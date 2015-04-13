@@ -57,8 +57,8 @@ PartitionModelPlen::PartitionModelPlen()
 {
 	}
 
-PartitionModelPlen::PartitionModelPlen(Params &params, PhyloSuperTreePlen *tree)
-        : PartitionModel(params, tree)
+PartitionModelPlen::PartitionModelPlen(Params &params, PhyloSuperTreePlen *tree, ModelsBlock *models_block)
+        : PartitionModel(params, tree, models_block)
 {
 	}
 

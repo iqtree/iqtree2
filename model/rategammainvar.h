@@ -104,6 +104,8 @@ public:
 	/** TRUE to jointly optimize gamma shape and p_invar using BFGS, default: FALSE */
 	bool joint_optimize;
 
+	virtual void setNCategory(int ncat);
+
 protected:
 
 	/**

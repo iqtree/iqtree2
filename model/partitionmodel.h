@@ -40,7 +40,7 @@ public:
 		@param params program parameters
 		@param tree associated phylogenetic super-tree
 	*/
-	PartitionModel(Params &params, PhyloSuperTree *tree);
+	PartitionModel(Params &params, PhyloSuperTree *tree, ModelsBlock *models_block);
 
     ~PartitionModel();
 

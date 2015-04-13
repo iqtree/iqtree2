@@ -841,7 +841,7 @@ void PhyloTree::computeLikelihoodDervEigen(PhyloNeighbor *dad_branch, PhyloNode 
 				double *theta = theta_all + ptn*block;
 			    double *partial_lh_node = node_branch->partial_lh + ptn*block;
 			    double *partial_lh_dad = dad_branch->partial_lh + ptn*block;
-			    double theta_max = 0.0;
+//			    double theta_max = 0.0;
 	    		for (i = 0; i < block; i++) {
 	    			theta[i] = partial_lh_node[i] * partial_lh_dad[i];
 //	    			theta_max = max(theta_max, fabs(theta[i]));

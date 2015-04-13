@@ -7,7 +7,7 @@
 
 #include "modelsblock.h"
 
-ModelsBlock::ModelsBlock()  : NxsBlock()
+ModelsBlock::ModelsBlock()  : NxsBlock(), vector<NxsModel>()
 {
 	id = "MODELS";
 }

@@ -22,6 +22,8 @@
 //const char STATE_UNKNOWN = 126;
 const char STATE_INVALID = 127;
 const int NUM_CHAR = 256;
+const double MIN_FREQUENCY          = 0.0001;
+const double MIN_FREQUENCY_DIFF     = 0.00001;
 
 typedef bitset<NUM_CHAR> StateBitset;
 
@@ -34,8 +36,8 @@ enum SeqType {
 typedef unordered_map<string, int> StringIntMap;
 typedef unordered_map<string, double> StringDoubleHashMap;
 typedef unordered_map<string, int> PatternIntMap;
-//typedef map<string, int> PatternIntMap;
 #else
+typedef map<string, int> StringIntMap;
 typedef map<string, double> StringDoubleHashMap;
 typedef map<string, int> PatternIntMap;
 #endif
@@ -578,6 +580,8 @@ public:
      * @return true if data type is SEQ_CODON and state is a stop codon
      */
     bool isStopCodon(int state);
+
+    bool isStandardGeneticCode();
 
 	/**
 	 * @return number of non-stop codons in the genetic code

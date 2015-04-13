@@ -76,8 +76,10 @@
 #else
 	#include <map>
 	#include <set>
-	#include <unordered_map>
-	#include <unordered_set>
+	#define unordered_map map
+	#define unordered_set set
+//	#include <unordered_map>
+//	#include <unordered_set>
 #endif
 
 using namespace std;
@@ -1064,6 +1066,9 @@ struct Params {
 
     /** set of models for testing */
     char *model_set;
+
+    /** set of rate heterogeneity model for testing */
+    char *ratehet_set;
 
     /** model defition file */
     char *model_def_file;

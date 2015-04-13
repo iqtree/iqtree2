@@ -432,16 +432,19 @@ void readPatternLh(const char *infile, IQTree *tree, bool compression) {
 void computeAllPatternLh(Params &params, IQTree &tree) {
     /* this part copied from phyloanalysis.cpp */
     tree.optimize_by_newton = params.optimize_by_newton;
+    ModelsBlock *models_block = new ModelsBlock;
+
     try {
         if (!tree.getModelFactory()) {
             if (tree.isSuperTree())
-                tree.setModelFactory(new PartitionModel(params, (PhyloSuperTree*)&tree));
+                tree.setModelFactory(new PartitionModel(params, (PhyloSuperTree*)&tree, models_block));
             else
-                tree.setModelFactory(new ModelFactory(params, &tree));
+                tree.setModelFactory(new ModelFactory(params, &tree, models_block));
         }
     } catch (string &str) {
         outError(str);
     }
+    delete models_block;
     tree.setModel(tree.getModelFactory()->model);
     tree.setRate(tree.getModelFactory()->site_rate);
     if (tree.isSuperTree()) ((PhyloSuperTree*)&tree)->mapTrees();

@@ -84,6 +84,11 @@ public:
 	virtual int getNRate() { return 1; }
 
 	/**
+		set the number of rate categories. The default raises assertion since it is homogeneous model
+	*/
+	virtual void setNCategory(int ncat) { assert(0); }
+
+	/**
 		get the number of rate categories for site-specific category model
 		The default returns 1 category since it is homogeneous model
 		@return the number of rate categories

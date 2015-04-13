@@ -36,7 +36,7 @@ add_definitions(-DIQ_TREE)
 # The version number.
 set (iqtree_VERSION_MAJOR 1)
 set (iqtree_VERSION_MINOR 2)
-set (iqtree_VERSION_PATCH 2)
+set (iqtree_VERSION_PATCH 3)
 
 set(BUILD_SHARED_LIBS OFF)
 
@@ -487,7 +487,7 @@ endif()
 #set(CPACK_SOURCE_PACKAGE_FILE_NAME
 #  "${CMAKE_PROJECT_NAME}-${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSION_MINOR}")
 set(CPACK_SOURCE_IGNORE_FILES
-  "/build.*/;/debug.*/;/examples/;/manual/;/.bzr/;~$;/\\\\.svn/;/\\\\.git/;/pll/;/pllrepo.dox/;/pllrepo.examples/;/pllrepo.figures/;/pllrepo.legacy/;/pllrepo.m4/;/pllrepo.man/;/pllrepo.MPI/;/pllrepo.sMSA/;/pllrepo.testdata/;${CPACK_SOURCE_IGNORE_FILES}")
+  "/build.*/;/debug.*/;/examples/;/test_scripts/;/manual/;/.bzr/;~$;/\\\\.svn/;/\\\\.git/;/pll/;/pllrepo.dox/;/pllrepo.examples/;/pllrepo.figures/;/pllrepo.legacy/;/pllrepo.m4/;/pllrepo.man/;/pllrepo.MPI/;/pllrepo.sMSA/;/pllrepo.testdata/;${CPACK_SOURCE_IGNORE_FILES}")
 
 set (SYSTEM_NAME "${CMAKE_SYSTEM_NAME}")
 if (${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")

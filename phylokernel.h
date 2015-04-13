@@ -809,14 +809,22 @@ double PhyloTree::computeLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, Ph
 #endif
 		tree_lh += horizontal_add(lh_final);
         if (isnan(tree_lh) || isinf(tree_lh)) {
-            cout << "ERROR: Numerical instability caused by alignment sites";
+            cout << "WARNING: Numerical underflow caused by alignment sites";
             i = aln->getNSite();
             for (j = 0; j < i; j++) {
                 ptn = aln->getPatternID(j);
-                if (isnan(_pattern_lh[ptn]) || isinf(_pattern_lh[ptn])) cout << " " << j+1;
+                if (isnan(_pattern_lh[ptn]) || isinf(_pattern_lh[ptn])) {
+                	cout << " " << j+1;
+                }
             }
-            cout << endl << "       Please check your alignment again and consider removing these sites from analysis" << endl << endl;
-            exit(1);
+            tree_lh = 0.0;
+            for (ptn = 0; ptn < orig_nptn; ptn++) {
+                if (isnan(_pattern_lh[ptn]) || isinf(_pattern_lh[ptn])) {
+                	_pattern_lh[ptn] = LOG_SCALING_THRESHOLD*4; // log(2^(-1024))
+                }
+            	tree_lh += _pattern_lh[ptn] * ptn_freq[ptn];
+            }
+            cout << endl << "         Tree log-likelihood is set to " << tree_lh << endl;
         }
 
 		// ascertainment bias correction

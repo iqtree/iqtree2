@@ -47,9 +47,6 @@ char genetic_code23[] = "KNKNTTTTRSRSIIMIQHQHPPPPRRRRLLLLEDEDAAAAGGGGVVVV*Y*YSSS
 char genetic_code24[] = "KNKNTTTTSSKSIIMIQHQHPPPPRRRRLLLLEDEDAAAAGGGGVVVV*Y*YSSSSWCWCLFLF"; // Pterobranchia mitochondrial
 char genetic_code25[] = "KNKNTTTTRSRSIIMIQHQHPPPPRRRRLLLLEDEDAAAAGGGGVVVV*Y*YSSSSGCWCLFLF"; // Candidate Division SR1 and Gracilibacteria
 
-const double MIN_FREQUENCY          = 0.0001;
-const double MIN_FREQUENCY_DIFF     = 0.00001;
-
 Alignment::Alignment()
         : vector<Pattern>()
 {
@@ -324,10 +321,13 @@ int Alignment::getNumNonstopCodons() {
 	assert(genetic_code);
 	int c = 0;
 	for (char *ch = genetic_code; *ch != 0; ch++)
-		if (*ch == '*') c++;
+		if (*ch != '*') c++;
 	return c;
 }
 
+bool Alignment::isStandardGeneticCode() {
+	return (genetic_code == genetic_code1);
+}
 
 void Alignment::buildSeqStates(bool add_unobs_const) {
 	string unobs_const;
@@ -548,7 +548,7 @@ bool Alignment::addPattern(Pattern &pat, int site, int freq) {
         pat.frequency = freq;
         computeConst(pat);
         push_back(pat);
-        pattern_index[pat] = size()-1;
+        pattern_index[back()] = size()-1;
         site_pattern[site] = size()-1;
     } else {
         int index = pat_it->second;
@@ -1811,6 +1811,11 @@ void Alignment::extractSites(Alignment *aln, IntVector &site_id) {
     verbose_mode = save_mode;
     countConstSite();
     buildSeqStates();
+    // sanity check
+    for (iterator it = begin(); it != end(); it++)
+    	if (it->at(0) == -1)
+    		assert(0);
+
     //cout << getNSite() << " positions were extracted" << endl;
     //cout << __func__ << " " << num_states << endl;
 }
@@ -2454,7 +2459,7 @@ void Alignment::getAppearance(char state, double *state_app) {
 		assert(state<22);
 		state -= 20;
 		for (i = 0; i < 7; i++)
-			if (ambi_aa[state] & (1<<i)) {
+			if (ambi_aa[(int)state] & (1<<i)) {
 				state_app[i] = 1.0;
 			}
 		break;
@@ -2489,7 +2494,7 @@ void Alignment::getAppearance(char state, StateBitset &state_app) {
 		assert(state<22);
 		state -= 20;
 		for (i = 0; i < 7; i++)
-			if (ambi_aa[state] & (1<<i)) {
+			if (ambi_aa[(int)state] & (1<<i)) {
 				state_app[i] = 1;
 			}
 		break;
@@ -2580,11 +2585,12 @@ void Alignment::computeCodonFreq(StateFreqType freq, double *state_freq, double 
 			state_freq[i] /= sum;
 	} else if (freq == FREQ_EMPIRICAL || freq == FREQ_ESTIMATE) {
 		memset(state_freq, 0, num_states*sizeof(double));
-        for (iterator it = begin(); it != end(); it++)
+        i = 0;
+        for (iterator it = begin(); it != end(); it++, i++)
 			for (int seq = 0; seq < nseqs; seq++) {
-				int state = (*it)[seq];
+				int state = it->at(seq);
 				if (state >= num_states) continue;
-				state_freq[state] += (*it).frequency;
+				state_freq[state] += it->frequency;
 			}
         double sum = 0.0;
         for (i = 0; i < num_states; i++)
@@ -2599,29 +2605,31 @@ void Alignment::computeEmpiricalRate (double *rates) {
     int i, j, k;
     assert(rates);
     int nseqs = getNSeq();
-    double **pair_rates = (double**) new double[num_states];
-    for (i = 0; i < num_states; i++) {
-        pair_rates[i] = new double[num_states];
-        memset(pair_rates[i], 0, sizeof(double)*num_states);
-    }
+    double *pair_rates = new double [num_states*num_states];
+    memset(pair_rates, 0, sizeof(double)*num_states*num_states);
+//    for (i = 0; i < num_states; i++) {
+//        pair_rates[i] = new double[num_states];
+//        memset(pair_rates[i], 0, sizeof(double)*num_states);
+//    }
 
-    for (iterator it = begin(); it != end(); it++) {
+    int count = 0;
+    for (iterator it = begin(); it != end(); it++, count++) {
         for (i = 0; i < nseqs-1; i++) {
-            char state1 = (*it)[i];
+            int state1 = (*it)[i];
             if (state1 >= num_states) continue;
             for (j = i+1; j < nseqs; j++) {
-                char state2 = (*it)[j];
-                if (state2 < num_states) pair_rates[(int)state1][(int)state2] += (*it).frequency;
+                int state2 = (*it)[j];
+                if (state2 < num_states) pair_rates[state1*num_states+state2] += (*it).frequency;
             }
         }
     }
 
     k = 0;
-    double last_rate = pair_rates[num_states-2][num_states-1] + pair_rates[num_states-1][num_states-2];
+    double last_rate = pair_rates[(num_states-2)*num_states+num_states-1] + pair_rates[(num_states-1)*num_states+num_states-2];
     if (last_rate == 0) last_rate = 1;
     for (i = 0; i < num_states-1; i++)
         for (j = i+1; j < num_states; j++) {
-            rates[k++] = (pair_rates[i][j] + pair_rates[j][i]) / last_rate;
+            rates[k++] = (pair_rates[i*num_states+j] + pair_rates[j*num_states+i]) / last_rate;
             // BIG WARNING: zero rates might cause numerical instability!
             if (rates[k-1] <= 0.0001) rates[k-1] = 0.01;
             if (rates[k-1] > 100.0) rates[k-1] = 50.0;
@@ -2634,9 +2642,9 @@ void Alignment::computeEmpiricalRate (double *rates) {
         cout << endl;
     }
 
-    for (i = num_states-1; i >= 0; i--) {
-        delete [] pair_rates[i];
-    }
+//    for (i = num_states-1; i >= 0; i--) {
+//        delete [] pair_rates[i];
+//    }
     delete [] pair_rates;
 }
 

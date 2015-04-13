@@ -1279,9 +1279,26 @@ void PhyloTree::deleteAllPartialLh() {
 	}
 	if (central_partial_pars)
 		aligned_free(central_partial_pars);
+	if (ptn_invar)
+		aligned_free(ptn_invar);
+	if (ptn_freq)
+		aligned_free(ptn_freq);
+	if (theta_all)
+		aligned_free(theta_all);
+	if (_pattern_lh_cat)
+		aligned_free(_pattern_lh_cat);
+	if (_pattern_lh)
+		aligned_free(_pattern_lh);
 	central_partial_lh = NULL;
 	central_scale_num = NULL;
 	central_partial_pars = NULL;
+
+	ptn_invar = NULL;
+	ptn_freq = NULL;
+	theta_all = NULL;
+	_pattern_lh_cat = NULL;
+	_pattern_lh = NULL;
+
     clearAllPartialLH();
 }
 
@@ -1343,7 +1360,7 @@ void PhyloTree::getMemoryRequired(uint64_t &partial_lh_entries, uint64_t &scale_
 }
 
 void PhyloTree::initializeAllPartialLh(int &index, int &indexlh, PhyloNode *node, PhyloNode *dad) {
-	intptr_t MEM_ALIGNMENT = (instruction_set >= 7) ? 32 : 16;
+//	intptr_t MEM_ALIGNMENT = (instruction_set >= 7) ? 32 : 16;
     size_t pars_block_size = getBitsBlockSize();
     size_t nptn = aln->size()+aln->num_states; // +num_states for ascertainment bias correction
     size_t block_size;
@@ -1371,6 +1388,8 @@ void PhyloTree::initializeAllPartialLh(int &index, int &indexlh, PhyloNode *node
             uint64_t mem_size = ((uint64_t)leafNum * 4 - 6) * (uint64_t) block_size + 2 + tip_partial_lh_size;
             if (sse == LK_EIGEN || sse == LK_EIGEN_SSE)
             	mem_size -= (uint64_t)leafNum * (uint64_t)block_size;
+            if (verbose_mode >= VB_MED)
+                cout << "Allocating " << mem_size * sizeof(double) << " bytes for partial likelihood vectors" << endl;
             try {
             	central_partial_lh = aligned_alloc<double>(mem_size);
             } catch (std::bad_alloc &ba) {

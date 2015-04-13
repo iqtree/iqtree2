@@ -31,16 +31,20 @@ RateGamma::RateGamma(int ncat, double shape, bool median, PhyloTree *tree) : Rat
 	//gamma_shape = MAX_GAMMA_SHAPE-1.0;
 	gamma_shape = 1.0;
 	fix_gamma_shape = false;
+	rates = NULL;
 	if (shape >= 0) {
 		gamma_shape = shape;
 		fix_gamma_shape = true;
 	}
+	setNCategory(ncat);
+}
 
+void RateGamma::setNCategory(int ncat) {
+	ncategory = ncat;
+	if (rates) delete [] rates;
 	rates = new double[ncategory];
-	name = "+G";
-	name += convertIntToString(ncategory);
-	full_name = "Gamma";
-	full_name += " with " + convertIntToString(ncategory) + " categories";
+	name = "+G" + convertIntToString(ncategory);
+	full_name = "Gamma with " + convertIntToString(ncategory) + " categories";
 	computeRates();
 }
 
