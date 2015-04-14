@@ -278,12 +278,12 @@ Alignment::Alignment(char *filename, char *sequence_type, InputType &intype) : v
         } else if (intype == IN_PHYLIP) {
             cout << "Phylip format detected" << endl;
             readPhylip(filename, sequence_type);
-	} else if (intype == IN_COUNTS) {
-	  cout << "Counts format (PoMo) detected" << endl;
-	  // TODO: PoMo; set this to Params.pomo_pop_size.  How can I
-	  // access this value?
-	  virtual_pop_size = 10;
-	  readCountsFormat(filename);
+        } else if (intype == IN_COUNTS) {
+            cout << "Counts format (PoMo) detected" << endl;
+            // TODO: PoMo; set this to Params.pomo_pop_size.  How can I
+            // access this value?
+            virtual_pop_size = 10;
+            readCountsFormat(filename);
         } else {
             outError("Unknown sequence format, please use PHYLIP, FASTA, or NEXUS format");
         }

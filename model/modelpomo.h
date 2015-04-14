@@ -12,12 +12,20 @@ class ModelPoMo : public ModelGTR
 {
  public:
     /**
-     * Constructor
+     * Constructor.
      *
+     * @todo Implement `model_params'.
+     * @todo Implement `freq_params'.
+     * 
+     * @param model_name The name of the model (e.g., "HKY+P").
+     * @param model_params The parameters of the model (user defined models.).
+     * @param freq_type
+     * @param freq_params
      * @param tree Associated tree for the model.
-     * @param count_rate
+     *
+     * @return
      */
-    ModelPoMo(PhyloTree *tree, bool count_rate = true);
+    ModelPoMo(const char *model_name, string model_params, StateFreqType freq_type, string freq_params, PhyloTree *tree);
 
     ~ModelPoMo();
 
@@ -197,6 +205,15 @@ class ModelPoMo : public ModelGTR
      * the frequencies of the GTR model.
      */
     void updateFreqFixedState ();
+
+    /**
+     * Precision and treshold value for mathematical computations and
+     * numerical stability checks.
+     *
+     * Feel free to set to a global value if there is one available.
+     *
+     */
+    double eps;
 
 };
 

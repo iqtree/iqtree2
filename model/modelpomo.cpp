@@ -3,25 +3,34 @@
 #include <assert.h>
 #include <string.h>
 
-ModelPoMo::ModelPoMo(PhyloTree *tree,
-                     bool count_rate)
-    : ModelGTR(tree, count_rate) {
-	init("PoMo", "", FREQ_USER_DEFINED, "");
+ModelPoMo::ModelPoMo(const char *model_name,
+                     string model_params,
+                     StateFreqType freq_type,
+                     string freq_params,
+                     PhyloTree *tree)
+    // Do not count rates; does not make sense for PoMo.
+    : ModelGTR(tree, false) {
+	init(model_name, model_params, freq_type, freq_params);
 }
 
 void ModelPoMo::init(const char *model_name,
                      string model_params,
                      StateFreqType freq,
                      string freq_params) {
-	this->name = string(model_name) + " " + convertIntToString(num_states) + " states";
-	mutation_prob = new double[6];
+    // num_states set in Alignment::readCountsFormat()
+	this->name = string(model_name) + " " +
+        convertIntToString(num_states) + " states";
+
+    eps = 1e-6;
+
+    mutation_prob = new double[6];
 	freq_fixed_states = new double[4];
 	rate_matrix = new double[num_states*num_states];
-	// TODO:  Reoptimize.
+
 	int i;
 	for (i = 0; i < 6; i++) mutation_prob[i] = 1e-4;
 	for (i = 0; i < 4; i++) freq_fixed_states[i] = 1.0;
-	// for (i = 0; i < 4; i++) freq_fixed_states[i] = 0.25; /**< Should sum up to 1.0 */
+
 	updatePoMoStatesAndRates();
 	ModelGTR::init(FREQ_USER_DEFINED);
 }
@@ -56,18 +65,18 @@ double ModelPoMo::computeNormConst() {
 	return 1.0/(norm_fixed + norm_polymorphic);
 }
 
-void ModelPoMo::updateFreqFixedState () {
-    // Sat Mar 28 22:10:49 CET 2015: This function is not needed, when
-    // the frequencies of the fixed states do not sum up to 1.0.  This
-    // might be better, because of numerical instabilities.
-    double f_sum = freq_fixed_states[0] +
-        freq_fixed_states[1] + freq_fixed_states[2];
-    // TODO: Make sure that this assertion is met and that IQ-Tree is
-    // not unstable.  Probably the lh diverges and this assertion is
-    // not met sometimes?
-    assert(f_sum <= 1.0);
-    freq_fixed_states[3] = 1.0 - f_sum;
-}
+// void ModelPoMo::updateFreqFixedState () {
+//     // Sat Mar 28 22:10:49 CET 2015: This function is not needed, when
+//     // the frequencies of the fixed states do not sum up to 1.0.  This
+//     // might be better, because of numerical instabilities.
+//     double f_sum = freq_fixed_states[0] +
+//         freq_fixed_states[1] + freq_fixed_states[2];
+//     // Make sure that this assertion is met and that IQ-Tree is
+//     // not unstable.  Probably the lh diverges and this assertion is
+//     // not met sometimes?
+//     assert(f_sum <= 1.0);
+//     freq_fixed_states[3] = 1.0 - f_sum;
+// }
 
 void ModelPoMo::computeStateFreq () {
 	double norm = computeNormConst();
@@ -92,8 +101,7 @@ void ModelPoMo::computeStateFreq () {
 	// double sum = 0.0;
 	// for (state = 0; state < num_states; state++)
 	// 	sum += state_freq[state];
-    // // XXX: Use predefined epsilon?
-	// assert(fabs(sum-1.0) < 0.000001);
+	// assert(fabs(sum-1.0) < eps);
 }
 
 void ModelPoMo::updatePoMoStatesAndRates () {
@@ -134,36 +142,6 @@ void ModelPoMo::updatePoMoStatesAndRates () {
     }
 
     int count = 0;
-
-    // Commented out for now, because PoMo has its own function to
-    // compute the rate matrix.
-    // // FIXME: This will not work.  The class ModelGTR expects rate G-T
-    // // to be one (from docstring in modelgtr.h).  I suppose that this
-    // // is simply the last element of rates in the usual case.  Here,
-    // // the last element does not correspond to G-T.
-	// for (state1 = 0; state1 < num_states; state1++) {
-	// 	for (state2 = state1+1; state2 < num_states; state2++) {
-	// 		rates[count++] =
-    //             rate_matrix[state1*num_states+state2] / state_freq[state2];
-    //     }
-	// }
-
-    // // Try to fix it: Normalize rates.
-    // double rate_norm = rates[4];
-    // count = 0;
-	// for (state1 = 0; state1 < num_states; state1++) {
-	// 	for (state2 = state1+1; state2 < num_states; state2++) {
-	// 		rates[count++] =
-    //             rates[count]/rate_norm;
-    //     }
-	// }
-
-    // for (int i = 0; i < 4; i++)
-    //     cout << freq_fixed_states[i] << '\t';
-    // cout << endl;
-    // for (int i = 0; i < 6; i++)
-    //     cout << mutation_prob[i] << '\t';
-    // cout << endl;
 }
 
 // void ModelPoMo::initMoranWithMutation() {
@@ -178,7 +156,7 @@ void ModelPoMo::updatePoMoStatesAndRates () {
 // 	// 	state_freq[i] = 1.0/num_states;
 // 	// }
 
-// 	// TODO: Recheck this.
+// 	// Recheck this.
 // 	// Initialize rate matrix Q[state1,state2] = transition rate from
 // 	// state1 to state2.
 // 	int state1, state2;
@@ -384,11 +362,6 @@ double ModelPoMo::computeProbBoundaryMutation(int state1, int state2) {
 }
 
 int ModelPoMo::getNDim() {
-    // FIXME: Maybe change this to 8, if we fix the mutation rates
-    // such that mu_GT = 1.0.  However, this might not be allowed
-    // here, because the mu in the GTR model are subsitution rates and
-    // confounded with N.  Here however, the mu are mutation
-    // probabilities (??).
 	return 9;
 }
 

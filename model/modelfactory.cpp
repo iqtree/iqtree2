@@ -112,6 +112,7 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 		else if (tree->aln->seq_type == SEQ_BINARY) model_str = "GTR2";
 		else if (tree->aln->seq_type == SEQ_CODON) model_str = "GY";
 		else if (tree->aln->seq_type == SEQ_MORPH) model_str = "MK";
+        else if (tree->aln->seq_type == SEQ_COUNTSFORMAT) model_str = "HKY+P";
 		else model_str = "JC";
 		outWarning("Default model may be under-fitting. Use option '-m TEST' to select best-fit model.");
 	}
@@ -136,10 +137,20 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 			rate_str = model_str.substr(pos+1);
 			model_str = model_str.substr(0, pos+1);
 		} else {
-			rate_str = model_str.substr(spec_pos);
-			model_str = model_str.substr(0, spec_pos);
-		}
-	}
+            size_t pos = model_str.find_first_of("+*", spec_pos+1);
+            std::string pomo = model_str.substr(spec_pos, pos - spec_pos);
+            if (pomo == "+P") {
+                if (pos != string::npos) {
+                    // E.g., model_str = "HKY+P+Something".
+                    rate_str = model_str.substr(pos);    // "+Something"
+                    model_str = model_str.substr(0,pos); // "HKY+P"
+                }
+            } else {
+                rate_str = model_str.substr(spec_pos);
+                model_str = model_str.substr(0, spec_pos);
+            }
+        }
+    }
 
 	nxsmodel = models_block->findModel(model_str);
 	if (nxsmodel && nxsmodel->description.find("MIX") != string::npos) {
@@ -156,6 +167,7 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 		case SEQ_BINARY: freq_type = FREQ_ESTIMATE; break; // default for binary: optimized frequencies
 		case SEQ_PROTEIN: freq_type = FREQ_USER_DEFINED; break; // default for protein: frequencies of the empirical AA matrix
 		case SEQ_MORPH: freq_type = FREQ_EQUAL; break;
+        case SEQ_COUNTSFORMAT: freq_type = FREQ_USER_DEFINED; break; // Default for PoMo.
 		default: freq_type = FREQ_EMPIRICAL; break; // default for DNA and others: counted frequencies from alignment
 		}
 	}

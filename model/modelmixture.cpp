@@ -1028,8 +1028,7 @@ ModelSubst* createModel(string model_str, ModelsBlock *models_block, StateFreqTy
 	} else if (tree->aln->seq_type == SEQ_MORPH) {
 		model = new ModelMorphology(model_str.c_str(), model_params, freq_type, freq_params, tree);
 	} else if (tree->aln->seq_type == SEQ_COUNTSFORMAT) {
-		// TODO
-		model = new ModelPoMo(tree);
+		model = new ModelPoMo(model_str.c_str(), model_params, freq_type, freq_params, tree);
 	} else {
 		outError("Unsupported model type");
 	}
