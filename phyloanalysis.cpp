@@ -2010,7 +2010,7 @@ void runPhyloAnalysis(Params &params) {
 	} else if (params.num_bootstrap_samples == 0) {
 		// the main Maximum likelihood tree reconstruction
 		vector<ModelInfo> *model_info = new vector<ModelInfo>;
-		alignment->checkGappySeq();
+		alignment->checkGappySeq(params.remove_empty_seq);
 
 		// remove identical sequences
         if (params.ignore_identical_seqs) {
