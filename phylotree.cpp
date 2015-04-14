@@ -284,7 +284,7 @@ void PhyloTree::readTreeString(const string &tree_string) {
 //	lhComputed = false;
 }
 
-int PhyloTree::fixAllBranches(bool force_change) {
+int PhyloTree::wrapperFixNegativeBranch(bool force_change) {
     // Initialize branch lengths for the parsimony tree
     initializeAllPartialPars();
     clearAllPartialLH();

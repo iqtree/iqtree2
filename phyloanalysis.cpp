@@ -1585,9 +1585,9 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
         	iqtree.resetCurScore();
         	iqtree.computeBioNJ(params, iqtree.aln, dist_file);
             if (iqtree.isSuperTree())
-            	iqtree.fixAllBranches(true);
+            	iqtree.wrapperFixNegativeBranch(true);
             else
-            	iqtree.fixAllBranches(false);
+            	iqtree.wrapperFixNegativeBranch(false);
         	initTree = iqtree.optimizeModelParameters(params.min_iterations==0, initEpsilon);
         }
     }
