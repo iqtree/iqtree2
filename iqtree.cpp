@@ -2736,7 +2736,9 @@ void IQTree::summarizeBootstrap(Params &params, MTreeSet &trees) {
     // now read resulting tree
     tree_stream.seekg(0, ios::beg);
     freeNode();
-    readTree(tree_stream, rooted);
+    // RARE BUG FIX: to avoid cases that identical seqs were removed and leaf name happens to be IDs
+    MTree::readTree(tree_stream, rooted);
+    
     assignLeafNames();
     if (isSuperTree()) {
         ((PhyloSuperTree*) this)->mapTrees();
