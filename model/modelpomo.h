@@ -34,12 +34,12 @@ class ModelPoMo : public ModelGTR
      *
      * @param model_name
      * @param model_params
-     * @param freq
+     * @param freq_type
      * @param freq_params
      */
     virtual void init(const char *model_name,
                       string model_params,
-                      StateFreqType freq,
+                      StateFreqType freq_type,
                       string freq_params);
 
     /* /\** */
@@ -77,6 +77,12 @@ class ModelPoMo : public ModelGTR
      *	@return the function value at x
 	*/
 	virtual double targetFunk(double x[]);
+
+    /**
+     * @return TRUE if parameters are at the boundary that may cause
+     * numerical unstability
+	 */
+	virtual bool isUnstableParameters();
 
  protected:
 

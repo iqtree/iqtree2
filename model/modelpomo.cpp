@@ -15,10 +15,18 @@ ModelPoMo::ModelPoMo(const char *model_name,
 
 void ModelPoMo::init(const char *model_name,
                      string model_params,
-                     StateFreqType freq,
+                     StateFreqType freq_type,
                      string freq_params) {
-    // num_states set in Alignment::readCountsFormat()
-	this->name = string(model_name) + " " +
+    // Check num_states (set in Alignment::readCountsFormat()).
+	int N = phylo_tree->aln->virtual_pop_size;
+    int nnuc = 4;
+    assert(num_states == (nnuc + (nnuc*(nnuc-1)/2 * (N-1))) );
+    
+    // TODO: Process model_params, freq_type and freq_params and set
+    // model_name and full_name accordingly.
+	this->name = string(model_name);
+
+    this->full_name = string(model_name) + " " +
         convertIntToString(num_states) + " states";
 
     eps = 1e-6;
@@ -32,7 +40,7 @@ void ModelPoMo::init(const char *model_name,
 	for (i = 0; i < 4; i++) freq_fixed_states[i] = 1.0;
 
 	updatePoMoStatesAndRates();
-	ModelGTR::init(FREQ_USER_DEFINED);
+	ModelGTR::init(freq_type);
 }
 
 ModelPoMo::~ModelPoMo() {
@@ -87,7 +95,7 @@ void ModelPoMo::computeStateFreq () {
     //     cout << "Normalization constant: " << norm << endl;
     // }
 
-	for (state = 0; state < num_states; state++)
+	for (state = 0; state < num_states; state++) {
 		if (isFixed(state))
 			state_freq[state] = freq_fixed_states[state]*norm;
 		else {
@@ -97,6 +105,8 @@ void ModelPoMo::computeStateFreq () {
                 norm * freq_fixed_states[X] * freq_fixed_states[Y] *
                 mutCoeff(X, Y)*N*N / (k*(N-k));
 		}
+    }
+
     // // Debug; should work anyway.
 	// double sum = 0.0;
 	// for (state = 0; state < num_states; state++)
@@ -106,7 +116,6 @@ void ModelPoMo::computeStateFreq () {
 
 void ModelPoMo::updatePoMoStatesAndRates () {
 	int state1, state2;
-	int N = phylo_tree->aln->virtual_pop_size;
 
     // Activate this if frequencies of fixed states sum up to 1.0.
     // updateFreqFixedState();
@@ -140,8 +149,6 @@ void ModelPoMo::updatePoMoStatesAndRates () {
                   << freq_fixed_states[2] << "\t"
                   << freq_fixed_states[3] << std::endl;
     }
-
-    int count = 0;
 }
 
 // void ModelPoMo::initMoranWithMutation() {
@@ -418,7 +425,7 @@ void ModelPoMo::getVariables(double *variables) {
 
 void ModelPoMo::writeInfo(ostream &out) {
 	int i;
-    int state1, state2;
+    int state1;
     ios  state(NULL);
     state.copyfmt(out);
 
@@ -455,8 +462,8 @@ void ModelPoMo::writeInfo(ostream &out) {
     // }
 
      // out << "PoMo rate matrix:" << endl;
-     // for (state1 = 0; state1 < num_states; state1++) {
-     //     for (state2 = 0; state2 < num_states; state2++)
+     // for (int state1 = 0; state1 < num_states; state1++) {
+     //     for (int state2 = 0; state2 < num_states; state2++)
      //         out << rate_matrix[state1*num_states+state2] << "\t";
      //     out << endl;
      // }
@@ -487,4 +494,12 @@ double ModelPoMo::targetFunk(double x[]) {
 	assert(phylo_tree);
 	phylo_tree->clearAllPartialLH();
 	return -phylo_tree->computeLikelihood();
+}
+
+bool ModelPoMo::isUnstableParameters() {
+    // More checking could be done.
+    for (int i = 0; i < num_states; i++) {
+        if (state_freq[i] < eps) return true;
+    }
+    return false;
 }
