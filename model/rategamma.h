@@ -162,6 +162,10 @@ public:
 		fix_gamma_shape = fixGammaShape;
 	}
 
+    /**
+        set number of rate categories
+        @param ncat #categories
+    */
 	virtual void setNCategory(int ncat);
 
 protected:

@@ -58,6 +58,7 @@ string RateGamma::getNameParams() {
 RateGamma::~RateGamma()
 {
 	if (rates) delete [] rates;
+	rates = NULL;
 }
 
 void RateGamma::computeRates() {
