@@ -769,7 +769,9 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 		subst_model = new ModelMorphology("MK", "", FREQ_UNKNOWN, "", in_tree);
 	else if (seq_type == SEQ_CODON)
 		subst_model = new ModelCodon("GY", "", FREQ_UNKNOWN, "", in_tree, false);
-
+    else if (seq_type == SEQ_COUNTSFORMAT)
+        // Exit gracefully.
+        outError("Model selection with PoMo not yet supported.");
 	assert(subst_model);
 
 	ModelFactory *model_fac = new ModelFactory();

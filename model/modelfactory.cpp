@@ -102,6 +102,7 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 
 	string model_str = params.model_name;
 	string rate_str;
+    bool pomo_flag = false;
 
 	try {
 
@@ -112,12 +113,9 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 		else if (tree->aln->seq_type == SEQ_BINARY) model_str = "GTR2";
 		else if (tree->aln->seq_type == SEQ_CODON) model_str = "GY";
 		else if (tree->aln->seq_type == SEQ_MORPH) model_str = "MK";
-        else if (tree->aln->seq_type == SEQ_COUNTSFORMAT) model_str = "HKY+rP10";
+        else if (tree->aln->seq_type == SEQ_COUNTSFORMAT) model_str = "HKY+rP";
 		else model_str = "JC";
-        // Do not show this warning when using a Counts File with PoMo
-        // because it is misleading.
-        if (model_str != "HKY+rP10")
-            outWarning("Default model may be under-fitting. Use option '-m TEST' to select best-fit model.");
+        outWarning("Default model may be under-fitting. Use option '-m TEST' to select best-fit model.");
 	}
 
 	/********* preprocessing model string ****************/
@@ -139,15 +137,41 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 				outError("Model name has wrong bracket notation '{...}'");
 			rate_str = model_str.substr(pos+1);
 			model_str = model_str.substr(0, pos+1);
-		} else {
-            std::string pomo = model_str.substr(spec_pos, 3);
-            if (pomo == "+rP")
-                // Let PoMo handle model string decomposition.
-                rate_str = "";
-            else {
-                rate_str = model_str.substr(spec_pos);
-                model_str = model_str.substr(0, spec_pos);
+		} else if (model_str[spec_pos] == '+') {
+            // Check for PoMo; if so, set model_str and rate_str
+            // accordingly.
+            size_t sspec_pos = model_str.find_first_of("+", spec_pos+1);
+            std::string pomo;
+            if (sspec_pos != string::npos) {
+                pomo = model_str.substr(spec_pos, sspec_pos);
+                model_str = model_str.substr(0,sspec_pos);
+                rate_str  = model_str.substr(sspec_pos);
+            } else {
+                pomo = model_str.substr(spec_pos);
+                // No other options specified.
+                rate_str  = "";
             }
+            if (pomo == "+nrP") {
+                pomo_flag = true;
+                // TODO: Eventually also allow a non-reversible PoMo.
+                outError("Non reversible PoMo not supported yet.");
+            } else if (pomo == "+rP") {
+                // Activate reversible PoMo and set custom virtual population size.
+                pomo_flag = true;
+            }
+            if (pomo_flag == true) {
+                // Check that only supported flags are given.
+                if (rate_str.find("+ASC") != string::npos)
+                    outError("Ascertainment bias correction with PoMo not yet supported.");
+                if ((rate_str.find("+I") != string::npos) ||
+                    (rate_str.find("+G") != string::npos) ||
+                    (rate_str.find("+R") != string::npos))
+                    outError("Rate heterogeneity with PoMo not yet supported.");
+            }
+            std::cout << pomo_flag << model_str << rate_str << std::endl;
+        } else {
+            rate_str = model_str.substr(spec_pos);
+            model_str = model_str.substr(0, spec_pos);
         }
     }
 
@@ -167,8 +191,8 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 		case SEQ_PROTEIN: freq_type = FREQ_USER_DEFINED; break; // default for protein: frequencies of the empirical AA matrix
 		case SEQ_MORPH: freq_type = FREQ_EQUAL; break;
         case SEQ_COUNTSFORMAT:
-            // Default for PoMo; let PoMo handle the frequency estimation.
-            freq_type = FREQ_USER_DEFINED;
+            // Default for PoMo; PoMo handles the different frequency types.
+            freq_type = FREQ_ESTIMATE;
             break;
 		default: freq_type = FREQ_EMPIRICAL; break; // default for DNA and others: counted frequencies from alignment
 		}
@@ -245,7 +269,6 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 //			if (nxsmodel) model_desc = nxsmodel->description;
 			model = createModel(model_str, models_block, freq_type, freq_params, tree);
 		}
-
 //		fused_mix_rate &= model->isMixture() && site_rate->getNRate() > 1;
 	} else {
 		// site-specific model

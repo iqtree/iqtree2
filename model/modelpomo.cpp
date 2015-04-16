@@ -21,6 +21,9 @@ void ModelPoMo::init(const char *model_name,
 	int N = phylo_tree->aln->virtual_pop_size;
     int nnuc = 4;
     assert(num_states == (nnuc + (nnuc*(nnuc-1)/2 * (N-1))) );
+
+    // TODO: Check model_name if it is supported and set parameters
+    // accordingly.
     
     // TODO: Process model_params, freq_type and freq_params and set
     // model_name and full_name accordingly.
@@ -40,7 +43,11 @@ void ModelPoMo::init(const char *model_name,
 	for (i = 0; i < 4; i++) freq_fixed_states[i] = 1.0;
 
 	updatePoMoStatesAndRates();
-	ModelGTR::init(freq_type);
+    // Use FREQ_USER_DEFINED for ModelGTR initialization so that it
+    // does not handle the frequency types.  However, freq_type
+    // still needs to be interpreted by PoMo and the parameters need
+    // to be set accordingly.
+	ModelGTR::init(FREQ_USER_DEFINED);
 }
 
 ModelPoMo::~ModelPoMo() {
