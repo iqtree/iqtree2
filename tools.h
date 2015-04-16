@@ -57,8 +57,11 @@
 #define __func__ __FUNCTION__
 #endif
 
-#if defined(USE_HASH_MAP) && !defined(_MSC_VER)
-	#if !defined(__GNUC__)
+#if defined(USE_HASH_MAP)
+	#if defined(_MSC_VER)
+		#include <unordered_map>
+		#include <unordered_set>
+	#elif !defined(__GNUC__)
 		#include <hash_map>
 		#include <hash_set>
 		using namespace stdext;
@@ -76,10 +79,6 @@
 #else
 	#include <map>
 	#include <set>
-	#define unordered_map map
-	#define unordered_set set
-//	#include <unordered_map>
-//	#include <unordered_set>
 #endif
 
 using namespace std;
