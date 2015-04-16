@@ -331,7 +331,7 @@ void IQTree::computeInitialTree(string &dist_file) {
         readTree(params->user_file, myrooted);
         setAlignment(aln);
         if (isSuperTree())
-        	wrapperFixNegativeBranch(false);
+        	wrapperFixNegativeBranch(!params->fixed_branch_length);
         else
         	fixed_number = wrapperFixNegativeBranch(false);
         params->numInitTrees = 1;
