@@ -12,11 +12,11 @@ const double MIN_FREE_RATE = 0.0001;
 const double MAX_FREE_RATE = 0.9999;
 const double TOL_FREE_RATE = 0.0001;
 
-RateFree::RateFree(int ncat, string params, PhyloTree *tree) : RateHeterogeneity() {
-	ncategory = ncat;
-	phylo_tree = tree;
+const double MIN_FREE_RATE_PROP = 0.0001;
+const double MAX_FREE_RATE_PROP = 0.9999;
+
+RateFree::RateFree(int ncat, string params, PhyloTree *tree) : RateGamma(ncat, 1.0, false, tree) {
 	fix_params = false;
-	rates = NULL;
 	prop = NULL;
 	setNCategory(ncat);
 
@@ -45,22 +45,28 @@ RateFree::RateFree(int ncat, string params, PhyloTree *tree) : RateHeterogeneity
 }
 
 void RateFree::setNCategory(int ncat) {
-	ncategory = ncat;
-	if (rates) delete [] rates;
+
+    // initialize with gamma rates
+    RateGamma::setNCategory(ncat);
 	if (prop) delete [] prop;
-	rates = new double[ncategory];
 	prop  = new double[ncategory];
-	double sum_prop = (ncategory)*(ncategory+1)/2.0;
-	double sum = 0.0;
-	int i;
-	// initialize rates as increasing
-	for (i = 0; i < ncategory; i++) {
-		prop[i] = (double)(ncategory-i) / sum_prop;
-		rates[i] = (double)(i+1);
-		sum += prop[i]*rates[i];
-	}
+
+    int i;
 	for (i = 0; i < ncategory; i++)
-		rates[i] /= sum;
+        prop[i] = 1.0/ncategory;
+    
+//	double sum_prop = (ncategory)*(ncategory+1)/2.0;
+//	double sum = 0.0;
+//	int i;
+	// initialize rates as increasing
+//	for (i = 0; i < ncategory; i++) {
+//		prop[i] = (double)(ncategory-i) / sum_prop;
+//        prop[i] = 1.0 / ncategory;
+//		rates[i] = (double)(i+1);
+//		sum += prop[i]*rates[i];
+//	}
+//	for (i = 0; i < ncategory; i++)
+//		rates[i] /= sum;
 
 	name = "+R";
 	name += convertIntToString(ncategory);
@@ -70,8 +76,8 @@ void RateFree::setNCategory(int ncat) {
 
 
 RateFree::~RateFree() {
-	delete [] prop;
-	delete [] rates;
+	if (prop) delete [] prop;
+	prop = NULL;
 }
 
 string RateFree::getNameParams() {
@@ -90,6 +96,43 @@ double RateFree::targetFunk(double x[]) {
 	phylo_tree->clearAllPartialLH();
 	return -phylo_tree->computeLikelihood();
 }
+
+/**
+    quicksort template
+*/
+template<class T1, class T2>
+void quicksort(T1* arr, int left, int right, T2* arr2 = NULL) {
+      assert(left <= right);    
+      int i = left, j = right;
+      T1 pivot = arr[(left + right) / 2];
+ 
+      /* partition */
+      while (i <= j) {
+            while (arr[i] < pivot)
+                  i++;
+            while (arr[j] > pivot)
+                  j--;
+            if (i <= j) {
+                  T1 tmp = arr[i];
+                  arr[i] = arr[j];
+                  arr[j] = tmp;
+                  if (arr2) {
+                      T2 tmp2 = arr2[i];
+                      arr2[i] = arr2[j];
+                      arr2[j] = tmp2;
+                  }
+                  i++;
+                  j--;
+            }
+      };
+ 
+      /* recursion */
+      if (left < j)
+            quicksort(arr, left, j, arr2);
+      if (i < right)
+            quicksort(arr, i, right, arr2);
+}
+
 
 /**
 	optimize parameters. Default is to optimize gamma shape
@@ -121,6 +164,9 @@ double RateFree::optimizeParameters(double epsilon) {
 	score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound, bound_check, max(epsilon, TOL_FREE_RATE));
 
 	getVariables(variables);
+    
+    // sort the rates in increasing order
+    quicksort<double,double>(rates, 0, ncategory-1, prop);
 
 	phylo_tree->clearAllPartialLH();
 
@@ -135,7 +181,12 @@ double RateFree::optimizeParameters(double epsilon) {
 void RateFree::setBounds(double *lower_bound, double *upper_bound, bool *bound_check) {
 	if (getNDim() == 0) return;
 	int i;
-	for (i = 1; i <= 2*ncategory-2; i++) {
+	for (i = 1; i < ncategory; i++) {
+		lower_bound[i] = MIN_FREE_RATE_PROP;
+		upper_bound[i] = MAX_FREE_RATE_PROP;
+		bound_check[i] = false;
+	}
+	for (i = ncategory; i <= 2*ncategory-2; i++) {
 		lower_bound[i] = MIN_FREE_RATE;
 		upper_bound[i] = MAX_FREE_RATE;
 		bound_check[i] = false;
@@ -166,7 +217,7 @@ void RateFree::getVariables(double *variables) {
 	// category rates: z[0..c-1] <-> (variables[c..2*c-2], 1.0)
 	memcpy(z, variables+ncategory, (ncategory-1) * sizeof(double));
 	z[ncategory-1] = 1.0;
-	std::sort(z, z+ncategory-1);
+	//std::sort(z, z+ncategory-1);
 
 	double sum = 0.0;
 	for (i = 0; i < ncategory; i++) {

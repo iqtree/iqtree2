@@ -1585,9 +1585,9 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
         	iqtree.resetCurScore();
         	iqtree.computeBioNJ(params, iqtree.aln, dist_file);
             if (iqtree.isSuperTree())
-            	iqtree.fixAllBranches(true);
+            	iqtree.wrapperFixNegativeBranch(true);
             else
-            	iqtree.fixAllBranches(false);
+            	iqtree.wrapperFixNegativeBranch(false);
         	initTree = iqtree.optimizeModelParameters(params.min_iterations==0, initEpsilon);
         }
     }
@@ -2010,7 +2010,7 @@ void runPhyloAnalysis(Params &params) {
 	} else if (params.num_bootstrap_samples == 0) {
 		// the main Maximum likelihood tree reconstruction
 		vector<ModelInfo> *model_info = new vector<ModelInfo>;
-		alignment->checkGappySeq();
+		alignment->checkGappySeq(params.remove_empty_seq);
 
 		// remove identical sequences
         if (params.ignore_identical_seqs) {
