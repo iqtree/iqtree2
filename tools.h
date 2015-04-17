@@ -1538,6 +1538,13 @@ struct Params {
 	bool count_trees;
 
 	/**
+	 * If `true`, Counts File input type has been specified with "-st
+	 * CF[ps]", where `ps` is optional and denotes a custome virtual
+	 * population size.
+	 */
+	int pomo_counts_file_flag;
+
+	/**
 	 * virtual population size for PoMo model
 	 */
 	int pomo_pop_size;
