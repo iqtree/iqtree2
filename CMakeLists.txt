@@ -117,6 +117,8 @@ elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     set(CMAKE_NM      "/usr/bin/llvm-nm")
     set(CMAKE_OBJDUMP "/usr/bin/llvm-objdump")
     set(CMAKE_RANLIB  "/usr/bin/llvm-ranlib")
+    # The two lines below are important, other it won't compile. There is a bug in CLANG that add "-rdynamic" flag
+    # to the linker even if "-static" is specified. The two command below remove all flags for shared libraries.
     set(CMAKE_SHARED_LIBRARY_LINK_C_FLAGS " ")
     set(CMAKE_SHARED_LIBRARY_LINK_CXX_FLAGS " ")
 elseif (CMAKE_CXX_COMPILER_ID MATCHES "MSVC")

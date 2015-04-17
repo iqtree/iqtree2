@@ -797,7 +797,7 @@ public:
     /**
      *  Return the sorted topology without branch length, used to compare tree topology
      */
-    string getTopology();
+    string getTopologyString();
 
 
     bool checkEqualScalingFactor(double &sum_scaling, PhyloNode *node = NULL, PhyloNode *dad = NULL);

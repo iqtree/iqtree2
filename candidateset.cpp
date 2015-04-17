@@ -93,7 +93,7 @@ bool CandidateSet::replaceTree(string tree, double score) {
     CandidateTree candidate;
     candidate.tree = tree;
     candidate.score = score;
-    candidate.topology = getTopology(tree);
+    candidate.topology = getTopologyString(tree);
     if (treeTopologyExist(candidate.topology)) {
         topologies[candidate.topology] = score;
         for (reverse_iterator i = rbegin(); i != rend(); i++) {
@@ -137,10 +137,10 @@ void CandidateSet::removeCandidateSplits(string treeString) {
 	SplitGraph allSplits;
 	tree.convertSplits(allSplits);
 	for (SplitGraph::iterator splitIt = allSplits.begin(); splitIt != allSplits.end(); splitIt++) {
-		int value;
-		Split *sp = candidateSplitsHash.findSplit(*splitIt, value);
-		assert(sp->getWeight() == value);
-		if (sp == NULL) {
+		int value = 0;
+		Split *sp;
+		sp = candidateSplitsHash.findSplit(*splitIt, value);
+		if (value == 0) {
 			cout << "Cannot find split: ";
 			(*splitIt)->report(cout);
 			exit(1);
@@ -215,16 +215,15 @@ bool CandidateSet::update(string tree, double score) {
 
 			// A new tree is inserted in the stable tree set
 			if (it_pos <= params->numSupportTrees) {
-				/*
-				addCandidateSplits(candidateTreeIt->second.tree);
-				if (candidateSplitsHash.getMaxValue() > params->numSupportTrees) {
-					assert(candidateSplitsHash.getMaxValue() == params->numSupportTrees + 1);
-					removeCandidateSplits(getNthBestTree(candidateSplitsHash.getMaxValue()).tree);
-				}
-				 */
+//				addCandidateSplits(candidateTreeIt->second.tree);
+//				if (candidateSplitsHash.getMaxValue() > params->numSupportTrees) {
+//					assert(candidateSplitsHash.getMaxValue() == params->numSupportTrees + 1);
+//					removeCandidateSplits(getNthBestTree(candidateSplitsHash.getMaxValue()).tree);
+//				}
 				buildTopSplits();
 				double percentSS = (double) getNumStableSplits() / (aln->getNSeq() - 3) * 100;
 				cout << percentSS << " % of the splits have 100% support" << endl;
+//				reportStableSplits();
 			}
 		}
 
@@ -352,7 +351,7 @@ int CandidateSet::buildTopSplits() {
 	vector<CandidateTree> bestCandidateTrees;
 
 	getBestCandidateTrees(params->numSupportTrees, bestCandidateTrees);
-	assert(bestCandidateTrees.size() > 1);
+	//assert(bestCandidateTrees.size() > 1);
 
 	candidateSplitsHash.setMaxValue(bestCandidateTrees.size());
 	loglThreshold = bestCandidateTrees.back().score;
@@ -399,6 +398,22 @@ int CandidateSet::countStableSplits() {
 		}
 	}
 	return numMaxSupport;
+}
+
+void CandidateSet::reportStableSplits() {
+	if (candidateSplitsHash.empty()) {
+		cout << "The set of stable splits is empty! " << endl;
+		return;
+	}
+
+	int numMaxSupport = 0;
+	for (SplitIntMap::iterator it = candidateSplitsHash.begin(); it != candidateSplitsHash.end(); it++) {
+		if (it->second == candidateSplitsHash.getMaxValue() && it->first->countTaxa() > 1) {
+			cout << it->first->getWeight() << " / " << candidateSplitsHash.getMaxValue() << endl;
+			assert(it->first->getWeight() == candidateSplitsHash.getMaxValue());
+			it->first->report(cout);
+		}
+	}
 }
 
 void CandidateSet::setAln(Alignment* aln) {

@@ -214,8 +214,9 @@ public:
     /**
      * 		Perform a series of random NNI moves
      * 		@param numNNI number of random NNIs
+     * 		@return the perturbed newick string
      */
-    void doRandomNNIs(int numNNI);
+    string doRandomNNIs(int numNNI);
 
     /**
      *   input model parameters from IQ-TREE to PLL

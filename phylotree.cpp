@@ -324,7 +324,7 @@ string PhyloTree::getTreeString() {
 	return tree_stream.str();
 }
 
-string PhyloTree::getTopology() {
+string PhyloTree::getTopologyString() {
     stringstream tree_stream;
     // important: to make topology string unique
     setRootNode(params->root);

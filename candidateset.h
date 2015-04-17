@@ -201,6 +201,8 @@ public:
     */
     int countStableSplits();
 
+    void reportStableSplits();
+
     /**
      *  Update the set of stable split when a new tree is inserted
      *  to the set of best trees used for computing stable splits.
@@ -326,7 +328,6 @@ private:
      * pointer to alignment, just to assign correct IDs for taxa
      */
     Alignment *aln;
-
 };
 
 #endif /* CANDIDATESET_H_ */

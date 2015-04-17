@@ -1618,6 +1618,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 		params.modelEps = 0.001;
 
         cout << "Current best tree score: " << iqtree.candidateTrees.getBestScore() << " / CPU time: " << getCPUTime() - initTime << endl;
+		cout << endl;
 	}
 
 
