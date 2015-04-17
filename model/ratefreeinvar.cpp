@@ -7,8 +7,8 @@
 
 #include "ratefreeinvar.h"
 
-RateFreeInvar::RateFreeInvar(int ncat, string params, double p_invar_sites, PhyloTree *tree)
-: RateGamma(ncat, 1.0, false, tree), RateInvar(p_invar_sites, tree), RateFree(ncat, params, tree)
+RateFreeInvar::RateFreeInvar(int ncat, string params, bool sorted_rates, double p_invar_sites, PhyloTree *tree)
+: RateGamma(ncat, 1.0, false, tree), RateInvar(p_invar_sites, tree), RateFree(ncat, params, sorted_rates, tree)
 {
 	cur_optimize = 0;
 	name = "+I" + name;
