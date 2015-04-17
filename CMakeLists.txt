@@ -19,6 +19,12 @@
 # cmake -DIQTREE_FLAGS="m32" <source_dir>      (32-bit SSE3 version)
 # cmake -DIQTREE_FLAGS="m32 omp" <source_dir>  (32-bit SSE3+OpenMP version)
 #
+# To compile with CLANG on Linux:
+# export CC=/usr/bin/clang
+# export CXX=/usr/bin/clang++
+# Best practices for setting up CMAKE for diffrent compiler can be found here:
+# http://stackoverflow.com/questions/7031126/switching-between-gcc-and-clang-llvm-using-cmake
+#
 # Mac OSX example usages:
 # cmake -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ <source_dir>							(SSE3 version)
 # cmake -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DIQTREE_FLAGS="avx" <source_dir>		(AVX version)
@@ -105,7 +111,14 @@ elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 	set(CLANG "TRUE")
 #	set(COMBINED_FLAGS "-Wall -Wno-unused-function -Wno-sign-compare -pedantic -D_GNU_SOURCE -Wno-nested-anon-types")
 	set(CMAKE_CXX_FLAGS_RELEASE "-O3")
-	set(CMAKE_C_FLAGS_RELEASE "-O3")	
+	set(CMAKE_C_FLAGS_RELEASE "-O3")
+    set(CMAKE_AR      "/usr/bin/llvm-ar")
+    set(CMAKE_LINKER  "/usr/bin/llvm-ld")
+    set(CMAKE_NM      "/usr/bin/llvm-nm")
+    set(CMAKE_OBJDUMP "/usr/bin/llvm-objdump")
+    set(CMAKE_RANLIB  "/usr/bin/llvm-ranlib")
+    set(CMAKE_SHARED_LIBRARY_LINK_C_FLAGS " ")
+    set(CMAKE_SHARED_LIBRARY_LINK_CXX_FLAGS " ")
 elseif (CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
 	set(VCC "TRUE")
 	message("Compiler      : MS Visual C++ Compiler")

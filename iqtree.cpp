@@ -1652,6 +1652,12 @@ double IQTree::doTreeSearch() {
     out_lh_file += ".treelh";
     string site_lh_file = params->out_prefix;
     site_lh_file += ".sitelh";
+    string nniFileName = string(params->out_prefix) + ".nni_info";
+    ofstream nniFile;
+    if (verbose_mode >= VB_DEBUG) {
+        nniFile.open(nniFileName.c_str());
+        nniFile << "NNI_Steps   Num_NNIs" << endl;
+    }
 
     if (params->print_tree_lh) {
         out_treelh.open(out_lh_file.c_str());
@@ -1768,16 +1774,9 @@ double IQTree::doTreeSearch() {
 
         string imd_tree = doNNISearch(nni_count, nni_steps);
 
-        // Sanity check
-//        SplitGraph sg_true;
-//        SplitGraph sg_test;
-//        convertSplits(sg_true);
-//        getSplits(sg_test);
-//        cout << "TRUE SPLITS: " << endl;
-//        sg_true.report(cout);
-//        cout << "TEST SPLITS: " << endl;
-//        sg_test.report(cout);
-//        exit(0);
+        if (verbose_mode >= VB_DEBUG) {
+            nniFile << nni_steps << "   " << nni_count << endl;
+        }
 
         if (iqp_assess_quartet == IQP_BOOTSTRAP) {
             // restore alignment
@@ -1883,6 +1882,10 @@ double IQTree::doTreeSearch() {
     if (params->print_tree_lh) {
         out_treelh.close();
         out_sitelh.close();
+    }
+
+    if (verbose_mode >= VB_DEBUG) {
+        nniFile.close();
     }
 
     // DTH: pllUFBoot deallocation
