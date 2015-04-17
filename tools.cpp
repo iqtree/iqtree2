@@ -2768,6 +2768,27 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -m <model_name>+ASC  Ascertainment bias correction for morphological/SNP data" << endl
             << "  -m \"MIX{m1,...mK}\"   Mixture model with K components" << endl
             << "  -m \"FMIX{f1,...fK}\"  Frequency mixture model with K components" << endl
+
+            << endl
+            << "POLYMORPHISM AWARE MODELS (PoMo):"                                                   << endl
+            << "  -st CF or CFps       Counts File (automatically detected)."                        << endl
+            << "                       Useful to customize the virtual population size `ps`"         << endl
+            << "                       (5 <= ps <= 20; default is 10)."                              << endl
+            << "  -m <sm>+<pm>+<ft>"                                                                 << endl
+            << "                 <sm>: Substitution model."                                          << endl
+            << "                  DNA: HKY (default), JC, F81, K2P, K3P, K81uf, TN/TrN, TNef,"       << endl
+            << "                       TIM, TIMef, TVM, TVMef, SYM, GTR, or 6-digit model"           << endl
+            << "                       specification (e.g., 010010 = HKY)."                          << endl
+            << "                 <pm>: PoMo model."                                                  << endl
+            << "                       - rP (reversible PoMo with tree inference)."                  << endl
+            << "                       - nrP (non-reversible PoMo; tree has to be given separately;" << endl
+            << "                         not implemented yet)."                                      << endl
+            << "                 <ft>: Frequency type (optional)."                                   << endl
+            << "                       F or +FO or +FU or +FQ (default: optimized)."                 << endl
+            << "                       Counted, optimized, user-defined, equal state frequency."     << endl
+            << "  Until now, only DNA models work with PoM."                                         << endl
+            << "  Model testing and rate heterogeneity do not work with PoMo yet."                   << endl
+        
             << endl << "RATE HETEROGENEITY:" << endl
             << "  -m <model_name>+I or +G[n] or +I+G[n] or +R[n]" << endl
             << "                       Invar, Gamma, Invar+Gamma, or FreeRate model where 'n' is" << endl

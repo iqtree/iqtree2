@@ -144,8 +144,8 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
             std::string pomo;
             if (sspec_pos != string::npos) {
                 pomo = model_str.substr(spec_pos, sspec_pos);
-                model_str = model_str.substr(0,sspec_pos);
                 rate_str  = model_str.substr(sspec_pos);
+                model_str = model_str.substr(0,sspec_pos);
             } else {
                 pomo = model_str.substr(spec_pos);
                 // No other options specified.
@@ -168,7 +168,6 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
                     (rate_str.find("+R") != string::npos))
                     outError("Rate heterogeneity with PoMo not yet supported.");
             }
-            std::cout << pomo_flag << model_str << rate_str << std::endl;
         } else {
             rate_str = model_str.substr(spec_pos);
             model_str = model_str.substr(0, spec_pos);

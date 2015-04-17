@@ -22,11 +22,18 @@ void ModelPoMo::init(const char *model_name,
     int nnuc = 4;
     assert(num_states == (nnuc + (nnuc*(nnuc-1)/2 * (N-1))) );
 
-    // TODO: Check model_name if it is supported and set parameters
-    // accordingly.
+    // TODO: Process model_name.
+    // DNA: HKY (default), JC, F81, K2P, K3P, K81uf, TN/TrN, TNef,
+    // TIM, TIMef, TVM, TVMef, SYM, GTR, or 6-digit model
+    // specification (e.g., 010010 = HKY).
     
-    // TODO: Process model_params, freq_type and freq_params and set
-    // model_name and full_name accordingly.
+    // TODO: Process model_params.  What is this?
+
+    // TODO: Process freq_type.  Take care, coden types can end up here.
+
+    // TODO: Process freq_params.  What is this?
+    
+    // TODO: Set model_name and full_name accordingly.
 	this->name = string(model_name);
 
     this->full_name = string(model_name) + " " +
