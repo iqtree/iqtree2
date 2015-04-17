@@ -2780,17 +2780,17 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -st CF or CFps       Counts File (automatically detected)."                        << endl
             << "                       Useful to customize the virtual population size `ps`"         << endl
             << "                       (5 <= ps <= 20; default is 10)."                              << endl
-            << "  -m <sm>+<pm>+<ft>"                                                                 << endl
+            << "  -m <sm>+<pm>+<ft>    Default: `HKY+rP+FO`."                                        << endl
             << "                 <sm>: Substitution model."                                          << endl
             << "                  DNA: HKY (default), JC, F81, K2P, K3P, K81uf, TN/TrN, TNef,"       << endl
             << "                       TIM, TIMef, TVM, TVMef, SYM, GTR, or 6-digit model"           << endl
             << "                       specification (e.g., 010010 = HKY)."                          << endl
             << "                 <pm>: PoMo model."                                                  << endl
-            << "                       - rP (reversible PoMo with tree inference)."                  << endl
+            << "                       - rP (default; reversible PoMo with tree inference)."         << endl
             << "                       - nrP (non-reversible PoMo; tree has to be given separately;" << endl
             << "                         not implemented yet)."                                      << endl
-            << "                 <ft>: Frequency type (optional)."                                   << endl
-            << "                       F or +FO or +FU or +FQ (default: optimized)."                 << endl
+            << "                 <ft>: Frequency type (optional; default: +FO, optimized)."          << endl
+            << "                       F or +FO or +FU or +FQ."                                      << endl
             << "                       Counted, optimized, user-defined, equal state frequency."     << endl
             << "  Until now, only DNA models work with PoM."                                         << endl
             << "  Model testing and rate heterogeneity do not work with PoMo yet."                   << endl

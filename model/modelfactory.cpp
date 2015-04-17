@@ -113,7 +113,7 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 		else if (tree->aln->seq_type == SEQ_BINARY) model_str = "GTR2";
 		else if (tree->aln->seq_type == SEQ_CODON) model_str = "GY";
 		else if (tree->aln->seq_type == SEQ_MORPH) model_str = "MK";
-        else if (tree->aln->seq_type == SEQ_COUNTSFORMAT) model_str = "HKY+rP";
+        else if (tree->aln->seq_type == SEQ_COUNTSFORMAT) model_str = "HKY+rP+FO";
 		else model_str = "JC";
         outWarning("Default model may be under-fitting. Use option '-m TEST' to select best-fit model.");
 	}
@@ -138,12 +138,17 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 			rate_str = model_str.substr(pos+1);
 			model_str = model_str.substr(0, pos+1);
 		} else if (model_str[spec_pos] == '+') {
+            // TODO: Still a bug here, cannot set rate_str and
+            // model_str before knowing if it is PoMo and standard HKY
+            // model with `-m HKY+F{0.22,0.22,0.23}` also does not
+            // work anymore.
+
             // Check for PoMo; if so, set model_str and rate_str
             // accordingly.
             size_t sspec_pos = model_str.find_first_of("+", spec_pos+1);
             std::string pomo;
             if (sspec_pos != string::npos) {
-                pomo = model_str.substr(spec_pos, sspec_pos);
+                pomo = model_str.substr(spec_pos, sspec_pos - spec_pos);
                 rate_str  = model_str.substr(sspec_pos);
                 model_str = model_str.substr(0,sspec_pos);
             } else {
