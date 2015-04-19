@@ -811,6 +811,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.probPerturbSS = 0.1;
     params.five_plus_five = false;
     params.tabu = false;
+    params.fastBran = false;
     params.numSupportTrees = 20;
     params.sprDist = 20;
     params.numNNITrees = 20;
@@ -2314,6 +2315,12 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.tabu = true;
 				continue;
 			}
+
+            if (strcmp(argv[cnt], "-fbran") == 0) {
+                params.fastBran = true;
+                continue;
+            }
+
 			if (strcmp(argv[cnt], "-toppars") == 0) {
 				cnt++;
 				if (cnt >= argc)

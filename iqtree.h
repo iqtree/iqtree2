@@ -310,7 +310,7 @@ public:
     double optimizeNNI(int &nni_count, int &nni_steps);
 
     /**
-     * Get branches for doing NNI.
+     * @brief Get branches for doing NNI that do not either belong to the tabu split or stable splits
      * @param nniBranches [OUT]
      * @param nonNNIBranches [OUT]
      * @param dad for navigation
@@ -318,7 +318,11 @@ public:
      */
     void getNNIBranches(Branches &nniBranches, Branches &nonNNIBranches, SplitIntMap* tabuSplits = NULL
             , SplitIntMap*candidateSplitHash = NULL, Node *dad = NULL, Node *node = NULL);
-
+    
+    /**
+     * @brief get branches that correspond to the splits in \a nniSplits
+     */
+    void getSplitBranches(Branches &branches, SplitIntMap &splits, Node *dad = NULL, Node *node = NULL);
 
     /**
      * 		Do fastNNI using PLL
@@ -354,6 +358,8 @@ public:
      * @param positiveNNI [OUT]
      */
     void evaluateNNIs(Branches &nniBranches, vector<NNIMove> &positiveNNIs);
+
+    double optimizeNNIBranches(Branches &nniBranches);
 
     /**
             search all positive NNI move on the current tree and save them

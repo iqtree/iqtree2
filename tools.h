@@ -408,6 +408,11 @@ extern int NNI_MAX_NR_STEP;
  */
 struct Params {
 
+    /**
+     *   Fast branch length optimization
+     */
+    bool fastBran;
+
 	/**
 	 *  Option to do mutlipe start for estimating alpha and p_invar
 	 */
