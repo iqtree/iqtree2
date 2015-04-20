@@ -906,7 +906,7 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
                 IQTree *iqtree = new IQTree(in_tree->aln);
                 cout << endl << "===> Testing model " << model+1 << ": " << params.model_name << endl;
                 runTreeReconstruction(params, original_model, *iqtree, model_info);
-                info.logl = tree->computeLikelihood();
+                info.logl = iqtree->computeLikelihood();
                 params.model_name = original_model;
                 tree = iqtree;
             } else {
