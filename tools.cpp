@@ -2751,12 +2751,18 @@ void usage_iqtree(char* argv[], bool full_command) {
             << endl << "AUTOMATIC MODEL SELECTION:" << endl
             << "  -m TEST              Select best-fit model for tree reconstruction" << endl
             << "  -m TESTONLY          Only do model selection, then stop" << endl
+            << "  -m TESTLINK or -m TESTONLYLINK" <<endl
+            << "                       Select best-fit partitioning scheme like PartitionFinder" << endl
             << "  -mset raxml          Restrict to only models supported by RAxML" << endl
             << "  -mset phyml          Restrict to only models supported by PhyML" << endl
             << "  -mset mrbayes        Restrict to only models supported by MrBayes" << endl
             << "  -mset m1,...,mk      Restrict to a comma-separated list of models" << endl
             << "  -mrate rm1,...,rmk   Restrict to a comma-separated list of rate heterogeneity" << endl
             << "                       (e.g. -mrate +G,+I)" << endl
+            << "  -cmax k              Max number of categories when testing FreeRate model [+R]" << endl
+            << "  -mtree               Do a full tree search for each testing model" << endl
+            << "  -mredo               Ignore .model file" << endl
+            << "  -mdef <nexus_file>   A model definition NEXUS file (see Manual)" << endl
 
             << endl << "SUBSTITUTION MODEL:" << endl
             << "  -m <model_name>" << endl

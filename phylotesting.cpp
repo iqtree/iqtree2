@@ -891,7 +891,7 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 			if (info.name == model_info[i].name) {
 				model_id = i;
 				if (info.df != model_info[i].df)
-					outError("Inconsistent model file, please delete it and rerun again: ", fmodel_str);
+					outError("Inconsistent model file " + fmodel_str + ", please rerun using -mredo option");
 				break;
 			}
 		if (model_id >= 0) {
