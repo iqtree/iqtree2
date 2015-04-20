@@ -392,10 +392,14 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
     cout.flush();
     double startTime = getCPUTime();
     int numDupPars = 0;
+    CandidateSet parsimonyTrees;
+    parsimonyTrees.init(this->aln, this->params);
+    parsimonyTrees.update(getTreeString(), getCurScore());
+
     for (int treeNr = 1; treeNr < nParTrees; treeNr++) {
         string curParsTree;
 
-        /********* Create parsimony tree using PLL *********/
+        /****************************** Create parsimony tree using PLL ******************************/
         if (params->start_tree == STT_PLL_PARSIMONY) {
 			pllInst->randomNumberSeed = params->ran_seed + treeNr * 12345;
 	        pllComputeRandomizedStepwiseAdditionParsimonyTree(pllInst, pllPartitions, params->sprDist);
@@ -408,26 +412,21 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
 			fixAllBranches(true);
 			curParsTree = getTreeString();
         } else {
-            /********* Create parsimony tree using IQ-TREE *********/
+        /****************************** Create parsimony tree using IQ-TREE ******************************/
             computeParsimonyTree(NULL, aln);
             curParsTree = getTreeString();
         }
 
-        if (candidateTrees.treeExist(curParsTree)) {
+        if (parsimonyTrees.treeExist(curParsTree)) {
             numDupPars++;
             continue;
         } else {
             if (params->count_trees) {
                 string tree = getTopologyString();
-                if (pllTreeCounter.find(tree) == pllTreeCounter.end()) {
-                    // not found in hash_map
-                    pllTreeCounter[curParsTree] = 1;
-                } else {
-                    // found in hash_map
-                    pllTreeCounter[curParsTree]++;
-                }
+                pllTreeCounter.find(tree) == pllTreeCounter.end() ? (pllTreeCounter[curParsTree] = 1)
+                                                                  : (pllTreeCounter[curParsTree]++);
         	}
-        	candidateTrees.update(curParsTree, -DBL_MAX);
+        	parsimonyTrees.update(curParsTree, 0.00);
         }
     }
     double parsTime = getCPUTime() - startTime;
@@ -438,21 +437,21 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
       			Compute logl of all parsimony trees
     ***********************************************************/
 
-    if (candidateTrees.size() > 1) {
+    if (parsimonyTrees.size() > 1) {
         cout << "Computing logl of parsimony trees ... " << endl;
         startTime = getCPUTime();
-        int cntParsimony = 0;
-        for (CandidateSet::iterator it = candidateTrees.begin(); it != candidateTrees.end(); it++) {
-            assert(it->first == -DBL_MAX);
-            readTreeString(it->second.tree);
-            string tree = optimizeBranches(2);
-            // Add tree to the candidate set
-            candidateTrees.update(tree, getCurScore());
-            cntParsimony++;
+        CandidateSet::iterator it = parsimonyTrees.begin();
+        for ( ; it != parsimonyTrees.end(); it++) {
+            if (it->first == 0.0) {
+                readTreeString(it->second.tree);
+                string tree = optimizeBranches(2);
+                candidateTrees.update(tree, getCurScore());
+            }
         }
         double loglTime = getCPUTime() - startTime;
         cout << "CPU time: " << loglTime << endl;
     }
+
 
     // Only select the best parsimony trees for doing NNI search
     vector<CandidateTree> bestParsimonyTrees;
@@ -1070,7 +1069,7 @@ void IQTree::getNNIBranches(Branches &nniBranches, Branches &tabuBranches, Split
                     /******************** CHECK TABU SPLIT **************************/
                     if (tabuSplits->findSplit(curSplit) != NULL) {
                         tabuBranches.push_back(curBranch);
-                    } else if (candidateSplitHash != NULL && !candidateSplitHash->empty()) {
+                    } else if (!candidateSplitHash->empty()) {
                         /******************** CHECK STABLE SPLIT **************************/
                         int value;
                         candidateSplitHash->findSplit(curSplit, value);

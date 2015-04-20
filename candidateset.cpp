@@ -178,36 +178,33 @@ void CandidateSet::initParentTrees() {
 }
 
 
-bool CandidateSet::update(string tree, double score) {
-	bool newTree = true;
+bool CandidateSet::update(string newTree, double newScore) {
+	bool notExisted = true;
 	CandidateTree candidate;
-	candidate.score = score;
-	candidate.topology = getTopology(tree);
-	candidate.tree = tree;
+	candidate.score = newScore;
+	candidate.topology = getTopology(newTree);
+	candidate.tree = newTree;
 
 	if (treeTopologyExist(candidate.topology)) {
-
-		newTree = false;
-	    /* If tree topology already exist but the score is better, we replace the old one
-	    by the new one (with new branch lengths) and update the score */
-		if (topologies[candidate.topology] < score) {
+		notExisted = false;
+		if (topologies[candidate.topology] < newScore || topologies[candidate.topology] == 0.0) {
 			//TODO Inefficient
 			removeCandidateTree(candidate.topology);
-			topologies[candidate.topology] = score;
+			topologies[candidate.topology] = newScore;
 			// insert tree into candidate set
-			insert(CandidateSet::value_type(score, candidate));
+			insert(CandidateSet::value_type(newScore, candidate));
 		}
 
 	} else {
 
-		if (getWorstScore() < score && size() >= params->maxCandidates) {
+		if (getWorstScore() < newScore && size() >= params->maxCandidates) {
 			// remove the worst-scoring tree
 			topologies.erase(begin()->second.topology);
 			erase(begin());
 		}
 
-		CandidateSet::iterator candidateTreeIt = insert(CandidateSet::value_type(score, candidate));
-		topologies[candidate.topology] = score;
+		CandidateSet::iterator candidateTreeIt = insert(CandidateSet::value_type(newScore, candidate));
+		topologies[candidate.topology] = newScore;
 
 		if (!candidateSplitsHash.empty()) {
 			// ranking of the inserted tree
@@ -230,7 +227,7 @@ bool CandidateSet::update(string tree, double score) {
 	}
 
 	assert(topologies.size() == size());
-	return newTree;
+	return notExisted;
 }
 
 vector<double> CandidateSet::getBestScores(int numBestScore) {

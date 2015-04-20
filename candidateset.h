@@ -41,6 +41,7 @@ struct CandidateTree {
 class CandidateSet : public multimap<double, CandidateTree> {
 
 public:
+
     /**
      * Initialization
      */
@@ -84,7 +85,7 @@ public:
      * @return false if tree topology already exists
      *
      */
-    bool update(string tree, double score);
+    bool update(string newTree, double newScore);
 
     /**
      *  Get the \a numBestScores best scores in the candidate set

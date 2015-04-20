@@ -1431,11 +1431,6 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
     /********************** Create an initial tree **********************/
     iqtree.computeInitialTree(dist_file);
     
-    //*** FOR TUNG: This is wrong! a NULL root was already treated correctly
-//    if (params.root == NULL) {
-//    	params.root = iqtree.aln->getSeqName(0).c_str();
-//    	iqtree.setRootNode(params.root);
-//    }
    	iqtree.setRootNode(params.root);
 
     /*************** SET UP PARAMETERS and model testing ****************/
@@ -1568,6 +1563,8 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
     double initEpsilon = params.min_iterations == 0 ? 0.001 : 0.1;
 	iqtree.clearAllPartialLH();
     string initTree = iqtree.optimizeModelParameters(true, initEpsilon);
+	//string initTree = iqtree.optimizeModelParameters(true, 0.001);
+
 
     /****************** NOW PERFORM MAXIMUM LIKELIHOOD TREE RECONSTRUCTION ******************/
 
