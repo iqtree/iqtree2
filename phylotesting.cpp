@@ -272,7 +272,7 @@ void copyCString(const char **cvec, int n, StrVector &strvec) {
  * @param nmodels (OUT) number of models
  * @return array of model names
  */
-void getModelList(Params &params, Alignment *aln, StrVector &models) {
+void getModelList(Params &params, Alignment *aln, StrVector &models, bool separate_rate = false) {
 	StrVector model_names;
 	SeqType seq_type = aln->seq_type;
 	if (seq_type == SEQ_BINARY) {
@@ -320,7 +320,7 @@ void getModelList(Params &params, Alignment *aln, StrVector &models) {
 	bool test_options_aa[] =     {true, true,   false, true,   true, true,   true,    false,   true,     true,false, false};
 	bool test_options_codon[] =  {true,false,   false,false,  false,false,  false,    false,  false,    false,false, false};
 	const int noptions = sizeof(rate_options) / sizeof(char*);
-	const char *must_options[] = {"+I", "+G", "+F","+ASC"};
+	const char *must_options[] = {"+I", "+G", "+F","+R","+ASC"};
 	const char *can_options[] = {"+i", "+g", "+f","+asc"};
 	const char *not_options[] = {"-I", "-G", "-F", "-ASC"};
 	int i, j;
@@ -374,6 +374,20 @@ void getModelList(Params &params, Alignment *aln, StrVector &models) {
 					ratedef.push_back(rate_options[j]);
 			ratehet.insert(ratehet.begin(), ratedef.begin(), ratedef.end());
 		}
+        for (j = 0; j < ratehet.size(); j++) {
+            if (ratehet[j] != "" && ratehet[j][0] != '+')
+                ratehet[j] = "+" + ratehet[j];
+            if (ratehet[j] == "+E") // for equal rate model 
+                ratehet[j] = "";
+        }
+        for (j = 0; j < ratehet.size(); j++)
+            if (ratehet[j] == "+R") {
+                ratehet[j] = "+R2";
+                for (int k = 3; k <= params.max_rate_cats; k++) {
+                    ratehet.insert(ratehet.begin()+j+k-2, "+R" + convertIntToString(k));
+                }
+                break;
+            }
 //		if (verbose_mode >= VB_MIN) {
 //			cout << "Rate heterogeneity under selection: ";
 //			for (j = 0; j < ratehet.size(); j++) {
@@ -381,15 +395,30 @@ void getModelList(Params &params, Alignment *aln, StrVector &models) {
 //			}
 //			cout << endl;
 //		}
-		for (i = 0; i < model_names.size(); i++)
-			for (j = 0; j < ratehet.size(); j++) {
-				models.push_back(model_names[i] + ratehet[j]);
-			}
+        if (separate_rate) {
+            for (i = 0; i < model_names.size(); i++) 
+                models.push_back(model_names[i]);
+            for (j = 0; j < ratehet.size(); j++)
+                models.push_back(ratehet[j]);
+        } else {
+            for (i = 0; i < model_names.size(); i++)
+                for (j = 0; j < ratehet.size(); j++) {
+                    models.push_back(model_names[i] + ratehet[j]);
+                }
+        }
 	} else {
-		for (i = 0; i < model_names.size(); i++)
-			for (j = 0; j < noptions; j++)
-				if (test_options[j])
-					models.push_back(model_names[i]+rate_options[j]);
+        if (separate_rate) {
+            for (i = 0; i < model_names.size(); i++)
+                models.push_back(model_names[i]);
+            for (j = 0; j < noptions; j++)
+                if (test_options[j])
+                    models.push_back(rate_options[j]);
+        } else {
+            for (i = 0; i < model_names.size(); i++)
+                for (j = 0; j < noptions; j++)
+                    if (test_options[j])
+                        models.push_back(model_names[i]+rate_options[j]);
+        }
 	}
 }
 
@@ -742,16 +771,6 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 	in_tree->optimize_by_newton = params.optimize_by_newton;
 	in_tree->setLikelihoodKernel(params.SSE);
 
-//	PhyloTree *tree_homo = new PhyloTree();
-//    tree_homo->copyPhyloTree(in_tree);
-//	tree_homo->optimize_by_newton = params.optimize_by_newton;
-//	tree_homo->setLikelihoodKernel(params.SSE);
-//
-//	PhyloTree *tree_hetero = new PhyloTree();
-//    tree_hetero->copyPhyloTree(in_tree);
-//	tree_hetero->optimize_by_newton = params.optimize_by_newton;
-//	tree_hetero->setLikelihoodKernel(params.SSE);
-
 	RateHeterogeneity * rate_class[5];
 	rate_class[0] = new RateHeterogeneity();
 	rate_class[1] = new RateInvar(-1, NULL);
@@ -811,13 +830,6 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 		}
 		// initialize tree
 		PhyloTree *tree = in_tree;
-/*
-		if (model_names[model].find("+G") == string::npos) {
-			tree = tree_homo;
-		} else {
-			tree = tree_hetero;
-		}
-*/
 		// initialize model
 		subst_model->setTree(tree);
 		if (model_names[model].find("+F") != string::npos)
@@ -1536,4 +1548,3 @@ void evaluateTrees(Params &params, IQTree *tree) {
 	IntVector distinct_ids;
 	evaluateTrees(params, tree, info, distinct_ids);
 }
-

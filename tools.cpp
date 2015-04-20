@@ -705,11 +705,14 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.ratehet_set = NULL;
     params.model_def_file = NULL;
     params.model_test_again = false;
+    params.model_test_and_tree = false;
+    params.model_test_separate_rate = false;
     params.optimize_mixmodel_weight = false;
     params.store_trans_matrix = false;
     //params.freq_type = FREQ_EMPIRICAL;
     params.freq_type = FREQ_UNKNOWN;
     params.num_rate_cats = 4;
+    params.max_rate_cats = 10;
     params.gamma_shape = -1.0;
     params.gamma_median = false;
     params.p_invar_sites = -1.0;
@@ -1642,6 +1645,14 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.model_test_again = true;
 				continue;
 			}
+			if (strcmp(argv[cnt], "-mtree") == 0) {
+				params.model_test_and_tree = true;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-msep") == 0) {
+				params.model_test_separate_rate = true;
+				continue;
+			}
 			if (strcmp(argv[cnt], "-mwopt") == 0) {
 				params.optimize_mixmodel_weight = true;
 				continue;
@@ -1748,6 +1759,15 @@ void parseArg(int argc, char *argv[], Params &params) {
 					throw "Use -c <#rate_category>";
 				params.num_rate_cats = convert_int(argv[cnt]);
 				if (params.num_rate_cats < 1)
+					throw "Wrong number of rate categories";
+				continue;
+			}
+			if (strcmp(argv[cnt], "-cmax") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -cmax <#max_rate_category>";
+				params.max_rate_cats = convert_int(argv[cnt]);
+				if (params.max_rate_cats < 1)
 					throw "Wrong number of rate categories";
 				continue;
 			}

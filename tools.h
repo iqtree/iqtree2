@@ -1075,6 +1075,12 @@ struct Params {
     /** true to redo model testing even if .model file exists */
     bool model_test_again;
 
+    /** true to perform tree reconstruction for each testing model (default: false) */
+    bool model_test_and_tree;
+
+    /** true to fist test equal rate model, then test rate heterogeneity (default: false) */
+    bool model_test_separate_rate;
+
     /** TRUE to optimize mixture model weights */
     bool optimize_mixmodel_weight;
 
@@ -1093,6 +1099,11 @@ struct Params {
             the number of rate categories
      */
     int num_rate_cats;
+
+    /**
+            maximum number of rate categories
+     */
+    int max_rate_cats;
 
     /**
             shape parameter (alpha) of the Gamma distribution for site rates
