@@ -1592,34 +1592,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
     double cputime_search_start = getCPUTime();
     double realtime_search_start = getRealTime();
 
-    if (params.min_iterations > 0) {
-        double initTime = getCPUTime();
-
-		/********************************** INITIALIZE THE CANDIDATE TREE SET ***************************************/
-		params.modelEps = initEpsilon;
-		if (!params.user_file && (params.start_tree == STT_PARSIMONY || params.start_tree == STT_PLL_PARSIMONY)) {
-        	iqtree.initCandidateTreeSet(params.numInitTrees, params.numNNITrees);
-        	assert(iqtree.candidateTrees.size() != 0);
-        	cout << "Finish initializing candidate tree set (" << iqtree.candidateTrees.size() << ")" << endl;
-        	if (params.write_local_optimal_trees) {
-        		printSuboptimalTrees(iqtree, params, ".init_suboptimal_trees");
-        	}
-        } else {
-            int nni_count = 0;
-            int nni_steps = 0;
-            cout << "Doing NNI on the initial tree ... " << endl;
-            string tree = iqtree.doNNISearch(nni_count, nni_steps);
-        	iqtree.candidateTrees.update(tree, iqtree.getCurScore());
-
-        }
-		params.modelEps = 0.001;
-
-        cout << "Current best tree score: " << iqtree.candidateTrees.getBestScore() << " / CPU time: " << getCPUTime() - initTime << endl;
-		cout << endl;
-	}
-
-
-    if (params.leastSquareNNI) {
+	if (params.leastSquareNNI) {
     	iqtree.computeSubtreeDists();
     }
     /* TUNG: what happens if params.root is not set? This is usually the case.

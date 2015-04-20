@@ -592,8 +592,7 @@ protected:
      */
     int k_represent;
 
-public:
-
+protected:
     /**
      *  Generate the initial candidate tree set
      *  @param nParTrees number of parsimony trees to generate
@@ -601,7 +600,13 @@ public:
      */
     void initCandidateTreeSet(int nParTrees, int nNNITrees);
 
+    /**
+     *  Update the candidate set with tree \a newTree. If a better tree is found, print notification to cout and print
+     *  the new best tree to file.
+     */
+    void updateCandidateSet(string &newTree);
 
+public:
     /**
      * Generate the initial tree (usually used for model parameter estimation)
      * @param dist_file only needed for BIONJ tree
