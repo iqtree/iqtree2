@@ -34,13 +34,15 @@
 #include "phyloanalysis.h"
 
 
-/* Binary model set */
+/******* Binary model set ******/
 const char* bin_model_names[] = { "JC2", "GTR2" };
 
-/* Morphological model set */
+
+/******* Morphological model set ******/
 const char* morph_model_names[] = {"MK", "ORDERED"};
 
-/* DNA model set */
+
+/******* DNA model set ******/
 const char* dna_model_names[] = { "JC", "F81", "K80", "HKY", "TNe",
 		"TN", "K81", "K81u", "TPM2", "TPM2u", "TPM3", "TPM3u", "TIMe", "TIM",
 		"TIM2e", "TIM2", "TIM3e", "TIM3", "TVMe", "TVM", "SYM", "GTR" };
@@ -55,11 +57,12 @@ const char* dna_model_names_rax[] ={"GTR"};
 /* DNA model supported by MrBayes */
 const char *dna_model_names_mrbayes[] = {"JC", "F81", "K80", "HKY", "SYM", "GTR"};
 
-/* Protein model set */
+
+/****** Protein model set ******/
 const char* aa_model_names[] = { "Dayhoff", "mtMAM", "JTT", "WAG",
 		"cpREV", "mtREV", "rtREV", "mtART", "mtZOA", "VT", "LG", "DCMut", "PMB",
 		"HIVb", "HIVw", "JTTDCMut", "FLU", "Blosum62" };
-
+        
 /* Protein models supported by PhyML/PartitionFinder */
 const char *aa_model_names_old[] = { "Dayhoff", "mtMAM", "JTT", "WAG",
 		"cpREV", "mtREV", "rtREV", "mtART", "VT", "LG", "DCMut",
@@ -72,8 +75,13 @@ const char *aa_model_names_rax[] = { "Dayhoff", "mtMAM", "JTT", "WAG",
 const char* aa_model_names_mrbayes[] = {"Poisson", "Dayhoff", "mtMAM", "JTT", "WAG",
 		"cpREV", "mtREV", "rtREV", "VT", "Blosum62" };
 
-/* Codon models */
+const char* aa_freq_names[] = {"", "+F"};
+
+
+/****** Codon models ******/
 const char *codon_model_names[] = {"MG", "GY", "ECM"};
+
+const char *codon_freq_names[] = {"", "+F1x4", "+F3x4", "+F"};
 
 const double TOL_LIKELIHOOD_MODELTEST = 0.01;
 
@@ -276,7 +284,16 @@ void copyCString(const char **cvec, int n, StrVector &strvec) {
  */
 void getModelList(Params &params, Alignment *aln, StrVector &models, bool separate_rate = false) {
 	StrVector model_names;
+    StrVector freq_names;
 	SeqType seq_type = aln->seq_type;
+    
+	const char *rate_options[] = {  "", "+I", "+ASC", "+G", "+I+G", "+ASC+G"};
+	bool test_options[] =        {true, true,  false, true,   true,    false};
+	bool test_options_morph[] =  {true,false,   true, true,  false,     true};
+	bool test_options_codon[] =  {true,false,  false,false,  false,    false};
+	const int noptions = sizeof(rate_options) / sizeof(char*);
+	int i, j;
+    
 	if (seq_type == SEQ_BINARY) {
 		copyCString(bin_model_names, sizeof(bin_model_names) / sizeof(char*), model_names);
 	} else if (seq_type == SEQ_MORPH) {
@@ -305,6 +322,7 @@ void getModelList(Params &params, Alignment *aln, StrVector &models, bool separa
 		} else {
 			convert_string_vec(params.model_set, model_names);
 		}
+        copyCString(aa_freq_names, sizeof(aa_freq_names)/sizeof(char*), freq_names);
 	} else if (seq_type == SEQ_CODON) {
 		if (params.model_set == NULL) {
 			if (aln->isStandardGeneticCode())
@@ -313,57 +331,33 @@ void getModelList(Params &params, Alignment *aln, StrVector &models, bool separa
 				copyCString(codon_model_names, sizeof(codon_model_names) / sizeof(char*) - 1, model_names);
 		} else
 			convert_string_vec(params.model_set, model_names);
+        copyCString(codon_freq_names, sizeof(codon_freq_names) / sizeof(char*), freq_names);
 	}
-
+    
 	if (model_names.empty()) return;
+    
+    if (params.state_freq_set)
+        convert_string_vec(params.state_freq_set, freq_names);
+    for (j = 0; j < freq_names.size(); j++)
+        if (freq_names[j] != "" && freq_names[j][0] != '+')
+            freq_names[j] = "+" + freq_names[j];
+    
+    if (freq_names.size() > 0) {
+        StrVector orig_model_names = model_names;
+        model_names.clear();
+        for (j = 0; j < orig_model_names.size(); j++)
+            for (i = 0; i < freq_names.size(); i++)
+                model_names.push_back(orig_model_names[j] + freq_names[i]);
+    }
 
-	const char *rate_options[] = {  "", "+I",  "+ASC", "+F", "+I+F", "+G", "+I+G", "+ASC+G", "+G+F", "+I+G+F", "+R", "+R+F"};
-	bool test_options[] =        {true, true,   false, false, false, true,   true,    false,  false,    false,false, false};
-	bool test_options_aa[] =     {true, true,   false, true,   true, true,   true,    false,   true,     true,false, false};
-	bool test_options_codon[] =  {true,false,   false,false,  false,false,  false,    false,  false,    false,false, false};
-	const int noptions = sizeof(rate_options) / sizeof(char*);
-	const char *must_options[] = {"+I", "+G", "+F","+R","+ASC"};
-	const char *can_options[] = {"+i", "+g", "+f","+asc"};
-	const char *not_options[] = {"-I", "-G", "-F", "-ASC"};
-	int i, j;
-	if (seq_type == SEQ_PROTEIN) {
-		// test all options for protein, incl. +F
-		for (i = 0; i < noptions; i++)
-			test_options[i] = test_options_aa[i];
-	} else if (seq_type == SEQ_CODON) {
+	if (seq_type == SEQ_CODON) {
 		for (i = 0; i < noptions; i++)
 			test_options[i] = test_options_codon[i];
 	} else if (seq_type == SEQ_MORPH) {
-		// turn off +I
 		for (i = 0; i < noptions; i++)
-			if (strstr(rate_options[i],"+I") != NULL)
-				test_options[i] = false;
-		// turn on +ASC
-		for (i = 0; i < noptions; i++)
-			if (strstr(rate_options[i],"+ASC") != NULL)
-				test_options[i] = true;
+			test_options[i] = test_options_morph[i];
 	}
-	// can-have option
-	for (j = 0; j < sizeof(can_options)/sizeof(char*); j++)
-	if (params.model_name.find(can_options[j]) != string::npos) {
-		for (i = 0; i < noptions; i++)
-			if (strstr(rate_options[i], must_options[j]) != NULL)
-				test_options[i] = true;
-	}
-	// must-have option
-	for (j = 0; j < sizeof(must_options)/sizeof(char*); j++)
-	if (params.model_name.find(must_options[j]) != string::npos) {
-		for (i = 0; i < noptions; i++)
-			if (strstr(rate_options[i], must_options[j]) == NULL)
-				test_options[i] = false;
-	}
-	// not-have option
-	for (j = 0; j < sizeof(not_options)/sizeof(char*); j++)
-	if (params.model_name.find(not_options[j]) != string::npos) {
-		for (i = 0; i < noptions; i++)
-			if (strstr(rate_options[i], must_options[j]))
-				test_options[i] = false;
-	}
+
 	if (params.ratehet_set) {
 		// take the rate_options from user-specified models
 		StrVector ratehet;

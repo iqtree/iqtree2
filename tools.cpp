@@ -702,6 +702,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.stop_confidence = 0.95;
     params.model_name = "";
     params.model_set = NULL;
+    params.state_freq_set = NULL;
     params.ratehet_set = NULL;
     params.model_def_file = NULL;
     params.model_test_again = false;
@@ -1627,10 +1628,17 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.model_set = argv[cnt];
 				continue;
 			}
+			if (strcmp(argv[cnt], "-mfreq") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -mfreq <state_freq_set>";
+				params.state_freq_set = argv[cnt];
+				continue;
+			}
 			if (strcmp(argv[cnt], "-mrate") == 0) {
 				cnt++;
 				if (cnt >= argc)
-					throw "Use -mrate <model_set>";
+					throw "Use -mrate <rate_set>";
 				params.ratehet_set = argv[cnt];
 				continue;
 			}
@@ -2757,9 +2765,10 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -mset phyml          Restrict to only models supported by PhyML" << endl
             << "  -mset mrbayes        Restrict to only models supported by MrBayes" << endl
             << "  -mset m1,...,mk      Restrict to a comma-separated list of models" << endl
-            << "  -mrate rm1,...,rmk   Restrict to a comma-separated list of rate heterogeneity" << endl
+            << "  -mfreq f1,...,fk     Restrict to a comma-separated list of state frequencies" << endl
+            << "  -mrate r1,...,rk     Restrict to a comma-separated list of rate heterogeneity" << endl
             << "                       (e.g. -mrate +G,+I)" << endl
-            << "  -cmax k              Max number of categories when testing FreeRate model [+R]" << endl
+            << "  -cmax <kmax>         Max number of categories when testing FreeRate model [+R]" << endl
             << "  -mtree               Do a full tree search for each testing model" << endl
             << "  -mredo               Ignore .model file" << endl
             << "  -mdef <nexus_file>   A model definition NEXUS file (see Manual)" << endl
