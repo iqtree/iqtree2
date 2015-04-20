@@ -17,7 +17,7 @@ public:
 		@param ncat number of rate categories
 		@param tree associated phylogenetic tree
 	*/
-    RateFree(int ncat, double start_alpha, string params, PhyloTree *tree);
+    RateFree(int ncat, double start_alpha, string params, bool sorted_rates, PhyloTree *tree);
 
 	virtual ~RateFree();
 
