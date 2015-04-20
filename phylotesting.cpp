@@ -31,6 +31,8 @@
 #include "model/modelmorphology.h"
 #include "timeutil.h"
 
+#include "phyloanalysis.h"
+
 
 /* Binary model set */
 const char* bin_model_names[] = { "JC2", "GTR2" };
@@ -802,7 +804,8 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 			<< ((seq_type == SEQ_BINARY) ? "binary" : ((seq_type == SEQ_DNA) ? "DNA" :
 				((seq_type == SEQ_PROTEIN) ? "protein": ((seq_type == SEQ_CODON) ? "codon": "morphological"))))
 			<< " models (sample size: " << ssize << ") ..." << endl;
-		cout << " No. Model         -LnL         df  AIC          AICc         BIC" << endl;
+        if (!params.model_test_and_tree)
+            cout << " No. Model         -LnL         df  AIC          AICc         BIC" << endl;
 	}
 	if (params.print_site_lh) {
 		ofstream sitelh_out(sitelh_file.c_str());
@@ -822,65 +825,66 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 
 	for (model = 0; model < model_names.size(); model++) {
 		//cout << model_names[model] << endl;
-		if (model_names[model].find("+ASC") != string::npos) {
-			model_fac->unobserved_ptns = in_tree->aln->getUnobservedConstPatterns();
-			if (model_fac->unobserved_ptns.size() == 0) continue;
-		} else {
-			model_fac->unobserved_ptns = "";
-		}
-		// initialize tree
 		PhyloTree *tree = in_tree;
-		// initialize model
-		subst_model->setTree(tree);
-		if (model_names[model].find("+F") != string::npos)
-			subst_model->init(model_names[model].substr(0, model_names[model].find('+')).c_str(), "", FREQ_EMPIRICAL, "");
-		else
-			subst_model->init(model_names[model].substr(0, model_names[model].find('+')).c_str(), "", FREQ_UNKNOWN, "");
-		tree->params = &params;
+        
+        if (model_names[model].find("+ASC") != string::npos) {
+            model_fac->unobserved_ptns = in_tree->aln->getUnobservedConstPatterns();
+            if (model_fac->unobserved_ptns.size() == 0) continue;
+        } else {
+            model_fac->unobserved_ptns = "";
+        }
+        // initialize tree
+        // initialize model
+        subst_model->setTree(tree);
+        if (model_names[model].find("+F") != string::npos)
+            subst_model->init(model_names[model].substr(0, model_names[model].find('+')).c_str(), "", FREQ_EMPIRICAL, "");
+        else
+            subst_model->init(model_names[model].substr(0, model_names[model].find('+')).c_str(), "", FREQ_UNKNOWN, "");
+        tree->params = &params;
 
-		tree->setModel(subst_model);
-		// initialize rate
-		size_t pos;
-		if ((pos = model_names[model].find("+R")) != string::npos) {
-			tree->setRate(rate_class[4]);
-			if (model_names[model].length() > pos+2 && isdigit(model_names[model][pos+2])) {
-				int ncat = convert_int(model_names[model].c_str() + pos+2);
-				if (ncat < 1) outError("Wrong number of category for +R in " + model_names[model]);
-				tree->getRate()->setNCategory(ncat);
-			}
-		} else if (model_names[model].find("+I") != string::npos && (pos = model_names[model].find("+G")) != string::npos) {
-			tree->setRate(rate_class[3]);
-			if (model_names[model].length() > pos+2 && isdigit(model_names[model][pos+2])) {
-				int ncat = convert_int(model_names[model].c_str() + pos+2);
-				if (ncat < 1) outError("Wrong number of category for +G in " + model_names[model]);
-				tree->getRate()->setNCategory(ncat);
-			}
-		} else if ((pos = model_names[model].find("+G")) != string::npos) {
-			tree->setRate(rate_class[2]);
-			if (model_names[model].length() > pos+2 && isdigit(model_names[model][pos+2])) {
-				int ncat = convert_int(model_names[model].c_str() + pos+2);
-				if (ncat < 1) outError("Wrong number of category for +G in " + model_names[model]);
-				tree->getRate()->setNCategory(ncat);
-			}
-		} else if (model_names[model].find("+I") != string::npos)
-			tree->setRate(rate_class[1]);
-		else
-			tree->setRate(rate_class[0]);
+        tree->setModel(subst_model);
+        // initialize rate
+        size_t pos;
+        if ((pos = model_names[model].find("+R")) != string::npos) {
+            tree->setRate(rate_class[4]);
+            if (model_names[model].length() > pos+2 && isdigit(model_names[model][pos+2])) {
+                int ncat = convert_int(model_names[model].c_str() + pos+2);
+                if (ncat < 1) outError("Wrong number of category for +R in " + model_names[model]);
+                tree->getRate()->setNCategory(ncat);
+            }
+        } else if (model_names[model].find("+I") != string::npos && (pos = model_names[model].find("+G")) != string::npos) {
+            tree->setRate(rate_class[3]);
+            if (model_names[model].length() > pos+2 && isdigit(model_names[model][pos+2])) {
+                int ncat = convert_int(model_names[model].c_str() + pos+2);
+                if (ncat < 1) outError("Wrong number of category for +G in " + model_names[model]);
+                tree->getRate()->setNCategory(ncat);
+            }
+        } else if ((pos = model_names[model].find("+G")) != string::npos) {
+            tree->setRate(rate_class[2]);
+            if (model_names[model].length() > pos+2 && isdigit(model_names[model][pos+2])) {
+                int ncat = convert_int(model_names[model].c_str() + pos+2);
+                if (ncat < 1) outError("Wrong number of category for +G in " + model_names[model]);
+                tree->getRate()->setNCategory(ncat);
+            }
+        } else if (model_names[model].find("+I") != string::npos)
+            tree->setRate(rate_class[1]);
+        else
+            tree->setRate(rate_class[0]);
 
-		tree->getRate()->setTree(tree);
+        tree->getRate()->setTree(tree);
 
-		// initialize model factory
-		model_fac->model = subst_model;
-		model_fac->site_rate = tree->getRate();
+        // initialize model factory
+        model_fac->model = subst_model;
+        model_fac->site_rate = tree->getRate();
         tree->setModelFactory(model_fac);
 
-		tree->clearAllPartialLH();
+        tree->clearAllPartialLH();
 
-		ModelInfo info;
 
 		// optimize model parameters
+		ModelInfo info;        
 		info.set_name = set_name;
-		info.df = model_fac->getNParameters();
+		info.df = tree->getModelFactory()->getNParameters();
 		info.name = tree->getModelName();
 		int model_id = -1;
 		for (int i = 0; i < model_info.size(); i++)
@@ -893,13 +897,26 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 		if (model_id >= 0) {
 			info.logl = model_info[model_id].logl;
 		} else {
-	        if (tree->getRate()->getNRate() > num_cat) {
-	        	tree->deleteAllPartialLh();
-	    		tree->initializeAllPartialLh();
-	    		num_cat = tree->getRate()->getNRate();
-	    	}
-
-			info.logl = tree->getModelFactory()->optimizeParameters(false, false, TOL_LIKELIHOOD_MODELTEST);
+            if (params.model_test_and_tree) {
+                string original_model = params.model_name;
+                params.model_name = model_names[model];
+                if (in_tree->isSuperTree()) {
+                    outError("-mtree option not supported for partition model");
+                }
+                IQTree *iqtree = new IQTree(in_tree->aln);
+                cout << endl << "===> Testing model " << model+1 << ": " << params.model_name << endl;
+                runTreeReconstruction(params, original_model, *iqtree, model_info);
+                info.logl = tree->computeLikelihood();
+                params.model_name = original_model;
+                tree = iqtree;
+            } else {
+                if (tree->getRate()->getNRate() > num_cat) {
+                    tree->deleteAllPartialLh();
+                    tree->initializeAllPartialLh();
+                    num_cat = tree->getRate()->getNRate();
+                }
+                info.logl = tree->getModelFactory()->optimizeParameters(false, false, TOL_LIKELIHOOD_MODELTEST);
+            }
 			// print information to .model file
 			if (!fmodel.is_open()) {
 				fmodel.open(fmodel_str.c_str(), ios::app);
@@ -936,6 +953,10 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 			const char *model_name = (params.print_site_lh) ? info.name.c_str() : NULL;
 			if (params.print_site_lh)
 				printSiteLh(sitelh_file.c_str(), tree, NULL, true, model_name);
+            if (params.model_test_and_tree) {
+                delete tree;
+                tree = NULL;
+            }
 		}
 		computeInformationScores(info.logl, info.df, ssize, info.AIC_score, info.AICc_score, info.BIC_score);
 		if (model_id >= 0) {
@@ -943,9 +964,9 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 		} else {
 			model_info.push_back(info);
 		}
-		tree->setModel(NULL);
-		tree->setModelFactory(NULL);
-		tree->setRate(NULL);
+        in_tree->setModel(NULL);
+        in_tree->setModelFactory(NULL);
+        in_tree->setRate(NULL);
 
 		if (set_name != "") continue;
 
