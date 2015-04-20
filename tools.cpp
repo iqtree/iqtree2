@@ -2318,6 +2318,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 
             if (strcmp(argv[cnt], "-fbran") == 0) {
                 params.fastBran = true;
+                //params.nni5 = false;
                 continue;
             }
 

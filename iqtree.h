@@ -827,6 +827,7 @@ protected:
 
     void estDeltaMin();
 
+    void convertNNI2Splits(SplitIntMap &nniSplits, int numNNIs, vector<NNIMove> &compatibleNNIs);
 };
 
 void estimateNNICutoff(Params &params);

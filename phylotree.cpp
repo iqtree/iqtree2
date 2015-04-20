@@ -261,7 +261,7 @@ void PhyloTree::setRootNode(const char *my_root) {
     assert(root);
 }
 
-void PhyloTree::readTreeString(const string &tree_string, bool buildSplits) {
+void PhyloTree::readTreeString(const string &tree_string) {
 	stringstream str;
 	str << tree_string;
 	str.seekg(0, ios::beg);
@@ -278,7 +278,7 @@ void PhyloTree::readTreeString(const string &tree_string, bool buildSplits) {
 	}
 	resetCurScore();
 //	lhComputed = false;
-    if (params->fixStableSplits && buildSplits) {
+    if (params->fixStableSplits) {
         buildNodeSplit();
     }
 }

@@ -470,20 +470,21 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
     	int nniCount, nniStep;
         double initLogl;
         string candidateTree;
-        readTreeString(it->tree, params->fixStableSplits);
+        readTreeString(it->tree);
         computeLogL();
         initLogl = getCurScore();
         candidateTree = doNNISearch(nniCount, nniStep);
-        bool newTree;
-        newTree = candidateTrees.update(candidateTree, curScore);
+        bool treeExisted = candidateTrees.treeExist(candidateTree);
+        //newTree = candidateTrees.update(candidateTree, curScore);
         if (curScore > candidateTrees.getBestScore()) {
-            if (newTree) {
+            if (!treeExisted) {
                 cout << "BETTER TREE FOUND at iteration " << getCurIt() << ": " << getCurScore() << endl;
                 stop_rule.addImprovedIteration(curIt);
             } else {
                 cout << "BETTER SCORE FOUND at iteration " << getCurIt() << ": " << getCurScore() << endl;
             }
         }
+        candidateTrees.update(candidateTree, curScore);
         cout << "Iteration " << getCurIt() << " / LogL: " << initLogl << " -> " << getCurScore();
         cout << " / " << nniStep << " rounds, " << nniCount << " NNIs ";
         cout << " / Time: " << convert_time(getRealTime() - params->start_real_time) << endl;
@@ -1023,7 +1024,7 @@ void IQTree::getNonTabuBranches(Branches& allBranches, SplitGraph& tabuSplits, B
 	}
 }
 
-void IQTree::getSplitBranches(Branches &branches, SplitIntMap &splits, Node *dad, Node *node) {
+void IQTree::getSplitBranches(Branches &branches, SplitIntMap &splits, Node *node, Node *dad) {
     if (!node) {
         node = root;
     }
@@ -1039,8 +1040,10 @@ void IQTree::getSplitBranches(Branches &branches, SplitIntMap &splits, Node *dad
                 if (curSplit->shouldInvert())
                     curSplit->invert();
                 if (splits.findSplit(curSplit) != NULL) {
+                    //curSplit->report(cout);
                     branches.push_back(curBranch);
                 }
+                delete curSplit;
             }
             getSplitBranches(branches, splits, (*it)->node, node);
         }
@@ -1112,7 +1115,7 @@ string IQTree::doRandomNNIs(int numNNI) {
         NNIMove randNNI = getRandomNNI(nniBranches[randInt]);
         doNNI(randNNI, true);
         if (params->tabu || params->fastBran) {
-            Split *sp = getSplit(nniBranches[randInt].first, nniBranches[randInt].second);
+            Split *sp = getSplit(randNNI.node1, randNNI.node2);
             Split *tabuSplit = new Split(*sp);
             if (tabuSplit->shouldInvert()) {
                 tabuSplit->invert();
@@ -1137,6 +1140,7 @@ string IQTree::doRandomNNIs(int numNNI) {
     if (params->fastBran) {
         Branches optBranches;
         getSplitBranches(optBranches, tabuSplits);
+        assert(optBranches.size() == tabuSplits.size());
         optimizeNNIBranches(optBranches);
     }
 
@@ -1757,9 +1761,9 @@ double IQTree::doTreeSearch() {
                 int numNNI = ceil(searchinfo.curPerStrength * numNonStableBranches);
 
                 if (params->five_plus_five) {
-                    readTreeString(candidateTrees.getNextCandTree(), params->fixStableSplits);
+                    readTreeString(candidateTrees.getNextCandTree());
                 } else {
-                    readTreeString(candidateTrees.getRandCandTree(), params->fixStableSplits);
+                    readTreeString(candidateTrees.getRandCandTree());
                 }
 
                 if (params->iqp) {
@@ -1799,17 +1803,17 @@ double IQTree::doTreeSearch() {
         int nni_steps = 0;
 
         string candidateTree = doNNISearch(nni_count, nni_steps);
-
-        bool newTree;
-        newTree = candidateTrees.update(candidateTree, curScore);
+        bool treeExisted = candidateTrees.treeExist(candidateTree);
+        //newTree = candidateTrees.update(candidateTree, curScore);
         if (curScore > candidateTrees.getBestScore()) {
-            if (newTree) {
+            if (!treeExisted) {
                 cout << "BETTER TREE FOUND at iteration " << getCurIt() << ": " << getCurScore() << endl;
                 stop_rule.addImprovedIteration(curIt);
             } else {
                 cout << "BETTER SCORE FOUND at iteration " << getCurIt() << ": " << getCurScore() << endl;
             }
         }
+        candidateTrees.update(candidateTree, curScore);
 
         if (verbose_mode >= VB_DEBUG) {
             nniFile << nni_steps << "   " << nni_count << endl;
@@ -1976,6 +1980,8 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
     positiveNNIs.reserve(numInnerBranches);
     string candidateTree = "";
     bool betterScore = false;
+    // New splits created by NNIs in each step
+    SplitIntMap nniSplits;
 
     for (nni_steps = 1; nni_steps <= MAXSTEPS; nni_steps++) {
         double oldScore = curScore;
@@ -2031,8 +2037,18 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
         // do non-conflicting positive NNIs
         doNNIs(numNNIs, compatibleNNIs);
 
-        // Re-estimate branch lengths of the new tree
-        curScore = optimizeAllBranches(1, params->loglh_epsilon, PLL_NEWZPERCYCLE);
+        if (params->fastBran) {
+            nniSplits.clear();
+            convertNNI2Splits(nniSplits, numNNIs, compatibleNNIs);
+            Branches nniBranches;
+            getSplitBranches(nniBranches, nniSplits);
+            assert(nniBranches.size() == nniSplits.size());
+            //optimizeNNIBranches(nniBranches);
+            curScore = computeLikelihood();
+        } else {
+            // Re-estimate branch lengths of the new tree
+            curScore = optimizeAllBranches(1, params->loglh_epsilon, PLL_NEWZPERCYCLE);
+        }
 
         // curScore should be larger than score of the best NNI
         if (curScore < compatibleNNIs.at(0).newloglh - params->loglh_epsilon) {
@@ -2078,6 +2094,9 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
 //        }
     }
 
+    if (params->fastBran) {
+        curScore = optimizeAllBranches(1, params->loglh_epsilon, PLL_NEWZPERCYCLE);
+    }
 
     if (nni_count == 0) {
         cout << "NOTE: Input tree is already NNI-local optimal" << endl;
@@ -3176,3 +3195,12 @@ void IQTree::printIntermediateTree(int brtype) {
 }
 
 
+void IQTree::convertNNI2Splits(SplitIntMap &nniSplits, int numNNIs, vector<NNIMove> &compatibleNNIs) {
+    for (int i = 0; i < numNNIs; i++) {
+        Split *sp = new Split(*getSplit(compatibleNNIs[i].node1, compatibleNNIs[i].node2));
+        if (sp->shouldInvert()) {
+            sp->invert();
+        }
+        nniSplits.insertSplit(sp, 1);
+    }
+}
