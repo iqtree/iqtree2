@@ -2769,6 +2769,7 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -mrate r1,...,rk     Restrict to a comma-separated list of rate heterogeneity" << endl
             << "                       (e.g. -mrate +G,+I)" << endl
             << "  -cmax <kmax>         Max number of categories when testing FreeRate model [+R]" << endl
+            << "  -msep                Perform model selection and then rate selection" << endl
             << "  -mtree               Do a full tree search for each testing model" << endl
             << "  -mredo               Ignore .model file" << endl
             << "  -mdef <nexus_file>   A model definition NEXUS file (see Manual)" << endl

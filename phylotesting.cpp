@@ -358,9 +358,10 @@ void getModelList(Params &params, Alignment *aln, StrVector &models, bool separa
 			test_options[i] = test_options_morph[i];
 	}
 
+    StrVector ratehet;
+
 	if (params.ratehet_set) {
 		// take the rate_options from user-specified models
-		StrVector ratehet;
 		convert_string_vec(params.ratehet_set, ratehet);
 		if (!ratehet.empty() && ratehet[0] == "default") {
 			ratehet.erase(ratehet.begin());
@@ -384,38 +385,26 @@ void getModelList(Params &params, Alignment *aln, StrVector &models, bool separa
                 }
                 break;
             }
-//		if (verbose_mode >= VB_MIN) {
-//			cout << "Rate heterogeneity under selection: ";
-//			for (j = 0; j < ratehet.size(); j++) {
-//				cout << ratehet[j] << " ";
-//			}
-//			cout << endl;
-//		}
-        if (separate_rate) {
-            for (i = 0; i < model_names.size(); i++) 
-                models.push_back(model_names[i]);
-            for (j = 0; j < ratehet.size(); j++)
+    } else {
+        for (j = 0; j < noptions; j++)
+            if (test_options[j])
+                ratehet.push_back(rate_options[j]);
+        
+    }
+
+    if (separate_rate) {
+        for (i = 0; i < model_names.size(); i++) 
+            models.push_back(model_names[i]);
+        for (j = 0; j < ratehet.size(); j++)
+            if (ratehet[j] != "")
                 models.push_back(ratehet[j]);
-        } else {
-            for (i = 0; i < model_names.size(); i++)
-                for (j = 0; j < ratehet.size(); j++) {
-                    models.push_back(model_names[i] + ratehet[j]);
-                }
-        }
-	} else {
-        if (separate_rate) {
-            for (i = 0; i < model_names.size(); i++)
-                models.push_back(model_names[i]);
-            for (j = 0; j < noptions; j++)
-                if (test_options[j])
-                    models.push_back(rate_options[j]);
-        } else {
-            for (i = 0; i < model_names.size(); i++)
-                for (j = 0; j < noptions; j++)
-                    if (test_options[j])
-                        models.push_back(model_names[i]+rate_options[j]);
-        }
-	}
+    } else {
+        for (i = 0; i < model_names.size(); i++)
+            for (j = 0; j < ratehet.size(); j++) {
+                models.push_back(model_names[i] + ratehet[j]);
+            }
+    }
+
 }
 
 /*
@@ -705,10 +694,10 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 	sitelh_file += ".sitelh";
 	in_tree->params = &params;
 	StrVector model_names;
-	getModelList(params, in_tree->aln, model_names);
+	getModelList(params, in_tree->aln, model_names, params.model_test_separate_rate);
 	int model;
 
-	string best_model;
+	string best_model = "";
 	/* first check the model file */
 	bool ok_model_file = false;
 	if (!params.print_site_lh && !params.model_test_again) {
@@ -816,9 +805,27 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 	}
 
 	int num_cat = 0;
+    int model_aic = 0, model_aicc = 0, model_bic = 0;
+
 
 	for (model = 0; model < model_names.size(); model++) {
 		//cout << model_names[model] << endl;
+        if (model_names[model] == "" || model_names[model][0] == '+') {
+            // now switching to test rate heterogeneity
+            if (best_model == "")
+                switch (params.model_test_criterion) {
+                case MTC_AIC:
+                    best_model = model_info[model_aic].name;
+                    break;
+                case MTC_AICC:
+                    best_model = model_info[model_aicc].name;
+                    break;
+                case MTC_BIC:
+                    best_model = model_info[model_bic].name;
+                    break;
+                }
+            model_names[model] = best_model + model_names[model];
+        }
 		PhyloTree *tree = in_tree;
         
         if (model_names[model].find("+ASC") != string::npos) {
@@ -895,7 +902,7 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
                 string original_model = params.model_name;
                 params.model_name = model_names[model];
                 if (in_tree->isSuperTree()) {
-                    outError("-mtree option not supported for partition model");
+                    outError("-mtree option is not supported for partition model");
                 }
                 IQTree *iqtree = new IQTree(in_tree->aln);
                 cout << endl << "===> Testing model " << model+1 << ": " << params.model_name << endl;
@@ -957,7 +964,15 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 			model_info[model_id] = info;
 		} else {
 			model_info.push_back(info);
+            model_id = model_info.size()-1;
 		}
+		if (model_info[model_id].AIC_score < model_info[model_aic].AIC_score)
+			model_aic = model_id;
+		if (model_info[model_id].AICc_score < model_info[model_aicc].AICc_score)
+			model_aicc = model_id;
+		if (model_info[model_id].BIC_score < model_info[model_bic].BIC_score)
+			model_bic = model;
+        
         in_tree->setModel(NULL);
         in_tree->setModelFactory(NULL);
         in_tree->setRate(NULL);
@@ -984,19 +999,18 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 
 
 	//cout.unsetf(ios::fixed);
-	int model_aic = 0, model_aicc = 0, model_bic = 0;
 	/*
 	for (it = model_info.begin(); it != model_info.end(); it++)
 		computeInformationScores(it->logl, it->df, ssize, it->AIC_score, it->AICc_score, it->BIC_score);
 */
-	for (it = model_info.begin(), model = 0; it != model_info.end(); it++, model++) {
-		if ((*it).AIC_score < model_info[model_aic].AIC_score)
-			model_aic = model;
-		if ((*it).AICc_score < model_info[model_aicc].AICc_score)
-			model_aicc = model;
-		if ((*it).BIC_score < model_info[model_bic].BIC_score)
-			model_bic = model;
-	}
+//	for (it = model_info.begin(), model = 0; it != model_info.end(); it++, model++) {
+//		if ((*it).AIC_score < model_info[model_aic].AIC_score)
+//			model_aic = model;
+//		if ((*it).AICc_score < model_info[model_aicc].AICc_score)
+//			model_aicc = model;
+//		if ((*it).BIC_score < model_info[model_bic].BIC_score)
+//			model_bic = model;
+//	}
 	if (set_name == "") {
 		cout << "Akaike Information Criterion:           " << model_info[model_aic].name << endl;
 		cout << "Corrected Akaike Information Criterion: " << model_info[model_aicc].name << endl;
