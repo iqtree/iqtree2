@@ -29,12 +29,15 @@ RateGamma::RateGamma(int ncat, double shape, bool median, PhyloTree *tree) : Rat
 	phylo_tree = tree;
 	cut_median = median;
 	//gamma_shape = MAX_GAMMA_SHAPE-1.0;
-	gamma_shape = 1.0;
+	gamma_shape = max(MIN_GAMMA_SHAPE, fabs(shape));
 	fix_gamma_shape = false;
 	rates = NULL;
-	if (shape >= 0) {
-		gamma_shape = shape;
+	if (shape > 0.0) {
+//		gamma_shape = shape;
 		fix_gamma_shape = true;
+	} else if (shape == 0.0) {
+		gamma_shape = max(MIN_GAMMA_SHAPE, random_double() * 10.0);
+		cout << "Randomize initial gamma shape (alpha): " << gamma_shape << endl;
 	}
 	setNCategory(ncat);
 }

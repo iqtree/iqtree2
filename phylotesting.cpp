@@ -759,9 +759,9 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 	RateHeterogeneity * rate_class[5];
 	rate_class[0] = new RateHeterogeneity();
 	rate_class[1] = new RateInvar(-1, NULL);
-	rate_class[2] = new RateGamma(params.num_rate_cats, -1, params.gamma_median, NULL);
-	rate_class[3] = new RateGammaInvar(params.num_rate_cats, -1, params.gamma_median, -1, params.optimize_model_rate_joint, params.rr_ai, NULL);
-	rate_class[4] = new RateFree(params.num_rate_cats, "", NULL);
+	rate_class[2] = new RateGamma(params.num_rate_cats, params.gamma_shape, params.gamma_median, NULL);
+	rate_class[3] = new RateGammaInvar(params.num_rate_cats, params.gamma_shape, params.gamma_median, -1, params.optimize_model_rate_joint, params.rr_ai, NULL);
+	rate_class[4] = new RateFree(params.num_rate_cats, params.gamma_shape, "", NULL);
 	ModelGTR *subst_model = NULL;
 	if (seq_type == SEQ_BINARY)
 		subst_model = new ModelBIN("JC2", "", FREQ_UNKNOWN, "", in_tree);
@@ -810,7 +810,7 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 
 	for (model = 0; model < model_names.size(); model++) {
 		//cout << model_names[model] << endl;
-        if (model_names[model] == "" || model_names[model][0] == '+') {
+        if (model_names[model][0] == '+') {
             // now switching to test rate heterogeneity
             if (best_model == "")
                 switch (params.model_test_criterion) {

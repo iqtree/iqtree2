@@ -346,12 +346,12 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 			if (close_bracket == string::npos)
 				outError("Close bracket not found in ", rate_str);
 			gamma_shape = convert_double(rate_str.substr(posG+3+end_pos, close_bracket-posG-3-end_pos).c_str());
-			if (gamma_shape < MIN_GAMMA_SHAPE || gamma_shape > MAX_GAMMA_SHAPE) {
-				stringstream str;
-				str << "Gamma shape parameter " << gamma_shape << "out of range ["
-						<< MIN_GAMMA_SHAPE << ',' << MAX_GAMMA_SHAPE << "]" << endl;
-				outError(str.str());
-			}
+//			if (gamma_shape < MIN_GAMMA_SHAPE || gamma_shape > MAX_GAMMA_SHAPE) {
+//				stringstream str;
+//				str << "Gamma shape parameter " << gamma_shape << "out of range ["
+//						<< MIN_GAMMA_SHAPE << ',' << MAX_GAMMA_SHAPE << "]" << endl;
+//				outError(str.str());
+//			}
 		} else if (rate_str.length() > posG+2+end_pos && rate_str[posG+2+end_pos] != '+')
 			outError("Wrong model name ", rate_str);
 	}
@@ -376,13 +376,13 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 			site_rate = new RateGammaInvar(num_rate_cats, gamma_shape, params.gamma_median,
 					p_invar_sites, params.optimize_model_rate_joint, params.rr_ai, tree);
 		} else if (posI != string::npos && posR != string::npos) {
-			site_rate = new RateFreeInvar(num_rate_cats, freerate_params, p_invar_sites, tree);
+			site_rate = new RateFreeInvar(num_rate_cats, gamma_shape, freerate_params, p_invar_sites, tree);
 		} else if (posI != string::npos) {
 			site_rate = new RateInvar(p_invar_sites, tree);
 		} else if (posG != string::npos) {
 			site_rate = new RateGamma(num_rate_cats, gamma_shape, params.gamma_median, tree);
 		} else if (posR != string::npos) {
-			site_rate = new RateFree(num_rate_cats, freerate_params, tree);
+			site_rate = new RateFree(num_rate_cats, gamma_shape, freerate_params, tree);
 		} else if ((posX = rate_str.find("+M")) != string::npos) {
 			tree->setLikelihoodKernel(LK_NORMAL);
 			params.rate_mh_type = true;

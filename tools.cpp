@@ -1784,8 +1784,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (cnt >= argc)
 					throw "Use -a <gamma_shape>";
 				params.gamma_shape = convert_double(argv[cnt]);
-				if (params.gamma_shape < 0)
-					throw "Wrong number of gamma shape parameter (alpha)";
+//				if (params.gamma_shape < 0)
+//					throw "Wrong number of gamma shape parameter (alpha)";
 				continue;
 			}
 			if (strcmp(argv[cnt], "-gmean") == 0) {
