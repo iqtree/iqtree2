@@ -18,6 +18,7 @@ const double MAX_FREE_RATE_PROP = 0.9999;
 RateFree::RateFree(int ncat, double start_alpha, string params, PhyloTree *tree) : RateGamma(ncat, start_alpha, false, tree) {
 	fix_params = false;
 	prop = NULL;
+    this->sorted_rates = sorted_rates;
 	setNCategory(ncat);
 
 	if (params.empty()) return;
@@ -166,7 +167,8 @@ double RateFree::optimizeParameters(double epsilon) {
 	getVariables(variables);
     
     // sort the rates in increasing order
-    quicksort<double,double>(rates, 0, ncategory-1, prop);
+    if (sorted_rates)
+        quicksort<double,double>(rates, 0, ncategory-1, prop);
 
 	phylo_tree->clearAllPartialLH();
 

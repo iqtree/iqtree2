@@ -19,6 +19,7 @@
 #include "timeutil.h"
 #include "pllnni.h"
 #include "phylosupertree.h"
+#include "phylosupertreeplen.h"
 #include "upperbounds.h"
 
 //const static int BINARY_SCALE = floor(log2(1/SCALING_THRESHOLD));
@@ -3038,8 +3039,10 @@ double PhyloTree::optimizeAllBranches(int my_iterations, double tolerance, int m
 //        if (verbose_mode >= VB_DEBUG) {
 //            printTree(cout, WT_BR_LEN+WT_NEWLINE);
 //        }
-        optimizeAllBranches((PhyloNode*) root, NULL, maxNRStep);
+
+    	optimizeAllBranches((PhyloNode*) root, NULL, maxNRStep);
         double new_tree_lh = computeLikelihoodFromBuffer();
+        //cout<<"After opt  log-lh = "<<new_tree_lh<<endl;
 
         if (verbose_mode >= VB_MAX) {
             cout << "Likelihood after iteration " << i + 1 << " : ";
@@ -3057,13 +3060,17 @@ double PhyloTree::optimizeAllBranches(int my_iterations, double tolerance, int m
 //            assert(new_tree_lh >= tree_lh - 10.0);
 //        }
         
+
         if (new_tree_lh < tree_lh) {
         	// IN RARE CASE: tree log-likelihood decreases, revert the branch length and stop
         	if (verbose_mode >= VB_MED)
         		cout << "NOTE: Restoring branch lengths as tree log-likelihood decreases after branch length optimization: "
         			<< tree_lh << " -> " << new_tree_lh << endl;
-        	restoreBranchLengths(lenvec);
+
         	clearAllPartialLH();
+        	restoreBranchLengths(lenvec);
+
+        	//clearAllPartialLH();
 //        	readTreeString(string_brlen);
         	new_tree_lh = computeLikelihood();
         	assert(fabs(new_tree_lh-tree_lh) < 1.0);

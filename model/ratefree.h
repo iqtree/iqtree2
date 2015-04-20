@@ -98,6 +98,9 @@ protected:
 
 	/** TRUE to fix parameters */
 	bool fix_params;
+    
+    /** true to sort rate in increasing order, false otherwise */
+    bool sorted_rates;
 
 };
 
