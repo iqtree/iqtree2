@@ -54,6 +54,9 @@ public:
     /** read partition model file */
     void readPartition(Params &params);
 
+    /** read RAxML-style partition file */
+    void readPartitionRaxml(Params &params);
+
     /** read partition model file in NEXUS format into variable info */
     void readPartitionNexus(Params &params);
 

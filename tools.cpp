@@ -1340,7 +1340,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.quad_programming = true;
 				continue;
 			}
-			if (strcmp(argv[cnt], "-q") == 0) {
+			if (strcmp(argv[cnt], "-quiet") == 0) {
 				verbose_mode = VB_QUIET;
 				continue;
 			}
@@ -1447,14 +1447,18 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.partition_type = 'p';
 				continue;
 			}
-			if (strcmp(argv[cnt], "-spj") == 0) {
+			if (strcmp(argv[cnt], "-spj") == 0 || strcmp(argv[cnt], "-q") == 0) {
 				cnt++;
 				if (cnt >= argc)
-					throw "Use -spj <type of partition model>";
+					throw "Use -q <type of partition model>";
 				params.partition_file = argv[cnt];
 				params.partition_type = 'j';
 				continue;
 			}
+			if (strcmp(argv[cnt], "-M") == 0) {
+                params.partition_type = 0;
+                continue;
+            }
 			if (strcmp(argv[cnt], "-keep_empty_seq") == 0) {
 				params.remove_empty_seq = false;
 				continue;
