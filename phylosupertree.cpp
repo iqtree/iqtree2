@@ -120,6 +120,8 @@ void PhyloSuperTree::readPartitionRaxml(Params &params) {
             
         input_aln = new Alignment(params.aln_file, params.sequence_type, params.intype);
 
+        cout << endl << "RAxML-style partition file detected" << endl;
+
         size_t pos = params.model_name.find_first_of("+*");
         string rate_type = "";
         if (pos != string::npos) rate_type = params.model_name.substr(pos);
@@ -168,6 +170,8 @@ void PhyloSuperTree::readPartitionRaxml(Params &params) {
                 info.model_name += "+F";
             else if (freq == FREQ_ESTIMATE)
                 info.model_name += "+FO";
+            if (is_ASC)
+                info.model_name += "+ASC";
             info.model_name += rate_type;
 
 			getline(in, info.name, '=');
@@ -181,7 +185,7 @@ void PhyloSuperTree::readPartitionRaxml(Params &params) {
                 outError("Please specify alignment positions for partition" + info.name);
             std::replace(info.position_spec.begin(), info.position_spec.end(), ',', ' ');
             
-			cout << endl << "Reading partition " << info.name << " (model=" << info.model_name << ", seq=" << info.sequence_type << ", pos=" << info.position_spec << ") ..." << endl;
+			cout << "Reading partition " << info.name << " (model=" << info.model_name << ", seq=" << info.sequence_type << ", pos=" << info.position_spec << ") ..." << endl;
 
 			//info.mem_ptnlh = NULL;
 			info.nniMoves[0].ptnlh = NULL;

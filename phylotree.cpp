@@ -408,6 +408,8 @@ string PhyloTree::getModelName() {
 	}
 	if (model->getFreqType() == FREQ_EMPIRICAL)
 		name += "+F";
+	if (model->getFreqType() == FREQ_ESTIMATE)
+		name += "+FO";
 	return name;
 }
 
@@ -418,6 +420,16 @@ string PhyloTree::getModelNameParams() {
 	name += site_rate->getNameParams();
 	if (model->getFreqType() == FREQ_EMPIRICAL)
 		name += "+F";
+	if (model->getFreqType() == FREQ_ESTIMATE) {
+		name += "+FO";
+        double *state_freq = new double[model->num_states];
+        model->getStateFrequency(state_freq);
+        name += "{" + convertDoubleToString(state_freq[0]);
+        for (int i = 1; i < model->num_states; i++)
+            name += "," + convertDoubleToString(state_freq[i]);
+        name += "}";
+        delete [] state_freq;
+    }
 	return name;
 }
 
