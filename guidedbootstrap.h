@@ -71,7 +71,11 @@ namespace std {
 } // namespace std
 
 
+#ifdef USE_HASH_MAP
 typedef unordered_map<IntVector*, int, hashfunc_IntVector> IntVectorMap;
+#else
+typedef map<IntVector*, int> IntVectorMap;
+#endif
 
 typedef vector<IntVector*> IntVectorCollection;
 

@@ -76,8 +76,10 @@
 #else
 	#include <map>
 	#include <set>
-	#include <unordered_map>
-	#include <unordered_set>
+	#define unordered_map map
+	#define unordered_set set
+//	#include <unordered_map>
+//	#include <unordered_set>
 #endif
 
 using namespace std;

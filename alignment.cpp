@@ -248,10 +248,10 @@ void Alignment::checkGappySeq(bool force_error) {
     int wrong_seq = 0;
     for (i = 0; i < nseq; i++)
         if (isGapOnlySeq(i)) {
-            cout << "ERROR: Sequence " << getSeqName(i) << " contains only gaps or missing data" << endl;
+            outWarning("Sequence " + getSeqName(i) + " contains only gaps or missing data");
             wrong_seq++;
         }
-    if (wrong_seq) {
+    if (wrong_seq && force_error) {
         outError("Some sequences (see above) are problematic, please check your alignment again");
     }
 }

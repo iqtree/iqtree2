@@ -321,9 +321,9 @@ void IQTree::computeInitialTree(string &dist_file) {
         readTree(params->user_file, myrooted);
         setAlignment(aln);
         if (isSuperTree())
-        	fixAllBranches(true);
+        	wrapperFixNegativeBranch(!params->fixed_branch_length);
         else
-        	fixed_number = fixAllBranches(false);
+        	fixed_number = wrapperFixNegativeBranch(false);
         params->numInitTrees = 1;
         params->numNNITrees = 1;
         // change to old kernel if tree is multifurcating
@@ -340,7 +340,7 @@ void IQTree::computeInitialTree(string &dist_file) {
         computeParsimonyTree(params->out_prefix, aln);
 //		if (params->pll)
 //			pllReadNewick(getTreeString());
-	    fixAllBranches(true);
+	    wrapperFixNegativeBranch(true);
 
         break;
     case STT_PLL_PARSIMONY:
@@ -353,7 +353,7 @@ void IQTree::computeInitialTree(string &dist_file) {
                 PLL_FALSE, PLL_TRUE, PLL_FALSE, PLL_FALSE, PLL_FALSE, PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
         PhyloTree::readTreeString(string(pllInst->tree_string));
         cout << getCPUTime() - start << " seconds" << endl;
-	    fixAllBranches(true);
+	    wrapperFixNegativeBranch(true);
         break;
     case STT_BIONJ:
         // This is the old default option: using BIONJ as starting tree
@@ -363,9 +363,9 @@ void IQTree::computeInitialTree(string &dist_file) {
 //		if (params->pll)
 //			pllReadNewick(getTreeString());
         if (isSuperTree())
-        	fixAllBranches(true);
+        	wrapperFixNegativeBranch(true);
         else
-        	fixed_number = fixAllBranches(false);
+        	fixed_number = wrapperFixNegativeBranch(false);
 		break;
     }
 
@@ -424,7 +424,7 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
 					PLL_FALSE, PLL_FALSE, PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
 			curParsTree = string(pllInst->tree_string);
 			PhyloTree::readTreeString(curParsTree);
-			fixAllBranches(true);
+			wrapperFixNegativeBranch(true);
 			curParsTree = getTreeString();
         } else {
         /****************************** Create parsimony tree using IQ-TREE ******************************/
@@ -2834,7 +2834,9 @@ void IQTree::summarizeBootstrap(Params &params, MTreeSet &trees) {
     // now read resulting tree
     tree_stream.seekg(0, ios::beg);
     freeNode();
-    readTree(tree_stream, rooted);
+    // RARE BUG FIX: to avoid cases that identical seqs were removed and leaf name happens to be IDs
+    MTree::readTree(tree_stream, rooted);
+    
     assignLeafNames();
     if (isSuperTree()) {
         ((PhyloSuperTree*) this)->mapTrees();

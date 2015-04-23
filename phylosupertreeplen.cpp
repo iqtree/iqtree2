@@ -375,6 +375,18 @@ double PhyloSuperTreePlen::optimizeAllBranches(int my_iterations, double toleran
 	for(int part = 0; part < size(); part++){
 		part_info[part].cur_score = 0.0;
 	}
+
+//	double logLH1=computeLikelihood();
+//	clearAllPartialLH();
+//	double logLH2=computeLikelihood();
+//	if(fabs(logLH1-logLH2)>1){
+//		cout<<"---------------------------------------------------------"<<endl;
+//		cout<<"BEFORE calling phylotree::optimize all branches "<<endl;
+//		cout<<"DIFFERENCE IN RECOMPUTATION of log-lh = "<<fabs(logLH1-logLH2)<<endl;
+//		cout<<"  initial    = "<<logLH1<<endl;
+//		cout<<"  recomputed = "<<logLH2<<endl;
+//	}
+
 	return PhyloTree::optimizeAllBranches(my_iterations,tolerance, maxNRStep);
 }
 
@@ -719,7 +731,10 @@ void PhyloSuperTreePlen::doNNI(NNIMove &move, bool clearLH)
 			node1 = (PhyloNode*)nei2->link_neighbors[part]->node;
 			node2 = (PhyloNode*)nei1->link_neighbors[part]->node;
 			linkBranch(part, nei1, nei2);
-			if(clearLH && !(PhyloNode*)nei2->link_neighbors[part]){
+			if(clearLH){
+				// the check "&& !(PhyloNode*)nei2->link_neighbors[part]" is not needed,
+				// since the branch lengths are changed during the optimization
+				// and we anyway have to clearReversePartialLh
 				node2->clearReversePartialLh(node1);
 				node1->clearReversePartialLh(node2);
 			}
@@ -1524,8 +1539,8 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 		//cout<<"In the end of swap NNI"<<endl;
 		//checkBranchLen();
 //------------------------------------------------------------------------------------------------------------------------------------------------
-	if(score_mine != this->computeLikelihood())
-		cout<<"Something weird happens during NNI evaluation..."<<endl;
+	//if(score_mine != this->computeLikelihood())
+	//	cout<<"Something weird happens during NNI evaluation..." << score_mine << " " << computeLikelihood() <<endl;
 
 	delete [] saved_cur_score;
 	delete [] sub_saved_branch;
