@@ -815,6 +815,8 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 	int num_cat = 0;
     int model_aic = 0, model_aicc = 0, model_bic = 0;
     string prev_tree_string = "";
+    int prev_model_id = -1;
+    bool skip_model = false;
 
 	for (model = 0; model < model_names.size(); model++) {
 		//cout << model_names[model] << endl;
@@ -896,6 +898,12 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 		info.df = tree->getModelFactory()->getNParameters();
 		info.name = tree->getModelName();
 		int model_id = -1;
+        if (skip_model) {
+            assert(prev_model_id>=0);
+            size_t pos_r = info.name.find("+R");
+            if (pos_r == string::npos || info.name.substr(0, pos_r) != model_info[prev_model_id].name.substr(0, pos_r))
+                skip_model = false;
+        }
 		for (int i = 0; i < model_info.size(); i++)
 			if (info.name == model_info[i].name) {
 				model_id = i;
@@ -906,6 +914,10 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 		if (model_id >= 0) {
 			info.logl = model_info[model_id].logl;
             prev_tree_string = model_info[model_id].tree;
+        } else if (skip_model) {
+            info.logl = model_info[prev_model_id].logl;
+            prev_tree_string = model_info[prev_model_id].tree;
+//            cout << "Skipped " << info.name << endl;
 		} else {
             if (params.model_test_and_tree) {
                 string original_model = params.model_name;
@@ -982,6 +994,19 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
             }
 		}
 		computeInformationScores(info.logl, info.df, ssize, info.AIC_score, info.AICc_score, info.BIC_score);
+        if (prev_model_id >= 0) {
+            // check stop criterion for +R
+            size_t prev_pos_r = model_info[prev_model_id].name.find("+R");
+            size_t pos_r = info.name.find("+R");
+            if ( prev_pos_r != string::npos &&  pos_r != string::npos && model_info[prev_model_id].name.substr(0,prev_pos_r) == info.name.substr(0, pos_r)) {
+                if (info.AIC_score > model_info[prev_model_id].AIC_score && info.AICc_score > model_info[prev_model_id].AICc_score &&
+                    info.BIC_score > model_info[prev_model_id].BIC_score) {
+                    // skip remaining model
+                    skip_model = true;
+//                    cout << "Skip next model" << endl;
+                }
+            }
+        }
 		if (model_id >= 0) {
 			model_info[model_id] = info;
 		} else {
@@ -998,6 +1023,8 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
         in_tree->setModel(NULL);
         in_tree->setModelFactory(NULL);
         in_tree->setRate(NULL);
+
+        prev_model_id = model_id;
 
 		if (set_name != "") continue;
 
@@ -1016,6 +1043,7 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 		cout.width(12);
 		cout << info.AICc_score << " " << info.BIC_score;
 		cout << endl;
+
 
 	}
 

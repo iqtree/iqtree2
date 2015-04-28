@@ -408,8 +408,8 @@ string PhyloTree::getModelName() {
 	}
 	if (model->getFreqType() == FREQ_EMPIRICAL)
 		name += "+F";
-	if (model->getFreqType() == FREQ_ESTIMATE)
-		name += "+FO";
+//	if (model->getFreqType() == FREQ_ESTIMATE)
+//		name += "+FO";
 	return name;
 }
 
