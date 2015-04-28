@@ -593,6 +593,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.tree_gen = NONE;
     params.user_file = NULL;
     params.rr_ai = false;
+    params.exh_ai = false;
     params.alpha_invar_file = NULL;
     params.out_prefix = NULL;
     params.out_file = NULL;
@@ -2320,6 +2321,10 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.rr_ai = true;
 				continue;
 			}
+            if (strcmp(argv[cnt], "-eai") == 0) {
+                params.exh_ai = true;
+                continue;
+            }
 			if (strcmp(argv[cnt], "-poplim") == 0) {
 				cnt++;
 				if (cnt >= argc)

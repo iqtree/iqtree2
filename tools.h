@@ -415,6 +415,11 @@ struct Params {
 	 */
 	bool rr_ai;
 
+    /**
+     *  Perform exhaustive search for parameter alpha and p_invar
+     */
+    bool exh_ai;
+
 	/**
 	 *  User file contains the alpha and invar parameters
 	 */
