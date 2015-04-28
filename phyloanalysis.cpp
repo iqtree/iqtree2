@@ -1478,6 +1478,8 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
     }
 
     iqtree.initializeAllPartialLh();
+	double initEpsilon = params.min_iterations == 0 ? 0.001 : 0.1;
+	string initTree;
 
 	if (iqtree.getRate()->name.find("+I+G") != string::npos) {
 		if (params.alpha_invar_file != NULL) { // COMPUTE TREE LIKELIHOOD BASED ON THE INPUT ALPHA AND P_INVAR VALUE
@@ -1522,7 +1524,59 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 			cout << "Results were written to: " << aiResultsFileName << endl;
 			cout << "Wall clock time used: " << getRealTime() - params.start_real_time << endl;
 			exit(0);
-		} else if (params.rr_ai) { // DO RESTART ON ALPHA AND P_INVAR
+		}
+
+		if (params.exh_ai) {
+			// Test alpha fom 0.1 to 15 and p_invar from 0.1 to 0.99, stepsize = 0.01
+			double alphaMin = 0.01;
+			double alphaMax = 15.00;
+			double p_invarMin = 0.01;
+			double p_invarMax = 1.00;
+			double stepSize = 0.01;
+			int numAlpha = floor((alphaMax - alphaMin)/stepSize);
+			int numInvar = floor((p_invarMax - p_invarMin)/stepSize);
+
+			cout << "EVALUATING COMBINATIONS OF " << numAlpha << " ALPHAS AND " << numInvar << " P_INVARS ... " << endl;
+
+			vector<string> results;
+			results.reserve(numAlpha * numInvar);
+			DoubleVector lenvec;
+			iqtree.saveBranchLengths(lenvec);
+
+			RateGammaInvar* site_rates = dynamic_cast<RateGammaInvar*>(iqtree.getRate());
+			site_rates->setFixPInvar(true);
+			site_rates->setFixGammaShape(true);
+
+			for (double alpha = alphaMin; alpha < alphaMax; alpha = alpha + stepSize) {
+				for (double p_invar = p_invarMin; p_invar < p_invarMax; p_invar = p_invar + stepSize) {
+					site_rates->setGammaShape(alpha);
+					site_rates->setPInvar(p_invar);
+					site_rates->computeRates();
+					iqtree.clearAllPartialLH();
+					double lh = iqtree.getModelFactory()->optimizeParameters(params.fixed_branch_length, false, 0.001);
+					stringstream ss;
+					ss << fixed << setprecision(2) << alpha << " " << p_invar << " " << lh << " " << iqtree.treeLength();
+					//cout << ss.str() << endl;
+					results.push_back(ss.str());
+					iqtree.restoreBranchLengths(lenvec);
+				}
+			}
+			string aiResultsFileName = string(params.out_prefix) + ".ai_results";
+			ofstream aiFileResults;
+			aiFileResults.open(aiResultsFileName.c_str());
+			aiFileResults << std::fixed;
+			aiFileResults.precision(4);
+			aiFileResults << "alpha p_invar logl tree_len\n";
+			for (vector<string>::iterator it = results.begin(); it != results.end(); it++) {
+				aiFileResults << (*it) << endl;
+			}
+			aiFileResults.close();
+			cout << "Results were written to: " << aiResultsFileName << endl;
+			cout << "Wall clock time used: " << getRealTime() - params.start_real_time << endl;
+			exit(0);
+		}
+
+		if (params.rr_ai) { // DO RESTART ON ALPHA AND P_INVAR
 			RateGammaInvar* site_rates = dynamic_cast<RateGammaInvar*>(iqtree.getRate());
 			double initAlphas[] = { 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0 };
 			double bestLogl = -DBL_MAX;
@@ -1561,59 +1615,16 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 			site_rates->computeRates();
 			iqtree.resetCurScore();
 			iqtree.clearAllPartialLH();
-		} else if (params.exh_ai) {
-			cout << "EVALUATING ALL ALPHA AND P_INVAR ... " << endl;
-			int numAlpha = 1499;
-			int numInvar = 99;
-			// Test alpha fom 0.1 to 15 and p_invar from 0.1 to 0.99, stepsize = 0.01
-			double alphaMin = 0.01;
-			double alphaMax = 15.00;
-			double p_invarMin = 0.01;
-			double p_invarMax = 1.00;
-			vector<string> results;
-			results.reserve(numAlpha * numInvar);
-			DoubleVector lenvec;
-			iqtree.saveBranchLengths(lenvec);
-
-			RateGammaInvar* site_rates = dynamic_cast<RateGammaInvar*>(iqtree.getRate());
-			site_rates->setFixPInvar(true);
-			site_rates->setFixGammaShape(true);
-
-			for (double alpha = alphaMin; alpha < alphaMax; alpha = alpha + 0.01) {
-				for (double p_invar = p_invarMin; p_invar < p_invarMax; p_invar = p_invar + 0.01) {
-					site_rates->setGammaShape(alpha);
-					site_rates->setPInvar(p_invar);
-					site_rates->computeRates();
-					iqtree.clearAllPartialLH();
-					double lh = iqtree.getModelFactory()->optimizeParameters(params.fixed_branch_length, false, 0.001);
-					stringstream ss;
-					ss << fixed << setprecision(2) << alpha << " " << p_invar << " " << lh << " " << iqtree.treeLength();
-					//cout << ss.str() << endl;
-					results.push_back(ss.str());
-					iqtree.restoreBranchLengths(lenvec);
-				}
-			}
-			string aiResultsFileName = string(params.out_prefix) + ".ai_results";
-			ofstream aiFileResults;
-			aiFileResults.open(aiResultsFileName.c_str());
-			aiFileResults << std::fixed;
-			aiFileResults.precision(4);
-			aiFileResults << "alpha p_invar logl tree_len\n";
-			for (vector<string>::iterator it = results.begin(); it != results.end(); it++) {
-				aiFileResults << (*it) << endl;
-			}
-			aiFileResults.close();
-			cout << "Results were written to: " << aiResultsFileName << endl;
-			cout << "Wall clock time used: " << getRealTime() - params.start_real_time << endl;
-			exit(0);
+		} else {
+			// Optimize model parameters and branch lengths using ML for the initial tree
+			iqtree.clearAllPartialLH();
+			initTree = iqtree.optimizeModelParameters(true, initEpsilon);
 		}
 	}
 
-
     // Optimize model parameters and branch lengths using ML for the initial tree
-    double initEpsilon = params.min_iterations == 0 ? 0.001 : 0.1;
 	iqtree.clearAllPartialLH();
-    string initTree = iqtree.optimizeModelParameters(true, initEpsilon);
+	initTree = iqtree.optimizeModelParameters(true, initEpsilon);
 
     /****************** NOW PERFORM MAXIMUM LIKELIHOOD TREE RECONSTRUCTION ******************/
 
