@@ -238,8 +238,16 @@ bool checkModelFile(ifstream &in, bool is_partitioned, vector<ModelInfo> &infos)
 		}
 		info.name = str;
 		in >> info.df >> info.logl;
-		infos.push_back(info);
 		getline(in, str);
+        info.tree = "";
+        if (*str.rbegin() == ';') {
+            size_t pos = str.rfind('\t');
+            if (pos != string::npos)
+                info.tree = str.substr(pos+1);
+//            else 
+//                outWarning(".model file was produced from a previous version of IQ-TREE");
+        }
+		infos.push_back(info);
 		//cout << str << " " << df << " " << logl << endl;
 	}
 	in.clear();
@@ -732,7 +740,7 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 				fmodel << "\t0\t1";
 			else if (seq_type == SEQ_DNA)
 				fmodel << "\tA-C\tA-G\tA-T\tC-G\tC-T\tG-T\tA\tC\tG\tT";
-			fmodel << "\talpha\tpinv" << endl;
+			fmodel << "\talpha\tpinv\tTree" << endl;
 			fmodel.precision(4);
 			fmodel << fixed;
 		}
@@ -806,7 +814,7 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 
 	int num_cat = 0;
     int model_aic = 0, model_aicc = 0, model_bic = 0;
-
+    string prev_tree_string = "";
 
 	for (model = 0; model < model_names.size(); model++) {
 		//cout << model_names[model] << endl;
@@ -897,10 +905,16 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 			}
 		if (model_id >= 0) {
 			info.logl = model_info[model_id].logl;
+            prev_tree_string = model_info[model_id].tree;
 		} else {
             if (params.model_test_and_tree) {
                 string original_model = params.model_name;
                 params.model_name = model_names[model];
+                char *orig_user_tree = params.user_file;
+                string new_user_tree = (string)params.out_prefix+".treefile";
+                if (model>0 && fileExists(new_user_tree)) {
+                    params.user_file = (char*)new_user_tree.c_str();
+                }
                 if (in_tree->isSuperTree()) {
                     outError("-mtree option is not supported for partition model");
                 }
@@ -909,6 +923,7 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
                 runTreeReconstruction(params, original_model, *iqtree, model_info);
                 info.logl = iqtree->computeLikelihood();
                 params.model_name = original_model;
+                params.user_file = orig_user_tree;
                 tree = iqtree;
             } else {
                 if (tree->getRate()->getNRate() > num_cat) {
@@ -916,6 +931,9 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
                     tree->initializeAllPartialLh();
                     num_cat = tree->getRate()->getNRate();
                 }
+                if (prev_tree_string != "")
+                    tree->readTreeString(prev_tree_string);
+                prev_tree_string = "";
                 info.logl = tree->getModelFactory()->optimizeParameters(false, false, TOL_LIKELIHOOD_MODELTEST);
             }
 			// print information to .model file
@@ -950,7 +968,11 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 			if (alpha > 0) fmodel << alpha; else fmodel << "NA";
 			fmodel << "\t";
 			double pinvar = tree->getRate()->getPInvar();
-			if (pinvar > 0) fmodel << pinvar << endl; else fmodel << "NA" << endl;
+			if (pinvar > 0) fmodel << pinvar; else fmodel << "NA";
+            fmodel << "\t";
+            tree->printTree(fmodel);
+            fmodel << endl;
+            fmodel.precision(4);
 			const char *model_name = (params.print_site_lh) ? info.name.c_str() : NULL;
 			if (params.print_site_lh)
 				printSiteLh(sitelh_file.c_str(), tree, NULL, true, model_name);
