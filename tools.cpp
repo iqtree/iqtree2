@@ -706,7 +706,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.ratehet_set = NULL;
     params.model_def_file = NULL;
     params.model_test_again = false;
-    params.model_test_and_tree = false;
+    params.model_test_and_tree = 0;
     params.model_test_separate_rate = false;
     params.optimize_mixmodel_weight = false;
     params.store_trans_matrix = false;
@@ -1658,7 +1658,11 @@ void parseArg(int argc, char *argv[], Params &params) {
 				continue;
 			}
 			if (strcmp(argv[cnt], "-mtree") == 0) {
-				params.model_test_and_tree = true;
+				params.model_test_and_tree = 1;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-mretree") == 0) {
+				params.model_test_and_tree = 2;
 				continue;
 			}
 			if (strcmp(argv[cnt], "-msep") == 0) {

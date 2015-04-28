@@ -1114,8 +1114,12 @@ void initializeParams(Params &params, IQTree &iqtree, vector<ModelInfo> &model_i
         if (mem_size >= getMemorySize()) {
             outError("Memory required exceeds your computer RAM size!");
         }
+        double start_cpu_time = getCPUTime();
+        double start_real_time = getRealTime();
         params.model_name = testModel(params, &iqtree, model_info);
-        cout << "CPU time for model selection: " << getCPUTime() - params.startCPUTime << " seconds." << endl;
+        params.startCPUTime = start_cpu_time;
+        params.start_real_time = start_real_time;
+        cout << "CPU time for model selection: " << getCPUTime() - start_cpu_time << " seconds." << endl;
 //        alignment = iqtree.aln;
         if (test_only) {
             params.min_iterations = 0;

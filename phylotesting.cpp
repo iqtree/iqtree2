@@ -795,7 +795,7 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 			<< ((seq_type == SEQ_BINARY) ? "binary" : ((seq_type == SEQ_DNA) ? "DNA" :
 				((seq_type == SEQ_PROTEIN) ? "protein": ((seq_type == SEQ_CODON) ? "codon": "morphological"))))
 			<< " models (sample size: " << ssize << ") ..." << endl;
-        if (!params.model_test_and_tree)
+        if (params.model_test_and_tree == 0)
             cout << " No. Model         -LnL         df  AIC          AICc         BIC" << endl;
 	}
 	if (params.print_site_lh) {
@@ -912,7 +912,7 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
                 params.model_name = model_names[model];
                 char *orig_user_tree = params.user_file;
                 string new_user_tree = (string)params.out_prefix+".treefile";
-                if (model>0 && fileExists(new_user_tree)) {
+                if (params.model_test_and_tree == 1 && model>0 && fileExists(new_user_tree)) {
                     params.user_file = (char*)new_user_tree.c_str();
                 }
                 if (in_tree->isSuperTree()) {

@@ -1078,8 +1078,12 @@ struct Params {
     /** true to redo model testing even if .model file exists */
     bool model_test_again;
 
-    /** true to perform tree reconstruction for each testing model (default: false) */
-    bool model_test_and_tree;
+    /** 0: use the same tree for model testing 
+        1: estimate tree for each model, but initialize the tree for next model 
+           by the tree reconstructed from the previous model
+        2: estimate tree for each model independently
+        */
+    short int model_test_and_tree;
 
     /** true to fist test equal rate model, then test rate heterogeneity (default: false) */
     bool model_test_separate_rate;
