@@ -547,7 +547,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInf
         delete part_model_info;
 	}
 
-	if (params.model_name.find("LINK") == string::npos) {
+	if (params.model_name.find("LINK") == string::npos || params.model_name.find("MERGE") == string::npos) {
 		return;
 	}
 

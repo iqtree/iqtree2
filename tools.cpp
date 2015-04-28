@@ -2763,7 +2763,7 @@ void usage_iqtree(char* argv[], bool full_command) {
             << endl << "AUTOMATIC MODEL SELECTION:" << endl
             << "  -m TEST              Select best-fit model for tree reconstruction" << endl
             << "  -m TESTONLY          Only do model selection, then stop" << endl
-            << "  -m TESTLINK or -m TESTONLYLINK" <<endl
+            << "  -m TESTLINK or -m TESTMERGE or -m TESTONLYLINK or -m TESTONLYMERGE" <<endl
             << "                       Select best-fit partitioning scheme like PartitionFinder" << endl
             << "  -mset raxml          Restrict to only models supported by RAxML" << endl
             << "  -mset phyml          Restrict to only models supported by PhyML" << endl
