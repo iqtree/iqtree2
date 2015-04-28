@@ -48,6 +48,8 @@ void RateHeterogeneity::writeSiteRates(ostream &out, DoubleVector &pattern_rates
 	if (!pattern_cat.empty()) out << "\tCategory\tCategorized_rate";
 	out << endl;
 	//cout << __func__ << endl;
+    IntVector count;
+    count.resize(phylo_tree->getRate()->getNRate(), 0);
 	for (i = 0; i < nsite; i++) {
 		int ptn = phylo_tree->aln->getPatternID(i);
 		out << i+1 << "\t";
@@ -55,7 +57,12 @@ void RateHeterogeneity::writeSiteRates(ostream &out, DoubleVector &pattern_rates
 		//cout << i << " "<< ptn << " " << pattern_cat[ptn] << endl;
 		if (!pattern_cat.empty()) out << "\t" << pattern_cat[ptn]+1 << "\t" << getRate(pattern_cat[ptn]);
 		out << endl;
+        count[pattern_cat[ptn]]++;
 	}
+    cout << "Empirical proportions for each category:";
+    for (i = 0; i < count.size(); i++)
+        cout << " " << ((double)count[i])/nsite;
+    cout << endl;
 }
 
 void RateHeterogeneity::writeSiteRates(ostream &out) {
