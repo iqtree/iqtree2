@@ -176,4 +176,42 @@ double RateGammaInvar::optimizeParameters(double epsilon) {
 }
 
 
+int RateGammaInvar::computePatternRates(DoubleVector &pattern_rates, IntVector &pattern_cat) {
+	//cout << "Computing Gamma site rates by empirical Bayes..." << endl;
+//	double *ptn_rates = new double[npattern];
+	if (phylo_tree->sse == LK_NORMAL || phylo_tree->sse == LK_SSE)
+		phylo_tree->computeLikelihoodBranchNaive((PhyloNeighbor*)phylo_tree->root->neighbors[0], (PhyloNode*)phylo_tree->root);
+	else {
+		switch (phylo_tree->aln->num_states) {
+		case 4: phylo_tree->computeLikelihoodBranchEigen<4>((PhyloNeighbor*)phylo_tree->root->neighbors[0], (PhyloNode*)phylo_tree->root); break;
+		case 20: phylo_tree->computeLikelihoodBranchEigen<20>((PhyloNeighbor*)phylo_tree->root->neighbors[0], (PhyloNode*)phylo_tree->root); break;
+		case 2: phylo_tree->computeLikelihoodBranchEigen<2>((PhyloNeighbor*)phylo_tree->root->neighbors[0], (PhyloNode*)phylo_tree->root); break;
+		case 64: phylo_tree->computeLikelihoodBranchEigen<64>((PhyloNeighbor*)phylo_tree->root->neighbors[0], (PhyloNode*)phylo_tree->root); break;
+		default: outError("Option unsupported yet for this sequence type. Contact author if you really need it."); break;
+		}
+	}
+
+	int npattern = phylo_tree->aln->getNPattern();
+	pattern_rates.resize(npattern);
+	pattern_cat.resize(npattern);
+
+	double *lh_cat = phylo_tree->_pattern_lh_cat;
+	for (int i = 0; i < npattern; i++) {
+		double sum_rate = 0.0, sum_lh = phylo_tree->ptn_invar[i];
+		int best = 0;
+        double best_lh = phylo_tree->ptn_invar[i];
+		for (int c = 0; c < ncategory; c++) {
+			sum_rate += rates[c] * lh_cat[c];
+			sum_lh += lh_cat[c];
+			if (lh_cat[c] > best_lh || (lh_cat[c] == best_lh && random_double()<0.5)) { // break tie at random
+                best = c+1;
+                best_lh = lh_cat[c];
+            }
+		}
+		pattern_rates[i] = sum_rate / sum_lh;
+		pattern_cat[i] = best;
+		lh_cat += ncategory;
+	}
+    return ncategory+1;
+}
 

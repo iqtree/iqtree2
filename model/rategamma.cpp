@@ -186,7 +186,7 @@ void RateGamma::writeParameters(ostream &out) {
 	out << "\t" << gamma_shape;
 }
 
-void RateGamma::computePatternRates(DoubleVector &pattern_rates, IntVector &pattern_cat) {
+int RateGamma::computePatternRates(DoubleVector &pattern_rates, IntVector &pattern_cat) {
 	//cout << "Computing Gamma site rates by empirical Bayes..." << endl;
 //	double *ptn_rates = new double[npattern];
 	if (phylo_tree->sse == LK_NORMAL || phylo_tree->sse == LK_SSE)
@@ -212,12 +212,14 @@ void RateGamma::computePatternRates(DoubleVector &pattern_rates, IntVector &patt
 		for (int c = 0; c < ncategory; c++) {
 			sum_rate += rates[c] * lh_cat[c];
 			sum_lh += lh_cat[c];
-			if (lh_cat[c] > lh_cat[best]) best = c;
+			if (lh_cat[c] > lh_cat[best] || (lh_cat[c] == lh_cat[best] && random_double()<0.5))  // break tie at random
+                best = c;
 		}
 		pattern_rates[i] = sum_rate / sum_lh;
 		pattern_cat[i] = best;
 		lh_cat += ncategory;
 	}
+    return ncategory;
 
 //	pattern_rates.clear();
 //	pattern_rates.insert(pattern_rates.begin(), ptn_rates, ptn_rates + npattern);
