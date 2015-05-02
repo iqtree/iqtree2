@@ -79,7 +79,8 @@ const char* aa_freq_names[] = {"", "+F"};
 
 
 /****** Codon models ******/
-const char *codon_model_names[] = {"MG", "GY", "KOSI07"};
+const char *codon_model_names[] = {"MG", "GY", "KOSI07", "SCHN05"};
+short int std_genetic_code[]    = {   0,    0,        1,        1};
 
 const char *codon_freq_names[] = {"", "+F1X4", "+F3X4", "+F"};
 
@@ -335,8 +336,13 @@ void getModelList(Params &params, Alignment *aln, StrVector &models, bool separa
 		if (params.model_set == NULL) {
 			if (aln->isStandardGeneticCode())
 				copyCString(codon_model_names, sizeof(codon_model_names) / sizeof(char*), model_names);
-			else
-				copyCString(codon_model_names, sizeof(codon_model_names) / sizeof(char*) - 1, model_names);
+			else {
+                i = sizeof(codon_model_names) / sizeof(char*);
+                for (j = 0; j < i; j++)
+                    if (!std_genetic_code[j])
+                        model_names.push_back(codon_model_names[j]);
+//				copyCString(codon_model_names, sizeof(codon_model_names) / sizeof(char*) - 1, model_names);
+            }
 		} else
 			convert_string_vec(params.model_set, model_names);
         copyCString(codon_freq_names, sizeof(codon_freq_names) / sizeof(char*), freq_names);
@@ -357,9 +363,16 @@ void getModelList(Params &params, Alignment *aln, StrVector &models, bool separa
     if (freq_names.size() > 0) {
         StrVector orig_model_names = model_names;
         model_names.clear();
-        for (j = 0; j < orig_model_names.size(); j++)
-            for (i = 0; i < freq_names.size(); i++)
-                model_names.push_back(orig_model_names[j] + freq_names[i]);
+        for (j = 0; j < orig_model_names.size(); j++) {
+            if (aln->seq_type == SEQ_CODON) {
+                for (i = 0; i < freq_names.size(); i++)
+                    if (freq_names[i] != "" || (orig_model_names[j].substr(0, 2) != "MG" && orig_model_names[j] != "GY"))
+                        model_names.push_back(orig_model_names[j] + freq_names[i]);
+            } else {
+                for (i = 0; i < freq_names.size(); i++)
+                    model_names.push_back(orig_model_names[j] + freq_names[i]);
+            }
+        }
     }
 
 	if (seq_type == SEQ_CODON) {
