@@ -218,6 +218,7 @@ void ModelCodon::init(const char *model_name, string model_params, StateFreqType
 	if (freq == FREQ_CODON_1x4 || freq == FREQ_CODON_3x4 || freq == FREQ_CODON_3x4C) {
 		// duplicated call early here to get ntfreq for MG model
 		phylo_tree->aln->computeCodonFreq(freq, state_freq, ntfreq);
+        cout << "Nucleotide frequencies:";
 		for (int i = 0; i < 12; i++)
 			cout << " " << ntfreq[i];
 		cout << endl;
@@ -245,7 +246,8 @@ void ModelCodon::init(const char *model_name, string model_params, StateFreqType
 		readRates(model_params);
 	}
 
-	if (freq == FREQ_UNKNOWN ||  def_freq == FREQ_EQUAL) freq = def_freq;
+//	if (freq == FREQ_UNKNOWN ||  def_freq == FREQ_EQUAL) freq = def_freq;
+    if (freq == FREQ_UNKNOWN) freq = def_freq;
 	if (freq == FREQ_CODON_1x4 || freq == FREQ_CODON_3x4 || freq == FREQ_CODON_3x4C) {
 		//ntfreq = new double[12];
 		phylo_tree->aln->computeCodonFreq(freq, state_freq, ntfreq);

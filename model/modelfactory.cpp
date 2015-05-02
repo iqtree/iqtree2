@@ -200,11 +200,11 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 			freq_type = FREQ_EQUAL;
 		else if (freq_str == "+FO" || freq_str == "+Fo")
 			freq_type = FREQ_ESTIMATE;
-		else if (freq_str == "+F1x4")
+		else if (freq_str == "+F1x4" || freq_str == "+F1X4")
 			freq_type = FREQ_CODON_1x4;
-		else if (freq_str == "+F3x4")
+		else if (freq_str == "+F3x4" || freq_str == "+F3X4")
 			freq_type = FREQ_CODON_3x4;
-		else if (freq_str == "+F3x4C" || freq_str == "+F3x4c")
+		else if (freq_str == "+F3x4C" || freq_str == "+F3x4c" || freq_str == "+F3X4C" || freq_str == "+F3X4c")
 			freq_type = FREQ_CODON_3x4C;
 		else outError("Unknown state frequency type ",freq_str);
 //		model_str = model_str.substr(0, posfreq);

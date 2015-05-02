@@ -2411,12 +2411,14 @@ void Alignment::convfreq(double *stateFrqArr) {
 
 	sum = 0.0;
 	maxfreq = 0.0;
+    double min_freq = (seq_type == SEQ_CODON) ? MIN_FREQUENCY*0.1 : MIN_FREQUENCY;
+    double min_freq_diff = (seq_type == SEQ_CODON) ? MIN_FREQUENCY_DIFF*0.1 : MIN_FREQUENCY;
 	for (i = 0; i < num_states; i++)
 //	if (!isStopCodon(i))
 	{
 		freq = stateFrqArr[i];
-		if (freq < MIN_FREQUENCY) { 
-			stateFrqArr[i] = MIN_FREQUENCY; 
+		if (freq < min_freq) { 
+			stateFrqArr[i] = min_freq; 
 			if (!isStopCodon(i))
 				cout << "WARNING: " << convertStateBackStr(i) << " is not present in alignment that may cause numerical problems" << endl;
 		}
@@ -2436,8 +2438,8 @@ void Alignment::convfreq(double *stateFrqArr) {
 //			if (!isStopCodon(j))
 			{
 			if (stateFrqArr[i] == stateFrqArr[j]) {
-				stateFrqArr[i] += MIN_FREQUENCY_DIFF;
-				stateFrqArr[j] -= MIN_FREQUENCY_DIFF;
+				stateFrqArr[i] += min_freq_diff;
+				stateFrqArr[j] -= min_freq_diff;
 			}
 		}
 	}

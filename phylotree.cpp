@@ -408,8 +408,14 @@ string PhyloTree::getModelName() {
 	}
 	if (model->getFreqType() == FREQ_EMPIRICAL)
 		name += "+F";
-//	if (model->getFreqType() == FREQ_ESTIMATE)
-//		name += "+FO";
+	else if (model->getFreqType() == FREQ_CODON_1x4)
+		name += "+F1X4";
+	else if (model->getFreqType() == FREQ_CODON_3x4)
+		name += "+F3X4";
+	else if (model->getFreqType() == FREQ_CODON_3x4C)
+		name += "+F3X4C";
+	else if (model->getFreqType() == FREQ_ESTIMATE && aln->seq_type != SEQ_DNA)
+		name += "+FO";
 	return name;
 }
 
@@ -420,6 +426,12 @@ string PhyloTree::getModelNameParams() {
 	name += site_rate->getNameParams();
 	if (model->getFreqType() == FREQ_EMPIRICAL)
 		name += "+F";
+	else if (model->getFreqType() == FREQ_CODON_1x4)
+		name += "+F1X4";
+	else if (model->getFreqType() == FREQ_CODON_3x4)
+		name += "+F3X4";
+	else if (model->getFreqType() == FREQ_CODON_3x4C)
+		name += "+F3X4C";
 	if (model->getFreqType() == FREQ_ESTIMATE) {
 		name += "+FO";
         double *state_freq = new double[model->num_states];
