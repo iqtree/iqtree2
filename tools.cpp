@@ -2775,7 +2775,7 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -mset m1,...,mk      Restrict to a comma-separated list of models" << endl
             << "  -mfreq f1,...,fk     Restrict to a comma-separated list of state frequencies" << endl
             << "  -mrate r1,...,rk     Restrict to a comma-separated list of rate heterogeneity" << endl
-            << "                       (e.g. -mrate +G,+I)" << endl
+            << "                       (default: -mrate E,I,G,I+G)" << endl
             << "  -cmax <kmax>         Max number of categories when testing FreeRate model [+R]" << endl
             << "  -msep                Perform model selection and then rate selection" << endl
             << "  -mtree               Do a full tree search for each testing model" << endl

@@ -137,6 +137,9 @@ protected:
 	/** initialize Muse-Gaut 1994 model */
 	void initMG94();
 
+	/** initialize Muse-Gaut 1994 model plus kappa */
+	void initMG94plusK();
+
 	/** initialize Goldman-Yang 1994 model (simplified version with 2 parameters omega and kappa */
 	void initGY94();
 

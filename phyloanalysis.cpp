@@ -241,9 +241,12 @@ void reportModel(ofstream &out, Alignment *aln, ModelSubst *m) {
 		if (m->getFreqType() != FREQ_USER_DEFINED && m->getFreqType() != FREQ_EQUAL) {
 			double *state_freqs = new double[m->num_states];
 			m->getStateFrequency(state_freqs);
-			for (i = 0; i < m->num_states; i++)
-				out << "  pi(" << aln->convertStateBackStr(i) << ") = "
-						<< state_freqs[i] << endl;
+            int ncols=(aln->seq_type == SEQ_CODON) ? 4 : 1;
+			for (i = 0; i < m->num_states; i++) {
+				out << "  pi(" << aln->convertStateBackStr(i) << ") = " << state_freqs[i];
+                if (i % ncols == ncols-1)
+                    out << endl;
+            }
 			delete[] state_freqs;
 			out << endl;
 		}

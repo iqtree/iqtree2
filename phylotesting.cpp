@@ -79,9 +79,9 @@ const char* aa_freq_names[] = {"", "+F"};
 
 
 /****** Codon models ******/
-const char *codon_model_names[] = {"MG", "GY", "ECM"};
+const char *codon_model_names[] = {"MG", "GY", "KOSI07"};
 
-const char *codon_freq_names[] = {"+F1X4", "+F3X4", "+F"};
+const char *codon_freq_names[] = {"", "+F1X4", "+F3X4", "+F"};
 
 const double TOL_LIKELIHOOD_MODELTEST = 0.01;
 
@@ -347,9 +347,9 @@ void getModelList(Params &params, Alignment *aln, StrVector &models, bool separa
     if (params.state_freq_set)
         convert_string_vec(params.state_freq_set, freq_names);
     for (j = 0; j < freq_names.size(); j++) {
-        for (i = 0; i < freq_names.size(); i++)
-            cout << " " << freq_names[i];
-        cout << endl;
+//        for (i = 0; i < freq_names.size(); i++)
+//            cout << " " << freq_names[i];
+//        cout << endl;
         if (freq_names[j] != "" && freq_names[j][0] != '+')
             freq_names[j] = "+" + freq_names[j];
     }
@@ -854,10 +854,10 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
         StateFreqType freq_type = FREQ_UNKNOWN;
         if (model_names[model].find("+F1X4") != string::npos)
             freq_type = FREQ_CODON_1x4;
-        else if (model_names[model].find("+F3X4") != string::npos)
-            freq_type = FREQ_CODON_3x4;
         else if (model_names[model].find("+F3X4C") != string::npos)
             freq_type = FREQ_CODON_3x4C;
+        else if (model_names[model].find("+F3X4") != string::npos)
+            freq_type = FREQ_CODON_3x4;
         else if (model_names[model].find("+FQ") != string::npos)
             freq_type = FREQ_EQUAL;
         else if (model_names[model].find("+F") != string::npos)

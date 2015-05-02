@@ -2336,7 +2336,9 @@ void Alignment::computeCodonFreq(StateFreqType freq, double *state_freq, double 
         	sum += state_freq[i];
         for (i = 0; i < num_states; i++)
         	state_freq[i] /= sum;
-	}
+	} else {
+        outError("Unsupported codon frequency");
+    }
 	convfreq(state_freq);
 }
 

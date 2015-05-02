@@ -155,6 +155,7 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 		case SEQ_BINARY: freq_type = FREQ_ESTIMATE; break; // default for binary: optimized frequencies
 		case SEQ_PROTEIN: freq_type = FREQ_USER_DEFINED; break; // default for protein: frequencies of the empirical AA matrix
 		case SEQ_MORPH: freq_type = FREQ_EQUAL; break;
+		case SEQ_CODON: freq_type = FREQ_UNKNOWN; break;
 		default: freq_type = FREQ_EMPIRICAL; break; // default for DNA and others: counted frequencies from alignment
 		}
 	}
