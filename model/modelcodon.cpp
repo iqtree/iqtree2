@@ -296,6 +296,13 @@ StateFreqType ModelCodon::initCodon(const char *model_name, StateFreqType freq) 
 
 void ModelCodon::init(const char *model_name, string model_params, StateFreqType freq, string freq_params)
 {
+    int i;
+	for (i = 0; i < 12; i++)
+		ntfreq[i] = 0.25;
+	int nrates = getNumRateEntries();
+	for (i = 0; i < nrates; i++)
+		extra_rates[i] = 1.0;
+    ignore_state_freq = false;
 
 	StateFreqType def_freq = FREQ_UNKNOWN;
 	name = full_name = model_name;
@@ -333,8 +340,10 @@ void ModelCodon::setRateGroup(IntVector &group) {
 	assert(group.size() == getNumRateEntries());
 	rate_group = group;
 	num_params = *max_element(rate_group.begin(), rate_group.end()) + 1;
+    rate_constraints.clear();
 	rate_constraints.resize(num_params);
 	for (int i = 0; i < num_params; i++) {
+        rate_constraints[i].fixed = false;
 		rate_constraints[i].min_value = 1e-4;
 		rate_constraints[i].max_value = 100.0;
 		rate_constraints[i].init_value = 1.0;
@@ -696,15 +705,6 @@ void ModelCodon::initMG94(bool with_kappa, StateFreqType freq) {
     
     // ignote state_freq because ntfreq is already used
     ignore_state_freq = true;
-//    double equal_freq = 1.0 / phylo_tree->aln->getNumNonstopCodons();
-//    for (i = 0; i < num_states; i++)
-//        if (phylo_tree->aln->isStopCodon(i))
-//            state_freq[i] = 0.0;
-//        else
-//            state_freq[i] = equal_freq;
-//    phylo_tree->aln->convfreq(state_freq);
-//    for (i = 0; i < num_states; i++)
-//        state_freq[i] = 1.0/num_states;
 }
 
 void ModelCodon::initGY94() {
@@ -729,9 +729,6 @@ void ModelCodon::initGY94() {
 			}
 		}
 	}
-    for (i = 0; i < nrates; i++)
-        extra_rates[i] = 1.0;
-        
 	setRateGroup(*group);
 	// set zero rate for multiple substitution
 	// 1 for synonymous transversion
@@ -757,7 +754,10 @@ void ModelCodon::writeInfo(ostream &out) {
 }
 
 void ModelCodon::readCodonModel(istream &in) {
-	empirical_rates = new double [getNumRateEntries()];
+	int nrates = getNumRateEntries();
+
+    if (!empirical_rates)
+        empirical_rates = new double [nrates];
 
 	int i, j;
 	int nscodons = phylo_tree->aln->getNumNonstopCodons();
@@ -796,9 +796,10 @@ void ModelCodon::readCodonModel(istream &in) {
 	}
 	if (verbose_mode >= VB_MAX) cout << endl;
 
-	//int nrates = getNumRateEntries();
 	//int row = 0, col = 1;
 	// since rates for codons is stored in lower-triangle, special treatment is needed
+    memset(empirical_rates, 0, nrates*sizeof(double));
+    memset(rates, 0, nrates*sizeof(double));
 	for (i = 1; i < nscodons; i++) {
 		for (j = 0; j < i; j++) {
 			int row = state_map[i], col = state_map[j];
@@ -807,9 +808,14 @@ void ModelCodon::readCodonModel(istream &in) {
 				row = col;
 				col = tmp;
 			}
-			int id = col*(2*num_states-col-1)/2 + (row-col-1);
-			assert(id < getNumRateEntries() && id >= 0);
-			empirical_rates[id] = rates[id] = q[i*nscodons+j];
+//			int id = col*(2*num_states-col-1)/2 + (row-col-1);
+            double qentry = q[i*nscodons+j];
+            int id = row*num_states+col;
+			assert(id < nrates && id >= 0);
+			empirical_rates[id] = rates[id] = qentry;
+            id = col*num_states+row;
+			assert(id < nrates && id >= 0);
+			empirical_rates[id] = rates[id] = qentry;
 		}
 	}
 	memset(state_freq, 0, num_states*sizeof(double));
