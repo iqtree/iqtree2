@@ -147,7 +147,7 @@ void reportModelSelection(ofstream &out, Params &params, vector<ModelInfo> &mode
 			out.width(4);
 			out << right << setid << "  ";
 		}
-		out.width(13);
+		out.width(15);
 		out << left << it->name << " ";
 		out.width(11);
 		out << right << it->logl << " ";

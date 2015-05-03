@@ -82,4 +82,15 @@ void evaluateTrees(Params &params, IQTree *tree, vector<TreeInfo> &info, IntVect
 
 void evaluateTrees(Params &params, IQTree *tree);
 
+/**
+    get sequence type for a model name
+    @param model_name model name string
+    @param seq_type (OUT) sequence type, SEQ_UNKNOWN if is not determined
+    @return 1 for parametric model, 2 for empirical model
+*/
+int getSeqType(const char *model_name, SeqType &seq_type);
+
+string getSeqType(string model_name);
+
+
 #endif /* PHYLOTESTING_H_ */

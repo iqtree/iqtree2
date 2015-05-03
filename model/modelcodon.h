@@ -41,7 +41,13 @@ public:
 	 */
 	virtual ~ModelCodon();
 
-	StateFreqType initCodon(const char *model_name);
+	/**
+		@return the number of rate entries, equal to the number of non-diagonal elements of the rate matrix
+        since we store full matrix here
+	*/
+	virtual int getNumRateEntries() { return num_states*(num_states); }
+
+	StateFreqType initCodon(const char *model_name, StateFreqType freq);
 
 	/**
 		initialization, called automatically by the constructor, no need to call it
@@ -135,10 +141,7 @@ public:
 protected:
 
 	/** initialize Muse-Gaut 1994 model */
-	void initMG94();
-
-	/** initialize Muse-Gaut 1994 model plus kappa */
-	void initMG94plusK();
+	void initMG94(bool with_kappa, StateFreqType freq);
 
 	/** initialize Goldman-Yang 1994 model (simplified version with 2 parameters omega and kappa */
 	void initGY94();

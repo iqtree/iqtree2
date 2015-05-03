@@ -225,12 +225,15 @@ GGG";
 ModelCodon::ModelCodon(const char *model_name, string model_params, StateFreqType freq, string freq_params,
 		PhyloTree *tree, bool count_rates) : ModelGTR(tree, count_rates)
 {
+    half_matrix = false;
 	int i;
 	ntfreq = new double[12];
 	for (i = 0; i < 12; i++)
 		ntfreq[i] = 0.25;
 	empirical_rates = NULL;
 	int nrates = getNumRateEntries();
+    delete [] rates;
+    rates = new double[nrates];
 	extra_rates = new double[nrates];
 	for (i = 0; i < nrates; i++)
 		extra_rates[i] = 1.0;
@@ -252,33 +255,33 @@ ModelCodon::~ModelCodon() {
 	}
 }
 
-StateFreqType ModelCodon::initCodon(const char *model_name) {
+StateFreqType ModelCodon::initCodon(const char *model_name, StateFreqType freq) {
 	string name_upper = model_name;
 	for (string::iterator it = name_upper.begin(); it != name_upper.end(); it++)
 		(*it) = toupper(*it);
-
+    
 	if (name_upper == "MG") {
-		initMG94();
+		initMG94(false, freq);
 		return FREQ_CODON_3x4;
 	} else if (name_upper == "MGK") {
-		initMG94plusK();
+		initMG94(true, freq);
 		return FREQ_CODON_3x4;
 	} else if (name_upper == "GY") {
 		initGY94();
 		return FREQ_EMPIRICAL;
-	} else if (name_upper == "ECM" || name_upper == "KOSI07") {
+	} else if (name_upper == "ECM" || name_upper == "KOSI07" || name_upper == "ECMK07") {
 		if (!phylo_tree->aln->isStandardGeneticCode())
-			outError("For ECM a standard genetic code must be used");
+			outError("For ECMK07 a standard genetic code must be used");
 		readCodonModel(model_ECMunrest);
 		return FREQ_USER_DEFINED;
 	} else if (name_upper == "ECMREST") {
 		if (!phylo_tree->aln->isStandardGeneticCode())
-			outError("For ECM a standard genetic code must be used");
+			outError("For ECMREST a standard genetic code must be used");
 		readCodonModel(model_ECMrest);
 		return FREQ_USER_DEFINED;
-	} else if (name_upper == "SCHN05") {
+	} else if (name_upper == "SCHN05" || name_upper == "ECMS05") {
 		if (!phylo_tree->aln->isStandardGeneticCode())
-			outError("For ECM a standard genetic code must be used");
+			outError("For ECMS05 a standard genetic code must be used");
 		readCodonModel(model_ECM_Schneider05);
 		return FREQ_USER_DEFINED;
 	} else {
@@ -293,24 +296,16 @@ StateFreqType ModelCodon::initCodon(const char *model_name) {
 
 void ModelCodon::init(const char *model_name, string model_params, StateFreqType freq, string freq_params)
 {
-	if (freq == FREQ_CODON_1x4 || freq == FREQ_CODON_3x4 || freq == FREQ_CODON_3x4C) {
-		// duplicated call early here to get ntfreq for MG model
-		phylo_tree->aln->computeCodonFreq(freq, state_freq, ntfreq);
-//        cout << "Nucleotide frequencies:";
-//		for (int i = 0; i < 12; i++)
-//			cout << " " << ntfreq[i];
-//		cout << endl;
-	}
 
 	StateFreqType def_freq = FREQ_UNKNOWN;
 	name = full_name = model_name;
 	if (name.find('*') == string::npos)
-		def_freq = initCodon(model_name);
+		def_freq = initCodon(model_name, freq);
 	else {
-		def_freq = initCodon(name.substr(0, name.find('*')).c_str());
+		def_freq = initCodon(name.substr(0, name.find('*')).c_str(), freq);
 		if (def_freq != FREQ_USER_DEFINED)
 			outError("Invalid model ", model_name); // first model must be empirical
-		def_freq = initCodon(name.substr(name.find('*')+1).c_str());
+		def_freq = initCodon(name.substr(name.find('*')+1).c_str(), freq);
 		if (def_freq == FREQ_USER_DEFINED) // second model must be parametric
 			outError("Invalid model ", model_name);
 		// adjust the constraint
@@ -342,7 +337,7 @@ void ModelCodon::setRateGroup(IntVector &group) {
 	for (int i = 0; i < num_params; i++) {
 		rate_constraints[i].min_value = 1e-4;
 		rate_constraints[i].max_value = 100.0;
-		rate_constraints[i].init_value = i+0.3;
+		rate_constraints[i].init_value = 1.0;
 		rate_constraints[i].opr = 0;
 		rate_constraints[i].param1 = -1;
 		rate_constraints[i].param2 = -1;
@@ -462,8 +457,8 @@ void ModelCodon::setRateGroupConstraint(string constraint) {
 		pos = 0;
 		// NEW: set ZERO rate going in/out stop-codon
 		for (int i = 0; i < num_states; i++)
-			// FIX BUG: start j was 0!!!
-			for (int j = i+1; j < num_states; j++, pos++)
+			// FIX BUG: start j was 0!!! OK now since rates has size n*n
+			for (int j = 0; j < num_states; j++, pos++)
 			if (phylo_tree->aln->isStopCodon(i) || phylo_tree->aln->isStopCodon(j))
 				rates[pos] = 0.0;
 
@@ -628,79 +623,98 @@ bool ModelCodon::isTransversion(int state1, int state2) {
 
 
 
-void ModelCodon::initMG94() {
+void ModelCodon::initMG94(bool with_kappa, StateFreqType freq) {
 	/* Muse-Gaut 1994 model with 1 parameters: omega */
 
 	int i,j,k;
+    
+    if (freq == FREQ_UNKNOWN)
+        freq = FREQ_CODON_3x4;
+        
+    switch (freq) {
+      case FREQ_CODON_1x4:
+      case FREQ_CODON_3x4:
+      case FREQ_CODON_3x4C:
+		phylo_tree->aln->computeCodonFreq(freq, state_freq, ntfreq);
+        break;
+      case FREQ_EMPIRICAL:
+      case FREQ_ESTIMATE:
+      case FREQ_USER_DEFINED:
+        outError("Invalid model type for MG");
+        break;
+      default:
+        break;
+    }
+    
+    
 	IntVector *group = new IntVector;
 	group->reserve(getNumRateEntries());
-	for (i = 0, k = 0; i < num_states-1; i++) {
-		for (j = i+1; j < num_states; j++,k++) {
-			if (isMultipleSubst(i, j))
+	for (i = 0, k = 0; i < num_states; i++) {
+		for (j = 0; j < num_states; j++,k++) {
+			if (i==j || phylo_tree->aln->isStopCodon(i) || phylo_tree->aln->isStopCodon(j) || isMultipleSubst(i, j)) {
 				group->push_back(0); // multiple substitution
-			else {
-				extra_rates[k] = ntfreq[targetNucleotide(i, j)];
-				if (isSynonymous(i, j))
-					group->push_back(1); // synonymous substitution
-				else
-					group->push_back(2); // non-synonymous substitution
+                extra_rates[k] = 1.0;
+			} else {
+                int nt = targetNucleotide(i, j);
+                assert(nt>=0 && nt<12);
+				extra_rates[k] = ntfreq[nt];
+                if (with_kappa) {
+                    if (isSynonymous(i, j)) {
+                        if (isTransversion(i, j))
+                            group->push_back(1); // synonymous transversion
+                        else
+                            group->push_back(3); // synonymous transition
+                    } else {
+                        if (isTransversion(i, j))
+                            group->push_back(2); // non-synonymous transversion
+                        else
+                            group->push_back(4); // non-synonymous transition
+                    }
+                } else {
+                    if (isSynonymous(i, j))
+                        group->push_back(1); // synonymous substitution
+                    else
+                        group->push_back(2); // non-synonymous substitution
+                }
 			}
 		}
 	}
 	setRateGroup(*group);
-	// set zero rate for multiple substitution and 1 for synonymous substitution
-	if (empirical_rates)
-		setRateGroupConstraint("x0=fix,x1=fix");
-	else
-		setRateGroupConstraint("x0=0,x1=1");
+    if (with_kappa) {
+        if (empirical_rates)
+            setRateGroupConstraint("x0=fix,x1=fix,x4=x2*x3");
+        else
+            setRateGroupConstraint("x0=0,x1=1,x4=x2*x3");
+    } else {
+        // set zero rate for multiple substitution and 1 for synonymous substitution
+        if (empirical_rates)
+            setRateGroupConstraint("x0=fix,x1=fix");
+        else
+            setRateGroupConstraint("x0=0,x1=1");
+    }
 	delete group;
+    
+    // ignote state_freq because ntfreq is already used
+    ignore_state_freq = true;
+//    double equal_freq = 1.0 / phylo_tree->aln->getNumNonstopCodons();
+//    for (i = 0; i < num_states; i++)
+//        if (phylo_tree->aln->isStopCodon(i))
+//            state_freq[i] = 0.0;
+//        else
+//            state_freq[i] = equal_freq;
+//    phylo_tree->aln->convfreq(state_freq);
+//    for (i = 0; i < num_states; i++)
+//        state_freq[i] = 1.0/num_states;
 }
-
-void ModelCodon::initMG94plusK() {
-	/* Muse-Gaut 1994 model with 1 parameters: omega */
-
-	int i,j,k;
-	IntVector *group = new IntVector;
-	group->reserve(getNumRateEntries());
-	for (i = 0, k = 0; i < num_states-1; i++) {
-		for (j = i+1; j < num_states; j++,k++) {
-			if (isMultipleSubst(i, j))
-				group->push_back(0); // multiple substitution
-			else {
-				extra_rates[k] = ntfreq[targetNucleotide(i, j)];
-                if (isSynonymous(i, j)) {
-                    if (isTransversion(i, j))
-                        group->push_back(1); // synonymous transversion
-                    else
-                        group->push_back(3); // synonymous transition
-                } else {
-                    if (isTransversion(i, j))
-                        group->push_back(2); // non-synonymous transversion
-                    else
-                        group->push_back(4); // non-synonymous transition
-                }
-            }
-		}
-	}
-	setRateGroup(*group);
-	// set zero rate for multiple substitution and 1 for synonymous substitution
-   	// and kappa*omega for non-synonymous transition
-	if (empirical_rates)
-		setRateGroupConstraint("x0=fix,x1=fix,x4=x2*x3");
-	else
-		setRateGroupConstraint("x0=0,x1=1,x4=x2*x3");
-	delete group;
-}
-
 
 void ModelCodon::initGY94() {
 	/* Yang-Nielsen 1998 model (also known as Goldman-Yang 1994) with 2 parameters: omega and kappa */
-	int i,j;
+	int i,j, nrates = getNumRateEntries();
 	IntVector *group = new IntVector();
-//	group->reserve(getNumRateEntries());
-	for (i = 0; i < num_states-1; i++) {
-		for (j = i+1; j < num_states; j++) {
-			if (isMultipleSubst(i, j))
+	group->reserve(nrates);
+	for (i = 0; i < num_states; i++) {
+		for (j = 0; j < num_states; j++) {
+            if (i==j || phylo_tree->aln->isStopCodon(i) || phylo_tree->aln->isStopCodon(j) || isMultipleSubst(i, j))
 				group->push_back(0); // multiple substitution
 			else if (isSynonymous(i, j)) {
 				if (isTransversion(i, j))
@@ -715,6 +729,9 @@ void ModelCodon::initGY94() {
 			}
 		}
 	}
+    for (i = 0; i < nrates; i++)
+        extra_rates[i] = 1.0;
+        
 	setRateGroup(*group);
 	// set zero rate for multiple substitution
 	// 1 for synonymous transversion

@@ -22,6 +22,7 @@
 #include "superalignmentpairwise.h"
 #include "msetsblock.h"
 #include "myreader.h"
+#include "phylotesting.h"
 
 /**
     remove white space at the beginning and end of the string
@@ -249,6 +250,11 @@ void PhyloSuperTree::readPartitionNexus(Params &params) {
 				outError("No input data for partition ", info.name);
 			info.sequence_type = (*it)->sequence_type;
 			if (info.sequence_type=="" && params.sequence_type) info.sequence_type = params.sequence_type;
+            
+            if (info.sequence_type == "" && !info.model_name.empty()) {
+                // try to get sequence type from model
+                info.sequence_type = getSeqType(info.model_name.substr(0, info.model_name.find_first_of("+*")));
+            }
 			info.position_spec = (*it)->position_spec;
 			cout << endl << "Reading partition " << info.name << " (model=" << info.model_name << ", aln=" <<
 				info.aln_file << ", seq=" << info.sequence_type << ", pos=" << info.position_spec << ") ..." << endl;

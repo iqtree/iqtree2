@@ -276,6 +276,9 @@ public:
 
 	void setEigenvectors(double *eigenvectors);
 
+    /** default TRUE: store only upper half of the rate matrix */
+    bool half_matrix;
+
 protected:
 
 	/**

@@ -55,6 +55,17 @@ public:
 	void eigensystem(double **rate_params, double *state_freq, 
 	double *eval, double **evec, double **inv_evec, int num_state);
 
+	/**
+		EigenSystem for general non-symmetric matrix without state frequencies
+		@param rate_params rate parameters (not the rate matrix)
+		@param eval (OUT) eigenvalues
+		@param evec (OUT) eigenvectors
+		@param inv_evec (OUT) inverse matrix of eigenvectors
+		@param num_state (IN) number of states
+	*/
+    void eigensystem(double **rate_params, double *eval, double **evec, double **inv_evec, int num_state);
+
+
 	/** TRUE to normalize rate matrix to 1.0 subst per unit time */
 	bool normalize_matrix;
 
@@ -63,6 +74,9 @@ public:
 	*/
 	double total_num_subst;
 	
+    /** TRUE to ignore state_freq in computation, default: FALSE */
+    bool ignore_state_freq;
+
 
 protected:
 

@@ -86,9 +86,80 @@ const char *codon_freq_names[] = {"", "+F1X4", "+F3X4", "+F"};
 
 const double TOL_LIKELIHOOD_MODELTEST = 0.01;
 
+/**
+ * copy from cvec to strvec
+ */
+void copyCString(const char **cvec, int n, StrVector &strvec, bool touppercase = false) {
+	strvec.resize(n);
+	for (int i = 0; i < n; i++) {
+		strvec[i] = cvec[i];
+        if (touppercase)
+            std::transform(strvec[i].begin(), strvec[i].end(), strvec[i].begin(), ::toupper);
+    }
+}
+
+int getSeqType(const char *model_name, SeqType &seq_type) {
+    bool empirical_model = false;
+    int i;
+    string model_str = model_name;
+    std::transform(model_str.begin(), model_str.end(), model_str.begin(), ::toupper);
+    StrVector model_list;
+
+    seq_type = SEQ_UNKNOWN;
+    
+    copyCString(bin_model_names, sizeof(bin_model_names)/sizeof(char*), model_list, true);
+    for (i = 0; i < model_list.size(); i++)
+        if (model_str == model_list[i]) {
+            seq_type = SEQ_BINARY;
+            break;
+        }
+    copyCString(morph_model_names, sizeof(morph_model_names)/sizeof(char*), model_list, true);
+    for (i = 0; i < model_list.size(); i++)
+        if (model_str == model_list[i]) {
+            seq_type = SEQ_MORPH;
+            break;
+        }
+    copyCString(dna_model_names, sizeof(dna_model_names)/sizeof(char*), model_list, true);
+    for (i = 0; i < model_list.size(); i++)
+        if (model_str == model_list[i]) {
+            seq_type = SEQ_DNA;
+            break;
+        }
+    copyCString(aa_model_names, sizeof(aa_model_names)/sizeof(char*), model_list, true);
+    for (i = 0; i < model_list.size(); i++)
+        if (model_str == model_list[i]) {
+            seq_type = SEQ_PROTEIN;
+            empirical_model = true;
+            break;
+        }
+    copyCString(codon_model_names, sizeof(codon_model_names)/sizeof(char*), model_list, true);
+    for (i = 0; i < model_list.size(); i++)
+        if (model_str == model_list[i]) {
+            seq_type = SEQ_CODON;
+            if (std_genetic_code[i]) empirical_model = true;
+            break;
+        }
+        
+    return (empirical_model) ? 2 : 1;
+}
+
+string getSeqType(string model_name) {
+    SeqType seq_type;
+    getSeqType(model_name.c_str(), seq_type);
+    switch (seq_type) {
+    case SEQ_BINARY: return "BIN"; break;
+    case SEQ_MORPH: return "MORPH"; break;
+    case SEQ_DNA: return "DNA"; break;
+    case SEQ_PROTEIN: return "AA"; break;
+    case SEQ_CODON: return "CODON"; break;
+    default: break;
+    }
+    return "";
+}
+
 void computeInformationScores(double tree_lh, int df, int ssize, double &AIC, double &AICc, double &BIC) {
 	AIC = -2 * tree_lh + 2 * df;
-	AICc = AIC + 2.0 * df * (df + 1) / (ssize - df - 1);
+	AICc = AIC + 2.0 * df * (df + 1) / max(ssize - df - 1, 1);
 	BIC = -2 * tree_lh + df * log(ssize);
 }
 
@@ -278,15 +349,6 @@ bool checkModelFile(string model_file, bool is_partitioned, vector<ModelInfo> &i
 }
 
 /**
- * copy from cvec to strvec
- */
-void copyCString(const char **cvec, int n, StrVector &strvec) {
-	strvec.resize(n);
-	for (int i = 0; i < n; i++)
-		strvec[i] = cvec[i];
-}
-
-/**
  * get the list of model
  * @param nmodels (OUT) number of models
  * @return array of model names
@@ -299,7 +361,7 @@ void getModelList(Params &params, Alignment *aln, StrVector &models, bool separa
 	const char *rate_options[] = {  "", "+I", "+ASC", "+G", "+I+G", "+ASC+G"};
 	bool test_options[] =        {true, true,  false, true,   true,    false};
 	bool test_options_morph[] =  {true,false,   true, true,  false,     true};
-	bool test_options_codon[] =  {true,false,  false,false,  false,    false};
+//	bool test_options_codon[] =  {true,false,  false,false,  false,    false};
 	const int noptions = sizeof(rate_options) / sizeof(char*);
 	int i, j;
     
@@ -365,9 +427,15 @@ void getModelList(Params &params, Alignment *aln, StrVector &models, bool separa
         model_names.clear();
         for (j = 0; j < orig_model_names.size(); j++) {
             if (aln->seq_type == SEQ_CODON) {
-                for (i = 0; i < freq_names.size(); i++)
-                    if (freq_names[i] != "" || (orig_model_names[j].substr(0, 2) != "MG" && orig_model_names[j] != "GY"))
+                SeqType seq_type;
+                int model_type = getSeqType(orig_model_names[j].c_str(), seq_type);
+                for (i = 0; i < freq_names.size(); i++) {
+                    // disallow MG+F
+                    if (freq_names[i] == "+F" && orig_model_names[j].substr(0,2) == "MG")
+                        continue;
+                    if (freq_names[i] != "" || model_type == 2) // empirical model also allow ""
                         model_names.push_back(orig_model_names[j] + freq_names[i]);
+                }
             } else {
                 for (i = 0; i < freq_names.size(); i++)
                     model_names.push_back(orig_model_names[j] + freq_names[i]);
@@ -375,10 +443,11 @@ void getModelList(Params &params, Alignment *aln, StrVector &models, bool separa
         }
     }
 
-	if (seq_type == SEQ_CODON) {
-		for (i = 0; i < noptions; i++)
-			test_options[i] = test_options_codon[i];
-	} else if (seq_type == SEQ_MORPH) {
+//	if (seq_type == SEQ_CODON) {
+//		for (i = 0; i < noptions; i++)
+//			test_options[i] = test_options_codon[i];
+//	} else 
+    if (seq_type == SEQ_MORPH) {
 		for (i = 0; i < noptions; i++)
 			test_options[i] = test_options_morph[i];
 	}
