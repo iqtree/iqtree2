@@ -79,8 +79,8 @@ const char* aa_freq_names[] = {"", "+F"};
 
 
 /****** Codon models ******/
-const char *codon_model_names[] = {"MG", "GY", "KOSI07", "SCHN05"};
-short int std_genetic_code[]    = {   0,    0,        1,        1};
+const char *codon_model_names[] = {"GY", "MG", "MGK", "KOSI07", "SCHN05"};
+short int std_genetic_code[]    = {   0,    0,     0,        1,        1};
 
 const char *codon_freq_names[] = {"", "+F1X4", "+F3X4", "+F"};
 
@@ -598,6 +598,8 @@ void mergePartitions(PhyloSuperTree* super_tree, vector<IntVector> &gene_sets, S
  * @return total number of parameters
  */
 void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInfo> &model_info) {
+    params.print_partition_info = true;
+    params.print_conaln = true;
 	int i = 0;
 	PhyloSuperTree::iterator it;
 	DoubleVector lhvec;
@@ -899,7 +901,7 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 	}
 
 	int num_cat = 0;
-    int model_aic = 0, model_aicc = 0, model_bic = 0;
+    int model_aic = -1, model_aicc = -1, model_bic = -1;
     string prev_tree_string = "";
     int prev_model_id = -1;
     bool skip_model = false;
@@ -1108,12 +1110,12 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 			model_info.push_back(info);
             model_id = model_info.size()-1;
 		}
-		if (model_info[model_id].AIC_score < model_info[model_aic].AIC_score)
+		if (model_aic < 0 || model_info[model_id].AIC_score < model_info[model_aic].AIC_score)
 			model_aic = model_id;
-		if (model_info[model_id].AICc_score < model_info[model_aicc].AICc_score)
+		if (model_aicc < 0 || model_info[model_id].AICc_score < model_info[model_aicc].AICc_score)
 			model_aicc = model_id;
-		if (model_info[model_id].BIC_score < model_info[model_bic].BIC_score)
-			model_bic = model;
+		if (model_bic < 0 || model_info[model_id].BIC_score < model_info[model_bic].BIC_score)
+			model_bic = model_id;
         
         in_tree->setModel(NULL);
         in_tree->setModelFactory(NULL);
