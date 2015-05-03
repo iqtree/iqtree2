@@ -193,14 +193,17 @@ public:
     /**
      *  Create a SplitInMap of splits from the current best trees
      *
+     *  @supportThres a number in (0,1] representing the support value threshold for stable splits
      *  @return number of splits with 100% support value
      */
-    int buildTopSplits();
+    int buildTopSplits(double supportThres);
 
-    /**
+   /**
     *   Get number of stable splits
+    *   @param thresHold A number between (0,1.0], all splits have support values above this threshold
+    *   are considered stable
     */
-    int countStableSplits();
+    int countStableSplits(double thresHold);
 
     void reportStableSplits();
 

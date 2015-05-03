@@ -808,7 +808,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.speednni = true; // turn on reduced hill-climbing NNI by default now
     params.numInitTrees = 100;
     params.fixStableSplits = false;
-    params.probPerturbSS = 0.1;
+    params.stableSplitThreshold = 0.9;
     params.five_plus_five = false;
     params.tabu = false;
     params.fastBran = false;
@@ -2300,11 +2300,11 @@ void parseArg(int argc, char *argv[], Params &params) {
 //				params.five_plus_five = true;
 				continue;
 			}
-            if (strcmp(argv[cnt], "-ps") == 0) {
+            if (strcmp(argv[cnt], "-ss_thres") == 0) {
                 cnt++;
                 if (cnt >= argc)
-                    throw "Use -ps <probability_perturb_stable_splits>";
-                params.probPerturbSS = convert_double(argv[cnt]);
+                    throw "Use -ss_thres <support_value_threshold>";
+                params.stableSplitThreshold = convert_double(argv[cnt]);
                 continue;
             }
 			if (strcmp(argv[cnt], "-ff") == 0) {

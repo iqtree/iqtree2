@@ -128,7 +128,7 @@ void CandidateSet::addCandidateSplits(string treeString) {
 			candidateSplitsHash.insertSplit(sp, 1);
 		}
 	}
-	candidateSplitsHash.setMaxValue(candidateSplitsHash.getMaxValue() + 1);
+	candidateSplitsHash.setNumTree(candidateSplitsHash.getNumTree() + 1);
 }
 
 void CandidateSet::removeCandidateSplits(string treeString) {
@@ -153,7 +153,7 @@ void CandidateSet::removeCandidateSplits(string treeString) {
 			}
 		}
 	}
-	candidateSplitsHash.setMaxValue(candidateSplitsHash.getMaxValue() - 1);
+	candidateSplitsHash.setNumTree(candidateSplitsHash.getNumTree() - 1);
 }
 
 string CandidateSet::getNextCandTree() {
@@ -217,9 +217,9 @@ bool CandidateSet::update(string newTree, double newScore) {
 //					assert(candidateSplitsHash.getMaxValue() == params->numSupportTrees + 1);
 //					removeCandidateSplits(getNthBestTree(candidateSplitsHash.getMaxValue()).tree);
 //				}
-				buildTopSplits();
+				buildTopSplits(params->stableSplitThreshold);
 				double percentSS = (double) getNumStableSplits() / (aln->getNSeq() - 3) * 100;
-				cout << percentSS << " % of the splits have 100% support" << endl;
+				cout << percentSS << " % of the splits are stable"  << endl;
 //				reportStableSplits();
 			}
 		}
@@ -343,20 +343,18 @@ void CandidateSet::removeCandidateTree(string topology) {
 	assert(removed);
 }
 
-int CandidateSet::buildTopSplits() {
+int CandidateSet::buildTopSplits(double supportThreshold) {
 	candidateSplitsHash.clear();
 	vector<CandidateTree> bestCandidateTrees;
 
 	getBestCandidateTrees(params->numSupportTrees, bestCandidateTrees);
 	//assert(bestCandidateTrees.size() > 1);
 
-	candidateSplitsHash.setMaxValue(bestCandidateTrees.size());
+	candidateSplitsHash.setNumTree(bestCandidateTrees.size());
 	loglThreshold = bestCandidateTrees.back().score;
 
 	/* Store all splits in the best trees in candidateSplitsHash.
-	 * Note that the weight of each split is set equal to the number of trees that have this split.
-	 * The variable maxWeight in SpitInMap is the number of trees, from which the splits are converted.
-	 * This is also the maximum weight each split can have.
+	 * The variable numTree in SpitInMap is the number of trees, from which the splits are converted.
 	 */
 	vector<CandidateTree>::iterator treeIt;
 	vector<string> taxaNames = aln->getSeqNames();
@@ -380,17 +378,20 @@ int CandidateSet::buildTopSplits() {
 		}
 	}
 
-	numStableSplits = countStableSplits();
+	numStableSplits = countStableSplits(params->stableSplitThreshold);
 	return numStableSplits;
 }
 
-int CandidateSet::countStableSplits() {
+int CandidateSet::countStableSplits(double thresHold) {
+	if (thresHold > 1.0)
+		thresHold = 1.0;
 	if (candidateSplitsHash.empty())
 		return 0;
 	int numMaxSupport = 0;
 	for (SplitIntMap::iterator it = candidateSplitsHash.begin(); it != candidateSplitsHash.end(); it++) {
-		if (it->second == candidateSplitsHash.getMaxValue() && it->first->countTaxa() > 1) {
-			assert(it->first->getWeight() == candidateSplitsHash.getMaxValue());
+		if (it->second / candidateSplitsHash.getNumTree()  > thresHold
+			&& it->first->countTaxa() > 1) {
+			assert(it->first->getWeight() == candidateSplitsHash.getNumTree());
 			numMaxSupport++;
 		}
 	}
@@ -405,9 +406,9 @@ void CandidateSet::reportStableSplits() {
 
 	int numMaxSupport = 0;
 	for (SplitIntMap::iterator it = candidateSplitsHash.begin(); it != candidateSplitsHash.end(); it++) {
-		if (it->second == candidateSplitsHash.getMaxValue() && it->first->countTaxa() > 1) {
-			cout << it->first->getWeight() << " / " << candidateSplitsHash.getMaxValue() << endl;
-			assert(it->first->getWeight() == candidateSplitsHash.getMaxValue());
+		if (it->second == candidateSplitsHash.getNumTree() && it->first->countTaxa() > 1) {
+			cout << it->first->getWeight() << " / " << candidateSplitsHash.getNumTree() << endl;
+			assert(it->first->getWeight() == candidateSplitsHash.getNumTree());
 			it->first->report(cout);
 		}
 	}

@@ -123,12 +123,12 @@ public:
 	*/
 	void buildMap(SplitGraph &sg, bool use_index = true);
 
-	int getMaxValue() {
-		return maxValue;
+	int getNumTree() {
+		return numTree;
 	}
 
-	void setMaxValue(int maxValue) {
-		this->maxValue = maxValue;
+	void setNumTree(int maxValue) {
+		this->numTree = maxValue;
 	}
 
 private:
@@ -138,7 +138,7 @@ private:
 	 *  all have weight = 1, then maxValue = n
 	 *  This variable is used to determine whether a split appear on all input trees.
 	 */
-	int maxValue;
+	int numTree;
 
 };
 

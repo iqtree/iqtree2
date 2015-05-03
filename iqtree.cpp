@@ -499,7 +499,7 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
     cout << "CPU time: " << nniTime << endl;
 
 	if (params->fixStableSplits) {
-		int nSupportedSplits = candidateTrees.buildTopSplits();
+		int nSupportedSplits = candidateTrees.buildTopSplits(params->stableSplitThreshold);
 		cout << ((double) nSupportedSplits / (aln->getNSeq() - 3)) * 100 ;
 		cout << " % of the splits have 100% support." << endl;
 	}
@@ -1081,12 +1081,12 @@ void IQTree::getNNIBranches(Branches &nniBranches, Branches &tabuBranches, Split
                         /******************** CHECK STABLE SPLIT **************************/
                         int value;
                         candidateSplitHash->findSplit(curSplit, value);
-                        int maxSupport = candidateSplitHash->getMaxValue();
+                        int maxSupport = candidateSplitHash->getNumTree();
                         if (value != maxSupport) {
                             nniBranches.push_back(curBranch);
                         } else { // add a stable branch with a certain probability
                             double rndDbl = random_double();
-                            if (rndDbl < params->probPerturbSS)
+                            if (rndDbl > params->stableSplitThreshold)
                                 nniBranches.push_back(curBranch);
                         }
                     } else {
@@ -1786,8 +1786,8 @@ double IQTree::doTreeSearch() {
         } else {
             if (params->snni) {
 
-            	int numNonStableBranches = (int) (
-                        aln->getNSeq() - 3 - floor(candidateTrees.getNumStableSplits() * (1.0 - params->probPerturbSS)));
+            	int numNonStableBranches =
+                        aln->getNSeq() - 3 - floor(candidateTrees.getNumStableSplits() * params->stableSplitThreshold);
                 int numNNI = ceil(searchinfo.curPerStrength * numNonStableBranches);
 
                 if (params->five_plus_five) {
@@ -2074,6 +2074,7 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
         if (curScore < compatibleNNIs.at(0).newloglh - params->loglh_epsilon) {
             // tree cannot be worse if only 1 NNI is applied
             assert(numNNIs != 1);
+            //cout << "Roll back ... " << endl;
             // restore the tree by reverting all NNIs
             for (int i = 0; i < numNNIs; i++)
                 doNNI(compatibleNNIs.at(i));

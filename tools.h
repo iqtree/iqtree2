@@ -411,6 +411,11 @@ extern int NNI_MAX_NR_STEP;
 struct Params {
 
     /**
+     *  The support threshold for stable splits (Default = 0.9)
+     */
+    double stableSplitThreshold;
+
+    /**
      *   Fast branch length optimization
      */
     bool fastBran;
@@ -433,7 +438,7 @@ struct Params {
 	 */
 	bool tabu;
 
-	/**
+    /**
 	 *  Use (5+5)-ES strategy
 	 */
 	bool five_plus_five;
@@ -442,11 +447,6 @@ struct Params {
 	 * Turn on feature to identify stable splits and fix them during tree search
 	 */
 	bool fixStableSplits;
-
-	/**
-	 *  The probability for a stable split to be perturbed
-	 */
-	double probPerturbSS;
 
 	/**
 	 *  Number of best trees used to compute stable splits
