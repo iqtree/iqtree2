@@ -649,7 +649,7 @@ void ModelCodon::initMG94(bool with_kappa, StateFreqType freq) {
       case FREQ_EMPIRICAL:
       case FREQ_ESTIMATE:
       case FREQ_USER_DEFINED:
-        outError("Invalid model type for MG");
+        outError("Invalid state frequency type for MG model, please use +F1X4 or +F3X4 or +F3X4C");
         break;
       default:
         break;

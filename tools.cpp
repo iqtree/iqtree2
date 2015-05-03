@@ -2793,7 +2793,7 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "      Protein mixture: C10,...,C60, EX2, EX3, EHO, UL2, UL3, EX_EHO, LG4M, LG4X," << endl
             << "                       JTTCF4G" << endl
             << "               Binary: JC2 (default), GTR2" << endl
-            << "                Codon: GY (default), ECM, MG" << endl
+            << "                Codon: GY (default), MG, KOSI07, SCHN05" << endl
             << "       Morphology/SNP: MK (default), ORDERED" << endl
             << "            Otherwise: Name of file containing user-model parameters" << endl
             << "                       (rate parameters and state frequencies)" << endl
