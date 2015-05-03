@@ -218,8 +218,6 @@ bool CandidateSet::update(string newTree, double newScore) {
 //					removeCandidateSplits(getNthBestTree(candidateSplitsHash.getMaxValue()).tree);
 //				}
 				buildTopSplits(params->stableSplitThreshold);
-				double percentSS = (double) getNumStableSplits() / (aln->getNSeq() - 3) * 100;
-				cout << percentSS << " % of the splits are stable"  << endl;
 //				reportStableSplits();
 			}
 		}
@@ -377,8 +375,12 @@ int CandidateSet::buildTopSplits(double supportThreshold) {
 			}
 		}
 	}
-
-	numStableSplits = countStableSplits(params->stableSplitThreshold);
+	int newNumStableSplits = countStableSplits(params->stableSplitThreshold);
+	if (newNumStableSplits > numStableSplits) {
+		numStableSplits = newNumStableSplits;
+		cout << ((double) numStableSplits / (aln->getNSeq() - 3)) * 100 ;
+		cout << " % of the splits are stable (support threshold " << params->stableSplitThreshold << ")" << endl;
+	}
 	return numStableSplits;
 }
 

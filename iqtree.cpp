@@ -500,8 +500,6 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
 
 	if (params->fixStableSplits) {
 		int nSupportedSplits = candidateTrees.buildTopSplits(params->stableSplitThreshold);
-		cout << ((double) nSupportedSplits / (aln->getNSeq() - 3)) * 100 ;
-		cout << " % of the splits have 100% support." << endl;
 	}
 }
 void IQTree::initializePLL(Params &params) {
@@ -2066,15 +2064,17 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
             //optimizeNNIBranches(nniBranches);
             curScore = computeLikelihood();
         } else {
-            // Re-estimate branch lengths of the new tree
-            curScore = optimizeAllBranches(1, params->loglh_epsilon, PLL_NEWZPERCYCLE);
+            if (params->tabu && numNNIs == 1)
+                curScore = computeLikelihood();
+            else
+                curScore = optimizeAllBranches(1, params->loglh_epsilon, PLL_NEWZPERCYCLE);
         }
 
         // curScore should be larger than score of the best NNI
         if (curScore < compatibleNNIs.at(0).newloglh - params->loglh_epsilon) {
             // tree cannot be worse if only 1 NNI is applied
             assert(numNNIs != 1);
-            //cout << "Roll back ... " << endl;
+            cout << "Roll back ... " << endl;
             // restore the tree by reverting all NNIs
             for (int i = 0; i < numNNIs; i++)
                 doNNI(compatibleNNIs.at(i));
@@ -2083,7 +2083,8 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
             // only do the best NNI
             numNNIs = 1;
             doNNIs(numNNIs, compatibleNNIs);
-            curScore = optimizeAllBranches(1, params->loglh_epsilon, PLL_NEWZPERCYCLE);
+            curScore = computeLikelihood();
+            //curScore = optimizeAllBranches(1, params->loglh_epsilon, PLL_NEWZPERCYCLE);
             assert(curScore > compatibleNNIs.at(0).newloglh - params->loglh_epsilon);
         }
 

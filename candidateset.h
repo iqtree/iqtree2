@@ -291,9 +291,8 @@ public:
         return loglThreshold;
     }
 
-
 private:
-/**
+    /**
      *  Log-likelihood threshold for tree to be considered in the set of stable splits.
      *  All tree with log-likelihood >= logThreshold are used to determine the stable splits
      */
@@ -305,6 +304,7 @@ public:
     }
 
 private:
+
     int numStableSplits;
 
     /**
