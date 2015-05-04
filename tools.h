@@ -57,8 +57,11 @@
 #define __func__ __FUNCTION__
 #endif
 
-#if defined(USE_HASH_MAP) && !defined(_MSC_VER)
-	#if !defined(__GNUC__)
+#if defined(USE_HASH_MAP)
+	#if defined(_MSC_VER)
+		#include <unordered_map>
+		#include <unordered_set>
+	#elif !defined(__GNUC__)
 		#include <hash_map>
 		#include <hash_set>
 		using namespace stdext;
@@ -76,10 +79,6 @@
 #else
 	#include <map>
 	#include <set>
-	#define unordered_map map
-	#define unordered_set set
-//	#include <unordered_map>
-//	#include <unordered_set>
 #endif
 
 using namespace std;
@@ -1072,6 +1071,9 @@ struct Params {
     /** set of models for testing */
     char *model_set;
 
+    /** set of state frequencies model for testing */
+    char *state_freq_set;
+
     /** set of rate heterogeneity model for testing */
     char *ratehet_set;
 
@@ -1080,6 +1082,16 @@ struct Params {
 
     /** true to redo model testing even if .model file exists */
     bool model_test_again;
+
+    /** 0: use the same tree for model testing 
+        1: estimate tree for each model, but initialize the tree for next model 
+           by the tree reconstructed from the previous model
+        2: estimate tree for each model independently
+        */
+    short int model_test_and_tree;
+
+    /** true to fist test equal rate model, then test rate heterogeneity (default: false) */
+    bool model_test_separate_rate;
 
     /** TRUE to optimize mixture model weights */
     bool optimize_mixmodel_weight;
@@ -1099,6 +1111,11 @@ struct Params {
             the number of rate categories
      */
     int num_rate_cats;
+
+    /**
+            maximum number of rate categories
+     */
+    int max_rate_cats;
 
     /**
             shape parameter (alpha) of the Gamma distribution for site rates

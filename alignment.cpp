@@ -195,7 +195,7 @@ Alignment *Alignment::removeIdenticalSeq(string not_remove, bool keep_two, StrVe
 					break;
 				}
 			if (equal_seq) {
-				if (!keep_two || !first_ident_seq) {
+				if (removed_seqs.size() < getNSeq()-3 && (!keep_two || !first_ident_seq)) {
 					removed_seqs.push_back(getSeqName(seq2));
 					target_seqs.push_back(getSeqName(seq1));
 					removed[seq2] = true;
@@ -208,8 +208,8 @@ Alignment *Alignment::removeIdenticalSeq(string not_remove, bool keep_two, StrVe
 	}
 
 	if (removed_seqs.size() > 0) {
-		if (removed_seqs.size() > getNSeq()-3)
-			outError("Your alignment contains too many identical sequences, quiting now...");
+		if (removed_seqs.size() >= getNSeq()-3)
+			outWarning("Your alignment contains too many identical sequences!");
 		IntVector keep_seqs;
 		for (seq1 = 0; seq1 < getNSeq(); seq1++)
 			if (!removed[seq1]) keep_seqs.push_back(seq1);
@@ -2271,18 +2271,24 @@ void Alignment::computeCodonFreq(StateFreqType freq, double *state_freq, double 
 		}
 		memcpy(ntfreq+4, ntfreq, sizeof(double)*4);
 		memcpy(ntfreq+8, ntfreq, sizeof(double)*4);
-		sum = 0;
-		for (i = 0; i < num_states; i++)
+        double sum_stop=0.0;
+        sum = 0.0;
+		for (i = 0; i < num_states; i++) {
+            state_freq[i] = ntfreq[i/16] * ntfreq[(i%16)/4] * ntfreq[i%4];
 			if (isStopCodon(i)) {
-				state_freq[i] = 0.0;
-			} else {
-				//int codon = codon_table[i];
-				int codon = i;
-				state_freq[i] = ntfreq[codon/16] * ntfreq[(codon%16)/4] * ntfreq[codon%4];
-				sum += state_freq[i];
+                sum_stop += state_freq[i];
+				state_freq[i] = MIN_FREQUENCY;
+                sum += MIN_FREQUENCY;
 			}
+        }
+        sum = (1.0-sum)/(1.0-sum_stop);
 		for (i = 0; i < num_states; i++)
-			state_freq[i] /= sum;
+            if (!isStopCodon(i))
+                state_freq[i] *= sum;
+        sum = 0.0;
+		for (i = 0; i < num_states; i++)
+                sum += state_freq[i];
+        assert(fabs(sum-1.0)<1e-5);
 	} else if (freq == FREQ_CODON_3x4) {
 		// F3x4 frequency model
 		memset(ntfreq, 0, sizeof(double)*12);
@@ -2310,18 +2316,64 @@ void Alignment::computeCodonFreq(StateFreqType freq, double *state_freq, double 
 				cout << endl;
 			}
 		}
-		double sum = 0;
-		for (i = 0; i < num_states; i++)
+        
+        double sum_stop=0.0;
+        double sum = 0.0;
+		for (i = 0; i < num_states; i++) {
+            state_freq[i] = ntfreq[i/16] * ntfreq[4+(i%16)/4] * ntfreq[8+i%4];
 			if (isStopCodon(i)) {
-				state_freq[i] = 0.0;
-			} else {
-				//int codon = codon_table[i];
-				int codon = i;
-				state_freq[i] = ntfreq[codon/16] * ntfreq[4+(codon%16)/4] * ntfreq[8+codon%4];
-				sum += state_freq[i];
+                sum_stop += state_freq[i];
+				state_freq[i] = MIN_FREQUENCY;
+                sum += MIN_FREQUENCY;
 			}
+        }
+        sum = (1.0-sum)/(1.0-sum_stop);
 		for (i = 0; i < num_states; i++)
-			state_freq[i] /= sum;
+            if (!isStopCodon(i))
+                state_freq[i] *= sum;
+        sum = 0.0;
+		for (i = 0; i < num_states; i++)
+                sum += state_freq[i];
+        assert(fabs(sum-1.0)<1e-5);
+        
+//		double sum = 0;
+//		for (i = 0; i < num_states; i++)
+//			if (isStopCodon(i)) {
+//				state_freq[i] = 0.0;
+//			} else {
+//				//int codon = codon_table[i];
+//				int codon = i;
+//				state_freq[i] = ntfreq[codon/16] * ntfreq[4+(codon%16)/4] * ntfreq[8+codon%4];
+//				sum += state_freq[i];
+//			}
+//		for (i = 0; i < num_states; i++)
+//			state_freq[i] /= sum;
+            
+        // now recompute ntfreq based on state_freq
+//        memset(ntfreq, 0, 12*sizeof(double));
+//        for (i = 0; i < num_states; i++)
+//            if (!isStopCodon(i)) {
+//				int nt1 = i / 16;
+//				int nt2 = (i % 16) / 4;
+//				int nt3 = i % 4;
+//                ntfreq[nt1] += state_freq[i];
+//                ntfreq[nt2+4] += state_freq[i];
+//                ntfreq[nt3+8] += state_freq[i];
+//            }
+//		for (j = 0; j < 12; j+=4) {
+//			double sum = 0;
+//			for (i = 0; i < 4; i++)
+//				sum += ntfreq[i+j];
+//			for (i = 0; i < 4; i++)
+//				ntfreq[i+j] /= sum;
+//			if (verbose_mode >= VB_MED) {
+//				for (i = 0; i < 4; i++)
+//					cout << "  " << symbols_dna[i] << ": " << ntfreq[i+j];
+//				cout << endl;
+//			}
+//		}
+	} else if (freq == FREQ_CODON_3x4C) {
+        outError("F3X4C not yet implemented. Contact authors if you really need it.");
 	} else if (freq == FREQ_EMPIRICAL || freq == FREQ_ESTIMATE) {
 		memset(state_freq, 0, num_states*sizeof(double));
         i = 0;
@@ -2336,7 +2388,9 @@ void Alignment::computeCodonFreq(StateFreqType freq, double *state_freq, double 
         	sum += state_freq[i];
         for (i = 0; i < num_states; i++)
         	state_freq[i] /= sum;
-	}
+	} else {
+        outError("Unsupported codon frequency");
+    }
 	convfreq(state_freq);
 }
 
@@ -2412,11 +2466,10 @@ void Alignment::convfreq(double *stateFrqArr) {
 	sum = 0.0;
 	maxfreq = 0.0;
 	for (i = 0; i < num_states; i++)
-//	if (!isStopCodon(i))
 	{
 		freq = stateFrqArr[i];
-		if (freq < MIN_FREQUENCY) { 
-			stateFrqArr[i] = MIN_FREQUENCY; 
+		if (freq < MIN_FREQUENCY) {
+			stateFrqArr[i] = MIN_FREQUENCY;
 			if (!isStopCodon(i))
 				cout << "WARNING: " << convertStateBackStr(i) << " is not present in alignment that may cause numerical problems" << endl;
 		}
@@ -2429,18 +2482,15 @@ void Alignment::convfreq(double *stateFrqArr) {
 	}
 	stateFrqArr[maxi] += 1.0 - sum;
 
-	for (i = 0; i < num_states - 1; i++)
+	// make state frequencies a bit different from each other
+//	for (i = 0; i < num_states - 1; i++)
 //		if (!isStopCodon(i))
-		{
-		for (j = i + 1; j < num_states; j++)
-//			if (!isStopCodon(j))
-			{
-			if (stateFrqArr[i] == stateFrqArr[j]) {
-				stateFrqArr[i] += MIN_FREQUENCY_DIFF;
-				stateFrqArr[j] -= MIN_FREQUENCY_DIFF;
-			}
-		}
-	}
+//			for (j = i + 1; j < num_states; j++)
+//				if (!isStopCodon(j))
+//					if (stateFrqArr[i] == stateFrqArr[j]) {
+//						stateFrqArr[i] += MIN_FREQUENCY_DIFF;
+//						stateFrqArr[j] -= MIN_FREQUENCY_DIFF;
+//					}
 	if (zero_states) {
 		cout << "WARNING: " << zero_states << " states not present in alignment that might cause numerical instability" << endl;
 	}

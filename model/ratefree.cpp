@@ -15,7 +15,7 @@ const double TOL_FREE_RATE = 0.0001;
 const double MIN_FREE_RATE_PROP = 0.0001;
 const double MAX_FREE_RATE_PROP = 0.9999;
 
-RateFree::RateFree(int ncat, string params, bool sorted_rates, PhyloTree *tree) : RateGamma(ncat, 1.0, false, tree) {
+RateFree::RateFree(int ncat, double start_alpha, string params, bool sorted_rates, PhyloTree *tree) : RateGamma(ncat, start_alpha, false, tree) {
 	fix_params = false;
 	prop = NULL;
     this->sorted_rates = sorted_rates;

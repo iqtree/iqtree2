@@ -153,6 +153,10 @@ void MSetsBlock::Read(NxsToken &token)
 				myset->aln_file = myset->position_spec.substr(0, pos);
 				myset->position_spec = myset->position_spec.substr(pos+1);
 			}
+            if ((pos=myset->position_spec.find(',')) != string::npos) {
+                myset->sequence_type = myset->position_spec.substr(0, pos);
+                myset->position_spec = myset->position_spec.substr(pos+1);
+            }
 
 			token.GetNextToken();
 			if (!token.Equals(";"))

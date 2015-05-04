@@ -175,8 +175,9 @@ public:
 	/**
 		Compute site-specific rates. Override this for Gamma model
 		@param pattern_rates (OUT) pattern rates. Resizing if necesary
+        @return total number of categories
 	*/
-	virtual void computePatternRates(DoubleVector &pattern_rates, IntVector &pattern_cat) {}
+	virtual int computePatternRates(DoubleVector &pattern_rates, IntVector &pattern_cat) { return 1; }
 
 	/**
 		write site-rates to a file in the following format:
@@ -190,7 +191,7 @@ public:
 
 	void writeSiteRates(ostream &out);
 
-	void writeSiteRates(ostream &out, DoubleVector &pattern_rates, IntVector &pattern_cat);
+	void writeSiteRates(ostream &out, DoubleVector &pattern_rates, IntVector &pattern_cat, int ncategory);
 
 	/**
 		name of the rate heterogeneity type

@@ -95,7 +95,7 @@ double RateKategory::optimizeParameters(double epsilon)
 	return score;
 }
 
-void RateKategory::computePatternRates(DoubleVector& pattern_rates, IntVector& pattern_cat)
+int RateKategory::computePatternRates(DoubleVector& pattern_rates, IntVector& pattern_cat)
 {
 	cout << "Computing site rates by empirical Bayes..." << endl;
 	if (phylo_tree->sse == LK_NORMAL || phylo_tree->sse == LK_SSE)
@@ -126,6 +126,8 @@ void RateKategory::computePatternRates(DoubleVector& pattern_rates, IntVector& p
 		pattern_cat[i] = best;
 		lh_cat += ncategory;
 	}
+
+    return ncategory;
 
 //	int npattern = phylo_tree->aln->getNPattern();
 //	double *ptn_rates = new double[npattern];

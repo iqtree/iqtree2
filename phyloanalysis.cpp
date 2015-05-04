@@ -147,7 +147,7 @@ void reportModelSelection(ofstream &out, Params &params, vector<ModelInfo> &mode
 			out.width(4);
 			out << right << setid << "  ";
 		}
-		out.width(13);
+		out.width(15);
 		out << left << it->name << " ";
 		out.width(11);
 		out << right << it->logl << " ";
@@ -241,9 +241,12 @@ void reportModel(ofstream &out, Alignment *aln, ModelSubst *m) {
 		if (m->getFreqType() != FREQ_USER_DEFINED && m->getFreqType() != FREQ_EQUAL) {
 			double *state_freqs = new double[m->num_states];
 			m->getStateFrequency(state_freqs);
-			for (i = 0; i < m->num_states; i++)
-				out << "  pi(" << aln->convertStateBackStr(i) << ") = "
-						<< state_freqs[i] << endl;
+            int ncols=(aln->seq_type == SEQ_CODON) ? 4 : 1;
+			for (i = 0; i < m->num_states; i++) {
+				out << "  pi(" << aln->convertStateBackStr(i) << ") = " << state_freqs[i];
+                if (i % ncols == ncols-1)
+                    out << endl;
+            }
 			delete[] state_freqs;
 			out << endl;
 		}
@@ -1121,8 +1124,12 @@ void initializeParams(Params &params, IQTree &iqtree, vector<ModelInfo> &model_i
         if (mem_size >= getMemorySize()) {
             outError("Memory required exceeds your computer RAM size!");
         }
+        double start_cpu_time = getCPUTime();
+        double start_real_time = getRealTime();
         params.model_name = testModel(params, &iqtree, model_info);
-        cout << "CPU time for model selection: " << getCPUTime() - params.startCPUTime << " seconds." << endl;
+        params.startCPUTime = start_cpu_time;
+        params.start_real_time = start_real_time;
+        cout << "CPU time for model selection: " << getCPUTime() - start_cpu_time << " seconds." << endl;
 //        alignment = iqtree.aln;
         if (test_only) {
             params.min_iterations = 0;
@@ -2160,8 +2167,8 @@ void runPhyloAnalysis(Params &params) {
         delete model_info;
 	} else {
 		// the classical non-parameter bootstrap (SBS)
-		if (params.model_name == "TESTLINK" || params.model_name == "TESTONLYLINK")
-			outError("-m TESTLINK is not allowed when doing standard bootstrap. Please first\nfind partition scheme on the original alignment and use it for bootstrap analysis");
+		if (params.model_name.find("LINK") == string::npos || params.model_name.find("MERGE") == string::npos)
+			outError("-m TESTMERGE is not allowed when doing standard bootstrap. Please first\nfind partition scheme on the original alignment and use it for bootstrap analysis");
 		runStandardBootstrap(params, original_model, alignment, tree);
 	}
 
