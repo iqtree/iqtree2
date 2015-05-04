@@ -670,7 +670,7 @@ public:
     /**
             number of leaves
      */
-    int leafNum;
+    unsigned int leafNum;
 
     /**
             total number of nodes in the tree

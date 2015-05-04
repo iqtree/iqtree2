@@ -194,7 +194,7 @@ public:
      *  @param
      *  	allBranches[IN] the inital branches
      *  @param
-     *  	tabuSplits[IN] the tabu splits
+     *  	perturbedSplits[IN] the tabu splits
      *  @param
      *		nonTabuBranches[OUT] non-tabu branches from \a allBranches
      *	@param[OUT]
@@ -301,13 +301,8 @@ public:
 
 
     /**
-            This implement the fastNNI algorithm proposed in PHYML paper
-            TUNG: this is a virtual function, so it will be called automatically by optimizeNNIBranches()
-            @return best likelihood found
-            @param skipped (OUT) 1 if current iteration is skipped, otherwise 0
-            @param nni_count (OUT) the number of single NNI moves proceeded so far
      */
-    double optimizeNNI(int &nni_count, int &nni_steps);
+    pair<int, int> optimizeNNI(SplitIntMap* perturbedSplit = NULL);
 
     /**
      * @brief Get branches for doing NNI that do not either belong to the tabu split or stable splits
@@ -316,8 +311,8 @@ public:
      * @param dad for navigation
      * @param node for navigation
      */
-    void getNNIBranches(Branches &nniBranches, Branches &nonNNIBranches, SplitIntMap* tabuSplits = NULL
-            , SplitIntMap*candidateSplitHash = NULL, Node *dad = NULL, Node *node = NULL);
+    void getNNIBranches(Branches &nniBranches, Branches &nonNNIBranches, SplitIntMap &tabuSplits,
+             SplitIntMap &candidateSplitHash, Node *dad = NULL, Node *node = NULL);
     
     /**
      * @brief get branches that correspond to the splits in \a nniSplits
@@ -335,12 +330,8 @@ public:
     /**
      * 		@brief Perform NNI search on the current tree topology
      * 		This function will automatically use the selected kernel (either PLL or IQ-TREE)
-     *
-     * 		@param nniCount (OUT) number of NNIs applied
-     * 		@param nniSteps (OUT) number of NNI steps done
-     * 		@return the new NEWICK string
      */
-    string doNNISearch(int &nniCount, int &nniSteps);
+    pair<int, int> doNNISearch();
 
     /**
             @brief evaluate all NNIs
@@ -553,9 +544,9 @@ public:
 protected:
 
    	/**
-   	 *  Splits that are in the tabu list
+   	 *  Splits corresponding to random NNIs
    	 */
-   	SplitIntMap tabuSplits;
+   	SplitIntMap perturbedSplits;
 
     /**
      *  Current IQPNNI iteration number
@@ -604,7 +595,7 @@ protected:
      *  Update the candidate set with tree \a newTree. If a better tree is found, print notification to cout and print
      *  the new best tree to file.
      */
-    void updateCandidateSet(string &newTree);
+    void addCurTreeToCandidateSet();
 
 public:
     /**
