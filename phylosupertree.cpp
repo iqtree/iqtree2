@@ -257,6 +257,7 @@ void PhyloSuperTree::readPartitionNexus(Params &params) {
                 info.sequence_type = getSeqType(info.model_name.substr(0, info.model_name.find_first_of("+*")));
             }
 			info.position_spec = (*it)->position_spec;
+			trimString(info.sequence_type);
 			cout << endl << "Reading partition " << info.name << " (model=" << info.model_name << ", aln=" <<
 				info.aln_file << ", seq=" << info.sequence_type << ", pos=" << info.position_spec << ") ..." << endl;
 			//info.mem_ptnlh = NULL;
