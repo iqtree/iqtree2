@@ -2372,6 +2372,8 @@ void Alignment::computeCodonFreq(StateFreqType freq, double *state_freq, double 
 //				cout << endl;
 //			}
 //		}
+	} else if (freq == FREQ_CODON_3x4C) {
+        outError("F3X4C not yet implemented. Contact authors if you really need it.");
 	} else if (freq == FREQ_EMPIRICAL || freq == FREQ_ESTIMATE) {
 		memset(state_freq, 0, num_states*sizeof(double));
         i = 0;

@@ -814,7 +814,8 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.numInitTrees = 100;
     params.fix_stable_splits = false;
     params.numSupportTrees = 20;
-    params.sprDist = 20;
+//    params.sprDist = 20;
+    params.sprDist = 6;
     params.numNNITrees = 20;
     params.avh_test = 0;
     params.bootlh_test = 0;
