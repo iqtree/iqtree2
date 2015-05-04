@@ -2167,7 +2167,7 @@ void runPhyloAnalysis(Params &params) {
         delete model_info;
 	} else {
 		// the classical non-parameter bootstrap (SBS)
-		if (params.model_name.find("LINK") == string::npos || params.model_name.find("MERGE") == string::npos)
+		if (params.model_name.find("LINK") != string::npos || params.model_name.find("MERGE") != string::npos)
 			outError("-m TESTMERGE is not allowed when doing standard bootstrap. Please first\nfind partition scheme on the original alignment and use it for bootstrap analysis");
 		runStandardBootstrap(params, original_model, alignment, tree);
 	}
