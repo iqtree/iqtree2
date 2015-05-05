@@ -262,6 +262,19 @@ void printSiteLhCategory(const char*filename, PhyloTree *tree) {
 		}
 		out.close();
 		cout << "Site log-likelihoods per category printed to " << filename << endl;
+        if (!tree->isSuperTree()) {
+            cout << "Log-likelihood of constant sites: " << endl;
+            double const_prob = 0.0;
+            for (i = 0; i < tree->aln->getNPattern(); i++)
+                if (tree->aln->at(i).is_const) {
+                    Pattern pat = tree->aln->at(i);
+                    for (Pattern::iterator it = pat.begin(); it != pat.end(); it++)
+                        cout << tree->aln->convertStateBackStr(*it);
+                    cout << ": " << pattern_lh[i] << endl;
+                    const_prob += exp(pattern_lh[i]);
+                }
+            cout << "Probability of const sites: " << const_prob << endl;
+        }
 	} catch (ios::failure) {
 		outError(ERR_WRITE_OUTPUT, filename);
 	}
