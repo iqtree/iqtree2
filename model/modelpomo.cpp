@@ -33,7 +33,8 @@ void ModelPoMo::init(const char *model_name,
 
     // TODO: Process freq_params.  What is this?
     
-    // TODO: Set model_name and full_name accordingly.
+    // TODO: Set model_name and full_name accordingly.  (PoMo is not
+    // in the name now!)
 	this->name = string(model_name);
 
     this->full_name = string(model_name) + " " +

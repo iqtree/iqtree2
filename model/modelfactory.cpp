@@ -102,7 +102,6 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 
 	string model_str = params.model_name;
 	string rate_str;
-    bool pomo_flag = false;
 
 	try {
 
@@ -138,33 +137,19 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 			rate_str = model_str.substr(pos+1);
 			model_str = model_str.substr(0, pos+1);
 		} else if (model_str[spec_pos] == '+') {
-            // TODO: Still a bug here, cannot set rate_str and
-            // model_str before knowing if it is PoMo and standard HKY
-            // model with `-m HKY+F{0.22,0.22,0.23}` also does not
-            // work anymore.
-
-            // Check for PoMo; if so, set model_str and rate_str
+            // Check for PoMo and set model_str and rate_str
             // accordingly.
-            size_t sspec_pos = model_str.find_first_of("+", spec_pos+1);
-            std::string pomo;
-            if (sspec_pos != string::npos) {
-                pomo = model_str.substr(spec_pos, sspec_pos - spec_pos);
-                rate_str  = model_str.substr(sspec_pos);
-                model_str = model_str.substr(0,sspec_pos);
-            } else {
-                pomo = model_str.substr(spec_pos);
-                // No other options specified.
-                rate_str  = "";
-            }
-            if (pomo == "+nrP") {
-                pomo_flag = true;
-                // TODO: Eventually also allow a non-reversible PoMo.
+            string::size_type pos_rev_pomo = model_str.find("+rP");
+            string::size_type pos_nonrev_pomo = model_str.find("+nrP");
+            if (pos_nonrev_pomo != string::npos)
                 outError("Non reversible PoMo not supported yet.");
-            } else if (pomo == "+rP") {
-                // Activate reversible PoMo and set custom virtual population size.
-                pomo_flag = true;
-            }
-            if (pomo_flag == true) {
+            else if (pos_rev_pomo != string::npos) {
+                size_t sspec_pos = model_str.find_first_of("+", spec_pos+1);
+                std::string pomo;
+                if (sspec_pos != string::npos) {
+                    rate_str  = model_str.substr(sspec_pos);
+                    model_str = model_str.substr(0,sspec_pos);
+                } else rate_str  = "";
                 // Check that only supported flags are given.
                 if (rate_str.find("+ASC") != string::npos)
                     outError("Ascertainment bias correction with PoMo not yet supported.");
@@ -172,6 +157,9 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
                     (rate_str.find("+G") != string::npos) ||
                     (rate_str.find("+R") != string::npos))
                     outError("Rate heterogeneity with PoMo not yet supported.");
+            } else {
+                rate_str = model_str.substr(spec_pos);
+                model_str = model_str.substr(0, spec_pos);
             }
         } else {
             rate_str = model_str.substr(spec_pos);

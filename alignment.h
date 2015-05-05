@@ -128,10 +128,11 @@ public:
      * TODO: Allow noninformative sites (where no base is present).
      * 
      * @param filename file name
+     * @param sequence_type sequence type (i.e., "CF10")
      *
      * @return 1 on success, 0 on failure
      */
-    int readCountsFormat(char *filename);
+    int readCountsFormat(char *filename, char *sequence_type);
 
     /**
             extract the alignment from a nexus data block, called by readNexus()

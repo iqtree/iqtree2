@@ -280,10 +280,7 @@ Alignment::Alignment(char *filename, char *sequence_type, InputType &intype) : v
             readPhylip(filename, sequence_type);
         } else if (intype == IN_COUNTS) {
             cout << "Counts format (PoMo) detected" << endl;
-            // TODO: PoMo; set this to Params.pomo_pop_size.  How can I
-            // access this value?
-            virtual_pop_size = 10;
-            readCountsFormat(filename);
+            readCountsFormat(filename, sequence_type);
         } else {
             outError("Unknown sequence format, please use PHYLIP, FASTA, or NEXUS format");
         }
@@ -1036,7 +1033,8 @@ int Alignment::buildPattern(StrVector &sequences, char *sequence_type, int nseq,
         cout << "Alignment most likely contains " << num_states << "-state morphological data" << endl;
         break;
     case SEQ_COUNTSFORMAT:
-    	/* TODO */
+        throw "Counts Format pattern is built in Alignment::readCountsFormat().";
+        break;
     default:
         if (!sequence_type)
             throw "Unknown sequence type.";
@@ -1262,10 +1260,10 @@ int Alignment::readFasta(char *filename, char *sequence_type) {
     return buildPattern(sequences, sequence_type, seq_names.size(), sequences.front().length());
 }
 
-int Alignment::readCountsFormat(char* filename) {
+int Alignment::readCountsFormat(char* filename, char* sequence_type) {
     int npop = 0;                // Number of populations.
     int nsites = 0;              // Number of sites.
-    int N = virtual_pop_size;                  // Virtual population size.
+    int N = 10;                  // Virtual population size; defaults to 10.
     int nnuc = 4;                // Number of nucleotides (base states).
     ostringstream err_str;
     ifstream in;
@@ -1313,6 +1311,19 @@ int Alignment::readCountsFormat(char* filename) {
 
     bool everything_ok = true;
     int fails = 0;
+
+    // Check for sequence type and for custom virtual population size.
+    if (sequence_type) {
+        string st (sequence_type);
+        if (st.substr(0,2) != "CF") throw "Counts File detected but sequence type is not 'CF'.";
+        string virt_pop_size_str = st.substr(2);
+        if (virt_pop_size_str != "") {
+            int virt_pop_size = atoi(virt_pop_size_str.c_str());
+            N = virt_pop_size;
+        }
+    }
+    virtual_pop_size = N;
+    
     // Set the number of states.  If nnuc=4:
     // 4 + (4 choose 2)*(N-1) = 58.
     num_states = nnuc + nnuc*(nnuc-1)/2*(N-1);

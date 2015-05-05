@@ -1559,17 +1559,17 @@ struct Params {
 	/** true to count all distinct trees visited during tree search */
 	bool count_trees;
 
-	/**
-	 * If `true`, Counts File input type has been specified with "-st
-	 * CF[ps]", where `ps` is optional and denotes a custome virtual
-	 * population size.
-	 */
-	int pomo_counts_file_flag;
+	/* /\** */
+	/*  * If `true`, Counts File input type has been specified with "-st */
+	/*  * CF[ps]", where `ps` is optional and denotes a custome virtual */
+	/*  * population size. */
+	/*  *\/ */
+	/* int pomo_counts_file_flag; */
 
-	/**
-	 * virtual population size for PoMo model
-	 */
-	int pomo_pop_size;
+	/* /\** */
+	/*  * virtual population size for PoMo model */
+	/*  *\/ */
+	/* int pomo_pop_size; */
 
 	/* -1 (auto-detect): will be set to 0 if there is enough memory, 1 otherwise
 	 * 0: store all partial likelihood vectors

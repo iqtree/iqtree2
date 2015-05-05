@@ -835,8 +835,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.print_partition_info = false;
 	params.print_conaln = false;
 	params.count_trees = false;
-	params.pomo_counts_file_flag = false;
-	params.pomo_pop_size = 10;
+	// params.pomo_counts_file_flag = false;
+	// params.pomo_pop_size = 10;
 	params.print_branch_lengths = false;
 	params.lh_mem_save = LM_DETECT; // auto detect
 	params.start_tree = STT_PLL_PARSIMONY;
@@ -1494,18 +1494,16 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (cnt >= argc)
 					throw "Use -st BIN or -st DNA or -st AA or -st CODON or -st MORPH";
                 string arg = argv[cnt];
+                params.sequence_type = argv[cnt];
                 if (arg.substr(0,2) == "CF") {
-                    params.pomo_counts_file_flag = true;
                     if (arg.length() > 2) {
                         int ps = convert_int(arg.substr(2).c_str());
-                        if ( (ps >= 5) && (ps <= 20)) params.pomo_pop_size = ps;
-                        else {
-                            std::cout << "Please give a correct PoMo -st parameter; e.g., `-st CF10`." << std::endl;
+                        if ( (ps < 5) || (ps > 20)) {
+                            std::cout << "Please give a correct PoMo sequence type parameter; e.g., `-st CF10`." << std::endl;
                             outError("Custom virtual population size of PoMo not within 5 and 20.");   
                         }
                     }
-                } else
-                    params.sequence_type = argv[cnt];
+                }
 				continue;
 			}
 			if (strcmp(argv[cnt], "-starttree") == 0) {
@@ -2842,6 +2840,7 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "                 <ft>: Frequency type (optional; default: +FO, optimized)."          << endl
             << "                       F or +FO or +FU or +FQ."                                      << endl
             << "                       Counted, optimized, user-defined, equal state frequency."     << endl
+            << "  The default model string is: -m HKY+rP+FO."                                        << endl
             << "  Until now, only DNA models work with PoM."                                         << endl
             << "  Model testing and rate heterogeneity do not work with PoMo yet."                   << endl
 

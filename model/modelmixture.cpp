@@ -984,8 +984,22 @@ ModelSubst* createModel(string model_str, ModelsBlock *models_block, StateFreqTy
 	ModelSubst *model = NULL;
 	//cout << "Numstates: " << tree->aln->num_states << endl;
 	string model_params;
-	NxsModel *nxsmodel = models_block->findModel(model_str);
+    NxsModel *nxsmodel = models_block->findModel(model_str);
 	if (nxsmodel) model_params = nxsmodel->description;
+
+    // Check for PoMo.
+    bool flag_rev_pomo = false;
+    size_t pos_rev_pomo = model_str.find("+rP");
+    size_t pos_nonrev_pomo = model_str.find("+nrP");
+    if (pos_rev_pomo != string::npos) {
+        flag_rev_pomo = true;
+        model_str = model_str.substr(0, pos_rev_pomo);
+    }
+    if (pos_nonrev_pomo != string::npos) {
+        flag_rev_pomo = true;
+        model_str = model_str.substr(0, pos_nonrev_pomo);
+    }
+
 	size_t pos = model_str.find(OPEN_BRACKET);
 	if (pos != string::npos) {
 		if (model_str.rfind(CLOSE_BRACKET) != model_str.length()-1)
@@ -1002,9 +1016,12 @@ ModelSubst* createModel(string model_str, ModelsBlock *models_block, StateFreqTy
 	{
 		model = new ModelSubst(tree->aln->num_states);
 	} else */
-	if ((model_str == "GTR" && tree->aln->seq_type == SEQ_DNA) ||
-		(model_str == "GTR2" && tree->aln->seq_type == SEQ_BINARY) ||
-		(model_str == "GTR20" && tree->aln->seq_type == SEQ_PROTEIN)) {
+    if ((flag_rev_pomo == true) ||
+        (tree->aln->seq_type == SEQ_COUNTSFORMAT))
+        model = new ModelPoMo(model_str.c_str(), model_params, freq_type, freq_params, tree);
+	else if ((model_str == "GTR" && tree->aln->seq_type == SEQ_DNA) ||
+             (model_str == "GTR2" && tree->aln->seq_type == SEQ_BINARY) ||
+             (model_str == "GTR20" && tree->aln->seq_type == SEQ_PROTEIN)) {
 		model = new ModelGTR(tree, count_rates);
 		if (freq_params != "")
 			((ModelGTR*)model)->readStateFreq(freq_params);
@@ -1027,8 +1044,6 @@ ModelSubst* createModel(string model_str, ModelsBlock *models_block, StateFreqTy
 		model = new ModelCodon(model_str.c_str(), model_params, freq_type, freq_params, tree, count_rates);
 	} else if (tree->aln->seq_type == SEQ_MORPH) {
 		model = new ModelMorphology(model_str.c_str(), model_params, freq_type, freq_params, tree);
-	} else if (tree->aln->seq_type == SEQ_COUNTSFORMAT) {
-		model = new ModelPoMo(model_str.c_str(), model_params, freq_type, freq_params, tree);
 	} else {
 		outError("Unsupported model type");
 	}
