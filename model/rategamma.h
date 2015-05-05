@@ -109,8 +109,9 @@ public:
 	/**
 		Compute site-specific rates. Override this for Gamma model
 		@param pattern_rates (OUT) pattern rates. Resizing if necesary
+        @return total number of categories
 	*/
-	virtual void computePatternRates(DoubleVector &pattern_rates, IntVector &pattern_cat);
+	virtual int computePatternRates(DoubleVector &pattern_rates, IntVector &pattern_cat);
 
 	/**
 	 * setup the bounds for joint optimization with BFGS
@@ -162,6 +163,10 @@ public:
 		fix_gamma_shape = fixGammaShape;
 	}
 
+    /**
+        set number of rate categories
+        @param ncat #categories
+    */
 	virtual void setNCategory(int ncat);
 
 protected:

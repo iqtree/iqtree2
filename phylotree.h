@@ -233,6 +233,7 @@ class PhyloTree : public MTree, public Optimization {
 	friend class PhyloSuperTree;
 	friend class PhyloSuperTreePlen;
 	friend class RateGamma;
+	friend class RateGammaInvar;
 	friend class RateKategory;
 
 public:
@@ -781,10 +782,10 @@ public:
      * Assign branch lengths for branch that has no or negative length
      * With single model branch lengths are assigned using parsimony. With partition model
      * branch lengths are assigned randomly
-     * @param updatePLL if true read the new tree into PLL
+     * @param force_change if true then force fixing also positive branch lengths
      * @return number of branches fixed
      */
-    int fixAllBranches(bool force_change);
+    int wrapperFixNegativeBranch(bool force_change);
 
     /**
      * Read the newick string into PLL kernel

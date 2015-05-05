@@ -22,6 +22,16 @@
 #include "superalignmentpairwise.h"
 #include "msetsblock.h"
 #include "myreader.h"
+#include "phylotesting.h"
+
+/**
+    remove white space at the beginning and end of the string
+    @param str (IN/OUT) string to be trimmed
+*/
+void trimString(string &str) {
+    str.erase(0, str.find_first_not_of(" \n\r\t"));
+    str.erase(str.find_last_not_of(" \n\r\t")+1);
+}
 
 PhyloSuperTree::PhyloSuperTree()
  : IQTree()
@@ -98,6 +108,111 @@ void PhyloSuperTree::readPartition(Params &params) {
 
 }
 
+void PhyloSuperTree::readPartitionRaxml(Params &params) {
+	try {
+		ifstream in;
+		in.exceptions(ios::failbit | ios::badbit);
+		in.open(params.partition_file);
+		in.exceptions(ios::badbit);
+		PartitionInfo info;
+        Alignment *input_aln = NULL;
+        if (!params.aln_file)
+            outError("Please supply an alignment with -s option");
+            
+        input_aln = new Alignment(params.aln_file, params.sequence_type, params.intype);
+
+        cout << endl << "RAxML-style partition file detected" << endl;
+
+        size_t pos = params.model_name.find_first_of("+*");
+        string rate_type = "";
+        if (pos != string::npos) rate_type = params.model_name.substr(pos);
+
+		while (!in.eof()) {
+			getline(in, info.model_name, ',');
+			if (in.eof()) break;
+            trimString(info.model_name);
+//            std::transform(info.model_name.begin(), info.model_name.end(), info.model_name.begin(), ::toupper);
+
+            bool is_ASC = info.model_name.substr(0,4) == "ASC_";
+            if (is_ASC) info.model_name.erase(0, 4);
+            StateFreqType freq = FREQ_UNKNOWN;
+            if (*info.model_name.rbegin() == 'F' && info.model_name != "DAYHOFF") {
+                freq = FREQ_EMPIRICAL;
+                info.model_name.erase(info.model_name.length()-1);
+            } else if (*info.model_name.rbegin() == 'X' && info.model_name != "LG4X") {
+                freq = FREQ_ESTIMATE;
+                info.model_name.erase(info.model_name.length()-1);
+            }
+            
+            if (info.model_name.empty())
+                outError("Please give model names in partition file!");
+            if (info.model_name == "BIN") {
+                info.sequence_type = "BIN";
+                info.model_name = "GTR2";
+            } else if (info.model_name == "DNA") {
+                info.sequence_type = "DNA";
+                info.model_name = "GTR";
+            } else if (info.model_name == "MULTI") {
+                info.sequence_type = "MORPH";
+                info.model_name = "MK";
+            } else if (info.model_name.substr(0,5) == "CODON") {
+                info.sequence_type = info.model_name;
+                info.model_name = "GY";
+            } else {
+                info.sequence_type = "AA";
+                if (*info.model_name.begin() == '[') {
+                    if (*info.model_name.rbegin() != ']')
+                        outError("User-defined protein model should be [myProtenSubstitutionModelFileName]");
+                    info.model_name = info.model_name.substr(1, info.model_name.length()-2);
+                }
+            }
+
+            if (freq == FREQ_EMPIRICAL) 
+                info.model_name += "+F";
+            else if (freq == FREQ_ESTIMATE)
+                info.model_name += "+FO";
+            if (is_ASC)
+                info.model_name += "+ASC";
+            info.model_name += rate_type;
+
+			getline(in, info.name, '=');
+            trimString(info.name);
+            if (info.name.empty())
+                outError("Please give partition names in partition file!");
+
+			getline(in, info.position_spec);
+            trimString(info.position_spec);
+            if (info.position_spec.empty())
+                outError("Please specify alignment positions for partition" + info.name);
+            std::replace(info.position_spec.begin(), info.position_spec.end(), ',', ' ');
+            
+			cout << "Reading partition " << info.name << " (model=" << info.model_name << ", seq=" << info.sequence_type << ", pos=" << info.position_spec << ") ..." << endl;
+
+			//info.mem_ptnlh = NULL;
+			info.nniMoves[0].ptnlh = NULL;
+			info.nniMoves[1].ptnlh = NULL;
+			info.cur_ptnlh = NULL;
+			part_info.push_back(info);
+            Alignment *part_aln = new Alignment();
+            part_aln->extractSites(input_aln, info.position_spec.c_str());
+			PhyloTree *tree = new PhyloTree(part_aln);
+			push_back(tree);
+//			params = origin_params;
+		}
+
+		in.clear();
+		// set the failbit again
+		in.exceptions(ios::failbit | ios::badbit);
+		in.close();
+	} catch(ios::failure) {
+		outError(ERR_READ_INPUT);
+	} catch (string str) {
+		outError(str);
+	}
+
+
+}
+
 void PhyloSuperTree::readPartitionNexus(Params &params) {
 	Params origin_params = params;
 	MSetsBlock *sets_block = new MSetsBlock();
@@ -135,6 +250,11 @@ void PhyloSuperTree::readPartitionNexus(Params &params) {
 				outError("No input data for partition ", info.name);
 			info.sequence_type = (*it)->sequence_type;
 			if (info.sequence_type=="" && params.sequence_type) info.sequence_type = params.sequence_type;
+            
+            if (info.sequence_type == "" && !info.model_name.empty()) {
+                // try to get sequence type from model
+                info.sequence_type = getSeqType(info.model_name.substr(0, info.model_name.find_first_of("+*")));
+            }
 			info.position_spec = (*it)->position_spec;
 			cout << endl << "Reading partition " << info.name << " (model=" << info.model_name << ", aln=" <<
 				info.aln_file << ", seq=" << info.sequence_type << ", pos=" << info.position_spec << ") ..." << endl;
@@ -213,7 +333,7 @@ PhyloSuperTree::PhyloSuperTree(Params &params) :  IQTree() {
 	if (detectInputFile(params.partition_file) == IN_NEXUS)
 		readPartitionNexus(params);
 	else
-		readPartition(params);
+		readPartitionRaxml(params);
 	if (part_info.empty())
 		outError("No partition found");
 

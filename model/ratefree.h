@@ -8,17 +8,16 @@
 #ifndef RATEFREE_H_
 #define RATEFREE_H_
 
-#include "rateheterogeneity.h"
+#include "rategamma.h"
 
-class RateFree: virtual public RateHeterogeneity {
-public:
+class RateFree: virtual public RateGamma {
 public:
 	/**
 		constructor
 		@param ncat number of rate categories
 		@param tree associated phylogenetic tree
 	*/
-    RateFree(int ncat, string params, PhyloTree *tree);
+    RateFree(int ncat, double start_alpha, string params, bool sorted_rates, PhyloTree *tree);
 
 	virtual ~RateFree();
 
@@ -28,35 +27,11 @@ public:
 	virtual string getNameParams();
 
 	/**
-		@return the number of rate categories
-	*/
-	virtual int getNRate() { return ncategory; }
-
-
-	/**
-		get the number of rate categories for site-specific category model
-		@return the number of rate categories
-	*/
-	virtual int getNDiscreteRate() { return ncategory; }
-
-
-	/**
-		@param category category ID from 0 to #category-1
-		@return the rate of the specified category
-	*/
-	virtual double getRate(int category) { return rates[category]; }
-
-	/**
 		get the proportion of sites under a specified category.
 		@param category category ID from 0 to #category-1
 		@return the proportion of the specified category
 	*/
 	virtual double getProp(int category) { return prop[category]; }
-
-	/**
-	 * 	return pointer to the rate array
-	 */
-	virtual double* getRates() { return rates; }
 
 	/**
 		the target function which needs to be optimized
@@ -76,7 +51,6 @@ public:
 	*/
 	virtual double optimizeParameters(double epsilon);
 
-
 	/**
 		return the number of dimensions
 	*/
@@ -94,6 +68,10 @@ public:
 	*/
 	virtual void writeParameters(ostream &out);
 
+    /**
+        set number of rate categories
+        @param ncat #categories
+    */
 	virtual void setNCategory(int ncat);
 
 
@@ -114,22 +92,15 @@ protected:
 	virtual void getVariables(double *variables);
 
 	/**
-		number of rate categories
-	*/
-	int ncategory;
-
-	/**
-		rates, containing ncategory elements
-	*/
-	double *rates;
-
-	/**
 	 * proportion of sites for each rate categories
 	 */
 	double *prop;
 
 	/** TRUE to fix parameters */
 	bool fix_params;
+    
+    /** true to sort rate in increasing order, false otherwise */
+    bool sorted_rates;
 
 };
 

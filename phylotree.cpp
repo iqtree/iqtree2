@@ -19,6 +19,7 @@
 #include "timeutil.h"
 #include "pllnni.h"
 #include "phylosupertree.h"
+#include "phylosupertreeplen.h"
 #include "upperbounds.h"
 
 //const static int BINARY_SCALE = floor(log2(1/SCALING_THRESHOLD));
@@ -284,7 +285,7 @@ void PhyloTree::readTreeString(const string &tree_string) {
 //	lhComputed = false;
 }
 
-int PhyloTree::fixAllBranches(bool force_change) {
+int PhyloTree::wrapperFixNegativeBranch(bool force_change) {
     // Initialize branch lengths for the parsimony tree
     initializeAllPartialPars();
     clearAllPartialLH();
@@ -407,6 +408,16 @@ string PhyloTree::getModelName() {
 	}
 	if (model->getFreqType() == FREQ_EMPIRICAL)
 		name += "+F";
+	else if (model->getFreqType() == FREQ_CODON_1x4)
+		name += "+F1X4";
+	else if (model->getFreqType() == FREQ_CODON_3x4)
+		name += "+F3X4";
+	else if (model->getFreqType() == FREQ_CODON_3x4C)
+		name += "+F3X4C";
+	else if (model->getFreqType() == FREQ_ESTIMATE && aln->seq_type != SEQ_DNA)
+		name += "+FO";
+	else if (model->getFreqType() == FREQ_EQUAL && aln->seq_type != SEQ_DNA)
+		name += "+FQ";
 	return name;
 }
 
@@ -417,6 +428,24 @@ string PhyloTree::getModelNameParams() {
 	name += site_rate->getNameParams();
 	if (model->getFreqType() == FREQ_EMPIRICAL)
 		name += "+F";
+	else if (model->getFreqType() == FREQ_CODON_1x4)
+		name += "+F1X4";
+	else if (model->getFreqType() == FREQ_CODON_3x4)
+		name += "+F3X4";
+	else if (model->getFreqType() == FREQ_CODON_3x4C)
+		name += "+F3X4C";
+	else if (model->getFreqType() == FREQ_ESTIMATE) {
+		name += "+FO";
+        double *state_freq = new double[model->num_states];
+        model->getStateFrequency(state_freq);
+        name += "{" + convertDoubleToString(state_freq[0]);
+        for (int i = 1; i < model->num_states; i++)
+            name += "," + convertDoubleToString(state_freq[i]);
+        name += "}";
+        delete [] state_freq;
+    }
+	else if (model->getFreqType() == FREQ_EQUAL && aln->seq_type != SEQ_DNA)
+		name += "+FQ";
 	return name;
 }
 
@@ -3038,8 +3067,10 @@ double PhyloTree::optimizeAllBranches(int my_iterations, double tolerance, int m
 //        if (verbose_mode >= VB_DEBUG) {
 //            printTree(cout, WT_BR_LEN+WT_NEWLINE);
 //        }
-        optimizeAllBranches((PhyloNode*) root, NULL, maxNRStep);
+
+    	optimizeAllBranches((PhyloNode*) root, NULL, maxNRStep);
         double new_tree_lh = computeLikelihoodFromBuffer();
+        //cout<<"After opt  log-lh = "<<new_tree_lh<<endl;
 
         if (verbose_mode >= VB_MAX) {
             cout << "Likelihood after iteration " << i + 1 << " : ";
@@ -3057,13 +3088,17 @@ double PhyloTree::optimizeAllBranches(int my_iterations, double tolerance, int m
 //            assert(new_tree_lh >= tree_lh - 10.0);
 //        }
         
+
         if (new_tree_lh < tree_lh) {
         	// IN RARE CASE: tree log-likelihood decreases, revert the branch length and stop
         	if (verbose_mode >= VB_MED)
         		cout << "NOTE: Restoring branch lengths as tree log-likelihood decreases after branch length optimization: "
         			<< tree_lh << " -> " << new_tree_lh << endl;
-        	restoreBranchLengths(lenvec);
+
         	clearAllPartialLH();
+        	restoreBranchLengths(lenvec);
+
+        	//clearAllPartialLH();
 //        	readTreeString(string_brlen);
         	new_tree_lh = computeLikelihood();
         	assert(fabs(new_tree_lh-tree_lh) < 1.0);

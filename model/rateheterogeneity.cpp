@@ -38,7 +38,7 @@ RateHeterogeneity::~RateHeterogeneity()
 {
 }
 
-void RateHeterogeneity::writeSiteRates(ostream &out, DoubleVector &pattern_rates, IntVector &pattern_cat) {
+void RateHeterogeneity::writeSiteRates(ostream &out, DoubleVector &pattern_rates, IntVector &pattern_cat, int ncategory) {
 	int nsite = phylo_tree->aln->getNSite();
 	int i;
 	
@@ -48,6 +48,8 @@ void RateHeterogeneity::writeSiteRates(ostream &out, DoubleVector &pattern_rates
 	if (!pattern_cat.empty()) out << "\tCategory\tCategorized_rate";
 	out << endl;
 	//cout << __func__ << endl;
+    IntVector count;
+    count.resize(ncategory, 0);
 	for (i = 0; i < nsite; i++) {
 		int ptn = phylo_tree->aln->getPatternID(i);
 		out << i+1 << "\t";
@@ -55,28 +57,33 @@ void RateHeterogeneity::writeSiteRates(ostream &out, DoubleVector &pattern_rates
 		//cout << i << " "<< ptn << " " << pattern_cat[ptn] << endl;
 		if (!pattern_cat.empty()) out << "\t" << pattern_cat[ptn]+1 << "\t" << getRate(pattern_cat[ptn]);
 		out << endl;
+        count[pattern_cat[ptn]]++;
 	}
+    cout << "Empirical proportions for each category:";
+    for (i = 0; i < count.size(); i++)
+        cout << " " << ((double)count[i])/nsite;
+    cout << endl;
 }
 
 void RateHeterogeneity::writeSiteRates(ostream &out) {
 	DoubleVector pattern_rates;
 	IntVector pattern_cat;
-	computePatternRates(pattern_rates, pattern_cat);
+	int ncategory = computePatternRates(pattern_rates, pattern_cat);
 	if (pattern_rates.empty()) return;
-	writeSiteRates(out, pattern_rates, pattern_cat);
+	writeSiteRates(out, pattern_rates, pattern_cat, ncategory);
 }
 
 void RateHeterogeneity::writeSiteRates(const char *file_name) {
 	DoubleVector pattern_rates;
 	IntVector pattern_cat;
-	computePatternRates(pattern_rates, pattern_cat);
+	int ncategory = computePatternRates(pattern_rates, pattern_cat);
 	if (pattern_rates.empty()) return;
 
 	try {
 		ofstream out;
 		out.exceptions(ios::failbit | ios::badbit);
 		out.open(file_name);
-		writeSiteRates(out, pattern_rates, pattern_cat);
+		writeSiteRates(out, pattern_rates, pattern_cat, ncategory);
 		out.close();
 		cout << "Site rates printed to " << file_name << endl;
 	} catch (ios::failure) {
