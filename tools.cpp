@@ -811,6 +811,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.stableSplitThreshold = 0.9;
     params.five_plus_five = false;
     params.tabu = false;
+    params.strictTabu = false;
     params.fastBran = false;
     params.numSupportTrees = 20;
     params.sprDist = 20;
@@ -2311,10 +2312,19 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.five_plus_five = true;
 				continue;
 			}
+
 			if (strcmp(argv[cnt], "-tabu") == 0) {
+                params.fixStableSplits = true;
 				params.tabu = true;
 				continue;
 			}
+
+            if (strcmp(argv[cnt], "-stabu") == 0) {
+                params.fixStableSplits = true;
+                params.tabu = true;
+                params.strictTabu = true;
+                continue;
+            }
 
             if (strcmp(argv[cnt], "-fbran") == 0) {
                 params.fastBran = true;

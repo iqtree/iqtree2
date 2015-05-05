@@ -2044,7 +2044,7 @@ pair<int, int> IQTree::optimizeNNI() {
         if (curScore - oldScore <  params->loglh_epsilon)
             break;
 
-        if (params->tabu) {
+        if (params->strictTabu) {
             // add tabu splits
             for (int i = 0; i < curNumNNIs; i++) {
                 Split* sp = getSplit(compatibleNNIs.at(i).node1, compatibleNNIs.at(i).node2);
