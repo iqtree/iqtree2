@@ -1074,16 +1074,19 @@ void IQTree::getNNIBranches(Branches &nniBranches, Branches &tabuBranches, Split
                     if (tabuSplits.findSplit(curSplit) != NULL) {
                         tabuBranches.push_back(curBranch);
                     } else if (!candidateSplitHash.empty()) {
+                        Split* _curSplit;
                         /******************** CHECK STABLE SPLIT **************************/
                         int value;
-                        candidateSplitHash.findSplit(curSplit, value);
-                        int maxSupport = candidateSplitHash.getNumTree();
-                        if (value != maxSupport) {
+                        _curSplit = candidateSplitHash.findSplit(curSplit, value);
+                        if (_curSplit == NULL || _curSplit->getWeight() <= params->stableSplitThreshold) {
                             nniBranches.push_back(curBranch);
                         } else { // add a stable branch with a certain probability
                             double rndDbl = random_double();
-                            if (rndDbl > params->stableSplitThreshold)
+                            if (rndDbl > params->stableSplitThreshold) {
                                 nniBranches.push_back(curBranch);
+//                                if (_curSplit->getWeight() != 1.0)
+//                                    cout << "Split support: " << _curSplit->getWeight() << endl;
+                            }
                         }
                     } else {
                         nniBranches.push_back(curBranch);

@@ -365,12 +365,14 @@ int CandidateSet::buildTopSplits(double supportThreshold) {
 			int value;
 			Split *sp = candidateSplitsHash.findSplit(*itg, value);
 			if (sp != NULL) {
-				sp->setWeight(value + 1);
-				candidateSplitsHash.setValue(sp, value + 1);
+				int newHashWeight = value + 1;
+				double newSupport = (double) newHashWeight / (double) candidateSplitsHash.getNumTree();
+				sp->setWeight(newSupport);
+				candidateSplitsHash.setValue(sp, newHashWeight);
 			}
 			else {
 				sp = new Split(*(*itg));
-				sp->setWeight(1);
+				sp->setWeight(1.0 / (double) candidateSplitsHash.getNumTree());
 				candidateSplitsHash.insertSplit(sp, 1);
 			}
 		}
@@ -391,9 +393,8 @@ int CandidateSet::countStableSplits(double thresHold) {
 		return 0;
 	int numMaxSupport = 0;
 	for (SplitIntMap::iterator it = candidateSplitsHash.begin(); it != candidateSplitsHash.end(); it++) {
-		if (it->second / candidateSplitsHash.getNumTree()  > thresHold
-			&& it->first->countTaxa() > 1) {
-			assert(it->first->getWeight() == candidateSplitsHash.getNumTree());
+		if (it->first->getWeight() > thresHold && it->first->countTaxa() > 1) {
+			//cout << "Stable support: " << it->first->getWeight() << endl;
 			numMaxSupport++;
 		}
 	}
