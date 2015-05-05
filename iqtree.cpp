@@ -1983,7 +1983,7 @@ pair<int, int> IQTree::optimizeNNI() {
                 if (positiveNNIs.size() == 0) {
                     break;
                 }
-                maxNumSteps = numSteps;
+                //maxnumsteps = numsteps;
             } else {
                 break;
             }
