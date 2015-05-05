@@ -194,7 +194,7 @@ public:
      *  @param
      *  	allBranches[IN] the inital branches
      *  @param
-     *  	perturbedSplits[IN] the tabu splits
+     *  	initTabuSplits[IN] the tabu splits
      *  @param
      *		nonTabuBranches[OUT] non-tabu branches from \a allBranches
      *	@param[OUT]
@@ -302,7 +302,7 @@ public:
 
     /**
      */
-    pair<int, int> optimizeNNI(SplitIntMap* perturbedSplit = NULL);
+    pair<int, int> optimizeNNI();
 
     /**
      * @brief Get branches for doing NNI that do not either belong to the tabu split or stable splits
@@ -546,7 +546,7 @@ protected:
    	/**
    	 *  Splits corresponding to random NNIs
    	 */
-   	SplitIntMap perturbedSplits;
+   	SplitIntMap initTabuSplits;
 
     /**
      *  Current IQPNNI iteration number
