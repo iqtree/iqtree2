@@ -415,6 +415,7 @@ void getModelList(Params &params, Alignment *aln, StrVector &models, bool separa
     if (params.state_freq_set)
         convert_string_vec(params.state_freq_set, freq_names);
     for (j = 0; j < freq_names.size(); j++) {
+        std::transform(freq_names[j].begin(), freq_names[j].end(), freq_names[j].begin(), ::toupper);
 //        for (i = 0; i < freq_names.size(); i++)
 //            cout << " " << freq_names[i];
 //        cout << endl;
@@ -852,12 +853,16 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 	in_tree->optimize_by_newton = params.optimize_by_newton;
 	in_tree->setLikelihoodKernel(params.SSE);
 
-	RateHeterogeneity * rate_class[5];
+    int num_rate_classes = 3 + params.max_rate_cats;
+
+	RateHeterogeneity ** rate_class = new RateHeterogeneity*[num_rate_classes];
 	rate_class[0] = new RateHeterogeneity();
 	rate_class[1] = new RateInvar(-1, NULL);
 	rate_class[2] = new RateGamma(params.num_rate_cats, params.gamma_shape, params.gamma_median, NULL);
 	rate_class[3] = new RateGammaInvar(params.num_rate_cats, params.gamma_shape, params.gamma_median, -1, params.optimize_model_rate_joint, params.rr_ai, NULL);
-	rate_class[4] = new RateFree(params.num_rate_cats, params.gamma_shape, "", false, NULL);
+    for (model = 4; model < num_rate_classes; model++)
+        rate_class[model] = new RateFree(model-2, params.gamma_shape, "", false, NULL);
+        
 	ModelGTR *subst_model = NULL;
 	if (seq_type == SEQ_BINARY)
 		subst_model = new ModelBIN("JC2", "", FREQ_UNKNOWN, "", in_tree);
@@ -954,12 +959,15 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
         // initialize rate
         size_t pos;
         if ((pos = model_names[model].find("+R")) != string::npos) {
-            tree->setRate(rate_class[4]);
+            int ncat = params.num_rate_cats;
             if (model_names[model].length() > pos+2 && isdigit(model_names[model][pos+2])) {
-                int ncat = convert_int(model_names[model].c_str() + pos+2);
-                if (ncat < 1) outError("Wrong number of category for +R in " + model_names[model]);
-                tree->getRate()->setNCategory(ncat);
+                ncat = convert_int(model_names[model].c_str() + pos+2);
+//                tree->getRate()->setNCategory(ncat);
             }
+            if (ncat <= 1) outError("Number of rate categories for " + model_names[model] + " is <= 1");
+            if (ncat > params.max_rate_cats)
+                outError("Number of rate categories for " + model_names[model] + " exceeds " + convertIntToString(params.max_rate_cats));
+            tree->setRate(rate_class[2+ncat]);
         } else if (model_names[model].find("+I") != string::npos && (pos = model_names[model].find("+G")) != string::npos) {
             tree->setRate(rate_class[3]);
             if (model_names[model].length() > pos+2 && isdigit(model_names[model][pos+2])) {
@@ -1258,9 +1266,10 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 
 	delete model_fac;
 	delete subst_model;
-	for (int rate_type = sizeof(rate_class)/sizeof(void*)-1; rate_type >= 0; rate_type--) {
+	for (int rate_type = num_rate_classes-1; rate_type >= 0; rate_type--) {
 		delete rate_class[rate_type];
-	}
+    }
+    delete [] rate_class;
 //	delete tree_hetero;
 //	delete tree_homo;
 	in_tree->deleteAllPartialLh();
