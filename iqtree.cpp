@@ -2021,7 +2021,7 @@ pair<int, int> IQTree::optimizeNNI() {
             // only do the best NNI
             curNumNNIs = 1;
             doNNIs(curNumNNIs, compatibleNNIs);
-            if (params->tabu)
+            if (params->fastBran)
                 curScore = computeLikelihood();
             else
                 curScore = optimizeAllBranches(1, params->loglh_epsilon, PLL_NEWZPERCYCLE);
