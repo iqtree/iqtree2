@@ -411,6 +411,11 @@ extern int NNI_MAX_NR_STEP;
 struct Params {
 
     /**
+     *  Option to check memory consumption only
+     */
+    bool memCheck;
+
+    /**
      *  The support threshold for stable splits (Default = 0.9)
      */
     double stableSplitThreshold;

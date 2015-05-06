@@ -1118,7 +1118,7 @@ string IQTree::doRandomNNIs(int numNNI) {
         int randInt = random_int(nniBranches.size());
         NNIMove randNNI = getRandomNNI(nniBranches[randInt]);
         doNNI(randNNI, true);
-        if (params->tabu || params->fastBran) {
+        if (params->tabu) {
             Split *sp = getSplit(randNNI.node1, randNNI.node2);
             Split *tabuSplit = new Split(*sp);
             if (tabuSplit->shouldInvert()) {
@@ -1141,12 +1141,12 @@ string IQTree::doRandomNNIs(int numNNI) {
 
     resetCurScore();
 
-    if (params->fastBran) {
-        Branches optBranches;
-        getSplitBranches(optBranches, initTabuSplits);
-        assert(optBranches.size() == initTabuSplits.size());
-        optimizeNNIBranches(optBranches);
-    }
+//    if (params->fastBran) {
+//        Branches optBranches;
+//        getSplitBranches(optBranches, initTabuSplits);
+//        assert(optBranches.size() == initTabuSplits.size());
+//        optimizeNNIBranches(optBranches);
+//    }
 
     optimizeBranches(1);
 
@@ -2001,20 +2001,12 @@ pair<int, int> IQTree::optimizeNNI() {
         // do non-conflicting positive NNIs
         doNNIs(curNumNNIs, compatibleNNIs);
 
-
-        if (params->fastBran) {
-            nniSplits.clear();
-            convertNNI2Splits(nniSplits, numNNIs, compatibleNNIs);
-            Branches _nniBranches;
-            getSplitBranches(_nniBranches, nniSplits);
-            assert(nniBranches.size() == nniSplits.size());
-            curScore = optimizeNNIBranches(_nniBranches);
+        if (params->fastBran && curNumNNIs == 1) {
+            curScore = computeLikelihood();
         } else {
-            if (params->tabu && numNNIs == 1)
-                curScore = computeLikelihood();
-            else
-                curScore = optimizeAllBranches(1, params->loglh_epsilon, PLL_NEWZPERCYCLE);
+            curScore = optimizeAllBranches(1, params->loglh_epsilon, PLL_NEWZPERCYCLE);
         }
+
 
         // curScore should be larger than score of the best NNI
         if (curScore < compatibleNNIs.at(0).newloglh - params->loglh_epsilon) {
@@ -2058,10 +2050,6 @@ pair<int, int> IQTree::optimizeNNI() {
                 tabuSplits.insertSplit(tabuSplit, 1);
             }
         }
-    }
-
-    if (params->fastBran) {
-        curScore = optimizeAllBranches(1, params->loglh_epsilon, PLL_NEWZPERCYCLE);
     }
 
     if (numNNIs == 0) {

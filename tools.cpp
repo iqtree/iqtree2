@@ -810,6 +810,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.fixStableSplits = false;
     params.stableSplitThreshold = 0.9;
     params.five_plus_five = false;
+    params.memCheck = false;
     params.tabu = false;
     params.strictTabu = false;
     params.fastBran = false;
@@ -2297,7 +2298,6 @@ void parseArg(int argc, char *argv[], Params &params) {
 			}
 			if (strcmp(argv[cnt], "-fss") == 0) {
 				params.fixStableSplits = true;
-				params.sprDist = 3;
 //				params.five_plus_five = true;
 				continue;
 			}
@@ -2319,6 +2319,11 @@ void parseArg(int argc, char *argv[], Params &params) {
 				continue;
 			}
 
+            if (strcmp(argv[cnt], "-memcheck") == 0) {
+                params.memCheck = true;
+                continue;
+            }
+
             if (strcmp(argv[cnt], "-stabu") == 0) {
                 params.fixStableSplits = true;
                 params.tabu = true;
@@ -2328,7 +2333,6 @@ void parseArg(int argc, char *argv[], Params &params) {
 
             if (strcmp(argv[cnt], "-fbran") == 0) {
                 params.fastBran = true;
-                //params.nni5 = false;
                 continue;
             }
 

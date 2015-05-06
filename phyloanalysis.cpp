@@ -1468,6 +1468,8 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
         if (mem_size >= getMemorySize()) {
             outError("Memory required exceeds your computer RAM size!");
         }
+		if (params.memCheck)
+			exit(0);
     }
 
     iqtree.initializeAllPartialLh();
