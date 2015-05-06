@@ -7,20 +7,24 @@ ModelPoMo::ModelPoMo(const char *model_name,
                      string model_params,
                      StateFreqType freq_type,
                      string freq_params,
-                     PhyloTree *tree)
+                     PhyloTree *tree,
+                     bool is_reversible)
     // Do not count rates; does not make sense for PoMo.
     : ModelGTR(tree, false) {
-	init(model_name, model_params, freq_type, freq_params);
+	init(model_name, model_params, freq_type, freq_params, is_reversible);
 }
 
 void ModelPoMo::init(const char *model_name,
                      string model_params,
                      StateFreqType freq_type,
-                     string freq_params) {
+                     string freq_params,
+                     bool is_reversible) {
     // Check num_states (set in Alignment::readCountsFormat()).
 	int N = phylo_tree->aln->virtual_pop_size;
     int nnuc = 4;
     assert(num_states == (nnuc + (nnuc*(nnuc-1)/2 * (N-1))) );
+
+    if (is_reversible != true) throw "Non-reversible PoMo not supported yet.";
 
     // TODO: Process model_name.
     // DNA: HKY (default), JC, F81, K2P, K3P, K81uf, TN/TrN, TNef,
@@ -33,12 +37,12 @@ void ModelPoMo::init(const char *model_name,
 
     // TODO: Process freq_params.  What is this?
     
-    // TODO: Set model_name and full_name accordingly.  (PoMo is not
-    // in the name now!)
-	this->name = string(model_name);
-
-    this->full_name = string(model_name) + " " +
-        convertIntToString(num_states) + " states";
+	this->name = string(model_name) + "+rP" + convertIntToString(N);
+    this->full_name =
+        "reversible PoMo with N=" +
+        convertIntToString(N) + " and " +
+        string(model_name) + " substitution model; " +
+        convertIntToString(num_states) + " states in total";
 
     eps = 1e-6;
 
@@ -151,14 +155,14 @@ void ModelPoMo::updatePoMoStatesAndRates () {
     if (verbose_mode >= VB_MAX) {
         std::cout << std::setprecision(7)
                   << "DEBUG: Rate Matrix calculated." << std::endl
-                  << "mu=" << std::endl
+                  << "DEBUG: mu=" << "\t"
                   << mutation_prob[0] << "\t"
                   << mutation_prob[1] << "\t"
                   << mutation_prob[2] << "\t"
                   << mutation_prob[3] << "\t"
                   << mutation_prob[4] << "\t"
                   << mutation_prob[5] << std::endl;
-        std::cout << std::setprecision(3) << "PIs:\t"
+        std::cout << "DEBUG: " << std::setprecision(3) << "PIs:\t"
                   << freq_fixed_states[0] << "\t"
                   << freq_fixed_states[1] << "\t"
                   << freq_fixed_states[2] << "\t"
@@ -442,6 +446,7 @@ void ModelPoMo::writeInfo(ostream &out) {
 	int i;
     int state1;
     ios  state(NULL);
+    int N = phylo_tree->aln->virtual_pop_size;
     state.copyfmt(out);
 
     out << setprecision(6);
@@ -462,7 +467,7 @@ void ModelPoMo::writeInfo(ostream &out) {
     out << "==================================" << endl;
     out << "State frequency vector state_freq: " << endl;
     for (state1 = 0; state1 < num_states; state1++) {
-        if (state1 == 4 || (state1-4)%9 == 0) out << endl;
+        if (state1 == 4 || (state1-4)%(N-1) == 0) out << endl;
         out << state_freq[state1] << " ";
     }
     out << endl << endl;

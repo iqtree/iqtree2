@@ -22,10 +22,11 @@ class ModelPoMo : public ModelGTR
      * @param freq_type
      * @param freq_params
      * @param tree Associated tree for the model.
+     * @param is_reversible True if the reversible model should be used.
      *
      * @return
      */
-    ModelPoMo(const char *model_name, string model_params, StateFreqType freq_type, string freq_params, PhyloTree *tree);
+    ModelPoMo(const char *model_name, string model_params, StateFreqType freq_type, string freq_params, PhyloTree *tree, bool is_reversible);
 
     ~ModelPoMo();
 
@@ -36,11 +37,13 @@ class ModelPoMo : public ModelGTR
      * @param model_params
      * @param freq_type
      * @param freq_params
+     * @param is_reversible True if the reversible model should be used.
      */
     virtual void init(const char *model_name,
                       string model_params,
                       StateFreqType freq_type,
-                      string freq_params);
+                      string freq_params,
+                      bool is_reversible);
 
     /* /\** */
     /*  *  Deprecated!  Unreversible.  Initialize rate_matrix and */

@@ -988,15 +988,18 @@ ModelSubst* createModel(string model_str, ModelsBlock *models_block, StateFreqTy
 	if (nxsmodel) model_params = nxsmodel->description;
 
     // Check for PoMo.
-    bool flag_rev_pomo = false;
+    bool is_pomo = false;
+    bool is_rev_pomo = true;
     size_t pos_rev_pomo = model_str.find("+rP");
     size_t pos_nonrev_pomo = model_str.find("+nrP");
     if (pos_rev_pomo != string::npos) {
-        flag_rev_pomo = true;
+        is_pomo = true;
+        is_rev_pomo = true;
         model_str = model_str.substr(0, pos_rev_pomo);
     }
     if (pos_nonrev_pomo != string::npos) {
-        flag_rev_pomo = true;
+        is_pomo = true;
+        is_rev_pomo = false;
         model_str = model_str.substr(0, pos_nonrev_pomo);
     }
 
@@ -1016,9 +1019,9 @@ ModelSubst* createModel(string model_str, ModelsBlock *models_block, StateFreqTy
 	{
 		model = new ModelSubst(tree->aln->num_states);
 	} else */
-    if ((flag_rev_pomo == true) ||
+    if ((is_pomo == true) ||
         (tree->aln->seq_type == SEQ_COUNTSFORMAT))
-        model = new ModelPoMo(model_str.c_str(), model_params, freq_type, freq_params, tree);
+        model = new ModelPoMo(model_str.c_str(), model_params, freq_type, freq_params, tree, is_rev_pomo);
 	else if ((model_str == "GTR" && tree->aln->seq_type == SEQ_DNA) ||
              (model_str == "GTR2" && tree->aln->seq_type == SEQ_BINARY) ||
              (model_str == "GTR20" && tree->aln->seq_type == SEQ_PROTEIN)) {
