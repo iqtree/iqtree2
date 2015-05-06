@@ -105,6 +105,13 @@ public:
 
 	virtual void setNCategory(int ncat);
 
+	/**
+		Compute site-specific rates. Override this for Gamma model
+		@param pattern_rates (OUT) pattern rates. Resizing if necesary
+        @return total number of categories
+	*/
+	virtual int computePatternRates(DoubleVector &pattern_rates, IntVector &pattern_cat);
+
 protected:
 
 	/**

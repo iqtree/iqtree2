@@ -593,6 +593,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.tree_gen = NONE;
     params.user_file = NULL;
     params.rr_ai = false;
+    params.exh_ai = false;
     params.alpha_invar_file = NULL;
     params.out_prefix = NULL;
     params.out_file = NULL;
@@ -702,14 +703,18 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.stop_confidence = 0.95;
     params.model_name = "";
     params.model_set = NULL;
+    params.state_freq_set = NULL;
     params.ratehet_set = NULL;
     params.model_def_file = NULL;
     params.model_test_again = false;
+    params.model_test_and_tree = 0;
+    params.model_test_separate_rate = false;
     params.optimize_mixmodel_weight = false;
     params.store_trans_matrix = false;
     //params.freq_type = FREQ_EMPIRICAL;
     params.freq_type = FREQ_UNKNOWN;
     params.num_rate_cats = 4;
+    params.max_rate_cats = 10;
     params.gamma_shape = -1.0;
     params.gamma_median = false;
     params.p_invar_sites = -1.0;
@@ -815,7 +820,8 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.strictTabu = false;
     params.fastBran = false;
     params.numSupportTrees = 20;
-    params.sprDist = 20;
+//    params.sprDist = 20;
+    params.sprDist = 6;
     params.numNNITrees = 20;
     params.avh_test = 0;
     params.bootlh_test = 0;
@@ -1341,7 +1347,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.quad_programming = true;
 				continue;
 			}
-			if (strcmp(argv[cnt], "-q") == 0) {
+			if (strcmp(argv[cnt], "-quiet") == 0) {
 				verbose_mode = VB_QUIET;
 				continue;
 			}
@@ -1448,14 +1454,18 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.partition_type = 'p';
 				continue;
 			}
-			if (strcmp(argv[cnt], "-spj") == 0) {
+			if (strcmp(argv[cnt], "-spj") == 0 || strcmp(argv[cnt], "-q") == 0) {
 				cnt++;
 				if (cnt >= argc)
-					throw "Use -spj <type of partition model>";
+					throw "Use -q <type of partition model>";
 				params.partition_file = argv[cnt];
 				params.partition_type = 'j';
 				continue;
 			}
+			if (strcmp(argv[cnt], "-M") == 0) {
+                params.partition_type = 0;
+                continue;
+            }
 			if (strcmp(argv[cnt], "-keep_empty_seq") == 0) {
 				params.remove_empty_seq = false;
 				continue;
@@ -1629,10 +1639,17 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.model_set = argv[cnt];
 				continue;
 			}
+			if (strcmp(argv[cnt], "-mfreq") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -mfreq <state_freq_set>";
+				params.state_freq_set = argv[cnt];
+				continue;
+			}
 			if (strcmp(argv[cnt], "-mrate") == 0) {
 				cnt++;
 				if (cnt >= argc)
-					throw "Use -mrate <model_set>";
+					throw "Use -mrate <rate_set>";
 				params.ratehet_set = argv[cnt];
 				continue;
 			}
@@ -1645,6 +1662,18 @@ void parseArg(int argc, char *argv[], Params &params) {
 			}
 			if (strcmp(argv[cnt], "-mredo") == 0) {
 				params.model_test_again = true;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-mtree") == 0) {
+				params.model_test_and_tree = 1;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-mretree") == 0) {
+				params.model_test_and_tree = 2;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-msep") == 0) {
+				params.model_test_separate_rate = true;
 				continue;
 			}
 			if (strcmp(argv[cnt], "-mwopt") == 0) {
@@ -1756,13 +1785,22 @@ void parseArg(int argc, char *argv[], Params &params) {
 					throw "Wrong number of rate categories";
 				continue;
 			}
+			if (strcmp(argv[cnt], "-cmax") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -cmax <#max_rate_category>";
+				params.max_rate_cats = convert_int(argv[cnt]);
+				if (params.max_rate_cats < 1)
+					throw "Wrong number of rate categories";
+				continue;
+			}
 			if (strcmp(argv[cnt], "-a") == 0) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -a <gamma_shape>";
 				params.gamma_shape = convert_double(argv[cnt]);
-				if (params.gamma_shape < 0)
-					throw "Wrong number of gamma shape parameter (alpha)";
+//				if (params.gamma_shape < 0)
+//					throw "Wrong number of gamma shape parameter (alpha)";
 				continue;
 			}
 			if (strcmp(argv[cnt], "-gmean") == 0) {
@@ -2361,6 +2399,10 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.rr_ai = true;
 				continue;
 			}
+            if (strcmp(argv[cnt], "-eai") == 0) {
+                params.exh_ai = true;
+                continue;
+            }
 			if (strcmp(argv[cnt], "-poplim") == 0) {
 				cnt++;
 				if (cnt >= argc)
@@ -2767,12 +2809,20 @@ void usage_iqtree(char* argv[], bool full_command) {
             << endl << "AUTOMATIC MODEL SELECTION:" << endl
             << "  -m TEST              Select best-fit model for tree reconstruction" << endl
             << "  -m TESTONLY          Only do model selection, then stop" << endl
+            << "  -m TESTLINK or -m TESTMERGE or -m TESTONLYLINK or -m TESTONLYMERGE" <<endl
+            << "                       Select best-fit partitioning scheme like PartitionFinder" << endl
             << "  -mset raxml          Restrict to only models supported by RAxML" << endl
             << "  -mset phyml          Restrict to only models supported by PhyML" << endl
             << "  -mset mrbayes        Restrict to only models supported by MrBayes" << endl
             << "  -mset m1,...,mk      Restrict to a comma-separated list of models" << endl
-            << "  -mrate rm1,...,rmk   Restrict to a comma-separated list of rate heterogeneity" << endl
-            << "                       (e.g. -mrate +G,+I)" << endl
+            << "  -mfreq f1,...,fk     Restrict to a comma-separated list of state frequencies" << endl
+            << "  -mrate r1,...,rk     Restrict to a comma-separated list of rate heterogeneity" << endl
+            << "                       (default: -mrate E,I,G,I+G)" << endl
+            << "  -cmax <kmax>         Max number of categories when testing FreeRate model [+R]" << endl
+            << "  -msep                Perform model selection and then rate selection" << endl
+            << "  -mtree               Do a full tree search for each testing model" << endl
+            << "  -mredo               Ignore .model file" << endl
+            << "  -mdef <nexus_file>   A model definition NEXUS file (see Manual)" << endl
 
             << endl << "SUBSTITUTION MODEL:" << endl
             << "  -m <model_name>" << endl
@@ -2785,7 +2835,7 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "      Protein mixture: C10,...,C60, EX2, EX3, EHO, UL2, UL3, EX_EHO, LG4M, LG4X," << endl
             << "                       JTTCF4G" << endl
             << "               Binary: JC2 (default), GTR2" << endl
-            << "                Codon: GY (default), ECM, MG" << endl
+            << "                Codon: GY (default), MG, MGK, KOSI07, SCHN05" << endl
             << "       Morphology/SNP: MK (default), ORDERED" << endl
             << "            Otherwise: Name of file containing user-model parameters" << endl
             << "                       (rate parameters and state frequencies)" << endl

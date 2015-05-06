@@ -19,6 +19,7 @@ struct ModelInfo {
 	string name; // model name
 	double logl; // tree log likelihood
 	int df;      // #parameters
+    string tree; // added 2015-04-28: tree string
 	double AIC_score, AICc_score, BIC_score;    // scores
 	double AIC_weight, AICc_weight, BIC_weight; // weights
 	bool AIC_conf, AICc_conf, BIC_conf;         // in confidence set?
@@ -80,5 +81,16 @@ void printSiteLhCategory(const char*filename, PhyloTree *tree);
 void evaluateTrees(Params &params, IQTree *tree, vector<TreeInfo> &info, IntVector &distinct_ids);
 
 void evaluateTrees(Params &params, IQTree *tree);
+
+/**
+    get sequence type for a model name
+    @param model_name model name string
+    @param seq_type (OUT) sequence type, SEQ_UNKNOWN if is not determined
+    @return 1 for parametric model, 2 for empirical model
+*/
+int getSeqType(const char *model_name, SeqType &seq_type);
+
+string getSeqType(string model_name);
+
 
 #endif /* PHYLOTESTING_H_ */

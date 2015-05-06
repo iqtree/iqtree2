@@ -229,6 +229,7 @@ class PhyloTree : public MTree, public Optimization {
 	friend class PhyloSuperTree;
 	friend class PhyloSuperTreePlen;
 	friend class RateGamma;
+	friend class RateGammaInvar;
 	friend class RateKategory;
 
 public:

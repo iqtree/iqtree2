@@ -32,6 +32,7 @@ EigenDecomposition::EigenDecomposition()
 {
 	total_num_subst = 1.0;
 	normalize_matrix = true;
+    ignore_state_freq = false;
 }
 
 void EigenDecomposition::eigensystem(
@@ -165,7 +166,8 @@ void EigenDecomposition::eigensystem_sym(double **rate_params, double *state_fre
 	double *eval_new = new double[num_state];
 	double **a = (double**)new double[num_state];
 	double **b = (double**)new double[num_state];
-	int i, j, k, error, new_num, inew, jnew;
+	int i, j, k, new_num, inew, jnew;
+	double error = 0.0;
 	double zero;
 
 	for (i=0; i < num_state; i++)
@@ -175,6 +177,7 @@ void EigenDecomposition::eigensystem_sym(double **rate_params, double *state_fre
 
 	/* get relative transition matrix and frequencies */
 	memcpy(forg, state_freq, num_state * sizeof(double));
+    
 	for (i = 0; i < num_state; i++)
 		memcpy(a[i], rate_params[i], num_state * sizeof(double)); 
 
@@ -234,20 +237,21 @@ void EigenDecomposition::eigensystem_sym(double **rate_params, double *state_fre
 
 
 	/* check eigenvalue equation */
-	error = 0;
+	error = 0.0;
 	for (j = 0; j < num_state; j++) {
 		for (i = 0, zero = 0.0; i < num_state; i++) {
 			for (k = 0; k < num_state; k++) zero += b[i][k] * evec[k*num_state+j];
 			zero -= eval[j] * evec[i*num_state+j];
-			if (fabs(zero) > 1.0e-5) {
-				error = 1;
+			if (fabs(zero) > 1.0e-3) {
+				error = max(error, fabs(zero));
 				break;
 			}
 		}
 	}
-	if (error) {
+	if (error > 1e-4) {
 		cout.precision(5);
-		cout << "\nWARNING: Eigensystem doesn't satisfy eigenvalue equation! (gap=" << fabs(zero) << ")" << endl;
+		cout << "\nWARNING: Eigensystem doesn't satisfy eigenvalue equation! (gap=" << error << ")" << endl;
+		assert(error < 1e-2);
 //		cout << "Rate matrix R: " << endl;
 //		for (i = 0; i < num_state; i++) {
 //			for (j = 0; j < num_state; j++) cout << rate_params[i][j] << " ";
@@ -274,6 +278,9 @@ void EigenDecomposition::eigensystem_sym(double **rate_params, double *state_fre
 	
 } // eigensystem_new
 
+
+
+
 EigenDecomposition::~EigenDecomposition()
 {
 }
@@ -289,7 +296,7 @@ void EigenDecomposition::computeRateMatrix(double **a, double *stateFrqArr_, int
 	double delta, temp, sum;
 	double *m = new double[num_state];
 
-	
+	if (!ignore_state_freq)
 	for (i = 0; i < num_state; i++) {
 		for (j = 0; j < num_state; j++) {
 			a[i][j] = stateFrqArr_[j]*a[i][j];
@@ -351,11 +358,22 @@ void EigenDecomposition::symmetrizeRateMatrix(double **a, double *stateFrq, doub
 
 	for (i = 0; i < num_state; i++)
 		stateFrq_sqrt[i] = sqrt(stateFrq[i]);
-	for (i = 0; i < num_state; i++)
+	for (i = 0; i < num_state; i++) {
+        double tmp = 1.0/stateFrq_sqrt[i];
 		for (j = 0; j < i; j++) {
-			a[i][j] *= stateFrq_sqrt[i] / stateFrq_sqrt[j];
-			a[j][i] = a[i][j];
+            a[j][i] *= stateFrq_sqrt[j]*tmp;
+            a[i][j] = a[j][i];
+            
+//			a[i][j] *= stateFrq_sqrt[i] / stateFrq_sqrt[j];
+//            a[j][i] = a[i][j];
+
+//            a[j][i] *= stateFrq_sqrt[j] / stateFrq_sqrt[i];
+//			if (fabs(a[j][i] - a[i][j]) > 1e-5) {
+//                cout << a[i][j] << "  " << a[j][i];
+//                assert(0);
+//            }
 		}
+    }
 }
 
 

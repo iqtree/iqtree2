@@ -26,6 +26,7 @@
 ModelGTR::ModelGTR(PhyloTree *tree, bool count_rates)
  : ModelSubst(tree->aln->num_states), EigenDecomposition()
 {
+    half_matrix = true;
 	int i;
 	int nrate = getNumRateEntries();
 	int ncoeff = num_states*num_states*num_states;
@@ -525,13 +526,39 @@ void ModelGTR::decomposeRateMatrix(){
 		for (i = 0; i < num_states; i++)
 			rate_matrix[i] = new double[num_states];
 
-		for (i = 0, k = 0; i < num_states; i++) {
-			rate_matrix[i][i] = 0.0;
-			for (j = i+1; j < num_states; j++, k++) {
-				rate_matrix[i][j] = rates[k];
-				rate_matrix[j][i] = rates[k];
-			}
-		}
+        if (half_matrix) {
+            for (i = 0, k = 0; i < num_states; i++) {
+                rate_matrix[i][i] = 0.0;
+                for (j = i+1; j < num_states; j++, k++) {
+                    rate_matrix[i][j] = rates[k];
+                    rate_matrix[j][i] = rates[k];
+                }
+            }
+        } else {
+            // full matrix
+            for (i = 0; i < num_states; i++) {
+                memcpy(rate_matrix[i], &rates[i*num_states], num_states*sizeof(double));
+                rate_matrix[i][i] = 0.0;
+            }
+//            IntVector codonid;
+//            codonid.reserve(num_states);
+//            int baseid[] = {3,1,0,2};
+//            for (i=0; i<4; i++)
+//                for (j=0; j<4; j++)
+//                    for (k=0; k<4; k++)
+//                        codonid.push_back(baseid[i]*16+baseid[j]*4+baseid[k]);
+//            cout.precision(4);
+//            cout << "rate_matrix=" << endl;
+//            for (i = 0; i < num_states; i++) {
+//                for (j = 0; j < num_states; j++)
+//                    cout << " " << rate_matrix[codonid[i]][codonid[j]];
+//                cout << endl;
+//            }
+//            cout << "state_freq=";
+//            for (i = 0; i < num_states; i++)
+//                cout << " " << state_freq[codonid[i]];
+//            cout << endl;
+        }
 		/* eigensystem of 1 PAM rate matrix */
 		eigensystem_sym(rate_matrix, state_freq, eigenvalues, eigenvectors, inv_eigenvectors, num_states);
 		//eigensystem(rate_matrix, state_freq, eigenvalues, eigenvectors, inv_eigenvectors, num_states);

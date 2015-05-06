@@ -237,9 +237,10 @@ double RateMeyerDiscrete::getPtnRate(int ptn) {
 	return rates[ptn_cat[ptn]];
 }
 
-void RateMeyerDiscrete::computePatternRates(DoubleVector &pattern_rates, IntVector &pattern_cat) {
+int RateMeyerDiscrete::computePatternRates(DoubleVector &pattern_rates, IntVector &pattern_cat) {
 	pattern_rates.insert(pattern_rates.begin(), begin(), end());
 	pattern_cat.insert(pattern_cat.begin(), ptn_cat, ptn_cat + size());
+    return ncategory;
 }
 
 /*double RateMeyerDiscrete::optimizeParameters() {

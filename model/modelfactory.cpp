@@ -155,6 +155,7 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 		case SEQ_BINARY: freq_type = FREQ_ESTIMATE; break; // default for binary: optimized frequencies
 		case SEQ_PROTEIN: freq_type = FREQ_USER_DEFINED; break; // default for protein: frequencies of the empirical AA matrix
 		case SEQ_MORPH: freq_type = FREQ_EQUAL; break;
+		case SEQ_CODON: freq_type = FREQ_UNKNOWN; break;
 		default: freq_type = FREQ_EMPIRICAL; break; // default for DNA and others: counted frequencies from alignment
 		}
 	}
@@ -200,11 +201,11 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 			freq_type = FREQ_EQUAL;
 		else if (freq_str == "+FO" || freq_str == "+Fo")
 			freq_type = FREQ_ESTIMATE;
-		else if (freq_str == "+F1x4")
+		else if (freq_str == "+F1x4" || freq_str == "+F1X4")
 			freq_type = FREQ_CODON_1x4;
-		else if (freq_str == "+F3x4")
+		else if (freq_str == "+F3x4" || freq_str == "+F3X4")
 			freq_type = FREQ_CODON_3x4;
-		else if (freq_str == "+F3x4C" || freq_str == "+F3x4c")
+		else if (freq_str == "+F3x4C" || freq_str == "+F3x4c" || freq_str == "+F3X4C" || freq_str == "+F3X4c")
 			freq_type = FREQ_CODON_3x4C;
 		else outError("Unknown state frequency type ",freq_str);
 //		model_str = model_str.substr(0, posfreq);
@@ -346,12 +347,12 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 			if (close_bracket == string::npos)
 				outError("Close bracket not found in ", rate_str);
 			gamma_shape = convert_double(rate_str.substr(posG+3+end_pos, close_bracket-posG-3-end_pos).c_str());
-			if (gamma_shape < MIN_GAMMA_SHAPE || gamma_shape > MAX_GAMMA_SHAPE) {
-				stringstream str;
-				str << "Gamma shape parameter " << gamma_shape << "out of range ["
-						<< MIN_GAMMA_SHAPE << ',' << MAX_GAMMA_SHAPE << "]" << endl;
-				outError(str.str());
-			}
+//			if (gamma_shape < MIN_GAMMA_SHAPE || gamma_shape > MAX_GAMMA_SHAPE) {
+//				stringstream str;
+//				str << "Gamma shape parameter " << gamma_shape << "out of range ["
+//						<< MIN_GAMMA_SHAPE << ',' << MAX_GAMMA_SHAPE << "]" << endl;
+//				outError(str.str());
+//			}
 		} else if (rate_str.length() > posG+2+end_pos && rate_str[posG+2+end_pos] != '+')
 			outError("Wrong model name ", rate_str);
 	}
@@ -376,13 +377,13 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 			site_rate = new RateGammaInvar(num_rate_cats, gamma_shape, params.gamma_median,
 					p_invar_sites, params.optimize_model_rate_joint, tree);
 		} else if (posI != string::npos && posR != string::npos) {
-			site_rate = new RateFreeInvar(num_rate_cats, freerate_params, p_invar_sites, !fused_mix_rate, tree);
+			site_rate = new RateFreeInvar(num_rate_cats, gamma_shape, freerate_params, p_invar_sites, !fused_mix_rate, tree);
 		} else if (posI != string::npos) {
 			site_rate = new RateInvar(p_invar_sites, tree);
 		} else if (posG != string::npos) {
 			site_rate = new RateGamma(num_rate_cats, gamma_shape, params.gamma_median, tree);
 		} else if (posR != string::npos) {
-			site_rate = new RateFree(num_rate_cats, freerate_params, !fused_mix_rate, tree);
+			site_rate = new RateFree(num_rate_cats, gamma_shape, freerate_params, !fused_mix_rate, tree);
 		} else if ((posX = rate_str.find("+M")) != string::npos) {
 			tree->setLikelihoodKernel(LK_NORMAL);
 			params.rate_mh_type = true;
@@ -467,7 +468,12 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 
 int ModelFactory::getNParameters() {
 	int df = model->getNDim() + site_rate->getNDim() + site_rate->phylo_tree->branchNum;
-	if (model->freq_type == FREQ_EMPIRICAL) df += model->num_states-1;
+	if (model->freq_type == FREQ_EMPIRICAL) 
+        df += model->num_states-1;
+	else if (model->freq_type == FREQ_CODON_1x4) 
+        df += 3;
+	else if (model->freq_type == FREQ_CODON_3x4 || model->freq_type == FREQ_CODON_3x4C) 
+        df += 9;
 	return df;
 }
 void ModelFactory::readSiteFreq(Alignment *aln, char* site_freq_file, IntVector &site_model, vector<double*> &freq_vec)

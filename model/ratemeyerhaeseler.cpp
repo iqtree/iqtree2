@@ -133,8 +133,9 @@ double RateMeyerHaeseler::getPtnRate(int ptn) {
 	return 1.0;
 }
 
-void RateMeyerHaeseler::computePatternRates(DoubleVector &pattern_rates, IntVector &pattern_cat) {
+int RateMeyerHaeseler::computePatternRates(DoubleVector &pattern_rates, IntVector &pattern_cat) {
 	pattern_rates.insert(pattern_rates.begin(), begin(), end());
+    return size();
 }
 
 void RateMeyerHaeseler::getRates(DoubleVector &rates) {
