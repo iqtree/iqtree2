@@ -331,7 +331,7 @@ void reportRate(ofstream &out, PhyloTree &tree) {
 			out << left << rate_model->getRate(i) << " " << prop[i];
 			out << endl;
 		}
-		if (rate_model->getGammaShape() > 0) {
+		if (rate_model->isGammaRate()) {
 			out << "Relative rates are computed as " << ((dynamic_cast<RateGamma*>(rate_model)->isCutMedian()) ? "MEDIAN" : "MEAN") <<
 				" of the portion of the Gamma distribution falling in the category." << endl;
 		}
