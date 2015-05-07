@@ -306,13 +306,14 @@ void ModelCodon::init(const char *model_name, string model_params, StateFreqType
 
 	StateFreqType def_freq = FREQ_UNKNOWN;
 	name = full_name = model_name;
-	if (name.find('*') == string::npos)
+    size_t pos;
+	if ((pos=name.find('_')) == string::npos)
 		def_freq = initCodon(model_name, freq);
 	else {
-		def_freq = initCodon(name.substr(0, name.find('*')).c_str(), freq);
+		def_freq = initCodon(name.substr(0, pos).c_str(), freq);
 		if (def_freq != FREQ_USER_DEFINED)
 			outError("Invalid model ", model_name); // first model must be empirical
-		def_freq = initCodon(name.substr(name.find('*')+1).c_str(), freq);
+		def_freq = initCodon(name.substr(pos+1).c_str(), freq);
 		if (def_freq == FREQ_USER_DEFINED) // second model must be parametric
 			outError("Invalid model ", model_name);
 		// adjust the constraint

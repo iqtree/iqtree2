@@ -2735,6 +2735,7 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -st <data_type>      BIN, DNA, AA, CODON, or MORPH (default: auto-detect)" << endl
             << "  -sp <partition_file> Partition model specification in NEXUS format." << endl
             << "                       For single model use the -m option (see below)" << endl
+            << "  -q <partition_file>  Partition model specification in RAxML format." << endl
             << "  -z <trees_file>      Compute log-likelihoods for all trees in the given file" << endl
             << "  <treefile>           Initial tree for tree reconstruction (default: MP)" << endl
             << "  -o <outgroup_taxon>  Outgroup taxon name for writing .treefile" << endl
