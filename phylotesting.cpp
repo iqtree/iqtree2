@@ -75,6 +75,14 @@ const char *aa_model_names_rax[] = { "Dayhoff", "mtMAM", "JTT", "WAG",
 const char* aa_model_names_mrbayes[] = {"Poisson", "Dayhoff", "mtMAM", "JTT", "WAG",
 		"cpREV", "mtREV", "rtREV", "VT", "Blosum62" };
 
+const char *aa_model_names_nuclear[] = {"WAG", "Dayhoff","JTT", "LG", "VT", "DCMut", "PMB", "JTTDCMut", "Blosum62"};
+
+const char *aa_model_names_mitochondrial[] = {"mtREV", "mtMAM", "mtART", "mtZOA"};
+
+const char *aa_model_names_chloroplast[] = {"cpREV"};
+
+const char *aa_model_names_viral[] = {"HIVb", "HIVw", "FLU", "rtREV"};
+
 const char* aa_freq_names[] = {"", "+F"};
 
 
@@ -403,6 +411,14 @@ void getModelList(Params &params, Alignment *aln, StrVector &models, bool separa
 			copyCString(aa_model_names_rax, sizeof(aa_model_names_rax) / sizeof(char*), model_names);
 		} else if (strcmp(params.model_set, "mrbayes") == 0) {
 			copyCString(aa_model_names_mrbayes, sizeof(aa_model_names_mrbayes) / sizeof(char*), model_names);
+		} else if (strncmp(params.model_set, "nuclear", 3) == 0) {
+			copyCString(aa_model_names_nuclear, sizeof(aa_model_names_nuclear) / sizeof(char*), model_names);
+		} else if (strncmp(params.model_set, "mitochondrial", 3) == 0) {
+			copyCString(aa_model_names_mitochondrial, sizeof(aa_model_names_mitochondrial) / sizeof(char*), model_names);
+		} else if (strncmp(params.model_set, "chloroplast", 3) == 0) {
+			copyCString(aa_model_names_chloroplast, sizeof(aa_model_names_chloroplast) / sizeof(char*), model_names);
+		} else if (strncmp(params.model_set, "viral",3) == 0) {
+			copyCString(aa_model_names_viral, sizeof(aa_model_names_viral) / sizeof(char*), model_names);
 		} else {
 			convert_string_vec(params.model_set, model_names);
 		}

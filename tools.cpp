@@ -2772,21 +2772,24 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -alrt <#replicates>  SH-like approximate likelihood ratio test (SH-aLRT)" << endl
             << "  -lbp <#replicates>   Fast local bootstrap probabilities" << endl
             << endl << "AUTOMATIC MODEL SELECTION:" << endl
-            << "  -m TEST              Select best-fit model for tree reconstruction" << endl
-            << "  -m TESTONLY          Only do model selection, then stop" << endl
-            << "  -m TESTLINK or -m TESTMERGE or -m TESTONLYLINK or -m TESTONLYMERGE" <<endl
-            << "                       Select best-fit partitioning scheme like PartitionFinder" << endl
-            << "  -mset raxml          Restrict to only models supported by RAxML" << endl
-            << "  -mset phyml          Restrict to only models supported by PhyML" << endl
-            << "  -mset mrbayes        Restrict to only models supported by MrBayes" << endl
+            << "  -m TEST              Select best-fit model prior to tree reconstruction" << endl
+            << "  -m TESTONLY          Like -m TEST but stop after model selection" << endl
+            << "  -m TESTMERGE         Select best-fit partition scheme like PartitionFinder" << endl
+            << "  -m TESTONLYMERGE     Like -m TESTMERGE but stop after model selection" << endl
+            << "  -mset raxml or -mset phyml or -mset mrbayes" << endl
+            << "                       Restrict to models supported by respective programs" << endl
+            << "  -mset nuclear or -mset mitochondrial or -mset chloroplast or -mset viral" << endl
+            << "                       Restrict to models designed for respective sequences" << endl            
             << "  -mset m1,...,mk      Restrict to a comma-separated list of models" << endl
+            << "                       (e.g. -mset WAG,LG,JTT)" << endl            
             << "  -mfreq f1,...,fk     Restrict to a comma-separated list of state frequencies" << endl
+            << "                       (default protein: -mfreq ,F; codon: -mfreq ,F1x4,F3x4,F)" << endl            
             << "  -mrate r1,...,rk     Restrict to a comma-separated list of rate heterogeneity" << endl
             << "                       (default: -mrate E,I,G,I+G)" << endl
             << "  -cmax <kmax>         Max number of categories when testing FreeRate model [+R]" << endl
 //            << "  -msep                Perform model selection and then rate selection" << endl
             << "  -mtree               Do a full tree search for each testing model" << endl
-            << "  -mredo               Ignore .model file" << endl
+            << "  -mredo               Ignore model scores computed earlier (default: not ignore)" << endl
             << "  -mdef <nexus_file>   A model definition NEXUS file (see Manual)" << endl
 
             << endl << "SUBSTITUTION MODEL:" << endl
@@ -2806,7 +2809,7 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "                       (rate parameters and state frequencies)" << endl
             << "  -m <model_name>+F or +FO or +FU or +FQ (default: auto)" << endl
             << "                       counted, optimized, user-defined, equal state frequency" << endl
-            << "  -m <model_name>+F1x4 or +F3x4 or +F3x4C" << endl
+            << "  -m <model_name>+F1x4 or +F3x4" << endl
             << "                       Codon frequencies" << endl
             << "  -m <model_name>+ASC  Ascertainment bias correction for morphological/SNP data" << endl
             << "  -m \"MIX{m1,...mK}\"   Mixture model with K components" << endl
