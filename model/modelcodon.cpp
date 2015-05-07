@@ -715,9 +715,11 @@ void ModelCodon::initGY94() {
 	group->reserve(nrates);
 	for (i = 0; i < num_states; i++) {
 		for (j = 0; j < num_states; j++) {
-            if (i==j || phylo_tree->aln->isStopCodon(i) || phylo_tree->aln->isStopCodon(j) || isMultipleSubst(i, j))
+            if (i==j || phylo_tree->aln->isStopCodon(i) || phylo_tree->aln->isStopCodon(j))
 				group->push_back(0); // multiple substitution
-			else if (isSynonymous(i, j)) {
+            else if (isMultipleSubst(i, j) && !empirical_rates) {
+                group->push_back(0);
+            } else if (isSynonymous(i, j)) {
 				if (isTransversion(i, j))
 					group->push_back(1); // synonymous transversion
 				else
@@ -742,6 +744,7 @@ void ModelCodon::initGY94() {
 }
 
 void ModelCodon::writeInfo(ostream &out) {
+/*
 	if (getNDim() == 0) return;
 	double *variables = new double[getNDim()+1];
 	setVariables(variables);
@@ -752,6 +755,42 @@ void ModelCodon::writeInfo(ostream &out) {
 		out << "Transition/transversion ratio (kappa): " << variables[2] << endl;
 	}
 	delete [] variables;
+*/
+    int i, j;
+    int num = 0;
+    double syn_tv, syn_ts, nonsyn_tv;
+    for (i = 0; i < num_states; i++) {
+        if (phylo_tree->aln->isStopCodon(i)) continue;
+        for (j = i+1; j < num_states; j++) {
+            if (phylo_tree->aln->isStopCodon(j) || isMultipleSubst(i, j)) continue;
+            if (isSynonymous(i, j)) {
+				if (isTransversion(i, j)) {
+					syn_tv = rates[i*num_states+j]/extra_rates[i*num_states+j]; // synonymous transversion
+                    if (empirical_rates)
+                        syn_tv /= empirical_rates[i*num_states+j];
+                    num++;
+				} else {
+					syn_ts = rates[i*num_states+j]/extra_rates[i*num_states+j]; // synonymous transition
+                    if (empirical_rates)
+                        syn_ts /= empirical_rates[i*num_states+j];                    
+                    num++;
+                }
+			} else {
+				if (isTransversion(i, j)) {
+					nonsyn_tv = rates[i*num_states+j]/extra_rates[i*num_states+j]; // non-synonymous transversion
+                    if (empirical_rates)
+                        nonsyn_tv /= empirical_rates[i*num_states+j];                    
+                    
+                    num++;
+                }
+			}
+            if (num==3) // get all values
+                break;
+        }
+        if (num==3) break;
+    }
+    out << "Nonsynonymous/synonymous ratio (omega): " << nonsyn_tv << endl;
+    out << "Transition/transversion ratio (kappa): " << syn_ts << endl;
 }
 
 void ModelCodon::readCodonModel(istream &in) {

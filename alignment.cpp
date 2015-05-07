@@ -2230,7 +2230,7 @@ void Alignment::getAppearance(char state, StateBitset &state_app) {
 			}
 		break;
 	case SEQ_PROTEIN:
-		assert(state<22);
+		if (state >= 22) return;
 		state -= 20;
 		for (i = 0; i < 7; i++)
 			if (ambi_aa[(int)state] & (1<<i)) {
