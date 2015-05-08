@@ -2782,6 +2782,8 @@ void usage_iqtree(char* argv[], bool full_command) {
             << endl << "AUTOMATIC MODEL SELECTION:" << endl
             << "  -m TEST              Select best-fit model prior to tree reconstruction" << endl
             << "  -m TESTONLY          Like -m TEST but stop after model selection" << endl
+            << "  -m TESTNEW           New model selection with FreeRate model replacing I+G" << endl
+            << "  -m TESTONLYNEW       Like -m TESTNEW but stop after model selection" << endl
             << "  -m TESTMERGE         Select best-fit partition scheme like PartitionFinder" << endl
             << "  -m TESTONLYMERGE     Like -m TESTMERGE but stop after model selection" << endl
             << "  -mset raxml or -mset phyml or -mset mrbayes" << endl

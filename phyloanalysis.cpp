@@ -642,7 +642,7 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 				<< endl;
 */
 		if (params.compute_ml_tree) {
-			if (original_model.substr(0, 8) == "TESTONLY")
+			if (original_model.find("ONLY") != string::npos)
 				out << "TREE USED FOR MODEL SELECTION" << endl
 					<< "-----------------------------" << endl << endl;
 			else
@@ -1112,7 +1112,7 @@ void computeInitialDist(Params &params, IQTree &iqtree, string &dist_file) {
 
 void initializeParams(Params &params, IQTree &iqtree, vector<ModelInfo> &model_info) {
 //    iqtree.setCurScore(-DBL_MAX);
-    bool test_only = params.model_name.substr(0, 8) == "TESTONLY";
+    bool test_only = params.model_name.find("ONLY") != string::npos;
     /* initialize substitution model */
     if (params.model_name.substr(0, 4) == "TEST") {
         if (iqtree.isSuperTree())

@@ -379,9 +379,11 @@ void getModelList(Params &params, Alignment *aln, StrVector &models, bool separa
     StrVector freq_names;
 	SeqType seq_type = aln->seq_type;
     
-	const char *rate_options[] = {  "", "+I", "+ASC", "+G", "+I+G", "+ASC+G"};
-	bool test_options[] =        {true, true,  false, true,   true,    false};
-	bool test_options_morph[] =  {true,false,   true, true,  false,     true};
+	const char *rate_options[]    = {  "", "+I", "+ASC", "+G", "+I+G", "+ASC+G", "+R", "+ASC+R"};
+	bool test_options[]           = {true, true,  false, true,   true,    false,false,    false};
+	bool test_options_morph[]     = {true,false,   true, true,  false,     true,false,    false};
+	bool test_options_new[]       = {true, true,  false, true,  false,    false, true,    false};
+	bool test_options_morph_new[] = {true,false,   true, true,  false,     true, true,     true};
 //	bool test_options_codon[] =  {true,false,  false,false,  false,    false};
 	const int noptions = sizeof(rate_options) / sizeof(char*);
 	int i, j;
@@ -498,9 +500,18 @@ void getModelList(Params &params, Alignment *aln, StrVector &models, bool separa
 //			test_options[i] = test_options_codon[i];
 //	} else 
     if (seq_type == SEQ_MORPH) {
-		for (i = 0; i < noptions; i++)
-			test_options[i] = test_options_morph[i];
-	}
+        if (params.model_name.find("NEW") != string::npos) {
+            for (i = 0; i < noptions; i++)
+                test_options[i] = test_options_morph_new[i];
+        } else
+            for (i = 0; i < noptions; i++)
+                test_options[i] = test_options_morph[i];
+	} else if (params.model_name.find("NEW") != string::npos) {
+        // change +I+G to +R
+        for (i = 0; i < noptions; i++)
+            test_options[i] = test_options_new[i];
+    }
+    
 
     StrVector ratehet;
 
@@ -521,20 +532,24 @@ void getModelList(Params &params, Alignment *aln, StrVector &models, bool separa
             if (ratehet[j] == "+E") // for equal rate model 
                 ratehet[j] = "";
         }
-        for (j = 0; j < ratehet.size(); j++)
-            if (ratehet[j] == "+R") {
-                ratehet[j] = "+R2";
-                for (int k = 3; k <= params.max_rate_cats; k++) {
-                    ratehet.insert(ratehet.begin()+j+k-2, "+R" + convertIntToString(k));
-                }
-                break;
-            }
     } else {
         for (j = 0; j < noptions; j++)
             if (test_options[j])
                 ratehet.push_back(rate_options[j]);
         
     }
+    
+    size_t pos;
+
+    for (j = 0; j < ratehet.size(); j++)
+        if ( (pos = ratehet[j].find("+R")) != string::npos && (pos >= ratehet[j].length()-2 || !isdigit(ratehet[j][pos+2]) )) {
+            string str = ratehet[j];
+            ratehet[j].insert(pos+2, "2");
+            for (int k = 3; k <= params.max_rate_cats; k++) {
+                ratehet.insert(ratehet.begin()+j+k-2, str.substr(0, pos+2) + convertIntToString(k) + str.substr(pos+2));
+            }
+            break;
+        }
 
     if (separate_rate) {
         for (i = 0; i < model_names.size(); i++) 
