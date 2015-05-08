@@ -1213,9 +1213,15 @@ struct Params {
     int write_intermediate_trees;
 
     /**
-     *  Write out all candidate trees (the locally optimal trees)
+     *  Write trees obtained at the end of each NNI search
      */
-    int write_local_optimal_trees;
+    bool write_candidate_trees;
+
+    /**
+     *   This is the same as write_intermediate_trees = 2. However, the CandidateSet is used
+     *   to store the trees
+     */
+    bool write_all_trees;
 
     /**
         TRUE to avoid duplicated trees while writing intermediate trees

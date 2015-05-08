@@ -899,7 +899,7 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 	if (params.compute_ml_tree) {
 		cout << "  Maximum-likelihood tree:       " << params.out_prefix
 				<< ".treefile" << endl;
-		if (params.snni && params.write_local_optimal_trees) {
+		if (params.snni && params.write_candidate_trees) {
 			cout << "  Candidate trees (" << tree.candidateTrees.size() << "):    " << params.out_prefix << ".suboptimal_trees" << endl;
 		}
 	}
@@ -1385,8 +1385,8 @@ void printFinalSearchInfo(Params &params, IQTree &iqtree, double search_cpu_time
 
 }
 
-void printSuboptimalTrees(IQTree& iqtree, Params& params, string suffix) {
-	vector<string> trees = iqtree.candidateTrees.getTopTrees();
+void printCandidateTreees(CandidateSet &candidateTrees, Params &params, string suffix) {
+	vector<string> trees = candidateTrees.getTopTrees();
 	ofstream treesOut((string(params.out_prefix) + suffix).c_str(),
 			ofstream::out);
 	for (vector<string>::iterator it = trees.begin(); it != trees.end(); it++) {
@@ -1610,8 +1610,8 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 
 	cout << "BEST SCORE FOUND : " << iqtree.getCurScore() << endl;
 
-	if (params.write_local_optimal_trees) {
-		printSuboptimalTrees(iqtree, params, ".suboptimal_trees");
+	if (params.write_candidate_trees) {
+		printCandidateTreees(iqtree.candidateTrees, params, ".candidate_trees");
 	}
 
 	if (params.pll)

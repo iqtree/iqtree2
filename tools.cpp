@@ -818,7 +818,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.memCheck = false;
     params.tabu = false;
     params.strictTabu = false;
-    params.fastBran = false;
+    params.fastBran = true;
     params.numSupportTrees = 20;
 //    params.sprDist = 20;
     params.sprDist = 6;
@@ -846,7 +846,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.print_splits_file = false;
     params.ignore_identical_seqs = true;
     params.write_init_tree = false;
-    params.write_local_optimal_trees = false;
+    params.write_candidate_trees = false;
     params.freq_const_patterns = NULL;
     params.no_rescale_gamma_invar = false;
 
@@ -1925,11 +1925,14 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.iqp = true;
 				continue;
 			}
-			if (strcmp(argv[cnt], "-wlt") == 0) {
-				// write all candidate trees
-				params.write_local_optimal_trees = true;
+			if (strcmp(argv[cnt], "-wct") == 0) {
+				params.write_candidate_trees = true;
 				continue;
 			}
+            if (strcmp(argv[cnt], "-wat") == 0) {
+                params.write_all_trees = true;
+                continue;
+            }
 			if (strcmp(argv[cnt], "-wt") == 0) {
 				params.write_intermediate_trees = 1;
 				continue;
