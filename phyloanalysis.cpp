@@ -678,8 +678,8 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 			out << endl;
 			reportTree(out, params, tree, tree.candidateTrees.getBestScore(), tree.logl_variance);
 
-			if (tree.isSuperTree()) {
-//				PhyloSuperTree *stree = (PhyloSuperTree*) &tree;
+			if (tree.isSuperTree() && verbose_mode >= VB_MED) {
+				PhyloSuperTree *stree = (PhyloSuperTree*) &tree;
 //				stree->mapTrees();
 //				int empty_branches = stree->countEmptyBranches();
 //				if (empty_branches) {
@@ -687,7 +687,7 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 //					ss << empty_branches << " branches in the overall tree with no phylogenetic information due to missing data!";
 //					outWarning(ss.str());
 //				}
-				/*
+				
 				int part = 0;
 				for (PhyloSuperTree::iterator it = stree->begin();
 						it != stree->end(); it++, part++) {
@@ -702,7 +702,7 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 					assert((*it)->root);
 					reportTree(out, params, *(*it), (*it)->computeLikelihood(),
 							(*it)->computeLogLVariance());
-				}*/
+				}
 			}
 
 		}

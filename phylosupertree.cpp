@@ -195,8 +195,19 @@ void PhyloSuperTree::readPartitionRaxml(Params &params) {
 			part_info.push_back(info);
             Alignment *part_aln = new Alignment();
             part_aln->extractSites(input_aln, info.position_spec.c_str());
-			PhyloTree *tree = new PhyloTree(part_aln);
-			push_back(tree);
+            
+			Alignment *new_aln;
+			if (params.remove_empty_seq)
+				new_aln = part_aln->removeGappySeq();
+			else
+				new_aln = part_aln;
+		    // also rebuild states set of each sequence for likelihood computation
+		    new_aln->buildSeqStates();
+
+			if (part_aln != new_aln) delete part_aln;
+			PhyloTree *tree = new PhyloTree(new_aln);
+            push_back(tree);
+            cout << new_aln->getNSeq() << " sequences and " << new_aln->getNSite() << " sites extracted" << endl;
 //			params = origin_params;
 		}
 
