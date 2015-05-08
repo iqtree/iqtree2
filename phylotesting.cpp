@@ -64,13 +64,13 @@ const char* aa_model_names[] = { "Dayhoff", "mtMAM", "JTT", "WAG",
 		"HIVb", "HIVw", "JTTDCMut", "FLU", "Blosum62" };
         
 /* Protein models supported by PhyML/PartitionFinder */
-const char *aa_model_names_old[] = { "Dayhoff", "mtMAM", "JTT", "WAG",
+const char *aa_model_names_phyml[] = { "Dayhoff", "mtMAM", "JTT", "WAG",
 		"cpREV", "mtREV", "rtREV", "mtART", "VT", "LG", "DCMut",
 		"HIVb", "HIVw", "Blosum62" };
 
 /* Protein models supported by RAxML */
 const char *aa_model_names_rax[] = { "Dayhoff", "mtMAM", "JTT", "WAG",
-		"cpREV", "mtREV", "rtREV", "VT", "LG", "DCMut", "Blosum62" };
+		"cpREV", "mtREV", "rtREV", "mtART", "mtZOA", "PMB", "HIVb", "HIVw", "JTTDCMut", "FLU", "VT", "LG", "DCMut", "Blosum62" };
 
 const char* aa_model_names_mrbayes[] = {"Poisson", "Dayhoff", "mtMAM", "JTT", "WAG",
 		"cpREV", "mtREV", "rtREV", "VT", "Blosum62" };
@@ -406,23 +406,43 @@ void getModelList(Params &params, Alignment *aln, StrVector &models, bool separa
 		if (params.model_set == NULL) {
 			copyCString(aa_model_names, sizeof(aa_model_names) / sizeof(char*), model_names);
 		} else if (strcmp(params.model_set, "partitionfinder") == 0 || strcmp(params.model_set, "phyml") == 0) {
-			copyCString(aa_model_names_old, sizeof(aa_model_names_old) / sizeof(char*), model_names);
+			copyCString(aa_model_names_phyml, sizeof(aa_model_names_phyml) / sizeof(char*), model_names);
 		} else if (strcmp(params.model_set, "raxml") == 0) {
 			copyCString(aa_model_names_rax, sizeof(aa_model_names_rax) / sizeof(char*), model_names);
 		} else if (strcmp(params.model_set, "mrbayes") == 0) {
 			copyCString(aa_model_names_mrbayes, sizeof(aa_model_names_mrbayes) / sizeof(char*), model_names);
-		} else if (strncmp(params.model_set, "nuclear", 3) == 0) {
-			copyCString(aa_model_names_nuclear, sizeof(aa_model_names_nuclear) / sizeof(char*), model_names);
-		} else if (strncmp(params.model_set, "mitochondrial", 3) == 0) {
-			copyCString(aa_model_names_mitochondrial, sizeof(aa_model_names_mitochondrial) / sizeof(char*), model_names);
-		} else if (strncmp(params.model_set, "chloroplast", 3) == 0) {
-			copyCString(aa_model_names_chloroplast, sizeof(aa_model_names_chloroplast) / sizeof(char*), model_names);
-		} else if (strncmp(params.model_set, "viral",3) == 0) {
-			copyCString(aa_model_names_viral, sizeof(aa_model_names_viral) / sizeof(char*), model_names);
 		} else {
 			convert_string_vec(params.model_set, model_names);
 		}
         copyCString(aa_freq_names, sizeof(aa_freq_names)/sizeof(char*), freq_names);
+        
+        if (params.model_subset) {
+            StrVector submodel_names;
+            if (strncmp(params.model_subset, "nuclear", 3) == 0) {
+                copyCString(aa_model_names_nuclear, sizeof(aa_model_names_nuclear) / sizeof(char*), submodel_names);
+            } else if (strncmp(params.model_subset, "mitochondrial", 3) == 0) {
+                copyCString(aa_model_names_mitochondrial, sizeof(aa_model_names_mitochondrial) / sizeof(char*), submodel_names);
+            } else if (strncmp(params.model_subset, "chloroplast", 3) == 0) {
+                copyCString(aa_model_names_chloroplast, sizeof(aa_model_names_chloroplast) / sizeof(char*), submodel_names);
+            } else if (strncmp(params.model_subset, "viral",3) == 0) {
+                copyCString(aa_model_names_viral, sizeof(aa_model_names_viral) / sizeof(char*), submodel_names);
+            } else {
+                outError("Wrong -msub option");
+            }
+            for (i = 0; i < model_names.size(); i++) {
+                bool appear = false;
+                for (j = 0; j < submodel_names.size(); j++) 
+                    if (model_names[i] == submodel_names[j]) {
+                        appear = true;
+                        break;
+                    }
+                if (!appear) {
+                    model_names.erase(model_names.begin()+i);
+                    i--;
+                }
+            }
+        }
+
 	} else if (seq_type == SEQ_CODON) {
 		if (params.model_set == NULL) {
 			if (aln->isStandardGeneticCode())

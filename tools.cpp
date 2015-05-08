@@ -703,6 +703,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.stop_confidence = 0.95;
     params.model_name = "";
     params.model_set = NULL;
+    params.model_subset = NULL;
     params.state_freq_set = NULL;
     params.ratehet_set = NULL;
     params.model_def_file = NULL;
@@ -1632,6 +1633,13 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (cnt >= argc)
 					throw "Use -mset <model_set>";
 				params.model_set = argv[cnt];
+				continue;
+			}
+			if (strcmp(argv[cnt], "-msub") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -msub <model_subset>";
+				params.model_subset = argv[cnt];
 				continue;
 			}
 			if (strcmp(argv[cnt], "-mfreq") == 0) {
@@ -2778,10 +2786,10 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -m TESTONLYMERGE     Like -m TESTMERGE but stop after model selection" << endl
             << "  -mset raxml or -mset phyml or -mset mrbayes" << endl
             << "                       Restrict to models supported by respective programs" << endl
-            << "  -mset nuclear or -mset mitochondrial or -mset chloroplast or -mset viral" << endl
-            << "                       Restrict to models designed for respective sequences" << endl            
             << "  -mset m1,...,mk      Restrict to a comma-separated list of models" << endl
             << "                       (e.g. -mset WAG,LG,JTT)" << endl            
+            << "  -msub nuclear or -msub mitochondrial or -msub chloroplast or -msub viral" << endl
+            << "                       Restrict to AA models designed for respective sequences" << endl            
             << "  -mfreq f1,...,fk     Restrict to a comma-separated list of state frequencies" << endl
             << "                       (default protein: -mfreq ,F; codon: -mfreq ,F1x4,F3x4,F)" << endl            
             << "  -mrate r1,...,rk     Restrict to a comma-separated list of rate heterogeneity" << endl

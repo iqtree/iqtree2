@@ -1071,6 +1071,9 @@ struct Params {
     /** set of models for testing */
     char *model_set;
 
+    /** subset of models for testing, e.g. viral, mitochondrial */
+    char *model_subset;
+
     /** set of state frequencies model for testing */
     char *state_freq_set;
 
