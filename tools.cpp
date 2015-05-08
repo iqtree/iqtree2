@@ -2795,7 +2795,7 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -mfreq f1,...,fk     Restrict to a comma-separated list of state frequencies" << endl
             << "                       (default protein: -mfreq ,F; codon: -mfreq ,F1x4,F3x4,F)" << endl            
             << "  -mrate r1,...,rk     Restrict to a comma-separated list of rate heterogeneity" << endl
-            << "                       (default: -mrate E,I,G,I+G)" << endl
+            << "                       (e.g. -mrate E,I,G,I+G,R)" << endl
             << "  -cmax <kmax>         Max #categories for FreeRate model [+R] (default: 10)" << endl
 //            << "  -msep                Perform model selection and then rate selection" << endl
             << "  -mtree               Do a full tree search for each testing model" << endl
