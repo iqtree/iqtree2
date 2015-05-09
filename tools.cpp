@@ -3302,3 +3302,8 @@ double computePValueChiSquare(double x, int df) /* x: obtained chi-square value,
 }
 
 
+void trimString(string &str) {
+    str.erase(0, str.find_first_not_of(" \n\r\t"));
+    str.erase(str.find_last_not_of(" \n\r\t")+1);
+}
+

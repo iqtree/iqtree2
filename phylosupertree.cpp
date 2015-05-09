@@ -24,15 +24,6 @@
 #include "myreader.h"
 #include "phylotesting.h"
 
-/**
-    remove white space at the beginning and end of the string
-    @param str (IN/OUT) string to be trimmed
-*/
-void trimString(string &str) {
-    str.erase(0, str.find_first_not_of(" \n\r\t"));
-    str.erase(str.find_last_not_of(" \n\r\t")+1);
-}
-
 PhyloSuperTree::PhyloSuperTree()
  : IQTree()
 {

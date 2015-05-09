@@ -1232,6 +1232,7 @@ int Alignment::readFasta(char *filename, char *sequence_type) {
         if (line[0] == '>') { // next sequence
             string::size_type pos = line.find_first_of("\n\r");
             seq_names.push_back(line.substr(1, pos-1));
+            trimString(seq_names.back());
             sequences.push_back("");
             continue;
         }

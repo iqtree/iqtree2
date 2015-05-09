@@ -2079,4 +2079,10 @@ void summarizeHeader(ostream &out, Params &params, bool budget_constraint, Input
 void summarizeFooter(ostream &out, Params &params);
 
 
+/**
+    remove white space at the beginning and end of the string
+    @param str (IN/OUT) string to be trimmed
+*/
+void trimString(string &str);
+
 #endif
