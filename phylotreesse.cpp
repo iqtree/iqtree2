@@ -361,7 +361,11 @@ void PhyloTree::computeTipPartialLikelihood() {
 
 	double lh_ambiguous;
 	// ambiguous characters
-	int ambi_aa[2] = {4+8, 32+64};
+	int ambi_aa[] = {
+        4+8, // B = N or D
+        32+64, // Z = Q or E
+        512+1024 // U = I or L
+        };
 	switch (aln->seq_type) {
 	case SEQ_DNA:
 		for (state = 4; state < 18; state++) {
@@ -382,13 +386,13 @@ void PhyloTree::computeTipPartialLikelihood() {
 	case SEQ_PROTEIN:
 		//map[(unsigned char)'B'] = 4+8+19; // N or D
 		//map[(unsigned char)'Z'] = 32+64+19; // Q or E
-		for (state = 0; state < 2; state++) {
+		for (state = 0; state < sizeof(ambi_aa)/sizeof(int); state++) {
 			double *this_tip_partial_lh = &tip_partial_lh[(state+20)*nstates*nmixtures];
 			for (m = 0; m < nmixtures; m++) {
 				double *inv_evec = &all_inv_evec[m*nstates*nstates];
 				for (i = 0; i < nstates; i++) {
 					lh_ambiguous = 0.0;
-					for (x = 0; x < 7; x++)
+					for (x = 0; x < 11; x++)
 						if (ambi_aa[state] & (1 << x))
 							lh_ambiguous += inv_evec[i*nstates+x];
 					this_tip_partial_lh[m*nstates+i] = lh_ambiguous;

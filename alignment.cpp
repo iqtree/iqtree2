@@ -388,7 +388,7 @@ int Alignment::readNexus(char *filename) {
 void Alignment::computeUnknownState() {
     switch (seq_type) {
     case SEQ_DNA: STATE_UNKNOWN = 18; break;
-    case SEQ_PROTEIN: STATE_UNKNOWN = 22; break;
+    case SEQ_PROTEIN: STATE_UNKNOWN = 23; break;
     default: STATE_UNKNOWN = num_states; break;
     }
 }
@@ -694,6 +694,7 @@ void Alignment::buildStateMap(char *map, SeqType seq_type) {
 //		map[(unsigned char)'Z'] = 32+64+19; // Q or E
         map[(unsigned char)'B'] = 20; // N or D
         map[(unsigned char)'Z'] = 21; // Q or E
+        map[(unsigned char)'J'] = 22; // I or L
         map[(unsigned char)'*'] = STATE_UNKNOWN; // stop codon
         map[(unsigned char)'U'] = STATE_UNKNOWN; // 21st amino acid
         
@@ -781,6 +782,7 @@ char Alignment::convertState(char state, SeqType seq_type) {
 //		if (state == 'Z') return 32+64+19;
 		if (state == 'B') return 20;
 		if (state == 'Z') return 21;
+		if (state == 'J') return 22;
         if (state == '*') return STATE_UNKNOWN; // stop codon
         if (state == 'U') return STATE_UNKNOWN; // 21st amino-acid
         loc = strchr(symbols_protein, state);
@@ -861,6 +863,7 @@ char Alignment::convertStateBack(char state) {
             return symbols_protein[(int)state];
 		else if (state == 20) return 'B';
 		else if (state == 21) return 'Z';
+		else if (state == 22) return 'J';
 //		else if (state == 4+8+19) return 'B';
 //		else if (state == 32+64+19) return 'Z';
         else
