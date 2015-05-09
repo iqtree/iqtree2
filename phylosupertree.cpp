@@ -334,9 +334,12 @@ PhyloSuperTree::PhyloSuperTree(Params &params) :  IQTree() {
 	totalNNIs = evalNNIs = 0;
 
 	cout << "Reading partition model file " << params.partition_file << " ..." << endl;
-	if (detectInputFile(params.partition_file) == IN_NEXUS)
+	if (detectInputFile(params.partition_file) == IN_NEXUS) {
 		readPartitionNexus(params);
-	else
+        if (part_info.empty()) {
+            outError("No partition found in SETS block. An example syntax looks like: \n#nexus\nbegin sets;\n  charset part1=1-100;\n  charset part2=101-300;\nend;");
+        }
+	} else
 		readPartitionRaxml(params);
 	if (part_info.empty())
 		outError("No partition found");
