@@ -1229,7 +1229,7 @@ int Alignment::readFasta(char *filename, char *sequence_type) {
 
         //cout << line << endl;
         if (line[0] == '>') { // next sequence
-            string::size_type pos = line.find_first_of(" \n\r\t");
+            string::size_type pos = line.find_first_of("\n\r");
             seq_names.push_back(line.substr(1, pos-1));
             sequences.push_back("");
             continue;
@@ -1250,6 +1250,44 @@ int Alignment::readFasta(char *filename, char *sequence_type) {
     // set the failbit again
     in.exceptions(ios::failbit | ios::badbit);
     in.close();
+
+    // now try to cut down sequence name if possible
+    int i, j, step = 0;
+    StrVector new_seq_names, remain_seq_names;
+    new_seq_names.resize(seq_names.size());
+    remain_seq_names = seq_names;
+    
+    for (step = 0; step < 4; step++) {
+        bool duplicated = false;
+        for (i = 0; i < seq_names.size(); i++) {
+            if (remain_seq_names[i].empty()) continue;
+            size_t pos = remain_seq_names[i].find_first_of(" \t");
+            if (pos == string::npos) {
+                new_seq_names[i] += remain_seq_names[i];
+                remain_seq_names[i] = "";
+            } else {
+                new_seq_names[i] += remain_seq_names[i].substr(0, pos);
+                remain_seq_names[i] = "_" + remain_seq_names[i].substr(pos+1);
+            }
+            // now check for duplication
+            if (!duplicated)
+            for (j = 0; j < i-1; j++)
+                if (new_seq_names[j] == new_seq_names[i]) {
+                    duplicated = true;
+                    break;
+                }
+        }
+        if (!duplicated) break;
+    }
+
+    if (step > 0) {
+        for (i = 0; i < seq_names.size(); i++)
+            if (seq_names[i] != new_seq_names[i]) {
+                cout << "NOTE: Change sequence name '" << seq_names[i] << "' -> " << new_seq_names[i] << endl;
+            }
+    }
+
+    seq_names = new_seq_names;
 
     return buildPattern(sequences, sequence_type, seq_names.size(), sequences.front().length());
 }
