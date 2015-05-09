@@ -1144,6 +1144,7 @@ int Alignment::readPhylip(char *filename, char *sequence_type) {
 
     for (; !in.eof(); line_num++) {
         getline(in, line);
+        line = line.substr(0, line.find_first_of("\n\r"));
         if (line == "") continue;
 
         //cout << line << endl;
