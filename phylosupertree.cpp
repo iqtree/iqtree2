@@ -113,7 +113,7 @@ void PhyloSuperTree::readPartitionRaxml(Params &params) {
             
         input_aln = new Alignment(params.aln_file, params.sequence_type, params.intype);
 
-        cout << endl << "RAxML-style partition file detected" << endl;
+        cout << endl << "Partition file is not in NEXUS format, assuming RAxML-style partition file..." << endl;
 
         size_t pos = params.model_name.find_first_of("+*");
         string rate_type = "";
