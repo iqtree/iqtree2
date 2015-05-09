@@ -749,7 +749,9 @@ char Alignment::convertState(char state, SeqType seq_type) {
             return 1+4+3; // A or G, Purine
         case 'Y':
             return 2+8+3; // C or T, Pyrimidine
+        case 'O':
         case 'N':
+        case 'X':
             return STATE_UNKNOWN;
         case 'W':
             return 1+8+3; // A or T, Weak
@@ -776,6 +778,7 @@ char Alignment::convertState(char state, SeqType seq_type) {
 //		if (state == 'Z') return 32+64+19;
 		if (state == 'B') return 20;
 		if (state == 'Z') return 21;
+        if (state == '*') return STATE_UNKNOWN;
         loc = strchr(symbols_protein, state);
 
         if (!loc) return STATE_INVALID; // unrecognize character
@@ -1185,12 +1188,12 @@ int Alignment::readPhylip(char *filename, char *sequence_type) {
                     if (isalnum(*it) || (*it) == '-' || (*it) == '?'|| (*it) == '.')
                         sequences[seq_id].append(1, toupper(*it));
                     else {
-                        err_str << "Unrecognized character " << *it << " on line " << line_num;
+                        err_str << "Line " << line_num <<": Unrecognized character " << *it;
                         throw err_str.str();
                     }
                 }
             if (sequences[seq_id].length() != sequences[0].length()) {
-                err_str << "Line " << line_num << ": alignment block has variable sequence lengths" << endl;
+                err_str << "Line " << line_num << ": Sequence " << seq_names[seq_id] << " has wrong sequence length " << sequences[seq_id].length() << endl;
                 throw err_str.str();
             }
             if (sequences[seq_id].length() > old_len)
