@@ -2909,17 +2909,19 @@ InputType detectInputFile(char *input_file) {
         in.exceptions(ios::failbit | ios::badbit);
         in.open(input_file);
 
-        unsigned char ch;
+        unsigned char ch, ch2;
         int count = 0;
         do {
             in >> ch;
         } while (ch <= 32 && !in.eof() && count++ < 20);
+        in >> ch2;
         in.close();
         switch (ch) {
             case '#': return IN_NEXUS;
             case '(': return IN_NEWICK;
             case '[': return IN_NEWICK;
             case '>': return IN_FASTA;
+            case 'C': if (ch2 == 'L') return IN_CLUSTALW; else return IN_OTHER;
             default:
                 if (isdigit(ch)) return IN_PHYLIP;
                 return IN_OTHER;

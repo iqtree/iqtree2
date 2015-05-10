@@ -123,6 +123,14 @@ public:
     int readFasta(char *filename, char *sequence_type);
 
     /**
+            read the alignment in CLUSTALW format
+            @param filename file name
+            @param sequence_type type of the sequence, either "BIN", "DNA", "AA", or NULL
+            @return 1 on success, 0 on failure
+     */
+    int readClustalw(char *filename, char *sequence_type);
+
+    /**
             extract the alignment from a nexus data block, called by readNexus()
             @param data_block data block of nexus file
      */
