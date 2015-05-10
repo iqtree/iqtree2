@@ -973,7 +973,7 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
     int model_aic = -1, model_aicc = -1, model_bic = -1;
     string prev_tree_string = "";
     int prev_model_id = -1;
-    bool skip_model = false;
+    int skip_model = 0;
 
 	for (model = 0; model < model_names.size(); model++) {
 		//cout << model_names[model] << endl;
@@ -1071,7 +1071,7 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
             assert(prev_model_id>=0);
             size_t pos_r = info.name.find("+R");
             if (pos_r == string::npos || info.name.substr(0, pos_r) != model_info[prev_model_id].name.substr(0, pos_r))
-                skip_model = false;
+                skip_model = 0;
         }
 		for (int i = 0; i < model_info.size(); i++)
 			if (info.name == model_info[i].name) {
@@ -1171,7 +1171,7 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
                 if (info.AIC_score > model_info[prev_model_id].AIC_score && info.AICc_score > model_info[prev_model_id].AICc_score &&
                     info.BIC_score > model_info[prev_model_id].BIC_score) {
                     // skip remaining model
-                    skip_model = true;
+                    skip_model++;
 //                    cout << "Skip next model" << endl;
                 }
             }
@@ -1201,6 +1201,12 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 		cout << right << model+1 << "  ";
 		cout.width(13);
 		cout << left << info.name << " ";
+        
+        if (skip_model > 1) {
+            cout << "Skipped " << endl;
+            continue;
+        }
+        
 		cout.precision(3);
 		cout << fixed;
 		cout.width(12);
