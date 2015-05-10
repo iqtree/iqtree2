@@ -278,11 +278,14 @@ Alignment::Alignment(char *filename, char *sequence_type, InputType &intype) : v
         } else if (intype == IN_PHYLIP) {
             cout << "Phylip format detected" << endl;
             readPhylip(filename, sequence_type);
-        } else if (intype == IN_CLUSTALW) {
-            cout << "ClustalW format detected" << endl;
-            readClustalw(filename, sequence_type);
+        } else if (intype == IN_CLUSTAL) {
+            cout << "Clustal format detected" << endl;
+            readClustal(filename, sequence_type);
+        } else if (intype == IN_MSF) {
+            cout << "MSF format detected" << endl;
+            readMSF(filename, sequence_type);
         } else {
-            outError("Unknown sequence format, please use PHYLIP, FASTA, CLUSTALW or NEXUS format");
+            outError("Unknown sequence format, please use PHYLIP, FASTA, CLUSTAL, MSF, or NEXUS format");
         }
     } catch (ios::failure) {
         outError(ERR_READ_INPUT);
@@ -1307,7 +1310,7 @@ int Alignment::readFasta(char *filename, char *sequence_type) {
     return buildPattern(sequences, sequence_type, seq_names.size(), sequences.front().length());
 }
 
-int Alignment::readClustalw(char *filename, char *sequence_type) {
+int Alignment::readClustal(char *filename, char *sequence_type) {
 
 
     StrVector sequences;
@@ -1365,6 +1368,118 @@ int Alignment::readClustalw(char *filename, char *sequence_type) {
             }
         }
         seq_count++;
+    }
+    in.clear();
+    // set the failbit again
+    in.exceptions(ios::failbit | ios::badbit);
+    in.close();
+    return buildPattern(sequences, sequence_type, seq_names.size(), sequences.front().length());
+
+
+}
+
+
+int Alignment::readMSF(char *filename, char *sequence_type) {
+
+
+    StrVector sequences;
+    ifstream in;
+    int line_num = 1;
+    string line;
+    num_states = 0;
+
+
+    // set the failbit and badbit
+    in.exceptions(ios::failbit | ios::badbit);
+    in.open(filename);
+    // remove the failbit
+    in.exceptions(ios::badbit);
+    getline(in, line);
+    if (line.find("MULTIPLE_ALIGNMENT") == string::npos) {
+        throw "MSF file must start with header line MULTIPLE_ALIGMENT";
+    }
+
+    int seq_len = 0, seq_count = 0;
+    bool seq_started = false;
+    
+    for (line_num = 2; !in.eof(); line_num++) {
+        getline(in, line);
+        trimString(line);
+        if (line == "") { 
+            continue;
+        }
+        size_t pos;
+        
+        if (line.substr(0, 2) == "//") {
+            seq_started = true;
+            continue;
+        }
+        
+        if (line.substr(0,5) == "Name:") {
+            if (seq_started)
+                throw "Line " + convertIntToString(line_num) + ": Cannot declare sequence name here";
+            line = line.substr(5);
+            trimString(line);
+            pos = line.find_first_of(" \t");
+            if (pos == string::npos)
+                throw "Line " + convertIntToString(line_num) + ": No whitespace found after sequence name";
+            string seq_name = line.substr(0,pos);
+            seq_names.push_back(seq_name);
+            sequences.push_back("");
+            pos = line.find("Len:");
+            if (pos == string::npos)
+                throw "Line " + convertIntToString(line_num) + ": Sequence description does not contain 'Len:'";
+            line = line.substr(pos+4);
+            trimString(line);
+            pos = line.find_first_of(" \t");
+            if (pos == string::npos)
+                throw "Line " + convertIntToString(line_num) + ": No whitespace found after sequence length";
+            
+            int len;
+            line = line.substr(0, pos);
+            try {
+                len = convert_int(line.c_str());
+            } catch (string &str) {
+                throw "Line " + convertIntToString(line_num) + ": " + str;
+            }
+            if (len <= 0)
+                throw "Line " + convertIntToString(line_num) + ": Non-positive sequence length not allowed";
+            if (seq_len == 0)
+                seq_len = len;
+            else if (seq_len != len)
+                throw "Line " + convertIntToString(line_num) + ": Sequence length " + convertIntToString(len) + " is different from previously defined " + convertIntToString(seq_len);
+            continue;
+        }
+        
+        if (!seq_started) continue;
+
+        if (seq_names.empty())
+            throw "No sequence name declared in header";
+        
+        if (isdigit(line[0])) continue;
+        pos = line.find_first_of(" \t");
+        if (pos == string::npos) 
+            throw "Line " + convertIntToString(line_num) + ": whitespace not found between sequence name and content - " + line;
+        
+        string seq_name = line.substr(0, pos);
+        if (seq_name != seq_names[seq_count])
+            throw "Line " + convertIntToString(line_num) + ": Sequence name " + seq_name + " does not match previously declared " +seq_names[seq_count];
+        
+        line = line.substr(pos+1);
+        // read sequence contents
+        for (string::iterator it = line.begin(); it != line.end(); it++) {
+            if ((*it) <= ' ') continue;
+            if (isalnum(*it) || (*it) == '-' || (*it) == '?'|| (*it) == '.' || (*it) == '*')
+                sequences[seq_count].append(1, toupper(*it));
+            else  if ((*it) == '~')
+                sequences[seq_count].append(1, '-');
+            else {
+                throw "Line " +convertIntToString(line_num) + ": Unrecognized character " + *it;
+            }
+        }
+        seq_count++;
+        if (seq_count == seq_names.size())
+            seq_count = 0;
     }
     in.clear();
     // set the failbit again

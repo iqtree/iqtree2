@@ -2921,7 +2921,8 @@ InputType detectInputFile(char *input_file) {
             case '(': return IN_NEWICK;
             case '[': return IN_NEWICK;
             case '>': return IN_FASTA;
-            case 'C': if (ch2 == 'L') return IN_CLUSTALW; else return IN_OTHER;
+            case 'C': if (ch2 == 'L') return IN_CLUSTAL; else return IN_OTHER;
+            case '!': if (ch2 == '!') return IN_MSF; else return IN_OTHER;
             default:
                 if (isdigit(ch)) return IN_PHYLIP;
                 return IN_OTHER;
