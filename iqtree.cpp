@@ -1141,15 +1141,6 @@ string IQTree::doRandomNNIs(int numNNI) {
 
     resetCurScore();
 
-//    if (params->fastBran) {
-//        Branches optBranches;
-//        getSplitBranches(optBranches, initTabuSplits);
-//        assert(optBranches.size() == initTabuSplits.size());
-//        optimizeNNIBranches(optBranches);
-//    }
-
-    optimizeBranches(1);
-
     return getTreeString();
 }
 
@@ -1847,7 +1838,6 @@ double IQTree::doTreeSearch() {
 
 
     	/*----------------------------------------
-    	 * convergence criterion for ultrafast bootstrap
     	 *---------------------------------------*/
         if ((curIt) % (params->step_iterations / 2) == 0 && params->stop_condition == SC_BOOTSTRAP_CORRELATION) {
         	// compute split support every half step
@@ -2012,7 +2002,7 @@ pair<int, int> IQTree::optimizeNNI() {
         if (curScore < compatibleNNIs.at(0).newloglh - params->loglh_epsilon) {
             // tree cannot be worse if only 1 NNI is applied
             assert(curNumNNIs != 1);
-            cout << "Roll back ... " << endl;
+            //cout << "Roll back ... " << endl;
             // restore the tree by reverting all NNIs
             for (int i = 0; i < curNumNNIs; i++)
                 doNNI(compatibleNNIs.at(i));
