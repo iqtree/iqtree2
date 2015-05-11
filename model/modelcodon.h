@@ -156,7 +156,15 @@ protected:
     */
 	void initGY94(int kappa_model);
 
-	void initGY94_1KTS();
+    /**
+        @param kappa_ts true for Kappa(ts) model, false for Kappa(tv) (Kosiol et al 2007)
+    */
+	void initGY94_1K(bool kappa_ts);
+
+    /**
+        Kappa(ts)Kappa(tv) model of Kosiol et al 2007
+    */
+	void initGY94_2K();
 
 	/**
 		this function is served for the multi-dimension optimization. It should pack the model parameters

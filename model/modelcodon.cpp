@@ -273,13 +273,13 @@ StateFreqType ModelCodon::initCodon(const char *model_name, StateFreqType freq) 
 		initGY94(0);
 		return FREQ_EMPIRICAL;
 	} else if (name_upper == "GY1KTS" || name_upper == "GYKAP2") {
-		initGY94_1KTS();
+		initGY94_1K(true);
 		return FREQ_EMPIRICAL;
-	} else if (name_upper == "GY1KTV") {
-		initGY94(0);
+	} else if (name_upper == "GY1KTV" || name_upper == "GYKAP3") {
+		initGY94_1K(false);
 		return FREQ_EMPIRICAL;
-	} else if (name_upper == "GY2K") {
-		initGY94(0);
+	} else if (name_upper == "GY2K" || name_upper == "GYKAP4") {
+		initGY94_2K();
 		return FREQ_EMPIRICAL;
 	} else if (name_upper == "ECM" || name_upper == "KOSI07" || name_upper == "ECMK07") {
 		if (!phylo_tree->aln->isStandardGeneticCode())
@@ -537,56 +537,58 @@ void ModelCodon::getVariables(double *variables) {
 	if (num_params > 0) {
 		for (i = 0, j = 1; i < rate_constraints.size(); i++)
 			if (rate_constraints[i].min_value != rate_constraints[i].max_value) {
+                double rate;
+                switch (rate_constraints[i].opr) {
+                case 0:
+                    rate = variables[j];
+                    break;
+                case '*':
+                    if (rate_constraints[i].param2 != -1)
+                        rate = variables[rate_constraints[i].param1] * variables[rate_constraints[i].param2];
+                    else
+                        rate = variables[rate_constraints[i].param1] * rate_constraints[i].opr_value;
+                        
+                    break;
+                case '/':
+                    if (rate_constraints[i].param2 != -1)
+                        rate = variables[rate_constraints[i].param1] / variables[rate_constraints[i].param2];
+                    else
+                        rate = variables[rate_constraints[i].param1] / rate_constraints[i].opr_value;
+                    break;
+                case '^':
+                    if (rate_constraints[i].param2 != -1)
+                        rate = pow(variables[rate_constraints[i].param1], variables[rate_constraints[i].param2]);
+                    else
+                        rate = pow(variables[rate_constraints[i].param1], rate_constraints[i].opr_value);
+                    break;
+                default:
+                    outError("Invalid operator");
+                    break;
+                }
+                switch (rate_constraints[i].opr2) {
+                case '*':
+                    if (rate_constraints[i].param3 != -1)
+                        rate *= variables[rate_constraints[i].param3];
+                    else
+                        rate *= rate_constraints[i].opr_value2;
+                    break;
+                case '/':
+                    if (rate_constraints[i].param3 != -1)
+                        rate /= variables[rate_constraints[i].param3];
+                    else
+                        rate /= rate_constraints[i].opr_value2;
+                case '^':
+                    if (rate_constraints[i].param3 != -1)
+                        rate = pow(rate, variables[rate_constraints[i].param3]);
+                    else
+                        rate = pow(rate, rate_constraints[i].opr_value2);
+                }
+            
 				for (int k = 0; k < rate_group.size(); k++)
 					if (rate_group[k] == i) {
-						switch (rate_constraints[i].opr) {
-						case 0:
-							rates[k] = variables[j];
-							break;
-						case '*':
-							if (rate_constraints[i].param2 != -1)
-								rates[k] = variables[rate_constraints[i].param1] * variables[rate_constraints[i].param2];
-							else
-								rates[k] = variables[rate_constraints[i].param1] * rate_constraints[i].opr_value;
-                                
-							break;
-						case '/':
-							if (rate_constraints[i].param2 != -1)
-								rates[k] = variables[rate_constraints[i].param1] / variables[rate_constraints[i].param2];
-							else
-								rates[k] = variables[rate_constraints[i].param1] / rate_constraints[i].opr_value;
-							break;
-						case '^':
-							if (rate_constraints[i].param2 != -1)
-								rates[k] = pow(variables[rate_constraints[i].param1], variables[rate_constraints[i].param2]);
-							else
-								rates[k] = pow(variables[rate_constraints[i].param1], rate_constraints[i].opr_value);
-							break;
-						default:
-							outError("Invalid operator");
-							break;
-						}
-                        switch (rate_constraints[i].opr2) {
-						case '*':
-							if (rate_constraints[i].param3 != -1)
-								rates[k] *= variables[rate_constraints[i].param3];
-							else
-								rates[k] *= rate_constraints[i].opr_value2;
-                            break;
-                        case '/':
-							if (rate_constraints[i].param3 != -1)
-								rates[k] /= variables[rate_constraints[i].param3];
-							else
-								rates[k] /= rate_constraints[i].opr_value2;
-                        case '^':
-							if (rate_constraints[i].param3 != -1)
-								rates[k] = pow(rates[k], variables[rate_constraints[i].param3]);
-							else
-								rates[k] = pow(rates[k], rate_constraints[i].opr_value2);
-                        }
-						rates[k] *= extra_rates[k];
-						if (empirical_rates)
-							rates[k] *= empirical_rates[k];
+                        rates[k] = rate*extra_rates[k];
+                        if (empirical_rates)
+                            rates[k] *= empirical_rates[k];
 					}
 				if (!rate_constraints[i].fixed) j++;
 			}
@@ -834,7 +836,7 @@ void ModelCodon::initGY94(int kappa_model) {
 	delete group;
 }
 
-void ModelCodon::initGY94_1KTS() {
+void ModelCodon::initGY94_1K(bool kappa_ts) {
 	/* Yang-Nielsen 1998 model (also known as Goldman-Yang 1994) with 2 parameters: omega and kappa */
 	int i,j, nrates = getNumRateEntries();
 	IntVector *group = new IntVector();
@@ -847,6 +849,7 @@ void ModelCodon::initGY94_1KTS() {
 				group->push_back(0); // multiple substitution
             } else {
                 countTsTv(i, j, ts, tv);
+                if (!kappa_ts) ts = tv;
                 if (isSynonymous(i, j)) {
                     switch (ts) {
                     case 0: group->push_back(1); break;
@@ -872,6 +875,106 @@ void ModelCodon::initGY94_1KTS() {
 	// 1 for synonymous transversion
 	// and kappa*omega for non-synonymous transition
     string constraint = "x3=x2*x2,x4=x2^3,x6=x2*x5,x7=x2^2*x5,x8=x2^3*x5";
+    if (empirical_rates)
+        setRateGroupConstraint("x0=fix,x1=fix," + constraint);
+    else
+        setRateGroupConstraint("x0=0,x1=1," + constraint);
+	delete group;
+}
+
+void ModelCodon::initGY94_2K() {
+	/* Yang-Nielsen 1998 model (also known as Goldman-Yang 1994) with 2 parameters: omega and kappa */
+	int i,j, nrates = getNumRateEntries();
+	IntVector *group = new IntVector();
+	group->reserve(nrates);
+    int ts, tv;
+	for (i = 0; i < num_states; i++) {
+        bool stopi = phylo_tree->aln->isStopCodon(i);
+		for (j = 0; j < num_states; j++) {
+            if (i==j || stopi || phylo_tree->aln->isStopCodon(j)) {
+				group->push_back(0); // multiple substitution
+            } else {
+                countTsTv(i, j, ts, tv);
+                assert(ts+tv>0);
+                if (isSynonymous(i, j)) {
+                    switch (ts) {
+                    case 0: 
+                        if (tv==1) 
+                            group->push_back(2); 
+                        else if (tv==2) 
+                            group->push_back(5); 
+                        else if (tv==3) 
+                            group->push_back(9); 
+                        else assert(0);
+                        break;
+                    case 1: 
+                        if (tv==0)
+                            group->push_back(1);
+                        else if (tv==1)
+                            group->push_back(4); 
+                        else if (tv==2)
+                            group->push_back(8);
+                        else
+                            assert(0);
+                        break;
+                    case 2: 
+                        if (tv==0)
+                            group->push_back(3);
+                        else if (tv==1)
+                            group->push_back(7);
+                        else assert(0);
+                        break;
+                    case 3: 
+                        if (tv==0)
+                            group->push_back(6); 
+                        else assert(0);
+                        break;
+                    default: assert(0); break;
+                    }
+                } else {
+                    switch (ts) {
+                    case 0: 
+                        if (tv==1) 
+                            group->push_back(11); 
+                        else if (tv==2) 
+                            group->push_back(14); 
+                        else if (tv==3) 
+                            group->push_back(18); 
+                        else assert(0);
+                        break;
+                    case 1: 
+                        if (tv==0)
+                            group->push_back(10);
+                        else if (tv==1)
+                            group->push_back(13); 
+                        else if (tv==2)
+                            group->push_back(17);
+                        else
+                            assert(0);
+                        break;
+                    case 2: 
+                        if (tv==0)
+                            group->push_back(12);
+                        else if (tv==1)
+                            group->push_back(16);
+                        else assert(0);
+                        break;
+                    case 3: 
+                        if (tv==0)
+                            group->push_back(15); 
+                        else assert(0);
+                        break;
+                    default: assert(0); break;
+                    }                
+                }
+            }
+		}
+	}
+	setRateGroup(*group);
+	// set zero rate for multiple substitution
+	// 1 for synonymous transversion
+	// and kappa*omega for non-synonymous transition
+    string constraint = "x3=x2*x2/x1,x4=x2,x5=x1,x6=x2^3/x1,x7=x2^2,x8=x2*x1,x9=x1*x1,x11=x10*x2,x12=x10*x2*x2/x1,x3=x10*x2,x14=x10*x1,x15=x2^3*x10/x1,x6=x2^2*x10,x17=x2*x1*x10,x18=x1*x1*x10";
     if (empirical_rates)
         setRateGroupConstraint("x0=fix,x1=fix," + constraint);
     else
