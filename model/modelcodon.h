@@ -143,8 +143,10 @@ protected:
 	/** initialize Muse-Gaut 1994 model */
 	void initMG94(bool with_kappa, StateFreqType freq);
 
-	/** initialize Goldman-Yang 1994 model (simplified version with 2 parameters omega and kappa */
-	void initGY94();
+	/** initialize Goldman-Yang 1994 model (simplified version with 2 parameters omega and kappa 
+        @param kappa_model 0 for k=1, 1 for usual kappa
+    */
+	void initGY94(int kappa_model);
 
 	/**
 		this function is served for the multi-dimension optimization. It should pack the model parameters

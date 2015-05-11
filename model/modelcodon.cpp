@@ -267,7 +267,10 @@ StateFreqType ModelCodon::initCodon(const char *model_name, StateFreqType freq) 
 		initMG94(true, freq);
 		return FREQ_CODON_3x4;
 	} else if (name_upper == "GY") {
-		initGY94();
+		initGY94(1);
+		return FREQ_EMPIRICAL;
+	} else if (name_upper == "GYW") {
+		initGY94(0);
 		return FREQ_EMPIRICAL;
 	} else if (name_upper == "ECM" || name_upper == "KOSI07" || name_upper == "ECMK07") {
 		if (!phylo_tree->aln->isStandardGeneticCode())
@@ -708,7 +711,7 @@ void ModelCodon::initMG94(bool with_kappa, StateFreqType freq) {
     ignore_state_freq = true;
 }
 
-void ModelCodon::initGY94() {
+void ModelCodon::initGY94(int kappa_model) {
 	/* Yang-Nielsen 1998 model (also known as Goldman-Yang 1994) with 2 parameters: omega and kappa */
 	int i,j, nrates = getNumRateEntries();
 	IntVector *group = new IntVector();
@@ -719,27 +722,43 @@ void ModelCodon::initGY94() {
 				group->push_back(0); // multiple substitution
             else if (isMultipleSubst(i, j) && !empirical_rates) {
                 group->push_back(0);
-            } else if (isSynonymous(i, j)) {
-				if (isTransversion(i, j))
-					group->push_back(1); // synonymous transversion
-				else
-					group->push_back(3); // synonymous transition
-			} else {
-				if (isTransversion(i, j))
-					group->push_back(2); // non-synonymous transversion
-				else
-					group->push_back(4); // non-synonymous transition
-			}
+            } else {
+                if (kappa_model == 1) {
+                    if (isSynonymous(i, j)) {
+                        if (isTransversion(i, j))
+                            group->push_back(1); // synonymous transversion
+                        else
+                            group->push_back(3); // synonymous transition
+                    } else {
+                        if (isTransversion(i, j))
+                            group->push_back(2); // non-synonymous transversion
+                        else
+                            group->push_back(4); // non-synonymous transition
+                    }
+                } else {
+                    if (isSynonymous(i, j))
+                        group->push_back(1);
+                    else 
+                        group->push_back(2);
+                }
+            }
 		}
 	}
 	setRateGroup(*group);
 	// set zero rate for multiple substitution
 	// 1 for synonymous transversion
 	// and kappa*omega for non-synonymous transition
-	if (empirical_rates)
-		setRateGroupConstraint("x0=fix,x1=fix,x4=x2*x3");
-	else
-		setRateGroupConstraint("x0=0,x1=1,x4=x2*x3");
+    if (kappa_model == 1) {
+        if (empirical_rates)
+            setRateGroupConstraint("x0=fix,x1=fix,x4=x2*x3");
+        else
+            setRateGroupConstraint("x0=0,x1=1,x4=x2*x3");
+    } else {
+        if (empirical_rates)
+            setRateGroupConstraint("x0=fix,x1=fix");
+        else
+            setRateGroupConstraint("x0=0,x1=1");    
+    }
 	delete group;
 }
 
