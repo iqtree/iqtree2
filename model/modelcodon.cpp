@@ -269,7 +269,16 @@ StateFreqType ModelCodon::initCodon(const char *model_name, StateFreqType freq) 
 	} else if (name_upper == "GY") {
 		initGY94(1);
 		return FREQ_EMPIRICAL;
-	} else if (name_upper == "GYW") {
+	} else if (name_upper == "GY0K" || name_upper == "GYKAP1") {
+		initGY94(0);
+		return FREQ_EMPIRICAL;
+	} else if (name_upper == "GY1KTS" || name_upper == "GYKAP2") {
+		initGY94_1KTS();
+		return FREQ_EMPIRICAL;
+	} else if (name_upper == "GY1KTV") {
+		initGY94(0);
+		return FREQ_EMPIRICAL;
+	} else if (name_upper == "GY2K") {
 		initGY94(0);
 		return FREQ_EMPIRICAL;
 	} else if (name_upper == "ECM" || name_upper == "KOSI07" || name_upper == "ECMK07") {
@@ -352,9 +361,12 @@ void ModelCodon::setRateGroup(IntVector &group) {
 		rate_constraints[i].max_value = 100.0;
 		rate_constraints[i].init_value = 1.0;
 		rate_constraints[i].opr = 0;
+		rate_constraints[i].opr2 = 0;
 		rate_constraints[i].param1 = -1;
 		rate_constraints[i].param2 = -1;
+		rate_constraints[i].param3 = -1;
 		rate_constraints[i].opr_value = 0;
+		rate_constraints[i].opr_value2 = 0;
 	}
 }
 
@@ -421,7 +433,7 @@ void ModelCodon::setRateGroupConstraint(string constraint) {
 					pos++;
 					rate_constraints[id].param1 = convert_int(constraint.substr(pos).c_str(), end_pos);
 					pos += end_pos;
-					if (constraint[pos] != '*' && constraint[pos] != '/')
+					if (constraint[pos] != '*' && constraint[pos] != '/' && constraint[pos] != '^')
 						outError("Invalid constraint ", constraint);
 					rate_constraints[id].opr = constraint[pos];
 					pos++;
@@ -432,6 +444,17 @@ void ModelCodon::setRateGroupConstraint(string constraint) {
 						rate_constraints[id].opr_value = convert_double(constraint.substr(pos).c_str(), end_pos);
 					}
 					pos += end_pos;
+                    if (constraint[pos] == '*' || constraint[pos] == '/' || constraint[pos] == '^') {
+                        rate_constraints[id].opr2 = constraint[pos];
+                        pos++;
+                        if (constraint[pos] == 'x') {
+                            pos++;
+                            rate_constraints[id].param3 = convert_int(constraint.substr(pos).c_str(), end_pos);
+                        } else {
+                            rate_constraints[id].opr_value2 = convert_double(constraint.substr(pos).c_str(), end_pos);
+                        }
+                        pos += end_pos;
+                    }
 				} else if (constraint[pos] == '?') {
 					pos++;
 					rate_constraints[id].init_value = convert_double(constraint.substr(pos).c_str(), end_pos);
@@ -496,6 +519,10 @@ void ModelCodon::setRateGroupConstraint(string constraint) {
 					assert(free_param[rate_constraints[pos].param2]);
 					rate_constraints[pos].param2 = free_param[rate_constraints[pos].param2];
 				}
+				if (rate_constraints[pos].param3 != -1) {
+					assert(free_param[rate_constraints[pos].param3]);
+					rate_constraints[pos].param3 = free_param[rate_constraints[pos].param3];
+				}
 			}
 	} catch (string &str) {
 		outError(str);
@@ -521,6 +548,7 @@ void ModelCodon::getVariables(double *variables) {
 								rates[k] = variables[rate_constraints[i].param1] * variables[rate_constraints[i].param2];
 							else
 								rates[k] = variables[rate_constraints[i].param1] * rate_constraints[i].opr_value;
+                                
 							break;
 						case '/':
 							if (rate_constraints[i].param2 != -1)
@@ -528,10 +556,34 @@ void ModelCodon::getVariables(double *variables) {
 							else
 								rates[k] = variables[rate_constraints[i].param1] / rate_constraints[i].opr_value;
 							break;
+						case '^':
+							if (rate_constraints[i].param2 != -1)
+								rates[k] = pow(variables[rate_constraints[i].param1], variables[rate_constraints[i].param2]);
+							else
+								rates[k] = pow(variables[rate_constraints[i].param1], rate_constraints[i].opr_value);
+							break;
 						default:
 							outError("Invalid operator");
 							break;
 						}
+                        switch (rate_constraints[i].opr2) {
+						case '*':
+							if (rate_constraints[i].param3 != -1)
+								rates[k] *= variables[rate_constraints[i].param3];
+							else
+								rates[k] *= rate_constraints[i].opr_value2;
+                            break;
+                        case '/':
+							if (rate_constraints[i].param3 != -1)
+								rates[k] /= variables[rate_constraints[i].param3];
+							else
+								rates[k] /= rate_constraints[i].opr_value2;
+                        case '^':
+							if (rate_constraints[i].param3 != -1)
+								rates[k] = pow(rates[k], variables[rate_constraints[i].param3]);
+							else
+								rates[k] = pow(rates[k], rate_constraints[i].opr_value2);
+                        }
 						rates[k] *= extra_rates[k];
 						if (empirical_rates)
 							rates[k] *= empirical_rates[k];
@@ -633,8 +685,28 @@ bool ModelCodon::isTransversion(int state1, int state2) {
 	return true;
 }
 
-
-
+void ModelCodon::countTsTv(int state1, int state2, int &ts, int &tv) {
+	int nuc1, nuc2;
+    ts = tv = 0;
+	if ((nuc1=state1/16) != (nuc2=state2/16)) {
+        if (abs(nuc1-nuc2)==2) // transition
+            ts++;
+        else // transversion
+            tv++;
+	}
+    if ((nuc1=state1%4) != (nuc2=state2%4)) {
+        if (abs(nuc1-nuc2)==2) // transition
+            ts++;
+        else // transversion
+            tv++;
+	}
+    if ((nuc1=(state1%16)/4) != (nuc2=(state2%16)/4)) {
+        if (abs(nuc1-nuc2)==2) // transition
+            ts++;
+        else // transversion
+            tv++;
+	}
+}
 
 void ModelCodon::initMG94(bool with_kappa, StateFreqType freq) {
 	/* Muse-Gaut 1994 model with 1 parameters: omega */
@@ -759,6 +831,51 @@ void ModelCodon::initGY94(int kappa_model) {
         else
             setRateGroupConstraint("x0=0,x1=1");    
     }
+	delete group;
+}
+
+void ModelCodon::initGY94_1KTS() {
+	/* Yang-Nielsen 1998 model (also known as Goldman-Yang 1994) with 2 parameters: omega and kappa */
+	int i,j, nrates = getNumRateEntries();
+	IntVector *group = new IntVector();
+	group->reserve(nrates);
+    int ts, tv;
+	for (i = 0; i < num_states; i++) {
+        bool stopi = phylo_tree->aln->isStopCodon(i);
+		for (j = 0; j < num_states; j++) {
+            if (i==j || stopi || phylo_tree->aln->isStopCodon(j)) {
+				group->push_back(0); // multiple substitution
+            } else {
+                countTsTv(i, j, ts, tv);
+                if (isSynonymous(i, j)) {
+                    switch (ts) {
+                    case 0: group->push_back(1); break;
+                    case 1: group->push_back(2); break;
+                    case 2: group->push_back(3); break;
+                    case 3: group->push_back(4); break;
+                    default: assert(0); break;
+                    }
+                } else {
+                    switch (ts) {
+                    case 0: group->push_back(5); break;
+                    case 1: group->push_back(6); break;
+                    case 2: group->push_back(7); break;
+                    case 3: group->push_back(8); break;
+                    default: assert(0); break;
+                    }
+                }
+            }
+		}
+	}
+	setRateGroup(*group);
+	// set zero rate for multiple substitution
+	// 1 for synonymous transversion
+	// and kappa*omega for non-synonymous transition
+    string constraint = "x3=x2*x2,x4=x2^3,x6=x2*x5,x7=x2^2*x5,x8=x2^3*x5";
+    if (empirical_rates)
+        setRateGroupConstraint("x0=fix,x1=fix," + constraint);
+    else
+        setRateGroupConstraint("x0=0,x1=1," + constraint);
 	delete group;
 }
 

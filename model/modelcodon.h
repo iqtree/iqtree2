@@ -17,9 +17,9 @@ struct ParamConstraint {
 	bool fixed; // TRUE if this parameter is fixed
 	// minimum, initial, and maximum value
 	double min_value, init_value, max_value;
-	char opr; // operator: '*', '/', or 0, to force this parameter
-	int param1, param2; // index of 2 parameters for operator
-	double opr_value; // instead of multiplying 2 parameters, one can multiply a parameter with this constant
+	char opr, opr2; // operator: '*', '/', or 0, to force this parameter
+	int param1, param2, param3; // index of 2 parameters for operator
+	double opr_value, opr_value2; // instead of multiplying 2 parameters, one can multiply a parameter with this constant
 };
 
 /**
@@ -115,6 +115,14 @@ public:
 	 */
 	bool isTransversion(int state1, int state2);
 
+    /**
+        count number of transition and transversion between 2 codons
+        @param state1 codon 1
+        @param state2 codon 2
+        @param ts (OUT) number of transitions (between 0 and 3)
+        @param tv (OUT) number of transversions (between 0 and 3)
+    */
+    void countTsTv(int state1, int state2, int &ts, int &tv);
 
 	/** 3x4 matrix of nucleotide frequencies at 1st,2nd,3rd codon position */
 	double *ntfreq;
@@ -147,6 +155,8 @@ protected:
         @param kappa_model 0 for k=1, 1 for usual kappa
     */
 	void initGY94(int kappa_model);
+
+	void initGY94_1KTS();
 
 	/**
 		this function is served for the multi-dimension optimization. It should pack the model parameters
