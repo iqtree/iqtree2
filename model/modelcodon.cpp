@@ -324,12 +324,11 @@ void ModelCodon::init(const char *model_name, string model_params, StateFreqType
 	else {
 		def_freq = initCodon(name.substr(0, pos).c_str(), freq);
 		if (def_freq != FREQ_USER_DEFINED)
-			outError("Invalid model ", model_name); // first model must be empirical
+			outError("Invalid model " + name + ": first component is not an empirical model"); // first model must be empirical
 		def_freq = initCodon(name.substr(pos+1).c_str(), freq);
 		if (def_freq == FREQ_USER_DEFINED) // second model must be parametric
-			outError("Invalid model ", model_name);
+			outError("Invalid model " + name + ": second component is not a mechanistic model");
 		// adjust the constraint
-
 	}
 
 	if (freq_params != "") {
@@ -434,7 +433,7 @@ void ModelCodon::setRateGroupConstraint(string constraint) {
 					rate_constraints[id].param1 = convert_int(constraint.substr(pos).c_str(), end_pos);
 					pos += end_pos;
 					if (constraint[pos] != '*' && constraint[pos] != '/' && constraint[pos] != '^')
-						outError("Invalid constraint ", constraint);
+						outError("Expecting operator *, /, or ^, but found ", constraint.substr(pos));
 					rate_constraints[id].opr = constraint[pos];
 					pos++;
 					if (constraint[pos] == 'x') {
