@@ -357,6 +357,8 @@ void ModelCodon::init(const char *model_name, string model_params, StateFreqType
 		if (def_freq == FREQ_USER_DEFINED) // second model must be parametric
 			outError("Invalid model " + name + ": second component must be a mechanistic model");
 		// adjust the constraint
+        if (codon_freq_style==CF_TARGET_CODON) 
+            def_freq = FREQ_USER_DEFINED;
 	}
 
     num_params = (!fix_omega) + (!fix_kappa) + (!fix_kappa2);
@@ -390,7 +392,7 @@ StateFreqType ModelCodon::initMG94(bool fix_kappa, StateFreqType freq, CodonKapp
     if (kappa_style == CK_TWO_KAPPA)
         fix_kappa2 = false;
     
-    if (freq == FREQ_UNKNOWN)
+    if (freq == FREQ_UNKNOWN || freq == FREQ_USER_DEFINED)
         freq = FREQ_CODON_3x4;
         
 //    if (combined_rate_ntfreq) 

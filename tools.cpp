@@ -2813,7 +2813,10 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "      Protein mixture: C10,...,C60, EX2, EX3, EHO, UL2, UL3, EX_EHO, LG4M, LG4X," << endl
             << "                       JTTCF4G" << endl
             << "               Binary: JC2 (default), GTR2" << endl
-            << "                Codon: GY (default), MG, MGK, KOSI07, SCHN05" << endl
+            << "      Empirical codon: KOSI07, SCHN05" << endl 
+            << "    Mechanistic codon: GY (default), MG, MGK, GY0K, GY1KTS, GY1KTV, GY2K," << endl
+            << "                       MG1KTS, MG1KTV, MG2K" << endl
+            << " Semi-empirical codon: XX_YY where XX is empirical and YY is mechanistic model" << endl
             << "       Morphology/SNP: MK (default), ORDERED" << endl
             << "            Otherwise: Name of file containing user-model parameters" << endl
             << "                       (rate parameters and state frequencies)" << endl

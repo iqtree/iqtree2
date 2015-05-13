@@ -144,7 +144,7 @@ int getSeqType(const char *model_name, SeqType &seq_type) {
         }
     copyCString(codon_model_names, sizeof(codon_model_names)/sizeof(char*), model_list, true);
     for (i = 0; i < model_list.size(); i++)
-        if (model_str == model_list[i]) {
+        if (model_str.substr(0,model_list[i].length()) == model_list[i]) {
             seq_type = SEQ_CODON;
             if (std_genetic_code[i]) empirical_model = true;
             break;
@@ -485,7 +485,7 @@ void getModelList(Params &params, Alignment *aln, StrVector &models, bool separa
                 int model_type = getSeqType(orig_model_names[j].c_str(), seq_type);
                 for (i = 0; i < freq_names.size(); i++) {
                     // disallow MG+F
-                    if (freq_names[i] == "+F" && orig_model_names[j].substr(0,2) == "MG")
+                    if (freq_names[i] == "+F" && orig_model_names[j].find("MG") != string::npos)
                         continue;
                     if (freq_names[i] != "" || model_type == 2) // empirical model also allow ""
                         model_names.push_back(orig_model_names[j] + freq_names[i]);
