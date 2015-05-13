@@ -239,13 +239,32 @@ ModelCodon::ModelCodon(const char *model_name, string model_params, StateFreqTyp
 	int nrates = getNumRateEntries();
     delete [] rates;
     rates = new double[nrates];
-    
+    empirical_rates = new double [nrates];
+
     rate_attr = NULL;
 //	extra_rates = new double[nrates];
 //	for (i = 0; i < nrates; i++)
 //		extra_rates[i] = 1.0;
         
     computeRateAttributes();
+
+    // initialize empirical_rates
+    for (i = 0; i < num_states; i++) {
+        double *this_emp_rate = &empirical_rates[i*num_states];
+        int *this_rate_attr = &rate_attr[i*num_states];
+        if (phylo_tree->aln->isStopCodon(i)) {
+            memset(this_emp_rate, 0, num_states*sizeof(double));
+            continue;
+        }
+        for (j = 0; j < num_states; j++) {
+            int attr = this_rate_attr[j];
+            if (attr & (CA_STOP_CODON+CA_MULTI_NT)) { // stop codon or multiple nt substitutions
+                this_emp_rate[j] = 0.0;
+            } else {
+                this_emp_rate[j] = 1.0;
+            }
+        }
+    }    
    	init(model_name, model_params, freq, freq_params);
 }
 
@@ -274,34 +293,19 @@ StateFreqType ModelCodon::initCodon(const char *model_name, StateFreqType freq) 
 		(*it) = toupper(*it);
     
 	if (name_upper == "MG") {
-		initMG94(false, freq);
-        codon_freq_style = CF_TARGET_NT;
-        fix_kappa = true;
-		return FREQ_CODON_3x4;
+		return initMG94(true, freq);
 	} else if (name_upper == "MGK") {
-		initMG94(true, freq);
-        codon_freq_style = CF_TARGET_NT;
-        fix_kappa = false;
-		return FREQ_CODON_3x4;
+		return initMG94(false, freq);
 	} else if (name_upper == "GY") {
-//		initGY94(1);
-		return FREQ_EMPIRICAL;
+        return initGY94(false, CK_ONE_KAPPA);
 	} else if (name_upper == "GY0K" || name_upper == "GYKAP1") {
-//		initGY94(0);
-        fix_kappa = true;
-		return FREQ_EMPIRICAL;
+        return initGY94(true, CK_ONE_KAPPA);
 	} else if (name_upper == "GY1KTS" || name_upper == "GYKAP2") {
-//		initGY94_1K(true);
-        codon_kappa_style = CK_ONE_KAPPA_TS;
-		return FREQ_EMPIRICAL;
+        return initGY94(false, CK_ONE_KAPPA_TS);
 	} else if (name_upper == "GY1KTV" || name_upper == "GYKAP3") {
-//		initGY94_1K(false);
-        codon_kappa_style = CK_ONE_KAPPA_TV;
-		return FREQ_EMPIRICAL;
+        return initGY94(false, CK_ONE_KAPPA_TV);
 	} else if (name_upper == "GY2K" || name_upper == "GYKAP4") {
-//		initGY94_2K();
-        codon_kappa_style = CK_TWO_KAPPA;
-		return FREQ_EMPIRICAL;
+        return initGY94(false, CK_TWO_KAPPA);
 	} else if (name_upper == "ECM" || name_upper == "KOSI07" || name_upper == "ECMK07") {
 		if (!phylo_tree->aln->isStandardGeneticCode())
 			outError("For ECMK07 a standard genetic code must be used");
@@ -332,7 +336,7 @@ void ModelCodon::init(const char *model_name, string model_params, StateFreqType
     int i;
 	for (i = 0; i < 12; i++)
 		ntfreq[i] = 0.25;
-	int nrates = getNumRateEntries();
+//	int nrates = getNumRateEntries();
 //	for (i = 0; i < nrates; i++)
 //		extra_rates[i] = 1.0;
     ignore_state_freq = false;
@@ -345,10 +349,10 @@ void ModelCodon::init(const char *model_name, string model_params, StateFreqType
 	else {
 		def_freq = initCodon(name.substr(0, pos).c_str(), freq);
 		if (def_freq != FREQ_USER_DEFINED)
-			outError("Invalid model " + name + ": first component is not an empirical model"); // first model must be empirical
+			outError("Invalid model " + name + ": first component must be an empirical model"); // first model must be empirical
 		def_freq = initCodon(name.substr(pos+1).c_str(), freq);
 		if (def_freq == FREQ_USER_DEFINED) // second model must be parametric
-			outError("Invalid model " + name + ": second component is not a mechanistic model");
+			outError("Invalid model " + name + ": second component must be a mechanistic model");
 		// adjust the constraint
 	}
 
@@ -370,9 +374,12 @@ void ModelCodon::init(const char *model_name, string model_params, StateFreqType
 	ModelGTR::init(freq);
 }
 
-void ModelCodon::initMG94(bool with_kappa, StateFreqType freq) {
+StateFreqType ModelCodon::initMG94(bool fix_kappa, StateFreqType freq) {
 	/* Muse-Gaut 1994 model with 1 parameters: omega */
 
+    this->fix_kappa = fix_kappa;
+    codon_freq_style = CF_TARGET_NT;
+    
     if (freq == FREQ_UNKNOWN)
         freq = FREQ_CODON_3x4;
         
@@ -393,7 +400,18 @@ void ModelCodon::initMG94(bool with_kappa, StateFreqType freq) {
     
     // ignote state_freq because ntfreq is already used
     ignore_state_freq = true;
+    return FREQ_CODON_3x4;
 }
+
+StateFreqType ModelCodon::initGY94(bool fix_kappa, CodonKappaStyle kappa_style) {
+    this->fix_kappa = fix_kappa;
+    fix_omega = false;
+    this->codon_kappa_style = kappa_style;
+    if (kappa_style == CK_TWO_KAPPA)
+        fix_kappa2 = false;
+    return FREQ_EMPIRICAL;
+}
+
 
 void ModelCodon::computeRateAttributes() {
     int i, j, ts, tv;
@@ -419,6 +437,9 @@ void ModelCodon::computeRateAttributes() {
             ts = tv = 0;
             if (phylo_tree->aln->genetic_code[i] == phylo_tree->aln->genetic_code[j])
                 attr |= CA_SYNONYMOUS;
+            else
+                attr |= CA_NONSYNONYMOUS;
+                
             if ((nuc1=i/16) != (nuc2=j/16)) {
                 if (abs(nuc1-nuc2)==2) { // transition 
                     attr |= CA_TRANSITION_1NT;
@@ -428,7 +449,7 @@ void ModelCodon::computeRateAttributes() {
                     tv++;
                 }
             }
-            if ((nuc1=i%4) != (nuc2=j%4)) {
+            if ((nuc1=(i%16)/4) != (nuc2=(j%16)/4)) {
                 if (abs(nuc1-nuc2)==2) { // transition
                     attr |= CA_TRANSITION_2NT;
                     ts++;
@@ -437,7 +458,7 @@ void ModelCodon::computeRateAttributes() {
                     tv++;
                 }
             }
-            if ((nuc1=(i%16)/4) != (nuc2=(j%16)/4)) {
+            if ((nuc1=i%4) != (nuc2=j%4)) {
                 if (abs(nuc1-nuc2)==2) { // transition
                     attr |= CA_TRANSITION_3NT;
                     ts++;
@@ -460,9 +481,6 @@ void ModelCodon::computeRateAttributes() {
 
 void ModelCodon::readCodonModel(istream &in) {
 	int nrates = getNumRateEntries();
-
-    if (!empirical_rates)
-        empirical_rates = new double [nrates];
 
 	int i, j;
 	int nscodons = phylo_tree->aln->getNumNonstopCodons();
@@ -552,8 +570,8 @@ void ModelCodon::decomposeRateMatrix() {
 }
 
 void ModelCodon::computeCodonRateMatrix() {
-    if (empirical_rates && fix_omega && fix_kappa) 
-        return; // do nothing for empirical codon model
+//    if (num_params == 0) 
+//        return; // do nothing for empirical codon model
         
     switch (codon_freq_style) {
     case CF_TARGET_CODON: // GY-style codon frequency
@@ -578,40 +596,121 @@ void ModelCodon::computeCodonRateMatrix() {
 }
 
 void ModelCodon::computeCodonRateMatrix_GY() {
+    int nrates = getNumRateEntries();
+    memcpy(rates, empirical_rates, nrates*sizeof(double));
+    if (omega == 1.0 && kappa == 1.0)
+        return; // do nothing
+
     int i, j;
     double omega_kappa = omega*kappa;
+    
     for (i = 0; i < num_states; i++) {
         double *this_rate = &rates[i*num_states];
         int *this_rate_attr = &rate_attr[i*num_states];
         if (phylo_tree->aln->isStopCodon(i)) {
-            memset(this_rate, 0, num_states*sizeof(double));
             continue;
         }
         for (j = 0; j < num_states; j++) {
+            if (this_rate[j] == 0.0) continue;
             int attr = this_rate_attr[j];
-            if (attr & (CA_STOP_CODON+CA_MULTI_NT)) // stop codon or multiple nt substitutions
-                this_rate[j] = 0.0;
-            else if (attr & CA_SYNONYMOUS) { // synonymous
-                if (attr & CA_TRANSVERSION) // transversion
-                    this_rate[j] = 1.0;
-                else // transition
-                    this_rate[j] = kappa;
-            } else { // non-synomyous
-                if (attr & CA_TRANSVERSION) // transversion
-                    this_rate[j] = omega;
-                else // transition
-                    this_rate[j] = omega_kappa;                
+            if (attr & CA_SYNONYMOUS) { // synonymous
+                if (attr & CA_TRANSITION) // transition
+                    this_rate[j] *= kappa;
+            } else if (attr & CA_NONSYNONYMOUS) { // non-synomyous
+                if (attr & CA_TRANSITION) // transition
+                    this_rate[j] *= omega_kappa;                
+                else // transversion
+                    this_rate[j] *= omega;
             }
         }
     }
 }
 
 void ModelCodon::computeCodonRateMatrix_GY1KTS() {
+    int nrates = getNumRateEntries();
+    memcpy(rates, empirical_rates, nrates*sizeof(double));
 
+    int i, j;
+    double kappa_pow[] = {1.0, kappa, kappa*kappa, kappa*kappa*kappa};
+    double omega_kappa_pow[] = {omega, omega*kappa, omega*kappa*kappa, omega*kappa*kappa*kappa};
+
+    for (i = 0; i < num_states; i++) {
+        double *this_rate = &rates[i*num_states];
+        int *this_rate_attr = &rate_attr[i*num_states];
+        if (phylo_tree->aln->isStopCodon(i)) {
+            continue;
+        }
+        for (j = 0; j < num_states; j++) {
+            int attr = this_rate_attr[j];
+            if (this_rate[j] == 0.0) continue;
+            if (attr & CA_SYNONYMOUS) { // synonymous
+                int num = ((attr & CA_TRANSITION_1NT) != 0) + ((attr & CA_TRANSITION_2NT) != 0) + ((attr & CA_TRANSITION_3NT) != 0);
+                this_rate[j] *= kappa_pow[num];
+            } else if (attr & CA_NONSYNONYMOUS) { // non-synomyous
+                int num = ((attr & CA_TRANSITION_1NT) != 0) + ((attr & CA_TRANSITION_2NT) != 0) + ((attr & CA_TRANSITION_3NT) != 0);
+                this_rate[j] *= omega_kappa_pow[num];
+            }
+        }
+    }
 }
+
 void ModelCodon::computeCodonRateMatrix_GY1KTV() {
+    int nrates = getNumRateEntries();
+    memcpy(rates, empirical_rates, nrates*sizeof(double));
+
+    int i, j;
+    double kappa_pow[] = {1.0, kappa, kappa*kappa, kappa*kappa*kappa};
+    double omega_kappa_pow[] = {omega, omega*kappa, omega*kappa*kappa, omega*kappa*kappa*kappa};
+
+    for (i = 0; i < num_states; i++) {
+        double *this_rate = &rates[i*num_states];
+        int *this_rate_attr = &rate_attr[i*num_states];
+        if (phylo_tree->aln->isStopCodon(i)) {
+            continue;
+        }
+        for (j = 0; j < num_states; j++) {
+            int attr = this_rate_attr[j];
+            if (this_rate[j] == 0.0) continue;
+            if (attr & CA_SYNONYMOUS) { // synonymous
+                int num = ((attr & CA_TRANSVERSION_1NT) != 0) + ((attr & CA_TRANSVERSION_2NT) != 0) + ((attr & CA_TRANSVERSION_3NT) != 0);
+                this_rate[j] *= kappa_pow[num];
+            } else if (attr & CA_NONSYNONYMOUS) { // non-synomyous
+                int num = ((attr & CA_TRANSVERSION_1NT) != 0) + ((attr & CA_TRANSVERSION_2NT) != 0) + ((attr & CA_TRANSVERSION_3NT) != 0);
+                this_rate[j] *= omega_kappa_pow[num];
+            }
+        }
+    }
 }
+
 void ModelCodon::computeCodonRateMatrix_GY2K() {
+    int nrates = getNumRateEntries();
+    memcpy(rates, empirical_rates, nrates*sizeof(double));
+
+    int i, j;
+    double kappa_pow[] = {1.0, kappa, kappa*kappa, kappa*kappa*kappa};
+    double omega_kappa_pow[] = {omega, omega*kappa, omega*kappa*kappa, omega*kappa*kappa*kappa};
+    double kappa2_pow[] = {1.0, kappa2, kappa2*kappa2, kappa2*kappa2*kappa2};
+
+    for (i = 0; i < num_states; i++) {
+        double *this_rate = &rates[i*num_states];
+        int *this_rate_attr = &rate_attr[i*num_states];
+        if (phylo_tree->aln->isStopCodon(i)) {
+            continue;
+        }
+        for (j = 0; j < num_states; j++) {
+            int attr = this_rate_attr[j];
+            if (this_rate[j] == 0.0) continue;
+            if (attr & CA_SYNONYMOUS) { // synonymous
+                int numts = ((attr & CA_TRANSITION_1NT) != 0) + ((attr & CA_TRANSITION_2NT) != 0) + ((attr & CA_TRANSITION_3NT) != 0);            
+                int numtv = ((attr & CA_TRANSVERSION_1NT) != 0) + ((attr & CA_TRANSVERSION_2NT) != 0) + ((attr & CA_TRANSVERSION_3NT) != 0);
+                this_rate[j] *= kappa_pow[numts]*kappa2_pow[numtv];
+            } else if (attr & CA_NONSYNONYMOUS) { // non-synomyous
+                int numts = ((attr & CA_TRANSITION_1NT) != 0) + ((attr & CA_TRANSITION_2NT) != 0) + ((attr & CA_TRANSITION_3NT) != 0);            
+                int numtv = ((attr & CA_TRANSVERSION_1NT) != 0) + ((attr & CA_TRANSVERSION_2NT) != 0) + ((attr & CA_TRANSVERSION_3NT) != 0);
+                this_rate[j] *= omega_kappa_pow[numts]*kappa2_pow[numtv];
+            }
+        }
+    }
 }
 
 void ModelCodon::getVariables(double *variables) {

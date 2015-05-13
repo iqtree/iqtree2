@@ -32,14 +32,15 @@ enum CodonKappaStyle {CK_ONE_KAPPA, CK_ONE_KAPPA_TS, CK_ONE_KAPPA_TV, CK_TWO_KAP
 const int CA_STOP_CODON   = 1; // stop codon substitution
 const int CA_MULTI_NT     = 2; // codon substitution involves > 1 NT
 const int CA_SYNONYMOUS   = 4; // synonymous codon substitution
-const int CA_TRANSVERSION = 8; // codon substitution involves 1 NT transversion
-const int CA_TRANSITION   = 16; // codon substitution involves 1 NT transition
-const int CA_TRANSVERSION_1NT = 32; // codon substitution involve the 1st NT which is also a transversion
-const int CA_TRANSVERSION_2NT = 64; // codon substitution involve the 2nd NT which is also a transversion
-const int CA_TRANSVERSION_3NT = 128; // codon substitution involve the 3rd NT which is also a transversion
-const int CA_TRANSITION_1NT   = 256; // codon substitution involve the 1st NT which is also a transversion
-const int CA_TRANSITION_2NT   = 512; // codon substitution involve the 2nd NT which is also a transversion
-const int CA_TRANSITION_3NT   = 1024; // codon substitution involve the 3rd NT which is also a transversion
+const int CA_NONSYNONYMOUS= 8; // synonymous codon substitution
+const int CA_TRANSVERSION = 16; // codon substitution involves 1 NT transversion
+const int CA_TRANSITION   = 32; // codon substitution involves 1 NT transition
+const int CA_TRANSVERSION_1NT = 64; // codon substitution involve the 1st NT which is also a transversion
+const int CA_TRANSVERSION_2NT = 128; // codon substitution involve the 2nd NT which is also a transversion
+const int CA_TRANSVERSION_3NT = 256; // codon substitution involve the 3rd NT which is also a transversion
+const int CA_TRANSITION_1NT   = 512; // codon substitution involve the 1st NT which is also a transversion
+const int CA_TRANSITION_2NT   = 1024; // codon substitution involve the 2nd NT which is also a transversion
+const int CA_TRANSITION_3NT   = 2048; // codon substitution involve the 3rd NT which is also a transversion
 
 /**
  * Codon substitution models
@@ -211,13 +212,19 @@ protected:
     void computeCodonRateMatrix_GY2K();
 
 
-	/** initialize Muse-Gaut 1994 model */
-	void initMG94(bool with_kappa, StateFreqType freq);
+	/** initialize Muse-Gaut 1994 model 
+        @param fix_kappa whether or not to fix kappa
+        @param freq input frequency
+        @return default frequency type
+    */
+	StateFreqType initMG94(bool fix_kappa, StateFreqType freq);
 
-//	/** initialize Goldman-Yang 1994 model (simplified version with 2 parameters omega and kappa 
-//        @param kappa_model 0 for k=1, 1 for usual kappa
-//    */
-//	void initGY94(int kappa_model);
+	/** initialize Goldman-Yang 1994 model (simplified version with 2 parameters omega and kappa 
+        @param fix_kappa whether or not to fix kappa
+        @param kappa_style: CK_ONE_KAPPA for traditional GY model, others follow Kosiol et al 2007
+        @return default frequency type
+    */
+	StateFreqType initGY94(bool fix_kappa, CodonKappaStyle kappa_style);
 //
 //    /**
 //        @param kappa_ts true for Kappa(ts) model, false for Kappa(tv) (Kosiol et al 2007)
