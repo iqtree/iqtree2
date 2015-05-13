@@ -785,6 +785,39 @@ void ModelCodon::computeCodonRateMatrix_2KAPPA() {
     }
 }
 
+double ModelCodon::computeEmpiricalOmega() {
+    double dn = 0.0, ds = 0.0;
+    int i, j;
+    if (ignore_state_freq) {
+        for (i = 0; i < num_states; i++) {
+            if (phylo_tree->aln->isStopCodon(i))
+                continue;
+            double *this_rate = &rates[i*num_states];
+            int *this_rate_attr = &rate_attr[i*num_states];
+            for (j = 0; j < num_states; j++)
+                if (this_rate_attr[j] & CA_NONSYNONYMOUS)
+                    dn += state_freq[i]*this_rate[j];
+                else
+                    ds += state_freq[i]*this_rate[j];
+        }
+    } else {
+        for (i = 0; i < num_states; i++) {
+            if (phylo_tree->aln->isStopCodon(i))
+                continue;
+            double *this_rate = &rates[i*num_states];
+            int *this_rate_attr = &rate_attr[i*num_states];
+            for (j = 0; j < num_states; j++)
+                if (this_rate_attr[j] & CA_NONSYNONYMOUS)
+                    dn += state_freq[i]*state_freq[j]*this_rate[j];
+                else
+                    ds += state_freq[i]*state_freq[j]*this_rate[j];
+        }
+    }
+    return (dn/ds)*(0.21/0.79);
+}
+    
+
+
 void ModelCodon::getVariables(double *variables) {
 	int i, j;
     if (num_params > 0) {
@@ -827,7 +860,10 @@ void ModelCodon::setVariables(double *variables) {
 }
 
 void ModelCodon::writeInfo(ostream &out) {
-    out << "Nonsynonymous/synonymous ratio (omega): " << omega << endl;
+    if (name.find('_') == string::npos)
+        out << "Nonsynonymous/synonymous ratio (omega): " << omega << endl;
+    else
+        out << "Empirical nonsynonymous/synonymous ratio (omega_E): " << computeEmpiricalOmega() << endl;
     out << "Transition/transversion ratio (kappa): " << kappa << endl;
     if (codon_kappa_style == CK_TWO_KAPPA) 
         out << "Transition/transversion ratio 2 (kappa2): " << kappa2 << endl;

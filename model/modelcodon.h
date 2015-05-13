@@ -212,6 +212,9 @@ public:
 
     /** separate rates from target nucleotide frequency (ntfreq) for MG-style model */
 //    void separateRateNTFreq();
+
+    /** compute the corrected empirical omega (Kosiol et al 2007) */
+    double computeEmpiricalOmega();
     
 protected:
 
