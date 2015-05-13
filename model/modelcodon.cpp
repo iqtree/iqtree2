@@ -231,10 +231,9 @@ ModelCodon::ModelCodon(const char *model_name, string model_params, StateFreqTyp
     fix_kappa2 = true;
     codon_freq_style = CF_TARGET_CODON;
     codon_kappa_style = CK_ONE_KAPPA;
-	int i, j;
+//    combined_rate_ntfreq = false;
+//	int i, j;
 	ntfreq = new double[12];
-	for (i = 0; i < 12; i++)
-		ntfreq[i] = 0.25;
 	empirical_rates = NULL;
 	int nrates = getNumRateEntries();
     delete [] rates;
@@ -248,23 +247,6 @@ ModelCodon::ModelCodon(const char *model_name, string model_params, StateFreqTyp
         
     computeRateAttributes();
 
-    // initialize empirical_rates
-    for (i = 0; i < num_states; i++) {
-        double *this_emp_rate = &empirical_rates[i*num_states];
-        int *this_rate_attr = &rate_attr[i*num_states];
-        if (phylo_tree->aln->isStopCodon(i)) {
-            memset(this_emp_rate, 0, num_states*sizeof(double));
-            continue;
-        }
-        for (j = 0; j < num_states; j++) {
-            int attr = this_rate_attr[j];
-            if (attr & (CA_STOP_CODON+CA_MULTI_NT)) { // stop codon or multiple nt substitutions
-                this_emp_rate[j] = 0.0;
-            } else {
-                this_emp_rate[j] = 1.0;
-            }
-        }
-    }    
    	init(model_name, model_params, freq, freq_params);
 }
 
@@ -339,20 +321,35 @@ StateFreqType ModelCodon::initCodon(const char *model_name, StateFreqType freq) 
 
 void ModelCodon::init(const char *model_name, string model_params, StateFreqType freq, string freq_params)
 {
-    int i;
+    int i, j;
 	for (i = 0; i < 12; i++)
 		ntfreq[i] = 0.25;
-//	int nrates = getNumRateEntries();
-//	for (i = 0; i < nrates; i++)
-//		extra_rates[i] = 1.0;
+    // initialize empirical_rates
+    for (i = 0; i < num_states; i++) {
+        double *this_emp_rate = &empirical_rates[i*num_states];
+        int *this_rate_attr = &rate_attr[i*num_states];
+        if (phylo_tree->aln->isStopCodon(i)) {
+            memset(this_emp_rate, 0, num_states*sizeof(double));
+            continue;
+        }
+        for (j = 0; j < num_states; j++) {
+            int attr = this_rate_attr[j];
+            if (attr & (CA_STOP_CODON+CA_MULTI_NT)) { // stop codon or multiple nt substitutions
+                this_emp_rate[j] = 0.0;
+            } else {
+                this_emp_rate[j] = 1.0;
+            }
+        }
+    }    
+
     ignore_state_freq = false;
 
 	StateFreqType def_freq = FREQ_UNKNOWN;
 	name = full_name = model_name;
     size_t pos;
-	if ((pos=name.find('_')) == string::npos)
+	if ((pos=name.find('_')) == string::npos) {
 		def_freq = initCodon(model_name, freq);
-	else {
+	} else {
 		def_freq = initCodon(name.substr(0, pos).c_str(), freq);
 		if (def_freq != FREQ_USER_DEFINED)
 			outError("Invalid model " + name + ": first component must be an empirical model"); // first model must be empirical
@@ -383,8 +380,11 @@ void ModelCodon::init(const char *model_name, string model_params, StateFreqType
 StateFreqType ModelCodon::initMG94(bool fix_kappa, StateFreqType freq, CodonKappaStyle kappa_style) {
 	/* Muse-Gaut 1994 model with 1 parameters: omega */
 
-    this->fix_kappa = fix_kappa;
     fix_omega = false;
+    this->fix_kappa = fix_kappa;
+    if (fix_kappa)
+        kappa = 1.0;
+    fix_kappa2 = true;
     codon_freq_style = CF_TARGET_NT;
     this->codon_kappa_style = kappa_style;
     if (kappa_style == CK_TWO_KAPPA)
@@ -392,6 +392,9 @@ StateFreqType ModelCodon::initMG94(bool fix_kappa, StateFreqType freq, CodonKapp
     
     if (freq == FREQ_UNKNOWN)
         freq = FREQ_CODON_3x4;
+        
+//    if (combined_rate_ntfreq) 
+//        separateRateNTFreq();
         
     switch (freq) {
       case FREQ_CODON_1x4:
@@ -416,11 +419,16 @@ StateFreqType ModelCodon::initMG94(bool fix_kappa, StateFreqType freq, CodonKapp
 }
 
 StateFreqType ModelCodon::initGY94(bool fix_kappa, CodonKappaStyle kappa_style) {
-    this->fix_kappa = fix_kappa;
     fix_omega = false;
+    this->fix_kappa = fix_kappa;
+    if (fix_kappa)
+        kappa = 1.0;
+    fix_kappa2 = true;
     this->codon_kappa_style = kappa_style;
     if (kappa_style == CK_TWO_KAPPA)
         fix_kappa2 = false;
+            
+//    separateRateNTFreq();
     return FREQ_EMPIRICAL;
 }
 
@@ -492,6 +500,8 @@ void ModelCodon::computeRateAttributes() {
 }
 
 void ModelCodon::combineRateNTFreq() {
+//    if (combined_rate_ntfreq) return;
+//    combined_rate_ntfreq = true;
     int i, j;
     for (i = 0; i < num_states; i++) {
         if (phylo_tree->aln->isStopCodon(i))
@@ -516,6 +526,33 @@ void ModelCodon::combineRateNTFreq() {
     
 }
 
+//void ModelCodon::separateRateNTFreq() {
+//    if (!combined_rate_ntfreq) return;
+//    combined_rate_ntfreq = false;
+//    int i, j;
+//    for (i = 0; i < num_states; i++) {
+//        if (phylo_tree->aln->isStopCodon(i))
+//            continue;
+//        double *this_rate = &empirical_rates[i*num_states];
+//        for (j = 0; j < num_states; j++)  {
+//            if (this_rate[j] == 0.0)
+//                continue;
+//            int nuc1, nuc2;
+//                
+//            if ((nuc1=i/16) != (nuc2=j/16)) {
+//                this_rate[j] /= ntfreq[nuc2];
+//            }
+//            if ((nuc1=(i%16)/4) != (nuc2=(j%16)/4)) {
+//                this_rate[j] /= ntfreq[nuc2+4];
+//            }
+//            if ((nuc1=i%4) != (nuc2=j%4)) {
+//                this_rate[j] /= ntfreq[nuc2+8];
+//            }
+//        }
+//    }
+//    
+//}
+//
 
 void ModelCodon::readCodonModel(istream &in) {
 	int nrates = getNumRateEntries();

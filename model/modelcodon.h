@@ -205,8 +205,13 @@ public:
     /** compute rate_attr for all codoni->codoni substitution */
     void computeRateAttributes();
     
-    /** combine rates with ntfreq for MG-style model */
+//    bool combined_rate_ntfreq;
+    
+    /** combine rates with target nucleotide frequency (ntfreq) for MG-style model */
     void combineRateNTFreq();
+
+    /** separate rates from target nucleotide frequency (ntfreq) for MG-style model */
+//    void separateRateNTFreq();
     
 protected:
 

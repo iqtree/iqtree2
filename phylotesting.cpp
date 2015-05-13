@@ -89,7 +89,7 @@ const char* aa_freq_names[] = {"", "+F"};
 /****** Codon models ******/
 //const char *codon_model_names[] = {"GY", "MG", "MGK", "KOSI07", "SCHN05","KOSI07_GY1KTV","SCHN05_GY1KTV"};
 //short int std_genetic_code[]    = {   0,    0,     0,        1,        1,              1,              1};
-const char *codon_model_names[] = {"GY", "MG", "MGK", "KOSI07", "SCHN05"};
+const char *codon_model_names[] = {"MG", "MGK", "GY", "KOSI07", "SCHN05"};
 short int std_genetic_code[]    = {   0,    0,     0,        1,        1};
 
 const char *codon_freq_names[] = {"", "+F1X4", "+F3X4", "+F"};
