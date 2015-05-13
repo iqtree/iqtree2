@@ -67,7 +67,7 @@ public:
 	*/
 	virtual int getNumRateEntries() { return num_states*(num_states); }
 
-	StateFreqType initCodon(const char *model_name, StateFreqType freq);
+	StateFreqType initCodon(const char *model_name, StateFreqType freq, bool reset_params);
 
 	/**
 		initialization, called automatically by the constructor, no need to call it
@@ -161,13 +161,13 @@ public:
 	 * read codon model from a stream, modying rates and state_freq accordingly
 	 * @param in input stream containing lower triangular matrix of rates, frequencies and list of codons
 	 */
-	void readCodonModel(istream &in);
+	void readCodonModel(istream &in, bool reset_params);
 
 	/**
 	 * read codon model from a string, modying rates and state_freq accordingly
 	 * @param str input string containing lower triangular matrix of rates, frequencies and list of codons
 	 */
-	void readCodonModel(string &str);
+	void readCodonModel(string &str, bool reset_params);
 
 	/**
 		write information

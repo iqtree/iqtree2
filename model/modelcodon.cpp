@@ -269,7 +269,7 @@ ModelCodon::~ModelCodon() {
 	}
 }
 
-StateFreqType ModelCodon::initCodon(const char *model_name, StateFreqType freq) {
+StateFreqType ModelCodon::initCodon(const char *model_name, StateFreqType freq, bool reset_params) {
 	string name_upper = model_name;
 	for (string::iterator it = name_upper.begin(); it != name_upper.end(); it++)
 		(*it) = toupper(*it);
@@ -297,17 +297,17 @@ StateFreqType ModelCodon::initCodon(const char *model_name, StateFreqType freq) 
 	} else if (name_upper == "ECM" || name_upper == "KOSI07" || name_upper == "ECMK07") {
 		if (!phylo_tree->aln->isStandardGeneticCode())
 			outError("For ECMK07 a standard genetic code must be used");
-		readCodonModel(model_ECMunrest);
+		readCodonModel(model_ECMunrest, reset_params);
 		return FREQ_USER_DEFINED;
 	} else if (name_upper == "ECMREST") {
 		if (!phylo_tree->aln->isStandardGeneticCode())
 			outError("For ECMREST a standard genetic code must be used");
-		readCodonModel(model_ECMrest);
+		readCodonModel(model_ECMrest, reset_params);
 		return FREQ_USER_DEFINED;
 	} else if (name_upper == "SCHN05" || name_upper == "ECMS05") {
 		if (!phylo_tree->aln->isStandardGeneticCode())
 			outError("For ECMS05 a standard genetic code must be used");
-		readCodonModel(model_ECM_Schneider05);
+		readCodonModel(model_ECM_Schneider05, reset_params);
 		return FREQ_USER_DEFINED;
 	} else {
 		//cout << "User-specified model "<< model_name << endl;
@@ -348,12 +348,12 @@ void ModelCodon::init(const char *model_name, string model_params, StateFreqType
 	name = full_name = model_name;
     size_t pos;
 	if ((pos=name.find('_')) == string::npos) {
-		def_freq = initCodon(model_name, freq);
+		def_freq = initCodon(model_name, freq, true);
 	} else {
-		def_freq = initCodon(name.substr(0, pos).c_str(), freq);
+		def_freq = initCodon(name.substr(0, pos).c_str(), freq, false);
 		if (def_freq != FREQ_USER_DEFINED)
 			outError("Invalid model " + name + ": first component must be an empirical model"); // first model must be empirical
-		def_freq = initCodon(name.substr(pos+1).c_str(), freq);
+		def_freq = initCodon(name.substr(pos+1).c_str(), freq, false);
 		if (def_freq == FREQ_USER_DEFINED) // second model must be parametric
 			outError("Invalid model " + name + ": second component must be a mechanistic model");
 		// adjust the constraint
@@ -554,7 +554,7 @@ void ModelCodon::combineRateNTFreq() {
 //}
 //
 
-void ModelCodon::readCodonModel(istream &in) {
+void ModelCodon::readCodonModel(istream &in, bool reset_params) {
 	int nrates = getNumRateEntries();
 
 	int i, j;
@@ -622,17 +622,18 @@ void ModelCodon::readCodonModel(istream &in) {
 	for (i = 0; i < nscodons; i++)
 		state_freq[state_map[i]] = f[i]-(num_states-nscodons)*MIN_FREQUENCY/nscodons;
 
-	num_params = 0;
-    fix_omega = fix_kappa = fix_kappa2 = true;
-    omega = kappa = kappa2 = 1.0;
+    if (reset_params) {
+        fix_omega = fix_kappa = fix_kappa2 = true;
+        omega = kappa = kappa2 = 1.0;
+    }
 	delete [] f;
 	delete [] q;
 }
 
-void ModelCodon::readCodonModel(string &str) {
+void ModelCodon::readCodonModel(string &str, bool reset_params) {
 	try {
 		istringstream in(str);
-		readCodonModel(in);
+		readCodonModel(in, reset_params);
 	}
 	catch (const char *str) {
 		outError(str);
