@@ -156,6 +156,7 @@ public:
 	double *ntfreq;
 
 
+
 	/**
 	 * read codon model from a stream, modying rates and state_freq accordingly
 	 * @param in input stream containing lower triangular matrix of rates, frequencies and list of codons
@@ -204,20 +205,22 @@ public:
     /** compute rate_attr for all codoni->codoni substitution */
     void computeRateAttributes();
     
+    /** combine rates with ntfreq for MG-style model */
+    void combineRateNTFreq();
+    
 protected:
 
-    void computeCodonRateMatrix_GY();
-    void computeCodonRateMatrix_GY1KTS();
-    void computeCodonRateMatrix_GY1KTV();
-    void computeCodonRateMatrix_GY2K();
-
+    void computeCodonRateMatrix_1KAPPA();
+    void computeCodonRateMatrix_1KAPPATS();
+    void computeCodonRateMatrix_1KAPPATV();
+    void computeCodonRateMatrix_2KAPPA();
 
 	/** initialize Muse-Gaut 1994 model 
         @param fix_kappa whether or not to fix kappa
         @param freq input frequency
         @return default frequency type
     */
-	StateFreqType initMG94(bool fix_kappa, StateFreqType freq);
+	StateFreqType initMG94(bool fix_kappa, StateFreqType freq, CodonKappaStyle kappa_style);
 
 	/** initialize Goldman-Yang 1994 model (simplified version with 2 parameters omega and kappa 
         @param fix_kappa whether or not to fix kappa

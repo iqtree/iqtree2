@@ -293,9 +293,15 @@ StateFreqType ModelCodon::initCodon(const char *model_name, StateFreqType freq) 
 		(*it) = toupper(*it);
     
 	if (name_upper == "MG") {
-		return initMG94(true, freq);
+		return initMG94(true, freq, CK_ONE_KAPPA);
 	} else if (name_upper == "MGK") {
-		return initMG94(false, freq);
+		return initMG94(false, freq, CK_ONE_KAPPA);
+	} else if (name_upper == "MG1KTS" || name_upper == "MGKAP2") {
+        return initMG94(false, freq, CK_ONE_KAPPA_TS);
+	} else if (name_upper == "MG1KTV" || name_upper == "MGKAP3") {
+        return initMG94(false, freq, CK_ONE_KAPPA_TV);
+	} else if (name_upper == "MG2K" || name_upper == "MGKAP4") {
+        return initMG94(false, freq, CK_TWO_KAPPA);
 	} else if (name_upper == "GY") {
         return initGY94(false, CK_ONE_KAPPA);
 	} else if (name_upper == "GY0K" || name_upper == "GYKAP1") {
@@ -374,11 +380,15 @@ void ModelCodon::init(const char *model_name, string model_params, StateFreqType
 	ModelGTR::init(freq);
 }
 
-StateFreqType ModelCodon::initMG94(bool fix_kappa, StateFreqType freq) {
+StateFreqType ModelCodon::initMG94(bool fix_kappa, StateFreqType freq, CodonKappaStyle kappa_style) {
 	/* Muse-Gaut 1994 model with 1 parameters: omega */
 
     this->fix_kappa = fix_kappa;
+    fix_omega = false;
     codon_freq_style = CF_TARGET_NT;
+    this->codon_kappa_style = kappa_style;
+    if (kappa_style == CK_TWO_KAPPA)
+        fix_kappa2 = false;
     
     if (freq == FREQ_UNKNOWN)
         freq = FREQ_CODON_3x4;
@@ -400,6 +410,8 @@ StateFreqType ModelCodon::initMG94(bool fix_kappa, StateFreqType freq) {
     
     // ignote state_freq because ntfreq is already used
     ignore_state_freq = true;
+    combineRateNTFreq();
+    
     return FREQ_CODON_3x4;
 }
 
@@ -478,6 +490,32 @@ void ModelCodon::computeRateAttributes() {
         }
     }
 }
+
+void ModelCodon::combineRateNTFreq() {
+    int i, j;
+    for (i = 0; i < num_states; i++) {
+        if (phylo_tree->aln->isStopCodon(i))
+            continue;
+        double *this_rate = &empirical_rates[i*num_states];
+        for (j = 0; j < num_states; j++)  {
+            if (this_rate[j] == 0.0)
+                continue;
+            int nuc1, nuc2;
+                
+            if ((nuc1=i/16) != (nuc2=j/16)) {
+                this_rate[j] *= ntfreq[nuc2];
+            }
+            if ((nuc1=(i%16)/4) != (nuc2=(j%16)/4)) {
+                this_rate[j] *= ntfreq[nuc2+4];
+            }
+            if ((nuc1=i%4) != (nuc2=j%4)) {
+                this_rate[j] *= ntfreq[nuc2+8];
+            }
+        }
+    }
+    
+}
+
 
 void ModelCodon::readCodonModel(istream &in) {
 	int nrates = getNumRateEntries();
@@ -573,29 +611,23 @@ void ModelCodon::computeCodonRateMatrix() {
 //    if (num_params == 0) 
 //        return; // do nothing for empirical codon model
         
-    switch (codon_freq_style) {
-    case CF_TARGET_CODON: // GY-style codon frequency
-        switch (codon_kappa_style) {
-        case CK_ONE_KAPPA:
-            computeCodonRateMatrix_GY();
-            break;
-        case CK_ONE_KAPPA_TS:
-            computeCodonRateMatrix_GY1KTS();
-            break;
-        case CK_ONE_KAPPA_TV:
-            computeCodonRateMatrix_GY1KTV();
-            break;
-        case CK_TWO_KAPPA:
-            computeCodonRateMatrix_GY2K();
-            break;
-        }
+    switch (codon_kappa_style) {
+    case CK_ONE_KAPPA:
+        computeCodonRateMatrix_1KAPPA();
         break;
-    case CF_TARGET_NT: // MG-style frequency
+    case CK_ONE_KAPPA_TS:
+        computeCodonRateMatrix_1KAPPATS();
+        break;
+    case CK_ONE_KAPPA_TV:
+        computeCodonRateMatrix_1KAPPATV();
+        break;
+    case CK_TWO_KAPPA:
+        computeCodonRateMatrix_2KAPPA();
         break;
     }
 }
 
-void ModelCodon::computeCodonRateMatrix_GY() {
+void ModelCodon::computeCodonRateMatrix_1KAPPA() {
     int nrates = getNumRateEntries();
     memcpy(rates, empirical_rates, nrates*sizeof(double));
     if (omega == 1.0 && kappa == 1.0)
@@ -626,7 +658,7 @@ void ModelCodon::computeCodonRateMatrix_GY() {
     }
 }
 
-void ModelCodon::computeCodonRateMatrix_GY1KTS() {
+void ModelCodon::computeCodonRateMatrix_1KAPPATS() {
     int nrates = getNumRateEntries();
     memcpy(rates, empirical_rates, nrates*sizeof(double));
 
@@ -654,7 +686,7 @@ void ModelCodon::computeCodonRateMatrix_GY1KTS() {
     }
 }
 
-void ModelCodon::computeCodonRateMatrix_GY1KTV() {
+void ModelCodon::computeCodonRateMatrix_1KAPPATV() {
     int nrates = getNumRateEntries();
     memcpy(rates, empirical_rates, nrates*sizeof(double));
 
@@ -682,7 +714,7 @@ void ModelCodon::computeCodonRateMatrix_GY1KTV() {
     }
 }
 
-void ModelCodon::computeCodonRateMatrix_GY2K() {
+void ModelCodon::computeCodonRateMatrix_2KAPPA() {
     int nrates = getNumRateEntries();
     memcpy(rates, empirical_rates, nrates*sizeof(double));
 
