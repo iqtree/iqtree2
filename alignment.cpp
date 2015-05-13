@@ -1578,6 +1578,8 @@ void Alignment::printPhylip(ostream &out, bool append, const char *aln_site_list
                             bool exclude_gaps, bool exclude_const_sites, const char *ref_seq_name) {
     IntVector kept_sites;
     int final_length = buildRetainingSites(aln_site_list, kept_sites, exclude_gaps, exclude_const_sites, ref_seq_name);
+    if (seq_type == SEQ_CODON)
+        final_length *= 3;
 
 	out << getNSeq() << " " << final_length << endl;
 	StrVector::iterator it;
@@ -1599,6 +1601,8 @@ void Alignment::printPhylip(const char *file_name, bool append, const char *aln_
                             bool exclude_gaps, bool exclude_const_sites, const char *ref_seq_name) {
     IntVector kept_sites;
     int final_length = buildRetainingSites(aln_site_list, kept_sites, exclude_gaps, exclude_const_sites, ref_seq_name);
+    if (seq_type == SEQ_CODON)
+        final_length *= 3;
 
     try {
         ofstream out;
