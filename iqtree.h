@@ -493,7 +493,7 @@ public:
      */
     vector<int> vecNumNNI;
 
-    int getCurIteration() { return curIt; }
+    int getNumIterations() { return numIterations; }
 
     /**
      * Do memory allocation and initialize parameter for UFBoot to run with PLL
@@ -542,16 +542,16 @@ public:
    void pllConvertUFBootData2IQTree();
 
 protected:
-
-   	/**
-   	 *  Splits corresponding to random NNIs
-   	 */
-   	SplitIntMap initTabuSplits;
+    /**
+    *  Splits corresponding to random NNIs
+    */
+    SplitIntMap initTabuSplits;
 
     /**
-     *  Current IQPNNI iteration number
+     *  Current number of iterations
      */
-    int curIt;
+    int numIterations;
+
     /**
             criterion to assess important quartet
      */
@@ -682,11 +682,11 @@ public:
 	void setDelete(int _delete);
 
 	int getCurIt() const {
-		return curIt;
+		return numIterations;
 	}
 
 	void setCurIt(int curIt) {
-		this->curIt = curIt;
+		this->numIterations = curIt;
 	}
 
 protected:
