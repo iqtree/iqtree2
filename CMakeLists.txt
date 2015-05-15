@@ -36,6 +36,7 @@
 
 
 cmake_minimum_required(VERSION 2.8)
+set(CMAKE_LEGACY_CYGWIN_WIN32 0)
 
 project(iqtree)
 add_definitions(-DIQ_TREE)
@@ -106,8 +107,8 @@ if (CMAKE_COMPILER_IS_GNUCXX)
 	set(GCC "TRUE")
 #	set(COMBINED_FLAGS "-Wall -Wno-unused-function -Wno-sign-compare -pedantic -D_GNU_SOURCE -fms-extensions -Wno-deprecated")
 #	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++98")
-	set(CMAKE_CXX_FLAGS_RELEASE "-O3 -g0")
-	set(CMAKE_C_FLAGS_RELEASE "-O3 -g0")
+	set(CMAKE_CXX_FLAGS_RELEASE "-O3 -g")
+	set(CMAKE_C_FLAGS_RELEASE "-O3 -g")
 elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 	message("Compiler      : Clang")
 	set(CLANG "TRUE")
