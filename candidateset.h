@@ -231,8 +231,9 @@ public:
     /**
      * Remove the \a CandidateTree with topology equal to \a topology
      * @param topology
+     * @param score
      */
-    void removeCandidateTree(string topology);
+    void removeCandidateTree(string topology, double score);
 
     /* Getter and Setter function */
 	void setAln(Alignment* aln);
@@ -305,6 +306,14 @@ public:
 
 private:
 
+    /**
+     *  Maximum number of trees stored
+     */
+    int maxSize;
+
+    /**
+     *  Number of stable splits identified
+     */
     int numStableSplits;
 
     /**

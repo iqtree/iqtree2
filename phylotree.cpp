@@ -329,7 +329,8 @@ string PhyloTree::getTopologyString() {
     stringstream tree_stream;
     // important: to make topology string unique
     setRootNode(params->root);
-    printTree(tree_stream, WT_TAXON_ID + WT_SORT_TAXA);
+    //printTree(tree_stream, WT_TAXON_ID + WT_SORT_TAXA);
+    printTree(tree_stream, WT_SORT_TAXA);
     return tree_stream.str();
 }
 
@@ -3781,6 +3782,10 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
 		// compute the pattern likelihoods if wanted
 		if (nniMoves[cnt].ptnlh)
 			computePatternLikelihood(nniMoves[cnt].ptnlh, &score);
+
+//        if (params->write_all_trees) {
+//            allTrees.update(getTopologyString(), score);
+//        }
 
 		if (save_all_trees == 2) {
 			saveCurrentTree(score); // BQM: for new bootstrap

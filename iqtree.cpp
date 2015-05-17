@@ -66,13 +66,13 @@ IQTree::IQTree(Alignment *aln) : PhyloTree(aln) {
 }
 
 void IQTree::initSettings(Params &params) {
+
     searchinfo.nni_type = params.nni_type;
     optimize_by_newton = params.optimize_by_newton;
     setLikelihoodKernel(params.SSE);
     candidateTrees.init(this->aln, &params);
-//    if (params.maxtime != 1000000) {
-//        params.autostop = false;
-//    }
+    allTrees.init(this->aln, &params);
+
     if (params.min_iterations == -1) {
         if (!params.gbo_replicates) {
             if (params.stop_condition == SC_UNSUCCESS_ITERATION) {
@@ -1937,17 +1937,20 @@ pair<int, int> IQTree::optimizeNNI() {
     SplitIntMap nniSplits;
 
     for (numSteps = 1; numSteps < maxNumSteps; numSteps++) {
+        if (params->write_all_trees) {
+            allTrees.update(getTopologyString(), curScore);
+        }
 
         double oldScore = curScore;
-            if (save_all_trees == 2) {
-                saveCurrentTree(curScore); // BQM: for new bootstrap
+        if (save_all_trees == 2) {
+            saveCurrentTree(curScore); // BQM: for new bootstrap
+        }
+        if (verbose_mode >= VB_DEBUG) {
+            cout << "Doing NNI round " << numSteps << endl;
+            if (isSuperTree()) {
+                ((PhyloSuperTree*) this)->printMapInfo();
             }
-            if (verbose_mode >= VB_DEBUG) {
-                cout << "Doing NNI round " << numSteps << endl;
-                if (isSuperTree()) {
-                    ((PhyloSuperTree*) this)->printMapInfo();
-                }
-            }
+        }
 
         // save all current branch lengths
         DoubleVector lenvec;

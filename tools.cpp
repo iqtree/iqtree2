@@ -694,7 +694,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.manuel_analytic_approx = false;
     params.leastSquareNNI = false;
     params.ls_var_type = OLS;
-    params.maxCandidates = 1000;
+    params.maxPopSize = 1000;
     params.popSize = 5;
     params.p_delete = -1;
     params.min_iterations = -1;
@@ -2410,7 +2410,13 @@ void parseArg(int argc, char *argv[], Params &params) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -poplim <max_pop_size>";
-				params.maxCandidates = convert_int(argv[cnt]);
+				params.maxPopSize = convert_int(argv[cnt]);
+                if (params.maxPopSize < params.numInitTrees) {
+                    stringstream msg;
+                    msg << "Population size cannot be smaller than number of inital trees (";
+                    msg << params.numInitTrees << ")";
+                    outError(msg.str().c_str());
+                }
 				continue;
 			}
 			if (strcmp(argv[cnt], "-popsize") == 0

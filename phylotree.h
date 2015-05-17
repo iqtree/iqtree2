@@ -31,6 +31,7 @@
 #include "optimization.h"
 #include "model/rateheterogeneity.h"
 #include "pllrepo/src/pll.h"
+#include "candidateset.h"
 
 #define BOOT_VAL_FLOAT
 #define BootValType float
@@ -1322,6 +1323,12 @@ public:
      ****************************************************************************/
 
     /**
+     *  Set of all trees seen during the tree search
+     *  It is a superset of candidateTrees
+     */
+    CandidateSet allTrees;
+
+    /**
             associated alignment
      */
     Alignment *aln;
@@ -1455,19 +1462,14 @@ public:
 		curScore = -DBL_MAX;
         if (model)
             initializeAllPartialLh();
-//		clearAllPartialLH();
 	}
 
 protected:
+
     /**
      *  Instance of the phylogenetic likelihood library. This is basically the tree data strucutre in RAxML
      */
     pllInstance *pllInst;
-
-    /**
-     *  Whether the partial likelihood vectors have been computed for PLL
-     */
-//    bool lhComputed;
 
     /**
      *	PLL data structure for alignment
@@ -1490,7 +1492,7 @@ protected:
     bool subTreeDistComputed;
 
     /**
-     * Map data structure to store distance between subtree.
+     * Map data structure to store distance Candidate trees between subtree.
      * The key is a string which is constructed by concatenating IDs of
      * the 2 nodes, e.g. 15-16
      */

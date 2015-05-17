@@ -584,6 +584,7 @@ protected:
     int k_represent;
 
 protected:
+
     /**
      *  Generate the initial candidate tree set
      *  @param nParTrees number of parsimony trees to generate
@@ -598,6 +599,12 @@ protected:
     void addCurTreeToCandidateSet();
 
 public:
+
+    /**
+     *  Set of candidate trees
+     */
+    CandidateSet candidateTrees;
+
     /**
      * Generate the initial tree (usually used for model parameter estimation)
      * @param dist_file only needed for BIONJ tree
@@ -617,9 +624,6 @@ public:
      *  variable storing the current best tree topology
      */
     topol* pllBestTree;
-
-    CandidateSet candidateTrees;
-
 
     /****** following variables are for ultra-fast bootstrap *******/
 
@@ -694,7 +698,6 @@ protected:
     /**
      */
     vector<NNIInfo> nni_info;
-
 
     bool estimate_nni_cutoff;
 

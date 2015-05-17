@@ -491,7 +491,7 @@ struct Params {
 	/**
 	 *  Maximum number of trees stored in the candidate tree set
 	 */
-	int maxCandidates;
+	int maxPopSize;
 
 	/**
 	 *  heuristics for speeding up NNI evaluation

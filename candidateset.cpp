@@ -11,6 +11,7 @@
 void CandidateSet::init(Alignment* aln, Params *params) {
     this->aln = aln;
     this->params = params;
+	maxSize = params->maxPopSize;
 }
 
 CandidateSet::~CandidateSet() {
@@ -21,6 +22,7 @@ CandidateSet::CandidateSet() {
 	params = NULL;
 	loglThreshold = -DBL_MAX;
 	numStableSplits = 0;
+	maxSize = 1000;
 }
 
 //void CandidateSet::getRandomStableSplits(int numSplit, SplitGraph& randomStableSplits) {
@@ -60,9 +62,8 @@ string CandidateSet::getRandCandTree() {
 }
 
 vector<string> CandidateSet::getTopTrees(int numTree) {
-	assert(numTree <= params->maxCandidates);
-	if (numTree == 0) {
-		numTree = params->maxCandidates;
+	if (numTree == 0 || numTree > maxSize) {
+		numTree = maxSize;
 	}
 	vector<string> res;
 	int cnt = numTree;
@@ -73,9 +74,9 @@ vector<string> CandidateSet::getTopTrees(int numTree) {
 }
 
 //vector<string> CandidateSet::getBestLocalOptimalTrees(int numTree) {
-//	assert(numTree <= params->maxCandidates);
+//	assert(numTree <= params->maxPopSize);
 //	if (numTree == 0) {
-//		numTree = params->maxCandidates;
+//		numTree = params->maxPopSize;
 //	}
 //	vector<string> res;
 //	int cnt = numTree;
@@ -187,9 +188,10 @@ bool CandidateSet::update(string newTree, double newScore) {
 
 	if (treeTopologyExist(candidate.topology)) {
 		notExisted = false;
-		if (topologies[candidate.topology] < newScore || topologies[candidate.topology] == 0.0) {
-			//TODO Inefficient
-			removeCandidateTree(candidate.topology);
+		// update new score if it is better the old score
+		double oldScore = topologies[candidate.topology];
+		if (oldScore < (newScore - 1e-6) || topologies[candidate.topology] == 0.0) {
+			removeCandidateTree(candidate.topology, oldScore);
 			topologies[candidate.topology] = newScore;
 			// insert tree into candidate set
 			insert(CandidateSet::value_type(newScore, candidate));
@@ -197,14 +199,20 @@ bool CandidateSet::update(string newTree, double newScore) {
 
 	} else {
 
-		if (getWorstScore() < newScore && size() >= params->maxCandidates) {
+//		if (getWorstScore() < newScore && size() >= maxSize) {
+//			// remove the worst-scoring tree
+//			topologies.erase(begin()->second.topology);
+//			erase(begin());
+//		}
+
+		CandidateSet::iterator candidateTreeIt = insert(CandidateSet::value_type(newScore, candidate));
+		topologies[candidate.topology] = newScore;
+
+		if (size() > maxSize) {
 			// remove the worst-scoring tree
 			topologies.erase(begin()->second.topology);
 			erase(begin());
 		}
-
-		CandidateSet::iterator candidateTreeIt = insert(CandidateSet::value_type(newScore, candidate));
-		topologies[candidate.topology] = newScore;
 
 		if (!candidateSplitsHash.empty()) {
 			// ranking of the inserted tree
@@ -328,16 +336,24 @@ CandidateSet::iterator CandidateSet::getCandidateTree(string topology) {
 }
 
 // TODO This function is not efficient for large number of tree
-void CandidateSet::removeCandidateTree(string topology) {
+void CandidateSet::removeCandidateTree(string topology, double score) {
 	bool removed = false;
-	for (CandidateSet::reverse_iterator rit = rbegin(); rit != rend(); rit++) {
-			if (rit->second.topology == topology) {
-				erase( --(rit.base()) );
-				topologies.erase(topology);
-				removed = true;
-				break;
-			}
+	CandidateSet::iterator it;
+	while ( (it = find(score)) != end()) {
+		if (it->second.topology == topology) {
+			erase(it);
+			removed = true;
+			break;
+		}
 	}
+//	for (CandidateSet::reverse_iterator rit = rbegin(); rit != rend(); rit++) {
+//			if (rit->second.topology == topology) {
+//				erase( --(rit.base()) );
+//				topologies.erase(topology);
+//				removed = true;
+//				break;
+//			}
+//	}
 	assert(removed);
 }
 
