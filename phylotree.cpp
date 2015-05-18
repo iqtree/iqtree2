@@ -531,7 +531,8 @@ void PhyloTree::initializeAllPartialPars(int &index, PhyloNode *node, PhyloNode 
 
 size_t PhyloTree::getBitsBlockSize() {
     // reserve the last entry for parsimony score
-    return (aln->num_states * aln->size() + UINT_BITS - 1) / UINT_BITS + 1;
+//    return (aln->num_states * aln->size() + UINT_BITS - 1) / UINT_BITS + 1;
+	return aln->num_states * ((aln->size() + UINT_BITS - 1) / UINT_BITS);
 }
 
 int PhyloTree::getBitsEntrySize() {
@@ -812,6 +813,46 @@ int PhyloTree::computeParsimonyBranch(PhyloNeighbor *dad_branch, PhyloNode *dad,
     tree_pars += node_branch->partial_pars[pars_size - 1] + dad_branch->partial_pars[pars_size - 1];
     delete[] bits_entry;
     delete[] partial_pars;
+    return tree_pars;
+}
+
+/***********************************************************/
+/****** optimized version of parsimony kernel **************/
+/***********************************************************/
+
+void PhyloTree::computePartialParsimonyFast(PhyloNeighbor *dad_branch, PhyloNode *dad) {
+    if (dad_branch->partial_lh_computed & 2)
+        return;
+    Node *node = dad_branch->node;
+    if (node->isLeaf() && dad) {
+        // external node
+    } else {
+        // internal node
+    }
+}
+
+int PhyloTree::computeParsimonyBranchFast(PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst) {
+    PhyloNode *node = (PhyloNode*) dad_branch->node;
+    PhyloNeighbor *node_branch = (PhyloNeighbor*) node->findNeighbor(dad);
+    assert(node_branch);
+    if (!central_partial_pars)
+        initializeAllPartialPars();
+    // swap node and dad if dad is a leaf
+    if (node->isLeaf()) {
+        PhyloNode *tmp_node = dad;
+        dad = node;
+        node = tmp_node;
+        PhyloNeighbor *tmp_nei = dad_branch;
+        dad_branch = node_branch;
+        node_branch = tmp_nei;
+        //cout << "swapped\n";
+    }
+    if ((dad_branch->partial_lh_computed & 2) == 0)
+        computePartialParsimonyFast(dad_branch, dad);
+    if ((node_branch->partial_lh_computed & 2) == 0)
+        computePartialParsimonyFast(node_branch, node);
+    int tree_pars = 0;
+    
     return tree_pars;
 }
 
@@ -2592,9 +2633,9 @@ void PhyloTree::computePartialLikelihoodNaive(PhyloNeighbor *dad_branch, PhyloNo
             } else if (aln->seq_type == SEQ_PROTEIN) {
                 // ambiguous character, for DNA, RNA
                 state = state - (nstates);
-                assert(state < 2);
-                int state_map[2] = {4+8,32+64};
-                for (int state2 = 0; state2 <= 6; state2++)
+                assert(state < 3);
+                int state_map[] = {4+8,32+64,512+1024};
+                for (int state2 = 0; state2 < 11; state2++)
                     if (state_map[(int)state] & (1 << state2)) {
                         for (cat = 0; cat < ncat; cat++)
                             partial_lh_site[cat * nstates + state2] = 1.0;

@@ -1208,9 +1208,9 @@ void PhyloTree::computePartialLikelihoodSSE(PhyloNeighbor *dad_branch, PhyloNode
             } else if (aln->seq_type == SEQ_PROTEIN) {
                 // ambiguous character, for DNA, RNA
                 state = state - (NSTATES);
-                assert(state < 2);
-                int state_map[2] = {4+8,32+64};
-                for (int state2 = 0; state2 <= 6; state2++)
+                assert(state < 3);
+                int state_map[] = {4+8,32+64,512+1024};
+                for (int state2 = 0; state2 < 11; state2++)
                     if (state_map[(int)state] & (1 << state2)) {
                         for (cat = 0; cat < numCat; cat++)
                             partial_lh_site[cat * NSTATES + state2] = 1.0;

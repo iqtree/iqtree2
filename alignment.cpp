@@ -2426,7 +2426,7 @@ void Alignment::getAppearance(char state, double *state_app) {
         return;
     }
 	// ambiguous characters
-	int ambi_aa[2] = {4+8, 32+64};
+	int ambi_aa[] = {4+8, 32+64, 512+1024};
 	switch (seq_type) {
 	case SEQ_DNA:
 	    state -= (num_states-1);
@@ -2436,9 +2436,9 @@ void Alignment::getAppearance(char state, double *state_app) {
 			}
 		break;
 	case SEQ_PROTEIN:
-		assert(state<22);
+		assert(state<23);
 		state -= 20;
-		for (i = 0; i < 7; i++)
+		for (i = 0; i < 11; i++)
 			if (ambi_aa[(int)state] & (1<<i)) {
 				state_app[i] = 1.0;
 			}
@@ -2461,7 +2461,7 @@ void Alignment::getAppearance(char state, StateBitset &state_app) {
         return;
     }
 	// ambiguous characters
-	int ambi_aa[2] = {4+8, 32+64};
+	int ambi_aa[] = {4+8, 32+64, 512+1024};
 	switch (seq_type) {
 	case SEQ_DNA:
 	    state -= (num_states-1);
@@ -2471,9 +2471,9 @@ void Alignment::getAppearance(char state, StateBitset &state_app) {
 			}
 		break;
 	case SEQ_PROTEIN:
-		if (state >= 22) return;
+		if (state >= 23) return;
 		state -= 20;
-		for (i = 0; i < 7; i++)
+		for (i = 0; i < 11; i++)
 			if (ambi_aa[(int)state] & (1<<i)) {
 				state_app[i] = 1;
 			}
