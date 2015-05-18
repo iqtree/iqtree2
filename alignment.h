@@ -623,6 +623,15 @@ public:
     double multinomialProb(IntVector &pattern_freq);
 
 
+    /**
+            get the appearance for a state, helpful for ambigious states
+            @param state the state index
+            @param state_app (OUT) state appearance
+     */
+    void getAppearance(char state, double *state_app);
+
+    void getAppearance(char state, StateBitset &state_app);
+
 protected:
 
 
@@ -641,15 +650,6 @@ protected:
      */
     PatternIntMap pattern_index;
 
-
-    /**
-            get the appearance for a state, helpful for ambigious states
-            @param state the state index
-            @param state_app (OUT) state appearance
-     */
-    void getAppearance(char state, double *state_app);
-
-    void getAppearance(char state, StateBitset &state_app);
 
     /**
 	 * special initialization for codon sequences, e.g., setting #states, genetic_code

@@ -20,13 +20,22 @@ void PhyloTree::computePartialParsimonyFast(PhyloNeighbor *dad_branch, PhyloNode
     int ptn;
     int nptn = aln->size();
     int nstates = aln->num_states;
+    int pars_size = getBitsBlockSize();
 
     if (node->isLeaf() && dad) {
         // external node
-        UINT *p = dad_branch->partial_pars;
         int leafid = node->id;
+        memset(dad_branch->partial_pars, 0, pars_size*sizeof(UINT));
+
         for (ptn = 0; ptn < nptn; ptn++) {
+            UINT *p = dad_branch->partial_pars+(ptn/UINT_BITS);
         	int state = aln->at(ptn)[leafid];
+        	UINT bit1 = (1 << (ptn%UINT_BITS));
+        	StateBitset state_app;
+        	aln->getAppearance(state, state_app);
+        	for (int i = 0; i < nstates; i++)
+        		if (state_app[i])
+        			p[i] |= bit1;
         }
     } else {
         // internal node
