@@ -3223,9 +3223,11 @@ double PhyloTree::computeDist(int seq1, int seq2, double initial_dist, double &d
         return initial_dist; // MANUEL: here no d2l is return
 
     // now optimize the distance based on the model and site rate
-    AlignmentPairwise aln_pair(this, seq1, seq2);
+    AlignmentPairwise *aln_pair = new AlignmentPairwise(this, seq1, seq2);
 
-    return aln_pair.optimizeDist(initial_dist, d2l);
+    double dist = aln_pair->optimizeDist(initial_dist, d2l);
+    delete aln_pair;
+    return dist;
 }
 
 double PhyloTree::computeDist(int seq1, int seq2, double initial_dist) {
@@ -3258,7 +3260,6 @@ double PhyloTree::computeDist(double *dist_mat, double *var_mat) {
     int pos = 0;
     int num_pairs = nseqs * (nseqs - 1) / 2;
     double longest_dist = 0.0;
-    double d2l;
     int *row_id = new int[num_pairs];
     int *col_id = new int[num_pairs];
 
@@ -3280,6 +3281,7 @@ double PhyloTree::computeDist(double *dist_mat, double *var_mat) {
     for (pos = 0; pos < num_pairs; pos++) {
         int seq1 = row_id[pos];
         int seq2 = col_id[pos];
+        double d2l; // moved here for thread-safe (OpenMP)
         int sym_pos = seq1 * nseqs + seq2;
         dist_mat[sym_pos] = computeDist(seq1, seq2, dist_mat[sym_pos], d2l);
         if (params->ls_var_type == OLS)
