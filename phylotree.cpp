@@ -3783,9 +3783,9 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
 		if (nniMoves[cnt].ptnlh)
 			computePatternLikelihood(nniMoves[cnt].ptnlh, &score);
 
-//        if (params->write_all_trees) {
-//            allTrees.update(getTopologyString(), score);
-//        }
+        if (params->write_all_trees) {
+            allTrees.update(getTopologyString(), score);
+        }
 
 		if (save_all_trees == 2) {
 			saveCurrentTree(score); // BQM: for new bootstrap
