@@ -532,7 +532,7 @@ void PhyloTree::initializeAllPartialPars(int &index, PhyloNode *node, PhyloNode 
 size_t PhyloTree::getBitsBlockSize() {
     // reserve the last entry for parsimony score
 //    return (aln->num_states * aln->size() + UINT_BITS - 1) / UINT_BITS + 1;
-	return aln->num_states * ((aln->size() + UINT_BITS - 1) / UINT_BITS);
+	return aln->num_states * ((aln->size() + UINT_BITS - 1) / UINT_BITS) + 1;
 }
 
 int PhyloTree::getBitsEntrySize() {
@@ -678,6 +678,8 @@ void PhyloTree::computePartialParsimony(PhyloNeighbor *dad_branch, PhyloNode *da
 
     if (node->isLeaf() && dad) {
         // external node
+    	int ambi_aa[] = {4+8, 32+64, 512+1024};
+
         setBitsAll(dad_branch->partial_pars, nstates * aln->size());
         dad_branch->partial_pars[pars_size - 1] = 0;
         for (ptn = 0; ptn < aln->size(); ptn++)
@@ -696,12 +698,20 @@ void PhyloTree::computePartialParsimony(PhyloNeighbor *dad_branch, PhyloNode *da
                     memset(bits_entry, 0, sizeof(UINT) * entry_size);
                     setBitsEntry(bits_entry, state);
                     setBitsBlock(dad_branch->partial_pars, ptn, bits_entry);
-                } else {
+                } else if (aln->seq_type == SEQ_DNA) {
                     // ambiguous character, for DNA, RNA
                     state = state - (nstates - 1);
                     memset(bits_entry, 0, sizeof(UINT) * entry_size);
                     bits_entry[0] = state;
                     setBitsBlock(dad_branch->partial_pars, ptn, bits_entry);
+                }  else if (aln->seq_type == SEQ_PROTEIN) {
+            		if (state >= 23) return;
+            		state -= 20;
+                    memset(bits_entry, 0, sizeof(UINT) * entry_size);
+                    bits_entry[0] = ambi_aa[state];
+                    setBitsBlock(dad_branch->partial_pars, ptn, bits_entry);
+                } else {
+                	assert(0);
                 }
             }
     } else {
@@ -813,46 +823,6 @@ int PhyloTree::computeParsimonyBranch(PhyloNeighbor *dad_branch, PhyloNode *dad,
     tree_pars += node_branch->partial_pars[pars_size - 1] + dad_branch->partial_pars[pars_size - 1];
     delete[] bits_entry;
     delete[] partial_pars;
-    return tree_pars;
-}
-
-/***********************************************************/
-/****** optimized version of parsimony kernel **************/
-/***********************************************************/
-
-void PhyloTree::computePartialParsimonyFast(PhyloNeighbor *dad_branch, PhyloNode *dad) {
-    if (dad_branch->partial_lh_computed & 2)
-        return;
-    Node *node = dad_branch->node;
-    if (node->isLeaf() && dad) {
-        // external node
-    } else {
-        // internal node
-    }
-}
-
-int PhyloTree::computeParsimonyBranchFast(PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst) {
-    PhyloNode *node = (PhyloNode*) dad_branch->node;
-    PhyloNeighbor *node_branch = (PhyloNeighbor*) node->findNeighbor(dad);
-    assert(node_branch);
-    if (!central_partial_pars)
-        initializeAllPartialPars();
-    // swap node and dad if dad is a leaf
-    if (node->isLeaf()) {
-        PhyloNode *tmp_node = dad;
-        dad = node;
-        node = tmp_node;
-        PhyloNeighbor *tmp_nei = dad_branch;
-        dad_branch = node_branch;
-        node_branch = tmp_nei;
-        //cout << "swapped\n";
-    }
-    if ((dad_branch->partial_lh_computed & 2) == 0)
-        computePartialParsimonyFast(dad_branch, dad);
-    if ((node_branch->partial_lh_computed & 2) == 0)
-        computePartialParsimonyFast(node_branch, node);
-    int tree_pars = 0;
-    
     return tree_pars;
 }
 

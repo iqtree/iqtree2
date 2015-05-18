@@ -365,6 +365,7 @@ phylonode.cpp
 phylosupertree.cpp
 phylotree.cpp
 phylotreesse.cpp
+phylotreepars.cpp
 #phylotreeavx.cpp
 pruning.cpp
 split.cpp
