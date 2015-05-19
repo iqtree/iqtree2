@@ -178,9 +178,37 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 		}
 	}
 
-	string::size_type posfreq = rate_str.find("+F");
+    // first handle mixture frequency
+    string::size_type posfreq = rate_str.find("+FMIX");
 	string freq_params;
-	size_t close_bracket;
+    size_t close_bracket;
+
+    if (posfreq != string::npos) {
+		string freq_str;
+		size_t last_pos = rate_str.find_first_of("+*", posfreq+1);
+        
+		if (last_pos == string::npos) {
+			freq_str = rate_str.substr(posfreq);
+			rate_str = rate_str.substr(0, posfreq);
+		} else {
+			freq_str = rate_str.substr(posfreq, last_pos-posfreq);
+			rate_str = rate_str.substr(0, posfreq) + rate_str.substr(last_pos);
+		}
+        
+        if (freq_str[5] != OPEN_BRACKET)
+            outError("Mixture-frequency must start with +FMIX{");
+        close_bracket = freq_str.find(CLOSE_BRACKET);
+        if (close_bracket == string::npos)
+            outError("Close bracket not found in ", freq_str);
+        if (close_bracket != freq_str.length()-1)
+            outError("Wrong close bracket position ", freq_str);
+        freq_type = FREQ_MIXTURE;
+        freq_params = freq_str.substr(6, close_bracket-6);
+    }
+
+    // then normal frequency
+	posfreq = rate_str.find("+F");
+    bool optimize_mixmodel_weight = params.optimize_mixmodel_weight;
 
 	if (posfreq != string::npos) {
 		string freq_str;
@@ -193,17 +221,9 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 			rate_str = rate_str.substr(0, posfreq) + rate_str.substr(last_pos);
 		}
 
-		if (freq_str.substr(0,5) == "+FMIX") {
-			if (freq_str[5] != OPEN_BRACKET)
-				outError("Mixture-frequency must start with +FMIX{");
-			close_bracket = freq_str.find(CLOSE_BRACKET);
-			if (close_bracket == string::npos)
-				outError("Close bracket not found in ", freq_str);
-			if (close_bracket != freq_str.length()-1)
-				outError("Wrong close bracket position ", freq_str);
-			freq_type = FREQ_MIXTURE;
-			freq_params = freq_str.substr(6, close_bracket-6);
-		} else if (freq_str.length() > 2 && freq_str[2] == OPEN_BRACKET) {
+        if (freq_str.length() > 2 && freq_str[2] == OPEN_BRACKET) {
+            if (freq_type == FREQ_MIXTURE)
+                outError("Mixture frequency with user-defined frequency is not allowed");
 			close_bracket = freq_str.find(CLOSE_BRACKET);
 			if (close_bracket == string::npos)
 				outError("Close bracket not found in ", freq_str);
@@ -211,21 +231,43 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 				outError("Wrong close bracket position ", freq_str);
 			freq_type = FREQ_USER_DEFINED;
 			freq_params = freq_str.substr(3, close_bracket-3);
-		} else if (freq_str == "+FC" || freq_str == "+Fc" || freq_str == "+F")
-			freq_type = FREQ_EMPIRICAL;
-		else if (freq_str == "+FU" || freq_str == "+Fu")
-			freq_type = FREQ_USER_DEFINED;
-		else if (freq_str == "+FQ" || freq_str == "+Fq")
-			freq_type = FREQ_EQUAL;
-		else if (freq_str == "+FO" || freq_str == "+Fo")
-			freq_type = FREQ_ESTIMATE;
-		else if (freq_str == "+F1x4" || freq_str == "+F1X4")
-			freq_type = FREQ_CODON_1x4;
-		else if (freq_str == "+F3x4" || freq_str == "+F3X4")
-			freq_type = FREQ_CODON_3x4;
-		else if (freq_str == "+F3x4C" || freq_str == "+F3x4c" || freq_str == "+F3X4C" || freq_str == "+F3X4c")
-			freq_type = FREQ_CODON_3x4C;
-		else outError("Unknown state frequency type ",freq_str);
+		} else if (freq_str == "+FC" || freq_str == "+Fc" || freq_str == "+F") {
+            if (freq_type == FREQ_MIXTURE) {
+                freq_params = "empirical," + freq_params;
+                optimize_mixmodel_weight = true;
+            } else
+                freq_type = FREQ_EMPIRICAL;
+		} else if (freq_str == "+FU" || freq_str == "+Fu") {
+            if (freq_type == FREQ_MIXTURE)
+                outError("Mixture frequency with user-defined frequency is not allowed");
+            else
+                freq_type = FREQ_USER_DEFINED;
+		} else if (freq_str == "+FQ" || freq_str == "+Fq") {
+            if (freq_type == FREQ_MIXTURE)
+                outError("Mixture frequency with equal frequency is not allowed");
+            else
+                freq_type = FREQ_EQUAL;
+		} else if (freq_str == "+FO" || freq_str == "+Fo") {
+            if (freq_type == FREQ_MIXTURE)
+                outError("Mixture frequency with optimized frequency is not allowed");
+            else
+                freq_type = FREQ_ESTIMATE;
+		} else if (freq_str == "+F1x4" || freq_str == "+F1X4") {
+            if (freq_type == FREQ_MIXTURE)
+                outError("Mixture frequency with " + freq_str + " is not allowed");
+            else
+                freq_type = FREQ_CODON_1x4;
+		} else if (freq_str == "+F3x4" || freq_str == "+F3X4") {
+            if (freq_type == FREQ_MIXTURE)
+                outError("Mixture frequency with " + freq_str + " is not allowed");
+            else
+                freq_type = FREQ_CODON_3x4;
+		} else if (freq_str == "+F3x4C" || freq_str == "+F3x4c" || freq_str == "+F3X4C" || freq_str == "+F3X4c") {
+            if (freq_type == FREQ_MIXTURE)
+                outError("Mixture frequency with " + freq_str + " is not allowed");
+            else
+                freq_type = FREQ_CODON_3x4C;
+		} else outError("Unknown state frequency type ",freq_str);
 //		model_str = model_str.substr(0, posfreq);
 	}
 
@@ -242,7 +284,7 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 				model_list = model_str.substr(4, model_str.length()-5);
 				model_str = model_str.substr(0, 3);
 			}
-			model = new ModelMixture(model_str, model_list, models_block, freq_type, freq_params, tree, params.optimize_mixmodel_weight);
+			model = new ModelMixture(model_str, model_list, models_block, freq_type, freq_params, tree, optimize_mixmodel_weight);
 		} else {
 //			string model_desc;
 //			NxsModel *nxsmodel = models_block->findModel(model_str);

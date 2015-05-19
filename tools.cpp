@@ -2827,6 +2827,7 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -m <model_name>+ASC  Ascertainment bias correction for morphological/SNP data" << endl
             << "  -m \"MIX{m1,...mK}\"   Mixture model with K components" << endl
             << "  -m \"FMIX{f1,...fK}\"  Frequency mixture model with K components" << endl
+            << "  -mwopt               Turn on optimizing mixture weights (default: none)" << endl
             << endl << "RATE HETEROGENEITY:" << endl
             << "  -m <model_name>+I or +G[n] or +I+G[n] or +R[n]" << endl
             << "                       Invar, Gamma, Invar+Gamma, or FreeRate model where 'n' is" << endl

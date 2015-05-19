@@ -1181,7 +1181,7 @@ ModelMixture::ModelMixture(string model_name, string model_list, ModelsBlock *mo
 	// normalize weights to 1.0
     if (sum != 1.0) {
         sum = 1.0/sum;
-        outWarning("Mixture weights do not sum up to 1, rescale weights by " + convertDoubleToString(sum));
+        cout << "NOTE: Mixture weights do not sum up to 1, rescale weights by " << sum << endl;
         for (i = 0; i < nmixtures; i++)
              prop[i] *= sum;
     }     
@@ -1303,7 +1303,7 @@ void ModelMixture::setVariables(double *variables) {
     // BQM 2015-05-19: modify using the same strategy for FreeRate model (thanks to Thomas Wong)
 	for (i = 0; i < ncategory-1; i++) {
 		variables[dim+i+1] = prop[i] / prop[ncategory-1];
-        if (variables[dim+i+1] < MIN_MIXTURE_PROP || variables[dim+i+1] > MAX_MIXTURE_PROP) {
+        if (variables[dim+i+1] < MIN_MIXTURE_PROP*0.9 || variables[dim+i+1] > MAX_MIXTURE_PROP) {
             outWarning("For component " + convertIntToString(i+1) + ", mixture weight " + convertDoubleToString(variables[dim+i+1]) + " is out of bound and may cause numerical instability");
         }
     }
