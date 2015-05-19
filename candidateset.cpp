@@ -394,10 +394,11 @@ int CandidateSet::buildTopSplits(double supportThreshold) {
 		}
 	}
 	int newNumStableSplits = countStableSplits(params->stableSplitThreshold);
-	if (newNumStableSplits > numStableSplits) {
+	if (newNumStableSplits > numStableSplits || verbose_mode >= VB_MED) {
 		numStableSplits = newNumStableSplits;
 		cout << ((double) numStableSplits / (aln->getNSeq() - 3)) * 100 ;
-		cout << " % of the splits are stable (support threshold " << params->stableSplitThreshold << ")" << endl;
+		cout << " % of the splits are stable (support threshold " << params->stableSplitThreshold;
+		cout << " from " << candidateSplitsHash.getNumTree() << " trees)" << endl;
 	}
 	return numStableSplits;
 }
