@@ -118,11 +118,29 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 	/********* preprocessing model string ****************/
 	NxsModel *nxsmodel  = NULL;
 
-	nxsmodel = models_block->findModel(model_str);
-	if (nxsmodel && nxsmodel->description.find_first_of("+*") != string::npos) {
-		cout << "Model " << model_str << " is alias for " << nxsmodel->description << endl;
-		model_str = nxsmodel->description;
-	}
+    string new_model_str = "";
+    size_t mix_pos;
+    for (mix_pos = 0; mix_pos < model_str.length(); mix_pos++) {
+        size_t next_mix_pos = model_str.find_first_of("+*", mix_pos);
+        string sub_model_str = model_str.substr(mix_pos, next_mix_pos-mix_pos);
+        nxsmodel = models_block->findMixModel(sub_model_str);
+        if (nxsmodel) sub_model_str = nxsmodel->description;
+        new_model_str += sub_model_str;
+        if (next_mix_pos != string::npos)
+            new_model_str += model_str[next_mix_pos];
+        else 
+            break;
+        mix_pos = next_mix_pos;
+    }
+    if (new_model_str != model_str)
+        cout << "Model " << model_str << " is alias for " << new_model_str << endl;
+    model_str = new_model_str;
+    
+//	nxsmodel = models_block->findModel(model_str);
+//	if (nxsmodel && nxsmodel->description.find_first_of("+*") != string::npos) {
+//		cout << "Model " << model_str << " is alias for " << nxsmodel->description << endl;
+//		model_str = nxsmodel->description;
+//	}
 
 	// decompose model string into model_str and rate_str string
 	size_t spec_pos = model_str.find_first_of("{+*");
@@ -140,11 +158,11 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 		}
 	}
 
-	nxsmodel = models_block->findModel(model_str);
-	if (nxsmodel && nxsmodel->description.find("MIX") != string::npos) {
-		cout << "Model " << model_str << " is alias for " << nxsmodel->description << endl;
-		model_str = nxsmodel->description;
-	}
+//	nxsmodel = models_block->findModel(model_str);
+//	if (nxsmodel && nxsmodel->description.find("MIX") != string::npos) {
+//		cout << "Model " << model_str << " is alias for " << nxsmodel->description << endl;
+//		model_str = nxsmodel->description;
+//	}
 
 	/******************** initialize state frequency ****************************/
 
@@ -278,8 +296,8 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 			if (*it) delete [] (*it);
 	}
 
-	if (model->isMixture())
-		cout << "Mixture model with " << model->getNMixtures() << " components!" << endl;
+//	if (model->isMixture())
+//		cout << "Mixture model with " << model->getNMixtures() << " components!" << endl;
 
 	/******************** initialize ascertainment bias correction model ****************************/
 
@@ -303,19 +321,40 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 
 	string::size_type posI = rate_str.find("+I");
 	string::size_type posG = rate_str.find("+G");
-	if (posG == string::npos) {
-		posG = rate_str.find("*G");
-		if (posG != string::npos)
-			fused_mix_rate = true;
-	}
+	string::size_type posG2 = rate_str.find("*G");
+    if (posG != string::npos && posG2 != string::npos) {
+        cout << "NOTE: both +G and *G were specified, continue with " 
+            << ((posG < posG2)? rate_str.substr(posG,2) : rate_str.substr(posG2,2)) << endl;
+    }
+    if (posG2 != string::npos && posG2 < posG) {
+        posG = posG2;
+        fused_mix_rate = true;
+    }
+//	if (posG == string::npos) {
+//		posG = rate_str.find("*G");
+//		if (posG != string::npos)
+//			fused_mix_rate = true;
+//	}
 	string::size_type posR = rate_str.find("+R"); // FreeRate model
-	if (posR == string::npos) {
-		posR = rate_str.find("*R");
-		if (posR != string::npos)
-			fused_mix_rate = true;
-	}
-	if (posG != string::npos && posR != string::npos)
-		outError("Gamma and FreeRate models cannot be both specified!");
+	string::size_type posR2 = rate_str.find("*R"); // FreeRate model
+    if (posR != string::npos && posR2 != string::npos) {
+        cout << "NOTE: both +R and *R were specified, continue with " 
+            << ((posR < posR2)? rate_str.substr(posR,2) : rate_str.substr(posR2,2)) << endl;
+    }
+    if (posR2 != string::npos && posR2 < posR) {
+        posR = posR2;
+        fused_mix_rate = true;
+    }
+    
+//	if (posR == string::npos) {
+//		posR = rate_str.find("*R");
+//		if (posR != string::npos)
+//			fused_mix_rate = true;
+//	}
+	if (posG != string::npos && posR != string::npos) {
+		outWarning("Both Gamma and FreeRate models were specified, continue with FreeRate model");
+        posG = string::npos;
+    }
 	string::size_type posX;
 	/* create site-rate heterogeneity */
 	int num_rate_cats = params.num_rate_cats;
