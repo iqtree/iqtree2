@@ -2739,9 +2739,9 @@ void usage_iqtree(char* argv[], bool full_command) {
     cout << "Usage: " << argv[0] << " -s <alignment> [OPTIONS] [<treefile>] " << endl << endl;
     cout << "GENERAL OPTIONS:" << endl
             << "  -?                   Printing this help dialog" << endl
-            << "  -s <alignment>       Input alignment (REQUIRED) in PHYLIP/FASTA/NEXUS format" << endl
+            << "  -s <alignment>       Input alignment in PHYLIP/FASTA/NEXUS/CLUSTAL/MSF format" << endl
             << "  -st <data_type>      BIN, DNA, AA, CODON, or MORPH (default: auto-detect)" << endl
-            << "  -sp <partition_file> Partition model specification in NEXUS format." << endl
+            << "  -sp <partition_file> Partition model specification in NEXUS/RAxML format." << endl
             << "                       For single model use the -m option (see below)" << endl
             << "  -q <partition_file>  Partition model specification in RAxML format." << endl
             << "  -z <trees_file>      Compute log-likelihoods for all trees in the given file" << endl
@@ -2780,26 +2780,26 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -alrt <#replicates>  SH-like approximate likelihood ratio test (SH-aLRT)" << endl
             << "  -lbp <#replicates>   Fast local bootstrap probabilities" << endl
             << endl << "AUTOMATIC MODEL SELECTION:" << endl
-            << "  -m TEST              Select best-fit model prior to tree reconstruction" << endl
-            << "  -m TESTONLY          Like -m TEST but stop after model selection" << endl
-            << "  -m TESTNEW           New model selection with FreeRate model replacing I+G" << endl
-            << "  -m TESTONLYNEW       Like -m TESTNEW but stop after model selection" << endl
-            << "  -m TESTMERGE         Select best-fit partition scheme like PartitionFinder" << endl
-            << "  -m TESTONLYMERGE     Like -m TESTMERGE but stop after model selection" << endl
-            << "  -mset raxml or -mset phyml or -mset mrbayes" << endl
-            << "                       Restrict to models supported by respective programs" << endl
-            << "  -mset m1,...,mk      Restrict to a comma-separated list of models" << endl
+            << "  -m TESTONLY          Standard model selection (like jModelTest, ProtTest)" << endl
+            << "  -m TEST              Like -m TESTONLY but followed by tree reconstruction" << endl
+            << "  -m TESTNEWONLY       New model selection with FreeRate model replacing I+G" << endl
+            << "  -m TESTNEW           Like -m TESTNEWONLY but followed by tree reconstruction" << endl
+            << "  -m TESTMERGEONLY     Select best-fit partition scheme (like PartitionFinder)" << endl
+            << "  -m TESTMERGE         Like -m TESTMERGEONLY but followed by tree reconstruction" << endl
+            << "  -mset program        Restrict search to models supported by other programs" << endl
+            << "                       (i.e., raxml, phyml or mrbayes)" << endl
+            << "  -mset m1,...,mk      Restrict search to models in a comma-separated list" << endl
             << "                       (e.g. -mset WAG,LG,JTT)" << endl            
-            << "  -msub nuclear or -msub mitochondrial or -msub chloroplast or -msub viral" << endl
-            << "                       Restrict to AA models designed for respective sequences" << endl            
-            << "  -mfreq f1,...,fk     Restrict to a comma-separated list of state frequencies" << endl
-            << "                       (default protein: -mfreq ,F; codon: -mfreq ,F1x4,F3x4,F)" << endl            
-            << "  -mrate r1,...,rk     Restrict to a comma-separated list of rate heterogeneity" << endl
+            << "  -msub source         Restrict search to AA models designed for specific sources" << endl
+            << "                       (i.e., nuclear, mitochondrial, chloroplast or viral)" << endl            
+            << "  -mfreq f1,...,fk     Restrict search to using a list of state frequencies" << endl
+            << "                       (default protein: -mfreq FU,F; codon: -mfreq ,F1x4,F3x4,F)" << endl            
+            << "  -mrate r1,...,rk     Restrict search to using a list of rate-across-sites models" << endl
             << "                       (e.g. -mrate E,I,G,I+G,R)" << endl
             << "  -cmax <kmax>         Max #categories for FreeRate model [+R] (default: 10)" << endl
 //            << "  -msep                Perform model selection and then rate selection" << endl
-            << "  -mtree               Do a full tree search for each testing model" << endl
-            << "  -mredo               Ignore model scores computed earlier (default: not ignore)" << endl
+            << "  -mtree               Do a full tree search for each model considered" << endl
+            << "  -mredo               Ignore model results computed earlier (default: not ignore)" << endl
             << "  -mdef <nexus_file>   A model definition NEXUS file (see Manual)" << endl
 
             << endl << "SUBSTITUTION MODEL:" << endl
