@@ -331,7 +331,7 @@ void reportRate(ofstream &out, PhyloTree &tree) {
 			out << left << rate_model->getRate(i) << " " << prop[i];
 			out << endl;
 		}
-		if (rate_model->getGammaShape() > 0) {
+		if (rate_model->isGammaRate()) {
 			out << "Relative rates are computed as " << ((dynamic_cast<RateGamma*>(rate_model)->isCutMedian()) ? "MEDIAN" : "MEAN") <<
 				" of the portion of the Gamma distribution falling in the category." << endl;
 		}
@@ -342,15 +342,64 @@ void reportRate(ofstream &out, PhyloTree &tree) {
 	out << endl;
 }
 
-void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh,
-		double lh_variance) {
+void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh, double lh_variance, double main_tree) {
 	double epsilon = 1.0 / tree.getAlnNSite();
 	double totalLen = tree.treeLength();
+	int df = tree.getModelFactory()->getNParameters();
+	int ssize = tree.getAlnNSite();
+	double AIC_score, AICc_score, BIC_score;
+	computeInformationScores(tree_lh, df, ssize, AIC_score, AICc_score, BIC_score);
+    
+	out << "Log-likelihood of the tree: " << fixed << tree_lh << " (s.e. "
+			<< sqrt(lh_variance) << ")" << endl;
+    out	<< "Unconstrained log-likelihood (without tree): " << tree.aln->computeUnconstrainedLogL() << endl;
+
+    out << "Number of free parameters (#branches + #model parameters): " << df << endl;
+    if (ssize > df) { 
+        if (ssize > 40*df)
+            out	<< "Akaike information criterion (AIC) score: " << AIC_score << endl;
+        else
+			out << "Corrected Akaike information criterion (AICc) score: " << AICc_score << endl;
+        
+		out << "Bayesian information criterion (BIC) score: " << BIC_score << endl;
+    } else if (main_tree) {
+        
+        out << endl
+            << "**************************** WARNING ****************************" << endl
+            << "Number of parameters (K=" << df << ") >= sample size (n=" << ssize << ")," << endl 
+            << "implying that all the model parameters are not identifiable." << endl 
+            << "The program will still try to estimate the parameter values but" << endl
+            << "because of the small sample size (n), the parameter estimates" << endl 
+            << "are likely to be inaccurate." << endl << endl
+            
+            << "Phylogenetic estimates obtained under these conditions should be" << endl 
+            << "interpreted with extreme caution." << endl << endl 
+
+            << "Ideally, if n > 40K, in which case AIC and BIC can be used. However," << endl
+            << "if 40K >= n > K, then the AICc can be used instead of the AIC" << endl 
+            << "(Burnham and Anderson, 2002)" << endl << endl
+
+            << "To improve the situation, consider the following options:" << endl
+            << "  1. Increase the sample size (i.e., the number of sites in the alignment (n))" << endl
+            << "  2. Decrease the number of model parameters (K) to be estimated. If possible:" << endl
+            << "     a. Remove the least important sequences from the alignment" << endl
+            << "     b. Specify some of the parameter values for the substitution model"<< endl 
+            << "        (e.g., the nucleotide or amino acid frequencies)" << endl
+            << "     c. Specify some of the parameter values for the rates-heterogeneity-across-sites model" << endl
+            << "        (e.g., the shape parameter for the Gamma distribution, the proportion of invariable" << endl
+            << "        sites, or the rates of change for different rate categories under the FreeRate model)" << endl << endl
+            << "Reference:" << endl
+            << "Burnham KR, Anderson DR (2002). Model Selection and Multimodel Inference:" << endl 
+            << "A Practical Information-theoretic Approach. Springer, New York." << endl 
+            << "************************ END OF WARNING ***********************" << endl;
+    }
+    out << endl;
+    
 	out << "Total tree length (sum of branch lengths): " << totalLen << endl;
 	double totalLenInternal = tree.treeLengthInternal(epsilon);
-	out << "Sum of internal branch lengths: " << totalLenInternal << endl;
-	out << "Sum of internal branch lengths divided by total tree length: "
-			<< totalLenInternal / totalLen << endl;
+	out << "Sum of internal branch lengths: " << totalLenInternal << " (" << totalLenInternal*100.0 / totalLen << "% of tree length)" << endl;
+//	out << "Sum of internal branch lengths divided by total tree length: "
+//			<< totalLenInternal / totalLen << endl;
 	out << endl;
 	//out << "ZERO BRANCH EPSILON = " << epsilon << endl;
 	int zero_internal_branches = tree.countZeroInternalBranches(NULL, NULL, epsilon);
@@ -369,36 +418,52 @@ void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh,
 				<< " branches of near-zero lengths (<" << epsilon << ") and should be treated with caution!"
 				<< endl;
 		*/
-		out << "         Such branches are denoted by '**' in the figure"
+		out << "         Such branches are denoted by '**' in the figure below"
 				<< endl << endl;
 	}
 	int long_branches = tree.countLongBranches(NULL, NULL, MAX_BRANCH_LEN-0.2);
 	if (long_branches > 0) {
 		//stringstream sstr;
-		out << "WARNING: " << long_branches
-				<< " too long branches (>" << MAX_BRANCH_LEN-0.2 << ") should be treated with caution!"
-				<< endl;
+		out << "WARNING: " << long_branches << " too long branches (>" 
+            << MAX_BRANCH_LEN-0.2 << ") should be treated with caution!" << endl;
 		//out << sstr.str();
 		//cout << sstr.str();
 	}
+
+			//<< "Total tree length: " << tree.treeLength() << endl << endl
 	tree.sortTaxa();
+    out << "NOTE: Tree is UNROOTED although outgroup taxon '" << tree.root->name << "' is drawn at root" << endl;
+
+    if (tree.isSuperTree() && params.partition_type == 0)
+        out	<< "NOTE: Branch lengths are weighted average over all partitions" << endl
+            << "      (weighted by the number of sites in the partitions)" << endl;
+
+    if (main_tree) 
+    if (params.aLRT_replicates > 0 || params.gbo_replicates || (params.num_bootstrap_samples && params.compute_ml_tree)) {
+        out << "Numbers in parentheses are ";
+        if (params.aLRT_replicates > 0) {
+            out << "SH-aLRT supports";
+            if (params.localbp_replicates)
+                out << " / local bootstrap (LBP)";
+        }
+        if (params.num_bootstrap_samples && params.compute_ml_tree) {
+            if (params.aLRT_replicates > 0)
+                out << " /";
+            out << " standard bootstrap supports";
+        }
+        if (params.gbo_replicates) {
+            if (params.aLRT_replicates > 0)
+                out << " /";
+            out << " ultrafast bootstrap supports";
+        }
+        out << " (%)" << endl;
+    }
+    out << endl;
+
 	//tree.setExtendedFigChar();
 	tree.drawTree(out, WT_BR_SCALE, epsilon);
-	int df = tree.getModelFactory()->getNParameters();
-	int ssize = tree.getAlnNSite();
-	double AIC_score, AICc_score, BIC_score;
-	computeInformationScores(tree_lh, df, ssize, AIC_score, AICc_score, BIC_score);
-
-	out << "Log-likelihood of the tree: " << fixed << tree_lh << " (s.e. "
-			<< sqrt(lh_variance) << ")" << endl
-			<< "Number of free parameters: " << df << endl
-			<< "Akaike information criterion (AIC) score: " << AIC_score << endl
-			<< "Corrected Akaike information criterion (AICc) score: " << AICc_score << endl
-			<< "Bayesian information criterion (BIC) score: " << BIC_score << endl
-			<< "Unconstrained log-likelihood (without tree): "
-			<< tree.aln->computeUnconstrainedLogL() << endl << endl
-			//<< "Total tree length: " << tree.treeLength() << endl << endl
-			<< "Tree in newick format:" << endl << endl;
+        
+    out << "Tree in newick format:" << endl << endl;
 
 	tree.printTree(out, WT_BR_LEN | WT_BR_LEN_FIXED_WIDTH | WT_SORT_TAXA);
 
@@ -481,14 +546,21 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 		if (params.user_file)
 			out << "User tree file name: " << params.user_file << endl;
 		out << "Type of analysis: ";
-		if (params.compute_ml_tree)
-			out << "tree reconstruction";
-		if (params.num_bootstrap_samples > 0) {
-			if (params.compute_ml_tree)
-				out << " + ";
-			out << "non-parametric bootstrap (" << params.num_bootstrap_samples
-					<< " replicates)";
-		}
+        if (original_model.find("TEST") != string::npos && original_model.find("ONLY") != string::npos) {
+            out << "model selection";
+        } else {
+            if (params.compute_ml_tree)
+                out << "tree reconstruction";
+            if (params.num_bootstrap_samples > 0) {
+                if (params.compute_ml_tree)
+                    out << " + ";
+                out << "non-parametric bootstrap (" << params.num_bootstrap_samples
+                        << " replicates)";
+            }
+            if (params.gbo_replicates > 0) {
+                out << " + ultrafast bootstrap (" << params.gbo_replicates << " replicates)";
+            }
+        }
 		out << endl;
 		out << "Random seed number: " << params.ran_seed << endl << endl;
 		out << "REFERENCES" << endl << "----------" << endl << endl;
@@ -641,7 +713,7 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 				<< endl;
 */
 		if (params.compute_ml_tree) {
-			if (original_model.substr(0, 8) == "TESTONLY")
+			if (original_model.find("ONLY") != string::npos)
 				out << "TREE USED FOR MODEL SELECTION" << endl
 					<< "-----------------------------" << endl << endl;
 			else
@@ -649,36 +721,10 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 					<< "-----------------------" << endl << endl;
 
 			tree.setRootNode(params.root);
-			out << "NOTE: Tree is UNROOTED although outgroup taxon '" << tree.root->name << "' is drawn at root" << endl;
-			if (params.partition_file)
-				out	<< "NOTE: Branch lengths are weighted average over all partitions"
-					<< endl
-					<< "      (weighted by the number of sites in the partitions)"
-					<< endl;
-			if (params.aLRT_replicates > 0 || params.gbo_replicates || (params.num_bootstrap_samples && params.compute_ml_tree)) {
-				out << "Numbers in parentheses are ";
-				if (params.aLRT_replicates > 0) {
-					out << "SH-aLRT supports";
-					if (params.localbp_replicates)
-						out << " / local bootstrap (LBP)";
-				}
-				if (params.num_bootstrap_samples && params.compute_ml_tree) {
-					if (params.aLRT_replicates > 0)
-						out << " /";
-					out << " standard bootstrap supports";
-				}
-				if (params.gbo_replicates) {
-					if (params.aLRT_replicates > 0)
-						out << " /";
-					out << " ultrafast bootstrap supports";
-				}
-				out << " (%)" << endl;
-			}
-			out << endl;
-			reportTree(out, params, tree, tree.candidateTrees.getBestScore(), tree.logl_variance);
+			reportTree(out, params, tree, tree.candidateTrees.getBestScore(), tree.logl_variance, true);
 
-			if (tree.isSuperTree()) {
-//				PhyloSuperTree *stree = (PhyloSuperTree*) &tree;
+			if (tree.isSuperTree() && verbose_mode >= VB_MED) {
+				PhyloSuperTree *stree = (PhyloSuperTree*) &tree;
 //				stree->mapTrees();
 //				int empty_branches = stree->countEmptyBranches();
 //				if (empty_branches) {
@@ -686,7 +732,7 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 //					ss << empty_branches << " branches in the overall tree with no phylogenetic information due to missing data!";
 //					outWarning(ss.str());
 //				}
-				/*
+				
 				int part = 0;
 				for (PhyloSuperTree::iterator it = stree->begin();
 						it != stree->end(); it++, part++) {
@@ -699,9 +745,8 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 						root_name = (*it)->aln->getSeqName(0);
 					(*it)->root = (*it)->findNodeName(root_name);
 					assert((*it)->root);
-					reportTree(out, params, *(*it), (*it)->computeLikelihood(),
-							(*it)->computeLogLVariance());
-				}*/
+					reportTree(out, params, *(*it), (*it)->computeLikelihood(), (*it)->computeLogLVariance(), false);
+				}
 			}
 
 		}
@@ -1116,7 +1161,7 @@ void computeInitialDist(Params &params, IQTree &iqtree, string &dist_file) {
 
 void initializeParams(Params &params, IQTree &iqtree, vector<ModelInfo> &model_info) {
 //    iqtree.setCurScore(-DBL_MAX);
-    bool test_only = params.model_name.substr(0, 8) == "TESTONLY";
+    bool test_only = params.model_name.find("ONLY") != string::npos;
     /* initialize substitution model */
     if (params.model_name.substr(0, 4) == "TEST") {
         if (iqtree.isSuperTree())
@@ -2145,7 +2190,7 @@ void runPhyloAnalysis(Params &params) {
         delete model_info;
 	} else {
 		// the classical non-parameter bootstrap (SBS)
-		if (params.model_name.find("LINK") == string::npos || params.model_name.find("MERGE") == string::npos)
+		if (params.model_name.find("LINK") != string::npos || params.model_name.find("MERGE") != string::npos)
 			outError("-m TESTMERGE is not allowed when doing standard bootstrap. Please first\nfind partition scheme on the original alignment and use it for bootstrap analysis");
 		runStandardBootstrap(params, original_model, alignment, tree);
 	}

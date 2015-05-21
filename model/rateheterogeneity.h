@@ -136,6 +136,11 @@ public:
 	virtual double getGammaShape() { return 0.0; }
 
 	/**
+		@return true if this is a Gamma model (default: false)
+	*/	
+    virtual bool isGammaRate() { return false; }
+
+	/**
 		the target function which needs to be optimized
 		@param x the input vector x
 		@return the function value at x

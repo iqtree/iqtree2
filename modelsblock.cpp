@@ -73,8 +73,17 @@ void ModelsBlock::Read(NxsToken &token)
 	}
 }
 
-NxsModel *ModelsBlock::findModel(string name) {
+NxsModel *ModelsBlock::findModel(string &name) {
 	for (iterator it = begin(); it != end(); it++)
 		if (it->name == name) return &(*it);
+	return NULL;
+}
+
+NxsModel *ModelsBlock::findMixModel(string &name) {
+	for (iterator it = begin(); it != end(); it++)
+		if (it->name == name)
+            if ((it->flag & NM_ATOMIC) == 0) 
+                return &(*it);
+            else return NULL;
 	return NULL;
 }

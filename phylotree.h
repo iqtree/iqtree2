@@ -449,7 +449,7 @@ public:
             @param dad its dad, used to direct the tranversal
      */
     void computePartialParsimony(PhyloNeighbor *dad_branch, PhyloNode *dad);
-
+    void computePartialParsimonyFast(PhyloNeighbor *dad_branch, PhyloNode *dad);
 
     /**
             compute tree parsimony score on a branch
@@ -459,6 +459,7 @@ public:
             @return parsimony score of the tree
      */
     int computeParsimonyBranch(PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst = NULL);
+    int computeParsimonyBranchFast(PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst = NULL);
 
     void printParsimonyStates(PhyloNeighbor *dad_branch = NULL, PhyloNode *dad = NULL);
 

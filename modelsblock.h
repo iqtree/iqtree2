@@ -37,7 +37,17 @@ public:
 	/** destructor */
 	virtual ~ModelsBlock();
 
-	NxsModel *findModel(string name);
+    /**
+        @param name model name
+        @return pointer to model with the name or NULL if not found
+    */
+	NxsModel *findModel(string &name);
+
+    /**
+        @param name model name
+        @return pointer to a mixed model with the name or NULL if not found
+    */
+	NxsModel *findMixModel(string &name);
 
 
 protected:

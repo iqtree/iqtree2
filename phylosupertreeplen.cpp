@@ -128,8 +128,10 @@ double PartitionModelPlen::optimizeParameters(bool fixed_len, bool write_info, d
             cur_lh = new_lh;
     	}
     	cout<<"Current log-likelihood at step "<<i<<": "<<cur_lh<<endl;
-    	if(fabs(cur_lh-tree_lh) < epsilon)
+    	if(fabs(cur_lh-tree_lh) < epsilon) {
+            tree_lh = cur_lh;
     		break;
+        }
     	// make sure that the new logl is not so bad compared with previous logl
     	assert(cur_lh > tree_lh - 1.0);
     	tree_lh = cur_lh;

@@ -42,8 +42,8 @@ project(iqtree)
 add_definitions(-DIQ_TREE)
 # The version number.
 set (iqtree_VERSION_MAJOR 1)
-set (iqtree_VERSION_MINOR 2)
-set (iqtree_VERSION_PATCH 4)
+set (iqtree_VERSION_MINOR 3)
+set (iqtree_VERSION_PATCH 0)
 
 set(BUILD_SHARED_LIBS OFF)
 
@@ -386,6 +386,7 @@ phylonode.cpp
 phylosupertree.cpp
 phylotree.cpp
 phylotreesse.cpp
+phylotreepars.cpp
 #phylotreeavx.cpp
 pruning.cpp
 split.cpp

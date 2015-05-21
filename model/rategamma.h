@@ -53,6 +53,11 @@ public:
 	*/
     virtual ~RateGamma();
 
+	/**
+		@return true if this is a Gamma model (default: false)
+	*/	
+    virtual bool isGammaRate() { return true; }
+
 	virtual double getGammaShape() { return gamma_shape; }
 
 	virtual void setGammaShape(double gs);
