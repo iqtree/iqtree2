@@ -548,10 +548,10 @@ int getModelList(Params &params, Alignment *aln, StrVector &models, bool separat
     for (j = 0; j < ratehet.size(); j++)
         if ( (pos = ratehet[j].find("+R")) != string::npos && (pos >= ratehet[j].length()-2 || !isdigit(ratehet[j][pos+2]) )) {
             string str = ratehet[j];
-            ratehet[j].insert(pos+2, "2");
+            ratehet[j].insert(pos+2, convertIntToString(params.min_rate_cats));
             max_cats = max(max_cats, params.max_rate_cats);
-            for (int k = 3; k <= params.max_rate_cats; k++) {
-                ratehet.insert(ratehet.begin()+j+k-2, str.substr(0, pos+2) + convertIntToString(k) + str.substr(pos+2));
+            for (int k = params.min_rate_cats+1; k <= params.max_rate_cats; k++) {
+                ratehet.insert(ratehet.begin()+j+k-params.min_rate_cats, str.substr(0, pos+2) + convertIntToString(k) + str.substr(pos+2));
             }
             break;
         }

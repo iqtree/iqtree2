@@ -1118,6 +1118,11 @@ struct Params {
     /**
             maximum number of rate categories
      */
+    int min_rate_cats;
+
+    /**
+            maximum number of rate categories
+     */
     int max_rate_cats;
 
     /**

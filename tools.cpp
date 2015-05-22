@@ -714,6 +714,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.store_trans_matrix = false;
     //params.freq_type = FREQ_EMPIRICAL;
     params.freq_type = FREQ_UNKNOWN;
+    params.min_rate_cats = 2;
     params.num_rate_cats = 4;
     params.max_rate_cats = 10;
     params.gamma_shape = -1.0;
@@ -1788,13 +1789,22 @@ void parseArg(int argc, char *argv[], Params &params) {
 					throw "Wrong number of rate categories";
 				continue;
 			}
+			if (strcmp(argv[cnt], "-cmin") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -cmin <#min_rate_category>";
+				params.min_rate_cats = convert_int(argv[cnt]);
+				if (params.min_rate_cats < 2)
+					throw "Wrong number of rate categories for -cmin";
+				continue;
+			}
 			if (strcmp(argv[cnt], "-cmax") == 0) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -cmax <#max_rate_category>";
 				params.max_rate_cats = convert_int(argv[cnt]);
-				if (params.max_rate_cats < 1)
-					throw "Wrong number of rate categories";
+				if (params.max_rate_cats < 2)
+					throw "Wrong number of rate categories for -cmax";
 				continue;
 			}
 			if (strcmp(argv[cnt], "-a") == 0) {
@@ -2796,6 +2806,7 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "                       (default protein: -mfreq FU,F; codon: -mfreq ,F1x4,F3x4,F)" << endl            
             << "  -mrate r1,...,rk     Restrict search to using a list of rate-across-sites models" << endl
             << "                       (e.g. -mrate E,I,G,I+G,R)" << endl
+            << "  -cmin <kmin>         Min #categories for FreeRate model [+R] (default: 2)" << endl
             << "  -cmax <kmax>         Max #categories for FreeRate model [+R] (default: 10)" << endl
 //            << "  -msep                Perform model selection and then rate selection" << endl
             << "  -mtree               Do a full tree search for each model considered" << endl
