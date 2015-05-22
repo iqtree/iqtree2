@@ -1162,16 +1162,9 @@ void initializeParams(Params &params, IQTree &iqtree, vector<ModelInfo> &model_i
     if (params.model_name.substr(0, 4) == "TEST") {
         if (iqtree.isSuperTree())
             ((PhyloSuperTree*) &iqtree)->mapTrees();
-        uint64_t mem_size = iqtree.getMemoryRequired(params.num_rate_cats);
-//        mem_size *= (params.num_rate_cats);
-        cout << "NOTE: MODEL SELECTION REQUIRES AT LEAST " << ((double) mem_size * sizeof(double) / 1024.0) / 1024
-                << " MB MEMORY!" << endl;
-        if (mem_size >= getMemorySize()) {
-            outError("Memory required exceeds your computer RAM size!");
-        }
         double start_cpu_time = getCPUTime();
         double start_real_time = getRealTime();
-        params.model_name = testModel(params, &iqtree, model_info);
+        params.model_name = testModel(params, &iqtree, model_info, "", true);
         params.startCPUTime = start_cpu_time;
         params.start_real_time = start_real_time;
         cout << "CPU time for model selection: " << getCPUTime() - start_cpu_time << " seconds." << endl;

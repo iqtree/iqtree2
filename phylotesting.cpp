@@ -373,10 +373,10 @@ bool checkModelFile(string model_file, bool is_partitioned, vector<ModelInfo> &i
 
 /**
  * get the list of model
- * @param nmodels (OUT) number of models
- * @return array of model names
+ * @param models (OUT) vectors of model names
+ * @return maximum number of rate categories
  */
-void getModelList(Params &params, Alignment *aln, StrVector &models, bool separate_rate = false) {
+int getModelList(Params &params, Alignment *aln, StrVector &models, bool separate_rate = false) {
 	StrVector model_names;
     StrVector freq_names;
 	SeqType seq_type = aln->seq_type;
@@ -463,7 +463,8 @@ void getModelList(Params &params, Alignment *aln, StrVector &models, bool separa
         copyCString(codon_freq_names, sizeof(codon_freq_names) / sizeof(char*), freq_names);
 	}
     
-	if (model_names.empty()) return;
+	if (model_names.empty()) 
+        return 1;
     
     if (params.state_freq_set)
         convert_string_vec(params.state_freq_set, freq_names);
@@ -516,6 +517,7 @@ void getModelList(Params &params, Alignment *aln, StrVector &models, bool separa
     
 
     StrVector ratehet;
+    int max_cats = params.num_rate_cats;
 
 	if (params.ratehet_set) {
 		// take the rate_options from user-specified models
@@ -547,6 +549,7 @@ void getModelList(Params &params, Alignment *aln, StrVector &models, bool separa
         if ( (pos = ratehet[j].find("+R")) != string::npos && (pos >= ratehet[j].length()-2 || !isdigit(ratehet[j][pos+2]) )) {
             string str = ratehet[j];
             ratehet[j].insert(pos+2, "2");
+            max_cats = max(max_cats, params.max_rate_cats);
             for (int k = 3; k <= params.max_rate_cats; k++) {
                 ratehet.insert(ratehet.begin()+j+k-2, str.substr(0, pos+2) + convertIntToString(k) + str.substr(pos+2));
             }
@@ -565,7 +568,7 @@ void getModelList(Params &params, Alignment *aln, StrVector &models, bool separa
                 models.push_back(model_names[i] + ratehet[j]);
             }
     }
-
+    return max_cats;
 }
 
 /*
@@ -845,7 +848,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInf
 	mergePartitions(in_tree, gene_sets, model_names);
 }
 
-string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_info, string set_name) {
+string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_info, string set_name, bool print_mem_usage) {
 	SeqType seq_type = in_tree->aln->seq_type;
 	if (in_tree->isSuperTree())
 		seq_type = ((PhyloSuperTree*)in_tree)->front()->aln->seq_type;
@@ -857,8 +860,18 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 	sitelh_file += ".sitelh";
 	in_tree->params = &params;
 	StrVector model_names;
-	getModelList(params, in_tree->aln, model_names, params.model_test_separate_rate);
+	int max_cats = getModelList(params, in_tree->aln, model_names, params.model_test_separate_rate);
 	int model;
+
+    if (print_mem_usage) {
+        uint64_t mem_size = in_tree->getMemoryRequired(max_cats);
+        cout << "NOTE: MODEL SELECTION REQUIRES " << ((double) mem_size * sizeof(double) / 1024.0) / 1024
+                << " MB MEMORY!" << endl;
+        if (mem_size >= getMemorySize()) {
+            outError("Memory required exceeds your computer RAM size!");
+        }
+    }
+
 
 	string best_model = "";
 	/* first check the model file */
