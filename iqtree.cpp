@@ -289,10 +289,15 @@ void IQTree::createPLLPartition(Params &params, ostream &pllPartitionFileHandle)
             if ((*it)->aln->seq_type == SEQ_DNA) {
                 pllPartitionFileHandle << "DNA";
             } else if ((*it)->aln->seq_type == SEQ_PROTEIN) {
-            	if (siqtree->part_info[i-1].model_name != "" && siqtree->part_info[i-1].model_name.substr(0, 4) != "TEST")
-            		pllPartitionFileHandle << siqtree->part_info[i-1].model_name.substr(0, siqtree->part_info[i-1].model_name.find_first_of("+{"));
-            	else
-            		pllPartitionFileHandle << "WAG";
+            	if (siqtree->part_info[i-1].model_name != "" && siqtree->part_info[i-1].model_name.substr(0, 4) != "TEST") {
+                    string modelStr = siqtree->part_info[i - 1].model_name.
+                            substr(0, siqtree->part_info[i - 1].model_name.find_first_of("+{"));
+                    if (modelStr == "LG4")
+                        modelStr = "LG4M";
+                    pllPartitionFileHandle << modelStr;
+                } else {
+                    pllPartitionFileHandle << "WAG";
+                }
             } else
             	outError("PLL only works with DNA/protein alignments");
             pllPartitionFileHandle << ", p" << i << " = " << startPos << "-" << startPos + curLen - 1 << endl;
