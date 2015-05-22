@@ -119,6 +119,18 @@ public:
 	virtual void getVariables(double *variables);
 	virtual void setVariables(double *variables);
 
+    /** partition ID currently under optimization of of its rate */
+    int optimizing_part;
+
+    /**
+        compute the likelihood for a partition under rate optimization (optimizing_rate).
+        Used for the ML optimization of gene rate
+        @param value x-value of the function
+        @return log-likelihood
+    */
+    virtual double computeFunction(double value);
+
+
 };
 
 // ======================================================================================================
@@ -257,6 +269,7 @@ public:
 
 	bool checkBranchLen();
 	void mapBranchLen();
+	void mapBranchLen(int part);
 	virtual void printMapInfo();
 
 	virtual void restoreAllBrans(PhyloNode *node, PhyloNode *dad);

@@ -2609,10 +2609,10 @@ void parseArg(int argc, char *argv[], Params &params) {
             	params.count_trees = true;
             	continue;
 			}
-			if (strcmp(argv[cnt], "-sprdist") == 0) {
+			if (strcmp(argv[cnt], "-sprdist") == 0 || strcmp(argv[cnt], "-sprrad") == 0) {
 				cnt++;
 				if (cnt >= argc)
-					throw "Use -sprdist <SPR distance used in parsimony search>";
+					throw "Use -sprrad <SPR radius used in parsimony search>";
 				params.sprDist = convert_int(argv[cnt]);
 				continue;
 			}
@@ -2767,6 +2767,7 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -pll                 Use phylogenetic likelihood library (PLL) (default: off)" << endl
             << "  -numpars <number>    Number of initial parsimony trees (default: 100)" << endl
             << "  -toppars <number>    Number of best parsimony trees (default: 20)" << endl
+            << "  -sprrad <number>     Radius for parsimony SPR search (default: 6)" << endl
             << "  -numcand <number>    Size of the candidate tree set (defaut: 5)" << endl
             << "  -pers <perturbation> Perturbation strength for randomized NNI (default: 0.5)" << endl
             << "  -numstop <number>    Number of unsuccessful iterations to stop (default: 100)" << endl

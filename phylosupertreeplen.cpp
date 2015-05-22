@@ -51,16 +51,21 @@ SuperAlignmentPairwisePlen::~SuperAlignmentPairwisePlen()
  * class PartitionModelPlen
 **********************************************************/
 
+const double MIN_GENE_RATE = 0.001;
+const double MAX_GENE_RATE = 1000.0;
+const double TOL_GENE_RATE = 0.0001;
 
 PartitionModelPlen::PartitionModelPlen()
         : PartitionModel()
 {
-	}
+    optimizing_part = -1;
+}
 
 PartitionModelPlen::PartitionModelPlen(Params &params, PhyloSuperTreePlen *tree, ModelsBlock *models_block)
         : PartitionModel(params, tree, models_block)
 {
-	}
+    optimizing_part = -1;
+}
 
 PartitionModelPlen::~PartitionModelPlen()
 {
@@ -150,9 +155,21 @@ double PartitionModelPlen::optimizeParameters(bool fixed_len, bool write_info, d
     return tree_lh;
 }
 
+double PartitionModelPlen::computeFunction(double value) {
+	PhyloSuperTreePlen *tree = (PhyloSuperTreePlen*)site_rate->getTree();
+    if (value != tree->part_info[optimizing_part].part_rate) {
+        tree->part_info[optimizing_part].part_rate = value;
+        tree->mapBranchLen(optimizing_part);
+        tree->at(optimizing_part)->clearAllPartialLH();
+    }
+    return -tree->at(optimizing_part)->computeLikelihood();
+}
+
+
 double PartitionModelPlen::optimizeGeneRate(double tol)
 {
 	PhyloSuperTreePlen *tree = (PhyloSuperTreePlen*)site_rate->getTree();
+/*    
 	int ndim = tree->size()-1;
 
 	double *variables   = new double[ndim+1];
@@ -184,6 +201,33 @@ double PartitionModelPlen::optimizeGeneRate(double tol)
 	delete [] variables;
 
 	return score;
+*/
+    // BQM 22-05-2015: change to optimize individual rates
+    int i;
+    double score = 0.0;
+    for (i = 0; i < tree->size(); i++) {
+        double gene_rate = tree->part_info[i].part_rate;
+        double negative_lh, ferror;
+        optimizing_part = i;
+        gene_rate = minimizeOneDimen(MIN_GENE_RATE, gene_rate, MAX_GENE_RATE, TOL_GENE_RATE, &negative_lh, &ferror);
+    	if (gene_rate != tree->part_info[optimizing_part].part_rate) {
+            tree->part_info[i].part_rate = gene_rate;
+            tree->mapBranchLen(i);
+            tree->at(i)->clearAllPartialLH();
+        }
+        tree->part_info[i].cur_score = tree->at(i)->computeLikelihood();
+        score += tree->part_info[i].cur_score;
+    }
+    // now normalize the rates
+    double sum = 0.0;
+    for (i = 0; i < tree->size(); i++)
+        sum += tree->part_info[i].part_rate * tree->at(i)->aln->getNSite();
+    sum /= tree->getAlnNSite();
+    tree->scaleLength(sum);
+    sum = 1.0/sum;
+    for (i = 0; i < tree->size(); i++)
+        tree->part_info[i].part_rate *= sum;
+    return score;
 }
 
 double PartitionModelPlen::targetFunk(double x[]) {
@@ -1626,6 +1670,27 @@ void PhyloSuperTreePlen::mapBranchLen()
 			nodes2_sub[j]->findNeighbor(nodes1_sub[j])->length = checkVAL[nodes1_sub[j]->findNeighbor(nodes2_sub[j])->id];
 		}
 	}
+	delete [] checkVAL;
+}
+
+void PhyloSuperTreePlen::mapBranchLen(int part)
+{
+	NodeVector nodes1,nodes2;
+	int i;
+	getBranches(nodes1, nodes2);
+	double *checkVAL = new double[branchNum];
+    memset(checkVAL,0,at(part)->branchNum*sizeof(double));
+    for (i = 0; i < nodes1.size(); i++){
+        if(((SuperNeighbor*)nodes1[i]->findNeighbor(nodes2[i]))->link_neighbors[part])
+            checkVAL[((SuperNeighbor*)nodes1[i]->findNeighbor(nodes2[i]))->link_neighbors[part]->id] +=
+                    nodes1[i]->findNeighbor(nodes2[i])->length * part_info[part].part_rate;
+    }
+    NodeVector nodes1_sub, nodes2_sub;
+    at(part)->getBranches(nodes1_sub, nodes2_sub);
+    for(int j = 0; j<nodes1_sub.size();j++){
+        nodes1_sub[j]->findNeighbor(nodes2_sub[j])->length = checkVAL[nodes1_sub[j]->findNeighbor(nodes2_sub[j])->id];
+        nodes2_sub[j]->findNeighbor(nodes1_sub[j])->length = checkVAL[nodes1_sub[j]->findNeighbor(nodes2_sub[j])->id];
+    }
 	delete [] checkVAL;
 }
 
