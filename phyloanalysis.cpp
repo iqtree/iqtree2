@@ -366,31 +366,39 @@ void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh, 
         
         out << endl
             << "**************************** WARNING ****************************" << endl
-            << "Number of parameters (K=" << df << ") >= sample size (n=" << ssize << ")," << endl 
-            << "implying that all the model parameters are not identifiable." << endl 
-            << "The program will still try to estimate the parameter values but" << endl
-            << "because of the small sample size (n), the parameter estimates" << endl 
+            << "Number of parameters (K): " << df << endl
+            << "Sample size (n):          " << ssize << endl << endl
+            << "Given that K>=n, the model parameters are not identifiable." << endl
+            << "The program will still try to estimate the parameter values," << endl
+            << "but because of the small sample size, the parameter estimates" << endl 
             << "are likely to be inaccurate." << endl << endl
             
             << "Phylogenetic estimates obtained under these conditions should be" << endl 
             << "interpreted with extreme caution." << endl << endl 
 
-            << "Ideally, if n > 40K, in which case AIC and BIC can be used. However," << endl
-            << "if 40K >= n > K, then the AICc can be used instead of the AIC" << endl 
-            << "(Burnham and Anderson, 2002)" << endl << endl
+            << "Ideally, it is desirable that n >> K. When selecting optimal" << endl
+            << "models," << endl
+            << "1. use AIC or BIC if n > 40K;" << endl 
+            << "2. use AICc or BIC if 40K >= n > K;" << endl 
+            << "3. be extremely cautious if n <= K (because model parameters" << endl
+            << "   are not identifiable)." << endl << endl
 
-            << "To improve the situation, consider the following options:" << endl
-            << "  1. Increase the sample size (i.e., the number of sites in the alignment (n))" << endl
-            << "  2. Decrease the number of model parameters (K) to be estimated. If possible:" << endl
+            << "To improve the situation (3), consider the following options:" << endl
+            << "  1. Increase the sample size (n)" << endl
+            << "  2. Decrease the number of parameters (K) to be estimated. If" << endl
+            << "     possible:" << endl
             << "     a. Remove the least important sequences from the alignment" << endl
-            << "     b. Specify some of the parameter values for the substitution model"<< endl 
-            << "        (e.g., the nucleotide or amino acid frequencies)" << endl
-            << "     c. Specify some of the parameter values for the rates-heterogeneity-across-sites model" << endl
-            << "        (e.g., the shape parameter for the Gamma distribution, the proportion of invariable" << endl
-            << "        sites, or the rates of change for different rate categories under the FreeRate model)" << endl << endl
+            << "     b. Specify some of the parameter values for the substitution"<< endl 
+            << "        model (e.g., the nucleotide or amino acid frequencies)" << endl
+            << "     c. Specify some of the parameter values for the rates-across-" << endl
+            << "        sites model (e.g., the shape parameter for the discrete" << endl
+            << "        Gamma distribution, the proportion of invariable sites, or" << endl
+            << "        the rates of change for different rate categories under" << endl
+            << "        the FreeRate model)" << endl << endl
             << "Reference:" << endl
-            << "Burnham KR, Anderson DR (2002). Model Selection and Multimodel Inference:" << endl 
-            << "A Practical Information-theoretic Approach. Springer, New York." << endl 
+            << "Burnham KR, Anderson DR (2002). Model Selection and Multimodel" << endl
+            << "Inference: A Practical Information-Theoretic Approach. Springer," << endl
+            << "New York." << endl 
             << "************************ END OF WARNING ***********************" << endl;
     }
     out << endl;
