@@ -22,6 +22,11 @@ public:
 	virtual ~RateFree();
 
 	/**
+		@return true if this is a Gamma model (default: false)
+	*/	
+    virtual bool isGammaRate() { return false; }
+
+	/**
 	 * @return model name with parameters in form of e.g. GTR{a,b,c,d,e,f}
 	 */
 	virtual string getNameParams();

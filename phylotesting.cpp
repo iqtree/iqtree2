@@ -64,22 +64,32 @@ const char* aa_model_names[] = { "Dayhoff", "mtMAM", "JTT", "WAG",
 		"HIVb", "HIVw", "JTTDCMut", "FLU", "Blosum62" };
         
 /* Protein models supported by PhyML/PartitionFinder */
-const char *aa_model_names_old[] = { "Dayhoff", "mtMAM", "JTT", "WAG",
+const char *aa_model_names_phyml[] = { "Dayhoff", "mtMAM", "JTT", "WAG",
 		"cpREV", "mtREV", "rtREV", "mtART", "VT", "LG", "DCMut",
 		"HIVb", "HIVw", "Blosum62" };
 
 /* Protein models supported by RAxML */
 const char *aa_model_names_rax[] = { "Dayhoff", "mtMAM", "JTT", "WAG",
-		"cpREV", "mtREV", "rtREV", "VT", "LG", "DCMut", "Blosum62" };
+		"cpREV", "mtREV", "rtREV", "mtART", "mtZOA", "PMB", "HIVb", "HIVw", "JTTDCMut", "FLU", "VT", "LG", "DCMut", "Blosum62" };
 
 const char* aa_model_names_mrbayes[] = {"Poisson", "Dayhoff", "mtMAM", "JTT", "WAG",
 		"cpREV", "mtREV", "rtREV", "VT", "Blosum62" };
+
+const char *aa_model_names_nuclear[] = {"WAG", "Dayhoff","JTT", "LG", "VT", "DCMut", "PMB", "JTTDCMut", "Blosum62"};
+
+const char *aa_model_names_mitochondrial[] = {"mtREV", "mtMAM", "mtART", "mtZOA"};
+
+const char *aa_model_names_chloroplast[] = {"cpREV"};
+
+const char *aa_model_names_viral[] = {"HIVb", "HIVw", "FLU", "rtREV"};
 
 const char* aa_freq_names[] = {"", "+F"};
 
 
 /****** Codon models ******/
-const char *codon_model_names[] = {"GY", "MG", "MGK", "KOSI07", "SCHN05"};
+//const char *codon_model_names[] = {"GY", "MG", "MGK", "KOSI07", "SCHN05","KOSI07_GY1KTV","SCHN05_GY1KTV"};
+//short int std_genetic_code[]    = {   0,    0,     0,        1,        1,              1,              1};
+const char *codon_model_names[] = {"MG", "MGK", "GY", "KOSI07", "SCHN05"};
 short int std_genetic_code[]    = {   0,    0,     0,        1,        1};
 
 const char *codon_freq_names[] = {"", "+F1X4", "+F3X4", "+F"};
@@ -134,7 +144,7 @@ int getSeqType(const char *model_name, SeqType &seq_type) {
         }
     copyCString(codon_model_names, sizeof(codon_model_names)/sizeof(char*), model_list, true);
     for (i = 0; i < model_list.size(); i++)
-        if (model_str == model_list[i]) {
+        if (model_str.substr(0,model_list[i].length()) == model_list[i]) {
             seq_type = SEQ_CODON;
             if (std_genetic_code[i]) empirical_model = true;
             break;
@@ -262,6 +272,19 @@ void printSiteLhCategory(const char*filename, PhyloTree *tree) {
 		}
 		out.close();
 		cout << "Site log-likelihoods per category printed to " << filename << endl;
+        if (!tree->isSuperTree()) {
+            cout << "Log-likelihood of constant sites: " << endl;
+            double const_prob = 0.0;
+            for (i = 0; i < tree->aln->getNPattern(); i++)
+                if (tree->aln->at(i).is_const) {
+                    Pattern pat = tree->aln->at(i);
+                    for (Pattern::iterator it = pat.begin(); it != pat.end(); it++)
+                        cout << tree->aln->convertStateBackStr(*it);
+                    cout << ": " << pattern_lh[i] << endl;
+                    const_prob += exp(pattern_lh[i]);
+                }
+            cout << "Probability of const sites: " << const_prob << endl;
+        }
 	} catch (ios::failure) {
 		outError(ERR_WRITE_OUTPUT, filename);
 	}
@@ -358,9 +381,11 @@ void getModelList(Params &params, Alignment *aln, StrVector &models, bool separa
     StrVector freq_names;
 	SeqType seq_type = aln->seq_type;
     
-	const char *rate_options[] = {  "", "+I", "+ASC", "+G", "+I+G", "+ASC+G"};
-	bool test_options[] =        {true, true,  false, true,   true,    false};
-	bool test_options_morph[] =  {true,false,   true, true,  false,     true};
+	const char *rate_options[]    = {  "", "+I", "+ASC", "+G", "+I+G", "+ASC+G", "+R", "+ASC+R"};
+	bool test_options[]           = {true, true,  false, true,   true,    false,false,    false};
+	bool test_options_morph[]     = {true,false,   true, true,  false,     true,false,    false};
+	bool test_options_new[]       = {true, true,  false, true,  false,    false, true,    false};
+	bool test_options_morph_new[] = {true,false,   true, true,  false,     true, true,     true};
 //	bool test_options_codon[] =  {true,false,  false,false,  false,    false};
 	const int noptions = sizeof(rate_options) / sizeof(char*);
 	int i, j;
@@ -385,7 +410,7 @@ void getModelList(Params &params, Alignment *aln, StrVector &models, bool separa
 		if (params.model_set == NULL) {
 			copyCString(aa_model_names, sizeof(aa_model_names) / sizeof(char*), model_names);
 		} else if (strcmp(params.model_set, "partitionfinder") == 0 || strcmp(params.model_set, "phyml") == 0) {
-			copyCString(aa_model_names_old, sizeof(aa_model_names_old) / sizeof(char*), model_names);
+			copyCString(aa_model_names_phyml, sizeof(aa_model_names_phyml) / sizeof(char*), model_names);
 		} else if (strcmp(params.model_set, "raxml") == 0) {
 			copyCString(aa_model_names_rax, sizeof(aa_model_names_rax) / sizeof(char*), model_names);
 		} else if (strcmp(params.model_set, "mrbayes") == 0) {
@@ -394,6 +419,34 @@ void getModelList(Params &params, Alignment *aln, StrVector &models, bool separa
 			convert_string_vec(params.model_set, model_names);
 		}
         copyCString(aa_freq_names, sizeof(aa_freq_names)/sizeof(char*), freq_names);
+        
+        if (params.model_subset) {
+            StrVector submodel_names;
+            if (strncmp(params.model_subset, "nuclear", 3) == 0) {
+                copyCString(aa_model_names_nuclear, sizeof(aa_model_names_nuclear) / sizeof(char*), submodel_names);
+            } else if (strncmp(params.model_subset, "mitochondrial", 3) == 0) {
+                copyCString(aa_model_names_mitochondrial, sizeof(aa_model_names_mitochondrial) / sizeof(char*), submodel_names);
+            } else if (strncmp(params.model_subset, "chloroplast", 3) == 0) {
+                copyCString(aa_model_names_chloroplast, sizeof(aa_model_names_chloroplast) / sizeof(char*), submodel_names);
+            } else if (strncmp(params.model_subset, "viral",3) == 0) {
+                copyCString(aa_model_names_viral, sizeof(aa_model_names_viral) / sizeof(char*), submodel_names);
+            } else {
+                outError("Wrong -msub option");
+            }
+            for (i = 0; i < model_names.size(); i++) {
+                bool appear = false;
+                for (j = 0; j < submodel_names.size(); j++) 
+                    if (model_names[i] == submodel_names[j]) {
+                        appear = true;
+                        break;
+                    }
+                if (!appear) {
+                    model_names.erase(model_names.begin()+i);
+                    i--;
+                }
+            }
+        }
+
 	} else if (seq_type == SEQ_CODON) {
 		if (params.model_set == NULL) {
 			if (aln->isStandardGeneticCode())
@@ -415,6 +468,7 @@ void getModelList(Params &params, Alignment *aln, StrVector &models, bool separa
     if (params.state_freq_set)
         convert_string_vec(params.state_freq_set, freq_names);
     for (j = 0; j < freq_names.size(); j++) {
+        std::transform(freq_names[j].begin(), freq_names[j].end(), freq_names[j].begin(), ::toupper);
 //        for (i = 0; i < freq_names.size(); i++)
 //            cout << " " << freq_names[i];
 //        cout << endl;
@@ -431,7 +485,7 @@ void getModelList(Params &params, Alignment *aln, StrVector &models, bool separa
                 int model_type = getSeqType(orig_model_names[j].c_str(), seq_type);
                 for (i = 0; i < freq_names.size(); i++) {
                     // disallow MG+F
-                    if (freq_names[i] == "+F" && orig_model_names[j].substr(0,2) == "MG")
+                    if (freq_names[i] == "+F" && orig_model_names[j].find("MG") != string::npos)
                         continue;
                     if (freq_names[i] != "" || model_type == 2) // empirical model also allow ""
                         model_names.push_back(orig_model_names[j] + freq_names[i]);
@@ -448,9 +502,18 @@ void getModelList(Params &params, Alignment *aln, StrVector &models, bool separa
 //			test_options[i] = test_options_codon[i];
 //	} else 
     if (seq_type == SEQ_MORPH) {
-		for (i = 0; i < noptions; i++)
-			test_options[i] = test_options_morph[i];
-	}
+        if (params.model_name.find("NEW") != string::npos) {
+            for (i = 0; i < noptions; i++)
+                test_options[i] = test_options_morph_new[i];
+        } else
+            for (i = 0; i < noptions; i++)
+                test_options[i] = test_options_morph[i];
+	} else if (params.model_name.find("NEW") != string::npos) {
+        // change +I+G to +R
+        for (i = 0; i < noptions; i++)
+            test_options[i] = test_options_new[i];
+    }
+    
 
     StrVector ratehet;
 
@@ -471,20 +534,24 @@ void getModelList(Params &params, Alignment *aln, StrVector &models, bool separa
             if (ratehet[j] == "+E") // for equal rate model 
                 ratehet[j] = "";
         }
-        for (j = 0; j < ratehet.size(); j++)
-            if (ratehet[j] == "+R") {
-                ratehet[j] = "+R2";
-                for (int k = 3; k <= params.max_rate_cats; k++) {
-                    ratehet.insert(ratehet.begin()+j+k-2, "+R" + convertIntToString(k));
-                }
-                break;
-            }
     } else {
         for (j = 0; j < noptions; j++)
             if (test_options[j])
                 ratehet.push_back(rate_options[j]);
         
     }
+    
+    size_t pos;
+
+    for (j = 0; j < ratehet.size(); j++)
+        if ( (pos = ratehet[j].find("+R")) != string::npos && (pos >= ratehet[j].length()-2 || !isdigit(ratehet[j][pos+2]) )) {
+            string str = ratehet[j];
+            ratehet[j].insert(pos+2, "2");
+            for (int k = 3; k <= params.max_rate_cats; k++) {
+                ratehet.insert(ratehet.begin()+j+k-2, str.substr(0, pos+2) + convertIntToString(k) + str.substr(pos+2));
+            }
+            break;
+        }
 
     if (separate_rate) {
         for (i = 0; i < model_names.size(); i++) 
@@ -635,7 +702,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInf
         delete part_model_info;
 	}
 
-	if (params.model_name.find("LINK") == string::npos || params.model_name.find("MERGE") == string::npos) {
+	if (params.model_name.find("LINK") == string::npos && params.model_name.find("MERGE") == string::npos) {
 		return;
 	}
 
@@ -852,12 +919,16 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 	in_tree->optimize_by_newton = params.optimize_by_newton;
 	in_tree->setLikelihoodKernel(params.SSE);
 
-	RateHeterogeneity * rate_class[5];
+    int num_rate_classes = 3 + params.max_rate_cats;
+
+	RateHeterogeneity ** rate_class = new RateHeterogeneity*[num_rate_classes];
 	rate_class[0] = new RateHeterogeneity();
 	rate_class[1] = new RateInvar(-1, NULL);
 	rate_class[2] = new RateGamma(params.num_rate_cats, params.gamma_shape, params.gamma_median, NULL);
 	rate_class[3] = new RateGammaInvar(params.num_rate_cats, params.gamma_shape, params.gamma_median, -1, params.optimize_model_rate_joint, params.rr_ai, NULL);
-	rate_class[4] = new RateFree(params.num_rate_cats, params.gamma_shape, "", false, NULL);
+    for (model = 4; model < num_rate_classes; model++)
+        rate_class[model] = new RateFree(model-2, params.gamma_shape, "", false, NULL);
+        
 	ModelGTR *subst_model = NULL;
 	if (seq_type == SEQ_BINARY)
 		subst_model = new ModelBIN("JC2", "", FREQ_UNKNOWN, "", in_tree);
@@ -904,7 +975,7 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
     int model_aic = -1, model_aicc = -1, model_bic = -1;
     string prev_tree_string = "";
     int prev_model_id = -1;
-    bool skip_model = false;
+    int skip_model = 0;
 
 	for (model = 0; model < model_names.size(); model++) {
 		//cout << model_names[model] << endl;
@@ -954,12 +1025,15 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
         // initialize rate
         size_t pos;
         if ((pos = model_names[model].find("+R")) != string::npos) {
-            tree->setRate(rate_class[4]);
+            int ncat = params.num_rate_cats;
             if (model_names[model].length() > pos+2 && isdigit(model_names[model][pos+2])) {
-                int ncat = convert_int(model_names[model].c_str() + pos+2);
-                if (ncat < 1) outError("Wrong number of category for +R in " + model_names[model]);
-                tree->getRate()->setNCategory(ncat);
+                ncat = convert_int(model_names[model].c_str() + pos+2);
+//                tree->getRate()->setNCategory(ncat);
             }
+            if (ncat <= 1) outError("Number of rate categories for " + model_names[model] + " is <= 1");
+            if (ncat > params.max_rate_cats)
+                outError("Number of rate categories for " + model_names[model] + " exceeds " + convertIntToString(params.max_rate_cats));
+            tree->setRate(rate_class[2+ncat]);
         } else if (model_names[model].find("+I") != string::npos && (pos = model_names[model].find("+G")) != string::npos) {
             tree->setRate(rate_class[3]);
             if (model_names[model].length() > pos+2 && isdigit(model_names[model][pos+2])) {
@@ -999,7 +1073,7 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
             assert(prev_model_id>=0);
             size_t pos_r = info.name.find("+R");
             if (pos_r == string::npos || info.name.substr(0, pos_r) != model_info[prev_model_id].name.substr(0, pos_r))
-                skip_model = false;
+                skip_model = 0;
         }
 		for (int i = 0; i < model_info.size(); i++)
 			if (info.name == model_info[i].name) {
@@ -1099,7 +1173,7 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
                 if (info.AIC_score > model_info[prev_model_id].AIC_score && info.AICc_score > model_info[prev_model_id].AICc_score &&
                     info.BIC_score > model_info[prev_model_id].BIC_score) {
                     // skip remaining model
-                    skip_model = true;
+                    skip_model++;
 //                    cout << "Skip next model" << endl;
                 }
             }
@@ -1129,6 +1203,12 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 		cout << right << model+1 << "  ";
 		cout.width(13);
 		cout << left << info.name << " ";
+        
+        if (skip_model > 1) {
+            cout << "Skipped " << endl;
+            continue;
+        }
+        
 		cout.precision(3);
 		cout << fixed;
 		cout.width(12);
@@ -1258,9 +1338,10 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 
 	delete model_fac;
 	delete subst_model;
-	for (int rate_type = sizeof(rate_class)/sizeof(void*)-1; rate_type >= 0; rate_type--) {
+	for (int rate_type = num_rate_classes-1; rate_type >= 0; rate_type--) {
 		delete rate_class[rate_type];
-	}
+    }
+    delete [] rate_class;
 //	delete tree_hetero;
 //	delete tree_homo;
 	in_tree->deleteAllPartialLh();

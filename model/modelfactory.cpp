@@ -118,11 +118,29 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 	/********* preprocessing model string ****************/
 	NxsModel *nxsmodel  = NULL;
 
-	nxsmodel = models_block->findModel(model_str);
-	if (nxsmodel && nxsmodel->description.find_first_of("+*") != string::npos) {
-		cout << "Model " << model_str << " is alias for " << nxsmodel->description << endl;
-		model_str = nxsmodel->description;
-	}
+    string new_model_str = "";
+    size_t mix_pos;
+    for (mix_pos = 0; mix_pos < model_str.length(); mix_pos++) {
+        size_t next_mix_pos = model_str.find_first_of("+*", mix_pos);
+        string sub_model_str = model_str.substr(mix_pos, next_mix_pos-mix_pos);
+        nxsmodel = models_block->findMixModel(sub_model_str);
+        if (nxsmodel) sub_model_str = nxsmodel->description;
+        new_model_str += sub_model_str;
+        if (next_mix_pos != string::npos)
+            new_model_str += model_str[next_mix_pos];
+        else 
+            break;
+        mix_pos = next_mix_pos;
+    }
+    if (new_model_str != model_str)
+        cout << "Model " << model_str << " is alias for " << new_model_str << endl;
+    model_str = new_model_str;
+    
+//	nxsmodel = models_block->findModel(model_str);
+//	if (nxsmodel && nxsmodel->description.find_first_of("+*") != string::npos) {
+//		cout << "Model " << model_str << " is alias for " << nxsmodel->description << endl;
+//		model_str = nxsmodel->description;
+//	}
 
 	// decompose model string into model_str and rate_str string
 	size_t spec_pos = model_str.find_first_of("{+*");
@@ -140,11 +158,11 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 		}
 	}
 
-	nxsmodel = models_block->findModel(model_str);
-	if (nxsmodel && nxsmodel->description.find("MIX") != string::npos) {
-		cout << "Model " << model_str << " is alias for " << nxsmodel->description << endl;
-		model_str = nxsmodel->description;
-	}
+//	nxsmodel = models_block->findModel(model_str);
+//	if (nxsmodel && nxsmodel->description.find("MIX") != string::npos) {
+//		cout << "Model " << model_str << " is alias for " << nxsmodel->description << endl;
+//		model_str = nxsmodel->description;
+//	}
 
 	/******************** initialize state frequency ****************************/
 
@@ -160,9 +178,37 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 		}
 	}
 
-	string::size_type posfreq = rate_str.find("+F");
+    // first handle mixture frequency
+    string::size_type posfreq = rate_str.find("+FMIX");
 	string freq_params;
-	size_t close_bracket;
+    size_t close_bracket;
+
+    if (posfreq != string::npos) {
+		string freq_str;
+		size_t last_pos = rate_str.find_first_of("+*", posfreq+1);
+        
+		if (last_pos == string::npos) {
+			freq_str = rate_str.substr(posfreq);
+			rate_str = rate_str.substr(0, posfreq);
+		} else {
+			freq_str = rate_str.substr(posfreq, last_pos-posfreq);
+			rate_str = rate_str.substr(0, posfreq) + rate_str.substr(last_pos);
+		}
+        
+        if (freq_str[5] != OPEN_BRACKET)
+            outError("Mixture-frequency must start with +FMIX{");
+        close_bracket = freq_str.find(CLOSE_BRACKET);
+        if (close_bracket == string::npos)
+            outError("Close bracket not found in ", freq_str);
+        if (close_bracket != freq_str.length()-1)
+            outError("Wrong close bracket position ", freq_str);
+        freq_type = FREQ_MIXTURE;
+        freq_params = freq_str.substr(6, close_bracket-6);
+    }
+
+    // then normal frequency
+	posfreq = rate_str.find("+F");
+    bool optimize_mixmodel_weight = params.optimize_mixmodel_weight;
 
 	if (posfreq != string::npos) {
 		string freq_str;
@@ -175,17 +221,9 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 			rate_str = rate_str.substr(0, posfreq) + rate_str.substr(last_pos);
 		}
 
-		if (freq_str.substr(0,5) == "+FMIX") {
-			if (freq_str[5] != OPEN_BRACKET)
-				outError("Mixture-frequency must start with +FMIX{");
-			close_bracket = freq_str.find(CLOSE_BRACKET);
-			if (close_bracket == string::npos)
-				outError("Close bracket not found in ", freq_str);
-			if (close_bracket != freq_str.length()-1)
-				outError("Wrong close bracket position ", freq_str);
-			freq_type = FREQ_MIXTURE;
-			freq_params = freq_str.substr(6, close_bracket-6);
-		} else if (freq_str.length() > 2 && freq_str[2] == OPEN_BRACKET) {
+        if (freq_str.length() > 2 && freq_str[2] == OPEN_BRACKET) {
+            if (freq_type == FREQ_MIXTURE)
+                outError("Mixture frequency with user-defined frequency is not allowed");
 			close_bracket = freq_str.find(CLOSE_BRACKET);
 			if (close_bracket == string::npos)
 				outError("Close bracket not found in ", freq_str);
@@ -193,21 +231,43 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 				outError("Wrong close bracket position ", freq_str);
 			freq_type = FREQ_USER_DEFINED;
 			freq_params = freq_str.substr(3, close_bracket-3);
-		} else if (freq_str == "+FC" || freq_str == "+Fc" || freq_str == "+F")
-			freq_type = FREQ_EMPIRICAL;
-		else if (freq_str == "+FU" || freq_str == "+Fu")
-			freq_type = FREQ_USER_DEFINED;
-		else if (freq_str == "+FQ" || freq_str == "+Fq")
-			freq_type = FREQ_EQUAL;
-		else if (freq_str == "+FO" || freq_str == "+Fo")
-			freq_type = FREQ_ESTIMATE;
-		else if (freq_str == "+F1x4" || freq_str == "+F1X4")
-			freq_type = FREQ_CODON_1x4;
-		else if (freq_str == "+F3x4" || freq_str == "+F3X4")
-			freq_type = FREQ_CODON_3x4;
-		else if (freq_str == "+F3x4C" || freq_str == "+F3x4c" || freq_str == "+F3X4C" || freq_str == "+F3X4c")
-			freq_type = FREQ_CODON_3x4C;
-		else outError("Unknown state frequency type ",freq_str);
+		} else if (freq_str == "+FC" || freq_str == "+Fc" || freq_str == "+F") {
+            if (freq_type == FREQ_MIXTURE) {
+                freq_params = "empirical," + freq_params;
+                optimize_mixmodel_weight = true;
+            } else
+                freq_type = FREQ_EMPIRICAL;
+		} else if (freq_str == "+FU" || freq_str == "+Fu") {
+            if (freq_type == FREQ_MIXTURE)
+                outError("Mixture frequency with user-defined frequency is not allowed");
+            else
+                freq_type = FREQ_USER_DEFINED;
+		} else if (freq_str == "+FQ" || freq_str == "+Fq") {
+            if (freq_type == FREQ_MIXTURE)
+                outError("Mixture frequency with equal frequency is not allowed");
+            else
+                freq_type = FREQ_EQUAL;
+		} else if (freq_str == "+FO" || freq_str == "+Fo") {
+            if (freq_type == FREQ_MIXTURE)
+                outError("Mixture frequency with optimized frequency is not allowed");
+            else
+                freq_type = FREQ_ESTIMATE;
+		} else if (freq_str == "+F1x4" || freq_str == "+F1X4") {
+            if (freq_type == FREQ_MIXTURE)
+                outError("Mixture frequency with " + freq_str + " is not allowed");
+            else
+                freq_type = FREQ_CODON_1x4;
+		} else if (freq_str == "+F3x4" || freq_str == "+F3X4") {
+            if (freq_type == FREQ_MIXTURE)
+                outError("Mixture frequency with " + freq_str + " is not allowed");
+            else
+                freq_type = FREQ_CODON_3x4;
+		} else if (freq_str == "+F3x4C" || freq_str == "+F3x4c" || freq_str == "+F3X4C" || freq_str == "+F3X4c") {
+            if (freq_type == FREQ_MIXTURE)
+                outError("Mixture frequency with " + freq_str + " is not allowed");
+            else
+                freq_type = FREQ_CODON_3x4C;
+		} else outError("Unknown state frequency type ",freq_str);
 //		model_str = model_str.substr(0, posfreq);
 	}
 
@@ -224,7 +284,7 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 				model_list = model_str.substr(4, model_str.length()-5);
 				model_str = model_str.substr(0, 3);
 			}
-			model = new ModelMixture(model_str, model_list, models_block, freq_type, freq_params, tree, params.optimize_mixmodel_weight);
+			model = new ModelMixture(model_str, model_list, models_block, freq_type, freq_params, tree, optimize_mixmodel_weight);
 		} else {
 //			string model_desc;
 //			NxsModel *nxsmodel = models_block->findModel(model_str);
@@ -278,8 +338,8 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 			if (*it) delete [] (*it);
 	}
 
-	if (model->isMixture())
-		cout << "Mixture model with " << model->getNMixtures() << " components!" << endl;
+//	if (model->isMixture())
+//		cout << "Mixture model with " << model->getNMixtures() << " components!" << endl;
 
 	/******************** initialize ascertainment bias correction model ****************************/
 
@@ -303,19 +363,40 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 
 	string::size_type posI = rate_str.find("+I");
 	string::size_type posG = rate_str.find("+G");
-	if (posG == string::npos) {
-		posG = rate_str.find("*G");
-		if (posG != string::npos)
-			fused_mix_rate = true;
-	}
+	string::size_type posG2 = rate_str.find("*G");
+    if (posG != string::npos && posG2 != string::npos) {
+        cout << "NOTE: both +G and *G were specified, continue with " 
+            << ((posG < posG2)? rate_str.substr(posG,2) : rate_str.substr(posG2,2)) << endl;
+    }
+    if (posG2 != string::npos && posG2 < posG) {
+        posG = posG2;
+        fused_mix_rate = true;
+    }
+//	if (posG == string::npos) {
+//		posG = rate_str.find("*G");
+//		if (posG != string::npos)
+//			fused_mix_rate = true;
+//	}
 	string::size_type posR = rate_str.find("+R"); // FreeRate model
-	if (posR == string::npos) {
-		posR = rate_str.find("*R");
-		if (posR != string::npos)
-			fused_mix_rate = true;
-	}
-	if (posG != string::npos && posR != string::npos)
-		outError("Gamma and FreeRate models cannot be both specified!");
+	string::size_type posR2 = rate_str.find("*R"); // FreeRate model
+    if (posR != string::npos && posR2 != string::npos) {
+        cout << "NOTE: both +R and *R were specified, continue with " 
+            << ((posR < posR2)? rate_str.substr(posR,2) : rate_str.substr(posR2,2)) << endl;
+    }
+    if (posR2 != string::npos && posR2 < posR) {
+        posR = posR2;
+        fused_mix_rate = true;
+    }
+    
+//	if (posR == string::npos) {
+//		posR = rate_str.find("*R");
+//		if (posR != string::npos)
+//			fused_mix_rate = true;
+//	}
+	if (posG != string::npos && posR != string::npos) {
+		outWarning("Both Gamma and FreeRate models were specified, continue with FreeRate model");
+        posG = string::npos;
+    }
 	string::size_type posX;
 	/* create site-rate heterogeneity */
 	int num_rate_cats = params.num_rate_cats;

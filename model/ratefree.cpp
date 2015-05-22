@@ -8,12 +8,16 @@
 #include "phylotree.h"
 #include "ratefree.h"
 
+
 const double MIN_FREE_RATE = 0.0001;
 const double MAX_FREE_RATE = 0.9999;
 const double TOL_FREE_RATE = 0.0001;
 
-const double MIN_FREE_RATE_PROP = 0.0001;
-const double MAX_FREE_RATE_PROP = 0.9999;
+// Modified by Thomas on 13 May 2015
+//const double MIN_FREE_RATE_PROP = 0.0001;
+//const double MAX_FREE_RATE_PROP = 0.9999;
+const double MIN_FREE_RATE_PROP = 0.001;
+const double MAX_FREE_RATE_PROP = 1000;
 
 RateFree::RateFree(int ncat, double start_alpha, string params, bool sorted_rates, PhyloTree *tree) : RateGamma(ncat, start_alpha, false, tree) {
 	fix_params = false;
@@ -199,9 +203,18 @@ void RateFree::setBounds(double *lower_bound, double *upper_bound, bool *bound_c
 void RateFree::setVariables(double *variables) {
 	if (getNDim() == 0) return;
 	int i;
+
+	// Modified by Thomas on 13 May 2015
+	// --start--
+	/*
 	variables[1] = prop[0];
 	for (i = 2; i < ncategory; i++)
 		variables[i] = variables[i-1] + prop[i-1];
+	*/
+	for (i = 0; i < ncategory-1; i++)
+		variables[i+1] = prop[i] / prop[ncategory-1];
+	// --end--
+
 	for (i = 0; i < ncategory-1; i++)
 		variables[i+ncategory] = rates[i] / rates[ncategory-1];
 }
@@ -209,6 +222,10 @@ void RateFree::setVariables(double *variables) {
 void RateFree::getVariables(double *variables) {
 	if (getNDim() == 0) return;
 	int i;
+
+	// Modified by Thomas on 13 May 2015
+	// --start--
+	/*
 	double *y = new double[2*ncategory+1];
 	double *z = y+ncategory+1;
 	//  site proportions: y[0..c] <-> (0.0, variables[1..c-1], 1.0)
@@ -231,6 +248,27 @@ void RateFree::getVariables(double *variables) {
 	}
 
 	delete [] y;
+	*/
+
+	double sum = 1.0;
+	for (i = 0; i < ncategory-1; i++) {
+		sum += variables[i+1];
+	}
+	for (i = 0; i < ncategory-1; i++) {
+		prop[i] = variables[i+1] / sum;
+	}
+	prop[ncategory-1] = 1.0 / sum;
+
+	sum = prop[ncategory-1];
+	for (i = 0; i < ncategory-1; i++) {
+		sum += prop[i] * variables[i+ncategory];
+	}
+	for (i = 0; i < ncategory-1; i++) {
+		rates[i] = variables[i+ncategory] / sum;
+	}
+	rates[ncategory-1] = 1.0 / sum;
+	// --end--
+
 }
 
 /**

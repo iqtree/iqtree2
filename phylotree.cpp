@@ -531,7 +531,8 @@ void PhyloTree::initializeAllPartialPars(int &index, PhyloNode *node, PhyloNode 
 
 size_t PhyloTree::getBitsBlockSize() {
     // reserve the last entry for parsimony score
-    return (aln->num_states * aln->size() + UINT_BITS - 1) / UINT_BITS + 1;
+//    return (aln->num_states * aln->size() + UINT_BITS - 1) / UINT_BITS + 1;
+	return aln->num_states * ((aln->size() + UINT_BITS - 1) / UINT_BITS) + 1;
 }
 
 int PhyloTree::getBitsEntrySize() {
@@ -677,6 +678,8 @@ void PhyloTree::computePartialParsimony(PhyloNeighbor *dad_branch, PhyloNode *da
 
     if (node->isLeaf() && dad) {
         // external node
+    	int ambi_aa[] = {4+8, 32+64, 512+1024};
+
         setBitsAll(dad_branch->partial_pars, nstates * aln->size());
         dad_branch->partial_pars[pars_size - 1] = 0;
         for (ptn = 0; ptn < aln->size(); ptn++)
@@ -695,12 +698,20 @@ void PhyloTree::computePartialParsimony(PhyloNeighbor *dad_branch, PhyloNode *da
                     memset(bits_entry, 0, sizeof(UINT) * entry_size);
                     setBitsEntry(bits_entry, state);
                     setBitsBlock(dad_branch->partial_pars, ptn, bits_entry);
-                } else {
+                } else if (aln->seq_type == SEQ_DNA) {
                     // ambiguous character, for DNA, RNA
                     state = state - (nstates - 1);
                     memset(bits_entry, 0, sizeof(UINT) * entry_size);
                     bits_entry[0] = state;
                     setBitsBlock(dad_branch->partial_pars, ptn, bits_entry);
+                }  else if (aln->seq_type == SEQ_PROTEIN) {
+            		if (state >= 23) return;
+            		state -= 20;
+                    memset(bits_entry, 0, sizeof(UINT) * entry_size);
+                    bits_entry[0] = ambi_aa[state];
+                    setBitsBlock(dad_branch->partial_pars, ptn, bits_entry);
+                } else {
+                	assert(0);
                 }
             }
     } else {
@@ -2592,9 +2603,9 @@ void PhyloTree::computePartialLikelihoodNaive(PhyloNeighbor *dad_branch, PhyloNo
             } else if (aln->seq_type == SEQ_PROTEIN) {
                 // ambiguous character, for DNA, RNA
                 state = state - (nstates);
-                assert(state < 2);
-                int state_map[2] = {4+8,32+64};
-                for (int state2 = 0; state2 <= 6; state2++)
+                assert(state < 3);
+                int state_map[] = {4+8,32+64,512+1024};
+                for (int state2 = 0; state2 < 11; state2++)
                     if (state_map[(int)state] & (1 << state2)) {
                         for (cat = 0; cat < ncat; cat++)
                             partial_lh_site[cat * nstates + state2] = 1.0;
@@ -3223,9 +3234,11 @@ double PhyloTree::computeDist(int seq1, int seq2, double initial_dist, double &d
         return initial_dist; // MANUEL: here no d2l is return
 
     // now optimize the distance based on the model and site rate
-    AlignmentPairwise aln_pair(this, seq1, seq2);
+    AlignmentPairwise *aln_pair = new AlignmentPairwise(this, seq1, seq2);
 
-    return aln_pair.optimizeDist(initial_dist, d2l);
+    double dist = aln_pair->optimizeDist(initial_dist, d2l);
+    delete aln_pair;
+    return dist;
 }
 
 double PhyloTree::computeDist(int seq1, int seq2, double initial_dist) {
@@ -3258,7 +3271,6 @@ double PhyloTree::computeDist(double *dist_mat, double *var_mat) {
     int pos = 0;
     int num_pairs = nseqs * (nseqs - 1) / 2;
     double longest_dist = 0.0;
-    double d2l;
     int *row_id = new int[num_pairs];
     int *col_id = new int[num_pairs];
 
@@ -3280,6 +3292,7 @@ double PhyloTree::computeDist(double *dist_mat, double *var_mat) {
     for (pos = 0; pos < num_pairs; pos++) {
         int seq1 = row_id[pos];
         int seq2 = col_id[pos];
+        double d2l; // moved here for thread-safe (OpenMP)
         int sym_pos = seq1 * nseqs + seq2;
         dist_mat[sym_pos] = computeDist(seq1, seq2, dist_mat[sym_pos], d2l);
         if (params->ls_var_type == OLS)
