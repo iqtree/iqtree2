@@ -71,11 +71,11 @@ PartitionModelPlen::~PartitionModelPlen()
 {
 	}
 
-double PartitionModelPlen::optimizeParameters(bool fixed_len, bool write_info, double epsilon) {
+double PartitionModelPlen::optimizeParameters(bool fixed_len, bool write_info, double logl_epsilon) {
     PhyloSuperTreePlen *tree = (PhyloSuperTreePlen*)site_rate->getTree();
     double tree_lh = 0.0, cur_lh = 0.0;
     int ntrees = tree->size();
-    double tol = 0.02;
+    double tol = 0.001;
 
 	/*#ifdef _OPENMP
 	#pragma omp parallel for reduction(+: tree_lh)
@@ -101,11 +101,11 @@ double PartitionModelPlen::optimizeParameters(bool fixed_len, bool write_info, d
 	double begin_time = getCPUTime();
 	int i;
     for(i = 1; i < 100; i++){
-    	tol = max(tol/2, epsilon);
+//    	tol = min(tol/2, logl_epsilon);
     	cur_lh = 0.0;
     	for (int part = 0; part < ntrees; part++) {
     		// Subtree model parameters optimization
-        	tree->part_info[part].cur_score = tree->at(part)->getModelFactory()->optimizeParameters(true,false,tol);
+        	tree->part_info[part].cur_score = tree->at(part)->getModelFactory()->optimizeParameters(true, false, tol);
         	cur_lh += tree->part_info[part].cur_score ;
         	//cout <<"Partition "<<part<<" MODEL:"<<tree->at(part)->getModelName() <<endl;
 
@@ -128,12 +128,12 @@ double PartitionModelPlen::optimizeParameters(bool fixed_len, bool write_info, d
     	//cout<<"BEFORE BRANCH OPTIMIZATION"<<endl;
         //tree->printTree(cout);
     	if(!fixed_len){
-            double new_lh = tree->optimizeAllBranches(my_iter,tol);
+            double new_lh = tree->optimizeAllBranches(my_iter, logl_epsilon);
             assert(new_lh > cur_lh - 1.0);
             cur_lh = new_lh;
     	}
     	cout<<"Current log-likelihood at step "<<i<<": "<<cur_lh<<endl;
-    	if(fabs(cur_lh-tree_lh) < epsilon) {
+    	if(fabs(cur_lh-tree_lh) < logl_epsilon) {
             tree_lh = cur_lh;
     		break;
         }
@@ -209,7 +209,7 @@ double PartitionModelPlen::optimizeGeneRate(double tol)
         double gene_rate = tree->part_info[i].part_rate;
         double negative_lh, ferror;
         optimizing_part = i;
-        gene_rate = minimizeOneDimen(MIN_GENE_RATE, gene_rate, MAX_GENE_RATE, TOL_GENE_RATE, &negative_lh, &ferror);
+        gene_rate = minimizeOneDimen(MIN_GENE_RATE, gene_rate, MAX_GENE_RATE, max(TOL_GENE_RATE, tol), &negative_lh, &ferror);
     	if (gene_rate != tree->part_info[optimizing_part].part_rate) {
             tree->part_info[i].part_rate = gene_rate;
             tree->mapBranchLen(i);
