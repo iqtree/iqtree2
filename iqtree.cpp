@@ -322,7 +322,7 @@ void IQTree::createPLLPartition(Params &params, ostream &pllPartitionFileHandle)
     }
 }
 
-void IQTree::computeInitialTree(string &dist_file) {
+void IQTree::computeInitialTree(string &dist_file, LikelihoodKernel kernel) {
     double start = getCPUTime();
     string initTree;
     string out_file = params->out_prefix;
@@ -351,8 +351,13 @@ void IQTree::computeInitialTree(string &dist_file) {
     } else switch (params->start_tree) {
     case STT_PARSIMONY:
         // Create parsimony tree using IQ-Tree kernel
-        cout << "Creating initial parsimony tree by random order stepwise addition..." << endl;
+        if (kernel == LK_EIGEN)
+            cout << "Creating fast initial parsimony tree by random order stepwise addition..." << endl;
+        else
+            cout << "Creating initial parsimony tree by random order stepwise addition..." << endl;
         computeParsimonyTree(params->out_prefix, aln);
+        cout << getCPUTime() - start << " seconds" << endl;
+
 //		if (params->pll)
 //			pllReadNewick(getTreeString());
 	    wrapperFixNegativeBranch(true);

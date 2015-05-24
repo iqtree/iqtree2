@@ -298,15 +298,16 @@ Alignment::Alignment(char *filename, char *sequence_type, InputType &intype) : v
     if (getNSeq() < 3)
         outError("Alignment must have at least 3 sequences");
 
+    countConstSite();
+
     cout << "Alignment has " << getNSeq() << " sequences with " << getNSite() <<
-         " columns and " << getNPattern() << " patterns"<< endl;
+         " columns " << getNPattern() << " patterns (" << num_informative_sites << " informative sites)" << endl;
     buildSeqStates();
     checkSeqName();
     // OBSOLETE: identical sequences are handled later
 //	checkIdenticalSeq();
     //cout << "Number of character states is " << num_states << endl;
     //cout << "Number of patterns = " << size() << endl;
-    countConstSite();
     //cout << "Fraction of constant sites: " << frac_const_sites << endl;
 
 }
@@ -492,6 +493,7 @@ void Alignment::extractDataBlock(NxsCharactersBlock *data_block) {
 */
 void Alignment::computeConst(Pattern &pat) {
     pat.is_const = false;
+    pat.is_informative = false;
     // critical fix: const_char was set wrongly to num_states in some data type (binary, codon),
     // causing wrong log-likelihood computation for +I or +I+G model
     if (STATE_UNKNOWN == num_states)
@@ -504,12 +506,33 @@ void Alignment::computeConst(Pattern &pat) {
     for (j = 0; j < num_states; j++)
     	state_app[j] = 1;
 
+    // number of appearance for each state, to compute is_informative
+    int *num_app = new int[num_states];
+    memset(num_app, 0, num_states*sizeof(int));
+
     for (Pattern::iterator i = pat.begin(); i != pat.end(); i++) {
     	StateBitset this_app;
     	getAppearance(*i, this_app);
     	state_app &= this_app;
+        if (*i < num_states) { 
+            num_app[(int)(*i)]++;
+            continue;
+        }
+        if (*i == STATE_UNKNOWN) continue;
+        for (j = 0; j < num_states; j++)
+            if (this_app[j])
+                num_app[j]++;
     }
-    int count = state_app.count();
+    int count = 0;
+    for (j = 0; j < num_states; j++)
+        if (num_app[j] >= 2) {
+            count++;
+        }
+    // at least 2 states, each appearing at least twice
+    if (count >= 2) pat.is_informative = true;
+    delete [] num_app;
+    
+    count = state_app.count();
     if (count == 0) {
     	return;
     }
@@ -2151,8 +2174,13 @@ void Alignment::copyAlignment(Alignment *aln) {
 
 void Alignment::countConstSite() {
     int num_const_sites = 0;
-    for (iterator it = begin(); it != end(); it++)
-        if ((*it).is_const) num_const_sites += (*it).frequency;
+    num_informative_sites = 0;
+    for (iterator it = begin(); it != end(); it++) {
+        if ((*it).is_const) 
+            num_const_sites += (*it).frequency;
+        if (it->is_informative)
+            num_informative_sites += it->frequency;
+    }
     frac_const_sites = ((double)num_const_sites) / getNSite();
 }
 

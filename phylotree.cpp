@@ -532,7 +532,7 @@ void PhyloTree::initializeAllPartialPars(int &index, PhyloNode *node, PhyloNode 
 size_t PhyloTree::getBitsBlockSize() {
     // reserve the last entry for parsimony score
 //    return (aln->num_states * aln->size() + UINT_BITS - 1) / UINT_BITS + 1;
-	return aln->num_states * ((aln->size() + UINT_BITS - 1) / UINT_BITS) + 1;
+	return aln->num_states * ((max(aln->size(), (size_t)aln->num_informative_sites) + UINT_BITS - 1) / UINT_BITS) + 1;
 }
 
 int PhyloTree::getBitsEntrySize() {
@@ -661,6 +661,10 @@ void setBitsAll(UINT* &bit_vec, int num) {
 }
 
 void PhyloTree::computePartialParsimony(PhyloNeighbor *dad_branch, PhyloNode *dad) {
+    if (sse == LK_EIGEN) {
+        computePartialParsimonyFast(dad_branch, dad);
+        return;
+    }
     // don't recompute the parsimony
     if (dad_branch->partial_lh_computed & 2)
         return;
@@ -781,6 +785,9 @@ void PhyloTree::computePartialParsimony(PhyloNeighbor *dad_branch, PhyloNode *da
 }
 
 int PhyloTree::computeParsimonyBranch(PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst) {
+    if (sse == LK_EIGEN) 
+        return computeParsimonyBranchFast(dad_branch, dad, branch_subst);
+        
     PhyloNode *node = (PhyloNode*) dad_branch->node;
     PhyloNeighbor *node_branch = (PhyloNeighbor*) node->findNeighbor(dad);
     assert(node_branch);

@@ -17,6 +17,7 @@ Pattern::Pattern()
 {
     frequency = 0;
     is_const = false;
+    is_informative = false;
     const_char = 255;
 }
 
@@ -25,6 +26,7 @@ Pattern::Pattern(const Pattern &pat)
 {
     frequency = pat.frequency;
     is_const = pat.is_const;
+    is_informative = pat.is_informative;
     const_char = pat.const_char;
 }
 

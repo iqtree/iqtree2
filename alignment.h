@@ -557,6 +557,9 @@ public:
      */
     double frac_const_sites;
 
+    /** number of informative sites */
+    int num_informative_sites;
+    
 	/**
 	 *  map from 64 codon to non-stop codon index
 	 */
