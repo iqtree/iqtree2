@@ -781,7 +781,7 @@ void PhyloTree::computePartialParsimony(PhyloNeighbor *dad_branch, PhyloNode *da
 }
 
 int PhyloTree::computeParsimonyBranch(PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst) {
-    if (sse == LK_EIGEN) 
+    if (sse == LK_EIGEN_SSE)
         return computeParsimonyBranchFast(dad_branch, dad, branch_subst);
         
     PhyloNode *node = (PhyloNode*) dad_branch->node;
