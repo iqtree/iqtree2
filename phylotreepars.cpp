@@ -20,6 +20,8 @@ void PhyloTree::computePartialParsimonyFast(PhyloNeighbor *dad_branch, PhyloNode
     int nstates = aln->num_states;
     int site;
 
+    dad_branch->partial_lh_computed |= 2;
+
     if (node->isLeaf() && dad) {
         // external node
         int leafid = node->id;
