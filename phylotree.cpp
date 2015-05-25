@@ -661,10 +661,6 @@ void setBitsAll(UINT* &bit_vec, int num) {
 }
 
 void PhyloTree::computePartialParsimony(PhyloNeighbor *dad_branch, PhyloNode *dad) {
-    if (sse == LK_EIGEN) {
-        computePartialParsimonyFast(dad_branch, dad);
-        return;
-    }
     // don't recompute the parsimony
     if (dad_branch->partial_lh_computed & 2)
         return;

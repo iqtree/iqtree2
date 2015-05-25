@@ -329,6 +329,8 @@ void IQTree::computeInitialTree(string &dist_file, LikelihoodKernel kernel) {
     if (params->stop_condition == SC_FIXED_ITERATION && params->numNNITrees > params->min_iterations)
     	params->numNNITrees = params->min_iterations;
     int fixed_number = 0;
+    LikelihoodKernel saved_sse = sse;
+    
     if (params->user_file) {
         // start the search with user-defined tree
         cout << "Reading input tree file " << params->user_file << " ..." << endl;
@@ -355,12 +357,13 @@ void IQTree::computeInitialTree(string &dist_file, LikelihoodKernel kernel) {
             cout << "Creating fast initial parsimony tree by random order stepwise addition..." << endl;
         else
             cout << "Creating initial parsimony tree by random order stepwise addition..." << endl;
+        sse = kernel;
         computeParsimonyTree(params->out_prefix, aln);
         cout << getCPUTime() - start << " seconds" << endl;
-
 //		if (params->pll)
 //			pllReadNewick(getTreeString());
 	    wrapperFixNegativeBranch(true);
+        sse = saved_sse;
 
         break;
     case STT_PLL_PARSIMONY:
