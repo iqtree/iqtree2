@@ -362,7 +362,8 @@ void IQTree::computeInitialTree(string &dist_file, LikelihoodKernel kernel) {
             cout << "Creating initial parsimony tree by random order stepwise addition..." << endl;
 
         score = computeParsimonyTree(params->out_prefix, aln);
-        cout << getCPUTime() - start << " seconds, parsimony score: " << score << endl;
+        cout << getCPUTime() - start << " seconds, parsimony score: " << score
+        	<< " (based on " << aln->num_informative_sites << " informative sites)"<< endl;
 //		if (params->pll)
 //			pllReadNewick(getTreeString());
 	    wrapperFixNegativeBranch(true);
@@ -976,7 +977,8 @@ void IQTree::reinsertLeavesByParsimony(PhyloNodeVector &del_leaves) {
         added_node->updateNeighbor(node1, (Node*) 1);
         added_node->updateNeighbor(node2, (Node*) 2);
 
-        addTaxonMPFast(added_node, target_node, target_dad, root->neighbors[0]->node, root);
+        int score = INT_MAX;
+        addTaxonMPFast(added_node, target_node, target_dad, score, NULL, root->neighbors[0]->node, root);
         target_node->updateNeighbor(target_dad, added_node, -1.0);
         target_dad->updateNeighbor(target_node, added_node, -1.0);
         added_node->updateNeighbor((Node*) 1, target_node, -1.0);

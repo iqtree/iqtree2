@@ -867,11 +867,12 @@ public:
             @param added_node node to add
             @param target_node (OUT) one end of the best branch found
             @param target_dad (OUT) the other end of the best branch found
+            @param target_partial_pars (OUT) copy of the partial_pars corresponding to best branch
             @param node the current node
             @param dad dad of the node, used to direct the search
             @return the parsimony score of the tree
      */
-    int addTaxonMPFast(Node *added_node, Node* &target_node, Node* &target_dad, Node *node, Node *dad);
+    int addTaxonMPFast(Node *added_node, Node* &target_node, Node* &target_dad, int &best_score, UINT *target_partial_pars, Node *node, Node *dad);
 
 
     /**
