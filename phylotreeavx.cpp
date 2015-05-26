@@ -16,7 +16,7 @@
 #endif
 
 void PhyloTree::setParsimonyKernelAVX() {
-	computeParsimonyBranchPointer = &PhyloTree::computeParsimonyBranchFastSIMD<Vec8ui>;
+	computeParsimonyBranchPointer = &PhyloTree::computeParsimonyBranchFastSIMD<Vec8ui, Vec8ib>;
 }
 
 void PhyloTree::setDotProductAVX() {

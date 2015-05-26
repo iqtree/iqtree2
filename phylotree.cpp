@@ -529,15 +529,17 @@ void PhyloTree::initializeAllPartialPars(int &index, PhyloNode *node, PhyloNode 
     FOR_NEIGHBOR_IT(node, dad, it)initializeAllPartialPars(index, (PhyloNode*) (*it)->node, node);
 }
 
+#define SIMD_BITS 256
+
 size_t PhyloTree::getBitsBlockSize() {
     // reserve the last entry for parsimony score
 //    return (aln->num_states * aln->size() + UINT_BITS - 1) / UINT_BITS + 1;
-	return aln->num_states * ((max(aln->size(), (size_t)aln->num_informative_sites) + UINT_BITS - 1) / UINT_BITS) + 1;
+	return aln->num_states * ((max(aln->size(), (size_t)aln->num_informative_sites) + SIMD_BITS - 1) / UINT_BITS) + 8;
 }
 
 int PhyloTree::getBitsEntrySize() {
     // reserve the last entry for parsimony score
-    return (aln->num_states + UINT_BITS - 1) / UINT_BITS;
+    return (aln->num_states + SIMD_BITS - 1) / UINT_BITS;
 }
 
 UINT *PhyloTree::newBitsBlock() {

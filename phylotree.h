@@ -448,7 +448,7 @@ public:
     void computePartialParsimonyNaive(PhyloNeighbor *dad_branch, PhyloNode *dad);
     void computePartialParsimonyFast(PhyloNeighbor *dad_branch, PhyloNode *dad);
 
-    template<class VectorClass>
+    template<class VectorClass, class VectorClassBool>
     void computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad);
 
     /**
@@ -464,7 +464,7 @@ public:
     int computeParsimonyBranchNaive(PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst = NULL);
     int computeParsimonyBranchFast(PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst = NULL);
 
-    template<class VectorClass>
+    template<class VectorClass, class VectorClassBool>
     int computeParsimonyBranchFastSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst = NULL);
 
     void printParsimonyStates(PhyloNeighbor *dad_branch = NULL, PhyloNode *dad = NULL);

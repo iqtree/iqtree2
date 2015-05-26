@@ -1106,7 +1106,7 @@ double PhyloTree::computeLikelihoodFromBufferEigenSIMD() {
         Highly optimized Parsimony function
  ****************************************************************************/
 
-template<class VectorClass>
+template<class VectorClass, class VectorClassBool>
 void PhyloTree::computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad) {
     if (dad_branch->partial_lh_computed & 2)
         return;
@@ -1161,9 +1161,6 @@ void PhyloTree::computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, Phylo
             // add dummy states
             if (site < max_sites)
             	dad_branch->partial_pars[(site/UINT_BITS)*4] |= ~((1<<(site%UINT_BITS)) - 1);
-//            for (; site < max_sites; site++) {
-//                dad_branch->partial_pars[(site/UINT_BITS)*4] |= (1 << (site%UINT_BITS));
-//            }
     		break;
     	case SEQ_PROTEIN:
             for (ptn = 0, site = 0; ptn < nptn; ptn++) {
@@ -1197,9 +1194,6 @@ void PhyloTree::computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, Phylo
             // add dummy states
             if (site < max_sites)
             	dad_branch->partial_pars[(site/UINT_BITS)*20] |= ~((1<<(site%UINT_BITS)) - 1);
-//            for (; site < max_sites; site++) {
-//                dad_branch->partial_pars[(site/UINT_BITS)*20] |= (1 << (site%UINT_BITS));
-//            }
     		break;
     	default:
             for (ptn = 0, site = 0; ptn < nptn; ptn++) {
@@ -1226,9 +1220,6 @@ void PhyloTree::computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, Phylo
             // add dummy states
             if (site < max_sites)
             	dad_branch->partial_pars[(site/UINT_BITS)*nstates] |= ~((1<<(site%UINT_BITS)) - 1);
-//            for (; site < max_sites; site++) {
-//                dad_branch->partial_pars[(site/UINT_BITS)*nstates] |= (1 << (site%UINT_BITS));
-//            }
     		break;
     	}
 
@@ -1239,26 +1230,27 @@ void PhyloTree::computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, Phylo
         FOR_NEIGHBOR_IT(node, dad, it) {
             PhyloNeighbor* pit = (PhyloNeighbor*) (*it);
             if ((*it)->node->name != ROOT_NAME && (pit->partial_lh_computed & 2) == 0) {
-                computePartialParsimonyFast(pit, (PhyloNode*) node);
+                computePartialParsimonyFastSIMD<VectorClass, VectorClassBool>(pit, (PhyloNode*) node);
             }
             if (!left) left = pit; else right = pit;
         }
         UINT score = 0;
         int nsites = aln->num_informative_sites;
-        UINT *x = left->partial_pars;
-        UINT *y = right->partial_pars;
-        UINT *z = dad_branch->partial_pars;
+        VectorClass *x = (VectorClass*)left->partial_pars;
+        VectorClass *y = (VectorClass*)right->partial_pars;
+        VectorClass *z = (VectorClass*)dad_branch->partial_pars;
+        const int NUM_BITS = VectorClass::size() * UINT_BITS;
+		VectorClass w;
         switch (nstates) {
         case 4:
-			for (site = 0; site<nsites; site+=UINT_BITS) {
-				UINT w;
+			for (site = 0; site<nsites; site+=NUM_BITS) {
 				z[0] = x[0] & y[0];
 				z[1] = x[1] & y[1];
 				z[2] = x[2] & y[2];
 				z[3] = x[3] & y[3];
 				w = z[0] | z[1] | z[2] | z[3];
 				w = ~w;
-				score += vml_popcnt(w);
+				score += horizontal_count(VectorClassBool(w));
 				z[0] |= w & (x[0] | y[0]);
 				z[1] |= w & (x[1] | y[1]);
 				z[2] |= w & (x[2] | y[2]);
@@ -1269,15 +1261,15 @@ void PhyloTree::computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, Phylo
 			}
 			break;
         default:
-			for (site = 0; site<nsites; site+=UINT_BITS) {
+			for (site = 0; site<nsites; site+=NUM_BITS) {
 				int i;
-				UINT w = 0;
+				w = 0;
 				for (i = 0; i < nstates; i++) {
 					z[i] = x[i] & y[i];
 					w |= z[i];
 				}
 				w = ~w;
-				score += vml_popcnt(w);
+				score += horizontal_count(VectorClassBool(w));
 				for (i = 0; i < nstates; i++) {
 					z[i] |= w & (x[i] | y[i]);
 				}
@@ -1287,11 +1279,14 @@ void PhyloTree::computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, Phylo
 			}
 			break;
         }
-        *z = score + *x + *y;
+        UINT *zscore = (UINT*)z;
+        UINT *xscore = (UINT*)x;
+        UINT *yscore = (UINT*)y;
+        *zscore = score + *xscore + *yscore;
     }
 }
 
-template<class VectorClass>
+template<class VectorClass, class VectorClassBool>
 int PhyloTree::computeParsimonyBranchFastSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst) {
     PhyloNode *node = (PhyloNode*) dad_branch->node;
     PhyloNeighbor *node_branch = (PhyloNeighbor*) node->findNeighbor(dad);
@@ -1299,35 +1294,36 @@ int PhyloTree::computeParsimonyBranchFastSIMD(PhyloNeighbor *dad_branch, PhyloNo
     if (!central_partial_pars)
         initializeAllPartialPars();
     if ((dad_branch->partial_lh_computed & 2) == 0)
-        computePartialParsimonyFast(dad_branch, dad);
+        computePartialParsimonyFastSIMD<VectorClass, VectorClassBool>(dad_branch, dad);
     if ((node_branch->partial_lh_computed & 2) == 0)
-        computePartialParsimonyFast(node_branch, node);
+        computePartialParsimonyFastSIMD<VectorClass, VectorClassBool>(node_branch, node);
     int site;
     int nsites = aln->num_informative_sites;
     int nstates = aln->num_states;
 
     UINT score = 0;
-    UINT *x = dad_branch->partial_pars;
-    UINT *y = node_branch->partial_pars;
+    VectorClass *x = (VectorClass*)dad_branch->partial_pars;
+    VectorClass *y = (VectorClass*)node_branch->partial_pars;
+    const int NUM_BITS = VectorClass::size() * UINT_BITS;
     switch (nstates) {
     case 4:
-		for (site = 0; site < nsites; site+=UINT_BITS) {
-			UINT w = (x[0] & y[0]) | (x[1] & y[1]) | (x[2] & y[2]) | (x[3] & y[3]);
+		for (site = 0; site < nsites; site+=NUM_BITS) {
+			VectorClass w = (x[0] & y[0]) | (x[1] & y[1]) | (x[2] & y[2]) | (x[3] & y[3]);
 			w = ~w;
-			score += vml_popcnt(w);
+			score += horizontal_count(VectorClassBool(w));
 			x += 4;
 			y += 4;
 		}
 		break;
     default:
-		for (site = 0; site < nsites; site+=UINT_BITS) {
+		for (site = 0; site < nsites; site+=NUM_BITS) {
 			int i;
-			UINT w = x[0] & y[0];
+			VectorClass w = x[0] & y[0];
 			for (i = 1; i < nstates; i++) {
 				w |= x[i] & y[i];
 			}
 			w = ~w;
-			score += vml_popcnt(w);
+			score += horizontal_count(VectorClassBool(w));
 			x += nstates;
 			y += nstates;
 
@@ -1336,7 +1332,9 @@ int PhyloTree::computeParsimonyBranchFastSIMD(PhyloNeighbor *dad_branch, PhyloNo
     }
     if (branch_subst)
         *branch_subst = score;
-    score += *x + *y;
+    UINT *xscore = (UINT*)x;
+    UINT *yscore = (UINT*)y;
+    score += *xscore + *yscore;
 
     return score;
 }

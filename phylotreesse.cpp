@@ -42,7 +42,7 @@ void PhyloTree::setParsimonyKernel(LikelihoodKernel lk) {
 		if (instruction_set >= 7)
 			setParsimonyKernelAVX();
 		else
-			computeParsimonyBranchPointer = &PhyloTree::computeParsimonyBranchFastSIMD<Vec4ui>;
+			computeParsimonyBranchPointer = &PhyloTree::computeParsimonyBranchFastSIMD<Vec4ui, Vec4ib>;
     	break;
     default:
         computeParsimonyBranchPointer = &PhyloTree::computeParsimonyBranchNaive;
