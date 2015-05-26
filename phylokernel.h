@@ -1154,8 +1154,9 @@ void PhyloTree::computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, Phylo
         int ptn;
         int nptn = aln->size();
     	int ambi_aa[] = {2, 3, 5, 6, 9, 10}; // {4+8, 32+64, 512+1024};
-        int max_sites = ((aln->num_informative_sites+UINT_BITS-1)/UINT_BITS)*UINT_BITS;
-        UINT *x = dad_branch->partial_pars - (nstates*VCSIZE);
+//        int max_sites = ((aln->num_informative_sites+UINT_BITS-1)/UINT_BITS)*UINT_BITS;
+//        UINT *x = dad_branch->partial_pars - (nstates*VCSIZE);
+        UINT *x = dad_branch->partial_pars;
     	switch (aln->seq_type) {
     	case SEQ_DNA:
             for (ptn = 0, site = 0; ptn < nptn; ptn++) {
@@ -1165,16 +1166,20 @@ void PhyloTree::computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, Phylo
                 int freq = aln->at(ptn).frequency;
                 if (state < 4) {
                     for (int j = 0; j < freq; j++, site++) {
-                        int offset = (site % NUM_BITS);
-                        if (offset == 0) x+=(4*VCSIZE);
-                        x[state*VCSIZE + offset/UINT_BITS] |= (1 << (offset % UINT_BITS));
+                        if (site == NUM_BITS) {
+                            x += 4*VCSIZE;
+                            site = 0;
+                        }
+                        x[state*VCSIZE + site/UINT_BITS] |= (1 << (site % UINT_BITS));
                     }
                 } else if (state == aln->STATE_UNKNOWN) {
                     for (int j = 0; j < freq; j++, site++) {
-                        int offset = (site % NUM_BITS);
-                        if (offset == 0) x+=(4*VCSIZE);
-                        UINT bit1 = (1 << (offset%UINT_BITS));
-                        UINT *p = x+(offset/UINT_BITS);
+                        if (site == NUM_BITS) {
+                            x += 4*VCSIZE;
+                            site = 0;
+                        }
+                        UINT bit1 = (1 << (site%UINT_BITS));
+                        UINT *p = x+(site/UINT_BITS);
                         p[0] |= bit1;
                         p[VCSIZE] |= bit1;
                         p[2*VCSIZE] |= bit1;
@@ -1183,11 +1188,13 @@ void PhyloTree::computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, Phylo
                 } else {
                 	state -= 3;
                     for (int j = 0; j < freq; j++, site++) {
-                        int offset = (site % NUM_BITS);
-                        if (offset == 0) x+=(4*VCSIZE);
-                        UINT *p = x + ((offset/UINT_BITS));
+                        if (site == NUM_BITS) {
+                            x += 4*VCSIZE;
+                            site = 0;
+                        }
+                        UINT *p = x + ((site/UINT_BITS));
                         
-                        UINT bit1 = (1 << (offset%UINT_BITS));
+                        UINT bit1 = (1 << (site%UINT_BITS));
                         for (int i = 0; i < 4; i++)
                             if (state & (1<<i))
                                 p[i*VCSIZE] |= bit1;
@@ -1203,16 +1210,20 @@ void PhyloTree::computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, Phylo
                 int freq = aln->at(ptn).frequency;
                 if (state < 20) {
                     for (int j = 0; j < freq; j++, site++) {
-                        int offset = (site % NUM_BITS);
-                        if (offset == 0) x+=(20*VCSIZE);
-                        x[state*VCSIZE + offset/UINT_BITS] |= (1 << (offset % UINT_BITS));
+                        if (site == NUM_BITS) {
+                            x += 20*VCSIZE;
+                            site = 0;
+                        }
+                        x[state*VCSIZE + site/UINT_BITS] |= (1 << (site % UINT_BITS));
                     }
                 } else if (state == aln->STATE_UNKNOWN) {
                     for (int j = 0; j < freq; j++, site++) {
-                        int offset = (site % NUM_BITS);
-                        if (offset == 0) x+=(20*VCSIZE);
-                        UINT bit1 = (1 << (offset%UINT_BITS));
-                        UINT *p = x+(offset/UINT_BITS);
+                        if (site == NUM_BITS) {
+                            x += 20*VCSIZE;
+                            site = 0;
+                        }
+                        UINT bit1 = (1 << (site%UINT_BITS));
+                        UINT *p = x+(site/UINT_BITS);
                         for (int i = 0; i < 20; i++)
                             p[i*VCSIZE] |= bit1;
                     }
@@ -1220,10 +1231,12 @@ void PhyloTree::computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, Phylo
                 	assert(state < 23);
             		state = (state-20)*2;
                     for (int j = 0; j < freq; j++, site++) {
-                        int offset = (site % NUM_BITS);
-                        if (offset == 0) x+=(20*VCSIZE);
-                        UINT *p = x + ((offset/UINT_BITS));
-                        UINT bit1 = (1 << (offset%UINT_BITS));
+                        if (site == NUM_BITS) {
+                            x += 20*VCSIZE;
+                            site = 0;
+                        }
+                        UINT *p = x + ((site/UINT_BITS));
+                        UINT bit1 = (1 << (site%UINT_BITS));
 
                         p[ambi_aa[state]*VCSIZE] |= bit1;
                         p[ambi_aa[state+1]*VCSIZE] |= bit1;
@@ -1239,16 +1252,20 @@ void PhyloTree::computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, Phylo
                 int freq = aln->at(ptn).frequency;
                 if (state < nstates) {
                     for (int j = 0; j < freq; j++, site++) {
-                        int offset = (site % NUM_BITS);
-                        if (offset == 0) x+=(nstates*VCSIZE);
-                        x[state*VCSIZE + offset/UINT_BITS] |= (1 << (offset % UINT_BITS));
+                        if (site == NUM_BITS) {
+                            x += nstates*VCSIZE;
+                            site = 0;
+                        }
+                        x[state*VCSIZE + site/UINT_BITS] |= (1 << (site % UINT_BITS));
                     }
                 } else if (state == aln->STATE_UNKNOWN) {
                     for (int j = 0; j < freq; j++, site++) {
-                        int offset = (site % NUM_BITS);
-                        if (offset == 0) x+=(nstates*VCSIZE);
-                        UINT bit1 = (1 << (offset%UINT_BITS));
-                        UINT *p = x+(offset/UINT_BITS);
+                        if (site == NUM_BITS) {
+                            x += nstates*VCSIZE;
+                            site = 0;
+                        }
+                        UINT bit1 = (1 << (site%UINT_BITS));
+                        UINT *p = x+(site/UINT_BITS);
                         for (int i = 0; i < nstates; i++)
                             p[i*VCSIZE] |= bit1;
                     }
@@ -1258,15 +1275,13 @@ void PhyloTree::computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, Phylo
             }
     		break;
     	}
-        assert(site == aln->num_informative_sites);
         // add dummy states
-        if (site < max_sites) {
-            int offset = (site % NUM_BITS);
-            x += offset/UINT_BITS;
-        	*x |= ~((1<<(offset%UINT_BITS)) - 1);
+        if (site > 0) {
+            x += site/UINT_BITS;
+        	*x |= ~((1<<(site%UINT_BITS)) - 1);
             x++;
-            for (; max_sites % NUM_BITS != 0; max_sites += UINT_BITS, x++)
-                *x = -1;
+            int max_sites = ((site+UINT_BITS-1)/UINT_BITS);
+            memset(x, 255, (VCSIZE - max_sites)*sizeof(UINT));
         }
     } else {
         // internal node
@@ -1284,48 +1299,24 @@ void PhyloTree::computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, Phylo
         VectorClass *x = (VectorClass*)left->partial_pars;
         VectorClass *y = (VectorClass*)right->partial_pars;
         VectorClass *z = (VectorClass*)dad_branch->partial_pars;
-//        VectorClass *vc_x = new VectorClass[nstates];
-//        VectorClass *vc_y = new VectorClass[nstates];
-//        VectorClass *vc_z = new VectorClass[nstates];
 		VectorClass w;
         
         switch (nstates) {
         case 4:
 			for (site = 0; site<nsites; site+=NUM_BITS) {
-//                vc_x[0].load_a(x);
-//                vc_y[0].load_a(y);
-//                vc_x[1].load_a(x+VCSIZE);
-//                vc_y[1].load_a(y+VCSIZE);
-//                vc_x[2].load_a(x+2*VCSIZE);
-//                vc_y[2].load_a(y+2*VCSIZE);
-//                vc_x[3].load_a(x+3*VCSIZE);
-//                vc_y[3].load_a(y+3*VCSIZE);
                 
-//				vc_z[0] = vc_x[0] & vc_y[0];
-//				vc_z[1] = vc_x[1] & vc_y[1];
-//				vc_z[2] = vc_x[2] & vc_y[2];
-//				vc_z[3] = vc_x[3] & vc_y[3];
-                
-//				w = vc_z[0] | vc_z[1] | vc_z[2] | vc_z[3];
                 z[0] = x[0] & y[0];
                 z[1] = x[1] & y[1];
                 z[2] = x[2] & y[2];
                 z[3] = x[3] & y[3];
                 w = z[0] | z[1] | z[2] | z[3];
 				w = ~w;
-//				(vc_z[0] | (w & (vc_x[0] | vc_y[0]))).store_a(z);
-//				(vc_z[1] | (w & (vc_x[1] | vc_y[1]))).store_a(z+VCSIZE);
-//				(vc_z[2] | (w & (vc_x[2] | vc_y[2]))).store_a(z+2*VCSIZE);
-//				(vc_z[3] | (w & (vc_x[3] | vc_y[3]))).store_a(z+3*VCSIZE);
                 z[0] |= w & (x[0] | y[0]);
                 z[1] |= w & (x[1] | y[1]);
                 z[2] |= w & (x[2] | y[2]);
                 z[3] |= w & (x[3] | y[3]);
 				horizontal_popcount(w);
                 score += w;
-//				x += 4 * VCSIZE;
-//				y += 4 * VCSIZE;
-//				z += 4 * VCSIZE;
                 x += 4;
                 y += 4;
                 z += 4;
@@ -1337,21 +1328,15 @@ void PhyloTree::computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, Phylo
 				int i;
 				w = 0;
 				for (i = 0; i < nstates; i++) {
-//					vc_z[i] = vc_x[i] & vc_y[i];
-//					w |= vc_z[i];
                     z[i] = x[i] & y[i];
                     w |= z[i];
 				}
 				w = ~w;
 				for (i = 0; i < nstates; i++) {
-//					vc_z[i] |= w & (vc_x[i] | vc_y[i]);
                     z[i] |= w & (x[i] | y[i]);
 				}
 				horizontal_popcount(w);
                 score += w;
-//				x += nstates*VCSIZE;
-//				y += nstates*VCSIZE;
-//				z += nstates*VCSIZE;
                 x += nstates;
                 y += nstates;
                 z += nstates;
@@ -1363,9 +1348,6 @@ void PhyloTree::computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, Phylo
         UINT *xscore = (UINT*)x;
         UINT *yscore = (UINT*)y;
         *zscore = sum_score + *xscore + *yscore;
-//        delete [] vc_z;
-//        delete [] vc_y;
-//        delete [] vc_x;
     }
 }
 
@@ -1387,31 +1369,17 @@ int PhyloTree::computeParsimonyBranchFastSIMD(PhyloNeighbor *dad_branch, PhyloNo
     VectorClass score = 0;
     VectorClass *x = (VectorClass*)dad_branch->partial_pars;
     VectorClass *y = (VectorClass*)node_branch->partial_pars;
-//    VectorClass *vc_x = new VectorClass[nstates];
-//    VectorClass *vc_y = new VectorClass[nstates];
     VectorClass w;
-//    const int VCSIZE = VectorClass::size();
 
     const int NUM_BITS = VectorClass::size() * UINT_BITS;
     switch (nstates) {
     case 4:
 		for (site = 0; site < nsites; site+=NUM_BITS) {
-//            vc_x[0].load_a(x);
-//            vc_y[0].load_a(y);
-//            vc_x[1].load_a(x+VCSIZE);
-//            vc_y[1].load_a(y+VCSIZE);
-//            vc_x[2].load_a(x+2*VCSIZE);
-//            vc_y[2].load_a(y+2*VCSIZE);
-//            vc_x[3].load_a(x+3*VCSIZE);
-//            vc_y[3].load_a(y+3*VCSIZE);
         
-//			w = (vc_x[0] & vc_y[0]) | (vc_x[1] & vc_y[1]) | (vc_x[2] & vc_y[2]) | (vc_x[3] & vc_y[3]);
             w = (x[0] & y[0]) | (x[1] & y[1]) | (x[2] & y[2]) | (x[3] & y[3]);
 			w = ~w;
 			horizontal_popcount(w);
             score += w;
-//			x += 4*VCSIZE;
-//			y += 4*VCSIZE;
             x += 4;
             y += 4;
 		}
@@ -1419,16 +1387,12 @@ int PhyloTree::computeParsimonyBranchFastSIMD(PhyloNeighbor *dad_branch, PhyloNo
     default:
 		for (site = 0; site < nsites; site+=NUM_BITS) {
             w = x[0] & y[0];
-//			VectorClass w = vc_x[0] & vc_y[0];
 			for (int i = 1; i < nstates; i++) {
-//				w |= vc_x[i] & vc_y[i];
                 w |= x[i] & y[i];
 			}
 			w = ~w;
 			horizontal_popcount(w);
             score += w;
-//			x += nstates*VCSIZE;
-//			y += nstates*VCSIZE;
             x += nstates;
             y += nstates;
 		}
@@ -1440,8 +1404,6 @@ int PhyloTree::computeParsimonyBranchFastSIMD(PhyloNeighbor *dad_branch, PhyloNo
     UINT *xscore = (UINT*)x;
     UINT *yscore = (UINT*)y;
     sum_score += *xscore + *yscore;
-//    delete [] vc_y;
-//    delete [] vc_x;
 
     return sum_score;
 }
