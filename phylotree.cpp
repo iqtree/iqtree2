@@ -543,7 +543,7 @@ int PhyloTree::getBitsEntrySize() {
 }
 
 UINT *PhyloTree::newBitsBlock() {
-    return new UINT[getBitsBlockSize()];
+    return aligned_alloc<UINT>(getBitsBlockSize());
 }
 
 void PhyloTree::getBitsBlock(UINT *bit_vec, int index, UINT* &bits_entry) {
@@ -782,6 +782,10 @@ void PhyloTree::computePartialParsimonyNaive(PhyloNeighbor *dad_branch, PhyloNod
     delete[] bits_entry;
 }
 
+int PhyloTree::computeParsimonyBranch(PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst) {
+    return (this->*computeParsimonyBranchPointer)(dad_branch, dad, branch_subst);
+}
+
 int PhyloTree::computeParsimonyBranchNaive(PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst) {
         
     PhyloNode *node = (PhyloNode*) dad_branch->node;
@@ -825,13 +829,13 @@ int PhyloTree::computeParsimonyBranchNaive(PhyloNeighbor *dad_branch, PhyloNode 
         *branch_subst = tree_pars;
     tree_pars += node_branch->partial_pars[pars_size - 1] + dad_branch->partial_pars[pars_size - 1];
     delete[] bits_entry;
-    delete[] partial_pars;
+    aligned_free(partial_pars);
     return tree_pars;
 }
 
 int PhyloTree::computeParsimony() {
 	int branch_subst;
-    return (this->*computeParsimonyBranchPointer)((PhyloNeighbor*) root->neighbors[0], (PhyloNode*) root, &branch_subst);
+    return computeParsimonyBranch((PhyloNeighbor*) root->neighbors[0], (PhyloNode*) root, &branch_subst);
 }
 
 void PhyloTree::printParsimonyStates(PhyloNeighbor *dad_branch, PhyloNode *dad) {
@@ -1014,7 +1018,7 @@ void PhyloTree::searchNNI() {
 // pointer object to it:
 //ptrdiff_t (*p_myrandom)(ptrdiff_t) = myrandom;
 
-void PhyloTree::computeParsimonyTree(const char *out_prefix, Alignment *alignment) {
+int PhyloTree::computeParsimonyTree(const char *out_prefix, Alignment *alignment) {
 //    cout << "Computing parsimony tree by random stepwise addition..." << endl;
 //    double start_time = getCPUTime();
     aln = alignment;
@@ -1027,6 +1031,7 @@ void PhyloTree::computeParsimonyTree(const char *out_prefix, Alignment *alignmen
 
     IntVector taxon_order;
     taxon_order.resize(size);
+    int score;
     for (int i = 0; i < size; i++)
         taxon_order[i] = i;
     // randomize the addition order
@@ -1042,6 +1047,9 @@ void PhyloTree::computeParsimonyTree(const char *out_prefix, Alignment *alignmen
         new_taxon->addNeighbor(root, -1.0);
     }
     root = findNodeID(taxon_order[0]);
+
+    if (isSuperTree())
+        ((PhyloSuperTree*)this)->mapTrees();
 
     // stepwise adding the next taxon
     for (leafNum = 3; leafNum < size; leafNum++) {
@@ -1062,9 +1070,9 @@ void PhyloTree::computeParsimonyTree(const char *out_prefix, Alignment *alignmen
 
         Node *target_node = NULL;
         Node *target_dad = NULL;
-        int score = addTaxonMPFast(added_node, target_node, target_dad, root->neighbors[0]->node, root);
-        delete[] ((PhyloNeighbor*) new_taxon->findNeighbor(added_node))->partial_pars;
-        delete[] ((PhyloNeighbor*) added_node->findNeighbor(new_taxon))->partial_pars;
+        score = addTaxonMPFast(added_node, target_node, target_dad, root->neighbors[0]->node, root);
+        aligned_free(((PhyloNeighbor*) new_taxon->findNeighbor(added_node))->partial_pars);
+        aligned_free(((PhyloNeighbor*) added_node->findNeighbor(new_taxon))->partial_pars);
         if (verbose_mode >= VB_MAX)
             cout << ", score = " << score << endl;
         // now insert the new node in the middle of the branch node-dad
@@ -1092,6 +1100,7 @@ void PhyloTree::computeParsimonyTree(const char *out_prefix, Alignment *alignmen
 		file_name += ".parstree";
 		printTree(file_name.c_str(), WT_NEWLINE);
     }
+    return score;
 }
 
 int PhyloTree::addTaxonMPFast(Node* added_node, Node*& target_node, Node*& target_dad, Node* node, Node* dad) {
@@ -1128,7 +1137,7 @@ int PhyloTree::addTaxonMPFast(Node* added_node, Node*& target_node, Node*& targe
     //clearAllPartialLh();
     ((PhyloNeighbor*) added_taxon->findNeighbor(added_node))->clearPartialLh();
 	int branch_subst;
-    int best_score = (this->*computeParsimonyBranchPointer)((PhyloNeighbor*) added_node->neighbors[0], (PhyloNode*) added_node, &branch_subst);
+    int best_score = computeParsimonyBranch((PhyloNeighbor*) added_node->neighbors[0], (PhyloNode*) added_node, &branch_subst);
     target_node = node;
     target_dad = dad;
     // remove the added node
@@ -3440,7 +3449,7 @@ int PhyloTree::fixNegativeBranch(bool force, Node *node, Node *dad) {
     FOR_NEIGHBOR_IT(node, dad, it){
     if ((*it)->length < 0.0 || force) { // negative branch length detected
         int branch_subst;
-        int pars_score = (this->*computeParsimonyBranchPointer)((PhyloNeighbor*) (*it), (PhyloNode*) node, &branch_subst);
+        int pars_score = computeParsimonyBranch((PhyloNeighbor*) (*it), (PhyloNode*) node, &branch_subst);
         // first compute the observed parsimony distance
         double branch_length = (branch_subst > 0) ? ((double) branch_subst / getAlnNSite()) : (1.0 / getAlnNSite());
         // now correct Juke-Cantor formula

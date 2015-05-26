@@ -278,7 +278,7 @@ IQTree::~IQTree() {
 void IQTree::createPLLPartition(Params &params, ostream &pllPartitionFileHandle) {
     if (isSuperTree()) {
         PhyloSuperTree *siqtree = (PhyloSuperTree*) this;
-        // additional check for stupid PLL hard limit
+        // additional check for PLL hard limit
         if (siqtree->size() > PLL_NUM_BRANCHES)
         	outError("Number of partitions exceeds PLL limit, please increase PLL_NUM_BRANCHES constant in pll.h");
         int i = 0;
@@ -326,9 +326,11 @@ void IQTree::computeInitialTree(string &dist_file, LikelihoodKernel kernel) {
     double start = getCPUTime();
     string initTree;
     string out_file = params->out_prefix;
+    int score;
     if (params->stop_condition == SC_FIXED_ITERATION && params->numNNITrees > params->min_iterations)
     	params->numNNITrees = params->min_iterations;
     int fixed_number = 0;
+    setParsimonyKernel(kernel);
     
     if (params->user_file) {
         // start the search with user-defined tree
@@ -359,9 +361,8 @@ void IQTree::computeInitialTree(string &dist_file, LikelihoodKernel kernel) {
         else
             cout << "Creating initial parsimony tree by random order stepwise addition..." << endl;
 
-        setParsimonyKernel(kernel);
-        computeParsimonyTree(params->out_prefix, aln);
-        cout << getCPUTime() - start << " seconds" << endl;
+        score = computeParsimonyTree(params->out_prefix, aln);
+        cout << getCPUTime() - start << " seconds, parsimony score: " << score << endl;
 //		if (params->pll)
 //			pllReadNewick(getTreeString());
 	    wrapperFixNegativeBranch(true);

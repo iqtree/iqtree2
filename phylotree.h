@@ -448,7 +448,7 @@ public:
     void computePartialParsimonyNaive(PhyloNeighbor *dad_branch, PhyloNode *dad);
     void computePartialParsimonyFast(PhyloNeighbor *dad_branch, PhyloNode *dad);
 
-    template<class VectorClass, class VectorClassBool>
+    template<class VectorClass>
     void computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad);
 
     /**
@@ -461,10 +461,12 @@ public:
     typedef int (PhyloTree::*ComputeParsimonyBranchType)(PhyloNeighbor *, PhyloNode *, int *);
     ComputeParsimonyBranchType computeParsimonyBranchPointer;
 
+    virtual int computeParsimonyBranch(PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst = NULL);
+
     int computeParsimonyBranchNaive(PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst = NULL);
     int computeParsimonyBranchFast(PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst = NULL);
 
-    template<class VectorClass, class VectorClassBool>
+    template<class VectorClass>
     int computeParsimonyBranchFastSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst = NULL);
 
     void printParsimonyStates(PhyloNeighbor *dad_branch = NULL, PhyloNode *dad = NULL);
@@ -876,8 +878,9 @@ public:
      * FAST VERSION: compute parsimony tree by step-wise addition
      * @param out_prefix prefix for .parstree file
      * @param alignment input alignment
+     * @return parsimony score
      */
-    void computeParsimonyTree(const char *out_prefix, Alignment *alignment);
+    int computeParsimonyTree(const char *out_prefix, Alignment *alignment);
 
     /**
             SLOW VERSION: grow the tree by step-wise addition

@@ -16,7 +16,7 @@
 #endif
 
 void PhyloTree::setParsimonyKernelAVX() {
-	computeParsimonyBranchPointer = &PhyloTree::computeParsimonyBranchFastSIMD<Vec8ui, Vec8ib>;
+	computeParsimonyBranchPointer = &PhyloTree::computeParsimonyBranchFastSIMD<Vec8ui>;
 }
 
 void PhyloTree::setDotProductAVX() {
@@ -29,6 +29,7 @@ void PhyloTree::setDotProductAVX() {
 }
 
 void PhyloTree::setLikelihoodKernelAVX() {
+    setParsimonyKernelAVX();
 	switch(aln->num_states) {
 	case 4:
 		if (model_factory && model_factory->model->isMixture()) {
