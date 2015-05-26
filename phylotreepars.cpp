@@ -8,6 +8,7 @@
  */
 
 #include "phylotree.h"
+#include "vectorclass/vectorclass.h"
 
 /***********************************************************/
 /****** optimized version of parsimony kernel **************/
@@ -149,7 +150,7 @@ void PhyloTree::computePartialParsimonyFast(PhyloNeighbor *dad_branch, PhyloNode
             }
             if (!left) left = pit; else right = pit;
         }
-        int score = 0;
+        UINT score = 0;
         int nsites = aln->num_informative_sites;
         UINT *x = left->partial_pars;
         UINT *y = right->partial_pars;
@@ -157,7 +158,6 @@ void PhyloTree::computePartialParsimonyFast(PhyloNeighbor *dad_branch, PhyloNode
         switch (nstates) {
         case 4:
 			for (site = 0; site<nsites; site+=UINT_BITS) {
-				int i;
 				UINT w;
 				z[0] = x[0] & y[0];
 				z[1] = x[1] & y[1];
@@ -165,7 +165,7 @@ void PhyloTree::computePartialParsimonyFast(PhyloNeighbor *dad_branch, PhyloNode
 				z[3] = x[3] & y[3];
 				w = z[0] | z[1] | z[2] | z[3];
 				w = ~w;
-				score += __builtin_popcount(w);
+				score += vml_popcnt(w);
 				z[0] |= w & (x[0] | y[0]);
 				z[1] |= w & (x[1] | y[1]);
 				z[2] |= w & (x[2] | y[2]);
@@ -184,7 +184,7 @@ void PhyloTree::computePartialParsimonyFast(PhyloNeighbor *dad_branch, PhyloNode
 					w |= z[i];
 				}
 				w = ~w;
-				score += __builtin_popcount(w);
+				score += vml_popcnt(w);
 				for (i = 0; i < nstates; i++) {
 					z[i] |= w & (x[i] | y[i]);
 				}
@@ -213,7 +213,7 @@ int PhyloTree::computeParsimonyBranchFast(PhyloNeighbor *dad_branch, PhyloNode *
     int nsites = aln->num_informative_sites;
     int nstates = aln->num_states;
 
-    int score = 0;
+    UINT score = 0;
     UINT *x = dad_branch->partial_pars;
     UINT *y = node_branch->partial_pars;
     switch (nstates) {
@@ -221,7 +221,7 @@ int PhyloTree::computeParsimonyBranchFast(PhyloNeighbor *dad_branch, PhyloNode *
 		for (site = 0; site < nsites; site+=UINT_BITS) {
 			UINT w = (x[0] & y[0]) | (x[1] & y[1]) | (x[2] & y[2]) | (x[3] & y[3]);
 			w = ~w;
-			score += __builtin_popcount(w);
+			score += vml_popcnt(w);
 			x += 4;
 			y += 4;
 		}
@@ -234,7 +234,7 @@ int PhyloTree::computeParsimonyBranchFast(PhyloNeighbor *dad_branch, PhyloNode *
 				w |= x[i] & y[i];
 			}
 			w = ~w;
-			score += __builtin_popcount(w);
+			score += vml_popcnt(w);
 			x += nstates;
 			y += nstates;
 

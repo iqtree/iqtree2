@@ -29,6 +29,27 @@
 
 //#define USING_SSE
 
+void PhyloTree::setParsimonyKernel(LikelihoodKernel lk) {
+    // set parsimony kernel
+    switch (lk) {
+    case LK_SSE:
+        computeParsimonyBranchPointer = &PhyloTree::computeParsimonyBranchNaive;
+    	break;
+    case LK_EIGEN:
+        computeParsimonyBranchPointer = &PhyloTree::computeParsimonyBranchFast;
+    	break;
+    case LK_EIGEN_SSE:
+		if (instruction_set >= 7)
+			setParsimonyKernelAVX();
+		else
+			computeParsimonyBranchPointer = &PhyloTree::computeParsimonyBranchFastSIMD<Vec4ui>;
+    	break;
+    default:
+        computeParsimonyBranchPointer = &PhyloTree::computeParsimonyBranchNaive;
+    	break;
+    }
+}
+
 void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk) {
 	if (instruction_set >= 7) {
 		setDotProductAVX();
@@ -49,9 +70,9 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk) {
         return;
     }
 
-        
 //    cout << "Likelihood kernel: ";
         
+    // set likelihood kernel
 	switch(aln->num_states) {
 	case 4:
 		switch(sse) {
@@ -311,7 +332,7 @@ void PhyloTree::computePartialLikelihood(PhyloNeighbor *dad_branch, PhyloNode *d
 }
 
 double PhyloTree::computeLikelihoodBranch(PhyloNeighbor *dad_branch, PhyloNode *dad) {
-	return (*this.*computeLikelihoodBranchPointer)(dad_branch, dad);
+	return (this->*computeLikelihoodBranchPointer)(dad_branch, dad);
 
 }
 

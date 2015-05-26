@@ -660,7 +660,7 @@ void setBitsAll(UINT* &bit_vec, int num) {
         bit_vec[size] = (1 << num) - 1;
 }
 
-void PhyloTree::computePartialParsimony(PhyloNeighbor *dad_branch, PhyloNode *dad) {
+void PhyloTree::computePartialParsimonyNaive(PhyloNeighbor *dad_branch, PhyloNode *dad) {
     // don't recompute the parsimony
     if (dad_branch->partial_lh_computed & 2)
         return;
@@ -722,7 +722,7 @@ void PhyloTree::computePartialParsimony(PhyloNeighbor *dad_branch, PhyloNode *da
         //UINT *partial_pars_child1 = NULL, *partial_pars_child2 = NULL;
         // take the intersection of two child states (with &= bit operation)
         FOR_NEIGHBOR_IT(node, dad, it)if ((*it)->node->name != ROOT_NAME) {
-            computePartialParsimony((PhyloNeighbor*) (*it), (PhyloNode*) node);
+            computePartialParsimonyNaive((PhyloNeighbor*) (*it), (PhyloNode*) node);
             /*
              if (!partial_pars_child1)
              partial_pars_child1 = ((PhyloNeighbor*) (*it))->partial_pars;
@@ -780,9 +780,7 @@ void PhyloTree::computePartialParsimony(PhyloNeighbor *dad_branch, PhyloNode *da
     delete[] bits_entry;
 }
 
-int PhyloTree::computeParsimonyBranch(PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst) {
-    if (sse == LK_EIGEN_SSE)
-        return computeParsimonyBranchFast(dad_branch, dad, branch_subst);
+int PhyloTree::computeParsimonyBranchNaive(PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst) {
         
     PhyloNode *node = (PhyloNode*) dad_branch->node;
     PhyloNeighbor *node_branch = (PhyloNeighbor*) node->findNeighbor(dad);
@@ -800,9 +798,9 @@ int PhyloTree::computeParsimonyBranch(PhyloNeighbor *dad_branch, PhyloNode *dad,
         //cout << "swapped\n";
     }
     if ((dad_branch->partial_lh_computed & 2) == 0)
-        computePartialParsimony(dad_branch, dad);
+        computePartialParsimonyNaive(dad_branch, dad);
     if ((node_branch->partial_lh_computed & 2) == 0)
-        computePartialParsimony(node_branch, node);
+        computePartialParsimonyNaive(node_branch, node);
     // now combine likelihood at the branch
 
     int pars_size = getBitsBlockSize();
@@ -830,7 +828,8 @@ int PhyloTree::computeParsimonyBranch(PhyloNeighbor *dad_branch, PhyloNode *dad,
 }
 
 int PhyloTree::computeParsimony() {
-    return computeParsimonyBranch((PhyloNeighbor*) root->neighbors[0], (PhyloNode*) root);
+	int branch_subst;
+    return (this->*computeParsimonyBranchPointer)((PhyloNeighbor*) root->neighbors[0], (PhyloNode*) root, &branch_subst);
 }
 
 void PhyloTree::printParsimonyStates(PhyloNeighbor *dad_branch, PhyloNode *dad) {
@@ -1126,7 +1125,8 @@ int PhyloTree::addTaxonMPFast(Node* added_node, Node*& target_node, Node*& targe
     // compute the likelihood
     //clearAllPartialLh();
     ((PhyloNeighbor*) added_taxon->findNeighbor(added_node))->clearPartialLh();
-    int best_score = computeParsimonyBranch((PhyloNeighbor*) added_node->neighbors[0], (PhyloNode*) added_node);
+	int branch_subst;
+    int best_score = (this->*computeParsimonyBranchPointer)((PhyloNeighbor*) added_node->neighbors[0], (PhyloNode*) added_node, &branch_subst);
     target_node = node;
     target_dad = dad;
     // remove the added node
@@ -3438,7 +3438,7 @@ int PhyloTree::fixNegativeBranch(bool force, Node *node, Node *dad) {
     FOR_NEIGHBOR_IT(node, dad, it){
     if ((*it)->length < 0.0 || force) { // negative branch length detected
         int branch_subst;
-        int pars_score = computeParsimonyBranch((PhyloNeighbor*) (*it), (PhyloNode*) node, &branch_subst);
+        int pars_score = (this->*computeParsimonyBranchPointer)((PhyloNeighbor*) (*it), (PhyloNode*) node, &branch_subst);
         // first compute the observed parsimony distance
         double branch_length = (branch_subst > 0) ? ((double) branch_subst / getAlnNSite()) : (1.0 / getAlnNSite());
         // now correct Juke-Cantor formula

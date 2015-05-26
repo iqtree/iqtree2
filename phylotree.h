@@ -445,8 +445,11 @@ public:
             @param dad_branch the branch leading to the subtree
             @param dad its dad, used to direct the tranversal
      */
-    void computePartialParsimony(PhyloNeighbor *dad_branch, PhyloNode *dad);
+    void computePartialParsimonyNaive(PhyloNeighbor *dad_branch, PhyloNode *dad);
     void computePartialParsimonyFast(PhyloNeighbor *dad_branch, PhyloNode *dad);
+
+    template<class VectorClass>
+    void computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad);
 
     /**
             compute tree parsimony score on a branch
@@ -455,11 +458,19 @@ public:
             @param branch_subst (OUT) if not NULL, the number of substitutions on this branch
             @return parsimony score of the tree
      */
-    int computeParsimonyBranch(PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst = NULL);
+    typedef int (PhyloTree::*ComputeParsimonyBranchType)(PhyloNeighbor *, PhyloNode *, int *);
+    ComputeParsimonyBranchType computeParsimonyBranchPointer;
+
+    int computeParsimonyBranchNaive(PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst = NULL);
     int computeParsimonyBranchFast(PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst = NULL);
+
+    template<class VectorClass>
+    int computeParsimonyBranchFastSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst = NULL);
 
     void printParsimonyStates(PhyloNeighbor *dad_branch = NULL, PhyloNode *dad = NULL);
 
+    virtual void setParsimonyKernel(LikelihoodKernel lk);
+    virtual void setParsimonyKernelAVX();
 
     /**
             SLOW VERSION: compute the parsimony score of the tree, given the alignment
