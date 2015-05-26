@@ -1106,18 +1106,32 @@ double PhyloTree::computeLikelihoodFromBufferEigenSIMD() {
         Highly optimized Parsimony function
  ****************************************************************************/
 
-inline UINT horizontal_popcount(Vec4ui &x) {
-    UINT vec[4];
-    x.store(vec);
-	return vml_popcnt(vec[0])+vml_popcnt(vec[1])+vml_popcnt(vec[2])+vml_popcnt(vec[3]);
+inline void horizontal_popcount(Vec4ui &x) {
+    PLL_ALIGN_BEGIN UINT vec[4] PLL_ALIGN_END;
+    x.store_a(vec);
+    vec[0] = vml_popcnt(vec[0]);
+    vec[1] = vml_popcnt(vec[1]);
+    vec[2] = vml_popcnt(vec[2]);
+    vec[3] = vml_popcnt(vec[3]);
+    x.load_a(vec);
+//	return vml_popcnt(vec[0])+vml_popcnt(vec[1])+vml_popcnt(vec[2])+vml_popcnt(vec[3]);
 }
 
-inline UINT horizontal_popcount(Vec8ui &x) {
-    UINT vec[8];
-    x.store(vec);
-	return
-		vml_popcnt(vec[0])+vml_popcnt(vec[1])+vml_popcnt(vec[2])+vml_popcnt(vec[3])+
-		vml_popcnt(vec[4])+vml_popcnt(vec[5])+vml_popcnt(vec[6])+vml_popcnt(vec[7]);
+inline void horizontal_popcount(Vec8ui &x) {
+    PLL_ALIGN_BEGIN UINT vec[8] PLL_ALIGN_END;
+    x.store_a(vec);
+    vec[0] = vml_popcnt(vec[0]);
+    vec[1] = vml_popcnt(vec[1]);
+    vec[2] = vml_popcnt(vec[2]);
+    vec[3] = vml_popcnt(vec[3]);
+    vec[4] = vml_popcnt(vec[4]);
+    vec[5] = vml_popcnt(vec[5]);
+    vec[6] = vml_popcnt(vec[6]);
+    vec[7] = vml_popcnt(vec[7]);
+    x.load_a(vec);
+//	return
+//		vml_popcnt(vec[0])+vml_popcnt(vec[1])+vml_popcnt(vec[2])+vml_popcnt(vec[3])+
+//		vml_popcnt(vec[4])+vml_popcnt(vec[5])+vml_popcnt(vec[6])+vml_popcnt(vec[7]);
 }
 
 template<class VectorClass>
@@ -1254,43 +1268,56 @@ void PhyloTree::computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, Phylo
             }
             if (!left) left = pit; else right = pit;
         }
-        UINT score = 0;
+        VectorClass score = 0;
         int nsites = aln->num_informative_sites;
-        UINT *x = left->partial_pars;
-        UINT *y = right->partial_pars;
-        UINT *z = dad_branch->partial_pars;
-        VectorClass *vc_x = new VectorClass[nstates];
-        VectorClass *vc_y = new VectorClass[nstates];
-        VectorClass *vc_z = new VectorClass[nstates];
+        VectorClass *x = (VectorClass*)left->partial_pars;
+        VectorClass *y = (VectorClass*)right->partial_pars;
+        VectorClass *z = (VectorClass*)dad_branch->partial_pars;
+//        VectorClass *vc_x = new VectorClass[nstates];
+//        VectorClass *vc_y = new VectorClass[nstates];
+//        VectorClass *vc_z = new VectorClass[nstates];
 		VectorClass w;
         
         switch (nstates) {
         case 4:
 			for (site = 0; site<nsites; site+=NUM_BITS) {
-                vc_x[0].load_a(x);
-                vc_y[0].load_a(y);
-                vc_x[1].load_a(x+VCSIZE);
-                vc_y[1].load_a(y+VCSIZE);
-                vc_x[2].load_a(x+2*VCSIZE);
-                vc_y[2].load_a(y+2*VCSIZE);
-                vc_x[3].load_a(x+3*VCSIZE);
-                vc_y[3].load_a(y+3*VCSIZE);
+//                vc_x[0].load_a(x);
+//                vc_y[0].load_a(y);
+//                vc_x[1].load_a(x+VCSIZE);
+//                vc_y[1].load_a(y+VCSIZE);
+//                vc_x[2].load_a(x+2*VCSIZE);
+//                vc_y[2].load_a(y+2*VCSIZE);
+//                vc_x[3].load_a(x+3*VCSIZE);
+//                vc_y[3].load_a(y+3*VCSIZE);
                 
-				vc_z[0] = vc_x[0] & vc_y[0];
-				vc_z[1] = vc_x[1] & vc_y[1];
-				vc_z[2] = vc_x[2] & vc_y[2];
-				vc_z[3] = vc_x[3] & vc_y[3];
+//				vc_z[0] = vc_x[0] & vc_y[0];
+//				vc_z[1] = vc_x[1] & vc_y[1];
+//				vc_z[2] = vc_x[2] & vc_y[2];
+//				vc_z[3] = vc_x[3] & vc_y[3];
                 
-				w = vc_z[0] | vc_z[1] | vc_z[2] | vc_z[3];
+//				w = vc_z[0] | vc_z[1] | vc_z[2] | vc_z[3];
+                z[0] = x[0] & y[0];
+                z[1] = x[1] & y[1];
+                z[2] = x[2] & y[2];
+                z[3] = x[3] & y[3];
+                w = z[0] | z[1] | z[2] | z[3];
 				w = ~w;
-				score += horizontal_popcount(w);
-				(vc_z[0] | (w & (vc_x[0] | vc_y[0]))).store_a(z);
-				(vc_z[1] | (w & (vc_x[1] | vc_y[1]))).store_a(z+VCSIZE);
-				(vc_z[2] | (w & (vc_x[2] | vc_y[2]))).store_a(z+2*VCSIZE);
-				(vc_z[3] | (w & (vc_x[3] | vc_y[3]))).store_a(z+3*VCSIZE);
-				x += 4 * VCSIZE;
-				y += 4 * VCSIZE;
-				z += 4 * VCSIZE;
+//				(vc_z[0] | (w & (vc_x[0] | vc_y[0]))).store_a(z);
+//				(vc_z[1] | (w & (vc_x[1] | vc_y[1]))).store_a(z+VCSIZE);
+//				(vc_z[2] | (w & (vc_x[2] | vc_y[2]))).store_a(z+2*VCSIZE);
+//				(vc_z[3] | (w & (vc_x[3] | vc_y[3]))).store_a(z+3*VCSIZE);
+                z[0] |= w & (x[0] | y[0]);
+                z[1] |= w & (x[1] | y[1]);
+                z[2] |= w & (x[2] | y[2]);
+                z[3] |= w & (x[3] | y[3]);
+				horizontal_popcount(w);
+                score += w;
+//				x += 4 * VCSIZE;
+//				y += 4 * VCSIZE;
+//				z += 4 * VCSIZE;
+                x += 4;
+                y += 4;
+                z += 4;
 			}
 
 			break;
@@ -1299,27 +1326,35 @@ void PhyloTree::computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, Phylo
 				int i;
 				w = 0;
 				for (i = 0; i < nstates; i++) {
-					vc_z[i] = vc_x[i] & vc_y[i];
-					w |= vc_z[i];
+//					vc_z[i] = vc_x[i] & vc_y[i];
+//					w |= vc_z[i];
+                    z[i] = x[i] & y[i];
+                    w |= z[i];
 				}
 				w = ~w;
-				score += horizontal_popcount(w);
 				for (i = 0; i < nstates; i++) {
-					vc_z[i] |= w & (vc_x[i] | vc_y[i]);
+//					vc_z[i] |= w & (vc_x[i] | vc_y[i]);
+                    z[i] |= w & (x[i] | y[i]);
 				}
-				x += nstates*VCSIZE;
-				y += nstates*VCSIZE;
-				z += nstates*VCSIZE;
+				horizontal_popcount(w);
+                score += w;
+//				x += nstates*VCSIZE;
+//				y += nstates*VCSIZE;
+//				z += nstates*VCSIZE;
+                x += nstates;
+                y += nstates;
+                z += nstates;
 			}
 			break;
         }
-//        UINT *zscore = (UINT*)z;
-//        UINT *xscore = (UINT*)x;
-//        UINT *yscore = (UINT*)y;
-        *z = score + *x + *y;
-        delete [] vc_z;
-        delete [] vc_y;
-        delete [] vc_x;
+        UINT sum_score = horizontal_add(score); 
+        UINT *zscore = (UINT*)z;
+        UINT *xscore = (UINT*)x;
+        UINT *yscore = (UINT*)y;
+        *zscore = sum_score + *xscore + *yscore;
+//        delete [] vc_z;
+//        delete [] vc_y;
+//        delete [] vc_x;
     }
 }
 
@@ -1338,58 +1373,66 @@ int PhyloTree::computeParsimonyBranchFastSIMD(PhyloNeighbor *dad_branch, PhyloNo
     int nsites = aln->num_informative_sites;
     int nstates = aln->num_states;
 
-    UINT score = 0;
-    UINT *x = dad_branch->partial_pars;
-    UINT *y = node_branch->partial_pars;
-    VectorClass *vc_x = new VectorClass[nstates];
-    VectorClass *vc_y = new VectorClass[nstates];
+    VectorClass score = 0;
+    VectorClass *x = (VectorClass*)dad_branch->partial_pars;
+    VectorClass *y = (VectorClass*)node_branch->partial_pars;
+//    VectorClass *vc_x = new VectorClass[nstates];
+//    VectorClass *vc_y = new VectorClass[nstates];
     VectorClass w;
-    const int VCSIZE = VectorClass::size();
+//    const int VCSIZE = VectorClass::size();
 
     const int NUM_BITS = VectorClass::size() * UINT_BITS;
     switch (nstates) {
     case 4:
 		for (site = 0; site < nsites; site+=NUM_BITS) {
-            vc_x[0].load_a(x);
-            vc_y[0].load_a(y);
-            vc_x[1].load_a(x+VCSIZE);
-            vc_y[1].load_a(y+VCSIZE);
-            vc_x[2].load_a(x+2*VCSIZE);
-            vc_y[2].load_a(y+2*VCSIZE);
-            vc_x[3].load_a(x+3*VCSIZE);
-            vc_y[3].load_a(y+3*VCSIZE);
+//            vc_x[0].load_a(x);
+//            vc_y[0].load_a(y);
+//            vc_x[1].load_a(x+VCSIZE);
+//            vc_y[1].load_a(y+VCSIZE);
+//            vc_x[2].load_a(x+2*VCSIZE);
+//            vc_y[2].load_a(y+2*VCSIZE);
+//            vc_x[3].load_a(x+3*VCSIZE);
+//            vc_y[3].load_a(y+3*VCSIZE);
         
-			w = (vc_x[0] & vc_y[0]) | (vc_x[1] & vc_y[1]) | (vc_x[2] & vc_y[2]) | (vc_x[3] & vc_y[3]);
+//			w = (vc_x[0] & vc_y[0]) | (vc_x[1] & vc_y[1]) | (vc_x[2] & vc_y[2]) | (vc_x[3] & vc_y[3]);
+            w = (x[0] & y[0]) | (x[1] & y[1]) | (x[2] & y[2]) | (x[3] & y[3]);
 			w = ~w;
-			score += horizontal_popcount(w);
-			x += 4*VCSIZE;
-			y += 4*VCSIZE;
+			horizontal_popcount(w);
+            score += w;
+//			x += 4*VCSIZE;
+//			y += 4*VCSIZE;
+            x += 4;
+            y += 4;
 		}
 		break;
     default:
 		for (site = 0; site < nsites; site+=NUM_BITS) {
-			int i;
-			VectorClass w = vc_x[0] & vc_y[0];
-			for (i = 1; i < nstates; i++) {
-				w |= vc_x[i] & vc_y[i];
+            w = x[0] & y[0];
+//			VectorClass w = vc_x[0] & vc_y[0];
+			for (int i = 1; i < nstates; i++) {
+//				w |= vc_x[i] & vc_y[i];
+                w |= x[i] & y[i];
 			}
 			w = ~w;
-			score += horizontal_popcount(w);
-			x += nstates*VCSIZE;
-			y += nstates*VCSIZE;
-
+			horizontal_popcount(w);
+            score += w;
+//			x += nstates*VCSIZE;
+//			y += nstates*VCSIZE;
+            x += nstates;
+            y += nstates;
 		}
 		break;
     }
+    UINT sum_score = horizontal_add(score);
     if (branch_subst)
-        *branch_subst = score;
-//    UINT *xscore = (UINT*)x;
-//    UINT *yscore = (UINT*)y;
-    score += *x + *y;
-    delete [] vc_y;
-    delete [] vc_x;
+        *branch_subst = sum_score;
+    UINT *xscore = (UINT*)x;
+    UINT *yscore = (UINT*)y;
+    sum_score += *xscore + *yscore;
+//    delete [] vc_y;
+//    delete [] vc_x;
 
-    return score;
+    return sum_score;
 }
 
 
