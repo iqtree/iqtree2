@@ -679,9 +679,12 @@ int PhyloSuperTree::computeParsimonyBranch(PhyloNeighbor *dad_branch, PhyloNode 
         branch_subst = 0;
     for (iterator it = begin(); it != end(); it++, part++) {
         int this_subst = 0;
-        if (dad_nei->link_neighbors[part])
-            score += (*it)->computeParsimonyBranch(dad_nei->link_neighbors[part], (PhyloNode*)node_nei->link_neighbors[part]->node, &this_subst);
-        else
+        if (dad_nei->link_neighbors[part]) {
+            if (branch_subst)
+                score += (*it)->computeParsimonyBranch(dad_nei->link_neighbors[part], (PhyloNode*)node_nei->link_neighbors[part]->node, &this_subst);
+            else
+                score += (*it)->computeParsimonyBranch(dad_nei->link_neighbors[part], (PhyloNode*)node_nei->link_neighbors[part]->node);
+        } else
             score += (*it)->computeParsimony();
         if (branch_subst)
             branch_subst += this_subst;

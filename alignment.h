@@ -144,6 +144,15 @@ public:
      */
     void extractDataBlock(NxsCharactersBlock *data_block);
 
+    vector<Pattern> ordered_pattern;
+    
+    /** lower bound of sum parsimony scores for remaining pattern in ordered_pattern */
+    UINT *pars_lower_bound;
+
+    /** order pattern by number of character states and return in ptn_order
+    */
+    void orderPatternByNumChars();
+
     /**
      * un-group site-patterns, i.e., making #sites = #patterns and pattern frequency = 1 for all patterns
      */

@@ -872,7 +872,7 @@ public:
             @param dad dad of the node, used to direct the search
             @return the parsimony score of the tree
      */
-    int addTaxonMPFast(Node *added_node, Node* &target_node, Node* &target_dad, int &best_score, UINT *target_partial_pars, Node *node, Node *dad);
+    int addTaxonMPFast(Node *added_node, Node* &target_node, Node* &target_dad, UINT *target_partial_pars, Node *node, Node *dad);
 
 
     /**
@@ -1697,6 +1697,9 @@ protected:
      * Current score of the tree;
      */
     double curScore;
+    
+    /** current best parsimony score */
+    UINT best_pars_score;
 
 };
 

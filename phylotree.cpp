@@ -834,8 +834,7 @@ int PhyloTree::computeParsimonyBranchNaive(PhyloNeighbor *dad_branch, PhyloNode 
 }
 
 int PhyloTree::computeParsimony() {
-	int branch_subst;
-    return computeParsimonyBranch((PhyloNeighbor*) root->neighbors[0], (PhyloNode*) root, &branch_subst);
+    return computeParsimonyBranch((PhyloNeighbor*) root->neighbors[0], (PhyloNode*) root);
 }
 
 void PhyloTree::printParsimonyStates(PhyloNeighbor *dad_branch, PhyloNode *dad) {
@@ -1031,7 +1030,7 @@ int PhyloTree::computeParsimonyTree(const char *out_prefix, Alignment *alignment
 
     IntVector taxon_order;
     taxon_order.resize(size);
-    int score;
+//    int score;
     for (int i = 0; i < size; i++)
         taxon_order[i] = i;
     // randomize the addition order
@@ -1075,13 +1074,14 @@ int PhyloTree::computeParsimonyTree(const char *out_prefix, Alignment *alignment
 
         Node *target_node = NULL;
         Node *target_dad = NULL;
-        score = INT_MAX;
-        addTaxonMPFast(added_node, target_node, target_dad, score, target_partial_pars, root->neighbors[0]->node, root);
+//        score = INT_MAX;
+        best_pars_score = INT_MAX;
+        addTaxonMPFast(added_node, target_node, target_dad, target_partial_pars, root->neighbors[0]->node, root);
         
 //        aligned_free(((PhyloNeighbor*) new_taxon->findNeighbor(added_node))->partial_pars);
 //        aligned_free(((PhyloNeighbor*) added_node->findNeighbor(new_taxon))->partial_pars);
         if (verbose_mode >= VB_MAX)
-            cout << ", score = " << score << endl;
+            cout << ", score = " << best_pars_score << endl;
         // now insert the new node in the middle of the branch node-dad
         //double len = target_dad->findNeighbor(target_node)->length;
         target_node->updateNeighbor(target_dad, added_node, -1.0);
@@ -1131,10 +1131,10 @@ int PhyloTree::computeParsimonyTree(const char *out_prefix, Alignment *alignment
 		file_name += ".parstree";
 		printTree(file_name.c_str(), WT_NEWLINE);
     }
-    return score;
+    return best_pars_score;
 }
 
-int PhyloTree::addTaxonMPFast(Node* added_node, Node*& target_node, Node*& target_dad, int &best_score, UINT *target_partial_pars, Node* node, Node* dad) {
+int PhyloTree::addTaxonMPFast(Node* added_node, Node*& target_node, Node*& target_dad, UINT *target_partial_pars, Node* node, Node* dad) {
     Neighbor *dad_nei = dad->findNeighbor(node);
     //Node *added_taxon = added_node->neighbors[0]->node;
     Node *added_taxon = NULL;
@@ -1171,10 +1171,9 @@ int PhyloTree::addTaxonMPFast(Node* added_node, Node*& target_node, Node*& targe
     // compute the likelihood
     //clearAllPartialLh();
     ((PhyloNeighbor*) added_taxon->findNeighbor(added_node))->clearPartialLh();
-	int branch_subst;
-    int score = computeParsimonyBranch((PhyloNeighbor*) added_node->neighbors[0], (PhyloNode*) added_node, &branch_subst);
-    if (score < best_score) {
-        best_score = score;
+    int score = computeParsimonyBranch((PhyloNeighbor*) added_node->neighbors[0], (PhyloNode*) added_node);
+    if (score < best_pars_score) {
+        best_pars_score = score;
         target_node = node;
         target_dad = dad;
         if (target_partial_pars)
@@ -1195,14 +1194,14 @@ int PhyloTree::addTaxonMPFast(Node* added_node, Node*& target_node, Node*& targe
     FOR_NEIGHBOR_IT(node, dad, it){
 //    Node *target_node2;
 //    Node *target_dad2;
-        addTaxonMPFast(added_node, target_node, target_dad, best_score, target_partial_pars, (*it)->node, node);
+        addTaxonMPFast(added_node, target_node, target_dad, target_partial_pars, (*it)->node, node);
 //    if (score < best_score) {
 //        best_score = score;
 //        target_node = target_node2;
 //        target_dad = target_dad2;
 //    }
     }
-    return best_score;
+    return best_pars_score;
 
 }
 

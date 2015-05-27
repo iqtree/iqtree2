@@ -1151,19 +1151,18 @@ void PhyloTree::computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, Phylo
         int leafid = node->id;
         int pars_size = getBitsBlockSize();
         memset(dad_branch->partial_pars, 0, pars_size*sizeof(UINT));
-        int ptn;
-        int nptn = aln->size();
+//        int ptn;
+//        int nptn = aln->size();
     	int ambi_aa[] = {2, 3, 5, 6, 9, 10}; // {4+8, 32+64, 512+1024};
 //        int max_sites = ((aln->num_informative_sites+UINT_BITS-1)/UINT_BITS)*UINT_BITS;
 //        UINT *x = dad_branch->partial_pars - (nstates*VCSIZE);
         UINT *x = dad_branch->partial_pars;
+        Alignment::iterator pat;
     	switch (aln->seq_type) {
     	case SEQ_DNA:
-            for (ptn = 0, site = 0; ptn < nptn; ptn++) {
-                if (!aln->at(ptn).is_informative)
-                    continue;
-            	int state = aln->at(ptn)[leafid];
-                int freq = aln->at(ptn).frequency;
+            for (pat = aln->ordered_pattern.begin(), site = 0; pat != aln->ordered_pattern.end(); pat++) {
+            	int state = pat->at(leafid);
+                int freq = pat->frequency;
                 if (state < 4) {
                     for (int j = 0; j < freq; j++, site++) {
                         if (site == NUM_BITS) {
@@ -1203,11 +1202,9 @@ void PhyloTree::computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, Phylo
             }
     		break;
     	case SEQ_PROTEIN:
-            for (ptn = 0, site = 0; ptn < nptn; ptn++) {
-                if (!aln->at(ptn).is_informative)
-                    continue;
-            	int state = aln->at(ptn)[leafid];
-                int freq = aln->at(ptn).frequency;
+            for (pat = aln->ordered_pattern.begin(), site = 0; pat != aln->ordered_pattern.end(); pat++) {
+            	int state = pat->at(leafid);
+                int freq = pat->frequency;
                 if (state < 20) {
                     for (int j = 0; j < freq; j++, site++) {
                         if (site == NUM_BITS) {
@@ -1245,11 +1242,9 @@ void PhyloTree::computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, Phylo
             }
     		break;
     	default:
-            for (ptn = 0, site = 0; ptn < nptn; ptn++) {
-                if (!aln->at(ptn).is_informative)
-                    continue;
-            	int state = aln->at(ptn)[leafid];
-                int freq = aln->at(ptn).frequency;
+            for (pat = aln->ordered_pattern.begin(), site = 0; pat != aln->ordered_pattern.end(); pat++) {
+            	int state = pat->at(leafid);
+                int freq = pat->frequency;
                 if (state < nstates) {
                     for (int j = 0; j < freq; j++, site++) {
                         if (site == NUM_BITS) {

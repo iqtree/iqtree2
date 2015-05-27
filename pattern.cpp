@@ -19,6 +19,7 @@ Pattern::Pattern()
     is_const = false;
     is_informative = false;
     const_char = 255;
+    num_chars = 0;
 }
 
 Pattern::Pattern(const Pattern &pat)
@@ -28,6 +29,7 @@ Pattern::Pattern(const Pattern &pat)
     is_const = pat.is_const;
     is_informative = pat.is_informative;
     const_char = pat.const_char;
+    num_chars = pat.num_chars;
 }
 
 Pattern::~Pattern()
