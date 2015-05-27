@@ -1496,7 +1496,6 @@ int Alignment::readMSF(char *filename, char *sequence_type) {
 
 }
 
-<<<<<<< HEAD
 int Alignment::readCountsFormat(char* filename, char* sequence_type) {
     int npop = 0;                // Number of populations.
     int nsites = 0;              // Number of sites.
@@ -1762,8 +1761,6 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
     // return buildPattern(sequences, sequence_type, seq_names.size(), sequences.front().length());
     return 1;
 }
-=======
->>>>>>> refs/remotes/origin/master
 
 bool Alignment::getSiteFromResidue(int seq_id, int &residue_left, int &residue_right) {
     int i, j;
