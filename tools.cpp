@@ -703,6 +703,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.stop_confidence = 0.95;
     params.model_name = "";
     params.model_set = NULL;
+    params.model_subset = NULL;
     params.state_freq_set = NULL;
     params.ratehet_set = NULL;
     params.model_def_file = NULL;
@@ -713,6 +714,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.store_trans_matrix = false;
     //params.freq_type = FREQ_EMPIRICAL;
     params.freq_type = FREQ_UNKNOWN;
+    params.min_rate_cats = 2;
     params.num_rate_cats = 4;
     params.max_rate_cats = 10;
     params.gamma_shape = -1.0;
@@ -1646,6 +1648,13 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.model_set = argv[cnt];
 				continue;
 			}
+			if (strcmp(argv[cnt], "-msub") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -msub <model_subset>";
+				params.model_subset = argv[cnt];
+				continue;
+			}
 			if (strcmp(argv[cnt], "-mfreq") == 0) {
 				cnt++;
 				if (cnt >= argc)
@@ -1792,13 +1801,22 @@ void parseArg(int argc, char *argv[], Params &params) {
 					throw "Wrong number of rate categories";
 				continue;
 			}
+			if (strcmp(argv[cnt], "-cmin") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -cmin <#min_rate_category>";
+				params.min_rate_cats = convert_int(argv[cnt]);
+				if (params.min_rate_cats < 2)
+					throw "Wrong number of rate categories for -cmin";
+				continue;
+			}
 			if (strcmp(argv[cnt], "-cmax") == 0) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -cmax <#max_rate_category>";
 				params.max_rate_cats = convert_int(argv[cnt]);
-				if (params.max_rate_cats < 1)
-					throw "Wrong number of rate categories";
+				if (params.max_rate_cats < 2)
+					throw "Wrong number of rate categories for -cmax";
 				continue;
 			}
 			if (strcmp(argv[cnt], "-a") == 0) {
@@ -2602,11 +2620,11 @@ void parseArg(int argc, char *argv[], Params &params) {
 			if (strcmp(argv[cnt], "-ct") == 0) {
             	params.count_trees = true;
             	continue;
-            }
-			if (strcmp(argv[cnt], "-sprdist") == 0) {
+			}
+			if (strcmp(argv[cnt], "-sprdist") == 0 || strcmp(argv[cnt], "-sprrad") == 0) {
 				cnt++;
 				if (cnt >= argc)
-					throw "Use -sprdist <SPR distance used in parsimony search>";
+					throw "Use -sprrad <SPR radius used in parsimony search>";
 				params.sprDist = convert_int(argv[cnt]);
 				continue;
 			}
@@ -2743,10 +2761,11 @@ void usage_iqtree(char* argv[], bool full_command) {
     cout << "Usage: " << argv[0] << " -s <alignment> [OPTIONS] [<treefile>] " << endl << endl;
     cout << "GENERAL OPTIONS:" << endl
             << "  -?                   Printing this help dialog" << endl
-            << "  -s <alignment>       Input alignment (REQUIRED) in PHYLIP/FASTA/NEXUS format" << endl
+            << "  -s <alignment>       Input alignment in PHYLIP/FASTA/NEXUS/CLUSTAL/MSF format" << endl
             << "  -st <data_type>      BIN, DNA, AA, CODON, or MORPH (default: auto-detect)" << endl
-            << "  -sp <partition_file> Partition model specification in NEXUS format." << endl
+            << "  -sp <partition_file> Partition model specification in NEXUS/RAxML format." << endl
             << "                       For single model use the -m option (see below)" << endl
+            << "  -q <partition_file>  Partition model specification in RAxML format." << endl
             << "  -z <trees_file>      Compute log-likelihoods for all trees in the given file" << endl
             << "  <treefile>           Initial tree for tree reconstruction (default: MP)" << endl
             << "  -o <outgroup_taxon>  Outgroup taxon name for writing .treefile" << endl
@@ -2760,6 +2779,7 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -pll                 Use phylogenetic likelihood library (PLL) (default: off)" << endl
             << "  -numpars <number>    Number of initial parsimony trees (default: 100)" << endl
             << "  -toppars <number>    Number of best parsimony trees (default: 20)" << endl
+            << "  -sprrad <number>     Radius for parsimony SPR search (default: 6)" << endl
             << "  -numcand <number>    Size of the candidate tree set (defaut: 5)" << endl
             << "  -pers <perturbation> Perturbation strength for randomized NNI (default: 0.5)" << endl
             << "  -numstop <number>    Number of unsuccessful iterations to stop (default: 100)" << endl
@@ -2783,21 +2803,27 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -alrt <#replicates>  SH-like approximate likelihood ratio test (SH-aLRT)" << endl
             << "  -lbp <#replicates>   Fast local bootstrap probabilities" << endl
             << endl << "AUTOMATIC MODEL SELECTION:" << endl
-            << "  -m TEST              Select best-fit model for tree reconstruction" << endl
-            << "  -m TESTONLY          Only do model selection, then stop" << endl
-            << "  -m TESTLINK or -m TESTMERGE or -m TESTONLYLINK or -m TESTONLYMERGE" <<endl
-            << "                       Select best-fit partitioning scheme like PartitionFinder" << endl
-            << "  -mset raxml          Restrict to only models supported by RAxML" << endl
-            << "  -mset phyml          Restrict to only models supported by PhyML" << endl
-            << "  -mset mrbayes        Restrict to only models supported by MrBayes" << endl
-            << "  -mset m1,...,mk      Restrict to a comma-separated list of models" << endl
-            << "  -mfreq f1,...,fk     Restrict to a comma-separated list of state frequencies" << endl
-            << "  -mrate r1,...,rk     Restrict to a comma-separated list of rate heterogeneity" << endl
-            << "                       (default: -mrate E,I,G,I+G)" << endl
-            << "  -cmax <kmax>         Max number of categories when testing FreeRate model [+R]" << endl
-            << "  -msep                Perform model selection and then rate selection" << endl
-            << "  -mtree               Do a full tree search for each testing model" << endl
-            << "  -mredo               Ignore .model file" << endl
+            << "  -m TESTONLY          Standard model selection (like jModelTest, ProtTest)" << endl
+            << "  -m TEST              Like -m TESTONLY but followed by tree reconstruction" << endl
+            << "  -m TESTNEWONLY       New model selection with FreeRate model replacing I+G" << endl
+            << "  -m TESTNEW           Like -m TESTNEWONLY but followed by tree reconstruction" << endl
+            << "  -m TESTMERGEONLY     Select best-fit partition scheme (like PartitionFinder)" << endl
+            << "  -m TESTMERGE         Like -m TESTMERGEONLY but followed by tree reconstruction" << endl
+            << "  -mset program        Restrict search to models supported by other programs" << endl
+            << "                       (i.e., raxml, phyml or mrbayes)" << endl
+            << "  -mset m1,...,mk      Restrict search to models in a comma-separated list" << endl
+            << "                       (e.g. -mset WAG,LG,JTT)" << endl            
+            << "  -msub source         Restrict search to AA models designed for specific sources" << endl
+            << "                       (i.e., nuclear, mitochondrial, chloroplast or viral)" << endl            
+            << "  -mfreq f1,...,fk     Restrict search to using a list of state frequencies" << endl
+            << "                       (default protein: -mfreq FU,F; codon: -mfreq ,F1x4,F3x4,F)" << endl            
+            << "  -mrate r1,...,rk     Restrict search to using a list of rate-across-sites models" << endl
+            << "                       (e.g. -mrate E,I,G,I+G,R)" << endl
+            << "  -cmin <kmin>         Min #categories for FreeRate model [+R] (default: 2)" << endl
+            << "  -cmax <kmax>         Max #categories for FreeRate model [+R] (default: 10)" << endl
+//            << "  -msep                Perform model selection and then rate selection" << endl
+            << "  -mtree               Do a full tree search for each model considered" << endl
+            << "  -mredo               Ignore model results computed earlier (default: not ignore)" << endl
             << "  -mdef <nexus_file>   A model definition NEXUS file (see Manual)" << endl
 
             << endl << "SUBSTITUTION MODEL:" << endl
@@ -2811,19 +2837,23 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "      Protein mixture: C10,...,C60, EX2, EX3, EHO, UL2, UL3, EX_EHO, LG4M, LG4X," << endl
             << "                       JTTCF4G" << endl
             << "               Binary: JC2 (default), GTR2" << endl
-            << "                Codon: GY (default), MG, MGK, KOSI07, SCHN05" << endl
+            << "      Empirical codon: KOSI07, SCHN05" << endl 
+            << "    Mechanistic codon: GY (default), MG, MGK, GY0K, GY1KTS, GY1KTV, GY2K," << endl
+            << "                       MG1KTS, MG1KTV, MG2K" << endl
+            << " Semi-empirical codon: XX_YY where XX is empirical and YY is mechanistic model" << endl
             << "       Morphology/SNP: MK (default), ORDERED" << endl
             << "            Otherwise: Name of file containing user-model parameters" << endl
             << "                       (rate parameters and state frequencies)" << endl
             << "  -m <model_name>+F or +FO or +FU or +FQ (default: auto)" << endl
             << "                       counted, optimized, user-defined, equal state frequency" << endl
-            << "  -m <model_name>+F1x4 or +F3x4 or +F3x4C" << endl
+            << "  -m <model_name>+F1x4 or +F3x4" << endl
             << "                       Codon frequencies" << endl
             << "  -m <model_name>+ASC  Ascertainment bias correction for morphological/SNP data" << endl
             << "  -m \"MIX{m1,...mK}\"   Mixture model with K components" << endl
             << "  -m \"FMIX{f1,...fK}\"  Frequency mixture model with K components" << endl
-
+            << "  -mwopt               Turn on optimizing mixture weights (default: none)" << endl
             << endl
+
             << "POLYMORPHISM AWARE MODELS (PoMo):"                                                   << endl
             << "  -st CF or CFps       Counts File (automatically detected)."                        << endl
             << "                       Useful to customize the virtual population size `ps`"         << endl
@@ -2929,21 +2959,24 @@ InputType detectInputFile(char *input_file) {
         in.exceptions(ios::failbit | ios::badbit);
         in.open(input_file);
 
-        unsigned char ch;
+        unsigned char ch, ch2;
         int count = 0;
         do {
             in >> ch;
         } while (ch <= 32 && !in.eof() && count++ < 20);
+        in >> ch2;
         in.close();
         switch (ch) {
-	case '#': return IN_NEXUS;
-	case '(': return IN_NEWICK;
-	case '[': return IN_NEWICK;
-	case '>': return IN_FASTA;
-	case 'C': return IN_COUNTS;
-	default:
-	  if (isdigit(ch)) return IN_PHYLIP;
-	  return IN_OTHER;
+            case '#': return IN_NEXUS;
+            case '(': return IN_NEWICK;
+            case '[': return IN_NEWICK;
+            case '>': return IN_FASTA;
+            case 'C': if (ch2 == 'L') return IN_CLUSTAL; else return IN_OTHER;
+            case 'C': if (ch2 == 'O') return IN_COUNTS; else return IN_OTHER;
+            case '!': if (ch2 == '!') return IN_MSF; else return IN_OTHER;
+            default:
+                if (isdigit(ch)) return IN_PHYLIP;
+                return IN_OTHER;
         }
     } catch (ios::failure) {
         outError("Cannot read file ", input_file);
@@ -3321,3 +3354,9 @@ double computePValueChiSquare(double x, int df) /* x: obtained chi-square value,
     } else
         return (s);
 }
+
+void trimString(string &str) {
+    str.erase(0, str.find_first_not_of(" \n\r\t"));
+    str.erase(str.find_last_not_of(" \n\r\t")+1);
+}
+

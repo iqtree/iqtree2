@@ -612,6 +612,7 @@ model LG4M4 =\n\
 0.104843 0.078835 0.043513 0.090498 0.002924 0.066163 0.151640 0.038843 0.022556 0.018383 0.038687 0.104462 0.010166 0.009089 0.066950 0.053667 0.049486 0.004409 0.012924 0.031963;\n\
 \n\
 model LG4M = MIX{LG4M1,LG4M2,LG4M3,LG4M4}*G4;\n\
+model LG4  = MIX{LG4M1,LG4M2,LG4M3,LG4M4}*G4;\n\
 \n\
 \n\
 [ ---------------------------------------------------------\n\
@@ -973,8 +974,8 @@ model C60 = POISSON+G4+FMIX{C60pi1:1:0.0169698865,C60pi2:1:0.0211683374,C60pi3:1
 \n\
 end;\n";
 
-const double MIN_MIXTURE_PROP = 0.0;
-const double MAX_MIXTURE_PROP = 1.0;
+const double MIN_MIXTURE_PROP = 0.001;
+const double MAX_MIXTURE_PROP = 1000.0;
 //const double MIN_MIXTURE_RATE = 0.01;
 //const double MAX_MIXTURE_RATE = 100.0;
 
@@ -1087,6 +1088,7 @@ ModelMixture::ModelMixture(string model_name, string model_list, ModelsBlock *mo
 					fix_prop = true;
 					if (weight <= 0.0)
 						outError("Mixture component weight is negative!");
+                    weight = max(weight, MIN_MIXTURE_PROP);
 				}
 				this_name = this_name.substr(0, pos_rate);
 			}
@@ -1198,8 +1200,12 @@ ModelMixture::ModelMixture(string model_name, string model_list, ModelsBlock *mo
 		}
 	}
 	// normalize weights to 1.0
-	for (i = 0; i < nmixtures; i++)
-		 prop[i] /= sum;
+    if (sum != 1.0) {
+        sum = 1.0/sum;
+        cout << "NOTE: Mixture weights do not sum up to 1, rescale weights by " << sum << endl;
+        for (i = 0; i < nmixtures; i++)
+             prop[i] *= sum;
+    }     
 
 	// rescale total_num_subst such that the global rate is 1
 	for (i = 0, sum = 0.0; i < nmixtures; i++)
@@ -1310,9 +1316,19 @@ void ModelMixture::setVariables(double *variables) {
 //	variables[dim+1] = prop[0]*at(0)->total_num_subst;
 //	for (i = 2; i < ncategory; i++)
 //		variables[dim+i] = variables[dim+i-1] + prop[i-1]*at(i-1)->total_num_subst;
-	variables[dim+1] = prop[0];
-	for (i = 2; i < ncategory; i++)
-		variables[dim+i] = variables[dim+i-1] + prop[i-1];
+
+//	variables[dim+1] = prop[0];
+//	for (i = 2; i < ncategory; i++)
+//		variables[dim+i] = variables[dim+i-1] + prop[i-1];
+
+    // BQM 2015-05-19: modify using the same strategy for FreeRate model (thanks to Thomas Wong)
+	for (i = 0; i < ncategory-1; i++) {
+		variables[dim+i+1] = prop[i] / prop[ncategory-1];
+        if (variables[dim+i+1] < MIN_MIXTURE_PROP*0.9 || variables[dim+i+1] > MAX_MIXTURE_PROP) {
+            outWarning("For component " + convertIntToString(i+1) + ", mixture weight " + convertDoubleToString(variables[dim+i+1]) + " is out of bound and may cause numerical instability");
+        }
+    }
+
 }
 
 void ModelMixture::getVariables(double *variables) {
@@ -1323,14 +1339,26 @@ void ModelMixture::getVariables(double *variables) {
 	}
 	if (fix_prop) return;
 	int i, ncategory = size();
-	double *y = new double[ncategory+1];
-	y[0] = 0; y[ncategory] = 1.0;
-	memcpy(y+1, variables+dim+1, (ncategory-1) * sizeof(double));
-	std::sort(y+1, y+ncategory);
+//	double *y = new double[ncategory+1];
+//	y[0] = 0; y[ncategory] = 1.0;
+//	memcpy(y+1, variables+dim+1, (ncategory-1) * sizeof(double));
+//	std::sort(y+1, y+ncategory);
 //	double sum = 0.0;
-	for (i = 0; i < ncategory; i++) {
-		prop[i] = (y[i+1]-y[i]);
+//	for (i = 0; i < ncategory; i++) {
+//		prop[i] = (y[i+1]-y[i]);
+//	}
+
+    // BQM 2015-05-19: modify using the same strategy for FreeRate model (thanks to Thomas Wong)
+	double sum = 1.0;
+	for (i = 0; i < ncategory-1; i++) {
+		sum += variables[dim+i+1];
 	}
+	for (i = 0; i < ncategory-1; i++) {
+		prop[i] = variables[dim+i+1] / sum;
+	}
+	prop[ncategory-1] = 1.0 / sum;
+    
+    
 //	for (i = 0, sum = 0.0; i < ncategory; i++)
 //		sum += prop[i]*at(i)->total_num_subst;
 //	for (i = 0; i < ncategory; i++)
@@ -1340,7 +1368,7 @@ void ModelMixture::getVariables(double *variables) {
 		for (i = 0; i < ncategory; i++)
 			cout << "Component " << i << " prop=" << prop[i] << endl;
 	}
-	delete [] y;
+//	delete [] y;
 
 }
 

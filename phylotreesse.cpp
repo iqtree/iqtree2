@@ -386,7 +386,11 @@ void PhyloTree::computeTipPartialLikelihood() {
 
 	double lh_ambiguous;
 	// ambiguous characters
-	int ambi_aa[2] = {4+8, 32+64};
+	int ambi_aa[] = {
+        4+8, // B = N or D
+        32+64, // Z = Q or E
+        512+1024 // U = I or L
+        };
 	switch (aln->seq_type) {
 	case SEQ_DNA:
 		for (state = 4; state < 18; state++) {
@@ -407,13 +411,13 @@ void PhyloTree::computeTipPartialLikelihood() {
 	case SEQ_PROTEIN:
 		//map[(unsigned char)'B'] = 4+8+19; // N or D
 		//map[(unsigned char)'Z'] = 32+64+19; // Q or E
-		for (state = 0; state < 2; state++) {
+		for (state = 0; state < sizeof(ambi_aa)/sizeof(int); state++) {
 			double *this_tip_partial_lh = &tip_partial_lh[(state+20)*nstates*nmixtures];
 			for (m = 0; m < nmixtures; m++) {
 				double *inv_evec = &all_inv_evec[m*nstates*nstates];
 				for (i = 0; i < nstates; i++) {
 					lh_ambiguous = 0.0;
-					for (x = 0; x < 7; x++)
+					for (x = 0; x < 11; x++)
 						if (ambi_aa[state] & (1 << x))
 							lh_ambiguous += inv_evec[i*nstates+x];
 					this_tip_partial_lh[m*nstates+i] = lh_ambiguous;
@@ -1229,9 +1233,9 @@ void PhyloTree::computePartialLikelihoodSSE(PhyloNeighbor *dad_branch, PhyloNode
             } else if (aln->seq_type == SEQ_PROTEIN) {
                 // ambiguous character, for DNA, RNA
                 state = state - (NSTATES);
-                assert(state < 2);
-                int state_map[2] = {4+8,32+64};
-                for (int state2 = 0; state2 <= 6; state2++)
+                assert(state < 3);
+                int state_map[] = {4+8,32+64,512+1024};
+                for (int state2 = 0; state2 < 11; state2++)
                     if (state_map[(int)state] & (1 << state2)) {
                         for (cat = 0; cat < numCat; cat++)
                             partial_lh_site[cat * NSTATES + state2] = 1.0;

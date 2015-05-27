@@ -310,7 +310,7 @@ const int SW_AVG_PRESENT = 4; // take the split weight average over all trees th
         input type, tree or splits graph
  */
 enum InputType {
-    IN_NEWICK, IN_NEXUS, IN_FASTA, IN_PHYLIP, IN_COUNTS, IN_OTHER
+    IN_NEWICK, IN_NEXUS, IN_FASTA, IN_PHYLIP, IN_COUNTS, IN_CLUSTAL, IN_MSF, IN_OTHER
 };
 
 /**
@@ -1071,6 +1071,9 @@ struct Params {
     /** set of models for testing */
     char *model_set;
 
+    /** subset of models for testing, e.g. viral, mitochondrial */
+    char *model_subset;
+
     /** set of state frequencies model for testing */
     char *state_freq_set;
 
@@ -1111,6 +1114,11 @@ struct Params {
             the number of rate categories
      */
     int num_rate_cats;
+
+    /**
+            maximum number of rate categories
+     */
+    int min_rate_cats;
 
     /**
             maximum number of rate categories
@@ -2083,5 +2091,11 @@ void summarizeHeader(ostream &out, Params &params, bool budget_constraint, Input
  */
 void summarizeFooter(ostream &out, Params &params);
 
+
+/**
+    remove white space at the beginning and end of the string
+    @param str (IN/OUT) string to be trimmed
+*/
+void trimString(string &str);
 
 #endif

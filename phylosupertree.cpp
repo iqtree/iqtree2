@@ -24,15 +24,6 @@
 #include "myreader.h"
 #include "phylotesting.h"
 
-/**
-    remove white space at the beginning and end of the string
-    @param str (IN/OUT) string to be trimmed
-*/
-void trimString(string &str) {
-    str.erase(0, str.find_first_not_of(" \n\r\t"));
-    str.erase(str.find_last_not_of(" \n\r\t")+1);
-}
-
 PhyloSuperTree::PhyloSuperTree()
  : IQTree()
 {
@@ -75,6 +66,7 @@ void PhyloSuperTree::readPartition(Params &params) {
 			getline(in, info.sequence_type, ',');
 			if (info.sequence_type=="" && params.sequence_type) info.sequence_type = params.sequence_type;
 			getline(in, info.position_spec);
+            trimString(info.sequence_type);
 			cout << endl << "Reading partition " << info.name << " (model=" << info.model_name << ", aln=" <<
 					info.aln_file << ", seq=" << info.sequence_type << ", pos=" << info.position_spec << ") ..." << endl;
 
@@ -121,7 +113,7 @@ void PhyloSuperTree::readPartitionRaxml(Params &params) {
             
         input_aln = new Alignment(params.aln_file, params.sequence_type, params.intype);
 
-        cout << endl << "RAxML-style partition file detected" << endl;
+        cout << endl << "Partition file is not in NEXUS format, assuming RAxML-style partition file..." << endl;
 
         size_t pos = params.model_name.find_first_of("+*");
         string rate_type = "";
@@ -195,8 +187,19 @@ void PhyloSuperTree::readPartitionRaxml(Params &params) {
 			part_info.push_back(info);
             Alignment *part_aln = new Alignment();
             part_aln->extractSites(input_aln, info.position_spec.c_str());
-			PhyloTree *tree = new PhyloTree(part_aln);
-			push_back(tree);
+            
+			Alignment *new_aln;
+			if (params.remove_empty_seq)
+				new_aln = part_aln->removeGappySeq();
+			else
+				new_aln = part_aln;
+		    // also rebuild states set of each sequence for likelihood computation
+		    new_aln->buildSeqStates();
+
+			if (part_aln != new_aln) delete part_aln;
+			PhyloTree *tree = new PhyloTree(new_aln);
+            push_back(tree);
+            cout << new_aln->getNSeq() << " sequences and " << new_aln->getNSite() << " sites extracted" << endl;
 //			params = origin_params;
 		}
 
@@ -256,6 +259,7 @@ void PhyloSuperTree::readPartitionNexus(Params &params) {
                 info.sequence_type = getSeqType(info.model_name.substr(0, info.model_name.find_first_of("+*")));
             }
 			info.position_spec = (*it)->position_spec;
+			trimString(info.sequence_type);
 			cout << endl << "Reading partition " << info.name << " (model=" << info.model_name << ", aln=" <<
 				info.aln_file << ", seq=" << info.sequence_type << ", pos=" << info.position_spec << ") ..." << endl;
 			//info.mem_ptnlh = NULL;
@@ -330,9 +334,12 @@ PhyloSuperTree::PhyloSuperTree(Params &params) :  IQTree() {
 	totalNNIs = evalNNIs = 0;
 
 	cout << "Reading partition model file " << params.partition_file << " ..." << endl;
-	if (detectInputFile(params.partition_file) == IN_NEXUS)
+	if (detectInputFile(params.partition_file) == IN_NEXUS) {
 		readPartitionNexus(params);
-	else
+        if (part_info.empty()) {
+            outError("No partition found in SETS block. An example syntax looks like: \n#nexus\nbegin sets;\n  charset part1=1-100;\n  charset part2=101-300;\nend;");
+        }
+	} else
 		readPartitionRaxml(params);
 	if (part_info.empty())
 		outError("No partition found");
