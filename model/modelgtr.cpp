@@ -434,7 +434,7 @@ void ModelGTR::setBounds(double *lower_bound, double *upper_bound, bool *bound_c
 	}
 }
 
-double ModelGTR::optimizeParameters(double epsilon) {
+double ModelGTR::optimizeParameters(double gradient_epsilon) {
 	int ndim = getNDim();
 	
 	// return if nothing to be optimized
@@ -455,7 +455,7 @@ double ModelGTR::optimizeParameters(double epsilon) {
 	setVariables(variables);
 	setBounds(lower_bound, upper_bound, bound_check);
 	//packData(variables, lower_bound, upper_bound, bound_check);
-	score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound, bound_check, max(epsilon, TOL_RATE));
+	score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound, bound_check, max(gradient_epsilon, TOL_RATE));
 
 	getVariables(variables);
 	//if (freq_type == FREQ_ESTIMATE) scaleStateFreq(true);

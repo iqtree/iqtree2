@@ -1265,8 +1265,8 @@ double ModelMixture::targetFunk(double x[]) {
 	return -phylo_tree->computeLikelihood();
 }
 
-double ModelMixture::optimizeParameters(double epsilon) {
-	double score = ModelGTR::optimizeParameters(epsilon);
+double ModelMixture::optimizeParameters(double gradient_epsilon) {
+	double score = ModelGTR::optimizeParameters(gradient_epsilon);
 	if (getNDim() == 0) return score;
 	// now rescale Q matrices to have proper interpretation of branch lengths
 	double sum;

@@ -1524,10 +1524,10 @@ double IQTree::perturb(int times) {
 //extern "C" pllUFBootData * pllUFBootDataPtr;
 extern pllUFBootData * pllUFBootDataPtr;
 
-string IQTree::optimizeModelParameters(bool printInfo, double epsilon) {
-	if (epsilon == -1)
-		epsilon = params->modeps;
-	cout << "Estimate model parameters (epsilon = " << epsilon << ")" << endl;
+string IQTree::optimizeModelParameters(bool printInfo, double logl_epsilon) {
+	if (logl_epsilon == -1)
+		logl_epsilon = params->modeps;
+	cout << "Estimate model parameters (epsilon = " << logl_epsilon << ")" << endl;
 	double stime = getCPUTime();
 	string newTree;
 	if (params->pll) {
@@ -1537,7 +1537,7 @@ string IQTree::optimizeModelParameters(bool printInfo, double epsilon) {
 		} else {
 			pllEvaluateLikelihood(pllInst, pllPartitions, pllInst->start, PLL_FALSE, PLL_FALSE);
 		}
-		pllOptimizeModelParameters(pllInst, pllPartitions, epsilon);
+		pllOptimizeModelParameters(pllInst, pllPartitions, logl_epsilon);
 		curScore = pllInst->likelihood;
 		pllTreeToNewick(pllInst->tree_string, pllInst, pllPartitions,
 				pllInst->start->back, PLL_TRUE,
@@ -1554,7 +1554,7 @@ string IQTree::optimizeModelParameters(bool printInfo, double epsilon) {
 //			clearAllPartialLH();
 //			lhComputed = true;
 //		}
-		double modOptScore = getModelFactory()->optimizeParameters(params->fixed_branch_length, printInfo, epsilon);
+		double modOptScore = getModelFactory()->optimizeParameters(params->fixed_branch_length, printInfo, logl_epsilon);
 		if (isSuperTree()) {
 			((PhyloSuperTree*) this)->computeBranchLengths();
 		}
