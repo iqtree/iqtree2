@@ -1106,130 +1106,111 @@ double PhyloTree::computeLikelihoodFromBufferEigenSIMD() {
         Highly optimized Parsimony function
  ****************************************************************************/
 
-/*
-	Bit population count, $Revision$
-	This program includes following functions:
-	* lookup  --- lookup based 
-	* ssse3-1 --- SSSE3 using PSHUFB and PSADBW
-	* ssse3-2 --- improved SSSE3 procedure - PSADBW called fewer times
-	* sse2-1  --- bit-parallel counting and PSADBW
-	* sse2-2  --- bit-parallel counting - PSADBW called fewer times (the same
-	              optimization as in ssse3-2)
-	* ssse3-unrl --- ssse3-2 with inner loop unrolled 4 times
-	* sse2-unrl --- ssse2-2 with inner loop unrolled 4 times
-	
-	compilation:
-	$ gcc -O3 -Wall -pedantic -std=c99 ssse3_popcount.c
-	
-	Author: Wojciech Mu³a
-	e-mail: wojciech_mula@poczta.onet.pl
-	www:    http://0x80.pl/
-	
-	License: BSD
-	
-	initial release 24-05-2008, last update $Date$
-*/
-// lookup for SSE
-
-#	define __aligned__ __attribute__((aligned(16)))
-
-static uint8_t POPCOUNT_4bit[16] __aligned__ = {
-/* 0 */ 0,
-/* 1 */ 1,
-/* 2 */ 1,
-/* 3 */ 2,
-/* 4 */ 1,
-/* 5 */ 2,
-/* 6 */ 2,
-/* 7 */ 3,
-/* 8 */ 1,
-/* 9 */ 2,
-/* a */ 2,
-/* b */ 3,
-/* c */ 2,
-/* d */ 3,
-/* e */ 3,
-/* f */ 4
-};
-
-// ---- SSSE3 - better alorithm, inner loop unrolled ----------------------
-static uint32_t ssse3_popcount3(uint8_t* buffer, int chunks16) {
-	static char MASK_4bit[16] = {0xf, 0xf, 0xf, 0xf, 0xf, 0xf, 0xf, 0xf, 0xf, 0xf, 0xf, 0xf, 0xf, 0xf, 0xf, 0xf};
-
-	uint32_t result;
-
-#ifdef DEBUG
-	assert(chunks16 % 4 == 0);
+#ifdef _MSC_VER
+	#define MEM_ALIGN_BEGIN __declspec(align(32))
+	#define MEM_ALIGN_END
+#else
+	#define MEM_ALIGN_BEGIN
+	#define MEM_ALIGN_END __attribute__((aligned(32)))
 #endif
 
-	__asm__ volatile ("movdqu (%%eax), %%xmm7" : : "a" (POPCOUNT_4bit));
-	__asm__ volatile ("movdqu (%%eax), %%xmm6" : : "a" (MASK_4bit));
-	__asm__ volatile ("pxor    %%xmm5, %%xmm5" : : ); // xmm5 -- global accumulator
 
-	result = 0;
+/* An optimized version of CÃ©dric Lauradoux's 64-bit merging3 algorithm
+   implemented by Kim Walisch, see:
+   http://code.google.com/p/primesieve/source/browse/trunk/src/soe/bithacks.h
+   Modified ever so slightly to maintain the same API. Note that
+   it assumes the buffer is a multiple of 64 bits in length.
+*/
+static inline uint32_t popcount_lauradoux(unsigned *buf, int n) {
+  const uint64_t* data = (uint64_t*) buf;
+  uint32_t size = n/(sizeof(uint64_t)/sizeof(int));
+  const uint64_t m1  = (0x5555555555555555ULL);
+  const uint64_t m2  = (0x3333333333333333ULL);
+  const uint64_t m4  = (0x0F0F0F0F0F0F0F0FULL);
+  const uint64_t m8  = (0x00FF00FF00FF00FFULL);
+  const uint64_t m16 = (0x0000FFFF0000FFFFULL);
+  const uint64_t h01 = (0x0101010101010101ULL);
 
-	int k, n, i;
+  uint32_t bitCount = 0;
+  uint32_t i, j;
+  uint64_t count1, count2, half1, half2, acc;
+  uint64_t x;
+  uint32_t limit30 = size - size % 30;
 
-	i = 0;
-	while (chunks16 > 0) {
-		// max(POPCOUNT_8bit) = 8, thus byte-wise addition could be done
-		// for floor(255/8) = 31 iterations
-#define MAX (7*4)
-		if (chunks16 > MAX) {
-			k = MAX;
-			chunks16 -= MAX;
-		}
-		else {
-			k = chunks16;
-			chunks16 = 0;
-		}
-#undef MAX
-		__asm__ volatile ("pxor %xmm4, %xmm4"); // xmm4 -- local accumulator
-		for (n=0; n < k; n+=4) {
-#define body(index) \
-			__asm__ volatile( \
-				"movdqa	  (%%eax), %%xmm0	\n" \
-				"movdqa    %%xmm0, %%xmm1	\n" \
-				"psrlw         $4, %%xmm1	\n" \
-				"pand      %%xmm6, %%xmm0	\n" \
-				"pand      %%xmm6, %%xmm1	\n" \
-				"movdqa    %%xmm7, %%xmm2	\n" \
-				"movdqa    %%xmm7, %%xmm3	\n" \
-				"pshufb    %%xmm0, %%xmm2	\n" \
-				"pshufb    %%xmm1, %%xmm3	\n" \
-				"paddb     %%xmm2, %%xmm4	\n" \
-				"paddb     %%xmm3, %%xmm4	\n" \
-				: : "a" (&buffer[index]));
+  // 64-bit tree merging (merging3)
+  for (i = 0; i < limit30; i += 30, data += 30) {
+    acc = 0;
+    for (j = 0; j < 30; j += 3) {
+      count1  =  data[j];
+      count2  =  data[j+1];
+      half1   =  data[j+2];
+      half2   =  data[j+2];
+      half1  &=  m1;
+      half2   = (half2  >> 1) & m1;
+      count1 -= (count1 >> 1) & m1;
+      count2 -= (count2 >> 1) & m1;
+      count1 +=  half1;
+      count2 +=  half2;
+      count1  = (count1 & m2) + ((count1 >> 2) & m2);
+      count1 += (count2 & m2) + ((count2 >> 2) & m2);
+      acc    += (count1 & m4) + ((count1 >> 4) & m4);
+    }
+    acc = (acc & m8) + ((acc >>  8)  & m8);
+    acc = (acc       +  (acc >> 16)) & m16;
+    acc =  acc       +  (acc >> 32);
+    bitCount += (uint32_t)acc;
+  }
 
-			body(i);
-			body(i + 1*16);
-			body(i + 2*16);
-			body(i + 3*16);
-#undef body
-			i += 4*16;
-		}
-
-		// update global accumulator (two 32-bits counters)
-		__asm__ volatile (
-			"pxor	%xmm0, %xmm0		\n"
-			"psadbw	%xmm0, %xmm4		\n"
-			"paddd	%xmm4, %xmm5		\n"
-		);
-	}
-
-	// finally add together 32-bits counters stored in global accumulator
-	__asm__ volatile (
-		"movhlps   %%xmm5, %%xmm0	\n"
-		"paddd     %%xmm5, %%xmm0	\n"
-		"movd      %%xmm0, %%eax	\n"
-		: "=a" (result)
-	);
-
-	return result;
+  // count the bits of the remaining bytes (MAX 29*8) using 
+  // "Counting bits set, in parallel" from the "Bit Twiddling Hacks",
+  // the code uses wikipedia's 64-bit popcount_3() implementation:
+  // http://en.wikipedia.org/wiki/Hamming_weight#Efficient_implementation
+  for (i = 0; i < size - limit30; i++) {
+    x = data[i];
+    x =  x       - ((x >> 1)  & m1);
+    x = (x & m2) + ((x >> 2)  & m2);
+    x = (x       +  (x >> 4)) & m4;
+    bitCount += (uint32_t)((x * h01) >> 56);
+  }
+  return bitCount;
 }
 
+inline UINT fast_popcount(Vec4ui &x) {
+    MEM_ALIGN_BEGIN UINT vec[4] MEM_ALIGN_END;
+    x.store_a(vec);
+    return popcount_lauradoux(vec, 4);
+}
+
+inline UINT fast_popcount(Vec8ui &x) {
+#if defined (__GNUC__) || defined(__clang__)
+    MEM_ALIGN_BEGIN uint64_t vec[4] MEM_ALIGN_END;
+    MEM_ALIGN_BEGIN uint64_t res[4] MEM_ALIGN_END;
+    Vec4uq y;
+    x.store_a(vec);
+    __asm("popcntq %1, %0" : "=r"(res[0]) : "r"(vec[0]) : );
+    __asm("popcntq %1, %0" : "=r"(res[1]) : "r"(vec[1]) : );
+    __asm("popcntq %1, %0" : "=r"(res[2]) : "r"(vec[2]) : );
+    __asm("popcntq %1, %0" : "=r"(res[3]) : "r"(vec[3]) : );
+    y.load_a(res);
+    return horizontal_add(y);
+#else
+    MEM_ALIGN_BEGIN uint64_t vec[4] MEM_ALIGN_END;
+    MEM_ALIGN_BEGIN int res[4] MEM_ALIGN_END;
+    Vec4ui y;
+    x.store_a(vec);
+    res[0] = _mm_popcnt_u64(vec[0]);
+    res[1] = _mm_popcnt_u64(vec[1]);
+    res[2] = _mm_popcnt_u64(vec[2]);
+    res[3] = _mm_popcnt_u64(vec[3]);
+    y.load_a(res);
+    return horizontal_add(y);
+#endif
+
+}
+
+
 inline void horizontal_popcount(Vec4ui &x) {
-    PLL_ALIGN_BEGIN UINT vec[4] PLL_ALIGN_END;
+    MEM_ALIGN_BEGIN UINT vec[4] MEM_ALIGN_END;
     x.store_a(vec);
     vec[0] = vml_popcnt(vec[0]);
     vec[1] = vml_popcnt(vec[1]);
@@ -1239,7 +1220,7 @@ inline void horizontal_popcount(Vec4ui &x) {
 }
 
 inline void horizontal_popcount(Vec8ui &x) {
-    PLL_ALIGN_BEGIN UINT vec[8] PLL_ALIGN_END;
+    MEM_ALIGN_BEGIN UINT vec[8] MEM_ALIGN_END;
     x.store_a(vec);
     vec[0] = vml_popcnt(vec[0]);
     vec[1] = vml_popcnt(vec[1]);
@@ -1407,7 +1388,8 @@ void PhyloTree::computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, Phylo
             }
             if (!left) left = pit; else right = pit;
         }
-        VectorClass score = 0;
+//        VectorClass score = 0;
+        UINT score = 0;
         int nsites = aln->num_informative_sites;
         VectorClass *x = (VectorClass*)left->partial_pars;
         VectorClass *y = (VectorClass*)right->partial_pars;
@@ -1428,8 +1410,9 @@ void PhyloTree::computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, Phylo
                 z[1] |= w & (x[1] | y[1]);
                 z[2] |= w & (x[2] | y[2]);
                 z[3] |= w & (x[3] | y[3]);
-				horizontal_popcount(w);
-                score += w;
+//				horizontal_popcount(w);
+//                score += w;
+                score += fast_popcount(w);
                 x += 4;
                 y += 4;
                 z += 4;
@@ -1448,19 +1431,21 @@ void PhyloTree::computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, Phylo
 				for (i = 0; i < nstates; i++) {
                     z[i] |= w & (x[i] | y[i]);
 				}
-				horizontal_popcount(w);
-                score += w;
+//				horizontal_popcount(w);
+//                score += w;
+                score += fast_popcount(w);
                 x += nstates;
                 y += nstates;
                 z += nstates;
 			}
 			break;
         }
-        UINT sum_score = horizontal_add(score); 
+//        UINT sum_score = horizontal_add(score); 
         UINT *zscore = (UINT*)z;
         UINT *xscore = (UINT*)x;
         UINT *yscore = (UINT*)y;
-        *zscore = sum_score + *xscore + *yscore;
+//        *zscore = sum_score + *xscore + *yscore;
+        *zscore = score + *xscore + *yscore;
     }
 }
 
@@ -1479,20 +1464,31 @@ int PhyloTree::computeParsimonyBranchFastSIMD(PhyloNeighbor *dad_branch, PhyloNo
     int nsites = aln->num_informative_sites;
     int nstates = aln->num_states;
 
-    VectorClass score = 0;
+//    VectorClass score = 0;
     VectorClass *x = (VectorClass*)dad_branch->partial_pars;
     VectorClass *y = (VectorClass*)node_branch->partial_pars;
     VectorClass w;
 
     const int NUM_BITS = VectorClass::size() * UINT_BITS;
+    
+    int scoreid = ((aln->num_informative_sites+NUM_BITS-1)/NUM_BITS)*VectorClass::size()*nstates;
+    UINT sum_end_node = (dad_branch->partial_pars[scoreid] + node_branch->partial_pars[scoreid]);
+    UINT score = sum_end_node;
+
+    UINT lower_bound = best_pars_score;
+    if (branch_subst) lower_bound = INT_MAX;
+    
     switch (nstates) {
     case 4:
 		for (site = 0; site < nsites; site+=NUM_BITS) {
         
             w = (x[0] & y[0]) | (x[1] & y[1]) | (x[2] & y[2]) | (x[3] & y[3]);
 			w = ~w;
-			horizontal_popcount(w);
-            score += w;
+//			horizontal_popcount(w);
+//            score += w;
+            score += fast_popcount(w);
+            if (score >= lower_bound) 
+                break;
             x += 4;
             y += 4;
 		}
@@ -1504,21 +1500,27 @@ int PhyloTree::computeParsimonyBranchFastSIMD(PhyloNeighbor *dad_branch, PhyloNo
                 w |= x[i] & y[i];
 			}
 			w = ~w;
-			horizontal_popcount(w);
-            score += w;
+//			horizontal_popcount(w);
+//            score += w;
+            score += fast_popcount(w);
+            if (score >= lower_bound) 
+                break;
             x += nstates;
             y += nstates;
 		}
 		break;
     }
-    UINT sum_score = horizontal_add(score);
+//    UINT sum_score = horizontal_add(score);
+//    if (branch_subst)
+//        *branch_subst = sum_score;
     if (branch_subst)
-        *branch_subst = sum_score;
-    UINT *xscore = (UINT*)x;
-    UINT *yscore = (UINT*)y;
-    sum_score += *xscore + *yscore;
-
-    return sum_score;
+        *branch_subst = score - sum_end_node;
+//    UINT *xscore = (UINT*)x;
+//    UINT *yscore = (UINT*)y;
+//    sum_score += *xscore + *yscore;
+//    score += *xscore + *yscore;
+//    return sum_score;
+    return score;
 }
 
 

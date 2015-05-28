@@ -235,10 +235,6 @@ int PhyloTree::computeParsimonyBranchFast(PhyloNeighbor *dad_branch, PhyloNode *
 			score += vml_popcnt(w);
             if (score >= lower_bound)
                 break;
-//			if (score + aln->pars_lower_bound[site] >= lower_bound) {
-//                score += aln->pars_lower_bound[site];
-//				break;
-//            }
 			x += 4;
 			y += 4;
 		}
@@ -254,10 +250,6 @@ int PhyloTree::computeParsimonyBranchFast(PhyloNeighbor *dad_branch, PhyloNode *
 			score += vml_popcnt(w);
             if (score >= lower_bound)
                 break;
-//			if (score + aln->pars_lower_bound[site] >= lower_bound) {
-//                score += aln->pars_lower_bound[site];
-//				break;
-//            }
 			x += nstates;
 			y += nstates;
 
