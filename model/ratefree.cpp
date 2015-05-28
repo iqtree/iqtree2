@@ -108,7 +108,7 @@ double RateFree::targetFunk(double x[]) {
 	optimize parameters. Default is to optimize gamma shape
 	@return the best likelihood
 */
-double RateFree::optimizeParameters(double epsilon) {
+double RateFree::optimizeParameters(double gradient_epsilon) {
 
 	int ndim = getNDim();
 
@@ -131,7 +131,7 @@ double RateFree::optimizeParameters(double epsilon) {
 	setVariables(variables);
 	setBounds(lower_bound, upper_bound, bound_check);
 
-	score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound, bound_check, max(epsilon, TOL_FREE_RATE));
+	score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound, bound_check, max(gradient_epsilon, TOL_FREE_RATE));
 
 	getVariables(variables);
     

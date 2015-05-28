@@ -53,7 +53,7 @@ double RateKategory::targetFunk(double x[])
 	return -phylo_tree->computeLikelihood();
 }
 
-double RateKategory::optimizeParameters(double epsilon)
+double RateKategory::optimizeParameters(double gradient_epsilon)
 {
 	int ndim = getNDim();
 	
@@ -81,7 +81,7 @@ double RateKategory::optimizeParameters(double epsilon)
 		bound_check[i] = false;
 	}
 
-	score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound, bound_check, max(epsilon, 1e-6));
+	score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound, bound_check, max(gradient_epsilon, 1e-6));
 
 	getVariables(variables);
 	//sort(rates, rates+ncategory);

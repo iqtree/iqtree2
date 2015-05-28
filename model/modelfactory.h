@@ -147,7 +147,7 @@ public:
 		@param fixed_len TRUE to fix branch lengths, default is false
 		@return the best likelihood 
 	*/
-	virtual double optimizeParameters(bool fixed_len = false, bool write_info = true, double epsilon = 0.001);
+	virtual double optimizeParameters(bool fixed_len = false, bool write_info = true, double logl_epsilon = 0.1, double gradient_epsilon = 0.001);
 
 	/**
 	 * @return TRUE if parameters are at the boundary that may cause numerical unstability
@@ -187,7 +187,7 @@ public:
 	/**
 	 * optimize model and site_rate parameters
 	 */
-	double optimizeParametersOnly(double epsilon);
+	double optimizeParametersOnly(double gradient_epsilon);
 
 	/************* FOLLOWING FUNCTIONS SERVE FOR JOINT OPTIMIZATION OF MODEL AND RATE PARAMETERS *******/
 

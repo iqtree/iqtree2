@@ -57,9 +57,9 @@ void RateFreeInvar::setBounds(double *lower_bound, double *upper_bound, bool *bo
 	optimize parameters
 	@return the best likelihood
 */
-double RateFreeInvar::optimizeParameters(double epsilon) {
+double RateFreeInvar::optimizeParameters(double gradient_epsilon) {
 	double tree_lh;
-	tree_lh = RateFree::optimizeParameters(epsilon);
+	tree_lh = RateFree::optimizeParameters(gradient_epsilon);
 	return tree_lh;
 }
 

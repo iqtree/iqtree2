@@ -670,7 +670,7 @@ double ModelFactory::optimizeParametersOnly(double gradient_epsilon) {
 
 
 
-double ModelFactory::optimizeParameters(bool fixed_len, bool write_info, double logl_epsilon) {
+double ModelFactory::optimizeParameters(bool fixed_len, bool write_info, double logl_epsilon, double gradient_epsilon) {
 	assert(model);
 	assert(site_rate);
 
@@ -699,10 +699,10 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info, double 
 
 	int i;
 	//bool optimize_rate = true;
-	double gradient_epsilon = min(logl_epsilon, 0.01); // epsilon for parameters starts at epsilon for logl
-	for (i = 2; i < 100; i++, gradient_epsilon/=2.0) {
-        if (gradient_epsilon < 0.001)
-            gradient_epsilon = 0.001;
+//	double gradient_epsilon = min(logl_epsilon, 0.01); // epsilon for parameters starts at epsilon for logl
+	for (i = 2; i < 100; i++) {
+//        if (gradient_epsilon < 0.001)
+//            gradient_epsilon = 0.001;
 		/*
 		double model_lh = model->optimizeParameters(param_epsilon);
 		double rate_lh = 0.0;
@@ -728,8 +728,8 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info, double 
 		if (!fixed_len)
 			new_lh = tree->optimizeAllBranches(min(i,3), logl_epsilon);  // loop only 3 times in total (previously in v0.9.6 5 times)
 		if (new_lh > cur_lh + logl_epsilon) {
-			if (gradient_epsilon > (new_lh - cur_lh) * logl_epsilon)
-				gradient_epsilon = (new_lh - cur_lh) * logl_epsilon;
+//			if (gradient_epsilon > (new_lh - cur_lh) * logl_epsilon)
+//				gradient_epsilon = (new_lh - cur_lh) * logl_epsilon;
 			cur_lh = new_lh;
 			if (verbose_mode >= VB_MED || write_info)
 				cout << i << ". Current log-likelihood: " << cur_lh << endl;

@@ -71,11 +71,11 @@ PartitionModelPlen::~PartitionModelPlen()
 {
 	}
 
-double PartitionModelPlen::optimizeParameters(bool fixed_len, bool write_info, double logl_epsilon) {
+double PartitionModelPlen::optimizeParameters(bool fixed_len, bool write_info, double logl_epsilon, double gradient_epsilon) {
     PhyloSuperTreePlen *tree = (PhyloSuperTreePlen*)site_rate->getTree();
     double tree_lh = 0.0, cur_lh = 0.0;
     int ntrees = tree->size();
-    double gradient_epsilon = min(logl_epsilon, 0.01);
+//    double gradient_epsilon = min(logl_epsilon, 0.01);
 
 	/*#ifdef _OPENMP
 	#pragma omp parallel for reduction(+: tree_lh)
@@ -100,14 +100,14 @@ double PartitionModelPlen::optimizeParameters(bool fixed_len, bool write_info, d
     cout<<"Initial log-likelihood: "<<tree_lh<<endl;
 	double begin_time = getCPUTime();
 	int i;
-    for(i = 1; i < 100; i++, gradient_epsilon /= 2.0){
-        if (gradient_epsilon < 0.001)
-            gradient_epsilon = 0.001;
+    for(i = 1; i < 100; i++){
+//        if (gradient_epsilon < 0.001)
+//            gradient_epsilon = 0.001;
 //    	tol = min(tol/2, logl_epsilon);
     	cur_lh = 0.0;
     	for (int part = 0; part < ntrees; part++) {
     		// Subtree model parameters optimization
-        	tree->part_info[part].cur_score = tree->at(part)->getModelFactory()->optimizeParameters(true, false, gradient_epsilon);
+        	tree->part_info[part].cur_score = tree->at(part)->getModelFactory()->optimizeParameters(true, false, logl_epsilon, gradient_epsilon);
         	cur_lh += tree->part_info[part].cur_score ;
         	//cout <<"Partition "<<part<<" MODEL:"<<tree->at(part)->getModelName() <<endl;
 
