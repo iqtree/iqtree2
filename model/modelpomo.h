@@ -94,6 +94,7 @@ class ModelPoMo : public ModelGTR
 	 */
 	virtual bool isUnstableParameters();
 
+    virtual bool isPolymorphismAware() { return true; };
  protected:
 
  	/**
