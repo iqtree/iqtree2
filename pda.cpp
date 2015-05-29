@@ -2157,8 +2157,23 @@ int main(int argc, char *argv[])
 	} /* local scope */
 	/*************************/
 
+#ifdef _IQTREE_MPI
+	int task_id, n_tasks; // Thread IDs and number of threads;
+	char *cpu_name;
+	double time_initial, time_current;
+
+	// Obtain number of tasks and task ID
+	MPI_Init(&argc, &argv);
+	MPI_Comm_size(MPI_COMM_WORLD, &n_tasks);
+	MPI_Comm_rank(MPI_COMM_WORLD, &task_id);
+#endif
+
 	Params params;
 	parseArg(argc, argv, params);
+
+#ifdef _IQTREE_MPI
+	params.ran_seed = params.ran_seed + task_id;
+#endif
 
 	_log_file = params.out_prefix;
 	_log_file += ".log";
@@ -2288,6 +2303,7 @@ int main(int argc, char *argv[])
 	cout.precision(3);
 	cout.setf(ios::fixed);
 
+#ifndef _IQTREE_MPI
 	// call the main function
 	if (params.tree_gen != NONE) {
 		generateRandomTree(params);
@@ -2379,6 +2395,10 @@ int main(int argc, char *argv[])
 			outError("Unknown file input format");
 		}
 	}
+
+#else
+	runPhyloAnalysis(params);
+#endif
 
 	time(&cur_time);
 	cout << "Date and Time: " << ctime(&cur_time);

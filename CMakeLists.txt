@@ -38,6 +38,16 @@
 cmake_minimum_required(VERSION 2.8)
 set(CMAKE_LEGACY_CYGWIN_WIN32 0)
 
+##################################################################
+# configure MPI compilation
+##################################################################
+if (IQTREE_FLAGS MATCHES "mpi")
+	set(IQTREE_FLAGS "${IQTREE_FLAGS} dynamic")
+	add_definitions(-D_IQTREE_MPI)
+	set(CMAKE_C_COMPILER "mpicc")
+	set(CMAKE_CXX_COMPILER "mpic++")
+endif()
+
 project(iqtree)
 add_definitions(-DIQ_TREE)
 # The version number.
@@ -205,8 +215,10 @@ if (IQTREE_FLAGS MATCHES "omp")
   	elseif (CLANG) 
   		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp")
   	endif()
+elseif (IQTREE_FLAGS MATCHES "mpi")
+	message("Parallel      : MPI")
 else()
-	message("Parallel      : None")
+	message("Parallel      : NONE")
 endif()
 
 ##################################################################

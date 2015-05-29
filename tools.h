@@ -33,6 +33,11 @@
 #include <math.h>
 #include <stdint.h>
 
+#ifdef _IQTREE_MPI
+#include <mpi.h>
+#define MASTER 0
+#endif
+
 //#include <sys/time.h>
 //#include <time.h>
 #include <sys/stat.h>
