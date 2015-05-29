@@ -13,7 +13,14 @@ class ModelPoMo : public ModelGTR
  public:
     /**
      * Constructor.
-     *
+     * ModelGTR() constructor calls ModelSubst() constructor.
+     * ModelSubst():
+     * - allocates state_freq[tree->aln->num_states]
+     * ModelGtr():
+     * - allocates rates[getNumRateEntries()] = rates[n*(n-1)/2];
+     *   cf. modelsubst.h
+     * - allocates eigenvalues and eigenvectors.
+     *   
      * @todo Implement `model_params'.
      * @todo Implement `freq_params'.
      * 
@@ -87,6 +94,7 @@ class ModelPoMo : public ModelGTR
 	 */
 	virtual bool isUnstableParameters();
 
+    virtual bool isPolymorphismAware() { return true; };
  protected:
 
  	/**

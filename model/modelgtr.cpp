@@ -681,7 +681,7 @@ void ModelGTR::readParameters(const char *file_name) {
 	try {
 		ifstream in(file_name);
 		if (in.fail())
-			outError("Unknown model ", file_name);
+			outError("Invalid model name ", file_name);
 		cout << "Reading model parameters from file " << file_name << endl;
 		readRates(in);
 		readStateFreq(in);

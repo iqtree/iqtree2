@@ -135,6 +135,22 @@ public:
     int readCountsFormat(char *filename, char *sequence_type);
 
     /**
+            read the alignment in CLUSTAL format
+            @param filename file name
+            @param sequence_type type of the sequence, either "BIN", "DNA", "AA", or NULL
+            @return 1 on success, 0 on failure
+     */
+    int readClustal(char *filename, char *sequence_type);
+
+    /**
+            read the alignment in MSF format
+            @param filename file name
+            @param sequence_type type of the sequence, either "BIN", "DNA", "AA", or NULL
+            @return 1 on success, 0 on failure
+     */
+    int readMSF(char *filename, char *sequence_type);
+
+    /**
             extract the alignment from a nexus data block, called by readNexus()
             @param data_block data block of nexus file
      */
@@ -623,6 +639,15 @@ public:
     double multinomialProb(IntVector &pattern_freq);
 
 
+    /**
+            get the appearance for a state, helpful for ambigious states
+            @param state the state index
+            @param state_app (OUT) state appearance
+     */
+    void getAppearance(char state, double *state_app);
+
+    void getAppearance(char state, StateBitset &state_app);
+
 protected:
 
 
@@ -641,15 +666,6 @@ protected:
      */
     PatternIntMap pattern_index;
 
-
-    /**
-            get the appearance for a state, helpful for ambigious states
-            @param state the state index
-            @param state_app (OUT) state appearance
-     */
-    void getAppearance(char state, double *state_app);
-
-    void getAppearance(char state, StateBitset &state_app);
 
     /**
 	 * special initialization for codon sequences, e.g., setting #states, genetic_code

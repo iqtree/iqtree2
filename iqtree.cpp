@@ -289,10 +289,15 @@ void IQTree::createPLLPartition(Params &params, ostream &pllPartitionFileHandle)
             if ((*it)->aln->seq_type == SEQ_DNA) {
                 pllPartitionFileHandle << "DNA";
             } else if ((*it)->aln->seq_type == SEQ_PROTEIN) {
-            	if (siqtree->part_info[i-1].model_name != "" && siqtree->part_info[i-1].model_name.substr(0, 4) != "TEST")
-            		pllPartitionFileHandle << siqtree->part_info[i-1].model_name.substr(0, siqtree->part_info[i-1].model_name.find_first_of("+{"));
-            	else
-            		pllPartitionFileHandle << "WAG";
+            	if (siqtree->part_info[i-1].model_name != "" && siqtree->part_info[i-1].model_name.substr(0, 4) != "TEST") {
+                    string modelStr = siqtree->part_info[i - 1].model_name.
+                            substr(0, siqtree->part_info[i - 1].model_name.find_first_of("+{"));
+                    if (modelStr == "LG4")
+                        modelStr = "LG4M";
+                    pllPartitionFileHandle << modelStr;
+                } else {
+                    pllPartitionFileHandle << "WAG";
+                }
             } else
             	outError("PLL only works with DNA/protein alignments");
             pllPartitionFileHandle << ", p" << i << " = " << startPos << "-" << startPos + curLen - 1 << endl;
@@ -528,54 +533,54 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
 //	}
 }
 void IQTree::initializePLL(Params &params) {
-    pllAttr.rateHetModel = PLL_GAMMA;
-    pllAttr.fastScaling = PLL_FALSE;
-    pllAttr.saveMemory = PLL_FALSE;
-    pllAttr.useRecom = PLL_FALSE;
-    pllAttr.randomNumberSeed = params.ran_seed;
-    pllAttr.numberOfThreads = params.num_threads; /* This only affects the pthreads version */
-    if (pllInst != NULL) {
-        pllDestroyInstance(pllInst);
-    }
-    /* Create a PLL instance */
-    pllInst = pllCreateInstance(&pllAttr);
+  pllAttr.rateHetModel = PLL_GAMMA;
+  pllAttr.fastScaling = PLL_FALSE;
+  pllAttr.saveMemory = PLL_FALSE;
+  pllAttr.useRecom = PLL_FALSE;
+  pllAttr.randomNumberSeed = params.ran_seed;
+  pllAttr.numberOfThreads = params.num_threads; /* This only affects the pthreads version */
+  if (pllInst != NULL) {
+    pllDestroyInstance(pllInst);
+  }
+  /* Create a PLL instance */
+  pllInst = pllCreateInstance(&pllAttr);
 
-    /* Read in the alignment file */
-    stringstream pllAln;
-	if (aln->isSuperAlignment()) {
-		((SuperAlignment*) aln)->printCombinedAlignment(pllAln);
-	} else {
-		aln->printPhylip(pllAln);
-	}
-	string pllAlnStr = pllAln.str();
-    pllAlignment = pllParsePHYLIPString(pllAlnStr.c_str(), pllAlnStr.length());
+  /* Read in the alignment file */
+  stringstream pllAln;
+  if (aln->isSuperAlignment()) {
+    ((SuperAlignment*) aln)->printCombinedAlignment(pllAln);
+  } else {
+    aln->printPhylip(pllAln);
+  }
+  string pllAlnStr = pllAln.str();
+  pllAlignment = pllParsePHYLIPString(pllAlnStr.c_str(), pllAlnStr.length());
 
-    /* Read in the partition information */
-    // BQM: to avoid printing file
-    stringstream pllPartitionFileHandle;
-    createPLLPartition(params, pllPartitionFileHandle);
-    pllQueue *partitionInfo = pllPartitionParseString(pllPartitionFileHandle.str().c_str());
+  /* Read in the partition information */
+  // BQM: to avoid printing file
+  stringstream pllPartitionFileHandle;
+  createPLLPartition(params, pllPartitionFileHandle);
+  pllQueue *partitionInfo = pllPartitionParseString(pllPartitionFileHandle.str().c_str());
 
-    /* Validate the partitions */
-    if (!pllPartitionsValidate(partitionInfo, pllAlignment)) {
-        outError("pllPartitionsValidate");
-    }
+  /* Validate the partitions */
+  if (!pllPartitionsValidate(partitionInfo, pllAlignment)) {
+    outError("pllPartitionsValidate");
+  }
 
-    /* Commit the partitions and build a partitions structure */
-    pllPartitions = pllPartitionsCommit(partitionInfo, pllAlignment);
+  /* Commit the partitions and build a partitions structure */
+  pllPartitions = pllPartitionsCommit(partitionInfo, pllAlignment);
 
-    /* We don't need the the intermediate partition queue structure anymore */
-    pllQueuePartitionsDestroy(&partitionInfo);
+  /* We don't need the the intermediate partition queue structure anymore */
+  pllQueuePartitionsDestroy(&partitionInfo);
 
-    /* eliminate duplicate sites from the alignment and update weights vector */
-    pllAlignmentRemoveDups(pllAlignment, pllPartitions);
+  /* eliminate duplicate sites from the alignment and update weights vector */
+  pllAlignmentRemoveDups(pllAlignment, pllPartitions);
 
-    pllTreeInitTopologyForAlignment(pllInst, pllAlignment);
+  pllTreeInitTopologyForAlignment(pllInst, pllAlignment);
 
-    /* Connect the alignment and partition structure with the tree structure */
-    if (!pllLoadAlignment(pllInst, pllAlignment, pllPartitions)) {
-        outError("Incompatible tree/alignment combination");
-    }
+  /* Connect the alignment and partition structure with the tree structure */
+  if (!pllLoadAlignment(pllInst, pllAlignment, pllPartitions)) {
+    outError("Incompatible tree/alignment combination");
+  }
 }
 
 

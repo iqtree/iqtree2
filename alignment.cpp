@@ -281,8 +281,14 @@ Alignment::Alignment(char *filename, char *sequence_type, InputType &intype) : v
         } else if (intype == IN_COUNTS) {
             cout << "Counts format (PoMo) detected" << endl;
             readCountsFormat(filename, sequence_type);
+        } else if (intype == IN_CLUSTAL) {
+            cout << "Clustal format detected" << endl;
+            readClustal(filename, sequence_type);
+        } else if (intype == IN_MSF) {
+            cout << "MSF format detected" << endl;
+            readMSF(filename, sequence_type);
         } else {
-            outError("Unknown sequence format, please use PHYLIP, FASTA, or NEXUS format");
+            outError("Unknown sequence format, please use PHYLIP, FASTA, CLUSTAL, MSF, or NEXUS format");
         }
     } catch (ios::failure) {
         outError(ERR_READ_INPUT);
@@ -391,7 +397,7 @@ int Alignment::readNexus(char *filename) {
 void Alignment::computeUnknownState() {
     switch (seq_type) {
     case SEQ_DNA: STATE_UNKNOWN = 18; break;
-    case SEQ_PROTEIN: STATE_UNKNOWN = 22; break;
+    case SEQ_PROTEIN: STATE_UNKNOWN = 23; break;
     default: STATE_UNKNOWN = num_states; break;
     }
 }
@@ -697,6 +703,10 @@ void Alignment::buildStateMap(char *map, SeqType seq_type) {
 //		map[(unsigned char)'Z'] = 32+64+19; // Q or E
         map[(unsigned char)'B'] = 20; // N or D
         map[(unsigned char)'Z'] = 21; // Q or E
+        map[(unsigned char)'J'] = 22; // I or L
+        map[(unsigned char)'*'] = STATE_UNKNOWN; // stop codon
+        map[(unsigned char)'U'] = STATE_UNKNOWN; // 21st amino acid
+        
         return;
     case SEQ_MULTISTATE:
         for (int i = 0; i <= STATE_UNKNOWN; i++)
@@ -752,7 +762,9 @@ char Alignment::convertState(char state, SeqType seq_type) {
             return 1+4+3; // A or G, Purine
         case 'Y':
             return 2+8+3; // C or T, Pyrimidine
+        case 'O':
         case 'N':
+        case 'X':
             return STATE_UNKNOWN;
         case 'W':
             return 1+8+3; // A or T, Weak
@@ -779,6 +791,9 @@ char Alignment::convertState(char state, SeqType seq_type) {
 //		if (state == 'Z') return 32+64+19;
 		if (state == 'B') return 20;
 		if (state == 'Z') return 21;
+		if (state == 'J') return 22;
+        if (state == '*') return STATE_UNKNOWN; // stop codon
+        if (state == 'U') return STATE_UNKNOWN; // 21st amino-acid
         loc = strchr(symbols_protein, state);
 
         if (!loc) return STATE_INVALID; // unrecognize character
@@ -857,6 +872,7 @@ char Alignment::convertStateBack(char state) {
             return symbols_protein[(int)state];
 		else if (state == 20) return 'B';
 		else if (state == 21) return 'Z';
+		else if (state == 22) return 'J';
 //		else if (state == 4+8+19) return 'B';
 //		else if (state == 32+64+19) return 'Z';
         else
@@ -1150,6 +1166,7 @@ int Alignment::readPhylip(char *filename, char *sequence_type) {
 
     for (; !in.eof(); line_num++) {
         getline(in, line);
+        line = line.substr(0, line.find_first_of("\n\r"));
         if (line == "") continue;
 
         //cout << line << endl;
@@ -1187,15 +1204,15 @@ int Alignment::readPhylip(char *filename, char *sequence_type) {
             } else
                 for (string::iterator it = line.begin(); it != line.end(); it++) {
                     if ((*it) <= ' ') continue;
-                    if (isalnum(*it) || (*it) == '-' || (*it) == '?'|| (*it) == '.')
+                    if (isalnum(*it) || (*it) == '-' || (*it) == '?'|| (*it) == '.' || (*it) == '*')
                         sequences[seq_id].append(1, toupper(*it));
                     else {
-                        err_str << "Unrecognized character " << *it << " on line " << line_num;
+                        err_str << "Line " << line_num <<": Unrecognized character " << *it;
                         throw err_str.str();
                     }
                 }
             if (sequences[seq_id].length() != sequences[0].length()) {
-                err_str << "Line " << line_num << ": alignment block has variable sequence lengths" << endl;
+                err_str << "Line " << line_num << ": Sequence " << seq_names[seq_id] << " has wrong sequence length " << sequences[seq_id].length() << endl;
                 throw err_str.str();
             }
             if (sequences[seq_id].length() > old_len)
@@ -1235,8 +1252,9 @@ int Alignment::readFasta(char *filename, char *sequence_type) {
 
         //cout << line << endl;
         if (line[0] == '>') { // next sequence
-            string::size_type pos = line.find_first_of(" \n\r\t");
+            string::size_type pos = line.find_first_of("\n\r");
             seq_names.push_back(line.substr(1, pos-1));
+            trimString(seq_names.back());
             sequences.push_back("");
             continue;
         }
@@ -1244,10 +1262,10 @@ int Alignment::readFasta(char *filename, char *sequence_type) {
         if (sequences.empty()) throw "First line must begin with '>' to define sequence name";
         for (string::iterator it = line.begin(); it != line.end(); it++) {
             if ((*it) <= ' ') continue;
-            if (isalnum(*it) || (*it) == '-' || (*it) == '?'|| (*it) == '.')
+            if (isalnum(*it) || (*it) == '-' || (*it) == '?'|| (*it) == '.' || (*it) == '*')
                 sequences.back().append(1, toupper(*it));
             else {
-                err_str << "Unrecognized character " << *it << " on line " << line_num;
+                err_str << "Line " << line_num <<": Unrecognized character " << *it;
                 throw err_str.str();
             }
         }
@@ -1257,7 +1275,225 @@ int Alignment::readFasta(char *filename, char *sequence_type) {
     in.exceptions(ios::failbit | ios::badbit);
     in.close();
 
+    // now try to cut down sequence name if possible
+    int i, j, step = 0;
+    StrVector new_seq_names, remain_seq_names;
+    new_seq_names.resize(seq_names.size());
+    remain_seq_names = seq_names;
+    
+    for (step = 0; step < 4; step++) {
+        bool duplicated = false;
+        for (i = 0; i < seq_names.size(); i++) {
+            if (remain_seq_names[i].empty()) continue;
+            size_t pos = remain_seq_names[i].find_first_of(" \t");
+            if (pos == string::npos) {
+                new_seq_names[i] += remain_seq_names[i];
+                remain_seq_names[i] = "";
+            } else {
+                new_seq_names[i] += remain_seq_names[i].substr(0, pos);
+                remain_seq_names[i] = "_" + remain_seq_names[i].substr(pos+1);
+            }
+            // now check for duplication
+            if (!duplicated)
+            for (j = 0; j < i-1; j++)
+                if (new_seq_names[j] == new_seq_names[i]) {
+                    duplicated = true;
+                    break;
+                }
+        }
+        if (!duplicated) break;
+    }
+
+    if (step > 0) {
+        for (i = 0; i < seq_names.size(); i++)
+            if (seq_names[i] != new_seq_names[i]) {
+                cout << "NOTE: Change sequence name '" << seq_names[i] << "' -> " << new_seq_names[i] << endl;
+            }
+    }
+
+    seq_names = new_seq_names;
+
     return buildPattern(sequences, sequence_type, seq_names.size(), sequences.front().length());
+}
+
+int Alignment::readClustal(char *filename, char *sequence_type) {
+
+
+    StrVector sequences;
+    ifstream in;
+    int line_num = 1;
+    string line;
+    num_states = 0;
+
+
+    // set the failbit and badbit
+    in.exceptions(ios::failbit | ios::badbit);
+    in.open(filename);
+    // remove the failbit
+    in.exceptions(ios::badbit);
+    getline(in, line);
+    if (line.substr(0, 7) != "CLUSTAL") {
+        throw "ClustalW file does not start with 'CLUSTAL'";
+    }
+
+    int seq_count = 0;
+    for (line_num = 2; !in.eof(); line_num++) {
+        getline(in, line);
+        trimString(line);
+        if (line == "") { 
+            seq_count = 0;
+            continue;
+        }
+        if (line[0] == '*' || line[0] == ':' || line[0] == '.') continue; // ignore conservation line
+
+        size_t pos = line.find_first_of(" \t");
+        if (pos == string::npos) {
+            throw "Line " + convertIntToString(line_num) + ": whitespace not found between sequence name and content";
+        }
+        string seq_name = line.substr(0, pos);
+        if (seq_count == seq_names.size()) {
+            seq_names.push_back(seq_name);
+            sequences.push_back("");
+        } else if (seq_count > seq_names.size()){
+            throw "Line " + convertIntToString(line_num) + ": New sequence name is not allowed here";
+        } else if (seq_name != seq_names[seq_count]) {
+            throw "Line " + convertIntToString(line_num) + ": Sequence name " + seq_name + " does not match previously declared " +seq_names[seq_count];
+        }
+        
+        line = line.substr(pos+1);
+        trimString(line);
+        pos = line.find_first_of(" \t");
+        line = line.substr(0, pos);
+        // read sequence contents
+        for (string::iterator it = line.begin(); it != line.end(); it++) {
+            if ((*it) <= ' ') continue;
+            if (isalnum(*it) || (*it) == '-' || (*it) == '?'|| (*it) == '.' || (*it) == '*')
+                sequences[seq_count].append(1, toupper(*it));
+            else {
+                throw "Line " +convertIntToString(line_num) + ": Unrecognized character " + *it;
+            }
+        }
+        seq_count++;
+    }
+    in.clear();
+    // set the failbit again
+    in.exceptions(ios::failbit | ios::badbit);
+    in.close();
+    return buildPattern(sequences, sequence_type, seq_names.size(), sequences.front().length());
+
+
+}
+
+
+int Alignment::readMSF(char *filename, char *sequence_type) {
+
+
+    StrVector sequences;
+    ifstream in;
+    int line_num = 1;
+    string line;
+    num_states = 0;
+
+
+    // set the failbit and badbit
+    in.exceptions(ios::failbit | ios::badbit);
+    in.open(filename);
+    // remove the failbit
+    in.exceptions(ios::badbit);
+    getline(in, line);
+    if (line.find("MULTIPLE_ALIGNMENT") == string::npos) {
+        throw "MSF file must start with header line MULTIPLE_ALIGMENT";
+    }
+
+    int seq_len = 0, seq_count = 0;
+    bool seq_started = false;
+    
+    for (line_num = 2; !in.eof(); line_num++) {
+        getline(in, line);
+        trimString(line);
+        if (line == "") { 
+            continue;
+        }
+        size_t pos;
+        
+        if (line.substr(0, 2) == "//") {
+            seq_started = true;
+            continue;
+        }
+        
+        if (line.substr(0,5) == "Name:") {
+            if (seq_started)
+                throw "Line " + convertIntToString(line_num) + ": Cannot declare sequence name here";
+            line = line.substr(5);
+            trimString(line);
+            pos = line.find_first_of(" \t");
+            if (pos == string::npos)
+                throw "Line " + convertIntToString(line_num) + ": No whitespace found after sequence name";
+            string seq_name = line.substr(0,pos);
+            seq_names.push_back(seq_name);
+            sequences.push_back("");
+            pos = line.find("Len:");
+            if (pos == string::npos)
+                throw "Line " + convertIntToString(line_num) + ": Sequence description does not contain 'Len:'";
+            line = line.substr(pos+4);
+            trimString(line);
+            pos = line.find_first_of(" \t");
+            if (pos == string::npos)
+                throw "Line " + convertIntToString(line_num) + ": No whitespace found after sequence length";
+            
+            int len;
+            line = line.substr(0, pos);
+            try {
+                len = convert_int(line.c_str());
+            } catch (string &str) {
+                throw "Line " + convertIntToString(line_num) + ": " + str;
+            }
+            if (len <= 0)
+                throw "Line " + convertIntToString(line_num) + ": Non-positive sequence length not allowed";
+            if (seq_len == 0)
+                seq_len = len;
+            else if (seq_len != len)
+                throw "Line " + convertIntToString(line_num) + ": Sequence length " + convertIntToString(len) + " is different from previously defined " + convertIntToString(seq_len);
+            continue;
+        }
+        
+        if (!seq_started) continue;
+
+        if (seq_names.empty())
+            throw "No sequence name declared in header";
+        
+        if (isdigit(line[0])) continue;
+        pos = line.find_first_of(" \t");
+        if (pos == string::npos) 
+            throw "Line " + convertIntToString(line_num) + ": whitespace not found between sequence name and content - " + line;
+        
+        string seq_name = line.substr(0, pos);
+        if (seq_name != seq_names[seq_count])
+            throw "Line " + convertIntToString(line_num) + ": Sequence name " + seq_name + " does not match previously declared " +seq_names[seq_count];
+        
+        line = line.substr(pos+1);
+        // read sequence contents
+        for (string::iterator it = line.begin(); it != line.end(); it++) {
+            if ((*it) <= ' ') continue;
+            if (isalnum(*it) || (*it) == '-' || (*it) == '?'|| (*it) == '.' || (*it) == '*')
+                sequences[seq_count].append(1, toupper(*it));
+            else  if ((*it) == '~')
+                sequences[seq_count].append(1, '-');
+            else {
+                throw "Line " +convertIntToString(line_num) + ": Unrecognized character " + *it;
+            }
+        }
+        seq_count++;
+        if (seq_count == seq_names.size())
+            seq_count = 0;
+    }
+    in.clear();
+    // set the failbit again
+    in.exceptions(ios::failbit | ios::badbit);
+    in.close();
+    return buildPattern(sequences, sequence_type, seq_names.size(), sequences.front().length());
+
+
 }
 
 int Alignment::readCountsFormat(char* filename, char* sequence_type) {
@@ -1613,6 +1849,8 @@ void Alignment::printPhylip(ostream &out, bool append, const char *aln_site_list
                             bool exclude_gaps, bool exclude_const_sites, const char *ref_seq_name) {
     IntVector kept_sites;
     int final_length = buildRetainingSites(aln_site_list, kept_sites, exclude_gaps, exclude_const_sites, ref_seq_name);
+    if (seq_type == SEQ_CODON)
+        final_length *= 3;
 
 	out << getNSeq() << " " << final_length << endl;
 	StrVector::iterator it;
@@ -1634,6 +1872,8 @@ void Alignment::printPhylip(const char *file_name, bool append, const char *aln_
                             bool exclude_gaps, bool exclude_const_sites, const char *ref_seq_name) {
     IntVector kept_sites;
     int final_length = buildRetainingSites(aln_site_list, kept_sites, exclude_gaps, exclude_const_sites, ref_seq_name);
+    if (seq_type == SEQ_CODON)
+        final_length *= 3;
 
     try {
         ofstream out;
@@ -2457,7 +2697,7 @@ void Alignment::getAppearance(char state, double *state_app) {
         return;
     }
 	// ambiguous characters
-	int ambi_aa[2] = {4+8, 32+64};
+	int ambi_aa[] = {4+8, 32+64, 512+1024};
 	switch (seq_type) {
 	case SEQ_DNA:
 	    state -= (num_states-1);
@@ -2467,9 +2707,9 @@ void Alignment::getAppearance(char state, double *state_app) {
 			}
 		break;
 	case SEQ_PROTEIN:
-		assert(state<22);
+		assert(state<23);
 		state -= 20;
-		for (i = 0; i < 7; i++)
+		for (i = 0; i < 11; i++)
 			if (ambi_aa[(int)state] & (1<<i)) {
 				state_app[i] = 1.0;
 			}
@@ -2492,7 +2732,7 @@ void Alignment::getAppearance(char state, StateBitset &state_app) {
         return;
     }
 	// ambiguous characters
-	int ambi_aa[2] = {4+8, 32+64};
+	int ambi_aa[] = {4+8, 32+64, 512+1024};
 	switch (seq_type) {
 	case SEQ_DNA:
 	    state -= (num_states-1);
@@ -2502,9 +2742,9 @@ void Alignment::getAppearance(char state, StateBitset &state_app) {
 			}
 		break;
 	case SEQ_PROTEIN:
-		assert(state<22);
+		if (state >= 23) return;
 		state -= 20;
-		for (i = 0; i < 7; i++)
+		for (i = 0; i < 11; i++)
 			if (ambi_aa[(int)state] & (1<<i)) {
 				state_app[i] = 1;
 			}

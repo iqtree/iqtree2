@@ -463,7 +463,10 @@ void SuperAlignment::printCombinedAlignment(const char *file_name, bool append) 
 	vector<Alignment*>::iterator pit;
 	int final_length = 0;
 	for (pit = partitions.begin(); pit != partitions.end(); pit++)
-		final_length += (*pit)->getNSite();
+        if ((*pit)->seq_type == SEQ_CODON)
+            final_length += 3*(*pit)->getNSite();
+        else
+            final_length += (*pit)->getNSite();
 	try {
 		ofstream out;
 		out.exceptions(ios::failbit | ios::badbit);

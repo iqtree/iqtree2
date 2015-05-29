@@ -60,6 +60,13 @@ public:
 	 */
 	virtual bool isMixture() { return false; }
 
+    /** 
+     * Confer to modelpomo.h.
+     * 
+     * @return TRUE if PoMo is being used, FALSE otherise.
+     */
+    virtual bool isPolymorphismAware() { return false; }
+
 	/**
 	 * @return the number of mixture model components
 	 */

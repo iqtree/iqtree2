@@ -119,8 +119,10 @@ set(ZLIB_SRCS
     uncompr.c
     zutil.c
 )
-
-if(NOT MINGW)
+# Note from Tung: I add 'NOT CYGWIN' clause to prevent ZLIB to redefine the source folder
+# to win32/zlib1.rc if I compile under Cygwin. 
+# This folder is for visual studio only and Cygwin does not understand it. 
+if(NOT MINGW AND NOT CYGWIN)
     set(ZLIB_SRCS ${ZLIB_SRCS}
         win32/zlib1.rc # If present will override custom build rule below.
     )
