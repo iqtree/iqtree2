@@ -75,19 +75,10 @@ double PartitionModelPlen::optimizeParameters(bool fixed_len, bool write_info, d
     PhyloSuperTreePlen *tree = (PhyloSuperTreePlen*)site_rate->getTree();
     double tree_lh = 0.0, cur_lh = 0.0;
     int ntrees = tree->size();
-//    double gradient_epsilon = min(logl_epsilon, 0.01);
 
-	/*#ifdef _OPENMP
-	#pragma omp parallel for reduction(+: tree_lh)
-	#endif*/
-    //tree->printMapInfo();
-   /* for (int part = 0; part < ntrees; part++) {
-    	cout << "LIKELIHOOD | Partition "<<part<<" | "<<tree->at(part)->computeLikelihood()<<endl;
-    }*/
 
     //tree->initPartitionInfo(); // FOR OLGA: needed here
 
-    //tree_lh = tree->computeLikelihood();
 	for(int part = 0; part < ntrees; part++){
 		tree->part_info[part].cur_score = 0.0;
 	}
@@ -101,35 +92,28 @@ double PartitionModelPlen::optimizeParameters(bool fixed_len, bool write_info, d
 	double begin_time = getCPUTime();
 	int i;
     for(i = 1; i < 100; i++){
-//        if (gradient_epsilon < 0.001)
-//            gradient_epsilon = 0.001;
-//    	tol = min(tol/2, logl_epsilon);
     	cur_lh = 0.0;
+        #ifdef _OPENMP
+        #pragma omp parallel for reduction(+: cur_lh)
+        #endif
     	for (int part = 0; part < ntrees; part++) {
     		// Subtree model parameters optimization
 //        	tree->part_info[part].cur_score = tree->at(part)->getModelFactory()->optimizeParameters(true, false, logl_epsilon, gradient_epsilon);
         	tree->part_info[part].cur_score = tree->at(part)->getModelFactory()->optimizeParametersOnly(gradient_epsilon);
+            if (tree->part_info[part].cur_score == 0.0)
+                tree->part_info[part].cur_score = tree->at(part)->computeLikelihood();
         	cur_lh += tree->part_info[part].cur_score;
-        	//cout <<"Partition "<<part<<" MODEL:"<<tree->at(part)->getModelName() <<endl;
 
     	}
     	tree->clearAllPartialLH();
     	// Optimizing gene rate
-    	//tree->fixed_rates = true;
     	if(!tree->fixed_rates){
     		cur_lh = optimizeGeneRate(gradient_epsilon);
-    		/*for (int part = 0; part < ntrees; part++){
-    			cout<<"Partition "<<part<<" rate: "<<tree->part_info[part].part_rate<<endl;
-    			//tree->at(part)->printTree(cout);
-    			//cout<<endl;
-    		}*/
     	}
 
     	// Optimizing branch lengths
     	int my_iter = min(5,i+1);
 
-    	//cout<<"BEFORE BRANCH OPTIMIZATION"<<endl;
-        //tree->printTree(cout);
     	if(!fixed_len){
             double new_lh = tree->optimizeAllBranches(my_iter, logl_epsilon);
             assert(new_lh > cur_lh - 1.0);
@@ -144,17 +128,12 @@ double PartitionModelPlen::optimizeParameters(bool fixed_len, bool write_info, d
     	assert(cur_lh > tree_lh - 1.0);
     	tree_lh = cur_lh;
     }
-    //tree->printTree(cout);
-	//cout<<endl;
     cout <<"OPTIMIZE MODEL has finished"<< endl;
     for(int part = 0; part < ntrees; part++){
     	cout<<"PART RATE "<<part<<" = "<<tree->part_info[part].part_rate<<endl;
-    	//tree->at(part)->printTree(cout);
-    	//cout<<endl;
     }
 	cout << "Parameters optimization took " << i-1 << " rounds (" << getCPUTime()-begin_time << " sec)" << endl << endl;
 
-    //exit(2);
     return tree_lh;
 }
 
