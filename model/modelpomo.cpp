@@ -28,8 +28,6 @@ void ModelPoMo::init(const char *model_name,
 
     if (is_reversible != true) throw "Non-reversible PoMo not supported yet.";
 
-    // TODO: Process model_params.  What is this?
-
     // TODO: Set and get variables according to the model type.
 
     // TODO: Process freq_type.  Take care, coden types can end up
@@ -70,13 +68,20 @@ void ModelPoMo::init(const char *model_name,
 	} else {
 		// User-specified model.
 		if (setRateType(model_name) == false) {
-            string err_str =
-                "Could not read model specification.  "
-                "Files specifying models are not supported by PoMo yet.";
-            outError(err_str);
-            // readParameters(model_name);
+            // TODO: Check this.
+            readParameters(model_name);
 		}
 	}
+
+    // TODO: Check this.
+	if (model_params != "") {
+		readRates(model_params);
+	}
+
+    // TODO
+	// if (freq_params != "") {
+	// 	readStateFreq(freq_params);
+	// }
 
     // Create fixed frequencies and set them.  These correspond to the
     // state frequencies in the DNA substitution models.  However,
@@ -614,4 +619,124 @@ bool ModelPoMo::setRateType(const char *rate_str) {
     // Fix the last entry.
 	param_fixed[0] = true;
 	return true;
+}
+
+void ModelPoMo::readStateFreq(istream &in) throw(const char*) {
+	int i;
+	for (i = 0; i < nnuc; i++) {
+		if (!(in >> freq_fixed_states[i])) 
+			throw "State frequencies could not be read";
+		if (freq_fixed_states[i] < 0.0)
+			throw "Negative state frequencies found";
+	}
+	double sum = 0.0;
+	for (i = 0; i < nnuc; i++) sum += freq_fixed_states[i];
+	if (fabs(sum-1.0) > 1e-3)
+		throw "State frequencies do not sum up to 1.0";
+}
+
+// TODO: Check.
+void ModelPoMo::readStateFreq(string str) throw(const char*) {
+	int i;
+	int end_pos = 0;
+	for (i = 0; i < nnuc; i++) {
+		int new_end_pos;
+		freq_fixed_states[i] = convert_double(str.substr(end_pos).c_str(), new_end_pos);
+		end_pos += new_end_pos;
+		//cout << i << " " << freq_fixed_states[i] << endl;
+		if (freq_fixed_states[i] < 0.0 || freq_fixed_states[i] > 1)
+			outError("State frequency must be in [0,1] in ", str);
+		if (i == nnuc-1 && end_pos < str.length())
+			outError("Unexpected end of string ", str);
+		if (end_pos < str.length() && str[end_pos] != ',')
+			outError("Comma to separate state frequencies not found in ", str);
+		end_pos++;
+	}
+	double sum = 0.0;
+	for (i = 0; i < nnuc; i++) sum += freq_fixed_states[i];
+	if (fabs(sum-1.0) > 1e-2)
+		outError("State frequencies do not sum up to 1.0 in ", str);
+}
+
+// TODO: Check.
+void ModelPoMo::readParameters(const char *file_name) { 
+	try {
+		ifstream in(file_name);
+		if (in.fail())
+			outError("Invalid model name ", file_name);
+		cout << "Reading model parameters from file " << file_name << endl;
+		readRates(in);
+		readStateFreq(in);
+		in.close();
+	}
+	catch (const char *str) {
+		outError(str);
+	} 
+	num_params = 0;
+	writeInfo(cout);
+}
+
+// TODO: Check.
+void ModelPoMo::readRates(istream &in) throw(const char*, string) {
+	int nrates = getNumRateEntries();
+	string str;
+	in >> str;
+	if (str == "equalrate") {
+		for (int i = 0; i < nrates; i++)
+			mutation_prob[i] = 1.0;
+	} else {
+		try {
+			mutation_prob[0] = convert_double(str.c_str());
+		} catch (string &str) {
+			outError(str);
+		}
+		if (mutation_prob[0] < 0.0)
+			throw "Negative rates not allowed";
+		for (int i = 1; i < nrates; i++) {
+			if (!(in >> mutation_prob[i]))
+				throw "Rate entries could not be read";
+			if (mutation_prob[i] < 0.0)
+				throw "Negative rates not allowed";
+		}
+	}
+}
+
+// TODO: Check.
+void ModelPoMo::readRates(string str) throw(const char*) {
+	int nrates = *max_element(param_spec.begin(), param_spec.end());
+	int end_pos = 0;
+	int i, j;
+	for (j = 0; j < param_spec.length(); j++)
+		mutation_prob[j] = 1.0;
+	num_params = 0;
+	for (i = 0; i < nrates && end_pos < str.length(); i++) {
+		int new_end_pos;
+		double rate = 0;
+		if (str[end_pos] == '?') {
+			param_fixed[i+1] = false;
+			end_pos++;
+			rate = i + 0.4;
+			num_params++;
+		} else {
+			param_fixed[i+1] = true;
+			try {
+				rate = convert_double(str.substr(end_pos).c_str(), new_end_pos);
+			} catch (string str) {
+				outError(str);
+			}
+			end_pos += new_end_pos;
+		}
+		if (rate < 0.0)
+			outError("Negative rates found");
+		if (i == nrates-1 && end_pos < str.length())
+			outError("String too long ", str);
+		if (i < nrates-1 && end_pos >= str.length())
+			outError("Unexpected end of string ", str);
+		if (end_pos < str.length() && str[end_pos] != ',')
+			outError("Comma to separate rates not found in ", str);
+		end_pos++;
+		for (j = 0; j < param_spec.length(); j++)
+			if (param_spec[j] == i+1)
+				mutation_prob[j] = rate;
+	}
 }

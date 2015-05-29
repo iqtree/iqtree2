@@ -110,7 +110,47 @@ class ModelPoMo : public ModelGTR
     /**
      *  @return the number of rate entries
      */
-	virtual int getNumRateEntries() { return nnuc*(nnuc-1)/2; }
+	virtual int getNumRateEntries() { return nnuc*(nnuc-1)/2; };
+
+    /** 
+     * Read state frequencies from an input stream.  If it fails,
+     * throw error message.
+     * 
+     * @param in input stream
+     */
+    void readStateFreq(istream &in) throw(const char*);
+
+    /** 
+     * Read state frequencies from comma-separated string.  Might
+     * throw error message.
+     * 
+     * @param str 
+     */
+    void readStateFreq(string str) throw(const char*);
+
+    /** 
+     * Read model parameters from a file.  The file needs to contain
+     * the upper-triangle rate matrix and the state frequencies.
+     * 
+     * @param file_name 
+     */
+    void readParameters(const char *file_name);
+
+    /** 
+     * Read the upper-triangle rate matrix from an input stream.
+     * Throw error message if failing.
+     * 
+     * @param in input stream
+     */
+    void readRates(istream &in) throw(const char*, string);
+
+    /** 
+     * Read rate parameters from a comma-separated string.  Throw
+     * error message if failing.
+     * 
+     * @param str input string
+     */
+    void readRates(string str) throw(const char*);
 
  protected:
 
