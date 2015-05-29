@@ -187,17 +187,22 @@ double PartitionModelPlen::optimizeGeneRate(double gradient_epsilon)
     // BQM 22-05-2015: change to optimize individual rates
     int i;
     double score = 0.0;
+
+    #ifdef _OPENMP
+    #pragma omp parallel for reduction(+: score) private(i)
+    #endif    
     for (i = 0; i < tree->size(); i++) {
-        double gene_rate = tree->part_info[i].part_rate;
-        double negative_lh, ferror;
-        optimizing_part = i;
-        gene_rate = minimizeOneDimen(MIN_GENE_RATE, gene_rate, MAX_GENE_RATE, max(TOL_GENE_RATE, gradient_epsilon), &negative_lh, &ferror);
-    	if (gene_rate != tree->part_info[optimizing_part].part_rate) {
-            tree->part_info[i].part_rate = gene_rate;
-            tree->mapBranchLen(i);
-            tree->at(i)->clearAllPartialLH();
-        }
-        tree->part_info[i].cur_score = tree->at(i)->computeLikelihood();
+//        double gene_rate = tree->part_info[i].part_rate;
+//        double negative_lh, ferror;
+//        optimizing_part = i;
+//        gene_rate = minimizeOneDimen(MIN_GENE_RATE, gene_rate, MAX_GENE_RATE, max(TOL_GENE_RATE, gradient_epsilon), &negative_lh, &ferror);
+//    	if (gene_rate != tree->part_info[optimizing_part].part_rate) {
+//            tree->part_info[i].part_rate = gene_rate;
+//            tree->mapBranchLen(i);
+//            tree->at(i)->clearAllPartialLH();
+//        }
+//        tree->part_info[i].cur_score = tree->at(i)->computeLikelihood();
+        tree->part_info[i].cur_score = tree->at(i)->optimizeTreeLengthScaling(tree->part_info[i].part_rate, gradient_epsilon);
         score += tree->part_info[i].cur_score;
     }
     // now normalize the rates

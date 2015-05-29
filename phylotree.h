@@ -993,6 +993,15 @@ public:
      */
     virtual void computeFuncDerv(double value, double &df, double &ddf);
 
+    /**
+        optimize the scaling factor for tree length, given all branch lengths fixed
+        @param scaling (IN/OUT) start value of scaling factor, and as output the optimal value
+        @param gradient_epsilon gradient epsilon
+        @return optimal tree log-likelihood
+    */
+    double optimizeTreeLengthScaling(double &scaling, double gradient_epsilon);
+
+
      /****************************************************************************
             Branch length optimization by Least Squares
      ****************************************************************************/
@@ -1565,6 +1574,11 @@ protected:
             and by computePatternLikelihood() to compute all pattern likelihoods
      */
     PhyloNeighbor *current_it_back;
+
+    bool is_opt_scaling;
+
+    /** current scaling factor for optimizeTreeLengthScaling() */
+    double current_scaling;
 
     /**
             spr moves

@@ -102,6 +102,8 @@ void PhyloTree::init() {
     curScore = -DBL_MAX;
     root = NULL;
     params = NULL;
+    current_scaling = 1.0;
+    is_opt_scaling = false;
 }
 
 PhyloTree::PhyloTree(Alignment *aln) : MTree() {
@@ -3009,11 +3011,38 @@ void PhyloTree::computeLikelihoodDervNaive(PhyloNeighbor *dad_branch, PhyloNode 
  Branch length optimization by maximum likelihood
  ****************************************************************************/
 
-double PhyloTree::computeFunction(double value) {
-    current_it->length = value;
-    current_it_back->length = value;
+const double MIN_TREE_LENGTH_SCALE = 0.001;
+const double MAX_TREE_LENGTH_SCALE = 1000.0;
+const double TOL_TREE_LENGTH_SCALE = 0.001;
 
-    return -computeLikelihoodBranch(current_it, (PhyloNode*) current_it_back->node);
+
+double PhyloTree::optimizeTreeLengthScaling(double &scaling, double gradient_epsilon) {
+    is_opt_scaling = true;
+    current_scaling = scaling;
+    double negative_lh, ferror;
+    scaling = minimizeOneDimen(MIN_TREE_LENGTH_SCALE, scaling, MAX_TREE_LENGTH_SCALE, max(TOL_TREE_LENGTH_SCALE, gradient_epsilon), &negative_lh, &ferror);
+    if (scaling != current_scaling) {
+        scaleLength(scaling / current_scaling);
+        current_scaling = scaling;
+        clearAllPartialLH();
+    }
+    is_opt_scaling = false;
+    return computeLikelihood();
+}
+
+double PhyloTree::computeFunction(double value) {
+    if (!is_opt_scaling) {
+        current_it->length = value;
+        current_it_back->length = value;
+        return -computeLikelihoodBranch(current_it, (PhyloNode*) current_it_back->node);
+    } else {
+        if (value != current_scaling) {
+            scaleLength(value / current_scaling);
+            current_scaling = value;
+            clearAllPartialLH();
+        }
+        return -computeLikelihood();
+    }
 }
 
 void PhyloTree::computeFuncDerv(double value, double &df, double &ddf) {
