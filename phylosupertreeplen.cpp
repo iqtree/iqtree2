@@ -107,8 +107,9 @@ double PartitionModelPlen::optimizeParameters(bool fixed_len, bool write_info, d
     	cur_lh = 0.0;
     	for (int part = 0; part < ntrees; part++) {
     		// Subtree model parameters optimization
-        	tree->part_info[part].cur_score = tree->at(part)->getModelFactory()->optimizeParameters(true, false, logl_epsilon, gradient_epsilon);
-        	cur_lh += tree->part_info[part].cur_score ;
+//        	tree->part_info[part].cur_score = tree->at(part)->getModelFactory()->optimizeParameters(true, false, logl_epsilon, gradient_epsilon);
+        	tree->part_info[part].cur_score = tree->at(part)->getModelFactory()->optimizeParametersOnly(gradient_epsilon);
+        	cur_lh += tree->part_info[part].cur_score;
         	//cout <<"Partition "<<part<<" MODEL:"<<tree->at(part)->getModelName() <<endl;
 
     	}
