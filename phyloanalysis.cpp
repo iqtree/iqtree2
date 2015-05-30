@@ -1341,6 +1341,22 @@ void printMiscInfo(Params &params, IQTree &iqtree, double *pattern_lh) {
 			printSiteLhCategory(site_lh_file.c_str(), &iqtree);
 	}
 
+    if (params.print_site_posterior && iqtree.getModel()->isMixture()) {
+        cout << "Computing mixture posterior probabilities" << endl;
+        IntVector pattern_cat;
+        int num_mix = ((ModelMixture*)iqtree.getModel())->computePatternCategories(pattern_cat);
+        cout << num_mix << " mixture components are necessary" << endl;
+        string site_mix_file = (string)params.out_prefix + ".sitemix";
+        ofstream out(site_mix_file.c_str());
+        if (!out.is_open())
+            outError("File " + site_mix_file + " could not be opened");
+        out << "Ptn\tFreq\tNumMix" << endl;
+        for (int ptn = 0; ptn < pattern_cat.size(); ptn++)
+            out << ptn << "\t" << (int)iqtree.ptn_freq[ptn] << "\t" << pattern_cat[ptn] << endl;
+        out.close();
+        cout << "Pattern mixtures printed to " << site_mix_file << endl;
+    }
+
 	if (params.print_branch_lengths) {
     	if (params.manuel_analytic_approx) {
     		cout << "Applying Manuel's analytic approximation.." << endl;

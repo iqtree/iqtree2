@@ -14,6 +14,7 @@
 #include "modelmorphology.h"
 #include "modelset.h"
 #include "modelmixture.h"
+#include "phylokernelmixture.h"
 
 const string builtin_mixmodels_definition =
 "#nexus\n\
@@ -1382,4 +1383,74 @@ void ModelMixture::writeParameters(ostream &out) {
 	for (iterator it = begin(); it != end(); it++) {
 		(*it)->writeParameters(out);
 	}
+}
+
+int ModelMixture::computePatternCategories(IntVector &pattern_cat) {
+    if (phylo_tree->getModelFactory()->fused_mix_rate)
+        return 0;
+    switch (phylo_tree->aln->num_states) {
+    case 4: phylo_tree->computeMixtureLikelihoodBranchEigen<4>((PhyloNeighbor*)phylo_tree->root->neighbors[0], (PhyloNode*)phylo_tree->root); break;
+    case 20: phylo_tree->computeMixtureLikelihoodBranchEigen<20>((PhyloNeighbor*)phylo_tree->root->neighbors[0], (PhyloNode*)phylo_tree->root); break;
+    case 2: phylo_tree->computeMixtureLikelihoodBranchEigen<2>((PhyloNeighbor*)phylo_tree->root->neighbors[0], (PhyloNode*)phylo_tree->root); break;
+    case 64: phylo_tree->computeMixtureLikelihoodBranchEigen<64>((PhyloNeighbor*)phylo_tree->root->neighbors[0], (PhyloNode*)phylo_tree->root); break;
+    default: outError("Option unsupported yet for this sequence type. Contact author if you really need it."); break;
+    }
+
+	size_t npattern = phylo_tree->aln->getNPattern();
+    size_t ncat = phylo_tree->getRate()->getNRate();
+    size_t nmixture = getNMixtures();
+    size_t ptn, m, c;
+	pattern_cat.resize(npattern);
+    size_t num_best_mixture = 0;
+
+	double *lh_cat = phylo_tree->_pattern_lh_cat;
+    double *cat_prob = new double[ncat];
+    double *lh_mixture = new double[nmixture];
+    double *sorted_lh_mixture = new double[nmixture];
+    int *id_mixture = new int[nmixture];
+    
+    for (c = 0; c < ncat; c++)
+        cat_prob[c] = phylo_tree->getRate()->getProp(c);
+    
+    cout << "Ptn\tFreq\tNumMix\tBestMix" << endl;
+    size_t sum_nmix = 0;
+	for (ptn = 0; ptn < npattern; ptn++) {
+		double sum_prob = 0.0, acc_prob = 0.0;
+        memset(lh_mixture, 0, nmixture*sizeof(double));
+        for (m = 0; m < nmixture; m++) {
+            for (c = 0; c < ncat; c++) {
+                lh_mixture[m] += lh_cat[c] * cat_prob[c];
+            }
+            lh_mixture[m] *= prop[m];
+            sum_prob += lh_mixture[m];
+            lh_cat += ncat;
+            id_mixture[m] = m;
+        }
+        sum_prob = 1.0 / sum_prob;
+        for (m = 0; m < nmixture; m++) {
+            lh_mixture[m] *= sum_prob;
+            sorted_lh_mixture[m] = -lh_mixture[m];
+        }
+        quicksort(sorted_lh_mixture, 0, m-1, id_mixture);
+        for (m = 0; m < nmixture && acc_prob <= 0.99; m++) {
+            acc_prob -= sorted_lh_mixture[m];
+        }
+        if (m > num_best_mixture)
+            num_best_mixture = m;
+        sum_nmix += m;
+		pattern_cat[ptn] = m;
+
+        if (verbose_mode >= VB_MED) {
+            cout << ptn << "\t" << (int)round(phylo_tree->ptn_freq[ptn]) << "\t" << m << "\t" << id_mixture[0];
+            for (c = 0; c < m; c++)
+                cout  << "\t" << id_mixture[c] << "\t" << -sorted_lh_mixture[c];
+            cout << endl;
+        }
+	}
+    cout << 100*(double(sum_nmix)/nmixture)/npattern << "% computation necessary" << endl;
+    delete [] id_mixture;
+    delete [] sorted_lh_mixture;
+    delete [] lh_mixture;
+    delete [] cat_prob;
+    return num_best_mixture;
 }

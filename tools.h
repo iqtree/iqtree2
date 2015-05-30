@@ -1261,6 +1261,9 @@ struct Params {
     /** TRUE to print site-specific rates, default: FALSE */
     bool print_site_rate;
 
+    /* 1: print site posterior probability */
+    int print_site_posterior;
+
     /**
             TRUE to print tree log-likelihood
      */

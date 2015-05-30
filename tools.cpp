@@ -739,6 +739,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.lk_no_avx = false;
     params.print_site_lh = 0;
     params.print_site_rate = false;
+    params.print_site_posterior = 0;
     params.print_tree_lh = false;
     params.lambda = 1;
     params.speed_conf = 1.0;
@@ -2035,6 +2036,10 @@ void parseArg(int argc, char *argv[], Params &params) {
 			}
 			if (strcmp(argv[cnt], "-wsr") == 0) {
 				params.print_site_rate = true;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-wsp") == 0) {
+				params.print_site_posterior = 1;
 				continue;
 			}
 			if (strcmp(argv[cnt], "-wba") == 0) {

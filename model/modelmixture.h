@@ -100,6 +100,12 @@ public:
 	*/
 	virtual void writeParameters(ostream &out);
 
+    /** 
+        classify pattern into best mixture components
+        @return number of conponents needed
+    */
+    int computePatternCategories(IntVector &pattern_cat);
+
 	/**
 		rates of mixture components
 	*/
