@@ -1740,6 +1740,100 @@ void PhyloTree::computePatternLikelihood(double *ptn_lh, double *cur_logl, doubl
     //return score;
 }
 
+int PhyloTree::computePatternCategories(IntVector *pattern_ncat) {
+    if (sse != LK_EIGEN) {
+        // compute _pattern_lh_cat
+        if (!getModel()->isMixture())
+            computeLikelihoodBranchEigen((PhyloNeighbor*)root->neighbors[0], (PhyloNode*)root);
+        else if (getModelFactory()->fused_mix_rate) {
+            computeMixrateLikelihoodBranchEigen((PhyloNeighbor*)root->neighbors[0], (PhyloNode*)root);
+            assert(getModel()->getNMixtures() == getRate()->getNRate());
+        } else {
+            computeMixtureLikelihoodBranchEigen((PhyloNeighbor*)root->neighbors[0], (PhyloNode*)root);
+        }
+    }
+    
+	size_t npattern = aln->getNPattern();
+    size_t ncat = getRate()->getNRate();
+    size_t nmixture;
+    if (getModel()->isMixture() && !getModelFactory()->fused_mix_rate)
+    	nmixture = getModel()->getNMixtures();
+    else
+    	nmixture = ncat;
+    size_t ptn, m, c;
+    if (pattern_ncat)
+        pattern_ncat->resize(npattern);
+    if (ptn_cat_mask.empty())
+        ptn_cat_mask.resize(npattern, 0);
+    
+    size_t num_best_mixture = 0;
+    assert(ncat < sizeof(uint64_t)*8 && nmixture < sizeof(uint64_t)*8);
+
+	double *lh_cat = _pattern_lh_cat;
+//    double *cat_prob = new double[ncat];
+    double *lh_mixture = new double[nmixture];
+    double *sorted_lh_mixture = new double[nmixture];
+    int *id_mixture = new int[nmixture];
+    
+//    for (c = 0; c < ncat; c++)
+//        cat_prob[c] = getRate()->getProp(c);
+    
+//    cout << "Ptn\tFreq\tNumMix\tBestMix" << endl;
+    size_t sum_nmix = 0;
+	for (ptn = 0; ptn < npattern; ptn++) {
+		double sum_prob = 0.0, acc_prob = 0.0;
+        memset(lh_mixture, 0, nmixture*sizeof(double));
+        if (getModel()->isMixture() && !getModelFactory()->fused_mix_rate) {
+            for (m = 0; m < nmixture; m++) {
+                for (c = 0; c < ncat; c++) {
+//                    lh_mixture[m] += lh_cat[c] * cat_prob[c];
+                    lh_mixture[m] += lh_cat[c];
+                }
+//                lh_mixture[m] *= prop[m];
+                sum_prob += lh_mixture[m];
+                lh_cat += ncat;
+                id_mixture[m] = m;
+            }
+        } else {
+            for (m = 0; m < nmixture; m++) {
+//                lh_mixture[m] = lh_cat[m] * prop[m];
+                lh_mixture[m] = lh_cat[m];
+                sum_prob += lh_mixture[m];
+                id_mixture[m] = m;
+            }
+            lh_cat += nmixture;
+        }
+        sum_prob = 1.0 / sum_prob;
+        for (m = 0; m < nmixture; m++) {
+            lh_mixture[m] *= sum_prob;
+            sorted_lh_mixture[m] = -lh_mixture[m];
+        }
+        quicksort(sorted_lh_mixture, 0, m-1, id_mixture);
+        for (m = 0; m < nmixture && acc_prob <= 0.99; m++) {
+            acc_prob -= sorted_lh_mixture[m];
+            ptn_cat_mask[ptn] |= (uint64_t)1 << id_mixture[m];
+        }
+        if (m > num_best_mixture)
+            num_best_mixture = m;
+        sum_nmix += m;
+        if (pattern_ncat)
+            (*pattern_ncat)[ptn] = m;
+
+        if (verbose_mode >= VB_MED) {
+            cout << ptn << "\t" << (int)ptn_freq[ptn] << "\t" << m << "\t" << id_mixture[0];
+            for (c = 0; c < m; c++)
+                cout  << "\t" << id_mixture[c] << "\t" << -sorted_lh_mixture[c];
+            cout << endl;
+        }
+	}
+//    cout << 100*(double(sum_nmix)/nmixture)/npattern << "% computation necessary" << endl;
+    delete [] id_mixture;
+    delete [] sorted_lh_mixture;
+    delete [] lh_mixture;
+//    delete [] cat_prob;
+    return num_best_mixture;
+}
+
 double PhyloTree::computeLogLVariance(double *ptn_lh, double tree_lh) {
     int i;
     int nptn = getAlnNPattern();

@@ -1341,20 +1341,41 @@ void printMiscInfo(Params &params, IQTree &iqtree, double *pattern_lh) {
 			printSiteLhCategory(site_lh_file.c_str(), &iqtree);
 	}
 
-    if (params.print_site_posterior && iqtree.getModel()->isMixture()) {
+    if (params.print_site_posterior) {
         cout << "Computing mixture posterior probabilities" << endl;
         IntVector pattern_cat;
-        int num_mix = ((ModelMixture*)iqtree.getModel())->computePatternCategories(pattern_cat);
+        int num_mix = iqtree.computePatternCategories(&pattern_cat);
         cout << num_mix << " mixture components are necessary" << endl;
         string site_mix_file = (string)params.out_prefix + ".sitemix";
         ofstream out(site_mix_file.c_str());
         if (!out.is_open())
             outError("File " + site_mix_file + " could not be opened");
         out << "Ptn\tFreq\tNumMix" << endl;
-        for (int ptn = 0; ptn < pattern_cat.size(); ptn++)
+        int ptn;
+        for (ptn = 0; ptn < pattern_cat.size(); ptn++)
             out << ptn << "\t" << (int)iqtree.ptn_freq[ptn] << "\t" << pattern_cat[ptn] << endl;
         out.close();
         cout << "Pattern mixtures printed to " << site_mix_file << endl;
+        
+        site_mix_file = (string)params.out_prefix + ".sitemixall";
+        out.open(site_mix_file.c_str());
+        int ncat = iqtree.getRate()->getNRate();
+        if (iqtree.getModel()->isMixture() && !iqtree.getModelFactory()->fused_mix_rate)
+            ncat = iqtree.getModel()->getNMixtures();
+        out << "Ptn\tFreq\tNumMix\tCat" << endl;
+        
+        int c;
+        for (ptn = 0; ptn < iqtree.ptn_cat_mask.size(); ptn++) {
+            int num_cat = __builtin_popcountll(iqtree.ptn_cat_mask[ptn]);
+            out << ptn << "\t" << (int)iqtree.ptn_freq[ptn] << "\t" << num_cat << "\t";
+            for (c = 0; c < ncat; c++)
+                if (iqtree.ptn_cat_mask[ptn] & ((uint64_t)1<<c))
+                    out << "1";
+                else
+                    out << "0";
+            out << endl;
+        }
+        out.close();
     }
 
 	if (params.print_branch_lengths) {

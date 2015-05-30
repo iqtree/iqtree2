@@ -703,6 +703,14 @@ public:
     virtual void computePatternLikelihood(double *pattern_lh, double *cur_logl = NULL,
     		double *pattern_lh_cat = NULL);
 
+    vector<uint64_t> ptn_cat_mask;
+
+    /**
+        compute categories for each pattern, update ptn_cat_mask
+        @return max number of categories necessary
+    */
+    virtual int computePatternCategories(IntVector *pattern_ncat = NULL);
+
     /**
             Compute the variance in tree log-likelihood
             (Kishino & Hasegawa 1989, JME 29:170-179)
