@@ -1659,16 +1659,25 @@ void PhyloTree::computePatternLikelihood(double *ptn_lh, double *cur_logl, doubl
     	if (sse == LK_NORMAL || sse == LK_SSE)
     		computeLikelihoodBranchNaive(current_it, (PhyloNode*)current_it_back->node);
     	else {
-    		switch (aln->num_states) {
-    		case 4: computeLikelihoodBranchEigen<4>(current_it, (PhyloNode*)current_it_back->node); break;
-    		case 20: computeLikelihoodBranchEigen<20>(current_it, (PhyloNode*)current_it_back->node); break;
-    		case 2: computeLikelihoodBranchEigen<2>(current_it, (PhyloNode*)current_it_back->node); break;
-    		case 64: computeLikelihoodBranchEigen<64>(current_it, (PhyloNode*)current_it_back->node); break;
-    		default: outError("Option unsupported yet for this sequence type. Contact author if you really need it."); break;
-    		}
-    	}
-
+//    		switch (aln->num_states) {
+//    		case 4: computeLikelihoodBranchEigen<4>(current_it, (PhyloNode*)current_it_back->node); break;
+//    		case 20: computeLikelihoodBranchEigen<20>(current_it, (PhyloNode*)current_it_back->node); break;
+//    		case 2: computeLikelihoodBranchEigen<2>(current_it, (PhyloNode*)current_it_back->node); break;
+//    		case 64: computeLikelihoodBranchEigen<64>(current_it, (PhyloNode*)current_it_back->node); break;
+//    		default: outError("Option unsupported yet for this sequence type. Contact author if you really need it."); break;
+//    		}
+            if (!getModel()->isMixture()) {
+                computeLikelihoodBranchEigen(current_it, (PhyloNode*)current_it_back->node); 
+            } else if (getModelFactory()->fused_mix_rate) {
+                computeMixrateLikelihoodBranchEigen(current_it, (PhyloNode*)current_it_back->node); 
+            } else {
+                computeMixtureLikelihoodBranchEigen(current_it, (PhyloNode*)current_it_back->node); 
+            }
+        }
     }
+    
+    // TODO: ptn_lh_cat not properly handled for mixture models
+    
     double sum_scaling = current_it->lh_scale_factor + current_it_back->lh_scale_factor;
     //double sum_scaling = 0.0;
     if (sum_scaling < 0.0) {

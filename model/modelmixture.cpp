@@ -1388,14 +1388,19 @@ void ModelMixture::writeParameters(ostream &out) {
 int ModelMixture::computePatternCategories(IntVector &pattern_cat) {
     if (phylo_tree->getModelFactory()->fused_mix_rate)
         return 0;
-    switch (phylo_tree->aln->num_states) {
-    case 4: phylo_tree->computeMixtureLikelihoodBranchEigen<4>((PhyloNeighbor*)phylo_tree->root->neighbors[0], (PhyloNode*)phylo_tree->root); break;
-    case 20: phylo_tree->computeMixtureLikelihoodBranchEigen<20>((PhyloNeighbor*)phylo_tree->root->neighbors[0], (PhyloNode*)phylo_tree->root); break;
-    case 2: phylo_tree->computeMixtureLikelihoodBranchEigen<2>((PhyloNeighbor*)phylo_tree->root->neighbors[0], (PhyloNode*)phylo_tree->root); break;
-    case 64: phylo_tree->computeMixtureLikelihoodBranchEigen<64>((PhyloNeighbor*)phylo_tree->root->neighbors[0], (PhyloNode*)phylo_tree->root); break;
-    default: outError("Option unsupported yet for this sequence type. Contact author if you really need it."); break;
+//    switch (phylo_tree->aln->num_states) {
+//    case 4: phylo_tree->computeMixtureLikelihoodBranchEigen<4>((PhyloNeighbor*)phylo_tree->root->neighbors[0], (PhyloNode*)phylo_tree->root); break;
+//    case 20: phylo_tree->computeMixtureLikelihoodBranchEigen<20>((PhyloNeighbor*)phylo_tree->root->neighbors[0], (PhyloNode*)phylo_tree->root); break;
+//    case 2: phylo_tree->computeMixtureLikelihoodBranchEigen<2>((PhyloNeighbor*)phylo_tree->root->neighbors[0], (PhyloNode*)phylo_tree->root); break;
+//    case 64: phylo_tree->computeMixtureLikelihoodBranchEigen<64>((PhyloNeighbor*)phylo_tree->root->neighbors[0], (PhyloNode*)phylo_tree->root); break;
+//    default: outError("Option unsupported yet for this sequence type. Contact author if you really need it."); break;
+//    }
+    if (phylo_tree->getModelFactory()->fused_mix_rate) {
+        phylo_tree->computeMixrateLikelihoodBranchEigen((PhyloNeighbor*)phylo_tree->root->neighbors[0], (PhyloNode*)phylo_tree->root);
+    } else {
+        phylo_tree->computeMixtureLikelihoodBranchEigen((PhyloNeighbor*)phylo_tree->root->neighbors[0], (PhyloNode*)phylo_tree->root);
     }
-
+    
 	size_t npattern = phylo_tree->aln->getNPattern();
     size_t ncat = phylo_tree->getRate()->getNRate();
     size_t nmixture = getNMixtures();
