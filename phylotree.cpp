@@ -1654,6 +1654,8 @@ void PhyloTree::computePatternLikelihood(double *ptn_lh, double *cur_logl, doubl
     int nptn = aln->getNPattern();
     int i;
     int ncat = site_rate->getNDiscreteRate();
+    if (getModel()->isMixture() && !getModelFactory()->fused_mix_rate)
+        ncat *= getModel()->getNMixtures();
     if (ptn_lh_cat) {
     	// Right now only Naive version store _pattern_lh_cat!
     	if (sse == LK_NORMAL || sse == LK_SSE)
@@ -1675,8 +1677,6 @@ void PhyloTree::computePatternLikelihood(double *ptn_lh, double *cur_logl, doubl
             }
         }
     }
-    
-    // TODO: ptn_lh_cat not properly handled for mixture models
     
     double sum_scaling = current_it->lh_scale_factor + current_it_back->lh_scale_factor;
     //double sum_scaling = 0.0;

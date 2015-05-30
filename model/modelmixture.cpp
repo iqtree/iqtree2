@@ -1386,8 +1386,6 @@ void ModelMixture::writeParameters(ostream &out) {
 }
 
 int ModelMixture::computePatternCategories(IntVector &pattern_cat) {
-    if (phylo_tree->getModelFactory()->fused_mix_rate)
-        return 0;
 //    switch (phylo_tree->aln->num_states) {
 //    case 4: phylo_tree->computeMixtureLikelihoodBranchEigen<4>((PhyloNeighbor*)phylo_tree->root->neighbors[0], (PhyloNode*)phylo_tree->root); break;
 //    case 20: phylo_tree->computeMixtureLikelihoodBranchEigen<20>((PhyloNeighbor*)phylo_tree->root->neighbors[0], (PhyloNode*)phylo_tree->root); break;
@@ -1397,6 +1395,7 @@ int ModelMixture::computePatternCategories(IntVector &pattern_cat) {
 //    }
     if (phylo_tree->getModelFactory()->fused_mix_rate) {
         phylo_tree->computeMixrateLikelihoodBranchEigen((PhyloNeighbor*)phylo_tree->root->neighbors[0], (PhyloNode*)phylo_tree->root);
+        assert(getNMixtures() == phylo_tree->getRate()->getNRate());
     } else {
         phylo_tree->computeMixtureLikelihoodBranchEigen((PhyloNeighbor*)phylo_tree->root->neighbors[0], (PhyloNode*)phylo_tree->root);
     }
@@ -1417,19 +1416,28 @@ int ModelMixture::computePatternCategories(IntVector &pattern_cat) {
     for (c = 0; c < ncat; c++)
         cat_prob[c] = phylo_tree->getRate()->getProp(c);
     
-    cout << "Ptn\tFreq\tNumMix\tBestMix" << endl;
+//    cout << "Ptn\tFreq\tNumMix\tBestMix" << endl;
     size_t sum_nmix = 0;
 	for (ptn = 0; ptn < npattern; ptn++) {
 		double sum_prob = 0.0, acc_prob = 0.0;
         memset(lh_mixture, 0, nmixture*sizeof(double));
-        for (m = 0; m < nmixture; m++) {
-            for (c = 0; c < ncat; c++) {
-                lh_mixture[m] += lh_cat[c] * cat_prob[c];
+        if (phylo_tree->getModelFactory()->fused_mix_rate) {
+            for (m = 0; m < nmixture; m++) {
+                lh_mixture[m] = lh_cat[m] * prop[m];
+                sum_prob += lh_mixture[m];
+                id_mixture[m] = m;
             }
-            lh_mixture[m] *= prop[m];
-            sum_prob += lh_mixture[m];
-            lh_cat += ncat;
-            id_mixture[m] = m;
+            lh_cat += nmixture;
+        } else {
+            for (m = 0; m < nmixture; m++) {
+                for (c = 0; c < ncat; c++) {
+                    lh_mixture[m] += lh_cat[c] * cat_prob[c];
+                }
+                lh_mixture[m] *= prop[m];
+                sum_prob += lh_mixture[m];
+                lh_cat += ncat;
+                id_mixture[m] = m;
+            }
         }
         sum_prob = 1.0 / sum_prob;
         for (m = 0; m < nmixture; m++) {

@@ -726,7 +726,10 @@ void PhyloSuperTree::computePatternLikelihood(double *pattern_lh, double *cur_lo
 		else
 			(*it)->computePatternLikelihood(pattern_lh + offset);
 		offset += (*it)->aln->getNPattern();
-		offset_lh_cat += (*it)->aln->getNPattern() * (*it)->site_rate->getNDiscreteRate();
+        if ((*it)->getModel()->isMixture() && !(*it)->getModelFactory()->fused_mix_rate)
+            offset_lh_cat += (*it)->aln->getNPattern() * (*it)->site_rate->getNDiscreteRate() * (*it)->model->getNMixtures();
+        else
+            offset_lh_cat += (*it)->aln->getNPattern() * (*it)->site_rate->getNDiscreteRate();
 	}
 	if (cur_logl) { // sanity check
 		double sum_logl = 0;

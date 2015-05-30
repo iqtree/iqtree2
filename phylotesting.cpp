@@ -238,13 +238,16 @@ void printSiteLh(const char*filename, PhyloTree *tree, double *ptn_lh,
 }
 
 void printSiteLhCategory(const char*filename, PhyloTree *tree) {
+    // TODO: mixture model!
+    if (tree->getModel()->isMixture() && !tree->getModelFactory()->fused_mix_rate)
+        outError("Unsupported feature, please contact author if you really need this", __func__);
 	double *pattern_lh, *pattern_lh_cat;
 	int i;
 	int discrete_cat = tree->getRate()->getNDiscreteRate();
 	pattern_lh = new double[tree->getAlnNPattern()];
 	pattern_lh_cat = new double[tree->getAlnNPattern()*(discrete_cat)];
 	tree->computePatternLikelihood(pattern_lh, NULL, pattern_lh_cat);
-
+        
 	try {
 		ofstream out;
 		out.exceptions(ios::failbit | ios::badbit);
