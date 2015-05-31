@@ -128,12 +128,14 @@ void PhyloSuperTree::readPartitionRaxml(Params &params) {
             bool is_ASC = info.model_name.substr(0,4) == "ASC_";
             if (is_ASC) info.model_name.erase(0, 4);
             StateFreqType freq = FREQ_UNKNOWN;
-            if (*info.model_name.rbegin() == 'F' && info.model_name != "DAYHOFF") {
-                freq = FREQ_EMPIRICAL;
-                info.model_name.erase(info.model_name.length()-1);
-            } else if (*info.model_name.rbegin() == 'X' && info.model_name != "LG4X") {
-                freq = FREQ_ESTIMATE;
-                info.model_name.erase(info.model_name.length()-1);
+            if (info.model_name.find_first_of("*+{") == string::npos ) {
+                if (*info.model_name.rbegin() == 'F' && info.model_name != "DAYHOFF") {
+                    freq = FREQ_EMPIRICAL;
+                    info.model_name.erase(info.model_name.length()-1);
+                } else if (*info.model_name.rbegin() == 'X' && info.model_name != "LG4X") {
+                    freq = FREQ_ESTIMATE;
+                    info.model_name.erase(info.model_name.length()-1);
+                }
             }
             
             if (info.model_name.empty())
