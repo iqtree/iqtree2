@@ -89,12 +89,12 @@ double PartitionModelPlen::optimizeParameters(bool fixed_len, bool write_info, d
 	}
 
     cout<<"Initial log-likelihood: "<<tree_lh<<endl;
-	double begin_time = getCPUTime();
+	double begin_time = getRealTime();
 	int i;
     for(i = 1; i < 100; i++){
     	cur_lh = 0.0;
         #ifdef _OPENMP
-        #pragma omp parallel for reduction(+: cur_lh)
+        #pragma omp parallel for reduction(+: cur_lh) schedule(dynamic)
         #endif
     	for (int part = 0; part < ntrees; part++) {
     		// Subtree model parameters optimization
@@ -128,11 +128,15 @@ double PartitionModelPlen::optimizeParameters(bool fixed_len, bool write_info, d
     	assert(cur_lh > tree_lh - 1.0);
     	tree_lh = cur_lh;
     }
-    cout <<"OPTIMIZE MODEL has finished"<< endl;
-    for(int part = 0; part < ntrees; part++){
-    	cout<<"PART RATE "<<part<<" = "<<tree->part_info[part].part_rate<<endl;
+//    cout <<"OPTIMIZE MODEL has finished"<< endl;
+    if (!tree->fixed_rates) {
+        cout << "Partition-specific rates: ";
+        for(int part = 0; part < ntrees; part++){
+            cout << " " << tree->part_info[part].part_rate;
+        }
+        cout << endl;
     }
-	cout << "Parameters optimization took " << i-1 << " rounds (" << getCPUTime()-begin_time << " sec)" << endl << endl;
+	cout << "Parameters optimization took " << i-1 << " rounds (" << getRealTime()-begin_time << " sec)" << endl << endl;
 
     return tree_lh;
 }
@@ -189,7 +193,7 @@ double PartitionModelPlen::optimizeGeneRate(double gradient_epsilon)
     double score = 0.0;
 
     #ifdef _OPENMP
-    #pragma omp parallel for reduction(+: score) private(i)
+    #pragma omp parallel for reduction(+: score) private(i) schedule(dynamic)
     #endif    
     for (i = 0; i < tree->size(); i++) {
 //        double gene_rate = tree->part_info[i].part_rate;

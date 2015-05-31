@@ -709,7 +709,7 @@ double PhyloSuperTree::computeLikelihood(double *pattern_lh) {
 		}
 	} else {
 		#ifdef _OPENMP
-		#pragma omp parallel for reduction(+: tree_lh)
+		#pragma omp parallel for reduction(+: tree_lh) schedule(dynamic)
 		#endif
 		for (int i = 0; i < ntrees; i++) {
 			part_info[i].cur_score = at(i)->computeLikelihood();
@@ -753,7 +753,7 @@ double PhyloSuperTree::optimizeAllBranches(int my_iterations, double tolerance, 
 	double tree_lh = 0.0;
 	int ntrees = size();
 	#ifdef _OPENMP
-	#pragma omp parallel for reduction(+: tree_lh)
+	#pragma omp parallel for reduction(+: tree_lh) schedule(dynamic)
 	#endif
 	for (int i = 0; i < ntrees; i++) {
 		part_info[i].cur_score = at(i)->optimizeAllBranches(my_iterations, tolerance, maxNRStep);

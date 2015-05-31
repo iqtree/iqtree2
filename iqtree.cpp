@@ -1539,7 +1539,7 @@ string IQTree::optimizeModelParameters(bool printInfo, double logl_epsilon) {
 	if (logl_epsilon == -1)
 		logl_epsilon = params->modeps;
 	cout << "Estimate model parameters (epsilon = " << logl_epsilon << ")" << endl;
-	double stime = getCPUTime();
+	double stime = getRealTime();
 	string newTree;
 	if (params->pll) {
 		if (curScore == -DBL_MAX) {
@@ -1587,7 +1587,7 @@ string IQTree::optimizeModelParameters(bool printInfo, double logl_epsilon) {
         if (params->print_site_posterior)
             computePatternCategories();
 	}
-	double etime = getCPUTime();
+	double etime = getRealTime();
 	cout << etime - stime << " seconds (logl: " << curScore << ")" << endl;
 	return newTree;
 }
