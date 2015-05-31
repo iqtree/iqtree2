@@ -51,20 +51,20 @@ SuperAlignmentPairwisePlen::~SuperAlignmentPairwisePlen()
  * class PartitionModelPlen
 **********************************************************/
 
-const double MIN_GENE_RATE = 0.001;
-const double MAX_GENE_RATE = 1000.0;
-const double TOL_GENE_RATE = 0.0001;
+//const double MIN_GENE_RATE = 0.001;
+//const double MAX_GENE_RATE = 1000.0;
+//const double TOL_GENE_RATE = 0.0001;
 
 PartitionModelPlen::PartitionModelPlen()
         : PartitionModel()
 {
-    optimizing_part = -1;
+//    optimizing_part = -1;
 }
 
 PartitionModelPlen::PartitionModelPlen(Params &params, PhyloSuperTreePlen *tree, ModelsBlock *models_block)
         : PartitionModel(params, tree, models_block)
 {
-    optimizing_part = -1;
+//    optimizing_part = -1;
 }
 
 PartitionModelPlen::~PartitionModelPlen()
@@ -137,15 +137,15 @@ double PartitionModelPlen::optimizeParameters(bool fixed_len, bool write_info, d
     return tree_lh;
 }
 
-double PartitionModelPlen::computeFunction(double value) {
-	PhyloSuperTreePlen *tree = (PhyloSuperTreePlen*)site_rate->getTree();
-    if (value != tree->part_info[optimizing_part].part_rate) {
-        tree->part_info[optimizing_part].part_rate = value;
-        tree->mapBranchLen(optimizing_part);
-        tree->at(optimizing_part)->clearAllPartialLH();
-    }
-    return -tree->at(optimizing_part)->computeLikelihood();
-}
+//double PartitionModelPlen::computeFunction(double value) {
+//	PhyloSuperTreePlen *tree = (PhyloSuperTreePlen*)site_rate->getTree();
+//    if (value != tree->part_info[optimizing_part].part_rate) {
+//        tree->part_info[optimizing_part].part_rate = value;
+//        tree->mapBranchLen(optimizing_part);
+//        tree->at(optimizing_part)->clearAllPartialLH();
+//    }
+//    return -tree->at(optimizing_part)->computeLikelihood();
+//}
 
 
 double PartitionModelPlen::optimizeGeneRate(double gradient_epsilon)
@@ -217,54 +217,54 @@ double PartitionModelPlen::optimizeGeneRate(double gradient_epsilon)
     return score;
 }
 
-double PartitionModelPlen::targetFunk(double x[]) {
-	PhyloSuperTreePlen *tree = (PhyloSuperTreePlen*)site_rate->getTree();
+//double PartitionModelPlen::targetFunk(double x[]) {
+//	PhyloSuperTreePlen *tree = (PhyloSuperTreePlen*)site_rate->getTree();
+//
+//	double sum = 0.0;
+//	int part;
+//	for( part = 0; part < tree->size()-1; part ++){
+//		sum += x[part+1];
+//	}
+//	if (tree->size() - sum < 1e-4) return 1.0e+12;
+//
+//	for( part = 0, sum = 0.0; part < tree->size(); part ++){
+//		double rate;
+//		if (part < tree->size() - 1)
+//			rate = x[part+1];
+//		else
+//			rate = tree->size() - sum;
+//		sum += rate;
+//		if(tree->part_info[part].part_rate != rate){
+//			tree->at(part)->clearAllPartialLH();
+//			//tree->at(part)->scaleLength(rate/tree->part_info[part].part_rate);
+//			tree->part_info[part].part_rate = rate;
+//			tree->part_info[part].cur_score = 0.0;
+//		}
+//	}
+//	tree->mapBranchLen();
+//	//getVariables(x);
+//
+//	return -tree->computeLikelihood();
+//}
 
-	double sum = 0.0;
-	int part;
-	for( part = 0; part < tree->size()-1; part ++){
-		sum += x[part+1];
-	}
-	if (tree->size() - sum < 1e-4) return 1.0e+12;
-
-	for( part = 0, sum = 0.0; part < tree->size(); part ++){
-		double rate;
-		if (part < tree->size() - 1)
-			rate = x[part+1];
-		else
-			rate = tree->size() - sum;
-		sum += rate;
-		if(tree->part_info[part].part_rate != rate){
-			tree->at(part)->clearAllPartialLH();
-			//tree->at(part)->scaleLength(rate/tree->part_info[part].part_rate);
-			tree->part_info[part].part_rate = rate;
-			tree->part_info[part].cur_score = 0.0;
-		}
-	}
-	tree->mapBranchLen();
-	//getVariables(x);
-
-	return -tree->computeLikelihood();
-}
-
-void PartitionModelPlen::getVariables(double *variables) {
-	PhyloSuperTreePlen *tree = (PhyloSuperTreePlen*)site_rate->getTree();
-	int ntrees = tree->size()-1;
-	double sum = 0.0;
-	for(int part = 0; part < ntrees; part++){
-		tree->part_info[part].part_rate = variables[part+1];
-		sum += variables[part+1];
-	}
-	tree->part_info[ntrees].part_rate = tree->size() - sum;
-}
-
-void PartitionModelPlen::setVariables(double *variables) {
-	PhyloSuperTreePlen *tree = (PhyloSuperTreePlen*)site_rate->getTree();
-	int ntrees = tree->size()-1;
-	for(int part = 0; part < ntrees; part++){
-		variables[part+1] = tree->part_info[part].part_rate;
-	}
-}
+//void PartitionModelPlen::getVariables(double *variables) {
+//	PhyloSuperTreePlen *tree = (PhyloSuperTreePlen*)site_rate->getTree();
+//	int ntrees = tree->size()-1;
+//	double sum = 0.0;
+//	for(int part = 0; part < ntrees; part++){
+//		tree->part_info[part].part_rate = variables[part+1];
+//		sum += variables[part+1];
+//	}
+//	tree->part_info[ntrees].part_rate = tree->size() - sum;
+//}
+//
+//void PartitionModelPlen::setVariables(double *variables) {
+//	PhyloSuperTreePlen *tree = (PhyloSuperTreePlen*)site_rate->getTree();
+//	int ntrees = tree->size()-1;
+//	for(int part = 0; part < ntrees; part++){
+//		variables[part+1] = tree->part_info[part].part_rate;
+//	}
+//}
 
 int PartitionModelPlen::getNParameters() {
     PhyloSuperTreePlen *tree = (PhyloSuperTreePlen*)site_rate->getTree();
@@ -439,6 +439,9 @@ void PhyloSuperTreePlen::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, b
 	PhyloTree::optimizeOneBranch(node1, node2, false, maxNRStep);
 
 	// bug fix: assign cur_score into part_info
+    #ifdef _OPENMP
+    #pragma omp parallel for private(part)
+    #endif    
 	for (part = 0; part < size(); part++) {
 		if (((SuperNeighbor*)current_it)->link_neighbors[part]) {
 			part_info[part].cur_score = at(part)->computeLikelihoodFromBuffer();
@@ -474,6 +477,9 @@ double PhyloSuperTreePlen::computeFunction(double value) {
 	SuperNeighbor *nei2 = (SuperNeighbor*)current_it->node->findNeighbor(current_it_back->node);
 	assert(nei1 && nei2);
 
+    #ifdef _OPENMP
+    #pragma omp parallel for reduction(+: tree_lh)
+    #endif    
 	for (int part = 0; part < ntrees; part++) {
 			PhyloNeighbor *nei1_part = nei1->link_neighbors[part];
 			PhyloNeighbor *nei2_part = nei2->link_neighbors[part];
@@ -504,11 +510,10 @@ double PhyloSuperTreePlen::computeLikelihoodFromBuffer() {
 	return score;
 }
 
-void PhyloSuperTreePlen::computeFuncDerv(double value, double &df, double &ddf) {
+void PhyloSuperTreePlen::computeFuncDerv(double value, double &df_ret, double &ddf_ret) {
 //	double tree_lh = 0.0;
-	double df_aux, ddf_aux;
-	df = 0.0;
-	ddf = 0.0;
+	double df = 0.0;
+	double ddf = 0.0;
 
 	int ntrees = size();
 
@@ -522,7 +527,11 @@ void PhyloSuperTreePlen::computeFuncDerv(double value, double &df, double &ddf) 
 	SuperNeighbor *nei2 = (SuperNeighbor*)current_it->node->findNeighbor(current_it_back->node);
 	assert(nei1 && nei2);
 
+    #ifdef _OPENMP
+    #pragma omp parallel for reduction(+: df, ddf)
+    #endif    
 	for (int part = 0; part < ntrees; part++) {
+        double df_aux, ddf_aux;
 			PhyloNeighbor *nei1_part = nei1->link_neighbors[part];
 			PhyloNeighbor *nei2_part = nei2->link_neighbors[part];
 			if (nei1_part && nei2_part) {
@@ -539,8 +548,8 @@ void PhyloSuperTreePlen::computeFuncDerv(double value, double &df, double &ddf) 
 //				part_info[part].cur_score = at(part)->computeLikelihoodDerv(nei2_part,(PhyloNode*)nei1_part->node, df_aux, ddf_aux);
 				at(part)->computeLikelihoodDerv(nei2_part,(PhyloNode*)nei1_part->node, df_aux, ddf_aux);
 //				tree_lh += part_info[part].cur_score;
-				df -= part_info[part].part_rate*df_aux;
-				ddf -= part_info[part].part_rate*part_info[part].part_rate*ddf_aux;
+				df += part_info[part].part_rate*df_aux;
+				ddf += part_info[part].part_rate*part_info[part].part_rate*ddf_aux;
 			}
 			else {
 //				part_info[part].cur_score = 0.0;
@@ -549,6 +558,8 @@ void PhyloSuperTreePlen::computeFuncDerv(double value, double &df, double &ddf) 
 //				tree_lh += part_info[part].cur_score;
 			}
 		}
+    df_ret = -df;
+    ddf_ret = -ddf;
 //    return -tree_lh;
 }
 
@@ -794,7 +805,7 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 //		if ((*it)->sse != LK_EIGEN_SSE)
 //			outError("hey!");
 
-	double score_mine = this->computeLikelihood();
+//	double score_mine = this->computeLikelihood();
 
 	//cout<<"starting NNI evaluation"<<endl;
 	//checkBranchLen();

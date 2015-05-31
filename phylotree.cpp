@@ -712,7 +712,7 @@ void PhyloTree::computePartialParsimonyNaive(PhyloNeighbor *dad_branch, PhyloNod
             		if (state >= 23) return;
             		state -= 20;
                     memset(bits_entry, 0, sizeof(UINT) * entry_size);
-                    bits_entry[0] = ambi_aa[state];
+                    bits_entry[0] = ambi_aa[(int)state];
                     setBitsBlock(dad_branch->partial_pars, ptn, bits_entry);
                 } else {
                 	assert(0);

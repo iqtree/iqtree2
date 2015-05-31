@@ -25,6 +25,8 @@ void PhyloTree::computePartialParsimonyFast(PhyloNeighbor *dad_branch, PhyloNode
 
     if (node->isLeaf() && dad) {
         // external node
+        if (aln->ordered_pattern.empty())
+            aln->orderPatternByNumChars();
         int leafid = node->id;
         int pars_size = getBitsBlockSize();
         memset(dad_branch->partial_pars, 0, pars_size*sizeof(UINT));

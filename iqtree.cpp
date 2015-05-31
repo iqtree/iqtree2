@@ -360,7 +360,7 @@ void IQTree::computeInitialTree(string &dist_file, LikelihoodKernel kernel) {
             cout << "Creating fast initial parsimony tree by random order stepwise addition..." << endl;
         else
             cout << "Creating initial parsimony tree by random order stepwise addition..." << endl;
-        aln->orderPatternByNumChars();
+//        aln->orderPatternByNumChars();
         start = getCPUTime();
         score = computeParsimonyTree(params->out_prefix, aln);
         cout << getCPUTime() - start << " seconds, parsimony score: " << score
