@@ -487,7 +487,6 @@ void PhyloTree::computePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNo
 	if ((right->partial_lh_computed & 1) == 0)
 		computePartialLikelihoodEigen(right, node);
 	dad_branch->lh_scale_factor = left->lh_scale_factor + right->lh_scale_factor;
-	double partial_lh_tmp[nstates];
 	double *eleft = new double[block*nstates], *eright = new double[block*nstates];
 
 	// precompute information buffer
@@ -549,9 +548,11 @@ void PhyloTree::computePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNo
 		// scale number must be ZERO
 	    memset(dad_branch->scale_num, 0, nptn * sizeof(UBYTE));
 #ifdef _OPENMP
-#pragma omp parallel for private(ptn, c, x, i, partial_lh_tmp)
+//#pragma omp parallel for private(ptn, c, x, i, partial_lh_tmp)
+#pragma omp parallel for private(ptn, c, x, i)
 #endif
 		for (ptn = 0; ptn < nptn; ptn++) {
+			double partial_lh_tmp[nstates];
 			double *partial_lh = dad_branch->partial_lh + ptn*block;
 			int state_left = (ptn < orig_ntn) ? (aln->at(ptn))[left->node->id] : model_factory->unobserved_ptns[ptn-orig_ntn];
 			int state_right = (ptn < orig_ntn) ? (aln->at(ptn))[right->node->id] : model_factory->unobserved_ptns[ptn-orig_ntn];
@@ -602,9 +603,11 @@ void PhyloTree::computePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNo
 
 		double sum_scale = 0.0;
 #ifdef _OPENMP
-#pragma omp parallel for reduction(+: sum_scale) private(ptn, c, x, i, partial_lh_tmp)
+//#pragma omp parallel for reduction(+: sum_scale) private(ptn, c, x, i, partial_lh_tmp)
+#pragma omp parallel for reduction(+: sum_scale) private(ptn, c, x, i)
 #endif
 		for (ptn = 0; ptn < nptn; ptn++) {
+			double partial_lh_tmp[nstates];
 			double *partial_lh = dad_branch->partial_lh + ptn*block;
 			double *partial_lh_right = right->partial_lh + ptn*block;
 			int state_left = (ptn < orig_ntn) ? (aln->at(ptn))[left->node->id] : model_factory->unobserved_ptns[ptn-orig_ntn];
@@ -669,9 +672,11 @@ void PhyloTree::computePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNo
 
 		double sum_scale = 0.0;
 #ifdef _OPENMP
-#pragma omp parallel for reduction(+: sum_scale) private(ptn, c, x, i, partial_lh_tmp)
+//#pragma omp parallel for reduction(+: sum_scale) private(ptn, c, x, i, partial_lh_tmp)
+#pragma omp parallel for reduction(+: sum_scale) private(ptn, c, x, i)
 #endif
 		for (ptn = 0; ptn < nptn; ptn++) {
+			double partial_lh_tmp[nstates];
 			double *partial_lh = dad_branch->partial_lh + ptn*block;
 			double *partial_lh_left = left->partial_lh + ptn*block;
 			double *partial_lh_right = right->partial_lh + ptn*block;
@@ -1518,7 +1523,6 @@ void PhyloTree::computeMixratePartialLikelihoodEigen(PhyloNeighbor *dad_branch, 
 	if ((right->partial_lh_computed & 1) == 0)
 		computeMixratePartialLikelihoodEigen(right, node);
 	dad_branch->lh_scale_factor = left->lh_scale_factor + right->lh_scale_factor;
-	double partial_lh_tmp[nstates];
 	double *eleft = new double[block*nstates], *eright = new double[block*nstates];
 
 	// precompute information buffer
@@ -1582,9 +1586,11 @@ void PhyloTree::computeMixratePartialLikelihoodEigen(PhyloNeighbor *dad_branch, 
 		// scale number must be ZERO
 	    memset(dad_branch->scale_num, 0, nptn * sizeof(UBYTE));
 #ifdef _OPENMP
-#pragma omp parallel for private(ptn, c, x, i, partial_lh_tmp)
+//#pragma omp parallel for private(ptn, c, x, i, partial_lh_tmp)
+#pragma omp parallel for private(ptn, c, x, i)
 #endif
 		for (ptn = 0; ptn < nptn; ptn++) {
+			double partial_lh_tmp[nstates];
 			double *partial_lh = dad_branch->partial_lh + ptn*block;
 			int state_left = (ptn < orig_ntn) ? (aln->at(ptn))[left->node->id] : model_factory->unobserved_ptns[ptn-orig_ntn];
 			int state_right = (ptn < orig_ntn) ? (aln->at(ptn))[right->node->id] : model_factory->unobserved_ptns[ptn-orig_ntn];
@@ -1636,9 +1642,11 @@ void PhyloTree::computeMixratePartialLikelihoodEigen(PhyloNeighbor *dad_branch, 
 
 		double sum_scale = 0.0;
 #ifdef _OPENMP
-#pragma omp parallel for reduction(+: sum_scale) private(ptn, c, x, i, partial_lh_tmp)
+//#pragma omp parallel for reduction(+: sum_scale) private(ptn, c, x, i, partial_lh_tmp)
+#pragma omp parallel for reduction(+: sum_scale) private(ptn, c, x, i)
 #endif
 		for (ptn = 0; ptn < nptn; ptn++) {
+			double partial_lh_tmp[nstates];
 			double *partial_lh = dad_branch->partial_lh + ptn*block;
 			double *partial_lh_right = right->partial_lh + ptn*block;
 			int state_left = (ptn < orig_ntn) ? (aln->at(ptn))[left->node->id] : model_factory->unobserved_ptns[ptn-orig_ntn];
@@ -1685,9 +1693,11 @@ void PhyloTree::computeMixratePartialLikelihoodEigen(PhyloNeighbor *dad_branch, 
 
 		double sum_scale = 0.0;
 #ifdef _OPENMP
-#pragma omp parallel for reduction(+: sum_scale) private(ptn, c, x, i, partial_lh_tmp)
+//#pragma omp parallel for reduction(+: sum_scale) private(ptn, c, x, i, partial_lh_tmp)
+#pragma omp parallel for reduction(+: sum_scale) private(ptn, c, x, i)
 #endif
 		for (ptn = 0; ptn < nptn; ptn++) {
+			double partial_lh_tmp[nstates];
 			double *partial_lh = dad_branch->partial_lh + ptn*block;
 			double *partial_lh_left = left->partial_lh + ptn*block;
 			double *partial_lh_right = right->partial_lh + ptn*block;
@@ -2064,7 +2074,7 @@ void PhyloTree::computeMixturePartialLikelihoodEigen(PhyloNeighbor *dad_branch, 
 	if ((right->partial_lh_computed & 1) == 0)
 		computeMixturePartialLikelihoodEigen(right, node);
 	dad_branch->lh_scale_factor = left->lh_scale_factor + right->lh_scale_factor;
-	double partial_lh_tmp[nstates];
+//	double partial_lh_tmp[nstates];
 	double *eleft = new double[block*nstates], *eright = new double[block*nstates];
 
 	// precompute information buffer
@@ -2148,9 +2158,10 @@ void PhyloTree::computeMixturePartialLikelihoodEigen(PhyloNeighbor *dad_branch, 
 		// scale number must be ZERO
 	    memset(dad_branch->scale_num, 0, nptn * sizeof(UBYTE));
 #ifdef _OPENMP
-#pragma omp parallel for private(ptn, c, x, i, m, partial_lh_tmp)
+//#pragma omp parallel for private(ptn, c, x, i, m)
 #endif
 		for (ptn = 0; ptn < nptn; ptn++) {
+			double partial_lh_tmp[nstates];
 			double *partial_lh = dad_branch->partial_lh + ptn*block;
 			int state_left = (ptn < orig_ntn) ? (aln->at(ptn))[left->node->id] : model_factory->unobserved_ptns[ptn-orig_ntn];
 			int state_right = (ptn < orig_ntn) ? (aln->at(ptn))[right->node->id] : model_factory->unobserved_ptns[ptn-orig_ntn];
@@ -2207,9 +2218,11 @@ void PhyloTree::computeMixturePartialLikelihoodEigen(PhyloNeighbor *dad_branch, 
 
 		double sum_scale = 0.0;
 #ifdef _OPENMP
-#pragma omp parallel for reduction(+: sum_scale) private(ptn, c, x, i, m, partial_lh_tmp)
+//#pragma omp parallel for reduction(+: sum_scale) private(ptn, c, x, i, m, partial_lh_tmp)
+#pragma omp parallel for reduction(+: sum_scale) private(ptn, c, x, i, m)
 #endif
 		for (ptn = 0; ptn < nptn; ptn++) {
+			double partial_lh_tmp[nstates];
 			double *partial_lh = dad_branch->partial_lh + ptn*block;
 			double *partial_lh_right = right->partial_lh + ptn*block;
 			int state_left = (ptn < orig_ntn) ? (aln->at(ptn))[left->node->id] : model_factory->unobserved_ptns[ptn-orig_ntn];
@@ -2258,9 +2271,11 @@ void PhyloTree::computeMixturePartialLikelihoodEigen(PhyloNeighbor *dad_branch, 
 
 		double sum_scale = 0.0;
 #ifdef _OPENMP
-#pragma omp parallel for reduction(+: sum_scale) private(ptn, c, x, i, m, partial_lh_tmp)
+//#pragma omp parallel for reduction(+: sum_scale) private(ptn, c, x, i, m, partial_lh_tmp)
+#pragma omp parallel for reduction(+: sum_scale) private(ptn, c, x, i, m)
 #endif
 		for (ptn = 0; ptn < nptn; ptn++) {
+			double partial_lh_tmp[nstates];
 			double *partial_lh = dad_branch->partial_lh + ptn*block;
 			double *partial_lh_left = left->partial_lh + ptn*block;
 			double *partial_lh_right = right->partial_lh + ptn*block;
