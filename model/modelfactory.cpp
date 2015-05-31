@@ -284,7 +284,7 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 				model_list = model_str.substr(4, model_str.length()-5);
 				model_str = model_str.substr(0, 3);
 			}
-			model = new ModelMixture(model_str, model_list, models_block, freq_type, freq_params, tree, optimize_mixmodel_weight);
+			model = new ModelMixture(params.model_name, model_str, model_list, models_block, freq_type, freq_params, tree, optimize_mixmodel_weight);
 		} else {
 //			string model_desc;
 //			NxsModel *nxsmodel = models_block->findModel(model_str);

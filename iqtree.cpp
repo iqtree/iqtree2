@@ -275,6 +275,8 @@ IQTree::~IQTree() {
     	aligned_free(boot_samples[0]); // free memory
 }
 
+extern const char *aa_model_names_rax[];
+
 void IQTree::createPLLPartition(Params &params, ostream &pllPartitionFileHandle) {
     if (isSuperTree()) {
         PhyloSuperTree *siqtree = (PhyloSuperTree*) this;
@@ -294,7 +296,16 @@ void IQTree::createPLLPartition(Params &params, ostream &pllPartitionFileHandle)
                             substr(0, siqtree->part_info[i - 1].model_name.find_first_of("+{"));
                     if (modelStr == "LG4")
                         modelStr = "LG4M";
-                    pllPartitionFileHandle << modelStr;
+                    bool name_ok = false;
+                    for (int j = 0; j < 18; j++)
+                        if (modelStr == aa_model_names_rax[j]) {
+                            name_ok = true;
+                            break;
+                        }
+                    if (name_ok)
+                        pllPartitionFileHandle << modelStr;
+                    else
+                        pllPartitionFileHandle << "WAG";                    
                 } else {
                     pllPartitionFileHandle << "WAG";
                 }

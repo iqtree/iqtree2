@@ -87,7 +87,7 @@ RateFree::~RateFree() {
 
 string RateFree::getNameParams() {
 	stringstream str;
-	str << "R" << ncategory << "{";
+	str << "+R" << ncategory << "{";
 	for (int i = 0; i < ncategory; i++) {
 		if (i > 0) str << ",";
 		str << prop[i]<< "," << rates[i];
