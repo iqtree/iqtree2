@@ -2129,4 +2129,64 @@ void quicksort(T1* arr, int left, int right, T2* arr2 = NULL) {
             quicksort(arr, i, right, arr2);
 }
 
+/* An optimized version of C̩dric Lauradoux's 64-bit merging3 algorithm
+   implemented by Kim Walisch, see:
+   http://code.google.com/p/primesieve/source/browse/trunk/src/soe/bithacks.h
+   Modified ever so slightly to maintain the same API. Note that
+   it assumes the buffer is a multiple of 64 bits in length.
+*/
+inline uint32_t popcount_lauradoux(unsigned *buf, int n) {
+  const uint64_t* data = (uint64_t*) buf;
+  uint32_t size = n/(sizeof(uint64_t)/sizeof(int));
+  const uint64_t m1  = (0x5555555555555555ULL);
+  const uint64_t m2  = (0x3333333333333333ULL);
+  const uint64_t m4  = (0x0F0F0F0F0F0F0F0FULL);
+  const uint64_t m8  = (0x00FF00FF00FF00FFULL);
+  const uint64_t m16 = (0x0000FFFF0000FFFFULL);
+  const uint64_t h01 = (0x0101010101010101ULL);
+
+  uint32_t bitCount = 0;
+  uint32_t i, j;
+  uint64_t count1, count2, half1, half2, acc;
+  uint64_t x;
+  uint32_t limit30 = size - size % 30;
+
+  // 64-bit tree merging (merging3)
+  for (i = 0; i < limit30; i += 30, data += 30) {
+    acc = 0;
+    for (j = 0; j < 30; j += 3) {
+      count1  =  data[j];
+      count2  =  data[j+1];
+      half1   =  data[j+2];
+      half2   =  data[j+2];
+      half1  &=  m1;
+      half2   = (half2  >> 1) & m1;
+      count1 -= (count1 >> 1) & m1;
+      count2 -= (count2 >> 1) & m1;
+      count1 +=  half1;
+      count2 +=  half2;
+      count1  = (count1 & m2) + ((count1 >> 2) & m2);
+      count1 += (count2 & m2) + ((count2 >> 2) & m2);
+      acc    += (count1 & m4) + ((count1 >> 4) & m4);
+    }
+    acc = (acc & m8) + ((acc >>  8)  & m8);
+    acc = (acc       +  (acc >> 16)) & m16;
+    acc =  acc       +  (acc >> 32);
+    bitCount += (uint32_t)acc;
+  }
+
+  // count the bits of the remaining bytes (MAX 29*8) using
+  // "Counting bits set, in parallel" from the "Bit Twiddling Hacks",
+  // the code uses wikipedia's 64-bit popcount_3() implementation:
+  // http://en.wikipedia.org/wiki/Hamming_weight#Efficient_implementation
+  for (i = 0; i < size - limit30; i++) {
+    x = data[i];
+    x =  x       - ((x >> 1)  & m1);
+    x = (x & m2) + ((x >> 2)  & m2);
+    x = (x       +  (x >> 4)) & m4;
+    bitCount += (uint32_t)((x * h01) >> 56);
+  }
+  return bitCount;
+}
+
 #endif

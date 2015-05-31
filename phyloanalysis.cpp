@@ -1366,7 +1366,7 @@ void printMiscInfo(Params &params, IQTree &iqtree, double *pattern_lh) {
         
         int c;
         for (ptn = 0; ptn < iqtree.ptn_cat_mask.size(); ptn++) {
-            int num_cat = __builtin_popcountll(iqtree.ptn_cat_mask[ptn]);
+            int num_cat = popcount_lauradoux((unsigned*)&iqtree.ptn_cat_mask[ptn], 2);
             out << ptn << "\t" << (int)iqtree.ptn_freq[ptn] << "\t" << num_cat << "\t";
             for (c = 0; c < ncat; c++)
                 if (iqtree.ptn_cat_mask[ptn] & ((uint64_t)1<<c))
