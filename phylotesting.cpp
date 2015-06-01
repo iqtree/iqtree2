@@ -94,7 +94,8 @@ short int std_genetic_code[]    = {   0,    0,     0,        1,        1};
 
 const char *codon_freq_names[] = {"", "+F1X4", "+F3X4", "+F"};
 
-const double TOL_LIKELIHOOD_MODELTEST = 0.01;
+const double TOL_LIKELIHOOD_MODELTEST = 0.1;
+const double TOL_GRADIENT_MODELTEST   = 0.01;
 
 /**
  * copy from cvec to strvec
@@ -1132,7 +1133,7 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
                 if (prev_tree_string != "")
                     tree->readTreeString(prev_tree_string);
                 prev_tree_string = "";
-                info.logl = tree->getModelFactory()->optimizeParameters(false, false, TOL_LIKELIHOOD_MODELTEST);
+                info.logl = tree->getModelFactory()->optimizeParameters(false, false, TOL_LIKELIHOOD_MODELTEST, TOL_GRADIENT_MODELTEST);
             }
 			// print information to .model file
 			if (!fmodel.is_open()) {

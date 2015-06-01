@@ -670,6 +670,29 @@ void PhyloSuperTree::clearAllPartialLH(bool make_null) {
     }
 }
 
+int PhyloSuperTree::computeParsimonyBranch(PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst) {
+    int score = 0, part = 0;
+    SuperNeighbor *dad_nei = (SuperNeighbor*)dad_branch;
+    SuperNeighbor *node_nei = (SuperNeighbor*)(dad_branch->node->findNeighbor(dad));
+        
+    if (branch_subst)
+        branch_subst = 0;
+    for (iterator it = begin(); it != end(); it++, part++) {
+        int this_subst = 0;
+        if (dad_nei->link_neighbors[part]) {
+            if (branch_subst)
+                score += (*it)->computeParsimonyBranch(dad_nei->link_neighbors[part], (PhyloNode*)node_nei->link_neighbors[part]->node, &this_subst);
+            else
+                score += (*it)->computeParsimonyBranch(dad_nei->link_neighbors[part], (PhyloNode*)node_nei->link_neighbors[part]->node);
+        } else
+            score += (*it)->computeParsimony();
+        if (branch_subst)
+            branch_subst += this_subst;
+    }
+    return score;
+}
+
+
 double PhyloSuperTree::computeLikelihood(double *pattern_lh) {
 	double tree_lh = 0.0;
 	int ntrees = size();

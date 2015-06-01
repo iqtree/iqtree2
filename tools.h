@@ -2098,4 +2098,40 @@ void summarizeFooter(ostream &out, Params &params);
 */
 void trimString(string &str);
 
+/**
+    quicksort template
+*/
+template<class T1, class T2>
+void quicksort(T1* arr, int left, int right, T2* arr2 = NULL) {
+      assert(left <= right);
+      int i = left, j = right;
+      T1 pivot = arr[(left + right) / 2];
+
+      /* partition */
+      while (i <= j) {
+            while (arr[i] < pivot)
+                  i++;
+            while (arr[j] > pivot)
+                  j--;
+            if (i <= j) {
+                  T1 tmp = arr[i];
+                  arr[i] = arr[j];
+                  arr[j] = tmp;
+                  if (arr2) {
+                      T2 tmp2 = arr2[i];
+                      arr2[i] = arr2[j];
+                      arr2[j] = tmp2;
+                  }
+                  i++;
+                  j--;
+            }
+      };
+
+      /* recursion */
+      if (left < j)
+            quicksort(arr, left, j, arr2);
+      if (i < right)
+            quicksort(arr, i, right, arr2);
+}
+
 #endif

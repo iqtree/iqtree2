@@ -57,6 +57,7 @@ Alignment::Alignment()
 //    non_stop_codon = NULL;
     seq_type = SEQ_UNKNOWN;
     STATE_UNKNOWN = 126;
+    pars_lower_bound = NULL;
 }
 
 string &Alignment::getSeqName(int i) {
@@ -264,6 +265,7 @@ Alignment::Alignment(char *filename, char *sequence_type, InputType &intype) : v
 //    non_stop_codon = NULL;
     seq_type = SEQ_UNKNOWN;
     STATE_UNKNOWN = 126;
+    pars_lower_bound = NULL;
     cout << "Reading alignment file " << filename << " ... ";
     intype = detectInputFile(filename);
 
@@ -301,15 +303,16 @@ Alignment::Alignment(char *filename, char *sequence_type, InputType &intype) : v
     if (getNSeq() < 3)
         outError("Alignment must have at least 3 sequences");
 
+    countConstSite();
+
     cout << "Alignment has " << getNSeq() << " sequences with " << getNSite() <<
-         " columns and " << getNPattern() << " patterns"<< endl;
+         " columns " << getNPattern() << " patterns (" << num_informative_sites << " informative sites)" << endl;
     buildSeqStates();
     checkSeqName();
     // OBSOLETE: identical sequences are handled later
 //	checkIdenticalSeq();
     //cout << "Number of character states is " << num_states << endl;
     //cout << "Number of patterns = " << size() << endl;
-    countConstSite();
     //cout << "Fraction of constant sites: " << frac_const_sites << endl;
 
 }
@@ -495,6 +498,7 @@ void Alignment::extractDataBlock(NxsCharactersBlock *data_block) {
 */
 void Alignment::computeConst(Pattern &pat) {
     pat.is_const = false;
+    pat.is_informative = false;
     // critical fix: const_char was set wrongly to num_states in some data type (binary, codon),
     // causing wrong log-likelihood computation for +I or +I+G model
     if (STATE_UNKNOWN == num_states)
@@ -507,12 +511,36 @@ void Alignment::computeConst(Pattern &pat) {
     for (j = 0; j < num_states; j++)
     	state_app[j] = 1;
 
+    // number of appearance for each state, to compute is_informative
+    int *num_app = new int[num_states];
+    memset(num_app, 0, num_states*sizeof(int));
+
     for (Pattern::iterator i = pat.begin(); i != pat.end(); i++) {
     	StateBitset this_app;
     	getAppearance(*i, this_app);
     	state_app &= this_app;
+        if (*i < num_states) { 
+            num_app[(int)(*i)]++;
+            continue;
+        }
+        if (*i == STATE_UNKNOWN) continue;
+        for (j = 0; j < num_states; j++)
+            if (this_app[j])
+                num_app[j]++;
     }
-    int count = state_app.count();
+    int count = 0;
+    pat.num_chars = 0;
+    for (j = 0; j < num_states; j++) if (num_app[j]) {
+        pat.num_chars++;
+        if (num_app[j] >= 2) {
+            count++;
+        }
+    }
+    // at least 2 states, each appearing at least twice
+    if (count >= 2) pat.is_informative = true;
+    delete [] num_app;
+    
+    count = state_app.count();
     if (count == 0) {
     	return;
     }
@@ -588,6 +616,59 @@ void Alignment::addConstPatterns(char *freq_const_patterns) {
 	}
     countConstSite();
     buildSeqStates();
+}
+
+void Alignment::orderPatternByNumChars() {
+    int nptn = getNPattern();
+    int ptn, site, i = 0;
+    int *num_chars = new int[nptn];
+    int *ptn_order = new int[nptn];
+    const int UINT_BITS = sizeof(UINT)*8;
+    int maxi = (num_informative_sites+UINT_BITS-1)/UINT_BITS;
+    pars_lower_bound = new UINT[maxi+1];
+    UINT sum = 0;
+    memset(pars_lower_bound, 0, (maxi+1)*sizeof(UINT));
+    for (ptn = 0; ptn < nptn; ptn++) {
+        num_chars[ptn] =  -at(ptn).num_chars + (!at(ptn).is_informative)*1024;
+        ptn_order[ptn] = ptn;
+    }
+    quicksort(num_chars, 0, nptn-1, ptn_order);
+    ordered_pattern.clear();
+    for (ptn = 0, site = 0, i = 0; ptn < nptn; ptn++) {
+        if (!at(ptn_order[ptn]).is_informative)
+            break;
+        ordered_pattern.push_back(at(ptn_order[ptn]));
+        int freq = ordered_pattern.back().frequency;
+        UINT num = ordered_pattern.back().num_chars - 1;
+        for (int j = 0; j < freq; j++, site++) {
+            if (site == UINT_BITS) {
+                sum += pars_lower_bound[i];
+                i++;
+                site = 0;
+            }
+            pars_lower_bound[i] += num;
+        }
+    }
+    sum += pars_lower_bound[i];
+    // now transform lower_bound
+//    assert(i == maxi-1);
+    
+    for (int j = 0; j <= i; j++) {
+        UINT newsum = sum - pars_lower_bound[j];
+        pars_lower_bound[j] = sum;
+        sum = newsum;
+    }
+    
+    if (verbose_mode >= VB_MAX) {
+//        for (ptn = 0; ptn < nptn; ptn++)
+//            cout << at(ptn_order[ptn]).num_chars << " ";
+        for (int j = 0; j <= i; j++) {
+            cout << pars_lower_bound[j] << " ";
+        }
+        cout << endl << sum << endl;
+    }
+    delete [] ptn_order;
+    delete [] num_chars;
 }
 
 void Alignment::ungroupSitePattern()
@@ -2422,8 +2503,13 @@ void Alignment::copyAlignment(Alignment *aln) {
 
 void Alignment::countConstSite() {
     int num_const_sites = 0;
-    for (iterator it = begin(); it != end(); it++)
-        if ((*it).is_const) num_const_sites += (*it).frequency;
+    num_informative_sites = 0;
+    for (iterator it = begin(); it != end(); it++) {
+        if ((*it).is_const) 
+            num_const_sites += (*it).frequency;
+        if (it->is_informative)
+            num_informative_sites += it->frequency;
+    }
     frac_const_sites = ((double)num_const_sites) / getNSite();
 }
 
@@ -2458,6 +2544,10 @@ Alignment::~Alignment()
 //		delete [] non_stop_codon;
 //		non_stop_codon = NULL;
 //	}
+    if (pars_lower_bound) {
+        delete [] pars_lower_bound;
+        pars_lower_bound = NULL;
+    }
 }
 
 double Alignment::computeObsDist(int seq1, int seq2) {

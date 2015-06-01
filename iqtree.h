@@ -605,7 +605,7 @@ public:
      * Generate the initial tree (usually used for model parameter estimation)
      * @param dist_file only needed for BIONJ tree
      */
-    void computeInitialTree(string &dist_file);
+    void computeInitialTree(string &dist_file, LikelihoodKernel kernel);
 
     /**
      *  @brief: optimize model parameters on the current tree

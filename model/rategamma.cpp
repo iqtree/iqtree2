@@ -161,7 +161,7 @@ void RateGamma::getVariables(double *variables) {
 	gamma_shape = variables[1];
 }
 
-double RateGamma::optimizeParameters(double epsilon) {
+double RateGamma::optimizeParameters(double gradient_epsilon) {
 	if (fix_gamma_shape)
 		return phylo_tree->computeLikelihood();
 	if (verbose_mode >= VB_MAX)
@@ -169,7 +169,7 @@ double RateGamma::optimizeParameters(double epsilon) {
 	double negative_lh;
 	double current_shape = gamma_shape;
 	double ferror, optx;
-	optx = minimizeOneDimen(MIN_GAMMA_SHAPE, current_shape, MAX_GAMMA_SHAPE, max(epsilon, TOL_GAMMA_SHAPE), &negative_lh, &ferror);
+	optx = minimizeOneDimen(MIN_GAMMA_SHAPE, current_shape, MAX_GAMMA_SHAPE, max(gradient_epsilon, TOL_GAMMA_SHAPE), &negative_lh, &ferror);
 	gamma_shape = optx;
 	computeRates();
 	phylo_tree->clearAllPartialLH();

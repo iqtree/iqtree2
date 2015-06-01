@@ -76,7 +76,7 @@ public:
 		optimize model parameters
 		@return the best likelihood
 	*/
-	virtual double optimizeParameters(double epsilon);
+	virtual double optimizeParameters(double gradient_epsilon);
 
 	/**
 		decompose the rate matrix into eigenvalues and eigenvectors

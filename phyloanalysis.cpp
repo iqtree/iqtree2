@@ -1494,7 +1494,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
     iqtree.setParams(&params);
 
     /********************** Create an initial tree **********************/
-    iqtree.computeInitialTree(dist_file);
+    iqtree.computeInitialTree(dist_file, params.SSE);
     
     //*** FOR TUNG: This is wrong! a NULL root was already treated correctly
 //    if (params.root == NULL) {

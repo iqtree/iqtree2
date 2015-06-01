@@ -445,8 +445,11 @@ public:
             @param dad_branch the branch leading to the subtree
             @param dad its dad, used to direct the tranversal
      */
-    void computePartialParsimony(PhyloNeighbor *dad_branch, PhyloNode *dad);
+    void computePartialParsimonyNaive(PhyloNeighbor *dad_branch, PhyloNode *dad);
     void computePartialParsimonyFast(PhyloNeighbor *dad_branch, PhyloNode *dad);
+
+    template<class VectorClass>
+    void computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad);
 
     /**
             compute tree parsimony score on a branch
@@ -455,11 +458,21 @@ public:
             @param branch_subst (OUT) if not NULL, the number of substitutions on this branch
             @return parsimony score of the tree
      */
-    int computeParsimonyBranch(PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst = NULL);
+    typedef int (PhyloTree::*ComputeParsimonyBranchType)(PhyloNeighbor *, PhyloNode *, int *);
+    ComputeParsimonyBranchType computeParsimonyBranchPointer;
+
+    virtual int computeParsimonyBranch(PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst = NULL);
+
+    int computeParsimonyBranchNaive(PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst = NULL);
     int computeParsimonyBranchFast(PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst = NULL);
+
+    template<class VectorClass>
+    int computeParsimonyBranchFastSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst = NULL);
 
     void printParsimonyStates(PhyloNeighbor *dad_branch = NULL, PhyloNode *dad = NULL);
 
+    virtual void setParsimonyKernel(LikelihoodKernel lk);
+    virtual void setParsimonyKernelAVX();
 
     /**
             SLOW VERSION: compute the parsimony score of the tree, given the alignment
@@ -854,19 +867,21 @@ public:
             @param added_node node to add
             @param target_node (OUT) one end of the best branch found
             @param target_dad (OUT) the other end of the best branch found
+            @param target_partial_pars (OUT) copy of the partial_pars corresponding to best branch
             @param node the current node
             @param dad dad of the node, used to direct the search
             @return the parsimony score of the tree
      */
-    int addTaxonMPFast(Node *added_node, Node* &target_node, Node* &target_dad, Node *node, Node *dad);
+    int addTaxonMPFast(Node *added_node, Node* &target_node, Node* &target_dad, UINT *target_partial_pars, Node *node, Node *dad);
 
 
     /**
      * FAST VERSION: compute parsimony tree by step-wise addition
      * @param out_prefix prefix for .parstree file
      * @param alignment input alignment
+     * @return parsimony score
      */
-    void computeParsimonyTree(const char *out_prefix, Alignment *alignment);
+    int computeParsimonyTree(const char *out_prefix, Alignment *alignment);
 
     /**
             SLOW VERSION: grow the tree by step-wise addition
@@ -1682,6 +1697,9 @@ protected:
      * Current score of the tree;
      */
     double curScore;
+    
+    /** current best parsimony score */
+    UINT best_pars_score;
 
 };
 

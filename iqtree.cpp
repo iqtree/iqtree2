@@ -278,7 +278,7 @@ IQTree::~IQTree() {
 void IQTree::createPLLPartition(Params &params, ostream &pllPartitionFileHandle) {
     if (isSuperTree()) {
         PhyloSuperTree *siqtree = (PhyloSuperTree*) this;
-        // additional check for stupid PLL hard limit
+        // additional check for PLL hard limit
         if (siqtree->size() > PLL_NUM_BRANCHES)
         	outError("Number of partitions exceeds PLL limit, please increase PLL_NUM_BRANCHES constant in pll.h");
         int i = 0;
@@ -322,13 +322,16 @@ void IQTree::createPLLPartition(Params &params, ostream &pllPartitionFileHandle)
     }
 }
 
-void IQTree::computeInitialTree(string &dist_file) {
+void IQTree::computeInitialTree(string &dist_file, LikelihoodKernel kernel) {
     double start = getCPUTime();
     string initTree;
     string out_file = params->out_prefix;
+    int score;
     if (params->stop_condition == SC_FIXED_ITERATION && params->numNNITrees > params->min_iterations)
     	params->numNNITrees = params->min_iterations;
     int fixed_number = 0;
+    setParsimonyKernel(kernel);
+    
     if (params->user_file) {
         // start the search with user-defined tree
         cout << "Reading input tree file " << params->user_file << " ..." << endl;
@@ -351,8 +354,17 @@ void IQTree::computeInitialTree(string &dist_file) {
     } else switch (params->start_tree) {
     case STT_PARSIMONY:
         // Create parsimony tree using IQ-Tree kernel
-        cout << "Creating initial parsimony tree by random order stepwise addition..." << endl;
-        computeParsimonyTree(params->out_prefix, aln);
+        if (kernel == LK_EIGEN_SSE)
+            cout << "Creating fast SIMD initial parsimony tree by random order stepwise addition..." << endl;
+        else if (kernel == LK_EIGEN)
+            cout << "Creating fast initial parsimony tree by random order stepwise addition..." << endl;
+        else
+            cout << "Creating initial parsimony tree by random order stepwise addition..." << endl;
+        aln->orderPatternByNumChars();
+        start = getCPUTime();
+        score = computeParsimonyTree(params->out_prefix, aln);
+        cout << getCPUTime() - start << " seconds, parsimony score: " << score
+        	<< " (based on " << aln->num_informative_sites << " informative sites)"<< endl;
 //		if (params->pll)
 //			pllReadNewick(getTreeString());
 	    wrapperFixNegativeBranch(true);
@@ -966,7 +978,8 @@ void IQTree::reinsertLeavesByParsimony(PhyloNodeVector &del_leaves) {
         added_node->updateNeighbor(node1, (Node*) 1);
         added_node->updateNeighbor(node2, (Node*) 2);
 
-        addTaxonMPFast(added_node, target_node, target_dad, root->neighbors[0]->node, root);
+        best_pars_score = INT_MAX;
+        addTaxonMPFast(added_node, target_node, target_dad, NULL, root->neighbors[0]->node, root);
         target_node->updateNeighbor(target_dad, added_node, -1.0);
         target_dad->updateNeighbor(target_node, added_node, -1.0);
         added_node->updateNeighbor((Node*) 1, target_node, -1.0);
@@ -1511,10 +1524,10 @@ double IQTree::perturb(int times) {
 //extern "C" pllUFBootData * pllUFBootDataPtr;
 extern pllUFBootData * pllUFBootDataPtr;
 
-string IQTree::optimizeModelParameters(bool printInfo, double epsilon) {
-	if (epsilon == -1)
-		epsilon = params->modeps;
-	cout << "Estimate model parameters (epsilon = " << epsilon << ")" << endl;
+string IQTree::optimizeModelParameters(bool printInfo, double logl_epsilon) {
+	if (logl_epsilon == -1)
+		logl_epsilon = params->modeps;
+	cout << "Estimate model parameters (epsilon = " << logl_epsilon << ")" << endl;
 	double stime = getCPUTime();
 	string newTree;
 	if (params->pll) {
@@ -1524,7 +1537,7 @@ string IQTree::optimizeModelParameters(bool printInfo, double epsilon) {
 		} else {
 			pllEvaluateLikelihood(pllInst, pllPartitions, pllInst->start, PLL_FALSE, PLL_FALSE);
 		}
-		pllOptimizeModelParameters(pllInst, pllPartitions, epsilon);
+		pllOptimizeModelParameters(pllInst, pllPartitions, logl_epsilon);
 		curScore = pllInst->likelihood;
 		pllTreeToNewick(pllInst->tree_string, pllInst, pllPartitions,
 				pllInst->start->back, PLL_TRUE,
@@ -1541,7 +1554,7 @@ string IQTree::optimizeModelParameters(bool printInfo, double epsilon) {
 //			clearAllPartialLH();
 //			lhComputed = true;
 //		}
-		double modOptScore = getModelFactory()->optimizeParameters(params->fixed_branch_length, printInfo, epsilon);
+		double modOptScore = getModelFactory()->optimizeParameters(params->fixed_branch_length, printInfo, logl_epsilon);
 		if (isSuperTree()) {
 			((PhyloSuperTree*) this)->computeBranchLengths();
 		}
