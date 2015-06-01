@@ -118,7 +118,7 @@ class ModelPoMo : public ModelGTR
      * 
      * @param in input stream
      */
-    void readStateFreq(istream &in) throw(const char*);
+    void readFixedStateFreq(istream &in);
 
     /** 
      * Read state frequencies from comma-separated string.  Might
@@ -126,7 +126,7 @@ class ModelPoMo : public ModelGTR
      * 
      * @param str 
      */
-    void readStateFreq(string str) throw(const char*);
+    void readFixedStateFreq(string str);
 
     /** 
      * Read model parameters from a file.  The file needs to contain
@@ -134,7 +134,7 @@ class ModelPoMo : public ModelGTR
      * 
      * @param file_name 
      */
-    void readParameters(const char *file_name);
+    void readMutationParameters(const char *file_name);
 
     /** 
      * Read the upper-triangle rate matrix from an input stream.
@@ -142,7 +142,7 @@ class ModelPoMo : public ModelGTR
      * 
      * @param in input stream
      */
-    void readRates(istream &in) throw(const char*, string);
+    void readMutationRates(istream &in);
 
     /** 
      * Read rate parameters from a comma-separated string.  Throw
@@ -150,7 +150,7 @@ class ModelPoMo : public ModelGTR
      * 
      * @param str input string
      */
-    void readRates(string str) throw(const char*);
+    void readMutationRates(string str);
 
  protected:
 

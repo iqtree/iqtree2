@@ -23,25 +23,21 @@ void ModelPoMo::init(const char *model_name,
     // Check num_states (set in Alignment::readCountsFormat()).
 	int N = phylo_tree->aln->virtual_pop_size;
     nnuc = 4;
-    StateFreqType def_freq = freq_type;
     assert(num_states == (nnuc + (nnuc*(nnuc-1)/2 * (N-1))) );
 
     if (is_reversible != true) throw "Non-reversible PoMo not supported yet.";
 
     // TODO: Set and get variables according to the model type.
 
-    // TODO: Process freq_type.  Take care, coden types can end up
-    // here.
-
     // TODO: Process freq_params.  What is this?
 
     // TODO: Set and get variables according to the frequency type.
 
     // Get DNA model info from model_name.
-    string dna_model_name;
-    string dna_model_full_name;
-    string dna_model_rate_type;
-    StateFreqType dna_model_def_freq;
+    string dna_model_name = "";
+    string dna_model_full_name = "";
+    string dna_model_rate_type = "";
+    StateFreqType dna_model_def_freq = FREQ_UNKNOWN;
     dna_model_name =
         getDNAModelInfo((string)model_name,
                         dna_model_full_name,
@@ -57,9 +53,23 @@ void ModelPoMo::init(const char *model_name,
 
     eps = 1e-6;
 
-    // Create mutation probabilities and set them.
+    // Create mutation probabilities.
     mutation_prob = new double[6];
 	for (int i = 0; i < 6; i++) mutation_prob[i] = 1e-4;
+
+    // Create fixed frequencies.  These correspond to the state
+    // frequencies in the DNA substitution models.  However, with
+    // PoMo, the state frequencies correspond to the frequencies of
+    // the fixed (10A...) states and the polymorphic states.  It is a
+    // vector of size 4+6(N-1) and not of size 4.
+    freq_fixed_states = new double[4];
+	for (int i = 0; i < 4; i++) freq_fixed_states[i] = 1.0;
+
+    // Create PoMo rate matrix.  This is the actual rate matrix of
+    // PoMo.  TODO: Is the distinction rates[] and rate_matrix[]
+    // really necessary?
+	rate_matrix = new double[num_states*num_states];
+
 	if (dna_model_name != "") {
 		if(setRateType(dna_model_rate_type.c_str()) == false)
             // This should never happen because rate type was set by
@@ -69,29 +79,31 @@ void ModelPoMo::init(const char *model_name,
 		// User-specified model.
 		if (setRateType(model_name) == false) {
             // TODO: Check this.
-            readParameters(model_name);
+            readMutationParameters(model_name);
 		}
 	}
 
-    // TODO: Check this.
 	if (model_params != "") {
-		readRates(model_params);
+		readMutationRates(model_params);
 	}
 
-    // TODO
-	// if (freq_params != "") {
-	// 	readStateFreq(freq_params);
-	// }
+	if (freq_params != "") {
+		readFixedStateFreq(freq_params);
+	}
 
-    // Create fixed frequencies and set them.  These correspond to the
-    // state frequencies in the DNA substitution models.  However,
-    // with PoMo, the state frequencies correspond to the frequencies
-    // of the fixed (10A...) states and the polymorphic states.  It is
-    // a vector of size 4+6(N-1) and not of size 4.
-    freq_fixed_states = new double[4];
-	rate_matrix = new double[num_states*num_states];
+    // Check frequency type.  If frequency type has not been set by
+    // user, use the DNA model frequency type (if set).
+    if (freq_type == FREQ_UNKNOWN)
+        freq_type = dna_model_def_freq;
 
-	for (int i = 0; i < 4; i++) freq_fixed_states[i] = 1.0;
+    if (freq_type == FREQ_UNKNOWN)
+        outError("No frequency type given.");
+
+    if (freq_type != FREQ_EQUAL     &&  // '+FQ'
+        freq_type != FREQ_ESTIMATE  &&  // '+FO'
+        freq_type != FREQ_EMPIRICAL &&  // '+F'
+        freq_type != FREQ_USER_DEFINED) // '+FU'
+        outError("Unknown frequency type.");
 
 	updatePoMoStatesAndRates();
 
@@ -589,7 +601,8 @@ bool ModelPoMo::setRateType(const char *rate_str) {
 		}
 	}
 
-	assert(param_spec.length() == num_ch);
+    bool t = (param_spec.length() == (unsigned int) num_ch);
+	assert(t);
 
     // Do not normalize mutation_prob for PoMo.
 
@@ -621,7 +634,7 @@ bool ModelPoMo::setRateType(const char *rate_str) {
 	return true;
 }
 
-void ModelPoMo::readStateFreq(istream &in) throw(const char*) {
+void ModelPoMo::readFixedStateFreq(istream &in) {
 	int i;
 	for (i = 0; i < nnuc; i++) {
 		if (!(in >> freq_fixed_states[i])) 
@@ -635,10 +648,9 @@ void ModelPoMo::readStateFreq(istream &in) throw(const char*) {
 		throw "State frequencies do not sum up to 1.0";
 }
 
-// TODO: Check.
-void ModelPoMo::readStateFreq(string str) throw(const char*) {
+void ModelPoMo::readFixedStateFreq(string str) {
 	int i;
-	int end_pos = 0;
+	unsigned int end_pos = 0;
 	for (i = 0; i < nnuc; i++) {
 		int new_end_pos;
 		freq_fixed_states[i] = convert_double(str.substr(end_pos).c_str(), new_end_pos);
@@ -658,15 +670,14 @@ void ModelPoMo::readStateFreq(string str) throw(const char*) {
 		outError("State frequencies do not sum up to 1.0 in ", str);
 }
 
-// TODO: Check.
-void ModelPoMo::readParameters(const char *file_name) { 
+void ModelPoMo::readMutationParameters(const char *file_name) { 
 	try {
 		ifstream in(file_name);
 		if (in.fail())
 			outError("Invalid model name ", file_name);
 		cout << "Reading model parameters from file " << file_name << endl;
-		readRates(in);
-		readStateFreq(in);
+		readMutationRates(in);
+		readFixedStateFreq(in);
 		in.close();
 	}
 	catch (const char *str) {
@@ -676,8 +687,7 @@ void ModelPoMo::readParameters(const char *file_name) {
 	writeInfo(cout);
 }
 
-// TODO: Check.
-void ModelPoMo::readRates(istream &in) throw(const char*, string) {
+void ModelPoMo::readMutationRates(istream &in) {
 	int nrates = getNumRateEntries();
 	string str;
 	in >> str;
@@ -701,11 +711,10 @@ void ModelPoMo::readRates(istream &in) throw(const char*, string) {
 	}
 }
 
-// TODO: Check.
-void ModelPoMo::readRates(string str) throw(const char*) {
-	int nrates = *max_element(param_spec.begin(), param_spec.end());
-	int end_pos = 0;
-	int i, j;
+void ModelPoMo::readMutationRates(string str) {
+	unsigned int nrates = *max_element(param_spec.begin(), param_spec.end());
+	unsigned int end_pos = 0;
+	unsigned int i, j;
 	for (j = 0; j < param_spec.length(); j++)
 		mutation_prob[j] = 1.0;
 	num_params = 0;
@@ -736,7 +745,7 @@ void ModelPoMo::readRates(string str) throw(const char*) {
 			outError("Comma to separate rates not found in ", str);
 		end_pos++;
 		for (j = 0; j < param_spec.length(); j++)
-			if (param_spec[j] == i+1)
+			if (param_spec[j] == (int) i+1)
 				mutation_prob[j] = rate;
 	}
 }

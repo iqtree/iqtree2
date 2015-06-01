@@ -2855,13 +2855,16 @@ void usage_iqtree(char* argv[], bool full_command) {
             << endl
 
             << "POLYMORPHISM AWARE MODELS (PoMo):"                                                   << endl
+            << "PoMo is run when"                                                                    << endl
+            << "- a Counts File is used as input file, and/or when"                                  << endl
+            << "- it is specified in the model string (see below)."                                  << endl
             << "  -st CF or CFps       Counts File (automatically detected)."                        << endl
             << "                       Useful to customize the virtual population size `ps`"         << endl
             << "                       (5 <= ps <= 20; default is 10)."                              << endl
             << "  -m <sm>+<pm>+<ft>    Default: `HKY+rP+FO`."                                        << endl
             << "                 <sm>: Substitution model."                                          << endl
             << "                  DNA: HKY (default), JC, F81, K2P, K3P, K81uf, TN/TrN, TNef,"       << endl
-            << "                       TIM, TIMef, TVM, TVMef, SYM, GTR, or 6-digit model"           << endl
+            << "                       TIM, TIMef, TVM, TVMef, SYM, GTR, or a 6-digit model"         << endl
             << "                       specification (e.g., 010010 = HKY)."                          << endl
             << "                 <pm>: PoMo model."                                                  << endl
             << "                       - rP (default; reversible PoMo with tree inference)."         << endl
@@ -2870,8 +2873,9 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "                 <ft>: Frequency type (optional; default: +FO, optimized)."          << endl
             << "                       F or +FO or +FU or +FQ."                                      << endl
             << "                       Counted, optimized, user-defined, equal state frequency."     << endl
+            << "                       This overwrites the specifications of the DNA model."         << endl
             << "  The default model string is: -m HKY+rP+FO."                                        << endl
-            << "  Until now, only DNA models work with PoM."                                         << endl
+            << "  Until now, only DNA models work with PoMo."                                        << endl
             << "  Model testing and rate heterogeneity do not work with PoMo yet."                   << endl
 
             << endl << "RATE HETEROGENEITY:" << endl
