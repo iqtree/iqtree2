@@ -394,8 +394,13 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 //			fused_mix_rate = true;
 //	}
 	if (posG != string::npos && posR != string::npos) {
-		outWarning("Both Gamma and FreeRate models were specified, continue with FreeRate model");
-        posG = string::npos;
+        if (posG == posG2 && posR != posR2) {
+            outWarning("Both Gamma and FreeRate models were specified, continue with Gamma model because *G has higher priority than +R");
+            posR = string::npos;
+        } else {
+            outWarning("Both Gamma and FreeRate models were specified, continue with FreeRate model");
+            posG = string::npos;
+        }
     }
 	string::size_type posX;
 	/* create site-rate heterogeneity */
