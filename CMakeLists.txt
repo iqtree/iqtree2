@@ -81,6 +81,8 @@ elseif (UNIX)
 	# build as static binary to run on most machines
     if (NOT IQTREE_FLAGS MATCHES "dynamic")
         set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static")
+    else()
+        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -rdynamic")
     endif()
 else()
 	# Note that IQ-TREE has NOT been tested on other platforms
