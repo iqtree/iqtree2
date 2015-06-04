@@ -30,7 +30,7 @@
 Params *globalParams;
 Alignment *globalAlignment;
 extern StringIntMap pllTreeCounter;
-
+extern int n_tasks, task_id;
 
 IQTree::IQTree() : PhyloTree() {
     IQTree::init();
@@ -403,17 +403,29 @@ void IQTree::addCurTreeToCandidateSet() {
 }
 
 void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
+
+    unsigned int numParTreePerWorker, numNNITreePerWorker;
+#ifdef _IQTREE_MPI
+    // At this point each worker already create 1 parsimony trees. Thus, the number of parsimony trees left is
+    // params->numInitTrees - n_tasks
+    unsigned int numParTreeLeft = params->numInitTrees - n_tasks;
+    numParTreePerWorker = ceil(numParTreeLeft / n_tasks);
+    numNNITreePerWorker = ceil(params->numNNITrees / n_tasks);
+#else
+    numParTreePerWorker = params->numInitTrees - 1;
+    numNNITreePerWorker = params->numNNITrees;
+#endif
     cout << "Generating " << nParTrees - 1 << " parsimony trees (max. SPR dist = " << params->sprDist << ")" << endl;
     cout.flush();
+
     double startTime = getCPUTime();
     int numDupPars = 0;
     CandidateSet parsimonyTrees;
     parsimonyTrees.init(this->aln, this->params);
     parsimonyTrees.update(getTreeString(), getCurScore());
 
-    for (int treeNr = 1; treeNr < nParTrees; treeNr++) {
+    for (int treeNr = 0; treeNr < numParTreePerWorker; treeNr++) {
         string curParsTree;
-
         /****************************** Create parsimony tree using PLL ******************************/
         if (params->start_tree == STT_PLL_PARSIMONY) {
 			pllInst->randomNumberSeed = params->ran_seed + treeNr * 12345;
@@ -444,6 +456,12 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
         	parsimonyTrees.update(curParsTree, 0.00);
         }
     }
+
+#ifdef _IQTREE_MPI
+    MPI_Barrier(MPI_COMM_WORLD);
+
+#endif
+
     double parsTime = getCPUTime() - startTime;
     cout << parsimonyTrees.size() << " distinct parsimony trees have been generated" << endl;
     cout << "CPU time: " << parsTime << endl;

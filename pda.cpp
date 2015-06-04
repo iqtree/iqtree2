@@ -1721,22 +1721,38 @@ protected:
     virtual int     sync();
 };
 
+/*********************************************************************************
+ * GLOBAL VARIABLES
+ *********************************************************************************/
+outstreambuf _out_buf;
+string _log_file;
+int _exit_wait_optn = FALSE;
+// FOR MPI only: rank of the process
+int task_id, n_tasks;
 
 outstreambuf* outstreambuf::open( const char* name, ios::openmode mode) {
-    fout.open(name, mode);
-	if (!fout.is_open()) {
-		cout << "Could not open " << name << " for logging" << endl;
-		return NULL;
+	if (task_id != MASTER) {
+		cout.rdbuf(this);
+		cerr.rdbuf(this);
+		return this;
+	} else {
+		fout.open(name, mode);
+		if (!fout.is_open()) {
+			cout << "Could not open " << name << " for logging" << endl;
+			return NULL;
+		}
+		cout_buf = cout.rdbuf();
+		cerr_buf = cerr.rdbuf();
+		fout_buf = fout.rdbuf();
+		cout.rdbuf(this);
+		cerr.rdbuf(this);
+		return this;
 	}
-	cout_buf = cout.rdbuf();
-	cerr_buf = cerr.rdbuf();
-	fout_buf = fout.rdbuf();
-	cout.rdbuf(this);
-	cerr.rdbuf(this);
-    return this;
 }
 
 outstreambuf* outstreambuf::close() {
+	if (task_id != MASTER)
+		return NULL;
     if ( fout.is_open()) {
         sync();
         cout.rdbuf(cout_buf);
@@ -1748,6 +1764,8 @@ outstreambuf* outstreambuf::close() {
 }
 
 int outstreambuf::overflow( int c) { // used for output buffer only
+	if (task_id != MASTER)
+		return c;
 	if (verbose_mode >= VB_MIN)
 		if (cout_buf->sputc(c) == EOF) return EOF;
 	if (fout_buf->sputc(c) == EOF) return EOF;
@@ -1755,15 +1773,12 @@ int outstreambuf::overflow( int c) { // used for output buffer only
 }
 
 int outstreambuf::sync() { // used for output buffer only
+	if (task_id != MASTER)
+		return 0;
 	if (verbose_mode >= VB_MIN)
 		cout_buf->pubsync();
 	return fout_buf->pubsync();
 }
-
-outstreambuf _out_buf;
-string _log_file;
-int _exit_wait_optn = FALSE;
-
 
 extern "C" void startLogFile() {
 	_out_buf.open(_log_file.c_str());
@@ -2112,57 +2127,52 @@ Instruction set ID reported by vectorclass::instrset_detect
 */
 int instruction_set;
 
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
 
 	/*************************/
 	{ /* local scope */
-		int found=FALSE;              /* "click" found in cmd name? */
+		int found = FALSE;              /* "click" found in cmd name? */
 		int n, dummyint;
 		char *tmpstr;
-		int     intargc; 
-		char  **intargv; 
-		intargc = 0; 
-		intargv = NULL; 
-		
-		for (n = strlen(argv[0]) - 5; 
-		    (n >= 0) && !found && (argv[0][n] != '/')
-		             && (argv[0][n] != '\\'); n--) {
+		int intargc;
+		char **intargv;
+		intargc = 0;
+		intargv = NULL;
+
+		for (n = strlen(argv[0]) - 5;
+			 (n >= 0) && !found && (argv[0][n] != '/')
+			 && (argv[0][n] != '\\'); n--) {
 
 			tmpstr = &(argv[0][n]);
 			dummyint = 0;
-			(void)sscanf(tmpstr, "click%n", &dummyint);
+			(void) sscanf(tmpstr, "click%n", &dummyint);
 			if (dummyint == 5) found = TRUE;
 			else {
 				dummyint = 0;
-				(void)sscanf(tmpstr, "CLICK%n", &dummyint);
+				(void) sscanf(tmpstr, "CLICK%n", &dummyint);
 				if (dummyint == 5) found = TRUE;
 				else {
 					dummyint = 0;
-					(void)sscanf(tmpstr, "Click%n", &dummyint);
+					(void) sscanf(tmpstr, "Click%n", &dummyint);
 					if (dummyint == 5) found = TRUE;
 				}
 			}
 		}
-		if(found) _exit_wait_optn = TRUE;
+		if (found) _exit_wait_optn = TRUE;
 
 		if (_exit_wait_optn) { // get commandline parameters from keyboard
-			getintargv(&intargc, &intargv); 
+			getintargv(&intargc, &intargv);
 			fprintf(stdout, "\n\n");
-			if(intargc > 1) { // if there were option entered, use them as argc/argv
-				argc = intargc; 
-				argv = intargv; 
-			} 
+			if (intargc > 1) { // if there were option entered, use them as argc/argv
+				argc = intargc;
+				argv = intargv;
+			}
 		}
 	} /* local scope */
 	/*************************/
 
 #ifdef _IQTREE_MPI
-	int task_id, n_tasks; // Thread IDs and number of threads;
-	char *cpu_name;
 	double time_initial, time_current;
-
-	// Obtain number of tasks and task ID
 	MPI_Init(&argc, &argv);
 	MPI_Comm_size(MPI_COMM_WORLD, &n_tasks);
 	MPI_Comm_rank(MPI_COMM_WORLD, &task_id);
@@ -2172,24 +2182,36 @@ int main(int argc, char *argv[])
 	parseArg(argc, argv, params);
 
 #ifdef _IQTREE_MPI
-	params.ran_seed = params.ran_seed + task_id;
+	unsigned int rndSeed;
+  	if (task_id == MASTER) {
+  		rndSeed = params.ran_seed;
+  	}
+    // Broadcast random seed
+    MPI_Bcast(&rndSeed, 1, MPI_INT, MASTER, MPI_COMM_WORLD);
+    if (task_id != MASTER) {
+		params.ran_seed = rndSeed + task_id;
+		printf("Process %d: random_seed = %d\n", task_id, params.ran_seed);
+	}
+	MPI_Finalize();
 #endif
 
-	_log_file = params.out_prefix;
-	_log_file += ".log";
-	startLogFile();
 	atexit(funcExit);
 	signal(SIGABRT, &funcAbort);
 	signal(SIGFPE, &funcAbort);
 	signal(SIGILL, &funcAbort);
 	signal(SIGSEGV, &funcAbort);
+	time_t cur_time;
+
+	_log_file = params.out_prefix;
+	_log_file += ".log";
+	startLogFile();
 	printCopyright(cout);
 	/*
-	double x=1e-100;
-	double y=1e-101;
-	if (x > y) cout << "ok!" << endl;
-	else cout << "shit!" << endl;
-	*/
+    double x=1e-100;
+    double y=1e-101;
+    if (x > y) cout << "ok!" << endl;
+    else cout << "shit!" << endl;
+    */
 	//FILE *pfile = popen("hostname","r");
 	char hostname[100];
 #if defined WIN32 || defined _WIN32 || defined __WIN32__
@@ -2217,13 +2239,13 @@ int main(int argc, char *argv[])
 
 	cout << "Host:    " << hostname << " (";
 	switch (instruction_set) {
-	case 3: cout << "SSE3, "; break;
-	case 4: cout << "SSSE3, "; break;
-	case 5: cout << "SSE4.1, "; break;
-	case 6: cout << "SSE4.2, "; break;
-	case 7: cout << "AVX, "; break;
-	case 8: cout << "AVX2, "; break;
-	default: cout << "AVX512F, "; break;
+		case 3: cout << "SSE3, "; break;
+		case 4: cout << "SSSE3, "; break;
+		case 5: cout << "SSE4.1, "; break;
+		case 6: cout << "SSE4.2, "; break;
+		case 7: cout << "AVX, "; break;
+		case 8: cout << "AVX2, "; break;
+		default: cout << "AVX512F, "; break;
 	}
 	if (has_fma3) cout << "FMA3, ";
 	if (has_fma4) cout << "FMA4, ";
@@ -2241,7 +2263,6 @@ int main(int argc, char *argv[])
 	cout << "Seed:    " << params.ran_seed <<  " ";
 	init_random(params.ran_seed);
 
-	time_t cur_time;
 	time(&cur_time);
 	cout << "Time:    " << ctime(&cur_time);
 
@@ -2257,24 +2278,22 @@ int main(int argc, char *argv[])
 #endif
 	} else {
 		switch (params.SSE) {
-		case LK_NORMAL: cout << "Slow"; break;
-		case LK_SSE: cout << "Slow SSE3"; break;
-		case LK_EIGEN: cout << "No SSE"; break;
-		case LK_EIGEN_SSE:
-			if (instruction_set >= 7) {
-				cout << "AVX";
-			} else {
-				cout << "SSE3";
-			}
+			case LK_NORMAL: cout << "Slow"; break;
+			case LK_SSE: cout << "Slow SSE3"; break;
+			case LK_EIGEN: cout << "No SSE"; break;
+			case LK_EIGEN_SSE:
+				if (instruction_set >= 7) {
+					cout << "AVX";
+				} else {
+					cout << "SSE3";
+				}
 
 #ifdef __FMA__
 			cout << "+FMA";
 #endif
-			break;
+				break;
 		}
 	}
-
-
 
 #ifdef _OPENMP
 	if (params.num_threads == 0) {
@@ -2349,22 +2368,22 @@ int main(int argc, char *argv[])
 		switch (params.consensus_type) {
 			case CT_CONSENSUS_TREE:
 				computeConsensusTree(params.user_file, params.tree_burnin, params.tree_max_count, params.split_threshold,
-					params.split_weight_threshold, params.out_file, params.out_prefix, params.tree_weight_file, &params);
+									 params.split_weight_threshold, params.out_file, params.out_prefix, params.tree_weight_file, &params);
 				break;
 			case CT_CONSENSUS_NETWORK:
 				computeConsensusNetwork(params.user_file, params.tree_burnin, params.tree_max_count, params.split_threshold,
-					params.split_weight_summary, params.split_weight_threshold, params.out_file, params.out_prefix, params.tree_weight_file);
+										params.split_weight_summary, params.split_weight_threshold, params.out_file, params.out_prefix, params.tree_weight_file);
 				break;
 			case CT_ASSIGN_SUPPORT:
-				assignBootstrapSupport(params.user_file, params.tree_burnin, params.tree_max_count, 
-					params.second_tree, params.is_rooted, params.out_file,
-					params.out_prefix, tree, params.tree_weight_file, &params);
+				assignBootstrapSupport(params.user_file, params.tree_burnin, params.tree_max_count,
+									   params.second_tree, params.is_rooted, params.out_file,
+									   params.out_prefix, tree, params.tree_weight_file, &params);
 				break;
 			case CT_ASSIGN_SUPPORT_EXTENDED:
 				assignBranchSupportNew(params);
 				break;
 			case CT_NONE: break;
-			/**MINH ANH: for some comparison*/
+				/**MINH ANH: for some comparison*/
 			case COMPARE: compare(params); break; //MA
 		}
 	} else {

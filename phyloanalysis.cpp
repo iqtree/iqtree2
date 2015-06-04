@@ -1461,9 +1461,6 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
         iqtree.deleteAllPartialLh();
     }
 
-//    if (params.count_trees && pllTreeCounter == NULL)
-//    	pllTreeCounter = new StringIntMap;
-
     // Temporary fix since PLL only supports DNA/Protein: switch to IQ-TREE parsimony kernel
     if (params.start_tree == STT_PLL_PARSIMONY) {
 		if (iqtree.isSuperTree()) {
@@ -1475,12 +1472,11 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 			params.start_tree = STT_PARSIMONY;
     }
 
-    /***************** Initialization for PLL and sNNI ******************/
+    /*****************  INITIALIZATION FOR PLL  ******************/
     if (params.start_tree == STT_PLL_PARSIMONY || params.pll) {
         /* Initialized all data structure for PLL*/
     	iqtree.initializePLL(params);
     }
-
 
     /********************* Compute pairwise distances *******************/
     if (params.start_tree == STT_BIONJ || params.iqp || params.leastSquareBranch) {
@@ -1544,11 +1540,11 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 		if (params.alpha_invar_file != NULL) { // COMPUTE TREE LIKELIHOOD BASED ON THE INPUT ALPHA AND P_INVAR VALUE
 			computeLoglFromUserInputGAMMAInvar(params, iqtree);
 			exit(0);
-			}
+		}
 		if (params.exh_ai) {
 			exhaustiveSearchGAMMAInvar(params, iqtree);
-		exit(0);
-	}
+			exit(0);
+		}
 
 		if (params.rr_ai) { // DO RESTART ON ALPHA AND P_INVAR
 			searchGAMMAInvarByRestarting(iqtree);
@@ -1563,9 +1559,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 	iqtree.clearAllPartialLH();
 	initTree = iqtree.optimizeModelParameters(true, initEpsilon);
 
-    /****************** NOW PERFORM MAXIMUM LIKELIHOOD TREE RECONSTRUCTION ******************/
-
-    // Update best tree
+    // Input the initial tree to the candidate set
     iqtree.candidateTrees.update(initTree, iqtree.getCurScore());
 
     // Compute maximum likelihood distance
@@ -1592,10 +1586,6 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
     if (params.leastSquareNNI) {
     	iqtree.computeSubtreeDists();
     }
-    /* TUNG: what happens if params.root is not set? This is usually the case.
-     * I added code to ininialize the root above.
-     */
-    //iqtree.setRootNode(params.root); // Important for NNI below
 
 	if (original_model == "WHTEST") {
 		cout << endl << "Testing model homogeneity by Weiss & von Haeseler (2003)..." << endl;
@@ -1613,7 +1603,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 	pruneTaxa(params, iqtree, pattern_lh, pruned_taxa, linked_name);
 
 	/***************************************** DO STOCHASTIC TREE SEARCH *******************************************/
-	if (params.min_iterations > 1) {
+	if (params.min_iterations > 0) {
 		iqtree.readTreeString(iqtree.candidateTrees.getTopTrees()[0]);
 		iqtree.doTreeSearch();
 		iqtree.setAlignment(iqtree.aln);
@@ -2113,7 +2103,9 @@ void runPhyloAnalysis(Params &params) {
 		// run Arndt's plot of tree likelihoods against bootstrap alignments
 		runBootLhTest(params, alignment, *tree);
 	} else if (params.num_bootstrap_samples == 0) {
-		// the main Maximum likelihood tree reconstruction
+	/********************************************************************************
+                    THE MAIN MAXIMUM LIKELIHOOD TREE RECONSTRUCTION
+	 ********************************************************************************/
 		vector<ModelInfo> *model_info = new vector<ModelInfo>;
 		alignment->checkGappySeq(params.remove_empty_seq);
 
@@ -2125,6 +2117,7 @@ void runPhyloAnalysis(Params &params) {
 
 		// call main tree reconstruction
         runTreeReconstruction(params, original_model, *tree, *model_info);
+
 		if (params.gbo_replicates && params.online_bootstrap) {
 			if (params.print_ufboot_trees)
 				tree->writeUFBootTrees(params);
