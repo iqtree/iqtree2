@@ -68,6 +68,24 @@ void PhyloTree::computeMixratePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_bran
 	if ((right->partial_lh_computed & 1) == 0)
 		computeMixratePartialLikelihoodEigenSIMD<VectorClass, VCSIZE, nstates>(right, node);
 
+    if (params->lh_mem_save == LM_PER_NODE && !dad_branch->partial_lh) {
+        // re-orient partial_lh
+        bool done = false;
+        FOR_NEIGHBOR_IT(node, dad, it2) {
+            PhyloNeighbor *backnei = ((PhyloNeighbor*)(*it2)->node->findNeighbor(node));
+            if (backnei->partial_lh) {
+                dad_branch->partial_lh = backnei->partial_lh;
+                dad_branch->scale_num = backnei->scale_num;
+                backnei->partial_lh = NULL;
+                backnei->scale_num = NULL;
+                backnei->partial_lh_computed &= ~1; // clear bit
+                done = true;
+                break;
+            }
+        }
+        assert(done && "partial_lh is not re-oriented");
+    }
+
 	double *evec = model->getEigenvectors();
 	double *inv_evec = model->getInverseEigenvectors();
 

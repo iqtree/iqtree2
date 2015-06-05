@@ -473,7 +473,7 @@ void PhyloTree::computePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNo
 	// internal node
 	assert(node->degree() == 3); // it works only for strictly bifurcating tree
 	PhyloNeighbor *left = NULL, *right = NULL; // left & right are two neighbors leading to 2 subtrees
-	FOR_NEIGHBOR_DECLARE(node, dad, it) {
+	FOR_NEIGHBOR_IT(node, dad, it) {
 		if (!left) left = (PhyloNeighbor*)(*it); else right = (PhyloNeighbor*)(*it);
 	}
 
@@ -490,8 +490,8 @@ void PhyloTree::computePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNo
     if (params->lh_mem_save == LM_PER_NODE && !dad_branch->partial_lh) {
         // re-orient partial_lh
         bool done = false;
-        FOR_NEIGHBOR(node, dad, it) {
-            PhyloNeighbor *backnei = ((PhyloNeighbor*)(*it)->node->findNeighbor(node));
+        FOR_NEIGHBOR_IT(node, dad, it2) {
+            PhyloNeighbor *backnei = ((PhyloNeighbor*)(*it2)->node->findNeighbor(node));
             if (backnei->partial_lh) {
                 dad_branch->partial_lh = backnei->partial_lh;
                 dad_branch->scale_num = backnei->scale_num;
