@@ -455,7 +455,7 @@ void PhyloTree::computePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNo
 			computeTipPartialLikelihood();
 		return;
 	}
-
+    
     size_t ptn, c;
     size_t orig_ntn = aln->size();
     size_t ncat = site_rate->getNRate();
@@ -473,7 +473,7 @@ void PhyloTree::computePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNo
 	// internal node
 	assert(node->degree() == 3); // it works only for strictly bifurcating tree
 	PhyloNeighbor *left = NULL, *right = NULL; // left & right are two neighbors leading to 2 subtrees
-	FOR_NEIGHBOR_IT(node, dad, it) {
+	FOR_NEIGHBOR_DECLARE(node, dad, it) {
 		if (!left) left = (PhyloNeighbor*)(*it); else right = (PhyloNeighbor*)(*it);
 	}
 
@@ -486,6 +486,27 @@ void PhyloTree::computePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNo
 		computePartialLikelihoodEigen(left, node);
 	if ((right->partial_lh_computed & 1) == 0)
 		computePartialLikelihoodEigen(right, node);
+        
+    if (params->lh_mem_save == LM_PER_NODE && !dad_branch->partial_lh) {
+        // re-orient partial_lh
+        bool done = false;
+        FOR_NEIGHBOR(node, dad, it) {
+            PhyloNeighbor *backnei = ((PhyloNeighbor*)(*it)->node->findNeighbor(node));
+            if (backnei->partial_lh) {
+                dad_branch->partial_lh = backnei->partial_lh;
+                dad_branch->scale_num = backnei->scale_num;
+                backnei->partial_lh = NULL;
+                backnei->scale_num = NULL;
+                backnei->partial_lh_computed &= ~1; // clear bit
+                done = true;
+                break;
+            }
+        }
+        assert(done && "partial_lh is not re-oriented");
+    }
+
+        
+        
 	dad_branch->lh_scale_factor = left->lh_scale_factor + right->lh_scale_factor;
 	double *eleft = new double[block*nstates], *eright = new double[block*nstates];
 

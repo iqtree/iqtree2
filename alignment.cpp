@@ -1477,7 +1477,7 @@ int Alignment::readMSF(char *filename, char *sequence_type) {
     in.exceptions(ios::badbit);
     getline(in, line);
     if (line.find("MULTIPLE_ALIGNMENT") == string::npos) {
-        throw "MSF file must start with header line MULTIPLE_ALIGMENT";
+        throw "MSF file must start with header line MULTIPLE_ALIGNMENT";
     }
 
     int seq_len = 0, seq_count = 0;

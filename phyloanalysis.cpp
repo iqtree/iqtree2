@@ -1564,6 +1564,13 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 
     if (!params.pll) {
         uint64_t mem_size = iqtree.getMemoryRequired();
+        if (mem_size >= getMemorySize()) {
+            if (params.lh_mem_save == LM_DETECT) {
+                // switch to memory saving technique that reduces memory requirement to 1/3
+                params.lh_mem_save = LM_PER_NODE;
+                mem_size = iqtree.getMemoryRequired();
+            }
+        }
 //#if defined __APPLE__ || defined __MACH__
         cout << "NOTE: " << ((double) mem_size * sizeof(double) / 1024.0) / 1024 << " MB RAM is required!" << endl;
 //#else

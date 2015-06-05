@@ -2257,6 +2257,8 @@ void IQTree::doNNIs(int nni2apply, bool changeBran) {
             changeNNIBrans(nonConfNNIs.at(i));
         }
     }
+    if (params->lh_mem_save == LM_PER_NODE) 
+        initializeAllPartialLh();
 }
 
 
