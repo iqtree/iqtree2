@@ -2043,11 +2043,6 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
             // likelihood need to be cleared.
             if (params->lh_mem_save == LM_PER_NODE) {
                 initializeAllPartialLh();
-                if (isSuperTree()) {
-                    PhyloSuperTree *stree = (PhyloSuperTree*)this;
-                    for (PhyloSuperTree::iterator it = stree->begin(); it != stree->end(); it++)
-                        (*it)->initializeAllPartialLh();
-                }
             } else
                 clearAllPartialLH();
             
@@ -2267,11 +2262,6 @@ void IQTree::doNNIs(int nni2apply, bool changeBran) {
     }
     if (params->lh_mem_save == LM_PER_NODE) {
         initializeAllPartialLh();
-        if (isSuperTree()) {
-            PhyloSuperTree *stree = (PhyloSuperTree*)this;
-            for (PhyloSuperTree::iterator it = stree->begin(); it != stree->end(); it++)
-                (*it)->initializeAllPartialLh();
-        }
     }
 }
 

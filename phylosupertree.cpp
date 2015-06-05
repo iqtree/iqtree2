@@ -660,6 +660,13 @@ void PhyloSuperTree::linkTrees() {
 	}
 }
 
+void PhyloSuperTree::initializeAllPartialLh() {
+	for (iterator it = begin(); it != end(); it++) {
+		(*it)->initializeAllPartialLh();
+	}
+}
+
+
 void PhyloSuperTree::deleteAllPartialLh() {
 	for (iterator it = begin(); it != end(); it++) {
 		(*it)->deleteAllPartialLh();
