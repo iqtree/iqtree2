@@ -3759,6 +3759,16 @@ void PhyloTree::doNNI(NNIMove &move, bool clearLH) {
      *nodeA_it = nodeBNei;*/
     // END TODO MINH
     assert(node1->degree() == 3 && node2->degree() == 3);
+
+    PhyloNeighbor *node12_it = (PhyloNeighbor*) node1->findNeighbor(node2); // return neighbor of node1 which points to node 2
+    PhyloNeighbor *node21_it = (PhyloNeighbor*) node2->findNeighbor(node1); // return neighbor of node2 which points to node 1
+
+    // reorient partial_lh before swap
+    if (params->lh_mem_save == LM_PER_NODE) {
+        node12_it->reorientPartialLh(node1);
+        node21_it->reorientPartialLh(node2);
+    }
+    
     // do the NNI swap
     node1->updateNeighbor(node1Nei_it, node2Nei);
     node2Nei->node->updateNeighbor(node2, node1);
@@ -3779,8 +3789,6 @@ void PhyloTree::doNNI(NNIMove &move, bool clearLH) {
      outError("Wrong ID");
      }*/
 
-    PhyloNeighbor *node12_it = (PhyloNeighbor*) node1->findNeighbor(node2); // return neighbor of node1 which points to node 2
-    PhyloNeighbor *node21_it = (PhyloNeighbor*) node2->findNeighbor(node1); // return neighbor of node2 which points to node 1
 
     if (clearLH) {
         // clear partial likelihood vector

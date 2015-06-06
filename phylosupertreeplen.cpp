@@ -1902,18 +1902,18 @@ void PhyloSuperTreePlen::initializeAllPartialLh(double* &lh_addr, UBYTE* &scale_
 
             if (params->lh_mem_save == LM_PER_NODE) {
                 if (!nei_part_back->node->isLeaf()) {
-                    nei_part_back->partial_lh = lh_addr;
-                    nei_part_back->scale_num = scale_addr;
-                    nei_part->partial_lh = NULL;
-                    nei_part->partial_lh = NULL;
-                    lh_addr = lh_addr + block_size[part];
-                    scale_addr = scale_addr + scale_block_size[part];
+                    if (!nei_part_back->partial_lh) {
+                        nei_part_back->partial_lh = lh_addr;
+                        nei_part_back->scale_num = scale_addr;
+                        lh_addr = lh_addr + block_size[part];
+                        scale_addr = scale_addr + scale_block_size[part];
+                    }
                 } else {
                     nei_part_back->partial_lh = NULL;
                     nei_part_back->scale_num = NULL;
-                    nei_part->partial_lh = NULL;
-                    nei_part->partial_lh = NULL;
                 }
+                nei_part->partial_lh = NULL;
+                nei_part->partial_lh = NULL;
             } else {
                 if (nei_part->node->isLeaf() && (sse == LK_EIGEN || sse == LK_EIGEN_SSE)) {
                     nei_part->partial_lh = NULL; // do not allocate memory for tip, use tip_partial_lh instead
