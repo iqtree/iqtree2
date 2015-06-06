@@ -3764,7 +3764,7 @@ void PhyloTree::doNNI(NNIMove &move, bool clearLH) {
     PhyloNeighbor *node21_it = (PhyloNeighbor*) node2->findNeighbor(node1); // return neighbor of node2 which points to node 1
 
     // reorient partial_lh before swap
-    if (params->lh_mem_save == LM_PER_NODE) {
+    if (params->lh_mem_save == LM_PER_NODE && !isSuperTree()) {
         node12_it->reorientPartialLh(node1);
         node21_it->reorientPartialLh(node2);
     }
