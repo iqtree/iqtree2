@@ -1009,6 +1009,7 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
                 case MTC_BIC:
                     best_model = model_info[model_bic].name;
                     break;
+                default: assert(0);
                 }
             model_names[model] = best_model + model_names[model];
         }
@@ -1187,11 +1188,32 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
             size_t prev_pos_r = model_info[prev_model_id].name.find("+R");
             size_t pos_r = info.name.find("+R");
             if ( prev_pos_r != string::npos &&  pos_r != string::npos && model_info[prev_model_id].name.substr(0,prev_pos_r) == info.name.substr(0, pos_r)) {
-                if (info.AIC_score > model_info[prev_model_id].AIC_score && info.AICc_score > model_info[prev_model_id].AICc_score &&
-                    info.BIC_score > model_info[prev_model_id].BIC_score) {
-                    // skip remaining model
-                    skip_model++;
-//                    cout << "Skip next model" << endl;
+                switch (params.model_test_stop_rule) {
+                case MTC_ALL:
+                    if (info.AIC_score > model_info[prev_model_id].AIC_score && info.AICc_score > model_info[prev_model_id].AICc_score &&
+                        info.BIC_score > model_info[prev_model_id].BIC_score) {
+                        // skip remaining model
+                        skip_model++;
+                    }
+                    break;
+                case MTC_AIC:
+                    if (info.AIC_score > model_info[prev_model_id].AIC_score) {
+                        // skip remaining model
+                        skip_model++;
+                    }
+                    break;
+                case MTC_AICC:
+                    if (info.AICc_score > model_info[prev_model_id].AICc_score) {
+                        // skip remaining model
+                        skip_model++;
+                    }
+                    break;
+                case MTC_BIC:
+                    if (info.BIC_score > model_info[prev_model_id].BIC_score) {
+                        // skip remaining model
+                        skip_model++;
+                    }
+                    break;
                 }
             }
         }
@@ -1342,6 +1364,7 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 			scores[model] = model_info[model].BIC_score;
 		best_model = model_info[model_bic].name;
 		break;
+    default: assert(0);
 	}
 	sort_index(scores, scores + model_info.size(), model_rank);
 

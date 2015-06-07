@@ -831,6 +831,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.num_threads = 1;
 #endif
     params.model_test_criterion = MTC_BIC;
+    params.model_test_stop_rule = MTC_ALL;
     params.model_test_sample_size = 0;
     params.root_state = NULL;
     params.print_bootaln = false;
@@ -2582,8 +2583,21 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.model_test_criterion = MTC_AIC;
 				continue;
 			}
-			if (strcmp(argv[cnt], "-AICc") == 0) {
+			if (strcmp(argv[cnt], "-AICc") == 0 || strcmp(argv[cnt], "-AICC") == 0) {
 				params.model_test_criterion = MTC_AICC;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-merit") == 0) {
+                cnt++;
+				if (cnt >= argc)
+					throw "Use -merit AIC|AICC|BIC";
+                if (strcmp(argv[cnt], "AIC") == 0)
+                    params.model_test_stop_rule = MTC_AIC;
+                else if (strcmp(argv[cnt], "AICc") == 0 || strcmp(argv[cnt], "AICC") == 0)
+                    params.model_test_stop_rule = MTC_AICC;
+                else if (strcmp(argv[cnt], "BIC") == 0)
+                    params.model_test_stop_rule = MTC_BIC;
+                else throw "Use -merit AIC|AICC|BIC";
 				continue;
 			}
 			if (strcmp(argv[cnt], "-ms") == 0) {
@@ -2814,9 +2828,10 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "                       (e.g. -mrate E,I,G,I+G,R)" << endl
             << "  -cmin <kmin>         Min #categories for FreeRate model [+R] (default: 2)" << endl
             << "  -cmax <kmax>         Max #categories for FreeRate model [+R] (default: 10)" << endl
+            << "  –merit AIC|AICc|BIC  Optimality criterion to use (default: all)" << endl
 //            << "  -msep                Perform model selection and then rate selection" << endl
-            << "  -mtree               Do a full tree search for each model considered" << endl
-            << "  -mredo               Ignore model results computed earlier (default: not ignore)" << endl
+            << "  -mtree               Performing full tree search for each model considered" << endl
+            << "  -mredo               Ignoring model results computed earlier (default: no)" << endl
             << "  -mdef <nexus_file>   A model definition NEXUS file (see Manual)" << endl
 
             << endl << "SUBSTITUTION MODEL:" << endl
