@@ -2101,6 +2101,11 @@ void summarizeFooter(ostream &out, Params &params);
 void trimString(string &str);
 
 /**
+    get number of processor cores
+*/
+int countPhysicalCPUCores();
+
+/**
     quicksort template
 */
 template<class T1, class T2>

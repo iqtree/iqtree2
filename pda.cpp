@@ -1787,7 +1787,7 @@ void funcExit(void) {
 	endLogFile();
 }
 
-#if defined(__GNUC__) || defined(__clang__)   
+#if (defined(__GNUC__) || defined(__clang__)) && !defined(WIN32)
 #include <execinfo.h>
 #endif
 
@@ -2291,8 +2291,8 @@ int main(int argc, char *argv[])
 	if (params.num_threads) omp_set_num_threads(params.num_threads);
 //	int max_threads = omp_get_max_threads();
 	params.num_threads = omp_get_max_threads();
-	int max_procs = omp_get_num_procs();
-	cout << " - " << params.num_threads  << " threads (" << max_procs << " CPU cores detected)";
+	int max_procs = countPhysicalCPUCores();
+	cout << " - " << params.num_threads  << " threads (" << max_procs << " physical CPU cores detected)";
 	if (params.num_threads  > max_procs) {
 		cout << endl;
 		outError("You have specified more threads than CPU cores available");
@@ -2303,6 +2303,10 @@ int main(int argc, char *argv[])
 		cout << endl << endl;
 		outError("Number of threads must be 1 for sequential version.");
 	}
+    int num_procs = countPhysicalCPUCores();
+    if (num_procs > 1) {
+        cout << endl << endl << "NOTE: Consider using the multicore version because your CPU has " << num_procs << " cores!" << endl;
+    }
 #endif
 	//cout << "sizeof(int)=" << sizeof(int) << endl;
 	cout << endl << endl;

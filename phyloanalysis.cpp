@@ -1581,18 +1581,12 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
             outError("Memory required exceeds your computer RAM size!");
         }
         
-#ifdef _OPENMP
-        int max_procs = omp_get_num_procs();
+        int max_procs = countPhysicalCPUCores();
         if (mem_size * max_procs > total_mem * params.num_threads) {
             outWarning("Memory required per CPU-core (" + convertDoubleToString((double)mem_size/params.num_threads/1024/1024/1024)+
             " GB) is higher than your computer RAM per CPU-core ("+convertIntToString(total_mem/max_procs/1024/1024/1024)+
             " GB), thus multiple runs will exceed RAM!");
         }
-#else
-        if (mem_size * 2 > total_mem) {
-            outWarning("Memory required exceeds half of your computer RAM, thus two runs will exceed RAM!");
-        }
-#endif        
     }
 
     iqtree.initializeAllPartialLh();

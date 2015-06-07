@@ -3346,3 +3346,33 @@ void trimString(string &str) {
     str.erase(str.find_last_not_of(" \n\r\t")+1);
 }
 
+
+int countPhysicalCPUCores() {
+    uint32_t registers[4];
+    unsigned logicalcpucount;
+    unsigned physicalcpucount;
+#if defined(_WIN32) || defined(WIN32)
+    SYSTEM_INFO systeminfo;
+    GetSystemInfo( &systeminfo );
+    logicalcpucount = systeminfo.dwNumberOfProcessors;
+#else
+    logicalcpucount = sysconf( _SC_NPROCESSORS_ONLN );
+#endif
+    if (logicalcpucount % 2 != 0)
+        return logicalcpucount;
+    __asm__ __volatile__ ("cpuid " :
+                          "=a" (registers[0]),
+                          "=b" (registers[1]),
+                          "=c" (registers[2]),
+                          "=d" (registers[3])
+                          : "a" (1), "c" (0));
+
+    unsigned CPUFeatureSet = registers[3];
+    bool hyperthreading = CPUFeatureSet & (1 << 28);    
+    if (hyperthreading){
+        physicalcpucount = logicalcpucount / 2;
+    } else {
+        physicalcpucount = logicalcpucount;
+    }
+    return physicalcpucount;
+}
