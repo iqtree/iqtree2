@@ -1563,22 +1563,36 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
     }
 
     if (!params.pll) {
-        uint64_t mem_size = iqtree.getMemoryRequired();
-        if (mem_size >= getMemorySize()) {
+        uint64_t mem_size = iqtree.getMemoryRequired() * sizeof(double);
+        uint64_t total_mem = getMemorySize();
+        if (mem_size >= total_mem) {
             if (params.lh_mem_save == LM_DETECT) {
                 // switch to memory saving technique that reduces memory requirement to 1/3
                 params.lh_mem_save = LM_PER_NODE;
-                mem_size = iqtree.getMemoryRequired();
+                mem_size = iqtree.getMemoryRequired() * sizeof(double);
             }
         }
 //#if defined __APPLE__ || defined __MACH__
-        cout << "NOTE: " << ((double) mem_size * sizeof(double) / 1024.0) / 1024 << " MB RAM is required!" << endl;
+        cout << "NOTE: " << (mem_size / 1024) / 1024 << " MB RAM is required!" << endl;
 //#else
-//        cout << "NOTE: " << ((double) mem_size * sizeof(double) / 1000.0) / 1000 << " MB RAM is required!" << endl;
+//        cout << "NOTE: " << ((double) mem_size / 1000.0) / 1000 << " MB RAM is required!" << endl;
 //#endif
-        if (mem_size >= getMemorySize()) {
+        if (mem_size >= total_mem) {
             outError("Memory required exceeds your computer RAM size!");
         }
+        
+#ifdef _OPENMP
+        int max_procs = omp_get_num_procs();
+        if (mem_size * max_procs > total_mem * params.num_threads) {
+            outWarning("Memory required per CPU-core (" + convertDoubleToString((double)mem_size/params.num_threads/1024/1024/1024)+
+            " GB) is higher than your computer RAM per CPU-core ("+convertIntToString(total_mem/max_procs/1024/1024/1024)+
+            " GB), thus multiple runs will exceed RAM!");
+        }
+#else
+        if (mem_size * 2 > total_mem) {
+            outWarning("Memory required exceeds half of your computer RAM, thus two runs will exceed RAM!");
+        }
+#endif        
     }
 
     iqtree.initializeAllPartialLh();
