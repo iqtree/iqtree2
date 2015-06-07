@@ -840,7 +840,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.print_conaln = false;
 	params.count_trees = false;
 	params.print_branch_lengths = false;
-	params.lh_mem_save = LM_DETECT; // auto detect
+	params.lh_mem_save = LM_PER_NODE; // auto detect
 	params.start_tree = STT_PLL_PARSIMONY;
 	params.print_splits_file = false;
     params.ignore_identical_seqs = true;
