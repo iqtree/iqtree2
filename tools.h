@@ -61,6 +61,10 @@
 	#if defined(_MSC_VER)
 		#include <unordered_map>
 		#include <unordered_set>
+    #elif defined(__clang__)
+		#include <tr1/unordered_map>
+		#include <tr1/unordered_set>
+		using namespace std::tr1;    
 	#elif !defined(__GNUC__)
 		#include <hash_map>
 		#include <hash_set>
@@ -84,7 +88,7 @@
 using namespace std;
 
 
-#if	defined(USE_HASH_MAP) && GCC_VERSION < 40300 && !defined(_MSC_VER)
+#if	defined(USE_HASH_MAP) && GCC_VERSION < 40300 && !defined(_MSC_VER) && !defined(__clang__)
 /*
         Define the hash function of Split
  */
