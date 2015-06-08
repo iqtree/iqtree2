@@ -431,7 +431,7 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
     //int numDup = 0;
     cout << "Generating " << nParTrees - 1 << " parsimony trees... ";
     cout.flush();
-    double startTime = getCPUTime();
+    double startTime = getRealTime();
     int numDupPars = 0;
     for (int treeNr = 1; treeNr < nParTrees; treeNr++) {
         string curParsTree;
@@ -471,11 +471,11 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
         	candidateTrees.update(curParsTree, -DBL_MAX, false);
         }
     }
-    double parsTime = getCPUTime() - startTime;
+    double parsTime = getRealTime() - startTime;
     cout << "(" << numDupPars << " duplicated parsimony trees)" << endl;
-    cout << "CPU time: " << parsTime << endl;
+    cout << "Time: " << parsTime << endl;
     cout << "Computing logl of parsimony trees ... " << endl;
-    startTime = getCPUTime();
+    startTime = getRealTime();
 
     /************ Compute logl of all parsimony trees ********************/
     vector<string> unOptParTrees = candidateTrees.getTopTrees(nParTrees);
@@ -490,9 +490,9 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
 		candidateTrees.update(tree, getCurScore(), false);
     }
     //exit(0);
-    double loglTime = getCPUTime() - startTime;
+    double loglTime = getRealTime() - startTime;
     if (unOptParTrees.size() > 1) {
-    	cout << "Average CPU time for computing logl of 1 parsimony tree: " << loglTime / (unOptParTrees.size()-1)<< endl;
+    	cout << "Average wall time for computing logl of 1 parsimony tree: " << loglTime / (unOptParTrees.size()-1)<< endl;
     }
 
     // Only select the best nNNITrees for doing NNI search

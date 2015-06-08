@@ -681,7 +681,7 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info, double 
 
 	//time_t begin_time, cur_time;
 	//time(&begin_time);
-	double begin_time = getCPUTime();
+	double begin_time = getRealTime();
 	double cur_lh;
 	PhyloTree *tree = site_rate->getTree();
 	assert(tree);
@@ -758,7 +758,7 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info, double 
 	}
 	//time(&cur_time);
 	//double elapsed_secs = difftime(cur_time,begin_time);
-	double elapsed_secs = getCPUTime() - begin_time;
+	double elapsed_secs = getRealTime() - begin_time;
 	if (write_info)
 		cout << "Parameters optimization took " << i-1 << " rounds (" << elapsed_secs << " sec)" << endl << endl;
 	startStoringTransMatrix();

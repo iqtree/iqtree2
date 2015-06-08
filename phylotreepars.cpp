@@ -164,7 +164,7 @@ void PhyloTree::computePartialParsimonyFast(PhyloNeighbor *dad_branch, PhyloNode
         switch (nstates) {
         case 4:
             #ifdef _OPENMP
-            #pragma omp parallel for private (site) reduction(+: score)
+            #pragma omp parallel for private (site) reduction(+: score) if(nsites>200)
             #endif
 			for (site = 0; site<nsites; site++) {
 				UINT w;
@@ -187,7 +187,7 @@ void PhyloTree::computePartialParsimonyFast(PhyloNeighbor *dad_branch, PhyloNode
 			break;
         default:
             #ifdef _OPENMP
-            #pragma omp parallel for private (site) reduction(+: score)
+            #pragma omp parallel for private (site) reduction(+: score) if(nsites>200)
             #endif
 			for (site = 0; site<nsites; site++) {
 				int i;
@@ -238,7 +238,7 @@ int PhyloTree::computeParsimonyBranchFast(PhyloNeighbor *dad_branch, PhyloNode *
     switch (nstates) {
     case 4:
         #ifdef _OPENMP
-        #pragma omp parallel for private (site) reduction(+: score)
+        #pragma omp parallel for private (site) reduction(+: score) if(nsites>200)
         #endif
 		for (site = 0; site < nsites; site++) {
             size_t offset = 4*site;
@@ -255,7 +255,7 @@ int PhyloTree::computeParsimonyBranchFast(PhyloNeighbor *dad_branch, PhyloNode *
 		break;
     default:
         #ifdef _OPENMP
-        #pragma omp parallel for private (site) reduction(+: score)
+        #pragma omp parallel for private (site) reduction(+: score) if(nsites>200)
         #endif
 		for (site = 0; site < nsites; site++) {
             size_t offset = nstates*site;
@@ -311,6 +311,8 @@ int PhyloTree::computeParsimonyTree(const char *out_prefix, Alignment *alignment
     int size = aln->getNSeq();
     if (size < 3)
         outError(ERR_FEW_TAXA);
+
+    freeNode();
 
     root = newNode(size);
 
