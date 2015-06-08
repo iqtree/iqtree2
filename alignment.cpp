@@ -2435,72 +2435,135 @@ double Alignment::readDist(const char *file_name, double *dist_mat) {
     return longest_dist;
 }
 
-
-void Alignment::computeStateFreq (double *stateFrqArr) {
-    int stateNo_;
-    int nState_ = num_states;
-    int nseqs = getNSeq();
-    double *timeAppArr_ = new double[num_states];
-    double *siteAppArr_ = new double[num_states]; //App = appearance
-    double *newSiteAppArr_ = new double[num_states];
-
-    for (stateNo_ = 0; stateNo_ < nState_; stateNo_ ++)
-        stateFrqArr [ stateNo_ ] = 1.0 / nState_;
-
-    int NUM_TIME = 8;
-    //app = appeareance
-    for (int time_ = 0; time_ < NUM_TIME; time_ ++)
-    {
-        for (stateNo_ = 0; stateNo_ < nState_; stateNo_ ++)
-            timeAppArr_[stateNo_] = 0.0;
-
-        for (iterator it = begin(); it != end(); it++)
-            for (int i = 0; i < (*it).frequency; i++)
-            {
-                for (int seq = 0; seq < nseqs; seq++) {
-                    int stateNo_ = (*it)[seq];
-
-                    getAppearance (stateNo_, siteAppArr_);
-
-                    double totalSiteApp_ = 0.0;
-                    for (stateNo_ = 0; stateNo_ < nState_; stateNo_ ++) {
-                        newSiteAppArr_[stateNo_] = stateFrqArr[stateNo_] * siteAppArr_[stateNo_];
-                        totalSiteApp_ += newSiteAppArr_[stateNo_];
-                    }
-
-                    for (stateNo_ = 0; stateNo_ < nState_; stateNo_ ++)
-                        timeAppArr_[stateNo_] += newSiteAppArr_[stateNo_] / totalSiteApp_;
-                }
+void Alignment::computeStateFreq (double *state_freq) {
+    int i, j;
+    double *states_app = new double[num_states*(STATE_UNKNOWN+1)];
+    double *new_freq = new double[num_states];
+    unsigned *state_count = new unsigned[STATE_UNKNOWN+1];
+    double *new_state_freq = new double[num_states];
+    
+    
+    memset(state_count, 0, sizeof(unsigned)*(STATE_UNKNOWN+1));
+    
+    for (i = 0; i <= STATE_UNKNOWN; i++)
+        getAppearance(i, &states_app[i*num_states]);
+        
+    for (iterator it = begin(); it != end(); it++)
+        for (Pattern::iterator it2 = it->begin(); it2 != it->end(); it2++)
+            state_count[*it2] += it->frequency;
+            
+    for (i = 0; i < num_states; i++)
+        state_freq[i] = 1.0/num_states;
+        
+    const int NUM_TIME = 8;
+    for (int k = 0; k < NUM_TIME; k++) {
+        memset(new_state_freq, 0, sizeof(double)*num_states);
+        
+        for (i = 0; i <= STATE_UNKNOWN; i++) {
+            if (state_count[i] == 0) continue;
+            double sum_freq = 0.0;
+            for (j = 0; j < num_states; j++) {
+                new_freq[j] = state_freq[j] * states_app[i*num_states+j];
+                sum_freq += new_freq[j];
             }
-
-        double totalTimeApp_ = 0.0;
-        int stateNo_;
-        for (stateNo_ = 0; stateNo_ < nState_; stateNo_ ++)
-            totalTimeApp_ += timeAppArr_[stateNo_];
-
-
-        for (stateNo_ = 0; stateNo_ < nState_; stateNo_ ++)
-            stateFrqArr[stateNo_] = timeAppArr_[stateNo_] / totalTimeApp_;
-
-    } //end of for time_
-
-    //  std::cout << "state frequency ..." << endl;
-    // for (stateNo_ = 0; stateNo_ < nState_; stateNo_ ++)
-    // std::cout << stateFrqArr[stateNo_] << endl;
-
-	convfreq(stateFrqArr);
+            sum_freq = 1.0/sum_freq;
+            for (j = 0; j < num_states; j++) {
+                new_state_freq[j] += new_freq[j]*sum_freq*state_count[i];
+            }
+        }
+        
+        double sum_freq = 0.0;
+        for (j = 0; j < num_states; j++)
+            sum_freq += new_state_freq[j];
+        sum_freq = 1.0/sum_freq;
+        for (j = 0; j < num_states; j++)
+            state_freq[j] = new_state_freq[j]*sum_freq;
+    }
+    
+	convfreq(state_freq);
 
     if (verbose_mode >= VB_MED) {
         cout << "Empirical state frequencies: ";
-        for (stateNo_ = 0; stateNo_ < nState_; stateNo_ ++)
-            cout << stateFrqArr[stateNo_] << " ";
+        for (i = 0; i < num_states; i++)
+            cout << state_freq[i] << " ";
         cout << endl;
     }
-	delete [] newSiteAppArr_;
-	delete [] siteAppArr_;
-	delete [] timeAppArr_;
-	
+    
+    delete [] new_state_freq;
+    delete [] state_count;
+    delete [] new_freq;
+    delete [] states_app;
 }
+
+
+//void Alignment::computeStateFreq (double *stateFrqArr) {
+//    int stateNo_;
+//    int nState_ = num_states;
+//    int nseqs = getNSeq();
+//    double *timeAppArr_ = new double[num_states];
+//    double *siteAppArr_ = new double[num_states]; //App = appearance
+//    double *newSiteAppArr_ = new double[num_states];
+//
+//    for (stateNo_ = 0; stateNo_ < nState_; stateNo_ ++)
+//        stateFrqArr [ stateNo_ ] = 1.0 / nState_;
+//
+//    int NUM_TIME = 8;
+//    //app = appeareance
+//    if (verbose_mode >= VB_MED)
+//        cout << "Computing state frequencies..." << endl;
+//    for (int time_ = 0; time_ < NUM_TIME; time_ ++)
+//    {
+//        for (stateNo_ = 0; stateNo_ < nState_; stateNo_ ++)
+//            timeAppArr_[stateNo_] = 0.0;
+//
+//        for (iterator it = begin(); it != end(); it++)
+//            for (int i = 0; i < (*it).frequency; i++)
+//            {
+//                for (int seq = 0; seq < nseqs; seq++) {
+//                    int stateNo_ = (*it)[seq];
+//
+//                    getAppearance (stateNo_, siteAppArr_);
+//
+//                    double totalSiteApp_ = 0.0;
+//                    for (stateNo_ = 0; stateNo_ < nState_; stateNo_ ++) {
+//                        newSiteAppArr_[stateNo_] = stateFrqArr[stateNo_] * siteAppArr_[stateNo_];
+//                        totalSiteApp_ += newSiteAppArr_[stateNo_];
+//                    }
+//                    totalSiteApp_ = 1.0 / totalSiteApp_;
+//
+//                    for (stateNo_ = 0; stateNo_ < nState_; stateNo_ ++)
+//                        timeAppArr_[stateNo_] += newSiteAppArr_[stateNo_] * totalSiteApp_;
+//                }
+//            }
+//
+//        double totalTimeApp_ = 0.0;
+//        int stateNo_;
+//        for (stateNo_ = 0; stateNo_ < nState_; stateNo_ ++)
+//            totalTimeApp_ += timeAppArr_[stateNo_];
+//
+//
+//        for (stateNo_ = 0; stateNo_ < nState_; stateNo_ ++)
+//            stateFrqArr[stateNo_] = timeAppArr_[stateNo_] / totalTimeApp_;
+//
+//    } //end of for time_
+//
+//    //  std::cout << "state frequency ..." << endl;
+//    // for (stateNo_ = 0; stateNo_ < nState_; stateNo_ ++)
+//    // std::cout << stateFrqArr[stateNo_] << endl;
+//
+//	convfreq(stateFrqArr);
+//
+//    if (verbose_mode >= VB_MED) {
+//        cout << "Empirical state frequencies: ";
+//        for (stateNo_ = 0; stateNo_ < nState_; stateNo_ ++)
+//            cout << stateFrqArr[stateNo_] << " ";
+//        cout << endl;
+//    }
+//	delete [] newSiteAppArr_;
+//	delete [] siteAppArr_;
+//	delete [] timeAppArr_;
+//	
+//}
 
 void Alignment::getAppearance(char state, double *state_app) {
     int i;
@@ -2729,23 +2792,34 @@ void Alignment::computeEmpiricalRate (double *rates) {
     int i, j, k;
     assert(rates);
     int nseqs = getNSeq();
-    double *pair_rates = new double [num_states*num_states];
-    memset(pair_rates, 0, sizeof(double)*num_states*num_states);
+    unsigned *pair_rates = new unsigned[num_states*num_states];
+    memset(pair_rates, 0, sizeof(unsigned)*num_states*num_states);
 //    for (i = 0; i < num_states; i++) {
 //        pair_rates[i] = new double[num_states];
 //        memset(pair_rates[i], 0, sizeof(double)*num_states);
 //    }
 
-    int count = 0;
-    for (iterator it = begin(); it != end(); it++, count++) {
-        for (i = 0; i < nseqs-1; i++) {
-            int state1 = (*it)[i];
-            if (state1 >= num_states) continue;
-            for (j = i+1; j < nseqs; j++) {
-                int state2 = (*it)[j];
-                if (state2 < num_states) pair_rates[state1*num_states+state2] += (*it).frequency;
-            }
+    unsigned *state_freq = new unsigned[STATE_UNKNOWN+1];
+
+    for (iterator it = begin(); it != end(); it++) {
+        memset(state_freq, 0, sizeof(unsigned)*(STATE_UNKNOWN+1));
+        for (i = 0; i < nseqs; i++) {
+            state_freq[it->at(i)]++;
         }
+        for (i = 0; i < num_states; i++) {
+            if (state_freq[i] == 0) continue;
+            pair_rates[i*num_states+i] += (state_freq[i]*(state_freq[i]-1)/2)*it->frequency;
+            for (j = i+1; j < num_states; j++)
+                pair_rates[i*num_states+j] += state_freq[i]*state_freq[j]*it->frequency;
+        }
+//            int state1 = it->at(i);
+//            if (state1 >= num_states) continue;
+//            int *this_pair = pair_rates + state1*num_states;
+//            for (j = i+1; j < nseqs; j++) {
+//                int state2 = it->at(j);
+//                if (state2 < num_states) this_pair[state2] += it->frequency;
+//            }
+//        }
     }
 
     k = 0;
@@ -2769,6 +2843,7 @@ void Alignment::computeEmpiricalRate (double *rates) {
 //    for (i = num_states-1; i >= 0; i--) {
 //        delete [] pair_rates[i];
 //    }
+    delete [] state_freq;
     delete [] pair_rates;
 }
 

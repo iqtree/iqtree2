@@ -412,8 +412,8 @@ int PhyloTree::computeParsimonyTree(const char *out_prefix, Alignment *alignment
     initializeTree();
 
     setAlignment(alignment);
-    initializeAllPartialPars();
-    clearAllPartialLH();
+//    initializeAllPartialPars();
+//    clearAllPartialLH();
     fixNegativeBranch(true);
     if (out_prefix) {
 		string file_name = out_prefix;

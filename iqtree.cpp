@@ -378,7 +378,7 @@ void IQTree::computeInitialTree(string &dist_file, LikelihoodKernel kernel) {
         	<< " (based on " << aln->num_informative_sites << " informative sites)"<< endl;
 //		if (params->pll)
 //			pllReadNewick(getTreeString());
-	    wrapperFixNegativeBranch(true);
+	    wrapperFixNegativeBranch(false);
 
         break;
     case STT_PLL_PARSIMONY:
