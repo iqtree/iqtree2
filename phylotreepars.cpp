@@ -159,14 +159,19 @@ void PhyloTree::computePartialParsimonyFast(PhyloNeighbor *dad_branch, PhyloNode
 //        UINT score = left->partial_pars[0] + right->partial_pars[0];
         UINT score = 0;
         int nsites = aln->num_informative_sites;
-        UINT *x = left->partial_pars;
-        UINT *y = right->partial_pars;
-        UINT *z = dad_branch->partial_pars;
+        nsites = (nsites+UINT_BITS-1)/UINT_BITS;
 
         switch (nstates) {
         case 4:
-			for (site = 0; site<nsites; site+=UINT_BITS) {
+            #ifdef _OPENMP
+            #pragma omp parallel for private (site) reduction(+: score)
+            #endif
+			for (site = 0; site<nsites; site++) {
 				UINT w;
+                size_t offset = 4*site;
+                UINT *x = left->partial_pars + offset;
+                UINT *y = right->partial_pars + offset;
+                UINT *z = dad_branch->partial_pars + offset;
 				z[0] = x[0] & y[0];
 				z[1] = x[1] & y[1];
 				z[2] = x[2] & y[2];
@@ -178,15 +183,20 @@ void PhyloTree::computePartialParsimonyFast(PhyloNeighbor *dad_branch, PhyloNode
 				z[1] |= w & (x[1] | y[1]);
 				z[2] |= w & (x[2] | y[2]);
 				z[3] |= w & (x[3] | y[3]);
-				x += 4;
-				y += 4;
-				z += 4;
 			}
 			break;
         default:
-			for (site = 0; site<nsites; site+=UINT_BITS) {
+            #ifdef _OPENMP
+            #pragma omp parallel for private (site) reduction(+: score)
+            #endif
+			for (site = 0; site<nsites; site++) {
 				int i;
 				UINT w = 0;
+                size_t offset = nstates*site;
+                UINT *x = left->partial_pars + offset;
+                UINT *y = right->partial_pars + offset;
+                UINT *z = dad_branch->partial_pars + offset;
+                
 				for (i = 0; i < nstates; i++) {
 					z[i] = x[i] & y[i];
 					w |= z[i];
@@ -196,13 +206,10 @@ void PhyloTree::computePartialParsimonyFast(PhyloNeighbor *dad_branch, PhyloNode
 				for (i = 0; i < nstates; i++) {
 					z[i] |= w & (x[i] | y[i]);
 				}
-				x += nstates;
-				y += nstates;
-				z += nstates;
 			}
 			break;
         }
-        *z = score + *x + *y;
+        dad_branch->partial_pars[nstates*nsites] = score + left->partial_pars[nstates*nsites] + right->partial_pars[nstates*nsites];
 //        dad_branch->partial_pars[0] = score;
     }
 }
@@ -228,22 +235,32 @@ int PhyloTree::computeParsimonyBranchFast(PhyloNeighbor *dad_branch, PhyloNode *
 
     UINT lower_bound = best_pars_score;
     if (branch_subst) lower_bound = INT_MAX;
-    UINT *x = dad_branch->partial_pars;
-    UINT *y = node_branch->partial_pars;
     switch (nstates) {
     case 4:
-		for (site = 1; site <= nsites; site++) {
+        #ifdef _OPENMP
+        #pragma omp parallel for private (site) reduction(+: score)
+        #endif
+		for (site = 0; site < nsites; site++) {
+            size_t offset = 4*site;
+            UINT *x = dad_branch->partial_pars + offset;
+            UINT *y = node_branch->partial_pars + offset;
 			UINT w = (x[0] & y[0]) | (x[1] & y[1]) | (x[2] & y[2]) | (x[3] & y[3]);
 			w = ~w;
 			score += vml_popcnt(w);
+            #ifndef _OPENMP
             if (score >= lower_bound)
                 break;
-			x += 4;
-			y += 4;
+            #endif
 		}
 		break;
     default:
-		for (site = 0; site < nsites; site+=UINT_BITS) {
+        #ifdef _OPENMP
+        #pragma omp parallel for private (site) reduction(+: score)
+        #endif
+		for (site = 0; site < nsites; site++) {
+            size_t offset = nstates*site;
+            UINT *x = dad_branch->partial_pars + offset;
+            UINT *y = node_branch->partial_pars + offset;
 			int i;
 			UINT w = x[0] & y[0];
 			for (i = 1; i < nstates; i++) {
@@ -251,11 +268,10 @@ int PhyloTree::computeParsimonyBranchFast(PhyloNeighbor *dad_branch, PhyloNode *
 			}
 			w = ~w;
 			score += vml_popcnt(w);
+            #ifndef _OPENMP
             if (score >= lower_bound)
                 break;
-			x += nstates;
-			y += nstates;
-
+            #endif
 		}
 		break;
     }
