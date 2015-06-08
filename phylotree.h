@@ -441,16 +441,24 @@ public:
      */
     int computeParsimony();
 
+    typedef void (PhyloTree::*ComputePartialParsimonyType)(PhyloNeighbor *, PhyloNode *);
+    ComputePartialParsimonyType computePartialParsimonyPointer;
+
     /**
-            TODO: Compute partial parsimony score of the subtree rooted at dad
+            Compute partial parsimony score of the subtree rooted at dad
             @param dad_branch the branch leading to the subtree
             @param dad its dad, used to direct the tranversal
      */
+    virtual void computePartialParsimony(PhyloNeighbor *dad_branch, PhyloNode *dad);
     void computePartialParsimonyNaive(PhyloNeighbor *dad_branch, PhyloNode *dad);
     void computePartialParsimonyFast(PhyloNeighbor *dad_branch, PhyloNode *dad);
-
     template<class VectorClass>
     void computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad);
+
+    void computeReversePartialParsimony(PhyloNode *node, PhyloNode *dad);
+
+    typedef int (PhyloTree::*ComputeParsimonyBranchType)(PhyloNeighbor *, PhyloNode *, int *);
+    ComputeParsimonyBranchType computeParsimonyBranchPointer;
 
     /**
             compute tree parsimony score on a branch
@@ -459,16 +467,12 @@ public:
             @param branch_subst (OUT) if not NULL, the number of substitutions on this branch
             @return parsimony score of the tree
      */
-    typedef int (PhyloTree::*ComputeParsimonyBranchType)(PhyloNeighbor *, PhyloNode *, int *);
-    ComputeParsimonyBranchType computeParsimonyBranchPointer;
-
     virtual int computeParsimonyBranch(PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst = NULL);
-
     int computeParsimonyBranchNaive(PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst = NULL);
     int computeParsimonyBranchFast(PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst = NULL);
-
     template<class VectorClass>
     int computeParsimonyBranchFastSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst = NULL);
+
 
     void printParsimonyStates(PhyloNeighbor *dad_branch = NULL, PhyloNode *dad = NULL);
 
@@ -526,6 +530,11 @@ public:
      * compute all partial likelihoods if not computed before
      */
     void computeAllPartialLh(PhyloNode *node = NULL, PhyloNode *dad = NULL);
+
+    /**
+     * compute all partial parsimony vector if not computed before
+     */
+    void computeAllPartialPars(PhyloNode *node = NULL, PhyloNode *dad = NULL);
 
     /**
             allocate memory for a partial likelihood vector
@@ -881,7 +890,7 @@ public:
             @param dad dad of the node, used to direct the search
             @return the parsimony score of the tree
      */
-    int addTaxonMPFast(Node *added_node, Node* &target_node, Node* &target_dad, UINT *target_partial_pars, Node *node, Node *dad);
+    int addTaxonMPFast(Node *added_taxon, Node *added_node, Node *node, Node *dad);
 
 
     /**

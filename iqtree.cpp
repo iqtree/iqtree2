@@ -372,9 +372,9 @@ void IQTree::computeInitialTree(string &dist_file, LikelihoodKernel kernel) {
         else
             cout << "Creating initial parsimony tree by random order stepwise addition..." << endl;
 //        aln->orderPatternByNumChars();
-        start = getCPUTime();
+        start = getRealTime();
         score = computeParsimonyTree(params->out_prefix, aln);
-        cout << getCPUTime() - start << " seconds, parsimony score: " << score
+        cout << getRealTime() - start << " seconds, parsimony score: " << score
         	<< " (based on " << aln->num_informative_sites << " informative sites)"<< endl;
 //		if (params->pll)
 //			pllReadNewick(getTreeString());
@@ -963,6 +963,7 @@ void IQTree::assessQuartets(vector<RepresentLeafSet*> &leaves_vec, PhyloNode *cu
 }
 
 void IQTree::reinsertLeavesByParsimony(PhyloNodeVector &del_leaves) {
+    assert(0 && "this function is obsolete");
     PhyloNodeVector::iterator it_leaf;
     assert(root->isLeaf());
     for (it_leaf = del_leaves.begin(); it_leaf != del_leaves.end(); it_leaf++) {
@@ -990,7 +991,8 @@ void IQTree::reinsertLeavesByParsimony(PhyloNodeVector &del_leaves) {
         added_node->updateNeighbor(node2, (Node*) 2);
 
         best_pars_score = INT_MAX;
-        addTaxonMPFast(added_node, target_node, target_dad, NULL, root->neighbors[0]->node, root);
+        // TODO: this needs to be adapted
+//        addTaxonMPFast(added_node, target_node, target_dad, NULL, root->neighbors[0]->node, root);
         target_node->updateNeighbor(target_dad, added_node, -1.0);
         target_dad->updateNeighbor(target_node, added_node, -1.0);
         added_node->updateNeighbor((Node*) 1, target_node, -1.0);

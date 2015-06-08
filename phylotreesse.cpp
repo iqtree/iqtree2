@@ -34,18 +34,23 @@ void PhyloTree::setParsimonyKernel(LikelihoodKernel lk) {
     switch (lk) {
     case LK_SSE:
         computeParsimonyBranchPointer = &PhyloTree::computeParsimonyBranchNaive;
+        computePartialParsimonyPointer = &PhyloTree::computePartialParsimonyNaive;
     	break;
     case LK_EIGEN:
         computeParsimonyBranchPointer = &PhyloTree::computeParsimonyBranchFast;
+        computePartialParsimonyPointer = &PhyloTree::computePartialParsimonyFast;
     	break;
     case LK_EIGEN_SSE:
 		if (instruction_set >= 7)
 			setParsimonyKernelAVX();
-		else
+		else {
 			computeParsimonyBranchPointer = &PhyloTree::computeParsimonyBranchFastSIMD<Vec4ui>;
+            computePartialParsimonyPointer = &PhyloTree::computePartialParsimonyFastSIMD<Vec4ui>;
+        }
     	break;
     default:
         computeParsimonyBranchPointer = &PhyloTree::computeParsimonyBranchNaive;
+        computePartialParsimonyPointer = &PhyloTree::computePartialParsimonyNaive;
     	break;
     }
 }

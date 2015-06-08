@@ -671,6 +671,20 @@ void setBitsAll(UINT* &bit_vec, int num) {
         bit_vec[size] = (1 << num) - 1;
 }
 
+void PhyloTree::computePartialParsimony(PhyloNeighbor *dad_branch, PhyloNode *dad) {
+    (this->*computePartialParsimonyPointer)(dad_branch, dad);
+}
+
+void PhyloTree::computeReversePartialParsimony(PhyloNode *node, PhyloNode *dad) {
+	PhyloNeighbor *node_nei = (PhyloNeighbor*)node->findNeighbor(dad);
+	assert(node_nei);
+	computePartialParsimony(node_nei, node);
+	for (NeighborVec::iterator it = node->neighbors.begin(); it != node->neighbors.end(); it ++)
+		if ((*it)->node != dad)
+			computeReversePartialParsimony((PhyloNode*)(*it)->node, node);
+
+}
+
 void PhyloTree::computePartialParsimonyNaive(PhyloNeighbor *dad_branch, PhyloNode *dad) {
     // don't recompute the parsimony
     if (dad_branch->partial_lh_computed & 2)
