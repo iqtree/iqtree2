@@ -1581,7 +1581,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
             outError("Memory required exceeds your computer RAM size!");
         }
 #ifdef BINARY32
-        if (mem_size >= 4000000000)
+        if (mem_size >= 4000000000UL) {
             outError("Memory required exceeds 4GB limit of 32-bit executable");
         }
 #endif
