@@ -875,8 +875,8 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
             outError("Memory required exceeds your computer RAM size!");
         }
 #ifdef BINARY32
-        if (mem_size >= 4000000000UL) {
-            outError("Memory required exceeds 4GB limit of 32-bit executable");
+        if (mem_size >= 2000000000) {
+            outError("Memory required exceeds 2GB limit of 32-bit executable");
         }
 #endif
     }
