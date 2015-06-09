@@ -543,19 +543,9 @@ void PhyloTree::initializeAllPartialPars(int &index, PhyloNode *node, PhyloNode 
 size_t PhyloTree::getBitsBlockSize() {
     // reserve the last entry for parsimony score
 //    return (aln->num_states * aln->size() + UINT_BITS - 1) / UINT_BITS + 1;
-    size_t len = ((max(aln->size(), (size_t)aln->num_informative_sites) + SIMD_BITS - 1) / UINT_BITS);
-    switch (aln->num_states % 4) {
-    case 0:
-        return aln->num_states * len + 8;
-    case 2:
-        if (len % 2 == 0)
-            return aln->num_states * len + 8;
-        else
-            return aln->num_states * len + 6;
-    default:
-        outError("Model with odd number of states not support yet. please contact author");
-        return 0;
-    }
+    size_t len = aln->num_states * ((max(aln->size(), (size_t)aln->num_informative_sites) + SIMD_BITS - 1) / UINT_BITS) + 8;
+    len = ((len+3)/4)*4;
+    return len;
 }
 
 int PhyloTree::getBitsEntrySize() {
