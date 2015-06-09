@@ -13,6 +13,7 @@
 #include "myreader.h"
 #include <numeric>
 #include <sstream>
+#include "model/rategamma.h"
 using namespace std;
 
 char symbols_protein[] = "ARNDCQEGHILKMFPSTWYVX"; // X for unknown AA
@@ -83,6 +84,21 @@ int Alignment::getMaxSeqNameLength() {
     return len;
 }
 
+/** 
+   probability that the observed chi-square exceeds chi2 even if model is correct 
+   @param deg degree of freedom
+   @param chi2 chi-square value
+   @return p-value
+   */
+double chi2prob (int deg, double chi2)
+{
+    double a = 0.5*deg;
+    double x = 0.5*chi2;
+    return 1.0-RateGamma::cmpIncompleteGamma (x, a, RateGamma::cmpLnGamma(a));
+//	return IncompleteGammaQ (0.5*deg, 0.5*chi2);
+} /* chi2prob */
+
+
 void Alignment::checkSeqName() {
     ostringstream warn_str;
     StrVector::iterator it;
@@ -113,35 +129,78 @@ void Alignment::checkSeqName() {
         }
     }
     if (!ok) outError("Please rename sequences listed above!");
+    
+    double *state_freq = new double[num_states];
+//    double *freq_per_sequence = new double[num_states*getNSeq()];
+    double *freq_per_sequence = new double[num_states];
+    unsigned *count_per_seq = new unsigned[num_states*getNSeq()];
+    computeStateFreq(state_freq);
+//    computeStateFreqPerSequence(freq_per_sequence);
+    countStatePerSequence(count_per_seq);
+    
     /*if (verbose_mode >= VB_MIN)*/ {
         int max_len = getMaxSeqNameLength()+1;
-        cout << "ID   ";
+        cout << "  ID  ";
         cout.width(max_len);
-        cout << left << "Sequence" << " #Gap/Ambiguity" << endl;
+        cout << left << "Sequence" << " %Gap/Ambi.  Seq. composition  p-value (chi2 test; df=" << num_states-1 << ")" << endl;
         int num_problem_seq = 0;
         int total_gaps = 0;
+        cout.precision(2);
+        int num_failed = 0;
         for (int i = 0; i < seq_names.size(); i++) {
+            int j;
             int num_gaps = getNSite() - countProperChar(i);
             total_gaps += num_gaps;
             double percent_gaps = ((double)num_gaps / getNSite())*100.0;
 			cout.width(4);
-			cout << i+1 << " ";
+			cout << right << i+1 << "  ";
             cout.width(max_len);
             cout << left << seq_names[i] << " ";
-			cout.width(4);
-			cout << num_gaps << " (" << percent_gaps << "%)";
+			cout.width(6);
+//			cout << num_gaps << " (" << percent_gaps << "%)";
+            cout << right << percent_gaps << "%";
             if (percent_gaps > 50) {
-				cout << " !!!";
+//				cout << " !!!";
 				num_problem_seq++;
 			}
-            cout << "\t" << seq_states[i].size();
+//            cout << "\t" << seq_states[i].size();
+
+            double chi2 = 0.0;
+            unsigned sum_count = 0;
+            for (j = 0; j < num_states; j++)
+                sum_count += count_per_seq[i*num_states+j];
+            double sum_inv = 1.0/sum_count;
+            for (j = 0; j < num_states; j++)
+                freq_per_sequence[j] = count_per_seq[i*num_states+j]*sum_inv;
+            for (j = 0; j < num_states; j++)
+                chi2 += (state_freq[j] - freq_per_sequence[j]) * (state_freq[j] - freq_per_sequence[j]) / state_freq[j];
+            
+//            chi2 *= getNSite();
+            chi2 *= sum_count;
+            double pvalue = chi2prob(num_states-1, chi2);
+            if (pvalue < 0.05) {
+                cout << "        failed ";
+                num_failed++;
+            } else
+                cout << "        passed ";
+            cout.width(12);
+            cout << right << pvalue*100 << "%";
+//            cout << "  " << chi2;
 			cout << endl;
         }
         if (num_problem_seq) cout << "WARNING: " << num_problem_seq << " sequences contain more than 50% gaps/ambiguity" << endl;
         cout << "**** ";
-        cout.width(max_len);
-        cout << left << "TOTAL" << " " << total_gaps << " (" << ((double)total_gaps/getNSite())/getNSeq()*100 << "%)" << endl;
+        cout.width(max_len+2);
+        cout << left << " TOTAL  ";
+        cout.width(6);
+        cout << right << ((double)total_gaps/getNSite())/getNSeq()*100 << "% ";
+        cout.width(6);
+        cout << right << num_failed << "-failed" << endl;
+        cout.precision(3);
     }
+    delete [] count_per_seq;
+    delete [] freq_per_sequence;
+    delete [] state_freq;
 }
 
 int Alignment::checkIdenticalSeq()
@@ -303,7 +362,7 @@ Alignment::Alignment(char *filename, char *sequence_type, InputType &intype) : v
     countConstSite();
 
     cout << "Alignment has " << getNSeq() << " sequences with " << getNSite() <<
-         " columns " << getNPattern() << " patterns (" << num_informative_sites << " informative sites)" << endl;
+         " columns and " << getNPattern() << " patterns (" << num_informative_sites << " informative sites)" << endl;
     buildSeqStates();
     checkSeqName();
     // OBSOLETE: identical sequences are handled later
@@ -481,7 +540,7 @@ void Alignment::extractDataBlock(NxsCharactersBlock *data_block) {
         num_gaps_only += addPattern(pat, site);
     }
     if (num_gaps_only)
-        cout << "WARNING: " << num_gaps_only << " sites contain only gaps or ambiguous chars." << endl;
+        cout << "WARNING: " << num_gaps_only << " sites contain only gaps or ambiguous characters." << endl;
     if (verbose_mode >= VB_MAX)
         for (site = 0; site < size(); site++) {
             for (seq = 0; seq < nseq; seq++)
@@ -1216,7 +1275,7 @@ int Alignment::buildPattern(StrVector &sequences, char *sequence_type, int nseq,
         num_gaps_only += addPattern(pat, site/step);
     }
     if (num_gaps_only)
-        cout << "WARNING: " << num_gaps_only << " sites contain only gaps or ambiguous chars." << endl;
+        cout << "WARNING: " << num_gaps_only << " sites contain only gaps or ambiguous characters." << endl;
     if (err_str.str() != "")
         throw err_str.str();
     return 1;
@@ -2450,7 +2509,7 @@ void Alignment::computeStateFreq (double *state_freq) {
         
     for (iterator it = begin(); it != end(); it++)
         for (Pattern::iterator it2 = it->begin(); it2 != it->end(); it2++)
-            state_count[*it2] += it->frequency;
+            state_count[(int)*it2] += it->frequency;
             
     for (i = 0; i < num_states; i++)
         state_freq[i] = 1.0/num_states;
@@ -2495,6 +2554,81 @@ void Alignment::computeStateFreq (double *state_freq) {
     delete [] states_app;
 }
 
+void Alignment::countStatePerSequence (unsigned *count_per_sequence) {
+    int i;
+    int nseqs = getNSeq();
+    memset(count_per_sequence, 0, sizeof(unsigned)*num_states*nseqs);
+    for (iterator it = begin(); it != end(); it++)
+        for (i = 0; i != nseqs; i++) {
+            if (it->at(i) < num_states) {
+                count_per_sequence[i*num_states + it->at(i)] += it->frequency;
+            }
+        }
+}
+
+void Alignment::computeStateFreqPerSequence (double *freq_per_sequence) {
+    int i, j;
+    int nseqs = getNSeq();
+    double *states_app = new double[num_states*(STATE_UNKNOWN+1)];
+    double *new_freq = new double[num_states];
+    unsigned *state_count = new unsigned[(STATE_UNKNOWN+1)*nseqs];
+    double *new_state_freq = new double[num_states];
+    
+    
+    memset(state_count, 0, sizeof(unsigned)*(STATE_UNKNOWN+1)*nseqs);
+    
+    for (i = 0; i <= STATE_UNKNOWN; i++)
+        getAppearance(i, &states_app[i*num_states]);
+        
+    for (iterator it = begin(); it != end(); it++)
+        for (i = 0; i != nseqs; i++) {
+            state_count[i*(STATE_UNKNOWN+1) + it->at(i)] += it->frequency;
+        }
+    double equal_freq = 1.0/num_states;
+    for (i = 0; i < num_states*nseqs; i++)
+        freq_per_sequence[i] = equal_freq;
+        
+    const int NUM_TIME = 8;
+    for (int k = 0; k < NUM_TIME; k++) {
+        for (int seq = 0; seq < nseqs; seq++) {
+            double *state_freq = &freq_per_sequence[seq*num_states];
+            memset(new_state_freq, 0, sizeof(double)*num_states);
+            for (i = 0; i <= STATE_UNKNOWN; i++) {
+                if (state_count[seq*(STATE_UNKNOWN+1)+i] == 0) continue;
+                double sum_freq = 0.0;
+                for (j = 0; j < num_states; j++) {
+                    new_freq[j] = state_freq[j] * states_app[i*num_states+j];
+                    sum_freq += new_freq[j];
+                }
+                sum_freq = 1.0/sum_freq;
+                for (j = 0; j < num_states; j++) {
+                    new_state_freq[j] += new_freq[j]*sum_freq*state_count[seq*(STATE_UNKNOWN+1)+i];
+                }
+            }
+            
+            double sum_freq = 0.0;
+            for (j = 0; j < num_states; j++)
+                sum_freq += new_state_freq[j];
+            sum_freq = 1.0/sum_freq;
+            for (j = 0; j < num_states; j++)
+                state_freq[j] = new_state_freq[j]*sum_freq;
+         }   
+    }
+    
+//	convfreq(state_freq);
+//
+//    if (verbose_mode >= VB_MED) {
+//        cout << "Empirical state frequencies: ";
+//        for (i = 0; i < num_states; i++)
+//            cout << state_freq[i] << " ";
+//        cout << endl;
+//    }
+    
+    delete [] new_state_freq;
+    delete [] state_count;
+    delete [] new_freq;
+    delete [] states_app;
+}
 
 //void Alignment::computeStateFreq (double *stateFrqArr) {
 //    int stateNo_;
@@ -2804,7 +2938,7 @@ void Alignment::computeEmpiricalRate (double *rates) {
     for (iterator it = begin(); it != end(); it++) {
         memset(state_freq, 0, sizeof(unsigned)*(STATE_UNKNOWN+1));
         for (i = 0; i < nseqs; i++) {
-            state_freq[it->at(i)]++;
+            state_freq[(int)it->at(i)]++;
         }
         for (i = 0; i < num_states; i++) {
             if (state_freq[i] == 0) continue;
