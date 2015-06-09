@@ -158,10 +158,11 @@ if(CMAKE_SIZEOF_VOID_P EQUAL 4 OR IQTREE_FLAGS MATCHES "m32")
 	if (CMAKE_GENERATOR MATCHES "Win64")
 		error("Both 32-bit and 64-bit mode cannot be specified")
 	endif()
-	SET(EXE_SUFFIX "${EXE_SUFFIX}-m32")
+	SET(EXE_SUFFIX "${EXE_SUFFIX}32")
 	if (GCC OR CLANG) 
 		set(COMBINED_FLAGS "${COMBINED_FLAGS} -m32")
   	endif()
+    add_definitions(-DBINARY32)
 else()
 	message("Target binary : 64-bit")
 endif()
@@ -330,7 +331,9 @@ add_subdirectory(model)
 # the main executable
 ##################################################################
 
+if (NOT BINARY32)
 add_library(avxkernel phylotreeavx.cpp)
+endif()
 
 add_executable(iqtree
 alignment.cpp
@@ -395,7 +398,9 @@ upperbounds.cpp
 
 if (NOT IQTREE_FLAGS MATCHES "avx" AND NOT IQTREE_FLAGS MATCHES "fma")
 	set_target_properties(iqtree pll ncl whtest zlibstatic sprng vectorclass model PROPERTIES COMPILE_FLAGS "${SSE_FLAGS}")
-	set_target_properties(avxkernel pllavx PROPERTIES COMPILE_FLAGS "${AVX_FLAGS}")
+	if (NOT BINARY32)
+		set_target_properties(avxkernel pllavx PROPERTIES COMPILE_FLAGS "${AVX_FLAGS}")
+	endif()
 endif()  
 
 ##################################################################
@@ -415,16 +420,20 @@ if (IQTREE_FLAGS MATCHES "omp")
 	if (MSVC)
 		set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /LIBPATH:${PROJECT_SOURCE_DIR}/lib")
 		if (BINARY32) 
-			set(THREAD_LIB "${THREAD_LIB} pthreadVC2_x86")
+			set(THREAD_LIB "pthreadVC2_x86")
 		else()
-			set(THREAD_LIB "${THREAD_LIB} pthreadVC2")
+			set(THREAD_LIB "pthreadVC2")
 		endif()
 	elseif(CLANG AND APPLE)
 		set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -L${PROJECT_SOURCE_DIR}/lib")
 	endif()
 endif()
 
-target_link_libraries(iqtree pll pllavx ncl whtest zlibstatic sprng vectorclass model avxkernel ${PLATFORM_LIB} ${THREAD_LIB})	
+if (BINARY32)
+    target_link_libraries(iqtree pll ncl whtest zlibstatic sprng vectorclass model ${PLATFORM_LIB} ${THREAD_LIB})	
+else()
+    target_link_libraries(iqtree pll pllavx ncl whtest zlibstatic sprng vectorclass model avxkernel ${PLATFORM_LIB} ${THREAD_LIB})	
+endif()
 
 ##################################################################
 # setup the executable name 

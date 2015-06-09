@@ -194,8 +194,7 @@ void Alignment::checkSeqName() {
         cout << left << " TOTAL  ";
         cout.width(6);
         cout << right << ((double)total_gaps/getNSite())/getNSeq()*100 << "% ";
-        cout.width(6);
-        cout << right << num_failed << "-failed" << endl;
+        cout << "  " << num_failed << " sequences failed composition test" << endl;
         cout.precision(3);
     }
     delete [] count_per_seq;

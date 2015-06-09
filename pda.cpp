@@ -2211,6 +2211,9 @@ int main(int argc, char *argv[])
 	//pclose(pfile);
 
 	instruction_set = instrset_detect();
+#ifdef BINARY32
+    instruction_set = min(instruction_set, 6);
+#endif
 	if (instruction_set < 3) outError("Your CPU does not support SSE3!");
 	bool has_fma3 = (instruction_set >= 7) && hasFMA3();
 	bool has_fma4 = (instruction_set >= 7) && hasFMA4();

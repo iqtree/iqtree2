@@ -401,8 +401,11 @@ public:
     typedef BootValType (PhyloTree::*DotProductType)(BootValType *x, BootValType *y, int size);
     DotProductType dotProduct;
 
+#ifdef BINARY32
+    void setDotProductAVX() {}
+#else
     void setDotProductAVX();
-
+#endif
     /**
             this function return the parsimony or likelihood score of the tree. Default is
             to compute the parsimony score. Override this function if you define a new
@@ -477,8 +480,11 @@ public:
     void printParsimonyStates(PhyloNeighbor *dad_branch = NULL, PhyloNode *dad = NULL);
 
     virtual void setParsimonyKernel(LikelihoodKernel lk);
+#ifdef BINARY32
+    virtual void setParsimonyKernelAVX() {}
+#else
     virtual void setParsimonyKernelAVX();
-
+#endif
     /**
             SLOW VERSION: compute the parsimony score of the tree, given the alignment
             @return the parsimony score
@@ -1348,8 +1354,11 @@ public:
 
     virtual void setLikelihoodKernel(LikelihoodKernel lk);
 
+#ifdef BINARY32
+    virtual void setLikelihoodKernelAVX() {}
+#else
     virtual void setLikelihoodKernelAVX();
-
+#endif
     /****************************************************************************
             Public variables
      ****************************************************************************/
