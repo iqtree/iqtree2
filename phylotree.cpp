@@ -1358,7 +1358,7 @@ void PhyloTree::initializeAllPartialLh(int &index, int &indexlh, PhyloNode *node
         assert(index < nodeNum * 2 - 1);
         
         // now initialize partial_lh and scale_num
-        if (params->lh_mem_save == LM_PER_NODE) {
+        if (params->lh_mem_save == LM_PER_NODE && (sse == LK_EIGEN || sse == LK_EIGEN_SSE)) {
             if (!node->isLeaf()) { // only allocate memory to internal node
                 nei->partial_lh = NULL; // do not allocate memory for tip, use tip_partial_lh instead
                 nei->scale_num = NULL;
@@ -3579,7 +3579,7 @@ void PhyloTree::doNNI(NNIMove &move, bool clearLH) {
     PhyloNeighbor *node21_it = (PhyloNeighbor*) node2->findNeighbor(node1); // return neighbor of node2 which points to node 1
 
     // reorient partial_lh before swap
-    if (params->lh_mem_save == LM_PER_NODE && !isSuperTree()) {
+    if (params->lh_mem_save == LM_PER_NODE && !isSuperTree() && (sse == LK_EIGEN || sse == LK_EIGEN_SSE)) {
         node12_it->reorientPartialLh(node1);
         node21_it->reorientPartialLh(node2);
     }
