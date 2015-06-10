@@ -231,9 +231,8 @@ public:
     /**
      * Remove the \a CandidateTree with topology equal to \a topology
      * @param topology
-     * @param score
      */
-    void removeCandidateTree(string topology, double score);
+    void removeCandidateTree(string topology);
 
     /* Getter and Setter function */
 	void setAln(Alignment* aln);

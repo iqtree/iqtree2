@@ -190,21 +190,13 @@ bool CandidateSet::update(string newTree, double newScore) {
 		notExisted = false;
 		// update new score if it is better the old score
 		double oldScore = topologies[candidate.topology];
-		if (oldScore < (newScore - 1e-6) || topologies[candidate.topology] == 0.0) {
-			removeCandidateTree(candidate.topology, oldScore);
-			topologies[candidate.topology] = newScore;
+		if (oldScore < (newScore - 1e-6)) {
+			removeCandidateTree(candidate.topology);
 			// insert tree into candidate set
 			insert(CandidateSet::value_type(newScore, candidate));
+			topologies[candidate.topology] = newScore;
 		}
-
 	} else {
-
-//		if (getWorstScore() < newScore && size() >= maxSize) {
-//			// remove the worst-scoring tree
-//			topologies.erase(begin()->second.topology);
-//			erase(begin());
-//		}
-
 		CandidateSet::iterator candidateTreeIt = insert(CandidateSet::value_type(newScore, candidate));
 		topologies[candidate.topology] = newScore;
 
@@ -346,25 +338,22 @@ CandidateSet::iterator CandidateSet::getCandidateTree(string topology) {
 	return end();
 }
 
-// TODO This function is not efficient for large number of tree
-void CandidateSet::removeCandidateTree(string topology, double score) {
+void CandidateSet::removeCandidateTree(string topology) {
 	bool removed = false;
+	double treeScore;
+	// Find the score of the topology
+	treeScore = topologies[topology];
+	pair<CandidateSet::iterator, CandidateSet::iterator> treeItPair;
+	// Find all trees with that score
+	treeItPair = equal_range(treeScore);
 	CandidateSet::iterator it;
-	while ( (it = find(score)) != end()) {
+	for (it = treeItPair.first; it != treeItPair.second; ++it) {
 		if (it->second.topology == topology) {
 			erase(it);
 			removed = true;
 			break;
 		}
 	}
-//	for (CandidateSet::reverse_iterator rit = rbegin(); rit != rend(); rit++) {
-//			if (rit->second.topology == topology) {
-//				erase( --(rit.base()) );
-//				topologies.erase(topology);
-//				removed = true;
-//				break;
-//			}
-//	}
 	assert(removed);
 }
 

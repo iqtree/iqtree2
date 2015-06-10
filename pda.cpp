@@ -2173,7 +2173,9 @@ int main(int argc, char *argv[]) {
 
 #ifdef _IQTREE_MPI
 	double time_initial, time_current;
-	MPI_Init(&argc, &argv);
+	if (MPI_Init(&argc, &argv) != MPI_SUCCESS) {
+        outError("MPI initialization failed!");
+    }
 	MPI_Comm_size(MPI_COMM_WORLD, &n_tasks);
 	MPI_Comm_rank(MPI_COMM_WORLD, &task_id);
 #endif

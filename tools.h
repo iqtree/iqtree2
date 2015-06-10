@@ -36,8 +36,9 @@
 
 #ifdef _IQTREE_MPI
 #include <mpi.h>
-#define MASTER 0
 #endif
+
+#define MASTER 0
 
 //#include <sys/time.h>
 //#include <time.h>

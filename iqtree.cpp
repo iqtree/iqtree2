@@ -397,7 +397,8 @@ void IQTree::addCurTreeToCandidateSet() {
         } else {
             cout << "UPDATE BEST LOG-LIKELIHOOD: " << curScore;
         }
-        cout << " / CPU time: " << (int) round(getCPUTime() - params->startCPUTime) << "s" << endl;
+        cout << endl;
+        //cout << " / CPU time: " << (int) round(getCPUTime() - params->startCPUTime) << "s" << endl;
         printResultTree();
     }
     candidateTrees.update(candidateTree, curScore);
@@ -460,7 +461,7 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
                                     ? (pllTreeCounter[curParsTree] = 1)
                                     : (pllTreeCounter[curParsTree]++);
         	}
-        	parsimonyTrees.update(curParsTree, 0.00);
+        	parsimonyTrees.update(curParsTree, -DBL_MAX);
         }
     }
 
@@ -472,9 +473,17 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
         size_t dataSize;
         dataSize = convertVector2CharArr(parTreeStrings, treeData);
         MPI_Send(treeData, dataSize, MPI_CHAR, MASTER, 0, MPI_COMM_WORLD);
+        #ifdef _MPI_DEBUG
+        //cout << "Process " << task_id << ": parsimony trees sent!" << endl;
+        printf("Process %d: parsimony sent!\n", task_id);
+        #endif
     } else {
         // Receive parsimony trees from workers
         int numMsg = 0;
+        #ifdef _MPI_DEBUG
+        printf("MASTER: %d parsimony trees generated\n", parsimonyTrees.size());
+        #endif
+        cout << "Number of messages expected: " << n_tasks - 1 << endl;
         while (numMsg < n_tasks - 1)  {
             MPI_Status status;
             char* recvBuffer;
@@ -483,59 +492,64 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
             MPI_Probe(MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
             // Determine the size of the message
             MPI_Get_count(&status, MPI_CHAR, &nbytes); 
-            if ( nbytes != MPI_UNDEFINED )    
+            if ( nbytes != MPI_UNDEFINED ) {    
                 recvBuffer = (char *) malloc( nbytes );
-            MPI_Recv(recvBuffer, nbytes, MPI_CHAR, status.MPI_SOURCE, status.MPI_TAG, MPI_COMM_WORLD, NULL);  
-            #ifdef _MPI_DEBUG
-            cout << "Receiving message from process " << status.MPI_SOURCE << endl;
-            #endif
-            numMsg++;
+                MPI_Recv(recvBuffer, nbytes, MPI_CHAR, status.MPI_SOURCE, status.MPI_TAG, MPI_COMM_WORLD, NULL);
+                numMsg++;
+            }
             // Now convert message to tree strings
             vector<string> treeStrings;
             treeStrings = convertCharArr2Vector(recvBuffer, nbytes);
-            for (vector<string>::iterator it = treeStrings.begin(); it != treeStrings.end(); it++) {
-                #ifdef _MPI_DEBUG
-                cout << *it << endl;
-                #endif
-                parsimonyTrees.update(*it, 0.00);
+            #ifdef _MPI_DEBUG
+            cout << "Received " << treeStrings.size() << " parsimony trees from process " << status.MPI_SOURCE << endl;
+            #endif
+            for (int i = 0; i < treeStrings.size(); i++) {
+                parsimonyTrees.update(treeStrings[i], -DBL_MAX);
             }
         }
-        cout << parsimonyTrees.size() << " distinct parsimony trees have been generated" << endl;
     }
 
     MPI_Barrier(MPI_COMM_WORLD);
-    MPI_Finalize();
-    exit(0);
 #endif
 
     double parsTime = getCPUTime() - startTime;
     cout << parsimonyTrees.size() << " distinct parsimony trees have been generated" << endl;
     cout << "CPU time: " << parsTime << endl;
 
+    #ifdef _IQTREE_MPI
+    MPI_Finalize();
+    #endif
+
     /**********************************************************
       			Compute logl of all parsimony trees
     ***********************************************************/
-
-    if (parsimonyTrees.size() > 1) {
-        cout << "Computing logl of parsimony trees ... " << endl;
-        startTime = getCPUTime();
-        CandidateSet::iterator it = parsimonyTrees.begin();
-        for ( ; it != parsimonyTrees.end(); it++) {
-            if (it->first == 0.0) {
-                readTreeString(it->second.tree);
-                wrapperFixNegativeBranch(true);
-                string tree = optimizeBranches(2);
-                parsimonyTrees.update(tree, getCurScore());
-            }
+    CandidateSet parsimonyTreesWithLogl;
+    parsimonyTreesWithLogl.init(this->aln, this->params);
+    cout << "Computing logl of parsimony trees ... " << endl;
+    startTime = getCPUTime();
+    for (CandidateSet::iterator it = parsimonyTrees.begin();  it != parsimonyTrees.end(); ++it) {
+        string treeString;
+        double score;
+        if (it->first == -DBL_MAX) {
+            readTreeString(it->second.tree);
+            wrapperFixNegativeBranch(true);
+            treeString = optimizeBranches(2);
+            score = getCurScore();
+        } else {
+            treeString = it->second.tree;
+            score = it->first;
         }
-        double loglTime = getCPUTime() - startTime;
-        cout << "CPU time: " << loglTime << endl;
+        parsimonyTreesWithLogl.update(treeString, score);
     }
+    parsimonyTrees.clear();
+    candidateTrees.clear();
+    double loglTime = getCPUTime() - startTime;
+    cout << "CPU time: " << loglTime << endl;
 
-
-    // Only select the best parsimony trees for doing NNI search
+    // Select the best parsimony trees for doing NNI search
     vector<CandidateTree> bestParsimonyTrees;
-    parsimonyTrees.getBestCandidateTrees(nNNITrees, bestParsimonyTrees);
+    parsimonyTreesWithLogl.getBestCandidateTrees(nNNITrees, bestParsimonyTrees);
+    parsimonyTreesWithLogl.clear();
 
     /**********************************************************
       			Do NNI search on the best parsimony trees
@@ -556,7 +570,6 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
         cout << "Iteration " << getCurIt() << " / LogL: " << initLogl << " -> " << getCurScore();
         cout << " / " << numStepsNNIs.first << " rounds, " << numStepsNNIs.second << " NNIs ";
         cout << " / Time: " << convert_time(getRealTime() - params->start_real_time) << endl;
-
     }
     double nniTime = getCPUTime() - startTime;
     cout << "CPU time: " << nniTime << endl;
