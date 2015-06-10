@@ -303,6 +303,17 @@ void CandidateSet::getBestCandidateTrees(int numTrees, vector<CandidateTree>& ca
 	}
 }
 
+vector<string> CandidateSet::getBestTreeStrings(int numTrees) {
+    if (numTrees == 0 || numTrees > size())
+        numTrees = size();
+    vector<string> bestTrees; 
+	for (reverse_iterator rit = rbegin(); rit != rend() && numTrees > 0; 
+            rit++, numTrees--) {
+        bestTrees.push_back(rit->second.tree);
+    }
+    return bestTrees;
+}
+
 CandidateTree CandidateSet::getNthBestTree(int N) {
 	if (N >= size())
 		N = size();

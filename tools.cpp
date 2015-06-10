@@ -3362,3 +3362,37 @@ void trimString(string &str) {
     str.erase(str.find_last_not_of(" \n\r\t")+1);
 }
 
+size_t convertVector2CharArr(vector<string> &strings, char*& cStrings) {
+    size_t numTrees = strings.size();
+    size_t totalSize = 0;
+    // Determine the total bytes required
+    for (int i = 0; i < numTrees; i++) {
+        totalSize += strings[i].length() + 1;
+    }
+    cStrings = ( char * ) malloc(totalSize);
+    char* pos = cStrings;
+    for (int i = 0; i < numTrees; i++) {
+        int length = strings[i].length();
+        const char* cString = strings[i].c_str();
+        strncpy(pos, cString, length + 1);
+        pos = pos + length + 1;
+    }
+    return totalSize;
+}
+
+vector<string> convertCharArr2Vector(char* cStrings, size_t length) {
+    vector<string> retStrings;
+    stringstream ss;
+    ss.str("");
+    for (int i = 0; i < length; i++) {
+        if (cStrings[i] == '\0') {
+            retStrings.push_back(ss.str());
+            ss.str("");
+        } else {
+            ss << cStrings[i];
+        }
+    }
+    return retStrings;
+}
+
+

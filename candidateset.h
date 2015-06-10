@@ -256,6 +256,11 @@ public:
     void getBestCandidateTrees(int numTrees, vector<CandidateTree>& candidateTrees);
 
     /**
+     * Get the current best tree strings
+     */
+    vector<string> getBestTreeStrings(int numTrees = 0);
+
+    /**
      *  Get the Nth best tree topology
      */
     CandidateTree getNthBestTree(int N);

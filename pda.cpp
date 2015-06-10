@@ -2192,7 +2192,6 @@ int main(int argc, char *argv[]) {
 		params.ran_seed = rndSeed + task_id;
 		printf("Process %d: random_seed = %d\n", task_id, params.ran_seed);
 	}
-	MPI_Finalize();
 #endif
 
 	atexit(funcExit);

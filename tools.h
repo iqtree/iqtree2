@@ -32,6 +32,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <stdint.h>
+#include <string.h>
 
 #ifdef _IQTREE_MPI
 #include <mpi.h>
@@ -2128,4 +2129,19 @@ void summarizeFooter(ostream &out, Params &params);
 */
 void trimString(string &str);
 
+/**
+ *  Convert vector of strings to array of chars 
+ *  @param [IN] strings the vector strings
+ *  @param [OUT] the char array
+ *  @return size of the char array
+ */
+size_t convertVector2CharArr(vector<string> &strings, char*& cStrings);
+
+/**
+ *  Convert array of chars to vector of strings
+ *  @param [IN] The char array containing strings
+ *  @param [IN] Size of the char array
+ *  @return vector of strings
+ */
+vector<string> convertCharArr2Vector(char* cStrings, size_t length);
 #endif
