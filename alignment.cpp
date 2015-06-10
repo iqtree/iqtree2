@@ -140,9 +140,10 @@ void Alignment::checkSeqName() {
     
     /*if (verbose_mode >= VB_MIN)*/ {
         int max_len = getMaxSeqNameLength()+1;
-        cout << "  ID  ";
-        cout.width(max_len);
-        cout << left << "Sequence" << " %Gap/Ambi.  Seq. composition  p-value (chi2 test; df=" << num_states-1 << ")" << endl;
+//        cout << "  ID  ";
+//        cout <<  "  Sequence";
+        cout.width(max_len+14);
+        cout << right << "Gap/Ambiguity" << "  Composition  p-value"<< endl;
         int num_problem_seq = 0;
         int total_gaps = 0;
         cout.precision(2);
@@ -179,11 +180,11 @@ void Alignment::checkSeqName() {
             chi2 *= sum_count;
             double pvalue = chi2prob(num_states-1, chi2);
             if (pvalue < 0.05) {
-                cout << "        failed ";
+                cout << "    failed ";
                 num_failed++;
             } else
-                cout << "        passed ";
-            cout.width(12);
+                cout << "    passed ";
+            cout.width(9);
             cout << right << pvalue*100 << "%";
 //            cout << "  " << chi2;
 			cout << endl;
@@ -194,7 +195,7 @@ void Alignment::checkSeqName() {
         cout << left << " TOTAL  ";
         cout.width(6);
         cout << right << ((double)total_gaps/getNSite())/getNSeq()*100 << "% ";
-        cout << "  " << num_failed << " sequences failed composition test" << endl;
+        cout << " " << num_failed << " sequences failed composition chi2 test (p-value<5%; df=" << num_states-1 << ")" << endl;
         cout.precision(3);
     }
     delete [] count_per_seq;
