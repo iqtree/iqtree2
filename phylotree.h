@@ -91,14 +91,19 @@ inline size_t get_safe_upper_limit_float(size_t cur_limit) {
 template< class T>
 inline T *aligned_alloc(size_t size) {
 	size_t MEM_ALIGNMENT = (instruction_set >= 7) ? 32 : 16;
+    void *mem;
 
 #if defined WIN32 || defined _WIN32 || defined __WIN32__
-	return (T*)_aligned_malloc(size*sizeof(T), MEM_ALIGNMENT);
+	mem = _aligned_malloc(size*sizeof(T), MEM_ALIGNMENT);
 #else
-	void *res;
-	posix_memalign(&res, MEM_ALIGNMENT, size*sizeof(T));
-	return (T*)res;
+	int res = posix_memalign(&mem, MEM_ALIGNMENT, size*sizeof(T));
+    if (res == ENOMEM) 
+        outError("Not enough memory (bad_alloc)");
 #endif
+    if (mem == NULL) {
+        outError("Memory allocation failed or not enough memory (bad_alloc)");
+    }
+    return (T*)mem;
 }
 
 inline void aligned_free(void *mem) {
