@@ -2308,7 +2308,7 @@ int main(int argc, char *argv[])
 	}
     int num_procs = countPhysicalCPUCores();
     if (num_procs > 1) {
-        cout << endl << endl << "NOTE: Consider using the multicore version because your CPU has " << num_procs << " cores!" << endl;
+        cout << endl << endl << "NOTE: Consider using the multicore version because your CPU has " << num_procs << " cores!";
     }
 #endif
 	//cout << "sizeof(int)=" << sizeof(int) << endl;
