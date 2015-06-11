@@ -2619,16 +2619,15 @@ void IQTree::saveCurrentTree(double cur_logl) {
     } else {
         // online bootstrap
         int ptn;
-        int updated = 0;
+//        int updated = 0;
         int nsamples = boot_samples.size();
 
+        #ifdef _OPENMP
+        #pragma omp parallel for
+        #endif
         for (int sample = 0; sample < nsamples; sample++) {
             double rell = 0.0;
 
-            // TODO: The following parallel is not very efficient, should wrap the above loop
-//#ifdef _OPENMP
-//#pragma omp parallel for reduction(+: rell)
-//#endif
             if (false) {
             	BootValType *boot_sample = boot_samples[sample];
             	BootValType rellll = 0.0;
@@ -2644,10 +2643,19 @@ void IQTree::saveCurrentTree(double cur_logl) {
 				rell = res;
             }
 
-            if (rell > boot_logl[sample] + params->ufboot_epsilon
-                    || (rell > boot_logl[sample] - params->ufboot_epsilon
-                            && random_double() <= 1.0 / (boot_counts[sample] + 1))) {
-                if (tree_str == "") {
+            bool better = rell > boot_logl[sample] + params->ufboot_epsilon;
+            if (!better && rell > boot_logl[sample] - params->ufboot_epsilon) {
+                #ifdef _OPENMP
+                #pragma omp critical
+                #endif
+                better = random_double() <= 1.0 / (boot_counts[sample] + 1);
+            }
+            if (better) {
+                if (tree_str == "") 
+                #ifdef _OPENMP
+                #pragma omp critical
+                #endif
+                {
                     printTree(ostr, WT_TAXON_ID | WT_SORT_TAXA);
                     tree_str = ostr.str();
                     it = treels.find(tree_str);
@@ -2665,13 +2673,13 @@ void IQTree::saveCurrentTree(double cur_logl) {
                 }
                 boot_logl[sample] = max(boot_logl[sample], rell);
                 boot_trees[sample] = tree_index;
-                updated++;
+//                updated++;
             } /*else if (verbose_mode >= VB_MED && rell > boot_logl[sample] - 0.01) {
              cout << "Info: multiple RELL score trees detected" << endl;
              }*/
         }
-        if (updated && verbose_mode >= VB_MAX)
-            cout << updated << " boot trees updated" << endl;
+//        if (updated && verbose_mode >= VB_MAX)
+//            cout << updated << " boot trees updated" << endl;
         /*
          if (tree_index >= max_candidate_trees/2 && boot_splits->empty()) {
          // summarize split support half way for stopping criterion

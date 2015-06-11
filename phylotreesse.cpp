@@ -575,7 +575,7 @@ void PhyloTree::computePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNo
 	    memset(dad_branch->scale_num, 0, nptn * sizeof(UBYTE));
 #ifdef _OPENMP
 //#pragma omp parallel for private(ptn, c, x, i, partial_lh_tmp)
-#pragma omp parallel for private(ptn, c, x, i)
+#pragma omp parallel for private(ptn, c, x, i) schedule(static)
 #endif
 		for (ptn = 0; ptn < nptn; ptn++) {
 			double partial_lh_tmp[nstates];
@@ -630,7 +630,7 @@ void PhyloTree::computePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNo
 		double sum_scale = 0.0;
 #ifdef _OPENMP
 //#pragma omp parallel for reduction(+: sum_scale) private(ptn, c, x, i, partial_lh_tmp)
-#pragma omp parallel for reduction(+: sum_scale) private(ptn, c, x, i)
+#pragma omp parallel for reduction(+: sum_scale) private(ptn, c, x, i) schedule(static)
 #endif
 		for (ptn = 0; ptn < nptn; ptn++) {
 			double partial_lh_tmp[nstates];
@@ -699,7 +699,7 @@ void PhyloTree::computePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNo
 		double sum_scale = 0.0;
 #ifdef _OPENMP
 //#pragma omp parallel for reduction(+: sum_scale) private(ptn, c, x, i, partial_lh_tmp)
-#pragma omp parallel for reduction(+: sum_scale) private(ptn, c, x, i)
+#pragma omp parallel for reduction(+: sum_scale) private(ptn, c, x, i) schedule(static)
 #endif
 		for (ptn = 0; ptn < nptn; ptn++) {
 			double partial_lh_tmp[nstates];
@@ -806,7 +806,7 @@ void PhyloTree::computeLikelihoodDervEigen(PhyloNeighbor *dad_branch, PhyloNode 
 	    if (dad->isLeaf()) {
 	    	// special treatment for TIP-INTERNAL NODE case
 #ifdef _OPENMP
-#pragma omp parallel for private(ptn, i)
+#pragma omp parallel for private(ptn, i) schedule(static)
 #endif
 	    	for (ptn = 0; ptn < nptn; ptn++) {
 				double *partial_lh_dad = dad_branch->partial_lh + ptn*block;
@@ -823,7 +823,7 @@ void PhyloTree::computeLikelihoodDervEigen(PhyloNeighbor *dad_branch, PhyloNode 
 
 //	    	size_t all_entries = nptn*block;
 #ifdef _OPENMP
-#pragma omp parallel for private(ptn, i)
+#pragma omp parallel for private(ptn, i) schedule(static)
 #endif
 	    	for (ptn = 0; ptn < nptn; ptn++) {
 				double *theta = theta_all + ptn*block;
@@ -868,7 +868,7 @@ void PhyloTree::computeLikelihoodDervEigen(PhyloNeighbor *dad_branch, PhyloNode 
 //    double tree_lh = node_branch->lh_scale_factor + dad_branch->lh_scale_factor;
 
 #ifdef _OPENMP
-#pragma omp parallel for reduction(+: my_df, my_ddf, prob_const, df_const, ddf_const) private(ptn, i)
+#pragma omp parallel for reduction(+: my_df, my_ddf, prob_const, df_const, ddf_const) private(ptn, i) schedule(static)
 #endif
     for (ptn = 0; ptn < nptn; ptn++) {
 		double lh_ptn = ptn_invar[ptn], df_ptn = 0.0, ddf_ptn = 0.0;
@@ -980,7 +980,7 @@ double PhyloTree::computeLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloN
 
     	// now do the real computation
 #ifdef _OPENMP
-#pragma omp parallel for reduction(+: tree_lh, prob_const) private(ptn, i, c)
+#pragma omp parallel for reduction(+: tree_lh, prob_const) private(ptn, i, c) schedule(static)
 #endif
     	for (ptn = 0; ptn < nptn; ptn++) {
 			double lh_ptn = ptn_invar[ptn];
@@ -1010,7 +1010,7 @@ double PhyloTree::computeLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloN
     } else {
     	// both dad and node are internal nodes
 #ifdef _OPENMP
-#pragma omp parallel for reduction(+: tree_lh, prob_const) private(ptn, i, c)
+#pragma omp parallel for reduction(+: tree_lh, prob_const) private(ptn, i, c) schedule(static)
 #endif
     	for (ptn = 0; ptn < nptn; ptn++) {
 			double lh_ptn = ptn_invar[ptn];
@@ -1119,7 +1119,7 @@ inline double PhyloTree::computeLikelihoodBranchSSE(PhyloNeighbor *dad_branch, P
     double prob_const = 0.0; // probability of unobserved const patterns
 
 #ifdef _OPENMP
-#pragma omp parallel for reduction(+: tree_lh, prob_const) private(ptn, cat)
+#pragma omp parallel for reduction(+: tree_lh, prob_const) private(ptn, cat) schedule(static)
 #endif
     for (ptn = 0; ptn < alnSize; ++ptn) {
         double lh_ptn = 0.0; // likelihood of the pattern
@@ -1254,7 +1254,7 @@ void PhyloTree::computePartialLikelihoodSSE(PhyloNeighbor *dad_branch, PhyloNode
             partial_lh_child = ((PhyloNeighbor*) (*it))->partial_lh;
             double sum_scale = 0.0;
 #ifdef _OPENMP
-#pragma omp parallel for reduction(+: sum_scale) private(ptn, cat, partial_lh_site, partial_lh_child)
+#pragma omp parallel for reduction(+: sum_scale) private(ptn, cat, partial_lh_site, partial_lh_child) schedule(static)
 #endif
             for (ptn = 0; ptn < alnSize; ++ptn)
 #ifndef KEEP_GAP_LH
@@ -1384,7 +1384,7 @@ inline void PhyloTree::computeLikelihoodDervSSE(PhyloNeighbor *dad_branch, Phylo
 #ifdef _OPENMP
 #pragma omp parallel for reduction(+: my_df, my_ddf,prob_const, prob_const_derv1, prob_const_derv2) \
 	private(cat, partial_lh_child, partial_lh_site,\
-	lh_ptn, lh_ptn_derv1, lh_ptn_derv2, derv1_frac, derv2_frac, dad_state, trans_state, derv1_state, derv2_state)
+	lh_ptn, lh_ptn_derv1, lh_ptn_derv2, derv1_frac, derv2_frac, dad_state, trans_state, derv1_state, derv2_state) schedule(static)
 #endif
     for (int ptn = 0; ptn < alnSize; ++ptn) {
 #ifdef _OPENMP
