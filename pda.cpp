@@ -2295,7 +2295,7 @@ int main(int argc, char *argv[])
 //	int max_threads = omp_get_max_threads();
 	params.num_threads = omp_get_max_threads();
 	int max_procs = countPhysicalCPUCores();
-	cout << " - " << params.num_threads  << " threads (" << max_procs << " physical CPU cores detected)";
+	cout << " - " << params.num_threads  << " threads (" << max_procs << " CPU cores detected)";
 	if (params.num_threads  > max_procs) {
 		cout << endl;
 		outError("You have specified more threads than CPU cores available");

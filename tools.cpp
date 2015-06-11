@@ -3358,6 +3358,8 @@ int countPhysicalCPUCores() {
 #else
     logicalcpucount = sysconf( _SC_NPROCESSORS_ONLN );
 #endif
+    return logicalcpucount;
+    
     if (logicalcpucount % 2 != 0)
         return logicalcpucount;
     __asm__ __volatile__ ("cpuid " :
