@@ -4939,3 +4939,47 @@ void PhyloTree::reinsertIdenticalSeqs(Alignment *orig_aln) {
     deleteAllPartialLh();
     clearAllPartialLH();
 }
+
+void PhyloTree::computeSeqIdentityAlongTree(Split &sp, Node *node, Node *dad) {
+    assert(node && !node->isLeaf());
+    // recursive
+    FOR_NEIGHBOR_IT(node, dad, it) {
+        if ((*it)->node->isLeaf()) {
+            sp.addTaxon((*it)->node->id);
+        } else {
+            Split newsp(leafNum);
+            computeSeqIdentityAlongTree(newsp, (*it)->node, node);
+            sp += newsp;
+        }
+    }
+    if (!dad) return;
+    // now going along alignment to compute seq identity
+    int ident = 0, nseqs = aln->getNSeq();
+    for (Alignment::iterator it = aln->begin(); it != aln->end(); it++) {
+        char state = aln->STATE_UNKNOWN;
+        bool is_const = true;
+        for (int i = 0; i != nseqs; i++)
+            if ((*it)[i] < aln->num_states && sp.containTaxon(i)) {
+                if (state < aln->num_states && state != (*it)[i]) {
+                    is_const = false;
+                    break;
+                }
+                state = (*it)[i];
+            }
+        if (is_const)
+            ident += it->frequency;
+    }
+    ident = (ident*100)/aln->getNSite();
+    if (node->name == "")
+        node->name = convertIntToString(ident);
+    else
+        node->name += "/" + convertIntToString(ident);
+}
+
+void PhyloTree::computeSeqIdentityAlongTree() {
+    Split sp(leafNum);
+    if (root->isLeaf())
+        computeSeqIdentityAlongTree(sp, root->neighbors[0]->node);
+    else
+        computeSeqIdentityAlongTree(sp, root);
+}

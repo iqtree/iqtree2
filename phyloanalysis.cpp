@@ -2179,7 +2179,17 @@ void runPhyloAnalysis(Params &params) {
 		alignment->concatenateAlignment(&aln);
 	}
 
-	if (params.aln_output) {
+    if (params.compute_seq_identity_along_tree) {
+        if (!params.user_file)
+            outError("Please supply a user tree file!");
+        tree->readTree(params.user_file, params.is_rooted);
+        tree->computeSeqIdentityAlongTree();
+        if (verbose_mode >= VB_MED)
+            tree->drawTree(cout);
+        string out_tree = (string)params.out_prefix + ".seqident_tree";
+        tree->printTree(out_tree.c_str());
+        cout << "Tree with sequence identity printed to " << out_tree << endl;
+	} else if (params.aln_output) {
 		/************ convert alignment to other format and write to output file *************/
 		convertAlignment(params, tree);
 	} else if (params.gbo_replicates > 0 && params.user_file && params.second_tree) {

@@ -1394,7 +1394,9 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 	if (fmodel.is_open())
 		fmodel.close();
 	if (set_name == "") {
-		cout << "Best-fit model: " << best_model << endl;
+		cout << "Best-fit model: " << best_model << " chosen according to " << 
+            ((params.model_test_criterion == MTC_BIC) ? "BIC" :
+			((params.model_test_criterion == MTC_AIC) ? "AIC" : "AICc")) << endl;
 	}
 	if (params.print_site_lh)
 		cout << "Site log-likelihoods per model printed to " << sitelh_file << endl;

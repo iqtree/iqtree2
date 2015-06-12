@@ -848,6 +848,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.write_local_optimal_trees = false;
     params.freq_const_patterns = NULL;
     params.no_rescale_gamma_invar = false;
+    params.compute_seq_identity_along_tree = false;
 
 	if (params.nni5) {
 	    params.nni_type = NNI5;
@@ -2639,6 +2640,13 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.no_rescale_gamma_invar = true;
 				continue;
 			}
+
+			if (strcmp(argv[cnt], "-wsi") == 0) {
+				params.compute_seq_identity_along_tree = true;
+				continue;
+			}
+            
+            
 			if (argv[cnt][0] == '-') {
                 string err = "Invalid \"";
                 err += argv[cnt];

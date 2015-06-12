@@ -1513,6 +1513,9 @@ public:
 //		clearAllPartialLH();
 	}
 
+    void computeSeqIdentityAlongTree(Split &resp, Node *node = NULL, Node *dad = NULL);
+    void computeSeqIdentityAlongTree();
+
 protected:
 
     /**

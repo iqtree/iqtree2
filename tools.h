@@ -1596,6 +1596,9 @@ struct Params {
 
     /** BQM 2015-02-25: true to NOT rescale Gamma+Invar rates by (1-p_invar) */
     bool no_rescale_gamma_invar;
+
+    /** true to compute sequence identity along tree */
+    bool compute_seq_identity_along_tree;
 };
 
 /**
