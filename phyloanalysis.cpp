@@ -2183,6 +2183,12 @@ void runPhyloAnalysis(Params &params) {
         if (!params.user_file)
             outError("Please supply a user tree file!");
         tree->readTree(params.user_file, params.is_rooted);
+        if (!tree->rooted && !params.root) {
+            outError("Tree is unrooted, thus you have to specify a root with -o option");
+        }
+        tree->setAlignment(tree->aln);
+        if (!tree->rooted)
+            tree->setRootNode(params.root);
         tree->computeSeqIdentityAlongTree();
         if (verbose_mode >= VB_MED)
             tree->drawTree(cout);
