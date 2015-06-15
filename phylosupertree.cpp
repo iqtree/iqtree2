@@ -751,8 +751,9 @@ void PhyloSuperTree::computePatternLikelihood(double *pattern_lh, double *cur_lo
 		}
 		if (fabs(sum_logl - *cur_logl) > 0.001) {
             cout << *cur_logl << " " << sum_logl << endl;
-            outError("Wrong PhyloSuperTree::", __func__);
+//            outError("Wrong PhyloSuperTree::", __func__);
 		}
+        assert(fabs(sum_logl - *cur_logl) < 0.001);
 	}
 }
 
@@ -810,7 +811,7 @@ void PhyloSuperTree::initPartitionInfo() {
 
 		(*it)->getBranchLengths(part_info[part].cur_brlen);
 
-		if (save_all_trees == 2) {
+		if (save_all_trees == 2 || params->write_intermediate_trees >= 2) {
 			// initialize ptnlh for ultrafast bootstrap
 			int nptn = (*it)->getAlnNPattern();
 			if (!part_info[part].cur_ptnlh)
