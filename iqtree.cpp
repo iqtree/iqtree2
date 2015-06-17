@@ -1885,6 +1885,10 @@ double IQTree::doTreeSearch() {
 	        }
         } // end of bootstrap convergence test
 
+        // print UFBoot trees every 10 iterations
+		if (params->gbo_replicates && params->online_bootstrap && params->print_ufboot_trees && curIt % 10 == 0)
+				writeUFBootTrees(*params);
+
        //if (params->partition_type)
        // 	((PhyloSuperTreePlen*)this)->printNNIcasesNUM();
     }
