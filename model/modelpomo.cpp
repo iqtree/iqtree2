@@ -21,7 +21,7 @@ void ModelPoMo::init(const char *model_name,
                      string freq_params,
                      bool is_reversible) {
     // Check num_states (set in Alignment::readCountsFormat()).
-	int N = phylo_tree->aln->virtual_pop_size;
+	N = phylo_tree->aln->virtual_pop_size;
     nnuc = 4;
     assert(num_states == (nnuc + (nnuc*(nnuc-1)/2 * (N-1))) );
 
@@ -120,7 +120,6 @@ ModelPoMo::~ModelPoMo() {
 
 double ModelPoMo::computeNormConst() {
 	int i, j;
-	int N = phylo_tree->aln->virtual_pop_size;
 	double harmonic = 0.0;
 	for (i = 1; i < N; i++)
 		harmonic += 1.0/(double)i;
@@ -158,7 +157,6 @@ double ModelPoMo::computeNormConst() {
 void ModelPoMo::computeStateFreq () {
 	double norm = computeNormConst();
 	int state;
-	int N = phylo_tree->aln->virtual_pop_size;
 
     // if (verbose_mode >= VB_MAX) {
     //     cout << "Normalization constant: " << norm << endl;
@@ -276,7 +274,6 @@ void ModelPoMo::updatePoMoStatesAndRates () {
 // }
 
 void ModelPoMo::decomposeState(int state, int &i, int &nt1, int &nt2) {
-	int N = phylo_tree->aln->virtual_pop_size;
 	if (state < 4) {
 		// Fixed A, C, G or T
 		i = N;
@@ -392,8 +389,6 @@ double ModelPoMo::mutCoeff(int nt1, int nt2) {
 }
 
 double ModelPoMo::computeProbBoundaryMutation(int state1, int state2) {
-	int N = phylo_tree->aln->virtual_pop_size;
-
     // The transition rate to the same state will be calculated by
     // (row_sum = 0).
 	assert(state1 != state2);
@@ -438,7 +433,11 @@ double ModelPoMo::computeProbBoundaryMutation(int state1, int state2) {
 }
 
 int ModelPoMo::getNDim() {
-	return 9;
+    assert(freq_type != FREQ_UNKNOWN);
+    int ndim = num_params;
+    if (freq_type == FREQ_ESTIMATE)
+        ndim += nnuc-1;
+	return ndim;
 }
 
 void ModelPoMo::setBounds(double *lower_bound,
@@ -496,7 +495,6 @@ void ModelPoMo::writeInfo(ostream &out) {
 	int i;
     int state1;
     ios  state(NULL);
-    int N = phylo_tree->aln->virtual_pop_size;
     state.copyfmt(out);
 
     out << setprecision(6);

@@ -182,6 +182,10 @@ class ModelPoMo : public ModelGTR
 
 
  private:
+
+    /// Virtual population size of the PoMo model.
+    int N;
+
     /**
      * Mutation probabilities, 6 entries for reversible model.
      */
