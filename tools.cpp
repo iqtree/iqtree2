@@ -84,12 +84,22 @@ void outError(char *error)
 }
  */
 
+
+#if (defined(__GNUC__) || defined(__clang__)) && !defined(WIN32)
+#include "stacktrace.h"
+#endif
+
 /**
         Output an error to screen, then exit program
         @param error error message
  */
 void outError(const char *error, bool quit) {
-    cerr << "ERROR: " << error << endl;
+	if (error == ERR_NO_MEMORY) {
+#if (defined(__GNUC__) || defined(__clang__)) && !defined(WIN32)
+		print_stacktrace();
+#endif
+	}
+	cerr << "ERROR: " << error << endl;
     if (quit)
     	exit(2);
 }
