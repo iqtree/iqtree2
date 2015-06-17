@@ -88,6 +88,11 @@ inline size_t get_safe_upper_limit_float(size_t cur_limit) {
 //#endif
 //}
 
+
+#if (defined(__GNUC__) || defined(__clang__)) && !defined(WIN32)
+#include "stacktrace.h"
+#endif
+
 template< class T>
 inline T *aligned_alloc(size_t size) {
 	size_t MEM_ALIGNMENT = (instruction_set >= 7) ? 32 : 16;
@@ -97,10 +102,17 @@ inline T *aligned_alloc(size_t size) {
 	mem = _aligned_malloc(size*sizeof(T), MEM_ALIGNMENT);
 #else
 	int res = posix_memalign(&mem, MEM_ALIGNMENT, size*sizeof(T));
-    if (res == ENOMEM) 
+    if (res == ENOMEM) {
+#if (defined(__GNUC__) || defined(__clang__)) && !defined(WIN32)
+        print_stacktrace();
+#endif
         outError("Not enough memory (bad_alloc)");
+    }
 #endif
     if (mem == NULL) {
+#if (defined(__GNUC__) || defined(__clang__)) && !defined(WIN32)
+        print_stacktrace();
+#endif
         outError("Memory allocation failed or not enough memory (bad_alloc)");
     }
     return (T*)mem;

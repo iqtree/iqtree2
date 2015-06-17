@@ -1787,10 +1787,6 @@ void funcExit(void) {
 	endLogFile();
 }
 
-#if (defined(__GNUC__) || defined(__clang__)) && !defined(WIN32)
-#include <execinfo.h>
-#endif
-
 extern "C" void funcAbort(int signal_number)
 {
     /*Your code goes here. You can output debugging info.
@@ -1806,21 +1802,8 @@ extern "C" void funcAbort(int signal_number)
 		case SIGSEGV: cout << "SEGMENTATION FAULT"; break;
 	}
     cout << endl;
-//#if defined(__GNUC__) || defined(__clang__)   
-#if defined(__clang__)
-    int j, nptrs;
-#define BTSIZE 100
-    void *buffer[BTSIZE];
-    char **strings;
-
-   nptrs = backtrace(buffer, BTSIZE);
-   /* The call backtrace_symbols_fd(buffer, nptrs, STDOUT_FILENO)
-       would produce similar output to the following: */
-
-   strings = backtrace_symbols(buffer, nptrs);
-   for (j = 0; j < nptrs; j++)
-        cout << "*** " << strings[j] << endl;
-   free(strings);
+#if (defined(__GNUC__) || defined(__clang__)) && !defined(WIN32)
+    print_stacktrace();
 #endif
 
 	cout << "*** For bug report please send to developers:" << endl << "***    Log file: " << _log_file;
