@@ -1346,6 +1346,43 @@ void printMiscInfo(Params &params, IQTree &iqtree, double *pattern_lh) {
 			printSiteLhCategory(site_lh_file.c_str(), &iqtree);
 	}
 
+    if (params.print_site_posterior) {
+        cout << "Computing mixture posterior probabilities" << endl;
+        IntVector pattern_cat;
+        int num_mix = iqtree.computePatternCategories(&pattern_cat);
+        cout << num_mix << " mixture components are necessary" << endl;
+        string site_mix_file = (string)params.out_prefix + ".sitemix";
+        ofstream out(site_mix_file.c_str());
+        if (!out.is_open())
+            outError("File " + site_mix_file + " could not be opened");
+        out << "Ptn\tFreq\tNumMix" << endl;
+        int ptn;
+        for (ptn = 0; ptn < pattern_cat.size(); ptn++)
+            out << ptn << "\t" << (int)iqtree.ptn_freq[ptn] << "\t" << pattern_cat[ptn] << endl;
+        out.close();
+        cout << "Pattern mixtures printed to " << site_mix_file << endl;
+        
+        site_mix_file = (string)params.out_prefix + ".sitemixall";
+        out.open(site_mix_file.c_str());
+        int ncat = iqtree.getRate()->getNRate();
+        if (iqtree.getModel()->isMixture() && !iqtree.getModelFactory()->fused_mix_rate)
+            ncat = iqtree.getModel()->getNMixtures();
+        out << "Ptn\tFreq\tNumMix\tCat" << endl;
+        
+        int c;
+        for (ptn = 0; ptn < iqtree.ptn_cat_mask.size(); ptn++) {
+            int num_cat = popcount_lauradoux((unsigned*)&iqtree.ptn_cat_mask[ptn], 2);
+            out << ptn << "\t" << (int)iqtree.ptn_freq[ptn] << "\t" << num_cat << "\t";
+            for (c = 0; c < ncat; c++)
+                if (iqtree.ptn_cat_mask[ptn] & ((uint64_t)1<<c))
+                    out << "1";
+                else
+                    out << "0";
+            out << endl;
+        }
+        out.close();
+    }
+
 	if (params.print_branch_lengths) {
     	if (params.manuel_analytic_approx) {
     		cout << "Applying Manuel's analytic approximation.." << endl;
@@ -1531,14 +1568,33 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
     }
 
     if (!params.pll) {
-        uint64_t mem_size = iqtree.getMemoryRequired();
+        uint64_t mem_size = iqtree.getMemoryRequired() * sizeof(double);
+        uint64_t total_mem = getMemorySize();
+        if (mem_size >= total_mem) {
+            if (params.lh_mem_save == LM_DETECT) {
+                // switch to memory saving technique that reduces memory requirement to 1/3
+                params.lh_mem_save = LM_PER_NODE;
+                mem_size = iqtree.getMemoryRequired() * sizeof(double);
+            }
+        }
 //#if defined __APPLE__ || defined __MACH__
-        cout << "NOTE: " << ((double) mem_size * sizeof(double) / 1024.0) / 1024 << " MB RAM is required!" << endl;
+        cout << "NOTE: " << (mem_size / 1024) / 1024 << " MB RAM is required!" << endl;
 //#else
-//        cout << "NOTE: " << ((double) mem_size * sizeof(double) / 1000.0) / 1000 << " MB RAM is required!" << endl;
+//        cout << "NOTE: " << ((double) mem_size / 1000.0) / 1000 << " MB RAM is required!" << endl;
 //#endif
-        if (mem_size >= getMemorySize()) {
+        if (mem_size >= total_mem) {
             outError("Memory required exceeds your computer RAM size!");
+        }
+#ifdef BINARY32
+        if (mem_size >= 2000000000) {
+            outError("Memory required exceeds 2GB limit of 32-bit executable");
+        }
+#endif
+        int max_procs = countPhysicalCPUCores();
+        if (mem_size * max_procs > total_mem * params.num_threads) {
+            outWarning("Memory required per CPU-core (" + convertDoubleToString((double)mem_size/params.num_threads/1024/1024/1024)+
+            " GB) is higher than your computer RAM per CPU-core ("+convertIntToString(total_mem/max_procs/1024/1024/1024)+
+            " GB), thus multiple runs will exceed RAM!");
         }
     }
 

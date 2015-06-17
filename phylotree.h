@@ -91,14 +91,19 @@ inline size_t get_safe_upper_limit_float(size_t cur_limit) {
 template< class T>
 inline T *aligned_alloc(size_t size) {
 	size_t MEM_ALIGNMENT = (instruction_set >= 7) ? 32 : 16;
+    void *mem;
 
 #if defined WIN32 || defined _WIN32 || defined __WIN32__
-	return (T*)_aligned_malloc(size*sizeof(T), MEM_ALIGNMENT);
+	mem = _aligned_malloc(size*sizeof(T), MEM_ALIGNMENT);
 #else
-	void *res;
-	posix_memalign(&res, MEM_ALIGNMENT, size*sizeof(T));
-	return (T*)res;
+	int res = posix_memalign(&mem, MEM_ALIGNMENT, size*sizeof(T));
+    if (res == ENOMEM) 
+        outError("Not enough memory (bad_alloc)");
 #endif
+    if (mem == NULL) {
+        outError("Memory allocation failed or not enough memory (bad_alloc)");
+    }
+    return (T*)mem;
 }
 
 inline void aligned_free(void *mem) {
@@ -235,6 +240,7 @@ class PhyloTree : public MTree, public Optimization {
 	friend class RateGamma;
 	friend class RateGammaInvar;
 	friend class RateKategory;
+    friend class ModelMixture;
 
 public:
     /**
@@ -400,8 +406,11 @@ public:
     typedef BootValType (PhyloTree::*DotProductType)(BootValType *x, BootValType *y, int size);
     DotProductType dotProduct;
 
+#ifdef BINARY32
+    void setDotProductAVX() {}
+#else
     void setDotProductAVX();
-
+#endif
     /**
             this function return the parsimony or likelihood score of the tree. Default is
             to compute the parsimony score. Override this function if you define a new
@@ -440,16 +449,24 @@ public:
      */
     int computeParsimony();
 
+    typedef void (PhyloTree::*ComputePartialParsimonyType)(PhyloNeighbor *, PhyloNode *);
+    ComputePartialParsimonyType computePartialParsimonyPointer;
+
     /**
-            TODO: Compute partial parsimony score of the subtree rooted at dad
+            Compute partial parsimony score of the subtree rooted at dad
             @param dad_branch the branch leading to the subtree
             @param dad its dad, used to direct the tranversal
      */
+    virtual void computePartialParsimony(PhyloNeighbor *dad_branch, PhyloNode *dad);
     void computePartialParsimonyNaive(PhyloNeighbor *dad_branch, PhyloNode *dad);
     void computePartialParsimonyFast(PhyloNeighbor *dad_branch, PhyloNode *dad);
-
     template<class VectorClass>
     void computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad);
+
+    void computeReversePartialParsimony(PhyloNode *node, PhyloNode *dad);
+
+    typedef int (PhyloTree::*ComputeParsimonyBranchType)(PhyloNeighbor *, PhyloNode *, int *);
+    ComputeParsimonyBranchType computeParsimonyBranchPointer;
 
     /**
             compute tree parsimony score on a branch
@@ -458,22 +475,21 @@ public:
             @param branch_subst (OUT) if not NULL, the number of substitutions on this branch
             @return parsimony score of the tree
      */
-    typedef int (PhyloTree::*ComputeParsimonyBranchType)(PhyloNeighbor *, PhyloNode *, int *);
-    ComputeParsimonyBranchType computeParsimonyBranchPointer;
-
     virtual int computeParsimonyBranch(PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst = NULL);
-
     int computeParsimonyBranchNaive(PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst = NULL);
     int computeParsimonyBranchFast(PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst = NULL);
-
     template<class VectorClass>
     int computeParsimonyBranchFastSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst = NULL);
+
 
     void printParsimonyStates(PhyloNeighbor *dad_branch = NULL, PhyloNode *dad = NULL);
 
     virtual void setParsimonyKernel(LikelihoodKernel lk);
+#ifdef BINARY32
+    virtual void setParsimonyKernelAVX() {}
+#else
     virtual void setParsimonyKernelAVX();
-
+#endif
     /**
             SLOW VERSION: compute the parsimony score of the tree, given the alignment
             @return the parsimony score
@@ -527,6 +543,11 @@ public:
     void computeAllPartialLh(PhyloNode *node = NULL, PhyloNode *dad = NULL);
 
     /**
+     * compute all partial parsimony vector if not computed before
+     */
+    void computeAllPartialPars(PhyloNode *node = NULL, PhyloNode *dad = NULL);
+
+    /**
             allocate memory for a partial likelihood vector
      */
     double *newPartialLh();
@@ -577,13 +598,13 @@ public:
     template<int NSTATES>
     void computePartialLikelihoodSSE(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
 
-    template <const int nstates>
+    //template <const int nstates>
     void computePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
 
-    template <const int nstates>
+    //template <const int nstates>
     void computeMixturePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
 
-    template <const int nstates>
+    //template <const int nstates>
     void computeMixratePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
 
     template <class VectorClass, const int VCSIZE, const int nstates>
@@ -623,13 +644,13 @@ public:
 //    template<int NSTATES>
 //    inline double computeLikelihoodBranchFast(PhyloNeighbor *dad_branch, PhyloNode *dad);
 
-    template <const int nstates>
+    //template <const int nstates>
     double computeLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloNode *dad);
 
-    template <const int nstates>
+    //template <const int nstates>
     double computeMixtureLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloNode *dad);
 
-    template <const int nstates>
+    //template <const int nstates>
     double computeMixrateLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloNode *dad);
 
     template <class VectorClass, const int VCSIZE, const int nstates>
@@ -701,6 +722,14 @@ public:
      */
     virtual void computePatternLikelihood(double *pattern_lh, double *cur_logl = NULL,
     		double *pattern_lh_cat = NULL);
+
+    vector<uint64_t> ptn_cat_mask;
+
+    /**
+        compute categories for each pattern, update ptn_cat_mask
+        @return max number of categories necessary
+    */
+    virtual int computePatternCategories(IntVector *pattern_ncat = NULL);
 
     /**
             Compute the variance in tree log-likelihood
@@ -827,13 +856,13 @@ public:
     template<int NSTATES>
     void computeLikelihoodDervSSE(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
 
-    template <const int nstates>
+    //template <const int nstates>
     void computeLikelihoodDervEigen(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
 
-    template <const int nstates>
+    //template <const int nstates>
     void computeMixtureLikelihoodDervEigen(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
 
-    template <const int nstates>
+    //template <const int nstates>
     void computeMixrateLikelihoodDervEigen(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
 
     template <class VectorClass, const int VCSIZE, const int nstates>
@@ -872,7 +901,7 @@ public:
             @param dad dad of the node, used to direct the search
             @return the parsimony score of the tree
      */
-    int addTaxonMPFast(Node *added_node, Node* &target_node, Node* &target_dad, UINT *target_partial_pars, Node *node, Node *dad);
+    int addTaxonMPFast(Node *added_taxon, Node *added_node, Node *node, Node *dad);
 
 
     /**
@@ -992,6 +1021,15 @@ public:
             @return negative of likelihood (for minimization)
      */
     virtual void computeFuncDerv(double value, double &df, double &ddf);
+
+    /**
+        optimize the scaling factor for tree length, given all branch lengths fixed
+        @param scaling (IN/OUT) start value of scaling factor, and as output the optimal value
+        @param gradient_epsilon gradient epsilon
+        @return optimal tree log-likelihood
+    */
+    double optimizeTreeLengthScaling(double &scaling, double gradient_epsilon);
+
 
      /****************************************************************************
             Branch length optimization by Least Squares
@@ -1321,8 +1359,11 @@ public:
 
     virtual void setLikelihoodKernel(LikelihoodKernel lk);
 
+#ifdef BINARY32
+    virtual void setLikelihoodKernelAVX() {}
+#else
     virtual void setLikelihoodKernelAVX();
-
+#endif
     /****************************************************************************
             Public variables
      ****************************************************************************/
@@ -1565,6 +1606,11 @@ protected:
             and by computePatternLikelihood() to compute all pattern likelihoods
      */
     PhyloNeighbor *current_it_back;
+
+    bool is_opt_scaling;
+
+    /** current scaling factor for optimizeTreeLengthScaling() */
+    double current_scaling;
 
     /**
             spr moves

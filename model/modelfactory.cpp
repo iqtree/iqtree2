@@ -313,7 +313,7 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 				model_list = model_str.substr(4, model_str.length()-5);
 				model_str = model_str.substr(0, 3);
 			}
-			model = new ModelMixture(model_str, model_list, models_block, freq_type, freq_params, tree, optimize_mixmodel_weight);
+			model = new ModelMixture(params.model_name, model_str, model_list, models_block, freq_type, freq_params, tree, optimize_mixmodel_weight);
 		} else {
 //			string model_desc;
 //			NxsModel *nxsmodel = models_block->findModel(model_str);
@@ -422,8 +422,13 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 //			fused_mix_rate = true;
 //	}
 	if (posG != string::npos && posR != string::npos) {
-		outWarning("Both Gamma and FreeRate models were specified, continue with FreeRate model");
-        posG = string::npos;
+        if (posG == posG2 && posR != posR2) {
+            outWarning("Both Gamma and FreeRate models were specified, continue with Gamma model because *G has higher priority than +R");
+            posR = string::npos;
+        } else {
+            outWarning("Both Gamma and FreeRate models were specified, continue with FreeRate model");
+            posG = string::npos;
+        }
     }
 	string::size_type posX;
 	/* create site-rate heterogeneity */
@@ -704,7 +709,7 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info, double 
 
 	//time_t begin_time, cur_time;
 	//time(&begin_time);
-	double begin_time = getCPUTime();
+	double begin_time = getRealTime();
 	double cur_lh;
 	PhyloTree *tree = site_rate->getTree();
 	assert(tree);
@@ -781,7 +786,7 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info, double 
 	}
 	//time(&cur_time);
 	//double elapsed_secs = difftime(cur_time,begin_time);
-	double elapsed_secs = getCPUTime() - begin_time;
+	double elapsed_secs = getRealTime() - begin_time;
 	if (write_info)
 		cout << "Parameters optimization took " << i-1 << " rounds (" << elapsed_secs << " sec)" << endl << endl;
 	startStoringTransMatrix();

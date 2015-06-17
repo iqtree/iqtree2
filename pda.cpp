@@ -1787,6 +1787,10 @@ void funcExit(void) {
 	endLogFile();
 }
 
+#if (defined(__GNUC__) || defined(__clang__)) && !defined(WIN32)
+#include <execinfo.h>
+#endif
+
 extern "C" void funcAbort(int signal_number)
 {
     /*Your code goes here. You can output debugging info.
@@ -1801,7 +1805,25 @@ extern "C" void funcAbort(int signal_number)
 		case SIGILL:  cout << "ILLEGAL INSTRUCTION"; break;
 		case SIGSEGV: cout << "SEGMENTATION FAULT"; break;
 	}
-	cout << endl << "*** For bug report please send to developers:" << endl << "***    Log file: " << _log_file;
+    cout << endl;
+//#if defined(__GNUC__) || defined(__clang__)   
+#if defined(__clang__)
+    int j, nptrs;
+#define BTSIZE 100
+    void *buffer[BTSIZE];
+    char **strings;
+
+   nptrs = backtrace(buffer, BTSIZE);
+   /* The call backtrace_symbols_fd(buffer, nptrs, STDOUT_FILENO)
+       would produce similar output to the following: */
+
+   strings = backtrace_symbols(buffer, nptrs);
+   for (j = 0; j < nptrs; j++)
+        cout << "*** " << strings[j] << endl;
+   free(strings);
+#endif
+
+	cout << "*** For bug report please send to developers:" << endl << "***    Log file: " << _log_file;
 	cout << endl << "***    Alignment files (if possible)" << endl;
 	funcExit();
 	signal(signal_number, SIG_DFL);
@@ -2189,6 +2211,9 @@ int main(int argc, char *argv[])
 	//pclose(pfile);
 
 	instruction_set = instrset_detect();
+#ifdef BINARY32
+    instruction_set = min(instruction_set, 6);
+#endif
 	if (instruction_set < 3) outError("Your CPU does not support SSE3!");
 	bool has_fma3 = (instruction_set >= 7) && hasFMA3();
 	bool has_fma4 = (instruction_set >= 7) && hasFMA4();
@@ -2269,7 +2294,7 @@ int main(int argc, char *argv[])
 	if (params.num_threads) omp_set_num_threads(params.num_threads);
 //	int max_threads = omp_get_max_threads();
 	params.num_threads = omp_get_max_threads();
-	int max_procs = omp_get_num_procs();
+	int max_procs = countPhysicalCPUCores();
 	cout << " - " << params.num_threads  << " threads (" << max_procs << " CPU cores detected)";
 	if (params.num_threads  > max_procs) {
 		cout << endl;
@@ -2281,6 +2306,10 @@ int main(int argc, char *argv[])
 		cout << endl << endl;
 		outError("Number of threads must be 1 for sequential version.");
 	}
+    int num_procs = countPhysicalCPUCores();
+    if (num_procs > 1) {
+        cout << endl << endl << "NOTE: Consider using the multicore version because your CPU has " << num_procs << " cores!";
+    }
 #endif
 	//cout << "sizeof(int)=" << sizeof(int) << endl;
 	cout << endl << endl;

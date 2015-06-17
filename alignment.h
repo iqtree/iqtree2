@@ -516,6 +516,14 @@ public:
     virtual void computeStateFreq(double *state_freq);
 
     /**
+            compute empirical state frequencies for each sequence 
+            @param freq_per_sequence (OUT) state frequencies for each sequence, of size num_states*num_freq
+     */
+    void computeStateFreqPerSequence (double *freq_per_sequence);
+
+    void countStatePerSequence (unsigned *count_per_sequence);
+
+    /**
      * Make all frequencies a little different and non-zero
      * @param stateFrqArr (IN/OUT) state frequencies
      */

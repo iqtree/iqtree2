@@ -9,6 +9,7 @@
 
 #include "phylotree.h"
 #include "vectorclass/vectorclass.h"
+#include "phylosupertree.h"
 
 /***********************************************************/
 /****** optimized version of parsimony kernel **************/
@@ -25,6 +26,8 @@ void PhyloTree::computePartialParsimonyFast(PhyloNeighbor *dad_branch, PhyloNode
 
     if (node->isLeaf() && dad) {
         // external node
+        if (aln->ordered_pattern.empty())
+            aln->orderPatternByNumChars();
         int leafid = node->id;
         int pars_size = getBitsBlockSize();
         memset(dad_branch->partial_pars, 0, pars_size*sizeof(UINT));
@@ -156,14 +159,19 @@ void PhyloTree::computePartialParsimonyFast(PhyloNeighbor *dad_branch, PhyloNode
 //        UINT score = left->partial_pars[0] + right->partial_pars[0];
         UINT score = 0;
         int nsites = aln->num_informative_sites;
-        UINT *x = left->partial_pars;
-        UINT *y = right->partial_pars;
-        UINT *z = dad_branch->partial_pars;
+        nsites = (nsites+UINT_BITS-1)/UINT_BITS;
 
         switch (nstates) {
         case 4:
-			for (site = 0; site<nsites; site+=UINT_BITS) {
+            #ifdef _OPENMP
+            #pragma omp parallel for private (site) reduction(+: score) if(nsites>200)
+            #endif
+			for (site = 0; site<nsites; site++) {
 				UINT w;
+                size_t offset = 4*site;
+                UINT *x = left->partial_pars + offset;
+                UINT *y = right->partial_pars + offset;
+                UINT *z = dad_branch->partial_pars + offset;
 				z[0] = x[0] & y[0];
 				z[1] = x[1] & y[1];
 				z[2] = x[2] & y[2];
@@ -175,15 +183,20 @@ void PhyloTree::computePartialParsimonyFast(PhyloNeighbor *dad_branch, PhyloNode
 				z[1] |= w & (x[1] | y[1]);
 				z[2] |= w & (x[2] | y[2]);
 				z[3] |= w & (x[3] | y[3]);
-				x += 4;
-				y += 4;
-				z += 4;
 			}
 			break;
         default:
-			for (site = 0; site<nsites; site+=UINT_BITS) {
+            #ifdef _OPENMP
+            #pragma omp parallel for private (site) reduction(+: score) if(nsites > 800/nstates)
+            #endif
+			for (site = 0; site<nsites; site++) {
 				int i;
 				UINT w = 0;
+                size_t offset = nstates*site;
+                UINT *x = left->partial_pars + offset;
+                UINT *y = right->partial_pars + offset;
+                UINT *z = dad_branch->partial_pars + offset;
+                
 				for (i = 0; i < nstates; i++) {
 					z[i] = x[i] & y[i];
 					w |= z[i];
@@ -193,13 +206,10 @@ void PhyloTree::computePartialParsimonyFast(PhyloNeighbor *dad_branch, PhyloNode
 				for (i = 0; i < nstates; i++) {
 					z[i] |= w & (x[i] | y[i]);
 				}
-				x += nstates;
-				y += nstates;
-				z += nstates;
 			}
 			break;
         }
-        *z = score + *x + *y;
+        dad_branch->partial_pars[nstates*nsites] = score + left->partial_pars[nstates*nsites] + right->partial_pars[nstates*nsites];
 //        dad_branch->partial_pars[0] = score;
     }
 }
@@ -225,22 +235,32 @@ int PhyloTree::computeParsimonyBranchFast(PhyloNeighbor *dad_branch, PhyloNode *
 
     UINT lower_bound = best_pars_score;
     if (branch_subst) lower_bound = INT_MAX;
-    UINT *x = dad_branch->partial_pars;
-    UINT *y = node_branch->partial_pars;
     switch (nstates) {
     case 4:
-		for (site = 1; site <= nsites; site++) {
+        #ifdef _OPENMP
+        #pragma omp parallel for private (site) reduction(+: score) if(nsites>200)
+        #endif
+		for (site = 0; site < nsites; site++) {
+            size_t offset = 4*site;
+            UINT *x = dad_branch->partial_pars + offset;
+            UINT *y = node_branch->partial_pars + offset;
 			UINT w = (x[0] & y[0]) | (x[1] & y[1]) | (x[2] & y[2]) | (x[3] & y[3]);
 			w = ~w;
 			score += vml_popcnt(w);
+            #ifndef _OPENMP
             if (score >= lower_bound)
                 break;
-			x += 4;
-			y += 4;
+            #endif
 		}
 		break;
     default:
-		for (site = 0; site < nsites; site+=UINT_BITS) {
+        #ifdef _OPENMP
+        #pragma omp parallel for private (site) reduction(+: score) if(nsites > 800/nstates)
+        #endif
+		for (site = 0; site < nsites; site++) {
+            size_t offset = nstates*site;
+            UINT *x = dad_branch->partial_pars + offset;
+            UINT *y = node_branch->partial_pars + offset;
 			int i;
 			UINT w = x[0] & y[0];
 			for (i = 1; i < nstates; i++) {
@@ -248,11 +268,10 @@ int PhyloTree::computeParsimonyBranchFast(PhyloNeighbor *dad_branch, PhyloNode *
 			}
 			w = ~w;
 			score += vml_popcnt(w);
+            #ifndef _OPENMP
             if (score >= lower_bound)
                 break;
-			x += nstates;
-			y += nstates;
-
+            #endif
 		}
 		break;
     }
@@ -262,6 +281,183 @@ int PhyloTree::computeParsimonyBranchFast(PhyloNeighbor *dad_branch, PhyloNode *
     return score;
 }
 
+void PhyloTree::computeAllPartialPars(PhyloNode *node, PhyloNode *dad) {
+	if (!node) node = (PhyloNode*)root;
+	FOR_NEIGHBOR_IT(node, dad, it) {
+		if ((((PhyloNeighbor*)*it)->partial_lh_computed & 1) == 0)
+			computePartialParsimony((PhyloNeighbor*)*it, node);
+		PhyloNeighbor *rev = (PhyloNeighbor*) (*it)->node->findNeighbor(node);
+		if ((rev->partial_lh_computed & 1) == 0)
+			computePartialParsimony(rev, (PhyloNode*)(*it)->node);
+		computeAllPartialPars((PhyloNode*)(*it)->node, node);
+	}
+}
 
 
+/****************************************************************************
+ Stepwise addition (greedy) by maximum parsimony
+ ****************************************************************************/
 
+// random generator function:
+//ptrdiff_t myrandom(ptrdiff_t i) {
+//    return random_int(i);
+//}
+
+// pointer object to it:
+//ptrdiff_t (*p_myrandom)(ptrdiff_t) = myrandom;
+
+int PhyloTree::computeParsimonyTree(const char *out_prefix, Alignment *alignment) {
+    aln = alignment;
+    int size = aln->getNSeq();
+    if (size < 3)
+        outError(ERR_FEW_TAXA);
+
+    freeNode();
+
+    root = newNode(size);
+
+    IntVector taxon_order;
+    taxon_order.resize(size);
+    for (int i = 0; i < size; i++)
+        taxon_order[i] = i;
+    // randomize the addition order
+    my_random_shuffle(taxon_order.begin(), taxon_order.end());
+
+    // create initial tree with 3 taxa
+    for (leafNum = 0; leafNum < 3; leafNum++) {
+        if (verbose_mode >= VB_MAX)
+            cout << "Add " << aln->getSeqName(taxon_order[leafNum]) << " to the tree" << endl;
+        Node *new_taxon = newNode(taxon_order[leafNum], aln->getSeqName(taxon_order[leafNum]).c_str());
+        root->addNeighbor(new_taxon, -1.0);
+        new_taxon->addNeighbor(root, -1.0);
+    }
+    root = findNodeID(taxon_order[0]);
+    initializeAllPartialPars();
+    size_t index = 6;
+    size_t pars_block_size = getBitsBlockSize();
+
+    if (isSuperTree())
+        ((PhyloSuperTree*)this)->mapTrees();
+    
+    UINT *tmp_partial_pars;
+    tmp_partial_pars = newBitsBlock();
+
+    // stepwise adding the next taxon
+    for (leafNum = 3; leafNum < size; leafNum++) {
+        if (verbose_mode >= VB_MAX)
+            cout << "Add " << aln->getSeqName(taxon_order[leafNum]) << " to the tree";
+        NodeVector nodes1, nodes2;
+        getBranches(nodes1, nodes2);
+        PhyloNode *target_node = NULL;
+        PhyloNode *target_dad = NULL;
+        best_pars_score = INT_MAX;
+        // allocate a new taxon and a new adjacent internal node
+        
+        UINT *new_taxon_partial_pars = central_partial_pars + ((index++) * pars_block_size);
+        
+        PhyloNode *new_taxon = (PhyloNode*)newNode(taxon_order[leafNum], aln->getSeqName(taxon_order[leafNum]).c_str());
+        PhyloNode *added_node = (PhyloNode*)newNode(size+leafNum-2);
+        added_node->addNeighbor(new_taxon, -1.0);
+        new_taxon->addNeighbor(added_node, -1.0);
+        ((PhyloNeighbor*) added_node->findNeighbor(new_taxon))->partial_pars = central_partial_pars + ((index++) * pars_block_size);
+        ((PhyloNeighbor*) new_taxon->findNeighbor(added_node))->partial_pars = tmp_partial_pars;
+
+        // preserve two neighbors
+        added_node->addNeighbor((Node*) 1, -1.0);
+        added_node->addNeighbor((Node*) 2, -1.0);
+
+        for (int nodeid = 0; nodeid < nodes1.size(); nodeid++) {
+            int score = addTaxonMPFast(new_taxon, added_node, nodes1[nodeid], nodes2[nodeid]);
+            if (score < best_pars_score) {
+                best_pars_score = score;
+                target_node = (PhyloNode*)nodes1[nodeid];
+                target_dad = (PhyloNode*)nodes2[nodeid];
+                memcpy(new_taxon_partial_pars, tmp_partial_pars, pars_block_size*sizeof(UINT));
+            }
+        }
+        
+        if (verbose_mode >= VB_MAX)
+            cout << ", score = " << best_pars_score << endl;
+        // now insert the new node in the middle of the branch node-dad
+        target_node->updateNeighbor(target_dad, added_node, -1.0);
+        target_dad->updateNeighbor(target_node, added_node, -1.0);
+        added_node->updateNeighbor((Node*) 1, target_node, -1.0);
+        added_node->updateNeighbor((Node*) 2, target_dad, -1.0);
+        ((PhyloNeighbor*) added_node->findNeighbor(target_node))->partial_pars =
+            ((PhyloNeighbor*) target_dad->findNeighbor(added_node))->partial_pars;
+        ((PhyloNeighbor*) added_node->findNeighbor(target_dad))->partial_pars =
+            ((PhyloNeighbor*) target_node->findNeighbor(added_node))->partial_pars;
+            
+        ((PhyloNeighbor*) added_node->findNeighbor(target_node))->partial_lh_computed = 
+            ((PhyloNeighbor*) target_dad->findNeighbor(added_node))->partial_lh_computed;
+        ((PhyloNeighbor*) added_node->findNeighbor(target_dad))->partial_lh_computed = 
+            ((PhyloNeighbor*) target_node->findNeighbor(added_node))->partial_lh_computed;
+        
+        ((PhyloNeighbor*) new_taxon->findNeighbor(added_node))->partial_lh_computed |= 2;
+        ((PhyloNeighbor*) new_taxon->findNeighbor(added_node))->partial_pars = new_taxon_partial_pars;
+
+        ((PhyloNeighbor*)target_dad->findNeighbor(added_node))->partial_pars = central_partial_pars + ((index++) * pars_block_size);
+        ((PhyloNeighbor*)target_node->findNeighbor(added_node))->partial_pars = central_partial_pars + ((index++) * pars_block_size);
+
+        target_dad->clearReversePartialLh(added_node);
+        target_node->clearReversePartialLh(added_node);
+
+    }
+
+    aligned_free(tmp_partial_pars);
+    
+    assert(index == 4*leafNum-6);
+
+    nodeNum = 2 * leafNum - 2;
+    initializeTree();
+
+    setAlignment(alignment);
+//    initializeAllPartialPars();
+//    clearAllPartialLH();
+    fixNegativeBranch(true);
+    if (out_prefix) {
+		string file_name = out_prefix;
+		file_name += ".parstree";
+		printTree(file_name.c_str(), WT_NEWLINE);
+    }
+    return best_pars_score;
+}
+
+int PhyloTree::addTaxonMPFast(Node *added_taxon, Node* added_node, Node* node, Node* dad) {
+    Neighbor *dad_nei = dad->findNeighbor(node);
+
+    // now insert the new node in the middle of the branch node-dad
+    double len = dad_nei->length;
+    node->updateNeighbor(dad, added_node, len / 2.0);
+    dad->updateNeighbor(node, added_node, len / 2.0);
+    added_node->updateNeighbor((Node*) 1, node, len / 2.0);
+    added_node->updateNeighbor((Node*) 2, dad, len / 2.0);
+    ((PhyloNeighbor*) added_node->findNeighbor(node))->partial_pars =
+        ((PhyloNeighbor*) dad->findNeighbor(added_node))->partial_pars;
+    ((PhyloNeighbor*) added_node->findNeighbor(dad))->partial_pars =
+        ((PhyloNeighbor*) node->findNeighbor(added_node))->partial_pars;
+    ((PhyloNeighbor*) added_node->findNeighbor(node))->partial_lh_computed = 
+        ((PhyloNeighbor*) dad->findNeighbor(added_node))->partial_lh_computed;
+    ((PhyloNeighbor*) added_node->findNeighbor(dad))->partial_lh_computed = 
+        ((PhyloNeighbor*) node->findNeighbor(added_node))->partial_lh_computed;
+    // compute the likelihood
+    ((PhyloNeighbor*) added_taxon->findNeighbor(added_node))->clearPartialLh();
+    int score = computeParsimonyBranch((PhyloNeighbor*) added_node->neighbors[0], (PhyloNode*) added_node);
+    // remove the added node
+    node->updateNeighbor(added_node, dad, len);
+    dad->updateNeighbor(added_node, node, len);
+    added_node->updateNeighbor(node, (Node*) 1, len);
+    added_node->updateNeighbor(dad, (Node*) 2, len);
+
+    // set partial_pars to COMPUTED
+    ((PhyloNeighbor*)node->findNeighbor(dad))->partial_lh_computed |= 2;
+    ((PhyloNeighbor*)dad->findNeighbor(node))->partial_lh_computed |= 2;
+
+    // now tranverse the tree downwards
+
+//    FOR_NEIGHBOR_IT(node, dad, it){
+//        addTaxonMPFast(added_node, target_node, target_dad, target_partial_pars, (*it)->node, node);
+//    }
+    return score;
+
+}

@@ -101,12 +101,13 @@ int RateKategory::computePatternRates(DoubleVector& pattern_rates, IntVector& pa
 	if (phylo_tree->sse == LK_NORMAL || phylo_tree->sse == LK_SSE)
 		phylo_tree->computeLikelihoodBranchNaive((PhyloNeighbor*)phylo_tree->root->neighbors[0], (PhyloNode*)phylo_tree->root);
 	else {
-		switch (phylo_tree->aln->num_states) {
-		case 4: phylo_tree->computeLikelihoodBranchEigen<4>((PhyloNeighbor*)phylo_tree->root->neighbors[0], (PhyloNode*)phylo_tree->root); break;
-		case 20: phylo_tree->computeLikelihoodBranchEigen<20>((PhyloNeighbor*)phylo_tree->root->neighbors[0], (PhyloNode*)phylo_tree->root); break;
-		case 2: phylo_tree->computeLikelihoodBranchEigen<2>((PhyloNeighbor*)phylo_tree->root->neighbors[0], (PhyloNode*)phylo_tree->root); break;
-		default: outError("Option unsupported yet for this sequence type. Contact author if you really need it."); break;
-		}
+//		switch (phylo_tree->aln->num_states) {
+//		case 4: phylo_tree->computeLikelihoodBranchEigen<4>((PhyloNeighbor*)phylo_tree->root->neighbors[0], (PhyloNode*)phylo_tree->root); break;
+//		case 20: phylo_tree->computeLikelihoodBranchEigen<20>((PhyloNeighbor*)phylo_tree->root->neighbors[0], (PhyloNode*)phylo_tree->root); break;
+//		case 2: phylo_tree->computeLikelihoodBranchEigen<2>((PhyloNeighbor*)phylo_tree->root->neighbors[0], (PhyloNode*)phylo_tree->root); break;
+//		default: outError("Option unsupported yet for this sequence type. Contact author if you really need it."); break;
+//		}
+        phylo_tree->computeLikelihoodBranchEigen((PhyloNeighbor*)phylo_tree->root->neighbors[0], (PhyloNode*)phylo_tree->root);
 	}
 
 	int npattern = phylo_tree->aln->getNPattern();

@@ -333,6 +333,8 @@ protected:
 	*/
 	double *eigen_coeff;
 
+	/** state with highest frequency, used when optimizing state frequencies +FO */
+	int highest_freq_state;
 
 };
 
