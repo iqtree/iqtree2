@@ -1563,13 +1563,13 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
     }
 
     if (!params.pll) {
-        uint64_t mem_size = iqtree.getMemoryRequired() * sizeof(double);
+        uint64_t mem_size = iqtree.getMemoryRequired();
         uint64_t total_mem = getMemorySize();
         if (mem_size >= total_mem) {
             if (params.lh_mem_save == LM_DETECT) {
                 // switch to memory saving technique that reduces memory requirement to 1/3
                 params.lh_mem_save = LM_PER_NODE;
-                mem_size = iqtree.getMemoryRequired() * sizeof(double);
+                mem_size = iqtree.getMemoryRequired();
             }
         }
 //#if defined __APPLE__ || defined __MACH__

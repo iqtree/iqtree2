@@ -61,9 +61,11 @@ void PhyloTree::init() {
     site_rate = NULL;
     optimize_by_newton = true;
     central_partial_lh = NULL;
+    nni_partial_lh = NULL;
     tip_partial_lh = NULL;
     tip_partial_lh_computed = false;
     central_scale_num = NULL;
+    nni_scale_num = NULL;
     central_partial_pars = NULL;
     model_factory = NULL;
 //    tmp_partial_lh1 = NULL;
@@ -116,6 +118,12 @@ void PhyloTree::discardSaturatedSite(bool val) {
 }
 
 PhyloTree::~PhyloTree() {
+    if (nni_scale_num)
+        aligned_free(nni_scale_num);
+    nni_scale_num = NULL;
+    if (nni_partial_lh)
+        aligned_free(nni_partial_lh);
+    nni_partial_lh = NULL;
     if (central_partial_lh)
         aligned_free(central_partial_lh);
     central_partial_lh = NULL;
@@ -1153,7 +1161,7 @@ void PhyloTree::initializeAllPartialLh() {
         ptn_invar = aligned_alloc<double>(mem_size);
     bool benchmark_mem = (!central_partial_lh && verbose_mode >= VB_MED);
     if (benchmark_mem) {
-    	cout << "Measuring run time for allocating " << getMemoryRequired()*sizeof(double) << " bytes RAM" << endl;
+    	cout << "Measuring run time for allocating " << getMemoryRequired() << " bytes RAM" << endl;
     }
     double cpu_start_time = getCPUTime();
     double wall_start_time = getRealTime();
@@ -1222,13 +1230,15 @@ uint64_t PhyloTree::getMemoryRequired(size_t ncategory) {
     	block_size *= ncategory;
     if (model && !model_factory->fused_mix_rate)
     	block_size *= model->getNMixtures();
-    uint64_t mem_size = ((uint64_t) leafNum*4 - 6) * block_size + 2 + (leafNum - 1) * 4 * nptn * sizeof(UBYTE);
+    uint64_t mem_size = ((uint64_t) leafNum*4) * block_size *sizeof(double) + 2 + (leafNum) * 4 * nptn * sizeof(UBYTE);
     if (params->SSE == LK_EIGEN || params->SSE == LK_EIGEN_SSE) {
-    	mem_size -= ((uint64_t)leafNum) * ((uint64_t)block_size + nptn * sizeof(UBYTE));
+    	mem_size -= ((uint64_t)leafNum) * ((uint64_t)block_size*sizeof(double) + nptn * sizeof(UBYTE));
         if (params->lh_mem_save == LM_PER_NODE) {
-            mem_size -= ((uint64_t)leafNum*2 - 4) * ((uint64_t)block_size + nptn * sizeof(UBYTE));
+            mem_size -= ((uint64_t)leafNum*2 - 4) * ((uint64_t)block_size*sizeof(double) + nptn * sizeof(UBYTE));
         }
     }
+    if (params->gbo_replicates)
+        mem_size += params->gbo_replicates*nptn*sizeof(BootValType);
     return mem_size;
 }
 
@@ -3659,6 +3669,16 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
 	assert(!node1->isLeaf() && !node2->isLeaf());
     assert(node1->degree() == 3 && node2->degree() == 3);
 
+	int IT_NUM = (params->nni5) ? 6 : 2;
+    size_t partial_lh_size = getPartialLhBytes()/sizeof(double);
+    size_t scale_num_size = getScaleNumBytes()/sizeof(UBYTE);
+    if (!nni_partial_lh) {
+        // allocate memory only once!
+        intptr_t MEM_ALIGNMENT = (instruction_set >= 7) ? 32 : 16;
+        nni_partial_lh = aligned_alloc<double>(IT_NUM*partial_lh_size+MEM_ALIGNMENT/sizeof(double));
+        nni_scale_num = aligned_alloc<UBYTE>(IT_NUM*scale_num_size+MEM_ALIGNMENT/sizeof(UBYTE));
+    }
+
     // Upper Bounds ---------------
     totalNNIub += 2;
     if(params->upper_bound_NNI){
@@ -3677,7 +3697,6 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
     //-----------------------------
 
 	NeighborVec::iterator it;
-	int IT_NUM = (params->nni5) ? 6 : 2;
 
 	NeighborVec::iterator saved_it[6];
 	int id = 0;
@@ -3696,19 +3715,12 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
 
 	Neighbor *saved_nei[6];
 	// save Neighbor and allocate new Neighbor pointer
-	size_t partial_lh_size = getPartialLhBytes()/sizeof(double);
-	intptr_t MEM_ALIGNMENT = (instruction_set >= 7) ? 32 : 16;
-
-	double *new_partial_lh = aligned_alloc<double>(IT_NUM*partial_lh_size+MEM_ALIGNMENT/sizeof(double));
-//	size_t mem_shift = 0;
-//	if (((intptr_t) new_partial_lh) % MEM_ALIGNMENT != 0)
-//		mem_shift = (MEM_ALIGNMENT - (((intptr_t) new_partial_lh) % MEM_ALIGNMENT)) / sizeof(double);
-
 	for (id = 0; id < IT_NUM; id++) {
 		saved_nei[id] = (*saved_it[id]);
 		*saved_it[id] = new PhyloNeighbor(saved_nei[id]->node, saved_nei[id]->length);
-		((PhyloNeighbor*) (*saved_it[id]))->partial_lh = new_partial_lh + id*partial_lh_size;
-		((PhyloNeighbor*) (*saved_it[id]))->scale_num = newScaleNum();
+		((PhyloNeighbor*) (*saved_it[id]))->partial_lh = nni_partial_lh + id*partial_lh_size;
+		((PhyloNeighbor*) (*saved_it[id]))->scale_num = nni_scale_num + id*scale_num_size;
+//		((PhyloNeighbor*) (*saved_it[id]))->scale_num = newScaleNum();
 	}
 
 	// get the Neighbor again since it is replaced for saving purpose
@@ -3820,7 +3832,7 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
 
 	 // restore the Neighbor*
 	 for (id = IT_NUM-1; id >= 0; id--) {
-		 aligned_free(((PhyloNeighbor*) *saved_it[id])->scale_num);
+//		 aligned_free(((PhyloNeighbor*) *saved_it[id])->scale_num);
 		 //delete[] ((PhyloNeighbor*) *saved_it[id])->partial_lh;
 		 if (*saved_it[id] == current_it) current_it = (PhyloNeighbor*) saved_nei[id];
 		 if (*saved_it[id] == current_it_back) current_it_back = (PhyloNeighbor*) saved_nei[id];
@@ -3828,7 +3840,7 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
 		 delete (*saved_it[id]);
 		 (*saved_it[id]) = saved_nei[id];
 	 }
-	 aligned_free(new_partial_lh);
+//	 aligned_free(new_partial_lh);
 
 	 // restore the length of 4 branches around node1, node2
 	 FOR_NEIGHBOR(node1, node2, it)

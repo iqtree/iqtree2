@@ -10,9 +10,9 @@
 #include <cxxabi.h>
 
 /** Print a demangled stack backtrace of the caller function to FILE* out. */
-static inline void print_stacktrace(FILE *out = stderr, unsigned int max_frames = 63)
+static inline void print_stacktrace(ostream &out, unsigned int max_frames = 63)
 {
-    fprintf(out, "stack trace:\n");
+    out << "Stack trace:" << endl;
 
     // storage array for stack trace address data
     void* addrlist[max_frames+1];
@@ -21,8 +21,8 @@ static inline void print_stacktrace(FILE *out = stderr, unsigned int max_frames 
     int addrlen = backtrace(addrlist, sizeof(addrlist) / sizeof(void*));
 
     if (addrlen == 0) {
-	fprintf(out, "  <empty, possibly corrupt>\n");
-	return;
+        out << "  <empty, possibly corrupt>" << endl;
+        return;
     }
 
     // resolve addresses into strings containing "filename(function+address)",
@@ -68,21 +68,19 @@ static inline void print_stacktrace(FILE *out = stderr, unsigned int max_frames 
 	    char* ret = abi::__cxa_demangle(begin_name,
 					    funcname, &funcnamesize, &status);
 	    if (status == 0) {
-		funcname = ret; // use possibly realloc()-ed string
-		fprintf(out, "  %s : %s+%s\n",
-			symbollist[i], funcname, begin_offset);
+            funcname = ret; // use possibly realloc()-ed string
+            out << "  " << symbollist[i] << " : " << funcname << "+"<< begin_offset << endl;
 	    }
 	    else {
-		// demangling failed. Output function name as a C function with
-		// no arguments.
-		fprintf(out, "  %s : %s()+%s\n",
-			symbollist[i], begin_name, begin_offset);
+            // demangling failed. Output function name as a C function with
+            // no arguments.
+            out << "  " << symbollist[i] << " : " << begin_name << "()+"<< begin_offset << endl;
 	    }
 	}
 	else
 	{
 	    // couldn't parse the line? print the whole line.
-	    fprintf(out, "  %s\n", symbollist[i]);
+	    out << "  " << symbollist[i] << endl;
 	}
     }
 

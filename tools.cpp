@@ -96,7 +96,7 @@ void outError(char *error)
 void outError(const char *error, bool quit) {
 	if (error == ERR_NO_MEMORY) {
 #if (defined(__GNUC__) || defined(__clang__)) && !defined(WIN32)
-		print_stacktrace();
+		print_stacktrace(cerr);
 #endif
 	}
 	cerr << "ERROR: " << error << endl;

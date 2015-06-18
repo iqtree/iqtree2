@@ -869,7 +869,7 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 
     if (print_mem_usage) {
         uint64_t mem_size = in_tree->getMemoryRequired(max_cats);
-        cout << "NOTE: MODEL SELECTION REQUIRES " << ((double) mem_size * sizeof(double) / 1024.0) / 1024
+        cout << "NOTE: MODEL SELECTION REQUIRES " << (mem_size / 1024) / 1024
                 << " MB MEMORY!" << endl;
         if (mem_size >= getMemorySize()) {
             outError("Memory required exceeds your computer RAM size!");

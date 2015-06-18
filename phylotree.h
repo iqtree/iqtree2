@@ -104,14 +104,14 @@ inline T *aligned_alloc(size_t size) {
 	int res = posix_memalign(&mem, MEM_ALIGNMENT, size*sizeof(T));
     if (res == ENOMEM) {
 #if (defined(__GNUC__) || defined(__clang__)) && !defined(WIN32)
-        print_stacktrace();
+        print_stacktrace(cerr);
 #endif
         outError("Not enough memory (bad_alloc)");
     }
 #endif
     if (mem == NULL) {
 #if (defined(__GNUC__) || defined(__clang__)) && !defined(WIN32)
-        print_stacktrace();
+        print_stacktrace(cerr);
 #endif
         outError("Memory allocation failed or not enough memory (bad_alloc)");
     }
@@ -1643,13 +1643,14 @@ protected:
             The variable partial_lh in PhyloNeighbor will be assigned to a region inside this variable.
      */
     double *central_partial_lh;
-
+    double *nni_partial_lh; // used for NNI functions
 
     /**
             the main memory storing all scaling event numbers for all neighbors of the tree.
             The variable scale_num in PhyloNeighbor will be assigned to a region inside this variable.
      */
     UBYTE *central_scale_num;
+    UBYTE *nni_scale_num; // used for NNI functions
 
     /**
             the main memory storing all partial parsimony states for all neighbors of the tree.
