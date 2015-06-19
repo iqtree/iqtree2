@@ -1639,6 +1639,7 @@ int Alignment::readMSF(char *filename, char *sequence_type) {
 int Alignment::readCountsFormat(char* filename, char* sequence_type) {
     int npop = 0;                // Number of populations.
     int nsites = 0;              // Number of sites.
+    // TODO: Change this.
     int N = 10;                  // Virtual population size; defaults to 10.
     int nnuc = 4;                // Number of nucleotides (base states).
     ostringstream err_str;
@@ -1897,6 +1898,9 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
     in.exceptions(ios::failbit | ios::badbit);
     in.close();
 
+    // Set UNKNOWN_STATE.
+    computeUnknownState();
+    
     // exit (EXIT_SUCCESS);
     // return buildPattern(sequences, sequence_type, seq_names.size(), sequences.front().length());
     return 1;
