@@ -66,20 +66,25 @@ int PartitionModel::getNParameters() {
 }
 
 
-double PartitionModel::optimizeParameters(bool fixed_len, bool write_info, double epsilon) {
+double PartitionModel::optimizeParameters(bool fixed_len, bool write_info, double logl_epsilon, double gradient_epsilon) {
     PhyloSuperTree *tree = (PhyloSuperTree*)site_rate->getTree();
     double tree_lh = 0.0;
     int ntrees = tree->size();
 
 	#ifdef _OPENMP
-	#pragma omp parallel for reduction(+: tree_lh)
+	#pragma omp parallel for reduction(+: tree_lh) schedule(dynamic)
 	#endif
     for (int part = 0; part < ntrees; part++) {
     	if (write_info)
+        #ifdef _OPENMP
+        #pragma omp critical
+        #endif
+        {
     		cout << "Optimizing " << tree->at(part)->getModelName() <<
         		" parameters for partition " << tree->part_info[part].name <<
         		" (" << tree->at(part)->getModelFactory()->getNParameters() << " free parameters)" << endl;
-        tree_lh += tree->at(part)->getModelFactory()->optimizeParameters(fixed_len, write_info && verbose_mode >= VB_MED, epsilon);
+        }
+        tree_lh += tree->at(part)->getModelFactory()->optimizeParameters(fixed_len, write_info && verbose_mode >= VB_MED, logl_epsilon, gradient_epsilon);
     }
     //return ModelFactory::optimizeParameters(fixed_len, write_info);
     return tree_lh;

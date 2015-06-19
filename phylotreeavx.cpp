@@ -15,6 +15,11 @@
 #error "You must compile this file with AVX enabled!"
 #endif
 
+void PhyloTree::setParsimonyKernelAVX() {
+	computeParsimonyBranchPointer = &PhyloTree::computeParsimonyBranchFastSIMD<Vec8ui>;
+    computePartialParsimonyPointer = &PhyloTree::computePartialParsimonyFastSIMD<Vec8ui>;
+}
+
 void PhyloTree::setDotProductAVX() {
 #ifdef BOOT_VAL_FLOAT
 		dotProduct = &PhyloTree::dotProductSIMD<float, Vec8f, 8>;
@@ -25,6 +30,7 @@ void PhyloTree::setDotProductAVX() {
 }
 
 void PhyloTree::setLikelihoodKernelAVX() {
+    setParsimonyKernelAVX();
 	switch(aln->num_states) {
 	case 4:
 		if (model_factory && model_factory->model->isMixture()) {

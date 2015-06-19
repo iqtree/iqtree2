@@ -87,7 +87,7 @@ RateFree::~RateFree() {
 
 string RateFree::getNameParams() {
 	stringstream str;
-	str << "R" << ncategory << "{";
+	str << "+R" << ncategory << "{";
 	for (int i = 0; i < ncategory; i++) {
 		if (i > 0) str << ",";
 		str << prop[i]<< "," << rates[i];
@@ -102,48 +102,13 @@ double RateFree::targetFunk(double x[]) {
 	return -phylo_tree->computeLikelihood();
 }
 
-/**
-    quicksort template
-*/
-template<class T1, class T2>
-void quicksort(T1* arr, int left, int right, T2* arr2 = NULL) {
-      assert(left <= right);    
-      int i = left, j = right;
-      T1 pivot = arr[(left + right) / 2];
- 
-      /* partition */
-      while (i <= j) {
-            while (arr[i] < pivot)
-                  i++;
-            while (arr[j] > pivot)
-                  j--;
-            if (i <= j) {
-                  T1 tmp = arr[i];
-                  arr[i] = arr[j];
-                  arr[j] = tmp;
-                  if (arr2) {
-                      T2 tmp2 = arr2[i];
-                      arr2[i] = arr2[j];
-                      arr2[j] = tmp2;
-                  }
-                  i++;
-                  j--;
-            }
-      };
- 
-      /* recursion */
-      if (left < j)
-            quicksort(arr, left, j, arr2);
-      if (i < right)
-            quicksort(arr, i, right, arr2);
-}
 
 
 /**
 	optimize parameters. Default is to optimize gamma shape
 	@return the best likelihood
 */
-double RateFree::optimizeParameters(double epsilon) {
+double RateFree::optimizeParameters(double gradient_epsilon) {
 
 	int ndim = getNDim();
 
@@ -166,7 +131,7 @@ double RateFree::optimizeParameters(double epsilon) {
 	setVariables(variables);
 	setBounds(lower_bound, upper_bound, bound_check);
 
-	score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound, bound_check, max(epsilon, TOL_FREE_RATE));
+	score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound, bound_check, max(gradient_epsilon, TOL_FREE_RATE));
 
 	getVariables(variables);
     

@@ -15,6 +15,7 @@
 #include "modelset.h"
 #include "modelmixture.h"
 #include "modelpomo.h"
+#include "phylokernelmixture.h"
 
 const string builtin_mixmodels_definition =
 "#nexus\n\
@@ -1055,11 +1056,11 @@ ModelSubst* createModel(string model_str, ModelsBlock *models_block, StateFreqTy
 	return model;
 }
 
-ModelMixture::ModelMixture(string model_name, string model_list, ModelsBlock *models_block,
+ModelMixture::ModelMixture(string orig_model_name, string model_name, string model_list, ModelsBlock *models_block,
 		StateFreqType freq, string freq_params, PhyloTree *tree, bool optimize_weights, bool count_rates)
 	: ModelGTR(tree, count_rates)
 {
-	const int MAX_MODELS = 64;
+//	const int MAX_MODELS = 64;
 	size_t cur_pos;
 	int m;
 
@@ -1069,7 +1070,7 @@ ModelMixture::ModelMixture(string model_name, string model_list, ModelsBlock *mo
 	fix_prop = false;
 
 	if (freq == FREQ_MIXTURE) {
-		for (m = 0, cur_pos = 0; m < MAX_MODELS && cur_pos < freq_params.length(); m++) {
+		for (m = 0, cur_pos = 0; cur_pos < freq_params.length(); m++) {
 			size_t pos = freq_params.find(',', cur_pos);
 			if (pos == string::npos)
 				pos = freq_params.length();
@@ -1116,9 +1117,10 @@ ModelMixture::ModelMixture(string model_name, string model_list, ModelsBlock *mo
 	}
 
 	DoubleVector weights;
-	name = full_name = (string)"MIX" + OPEN_BRACKET;
+    name = orig_model_name;
+	full_name = (string)"MIX" + OPEN_BRACKET;
 	if (model_list == "") model_list = model_name;
-	for (m = 0, cur_pos = 0; m < MAX_MODELS && cur_pos < model_list.length(); m++) {
+	for (m = 0, cur_pos = 0; cur_pos < model_list.length(); m++) {
 		size_t pos = model_list.find(',', cur_pos);
 		if (pos == string::npos)
 			pos = model_list.length();
@@ -1152,18 +1154,18 @@ ModelMixture::ModelMixture(string model_name, string model_list, ModelsBlock *mo
 				push_back(model);
 				weights.push_back(weight * freq_weights[f]);
 				if (m+f > 0) {
-					name += ',';
+//					name += ',';
 					full_name += ',';
 				}
 				if (freq_vec[f]) {
-					model->name += "+F{" +freq_vec[f]->name + "}";
-					model->full_name += "+F{" +freq_vec[f]->name + "}";
+					model->name += "+F" +freq_vec[f]->name + "";
+					model->full_name += "+F" +freq_vec[f]->name + "";
 				} else {
 					model->name += "+F";
 					model->full_name += "+F";
 				}
-				name += model->name;
-				full_name += model->full_name;
+//				name += model->name;
+				full_name += model->name;
 			}
 		} else {
 			model = (ModelGTR*)createModel(this_name, models_block, freq, freq_params, tree, count_rates);
@@ -1171,15 +1173,15 @@ ModelMixture::ModelMixture(string model_name, string model_list, ModelsBlock *mo
 			push_back(model);
 			weights.push_back(weight);
 			if (m > 0) {
-				name += ',';
+//				name += ',';
 				full_name += ',';
 			}
-			name += model->name;
-			full_name += model->full_name;
+//			name += model->name;
+			full_name += model->name;
 		}
 	}
 
-	name += CLOSE_BRACKET;
+//	name += CLOSE_BRACKET;
 	full_name += CLOSE_BRACKET;
 
 	int nmixtures = size();
@@ -1202,7 +1204,7 @@ ModelMixture::ModelMixture(string model_name, string model_list, ModelsBlock *mo
 	// normalize weights to 1.0
     if (sum != 1.0) {
         sum = 1.0/sum;
-        cout << "NOTE: Mixture weights do not sum up to 1, rescale weights by " << sum << endl;
+//        cout << "NOTE: Mixture weights do not sum up to 1, rescale weights by " << sum << endl;
         for (i = 0; i < nmixtures; i++)
              prop[i] *= sum;
     }     
@@ -1286,8 +1288,8 @@ double ModelMixture::targetFunk(double x[]) {
 	return -phylo_tree->computeLikelihood();
 }
 
-double ModelMixture::optimizeParameters(double epsilon) {
-	double score = ModelGTR::optimizeParameters(epsilon);
+double ModelMixture::optimizeParameters(double gradient_epsilon) {
+	double score = ModelGTR::optimizeParameters(gradient_epsilon);
 	if (getNDim() == 0) return score;
 	// now rescale Q matrices to have proper interpretation of branch lengths
 	double sum;
@@ -1403,4 +1405,16 @@ void ModelMixture::writeParameters(ostream &out) {
 	for (iterator it = begin(); it != end(); it++) {
 		(*it)->writeParameters(out);
 	}
+}
+
+string ModelMixture::getNameParams() {
+//	ostringstream retname;
+//	retname << "MIX" << OPEN_BRACKET;
+//    for (iterator it=begin(); it != end(); it++) {
+//        if (it != begin()) retname << ",";
+//        retname << (*it)->ModelSubst::getNameParams();
+//    }
+//	retname << CLOSE_BRACKET;
+//	return retname.str();
+    return full_name;
 }

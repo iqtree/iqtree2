@@ -134,7 +134,7 @@ public:
 		optimize parameters. Default is to optimize gamma shape
 		@return the best likelihood
 	*/
-	virtual double optimizeParameters(double epsilon);
+	virtual double optimizeParameters(double gradient_epsilon);
 
 	/**
 		override function from Optimization class, used by the minimizeOneDimen() to optimize
@@ -216,6 +216,8 @@ protected:
 	*/
 	bool cut_median;
 
+public:
+
 	//Normally, beta is assigned equal to alpha
 	//double cmpPerPointGamma (const double prob, const double shape);
 
@@ -229,7 +231,7 @@ protected:
 	   Communications of the Association for Computing Machinery, 9:684
 
 	*/
-	double cmpLnGamma (double alpha);
+	static double cmpLnGamma (double alpha);
 
 	/** returns the incomplete gamma ratio I(x,alpha) where x is the upper
 	   limit of the integration and alpha is the shape parameter.
@@ -240,7 +242,7 @@ protected:
 	   Bhattacharjee GP (1970) The incomplete gamma integral.  Applied Statistics,
 	   19: 285-287 (AS32)
 	*/
-	double cmpIncompleteGamma (double x, double alpha, double ln_gamma_alpha);
+	static double cmpIncompleteGamma (double x, double alpha, double ln_gamma_alpha);
 
 	/** functions concerning the CDF and percentage points of the gamma and
 	   Chi2 distribution
@@ -255,7 +257,7 @@ protected:
 	     Beasley JD & Springer SG  (1977).  Algorithm AS 111: the percentage
 	       points of the normal distribution.  26: 118-121.
 	*/
-	double cmpPointNormal (double prob);
+	static double cmpPointNormal (double prob);
 
 
 	/** returns z so that Prob{x<z}=prob where x is Chi2 distributed with df=v
@@ -265,7 +267,7 @@ protected:
 	       Chi2 distribution.  Applied Statistics 24: 385-388.  (AS91)
 	   Converted into C by Ziheng Yang, Oct. 1993.
 	*/
-	double cmpPointChi2 (double prob, double v);
+	static double cmpPointChi2 (double prob, double v);
 
 	/* THE END OF THE CODES COMMING FROM tools.c in Yang's PAML package */
 

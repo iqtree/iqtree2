@@ -111,16 +111,16 @@ public:
 		@param fixed_len TRUE to fix branch lengths, default is false
 		@return the best likelihood
 	*/
-	virtual double optimizeParameters(bool fixed_len = false, bool write_info = true, double epsilon = 0.001);
+	virtual double optimizeParameters(bool fixed_len = false, bool write_info = true, double logl_epsilon = 0.1, double gradient_epsilon = 0.001);
 
 	double optimizeGeneRate(double tol);
 
-	virtual double targetFunk(double x[]);
-	virtual void getVariables(double *variables);
-	virtual void setVariables(double *variables);
+//	virtual double targetFunk(double x[]);
+//	virtual void getVariables(double *variables);
+//	virtual void setVariables(double *variables);
 
     /** partition ID currently under optimization of of its rate */
-    int optimizing_part;
+//    int optimizing_part;
 
     /**
         compute the likelihood for a partition under rate optimization (optimizing_rate).
@@ -128,7 +128,7 @@ public:
         @param value x-value of the function
         @return log-likelihood
     */
-    virtual double computeFunction(double value);
+//    virtual double computeFunction(double value);
 
 
 };

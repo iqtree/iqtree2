@@ -54,7 +54,7 @@ public:
 		optimize parameters. Default is to optimize gamma shape
 		@return the best likelihood
 	*/
-	virtual double optimizeParameters(double epsilon);
+	virtual double optimizeParameters(double gradient_epsilon);
 
 	/**
 		return the number of dimensions

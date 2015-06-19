@@ -156,6 +156,15 @@ public:
      */
     void extractDataBlock(NxsCharactersBlock *data_block);
 
+    vector<Pattern> ordered_pattern;
+    
+    /** lower bound of sum parsimony scores for remaining pattern in ordered_pattern */
+    UINT *pars_lower_bound;
+
+    /** order pattern by number of character states and return in ptn_order
+    */
+    void orderPatternByNumChars();
+
     /**
      * un-group site-patterns, i.e., making #sites = #patterns and pattern frequency = 1 for all patterns
      */
@@ -507,6 +516,14 @@ public:
     virtual void computeStateFreq(double *state_freq);
 
     /**
+            compute empirical state frequencies for each sequence 
+            @param freq_per_sequence (OUT) state frequencies for each sequence, of size num_states*num_freq
+     */
+    void computeStateFreqPerSequence (double *freq_per_sequence);
+
+    void countStatePerSequence (unsigned *count_per_sequence);
+
+    /**
      * Make all frequencies a little different and non-zero
      * @param stateFrqArr (IN/OUT) state frequencies
      */
@@ -569,6 +586,9 @@ public:
      */
     double frac_const_sites;
 
+    /** number of informative sites */
+    int num_informative_sites;
+    
 	/**
 	 *  map from 64 codon to non-stop codon index
 	 */

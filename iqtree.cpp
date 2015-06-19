@@ -275,10 +275,12 @@ IQTree::~IQTree() {
     	aligned_free(boot_samples[0]); // free memory
 }
 
+extern const char *aa_model_names_rax[];
+
 void IQTree::createPLLPartition(Params &params, ostream &pllPartitionFileHandle) {
     if (isSuperTree()) {
         PhyloSuperTree *siqtree = (PhyloSuperTree*) this;
-        // additional check for stupid PLL hard limit
+        // additional check for PLL hard limit
         if (siqtree->size() > PLL_NUM_BRANCHES)
         	outError("Number of partitions exceeds PLL limit, please increase PLL_NUM_BRANCHES constant in pll.h");
         int i = 0;
@@ -294,7 +296,16 @@ void IQTree::createPLLPartition(Params &params, ostream &pllPartitionFileHandle)
                             substr(0, siqtree->part_info[i - 1].model_name.find_first_of("+{"));
                     if (modelStr == "LG4")
                         modelStr = "LG4M";
-                    pllPartitionFileHandle << modelStr;
+                    bool name_ok = false;
+                    for (int j = 0; j < 18; j++)
+                        if (modelStr == aa_model_names_rax[j]) {
+                            name_ok = true;
+                            break;
+                        }
+                    if (name_ok)
+                        pllPartitionFileHandle << modelStr;
+                    else
+                        pllPartitionFileHandle << "WAG";                    
                 } else {
                     pllPartitionFileHandle << "WAG";
                 }
@@ -322,13 +333,16 @@ void IQTree::createPLLPartition(Params &params, ostream &pllPartitionFileHandle)
     }
 }
 
-void IQTree::computeInitialTree(string &dist_file) {
+void IQTree::computeInitialTree(string &dist_file, LikelihoodKernel kernel) {
     double start = getCPUTime();
     string initTree;
     string out_file = params->out_prefix;
+    int score;
     if (params->stop_condition == SC_FIXED_ITERATION && params->numNNITrees > params->min_iterations)
     	params->numNNITrees = params->min_iterations;
     int fixed_number = 0;
+    setParsimonyKernel(kernel);
+    
     if (params->user_file) {
         // start the search with user-defined tree
         cout << "Reading input tree file " << params->user_file << " ..." << endl;
@@ -351,11 +365,20 @@ void IQTree::computeInitialTree(string &dist_file) {
     } else switch (params->start_tree) {
     case STT_PARSIMONY:
         // Create parsimony tree using IQ-Tree kernel
-        cout << "Creating initial parsimony tree by random order stepwise addition..." << endl;
-        computeParsimonyTree(params->out_prefix, aln);
+        if (kernel == LK_EIGEN_SSE)
+            cout << "Creating fast SIMD initial parsimony tree by random order stepwise addition..." << endl;
+        else if (kernel == LK_EIGEN)
+            cout << "Creating fast initial parsimony tree by random order stepwise addition..." << endl;
+        else
+            cout << "Creating initial parsimony tree by random order stepwise addition..." << endl;
+//        aln->orderPatternByNumChars();
+        start = getRealTime();
+        score = computeParsimonyTree(params->out_prefix, aln);
+        cout << getRealTime() - start << " seconds, parsimony score: " << score
+        	<< " (based on " << aln->num_informative_sites << " informative sites)"<< endl;
 //		if (params->pll)
 //			pllReadNewick(getTreeString());
-	    wrapperFixNegativeBranch(true);
+	    wrapperFixNegativeBranch(false);
 
         break;
     case STT_PLL_PARSIMONY:
@@ -408,8 +431,25 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
     //int numDup = 0;
     cout << "Generating " << nParTrees - 1 << " parsimony trees... ";
     cout.flush();
-    double startTime = getCPUTime();
+    double startTime = getRealTime();
     int numDupPars = 0;
+#ifdef _OPENMP
+    StrVector pars_trees;
+    if (params->start_tree == STT_PARSIMONY && nParTrees > 1) {
+        pars_trees.resize(nParTrees-1);
+        #pragma omp parallel
+        {
+            PhyloTree tree;
+            tree.setParams(params);
+            tree.setParsimonyKernel(params->SSE);
+            #pragma omp for
+            for (int i = 1; i < nParTrees; i++) {
+                tree.computeParsimonyTree(NULL, aln);
+                pars_trees[i-1] = tree.getTreeString();
+            }
+        }
+    }
+#endif
     for (int treeNr = 1; treeNr < nParTrees; treeNr++) {
         string curParsTree;
 
@@ -427,8 +467,12 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
 			curParsTree = getTreeString();
         } else {
             /********* Create parsimony tree using IQ-TREE *********/
+#ifdef _OPENMP
+            curParsTree = pars_trees[treeNr-1];
+#else
             computeParsimonyTree(NULL, aln);
             curParsTree = getTreeString();
+#endif
         }
 
         if (candidateTrees.treeExist(curParsTree)) {
@@ -448,11 +492,11 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
         	candidateTrees.update(curParsTree, -DBL_MAX, false);
         }
     }
-    double parsTime = getCPUTime() - startTime;
+    double parsTime = getRealTime() - startTime;
     cout << "(" << numDupPars << " duplicated parsimony trees)" << endl;
-    cout << "CPU time: " << parsTime << endl;
+    cout << "Time: " << parsTime << endl;
     cout << "Computing logl of parsimony trees ... " << endl;
-    startTime = getCPUTime();
+    startTime = getRealTime();
 
     /************ Compute logl of all parsimony trees ********************/
     vector<string> unOptParTrees = candidateTrees.getTopTrees(nParTrees);
@@ -467,9 +511,9 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
 		candidateTrees.update(tree, getCurScore(), false);
     }
     //exit(0);
-    double loglTime = getCPUTime() - startTime;
+    double loglTime = getRealTime() - startTime;
     if (unOptParTrees.size() > 1) {
-    	cout << "Average CPU time for computing logl of 1 parsimony tree: " << loglTime / (unOptParTrees.size()-1)<< endl;
+    	cout << "Average wall time for computing logl of 1 parsimony tree: " << loglTime / (unOptParTrees.size()-1)<< endl;
     }
 
     // Only select the best nNNITrees for doing NNI search
@@ -940,6 +984,7 @@ void IQTree::assessQuartets(vector<RepresentLeafSet*> &leaves_vec, PhyloNode *cu
 }
 
 void IQTree::reinsertLeavesByParsimony(PhyloNodeVector &del_leaves) {
+    assert(0 && "this function is obsolete");
     PhyloNodeVector::iterator it_leaf;
     assert(root->isLeaf());
     for (it_leaf = del_leaves.begin(); it_leaf != del_leaves.end(); it_leaf++) {
@@ -966,7 +1011,9 @@ void IQTree::reinsertLeavesByParsimony(PhyloNodeVector &del_leaves) {
         added_node->updateNeighbor(node1, (Node*) 1);
         added_node->updateNeighbor(node2, (Node*) 2);
 
-        addTaxonMPFast(added_node, target_node, target_dad, root->neighbors[0]->node, root);
+        best_pars_score = INT_MAX;
+        // TODO: this needs to be adapted
+//        addTaxonMPFast(added_node, target_node, target_dad, NULL, root->neighbors[0]->node, root);
         target_node->updateNeighbor(target_dad, added_node, -1.0);
         target_dad->updateNeighbor(target_node, added_node, -1.0);
         added_node->updateNeighbor((Node*) 1, target_node, -1.0);
@@ -1511,11 +1558,11 @@ double IQTree::perturb(int times) {
 //extern "C" pllUFBootData * pllUFBootDataPtr;
 extern pllUFBootData * pllUFBootDataPtr;
 
-string IQTree::optimizeModelParameters(bool printInfo, double epsilon) {
-	if (epsilon == -1)
-		epsilon = params->modeps;
-	cout << "Estimate model parameters (epsilon = " << epsilon << ")" << endl;
-	double stime = getCPUTime();
+string IQTree::optimizeModelParameters(bool printInfo, double logl_epsilon) {
+	if (logl_epsilon == -1)
+		logl_epsilon = params->modeps;
+	cout << "Estimate model parameters (epsilon = " << logl_epsilon << ")" << endl;
+	double stime = getRealTime();
 	string newTree;
 	if (params->pll) {
 		if (curScore == -DBL_MAX) {
@@ -1524,7 +1571,7 @@ string IQTree::optimizeModelParameters(bool printInfo, double epsilon) {
 		} else {
 			pllEvaluateLikelihood(pllInst, pllPartitions, pllInst->start, PLL_FALSE, PLL_FALSE);
 		}
-		pllOptimizeModelParameters(pllInst, pllPartitions, epsilon);
+		pllOptimizeModelParameters(pllInst, pllPartitions, logl_epsilon);
 		curScore = pllInst->likelihood;
 		pllTreeToNewick(pllInst->tree_string, pllInst, pllPartitions,
 				pllInst->start->back, PLL_TRUE,
@@ -1541,7 +1588,7 @@ string IQTree::optimizeModelParameters(bool printInfo, double epsilon) {
 //			clearAllPartialLH();
 //			lhComputed = true;
 //		}
-		double modOptScore = getModelFactory()->optimizeParameters(params->fixed_branch_length, printInfo, epsilon);
+		double modOptScore = getModelFactory()->optimizeParameters(params->fixed_branch_length, printInfo, logl_epsilon);
 		if (isSuperTree()) {
 			((PhyloSuperTree*) this)->computeBranchLengths();
 		}
@@ -1560,8 +1607,10 @@ string IQTree::optimizeModelParameters(bool printInfo, double epsilon) {
 			curScore = modOptScore;
 			newTree = getTreeString();
 		}
+        if (params->print_site_posterior)
+            computePatternCategories();
 	}
-	double etime = getCPUTime();
+	double etime = getRealTime();
 	cout << etime - stime << " seconds (logl: " << curScore << ")" << endl;
 	return newTree;
 }
@@ -1878,6 +1927,8 @@ string IQTree::doNNISearch(int& nniCount, int& nniSteps) {
             ((PhyloSuperTree*) this)->computeBranchLengths();
         }
         treeString = getTreeString();
+        if (params->print_site_posterior)
+            computePatternCategories();
     }
     return treeString;
 }
@@ -2013,6 +2064,9 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
             restoreAllBrans();
             // This is important because after restoring the branch lengths, all partial
             // likelihood need to be cleared.
+//            if (params->lh_mem_save == LM_PER_NODE) {
+//                initializeAllPartialLh();
+//            } else
             clearAllPartialLH();
             
             // UPDATE: the following is not needed as clearAllPartialLH() is now also defined for SuperTree
@@ -2229,6 +2283,9 @@ void IQTree::doNNIs(int nni2apply, bool changeBran) {
             changeNNIBrans(nonConfNNIs.at(i));
         }
     }
+//    if (params->lh_mem_save == LM_PER_NODE) {
+//        initializeAllPartialLh();
+//    }
 }
 
 
@@ -2562,16 +2619,15 @@ void IQTree::saveCurrentTree(double cur_logl) {
     } else {
         // online bootstrap
         int ptn;
-        int updated = 0;
+//        int updated = 0;
         int nsamples = boot_samples.size();
 
+        #ifdef _OPENMP
+        #pragma omp parallel for
+        #endif
         for (int sample = 0; sample < nsamples; sample++) {
             double rell = 0.0;
 
-            // TODO: The following parallel is not very efficient, should wrap the above loop
-//#ifdef _OPENMP
-//#pragma omp parallel for reduction(+: rell)
-//#endif
             if (false) {
             	BootValType *boot_sample = boot_samples[sample];
             	BootValType rellll = 0.0;
@@ -2587,10 +2643,19 @@ void IQTree::saveCurrentTree(double cur_logl) {
 				rell = res;
             }
 
-            if (rell > boot_logl[sample] + params->ufboot_epsilon
-                    || (rell > boot_logl[sample] - params->ufboot_epsilon
-                            && random_double() <= 1.0 / (boot_counts[sample] + 1))) {
-                if (tree_str == "") {
+            bool better = rell > boot_logl[sample] + params->ufboot_epsilon;
+            if (!better && rell > boot_logl[sample] - params->ufboot_epsilon) {
+                #ifdef _OPENMP
+                #pragma omp critical
+                #endif
+                better = random_double() <= 1.0 / (boot_counts[sample] + 1);
+            }
+            if (better) {
+                if (tree_str == "") 
+                #ifdef _OPENMP
+                #pragma omp critical
+                #endif
+                {
                     printTree(ostr, WT_TAXON_ID | WT_SORT_TAXA);
                     tree_str = ostr.str();
                     it = treels.find(tree_str);
@@ -2608,13 +2673,13 @@ void IQTree::saveCurrentTree(double cur_logl) {
                 }
                 boot_logl[sample] = max(boot_logl[sample], rell);
                 boot_trees[sample] = tree_index;
-                updated++;
+//                updated++;
             } /*else if (verbose_mode >= VB_MED && rell > boot_logl[sample] - 0.01) {
              cout << "Info: multiple RELL score trees detected" << endl;
              }*/
         }
-        if (updated && verbose_mode >= VB_MAX)
-            cout << updated << " boot trees updated" << endl;
+//        if (updated && verbose_mode >= VB_MAX)
+//            cout << updated << " boot trees updated" << endl;
         /*
          if (tree_index >= max_candidate_trees/2 && boot_splits->empty()) {
          // summarize split support half way for stopping criterion

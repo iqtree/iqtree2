@@ -739,6 +739,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.lk_no_avx = false;
     params.print_site_lh = 0;
     params.print_site_rate = false;
+    params.print_site_posterior = 0;
     params.print_tree_lh = false;
     params.lambda = 1;
     params.speed_conf = 1.0;
@@ -830,6 +831,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.num_threads = 1;
 #endif
     params.model_test_criterion = MTC_BIC;
+    params.model_test_stop_rule = MTC_ALL;
     params.model_test_sample_size = 0;
     params.root_state = NULL;
     params.print_bootaln = false;
@@ -840,7 +842,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 	// params.pomo_counts_file_flag = false;
 	// params.pomo_pop_size = 10;
 	params.print_branch_lengths = false;
-	params.lh_mem_save = LM_DETECT; // auto detect
+	params.lh_mem_save = LM_PER_NODE; // auto detect
 	params.start_tree = STT_PLL_PARSIMONY;
 	params.print_splits_file = false;
     params.ignore_identical_seqs = true;
@@ -2049,6 +2051,10 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.print_site_rate = true;
 				continue;
 			}
+			if (strcmp(argv[cnt], "-wsp") == 0) {
+				params.print_site_posterior = 1;
+				continue;
+			}
 			if (strcmp(argv[cnt], "-wba") == 0) {
 				params.print_bootaln = true;
 				continue;
@@ -2589,8 +2595,21 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.model_test_criterion = MTC_AIC;
 				continue;
 			}
-			if (strcmp(argv[cnt], "-AICc") == 0) {
+			if (strcmp(argv[cnt], "-AICc") == 0 || strcmp(argv[cnt], "-AICC") == 0) {
 				params.model_test_criterion = MTC_AICC;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-merit") == 0) {
+                cnt++;
+				if (cnt >= argc)
+					throw "Use -merit AIC|AICC|BIC";
+                if (strcmp(argv[cnt], "AIC") == 0)
+                    params.model_test_stop_rule = MTC_AIC;
+                else if (strcmp(argv[cnt], "AICc") == 0 || strcmp(argv[cnt], "AICC") == 0)
+                    params.model_test_stop_rule = MTC_AICC;
+                else if (strcmp(argv[cnt], "BIC") == 0)
+                    params.model_test_stop_rule = MTC_BIC;
+                else throw "Use -merit AIC|AICC|BIC";
 				continue;
 			}
 			if (strcmp(argv[cnt], "-ms") == 0) {
@@ -2821,9 +2840,10 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "                       (e.g. -mrate E,I,G,I+G,R)" << endl
             << "  -cmin <kmin>         Min #categories for FreeRate model [+R] (default: 2)" << endl
             << "  -cmax <kmax>         Max #categories for FreeRate model [+R] (default: 10)" << endl
+            << "  –merit AIC|AICc|BIC  Optimality criterion to use (default: all)" << endl
 //            << "  -msep                Perform model selection and then rate selection" << endl
-            << "  -mtree               Do a full tree search for each model considered" << endl
-            << "  -mredo               Ignore model results computed earlier (default: not ignore)" << endl
+            << "  -mtree               Performing full tree search for each model considered" << endl
+            << "  -mredo               Ignoring model results computed earlier (default: no)" << endl
             << "  -mdef <nexus_file>   A model definition NEXUS file (see Manual)" << endl
 
             << endl << "SUBSTITUTION MODEL:" << endl
@@ -2855,13 +2875,16 @@ void usage_iqtree(char* argv[], bool full_command) {
             << endl
 
             << "POLYMORPHISM AWARE MODELS (PoMo):"                                                   << endl
+            << "PoMo is run when"                                                                    << endl
+            << "- a Counts File is used as input file, and/or when"                                  << endl
+            << "- it is specified in the model string (see below)."                                  << endl
             << "  -st CF or CFps       Counts File (automatically detected)."                        << endl
             << "                       Useful to customize the virtual population size `ps`"         << endl
             << "                       (5 <= ps <= 20; default is 10)."                              << endl
             << "  -m <sm>+<pm>+<ft>    Default: `HKY+rP+FO`."                                        << endl
             << "                 <sm>: Substitution model."                                          << endl
             << "                  DNA: HKY (default), JC, F81, K2P, K3P, K81uf, TN/TrN, TNef,"       << endl
-            << "                       TIM, TIMef, TVM, TVMef, SYM, GTR, or 6-digit model"           << endl
+            << "                       TIM, TIMef, TVM, TVMef, SYM, GTR, or a 6-digit model"         << endl
             << "                       specification (e.g., 010010 = HKY)."                          << endl
             << "                 <pm>: PoMo model."                                                  << endl
             << "                       - rP (default; reversible PoMo with tree inference)."         << endl
@@ -2870,8 +2893,9 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "                 <ft>: Frequency type (optional; default: +FO, optimized)."          << endl
             << "                       F or +FO or +FU or +FQ."                                      << endl
             << "                       Counted, optimized, user-defined, equal state frequency."     << endl
+            << "                       This overwrites the specifications of the DNA model."         << endl
             << "  The default model string is: -m HKY+rP+FO."                                        << endl
-            << "  Until now, only DNA models work with PoM."                                         << endl
+            << "  Until now, only DNA models work with PoMo."                                        << endl
             << "  Model testing and rate heterogeneity do not work with PoMo yet."                   << endl
 
             << endl << "RATE HETEROGENEITY:" << endl
@@ -3361,3 +3385,35 @@ void trimString(string &str) {
     str.erase(str.find_last_not_of(" \n\r\t")+1);
 }
 
+
+int countPhysicalCPUCores() {
+    uint32_t registers[4];
+    unsigned logicalcpucount;
+    unsigned physicalcpucount;
+#if defined(_WIN32) || defined(WIN32)
+    SYSTEM_INFO systeminfo;
+    GetSystemInfo( &systeminfo );
+    logicalcpucount = systeminfo.dwNumberOfProcessors;
+#else
+    logicalcpucount = sysconf( _SC_NPROCESSORS_ONLN );
+#endif
+    return logicalcpucount;
+    
+    if (logicalcpucount % 2 != 0)
+        return logicalcpucount;
+    __asm__ __volatile__ ("cpuid " :
+                          "=a" (registers[0]),
+                          "=b" (registers[1]),
+                          "=c" (registers[2]),
+                          "=d" (registers[3])
+                          : "a" (1), "c" (0));
+
+    unsigned CPUFeatureSet = registers[3];
+    bool hyperthreading = CPUFeatureSet & (1 << 28);    
+    if (hyperthreading){
+        physicalcpucount = logicalcpucount / 2;
+    } else {
+        physicalcpucount = logicalcpucount;
+    }
+    return physicalcpucount;
+}

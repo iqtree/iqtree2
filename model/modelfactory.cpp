@@ -112,7 +112,7 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 		else if (tree->aln->seq_type == SEQ_BINARY) model_str = "GTR2";
 		else if (tree->aln->seq_type == SEQ_CODON) model_str = "GY";
 		else if (tree->aln->seq_type == SEQ_MORPH) model_str = "MK";
-        else if (tree->aln->seq_type == SEQ_COUNTSFORMAT) model_str = "HKY+rP+FO";
+        else if (tree->aln->seq_type == SEQ_COUNTSFORMAT) model_str = "HKY+rP";
 		else model_str = "JC";
         outWarning("Default model may be under-fitting. Use option '-m TEST' to select best-fit model.");
 	}
@@ -201,9 +201,7 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 		case SEQ_PROTEIN: freq_type = FREQ_USER_DEFINED; break; // default for protein: frequencies of the empirical AA matrix
 		case SEQ_MORPH: freq_type = FREQ_EQUAL; break;
 		case SEQ_CODON: freq_type = FREQ_UNKNOWN; break;
-        case SEQ_COUNTSFORMAT:
-            // Default for PoMo; PoMo handles the different frequency types.
-            freq_type = FREQ_ESTIMATE;
+        case SEQ_COUNTSFORMAT: freq_type = FREQ_UNKNOWN;
             break;
 		default: freq_type = FREQ_EMPIRICAL; break; // default for DNA and others: counted frequencies from alignment
 		}
@@ -315,7 +313,7 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 				model_list = model_str.substr(4, model_str.length()-5);
 				model_str = model_str.substr(0, 3);
 			}
-			model = new ModelMixture(model_str, model_list, models_block, freq_type, freq_params, tree, optimize_mixmodel_weight);
+			model = new ModelMixture(params.model_name, model_str, model_list, models_block, freq_type, freq_params, tree, optimize_mixmodel_weight);
 		} else {
 //			string model_desc;
 //			NxsModel *nxsmodel = models_block->findModel(model_str);
@@ -424,8 +422,13 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 //			fused_mix_rate = true;
 //	}
 	if (posG != string::npos && posR != string::npos) {
-		outWarning("Both Gamma and FreeRate models were specified, continue with FreeRate model");
-        posG = string::npos;
+        if (posG == posG2 && posR != posR2) {
+            outWarning("Both Gamma and FreeRate models were specified, continue with Gamma model because *G has higher priority than +R");
+            posR = string::npos;
+        } else {
+            outWarning("Both Gamma and FreeRate models were specified, continue with FreeRate model");
+            posG = string::npos;
+        }
     }
 	string::size_type posX;
 	/* create site-rate heterogeneity */
@@ -644,10 +647,10 @@ void ModelFactory::readSiteFreq(Alignment *aln, char* site_freq_file, IntVector 
 	}
 }
 
-double ModelFactory::optimizeParametersOnly(double epsilon) {
+double ModelFactory::optimizeParametersOnly(double gradient_epsilon) {
 	if (!joint_optimize) {
-		double model_lh = model->optimizeParameters(epsilon);
-		double rate_lh = site_rate->optimizeParameters(epsilon);
+		double model_lh = model->optimizeParameters(gradient_epsilon);
+		double rate_lh = site_rate->optimizeParameters(gradient_epsilon);
 		if (rate_lh == 0.0)
 			return model_lh;
 		return rate_lh;
@@ -683,7 +686,7 @@ double ModelFactory::optimizeParametersOnly(double epsilon) {
 	// setup the bounds for site_rate
 	site_rate->setBounds(lower_bound+model_ndim, upper_bound+model_ndim, bound_check+model_ndim);
 
-	score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound, bound_check, max(epsilon, TOL_RATE));
+	score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound, bound_check, max(gradient_epsilon, TOL_RATE));
 
 	getVariables(variables);
 	//if (freq_type == FREQ_ESTIMATE) scaleStateFreq(true);
@@ -700,13 +703,13 @@ double ModelFactory::optimizeParametersOnly(double epsilon) {
 
 
 
-double ModelFactory::optimizeParameters(bool fixed_len, bool write_info, double logl_epsilon) {
+double ModelFactory::optimizeParameters(bool fixed_len, bool write_info, double logl_epsilon, double gradient_epsilon) {
 	assert(model);
 	assert(site_rate);
 
 	//time_t begin_time, cur_time;
 	//time(&begin_time);
-	double begin_time = getCPUTime();
+	double begin_time = getRealTime();
 	double cur_lh;
 	PhyloTree *tree = site_rate->getTree();
 	assert(tree);
@@ -729,8 +732,10 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info, double 
 
 	int i;
 	//bool optimize_rate = true;
-	double param_epsilon = logl_epsilon; // epsilon for parameters starts at epsilon for logl
-	for (i = 2; i < 100; i++, param_epsilon/=4.0) {
+//	double gradient_epsilon = min(logl_epsilon, 0.01); // epsilon for parameters starts at epsilon for logl
+	for (i = 2; i < 100; i++) {
+//        if (gradient_epsilon < 0.001)
+//            gradient_epsilon = 0.001;
 		/*
 		double model_lh = model->optimizeParameters(param_epsilon);
 		double rate_lh = 0.0;
@@ -744,7 +749,7 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info, double 
 		}
 		double new_lh = (rate_lh != 0.0) ? rate_lh : model_lh;
 		*/
-		double new_lh = optimizeParametersOnly(param_epsilon);
+		double new_lh = optimizeParametersOnly(gradient_epsilon);
 		if (new_lh == 0.0) {
 			if (!fixed_len) cur_lh = tree->optimizeAllBranches(100, logl_epsilon);
 			break;
@@ -756,8 +761,8 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info, double 
 		if (!fixed_len)
 			new_lh = tree->optimizeAllBranches(min(i,3), logl_epsilon);  // loop only 3 times in total (previously in v0.9.6 5 times)
 		if (new_lh > cur_lh + logl_epsilon) {
-			if (param_epsilon > (new_lh - cur_lh) * logl_epsilon)
-				param_epsilon = (new_lh - cur_lh) * logl_epsilon;
+//			if (gradient_epsilon > (new_lh - cur_lh) * logl_epsilon)
+//				gradient_epsilon = (new_lh - cur_lh) * logl_epsilon;
 			cur_lh = new_lh;
 			if (verbose_mode >= VB_MED || write_info)
 				cout << i << ". Current log-likelihood: " << cur_lh << endl;
@@ -781,7 +786,7 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info, double 
 	}
 	//time(&cur_time);
 	//double elapsed_secs = difftime(cur_time,begin_time);
-	double elapsed_secs = getCPUTime() - begin_time;
+	double elapsed_secs = getRealTime() - begin_time;
 	if (write_info)
 		cout << "Parameters optimization took " << i-1 << " rounds (" << elapsed_secs << " sec)" << endl << endl;
 	startStoringTransMatrix();

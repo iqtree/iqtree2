@@ -164,6 +164,12 @@ public:
 	 */
 	void linkBranch(int part, SuperNeighbor *nei, SuperNeighbor *dad_nei);
 
+
+    /**
+            initialize partial_lh vector of all PhyloNeighbors, allocating central_partial_lh
+     */
+    virtual void initializeAllPartialLh();
+
     /**
             de-allocate central_partial_lh
      */
@@ -289,6 +295,8 @@ public:
             @return The number of branches that have no/negative length
      */
     virtual int fixNegativeBranch(bool force = false, Node *node = NULL, Node *dad = NULL);
+
+    virtual int computeParsimonyBranch(PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst = NULL);
 
     int totalNNIs, evalNNIs;
 

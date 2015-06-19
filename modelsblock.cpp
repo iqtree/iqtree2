@@ -81,9 +81,10 @@ NxsModel *ModelsBlock::findModel(string &name) {
 
 NxsModel *ModelsBlock::findMixModel(string &name) {
 	for (iterator it = begin(); it != end(); it++)
-		if (it->name == name)
+		if (it->name == name) {
             if ((it->flag & NM_ATOMIC) == 0) 
                 return &(*it);
             else return NULL;
+        }
 	return NULL;
 }

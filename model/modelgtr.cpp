@@ -22,6 +22,8 @@
 #include <assert.h>
 #include <string.h>
 
+//const double MIN_FREQ_RATIO = MIN_FREQUENCY;
+//const double MAX_FREQ_RATIO = 1.0/MIN_FREQUENCY;
 
 ModelGTR::ModelGTR(PhyloTree *tree, bool count_rates)
  : ModelSubst(tree->aln->num_states), EigenDecomposition()
@@ -31,6 +33,7 @@ ModelGTR::ModelGTR(PhyloTree *tree, bool count_rates)
 	int nrate = getNumRateEntries();
 	int ncoeff = num_states*num_states*num_states;
 	
+	highest_freq_state = num_states-1;
 	name = "GTR";
 	full_name = "GTR (Tavare, 1986)";
 	phylo_tree = tree;
@@ -108,6 +111,9 @@ void ModelGTR::init(StateFreqType type) {
 //			phylo_tree->aln->computeCodonFreq(state_freq);
 		} else
 			phylo_tree->aln->computeStateFreq(state_freq);
+		for (i = 0; i < num_states; i++)
+			if (state_freq[i] > state_freq[highest_freq_state])
+				highest_freq_state = i;
 		break;
 	case FREQ_USER_DEFINED:
 		if (state_freq[0] == 0.0) outError("State frequencies not specified");
@@ -373,8 +379,14 @@ void ModelGTR::setVariables(double *variables) {
 	if (nrate > 0)
 		memcpy(variables+1, rates, nrate*sizeof(double));
 	if (freq_type == FREQ_ESTIMATE) {
+		int i, j;
+		for (i = 0, j = 1; i < num_states; i++)
+			if (i != highest_freq_state) {
+				variables[nrate+j] = state_freq[i] / state_freq[highest_freq_state];
+				j++;
+			}
 		//scaleStateFreq(false);
-		memcpy(variables+nrate+1, state_freq, (num_states-1)*sizeof(double));
+//		memcpy(variables+nrate+1, state_freq, (num_states-1)*sizeof(double));
 		//scaleStateFreq(true);
 	}
 }
@@ -386,14 +398,24 @@ void ModelGTR::getVariables(double *variables) {
 		memcpy(rates, variables+1, nrate * sizeof(double));
 
 	if (freq_type == FREQ_ESTIMATE) {
-		memcpy(state_freq, variables+nrate+1, (num_states-1)*sizeof(double));
+//		memcpy(state_freq, variables+nrate+1, (num_states-1)*sizeof(double));
 		//state_freq[num_states-1] = 0.1;
 		//scaleStateFreq(true);
 
-		double sum = 0.0;
-		for (int i = 0; i < num_states-1; i++) 
-			sum += state_freq[i];
-		state_freq[num_states-1] = 1.0 - sum;
+//		double sum = 0.0;
+//		for (int i = 0; i < num_states-1; i++)
+//			sum += state_freq[i];
+//		state_freq[num_states-1] = 1.0 - sum;
+		double sum = 1.0;
+		int i, j;
+		for (i = 1; i < num_states; i++)
+			sum += variables[nrate+i];
+		for (i = 0, j = 1; i < num_states; i++)
+			if (i != highest_freq_state) {
+				state_freq[i] = variables[nrate+j] / sum;
+				j++;
+			}
+		state_freq[highest_freq_state] = 1.0/sum;
 	}
 }
 
@@ -429,12 +451,15 @@ void ModelGTR::setBounds(double *lower_bound, double *upper_bound, bool *bound_c
 	}
 
 	if (freq_type == FREQ_ESTIMATE) {
-		for (i = ndim-num_states+2; i <= ndim; i++)
-			upper_bound[i] = 1.0;
+		for (i = ndim-num_states+2; i <= ndim; i++) {
+            lower_bound[i] = MIN_FREQUENCY/state_freq[highest_freq_state];
+			upper_bound[i] = state_freq[highest_freq_state]/MIN_FREQUENCY;
+            bound_check[i] = false;
+        }
 	}
 }
 
-double ModelGTR::optimizeParameters(double epsilon) {
+double ModelGTR::optimizeParameters(double gradient_epsilon) {
 	int ndim = getNDim();
 	
 	// return if nothing to be optimized
@@ -451,11 +476,15 @@ double ModelGTR::optimizeParameters(double epsilon) {
 	bool *bound_check = new bool[ndim+1];
 	double score;
 
+    for (int i = 0; i < num_states; i++)
+        if (state_freq[i] > state_freq[highest_freq_state])
+            highest_freq_state = i;
+
 	// by BFGS algorithm
 	setVariables(variables);
 	setBounds(lower_bound, upper_bound, bound_check);
 	//packData(variables, lower_bound, upper_bound, bound_check);
-	score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound, bound_check, max(epsilon, TOL_RATE));
+	score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound, bound_check, max(gradient_epsilon, TOL_RATE));
 
 	getVariables(variables);
 	//if (freq_type == FREQ_ESTIMATE) scaleStateFreq(true);

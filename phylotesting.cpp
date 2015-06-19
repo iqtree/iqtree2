@@ -94,7 +94,8 @@ short int std_genetic_code[]    = {   0,    0,     0,        1,        1};
 
 const char *codon_freq_names[] = {"", "+F1X4", "+F3X4", "+F"};
 
-const double TOL_LIKELIHOOD_MODELTEST = 0.01;
+const double TOL_LIKELIHOOD_MODELTEST = 0.1;
+const double TOL_GRADIENT_MODELTEST   = 0.01;
 
 /**
  * copy from cvec to strvec
@@ -237,13 +238,16 @@ void printSiteLh(const char*filename, PhyloTree *tree, double *ptn_lh,
 }
 
 void printSiteLhCategory(const char*filename, PhyloTree *tree) {
+    // TODO: mixture model!
+    if (tree->getModel()->isMixture() && !tree->getModelFactory()->fused_mix_rate)
+        outError("Unsupported feature, please contact author if you really need this", __func__);
 	double *pattern_lh, *pattern_lh_cat;
 	int i;
 	int discrete_cat = tree->getRate()->getNDiscreteRate();
 	pattern_lh = new double[tree->getAlnNPattern()];
 	pattern_lh_cat = new double[tree->getAlnNPattern()*(discrete_cat)];
 	tree->computePatternLikelihood(pattern_lh, NULL, pattern_lh_cat);
-
+        
 	try {
 		ofstream out;
 		out.exceptions(ios::failbit | ios::badbit);
@@ -870,6 +874,11 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
         if (mem_size >= getMemorySize()) {
             outError("Memory required exceeds your computer RAM size!");
         }
+#ifdef BINARY32
+        if (mem_size >= 2000000000) {
+            outError("Memory required exceeds 2GB limit of 32-bit executable");
+        }
+#endif
     }
 
 
@@ -1007,6 +1016,7 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
                 case MTC_BIC:
                     best_model = model_info[model_bic].name;
                     break;
+                default: assert(0);
                 }
             model_names[model] = best_model + model_names[model];
         }
@@ -1132,7 +1142,7 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
                 if (prev_tree_string != "")
                     tree->readTreeString(prev_tree_string);
                 prev_tree_string = "";
-                info.logl = tree->getModelFactory()->optimizeParameters(false, false, TOL_LIKELIHOOD_MODELTEST);
+                info.logl = tree->getModelFactory()->optimizeParameters(false, false, TOL_LIKELIHOOD_MODELTEST, TOL_GRADIENT_MODELTEST);
             }
 			// print information to .model file
 			if (!fmodel.is_open()) {
@@ -1185,11 +1195,32 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
             size_t prev_pos_r = model_info[prev_model_id].name.find("+R");
             size_t pos_r = info.name.find("+R");
             if ( prev_pos_r != string::npos &&  pos_r != string::npos && model_info[prev_model_id].name.substr(0,prev_pos_r) == info.name.substr(0, pos_r)) {
-                if (info.AIC_score > model_info[prev_model_id].AIC_score && info.AICc_score > model_info[prev_model_id].AICc_score &&
-                    info.BIC_score > model_info[prev_model_id].BIC_score) {
-                    // skip remaining model
-                    skip_model++;
-//                    cout << "Skip next model" << endl;
+                switch (params.model_test_stop_rule) {
+                case MTC_ALL:
+                    if (info.AIC_score > model_info[prev_model_id].AIC_score && info.AICc_score > model_info[prev_model_id].AICc_score &&
+                        info.BIC_score > model_info[prev_model_id].BIC_score) {
+                        // skip remaining model
+                        skip_model++;
+                    }
+                    break;
+                case MTC_AIC:
+                    if (info.AIC_score > model_info[prev_model_id].AIC_score) {
+                        // skip remaining model
+                        skip_model++;
+                    }
+                    break;
+                case MTC_AICC:
+                    if (info.AICc_score > model_info[prev_model_id].AICc_score) {
+                        // skip remaining model
+                        skip_model++;
+                    }
+                    break;
+                case MTC_BIC:
+                    if (info.BIC_score > model_info[prev_model_id].BIC_score) {
+                        // skip remaining model
+                        skip_model++;
+                    }
+                    break;
                 }
             }
         }
@@ -1340,6 +1371,7 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 			scores[model] = model_info[model].BIC_score;
 		best_model = model_info[model_bic].name;
 		break;
+    default: assert(0);
 	}
 	sort_index(scores, scores + model_info.size(), model_rank);
 

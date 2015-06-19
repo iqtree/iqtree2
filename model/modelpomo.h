@@ -95,6 +95,63 @@ class ModelPoMo : public ModelGTR
 	virtual bool isUnstableParameters();
 
     virtual bool isPolymorphismAware() { return true; };
+
+    /** 
+     * Set the substitution rate parameters by a specification.  From
+     * ModelDNA::setRateType().
+     *
+     * Sets the array #mutation_prob and the vector #param_fixed.
+     * 
+     * @param rate_spec a string of six letters describing how rates are related
+     * @return TRUE if successful, FALSE otherwise
+     */
+	bool setRateType(const char *rate_spec);
+    
+    /**
+     *  @return the number of rate entries
+     */
+	virtual int getNumRateEntries() { return nnuc*(nnuc-1)/2; };
+
+    /** 
+     * Read state frequencies from an input stream.  If it fails,
+     * throw error message.
+     * 
+     * @param in input stream
+     */
+    void readFixedStateFreq(istream &in);
+
+    /** 
+     * Read state frequencies from comma-separated string.  Might
+     * throw error message.
+     * 
+     * @param str 
+     */
+    void readFixedStateFreq(string str);
+
+    /** 
+     * Read model parameters from a file.  The file needs to contain
+     * the upper-triangle rate matrix and the state frequencies.
+     * 
+     * @param file_name 
+     */
+    void readMutationParameters(const char *file_name);
+
+    /** 
+     * Read the upper-triangle rate matrix from an input stream.
+     * Throw error message if failing.
+     * 
+     * @param in input stream
+     */
+    void readMutationRates(istream &in);
+
+    /** 
+     * Read rate parameters from a comma-separated string.  Throw
+     * error message if failing.
+     * 
+     * @param str input string
+     */
+    void readMutationRates(string str);
+
  protected:
 
  	/**
@@ -125,6 +182,10 @@ class ModelPoMo : public ModelGTR
 
 
  private:
+
+    /// Virtual population size of the PoMo model.
+    int N;
+
     /**
      * Mutation probabilities, 6 entries for reversible model.
      */
@@ -232,6 +293,19 @@ class ModelPoMo : public ModelGTR
      */
     double eps;
 
+    /// Rate parameter specification, a string of 6 characters.  E.g.,
+    /// for the HKY model, it will be set to '010010' by
+    /// SetRateType().
+	string param_spec;
+
+    /// Vector of boolean, TRUE if correspodning parameter is fixed
+    /// and FALSE otherwise.  Set by SetRateType().
+    vector<bool> param_fixed;
+
+    /// Number of nucleotides (alleles).  This might be useful in the
+    /// future, when we do not restrict PoMo to DNA models only.
+    /// Eventual todo: do not hardcode this.
+    int nnuc;
 };
 
 #endif /* _MODELPOMO_H_ */

@@ -128,12 +128,14 @@ void PhyloSuperTree::readPartitionRaxml(Params &params) {
             bool is_ASC = info.model_name.substr(0,4) == "ASC_";
             if (is_ASC) info.model_name.erase(0, 4);
             StateFreqType freq = FREQ_UNKNOWN;
-            if (*info.model_name.rbegin() == 'F' && info.model_name != "DAYHOFF") {
-                freq = FREQ_EMPIRICAL;
-                info.model_name.erase(info.model_name.length()-1);
-            } else if (*info.model_name.rbegin() == 'X' && info.model_name != "LG4X") {
-                freq = FREQ_ESTIMATE;
-                info.model_name.erase(info.model_name.length()-1);
+            if (info.model_name.find_first_of("*+{") == string::npos ) {
+                if (*info.model_name.rbegin() == 'F' && info.model_name != "DAYHOFF") {
+                    freq = FREQ_EMPIRICAL;
+                    info.model_name.erase(info.model_name.length()-1);
+                } else if (*info.model_name.rbegin() == 'X' && info.model_name != "LG4X") {
+                    freq = FREQ_ESTIMATE;
+                    info.model_name.erase(info.model_name.length()-1);
+                }
             }
             
             if (info.model_name.empty())
@@ -658,6 +660,13 @@ void PhyloSuperTree::linkTrees() {
 	}
 }
 
+void PhyloSuperTree::initializeAllPartialLh() {
+	for (iterator it = begin(); it != end(); it++) {
+		(*it)->initializeAllPartialLh();
+	}
+}
+
+
 void PhyloSuperTree::deleteAllPartialLh() {
 	for (iterator it = begin(); it != end(); it++) {
 		(*it)->deleteAllPartialLh();
@@ -669,6 +678,29 @@ void PhyloSuperTree::clearAllPartialLH(bool make_null) {
         (*it)->clearAllPartialLH(make_null);
     }
 }
+
+int PhyloSuperTree::computeParsimonyBranch(PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst) {
+    int score = 0, part = 0;
+    SuperNeighbor *dad_nei = (SuperNeighbor*)dad_branch;
+    SuperNeighbor *node_nei = (SuperNeighbor*)(dad_branch->node->findNeighbor(dad));
+        
+    if (branch_subst)
+        branch_subst = 0;
+    for (iterator it = begin(); it != end(); it++, part++) {
+        int this_subst = 0;
+        if (dad_nei->link_neighbors[part]) {
+            if (branch_subst)
+                score += (*it)->computeParsimonyBranch(dad_nei->link_neighbors[part], (PhyloNode*)node_nei->link_neighbors[part]->node, &this_subst);
+            else
+                score += (*it)->computeParsimonyBranch(dad_nei->link_neighbors[part], (PhyloNode*)node_nei->link_neighbors[part]->node);
+        } else
+            score += (*it)->computeParsimony();
+        if (branch_subst)
+            branch_subst += this_subst;
+    }
+    return score;
+}
+
 
 double PhyloSuperTree::computeLikelihood(double *pattern_lh) {
 	double tree_lh = 0.0;
@@ -684,7 +716,7 @@ double PhyloSuperTree::computeLikelihood(double *pattern_lh) {
 		}
 	} else {
 		#ifdef _OPENMP
-		#pragma omp parallel for reduction(+: tree_lh)
+		#pragma omp parallel for reduction(+: tree_lh) schedule(dynamic)
 		#endif
 		for (int i = 0; i < ntrees; i++) {
 			part_info[i].cur_score = at(i)->computeLikelihood();
@@ -703,7 +735,10 @@ void PhyloSuperTree::computePatternLikelihood(double *pattern_lh, double *cur_lo
 		else
 			(*it)->computePatternLikelihood(pattern_lh + offset);
 		offset += (*it)->aln->getNPattern();
-		offset_lh_cat += (*it)->aln->getNPattern() * (*it)->site_rate->getNDiscreteRate();
+        if ((*it)->getModel()->isMixture() && !(*it)->getModelFactory()->fused_mix_rate)
+            offset_lh_cat += (*it)->aln->getNPattern() * (*it)->site_rate->getNDiscreteRate() * (*it)->model->getNMixtures();
+        else
+            offset_lh_cat += (*it)->aln->getNPattern() * (*it)->site_rate->getNDiscreteRate();
 	}
 	if (cur_logl) { // sanity check
 		double sum_logl = 0;
@@ -725,7 +760,7 @@ double PhyloSuperTree::optimizeAllBranches(int my_iterations, double tolerance, 
 	double tree_lh = 0.0;
 	int ntrees = size();
 	#ifdef _OPENMP
-	#pragma omp parallel for reduction(+: tree_lh)
+	#pragma omp parallel for reduction(+: tree_lh) schedule(dynamic)
 	#endif
 	for (int i = 0; i < ntrees; i++) {
 		part_info[i].cur_score = at(i)->optimizeAllBranches(my_iterations, tolerance, maxNRStep);
