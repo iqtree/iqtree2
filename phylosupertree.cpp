@@ -326,7 +326,35 @@ void PhyloSuperTree::printPartition(const char *filename) {
             out << "end;" << endl;
 	        out.close();
 	        cout << "Partition information was printed to " << filename << endl;
-	    } catch (ios::failure) {
+	    } catch (ios::failure &) {
+	        outError(ERR_WRITE_OUTPUT, filename);
+	    }
+
+}
+
+void PhyloSuperTree::printPartitionRaxml(const char *filename) {
+	   try {
+	        ofstream out;
+	        out.exceptions(ios::failbit | ios::badbit);
+            out.open(filename);
+            int part;
+            int start_site;
+            for (part = 0, start_site = 1; part < part_info.size(); part++) {
+            	string name = part_info[part].name;
+            	replace(name.begin(), name.end(), '+', '_');
+            	int end_site = start_site + at(part)->getAlnNSite();
+            	switch (at(part)->aln->seq_type) {
+            	case SEQ_DNA: out << "DNA, "; break;
+            	case SEQ_BINARY: out << "BIN, "; break;
+            	case SEQ_MORPH: out << "MULTI, "; break;
+            	default: out << at(part)->getModel()->name << ","; break;
+            	}
+            	out << name << " = " << start_site << "-" << end_site-1 << endl;
+            	start_site = end_site;
+            }
+	        out.close();
+	        cout << "Partition information in Raxml format was printed to " << filename << endl;
+	    } catch (ios::failure &) {
 	        outError(ERR_WRITE_OUTPUT, filename);
 	    }
 

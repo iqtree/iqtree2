@@ -62,6 +62,8 @@ public:
 
     void printPartition(const char *filename);
 
+    void printPartitionRaxml(const char *filename);
+
 	/** remove identical sequences from the tree */
     virtual void removeIdenticalSeqs(Params &params);
 

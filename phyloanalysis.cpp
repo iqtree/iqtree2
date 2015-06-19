@@ -1396,7 +1396,8 @@ void printMiscInfo(Params &params, IQTree &iqtree, double *pattern_lh) {
 		string partition_info = params.out_prefix;
 		partition_info += ".partinfo.nex";
 		((PhyloSuperTree*)(&iqtree))->printPartition(partition_info.c_str());
-
+		partition_info = (string)params.out_prefix + ".partitions";
+		((PhyloSuperTree*)(&iqtree))->printPartitionRaxml(partition_info.c_str());
 	}
 
 	if (params.mvh_site_rate) {
