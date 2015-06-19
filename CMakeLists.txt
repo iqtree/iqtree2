@@ -167,6 +167,10 @@ else()
 	message("Target binary : 64-bit")
 endif()
 
+if(IQTREE_FLAGS MATCHES "novx") 
+    add_definitions(-D__NOAVX__)
+endif()
+
 ##################################################################
 # configure OpenMP/PThreads compilation
 # change the executable name if compiled for OpenMP parallel version
@@ -331,7 +335,7 @@ add_subdirectory(model)
 # the main executable
 ##################################################################
 
-if (NOT BINARY32)
+if (NOT BINARY32 AND NOT IQTREE_FLAGS MATCHES "novx")
 add_library(avxkernel phylotreeavx.cpp)
 endif()
 
@@ -398,7 +402,7 @@ upperbounds.cpp
 
 if (NOT IQTREE_FLAGS MATCHES "avx" AND NOT IQTREE_FLAGS MATCHES "fma")
 	set_target_properties(iqtree pll ncl whtest zlibstatic sprng vectorclass model PROPERTIES COMPILE_FLAGS "${SSE_FLAGS}")
-	if (NOT BINARY32)
+	if (NOT BINARY32 AND NOT IQTREE_FLAGS MATCHES "novx")
 		set_target_properties(avxkernel pllavx PROPERTIES COMPILE_FLAGS "${AVX_FLAGS}")
 	endif()
 endif()  
@@ -430,7 +434,7 @@ if (IQTREE_FLAGS MATCHES "omp")
 	endif()
 endif()
 
-if (BINARY32)
+if (BINARY32 OR IQTREE_FLAGS MATCHES "novx")
     target_link_libraries(iqtree pll ncl whtest zlibstatic sprng vectorclass model ${PLATFORM_LIB} ${THREAD_LIB})	
 else()
     target_link_libraries(iqtree pll pllavx ncl whtest zlibstatic sprng vectorclass model avxkernel ${PLATFORM_LIB} ${THREAD_LIB})	

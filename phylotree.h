@@ -418,7 +418,7 @@ public:
     typedef BootValType (PhyloTree::*DotProductType)(BootValType *x, BootValType *y, int size);
     DotProductType dotProduct;
 
-#ifdef BINARY32
+#if defined(BINARY32) || defined(__NOAVX__)
     void setDotProductAVX() {}
 #else
     void setDotProductAVX();
@@ -497,7 +497,7 @@ public:
     void printParsimonyStates(PhyloNeighbor *dad_branch = NULL, PhyloNode *dad = NULL);
 
     virtual void setParsimonyKernel(LikelihoodKernel lk);
-#ifdef BINARY32
+#if defined(BINARY32) || defined(__NOAVX__)
     virtual void setParsimonyKernelAVX() {}
 #else
     virtual void setParsimonyKernelAVX();
@@ -1371,7 +1371,7 @@ public:
 
     virtual void setLikelihoodKernel(LikelihoodKernel lk);
 
-#ifdef BINARY32
+#if defined(BINARY32) || defined(__NOAVX__)
     virtual void setLikelihoodKernelAVX() {}
 #else
     virtual void setLikelihoodKernelAVX();
