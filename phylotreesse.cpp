@@ -251,9 +251,9 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk) {
             computeLikelihoodFromBufferPointer = NULL;
             break;
         case LK_EIGEN:
-            computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchEigen<28>;
-            computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervEigen<28>;
-            computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodEigen<28>;
+            computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchEigen;
+            computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervEigen;
+            computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodEigen;
             computeLikelihoodFromBufferPointer = NULL;
             break;
         case LK_EIGEN_SSE:
@@ -275,9 +275,9 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk) {
             computeLikelihoodFromBufferPointer = NULL;
             break;
         case LK_EIGEN:
-            computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchEigen<34>;
-            computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervEigen<34>;
-            computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodEigen<34>;
+            computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchEigen;
+            computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervEigen;
+            computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodEigen;
             computeLikelihoodFromBufferPointer = NULL;
             break;
         case LK_EIGEN_SSE:
@@ -299,9 +299,9 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk) {
             computeLikelihoodFromBufferPointer = NULL;
             break;
         case LK_EIGEN:
-            computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchEigen<40>;
-            computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervEigen<40>;
-            computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodEigen<40>;
+            computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchEigen;
+            computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervEigen;
+            computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodEigen;
             computeLikelihoodFromBufferPointer = NULL;
             break;
         case LK_EIGEN_SSE:
@@ -323,9 +323,9 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk) {
             computeLikelihoodFromBufferPointer = NULL;
             break;
         case LK_EIGEN:
-            computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchEigen<46>;
-            computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervEigen<46>;
-            computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodEigen<46>;
+            computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchEigen;
+            computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervEigen;
+            computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodEigen;
             computeLikelihoodFromBufferPointer = NULL;
             break;
         case LK_EIGEN_SSE:
@@ -347,9 +347,9 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk) {
             computeLikelihoodFromBufferPointer = NULL;
             break;
         case LK_EIGEN:
-            computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchEigen<52>;
-            computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervEigen<52>;
-            computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodEigen<52>;
+            computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchEigen;
+            computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervEigen;
+            computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodEigen;
             computeLikelihoodFromBufferPointer = NULL;
             break;
         case LK_EIGEN_SSE:
@@ -371,9 +371,9 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk) {
             computeLikelihoodFromBufferPointer = NULL;
             break;
         case LK_EIGEN:
-            computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchEigen<58>;
-            computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervEigen<58>;
-            computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodEigen<58>;
+            computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchEigen;
+            computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervEigen;
+            computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodEigen;
             computeLikelihoodFromBufferPointer = NULL;
             break;
         case LK_EIGEN_SSE:
@@ -397,9 +397,9 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk) {
             computeLikelihoodFromBufferPointer = NULL;
             break;
         case LK_EIGEN:
-            computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchEigen<70>;
-            computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervEigen<70>;
-            computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodEigen<70>;
+            computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchEigen;
+            computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervEigen;
+            computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodEigen;
             computeLikelihoodFromBufferPointer = NULL;
             break;
         case LK_EIGEN_SSE:
@@ -421,9 +421,9 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk) {
             computeLikelihoodFromBufferPointer = NULL;
             break;
         case LK_EIGEN:
-            computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchEigen<76>;
-            computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervEigen<76>;
-            computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodEigen<76>;
+            computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchEigen;
+            computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervEigen;
+            computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodEigen;
             computeLikelihoodFromBufferPointer = NULL;
             break;
         case LK_EIGEN_SSE:
@@ -445,9 +445,9 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk) {
             computeLikelihoodFromBufferPointer = NULL;
             break;
         case LK_EIGEN:
-            computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchEigen<82>;
-            computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervEigen<82>;
-            computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodEigen<82>;
+            computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchEigen;
+            computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervEigen;
+            computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodEigen;
             computeLikelihoodFromBufferPointer = NULL;
             break;
         case LK_EIGEN_SSE:
@@ -469,9 +469,9 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk) {
             computeLikelihoodFromBufferPointer = NULL;
             break;
         case LK_EIGEN:
-            computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchEigen<88>;
-            computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervEigen<88>;
-            computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodEigen<88>;
+            computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchEigen;
+            computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervEigen;
+            computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodEigen;
             computeLikelihoodFromBufferPointer = NULL;
             break;
         case LK_EIGEN_SSE:
@@ -493,9 +493,9 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk) {
             computeLikelihoodFromBufferPointer = NULL;
             break;
         case LK_EIGEN:
-            computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchEigen<94>;
-            computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervEigen<94>;
-            computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodEigen<94>;
+            computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchEigen;
+            computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervEigen;
+            computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodEigen;
             computeLikelihoodFromBufferPointer = NULL;
             break;
         case LK_EIGEN_SSE:
@@ -517,9 +517,9 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk) {
             computeLikelihoodFromBufferPointer = NULL;
             break;
         case LK_EIGEN:
-            computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchEigen<100>;
-            computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervEigen<100>;
-            computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodEigen<100>;
+            computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchEigen;
+            computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervEigen;
+            computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodEigen;
             computeLikelihoodFromBufferPointer = NULL;
             break;
         case LK_EIGEN_SSE:
@@ -541,9 +541,9 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk) {
             computeLikelihoodFromBufferPointer = NULL;
             break;
         case LK_EIGEN:
-            computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchEigen<106>;
-            computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervEigen<106>;
-            computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodEigen<106>;
+            computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchEigen;
+            computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervEigen;
+            computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodEigen;
             computeLikelihoodFromBufferPointer = NULL;
             break;
         case LK_EIGEN_SSE:
@@ -565,9 +565,9 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk) {
             computeLikelihoodFromBufferPointer = NULL;
             break;
         case LK_EIGEN:
-            computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchEigen<112>;
-            computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervEigen<112>;
-            computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodEigen<112>;
+            computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchEigen;
+            computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervEigen;
+            computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodEigen;
             computeLikelihoodFromBufferPointer = NULL;
             break;
         case LK_EIGEN_SSE:
@@ -589,9 +589,9 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk) {
             computeLikelihoodFromBufferPointer = NULL;
             break;
         case LK_EIGEN:
-            computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchEigen<118>;
-            computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervEigen<118>;
-            computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodEigen<118>;
+            computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchEigen;
+            computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervEigen;
+            computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodEigen;
             computeLikelihoodFromBufferPointer = NULL;
             break;
         case LK_EIGEN_SSE:
