@@ -34,27 +34,34 @@ void ModelPoMo::init(const char *model_name,
     // TODO: Set and get variables according to the frequency type.
 
     // Get DNA model info from model_name.
-    string dna_model_name = "";
-    string dna_model_full_name = "";
-    string dna_model_rate_type = "";
-    StateFreqType dna_model_def_freq = FREQ_UNKNOWN;
-    dna_model_name =
-        getDNAModelInfo((string)model_name,
-                        dna_model_full_name,
-                        dna_model_rate_type,
-                        dna_model_def_freq);
+    phylo_tree->aln->num_states = 4;
+    dna_model = new ModelDNA(model_name, model_params, freq_type, freq_params, phylo_tree);
+    phylo_tree->aln->num_states = num_states;
 
-	this->name = string(dna_model_name) + "+rP" + convertIntToString(N);
+//    string dna_model_name = "";
+//    string dna_model_full_name = "";
+//    string dna_model_rate_type = "";
+//    StateFreqType dna_model_def_freq = FREQ_UNKNOWN;
+//    
+//
+//    dna_model_name =
+//        getDNAModelInfo((string)model_name,
+//                        dna_model_full_name,
+//                        dna_model_rate_type,
+//                        dna_model_def_freq);
+
+	this->name = dna_model->name + "+rP" + convertIntToString(N);
     this->full_name =
         "reversible PoMo with N=" +
         convertIntToString(N) + " and " +
-        dna_model_full_name + " substitution model; " +
+        dna_model->full_name + " substitution model; " +
         convertIntToString(num_states) + " states in total";
 
     eps = 1e-6;
 
     // Create mutation probabilities.
-    mutation_prob = new double[6];
+//    mutation_prob = new double[6];
+    mutation_prob = dna_model->rates;
 	for (int i = 0; i < 6; i++) mutation_prob[i] = 1e-4;
 
     // Create fixed frequencies.  These correspond to the state
@@ -62,7 +69,8 @@ void ModelPoMo::init(const char *model_name,
     // PoMo, the state frequencies correspond to the frequencies of
     // the fixed (10A...) states and the polymorphic states.  It is a
     // vector of size 4+6(N-1) and not of size 4.
-    freq_fixed_states = new double[4];
+//    freq_fixed_states = new double[4];
+    freq_fixed_states = dna_model->state_freq;
 	for (int i = 0; i < 4; i++) freq_fixed_states[i] = 1.0;
 
     // Create PoMo rate matrix.  This is the actual rate matrix of
@@ -70,31 +78,31 @@ void ModelPoMo::init(const char *model_name,
     // really necessary?
 	rate_matrix = new double[num_states*num_states];
 
-	if (dna_model_name != "") {
-		if(setRateType(dna_model_rate_type.c_str()) == false)
-            // This should never happen because rate type was set by
-            // getDNAModelInfo().
-            outError("Could not read rate type. This is a bug.");
-	} else {
-		// User-specified model.
-		if (setRateType(model_name) == false) {
-            // TODO: Check this.
-            readMutationParameters(model_name);
-		}
-	}
-
-	if (model_params != "") {
-		readMutationRates(model_params);
-	}
-
-	if (freq_params != "") {
-		readFixedStateFreq(freq_params);
-	}
-
+//	if (dna_model_name != "") {
+//		if(setRateType(dna_model_rate_type.c_str()) == false)
+//            // This should never happen because rate type was set by
+//            // getDNAModelInfo().
+//            outError("Could not read rate type. This is a bug.");
+//	} else {
+//		// User-specified model.
+//		if (setRateType(model_name) == false) {
+//            // TODO: Check this.
+//            readMutationParameters(model_name);
+//		}
+//	}
+//
+//	if (model_params != "") {
+//		readMutationRates(model_params);
+//	}
+//
+//	if (freq_params != "") {
+//		readFixedStateFreq(freq_params);
+//	}
+//
     // Check frequency type.  If frequency type has not been set by
     // user, use the DNA model frequency type (if set).
     if (freq_type == FREQ_UNKNOWN)
-        freq_type = dna_model_def_freq;
+        freq_type = dna_model->freq_type;
 
     if (freq_type == FREQ_UNKNOWN)
         outError("No frequency type given.");
@@ -114,8 +122,9 @@ void ModelPoMo::init(const char *model_name,
 
 ModelPoMo::~ModelPoMo() {
 	delete [] rate_matrix;
-	delete [] freq_fixed_states;
-	delete [] mutation_prob;
+//	delete [] freq_fixed_states;
+    delete dna_model;
+//	delete [] mutation_prob;
 }
 
 double ModelPoMo::computeNormConst() {
@@ -433,12 +442,11 @@ double ModelPoMo::computeProbBoundaryMutation(int state1, int state2) {
 }
 
 int ModelPoMo::getNDim() {
-    return 9;
-    //     assert(freq_type != FREQ_UNKNOWN);
-//     int ndim = num_params;
-//     if (freq_type == FREQ_ESTIMATE)
+//    return 9;
+//    int ndim = dna_model->num_params+1;
+//     if (dna_model->freq_type == FREQ_ESTIMATE)
 //         ndim += nnuc-1;
-// 	return ndim;
+ 	return dna_model->getNDim()+1;
 }
 
 void ModelPoMo::setBounds(double *lower_bound,

@@ -1,7 +1,7 @@
 #ifndef _MODELPOMO_H_
 #define _MODELPOMO_H_
 
-#include "modelgtr.h"
+#include "modeldna.h"
 
 /* TODO: Make it work with N arbitrary, this should not be too hard */
 /*       (phylotreesse.cpp has to be changed to). */
@@ -153,6 +153,8 @@ class ModelPoMo : public ModelGTR
     void readMutationRates(string str);
 
  protected:
+
+    ModelDNA *dna_model;
 
  	/**
  		compute the rate matrix and then normalize it such that the total number of substitutions is 1.

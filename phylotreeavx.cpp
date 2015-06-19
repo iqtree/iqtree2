@@ -101,6 +101,12 @@ void PhyloTree::setLikelihoodKernelAVX() {
 //	        cout << "Fast-AVX" << endl;
 		}
 		break;
+    case 28:// N=5
+			computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchEigenSIMD<Vec4d, 4, 28>;
+			computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervEigenSIMD<Vec4d, 4, 28>;
+			computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodEigenSIMD<Vec4d, 4, 28>;
+			computeLikelihoodFromBufferPointer = &PhyloTree::computeLikelihoodFromBufferEigenSIMD<Vec4d, 4, 28>;
+            break;
 	default:
 		assert(0);
 		break;
