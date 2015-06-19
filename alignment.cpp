@@ -1031,6 +1031,8 @@ char Alignment::convertStateBack(char state) {
 
 string Alignment::convertStateBackStr(char state) {
 	string str;
+    if (seq_type == SEQ_COUNTSFORMAT)
+        return string("POMO")+convertIntToString(state);
 	if (seq_type != SEQ_CODON) {
 		str = convertStateBack(state);
 	} else {
