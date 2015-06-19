@@ -433,11 +433,12 @@ double ModelPoMo::computeProbBoundaryMutation(int state1, int state2) {
 }
 
 int ModelPoMo::getNDim() {
-    assert(freq_type != FREQ_UNKNOWN);
-    int ndim = num_params;
-    if (freq_type == FREQ_ESTIMATE)
-        ndim += nnuc-1;
-	return ndim;
+    return 9;
+    //     assert(freq_type != FREQ_UNKNOWN);
+//     int ndim = num_params;
+//     if (freq_type == FREQ_ESTIMATE)
+//         ndim += nnuc-1;
+// 	return ndim;
 }
 
 void ModelPoMo::setBounds(double *lower_bound,
