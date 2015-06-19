@@ -29,11 +29,12 @@ void ModelPoMo::init(const char *model_name,
 
     // TODO: Set and get variables according to the model type.
 
-    // TODO: Process freq_params.  What is this?
-
     // TODO: Set and get variables according to the frequency type.
 
-    // Get DNA model info from model_name.
+    // Get DNA model info from model_name.  Use ModelDNA for this
+    // purpose.  It acts as the basis of the `ModelPoMo' (the mutation
+    // coefficients point to the rates of ModelDNA, the fixed state
+    // frequencies to the state frequencies and so on).
     phylo_tree->aln->num_states = 4;
     dna_model = new ModelDNA(model_name, model_params, freq_type, freq_params, phylo_tree);
     phylo_tree->aln->num_states = num_states;
