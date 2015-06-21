@@ -1641,8 +1641,9 @@ int Alignment::readMSF(char *filename, char *sequence_type) {
 int Alignment::readCountsFormat(char* filename, char* sequence_type) {
     int npop = 0;                // Number of populations.
     int nsites = 0;              // Number of sites.
-    // TODO: Change this.
-    int N = 10;                  // Virtual population size; defaults to 10.
+    int N = 10;                  // Virtual population size; defaults
+                                 // to 10.  If `-st CFXX` is given, it
+                                 // will be set to XX below.
     int nnuc = 4;                // Number of nucleotides (base states).
     ostringstream err_str;
     ifstream in;
@@ -1892,6 +1893,7 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
     }
 
     cout << "Number of sites read:  " << site_count << "." << endl;
+    std::cout << "Number of fails: " << fails << "." << std::endl;
 
     site_pattern.resize(site_count);
 
