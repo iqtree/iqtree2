@@ -821,7 +821,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 #else
     params.pll = false;
 #endif
-    params.modeps = 0.001;
+    params.modeps = 0.01;
     params.parbran = false;
     params.binary_aln_file = NULL;
     params.maxtime = 1000000;

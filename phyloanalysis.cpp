@@ -1595,7 +1595,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
     }
 
     iqtree.initializeAllPartialLh();
-	double initEpsilon = params.min_iterations == 0 ? 0.001 : 0.1;
+	double initEpsilon = params.min_iterations == 0 ? params.modeps : (params.modeps*10);
 	string initTree;
 
 	if (iqtree.getRate()->name.find("+I+G") != string::npos) {
@@ -1871,7 +1871,7 @@ void searchGAMMAInvarByRestarting(IQTree &iqtree) {
 				site_rates->computeRates();
 				iqtree.clearAllPartialLH();
 				iqtree.resetCurScore();
-				iqtree.optimizeModelParameters(false, 0.001);
+				iqtree.optimizeModelParameters(false, iqtree.params->modeps);
 				//iqtree.getModelFactory()->optimizeParameters(params.fixed_branch_length, false, 0.001);
 				cout << iqtree.getCurScore() << endl;
 				if (iqtree.getCurScore() > bestLogl) {

@@ -792,7 +792,7 @@ double PhyloSuperTree::optimizeAllBranches(int my_iterations, double tolerance, 
 	#pragma omp parallel for reduction(+: tree_lh) schedule(dynamic)
 	#endif
 	for (int i = 0; i < ntrees; i++) {
-		part_info[i].cur_score = at(i)->optimizeAllBranches(my_iterations, tolerance, maxNRStep);
+		part_info[i].cur_score = at(i)->optimizeAllBranches(my_iterations, tolerance/min(ntrees,10), maxNRStep);
 		tree_lh += part_info[i].cur_score;
 		if (verbose_mode >= VB_MAX)
 			at(i)->printTree(cout, WT_BR_LEN + WT_NEWLINE);

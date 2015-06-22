@@ -552,7 +552,7 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
         // Better tree or score is found
         if (getCurScore() > candidateTrees.getBestScore()) {
             // Re-optimize model parameters (the sNNI algorithm)
-        	tree = optimizeModelParameters(false, 0.1);
+        	tree = optimizeModelParameters(false, params->modeps*10);
         	betterScore = true;
         }
         bool newTree = candidateTrees.update(tree, getCurScore());
