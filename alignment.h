@@ -515,6 +515,16 @@ public:
      */
     virtual void computeStateFreq(double *state_freq);
 
+    /** 
+     * Compute the absolute frequencies of the different states.
+     * Helpful for models with many states (e.g., PoMo) to check the
+     * abundancy of states in the data.
+     * 
+     * @param abs_state_freq (OUT) assumed to be at least of size
+     * num_states.
+     */
+    void computeAbsoluteStateFreq(unsigned int *abs_state_freq);
+    
     /**
             compute empirical state frequencies for each sequence 
             @param freq_per_sequence (OUT) state frequencies for each sequence, of size num_states*num_freq

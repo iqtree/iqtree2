@@ -2822,6 +2822,7 @@ void Alignment::computeStateFreq (double *state_freq) {
 
     if (verbose_mode >= VB_MED) {
         cout << "Empirical state frequencies: ";
+        cout << setprecision(10);
         for (i = 0; i < num_states; i++)
             cout << state_freq[i] << " ";
         cout << endl;
@@ -2832,6 +2833,15 @@ void Alignment::computeStateFreq (double *state_freq) {
     delete [] new_freq;
     delete [] states_app;
 }
+
+void Alignment::computeAbsoluteStateFreq(unsigned int *abs_state_freq) {
+    memset(abs_state_freq, 0, num_states * sizeof(unsigned int));
+
+    for (iterator it = begin(); it != end(); it++)
+        for (Pattern::iterator it2 = it->begin(); it2 != it->end(); it2++)
+            abs_state_freq[(int)*it2] += it->frequency;
+}
+
 
 void Alignment::countStatePerSequence (unsigned *count_per_sequence) {
     int i;
@@ -3287,7 +3297,10 @@ void Alignment::convfreq(double *stateFrqArr) {
 	for (i = 0; i < num_states; i++)
 	{
 		freq = stateFrqArr[i];
-		if (freq < MIN_FREQUENCY) {
+        // Do not check for a minimum frequency with PoMo because very
+        // low frequencies are expected for polymorphic sites.
+		if ((freq < MIN_FREQUENCY) &&
+            (seq_type != SEQ_COUNTSFORMAT)) {
 			stateFrqArr[i] = MIN_FREQUENCY;
 			if (!isStopCodon(i))
 				cout << "WARNING: " << convertStateBackStr(i) << " is not present in alignment that may cause numerical problems" << endl;
