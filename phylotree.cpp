@@ -443,9 +443,16 @@ string PhyloTree::getModelNameParams() {
 		name += rate_name;
 	}
 
-	if (model->getFreqType() == FREQ_EMPIRICAL)
+	if (model->getFreqType() == FREQ_EMPIRICAL || (model->getFreqType() == FREQ_USER_DEFINED && aln->seq_type == SEQ_DNA)) {
 		name += "+F";
-	else if (model->getFreqType() == FREQ_CODON_1x4)
+        double *state_freq = new double[model->num_states];
+        model->getStateFrequency(state_freq);
+        name += "{" + convertDoubleToString(state_freq[0]);
+        for (int i = 1; i < model->num_states; i++)
+            name += "," + convertDoubleToString(state_freq[i]);
+        name += "}";
+        delete [] state_freq;
+	} else if (model->getFreqType() == FREQ_CODON_1x4)
 		name += "+F1X4";
 	else if (model->getFreqType() == FREQ_CODON_3x4)
 		name += "+F3X4";
