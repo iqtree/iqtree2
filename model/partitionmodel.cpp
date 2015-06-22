@@ -50,6 +50,11 @@ PartitionModel::PartitionModel(Params &params, PhyloSuperTree *tree, ModelsBlock
         (*it)->setModel((*it)->getModelFactory()->model);
         (*it)->setRate((*it)->getModelFactory()->site_rate);
         params.model_name = model_name;
+        if ((*it)->aln->getNSeq() < tree->aln->getNSeq() && (*it)->getModel()->freq_type == FREQ_EMPIRICAL && (*it)->aln->seq_type != SEQ_CODON) {
+        	// modify state_freq to account for empty sequences
+        	(*it)->aln->computeStateFreq((*it)->getModel()->state_freq, (*it)->aln->getNSite() * (tree->aln->getNSeq() - (*it)->aln->getNSeq()));
+        	(*it)->getModel()->decomposeRateMatrix();
+        }
         //string taxa_set = ((SuperAlignment*)tree->aln)->getPattern(part);
         //(*it)->copyTree(tree, taxa_set);
         //(*it)->drawTree(cout);

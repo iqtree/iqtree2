@@ -501,7 +501,7 @@ public:
             @param state_freq (OUT) is filled with state frequencies, assuming state_freq was allocated with 
                     at least num_states entries.
      */
-    virtual void computeStateFreq(double *state_freq);
+    virtual void computeStateFreq(double *state_freq, size_t num_unknown_states = 0);
 
     /**
             compute empirical state frequencies for each sequence 

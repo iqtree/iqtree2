@@ -2496,7 +2496,7 @@ double Alignment::readDist(const char *file_name, double *dist_mat) {
     return longest_dist;
 }
 
-void Alignment::computeStateFreq (double *state_freq) {
+void Alignment::computeStateFreq (double *state_freq, size_t num_unknown_states) {
     int i, j;
     double *states_app = new double[num_states*(STATE_UNKNOWN+1)];
     double *new_freq = new double[num_states];
@@ -2505,6 +2505,7 @@ void Alignment::computeStateFreq (double *state_freq) {
     
     
     memset(state_count, 0, sizeof(unsigned)*(STATE_UNKNOWN+1));
+    state_count[STATE_UNKNOWN] = num_unknown_states;
     
     for (i = 0; i <= STATE_UNKNOWN; i++)
         getAppearance(i, &states_app[i*num_states]);
