@@ -575,7 +575,7 @@ void PhyloTree::computeMixrateLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch,
 		}
 		lh_ptn = horizontal_add(vc_ptn) + VectorClass().load_a(&ptn_invar[ptn]);
 
-		inv_lh_ptn = vc_unit / lh_ptn;
+		inv_lh_ptn = vc_unit / abs(lh_ptn);
 
 		vc_freq.load_a(&ptn_freq[ptn]);
 
@@ -880,7 +880,7 @@ double PhyloTree::computeMixrateLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_bra
 
 			lh_ptn = horizontal_add(vc_ptn) + VectorClass().load_a(&ptn_invar[ptn]);
 
-			lh_ptn = log(lh_ptn);
+			lh_ptn = log(abs(lh_ptn));
 			lh_ptn.store_a(&_pattern_lh[ptn]);
 #ifdef _OPENMP
 			lh_final_th = mul_add(lh_ptn, vc_freq, lh_final_th);
@@ -1005,7 +1005,7 @@ double PhyloTree::computeMixrateLikelihoodFromBufferEigenSIMD() {
 			}
 		}
 		lh_ptn = horizontal_add(vc_ptn) + VectorClass().load_a(&ptn_invar[ptn]);
-		lh_ptn = log(lh_ptn);
+		lh_ptn = log(abs(lh_ptn));
 		lh_ptn.store_a(&_pattern_lh[ptn]);
 		vc_freq.load_a(&ptn_freq[ptn]);
 

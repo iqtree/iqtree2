@@ -106,14 +106,14 @@ inline T *aligned_alloc(size_t size) {
 #if (defined(__GNUC__) || defined(__clang__)) && !defined(WIN32)
         print_stacktrace(cerr);
 #endif
-        outError("Not enough memory (bad_alloc)");
+        outError("Not enough memory, allocation of " + convertInt64ToString(size*sizeof(T)) + " bytes failed (bad_alloc)");
     }
 #endif
     if (mem == NULL) {
 #if (defined(__GNUC__) || defined(__clang__)) && !defined(WIN32)
         print_stacktrace(cerr);
 #endif
-        outError("Memory allocation failed or not enough memory (bad_alloc)");
+        outError("Not enough memory, allocation of " + convertInt64ToString(size*sizeof(T)) + " bytes failed (bad_alloc)");
     }
     return (T*)mem;
 }

@@ -835,7 +835,7 @@ double PhyloTree::computeLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, Ph
                 	cout << " " << j+1;
                 }
             }
-            tree_lh = 0.0;
+            tree_lh = node_branch->lh_scale_factor + dad_branch->lh_scale_factor;
             for (ptn = 0; ptn < orig_nptn; ptn++) {
                 if (isnan(_pattern_lh[ptn]) || isinf(_pattern_lh[ptn])) {
                 	_pattern_lh[ptn] = LOG_SCALING_THRESHOLD*4; // log(2^(-1024))

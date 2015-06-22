@@ -1172,7 +1172,7 @@ void PhyloTree::initializeAllPartialLh() {
     }
     assert(index == (nodeNum - 1) * 2);
     if (sse == LK_EIGEN || sse == LK_EIGEN_SSE) {
-        if (params->lh_mem_save)
+        if (params->lh_mem_save == LM_PER_NODE)
             assert(indexlh == nodeNum-leafNum);
         else
             assert(indexlh == (nodeNum-1)*2-leafNum);
@@ -1183,6 +1183,13 @@ void PhyloTree::initializeAllPartialLh() {
 }
 
 void PhyloTree::deleteAllPartialLh() {
+    if (nni_scale_num)
+        aligned_free(nni_scale_num);
+    nni_scale_num = NULL;
+    if (nni_partial_lh)
+        aligned_free(nni_partial_lh);
+    nni_partial_lh = NULL;
+
 	if (central_partial_lh) {
 		aligned_free(central_partial_lh);
 	}
@@ -1296,6 +1303,17 @@ void PhyloTree::initializeAllPartialLh(int &index, int &indexlh, PhyloNode *node
     if (!node) {
         node = (PhyloNode*) root;
         // allocate the big central partial likelihoods memory
+        if (!nni_partial_lh) {
+            // allocate memory only once!
+//            intptr_t MEM_ALIGNMENT = (instruction_set >= 7) ? 32 : 16;
+//            nni_partial_lh = aligned_alloc<double>(IT_NUM*partial_lh_size+MEM_ALIGNMENT/sizeof(double));
+//            nni_scale_num = aligned_alloc<UBYTE>(IT_NUM*scale_num_size+MEM_ALIGNMENT/sizeof(UBYTE));
+            size_t IT_NUM = (params->nni5) ? 6 : 2;
+            nni_partial_lh = aligned_alloc<double>(IT_NUM*block_size);
+            nni_scale_num = aligned_alloc<UBYTE>(IT_NUM*scale_block_size);
+        }
+
+
         if (!central_partial_lh) {
         	uint64_t tip_partial_lh_size = aln->num_states * (aln->STATE_UNKNOWN+1) * model->getNMixtures();
             uint64_t mem_size = ((uint64_t)leafNum * 4 - 6) * (uint64_t) block_size + 2 + tip_partial_lh_size;
@@ -1412,8 +1430,18 @@ double *PhyloTree::newPartialLh() {
 }
 
 int PhyloTree::getPartialLhBytes() {
-	return ((aln->size()+aln->num_states+3) * aln->num_states * site_rate->getNRate() *
-			((model_factory->fused_mix_rate)? 1 : model->getNMixtures())) * sizeof(double);
+    size_t nptn = aln->size()+aln->num_states; // +num_states for ascertainment bias correction
+    size_t block_size;
+    if (instruction_set >= 7)
+    	// block size must be divisible by 4
+    	block_size = ((nptn+3)/4)*4;
+	else
+		// block size must be divisible by 2
+		block_size = ((nptn % 2) == 0) ? nptn : (nptn + 1);
+
+    block_size = block_size * model->num_states * site_rate->getNRate() * ((model_factory->fused_mix_rate)? 1 : model->getNMixtures());
+
+	return block_size * sizeof(double);
 }
 
 int PhyloTree::getScaleNumBytes() {
@@ -3672,12 +3700,6 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
 	int IT_NUM = (params->nni5) ? 6 : 2;
     size_t partial_lh_size = getPartialLhBytes()/sizeof(double);
     size_t scale_num_size = getScaleNumBytes()/sizeof(UBYTE);
-    if (!nni_partial_lh) {
-        // allocate memory only once!
-        intptr_t MEM_ALIGNMENT = (instruction_set >= 7) ? 32 : 16;
-        nni_partial_lh = aligned_alloc<double>(IT_NUM*partial_lh_size+MEM_ALIGNMENT/sizeof(double));
-        nni_scale_num = aligned_alloc<UBYTE>(IT_NUM*scale_num_size+MEM_ALIGNMENT/sizeof(UBYTE));
-    }
 
     // Upper Bounds ---------------
     totalNNIub += 2;

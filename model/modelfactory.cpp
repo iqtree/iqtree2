@@ -687,7 +687,7 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info, double 
 	assert(tree);
 
 	stopStoringTransMatrix();
-	if (fixed_len) 
+	if (fixed_len || tree->params->num_param_iterations == 0)
 		cur_lh = tree->computeLikelihood();
 	else {
 		cur_lh = tree->optimizeAllBranches(1);
@@ -705,7 +705,7 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info, double 
 	int i;
 	//bool optimize_rate = true;
 //	double gradient_epsilon = min(logl_epsilon, 0.01); // epsilon for parameters starts at epsilon for logl
-	for (i = 2; i < 100; i++) {
+	for (i = 2; i < tree->params->num_param_iterations; i++) {
 //        if (gradient_epsilon < 0.001)
 //            gradient_epsilon = 0.001;
 		/*

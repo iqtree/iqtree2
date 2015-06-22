@@ -12,6 +12,10 @@
 /** Print a demangled stack backtrace of the caller function to FILE* out. */
 static inline void print_stacktrace(ostream &out, unsigned int max_frames = 63)
 {
+#ifdef _OPENMP
+#pragma omp master
+{
+#endif
     out << "Stack trace:" << endl;
 
     // storage array for stack trace address data
@@ -20,10 +24,10 @@ static inline void print_stacktrace(ostream &out, unsigned int max_frames = 63)
     // retrieve current stack addresses
     int addrlen = backtrace(addrlist, sizeof(addrlist) / sizeof(void*));
 
-    if (addrlen == 0) {
-        out << "  <empty, possibly corrupt>" << endl;
-        return;
-    }
+//    if (addrlen == 0) {
+//        out << "  <empty, possibly corrupt>" << endl;
+//        return;
+//    }
 
     // resolve addresses into strings containing "filename(function+address)",
     // this array must be free()-ed
@@ -86,6 +90,10 @@ static inline void print_stacktrace(ostream &out, unsigned int max_frames = 63)
 
     free(funcname);
     free(symbollist);
+#ifdef _OPENMP
+}
+#endif
+
 }
 
 #endif // _STACKTRACE_H_

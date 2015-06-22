@@ -162,6 +162,12 @@ string convertIntToString(int number) {
     return ss.str(); //return a string with the contents of the stream
 }
 
+string convertInt64ToString(int64_t number) {
+    stringstream ss; //create a stringstream
+    ss << number; //add number to the stream
+    return ss.str(); //return a string with the contents of the stream
+}
+
 string convertDoubleToString(double number) {
     stringstream ss; //create a stringstream
     ss << number; //add number to the stream
@@ -709,6 +715,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.p_delete = -1;
     params.min_iterations = -1;
     params.max_iterations = 1;
+    params.num_param_iterations = 100;
     params.stop_condition = SC_UNSUCCESS_ITERATION;
     params.stop_confidence = 0.95;
     params.model_name = "";
@@ -1625,6 +1632,16 @@ void parseArg(int argc, char *argv[], Params &params) {
 //                params.autostop = false;
 				continue;
 			}
+			if (strcmp(argv[cnt], "-nparam") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -nparam <#iterations>";
+				params.num_param_iterations = convert_int(argv[cnt]);
+				if (params.num_param_iterations < 0)
+					throw "Number of parameter optimization iterations (-nparam) must be non negative";
+				continue;
+			}
+
 			if (strcmp(argv[cnt], "-nb") == 0) {
 				cnt++;
 				if (cnt >= argc)

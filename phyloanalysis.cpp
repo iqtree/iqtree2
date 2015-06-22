@@ -1590,7 +1590,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
         if (mem_size * max_procs > total_mem * params.num_threads) {
             outWarning("Memory required per CPU-core (" + convertDoubleToString((double)mem_size/params.num_threads/1024/1024/1024)+
             " GB) is higher than your computer RAM per CPU-core ("+convertIntToString(total_mem/max_procs/1024/1024/1024)+
-            " GB), thus multiple runs will exceed RAM!");
+            " GB), thus multiple runs may exceed RAM!");
         }
     }
 

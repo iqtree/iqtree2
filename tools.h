@@ -1067,6 +1067,9 @@ struct Params {
      */
     double stop_confidence;
 
+    /** number iterations for parameter optimization, default: 100 */
+    int num_param_iterations;
+
     /**
             name of the substitution model (e.g., HKY, GTR, TN+I+G, JC+G, etc.)
      */
@@ -1760,6 +1763,7 @@ const char ERR_INTERNAL[] = "Internal error, pls contact authors!";
  * @return string
  */
 string convertIntToString(int number);
+string convertInt64ToString(int64_t number);
 
 string convertDoubleToString(double number);
 
