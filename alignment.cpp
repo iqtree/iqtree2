@@ -1234,7 +1234,7 @@ int Alignment::buildPattern(StrVector &sequences, char *sequence_type, int nseq,
     site_pattern.resize(nsite/step, -1);
     clear();
     pattern_index.clear();
-
+    bool error = false;
     for (site = 0; site < nsite; site+=step) {
         for (seq = 0; seq < nseq; seq++) {
             //char state = convertState(sequences[seq][site], seq_type);
@@ -1269,10 +1269,12 @@ int Alignment::buildPattern(StrVector &sequences, char *sequence_type, int nseq,
                 err_str << "Sequence " << seq_names[seq] << " has invalid character " << sequences[seq][site];
             	if (seq_type == SEQ_CODON) err_str << sequences[seq][site+1] << sequences[seq][site+2];
             	err_str << " at site " << site+1 << endl;
+                error = true;
             }
             pat[seq] = state;
         }
-        num_gaps_only += addPattern(pat, site/step);
+        if (!error)
+            num_gaps_only += addPattern(pat, site/step);
     }
     if (num_gaps_only)
         cout << "WARNING: " << num_gaps_only << " sites contain only gaps or ambiguous characters." << endl;
