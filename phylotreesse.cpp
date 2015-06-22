@@ -879,10 +879,8 @@ void PhyloTree::computeLikelihoodDervEigen(PhyloNeighbor *dad_branch, PhyloNode 
 			ddf_ptn += val2[i] * theta[i];
 		}
 
-        if (lh_ptn <= 0) {
-            printTree(cout);
-        }
-        assert(lh_ptn > 0.0);
+//        assert(lh_ptn > 0.0);
+        lh_ptn = fabs(lh_ptn);
         
         if (ptn < orig_nptn) {
 			double df_frac = df_ptn / lh_ptn;
@@ -901,6 +899,11 @@ void PhyloTree::computeLikelihoodDervEigen(PhyloNeighbor *dad_branch, PhyloNode 
     }
 	df = my_df;
 	ddf = my_ddf;
+    if (isnan(df) || isinf(df)) {
+        df = 0.0;
+        ddf = 0.0;
+//        outWarning("Numerical instability (some site-likelihood = 0)");
+    }
 
 	if (orig_nptn < nptn) {
     	// ascertainment bias correction
@@ -1029,9 +1032,9 @@ double PhyloTree::computeLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloN
 				lh_cat++;
 			}
 
-			assert(lh_ptn > 0.0);
+//			assert(lh_ptn > 0.0);
             if (ptn < orig_nptn) {
-				lh_ptn = log(lh_ptn);
+				lh_ptn = log(fabs(lh_ptn));
 				_pattern_lh[ptn] = lh_ptn;
 				tree_lh += lh_ptn * ptn_freq[ptn];
 			} else {
@@ -1040,6 +1043,30 @@ double PhyloTree::computeLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloN
 		}
     }
 
+    if (isnan(tree_lh) || isinf(tree_lh)) {
+        cout << "WARNING: Numerical underflow caused by alignment sites";
+        i = aln->getNSite();
+        int j;
+        for (j = 0, c = 0; j < i; j++) {
+            ptn = aln->getPatternID(j);
+            if (isnan(_pattern_lh[ptn]) || isinf(_pattern_lh[ptn])) {
+                cout << " " << j+1;
+                c++;
+                if (c >= 10) {
+                    cout << " ...";
+                    break;
+                }
+            }
+        }
+        cout << endl;
+        tree_lh = current_it->lh_scale_factor + current_it_back->lh_scale_factor;
+        for (ptn = 0; ptn < orig_nptn; ptn++) {
+            if (isnan(_pattern_lh[ptn]) || isinf(_pattern_lh[ptn])) {
+                _pattern_lh[ptn] = LOG_SCALING_THRESHOLD*4; // log(2^(-1024))
+            }
+            tree_lh += _pattern_lh[ptn] * ptn_freq[ptn];
+        }
+    }
 
     if (orig_nptn < nptn) {
     	// ascertainment bias correction
@@ -1883,7 +1910,8 @@ void PhyloTree::computeMixrateLikelihoodDervEigen(PhyloNeighbor *dad_branch, Phy
 			ddf_ptn += val2[i] * theta[i];
 		}
 
-        assert(lh_ptn > 0.0);
+//        assert(lh_ptn > 0.0);
+        lh_ptn = fabs(lh_ptn);
 
         if (ptn < orig_nptn) {
 			double df_frac = df_ptn / lh_ptn;
@@ -1902,6 +1930,11 @@ void PhyloTree::computeMixrateLikelihoodDervEigen(PhyloNeighbor *dad_branch, Phy
     }
 	df = my_df;
 	ddf = my_ddf;
+    if (isnan(df) || isinf(df)) {
+        df = 0.0;
+        ddf = 0.0;
+//        outWarning("Numerical instability (some site-likelihood = 0)");
+    }
 
 	if (orig_nptn < nptn) {
     	// ascertainment bias correction
@@ -2491,7 +2524,8 @@ void PhyloTree::computeMixtureLikelihoodDervEigen(PhyloNeighbor *dad_branch, Phy
 			ddf_ptn += val2[i] * theta[i];
 		}
 
-        assert(lh_ptn > 0.0);
+//        assert(lh_ptn > 0.0);
+        lh_ptn = fabs(lh_ptn);
 
         if (ptn < orig_nptn) {
 			double df_frac = df_ptn / lh_ptn;
@@ -2510,6 +2544,11 @@ void PhyloTree::computeMixtureLikelihoodDervEigen(PhyloNeighbor *dad_branch, Phy
     }
 	df = my_df;
 	ddf = my_ddf;
+    if (isnan(df) || isinf(df)) {
+        df = 0.0;
+        ddf = 0.0;
+//        outWarning("Numerical instability (some site-likelihood = 0)");
+    }
 
 	if (orig_nptn < nptn) {
     	// ascertainment bias correction

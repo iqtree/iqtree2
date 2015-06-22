@@ -1088,6 +1088,13 @@ ModelMixture::ModelMixture(string orig_model_name, string model_name, string mod
 				freq_vec.push_back(freq_mod);
 			}
 		}
+        double sum_weights = 0.0;
+        for (m = 0; m < freq_weights.size(); m++)
+            if (freq_vec[m]) 
+                sum_weights += freq_weights[m];
+        for (m = 0; m < freq_weights.size(); m++)
+            if (!freq_vec[m]) 
+                freq_weights[m] = sum_weights/freq_weights.size();
 		init(FREQ_USER_DEFINED);
 	} else {
 		if (freq_params != "")
