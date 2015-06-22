@@ -633,8 +633,9 @@ void PhyloTree::computeMixtureLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch,
 	df = horizontal_add(df_final);
 	ddf = horizontal_add(ddf_final);
     if (isnan(df) || isinf(df)) {
-        cout << "Branch length causing numerical underflow: " << dad_branch->length << endl;
-        assert(0 && "Numerical instability due to some site-likelihood being zero");
+        df = 0.0;
+        ddf = 0.0;
+//        outWarning("Numerical instability (some site-likelihood = 0)");
     }
 
 //	assert(isnormal(tree_lh));
@@ -1111,8 +1112,30 @@ double PhyloTree::computeMixtureLikelihoodFromBufferEigenSIMD() {
 }
 #endif
 	tree_lh += horizontal_add(lh_final);
+    if (isnan(tree_lh) || isinf(tree_lh)) {
+        cout << "WARNING: Numerical underflow caused by alignment sites";
+        i = aln->getNSite();
+        for (j = 0, c = 0; j < i; j++) {
+            ptn = aln->getPatternID(j);
+            if (isnan(_pattern_lh[ptn]) || isinf(_pattern_lh[ptn])) {
+                cout << " " << j+1;
+                c++;
+                if (c >= 10) {
+                    cout << " ...";
+                    break;
+                }
+            }
+        }
+        cout << endl;
+        tree_lh = current_it->lh_scale_factor + current_it_back->lh_scale_factor;
+        for (ptn = 0; ptn < orig_nptn; ptn++) {
+            if (isnan(_pattern_lh[ptn]) || isinf(_pattern_lh[ptn])) {
+                _pattern_lh[ptn] = LOG_SCALING_THRESHOLD*4; // log(2^(-1024))
+            }
+            tree_lh += _pattern_lh[ptn] * ptn_freq[ptn];
+        }
+    }
 
-	assert(isnormal(tree_lh));
 	if (orig_nptn < nptn) {
 		// ascertaiment bias correction
 		lh_final = 0.0;
