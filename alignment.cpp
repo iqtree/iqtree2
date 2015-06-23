@@ -1050,7 +1050,7 @@ void Alignment::convertStateStr(string &str, SeqType seq_type) {
 void Alignment::initCodon(char *gene_code_id) {
     // build index from 64 codons to non-stop codons
 	int transl_table = 1;
-	if (strlen(gene_code_id) > 5) {
+	if (strlen(gene_code_id) > 0) {
 		try {
 			transl_table = convert_int(gene_code_id);
 		} catch (string &str) {
@@ -1200,7 +1200,7 @@ int Alignment::buildPattern(StrVector &sequences, char *sequence_type, int nseq,
         } else if (strcmp(sequence_type, "AA") == 0 || strcmp(sequence_type, "PROT") == 0) {
             num_states = 20;
             user_seq_type = SEQ_PROTEIN;
-        } else if (strcmp(sequence_type, "NT2AA") == 0) {
+        } else if (strncmp(sequence_type, "NT2AA", 5) == 0) {
             if (seq_type != SEQ_DNA)
                 outWarning("Sequence type detected as non DNA!");
             initCodon(&sequence_type[5]);
