@@ -38,7 +38,7 @@ add_definitions(-DIQ_TREE)
 set (iqtree_VERSION_MAJOR 1)
 set (iqtree_VERSION_MINOR 3)
 set (iqtree_VERSION_PATCH 3)
-
+ 
 set(BUILD_SHARED_LIBS OFF)
 
 message("IQ-TREE flags : ${IQTREE_FLAGS}")
