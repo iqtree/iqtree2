@@ -675,7 +675,7 @@ protected:
 	 * special initialization for codon sequences, e.g., setting #states, genetic_code
 	 * @param sequence_type user-defined sequence type
 	 */
-	void initCodon(char *sequence_type);
+	void initCodon(char *gene_code_id);
 
 };
 

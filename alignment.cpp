@@ -1047,14 +1047,14 @@ void Alignment::convertStateStr(string &str, SeqType seq_type) {
         (*it) = convertState(*it, seq_type);
 }
 
-void Alignment::initCodon(char *sequence_type) {
+void Alignment::initCodon(char *gene_code_id) {
     // build index from 64 codons to non-stop codons
 	int transl_table = 1;
-	if (strlen(sequence_type) > 5) {
+	if (strlen(gene_code_id) > 5) {
 		try {
-			transl_table = convert_int(sequence_type+5);
+			transl_table = convert_int(gene_code_id);
 		} catch (string &str) {
-			outError("Wrong genetic code ", sequence_type);
+			outError("Wrong genetic code ", gene_code_id);
 		}
 		switch (transl_table) {
 		case 1: genetic_code = genetic_code1; break;
@@ -1077,14 +1077,13 @@ void Alignment::initCodon(char *sequence_type) {
 		case 24: genetic_code = genetic_code24; break;
 		case 25: genetic_code = genetic_code25; break;
 		default:
-			outError("Wrong genetic code ", sequence_type);
+			outError("Wrong genetic code ", gene_code_id);
 			break;
 		}
 	} else {
 		genetic_code = genetic_code1;
 	}
 	assert(strlen(genetic_code) == 64);
-	cout << "Converting to codon sequences with genetic code " << transl_table << " ..." << endl;
 
 //	int codon;
 	/*
@@ -1189,29 +1188,39 @@ int Alignment::buildPattern(StrVector &sequences, char *sequence_type, int nseq,
         if (!sequence_type)
             throw "Unknown sequence type.";
     }
+    bool nt2aa = false;
     if (sequence_type && strcmp(sequence_type,"") != 0) {
         SeqType user_seq_type;
         if (strcmp(sequence_type, "BIN") == 0) {
             num_states = 2;
             user_seq_type = SEQ_BINARY;
-        } else if (strcmp(sequence_type, "DNA") == 0) {
+        } else if (strcmp(sequence_type, "NT") == 0 || strcmp(sequence_type, "DNA") == 0) {
             num_states = 4;
             user_seq_type = SEQ_DNA;
         } else if (strcmp(sequence_type, "AA") == 0 || strcmp(sequence_type, "PROT") == 0) {
             num_states = 20;
             user_seq_type = SEQ_PROTEIN;
-        } else if (strcmp(sequence_type, "NUM") == 0 || strcmp(sequence_type, "MORPH") == 0) {
+        } else if (strcmp(sequence_type, "NT2AA") == 0) {
+            if (seq_type != SEQ_DNA)
+                outWarning("Sequence type detected as non DNA!");
+            initCodon(&sequence_type[5]);
+            seq_type = user_seq_type = SEQ_PROTEIN;
+            num_states = 20;
+            nt2aa = true;
+            cout << "Translating to amino-acid sequences with genetic code " << &sequence_type[5] << " ..." << endl;
+        } else if (strcmp(sequence_type, "NUM") == 0 || strcmp(sequence_type, "MORPH") == 0 || strcmp(sequence_type, "MULTI") == 0) {
             num_states = getMaxObservedStates(sequences);
             if (num_states < 2 || num_states > 32) throw "Invalid number of states";
             user_seq_type = SEQ_MORPH;
-        } else if (strcmp(sequence_type, "TINA") == 0 || strcmp(sequence_type, "MULTI") == 0) {
+        } else if (strcmp(sequence_type, "TINA") == 0) {
             cout << "Multi-state data with " << num_states << " alphabets" << endl;
             user_seq_type = SEQ_MULTISTATE;
         } else if (strncmp(sequence_type, "CODON", 5) == 0) {
             if (seq_type != SEQ_DNA) 
 				outWarning("You want to use codon models but the sequences were not detected as DNA");
             seq_type = user_seq_type = SEQ_CODON;
-        	initCodon(sequence_type);
+        	initCodon(&sequence_type[5]);
+            cout << "Converting to codon sequences with genetic code " << &sequence_type[5] << " ..." << endl;
         } else
             throw "Invalid sequence type.";
         if (user_seq_type != seq_type && seq_type != SEQ_UNKNOWN)
@@ -1223,35 +1232,43 @@ int Alignment::buildPattern(StrVector &sequences, char *sequence_type, int nseq,
     int site, seq, num_gaps_only = 0;
 
     char char_to_state[NUM_CHAR];
+    char AA_to_state[NUM_CHAR];
     computeUnknownState();
-    buildStateMap(char_to_state, seq_type);
+    if (nt2aa) {
+        buildStateMap(char_to_state, SEQ_DNA);
+        buildStateMap(AA_to_state, SEQ_PROTEIN);
+    } else
+        buildStateMap(char_to_state, seq_type);
 
     Pattern pat;
     pat.resize(nseq);
-    int step = ((seq_type == SEQ_CODON) ? 3 : 1);
+    int step = ((seq_type == SEQ_CODON || nt2aa) ? 3 : 1);
     if (nsite % step != 0)
     	outError("Number of sites is not multiple of 3");
     site_pattern.resize(nsite/step, -1);
     clear();
     pattern_index.clear();
-    bool error = false;
+    int num_error = 0;
     for (site = 0; site < nsite; site+=step) {
         for (seq = 0; seq < nseq; seq++) {
             //char state = convertState(sequences[seq][site], seq_type);
             char state = char_to_state[(int)(sequences[seq][site])];
-            if (seq_type == SEQ_CODON) {
+            if (seq_type == SEQ_CODON || nt2aa) {
             	// special treatment for codon
             	char state2 = char_to_state[(int)(sequences[seq][site+1])];
             	char state3 = char_to_state[(int)(sequences[seq][site+2])];
             	if (state < 4 && state2 < 4 && state3 < 4) {
 //            		state = non_stop_codon[state*16 + state2*4 + state3];
             		state = state*16 + state2*4 + state3;
-            		if (isStopCodon(state)) {
+            		if (genetic_code[(int)state] == '*') {
                         err_str << "Sequence " << seq_names[seq] << " has stop codon " <<
                         		sequences[seq][site] << sequences[seq][site+1] << sequences[seq][site+2] <<
                         		" at site " << site+1 << endl;
+                        num_error++;
                         state = STATE_UNKNOWN;
-            		}
+            		} else if (nt2aa) {
+                        state = AA_to_state[genetic_code[(int)state]];
+                    }
             	} else if (state == STATE_INVALID || state2 == STATE_INVALID || state3 == STATE_INVALID) {
             		state = STATE_INVALID;
             	} else {
@@ -1266,14 +1283,18 @@ int Alignment::buildPattern(StrVector &sequences, char *sequence_type, int nseq,
             	}
             }
             if (state == STATE_INVALID) {
-                err_str << "Sequence " << seq_names[seq] << " has invalid character " << sequences[seq][site];
-            	if (seq_type == SEQ_CODON) err_str << sequences[seq][site+1] << sequences[seq][site+2];
-            	err_str << " at site " << site+1 << endl;
-                error = true;
+                if (num_error < 100) {
+                    err_str << "Sequence " << seq_names[seq] << " has invalid character " << sequences[seq][site];
+                    if (seq_type == SEQ_CODON) 
+                        err_str << sequences[seq][site+1] << sequences[seq][site+2];
+                    err_str << " at site " << site+1 << endl;
+                } else if (num_error == 100)
+                    err_str << "...many more..." << endl;
+                num_error++;
             }
             pat[seq] = state;
         }
-        if (!error)
+        if (!num_error)
             num_gaps_only += addPattern(pat, site/step);
     }
     if (num_gaps_only)
