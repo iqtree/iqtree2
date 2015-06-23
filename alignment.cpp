@@ -1031,7 +1031,7 @@ char Alignment::convertStateBack(char state) {
 
 string Alignment::convertStateBackStr(char state) {
 	string str;
-    if (seq_type == SEQ_COUNTSFORMAT)
+    if (seq_type == SEQ_POMO)
         return string("POMO")+convertIntToString(state);
 	if (seq_type != SEQ_CODON) {
 		str = convertStateBack(state);
@@ -1190,7 +1190,7 @@ int Alignment::buildPattern(StrVector &sequences, char *sequence_type, int nseq,
         if (num_states < 2 || num_states > 32) throw "Invalid number of states.";
         cout << "Alignment most likely contains " << num_states << "-state morphological data" << endl;
         break;
-    case SEQ_COUNTSFORMAT:
+    case SEQ_POMO:
         throw "Counts Format pattern is built in Alignment::readCountsFormat().";
         break;
     default:
@@ -1381,6 +1381,13 @@ int Alignment::readFasta(char *filename, char *sequence_type) {
     ifstream in;
     int line_num = 1;
     string line;
+
+    // PoMo with Fasta files is not supported yet.
+    if (sequence_type) {
+        string st (sequence_type);
+        if (st.substr(0,2) != "CF")
+            throw "PoMo does not support reading fasta files yet, please use a Counts File.";
+    }
 
     // set the failbit and badbit
     in.exceptions(ios::failbit | ios::badbit);
@@ -1641,7 +1648,7 @@ int Alignment::readMSF(char *filename, char *sequence_type) {
 int Alignment::readCountsFormat(char* filename, char* sequence_type) {
     int npop = 0;                // Number of populations.
     int nsites = 0;              // Number of sites.
-    int N = 10;                  // Virtual population size; defaults
+    int N = 11;                  // Virtual population size; defaults
                                  // to 10.  If `-st CFXX` is given, it
                                  // will be set to XX below.
     int nnuc = 4;                // Number of nucleotides (base states).
@@ -1692,10 +1699,11 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
     bool everything_ok = true;
     int fails = 0;
 
-    // Check for sequence type and for custom virtual population size.
+    // Check if sequence type flag matches and for custom virtual population size.
     if (sequence_type) {
         string st (sequence_type);
-        if (st.substr(0,2) != "CF") throw "Counts File detected but sequence type is not 'CF'.";
+        if (st.substr(0,2) != "CF")
+            throw "Counts File detected but sequence type (-st) is not 'CF'.";
         string virt_pop_size_str = st.substr(2);
         if (virt_pop_size_str != "") {
             int virt_pop_size = atoi(virt_pop_size_str.c_str());
@@ -1707,7 +1715,7 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
     // Set the number of states.  If nnuc=4:
     // 4 + (4 choose 2)*(N-1) = 58.
     num_states = nnuc + nnuc*(nnuc-1)/2*(N-1);
-    seq_type = SEQ_COUNTSFORMAT;
+    seq_type = SEQ_POMO;
 
     // Open counts file.
     // Set the failbit and badbit.
@@ -3300,7 +3308,7 @@ void Alignment::convfreq(double *stateFrqArr) {
         // Do not check for a minimum frequency with PoMo because very
         // low frequencies are expected for polymorphic sites.
 		if ((freq < MIN_FREQUENCY) &&
-            (seq_type != SEQ_COUNTSFORMAT)) {
+            (seq_type != SEQ_POMO)) {
 			stateFrqArr[i] = MIN_FREQUENCY;
 			if (!isStopCodon(i))
 				cout << "WARNING: " << convertStateBackStr(i) << " is not present in alignment that may cause numerical problems" << endl;

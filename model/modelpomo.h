@@ -7,8 +7,8 @@
 /*       (phylotreesse.cpp has to be changed to). */
 /* TODO: Implement different DNA subsitution models. */
 
-const double POMO_MIN_RATE = 1e-6;
-const double POMO_MAX_RATE = 1e-3;
+const double POMO_MIN_RATE = 3e-6;
+const double POMO_MAX_RATE = 1e-4;
 const double POMO_MIN_REL_FREQ = 0.5;
 const double POMO_MAX_REL_FREQ = 2.0;
 
@@ -24,10 +24,10 @@ class ModelPoMo : public ModelGTR
      * - allocates rates[getNumRateEntries()] = rates[n*(n-1)/2];
      *   cf. modelsubst.h
      * - allocates eigenvalues and eigenvectors.
-     *   
+     *
      * @todo Implement `model_params'.
      * @todo Implement `freq_params'.
-     * 
+     *
      * @param model_name The name of the model (e.g., "HKY+P").
      * @param model_params The parameters of the model (user defined models.).
      * @param freq_type
@@ -110,7 +110,7 @@ class ModelPoMo : public ModelGTR
     /*  * @return TRUE if successful, FALSE otherwise */
     /*  *\/ */
 	/* bool setRateType(const char *rate_spec); */
-    
+
     /**
      *  @return the number of rate entries
      */
@@ -156,18 +156,32 @@ class ModelPoMo : public ModelGTR
     /*  *\/ */
     /* void readMutationRates(string str); */
 
-    /** 
+    /**
      * Estimate the empirical (relative) fixed state frequencies.  The
      * number of A, C, G, and T in the data is summed up and the
      * relative proportion of all bases is calculated.  The empirical
      * fixed state frequencies are set to these relative proportions.
-     * 
+     *
      * @param abs_state_freq An array of the absolute state frequencies, size N.
      * @param freq_fixed_states (OUT) The estimated fixed frequencies,
      * size num_states.
      */
     void estimateEmpiricalFixedStateFreqs(unsigned int * abs_state_freq, double * freq_fixed_states);
-        
+
+    /**
+     * Report the model rates to the output file stream 'out'.
+     *
+     * @param out Output file stream.
+     */
+    void reportPoMoRates(ofstream &out);
+
+    /**
+     * Report the state frequencies to the output file stream 'out'.
+     *
+     * @param out Output file stream.
+     */
+    void reportPoMoStateFreqs(ofstream &out);
+
  protected:
 
     ModelDNA *dna_model;

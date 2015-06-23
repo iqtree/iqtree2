@@ -31,6 +31,7 @@
 #include "iqtree.h"
 #include "model/modelgtr.h"
 #include "model/modeldna.h"
+#include "model/modelpomo.h"
 #include "myreader.h"
 #include "model/rateheterogeneity.h"
 #include "model/rategamma.h"
@@ -83,7 +84,7 @@ void reportAlignment(ofstream &out, Alignment &alignment, int nremoved_seqs) {
 	case SEQ_PROTEIN: out << "amino-acid"; break;
 	case SEQ_CODON: out << "codon"; break;
 	case SEQ_MORPH: out << "morphological"; break;
-	case SEQ_COUNTSFORMAT: out << "PoMo"; break;
+	case SEQ_POMO: out << "PoMo"; break;
 	default: out << "unknown"; break;
 	}
 	out << " sites" << endl << "Number of constant sites: "
@@ -217,6 +218,7 @@ void reportModel(ofstream &out, Alignment *aln, ModelSubst *m) {
 		out.unsetf(ios_base::fixed);
 		delete[] rate_mat;
 	}
+    if (aln->seq_type == SEQ_POMO) ((ModelPoMo*) m)->reportPoMoRates(out);
 	out << "State frequencies: ";
 	if (m->isSiteSpecificModel())
 		out << "(site specific frequencies)" << endl << endl;
@@ -272,6 +274,7 @@ void reportModel(ofstream &out, Alignment *aln, ModelSubst *m) {
 			out << endl;
 			delete[] q_mat;
 		}
+        if (aln->seq_type == SEQ_POMO) ((ModelPoMo*) m)->reportPoMoStateFreqs(out);
 	}
 }
 
@@ -609,7 +612,7 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 				case SEQ_MORPH: out << "MORPH"; break;
 				case SEQ_MULTISTATE: out << "TINA"; break;
 				case SEQ_PROTEIN: out << "AA"; break;
-				case SEQ_COUNTSFORMAT: out << "COUNTSFORMAT"; break;
+				case SEQ_POMO: out << "COUNTSFORMAT"; break;
 				case SEQ_UNKNOWN: out << "???"; break;
 				}
 				out.width(5);

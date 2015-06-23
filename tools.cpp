@@ -2880,7 +2880,7 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "- it is specified in the model string (see below)."                                  << endl
             << "  -st CF or CFps       Counts File (automatically detected)."                        << endl
             << "                       Useful to customize the virtual population size `ps`"         << endl
-            << "                       (5 <= ps <= 20; default is 10)."                              << endl
+            << "                       (5 <= ps <= 20; default is 11)."                              << endl
             << "  -m <sm>+<pm>+<ft>    Default: `HKY+rP+FO`."                                        << endl
             << "                 <sm>: Substitution model."                                          << endl
             << "                  DNA: HKY (default), JC, F81, K2P, K3P, K81uf, TN/TrN, TNef,"       << endl
@@ -2890,7 +2890,7 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "                       - rP (default; reversible PoMo with tree inference)."         << endl
             << "                       - nrP (non-reversible PoMo; tree has to be given separately;" << endl
             << "                         not implemented yet)."                                      << endl
-            << "                 <ft>: Frequency type (optional; default: +FO, optimized)."          << endl
+            << "                 <ft>: Frequency type (optional; default: +F, counted)."             << endl
             << "                       F or +FO or +FU or +FQ."                                      << endl
             << "                       Counted, optimized, user-defined, equal state frequency."     << endl
             << "                       This overwrites the specifications of the DNA model."         << endl

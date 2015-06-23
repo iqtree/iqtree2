@@ -27,10 +27,6 @@ void ModelPoMo::init(const char *model_name,
 
     if (is_reversible != true) throw "Non-reversible PoMo not supported yet.";
 
-    // TODO: Set and get variables according to the model type.
-
-    // TODO: Set and get variables according to the frequency type.
-
     // Get DNA model info from model_name.  Use ModelDNA for this
     // purpose.  It acts as the basis of the `ModelPoMo' (the mutation
     // coefficients point to the rates of ModelDNA, the fixed state
@@ -38,7 +34,8 @@ void ModelPoMo::init(const char *model_name,
     phylo_tree->aln->num_states = 4;
     dna_model = new ModelDNA(model_name, model_params, freq_type, freq_params, phylo_tree);
     phylo_tree->aln->num_states = num_states;
-
+    num_params = dna_model->num_params + 1;
+    
 	this->name = dna_model->name + "+rP" + convertIntToString(N);
     this->full_name =
         "reversible PoMo with N=" +
@@ -56,26 +53,13 @@ void ModelPoMo::init(const char *model_name,
     // These correspond to the state frequencies in the DNA
     // substitution models.
     freq_fixed_states = dna_model->state_freq;
-	for (int i = 0; i < 4; i++) freq_fixed_states[i] = 1.0;
 
     // Create PoMo rate matrix.  This is the actual rate matrix of
     // PoMo.  TODO: Is the distinction rates[] and rate_matrix[]
     // really necessary?
 	rate_matrix = new double[num_states*num_states];
 
-    // Check frequency type.  If frequency type has not been set by
-    // user, use the DNA model frequency type (if set).
-    if (freq_type == FREQ_UNKNOWN)
-        freq_type = dna_model->freq_type;
-    if (freq_type == FREQ_UNKNOWN)
-        outError("No frequency type given.");
-
-    if (freq_type != FREQ_EQUAL     &&  // '+FQ'
-        freq_type != FREQ_ESTIMATE  &&  // '+FO'
-        freq_type != FREQ_EMPIRICAL &&  // '+F'
-        freq_type != FREQ_USER_DEFINED) // '+FU'
-        outError("Unknown frequency type.");
-
+    // Check state frequencies.
     unsigned int abs_state_freq[num_states];
     phylo_tree->aln->computeAbsoluteStateFreq(abs_state_freq);
     if (verbose_mode >= VB_MAX) {
@@ -84,23 +68,47 @@ void ModelPoMo::init(const char *model_name,
             std::cout << abs_state_freq[i] << " ";
         std::cout << std::endl;
     }
-
-    if (freq_type == FREQ_EMPIRICAL) {
+    
+    freq_type = dna_model->freq_type;
+    // ModelGTR.freq_type is not set correctly.  Set it here
+    // explicitely.  Needed for some verbose output functions.
+    this->freq_type = dna_model->freq_type;
+    
+    switch (freq_type) {
+    case FREQ_EQUAL:            // '+FQ'
+    case FREQ_ESTIMATE:         // '+FO'
+        for (int i = 0; i < 4; i++) freq_fixed_states[i] = 1.0;
+        break;
+    case FREQ_EMPIRICAL:        // '+F'
         // Get the fixed state frequencies from the data and normalize
         // them such that the last one is 1.0.
         estimateEmpiricalFixedStateFreqs(abs_state_freq,
                                          freq_fixed_states);
         for (int i = 0; i < nnuc; i++)
             freq_fixed_states[i] /= freq_fixed_states[3];
+        // Set highest_freq_state.
+		for (int i = 0; i < num_states; i++)
+			if (abs_state_freq[i] > abs_state_freq[highest_freq_state])
+				highest_freq_state = i;
+        break;
+    case FREQ_USER_DEFINED:     // '+FU'
+        // ModelDNA should have set them already.
+        if (freq_fixed_states[0] == 0.0)
+            outError("State frequencies not specified");
+        break;
+    case FREQ_UNKNOWN:
+        outError("No frequency type given.");
+        break;
+    default:
+        outError("Unknown frequency type.");
+        break;
     }
-    
+
 	updatePoMoStatesAndRates();
 
-    // Use FREQ_USER_DEFINED for ModelGTR initialization so that it
-    // does not handle the frequency types.  TODO: Not sure if this is
-    // even needed.  It sets highest_freq_state and runs
-    // decomposeRateMatrix().
-	ModelGTR::init(FREQ_USER_DEFINED);
+	decomposeRateMatrix();
+	if (verbose_mode >= VB_MAX)
+		writeInfo(cout);
 }
 
 ModelPoMo::~ModelPoMo() {
@@ -441,25 +449,61 @@ void ModelPoMo::setBounds(double *lower_bound,
 }
 
 void ModelPoMo::setVariables(double *variables) {
-	int i;
-	for (i = 1; i <= 6; i++) {
-		variables[i] = mutation_prob[i-1];
+	// for (int i = 1; i <= 6; i++) {
+	// 	variables[i] = mutation_prob[i-1];
+	// }
+	// for (int i = 7; i <= 9; i++) {
+	// 	variables[i] = freq_fixed_states[i-7];
+	// }
+	if (num_params > 0) {
+		int num_all = dna_model->param_spec.length();
+		for (int i = 0; i < num_all; i++)
+            variables[(int)dna_model->param_spec[i]+1] = mutation_prob[i];
 	}
-	for (i = 7; i <= 9; i++) {
-		variables[i] = freq_fixed_states[i-7];
+	if (freq_type == FREQ_ESTIMATE) {
+		int ndim = getNDim();
+		memcpy(variables+(ndim-nnuc+2), freq_fixed_states, (nnuc-1)*sizeof(double));
 	}
-    // TODO: Von ModelDNA!
 }
 
 void ModelPoMo::getVariables(double *variables) {
 	int i;
-	for (i = 1; i <= 6; i++) {
-		mutation_prob[i-1] = variables[i];
+	// for (i = 1; i <= 6; i++) {
+	// 	mutation_prob[i-1] = variables[i];
+	// }
+	// for (i = 7; i <= 9; i++) {
+	// 	freq_fixed_states[i-7] = variables[i];
+	// }
+	// updatePoMoStatesAndRates();
+
+	if (num_params > 0) {
+		int num_all = dna_model->param_spec.length();
+		if (verbose_mode >= VB_MAX) {
+			for (i = 1; i <= num_params; i++) {
+                cout << setprecision(8);
+				cout << "  Estimated mutation probabilities[" << i << "] = ";
+                cout << variables[i] << endl;
+            }
+		}
+		for (i = 0; i < num_all; i++)
+            mutation_prob[i] = variables[(int)dna_model->param_spec[i]+1];
 	}
-	for (i = 7; i <= 9; i++) {
-		freq_fixed_states[i-7] = variables[i];
+	if (freq_type == FREQ_ESTIMATE) {
+		int ndim = getNDim();
+		memcpy(freq_fixed_states, variables+(ndim-nnuc+2), (nnuc-1)*sizeof(double));
+		if (verbose_mode >= VB_MAX) {
+			for (i = 0; i < nnuc-1; i++) {
+                cout << setprecision(8);
+				cout << "  Estimated fixed frequencies[" << i << "] = ";
+                cout << variables[ndim-nnuc+2+i] << endl;
+            }
+		}
+		// double sum = 0;
+		// for (i = 0; i < num_states-1; i++) 
+		// 	sum += state_freq[i];
+		// state_freq[num_states-1] = 1.0 - sum;
 	}
-	updatePoMoStatesAndRates();
+    updatePoMoStatesAndRates();
 }
 
 void ModelPoMo::writeInfo(ostream &out) {
@@ -468,7 +512,7 @@ void ModelPoMo::writeInfo(ostream &out) {
     ios  state(NULL);
     state.copyfmt(out);
 
-    out << setprecision(6);
+    out << setprecision(8);
     out << endl;
 
     out << "==========================" << endl;
@@ -537,19 +581,19 @@ void ModelPoMo::computeRateMatrix(double **r_matrix, double *s_freqs, int n_stat
         }
     }
 
-    std::cout << "DEBUG Rate Matrix." << std::endl;
-    for (int i = 0; i < n_states; i++) {
-        std::cout << "Row " << i << ": ";
-        for (int j = 0; j < n_states; j++) {
-            std::cout << rate_matrix[i*n_states+j] << " ";
-        }
-        std::cout << std::endl;
-    }
-    std::cout << "DEBUG State Frequency." << setprecision(10) << std::endl;
-    for (int i = 0; i < n_states; i++) {
-        std::cout << s_freqs[i] << " ";
-    }
-    std::cout << std::endl;
+    // std::cout << "DEBUG Rate Matrix." << std::endl;
+    // for (int i = 0; i < n_states; i++) {
+    //     std::cout << "Row " << i << ": ";
+    //     for (int j = 0; j < n_states; j++) {
+    //         std::cout << rate_matrix[i*n_states+j] << " ";
+    //     }
+    //     std::cout << std::endl;
+    // }
+    // std::cout << "DEBUG State Frequency." << setprecision(10) << std::endl;
+    // for (int i = 0; i < n_states; i++) {
+    //     std::cout << s_freqs[i] << " ";
+    // }
+    // std::cout << std::endl;
 }
 
 double ModelPoMo::targetFunk(double x[]) {
@@ -769,4 +813,27 @@ ModelPoMo::estimateEmpiricalFixedStateFreqs(unsigned int * abs_state_freq,
     for (int i = 0; i < nnuc; i++) {
         freq_fixed_states[i] = (double) sum[i]/tot_sum;
     }
+}
+
+void ModelPoMo::reportPoMoRates(ofstream &out) {
+    out << setprecision(8);
+    out << "Estimated mutation rates:" << endl;
+	for (int i = 0; i < 6; i++)
+		out << mutation_prob[i] << " ";
+	out << endl << endl;;
+
+}
+
+void ModelPoMo::reportPoMoStateFreqs(ofstream &out) {
+    double sum = 0.0;
+    for (int i = 0; i < nnuc; i++) {
+        sum += freq_fixed_states[i];
+    }
+
+    out << setprecision(8);
+    out << "(Estimated) frequencies of fixed states:" << endl;;
+	for (int i = 0; i < nnuc; i++)
+		out << freq_fixed_states[i]/sum << " ";
+	out << endl << endl;
+
 }
