@@ -1107,6 +1107,7 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 			}
 		if (model_id >= 0) {
 			info.logl = model_info[model_id].logl;
+            info.tree_len = model_info[model_id].tree_len;
             prev_tree_string = model_info[model_id].tree;
         } else if (skip_model) {
             info.logl = model_info[prev_model_id].logl;
@@ -1128,6 +1129,7 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
                 cout << endl << "===> Testing model " << model+1 << ": " << params.model_name << endl;
                 runTreeReconstruction(params, original_model, *iqtree, model_info);
                 info.logl = iqtree->computeLikelihood();
+                info.tree_len = iqtree->treeLength();
                 params.model_name = original_model;
                 params.user_file = orig_user_tree;
                 tree = iqtree;

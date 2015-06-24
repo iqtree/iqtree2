@@ -603,6 +603,8 @@ void get2RandNumb(const int size, int &first, int &second) {
     }
 }
 
+void quickStartGuide();
+
 void parseArg(int argc, char *argv[], Params &params) {
     int cnt;
     verbose_mode = VB_MIN;
@@ -686,6 +688,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.siteLL_file = NULL; //added by MA
     params.partition_file = NULL;
     params.partition_type = 0;
+    params.partfinder_rcluster = 100;
     params.remove_empty_seq = true;
     params.terrace_aware = true;
     params.sequence_type = NULL;
@@ -1390,10 +1393,10 @@ void parseArg(int argc, char *argv[], Params &params) {
 					throw "tree_max_count must not be negative";
 				continue;
 			}
-			if (strcmp(argv[cnt], "-t") == 0) {
+			if (strcmp(argv[cnt], "-minsup") == 0) {
 				cnt++;
 				if (cnt >= argc)
-					throw "Use -t <split_threshold>";
+					throw "Use -minsup <split_threshold>";
 				params.split_threshold = convert_double(argv[cnt]);
 				if (params.split_threshold < 0 || params.split_threshold > 1)
 					throw "Split threshold must be between 0 and 1";
@@ -1482,6 +1485,15 @@ void parseArg(int argc, char *argv[], Params &params) {
 			if (strcmp(argv[cnt], "-M") == 0) {
                 params.partition_type = 0;
                 continue;
+            }
+            if (strcmp(argv[cnt], "-rcluster") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -rcluster <percent>";
+                params.partfinder_rcluster = convert_double(argv[cnt]);
+                if (params.partfinder_rcluster < 0 || params.partfinder_rcluster > 100)
+                    throw "rcluster percentage must be between 0 and 100";
+				continue;
             }
 			if (strcmp(argv[cnt], "-keep_empty_seq") == 0) {
 				params.remove_empty_seq = false;
@@ -2672,7 +2684,22 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.compute_seq_identity_along_tree = true;
 				continue;
 			}
-            
+			if (strcmp(argv[cnt], "-t") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -t <start_tree>";
+				params.user_file = argv[cnt];
+				continue;
+			}
+			if (strcmp(argv[cnt], "-te") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -te <user_tree>";
+				params.user_file = argv[cnt];
+				params.min_iterations = 0;
+				params.stop_condition = SC_FIXED_ITERATION;
+				continue;
+			}
             
 			if (argv[cnt][0] == '-') {
                 string err = "Invalid \"";
@@ -2704,12 +2731,14 @@ void parseArg(int argc, char *argv[], Params &params) {
         }
 
     } // for
-    if (!params.user_file && !params.aln_file && !params.ngs_file && !params.ngs_mapped_reads && !params.partition_file)
+    if (!params.user_file && !params.aln_file && !params.ngs_file && !params.ngs_mapped_reads && !params.partition_file) {
 #ifdef IQ_TREE
-        usage_iqtree(argv, false);
+        quickStartGuide();
+//        usage_iqtree(argv, false);
 #else
         usage(argv, false);
 #endif
+    }
     if (!params.out_prefix) {
     	if (params.eco_dag_file)
     		params.out_prefix = params.eco_dag_file;
@@ -2800,18 +2829,19 @@ void usage(char* argv[], bool full_command) {
 
 void usage_iqtree(char* argv[], bool full_command) {
     printCopyright(cout);
-    cout << "Usage: " << argv[0] << " -s <alignment> [OPTIONS] [<treefile>] " << endl << endl;
+    cout << "Usage: " << argv[0] << " -s <alignment> [OPTIONS]" << endl << endl;
     cout << "GENERAL OPTIONS:" << endl
-            << "  -?                   Printing this help dialog" << endl
+            << "  -? or -h             Printing this help dialog" << endl
             << "  -s <alignment>       Input alignment in PHYLIP/FASTA/NEXUS/CLUSTAL/MSF format" << endl
             << "  -st <data_type>      BIN, DNA, AA, CODON, or MORPH (default: auto-detect)" << endl
-            << "  -sp <partition_file> Partition model specification in NEXUS/RAxML format." << endl
-            << "                       For single model use the -m option (see below)" << endl
-            << "  -q <partition_file>  Partition model specification in RAxML format." << endl
-            << "  -z <trees_file>      Compute log-likelihoods for all trees in the given file" << endl
-            << "  <treefile>           Initial tree for tree reconstruction (default: MP)" << endl
+            << "  -q <partition_file>  Edge-linked partition model (file in NEXUS/RAxML format)" << endl
+            << " -spp <partition_file> Like -q option but allowing partition-specific rates" << endl
+            << "  -sp <partition_file> Edge-unlinked partition model (like -M option of RAxML)" << endl
+            << "  -t <start_tree_file> Starting tree for reconstruction (default: parsimony)" << endl
+            << "  -te <user_tree_file> Evaluating a fixed user tree (no tree search performed)" << endl
+            << "  -z <trees_file>      Evaluating user trees at the end (can be used with -t, -te)" << endl
             << "  -o <outgroup_taxon>  Outgroup taxon name for writing .treefile" << endl
-            << "  -pre <PREFIX>        Using <PREFIX> for output files (default: alignment name)" << endl
+            << "  -pre <PREFIX>        Using <PREFIX> for output files (default: aln/partition)" << endl
 #ifdef _OPENMP
             << "  -nt <#cpu_cores>     Number of cores/threads to use (REQUIRED)" << endl
 #endif
@@ -2851,6 +2881,7 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -m TESTNEW           Like -m TESTNEWONLY but followed by tree reconstruction" << endl
             << "  -m TESTMERGEONLY     Select best-fit partition scheme (like PartitionFinder)" << endl
             << "  -m TESTMERGE         Like -m TESTMERGEONLY but followed by tree reconstruction" << endl
+            << "  -rcluster <percent>  Relaxed clustering algorithm (cf. PartitionFinder)" << endl
             << "  -mset program        Restrict search to models supported by other programs" << endl
             << "                       (i.e., raxml, phyml or mrbayes)" << endl
             << "  -mset m1,...,mk      Restrict search to models in a comma-separated list" << endl
@@ -2925,8 +2956,8 @@ void usage_iqtree(char* argv[], bool full_command) {
 //            << "  -seed <number>       Random seed number, normally used for debugging purpose" << endl
 //            << "  -v, -vv, -vvv        Verbose mode, printing more messages to screen" << endl
             << endl << "CONSENSUS RECONSTRUCTION:" << endl
-            << "  <tree_file>          Set of input trees for consensus reconstruction" << endl
-            << "  -t <threshold>       Min split support in range [0,1]. 0.5 for majority-rule" << endl
+            << "  -t <tree_file>       Set of input trees for consensus reconstruction" << endl
+            << "  -minsup <threshold>  Min split support in range [0,1]; 0.5 for majority-rule" << endl
             << "                       consensus (default: 0, i.e. extended consensus)" << endl
             << "  -bi <burnin>         Discarding <burnin> trees at beginning of <treefile>" << endl
             << "  -con                 Computing consensus tree to .contree file" << endl
@@ -2970,6 +3001,30 @@ void usage_iqtree(char* argv[], bool full_command) {
         //TODO Print other options here (to be added)
     }
 
+    exit(0);
+}
+
+void quickStartGuide() {
+    printCopyright(cout);
+    cout << "Minimal command-line examples (replace 'iqtree ...' with actual path to executable):" << endl << endl
+        << "1. Reconstruct maximum-likelihood tree from a sequence alignment (example.phy)" << endl
+         << "   with the best-fit substitution model automatically selected:" << endl
+         << "     iqtree -s example.phy -m TEST" << endl << endl
+         << "2. Reconstruct ML tree and assess branch supports with ultrafast bootstrap" << endl
+         << "   and SH-aLRT test (1000 replicates):" << endl
+         << "     iqtree -s example.phy -m TEST -alrt 1000 -bb 1000" << endl << endl
+         << "3. Perform partitioned analysis with partition definition file (example.nex)" << endl
+         << "   in Nexus or RAxML format using edge-linked model and gene-specific rates:" << endl
+         << "     iqtree -s example.phy -spp example.nex -m TEST" << endl << endl
+         << "   (for edge-unlinked model replace '-spp' with '-sp' option)" << endl << endl
+         << "4. Merge partitions to reduce model complexity:" << endl
+         << "     iqtree -s example.phy -q example.nex -m TESTMERGE" << endl << endl
+#ifdef _OPENMP
+         << "5. Use 4 CPU cores to speed up computation: add '-nt 4' option" << endl << endl
+#endif
+         << "To show all available options, run 'iqtree -h'" << endl << endl
+         << "Have a look at the tutorial and manual for more information:" << endl
+         << "     http://www.cibiv.at/software/iqtree" << endl << endl;
     exit(0);
 }
 

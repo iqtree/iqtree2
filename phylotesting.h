@@ -19,6 +19,7 @@ struct ModelInfo {
 	string name; // model name
 	double logl; // tree log likelihood
 	int df;      // #parameters
+    double tree_len; // tree length, added 2015-06-24 for rcluster algorithm
     string tree; // added 2015-04-28: tree string
 	double AIC_score, AICc_score, BIC_score;    // scores
 	double AIC_weight, AICc_weight, BIC_weight; // weights
