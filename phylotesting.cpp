@@ -325,6 +325,11 @@ bool checkModelFile(ifstream &in, bool is_partitioned, vector<ModelInfo> &infos)
 	in >> str;
 	if (str != "LnL")
 		return false;
+	in >> str;
+	if (str != "TreeLen") {
+        outWarning(".model file was produced from a previous version of IQ-TREE");
+		return false;
+    }
 	getline(in, str);
 	while (!in.eof()) {
 		in >> str;
@@ -336,7 +341,7 @@ bool checkModelFile(ifstream &in, bool is_partitioned, vector<ModelInfo> &infos)
 			in >> str;
 		}
 		info.name = str;
-		in >> info.df >> info.logl;
+		in >> info.df >> info.logl >> info.tree_len;
 		getline(in, str);
         info.tree = "";
         if (*str.rbegin() == ';') {
@@ -678,6 +683,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInf
 	PhyloSuperTree::iterator it;
 	DoubleVector lhvec;
 	DoubleVector dfvec;
+    DoubleVector lenvec; // tree length
 	double lhsum = 0.0;
 	int dfsum = 0;
 	int ssize = in_tree->getAlnNSite();
@@ -704,6 +710,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInf
 		replaceModelInfo(model_info, *part_model_info);
 		lhvec.push_back(part_model_info->at(0).logl);
 		dfvec.push_back(part_model_info->at(0).df);
+        lenvec.push_back(part_model_info->at(0).tree_len);
 		lhsum += lhvec.back();
 		dfsum += dfvec.back();
         delete part_model_info;
@@ -731,20 +738,42 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInf
 	}
 	cout << "Merging models to increase model fit..." << endl;
 	int prev_part = -1;
+    double *dist = new double[gene_sets.size()*(gene_sets.size()-1)/2];
+    int *distID = new int[gene_sets.size()*(gene_sets.size()-1)/2];
 	while (gene_sets.size() >= 2) {
 		// stepwise merging charsets
 		double new_score = DBL_MAX;
 		double opt_lh = 0.0;
 		int opt_df = 0;
+        double opt_treelen = 0.0;
 		int opt_part1 = 0, opt_part2 = 1;
 		IntVector opt_merged_set;
 		string opt_set_name = "";
 		string opt_model_name = "";
-		for (part1 = 0; part1 < gene_sets.size()-1; part1++)
-			for (part2 = part1+1; part2 < gene_sets.size(); part2++)
-			if (super_aln->partitions[gene_sets[part1][0]]->num_states == super_aln->partitions[gene_sets[part2][0]]->num_states &&
-				super_aln->partitions[gene_sets[part1][0]]->seq_type == super_aln->partitions[gene_sets[part2][0]]->seq_type) {
+        int num_pairs;
+        // 2015-06-24: begin rcluster algorithm
+        // compute distance between gene_sets
+		for (part1 = 0, num_pairs = 0; part1 < gene_sets.size()-1; part1++)
+			for (part2 = part1+1; part2 < gene_sets.size(); part2++) 
+			if (super_aln->partitions[gene_sets[part1][0]]->seq_type == super_aln->partitions[gene_sets[part2][0]]->seq_type)
+            {
 				// only merge partitions of the same data type
+                dist[num_pairs] = fabs(lenvec[part1] - lenvec[part2]);
+                distID[num_pairs] = (part1 << 16) | part2;
+                num_pairs++;
+            }
+        if (num_pairs > 0 && params.partfinder_rcluster < 100) {
+            // sort distance
+            quicksort(dist, 0, num_pairs-1, distID);
+            num_pairs = (int)ceil(num_pairs * (params.partfinder_rcluster/100));
+            if (num_pairs <= 0) num_pairs = 1;
+        }
+        // end 
+//		for (part1 = 0; part1 < gene_sets.size()-1; part1++)
+//			for (part2 = part1+1; part2 < gene_sets.size(); part2++)
+        for (int pair = 0; pair < num_pairs; pair++) {
+            part1 = distID[pair] >> 16;
+            part2 = distID[pair] & ((1<<16)-1);
 				IntVector merged_set;
 				merged_set.insert(merged_set.end(), gene_sets[part1].begin(), gene_sets[part1].end());
 				merged_set.insert(merged_set.end(), gene_sets[part2].begin(), gene_sets[part2].end());
@@ -757,7 +786,9 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInf
 				string model = "";
 				double logl = 0.0;
 				int df = 0;
+                double treelen = 0.0;
 				cout.width(4);
+                bool done_before = false;
 				if (prev_part >= 0 && part1 != prev_part && part2 != prev_part) {
 					// if pairs previously examined, reuse the information
 					for (vector<ModelInfo>::iterator mit = model_info.begin(); mit != model_info.end(); mit++)
@@ -765,10 +796,13 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInf
 							model = mit->name;
 							logl = mit->logl;
 							df = mit->df;
+                            treelen = mit->tree_len;
 							cout << right << "-" << " ";
+                            done_before = true;
 							break;
 						}
-				} else {
+				}
+                if (!done_before) {
 					cout << right << nr_model++ << " ";
 					Alignment *aln = super_aln->concatenateAlignments(merged_set);
 					PhyloTree *tree = in_tree->extractSubtree(merged_set);
@@ -780,6 +814,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInf
 					replaceModelInfo(model_info, part_model_info);
 					logl = part_model_info[0].logl;
 					df = part_model_info[0].df;
+                    treelen = part_model_info[0].tree_len;
 					delete tree;
 					delete aln;
 				}
@@ -796,11 +831,12 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInf
 					opt_part2 = part2;
 					opt_lh = logl;
 					opt_df = df;
+                    opt_treelen = treelen;
 					opt_merged_set = merged_set;
 					opt_set_name = set_name;
 					opt_model_name = model;
 				}
-			}
+        }
 		if (new_score >= inf_score) break;
 		inf_score = new_score;
 
@@ -811,6 +847,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInf
 		gene_sets[opt_part1] = opt_merged_set;
 		lhvec[opt_part1] = opt_lh;
 		dfvec[opt_part1] = opt_df;
+        lenvec[opt_part1] = opt_treelen;
 		model_names[opt_part1] = opt_model_name;
 		greedy_model_trees[opt_part1] = "(" + greedy_model_trees[opt_part1] + "," + greedy_model_trees[opt_part2] + ")" +
 				convertIntToString(in_tree->size()-gene_sets.size()+1) + ":" + convertDoubleToString(inf_score);
@@ -819,6 +856,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInf
 		// delete entry opt_part2
 		lhvec.erase(lhvec.begin() + opt_part2);
 		dfvec.erase(dfvec.begin() + opt_part2);
+		lenvec.erase(lenvec.begin() + opt_part2);
 		gene_sets.erase(gene_sets.begin() + opt_part2);
 		model_names.erase(model_names.begin() + opt_part2);
 		greedy_model_trees.erase(greedy_model_trees.begin() + opt_part2);
@@ -849,6 +887,9 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInf
 	}
 	cout << ";" << endl;
 	cout << "Agglomerative model selection: " << final_model_tree << endl;
+    
+    delete [] distID;
+    delete [] dist;
 	mergePartitions(in_tree, gene_sets, model_names);
 }
 
@@ -912,7 +953,7 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 			// print header
 			if (in_tree->isSuperTree())
 				fmodel << "Charset\t";
-			fmodel << "Model\tdf\tLnL";
+			fmodel << "Model\tdf\tLnL\tTreeLen";
 			if (seq_type == SEQ_BINARY)
 				fmodel << "\t0\t1";
 			else if (seq_type == SEQ_DNA)
@@ -1111,6 +1152,7 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
             prev_tree_string = model_info[model_id].tree;
         } else if (skip_model) {
             info.logl = model_info[prev_model_id].logl;
+            info.tree_len = model_info[prev_model_id].tree_len;
             prev_tree_string = model_info[prev_model_id].tree;
 //            cout << "Skipped " << info.name << endl;
 		} else {
@@ -1143,6 +1185,7 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
                     tree->readTreeString(prev_tree_string);
                 prev_tree_string = "";
                 info.logl = tree->getModelFactory()->optimizeParameters(false, false, TOL_LIKELIHOOD_MODELTEST, TOL_GRADIENT_MODELTEST);
+                info.tree_len = tree->treeLength();
             }
 			// print information to .model file
 			if (!fmodel.is_open()) {
@@ -1154,7 +1197,7 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 			}
 			if (set_name != "")
 				fmodel << set_name << "\t";
-			fmodel << info.name << "\t" << info.df << "\t" << info.logl;
+			fmodel << info.name << "\t" << info.df << "\t" << info.logl << "\t" << info.tree_len;
 			if (seq_type == SEQ_DNA) {
 				int nrates = tree->getModel()->getNumRateEntries();
 				double *rate_mat = new double[nrates];

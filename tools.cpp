@@ -2881,7 +2881,7 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -m TESTNEW           Like -m TESTNEWONLY but followed by tree reconstruction" << endl
             << "  -m TESTMERGEONLY     Select best-fit partition scheme (like PartitionFinder)" << endl
             << "  -m TESTMERGE         Like -m TESTMERGEONLY but followed by tree reconstruction" << endl
-            << "  -rcluster <percent>  Relaxed clustering algorithm (cf. PartitionFinder)" << endl
+            << "  -rcluster <percent>  Percentage of partition pairs (relaxed clustering alg.)" << endl
             << "  -mset program        Restrict search to models supported by other programs" << endl
             << "                       (i.e., raxml, phyml or mrbayes)" << endl
             << "  -mset m1,...,mk      Restrict search to models in a comma-separated list" << endl
@@ -3018,11 +3018,12 @@ void quickStartGuide() {
          << "     iqtree -s example.phy -spp example.nex -m TEST" << endl << endl
          << "   (for edge-unlinked model replace '-spp' with '-sp' option)" << endl << endl
          << "4. Merge partitions to reduce model complexity:" << endl
-         << "     iqtree -s example.phy -q example.nex -m TESTMERGE" << endl << endl
+         << "     iqtree -s example.phy -sp example.nex -m TESTMERGE" << endl << endl
+         << "5. Perform model selection only: use '-m TESTONLY' or '-m TESTMERGEONLY'" << endl << endl
 #ifdef _OPENMP
-         << "5. Use 4 CPU cores to speed up computation: add '-nt 4' option" << endl << endl
+         << "6. Use 4 CPU cores to speed up computation: add '-nt 4' option" << endl << endl
 #endif
-         << "To show all available options, run 'iqtree -h'" << endl << endl
+         << "To show all available options: run 'iqtree -h'" << endl << endl
          << "Have a look at the tutorial and manual for more information:" << endl
          << "     http://www.cibiv.at/software/iqtree" << endl << endl;
     exit(0);
