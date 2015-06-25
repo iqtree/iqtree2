@@ -1717,6 +1717,9 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
     num_states = nnuc + nnuc*(nnuc-1)/2*(N-1);
     seq_type = SEQ_POMO;
 
+    // Set UNKNOWN_STATE.
+    computeUnknownState();
+
     // Open counts file.
     // Set the failbit and badbit.
     in.exceptions(ios::failbit | ios::badbit);
@@ -1837,17 +1840,15 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
             }
             // Determine state (cf. above).
             if (count == 1) {
-            	// State is just id1.
+            	// Fixed state, state ID is just id1.
             	state = id1;
             }
             else if (count == 0) {
-                // TODO: Can we still use this site (i.e., set the
-                // value to 'N') and sum over the likelihoods of all
-                // states in the Felsenstein algorithm?
-                if (verbose_mode >= VB_MAX) {
-                    cout << "WARNING: Population without bases on line " << line_num << "." << endl;
-                }
-                everything_ok = false;
+                state = STATE_UNKNOWN;
+                // if (verbose_mode >= VB_MAX) {
+                //     cout << "WARNING: Population without bases on line " << line_num << "." << endl;
+                // }
+                // everything_ok = false;
             	// err_str << "No bases are present on line " << line_num << ".";
             	//throw err_str.str();
             }
@@ -1910,9 +1911,6 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
     in.exceptions(ios::failbit | ios::badbit);
     in.close();
 
-    // Set UNKNOWN_STATE.
-    computeUnknownState();
-    
     // exit (EXIT_SUCCESS);
     // return buildPattern(sequences, sequence_type, seq_names.size(), sequences.front().length());
     return 1;
