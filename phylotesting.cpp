@@ -680,7 +680,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInf
     params.print_partition_info = true;
     params.print_conaln = true;
 	int i = 0;
-	PhyloSuperTree::iterator it;
+//	PhyloSuperTree::iterator it;
 	DoubleVector lhvec;
 	DoubleVector dfvec;
     DoubleVector lenvec; // tree length
@@ -693,35 +693,51 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInf
 	//cout << " No. AIC         AICc        BIC         Charset" << endl;
 	cout << " No. Model        Score       Charset" << endl;
 
-	for (it = in_tree->begin(), i = 0; it != in_tree->end(); it++, i++) {
+	lhvec.resize(in_tree->size());
+	dfvec.resize(in_tree->size());
+	lenvec.resize(in_tree->size());
+
+#ifdef _OPENMP
+#pragma omp parallel for private(i) schedule(dynamic) reduction(+: lhsum, dfsum)
+#endif
+	for (i = 0; i < in_tree->size(); i++) {
+        PhyloTree *this_tree = in_tree->at(i);
 		// scan through models for this partition, assuming the information occurs consecutively
 		vector<ModelInfo> *part_model_info = new vector<ModelInfo>;
 		extractModelInfo(in_tree->part_info[i].name, model_info, *part_model_info);
+		// do the computation
+		string model = testModel(params, this_tree, *part_model_info, in_tree->part_info[i].name);
+		double score = computeInformationScore(part_model_info->at(0).logl,part_model_info->at(0).df,
+				this_tree->getAlnNSite(),params.model_test_criterion);
+		in_tree->part_info[i].model_name = model;
+		lhsum += (lhvec[i] = part_model_info->at(0).logl);
+		dfsum += (dfvec[i] = part_model_info->at(0).df);
+        lenvec[i] = part_model_info->at(0).tree_len;
 
+#ifdef _OPENMP
+#pragma omp critical
+        {
+#endif
 		cout.width(4);
-		cout << right << nr_model++ << " ";
-		string model = testModel(params, (*it), *part_model_info, in_tree->part_info[i].name);
+		cout << right << i+1 << " ";
 		cout.width(12);
 		cout << left << model << " ";
 		cout.width(11);
-		double score = computeInformationScore(part_model_info->at(0).logl,part_model_info->at(0).df, (*it)->getAlnNSite(),params.model_test_criterion);
 		cout << score << " " << in_tree->part_info[i].name << endl;
-		in_tree->part_info[i].model_name = model;
 		replaceModelInfo(model_info, *part_model_info);
-		lhvec.push_back(part_model_info->at(0).logl);
-		dfvec.push_back(part_model_info->at(0).df);
-        lenvec.push_back(part_model_info->at(0).tree_len);
-		lhsum += lhvec.back();
-		dfsum += dfvec.back();
-        delete part_model_info;
-	}
+#ifdef _OPENMP
+        }
+#endif
+	    delete part_model_info;
+    }
 
+	nr_model = in_tree->size()+1;
 	if (params.model_name.find("LINK") == string::npos && params.model_name.find("MERGE") == string::npos) {
 		return;
 	}
 
 	/* following implements the greedy algorithm of Lanfear et al. (2012) */
-	int part1, part2;
+//	int part1, part2;
 	double inf_score = computeInformationScore(lhsum, dfsum, ssize, params.model_test_criterion);
 	cout << "Full partition model " << criterionName(params.model_test_criterion) << " score: " << inf_score << " (lh=" << lhsum << "  df=" << dfsum << ")" << endl;
 	SuperAlignment *super_aln = ((SuperAlignment*)in_tree->aln);
@@ -750,11 +766,11 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInf
 		IntVector opt_merged_set;
 		string opt_set_name = "";
 		string opt_model_name = "";
-        int num_pairs;
+        int num_pairs = 0;
         // 2015-06-24: begin rcluster algorithm
         // compute distance between gene_sets
-		for (part1 = 0, num_pairs = 0; part1 < gene_sets.size()-1; part1++)
-			for (part2 = part1+1; part2 < gene_sets.size(); part2++) 
+		for (int part1 = 0; part1 < gene_sets.size()-1; part1++)
+			for (int part2 = part1+1; part2 < gene_sets.size(); part2++)
 			if (super_aln->partitions[gene_sets[part1][0]]->seq_type == super_aln->partitions[gene_sets[part2][0]]->seq_type)
             {
 				// only merge partitions of the same data type
@@ -771,9 +787,14 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInf
         // end 
 //		for (part1 = 0; part1 < gene_sets.size()-1; part1++)
 //			for (part2 = part1+1; part2 < gene_sets.size(); part2++)
+
+#ifdef _OPENMP
+#pragma omp parallel for private(i) schedule(dynamic)
+#endif
         for (int pair = 0; pair < num_pairs; pair++) {
-            part1 = distID[pair] >> 16;
-            part2 = distID[pair] & ((1<<16)-1);
+            int part1 = distID[pair] >> 16;
+            int part2 = distID[pair] & ((1<<16)-1);
+            assert(part1 != part2);
 				IntVector merged_set;
 				merged_set.insert(merged_set.end(), gene_sets[part1].begin(), gene_sets[part1].end());
 				merged_set.insert(merged_set.end(), gene_sets[part2].begin(), gene_sets[part2].end());
@@ -787,7 +808,6 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInf
 				double logl = 0.0;
 				int df = 0;
                 double treelen = 0.0;
-				cout.width(4);
                 bool done_before = false;
 				if (prev_part >= 0 && part1 != prev_part && part2 != prev_part) {
 					// if pairs previously examined, reuse the information
@@ -797,21 +817,19 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInf
 							logl = mit->logl;
 							df = mit->df;
                             treelen = mit->tree_len;
-							cout << right << "-" << " ";
+//							cout << right << "-" << " ";
                             done_before = true;
 							break;
 						}
 				}
+				vector<ModelInfo> part_model_info;
                 if (!done_before) {
-					cout << right << nr_model++ << " ";
 					Alignment *aln = super_aln->concatenateAlignments(merged_set);
 					PhyloTree *tree = in_tree->extractSubtree(merged_set);
 					tree->setAlignment(aln);
-					vector<ModelInfo> part_model_info;
 					extractModelInfo(set_name, model_info, part_model_info);
 
 					model = testModel(params, tree, part_model_info, set_name);
-					replaceModelInfo(model_info, part_model_info);
 					logl = part_model_info[0].logl;
 					df = part_model_info[0].df;
                     treelen = part_model_info[0].tree_len;
@@ -821,10 +839,19 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInf
 				double lhnew = lhsum - lhvec[part1] - lhvec[part2] + logl;
 				int dfnew = dfsum - dfvec[part1] - dfvec[part2] + df;
 				double score = computeInformationScore(lhnew, dfnew, ssize, params.model_test_criterion);
-				cout.width(12);
-				cout << left << model << " ";
-				cout.width(11);
-				cout << score << " " << set_name << endl;
+#ifdef _OPENMP
+#pragma omp critical
+#endif
+			{
+				if (!done_before) {
+					replaceModelInfo(model_info, part_model_info);
+					cout.width(4);
+					cout << right << nr_model++ << " ";
+					cout.width(12);
+					cout << left << model << " ";
+					cout.width(11);
+					cout << score << " " << set_name << endl;
+				}
 				if (score < new_score) {
 					new_score = score;
 					opt_part1 = part1;
@@ -836,6 +863,8 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInf
 					opt_set_name = set_name;
 					opt_model_name = model;
 				}
+			}
+
         }
 		if (new_score >= inf_score) break;
 		inf_score = new_score;
