@@ -368,6 +368,13 @@ add_subdirectory(model)
 
 add_library(avxkernel phylotreeavx.cpp)
 
+if (IQTREE_FLAGS MATCHES "mpi")
+	add_library(iqtreempi
+	mpiHelper.cpp
+    TreeCollection.cpp
+    ObjectStream.cpp)
+endif()
+
 add_executable(iqtree
 alignment.cpp
 alignmentpairwise.cpp

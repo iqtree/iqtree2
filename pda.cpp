@@ -67,6 +67,11 @@
 #include <stdlib.h>
 #include "vectorclass/vectorclass.h"
 
+#ifdef _IQTREE_MPI
+#include <mpi.h>
+#include "mpiHelper.h"
+#endif
+
 #ifdef _OPENMP
 	#include <omp.h>
 #endif
@@ -1727,32 +1732,34 @@ protected:
 outstreambuf _out_buf;
 string _log_file;
 int _exit_wait_optn = FALSE;
-// FOR MPI only: rank of the process
-int task_id, n_tasks;
 
 outstreambuf* outstreambuf::open( const char* name, ios::openmode mode) {
-	if (task_id != MASTER) {
-		cout.rdbuf(this);
-		cerr.rdbuf(this);
-		return this;
-	} else {
-		fout.open(name, mode);
-		if (!fout.is_open()) {
-			cout << "Could not open " << name << " for logging" << endl;
-			return NULL;
-		}
-		cout_buf = cout.rdbuf();
-		cerr_buf = cerr.rdbuf();
-		fout_buf = fout.rdbuf();
+#ifdef _IQTREE_MPI
+	if (MPIHelper::instance()->getProcessID() != MASTER) {
 		cout.rdbuf(this);
 		cerr.rdbuf(this);
 		return this;
 	}
+#else
+	fout.open(name, mode);
+	if (!fout.is_open()) {
+		cout << "Could not open " << name << " for logging" << endl;
+		return NULL;
+	}
+	cout_buf = cout.rdbuf();
+	cerr_buf = cerr.rdbuf();
+	fout_buf = fout.rdbuf();
+	cout.rdbuf(this);
+	cerr.rdbuf(this);
+	return this;
+#endif
 }
 
 outstreambuf* outstreambuf::close() {
-	if (task_id != MASTER)
+#ifdef _IQTREE_MPI
+	if (MPIHelper::instance()->getProcessID() != MASTER)
 		return NULL;
+#else
     if ( fout.is_open()) {
         sync();
         cout.rdbuf(cout_buf);
@@ -1761,23 +1768,30 @@ outstreambuf* outstreambuf::close() {
         return this;
     }
     return NULL;
+#endif
 }
 
 int outstreambuf::overflow( int c) { // used for output buffer only
-	if (task_id != MASTER)
+#ifdef _IQTREE_MPI
+	if (MPIHelper::instance()->getProcessID() != MASTER)
 		return c;
+#else
 	if (verbose_mode >= VB_MIN)
 		if (cout_buf->sputc(c) == EOF) return EOF;
 	if (fout_buf->sputc(c) == EOF) return EOF;
 	return c;
+#endif
 }
 
 int outstreambuf::sync() { // used for output buffer only
-	if (task_id != MASTER)
+#ifdef _IQTREE_MPI
+	if (MPIHelper::instance()->getProcessID() != MASTER)
 		return 0;
+#else
 	if (verbose_mode >= VB_MIN)
 		cout_buf->pubsync();
 	return fout_buf->pubsync();
+#endif
 }
 
 extern "C" void startLogFile() {
@@ -2173,11 +2187,15 @@ int main(int argc, char *argv[]) {
 
 #ifdef _IQTREE_MPI
 	double time_initial, time_current;
+	int n_tasks, task_id;
 	if (MPI_Init(&argc, &argv) != MPI_SUCCESS) {
         outError("MPI initialization failed!");
     }
 	MPI_Comm_size(MPI_COMM_WORLD, &n_tasks);
 	MPI_Comm_rank(MPI_COMM_WORLD, &task_id);
+	MPIHelper::instance()->setNumProcesses(n_tasks);
+	MPIHelper::instance()->setProcessID(n_tasks);
+
 #endif
 
 	Params params;
@@ -2185,14 +2203,16 @@ int main(int argc, char *argv[]) {
 
 #ifdef _IQTREE_MPI
 	unsigned int rndSeed;
-  	if (task_id == MASTER) {
+  	if (MPIHelper::instance()->getProcessID() == MASTER) {
   		rndSeed = params.ran_seed;
   	}
     // Broadcast random seed
     MPI_Bcast(&rndSeed, 1, MPI_INT, MASTER, MPI_COMM_WORLD);
-    if (task_id != MASTER) {
+    if (MPIHelper::instance()->getProcessID() != MASTER) {
 		params.ran_seed = rndSeed + task_id;
+#ifdef _MPI_DEBUG
 		printf("Process %d: random_seed = %d\n", task_id, params.ran_seed);
+#endif
 	}
 #endif
 

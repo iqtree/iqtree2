@@ -73,9 +73,7 @@ inline int int_branch_cmp(const IntBranchInfo a, const IntBranchInfo b) {
 typedef multiset<RepLeaf*, nodeheightcmp> RepresentLeafSet;
 
 /**
-Important Quartet Puzzling
-
-        @author BUI Quang Minh <minh.bui@univie.ac.at>
+    Main class for tree search
  */
 class IQTree : public PhyloTree {
 public:
@@ -827,6 +825,8 @@ protected:
     void estDeltaMin();
 
     void convertNNI2Splits(SplitIntMap &nniSplits, int numNNIs, vector<NNIMove> &compatibleNNIs);
+
+    string generateParsimonyTree(int randomSeed);
 };
 
 void estimateNNICutoff(Params &params);

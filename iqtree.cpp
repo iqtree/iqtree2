@@ -26,12 +26,14 @@
 #include "model/rategamma.h"
 #include <numeric>
 #include "tools.h"
-
+#ifdef _IQTREE_MPI
+#include <mpi.h>
+#include "mpiHelper.h"
+#endif
 
 Params *globalParams;
 Alignment *globalAlignment;
 extern StringIntMap pllTreeCounter;
-extern int n_tasks, task_id;
 
 IQTree::IQTree() : PhyloTree() {
     IQTree::init();
@@ -405,22 +407,16 @@ void IQTree::addCurTreeToCandidateSet() {
 }
 
 void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
-
-    unsigned int numParTreePerWorker, numNNITreePerWorker;
-    
+    int numTrees;
 #ifdef _IQTREE_MPI
-    // At this point each worker already create 1 parsimony trees. 
-    // Thus, the number of parsimony trees left is
-    // params->numInitTrees - n_tasks
-    unsigned int numParTreeLeft = params->numInitTrees - n_tasks;
-    numParTreePerWorker = ceil(numParTreeLeft / n_tasks);
-    numNNITreePerWorker = ceil(params->numNNITrees / n_tasks);
+    numTrees =  (int) nParTrees / MPIHelper::instance()->getNumProcesses();
+    int rest = nParTrees % MPIHelper::instance()->getNumProcesses();
+    if (MPIHelper::instance()->getNumProcesses() < rest)
+        numTrees = numTrees + 1;
 #else
-    numParTreePerWorker = params->numInitTrees - 1;
-    numNNITreePerWorker = params->numNNITrees;
+    numTrees = nParTrees;
 #endif
-
-    cout << "Generating " << nParTrees - 1 << " parsimony trees (max. SPR dist = " << params->sprDist << ")" << endl;
+    cout << "Generating " << nParTrees  << " parsimony trees (max. SPR dist = " << params->sprDist << ")" << endl;
     cout.flush();
 
     double startTime = getCPUTime();
@@ -428,84 +424,40 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
     // Create a separate candidat tree set of parsimony trees
     CandidateSet parsimonyTrees;
     parsimonyTrees.init(this->aln, this->params);
-    // Add the current tree to the parsimony tree set
-    //parsimonyTrees.update(getTreeString(), getCurScore());
 
-    for (int treeNr = 0; treeNr < numParTreePerWorker; treeNr++) {
+    for (int treeNr = 0; treeNr < numTrees; treeNr++) {
         string curParsTree;
-
-        /******** Create parsimony tree using PLL ********/
-        if (params->start_tree == STT_PLL_PARSIMONY) {
-			pllInst->randomNumberSeed = params->ran_seed + treeNr * 12345;
-	        pllComputeRandomizedStepwiseAdditionParsimonyTree(pllInst, 
-                    pllPartitions, params->sprDist);
-	        resetBranches(pllInst);
-			pllTreeToNewick(pllInst->tree_string, pllInst, pllPartitions,
-					pllInst->start->back, PLL_FALSE, PLL_TRUE, PLL_FALSE,
-					PLL_FALSE, PLL_FALSE, PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
-			curParsTree = string(pllInst->tree_string);
-
-        } else {
-
-        /******* Create parsimony tree using IQ-TREE *********/
-            computeParsimonyTree(NULL, aln);
-            curParsTree = getTreeString();
-        }
-
-        if (parsimonyTrees.treeExist(curParsTree)) {
-            continue;
-        } else {
-            if (params->count_trees) {
-                string tree = getTopologyString();
-                pllTreeCounter.find(tree) == pllTreeCounter.end() 
-                                    ? (pllTreeCounter[curParsTree] = 1)
-                                    : (pllTreeCounter[curParsTree]++);
-        	}
-        	parsimonyTrees.update(curParsTree, -DBL_MAX);
-        }
+        curParsTree = generateParsimonyTree(params->ran_seed + treeNr);
+        parsimonyTrees.update(curParsTree, -DBL_MAX);
     }
 
 #ifdef _IQTREE_MPI
-    //Send parsimony trees to master
-    if (task_id != MASTER) {
+    // Send parsimony trees to all other processes
+    if (MPIHelper::instance()->getProcessID() != MASTER) {
         vector<string> parTreeStrings = parsimonyTrees.getBestTreeStrings();
-        char* treeData;
-        size_t dataSize;
-        dataSize = convertVector2CharArr(parTreeStrings, treeData);
-        MPI_Send(treeData, dataSize, MPI_CHAR, MASTER, 0, MPI_COMM_WORLD);
-        #ifdef _MPI_DEBUG
-        //cout << "Process " << task_id << ": parsimony trees sent!" << endl;
-        printf("Process %d: parsimony sent!\n", task_id);
-        #endif
+        MPIHelper::instance()->sendStringsToSource(MASTER, parTreeStrings);
+#ifdef _MPI_DEBUG
+        printf("Process %d: parsimony sent!\n", MPIHelper::instance()->getProcessID());
+#endif
     } else {
-        // Receive parsimony trees from workers
+        //RECEIVE PARSIMONY TREE FROM WORKER
         int numMsg = 0;
-        #ifdef _MPI_DEBUG
+#ifdef _MPI_DEBUG
         printf("MASTER: %d parsimony trees generated\n", parsimonyTrees.size());
-        #endif
-        cout << "Number of messages expected: " << n_tasks - 1 << endl;
-        while (numMsg < n_tasks - 1)  {
-            MPI_Status status;
-            char* recvBuffer;
-            int nbytes;
-            // Check to see if there is a message
-            MPI_Probe(MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
-            // Determine the size of the message
-            MPI_Get_count(&status, MPI_CHAR, &nbytes); 
-            if ( nbytes != MPI_UNDEFINED ) {    
-                recvBuffer = (char *) malloc( nbytes );
-                MPI_Recv(recvBuffer, nbytes, MPI_CHAR, status.MPI_SOURCE, status.MPI_TAG, MPI_COMM_WORLD, NULL);
-                numMsg++;
-            }
-            // Now convert message to tree strings
+        cout << "Number of messages expected: " << MPIHelper::instance()->getNumProcesses() - 1 << endl;
+
+#endif
+        while (numMsg < MPIHelper::instance()->getNumProcesses() - 1)  {
+            int processID;
             vector<string> treeStrings;
-            treeStrings = convertCharArr2Vector(recvBuffer, nbytes);
-            #ifdef _MPI_DEBUG
-            cout << "Received " << treeStrings.size() << " parsimony trees from process " << status.MPI_SOURCE << endl;
-            #endif
+            MPIHelper::instance()->recvStringsFromAnySource(processID, treeStrings);
+#ifdef _MPI_DEBUG
+            cout << "Received " << treeStrings.size() << " parsimony trees from process " << processID << endl;
+#endif
             for (int i = 0; i < treeStrings.size(); i++) {
                 parsimonyTrees.update(treeStrings[i], -DBL_MAX);
             }
+            numMsg++;
         }
     }
 
@@ -516,13 +468,46 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
     cout << parsimonyTrees.size() << " distinct parsimony trees have been generated" << endl;
     cout << "CPU time: " << parsTime << endl;
 
-    #ifdef _IQTREE_MPI
-    MPI_Finalize();
-    #endif
+    /****************************************************************************************
+      			            Compute logl of all parsimony trees
+    *****************************************************************************************/
 
-    /**********************************************************
-      			Compute logl of all parsimony trees
-    ***********************************************************/
+#ifdef _IQTREE_MPI
+    int numParTrees = parsimonyTrees.size();
+    vector<string> allTrees = parsimonyTrees.getBestTreeStrings();
+
+    /* Distribute parsimony trees to all process for likelihood computation */
+    numParTreePerWorker =  (int) numParTrees / MPIHelper::instance()->getNumProcesses();
+    int remainingJobs = numParTrees % MPIHelper::instance()->getNumProcesses();
+    if (MPIHelper::instance()->getProcessID() == MASTER) {
+        int treeIndex = 0;
+        for (int worker = 0; worker < MPIHelper::instance()->getNumProcesses(); worker++) {
+            int numTreeForYou;
+            if (worker <= remainingJobs)
+                numTreeForYou = numParTreePerWorker + 1;
+            vector<string> yourTrees;
+            while (treeIndex < numParTrees && yourTrees.size() < numTreeForYou) {
+                yourTrees.push_back(allTrees[treeIndex]);
+            }
+            if (worker == MASTER) {
+                parsimonyTrees.clear();
+                for (int i = 0; i < yourTrees.size(); i++) {
+                    parsimonyTrees.update(yourTrees[i], -DBL_MAX);
+                }
+            } else {
+                MPIHelper::instance()->sendStringsToSource(worker, yourTrees);
+            }
+        }
+    } else {
+        parsimonyTrees.clear();
+        vector<string> myTrees;
+        MPIHelper::instance()->recvStringsFromSource(MASTER, myTrees);
+        for (int i = 0; i < myTrees.size(); i++) {
+            parsimonyTrees.update(myTrees[i], -DBL_MAX);
+        }
+    }
+    MPI_Finalize();
+#endif
     CandidateSet parsimonyTreesWithLogl;
     parsimonyTreesWithLogl.init(this->aln, this->params);
     cout << "Computing logl of parsimony trees ... " << endl;
@@ -551,9 +536,9 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
     parsimonyTreesWithLogl.getBestCandidateTrees(nNNITrees, bestParsimonyTrees);
     parsimonyTreesWithLogl.clear();
 
-    /**********************************************************
-      			Do NNI search on the best parsimony trees
-    ***********************************************************/
+    /****************************************************************************************
+      			            Do NNI search on the best parsimony trees
+    *****************************************************************************************/
 
     cout << endl;
     cout << "Optimizing top parsimony trees with NNI..." << endl;
@@ -577,6 +562,26 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
 	if (params->fixStableSplits) {
         candidateTrees.buildTopSplits(params->stableSplitThreshold);
 	}
+}
+
+string IQTree::generateParsimonyTree(int randomSeed) {
+    string parsimonyTreeString;
+    if (params->start_tree == STT_PLL_PARSIMONY) {
+			pllInst->randomNumberSeed = randomSeed;
+	        pllComputeRandomizedStepwiseAdditionParsimonyTree(pllInst,
+                                                              pllPartitions, params->sprDist);
+	        resetBranches(pllInst);
+			pllTreeToNewick(pllInst->tree_string, pllInst, pllPartitions,
+					pllInst->start->back, PLL_FALSE, PLL_TRUE, PLL_FALSE,
+					PLL_FALSE, PLL_FALSE, PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
+			parsimonyTreeString = string(pllInst->tree_string);
+
+        } else {
+        /******* Create parsimony tree using IQ-TREE *********/
+            computeParsimonyTree(NULL, aln);
+            parsimonyTreeString = getTreeString();
+        }
+    return parsimonyTreeString;
 }
 
 void IQTree::initializePLL(Params &params) {
@@ -1713,7 +1718,12 @@ double IQTree::doTreeSearch() {
         /********************************** INITIALIZE THE CANDIDATE TREE SET ***************************************/
         params->modelEps = 0.1;
         if (!params->user_file && (params->start_tree == STT_PARSIMONY || params->start_tree == STT_PLL_PARSIMONY)) {
-            initCandidateTreeSet(params->numInitTrees, params->numNNITrees);
+#ifdef _IQTREE_MPI
+            initCandidateTreeSet(params->numInitTrees - MPIHelper::instance()->getNumProcesses(),
+                                 params->numNNITrees);
+#else
+            initCandidateTreeSet(params->numInitTrees - 1, params->numNNITrees);
+#endif
             assert(candidateTrees.size() != 0);
             cout << "Finish initializing candidate tree set (" << candidateTrees.size() << ")" << endl;
         } else {
