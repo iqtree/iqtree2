@@ -633,15 +633,32 @@ void mergePartitions(PhyloSuperTree* super_tree, vector<IntVector> &gene_sets, S
 	for (it = gene_sets.begin(); it != gene_sets.end(); it++) {
 		PartitionInfo info;
 		info.name = "";
-		for (IntVector::iterator i = it->begin(); i != it->end(); i++) {
-			if (i != it->begin())
-				info.name += "+";
-			info.name += super_tree->part_info[*i].name;
-		}
-		info.model_name = model_names[it-gene_sets.begin()];
+		info.position_spec = "";
 		info.aln_file = "";
 		info.sequence_type = "";
-		info.position_spec = "";
+		info.model_name = model_names[it-gene_sets.begin()];
+		for (IntVector::iterator i = it->begin(); i != it->end(); i++) {
+			if (i != it->begin()) {
+				info.name += "+";
+				info.position_spec += ", ";
+			}
+			info.name += super_tree->part_info[*i].name;
+			info.position_spec += super_tree->part_info[*i].position_spec;
+			if (!super_tree->part_info[*i].aln_file.empty()) {
+                if (info.aln_file.empty())
+                    info.aln_file = super_tree->part_info[*i].aln_file;
+                else if (info.aln_file != super_tree->part_info[*i].aln_file) {
+                    info.aln_file = "__NA__";
+                }
+			}
+			if (!super_tree->part_info[*i].sequence_type.empty()) {
+                if (info.sequence_type.empty())
+                    info.sequence_type = super_tree->part_info[*i].sequence_type;
+                else if (info.sequence_type != super_tree->part_info[*i].sequence_type) {
+                    info.sequence_type = "__NA__";
+                }
+			}
+		}
 		info.cur_ptnlh = NULL;
 		info.nniMoves[0].ptnlh = NULL;
 		info.nniMoves[1].ptnlh = NULL;
@@ -715,8 +732,8 @@ void printModelFile(ostream &fmodel, Params &params, PhyloTree *tree, ModelInfo 
  * @return total number of parameters
  */
 void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInfo> &model_info, ostream &fmodel) {
-    params.print_partition_info = true;
-    params.print_conaln = true;
+//    params.print_partition_info = true;
+//    params.print_conaln = true;
 	int i = 0;
 //	PhyloSuperTree::iterator it;
 	DoubleVector lhvec;
@@ -777,6 +794,8 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInf
 
 	nr_model = in_tree->size()+1;
 	if (params.model_name.find("LINK") == string::npos && params.model_name.find("MERGE") == string::npos) {
+		in_tree->printBestPartition((string(params.out_prefix) + ".best_scheme.nex").c_str());
+		in_tree->printBestPartitionRaxml((string(params.out_prefix) + ".best_scheme").c_str());
 		return;
 	}
 
@@ -968,6 +987,8 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInf
     delete [] distID;
     delete [] dist;
 	mergePartitions(in_tree, gene_sets, model_names);
+	in_tree->printBestPartition((string(params.out_prefix) + ".best_scheme.nex").c_str());
+	in_tree->printBestPartitionRaxml((string(params.out_prefix) + ".best_scheme").c_str());
 }
 
 string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_info, ostream &fmodel, string set_name, bool print_mem_usage) {

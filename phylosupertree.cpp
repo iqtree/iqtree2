@@ -301,64 +301,152 @@ void PhyloSuperTree::readPartitionNexus(Params &params) {
 }
 
 void PhyloSuperTree::printPartition(const char *filename) {
-	   try {
-	        ofstream out;
-	        out.exceptions(ios::failbit | ios::badbit);
-            out.open(filename);
-            out << "#nexus" << endl << "[ partition information for alignment written in .conaln file ]" << endl
-            	<< "begin sets;" << endl;
-            int part; int start_site;
-            for (part = 0, start_site = 1; part < part_info.size(); part++) {
-            	string name = part_info[part].name;
-            	replace(name.begin(), name.end(), '+', '_');
-            	int end_site = start_site + at(part)->getAlnNSite();
-            	out << "  charset " << name << " = " << start_site << "-" << end_site-1 << ";" << endl;
-            	start_site = end_site;
-            }
-            out << "  charpartition mymodels =" << endl;
-            for (part = 0; part < part_info.size(); part++) {
-            	string name = part_info[part].name;
-            	replace(name.begin(), name.end(), '+', '_');
-            	if (part > 0) out << "," << endl;
-            	out << "    " << at(part)->getModelNameParams() << ":" << name;
-            }
-        	out << ";" << endl;
-            out << "end;" << endl;
-	        out.close();
-	        cout << "Partition information was printed to " << filename << endl;
-	    } catch (ios::failure &) {
-	        outError(ERR_WRITE_OUTPUT, filename);
-	    }
+   try {
+		ofstream out;
+		out.exceptions(ios::failbit | ios::badbit);
+		out.open(filename);
+		out << "#nexus" << endl << "[ partition information for alignment written in .conaln file ]" << endl
+			<< "begin sets;" << endl;
+		int part; int start_site;
+		for (part = 0, start_site = 1; part < part_info.size(); part++) {
+			string name = part_info[part].name;
+			replace(name.begin(), name.end(), '+', '_');
+			int end_site = start_site + at(part)->getAlnNSite();
+			out << "  charset " << name << " = " << start_site << "-" << end_site-1 << ";" << endl;
+			start_site = end_site;
+		}
+		out << "  charpartition mymodels =" << endl;
+		for (part = 0; part < part_info.size(); part++) {
+			string name = part_info[part].name;
+			replace(name.begin(), name.end(), '+', '_');
+			if (part > 0) out << "," << endl;
+			out << "    " << at(part)->getModelNameParams() << ":" << name;
+		}
+		out << ";" << endl;
+		out << "end;" << endl;
+		out.close();
+		cout << "Partition information was printed to " << filename << endl;
+	} catch (ios::failure &) {
+		outError(ERR_WRITE_OUTPUT, filename);
+	}
 
 }
+
+void PhyloSuperTree::printBestPartition(const char *filename) {
+   try {
+		ofstream out;
+		out.exceptions(ios::failbit | ios::badbit);
+		out.open(filename);
+		out << "#nexus" << endl
+			<< "begin sets;" << endl;
+		int part;
+		for (part = 0; part < part_info.size(); part++) {
+			string name = part_info[part].name;
+			replace(name.begin(), name.end(), '+', '_');
+			out << "  charset " << name << " = ";
+			if (!part_info[part].aln_file.empty()) out << part_info[part].aln_file << ": ";
+			if (at(part)->aln->seq_type == SEQ_CODON)
+				out << "CODON, ";
+			string pos = part_info[part].position_spec;
+			replace(pos.begin(), pos.end(), ',' , ' ');
+			out << pos << ";" << endl;
+		}
+		out << "  charpartition mymodels =" << endl;
+		for (part = 0; part < part_info.size(); part++) {
+			string name = part_info[part].name;
+			replace(name.begin(), name.end(), '+', '_');
+			if (part > 0) out << "," << endl;
+			out << "    " << part_info[part].model_name << ": " << name;
+		}
+		out << ";" << endl;
+		out << "end;" << endl;
+		out.close();
+		cout << "Partition information was printed to " << filename << endl;
+	} catch (ios::failure &) {
+		outError(ERR_WRITE_OUTPUT, filename);
+	}
+
+}
+
 
 void PhyloSuperTree::printPartitionRaxml(const char *filename) {
-	   try {
-	        ofstream out;
-	        out.exceptions(ios::failbit | ios::badbit);
-            out.open(filename);
-            int part;
-            int start_site;
-            for (part = 0, start_site = 1; part < part_info.size(); part++) {
-            	string name = part_info[part].name;
-            	replace(name.begin(), name.end(), '+', '_');
-            	int end_site = start_site + at(part)->getAlnNSite();
-            	switch (at(part)->aln->seq_type) {
-            	case SEQ_DNA: out << "DNA, "; break;
-            	case SEQ_BINARY: out << "BIN, "; break;
-            	case SEQ_MORPH: out << "MULTI, "; break;
-            	default: out << at(part)->getModel()->name << ","; break;
-            	}
-            	out << name << " = " << start_site << "-" << end_site-1 << endl;
-            	start_site = end_site;
-            }
-	        out.close();
-	        cout << "Partition information in Raxml format was printed to " << filename << endl;
-	    } catch (ios::failure &) {
-	        outError(ERR_WRITE_OUTPUT, filename);
-	    }
+	int part;
+	for (part = 0; part < part_info.size(); part++) {
+		if (part_info[part].aln_file != "") {
+			cout << "INFO: Printing partition in RAxML format is not possible" << endl;
+            return;
+        }
+	}
+   try {
+		ofstream out;
+		out.exceptions(ios::failbit | ios::badbit);
+		out.open(filename);
+		int start_site;
+		for (part = 0, start_site = 1; part < part_info.size(); part++) {
+			string name = part_info[part].name;
+			replace(name.begin(), name.end(), '+', '_');
+			int end_site = start_site + at(part)->getAlnNSite();
+			switch (at(part)->aln->seq_type) {
+			case SEQ_DNA: out << "DNA, "; break;
+			case SEQ_BINARY: out << "BIN, "; break;
+			case SEQ_MORPH: out << "MULTI, "; break;
+			default: out << at(part)->getModel()->name << ","; break;
+			}
+			out << name << " = " << start_site << "-" << end_site-1 << endl;
+			start_site = end_site;
+		}
+		out.close();
+		cout << "Partition information in Raxml format was printed to " << filename << endl;
+	} catch (ios::failure &) {
+		outError(ERR_WRITE_OUTPUT, filename);
+	}
 
 }
+
+void PhyloSuperTree::printBestPartitionRaxml(const char *filename) {
+	int part;
+	for (part = 0; part < part_info.size(); part++) {
+		if (part_info[part].aln_file != "") {
+			cout << "INFO: Printing partition in RAxML format is not possible" << endl;
+            return;
+        }
+	}
+	try {
+		ofstream out;
+		out.exceptions(ios::failbit | ios::badbit);
+		out.open(filename);
+		for (part = 0; part < part_info.size(); part++) {
+			string name = part_info[part].name;
+			replace(name.begin(), name.end(), '+', '_');
+            if (part_info[part].model_name.find("+ASC") != string::npos)
+                out << "ASC_";
+			switch (at(part)->aln->seq_type) {
+			case SEQ_DNA: out << "DNA"; break;
+			case SEQ_BINARY: out << "BIN"; break;
+			case SEQ_MORPH: out << "MULTI"; break;
+            case SEQ_PROTEIN:
+                out << part_info[part].model_name.substr(0, part_info[part].model_name.find_first_of("*{+"));
+                break;
+            case SEQ_CODON:
+                out << "CODON_" << part_info[part].model_name.substr(0, part_info[part].model_name.find_first_of("*{+"));
+                break;
+			default: out << part_info[part].model_name; break;
+			}
+            if (part_info[part].model_name.find("+FO") != string::npos)
+                out << "X";
+            else if (part_info[part].model_name.find("+F") != string::npos)
+                out << "F";
+                
+			out << ", " << name << " = " << part_info[part].position_spec << endl;
+		}
+		out.close();
+		cout << "Partition information in Raxml format was printed to " << filename << endl;
+	} catch (ios::failure &) {
+		outError(ERR_WRITE_OUTPUT, filename);
+	}
+
+}
+
 
 PhyloSuperTree::PhyloSuperTree(Params &params) :  IQTree() {
 	totalNNIs = evalNNIs = 0;

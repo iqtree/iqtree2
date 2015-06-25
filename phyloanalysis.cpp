@@ -951,8 +951,10 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 			<< "  IQ-TREE report:                " << params.out_prefix << ".iqtree"
 			<< endl;
 	if (params.compute_ml_tree) {
-		cout << "  Maximum-likelihood tree:       " << params.out_prefix
-				<< ".treefile" << endl;
+		if (original_model.find("ONLY") == string::npos)
+			cout << "  Maximum-likelihood tree:       " << params.out_prefix << ".treefile" << endl;
+		else
+			cout << "  Tree used for model selection: " << params.out_prefix << ".treefile" << endl;
 		if (params.snni && params.write_local_optimal_trees) {
 			cout << "  Locally optimal trees (" << tree.candidateTrees.getNumLocalOptTrees() << "):    " << params.out_prefix << ".suboptimal_trees" << endl;
 		}
@@ -969,6 +971,19 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 		if (params.print_conaln)
 		cout << "  Concatenated alignment:        " << params.out_prefix
 					<< ".conaln" << endl;
+	}
+	if (original_model.find("TEST") != string::npos && tree.isSuperTree()) {
+		cout << "  Best partitioning scheme:      " << params.out_prefix << ".best_scheme.nex" << endl;
+		bool raxml_format_printed = true;
+
+		for (vector<PartitionInfo>::iterator it = ((PhyloSuperTree*)&tree)->part_info.begin();
+				it != ((PhyloSuperTree*)&tree)->part_info.end(); it++)
+			if (!it->aln_file.empty()) {
+				raxml_format_printed = false;
+				break;
+			}
+		if (raxml_format_printed)
+			 cout << "           in RAxML format:      " << params.out_prefix << ".best_scheme" << endl;
 	}
 	if (tree.getRate()->getGammaShape() > 0 && params.print_site_rate)
 		cout << "  Gamma-distributed rates:       " << params.out_prefix << ".rate"

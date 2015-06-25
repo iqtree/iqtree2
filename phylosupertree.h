@@ -64,7 +64,10 @@ public:
 
     void printPartitionRaxml(const char *filename);
 
-	/** remove identical sequences from the tree */
+    void printBestPartition(const char *filename);
+    void printBestPartitionRaxml(const char *filename);
+
+    /** remove identical sequences from the tree */
     virtual void removeIdenticalSeqs(Params &params);
 
     /** reinsert identical sequences into the tree and reset original alignment */
