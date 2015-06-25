@@ -298,15 +298,6 @@ void printSiteLhCategory(const char*filename, PhyloTree *tree) {
 
 }
 
-/**
- * check if the model file contains correct information
- * @param model_file model file names
- * @param model_name (OUT) vector of model names
- * @param lh_scores (OUT) vector of tree log-likelihoods
- * @param df_vec (OUT) vector of degrees of freedom (or K)
- * @return TRUE if success, FALSE failed.
- */
-
 bool checkModelFile(ifstream &in, bool is_partitioned, vector<ModelInfo> &infos) {
 	if (!in.is_open()) return false;
 	in.exceptions(ios::badbit);
@@ -671,12 +662,59 @@ void mergePartitions(PhyloSuperTree* super_tree, vector<IntVector> &gene_sets, S
 	super_tree->aln = new SuperAlignment(super_tree);
 }
 
+void printModelFile(ostream &fmodel, Params &params, PhyloTree *tree, ModelInfo &info, string &set_name) {
+	string sitelh_file = params.out_prefix;
+	sitelh_file += ".sitelh";
+	SeqType seq_type = tree->aln->seq_type;
+	if (tree->isSuperTree())
+		seq_type = ((PhyloSuperTree*)tree)->front()->aln->seq_type;
+
+    fmodel.precision(4);
+    fmodel << fixed;
+    if (set_name != "")
+        fmodel << set_name << "\t";
+    fmodel << info.name << "\t" << info.df << "\t" << info.logl << "\t" << info.tree_len;
+    if (seq_type == SEQ_DNA) {
+        int nrates = tree->getModel()->getNumRateEntries();
+        double *rate_mat = new double[nrates];
+        tree->getModel()->getRateMatrix(rate_mat);
+        for (int rate = 0; rate < nrates; rate++)
+            fmodel << "\t" << rate_mat[rate];
+        delete [] rate_mat;
+    }
+    if (seq_type == SEQ_DNA || seq_type == SEQ_BINARY) {
+        int nstates = (seq_type == SEQ_DNA) ? 4 : 2;
+        double *freqs = new double[nstates];
+        tree->getModel()->getStateFrequency(freqs);
+        for (int freq = 0; freq < nstates; freq++)
+            fmodel << "\t" << freqs[freq];
+        delete [] freqs;
+    }
+    double alpha = tree->getRate()->getGammaShape();
+    fmodel << "\t";
+    if (alpha > 0) fmodel << alpha; else fmodel << "NA";
+    fmodel << "\t";
+    double pinvar = tree->getRate()->getPInvar();
+    if (pinvar > 0) fmodel << pinvar; else fmodel << "NA";
+    fmodel << "\t";
+    tree->printTree(fmodel);
+    fmodel << endl;
+    fmodel.precision(4);
+    const char *model_name = (params.print_site_lh) ? info.name.c_str() : NULL;
+    if (params.print_site_lh)
+        printSiteLh(sitelh_file.c_str(), tree, NULL, true, model_name);
+    if (params.model_test_and_tree) {
+        delete tree;
+        tree = NULL;
+    }
+}
+
 /**
  * select models for all partitions
  * @param model_info (IN/OUT) all model information
  * @return total number of parameters
  */
-void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInfo> &model_info) {
+void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInfo> &model_info, ostream &fmodel) {
     params.print_partition_info = true;
     params.print_conaln = true;
 	int i = 0;
@@ -703,32 +741,38 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInf
 	for (i = 0; i < in_tree->size(); i++) {
         PhyloTree *this_tree = in_tree->at(i);
 		// scan through models for this partition, assuming the information occurs consecutively
-		vector<ModelInfo> *part_model_info = new vector<ModelInfo>;
-		extractModelInfo(in_tree->part_info[i].name, model_info, *part_model_info);
+		vector<ModelInfo> part_model_info;
+		extractModelInfo(in_tree->part_info[i].name, model_info, part_model_info);
+        stringstream this_fmodel;
 		// do the computation
-		string model = testModel(params, this_tree, *part_model_info, in_tree->part_info[i].name);
-		double score = computeInformationScore(part_model_info->at(0).logl,part_model_info->at(0).df,
+#ifdef _OPENMP
+		string model = testModel(params, this_tree, part_model_info, this_fmodel, in_tree->part_info[i].name);
+#else
+		string model = testModel(params, this_tree, part_model_info, fmodel, in_tree->part_info[i].name);
+#endif
+		double score = computeInformationScore(part_model_info[0].logl,part_model_info[0].df,
 				this_tree->getAlnNSite(),params.model_test_criterion);
 		in_tree->part_info[i].model_name = model;
-		lhsum += (lhvec[i] = part_model_info->at(0).logl);
-		dfsum += (dfvec[i] = part_model_info->at(0).df);
-        lenvec[i] = part_model_info->at(0).tree_len;
+		lhsum += (lhvec[i] = part_model_info[0].logl);
+		dfsum += (dfvec[i] = part_model_info[0].df);
+        lenvec[i] = part_model_info[0].tree_len;
 
 #ifdef _OPENMP
 #pragma omp critical
+#endif
         {
-#endif
-		cout.width(4);
-		cout << right << i+1 << " ";
-		cout.width(12);
-		cout << left << model << " ";
-		cout.width(11);
-		cout << score << " " << in_tree->part_info[i].name << endl;
-		replaceModelInfo(model_info, *part_model_info);
 #ifdef _OPENMP
-        }
+            fmodel << this_fmodel.str();
 #endif
-	    delete part_model_info;
+            cout.width(4);
+            cout << right << i+1 << " ";
+            cout.width(12);
+            cout << left << model << " ";
+            cout.width(11);
+            cout << score << " " << in_tree->part_info[i].name << endl;
+            replaceModelInfo(model_info, part_model_info);
+        }
+//	    delete part_model_info;
     }
 
 	nr_model = in_tree->size()+1;
@@ -785,8 +829,6 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInf
             if (num_pairs <= 0) num_pairs = 1;
         }
         // end 
-//		for (part1 = 0; part1 < gene_sets.size()-1; part1++)
-//			for (part2 = part1+1; part2 < gene_sets.size(); part2++)
 
 #ifdef _OPENMP
 #pragma omp parallel for private(i) schedule(dynamic)
@@ -795,55 +837,61 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInf
             int part1 = distID[pair] >> 16;
             int part2 = distID[pair] & ((1<<16)-1);
             assert(part1 != part2);
-				IntVector merged_set;
-				merged_set.insert(merged_set.end(), gene_sets[part1].begin(), gene_sets[part1].end());
-				merged_set.insert(merged_set.end(), gene_sets[part2].begin(), gene_sets[part2].end());
-				string set_name = "";
-				for (i = 0; i < merged_set.size(); i++) {
-					if (i > 0)
-						set_name += "+";
-					set_name += in_tree->part_info[merged_set[i]].name;
-				}
-				string model = "";
-				double logl = 0.0;
-				int df = 0;
-                double treelen = 0.0;
-                bool done_before = false;
-				if (prev_part >= 0 && part1 != prev_part && part2 != prev_part) {
-					// if pairs previously examined, reuse the information
-					for (vector<ModelInfo>::iterator mit = model_info.begin(); mit != model_info.end(); mit++)
-						if (mit->set_name == set_name) {
-							model = mit->name;
-							logl = mit->logl;
-							df = mit->df;
-                            treelen = mit->tree_len;
-//							cout << right << "-" << " ";
-                            done_before = true;
-							break;
-						}
-				}
-				vector<ModelInfo> part_model_info;
-                if (!done_before) {
-					Alignment *aln = super_aln->concatenateAlignments(merged_set);
-					PhyloTree *tree = in_tree->extractSubtree(merged_set);
-					tree->setAlignment(aln);
-					extractModelInfo(set_name, model_info, part_model_info);
-
-					model = testModel(params, tree, part_model_info, set_name);
-					logl = part_model_info[0].logl;
-					df = part_model_info[0].df;
-                    treelen = part_model_info[0].tree_len;
-					delete tree;
-					delete aln;
-				}
-				double lhnew = lhsum - lhvec[part1] - lhvec[part2] + logl;
-				int dfnew = dfsum - dfvec[part1] - dfvec[part2] + df;
-				double score = computeInformationScore(lhnew, dfnew, ssize, params.model_test_criterion);
+            IntVector merged_set;
+            merged_set.insert(merged_set.end(), gene_sets[part1].begin(), gene_sets[part1].end());
+            merged_set.insert(merged_set.end(), gene_sets[part2].begin(), gene_sets[part2].end());
+            string set_name = "";
+            for (i = 0; i < merged_set.size(); i++) {
+                if (i > 0)
+                    set_name += "+";
+                set_name += in_tree->part_info[merged_set[i]].name;
+            }
+            string model = "";
+            double logl = 0.0;
+            int df = 0;
+            double treelen = 0.0;
+            bool done_before = false;
+            if (prev_part >= 0 && part1 != prev_part && part2 != prev_part) {
+                // if pairs previously examined, reuse the information
+                for (vector<ModelInfo>::iterator mit = model_info.begin(); mit != model_info.end(); mit++)
+                    if (mit->set_name == set_name) {
+                        model = mit->name;
+                        logl = mit->logl;
+                        df = mit->df;
+                        treelen = mit->tree_len;
+                        done_before = true;
+                        break;
+                    }
+            }
+            vector<ModelInfo> part_model_info;
+            stringstream this_fmodel;
+            if (!done_before) {
+                Alignment *aln = super_aln->concatenateAlignments(merged_set);
+                PhyloTree *tree = in_tree->extractSubtree(merged_set);
+                tree->setAlignment(aln);
+                extractModelInfo(set_name, model_info, part_model_info);
+#ifdef _OPENMP
+                model = testModel(params, tree, part_model_info, this_fmodel, set_name);
+#else
+                model = testModel(params, tree, part_model_info, fmodel, set_name);
+#endif
+                logl = part_model_info[0].logl;
+                df = part_model_info[0].df;
+                treelen = part_model_info[0].tree_len;
+                delete tree;
+                delete aln;
+            }
+            double lhnew = lhsum - lhvec[part1] - lhvec[part2] + logl;
+            int dfnew = dfsum - dfvec[part1] - dfvec[part2] + df;
+            double score = computeInformationScore(lhnew, dfnew, ssize, params.model_test_criterion);
 #ifdef _OPENMP
 #pragma omp critical
 #endif
 			{
 				if (!done_before) {
+#ifdef _OPENMP
+                    fmodel << this_fmodel.str();
+#endif
 					replaceModelInfo(model_info, part_model_info);
 					cout.width(4);
 					cout << right << nr_model++ << " ";
@@ -922,7 +970,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInf
 	mergePartitions(in_tree, gene_sets, model_names);
 }
 
-string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_info, string set_name, bool print_mem_usage) {
+string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_info, ostream &fmodel, string set_name, bool print_mem_usage) {
 	SeqType seq_type = in_tree->aln->seq_type;
 	if (in_tree->isSuperTree())
 		seq_type = ((PhyloSuperTree*)in_tree)->front()->aln->seq_type;
@@ -954,52 +1002,11 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 
 	string best_model = "";
 	/* first check the model file */
-	bool ok_model_file = false;
-	if (!params.print_site_lh && !params.model_test_again) {
-		if (set_name == "")
-			ok_model_file = checkModelFile(fmodel_str, in_tree->isSuperTree(), model_info);
-		else
-			ok_model_file = true;
-	}
-
-	ok_model_file &= model_info.size() > 0;
-	/*
-	if (in_tree->isSuperTree()) {
-		ok_model_file &= checkPartitionModel(params, (PhyloSuperTree*)in_tree, model_info);
-	} else {
-		ok_model_file &= (model_info.size() == num_models * 4);
-	}
-	*/
-	ofstream fmodel;
-	if (ok_model_file) {
-		if (set_name == "")
-			cout << "Reusing information from model file " << fmodel_str << endl;
-	} else {
-		if (set_name == "" && model_info.size() == 0) {
-			fmodel.open(fmodel_str.c_str());
-			if (!fmodel.is_open())
-				outError("cannot write to ", fmodel_str);
-			// print header
-			if (in_tree->isSuperTree())
-				fmodel << "Charset\t";
-			fmodel << "Model\tdf\tLnL\tTreeLen";
-			if (seq_type == SEQ_BINARY)
-				fmodel << "\t0\t1";
-			else if (seq_type == SEQ_DNA)
-				fmodel << "\tA-C\tA-G\tA-T\tC-G\tC-T\tG-T\tA\tC\tG\tT";
-			fmodel << "\talpha\tpinv\tTree" << endl;
-			fmodel.precision(4);
-			fmodel << fixed;
-		}
-		model_info.clear();
-	}
 
 	if (in_tree->isSuperTree()) {
 		// select model for each partition
-		if (fmodel.is_open())
-			fmodel.close();
 		PhyloSuperTree *stree = (PhyloSuperTree*)in_tree;
-		testPartitionModel(params, stree, model_info);
+		testPartitionModel(params, stree, model_info, fmodel);
 		string res_models = "";
 		for (vector<PartitionInfo>::iterator it = stree->part_info.begin(); it != stree->part_info.end(); it++) {
 			if (it != stree->part_info.begin()) res_models += ",";
@@ -1217,49 +1224,7 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
                 info.tree_len = tree->treeLength();
             }
 			// print information to .model file
-			if (!fmodel.is_open()) {
-				fmodel.open(fmodel_str.c_str(), ios::app);
-				if (!fmodel.is_open())
-					outError("cannot write to ", fmodel_str);
-				fmodel.precision(4);
-				fmodel << fixed;
-			}
-			if (set_name != "")
-				fmodel << set_name << "\t";
-			fmodel << info.name << "\t" << info.df << "\t" << info.logl << "\t" << info.tree_len;
-			if (seq_type == SEQ_DNA) {
-				int nrates = tree->getModel()->getNumRateEntries();
-				double *rate_mat = new double[nrates];
-				tree->getModel()->getRateMatrix(rate_mat);
-				for (int rate = 0; rate < nrates; rate++)
-					fmodel << "\t" << rate_mat[rate];
-				delete [] rate_mat;
-			}
-			if (seq_type == SEQ_DNA || seq_type == SEQ_BINARY) {
-				int nstates = (seq_type == SEQ_DNA) ? 4 : 2;
-				double *freqs = new double[nstates];
-				tree->getModel()->getStateFrequency(freqs);
-				for (int freq = 0; freq < nstates; freq++)
-					fmodel << "\t" << freqs[freq];
-				delete [] freqs;
-			}
-			double alpha = tree->getRate()->getGammaShape();
-			fmodel << "\t";
-			if (alpha > 0) fmodel << alpha; else fmodel << "NA";
-			fmodel << "\t";
-			double pinvar = tree->getRate()->getPInvar();
-			if (pinvar > 0) fmodel << pinvar; else fmodel << "NA";
-            fmodel << "\t";
-            tree->printTree(fmodel);
-            fmodel << endl;
-            fmodel.precision(4);
-			const char *model_name = (params.print_site_lh) ? info.name.c_str() : NULL;
-			if (params.print_site_lh)
-				printSiteLh(sitelh_file.c_str(), tree, NULL, true, model_name);
-            if (params.model_test_and_tree) {
-                delete tree;
-                tree = NULL;
-            }
+            printModelFile(fmodel, params, tree, info, set_name);
 		}
 		computeInformationScores(info.logl, info.df, ssize, info.AIC_score, info.AICc_score, info.BIC_score);
         if (prev_model_id >= 0) {
@@ -1465,8 +1430,7 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 //	delete tree_homo;
 	in_tree->deleteAllPartialLh();
 
-	if (fmodel.is_open())
-		fmodel.close();
+    
 	if (set_name == "") {
 		cout << "Best-fit model: " << best_model << " chosen according to " << 
             ((params.model_test_criterion == MTC_BIC) ? "BIC" :

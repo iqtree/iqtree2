@@ -1172,7 +1172,46 @@ void initializeParams(Params &params, IQTree &iqtree, vector<ModelInfo> &model_i
             ((PhyloSuperTree*) &iqtree)->mapTrees();
         double start_cpu_time = getCPUTime();
         double start_real_time = getRealTime();
-        params.model_name = testModel(params, &iqtree, model_info, "", true);
+        ofstream fmodel;
+        string fmodel_str = ((string)params.out_prefix + ".model"); 
+
+        bool ok_model_file = false;
+        if (!params.print_site_lh && !params.model_test_again) {
+            ok_model_file = checkModelFile(fmodel_str, iqtree.isSuperTree(), model_info);
+        }
+
+        ok_model_file &= model_info.size() > 0;
+        if (ok_model_file) {
+            cout << "Reusing information from model file " << fmodel_str << endl;
+        } else {
+            if (model_info.size() == 0) {
+                fmodel.open(fmodel_str.c_str());
+                if (!fmodel.is_open())
+                    outError("cannot write to file ", fmodel_str);
+                // print header
+                SeqType seq_type = iqtree.aln->seq_type;
+                if (iqtree.isSuperTree()) {
+                    fmodel << "Charset\t";
+                    seq_type = ((PhyloSuperTree*)&iqtree)->front()->aln->seq_type;
+                }
+                fmodel << "Model\tdf\tLnL\tTreeLen";
+                if (seq_type == SEQ_BINARY)
+                    fmodel << "\t0\t1";
+                else if (seq_type == SEQ_DNA)
+                    fmodel << "\tA-C\tA-G\tA-T\tC-G\tC-T\tG-T\tA\tC\tG\tT";
+                fmodel << "\talpha\tpinv\tTree" << endl;
+                fmodel.precision(4);
+                fmodel << fixed;
+            } else {
+                fmodel.open(fmodel_str.c_str(), ios::app);
+                if (!fmodel.is_open())
+                    outError("cannot append to file ", fmodel_str);
+            }
+            model_info.clear();
+        }
+
+        params.model_name = testModel(params, &iqtree, model_info, fmodel, "", true);
+        fmodel.close();
         params.startCPUTime = start_cpu_time;
         params.start_real_time = start_real_time;
         cout << "CPU time for model selection: " << getCPUTime() - start_cpu_time << " seconds." << endl;
