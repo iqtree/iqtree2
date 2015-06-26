@@ -742,8 +742,22 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInf
 	double lhsum = 0.0;
 	int dfsum = 0;
 	int ssize = in_tree->getAlnNSite();
-	int nr_model = 1;
-
+	int num_model = 0;
+    int total_num_model = in_tree->size();
+	if (params.model_name.find("LINK") != string::npos || params.model_name.find("MERGE") != string::npos) {
+//        if (params.partfinder_rcluster == 100.0)
+//            total_num_model += in_tree->size()*(in_tree->size()-2);
+//        else 
+        {
+            double p = params.partfinder_rcluster/100.0;
+            total_num_model += round(in_tree->size()*(in_tree->size()-1)*p/2);
+            for (i = in_tree->size()-2; i > 1; i--)
+                total_num_model += max(round(i*p), 1.0);
+        }
+    }
+    
+    double start_time = getRealTime();
+    
 	cout << "Selecting individual models for " << in_tree->size() << " charsets using " << criterionName(params.model_test_criterion) << "..." << endl;
 	//cout << " No. AIC         AICc        BIC         Charset" << endl;
 	cout << " No. Model        Score       Charset" << endl;
@@ -751,6 +765,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInf
 	lhvec.resize(in_tree->size());
 	dfvec.resize(in_tree->size());
 	lenvec.resize(in_tree->size());
+
 
 #ifdef _OPENMP
 #pragma omp parallel for private(i) schedule(dynamic) reduction(+: lhsum, dfsum)
@@ -781,18 +796,24 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInf
 #ifdef _OPENMP
             fmodel << this_fmodel.str();
 #endif
+            num_model++;
             cout.width(4);
             cout << right << i+1 << " ";
             cout.width(12);
             cout << left << model << " ";
             cout.width(11);
-            cout << score << " " << in_tree->part_info[i].name << endl;
+            cout << score << " " << in_tree->part_info[i].name;
+            if (num_model >= 10) {
+                double remain_time = (total_num_model-num_model)*(getRealTime()-start_time)/num_model;
+                cout << "\t" << convert_time(getRealTime()-start_time) << " (" 
+                    << convert_time(remain_time) << " left)";
+            }
+            cout << endl;
             replaceModelInfo(model_info, part_model_info);
         }
 //	    delete part_model_info;
     }
 
-	nr_model = in_tree->size()+1;
 	if (params.model_name.find("LINK") == string::npos && params.model_name.find("MERGE") == string::npos) {
 		in_tree->printBestPartition((string(params.out_prefix) + ".best_scheme.nex").c_str());
 		in_tree->printBestPartitionRaxml((string(params.out_prefix) + ".best_scheme").c_str());
@@ -815,7 +836,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInf
 		model_names[i] = in_tree->part_info[i].model_name;
 		greedy_model_trees[i] = in_tree->part_info[i].name;
 	}
-	cout << "Merging models to increase model fit..." << endl;
+	cout << "Merging models to increase model fit (" << total_num_model << " partition schemes)..." << endl;
 	int prev_part = -1;
     double *dist = new double[gene_sets.size()*(gene_sets.size()-1)/2];
     int *distID = new int[gene_sets.size()*(gene_sets.size()-1)/2];
@@ -844,7 +865,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInf
         if (num_pairs > 0 && params.partfinder_rcluster < 100) {
             // sort distance
             quicksort(dist, 0, num_pairs-1, distID);
-            num_pairs = (int)ceil(num_pairs * (params.partfinder_rcluster/100));
+            num_pairs = (int)round(num_pairs * (params.partfinder_rcluster/100.0));
             if (num_pairs <= 0) num_pairs = 1;
         }
         // end 
@@ -912,12 +933,19 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInf
                     fmodel << this_fmodel.str();
 #endif
 					replaceModelInfo(model_info, part_model_info);
+                    num_model++;
 					cout.width(4);
-					cout << right << nr_model++ << " ";
+					cout << right << num_model << " ";
 					cout.width(12);
 					cout << left << model << " ";
 					cout.width(11);
-					cout << score << " " << set_name << endl;
+					cout << score << " " << set_name;
+                    if (num_model >= 10) {
+                        double remain_time = max(total_num_model-num_model, 0)*(getRealTime()-start_time)/num_model;
+                        cout << "\t" << convert_time(getRealTime()-start_time) << " (" 
+                            << convert_time(remain_time) << " left)";
+                    }
+                    cout << endl;
 				}
 				if (score < new_score) {
 					new_score = score;
