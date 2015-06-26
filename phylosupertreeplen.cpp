@@ -93,8 +93,8 @@ double PartitionModelPlen::optimizeParameters(bool fixed_len, bool write_info, d
 	int i;
     for(i = 1; i < tree->params->num_param_iterations; i++){
     	cur_lh = 0.0;
-        #ifdef _OPENMP
         if (tree->part_order.empty()) tree->computePartitionOrder();
+        #ifdef _OPENMP
         #pragma omp parallel for reduction(+: cur_lh) schedule(dynamic)
         #endif
     	for (int partid = 0; partid < ntrees; partid++) {
@@ -194,8 +194,8 @@ double PartitionModelPlen::optimizeGeneRate(double gradient_epsilon)
     int i;
     double score = 0.0;
 
-    #ifdef _OPENMP
     if (tree->part_order.empty()) tree->computePartitionOrder();
+    #ifdef _OPENMP
     #pragma omp parallel for reduction(+: score) private(i) schedule(dynamic)
     #endif    
     for (int j = 0; j < tree->size(); j++) {
@@ -454,9 +454,9 @@ void PhyloSuperTreePlen::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, b
 	//this->clearAllPartialLH();
 	PhyloTree::optimizeOneBranch(node1, node2, false, maxNRStep);
 
+    if (part_order.empty()) computePartitionOrder();
 	// bug fix: assign cur_score into part_info
     #ifdef _OPENMP
-    if (part_order.empty()) computePartitionOrder();
     #pragma omp parallel for private(part) schedule(dynamic)
     #endif    
 	for (int partid = 0; partid < size(); partid++) {
@@ -495,8 +495,8 @@ double PhyloSuperTreePlen::computeFunction(double value) {
 	SuperNeighbor *nei2 = (SuperNeighbor*)current_it->node->findNeighbor(current_it_back->node);
 	assert(nei1 && nei2);
 
-    #ifdef _OPENMP
     if (part_order.empty()) computePartitionOrder();
+    #ifdef _OPENMP
     #pragma omp parallel for reduction(+: tree_lh) schedule(dynamic)
     #endif    
 	for (int partid = 0; partid < ntrees; partid++) {
@@ -547,8 +547,8 @@ void PhyloSuperTreePlen::computeFuncDerv(double value, double &df_ret, double &d
 	SuperNeighbor *nei2 = (SuperNeighbor*)current_it->node->findNeighbor(current_it_back->node);
 	assert(nei1 && nei2);
 
-    #ifdef _OPENMP
     if (part_order.empty()) computePartitionOrder();
+    #ifdef _OPENMP
     #pragma omp parallel for reduction(+: df, ddf) schedule(dynamic)
     #endif    
 	for (int partid = 0; partid < ntrees; partid++) {
