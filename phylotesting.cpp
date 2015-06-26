@@ -771,9 +771,12 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInf
         // computation cost is proportional to #sequences, #patterns, and #states
         dist[i] = -((double)this_aln->getNSeq())*this_aln->getNPattern()*this_aln->num_states;
     }
+    
+    if (params.num_threads > 1)
+        quicksort(dist, 0, in_tree->size()-1, distID);
+
 
 #ifdef _OPENMP
-    quicksort(dist, 0, in_tree->size()-1, distID);
 //        for (i = 0; i < in_tree->size(); i++)
 //            cout << distID[i]+1 << "\t" << in_tree->part_info[distID[i]].name << "\t" << -dist[i] << endl;
 #pragma omp parallel for private(i) schedule(dynamic) reduction(+: lhsum, dfsum)
@@ -884,9 +887,10 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInf
             this_aln = in_tree->at(distID[i] & ((1<<16)-1))->aln;
             dist[i] -= ((double)this_aln->getNSeq())*this_aln->getNPattern()*this_aln->num_states;
         }
+        if (params.num_threads > 1)
+            quicksort(dist, 0, num_pairs-1, distID);
 
 #ifdef _OPENMP
-        quicksort(dist, 0, num_pairs-1, distID);
 #pragma omp parallel for private(i) schedule(dynamic)
 #endif
         for (int pair = 0; pair < num_pairs; pair++) {
