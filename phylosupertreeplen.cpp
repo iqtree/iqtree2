@@ -94,9 +94,11 @@ double PartitionModelPlen::optimizeParameters(bool fixed_len, bool write_info, d
     for(i = 1; i < tree->params->num_param_iterations; i++){
     	cur_lh = 0.0;
         #ifdef _OPENMP
+        if (tree->part_order.empty()) tree->computePartitionOrder();
         #pragma omp parallel for reduction(+: cur_lh) schedule(dynamic)
         #endif
-    	for (int part = 0; part < ntrees; part++) {
+    	for (int partid = 0; partid < ntrees; partid++) {
+            int part = tree->part_order[partid];
     		// Subtree model parameters optimization
 //        	tree->part_info[part].cur_score = tree->at(part)->getModelFactory()->optimizeParameters(true, false, logl_epsilon, gradient_epsilon);
         	tree->part_info[part].cur_score = tree->at(part)->getModelFactory()->optimizeParametersOnly(gradient_epsilon/min(min(i,ntrees),10));
@@ -193,9 +195,11 @@ double PartitionModelPlen::optimizeGeneRate(double gradient_epsilon)
     double score = 0.0;
 
     #ifdef _OPENMP
+    if (tree->part_order.empty()) tree->computePartitionOrder();
     #pragma omp parallel for reduction(+: score) private(i) schedule(dynamic)
     #endif    
-    for (i = 0; i < tree->size(); i++) {
+    for (int j = 0; j < tree->size(); j++) {
+        int i = tree->part_order[j];
 //        double gene_rate = tree->part_info[i].part_rate;
 //        double negative_lh, ferror;
 //        optimizing_part = i;
@@ -452,9 +456,11 @@ void PhyloSuperTreePlen::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, b
 
 	// bug fix: assign cur_score into part_info
     #ifdef _OPENMP
-    #pragma omp parallel for private(part)
+    if (part_order.empty()) computePartitionOrder();
+    #pragma omp parallel for private(part) schedule(dynamic)
     #endif    
-	for (part = 0; part < size(); part++) {
+	for (int partid = 0; partid < size(); partid++) {
+        part = part_order_by_nptn[partid];
 		if (((SuperNeighbor*)current_it)->link_neighbors[part]) {
 			part_info[part].cur_score = at(part)->computeLikelihoodFromBuffer();
 		}
@@ -490,9 +496,11 @@ double PhyloSuperTreePlen::computeFunction(double value) {
 	assert(nei1 && nei2);
 
     #ifdef _OPENMP
-    #pragma omp parallel for reduction(+: tree_lh)
+    if (part_order.empty()) computePartitionOrder();
+    #pragma omp parallel for reduction(+: tree_lh) schedule(dynamic)
     #endif    
-	for (int part = 0; part < ntrees; part++) {
+	for (int partid = 0; partid < ntrees; partid++) {
+            int part = part_order_by_nptn[partid];
 			PhyloNeighbor *nei1_part = nei1->link_neighbors[part];
 			PhyloNeighbor *nei2_part = nei2->link_neighbors[part];
 			if (nei1_part && nei2_part) {
@@ -540,9 +548,11 @@ void PhyloSuperTreePlen::computeFuncDerv(double value, double &df_ret, double &d
 	assert(nei1 && nei2);
 
     #ifdef _OPENMP
-    #pragma omp parallel for reduction(+: df, ddf)
+    if (part_order.empty()) computePartitionOrder();
+    #pragma omp parallel for reduction(+: df, ddf) schedule(dynamic)
     #endif    
-	for (int part = 0; part < ntrees; part++) {
+	for (int partid = 0; partid < ntrees; partid++) {
+        int part = part_order_by_nptn[partid];
         double df_aux, ddf_aux;
 			PhyloNeighbor *nei1_part = nei1->link_neighbors[part];
 			PhyloNeighbor *nei2_part = nei2->link_neighbors[part];
