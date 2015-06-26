@@ -736,24 +736,19 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInf
 //    params.print_conaln = true;
 	int i = 0;
 //	PhyloSuperTree::iterator it;
-	DoubleVector lhvec;
-	DoubleVector dfvec;
-    DoubleVector lenvec; // tree length
+	DoubleVector lhvec; // log-likelihood for each partition
+	DoubleVector dfvec; // number of parameters for each partition
+    DoubleVector lenvec; // tree length for each partition
 	double lhsum = 0.0;
 	int dfsum = 0;
 	int ssize = in_tree->getAlnNSite();
 	int num_model = 0;
     int total_num_model = in_tree->size();
 	if (params.model_name.find("LINK") != string::npos || params.model_name.find("MERGE") != string::npos) {
-//        if (params.partfinder_rcluster == 100.0)
-//            total_num_model += in_tree->size()*(in_tree->size()-2);
-//        else 
-        {
-            double p = params.partfinder_rcluster/100.0;
-            total_num_model += round(in_tree->size()*(in_tree->size()-1)*p/2);
-            for (i = in_tree->size()-2; i > 1; i--)
-                total_num_model += max(round(i*p), 1.0);
-        }
+        double p = params.partfinder_rcluster/100.0;
+        total_num_model += round(in_tree->size()*(in_tree->size()-1)*p/2);
+        for (i = in_tree->size()-2; i > 0; i--)
+            total_num_model += max(round(i*p), 1.0);
     }
     
     double start_time = getRealTime();
@@ -766,11 +761,25 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInf
 	dfvec.resize(in_tree->size());
 	lenvec.resize(in_tree->size());
 
+    double *dist = new double[in_tree->size()*(in_tree->size()-1)/2];
+    int *distID = new int[in_tree->size()*(in_tree->size()-1)/2];
+    
+    // sort partition by computational cost for OpenMP effciency
+	for (i = 0; i < in_tree->size(); i++) {
+        distID[i] = i;
+        Alignment *this_aln = in_tree->at(i)->aln;
+        // computation cost is proportional to #sequences, #patterns, and #states
+        dist[i] = -((double)this_aln->getNSeq())*this_aln->getNPattern()*this_aln->num_states;
+    }
 
 #ifdef _OPENMP
+    quicksort(dist, 0, in_tree->size()-1, distID);
+//        for (i = 0; i < in_tree->size(); i++)
+//            cout << distID[i]+1 << "\t" << in_tree->part_info[distID[i]].name << "\t" << -dist[i] << endl;
 #pragma omp parallel for private(i) schedule(dynamic) reduction(+: lhsum, dfsum)
 #endif
-	for (i = 0; i < in_tree->size(); i++) {
+	for (int j = 0; j < in_tree->size(); j++) {
+        i = distID[j];
         PhyloTree *this_tree = in_tree->at(i);
 		// scan through models for this partition, assuming the information occurs consecutively
 		vector<ModelInfo> part_model_info;
@@ -798,7 +807,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInf
 #endif
             num_model++;
             cout.width(4);
-            cout << right << i+1 << " ";
+            cout << right << num_model << " ";
             cout.width(12);
             cout << left << model << " ";
             cout.width(11);
@@ -811,12 +820,13 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInf
             cout << endl;
             replaceModelInfo(model_info, part_model_info);
         }
-//	    delete part_model_info;
     }
 
 	if (params.model_name.find("LINK") == string::npos && params.model_name.find("MERGE") == string::npos) {
 		in_tree->printBestPartition((string(params.out_prefix) + ".best_scheme.nex").c_str());
 		in_tree->printBestPartitionRaxml((string(params.out_prefix) + ".best_scheme").c_str());
+        delete [] distID;
+        delete [] dist;
 		return;
 	}
 
@@ -836,10 +846,8 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInf
 		model_names[i] = in_tree->part_info[i].model_name;
 		greedy_model_trees[i] = in_tree->part_info[i].name;
 	}
-	cout << "Merging models to increase model fit (" << total_num_model << " partition schemes)..." << endl;
+	cout << "Merging models to increase model fit (about " << total_num_model << " total partition schemes)..." << endl;
 	int prev_part = -1;
-    double *dist = new double[gene_sets.size()*(gene_sets.size()-1)/2];
-    int *distID = new int[gene_sets.size()*(gene_sets.size()-1)/2];
 	while (gene_sets.size() >= 2) {
 		// stepwise merging charsets
 		double new_score = DBL_MAX;
@@ -868,9 +876,17 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInf
             num_pairs = (int)round(num_pairs * (params.partfinder_rcluster/100.0));
             if (num_pairs <= 0) num_pairs = 1;
         }
-        // end 
+        // sort partition by computational cost for OpenMP effciency
+        for (i = 0; i < num_pairs; i++) {
+            // computation cost is proportional to #sequences, #patterns, and #states
+            Alignment *this_aln = in_tree->at(distID[i] >> 16)->aln;
+            dist[i] = -((double)this_aln->getNSeq())*this_aln->getNPattern()*this_aln->num_states;
+            this_aln = in_tree->at(distID[i] & ((1<<16)-1))->aln;
+            dist[i] -= ((double)this_aln->getNSeq())*this_aln->getNPattern()*this_aln->num_states;
+        }
 
 #ifdef _OPENMP
+        quicksort(dist, 0, num_pairs-1, distID);
 #pragma omp parallel for private(i) schedule(dynamic)
 #endif
         for (int pair = 0; pair < num_pairs; pair++) {
