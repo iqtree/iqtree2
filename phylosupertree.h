@@ -269,6 +269,13 @@ public:
 	*/
 	vector<PartitionInfo> part_info;
 
+    /* partition ID sorted in descending order of computation cost */
+    IntVector part_order;
+    IntVector part_order_by_nptn;
+
+    /* compute part_order vector */
+    void computePartitionOrder();
+
     /**
             get the name of the model
     */

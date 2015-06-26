@@ -817,6 +817,38 @@ int PhyloSuperTree::computeParsimonyBranch(PhyloNeighbor *dad_branch, PhyloNode 
     return score;
 }
 
+void PhyloSuperTree::computePartitionOrder() {
+    if (!part_order.empty())
+        return;
+    int i, ntrees = size();
+    part_order.resize(ntrees);
+    part_order_by_nptn.resize(ntrees);
+    
+    int *id = new int[ntrees];
+    double *cost = new double[ntrees];
+    
+    for (i = 0; i < ntrees; i++) {
+        Alignment *part_aln = at(i)->aln;
+        cost[i] = -((double)part_aln->getNSeq())*part_aln->getNPattern()*part_aln->num_states;
+        id[i] = i;
+    }
+    quicksort(cost, 0, ntrees-1, id);
+    for (i = 0; i < ntrees; i++) 
+        part_order[i] = id[i];
+        
+    // compute part_order by number of patterns
+    for (i = 0; i < ntrees; i++) {
+        Alignment *part_aln = at(i)->aln;
+        cost[i] = -((double)part_aln->getNPattern())*part_aln->num_states;
+        id[i] = i;
+    }
+    quicksort(cost, 0, ntrees-1, id);
+    for (i = 0; i < ntrees; i++) 
+        part_order_by_nptn[i] = id[i];
+        
+    delete [] cost;
+    delete [] id;
+}
 
 double PhyloSuperTree::computeLikelihood(double *pattern_lh) {
 	double tree_lh = 0.0;
@@ -832,9 +864,11 @@ double PhyloSuperTree::computeLikelihood(double *pattern_lh) {
 		}
 	} else {
 		#ifdef _OPENMP
+        if (part_order.empty()) computePartitionOrder();
 		#pragma omp parallel for reduction(+: tree_lh) schedule(dynamic)
 		#endif
-		for (int i = 0; i < ntrees; i++) {
+		for (int j = 0; j < ntrees; j++) {
+            int i = part_order[j];
 			part_info[i].cur_score = at(i)->computeLikelihood();
 			tree_lh += part_info[i].cur_score;
 		}
@@ -877,9 +911,11 @@ double PhyloSuperTree::optimizeAllBranches(int my_iterations, double tolerance, 
 	double tree_lh = 0.0;
 	int ntrees = size();
 	#ifdef _OPENMP
+    if (part_order.empty()) computePartitionOrder();
 	#pragma omp parallel for reduction(+: tree_lh) schedule(dynamic)
 	#endif
-	for (int i = 0; i < ntrees; i++) {
+	for (int j = 0; j < ntrees; j++) {
+        int i = part_order[j];
 		part_info[i].cur_score = at(i)->optimizeAllBranches(my_iterations, tolerance/min(ntrees,10), maxNRStep);
 		tree_lh += part_info[i].cur_score;
 		if (verbose_mode >= VB_MAX)
@@ -978,9 +1014,11 @@ NNIMove PhyloSuperTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NN
 	int local_totalNNIs = 0, local_evalNNIs = 0;
 
 	#ifdef _OPENMP
-	#pragma omp parallel for reduction(+: nni_score1, nni_score2, local_totalNNIs, local_evalNNIs) private(part)
+    if (part_order.empty()) computePartitionOrder();
+	#pragma omp parallel for reduction(+: nni_score1, nni_score2, local_totalNNIs, local_evalNNIs) private(part) schedule(dynamic)
 	#endif
-	for (part = 0; part < ntrees; part++) {
+	for (int treeid = 0; treeid < ntrees; treeid++) {
+        part = part_order_by_nptn[treeid];
 		bool is_nni = true;
 		local_totalNNIs++;
 		FOR_NEIGHBOR_DECLARE(node1, NULL, nit) {
