@@ -2837,7 +2837,7 @@ void usage_iqtree(char* argv[], bool full_command) {
     cout << "GENERAL OPTIONS:" << endl
             << "  -? or -h             Printing this help dialog" << endl
             << "  -s <alignment>       Input alignment in PHYLIP/FASTA/NEXUS/CLUSTAL/MSF format" << endl
-            << "  -st <data_type>      BIN, DNA, AA, CODON, or MORPH (default: auto-detect)" << endl
+            << "  -st <data_type>      BIN, DNA, AA, NT2AA, CODON, MORPH (default: auto-detect)" << endl
             << "  -q <partition_file>  Edge-linked partition model (file in NEXUS/RAxML format)" << endl
             << " -spp <partition_file> Like -q option but allowing partition-specific rates" << endl
             << "  -sp <partition_file> Edge-unlinked partition model (like -M option of RAxML)" << endl
