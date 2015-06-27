@@ -2115,6 +2115,8 @@ void trimString(string &str);
 */
 int countPhysicalCPUCores();
 
+void print_stacktrace(ostream &out, unsigned int max_frames = 63);
+
 /**
     quicksort template
 */
