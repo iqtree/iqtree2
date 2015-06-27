@@ -1794,9 +1794,7 @@ extern "C" void funcAbort(int signal_number)
       because abort() was called, your program will exit or crash anyway
       (with a dialog box on Windows).
      */
-#if (defined(__GNUC__) || defined(__clang__)) && !defined(WIN32)
     print_stacktrace(cerr);
-#endif
 
 	cout << endl << "*** IQ-TREE CRASHES WITH SIGNAL ";
 	switch (signal_number) {

@@ -18,10 +18,13 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include <stdio.h>
-#include <stdlib.h>
+
+
+#if (defined(__GNUC__) || defined(__clang__)) && !defined(WIN32)
 #include <execinfo.h>
 #include <cxxabi.h>
+#endif
+
 #include "tools.h"
 #include "timeutil.h"
 
@@ -89,19 +92,13 @@ void outError(char *error)
  */
 
 
-#if (defined(__GNUC__) || defined(__clang__)) && !defined(WIN32)
-#include "stacktrace.h"
-#endif
-
 /**
         Output an error to screen, then exit program
         @param error error message
  */
 void outError(const char *error, bool quit) {
 	if (error == ERR_NO_MEMORY) {
-#if (defined(__GNUC__) || defined(__clang__)) && !defined(WIN32)
 		print_stacktrace(cerr);
-#endif
 	}
 	cerr << "ERROR: " << error << endl;
     if (quit)
@@ -3478,6 +3475,14 @@ int countPhysicalCPUCores() {
 // published under the WTFPL v2.0
 
 /** Print a demangled stack backtrace of the caller function to FILE* out. */
+
+#ifdef WIN32
+
+// donothing for WIN32
+void print_stacktrace(ostream &out, unsigned int max_frames) {}
+
+#else
+
 void print_stacktrace(ostream &out, unsigned int max_frames)
 {
 #ifdef _OPENMP
@@ -3600,3 +3605,5 @@ void print_stacktrace(ostream &out, unsigned int max_frames)
 #endif
 
 }
+
+#endif // WIN32
