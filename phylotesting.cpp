@@ -502,7 +502,7 @@ int getModelList(Params &params, Alignment *aln, StrVector &models, bool separat
 //		for (i = 0; i < noptions; i++)
 //			test_options[i] = test_options_codon[i];
 //	} else 
-    if (seq_type == SEQ_MORPH) {
+    if (seq_type == SEQ_MORPH || aln->frac_const_sites == 0.0) {
         if (params.model_name.find("NEW") != string::npos) {
             for (i = 0; i < noptions; i++)
                 test_options[i] = test_options_morph_new[i];
