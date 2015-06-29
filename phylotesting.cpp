@@ -382,10 +382,13 @@ int getModelList(Params &params, Alignment *aln, StrVector &models, bool separat
 	SeqType seq_type = aln->seq_type;
     
 	const char *rate_options[]    = {  "", "+I", "+ASC", "+G", "+I+G", "+ASC+G", "+R", "+ASC+R"};
-	bool test_options[]           = {true, true,  false, true,   true,    false,false,    false};
-	bool test_options_morph[]     = {true,false,   true, true,  false,     true,false,    false};
+	bool test_options_default[]   = {true, true,  false, true,   true,    false,false,    false};
+	bool test_options_morph[]     = {true,false,   true, true,  false,     true,false,    false};    
+	bool test_options_asc[]       ={false,false,   true,false,  false,     true,false,    false};
 	bool test_options_new[]       = {true, true,  false, true,  false,    false, true,    false};
 	bool test_options_morph_new[] = {true,false,   true, true,  false,     true, true,     true};
+	bool test_options_asc_new[]   ={false,false,   true,false,  false,     true,false,     true};
+    bool *test_options = test_options_default;
 //	bool test_options_codon[] =  {true,false,  false,false,  false,    false};
 	const int noptions = sizeof(rate_options) / sizeof(char*);
 	int i, j;
@@ -498,21 +501,36 @@ int getModelList(Params &params, Alignment *aln, StrVector &models, bool separat
         }
     }
 
+    bool with_new = params.model_name.find("NEW") != string::npos;
+    bool with_asc = params.model_name.find("ASC") != string::npos;
+
 //	if (seq_type == SEQ_CODON) {
 //		for (i = 0; i < noptions; i++)
 //			test_options[i] = test_options_codon[i];
 //	} else 
     if (seq_type == SEQ_MORPH || aln->frac_const_sites == 0.0) {
-        if (params.model_name.find("NEW") != string::npos) {
-            for (i = 0; i < noptions; i++)
-                test_options[i] = test_options_morph_new[i];
+        // morphological or SNP data: activate +ASC
+        if (with_new) {
+            if (with_asc)
+                test_options = test_options_asc_new;
+            else
+                test_options = test_options_morph_new;
+        } else if (with_asc)
+            test_options = test_options_asc;
+        else
+            test_options = test_options_morph;
+	} else {
+        // normal data, use +I instead
+        if (with_new) {
+            // change +I+G to +R
+            if (with_asc)
+                test_options = test_options_asc_new;
+            else
+                test_options = test_options_new;
+        } else if (with_asc) {
+            test_options = test_options_asc;
         } else
-            for (i = 0; i < noptions; i++)
-                test_options[i] = test_options_morph[i];
-	} else if (params.model_name.find("NEW") != string::npos) {
-        // change +I+G to +R
-        for (i = 0; i < noptions; i++)
-            test_options[i] = test_options_new[i];
+            test_options = test_options_default;
     }
     
 
