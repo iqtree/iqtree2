@@ -215,9 +215,16 @@ double PartitionModelPlen::optimizeGeneRate(double gradient_epsilon)
     }
     // now normalize the rates
     double sum = 0.0;
-    for (i = 0; i < tree->size(); i++)
+    size_t nsite = 0;
+    for (i = 0; i < tree->size(); i++) {
         sum += tree->part_info[i].part_rate * tree->at(i)->aln->getNSite();
-    sum /= tree->getAlnNSite();
+        if (tree->at(i)->aln->seq_type == SEQ_CODON && tree->rescale_codon_brlen)
+            nsite += 3*tree->at(i)->aln->getNSite();
+        else
+            nsite += tree->at(i)->aln->getNSite();
+    }
+//    sum /= tree->getAlnNSite();
+    sum /= nsite;
     tree->scaleLength(sum);
     sum = 1.0/sum;
     for (i = 0; i < tree->size(); i++)
@@ -315,6 +322,8 @@ PhyloSuperTreePlen::PhyloSuperTreePlen(Params &params)
 	for (iterator it = begin(); it != end(); it++, part++) {
 		part_info[part].part_rate = 1.0;
 		part_info[part].evalNNIs = 0.0;
+        if ((*it)->aln->seq_type == SEQ_CODON && rescale_codon_brlen)
+            part_info[part].part_rate = 3.0;
 	}
 }
 
@@ -357,9 +366,18 @@ double PhyloSuperTreePlen::computeDist(int seq1, int seq2, double initial_dist, 
 void PhyloSuperTreePlen::mapTrees() {
 	assert(root);
 	int part = 0;
+    // this is important: rescale branch length of codon partitions to be compatible with other partitions.
+    // since for codon models, branch lengths = # nucleotide subst per codon site!
+    bool noncodon_present = false;
+    iterator it;
+    for (it = begin(); it != end(); it++)
+        if ((*it)->aln->seq_type != SEQ_CODON) {
+            noncodon_present = true;
+            break;
+        }
 //	if (verbose_mode >= VB_DEBUG)
 //		drawTree(cout,  WT_BR_SCALE | WT_INT_NODE | WT_TAXON_ID | WT_NEWLINE | WT_BR_ID);
-	for (iterator it = begin(); it != end(); it++, part++) {
+	for (it = begin(); it != end(); it++, part++) {
 		string taxa_set = ((SuperAlignment*)aln)->getPattern(part);
 		(*it)->copyTree(this, taxa_set);
 

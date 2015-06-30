@@ -28,11 +28,13 @@ PhyloSuperTree::PhyloSuperTree()
  : IQTree()
 {
 	totalNNIs = evalNNIs = 0;
+    rescale_codon_brlen = false;
 	// Initialize the counter for evaluated NNIs on subtrees. FOR THIS CASE IT WON'T BE initialized.
 }
 
 PhyloSuperTree::PhyloSuperTree(SuperAlignment *alignment, PhyloSuperTree *super_tree) :  IQTree(alignment) {
 	totalNNIs = evalNNIs = 0;
+    rescale_codon_brlen = super_tree->rescale_codon_brlen;
 	part_info = super_tree->part_info;
 	for (vector<Alignment*>::iterator it = alignment->partitions.begin(); it != alignment->partitions.end(); it++) {
 		PhyloTree *tree = new PhyloTree((*it));
@@ -470,7 +472,8 @@ PhyloSuperTree::PhyloSuperTree(Params &params) :  IQTree() {
 
 	// Initialize the counter for evaluated NNIs on subtrees
 	int part = 0;
-	for (iterator it = begin(); it != end(); it++, part++) {
+    iterator it;
+	for (it = begin(); it != end(); it++, part++) {
 		part_info[part].evalNNIs = 0.0;
 	}
 
@@ -481,6 +484,21 @@ PhyloSuperTree::PhyloSuperTree(Params &params) :  IQTree() {
 		str += ".conaln";
 		((SuperAlignment*)aln)->printCombinedAlignment(str.c_str());
 	}
+
+    // this is important: rescale branch length of codon partitions to be compatible with other partitions.
+    // since for codon models, branch lengths = # nucleotide subst per codon site!
+    rescale_codon_brlen = false;
+    bool has_codon = false;
+	for (it = begin(); it != end(); it++, part++) 
+        if ((*it)->aln->seq_type != SEQ_CODON) {
+            rescale_codon_brlen = true;
+        } else 
+            has_codon = true;
+            
+    rescale_codon_brlen &= has_codon;
+    if (rescale_codon_brlen)
+        cout << "NOTE: Mixed codon with other data type. Branch lengths of codon partitions will be rescaled by 1/3" << endl;
+    
 	cout << "Degree of missing data: " << ((SuperAlignment*)aln)->computeMissingData() << endl;
 	cout << endl;
 
@@ -1265,15 +1283,7 @@ void PhyloSuperTree::computeBranchLengths() {
 		cout << "Assigning branch lengths for full tree with weighted average..." << endl;
 	int part = 0, i;
     iterator it;
-    // this is important: rescale branch length of codon partitions to be compatible with other partitions.
-    // since for codon models, branch lengths = # nucleotide subst per codon site!
-    bool noncodon_present = false;
-    for (it = begin(); it != end(); it++)
-        if ((*it)->aln->seq_type != SEQ_CODON) {
-            noncodon_present = true;
-            break;
-        }
-    
+
 	NodeVector nodes1, nodes2;
 	getBranches(nodes1, nodes2);
 	vector<SuperNeighbor*> neighbors1;
@@ -1296,7 +1306,7 @@ void PhyloSuperTree::computeBranchLengths() {
 		for (i = 0; i < nodes1.size(); i++) {
 			PhyloNeighbor *nei1 = neighbors1[i]->link_neighbors[part];
 			if (!nei1) continue;
-            if ((*it)->aln->seq_type == SEQ_CODON && noncodon_present) {
+            if ((*it)->aln->seq_type == SEQ_CODON && rescale_codon_brlen) {
                 // rescale branch length by 3
                 neighbors1[i]->length += (nei1->length) * (*it)->aln->getNSite() / brfreq[nei1->id];
                 occurence[i] += (*it)->aln->getNSite()*3;

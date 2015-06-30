@@ -310,6 +310,9 @@ public:
 
     virtual int computeParsimonyBranch(PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst = NULL);
 
+    /** True when mixed codon with other data type */
+    bool rescale_codon_brlen;
+    
     int totalNNIs, evalNNIs;
 
 };
