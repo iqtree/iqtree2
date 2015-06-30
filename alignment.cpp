@@ -1854,7 +1854,8 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
             }
             else if (count > 2) {
                 if (verbose_mode >= VB_MAX) {
-                    std::cout << "WARNING: More than two bases are present on line" << line_num << "." std::endl;
+                    std::cout << "WARNING: More than two bases are present on line ";
+                    std::cout << line_num << "." << std::endl;
                 }
                 everything_ok = false;
             	// err_str << "More than 2 bases are present on line " << line_num << ".";
