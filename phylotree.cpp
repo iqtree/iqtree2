@@ -3473,15 +3473,16 @@ void PhyloTree::computeBioNJ(Params &params, Alignment *alignment, string &dist_
     cout << "Computing BIONJ tree..." << endl;
     BioNj bionj;
     bionj.create(dist_file.c_str(), bionj_file.c_str());
-    bool my_rooted = false;
+//    bool my_rooted = false;
     bool non_empty_tree = (root != NULL);
-    if (root)
-        freeNode();
-    readTree(bionj_file.c_str(), my_rooted);
+//    if (root)
+//        freeNode();
+    readTreeFile(bionj_file.c_str());
 
-    if (non_empty_tree)
+    if (non_empty_tree) {
         initializeAllPartialLh();
-    setAlignment(alignment);
+    }
+//    setAlignment(alignment);
 }
 
 int PhyloTree::fixNegativeBranch(bool force, Node *node, Node *dad) {
