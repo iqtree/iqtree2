@@ -1267,7 +1267,7 @@ int Alignment::buildPattern(StrVector &sequences, char *sequence_type, int nseq,
                         num_error++;
                         state = STATE_UNKNOWN;
             		} else if (nt2aa) {
-                        state = AA_to_state[genetic_code[(int)state]];
+                        state = AA_to_state[(int)genetic_code[(int)state]];
                     }
             	} else if (state == STATE_INVALID || state2 == STATE_INVALID || state3 == STATE_INVALID) {
             		state = STATE_INVALID;
@@ -1946,8 +1946,6 @@ void Alignment::extractSites(Alignment *aln, IntVector &site_id) {
     VerboseMode save_mode = verbose_mode;
     verbose_mode = min(verbose_mode, VB_MIN); // to avoid printing gappy sites in addPattern
     for (i = 0; i != site_id.size(); i++) {
-        if (site_id[i] < 0 || site_id[i] >= aln->getNSite())
-            throw "Site ID out of bound";
         Pattern pat = aln->getPattern(site_id[i]);
         addPattern(pat, i);
     }
@@ -1961,6 +1959,97 @@ void Alignment::extractSites(Alignment *aln, IntVector &site_id) {
 
     //cout << getNSite() << " positions were extracted" << endl;
     //cout << __func__ << " " << num_states << endl;
+}
+
+
+
+void Alignment::convertToCodonOrAA(Alignment *aln, char *gene_code_id, bool nt2aa) {
+    if (aln->seq_type != SEQ_DNA)
+        outError("Cannot convert non-DNA alignment into codon alignment");
+    if (aln->getNSite() % 3 != 0)
+        outError("Sequence length is not divisible by 3 when converting to codon sequences");
+    int i, site;
+    char AA_to_state[NUM_CHAR];
+    for (i = 0; i < aln->getNSeq(); i++) {
+        seq_names.push_back(aln->getSeqName(i));
+    }
+//    num_states = aln->num_states;
+    seq_type = SEQ_CODON;
+    initCodon(gene_code_id);
+    if (nt2aa) {
+        seq_type = SEQ_PROTEIN;
+        num_states = 20;
+        buildStateMap(AA_to_state, SEQ_PROTEIN);
+    }
+
+    computeUnknownState();
+
+    site_pattern.resize(aln->getNSite()/3, -1);
+    clear();
+    pattern_index.clear();
+    int step = ((seq_type == SEQ_CODON || nt2aa) ? 3 : 1);
+
+    VerboseMode save_mode = verbose_mode;
+    verbose_mode = min(verbose_mode, VB_MIN); // to avoid printing gappy sites in addPattern
+    int nsite = aln->getNSite();
+    int nseq = aln->getNSeq();
+    Pattern pat;
+    pat.resize(nseq);
+    int num_error = 0;
+    ostringstream err_str;
+
+    for (site = 0; site < nsite; site+=step) {
+        for (int seq = 0; seq < nseq; seq++) {
+            //char state = convertState(sequences[seq][site], seq_type);
+            char state = aln->at(aln->getPatternID(site))[seq];
+            // special treatment for codon
+            char state2 = aln->at(aln->getPatternID(site+1))[seq];
+            char state3 = aln->at(aln->getPatternID(site+2))[seq];
+            if (state < 4 && state2 < 4 && state3 < 4) {
+//            		state = non_stop_codon[state*16 + state2*4 + state3];
+                state = state*16 + state2*4 + state3;
+                if (genetic_code[(int)state] == '*') {
+                    err_str << "Sequence " << seq_names[seq] << " has stop codon "
+                            << " at site " << site+1 << endl;
+                    num_error++;
+                    state = STATE_UNKNOWN;
+                } else if (nt2aa) {
+                    state = AA_to_state[(int)genetic_code[(int)state]];
+                }
+            } else if (state == STATE_INVALID || state2 == STATE_INVALID || state3 == STATE_INVALID) {
+                state = STATE_INVALID;
+            } else {
+                if (state != STATE_UNKNOWN || state2 != STATE_UNKNOWN || state3 != STATE_UNKNOWN) {
+                    ostringstream warn_str;
+                    warn_str << "Sequence " << seq_names[seq] << " has ambiguous character " <<
+                        " at site " << site+1 << endl;
+                    outWarning(warn_str.str());
+                }
+                state = STATE_UNKNOWN;
+            }
+            if (state == STATE_INVALID) {
+                if (num_error < 100) {
+                    err_str << "Sequence " << seq_names[seq] << " has invalid character ";
+                    err_str << " at site " << site+1 << endl;
+                } else if (num_error == 100)
+                    err_str << "...many more..." << endl;
+                num_error++;
+            }
+            pat[seq] = state;
+        }
+        if (!num_error)
+            addPattern(pat, site/step);
+    }
+    if (num_error)
+        outError(err_str.str());
+    verbose_mode = save_mode;
+    countConstSite();
+    buildSeqStates();
+    // sanity check
+    for (iterator it = begin(); it != end(); it++)
+    	if (it->at(0) == -1)
+    		assert(0);
+    
 }
 
 void convert_range(const char *str, int &lower, int &upper, int &step_size, char* &endptr) throw (string) {
@@ -2013,12 +2102,18 @@ void convert_range(const char *str, int &lower, int &upper, int &step_size, char
 void extractSiteID(Alignment *aln, const char* spec, IntVector &site_id) {
     int i;
     char *str = (char*)spec;
+    int nchars = 0;
     try {
         for (; *str != 0; ) {
             int lower, upper, step;
             convert_range(str, lower, upper, step, str);
             lower--;
             upper--;
+            nchars += (upper-lower+1)/step;
+            if (aln->seq_type == SEQ_CODON) {
+                lower /= 3;
+                upper /= 3;
+            }
             if (upper >= aln->getNSite()) throw "Too large site ID";
             if (lower < 0) throw "Negative site ID";
             if (lower > upper) throw "Wrong range";
@@ -2028,6 +2123,8 @@ void extractSiteID(Alignment *aln, const char* spec, IntVector &site_id) {
             if (*str == ',' || *str == ' ') str++;
             else break;
         }
+        if (aln->seq_type == SEQ_CODON && nchars % 3 != 0)
+            throw (string)"Range " + spec + " length is not multiple of 3 (necessary for codon data)";
     } catch (const char* err) {
         outError(err);
     } catch (string err) {
@@ -2526,7 +2623,7 @@ void Alignment::computeStateFreq (double *state_freq, size_t num_unknown_states)
     
     
     memset(state_count, 0, sizeof(unsigned)*(STATE_UNKNOWN+1));
-    state_count[STATE_UNKNOWN] = num_unknown_states;
+    state_count[(int)STATE_UNKNOWN] = num_unknown_states;
     
     for (i = 0; i <= STATE_UNKNOWN; i++)
         getAppearance(i, &states_app[i*num_states]);

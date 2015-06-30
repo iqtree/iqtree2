@@ -429,6 +429,11 @@ public:
      */
     void extractSites(Alignment *aln, const char* spec);
 
+    /**
+        convert a DNA alignment into codon or AA alignment
+    */
+    void convertToCodonOrAA(Alignment *aln, char *gene_code_id, bool nt2aa = false);
+
     /****************************************************************************
             Distance functions
      ****************************************************************************/

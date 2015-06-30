@@ -281,6 +281,12 @@ void PhyloSuperTree::readPartitionNexus(Params &params) {
 				if (part_aln != input_aln) delete part_aln;
 				part_aln = new_aln;
 			}
+            if (part_aln->seq_type == SEQ_DNA && (info.sequence_type.substr(0, 5) == "CODON" || info.sequence_type.substr(0, 5) == "NT2AA")) {
+				Alignment *new_aln = new Alignment();
+                new_aln->convertToCodonOrAA(part_aln, &info.sequence_type[5], info.sequence_type.substr(0, 5) == "NT2AA");
+                if (part_aln != input_aln) delete part_aln;
+                part_aln = new_aln;
+            }
 			Alignment *new_aln;
 			if (params.remove_empty_seq)
 				new_aln = part_aln->removeGappySeq();
@@ -1258,6 +1264,16 @@ void PhyloSuperTree::computeBranchLengths() {
 	if (verbose_mode >= VB_DEBUG)
 		cout << "Assigning branch lengths for full tree with weighted average..." << endl;
 	int part = 0, i;
+    iterator it;
+    // this is important: rescale branch length of codon partitions to be compatible with other partitions.
+    // since for codon models, branch lengths = # nucleotide subst per codon site!
+    bool noncodon_present = false;
+    for (it = begin(); it != end(); it++)
+        if ((*it)->aln->seq_type != SEQ_CODON) {
+            noncodon_present = true;
+            break;
+        }
+    
 	NodeVector nodes1, nodes2;
 	getBranches(nodes1, nodes2);
 	vector<SuperNeighbor*> neighbors1;
@@ -1269,7 +1285,7 @@ void PhyloSuperTree::computeBranchLengths() {
 		neighbors2.push_back((SuperNeighbor*)nodes2[i]->findNeighbor(nodes1[i]) );
 		neighbors1.back()->length = 0.0;
 	}
-	for (iterator it = begin(); it != end(); it++, part++) {
+	for (it = begin(), part = 0; it != end(); it++, part++) {
 		IntVector brfreq;
 		brfreq.resize((*it)->branchNum, 0);
 		for (i = 0; i < nodes1.size(); i++) {
@@ -1280,8 +1296,14 @@ void PhyloSuperTree::computeBranchLengths() {
 		for (i = 0; i < nodes1.size(); i++) {
 			PhyloNeighbor *nei1 = neighbors1[i]->link_neighbors[part];
 			if (!nei1) continue;
-			neighbors1[i]->length += (nei1->length) * (*it)->aln->getNSite() / brfreq[nei1->id];
-			occurence[i] += (*it)->aln->getNSite();
+            if ((*it)->aln->seq_type == SEQ_CODON && noncodon_present) {
+                // rescale branch length by 3
+                neighbors1[i]->length += (nei1->length) * (*it)->aln->getNSite() / brfreq[nei1->id];
+                occurence[i] += (*it)->aln->getNSite()*3;
+            } else {
+                neighbors1[i]->length += (nei1->length) * (*it)->aln->getNSite() / brfreq[nei1->id];
+                occurence[i] += (*it)->aln->getNSite();
+            }
 			//cout << neighbors1[i]->id << "  " << nodes1[i]->id << nodes1[i]->name <<"," << nodes2[i]->id << nodes2[i]->name <<": " << (nei1->length) / brfreq[nei1->id] << endl;
 		}
 		//cout << endl;
