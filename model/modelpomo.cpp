@@ -131,6 +131,7 @@ double ModelPoMo::computeNormConst() {
     // norm_fixed = 1.0;
 	for (i = 0; i < 4; i++)
 		norm_fixed += freq_fixed_states[i];
+    // TODO: This could be made faster (second sum over j < i only).
 	for (i = 0; i < 4; i++) {
 		for (j = 0; j < 4; j++)
 			if (i != j)
