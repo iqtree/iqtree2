@@ -1979,11 +1979,14 @@ void Alignment::convertToCodonOrAA(Alignment *aln, char *gene_code_id, bool nt2a
     if (nt2aa) {
         seq_type = SEQ_PROTEIN;
         num_states = 20;
-        buildStateMap(AA_to_state, SEQ_PROTEIN);
     }
 
     computeUnknownState();
 
+    if (nt2aa) {
+        buildStateMap(AA_to_state, SEQ_PROTEIN);
+    }
+    
     site_pattern.resize(aln->getNSite()/3, -1);
     clear();
     pattern_index.clear();

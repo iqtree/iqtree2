@@ -446,6 +446,19 @@ void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh, 
         out	<< "NOTE: Branch lengths are weighted average over all partitions" << endl
             << "      (weighted by the number of sites in the partitions)" << endl;
 
+    bool is_codon = tree.aln->seq_type == SEQ_CODON;
+    if (tree.isSuperTree()) {
+        PhyloSuperTree *stree = (PhyloSuperTree*) &tree;
+        is_codon = true;
+        for (PhyloSuperTree::iterator sit = stree->begin(); sit != stree->end(); sit++)
+            if ((*sit)->aln->seq_type != SEQ_CODON) {
+                is_codon = false;
+                break;
+            }
+    }
+    if (is_codon)
+        out << endl << "NOTE: Branch lengths are intepreted as number of nucleotide substitutions per codon site!" 
+            << endl << "      Rescale them by 1/3 if you want to have #nt substitutions per nt site" << endl;
     if (main_tree) 
     if (params.aLRT_replicates > 0 || params.gbo_replicates || (params.num_bootstrap_samples && params.compute_ml_tree)) {
         out << "Numbers in parentheses are ";
