@@ -653,18 +653,18 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 			PhyloSuperTree::iterator it;
 			int part;
 			if(params.partition_type)
-				out << "  ID  Model          Rate   Parameters" << endl;
+				out << "  ID  Model           Speed  Parameters" << endl;
 			else
-				out << "  ID  Model          Parameters" << endl;
+				out << "  ID  Model         TreeLen  Parameters" << endl;
 			//out << "-------------------------------------" << endl;
 			for (it = stree->begin(), part = 0; it != stree->end(); it++, part++) {
 				out.width(4);
 				out << right << (part+1) << "  ";
 				out.width(14);
 				if(params.partition_type)
-					out << left << (*it)->getModelName() << " " << stree->part_info[part].part_rate  << " " << (*it)->getModelNameParams() << endl;
+					out << left << (*it)->getModelName() << " " << stree->part_info[part].part_rate  << "  " << (*it)->getModelNameParams() << endl;
 				else
-					out << left << (*it)->getModelName() << " " << (*it)->getModelNameParams() << endl;
+					out << left << (*it)->getModelName() << " " << (*it)->treeLength() << "  " << (*it)->getModelNameParams() << endl;
 			}
 			out << endl;
 			/*
@@ -1786,8 +1786,10 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 	double search_cpu_time = getCPUTime() - cputime_search_start;
 	double search_real_time = getRealTime() - realtime_search_start;
 
-	if (iqtree.isSuperTree())
-			((PhyloSuperTree*) &iqtree)->mapTrees();
+    // COMMENT THIS OUT BECAUSE IT DELETES ALL BRANCH LENGTHS OF SUBTREES!
+//	if (iqtree.isSuperTree())
+//			((PhyloSuperTree*) &iqtree)->mapTrees();
+
 	if (params.snni && params.min_iterations && verbose_mode >= VB_MED) {
 		cout << "Log-likelihoods of best " << params.popSize << " trees: " << endl;
 		iqtree.printBestScores(params.popSize);

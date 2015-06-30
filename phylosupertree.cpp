@@ -497,7 +497,7 @@ PhyloSuperTree::PhyloSuperTree(Params &params) :  IQTree() {
             
     rescale_codon_brlen &= has_codon;
     if (rescale_codon_brlen)
-        cout << "NOTE: Mixed codon with other data type. Branch lengths of codon partitions will be rescaled by 1/3" << endl;
+        cout << "NOTE: Mixed codon and other data, branch lengths of codon partitions are rescaled by 3!" << endl;
     
 	cout << "Degree of missing data: " << ((SuperAlignment*)aln)->computeMissingData() << endl;
 	cout << endl;
