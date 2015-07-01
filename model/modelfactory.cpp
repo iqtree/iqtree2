@@ -352,7 +352,7 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 		tree->aln->buildSeqStates(true);
 //		if (unobserved_ptns.size() <= 0)
 //			outError("Invalid use of +ASC because all constant patterns are observed in the alignment");
-		if (unobserved_ptns.size() < tree->aln->num_states)
+		if (unobserved_ptns.size() < tree->aln->getNumNonstopCodons())
 			outError("Invalid use of +ASC because constant patterns are observed in the alignment");
 		cout << "Ascertainment bias correction: " << unobserved_ptns.size() << " unobservable constant patterns"<< endl;
 		rate_str = rate_str.substr(0, posasc) + rate_str.substr(posasc+4);

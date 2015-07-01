@@ -380,6 +380,7 @@ bool Alignment::isStopCodon(int state) {
 }
 
 int Alignment::getNumNonstopCodons() {
+    if (seq_type != SEQ_CODON) return num_states;
 	assert(genetic_code);
 	int c = 0;
 	for (char *ch = genetic_code; *ch != 0; ch++)
@@ -388,6 +389,7 @@ int Alignment::getNumNonstopCodons() {
 }
 
 bool Alignment::isStandardGeneticCode() {
+    if (seq_type != SEQ_CODON) return false;
 	return (genetic_code == genetic_code1);
 }
 
@@ -2426,7 +2428,9 @@ void Alignment::countConstSite() {
 
 string Alignment::getUnobservedConstPatterns() {
 	string ret = "";
-	for (char state = 0; state < num_states; state++) {
+	for (char state = 0; state < num_states; state++) 
+    if (!isStopCodon(state))
+    {
 		string pat;
 		pat.resize(getNSeq(), state);
 		if (pattern_index.find(pat) == pattern_index.end()) {

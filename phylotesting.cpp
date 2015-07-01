@@ -807,11 +807,11 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInf
 		extractModelInfo(in_tree->part_info[i].name, model_info, part_model_info);
         stringstream this_fmodel;
 		// do the computation
-#ifdef _OPENMP
+//#ifdef _OPENMP
 		string model = testModel(params, this_tree, part_model_info, this_fmodel, in_tree->part_info[i].name);
-#else
-		string model = testModel(params, this_tree, part_model_info, fmodel, in_tree->part_info[i].name);
-#endif
+//#else
+//		string model = testModel(params, this_tree, part_model_info, fmodel, in_tree->part_info[i].name);
+//#endif
 		double score = computeInformationScore(part_model_info[0].logl,part_model_info[0].df,
 				this_tree->getAlnNSite(),params.model_test_criterion);
 		in_tree->part_info[i].model_name = model;
@@ -823,9 +823,9 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInf
 #pragma omp critical
 #endif
         {
-#ifdef _OPENMP
+//#ifdef _OPENMP
             fmodel << this_fmodel.str();
-#endif
+//#endif
             num_model++;
             cout.width(4);
             cout << right << num_model << " ";
@@ -948,11 +948,11 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInf
                 PhyloTree *tree = in_tree->extractSubtree(merged_set);
                 tree->setAlignment(aln);
                 extractModelInfo(set_name, model_info, part_model_info);
-#ifdef _OPENMP
+//#ifdef _OPENMP
                 model = testModel(params, tree, part_model_info, this_fmodel, set_name);
-#else
-                model = testModel(params, tree, part_model_info, fmodel, set_name);
-#endif
+//#else
+//                model = testModel(params, tree, part_model_info, fmodel, set_name);
+//#endif
                 logl = part_model_info[0].logl;
                 df = part_model_info[0].df;
                 treelen = part_model_info[0].tree_len;
@@ -967,9 +967,9 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInf
 #endif
 			{
 				if (!done_before) {
-#ifdef _OPENMP
+//#ifdef _OPENMP
                     fmodel << this_fmodel.str();
-#endif
+//#endif
 					replaceModelInfo(model_info, part_model_info);
                     num_model++;
 					cout.width(4);
@@ -1187,8 +1187,12 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
         if (model_names[model].find("+ASC") != string::npos) {
             model_fac->unobserved_ptns = in_tree->aln->getUnobservedConstPatterns();
             if (model_fac->unobserved_ptns.size() == 0) continue;
+            tree->aln->buildSeqStates(true);
+            if (model_fac->unobserved_ptns.size() < tree->aln->getNumNonstopCodons())
+                outError("Invalid use of +ASC because constant patterns are observed in the alignment");
         } else {
             model_fac->unobserved_ptns = "";
+            tree->aln->buildSeqStates(false);
         }
         // initialize tree
         // initialize model

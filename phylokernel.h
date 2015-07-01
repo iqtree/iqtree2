@@ -500,6 +500,7 @@ void PhyloTree::computeLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch, PhyloN
     size_t orig_nptn = aln->size();
     size_t nptn = aln->size()+model_factory->unobserved_ptns.size();
     size_t maxptn = ((nptn+VCSIZE-1)/VCSIZE)*VCSIZE;
+    maxptn = max(maxptn, aln->size()+((model_factory->unobserved_ptns.size()+VCSIZE-1)/VCSIZE)*VCSIZE);
     double *eval = model->getEigenvalues();
     assert(eval);
 
@@ -711,7 +712,7 @@ void PhyloTree::computeLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch, PhyloN
     	df += nsites * df_frac;
     	ddf += nsites *(ddf_frac + df_frac*df_frac);
 	}
-
+    assert(!isnan(df));
     aligned_free(vc_val2);
     aligned_free(vc_val1);
     aligned_free(vc_val0);
@@ -745,6 +746,7 @@ double PhyloTree::computeLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, Ph
     size_t orig_nptn = aln->size();
     size_t nptn = aln->size()+model_factory->unobserved_ptns.size();
     size_t maxptn = ((nptn+VCSIZE-1)/VCSIZE)*VCSIZE;
+    maxptn = max(maxptn, aln->size()+((model_factory->unobserved_ptns.size()+VCSIZE-1)/VCSIZE)*VCSIZE);
     double *eval = model->getEigenvalues();
     assert(eval);
 
@@ -864,7 +866,7 @@ double PhyloTree::computeLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, Ph
 				for (j = 0; j < VCSIZE; j++) {
 					double *lh_dad = lh_states_dad[ptn+j];
 					for (i = 0; i < nstates/VCSIZE; i++) {
-						vc_tip_partial_lh[j*(nstates/VCSIZE)+i].load_a(&lh_dad[i*VCSIZE]);
+						vc_tip_partial_lh[j*(nstates/VCSIZE)+i].load(&lh_dad[i*VCSIZE]); // lh_dad is not aligned!
 					}
 					vc_partial_lh_dad[j].load_a(&partial_lh_dad[j*block]);
 					vc_ptn[j] = vc_val[0] * vc_tip_partial_lh[j*(nstates/VCSIZE)] * vc_partial_lh_dad[j];
