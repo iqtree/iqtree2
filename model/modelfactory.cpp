@@ -112,7 +112,7 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 		else if (tree->aln->seq_type == SEQ_BINARY) model_str = "GTR2";
 		else if (tree->aln->seq_type == SEQ_CODON) model_str = "GY";
 		else if (tree->aln->seq_type == SEQ_MORPH) model_str = "MK";
-        else if (tree->aln->seq_type == SEQ_COUNTSFORMAT) model_str = "HKY+rP";
+        else if (tree->aln->seq_type == SEQ_POMO) model_str = "HKY+rP";
 		else model_str = "JC";
         outWarning("Default model may be under-fitting. Use option '-m TEST' to select best-fit model.");
 	}
@@ -201,9 +201,8 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 		case SEQ_PROTEIN: freq_type = FREQ_USER_DEFINED; break; // default for protein: frequencies of the empirical AA matrix
 		case SEQ_MORPH: freq_type = FREQ_EQUAL; break;
 		case SEQ_CODON: freq_type = FREQ_UNKNOWN; break;
-        case SEQ_COUNTSFORMAT: freq_type = FREQ_UNKNOWN;
             break;
-		default: freq_type = FREQ_EMPIRICAL; break; // default for DNA and others: counted frequencies from alignment
+		default: freq_type = FREQ_EMPIRICAL; break; // default for DNA, PoMo and others: counted frequencies from alignment
 		}
 	}
 
@@ -715,7 +714,7 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info, double 
 	assert(tree);
 
 	stopStoringTransMatrix();
-	if (fixed_len) 
+	if (fixed_len || tree->params->num_param_iterations == 0)
 		cur_lh = tree->computeLikelihood();
 	else {
 		cur_lh = tree->optimizeAllBranches(1);
@@ -733,7 +732,7 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info, double 
 	int i;
 	//bool optimize_rate = true;
 //	double gradient_epsilon = min(logl_epsilon, 0.01); // epsilon for parameters starts at epsilon for logl
-	for (i = 2; i < 100; i++) {
+	for (i = 2; i < tree->params->num_param_iterations; i++) {
 //        if (gradient_epsilon < 0.001)
 //            gradient_epsilon = 0.001;
 		/*

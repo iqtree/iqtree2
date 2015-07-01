@@ -1787,10 +1787,6 @@ void funcExit(void) {
 	endLogFile();
 }
 
-#if (defined(__GNUC__) || defined(__clang__)) && !defined(WIN32)
-#include <execinfo.h>
-#endif
-
 extern "C" void funcAbort(int signal_number)
 {
     /*Your code goes here. You can output debugging info.
@@ -1798,6 +1794,10 @@ extern "C" void funcAbort(int signal_number)
       because abort() was called, your program will exit or crash anyway
       (with a dialog box on Windows).
      */
+#if (defined(__GNUC__) || defined(__clang__)) && !defined(WIN32)
+    print_stacktrace(cerr);
+#endif
+
 	cout << endl << "*** IQ-TREE CRASHES WITH SIGNAL ";
 	switch (signal_number) {
 		case SIGABRT: cout << "ABORTED"; break;
@@ -1806,23 +1806,6 @@ extern "C" void funcAbort(int signal_number)
 		case SIGSEGV: cout << "SEGMENTATION FAULT"; break;
 	}
     cout << endl;
-//#if defined(__GNUC__) || defined(__clang__)   
-#if defined(__clang__)
-    int j, nptrs;
-#define BTSIZE 100
-    void *buffer[BTSIZE];
-    char **strings;
-
-   nptrs = backtrace(buffer, BTSIZE);
-   /* The call backtrace_symbols_fd(buffer, nptrs, STDOUT_FILENO)
-       would produce similar output to the following: */
-
-   strings = backtrace_symbols(buffer, nptrs);
-   for (j = 0; j < nptrs; j++)
-        cout << "*** " << strings[j] << endl;
-   free(strings);
-#endif
-
 	cout << "*** For bug report please send to developers:" << endl << "***    Log file: " << _log_file;
 	cout << endl << "***    Alignment files (if possible)" << endl;
 	funcExit();
@@ -2211,7 +2194,7 @@ int main(int argc, char *argv[])
 	//pclose(pfile);
 
 	instruction_set = instrset_detect();
-#ifdef BINARY32
+#if defined(BINARY32) || defined(__NOAVX__)
     instruction_set = min(instruction_set, 6);
 #endif
 	if (instruction_set < 3) outError("Your CPU does not support SSE3!");

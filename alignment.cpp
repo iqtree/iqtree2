@@ -1031,7 +1031,7 @@ char Alignment::convertStateBack(char state) {
 
 string Alignment::convertStateBackStr(char state) {
 	string str;
-    if (seq_type == SEQ_COUNTSFORMAT)
+    if (seq_type == SEQ_POMO)
         return string("POMO")+convertIntToString(state);
 	if (seq_type != SEQ_CODON) {
 		str = convertStateBack(state);
@@ -1190,7 +1190,7 @@ int Alignment::buildPattern(StrVector &sequences, char *sequence_type, int nseq,
         if (num_states < 2 || num_states > 32) throw "Invalid number of states.";
         cout << "Alignment most likely contains " << num_states << "-state morphological data" << endl;
         break;
-    case SEQ_COUNTSFORMAT:
+    case SEQ_POMO:
         throw "Counts Format pattern is built in Alignment::readCountsFormat().";
         break;
     default:
@@ -1242,7 +1242,7 @@ int Alignment::buildPattern(StrVector &sequences, char *sequence_type, int nseq,
     site_pattern.resize(nsite/step, -1);
     clear();
     pattern_index.clear();
-
+    bool error = false;
     for (site = 0; site < nsite; site+=step) {
         for (seq = 0; seq < nseq; seq++) {
             //char state = convertState(sequences[seq][site], seq_type);
@@ -1277,10 +1277,12 @@ int Alignment::buildPattern(StrVector &sequences, char *sequence_type, int nseq,
                 err_str << "Sequence " << seq_names[seq] << " has invalid character " << sequences[seq][site];
             	if (seq_type == SEQ_CODON) err_str << sequences[seq][site+1] << sequences[seq][site+2];
             	err_str << " at site " << site+1 << endl;
+                error = true;
             }
             pat[seq] = state;
         }
-        num_gaps_only += addPattern(pat, site/step);
+        if (!error)
+            num_gaps_only += addPattern(pat, site/step);
     }
     if (num_gaps_only)
         cout << "WARNING: " << num_gaps_only << " sites contain only gaps or ambiguous characters." << endl;
@@ -1381,6 +1383,13 @@ int Alignment::readFasta(char *filename, char *sequence_type) {
     ifstream in;
     int line_num = 1;
     string line;
+
+    // PoMo with Fasta files is not supported yet.
+    if (sequence_type) {
+        string st (sequence_type);
+        if (st.substr(0,2) != "CF")
+            throw "PoMo does not support reading fasta files yet, please use a Counts File.";
+    }
 
     // set the failbit and badbit
     in.exceptions(ios::failbit | ios::badbit);
@@ -1641,8 +1650,9 @@ int Alignment::readMSF(char *filename, char *sequence_type) {
 int Alignment::readCountsFormat(char* filename, char* sequence_type) {
     int npop = 0;                // Number of populations.
     int nsites = 0;              // Number of sites.
-    // TODO: Change this.
-    int N = 10;                  // Virtual population size; defaults to 10.
+    int N = 11;                  // Virtual population size; defaults
+                                 // to 10.  If `-st CFXX` is given, it
+                                 // will be set to XX below.
     int nnuc = 4;                // Number of nucleotides (base states).
     ostringstream err_str;
     ifstream in;
@@ -1691,10 +1701,11 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
     bool everything_ok = true;
     int fails = 0;
 
-    // Check for sequence type and for custom virtual population size.
+    // Check if sequence type flag matches and for custom virtual population size.
     if (sequence_type) {
         string st (sequence_type);
-        if (st.substr(0,2) != "CF") throw "Counts File detected but sequence type is not 'CF'.";
+        if (st.substr(0,2) != "CF")
+            throw "Counts File detected but sequence type (-st) is not 'CF'.";
         string virt_pop_size_str = st.substr(2);
         if (virt_pop_size_str != "") {
             int virt_pop_size = atoi(virt_pop_size_str.c_str());
@@ -1706,7 +1717,10 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
     // Set the number of states.  If nnuc=4:
     // 4 + (4 choose 2)*(N-1) = 58.
     num_states = nnuc + nnuc*(nnuc-1)/2*(N-1);
-    seq_type = SEQ_COUNTSFORMAT;
+    seq_type = SEQ_POMO;
+
+    // Set UNKNOWN_STATE.
+    computeUnknownState();
 
     // Open counts file.
     // Set the failbit and badbit.
@@ -1828,23 +1842,26 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
             }
             // Determine state (cf. above).
             if (count == 1) {
-            	// State is just id1.
+            	// Fixed state, state ID is just id1.
             	state = id1;
             }
             else if (count == 0) {
-                // TODO: Can we still use this site (i.e., set the
-                // value to 'N') and sum over the likelihoods of all
-                // states in the Felsenstein algorithm?
-                if (verbose_mode >= VB_MAX) {
-                    cout << "WARNING: Population without bases on line " << line_num << "." << endl;
-                }
-                everything_ok = false;
+                state = STATE_UNKNOWN;
+                // if (verbose_mode >= VB_MAX) {
+                //     cout << "WARNING: Population without bases on line " << line_num << "." << endl;
+                // }
+                // everything_ok = false;
             	// err_str << "No bases are present on line " << line_num << ".";
             	//throw err_str.str();
             }
             else if (count > 2) {
-            	err_str << "More than 2 bases are present on line " << line_num << ".";
-            	throw err_str.str();
+                if (verbose_mode >= VB_MAX) {
+                    std::cout << "WARNING: More than two bases are present on line ";
+                    std::cout << line_num << "." << std::endl;
+                }
+                everything_ok = false;
+            	// err_str << "More than 2 bases are present on line " << line_num << ".";
+            	// throw err_str.str();
             }
             // 2 bases are present.
             else {
@@ -1892,6 +1909,7 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
     }
 
     cout << "Number of sites read:  " << site_count << "." << endl;
+    std::cout << "Number of fails: " << fails << "." << std::endl;
 
     site_pattern.resize(site_count);
 
@@ -1900,9 +1918,6 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
     in.exceptions(ios::failbit | ios::badbit);
     in.close();
 
-    // Set UNKNOWN_STATE.
-    computeUnknownState();
-    
     // exit (EXIT_SUCCESS);
     // return buildPattern(sequences, sequence_type, seq_names.size(), sequences.front().length());
     return 1;
@@ -2771,7 +2786,7 @@ double Alignment::readDist(const char *file_name, double *dist_mat) {
     return longest_dist;
 }
 
-void Alignment::computeStateFreq (double *state_freq) {
+void Alignment::computeStateFreq (double *state_freq, size_t num_unknown_states) {
     int i, j;
     double *states_app = new double[num_states*(STATE_UNKNOWN+1)];
     double *new_freq = new double[num_states];
@@ -2780,6 +2795,7 @@ void Alignment::computeStateFreq (double *state_freq) {
     
     
     memset(state_count, 0, sizeof(unsigned)*(STATE_UNKNOWN+1));
+    state_count[STATE_UNKNOWN] = num_unknown_states;
     
     for (i = 0; i <= STATE_UNKNOWN; i++)
         getAppearance(i, &states_app[i*num_states]);
@@ -2820,6 +2836,7 @@ void Alignment::computeStateFreq (double *state_freq) {
 
     if (verbose_mode >= VB_MED) {
         cout << "Empirical state frequencies: ";
+        cout << setprecision(10);
         for (i = 0; i < num_states; i++)
             cout << state_freq[i] << " ";
         cout << endl;
@@ -2830,6 +2847,15 @@ void Alignment::computeStateFreq (double *state_freq) {
     delete [] new_freq;
     delete [] states_app;
 }
+
+void Alignment::computeAbsoluteStateFreq(unsigned int *abs_state_freq) {
+    memset(abs_state_freq, 0, num_states * sizeof(unsigned int));
+
+    for (iterator it = begin(); it != end(); it++)
+        for (Pattern::iterator it2 = it->begin(); it2 != it->end(); it2++)
+            abs_state_freq[(int)*it2] += it->frequency;
+}
+
 
 void Alignment::countStatePerSequence (unsigned *count_per_sequence) {
     int i;
@@ -3285,7 +3311,10 @@ void Alignment::convfreq(double *stateFrqArr) {
 	for (i = 0; i < num_states; i++)
 	{
 		freq = stateFrqArr[i];
-		if (freq < MIN_FREQUENCY) {
+        // Do not check for a minimum frequency with PoMo because very
+        // low frequencies are expected for polymorphic sites.
+		if ((freq < MIN_FREQUENCY) &&
+            (seq_type != SEQ_POMO)) {
 			stateFrqArr[i] = MIN_FREQUENCY;
 			if (!isStopCodon(i))
 				cout << "WARNING: " << convertStateBackStr(i) << " is not present in alignment that may cause numerical problems" << endl;

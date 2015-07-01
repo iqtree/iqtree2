@@ -7,6 +7,10 @@
 /*       (phylotreesse.cpp has to be changed to). */
 /* TODO: Implement different DNA subsitution models. */
 
+const double POMO_MIN_RATE = 3e-6;
+const double POMO_MAX_RATE = 1e-4;
+const double POMO_MIN_REL_FREQ = 0.5;
+const double POMO_MAX_REL_FREQ = 2.0;
 
 class ModelPoMo : public ModelGTR
 {
@@ -20,10 +24,10 @@ class ModelPoMo : public ModelGTR
      * - allocates rates[getNumRateEntries()] = rates[n*(n-1)/2];
      *   cf. modelsubst.h
      * - allocates eigenvalues and eigenvectors.
-     *   
+     *
      * @todo Implement `model_params'.
      * @todo Implement `freq_params'.
-     * 
+     *
      * @param model_name The name of the model (e.g., "HKY+P").
      * @param model_params The parameters of the model (user defined models.).
      * @param freq_type
@@ -96,61 +100,87 @@ class ModelPoMo : public ModelGTR
 
     virtual bool isPolymorphismAware() { return true; };
 
-    /** 
-     * Set the substitution rate parameters by a specification.  From
-     * ModelDNA::setRateType().
-     *
-     * Sets the array #mutation_prob and the vector #param_fixed.
-     * 
-     * @param rate_spec a string of six letters describing how rates are related
-     * @return TRUE if successful, FALSE otherwise
-     */
-	bool setRateType(const char *rate_spec);
-    
+    /* /\**  */
+    /*  * Set the substitution rate parameters by a specification.  From */
+    /*  * ModelDNA::setRateType(). */
+    /*  * */
+    /*  * Sets the array #mutation_prob and the vector #param_fixed. */
+    /*  *  */
+    /*  * @param rate_spec a string of six letters describing how rates are related */
+    /*  * @return TRUE if successful, FALSE otherwise */
+    /*  *\/ */
+	/* bool setRateType(const char *rate_spec); */
+
     /**
      *  @return the number of rate entries
      */
 	virtual int getNumRateEntries() { return nnuc*(nnuc-1)/2; };
 
-    /** 
-     * Read state frequencies from an input stream.  If it fails,
-     * throw error message.
-     * 
-     * @param in input stream
-     */
-    void readFixedStateFreq(istream &in);
+    /* /\**  */
+    /*  * Read state frequencies from an input stream.  If it fails, */
+    /*  * throw error message. */
+    /*  *  */
+    /*  * @param in input stream */
+    /*  *\/ */
+    /* void readFixedStateFreq(istream &in); */
 
-    /** 
-     * Read state frequencies from comma-separated string.  Might
-     * throw error message.
-     * 
-     * @param str 
-     */
-    void readFixedStateFreq(string str);
+    /* /\**  */
+    /*  * Read state frequencies from comma-separated string.  Might */
+    /*  * throw error message. */
+    /*  *  */
+    /*  * @param str  */
+    /*  *\/ */
+    /* void readFixedStateFreq(string str); */
 
-    /** 
-     * Read model parameters from a file.  The file needs to contain
-     * the upper-triangle rate matrix and the state frequencies.
-     * 
-     * @param file_name 
-     */
-    void readMutationParameters(const char *file_name);
+    /* /\**  */
+    /*  * Read model parameters from a file.  The file needs to contain */
+    /*  * the upper-triangle rate matrix and the state frequencies. */
+    /*  *  */
+    /*  * @param file_name  */
+    /*  *\/ */
+    /* void readMutationParameters(const char *file_name); */
 
-    /** 
-     * Read the upper-triangle rate matrix from an input stream.
-     * Throw error message if failing.
-     * 
-     * @param in input stream
-     */
-    void readMutationRates(istream &in);
+    /* /\**  */
+    /*  * Read the upper-triangle rate matrix from an input stream. */
+    /*  * Throw error message if failing. */
+    /*  *  */
+    /*  * @param in input stream */
+    /*  *\/ */
+    /* void readMutationRates(istream &in); */
 
-    /** 
-     * Read rate parameters from a comma-separated string.  Throw
-     * error message if failing.
-     * 
-     * @param str input string
+    /* /\**  */
+    /*  * Read rate parameters from a comma-separated string.  Throw */
+    /*  * error message if failing. */
+    /*  *  */
+    /*  * @param str input string */
+    /*  *\/ */
+    /* void readMutationRates(string str); */
+
+    /**
+     * Estimate the empirical (relative) fixed state frequencies.  The
+     * number of A, C, G, and T in the data is summed up and the
+     * relative proportion of all bases is calculated.  The empirical
+     * fixed state frequencies are set to these relative proportions.
+     *
+     * @param abs_state_freq An array of the absolute state frequencies, size N.
+     * @param freq_fixed_states (OUT) The estimated fixed frequencies,
+     * size num_states.
      */
-    void readMutationRates(string str);
+    void estimateEmpiricalFixedStateFreqs(unsigned int * abs_state_freq, double * freq_fixed_states);
+
+    /**
+     * Report the model rates to the output file stream 'out'.
+     *
+     * @param out Output file stream.
+     */
+    void reportPoMoRates(ofstream &out);
+
+    /**
+     * Report the state frequencies to the output file stream 'out'.
+     *
+     * @param out Output file stream.
+     */
+    void reportPoMoStateFreqs(ofstream &out);
 
  protected:
 
@@ -295,14 +325,14 @@ class ModelPoMo : public ModelGTR
      */
     double eps;
 
-    /// Rate parameter specification, a string of 6 characters.  E.g.,
-    /// for the HKY model, it will be set to '010010' by
-    /// SetRateType().
-	string param_spec;
+    /* /// Rate parameter specification, a string of 6 characters.  E.g., */
+    /* /// for the HKY model, it will be set to '010010' by */
+    /* /// SetRateType(). */
+	/* string param_spec; */
 
-    /// Vector of boolean, TRUE if correspodning parameter is fixed
-    /// and FALSE otherwise.  Set by SetRateType().
-    vector<bool> param_fixed;
+    /* /// Vector of boolean, TRUE if correspodning parameter is fixed */
+    /* /// and FALSE otherwise.  Set by SetRateType(). */
+    /* vector<bool> param_fixed; */
 
     /// Number of nucleotides (alleles).  This might be useful in the
     /// future, when we do not restrict PoMo to DNA models only.

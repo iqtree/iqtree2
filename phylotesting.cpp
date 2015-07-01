@@ -869,7 +869,7 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 
     if (print_mem_usage) {
         uint64_t mem_size = in_tree->getMemoryRequired(max_cats);
-        cout << "NOTE: MODEL SELECTION REQUIRES " << ((double) mem_size * sizeof(double) / 1024.0) / 1024
+        cout << "NOTE: MODEL SELECTION REQUIRES " << (mem_size / 1024) / 1024
                 << " MB MEMORY!" << endl;
         if (mem_size >= getMemorySize()) {
             outError("Memory required exceeds your computer RAM size!");
@@ -962,7 +962,7 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 		subst_model = new ModelMorphology("MK", "", FREQ_UNKNOWN, "", in_tree);
 	else if (seq_type == SEQ_CODON)
 		subst_model = new ModelCodon("GY", "", FREQ_UNKNOWN, "", in_tree, false);
-    else if (seq_type == SEQ_COUNTSFORMAT)
+    else if (seq_type == SEQ_POMO)
         // Exit gracefully.
         outError("Model selection with PoMo not yet supported.");
 	assert(subst_model);
@@ -1396,7 +1396,9 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 	if (fmodel.is_open())
 		fmodel.close();
 	if (set_name == "") {
-		cout << "Best-fit model: " << best_model << endl;
+		cout << "Best-fit model: " << best_model << " chosen according to " << 
+            ((params.model_test_criterion == MTC_BIC) ? "BIC" :
+			((params.model_test_criterion == MTC_AIC) ? "AIC" : "AICc")) << endl;
 	}
 	if (params.print_site_lh)
 		cout << "Site log-likelihoods per model printed to " << sitelh_file << endl;

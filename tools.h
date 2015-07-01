@@ -1067,6 +1067,9 @@ struct Params {
      */
     double stop_confidence;
 
+    /** number iterations for parameter optimization, default: 100 */
+    int num_param_iterations;
+
     /**
             name of the substitution model (e.g., HKY, GTR, TN+I+G, JC+G, etc.)
      */
@@ -1608,6 +1611,9 @@ struct Params {
 
     /** BQM 2015-02-25: true to NOT rescale Gamma+Invar rates by (1-p_invar) */
     bool no_rescale_gamma_invar;
+
+    /** true to compute sequence identity along tree */
+    bool compute_seq_identity_along_tree;
 };
 
 /**
@@ -1764,6 +1770,7 @@ const char ERR_INTERNAL[] = "Internal error, pls contact authors!";
  * @return string
  */
 string convertIntToString(int number);
+string convertInt64ToString(int64_t number);
 
 string convertDoubleToString(double number);
 

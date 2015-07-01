@@ -552,7 +552,7 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
         // Better tree or score is found
         if (getCurScore() > candidateTrees.getBestScore()) {
             // Re-optimize model parameters (the sNNI algorithm)
-        	tree = optimizeModelParameters(false, 0.1);
+        	tree = optimizeModelParameters(false, params->modeps*10);
         	betterScore = true;
         }
         bool newTree = candidateTrees.update(tree, getCurScore());
@@ -1885,6 +1885,10 @@ double IQTree::doTreeSearch() {
 	        }
         } // end of bootstrap convergence test
 
+        // print UFBoot trees every 10 iterations
+		if (params->gbo_replicates && params->online_bootstrap && params->print_ufboot_trees && curIt % 10 == 0)
+				writeUFBootTrees(*params);
+
        //if (params->partition_type)
        // 	((PhyloSuperTreePlen*)this)->printNNIcasesNUM();
     }
@@ -3136,8 +3140,9 @@ void IQTree::printIntermediateTree(int brtype) {
                 duplicated_tree = true;
             else {
                 treels[tree_str] = treels_ptnlh.size();
-                pattern_lh = new double[aln->getNPattern()];
-                computePatternLikelihood(pattern_lh, &logl);
+                pattern_lh = new double[getAlnNPattern()];
+//                computePatternLikelihood(pattern_lh, &logl);
+                computePatternLikelihood(pattern_lh);
                 treels_ptnlh.push_back(pattern_lh);
                 treels_logl.push_back(logl);
                 if (save_all_br_lens) {
@@ -3150,7 +3155,7 @@ void IQTree::printIntermediateTree(int brtype) {
         //cout << tree_str << endl;
     } else {
         if (params->print_tree_lh) {
-            pattern_lh = new double[aln->getNPattern()];
+            pattern_lh = new double[getAlnNPattern()];
             computePatternLikelihood(pattern_lh, &logl);
         }
     }

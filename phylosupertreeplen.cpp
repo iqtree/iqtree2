@@ -91,7 +91,7 @@ double PartitionModelPlen::optimizeParameters(bool fixed_len, bool write_info, d
     cout<<"Initial log-likelihood: "<<tree_lh<<endl;
 	double begin_time = getRealTime();
 	int i;
-    for(i = 1; i < 100; i++){
+    for(i = 1; i < tree->params->num_param_iterations; i++){
     	cur_lh = 0.0;
         #ifdef _OPENMP
         #pragma omp parallel for reduction(+: cur_lh) schedule(dynamic)
@@ -99,7 +99,7 @@ double PartitionModelPlen::optimizeParameters(bool fixed_len, bool write_info, d
     	for (int part = 0; part < ntrees; part++) {
     		// Subtree model parameters optimization
 //        	tree->part_info[part].cur_score = tree->at(part)->getModelFactory()->optimizeParameters(true, false, logl_epsilon, gradient_epsilon);
-        	tree->part_info[part].cur_score = tree->at(part)->getModelFactory()->optimizeParametersOnly(gradient_epsilon);
+        	tree->part_info[part].cur_score = tree->at(part)->getModelFactory()->optimizeParametersOnly(gradient_epsilon/min(min(i,ntrees),10));
             if (tree->part_info[part].cur_score == 0.0)
                 tree->part_info[part].cur_score = tree->at(part)->computeLikelihood();
         	cur_lh += tree->part_info[part].cur_score;
@@ -431,10 +431,18 @@ void PhyloSuperTreePlen::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, b
 
 	SuperNeighbor *nei1 = (SuperNeighbor*)node1->findNeighbor(node2);
 	SuperNeighbor *nei2 = (SuperNeighbor*)node2->findNeighbor(node1);
+	int part;
 
 	current_it = (PhyloNeighbor*) node1->findNeighbor(node2);
+    current_it_back = (PhyloNeighbor*) node2->findNeighbor(node1);
+	for (part = 0; part < size(); part++) {
+		if (((SuperNeighbor*)current_it)->link_neighbors[part]) {
+            at(part)->current_it = ((SuperNeighbor*)current_it)->link_neighbors[part];
+            at(part)->current_it_back = ((SuperNeighbor*)current_it_back)->link_neighbors[part];
+		}
+	}
+    
 	double current_len = current_it->length;
-	int part;
 	for (part = 0; part < size(); part++) {
 		at(part)->theta_computed = false;
 	}
@@ -1763,10 +1771,13 @@ int PhyloSuperTreePlen::fixNegativeBranch(bool force, Node *node, Node *dad) {
 		fixed += (*it)->fixNegativeBranch(force);
 		(*it)->clearAllPartialLH();
 	}
-	PhyloSuperTree::computeBranchLengths();
+    // FOR OLGA: because this check is not performed, branch lengths of user tree will change even with -fixbr command line
+    if (fixed) {
+        PhyloSuperTree::computeBranchLengths();
 
-	// it is necessary to map the branch lengths from supertree into gene trees!
-	mapTrees();
+        // it is necessary to map the branch lengths from supertree into gene trees!
+        mapTrees();
+    }
 
 	return fixed;
 }

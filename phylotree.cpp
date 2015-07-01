@@ -61,9 +61,11 @@ void PhyloTree::init() {
     site_rate = NULL;
     optimize_by_newton = true;
     central_partial_lh = NULL;
+    nni_partial_lh = NULL;
     tip_partial_lh = NULL;
     tip_partial_lh_computed = false;
     central_scale_num = NULL;
+    nni_scale_num = NULL;
     central_partial_pars = NULL;
     model_factory = NULL;
 //    tmp_partial_lh1 = NULL;
@@ -116,6 +118,12 @@ void PhyloTree::discardSaturatedSite(bool val) {
 }
 
 PhyloTree::~PhyloTree() {
+    if (nni_scale_num)
+        aligned_free(nni_scale_num);
+    nni_scale_num = NULL;
+    if (nni_partial_lh)
+        aligned_free(nni_partial_lh);
+    nni_partial_lh = NULL;
     if (central_partial_lh)
         aligned_free(central_partial_lh);
     central_partial_lh = NULL;
@@ -435,9 +443,16 @@ string PhyloTree::getModelNameParams() {
 		name += rate_name;
 	}
 
-	if (model->getFreqType() == FREQ_EMPIRICAL)
+	if (model->getFreqType() == FREQ_EMPIRICAL || (model->getFreqType() == FREQ_USER_DEFINED && aln->seq_type == SEQ_DNA)) {
 		name += "+F";
-	else if (model->getFreqType() == FREQ_CODON_1x4)
+        double *state_freq = new double[model->num_states];
+        model->getStateFrequency(state_freq);
+        name += "{" + convertDoubleToString(state_freq[0]);
+        for (int i = 1; i < model->num_states; i++)
+            name += "," + convertDoubleToString(state_freq[i]);
+        name += "}";
+        delete [] state_freq;
+	} else if (model->getFreqType() == FREQ_CODON_1x4)
 		name += "+F1X4";
 	else if (model->getFreqType() == FREQ_CODON_3x4)
 		name += "+F3X4";
@@ -1153,7 +1168,7 @@ void PhyloTree::initializeAllPartialLh() {
         ptn_invar = aligned_alloc<double>(mem_size);
     bool benchmark_mem = (!central_partial_lh && verbose_mode >= VB_MED);
     if (benchmark_mem) {
-    	cout << "Measuring run time for allocating " << getMemoryRequired()*sizeof(double) << " bytes RAM" << endl;
+    	cout << "Measuring run time for allocating " << getMemoryRequired() << " bytes RAM" << endl;
     }
     double cpu_start_time = getCPUTime();
     double wall_start_time = getRealTime();
@@ -1164,7 +1179,7 @@ void PhyloTree::initializeAllPartialLh() {
     }
     assert(index == (nodeNum - 1) * 2);
     if (sse == LK_EIGEN || sse == LK_EIGEN_SSE) {
-        if (params->lh_mem_save)
+        if (params->lh_mem_save == LM_PER_NODE)
             assert(indexlh == nodeNum-leafNum);
         else
             assert(indexlh == (nodeNum-1)*2-leafNum);
@@ -1175,6 +1190,13 @@ void PhyloTree::initializeAllPartialLh() {
 }
 
 void PhyloTree::deleteAllPartialLh() {
+    if (nni_scale_num)
+        aligned_free(nni_scale_num);
+    nni_scale_num = NULL;
+    if (nni_partial_lh)
+        aligned_free(nni_partial_lh);
+    nni_partial_lh = NULL;
+
 	if (central_partial_lh) {
 		aligned_free(central_partial_lh);
 	}
@@ -1222,13 +1244,15 @@ uint64_t PhyloTree::getMemoryRequired(size_t ncategory) {
     	block_size *= ncategory;
     if (model && !model_factory->fused_mix_rate)
     	block_size *= model->getNMixtures();
-    uint64_t mem_size = ((uint64_t) leafNum*4 - 6) * block_size + 2 + (leafNum - 1) * 4 * nptn * sizeof(UBYTE);
+    uint64_t mem_size = ((uint64_t) leafNum*4) * block_size *sizeof(double) + 2 + (leafNum) * 4 * nptn * sizeof(UBYTE);
     if (params->SSE == LK_EIGEN || params->SSE == LK_EIGEN_SSE) {
-    	mem_size -= ((uint64_t)leafNum) * ((uint64_t)block_size + nptn * sizeof(UBYTE));
+    	mem_size -= ((uint64_t)leafNum) * ((uint64_t)block_size*sizeof(double) + nptn * sizeof(UBYTE));
         if (params->lh_mem_save == LM_PER_NODE) {
-            mem_size -= ((uint64_t)leafNum*2 - 4) * ((uint64_t)block_size + nptn * sizeof(UBYTE));
+            mem_size -= ((uint64_t)leafNum*2 - 4) * ((uint64_t)block_size*sizeof(double) + nptn * sizeof(UBYTE));
         }
     }
+    if (params->gbo_replicates)
+        mem_size += params->gbo_replicates*nptn*sizeof(BootValType);
     return mem_size;
 }
 
@@ -1286,6 +1310,17 @@ void PhyloTree::initializeAllPartialLh(int &index, int &indexlh, PhyloNode *node
     if (!node) {
         node = (PhyloNode*) root;
         // allocate the big central partial likelihoods memory
+        if (!nni_partial_lh) {
+            // allocate memory only once!
+//            intptr_t MEM_ALIGNMENT = (instruction_set >= 7) ? 32 : 16;
+//            nni_partial_lh = aligned_alloc<double>(IT_NUM*partial_lh_size+MEM_ALIGNMENT/sizeof(double));
+//            nni_scale_num = aligned_alloc<UBYTE>(IT_NUM*scale_num_size+MEM_ALIGNMENT/sizeof(UBYTE));
+            size_t IT_NUM = (params->nni5) ? 6 : 2;
+            nni_partial_lh = aligned_alloc<double>(IT_NUM*block_size);
+            nni_scale_num = aligned_alloc<UBYTE>(IT_NUM*scale_block_size);
+        }
+
+
         if (!central_partial_lh) {
         	uint64_t tip_partial_lh_size = aln->num_states * (aln->STATE_UNKNOWN+1) * model->getNMixtures();
             uint64_t mem_size = ((uint64_t)leafNum * 4 - 6) * (uint64_t) block_size + 2 + tip_partial_lh_size;
@@ -1402,8 +1437,18 @@ double *PhyloTree::newPartialLh() {
 }
 
 int PhyloTree::getPartialLhBytes() {
-	return ((aln->size()+aln->num_states+3) * aln->num_states * site_rate->getNRate() *
-			((model_factory->fused_mix_rate)? 1 : model->getNMixtures())) * sizeof(double);
+    size_t nptn = aln->size()+aln->num_states; // +num_states for ascertainment bias correction
+    size_t block_size;
+    if (instruction_set >= 7)
+    	// block size must be divisible by 4
+    	block_size = ((nptn+3)/4)*4;
+	else
+		// block size must be divisible by 2
+		block_size = ((nptn % 2) == 0) ? nptn : (nptn + 1);
+
+    block_size = block_size * model->num_states * site_rate->getNRate() * ((model_factory->fused_mix_rate)? 1 : model->getNMixtures());
+
+	return block_size * sizeof(double);
 }
 
 int PhyloTree::getScaleNumBytes() {
@@ -3659,6 +3704,10 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
 	assert(!node1->isLeaf() && !node2->isLeaf());
     assert(node1->degree() == 3 && node2->degree() == 3);
 
+	int IT_NUM = (params->nni5) ? 6 : 2;
+    size_t partial_lh_size = getPartialLhBytes()/sizeof(double);
+    size_t scale_num_size = getScaleNumBytes()/sizeof(UBYTE);
+
     // Upper Bounds ---------------
     totalNNIub += 2;
     if(params->upper_bound_NNI){
@@ -3677,7 +3726,6 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
     //-----------------------------
 
 	NeighborVec::iterator it;
-	int IT_NUM = (params->nni5) ? 6 : 2;
 
 	NeighborVec::iterator saved_it[6];
 	int id = 0;
@@ -3696,19 +3744,12 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
 
 	Neighbor *saved_nei[6];
 	// save Neighbor and allocate new Neighbor pointer
-	size_t partial_lh_size = getPartialLhBytes()/sizeof(double);
-	intptr_t MEM_ALIGNMENT = (instruction_set >= 7) ? 32 : 16;
-
-	double *new_partial_lh = aligned_alloc<double>(IT_NUM*partial_lh_size+MEM_ALIGNMENT/sizeof(double));
-//	size_t mem_shift = 0;
-//	if (((intptr_t) new_partial_lh) % MEM_ALIGNMENT != 0)
-//		mem_shift = (MEM_ALIGNMENT - (((intptr_t) new_partial_lh) % MEM_ALIGNMENT)) / sizeof(double);
-
 	for (id = 0; id < IT_NUM; id++) {
 		saved_nei[id] = (*saved_it[id]);
 		*saved_it[id] = new PhyloNeighbor(saved_nei[id]->node, saved_nei[id]->length);
-		((PhyloNeighbor*) (*saved_it[id]))->partial_lh = new_partial_lh + id*partial_lh_size;
-		((PhyloNeighbor*) (*saved_it[id]))->scale_num = newScaleNum();
+		((PhyloNeighbor*) (*saved_it[id]))->partial_lh = nni_partial_lh + id*partial_lh_size;
+		((PhyloNeighbor*) (*saved_it[id]))->scale_num = nni_scale_num + id*scale_num_size;
+//		((PhyloNeighbor*) (*saved_it[id]))->scale_num = newScaleNum();
 	}
 
 	// get the Neighbor again since it is replaced for saving purpose
@@ -3820,7 +3861,7 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
 
 	 // restore the Neighbor*
 	 for (id = IT_NUM-1; id >= 0; id--) {
-		 aligned_free(((PhyloNeighbor*) *saved_it[id])->scale_num);
+//		 aligned_free(((PhyloNeighbor*) *saved_it[id])->scale_num);
 		 //delete[] ((PhyloNeighbor*) *saved_it[id])->partial_lh;
 		 if (*saved_it[id] == current_it) current_it = (PhyloNeighbor*) saved_nei[id];
 		 if (*saved_it[id] == current_it_back) current_it_back = (PhyloNeighbor*) saved_nei[id];
@@ -3828,7 +3869,7 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
 		 delete (*saved_it[id]);
 		 (*saved_it[id]) = saved_nei[id];
 	 }
-	 aligned_free(new_partial_lh);
+//	 aligned_free(new_partial_lh);
 
 	 // restore the length of 4 branches around node1, node2
 	 FOR_NEIGHBOR(node1, node2, it)
@@ -4938,4 +4979,48 @@ void PhyloTree::reinsertIdenticalSeqs(Alignment *orig_aln) {
     // delete all partial_lh, which will be automatically recreated later
     deleteAllPartialLh();
     clearAllPartialLH();
+}
+
+void PhyloTree::computeSeqIdentityAlongTree(Split &sp, Node *node, Node *dad) {
+    assert(node && !node->isLeaf());
+    // recursive
+    FOR_NEIGHBOR_IT(node, dad, it) {
+        if ((*it)->node->isLeaf()) {
+            sp.addTaxon((*it)->node->id);
+        } else {
+            Split newsp(leafNum);
+            computeSeqIdentityAlongTree(newsp, (*it)->node, node);
+            sp += newsp;
+        }
+    }
+    if (!dad) return;
+    // now going along alignment to compute seq identity
+    int ident = 0, nseqs = aln->getNSeq();
+    for (Alignment::iterator it = aln->begin(); it != aln->end(); it++) {
+        char state = aln->STATE_UNKNOWN;
+        bool is_const = true;
+        for (int i = 0; i != nseqs; i++)
+            if ((*it)[i] < aln->num_states && sp.containTaxon(i)) {
+                if (state < aln->num_states && state != (*it)[i]) {
+                    is_const = false;
+                    break;
+                }
+                state = (*it)[i];
+            }
+        if (is_const)
+            ident += it->frequency;
+    }
+    ident = (ident*100)/aln->getNSite();
+    if (node->name == "")
+        node->name = convertIntToString(ident);
+    else
+        node->name += "/" + convertIntToString(ident);
+}
+
+void PhyloTree::computeSeqIdentityAlongTree() {
+    Split sp(leafNum);
+    if (root->isLeaf())
+        computeSeqIdentityAlongTree(sp, root->neighbors[0]->node);
+    else
+        computeSeqIdentityAlongTree(sp, root);
 }

@@ -28,7 +28,7 @@ const double MIN_FREQUENCY_DIFF     = 0.00001;
 typedef bitset<NUM_CHAR> StateBitset;
 
 enum SeqType {
-    SEQ_DNA, SEQ_PROTEIN, SEQ_BINARY, SEQ_MORPH, SEQ_MULTISTATE, SEQ_CODON, SEQ_COUNTSFORMAT, SEQ_UNKNOWN
+    SEQ_DNA, SEQ_PROTEIN, SEQ_BINARY, SEQ_MORPH, SEQ_MULTISTATE, SEQ_CODON, SEQ_POMO, SEQ_UNKNOWN
 };
 
 
@@ -513,8 +513,18 @@ public:
             @param state_freq (OUT) is filled with state frequencies, assuming state_freq was allocated with 
                     at least num_states entries.
      */
-    virtual void computeStateFreq(double *state_freq);
+    virtual void computeStateFreq(double *state_freq, size_t num_unknown_states = 0);
 
+    /** 
+     * Compute the absolute frequencies of the different states.
+     * Helpful for models with many states (e.g., PoMo) to check the
+     * abundancy of states in the data.
+     * 
+     * @param abs_state_freq (OUT) assumed to be at least of size
+     * num_states.
+     */
+    void computeAbsoluteStateFreq(unsigned int *abs_state_freq);
+    
     /**
             compute empirical state frequencies for each sequence 
             @param freq_per_sequence (OUT) state frequencies for each sequence, of size num_states*num_freq
