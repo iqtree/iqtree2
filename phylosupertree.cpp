@@ -500,6 +500,13 @@ PhyloSuperTree::PhyloSuperTree(Params &params) :  IQTree() {
         cout << "NOTE: Mixed codon and other data, branch lengths of codon partitions are rescaled by 3!" << endl;
     
 	cout << "Degree of missing data: " << ((SuperAlignment*)aln)->computeMissingData() << endl;
+    
+#ifdef _OPENMP
+    if (params.num_threads > size()) {
+        outWarning("More threads (" + convertIntToString(params.num_threads) + ") than number of partitions (" + convertIntToString(size()) + ") is not necessary. ");
+        outWarning("Please rerun again with -nt " + convertIntToString(size()));
+    }
+#endif
 	cout << endl;
 
 }
