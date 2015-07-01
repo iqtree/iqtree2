@@ -1404,7 +1404,8 @@ void printMiscInfo(Params &params, IQTree &iqtree, double *pattern_lh) {
 		string partition_info = params.out_prefix;
 		partition_info += ".partinfo.nex";
 		((PhyloSuperTree*)(&iqtree))->printPartition(partition_info.c_str());
-
+		partition_info = (string)params.out_prefix + ".partitions";
+		((PhyloSuperTree*)(&iqtree))->printPartitionRaxml(partition_info.c_str());
 	}
 
 	if (params.mvh_site_rate) {
@@ -1571,13 +1572,13 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
     }
 
     if (!params.pll) {
-        uint64_t mem_size = iqtree.getMemoryRequired() * sizeof(double);
+        uint64_t mem_size = iqtree.getMemoryRequired();
         uint64_t total_mem = getMemorySize();
         if (mem_size >= total_mem) {
             if (params.lh_mem_save == LM_DETECT) {
                 // switch to memory saving technique that reduces memory requirement to 1/3
                 params.lh_mem_save = LM_PER_NODE;
-                mem_size = iqtree.getMemoryRequired() * sizeof(double);
+                mem_size = iqtree.getMemoryRequired();
             }
         }
 //#if defined __APPLE__ || defined __MACH__
@@ -1597,12 +1598,12 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
         if (mem_size * max_procs > total_mem * params.num_threads) {
             outWarning("Memory required per CPU-core (" + convertDoubleToString((double)mem_size/params.num_threads/1024/1024/1024)+
             " GB) is higher than your computer RAM per CPU-core ("+convertIntToString(total_mem/max_procs/1024/1024/1024)+
-            " GB), thus multiple runs will exceed RAM!");
+            " GB), thus multiple runs may exceed RAM!");
         }
     }
 
     iqtree.initializeAllPartialLh();
-	double initEpsilon = params.min_iterations == 0 ? 0.001 : 0.1;
+	double initEpsilon = params.min_iterations == 0 ? params.modeps : (params.modeps*10);
 	string initTree;
 
 	if (iqtree.getRate()->name.find("+I+G") != string::npos) {
@@ -1878,7 +1879,7 @@ void searchGAMMAInvarByRestarting(IQTree &iqtree) {
 				site_rates->computeRates();
 				iqtree.clearAllPartialLH();
 				iqtree.resetCurScore();
-				iqtree.optimizeModelParameters(false, 0.001);
+				iqtree.optimizeModelParameters(false, iqtree.params->modeps);
 				//iqtree.getModelFactory()->optimizeParameters(params.fixed_branch_length, false, 0.001);
 				cout << iqtree.getCurScore() << endl;
 				if (iqtree.getCurScore() > bestLogl) {
@@ -2187,7 +2188,23 @@ void runPhyloAnalysis(Params &params) {
 		alignment->concatenateAlignment(&aln);
 	}
 
-	if (params.aln_output) {
+    if (params.compute_seq_identity_along_tree) {
+        if (!params.user_file)
+            outError("Please supply a user tree file!");
+        tree->readTree(params.user_file, params.is_rooted);
+        if (!tree->rooted && !params.root) {
+            outError("Tree is unrooted, thus you have to specify a root with -o option");
+        }
+        tree->setAlignment(tree->aln);
+        if (!tree->rooted)
+            tree->setRootNode(params.root);
+        tree->computeSeqIdentityAlongTree();
+        if (verbose_mode >= VB_MED)
+            tree->drawTree(cout);
+        string out_tree = (string)params.out_prefix + ".seqident_tree";
+        tree->printTree(out_tree.c_str());
+        cout << "Tree with sequence identity printed to " << out_tree << endl;
+	} else if (params.aln_output) {
 		/************ convert alignment to other format and write to output file *************/
 		convertAlignment(params, tree);
 	} else if (params.gbo_replicates > 0 && params.user_file && params.second_tree) {

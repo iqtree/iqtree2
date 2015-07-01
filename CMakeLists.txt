@@ -37,8 +37,8 @@ add_definitions(-DIQ_TREE)
 # The version number.
 set (iqtree_VERSION_MAJOR 1)
 set (iqtree_VERSION_MINOR 3)
-set (iqtree_VERSION_PATCH 2)
-
+set (iqtree_VERSION_PATCH 3)
+ 
 set(BUILD_SHARED_LIBS OFF)
 
 message("IQ-TREE flags : ${IQTREE_FLAGS}")
@@ -165,6 +165,10 @@ if(CMAKE_SIZEOF_VOID_P EQUAL 4 OR IQTREE_FLAGS MATCHES "m32")
     add_definitions(-DBINARY32)
 else()
 	message("Target binary : 64-bit")
+endif()
+
+if(IQTREE_FLAGS MATCHES "novx") 
+    add_definitions(-D__NOAVX__)
 endif()
 
 ##################################################################
@@ -331,7 +335,7 @@ add_subdirectory(model)
 # the main executable
 ##################################################################
 
-if (NOT BINARY32)
+if (NOT BINARY32 AND NOT IQTREE_FLAGS MATCHES "novx")
 add_library(avxkernel phylotreeavx.cpp)
 endif()
 
@@ -398,7 +402,7 @@ upperbounds.cpp
 
 if (NOT IQTREE_FLAGS MATCHES "avx" AND NOT IQTREE_FLAGS MATCHES "fma")
 	set_target_properties(iqtree pll ncl whtest zlibstatic sprng vectorclass model PROPERTIES COMPILE_FLAGS "${SSE_FLAGS}")
-	if (NOT BINARY32)
+	if (NOT BINARY32 AND NOT IQTREE_FLAGS MATCHES "novx")
 		set_target_properties(avxkernel pllavx PROPERTIES COMPILE_FLAGS "${AVX_FLAGS}")
 	endif()
 endif()  
@@ -430,7 +434,7 @@ if (IQTREE_FLAGS MATCHES "omp")
 	endif()
 endif()
 
-if (BINARY32)
+if (BINARY32 OR IQTREE_FLAGS MATCHES "novx")
     target_link_libraries(iqtree pll ncl whtest zlibstatic sprng vectorclass model ${PLATFORM_LIB} ${THREAD_LIB})	
 else()
     target_link_libraries(iqtree pll pllavx ncl whtest zlibstatic sprng vectorclass model avxkernel ${PLATFORM_LIB} ${THREAD_LIB})	

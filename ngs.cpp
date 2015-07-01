@@ -106,7 +106,7 @@ void NGSAlignment::readFritzFile(const char *filename) {
     cout << ncategory << " matrices of size " << num_states << endl;
 }
 
-void NGSAlignment::computeStateFreq (double *stateFrqArr) {
+void NGSAlignment::computeStateFreq (double *stateFrqArr, size_t num_unknown_states) {
     int cat, i, j, id = 0;
     double *state_count = new double[num_states];
     memset(state_count, 0, sizeof(double)*num_states);

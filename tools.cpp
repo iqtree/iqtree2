@@ -84,12 +84,22 @@ void outError(char *error)
 }
  */
 
+
+#if (defined(__GNUC__) || defined(__clang__)) && !defined(WIN32)
+#include "stacktrace.h"
+#endif
+
 /**
         Output an error to screen, then exit program
         @param error error message
  */
 void outError(const char *error, bool quit) {
-    cerr << "ERROR: " << error << endl;
+	if (error == ERR_NO_MEMORY) {
+#if (defined(__GNUC__) || defined(__clang__)) && !defined(WIN32)
+		print_stacktrace(cerr);
+#endif
+	}
+	cerr << "ERROR: " << error << endl;
     if (quit)
     	exit(2);
 }
@@ -147,6 +157,12 @@ double randomLen(Params &params) {
 //From Tung
 
 string convertIntToString(int number) {
+    stringstream ss; //create a stringstream
+    ss << number; //add number to the stream
+    return ss.str(); //return a string with the contents of the stream
+}
+
+string convertInt64ToString(int64_t number) {
     stringstream ss; //create a stringstream
     ss << number; //add number to the stream
     return ss.str(); //return a string with the contents of the stream
@@ -699,6 +715,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.p_delete = -1;
     params.min_iterations = -1;
     params.max_iterations = 1;
+    params.num_param_iterations = 100;
     params.stop_condition = SC_UNSUCCESS_ITERATION;
     params.stop_confidence = 0.95;
     params.model_name = "";
@@ -804,7 +821,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 #else
     params.pll = false;
 #endif
-    params.modeps = 0.001;
+    params.modeps = 0.01;
     params.parbran = false;
     params.binary_aln_file = NULL;
     params.maxtime = 1000000;
@@ -850,6 +867,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.write_local_optimal_trees = false;
     params.freq_const_patterns = NULL;
     params.no_rescale_gamma_invar = false;
+    params.compute_seq_identity_along_tree = false;
 
 	if (params.nni5) {
 	    params.nni_type = NNI5;
@@ -1626,6 +1644,16 @@ void parseArg(int argc, char *argv[], Params &params) {
 //                params.autostop = false;
 				continue;
 			}
+			if (strcmp(argv[cnt], "-nparam") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -nparam <#iterations>";
+				params.num_param_iterations = convert_int(argv[cnt]);
+				if (params.num_param_iterations < 0)
+					throw "Number of parameter optimization iterations (-nparam) must be non negative";
+				continue;
+			}
+
 			if (strcmp(argv[cnt], "-nb") == 0) {
 				cnt++;
 				if (cnt >= argc)
@@ -2651,6 +2679,13 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.no_rescale_gamma_invar = true;
 				continue;
 			}
+
+			if (strcmp(argv[cnt], "-wsi") == 0) {
+				params.compute_seq_identity_along_tree = true;
+				continue;
+			}
+            
+            
 			if (argv[cnt][0] == '-') {
                 string err = "Invalid \"";
                 err += argv[cnt];

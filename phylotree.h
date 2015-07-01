@@ -88,6 +88,11 @@ inline size_t get_safe_upper_limit_float(size_t cur_limit) {
 //#endif
 //}
 
+
+#if (defined(__GNUC__) || defined(__clang__)) && !defined(WIN32)
+#include "stacktrace.h"
+#endif
+
 template< class T>
 inline T *aligned_alloc(size_t size) {
 	size_t MEM_ALIGNMENT = (instruction_set >= 7) ? 32 : 16;
@@ -97,11 +102,18 @@ inline T *aligned_alloc(size_t size) {
 	mem = _aligned_malloc(size*sizeof(T), MEM_ALIGNMENT);
 #else
 	int res = posix_memalign(&mem, MEM_ALIGNMENT, size*sizeof(T));
-    if (res == ENOMEM) 
-        outError("Not enough memory (bad_alloc)");
+    if (res == ENOMEM) {
+#if (defined(__GNUC__) || defined(__clang__)) && !defined(WIN32)
+        print_stacktrace(cerr);
+#endif
+        outError("Not enough memory, allocation of " + convertInt64ToString(size*sizeof(T)) + " bytes failed (bad_alloc)");
+    }
 #endif
     if (mem == NULL) {
-        outError("Memory allocation failed or not enough memory (bad_alloc)");
+#if (defined(__GNUC__) || defined(__clang__)) && !defined(WIN32)
+        print_stacktrace(cerr);
+#endif
+        outError("Not enough memory, allocation of " + convertInt64ToString(size*sizeof(T)) + " bytes failed (bad_alloc)");
     }
     return (T*)mem;
 }
@@ -406,7 +418,7 @@ public:
     typedef BootValType (PhyloTree::*DotProductType)(BootValType *x, BootValType *y, int size);
     DotProductType dotProduct;
 
-#ifdef BINARY32
+#if defined(BINARY32) || defined(__NOAVX__)
     void setDotProductAVX() {}
 #else
     void setDotProductAVX();
@@ -485,7 +497,7 @@ public:
     void printParsimonyStates(PhyloNeighbor *dad_branch = NULL, PhyloNode *dad = NULL);
 
     virtual void setParsimonyKernel(LikelihoodKernel lk);
-#ifdef BINARY32
+#if defined(BINARY32) || defined(__NOAVX__)
     virtual void setParsimonyKernelAVX() {}
 #else
     virtual void setParsimonyKernelAVX();
@@ -1359,7 +1371,7 @@ public:
 
     virtual void setLikelihoodKernel(LikelihoodKernel lk);
 
-#ifdef BINARY32
+#if defined(BINARY32) || defined(__NOAVX__)
     virtual void setLikelihoodKernelAVX() {}
 #else
     virtual void setLikelihoodKernelAVX();
@@ -1513,6 +1525,9 @@ public:
 //		clearAllPartialLH();
 	}
 
+    void computeSeqIdentityAlongTree(Split &resp, Node *node = NULL, Node *dad = NULL);
+    void computeSeqIdentityAlongTree();
+
 protected:
 
     /**
@@ -1628,13 +1643,14 @@ protected:
             The variable partial_lh in PhyloNeighbor will be assigned to a region inside this variable.
      */
     double *central_partial_lh;
-
+    double *nni_partial_lh; // used for NNI functions
 
     /**
             the main memory storing all scaling event numbers for all neighbors of the tree.
             The variable scale_num in PhyloNeighbor will be assigned to a region inside this variable.
      */
     UBYTE *central_scale_num;
+    UBYTE *nni_scale_num; // used for NNI functions
 
     /**
             the main memory storing all partial parsimony states for all neighbors of the tree.
