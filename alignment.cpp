@@ -84,8 +84,8 @@ int Alignment::getMaxSeqNameLength() {
     return len;
 }
 
-/** 
-   probability that the observed chi-square exceeds chi2 even if model is correct 
+/**
+   probability that the observed chi-square exceeds chi2 even if model is correct
    @param deg degree of freedom
    @param chi2 chi-square value
    @return p-value
@@ -129,7 +129,7 @@ void Alignment::checkSeqName() {
         }
     }
     if (!ok) outError("Please rename sequences listed above!");
-    
+
     double *state_freq = new double[num_states];
 //    double *freq_per_sequence = new double[num_states*getNSeq()];
     double *freq_per_sequence = new double[num_states];
@@ -137,7 +137,7 @@ void Alignment::checkSeqName() {
     computeStateFreq(state_freq);
 //    computeStateFreqPerSequence(freq_per_sequence);
     countStatePerSequence(count_per_seq);
-    
+
     /*if (verbose_mode >= VB_MIN)*/ {
         int max_len = getMaxSeqNameLength()+1;
 //        cout << "  ID  ";
@@ -175,7 +175,7 @@ void Alignment::checkSeqName() {
                 freq_per_sequence[j] = count_per_seq[i*num_states+j]*sum_inv;
             for (j = 0; j < num_states; j++)
                 chi2 += (state_freq[j] - freq_per_sequence[j]) * (state_freq[j] - freq_per_sequence[j]) / state_freq[j];
-            
+
 //            chi2 *= getNSite();
             chi2 *= sum_count;
             double pvalue = chi2prob(num_states-1, chi2);
@@ -578,7 +578,7 @@ void Alignment::computeConst(Pattern &pat) {
     	StateBitset this_app;
     	getAppearance(*i, this_app);
     	state_app &= this_app;
-        if (*i < num_states) { 
+        if (*i < num_states) {
             num_app[(int)(*i)]++;
             continue;
         }
@@ -598,7 +598,7 @@ void Alignment::computeConst(Pattern &pat) {
     // at least 2 states, each appearing at least twice
     if (count >= 2) pat.is_informative = true;
     delete [] num_app;
-    
+
     count = state_app.count();
     if (count == 0) {
     	return;
@@ -711,13 +711,13 @@ void Alignment::orderPatternByNumChars() {
     sum += pars_lower_bound[i];
     // now transform lower_bound
 //    assert(i == maxi-1);
-    
+
     for (int j = 0; j <= i; j++) {
         UINT newsum = sum - pars_lower_bound[j];
         pars_lower_bound[j] = sum;
         sum = newsum;
     }
-    
+
     if (verbose_mode >= VB_MAX) {
 //        for (ptn = 0; ptn < nptn; ptn++)
 //            cout << at(ptn_order[ptn]).num_chars << " ";
@@ -846,7 +846,7 @@ void Alignment::buildStateMap(char *map, SeqType seq_type) {
         map[(unsigned char)'J'] = 22; // I or L
         map[(unsigned char)'*'] = STATE_UNKNOWN; // stop codon
         map[(unsigned char)'U'] = STATE_UNKNOWN; // 21st amino acid
-        
+
         return;
     case SEQ_MULTISTATE:
         for (int i = 0; i <= STATE_UNKNOWN; i++)
@@ -1431,7 +1431,7 @@ int Alignment::readFasta(char *filename, char *sequence_type) {
     StrVector new_seq_names, remain_seq_names;
     new_seq_names.resize(seq_names.size());
     remain_seq_names = seq_names;
-    
+
     for (step = 0; step < 4; step++) {
         bool duplicated = false;
         for (i = 0; i < seq_names.size(); i++) {
@@ -1491,7 +1491,7 @@ int Alignment::readClustal(char *filename, char *sequence_type) {
     for (line_num = 2; !in.eof(); line_num++) {
         getline(in, line);
         trimString(line);
-        if (line == "") { 
+        if (line == "") {
             seq_count = 0;
             continue;
         }
@@ -1510,7 +1510,7 @@ int Alignment::readClustal(char *filename, char *sequence_type) {
         } else if (seq_name != seq_names[seq_count]) {
             throw "Line " + convertIntToString(line_num) + ": Sequence name " + seq_name + " does not match previously declared " +seq_names[seq_count];
         }
-        
+
         line = line.substr(pos+1);
         trimString(line);
         pos = line.find_first_of(" \t");
@@ -1558,20 +1558,20 @@ int Alignment::readMSF(char *filename, char *sequence_type) {
 
     int seq_len = 0, seq_count = 0;
     bool seq_started = false;
-    
+
     for (line_num = 2; !in.eof(); line_num++) {
         getline(in, line);
         trimString(line);
-        if (line == "") { 
+        if (line == "") {
             continue;
         }
         size_t pos;
-        
+
         if (line.substr(0, 2) == "//") {
             seq_started = true;
             continue;
         }
-        
+
         if (line.substr(0,5) == "Name:") {
             if (seq_started)
                 throw "Line " + convertIntToString(line_num) + ": Cannot declare sequence name here";
@@ -1591,7 +1591,7 @@ int Alignment::readMSF(char *filename, char *sequence_type) {
             pos = line.find_first_of(" \t");
             if (pos == string::npos)
                 throw "Line " + convertIntToString(line_num) + ": No whitespace found after sequence length";
-            
+
             int len;
             line = line.substr(0, pos);
             try {
@@ -1607,21 +1607,21 @@ int Alignment::readMSF(char *filename, char *sequence_type) {
                 throw "Line " + convertIntToString(line_num) + ": Sequence length " + convertIntToString(len) + " is different from previously defined " + convertIntToString(seq_len);
             continue;
         }
-        
+
         if (!seq_started) continue;
 
         if (seq_names.empty())
             throw "No sequence name declared in header";
-        
+
         if (isdigit(line[0])) continue;
         pos = line.find_first_of(" \t");
-        if (pos == string::npos) 
+        if (pos == string::npos)
             throw "Line " + convertIntToString(line_num) + ": whitespace not found between sequence name and content - " + line;
-        
+
         string seq_name = line.substr(0, pos);
         if (seq_name != seq_names[seq_count])
             throw "Line " + convertIntToString(line_num) + ": Sequence name " + seq_name + " does not match previously declared " +seq_names[seq_count];
-        
+
         line = line.substr(pos+1);
         // read sequence contents
         for (string::iterator it = line.begin(); it != line.end(); it++) {
@@ -1650,7 +1650,7 @@ int Alignment::readMSF(char *filename, char *sequence_type) {
 int Alignment::readCountsFormat(char* filename, char* sequence_type) {
     int npop = 0;                // Number of populations.
     int nsites = 0;              // Number of sites.
-    int N = 11;                  // Virtual population size; defaults
+    int N = 10;                  // Virtual population size; defaults
                                  // to 10.  If `-st CFXX` is given, it
                                  // will be set to XX below.
     int nnuc = 4;                // Number of nucleotides (base states).
@@ -1713,7 +1713,7 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
         }
     }
     virtual_pop_size = N;
-    
+
     // Set the number of states.  If nnuc=4:
     // 4 + (4 choose 2)*(N-1) = 58.
     num_states = nnuc + nnuc*(nnuc-1)/2*(N-1);
@@ -1827,13 +1827,17 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
                 throw err_str.str();
             }
 
-            // Binomial sampling.
+            // Read in the data.
             sum = 0;
             count = 0;
             id1 = -1;
             // Sum over elements and count non-zero elements.
             for(i = values.begin(); i != values.end(); ++i) {
+                // `i` is an iterator object that points to some
+                // element of `value`.
             	if (*i != 0) {
+                    // `i - values.begin()` ranges from 0 to 3 and
+                    // determines the nucleotide or allele type.
             		if (id1 == -1) id1 = i - values.begin();
             		else id2 = i - values.begin();
             		count++;
@@ -1863,12 +1867,21 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
             	// err_str << "More than 2 bases are present on line " << line_num << ".";
             	// throw err_str.str();
             }
-            // 2 bases are present.
-            else {
-            	for(int k = 0; k < N; k++) {
-            		r_int = random_int(sum);
-            		if (r_int < values[id1]) sampled_values[id1]++;
-            		else sampled_values[id2]++;
+            // Binomial sampling.  2 bases are present.
+            else if (count == 2) {
+                // FIXME: This should be removed but is needed for
+                // debugging purposes so that the likelihood is
+                // deterministic for a given tree.
+                if (sum == N) {
+                    sampled_values[id1] = values[id1];
+                    sampled_values[id2] = values[id2];
+                }
+            	else {
+                    for(int k = 0; k < N; k++) {
+                        r_int = random_int(sum);
+                        if (r_int < values[id1]) sampled_values[id1]++;
+                        else sampled_values[id2]++;
+                    }
             	}
             	if (sampled_values[id1] == 0) state = id2;
             	else if (sampled_values[id2] == 0) state = id1;
@@ -1880,6 +1893,11 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
                     state = nnuc + j*(N-2) + j + sampled_values[id1] - 1;
             	}
             }
+            else {
+                err_str << "Unexpected error on line number " << line_num << ".";
+                throw err_str.str();
+            }
+
             // Now we have the state to build a pattern ;-).
             pattern.push_back(state);
         }
@@ -2585,7 +2603,7 @@ void Alignment::countConstSite() {
     int num_const_sites = 0;
     num_informative_sites = 0;
     for (iterator it = begin(); it != end(); it++) {
-        if ((*it).is_const) 
+        if ((*it).is_const)
             num_const_sites += (*it).frequency;
         if (it->is_informative)
             num_informative_sites += it->frequency;
@@ -2792,25 +2810,25 @@ void Alignment::computeStateFreq (double *state_freq, size_t num_unknown_states)
     double *new_freq = new double[num_states];
     unsigned *state_count = new unsigned[STATE_UNKNOWN+1];
     double *new_state_freq = new double[num_states];
-    
-    
+
+
     memset(state_count, 0, sizeof(unsigned)*(STATE_UNKNOWN+1));
     state_count[STATE_UNKNOWN] = num_unknown_states;
-    
+
     for (i = 0; i <= STATE_UNKNOWN; i++)
         getAppearance(i, &states_app[i*num_states]);
-        
+
     for (iterator it = begin(); it != end(); it++)
         for (Pattern::iterator it2 = it->begin(); it2 != it->end(); it2++)
             state_count[(int)*it2] += it->frequency;
-            
+
     for (i = 0; i < num_states; i++)
         state_freq[i] = 1.0/num_states;
-        
+
     const int NUM_TIME = 8;
     for (int k = 0; k < NUM_TIME; k++) {
         memset(new_state_freq, 0, sizeof(double)*num_states);
-        
+
         for (i = 0; i <= STATE_UNKNOWN; i++) {
             if (state_count[i] == 0) continue;
             double sum_freq = 0.0;
@@ -2823,7 +2841,7 @@ void Alignment::computeStateFreq (double *state_freq, size_t num_unknown_states)
                 new_state_freq[j] += new_freq[j]*sum_freq*state_count[i];
             }
         }
-        
+
         double sum_freq = 0.0;
         for (j = 0; j < num_states; j++)
             sum_freq += new_state_freq[j];
@@ -2831,7 +2849,7 @@ void Alignment::computeStateFreq (double *state_freq, size_t num_unknown_states)
         for (j = 0; j < num_states; j++)
             state_freq[j] = new_state_freq[j]*sum_freq;
     }
-    
+
 	convfreq(state_freq);
 
     if (verbose_mode >= VB_MED) {
@@ -2841,7 +2859,7 @@ void Alignment::computeStateFreq (double *state_freq, size_t num_unknown_states)
             cout << state_freq[i] << " ";
         cout << endl;
     }
-    
+
     delete [] new_state_freq;
     delete [] state_count;
     delete [] new_freq;
@@ -2876,13 +2894,13 @@ void Alignment::computeStateFreqPerSequence (double *freq_per_sequence) {
     double *new_freq = new double[num_states];
     unsigned *state_count = new unsigned[(STATE_UNKNOWN+1)*nseqs];
     double *new_state_freq = new double[num_states];
-    
-    
+
+
     memset(state_count, 0, sizeof(unsigned)*(STATE_UNKNOWN+1)*nseqs);
-    
+
     for (i = 0; i <= STATE_UNKNOWN; i++)
         getAppearance(i, &states_app[i*num_states]);
-        
+
     for (iterator it = begin(); it != end(); it++)
         for (i = 0; i != nseqs; i++) {
             state_count[i*(STATE_UNKNOWN+1) + it->at(i)] += it->frequency;
@@ -2890,7 +2908,7 @@ void Alignment::computeStateFreqPerSequence (double *freq_per_sequence) {
     double equal_freq = 1.0/num_states;
     for (i = 0; i < num_states*nseqs; i++)
         freq_per_sequence[i] = equal_freq;
-        
+
     const int NUM_TIME = 8;
     for (int k = 0; k < NUM_TIME; k++) {
         for (int seq = 0; seq < nseqs; seq++) {
@@ -2908,16 +2926,16 @@ void Alignment::computeStateFreqPerSequence (double *freq_per_sequence) {
                     new_state_freq[j] += new_freq[j]*sum_freq*state_count[seq*(STATE_UNKNOWN+1)+i];
                 }
             }
-            
+
             double sum_freq = 0.0;
             for (j = 0; j < num_states; j++)
                 sum_freq += new_state_freq[j];
             sum_freq = 1.0/sum_freq;
             for (j = 0; j < num_states; j++)
                 state_freq[j] = new_state_freq[j]*sum_freq;
-         }   
+         }
     }
-    
+
 //	convfreq(state_freq);
 //
 //    if (verbose_mode >= VB_MED) {
@@ -2926,7 +2944,7 @@ void Alignment::computeStateFreqPerSequence (double *freq_per_sequence) {
 //            cout << state_freq[i] << " ";
 //        cout << endl;
 //    }
-    
+
     delete [] new_state_freq;
     delete [] state_count;
     delete [] new_freq;
@@ -2999,7 +3017,7 @@ void Alignment::computeStateFreqPerSequence (double *freq_per_sequence) {
 //	delete [] newSiteAppArr_;
 //	delete [] siteAppArr_;
 //	delete [] timeAppArr_;
-//	
+//
 //}
 
 void Alignment::getAppearance(char state, double *state_app) {
@@ -3147,7 +3165,7 @@ void Alignment::computeCodonFreq(StateFreqType freq, double *state_freq, double 
 				cout << endl;
 			}
 		}
-        
+
         double sum_stop=0.0;
         double sum = 0.0;
 		for (i = 0; i < num_states; i++) {
@@ -3166,7 +3184,7 @@ void Alignment::computeCodonFreq(StateFreqType freq, double *state_freq, double 
 		for (i = 0; i < num_states; i++)
                 sum += state_freq[i];
         assert(fabs(sum-1.0)<1e-5);
-        
+
 //		double sum = 0;
 //		for (i = 0; i < num_states; i++)
 //			if (isStopCodon(i)) {
@@ -3179,7 +3197,7 @@ void Alignment::computeCodonFreq(StateFreqType freq, double *state_freq, double 
 //			}
 //		for (i = 0; i < num_states; i++)
 //			state_freq[i] /= sum;
-            
+
         // now recompute ntfreq based on state_freq
 //        memset(ntfreq, 0, 12*sizeof(double));
 //        for (i = 0; i < num_states; i++)
