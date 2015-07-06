@@ -66,7 +66,7 @@ void SuperAlignment::buildPattern() {
 	int nseq = getNSeq();
 	for (site = 0; site < nsite; site++) {
  		Pattern pat;
- 		pat.append(nseq, 0);
+ 		pat.resize(nseq, 0);
 		for (seq = 0; seq < nseq; seq++)
 			pat[seq] = (taxa_index[seq][site] >= 0)? 1 : 0;
 		addPattern(pat, site);
@@ -558,7 +558,9 @@ Alignment *SuperAlignment::concatenateAlignments(IntVector &ids) {
 		if (nstates != partitions[id]->num_states)
 			outError("Cannot concatenate sub-alignments of different #states");
 
-		string taxa_set = getPattern(id);
+		string taxa_set;
+        Pattern taxa_pat = getPattern(id);
+        taxa_set.insert(taxa_set.begin(), taxa_pat.begin(), taxa_pat.end());
 		nsites += partitions[id]->getNSite();
 		if (i == 0) union_taxa = taxa_set; else {
 			for (int j = 0; j < union_taxa.length(); j++)
@@ -582,7 +584,9 @@ Alignment *SuperAlignment::concatenateAlignments(IntVector &ids) {
     int site = 0;
     for (i = 0; i < ids.size(); i++) {
     	int id = ids[i];
-		string taxa_set = getPattern(id);
+		string taxa_set;
+        Pattern taxa_pat = getPattern(id);
+        taxa_set.insert(taxa_set.begin(), taxa_pat.begin(), taxa_pat.end());
     	for (Alignment::iterator it = partitions[id]->begin(); it != partitions[id]->end(); it++) {
     		Pattern pat;
     		int part_seq = 0;

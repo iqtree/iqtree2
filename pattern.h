@@ -14,6 +14,7 @@
 
 #include <iostream>
 #include <string>
+#include <vector>
 
 using namespace std;
 
@@ -21,7 +22,10 @@ using namespace std;
 	Site-patterns in a multiple sequence alignment
 	@author BUI Quang Minh, Steffen Klaere, Arndt von Haeseler <minh.bui@univie.ac.at>
 */
-class Pattern : public string
+
+typedef uint32_t StateType;
+
+class Pattern : public vector<StateType>
 {
 public:
 	/** 

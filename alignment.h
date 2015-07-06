@@ -33,13 +33,21 @@ enum SeqType {
 
 
 #ifdef USE_HASH_MAP
+struct hashPattern {
+	size_t operator()(const vector<StateType> &sp) const {
+		size_t sum = 0;
+		for (Pattern::const_iterator it = sp.begin(); it != sp.end(); it++)
+			sum = (*it) + (sum << 6) + (sum << 16) - sum;
+		return sum;
+	}
+};
 typedef unordered_map<string, int> StringIntMap;
 typedef unordered_map<string, double> StringDoubleHashMap;
-typedef unordered_map<string, int> PatternIntMap;
+typedef unordered_map<vector<StateType>, int, hashPattern> PatternIntMap;
 #else
 typedef map<string, int> StringIntMap;
 typedef map<string, double> StringDoubleHashMap;
-typedef map<string, int> PatternIntMap;
+typedef map<vector<StateType>, int> PatternIntMap;
 #endif
 
 /**
@@ -584,7 +592,7 @@ public:
     /** either SEQ_BINARY, SEQ_DNA, SEQ_PROTEIN, SEQ_MORPH, or SEQ_CODON */
     SeqType seq_type;
 
-    char STATE_UNKNOWN;
+    StateType STATE_UNKNOWN;
 
     /**
             number of states

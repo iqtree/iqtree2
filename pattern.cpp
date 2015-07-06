@@ -13,7 +13,7 @@
 #include "alignment.h"
 
 Pattern::Pattern()
-        : string()
+        : vector<StateType>()
 {
     frequency = 0;
     is_const = false;
@@ -23,7 +23,7 @@ Pattern::Pattern()
 }
 
 Pattern::Pattern(const Pattern &pat)
-        : string(pat)
+        : vector<StateType>(pat)
 {
     frequency = pat.frequency;
     is_const = pat.is_const;

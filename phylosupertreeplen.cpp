@@ -356,7 +356,9 @@ void PhyloSuperTreePlen::mapTrees() {
 //	if (verbose_mode >= VB_DEBUG)
 //		drawTree(cout,  WT_BR_SCALE | WT_INT_NODE | WT_TAXON_ID | WT_NEWLINE | WT_BR_ID);
 	for (iterator it = begin(); it != end(); it++, part++) {
-		string taxa_set = ((SuperAlignment*)aln)->getPattern(part);
+		string taxa_set;
+        Pattern taxa_pat = ((SuperAlignment*)aln)->getPattern(part);
+        taxa_set.insert(taxa_set.begin(), taxa_pat.begin(), taxa_pat.end());
 		(*it)->copyTree(this, taxa_set);
 
 		// the only difference with PhyloSuperTree::mapTrees()

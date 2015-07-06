@@ -527,9 +527,9 @@ void Alignment::extractDataBlock(NxsCharactersBlock *data_block) {
         for (seq = 0; seq < nseq; seq++) {
             int nstate = data_block->GetNumStates(seq, site);
             if (nstate == 0)
-                pat += STATE_UNKNOWN;
+                pat.push_back(STATE_UNKNOWN);
             else if (nstate == 1) {
-                pat += char_to_state[(int)data_block->GetState(seq, site, 0)];
+                pat.push_back(char_to_state[(int)data_block->GetState(seq, site, 0)]);
             } else {
                 assert(data_type != NxsCharactersBlock::dna || data_type != NxsCharactersBlock::rna || data_type != NxsCharactersBlock::nucleotide);
                 char pat_ch = 0;
@@ -537,7 +537,7 @@ void Alignment::extractDataBlock(NxsCharactersBlock *data_block) {
                     pat_ch |= (1 << char_to_state[(int)data_block->GetState(seq, site, state)]);
                 }
                 pat_ch += 3;
-                pat += pat_ch;
+                pat.push_back(pat_ch);
             }
         }
         num_gaps_only += addPattern(pat, site);
@@ -2614,7 +2614,7 @@ void Alignment::countConstSite() {
 string Alignment::getUnobservedConstPatterns() {
 	string ret = "";
 	for (char state = 0; state < num_states; state++) {
-		string pat;
+		Pattern pat;
 		pat.resize(getNSeq(), state);
 		if (pattern_index.find(pat) == pattern_index.end()) {
 			// constant pattern is unobserved
@@ -2627,7 +2627,7 @@ string Alignment::getUnobservedConstPatterns() {
 int Alignment::countProperChar(int seq_id) {
     int num_proper_chars = 0;
     for (iterator it = begin(); it != end(); it++) {
-        if ((*it)[seq_id] >= 0 && (*it)[seq_id] < num_states) num_proper_chars+=(*it).frequency;
+        if ((*it)[seq_id] < num_states) num_proper_chars+=(*it).frequency;
     }
     return num_proper_chars;
 }
