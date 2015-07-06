@@ -655,6 +655,8 @@ void mergePartitions(PhyloSuperTree* super_tree, vector<IntVector> &gene_sets, S
 		info.aln_file = "";
 		info.sequence_type = "";
 		info.model_name = model_names[it-gene_sets.begin()];
+        info.part_rate = 1.0; // BIG FIX: make -spp works with -m TESTMERGE now!
+        info.evalNNIs = 0;
 		for (IntVector::iterator i = it->begin(); i != it->end(); i++) {
 			if (i != it->begin()) {
 				info.name += "+";
