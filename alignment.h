@@ -695,9 +695,9 @@ public:
             @param state the state index
             @param state_app (OUT) state appearance
      */
-    void getAppearance(char state, double *state_app);
+    void getAppearance(StateType state, double *state_app);
 
-    void getAppearance(char state, StateBitset &state_app);
+    void getAppearance(StateType state, StateBitset &state_app);
 
 protected:
 

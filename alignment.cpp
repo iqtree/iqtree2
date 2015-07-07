@@ -3074,7 +3074,7 @@ void Alignment::computeStateFreqPerSequence (double *freq_per_sequence) {
 //
 //}
 
-void Alignment::getAppearance(char state, double *state_app) {
+void Alignment::getAppearance(StateType state, double *state_app) {
     int i;
     if (state == STATE_UNKNOWN) {
         for (i = 0; i < num_states; i++)
@@ -3116,7 +3116,7 @@ void Alignment::getAppearance(char state, double *state_app) {
 	}
 }
 
-void Alignment::getAppearance(char state, StateBitset &state_app) {
+void Alignment::getAppearance(StateType state, StateBitset &state_app) {
 
 	int i;
     if (state == STATE_UNKNOWN) {
