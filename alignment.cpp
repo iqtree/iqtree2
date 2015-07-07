@@ -1851,6 +1851,7 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
             }
             else if (count == 0) {
                 state = STATE_UNKNOWN;
+                everything_ok = false; // BQM: STATE_UNKNOWN is not known right now, will be set once data reading is completed
                 // if (verbose_mode >= VB_MAX) {
                 //     cout << "WARNING: Population without bases on line " << line_num << "." << endl;
                 // }
@@ -1872,26 +1873,39 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
                 // FIXME: This should be removed but is needed for
                 // debugging purposes so that the likelihood is
                 // deterministic for a given tree.
-                if (sum == N) {
-                    sampled_values[id1] = values[id1];
-                    sampled_values[id2] = values[id2];
+//                if (sum == N) {
+//                    sampled_values[id1] = values[id1];
+//                    sampled_values[id2] = values[id2];
+//                }
+//            	else {
+//                    for(int k = 0; k < N; k++) {
+//                        r_int = random_int(sum);
+//                        if (r_int < values[id1]) sampled_values[id1]++;
+//                        else sampled_values[id2]++;
+//                    }
+//            	}
+//            	if (sampled_values[id1] == 0) state = id2;
+//            	else if (sampled_values[id2] == 0) state = id1;
+//            	else {
+//                    // Convert sampled_values to state.
+//                    // FIXME: This could be improved.
+//                    if (id1 == 0) j = id2 - 1;
+//                    else j = id1 + id2;
+//                    state = nnuc + j*(N-2) + j + sampled_values[id1] - 1;
+//            	}
+
+                /* BQM 2015-07: store both states now */
+                if (values[id1] >= 16384 || values[id2] >= 16384)
+                    everything_ok = false;
+                uint32_t pomo_state = (id1 | (values[id1]) << 2) | ((id2 | (values[id2]<<2))<<16);
+                IntIntMap::iterator pit = pomo_states_index.find(pomo_state);
+                if (pit == pomo_states_index.end()) { // not found
+                    state = pomo_states_index[pomo_state] = pomo_states.size();
+                    pomo_states.push_back(pomo_state);
+                } else {
+                    state = pit->second;
                 }
-            	else {
-                    for(int k = 0; k < N; k++) {
-                        r_int = random_int(sum);
-                        if (r_int < values[id1]) sampled_values[id1]++;
-                        else sampled_values[id2]++;
-                    }
-            	}
-            	if (sampled_values[id1] == 0) state = id2;
-            	else if (sampled_values[id2] == 0) state = id1;
-            	else {
-                    // Convert sampled_values to state.
-                    // FIXME: This could be improved.
-                    if (id1 == 0) j = id2 - 1;
-                    else j = id1 + id2;
-                    state = nnuc + j*(N-2) + j + sampled_values[id1] - 1;
-            	}
+                state += num_states; // make the state larger than num_states
             }
             else {
                 err_str << "Unexpected error on line number " << line_num << ".";
@@ -1928,6 +1942,12 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
 
     cout << "Number of sites read:  " << site_count << "." << endl;
     std::cout << "Number of fails: " << fails << "." << std::endl;
+
+    cout << "Number of compound states: " << pomo_states.size() << endl;
+    STATE_UNKNOWN = pomo_states.size()+num_states;
+//    if (STATE_UNKNOWN >= STATE_INVALID)
+//        outError("Too many PoMo states that does not work temporarily");
+//    STATE_INVALID = STATE_UNKNOWN+1;
 
     site_pattern.resize(site_count);
 
@@ -2866,12 +2886,46 @@ void Alignment::computeStateFreq (double *state_freq, size_t num_unknown_states)
     delete [] states_app;
 }
 
+int Alignment::convertPomoState(int state) {
+    if (seq_type != SEQ_POMO) return state;
+    if (state < num_states) return state;
+    if (state == STATE_UNKNOWN) return state;
+    state -= num_states;
+    assert(state < pomo_states.size());
+    int id1 = pomo_states[state] & 3;
+    int id2 = (pomo_states[state] >> 16) & 3;
+    int value1 = (pomo_states[state] >> 2) & 16383;
+    int value2 = pomo_states[state] >> 18;
+    int N = virtual_pop_size;
+    value1 = value1*N/(value1+value2);
+    int real_state;
+    if (value1 == 0) 
+        real_state = id2;
+    else if (value1 >= N)
+        real_state = id1;
+    else {
+        int j;
+        if (id1 == 0) j = id2 - 1;
+        else j = id1 + id2;
+        real_state = 4 + j*(N-2) + j + value1 - 1;
+    }
+    state = real_state;
+    assert(state < num_states);
+    return state;
+}
+
 void Alignment::computeAbsoluteStateFreq(unsigned int *abs_state_freq) {
     memset(abs_state_freq, 0, num_states * sizeof(unsigned int));
 
-    for (iterator it = begin(); it != end(); it++)
-        for (Pattern::iterator it2 = it->begin(); it2 != it->end(); it2++)
-            abs_state_freq[(int)*it2] += it->frequency;
+    if (seq_type == SEQ_POMO) {
+        for (iterator it = begin(); it != end(); it++)
+            for (Pattern::iterator it2 = it->begin(); it2 != it->end(); it2++)
+                abs_state_freq[convertPomoState((int)*it2)] += it->frequency;
+    } else {
+        for (iterator it = begin(); it != end(); it++)
+            for (Pattern::iterator it2 = it->begin(); it2 != it->end(); it2++)
+                abs_state_freq[(int)*it2] += it->frequency;
+    }
 }
 
 
@@ -3051,6 +3105,13 @@ void Alignment::getAppearance(char state, double *state_app) {
 				state_app[i] = 1.0;
 			}
 		break;
+    case SEQ_POMO:
+        state -= num_states;
+        assert(state < pomo_states.size());
+        // count the number of nucleotides
+        state_app[pomo_states[state] & 3] = 1.0;
+        state_app[(pomo_states[state] >> 16) & 3] = 1.0;
+        break;
 	default: assert(0); break;
 	}
 }
@@ -3086,6 +3147,13 @@ void Alignment::getAppearance(char state, StateBitset &state_app) {
 				state_app[i] = 1;
 			}
 		break;
+    case SEQ_POMO:
+        state -= num_states;
+        assert(state < pomo_states.size());
+        // count the number of nucleotides
+        state_app[pomo_states[state] & 3] = 1;
+        state_app[(pomo_states[state] >> 16) & 3] = 1;
+        break;
 	default: assert(0); break;
 	}
 }

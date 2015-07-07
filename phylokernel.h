@@ -1332,6 +1332,29 @@ void PhyloTree::computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, Phylo
             for (pat = aln->ordered_pattern.begin(), site = 0; pat != aln->ordered_pattern.end(); pat++) {
             	int state = pat->at(leafid);
                 int freq = pat->frequency;
+                if (aln->seq_type == SEQ_POMO && state >= nstates && state < aln->STATE_UNKNOWN) {
+                    state -= nstates;
+                    assert(state < aln->pomo_states.size());
+                    int id1 = aln->pomo_states[state] & 3;
+                    int id2 = (aln->pomo_states[state] >> 16) & 3;
+                    int value1 = (aln->pomo_states[state] >> 2) & 16383;
+                    int value2 = aln->pomo_states[state] >> 18;
+                    int N = aln->virtual_pop_size;
+                    value1 = value1*N/(value1+value2);
+                    int real_state;
+                    if (value1 == 0) 
+                        real_state = id2;
+                    else if (value1 >= N)
+                        real_state = id1;
+                    else {
+                        int j;
+                        if (id1 == 0) j = id2 - 1;
+                        else j = id1 + id2;
+                        real_state = 4 + j*(N-2) + j + value1 - 1;
+                    }
+                    state = real_state;
+                    assert(state < nstates);
+                }                
                 if (state < nstates) {
                     for (int j = 0; j < freq; j++, site++) {
                         if (site == NUM_BITS) {

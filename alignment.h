@@ -20,7 +20,7 @@
 
 // IMPORTANT: refactor STATE_UNKNOWN
 //const char STATE_UNKNOWN = 126;
-const char STATE_INVALID = 127;
+const unsigned char STATE_INVALID = 255;
 const int NUM_CHAR = 256;
 const double MIN_FREQUENCY          = 0.0001;
 const double MIN_FREQUENCY_DIFF     = 0.00001;
@@ -44,10 +44,12 @@ struct hashPattern {
 typedef unordered_map<string, int> StringIntMap;
 typedef unordered_map<string, double> StringDoubleHashMap;
 typedef unordered_map<vector<StateType>, int, hashPattern> PatternIntMap;
+typedef unordered_map<uint32_t, uint32_t> IntIntMap;
 #else
 typedef map<string, int> StringIntMap;
 typedef map<string, double> StringDoubleHashMap;
 typedef map<vector<StateType>, int> PatternIntMap;
+typedef map<uint32_t, uint32_t> IntIntMap;
 #endif
 
 /**
@@ -523,6 +525,8 @@ public:
      */
     virtual void computeStateFreq(double *state_freq, size_t num_unknown_states = 0);
 
+    int convertPomoState(int state);
+
     /** 
      * Compute the absolute frequencies of the different states.
      * Helpful for models with many states (e.g., PoMo) to check the
@@ -628,6 +632,15 @@ public:
 	 * virtual population size for PoMo model
 	 */
 	int virtual_pop_size;
+    
+    /** BQM: 2015-07-06, 
+        for PoMo data: map from state ID to pair of base1 and base2 
+        represented in the high 16-bit and the low 16-bit of uint32_t
+        for base1, bit0-1 is used to encode the base (A,G,C,T) and the remaining 14 bits store the count
+        same interpretation for base2
+    */
+    vector<uint32_t> pomo_states;
+    IntIntMap pomo_states_index; // indexing, to quickly find if a PoMo-2-state is already present
 
     vector<vector<int> > seq_states; // state set for each sequence in the alignment
 
