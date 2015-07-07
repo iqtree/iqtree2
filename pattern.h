@@ -15,16 +15,16 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <stdint.h>
 
 using namespace std;
+
+typedef uint32_t StateType;
 
 /**
 	Site-patterns in a multiple sequence alignment
 	@author BUI Quang Minh, Steffen Klaere, Arndt von Haeseler <minh.bui@univie.ac.at>
 */
-
-typedef uint32_t StateType;
-
 class Pattern : public vector<StateType>
 {
 public:
