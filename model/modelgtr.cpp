@@ -453,8 +453,10 @@ void ModelGTR::setBounds(double *lower_bound, double *upper_bound, bool *bound_c
 
 	if (freq_type == FREQ_ESTIMATE) {
 		for (i = ndim-num_states+2; i <= ndim; i++) {
-            lower_bound[i] = MIN_FREQUENCY/state_freq[highest_freq_state];
-			upper_bound[i] = state_freq[highest_freq_state]/MIN_FREQUENCY;
+//            lower_bound[i] = MIN_FREQUENCY/state_freq[highest_freq_state];
+//			upper_bound[i] = state_freq[highest_freq_state]/MIN_FREQUENCY;
+            lower_bound[i]  = 0.001;
+            upper_bound[i] = 100.0;
             bound_check[i] = false;
         }
 	}
