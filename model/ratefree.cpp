@@ -137,7 +137,7 @@ double RateFree::optimizeParameters(double gradient_epsilon) {
     
     // sort the rates in increasing order
     if (sorted_rates)
-        quicksort<double,double>(rates, 0, ncategory-1, prop);
+        quicksort(rates, 0, ncategory-1, prop);
 
 	phylo_tree->clearAllPartialLH();
 

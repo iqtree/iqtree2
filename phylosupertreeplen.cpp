@@ -93,10 +93,12 @@ double PartitionModelPlen::optimizeParameters(bool fixed_len, bool write_info, d
 	int i;
     for(i = 1; i < tree->params->num_param_iterations; i++){
     	cur_lh = 0.0;
+        if (tree->part_order.empty()) tree->computePartitionOrder();
         #ifdef _OPENMP
         #pragma omp parallel for reduction(+: cur_lh) schedule(dynamic)
         #endif
-    	for (int part = 0; part < ntrees; part++) {
+    	for (int partid = 0; partid < ntrees; partid++) {
+            int part = tree->part_order[partid];
     		// Subtree model parameters optimization
 //        	tree->part_info[part].cur_score = tree->at(part)->getModelFactory()->optimizeParameters(true, false, logl_epsilon, gradient_epsilon);
         	tree->part_info[part].cur_score = tree->at(part)->getModelFactory()->optimizeParametersOnly(gradient_epsilon/min(min(i,ntrees),10));
@@ -192,10 +194,12 @@ double PartitionModelPlen::optimizeGeneRate(double gradient_epsilon)
     int i;
     double score = 0.0;
 
+    if (tree->part_order.empty()) tree->computePartitionOrder();
     #ifdef _OPENMP
     #pragma omp parallel for reduction(+: score) private(i) schedule(dynamic)
     #endif    
-    for (i = 0; i < tree->size(); i++) {
+    for (int j = 0; j < tree->size(); j++) {
+        int i = tree->part_order[j];
 //        double gene_rate = tree->part_info[i].part_rate;
 //        double negative_lh, ferror;
 //        optimizing_part = i;
@@ -211,9 +215,16 @@ double PartitionModelPlen::optimizeGeneRate(double gradient_epsilon)
     }
     // now normalize the rates
     double sum = 0.0;
-    for (i = 0; i < tree->size(); i++)
+    size_t nsite = 0;
+    for (i = 0; i < tree->size(); i++) {
         sum += tree->part_info[i].part_rate * tree->at(i)->aln->getNSite();
-    sum /= tree->getAlnNSite();
+        if (tree->at(i)->aln->seq_type == SEQ_CODON && tree->rescale_codon_brlen)
+            nsite += 3*tree->at(i)->aln->getNSite();
+        else
+            nsite += tree->at(i)->aln->getNSite();
+    }
+//    sum /= tree->getAlnNSite();
+    sum /= nsite;
     tree->scaleLength(sum);
     sum = 1.0/sum;
     for (i = 0; i < tree->size(); i++)
@@ -311,6 +322,8 @@ PhyloSuperTreePlen::PhyloSuperTreePlen(Params &params)
 	for (iterator it = begin(); it != end(); it++, part++) {
 		part_info[part].part_rate = 1.0;
 		part_info[part].evalNNIs = 0.0;
+        if ((*it)->aln->seq_type == SEQ_CODON && rescale_codon_brlen)
+            part_info[part].part_rate = 3.0;
 	}
 }
 
@@ -353,9 +366,18 @@ double PhyloSuperTreePlen::computeDist(int seq1, int seq2, double initial_dist, 
 void PhyloSuperTreePlen::mapTrees() {
 	assert(root);
 	int part = 0;
+    // this is important: rescale branch length of codon partitions to be compatible with other partitions.
+    // since for codon models, branch lengths = # nucleotide subst per codon site!
+    bool noncodon_present = false;
+    iterator it;
+    for (it = begin(); it != end(); it++)
+        if ((*it)->aln->seq_type != SEQ_CODON) {
+            noncodon_present = true;
+            break;
+        }
 //	if (verbose_mode >= VB_DEBUG)
 //		drawTree(cout,  WT_BR_SCALE | WT_INT_NODE | WT_TAXON_ID | WT_NEWLINE | WT_BR_ID);
-	for (iterator it = begin(); it != end(); it++, part++) {
+	for (it = begin(); it != end(); it++, part++) {
 		string taxa_set = ((SuperAlignment*)aln)->getPattern(part);
 		(*it)->copyTree(this, taxa_set);
 
@@ -450,11 +472,13 @@ void PhyloSuperTreePlen::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, b
 	//this->clearAllPartialLH();
 	PhyloTree::optimizeOneBranch(node1, node2, false, maxNRStep);
 
+    if (part_order.empty()) computePartitionOrder();
 	// bug fix: assign cur_score into part_info
     #ifdef _OPENMP
-    #pragma omp parallel for private(part)
+    #pragma omp parallel for private(part) schedule(dynamic)
     #endif    
-	for (part = 0; part < size(); part++) {
+	for (int partid = 0; partid < size(); partid++) {
+        part = part_order_by_nptn[partid];
 		if (((SuperNeighbor*)current_it)->link_neighbors[part]) {
 			part_info[part].cur_score = at(part)->computeLikelihoodFromBuffer();
 		}
@@ -489,10 +513,12 @@ double PhyloSuperTreePlen::computeFunction(double value) {
 	SuperNeighbor *nei2 = (SuperNeighbor*)current_it->node->findNeighbor(current_it_back->node);
 	assert(nei1 && nei2);
 
+    if (part_order.empty()) computePartitionOrder();
     #ifdef _OPENMP
-    #pragma omp parallel for reduction(+: tree_lh)
+    #pragma omp parallel for reduction(+: tree_lh) schedule(dynamic)
     #endif    
-	for (int part = 0; part < ntrees; part++) {
+	for (int partid = 0; partid < ntrees; partid++) {
+            int part = part_order_by_nptn[partid];
 			PhyloNeighbor *nei1_part = nei1->link_neighbors[part];
 			PhyloNeighbor *nei2_part = nei2->link_neighbors[part];
 			if (nei1_part && nei2_part) {
@@ -539,10 +565,12 @@ void PhyloSuperTreePlen::computeFuncDerv(double value, double &df_ret, double &d
 	SuperNeighbor *nei2 = (SuperNeighbor*)current_it->node->findNeighbor(current_it_back->node);
 	assert(nei1 && nei2);
 
+    if (part_order.empty()) computePartitionOrder();
     #ifdef _OPENMP
-    #pragma omp parallel for reduction(+: df, ddf)
+    #pragma omp parallel for reduction(+: df, ddf) schedule(dynamic)
     #endif    
-	for (int part = 0; part < ntrees; part++) {
+	for (int partid = 0; partid < ntrees; partid++) {
+        int part = part_order_by_nptn[partid];
         double df_aux, ddf_aux;
 			PhyloNeighbor *nei1_part = nei1->link_neighbors[part];
 			PhyloNeighbor *nei2_part = nei2->link_neighbors[part];
@@ -1827,7 +1855,7 @@ void PhyloSuperTreePlen::initializeAllPartialLh() {
         _pattern_lh = aligned_alloc<double>(total_mem_size);
     front()->_pattern_lh = _pattern_lh;
     if (!_pattern_lh_cat)
-        _pattern_lh_cat = new double[total_lh_cat_size];
+        _pattern_lh_cat = aligned_alloc<double>(total_lh_cat_size);
     front()->_pattern_lh_cat = _pattern_lh_cat;
     if (!theta_all)
         theta_all = aligned_alloc<double>(total_block_size);

@@ -642,6 +642,9 @@ struct Params {
      */
     char partition_type;
 
+    /** percentage for rcluster algorithm like PartitionFinder */
+    double partfinder_rcluster; 
+
     /** remove all-gap sequences in partition model to account for terrace default: TRUE */
     bool remove_empty_seq;
 
@@ -2111,6 +2114,8 @@ void trimString(string &str);
     get number of processor cores
 */
 int countPhysicalCPUCores();
+
+void print_stacktrace(ostream &out, unsigned int max_frames = 63);
 
 /**
     quicksort template

@@ -93,7 +93,7 @@ void nrerror(const char *error_text)
 {
 	cerr << "NUMERICAL ERROR: " << error_text << endl;
 	//exit(1);
-	throw error_text;
+	abort();
 }
 
 double *vector(long nl, long nh)

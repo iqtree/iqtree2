@@ -155,7 +155,7 @@ PhyloTree::~PhyloTree() {
     //if (tmp_ptn_rates)
     //	delete [] tmp_ptn_rates;
     if (_pattern_lh_cat)
-        delete[] _pattern_lh_cat;
+        aligned_free(_pattern_lh_cat);
     if (_pattern_lh)
         aligned_free(_pattern_lh);
     //if (state_freqs)
@@ -1159,7 +1159,7 @@ void PhyloTree::initializeAllPartialLh() {
     if (!_pattern_lh)
         _pattern_lh = aligned_alloc<double>(mem_size);
     if (!_pattern_lh_cat)
-        _pattern_lh_cat = new double[mem_size * site_rate->getNDiscreteRate() * ((model_factory->fused_mix_rate)? 1 : model->getNMixtures())];
+        _pattern_lh_cat = aligned_alloc<double>(mem_size * site_rate->getNDiscreteRate() * ((model_factory->fused_mix_rate)? 1 : model->getNMixtures()));
     if (!theta_all)
         theta_all = aligned_alloc<double>(block_size);
     if (!ptn_freq)
@@ -1190,12 +1190,6 @@ void PhyloTree::initializeAllPartialLh() {
 }
 
 void PhyloTree::deleteAllPartialLh() {
-    if (nni_scale_num)
-        aligned_free(nni_scale_num);
-    nni_scale_num = NULL;
-    if (nni_partial_lh)
-        aligned_free(nni_partial_lh);
-    nni_partial_lh = NULL;
 
 	if (central_partial_lh) {
 		aligned_free(central_partial_lh);
@@ -1205,12 +1199,21 @@ void PhyloTree::deleteAllPartialLh() {
 	}
 	if (central_partial_pars)
 		aligned_free(central_partial_pars);
+
+    if (nni_scale_num)
+        aligned_free(nni_scale_num);
+    nni_scale_num = NULL;
+    if (nni_partial_lh)
+        aligned_free(nni_partial_lh);
+    nni_partial_lh = NULL;
+
 	if (ptn_invar)
 		aligned_free(ptn_invar);
 	if (ptn_freq)
 		aligned_free(ptn_freq);
 	if (theta_all)
 		aligned_free(theta_all);
+
 	if (_pattern_lh_cat)
 		aligned_free(_pattern_lh_cat);
 	if (_pattern_lh)
@@ -1227,7 +1230,7 @@ void PhyloTree::deleteAllPartialLh() {
 
     clearAllPartialLH();
 }
-
+ 
 uint64_t PhyloTree::getMemoryRequired(size_t ncategory) {
 	size_t nptn = aln->getNPattern() + aln->num_states; // +num_states for ascertainment bias correction
 	uint64_t block_size;
@@ -3473,15 +3476,16 @@ void PhyloTree::computeBioNJ(Params &params, Alignment *alignment, string &dist_
     cout << "Computing BIONJ tree..." << endl;
     BioNj bionj;
     bionj.create(dist_file.c_str(), bionj_file.c_str());
-    bool my_rooted = false;
+//    bool my_rooted = false;
     bool non_empty_tree = (root != NULL);
-    if (root)
-        freeNode();
-    readTree(bionj_file.c_str(), my_rooted);
+//    if (root)
+//        freeNode();
+    readTreeFile(bionj_file.c_str());
 
-    if (non_empty_tree)
+    if (non_empty_tree) {
         initializeAllPartialLh();
-    setAlignment(alignment);
+    }
+//    setAlignment(alignment);
 }
 
 int PhyloTree::fixNegativeBranch(bool force, Node *node, Node *dad) {
