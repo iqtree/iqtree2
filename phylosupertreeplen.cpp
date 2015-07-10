@@ -1855,7 +1855,7 @@ void PhyloSuperTreePlen::initializeAllPartialLh() {
         _pattern_lh = aligned_alloc<double>(total_mem_size);
     front()->_pattern_lh = _pattern_lh;
     if (!_pattern_lh_cat)
-        _pattern_lh_cat = new double[total_lh_cat_size];
+        _pattern_lh_cat = aligned_alloc<double>(total_lh_cat_size);
     front()->_pattern_lh_cat = _pattern_lh_cat;
     if (!theta_all)
         theta_all = aligned_alloc<double>(total_block_size);
