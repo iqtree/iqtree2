@@ -1230,7 +1230,7 @@ void PhyloTree::deleteAllPartialLh() {
 
     clearAllPartialLH();
 }
-
+ 
 uint64_t PhyloTree::getMemoryRequired(size_t ncategory) {
 	size_t nptn = aln->getNPattern() + aln->num_states; // +num_states for ascertainment bias correction
 	uint64_t block_size;
