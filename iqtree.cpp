@@ -1567,7 +1567,6 @@ string IQTree::optimizeModelParameters(bool printInfo, double logl_epsilon) {
 	if (params->pll) {
 		if (curScore == -DBL_MAX) {
 			pllEvaluateLikelihood(pllInst, pllPartitions, pllInst->start, PLL_TRUE, PLL_FALSE);
-//			lhComputed = true;
 		} else {
 			pllEvaluateLikelihood(pllInst, pllPartitions, pllInst->start, PLL_FALSE, PLL_FALSE);
 		}
@@ -1582,12 +1581,6 @@ string IQTree::optimizeModelParameters(bool printInfo, double logl_epsilon) {
 		}
 		newTree = string(pllInst->tree_string);
 	} else {
-//		string curTree = getTreeString();
-//		if (!lhComputed) {
-//			initializeAllPartialLh();
-//			clearAllPartialLH();
-//			lhComputed = true;
-//		}
 		double modOptScore = getModelFactory()->optimizeParameters(params->fixed_branch_length, printInfo, logl_epsilon);
 		if (isSuperTree()) {
 			((PhyloSuperTree*) this)->computeBranchLengths();
@@ -1611,7 +1604,7 @@ string IQTree::optimizeModelParameters(bool printInfo, double logl_epsilon) {
             computePatternCategories();
 	}
 	double etime = getRealTime();
-	cout << etime - stime << " seconds (logl: " << curScore << ")" << endl;
+	cout << "Model optimization took: " << etime - stime << " CPU seconds (Final logl: " << curScore << ")" << endl;
 	return newTree;
 }
 

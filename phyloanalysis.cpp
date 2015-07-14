@@ -1611,10 +1611,6 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 
 		if (params.rr_ai) { // DO RESTART ON ALPHA AND P_INVAR
 			searchGAMMAInvarByRestarting(iqtree);
-		} else {
-			// Optimize model parameters and branch lengths using ML for the initial tree
-			iqtree.clearAllPartialLH();
-			initTree = iqtree.optimizeModelParameters(true, initEpsilon);
 		}
 	}
 
@@ -1860,53 +1856,80 @@ void searchGAMMAInvarByRestarting(IQTree &iqtree) {
 	double bestAlpha = 0.0;
 	double bestPInvar = 0.0;
 	double initPInvar = iqtree.getRate()->getPInvar();
+
+    /* Back up branch lengths and substitutional rates */
 	DoubleVector lenvec;
 	DoubleVector bestLens;
 	iqtree.saveBranchLengths(lenvec);
-	//site_rates->setFixGammaShape(true);
-	for (int i = 0; i < 10; i++) {
-				cout << "Alpha: " << initAlphas[i] << " / Logl: ";
-				site_rates->setGammaShape(initAlphas[i]);
-				site_rates->setPInvar(initPInvar);
-				site_rates->computeRates();
-				iqtree.clearAllPartialLH();
-				iqtree.resetCurScore();
-				iqtree.optimizeModelParameters(false, iqtree.params->modeps);
-				//iqtree.getModelFactory()->optimizeParameters(params.fixed_branch_length, false, 0.001);
-				cout << iqtree.getCurScore() << endl;
-				if (iqtree.getCurScore() > bestLogl) {
-					bestLogl = iqtree.getCurScore();
-					bestAlpha = iqtree.getRate()->getGammaShape();
-					bestPInvar = iqtree.getRate()->getPInvar();
-					bestLens.clear();
-					iqtree.saveBranchLengths(bestLens);
-				}
-				iqtree.restoreBranchLengths(lenvec);
-			}
-	cout << "best alpha: " << bestAlpha << " / best p_invar: " << bestPInvar << " / logl:  " << bestLogl << endl;
+    int numRateEntries = iqtree.getModel()->getNumRateEntries();
+    double *rates = new double[numRateEntries];
+    double *bestRates = new double[numRateEntries];
+    iqtree.getModel()->getRateMatrix(rates);
+    int numStates = iqtree.aln->num_states;
+    double *state_freqs = new double[numStates];
+    iqtree.getModel()->getStateFrequency(state_freqs);
+    double *bestStateFreqs =  new double[numStates];
+
+    for (int i = 0; i < 10; i++) {
+		cout << "Testing alpha: " << initAlphas[i] << endl;
+        // Initialize model parameters
+        iqtree.restoreBranchLengths(lenvec);
+        ((ModelGTR*) iqtree.getModel())->setRateMatrix(rates);
+        ((ModelGTR*) iqtree.getModel())->setStateFrequency(state_freqs);
+        iqtree.getModel()->decomposeRateMatrix();
+        site_rates->setGammaShape(initAlphas[i]);
+		site_rates->setPInvar(initPInvar);
+		site_rates->computeRates();
+		iqtree.clearAllPartialLH();
+		iqtree.resetCurScore();
+		iqtree.optimizeModelParameters(true, 10.0);
+
+		if (iqtree.getCurScore() > bestLogl) {
+			bestLogl = iqtree.getCurScore();
+			bestAlpha = iqtree.getRate()->getGammaShape();
+			bestPInvar = iqtree.getRate()->getPInvar();
+			bestLens.clear();
+			iqtree.saveBranchLengths(bestLens);
+            iqtree.getModel()->getRateMatrix(bestRates);
+            iqtree.getModel()->getStateFrequency(bestStateFreqs);
+        }
+    }
 	site_rates->setGammaShape(bestAlpha);
 	site_rates->setFixGammaShape(false);
 	site_rates->setPInvar(bestPInvar);
 	site_rates->setFixPInvar(false);
+    ((ModelGTR*) iqtree.getModel())->setRateMatrix(bestRates);
+    ((ModelGTR*) iqtree.getModel())->setStateFrequency(bestStateFreqs);
 	iqtree.restoreBranchLengths(bestLens);
-	site_rates->computeRates();
+    iqtree.getModel()->decomposeRateMatrix();
+    site_rates->computeRates();
 	iqtree.resetCurScore();
 	iqtree.clearAllPartialLH();
+    iqtree.getModel()->writeInfo(cout);
+    iqtree.getRate()->writeInfo(cout);
+    iqtree.setCurScore(iqtree.computeLikelihood());
+    cout << "Logl: " << iqtree.getCurScore() << endl;
+
+    delete [] rates;
+    delete [] state_freqs;
+    delete [] bestRates;
+    delete [] bestStateFreqs;
 }
 
-void exhaustiveSearchGAMMAInvar(Params &params, IQTree &iqtree) {// Test alpha fom 0.1 to 15 and p_invar from 0.1 to 0.99, stepsize = 0.01
+// Test alpha fom 0.1 to 15 and p_invar from 0.1 to 0.99, stepsize = 0.01
+void exhaustiveSearchGAMMAInvar(Params &params, IQTree &iqtree) {
 	double alphaMin = 0.01;
 	double alphaMax = 15.00;
 	double p_invarMin = 0.01;
 	double p_invarMax = 1.00;
 	double stepSize = 0.01;
-	int numAlpha = floor((alphaMax - alphaMin)/stepSize);
-	int numInvar = floor((p_invarMax - p_invarMin)/stepSize);
+	int numAlpha = (int) floor((alphaMax - alphaMin)/stepSize);
+	int numInvar = (int) floor((p_invarMax - p_invarMin)/stepSize);
 
 	cout << "EVALUATING COMBINATIONS OF " << numAlpha << " ALPHAS AND " << numInvar << " P_INVARS ... " << endl;
 
 	vector<string> results;
-	results.reserve(numAlpha * numInvar);
+	results.reserve((unsigned long) (numAlpha * numInvar));
 	DoubleVector lenvec;
 	iqtree.saveBranchLengths(lenvec);
 

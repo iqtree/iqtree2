@@ -410,9 +410,19 @@ extern int NNI_MAX_NR_STEP;
 
 /**
         program parameters, everything is specified here
+        Use singleton pattern to avoid using global variable or
+        having to pass the params variable around
  */
-struct Params {
-
+class Params {
+public:
+    static Params& getInstance();
+private:
+    Params () {}; // Disable constructor
+    // Temoprarily commented out because void PhyloSuperTree::readPartition(Params &params)
+    // make a copy of params?
+    //Params (Params const&) {}; // Disable copy constructor
+    //void operator=(Params const&) {}; // Disable assignment
+public:
 	/**
 	 *  Use random restart strategy for estimating alpha and p_invar
 	 */

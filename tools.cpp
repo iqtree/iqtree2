@@ -85,7 +85,7 @@ void outError(char *error)
  */
 
 
-#if (defined(__GNUC__) || defined(__clang__)) && !defined(WIN32)
+#if (defined(__GNUC__) || defined(__clang__)) && !defined(WIN32) && !defined(__CYGWIN__)
 #include "stacktrace.h"
 #endif
 
@@ -95,8 +95,8 @@ void outError(char *error)
  */
 void outError(const char *error, bool quit) {
 	if (error == ERR_NO_MEMORY) {
-#if (defined(__GNUC__) || defined(__clang__)) && !defined(WIN32)
-		print_stacktrace(cerr);
+#if (defined(__GNUC__) || defined(__clang__)) && !defined(WIN32) && !defined(__CYGWIN__)
+        print_stacktrace(cerr);
 #endif
 	}
 	cerr << "ERROR: " << error << endl;
@@ -3412,4 +3412,9 @@ int countPhysicalCPUCores() {
         physicalcpucount = logicalcpucount;
     }
     return physicalcpucount;
+}
+
+Params& Params::getInstance() {
+    static Params instance;
+    return instance;
 }
