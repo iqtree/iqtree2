@@ -446,6 +446,19 @@ void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh, 
         out	<< "NOTE: Branch lengths are weighted average over all partitions" << endl
             << "      (weighted by the number of sites in the partitions)" << endl;
 
+    bool is_codon = tree.aln->seq_type == SEQ_CODON;
+    if (tree.isSuperTree()) {
+        PhyloSuperTree *stree = (PhyloSuperTree*) &tree;
+        is_codon = true;
+        for (PhyloSuperTree::iterator sit = stree->begin(); sit != stree->end(); sit++)
+            if ((*sit)->aln->seq_type != SEQ_CODON) {
+                is_codon = false;
+                break;
+            }
+    }
+    if (is_codon)
+        out << endl << "NOTE: Branch lengths are intepreted as number of nucleotide substitutions per codon site!" 
+            << endl << "      Rescale them by 1/3 if you want to have #nt substitutions per nt site" << endl;
     if (main_tree) 
     if (params.aLRT_replicates > 0 || params.gbo_replicates || (params.num_bootstrap_samples && params.compute_ml_tree)) {
         out << "Numbers in parentheses are ";
@@ -640,18 +653,18 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 			PhyloSuperTree::iterator it;
 			int part;
 			if(params.partition_type)
-				out << "  ID  Model          Rate   Parameters" << endl;
+				out << "  ID  Model           Speed  Parameters" << endl;
 			else
-				out << "  ID  Model          Parameters" << endl;
+				out << "  ID  Model         TreeLen  Parameters" << endl;
 			//out << "-------------------------------------" << endl;
 			for (it = stree->begin(), part = 0; it != stree->end(); it++, part++) {
 				out.width(4);
 				out << right << (part+1) << "  ";
 				out.width(14);
 				if(params.partition_type)
-					out << left << (*it)->getModelName() << " " << stree->part_info[part].part_rate  << " " << (*it)->getModelNameParams() << endl;
+					out << left << (*it)->getModelName() << " " << stree->part_info[part].part_rate  << "  " << (*it)->getModelNameParams() << endl;
 				else
-					out << left << (*it)->getModelName() << " " << (*it)->getModelNameParams() << endl;
+					out << left << (*it)->getModelName() << " " << (*it)->treeLength() << "  " << (*it)->getModelNameParams() << endl;
 			}
 			out << endl;
 			/*
@@ -951,8 +964,10 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 			<< "  IQ-TREE report:                " << params.out_prefix << ".iqtree"
 			<< endl;
 	if (params.compute_ml_tree) {
-		cout << "  Maximum-likelihood tree:       " << params.out_prefix
-				<< ".treefile" << endl;
+		if (original_model.find("ONLY") == string::npos)
+			cout << "  Maximum-likelihood tree:       " << params.out_prefix << ".treefile" << endl;
+		else
+			cout << "  Tree used for model selection: " << params.out_prefix << ".treefile" << endl;
 		if (params.snni && params.write_local_optimal_trees) {
 			cout << "  Locally optimal trees (" << tree.candidateTrees.getNumLocalOptTrees() << "):    " << params.out_prefix << ".suboptimal_trees" << endl;
 		}
@@ -969,6 +984,19 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 		if (params.print_conaln)
 		cout << "  Concatenated alignment:        " << params.out_prefix
 					<< ".conaln" << endl;
+	}
+	if (original_model.find("TEST") != string::npos && tree.isSuperTree()) {
+		cout << "  Best partitioning scheme:      " << params.out_prefix << ".best_scheme.nex" << endl;
+		bool raxml_format_printed = true;
+
+		for (vector<PartitionInfo>::iterator it = ((PhyloSuperTree*)&tree)->part_info.begin();
+				it != ((PhyloSuperTree*)&tree)->part_info.end(); it++)
+			if (!it->aln_file.empty()) {
+				raxml_format_printed = false;
+				break;
+			}
+		if (raxml_format_printed)
+			 cout << "           in RAxML format:      " << params.out_prefix << ".best_scheme" << endl;
 	}
 	if (tree.getRate()->getGammaShape() > 0 && params.print_site_rate)
 		cout << "  Gamma-distributed rates:       " << params.out_prefix << ".rate"
@@ -1172,7 +1200,43 @@ void initializeParams(Params &params, IQTree &iqtree, vector<ModelInfo> &model_i
             ((PhyloSuperTree*) &iqtree)->mapTrees();
         double start_cpu_time = getCPUTime();
         double start_real_time = getRealTime();
-        params.model_name = testModel(params, &iqtree, model_info, "", true);
+        ofstream fmodel;
+        string fmodel_str = ((string)params.out_prefix + ".model"); 
+
+        bool ok_model_file = false;
+        if (!params.print_site_lh && !params.model_test_again) {
+            ok_model_file = checkModelFile(fmodel_str, iqtree.isSuperTree(), model_info);
+        }
+
+        ok_model_file &= model_info.size() > 0;
+        if (ok_model_file) {
+            cout << "Reusing information from model file " << fmodel_str << endl;
+            fmodel.open(fmodel_str.c_str(), ios::app);
+            if (!fmodel.is_open())
+                outError("cannot append to file ", fmodel_str);            
+        } else {
+            fmodel.open(fmodel_str.c_str());
+            if (!fmodel.is_open())
+                outError("cannot write to file ", fmodel_str);
+            // print header
+            SeqType seq_type = iqtree.aln->seq_type;
+            if (iqtree.isSuperTree()) {
+                fmodel << "Charset\t";
+                seq_type = ((PhyloSuperTree*)&iqtree)->front()->aln->seq_type;
+            }
+            fmodel << "Model\tdf\tLnL\tTreeLen";
+            if (seq_type == SEQ_BINARY)
+                fmodel << "\t0\t1";
+            else if (seq_type == SEQ_DNA)
+                fmodel << "\tA-C\tA-G\tA-T\tC-G\tC-T\tG-T\tA\tC\tG\tT";
+            fmodel << "\talpha\tpinv\tTree" << endl;
+            model_info.clear();
+        }
+        fmodel.precision(4);
+        fmodel << fixed;
+
+        params.model_name = testModel(params, &iqtree, model_info, fmodel, "", true);
+        fmodel.close();
         params.startCPUTime = start_cpu_time;
         params.start_real_time = start_real_time;
         cout << "CPU time for model selection: " << getCPUTime() - start_cpu_time << " seconds." << endl;
@@ -1718,8 +1782,10 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 	double search_cpu_time = getCPUTime() - cputime_search_start;
 	double search_real_time = getRealTime() - realtime_search_start;
 
-	if (iqtree.isSuperTree())
-			((PhyloSuperTree*) &iqtree)->mapTrees();
+    // COMMENT THIS OUT BECAUSE IT DELETES ALL BRANCH LENGTHS OF SUBTREES!
+//	if (iqtree.isSuperTree())
+//			((PhyloSuperTree*) &iqtree)->mapTrees();
+
 	if (params.snni && params.min_iterations && verbose_mode >= VB_MED) {
 		cout << "Log-likelihoods of best " << params.popSize << " trees: " << endl;
 		iqtree.printBestScores(params.popSize);
