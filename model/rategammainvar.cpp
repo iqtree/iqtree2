@@ -20,12 +20,11 @@
 #include "rategammainvar.h"
 
 RateGammaInvar::RateGammaInvar(int ncat, double shape, bool median,
-		double p_invar_sites, bool simultaneous, bool rr_ai, PhyloTree *tree) :
+		double p_invar_sites, bool simultaneous, PhyloTree *tree) :
 		RateInvar(p_invar_sites, tree), RateGamma(ncat, shape, median, tree) {
 	name = "+I" + name;
 	full_name = "Invar+" + full_name;
 	joint_optimize = simultaneous;
-	this->rr_ai = rr_ai;
 	computeRates();
 }
 

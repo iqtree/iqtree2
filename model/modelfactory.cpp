@@ -461,7 +461,7 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 		//string rate_str = model_str.substr(pos);
 		if (posI != string::npos && posG != string::npos) {
 			site_rate = new RateGammaInvar(num_rate_cats, gamma_shape, params.gamma_median,
-					p_invar_sites, params.optimize_model_rate_joint, params.rr_ai, tree);
+					p_invar_sites, params.optimize_model_rate_joint, tree);
 		} else if (posI != string::npos && posR != string::npos) {
 			site_rate = new RateFreeInvar(num_rate_cats, gamma_shape, freerate_params, p_invar_sites, !fused_mix_rate, tree);
 		} else if (posI != string::npos) {
@@ -619,64 +619,127 @@ void ModelFactory::readSiteFreq(Alignment *aln, char* site_freq_file, IntVector 
 	}
 }
 
-double ModelFactory::optimizeParametersOnly(double gradient_epsilon) {
+double ModelFactory::initGTRGammaIParameters(RateHeterogeneity *rate, ModelSubst *model, double initAlpha,
+                                           double initPInvar, double *initRates, double *initStateFreqs)  {
 
-	/* Optimize substitutional and heterogeneity rates independetly */
-	if (!joint_optimize) {
-		double model_lh = model->optimizeParameters(gradient_epsilon);
-		double rate_lh = site_rate->optimizeParameters(gradient_epsilon);
-		if (rate_lh == 0.0)
-			return model_lh;
-		return rate_lh;
-	}
-
-	/* Optimize substitutional and heterogeneity rates jointly using BFGS */
-	int ndim = getNDim();
-
-	// return if nothing to be optimized
-	if (ndim == 0) return 0.0;
-
-	double *variables = new double[ndim+1];
-	double *upper_bound = new double[ndim+1];
-	double *lower_bound = new double[ndim+1];
-	bool *bound_check = new bool[ndim+1];
-	int i;
-	double score;
-
-	// setup the bounds for model
-	setVariables(variables);
-	int model_ndim = model->getNDim();
-	for (i = 1; i <= model_ndim; i++) {
-		//cout << variables[i] << endl;
-		lower_bound[i] = MIN_RATE;
-		upper_bound[i] = MAX_RATE;
-		bound_check[i] = false;
-	}
-
-	if (model->freq_type == FREQ_ESTIMATE) {
-		for (i = model_ndim-model->num_states+2; i <= model_ndim; i++)
-			upper_bound[i] = 1.0;
-	}
-
-	// setup the bounds for site_rate
-	site_rate->setBounds(lower_bound+model_ndim, upper_bound+model_ndim, bound_check+model_ndim);
-
-	score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound, bound_check, max(gradient_epsilon, TOL_RATE));
-
-	getVariables(variables);
-	//if (freq_type == FREQ_ESTIMATE) scaleStateFreq(true);
-	model->decomposeRateMatrix();
-	site_rate->phylo_tree->clearAllPartialLH();
-
-	delete [] bound_check;
-	delete [] lower_bound;
-	delete [] upper_bound;
-	delete [] variables;
-
-	return score;
+    RateGammaInvar* rateGammaInvar = dynamic_cast<RateGammaInvar*>(rate);
+    ModelGTR* modelGTR = dynamic_cast<ModelGTR*>(model);
+    modelGTR->setRateMatrix(initRates);
+    modelGTR->setStateFrequency(initStateFreqs);
+    rateGammaInvar->setGammaShape(initAlpha);
+    rateGammaInvar->setPInvar(initPInvar);
+    modelGTR->decomposeRateMatrix();
+    rateGammaInvar->computeRates();
+    site_rate->phylo_tree->clearAllPartialLH();
+    return site_rate->phylo_tree->computeLikelihood();
 }
 
-double ModelFactory::optimizeParameters(bool fixed_len, bool write_info, double logl_epsilon, double gradient_epsilon) {
+double ModelFactory::optimizeParametersOnly(double gradient_epsilon) {
+    double logl;
+    if (Params::getInstance().fai && dynamic_cast<RateGammaInvar*>(site_rate) != NULL
+        && dynamic_cast<ModelGTR*>(model) != NULL) {
+        cout << "Optimize substitutional and site rates with restart ..." << endl;
+        double initAlpha = 0.1;
+        double maxInitAlpha = 1.0;
+        double alphaStep = 0.1;
+        double bestLogl = -DBL_MAX;
+        double bestAlpha = 0.0;
+        double bestPInvar = 0.0;
+        double initPInvar = site_rate->getPInvar();
+        int numRateEntries = model->getNumRateEntries();
+        double *initRates = new double[numRateEntries];
+        double *bestRates = new double[numRateEntries];
+        model->getRateMatrix(initRates);
+        int numStates = model->num_states;
+        double *initStateFreqs = new double[numStates];
+        model->getStateFrequency(initStateFreqs);
+        double *bestStateFreqs =  new double[numStates];
+
+        while (initAlpha <= maxInitAlpha) {
+            initGTRGammaIParameters(site_rate, model, initAlpha, initPInvar, initRates, initStateFreqs);
+            logl = optimizeAllParameters(gradient_epsilon);
+            if (logl > bestLogl) {
+                RateGammaInvar* rateGammaInvar = dynamic_cast<RateGammaInvar*>(site_rate);
+                ModelGTR* modelGTR = dynamic_cast<ModelGTR*>(model);
+                bestLogl = logl;
+                bestAlpha = rateGammaInvar->getGammaShape();
+                bestPInvar = rateGammaInvar->getPInvar();
+                modelGTR->getRateMatrix(bestRates);
+                modelGTR->getStateFrequency(bestStateFreqs);
+            }
+            initAlpha = initAlpha + alphaStep;
+        }
+        //cout << "best alpha = " << bestAlpha << " / best p_invar = " << bestPInvar << " / logl = " << bestLogl << endl;
+        logl = initGTRGammaIParameters(site_rate, model, bestAlpha, bestPInvar, bestRates, bestStateFreqs);
+        delete [] initRates;
+        delete [] bestRates;
+        delete [] initStateFreqs;
+        delete [] bestStateFreqs;
+    } else {
+        /* Optimize substitutional and heterogeneity rates independetly */
+        if (!joint_optimize) {
+            double model_lh = model->optimizeParameters(gradient_epsilon);
+            double rate_lh = site_rate->optimizeParameters(gradient_epsilon);
+            if (rate_lh == 0.0)
+                logl = model_lh;
+            else
+                logl = rate_lh;
+        } else {
+            /* Optimize substitutional and heterogeneity rates jointly using BFGS */
+            logl = optimizeAllParameters(gradient_epsilon);
+        }
+    }
+    return logl;
+}
+
+double ModelFactory::optimizeAllParameters(double gradient_epsilon) {
+    int ndim = getNDim();
+
+    // return if nothing to be optimized
+    if (ndim == 0) return 0.0;
+
+    double *variables = new double[ndim+1];
+    double *upper_bound = new double[ndim+1];
+    double *lower_bound = new double[ndim+1];
+    bool *bound_check = new bool[ndim+1];
+    int i;
+    double score;
+
+    // setup the bounds for model
+    setVariables(variables);
+    int model_ndim = model->getNDim();
+    for (i = 1; i <= model_ndim; i++) {
+        //cout << variables[i] << endl;
+        lower_bound[i] = MIN_RATE;
+        upper_bound[i] = MAX_RATE;
+        bound_check[i] = false;
+    }
+
+    if (model->freq_type == FREQ_ESTIMATE) {
+        for (i = model_ndim- model->num_states+2; i <= model_ndim; i++)
+            upper_bound[i] = 1.0;
+    }
+
+    // setup the bounds for site_rate
+    site_rate->setBounds(lower_bound+model_ndim, upper_bound+model_ndim, bound_check+model_ndim);
+
+    score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound, bound_check, max(gradient_epsilon, TOL_RATE));
+
+    getVariables(variables);
+    //if (freq_type == FREQ_ESTIMATE) scaleStateFreq(true);
+    model->decomposeRateMatrix();
+    site_rate->phylo_tree->clearAllPartialLH();
+
+    delete [] bound_check;
+    delete [] lower_bound;
+    delete [] upper_bound;
+    delete [] variables;
+
+    return score;
+}
+
+double ModelFactory::optimizeParameters(bool fixed_len, bool write_info,
+                                        double logl_epsilon, double gradient_epsilon) {
 	assert(model);
 	assert(site_rate);
 
@@ -713,7 +776,10 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info, double 
 		}
 		double new_lh = (rate_lh != 0.0) ? rate_lh : model_lh;
 		*/
-		double new_lh = optimizeParametersOnly(gradient_epsilon);
+        if (i > 2 && Params::getInstance().fai)
+            Params::getInstance().fai = false;
+        double new_lh = optimizeParametersOnly(gradient_epsilon);
+
 		if (new_lh == 0.0) {
 			if (!fixed_len) cur_lh = tree->optimizeAllBranches(100, logl_epsilon);
 			break;

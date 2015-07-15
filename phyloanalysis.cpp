@@ -1948,7 +1948,7 @@ void searchGAMMAInvarByRestarting(IQTree &iqtree) {
 		site_rates->computeRates();
 		iqtree.clearAllPartialLH();
 		iqtree.resetCurScore();
-		iqtree.optimizeModelParameters(true, 10.0);
+		iqtree.optimizeModelParameters(true);
 
 		if (iqtree.getCurScore() > bestLogl) {
 			bestLogl = iqtree.getCurScore();

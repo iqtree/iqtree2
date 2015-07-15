@@ -617,6 +617,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     verbose_mode = VB_MIN;
     params.tree_gen = NONE;
     params.user_file = NULL;
+    params.fai = false;
     params.rr_ai = false;
     params.exh_ai = false;
     params.alpha_invar_file = NULL;
@@ -2429,6 +2430,12 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.rr_ai = true;
 				continue;
 			}
+
+            if (strcmp(argv[cnt], "-fai") == 0) {
+                params.fai = true;
+                continue;
+            }
+
             if (strcmp(argv[cnt], "-eai") == 0) {
                 params.exh_ai = true;
                 continue;

@@ -1581,7 +1581,8 @@ string IQTree::optimizeModelParameters(bool printInfo, double logl_epsilon) {
 		}
 		newTree = string(pllInst->tree_string);
 	} else {
-		double modOptScore = getModelFactory()->optimizeParameters(params->fixed_branch_length, printInfo, logl_epsilon);
+		double modOptScore =
+                getModelFactory()->optimizeParameters(params->fixed_branch_length, printInfo, logl_epsilon);
 		if (isSuperTree()) {
 			((PhyloSuperTree*) this)->computeBranchLengths();
 		}

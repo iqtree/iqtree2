@@ -423,6 +423,12 @@ private:
     //Params (Params const&) {}; // Disable copy constructor
     //void operator=(Params const&) {}; // Disable assignment
 public:
+
+    /**
+    *  Fast and accurate optimiation for alpha and p_invar
+    */
+    bool fai;
+
 	/**
 	 *  Use random restart strategy for estimating alpha and p_invar
 	 */
