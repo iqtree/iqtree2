@@ -1524,6 +1524,7 @@ void printFinalSearchInfo(Params &params, IQTree &iqtree, double search_cpu_time
 
 	params.run_time = (getCPUTime() - params.startCPUTime);
 	cout << endl;
+	cout << "Total number of iterations: " << iqtree.stop_rule.getCurIt() << endl;
 	cout << "CPU time used for tree search: " << search_cpu_time
 			<< " sec (" << convert_time(search_cpu_time) << ")" << endl;
 	cout << "Wall-clock time used for tree search: " << search_real_time
@@ -1727,7 +1728,6 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
         	iqtree.candidateTrees.update(tree, iqtree.getCurScore(), true);
 
         }
-
         cout << "Current best tree score: " << iqtree.candidateTrees.getBestScore() << " / CPU time: "
                 << getCPUTime() - initTime << endl;
 	}
@@ -1756,7 +1756,6 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 	// prune stable taxa
 	pruneTaxa(params, iqtree, pattern_lh, pruned_taxa, linked_name);
 
-	/****************** Do tree search ***************************/
 	if (params.min_iterations > 1) {
 		iqtree.readTreeString(iqtree.candidateTrees.getTopTrees()[0]);
 		iqtree.doTreeSearch();
@@ -1792,11 +1791,13 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 		cout << endl;
 	}
 
-	/******** Performs final model parameters optimization ******************/
 	if (params.min_iterations) {
 		iqtree.readTreeString(iqtree.candidateTrees.getBestTrees()[0]);
         iqtree.initializeAllPartialLh();
         iqtree.clearAllPartialLH();
+        cout << "--------------------------------------------------------------------" << endl;
+        cout << "|                    FINALIZING TREE SEARCH                        |" << endl;
+        cout << "--------------------------------------------------------------------" << endl;
         cout << "Performs final model parameters optimization" << endl;
 		string tree = iqtree.optimizeModelParameters(true);
 		iqtree.candidateTrees.update(tree, iqtree.getCurScore(), true);

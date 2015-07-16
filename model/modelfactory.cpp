@@ -657,19 +657,35 @@ double ModelFactory::optimizeParametersOnly(double gradient_epsilon) {
 
         while (initAlpha <= maxInitAlpha) {
             initGTRGammaIParameters(site_rate, model, initAlpha, initPInvar, initRates, initStateFreqs);
-            logl = optimizeAllParameters(gradient_epsilon);
+            if (joint_optimize) {
+                logl = optimizeAllParameters(gradient_epsilon);
+            } else {
+                double model_lh = model->optimizeParameters(gradient_epsilon);
+                double rate_lh = site_rate->optimizeParameters(gradient_epsilon);
+                if (rate_lh == 0.0)
+                    logl = model_lh;
+                else
+                    logl = rate_lh;
+            }
+            RateGammaInvar* rateGammaInvar = dynamic_cast<RateGammaInvar*>(site_rate);
+            ModelGTR* modelGTR = dynamic_cast<ModelGTR*>(model);
+            double curAlpha = rateGammaInvar->getGammaShape();
+            double curPInvar = rateGammaInvar->getPInvar();
             if (logl > bestLogl) {
-                RateGammaInvar* rateGammaInvar = dynamic_cast<RateGammaInvar*>(site_rate);
-                ModelGTR* modelGTR = dynamic_cast<ModelGTR*>(model);
                 bestLogl = logl;
-                bestAlpha = rateGammaInvar->getGammaShape();
-                bestPInvar = rateGammaInvar->getPInvar();
+                bestAlpha = curAlpha;
+                bestPInvar = curPInvar;
                 modelGTR->getRateMatrix(bestRates);
                 modelGTR->getStateFrequency(bestStateFreqs);
             }
+            if (verbose_mode >= VB_MED) {
+                cout << "Init. alpha = " << initAlpha <<
+                " / Est. alpha = " << curAlpha
+                << "/ Est. pinv = " << curPInvar << " / logl = " << logl << endl;
+            }
             initAlpha = initAlpha + alphaStep;
         }
-        //cout << "best alpha = " << bestAlpha << " / best p_invar = " << bestPInvar << " / logl = " << bestLogl << endl;
+        cout << "Best alpha = " << bestAlpha << " / best p_invar = " << bestPInvar << endl;
         logl = initGTRGammaIParameters(site_rate, model, bestAlpha, bestPInvar, bestRates, bestStateFreqs);
         delete [] initRates;
         delete [] bestRates;
