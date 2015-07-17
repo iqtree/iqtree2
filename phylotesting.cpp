@@ -95,7 +95,7 @@ short int std_genetic_code[]    = {   0,    0,     0,        1,        1};
 const char *codon_freq_names[] = {"", "+F1X4", "+F3X4", "+F"};
 
 const double TOL_LIKELIHOOD_MODELTEST = 0.1;
-const double TOL_GRADIENT_MODELTEST   = 0.01;
+const double TOL_GRADIENT_MODELTEST   = 0.001;
 
 /**
  * copy from cvec to strvec
