@@ -1518,8 +1518,11 @@ public:
 	/**
 	 * This will invalidate curScore variable, used whenever reading a tree!
 	 */
-	void resetCurScore() {
-		curScore = -DBL_MAX;
+	void resetCurScore(double score = 0.0) {
+        if (score != 0.0)
+            curScore = score;
+        else
+		    curScore = -DBL_MAX;
         if (model)
             initializeAllPartialLh();
 //		clearAllPartialLH();
