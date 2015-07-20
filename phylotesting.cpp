@@ -1354,6 +1354,9 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
                 }
             }
         }
+        if (skip_model > 1)
+            info.AIC_score = DBL_MAX;
+        
 		if (model_id >= 0) {
 			model_info[model_id] = info;
 		} else {
