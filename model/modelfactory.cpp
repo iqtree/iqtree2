@@ -792,9 +792,13 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info,
 		}
 		double new_lh = (rate_lh != 0.0) ? rate_lh : model_lh;
 		*/
-        if (i > 2 && Params::getInstance().fai)
+        double new_lh;
+
+        if (Params::getInstance().fai && i > 2) {
             Params::getInstance().fai = false;
-        double new_lh = optimizeParametersOnly(gradient_epsilon);
+        }
+
+        new_lh = optimizeParametersOnly(gradient_epsilon);
 
 		if (new_lh == 0.0) {
 			if (!fixed_len) cur_lh = tree->optimizeAllBranches(100, logl_epsilon);

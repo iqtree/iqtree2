@@ -1675,7 +1675,12 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 		}
 
 		if (params.rr_ai) { // DO RESTART ON ALPHA AND P_INVAR
+			double stime = getRealTime();
 			searchGAMMAInvarByRestarting(iqtree);
+			double etime = getRealTime();
+            cout << endl;
+            cout << "Testing alpha took: " << etime -stime << " CPU seconds" << endl;
+            cout << endl;
 		}
 	}
 
@@ -1938,7 +1943,7 @@ void searchGAMMAInvarByRestarting(IQTree &iqtree) {
     double *bestStateFreqs =  new double[numStates];
 
     for (int i = 0; i < 10; i++) {
-		cout << "Testing alpha: " << initAlphas[i] << endl;
+		cout << "Testing alpha: " << initAlphas[i];
         // Initialize model parameters
         iqtree.restoreBranchLengths(lenvec);
         ((ModelGTR*) iqtree.getModel())->setRateMatrix(rates);
@@ -1949,12 +1954,17 @@ void searchGAMMAInvarByRestarting(IQTree &iqtree) {
 		site_rates->computeRates();
 		iqtree.clearAllPartialLH();
 		iqtree.resetCurScore();
-		iqtree.optimizeModelParameters(true);
+		iqtree.optimizeModelParameters(false, 5.0);
+        double estAlpha = iqtree.getRate()->getGammaShape();
+        double estPInv = iqtree.getRate()->getPInvar();
+        double logl = iqtree.getCurScore();
+		cout << "Est. alpha: " << estAlpha << " / Est. pinv: " << estPInv
+        << " / Logl: " << logl << endl;
 
 		if (iqtree.getCurScore() > bestLogl) {
-			bestLogl = iqtree.getCurScore();
-			bestAlpha = iqtree.getRate()->getGammaShape();
-			bestPInvar = iqtree.getRate()->getPInvar();
+			bestLogl = logl;
+			bestAlpha = estAlpha;
+			bestPInvar = estPInv;
 			bestLens.clear();
 			iqtree.saveBranchLengths(bestLens);
             iqtree.getModel()->getRateMatrix(bestRates);
@@ -1975,6 +1985,7 @@ void searchGAMMAInvarByRestarting(IQTree &iqtree) {
     iqtree.getModel()->writeInfo(cout);
     iqtree.getRate()->writeInfo(cout);
     iqtree.setCurScore(iqtree.computeLikelihood());
+    cout << "Best init. alpha: " << bestAlpha << " / init. pinv: " << bestPInvar << " / ";
     cout << "Logl: " << iqtree.getCurScore() << endl;
 
     delete [] rates;
