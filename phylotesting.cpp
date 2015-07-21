@@ -734,7 +734,8 @@ void printModelFile(ostream &fmodel, Params &params, PhyloTree *tree, ModelInfo 
     double pinvar = tree->getRate()->getPInvar();
     if (pinvar > 0) fmodel << pinvar; else fmodel << "NA";
     fmodel << "\t";
-    tree->printTree(fmodel);
+//    tree->printTree(fmodel);
+    fmodel << info.tree;
     fmodel << endl;
     fmodel.precision(4);
     const char *model_name = (params.print_site_lh) ? info.name.c_str() : NULL;
@@ -1278,10 +1279,12 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 		if (model_id >= 0) {
 			info.logl = model_info[model_id].logl;
             info.tree_len = model_info[model_id].tree_len;
+            info.tree = model_info[model_id].tree;
             prev_tree_string = model_info[model_id].tree;
         } else if (skip_model) {
             info.logl = model_info[prev_model_id].logl;
             info.tree_len = model_info[prev_model_id].tree_len;
+            info.tree = model_info[prev_model_id].tree;
             prev_tree_string = model_info[prev_model_id].tree;
 //            cout << "Skipped " << info.name << endl;
 		} else {
@@ -1301,6 +1304,7 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
                 runTreeReconstruction(params, original_model, *iqtree, model_info);
                 info.logl = iqtree->computeLikelihood();
                 info.tree_len = iqtree->treeLength();
+                info.tree = iqtree->getTreeString();
                 params.model_name = original_model;
                 params.user_file = orig_user_tree;
                 tree = iqtree;
@@ -1315,6 +1319,7 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
                 prev_tree_string = "";
                 info.logl = tree->getModelFactory()->optimizeParameters(false, false, TOL_LIKELIHOOD_MODELTEST, TOL_GRADIENT_MODELTEST);
                 info.tree_len = tree->treeLength();
+                info.tree = tree->getTreeString();
             }
 			// print information to .model file
             printModelFile(fmodel, params, tree, info, set_name);
@@ -1487,22 +1492,26 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 		if (AICc_sum > 0.95) break;
 	}
 
+    string best_tree; // BQM 2015-07-21: With Lars find best model
 	/* sort models by their scores */
 	switch (params.model_test_criterion) {
 	case MTC_AIC:
 		for (model = 0; model < model_info.size(); model++)
 			scores[model] = model_info[model].AIC_score;
 		best_model = model_info[model_aic].name;
+        best_tree = model_info[model_aic].tree;
 		break;
 	case MTC_AICC:
 		for (model = 0; model < model_info.size(); model++)
 			scores[model] = model_info[model].AICc_score;
 		best_model = model_info[model_aicc].name;
+        best_tree = model_info[model_aicc].tree;
 		break;
 	case MTC_BIC:
 		for (model = 0; model < model_info.size(); model++)
 			scores[model] = model_info[model].BIC_score;
 		best_model = model_info[model_bic].name;
+        best_tree = model_info[model_bic].tree;
 		break;
     default: assert(0);
 	}
@@ -1525,6 +1534,9 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 //	delete tree_hetero;
 //	delete tree_homo;
 	in_tree->deleteAllPartialLh();
+    
+    // BQM 2015-07-21 with Lars: load the best_tree
+    in_tree->readTreeString(best_tree);
 
     
 	if (set_name == "") {
