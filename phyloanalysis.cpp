@@ -1926,8 +1926,7 @@ void computeLoglFromUserInputGAMMAInvar(Params &params, IQTree &iqtree) {
 
 void searchGAMMAInvarByRestarting(IQTree &iqtree) {
     if (!Params::getInstance().fixed_branch_length)
-        iqtree.setCurScore(iqtree.optimizeAllBranches(1));
-    double initScore = iqtree.getCurScore();
+        iqtree.optimizeAllBranches(1);
 	RateGammaInvar* site_rates = dynamic_cast<RateGammaInvar*>(iqtree.getRate());
 	double initAlphas[] = { 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0 };
 	double bestLogl = iqtree.getCurScore();
@@ -1949,7 +1948,8 @@ void searchGAMMAInvarByRestarting(IQTree &iqtree) {
     double *bestStateFreqs =  new double[numStates];
 
     for (int i = 0; i < 10; i++) {
-		cout << "Testing alpha: " << initAlphas[i];
+		cout << endl;
+		cout << "Testing alpha: " << initAlphas[i] << endl;
         // Initialize model parameters
         iqtree.restoreBranchLengths(lenvec);
         ((ModelGTR*) iqtree.getModel())->setRateMatrix(rates);
@@ -1959,8 +1959,7 @@ void searchGAMMAInvarByRestarting(IQTree &iqtree) {
 		site_rates->setPInvar(initPInvar);
 		site_rates->computeRates();
 		iqtree.clearAllPartialLH();
-		iqtree.resetCurScore(initScore);
-		iqtree.optimizeModelParameters(false, 5.0);
+		iqtree.optimizeModelParameters(verbose_mode >= VB_MED, 5.0);
         double estAlpha = iqtree.getRate()->getGammaShape();
         double estPInv = iqtree.getRate()->getPInvar();
         double logl = iqtree.getCurScore();
@@ -1986,7 +1985,6 @@ void searchGAMMAInvarByRestarting(IQTree &iqtree) {
 	iqtree.restoreBranchLengths(bestLens);
     iqtree.getModel()->decomposeRateMatrix();
     site_rates->computeRates();
-	iqtree.resetCurScore(bestLogl);
 	iqtree.clearAllPartialLH();
     iqtree.getModel()->writeInfo(cout);
     iqtree.getRate()->writeInfo(cout);

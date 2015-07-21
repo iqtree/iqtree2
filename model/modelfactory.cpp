@@ -771,8 +771,9 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info,
         if (!Params::getInstance().rr_ai)
 		    cur_lh = tree->optimizeAllBranches(1);
         else
-            cur_lh = tree->getCurScore();
+            cur_lh = tree->computeLikelihood();
 	}
+    tree->setCurScore(cur_lh);
 	if (verbose_mode >= VB_MED || write_info) 
 		cout << "1. Initial log-likelihood: " << cur_lh << endl;
 
