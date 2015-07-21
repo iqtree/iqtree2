@@ -98,8 +98,8 @@ double RateGammaInvar::optimizeParameters(double gradient_epsilon) {
 	if (!joint_optimize) {
 //		double lh = phylo_tree->computeLikelihood();
 		cur_optimize = 1;
-		double invar_lh;
-		invar_lh = RateInvar::optimizeParameters(gradient_epsilon);
+		double invar_lh = -DBL_MAX;
+        invar_lh = RateInvar::optimizeParameters(gradient_epsilon);
 //		assert(tree_lh >= lh-0.1);
 //		lh = tree_lh;
 		cur_optimize = 0;

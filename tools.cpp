@@ -618,7 +618,8 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.tree_gen = NONE;
     params.user_file = NULL;
     params.fai = false;
-    params.rr_ai = false;
+    params.testAlpha = false;
+    params.testAlphaEps = 100.0;
     params.exh_ai = false;
     params.alpha_invar_file = NULL;
     params.out_prefix = NULL;
@@ -2426,10 +2427,18 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.alpha_invar_file = argv[cnt];
 				continue;
 			}
-			if (strcmp(argv[cnt], "-rr_ai") == 0) {
-				params.rr_ai = true;
+
+			if (strcmp(argv[cnt], "--test-alpha") == 0) {
+				params.testAlpha = true;
 				continue;
 			}
+            if (strcmp(argv[cnt], "--test-alpha-eps") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use -test-alpha-eps <logl_eps>";
+                params.testAlphaEps = convert_double(argv[cnt]);
+                continue;
+            }
 
             if (strcmp(argv[cnt], "-fai") == 0) {
                 params.fai = true;

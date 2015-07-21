@@ -432,7 +432,13 @@ public:
 	/**
 	 *  Use random restart strategy for estimating alpha and p_invar
 	 */
-	bool rr_ai;
+	bool testAlpha;
+
+    /**
+     *  Logl epsilon to test for initial alpha and pinvar values.
+     *  This does not need to be small (default value = 100)
+     */
+    double testAlphaEps;
 
     /**
      *  Perform exhaustive search for parameter alpha and p_invar

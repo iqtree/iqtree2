@@ -768,7 +768,7 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info,
 	if (fixed_len || tree->params->num_param_iterations == 0)
 		cur_lh = tree->computeLikelihood();
 	else {
-        if (!Params::getInstance().rr_ai)
+        if (!Params::getInstance().testAlpha)
 		    cur_lh = tree->optimizeAllBranches(1);
         else
             cur_lh = tree->computeLikelihood();

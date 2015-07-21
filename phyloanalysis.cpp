@@ -1674,7 +1674,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 			exit(0);
 		}
 
-		if (params.rr_ai) { // DO RESTART ON ALPHA AND P_INVAR
+		if (params.testAlpha) { // DO RESTART ON ALPHA AND P_INVAR
 			double stime = getRealTime();
 			searchGAMMAInvarByRestarting(iqtree);
 			double etime = getRealTime();
@@ -1686,10 +1686,11 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 
     // Optimize model parameters and branch lengths using ML for the initial tree
 	iqtree.clearAllPartialLH();
+	if (params.testAlpha) {
+		params.testAlpha = false;
+	}
 	initTree = iqtree.optimizeModelParameters(true, initEpsilon);
-    if (params.rr_ai) {
-       params.rr_ai = false;
-    }
+
 
     /****************** NOW PERFORM MAXIMUM LIKELIHOOD TREE RECONSTRUCTION ******************/
 
@@ -1959,7 +1960,7 @@ void searchGAMMAInvarByRestarting(IQTree &iqtree) {
 		site_rates->setPInvar(initPInvar);
 		site_rates->computeRates();
 		iqtree.clearAllPartialLH();
-		iqtree.optimizeModelParameters(verbose_mode >= VB_MED, 5.0);
+		iqtree.optimizeModelParameters(verbose_mode >= VB_MED, Params::getInstance().testAlphaEps);
         double estAlpha = iqtree.getRate()->getGammaShape();
         double estPInv = iqtree.getRate()->getPInvar();
         double logl = iqtree.getCurScore();
@@ -1988,8 +1989,9 @@ void searchGAMMAInvarByRestarting(IQTree &iqtree) {
 	iqtree.clearAllPartialLH();
     iqtree.getModel()->writeInfo(cout);
     iqtree.getRate()->writeInfo(cout);
-    //iqtree.setCurScore(iqtree.computeLikelihood());
-    cout << "Best init. alpha: " << bestAlpha << " / init. pinv: " << bestPInvar << " / ";
+    iqtree.setCurScore(iqtree.computeLikelihood());
+    cout << endl;
+    cout << "Best initial alpha: " << bestAlpha << " / initial pinv: " << bestPInvar << " / ";
     cout << "Logl: " << iqtree.getCurScore() << endl;
 
     delete [] rates;
@@ -2019,20 +2021,20 @@ void exhaustiveSearchGAMMAInvar(Params &params, IQTree &iqtree) {
 	site_rates->setFixPInvar(true);
 	site_rates->setFixGammaShape(true);
 
-	for (double alpha = alphaMin; alpha < alphaMax; alpha = alpha + stepSize) {
-				for (double p_invar = p_invarMin; p_invar < p_invarMax; p_invar = p_invar + stepSize) {
-					site_rates->setGammaShape(alpha);
-					site_rates->setPInvar(p_invar);
-					site_rates->computeRates();
-					iqtree.clearAllPartialLH();
-					double lh = iqtree.getModelFactory()->optimizeParameters(params.fixed_branch_length, false, 0.001);
-					stringstream ss;
-					ss << fixed << setprecision(2) << alpha << " " << p_invar << " " << lh << " " << iqtree.treeLength();
-					//cout << ss.str() << endl;
-					results.push_back(ss.str());
-					iqtree.restoreBranchLengths(lenvec);
-				}
-			}
+    for (double alpha = alphaMin; alpha < alphaMax; alpha = alpha + stepSize) {
+        for (double p_invar = p_invarMin; p_invar < p_invarMax; p_invar = p_invar + stepSize) {
+            site_rates->setGammaShape(alpha);
+            site_rates->setPInvar(p_invar);
+            site_rates->computeRates();
+            iqtree.clearAllPartialLH();
+            double lh = iqtree.getModelFactory()->optimizeParameters(params.fixed_branch_length, false, 0.001);
+            stringstream ss;
+            ss << fixed << setprecision(2) << alpha << " " << p_invar << " " << lh << " " << iqtree.treeLength();
+            //cout << ss.str() << endl;
+            results.push_back(ss.str());
+            iqtree.restoreBranchLengths(lenvec);
+        }
+    }
 	string aiResultsFileName = string(params.out_prefix) + ".ai_results";
 	ofstream aiFileResults;
 	aiFileResults.open(aiResultsFileName.c_str());
