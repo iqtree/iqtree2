@@ -1279,12 +1279,12 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 		if (model_id >= 0) {
 			info.logl = model_info[model_id].logl;
             info.tree_len = model_info[model_id].tree_len;
-            info.tree = model_info[model_id].tree;
+//            info.tree = model_info[model_id].tree;
             prev_tree_string = model_info[model_id].tree;
         } else if (skip_model) {
             info.logl = model_info[prev_model_id].logl;
             info.tree_len = model_info[prev_model_id].tree_len;
-            info.tree = model_info[prev_model_id].tree;
+//            info.tree = model_info[prev_model_id].tree;
             prev_tree_string = model_info[prev_model_id].tree;
 //            cout << "Skipped " << info.name << endl;
 		} else {
@@ -1304,7 +1304,7 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
                 runTreeReconstruction(params, original_model, *iqtree, model_info);
                 info.logl = iqtree->computeLikelihood();
                 info.tree_len = iqtree->treeLength();
-                info.tree = iqtree->getTreeString();
+//                info.tree = iqtree->getTreeString();
                 params.model_name = original_model;
                 params.user_file = orig_user_tree;
                 tree = iqtree;
@@ -1319,9 +1319,10 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
                 prev_tree_string = "";
                 info.logl = tree->getModelFactory()->optimizeParameters(false, false, TOL_LIKELIHOOD_MODELTEST, TOL_GRADIENT_MODELTEST);
                 info.tree_len = tree->treeLength();
-                info.tree = tree->getTreeString();
+//                info.tree = tree->getTreeString();
             }
 			// print information to .model file
+            info.tree = tree->getTreeString();
             printModelFile(fmodel, params, tree, info, set_name);
 		}
 		computeInformationScores(info.logl, info.df, ssize, info.AIC_score, info.AICc_score, info.BIC_score);
