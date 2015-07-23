@@ -1686,9 +1686,6 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 
     // Optimize model parameters and branch lengths using ML for the initial tree
 	iqtree.clearAllPartialLH();
-	if (params.testAlpha) {
-		params.testAlpha = false;
-	}
 	initTree = iqtree.optimizeModelParameters(true, initEpsilon);
 
 
@@ -1808,7 +1805,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
         cout << "|                    FINALIZING TREE SEARCH                        |" << endl;
         cout << "--------------------------------------------------------------------" << endl;
         cout << "Performs final model parameters optimization" << endl;
-		string tree = iqtree.optimizeModelParameters(true);
+		string tree = iqtree.optimizeModelParameters(true, 0.001);
 		iqtree.candidateTrees.update(tree, iqtree.getCurScore(), true);
     }
 
@@ -1998,6 +1995,7 @@ void searchGAMMAInvarByRestarting(IQTree &iqtree) {
     delete [] state_freqs;
     delete [] bestRates;
     delete [] bestStateFreqs;
+	Params::getInstance().testAlpha = false;
 }
 
 // Test alpha fom 0.1 to 15 and p_invar from 0.1 to 0.99, stepsize = 0.01

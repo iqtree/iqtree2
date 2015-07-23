@@ -639,6 +639,7 @@ double ModelFactory::optimizeParametersOnly(double gradient_epsilon) {
     if (Params::getInstance().fai && dynamic_cast<RateGammaInvar*>(site_rate) != NULL
         && dynamic_cast<ModelGTR*>(model) != NULL) {
         cout << "Optimize substitutional and site rates with restart ..." << endl;
+        PhyloTree* tree = site_rate->phylo_tree;
         double initAlpha = 0.1;
         double maxInitAlpha = 1.0;
         double alphaStep = 0.1;
@@ -654,18 +655,19 @@ double ModelFactory::optimizeParametersOnly(double gradient_epsilon) {
         double *initStateFreqs = new double[numStates];
         model->getStateFrequency(initStateFreqs);
         double *bestStateFreqs =  new double[numStates];
+        DoubleVector initBranchLengths;
+        DoubleVector bestBranchLengths;
+        tree->saveBranchLengths(initBranchLengths);
 
         while (initAlpha <= maxInitAlpha) {
-            initGTRGammaIParameters(site_rate, model, initAlpha, initPInvar, initRates, initStateFreqs);
+            tree->restoreBranchLengths(initBranchLengths);
+            double initLogl = initGTRGammaIParameters(site_rate, model, initAlpha, initPInvar, initRates, initStateFreqs);
             if (joint_optimize) {
                 logl = optimizeAllParameters(gradient_epsilon);
             } else {
-                double model_lh = model->optimizeParameters(gradient_epsilon);
-                double rate_lh = site_rate->optimizeParameters(gradient_epsilon);
-                if (rate_lh == 0.0)
-                    logl = model_lh;
-                else
-                    logl = rate_lh;
+                model->optimizeParameters(gradient_epsilon);
+                site_rate->optimizeParameters(gradient_epsilon);
+                logl = tree->optimizeAllBranches(1);
             }
             RateGammaInvar* rateGammaInvar = dynamic_cast<RateGammaInvar*>(site_rate);
             ModelGTR* modelGTR = dynamic_cast<ModelGTR*>(model);
@@ -677,15 +679,17 @@ double ModelFactory::optimizeParametersOnly(double gradient_epsilon) {
                 bestPInvar = curPInvar;
                 modelGTR->getRateMatrix(bestRates);
                 modelGTR->getStateFrequency(bestStateFreqs);
+                tree->saveBranchLengths(bestBranchLengths);
             }
             if (verbose_mode >= VB_MED) {
-                cout << "Init. alpha = " << initAlpha <<
-                " / Est. alpha = " << curAlpha
-                << "/ Est. pinv = " << curPInvar << " / logl = " << logl << endl;
+                cout << "Init. alpha = " << initAlpha << " / Init. PInvar = " << initPInvar << " / Init. Logl = " <<
+                initLogl << " / Est. alpha = " << curAlpha
+                << "/ Est. pinv = " << curPInvar << " / Final Logl = " << logl << endl;
             }
             initAlpha = initAlpha + alphaStep;
         }
         cout << "Best alpha = " << bestAlpha << " / best p_invar = " << bestPInvar << endl;
+        tree->restoreBranchLengths(bestBranchLengths);
         logl = initGTRGammaIParameters(site_rate, model, bestAlpha, bestPInvar, bestRates, bestStateFreqs);
         delete [] initRates;
         delete [] bestRates;
@@ -768,7 +772,7 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info,
 	if (fixed_len || tree->params->num_param_iterations == 0)
 		cur_lh = tree->computeLikelihood();
 	else {
-        if (!Params::getInstance().testAlpha)
+        if (!Params::getInstance().testAlpha && !Params::getInstance().fai)
 		    cur_lh = tree->optimizeAllBranches(1);
         else
             cur_lh = tree->computeLikelihood();

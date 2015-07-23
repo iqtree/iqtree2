@@ -103,7 +103,12 @@ double RateGammaInvar::optimizeParameters(double gradient_epsilon) {
 //		assert(tree_lh >= lh-0.1);
 //		lh = tree_lh;
 		cur_optimize = 0;
-		double gamma_lh = RateGamma::optimizeParameters(gradient_epsilon);
+		double gamma_lh; RateGamma::optimizeParameters(gradient_epsilon);
+		if (Params::getInstance().testAlpha) {
+			gamma_lh = RateGamma::optimizeParameters(gradient_epsilon, 0.05, 10);
+		} else {
+            gamma_lh = RateGamma::optimizeParameters(gradient_epsilon);
+        }
 		assert(gamma_lh >= invar_lh - 0.1);
 		phylo_tree->clearAllPartialLH();
 		return gamma_lh;
