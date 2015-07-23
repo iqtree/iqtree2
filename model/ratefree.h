@@ -79,6 +79,10 @@ public:
     */
 	virtual void setNCategory(int ncat);
 
+    /**
+        initialize rates and prop from rate model with #category less by 1
+    */
+    void setRateAndProp(RateFree *input);
 
 protected:
 
