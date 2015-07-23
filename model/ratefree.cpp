@@ -79,6 +79,24 @@ void RateFree::setNCategory(int ncat) {
 	full_name += " with " + convertIntToString(ncategory) + " categories";
 }
 
+void RateFree::setRateAndProp(RateFree *input) {
+    assert(input->ncategory == ncategory-1);
+    int k = 0, i;
+    memcpy(rates, input->rates, (ncategory-1)*sizeof(double));
+    memcpy(prop, input->prop, (ncategory-1)*sizeof(double));
+    // get the category k with largest proportion
+    for (i = 1; i < ncategory; i++)
+        if (prop[i] > prop[k]) k = i;
+    // copy half of k to the last category
+    rates[ncategory-1] = rates[k];
+    prop[ncategory-1] = prop[k] / 2;
+    prop[k] = prop[k] / 2;
+    // sort the rates in increasing order
+    if (sorted_rates)
+        quicksort(rates, 0, ncategory-1, prop);
+    phylo_tree->clearAllPartialLH();
+}
+
 
 RateFree::~RateFree() {
 	if (prop) delete [] prop;

@@ -743,6 +743,13 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 					<< "-----------------------" << endl << endl;
 
 			tree.setRootNode(params.root);
+            
+            if (params.gbo_replicates) {
+                if (tree.boot_consense_logl > tree.candidateTrees.getBestScore()) {
+                    out << endl << "**NOTE**: Consensus tree has higher likelihood than ML tree found! Please use consensus tree below." << endl;
+                }
+            }
+
 			reportTree(out, params, tree, tree.candidateTrees.getBestScore(), tree.logl_variance, true);
 
 			if (tree.isSuperTree() && verbose_mode >= VB_MED) {
@@ -784,7 +791,18 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 			out << "CONSENSUS TREE" << endl << "--------------" << endl << endl;
 			out << "Consensus tree is constructed from "
 					<< (params.num_bootstrap_samples ? params.num_bootstrap_samples : params.gbo_replicates)
-					<< " bootstrap trees" << endl << "Branches with bootstrap support >"
+					<< " bootstrap trees";
+            if (params.gbo_replicates) {
+                out << endl << "Log-likelihood of consensus tree: " << tree.boot_consense_logl;
+            }
+			string con_file = params.out_prefix;
+			con_file += ".contree";
+
+            IntVector rfdist;
+            tree.computeRFDist(con_file.c_str(), rfdist);
+            out << endl << "Robinson-Foulds distance between ML tree and consensus tree: " << rfdist[0] << endl;
+            
+            out << endl << "Branches with bootstrap support >"
 					<< floor(params.split_threshold * 1000) / 10 << "% are kept";
 			if (params.split_threshold == 0.0)
 				out << " (extended consensus)";
@@ -796,8 +814,6 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 			out << endl << "Branch lengths are optimized by maximum likelihood on original alignment" << endl;
 			out << "Numbers in parentheses are bootstrap supports (%)" << endl << endl;
 
-			string con_file = params.out_prefix;
-			con_file += ".contree";
 			bool rooted = false;
 			MTree contree;
 			contree.readTree(con_file.c_str(), rooted);
@@ -2327,8 +2343,8 @@ void runPhyloAnalysis(Params &params) {
 //	        	tree->fixNegativeBranch(true);
 //	    	}
 
-			double conScore = tree->optimizeAllBranches();
-			cout << "Log-likelihood of consensus tree: " << conScore << endl;
+			tree->boot_consense_logl = tree->optimizeAllBranches();
+			cout << "Log-likelihood of consensus tree: " << tree->boot_consense_logl << endl;
 		    tree->setRootNode(params.root);
 		    tree->insertTaxa(tree->removed_seqs, tree->twin_seqs);
 			tree->printTree(splitsfile.c_str(), WT_BR_LEN | WT_BR_LEN_FIXED_WIDTH | WT_SORT_TAXA | WT_NEWLINE);
