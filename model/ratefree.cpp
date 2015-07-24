@@ -9,8 +9,8 @@
 #include "ratefree.h"
 
 
-const double MIN_FREE_RATE = 0.0001;
-const double MAX_FREE_RATE = 0.9999;
+const double MIN_FREE_RATE = 0.001;
+const double MAX_FREE_RATE = 1000.0;
 const double TOL_FREE_RATE = 0.0001;
 
 // Modified by Thomas on 13 May 2015
@@ -82,15 +82,26 @@ void RateFree::setNCategory(int ncat) {
 void RateFree::setRateAndProp(RateFree *input) {
     assert(input->ncategory == ncategory-1);
     int k = 0, i;
-    memcpy(rates, input->rates, (ncategory-1)*sizeof(double));
-    memcpy(prop, input->prop, (ncategory-1)*sizeof(double));
     // get the category k with largest proportion
-    for (i = 1; i < ncategory; i++)
-        if (prop[i] > prop[k]) k = i;
+    for (i = 1; i < ncategory-1; i++)
+        if (input->prop[i] > input->prop[k]) k = i;
+
+    memcpy(rates, input->rates, (k+1)*sizeof(double));
+    memcpy(prop, input->prop, (k+1)*sizeof(double));
+    rates[k+1] = 1.414*rates[k]; // sqrt(2)
+    prop[k+1] = prop[k]/2;
+    rates[k] = 0.586*rates[k];
+    prop[k] = prop[k]/2;
+    if (k < ncategory-2) {
+        memcpy(&rates[k+2], &input->rates[k+1], (ncategory-2-k)*sizeof(double));
+        memcpy(&prop[k+2], &input->prop[k+1], (ncategory-2-k)*sizeof(double));
+    }
     // copy half of k to the last category
-    rates[ncategory-1] = rates[k];
-    prop[ncategory-1] = prop[k] / 2;
-    prop[k] = prop[k] / 2;
+
+
+//    rates[ncategory-1] = rates[k];
+//    prop[ncategory-1] = prop[k] / 2;
+//    prop[k] = prop[k] / 2;
     // sort the rates in increasing order
     if (sorted_rates)
         quicksort(rates, 0, ncategory-1, prop);

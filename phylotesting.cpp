@@ -1325,10 +1325,11 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
                     size_t prev_pos_r = model_info[prev_model_id].name.find("+R");
                     size_t pos_r = info.name.find("+R");
                     if ( prev_pos_r != string::npos &&  pos_r != string::npos && 
-                        model_info[prev_model_id].name.substr(0,prev_pos_r) == info.name.substr(0, pos_r) &&
+                        model_info[prev_model_id].name.substr(0,prev_pos_r) == info.name.substr(0, pos_r) && 
                         info.logl < model_info[prev_model_id].logl) 
                     {
-//                        cout << "redo" << endl;
+                        if (verbose_mode >= VB_MED)
+                            cout << "reoptimizing from previous parameters of +R...." << endl;
                         dynamic_cast<RateFree*>(rate_class[2+ncat])->setRateAndProp(dynamic_cast<RateFree*>(rate_class[1+ncat]));
                         info.logl = tree->getModelFactory()->optimizeParameters(false, false, TOL_LIKELIHOOD_MODELTEST, TOL_GRADIENT_MODELTEST);
                         info.tree_len = tree->treeLength();                        
