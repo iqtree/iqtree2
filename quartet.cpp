@@ -34,6 +34,8 @@ void PhyloTree::computeQuartetLikelihoods(vector<QuartetInfo> &quartet_info) {
         } while (quartet_info[qid].seqID[3] == quartet_info[qid].seqID[0] || quartet_info[qid].seqID[3] == quartet_info[qid].seqID[1]
             || quartet_info[qid].seqID[3] == quartet_info[qid].seqID[2]);
             
+        sort(quartet_info[qid].seqID, quartet_info[qid].seqID+4);
+            
         // initialize sub-alignment and sub-tree
         Alignment *quartet_aln;
         PhyloTree *quartet_tree;
@@ -93,9 +95,20 @@ void PhyloTree::doLikelihoodMapping() {
     // TODO For Heiko: Please add code here
     vector<QuartetInfo> quartet_info;
     computeQuartetLikelihoods(quartet_info);
-    if (verbose_mode >= VB_MED) {
-        for (int qid = 0; qid < params->num_quartets; qid++)
-            cout << qid << "  " << quartet_info[qid].logl[0] << "  " << quartet_info[qid].logl[1] << "  " 
-                << quartet_info[qid].logl[2] << endl;
-        }
+    
+    // print quartet file
+    string filename = (string)params->out_prefix + ".quartetlh";
+    ofstream out;
+    out.open(filename.c_str());
+    for (int qid = 0; qid < params->num_quartets; qid++) {
+        out << "(" << quartet_info[qid].seqID[0] << ","
+            << quartet_info[qid].seqID[1] << ","
+            << quartet_info[qid].seqID[2] << ","
+            << quartet_info[qid].seqID[3] << ")"
+            << "   " << quartet_info[qid].logl[0] 
+            << "   " << quartet_info[qid].logl[1] 
+            << "   " << quartet_info[qid].logl[2] << endl;
+    }
+    out.close();
+    
 }

@@ -2708,8 +2708,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (cnt >= argc)
 					throw "Use -lm <likelihood_mapping_num_quartets>";
 				params.num_quartets = convert_int(argv[cnt]);
-                if (params.num_quartets < 1000)
-                    throw "Number of quartets must be >= 1000";
+                if (params.num_quartets < 1)
+                    throw "Number of quartets must be >= 1";
 				continue;
 			}
             
