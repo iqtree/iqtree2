@@ -870,6 +870,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.freq_const_patterns = NULL;
     params.no_rescale_gamma_invar = false;
     params.compute_seq_identity_along_tree = false;
+    params.num_quartets = 0;
 
 	if (params.nni5) {
 	    params.nni_type = NNI5;
@@ -2701,6 +2702,17 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.stop_condition = SC_FIXED_ITERATION;
 				continue;
 			}
+            
+			if (strcmp(argv[cnt], "-lm") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -lm <likelihood_mapping_num_quartets>";
+				params.num_quartets = convert_int(argv[cnt]);
+                if (params.num_quartets < 1000)
+                    throw "Number of quartets must be >= 1000";
+				continue;
+			}
+            
             
 			if (argv[cnt][0] == '-') {
                 string err = "Invalid \"";

@@ -1626,6 +1626,11 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
     /*********************** INITIAL MODEL OPTIMIZATION *****************/
 
     iqtree.initializeModel(params);
+    
+    if (params.num_quartets) {
+        cout << "Performing likelihood mapping with " << params.num_quartets << " quartets...";
+        iqtree.doLikelihoodMapping();
+    }
 
     // UpperBounds analysis. Here, to analyse the initial tree without any tree search or optimization
     if (params.upper_bound) {

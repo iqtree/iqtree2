@@ -1022,7 +1022,7 @@ public:
 
     /**
             inherited from Optimization class, to return to likelihood of the tree
-            when the current branch length is set to value
+            when the current branceh length is set to value
             @param value current branch length
             @return negative of likelihood (for minimization)
      */
@@ -1346,7 +1346,10 @@ public:
         @param num_quartets number of quartets
         @param quartet_info (OUT) vector of quartet information
     */
-    void computeQuartetLikelihoods(int num_quartets, vector<QuartetInfo> &quartet_info);
+    void computeQuartetLikelihoods(vector<QuartetInfo> &quartet_info);
+
+    /** main function that performs likelihood mapping analysis (Strimmer & von Haeseler 1997) */
+    void doLikelihoodMapping();
 
     /****************************************************************************
             Collapse stable (highly supported) clades by one representative

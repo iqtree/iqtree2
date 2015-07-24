@@ -1605,6 +1605,9 @@ struct Params {
 
     /** true to compute sequence identity along tree */
     bool compute_seq_identity_along_tree;
+    
+    /** number of quartets for likelihood mapping */
+    int num_quartets;
 };
 
 /**
