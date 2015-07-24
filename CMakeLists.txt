@@ -378,6 +378,7 @@ phylotreesse.cpp
 phylotreepars.cpp
 #phylotreeavx.cpp
 pruning.cpp
+quartet.cpp
 split.cpp
 splitgraph.cpp
 splitset.cpp

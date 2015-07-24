@@ -240,6 +240,11 @@ struct LeafFreq {
     }
 };
 
+struct QuartetInfo {
+    int seqID[4];
+    double logl[3]; // for {0,1}|{2,3}  {0,2}|{1,3}  {0,3}|{1,4}
+};
+
 /**
 Phylogenetic Tree class
 
@@ -1332,6 +1337,16 @@ public:
     int testAllBranches(int threshold,
             double best_score, double *pattern_lh, int reps, int lbp_reps,
             PhyloNode *node = NULL, PhyloNode *dad = NULL);
+
+    /****************************************************************************
+            Quartet functions
+     ****************************************************************************/
+
+    /** generate a bunch of quartets and compute likelihood for 3 quartet trees for each replicate
+        @param num_quartets number of quartets
+        @param quartet_info (OUT) vector of quartet information
+    */
+    void computeQuartetLikelihoods(int num_quartets, vector<QuartetInfo> &quartet_info);
 
     /****************************************************************************
             Collapse stable (highly supported) clades by one representative
