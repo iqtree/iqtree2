@@ -20,6 +20,9 @@ void PhyloTree::computeQuartetLikelihoods(vector<QuartetInfo> &quartet_info) {
     
     int qc[] = {0, 1, 2, 3,  0, 2, 1, 3,  0, 3, 1, 2};
     
+#ifdef _OPENMP
+    #pragma for parallel
+#endif
     for (int qid = 0; qid < params->num_quartets; qid++) {
         // uniformly draw 4 taxa
         quartet_info[qid].seqID[0] = random_int(leafNum);
@@ -77,9 +80,6 @@ void PhyloTree::computeQuartetLikelihoods(vector<QuartetInfo> &quartet_info) {
             // optimize branch lengths with logl_epsilon=0.1 accuracy
             quartet_info[qid].logl[k] = quartet_tree->optimizeAllBranches(10, 0.1);
         }
-//        cout << qid << "  " << quartet_info[qid].logl[0] << "  " << quartet_info[qid].logl[1] << "  " 
-//            << quartet_info[qid].logl[2] << endl;
-//
         // reset model & rate so that they are not deleted
         quartet_tree->setModel(NULL);
         quartet_tree->setModelFactory(NULL);

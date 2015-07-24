@@ -1627,11 +1627,6 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 
     iqtree.initializeModel(params);
     
-    if (params.num_quartets) {
-        cout << "Performing likelihood mapping with " << params.num_quartets << " quartets...";
-        iqtree.doLikelihoodMapping();
-    }
-
     // UpperBounds analysis. Here, to analyse the initial tree without any tree search or optimization
     if (params.upper_bound) {
     	iqtree.setCurScore(iqtree.computeLikelihood());
@@ -1706,6 +1701,14 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
     // Optimize model parameters and branch lengths using ML for the initial tree
 	iqtree.clearAllPartialLH();
 	initTree = iqtree.optimizeModelParameters(true, initEpsilon);
+
+    if (params.num_quartets) {
+        cout << "Performing likelihood mapping with " << params.num_quartets << " quartets..." << endl;
+        double lkmap_time = getRealTime();
+        iqtree.doLikelihoodMapping();
+        cout << getRealTime()-lkmap_time << " seconds" << endl;
+    }
+
 
     /****************** NOW PERFORM MAXIMUM LIKELIHOOD TREE RECONSTRUCTION ******************/
 
