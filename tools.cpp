@@ -2435,8 +2435,9 @@ void parseArg(int argc, char *argv[], Params &params) {
             if (strcmp(argv[cnt], "--test-alpha-eps") == 0) {
                 cnt++;
                 if (cnt >= argc)
-                    throw "Use -test-alpha-eps <logl_eps>";
+                    throw "Use --test-alpha-eps <logl_eps>";
                 params.testAlphaEps = convert_double(argv[cnt]);
+                params.testAlpha = true;
                 continue;
             }
 
