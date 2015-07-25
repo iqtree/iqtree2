@@ -21,7 +21,7 @@ void PhyloTree::computeQuartetLikelihoods(vector<QuartetInfo> &quartet_info) {
     int qc[] = {0, 1, 2, 3,  0, 2, 1, 3,  0, 3, 1, 2};
     
 #ifdef _OPENMP
-    #pragma for parallel
+    #pragma omp parallel for schedule(guided)
 #endif
     for (int qid = 0; qid < params->num_quartets; qid++) {
         // uniformly draw 4 taxa
