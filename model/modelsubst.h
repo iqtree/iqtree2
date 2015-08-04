@@ -221,7 +221,7 @@ public:
 		@param epsilon accuracy of the parameters during optimization
 		@return the best likelihood 
 	*/
-	virtual double optimizeParameters(double epsilon) { return 0.0; }
+	virtual double optimizeParameters(double gradient_epsilon) { return 0.0; }
 
 	/**
 	 * @return TRUE if parameters are at the boundary that may cause numerical unstability

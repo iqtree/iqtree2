@@ -78,6 +78,12 @@ public:
      */
     void clearForwardPartialLh(Node *dad);
 
+    /**
+        if partial_lh is NULL, reorient partial_lh (LM_PER_NODE technique)
+        @param dad dad of this neighbor
+    */
+    void reorientPartialLh(Node *dad);
+
 	/**
 	* For Upper Bounds analysis: get partial likelihood and lh scale factor
 	*/
@@ -180,6 +186,9 @@ public:
         tell that all partial likelihood vectors (in reverse direction) below this node are not computed
      */
     void clearReversePartialLh(PhyloNode *dad);
+
+    void computeReversePartialLh(PhyloNode *dad);
+
 };
 
 

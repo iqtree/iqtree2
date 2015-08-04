@@ -115,6 +115,24 @@ void PhyloTree::computePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_branch, Phy
 	if ((right->partial_lh_computed & 1) == 0)
 		computePartialLikelihoodEigenSIMD<VectorClass, VCSIZE, nstates>(right, node);
 
+    if (params->lh_mem_save == LM_PER_NODE && !dad_branch->partial_lh) {
+        // re-orient partial_lh
+        bool done = false;
+        FOR_NEIGHBOR_IT(node, dad, it2) {
+            PhyloNeighbor *backnei = ((PhyloNeighbor*)(*it2)->node->findNeighbor(node));
+            if (backnei->partial_lh) {
+                dad_branch->partial_lh = backnei->partial_lh;
+                dad_branch->scale_num = backnei->scale_num;
+                backnei->partial_lh = NULL;
+                backnei->scale_num = NULL;
+                backnei->partial_lh_computed &= ~1; // clear bit
+                done = true;
+                break;
+            }
+        }
+        assert(done && "partial_lh is not re-oriented");
+    }
+
 	double *evec = model->getEigenvectors();
 	double *inv_evec = model->getInverseEigenvectors();
 
@@ -482,6 +500,7 @@ void PhyloTree::computeLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch, PhyloN
     size_t orig_nptn = aln->size();
     size_t nptn = aln->size()+model_factory->unobserved_ptns.size();
     size_t maxptn = ((nptn+VCSIZE-1)/VCSIZE)*VCSIZE;
+    maxptn = max(maxptn, aln->size()+((model_factory->unobserved_ptns.size()+VCSIZE-1)/VCSIZE)*VCSIZE);
     double *eval = model->getEigenvalues();
     assert(eval);
 
@@ -616,6 +635,12 @@ void PhyloTree::computeLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch, PhyloN
 #endif
 	df = horizontal_add(df_final);
 	ddf = horizontal_add(ddf_final);
+    if (isnan(df) || isinf(df)) {
+        df = 0.0;
+        ddf = 0.0;
+//        outWarning("Numerical instability (some site-likelihood = 0)");
+    }
+
 
 //	assert(isnormal(tree_lh));
 	if (orig_nptn < nptn) {
@@ -652,7 +677,7 @@ void PhyloTree::computeLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch, PhyloN
 			theta += block*VCSIZE;
 
 			// ptn_invar[ptn] is not aligned
-			lh_ptn = horizontal_add(vc_ptn) + VectorClass().load_a(&ptn_invar[ptn]);
+			lh_ptn = horizontal_add(vc_ptn) + VectorClass().load(&ptn_invar[ptn]);
 
 		}
 		switch ((nptn-orig_nptn) % VCSIZE) {
@@ -687,7 +712,7 @@ void PhyloTree::computeLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch, PhyloN
     	df += nsites * df_frac;
     	ddf += nsites *(ddf_frac + df_frac*df_frac);
 	}
-
+    assert(!isnan(df));
     aligned_free(vc_val2);
     aligned_free(vc_val1);
     aligned_free(vc_val0);
@@ -721,6 +746,7 @@ double PhyloTree::computeLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, Ph
     size_t orig_nptn = aln->size();
     size_t nptn = aln->size()+model_factory->unobserved_ptns.size();
     size_t maxptn = ((nptn+VCSIZE-1)/VCSIZE)*VCSIZE;
+    maxptn = max(maxptn, aln->size()+((model_factory->unobserved_ptns.size()+VCSIZE-1)/VCSIZE)*VCSIZE);
     double *eval = model->getEigenvalues();
     assert(eval);
 
@@ -817,14 +843,15 @@ double PhyloTree::computeLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, Ph
                 	cout << " " << j+1;
                 }
             }
-            tree_lh = 0.0;
+            tree_lh = node_branch->lh_scale_factor + dad_branch->lh_scale_factor;
             for (ptn = 0; ptn < orig_nptn; ptn++) {
                 if (isnan(_pattern_lh[ptn]) || isinf(_pattern_lh[ptn])) {
                 	_pattern_lh[ptn] = LOG_SCALING_THRESHOLD*4; // log(2^(-1024))
                 }
             	tree_lh += _pattern_lh[ptn] * ptn_freq[ptn];
             }
-            cout << endl << "         Tree log-likelihood is set to " << tree_lh << endl;
+            cout << endl;
+//            cout << "WARNING: Tree log-likelihood is set to " << tree_lh << endl;
         }
 
 		// ascertainment bias correction
@@ -839,7 +866,7 @@ double PhyloTree::computeLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, Ph
 				for (j = 0; j < VCSIZE; j++) {
 					double *lh_dad = lh_states_dad[ptn+j];
 					for (i = 0; i < nstates/VCSIZE; i++) {
-						vc_tip_partial_lh[j*(nstates/VCSIZE)+i].load_a(&lh_dad[i*VCSIZE]);
+						vc_tip_partial_lh[j*(nstates/VCSIZE)+i].load(&lh_dad[i*VCSIZE]); // lh_dad is not aligned!
 					}
 					vc_partial_lh_dad[j].load_a(&partial_lh_dad[j*block]);
 					vc_ptn[j] = vc_val[0] * vc_tip_partial_lh[j*(nstates/VCSIZE)] * vc_partial_lh_dad[j];
@@ -853,7 +880,7 @@ double PhyloTree::computeLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, Ph
 								vc_partial_lh_dad[j], vc_ptn[j]);
 					}
 				// ptn_invar[ptn] is not aligned
-				lh_ptn = horizontal_add(vc_ptn) + VectorClass().load_a(&ptn_invar[ptn]);
+				lh_ptn = horizontal_add(vc_ptn) + VectorClass().load(&ptn_invar[ptn]);
 			}
 			switch ((nptn-orig_nptn)%VCSIZE) {
 			case 0: prob_const = horizontal_add(lh_final+lh_ptn); break;
@@ -943,7 +970,7 @@ double PhyloTree::computeLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, Ph
 				}
 
 				// ptn_invar[ptn] is not aligned
-				lh_ptn = horizontal_add(vc_ptn) + VectorClass().load_a(&ptn_invar[ptn]);
+				lh_ptn = horizontal_add(vc_ptn) + VectorClass().load(&ptn_invar[ptn]);
 				partial_lh_node += block*VCSIZE;
 				partial_lh_dad += block*VCSIZE;
 			}
@@ -1047,8 +1074,30 @@ double PhyloTree::computeLikelihoodFromBufferEigenSIMD() {
 }
 #endif
 	tree_lh += horizontal_add(lh_final);
+    if (isnan(tree_lh) || isinf(tree_lh)) {
+        cout << "WARNING: Numerical underflow caused by alignment sites";
+        i = aln->getNSite();
+        for (j = 0, c = 0; j < i; j++) {
+            ptn = aln->getPatternID(j);
+            if (isnan(_pattern_lh[ptn]) || isinf(_pattern_lh[ptn])) {
+                cout << " " << j+1;
+                c++;
+                if (c >= 10) {
+                    cout << " ...";
+                    break;
+                }
+            }
+        }
+        cout << endl;
+        tree_lh = current_it->lh_scale_factor + current_it_back->lh_scale_factor;
+        for (ptn = 0; ptn < orig_nptn; ptn++) {
+            if (isnan(_pattern_lh[ptn]) || isinf(_pattern_lh[ptn])) {
+                _pattern_lh[ptn] = LOG_SCALING_THRESHOLD*4; // log(2^(-1024))
+            }
+            tree_lh += _pattern_lh[ptn] * ptn_freq[ptn];
+        }
+    }
 
-	assert(isnormal(tree_lh));
 	if (orig_nptn < nptn) {
 		// ascertaiment bias correction
 		lh_final = 0.0;
@@ -1071,7 +1120,7 @@ double PhyloTree::computeLikelihoodFromBufferEigenSIMD() {
 			theta += block*VCSIZE;
 
 			// ptn_invar[ptn] is not aligned
-			lh_ptn = horizontal_add(vc_ptn) + VectorClass().load_a(&ptn_invar[ptn]);
+			lh_ptn = horizontal_add(vc_ptn) + VectorClass().load(&ptn_invar[ptn]);
 
 		}
 		switch ((nptn-orig_nptn) % VCSIZE) {
@@ -1100,6 +1149,386 @@ double PhyloTree::computeLikelihoodFromBufferEigenSIMD() {
     aligned_free(vc_val0);
 
     return tree_lh;
+}
+
+/****************************************************************************
+        Highly optimized Parsimony function
+ ****************************************************************************/
+
+#ifdef _MSC_VER
+	#define MEM_ALIGN_BEGIN __declspec(align(32))
+	#define MEM_ALIGN_END
+#else
+	#define MEM_ALIGN_BEGIN
+	#define MEM_ALIGN_END __attribute__((aligned(32)))
+#endif
+
+inline UINT fast_popcount(Vec4ui &x) {
+    MEM_ALIGN_BEGIN UINT vec[4] MEM_ALIGN_END;
+    x.store_a(vec);
+    return popcount_lauradoux(vec, 4);
+}
+
+inline UINT fast_popcount(Vec8ui &x) {
+#if defined (__GNUC__) || defined(__clang__)
+    MEM_ALIGN_BEGIN uint64_t vec[4] MEM_ALIGN_END;
+    MEM_ALIGN_BEGIN uint64_t res[4] MEM_ALIGN_END;
+    Vec8ui y;
+    x.store_a(vec);
+    __asm("popcntq %1, %0" : "=r"(res[0]) : "r"(vec[0]) : );
+    __asm("popcntq %1, %0" : "=r"(res[1]) : "r"(vec[1]) : );
+    __asm("popcntq %1, %0" : "=r"(res[2]) : "r"(vec[2]) : );
+    __asm("popcntq %1, %0" : "=r"(res[3]) : "r"(vec[3]) : );
+    y.load_a(res);
+    return horizontal_add(y);
+#else
+    MEM_ALIGN_BEGIN uint64_t vec[4] MEM_ALIGN_END;
+    MEM_ALIGN_BEGIN int res[4] MEM_ALIGN_END;
+    Vec4ui y;
+    x.store_a(vec);
+    res[0] = _mm_popcnt_u64(vec[0]);
+    res[1] = _mm_popcnt_u64(vec[1]);
+    res[2] = _mm_popcnt_u64(vec[2]);
+    res[3] = _mm_popcnt_u64(vec[3]);
+    y.load_a(res);
+    return horizontal_add(y);
+#endif
+
+}
+
+
+inline void horizontal_popcount(Vec4ui &x) {
+    MEM_ALIGN_BEGIN UINT vec[4] MEM_ALIGN_END;
+    x.store_a(vec);
+    vec[0] = vml_popcnt(vec[0]);
+    vec[1] = vml_popcnt(vec[1]);
+    vec[2] = vml_popcnt(vec[2]);
+    vec[3] = vml_popcnt(vec[3]);
+    x.load_a(vec);
+}
+
+inline void horizontal_popcount(Vec8ui &x) {
+    MEM_ALIGN_BEGIN UINT vec[8] MEM_ALIGN_END;
+    x.store_a(vec);
+    vec[0] = vml_popcnt(vec[0]);
+    vec[1] = vml_popcnt(vec[1]);
+    vec[2] = vml_popcnt(vec[2]);
+    vec[3] = vml_popcnt(vec[3]);
+    vec[4] = vml_popcnt(vec[4]);
+    vec[5] = vml_popcnt(vec[5]);
+    vec[6] = vml_popcnt(vec[6]);
+    vec[7] = vml_popcnt(vec[7]);
+    x.load_a(vec);
+}
+
+template<class VectorClass>
+void PhyloTree::computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad) {
+    if (dad_branch->partial_lh_computed & 2)
+        return;
+    Node *node = dad_branch->node;
+    int nstates = aln->num_states;
+    int site;
+    const int VCSIZE = VectorClass::size();
+    const int NUM_BITS = VectorClass::size() * UINT_BITS;
+
+    dad_branch->partial_lh_computed |= 2;
+
+    if (node->isLeaf() && dad) {
+        // external node
+        if (aln->ordered_pattern.empty())
+            aln->orderPatternByNumChars();
+        int leafid = node->id;
+        int pars_size = getBitsBlockSize();
+        memset(dad_branch->partial_pars, 0, pars_size*sizeof(UINT));
+//        int ptn;
+//        int nptn = aln->size();
+    	int ambi_aa[] = {2, 3, 5, 6, 9, 10}; // {4+8, 32+64, 512+1024};
+//        int max_sites = ((aln->num_informative_sites+UINT_BITS-1)/UINT_BITS)*UINT_BITS;
+//        UINT *x = dad_branch->partial_pars - (nstates*VCSIZE);
+        UINT *x = dad_branch->partial_pars;
+        Alignment::iterator pat;
+    	switch (aln->seq_type) {
+    	case SEQ_DNA:
+            for (pat = aln->ordered_pattern.begin(), site = 0; pat != aln->ordered_pattern.end(); pat++) {
+            	int state = pat->at(leafid);
+                int freq = pat->frequency;
+                if (state < 4) {
+                    for (int j = 0; j < freq; j++, site++) {
+                        if (site == NUM_BITS) {
+                            x += 4*VCSIZE;
+                            site = 0;
+                        }
+                        x[state*VCSIZE + site/UINT_BITS] |= (1 << (site % UINT_BITS));
+                    }
+                } else if (state == aln->STATE_UNKNOWN) {
+                    for (int j = 0; j < freq; j++, site++) {
+                        if (site == NUM_BITS) {
+                            x += 4*VCSIZE;
+                            site = 0;
+                        }
+                        UINT bit1 = (1 << (site%UINT_BITS));
+                        UINT *p = x+(site/UINT_BITS);
+                        p[0] |= bit1;
+                        p[VCSIZE] |= bit1;
+                        p[2*VCSIZE] |= bit1;
+                        p[3*VCSIZE] |= bit1;
+                    }
+                } else {
+                	state -= 3;
+                    for (int j = 0; j < freq; j++, site++) {
+                        if (site == NUM_BITS) {
+                            x += 4*VCSIZE;
+                            site = 0;
+                        }
+                        UINT *p = x + ((site/UINT_BITS));
+                        
+                        UINT bit1 = (1 << (site%UINT_BITS));
+                        for (int i = 0; i < 4; i++)
+                            if (state & (1<<i))
+                                p[i*VCSIZE] |= bit1;
+                    }
+                }
+            }
+    		break;
+    	case SEQ_PROTEIN:
+            for (pat = aln->ordered_pattern.begin(), site = 0; pat != aln->ordered_pattern.end(); pat++) {
+            	int state = pat->at(leafid);
+                int freq = pat->frequency;
+                if (state < 20) {
+                    for (int j = 0; j < freq; j++, site++) {
+                        if (site == NUM_BITS) {
+                            x += 20*VCSIZE;
+                            site = 0;
+                        }
+                        x[state*VCSIZE + site/UINT_BITS] |= (1 << (site % UINT_BITS));
+                    }
+                } else if (state == aln->STATE_UNKNOWN) {
+                    for (int j = 0; j < freq; j++, site++) {
+                        if (site == NUM_BITS) {
+                            x += 20*VCSIZE;
+                            site = 0;
+                        }
+                        UINT bit1 = (1 << (site%UINT_BITS));
+                        UINT *p = x+(site/UINT_BITS);
+                        for (int i = 0; i < 20; i++)
+                            p[i*VCSIZE] |= bit1;
+                    }
+                } else {
+                	assert(state < 23);
+            		state = (state-20)*2;
+                    for (int j = 0; j < freq; j++, site++) {
+                        if (site == NUM_BITS) {
+                            x += 20*VCSIZE;
+                            site = 0;
+                        }
+                        UINT *p = x + ((site/UINT_BITS));
+                        UINT bit1 = (1 << (site%UINT_BITS));
+
+                        p[ambi_aa[state]*VCSIZE] |= bit1;
+                        p[ambi_aa[state+1]*VCSIZE] |= bit1;
+                    }
+                }
+            }
+    		break;
+    	default:
+            for (pat = aln->ordered_pattern.begin(), site = 0; pat != aln->ordered_pattern.end(); pat++) {
+            	int state = pat->at(leafid);
+                int freq = pat->frequency;
+                if (state < nstates) {
+                    for (int j = 0; j < freq; j++, site++) {
+                        if (site == NUM_BITS) {
+                            x += nstates*VCSIZE;
+                            site = 0;
+                        }
+                        x[state*VCSIZE + site/UINT_BITS] |= (1 << (site % UINT_BITS));
+                    }
+                } else if (state == aln->STATE_UNKNOWN) {
+                    for (int j = 0; j < freq; j++, site++) {
+                        if (site == NUM_BITS) {
+                            x += nstates*VCSIZE;
+                            site = 0;
+                        }
+                        UINT bit1 = (1 << (site%UINT_BITS));
+                        UINT *p = x+(site/UINT_BITS);
+                        for (int i = 0; i < nstates; i++)
+                            p[i*VCSIZE] |= bit1;
+                    }
+                } else {
+                	assert(0);
+                }
+            }
+    		break;
+    	}
+        // add dummy states
+        if (site > 0) {
+            x += site/UINT_BITS;
+        	*x |= ~((1<<(site%UINT_BITS)) - 1);
+            x++;
+            int max_sites = ((site+UINT_BITS-1)/UINT_BITS);
+            memset(x, 255, (VCSIZE - max_sites)*sizeof(UINT));
+        }
+    } else {
+        // internal node
+        assert(node->degree() == 3); // it works only for strictly bifurcating tree
+        PhyloNeighbor *left = NULL, *right = NULL; // left & right are two neighbors leading to 2 subtrees
+        FOR_NEIGHBOR_IT(node, dad, it) {
+            PhyloNeighbor* pit = (PhyloNeighbor*) (*it);
+            if ((*it)->node->name != ROOT_NAME && (pit->partial_lh_computed & 2) == 0) {
+                computePartialParsimonyFastSIMD<VectorClass>(pit, (PhyloNode*) node);
+            }
+            if (!left) left = pit; else right = pit;
+        }
+//        VectorClass score = 0;
+        UINT score = 0;
+        int nsites = (aln->num_informative_sites+NUM_BITS-1)/NUM_BITS;
+        int entry_size = nstates * VCSIZE;
+        
+        switch (nstates) {
+        case 4:
+            #ifdef _OPENMP
+            #pragma omp parallel for private (site) reduction(+: score) if(nsites>200)
+            #endif
+			for (site = 0; site<nsites; site++) {
+                size_t offset = 4*VCSIZE*site;
+                VectorClass *x = (VectorClass*)(left->partial_pars + offset);
+                VectorClass *y = (VectorClass*)(right->partial_pars + offset);
+                VectorClass *z = (VectorClass*)(dad_branch->partial_pars + offset);
+                z[0] = x[0] & y[0];
+                z[1] = x[1] & y[1];
+                z[2] = x[2] & y[2];
+                z[3] = x[3] & y[3];
+                VectorClass w = z[0] | z[1] | z[2] | z[3];
+				w = ~w;
+                z[0] |= w & (x[0] | y[0]);
+                z[1] |= w & (x[1] | y[1]);
+                z[2] |= w & (x[2] | y[2]);
+                z[3] |= w & (x[3] | y[3]);
+//				horizontal_popcount(w);
+//                score += w;
+                score += fast_popcount(w);
+//                x += 4;
+//                y += 4;
+//                z += 4;
+			}
+
+			break;
+        default:
+            #ifdef _OPENMP
+            #pragma omp parallel for private (site) reduction(+: score) if(nsites > 800/nstates)
+            #endif
+			for (site = 0; site<nsites; site++) {
+                size_t offset = entry_size*site;
+                VectorClass *x = (VectorClass*)(left->partial_pars + offset);
+                VectorClass *y = (VectorClass*)(right->partial_pars + offset);
+                VectorClass *z = (VectorClass*)(dad_branch->partial_pars + offset);
+				int i;
+				VectorClass w = 0;
+				for (i = 0; i < nstates; i++) {
+                    z[i] = x[i] & y[i];
+                    w |= z[i];
+				}
+				w = ~w;
+				for (i = 0; i < nstates; i++) {
+                    z[i] |= w & (x[i] | y[i]);
+				}
+//				horizontal_popcount(w);
+//                score += w;
+                score += fast_popcount(w);
+                x += nstates;
+                y += nstates;
+                z += nstates;
+			}
+			break;
+        }
+//        UINT sum_score = horizontal_add(score); 
+//        UINT *zscore = (UINT*)z;
+//        UINT *xscore = (UINT*)x;
+//        UINT *yscore = (UINT*)y;
+        dad_branch->partial_pars[nstates*VCSIZE*nsites] = score + left->partial_pars[nstates*VCSIZE*nsites] + right->partial_pars[nstates*VCSIZE*nsites];
+    }
+}
+
+template<class VectorClass>
+int PhyloTree::computeParsimonyBranchFastSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst) {
+    PhyloNode *node = (PhyloNode*) dad_branch->node;
+    PhyloNeighbor *node_branch = (PhyloNeighbor*) node->findNeighbor(dad);
+    assert(node_branch);
+    if (!central_partial_pars)
+        initializeAllPartialPars();
+    if ((dad_branch->partial_lh_computed & 2) == 0)
+        computePartialParsimonyFastSIMD<VectorClass>(dad_branch, dad);
+    if ((node_branch->partial_lh_computed & 2) == 0)
+        computePartialParsimonyFastSIMD<VectorClass>(node_branch, node);
+    int site;
+    int nstates = aln->num_states;
+
+//    VectorClass score = 0;
+//    VectorClass w;
+
+    const int NUM_BITS = VectorClass::size() * UINT_BITS;
+    int nsites = (aln->num_informative_sites + NUM_BITS - 1)/NUM_BITS;
+    int entry_size = nstates * VectorClass::size();
+    
+    int scoreid = nsites*entry_size;
+    UINT sum_end_node = (dad_branch->partial_pars[scoreid] + node_branch->partial_pars[scoreid]);
+    UINT score = sum_end_node;
+    UINT lower_bound = best_pars_score;
+    if (branch_subst) lower_bound = INT_MAX;
+    
+    switch (nstates) {
+    case 4:
+        #ifdef _OPENMP
+        #pragma omp parallel for private (site) reduction(+: score) if(nsites>200)
+        #endif
+		for (site = 0; site < nsites; site++) {
+            size_t offset = entry_size*site;
+            VectorClass *x = (VectorClass*)(dad_branch->partial_pars + offset);
+            VectorClass *y = (VectorClass*)(node_branch->partial_pars + offset);
+            VectorClass w = (x[0] & y[0]) | (x[1] & y[1]) | (x[2] & y[2]) | (x[3] & y[3]);
+			w = ~w;
+//			horizontal_popcount(w);
+//            score += w;
+            score += fast_popcount(w);
+            #ifndef _OPENMP
+            if (score >= lower_bound) 
+                break;
+            #endif
+		}
+		break;
+    default:
+        #ifdef _OPENMP
+        #pragma omp parallel for private (site) reduction(+: score) if(nsites > 800/nstates)
+        #endif
+		for (site = 0; site < nsites; site++) {
+            size_t offset = entry_size*site;
+            VectorClass *x = (VectorClass*)(dad_branch->partial_pars + offset);
+            VectorClass *y = (VectorClass*)(node_branch->partial_pars + offset);
+            VectorClass w = x[0] & y[0];
+			for (int i = 1; i < nstates; i++) {
+                w |= x[i] & y[i];
+			}
+			w = ~w;
+//			horizontal_popcount(w);
+//            score += w;
+            score += fast_popcount(w);
+            #ifndef _OPENMP
+            if (score >= lower_bound) 
+                break;
+            #endif
+		}
+		break;
+    }
+//    UINT sum_score = horizontal_add(score);
+//    if (branch_subst)
+//        *branch_subst = sum_score;
+    if (branch_subst)
+        *branch_subst = score - sum_end_node;
+//    UINT *xscore = (UINT*)x;
+//    UINT *yscore = (UINT*)y;
+//    sum_score += *xscore + *yscore;
+//    score += *xscore + *yscore;
+//    return sum_score;
+    return score;
 }
 
 

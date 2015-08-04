@@ -32,6 +32,7 @@
 #include "candidateset.h"
 #include "pllnni.h"
 
+typedef std::map< string, double > mapString2Double;
 typedef std::multiset< double, std::less< double > > multiSetDB;
 typedef std::multiset< int, std::less< int > > MultiSetInt;
 
@@ -607,7 +608,7 @@ public:
      * Generate the initial tree (usually used for model parameter estimation)
      * @param dist_file only needed for BIONJ tree
      */
-    void computeInitialTree(string &dist_file);
+    void computeInitialTree(string &dist_file, LikelihoodKernel kernel);
 
     /**
      *  @brief: optimize model parameters on the current tree

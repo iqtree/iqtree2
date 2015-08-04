@@ -144,6 +144,15 @@ public:
      */
     void extractDataBlock(NxsCharactersBlock *data_block);
 
+    vector<Pattern> ordered_pattern;
+    
+    /** lower bound of sum parsimony scores for remaining pattern in ordered_pattern */
+    UINT *pars_lower_bound;
+
+    /** order pattern by number of character states and return in ptn_order
+    */
+    void orderPatternByNumChars();
+
     /**
      * un-group site-patterns, i.e., making #sites = #patterns and pattern frequency = 1 for all patterns
      */
@@ -420,6 +429,11 @@ public:
      */
     void extractSites(Alignment *aln, const char* spec);
 
+    /**
+        convert a DNA alignment into codon or AA alignment
+    */
+    void convertToCodonOrAA(Alignment *aln, char *gene_code_id, bool nt2aa = false);
+
     /****************************************************************************
             Distance functions
      ****************************************************************************/
@@ -492,7 +506,15 @@ public:
             @param state_freq (OUT) is filled with state frequencies, assuming state_freq was allocated with 
                     at least num_states entries.
      */
-    virtual void computeStateFreq(double *state_freq);
+    virtual void computeStateFreq(double *state_freq, size_t num_unknown_states = 0);
+
+    /**
+            compute empirical state frequencies for each sequence 
+            @param freq_per_sequence (OUT) state frequencies for each sequence, of size num_states*num_freq
+     */
+    void computeStateFreqPerSequence (double *freq_per_sequence);
+
+    void countStatePerSequence (unsigned *count_per_sequence);
 
     /**
      * Make all frequencies a little different and non-zero
@@ -557,6 +579,9 @@ public:
      */
     double frac_const_sites;
 
+    /** number of informative sites */
+    int num_informative_sites;
+    
 	/**
 	 *  map from 64 codon to non-stop codon index
 	 */
@@ -655,7 +680,7 @@ protected:
 	 * special initialization for codon sequences, e.g., setting #states, genetic_code
 	 * @param sequence_type user-defined sequence type
 	 */
-	void initCodon(char *sequence_type);
+	void initCodon(char *gene_code_id);
 
 };
 

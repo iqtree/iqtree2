@@ -81,7 +81,21 @@ public:
 	*/
 //	int getPredictedIteration(int cur_iteration);
 
+
+    int getCurIt() const {
+        return curIteration;
+    }
+
+    void setCurIt(int curIteration) {
+        StopRule::curIteration = curIteration;
+    }
+
 private:
+
+    /**
+	 *  Current iteration number
+	 */
+	int curIteration;
 
 	double predict (double &upperTime);
 

@@ -34,6 +34,7 @@ StopRule::StopRule()
 	step_iteration = 100;
 	start_real_time = -1.0;
 	max_run_time = -1.0;
+	curIteration = 0;
 }
 
 void StopRule::initialize(Params &params) {

@@ -238,7 +238,7 @@ public:
 		optimize model parameters
 		@return the best likelihood 
 	*/
-	virtual double optimizeParameters(double epsilon);
+	virtual double optimizeParameters(double gradient_epsilon);
 
 	/**
 	 * @return TRUE if parameters are at the boundary that may cause numerical unstability
@@ -302,7 +302,8 @@ protected:
 	*/
 	PhyloTree *phylo_tree;
 
-	/**
+protected:
+/**
 		rates between pairs of states of the unit rate matrix Q.
 		In order A-C, A-G, A-T, C-G, C-T (rate G-T = 1 always)
 	*/
@@ -333,6 +334,8 @@ protected:
 	*/
 	double *eigen_coeff;
 
+	/** state with highest frequency, used when optimizing state frequencies +FO */
+	int highest_freq_state;
 
 };
 

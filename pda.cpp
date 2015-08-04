@@ -1823,6 +1823,10 @@ extern "C" void funcAbort(int signal_number)
       because abort() was called, your program will exit or crash anyway
       (with a dialog box on Windows).
      */
+#if (defined(__GNUC__) || defined(__clang__)) && !defined(WIN32) && !defined(__CYGWIN__)
+	print_stacktrace(cerr);
+#endif
+
 	cout << endl << "*** IQ-TREE CRASHES WITH SIGNAL ";
 	switch (signal_number) {
 		case SIGABRT: cout << "ABORTED"; break;
@@ -1830,7 +1834,8 @@ extern "C" void funcAbort(int signal_number)
 		case SIGILL:  cout << "ILLEGAL INSTRUCTION"; break;
 		case SIGSEGV: cout << "SEGMENTATION FAULT"; break;
 	}
-	cout << endl << "*** For bug report please send to developers:" << endl << "***    Log file: " << _log_file;
+    cout << endl;
+	cout << "*** For bug report please send to developers:" << endl << "***    Log file: " << _log_file;
 	cout << endl << "***    Alignment files (if possible)" << endl;
 	funcExit();
 	signal(signal_number, SIG_DFL);
@@ -2200,7 +2205,13 @@ int main(int argc, char *argv[]) {
 
 	Params params;
 	parseArg(argc, argv, params);
-
+	//Params params;
+	parseArg(argc, argv, Params::getInstance());
+	_log_file = Params::getInstance().out_prefix;
+	_log_file += ".log";
+	startLogFile();
+	time_t cur_time;
+	
 #ifdef _IQTREE_MPI
 	unsigned int rndSeed;
   	if (MPIHelper::instance()->getProcessID() == MASTER) {
@@ -2215,17 +2226,12 @@ int main(int argc, char *argv[]) {
 #endif
 	}
 #endif
-
+	
 	atexit(funcExit);
 	signal(SIGABRT, &funcAbort);
 	signal(SIGFPE, &funcAbort);
 	signal(SIGILL, &funcAbort);
 	signal(SIGSEGV, &funcAbort);
-	time_t cur_time;
-
-	_log_file = params.out_prefix;
-	_log_file += ".log";
-	startLogFile();
 	printCopyright(cout);
 	/*
     double x=1e-100;
@@ -2247,6 +2253,9 @@ int main(int argc, char *argv[]) {
 	//pclose(pfile);
 
 	instruction_set = instrset_detect();
+#if defined(BINARY32) || defined(__NOAVX__)
+    instruction_set = min(instruction_set, 6);
+#endif
 	if (instruction_set < 3) outError("Your CPU does not support SSE3!");
 	bool has_fma3 = (instruction_set >= 7) && hasFMA3();
 	bool has_fma4 = (instruction_set >= 7) && hasFMA4();
@@ -2281,38 +2290,38 @@ int main(int argc, char *argv[]) {
 		cout << " " << argv[i];
 	cout << endl;
 
-	cout << "Seed:    " << params.ran_seed <<  " ";
-	init_random(params.ran_seed);
+	cout << "Seed:    " << Params::getInstance().ran_seed <<  " ";
+	init_random(Params::getInstance().ran_seed);
 
 	time(&cur_time);
 	cout << "Time:    " << ctime(&cur_time);
 
-	if (params.lk_no_avx)
+	if (Params::getInstance().lk_no_avx)
 		instruction_set = min(instruction_set, 6);
 
 	cout << "Kernel:  ";
-	if (params.pll) {
+	if (Params::getInstance().pll) {
 #ifdef __AVX__
 		cout << "PLL-AVX";
 #else
 		cout << "PLL-SSE3";
 #endif
 	} else {
-		switch (params.SSE) {
-			case LK_NORMAL: cout << "Slow"; break;
-			case LK_SSE: cout << "Slow SSE3"; break;
-			case LK_EIGEN: cout << "No SSE"; break;
-			case LK_EIGEN_SSE:
-				if (instruction_set >= 7) {
-					cout << "AVX";
-				} else {
-					cout << "SSE3";
-				}
+		switch (Params::getInstance().SSE) {
+		case LK_NORMAL: cout << "Slow"; break;
+		case LK_SSE: cout << "Slow SSE3"; break;
+		case LK_EIGEN: cout << "No SSE"; break;
+		case LK_EIGEN_SSE:
+			if (instruction_set >= 7) {
+				cout << "AVX";
+			} else {
+				cout << "SSE3";
+			}
 
 #ifdef __FMA__
 			cout << "+FMA";
 #endif
-				break;
+			break;
 		}
 	}
 
@@ -2324,7 +2333,7 @@ int main(int argc, char *argv[]) {
 	if (params.num_threads) omp_set_num_threads(params.num_threads);
 //	int max_threads = omp_get_max_threads();
 	params.num_threads = omp_get_max_threads();
-	int max_procs = omp_get_num_procs();
+	int max_procs = countPhysicalCPUCores();
 	cout << " - " << params.num_threads  << " threads (" << max_procs << " CPU cores detected)";
 	if (params.num_threads  > max_procs) {
 		cout << endl;
@@ -2332,10 +2341,14 @@ int main(int argc, char *argv[]) {
 	}
 	omp_set_nested(false); // don't allow nested OpenMP parallelism
 #else
-	if (params.num_threads != 1) {
+	if (Params::getInstance().num_threads != 1) {
 		cout << endl << endl;
 		outError("Number of threads must be 1 for sequential version.");
 	}
+    int num_procs = countPhysicalCPUCores();
+    if (num_procs > 1) {
+        cout << endl << endl << "NOTE: Consider using the multicore version because your CPU has " << num_procs << " cores!";
+    }
 #endif
 	//cout << "sizeof(int)=" << sizeof(int) << endl;
 	cout << endl << endl;
@@ -2345,92 +2358,92 @@ int main(int argc, char *argv[]) {
 
 #ifndef _IQTREE_MPI
 	// call the main function
-	if (params.tree_gen != NONE) {
-		generateRandomTree(params);
-	} else if (params.do_pars_multistate) {
-		doParsMultiState(params);
-	} else if (params.rf_dist_mode != 0) {
-		computeRFDist(params);
-	} else if (params.test_input != TEST_NONE) {
-		params.intype = detectInputFile(params.user_file);
-		testInputFile(params);
-	} else if (params.run_mode == PRINT_TAXA) {
-		printTaxa(params);
-	} else if (params.run_mode == PRINT_AREA) {
-		printAreaList(params);
-	} else if (params.run_mode == SCALE_BRANCH_LEN || params.run_mode == SCALE_NODE_NAME) {
-		scaleBranchLength(params);
-	} else if (params.run_mode == PD_DISTRIBUTION) {
-		calcDistribution(params);
-	} else if (params.run_mode == STATS){ /**MINH ANH: for some statistics on the input tree*/
-		branchStats(params); // MA
-	} else if (params.branch_cluster > 0) {
-		calcTreeCluster(params);
-	} else if (params.ncbi_taxid) {
-		processNCBITree(params);
-	} else if (params.user_file && params.eco_dag_file) { /**ECOpd analysis*/
-		processECOpd(params);
-	} else if (params.aln_file || params.partition_file) {
-		if ((params.siteLL_file || params.second_align) && !params.gbo_replicates)
+	if (Params::getInstance().tree_gen != NONE) {
+		generateRandomTree(Params::getInstance());
+	} else if (Params::getInstance().do_pars_multistate) {
+		doParsMultiState(Params::getInstance());
+	} else if (Params::getInstance().rf_dist_mode != 0) {
+		computeRFDist(Params::getInstance());
+	} else if (Params::getInstance().test_input != TEST_NONE) {
+		Params::getInstance().intype = detectInputFile(Params::getInstance().user_file);
+		testInputFile(Params::getInstance());
+	} else if (Params::getInstance().run_mode == PRINT_TAXA) {
+		printTaxa(Params::getInstance());
+	} else if (Params::getInstance().run_mode == PRINT_AREA) {
+		printAreaList(Params::getInstance());
+	} else if (Params::getInstance().run_mode == SCALE_BRANCH_LEN || Params::getInstance().run_mode == SCALE_NODE_NAME) {
+		scaleBranchLength(Params::getInstance());
+	} else if (Params::getInstance().run_mode == PD_DISTRIBUTION) {
+		calcDistribution(Params::getInstance());
+	} else if (Params::getInstance().run_mode == STATS){ /**MINH ANH: for some statistics on the input tree*/
+		branchStats(Params::getInstance()); // MA
+	} else if (Params::getInstance().branch_cluster > 0) {
+		calcTreeCluster(Params::getInstance());
+	} else if (Params::getInstance().ncbi_taxid) {
+		processNCBITree(Params::getInstance());
+	} else if (Params::getInstance().user_file && Params::getInstance().eco_dag_file) { /**ECOpd analysis*/
+		processECOpd(Params::getInstance());
+	} else if (Params::getInstance().aln_file || Params::getInstance().partition_file) {
+		if ((Params::getInstance().siteLL_file || Params::getInstance().second_align) && !Params::getInstance().gbo_replicates)
 		{
-			if (params.siteLL_file)
-				guidedBootstrap(params);
-			if (params.second_align)
-				computeMulProb(params);
+			if (Params::getInstance().siteLL_file)
+				guidedBootstrap(Params::getInstance());
+			if (Params::getInstance().second_align)
+				computeMulProb(Params::getInstance());
 		} else {
-			runPhyloAnalysis(params);
+			runPhyloAnalysis(Params::getInstance());
 		}
-	} else if (params.ngs_file || params.ngs_mapped_reads) {
-		runNGSAnalysis(params);
-	} else if (params.pdtaxa_file && params.gene_scale_factor >=0.0 && params.gene_pvalue_file) {
-		runGSSAnalysis(params);
-	} else if (params.consensus_type != CT_NONE) {
+	} else if (Params::getInstance().ngs_file || Params::getInstance().ngs_mapped_reads) {
+		runNGSAnalysis(Params::getInstance());
+	} else if (Params::getInstance().pdtaxa_file && Params::getInstance().gene_scale_factor >=0.0 && Params::getInstance().gene_pvalue_file) {
+		runGSSAnalysis(Params::getInstance());
+	} else if (Params::getInstance().consensus_type != CT_NONE) {
 		MExtTree tree;
-		switch (params.consensus_type) {
+		switch (Params::getInstance().consensus_type) {
 			case CT_CONSENSUS_TREE:
-				computeConsensusTree(params.user_file, params.tree_burnin, params.tree_max_count, params.split_threshold,
-									 params.split_weight_threshold, params.out_file, params.out_prefix, params.tree_weight_file, &params);
+				computeConsensusTree(Params::getInstance().user_file, Params::getInstance().tree_burnin, Params::getInstance().tree_max_count, Params::getInstance().split_threshold,
+					Params::getInstance().split_weight_threshold, Params::getInstance().out_file, Params::getInstance().out_prefix, Params::getInstance().tree_weight_file, &Params::getInstance());
 				break;
 			case CT_CONSENSUS_NETWORK:
-				computeConsensusNetwork(params.user_file, params.tree_burnin, params.tree_max_count, params.split_threshold,
-										params.split_weight_summary, params.split_weight_threshold, params.out_file, params.out_prefix, params.tree_weight_file);
+				computeConsensusNetwork(Params::getInstance().user_file, Params::getInstance().tree_burnin, Params::getInstance().tree_max_count, Params::getInstance().split_threshold,
+					Params::getInstance().split_weight_summary, Params::getInstance().split_weight_threshold, Params::getInstance().out_file, Params::getInstance().out_prefix, Params::getInstance().tree_weight_file);
 				break;
 			case CT_ASSIGN_SUPPORT:
-				assignBootstrapSupport(params.user_file, params.tree_burnin, params.tree_max_count,
-									   params.second_tree, params.is_rooted, params.out_file,
-									   params.out_prefix, tree, params.tree_weight_file, &params);
+				assignBootstrapSupport(Params::getInstance().user_file, Params::getInstance().tree_burnin, Params::getInstance().tree_max_count, 
+					Params::getInstance().second_tree, Params::getInstance().is_rooted, Params::getInstance().out_file,
+					Params::getInstance().out_prefix, tree, Params::getInstance().tree_weight_file, &Params::getInstance());
 				break;
 			case CT_ASSIGN_SUPPORT_EXTENDED:
-				assignBranchSupportNew(params);
+				assignBranchSupportNew(Params::getInstance());
 				break;
 			case CT_NONE: break;
-				/**MINH ANH: for some comparison*/
-			case COMPARE: compare(params); break; //MA
+			/**MINH ANH: for some comparison*/
+			case COMPARE: compare(Params::getInstance()); break; //MA
 		}
 	} else {
-		params.intype = detectInputFile(params.user_file);
-		if (params.intype == IN_NEWICK && params.pdtaxa_file && params.tree_gen == NONE) {
-			if (params.budget_file) {
-				//if (params.budget < 0) params.run_mode = PD_USER_SET;
+		Params::getInstance().intype = detectInputFile(Params::getInstance().user_file);
+		if (Params::getInstance().intype == IN_NEWICK && Params::getInstance().pdtaxa_file && Params::getInstance().tree_gen == NONE) {
+			if (Params::getInstance().budget_file) {
+				//if (Params::getInstance().budget < 0) Params::getInstance().run_mode = PD_USER_SET;
 			} else {
-				if (params.sub_size < 1 && params.pd_proportion == 0.0)
-					params.run_mode = PD_USER_SET;
+				if (Params::getInstance().sub_size < 1 && Params::getInstance().pd_proportion == 0.0)
+					Params::getInstance().run_mode = PD_USER_SET;
 			}
 			// input is a tree, check if it is a reserve selection -> convert to splits
-			if (params.run_mode != PD_USER_SET) params.multi_tree = true;
+			if (Params::getInstance().run_mode != PD_USER_SET) Params::getInstance().multi_tree = true;
 		}
 
 
-		if (params.intype == IN_NEWICK && !params.find_all && params.budget_file == NULL &&
-			params.find_pd_min == false && params.calc_pdgain == false &&
-			params.run_mode != LINEAR_PROGRAMMING && params.multi_tree == false)
-			runPDTree(params);
-		else if (params.intype == IN_NEXUS || params.intype == IN_NEWICK) {
-			if (params.run_mode == LINEAR_PROGRAMMING && params.find_pd_min)
+		if (Params::getInstance().intype == IN_NEWICK && !Params::getInstance().find_all && Params::getInstance().budget_file == NULL &&
+			Params::getInstance().find_pd_min == false && Params::getInstance().calc_pdgain == false &&
+			Params::getInstance().run_mode != LINEAR_PROGRAMMING && Params::getInstance().multi_tree == false)
+			runPDTree(Params::getInstance());
+		else if (Params::getInstance().intype == IN_NEXUS || Params::getInstance().intype == IN_NEWICK) {
+			if (Params::getInstance().run_mode == LINEAR_PROGRAMMING && Params::getInstance().find_pd_min)
 				outError("Current linear programming does not support finding minimal PD sets!");
-			if (params.find_all && params.run_mode == LINEAR_PROGRAMMING)
-				params.binary_programming = true;
-			runPDSplit(params);
+			if (Params::getInstance().find_all && Params::getInstance().run_mode == LINEAR_PROGRAMMING)
+				Params::getInstance().binary_programming = true;
+			runPDSplit(Params::getInstance());
 		} else {
 			outError("Unknown file input format");
 		}

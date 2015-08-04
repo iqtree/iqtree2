@@ -161,7 +161,7 @@ void RateGamma::getVariables(double *variables) {
 	gamma_shape = variables[1];
 }
 
-double RateGamma::optimizeParameters(double epsilon) {
+double RateGamma::optimizeParameters(double gradient_epsilon, double min_gamma, double max_gamma) {
 	if (fix_gamma_shape)
 		return phylo_tree->computeLikelihood();
 	if (verbose_mode >= VB_MAX)
@@ -169,7 +169,22 @@ double RateGamma::optimizeParameters(double epsilon) {
 	double negative_lh;
 	double current_shape = gamma_shape;
 	double ferror, optx;
-	optx = minimizeOneDimen(MIN_GAMMA_SHAPE, current_shape, MAX_GAMMA_SHAPE, max(epsilon, TOL_GAMMA_SHAPE), &negative_lh, &ferror);
+	optx = minimizeOneDimen(min_gamma, current_shape, max_gamma, max(gradient_epsilon, TOL_GAMMA_SHAPE), &negative_lh, &ferror);
+	gamma_shape = optx;
+	computeRates();
+	phylo_tree->clearAllPartialLH();
+	return -negative_lh;
+}
+
+double RateGamma::optimizeParameters(double gradient_epsilon) {
+	if (fix_gamma_shape)
+		return phylo_tree->computeLikelihood();
+	if (verbose_mode >= VB_MAX)
+		cout << "Optimizing gamma shape..." << endl;
+	double negative_lh;
+	double current_shape = gamma_shape;
+	double ferror, optx;
+	optx = minimizeOneDimen(MIN_GAMMA_SHAPE, current_shape, MAX_GAMMA_SHAPE, max(gradient_epsilon, TOL_GAMMA_SHAPE), &negative_lh, &ferror);
 	gamma_shape = optx;
 	computeRates();
 	phylo_tree->clearAllPartialLH();
@@ -192,13 +207,14 @@ int RateGamma::computePatternRates(DoubleVector &pattern_rates, IntVector &patte
 	if (phylo_tree->sse == LK_NORMAL || phylo_tree->sse == LK_SSE)
 		phylo_tree->computeLikelihoodBranchNaive((PhyloNeighbor*)phylo_tree->root->neighbors[0], (PhyloNode*)phylo_tree->root);
 	else {
-		switch (phylo_tree->aln->num_states) {
-		case 4: phylo_tree->computeLikelihoodBranchEigen<4>((PhyloNeighbor*)phylo_tree->root->neighbors[0], (PhyloNode*)phylo_tree->root); break;
-		case 20: phylo_tree->computeLikelihoodBranchEigen<20>((PhyloNeighbor*)phylo_tree->root->neighbors[0], (PhyloNode*)phylo_tree->root); break;
-		case 2: phylo_tree->computeLikelihoodBranchEigen<2>((PhyloNeighbor*)phylo_tree->root->neighbors[0], (PhyloNode*)phylo_tree->root); break;
-		case 64: phylo_tree->computeLikelihoodBranchEigen<64>((PhyloNeighbor*)phylo_tree->root->neighbors[0], (PhyloNode*)phylo_tree->root); break;
-		default: outError("Option unsupported yet for this sequence type. Contact author if you really need it."); break;
-		}
+//		switch (phylo_tree->aln->num_states) {
+//		case 4: phylo_tree->computeLikelihoodBranchEigen<4>((PhyloNeighbor*)phylo_tree->root->neighbors[0], (PhyloNode*)phylo_tree->root); break;
+//		case 20: phylo_tree->computeLikelihoodBranchEigen<20>((PhyloNeighbor*)phylo_tree->root->neighbors[0], (PhyloNode*)phylo_tree->root); break;
+//		case 2: phylo_tree->computeLikelihoodBranchEigen<2>((PhyloNeighbor*)phylo_tree->root->neighbors[0], (PhyloNode*)phylo_tree->root); break;
+//		case 64: phylo_tree->computeLikelihoodBranchEigen<64>((PhyloNeighbor*)phylo_tree->root->neighbors[0], (PhyloNode*)phylo_tree->root); break;
+//		default: outError("Option unsupported yet for this sequence type. Contact author if you really need it."); break;
+//		}
+        phylo_tree->computeLikelihoodBranchEigen((PhyloNeighbor*)phylo_tree->root->neighbors[0], (PhyloNode*)phylo_tree->root);
 	}
 
 	int npattern = phylo_tree->aln->getNPattern();

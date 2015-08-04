@@ -43,7 +43,7 @@ public:
 		@param freq state frequency type
 		@param tree associated phylogenetic tree
 	*/
-    ModelMixture(string model_name, string model_list, ModelsBlock *models_block,
+    ModelMixture(string orig_model_name, string model_name, string model_list, ModelsBlock *models_block,
     		StateFreqType freq, string freq_params, PhyloTree *tree, bool optimize_weights, bool count_rates = true);
 
     virtual ~ModelMixture();
@@ -76,7 +76,7 @@ public:
 		optimize model parameters
 		@return the best likelihood
 	*/
-	virtual double optimizeParameters(double epsilon);
+	virtual double optimizeParameters(double gradient_epsilon);
 
 	/**
 		decompose the rate matrix into eigenvalues and eigenvectors
@@ -99,6 +99,11 @@ public:
 		@param out output stream
 	*/
 	virtual void writeParameters(ostream &out);
+
+	/**
+	 * @return model name with parameters in form of e.g. GTR{a,b,c,d,e,f}
+	 */
+	virtual string getNameParams();
 
 	/**
 		rates of mixture components

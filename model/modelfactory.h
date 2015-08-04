@@ -147,7 +147,8 @@ public:
 		@param fixed_len TRUE to fix branch lengths, default is false
 		@return the best likelihood 
 	*/
-	virtual double optimizeParameters(bool fixed_len = false, bool write_info = true, double epsilon = 0.001);
+	virtual double optimizeParameters(bool fixed_len = false, bool write_info = true,
+                                      double logl_epsilon = 0.1, double gradient_epsilon = 0.001);
 
 	/**
 	 * @return TRUE if parameters are at the boundary that may cause numerical unstability
@@ -186,8 +187,10 @@ public:
 
 	/**
 	 * optimize model and site_rate parameters
+	 * @param gradient_epsilon
+	 * @param restart do restart from different starting value
 	 */
-	double optimizeParametersOnly(double epsilon);
+	double optimizeParametersOnly(double gradient_epsilon);
 
 	/************* FOLLOWING FUNCTIONS SERVE FOR JOINT OPTIMIZATION OF MODEL AND RATE PARAMETERS *******/
 
@@ -207,6 +210,12 @@ public:
 		@return the function value at x
 	*/
 	virtual double targetFunk(double x[]);
+
+	double initGTRGammaIParameters(RateHeterogeneity *rate, ModelSubst *model, double initAlpha,
+								 double initPInvar, double *initRates, double *initStateFreqs);
+
+    double optimizeAllParameters(double gradient_epsilon);
+
 
 protected:
 

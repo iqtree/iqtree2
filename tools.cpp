@@ -18,6 +18,13 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+
+
+#if (defined(__GNUC__) || defined(__clang__)) && !defined(WIN32)
+#include <execinfo.h>
+#include <cxxabi.h>
+#endif
+
 #include "tools.h"
 #include "timeutil.h"
 
@@ -84,12 +91,22 @@ void outError(char *error)
 }
  */
 
+
+#if (defined(__GNUC__) || defined(__clang__)) && !defined(WIN32) && !defined(__CYGWIN__)
+#include "stacktrace.h"
+#endif
+
 /**
         Output an error to screen, then exit program
         @param error error message
  */
 void outError(const char *error, bool quit) {
-    cerr << "ERROR: " << error << endl;
+	if (error == ERR_NO_MEMORY) {
+#if (defined(__GNUC__) || defined(__clang__)) && !defined(WIN32) && !defined(__CYGWIN__)
+        print_stacktrace(cerr);
+#endif
+	}
+	cerr << "ERROR: " << error << endl;
     if (quit)
     	exit(2);
 }
@@ -147,6 +164,12 @@ double randomLen(Params &params) {
 //From Tung
 
 string convertIntToString(int number) {
+    stringstream ss; //create a stringstream
+    ss << number; //add number to the stream
+    return ss.str(); //return a string with the contents of the stream
+}
+
+string convertInt64ToString(int64_t number) {
     stringstream ss; //create a stringstream
     ss << number; //add number to the stream
     return ss.str(); //return a string with the contents of the stream
@@ -587,12 +610,16 @@ void get2RandNumb(const int size, int &first, int &second) {
     }
 }
 
+void quickStartGuide();
+
 void parseArg(int argc, char *argv[], Params &params) {
     int cnt;
     verbose_mode = VB_MIN;
     params.tree_gen = NONE;
     params.user_file = NULL;
-    params.rr_ai = false;
+    params.fai = false;
+    params.testAlpha = false;
+    params.testAlphaEps = 100.0;
     params.exh_ai = false;
     params.alpha_invar_file = NULL;
     params.out_prefix = NULL;
@@ -670,6 +697,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.siteLL_file = NULL; //added by MA
     params.partition_file = NULL;
     params.partition_type = 0;
+    params.partfinder_rcluster = 100;
     params.remove_empty_seq = true;
     params.terrace_aware = true;
     params.sequence_type = NULL;
@@ -699,6 +727,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.p_delete = -1;
     params.min_iterations = -1;
     params.max_iterations = 1;
+    params.num_param_iterations = 100;
     params.stop_condition = SC_UNSUCCESS_ITERATION;
     params.stop_confidence = 0.95;
     params.model_name = "";
@@ -714,6 +743,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.store_trans_matrix = false;
     //params.freq_type = FREQ_EMPIRICAL;
     params.freq_type = FREQ_UNKNOWN;
+    params.min_rate_cats = 2;
     params.num_rate_cats = 4;
     params.max_rate_cats = 10;
     params.gamma_shape = -1.0;
@@ -738,6 +768,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.lk_no_avx = false;
     params.print_site_lh = 0;
     params.print_site_rate = false;
+    params.print_site_posterior = 0;
     params.print_tree_lh = false;
     params.lambda = 1;
     params.speed_conf = 1.0;
@@ -834,6 +865,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.num_threads = 1;
 #endif
     params.model_test_criterion = MTC_BIC;
+    params.model_test_stop_rule = MTC_ALL;
     params.model_test_sample_size = 0;
     params.root_state = NULL;
     params.print_bootaln = false;
@@ -842,7 +874,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.print_conaln = false;
 	params.count_trees = false;
 	params.print_branch_lengths = false;
-	params.lh_mem_save = LM_DETECT; // auto detect
+	params.lh_mem_save = LM_PER_NODE; // auto detect
 	params.start_tree = STT_PLL_PARSIMONY;
 	params.print_splits_file = false;
     params.ignore_identical_seqs = true;
@@ -850,6 +882,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.write_candidate_trees = false;
     params.freq_const_patterns = NULL;
     params.no_rescale_gamma_invar = false;
+    params.compute_seq_identity_along_tree = false;
 
 	if (params.nni5) {
 	    params.nni_type = NNI5;
@@ -1374,10 +1407,10 @@ void parseArg(int argc, char *argv[], Params &params) {
 					throw "tree_max_count must not be negative";
 				continue;
 			}
-			if (strcmp(argv[cnt], "-t") == 0) {
+			if (strcmp(argv[cnt], "-minsup") == 0) {
 				cnt++;
 				if (cnt >= argc)
-					throw "Use -t <split_threshold>";
+					throw "Use -minsup <split_threshold>";
 				params.split_threshold = convert_double(argv[cnt]);
 				if (params.split_threshold < 0 || params.split_threshold > 1)
 					throw "Split threshold must be between 0 and 1";
@@ -1466,6 +1499,15 @@ void parseArg(int argc, char *argv[], Params &params) {
 			if (strcmp(argv[cnt], "-M") == 0) {
                 params.partition_type = 0;
                 continue;
+            }
+            if (strcmp(argv[cnt], "-rcluster") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -rcluster <percent>";
+                params.partfinder_rcluster = convert_double(argv[cnt]);
+                if (params.partfinder_rcluster < 0 || params.partfinder_rcluster > 100)
+                    throw "rcluster percentage must be between 0 and 100";
+				continue;
             }
 			if (strcmp(argv[cnt], "-keep_empty_seq") == 0) {
 				params.remove_empty_seq = false;
@@ -1616,6 +1658,16 @@ void parseArg(int argc, char *argv[], Params &params) {
 //                params.autostop = false;
 				continue;
 			}
+			if (strcmp(argv[cnt], "-nparam") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -nparam <#iterations>";
+				params.num_param_iterations = convert_int(argv[cnt]);
+				if (params.num_param_iterations < 0)
+					throw "Number of parameter optimization iterations (-nparam) must be non negative";
+				continue;
+			}
+
 			if (strcmp(argv[cnt], "-nb") == 0) {
 				cnt++;
 				if (cnt >= argc)
@@ -1793,13 +1845,22 @@ void parseArg(int argc, char *argv[], Params &params) {
 					throw "Wrong number of rate categories";
 				continue;
 			}
+			if (strcmp(argv[cnt], "-cmin") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -cmin <#min_rate_category>";
+				params.min_rate_cats = convert_int(argv[cnt]);
+				if (params.min_rate_cats < 2)
+					throw "Wrong number of rate categories for -cmin";
+				continue;
+			}
 			if (strcmp(argv[cnt], "-cmax") == 0) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -cmax <#max_rate_category>";
 				params.max_rate_cats = convert_int(argv[cnt]);
-				if (params.max_rate_cats < 1)
-					throw "Wrong number of rate categories";
+				if (params.max_rate_cats < 2)
+					throw "Wrong number of rate categories for -cmax";
 				continue;
 			}
 			if (strcmp(argv[cnt], "-a") == 0) {
@@ -2033,6 +2094,10 @@ void parseArg(int argc, char *argv[], Params &params) {
 			}
 			if (strcmp(argv[cnt], "-wsr") == 0) {
 				params.print_site_rate = true;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-wsp") == 0) {
+				params.print_site_posterior = 1;
 				continue;
 			}
 			if (strcmp(argv[cnt], "-wba") == 0) {
@@ -2406,10 +2471,25 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.alpha_invar_file = argv[cnt];
 				continue;
 			}
-			if (strcmp(argv[cnt], "-rr_ai") == 0) {
-				params.rr_ai = true;
+
+			if (strcmp(argv[cnt], "--test-alpha") == 0) {
+				params.testAlpha = true;
 				continue;
 			}
+            if (strcmp(argv[cnt], "--test-alpha-eps") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use --test-alpha-eps <logl_eps>";
+                params.testAlphaEps = convert_double(argv[cnt]);
+                params.testAlpha = true;
+                continue;
+            }
+
+            if (strcmp(argv[cnt], "-fai") == 0) {
+                params.fai = true;
+                continue;
+            }
+
             if (strcmp(argv[cnt], "-eai") == 0) {
                 params.exh_ai = true;
                 continue;
@@ -2612,8 +2692,21 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.model_test_criterion = MTC_AIC;
 				continue;
 			}
-			if (strcmp(argv[cnt], "-AICc") == 0) {
+			if (strcmp(argv[cnt], "-AICc") == 0 || strcmp(argv[cnt], "-AICC") == 0) {
 				params.model_test_criterion = MTC_AICC;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-merit") == 0) {
+                cnt++;
+				if (cnt >= argc)
+					throw "Use -merit AIC|AICC|BIC";
+                if (strcmp(argv[cnt], "AIC") == 0)
+                    params.model_test_stop_rule = MTC_AIC;
+                else if (strcmp(argv[cnt], "AICc") == 0 || strcmp(argv[cnt], "AICC") == 0)
+                    params.model_test_stop_rule = MTC_AICC;
+                else if (strcmp(argv[cnt], "BIC") == 0)
+                    params.model_test_stop_rule = MTC_BIC;
+                else throw "Use -merit AIC|AICC|BIC";
 				continue;
 			}
 			if (strcmp(argv[cnt], "-ms") == 0) {
@@ -2644,10 +2737,10 @@ void parseArg(int argc, char *argv[], Params &params) {
             	params.count_trees = true;
             	continue;
 			}
-			if (strcmp(argv[cnt], "-sprdist") == 0) {
+			if (strcmp(argv[cnt], "-sprdist") == 0 || strcmp(argv[cnt], "-sprrad") == 0) {
 				cnt++;
 				if (cnt >= argc)
-					throw "Use -sprdist <SPR distance used in parsimony search>";
+					throw "Use -sprrad <SPR radius used in parsimony search>";
 				params.sprDist = convert_int(argv[cnt]);
 				continue;
 			}
@@ -2655,6 +2748,28 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.no_rescale_gamma_invar = true;
 				continue;
 			}
+
+			if (strcmp(argv[cnt], "-wsi") == 0) {
+				params.compute_seq_identity_along_tree = true;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-t") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -t <start_tree>";
+				params.user_file = argv[cnt];
+				continue;
+			}
+			if (strcmp(argv[cnt], "-te") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -te <user_tree>";
+				params.user_file = argv[cnt];
+				params.min_iterations = 0;
+				params.stop_condition = SC_FIXED_ITERATION;
+				continue;
+			}
+            
 			if (argv[cnt][0] == '-') {
                 string err = "Invalid \"";
                 err += argv[cnt];
@@ -2685,12 +2800,14 @@ void parseArg(int argc, char *argv[], Params &params) {
         }
 
     } // for
-    if (!params.user_file && !params.aln_file && !params.ngs_file && !params.ngs_mapped_reads && !params.partition_file)
+    if (!params.user_file && !params.aln_file && !params.ngs_file && !params.ngs_mapped_reads && !params.partition_file) {
 #ifdef IQ_TREE
-        usage_iqtree(argv, false);
+        quickStartGuide();
+//        usage_iqtree(argv, false);
 #else
         usage(argv, false);
 #endif
+    }
     if (!params.out_prefix) {
     	if (params.eco_dag_file)
     		params.out_prefix = params.eco_dag_file;
@@ -2781,18 +2898,19 @@ void usage(char* argv[], bool full_command) {
 
 void usage_iqtree(char* argv[], bool full_command) {
     printCopyright(cout);
-    cout << "Usage: " << argv[0] << " -s <alignment> [OPTIONS] [<treefile>] " << endl << endl;
+    cout << "Usage: " << argv[0] << " -s <alignment> [OPTIONS]" << endl << endl;
     cout << "GENERAL OPTIONS:" << endl
-            << "  -?                   Printing this help dialog" << endl
+            << "  -? or -h             Printing this help dialog" << endl
             << "  -s <alignment>       Input alignment in PHYLIP/FASTA/NEXUS/CLUSTAL/MSF format" << endl
-            << "  -st <data_type>      BIN, DNA, AA, CODON, or MORPH (default: auto-detect)" << endl
-            << "  -sp <partition_file> Partition model specification in NEXUS/RAxML format." << endl
-            << "                       For single model use the -m option (see below)" << endl
-            << "  -q <partition_file>  Partition model specification in RAxML format." << endl
-            << "  -z <trees_file>      Compute log-likelihoods for all trees in the given file" << endl
-            << "  <treefile>           Initial tree for tree reconstruction (default: MP)" << endl
+            << "  -st <data_type>      BIN, DNA, AA, NT2AA, CODON, MORPH (default: auto-detect)" << endl
+            << "  -q <partition_file>  Edge-linked partition model (file in NEXUS/RAxML format)" << endl
+            << " -spp <partition_file> Like -q option but allowing partition-specific rates" << endl
+            << "  -sp <partition_file> Edge-unlinked partition model (like -M option of RAxML)" << endl
+            << "  -t <start_tree_file> Starting tree for reconstruction (default: parsimony)" << endl
+            << "  -te <user_tree_file> Evaluating a fixed user tree (no tree search performed)" << endl
+            << "  -z <trees_file>      Evaluating user trees at the end (can be used with -t, -te)" << endl
             << "  -o <outgroup_taxon>  Outgroup taxon name for writing .treefile" << endl
-            << "  -pre <PREFIX>        Using <PREFIX> for output files (default: alignment name)" << endl
+            << "  -pre <PREFIX>        Using <PREFIX> for output files (default: aln/partition)" << endl
 #ifdef _OPENMP
             << "  -nt <#cpu_cores>     Number of cores/threads to use (REQUIRED)" << endl
 #endif
@@ -2802,6 +2920,7 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -pll                 Use phylogenetic likelihood library (PLL) (default: off)" << endl
             << "  -numpars <number>    Number of initial parsimony trees (default: 100)" << endl
             << "  -toppars <number>    Number of best parsimony trees (default: 20)" << endl
+            << "  -sprrad <number>     Radius for parsimony SPR search (default: 6)" << endl
             << "  -numcand <number>    Size of the candidate tree set (defaut: 5)" << endl
             << "  -pers <perturbation> Perturbation strength for randomized NNI (default: 0.5)" << endl
             << "  -numstop <number>    Number of unsuccessful iterations to stop (default: 100)" << endl
@@ -2831,6 +2950,7 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -m TESTNEW           Like -m TESTNEWONLY but followed by tree reconstruction" << endl
             << "  -m TESTMERGEONLY     Select best-fit partition scheme (like PartitionFinder)" << endl
             << "  -m TESTMERGE         Like -m TESTMERGEONLY but followed by tree reconstruction" << endl
+            << "  -rcluster <percent>  Percentage of partition pairs (relaxed clustering alg.)" << endl
             << "  -mset program        Restrict search to models supported by other programs" << endl
             << "                       (i.e., raxml, phyml or mrbayes)" << endl
             << "  -mset m1,...,mk      Restrict search to models in a comma-separated list" << endl
@@ -2841,10 +2961,12 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "                       (default protein: -mfreq FU,F; codon: -mfreq ,F1x4,F3x4,F)" << endl            
             << "  -mrate r1,...,rk     Restrict search to using a list of rate-across-sites models" << endl
             << "                       (e.g. -mrate E,I,G,I+G,R)" << endl
+            << "  -cmin <kmin>         Min #categories for FreeRate model [+R] (default: 2)" << endl
             << "  -cmax <kmax>         Max #categories for FreeRate model [+R] (default: 10)" << endl
+            << "  –merit AIC|AICc|BIC  Optimality criterion to use (default: all)" << endl
 //            << "  -msep                Perform model selection and then rate selection" << endl
-            << "  -mtree               Do a full tree search for each model considered" << endl
-            << "  -mredo               Ignore model results computed earlier (default: not ignore)" << endl
+            << "  -mtree               Performing full tree search for each model considered" << endl
+            << "  -mredo               Ignoring model results computed earlier (default: no)" << endl
             << "  -mdef <nexus_file>   A model definition NEXUS file (see Manual)" << endl
 
             << endl << "SUBSTITUTION MODEL:" << endl
@@ -2903,8 +3025,8 @@ void usage_iqtree(char* argv[], bool full_command) {
 //            << "  -seed <number>       Random seed number, normally used for debugging purpose" << endl
 //            << "  -v, -vv, -vvv        Verbose mode, printing more messages to screen" << endl
             << endl << "CONSENSUS RECONSTRUCTION:" << endl
-            << "  <tree_file>          Set of input trees for consensus reconstruction" << endl
-            << "  -t <threshold>       Min split support in range [0,1]. 0.5 for majority-rule" << endl
+            << "  -t <tree_file>       Set of input trees for consensus reconstruction" << endl
+            << "  -minsup <threshold>  Min split support in range [0,1]; 0.5 for majority-rule" << endl
             << "                       consensus (default: 0, i.e. extended consensus)" << endl
             << "  -bi <burnin>         Discarding <burnin> trees at beginning of <treefile>" << endl
             << "  -con                 Computing consensus tree to .contree file" << endl
@@ -2948,6 +3070,31 @@ void usage_iqtree(char* argv[], bool full_command) {
         //TODO Print other options here (to be added)
     }
 
+    exit(0);
+}
+
+void quickStartGuide() {
+    printCopyright(cout);
+    cout << "Minimal command-line examples (replace 'iqtree ...' with actual path to executable):" << endl << endl
+        << "1. Reconstruct maximum-likelihood tree from a sequence alignment (example.phy)" << endl
+         << "   with the best-fit substitution model automatically selected:" << endl
+         << "     iqtree -s example.phy -m TEST" << endl << endl
+         << "2. Reconstruct ML tree and assess branch supports with ultrafast bootstrap" << endl
+         << "   and SH-aLRT test (1000 replicates):" << endl
+         << "     iqtree -s example.phy -m TEST -alrt 1000 -bb 1000" << endl << endl
+         << "3. Perform partitioned analysis with partition definition file (example.nex)" << endl
+         << "   in Nexus or RAxML format using edge-linked model and gene-specific rates:" << endl
+         << "     iqtree -s example.phy -spp example.nex -m TEST" << endl << endl
+         << "   (for edge-unlinked model replace '-spp' with '-sp' option)" << endl << endl
+         << "4. Merge partitions to reduce model complexity:" << endl
+         << "     iqtree -s example.phy -sp example.nex -m TESTMERGE" << endl << endl
+         << "5. Perform model selection only: use '-m TESTONLY' or '-m TESTMERGEONLY'" << endl << endl
+#ifdef _OPENMP
+         << "6. Use 4 CPU cores to speed up computation: add '-nt 4' option" << endl << endl
+#endif
+         << "To show all available options: run 'iqtree -h'" << endl << endl
+         << "Have a look at the tutorial and manual for more information:" << endl
+         << "     http://www.cibiv.at/software/iqtree" << endl << endl;
     exit(0);
 }
 
@@ -3364,3 +3511,177 @@ void trimString(string &str) {
 
 
 
+Params& Params::getInstance() {
+    static Params instance;
+    return instance;
+}
+
+
+int countPhysicalCPUCores() {
+    uint32_t registers[4];
+    unsigned logicalcpucount;
+    unsigned physicalcpucount;
+#if defined(_WIN32) || defined(WIN32)
+    SYSTEM_INFO systeminfo;
+    GetSystemInfo( &systeminfo );
+    logicalcpucount = systeminfo.dwNumberOfProcessors;
+#else
+    logicalcpucount = sysconf( _SC_NPROCESSORS_ONLN );
+#endif
+    return logicalcpucount;
+    
+    if (logicalcpucount % 2 != 0)
+        return logicalcpucount;
+    __asm__ __volatile__ ("cpuid " :
+                          "=a" (registers[0]),
+                          "=b" (registers[1]),
+                          "=c" (registers[2]),
+                          "=d" (registers[3])
+                          : "a" (1), "c" (0));
+
+    unsigned CPUFeatureSet = registers[3];
+    bool hyperthreading = CPUFeatureSet & (1 << 28);    
+    if (hyperthreading){
+        physicalcpucount = logicalcpucount / 2;
+    } else {
+        physicalcpucount = logicalcpucount;
+    }
+    return physicalcpucount;
+}
+
+// stacktrace.h (c) 2008, Timo Bingmann from http://idlebox.net/
+// published under the WTFPL v2.0
+
+/** Print a demangled stack backtrace of the caller function to FILE* out. */
+
+#ifdef WIN32
+
+// donothing for WIN32
+void print_stacktrace(ostream &out, unsigned int max_frames) {}
+
+#else
+
+void print_stacktrace(ostream &out, unsigned int max_frames)
+{
+#ifdef _OPENMP
+#pragma omp master
+{
+#endif
+    out << "STACK TRACE FOR DEBUGGING:" << endl;
+
+    // storage array for stack trace address data
+    void* addrlist[max_frames+1];
+
+    // retrieve current stack addresses
+    int addrlen = backtrace(addrlist, sizeof(addrlist) / sizeof(void*));
+
+//    if (addrlen == 0) {
+//        out << "  <empty, possibly corrupt>" << endl;
+//        return;
+//    }
+
+    // resolve addresses into strings containing "filename(function+address)",
+    // this array must be free()-ed
+    char** symbollist = backtrace_symbols(addrlist, addrlen);
+
+    // allocate string which will be filled with the demangled function name
+    size_t funcnamesize = 256;
+    char* funcname = (char*)malloc(funcnamesize);
+
+    // iterate over the returned symbol lines. skip the first, it is the
+    // address of this function.
+    for (int i = 1; i < addrlen; i++)
+    {
+	char *begin_name = 0, *begin_offset = 0, *end_offset = 0;
+
+	// find parentheses and +address offset surrounding the mangled name:
+#ifdef __clang__
+      // OSX style stack trace
+      for ( char *p = symbollist[i]; *p; ++p )
+      {
+         if (( *p == '_' ) && ( *(p-1) == ' ' ))
+            begin_name = p-1;
+         else if ( *p == '+' )
+            begin_offset = p-1;
+      }
+
+      if ( begin_name && begin_offset && ( begin_name < begin_offset ))
+      {
+         *begin_name++ = '\0';
+         *begin_offset++ = '\0';
+
+         // mangled name is now in [begin_name, begin_offset) and caller
+         // offset in [begin_offset, end_offset). now apply
+         // __cxa_demangle():
+         int status;
+         char* ret = abi::__cxa_demangle( begin_name, &funcname[0],
+                                          &funcnamesize, &status );
+         if ( status == 0 )
+         {
+            funcname = ret; // use possibly realloc()-ed string
+//            out << "  " << symbollist[i] << " : " << funcname << "+"<< begin_offset << endl;
+            out << i << "   "  << funcname << endl;
+         } else {
+            // demangling failed. Output function name as a C function with
+            // no arguments.
+//             out << "  " << symbollist[i] << " : " << begin_name << "()+"<< begin_offset << endl;
+            out << i << "   " << begin_name << "()" << endl;
+         }
+
+#else // !DARWIN - but is posix
+         // ./module(function+0x15c) [0x8048a6d]
+	for (char *p = symbollist[i]; *p; ++p)
+	{
+	    if (*p == '(')
+		begin_name = p;
+	    else if (*p == '+')
+		begin_offset = p;
+	    else if (*p == ')' && begin_offset) {
+		end_offset = p;
+		break;
+	    }
+	}
+
+	if (begin_name && begin_offset && end_offset
+	    && begin_name < begin_offset)
+	{
+	    *begin_name++ = '\0';
+	    *begin_offset++ = '\0';
+	    *end_offset = '\0';
+
+	    // mangled name is now in [begin_name, begin_offset) and caller
+	    // offset in [begin_offset, end_offset). now apply
+	    // __cxa_demangle():
+
+	    int status;
+	    char* ret = abi::__cxa_demangle(begin_name,
+					    funcname, &funcnamesize, &status);
+	    if (status == 0) {
+            funcname = ret; // use possibly realloc()-ed string
+//            out << "  " << symbollist[i] << " : " << funcname << "+"<< begin_offset << endl;
+            out << i << "   " << funcname << endl;
+	    }
+	    else {
+            // demangling failed. Output function name as a C function with
+            // no arguments.
+//            out << "  " << symbollist[i] << " : " << begin_name << "()+"<< begin_offset << endl;
+            out << i << "   " << begin_name << "()" << endl;
+	    }
+#endif
+	}
+	else
+	{
+	    // couldn't parse the line? print the whole line.
+//	    out << i << ". " << symbollist[i] << endl;
+	}
+    }
+
+    free(funcname);
+    free(symbollist);
+#ifdef _OPENMP
+}
+#endif
+
+}
+
+#endif // WIN32

@@ -62,7 +62,12 @@ public:
 
     void printPartition(const char *filename);
 
-	/** remove identical sequences from the tree */
+    void printPartitionRaxml(const char *filename);
+
+    void printBestPartition(const char *filename);
+    void printBestPartitionRaxml(const char *filename);
+
+    /** remove identical sequences from the tree */
     virtual void removeIdenticalSeqs(Params &params);
 
     /** reinsert identical sequences into the tree and reset original alignment */
@@ -164,6 +169,12 @@ public:
 	 */
 	void linkBranch(int part, SuperNeighbor *nei, SuperNeighbor *dad_nei);
 
+
+    /**
+            initialize partial_lh vector of all PhyloNeighbors, allocating central_partial_lh
+     */
+    virtual void initializeAllPartialLh();
+
     /**
             de-allocate central_partial_lh
      */
@@ -259,6 +270,13 @@ public:
 	*/
 	vector<PartitionInfo> part_info;
 
+    /* partition ID sorted in descending order of computation cost */
+    IntVector part_order;
+    IntVector part_order_by_nptn;
+
+    /* compute part_order vector */
+    void computePartitionOrder();
+
     /**
             get the name of the model
     */
@@ -291,6 +309,11 @@ public:
      */
     virtual int fixNegativeBranch(bool force = false, Node *node = NULL, Node *dad = NULL);
 
+    virtual int computeParsimonyBranch(PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst = NULL);
+
+    /** True when mixed codon with other data type */
+    bool rescale_codon_brlen;
+    
     int totalNNIs, evalNNIs;
 
 };

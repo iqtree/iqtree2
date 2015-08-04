@@ -50,6 +50,11 @@ PartitionModel::PartitionModel(Params &params, PhyloSuperTree *tree, ModelsBlock
         (*it)->setModel((*it)->getModelFactory()->model);
         (*it)->setRate((*it)->getModelFactory()->site_rate);
         params.model_name = model_name;
+        if ((*it)->aln->getNSeq() < tree->aln->getNSeq() && (*it)->getModel()->freq_type == FREQ_EMPIRICAL && (*it)->aln->seq_type != SEQ_CODON) {
+        	// modify state_freq to account for empty sequences
+        	(*it)->aln->computeStateFreq((*it)->getModel()->state_freq, (*it)->aln->getNSite() * (tree->aln->getNSeq() - (*it)->aln->getNSeq()));
+        	(*it)->getModel()->decomposeRateMatrix();
+        }
         //string taxa_set = ((SuperAlignment*)tree->aln)->getPattern(part);
         //(*it)->copyTree(tree, taxa_set);
         //(*it)->drawTree(cout);
@@ -66,20 +71,28 @@ int PartitionModel::getNParameters() {
 }
 
 
-double PartitionModel::optimizeParameters(bool fixed_len, bool write_info, double epsilon) {
+double PartitionModel::optimizeParameters(bool fixed_len, bool write_info, double logl_epsilon, double gradient_epsilon) {
     PhyloSuperTree *tree = (PhyloSuperTree*)site_rate->getTree();
     double tree_lh = 0.0;
     int ntrees = tree->size();
 
+    if (tree->part_order.empty()) tree->computePartitionOrder();
 	#ifdef _OPENMP
-	#pragma omp parallel for reduction(+: tree_lh)
+	#pragma omp parallel for reduction(+: tree_lh) schedule(dynamic)
 	#endif
-    for (int part = 0; part < ntrees; part++) {
+    for (int i = 0; i < ntrees; i++) {
+        int part = tree->part_order[i];
     	if (write_info)
+        #ifdef _OPENMP
+        #pragma omp critical
+        #endif
+        {
     		cout << "Optimizing " << tree->at(part)->getModelName() <<
         		" parameters for partition " << tree->part_info[part].name <<
         		" (" << tree->at(part)->getModelFactory()->getNParameters() << " free parameters)" << endl;
-        tree_lh += tree->at(part)->getModelFactory()->optimizeParameters(fixed_len, write_info && verbose_mode >= VB_MED, epsilon);
+        }
+        tree_lh += tree->at(part)->getModelFactory()->optimizeParameters(fixed_len, write_info && verbose_mode >= VB_MED, 
+            logl_epsilon/min(ntrees,10), gradient_epsilon/min(ntrees,10));
     }
     //return ModelFactory::optimizeParameters(fixed_len, write_info);
     return tree_lh;

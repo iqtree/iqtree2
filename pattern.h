@@ -60,10 +60,15 @@ public:
 		2015-03-04: is_const will also be true for pattern like "AA-A--AAA"
 	*/
 	bool is_const;
+    
+    /** true if pattern is informative, false otherwise */
+    bool is_informative;
 
 	/** 2015-03-04: if is_const is true, this will store the const character for the pattern */
 	char const_char;
 
+    /** number of different character states */
+    int num_chars;
 };
 
 #endif

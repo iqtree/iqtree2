@@ -837,7 +837,7 @@ void sumFraction(PhyloNode *node1, PhyloNode *node2, PhyloTree *tree){
 	PhyloNeighbor* nei1 = (PhyloNeighbor*) node1->findNeighbor(node2);
 	PhyloNeighbor* nei2 = (PhyloNeighbor*) node2->findNeighbor(node1);
 
-	int loglh = tree->computeLikelihood();
+//	int loglh = tree->computeLikelihood();
 
     double* T1_partial_lh;
     if(nei1->get_partial_lh_computed() == 0){
