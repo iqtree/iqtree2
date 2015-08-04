@@ -184,6 +184,11 @@ public:
 
     void initializeAllPartialLh(double* &lh_addr, UBYTE* &scale_addr, UINT* &pars_addr, PhyloNode *node = NULL, PhyloNode *dad = NULL);
 
+    /**
+            de-allocate central_partial_lh
+     */
+    virtual void deleteAllPartialLh();
+
 	/**
 	 * @return the type of NNI around node1-node2 for partition part
 	 */

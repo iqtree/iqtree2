@@ -274,6 +274,8 @@ void PhyloTree::changeLikelihoodKernel(LikelihoodKernel lk) {
 	if (sse == lk) return;
 	if ((sse == LK_EIGEN || sse == LK_EIGEN_SSE) && (lk == LK_NORMAL || lk == LK_SSE)) {
 		// need to increase the memory usage when changing from new kernel to old kernel
+        if (params->lh_mem_save == LM_PER_NODE)
+            params->lh_mem_save = LM_ALL_BRANCH;
 		setLikelihoodKernel(lk);
 		deleteAllPartialLh();
 		initializeAllPartialLh();

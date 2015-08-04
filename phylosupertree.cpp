@@ -528,11 +528,26 @@ void PhyloSuperTree::initSettings(Params &params) {
 
 }
 
+void PhyloSuperTree::setLikelihoodKernel(LikelihoodKernel lk) {
+    PhyloTree::setLikelihoodKernel(lk);
+    for (iterator it = begin(); it != end(); it++)
+        (*it)->setLikelihoodKernel(lk);    
+}
+
 void PhyloSuperTree::changeLikelihoodKernel(LikelihoodKernel lk) {
-//	PhyloTree::changeLikelihoodKernel(lk);
-	sse = lk;
-	for (iterator it = begin(); it != end(); it++)
-		(*it)->changeLikelihoodKernel(lk);
+	PhyloTree::changeLikelihoodKernel(lk);
+//	if ((sse == LK_EIGEN || sse == LK_EIGEN_SSE) && (lk == LK_NORMAL || lk == LK_SSE)) {
+//		// need to increase the memory usage when changing from new kernel to old kernel
+//        setLikelihoodKernel(lk);
+//        for (iterator it = begin(); it != end(); it++)
+//            (*it)->setLikelihoodKernel(lk);
+//		deleteAllPartialLh();
+//		initializeAllPartialLh();
+//		clearAllPartialLH();
+//    } else {
+//        for (iterator it = begin(); it != end(); it++)
+//            (*it)->setLikelihoodKernel(lk);
+//    }
 }
 
 string PhyloSuperTree::getTreeString() {

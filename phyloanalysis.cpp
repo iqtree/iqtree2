@@ -2320,7 +2320,10 @@ void runPhyloAnalysis(Params &params) {
 			// bug fix
 			if ((tree->sse == LK_EIGEN || tree->sse == LK_EIGEN_SSE) && !tree->isBifurcating()) {
 				cout << "NOTE: Changing to old kernel as consensus tree is multifurcating" << endl;
-				tree->changeLikelihoodKernel(LK_SSE);
+                if (tree->sse == LK_EIGEN)
+                    tree->changeLikelihoodKernel(LK_NORMAL);
+                else
+                    tree->changeLikelihoodKernel(LK_SSE);
 			}
 
 			tree->initializeAllPartialLh();

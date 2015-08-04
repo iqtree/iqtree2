@@ -80,6 +80,8 @@ public:
 	 */
 	virtual void initSettings(Params& params);
 
+    virtual void setLikelihoodKernel(LikelihoodKernel lk);
+
     virtual void changeLikelihoodKernel(LikelihoodKernel lk);
 
 	virtual bool isSuperTree() { return true; }
