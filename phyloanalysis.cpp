@@ -1924,7 +1924,9 @@ void computeLoglFromUserInputGAMMAInvar(Params &params, IQTree &iqtree) {
 
 void searchGAMMAInvarByRestarting(IQTree &iqtree) {
     if (!Params::getInstance().fixed_branch_length)
-        iqtree.optimizeAllBranches(1);
+		iqtree.setCurScore(iqtree.optimizeAllBranches(1));
+	else
+		iqtree.setCurScore(iqtree.computeLikelihood());
 	RateGammaInvar* site_rates = dynamic_cast<RateGammaInvar*>(iqtree.getRate());
 	double initAlphas[] = { 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0 };
 	double bestLogl = iqtree.getCurScore();
@@ -1957,7 +1959,7 @@ void searchGAMMAInvarByRestarting(IQTree &iqtree) {
 		site_rates->setPInvar(initPInvar);
 		site_rates->computeRates();
 		iqtree.clearAllPartialLH();
-		iqtree.optimizeModelParameters(verbose_mode >= VB_MED, Params::getInstance().testAlphaEps);
+		iqtree.optimizeModelParameters(verbose_mode >= VB_MED, 0.1);
         double estAlpha = iqtree.getRate()->getGammaShape();
         double estPInv = iqtree.getRate()->getPInvar();
         double logl = iqtree.getCurScore();

@@ -763,6 +763,10 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info,
 	assert(model);
 	assert(site_rate);
 
+    cout << "Estimate model parameters (epsilon = " << logl_epsilon << ")" << endl;
+
+    double defaultEpsilon = logl_epsilon;
+
 	double begin_time = getRealTime();
 	double cur_lh;
 	PhyloTree *tree = site_rate->getTree();
@@ -819,6 +823,13 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info,
 		if (!fixed_len)
 			new_lh = tree->optimizeAllBranches(min(i,3), logl_epsilon);  // loop only 3 times in total (previously in v0.9.6 5 times)
 		if (new_lh > cur_lh + logl_epsilon) {
+            if (Params::getInstance().testAlpha && i == 3) {
+                double newEpsilon = (new_lh - cur_lh) * 0.01;
+                if (newEpsilon > defaultEpsilon) {
+                    logl_epsilon = newEpsilon;
+                    cout << "Estimate model parameters new epsilon = " << logl_epsilon << endl;
+                }
+            }
 //			if (gradient_epsilon > (new_lh - cur_lh) * logl_epsilon)
 //				gradient_epsilon = (new_lh - cur_lh) * logl_epsilon;
 			cur_lh = new_lh;
