@@ -827,7 +827,7 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info,
                 double newEpsilon = (new_lh - cur_lh) * 0.01;
                 if (newEpsilon > defaultEpsilon) {
                     logl_epsilon = newEpsilon;
-                    cout << "Estimate model parameters new epsilon = " << logl_epsilon << endl;
+                    cout << "Estimate model parameters with new epsilon = " << logl_epsilon << endl;
                 }
             }
 //			if (gradient_epsilon > (new_lh - cur_lh) * logl_epsilon)
