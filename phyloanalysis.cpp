@@ -1880,25 +1880,26 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 }
 
 void computeLoglFromUserInputGAMMAInvar(Params &params, IQTree &iqtree) {
-	RateGammaInvar* site_rates = dynamic_cast<RateGammaInvar*>(iqtree.getRate());
+	RateGammaInvar *site_rates = dynamic_cast<RateGammaInvar *>(iqtree.getRate());
 	site_rates->setFixPInvar(true);
 	site_rates->setFixGammaShape(true);
 	vector<double> alphas, p_invars, logl;
 	ifstream aiFile;
 	aiFile.open(params.alpha_invar_file, ios_base::in);
 	if (aiFile.good()) {
-				double alpha, p_invar;
-				while (aiFile >> alpha >> p_invar) {
-					alphas.push_back(alpha);
-					p_invars.push_back(p_invar);
-				}
-				aiFile.close();
-				cout << "Computing tree logl based on the alpha and p_invar values in " << params.alpha_invar_file << " ..." << endl;
-			} else {
-				stringstream errMsg;
-				errMsg << "Could not find file: " << params.alpha_invar_file;
-				outError(errMsg.str().c_str());
-			}
+		double alpha, p_invar;
+		while (aiFile >> alpha >> p_invar) {
+			alphas.push_back(alpha);
+			p_invars.push_back(p_invar);
+		}
+		aiFile.close();
+		cout << "Computing tree logl based on the alpha and p_invar values in " << params.alpha_invar_file << " ..." <<
+		endl;
+	} else {
+		stringstream errMsg;
+		errMsg << "Could not find file: " << params.alpha_invar_file;
+		outError(errMsg.str().c_str());
+	}
 	string aiResultsFileName = string(params.out_prefix) + "_" + string(params.alpha_invar_file) + ".results";
 	ofstream aiFileResults;
 	aiFileResults.open(aiResultsFileName.c_str());
@@ -1907,16 +1908,16 @@ void computeLoglFromUserInputGAMMAInvar(Params &params, IQTree &iqtree) {
 	DoubleVector lenvec;
 	aiFileResults << "Alpha P_Invar Logl TreeLength\n";
 	for (int i = 0; i < alphas.size(); i++) {
-				iqtree.saveBranchLengths(lenvec);
-				aiFileResults << alphas.at(i) << " " << p_invars.at(i) << " ";
-				site_rates->setGammaShape(alphas.at(i));
-				site_rates->setPInvar(p_invars.at(i));
-				site_rates->computeRates();
-				iqtree.clearAllPartialLH();
-				double lh = iqtree.getModelFactory()->optimizeParameters(params.fixed_branch_length, false, 0.001);
-				aiFileResults << lh << " " << iqtree.treeLength() << "\n";
-				iqtree.restoreBranchLengths(lenvec);
-			}
+		iqtree.saveBranchLengths(lenvec);
+		aiFileResults << alphas.at(i) << " " << p_invars.at(i) << " ";
+		site_rates->setGammaShape(alphas.at(i));
+		site_rates->setPInvar(p_invars.at(i));
+		site_rates->computeRates();
+		iqtree.clearAllPartialLH();
+		double lh = iqtree.getModelFactory()->optimizeParameters(params.fixed_branch_length, false, 0.001);
+		aiFileResults << lh << " " << iqtree.treeLength() << "\n";
+		iqtree.restoreBranchLengths(lenvec);
+	}
 	aiFileResults.close();
 	cout << "Results were written to: " << aiResultsFileName << endl;
 	cout << "Wall clock time used: " << getRealTime() - params.start_real_time << endl;

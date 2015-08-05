@@ -557,7 +557,7 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
         }
         bool newTree = candidateTrees.update(tree, getCurScore());
 		if (betterScore) {
-			if (newTree)
+			if (newTree && nniCount != 0)
 				cout << "BETTER TREE FOUND at iteration " << stop_rule.getCurIt() << ": "
 						<< getCurScore() << endl;
 			else
