@@ -446,7 +446,7 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
 #endif
     cout << "Generating " << nParTrees << " parsimony trees (max. SPR dist = " << params->sprDist << ")" << endl;
     cout << "--------------------------------------------------------------------" << endl;
-    cout << "|                    STARTING TREE SEARCH                          |" << endl;
+    cout << "|                        STARTING TREE SEARCH                      |" << endl;
     cout << "--------------------------------------------------------------------" << endl;
     cout << "               DIVERSIFICATION PHASE" << endl;
     cout << "Generating " << nParTrees - 1 << " parsimony trees... ";
@@ -458,7 +458,7 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
     CandidateSet parsimonyTrees;
     parsimonyTrees.init(this->aln, this->params);
 
-    for (int treeNr = 0; treeNr < numTrees; treeNr++) {
+    for (int treeNr = 1; treeNr < numTrees; treeNr++) {
         double startTime = getRealTime();
         int numDupPars = 0;
 #ifdef _OPENMP
@@ -478,11 +478,9 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
         }
     }
 #endif
-        for (int treeNr = 1; treeNr < nParTrees; treeNr++) {
-            string curParsTree;
-            curParsTree = generateParsimonyTree(params->ran_seed + treeNr);
-            parsimonyTrees.update(curParsTree, -DBL_MAX);
-        }
+        string curParsTree;
+        curParsTree = generateParsimonyTree(params->ran_seed + treeNr);
+        parsimonyTrees.update(curParsTree, -DBL_MAX);
 
 #ifdef _IQTREE_MPI
     // Send parsimony trees to all other processes
@@ -538,13 +536,13 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
     MPI_Barrier(MPI_COMM_WORLD);
 #endif
 
-        double parsTime = getCPUTime() - startTime;
+        double parsTime = getRealTime() - startTime;
         cout << parsimonyTrees.size() << " distinct parsimony trees have been generated" << endl;
-        cout << "CPU time: " << parsTime << endl;
+        cout << "Wallclock time: " << parsTime << endl;
 
         /****************************************************************************************
       			            Compute logl of all parsimony trees
-    *****************************************************************************************/
+        *****************************************************************************************/
 
 #ifdef _IQTREE_MPI
     int numParTrees = parsimonyTrees.size();
@@ -1786,42 +1784,32 @@ string IQTree::optimizeBranches(int maxTraversal) {
 }
 
 double IQTree::doTreeSearch() {
+    double initCPUTime = getCPUTime();
 
-    if (params->min_iterations > 0) {
-        double initTime = getCPUTime();
-
-        /********************************** INITIALIZE THE CANDIDATE TREE SET ***************************************/
-        params->modelEps = 0.1;
-        if (!params->user_file && (params->start_tree == STT_PARSIMONY || params->start_tree == STT_PLL_PARSIMONY)) {
+    /********************************** INITIALIZE THE CANDIDATE TREE SET ***************************************/
+    params->modelEps = 0.1;
+    if (!params->user_file && (params->start_tree == STT_PARSIMONY || params->start_tree == STT_PLL_PARSIMONY)) {
 #ifdef _IQTREE_MPI
-            initCandidateTreeSet(params->numInitTrees - MPIHelper::instance()->getNumProcesses(),
+        initCandidateTreeSet(params->numInitTrees - MPIHelper::instance()->getNumProcesses(),
                                  params->numNNITrees);
 #else
-            initCandidateTreeSet(params->numInitTrees - 1, params->numNNITrees);
+        initCandidateTreeSet(params->numInitTrees - 1, params->numNNITrees);
 #endif
-            assert(candidateTrees.size() != 0);
-            cout << "Finish initializing candidate tree set (" << candidateTrees.size() << ")" << endl;
-        } else {
-            cout << "Doing NNI on the initial tree ... " << endl;
-            doNNISearch();
-            candidateTrees.update(getTreeString(), getCurScore());
-        }
-        params->modelEps = 0.001;
-
-        cout << "Current best tree score: " << candidateTrees.getBestScore() << " / CPU time: " <<
-        getCPUTime() - initTime << endl;
-        cout << endl;
+        assert(candidateTrees.size() != 0);
+        cout << "Finish initializing candidate tree set (" << candidateTrees.size() << ")" << endl;
+    } else {
+        cout << "Doing NNI on the user-input tree ... " << endl;
+        doNNISearch();
+        candidateTrees.update(getTreeString(), getCurScore());
     }
-// FROM TUNG: Not needed anymore because printResultTree() is always called whenever a new best tree is found
-//    string tree_file_name = params->out_prefix;
-//    tree_file_name += ".treefile";
-//    // PLEASE PRINT TREE HERE!
-//    printResultTree();
+    params->modelEps = 0.001;
+
+    cout << "Current best tree score: " << candidateTrees.getBestScore() << " / CPU time: " <<
+    getCPUTime() - initCPUTime << endl;
+    cout << endl;
+
     cout << "               INTENSIFICATION PHASE" << endl;
-    string tree_file_name = params->out_prefix;
-    tree_file_name += ".treefile";
-    // PLEASE PRINT TREE HERE!
-    printResultTree();
+
     string treels_name = params->out_prefix;
     treels_name += ".treels";
     string out_lh_file = params->out_prefix;
@@ -1848,16 +1836,17 @@ double IQTree::doTreeSearch() {
 
     double cur_correlation = 0.0;
 
-    /*====================================================
-	 * MAIN LOOP OF THE IQ-TREE ALGORITHM
-	 *====================================================*/
+    /*==============================================================================================================
+	                                       MAIN LOOP OF THE IQ-TREE ALGORITHM
+	 *=============================================================================================================*/
     for (; !stop_rule.meetStopCondition(stop_rule.getCurIt(), cur_correlation); stop_rule.setCurIt(
             stop_rule.getCurIt() + 1)) {
         searchinfo.curIter = stop_rule.getCurIt();
         // estimate logl_cutoff for bootstrap
         if (params->avoid_duplicated_trees && max_candidate_trees > 0 && treels_logl.size() > 1000) {
-            int predicted_iteration = ((stop_rule.getCurIt() + params->step_iterations - 1) / params->step_iterations) *
-                                      params->step_iterations;
+            int predicted_iteration;
+            predicted_iteration = ((stop_rule.getCurIt() + params->step_iterations - 1) / params->step_iterations)
+                                                  * params->step_iterations;
             int num_entries = floor(max_candidate_trees * ((double) stop_rule.getCurIt() / predicted_iteration));
             if (num_entries < treels_logl.size() * 0.9) {
                 DoubleVector logl = treels_logl;
@@ -1870,7 +1859,7 @@ double IQTree::doTreeSearch() {
                     cout << treels.size() << " trees, " << treels_logl.size() << " logls, logl_cutoff= " << logl_cutoff;
                     if (params->store_candidate_trees)
                         cout << " duplicates= " << duplication_counter << " ("
-                                                                          << (int) round(100 * ((double) duplication_counter / treels_logl.size())) << "%)" << endl;
+                        << (int) round(100 * ((double) duplication_counter / treels_logl.size())) << "%)" << endl;
                     else
                         cout << endl;
                 }

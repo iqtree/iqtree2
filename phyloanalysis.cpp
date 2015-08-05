@@ -1706,14 +1706,13 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 	iqtree.clearAllPartialLH();
 	initTree = iqtree.optimizeModelParameters(true, initEpsilon);
 
-    // Input the initial tree to the candidate set
-    iqtree.candidateTrees.update(initTree, iqtree.getCurScore());
+	iqtree.printResultTree();
 
     // Compute maximum likelihood distance
-    // ML distance is only needed for IQP
     if ( params.start_tree != STT_BIONJ && ((params.snni && !params.iqp) || params.min_iterations == 0)) {
         params.compute_ml_dist = false;
     }
+
     if ((!params.dist_file && params.compute_ml_dist) || params.leastSquareBranch) {
         computeMLDist(params, iqtree, dist_file, getCPUTime());
         if (params.start_tree == STT_BIONJ) {
@@ -1750,8 +1749,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 	pruneTaxa(params, iqtree, pattern_lh, pruned_taxa, linked_name);
 
 	/***************************************** DO STOCHASTIC TREE SEARCH *******************************************/
-	if (params.min_iterations > 1) {
-		iqtree.readTreeString(iqtree.candidateTrees.getTopTrees()[0]);
+	if (params.min_iterations > 0) {
 		iqtree.doTreeSearch();
 		iqtree.setAlignment(iqtree.aln);
 	} else {
@@ -1780,7 +1778,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 //			((PhyloSuperTree*) &iqtree)->mapTrees();
 
 	if (params.snni && params.min_iterations && verbose_mode >= VB_MED) {
-		cout << "Log-likelihoods of best " << params.popSize << " trees: " << endl;
+		cout << "Log-likelihoods of " << params.popSize << " best candidate trees: " << endl;
 		iqtree.printBestScores();
 		cout << endl;
 	}
