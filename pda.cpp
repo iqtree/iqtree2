@@ -2203,9 +2203,6 @@ int main(int argc, char *argv[]) {
 
 #endif
 
-	Params params;
-	parseArg(argc, argv, params);
-	//Params params;
 	parseArg(argc, argv, Params::getInstance());
 	_log_file = Params::getInstance().out_prefix;
 	_log_file += ".log";
