@@ -666,6 +666,9 @@ public:
     /** Set of splits occuring in bootstrap trees */
     vector<SplitGraph*> boot_splits;
 
+    /** log-likelihood of bootstrap consensus tree */
+    double boot_consense_logl;
+
     /** Corresponding map for set of splits occuring in bootstrap trees */
     //SplitIntMap boot_splits_map;
 

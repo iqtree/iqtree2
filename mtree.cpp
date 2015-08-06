@@ -1958,7 +1958,8 @@ void MTree::computeRFDist(istream &in, IntVector &dist) {
 		}
 
 		//cout << "common_splits = " << common_splits << endl;
-		dist.push_back(common_splits);
+        int rf_val = branchNum-leafNum + tree.branchNum-tree.leafNum - 2*common_splits;
+		dist.push_back(rf_val);
 		char ch;
 		in.exceptions(ios::goodbit);
 		(in) >> ch;
@@ -1968,7 +1969,7 @@ void MTree::computeRFDist(istream &in, IntVector &dist) {
 
 	}
 
-	cout << ntrees << " trees read" << endl;
+//	cout << ntrees << " trees read" << endl;
 
 
 }
