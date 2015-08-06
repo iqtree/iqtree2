@@ -2493,7 +2493,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.reinsert_par = true;
 				continue;
 			}
-			if (strcmp(argv[cnt], "-nospeednni") == 0) {
+			if (strcmp(argv[cnt], "-allnni") == 0) {
 				params.speednni = false;
 				continue;
 			}
@@ -2877,7 +2877,8 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -toppars <number>    Number of best parsimony trees (default: 20)" << endl
             << "  -sprrad <number>     Radius for parsimony SPR search (default: 6)" << endl
             << "  -numcand <number>    Size of the candidate tree set (defaut: 5)" << endl
-            << "  -pers <perturbation> Perturbation strength for randomized NNI (default: 0.5)" << endl
+            << "  -pers <percent>      Perturbation strength for randomized NNI (0.0 < percent < 1.0, default: 0.5)" << endl
+            << "  -allnni              Perform more thorough NNI search (default: off)" << endl
             << "  -numstop <number>    Number of unsuccessful iterations to stop (default: 100)" << endl
             << "  -n <#iterations>     Fix number of iterations to <#iterations> (default: auto)" << endl
             << "  -iqp                 Use the IQP tree perturbation (default: randomized NNI)" << endl
