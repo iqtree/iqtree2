@@ -94,8 +94,8 @@ short int std_genetic_code[]    = {   0,    0,     0,        1,        1};
 
 const char *codon_freq_names[] = {"", "+F1X4", "+F3X4", "+F"};
 
-const double TOL_LIKELIHOOD_MODELTEST = 0.1;
-const double TOL_GRADIENT_MODELTEST   = 0.01;
+const double TOL_LIKELIHOOD_MODELTEST = 0.01;
+const double TOL_GRADIENT_MODELTEST   = 0.001;
 
 /**
  * copy from cvec to strvec
@@ -734,7 +734,8 @@ void printModelFile(ostream &fmodel, Params &params, PhyloTree *tree, ModelInfo 
     double pinvar = tree->getRate()->getPInvar();
     if (pinvar > 0) fmodel << pinvar; else fmodel << "NA";
     fmodel << "\t";
-    tree->printTree(fmodel);
+//    tree->printTree(fmodel);
+    fmodel << info.tree;
     fmodel << endl;
     fmodel.precision(4);
     const char *model_name = (params.print_site_lh) ? info.name.c_str() : NULL;
@@ -1217,8 +1218,9 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
         tree->setModel(subst_model);
         // initialize rate
         size_t pos;
+        int ncat = 0;
         if ((pos = model_names[model].find("+R")) != string::npos) {
-            int ncat = params.num_rate_cats;
+            ncat = params.num_rate_cats;
             if (model_names[model].length() > pos+2 && isdigit(model_names[model][pos+2])) {
                 ncat = convert_int(model_names[model].c_str() + pos+2);
 //                tree->getRate()->setNCategory(ncat);
@@ -1237,7 +1239,7 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
         } else if ((pos = model_names[model].find("+G")) != string::npos) {
             tree->setRate(rate_class[2]);
             if (model_names[model].length() > pos+2 && isdigit(model_names[model][pos+2])) {
-                int ncat = convert_int(model_names[model].c_str() + pos+2);
+                ncat = convert_int(model_names[model].c_str() + pos+2);
                 if (ncat < 1) outError("Wrong number of category for +G in " + model_names[model]);
                 tree->getRate()->setNCategory(ncat);
             }
@@ -1278,10 +1280,12 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 		if (model_id >= 0) {
 			info.logl = model_info[model_id].logl;
             info.tree_len = model_info[model_id].tree_len;
+//            info.tree = model_info[model_id].tree;
             prev_tree_string = model_info[model_id].tree;
         } else if (skip_model) {
             info.logl = model_info[prev_model_id].logl;
             info.tree_len = model_info[prev_model_id].tree_len;
+//            info.tree = model_info[prev_model_id].tree;
             prev_tree_string = model_info[prev_model_id].tree;
 //            cout << "Skipped " << info.name << endl;
 		} else {
@@ -1301,6 +1305,7 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
                 runTreeReconstruction(params, original_model, *iqtree, model_info);
                 info.logl = iqtree->computeLikelihood();
                 info.tree_len = iqtree->treeLength();
+//                info.tree = iqtree->getTreeString();
                 params.model_name = original_model;
                 params.user_file = orig_user_tree;
                 tree = iqtree;
@@ -1315,8 +1320,24 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
                 prev_tree_string = "";
                 info.logl = tree->getModelFactory()->optimizeParameters(false, false, TOL_LIKELIHOOD_MODELTEST, TOL_GRADIENT_MODELTEST);
                 info.tree_len = tree->treeLength();
+                if (prev_model_id >= 0) {
+                    // check stop criterion for +R
+                    size_t prev_pos_r = model_info[prev_model_id].name.find("+R");
+                    size_t pos_r = info.name.find("+R");
+                    if ( prev_pos_r != string::npos &&  pos_r != string::npos && 
+                        model_info[prev_model_id].name.substr(0,prev_pos_r) == info.name.substr(0, pos_r) &&
+                        info.logl < model_info[prev_model_id].logl) 
+                    {
+//                        cout << "redo" << endl;
+                        dynamic_cast<RateFree*>(rate_class[2+ncat])->setRateAndProp(dynamic_cast<RateFree*>(rate_class[1+ncat]));
+                        info.logl = tree->getModelFactory()->optimizeParameters(false, false, TOL_LIKELIHOOD_MODELTEST, TOL_GRADIENT_MODELTEST);
+                        info.tree_len = tree->treeLength();                        
+                    }
+                }
+//                info.tree = tree->getTreeString();
             }
 			// print information to .model file
+            info.tree = tree->getTreeString();
             printModelFile(fmodel, params, tree, info, set_name);
 		}
 		computeInformationScores(info.logl, info.df, ssize, info.AIC_score, info.AICc_score, info.BIC_score);
@@ -1324,7 +1345,8 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
             // check stop criterion for +R
             size_t prev_pos_r = model_info[prev_model_id].name.find("+R");
             size_t pos_r = info.name.find("+R");
-            if ( prev_pos_r != string::npos &&  pos_r != string::npos && model_info[prev_model_id].name.substr(0,prev_pos_r) == info.name.substr(0, pos_r)) {
+            if ( prev_pos_r != string::npos &&  pos_r != string::npos && 
+            model_info[prev_model_id].name.substr(0,prev_pos_r) == info.name.substr(0, pos_r)) {
                 switch (params.model_test_stop_rule) {
                 case MTC_ALL:
                     if (info.AIC_score > model_info[prev_model_id].AIC_score && info.AICc_score > model_info[prev_model_id].AICc_score &&
@@ -1354,6 +1376,9 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
                 }
             }
         }
+        if (skip_model > 1)
+            info.AIC_score = DBL_MAX;
+        
 		if (model_id >= 0) {
 			model_info[model_id] = info;
 		} else {
@@ -1484,22 +1509,26 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 		if (AICc_sum > 0.95) break;
 	}
 
+    string best_tree; // BQM 2015-07-21: With Lars find best model
 	/* sort models by their scores */
 	switch (params.model_test_criterion) {
 	case MTC_AIC:
 		for (model = 0; model < model_info.size(); model++)
 			scores[model] = model_info[model].AIC_score;
 		best_model = model_info[model_aic].name;
+        best_tree = model_info[model_aic].tree;
 		break;
 	case MTC_AICC:
 		for (model = 0; model < model_info.size(); model++)
 			scores[model] = model_info[model].AICc_score;
 		best_model = model_info[model_aicc].name;
+        best_tree = model_info[model_aicc].tree;
 		break;
 	case MTC_BIC:
 		for (model = 0; model < model_info.size(); model++)
 			scores[model] = model_info[model].BIC_score;
 		best_model = model_info[model_bic].name;
+        best_tree = model_info[model_bic].tree;
 		break;
     default: assert(0);
 	}
@@ -1522,6 +1551,10 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 //	delete tree_hetero;
 //	delete tree_homo;
 	in_tree->deleteAllPartialLh();
+    
+    // BQM 2015-07-21 with Lars: load the best_tree
+//	if (params.model_test_and_tree)
+		in_tree->readTreeString(best_tree);
 
     
 	if (set_name == "") {
