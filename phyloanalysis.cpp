@@ -1150,7 +1150,6 @@ void computeMLDist(Params& params, IQTree& iqtree, string &dist_file, double beg
     double *ml_var = NULL;
     longest_dist = iqtree.computeDist(params, iqtree.aln, ml_dist, ml_var, dist_file);
 	cout << " " << (getCPUTime() - begin_time) << " sec" << endl;
-	cout << endl;
 	if (longest_dist > MAX_GENETIC_DIST * 0.99) {
 		outWarning("Some pairwise ML distances are too long (saturated)");
 		//cout << "Some ML distances are too long, using old distances..." << endl;
@@ -1678,7 +1677,6 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 			double stime = getRealTime();
 			searchGAMMAInvarByRestarting(iqtree);
 			double etime = getRealTime();
-            cout << endl;
             cout << "Testing alpha took: " << etime -stime << " CPU seconds" << endl;
             cout << endl;
 		}
@@ -1696,9 +1694,10 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 
     // Compute maximum likelihood distance
     // ML distance is only needed for IQP
-    if ( params.start_tree != STT_BIONJ && ((params.snni && !params.iqp) || params.min_iterations == 0)) {
-        params.compute_ml_dist = false;
-    }
+//    if ( params.start_tree != STT_BIONJ && ((params.snni && !params.iqp) || params.min_iterations == 0)) {
+//        params.compute_ml_dist = false;
+//    }
+
     if ((!params.dist_file && params.compute_ml_dist) || params.leastSquareBranch) {
         computeMLDist(params, iqtree, dist_file, getCPUTime());
         if (params.start_tree == STT_BIONJ) {
@@ -1709,17 +1708,27 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
             else
             	iqtree.wrapperFixNegativeBranch(false);
         	initTree = iqtree.optimizeModelParameters(params.min_iterations==0, initEpsilon);
-        }
+        } else {
+			iqtree.resetCurScore();
+			iqtree.computeBioNJ(params, iqtree.aln, dist_file);
+			if (iqtree.isSuperTree())
+				iqtree.wrapperFixNegativeBranch(true);
+			else
+				iqtree.wrapperFixNegativeBranch(false);
+			initTree = iqtree.optimizeBranches(2);
+		}
     }
 
-    double cputime_search_start = getCPUTime();
+	iqtree.candidateTrees.update(initTree, iqtree.getCurScore());
+
+	double cputime_search_start = getCPUTime();
     double realtime_search_start = getRealTime();
 
     if (params.min_iterations > 0) {
         double initTime = getCPUTime();
 
         if (!params.user_file && (params.start_tree == STT_PARSIMONY || params.start_tree == STT_PLL_PARSIMONY)) {
-        	iqtree.initCandidateTreeSet(params.numInitTrees, params.numNNITrees);
+        	iqtree.initCandidateTreeSet(params.numInitTrees - iqtree.candidateTrees.size(), params.numNNITrees);
         	assert(iqtree.candidateTrees.size() != 0);
         	cout << "Finish initializing candidate tree set. ";
         	cout << "Number of distinct locally optimal trees: " << iqtree.candidateTrees.size() << endl;
@@ -1987,8 +1996,6 @@ void searchGAMMAInvarByRestarting(IQTree &iqtree) {
     iqtree.getModel()->decomposeRateMatrix();
     site_rates->computeRates();
 	iqtree.clearAllPartialLH();
-    iqtree.getModel()->writeInfo(cout);
-    iqtree.getRate()->writeInfo(cout);
     iqtree.setCurScore(iqtree.computeLikelihood());
     cout << endl;
     cout << "Best initial alpha: " << bestAlpha << " / initial pinv: " << bestPInvar << " / ";

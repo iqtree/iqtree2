@@ -428,8 +428,9 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
     cout << "--------------------------------------------------------------------" << endl;
     cout << "|                    STARTING TREE SEARCH                          |" << endl;
     cout << "--------------------------------------------------------------------" << endl;
-    cout << "               DIVERSIFICATION PHASE" << endl;
-    cout << "Generating " << nParTrees - 1 << " parsimony trees... ";
+    cout << "                     DIVERSIFICATION PHASE" << endl;
+
+    cout << "Generating " << nParTrees  << " parsimony trees... ";
     cout.flush();
     double startTime = getRealTime();
     int numDupPars = 0;
@@ -450,7 +451,7 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
         }
     }
 #endif
-    for (int treeNr = 1; treeNr < nParTrees; treeNr++) {
+    for (int treeNr = 1; treeNr <= nParTrees; treeNr++) {
         string curParsTree;
 
         /********* Create parsimony tree using PLL *********/
@@ -493,28 +494,32 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
         }
     }
     double parsTime = getRealTime() - startTime;
-    cout << "(" << numDupPars << " duplicated parsimony trees)" << endl;
-    cout << "Time: " << parsTime << endl;
-    cout << "Computing logl of parsimony trees ... " << endl;
+    cout << parsTime << " seconds ";
+    cout << candidateTrees.size() << " distinct parsimony trees have been generated" << endl;
+
+    /****************************************************************************************
+                      Compute logl of all parsimony trees
+    *****************************************************************************************/
+
+    cout << "Computing logl of parsimony trees ... ";
     startTime = getRealTime();
 
-    /************ Compute logl of all parsimony trees ********************/
-    vector<string> unOptParTrees = candidateTrees.getTopTrees(nParTrees);
-    // logl of the first tree has already been computed during model parameter estimation
-    for (vector<string>::iterator it = unOptParTrees.begin()+1; it != unOptParTrees.end(); it++) {
-    	readTreeString(*it);
-//    	cout << getTreeString() << endl << "-----" << endl;
-    	//cout << "Root: " << root->name << endl;
-//    	fixAllBranches(true);
-        string tree = optimizeBranches(2);
-        // Add tree to the candidate set
-		candidateTrees.update(tree, getCurScore(), false);
+    for (CandidateSet::iterator it = candidateTrees.begin(); it != candidateTrees.end(); ++it) {
+        string treeString;
+        double score;
+        if (it->first == -DBL_MAX) {
+            readTreeString(it->second.tree);
+            treeString = optimizeBranches(2);
+            score = getCurScore();
+        } else {
+            treeString = it->second.tree;
+            score = it->first;
+        }
+        candidateTrees.update(treeString, score);
     }
-    //exit(0);
+
     double loglTime = getRealTime() - startTime;
-    if (unOptParTrees.size() > 1) {
-    	cout << "Average wall time for computing logl of 1 parsimony tree: " << loglTime / (unOptParTrees.size()-1)<< endl;
-    }
+    cout << loglTime << " seconds" << endl;
 
     // Only select the best nNNITrees for doing NNI search
     CandidateSet initParsimonyTrees = candidateTrees.getBestCandidateTrees(nNNITrees);
@@ -550,9 +555,9 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
 
         bool betterScore = false;
         // Better tree or score is found
-        if (getCurScore() > candidateTrees.getBestScore()) {
+        if (getCurScore() > candidateTrees.getBestScore() + params->modeps) {
             // Re-optimize model parameters (the sNNI algorithm)
-        	tree = optimizeModelParameters(false, params->modeps*10);
+        	tree = optimizeModelParameters(false, params->modeps * 10);
         	betterScore = true;
         }
         bool newTree = candidateTrees.update(tree, getCurScore());
@@ -569,13 +574,8 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
     }
     double nniTime = getCPUTime() - startTime;
     cout << "Average CPU time for 1 NNI search: " << nniTime / initParsimonyTrees.size() << endl;
-
-//	if (params->fix_stable_splits) {
-//		int nSupportedSplits = candidateTrees.computeSplitSupport(nNNITrees);
-//		cout << ((double) nSupportedSplits / (aln->getNSeq() - 3)) * 100 << " % of the splits have 100% support and can be fixed." << endl;
-//		//candidateTrees.getSupportedSplits().report(cout);
-//	}
 }
+
 void IQTree::initializePLL(Params &params) {
   pllAttr.rateHetModel = PLL_GAMMA;
   pllAttr.fastScaling = PLL_FALSE;
@@ -1661,7 +1661,7 @@ string IQTree::optimizeBranches(int maxTraversal) {
 }
 
 double IQTree::doTreeSearch() {
-    cout << "               INTENSIFICATION PHASE" << endl;
+    cout << "                     INTENSIFICATION PHASE" << endl;
     string tree_file_name = params->out_prefix;
     tree_file_name += ".treefile";
     // PLEASE PRINT TREE HERE!
