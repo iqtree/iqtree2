@@ -1976,8 +1976,6 @@ void searchGAMMAInvarByRestarting(IQTree &iqtree) {
     iqtree.getModel()->decomposeRateMatrix();
     site_rates->computeRates();
 	iqtree.clearAllPartialLH();
-    iqtree.getModel()->writeInfo(cout);
-    iqtree.getRate()->writeInfo(cout);
     iqtree.setCurScore(iqtree.computeLikelihood());
     cout << endl;
     cout << "Best initial alpha: " << bestAlpha << " / initial pinv: " << bestPInvar << " / ";
