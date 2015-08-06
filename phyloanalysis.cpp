@@ -355,14 +355,19 @@ void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh, 
     out	<< "Unconstrained log-likelihood (without tree): " << tree.aln->computeUnconstrainedLogL() << endl;
 
     out << "Number of free parameters (#branches + #model parameters): " << df << endl;
-    if (ssize > df) { 
-        if (ssize > 40*df)
-            out	<< "Akaike information criterion (AIC) score: " << AIC_score << endl;
-        else
-			out << "Corrected Akaike information criterion (AICc) score: " << AICc_score << endl;
-        
-		out << "Bayesian information criterion (BIC) score: " << BIC_score << endl;
-    } else if (main_tree) {
+//    if (ssize > df) { 
+//        if (ssize > 40*df)
+//            out	<< "Akaike information criterion (AIC) score: " << AIC_score << endl;
+//        else
+//			out << "Corrected Akaike information criterion (AICc) score: " << AICc_score << endl;
+//        
+//		out << "Bayesian information criterion (BIC) score: " << BIC_score << endl;
+//    } else 
+    out	<< "Akaike information criterion (AIC) score: " << AIC_score << endl;
+    out << "Corrected Akaike information criterion (AICc) score: " << AICc_score << endl;
+    out << "Bayesian information criterion (BIC) score: " << BIC_score << endl;
+
+    if (ssize <= df && main_tree) {
         
         out << endl
             << "**************************** WARNING ****************************" << endl
