@@ -92,13 +92,19 @@ void outError(char *error)
  */
 
 
+#if (defined(__GNUC__) || defined(__clang__)) && !defined(WIN32) && !defined(__CYGWIN__)
+#include "stacktrace.h"
+#endif
+
 /**
         Output an error to screen, then exit program
         @param error error message
  */
 void outError(const char *error, bool quit) {
 	if (error == ERR_NO_MEMORY) {
-		print_stacktrace(cerr);
+#if (defined(__GNUC__) || defined(__clang__)) && !defined(WIN32) && !defined(__CYGWIN__)
+        print_stacktrace(cerr);
+#endif
 	}
 	cerr << "ERROR: " << error << endl;
     if (quit)
@@ -611,7 +617,9 @@ void parseArg(int argc, char *argv[], Params &params) {
     verbose_mode = VB_MIN;
     params.tree_gen = NONE;
     params.user_file = NULL;
-    params.rr_ai = false;
+    params.fai = false;
+    params.testAlpha = false;
+    params.testAlphaEps = 100.0;
     params.exh_ai = false;
     params.alpha_invar_file = NULL;
     params.out_prefix = NULL;
@@ -2419,10 +2427,25 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.alpha_invar_file = argv[cnt];
 				continue;
 			}
-			if (strcmp(argv[cnt], "-rr_ai") == 0) {
-				params.rr_ai = true;
+
+			if (strcmp(argv[cnt], "--test-alpha") == 0) {
+				params.testAlpha = true;
 				continue;
 			}
+            if (strcmp(argv[cnt], "--test-alpha-eps") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use --test-alpha-eps <logl_eps>";
+                params.testAlphaEps = convert_double(argv[cnt]);
+                params.testAlpha = true;
+                continue;
+            }
+
+            if (strcmp(argv[cnt], "-fai") == 0) {
+                params.fai = true;
+                continue;
+            }
+
             if (strcmp(argv[cnt], "-eai") == 0) {
                 params.exh_ai = true;
                 continue;
@@ -2470,7 +2493,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.reinsert_par = true;
 				continue;
 			}
-			if (strcmp(argv[cnt], "-nospeednni") == 0) {
+			if (strcmp(argv[cnt], "-allnni") == 0) {
 				params.speednni = false;
 				continue;
 			}
@@ -2854,7 +2877,8 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -toppars <number>    Number of best parsimony trees (default: 20)" << endl
             << "  -sprrad <number>     Radius for parsimony SPR search (default: 6)" << endl
             << "  -numcand <number>    Size of the candidate tree set (defaut: 5)" << endl
-            << "  -pers <perturbation> Perturbation strength for randomized NNI (default: 0.5)" << endl
+            << "  -pers <percent>      Perturbation strength for randomized NNI (0.0 < percent < 1.0, default: 0.5)" << endl
+            << "  -allnni              Perform more thorough NNI search (default: off)" << endl
             << "  -numstop <number>    Number of unsuccessful iterations to stop (default: 100)" << endl
             << "  -n <#iterations>     Fix number of iterations to <#iterations> (default: auto)" << endl
             << "  -iqp                 Use the IQP tree perturbation (default: randomized NNI)" << endl
@@ -3436,6 +3460,11 @@ double computePValueChiSquare(double x, int df) /* x: obtained chi-square value,
 void trimString(string &str) {
     str.erase(0, str.find_first_not_of(" \n\r\t"));
     str.erase(str.find_last_not_of(" \n\r\t")+1);
+}
+
+Params& Params::getInstance() {
+    static Params instance;
+    return instance;
 }
 
 

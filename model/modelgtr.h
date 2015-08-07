@@ -302,7 +302,8 @@ protected:
 	*/
 	PhyloTree *phylo_tree;
 
-	/**
+protected:
+/**
 		rates between pairs of states of the unit rate matrix Q.
 		In order A-C, A-G, A-T, C-G, C-T (rate G-T = 1 always)
 	*/

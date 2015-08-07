@@ -465,8 +465,6 @@ public:
      */
     vector<int> vecNumNNI;
 
-    int getCurIteration() { return curIt; }
-
     /**
      * Do memory allocation and initialize parameter for UFBoot to run with PLL
      */
@@ -514,11 +512,6 @@ public:
    void pllConvertUFBootData2IQTree();
 
 protected:
-
-    /**
-     *  Current IQPNNI iteration number
-     */
-    int curIt;
     /**
             criterion to assess important quartet
      */
@@ -686,14 +679,6 @@ public:
 
 	int getDelete() const;
 	void setDelete(int _delete);
-
-	int getCurIt() const {
-		return curIt;
-	}
-
-	void setCurIt(int curIt) {
-		this->curIt = curIt;
-	}
 
 protected:
     /**** NNI cutoff heuristic *****/

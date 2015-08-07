@@ -35,9 +35,9 @@ public:
 		constructor
 		@param ncat number of rate categories
 		@param tree associated phylogenetic tree
-		@param rr_ai turn on option for doing random restart optimization of alpha and p_invar
+		@param testAlpha turn on option for doing random restart optimization of alpha and p_invar
 	*/
-    RateGammaInvar(int ncat, double shape, bool median, double p_invar_sites, bool simultaneous, bool rr_ai, PhyloTree *tree);
+    RateGammaInvar(int ncat, double shape, bool median, double p_invar_sites, bool simultaneous, PhyloTree *tree);
 
 	/**
 		get the proportion of sites under a specified category.
