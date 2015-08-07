@@ -116,9 +116,9 @@ double StopRule::getRemainingTime(int cur_iteration, double cur_correlation) {
 		niterations = getLastImprovedIteration() + unsuccess_iteration;
 		break;
 	case SC_BOOTSTRAP_CORRELATION:
-		niterations = ((cur_iteration+step_iteration-1)/step_iteration)*step_iteration;
-		if (cur_correlation >= min_correlation)
-			niterations = getLastImprovedIteration() + unsuccess_iteration;
+		niterations = max(((cur_iteration+step_iteration-1)/step_iteration)*step_iteration, getLastImprovedIteration() + unsuccess_iteration);
+//		if (cur_correlation >= min_correlation)
+//			niterations = getLastImprovedIteration() + unsuccess_iteration;
 		break;
 	}
 	return (niterations - cur_iteration) * realtime_secs / (cur_iteration - 1);

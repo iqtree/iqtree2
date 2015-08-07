@@ -1823,7 +1823,7 @@ double IQTree::doTreeSearch() {
 			cout << " / Time: " << convert_time(getRealTime() - params->start_real_time);
 
 			if (curIt > 10) {
-				cout << " (" << convert_time(realtime_remaining) << " left)";
+				cout << " (min. " << convert_time(realtime_remaining) << " left)";
 			}
 			cout << endl;
         }
