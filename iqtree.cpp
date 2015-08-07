@@ -426,9 +426,8 @@ void IQTree::computeInitialTree(string &dist_file, LikelihoodKernel kernel) {
 
 void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
     cout << "--------------------------------------------------------------------" << endl;
-    cout << "|                    STARTING TREE SEARCH                          |" << endl;
+    cout << "|             INITIALIZING CANDIDATE TREE SET                      |" << endl;
     cout << "--------------------------------------------------------------------" << endl;
-    cout << "                     DIVERSIFICATION PHASE" << endl;
 
     cout << "Generating " << nParTrees  << " parsimony trees... ";
     cout.flush();
@@ -503,8 +502,10 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
 
     cout << "Computing logl of parsimony trees ... ";
     startTime = getRealTime();
+//    CandidateSet candTrees = candidateTrees.getBestCandidateTrees(candidateTrees.size());
+    CandidateSet candTrees = candidateTrees;
 
-    for (CandidateSet::iterator it = candidateTrees.begin(); it != candidateTrees.end(); ++it) {
+    for (CandidateSet::iterator it = candTrees.begin(); it != candTrees.end(); ++it) {
         string treeString;
         double score;
         if (it->first == -DBL_MAX) {
@@ -1561,10 +1562,10 @@ extern pllUFBootData * pllUFBootDataPtr;
 string IQTree::optimizeModelParameters(bool printInfo, double logl_epsilon) {
 	if (logl_epsilon == -1)
 		logl_epsilon = params->modeps;
+    cout << "Estimate model parameters (epsilon = " << logl_epsilon << ")" << endl;
 	double stime = getRealTime();
 	string newTree;
 	if (params->pll) {
-        cout << "Estimate model parameters (epsilon = " << logl_epsilon << ")" << endl;
         if (curScore == -DBL_MAX) {
 			pllEvaluateLikelihood(pllInst, pllPartitions, pllInst->start, PLL_TRUE, PLL_FALSE);
 		} else {
@@ -1582,7 +1583,7 @@ string IQTree::optimizeModelParameters(bool printInfo, double logl_epsilon) {
 		newTree = string(pllInst->tree_string);
         double etime = getRealTime();
         if (printInfo)
-            cout << "Model optimization took: " << etime - stime << " CPU seconds (logl: " << curScore << ")" << endl;
+            cout << etime - stime << " seconds (logl: " << curScore << ")" << endl;
 	} else {
 		double modOptScore =
                 getModelFactory()->optimizeParameters(params->fixed_branch_length, printInfo, logl_epsilon);
@@ -1661,7 +1662,9 @@ string IQTree::optimizeBranches(int maxTraversal) {
 }
 
 double IQTree::doTreeSearch() {
-    cout << "                     INTENSIFICATION PHASE" << endl;
+    cout << "--------------------------------------------------------------------" << endl;
+    cout << "|               OPTIMIZING CANDIDATE TREE SET                      |" << endl;
+    cout << "--------------------------------------------------------------------" << endl;
     string tree_file_name = params->out_prefix;
     tree_file_name += ".treefile";
     // PLEASE PRINT TREE HERE!
@@ -1833,7 +1836,7 @@ double IQTree::doTreeSearch() {
     	/*----------------------------------------
     	 * Update if better tree is found
     	 *---------------------------------------*/
-        if (curScore > candidateTrees.getBestScore() + 0.01) {
+        if (curScore > candidateTrees.getBestScore() + Params::getInstance().modeps) {
         	if (params->snni) {
         		imd_tree = optimizeModelParameters();
         	}

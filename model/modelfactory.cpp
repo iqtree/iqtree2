@@ -763,8 +763,6 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info,
 	assert(model);
 	assert(site_rate);
 
-    cout << "Estimate model parameters (epsilon = " << logl_epsilon << ")" << endl;
-
     double defaultEpsilon = logl_epsilon;
 
 	double begin_time = getRealTime();
