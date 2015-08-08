@@ -240,9 +240,19 @@ struct LeafFreq {
     }
 };
 
+
+// definitions for likelihood mapping
+
+/* maximum exp difference, such that 1.0+exp(-TP_MAX_EXP_DIFF) == 1.0 */
+const double TP_MAX_EXP_DIFF = 40.0;
+
 struct QuartetInfo {
     int seqID[4];
-    double logl[3]; // for {0,1}|{2,3}  {0,2}|{1,3}  {0,3}|{1,4}
+    double logl[3];    // log-lh for {0,1}|{2,3}  {0,2}|{1,3}  {0,3}|{1,4}
+    double qweight[3]; // weight for {0,1}|{2,3}  {0,2}|{1,3}  {0,3}|{1,4}
+    int corner;        // for the 3 corners of the simplex triangle (0:top, 1:right, 2:left)
+    int area;          // for the 7 areas of the simplex triangle
+			// corners (0:top, 1:right, 2:left), rectangles (3:right, 4:left, 5:bottom), 6:center
 };
 
 /**
