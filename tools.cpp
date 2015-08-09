@@ -871,6 +871,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.no_rescale_gamma_invar = false;
     params.compute_seq_identity_along_tree = false;
     params.num_quartets = 0;
+    params.print_quartet_lh = false;
 
 	if (params.nni5) {
 	    params.nni_type = NNI5;
@@ -2713,6 +2714,10 @@ void parseArg(int argc, char *argv[], Params &params) {
 				continue;
 			}
             
+			if (strcmp(argv[cnt], "-wql") == 0) {
+                params.print_quartet_lh = true;
+                continue;
+            }
             
 			if (argv[cnt][0] == '-') {
                 string err = "Invalid \"";

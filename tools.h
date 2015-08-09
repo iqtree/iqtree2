@@ -1608,6 +1608,10 @@ struct Params {
     
     /** number of quartets for likelihood mapping */
     int num_quartets;
+
+    /** TRUE to print quartet log-likelihoods to .quartetlh file */
+    bool print_quartet_lh;
+
 };
 
 /**

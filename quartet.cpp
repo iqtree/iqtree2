@@ -263,36 +263,42 @@ void PhyloTree::doLikelihoodMapping() {
     int areacount[8] = {0, 0, 0, 0, 0, 0, 0, 0};
     int cornercount[4] = {0, 0, 0, 0};
     int resolved, partly, unresolved;
+    int qid;
 
     computeQuartetLikelihoods(quartet_info);
+    for (qid = 0; qid < params->num_quartets; qid++) {
+        areacount[quartet_info[qid].area]++;
+        cornercount[quartet_info[qid].corner]++;
+    }
     
-    // print quartet file
-    string filename = (string)params->out_prefix + ".quartetlh";
-    ofstream out;
-    out.open(filename.c_str());
-    for (int qid = 0; qid < params->num_quartets; qid++) {
-	areacount[quartet_info[qid].area]++;
-	cornercount[quartet_info[qid].corner]++;
-
-        out << "(" << quartet_info[qid].seqID[0] << ","
-            << quartet_info[qid].seqID[1] << ","
-            << quartet_info[qid].seqID[2] << ","
-            << quartet_info[qid].seqID[3] << ")"
-            << "   " << quartet_info[qid].logl[0] 
-            << "   " << quartet_info[qid].logl[1] 
-            << "   " << quartet_info[qid].logl[2] << endl;
+    if (params->print_quartet_lh) {
+        // print quartet file
+        string filename = (string)params->out_prefix + ".quartetlh";
+        ofstream out;
+        out.open(filename.c_str());
+        for (qid = 0; qid < params->num_quartets; qid++) {
+            out << "(" << quartet_info[qid].seqID[0] << ","
+                << quartet_info[qid].seqID[1] << ","
+                << quartet_info[qid].seqID[2] << ","
+                << quartet_info[qid].seqID[3] << ")"
+                << "   " << quartet_info[qid].logl[0] 
+                << "   " << quartet_info[qid].logl[1] 
+                << "   " << quartet_info[qid].logl[2] << endl;
+        }
+        out.close();        
+        cout << "Quartet log-likelihoods printed to " << filename << endl;
     }
 
     resolved   = areacount[0] + areacount[1] + areacount[2];
     partly     = areacount[3] + areacount[4] + areacount[5];
     unresolved = areacount[6];
 	
-    fprintf(stdout, "LIKELIHOOD MAPPING ANALYSIS\n\n");
-    fprintf(stdout, "Number of quartets: %d (randomly drawn with replacement)\n\n", (resolved+partly+unresolved));
-    fprintf(stdout, "Overall quartet resolution:\n");
-    fprintf(stdout, "Number of fully resolved  quartets: %6d (= %.2f%%)\n", resolved, 100.0 * resolved/(resolved+partly+unresolved));
-    fprintf(stdout, "Number of partly resolved quartets: %6d (= %.2f%%)\n", partly, 100.0 * partly/(resolved+partly+unresolved));
-    fprintf(stdout, "Number of unresolved      quartets: %6d (= %.2f%%)\n\n", unresolved, 100.0 * unresolved/(resolved+partly+unresolved));
+//    fprintf(stdout, "LIKELIHOOD MAPPING ANALYSIS\n\n");
+//    fprintf(stdout, "Number of quartets: %d (randomly drawn with replacement)\n\n", (resolved+partly+unresolved));
+//    fprintf(stdout, "Overall quartet resolution:\n");
+//    fprintf(stdout, "Number of fully resolved  quartets: %6d (= %.2f%%)\n", resolved, 100.0 * resolved/(resolved+partly+unresolved));
+//    fprintf(stdout, "Number of partly resolved quartets: %6d (= %.2f%%)\n", partly, 100.0 * partly/(resolved+partly+unresolved));
+//    fprintf(stdout, "Number of unresolved      quartets: %6d (= %.2f%%)\n\n", unresolved, 100.0 * unresolved/(resolved+partly+unresolved));
 
     cout << "\nOverall quartet resolution: (from " << (resolved+partly+unresolved) << " randomly drawn quartets)" << endl;
     cout << "Fully resolved quartets:  " << resolved   << " (= "
@@ -302,6 +308,4 @@ void PhyloTree::doLikelihoodMapping() {
     cout << "Unresolved quartets:      " << unresolved << " (= "
         << (double) unresolved * 100.0 / (resolved+partly+unresolved) << "%)" << endl << endl;
 
-    out.close();
-    
 } // end PhyloTree::doLikelihoodMapping
