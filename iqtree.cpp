@@ -1836,7 +1836,7 @@ double IQTree::doTreeSearch() {
     	/*----------------------------------------
     	 * Update if better tree is found
     	 *---------------------------------------*/
-        if (curScore > candidateTrees.getBestScore() + Params::getInstance().modeps) {
+        if (curScore > candidateTrees.getBestScore() + params->modeps) {
         	if (params->snni) {
         		imd_tree = optimizeModelParameters();
         	}
