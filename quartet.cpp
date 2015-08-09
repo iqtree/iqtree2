@@ -29,8 +29,7 @@ void PhyloTree::computeQuartetLikelihoods(vector<QuartetInfo> &quartet_info) {
 #endif
 int xxx=1;
     for (int qid = 0; qid < params->num_quartets; qid++) {
-fprintf(stderr, "%d\n", qid); 
-// fprintf(stderr, "."); 
+// fprintf(stderr, "%d\n", qid); 
         // uniformly draw 4 taxa
         quartet_info[qid].seqID[0] = random_int(leafNum);
         do {
