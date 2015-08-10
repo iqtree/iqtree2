@@ -92,19 +92,13 @@ void outError(char *error)
  */
 
 
-#if (defined(__GNUC__) || defined(__clang__)) && !defined(WIN32) && !defined(__CYGWIN__)
-#include "stacktrace.h"
-#endif
-
 /**
         Output an error to screen, then exit program
         @param error error message
  */
 void outError(const char *error, bool quit) {
 	if (error == ERR_NO_MEMORY) {
-#if (defined(__GNUC__) || defined(__clang__)) && !defined(WIN32) && !defined(__CYGWIN__)
         print_stacktrace(cerr);
-#endif
 	}
 	cerr << "ERROR: " << error << endl;
     if (quit)
@@ -2877,7 +2871,7 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -toppars <number>    Number of best parsimony trees (default: 20)" << endl
             << "  -sprrad <number>     Radius for parsimony SPR search (default: 6)" << endl
             << "  -numcand <number>    Size of the candidate tree set (defaut: 5)" << endl
-            << "  -pers <percent>      Perturbation strength for randomized NNI (0.0 < percent < 1.0, default: 0.5)" << endl
+            << "  -pers <proportion>   Perturbation strength for randomized NNI (default: 0.5)" << endl
             << "  -allnni              Perform more thorough NNI search (default: off)" << endl
             << "  -numstop <number>    Number of unsuccessful iterations to stop (default: 100)" << endl
             << "  -n <#iterations>     Fix number of iterations to <#iterations> (default: auto)" << endl
@@ -3505,7 +3499,7 @@ int countPhysicalCPUCores() {
 
 /** Print a demangled stack backtrace of the caller function to FILE* out. */
 
-#ifdef WIN32
+#if  defined(WIN32) || defined(__CYGWIN__) 
 
 // donothing for WIN32
 void print_stacktrace(ostream &out, unsigned int max_frames) {}

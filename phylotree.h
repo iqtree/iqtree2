@@ -88,11 +88,6 @@ inline size_t get_safe_upper_limit_float(size_t cur_limit) {
 //#endif
 //}
 
-
-#if (defined(__GNUC__) || defined(__clang__)) && !defined(WIN32) && !defined(__CYGWIN__)
-#include "stacktrace.h"
-#endif
-
 template< class T>
 inline T *aligned_alloc(size_t size) {
 	size_t MEM_ALIGNMENT = (instruction_set >= 7) ? 32 : 16;

@@ -333,7 +333,7 @@ void IQTree::createPLLPartition(Params &params, ostream &pllPartitionFileHandle)
 }
 
 void IQTree::computeInitialTree(string &dist_file, LikelihoodKernel kernel) {
-    double start = getCPUTime();
+    double start = getRealTime();
     string initTree;
     string out_file = params->out_prefix;
     int score;
@@ -389,13 +389,13 @@ void IQTree::computeInitialTree(string &dist_file, LikelihoodKernel kernel) {
         pllTreeToNewick(pllInst->tree_string, pllInst, pllPartitions, pllInst->start->back,
                 PLL_FALSE, PLL_TRUE, PLL_FALSE, PLL_FALSE, PLL_FALSE, PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
         PhyloTree::readTreeString(string(pllInst->tree_string));
-        cout << getCPUTime() - start << " seconds" << endl;
+        cout << getRealTime() - start << " seconds" << endl;
 	    wrapperFixNegativeBranch(true);
         break;
     case STT_BIONJ:
         // This is the old default option: using BIONJ as starting tree
         computeBioNJ(*params, aln, dist_file);
-        cout << getCPUTime() - start << " seconds" << endl;
+        cout << getRealTime() - start << " seconds" << endl;
         params->numInitTrees = 1;
 //		if (params->pll)
 //			pllReadNewick(getTreeString());

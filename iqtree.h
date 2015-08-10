@@ -266,7 +266,7 @@ public:
      *  	maximum number of tree traversal for branch length optimization
      *  @return NEWICK tree string
      */
-    string optimizeBranches(int maxTraversal);
+    string optimizeBranches(int maxTraversal = 100);
 
     /**
      *  Wrapper function to compute tree log-likelihood.
