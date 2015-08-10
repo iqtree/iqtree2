@@ -1716,29 +1716,29 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 //    if ( params.start_tree != STT_BIONJ && ((params.snni && !params.iqp) || params.min_iterations == 0)) {
 //        params.compute_ml_dist = false;
 //    }
+    if ( params.user_file && params.min_iterations == 0) {
+        params.compute_ml_dist = false;
+    }
 
     if ((!params.dist_file && params.compute_ml_dist) || params.leastSquareBranch) {
         computeMLDist(params, iqtree, dist_file, getCPUTime());
+        // NEW 2015-08-10: always compute BIONJ tree into the candidate set
+        iqtree.resetCurScore();
+        double start_bionj = getRealTime();
+        iqtree.computeBioNJ(params, iqtree.aln, dist_file);
+        cout << getRealTime() - start_bionj << " seconds" << endl;
+        if (iqtree.isSuperTree())
+            iqtree.wrapperFixNegativeBranch(true);
+        else
+            iqtree.wrapperFixNegativeBranch(false);
         if (params.start_tree == STT_BIONJ) {
-        	iqtree.resetCurScore();
-        	iqtree.computeBioNJ(params, iqtree.aln, dist_file);
-            if (iqtree.isSuperTree())
-            	iqtree.wrapperFixNegativeBranch(true);
-            else
-            	iqtree.wrapperFixNegativeBranch(false);
         	initTree = iqtree.optimizeModelParameters(params.min_iterations==0, initEpsilon);
         } else {
-			iqtree.resetCurScore();
-			iqtree.computeBioNJ(params, iqtree.aln, dist_file);
-			if (iqtree.isSuperTree())
-				iqtree.wrapperFixNegativeBranch(true);
-			else
-				iqtree.wrapperFixNegativeBranch(false);
-			initTree = iqtree.optimizeBranches(2);
+			initTree = iqtree.optimizeBranches();
 		}
+        cout << "Log-likelihood of BIONJ tree: " << iqtree.getCurScore() << endl;
+        iqtree.candidateTrees.update(initTree, iqtree.getCurScore());
     }
-
-	iqtree.candidateTrees.update(initTree, iqtree.getCurScore());
 
 	double cputime_search_start = getCPUTime();
     double realtime_search_start = getRealTime();
@@ -1829,8 +1829,13 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
         cout << "|                    FINALIZING TREE SEARCH                        |" << endl;
         cout << "--------------------------------------------------------------------" << endl;
         cout << "Performs final model parameters optimization" << endl;
-		string tree = iqtree.optimizeModelParameters(true, 0.001);
-        iqtree.candidateTrees.update(tree, iqtree.getCurScore());
+		string tree;
+        if (params.testAlpha)
+            tree = iqtree.optimizeModelParameters(true, 0.001);
+        else
+            tree = iqtree.optimizeModelParameters(true);
+        
+		iqtree.candidateTrees.update(tree, iqtree.getCurScore(), true);
     }
 
 	if (iqtree.isSuperTree())
@@ -1840,10 +1845,6 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 
 	if ((params.snni && params.write_candidate_trees) || verbose_mode >= VB_MED) {
 		printTrees(iqtree.candidateTrees, params, ".candidate_trees");
-	}
-
-	if (params.write_all_trees) {
-		printTrees(iqtree.allTrees, params, ".all_trees");
 	}
 
 	if (params.pll)

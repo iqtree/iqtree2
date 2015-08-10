@@ -188,7 +188,6 @@ public:
 	/**
 	 * optimize model and site_rate parameters
 	 * @param gradient_epsilon
-	 * @param restart do restart from different starting value
 	 */
 	double optimizeParametersOnly(double gradient_epsilon);
 

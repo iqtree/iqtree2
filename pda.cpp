@@ -2323,16 +2323,16 @@ int main(int argc, char *argv[]) {
 	}
 
 #ifdef _OPENMP
-	if (params.num_threads == 0) {
+	if (Params::getInstance().num_threads == 0) {
 		cout << endl << endl;
 		outError("Please specify the number of cores to use (-nt option)!");
 	}
-	if (params.num_threads) omp_set_num_threads(params.num_threads);
+	if (Params::getInstance().num_threads) omp_set_num_threads(Params::getInstance().num_threads);
 //	int max_threads = omp_get_max_threads();
-	params.num_threads = omp_get_max_threads();
+	Params::getInstance().num_threads = omp_get_max_threads();
 	int max_procs = countPhysicalCPUCores();
-	cout << " - " << params.num_threads  << " threads (" << max_procs << " CPU cores detected)";
-	if (params.num_threads  > max_procs) {
+	cout << " - " << Params::getInstance().num_threads  << " threads (" << max_procs << " CPU cores detected)";
+	if (Params::getInstance().num_threads  > max_procs) {
 		cout << endl;
 		outError("You have specified more threads than CPU cores available");
 	}
