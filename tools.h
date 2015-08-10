@@ -435,6 +435,11 @@ public:
 	bool testAlpha;
 
     /**
+     *  Automatic adjust the log-likelihood espilon using some heuristic
+     */
+    bool testAlphaEpsAdaptive;
+
+    /**
      *  Logl epsilon to test for initial alpha and pinvar values.
      *  This does not need to be small (default value = 100)
      */
