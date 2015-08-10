@@ -494,13 +494,13 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
     }
     double parsTime = getRealTime() - startTime;
     cout << parsTime << " seconds ";
-    cout << candidateTrees.size() << " distinct parsimony trees have been generated" << endl;
+    cout << candidateTrees.size() << " distinct starting trees" << endl;
 
     /****************************************************************************************
                       Compute logl of all parsimony trees
     *****************************************************************************************/
 
-    cout << "Computing logl of parsimony trees ... ";
+    cout << "Computing log-likelihood of parsimony trees ... ";
     startTime = getRealTime();
 //    CandidateSet candTrees = candidateTrees.getBestCandidateTrees(candidateTrees.size());
     CandidateSet candTrees = candidateTrees;
@@ -518,6 +518,14 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
         }
         candidateTrees.update(treeString, score);
     }
+    
+    if (verbose_mode >= VB_MED) {
+        vector<double> bestScores = candidateTrees.getBestScores(candidateTrees.size());
+        for (vector<double>::iterator it = bestScores.begin(); it != bestScores.end(); it++)
+            cout << (*it) << " ";
+        cout << endl;
+    }
+
 
     double loglTime = getRealTime() - startTime;
     cout << loglTime << " seconds" << endl;
