@@ -334,6 +334,23 @@ PhyloSuperTreePlen::PhyloSuperTreePlen(SuperAlignment *alignment, PhyloSuperTree
 	fixed_rates = false;
 }
 
+void PhyloSuperTreePlen::deleteAllPartialLh() {
+	for (iterator it = begin(); it != end(); it++) {
+		// reset these pointers so that they are not deleted
+		(*it)->central_partial_lh = NULL;
+		(*it)->central_scale_num = NULL;
+		(*it)->central_partial_pars = NULL;
+		(*it)->_pattern_lh = NULL;
+		(*it)->_pattern_lh_cat = NULL;
+		(*it)->theta_all = NULL;
+		(*it)->ptn_freq = NULL;
+		(*it)->ptn_invar = NULL;
+        (*it)->nni_partial_lh = NULL;
+        (*it)->nni_scale_num = NULL;
+	}
+    PhyloTree::deleteAllPartialLh();
+}
+
 PhyloSuperTreePlen::~PhyloSuperTreePlen()
 {
 	for (iterator it = begin(); it != end(); it++) {
@@ -346,6 +363,8 @@ PhyloSuperTreePlen::~PhyloSuperTreePlen()
 		(*it)->theta_all = NULL;
 		(*it)->ptn_freq = NULL;
 		(*it)->ptn_invar = NULL;
+        (*it)->nni_partial_lh = NULL;
+        (*it)->nni_scale_num = NULL;
 	}
 }
 
@@ -1867,12 +1886,25 @@ void PhyloSuperTreePlen::initializeAllPartialLh() {
         ptn_invar = aligned_alloc<double>(total_mem_size);
     front()->ptn_invar = ptn_invar;
 
+    size_t IT_NUM = (params->nni5) ? 6 : 2;
+    if (!nni_partial_lh) {
+        nni_partial_lh = aligned_alloc<double>(IT_NUM*total_block_size);
+    }
+    front()->nni_partial_lh = nni_partial_lh;
+    
+    if (!nni_scale_num) {
+        nni_scale_num = aligned_alloc<UBYTE>(IT_NUM*total_mem_size);
+    }
+    front()->nni_scale_num = nni_scale_num;
+
 	for (it = begin()+1, part = 0; it != end(); it++, part++) {
 		(*it)->_pattern_lh = (*(it-1))->_pattern_lh + mem_size[part];
 		(*it)->_pattern_lh_cat = (*(it-1))->_pattern_lh_cat + lh_cat_size[part];
 		(*it)->theta_all = (*(it-1))->theta_all + block_size[part];
 		(*it)->ptn_freq = (*(it-1))->ptn_freq + mem_size[part];
 		(*it)->ptn_invar = (*(it-1))->ptn_invar + mem_size[part];
+        (*it)->nni_partial_lh = (*(it-1))->nni_partial_lh + IT_NUM*block_size[part];
+        (*it)->nni_scale_num = (*(it-1))->nni_scale_num + IT_NUM*mem_size[part];
 	}
 
 	// compute total memory for all partitions
@@ -1988,3 +2020,4 @@ void PhyloSuperTreePlen::initializeAllPartialLh(int &index, int &indexlh, PhyloN
 	// this function should not be used, assertion raised if accidentally called
 	assert(0);
 }
+

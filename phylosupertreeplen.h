@@ -111,7 +111,8 @@ public:
 		@param fixed_len TRUE to fix branch lengths, default is false
 		@return the best likelihood
 	*/
-	virtual double optimizeParameters(bool fixed_len = false, bool write_info = true, double logl_epsilon = 0.1, double gradient_epsilon = 0.001);
+	virtual double optimizeParameters(bool fixed_len = false, bool write_info = true,
+                                      double logl_epsilon = 0.1, double gradient_epsilon = 0.001);
 
 	double optimizeGeneRate(double tol);
 
@@ -183,6 +184,11 @@ public:
     virtual void initializeAllPartialLh(int &index, int &indexlh, PhyloNode *node = NULL, PhyloNode *dad = NULL);
 
     void initializeAllPartialLh(double* &lh_addr, UBYTE* &scale_addr, UINT* &pars_addr, PhyloNode *node = NULL, PhyloNode *dad = NULL);
+
+    /**
+            de-allocate central_partial_lh
+     */
+    virtual void deleteAllPartialLh();
 
 	/**
 	 * @return the type of NNI around node1-node2 for partition part

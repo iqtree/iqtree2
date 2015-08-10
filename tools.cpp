@@ -98,7 +98,7 @@ void outError(char *error)
  */
 void outError(const char *error, bool quit) {
 	if (error == ERR_NO_MEMORY) {
-		print_stacktrace(cerr);
+        print_stacktrace(cerr);
 	}
 	cerr << "ERROR: " << error << endl;
     if (quit)
@@ -611,7 +611,9 @@ void parseArg(int argc, char *argv[], Params &params) {
     verbose_mode = VB_MIN;
     params.tree_gen = NONE;
     params.user_file = NULL;
-    params.rr_ai = false;
+    params.fai = false;
+    params.testAlpha = false;
+    params.testAlphaEps = 100.0;
     params.exh_ai = false;
     params.alpha_invar_file = NULL;
     params.out_prefix = NULL;
@@ -2421,10 +2423,25 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.alpha_invar_file = argv[cnt];
 				continue;
 			}
-			if (strcmp(argv[cnt], "-rr_ai") == 0) {
-				params.rr_ai = true;
+
+			if (strcmp(argv[cnt], "--test-alpha") == 0) {
+				params.testAlpha = true;
 				continue;
 			}
+            if (strcmp(argv[cnt], "--test-alpha-eps") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use --test-alpha-eps <logl_eps>";
+                params.testAlphaEps = convert_double(argv[cnt]);
+                params.testAlpha = true;
+                continue;
+            }
+
+            if (strcmp(argv[cnt], "-fai") == 0) {
+                params.fai = true;
+                continue;
+            }
+
             if (strcmp(argv[cnt], "-eai") == 0) {
                 params.exh_ai = true;
                 continue;
@@ -2472,7 +2489,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.reinsert_par = true;
 				continue;
 			}
-			if (strcmp(argv[cnt], "-nospeednni") == 0) {
+			if (strcmp(argv[cnt], "-allnni") == 0) {
 				params.speednni = false;
 				continue;
 			}
@@ -2871,7 +2888,8 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -toppars <number>    Number of best parsimony trees (default: 20)" << endl
             << "  -sprrad <number>     Radius for parsimony SPR search (default: 6)" << endl
             << "  -numcand <number>    Size of the candidate tree set (defaut: 5)" << endl
-            << "  -pers <perturbation> Perturbation strength for randomized NNI (default: 0.5)" << endl
+            << "  -pers <proportion>   Perturbation strength for randomized NNI (default: 0.5)" << endl
+            << "  -allnni              Perform more thorough NNI search (default: off)" << endl
             << "  -numstop <number>    Number of unsuccessful iterations to stop (default: 100)" << endl
             << "  -n <#iterations>     Fix number of iterations to <#iterations> (default: auto)" << endl
             << "  -iqp                 Use the IQP tree perturbation (default: randomized NNI)" << endl
@@ -3455,6 +3473,11 @@ void trimString(string &str) {
     str.erase(str.find_last_not_of(" \n\r\t")+1);
 }
 
+Params& Params::getInstance() {
+    static Params instance;
+    return instance;
+}
+
 
 int countPhysicalCPUCores() {
     uint32_t registers[4];
@@ -3493,7 +3516,7 @@ int countPhysicalCPUCores() {
 
 /** Print a demangled stack backtrace of the caller function to FILE* out. */
 
-#ifdef WIN32
+#if  defined(WIN32) || defined(__CYGWIN__) 
 
 // donothing for WIN32
 void print_stacktrace(ostream &out, unsigned int max_frames) {}

@@ -34,6 +34,7 @@ StopRule::StopRule()
 	step_iteration = 100;
 	start_real_time = -1.0;
 	max_run_time = -1.0;
+	curIteration = 0;
 }
 
 void StopRule::initialize(Params &params) {
@@ -116,9 +117,9 @@ double StopRule::getRemainingTime(int cur_iteration, double cur_correlation) {
 		niterations = getLastImprovedIteration() + unsuccess_iteration;
 		break;
 	case SC_BOOTSTRAP_CORRELATION:
-		niterations = ((cur_iteration+step_iteration-1)/step_iteration)*step_iteration;
-		if (cur_correlation >= min_correlation)
-			niterations = getLastImprovedIteration() + unsuccess_iteration;
+		niterations = max(((cur_iteration+step_iteration-1)/step_iteration)*step_iteration, getLastImprovedIteration() + unsuccess_iteration);
+//		if (cur_correlation >= min_correlation)
+//			niterations = getLastImprovedIteration() + unsuccess_iteration;
 		break;
 	}
 	return (niterations - cur_iteration) * realtime_secs / (cur_iteration - 1);
