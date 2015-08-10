@@ -328,7 +328,6 @@ void IQTree::createPLLPartition(Params &params, ostream &pllPartitionFileHandle)
 }
 
 void IQTree::computeInitialTree(string &dist_file, LikelihoodKernel kernel) {
-    double start = getCPUTime();
     double start = getRealTime();
     string initTree;
     string out_file = params->out_prefix;
@@ -535,9 +534,6 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
     MPI_Barrier(MPI_COMM_WORLD);
 #endif
     cout << getRealTime() - startTime << " seconds" << endl;
-    cout << candidateTrees.size() << " distinct parsimony trees have been generated" << endl;
-    double parsTime = getRealTime() - startTime;
-    cout << parsTime << " seconds ";
     cout << candidateTrees.size() << " distinct starting trees" << endl;
 
 
@@ -585,7 +581,6 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
     //.init(this->aln, this->params);
     cout << "Computing log-likelihood of parsimony trees ... ";
     startTime = getRealTime();
-//    CandidateSet candTrees = candidateTrees.getBestCandidateTrees(candidateTrees.size());
     CandidateSet candTrees = candidateTrees;
 
     for (CandidateSet::iterator it = candTrees.begin(); it != candTrees.end(); ++it) {

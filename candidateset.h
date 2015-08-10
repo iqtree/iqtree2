@@ -252,7 +252,7 @@ public:
      * @param numTrees
      * @return
      */
-    void getBestCandidateTrees(int numTrees, vector<CandidateTree>& candidateTrees);
+    vector<CandidateTree> getBestCandidateTrees(int numTrees);
 
     /**
      * Get the current best tree strings

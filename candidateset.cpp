@@ -286,13 +286,14 @@ void CandidateSet::clearTopologies() {
 }
 
 
-void CandidateSet::getBestCandidateTrees(int numTrees, vector<CandidateTree>& candidateTrees) {
-	candidateTrees.clear();
+vector<CandidateTree> CandidateSet::getBestCandidateTrees(int numTrees) {
+	vector<CandidateTree> candidateTrees;
 	if (numTrees >= size())
 		numTrees = size();
 	for (reverse_iterator rit = rbegin(); rit != rend() && numTrees > 0; rit++, numTrees--) {
 		candidateTrees.push_back(rit->second);
 	}
+	return candidateTrees;
 }
 
 vector<string> CandidateSet::getBestTreeStrings(int numTrees) {
