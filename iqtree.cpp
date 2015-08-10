@@ -1831,8 +1831,8 @@ double IQTree::doTreeSearch() {
 				cout << " / (NNIs, Steps): (" << nni_count << "," << nni_steps << ")";
 			cout << " / Time: " << convert_time(getRealTime() - params->start_real_time);
 
-			if (curIt > 10) {
-				cout << " (min. " << convert_time(realtime_remaining) << " left)";
+			if (stop_rule.getCurIt() > 10) {
+				cout << " (" << convert_time(realtime_remaining) << " left)";
 			}
 			cout << endl;
         }
