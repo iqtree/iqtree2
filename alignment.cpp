@@ -1126,6 +1126,26 @@ int getMaxObservedStates(StrVector &sequences) {
 	return 0;
 }
 
+SeqType Alignment::getSeqType(const char *sequence_type) {
+    SeqType user_seq_type = SEQ_UNKNOWN;
+    if (strcmp(sequence_type, "BIN") == 0) {
+        user_seq_type = SEQ_BINARY;
+    } else if (strcmp(sequence_type, "NT") == 0 || strcmp(sequence_type, "DNA") == 0) {
+        user_seq_type = SEQ_DNA;
+    } else if (strcmp(sequence_type, "AA") == 0 || strcmp(sequence_type, "PROT") == 0) {
+        user_seq_type = SEQ_PROTEIN;
+    } else if (strncmp(sequence_type, "NT2AA", 5) == 0) {
+        user_seq_type = SEQ_PROTEIN;
+    } else if (strcmp(sequence_type, "NUM") == 0 || strcmp(sequence_type, "MORPH") == 0 || strcmp(sequence_type, "MULTI") == 0) {
+        user_seq_type = SEQ_MORPH;
+    } else if (strcmp(sequence_type, "TINA") == 0) {
+        user_seq_type = SEQ_MULTISTATE;
+    } else if (strncmp(sequence_type, "CODON", 5) == 0) {
+        user_seq_type = SEQ_CODON;
+    }
+    return user_seq_type;
+}
+
 int Alignment::buildPattern(StrVector &sequences, char *sequence_type, int nseq, int nsite) {
     int seq_id;
     ostringstream err_str;
