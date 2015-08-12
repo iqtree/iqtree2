@@ -385,7 +385,7 @@ int getModelList(Params &params, Alignment *aln, StrVector &models, bool separat
 	bool test_options_default[]   = {true, true,  false, true,   true,    false,false,    false};
 	bool test_options_morph[]     = {true,false,   true, true,  false,     true,false,    false};    
 	bool test_options_asc[]       ={false,false,   true,false,  false,     true,false,    false};
-	bool test_options_new[]       = {true, true,  false, true,  false,    false, true,    false};
+	bool test_options_new[]       = {true, true,  false, true,   true,    false, true,    false};
 	bool test_options_morph_new[] = {true,false,   true, true,  false,     true, true,     true};
 	bool test_options_asc_new[]   ={false,false,   true,false,  false,     true,false,     true};
     bool *test_options = test_options_default;
