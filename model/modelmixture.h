@@ -72,6 +72,8 @@ public:
 	*/
 	virtual double targetFunk(double x[]);
 
+    double optimizeWeights();
+
 	/**
 		optimize model parameters
 		@return the best likelihood
