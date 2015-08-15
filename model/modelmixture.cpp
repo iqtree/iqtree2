@@ -1047,6 +1047,7 @@ ModelMixture::ModelMixture(string orig_model_name, string model_name, string mod
 	DoubleVector freq_rates;
 	DoubleVector freq_weights;
 	fix_prop = false;
+	optimizing_submodels = false;
 
 	if (freq == FREQ_MIXTURE) {
 		for (m = 0, cur_pos = 0; cur_pos < freq_params.length(); m++) {
@@ -1255,6 +1256,8 @@ ModelMixture::~ModelMixture() {
 int ModelMixture::getNDim() {
 //	int dim = (fix_prop) ? 0: (size()-1);
     int dim = 0;
+    if (!optimizing_submodels && !fix_prop)
+    	dim = size()-1;
 	for (iterator it = begin(); it != end(); it++)
 		dim += (*it)->getNDim();
 	return dim;
@@ -1272,7 +1275,7 @@ double ModelMixture::targetFunk(double x[]) {
 	assert(phylo_tree);
 	if (dim > 0) // only clear all partial_lh if changing at least 1 rate matrix
 		phylo_tree->clearAllPartialLH();
-	if (prop[size()-1] < 0.0) return 1.0e+12;
+//	if (prop[size()-1] < 0.0) return 1.0e+12;
 	return -phylo_tree->computeLikelihood();
 }
 
@@ -1341,7 +1344,9 @@ double ModelMixture::optimizeWeights() {
 }
 
 double ModelMixture::optimizeParameters(double gradient_epsilon) {
+	optimizing_submodels = true;
 	double score = ModelGTR::optimizeParameters(gradient_epsilon);
+	optimizing_submodels = false;
     if (!fix_prop)
         score = optimizeWeights();
 	if (getNDim() == 0) return score;
@@ -1436,13 +1441,13 @@ void ModelMixture::setBounds(double *lower_bound, double *upper_bound, bool *bou
 		(*it)->setBounds(&lower_bound[dim], &upper_bound[dim], &bound_check[dim]);
 		dim += (*it)->getNDim();
 	}
-	if (fix_prop) return;
-	int i, ncategory = size();
-	for (i = 1; i < ncategory; i++) {
-		lower_bound[dim+i] = MIN_MIXTURE_PROP;
-		upper_bound[dim+i] = MAX_MIXTURE_PROP;
-		bound_check[dim+i] = false;
-	}
+//	if (fix_prop) return;
+//	int i, ncategory = size();
+//	for (i = 1; i < ncategory; i++) {
+//		lower_bound[dim+i] = MIN_MIXTURE_PROP;
+//		upper_bound[dim+i] = MAX_MIXTURE_PROP;
+//		bound_check[dim+i] = false;
+//	}
 }
 
 void ModelMixture::writeInfo(ostream &out) {

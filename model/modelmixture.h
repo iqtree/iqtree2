@@ -124,6 +124,8 @@ public:
 
 protected:
 
+	bool optimizing_submodels;
+
 	/**
 		this function is served for the multi-dimension optimization. It should pack the model parameters
 		into a vector that is index from 1 (NOTE: not from 0)
