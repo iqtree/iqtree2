@@ -1116,11 +1116,11 @@ void Alignment::initCodon(char *gene_code_id) {
 //	cout << "num_states = " << num_states << endl;
 }
 
-int getMaxObservedStates(StrVector &sequences) {
+int getMorphStates(StrVector &sequences) {
 	char maxstate = 0;
 	for (StrVector::iterator it = sequences.begin(); it != sequences.end(); it++)
 		for (string::iterator pos = it->begin(); pos != it->end(); pos++)
-			if ((*pos) > maxstate) maxstate = *pos;
+			if ((*pos) > maxstate && isalnum(*pos)) maxstate = *pos;
 	if (maxstate >= '0' && maxstate <= '9') return (maxstate - '0' + 1);
 	if (maxstate >= 'A' && maxstate <= 'V') return (maxstate - 'A' + 11);
 	return 0;
@@ -1202,7 +1202,7 @@ int Alignment::buildPattern(StrVector &sequences, char *sequence_type, int nseq,
         cout << "Alignment most likely contains protein sequences" << endl;
         break;
     case SEQ_MORPH:
-        num_states = getMaxObservedStates(sequences);
+        num_states = getMorphStates(sequences);
         if (num_states < 2 || num_states > 32) throw "Invalid number of states.";
         cout << "Alignment most likely contains " << num_states << "-state morphological data" << endl;
         break;
@@ -1231,7 +1231,7 @@ int Alignment::buildPattern(StrVector &sequences, char *sequence_type, int nseq,
             nt2aa = true;
             cout << "Translating to amino-acid sequences with genetic code " << &sequence_type[5] << " ..." << endl;
         } else if (strcmp(sequence_type, "NUM") == 0 || strcmp(sequence_type, "MORPH") == 0 || strcmp(sequence_type, "MULTI") == 0) {
-            num_states = getMaxObservedStates(sequences);
+            num_states = getMorphStates(sequences);
             if (num_states < 2 || num_states > 32) throw "Invalid number of states";
             user_seq_type = SEQ_MORPH;
         } else if (strcmp(sequence_type, "TINA") == 0) {
