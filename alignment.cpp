@@ -463,6 +463,47 @@ void Alignment::computeUnknownState() {
     }
 }
 
+int getDataBlockMorphStates(NxsCharactersBlock *data_block) {
+    int nseq = data_block->GetNTax();
+    int nsite = data_block->GetNCharTotal();
+    int seq, site;
+    char ch;
+    int nstates = 0;
+    
+    for (site = 0; site < nsite; site++)
+        for (seq = 0; seq < nseq; seq++) {
+            int nstate = data_block->GetNumStates(seq, site);
+            if (nstate == 0)
+                continue;
+            if (nstate == 1) {
+                ch = data_block->GetState(seq, site, 0);
+                if (!isalnum(ch)) continue;
+                if (ch >= '0' && ch <= '9') 
+                    ch = ch - '0' + 1;
+                else if (ch >= 'A' && ch <= 'Z') 
+                    ch = ch - 'A' + 11;
+                else 
+                    outError(data_block->GetTaxonLabel(seq) + " has invalid state at site " + convertIntToString(site));
+                if (ch > nstates) nstates = ch;
+                continue;
+            }
+            for (int state = 0; state < nstate; state++) {
+                ch = data_block->GetState(seq, site, state);
+                if (!isalnum(ch)) continue;
+                if (ch >= '0' && ch <= '9') ch = ch - '0' + 1;
+                if (ch >= 'A' && ch <= 'Z') ch = ch - 'A' + 11;
+                if (ch >= '0' && ch <= '9') 
+                    ch = ch - '0' + 1;
+                else if (ch >= 'A' && ch <= 'Z') 
+                    ch = ch - 'A' + 11;
+                else 
+                    outError(data_block->GetTaxonLabel(seq) + " has invalid state at site " + convertIntToString(site));
+                if (ch > nstates) nstates = ch;
+            }
+        }
+    return nstates;
+}
+
 void Alignment::extractDataBlock(NxsCharactersBlock *data_block) {
     int nseq = data_block->GetNTax();
     int nsite = data_block->GetNCharTotal();
@@ -489,7 +530,8 @@ void Alignment::extractDataBlock(NxsCharactersBlock *data_block) {
         seq_type = SEQ_PROTEIN;
     } else {
     	// standard morphological character
-        num_states = data_block->GetMaxObsNumStates();
+//        num_states = data_block->GetMaxObsNumStates();
+        num_states = getDataBlockMorphStates(data_block);
         if (num_states > 32)
         	outError("Number of states can not exceed 32");
         if (num_states < 2)
