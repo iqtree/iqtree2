@@ -385,7 +385,7 @@ int getModelList(Params &params, Alignment *aln, StrVector &models, bool separat
 	bool test_options_default[]   = {true, true,  false, true,   true,    false,false,    false};
 	bool test_options_morph[]     = {true,false,   true, true,  false,     true,false,    false};    
 	bool test_options_asc[]       ={false,false,   true,false,  false,     true,false,    false};
-	bool test_options_new[]       = {true, true,  false, true,  false,    false, true,    false};
+	bool test_options_new[]       = {true, true,  false, true,   true,    false, true,    false};
 	bool test_options_morph_new[] = {true,false,   true, true,  false,     true, true,     true};
 	bool test_options_asc_new[]   ={false,false,   true,false,  false,     true,false,     true};
     bool *test_options = test_options_default;
@@ -1189,7 +1189,14 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
         
         if (model_names[model].find("+ASC") != string::npos) {
             model_fac->unobserved_ptns = in_tree->aln->getUnobservedConstPatterns();
-            if (model_fac->unobserved_ptns.size() == 0) continue;
+            if (model_fac->unobserved_ptns.size() == 0) {
+                cout.width(3);
+                cout << right << model+1 << "  ";
+                cout.width(13);
+                cout << left << model_names[model] << " ";                
+                cout << "Skipped since +ASC is not applicable" << endl;
+                continue;
+            }
             tree->aln->buildSeqStates(true);
             if (model_fac->unobserved_ptns.size() < tree->aln->getNumNonstopCodons())
                 outError("Invalid use of +ASC because constant patterns are observed in the alignment");
@@ -1280,12 +1287,12 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 		if (model_id >= 0) {
 			info.logl = model_info[model_id].logl;
             info.tree_len = model_info[model_id].tree_len;
-//            info.tree = model_info[model_id].tree;
+            info.tree = model_info[model_id].tree;
             prev_tree_string = model_info[model_id].tree;
         } else if (skip_model) {
             info.logl = model_info[prev_model_id].logl;
             info.tree_len = model_info[prev_model_id].tree_len;
-//            info.tree = model_info[prev_model_id].tree;
+            info.tree = model_info[prev_model_id].tree;
             prev_tree_string = model_info[prev_model_id].tree;
 //            cout << "Skipped " << info.name << endl;
 		} else {
@@ -1426,6 +1433,8 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 
 	}
 
+    if (model_bic < 0) 
+        outError("No models were examined! Please check messages above");
 
 	//cout.unsetf(ios::fixed);
 	/*
