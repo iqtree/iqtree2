@@ -20,7 +20,7 @@
 
 
 
-#if (defined(__GNUC__) || defined(__clang__)) && !defined(WIN32)
+#if (defined(__GNUC__) || defined(__clang__)) && !defined(WIN32) && !defined(__CYGWIN__)
 #include <execinfo.h>
 #include <cxxabi.h>
 #endif
