@@ -138,9 +138,10 @@ public:
      4. double* upper : upper bounds of the variables
      5. double pgtol: gradient tolerance
      5. int maxit : max # of iterations
+     @return minimized function value
      After the function is invoked, the values of x will be updated
     */
-    void L_BFGS_B(int nvar, double* vars, double* lower, double* upper, double pgtol = 1e-5, int maxit = 1000);
+    double L_BFGS_B(int nvar, double* vars, double* lower, double* upper, double pgtol = 1e-5, int maxit = 1000);
 
     /** internal function called by L_BFGS_B
         should return function value 

@@ -488,13 +488,12 @@ double ModelGTR::optimizeParameters(double gradient_epsilon) {
 	setBounds(lower_bound, upper_bound, bound_check);
 	//packData(variables, lower_bound, upper_bound, bound_check);
 //	score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound, bound_check, max(gradient_epsilon, TOL_RATE));
-    L_BFGS_B(ndim, variables+1, lower_bound+1, upper_bound+1, max(gradient_epsilon, TOL_RATE));
+    score = -L_BFGS_B(ndim, variables+1, lower_bound+1, upper_bound+1, max(gradient_epsilon, TOL_RATE));
 
 	getVariables(variables);
 	//if (freq_type == FREQ_ESTIMATE) scaleStateFreq(true);
 	decomposeRateMatrix();
 	phylo_tree->clearAllPartialLH();
-    score = optimFunc(ndim, variables+1);
 	
 	delete [] bound_check;
 	delete [] lower_bound;

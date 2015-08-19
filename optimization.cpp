@@ -918,7 +918,7 @@ double Optimization::minimizeNewton(double xmin, double xguess, double xmax, dou
 #undef JMAX*/
 
 
-void Optimization::L_BFGS_B(int n, double* x, double* l, double* u, double pgtol, int maxit) {
+double Optimization::L_BFGS_B(int n, double* x, double* l, double* u, double pgtol, int maxit) {
 	int i;
 	double Fmin;
 	int fail;
@@ -959,6 +959,8 @@ void Optimization::L_BFGS_B(int n, double* x, double* l, double* u, double pgtol
 //#endif
 
 	delete[] nbd;
+    
+    return Fmin;
 }
 
 void Optimization::lbfgsb(int n, int m, double *x, double *l, double *u, int *nbd,
