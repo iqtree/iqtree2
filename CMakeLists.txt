@@ -325,6 +325,7 @@ include_directories("${PROJECT_BINARY_DIR}/zlib-1.2.7")
 ##################################################################
 add_subdirectory(pllrepo/src)
 add_subdirectory(ncl)
+add_subdirectory(lbfgsb)
 add_subdirectory(whtest)
 add_subdirectory(sprng)
 add_subdirectory(zlib-1.2.7)
@@ -401,7 +402,7 @@ upperbounds.cpp
 )
 
 if (NOT IQTREE_FLAGS MATCHES "avx" AND NOT IQTREE_FLAGS MATCHES "fma")
-	set_target_properties(iqtree pll ncl whtest zlibstatic sprng vectorclass model PROPERTIES COMPILE_FLAGS "${SSE_FLAGS}")
+	set_target_properties(iqtree pll ncl lbfgsb whtest zlibstatic sprng vectorclass model PROPERTIES COMPILE_FLAGS "${SSE_FLAGS}")
 	if (NOT BINARY32 AND NOT IQTREE_FLAGS MATCHES "novx")
 		set_target_properties(avxkernel pllavx PROPERTIES COMPILE_FLAGS "${AVX_FLAGS}")
 	endif()
@@ -435,9 +436,9 @@ if (IQTREE_FLAGS MATCHES "omp")
 endif()
 
 if (BINARY32 OR IQTREE_FLAGS MATCHES "novx")
-    target_link_libraries(iqtree pll ncl whtest zlibstatic sprng vectorclass model ${PLATFORM_LIB} ${THREAD_LIB})	
+    target_link_libraries(iqtree pll ncl lbfgsb whtest zlibstatic sprng vectorclass model ${PLATFORM_LIB} ${THREAD_LIB})	
 else()
-    target_link_libraries(iqtree pll pllavx ncl whtest zlibstatic sprng vectorclass model avxkernel ${PLATFORM_LIB} ${THREAD_LIB})	
+    target_link_libraries(iqtree pll pllavx ncl lbfgsb whtest zlibstatic sprng vectorclass model avxkernel ${PLATFORM_LIB} ${THREAD_LIB})	
 endif()
 
 ##################################################################

@@ -14,6 +14,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <iostream>
+#include "lbfgsb/lbfgsb_new.h"
 //#include "tools.h"
 
 
@@ -915,3 +916,159 @@ double Optimization::minimizeNewton(double xmin, double xguess, double xmax, dou
 	//return 0.0;
 }
 #undef JMAX*/
+
+
+void Optimization::L_BFGS_B(int n, double* x, double* l, double* u, double pgtol, int maxit) {
+	int i;
+	double Fmin;
+	int fail;
+	int fncount;
+	int grcount;
+	char msg[100];
+
+	int m = 3;          // number of BFGS updates retained in the "L-BFGS-B" method. It defaults to 5.
+
+	int *nbd;           // 0: unbounded; 1: lower bounded; 2: both lower & upper; 3: upper bounded
+	nbd = new int[n];
+	for (i=0; i<n; i++)
+		nbd[i] = 2;
+
+	double factr = 1e+10; // control the convergence of the "L-BFGS-B" method.
+	// Convergence occurs when the reduction in the object is within this factor
+	// of the machine tolerance.
+	// Default is 1e7, that is a tolerance of about 1e-8
+
+//	double pgtol = 0;   // helps control the convergence of the "L-BFGS-B" method.
+	// It is a tolerance on the projected gradient in the current search direction.
+	// Default is zero, when the check is suppressed
+
+	int trace = 0;      // non-negative integer.
+	// If positive, tracing information on the progress of the optimization is produced.
+	// Higher values may produce more tracing information.
+
+	int nREPORT = 10;   // The frequency of reports for the "L-BFGS-B" methods if "trace" is positive.
+	// Defaults to every 10 iterations.
+
+/*#ifdef USE_OLD_PARAM
+	lbfgsb(n, m, x, l, u, nbd, &Fmin, fn, gr1, &fail, ex,
+			factr, pgtol, &fncount, &grcount, maxit, msg, trace, nREPORT);
+#else*/
+
+	lbfgsb(n, m, x, l, u, nbd, &Fmin, &fail,
+			factr, pgtol, &fncount, &grcount, maxit, msg, trace, nREPORT);
+//#endif
+
+	delete[] nbd;
+}
+
+void Optimization::lbfgsb(int n, int m, double *x, double *l, double *u, int *nbd,
+		double *Fmin, int *fail,
+		double factr, double pgtol,
+		int *fncount, int *grcount, int maxit, char *msg,
+		int trace, int nREPORT)
+{
+	char task[60];
+	double f, *g, dsave[29], *wa;
+	int tr = -1, iter = 0, *iwa, isave[44], lsave[4];
+
+	/* shut up gcc -Wall in 4.6.x */
+
+	for(int i = 0; i < 4; i++) lsave[i] = 0;
+
+	if(n == 0) { /* not handled in setulb */
+		*fncount = 1;
+		*grcount = 0;
+		*Fmin = optimFunc(n, u);
+		strcpy(msg, "NOTHING TO DO");
+		*fail = 0;
+		return;
+	}
+	if (nREPORT <= 0) {
+		cerr << "REPORT must be > 0 (method = \"L-BFGS-B\")" << endl;
+		exit(1);
+	}
+	switch(trace) {
+	case 2: tr = 0; break;
+	case 3: tr = nREPORT; break;
+	case 4: tr = 99; break;
+	case 5: tr = 100; break;
+	case 6: tr = 101; break;
+	default: tr = -1; break;
+	}
+
+	*fail = 0;
+	g = (double*) malloc (n * sizeof(double));
+	/* this needs to be zeroed for snd in mainlb to be zeroed */
+	wa = (double *) malloc((2*m*n+4*n+11*m*m+8*m) * sizeof(double));
+	iwa = (int *) malloc(3*n * sizeof(int));
+	strcpy(task, "START");
+	while(1) {
+		/* Main workhorse setulb() from ../appl/lbfgsb.c : */
+		setulb(n, m, x, l, u, nbd, &f, g, factr, &pgtol, wa, iwa, task,
+				tr, lsave, isave, dsave);
+		/*    Rprintf("in lbfgsb - %s\n", task);*/
+		if (strncmp(task, "FG", 2) == 0) {
+			f = optimGradient(n, x, g);
+			if (!isfinite(f)) {
+				cerr << "L-BFGS-B needs finite values of 'fn'" << endl;
+				exit(1);
+			}
+			
+		} else if (strncmp(task, "NEW_X", 5) == 0) {
+			iter++;
+			if(trace == 1 && (iter % nREPORT == 0)) {
+				cout << "iter " << iter << " value " << f << endl;
+			}
+			if (iter > maxit) {
+				*fail = 1;
+				break;
+			}
+		} else if (strncmp(task, "WARN", 4) == 0) {
+			*fail = 51;
+			break;
+		} else if (strncmp(task, "CONV", 4) == 0) {
+			break;
+		} else if (strncmp(task, "ERROR", 5) == 0) {
+			*fail = 52;
+			break;
+		} else { /* some other condition that is not supposed to happen */
+			*fail = 52;
+			break;
+		}
+	}
+	*Fmin = f;
+	*fncount = *grcount = isave[33];
+	if (trace) {
+		cout << "final value " << *Fmin << endl;
+		if (iter < maxit && *fail == 0)
+			cout << "converged" << endl;
+		else
+			cout << "stopped after " << iter << " iterations\n";
+	}
+	strcpy(msg, task);
+	free(g);
+	free(wa);
+	free(iwa);
+}
+
+double Optimization::optimFunc(int nvar, double *vars) { 
+    return targetFunk(vars-1);
+}
+
+
+double Optimization::optimGradient(int nvar, double *x, double *dfx) {
+//    return derivativeFunk(x-1, dfx-1);
+    const double ERRORX = 1e-5;
+	double fx = optimFunc(nvar, x);
+	double h, temp;
+	for (int dim = 0; dim <= nvar; dim++ ){
+		temp = x[dim];
+		h = ERRORX * fabs(temp);
+		if (h == 0.0) h = ERRORX;
+		x[dim] = temp + h;
+		h = x[dim] - temp;
+		dfx[dim] = (optimFunc(nvar, x) - fx) / h;
+		x[dim] = temp;
+	}
+	return fx;
+}
