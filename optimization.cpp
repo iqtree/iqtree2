@@ -726,18 +726,23 @@ double Optimization::derivativeFunk(double x[], double dfx[]) {
 	if (!checkRange(x))
 		return INFINITIVE;
 	*/
-	double fx = targetFunk(x);
 	int ndim = getNDim();
-	double h, temp;
-	for (int dim = 1; dim <= ndim; dim++ ){
+	double *h = new double[ndim+1];
+    double temp;
+    int dim;
+	for (dim = 1; dim <= ndim; dim++ ){
 		temp = x[dim];
-		h = ERROR_X * fabs(temp);
-		if (h == 0.0) h = ERROR_X;
-		x[dim] = temp + h;
-		h = x[dim] - temp;
-		dfx[dim] = (targetFunk(x) - fx) / h;
+		h[dim] = ERROR_X * fabs(temp);
+		if (h[dim] == 0.0) h[dim] = ERROR_X;
+		x[dim] = temp + h[dim];
+		h[dim] = x[dim] - temp;
+		dfx[dim] = (targetFunk(x));
 		x[dim] = temp;
 	}
+	double fx = targetFunk(x);
+	for (dim = 1; dim <= ndim; dim++ )
+        dfx[dim] = (dfx[dim] - fx) / h[dim];
+    delete [] h;
 	return fx;
 }
 
@@ -1059,18 +1064,18 @@ double Optimization::optimFunc(int nvar, double *vars) {
 
 
 double Optimization::optimGradient(int nvar, double *x, double *dfx) {
-//    return derivativeFunk(x-1, dfx-1);
-    const double ERRORX = 1e-5;
-	double fx = optimFunc(nvar, x);
-	double h, temp;
-	for (int dim = 0; dim <= nvar; dim++ ){
-		temp = x[dim];
-		h = ERRORX * fabs(temp);
-		if (h == 0.0) h = ERRORX;
-		x[dim] = temp + h;
-		h = x[dim] - temp;
-		dfx[dim] = (optimFunc(nvar, x) - fx) / h;
-		x[dim] = temp;
-	}
-	return fx;
+    return derivativeFunk(x-1, dfx-1);
+//    const double ERRORX = 1e-5;
+//	double fx = optimFunc(nvar, x);
+//	double h, temp;
+//	for (int dim = 0; dim <= nvar; dim++ ){
+//		temp = x[dim];
+//		h = ERRORX * fabs(temp);
+//		if (h == 0.0) h = ERRORX;
+//		x[dim] = temp + h;
+//		h = x[dim] - temp;
+//		dfx[dim] = (optimFunc(nvar, x) - fx) / h;
+//		x[dim] = temp;
+//	}
+//	return fx;
 }
