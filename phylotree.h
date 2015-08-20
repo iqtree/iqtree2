@@ -248,6 +248,7 @@ class PhyloTree : public MTree, public Optimization {
 	friend class RateGammaInvar;
 	friend class RateKategory;
     friend class ModelMixture;
+    friend class RateFree;
 
 public:
     /**
