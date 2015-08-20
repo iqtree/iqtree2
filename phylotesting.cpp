@@ -1319,9 +1319,9 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
             } else {
                 if (tree->getRate()->getNRate() > num_cat) {
                     tree->deleteAllPartialLh();
-                    tree->initializeAllPartialLh();
                     num_cat = tree->getRate()->getNRate();
                 }
+                tree->initializeAllPartialLh();
                 if (prev_tree_string != "")
                     tree->readTreeString(prev_tree_string);
                 prev_tree_string = "";

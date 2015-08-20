@@ -1228,6 +1228,8 @@ void PhyloTree::deleteAllPartialLh() {
 	_pattern_lh_cat = NULL;
 	_pattern_lh = NULL;
 
+    tip_partial_lh = NULL;
+
     clearAllPartialLH();
 }
  
@@ -1342,14 +1344,16 @@ void PhyloTree::initializeAllPartialLh(int &index, int &indexlh, PhyloNode *node
             }
             if (!central_partial_lh)
                 outError("Not enough memory for partial likelihood vectors");
-            if (sse == LK_EIGEN || sse == LK_EIGEN_SSE) {
-                if (params->lh_mem_save == LM_PER_NODE)
-                    tip_partial_lh = central_partial_lh + ((nodeNum - leafNum)*block_size);
-                else
-                    tip_partial_lh = central_partial_lh + (((nodeNum - 1)*2-leafNum)*block_size);
-            } else
-            	tip_partial_lh = central_partial_lh + (((nodeNum - 1)*2)*block_size);
         }
+
+        // now always assign tip_partial_lh
+        if (sse == LK_EIGEN || sse == LK_EIGEN_SSE) {
+            if (params->lh_mem_save == LM_PER_NODE)
+                tip_partial_lh = central_partial_lh + ((nodeNum - leafNum)*block_size);
+            else
+                tip_partial_lh = central_partial_lh + (((nodeNum - 1)*2-leafNum)*block_size);
+        } else
+            tip_partial_lh = central_partial_lh + (((nodeNum - 1)*2)*block_size);
 
         if (!central_scale_num) {
         	uint64_t mem_size = (leafNum - 1) * 4 * scale_block_size;
