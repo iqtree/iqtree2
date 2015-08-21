@@ -142,7 +142,7 @@ int RateFree::getNDim() {
 
 double RateFree::targetFunk(double x[]) {
 	getVariables(x);
-    if (optimizing_params == 1)
+    if (optimizing_params != 2)
         // only clear partial_lh if optimizing rates
         phylo_tree->clearAllPartialLH();
 	return -phylo_tree->computeLikelihood();
@@ -162,11 +162,11 @@ double RateFree::optimizeParameters(double gradient_epsilon) {
 	if (ndim == 0)
 		return phylo_tree->computeLikelihood();
 
+	if (verbose_mode >= VB_MED)
+		cout << "Optimizing " << name << " model parameters by " << optimize_alg << " algorithm..." << endl;
+
     if (optimize_alg == "EM")
         return optimizeWithEM();
-
-	if (verbose_mode >= VB_MAX)
-		cout << "Optimizing " << name << " model parameters by BFGS..." << endl;
 
 	//if (freq_type == FREQ_ESTIMATE) scaleStateFreq(false);
 
@@ -178,20 +178,32 @@ double RateFree::optimizeParameters(double gradient_epsilon) {
 
 //    score = optimizeWeights();
 
-    for (optimizing_params = 1; optimizing_params <= 2; optimizing_params++) {
-    ndim = getNDim();
-	// by BFGS algorithm
-	setVariables(variables);
-	setBounds(lower_bound, upper_bound, bound_check);
+    int left = 1, right = 2;
+    if (optimize_alg.substr(0, 6) == "1-BFGS") {
+        left = 0; 
+        right = 0;
+    }
 
-//	score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound, bound_check, max(gradient_epsilon, TOL_FREE_RATE));
-    score = -L_BFGS_B(ndim, variables+1, lower_bound+1, upper_bound+1, max(gradient_epsilon, TOL_FREE_RATE));
+    for (optimizing_params = left; optimizing_params <= right; optimizing_params++) {
+    
+        ndim = getNDim();
+        // by BFGS algorithm
+        setVariables(variables);
+        setBounds(lower_bound, upper_bound, bound_check);
 
-	getVariables(variables);
-    // sort the rates in increasing order
-    if (sorted_rates)
-        quicksort(rates, 0, ncategory-1, prop);
-	phylo_tree->clearAllPartialLH();
+//        if (optimizing_params == 2 && optimize_alg.find("-EM") != string::npos)
+//            score = optimizeWeights();
+//        else 
+        if (optimize_alg.substr(optimize_alg.length()-2,2) == "-B")
+            score = -L_BFGS_B(ndim, variables+1, lower_bound+1, upper_bound+1, max(gradient_epsilon, TOL_FREE_RATE));
+        else
+            score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound, bound_check, max(gradient_epsilon, TOL_FREE_RATE));
+
+        getVariables(variables);
+        // sort the rates in increasing order
+        if (sorted_rates)
+            quicksort(rates, 0, ncategory-1, prop);
+        phylo_tree->clearAllPartialLH();
     }
     optimizing_params = 0;
 
@@ -213,13 +225,26 @@ void RateFree::setBounds(double *lower_bound, double *upper_bound, bool *bound_c
             upper_bound[i] = MAX_FREE_RATE_PROP;
             bound_check[i] = false;
         }
-    } else {
+    } else if (optimizing_params == 1){
         // rates
         for (i = 1; i <= ncategory; i++) {
             lower_bound[i] = MIN_FREE_RATE;
             upper_bound[i] = MAX_FREE_RATE;
             bound_check[i] = false;
         }
+    } else {
+        // both weights and rates
+        for (i = 1; i < ncategory; i++) {
+            lower_bound[i] = MIN_FREE_RATE_PROP;
+            upper_bound[i] = MAX_FREE_RATE_PROP;
+            bound_check[i] = false;
+        }
+        for (i = 1; i < ncategory; i++) {
+            lower_bound[i+ncategory-1] = MIN_FREE_RATE;
+            upper_bound[i+ncategory-1] = MAX_FREE_RATE;
+            bound_check[i+ncategory-1] = false;
+        }
+        
     }
 //	for (i = ncategory; i <= 2*ncategory-2; i++) {
 //		lower_bound[i] = MIN_FREE_RATE;
@@ -245,14 +270,18 @@ void RateFree::setVariables(double *variables) {
         // proportions
         for (i = 0; i < ncategory-1; i++)
             variables[i+1] = prop[i] / prop[ncategory-1];
-    } else {
+    } else if (optimizing_params == 1) {
         // rates
         for (i = 0; i < ncategory; i++)
             variables[i+1] = rates[i];
+    } else {
+        // both rates and weights
+        for (i = 0; i < ncategory-1; i++)
+            variables[i+1] = prop[i] / prop[ncategory-1];
+        for (i = 0; i < ncategory-1; i++)
+            variables[i+ncategory] = rates[i] / rates[ncategory-1];
     }
 
-//	for (i = 0; i < ncategory-1; i++)
-//		variables[i+ncategory] = rates[i] / rates[ncategory-1];
 }
 
 void RateFree::getVariables(double *variables) {
@@ -296,19 +325,30 @@ void RateFree::getVariables(double *variables) {
             prop[i] = variables[i+1] / sum;
         }
         prop[ncategory-1] = 1.0 / sum;
-    } else {
+    } else if (optimizing_params == 1) {
         // rates
         for (i = 0; i < ncategory; i++)
             rates[i] = variables[i+1];
+    } else {
+        // both weights and rates
+        for (i = 0; i < ncategory-1; i++) {
+            sum += variables[i+1];
+        }
+        for (i = 0; i < ncategory-1; i++) {
+            prop[i] = variables[i+1] / sum;
+        }
+        prop[ncategory-1] = 1.0 / sum;
+        
+        // then rates
+    	sum = prop[ncategory-1];
+    	for (i = 0; i < ncategory-1; i++) {
+    		sum += prop[i] * variables[i+ncategory];
+    	}
+    	for (i = 0; i < ncategory-1; i++) {
+    		rates[i] = variables[i+ncategory] / sum;
+    	}
+    	rates[ncategory-1] = 1.0 / sum;
     }
-//	sum = prop[ncategory-1];
-//	for (i = 0; i < ncategory-1; i++) {
-//		sum += prop[i] * variables[i+ncategory];
-//	}
-//	for (i = 0; i < ncategory-1; i++) {
-//		rates[i] = variables[i+ncategory] / sum;
-//	}
-//	rates[ncategory-1] = 1.0 / sum;
 	// --end--
 
 }
@@ -439,3 +479,71 @@ double RateFree::optimizeWithEM() {
     aligned_free(new_prop);
     return phylo_tree->computeLikelihood();
 }
+
+//double RateFree::optimizeWeights() {
+//    // first compute _pattern_lh_cat
+//    double score;
+//    if (!phylo_tree->getModel()->isMixture())
+//        score = phylo_tree->computeLikelihoodBranchEigen((PhyloNeighbor*)phylo_tree->root->neighbors[0], (PhyloNode*)phylo_tree->root); 
+//    else if (phylo_tree->getModelFactory()->fused_mix_rate) {
+//        score = phylo_tree->computeMixrateLikelihoodBranchEigen((PhyloNeighbor*)phylo_tree->root->neighbors[0], (PhyloNode*)phylo_tree->root); 
+//    } else {
+//        outError("Mixture model does not work with FreeRate model!");
+//        score = phylo_tree->computeMixtureLikelihoodBranchEigen((PhyloNeighbor*)phylo_tree->root->neighbors[0], (PhyloNode*)phylo_tree->root); 
+//    }
+//    size_t ptn, c;
+//    size_t nptn = phylo_tree->aln->getNPattern();
+//    size_t nmix = ncategory;
+//    
+//    double *lk_ptn = aligned_alloc<double>(nptn);
+//    double *new_prop = aligned_alloc<double>(nmix);
+//    
+//        
+//    // EM algorithm loop described in Wang, Li, Susko, and Roger (2008)
+//    for (int step = 0; step < 100; step++) {
+//        // E-step
+//        memset(lk_ptn, 0, nptn*sizeof(double));
+//        if (step == 0) {
+//            for (c = 0; c < nmix; c++) 
+//                new_prop[c] = 1.0 / prop[c];
+//            // decoupled weights (prop) from _pattern_lh_cat to obtain L_ci and compute pattern likelihood L_i
+//            for (ptn = 0; ptn < nptn; ptn++) {
+//                double *this_lk_cat = phylo_tree->_pattern_lh_cat + ptn*nmix;
+//                for (c = 0; c < nmix; c++) {
+//                    lk_ptn[ptn] += this_lk_cat[c];
+//                    this_lk_cat[c] *= new_prop[c];
+//                }
+//            } 
+//        } else {
+//            // update L_i according to (**)
+//            for (ptn = 0; ptn < nptn; ptn++) {
+//                double *this_lk_cat = phylo_tree->_pattern_lh_cat + ptn*nmix;
+//                for (c = 0; c < nmix; c++) {
+//                    lk_ptn[ptn] += this_lk_cat[c] * prop[c];
+//                }
+//            }        
+//        }
+//        
+//        // M-step, update weights according to (*)
+//        memset(new_prop, 0, nmix*sizeof(double));
+//        for (ptn = 0; ptn < nptn; ptn++) {
+//            double inv_lk_ptn = phylo_tree->ptn_freq[ptn] / lk_ptn[ptn];
+//            double *this_lk_cat = phylo_tree->_pattern_lh_cat + ptn*nmix;
+//            for (c = 0; c < nmix; c++)
+//                new_prop[c] += this_lk_cat[c] * inv_lk_ptn;
+//        }
+//        
+//        bool converged = true;
+//        for (c = 0; c < nmix; c++) {
+//            new_prop[c] = prop[c] * (new_prop[c] / phylo_tree->getAlnNSite());
+//            // check for convergence
+//            converged = converged && (fabs(prop[c]-new_prop[c]) < 1e-4);
+//            prop[c] = new_prop[c];
+//        }
+//        if (converged) break;
+//    }
+//    
+//    aligned_free(new_prop);
+//    aligned_free(lk_ptn);
+//    return phylo_tree->computeLikelihood();
+//}

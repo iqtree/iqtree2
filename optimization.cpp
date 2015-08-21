@@ -931,7 +931,7 @@ double Optimization::L_BFGS_B(int n, double* x, double* l, double* u, double pgt
 	int grcount;
 	char msg[100];
 
-	int m = 3;          // number of BFGS updates retained in the "L-BFGS-B" method. It defaults to 5.
+	int m = 5;          // number of BFGS updates retained in the "L-BFGS-B" method. It defaults to 5.
 
 	int *nbd;           // 0: unbounded; 1: lower bounded; 2: both lower & upper; 3: upper bounded
 	nbd = new int[n];

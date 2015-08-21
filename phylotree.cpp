@@ -1163,8 +1163,10 @@ void PhyloTree::initializeAllPartialLh() {
         _pattern_lh_cat = aligned_alloc<double>(mem_size * site_rate->getNDiscreteRate() * ((model_factory->fused_mix_rate)? 1 : model->getNMixtures()));
     if (!theta_all)
         theta_all = aligned_alloc<double>(block_size);
-    if (!ptn_freq)
+    if (!ptn_freq) {
         ptn_freq = aligned_alloc<double>(mem_size);
+        ptn_freq_computed = false;
+    }
     if (!ptn_invar)
         ptn_invar = aligned_alloc<double>(mem_size);
     bool benchmark_mem = (!central_partial_lh && verbose_mode >= VB_MED);

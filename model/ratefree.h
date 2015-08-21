@@ -60,6 +60,8 @@ public:
     /** optimize weights using EM algorithm */
     double optimizeWithEM();
 
+    double optimizeWeights();
+
 	/**
 		return the number of dimensions
 	*/
