@@ -355,14 +355,19 @@ void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh, 
     out	<< "Unconstrained log-likelihood (without tree): " << tree.aln->computeUnconstrainedLogL() << endl;
 
     out << "Number of free parameters (#branches + #model parameters): " << df << endl;
-    if (ssize > df) { 
-        if (ssize > 40*df)
-            out	<< "Akaike information criterion (AIC) score: " << AIC_score << endl;
-        else
-			out << "Corrected Akaike information criterion (AICc) score: " << AICc_score << endl;
-        
-		out << "Bayesian information criterion (BIC) score: " << BIC_score << endl;
-    } else if (main_tree) {
+//    if (ssize > df) { 
+//        if (ssize > 40*df)
+//            out	<< "Akaike information criterion (AIC) score: " << AIC_score << endl;
+//        else
+//			out << "Corrected Akaike information criterion (AICc) score: " << AICc_score << endl;
+//        
+//		out << "Bayesian information criterion (BIC) score: " << BIC_score << endl;
+//    } else 
+    out	<< "Akaike information criterion (AIC) score: " << AIC_score << endl;
+    out << "Corrected Akaike information criterion (AICc) score: " << AICc_score << endl;
+    out << "Bayesian information criterion (BIC) score: " << BIC_score << endl;
+
+    if (ssize <= df && main_tree) {
         
         out << endl
             << "**************************** WARNING ****************************" << endl
@@ -984,9 +989,6 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 			cout << "  Maximum-likelihood tree:       " << params.out_prefix << ".treefile" << endl;
 		else
 			cout << "  Tree used for model selection: " << params.out_prefix << ".treefile" << endl;
-		if (params.snni && params.write_local_optimal_trees) {
-			cout << "  Locally optimal trees (" << tree.candidateTrees.getNumLocalOptTrees() << "):    " << params.out_prefix << ".suboptimal_trees" << endl;
-		}
 	}
 	if (!params.user_file && params.start_tree == STT_BIONJ) {
 		cout << "  BIONJ tree:                    " << params.out_prefix << ".bionj"
@@ -1310,8 +1312,7 @@ void pruneTaxa(Params &params, IQTree &iqtree, double *pattern_lh, NodeVector &p
 		iqtree.clearAllPartialLH();
 		iqtree.setCurScore(iqtree.optimizeAllBranches());
 		//cout << "Log-likelihood	after reoptimizing model parameters: " << tree.curScore << endl;
-		int nni_count, nni_steps;
-		iqtree.setCurScore(iqtree.optimizeNNI(nni_count, nni_steps));
+		pair<int, int> nniInfo = iqtree.optimizeNNI();
 		cout << "Log-likelihood after optimizing partial tree: "
 				<< iqtree.getCurScore() << endl;
 	}
@@ -1328,8 +1329,8 @@ void restoreTaxa(IQTree &iqtree, double *saved_dist_mat, NodeVector &pruned_taxa
 		iqtree.clearAllPartialLH();
 		iqtree.setCurScore(iqtree.optimizeAllBranches());
 		//cout << "Log-likelihood	after reoptimizing model parameters: " << tree.curScore << endl;
-		int nni_count, nni_steps;
-		iqtree.setCurScore(iqtree.optimizeNNI(nni_count, nni_steps));
+		pair<int, int> nniInfo;
+		nniInfo = iqtree.optimizeNNI();
 		cout << "Log-likelihood	after reoptimizing full tree: " << iqtree.getCurScore() << endl;
 		//iqtree.setBestScore(iqtree.getModelFactory()->optimizeParameters(params.fixed_branch_length, true, params.model_eps));
 
@@ -1716,28 +1717,33 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 //    if ( params.start_tree != STT_BIONJ && ((params.snni && !params.iqp) || params.min_iterations == 0)) {
 //        params.compute_ml_dist = false;
 //    }
-    if ( params.user_file && params.min_iterations == 0) {
+    if (params.user_file && ((params.snni && !params.iqp) || params.min_iterations == 0)) {
         params.compute_ml_dist = false;
     }
+//    if ( params.user_file && params.min_iterations == 0) {
+//        params.compute_ml_dist = false;
+//    }
 
     if ((!params.dist_file && params.compute_ml_dist) || params.leastSquareBranch) {
         computeMLDist(params, iqtree, dist_file, getCPUTime());
-        // NEW 2015-08-10: always compute BIONJ tree into the candidate set
-        iqtree.resetCurScore();
-        double start_bionj = getRealTime();
-        iqtree.computeBioNJ(params, iqtree.aln, dist_file);
-        cout << getRealTime() - start_bionj << " seconds" << endl;
-        if (iqtree.isSuperTree())
-            iqtree.wrapperFixNegativeBranch(true);
-        else
-            iqtree.wrapperFixNegativeBranch(false);
-        if (params.start_tree == STT_BIONJ) {
-        	initTree = iqtree.optimizeModelParameters(params.min_iterations==0, initEpsilon);
-        } else {
-			initTree = iqtree.optimizeBranches();
-		}
-        cout << "Log-likelihood of BIONJ tree: " << iqtree.getCurScore() << endl;
-        iqtree.candidateTrees.update(initTree, iqtree.getCurScore());
+        if (!params.user_file) {
+            // NEW 2015-08-10: always compute BIONJ tree into the candidate set
+            iqtree.resetCurScore();
+            double start_bionj = getRealTime();
+            iqtree.computeBioNJ(params, iqtree.aln, dist_file);
+            cout << getRealTime() - start_bionj << " seconds" << endl;
+            if (iqtree.isSuperTree())
+                iqtree.wrapperFixNegativeBranch(true);
+            else
+                iqtree.wrapperFixNegativeBranch(false);
+            if (params.start_tree == STT_BIONJ) {
+                initTree = iqtree.optimizeModelParameters(params.min_iterations==0, initEpsilon);
+            } else {
+                initTree = iqtree.optimizeBranches();
+            }
+            cout << "Log-likelihood of BIONJ tree: " << iqtree.getCurScore() << endl;
+            iqtree.candidateTrees.update(initTree, iqtree.getCurScore());
+        }
     }
 
 	double cputime_search_start = getCPUTime();
@@ -1751,16 +1757,10 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
         	assert(iqtree.candidateTrees.size() != 0);
         	cout << "Finish initializing candidate tree set. ";
         	cout << "Number of distinct locally optimal trees: " << iqtree.candidateTrees.size() << endl;
-        	if (params.write_local_optimal_trees) {
-        		printSuboptimalTrees(iqtree, params, ".init_suboptimal_trees");
-        	}
         } else {
-            int nni_count = 0;
-            int nni_steps = 0;
             cout << "Doing NNI on the initial tree ... " << endl;
-            string tree = iqtree.doNNISearch(nni_count, nni_steps);
-        	iqtree.candidateTrees.update(tree, iqtree.getCurScore(), true);
-
+            pair<int, int> nniInfo = iqtree.doNNISearch();
+        	iqtree.candidateTrees.update(iqtree.getTreeString(), iqtree.getCurScore());
         }
         cout << "Current best tree score: " << iqtree.candidateTrees.getBestScore() << " / CPU time: "
                 << getCPUTime() - initTime << endl;
@@ -1790,6 +1790,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 	if (params.min_iterations > 0) {
 		iqtree.doTreeSearch();
 		iqtree.setAlignment(iqtree.aln);
+        cout << "TREE SEARCH COMPLETED AFTER " << iqtree.stop_rule.getCurIt() << " ITERATIONS" << endl << endl;
 	} else {
 		/* do SPR with likelihood function */
 		if (params.tree_spr) {
@@ -1835,7 +1836,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
         else
             tree = iqtree.optimizeModelParameters(true);
         
-		iqtree.candidateTrees.update(tree, iqtree.getCurScore(), true);
+		iqtree.candidateTrees.update(tree, iqtree.getCurScore());
     }
 
 	if (iqtree.isSuperTree())
@@ -1989,7 +1990,7 @@ void searchGAMMAInvarByRestarting(IQTree &iqtree) {
 		site_rates->setPInvar(initPInvar);
 		site_rates->computeRates();
 		iqtree.clearAllPartialLH();
-		iqtree.optimizeModelParameters(verbose_mode >= VB_MED, 0.1);
+		iqtree.optimizeModelParameters(verbose_mode >= VB_MED, Params::getInstance().testAlphaEps);
         double estAlpha = iqtree.getRate()->getGammaShape();
         double estPInv = iqtree.getRate()->getPInvar();
         double logl = iqtree.getCurScore();
@@ -2376,7 +2377,10 @@ void runPhyloAnalysis(Params &params) {
 			// bug fix
 			if ((tree->sse == LK_EIGEN || tree->sse == LK_EIGEN_SSE) && !tree->isBifurcating()) {
 				cout << "NOTE: Changing to old kernel as consensus tree is multifurcating" << endl;
-				tree->changeLikelihoodKernel(LK_SSE);
+                if (tree->sse == LK_EIGEN)
+                    tree->changeLikelihoodKernel(LK_NORMAL);
+                else
+                    tree->changeLikelihoodKernel(LK_SSE);
 			}
 
 			tree->initializeAllPartialLh();

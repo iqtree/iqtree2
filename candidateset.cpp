@@ -8,10 +8,9 @@
 #include "phylotree.h"
 #include "candidateset.h"
 
-void CandidateSet::init(Alignment* aln, Params *params) {
+void CandidateSet::init(Alignment* aln) {
     this->aln = aln;
-    this->params = params;
-	maxSize = params->maxPopSize;
+	maxSize = Params::getInstance().maxCandidates;
 }
 
 CandidateSet::~CandidateSet() {
@@ -19,7 +18,6 @@ CandidateSet::~CandidateSet() {
 
 CandidateSet::CandidateSet() {
 	aln = NULL;
-	params = NULL;
 	loglThreshold = -DBL_MAX;
 	numStableSplits = 0;
 	maxSize = 1000;
@@ -53,7 +51,7 @@ string CandidateSet::getRandCandTree() {
 	assert(!empty());
 	if (empty())
 		return "";
-	int id = random_int(min(params->popSize, (int)size()) );
+	int id = random_int(min(Params::getInstance().popSize, (int)size()) );
 	for (reverse_iterator i = rbegin(); i != rend(); i++, id--)
 		if (id == 0)
 			return i->second.tree;
@@ -114,7 +112,7 @@ bool CandidateSet::replaceTree(string tree, double score) {
 
 void CandidateSet::addCandidateSplits(string treeString) {
 	vector<string> taxaNames = aln->getSeqNames();
-	MTree tree(treeString, taxaNames, params->is_rooted);
+	MTree tree(treeString, taxaNames, Params::getInstance().is_rooted);
 	SplitGraph allSplits;
 	tree.convertSplits(allSplits);
 	for (SplitGraph::iterator splitIt = allSplits.begin(); splitIt != allSplits.end(); splitIt++) {
@@ -134,7 +132,7 @@ void CandidateSet::addCandidateSplits(string treeString) {
 
 void CandidateSet::removeCandidateSplits(string treeString) {
 	vector<string> taxaNames = aln->getSeqNames();
-	MTree tree(treeString, taxaNames, params->is_rooted);
+	MTree tree(treeString, taxaNames, Params::getInstance().is_rooted);
 	SplitGraph allSplits;
 	tree.convertSplits(allSplits);
 	for (SplitGraph::iterator splitIt = allSplits.begin(); splitIt != allSplits.end(); splitIt++) {
@@ -170,7 +168,7 @@ string CandidateSet::getNextCandTree() {
 
 void CandidateSet::initParentTrees() {
     if (parentTrees.empty()) {
-        int count = params->popSize;
+		int count = Params::getInstance().popSize;
         for (reverse_iterator i = rbegin(); i != rend() && count >0 ; i++, count--) {
             parentTrees.push(i->second.tree);
             //cout << i->first << endl;
@@ -211,13 +209,13 @@ bool CandidateSet::update(string newTree, double newScore) {
 			int it_pos = distance(candidateTreeIt, end());
 
 			// A new tree is inserted in the stable tree set
-			if (it_pos <= params->numSupportTrees) {
+			if (it_pos <= Params::getInstance().numSupportTrees) {
 //				addCandidateSplits(candidateTreeIt->second.tree);
 //				if (candidateSplitsHash.getMaxValue() > params->numSupportTrees) {
 //					assert(candidateSplitsHash.getMaxValue() == params->numSupportTrees + 1);
 //					removeCandidateSplits(getNthBestTree(candidateSplitsHash.getMaxValue()).tree);
 //				}
-				buildTopSplits(params->stableSplitThreshold);
+				buildTopSplits(Params::getInstance().stableSplitThreshold);
 //				reportStableSplits();
 			}
 		}
@@ -253,15 +251,15 @@ string CandidateSet::getTopology(string tree) {
 	PhyloTree mtree;
 //	mtree.rooted = params->is_rooted;
 	mtree.aln = this->aln;
-	mtree.setParams(params);
+	mtree.setParams(&(Params::getInstance()));
 
 	stringstream str;
 	str << tree;
 	str.seekg(0, ios::beg);
 //	freeNode();
-	mtree.readTree(str, params->is_rooted);
+	mtree.readTree(str, Params::getInstance().is_rooted);
 	mtree.setAlignment(aln);
-	mtree.setRootNode(params->root);
+	mtree.setRootNode(Params::getInstance().root);
 
 //	mtree.readTreeString(tree);
 //	mtree.setRootNode(params->root);
@@ -286,14 +284,14 @@ void CandidateSet::clearTopologies() {
 }
 
 
-vector<CandidateTree> CandidateSet::getBestCandidateTrees(int numTrees) {
-	vector<CandidateTree> candidateTrees;
+CandidateSet CandidateSet::getBestCandidateTrees(int numTrees) {
+	CandidateSet res;
 	if (numTrees >= size())
 		numTrees = size();
 	for (reverse_iterator rit = rbegin(); rit != rend() && numTrees > 0; rit++, numTrees--) {
-		candidateTrees.push_back(rit->second);
+		res.insert(*rit);
 	}
-	return candidateTrees;
+	return res;
 }
 
 vector<string> CandidateSet::getBestTreeStrings(int numTrees) {
@@ -362,7 +360,7 @@ int CandidateSet::buildTopSplits(double supportThreshold) {
 	candidateSplitsHash.clear();
 	vector<CandidateTree> bestCandidateTrees;
 
-	getBestCandidateTrees(params->numSupportTrees, bestCandidateTrees);
+	getBestCandidateTrees(Params::getInstance().numSupportTrees, bestCandidateTrees);
 	//assert(bestCandidateTrees.size() > 1);
 
 	candidateSplitsHash.setNumTree(bestCandidateTrees.size());

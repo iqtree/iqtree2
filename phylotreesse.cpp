@@ -274,6 +274,8 @@ void PhyloTree::changeLikelihoodKernel(LikelihoodKernel lk) {
 	if (sse == lk) return;
 	if ((sse == LK_EIGEN || sse == LK_EIGEN_SSE) && (lk == LK_NORMAL || lk == LK_SSE)) {
 		// need to increase the memory usage when changing from new kernel to old kernel
+        if (params->lh_mem_save == LM_PER_NODE)
+            params->lh_mem_save = LM_ALL_BRANCH;
 		setLikelihoodKernel(lk);
 		deleteAllPartialLh();
 		initializeAllPartialLh();
@@ -2592,6 +2594,7 @@ double PhyloTree::computeMixtureLikelihoodBranchEigen(PhyloNeighbor *dad_branch,
 
     size_t block = ncat * nstates * nmixture;
     size_t statemix = nstates * nmixture;
+    size_t cat_states = ncat * nstates;
     size_t ptn; // for big data size > 4GB memory required
     size_t c, i, m;
     size_t orig_nptn = aln->size();
@@ -2609,7 +2612,8 @@ double PhyloTree::computeMixtureLikelihoodBranchEigen(PhyloNeighbor *dad_branch,
 	}
 
 	double prob_const = 0.0;
-	memset(_pattern_lh_cat, 0, nptn*ncat*nmixture*sizeof(double));
+    // 2018-08-14: _pattern_lh_cat now only stores mixture likelihoods
+	memset(_pattern_lh_cat, 0, nptn*nmixture*sizeof(double));
 
     if (dad->isLeaf()) {
     	// special treatment for TIP-INTERNAL NODE case
@@ -2638,20 +2642,27 @@ double PhyloTree::computeMixtureLikelihoodBranchEigen(PhyloNeighbor *dad_branch,
 #endif
     	for (ptn = 0; ptn < nptn; ptn++) {
 			double lh_ptn = ptn_invar[ptn];
-			double *lh_cat = _pattern_lh_cat + ptn*ncat*nmixture;
+			double *lh_cat = _pattern_lh_cat + ptn*nmixture;
 			double *partial_lh_dad = dad_branch->partial_lh + ptn*block;
 			int state_dad = (ptn < orig_nptn) ? (aln->at(ptn))[dad->id] : model_factory->unobserved_ptns[ptn-orig_nptn];
 			double *lh_node = partial_lh_node + state_dad*block;
 			for (m = 0; m < nmixture; m++) {
-				for (c = 0; c < ncat; c++) {
-					for (i = 0; i < nstates; i++) {
-						*lh_cat += lh_node[i] * partial_lh_dad[i];
-					}
-					lh_node += nstates;
-					partial_lh_dad += nstates;
-					lh_ptn += *lh_cat;
-					lh_cat++;
-				}
+                for (i = 0; i < cat_states; i++)
+                    *lh_cat += lh_node[i] * partial_lh_dad[i];
+                lh_ptn += *lh_cat;
+                lh_node += cat_states;
+                partial_lh_dad += cat_states;
+                lh_cat++;
+//				for (c = 0; c < ncat; c++) {
+//					for (i = 0; i < nstates; i++) {
+//						*lh_cat += lh_node[i] * partial_lh_dad[i];
+//					}
+//					lh_node += nstates;
+//					partial_lh_dad += nstates;
+//                    lh_ptn += *lh_cat;
+//					lh_cat++;
+//				}
+                
 			}
 //			assert(lh_ptn > 0.0);
 			if (ptn < orig_nptn) {
@@ -2670,21 +2681,28 @@ double PhyloTree::computeMixtureLikelihoodBranchEigen(PhyloNeighbor *dad_branch,
 #endif
     	for (ptn = 0; ptn < nptn; ptn++) {
 			double lh_ptn = ptn_invar[ptn];
-			double *lh_cat = _pattern_lh_cat + ptn*ncat*nmixture;
+			double *lh_cat = _pattern_lh_cat + ptn*nmixture;
 			double *partial_lh_dad = dad_branch->partial_lh + ptn*block;
 			double *partial_lh_node = node_branch->partial_lh + ptn*block;
 			double *val_tmp = val;
 			for (m = 0; m < nmixture; m++) {
-				for (c = 0; c < ncat; c++) {
-					for (i = 0; i < nstates; i++) {
-						*lh_cat +=  val_tmp[i] * partial_lh_node[i] * partial_lh_dad[i];
-					}
-					lh_ptn += *lh_cat;
-					partial_lh_node += nstates;
-					partial_lh_dad += nstates;
-					val_tmp += nstates;
-					lh_cat++;
-				}
+                for (i = 0; i < cat_states; i++)
+                    *lh_cat += val_tmp[i] * partial_lh_node[i] * partial_lh_dad[i];
+                lh_ptn += *lh_cat;
+                partial_lh_dad += cat_states;
+                partial_lh_node += cat_states;
+                val_tmp += cat_states;
+                lh_cat++;
+//				for (c = 0; c < ncat; c++) {
+//					for (i = 0; i < nstates; i++) {
+//						*lh_cat +=  val_tmp[i] * partial_lh_node[i] * partial_lh_dad[i];
+//					}
+//					lh_ptn += *lh_cat;
+//					partial_lh_node += nstates;
+//					partial_lh_dad += nstates;
+//					val_tmp += nstates;
+//					lh_cat++;
+//				}
 			}
 
 			assert(lh_ptn > 0.0);

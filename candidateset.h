@@ -45,7 +45,7 @@ public:
     /**
      * Initialization
      */
-	void init(Alignment* aln, Params *params);
+	void init(Alignment* aln);
 
 	CandidateSet();
 
@@ -241,18 +241,12 @@ public:
 		return topologies;
 	}
 
-	/**
-	 * get number of locally optimal trees in the set
-	 * @return
-	 */
-//	int getNumLocalOptTrees();
-
     /**
-     * Return a CandidateSet containing \a numTrees of current best candidate trees
+     * Return a CandidateSet containing \a numTrees candidate trees
      * @param numTrees
      * @return
      */
-    vector<CandidateTree> getBestCandidateTrees(int numTrees);
+    CandidateSet getBestCandidateTrees(int numTrees);
 
     /**
      * Get the current best tree strings
@@ -325,11 +319,6 @@ private:
      *  The number of current best trees is specified in params->numSupportTrees
      */
 	SplitIntMap candidateSplitsHash;
-
-    /**
-     *  Shared params pointing to the global params
-     */
-    Params* params;
 
     /**
      *  Map data structure storing <topology_string, score>

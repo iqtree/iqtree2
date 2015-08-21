@@ -1387,12 +1387,6 @@ public:
      ****************************************************************************/
 
     /**
-     *  Set of all trees seen during the tree search
-     *  It is a superset of candidateTrees
-     */
-    CandidateSet allTrees;
-
-    /**
             associated alignment
      */
     Alignment *aln;

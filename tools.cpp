@@ -20,7 +20,7 @@
 
 
 
-#if (defined(__GNUC__) || defined(__clang__)) && !defined(WIN32)
+#if (defined(__GNUC__) || defined(__clang__)) && !defined(WIN32) && !defined(__CYGWIN__)
 #include <execinfo.h>
 #include <cxxabi.h>
 #endif
@@ -613,7 +613,8 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.user_file = NULL;
     params.fai = false;
     params.testAlpha = false;
-    params.testAlphaEps = 100.0;
+    params.testAlphaEpsAdaptive = false;
+    params.testAlphaEps = 0.1;
     params.exh_ai = false;
     params.alpha_invar_file = NULL;
     params.out_prefix = NULL;
@@ -716,7 +717,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.manuel_analytic_approx = false;
     params.leastSquareNNI = false;
     params.ls_var_type = OLS;
-    params.maxPopSize = 100;
+    params.maxCandidates = 1000;
     params.popSize = 5;
     params.p_delete = -1;
     params.min_iterations = -1;
@@ -2470,6 +2471,10 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.testAlpha = true;
 				continue;
 			}
+            if (strcmp(argv[cnt], "--adaptive-eps") == 0) {
+                params.testAlphaEpsAdaptive = true;
+                continue;
+            }
             if (strcmp(argv[cnt], "--test-alpha-eps") == 0) {
                 cnt++;
                 if (cnt >= argc)
@@ -2492,13 +2497,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -poplim <max_pop_size>";
-				params.maxPopSize = convert_int(argv[cnt]);
-                if (params.maxPopSize < params.numInitTrees) {
-                    stringstream msg;
-                    msg << "Population size cannot be smaller than number of inital trees (";
-                    msg << params.numInitTrees << ")";
-                    outError(msg.str().c_str());
-                }
+				params.maxCandidates = convert_int(argv[cnt]);
 				continue;
 			}
 			if (strcmp(argv[cnt], "-popsize") == 0
@@ -2541,6 +2540,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.speednni = false;
 				continue;
 			}
+            
 			if (strcmp(argv[cnt], "-snni") == 0) {
 				params.snni = true;
 				// dont need to turn this on here

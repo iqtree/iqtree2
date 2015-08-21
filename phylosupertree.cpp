@@ -266,6 +266,8 @@ void PhyloSuperTree::readPartitionNexus(Params &params) {
 			trimString(info.sequence_type);
 			cout << endl << "Reading partition " << info.name << " (model=" << info.model_name << ", aln=" <<
 				info.aln_file << ", seq=" << info.sequence_type << ", pos=" << info.position_spec << ") ..." << endl;
+            if (info.sequence_type != "" && Alignment::getSeqType(info.sequence_type.c_str()) == SEQ_UNKNOWN)
+                outError("Unknown sequence type " + info.sequence_type);
 			//info.mem_ptnlh = NULL;
 			info.nniMoves[0].ptnlh = NULL;
 			info.nniMoves[1].ptnlh = NULL;
@@ -528,11 +530,26 @@ void PhyloSuperTree::initSettings(Params &params) {
 
 }
 
+void PhyloSuperTree::setLikelihoodKernel(LikelihoodKernel lk) {
+    PhyloTree::setLikelihoodKernel(lk);
+    for (iterator it = begin(); it != end(); it++)
+        (*it)->setLikelihoodKernel(lk);    
+}
+
 void PhyloSuperTree::changeLikelihoodKernel(LikelihoodKernel lk) {
-//	PhyloTree::changeLikelihoodKernel(lk);
-	sse = lk;
-	for (iterator it = begin(); it != end(); it++)
-		(*it)->changeLikelihoodKernel(lk);
+	PhyloTree::changeLikelihoodKernel(lk);
+//	if ((sse == LK_EIGEN || sse == LK_EIGEN_SSE) && (lk == LK_NORMAL || lk == LK_SSE)) {
+//		// need to increase the memory usage when changing from new kernel to old kernel
+//        setLikelihoodKernel(lk);
+//        for (iterator it = begin(); it != end(); it++)
+//            (*it)->setLikelihoodKernel(lk);
+//		deleteAllPartialLh();
+//		initializeAllPartialLh();
+//		clearAllPartialLH();
+//    } else {
+//        for (iterator it = begin(); it != end(); it++)
+//            (*it)->setLikelihoodKernel(lk);
+//    }
 }
 
 string PhyloSuperTree::getTreeString() {

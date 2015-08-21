@@ -58,7 +58,7 @@ add_definitions(-DIQ_TREE)
 # The version number.
 set (iqtree_VERSION_MAJOR 1)
 set (iqtree_VERSION_MINOR 3)
-set (iqtree_VERSION_PATCH 5)
+set (iqtree_VERSION_PATCH 6) 
 
 set(BUILD_SHARED_LIBS OFF)
 
@@ -100,9 +100,7 @@ elseif (APPLE)
 elseif (UNIX) 
 	message("Target OS     : Unix")
 	# build as static binary to run on most machines
-    if (NOT IQTREE_FLAGS MATCHES "static")
-        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -rdynamic")
-    else()
+    if (IQTREE_FLAGS MATCHES "static")
         set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static")
     endif()
 else()

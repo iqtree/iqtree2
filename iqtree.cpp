@@ -73,8 +73,7 @@ void IQTree::initSettings(Params &params) {
     searchinfo.nni_type = params.nni_type;
     optimize_by_newton = params.optimize_by_newton;
     setLikelihoodKernel(params.SSE);
-    candidateTrees.init(this->aln, &params);
-    allTrees.init(this->aln, &params);
+    candidateTrees.init(this->aln);
 
     if (params.min_iterations == -1) {
         if (!params.gbo_replicates) {
@@ -608,40 +607,37 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
 
     double loglTime = getRealTime() - startTime;
     cout << loglTime << " seconds" << endl;
-    // Select the best parsimony trees for doing NNI search
-    vector <CandidateTree> bestParsimonyTrees;
-    candidateTrees.getBestCandidateTrees(nNNITrees, bestParsimonyTrees);
 
     // Only select the best nNNITrees for doing NNI search
     CandidateSet initParsimonyTrees = candidateTrees.getBestCandidateTrees(nNNITrees);
+
     candidateTrees.clear();
 
     cout << "Optimizing top parsimony trees with NNI..." << endl;
     startTime = getCPUTime();
-    /*********** START: Do NNI on the best parsimony trees ************************************/
     CandidateSet::reverse_iterator rit;
     stop_rule.setCurIt(1);
     for (rit = initParsimonyTrees.rbegin(); rit != initParsimonyTrees.rend(); ++rit, stop_rule.setCurIt(
             stop_rule.getCurIt() + 1)) {
-    	int nniCount, nniStep;
+        pair<int, int> nniInfo;
         double initLogl, nniLogl;
         string tree;
         readTreeString(rit->second.tree);
-        computeLogL();
+        initLogl = computeLogL();
 //         THIS HAPPEN WHENEVER USING FULL PARTITION MODEL
 //        if (isSuperTree() && params->partition_type == 0) {
 //        	if (verbose_mode >= VB_MED)
 //        		cout << "curScore: " << getCurScore() << " expected score: " << rit->first << endl;
 //        	optimizeBranches(2);
 //        }
-        initLogl = getCurScore();
-        tree = doNNISearch(nniCount, nniStep);
+        nniInfo = doNNISearch();
         nniLogl = getCurScore();
         cout << "Iteration " << stop_rule.getCurIt() << " / LogL: " << getCurScore();
         if (verbose_mode >= VB_MED) {
-        	cout << " / NNI count, steps: " << nniCount << "," << nniStep;
-        	cout << " / Parsimony logl " << initLogl << " / NNI logl: " << nniLogl;
+            cout << " / NNI steps, count: " << nniInfo.first << "," << nniInfo.second;
+            cout << " / Init. logl " << initLogl << " / Final logl: " << nniLogl;
         }
+    }
         cout << " / Time: " << convert_time(getRealTime() - params->start_real_time) << endl;
 
     if (params->fixStableSplits) {
@@ -2123,9 +2119,6 @@ pair<int, int> IQTree::optimizeNNI() {
     SplitIntMap nniSplits;
 
     for (numSteps = 1; numSteps <= MAXSTEPS; numSteps++) {
-        if (params->write_all_trees) {
-            allTrees.update(getTopologyString(), curScore);
-        }
 
         double oldScore = curScore;
         if (save_all_trees == 2) {

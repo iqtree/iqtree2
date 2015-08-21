@@ -75,6 +75,10 @@ public:
             input alignment reader
      ****************************************************************************/
 
+    /** get the SeqType for a given string */
+    static SeqType getSeqType(const char *sequence_type);
+
+
     /**
             add a pattern into the alignment
             @param pat the pattern
@@ -686,6 +690,5 @@ protected:
 
 
 void extractSiteID(Alignment *aln, const char* spec, IntVector &site_id);
-
 
 #endif

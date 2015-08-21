@@ -451,6 +451,11 @@ public:
 	bool testAlpha;
 
     /**
+     *  Automatic adjust the log-likelihood espilon using some heuristic
+     */
+    bool testAlphaEpsAdaptive;
+
+    /**
      *  Logl epsilon to test for initial alpha and pinvar values.
      *  This does not need to be small (default value = 100)
      */
@@ -512,13 +517,16 @@ public:
 
 	/**
 	 *  Number of best trees in the candidate set used to generate perturbed trees
+	 *  In term of evolutionary algorithm, this is the population size
 	 */
 	int popSize;
 
 	/**
 	 *  Maximum number of trees stored in the candidate tree set
+	 *  This is just a technical constraint to ensure that the candidate tree set
+	 *  does not have to store a lot of trees
 	 */
-	int maxPopSize;
+	int maxCandidates;
 
 	/**
 	 *  heuristics for speeding up NNI evaluation

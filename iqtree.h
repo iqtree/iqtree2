@@ -583,15 +583,6 @@ protected:
      */
     int k_represent;
 
-protected:
-
-    /**
-     *  Generate the initial candidate tree set
-     *  @param nParTrees number of parsimony trees to generate
-     *  @param nNNITrees number of NNI locally optimal trees to generate
-     */
-    void initCandidateTreeSet(int nParTrees, int nNNITrees);
-
     /**
      *  Update the candidate set with tree \a newTree. If a better tree is found, print notification to cout and print
      *  the new best tree to file.
@@ -599,6 +590,13 @@ protected:
     void addCurTreeToCandidateSet();
 
 public:
+
+    /**
+     *  Generate the initial candidate tree set
+     *  @param nParTrees number of parsimony trees to generate
+     *  @param nNNITrees number of NNI locally optimal trees to generate
+     */
+    void initCandidateTreeSet(int nParTrees, int nNNITrees);
 
     /**
      *  Set of candidate trees
