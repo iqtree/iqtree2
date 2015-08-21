@@ -19,7 +19,7 @@ public:
 		@param ncat number of rate categories
 		@param tree associated phylogenetic tree
 	*/
-    RateFreeInvar(int ncat, double start_alpha, string params, bool sorted_rates, double p_invar_sites, PhyloTree *tree);
+    RateFreeInvar(int ncat, double start_alpha, string params, bool sorted_rates, double p_invar_sites, string opt_alg, PhyloTree *tree);
 
 
 	/**

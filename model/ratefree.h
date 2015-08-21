@@ -16,8 +16,9 @@ public:
 		constructor
 		@param ncat number of rate categories
 		@param tree associated phylogenetic tree
+        @param opt_alg optimization algorithm (1-BFGS, 2-BFGS, EM)
 	*/
-    RateFree(int ncat, double start_alpha, string params, bool sorted_rates, PhyloTree *tree);
+    RateFree(int ncat, double start_alpha, string params, bool sorted_rates, string opt_alg, PhyloTree *tree);
 
 	virtual ~RateFree();
 
@@ -57,7 +58,7 @@ public:
 	virtual double optimizeParameters(double gradient_epsilon);
 
     /** optimize weights using EM algorithm */
-    double optimizeWeights();
+    double optimizeWithEM();
 
 	/**
 		return the number of dimensions
@@ -116,6 +117,8 @@ protected:
 
     /** 0: no, 1: rates, 2: weights */
     int optimizing_params;
+
+    string optimize_alg;
 
 };
 

@@ -745,6 +745,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.p_invar_sites = -1.0;
     params.optimize_model_rate_joint = false;
     params.optimize_by_newton = true;
+    params.optimize_alg = "2-BFGS";
     params.fixed_branch_length = false;
     params.iqp_assess_quartet = IQP_DISTANCE;
     params.iqp = false;
@@ -977,6 +978,13 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (cnt >= argc)
 					throw "Use -o <taxon>";
 				params.root = argv[cnt];
+				continue;
+			}
+			if (strcmp(argv[cnt], "-optalg") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -opt_alg <1-BFGS|2-BFGS|EM>";
+				params.optimize_alg = argv[cnt];
 				continue;
 			}
 			if (strcmp(argv[cnt], "-root") == 0) {

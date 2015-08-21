@@ -64,6 +64,7 @@ void PhyloTree::init() {
     nni_partial_lh = NULL;
     tip_partial_lh = NULL;
     tip_partial_lh_computed = false;
+    ptn_freq_computed = false;
     central_scale_num = NULL;
     nni_scale_num = NULL;
     central_partial_pars = NULL;

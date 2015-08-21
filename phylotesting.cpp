@@ -1116,7 +1116,7 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 	rate_class[2] = new RateGamma(params.num_rate_cats, params.gamma_shape, params.gamma_median, NULL);
 	rate_class[3] = new RateGammaInvar(params.num_rate_cats, params.gamma_shape, params.gamma_median, -1, params.optimize_model_rate_joint, NULL);
     for (model = 4; model < num_rate_classes; model++)
-        rate_class[model] = new RateFree(model-2, params.gamma_shape, "", false, NULL);
+        rate_class[model] = new RateFree(model-2, params.gamma_shape, "", false, params.optimize_alg, NULL);
         
 	ModelGTR *subst_model = NULL;
 	if (seq_type == SEQ_BINARY)

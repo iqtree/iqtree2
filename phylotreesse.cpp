@@ -395,6 +395,14 @@ void PhyloTree::computeTipPartialLikelihood() {
 	// initialize ptn_freq and ptn_invar
 	//-------------------------------------------------------
 
+	computePtnFreq();
+	// for +I model
+	computePtnInvar();
+}
+
+void PhyloTree::computePtnFreq() {
+	if (ptn_freq_computed) return;
+	ptn_freq_computed = true;
 	size_t nptn = aln->getNPattern();
 	size_t maxptn = get_safe_upper_limit(nptn+model_factory->unobserved_ptns.size());
 	int ptn;
@@ -402,9 +410,6 @@ void PhyloTree::computeTipPartialLikelihood() {
 		ptn_freq[ptn] = (*aln)[ptn].frequency;
 	for (ptn = nptn; ptn < maxptn; ptn++)
 		ptn_freq[ptn] = 0.0;
-
-	// for +I model
-	computePtnInvar();
 }
 
 void PhyloTree::computePtnInvar() {

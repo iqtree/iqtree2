@@ -578,6 +578,7 @@ public:
     double *tip_partial_lh;
     bool tip_partial_lh_computed;
 
+    bool ptn_freq_computed;
 
     /****************************************************************************
             computing partial (conditional) likelihood of subtrees
@@ -585,6 +586,7 @@ public:
 
     void computeTipPartialLikelihood();
     void computePtnInvar();
+    void computePtnFreq();
 
     /**
             compute the partial likelihood at a subtree

@@ -1180,6 +1180,9 @@ public:
      */
     bool optimize_by_newton;
 
+    /** optimization algorithm for parameter estimation: 1-BFGS, 2-BFGS, EM */
+    string optimize_alg;
+
     /**
             TRUE if you want to fix branch lengths during model optimization
      */
