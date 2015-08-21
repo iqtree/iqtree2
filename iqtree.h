@@ -493,7 +493,6 @@ public:
      */
     vector<int> vecNumNNI;
 
-    int getNumIterations() { return numIterations; }
 
     /**
      * Do memory allocation and initialize parameter for UFBoot to run with PLL
@@ -546,11 +545,6 @@ protected:
     *  Splits corresponding to random NNIs
     */
     SplitIntMap initTabuSplits;
-
-    /**
-     *  Current number of iterations
-     */
-    int numIterations;
 
     /**
             criterion to assess important quartet
@@ -685,14 +679,6 @@ public:
 
 	int getDelete() const;
 	void setDelete(int _delete);
-
-	int getCurIt() const {
-		return numIterations;
-	}
-
-	void setCurIt(int curIt) {
-		this->numIterations = curIt;
-	}
 
 protected:
     /**** NNI cutoff heuristic *****/
