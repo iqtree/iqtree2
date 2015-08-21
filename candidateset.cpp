@@ -18,7 +18,6 @@ CandidateSet::~CandidateSet() {
 
 CandidateSet::CandidateSet() {
 	aln = NULL;
-	loglThreshold = -DBL_MAX;
 	numStableSplits = 0;
 	maxSize = 1000;
 }
@@ -358,21 +357,20 @@ void CandidateSet::removeCandidateTree(string topology) {
 
 int CandidateSet::buildTopSplits(double supportThreshold) {
 	candidateSplitsHash.clear();
-	vector<CandidateTree> bestCandidateTrees;
+	CandidateSet bestCandidateTrees;
 
-	getBestCandidateTrees(Params::getInstance().numSupportTrees, bestCandidateTrees);
+	bestCandidateTrees = getBestCandidateTrees(Params::getInstance().numSupportTrees);
 	//assert(bestCandidateTrees.size() > 1);
 
 	candidateSplitsHash.setNumTree(bestCandidateTrees.size());
-	loglThreshold = bestCandidateTrees.back().score;
 
 	/* Store all splits in the best trees in candidateSplitsHash.
 	 * The variable numTree in SpitInMap is the number of trees, from which the splits are converted.
 	 */
-	vector<CandidateTree>::iterator treeIt;
+	CandidateSet::iterator treeIt;
 	vector<string> taxaNames = aln->getSeqNames();
 	for (treeIt = bestCandidateTrees.begin(); treeIt != bestCandidateTrees.end(); treeIt++) {
-		MTree tree(treeIt->tree, taxaNames, params->is_rooted);
+		MTree tree(treeIt->second.topology, taxaNames, Params::getInstance().is_rooted);
 		SplitGraph splits;
 		tree.convertSplits(splits);
 		SplitGraph::iterator itg;
@@ -392,11 +390,11 @@ int CandidateSet::buildTopSplits(double supportThreshold) {
 			}
 		}
 	}
-	int newNumStableSplits = countStableSplits(params->stableSplitThreshold);
+	int newNumStableSplits = countStableSplits(supportThreshold);
 	if (newNumStableSplits > numStableSplits || verbose_mode >= VB_MED) {
 		numStableSplits = newNumStableSplits;
 		cout << ((double) numStableSplits / (aln->getNSeq() - 3)) * 100 ;
-		cout << " % of the splits are stable (support threshold " << params->stableSplitThreshold;
+		cout << " % of the splits are stable (support threshold " << supportThreshold;
 		cout << " from " << candidateSplitsHash.getNumTree() << " trees)" << endl;
 	}
 	return numStableSplits;
