@@ -3189,7 +3189,7 @@ void Alignment::computeEmpiricalRateNonRev (double *rates) {
 }
 
 void Alignment::convfreq(double *stateFrqArr) {
-	int i, j, maxi=0;
+	int i, maxi=0;
 	double freq, maxfreq, sum;
 	int zero_states = 0;
 

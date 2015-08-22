@@ -2782,7 +2782,7 @@ void IQTree::summarizeBootstrap(Params &params, MTreeSet &trees) {
      else
      trees.convertSplits(taxname, sg, hash_ss, SW_COUNT, -1, false);
      */
-    trees.convertSplits(taxname, sg, hash_ss, SW_COUNT, -1, false); // do not sort taxa
+    trees.convertSplits(taxname, sg, hash_ss, SW_COUNT, -1, NULL, false); // do not sort taxa
 
     if (verbose_mode >= VB_MED)
     	cout << sg.size() << " splits found" << endl;
@@ -2812,7 +2812,7 @@ void IQTree::summarizeBootstrap(Params &params, MTreeSet &trees) {
     MExtTree mytree;
     mytree.readTree(tree_stream, rooted);
     mytree.assignLeafID();
-    mytree.createBootstrapSupport(taxname, trees, sg, hash_ss);
+    mytree.createBootstrapSupport(taxname, trees, sg, hash_ss, NULL);
 
     // now write resulting tree with supports
     tree_stream.seekp(0, ios::beg);
@@ -2935,7 +2935,7 @@ void IQTree::summarizeBootstrap(SplitGraph &sg) {
      else
      trees.convertSplits(taxname, sg, hash_ss, SW_COUNT, -1, false);
      */
-    trees.convertSplits(taxname, sg, hash_ss, SW_COUNT, -1, false); // do not sort taxa
+    trees.convertSplits(taxname, sg, hash_ss, SW_COUNT, -1, NULL, false); // do not sort taxa
 }
 
 void IQTree::pllConvertUFBootData2IQTree(){

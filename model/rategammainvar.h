@@ -134,7 +134,7 @@ private:
 	/**
 	 *  TRUE to turn on random restart optimization for estimating alpha and p_invar
 	 */
-	bool rr_ai;
+//	bool rr_ai;
 
 	/**
 		current parameter to optimize. 0 if gamma shape or 1 if p_invar.

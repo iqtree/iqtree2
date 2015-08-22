@@ -1244,6 +1244,13 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.consensus_type = CT_ASSIGN_SUPPORT;
 				continue;
 			}
+			if (strcmp(argv[cnt], "-suptag") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -suptag <tagname or ALL>";
+				params.support_tag = argv[cnt];
+				continue;
+			}
 			if (strcmp(argv[cnt], "-sup2") == 0) {
 				cnt++;
 				if (cnt >= argc)
@@ -2990,6 +2997,7 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -con                 Computing consensus tree to .contree file" << endl
             << "  -net                 Computing consensus network to .nex file" << endl
             << "  -sup <target_tree>   Assigning support values for <target_tree> to .suptree" << endl
+            << "  -suptag <name>       Node name (or ALL) to assign tree IDs where node occurs" << endl
             << endl << "ROBINSON-FOULDS DISTANCE:" << endl
             << "  -rf_all              Computing all-to-all RF distances of trees in <treefile>" << endl
             << "  -rf <treefile2>      Computing all RF distances between two sets of trees" << endl
@@ -3545,7 +3553,7 @@ void print_stacktrace(ostream &out, unsigned int max_frames)
     // address of this function.
     for (int i = 1; i < addrlen; i++)
     {
-	char *begin_name = 0, *begin_offset = 0, *end_offset = 0;
+	char *begin_name = 0, *begin_offset = 0;
 
 	// find parentheses and +address offset surrounding the mangled name:
 #ifdef __clang__

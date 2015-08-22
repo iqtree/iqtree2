@@ -963,6 +963,11 @@ public:
      */
     char *second_tree;
 
+    /** 
+        tag each branch with the tree ID where it occurs; "ALL" to tag all branches
+    */
+    char *support_tag;
+
     /**
             2nd alignment used in computing multinomialProb (Added by MA)
      */

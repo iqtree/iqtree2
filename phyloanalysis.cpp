@@ -2543,7 +2543,7 @@ void assignBootstrapSupport(const char *input_trees, int burnin, int max_count,
 	} else {
 		boot_trees.init(input_trees, rooted, burnin, max_count,
 				tree_weight_file);
-		boot_trees.convertSplits(taxname, sg, hash_ss, SW_COUNT, -1);
+		boot_trees.convertSplits(taxname, sg, hash_ss, SW_COUNT, -1, params->support_tag);
 		scale /= boot_trees.sumTreeWeights();
 	}
 	//sg.report(cout);
@@ -2559,7 +2559,7 @@ void assignBootstrapSupport(const char *input_trees, int burnin, int max_count,
 	//	printSplitSet(sg, hash_ss);
 	//sg.report(cout);
 	cout << "Creating bootstrap support values..." << endl;
-	mytree.createBootstrapSupport(taxname, boot_trees, sg, hash_ss);
+	mytree.createBootstrapSupport(taxname, boot_trees, sg, hash_ss, params->support_tag);
 	//mytree.scaleLength(100.0/boot_trees.size(), true);
 	string out_file;
 	if (output_tree)

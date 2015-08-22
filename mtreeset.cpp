@@ -343,11 +343,11 @@ void MTreeSet::convertSplits(SplitGraph &sg, SplitIntMap &hash_ss, int weighting
 		return;
 	
 	front()->getTaxaName(taxname);
-	convertSplits(taxname, sg, hash_ss, weighting_type, weight_threshold);
+	convertSplits(taxname, sg, hash_ss, weighting_type, weight_threshold, NULL);
 }
 
 void MTreeSet::convertSplits(vector<string> &taxname, SplitGraph &sg, SplitIntMap &hash_ss, 
-	int weighting_type, double weight_threshold, bool sort_taxa) {
+	int weighting_type, double weight_threshold, char *tag_str, bool sort_taxa) {
 
 	if (verbose_mode >= VB_MED) {
 	#ifdef USE_HASH_MAP
@@ -430,6 +430,8 @@ void MTreeSet::convertSplits(vector<string> &taxname, SplitGraph &sg, SplitIntMa
 				
 				hash_ss.insertSplit(sp, tree_weights[tree_id]);
  			}
+            if (tag_str)
+                sp->name += "@" + convertIntToString(tree_id+1);
 		}
 		delete isg;
 	}

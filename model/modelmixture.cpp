@@ -975,7 +975,7 @@ model C60 = POISSON+G+FMIX{C60pi1:1:0.0169698865,C60pi2:1:0.0211683374,C60pi3:1:
 end;\n";
 
 const double MIN_MIXTURE_PROP = 0.001;
-const double MAX_MIXTURE_PROP = 1000.0;
+//const double MAX_MIXTURE_PROP = 1000.0;
 //const double MIN_MIXTURE_RATE = 0.01;
 //const double MAX_MIXTURE_RATE = 100.0;
 

@@ -70,7 +70,7 @@ void UpperBounds(Params *params, Alignment* alignment, IQTree* tree){
 	 *
 	 * ------------------------------------------------------------------------------------------------------ */
 
-	int i=0, j=0, h=0;
+	int i=0;//, h=0;
 
 	// Printing info about the TreeLogL changes during the tree search
 /*	cout<<"mlInitial  = "<<tree->mlInitial<<endl;
@@ -88,7 +88,7 @@ void UpperBounds(Params *params, Alignment* alignment, IQTree* tree){
 	NodeVector branch1, branch2;
 	tree->getBranches(branch1, branch2);
 	int allSplits = 0;
-	int R=10; // R is the number of random trees we will generate
+//	int R=10; // R is the number of random trees we will generate
 
 // A loop over all A|B present on tree T
 	for(i = 0; i != branch1.size(); i++){
