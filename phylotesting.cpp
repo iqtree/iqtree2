@@ -1292,7 +1292,7 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
         } else if (skip_model) {
             info.logl = model_info[prev_model_id].logl;
             info.tree_len = model_info[prev_model_id].tree_len;
-            info.tree = model_info[prev_model_id].tree;
+//            info.tree = model_info[prev_model_id].tree;
             prev_tree_string = model_info[prev_model_id].tree;
 //            cout << "Skipped " << info.name << endl;
 		} else {
@@ -1320,10 +1320,11 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
                 if (tree->getRate()->getNRate() > num_cat) {
                     tree->deleteAllPartialLh();
                     num_cat = tree->getRate()->getNRate();
+                    tree->initializeAllPartialLh();
                 }
-                tree->initializeAllPartialLh();
-                if (prev_tree_string != "")
+                if (prev_tree_string != "") {
                     tree->readTreeString(prev_tree_string);
+                }
                 prev_tree_string = "";
                 info.logl = tree->getModelFactory()->optimizeParameters(false, false, TOL_LIKELIHOOD_MODELTEST, TOL_GRADIENT_MODELTEST);
                 info.tree_len = tree->treeLength();
