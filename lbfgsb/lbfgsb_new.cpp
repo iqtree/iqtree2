@@ -53,6 +53,8 @@
 
 
 #include "lbfgsb_new.h"
+#include <algorithm>
+//using namespace std;
 
 static int c__1 = 1;
 static int c__11 = 11;

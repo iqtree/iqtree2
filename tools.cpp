@@ -3591,6 +3591,7 @@ void print_stacktrace(ostream &out, unsigned int max_frames)
 
 #else // !DARWIN - but is posix
          // ./module(function+0x15c) [0x8048a6d]
+    char *end_offset = 0;
 	for (char *p = symbollist[i]; *p; ++p)
 	{
 	    if (*p == '(')
