@@ -1295,7 +1295,7 @@ double ModelMixture::optimizeWeights() {
     
         
     // EM algorithm loop described in Wang, Li, Susko, and Roger (2008)
-    for (int step = 0; step < 100; step++) {
+    for (int step = 0; step < nmix; step++) {
         // E-step
         memset(lk_ptn, 0, nptn*sizeof(double));
         if (step == 0) {
