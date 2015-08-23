@@ -416,7 +416,7 @@ double RateFree::optimizeWithEM() {
     tree->setParams(phylo_tree->params);
         
     // EM algorithm loop described in Wang, Li, Susko, and Roger (2008)
-    for (int step = 0; step < 10; step++) {
+    for (int step = 0; step < ncategory; step++) {
         // first compute _pattern_lh_cat
         double score;
         if (!phylo_tree->getModel()->isMixture())

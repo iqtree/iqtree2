@@ -943,9 +943,11 @@ double PhyloTree::computeLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloN
     	node_branch = tmp_nei;
     }
     if ((dad_branch->partial_lh_computed & 1) == 0)
-        computePartialLikelihoodEigen(dad_branch, dad);
+//        computePartialLikelihoodEigen(dad_branch, dad);
+        computePartialLikelihood(dad_branch, dad);
     if ((node_branch->partial_lh_computed & 1) == 0)
-        computePartialLikelihoodEigen(node_branch, node);
+//        computePartialLikelihoodEigen(node_branch, node);
+        computePartialLikelihood(node_branch, node);
     double tree_lh = node_branch->lh_scale_factor + dad_branch->lh_scale_factor;
     size_t nstates = aln->num_states;
     size_t ncat = site_rate->getNRate();
@@ -1975,9 +1977,11 @@ double PhyloTree::computeMixrateLikelihoodBranchEigen(PhyloNeighbor *dad_branch,
     	node_branch = tmp_nei;
     }
     if ((dad_branch->partial_lh_computed & 1) == 0)
-        computeMixratePartialLikelihoodEigen(dad_branch, dad);
+//        computeMixratePartialLikelihoodEigen(dad_branch, dad);
+        computePartialLikelihood(dad_branch, dad);
     if ((node_branch->partial_lh_computed & 1) == 0)
-        computeMixratePartialLikelihoodEigen(node_branch, node);
+//        computeMixratePartialLikelihoodEigen(node_branch, node);
+        computePartialLikelihood(node_branch, node);
     double tree_lh = node_branch->lh_scale_factor + dad_branch->lh_scale_factor;
     size_t nstates = aln->num_states;
     size_t ncat = site_rate->getNRate();
@@ -2589,9 +2593,10 @@ double PhyloTree::computeMixtureLikelihoodBranchEigen(PhyloNeighbor *dad_branch,
     	node_branch = tmp_nei;
     }
     if ((dad_branch->partial_lh_computed & 1) == 0)
-        computeMixturePartialLikelihoodEigen(dad_branch, dad);
+//        computeMixturePartialLikelihoodEigen(dad_branch, dad);
+        computePartialLikelihood(dad_branch, dad);
     if ((node_branch->partial_lh_computed & 1) == 0)
-        computeMixturePartialLikelihoodEigen(node_branch, node);
+        computePartialLikelihood(node_branch, node);
     double tree_lh = node_branch->lh_scale_factor + dad_branch->lh_scale_factor;
     size_t nstates = aln->num_states;
     size_t ncat = site_rate->getNRate();
