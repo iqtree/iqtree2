@@ -130,6 +130,24 @@ string RateFree::getNameParams() {
 	return str.str();
 }
 
+double RateFree::meanRates() {
+	double ret = 0.0;
+	for (int i = 0; i < ncategory; i++)
+		ret += prop[i] * rates[i];
+	return ret;
+}
+
+/**
+ * rescale rates s.t. mean rate is equal to 1, useful for FreeRate model
+ * @return rescaling factor
+ */
+double RateFree::rescaleRates() {
+	double norm = meanRates();
+	for (int i = 0; i < ncategory; i++)
+		rates[i] /= norm;
+	return norm;
+}
+
 int RateFree::getNDim() { 
     if (fix_params) return 0;
     if (optimizing_params == 0) return (2*ncategory-2); 

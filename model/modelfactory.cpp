@@ -847,6 +847,14 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info,
 				break;
 		}
 	}
+
+	// normalize rates s.t. branch lengths are #subst per site
+    double mean_rate = site_rate->rescaleRates();
+    if (mean_rate != 1.0) {
+		tree->scaleLength(mean_rate);
+		tree->clearAllPartialLH();
+    }
+    
 	if (verbose_mode >= VB_MED || write_info)
 		cout << "Optimal log-likelihood: " << cur_lh << endl;
 
