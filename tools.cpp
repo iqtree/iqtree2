@@ -2717,20 +2717,24 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.compute_seq_identity_along_tree = true;
 				continue;
 			}
-			if (strcmp(argv[cnt], "-t") == 0) {
+			if (strcmp(argv[cnt], "-t") == 0 || strcmp(argv[cnt], "-te") == 0) {
+                if (strcmp(argv[cnt], "-te") == 0) {
+                    params.min_iterations = 0;
+                    params.stop_condition = SC_FIXED_ITERATION;
+                }
 				cnt++;
 				if (cnt >= argc)
-					throw "Use -t <start_tree>";
-				params.user_file = argv[cnt];
-				continue;
-			}
-			if (strcmp(argv[cnt], "-te") == 0) {
-				cnt++;
-				if (cnt >= argc)
-					throw "Use -te <user_tree>";
-				params.user_file = argv[cnt];
-				params.min_iterations = 0;
-				params.stop_condition = SC_FIXED_ITERATION;
+					throw "Use -t,-te <start_tree | BIONJ | PARS | PLLPARS>";
+				if (strcmp(argv[cnt], "BIONJ") == 0)
+					params.start_tree = STT_BIONJ;
+				else if (strcmp(argv[cnt], "PARS") == 0)
+					params.start_tree = STT_PARSIMONY;
+				else if (strcmp(argv[cnt], "PLLPARS") == 0)
+					params.start_tree = STT_PLL_PARSIMONY;
+                else if (strcmp(argv[cnt], "RANDOM") == 0)
+					params.start_tree = STT_RANDOM_TREE;
+				else
+                    params.user_file = argv[cnt];
 				continue;
 			}
             
@@ -2870,7 +2874,8 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -q <partition_file>  Edge-linked partition model (file in NEXUS/RAxML format)" << endl
             << " -spp <partition_file> Like -q option but allowing partition-specific rates" << endl
             << "  -sp <partition_file> Edge-unlinked partition model (like -M option of RAxML)" << endl
-            << "  -t <start_tree_file> Starting tree for reconstruction (default: parsimony)" << endl
+            << "  -t <start_tree_file> | BIONJ | RANDOM" << endl
+            << "                       Starting tree (default: 100 parsimony trees and BIONJ)" << endl
             << "  -te <user_tree_file> Evaluating a fixed user tree (no tree search performed)" << endl
             << "  -z <trees_file>      Evaluating user trees at the end (can be used with -t, -te)" << endl
             << "  -o <outgroup_taxon>  Outgroup taxon name for writing .treefile" << endl

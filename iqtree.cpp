@@ -404,6 +404,11 @@ void IQTree::computeInitialTree(string &dist_file, LikelihoodKernel kernel) {
         else
         	fixed_number = wrapperFixNegativeBranch(false);
 		break;
+    case STT_RANDOM_TREE:
+        cout << "Generate random initial Yule-Harding tree..." << endl;
+        generateRandomTree(YULE_HARDING);
+        wrapperFixNegativeBranch(true);
+        break;
     }
 
     if (fixed_number) {

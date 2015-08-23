@@ -5037,3 +5037,38 @@ void PhyloTree::computeSeqIdentityAlongTree() {
     else
         computeSeqIdentityAlongTree(sp, root);
 }
+
+void PhyloTree::generateRandomTree(TreeGenType tree_type) {
+    assert(aln);
+    int orig_size = params->sub_size;
+    params->sub_size = aln->getNSeq();
+    MExtTree ext_tree;
+	switch (tree_type) {
+	case YULE_HARDING: 
+		ext_tree.generateYuleHarding(*params);
+		break;
+	case UNIFORM:
+		ext_tree.generateUniform(params->sub_size);
+		break;
+	case CATERPILLAR:
+		ext_tree.generateCaterpillar(params->sub_size);
+		break;
+	case BALANCED:
+		ext_tree.generateBalanced(params->sub_size);
+		break;
+	case STAR_TREE:
+		ext_tree.generateStarTree(*params);
+		break;
+	default:
+		break;
+	}
+    params->sub_size = orig_size;
+	NodeVector taxa;
+	ext_tree.getTaxa(taxa);
+	assert(taxa.size() == aln->getNSeq());
+	for (NodeVector::iterator it = taxa.begin(); it != taxa.end(); it++)
+		(*it)->name = aln->getSeqName((*it)->id);
+    stringstream str;
+    ext_tree.printTree(str);
+    PhyloTree::readTreeString(str.str());
+}

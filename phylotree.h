@@ -1250,6 +1250,11 @@ public:
     /* compute Bayesian branch lengths based on ancestral sequence reconstruction */
     void computeAllBayesianBranchLengths(Node *node = NULL, Node *dad = NULL);
 
+    /**
+        generate random tree
+    */
+    void generateRandomTree(TreeGenType tree_type);
+
     /****************************************************************************
             Subtree Pruning and Regrafting by maximum likelihood
             NOTE: NOT DONE YET
