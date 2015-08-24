@@ -1718,7 +1718,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 //    if ( params.start_tree != STT_BIONJ && ((params.snni && !params.iqp) || params.min_iterations == 0)) {
 //        params.compute_ml_dist = false;
 //    }
-    if (params.min_iterations == 0 && params.start_tree != STT_BIONJ)
+    if (params.min_iterations <= 1 && params.start_tree != STT_BIONJ)
         params.compute_ml_dist = false;
     
     if ((params.user_file || params.start_tree == STT_RANDOM_TREE) && params.snni && !params.iqp) {
