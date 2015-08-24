@@ -613,8 +613,7 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
     for (rit = initParsimonyTrees.rbegin(); rit != initParsimonyTrees.rend(); ++rit, stop_rule.setCurIt(
             stop_rule.getCurIt() + 1)) {
         pair<int, int> nniInfo;
-        double initLogl, nniLogl;
-        string tree;
+        double initLogl;
         readTreeString(rit->second.tree);
         initLogl = computeLogL();
 //         THIS HAPPEN WHENEVER USING FULL PARTITION MODEL
@@ -1267,7 +1266,7 @@ void IQTree::getNNIBranches(Branches &nniBranches, Branches &tabuBranches, Split
 
 string IQTree::doRandomNNIs(int numNNI) {
     int cntNNI = 0;
-    unsigned int totalBranches = aln->getNSeq() - 3;
+    unsigned int totalBranches = (unsigned int) (aln->getNSeq() - 3);
     Branches nniBranches;
     Branches tabuNNIBranches;
     nniBranches.reserve(totalBranches);
@@ -1278,7 +1277,7 @@ string IQTree::doRandomNNIs(int numNNI) {
         tabuNNIBranches.clear();
         getNNIBranches(nniBranches, tabuNNIBranches, initTabuSplits, candidateTrees.getCandidateSplitHash());
         if (nniBranches.size() == 0) break;
-        int randInt = random_int(nniBranches.size());
+        int randInt = random_int((int) nniBranches.size());
         NNIMove randNNI = getRandomNNI(nniBranches[randInt]);
         doNNI(randNNI, true);
         if (params->tabu) {
@@ -1897,6 +1896,7 @@ double IQTree::doTreeSearch() {
 
                 int numNonStableBranches =
                         aln->getNSeq() - 3 - floor(candidateTrees.getNumStableSplits() * params->stableSplitThreshold);
+
                 int numNNI = ceil(searchinfo.curPerStrength * numNonStableBranches);
 
                 if (params->five_plus_five) {
@@ -1908,12 +1908,7 @@ double IQTree::doTreeSearch() {
                 if (params->iqp) {
                     doIQP();
                 } else {
-                    string curTopo = getTopologyString();
                     doRandomNNIs(numNNI);
-                    string pertTopo = getTopologyString();
-                    if (curTopo == pertTopo) {
-                        continue;
-                    }
                 }
             } else {
                 // Using the IQPNNI algorithm (best tree is selected)
@@ -1930,7 +1925,8 @@ double IQTree::doTreeSearch() {
                     pllTreeCounter[perturb_tree_topo]++;
                 }
             }
-            optimizeBranches(1);
+            //optimizeBranches(1);
+            computeLogL();
         }
 
         initScore = getCurScore();
@@ -1941,7 +1937,6 @@ double IQTree::doTreeSearch() {
 
         pair<int, int> nniInfos; // <num_NNIs, num_steps>
         nniInfos = doNNISearch();
-        addCurTreeToCandidateSet();
 
         if (iqp_assess_quartet == IQP_BOOTSTRAP) {
             // restore alignment
@@ -2003,10 +1998,10 @@ double IQTree::doTreeSearch() {
                 summarizeBootstrap(*sg);
                 boot_splits.push_back(sg);
                 if (params->max_candidate_trees == 0)
-                    max_candidate_trees = treels_logl.size() * (stop_rule.getCurIt() + (params->step_iterations / 2)) /
-                                                               stop_rule.getCurIt();
-                max_candidate_trees = treels_logl.size() * (stop_rule.getCurIt() + (params->step_iterations / 2)) /
-                                                           stop_rule.getCurIt();
+                    max_candidate_trees = (int) (treels_logl.size() * (stop_rule.getCurIt() + (params->step_iterations / 2)) /
+                                                                                   stop_rule.getCurIt());
+                max_candidate_trees = (int) (treels_logl.size() * (stop_rule.getCurIt() + (params->step_iterations / 2)) /
+                                                                           stop_rule.getCurIt());
                 cout << "NOTE: " << treels_logl.size() << " bootstrap candidate trees evaluated (logl-cutoff: " <<
                 logl_cutoff << ")" << endl;
 
@@ -2020,11 +2015,11 @@ double IQTree::doTreeSearch() {
                             if (!stop_rule.meetStopCondition(stop_rule.getCurIt(), cur_correlation)) {
                                 if (params->max_candidate_trees == 0) {
                                     max_candidate_trees =
-                                            treels_logl.size() * (stop_rule.getCurIt() + params->step_iterations) /
-                                            stop_rule.getCurIt();
+                                            (int) (treels_logl.size() * (stop_rule.getCurIt() + params->step_iterations) /
+                                                                                        stop_rule.getCurIt());
                                     max_candidate_trees =
-                                            treels_logl.size() * (stop_rule.getCurIt() + params->step_iterations) /
-                                            stop_rule.getCurIt();
+                                            (int) (treels_logl.size() * (stop_rule.getCurIt() + params->step_iterations) /
+                                                                                        stop_rule.getCurIt());
                                 }
 //	                cout << "INFO: UFBoot does not converge, continue " << params->step_iterations << " more iterations" << endl;
                             }
@@ -2093,6 +2088,7 @@ pair<int, int> IQTree::optimizeNNI() {
     unsigned int numSteps = 0;
     const int MAXSTEPS = leafNum;
     unsigned int numInnerBranches = leafNum - 3;
+    double curBestScore = candidateTrees.getBestScore();
 
     Branches nniBranches;
     Branches tabuNNIBranches;
@@ -2104,7 +2100,8 @@ pair<int, int> IQTree::optimizeNNI() {
     bool betterScore = false;
     SplitIntMap tabuSplits;
     if (!initTabuSplits.empty()) {
-        tabuSplits.insert(initTabuSplits.begin(), initTabuSplits.end());
+        //tabuSplits.insert(initTabuSplits.begin(), initTabuSplits.end());
+        tabuSplits = initTabuSplits;
     }
     // New splits created by NNIs in each step
     SplitIntMap nniSplits;
@@ -2189,16 +2186,9 @@ pair<int, int> IQTree::optimizeNNI() {
         if (curScore - oldScore <  params->loglh_epsilon)
             break;
 
-        if (params->strictTabu) {
-            // add tabu splits
-            for (int i = 0; i < curNumNNIs; i++) {
-                Split* sp = getSplit(compatibleNNIs.at(i).node1, compatibleNNIs.at(i).node2);
-                Split* tabuSplit = new Split(*sp);
-                if (tabuSplit->shouldInvert()) {
-                    tabuSplit->invert();
-                }
-                tabuSplits.insertSplit(tabuSplit, 1);
-            }
+        if (params->snni && (curScore > curBestScore + params->loglh_epsilon)) {
+            optimizeModelParameters(false);
+            curBestScore = curScore;
         }
     }
 

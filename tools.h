@@ -475,11 +475,6 @@ public:
 	bool tabu;
 
     /**
-     *
-     */
-    bool strictTabu;
-
-    /**
 	 *  Use (5+5)-ES strategy
 	 */
 	bool five_plus_five;

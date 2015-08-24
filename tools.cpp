@@ -844,7 +844,6 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.five_plus_five = false;
     params.memCheck = false;
     params.tabu = false;
-    params.strictTabu = false;
     params.numSupportTrees = 20;
 //    params.sprDist = 20;
     params.sprDist = 6;
@@ -2429,13 +2428,6 @@ void parseArg(int argc, char *argv[], Params &params) {
 
             if (strcmp(argv[cnt], "-memcheck") == 0) {
                 params.memCheck = true;
-                continue;
-            }
-
-            if (strcmp(argv[cnt], "-stabu") == 0) {
-                params.fixStableSplits = true;
-                params.tabu = true;
-                params.strictTabu = true;
                 continue;
             }
 
