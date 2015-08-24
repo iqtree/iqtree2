@@ -1849,7 +1849,7 @@ double IQTree::doTreeSearch() {
             int predicted_iteration;
             predicted_iteration = ((stop_rule.getCurIt() + params->step_iterations - 1) / params->step_iterations)
                                                   * params->step_iterations;
-            int num_entries = floor(max_candidate_trees * ((double) stop_rule.getCurIt() / predicted_iteration));
+            int num_entries = (int) floor(max_candidate_trees * ((double) stop_rule.getCurIt() / predicted_iteration));
             if (num_entries < treels_logl.size() * 0.9) {
                 DoubleVector logl = treels_logl;
                 nth_element(logl.begin(), logl.begin() + (treels_logl.size() - num_entries), logl.end());

@@ -1991,10 +1991,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.write_candidate_trees = true;
 				continue;
 			}
-            if (strcmp(argv[cnt], "-wat") == 0) {
-                params.write_all_trees = true;
-                continue;
-            }
+
 			if (strcmp(argv[cnt], "-wt") == 0) {
 				params.write_intermediate_trees = 1;
 				continue;

@@ -1256,11 +1256,6 @@ public:
      */
     bool write_candidate_trees;
 
-    /**
-     *   This is the same as write_intermediate_trees = 2. However, the CandidateSet is used
-     *   to store the trees
-     */
-    bool write_all_trees;
 
     /**
         TRUE to avoid duplicated trees while writing intermediate trees
