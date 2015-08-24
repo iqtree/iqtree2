@@ -1136,6 +1136,9 @@ public:
     /** TRUE to optimize mixture model weights */
     bool optimize_mixmodel_weight;
 
+    /** number of mixture branch lengths, default 1 */
+    int num_mixlen;
+
     /**
             TRUE to store transition matrix into a hash table for computation efficiency
      */

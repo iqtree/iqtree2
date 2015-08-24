@@ -873,6 +873,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.freq_const_patterns = NULL;
     params.no_rescale_gamma_invar = false;
     params.compute_seq_identity_along_tree = false;
+    params.num_mixlen = 1;
 
 	if (params.nni5) {
 	    params.nni_type = NNI5;
@@ -2738,6 +2739,16 @@ void parseArg(int argc, char *argv[], Params &params) {
 				continue;
 			}
             
+			if (strcmp(argv[cnt], "-mixlen") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -mixlen <number of mixture branch lengths for heterotachy model>";
+				params.num_mixlen = convert_int(argv[cnt]);
+				if (params.num_mixlen < 1)
+					outError("-mixlen must be >= 1");
+				continue;
+			}
+
 			if (argv[cnt][0] == '-') {
                 string err = "Invalid \"";
                 err += argv[cnt];

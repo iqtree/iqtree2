@@ -29,6 +29,7 @@
 #include "alignment.h"
 #include "superalignment.h"
 #include "iqtree.h"
+#include "phylotreemixlen.h"
 #include "model/modelgtr.h"
 #include "model/modeldna.h"
 #include "myreader.h"
@@ -2319,7 +2320,10 @@ void runPhyloAnalysis(Params &params) {
 			alignment->addConstPatterns(params.freq_const_patterns);
 			cout << "INFO: " << alignment->getNSite() - orig_nsite << " const sites added into alignment" << endl;
 		}
-		tree = new IQTree(alignment);
+        if (params.num_mixlen == 1)
+            tree = new IQTree(alignment);
+        else
+            tree = new PhyloTreeMixlen(alignment, params.num_mixlen);
 	}
 
 	string original_model = params.model_name;
