@@ -373,11 +373,12 @@ pdtree.cpp
 pdtreeset.cpp
 phyloanalysis.cpp
 phylonode.cpp
+phylonodemixlen.cpp
 phylosupertree.cpp
 phylotree.cpp
 phylotreesse.cpp
 phylotreepars.cpp
-#phylotreeavx.cpp
+phylotreemixlen.cpp
 pruning.cpp
 split.cpp
 splitgraph.cpp
