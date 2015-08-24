@@ -2165,12 +2165,7 @@ pair<int, int> IQTree::optimizeNNI() {
         // do non-conflicting positive NNIs
         doNNIs(curNumNNIs, compatibleNNIs);
 
-        if (params->fastBran && curNumNNIs == 1) {
-            curScore = computeLikelihood();
-        } else {
-            curScore = optimizeAllBranches(1, params->loglh_epsilon, PLL_NEWZPERCYCLE);
-        }
-
+        curScore = optimizeAllBranches(1, params->loglh_epsilon, PLL_NEWZPERCYCLE);
 
         // curScore should be larger than score of the best NNI
         if (curScore < compatibleNNIs.at(0).newloglh - params->loglh_epsilon) {
@@ -2185,10 +2180,7 @@ pair<int, int> IQTree::optimizeNNI() {
             // only do the best NNI
             curNumNNIs = 1;
             doNNIs(curNumNNIs, compatibleNNIs);
-            if (params->fastBran)
-                curScore = computeLikelihood();
-            else
-                curScore = optimizeAllBranches(1, params->loglh_epsilon, PLL_NEWZPERCYCLE);
+            curScore = optimizeAllBranches(1, params->loglh_epsilon, PLL_NEWZPERCYCLE);
             assert(curScore > compatibleNNIs.at(0).newloglh - params->loglh_epsilon);
         }
 

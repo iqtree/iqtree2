@@ -370,7 +370,7 @@ int CandidateSet::buildTopSplits(double supportThreshold) {
 	CandidateSet::iterator treeIt;
 	vector<string> taxaNames = aln->getSeqNames();
 	for (treeIt = bestCandidateTrees.begin(); treeIt != bestCandidateTrees.end(); treeIt++) {
-		MTree tree(treeIt->second.topology, taxaNames, Params::getInstance().is_rooted);
+		MTree tree(treeIt->second.tree, taxaNames, Params::getInstance().is_rooted);
 		SplitGraph splits;
 		tree.convertSplits(splits);
 		SplitGraph::iterator itg;

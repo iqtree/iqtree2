@@ -845,7 +845,6 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.memCheck = false;
     params.tabu = false;
     params.strictTabu = false;
-    params.fastBran = true;
     params.numSupportTrees = 20;
 //    params.sprDist = 20;
     params.sprDist = 6;
@@ -2437,11 +2436,6 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.fixStableSplits = true;
                 params.tabu = true;
                 params.strictTabu = true;
-                continue;
-            }
-
-            if (strcmp(argv[cnt], "-fbran") == 0) {
-                params.fastBran = true;
                 continue;
             }
 

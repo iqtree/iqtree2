@@ -440,11 +440,6 @@ public:
      */
     double stableSplitThreshold;
 
-    /**
-     *   Fast branch length optimization
-     */
-    bool fastBran;
-
 	/**
 	 *  Option to do mutlipe start for estimating alpha and p_invar
 	 */
