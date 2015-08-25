@@ -2187,10 +2187,12 @@ pair<int, int> IQTree::optimizeNNI() {
             break;
 
         if (params->snni && (curScore > curBestScore + params->loglh_epsilon)) {
-            optimizeModelParameters(false);
+            optimizeModelParameters(false, 0.1);
             curBestScore = curScore;
         }
     }
+
+
 
     if (numNNIs == 0) {
         cout << "NOTE: Input tree is already NNI-local optimal" << endl;
