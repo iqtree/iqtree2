@@ -1,17 +1,17 @@
 //
-// Created by tung on 6/23/15.
+// Created by Tung Nguyen on 6/23/15.
 //
 
 #include "TreeCollection.h"
 
 using namespace std;
 
-TreeCollection::TreeCollection(vector<CandidateTree> &candidateTrees) {
+TreeCollection::TreeCollection(CandidateSet &candidateTrees) {
     numTrees = candidateTrees.size();
-    vector<CandidateTree>::iterator it;
-    for (it = candidateTrees.begin(); it != candidateTrees.end(); it++) {
-       treeStrings.push_back(it->tree);
-       scores.push_back(it->score);
+    CandidateSet::reverse_iterator rit;
+    for (rit = candidateTrees.rbegin(); rit != candidateTrees.rend(); rit++) {
+       treeStrings.push_back(rit->second.tree);
+       scores.push_back(rit->first);
     }
 }
 

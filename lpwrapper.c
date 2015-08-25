@@ -43,7 +43,7 @@ int lp_solve(char *filename, int ntaxa, double *score, double *variables, int ve
 	//write_lp(lp, name2);
 
 	if (lp == NULL) {
-		printf("Could not create an LP_SOLVE instance!\n");
+		printf("Could not create an LP_SOLVE getInstance!\n");
 		return 1;
 	}
 

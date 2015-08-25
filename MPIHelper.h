@@ -17,16 +17,18 @@ using namespace std;
 class MPIHelper {
 
     /**
-     *  Singleton method: get one and only one instance of the class
+     *  Singleton method: get one and only one getInstance of the class
      */
 public:
-    static MPIHelper* instance();
+    static MPIHelper& getInstance();
 
     TreeCollection receiveTrees(int &MPISource);
 
     TreeCollection receiveTreesFromAnySource();
 
     void sendTreesToAll(TreeCollection& trees);
+
+    void sendTreesToNode(int nodeID, TreeCollection& trees);
 
     int getNumProcesses() const {
         return numProcesses;
@@ -45,27 +47,13 @@ public:
     }
 
 private:
+    MPIHelper() {}; // Disable constructor
+    MPIHelper (MPIHelper const&) {}; // Disable copy constructor
+    void operator=(MPIHelper const&) {}; // Disable assignment
+
     int processID;
 
     int numProcesses;
-
-    /**
-     *  Private constructor
-     */
-    MPIHelper() {};
-
-    /**
-     *  Disable copy constructor from outside
-     */
-    MPIHelper(MPIHelper const&) {};
-
-    /**
-     *  Disable assignment constructor
-     */
-    MPIHelper& operator=(MPIHelper const&) {};
-
-    static MPIHelper* MPIHelperInstance;
-
 };
 
 #endif //IQTREE_MPIHELPER_H

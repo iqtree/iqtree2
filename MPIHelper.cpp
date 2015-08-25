@@ -2,19 +2,16 @@
 // Created by tung on 6/18/15.
 //
 
-#include "mpiHelper.h"
+#include "MPIHelper.h"
 #include "ObjectStream.h"
 
 /**
- *  Initialize the single instance of MPIHelper
+ *  Initialize the single getInstance of MPIHelper
  */
-MPIHelper* MPIHelper::MPIHelperInstance = NULL;
 
-MPIHelper* MPIHelper::instance() {
-    if (!MPIHelperInstance) {
-        MPIHelperInstance = new MPIHelper();
-    }
-    return MPIHelperInstance;
+MPIHelper& MPIHelper::getInstance() {
+    static MPIHelper instance;
+    return instance;
 }
 
 void MPIHelper::sendTreesToAll(TreeCollection& trees) {
@@ -46,7 +43,6 @@ TreeCollection MPIHelper::receiveTreesFromAnySource() {
 }
 
 
+void MPIHelper::sendTreesToNode(int nodeID, TreeCollection &trees) {
 
-
-
-
+}

@@ -242,10 +242,6 @@ double CandidateSet::getBestScore() {
 		return rbegin()->first;
 }
 
-double CandidateSet::getWorstScore() {
-	return begin()->first;
-}
-
 string CandidateSet::getTopology(string tree) {
 	PhyloTree mtree;
 //	mtree.rooted = params->is_rooted;
@@ -291,33 +287,6 @@ CandidateSet CandidateSet::getBestCandidateTrees(int numTrees) {
 		res.insert(*rit);
 	}
 	return res;
-}
-
-vector<string> CandidateSet::getBestTreeStrings(int numTrees) {
-    if (numTrees == 0 || numTrees > size())
-        numTrees = size();
-    vector<string> bestTrees; 
-	for (reverse_iterator rit = rbegin(); rit != rend() && numTrees > 0; 
-            rit++, numTrees--) {
-        bestTrees.push_back(rit->second.tree);
-    }
-    return bestTrees;
-}
-
-CandidateTree CandidateSet::getNthBestTree(int N) {
-	if (N >= size())
-		N = size();
-	reverse_iterator rit;
-	CandidateTree myTree;
-	myTree.score = -DBL_MAX;
-	myTree.tree = "";
-	myTree.topology = "";
-	for (rit = rbegin(); rit != rend(); rit++, N--) {
-		myTree = rit->second;
-		if (N == 0)
-			break;
-	}
-	return myTree;
 }
 
 bool CandidateSet::treeTopologyExist(string topo) {
@@ -435,12 +404,12 @@ void CandidateSet::setAln(Alignment* aln) {
 	this->aln = aln;
 }
 
-//int CandidateSet::getNumLocalOptTrees() {
-//	int numLocalOptima = 0;
-//	for (reverse_iterator rit = rbegin(); rit != rend(); rit++) {
-//		if (rit->second.localOpt) {
-//			numLocalOptima++;
-//		}
-//	}
-//	return numLocalOptima;
-//}
+CandidateSet CandidateSet::getCandidateTrees(double score) {
+    CandidateSet res;
+    for (CandidateSet::iterator it = begin(); it != end(); it++) {
+        if (abs(it->first - score) < 0.1) {
+            res.insert(*it);
+        }
+    }
+    return res;
+}

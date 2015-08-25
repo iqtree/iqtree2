@@ -69,7 +69,7 @@
 
 #ifdef _IQTREE_MPI
 #include <mpi.h>
-#include "mpiHelper.h"
+#include "MPIHelper.h"
 #endif
 
 #ifdef _OPENMP
@@ -1735,7 +1735,7 @@ int _exit_wait_optn = FALSE;
 
 outstreambuf* outstreambuf::open( const char* name, ios::openmode mode) {
 #ifdef _IQTREE_MPI
-	if (MPIHelper::instance()->getProcessID() != MASTER) {
+	if (MPIHelper::getInstance().getProcessID() != MASTER) {
 		cout.rdbuf(this);
 		cerr.rdbuf(this);
 		return this;
@@ -1757,7 +1757,7 @@ outstreambuf* outstreambuf::open( const char* name, ios::openmode mode) {
 
 outstreambuf* outstreambuf::close() {
 #ifdef _IQTREE_MPI
-	if (MPIHelper::instance()->getProcessID() != MASTER)
+	if (MPIHelper::getInstance().getProcessID() != MASTER)
 		return NULL;
 #else
     if ( fout.is_open()) {
@@ -1773,7 +1773,7 @@ outstreambuf* outstreambuf::close() {
 
 int outstreambuf::overflow( int c) { // used for output buffer only
 #ifdef _IQTREE_MPI
-	if (MPIHelper::instance()->getProcessID() != MASTER)
+	if (MPIHelper::getInstance().getProcessID() != MASTER)
 		return c;
 #else
 	if (verbose_mode >= VB_MIN)
@@ -1785,7 +1785,7 @@ int outstreambuf::overflow( int c) { // used for output buffer only
 
 int outstreambuf::sync() { // used for output buffer only
 #ifdef _IQTREE_MPI
-	if (MPIHelper::instance()->getProcessID() != MASTER)
+	if (MPIHelper::getInstance().getProcessID() != MASTER)
 		return 0;
 #else
 	if (verbose_mode >= VB_MIN)
@@ -2198,8 +2198,8 @@ int main(int argc, char *argv[]) {
     }
 	MPI_Comm_size(MPI_COMM_WORLD, &n_tasks);
 	MPI_Comm_rank(MPI_COMM_WORLD, &task_id);
-	MPIHelper::instance()->setNumProcesses(n_tasks);
-	MPIHelper::instance()->setProcessID(n_tasks);
+	MPIHelper::getInstance().setNumProcesses(n_tasks);
+	MPIHelper::getInstance().setProcessID(n_tasks);
 
 #endif
 
@@ -2211,15 +2211,15 @@ int main(int argc, char *argv[]) {
 	
 #ifdef _IQTREE_MPI
 	unsigned int rndSeed;
-  	if (MPIHelper::instance()->getProcessID() == MASTER) {
-  		rndSeed = params.ran_seed;
+  	if (MPIHelper::getInstance().getProcessID() == MASTER) {
+  		rndSeed = Params::getInstance().ran_seed;
   	}
     // Broadcast random seed
     MPI_Bcast(&rndSeed, 1, MPI_INT, MASTER, MPI_COMM_WORLD);
-    if (MPIHelper::instance()->getProcessID() != MASTER) {
-		params.ran_seed = rndSeed + task_id;
+    if (MPIHelper::getInstance().getProcessID() != MASTER) {
+		Params::getInstance().ran_seed = rndSeed + task_id;
 #ifdef _MPI_DEBUG
-		printf("Process %d: random_seed = %d\n", task_id, params.ran_seed);
+		printf("Process %d: random_seed = %d\n", task_id, Params::getInstance().ran_seed);
 #endif
 	}
 #endif
@@ -2447,7 +2447,7 @@ int main(int argc, char *argv[]) {
 	}
 
 #else
-	runPhyloAnalysis(params);
+	runPhyloAnalysis(Params::getInstance());
 #endif
 
 	time(&cur_time);

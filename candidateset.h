@@ -98,13 +98,6 @@ public:
     vector<double> getBestScores(int numBestScores = 0);
 
     /**
-     * Get the worst score
-     *
-     * @return the worst score
-     */
-    double getWorstScore();
-
-    /**
      * Get best score
      *
      * @return the best score
@@ -121,14 +114,6 @@ public:
      */
     vector<string> getTopTrees(int numTree = 0);
 
-    /**
-     * 	Get \a numTree best locally optimal trees
-     * 	@param numTree
-     * 		Number of locally optimal trees
-     * 	@return
-     * 		Vector of current best locally optimal trees
-     */
-    vector<string> getBestLocalOptimalTrees(int numTree = 0);
 
     /**
      * 	Get tree(s) with the best score. There could be more than one
@@ -249,14 +234,10 @@ public:
     CandidateSet getBestCandidateTrees(int numTrees);
 
     /**
-     * Get the current best tree strings
+     *  Return a set of trees whose score are equal \a score
      */
-    vector<string> getBestTreeStrings(int numTrees = 0);
+    CandidateSet getCandidateTrees(double score);
 
-    /**
-     *  Get the Nth best tree topology
-     */
-    CandidateTree getNthBestTree(int N);
 
 	SplitIntMap& getCandidateSplitHash() {
 		return candidateSplitsHash;

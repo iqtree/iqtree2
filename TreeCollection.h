@@ -6,14 +6,20 @@
 #define IQTREE_TREECOLLECTION_H
 #include "candidateset.h"
 
+/**
+ *  A container for a set of trees together with their scores
+ */
 class TreeCollection {
-
+private:
+    size_t numTrees;
+    vector<string> treeStrings;
+    vector<double> scores;
 public:
 
     /**
      *  Constructor
      */
-    TreeCollection(vector<CandidateTree>& candidateTrees);
+    TreeCollection(CandidateSet& candidateTrees);
 
     TreeCollection() {};
 
@@ -48,10 +54,6 @@ public:
         return scores;
     }
 
-private:
-    size_t numTrees;
-    vector<string> treeStrings;
-    vector<double> scores;
 };
 
 

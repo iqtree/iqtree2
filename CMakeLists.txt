@@ -372,14 +372,11 @@ add_subdirectory(model)
 ##################################################################
 
 if (NOT BINARY32 AND NOT IQTREE_FLAGS MATCHES "novx")
-add_library(avxkernel phylotreeavx.cpp)
+    add_library(avxkernel phylotreeavx.cpp)
 endif()
 
 if (IQTREE_FLAGS MATCHES "mpi")
-	add_library(iqtreempi
-	mpiHelper.cpp
-    TreeCollection.cpp
-    ObjectStream.cpp)
+	add_library(mpi MPIHelper.cpp TreeCollection.cpp ObjectStream.cpp)
 endif()
 
 add_executable(iqtree
@@ -443,7 +440,14 @@ checkpoint.cpp
 upperbounds.cpp
 )
 
-if (NOT IQTREE_FLAGS MATCHES "avx" AND NOT IQTREE_FLAGS MATCHES "fma")
+if (IQTREE_FLAGS MATCHES "mpi")
+    if (NOT IQTREE_FLAGS MATCHES "avx" AND NOT IQTREE_FLAGS MATCHES "fma")
+        set_target_properties(iqtree pll ncl whtest zlibstatic sprng vectorclass model mpi PROPERTIES COMPILE_FLAGS "${SSE_FLAGS}")
+        if (NOT BINARY32 AND NOT IQTREE_FLAGS MATCHES "novx")
+            set_target_properties(avxkernel pllavx PROPERTIES COMPILE_FLAGS "${AVX_FLAGS}")
+        endif()
+    endif()
+elseif (NOT IQTREE_FLAGS MATCHES "avx" AND NOT IQTREE_FLAGS MATCHES "fma")
 	set_target_properties(iqtree pll ncl whtest zlibstatic sprng vectorclass model PROPERTIES COMPILE_FLAGS "${SSE_FLAGS}")
 	if (NOT BINARY32 AND NOT IQTREE_FLAGS MATCHES "novx")
 		set_target_properties(avxkernel pllavx PROPERTIES COMPILE_FLAGS "${AVX_FLAGS}")
@@ -477,11 +481,20 @@ if (IQTREE_FLAGS MATCHES "omp")
 	endif()
 endif()
 
-if (BINARY32 OR IQTREE_FLAGS MATCHES "novx")
-    target_link_libraries(iqtree pll ncl whtest zlibstatic sprng vectorclass model ${PLATFORM_LIB} ${THREAD_LIB})	
+if (IQTREE_FLAGS MATCHES "mpi")
+	if (BINARY32 OR IQTREE_FLAGS MATCHES "novx")
+		target_link_libraries(iqtree pll ncl whtest zlibstatic sprng vectorclass model mpi ${PLATFORM_LIB} ${THREAD_LIB})
+	else()
+		target_link_libraries(iqtree pll pllavx ncl whtest zlibstatic sprng vectorclass model avxkernel mpi ${PLATFORM_LIB} ${THREAD_LIB})
+	endif()
 else()
-    target_link_libraries(iqtree pll pllavx ncl whtest zlibstatic sprng vectorclass model avxkernel ${PLATFORM_LIB} ${THREAD_LIB})	
+	if (BINARY32 OR IQTREE_FLAGS MATCHES "novx")
+		target_link_libraries(iqtree pll ncl whtest zlibstatic sprng vectorclass model ${PLATFORM_LIB} ${THREAD_LIB})
+	else()
+	target_link_libraries(iqtree pll pllavx ncl whtest zlibstatic sprng vectorclass model avxkernel ${PLATFORM_LIB} ${THREAD_LIB})
+	endif()
 endif()
+
 
 ##################################################################
 # setup the executable name 
