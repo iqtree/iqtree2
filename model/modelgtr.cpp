@@ -487,8 +487,10 @@ double ModelGTR::optimizeParameters(double gradient_epsilon) {
 	setVariables(variables);
 	setBounds(lower_bound, upper_bound, bound_check);
 	//packData(variables, lower_bound, upper_bound, bound_check);
-//	score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound, bound_check, max(gradient_epsilon, TOL_RATE));
-    score = -L_BFGS_B(ndim, variables+1, lower_bound+1, upper_bound+1, max(gradient_epsilon, TOL_RATE));
+    if (phylo_tree->params->optimize_alg.find("BFGS-B") == string::npos)
+        score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound, bound_check, max(gradient_epsilon, TOL_RATE));
+    else
+        score = -L_BFGS_B(ndim, variables+1, lower_bound+1, upper_bound+1, max(gradient_epsilon, TOL_RATE));
 
 	getVariables(variables);
 	//if (freq_type == FREQ_ESTIMATE) scaleStateFreq(true);
