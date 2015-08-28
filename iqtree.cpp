@@ -519,9 +519,18 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
     cout << getRealTime() - startTime << " seconds" << endl;
     cout << candidateTrees.size() << " distinct starting trees" << endl;
 
+#ifdef _IQTREE_MPI
+    // Send all trees to other nodes
+    CandidateSet candidateTrees = candidateTrees.getBestCandidateTrees(candidateTrees.size());
+    TreeCollection tress(candidateTrees);
+
+
+    cout << "(" << numTrees << " parsimony trees on each node)";
+#endif
+
 
     // Only select the best nNNITrees for doing NNI search
-    CandidateSet initParsimonyTrees = candidateTrees.getBestCandidateTrees(nNNITrees);
+    CandidateSet initParsimonyTrees = candidateTrees.getBestCandidateTrees();
 
     cout << "Optimizing top parsimony trees with NNI..." << endl;
     CandidateSet::reverse_iterator rit;

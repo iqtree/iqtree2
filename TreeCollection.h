@@ -27,6 +27,8 @@ public:
 
     void addTrees(TreeCollection &trees);
 
+    CandidateSet convertToCandidateSet();
+
     /*
      *  Get i-th tree and its score
     */

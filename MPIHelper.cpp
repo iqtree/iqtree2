@@ -14,11 +14,15 @@ MPIHelper& MPIHelper::getInstance() {
     return instance;
 }
 
-void MPIHelper::sendTreesToAll(TreeCollection& trees) {
+void MPIHelper::sendTreesToAll(CandidateSet& candidateTrees, bool blocking) {
 
 }
 
-TreeCollection MPIHelper::receiveTreesFromAnySource() {
+void MPIHelper::sendTreesToNode(int nodeID, CandidateSet& candidateTrees, bool blocking) {
+
+}
+
+CandidateSet MPIHelper::receiveTreesFromAll() {
     MPI_Status status;
     char* recvBuffer;
     int MPISource, flag;
@@ -26,7 +30,9 @@ TreeCollection MPIHelper::receiveTreesFromAnySource() {
     TreeCollection allTrees;
     // Process all pending messages
     do {
+        // Check for incoming messages
         MPI_Iprobe(MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &flag, &status);
+        // flag == true if there is a message
         if (flag) {
             MPISource = status.MPI_SOURCE;
             MPI_Get_count(&status, MPI_CHAR, &numBytes);

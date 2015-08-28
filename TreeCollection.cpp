@@ -37,3 +37,8 @@ void TreeCollection::addTrees(TreeCollection &trees) {
         scores.push_back(trees.getTree(i).second);
     }
 }
+
+CandidateSet TreeCollection::convertToCandidateSet() {
+    for (int i = 0; i < )
+    return CandidateSet();
+}

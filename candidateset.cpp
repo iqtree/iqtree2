@@ -328,7 +328,7 @@ int CandidateSet::buildTopSplits(double supportThreshold) {
 	candidateSplitsHash.clear();
 	CandidateSet bestCandidateTrees;
 
-	bestCandidateTrees = getBestCandidateTrees(Params::getInstance().numSupportTrees);
+	bestCandidateTrees = getBestCandidateTrees();
 	//assert(bestCandidateTrees.size() > 1);
 
 	candidateSplitsHash.setNumTree(bestCandidateTrees.size());

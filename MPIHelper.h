@@ -22,13 +22,22 @@ class MPIHelper {
 public:
     static MPIHelper& getInstance();
 
-    TreeCollection receiveTrees(int &MPISource);
+    CandidateSet receiveTrees(int &MPISource);
 
-    TreeCollection receiveTreesFromAnySource();
+    /**
+     *  Get all the trees that have been sent to the current node
+     */
+    CandidateSet receiveTreesFromAll();
 
-    void sendTreesToAll(TreeCollection& trees);
+    /**
+     *  Send a set of candidate trees to all remaining nodes
+     */
+    void sendTreesToAll(CandidateSet& candidateTrees);
 
-    void sendTreesToNode(int nodeID, TreeCollection& trees);
+    /**
+     *  Send a set of candidate trees to node \a nodeID
+     */
+    void sendTreesToNode(int nodeID, CandidateSet& candidateTrees);
 
     int getNumProcesses() const {
         return numProcesses;
