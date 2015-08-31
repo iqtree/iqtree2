@@ -136,6 +136,11 @@ public:
 	*/
 	virtual double optimizeParameters(double gradient_epsilon);
 
+    /**
+     *  Same as above but add parameters to control gamma bounds
+     */
+	virtual double optimizeParameters(double gradient_epsilon, double min_gamma, double max_gamma);
+
 	/**
 		override function from Optimization class, used by the minimizeOneDimen() to optimize
 		gamma shape parameter

@@ -72,6 +72,8 @@ public:
 	*/
 	virtual double targetFunk(double x[]);
 
+    double optimizeWeights();
+
 	/**
 		optimize model parameters
 		@return the best likelihood
@@ -121,6 +123,8 @@ public:
 	bool fix_prop;
 
 protected:
+
+	bool optimizing_submodels;
 
 	/**
 		this function is served for the multi-dimension optimization. It should pack the model parameters

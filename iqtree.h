@@ -266,7 +266,7 @@ public:
      *  	maximum number of tree traversal for branch length optimization
      *  @return NEWICK tree string
      */
-    string optimizeBranches(int maxTraversal);
+    string optimizeBranches(int maxTraversal = 100);
 
     /**
      *  Wrapper function to compute tree log-likelihood.
@@ -465,8 +465,6 @@ public:
      */
     vector<int> vecNumNNI;
 
-    int getCurIteration() { return curIt; }
-
     /**
      * Do memory allocation and initialize parameter for UFBoot to run with PLL
      */
@@ -514,11 +512,6 @@ public:
    void pllConvertUFBootData2IQTree();
 
 protected:
-
-    /**
-     *  Current IQPNNI iteration number
-     */
-    int curIt;
     /**
             criterion to assess important quartet
      */
@@ -665,6 +658,9 @@ public:
     /** Set of splits occuring in bootstrap trees */
     vector<SplitGraph*> boot_splits;
 
+    /** log-likelihood of bootstrap consensus tree */
+    double boot_consense_logl;
+
     /** Corresponding map for set of splits occuring in bootstrap trees */
     //SplitIntMap boot_splits_map;
 
@@ -683,14 +679,6 @@ public:
 
 	int getDelete() const;
 	void setDelete(int _delete);
-
-	int getCurIt() const {
-		return curIt;
-	}
-
-	void setCurIt(int curIt) {
-		this->curIt = curIt;
-	}
 
 protected:
     /**** NNI cutoff heuristic *****/

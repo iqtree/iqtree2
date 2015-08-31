@@ -46,6 +46,7 @@ public:
 	friend class PDNetwork;
 	friend class CircularNetwork;
 	friend class PDTree;
+    friend class MTreeSet;
 
 	/**
 		empty constructor
@@ -270,6 +271,7 @@ public:
 
 	Split *extractSubSplit(Split &taxa_mask);
 
+	string &getName() { return name; }
 protected:
 	/**
 		number of taxa
@@ -280,6 +282,9 @@ protected:
 		weight of split
 	*/
 	double weight;
+    
+    /** 2018-08-23: split name */
+    string name;
 
 };
 

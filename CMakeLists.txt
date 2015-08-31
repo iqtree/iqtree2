@@ -37,8 +37,8 @@ add_definitions(-DIQ_TREE)
 # The version number.
 set (iqtree_VERSION_MAJOR 1)
 set (iqtree_VERSION_MINOR 3)
-set (iqtree_VERSION_PATCH 3)
- 
+set (iqtree_VERSION_PATCH 9) 
+
 set(BUILD_SHARED_LIBS OFF)
 
 message("IQ-TREE flags : ${IQTREE_FLAGS}")
@@ -60,7 +60,7 @@ include_directories("${PROJECT_SOURCE_DIR}")
 if (WIN32)
 	message("Target OS     : Windows")
 	# build as static binary to run on most machines
-    if (NOT IQTREE_FLAGS MATCHES "dynamic")
+    if (IQTREE_FLAGS MATCHES "static")
         set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static")
     endif()
     SET(CMAKE_FIND_LIBRARY_SUFFIXES .lib .a ${CMAKE_FIND_LIBRARY_SUFFIXES})
@@ -79,10 +79,10 @@ elseif (APPLE)
 elseif (UNIX) 
 	message("Target OS     : Unix")
 	# build as static binary to run on most machines
-    if (NOT IQTREE_FLAGS MATCHES "dynamic")
-        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static")
-    else()
+    if (NOT IQTREE_FLAGS MATCHES "static")
         set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -rdynamic")
+    else()
+        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static")
     endif()
 else()
 	# Note that IQ-TREE has NOT been tested on other platforms
@@ -325,6 +325,7 @@ include_directories("${PROJECT_BINARY_DIR}/zlib-1.2.7")
 ##################################################################
 add_subdirectory(pllrepo/src)
 add_subdirectory(ncl)
+add_subdirectory(lbfgsb)
 add_subdirectory(whtest)
 add_subdirectory(sprng)
 add_subdirectory(zlib-1.2.7)
@@ -401,7 +402,7 @@ upperbounds.cpp
 )
 
 if (NOT IQTREE_FLAGS MATCHES "avx" AND NOT IQTREE_FLAGS MATCHES "fma")
-	set_target_properties(iqtree pll ncl whtest zlibstatic sprng vectorclass model PROPERTIES COMPILE_FLAGS "${SSE_FLAGS}")
+	set_target_properties(iqtree pll ncl lbfgsb whtest zlibstatic sprng vectorclass model PROPERTIES COMPILE_FLAGS "${SSE_FLAGS}")
 	if (NOT BINARY32 AND NOT IQTREE_FLAGS MATCHES "novx")
 		set_target_properties(avxkernel pllavx PROPERTIES COMPILE_FLAGS "${AVX_FLAGS}")
 	endif()
@@ -435,9 +436,9 @@ if (IQTREE_FLAGS MATCHES "omp")
 endif()
 
 if (BINARY32 OR IQTREE_FLAGS MATCHES "novx")
-    target_link_libraries(iqtree pll ncl whtest zlibstatic sprng vectorclass model ${PLATFORM_LIB} ${THREAD_LIB})	
+    target_link_libraries(iqtree pll ncl lbfgsb whtest zlibstatic sprng vectorclass model ${PLATFORM_LIB} ${THREAD_LIB})	
 else()
-    target_link_libraries(iqtree pll pllavx ncl whtest zlibstatic sprng vectorclass model avxkernel ${PLATFORM_LIB} ${THREAD_LIB})	
+    target_link_libraries(iqtree pll pllavx ncl lbfgsb whtest zlibstatic sprng vectorclass model avxkernel ${PLATFORM_LIB} ${THREAD_LIB})	
 endif()
 
 ##################################################################

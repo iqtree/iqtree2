@@ -16,8 +16,9 @@ public:
 		constructor
 		@param ncat number of rate categories
 		@param tree associated phylogenetic tree
+        @param opt_alg optimization algorithm (1-BFGS, 2-BFGS, EM)
 	*/
-    RateFree(int ncat, double start_alpha, string params, bool sorted_rates, PhyloTree *tree);
+    RateFree(int ncat, double start_alpha, string params, bool sorted_rates, string opt_alg, PhyloTree *tree);
 
 	virtual ~RateFree();
 
@@ -56,10 +57,15 @@ public:
 	*/
 	virtual double optimizeParameters(double gradient_epsilon);
 
+    /** optimize weights using EM algorithm */
+    double optimizeWithEM();
+
+    double optimizeWeights();
+
 	/**
 		return the number of dimensions
 	*/
-	virtual int getNDim() { return (fix_params) ? 0 : (2*ncategory-2); }
+	virtual int getNDim();
 
 	/**
 		write information
@@ -79,6 +85,22 @@ public:
     */
 	virtual void setNCategory(int ncat);
 
+    /**
+        initialize rates and prop from rate model with #category less by 1
+    */
+    void setRateAndProp(RateFree *input);
+
+	/**
+	 * used to normal branch lengths if mean rate is not equal to 1 (e.g. FreeRate model)
+	 * @return mean rate, default = 1
+	 */
+	virtual double meanRates();
+
+	/**
+	 * rescale rates s.t. mean rate is equal to 1, useful for FreeRate model
+	 * @return rescaling factor
+	 */
+	virtual double rescaleRates();
 
 protected:
 
@@ -106,6 +128,11 @@ protected:
     
     /** true to sort rate in increasing order, false otherwise */
     bool sorted_rates;
+
+    /** 0: no, 1: rates, 2: weights */
+    int optimizing_params;
+
+    string optimize_alg;
 
 };
 

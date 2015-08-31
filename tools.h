@@ -378,7 +378,7 @@ enum LEAST_SQUARE_VAR {
 };
 
 enum START_TREE_TYPE {
-	STT_BIONJ, STT_PARSIMONY, STT_PLL_PARSIMONY
+	STT_BIONJ, STT_PARSIMONY, STT_PLL_PARSIMONY, STT_RANDOM_TREE
 };
 
 const int MCAT_LOG = 1; // categorize by log(rate) for Meyer & von Haeseler model
@@ -410,13 +410,35 @@ extern int NNI_MAX_NR_STEP;
 
 /**
         program parameters, everything is specified here
+        Use singleton pattern to avoid using global variable or
+        having to pass the params variable around
  */
-struct Params {
+class Params {
+public:
+    static Params& getInstance();
+private:
+    Params () {}; // Disable constructor
+    // Temoprarily commented out because void PhyloSuperTree::readPartition(Params &params)
+    // make a copy of params?
+    //Params (Params const&) {}; // Disable copy constructor
+    //void operator=(Params const&) {}; // Disable assignment
+public:
+
+    /**
+    *  Fast and accurate optimiation for alpha and p_invar
+    */
+    bool fai;
 
 	/**
 	 *  Use random restart strategy for estimating alpha and p_invar
 	 */
-	bool rr_ai;
+	bool testAlpha;
+
+    /**
+     *  Logl epsilon to test for initial alpha and pinvar values.
+     *  This does not need to be small (default value = 100)
+     */
+    double testAlphaEps;
 
     /**
      *  Perform exhaustive search for parameter alpha and p_invar
@@ -641,6 +663,9 @@ struct Params {
      * 		'j' for joint edge length
      */
     char partition_type;
+
+    /** percentage for rcluster algorithm like PartitionFinder */
+    double partfinder_rcluster; 
 
     /** remove all-gap sequences in partition model to account for terrace default: TRUE */
     bool remove_empty_seq;
@@ -938,6 +963,11 @@ struct Params {
      */
     char *second_tree;
 
+    /** 
+        tag each branch with the tree ID where it occurs; "ALL" to tag all branches
+    */
+    char *support_tag;
+
     /**
             2nd alignment used in computing multinomialProb (Added by MA)
      */
@@ -1154,6 +1184,9 @@ struct Params {
             TRUE if you want to optimize branch lengths by Newton-Raphson method
      */
     bool optimize_by_newton;
+
+    /** optimization algorithm for parameter estimation: 1-BFGS, 2-BFGS, EM */
+    string optimize_alg;
 
     /**
             TRUE if you want to fix branch lengths during model optimization
@@ -2119,6 +2152,8 @@ void trimString(string &str);
     get number of processor cores
 */
 int countPhysicalCPUCores();
+
+void print_stacktrace(ostream &out, unsigned int max_frames = 63);
 
 /**
     quicksort template

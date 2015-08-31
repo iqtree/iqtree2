@@ -88,11 +88,6 @@ inline size_t get_safe_upper_limit_float(size_t cur_limit) {
 //#endif
 //}
 
-
-#if (defined(__GNUC__) || defined(__clang__)) && !defined(WIN32)
-#include "stacktrace.h"
-#endif
-
 template< class T>
 inline T *aligned_alloc(size_t size) {
 	size_t MEM_ALIGNMENT = (instruction_set >= 7) ? 32 : 16;
@@ -103,14 +98,14 @@ inline T *aligned_alloc(size_t size) {
 #else
 	int res = posix_memalign(&mem, MEM_ALIGNMENT, size*sizeof(T));
     if (res == ENOMEM) {
-#if (defined(__GNUC__) || defined(__clang__)) && !defined(WIN32)
+#if (defined(__GNUC__) || defined(__clang__)) && !defined(WIN32) && !defined(__CYGWIN__)
         print_stacktrace(cerr);
 #endif
         outError("Not enough memory, allocation of " + convertInt64ToString(size*sizeof(T)) + " bytes failed (bad_alloc)");
     }
 #endif
     if (mem == NULL) {
-#if (defined(__GNUC__) || defined(__clang__)) && !defined(WIN32)
+#if (defined(__GNUC__) || defined(__clang__)) && !defined(WIN32) && !defined(__CYGWIN__)
         print_stacktrace(cerr);
 #endif
         outError("Not enough memory, allocation of " + convertInt64ToString(size*sizeof(T)) + " bytes failed (bad_alloc)");
@@ -253,6 +248,7 @@ class PhyloTree : public MTree, public Optimization {
 	friend class RateGammaInvar;
 	friend class RateKategory;
     friend class ModelMixture;
+    friend class RateFree;
 
 public:
     /**
@@ -582,6 +578,7 @@ public:
     double *tip_partial_lh;
     bool tip_partial_lh_computed;
 
+    bool ptn_freq_computed;
 
     /****************************************************************************
             computing partial (conditional) likelihood of subtrees
@@ -589,6 +586,7 @@ public:
 
     void computeTipPartialLikelihood();
     void computePtnInvar();
+    void computePtnFreq();
 
     /**
             compute the partial likelihood at a subtree
@@ -1252,6 +1250,11 @@ public:
     /* compute Bayesian branch lengths based on ancestral sequence reconstruction */
     void computeAllBayesianBranchLengths(Node *node = NULL, Node *dad = NULL);
 
+    /**
+        generate random tree
+    */
+    void generateRandomTree(TreeGenType tree_type);
+
     /****************************************************************************
             Subtree Pruning and Regrafting by maximum likelihood
             NOTE: NOT DONE YET
@@ -1518,8 +1521,11 @@ public:
 	/**
 	 * This will invalidate curScore variable, used whenever reading a tree!
 	 */
-	void resetCurScore() {
-		curScore = -DBL_MAX;
+	void resetCurScore(double score = 0.0) {
+        if (score != 0.0)
+            curScore = score;
+        else
+		    curScore = -DBL_MAX;
         if (model)
             initializeAllPartialLh();
 //		clearAllPartialLH();

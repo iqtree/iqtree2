@@ -85,6 +85,10 @@ public:
             input alignment reader
      ****************************************************************************/
 
+    /** get the SeqType for a given string */
+    static SeqType getSeqType(const char *sequence_type);
+
+
     /**
             add a pattern into the alignment
             @param pat the pattern
@@ -451,6 +455,11 @@ public:
      */
     void extractSites(Alignment *aln, const char* spec);
 
+    /**
+        convert a DNA alignment into codon or AA alignment
+    */
+    void convertToCodonOrAA(Alignment *aln, char *gene_code_id, bool nt2aa = false);
+
     /****************************************************************************
             Distance functions
      ****************************************************************************/
@@ -722,12 +731,11 @@ protected:
 	 * special initialization for codon sequences, e.g., setting #states, genetic_code
 	 * @param sequence_type user-defined sequence type
 	 */
-	void initCodon(char *sequence_type);
+	void initCodon(char *gene_code_id);
 
 };
 
 
 void extractSiteID(Alignment *aln, const char* spec, IntVector &site_id);
-
 
 #endif

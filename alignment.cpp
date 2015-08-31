@@ -383,6 +383,7 @@ bool Alignment::isStopCodon(int state) {
 }
 
 int Alignment::getNumNonstopCodons() {
+    if (seq_type != SEQ_CODON) return num_states;
 	assert(genetic_code);
 	int c = 0;
 	for (char *ch = genetic_code; *ch != 0; ch++)
@@ -391,6 +392,7 @@ int Alignment::getNumNonstopCodons() {
 }
 
 bool Alignment::isStandardGeneticCode() {
+    if (seq_type != SEQ_CODON) return false;
 	return (genetic_code == genetic_code1);
 }
 
@@ -464,6 +466,47 @@ void Alignment::computeUnknownState() {
     }
 }
 
+int getDataBlockMorphStates(NxsCharactersBlock *data_block) {
+    int nseq = data_block->GetNTax();
+    int nsite = data_block->GetNCharTotal();
+    int seq, site;
+    char ch;
+    int nstates = 0;
+    
+    for (site = 0; site < nsite; site++)
+        for (seq = 0; seq < nseq; seq++) {
+            int nstate = data_block->GetNumStates(seq, site);
+            if (nstate == 0)
+                continue;
+            if (nstate == 1) {
+                ch = data_block->GetState(seq, site, 0);
+                if (!isalnum(ch)) continue;
+                if (ch >= '0' && ch <= '9') 
+                    ch = ch - '0' + 1;
+                else if (ch >= 'A' && ch <= 'Z') 
+                    ch = ch - 'A' + 11;
+                else 
+                    outError(data_block->GetTaxonLabel(seq) + " has invalid state at site " + convertIntToString(site));
+                if (ch > nstates) nstates = ch;
+                continue;
+            }
+            for (int state = 0; state < nstate; state++) {
+                ch = data_block->GetState(seq, site, state);
+                if (!isalnum(ch)) continue;
+                if (ch >= '0' && ch <= '9') ch = ch - '0' + 1;
+                if (ch >= 'A' && ch <= 'Z') ch = ch - 'A' + 11;
+                if (ch >= '0' && ch <= '9') 
+                    ch = ch - '0' + 1;
+                else if (ch >= 'A' && ch <= 'Z') 
+                    ch = ch - 'A' + 11;
+                else 
+                    outError(data_block->GetTaxonLabel(seq) + " has invalid state at site " + convertIntToString(site));
+                if (ch > nstates) nstates = ch;
+            }
+        }
+    return nstates;
+}
+
 void Alignment::extractDataBlock(NxsCharactersBlock *data_block) {
     int nseq = data_block->GetNTax();
     int nsite = data_block->GetNCharTotal();
@@ -490,7 +533,8 @@ void Alignment::extractDataBlock(NxsCharactersBlock *data_block) {
         seq_type = SEQ_PROTEIN;
     } else {
     	// standard morphological character
-        num_states = data_block->GetMaxObsNumStates();
+//        num_states = data_block->GetMaxObsNumStates();
+        num_states = getDataBlockMorphStates(data_block);
         if (num_states > 32)
         	outError("Number of states can not exceed 32");
         if (num_states < 2)
@@ -1052,14 +1096,14 @@ void Alignment::convertStateStr(string &str, SeqType seq_type) {
         (*it) = convertState(*it, seq_type);
 }
 
-void Alignment::initCodon(char *sequence_type) {
+void Alignment::initCodon(char *gene_code_id) {
     // build index from 64 codons to non-stop codons
 	int transl_table = 1;
-	if (strlen(sequence_type) > 5) {
+	if (strlen(gene_code_id) > 0) {
 		try {
-			transl_table = convert_int(sequence_type+5);
+			transl_table = convert_int(gene_code_id);
 		} catch (string &str) {
-			outError("Wrong genetic code ", sequence_type);
+			outError("Wrong genetic code ", gene_code_id);
 		}
 		switch (transl_table) {
 		case 1: genetic_code = genetic_code1; break;
@@ -1082,14 +1126,13 @@ void Alignment::initCodon(char *sequence_type) {
 		case 24: genetic_code = genetic_code24; break;
 		case 25: genetic_code = genetic_code25; break;
 		default:
-			outError("Wrong genetic code ", sequence_type);
+			outError("Wrong genetic code ", gene_code_id);
 			break;
 		}
 	} else {
 		genetic_code = genetic_code1;
 	}
 	assert(strlen(genetic_code) == 64);
-	cout << "Converting to codon sequences with genetic code " << transl_table << " ..." << endl;
 
 //	int codon;
 	/*
@@ -1120,14 +1163,34 @@ void Alignment::initCodon(char *sequence_type) {
 //	cout << "num_states = " << num_states << endl;
 }
 
-int getMaxObservedStates(StrVector &sequences) {
+int getMorphStates(StrVector &sequences) {
 	char maxstate = 0;
 	for (StrVector::iterator it = sequences.begin(); it != sequences.end(); it++)
 		for (string::iterator pos = it->begin(); pos != it->end(); pos++)
-			if ((*pos) > maxstate) maxstate = *pos;
+			if ((*pos) > maxstate && isalnum(*pos)) maxstate = *pos;
 	if (maxstate >= '0' && maxstate <= '9') return (maxstate - '0' + 1);
 	if (maxstate >= 'A' && maxstate <= 'V') return (maxstate - 'A' + 11);
 	return 0;
+}
+
+SeqType Alignment::getSeqType(const char *sequence_type) {
+    SeqType user_seq_type = SEQ_UNKNOWN;
+    if (strcmp(sequence_type, "BIN") == 0) {
+        user_seq_type = SEQ_BINARY;
+    } else if (strcmp(sequence_type, "NT") == 0 || strcmp(sequence_type, "DNA") == 0) {
+        user_seq_type = SEQ_DNA;
+    } else if (strcmp(sequence_type, "AA") == 0 || strcmp(sequence_type, "PROT") == 0) {
+        user_seq_type = SEQ_PROTEIN;
+    } else if (strncmp(sequence_type, "NT2AA", 5) == 0) {
+        user_seq_type = SEQ_PROTEIN;
+    } else if (strcmp(sequence_type, "NUM") == 0 || strcmp(sequence_type, "MORPH") == 0 || strcmp(sequence_type, "MULTI") == 0) {
+        user_seq_type = SEQ_MORPH;
+    } else if (strcmp(sequence_type, "TINA") == 0) {
+        user_seq_type = SEQ_MULTISTATE;
+    } else if (strncmp(sequence_type, "CODON", 5) == 0) {
+        user_seq_type = SEQ_CODON;
+    }
+    return user_seq_type;
 }
 
 int Alignment::buildPattern(StrVector &sequences, char *sequence_type, int nseq, int nsite) {
@@ -1186,7 +1249,7 @@ int Alignment::buildPattern(StrVector &sequences, char *sequence_type, int nseq,
         cout << "Alignment most likely contains protein sequences" << endl;
         break;
     case SEQ_MORPH:
-        num_states = getMaxObservedStates(sequences);
+        num_states = getMorphStates(sequences);
         if (num_states < 2 || num_states > 32) throw "Invalid number of states.";
         cout << "Alignment most likely contains " << num_states << "-state morphological data" << endl;
         break;
@@ -1197,29 +1260,39 @@ int Alignment::buildPattern(StrVector &sequences, char *sequence_type, int nseq,
         if (!sequence_type)
             throw "Unknown sequence type.";
     }
+    bool nt2aa = false;
     if (sequence_type && strcmp(sequence_type,"") != 0) {
         SeqType user_seq_type;
         if (strcmp(sequence_type, "BIN") == 0) {
             num_states = 2;
             user_seq_type = SEQ_BINARY;
-        } else if (strcmp(sequence_type, "DNA") == 0) {
+        } else if (strcmp(sequence_type, "NT") == 0 || strcmp(sequence_type, "DNA") == 0) {
             num_states = 4;
             user_seq_type = SEQ_DNA;
         } else if (strcmp(sequence_type, "AA") == 0 || strcmp(sequence_type, "PROT") == 0) {
             num_states = 20;
             user_seq_type = SEQ_PROTEIN;
-        } else if (strcmp(sequence_type, "NUM") == 0 || strcmp(sequence_type, "MORPH") == 0) {
-            num_states = getMaxObservedStates(sequences);
+        } else if (strncmp(sequence_type, "NT2AA", 5) == 0) {
+            if (seq_type != SEQ_DNA)
+                outWarning("Sequence type detected as non DNA!");
+            initCodon(&sequence_type[5]);
+            seq_type = user_seq_type = SEQ_PROTEIN;
+            num_states = 20;
+            nt2aa = true;
+            cout << "Translating to amino-acid sequences with genetic code " << &sequence_type[5] << " ..." << endl;
+        } else if (strcmp(sequence_type, "NUM") == 0 || strcmp(sequence_type, "MORPH") == 0 || strcmp(sequence_type, "MULTI") == 0) {
+            num_states = getMorphStates(sequences);
             if (num_states < 2 || num_states > 32) throw "Invalid number of states";
             user_seq_type = SEQ_MORPH;
-        } else if (strcmp(sequence_type, "TINA") == 0 || strcmp(sequence_type, "MULTI") == 0) {
+        } else if (strcmp(sequence_type, "TINA") == 0) {
             cout << "Multi-state data with " << num_states << " alphabets" << endl;
             user_seq_type = SEQ_MULTISTATE;
         } else if (strncmp(sequence_type, "CODON", 5) == 0) {
             if (seq_type != SEQ_DNA)
 				outWarning("You want to use codon models but the sequences were not detected as DNA");
             seq_type = user_seq_type = SEQ_CODON;
-        	initCodon(sequence_type);
+        	initCodon(&sequence_type[5]);
+            cout << "Converting to codon sequences with genetic code " << &sequence_type[5] << " ..." << endl;
         } else
             throw "Invalid sequence type.";
         if (user_seq_type != seq_type && seq_type != SEQ_UNKNOWN)
@@ -1231,35 +1304,43 @@ int Alignment::buildPattern(StrVector &sequences, char *sequence_type, int nseq,
     int site, seq, num_gaps_only = 0;
 
     char char_to_state[NUM_CHAR];
+    char AA_to_state[NUM_CHAR];
     computeUnknownState();
-    buildStateMap(char_to_state, seq_type);
+    if (nt2aa) {
+        buildStateMap(char_to_state, SEQ_DNA);
+        buildStateMap(AA_to_state, SEQ_PROTEIN);
+    } else
+        buildStateMap(char_to_state, seq_type);
 
     Pattern pat;
     pat.resize(nseq);
-    int step = ((seq_type == SEQ_CODON) ? 3 : 1);
+    int step = ((seq_type == SEQ_CODON || nt2aa) ? 3 : 1);
     if (nsite % step != 0)
     	outError("Number of sites is not multiple of 3");
     site_pattern.resize(nsite/step, -1);
     clear();
     pattern_index.clear();
-    bool error = false;
+    int num_error = 0;
     for (site = 0; site < nsite; site+=step) {
         for (seq = 0; seq < nseq; seq++) {
             //char state = convertState(sequences[seq][site], seq_type);
             char state = char_to_state[(int)(sequences[seq][site])];
-            if (seq_type == SEQ_CODON) {
+            if (seq_type == SEQ_CODON || nt2aa) {
             	// special treatment for codon
             	char state2 = char_to_state[(int)(sequences[seq][site+1])];
             	char state3 = char_to_state[(int)(sequences[seq][site+2])];
             	if (state < 4 && state2 < 4 && state3 < 4) {
 //            		state = non_stop_codon[state*16 + state2*4 + state3];
             		state = state*16 + state2*4 + state3;
-            		if (isStopCodon(state)) {
+            		if (genetic_code[(int)state] == '*') {
                         err_str << "Sequence " << seq_names[seq] << " has stop codon " <<
                         		sequences[seq][site] << sequences[seq][site+1] << sequences[seq][site+2] <<
                         		" at site " << site+1 << endl;
+                        num_error++;
                         state = STATE_UNKNOWN;
-            		}
+            		} else if (nt2aa) {
+                        state = AA_to_state[(int)genetic_code[(int)state]];
+                    }
             	} else if (state == STATE_INVALID || state2 == STATE_INVALID || state3 == STATE_INVALID) {
             		state = STATE_INVALID;
             	} else {
@@ -1274,14 +1355,18 @@ int Alignment::buildPattern(StrVector &sequences, char *sequence_type, int nseq,
             	}
             }
             if (state == STATE_INVALID) {
-                err_str << "Sequence " << seq_names[seq] << " has invalid character " << sequences[seq][site];
-            	if (seq_type == SEQ_CODON) err_str << sequences[seq][site+1] << sequences[seq][site+2];
-            	err_str << " at site " << site+1 << endl;
-                error = true;
+                if (num_error < 100) {
+                    err_str << "Sequence " << seq_names[seq] << " has invalid character " << sequences[seq][site];
+                    if (seq_type == SEQ_CODON) 
+                        err_str << sequences[seq][site+1] << sequences[seq][site+2];
+                    err_str << " at site " << site+1 << endl;
+                } else if (num_error == 100)
+                    err_str << "...many more..." << endl;
+                num_error++;
             }
             pat[seq] = state;
         }
-        if (!error)
+        if (!num_error)
             num_gaps_only += addPattern(pat, site/step);
     }
     if (num_gaps_only)
@@ -2253,8 +2338,6 @@ void Alignment::extractSites(Alignment *aln, IntVector &site_id) {
     VerboseMode save_mode = verbose_mode;
     verbose_mode = min(verbose_mode, VB_MIN); // to avoid printing gappy sites in addPattern
     for (i = 0; i != site_id.size(); i++) {
-        if (site_id[i] < 0 || site_id[i] >= aln->getNSite())
-            throw "Site ID out of bound";
         Pattern pat = aln->getPattern(site_id[i]);
         addPattern(pat, i);
     }
@@ -2268,6 +2351,100 @@ void Alignment::extractSites(Alignment *aln, IntVector &site_id) {
 
     //cout << getNSite() << " positions were extracted" << endl;
     //cout << __func__ << " " << num_states << endl;
+}
+
+
+
+void Alignment::convertToCodonOrAA(Alignment *aln, char *gene_code_id, bool nt2aa) {
+    if (aln->seq_type != SEQ_DNA)
+        outError("Cannot convert non-DNA alignment into codon alignment");
+    if (aln->getNSite() % 3 != 0)
+        outError("Sequence length is not divisible by 3 when converting to codon sequences");
+    int i, site;
+    char AA_to_state[NUM_CHAR];
+    for (i = 0; i < aln->getNSeq(); i++) {
+        seq_names.push_back(aln->getSeqName(i));
+    }
+//    num_states = aln->num_states;
+    seq_type = SEQ_CODON;
+    initCodon(gene_code_id);
+    if (nt2aa) {
+        seq_type = SEQ_PROTEIN;
+        num_states = 20;
+    }
+
+    computeUnknownState();
+
+    if (nt2aa) {
+        buildStateMap(AA_to_state, SEQ_PROTEIN);
+    }
+    
+    site_pattern.resize(aln->getNSite()/3, -1);
+    clear();
+    pattern_index.clear();
+    int step = ((seq_type == SEQ_CODON || nt2aa) ? 3 : 1);
+
+    VerboseMode save_mode = verbose_mode;
+    verbose_mode = min(verbose_mode, VB_MIN); // to avoid printing gappy sites in addPattern
+    int nsite = aln->getNSite();
+    int nseq = aln->getNSeq();
+    Pattern pat;
+    pat.resize(nseq);
+    int num_error = 0;
+    ostringstream err_str;
+
+    for (site = 0; site < nsite; site+=step) {
+        for (int seq = 0; seq < nseq; seq++) {
+            //char state = convertState(sequences[seq][site], seq_type);
+            char state = aln->at(aln->getPatternID(site))[seq];
+            // special treatment for codon
+            char state2 = aln->at(aln->getPatternID(site+1))[seq];
+            char state3 = aln->at(aln->getPatternID(site+2))[seq];
+            if (state < 4 && state2 < 4 && state3 < 4) {
+//            		state = non_stop_codon[state*16 + state2*4 + state3];
+                state = state*16 + state2*4 + state3;
+                if (genetic_code[(int)state] == '*') {
+                    err_str << "Sequence " << seq_names[seq] << " has stop codon "
+                            << " at site " << site+1 << endl;
+                    num_error++;
+                    state = STATE_UNKNOWN;
+                } else if (nt2aa) {
+                    state = AA_to_state[(int)genetic_code[(int)state]];
+                }
+            } else if (state == STATE_INVALID || state2 == STATE_INVALID || state3 == STATE_INVALID) {
+                state = STATE_INVALID;
+            } else {
+                if (state != STATE_UNKNOWN || state2 != STATE_UNKNOWN || state3 != STATE_UNKNOWN) {
+                    ostringstream warn_str;
+                    warn_str << "Sequence " << seq_names[seq] << " has ambiguous character " <<
+                        " at site " << site+1 << endl;
+                    outWarning(warn_str.str());
+                }
+                state = STATE_UNKNOWN;
+            }
+            if (state == STATE_INVALID) {
+                if (num_error < 100) {
+                    err_str << "Sequence " << seq_names[seq] << " has invalid character ";
+                    err_str << " at site " << site+1 << endl;
+                } else if (num_error == 100)
+                    err_str << "...many more..." << endl;
+                num_error++;
+            }
+            pat[seq] = state;
+        }
+        if (!num_error)
+            addPattern(pat, site/step);
+    }
+    if (num_error)
+        outError(err_str.str());
+    verbose_mode = save_mode;
+    countConstSite();
+    buildSeqStates();
+    // sanity check
+    for (iterator it = begin(); it != end(); it++)
+    	if (it->at(0) == -1)
+    		assert(0);
+    
 }
 
 void convert_range(const char *str, int &lower, int &upper, int &step_size, char* &endptr) throw (string) {
@@ -2320,12 +2497,18 @@ void convert_range(const char *str, int &lower, int &upper, int &step_size, char
 void extractSiteID(Alignment *aln, const char* spec, IntVector &site_id) {
     int i;
     char *str = (char*)spec;
+    int nchars = 0;
     try {
         for (; *str != 0; ) {
             int lower, upper, step;
             convert_range(str, lower, upper, step, str);
             lower--;
             upper--;
+            nchars += (upper-lower+1)/step;
+            if (aln->seq_type == SEQ_CODON) {
+                lower /= 3;
+                upper /= 3;
+            }
             if (upper >= aln->getNSite()) throw "Too large site ID";
             if (lower < 0) throw "Negative site ID";
             if (lower > upper) throw "Wrong range";
@@ -2335,6 +2518,8 @@ void extractSiteID(Alignment *aln, const char* spec, IntVector &site_id) {
             if (*str == ',' || *str == ' ') str++;
             else break;
         }
+        if (aln->seq_type == SEQ_CODON && nchars % 3 != 0)
+            throw (string)"Range " + spec + " length is not multiple of 3 (necessary for codon data)";
     } catch (const char* err) {
         outError(err);
     } catch (string err) {
@@ -2633,7 +2818,9 @@ void Alignment::countConstSite() {
 
 string Alignment::getUnobservedConstPatterns() {
 	string ret = "";
-	for (char state = 0; state < num_states; state++) {
+	for (char state = 0; state < num_states; state++) 
+    if (!isStopCodon(state))
+    {
 		Pattern pat;
 		pat.resize(getNSeq(), state);
 		if (pattern_index.find(pat) == pattern_index.end()) {
@@ -2833,7 +3020,7 @@ void Alignment::computeStateFreq (double *state_freq, size_t num_unknown_states)
 
 
     memset(state_count, 0, sizeof(unsigned)*(STATE_UNKNOWN+1));
-    state_count[STATE_UNKNOWN] = num_unknown_states;
+    state_count[(int)STATE_UNKNOWN] = num_unknown_states;
 
     for (i = 0; i <= STATE_UNKNOWN; i++)
         getAppearance(i, &states_app[i*num_states]);
@@ -3388,7 +3575,7 @@ void Alignment::computeEmpiricalRateNonRev (double *rates) {
 }
 
 void Alignment::convfreq(double *stateFrqArr) {
-	int i, j, maxi=0;
+	int i, maxi=0;
 	double freq, maxfreq, sum;
 	int zero_states = 0;
 

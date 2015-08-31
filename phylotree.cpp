@@ -64,6 +64,7 @@ void PhyloTree::init() {
     nni_partial_lh = NULL;
     tip_partial_lh = NULL;
     tip_partial_lh_computed = false;
+    ptn_freq_computed = false;
     central_scale_num = NULL;
     nni_scale_num = NULL;
     central_partial_pars = NULL;
@@ -155,7 +156,7 @@ PhyloTree::~PhyloTree() {
     //if (tmp_ptn_rates)
     //	delete [] tmp_ptn_rates;
     if (_pattern_lh_cat)
-        delete[] _pattern_lh_cat;
+        aligned_free(_pattern_lh_cat);
     if (_pattern_lh)
         aligned_free(_pattern_lh);
     //if (state_freqs)
@@ -164,6 +165,7 @@ PhyloTree::~PhyloTree() {
         aligned_free(theta_all);
     if (ptn_freq)
         aligned_free(ptn_freq);
+    ptn_freq_computed = false;
     if (ptn_invar)
     	aligned_free(ptn_invar);
     if (dist_matrix)
@@ -1159,11 +1161,13 @@ void PhyloTree::initializeAllPartialLh() {
     if (!_pattern_lh)
         _pattern_lh = aligned_alloc<double>(mem_size);
     if (!_pattern_lh_cat)
-        _pattern_lh_cat = new double[mem_size * site_rate->getNDiscreteRate() * ((model_factory->fused_mix_rate)? 1 : model->getNMixtures())];
+        _pattern_lh_cat = aligned_alloc<double>(mem_size * site_rate->getNDiscreteRate() * ((model_factory->fused_mix_rate)? 1 : model->getNMixtures()));
     if (!theta_all)
         theta_all = aligned_alloc<double>(block_size);
-    if (!ptn_freq)
+    if (!ptn_freq) {
         ptn_freq = aligned_alloc<double>(mem_size);
+        ptn_freq_computed = false;
+    }
     if (!ptn_invar)
         ptn_invar = aligned_alloc<double>(mem_size);
     bool benchmark_mem = (!central_partial_lh && verbose_mode >= VB_MED);
@@ -1190,12 +1194,6 @@ void PhyloTree::initializeAllPartialLh() {
 }
 
 void PhyloTree::deleteAllPartialLh() {
-    if (nni_scale_num)
-        aligned_free(nni_scale_num);
-    nni_scale_num = NULL;
-    if (nni_partial_lh)
-        aligned_free(nni_partial_lh);
-    nni_partial_lh = NULL;
 
 	if (central_partial_lh) {
 		aligned_free(central_partial_lh);
@@ -1205,12 +1203,21 @@ void PhyloTree::deleteAllPartialLh() {
 	}
 	if (central_partial_pars)
 		aligned_free(central_partial_pars);
+
+    if (nni_scale_num)
+        aligned_free(nni_scale_num);
+    nni_scale_num = NULL;
+    if (nni_partial_lh)
+        aligned_free(nni_partial_lh);
+    nni_partial_lh = NULL;
+
 	if (ptn_invar)
 		aligned_free(ptn_invar);
 	if (ptn_freq)
 		aligned_free(ptn_freq);
 	if (theta_all)
 		aligned_free(theta_all);
+
 	if (_pattern_lh_cat)
 		aligned_free(_pattern_lh_cat);
 	if (_pattern_lh)
@@ -1221,13 +1228,16 @@ void PhyloTree::deleteAllPartialLh() {
 
 	ptn_invar = NULL;
 	ptn_freq = NULL;
+	ptn_freq_computed = false;
 	theta_all = NULL;
 	_pattern_lh_cat = NULL;
 	_pattern_lh = NULL;
 
+    tip_partial_lh = NULL;
+
     clearAllPartialLH();
 }
-
+ 
 uint64_t PhyloTree::getMemoryRequired(size_t ncategory) {
 	size_t nptn = aln->getNPattern() + aln->num_states; // +num_states for ascertainment bias correction
 	uint64_t block_size;
@@ -1339,14 +1349,16 @@ void PhyloTree::initializeAllPartialLh(int &index, int &indexlh, PhyloNode *node
             }
             if (!central_partial_lh)
                 outError("Not enough memory for partial likelihood vectors");
-            if (sse == LK_EIGEN || sse == LK_EIGEN_SSE) {
-                if (params->lh_mem_save == LM_PER_NODE)
-                    tip_partial_lh = central_partial_lh + ((nodeNum - leafNum)*block_size);
-                else
-                    tip_partial_lh = central_partial_lh + (((nodeNum - 1)*2-leafNum)*block_size);
-            } else
-            	tip_partial_lh = central_partial_lh + (((nodeNum - 1)*2)*block_size);
         }
+
+        // now always assign tip_partial_lh
+        if (sse == LK_EIGEN || sse == LK_EIGEN_SSE) {
+            if (params->lh_mem_save == LM_PER_NODE)
+                tip_partial_lh = central_partial_lh + ((nodeNum - leafNum)*block_size);
+            else
+                tip_partial_lh = central_partial_lh + (((nodeNum - 1)*2-leafNum)*block_size);
+        } else
+            tip_partial_lh = central_partial_lh + (((nodeNum - 1)*2)*block_size);
 
         if (!central_scale_num) {
         	uint64_t mem_size = (leafNum - 1) * 4 * scale_block_size;
@@ -3170,6 +3182,8 @@ double PhyloTree::optimizeAllBranches(int my_iterations, double tolerance, int m
         	//clearAllPartialLH();
 //        	readTreeString(string_brlen);
         	new_tree_lh = computeLikelihood();
+            if (fabs(new_tree_lh-tree_lh) > 1.0)
+                cout << "new_tree_lh: " << new_tree_lh << "   tree_lh: " << tree_lh << endl;
         	assert(fabs(new_tree_lh-tree_lh) < 1.0);
         	return new_tree_lh;
         }
@@ -3473,15 +3487,16 @@ void PhyloTree::computeBioNJ(Params &params, Alignment *alignment, string &dist_
     cout << "Computing BIONJ tree..." << endl;
     BioNj bionj;
     bionj.create(dist_file.c_str(), bionj_file.c_str());
-    bool my_rooted = false;
+//    bool my_rooted = false;
     bool non_empty_tree = (root != NULL);
-    if (root)
-        freeNode();
-    readTree(bionj_file.c_str(), my_rooted);
+//    if (root)
+//        freeNode();
+    readTreeFile(bionj_file.c_str());
 
-    if (non_empty_tree)
+    if (non_empty_tree) {
         initializeAllPartialLh();
-    setAlignment(alignment);
+    }
+//    setAlignment(alignment);
 }
 
 int PhyloTree::fixNegativeBranch(bool force, Node *node, Node *dad) {
@@ -5023,4 +5038,39 @@ void PhyloTree::computeSeqIdentityAlongTree() {
         computeSeqIdentityAlongTree(sp, root->neighbors[0]->node);
     else
         computeSeqIdentityAlongTree(sp, root);
+}
+
+void PhyloTree::generateRandomTree(TreeGenType tree_type) {
+    assert(aln);
+    int orig_size = params->sub_size;
+    params->sub_size = aln->getNSeq();
+    MExtTree ext_tree;
+	switch (tree_type) {
+	case YULE_HARDING: 
+		ext_tree.generateYuleHarding(*params);
+		break;
+	case UNIFORM:
+		ext_tree.generateUniform(params->sub_size);
+		break;
+	case CATERPILLAR:
+		ext_tree.generateCaterpillar(params->sub_size);
+		break;
+	case BALANCED:
+		ext_tree.generateBalanced(params->sub_size);
+		break;
+	case STAR_TREE:
+		ext_tree.generateStarTree(*params);
+		break;
+	default:
+		break;
+	}
+    params->sub_size = orig_size;
+	NodeVector taxa;
+	ext_tree.getTaxa(taxa);
+	assert(taxa.size() == aln->getNSeq());
+	for (NodeVector::iterator it = taxa.begin(); it != taxa.end(); it++)
+		(*it)->name = aln->getSeqName((*it)->id);
+    stringstream str;
+    ext_tree.printTree(str);
+    PhyloTree::readTreeString(str.str());
 }

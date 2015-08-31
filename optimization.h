@@ -125,6 +125,40 @@ public:
 	double minimizeMultiDimen(double guess[], int ndim, double lower[], double upper[],
 		bool bound_check[], double gtol);
 
+	/*****************************************************
+		NEW 2015-08-19: Multi dimensional optimization with L-BFGS-B method
+	*****************************************************/
+
+    /**
+     Function to access the L-BFGS-B function, taken from HAL_HAS software package
+     
+     1. int nvar : The number of the variables
+     2. double* vars : initial values of the variables
+     3. double* lower : lower bounds of the variables
+     4. double* upper : upper bounds of the variables
+     5. double pgtol: gradient tolerance
+     5. int maxit : max # of iterations
+     @return minimized function value
+     After the function is invoked, the values of x will be updated
+    */
+    double L_BFGS_B(int nvar, double* vars, double* lower, double* upper, double pgtol = 1e-5, int maxit = 1000);
+
+    /** internal function called by L_BFGS_B
+        should return function value 
+        @param nvar number of variables
+        @param vars variables
+    */
+    virtual double optimFunc(int nvar, double *vars);
+    
+    /** internal function called by L_BFGS_B
+        should return gradient value
+        @param nvar number of variables
+        @param vars variables
+        @param gradient (OUT) function gradient
+        @return function value
+    */
+    virtual double optimGradient(int nvar, double *vars, double *gradient);
+    
 
     ~Optimization();
 
@@ -146,6 +180,12 @@ private:
 	void lnsrch(int n, double xold[], double fold, double g[], double p[], double x[],
 		double *f, double stpmax, int *check, double lower[], double upper[]);
 
+    void lbfgsb(int n, int m, double *x, double *l, double *u, int *nbd,
+		double *Fmin, int *fail,
+		double factr, double pgtol,
+		int *fncount, int *grcount, int maxit, char *msg,
+		int trace, int nREPORT);
+    
 };
 
 
