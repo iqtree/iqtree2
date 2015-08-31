@@ -1804,7 +1804,8 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
     num_states = nnuc + nnuc*(nnuc-1)/2*(N-1);
     seq_type = SEQ_POMO;
 
-    // Set UNKNOWN_STATE.
+    // Set UNKNOWN_STATE.  This state is set if no information is in
+    // the alignment.  It is set to num_states.
     computeUnknownState();
 
     // Open counts file.
@@ -1873,7 +1874,7 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
         }
         field_num++;
     }
-    if (seq_names.size() != npop) {
+    if ((int) seq_names.size() != npop) {
                 err_str << "Number of populations in headerline doesn't match NPOP.";
                 throw err_str.str();
     }
@@ -1932,6 +1933,7 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
             // Determine state (cf. above).
             if (count == 1) {
             	// Fixed state, state ID is just id1.
+                // TODO: Implement sampling process here.
             	state = id1;
             }
             else if (count == 0) {
@@ -1953,34 +1955,37 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
             	// err_str << "More than 2 bases are present on line " << line_num << ".";
             	// throw err_str.str();
             }
-            // Binomial sampling.  2 bases are present.
             else if (count == 2) {
-                // FIXME: This should be removed but is needed for
-                // debugging purposes so that the likelihood is
-                // deterministic for a given tree.
-//                if (sum == N) {
-//                    sampled_values[id1] = values[id1];
-//                    sampled_values[id2] = values[id2];
-//                }
-//            	else {
-//                    for(int k = 0; k < N; k++) {
-//                        r_int = random_int(sum);
-//                        if (r_int < values[id1]) sampled_values[id1]++;
-//                        else sampled_values[id2]++;
-//                    }
-//            	}
-//            	if (sampled_values[id1] == 0) state = id2;
-//            	else if (sampled_values[id2] == 0) state = id1;
-//            	else {
-//                    // Convert sampled_values to state.
-//                    // FIXME: This could be improved.
-//                    if (id1 == 0) j = id2 - 1;
-//                    else j = id1 + id2;
-//                    state = nnuc + j*(N-2) + j + sampled_values[id1] - 1;
-//            	}
+                // // FIXME: This should be removed but is needed for
+                // // debugging purposes so that the likelihood is
+                // // deterministic for a given tree.
+                // if (sum == N) {
+                //     sampled_values[id1] = values[id1];
+                //     sampled_values[id2] = values[id2];
+                // }
+                // // Binomial sampling.  2 bases are present.
+                // else {
+                //     for(int k = 0; k < N; k++) {
+                //         r_int = random_int(sum);
+                //         if (r_int < values[id1]) sampled_values[id1]++;
+                //         else sampled_values[id2]++;
+                //     }
+                // }
+                // if (sampled_values[id1] == 0) state = id2;
+                // else if (sampled_values[id2] == 0) state = id1;
+                // else {
+                //     // Convert sampled_values to state.
+                //     // FIXME: This could be improved.
+                //     if (id1 == 0) j = id2 - 1;
+                //     else j = id1 + id2;
+                //     state = nnuc + j*(N-2) + j + sampled_values[id1] - 1;
+                // }
 
                 /* BQM 2015-07: store both states now */
                 if (values[id1] >= 16384 || values[id2] >= 16384)
+                    // Cannot add sites where more than 16384
+                    // individuals have the same base within one
+                    // population.
                     everything_ok = false;
                 uint32_t pomo_state = (id1 | (values[id1]) << 2) | ((id2 | (values[id2]<<2))<<16);
                 IntIntMap::iterator pit = pomo_states_index.find(pomo_state);
@@ -2000,7 +2005,7 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
             // Now we have the state to build a pattern ;-).
             pattern.push_back(state);
         }
-        if (pattern.size() != npop) {
+        if ((int) pattern.size() != npop) {
             err_str << "Number of species does not match on line " << line_num << ".";
             throw err_str.str();
         }
@@ -2027,8 +2032,8 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
 
     cout << "Number of sites read:  " << site_count << "." << endl;
     std::cout << "Number of fails: " << fails << "." << std::endl;
-
     cout << "Number of compound states: " << pomo_states.size() << endl;
+
     STATE_UNKNOWN = pomo_states.size()+num_states;
 //    if (STATE_UNKNOWN >= STATE_INVALID)
 //        outError("Too many PoMo states that does not work temporarily");
@@ -2041,8 +2046,6 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
     in.exceptions(ios::failbit | ios::badbit);
     in.close();
 
-    // exit (EXIT_SUCCESS);
-    // return buildPattern(sequences, sequence_type, seq_names.size(), sequences.front().length());
     return 1;
 }
 
