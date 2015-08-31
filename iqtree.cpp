@@ -450,7 +450,7 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
 
     cout << "Generating " << nParTrees << " parsimony trees... ";
 #ifdef _IQTREE_MPI
-    cout << "(" << numTrees << " parsimony trees on each node)";
+    cout << "(" << numTrees << " parsimony trees on each node) ";
 #endif
     cout.flush();
 
@@ -521,17 +521,19 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
 
 #ifdef _IQTREE_MPI
     // Send all trees to other nodes
-    CandidateSet candidateTrees = candidateTrees.getBestCandidateTrees(candidateTrees.size());
-    TreeCollection trees(candidateTrees);
+    CandidateSet bestTrees = candidateTrees.getBestCandidateTrees(candidateTrees.size());
+    TreeCollection trees(bestTrees);
     bool blocking = false;
-    MPIHelper::getInstance().sendTreesToAll(trees, blocking);
-    cout << "(" << numTrees << " parsimony trees on each node)";
+    MPIHelper::getInstance().sendTreesToAllNodes(trees, blocking);
 
     // Get trees from other nodes
     TreeCollection otherTrees = MPIHelper::getInstance().getTreesFromOtherNodes(
             MPIHelper::getInstance().getNumProcesses() - 1);
-    cout << "I get " << otherTrees.getNumTrees() << " from other nodes" << endl;
+    cout << otherTrees.getNumTrees() << " trees received from " << (MPIHelper::getInstance().getNumProcesses() - 1);
+    cout << " processes" << endl;
     MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Finalize();
+    exit(0);
 #endif
 
     // Only select the best nNNITrees for doing NNI search

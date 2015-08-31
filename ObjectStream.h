@@ -23,7 +23,8 @@ public:
     }
 
     virtual ~ObjectStream() {
-        delete [] objectData;
+        if (objectData != NULL)
+            delete [] objectData;
     }
 
     /**
@@ -34,9 +35,8 @@ public:
 
     /**
      *  Reconstruct TreeCollection from a byte stream
-     *  @param[OUT] trees
      */
-    void readObject(TreeCollection& trees);
+    TreeCollection convertToTreeCollection();
 
 
 public:

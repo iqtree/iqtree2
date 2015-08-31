@@ -7,7 +7,6 @@
 using namespace std;
 
 TreeCollection::TreeCollection(CandidateSet &candidateTrees) {
-    numTrees = candidateTrees.size();
     CandidateSet::reverse_iterator rit;
     for (rit = candidateTrees.rbegin(); rit != candidateTrees.rend(); rit++) {
        treeStrings.push_back(rit->second.tree);
@@ -19,7 +18,6 @@ TreeCollection::TreeCollection(vector<string>& trees, vector<double>& scores) {
     assert(trees.size() == scores.size());
     this->treeStrings = trees;
     this->scores = scores;
-    numTrees = trees.size();
 }
 
 pair<string, double> TreeCollection::getTree(int i) {
@@ -36,4 +34,10 @@ void TreeCollection::addTrees(TreeCollection &trees) {
         treeStrings.push_back(trees.getTree(i).first);
         scores.push_back(trees.getTree(i).second);
     }
+}
+
+size_t TreeCollection::getNumTrees() {
+    size_t numTrees = treeStrings.size();
+    assert(numTrees == scores.size());
+    return numTrees;
 }

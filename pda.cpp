@@ -1734,64 +1734,72 @@ string _log_file;
 int _exit_wait_optn = FALSE;
 
 outstreambuf* outstreambuf::open( const char* name, ios::openmode mode) {
-#ifdef _IQTREE_MPI
-	if (MPIHelper::getInstance().getProcessID() != MASTER) {
+	if (MPIHelper::getInstance().getProcessID() == MASTER) {
+		fout.open(name, mode);
+		if (!fout.is_open()) {
+			cout << "Could not open " << name << " for logging" << endl;
+			return NULL;
+		}
+		cout_buf = cout.rdbuf();
+		cerr_buf = cerr.rdbuf();
+		fout_buf = fout.rdbuf();
+		cout.rdbuf(this);
+		cerr.rdbuf(this);
+		return this;
+	} else {
+		cout_buf = cout.rdbuf();
+		cerr_buf = cerr.rdbuf();
 		cout.rdbuf(this);
 		cerr.rdbuf(this);
 		return this;
 	}
-#else
-	fout.open(name, mode);
-	if (!fout.is_open()) {
-		cout << "Could not open " << name << " for logging" << endl;
-		return NULL;
-	}
-	cout_buf = cout.rdbuf();
-	cerr_buf = cerr.rdbuf();
-	fout_buf = fout.rdbuf();
-	cout.rdbuf(this);
-	cerr.rdbuf(this);
-	return this;
-#endif
 }
 
 outstreambuf* outstreambuf::close() {
-#ifdef _IQTREE_MPI
-	if (MPIHelper::getInstance().getProcessID() != MASTER)
+	if (MPIHelper::getInstance().getProcessID() == MASTER) {
+		if (fout.is_open()) {
+			sync();
+			cout.rdbuf(cout_buf);
+			cerr.rdbuf(cerr_buf);
+			fout.close();
+			return this;
+		}
 		return NULL;
-#else
-    if ( fout.is_open()) {
-        sync();
-        cout.rdbuf(cout_buf);
-        cerr.rdbuf(cerr_buf);
-		fout.close();
-        return this;
-    }
-    return NULL;
-#endif
+	} else {
+		sync();
+		cout.rdbuf(cout_buf);
+		cerr.rdbuf(cerr_buf);
+		return this;
+	}
 }
 
 int outstreambuf::overflow( int c) { // used for output buffer only
-#ifdef _IQTREE_MPI
-	if (MPIHelper::getInstance().getProcessID() != MASTER)
+	if (MPIHelper::getInstance().getProcessID() == MASTER) {
+		if (verbose_mode >= VB_MIN) {
+			if (cout_buf->sputc(c) == EOF) return EOF;
+		}
+		if (fout_buf->sputc(c) == EOF) return EOF;
 		return c;
-#else
-	if (verbose_mode >= VB_MIN)
-		if (cout_buf->sputc(c) == EOF) return EOF;
-	if (fout_buf->sputc(c) == EOF) return EOF;
-	return c;
-#endif
+	} else {
+		if (verbose_mode >= VB_MED) {
+			if (cout_buf->sputc(c) == EOF) return EOF;
+		}
+		return c;
+	}
 }
 
+
+
 int outstreambuf::sync() { // used for output buffer only
-#ifdef _IQTREE_MPI
-	if (MPIHelper::getInstance().getProcessID() != MASTER)
-		return 0;
-#else
-	if (verbose_mode >= VB_MIN)
-		cout_buf->pubsync();
-	return fout_buf->pubsync();
-#endif
+	if (MPIHelper::getInstance().getProcessID() == MASTER) {
+		if (verbose_mode >= VB_MIN)
+			cout_buf->pubsync();
+		return fout_buf->pubsync();
+	} else {
+		if (verbose_mode >= VB_MED)
+			return cout_buf->pubsync();
+	}
+	return 0;
 }
 
 extern "C" void startLogFile() {
@@ -2156,8 +2164,10 @@ int main(int argc, char *argv[]) {
 	MPI_Comm_size(MPI_COMM_WORLD, &n_tasks);
 	MPI_Comm_rank(MPI_COMM_WORLD, &task_id);
 	MPIHelper::getInstance().setNumProcesses(n_tasks);
-	MPIHelper::getInstance().setProcessID(n_tasks);
-	cout << "Start MPI jobs with " << MPIHelper::getInstance().getNumProcesses() << " processes" << endl;
+	MPIHelper::getInstance().setProcessID(task_id);
+#else
+	MPIHelper::getInstance().setNumProcesses(1);
+	MPIHelper::getInstance().setProcessID(0);
 #endif
 
 	/*************************/

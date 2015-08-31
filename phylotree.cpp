@@ -21,6 +21,7 @@
 #include "phylosupertree.h"
 #include "phylosupertreeplen.h"
 #include "upperbounds.h"
+#include "MPIHelper.h"
 
 //const static int BINARY_SCALE = floor(log2(1/SCALING_THRESHOLD));
 //const static double LOG_BINARY_SCALE = -(log(2) * BINARY_SCALE);
@@ -3420,6 +3421,11 @@ double PhyloTree::computeDist(Params &params, Alignment *alignment, double* &dis
     } else
         dist_file += ".mldist";
 
+#ifdef _IQTREE_MPI
+    stringstream processID;
+    processID << MPIHelper::getInstance().getProcessID();
+    dist_file += ".process_" + processID.str();
+#endif
     if (!dist_mat) {
         dist_mat = new double[alignment->getNSeq() * alignment->getNSeq()];
         memset(dist_mat, 0, sizeof(double) * alignment->getNSeq() * alignment->getNSeq());

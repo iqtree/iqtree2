@@ -11,7 +11,6 @@
  */
 class TreeCollection {
 private:
-    size_t numTrees;
     vector<string> treeStrings;
     vector<double> scores;
 public:
@@ -35,17 +34,15 @@ public:
 
     void clear();
 
-    void setTreeStrings(const vector<string> &treeStrings) {
+    void setTreeStrings(const vector<string> treeStrings) {
         TreeCollection::treeStrings = treeStrings;
     }
 
-    void setScores(const vector<double> &scores) {
+    void setScores(const vector<double> scores) {
         TreeCollection::scores = scores;
     }
 
-    size_t getNumTrees() const {
-        return numTrees;
-    }
+    size_t getNumTrees();
 
     const vector<string> &getTreeStrings() const {
         return treeStrings;

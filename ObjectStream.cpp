@@ -14,15 +14,19 @@ void ObjectStream::writeObject(TreeCollection &trees) {
     vector<string> treeStrings = trees.getTreeStrings();
     vector<double> scores = trees.getScores();
     size_t numTrees = trees.getNumTrees();
-    if (objectData != NULL)
-        delete [] objectData;
+
     char* stringData;
     size_t stringDataSize = serializeStringVector(treeStrings, stringData);
     size_t doubleDataSize = scores.size() * sizeof(double);
 
     objectDataSize = sizeof(size_t) * 2 + stringDataSize + doubleDataSize;
-    char* pos = objectData;
 
+    if (objectData != NULL) {
+        delete[] objectData;
+    }
+    objectData = new char[objectDataSize];
+
+    char* pos = objectData;
     // Copy the size of the string block and double block into the beginning of objectData
     memcpy(pos, &stringDataSize, sizeof(size_t));
     pos = pos + sizeof(size_t);
@@ -37,8 +41,7 @@ void ObjectStream::writeObject(TreeCollection &trees) {
     delete [] stringData;
 }
 
-void ObjectStream::readObject(TreeCollection &trees) {
-    trees.clear();
+TreeCollection ObjectStream::convertToTreeCollection() {
     size_t metaInfo[2];
     memcpy(metaInfo, objectData, sizeof(size_t) * 2);
     size_t stringDataSize = metaInfo[0];
@@ -47,13 +50,16 @@ void ObjectStream::readObject(TreeCollection &trees) {
     vector<string> treeStrings;
     vector<double> scores;
     deserializeStringVector(objectData + sizeof(size_t) * 2, stringDataSize, treeStrings);
+    cout << "Expect number of trees = " << numTrees << endl;
+    cout << "Received number of trees = " << treeStrings.size() << endl;
     assert(treeStrings.size() == numTrees);
     double scoreArr[numTrees];
     memcpy(scoreArr, objectData + sizeof(size_t) * 2 + stringDataSize, doubleDataSize);
-    for (int i = 0; i < numTrees; ++i)
+    for (int i = 0; i < numTrees; ++i) {
         scores.push_back(scoreArr[i]);
-    trees.setTreeStrings(treeStrings);
-    trees.setScores(scores);
+    }
+    TreeCollection decodedTrees(treeStrings, scores);
+    return decodedTrees;
 }
 
 

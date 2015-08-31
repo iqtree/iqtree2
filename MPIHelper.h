@@ -32,7 +32,7 @@ public:
     /**
      *  Send a set of candidate trees to all remaining nodes
      */
-    void sendTreesToAll(TreeCollection& trees, bool blocking);
+    void sendTreesToAllNodes(TreeCollection &trees, bool blocking);
 
     int getNumProcesses() const {
         return numProcesses;
