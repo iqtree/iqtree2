@@ -2147,6 +2147,18 @@ Instruction set ID reported by vectorclass::instrset_detect
 int instruction_set;
 
 int main(int argc, char *argv[]) {
+#ifdef _IQTREE_MPI
+	double time_initial, time_current;
+	int n_tasks, task_id;
+	if (MPI_Init(&argc, &argv) != MPI_SUCCESS) {
+		outError("MPI initialization failed!");
+	}
+	MPI_Comm_size(MPI_COMM_WORLD, &n_tasks);
+	MPI_Comm_rank(MPI_COMM_WORLD, &task_id);
+	MPIHelper::getInstance().setNumProcesses(n_tasks);
+	MPIHelper::getInstance().setProcessID(n_tasks);
+	cout << "Start MPI jobs with " << MPIHelper::getInstance().getNumProcesses() << " processes" << endl;
+#endif
 
 	/*************************/
 	{ /* local scope */
@@ -2190,46 +2202,19 @@ int main(int argc, char *argv[]) {
 	} /* local scope */
 	/*************************/
 
-#ifdef _IQTREE_MPI
-	double time_initial, time_current;
-	int n_tasks, task_id;
-	if (MPI_Init(&argc, &argv) != MPI_SUCCESS) {
-        outError("MPI initialization failed!");
-    }
-	MPI_Comm_size(MPI_COMM_WORLD, &n_tasks);
-	MPI_Comm_rank(MPI_COMM_WORLD, &task_id);
-	MPIHelper::getInstance().setNumProcesses(n_tasks);
-	MPIHelper::getInstance().setProcessID(n_tasks);
-
-#endif
-
 	parseArg(argc, argv, Params::getInstance());
 	_log_file = Params::getInstance().out_prefix;
 	_log_file += ".log";
 	startLogFile();
 	time_t cur_time;
-	
-#ifdef _IQTREE_MPI
-	unsigned int rndSeed;
-  	if (MPIHelper::getInstance().getProcessID() == MASTER) {
-  		rndSeed = Params::getInstance().ran_seed;
-  	}
-    // Broadcast random seed
-    MPI_Bcast(&rndSeed, 1, MPI_INT, MASTER, MPI_COMM_WORLD);
-    if (MPIHelper::getInstance().getProcessID() != MASTER) {
-		Params::getInstance().ran_seed = rndSeed + task_id;
-#ifdef _MPI_DEBUG
-		printf("Process %d: random_seed = %d\n", task_id, Params::getInstance().ran_seed);
-#endif
-	}
-#endif
-	
+
 	atexit(funcExit);
 	signal(SIGABRT, &funcAbort);
 	signal(SIGFPE, &funcAbort);
 	signal(SIGILL, &funcAbort);
 	signal(SIGSEGV, &funcAbort);
 	printCopyright(cout);
+
 	/*
     double x=1e-100;
     double y=1e-101;
@@ -2447,6 +2432,20 @@ int main(int argc, char *argv[]) {
 	}
 
 #else
+    cout << "Start tree search using MPI with " << MPIHelper::getInstance().getNumProcesses() << " processes" << endl;
+	unsigned int rndSeed;
+	if (MPIHelper::getInstance().getProcessID() == MASTER) {
+		rndSeed = Params::getInstance().ran_seed;
+		cout << "Random seed of master = " << rndSeed << endl;
+	}
+	// Broadcast random seed
+	MPI_Bcast(&rndSeed, 1, MPI_INT, MASTER, MPI_COMM_WORLD);
+	if (MPIHelper::getInstance().getProcessID() != MASTER) {
+		Params::getInstance().ran_seed = rndSeed + task_id;
+#ifdef _MPI_DEBUG
+		printf("Process %d: random_seed = %d\n", task_id, Params::getInstance().ran_seed);
+#endif
+	}
 	runPhyloAnalysis(Params::getInstance());
 #endif
 

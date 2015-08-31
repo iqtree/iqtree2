@@ -33,7 +33,7 @@ public:
     void writeObject(TreeCollection& trees);
 
     /**
-     *  Reconstruct TreeCollectioin from a byte stream
+     *  Reconstruct TreeCollection from a byte stream
      *  @param[OUT] trees
      */
     void readObject(TreeCollection& trees);
@@ -51,7 +51,7 @@ public:
 
 private:
     /**
-     *  Byte stream the represent the object
+     *  Byte stream representing the object
      */
     char* objectData;
 

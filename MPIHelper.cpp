@@ -14,41 +14,50 @@ MPIHelper& MPIHelper::getInstance() {
     return instance;
 }
 
-void MPIHelper::sendTreesToAll(CandidateSet& candidateTrees, bool blocking) {
-
+void MPIHelper::sendTreesToAll(TreeCollection& trees, bool blocking) {
+    ObjectStream os;
+    os.writeObject(trees);
+    MPI_Request requestNull;
+    for (int i = 0; i <= getNumProcesses(); i++) {
+        if (i != getProcessID()) {
+            if (blocking) {
+                MPI_Send(os.getObjectData(), os.getDataLength(), MPI_CHAR, i, 1, MPI_COMM_WORLD);
+            } else {
+                MPI_Isend(os.getObjectData(), os.getDataLength(), MPI_CHAR, i, 1, MPI_COMM_WORLD, &requestNull);
+            }
+        }
+    }
 }
 
-void MPIHelper::sendTreesToNode(int nodeID, CandidateSet& candidateTrees, bool blocking) {
-
-}
-
-CandidateSet MPIHelper::receiveTreesFromAll() {
+TreeCollection MPIHelper::getTreesFromOtherNodes(int numNodes) {
+    if (numNodes > (getNumProcesses() - 1)) {
+        numNodes = getNumProcesses() - 1;
+    }
     MPI_Status status;
     char* recvBuffer;
     int MPISource, flag;
     int numBytes;
     TreeCollection allTrees;
     // Process all pending messages
-    do {
-        // Check for incoming messages
-        MPI_Iprobe(MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &flag, &status);
-        // flag == true if there is a message
-        if (flag) {
-            MPISource = status.MPI_SOURCE;
-            MPI_Get_count(&status, MPI_CHAR, &numBytes);
-            recvBuffer = new char[numBytes];
-            MPI_Recv(recvBuffer, numBytes, MPI_CHAR, status.MPI_SOURCE, status.MPI_TAG, MPI_COMM_WORLD, NULL);
-            ObjectStream os(recvBuffer, numBytes);
-            TreeCollection curTrees;
-            os.readObject(curTrees);
-            allTrees.addTrees(curTrees);
-            delete [] recvBuffer;
-        }
-    } while (flag);
+    while (numNodes > 0) {
+        do {
+            // Check for incoming messages
+            MPI_Iprobe(MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &flag, &status);
+            // flag == true if there is a message
+            if (flag) {
+                MPISource = status.MPI_SOURCE;
+                MPI_Get_count(&status, MPI_CHAR, &numBytes);
+                recvBuffer = new char[numBytes];
+                MPI_Recv(recvBuffer, numBytes, MPI_CHAR, status.MPI_SOURCE, status.MPI_TAG, MPI_COMM_WORLD, NULL);
+                ObjectStream os(recvBuffer, numBytes);
+                TreeCollection curTrees;
+                os.readObject(curTrees);
+                allTrees.addTrees(curTrees);
+                delete [] recvBuffer;
+                numNodes--;
+            }
+        } while (flag);
+    }
+
     return allTrees;
-}
-
-
-void MPIHelper::sendTreesToNode(int nodeID, TreeCollection &trees) {
-
 }

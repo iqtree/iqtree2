@@ -27,17 +27,12 @@ public:
     /**
      *  Get all the trees that have been sent to the current node
      */
-    CandidateSet receiveTreesFromAll();
+    TreeCollection getTreesFromOtherNodes(int numNodes = 1);
 
     /**
      *  Send a set of candidate trees to all remaining nodes
      */
-    void sendTreesToAll(CandidateSet& candidateTrees);
-
-    /**
-     *  Send a set of candidate trees to node \a nodeID
-     */
-    void sendTreesToNode(int nodeID, CandidateSet& candidateTrees);
+    void sendTreesToAll(TreeCollection& trees, bool blocking);
 
     int getNumProcesses() const {
         return numProcesses;

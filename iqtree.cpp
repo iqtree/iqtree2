@@ -522,15 +522,20 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
 #ifdef _IQTREE_MPI
     // Send all trees to other nodes
     CandidateSet candidateTrees = candidateTrees.getBestCandidateTrees(candidateTrees.size());
-    TreeCollection tress(candidateTrees);
-
-
+    TreeCollection trees(candidateTrees);
+    bool blocking = false;
+    MPIHelper::getInstance().sendTreesToAll(trees, blocking);
     cout << "(" << numTrees << " parsimony trees on each node)";
+
+    // Get trees from other nodes
+    TreeCollection otherTrees = MPIHelper::getInstance().getTreesFromOtherNodes(
+            MPIHelper::getInstance().getNumProcesses() - 1);
+    cout << "I get " << otherTrees.getNumTrees() << " from other nodes" << endl;
+    MPI_Barrier(MPI_COMM_WORLD);
 #endif
 
-
     // Only select the best nNNITrees for doing NNI search
-    CandidateSet initParsimonyTrees = candidateTrees.getBestCandidateTrees();
+    CandidateSet initParsimonyTrees = candidateTrees.getBestCandidateTrees(Params::getInstance().numNNITrees);
 
     cout << "Optimizing top parsimony trees with NNI..." << endl;
     CandidateSet::reverse_iterator rit;
