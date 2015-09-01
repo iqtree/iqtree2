@@ -52,6 +52,7 @@ TreeCollection ObjectStream::convertToTreeCollection() {
     deserializeStringVector(objectData + sizeof(size_t) * 2, stringDataSize, treeStrings);
     cout << "Expect number of trees = " << numTrees << endl;
     cout << "Received number of trees = " << treeStrings.size() << endl;
+
     assert(treeStrings.size() == numTrees);
     double scoreArr[numTrees];
     memcpy(scoreArr, objectData + sizeof(size_t) * 2 + stringDataSize, doubleDataSize);
@@ -88,6 +89,7 @@ void ObjectStream::deserializeStringVector(char *data, size_t length, vector<str
     for (int i = 0; i < length; i++) {
         if (data[i] == '\0') {
             strings.push_back(ss.str());
+            cout << ss.str() << endl;
             ss.str("");
         } else {
             ss << data[i];

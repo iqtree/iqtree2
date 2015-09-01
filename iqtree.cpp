@@ -523,6 +523,7 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
     // Send all trees to other nodes
     CandidateSet bestTrees = candidateTrees.getBestCandidateTrees(candidateTrees.size());
     TreeCollection trees(bestTrees);
+    //bool blocking = false;
     bool blocking = false;
     MPIHelper::getInstance().sendTreesToAllNodes(trees, blocking);
 

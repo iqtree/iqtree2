@@ -58,6 +58,8 @@ private:
     int processID;
 
     int numProcesses;
+
+    ObjectStream os;
 };
 
 #endif //IQTREE_MPIHELPER_H

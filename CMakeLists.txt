@@ -438,7 +438,7 @@ graph.cpp
 candidateset.cpp
 checkpoint.cpp
 upperbounds.cpp
-MPIHelper.cpp)
+)
 
 if (IQTREE_FLAGS MATCHES "mpi")
     if (NOT IQTREE_FLAGS MATCHES "avx" AND NOT IQTREE_FLAGS MATCHES "fma")
