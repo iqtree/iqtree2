@@ -165,6 +165,7 @@ PhyloTree::~PhyloTree() {
         aligned_free(theta_all);
     if (ptn_freq)
         aligned_free(ptn_freq);
+    ptn_freq_computed = false;
     if (ptn_invar)
     	aligned_free(ptn_invar);
     if (dist_matrix)
@@ -1227,6 +1228,7 @@ void PhyloTree::deleteAllPartialLh() {
 
 	ptn_invar = NULL;
 	ptn_freq = NULL;
+	ptn_freq_computed = false;
 	theta_all = NULL;
 	_pattern_lh_cat = NULL;
 	_pattern_lh = NULL;

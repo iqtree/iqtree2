@@ -1966,6 +1966,7 @@ Node *MTree::findFirstTaxon(Node *node, Node *dad) {
 			if ((*it)->node->isLeaf()) return (*it)->node;
 			dad = node;
 			node = (*it)->node;
+            break;
 		}
 	return NULL;
 }
