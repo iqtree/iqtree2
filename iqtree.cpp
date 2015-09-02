@@ -520,17 +520,17 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
     cout << candidateTrees.size() << " distinct starting trees" << endl;
 
 #ifdef _IQTREE_MPI
-    // Send all trees to other nodes
     CandidateSet bestTrees = candidateTrees.getBestCandidateTrees(candidateTrees.size());
-    TreeCollection trees(bestTrees);
-    //bool blocking = false;
+    // Send all trees to other nodes
+    TreeCollection outTrees(bestTrees);
     bool blocking = false;
-    MPIHelper::getInstance().sendTreesToAllNodes(trees, blocking);
+    MPIHelper::getInstance().sendTreesToOthers(outTrees, blocking);
 
     // Get trees from other nodes
-    TreeCollection otherTrees = MPIHelper::getInstance().getTreesFromOtherNodes(
-            MPIHelper::getInstance().getNumProcesses() - 1);
-    cout << otherTrees.getNumTrees() << " trees received from " << (MPIHelper::getInstance().getNumProcesses() - 1);
+    TreeCollection inTrees;
+    int numNodes = MPIHelper::getInstance().getNumProcesses() - 1;
+    inTrees = MPIHelper::getInstance().getTreesFromOther(numNodes);
+    cout << inTrees.getNumTrees() << " trees received from " << numNodes;
     cout << " processes" << endl;
     MPI_Barrier(MPI_COMM_WORLD);
     MPI_Finalize();

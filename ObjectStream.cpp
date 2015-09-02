@@ -10,10 +10,9 @@ ObjectStream::ObjectStream(const char *data, size_t length) {
     objectDataSize = length;
 }
 
-void ObjectStream::writeObject(TreeCollection &trees) {
+void ObjectStream::convertFromTreeCollection(TreeCollection &trees) {
     vector<string> treeStrings = trees.getTreeStrings();
     vector<double> scores = trees.getScores();
-    size_t numTrees = trees.getNumTrees();
 
     char* stringData;
     size_t stringDataSize = serializeStringVector(treeStrings, stringData);
@@ -50,15 +49,11 @@ TreeCollection ObjectStream::convertToTreeCollection() {
     vector<string> treeStrings;
     vector<double> scores;
     deserializeStringVector(objectData + sizeof(size_t) * 2, stringDataSize, treeStrings);
-    cout << "Expect number of trees = " << numTrees << endl;
-    cout << "Received number of trees = " << treeStrings.size() << endl;
 
     assert(treeStrings.size() == numTrees);
     double scoreArr[numTrees];
     memcpy(scoreArr, objectData + sizeof(size_t) * 2 + stringDataSize, doubleDataSize);
-    for (int i = 0; i < numTrees; ++i) {
-        scores.push_back(scoreArr[i]);
-    }
+
     TreeCollection decodedTrees(treeStrings, scores);
     return decodedTrees;
 }
@@ -89,10 +84,13 @@ void ObjectStream::deserializeStringVector(char *data, size_t length, vector<str
     for (int i = 0; i < length; i++) {
         if (data[i] == '\0') {
             strings.push_back(ss.str());
-            cout << ss.str() << endl;
             ss.str("");
         } else {
             ss << data[i];
         }
     }
+}
+
+ObjectStream::ObjectStream(TreeCollection &trees) {
+    convertFromTreeCollection(trees);
 }

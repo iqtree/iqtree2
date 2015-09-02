@@ -3489,7 +3489,13 @@ double PhyloTree::computeObsDist(Params &params, Alignment *alignment, double* &
 
 void PhyloTree::computeBioNJ(Params &params, Alignment *alignment, string &dist_file) {
     string bionj_file = params.out_prefix;
+#ifdef _IQTREE_MPI
+    stringstream newBionjFile;
+    newBionjFile << bionj_file << ".bionj." << MPIHelper::getInstance().getProcessID();
+    bionj_file = newBionjFile.str();
+#else
     bionj_file += ".bionj";
+#endif
     cout << "Computing BIONJ tree..." << endl;
     BioNj bionj;
     bionj.create(dist_file.c_str(), bionj_file.c_str());

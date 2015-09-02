@@ -376,7 +376,7 @@ if (NOT BINARY32 AND NOT IQTREE_FLAGS MATCHES "novx")
 endif()
 
 if (IQTREE_FLAGS MATCHES "mpi")
-	add_library(mpi TreeCollection.cpp ObjectStream.cpp)
+	add_library(mpi MPIHelper.cpp TreeCollection.cpp ObjectStream.cpp)
 endif()
 
 add_executable(iqtree

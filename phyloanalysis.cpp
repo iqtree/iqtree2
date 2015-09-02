@@ -1679,7 +1679,6 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 
     iqtree.initializeAllPartialLh();
 	double initEpsilon = params.min_iterations == 0 ? params.modelEps : (params.modelEps * 10);
-	string initTree;
 
 	if (iqtree.getRate()->name.find("+I+G") != string::npos) {
 		if (params.alpha_invar_file != NULL) { // COMPUTE TREE LIKELIHOOD BASED ON THE INPUT ALPHA AND P_INVAR VALUE
@@ -1703,26 +1702,17 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 
     // Optimize model parameters and branch lengths using ML for the initial tree
 	iqtree.clearAllPartialLH();
+	string initTree;
 	initTree = iqtree.optimizeModelParameters(true, initEpsilon);
-
+	// Update best tree
+	iqtree.candidateTrees.update(initTree, iqtree.getCurScore());
 	iqtree.printResultTree();
 
     /****************** NOW PERFORM MAXIMUM LIKELIHOOD TREE RECONSTRUCTION ******************/
 
-    // Update best tree
-    iqtree.candidateTrees.update(initTree, iqtree.getCurScore());
-
-    // Compute maximum likelihood distance
-    // ML distance is only needed for IQP
-//    if ( params.start_tree != STT_BIONJ && ((params.snni && !params.iqp) || params.min_iterations == 0)) {
-//        params.compute_ml_dist = false;
-//    }
-    if (params.user_file && ((params.snni && !params.iqp) || params.min_iterations == 0)) {
+    if (params.user_file  || params.min_iterations == 0) {
         params.compute_ml_dist = false;
     }
-//    if ( params.user_file && params.min_iterations == 0) {
-//        params.compute_ml_dist = false;
-//    }
 
     if ((!params.dist_file && params.compute_ml_dist) || params.leastSquareBranch) {
         computeMLDist(params, iqtree, dist_file, getCPUTime());

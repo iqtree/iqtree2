@@ -27,12 +27,12 @@ public:
     /**
      *  Get all the trees that have been sent to the current node
      */
-    TreeCollection getTreesFromOtherNodes(int numNodes = 1);
+    TreeCollection getTreesFromOther(int numNodes = 1);
 
     /**
      *  Send a set of candidate trees to all remaining nodes
      */
-    void sendTreesToAllNodes(TreeCollection &trees, bool blocking);
+    void sendTreesToOthers(TreeCollection &trees, bool blocking);
 
     int getNumProcesses() const {
         return numProcesses;
@@ -58,8 +58,6 @@ private:
     int processID;
 
     int numProcesses;
-
-    ObjectStream os;
 };
 
 #endif //IQTREE_MPIHELPER_H

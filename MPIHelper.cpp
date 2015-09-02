@@ -14,26 +14,22 @@ MPIHelper& MPIHelper::getInstance() {
     return instance;
 }
 
-void MPIHelper::sendTreesToAllNodes(TreeCollection &trees, bool blocking) {
+void MPIHelper::sendTreesToOthers(TreeCollection &trees, bool blocking) {
     MPI_Request requestNull;
     for (int i = 0; i < getNumProcesses(); i++) {
         if (i != getProcessID()) {
-            ObjectStream os;
-            os.writeObject(trees);
-            cout << "Sending message to process " << i << endl;
-            cout << "JUST FOR TESTING: Redecode ObjectStream ... " << endl;
-            TreeCollection myTrees = os.convertToTreeCollection();
-            cout << "Number of trees endcoded = " << myTrees.getNumTrees() << endl;
+            ObjectStream* os = new ObjectStream();
+            os->convertFromTreeCollection(trees);
             if (blocking) {
-                MPI_Send(os.getObjectData(), os.getDataLength(), MPI_CHAR, i, 1, MPI_COMM_WORLD);
+                MPI_Send(os->getObjectData(), os->getDataLength(), MPI_CHAR, i, 1, MPI_COMM_WORLD);
             } else {
-                MPI_Isend(os.getObjectData(), os.getDataLength(), MPI_CHAR, i, 1, MPI_COMM_WORLD, &requestNull);
+                MPI_Isend(os->getObjectData(), os->getDataLength(), MPI_CHAR, i, 1, MPI_COMM_WORLD, &requestNull);
             }
         }
     }
 }
 
-TreeCollection MPIHelper::getTreesFromOtherNodes(int numNodes) {
+TreeCollection MPIHelper::getTreesFromOther(int numNodes) {
     if (numNodes > (getNumProcesses() - 1)) {
         numNodes = getNumProcesses() - 1;
     }

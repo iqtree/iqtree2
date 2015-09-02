@@ -18,6 +18,8 @@ public:
      */
     ObjectStream(const char* data, size_t length);
 
+    ObjectStream(TreeCollection& trees);
+
     ObjectStream() {
         objectData = NULL;
     }
@@ -31,7 +33,7 @@ public:
      *  Convert a tree collection into the internal byte stream
      *  @param[IN] trees
      */
-    void writeObject(TreeCollection& trees);
+    void convertFromTreeCollection(TreeCollection &trees);
 
     /**
      *  Reconstruct TreeCollection from a byte stream
