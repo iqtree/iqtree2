@@ -476,7 +476,11 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
 
     string curParsTree;
     for (int treeNr = 1; treeNr < numTrees; treeNr++) {
-        curParsTree = generateParsimonyTree(params->ran_seed + treeNr);
+        // This is to make sure that when parismony trees are created on different processes
+        // no duplicated seeds are used
+        //int seedPadding = Params::getInstance().numInitTrees * MPIHelper::getInstance().getProcessID();
+        int randSeed = params->ran_seed + treeNr;
+        curParsTree = generateParsimonyTree(randSeed);
         candidateTrees.update(curParsTree, -DBL_MAX);
     }
 
@@ -529,9 +533,14 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
     // Get trees from other nodes
     TreeCollection inTrees;
     int numNodes = MPIHelper::getInstance().getNumProcesses() - 1;
-    inTrees = MPIHelper::getInstance().getTreesFromOther(numNodes);
+    inTrees = MPIHelper::getInstance().getTreesFromOthers(numNodes);
     cout << inTrees.getNumTrees() << " trees received from " << numNodes;
     cout << " processes" << endl;
+    for (int i = 0; i < inTrees.getNumTrees(); i++) {
+        pair<string, double> tree = inTrees.getTree(i);
+        candidateTrees.update(tree.first, tree.second);
+    }
+    cout << candidateTrees.size() << " distinct starting trees" << endl;
     MPI_Barrier(MPI_COMM_WORLD);
     MPI_Finalize();
     exit(0);
@@ -1728,10 +1737,11 @@ double IQTree::doTreeSearch() {
 
     if (!params->user_file && (params->start_tree == STT_PARSIMONY || params->start_tree == STT_PLL_PARSIMONY)) {
 #ifdef _IQTREE_MPI
-        initCandidateTreeSet(params->numInitTrees - MPIHelper::getInstance().getNumProcesses(),
-                                 params->numNNITrees);
+        // On each process, 2 trees were already created (1 parsimony and 1 bionj)
+        int numRemainingTrees = params->numInitTrees - MPIHelper::getInstance().getNumProcesses() * 2;
+        initCandidateTreeSet(numRemainingTrees, params->numNNITrees);
 #else
-        initCandidateTreeSet(params->numInitTrees - 1, params->numNNITrees);
+        initCandidateTreeSet(params->numInitTrees - 2, params->numNNITrees);
 #endif
         assert(candidateTrees.size() != 0);
         cout << "Finish initializing candidate tree set (" << candidateTrees.size() << ")" << endl;

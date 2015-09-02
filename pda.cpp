@@ -2166,6 +2166,11 @@ int main(int argc, char *argv[]) {
 	MPI_Comm_rank(MPI_COMM_WORLD, &task_id);
 	MPIHelper::getInstance().setNumProcesses(n_tasks);
 	MPIHelper::getInstance().setProcessID(task_id);
+
+	cout << "************************************************" << endl;
+	cout << "* START TREE SEARCH USING MPI WITH " << MPIHelper::getInstance().getNumProcesses() << " PROCESSES *" << endl;
+	cout << "************************************************" << endl;
+
 #else
 	MPIHelper::getInstance().setNumProcesses(1);
 	MPIHelper::getInstance().setProcessID(0);
@@ -2218,6 +2223,22 @@ int main(int argc, char *argv[]) {
 	_log_file += ".log";
 	startLogFile();
 	time_t cur_time;
+
+#ifdef _IQTREE_MPI
+	unsigned int rndSeed;
+	if (MPIHelper::getInstance().getProcessID() == MASTER) {
+		rndSeed = Params::getInstance().ran_seed;
+		cout << "Random seed of master = " << rndSeed << endl;
+	}
+	// Broadcast random seed
+	MPI_Bcast(&rndSeed, 1, MPI_INT, MASTER, MPI_COMM_WORLD);
+	if (MPIHelper::getInstance().getProcessID() != MASTER) {
+		Params::getInstance().ran_seed = rndSeed + task_id * 100000;
+#ifdef _MPI_DEBUG
+		printf("Process %d: random_seed = %d\n", task_id, Params::getInstance().ran_seed);
+#endif
+	}
+#endif
 
 	atexit(funcExit);
 	signal(SIGABRT, &funcAbort);
@@ -2339,9 +2360,11 @@ int main(int argc, char *argv[]) {
 		outError("Number of threads must be 1 for sequential version.");
 	}
     int num_procs = countPhysicalCPUCores();
+#ifndef _IQTREE_MPI
     if (num_procs > 1) {
         cout << endl << endl << "NOTE: Consider using the multicore version because your CPU has " << num_procs << " cores!";
     }
+#endif
 #endif
 	//cout << "sizeof(int)=" << sizeof(int) << endl;
 	cout << endl << endl;
@@ -2443,20 +2466,6 @@ int main(int argc, char *argv[]) {
 	}
 
 #else
-    cout << "Start tree search using MPI with " << MPIHelper::getInstance().getNumProcesses() << " processes" << endl;
-	unsigned int rndSeed;
-	if (MPIHelper::getInstance().getProcessID() == MASTER) {
-		rndSeed = Params::getInstance().ran_seed;
-		cout << "Random seed of master = " << rndSeed << endl;
-	}
-	// Broadcast random seed
-	MPI_Bcast(&rndSeed, 1, MPI_INT, MASTER, MPI_COMM_WORLD);
-	if (MPIHelper::getInstance().getProcessID() != MASTER) {
-		Params::getInstance().ran_seed = rndSeed + task_id;
-#ifdef _MPI_DEBUG
-		printf("Process %d: random_seed = %d\n", task_id, Params::getInstance().ran_seed);
-#endif
-	}
 	runPhyloAnalysis(Params::getInstance());
 #endif
 

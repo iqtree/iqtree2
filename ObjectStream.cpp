@@ -10,12 +10,12 @@ ObjectStream::ObjectStream(const char *data, size_t length) {
     objectDataSize = length;
 }
 
-void ObjectStream::convertFromTreeCollection(TreeCollection &trees) {
+void ObjectStream::initFromTreeCollection(TreeCollection &trees) {
     vector<string> treeStrings = trees.getTreeStrings();
     vector<double> scores = trees.getScores();
 
     char* stringData;
-    size_t stringDataSize = serializeStringVector(treeStrings, stringData);
+    size_t stringDataSize = serializeStrings(treeStrings, stringData);
     size_t doubleDataSize = scores.size() * sizeof(double);
 
     objectDataSize = sizeof(size_t) * 2 + stringDataSize + doubleDataSize;
@@ -40,26 +40,24 @@ void ObjectStream::convertFromTreeCollection(TreeCollection &trees) {
     delete [] stringData;
 }
 
-TreeCollection ObjectStream::convertToTreeCollection() {
+TreeCollection ObjectStream::getTreeCollection() {
     size_t metaInfo[2];
     memcpy(metaInfo, objectData, sizeof(size_t) * 2);
     size_t stringDataSize = metaInfo[0];
     size_t doubleDataSize = metaInfo[1];
     size_t numTrees = doubleDataSize / sizeof(double);
     vector<string> treeStrings;
-    vector<double> scores;
-    deserializeStringVector(objectData + sizeof(size_t) * 2, stringDataSize, treeStrings);
-
+    deserializeStrings(objectData + sizeof(size_t) * 2, stringDataSize, treeStrings);
     assert(treeStrings.size() == numTrees);
     double scoreArr[numTrees];
     memcpy(scoreArr, objectData + sizeof(size_t) * 2 + stringDataSize, doubleDataSize);
-
+    vector<double> scores(scoreArr, scoreArr + sizeof(scoreArr) / sizeof(scoreArr[0]));
     TreeCollection decodedTrees(treeStrings, scores);
     return decodedTrees;
 }
 
 
-size_t ObjectStream::serializeStringVector(vector<string> &strings, char *&data) {
+size_t ObjectStream::serializeStrings(vector<string> &strings, char *&data) {
     size_t numStrings = strings.size();
     size_t totalSize = 0;
     // Determine the total bytes required
@@ -77,7 +75,7 @@ size_t ObjectStream::serializeStringVector(vector<string> &strings, char *&data)
     return totalSize;
 }
 
-void ObjectStream::deserializeStringVector(char *data, size_t length, vector<string> &strings) {
+void ObjectStream::deserializeStrings(char *data, size_t length, vector<string> &strings) {
     strings.clear();
     stringstream ss;
     ss.str("");
@@ -92,5 +90,7 @@ void ObjectStream::deserializeStringVector(char *data, size_t length, vector<str
 }
 
 ObjectStream::ObjectStream(TreeCollection &trees) {
-    convertFromTreeCollection(trees);
+    objectData = NULL;
+    objectDataSize = 0;
+    initFromTreeCollection(trees);
 }

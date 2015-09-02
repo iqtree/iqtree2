@@ -27,7 +27,7 @@ public:
     /**
      *  Get all the trees that have been sent to the current node
      */
-    TreeCollection getTreesFromOther(int numNodes = 1);
+    TreeCollection getTreesFromOthers(int numNodes = 1);
 
     /**
      *  Send a set of candidate trees to all remaining nodes

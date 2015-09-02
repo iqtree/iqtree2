@@ -33,12 +33,12 @@ public:
      *  Convert a tree collection into the internal byte stream
      *  @param[IN] trees
      */
-    void convertFromTreeCollection(TreeCollection &trees);
+    void initFromTreeCollection(TreeCollection &trees);
 
     /**
      *  Reconstruct TreeCollection from a byte stream
      */
-    TreeCollection convertToTreeCollection();
+    TreeCollection getTreeCollection();
 
 
 public:
@@ -66,7 +66,7 @@ private:
      *  @param [OUT] the char array
      *  @return size of the char array
      */
-    size_t serializeStringVector(vector<string> &strings, char*& data);
+    size_t serializeStrings(vector<string> &strings, char *&data);
 
     /**
      *  Convert array of chars to vector of strings
@@ -74,7 +74,7 @@ private:
      *  @param [IN] length size of data
      *  @param [OUT] strings the reconstructed vector<string>
      */
-    void deserializeStringVector(char* data, size_t length, vector<string>& strings);
+    void deserializeStrings(char *data, size_t length, vector<string> &strings);
 
 };
 #endif // IQTREE_OBJECTSTREAM_H
