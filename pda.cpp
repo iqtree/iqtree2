@@ -1781,9 +1781,9 @@ int outstreambuf::overflow( int c) { // used for output buffer only
 		if (fout_buf->sputc(c) == EOF) return EOF;
 		return c;
 	} else {
-		if (verbose_mode >= VB_MED) {
-			if (cout_buf->sputc(c) == EOF) return EOF;
-		}
+#ifdef _MPI_DEBUG
+		if (cout_buf->sputc(c) == EOF) return EOF;
+#endif
 		return c;
 	}
 }
@@ -1796,8 +1796,9 @@ int outstreambuf::sync() { // used for output buffer only
 			cout_buf->pubsync();
 		return fout_buf->pubsync();
 	} else {
-		if (verbose_mode >= VB_MED)
-			return cout_buf->pubsync();
+#ifdef _MPI_DEBUG
+		return cout_buf->pubsync();
+#endif
 	}
 	return 0;
 }
