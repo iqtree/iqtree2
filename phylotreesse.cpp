@@ -705,10 +705,17 @@ void PhyloTree::computeTipPartialLikelihood() {
             int i = 0;
             int k;
         
+
+#if 0 
+            // TODO: this is randomly drawn every time computing partial likelihood again
              for(k = 0; k < N; k++) {
                  int r_int = random_int(M);
                  if (r_int < j) i++;
              }
+#else
+            i = N*j/M;
+#endif
+            
              int real_state;
              if (i == 0) 
                 real_state = id2;

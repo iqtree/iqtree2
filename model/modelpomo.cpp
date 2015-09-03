@@ -47,7 +47,7 @@ void ModelPoMo::init(const char *model_name,
 
     // Mutation probabilities point to the rates of the DNA model.
     mutation_prob = dna_model->rates;
-	for (int i = 0; i < 6; i++) mutation_prob[i] = 1e-5;
+	for (int i = 0; i < 6; i++) mutation_prob[i] = POMO_INIT_RATE;
 
     // Frequencies of the boundary states (fixed states, e.g., 10A).
     // These correspond to the state frequencies in the DNA

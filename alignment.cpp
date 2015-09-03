@@ -1938,6 +1938,7 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
             }
             else if (count == 0) {
                 state = STATE_UNKNOWN;
+                outError("Unknown state not supported yet");
                 everything_ok = false; // BQM: STATE_UNKNOWN is not known right now, will be set once data reading is completed
                 // if (verbose_mode >= VB_MAX) {
                 //     cout << "WARNING: Population without bases on line " << line_num << "." << endl;

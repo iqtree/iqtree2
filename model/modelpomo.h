@@ -7,9 +7,12 @@
 /*       (phylotreesse.cpp has to be changed to). */
 /* TODO: Implement different DNA subsitution models. */
 
-const double POMO_MIN_RATE = 3e-6;
-const double POMO_MAX_RATE = 1e-4;
-const double POMO_MIN_REL_FREQ = 0.5;
+//const double POMO_MIN_RATE = 3e-6;
+//const double POMO_MAX_RATE = 1e-4;
+const double POMO_MIN_RATE =  1e-5;
+const double POMO_INIT_RATE = 1e-4;
+const double POMO_MAX_RATE =  1e-3;
+const double POMO_MIN_REL_FREQ = 0.5; // one nucleotide might occur 10 times more than the others
 const double POMO_MAX_REL_FREQ = 2.0;
 
 class ModelPoMo : public ModelGTR
