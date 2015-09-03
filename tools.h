@@ -1613,6 +1613,9 @@ public:
 	/** true to count all distinct trees visited during tree search */
 	bool count_trees;
 
+    /** true to do random sampling for PoMo model, false to do binomial sampling */
+    bool pomo_random_sampling;
+
 	/* /\** */
 	/*  * If `true`, Counts File input type has been specified with "-st */
 	/*  * CF[ps]", where `ps` is optional and denotes a custome virtual */

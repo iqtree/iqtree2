@@ -863,6 +863,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.print_partition_info = false;
 	params.print_conaln = false;
 	params.count_trees = false;
+    params.pomo_random_sampling = false;
 	// params.pomo_counts_file_flag = false;
 	// params.pomo_pop_size = 10;
 	params.print_branch_lengths = false;
@@ -1558,6 +1559,12 @@ void parseArg(int argc, char *argv[], Params &params) {
                 }
 				continue;
 			}
+            
+            if (strcmp(argv[cnt], "-pomo-random-sampling") == 0) {
+                params.pomo_random_sampling = true;
+                continue;
+            }
+            
 			if (strcmp(argv[cnt], "-starttree") == 0) {
 				cnt++;
 				if (cnt >= argc)
