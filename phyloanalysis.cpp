@@ -52,6 +52,7 @@
 #include "model/modelset.h"
 #include "timeutil.h"
 #include "upperbounds.h"
+#include "MPIHelper.h"
 
 
 void reportReferences(Params &params, ofstream &out, string &original_model) {
@@ -1678,7 +1679,8 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
     }
 
     iqtree.initializeAllPartialLh();
-	double initEpsilon = params.min_iterations == 0 ? params.modelEps : (params.modelEps * 10);
+	double initEpsilon = params.min_iterations == 0 ? params.modelEps : (params.modelEps * 100);
+	Params::getInstance().testAlphaEps = initEpsilon;
 
 	if (iqtree.getRate()->name.find("+I+G") != string::npos) {
 		if (params.alpha_invar_file != NULL) { // COMPUTE TREE LIKELIHOOD BASED ON THE INPUT ALPHA AND P_INVAR VALUE
@@ -1701,8 +1703,8 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 	}
 
     // Optimize model parameters and branch lengths using ML for the initial tree
-	iqtree.clearAllPartialLH();
 	string initTree;
+	iqtree.clearAllPartialLH();
 	initTree = iqtree.optimizeModelParameters(true, initEpsilon);
 	// Update best tree
 	iqtree.candidateTrees.update(initTree, iqtree.getCurScore());
@@ -1714,47 +1716,32 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
         params.compute_ml_dist = false;
     }
 
-    if ((!params.dist_file && params.compute_ml_dist) || params.leastSquareBranch) {
-        computeMLDist(params, iqtree, dist_file, getCPUTime());
-        if (!params.user_file) {
-            // NEW 2015-08-10: always compute BIONJ tree into the candidate set
-            iqtree.resetCurScore();
-            double start_bionj = getRealTime();
-            iqtree.computeBioNJ(params, iqtree.aln, dist_file);
-            cout << getRealTime() - start_bionj << " seconds" << endl;
-            if (iqtree.isSuperTree())
-                iqtree.wrapperFixNegativeBranch(true);
-            else
-                iqtree.wrapperFixNegativeBranch(false);
-            if (params.start_tree == STT_BIONJ) {
-                initTree = iqtree.optimizeModelParameters(params.min_iterations==0, initEpsilon);
-            } else {
-                initTree = iqtree.optimizeBranches();
-            }
-            cout << "Log-likelihood of BIONJ tree: " << iqtree.getCurScore() << endl;
-            iqtree.candidateTrees.update(initTree, iqtree.getCurScore());
-        }
-    }
+	if (MPIHelper::getInstance().getProcessID() == MASTER) {
+		if ((!params.dist_file && params.compute_ml_dist) || params.leastSquareBranch) {
+			computeMLDist(params, iqtree, dist_file, getCPUTime());
+			if (!params.user_file) {
+				// NEW 2015-08-10: always compute BIONJ tree into the candidate set
+				iqtree.resetCurScore();
+				double start_bionj = getRealTime();
+				iqtree.computeBioNJ(params, iqtree.aln, dist_file);
+				cout << getRealTime() - start_bionj << " seconds" << endl;
+				if (iqtree.isSuperTree())
+					iqtree.wrapperFixNegativeBranch(true);
+				else
+					iqtree.wrapperFixNegativeBranch(false);
+				if (params.start_tree == STT_BIONJ) {
+					initTree = iqtree.optimizeModelParameters(params.min_iterations == 0, initEpsilon);
+				} else {
+					initTree = iqtree.optimizeBranches();
+				}
+				cout << "Log-likelihood of BIONJ tree: " << iqtree.getCurScore() << endl;
+				iqtree.candidateTrees.update(initTree, iqtree.getCurScore());
+			}
+		}
+	}
 
 	double cputime_search_start = getCPUTime();
     double realtime_search_start = getRealTime();
-
-//    if (params.min_iterations > 0) {
-//        double initTime = getRealTime();
-//
-//        if (!params.user_file && (params.start_tree == STT_PARSIMONY || params.start_tree == STT_PLL_PARSIMONY)) {
-//        	iqtree.initCandidateTreeSet(params.numInitTrees - iqtree.candidateTrees.size(), params.numNNITrees);
-//        	assert(iqtree.candidateTrees.size() != 0);
-//        	cout << "Finish initializing candidate tree set. ";
-//        	cout << "Number of distinct locally optimal trees: " << iqtree.candidateTrees.size() << endl;
-//        } else {
-//            cout << "Doing NNI on the initial tree ... " << endl;
-//            pair<int, int> nniInfo = iqtree.doNNISearch();
-//        }
-//        cout << "Current best tree score: " << iqtree.candidateTrees.getBestScore() << " / CPU time: "
-//                << getRealTime() - initTime << endl;
-//	}
-
 
     if (params.leastSquareNNI) {
     	iqtree.computeSubtreeDists();

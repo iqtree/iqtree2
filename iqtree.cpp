@@ -434,24 +434,13 @@ void IQTree::addCurTreeToCandidateSet() {
 }
 
 void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
-    int numTrees;
-#ifdef _IQTREE_MPI
-    numTrees =  nParTrees / MPIHelper::getInstance().getNumProcesses();
-    int rest = nParTrees % MPIHelper::getInstance().getNumProcesses();
-    if (rest != 0) {
-        numTrees = numTrees + 1;
-    }
-#else
-    numTrees = nParTrees;
-#endif
+
     cout << "--------------------------------------------------------------------" << endl;
     cout << "|             INITIALIZING CANDIDATE TREE SET                      |" << endl;
     cout << "--------------------------------------------------------------------" << endl;
 
     cout << "Generating " << nParTrees << " parsimony trees... ";
-#ifdef _IQTREE_MPI
-    cout << "(" << numTrees << " parsimony trees on each node) ";
-#endif
+
     cout.flush();
 
     double startTime = getRealTime();
@@ -475,11 +464,12 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
 #endif
 
     string curParsTree;
-    for (int treeNr = 1; treeNr < numTrees; treeNr++) {
+    for (int treeNr = 1; treeNr < nParTrees; treeNr++) {
         // This is to make sure that when parismony trees are created on different processes
         // no duplicated seeds are used
         //int seedPadding = Params::getInstance().numInitTrees * MPIHelper::getInstance().getProcessID();
-        int randSeed = params->ran_seed + treeNr;
+        //int randSeed = params->ran_seed + treeNr;
+        int randSeed = params->ran_seed + treeNr + MPIHelper::getInstance().getProcessID() * nParTrees;
         curParsTree = generateParsimonyTree(randSeed);
         candidateTrees.update(curParsTree, -DBL_MAX);
     }
@@ -536,6 +526,15 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
     inTrees = MPIHelper::getInstance().getTreesFromOthers(numNodes);
     cout << inTrees.getNumTrees() << " trees received from " << numNodes;
     cout << " processes" << endl;
+
+    CandidateSet inCandTrees;
+    inCandTrees.setAln(this->aln);
+    for (int i = 0; i < inTrees.getNumTrees(); i++) {
+        pair<string, double> tree = inTrees.getTree(i);
+        inCandTrees.update(tree.first, tree.second);
+    }
+    cout << "Number of distinct trees received: " << inCandTrees.size() << endl;
+
     for (int i = 0; i < inTrees.getNumTrees(); i++) {
         pair<string, double> tree = inTrees.getTree(i);
         candidateTrees.update(tree.first, tree.second);
@@ -1737,9 +1736,16 @@ double IQTree::doTreeSearch() {
 
     if (!params->user_file && (params->start_tree == STT_PARSIMONY || params->start_tree == STT_PLL_PARSIMONY)) {
 #ifdef _IQTREE_MPI
-        // On each process, 2 trees were already created (1 parsimony and 1 bionj)
-        int numRemainingTrees = params->numInitTrees - MPIHelper::getInstance().getNumProcesses() * 2;
-        initCandidateTreeSet(numRemainingTrees, params->numNNITrees);
+        int numTreesForProcess = params->numInitTrees / MPIHelper::getInstance().getNumProcesses();
+        int rest = params->numInitTrees % MPIHelper::getInstance().getNumProcesses();
+        if (rest != 0) {
+            numTreesForProcess++;
+        }
+        if (MPIHelper::getInstance().getProcessID() == MASTER) {
+            numTreesForProcess--;
+        }
+
+        initCandidateTreeSet(numTreesForProcess, params->numNNITrees);
 #else
         initCandidateTreeSet(params->numInitTrees - 2, params->numNNITrees);
 #endif

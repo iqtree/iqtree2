@@ -21,6 +21,7 @@ TreeCollection::TreeCollection(vector<string>& trees, vector<double>& scores) {
 }
 
 pair<string, double> TreeCollection::getTree(int i) {
+    assert(treeStrings.size() == scores.size());
     return std::make_pair(treeStrings[i], scores[i]);
 }
 
