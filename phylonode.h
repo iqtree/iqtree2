@@ -32,8 +32,8 @@ public:
     friend class PhyloSuperTreePlen;
 
     /**
-        construct class with a node and length		@param anode the other end of the branch
-
+        construct class with a node and length		
+        @param anode the other end of the branch
         @param alength length of branch
      */
     PhyloNeighbor(Node *anode, double alength) : Neighbor(anode, alength) {
@@ -98,6 +98,14 @@ public:
 	int get_partial_lh_computed(){
 	return partial_lh_computed;
 	}
+
+    /**
+        get branch length for a mixture class c, used by heterotachy model (PhyloNeighborMixlen)
+        the default is just to return a single branch length
+        @param c class index
+        @return branch length for class c
+    */
+    virtual double getLength(int c) { return length; }
 
 private:
 

@@ -24,7 +24,7 @@
 #include "modelsubst.h"
 #include "rateheterogeneity.h"
 #include "modelsblock.h"
-
+#include "alignment.h"
 
 ModelsBlock *readModelsDefinition(Params &params);
 

@@ -40,6 +40,19 @@ public:
     /** branch lengths for mixture */
     DoubleVector lengths;
 
+    /**
+        get branch length for a mixture class c, used by heterotachy model (PhyloNeighborMixlen)
+        the default is just to return a single branch length
+        @param c class index
+        @return branch length for class c
+    */
+    virtual double getLength(int c) { 
+        if (lengths.empty())
+            return length; 
+        assert(c < lengths.size());
+        return lengths[c];
+    }
+
 protected:
 
 };

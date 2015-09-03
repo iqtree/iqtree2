@@ -367,6 +367,11 @@ public:
     }
 
     /**
+        @return true if this is a tree with mixture branch lengths, default: false
+    */
+    virtual bool isMixlen() { return false; }
+
+    /**
             allocate a new node. Override this if you have an inherited Node class.
             @param node_id node ID
             @param node_name node name
