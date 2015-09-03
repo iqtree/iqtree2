@@ -13,6 +13,10 @@
 #include "iqtree.h"
 
 
+/**
+    Phylogenetic tree with mixture of branch lengths
+    Started within joint project with Stephen Crotty
+*/
 class PhyloTreeMixlen : public IQTree {
 
 public:
@@ -23,6 +27,11 @@ public:
     PhyloTreeMixlen();
 
     PhyloTreeMixlen(Alignment *aln, int mixlen);
+
+    /**
+        @return true if this is a tree with mixture branch lengths, default: false
+    */
+    virtual bool isMixlen() { return true; }
 
     /**
         set number of mixture branch lengths
