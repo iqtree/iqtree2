@@ -768,10 +768,18 @@ void PhyloTree::computeTipPartialLikelihood() {
             if (id1 == 0) k = id2 - 1;
             else k = id1 + id2;
             int real_state = 4 + k*(N-2) + k;
+            
+            double sum_lh = 0.0;
             for (i = 1; i < N; i++, real_state++) {
                 assert(real_state < nstates);
                 real_partial_lh[real_state] = exp(res + j*logv[i] + (M-j) * logv[N-i]);
+                sum_lh += real_partial_lh[real_state];
             }
+            
+            // normalize partial likelihoods to total of 1.0
+            sum_lh = 1.0/sum_lh;
+            for (i = 0; i < nstates; i++)
+                real_partial_lh[i] *= sum_lh;
             
             // BUG FIX 2015-09-03: tip_partial_lh stores inner product of real_partial_lh and inverse eigenvector for each state
             memset(this_tip_partial_lh, 0, nmixtures*nstates*sizeof(double));
