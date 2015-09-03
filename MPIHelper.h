@@ -9,6 +9,7 @@
 #include <mpi.h>
 #include "tools.h"
 #include "TreeCollection.h"
+#include "ObjectStream.h"
 
 #define MASTER 0
 
@@ -22,8 +23,6 @@ class MPIHelper {
 public:
     static MPIHelper& getInstance();
 
-    CandidateSet receiveTrees(int &MPISource);
-
     /**
      *  Get all the trees that have been sent to the current node
      */
@@ -32,7 +31,12 @@ public:
     /**
      *  Send a set of candidate trees to all remaining nodes
      */
-    void sendTreesToOthers(TreeCollection &trees, bool blocking);
+    void sendTreesToOthers(TreeCollection &trees);
+
+    /**
+     *  Remove the buffers for finished messages
+     */
+    int cleanUpMessages();
 
     int getNumProcesses() const {
         return numProcesses;
@@ -58,6 +62,8 @@ private:
     int processID;
 
     int numProcesses;
+
+    list< pair<MPI_Request*, ObjectStream*> > messages;
 };
 
 #endif //IQTREE_MPIHELPER_H

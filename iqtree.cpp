@@ -514,11 +514,11 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
     cout << candidateTrees.size() << " distinct starting trees" << endl;
 
 #ifdef _IQTREE_MPI
-    CandidateSet bestTrees = candidateTrees.getBestCandidateTrees(candidateTrees.size());
+    CandidateSet bestCandidateTrees = candidateTrees.getBestCandidateTrees(candidateTrees.size());
     // Send all trees to other nodes
-    TreeCollection outTrees(bestTrees);
+    TreeCollection outTrees(bestCandidateTrees);
     bool blocking = false;
-    MPIHelper::getInstance().sendTreesToOthers(outTrees, blocking);
+    MPIHelper::getInstance().sendTreesToOthers(outTrees);
 
     // Get trees from other nodes
     TreeCollection inTrees;
@@ -527,42 +527,44 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
     cout << inTrees.getNumTrees() << " trees received from " << numNodes;
     cout << " processes" << endl;
 
-    CandidateSet inCandTrees;
-    inCandTrees.setAln(this->aln);
-    for (int i = 0; i < inTrees.getNumTrees(); i++) {
-        pair<string, double> tree = inTrees.getTree(i);
-        inCandTrees.update(tree.first, tree.second);
-    }
-    cout << "Number of distinct trees received: " << inCandTrees.size() << endl;
-
     for (int i = 0; i < inTrees.getNumTrees(); i++) {
         pair<string, double> tree = inTrees.getTree(i);
         candidateTrees.update(tree.first, tree.second);
     }
     cout << candidateTrees.size() << " distinct starting trees" << endl;
+    int numMsgCleaned = MPIHelper::getInstance().cleanUpMessages();
+    cout << "Cleaned " << numMsgCleaned << " messages" << endl;
     MPI_Barrier(MPI_COMM_WORLD);
     MPI_Finalize();
     exit(0);
 #endif
+    vector<string> bestTreeStrings = candidateTrees.getBestTreeStrings(Params::getInstance().numNNITrees);
 
-    // Only select the best nNNITrees for doing NNI search
-    CandidateSet initParsimonyTrees = candidateTrees.getBestCandidateTrees(Params::getInstance().numNNITrees);
+#ifdef _IQTREE_MPI
+    int numTreesPerProc = Params::getInstance().numNNITrees / MPIHelper::getInstance().getNumProcesses();
+    int rest = Params::getInstance().numNNITrees % MPIHelper::getInstance().getNumProcesses();
+    int numBestTrees = Params::getInstance().numNNITrees;
+    if (rest != 0) {
+        numTreesPerProc++;
+        numBestTrees = numTreesPerProc * MPIHelper::getInstance().getNumProcesses();
+        bestTreeStrings = candidateTrees.getBestTreeStrings(numBestTrees);
+    }
+    cout << "Do NNI search on " << bestTreeStrings.size() << " initial tree on " <<
+    MPIHelper::getInstance().getNumProcesses() << " processes" << endl;
+    vector<string> myTreeStrings;
+    int i = MPIHelper::getInstance().getProcessID() * numTreesPerProc;
+    int j = 0;
+    for ( ; j < numTreesPerProc; i++, j++) {
 
+    }
+#endif
     cout << "Optimizing top parsimony trees with NNI..." << endl;
-    CandidateSet::reverse_iterator rit;
     stop_rule.setCurIt(1);
-    for (rit = initParsimonyTrees.rbegin(); rit != initParsimonyTrees.rend(); ++rit, stop_rule.setCurIt(
-            stop_rule.getCurIt() + 1)) {
+    for (vector<string>::iterator it = bestTreeStrings.begin(); it != bestTreeStrings.end(); it++) {
         pair<int, int> nniInfo;
         double initLogl;
-        readTreeString(rit->second.tree);
+        readTreeString(*it);
         initLogl = computeLogL();
-//         THIS HAPPEN WHENEVER USING FULL PARTITION MODEL
-//        if (isSuperTree() && params->partition_type == 0) {
-//        	if (verbose_mode >= VB_MED)
-//        		cout << "curScore: " << getCurScore() << " expected score: " << rit->first << endl;
-//        	optimizeBranches(2);
-//        }
         nniInfo = doNNISearch();
         cout << "Iteration " << stop_rule.getCurIt();
         if (verbose_mode >= VB_MED) {
@@ -571,6 +573,7 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
         }
         cout << " /  Logl: " << getCurScore() ;
         cout << " / Time: " << convert_time(getRealTime() - params->start_real_time) << endl;
+        stop_rule.setCurIt(stop_rule.getCurIt() + 1);
     }
 
     if (params->fixStableSplits) {
@@ -1986,7 +1989,7 @@ double IQTree::doTreeSearch() {
                     // 	((PhyloSuperTreePlen*)this)->printNNIcasesNUM();
                 }
 
-                readTreeString(candidateTrees.getTopTrees()[0]);
+                readTreeString(candidateTrees.getBestTreeStrings()[0]);
 
                 if (testNNI)
                     outNNI.close();

@@ -112,7 +112,7 @@ public:
      *  @return
      *  	Vector of current best trees
      */
-    vector<string> getTopTrees(int numTree = 0);
+    vector<string> getBestTreeStrings(int numTree = 0);
 
 
     /**

@@ -58,7 +58,7 @@ string CandidateSet::getRandCandTree() {
 	return "";
 }
 
-vector<string> CandidateSet::getTopTrees(int numTree) {
+vector<string> CandidateSet::getBestTreeStrings(int numTree) {
 	if (numTree == 0 || numTree > maxSize) {
 		numTree = maxSize;
 	}

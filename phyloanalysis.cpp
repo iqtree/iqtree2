@@ -1555,7 +1555,7 @@ void printFinalSearchInfo(Params &params, IQTree &iqtree, double search_cpu_time
 }
 
 void printTrees(CandidateSet &candidateTrees, Params &params, string suffix) {
-	vector<string> trees = candidateTrees.getTopTrees();
+	vector<string> trees = candidateTrees.getBestTreeStrings();
 	ofstream treesOut((string(params.out_prefix) + suffix).c_str(),
 			ofstream::out);
 	for (vector<string>::iterator it = trees.begin(); it != trees.end(); it++) {
