@@ -63,6 +63,8 @@ int MPIHelper::cleanUpMessages() {
     while ( it != messages.end() ) {
         MPI_Test(it->first, &flag, &status);
         if (flag) {
+            delete it->first;
+            delete it->second;
             numMsgCleaned++;
             messages.erase(it++);
         } else {
