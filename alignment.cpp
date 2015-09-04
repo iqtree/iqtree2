@@ -2870,13 +2870,16 @@ Alignment::~Alignment()
 
 double Alignment::computeObsDist(int seq1, int seq2) {
     int diff_pos = 0, total_pos = 0;
-    for (iterator it = begin(); it != end(); it++)
-        if  ((*it)[seq1] < num_states && (*it)[seq2] < num_states) {
+    for (iterator it = begin(); it != end(); it++) {
+        int state1 = convertPomoState((*it)[seq1]);
+        int state2 = convertPomoState((*it)[seq2]);
+        if  (state1 < num_states && state2 < num_states) {
             //if ((*it)[seq1] != STATE_UNKNOWN && (*it)[seq2] != STATE_UNKNOWN) {
             total_pos += (*it).frequency;
             if ((*it)[seq1] != (*it)[seq2] )
                 diff_pos += (*it).frequency;
         }
+    }
     if (!total_pos)
         return MAX_GENETIC_DIST; // return +INF if no overlap between two sequences
     return ((double)diff_pos) / total_pos;
