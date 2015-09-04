@@ -453,9 +453,9 @@ void ModelGTR::setBounds(double *lower_bound, double *upper_bound, bool *bound_c
 
 	if (freq_type == FREQ_ESTIMATE) {
 		for (i = ndim-num_states+2; i <= ndim; i++) {
-//            lower_bound[i] = MIN_FREQUENCY/state_freq[highest_freq_state];
+            lower_bound[i] = MIN_FREQUENCY/state_freq[highest_freq_state];
 //			upper_bound[i] = state_freq[highest_freq_state]/MIN_FREQUENCY;
-            lower_bound[i]  = 0.001;
+//            lower_bound[i]  = MIN_FREQUENCY;
             upper_bound[i] = 100.0;
             bound_check[i] = false;
         }
@@ -487,8 +487,10 @@ double ModelGTR::optimizeParameters(double gradient_epsilon) {
 	setVariables(variables);
 	setBounds(lower_bound, upper_bound, bound_check);
 	//packData(variables, lower_bound, upper_bound, bound_check);
-//	score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound, bound_check, max(gradient_epsilon, TOL_RATE));
-    score = -L_BFGS_B(ndim, variables+1, lower_bound+1, upper_bound+1, max(gradient_epsilon, TOL_RATE));
+    if (phylo_tree->params->optimize_alg.find("BFGS-B") == string::npos)
+        score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound, bound_check, max(gradient_epsilon, TOL_RATE));
+    else
+        score = -L_BFGS_B(ndim, variables+1, lower_bound+1, upper_bound+1, max(gradient_epsilon, TOL_RATE));
 
 	getVariables(variables);
 	//if (freq_type == FREQ_ESTIMATE) scaleStateFreq(true);
