@@ -810,7 +810,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.min_correlation = 0.99;
     params.step_iterations = 100;
     params.store_candidate_trees = false;
-	params.print_ufboot_trees = false;
+	params.print_ufboot_trees = 0;
     //const double INF_NNI_CUTOFF = -1000000.0;
     params.nni_cutoff = -1000000.0;
     params.estimate_nni_cutoff = false;
@@ -2296,7 +2296,12 @@ void parseArg(int argc, char *argv[], Params &params) {
 				continue;
 			}
 			if (strcmp(argv[cnt], "-wbt") == 0) {
-				params.print_ufboot_trees = true;
+				params.print_ufboot_trees = 1;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-wbtl") == 0) {
+                // print ufboot trees with branch lengths
+				params.print_ufboot_trees = 2;
 				continue;
 			}
 			if (strcmp(argv[cnt], "-bs") == 0) {
@@ -2900,6 +2905,7 @@ void usage_iqtree(char* argv[], bool full_command) {
             << endl << "ULTRAFAST BOOTSTRAP:" << endl
             << "  -bb <#replicates>    Ultrafast bootstrap (>=1000)" << endl
             << "  -wbt                 Write bootstrap trees to .ufboot file (default: none)" << endl
+//            << "  -wbtl                Like -wbt and writing branch lengths also" << endl
 //            << "  -n <#iterations>     Minimum number of iterations (default: 100)" << endl
             << "  -nm <#iterations>    Maximum number of iterations (default: 1000)" << endl
 			<< "  -nstep <#iterations> #Iterations for UFBoot stopping rule (default: 100)" << endl

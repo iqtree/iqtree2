@@ -1522,7 +1522,7 @@ public:
     bool store_candidate_trees;
 
 	/** true to print all UFBoot trees to a file */
-	bool print_ufboot_trees;
+	int print_ufboot_trees;
 
     /****** variables for NNI cutoff heuristics ******/
 

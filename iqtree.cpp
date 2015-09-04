@@ -2902,7 +2902,10 @@ void IQTree::writeUFBootTrees(Params &params) {
 		}
 		// now print to file
 		for (j = 0; j < trees.tree_weights[i]; j++)
-			trees[i]->printTree(out, WT_NEWLINE);
+            if (params.print_ufboot_trees == 1)
+                trees[i]->printTree(out, WT_NEWLINE);
+            else
+                trees[i]->printTree(out, WT_NEWLINE + WT_BR_LEN);
 	}
 	out.close();
 	cout << "UFBoot trees printed to " << filename << endl;
