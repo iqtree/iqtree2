@@ -1548,7 +1548,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 					throw "Use -st BIN or -st DNA or -st AA or -st CODON or -st MORPH";
                 string arg = argv[cnt];
                 params.sequence_type = argv[cnt];
-                if (arg.substr(0,2) == "CF") {
+                if (arg.substr(0,2) == "CF" || arg.substr(0,2) == "CR") {
                     if (arg.length() > 2) {
                         int ps = convert_int(arg.substr(2).c_str());
                         if ( (ps < 5) || (ps > 20)) {

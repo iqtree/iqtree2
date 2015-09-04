@@ -1786,11 +1786,15 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
     bool everything_ok = true;
     int fails = 0;
 
+    bool random_sampling = false;
+
     // Check if sequence type flag matches and for custom virtual population size.
     if (sequence_type) {
         string st (sequence_type);
-        if (st.substr(0,2) != "CF")
-            throw "Counts File detected but sequence type (-st) is not 'CF'.";
+        if (st.substr(0,2) != "CF" && st.substr(0,2) != "CR")
+            throw "Counts File detected but sequence type (-st) is neither 'CF' nor 'CR'.";
+        if (st.substr(0,2) == "CR")
+            random_sampling = true;
         string virt_pop_size_str = st.substr(2);
         if (virt_pop_size_str != "") {
             int virt_pop_size = atoi(virt_pop_size_str.c_str());
@@ -1938,8 +1942,10 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
             }
             else if (count == 0) {
                 state = STATE_UNKNOWN;
-                outError("Unknown state not supported yet");
-                everything_ok = false; // BQM: STATE_UNKNOWN is not known right now, will be set once data reading is completed
+                if (!random_sampling) {
+                    outError("Unknown state not supported yet");
+                    everything_ok = false; // BQM: STATE_UNKNOWN is not known right now, will be set once data reading is completed
+                }
                 // if (verbose_mode >= VB_MAX) {
                 //     cout << "WARNING: Population without bases on line " << line_num << "." << endl;
                 // }
@@ -1957,46 +1963,49 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
             	// throw err_str.str();
             }
             else if (count == 2) {
-                // // FIXME: This should be removed but is needed for
-                // // debugging purposes so that the likelihood is
-                // // deterministic for a given tree.
-                // if (sum == N) {
-                //     sampled_values[id1] = values[id1];
-                //     sampled_values[id2] = values[id2];
-                // }
-                // // Binomial sampling.  2 bases are present.
-                // else {
-                //     for(int k = 0; k < N; k++) {
-                //         r_int = random_int(sum);
-                //         if (r_int < values[id1]) sampled_values[id1]++;
-                //         else sampled_values[id2]++;
-                //     }
-                // }
-                // if (sampled_values[id1] == 0) state = id2;
-                // else if (sampled_values[id2] == 0) state = id1;
-                // else {
-                //     // Convert sampled_values to state.
-                //     // FIXME: This could be improved.
-                //     if (id1 == 0) j = id2 - 1;
-                //     else j = id1 + id2;
-                //     state = nnuc + j*(N-2) + j + sampled_values[id1] - 1;
-                // }
-
-                /* BQM 2015-07: store both states now */
-                if (values[id1] >= 16384 || values[id2] >= 16384)
-                    // Cannot add sites where more than 16384
-                    // individuals have the same base within one
-                    // population.
-                    everything_ok = false;
-                uint32_t pomo_state = (id1 | (values[id1]) << 2) | ((id2 | (values[id2]<<2))<<16);
-                IntIntMap::iterator pit = pomo_states_index.find(pomo_state);
-                if (pit == pomo_states_index.end()) { // not found
-                    state = pomo_states_index[pomo_state] = pomo_states.size();
-                    pomo_states.push_back(pomo_state);
+            
+                if (random_sampling) {
+                     // FIXME: This should be removed but is needed for
+                     // debugging purposes so that the likelihood is
+                     // deterministic for a given tree.
+                     if (sum == N) {
+                         sampled_values[id1] = values[id1];
+                         sampled_values[id2] = values[id2];
+                     }
+                     // Binomial sampling.  2 bases are present.
+                     else {
+                         for(int k = 0; k < N; k++) {
+                             r_int = random_int(sum);
+                             if (r_int < values[id1]) sampled_values[id1]++;
+                             else sampled_values[id2]++;
+                         }
+                     }
+                     if (sampled_values[id1] == 0) state = id2;
+                     else if (sampled_values[id2] == 0) state = id1;
+                     else {
+                         // Convert sampled_values to state.
+                         // FIXME: This could be improved.
+                         if (id1 == 0) j = id2 - 1;
+                         else j = id1 + id2;
+                         state = nnuc + j*(N-2) + j + sampled_values[id1] - 1;
+                     }
                 } else {
-                    state = pit->second;
+                    /* BQM 2015-07: store both states now */
+                    if (values[id1] >= 16384 || values[id2] >= 16384)
+                        // Cannot add sites where more than 16384
+                        // individuals have the same base within one
+                        // population.
+                        everything_ok = false;
+                    uint32_t pomo_state = (id1 | (values[id1]) << 2) | ((id2 | (values[id2]<<2))<<16);
+                    IntIntMap::iterator pit = pomo_states_index.find(pomo_state);
+                    if (pit == pomo_states_index.end()) { // not found
+                        state = pomo_states_index[pomo_state] = pomo_states.size();
+                        pomo_states.push_back(pomo_state);
+                    } else {
+                        state = pit->second;
+                    }
+                    state += num_states; // make the state larger than num_states
                 }
-                state += num_states; // make the state larger than num_states
             }
             else {
                 err_str << "Unexpected error on line number " << line_num << ".";
