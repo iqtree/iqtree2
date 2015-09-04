@@ -1738,27 +1738,27 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 
     // TODO: 2015-08-31 Dom
     // Commented out because BIONJ trees need to calculate ML and this has not been tested with PoMo yet.
-    // if ((!params.dist_file && params.compute_ml_dist) || params.leastSquareBranch) {
-    //     computeMLDist(params, iqtree, dist_file, getCPUTime());
-    //     if (!params.user_file && params.start_tree != STT_RANDOM_TREE) {
-    //         // NEW 2015-08-10: always compute BIONJ tree into the candidate set
-    //         iqtree.resetCurScore();
-    //         double start_bionj = getRealTime();
-    //         iqtree.computeBioNJ(params, iqtree.aln, dist_file);
-    //         cout << getRealTime() - start_bionj << " seconds" << endl;
-    //         if (iqtree.isSuperTree())
-    //             iqtree.wrapperFixNegativeBranch(true);
-    //         else
-    //             iqtree.wrapperFixNegativeBranch(false);
-    //         if (params.start_tree == STT_BIONJ) {
-    //             initTree = iqtree.optimizeModelParameters(params.min_iterations==0, initEpsilon);
-    //         } else {
-    //             initTree = iqtree.optimizeBranches();
-    //         }
-    //         cout << "Log-likelihood of BIONJ tree: " << iqtree.getCurScore() << endl;
-    //         iqtree.candidateTrees.update(initTree, iqtree.getCurScore());
-    //     }
-    // }
+     if ((!params.dist_file && params.compute_ml_dist) || params.leastSquareBranch) {
+         computeMLDist(params, iqtree, dist_file, getCPUTime());
+         if (!params.user_file && params.start_tree != STT_RANDOM_TREE) {
+             // NEW 2015-08-10: always compute BIONJ tree into the candidate set
+             iqtree.resetCurScore();
+             double start_bionj = getRealTime();
+             iqtree.computeBioNJ(params, iqtree.aln, dist_file);
+             cout << getRealTime() - start_bionj << " seconds" << endl;
+             if (iqtree.isSuperTree())
+                 iqtree.wrapperFixNegativeBranch(true);
+             else
+                 iqtree.wrapperFixNegativeBranch(false);
+             if (params.start_tree == STT_BIONJ) {
+                 initTree = iqtree.optimizeModelParameters(params.min_iterations==0, initEpsilon);
+             } else {
+                 initTree = iqtree.optimizeBranches();
+             }
+             cout << "Log-likelihood of BIONJ tree: " << iqtree.getCurScore() << endl;
+             iqtree.candidateTrees.update(initTree, iqtree.getCurScore());
+         }
+     }
 
 	double cputime_search_start = getCPUTime();
     double realtime_search_start = getRealTime();

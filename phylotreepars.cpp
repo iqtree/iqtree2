@@ -120,6 +120,9 @@ void PhyloTree::computePartialParsimonyFast(PhyloNeighbor *dad_branch, PhyloNode
 //                    continue;
             	int state = pat->at(leafid);
                 int freq = pat->frequency;
+                if (aln->seq_type == SEQ_POMO && state >= nstates && state < aln->STATE_UNKNOWN) {
+                    state = aln->convertPomoState(state);
+                }                
                 if (state < nstates) {
                     for (int j = 0; j < freq; j++, site++) {
                         dad_branch->partial_pars[(site/UINT_BITS)*nstates+state] |= (1 << (site % UINT_BITS));

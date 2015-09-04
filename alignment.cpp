@@ -1786,11 +1786,15 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
     bool everything_ok = true;
     int fails = 0;
 
+    bool random_sampling = false;
+
     // Check if sequence type flag matches and for custom virtual population size.
     if (sequence_type) {
         string st (sequence_type);
-        if (st.substr(0,2) != "CF")
-            throw "Counts File detected but sequence type (-st) is not 'CF'.";
+        if (st.substr(0,2) != "CF" && st.substr(0,2) != "CR")
+            throw "Counts File detected but sequence type (-st) is neither 'CF' nor 'CR'.";
+        if (st.substr(0,2) == "CR")
+            random_sampling = true;
         string virt_pop_size_str = st.substr(2);
         if (virt_pop_size_str != "") {
             int virt_pop_size = atoi(virt_pop_size_str.c_str());
@@ -1938,8 +1942,10 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
             }
             else if (count == 0) {
                 state = STATE_UNKNOWN;
-                outError("Unknown state not supported yet");
-                everything_ok = false; // BQM: STATE_UNKNOWN is not known right now, will be set once data reading is completed
+                if (!random_sampling) {
+                    outError("Unknown state not supported yet");
+                    everything_ok = false; // BQM: STATE_UNKNOWN is not known right now, will be set once data reading is completed
+                }
                 // if (verbose_mode >= VB_MAX) {
                 //     cout << "WARNING: Population without bases on line " << line_num << "." << endl;
                 // }
@@ -1957,46 +1963,49 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
             	// throw err_str.str();
             }
             else if (count == 2) {
-                // // FIXME: This should be removed but is needed for
-                // // debugging purposes so that the likelihood is
-                // // deterministic for a given tree.
-                // if (sum == N) {
-                //     sampled_values[id1] = values[id1];
-                //     sampled_values[id2] = values[id2];
-                // }
-                // // Binomial sampling.  2 bases are present.
-                // else {
-                //     for(int k = 0; k < N; k++) {
-                //         r_int = random_int(sum);
-                //         if (r_int < values[id1]) sampled_values[id1]++;
-                //         else sampled_values[id2]++;
-                //     }
-                // }
-                // if (sampled_values[id1] == 0) state = id2;
-                // else if (sampled_values[id2] == 0) state = id1;
-                // else {
-                //     // Convert sampled_values to state.
-                //     // FIXME: This could be improved.
-                //     if (id1 == 0) j = id2 - 1;
-                //     else j = id1 + id2;
-                //     state = nnuc + j*(N-2) + j + sampled_values[id1] - 1;
-                // }
-
-                /* BQM 2015-07: store both states now */
-                if (values[id1] >= 16384 || values[id2] >= 16384)
-                    // Cannot add sites where more than 16384
-                    // individuals have the same base within one
-                    // population.
-                    everything_ok = false;
-                uint32_t pomo_state = (id1 | (values[id1]) << 2) | ((id2 | (values[id2]<<2))<<16);
-                IntIntMap::iterator pit = pomo_states_index.find(pomo_state);
-                if (pit == pomo_states_index.end()) { // not found
-                    state = pomo_states_index[pomo_state] = pomo_states.size();
-                    pomo_states.push_back(pomo_state);
+            
+                if (random_sampling) {
+                     // FIXME: This should be removed but is needed for
+                     // debugging purposes so that the likelihood is
+                     // deterministic for a given tree.
+                     if (sum == N) {
+                         sampled_values[id1] = values[id1];
+                         sampled_values[id2] = values[id2];
+                     }
+                     // Binomial sampling.  2 bases are present.
+                     else {
+                         for(int k = 0; k < N; k++) {
+                             r_int = random_int(sum);
+                             if (r_int < values[id1]) sampled_values[id1]++;
+                             else sampled_values[id2]++;
+                         }
+                     }
+                     if (sampled_values[id1] == 0) state = id2;
+                     else if (sampled_values[id2] == 0) state = id1;
+                     else {
+                         // Convert sampled_values to state.
+                         // FIXME: This could be improved.
+                         if (id1 == 0) j = id2 - 1;
+                         else j = id1 + id2;
+                         state = nnuc + j*(N-2) + j + sampled_values[id1] - 1;
+                     }
                 } else {
-                    state = pit->second;
+                    /* BQM 2015-07: store both states now */
+                    if (values[id1] >= 16384 || values[id2] >= 16384)
+                        // Cannot add sites where more than 16384
+                        // individuals have the same base within one
+                        // population.
+                        everything_ok = false;
+                    uint32_t pomo_state = (id1 | (values[id1]) << 2) | ((id2 | (values[id2]<<2))<<16);
+                    IntIntMap::iterator pit = pomo_states_index.find(pomo_state);
+                    if (pit == pomo_states_index.end()) { // not found
+                        state = pomo_states_index[pomo_state] = pomo_states.size();
+                        pomo_states.push_back(pomo_state);
+                    } else {
+                        state = pit->second;
+                    }
+                    state += num_states; // make the state larger than num_states
                 }
-                state += num_states; // make the state larger than num_states
             }
             else {
                 err_str << "Unexpected error on line number " << line_num << ".";
@@ -2861,13 +2870,16 @@ Alignment::~Alignment()
 
 double Alignment::computeObsDist(int seq1, int seq2) {
     int diff_pos = 0, total_pos = 0;
-    for (iterator it = begin(); it != end(); it++)
-        if  ((*it)[seq1] < num_states && (*it)[seq2] < num_states) {
+    for (iterator it = begin(); it != end(); it++) {
+        int state1 = convertPomoState((*it)[seq1]);
+        int state2 = convertPomoState((*it)[seq2]);
+        if  (state1 < num_states && state2 < num_states) {
             //if ((*it)[seq1] != STATE_UNKNOWN && (*it)[seq2] != STATE_UNKNOWN) {
             total_pos += (*it).frequency;
             if ((*it)[seq1] != (*it)[seq2] )
                 diff_pos += (*it).frequency;
         }
+    }
     if (!total_pos)
         return MAX_GENETIC_DIST; // return +INF if no overlap between two sequences
     return ((double)diff_pos) / total_pos;
@@ -3031,7 +3043,7 @@ void Alignment::computeStateFreq (double *state_freq, size_t num_unknown_states)
 
     for (iterator it = begin(); it != end(); it++)
         for (Pattern::iterator it2 = it->begin(); it2 != it->end(); it2++)
-            state_count[(int)*it2] += it->frequency;
+            state_count[convertPomoState((int)*it2)] += it->frequency;
 
     for (i = 0; i < num_states; i++)
         state_freq[i] = 1.0/num_states;
@@ -3126,8 +3138,9 @@ void Alignment::countStatePerSequence (unsigned *count_per_sequence) {
     memset(count_per_sequence, 0, sizeof(unsigned)*num_states*nseqs);
     for (iterator it = begin(); it != end(); it++)
         for (i = 0; i != nseqs; i++) {
-            if (it->at(i) < num_states) {
-                count_per_sequence[i*num_states + it->at(i)] += it->frequency;
+            int state = convertPomoState(it->at(i));
+            if (state < num_states) {
+                count_per_sequence[i*num_states + state] += it->frequency;
             }
         }
 }
@@ -3297,11 +3310,12 @@ void Alignment::getAppearance(StateType state, double *state_app) {
 			}
 		break;
     case SEQ_POMO:
-        state -= num_states;
-        assert(state < pomo_states.size());
-        // count the number of nucleotides
-        state_app[pomo_states[state] & 3] = 1.0;
-        state_app[(pomo_states[state] >> 16) & 3] = 1.0;
+//        state -= num_states;
+//        assert(state < pomo_states.size());
+//        // count the number of nucleotides
+//        state_app[pomo_states[state] & 3] = 1.0;
+//        state_app[(pomo_states[state] >> 16) & 3] = 1.0;
+        state_app[convertPomoState(state)] = 1.0;
         break;
 	default: assert(0); break;
 	}
