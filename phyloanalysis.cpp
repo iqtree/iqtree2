@@ -1756,7 +1756,8 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
     if (params.min_iterations > 0) {
         double initTime = getCPUTime();
 
-        if (!params.user_file && (params.start_tree == STT_PARSIMONY || params.start_tree == STT_PLL_PARSIMONY)) {
+//        if (!params.user_file && (params.start_tree == STT_PARSIMONY || params.start_tree == STT_PLL_PARSIMONY)) 
+//        {
         	iqtree.initCandidateTreeSet(params.numInitTrees - iqtree.candidateTrees.size(), params.numNNITrees);
         	assert(iqtree.candidateTrees.size() != 0);
         	cout << "Finish initializing candidate tree set. ";
@@ -1764,15 +1765,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
         	if (params.write_local_optimal_trees) {
         		printSuboptimalTrees(iqtree, params, ".init_suboptimal_trees");
         	}
-        } else {
-            int nni_count = 0;
-            int nni_steps = 0;
-            iqtree.stop_rule.setCurIt(2);
-            cout << "Doing NNI on the initial tree ... " << endl;
-            string tree = iqtree.doNNISearch(nni_count, nni_steps);
-        	iqtree.candidateTrees.update(tree, iqtree.getCurScore(), true);
-
-        }
+//        }
         cout << "Current best tree score: " << iqtree.candidateTrees.getBestScore() << " / CPU time: "
                 << getCPUTime() - initTime << endl;
 	}
