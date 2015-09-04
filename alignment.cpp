@@ -3353,11 +3353,12 @@ void Alignment::getAppearance(StateType state, StateBitset &state_app) {
 			}
 		break;
     case SEQ_POMO:
-        state -= num_states;
-        assert(state < pomo_states.size());
-        // count the number of nucleotides
-        state_app[pomo_states[state] & 3] = 1;
-        state_app[(pomo_states[state] >> 16) & 3] = 1;
+//        state -= num_states;
+//        assert(state < pomo_states.size());
+//        // count the number of nucleotides
+//        state_app[pomo_states[state] & 3] = 1;
+//        state_app[(pomo_states[state] >> 16) & 3] = 1;
+        state_app[convertPomoState(state)] = 1;
         break;
 	default: assert(0); break;
 	}
