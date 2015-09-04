@@ -1798,6 +1798,7 @@ double IQTree::doTreeSearch() {
             }
 
             computeLogL();
+            perturbScore = curScore;
         }
 
     	/*----------------------------------------

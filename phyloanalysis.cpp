@@ -1544,7 +1544,7 @@ void printFinalSearchInfo(Params &params, IQTree &iqtree, double search_cpu_time
 
 	params.run_time = (getCPUTime() - params.startCPUTime);
 	cout << endl;
-	cout << "Total number of iterations: " << iqtree.stop_rule.getCurIt() << endl;
+	cout << "Total number of iterations: " << iqtree.stop_rule.getCurIt()-1 << endl;
 	cout << "CPU time used for tree search: " << search_cpu_time
 			<< " sec (" << convert_time(search_cpu_time) << ")" << endl;
 	cout << "Wall-clock time used for tree search: " << search_real_time
@@ -1767,6 +1767,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
         } else {
             int nni_count = 0;
             int nni_steps = 0;
+            iqtree.stop_rule.setCurIt(2);
             cout << "Doing NNI on the initial tree ... " << endl;
             string tree = iqtree.doNNISearch(nni_count, nni_steps);
         	iqtree.candidateTrees.update(tree, iqtree.getCurScore(), true);
@@ -1804,7 +1805,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 		iqtree.readTreeString(iqtree.candidateTrees.getTopTrees()[0]);
 		iqtree.doTreeSearch();
 		iqtree.setAlignment(iqtree.aln);
-        cout << "TREE SEARCH COMPLETED AFTER " << iqtree.stop_rule.getCurIt() << " ITERATIONS" << endl << endl;
+        cout << "TREE SEARCH COMPLETED AFTER " << iqtree.stop_rule.getCurIt()-1 << " ITERATIONS" << endl << endl;
 	} else {
 		/* do SPR with likelihood function */
 		if (params.tree_spr) {
