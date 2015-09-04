@@ -2990,9 +2990,13 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "PoMo is run when"                                                                    << endl
             << "- a Counts File is used as input file, and/or when"                                  << endl
             << "- it is specified in the model string (see below)."                                  << endl
-            << "  -st CF or CFps       Counts File (automatically detected)."                        << endl
+            << "  -st C[FR] or C[FR]ps Counts File (automatically detected)."                        << endl
             << "                       Useful to customize the virtual population size `ps`"         << endl
-            << "                       (5 <= ps <= 20; default is 11)."                              << endl
+            << "                       5 <= ps <= 20;."                                              << endl
+            << "                       F: Sum over partial likelihoods at the tip of the tree."      << endl
+            << "                       R: Random binomial sampling of PoMo states from data."        << endl
+            << "                       Default is `CF9`."                                            << endl
+            // TODO Cite reversible PoMo paper here (how does sampling work now).
             << "  -m <sm>+<pm>+<ft>    Default: `HKY+rP+FO`."                                        << endl
             << "                 <sm>: Substitution model."                                          << endl
             << "                  DNA: HKY (default), JC, F81, K2P, K3P, K81uf, TN/TrN, TNef,"       << endl
@@ -3006,7 +3010,7 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "                       F or +FO or +FU or +FQ."                                      << endl
             << "                       Counted, optimized, user-defined, equal state frequency."     << endl
             << "                       This overwrites the specifications of the DNA model."         << endl
-            << "  The default model string is: -m HKY+rP+FO."                                        << endl
+            << "  The default model string is: -m HKY+rP+F."                                         << endl
             << "  Until now, only DNA models work with PoMo."                                        << endl
             << "  Model testing and rate heterogeneity do not work with PoMo yet."                   << endl
 
