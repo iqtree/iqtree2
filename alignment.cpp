@@ -3040,7 +3040,7 @@ void Alignment::computeStateFreq (double *state_freq, size_t num_unknown_states)
 
     for (iterator it = begin(); it != end(); it++)
         for (Pattern::iterator it2 = it->begin(); it2 != it->end(); it2++)
-            state_count[(int)*it2] += it->frequency;
+            state_count[convertPomoState((int)*it2)] += it->frequency;
 
     for (i = 0; i < num_states; i++)
         state_freq[i] = 1.0/num_states;
@@ -3135,8 +3135,9 @@ void Alignment::countStatePerSequence (unsigned *count_per_sequence) {
     memset(count_per_sequence, 0, sizeof(unsigned)*num_states*nseqs);
     for (iterator it = begin(); it != end(); it++)
         for (i = 0; i != nseqs; i++) {
-            if (it->at(i) < num_states) {
-                count_per_sequence[i*num_states + it->at(i)] += it->frequency;
+            int state = convertPomoState(it->at(i));
+            if (state < num_states) {
+                count_per_sequence[i*num_states + state] += it->frequency;
             }
         }
 }
@@ -3306,11 +3307,12 @@ void Alignment::getAppearance(StateType state, double *state_app) {
 			}
 		break;
     case SEQ_POMO:
-        state -= num_states;
-        assert(state < pomo_states.size());
-        // count the number of nucleotides
-        state_app[pomo_states[state] & 3] = 1.0;
-        state_app[(pomo_states[state] >> 16) & 3] = 1.0;
+//        state -= num_states;
+//        assert(state < pomo_states.size());
+//        // count the number of nucleotides
+//        state_app[pomo_states[state] & 3] = 1.0;
+//        state_app[(pomo_states[state] >> 16) & 3] = 1.0;
+        state_app[convertPomoState(state)] = 1.0;
         break;
 	default: assert(0); break;
 	}
