@@ -1108,6 +1108,9 @@ public:
     /** set of models for testing */
     char *model_set;
 
+    /** set of models to be added into default set */
+    char *model_extra_set;
+
     /** subset of models for testing, e.g. viral, mitochondrial */
     char *model_subset;
 

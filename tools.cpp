@@ -726,6 +726,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.stop_confidence = 0.95;
     params.model_name = "";
     params.model_set = NULL;
+    params.model_extra_set = NULL;
     params.model_subset = NULL;
     params.state_freq_set = NULL;
     params.ratehet_set = NULL;
@@ -1694,6 +1695,13 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (cnt >= argc)
 					throw "Use -mset <model_set>";
 				params.model_set = argv[cnt];
+				continue;
+			}
+			if (strcmp(argv[cnt], "-madd") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -madd <extra_model_set>";
+				params.model_extra_set = argv[cnt];
 				continue;
 			}
 			if (strcmp(argv[cnt], "-msub") == 0) {

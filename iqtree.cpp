@@ -434,8 +434,10 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
     cout << "|             INITIALIZING CANDIDATE TREE SET                      |" << endl;
     cout << "--------------------------------------------------------------------" << endl;
 
-    cout << "Generating " << nParTrees  << " parsimony trees... ";
-    cout.flush();
+    if (nParTrees > 0) {
+        cout << "Generating " << nParTrees  << " parsimony trees... ";
+        cout.flush();
+    }
     double startTime = getRealTime();
     int numDupPars = 0;
 #ifdef _OPENMP
@@ -498,14 +500,16 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
         }
     }
     double parsTime = getRealTime() - startTime;
-    cout << parsTime << " seconds ";
-    cout << candidateTrees.size() << " distinct starting trees" << endl;
+    if (nParTrees > 0) {
+        cout << parsTime << " seconds ";
+        cout << candidateTrees.size() << " distinct starting trees" << endl;
+    }
 
     /****************************************************************************************
                       Compute logl of all parsimony trees
     *****************************************************************************************/
 
-    cout << "Computing log-likelihood of parsimony trees ... ";
+    cout << "Computing log-likelihood of " << candidateTrees.size() << " initial trees ... ";
     startTime = getRealTime();
 //    CandidateSet candTrees = candidateTrees.getBestCandidateTrees(candidateTrees.size());
     CandidateSet candTrees = candidateTrees;
@@ -539,13 +543,13 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
     CandidateSet initParsimonyTrees = candidateTrees.getBestCandidateTrees(nNNITrees);
     candidateTrees.clear();
 
-    cout << "Optimizing top parsimony trees with NNI..." << endl;
+    cout << "Optimizing top " << initParsimonyTrees.size() << " initial trees with NNI..." << endl;
     startTime = getCPUTime();
     /*********** START: Do NNI on the best parsimony trees ************************************/
     CandidateSet::reverse_iterator rit;
-    stop_rule.setCurIt(1);
-    for (rit = initParsimonyTrees.rbegin(); rit != initParsimonyTrees.rend(); ++rit, stop_rule.setCurIt(
-            stop_rule.getCurIt() + 1)) {
+    stop_rule.setCurIt(0);
+    for (rit = initParsimonyTrees.rbegin(); rit != initParsimonyTrees.rend(); ++rit) {
+        stop_rule.setCurIt(stop_rule.getCurIt() + 1);
     	int nniCount, nniStep;
         double initLogl, nniLogl;
         string tree;
@@ -1719,8 +1723,8 @@ double IQTree::doTreeSearch() {
 	/*====================================================
 	 * MAIN LOOP OF THE IQ-TREE ALGORITHM
 	 *====================================================*/
-    for (; !stop_rule.meetStopCondition(stop_rule.getCurIt(), cur_correlation); stop_rule.setCurIt(
-            stop_rule.getCurIt() + 1)) {
+    while(!stop_rule.meetStopCondition(stop_rule.getCurIt(), cur_correlation)) {
+        stop_rule.setCurIt(stop_rule.getCurIt() + 1);
         searchinfo.curIter = stop_rule.getCurIt();
         // estimate logl_cutoff for bootstrap
         if (params->avoid_duplicated_trees && max_candidate_trees > 0 && treels_logl.size() > 1000) {
@@ -1908,6 +1912,7 @@ double IQTree::doTreeSearch() {
 
        //if (params->partition_type)
        // 	((PhyloSuperTreePlen*)this)->printNNIcasesNUM();
+       
     }
 
     readTreeString(candidateTrees.getTopTrees()[0]);
