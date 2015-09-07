@@ -13,13 +13,13 @@ MPIHelper& MPIHelper::getInstance() {
     return instance;
 }
 
-void MPIHelper::sendTreesToOthers(TreeCollection &trees) {
+void MPIHelper::sendTreesToOthers(TreeCollection &trees, int tag) {
     cleanUpMessages();
     for (int i = 0; i < getNumProcesses(); i++) {
         if (i != getProcessID()) {
             MPI_Request *request = new MPI_Request;
             ObjectStream *os = new ObjectStream(trees);
-            MPI_Isend(os->getObjectData(), os->getDataLength(), MPI_CHAR, i, 1, MPI_COMM_WORLD, request);
+            MPI_Isend(os->getObjectData(), os->getDataLength(), MPI_CHAR, i, tag, MPI_COMM_WORLD, request);
             messages.push_back(make_pair(request, os));
         }
     }
@@ -47,6 +47,11 @@ TreeCollection MPIHelper::getTreesForMe(bool fromAll) {
         if (flag) {
             //cout << "Getting messages from node " << status.MPI_SOURCE << endl;
             MPI_Get_count(&status, MPI_CHAR, &numBytes);
+            if (status.MPI_SOURCE == MASTER && status.MPI_TAG == STOP_TAG) {
+                cout << "Stop signal received. Process is now being ended." << endl;
+                MPI_Finalize();
+                exit(0);
+            }
             recvBuffer = new char[numBytes];
             MPI_Recv(recvBuffer, numBytes, MPI_CHAR, status.MPI_SOURCE, status.MPI_TAG, MPI_COMM_WORLD, NULL);
             ObjectStream os(recvBuffer, numBytes);
@@ -81,4 +86,5 @@ int MPIHelper::cleanUpMessages() {
     }
     return numMsgCleaned;
 }
+
 

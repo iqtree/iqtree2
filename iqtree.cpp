@@ -417,20 +417,20 @@ void IQTree::computeInitialTree(string &dist_file, LikelihoodKernel kernel) {
     }
 }
 
-void IQTree::addCurTreeToCandidateSet() {
-    string candidateTree = getTreeString();
-    if (curScore > candidateTrees.getBestScore() + Params::getInstance().loglh_epsilon) {
-        if (!candidateTrees.treeExist(candidateTree)) {
+bool IQTree::addTreeToCandidateSet(string treeString, double score) {
+    stop_rule.setCurIt(stop_rule.getCurIt() + 1);
+    if (score > candidateTrees.getBestScore() + Params::getInstance().loglh_epsilon) {
+        if (!candidateTrees.treeExist(treeString)) {
             stop_rule.addImprovedIteration(stop_rule.getCurIt());
-            cout << "BETTER TREE FOUND at iteration " << stop_rule.getCurIt() << ": " << curScore;
+            cout << "BETTER TREE FOUND at iteration " << stop_rule.getCurIt() << ": " << score;
         } else {
-            if (curScore > candidateTrees.getBestScore() + params->modelEps)
-                cout << "UPDATE BEST LOG-LIKELIHOOD: " << curScore;
+            if (score > candidateTrees.getBestScore() + params->modelEps)
+                cout << "UPDATE BEST LOG-LIKELIHOOD: " << score;
         }
         cout << endl;
         printResultTree();
     }
-    candidateTrees.update(candidateTree, curScore);
+    return candidateTrees.update(treeString, score);
 }
 
 void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
@@ -465,10 +465,6 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
 
     string curParsTree;
     for (int treeNr = 1; treeNr < nParTrees; treeNr++) {
-        // This is to make sure that when parismony trees are created on different processes
-        // no duplicated seeds are used
-        //int seedPadding = Params::getInstance().numInitTrees * MPIHelper::getInstance().getProcessID();
-        //int randSeed = params->ran_seed + treeNr;
         int randSeed = params->ran_seed + treeNr + MPIHelper::getInstance().getProcessID() * nParTrees;
         curParsTree = generateParsimonyTree(randSeed);
         candidateTrees.update(curParsTree, -DBL_MAX);
@@ -517,7 +513,7 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
     CandidateSet bestCandidateTrees = candidateTrees.getBestCandidateTrees(candidateTrees.size());
     // Send all trees to other nodes
     TreeCollection outTrees(bestCandidateTrees);
-    MPIHelper::getInstance().sendTreesToOthers(outTrees);
+    MPIHelper::getInstance().sendTreesToOthers(outTrees, CNT_TAG);
 
     // Get trees from other nodes
     TreeCollection inTrees;
@@ -570,7 +566,7 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
         }
         cout << " /  Logl: " << getCurScore() ;
         cout << " / Time: " << convert_time(getRealTime() - params->start_real_time) << endl;
-        stop_rule.setCurIt(stop_rule.getCurIt() + 1);
+        addTreeToCandidateSet(getTreeString(), curScore);
 
 #ifdef _IQTREE_MPI
         nniTrees.push_back(getTreeString());
@@ -580,20 +576,15 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
 #ifdef _IQTREE_MPI
     MPI_Barrier(MPI_COMM_WORLD);
     outTrees = TreeCollection(nniTrees, nniScores);
-    MPIHelper::getInstance().sendTreesToOthers(outTrees);
-    //cout << "Trees sent to other nodes" << endl;
-    //MPI_Barrier(MPI_COMM_WORLD);
+    MPIHelper::getInstance().sendTreesToOthers(outTrees, CNT_TAG);
     inTrees = MPIHelper::getInstance().getTreesForMe(true);
-    cout << inTrees.getNumTrees() << " trees received from other processes" << endl;
+    //cout << inTrees.getNumTrees() << " trees received from other processes" << endl;
 
     for (int i = 0; i < inTrees.getNumTrees(); i++) {
         pair<string, double> tree = inTrees.getTree(i);
-        candidateTrees.update(tree.first, tree.second);
+        addTreeToCandidateSet(tree.first, tree.second);
     }
-    stop_rule.setCurIt(stop_rule.getCurIt() + inTrees.getNumTrees());
 #endif
-
-
     if (params->fixStableSplits) {
         candidateTrees.buildTopSplits(params->stableSplitThreshold);
     }
@@ -1781,8 +1772,6 @@ double IQTree::doTreeSearch() {
     getRealTime() - initCPUTime << endl;
     cout << "Number of iterations: " << stop_rule.getCurIt() << endl;
     cout << endl;
-    MPI_Finalize();
-    exit(0);
 
     cout << "--------------------------------------------------------------------" << endl;
     cout << "|               OPTIMIZING CANDIDATE TREE SET                      |" << endl;
@@ -1816,14 +1805,14 @@ double IQTree::doTreeSearch() {
     /*==============================================================================================================
 	                                       MAIN LOOP OF THE IQ-TREE ALGORITHM
 	 *=============================================================================================================*/
-    for (; !stop_rule.meetStopCondition(stop_rule.getCurIt(), cur_correlation); stop_rule.setCurIt(
-            stop_rule.getCurIt() + 1)) {
+    while (!stop_rule.meetStopCondition(stop_rule.getCurIt(), cur_correlation)) {
+        stop_rule.setCurIt(stop_rule.getCurIt() + 1);
         searchinfo.curIter = stop_rule.getCurIt();
         // estimate logl_cutoff for bootstrap
         if (params->avoid_duplicated_trees && max_candidate_trees > 0 && treels_logl.size() > 1000) {
             int predicted_iteration;
             predicted_iteration = ((stop_rule.getCurIt() + params->step_iterations - 1) / params->step_iterations)
-                                                  * params->step_iterations;
+                                  * params->step_iterations;
             int num_entries = (int) floor(max_candidate_trees * ((double) stop_rule.getCurIt() / predicted_iteration));
             if (num_entries < treels_logl.size() * 0.9) {
                 DoubleVector logl = treels_logl;
@@ -1901,10 +1890,8 @@ double IQTree::doTreeSearch() {
                 }
             }
             //optimizeBranches(1);
-            computeLogL();
+            initScore = computeLogL();
         }
-
-        initScore = getCurScore();
 
         /*----------------------------------------
     	 * Optimize tree with NNI
@@ -1912,6 +1899,21 @@ double IQTree::doTreeSearch() {
 
         pair<int, int> nniInfos; // <num_NNIs, num_steps>
         nniInfos = doNNISearch();
+
+#ifdef _IQTREE_MPI
+        TreeCollection inTrees = MPIHelper::getInstance().getTreesForMe(false);
+        //cout << inTrees.getNumTrees() << " trees received from other processes" << endl;
+        for (int i = 0; i < inTrees.getNumTrees(); i++) {
+            pair<string, double> tree = inTrees.getTree(i);
+            addTreeToCandidateSet(tree.first, tree.second);
+        }
+        addTreeToCandidateSet(getTreeString(), curScore);
+        if (MPIHelper::getInstance().getProcessID() == MASTER
+        && stop_rule.meetStopCondition(stop_rule.getCurIt(), cur_correlation))
+            sendCurTreeToOtherNodes(STOP_TAG);
+        else
+            sendCurTreeToOtherNodes(CNT_TAG);
+#endif
 
         if (iqp_assess_quartet == IQP_BOOTSTRAP) {
             // restore alignment
@@ -1973,10 +1975,12 @@ double IQTree::doTreeSearch() {
                 summarizeBootstrap(*sg);
                 boot_splits.push_back(sg);
                 if (params->max_candidate_trees == 0)
-                    max_candidate_trees = (int) (treels_logl.size() * (stop_rule.getCurIt() + (params->step_iterations / 2)) /
-                                                                                   stop_rule.getCurIt());
-                max_candidate_trees = (int) (treels_logl.size() * (stop_rule.getCurIt() + (params->step_iterations / 2)) /
-                                                                           stop_rule.getCurIt());
+                    max_candidate_trees = (int) (treels_logl.size() *
+                                                 (stop_rule.getCurIt() + (params->step_iterations / 2)) /
+                                                 stop_rule.getCurIt());
+                max_candidate_trees = (int) (treels_logl.size() *
+                                             (stop_rule.getCurIt() + (params->step_iterations / 2)) /
+                                             stop_rule.getCurIt());
                 cout << "NOTE: " << treels_logl.size() << " bootstrap candidate trees evaluated (logl-cutoff: " <<
                 logl_cutoff << ")" << endl;
 
@@ -1990,11 +1994,13 @@ double IQTree::doTreeSearch() {
                             if (!stop_rule.meetStopCondition(stop_rule.getCurIt(), cur_correlation)) {
                                 if (params->max_candidate_trees == 0) {
                                     max_candidate_trees =
-                                            (int) (treels_logl.size() * (stop_rule.getCurIt() + params->step_iterations) /
-                                                                                        stop_rule.getCurIt());
+                                            (int) (treels_logl.size() *
+                                                   (stop_rule.getCurIt() + params->step_iterations) /
+                                                   stop_rule.getCurIt());
                                     max_candidate_trees =
-                                            (int) (treels_logl.size() * (stop_rule.getCurIt() + params->step_iterations) /
-                                                                                        stop_rule.getCurIt());
+                                            (int) (treels_logl.size() *
+                                                   (stop_rule.getCurIt() + params->step_iterations) /
+                                                   stop_rule.getCurIt());
                                 }
 //	                cout << "INFO: UFBoot does not converge, continue " << params->step_iterations << " more iterations" << endl;
                             }
@@ -2030,7 +2036,23 @@ double IQTree::doTreeSearch() {
             }
         }
     }
+#ifdef _IQTREE_MPI
+    MPI_Finalize();
+    if (MPIHelper::getInstance().getProcessID() != MASTER)
+        exit(0);
+#endif
 }
+
+#ifdef _IQTREE_MPI
+void IQTree::sendCurTreeToOtherNodes(int tag) {
+    vector<string> treeString;
+    vector<double> score;
+    treeString.push_back(getTreeString());
+    score.push_back(curScore);
+    TreeCollection outTrees(treeString, score);
+    MPIHelper::getInstance().sendTreesToOthers(outTrees, tag);
+}
+#endif
 
 /****************************************************************************
  Fast Nearest Neighbor Interchange by maximum likelihood
@@ -2053,7 +2075,6 @@ pair<int, int> IQTree::doNNISearch() {
         if (params->print_site_posterior)
             computePatternCategories();
     }
-    addCurTreeToCandidateSet();
     return nniInfos;
 }
 

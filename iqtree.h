@@ -578,10 +578,14 @@ protected:
     int k_represent;
 
     /**
-     *  Update the candidate set with tree \a newTree. If a better tree is found, print notification to cout and print
+     *  Update the candidate set with a new tree.
+     *  If a better tree is found, print notification to cout and print
      *  the new best tree to file.
+     *  @param treeString the new tree
+     *  @param score the score of the new tree
+     *  @return whether a new tree topology is found
      */
-    void addCurTreeToCandidateSet();
+    bool addTreeToCandidateSet(string treeString, double score);
 
 public:
 
@@ -816,6 +820,10 @@ protected:
     void convertNNI2Splits(SplitIntMap &nniSplits, int numNNIs, vector<NNIMove> &compatibleNNIs);
 
     string generateParsimonyTree(int randomSeed);
+
+#ifdef _IQTREE_MPI
+    void sendCurTreeToOtherNodes(int tag);
+#endif
 };
 
 void estimateNNICutoff(Params &params);

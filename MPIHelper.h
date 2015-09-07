@@ -12,6 +12,8 @@
 #include "ObjectStream.h"
 
 #define MASTER 0
+#define CNT_TAG 0
+#define STOP_TAG 1
 
 using namespace std;
 
@@ -31,9 +33,12 @@ public:
 
 
     /**
-     *  Send a set of candidate trees to all remaining nodes
+     *  Send a set of trees with scores to other nodes
+     *  @param trees a TreeCollection object
+     *  @param tag tag used with the message
      */
-    void sendTreesToOthers(TreeCollection &trees);
+    void sendTreesToOthers(TreeCollection &trees, int tag);
+
 
     /**
      *  Remove the buffers for finished messages
