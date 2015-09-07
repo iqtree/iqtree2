@@ -1736,8 +1736,6 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 //        params.compute_ml_dist = false;
 //    }
 
-    // TODO: 2015-08-31 Dom
-    // Commented out because BIONJ trees need to calculate ML and this has not been tested with PoMo yet.
      if ((!params.dist_file && params.compute_ml_dist) || params.leastSquareBranch) {
          computeMLDist(params, iqtree, dist_file, getCPUTime());
          if (!params.user_file && params.start_tree != STT_RANDOM_TREE) {

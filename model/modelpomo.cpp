@@ -795,6 +795,9 @@ void
 ModelPoMo::estimateEmpiricalFixedStateFreqs(unsigned int * abs_state_freq,
                                             double * freq_fixed_states)
 {
+    // TODO: Maybe do not use the absolute state frequency vector
+    // calculated by Alignment::computeAbsoluteStateFreq but directly
+    // sum over the data.
     int n;
     int x;
     int y;

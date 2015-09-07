@@ -3120,6 +3120,8 @@ int Alignment::convertPomoState(int state) {
     int value1 = (pomo_states[state] >> 2) & 16383;
     int value2 = pomo_states[state] >> 18;
     int N = virtual_pop_size;
+    // TODO: Check if this is a good approximation.  Maybe the integer
+    // division leads to a bias.
     value1 = value1*N/(value1+value2);
     int real_state;
     if (value1 == 0) 
