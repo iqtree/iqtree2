@@ -165,11 +165,10 @@ class ModelPoMo : public ModelGTR
      * relative proportion of all bases is calculated.  The empirical
      * fixed state frequencies are set to these relative proportions.
      *
-     * @param abs_state_freq An array of the absolute state frequencies, size N.
      * @param freq_fixed_states (OUT) The estimated fixed frequencies,
      * size num_states.
      */
-    void estimateEmpiricalFixedStateFreqs(unsigned int * abs_state_freq, double * freq_fixed_states);
+    void estimateEmpiricalFixedStateFreqs(double * freq_fixed_states);
 
     /**
      * Report the model rates to the output file stream 'out'.

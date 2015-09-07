@@ -59,15 +59,6 @@ void ModelPoMo::init(const char *model_name,
     // really necessary?
 	rate_matrix = new double[num_states*num_states];
 
-    // Check state frequencies.
-    unsigned int abs_state_freq[num_states];
-    phylo_tree->aln->computeAbsoluteStateFreq(abs_state_freq);
-    if (verbose_mode >= VB_MAX) {
-        std::cout << "Absolute empirical state frequencies:" << std::endl;
-        for (int i = 0; i < num_states; i++)
-            std::cout << abs_state_freq[i] << " ";
-        std::cout << std::endl;
-    }
     
     freq_type = dna_model->freq_type;
     // ModelGTR.freq_type is not set correctly.  Set it here
@@ -82,14 +73,7 @@ void ModelPoMo::init(const char *model_name,
     case FREQ_EMPIRICAL:        // '+F'
         // Get the fixed state frequencies from the data and normalize
         // them such that the last one is 1.0.
-        estimateEmpiricalFixedStateFreqs(abs_state_freq,
-                                         freq_fixed_states);
-        for (int i = 0; i < nnuc; i++)
-            freq_fixed_states[i] /= freq_fixed_states[3];
-        // Set highest_freq_state.
-		for (int i = 0; i < num_states; i++)
-			if (abs_state_freq[i] > abs_state_freq[highest_freq_state])
-				highest_freq_state = i;
+        estimateEmpiricalFixedStateFreqs(freq_fixed_states);
         break;
     case FREQ_USER_DEFINED:     // '+FU'
         // ModelDNA should have set them already.
@@ -792,30 +776,73 @@ bool ModelPoMo::isUnstableParameters() {
 // }
 
 void
-ModelPoMo::estimateEmpiricalFixedStateFreqs(unsigned int * abs_state_freq,
-                                            double * freq_fixed_states)
+ModelPoMo::estimateEmpiricalFixedStateFreqs(double * freq_fixed_states)
 {
-    // TODO: Maybe do not use the absolute state frequency vector
-    // calculated by Alignment::computeAbsoluteStateFreq but directly
-    // sum over the data.
-    int n;
-    int x;
-    int y;
+    memset(freq_fixed_states, 0, sizeof(double)*nnuc);
 
-    int sum[nnuc];
-    int tot_sum = 0;
-    memset (sum, 0, nnuc * sizeof(int));
-    
-    for (int i = 0; i < num_states; i++) {
-        decomposeState(i, n, x, y);
-        sum[x]+= n*abs_state_freq[i];
-        if (y >= 0) sum[y]+= (N-n)*abs_state_freq[i];
+    if (phylo_tree->aln->pomo_random_sampling) {
+        unsigned int abs_state_freq[num_states];
+        memset(abs_state_freq, 0, sizeof(unsigned int)*num_states);
+        phylo_tree->aln->computeAbsoluteStateFreq(abs_state_freq);
+        int n;
+        int x;
+        int y;
+
+        int sum[nnuc];
+        int tot_sum = 0;
+        memset (sum, 0, nnuc * sizeof(int));
+
+        for (int i = 0; i < num_states; i++) {
+            decomposeState(i, n, x, y);
+            sum[x]+= n*abs_state_freq[i];
+            if (y >= 0) sum[y]+= (N-n)*abs_state_freq[i];
+        }
+        for (int i = 0; i < nnuc; i++) {
+            tot_sum += sum[i];
+        }
+        for (int i = 0; i < nnuc; i++) {
+            freq_fixed_states[i] = (double) sum[i]/tot_sum;
+        }
+        // Output vector if verbose mode.
+        if (verbose_mode >= VB_MAX) {
+            std::cout << "Absolute empirical state frequencies:" << std::endl;
+            for (int i = 0; i < num_states; i++)
+                std::cout << abs_state_freq[i] << " ";
+            std::cout << std::endl;
+        }
+        // Set highest_freq_state.
+        for (int i = 0; i < num_states; i++)
+            if (abs_state_freq[i] > abs_state_freq[highest_freq_state])
+                highest_freq_state = i;
+    } else {
+        for (Alignment::iterator it = phylo_tree->aln->begin();
+             it != phylo_tree->aln->end(); it++) {
+            for (Pattern::iterator it2 = it->begin(); it2 != it->end(); it2++) {
+                int state = (int)*it2;
+                if (state < num_states)
+                    outError("Unknown PoMo state in pattern.");
+                if (state == phylo_tree->aln->STATE_UNKNOWN)
+                    outError("STATE_UNKNOWN is not supported yet with partial lh");
+                state -= num_states;
+                assert(state < phylo_tree->aln->pomo_states.size());
+                // Decode the id and counts.
+                int id1 = phylo_tree->aln->pomo_states[state] & 3;
+                int id2 = (phylo_tree->aln->pomo_states[state] >> 16) & 3;
+                int j1 = (phylo_tree->aln->pomo_states[state] >> 2) & 16383;
+                int j2 = (phylo_tree->aln->pomo_states[state] >> 18);
+                freq_fixed_states[id1] += j1*(it->frequency);
+                freq_fixed_states[id2] += j2*(it->frequency);
+            }
+        }
     }
-    for (int i = 0; i < nnuc; i++) {
-        tot_sum += sum[i];
-    }
-    for (int i = 0; i < nnuc; i++) {
-        freq_fixed_states[i] = (double) sum[i]/tot_sum;
+    // Normalize frequencies so that the last entry is 1.0.
+    for (int i = 0; i < nnuc; i++)
+        freq_fixed_states[i] /= freq_fixed_states[nnuc-1];
+    if (verbose_mode >= VB_MAX) {
+        std::cout << "The empirical frequencies of the fixed states are:" << std::endl;
+        for (int i = 0; i < nnuc; i++)
+            std::cout << freq_fixed_states[i] << " ";
+        std::cout << std::endl;
     }
 }
 

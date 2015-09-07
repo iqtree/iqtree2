@@ -641,6 +641,14 @@ public:
 	 * virtual population size for PoMo model
 	 */
 	int virtual_pop_size;
+
+    /**
+     * If true do random binomial sampling from data to get PoMo
+     * states.  This is not the default behavior which uses partial
+     * likelihoods at the tips of the tree.
+     * 
+     */
+    bool pomo_random_sampling;
     
     /** BQM: 2015-07-06, 
         for PoMo data: map from state ID to pair of base1 and base2 

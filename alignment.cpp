@@ -1742,8 +1742,8 @@ int Alignment::readMSF(char *filename, char *sequence_type) {
 int Alignment::readCountsFormat(char* filename, char* sequence_type) {
     int npop = 0;                // Number of populations.
     int nsites = 0;              // Number of sites.
-    int N = 10;                  // Virtual population size; defaults
-                                 // to 10.  If `-st CFXX` is given, it
+    int N = 9;                   // Virtual population size; defaults
+                                 // to 9.  If `-st CFXX` is given, it
                                  // will be set to XX below.
     int nnuc = 4;                // Number of nucleotides (base states).
     ostringstream err_str;
@@ -1793,15 +1793,16 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
     bool everything_ok = true;
     int fails = 0;
 
-    bool random_sampling = false;
-
     // Check if sequence type flag matches and for custom virtual population size.
     if (sequence_type) {
         string st (sequence_type);
         if (st.substr(0,2) != "CF" && st.substr(0,2) != "CR")
             throw "Counts File detected but sequence type (-st) is neither 'CF' nor 'CR'.";
         if (st.substr(0,2) == "CR")
-            random_sampling = true;
+            pomo_random_sampling = true;
+        else
+            // The default; use partial lh.
+            pomo_random_sampling = false;
         string virt_pop_size_str = st.substr(2);
         if (virt_pop_size_str != "") {
             int virt_pop_size = atoi(virt_pop_size_str.c_str());
@@ -1944,7 +1945,7 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
             }
             // Determine state (cf. above).
             if (count == 1) {
-                if (random_sampling) {
+                if (pomo_random_sampling) {
                     // Fixed state, state ID is just id1.
                     state = id1;
                 } else {
@@ -1971,7 +1972,7 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
             // only then create the pattern.  Also fix `addPattern()`.
             else if (count == 0) {
                 state = STATE_UNKNOWN;
-                if (!random_sampling) {
+                if (!pomo_random_sampling) {
                     outError("Unknown state not supported yet without random sampling.");
                     everything_ok = false; // BQM: STATE_UNKNOWN is not known right now, will be set once data reading is completed
                 }
@@ -1993,7 +1994,7 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
             }
             else if (count == 2) {
             
-                if (random_sampling) {
+                if (pomo_random_sampling) {
                      // Binomial sampling.  2 bases are present.
                     for(int k = 0; k < N; k++) {
                         r_int = random_int(sum);
