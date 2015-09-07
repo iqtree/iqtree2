@@ -533,6 +533,7 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
     vector<string> bestTreeStrings = candidateTrees.getBestTreeStrings(Params::getInstance().numNNITrees);
 
 #ifdef _IQTREE_MPI
+    MPI_Barrier(MPI_COMM_WORLD);
     int numTreesPerProc = Params::getInstance().numNNITrees / MPIHelper::getInstance().getNumProcesses();
     int rest = Params::getInstance().numNNITrees % MPIHelper::getInstance().getNumProcesses();
     int numBestTrees = Params::getInstance().numNNITrees;
@@ -578,10 +579,11 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
 #endif
     }
 #ifdef _IQTREE_MPI
+    MPI_Barrier(MPI_COMM_WORLD);
     outTrees = TreeCollection(nniTrees, nniScores);
     MPIHelper::getInstance().sendTreesToOthers(outTrees);
-    cout << "Trees sent to other nodes" << endl;
-    MPI_Barrier(MPI_COMM_WORLD);
+    //cout << "Trees sent to other nodes" << endl;
+    //MPI_Barrier(MPI_COMM_WORLD);
     inTrees = MPIHelper::getInstance().getTreesForMe(true);
     cout << inTrees.getNumTrees() << " trees received from other processes" << endl;
 
