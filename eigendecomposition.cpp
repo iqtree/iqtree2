@@ -60,6 +60,14 @@ void EigenDecomposition::eigensystem(
 
 	/* get relative transition matrix and frequencies */
 	memcpy(forg, state_freq, num_state * sizeof(double));
+    // BQM 2015-09-07: normalize state frequencies to 1
+    double sum = 0.0;
+    for (i = 0; i < num_state; i++) 
+        sum += forg[i];
+    sum = 1.0/sum;
+    for (i = 0; i < num_state; i++) 
+        forg[i] *= sum;
+
 	for (i = 0; i < num_state; i++)
 		memcpy(a[i], rate_params[i], num_state * sizeof(double)); 
 
@@ -178,6 +186,15 @@ void EigenDecomposition::eigensystem_sym(double **rate_params, double *state_fre
 	/* get relative transition matrix and frequencies */
 	memcpy(forg, state_freq, num_state * sizeof(double));
     
+    // BQM 2015-09-07: normalize state frequencies to 1
+    double sum = 0.0;
+    for (i = 0; i < num_state; i++) 
+        sum += forg[i];
+    sum = 1.0/sum;
+    for (i = 0; i < num_state; i++) 
+        forg[i] *= sum;
+
+    
 	for (i = 0; i < num_state; i++)
 		memcpy(a[i], rate_params[i], num_state * sizeof(double)); 
 
@@ -257,7 +274,7 @@ void EigenDecomposition::eigensystem_sym(double **rate_params, double *state_fre
 //			for (j = 0; j < num_state; j++) cout << rate_params[i][j] << " ";
 //			cout << endl;
 //		}
-		cout << "State frequencies: " << endl;
+		cout << "State frequencies (might be un-normalized): " << endl;
 		for (i = 0; i < num_state; i++) cout << state_freq[i] << " ";
 		cout << endl;
 	}
