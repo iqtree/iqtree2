@@ -556,8 +556,7 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
 #endif
     candidateTrees.clear();
     //cout << "Optimizing " << bestTreeStrings.size() << " best parsimony trees with NNI ..." << endl;
-    stop_rule.setCurIt(1);
-
+    stop_rule.setCurIt(0);
     for (vector<string>::iterator it = bestTreeStrings.begin(); it != bestTreeStrings.end(); it++) {
         pair<int, int> nniInfo;
         double initLogl;
@@ -1780,6 +1779,7 @@ double IQTree::doTreeSearch() {
 
     cout << "Current best tree score: " << candidateTrees.getBestScore() << " / CPU time: " <<
     getRealTime() - initCPUTime << endl;
+    cout << "Number of iterations: " << stop_rule.getCurIt() << endl;
     cout << endl;
     MPI_Finalize();
     exit(0);
