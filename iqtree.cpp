@@ -517,26 +517,18 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
     CandidateSet bestCandidateTrees = candidateTrees.getBestCandidateTrees(candidateTrees.size());
     // Send all trees to other nodes
     TreeCollection outTrees(bestCandidateTrees);
-    bool blocking = false;
     MPIHelper::getInstance().sendTreesToOthers(outTrees);
 
     // Get trees from other nodes
     TreeCollection inTrees;
-    int numNodes = MPIHelper::getInstance().getNumProcesses() - 1;
-    inTrees = MPIHelper::getInstance().getTreesFromOthers(numNodes);
-    cout << inTrees.getNumTrees() << " trees received from " << numNodes;
-    cout << " processes" << endl;
+    inTrees = MPIHelper::getInstance().getTreesForMe(true);
+    cout << inTrees.getNumTrees() << " trees received from other process" << endl;
 
     for (int i = 0; i < inTrees.getNumTrees(); i++) {
         pair<string, double> tree = inTrees.getTree(i);
         candidateTrees.update(tree.first, tree.second);
     }
     cout << candidateTrees.size() << " distinct starting trees" << endl;
-    int numMsgCleaned = MPIHelper::getInstance().cleanUpMessages();
-    cout << "Cleaned " << numMsgCleaned << " messages" << endl;
-    MPI_Barrier(MPI_COMM_WORLD);
-    MPI_Finalize();
-    exit(0);
 #endif
     vector<string> bestTreeStrings = candidateTrees.getBestTreeStrings(Params::getInstance().numNNITrees);
 
@@ -549,17 +541,22 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
         numBestTrees = numTreesPerProc * MPIHelper::getInstance().getNumProcesses();
         bestTreeStrings = candidateTrees.getBestTreeStrings(numBestTrees);
     }
-    cout << "Do NNI search on " << bestTreeStrings.size() << " initial tree on " <<
+    cout << "Do NNI search on " << bestTreeStrings.size() << " best initial trees using " <<
     MPIHelper::getInstance().getNumProcesses() << " processes" << endl;
     vector<string> myTreeStrings;
-    int i = MPIHelper::getInstance().getProcessID() * numTreesPerProc;
-    int j = 0;
-    for ( ; j < numTreesPerProc; i++, j++) {
-
+    int index = MPIHelper::getInstance().getProcessID() * numTreesPerProc;
+    int maxIndex = index + numTreesPerProc;
+    for ( ; index < maxIndex; index++) {
+        myTreeStrings.push_back(bestTreeStrings[index]);
     }
+    bestTreeStrings = myTreeStrings;
+    vector<string> nniTrees;
+    vector<double> nniScores;
 #endif
-    cout << "Optimizing top parsimony trees with NNI..." << endl;
+    candidateTrees.clear();
+    //cout << "Optimizing " << bestTreeStrings.size() << " best parsimony trees with NNI ..." << endl;
     stop_rule.setCurIt(1);
+
     for (vector<string>::iterator it = bestTreeStrings.begin(); it != bestTreeStrings.end(); it++) {
         pair<int, int> nniInfo;
         double initLogl;
@@ -574,7 +571,27 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
         cout << " /  Logl: " << getCurScore() ;
         cout << " / Time: " << convert_time(getRealTime() - params->start_real_time) << endl;
         stop_rule.setCurIt(stop_rule.getCurIt() + 1);
+
+#ifdef _IQTREE_MPI
+        nniTrees.push_back(getTreeString());
+        nniScores.push_back(getCurScore());
+#endif
     }
+#ifdef _IQTREE_MPI
+    outTrees = TreeCollection(nniTrees, nniScores);
+    MPIHelper::getInstance().sendTreesToOthers(outTrees);
+    cout << "Trees sent to other nodes" << endl;
+    MPI_Barrier(MPI_COMM_WORLD);
+    inTrees = MPIHelper::getInstance().getTreesForMe(true);
+    cout << inTrees.getNumTrees() << " trees received from other processes" << endl;
+
+    for (int i = 0; i < inTrees.getNumTrees(); i++) {
+        pair<string, double> tree = inTrees.getTree(i);
+        candidateTrees.update(tree.first, tree.second);
+    }
+    stop_rule.setCurIt(stop_rule.getCurIt() + inTrees.getNumTrees());
+#endif
+
 
     if (params->fixStableSplits) {
         candidateTrees.buildTopSplits(params->stableSplitThreshold);
@@ -1762,7 +1779,9 @@ double IQTree::doTreeSearch() {
     cout << "Current best tree score: " << candidateTrees.getBestScore() << " / CPU time: " <<
     getRealTime() - initCPUTime << endl;
     cout << endl;
-    
+    MPI_Finalize();
+    exit(0);
+
     cout << "--------------------------------------------------------------------" << endl;
     cout << "|               OPTIMIZING CANDIDATE TREE SET                      |" << endl;
     cout << "--------------------------------------------------------------------" << endl;

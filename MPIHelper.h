@@ -25,8 +25,10 @@ public:
 
     /**
      *  Get all the trees that have been sent to the current node
+     *  @param fromAll wait for messages from all other processes
      */
-    TreeCollection getTreesFromOthers(int numNodes = 1);
+    TreeCollection getTreesForMe(bool fromAll);
+
 
     /**
      *  Send a set of candidate trees to all remaining nodes
