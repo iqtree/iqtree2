@@ -673,7 +673,14 @@ bool Alignment::addPattern(Pattern &pat, int site, int freq) {
             break;
         }
     if (gaps_only) {
-        if (verbose_mode >= VB_DEBUG)
+        // FIXME: STATE_UNKNOWN is not properly set when reading in
+        // counts file data at the moment.  This leads to
+        // gaps_only=true in cases where this is not true.  In order
+        // to fix this bug, STATE_UNKNOWN needs to be known when
+        // adding a pattern.  Maybe we have to read in all the data
+        // and only then create the pattern.
+        if ((verbose_mode >= VB_DEBUG) &&
+            (seq_type != SEQ_POMO))
             cout << "Site " << site << " contains only gaps or ambiguous characters" << endl;
         //return true;
     }
@@ -1921,6 +1928,7 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
             sum = 0;
             count = 0;
             id1 = -1;
+            id2 = -1;
             // Sum over elements and count non-zero elements.
             for(i = values.begin(); i != values.end(); ++i) {
                 // `i` is an iterator object that points to some
@@ -1936,14 +1944,35 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
             }
             // Determine state (cf. above).
             if (count == 1) {
-            	// Fixed state, state ID is just id1.
-                // TODO: Implement sampling process here.
-            	state = id1;
+                if (random_sampling) {
+                    // Fixed state, state ID is just id1.
+                    state = id1;
+                } else {
+                    if (values[id1] >= 16384)
+                        // Cannot add sites where more than 16384
+                        // individuals have the same base within one
+                        // population.
+                        everything_ok = false;
+                    uint32_t pomo_state = (id1 | (values[id1]) << 2);
+                    IntIntMap::iterator pit = pomo_states_index.find(pomo_state);
+                    if (pit == pomo_states_index.end()) { // not found
+                        state = pomo_states_index[pomo_state] = pomo_states.size();
+                        pomo_states.push_back(pomo_state);
+                    } else {
+                        state = pit->second;
+                    }
+                    state += num_states; // make the state larger than num_states
+                }
             }
+            // FIXME: STATE_UNKNOWN is not properly set when reading
+            // in counts file data at the moment.  In order to fix
+            // this bug, STATE_UNKNOWN needs to be known when adding a
+            // pattern.  Maybe we have to read in all the data and
+            // only then create the pattern.  Also fix `addPattern()`.
             else if (count == 0) {
                 state = STATE_UNKNOWN;
                 if (!random_sampling) {
-                    outError("Unknown state not supported yet");
+                    outError("Unknown state not supported yet without random sampling.");
                     everything_ok = false; // BQM: STATE_UNKNOWN is not known right now, will be set once data reading is completed
                 }
                 // if (verbose_mode >= VB_MAX) {
@@ -1965,30 +1994,21 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
             else if (count == 2) {
             
                 if (random_sampling) {
-                     // FIXME: This should be removed but is needed for
-                     // debugging purposes so that the likelihood is
-                     // deterministic for a given tree.
-                     if (sum == N) {
-                         sampled_values[id1] = values[id1];
-                         sampled_values[id2] = values[id2];
-                     }
                      // Binomial sampling.  2 bases are present.
-                     else {
-                         for(int k = 0; k < N; k++) {
-                             r_int = random_int(sum);
-                             if (r_int < values[id1]) sampled_values[id1]++;
-                             else sampled_values[id2]++;
-                         }
-                     }
-                     if (sampled_values[id1] == 0) state = id2;
-                     else if (sampled_values[id2] == 0) state = id1;
-                     else {
-                         // Convert sampled_values to state.
-                         // FIXME: This could be improved.
-                         if (id1 == 0) j = id2 - 1;
-                         else j = id1 + id2;
-                         state = nnuc + j*(N-2) + j + sampled_values[id1] - 1;
-                     }
+                    for(int k = 0; k < N; k++) {
+                        r_int = random_int(sum);
+                        if (r_int < values[id1]) sampled_values[id1]++;
+                        else sampled_values[id2]++;
+                    }
+                    if (sampled_values[id1] == 0) state = id2;
+                    else if (sampled_values[id2] == 0) state = id1;
+                    else {
+                        // Convert sampled_values to state.
+                        // FIXME: This could be improved.
+                        if (id1 == 0) j = id2 - 1;
+                        else j = id1 + id2;
+                        state = nnuc + j*(N-2) + j + sampled_values[id1] - 1;
+                    }
                 } else {
                     /* BQM 2015-07: store both states now */
                     if (values[id1] >= 16384 || values[id2] >= 16384)

@@ -748,6 +748,7 @@ void PhyloTree::computeTipPartialLikelihood() {
 
 		for (state = 0; state < aln->pomo_states.size(); state++) {
             double *this_tip_partial_lh = &tip_partial_lh[(state+nstates)*nstates*nmixtures];
+            memset(real_partial_lh, 0, sizeof(double)*nstates);
             
             // decode the id and value
             int id1 = aln->pomo_states[state] & 3;
@@ -758,38 +759,75 @@ void PhyloTree::computeTipPartialLikelihood() {
                 for (i = logv.size(); i <= M; i++)
                     logv.push_back(log((double)i));
             }
-            // compute (M choose value1)
-            double res = 0.0;
-            for (i = j+1; i <= M; i++)
-                res += (logv[i] - logv[i-j]);
-            res -= M * logv[N];
-            memset(real_partial_lh, 0, sizeof(double)*nstates);
-            int k;
-            if (id1 == 0) k = id2 - 1;
-            else k = id1 + id2;
-            int real_state = 4 + k*(N-2) + k;
-            
-            double sum_lh = 0.0;
-            for (i = 1; i < N; i++, real_state++) {
-                assert(real_state < nstates);
-                real_partial_lh[real_state] = exp(res + j*logv[i] + (M-j) * logv[N-i]);
-                sum_lh += real_partial_lh[real_state];
-            }
-            
+            // Check if observed state is a fixed one.  If so, many
+            // PoMo states can lead to this data.  E.g., even (2A,8T)
+            // can lead to a sampled data of 7A.
+            if (j == M) {
+                // TODO: Number of alleles is hardcoded here.
+                // First: Fixed state.
+                real_partial_lh[id1] = 1.0;
+                double sum_lh = 1.0;
+                // Second: Polymorphic states.
+                for (int s_id1 = 0; s_id1 < 3; s_id1++) {
+                    for (int s_id2 = s_id1+1; s_id2 < 4; s_id2++) {
+                        if ((s_id1 == id1) || (s_id2 == id1)) {
+                            int k;
+                            if (s_id1 == 0) k = s_id2 - 1;
+                            else k = s_id1 + s_id2;
+                            int real_state = 4 + k*(N-2) + k;
+                            for (i = 1; i < N; i++, real_state++) {
+                                assert(real_state < nstates);
+                                real_partial_lh[real_state] =
+                                    std::pow((double)i/(double)N,j);
+                                sum_lh += real_partial_lh[real_state];
+                            }
+                        }
+                    }
+                }
             // normalize partial likelihoods to total of 1.0
             sum_lh = 1.0/sum_lh;
             for (i = 0; i < nstates; i++)
                 real_partial_lh[i] *= sum_lh;
+            }
+            // Observed state is polymorphic.  We only need to set the
+            // partial likelihoods for states that are also
+            // polymorphic for the same alleles.  E.g., states of type
+            // (ix,(N-i)y) can lead to the observed state (jx,(M-j)y).
+            else {
+                // compute (M choose (M-j) = M choose j)
+                double res = 0.0;
+                for (i = j+1; i <= M; i++)
+                    res += (logv[i] - logv[i-j]);
+                res -= M * logv[N];
+                int k;
+                if (id1 == 0) k = id2 - 1;
+                else k = id1 + id2;
+                int real_state = 4 + k*(N-2) + k;
+
+                double sum_lh = 0.0;
+                for (i = 1; i < N; i++, real_state++) {
+                    assert(real_state < nstates);
+                    real_partial_lh[real_state] = exp(res + j*logv[i] + (M-j) * logv[N-i]);
+                    sum_lh += real_partial_lh[real_state];
+                }
+
+                // normalize partial likelihoods to total of 1.0
+                sum_lh = 1.0/sum_lh;
+                for (i = 0; i < nstates; i++)
+                    real_partial_lh[i] *= sum_lh;
+                }
             
-            // BUG FIX 2015-09-03: tip_partial_lh stores inner product of real_partial_lh and inverse eigenvector for each state
+            // BUG FIX 2015-09-03: tip_partial_lh stores inner product
+            // of real_partial_lh and inverse eigenvector for each
+            // state
             memset(this_tip_partial_lh, 0, nmixtures*nstates*sizeof(double));
             for (m = 0; m < nmixtures; m++) {
                 double *inv_evec = &all_inv_evec[m*nstates*nstates];
                 for (i = 0; i < nstates; i++)
                     for (j = 0; j < nstates; j++)
-                        this_tip_partial_lh[m*nstates + i] += inv_evec[i*nstates+j] * real_partial_lh[j];
+                        this_tip_partial_lh[m*nstates + i] +=
+                            inv_evec[i*nstates+j] * real_partial_lh[j];
             }
-            
         }
         aligned_free(real_partial_lh);
     }
