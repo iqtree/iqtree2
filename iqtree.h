@@ -649,6 +649,9 @@ public:
     /** newick string of corresponding bootstrap trees */
     IntVector boot_trees;
 
+    /** bootstrap tree strings with branch lengths, for -wbtl option */
+    StrVector boot_trees_brlen;
+
 	/** number of multiple optimal trees per replicate */
 	IntVector boot_counts;
 

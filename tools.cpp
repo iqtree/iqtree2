@@ -2913,7 +2913,7 @@ void usage_iqtree(char* argv[], bool full_command) {
             << endl << "ULTRAFAST BOOTSTRAP:" << endl
             << "  -bb <#replicates>    Ultrafast bootstrap (>=1000)" << endl
             << "  -wbt                 Write bootstrap trees to .ufboot file (default: none)" << endl
-//            << "  -wbtl                Like -wbt and writing branch lengths also" << endl
+            << "  -wbtl                Like -wbt but also writing branch lengths" << endl
 //            << "  -n <#iterations>     Minimum number of iterations (default: 100)" << endl
             << "  -nm <#iterations>    Maximum number of iterations (default: 1000)" << endl
 			<< "  -nstep <#iterations> #Iterations for UFBoot stopping rule (default: 100)" << endl
@@ -2951,6 +2951,7 @@ void usage_iqtree(char* argv[], bool full_command) {
 //            << "  -msep                Perform model selection and then rate selection" << endl
             << "  -mtree               Performing full tree search for each model considered" << endl
             << "  -mredo               Ignoring model results computed earlier (default: no)" << endl
+            << "  -madd mx1,...,mxk    List of mixture models to also consider" << endl
             << "  -mdef <nexus_file>   A model definition NEXUS file (see Manual)" << endl
 
             << endl << "SUBSTITUTION MODEL:" << endl
