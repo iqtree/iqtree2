@@ -1718,6 +1718,12 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
     // Update best tree
     iqtree.candidateTrees.update(initTree, iqtree.getCurScore());
 
+    if (params.min_iterations > 0) {
+        cout << "--------------------------------------------------------------------" << endl;
+        cout << "|             INITIALIZING CANDIDATE TREE SET                      |" << endl;
+        cout << "--------------------------------------------------------------------" << endl;
+    }
+
     // Compute maximum likelihood distance
     // ML distance is only needed for IQP
 //    if ( params.start_tree != STT_BIONJ && ((params.snni && !params.iqp) || params.min_iterations == 0)) {

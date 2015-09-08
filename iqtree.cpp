@@ -432,9 +432,6 @@ void IQTree::computeInitialTree(string &dist_file, LikelihoodKernel kernel) {
 }
 
 void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
-    cout << "--------------------------------------------------------------------" << endl;
-    cout << "|             INITIALIZING CANDIDATE TREE SET                      |" << endl;
-    cout << "--------------------------------------------------------------------" << endl;
 
     if (nParTrees > 0) {
         cout << "Generating " << nParTrees  << " parsimony trees... ";
