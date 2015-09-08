@@ -68,7 +68,7 @@ bool checkModelFile(string model_file, bool is_partitioned, vector<ModelInfo> &i
  @return name of best-fit-model
  */
 string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_info, ostream &fmodel,
-		string set_name = "", bool print_mem_usage = false);
+		ModelsBlock *models_block, string set_name = "", bool print_mem_usage = false);
 
 /**
  * print site log likelihoods to a fileExists

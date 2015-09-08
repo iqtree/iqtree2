@@ -1261,6 +1261,12 @@ uint64_t PhyloTree::getMemoryRequired(size_t ncategory) {
             mem_size -= ((uint64_t)leafNum*2 - 4) * ((uint64_t)block_size*sizeof(double) + nptn * sizeof(UBYTE));
         }
     }
+	uint64_t tip_partial_lh_size;
+    if (model)
+        tip_partial_lh_size = aln->num_states * (aln->STATE_UNKNOWN+1) * model->getNMixtures() * sizeof(double);
+    else
+        tip_partial_lh_size = aln->num_states * (aln->STATE_UNKNOWN+1) * sizeof(double);
+    mem_size += tip_partial_lh_size;
     if (params->gbo_replicates)
         mem_size += params->gbo_replicates*nptn*sizeof(BootValType);
     return mem_size;

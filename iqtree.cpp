@@ -646,8 +646,7 @@ void IQTree::initializePLL(Params &params) {
 }
 
 
-void IQTree::initializeModel(Params &params) {
-	ModelsBlock *models_block = readModelsDefinition(params);
+void IQTree::initializeModel(Params &params, ModelsBlock *models_block) {
     try {
         if (!getModelFactory()) {
             if (isSuperTree()) {
@@ -676,7 +675,6 @@ void IQTree::initializeModel(Params &params) {
         	outError("non GTR model for DNA is not yet supported by PLL.");
         pllInitModel(pllInst, pllPartitions);
     }
-    delete models_block;
 }
 double IQTree::getProbDelete() {
     return (double) k_delete / leafNum;

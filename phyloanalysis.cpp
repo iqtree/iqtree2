@@ -1211,7 +1211,7 @@ void computeInitialDist(Params &params, IQTree &iqtree, string &dist_file) {
 
 }
 
-void initializeParams(Params &params, IQTree &iqtree, vector<ModelInfo> &model_info) {
+void initializeParams(Params &params, IQTree &iqtree, vector<ModelInfo> &model_info, ModelsBlock *models_block) {
 //    iqtree.setCurScore(-DBL_MAX);
     bool test_only = params.model_name.find("ONLY") != string::npos;
     /* initialize substitution model */
@@ -1255,7 +1255,7 @@ void initializeParams(Params &params, IQTree &iqtree, vector<ModelInfo> &model_i
         fmodel.precision(4);
         fmodel << fixed;
 
-        params.model_name = testModel(params, &iqtree, model_info, fmodel, "", true);
+        params.model_name = testModel(params, &iqtree, model_info, fmodel, models_block, "", true);
         fmodel.close();
         params.startCPUTime = start_cpu_time;
         params.start_real_time = start_real_time;
@@ -1625,12 +1625,17 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 
    	// FOR TUNG: swapping the order cause bug for -m TESTLINK
 //    iqtree.initSettings(params);
-    initializeParams(params, iqtree, model_info);
+
+	ModelsBlock *models_block = readModelsDefinition(params);
+
+    initializeParams(params, iqtree, model_info, models_block);
     iqtree.initSettings(params);
 
     /*********************** INITIAL MODEL OPTIMIZATION *****************/
 
-    iqtree.initializeModel(params);
+    iqtree.initializeModel(params, models_block);
+
+    delete models_block;
 
     // UpperBounds analysis. Here, to analyse the initial tree without any tree search or optimization
     if (params.upper_bound) {
