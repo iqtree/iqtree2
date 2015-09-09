@@ -864,6 +864,11 @@ void ModelPoMo::reportPoMoStateFreqs(ofstream &out) {
     out << setprecision(8);
     out << "(Estimated) frequencies of fixed states:" << endl;;
 	for (int i = 0; i < nnuc; i++)
+		out << freq_fixed_states[i] << " ";
+	out << endl << endl;
+
+    out << "(Estimated) normalized frequencies of fixed states:" << endl;;
+	for (int i = 0; i < nnuc; i++)
 		out << freq_fixed_states[i]/sum << " ";
 	out << endl << endl;
 
