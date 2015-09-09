@@ -468,21 +468,25 @@ void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh, 
     if (params.aLRT_replicates > 0 || params.gbo_replicates || (params.num_bootstrap_samples && params.compute_ml_tree)) {
         out << "Numbers in parentheses are ";
         if (params.aLRT_replicates > 0) {
-            out << "SH-aLRT supports";
+            out << "SH-aLRT support (%)";
             if (params.localbp_replicates)
-                out << " / local bootstrap (LBP)";
+                out << " / local bootstrap support (%)";
         }
+        if (params.aLRT_test)
+            out << " / parametric aLRT support";
+        if (params.aBayes_test)
+            out << " / aBayes support";
         if (params.num_bootstrap_samples && params.compute_ml_tree) {
-            if (params.aLRT_replicates > 0)
+            if (params.aLRT_replicates > 0 || params.aLRT_test || params.aBayes_test)
                 out << " /";
-            out << " standard bootstrap supports";
+            out << " standard bootstrap support (%)";
         }
         if (params.gbo_replicates) {
-            if (params.aLRT_replicates > 0)
+            if (params.aLRT_replicates > 0 || params.aLRT_test || params.aBayes_test)
                 out << " /";
-            out << " ultrafast bootstrap supports";
+            out << " ultrafast bootstrap support (%)";
         }
-        out << " (%)" << endl;
+        out << endl;
     }
     out << endl;
 
@@ -1295,7 +1299,7 @@ void pruneTaxa(Params &params, IQTree &iqtree, double *pattern_lh, NodeVector &p
 		double curScore =  iqtree.getCurScore();
 		iqtree.computePatternLikelihood(pattern_lh, &curScore);
 		num_low_support = iqtree.testAllBranches(params.aLRT_threshold, curScore,
-				pattern_lh, params.aLRT_replicates, params.localbp_replicates);
+				pattern_lh, params.aLRT_replicates, params.localbp_replicates, params.aLRT_test, params.aBayes_test);
 		iqtree.printResultTree();
 		cout << "  " << getCPUTime() - mytime << " sec." << endl;
 		cout << num_low_support << " branches show low support values (<= " << params.aLRT_threshold << "%)" << endl;
@@ -1884,14 +1888,22 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 	printMiscInfo(params, iqtree, pattern_lh);
 
 	/****** perform SH-aLRT test ******************/
-	if ((params.aLRT_replicates > 0 || params.localbp_replicates > 0) && !params.pll) {
+	if ((params.aLRT_replicates > 0 || params.localbp_replicates > 0 || params.aLRT_test || params.aBayes_test) && !params.pll) {
 		double mytime = getCPUTime();
 		params.aLRT_replicates = max(params.aLRT_replicates, params.localbp_replicates);
-		cout << endl << "Testing tree branches by SH-like aLRT with "
+        cout << endl;
+        if (params.aLRT_replicates > 0) 
+            cout << "Testing tree branches by SH-like aLRT with "
 				<< params.aLRT_replicates << " replicates..." << endl;
+        if (params.localbp_replicates)
+            cout << "Testing tree branches by local-BP test with " << params.localbp_replicates << " replicates..." << endl;
+        if (params.aLRT_test)
+            cout << "Testing tree branches by aLRT parametric test..." << endl;
+        if (params.aBayes_test)
+            cout << "Testing tree branches by aBayes parametric test..." << endl;
 		iqtree.setRootNode(params.root);
 		iqtree.testAllBranches(params.aLRT_threshold, iqtree.getCurScore(),
-				pattern_lh, params.aLRT_replicates, params.localbp_replicates);
+				pattern_lh, params.aLRT_replicates, params.localbp_replicates, params.aLRT_test, params.aBayes_test);
 		cout << "CPU Time used:  " << getCPUTime() - mytime << " sec." << endl;
 	}
 

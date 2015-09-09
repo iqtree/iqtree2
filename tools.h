@@ -1281,6 +1281,12 @@ public:
      */
     int aLRT_replicates;
 
+    /** true to perform aLRT branch test of Anisimova & Gascuel (2006) */
+    bool aLRT_test;
+
+    /** true to perform aBayes branch test of Anisimova et al (2011) */
+    bool aBayes_test;
+
     /**
             number of replicates for local bootstrap probabilities method of Adachi & Hasegawa (1996) in MOLPHY
      */

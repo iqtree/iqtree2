@@ -759,6 +759,8 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.mean_rate = 1.0;
     params.aLRT_threshold = 101;
     params.aLRT_replicates = 0;
+    params.aLRT_test = false;
+    params.aBayes_test = false;
     params.localbp_replicates = 0;
     params.SSE = LK_EIGEN_SSE;
     params.lk_no_avx = false;
@@ -2079,10 +2081,18 @@ void parseArg(int argc, char *argv[], Params &params) {
 			}
 			if (strcmp(argv[cnt], "-alrt") == 0) {
 				cnt++;
-				params.aLRT_replicates = convert_int(argv[cnt]);
-				if (params.aLRT_replicates < 1000
-						&& params.aLRT_replicates != 0)
-					throw "aLRT replicates must be at least 1000";
+                int reps = convert_int(argv[cnt]);
+                if (reps == 0)
+                    params.aLRT_test = true;
+                else {
+                    params.aLRT_replicates = reps;
+                    if (params.aLRT_replicates < 1000)
+                        throw "aLRT replicates must be at least 1000";
+                }
+				continue;
+			}
+			if (strcmp(argv[cnt], "-abayes") == 0) {
+				params.aBayes_test = true;
 				continue;
 			}
 			if (strcmp(argv[cnt], "-lbp") == 0) {
@@ -2926,6 +2936,8 @@ void usage_iqtree(char* argv[], bool full_command) {
 //            << "  -t <threshold>       Minimum bootstrap support [0...1) for consensus tree" << endl
             << endl << "SINGLE BRANCH TEST:" << endl
             << "  -alrt <#replicates>  SH-like approximate likelihood ratio test (SH-aLRT)" << endl
+            << "  -alrt 0              Parametric aLRT test (Anisimova and Gascuel 2006)" << endl
+            << "  -abayes              approximate Bayes test (Anisimova et al. 2011)" << endl
             << "  -lbp <#replicates>   Fast local bootstrap probabilities" << endl
             << endl << "AUTOMATIC MODEL SELECTION:" << endl
             << "  -m TESTONLY          Standard model selection (like jModelTest, ProtTest)" << endl
