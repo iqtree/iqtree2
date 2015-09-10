@@ -1614,7 +1614,8 @@ public:
 	bool count_trees;
 
     /** true to do random sampling for PoMo model, false to do binomial sampling */
-    bool pomo_random_sampling;
+    // OBSOLETE: now specified with -st CR 
+//    bool pomo_random_sampling;
 
 	/* /\** */
 	/*  * If `true`, Counts File input type has been specified with "-st */
