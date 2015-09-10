@@ -692,51 +692,8 @@ void PhyloTree::computeTipPartialLikelihood() {
 		}
 		break;
     case SEQ_POMO: 
-    if (params->pomo_random_sampling) {
-        int N = aln->virtual_pop_size;
-		for (state = 0; state < aln->pomo_states.size(); state++) {
-            double *this_tip_partial_lh = &tip_partial_lh[(state+nstates)*nstates*nmixtures];
-            
-            // decode the id and value
-            int id1 = aln->pomo_states[state] & 3;
-            int id2 = (aln->pomo_states[state] >> 16) & 3;
-            int j = (aln->pomo_states[state] >> 2) & 16383;
-            int M = j + (aln->pomo_states[state] >> 18);
-            int i = 0;
-            int k;
-        
-
-#if 0 
-            // TODO: this is randomly drawn every time computing partial likelihood again
-             for(k = 0; k < N; k++) {
-                 int r_int = random_int(M);
-                 if (r_int < j) i++;
-             }
-#else
-            i = N*j/M;
-#endif
-            
-             int real_state;
-             if (i == 0) 
-                real_state = id2;
-             else if (i == N) 
-                real_state = id1;
-             else {
-                 // Convert sampled_values to state.
-                 // FIXME: This could be improved.
-                 int x;
-                 int nnuc = 4;
-                 if (id1 == 0) x = id2 - 1;
-                 else x = id1 + id2;
-                 real_state = nnuc + x*(N-2) + x + i - 1;
-             }
-            for (m = 0; m < nmixtures; m++) {
-                double *inv_evec = &all_inv_evec[m*nstates*nstates];
-                for (i = 0; i < nstates; i++)
-                    this_tip_partial_lh[m*nstates + i] = inv_evec[i*nstates+real_state];
-            }
-        }
-    } else { // added BQM 2015-07
+    if (aln->pomo_states.size() > 0)
+    { // added BQM 2015-07
         int N = aln->virtual_pop_size;
         DoubleVector logv; // BQM: log(0), log(1), log(2)..., for fast computation
         logv.resize(N+1);
@@ -755,10 +712,6 @@ void PhyloTree::computeTipPartialLikelihood() {
             int id2 = (aln->pomo_states[state] >> 16) & 3;
             int j = (aln->pomo_states[state] >> 2) & 16383;
             int M = j + (aln->pomo_states[state] >> 18);
-            if (M >= logv.size()) {
-                for (i = logv.size(); i <= M; i++)
-                    logv.push_back(log((double)i));
-            }
             // Check if observed state is a fixed one.  If so, many
             // PoMo states can lead to this data.  E.g., even (2A,8T)
             // can lead to a sampled data of 7A.
@@ -784,16 +737,20 @@ void PhyloTree::computeTipPartialLikelihood() {
                         }
                     }
                 }
-            // normalize partial likelihoods to total of 1.0
-            sum_lh = 1.0/sum_lh;
-            for (i = 0; i < nstates; i++)
-                real_partial_lh[i] *= sum_lh;
+                // normalize partial likelihoods to total of 1.0
+                sum_lh = 1.0/sum_lh;
+                for (i = 0; i < nstates; i++)
+                    real_partial_lh[i] *= sum_lh;
             }
             // Observed state is polymorphic.  We only need to set the
             // partial likelihoods for states that are also
             // polymorphic for the same alleles.  E.g., states of type
             // (ix,(N-i)y) can lead to the observed state (jx,(M-j)y).
             else {
+                if (M >= logv.size()) {
+                    for (i = logv.size(); i <= M; i++)
+                        logv.push_back(log((double)i));
+                }
                 // compute (M choose (M-j) = M choose j)
                 double res = 0.0;
                 for (i = j+1; i <= M; i++)
@@ -815,7 +772,7 @@ void PhyloTree::computeTipPartialLikelihood() {
                 sum_lh = 1.0/sum_lh;
                 for (i = 0; i < nstates; i++)
                     real_partial_lh[i] *= sum_lh;
-                }
+            }
             
             // BUG FIX 2015-09-03: tip_partial_lh stores inner product
             // of real_partial_lh and inverse eigenvector for each
@@ -828,7 +785,7 @@ void PhyloTree::computeTipPartialLikelihood() {
                         this_tip_partial_lh[m*nstates + i] +=
                             inv_evec[i*nstates+j] * real_partial_lh[j];
             }
-        }
+        } // for loop
         aligned_free(real_partial_lh);
     }
         break;

@@ -135,6 +135,10 @@ void Alignment::checkSeqName() {
     double *freq_per_sequence = new double[num_states];
     unsigned *count_per_seq = new unsigned[num_states*getNSeq()];
     computeStateFreq(state_freq);
+    bool do_comp_test = true;
+    for (int stateno = 0; stateno < num_states; stateno++)
+        if (state_freq[stateno] <= 0)
+            do_comp_test = false;
 //    computeStateFreqPerSequence(freq_per_sequence);
     countStatePerSequence(count_per_seq);
 
@@ -143,7 +147,10 @@ void Alignment::checkSeqName() {
 //        cout << "  ID  ";
 //        cout <<  "  Sequence";
         cout.width(max_len+14);
-        cout << right << "Gap/Ambiguity" << "  Composition  p-value"<< endl;
+        cout << right << "Gap/Ambiguity";
+        if (do_comp_test) 
+            cout << "  Composition  p-value";
+        cout << endl;
         int num_problem_seq = 0;
         int total_gaps = 0;
         cout.precision(2);
@@ -166,26 +173,28 @@ void Alignment::checkSeqName() {
 			}
 //            cout << "\t" << seq_states[i].size();
 
-            double chi2 = 0.0;
-            unsigned sum_count = 0;
-            for (j = 0; j < num_states; j++)
-                sum_count += count_per_seq[i*num_states+j];
-            double sum_inv = 1.0/sum_count;
-            for (j = 0; j < num_states; j++)
-                freq_per_sequence[j] = count_per_seq[i*num_states+j]*sum_inv;
-            for (j = 0; j < num_states; j++)
-                chi2 += (state_freq[j] - freq_per_sequence[j]) * (state_freq[j] - freq_per_sequence[j]) / state_freq[j];
+            if (do_comp_test) {
+                double chi2 = 0.0;
+                unsigned sum_count = 0;
+                for (j = 0; j < num_states; j++)
+                    sum_count += count_per_seq[i*num_states+j];
+                double sum_inv = 1.0/sum_count;
+                for (j = 0; j < num_states; j++)
+                    freq_per_sequence[j] = count_per_seq[i*num_states+j]*sum_inv;
+                for (j = 0; j < num_states; j++)
+                    chi2 += (state_freq[j] - freq_per_sequence[j]) * (state_freq[j] - freq_per_sequence[j]) / state_freq[j];
 
 //            chi2 *= getNSite();
-            chi2 *= sum_count;
-            double pvalue = chi2prob(num_states-1, chi2);
-            if (pvalue < 0.05) {
-                cout << "    failed ";
-                num_failed++;
-            } else
-                cout << "    passed ";
-            cout.width(9);
-            cout << right << pvalue*100 << "%";
+                chi2 *= sum_count;
+                double pvalue = chi2prob(num_states-1, chi2);
+                if (pvalue < 0.05) {
+                    cout << "    failed ";
+                    num_failed++;
+                } else
+                    cout << "    passed ";
+                cout.width(9);
+                cout << right << pvalue*100 << "%";
+            }
 //            cout << "  " << chi2;
 			cout << endl;
         }
@@ -195,7 +204,9 @@ void Alignment::checkSeqName() {
         cout << left << " TOTAL  ";
         cout.width(6);
         cout << right << ((double)total_gaps/getNSite())/getNSeq()*100 << "% ";
-        cout << " " << num_failed << " sequences failed composition chi2 test (p-value<5%; df=" << num_states-1 << ")" << endl;
+        if (do_comp_test)
+            cout << " " << num_failed << " sequences failed composition chi2 test (p-value<5%; df=" << num_states-1 << ")";
+        cout << endl;
         cout.precision(3);
     }
     delete [] count_per_seq;
@@ -1004,12 +1015,13 @@ char Alignment::convertState(char state, SeqType seq_type) {
     }
 }
 
+// TODO: state should int
 char Alignment::convertState(char state) {
 	return convertState(state, seq_type);
 }
 
 
-
+// TODO: state should int
 char Alignment::convertStateBack(char state) {
     if (state == STATE_UNKNOWN) return '-';
     if (state == STATE_INVALID) return '?';
@@ -2868,7 +2880,7 @@ string Alignment::getUnobservedConstPatterns() {
 int Alignment::countProperChar(int seq_id) {
     int num_proper_chars = 0;
     for (iterator it = begin(); it != end(); it++) {
-        if ((*it)[seq_id] < num_states) num_proper_chars+=(*it).frequency;
+        if ((*it)[seq_id] < num_states + pomo_states.size()) num_proper_chars+=(*it).frequency;
     }
     return num_proper_chars;
 }
@@ -3121,9 +3133,7 @@ int Alignment::convertPomoState(int state) {
     int value1 = (pomo_states[state] >> 2) & 16383;
     int value2 = pomo_states[state] >> 18;
     int N = virtual_pop_size;
-    // TODO: Check if this is a good approximation.  Maybe the integer
-    // division leads to a bias.
-    value1 = value1*N/(value1+value2);
+    value1 = (int)round((double)value1*N/(value1+value2));
     int real_state;
     if (value1 == 0) 
         real_state = id2;

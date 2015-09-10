@@ -863,7 +863,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.print_partition_info = false;
 	params.print_conaln = false;
 	params.count_trees = false;
-    params.pomo_random_sampling = false;
+//    params.pomo_random_sampling = false;
 	// params.pomo_counts_file_flag = false;
 	// params.pomo_pop_size = 10;
 	params.print_branch_lengths = false;
@@ -1548,7 +1548,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 					throw "Use -st BIN or -st DNA or -st AA or -st CODON or -st MORPH";
                 string arg = argv[cnt];
                 params.sequence_type = argv[cnt];
-                if (arg.substr(0,2) == "CR") params.pomo_random_sampling = true;
+//                if (arg.substr(0,2) == "CR") params.pomo_random_sampling = true;
                 if (arg.substr(0,2) == "CF" || arg.substr(0,2) == "CR") {
                     if (arg.length() > 2) {
                         int ps = convert_int(arg.substr(2).c_str());
