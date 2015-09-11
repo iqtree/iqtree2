@@ -1555,9 +1555,9 @@ void parseArg(int argc, char *argv[], Params &params) {
                 if (arg.substr(0,2) == "CF" || arg.substr(0,2) == "CR") {
                     if (arg.length() > 2) {
                         int ps = convert_int(arg.substr(2).c_str());
-                        if ( (ps < 2) || (ps > 20)) {
-                            std::cout << "Please give a correct PoMo sequence type parameter; e.g., `-st CF10`." << std::endl;
-                            outError("Custom virtual population size of PoMo not within 3 and 20.");   
+                        if (((ps != 10) && (ps % 2 == 0)) || (ps < 3) || (ps > 19)) {
+                            std::cout << "Please give a correct PoMo sequence type parameter; e.g., `-st CF09`." << std::endl;
+                            outError("Custom virtual population size of PoMo not an odd number within 3 and 20 or 10.");   
                         }
                     }
                 }
@@ -3015,7 +3015,7 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "- it is specified in the model string (see below)."                                  << endl
             << "  -st C[FR] or C[FR]ps Counts File (automatically detected)."                        << endl
             << "                       Useful to customize the virtual population size `ps`"         << endl
-            << "                       2 <= ps <= 20;."                                              << endl
+            << "                       3 <= ps <= 19; ps has to be an odd number or 10."             << endl
             << "                       F: Sum over partial likelihoods at the tip of the tree."      << endl
             << "                       R: Random binomial sampling of PoMo states from data."        << endl
             << "                       Default is `CF9`."                                            << endl
