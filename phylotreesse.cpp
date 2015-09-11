@@ -245,19 +245,19 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk) {
     case 16: // N=3
         switch(sse) {
         case LK_SSE:
-            computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchSSE<28>;
-            computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervSSE<28>;
-            computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodSSE<28>;
+            computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchSSE<16>;
+            computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervSSE<16>;
+            computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodSSE<16>;
             computeLikelihoodFromBufferPointer = NULL;
             break;
         case LK_EIGEN_SSE:
 			if (instruction_set >= 7) {
 				setLikelihoodKernelAVX();
 			} else {
-                computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchEigenSIMD<Vec2d, 2, 28>;
-                computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervEigenSIMD<Vec2d, 2, 28>;
-                computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodEigenSIMD<Vec2d, 2, 28>;
-                computeLikelihoodFromBufferPointer = &PhyloTree::computeLikelihoodFromBufferEigenSIMD<Vec2d, 2, 28>;
+                computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchEigenSIMD<Vec2d, 2, 16>;
+                computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervEigenSIMD<Vec2d, 2, 16>;
+                computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodEigenSIMD<Vec2d, 2, 16>;
+                computeLikelihoodFromBufferPointer = &PhyloTree::computeLikelihoodFromBufferEigenSIMD<Vec2d, 2, 16>;
             }
             break;
         default:
