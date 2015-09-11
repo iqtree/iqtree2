@@ -1056,9 +1056,28 @@ ModelSubst* createModel(string model_str, ModelsBlock *models_block, StateFreqTy
 	return model;
 }
 
+/**
+	constructor
+	@param tree associated tree for the model
+*/
+ModelMixture::ModelMixture(PhyloTree *tree, bool count_rates) : ModelGTR(tree, count_rates) {
+	prop = NULL;
+	fix_prop = true;
+	optimizing_submodels = false;
+}
+
 ModelMixture::ModelMixture(string orig_model_name, string model_name, string model_list, ModelsBlock *models_block,
 		StateFreqType freq, string freq_params, PhyloTree *tree, bool optimize_weights, bool count_rates)
 	: ModelGTR(tree, count_rates)
+{
+	prop = NULL;
+	fix_prop = true;
+	optimizing_submodels = false;
+	initMixture(orig_model_name, model_name, model_list, models_block, freq, freq_params, tree, optimize_weights, count_rates);
+}
+
+void ModelMixture::initMixture(string orig_model_name, string model_name, string model_list, ModelsBlock *models_block,
+		StateFreqType freq, string freq_params, PhyloTree *tree, bool optimize_weights, bool count_rates)
 {
 //	const int MAX_MODELS = 64;
 	size_t cur_pos;
@@ -1117,11 +1136,11 @@ ModelMixture::ModelMixture(string orig_model_name, string model_name, string mod
         for (m = 0; m < freq_weights.size(); m++)
             if (!freq_vec[m]) 
                 freq_weights[m] = sum_weights/freq_weights.size();
-		init(FREQ_USER_DEFINED);
+		ModelGTR::init(FREQ_USER_DEFINED);
 	} else {
 		if (freq_params != "")
 			readStateFreq(freq_params);
-		init(freq);
+		ModelGTR::init(freq);
 	}
 
 	DoubleVector weights;
@@ -1193,6 +1212,8 @@ ModelMixture::ModelMixture(string orig_model_name, string model_name, string mod
 	full_name += CLOSE_BRACKET;
 
 	int nmixtures = size();
+	if (prop)
+		aligned_free(prop);
 	prop = aligned_alloc<double>(nmixtures);
 
 	double sum = 0.0;

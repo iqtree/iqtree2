@@ -29,6 +29,7 @@
 #include "model/modelbin.h"
 #include "model/modelcodon.h"
 #include "model/modelmorphology.h"
+#include "model/modelmixture.h"
 #include "timeutil.h"
 
 #include "phyloanalysis.h"
@@ -586,6 +587,11 @@ int getModelList(Params &params, Alignment *aln, StrVector &models, bool separat
                 models.push_back(model_names[i] + ratehet[j]);
             }
     }
+    if (params.model_extra_set) {
+        StrVector extra_model_names;
+        convert_string_vec(params.model_extra_set, extra_model_names);        
+        models.insert(models.end(), extra_model_names.begin(), extra_model_names.end());
+    }
     return max_cats;
 }
 
@@ -752,7 +758,7 @@ void printModelFile(ostream &fmodel, Params &params, PhyloTree *tree, ModelInfo 
  * @param model_info (IN/OUT) all model information
  * @return total number of parameters
  */
-void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInfo> &model_info, ostream &fmodel) {
+void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInfo> &model_info, ostream &fmodel, ModelsBlock *models_block ) {
 //    params.print_partition_info = true;
 //    params.print_conaln = true;
 	int i = 0;
@@ -811,7 +817,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInf
         stringstream this_fmodel;
 		// do the computation
 //#ifdef _OPENMP
-		string model = testModel(params, this_tree, part_model_info, this_fmodel, in_tree->part_info[i].name);
+		string model = testModel(params, this_tree, part_model_info, this_fmodel, models_block, in_tree->part_info[i].name);
 //#else
 //		string model = testModel(params, this_tree, part_model_info, fmodel, in_tree->part_info[i].name);
 //#endif
@@ -952,7 +958,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInf
                 tree->setAlignment(aln);
                 extractModelInfo(set_name, model_info, part_model_info);
 //#ifdef _OPENMP
-                model = testModel(params, tree, part_model_info, this_fmodel, set_name);
+                model = testModel(params, tree, part_model_info, this_fmodel, models_block, set_name);
 //#else
 //                model = testModel(params, tree, part_model_info, fmodel, set_name);
 //#endif
@@ -1060,7 +1066,9 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInf
 	in_tree->printBestPartitionRaxml((string(params.out_prefix) + ".best_scheme").c_str());
 }
 
-string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_info, ostream &fmodel, string set_name, bool print_mem_usage) {
+string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_info, ostream &fmodel, ModelsBlock *models_block,
+    string set_name, bool print_mem_usage) 
+{
 	SeqType seq_type = in_tree->aln->seq_type;
 	if (in_tree->isSuperTree())
 		seq_type = ((PhyloSuperTree*)in_tree)->front()->aln->seq_type;
@@ -1096,7 +1104,7 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 	if (in_tree->isSuperTree()) {
 		// select model for each partition
 		PhyloSuperTree *stree = (PhyloSuperTree*)in_tree;
-		testPartitionModel(params, stree, model_info, fmodel);
+		testPartitionModel(params, stree, model_info, fmodel, models_block);
 		string res_models = "";
 		for (vector<PartitionInfo>::iterator it = stree->part_info.begin(); it != stree->part_info.end(); it++) {
 			if (it != stree->part_info.begin()) res_models += ",";
@@ -1162,7 +1170,7 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 		it->BIC_score = DBL_MAX;
 	}
 
-	int num_cat = 0;
+	uint64_t RAM_requirement = 0;
     int model_aic = -1, model_aicc = -1, model_bic = -1;
     string prev_tree_string = "";
     int prev_model_id = -1;
@@ -1188,82 +1196,101 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
             model_names[model] = best_model + model_names[model];
         }
 		PhyloTree *tree = in_tree;
-        
-        if (model_names[model].find("+ASC") != string::npos) {
-            model_fac->unobserved_ptns = in_tree->aln->getUnobservedConstPatterns();
-            if (model_fac->unobserved_ptns.size() == 0) {
-                cout.width(3);
-                cout << right << model+1 << "  ";
-                cout.width(13);
-                cout << left << model_names[model] << " ";                
-                cout << "Skipped since +ASC is not applicable" << endl;
-                continue;
-            }
-            tree->aln->buildSeqStates(true);
-            if (model_fac->unobserved_ptns.size() < tree->aln->getNumNonstopCodons())
-                outError("Invalid use of +ASC because constant patterns are observed in the alignment");
-        } else {
-            model_fac->unobserved_ptns = "";
-            tree->aln->buildSeqStates(false);
-        }
-        // initialize tree
-        // initialize model
-        subst_model->setTree(tree);
-        StateFreqType freq_type = FREQ_UNKNOWN;
-        if (model_names[model].find("+F1X4") != string::npos)
-            freq_type = FREQ_CODON_1x4;
-        else if (model_names[model].find("+F3X4C") != string::npos)
-            freq_type = FREQ_CODON_3x4C;
-        else if (model_names[model].find("+F3X4") != string::npos)
-            freq_type = FREQ_CODON_3x4;
-        else if (model_names[model].find("+FQ") != string::npos)
-            freq_type = FREQ_EQUAL;
-        else if (model_names[model].find("+F") != string::npos)
-            freq_type = FREQ_EMPIRICAL;
-            
-        subst_model->init(model_names[model].substr(0, model_names[model].find('+')).c_str(), "", freq_type, "");
-        tree->params = &params;
-
-        tree->setModel(subst_model);
-        // initialize rate
-        size_t pos;
+        ModelFactory *this_model_fac = NULL;
+        bool mixture_model = false;
         int ncat = 0;
-        if ((pos = model_names[model].find("+R")) != string::npos) {
-            ncat = params.num_rate_cats;
-            if (model_names[model].length() > pos+2 && isdigit(model_names[model][pos+2])) {
-                ncat = convert_int(model_names[model].c_str() + pos+2);
-//                tree->getRate()->setNCategory(ncat);
+        string orig_name = params.model_name;
+        
+        if (models_block->findMixModel(model_names[model])) {
+            // mixture model
+            mixture_model = true;
+            params.model_name = model_names[model];
+            this_model_fac = new ModelFactory(params, tree, models_block);
+            tree->setModelFactory(this_model_fac);
+            tree->setModel(this_model_fac->model);
+            tree->setRate(this_model_fac->site_rate);
+            tree->deleteAllPartialLh();
+            tree->initializeAllPartialLh();
+            RAM_requirement = max(RAM_requirement, tree->getMemoryRequired());
+        } else {
+            // kernel might be changed if mixture model was tested
+            in_tree->setLikelihoodKernel(params.SSE);
+            // normal model
+            if (model_names[model].find("+ASC") != string::npos) {
+                model_fac->unobserved_ptns = in_tree->aln->getUnobservedConstPatterns();
+                if (model_fac->unobserved_ptns.size() == 0) {
+                    cout.width(3);
+                    cout << right << model+1 << "  ";
+                    cout.width(13);
+                    cout << left << model_names[model] << " ";                
+                    cout << "Skipped since +ASC is not applicable" << endl;
+                    continue;
+                }
+                tree->aln->buildSeqStates(true);
+                if (model_fac->unobserved_ptns.size() < tree->aln->getNumNonstopCodons())
+                    outError("Invalid use of +ASC because constant patterns are observed in the alignment");
+            } else {
+                model_fac->unobserved_ptns = "";
+                tree->aln->buildSeqStates(false);
             }
-            if (ncat <= 1) outError("Number of rate categories for " + model_names[model] + " is <= 1");
-            if (ncat > params.max_rate_cats)
-                outError("Number of rate categories for " + model_names[model] + " exceeds " + convertIntToString(params.max_rate_cats));
-            tree->setRate(rate_class[2+ncat]);
-        } else if (model_names[model].find("+I") != string::npos && (pos = model_names[model].find("+G")) != string::npos) {
-            tree->setRate(rate_class[3]);
-            if (model_names[model].length() > pos+2 && isdigit(model_names[model][pos+2])) {
-                int ncat = convert_int(model_names[model].c_str() + pos+2);
-                if (ncat < 1) outError("Wrong number of category for +G in " + model_names[model]);
-                tree->getRate()->setNCategory(ncat);
-            }
-        } else if ((pos = model_names[model].find("+G")) != string::npos) {
-            tree->setRate(rate_class[2]);
-            if (model_names[model].length() > pos+2 && isdigit(model_names[model][pos+2])) {
-                ncat = convert_int(model_names[model].c_str() + pos+2);
-                if (ncat < 1) outError("Wrong number of category for +G in " + model_names[model]);
-                tree->getRate()->setNCategory(ncat);
-            }
-        } else if (model_names[model].find("+I") != string::npos)
-            tree->setRate(rate_class[1]);
-        else
-            tree->setRate(rate_class[0]);
+            // initialize tree
+            // initialize model
+            subst_model->setTree(tree);
+            StateFreqType freq_type = FREQ_UNKNOWN;
+            if (model_names[model].find("+F1X4") != string::npos)
+                freq_type = FREQ_CODON_1x4;
+            else if (model_names[model].find("+F3X4C") != string::npos)
+                freq_type = FREQ_CODON_3x4C;
+            else if (model_names[model].find("+F3X4") != string::npos)
+                freq_type = FREQ_CODON_3x4;
+            else if (model_names[model].find("+FQ") != string::npos)
+                freq_type = FREQ_EQUAL;
+            else if (model_names[model].find("+F") != string::npos)
+                freq_type = FREQ_EMPIRICAL;
+                
+            subst_model->init(model_names[model].substr(0, model_names[model].find('+')).c_str(), "", freq_type, "");
+            tree->params = &params;
 
-        tree->getRate()->setTree(tree);
+            tree->setModel(subst_model);
+            // initialize rate
+            size_t pos;
+            if ((pos = model_names[model].find("+R")) != string::npos) {
+                ncat = params.num_rate_cats;
+                if (model_names[model].length() > pos+2 && isdigit(model_names[model][pos+2])) {
+                    ncat = convert_int(model_names[model].c_str() + pos+2);
+    //                tree->getRate()->setNCategory(ncat);
+                }
+                if (ncat <= 1) outError("Number of rate categories for " + model_names[model] + " is <= 1");
+                if (ncat > params.max_rate_cats)
+                    outError("Number of rate categories for " + model_names[model] + " exceeds " + convertIntToString(params.max_rate_cats));
+                tree->setRate(rate_class[2+ncat]);
+            } else if (model_names[model].find("+I") != string::npos && (pos = model_names[model].find("+G")) != string::npos) {
+                tree->setRate(rate_class[3]);
+                if (model_names[model].length() > pos+2 && isdigit(model_names[model][pos+2])) {
+                    int ncat = convert_int(model_names[model].c_str() + pos+2);
+                    if (ncat < 1) outError("Wrong number of category for +G in " + model_names[model]);
+                    tree->getRate()->setNCategory(ncat);
+                }
+            } else if ((pos = model_names[model].find("+G")) != string::npos) {
+                tree->setRate(rate_class[2]);
+                if (model_names[model].length() > pos+2 && isdigit(model_names[model][pos+2])) {
+                    ncat = convert_int(model_names[model].c_str() + pos+2);
+                    if (ncat < 1) outError("Wrong number of category for +G in " + model_names[model]);
+                    tree->getRate()->setNCategory(ncat);
+                }
+            } else if (model_names[model].find("+I") != string::npos)
+                tree->setRate(rate_class[1]);
+            else
+                tree->setRate(rate_class[0]);
 
-        // initialize model factory
-        model_fac->model = subst_model;
-        model_fac->site_rate = tree->getRate();
-        tree->setModelFactory(model_fac);
+            tree->getRate()->setTree(tree);
 
+            // initialize model factory
+            model_fac->model = subst_model;
+            model_fac->site_rate = tree->getRate();
+            tree->setModelFactory(model_fac);
+        }
+        
         tree->clearAllPartialLH();
 
 
@@ -1319,9 +1346,9 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
                 params.user_file = orig_user_tree;
                 tree = iqtree;
             } else {
-                if (tree->getRate()->getNRate() > num_cat) {
+                if (tree->getMemoryRequired() > RAM_requirement) {
                     tree->deleteAllPartialLh();
-                    num_cat = tree->getRate()->getNRate();
+                    RAM_requirement = tree->getMemoryRequired();
                     tree->initializeAllPartialLh();
                 }
                 if (prev_tree_string != "") {
@@ -1402,6 +1429,14 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 			model_aicc = model_id;
 		if (model_bic < 0 || model_info[model_id].BIC_score < model_info[model_bic].BIC_score)
 			model_bic = model_id;
+        
+        if (mixture_model) {
+            delete this_model_fac->model;
+            delete this_model_fac->site_rate;
+            delete this_model_fac;
+            this_model_fac = NULL;
+            params.model_name = orig_name;
+        }
         
         in_tree->setModel(NULL);
         in_tree->setModelFactory(NULL);
