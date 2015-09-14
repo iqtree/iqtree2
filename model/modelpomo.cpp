@@ -426,8 +426,8 @@ void ModelPoMo::setBounds(double *lower_bound,
     // Frequencies of fixed states.
     if (freq_type == FREQ_ESTIMATE) {
         for (i = ndim-nnuc+2; i <= ndim; i++) {
-            lower_bound[i] = POMO_MIN_REL_FREQ * freq_fixed_states[3];
-            upper_bound[i] = POMO_MAX_REL_FREQ * freq_fixed_states[3];
+            lower_bound[i] = POMO_MIN_REL_FREQ * freq_fixed_states[i-ndim+nnuc-2];
+            upper_bound[i] = POMO_MAX_REL_FREQ * freq_fixed_states[i-ndim+nnuc-2];
             bound_check[i] = false;
         }        
     }

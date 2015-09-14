@@ -12,7 +12,9 @@
 const double POMO_MIN_RATE =  1e-5;
 const double POMO_INIT_RATE = 1e-4;
 const double POMO_MAX_RATE =  1e-3;
-const double POMO_MIN_REL_FREQ = 0.5; // one nucleotide might occur 10 times more than the others
+/* The actual boundaries will be set, e.g., to
+   #freq_fixed_states[i]*POMO_MIN_REL_FREQ. */
+const double POMO_MIN_REL_FREQ = 0.5;
 const double POMO_MAX_REL_FREQ = 2.0;
 
 class ModelPoMo : public ModelGTR
