@@ -1985,7 +1985,8 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
             else if (count == 0) {
                 state = STATE_UNKNOWN;
                 if (!pomo_random_sampling) {
-                    outError("Unknown state not supported yet without random sampling.");
+                    cout << "FIXME: STATE_UNKNOWN not supported yet without random sampling, site will be dropped from analysis." << endl;
+                    // outError("Unknown state not supported yet without random sampling.");
                     everything_ok = false; // BQM: STATE_UNKNOWN is not known right now, will be set once data reading is completed
                 }
                 // if (verbose_mode >= VB_MAX) {
