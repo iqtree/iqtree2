@@ -771,6 +771,10 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info,
 	assert(tree);
 
 	stopStoringTransMatrix();
+        // modified by Thomas Wong on Sept 11, 15
+        // no optimization of branch length in the first round
+        cur_lh = tree->computeLikelihood();
+        /*
 	if (fixed_len || tree->params->num_param_iterations == 0)
 		cur_lh = tree->computeLikelihood();
 	else {
@@ -779,6 +783,7 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info,
         else
             cur_lh = tree->computeLikelihood();
 	}
+        */
     tree->setCurScore(cur_lh);
 	if (verbose_mode >= VB_MED || write_info) 
 		cout << "1. Initial log-likelihood: " << cur_lh << endl;
@@ -816,6 +821,10 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info,
             Params::getInstance().fai = false;
         }
 
+                // changed to opimise edge length first, and then Q,W,R inside the loop by Thomas on Sept 11, 15
+		if (!fixed_len)
+			new_lh = tree->optimizeAllBranches(min(i,3), logl_epsilon);  // loop only 3 times in total (previously in v0.9.6 5 times)
+
         new_lh = optimizeParametersOnly(gradient_epsilon);
 
 		if (new_lh == 0.0) {
@@ -826,8 +835,6 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info,
 			model->writeInfo(cout);
 			site_rate->writeInfo(cout);
 		}
-		if (!fixed_len)
-			new_lh = tree->optimizeAllBranches(min(i,3), logl_epsilon);  // loop only 3 times in total (previously in v0.9.6 5 times)
 		if (new_lh > cur_lh + logl_epsilon) {
             if (Params::getInstance().testAlpha && i == 3) {
                 double newEpsilon = (new_lh - cur_lh) * 0.01;

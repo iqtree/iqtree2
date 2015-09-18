@@ -202,7 +202,8 @@ double RateFree::optimizeParameters(double gradient_epsilon) {
         right = 0;
     }
 
-    for (optimizing_params = left; optimizing_params <= right; optimizing_params++) {
+    // changed to Wi -> Ri by Thomas on Sept 11, 15
+    for (optimizing_params = right; optimizing_params >= left; optimizing_params--) {
     
         ndim = getNDim();
         // by BFGS algorithm
@@ -343,10 +344,30 @@ void RateFree::getVariables(double *variables) {
             prop[i] = variables[i+1] / sum;
         }
         prop[ncategory-1] = 1.0 / sum;
+        // added by Thomas on Sept 10, 15
+        // update the values of rates, in order to
+        // maintain the sum of prop[i]*rates[i] = 1
+        sum = 0;
+        for (i = 0; i < ncategory; i++) {
+            sum += prop[i] * rates[i];
+        }
+        for (i = 0; i < ncategory; i++) {
+            rates[i] = rates[i] / sum;
+        }
     } else if (optimizing_params == 1) {
         // rates
         for (i = 0; i < ncategory; i++)
             rates[i] = variables[i+1];
+        // added by Thomas on Sept 10, 15
+        // need to normalize the values of rates, in order to
+        // maintain the sum of prop[i]*rates[i] = 1
+        sum = 0;
+        for (i = 0; i < ncategory; i++) {
+            sum += prop[i] * rates[i];
+        }
+        for (i = 0; i < ncategory; i++) {
+            rates[i] = rates[i] / sum;
+        }
     } else {
         // both weights and rates
         for (i = 0; i < ncategory-1; i++) {
