@@ -67,9 +67,9 @@
 #include <stdlib.h>
 #include "vectorclass/vectorclass.h"
 
+#include "MPIHelper.h"
 #ifdef _IQTREE_MPI
 #include <mpi.h>
-#include "MPIHelper.h"
 #endif
 
 #ifdef _OPENMP

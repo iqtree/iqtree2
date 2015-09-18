@@ -2,14 +2,16 @@
 // Created by tung on 6/18/15.
 //
 
-#ifndef IQTREE_MPIHELPER_H
-#define IQTREE_MPIHELPER_H
+#ifndef MPIHELPER_H
+#define MPIHELPER_H
 #include <string>
 #include <vector>
-#include <mpi.h>
 #include "tools.h"
 #include "TreeCollection.h"
 #include "ObjectStream.h"
+#ifdef _IQTREE_MPI
+#include <mpi.h>
+#endif
 
 #define MASTER 0
 #define CNT_TAG 0
@@ -23,7 +25,26 @@ class MPIHelper {
      *  Singleton method: get one and only one getInstance of the class
      */
 public:
+
     static MPIHelper& getInstance();
+
+    int getNumProcesses() const {
+        return numProcesses;
+    }
+
+    void setNumProcesses(int numProcesses) {
+        MPIHelper::numProcesses = numProcesses;
+    }
+
+    int getProcessID() const {
+        return processID;
+    }
+
+    void setProcessID(int processID) {
+        MPIHelper::processID = processID;
+    }
+
+#ifdef _IQTREE_MPI
 
     /**
      *  Get all the trees that have been sent to the current node
@@ -44,22 +65,8 @@ public:
      *  Remove the buffers for finished messages
      */
     int cleanUpMessages();
+#endif
 
-    int getNumProcesses() const {
-        return numProcesses;
-    }
-
-    void setNumProcesses(int numProcesses) {
-        MPIHelper::numProcesses = numProcesses;
-    }
-
-    int getProcessID() const {
-        return processID;
-    }
-
-    void setProcessID(int processID) {
-        MPIHelper::processID = processID;
-    }
 
 private:
     MPIHelper() {}; // Disable constructor
@@ -70,7 +77,10 @@ private:
 
     int numProcesses;
 
+#ifdef _IQTREE_MPI
     list< pair<MPI_Request*, ObjectStream*> > messages;
+#endif
+
 };
 
-#endif //IQTREE_MPIHELPER_H
+#endif

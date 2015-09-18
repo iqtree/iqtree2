@@ -10,9 +10,14 @@
 
 MPIHelper& MPIHelper::getInstance() {
     static MPIHelper instance;
+#ifndef _IQTREE_MPI
+    instance.setProcessID(0);
+    instance.setNumProcesses(0);
+#endif
     return instance;
 }
 
+#ifdef _IQTREE_MPI
 void MPIHelper::sendTreesToOthers(TreeCollection &trees, int tag) {
     cleanUpMessages();
     for (int i = 0; i < getNumProcesses(); i++) {
@@ -86,5 +91,6 @@ int MPIHelper::cleanUpMessages() {
     }
     return numMsgCleaned;
 }
+#endif
 
 

@@ -464,8 +464,14 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
 #endif
 
     string curParsTree;
+#ifdef _IQTREE_MPI
+    int processID = MPIHelper::getInstance().getProcessID();
+#else
+    int processID = 0;
+#endif
+
     for (int treeNr = 1; treeNr < nParTrees; treeNr++) {
-        int randSeed = params->ran_seed + treeNr + MPIHelper::getInstance().getProcessID() * nParTrees;
+        int randSeed = params->ran_seed + treeNr + processID * nParTrees;
         curParsTree = generateParsimonyTree(randSeed);
         candidateTrees.update(curParsTree, -DBL_MAX);
     }
@@ -526,7 +532,8 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
     }
     cout << candidateTrees.size() << " distinct starting trees" << endl;
 #endif
-    vector<string> bestTreeStrings = candidateTrees.getBestTreeStrings(Params::getInstance().numNNITrees);
+    // Select best initial trees for doing NNI
+    vector<string> bestTreeStrings = candidateTrees.getBestTreeStrings(nNNITrees);
 
 #ifdef _IQTREE_MPI
     MPI_Barrier(MPI_COMM_WORLD);
@@ -1766,6 +1773,7 @@ double IQTree::doTreeSearch() {
     } else {
         cout << "Doing NNI on the user-input tree ... " << endl;
         doNNISearch();
+        addTreeToCandidateSet(getTreeString(), curScore);
     }
 
     cout << "Current best tree score: " << candidateTrees.getBestScore() << " / CPU time: " <<
@@ -1889,8 +1897,8 @@ double IQTree::doTreeSearch() {
                     pllTreeCounter[perturb_tree_topo]++;
                 }
             }
-            //optimizeBranches(1);
-            initScore = computeLogL();
+            optimizeBranches(1);
+            initScore = curScore;
         }
 
         /*----------------------------------------
@@ -1913,6 +1921,8 @@ double IQTree::doTreeSearch() {
             sendCurTreeToOtherNodes(STOP_TAG);
         else
             sendCurTreeToOtherNodes(CNT_TAG);
+#else
+        addTreeToCandidateSet(getTreeString(), curScore);
 #endif
 
         if (iqp_assess_quartet == IQP_BOOTSTRAP) {
@@ -2182,12 +2192,11 @@ pair<int, int> IQTree::optimizeNNI() {
         if (curScore - oldScore <  params->loglh_epsilon)
             break;
 
-        if (params->snni && (curScore > curBestScore + params->loglh_epsilon)) {
+        if (params->snni && (curScore > curBestScore + 0.1)) {
             optimizeModelParameters(false, 0.1);
             curBestScore = curScore;
         }
     }
-
 
 
     if (numNNIs == 0) {
