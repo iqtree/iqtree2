@@ -349,7 +349,7 @@ void PhyloSuperTreePlen::deleteAllPartialLh() {
 		// reset these pointers so that they are not deleted
 		(*it)->central_partial_lh = NULL;
 		(*it)->central_scale_num = NULL;
-		(*it)->central_partial_pars = NULL;
+//		(*it)->central_partial_pars = NULL;
 		(*it)->_pattern_lh = NULL;
 		(*it)->_pattern_lh_cat = NULL;
 		(*it)->theta_all = NULL;
@@ -368,7 +368,7 @@ PhyloSuperTreePlen::~PhyloSuperTreePlen()
 		// reset these pointers so that they are not deleted
 		(*it)->central_partial_lh = NULL;
 		(*it)->central_scale_num = NULL;
-		(*it)->central_partial_pars = NULL;
+//		(*it)->central_partial_pars = NULL;
 		(*it)->_pattern_lh = NULL;
 		(*it)->_pattern_lh_cat = NULL;
 		(*it)->theta_all = NULL;
