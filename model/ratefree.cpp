@@ -183,7 +183,7 @@ double RateFree::optimizeParameters(double gradient_epsilon) {
 	if (verbose_mode >= VB_MED)
 		cout << "Optimizing " << name << " model parameters by " << optimize_alg << " algorithm..." << endl;
 
-    if (optimize_alg == "EM")
+    if (optimize_alg.find("EM") != string::npos)
         return optimizeWithEM();
 
 	//if (freq_type == FREQ_ESTIMATE) scaleStateFreq(false);
@@ -197,7 +197,7 @@ double RateFree::optimizeParameters(double gradient_epsilon) {
 //    score = optimizeWeights();
 
     int left = 1, right = 2;
-    if (optimize_alg.substr(0, 6) == "1-BFGS") {
+    if (optimize_alg.find("1-BFGS") != string::npos) {
         left = 0; 
         right = 0;
     }
@@ -212,7 +212,7 @@ double RateFree::optimizeParameters(double gradient_epsilon) {
 //        if (optimizing_params == 2 && optimize_alg.find("-EM") != string::npos)
 //            score = optimizeWeights();
 //        else 
-        if (optimize_alg.substr(optimize_alg.length()-2,2) == "-B")
+        if (optimize_alg.find("BFGS-B") != string::npos)
             score = -L_BFGS_B(ndim, variables+1, lower_bound+1, upper_bound+1, max(gradient_epsilon, TOL_FREE_RATE));
         else
             score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound, bound_check, max(gradient_epsilon, TOL_FREE_RATE));
