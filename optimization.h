@@ -141,7 +141,7 @@ public:
      @return minimized function value
      After the function is invoked, the values of x will be updated
     */
-    double L_BFGS_B(int nvar, double* vars, double* lower, double* upper, double pgtol = 1e-5, int maxit = 1000);
+    double L_BFGS_B(int nvar, double* vars, double* lower, double* upper, double pgtol = 1e-5, int maxit = 5); // changed maxit 1000 -> 5 by Thomas on Sept 11, 15
 
     /** internal function called by L_BFGS_B
         should return function value 
