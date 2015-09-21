@@ -237,43 +237,23 @@ void IQTree::initSettings(Params &params) {
     }
 }
 
-void myPartitionsDestroy(partitionList *pl) {
-	int i;
-	for (i = 0; i < pl->numberOfPartitions; i++) {
-		rax_free(pl->partitionData[i]->partitionName);
-		rax_free(pl->partitionData[i]);
-	}
-	rax_free(pl->partitionData);
-	rax_free(pl);
-}
-
 IQTree::~IQTree() {
     //if (bonus_values)
     //delete bonus_values;
     //bonus_values = NULL;
-    if (dist_matrix)
-        delete[] dist_matrix;
-    dist_matrix = NULL;
-
-    if (var_matrix)
-        delete[] var_matrix;
-    var_matrix = NULL;
 
     for (vector<double*>::reverse_iterator it = treels_ptnlh.rbegin(); it != treels_ptnlh.rend(); it++)
         delete[] (*it);
     treels_ptnlh.clear();
     for (vector<SplitGraph*>::reverse_iterator it2 = boot_splits.rbegin(); it2 != boot_splits.rend(); it2++)
         delete (*it2);
+    boot_splits.clear();
     //if (boot_splits) delete boot_splits;
-    if (pllPartitions)
-    	myPartitionsDestroy(pllPartitions);
-    if (pllAlignment)
-    	pllAlignmentDataDestroy(pllAlignment);
-    if (pllInst)
-        pllDestroyInstance(pllInst);
 
-    if (!boot_samples.empty())
+    if (!boot_samples.empty()) {
     	aligned_free(boot_samples[0]); // free memory
+        boot_samples.clear();
+    }
 }
 
 extern const char *aa_model_names_rax[];

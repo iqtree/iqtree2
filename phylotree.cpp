@@ -87,6 +87,7 @@ void PhyloTree::init() {
     ptn_invar = NULL;
     subTreeDistComputed = false;
     dist_matrix = NULL;
+    var_matrix = NULL;
     setLikelihoodKernel(LK_SSE);  // FOR TUNG: you forgot to initialize this variable!
     save_all_trees = 0;
     nodeBranchDists = NULL;
@@ -118,6 +119,16 @@ void PhyloTree::discardSaturatedSite(bool val) {
     discard_saturated_site = val;
 }
 
+void myPartitionsDestroy(partitionList *pl) {
+	int i;
+	for (i = 0; i < pl->numberOfPartitions; i++) {
+		rax_free(pl->partitionData[i]->partitionName);
+		rax_free(pl->partitionData[i]);
+	}
+	rax_free(pl->partitionData);
+	rax_free(pl);
+}
+
 PhyloTree::~PhyloTree() {
     if (nni_scale_num)
         aligned_free(nni_scale_num);
@@ -137,10 +148,13 @@ PhyloTree::~PhyloTree() {
     central_partial_pars = NULL;
     if (model_factory)
         delete model_factory;
+    model_factory = NULL;
     if (model)
         delete model;
+    model = NULL;
     if (site_rate)
         delete site_rate;
+    site_rate = NULL;
 //    if (tmp_scale_num1)
 //        delete[] tmp_scale_num1;
 //    if (tmp_scale_num2)
@@ -157,19 +171,41 @@ PhyloTree::~PhyloTree() {
     //	delete [] tmp_ptn_rates;
     if (_pattern_lh_cat)
         aligned_free(_pattern_lh_cat);
+    _pattern_lh_cat = NULL;
     if (_pattern_lh)
         aligned_free(_pattern_lh);
+    _pattern_lh = NULL;
     //if (state_freqs)
     //	delete [] state_freqs;
     if (theta_all)
         aligned_free(theta_all);
+    theta_all = NULL;
     if (ptn_freq)
         aligned_free(ptn_freq);
+    ptn_freq = NULL;
     ptn_freq_computed = false;
     if (ptn_invar)
     	aligned_free(ptn_invar);
+    ptn_invar = NULL;
     if (dist_matrix)
     	delete[] dist_matrix;
+    dist_matrix = NULL;
+
+    if (var_matrix)
+        delete[] var_matrix;
+    var_matrix = NULL;
+
+    if (pllPartitions)
+    	myPartitionsDestroy(pllPartitions);
+    if (pllAlignment)
+    	pllAlignmentDataDestroy(pllAlignment);
+    if (pllInst)
+        pllDestroyInstance(pllInst);
+
+    pllPartitions = NULL;
+    pllAlignment = NULL;
+    pllInst = NULL;
+    
 }
 
 void PhyloTree::readTree(const char *infile, bool &is_rooted) {

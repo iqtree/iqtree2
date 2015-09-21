@@ -2470,9 +2470,12 @@ void runPhyloAnalysis(Params &params) {
 			((PhyloSuperTreePlen*) tree)->printNNIcasesNUM();
 		}
 	}
+    // 2015-09-22: bug fix, move this line to before deleting tree
+    alignment = tree->aln;
 	delete tree;
 	// BUG FIX: alignment can be changed, should delete tree->aln instead
-	alignment = tree->aln;
+    // 2015-09-22: THIS IS STUPID: after deleting tree, one cannot access tree->aln anymore
+//	alignment = tree->aln;
 	delete alignment;
 }
 
