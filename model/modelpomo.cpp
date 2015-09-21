@@ -45,6 +45,8 @@ void ModelPoMo::init(const char *model_name,
 
     eps = 1e-6;
 
+    double test = estimateEmpiricalPolymorphicFreq();
+    
     // Mutation probabilities point to the rates of the DNA model.
     mutation_prob = dna_model->rates;
 	for (int i = 0; i < 6; i++) mutation_prob[i] = POMO_INIT_RATE;
@@ -102,27 +104,30 @@ ModelPoMo::~ModelPoMo() {
 //	delete [] mutation_prob;
 }
 
-double ModelPoMo::computeNormConst() {
-	int i, j;
+double ModelPoMo::computeSumFreqFixedStates() {
+    int i;
+    double norm_fixed = 0.0;
+	for (i = 0; i < 4; i++)
+		norm_fixed += freq_fixed_states[i];
+}
+
+double ModelPoMo::computeSumFreqPolyStates() {
+    double norm_polymorphic = 0.0;
+    int i, j;
 	double harmonic = 0.0;
 	for (i = 1; i < N; i++)
 		harmonic += 1.0/(double)i;
-
-	double norm_fixed = 0.0, norm_polymorphic = 0.0;
-    // // Tue Mar 17 14:29:37 CET 2015; Set the sum over the fixed
-    // // frequencies to 1.0 so that they can be compared with the
-    // // frequencies from the GTR model.
-    // norm_fixed = 1.0;
-	for (i = 0; i < 4; i++)
-		norm_fixed += freq_fixed_states[i];
-    // TODO: This could be made faster (second sum over j < i only).
 	for (i = 0; i < 4; i++) {
-		for (j = 0; j < 4; j++)
-			if (i != j)
-				norm_polymorphic +=
-                    freq_fixed_states[i] * freq_fixed_states[j] * mutCoeff(i, j);
+		for (j = 0; j < i; j++)
+            norm_polymorphic +=
+                2 * freq_fixed_states[i] * freq_fixed_states[j] * mutCoeff(i, j);
 	}
 	norm_polymorphic *= N * harmonic;
+}
+
+double ModelPoMo::computeNormConst() {
+	double norm_fixed = computeSumFreqFixedStates();
+    double norm_polymorphic = computeSumFreqPolyStates();
 	return 1.0/(norm_fixed + norm_polymorphic);
 }
 
@@ -844,6 +849,57 @@ ModelPoMo::estimateEmpiricalFixedStateFreqs(double * freq_fixed_states)
             std::cout << freq_fixed_states[i] << " ";
         std::cout << std::endl;
     }
+}
+
+double
+ModelPoMo::estimateEmpiricalPolymorphicFreq()
+{
+    double theta_p = 0.0;
+    int sum_pol = 0;
+    int sum_tot = 0;
+    
+    if (phylo_tree->aln->pomo_random_sampling) {
+        unsigned int abs_state_freq[num_states];
+        memset(abs_state_freq, 0, sizeof(unsigned int)*num_states);
+        phylo_tree->aln->computeAbsoluteStateFreq(abs_state_freq);
+        int n;
+        int x;
+        int y;
+
+        for (int i = 0; i < nnuc; i++) sum_tot += abs_state_freq[i];
+        for (int i = nnuc; i < num_states; i++) sum_pol += abs_state_freq[i];
+    } else {
+        for (Alignment::iterator it = phylo_tree->aln->begin();
+             it != phylo_tree->aln->end(); it++) {
+            for (Pattern::iterator it2 = it->begin(); it2 != it->end(); it2++) {
+                int state = (int)*it2;
+                if (state < num_states)
+                    outError("Unknown PoMo state in pattern.");
+                if (state == phylo_tree->aln->STATE_UNKNOWN)
+                    outError("STATE_UNKNOWN is not supported yet with partial lh");
+                state -= num_states;
+                assert(state < phylo_tree->aln->pomo_states.size());
+                // Decode the id and counts.
+                int id1 = phylo_tree->aln->pomo_states[state] & 3;
+                int id2 = (phylo_tree->aln->pomo_states[state] >> 16) & 3;
+                int j1 = (phylo_tree->aln->pomo_states[state] >> 2) & 16383;
+                int j2 = (phylo_tree->aln->pomo_states[state] >> 18);
+                if (j2 == 0) sum_tot += it->frequency;
+                else sum_pol += it->frequency;
+            }
+        }
+    }
+    sum_tot += sum_pol;
+    theta_p = (double) sum_pol/sum_tot;
+    // Output vector if verbose mode.
+    if (verbose_mode >= VB_MAX) {
+        cout << setprecision(8);
+        cout << "Estimated relative frequency of polymorphic states:" << std::endl;
+        cout << theta_p << std::endl;
+        cout << setprecision(5);
+    }
+    // Normalize frequencies so that the last entry is 1.0.
+    return theta_p;
 }
 
 void ModelPoMo::reportPoMoRates(ofstream &out) {

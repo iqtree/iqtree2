@@ -173,6 +173,14 @@ class ModelPoMo : public ModelGTR
     void estimateEmpiricalFixedStateFreqs(double * freq_fixed_states);
 
     /**
+     * Estimate the empirical (relative) sum of polymorhic states.
+     * The number of polymorphic sites in the data is summed up and
+     * the relative proportion of all sites is calculated and returned.
+     *
+     */
+    double estimateEmpiricalPolymorphicFreq();
+
+    /**
      * Report the model rates to the output file stream 'out'.
      *
      * @param out Output file stream.
@@ -304,6 +312,20 @@ class ModelPoMo : public ModelGTR
      */
     double mutCoeff(int nt1, int nt2);
 
+    /**
+     * Compute the sum of the frequencies of the fixed states.
+     *
+     * @return
+     */
+    double computeSumFreqFixedStates();
+
+    /**
+     * Compute part of normalization constant of polymorphic states.
+     *
+     * @return
+     */
+    double computeSumFreqPolyStates();
+    
     /**
      * Compute the normalization constant.  This constant ensures that
      * the stationary frequencies (invariant measure) sum up to 1
