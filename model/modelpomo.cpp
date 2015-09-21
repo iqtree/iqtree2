@@ -826,8 +826,8 @@ ModelPoMo::estimateEmpiricalFixedStateFreqs(double * freq_fixed_states)
                 int state = (int)*it2;
                 if (state < num_states)
                     outError("Unknown PoMo state in pattern.");
-                if (state == phylo_tree->aln->STATE_UNKNOWN)
-                    outError("STATE_UNKNOWN is not supported yet with partial lh");
+                else if (state == phylo_tree->aln->STATE_UNKNOWN)
+                    continue;
                 state -= num_states;
                 assert(state < phylo_tree->aln->pomo_states.size());
                 // Decode the id and counts.
@@ -875,8 +875,8 @@ ModelPoMo::estimateEmpiricalPolymorphicFreq()
                 int state = (int)*it2;
                 if (state < num_states)
                     outError("Unknown PoMo state in pattern.");
-                if (state == phylo_tree->aln->STATE_UNKNOWN)
-                    outError("STATE_UNKNOWN is not supported yet with partial lh");
+                else if (state == phylo_tree->aln->STATE_UNKNOWN)
+                    continue;
                 state -= num_states;
                 assert(state < phylo_tree->aln->pomo_states.size());
                 // Decode the id and counts.

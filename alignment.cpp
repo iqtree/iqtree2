@@ -473,6 +473,11 @@ void Alignment::computeUnknownState() {
     switch (seq_type) {
     case SEQ_DNA: STATE_UNKNOWN = 18; break;
     case SEQ_PROTEIN: STATE_UNKNOWN = 23; break;
+    case SEQ_POMO: {
+        if (pomo_random_sampling) STATE_UNKNOWN = num_states;
+        else STATE_UNKNOWN = 0xffffffff;
+        break;
+    }
     default: STATE_UNKNOWN = num_states; break;
     }
 }
@@ -684,14 +689,7 @@ bool Alignment::addPattern(Pattern &pat, int site, int freq) {
             break;
         }
     if (gaps_only) {
-        // FIXME: STATE_UNKNOWN is not properly set when reading in
-        // counts file data at the moment.  This leads to
-        // gaps_only=true in cases where this is not true.  In order
-        // to fix this bug, STATE_UNKNOWN needs to be known when
-        // adding a pattern.  Maybe we have to read in all the data
-        // and only then create the pattern.
-        if ((verbose_mode >= VB_DEBUG) &&
-            (seq_type != SEQ_POMO))
+        if (verbose_mode >= VB_DEBUG)
             cout << "Site " << site << " contains only gaps or ambiguous characters" << endl;
         //return true;
     }
@@ -1829,9 +1827,23 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
     seq_type = SEQ_POMO;
 
     // Set UNKNOWN_STATE.  This state is set if no information is in
-    // the alignment.  It is set to num_states.
+    // the alignment.  If we use partial likelihood we do not know the
+    // number of different patterns in the alignment yet and hence,
+    // cannot set the variable STATE_UNKNOWN yet (see
+    // `state_unknown_buffer`).
     computeUnknownState();
 
+    // Use a buffer for STATE_UNKNOWN.  I.e., if an unknown state is
+    // encountered, the pattern is added to this buffer.  Only after
+    // all sites have been read in, the patterns from this temporal
+    // buffer are added to the normal alignment because then, the
+    // value of STATE_UNKNOWN is known.
+    vector<Pattern> su_buffer;
+    // The site numbers of the patterns that include unknown states.
+    IntVector su_site_counts;
+    int su_number = 0;
+    bool includes_state_unknown = false;
+    
     // Open counts file.
     // Set the failbit and badbit.
     in.exceptions(ios::failbit | ios::badbit);
@@ -1859,8 +1871,8 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
         err_str << "Counts-File identification line could not be read.";
         throw err_str.str();
     }
-    cout << "Number of populations: " << npop << "." << endl;
-    cout << "Number of sites:       " << nsites << "." << endl;
+    cout << "Number of populations:     " << npop << endl;
+    cout << "Number of sites:           " << nsites << endl;
 
     if (nsites > 0)
         site_pattern.resize(nsites);
@@ -1909,6 +1921,8 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
         line_num++;
     	field_num = 0;
         pattern.clear();
+        everything_ok = true;
+        includes_state_unknown = false;
         istringstream fieldstream(line);
         // Loop over populations / individuals.
         for ( ; getline(fieldstream, field, field_delim); ) {
@@ -1977,24 +1991,11 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
                     state += num_states; // make the state larger than num_states
                 }
             }
-            // FIXME: STATE_UNKNOWN is not properly set when reading
-            // in counts file data at the moment.  In order to fix
-            // this bug, STATE_UNKNOWN needs to be known when adding a
-            // pattern.  Maybe we have to read in all the data and
-            // only then create the pattern.  Also fix `addPattern()`.
             else if (count == 0) {
                 state = STATE_UNKNOWN;
-                if (!pomo_random_sampling) {
-                    cout << "FIXME: STATE_UNKNOWN not supported yet without random sampling, site will be dropped from analysis." << endl;
-                    // outError("Unknown state not supported yet without random sampling.");
-                    everything_ok = false; // BQM: STATE_UNKNOWN is not known right now, will be set once data reading is completed
-                }
-                // if (verbose_mode >= VB_MAX) {
-                //     cout << "WARNING: Population without bases on line " << line_num << "." << endl;
-                // }
-                // everything_ok = false;
-            	// err_str << "No bases are present on line " << line_num << ".";
-            	//throw err_str.str();
+                su_number++;
+                if (!pomo_random_sampling)
+                    includes_state_unknown = true;
             }
             else if (count > 2) {
                 if (verbose_mode >= VB_MAX) {
@@ -2056,7 +2057,18 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
         // Pattern has been built and is now added to the vector of
         // patterns.
         if (everything_ok == true) {
-            addPattern(pattern,site_count);
+            if (includes_state_unknown) {
+                su_buffer.push_back(pattern);
+                su_site_counts.push_back(site_count);
+                // PatternIntMap::iterator pat_it = su_pattern_index.find(pattern);
+                // if (pat_it == su_pattern_index.end()) {
+                //     su_pattern_index[pattern] = site_count;
+                // }
+                // else {
+                //     su_duplicate_pattern_counter++;
+                // }
+            }
+            else addPattern(pattern, site_count);
             site_count++;
         }
         else {
@@ -2065,7 +2077,6 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
                 cout << "WARNING: Pattern on line " <<
                     line_num << " was not added." << endl;
             }
-            everything_ok = true;
         }
     }
 
@@ -2074,14 +2085,26 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
         throw err_str.str();
     }
 
-    cout << "Number of sites read:  " << site_count << "." << endl;
-    std::cout << "Number of fails: " << fails << "." << std::endl;
-    cout << "Number of compound states: " << pomo_states.size() << endl;
+    if (!pomo_random_sampling) {
+        // Now we can correctly set STATE_UNKNOWN.
+        // STATE_UNKNOWN = pomo_states.size() + num_states + su_buffer.size() - su_duplicate_pattern_counter;
+        STATE_UNKNOWN = pomo_states.size() + num_states;
 
-    STATE_UNKNOWN = pomo_states.size()+num_states;
-//    if (STATE_UNKNOWN >= STATE_INVALID)
-//        outError("Too many PoMo states that does not work temporarily");
-//    STATE_INVALID = STATE_UNKNOWN+1;
+        // TODO: DEBUG HANDLING OF UNKNOWN SITE.  THERE IS STILL A SEGMENTATION FAULT.
+        // Process sites that include an unknown state.
+        for (vector<Pattern>::iterator pat_it = su_buffer.begin(); pat_it != su_buffer.end(); pat_it++) {
+            for (Pattern::iterator sp_it = pat_it->begin(); sp_it != pat_it->end(); sp_it++)
+                if (*sp_it == 0xffffffff) *sp_it = STATE_UNKNOWN;
+        }
+
+        for (unsigned int i = 0; i < su_buffer.size(); i++)
+                addPattern(su_buffer[i], su_site_counts[i]);        
+    }
+
+    cout << "Number of sites read:      " << site_count << endl;
+    cout << "Number of fails:           " << fails << endl;
+    if (!pomo_random_sampling) cout << "Number of compound states: " << pomo_states.size() << endl;
+    cout << "Sites with unknown states: " << su_number << endl;
 
     site_pattern.resize(site_count);
 
