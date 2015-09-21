@@ -184,7 +184,9 @@ double RateFree::optimizeParameters(double gradient_epsilon) {
 		cout << "Optimizing " << name << " model parameters by " << optimize_alg << " algorithm..." << endl;
 
     if (optimize_alg.find("EM") != string::npos)
-        return optimizeWithEM();
+        if (!phylo_tree->getModel()->isMixture() || phylo_tree->getModelFactory()->fused_mix_rate)
+            // call EM only if model is current supported, otherwise use BFGS engine
+            return optimizeWithEM();
 
 	//if (freq_type == FREQ_ESTIMATE) scaleStateFreq(false);
 
