@@ -152,7 +152,7 @@ int RateFree::getNDim() {
     if (fix_params) return 0;
     if (optimizing_params == 0) return (2*ncategory-2); 
     if (optimizing_params == 1) // rates
-        return ncategory;
+        return ncategory-1;
     if (optimizing_params == 2) // proportions
         return ncategory-1;
     return 0;
@@ -291,7 +291,7 @@ void RateFree::setVariables(double *variables) {
             variables[i+1] = prop[i] / prop[ncategory-1];
     } else if (optimizing_params == 1) {
         // rates
-        for (i = 0; i < ncategory; i++)
+        for (i = 0; i < ncategory-1; i++)
             variables[i+1] = rates[i];
     } else {
         // both rates and weights
@@ -347,27 +347,27 @@ void RateFree::getVariables(double *variables) {
         // added by Thomas on Sept 10, 15
         // update the values of rates, in order to
         // maintain the sum of prop[i]*rates[i] = 1
-        sum = 0;
-        for (i = 0; i < ncategory; i++) {
-            sum += prop[i] * rates[i];
-        }
-        for (i = 0; i < ncategory; i++) {
-            rates[i] = rates[i] / sum;
-        }
+//        sum = 0;
+//        for (i = 0; i < ncategory; i++) {
+//            sum += prop[i] * rates[i];
+//        }
+//        for (i = 0; i < ncategory; i++) {
+//            rates[i] = rates[i] / sum;
+//        }
     } else if (optimizing_params == 1) {
         // rates
-        for (i = 0; i < ncategory; i++)
+        for (i = 0; i < ncategory-1; i++)
             rates[i] = variables[i+1];
         // added by Thomas on Sept 10, 15
         // need to normalize the values of rates, in order to
         // maintain the sum of prop[i]*rates[i] = 1
-        sum = 0;
-        for (i = 0; i < ncategory; i++) {
-            sum += prop[i] * rates[i];
-        }
-        for (i = 0; i < ncategory; i++) {
-            rates[i] = rates[i] / sum;
-        }
+//        sum = 0;
+//        for (i = 0; i < ncategory; i++) {
+//            sum += prop[i] * rates[i];
+//        }
+//        for (i = 0; i < ncategory; i++) {
+//            rates[i] = rates[i] / sum;
+//        }
     } else {
         // both weights and rates
         for (i = 0; i < ncategory-1; i++) {
