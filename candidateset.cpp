@@ -281,8 +281,9 @@ void CandidateSet::clearTopologies() {
 
 CandidateSet CandidateSet::getBestCandidateTrees(int numTrees) {
 	CandidateSet res;
-	if (numTrees >= size())
-		numTrees = size();
+	if (numTrees >= size() || numTrees == 0)
+		numTrees = (int) size();
+
 	for (reverse_iterator rit = rbegin(); rit != rend() && numTrees > 0; rit++, numTrees--) {
 		res.insert(*rit);
 	}

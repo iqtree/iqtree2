@@ -76,14 +76,14 @@ public:
     void initParentTrees();
 
     /**
-     * update/insert \a tree into the candidate set if its score is higher than the worst tree
+     *  update/insert \a tree into the candidate set if its score is higher than the worst tree
      *
-     * @param tree
-     * 	The new tree string (with branch lengths)
-     * @param score
-     * 	The score (ML or parsimony) of \a tree
-     * @return false if tree topology already exists
-     *
+     *  @param tree
+     * 	    The new tree string (with branch lengths)
+     *  @param score
+     * 	    The score (ML or parsimony) of \a tree
+     *  @return
+     *      false if tree topology already exists
      */
     bool update(string newTree, double newScore);
 
@@ -231,7 +231,7 @@ public:
      * @param numTrees
      * @return
      */
-    CandidateSet getBestCandidateTrees(int numTrees);
+    CandidateSet getBestCandidateTrees(int numTrees = 0);
 
     /**
      *  Return a set of trees whose score are equal \a score

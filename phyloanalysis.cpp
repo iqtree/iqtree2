@@ -1610,23 +1610,16 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 
     /********************** Create an initial tree **********************/
     iqtree.computeInitialTree(dist_file, params.SSE);
-    
-    //*** FOR TUNG: This is wrong! a NULL root was already treated correctly
-//    if (params.root == NULL) {
-//    	params.root = iqtree.aln->getSeqName(0).c_str();
-//    	iqtree.setRootNode(params.root);
-//    }
+
    	iqtree.setRootNode(params.root);
 
     /*************** SET UP PARAMETERS and model testing ****************/
 
    	// FOR TUNG: swapping the order cause bug for -m TESTLINK
-//    iqtree.initSettings(params);
     initializeParams(params, iqtree, model_info);
     iqtree.initSettings(params);
 
     /*********************** INITIAL MODEL OPTIMIZATION *****************/
-
     iqtree.initializeModel(params);
 
     // UpperBounds analysis. Here, to analyse the initial tree without any tree search or optimization
@@ -1716,7 +1709,8 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
         params.compute_ml_dist = false;
     }
 
-	if (MPIHelper::getInstance().getProcessID() == MASTER) {
+	/************************************** Compute BIONJ tree *********************************************/
+	if (MPIHelper::getInstance().getProcessID() == MASTER) { // Only compute BIONJ tree at the master node
 		if ((!params.dist_file && params.compute_ml_dist) || params.leastSquareBranch) {
 			computeMLDist(params, iqtree, dist_file, getCPUTime());
 			if (!params.user_file) {
@@ -2418,10 +2412,10 @@ void runPhyloAnalysis(Params &params) {
 			((PhyloSuperTreePlen*) tree)->printNNIcasesNUM();
 		}
 	}
-	delete tree;
 	// BUG FIX: alignment can be changed, should delete tree->aln instead
 	alignment = tree->aln;
 	delete alignment;
+	delete tree; // TUNG: Fix the segmentation fault bug
 }
 
 void assignBranchSupportNew(Params &params) {

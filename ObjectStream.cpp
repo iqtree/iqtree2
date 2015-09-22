@@ -10,6 +10,12 @@ ObjectStream::ObjectStream(const char *data, size_t length) {
     objectDataSize = length;
 }
 
+ObjectStream::ObjectStream(TreeCollection &trees) {
+    objectData = NULL;
+    objectDataSize = 0;
+    initFromTreeCollection(trees);
+}
+
 void ObjectStream::initFromTreeCollection(TreeCollection &trees) {
     vector<string> treeStrings = trees.getTreeStrings();
     vector<double> scores = trees.getScores();
@@ -89,8 +95,4 @@ void ObjectStream::deserializeStrings(char *data, size_t length, vector<string> 
     }
 }
 
-ObjectStream::ObjectStream(TreeCollection &trees) {
-    objectData = NULL;
-    objectDataSize = 0;
-    initFromTreeCollection(trees);
-}
+

@@ -579,13 +579,16 @@ protected:
 
     /**
      *  Update the candidate set with a new tree.
-     *  If a better tree is found, print notification to cout and print
-     *  the new best tree to file.
-     *  @param treeString the new tree
-     *  @param score the score of the new tree
+     *
+     *  @param treeString
+     *      the new tree
+     *  @param score
+     *      the score of the new tree
+     *  @param updateStopRule
+     *      Whether or not to update the stop rule
      *  @return whether a new tree topology is found
      */
-    bool addTreeToCandidateSet(string treeString, double score);
+    bool addTreeToCandidateSet(string treeString, double score, bool updateStopRule = true);
 
 public:
 
@@ -822,8 +825,31 @@ protected:
     string generateParsimonyTree(int randomSeed);
 
 #ifdef _IQTREE_MPI
-    void sendCurTreeToOtherNodes(int tag);
+
+    /**
+     *  Send a tree string and score to other processes
+     *  @param treeString
+     *      Newick string
+     *  @param score
+     *      Score of the tree
+     */
+    void sendTreeToAllNodes(string treeString, double score);
+
+    /**
+     *  Receive tree from other nodes and add to the candidate set
+     *  @param allTrees
+     *      If true, wait for tree from every node
+     *      If false, only collect trees that have been sent
+     *  @param updateStopRule
+     *      To update the stop rule or not
+     *  @return whether or not stop message is received
+     */
+    bool addTreesFromOtherProcesses(bool allTrees, bool updateStopRule = true);
 #endif
+
+    double doTreePerturbation();
+
+    void estimateLoglCutoffBS();
 };
 
 void estimateNNICutoff(Params &params);

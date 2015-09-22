@@ -18,20 +18,32 @@ MPIHelper& MPIHelper::getInstance() {
 }
 
 #ifdef _IQTREE_MPI
-void MPIHelper::sendTreesToOthers(TreeCollection &trees, int tag) {
+void MPIHelper::sendTreesToOthers(TreeCollection trees, int tag) {
     cleanUpMessages();
     for (int i = 0; i < getNumProcesses(); i++) {
         if (i != getProcessID()) {
             MPI_Request *request = new MPI_Request;
             ObjectStream *os = new ObjectStream(trees);
             MPI_Isend(os->getObjectData(), os->getDataLength(), MPI_CHAR, i, tag, MPI_COMM_WORLD, request);
-            messages.push_back(make_pair(request, os));
+            sentMessages.push_back(make_pair(request, os));
         }
     }
 }
 
-TreeCollection MPIHelper::getTreesForMe(bool fromAll) {
-    TreeCollection allTrees;
+void MPIHelper::sendStopMsg(string msg) {
+    cleanUpMessages();
+    for (int i = 0; i < getNumProcesses(); i++) {
+        if (i != getProcessID()) {
+            MPI_Request *request = new MPI_Request;
+            ObjectStream *os = new ObjectStream(msg.c_str(), msg.size()+1);
+            MPI_Isend(os->getObjectData(), os->getDataLength(), MPI_CHAR, i, STOP_TAG, MPI_COMM_WORLD, request);
+            sentMessages.push_back(make_pair(request, os));
+        }
+    }
+}
+
+bool MPIHelper::receiveTrees(bool fromAll, TreeCollection &trees) {
+    bool stop = false;
     int flag, totalMsg;
     bool nodes[getNumProcesses()];
     if (fromAll)
@@ -53,15 +65,14 @@ TreeCollection MPIHelper::getTreesForMe(bool fromAll) {
             //cout << "Getting messages from node " << status.MPI_SOURCE << endl;
             MPI_Get_count(&status, MPI_CHAR, &numBytes);
             if (status.MPI_SOURCE == MASTER && status.MPI_TAG == STOP_TAG) {
-                cout << "Stop signal received. Process is now being ended." << endl;
-                MPI_Finalize();
-                exit(0);
+                stop = true;
+                break;
             }
             recvBuffer = new char[numBytes];
             MPI_Recv(recvBuffer, numBytes, MPI_CHAR, status.MPI_SOURCE, status.MPI_TAG, MPI_COMM_WORLD, NULL);
             ObjectStream os(recvBuffer, numBytes);
             TreeCollection curTrees = os.getTreeCollection();
-            allTrees.addTrees(curTrees);
+            trees.addTrees(curTrees);
             if (fromAll && !nodes[status.MPI_SOURCE]) {
                 nodes[status.MPI_SOURCE] = true;
                 totalMsg--;
@@ -69,7 +80,7 @@ TreeCollection MPIHelper::getTreesForMe(bool fromAll) {
             delete [] recvBuffer;
         }
     } while (totalMsg != 0 || flag);
-    return allTrees;
+    return stop;
 }
 
 int MPIHelper::cleanUpMessages() {
@@ -77,14 +88,14 @@ int MPIHelper::cleanUpMessages() {
     int flag = 0;
     MPI_Status status;
     list< pair<MPI_Request*, ObjectStream*> >::iterator it;
-    it = messages.begin();
-    while ( it != messages.end() ) {
+    it = sentMessages.begin();
+    while ( it != sentMessages.end() ) {
         MPI_Test(it->first, &flag, &status);
         if (flag) {
             delete it->first;
             delete it->second;
             numMsgCleaned++;
-            messages.erase(it++);
+            sentMessages.erase(it++);
         } else {
             ++it;
         }
