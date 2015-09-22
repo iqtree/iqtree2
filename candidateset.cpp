@@ -37,15 +37,6 @@ CandidateSet::CandidateSet() {
 //	}
 //}
 
-vector<string> CandidateSet::getBestTrees() {
-	vector<string> res;
-	double bestScore = rbegin()->first;
-	for (reverse_iterator rit = rbegin(); rit != rend() && rit->second.score == bestScore; rit++) {
-		res.push_back(rit->second.tree);
-	}
-	return res;
-}
-
 string CandidateSet::getRandCandTree() {
 	assert(!empty());
 	if (empty())

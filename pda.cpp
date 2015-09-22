@@ -2170,10 +2170,6 @@ int main(int argc, char *argv[]) {
 	cout << "************************************************" << endl;
 	cout << "* START TREE SEARCH USING MPI WITH " << MPIHelper::getInstance().getNumProcesses() << " PROCESSES *" << endl;
 	cout << "************************************************" << endl;
-
-#else
-	MPIHelper::getInstance().setNumProcesses(1);
-	MPIHelper::getInstance().setProcessID(0);
 #endif
 
 	/*************************/

@@ -751,12 +751,12 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 			tree.setRootNode(params.root);
             
             if (params.gbo_replicates) {
-                if (tree.boot_consense_logl > tree.candidateTrees.getBestScore()) {
+                if (tree.boot_consense_logl > tree.getBestScore()) {
                     out << endl << "**NOTE**: Consensus tree has higher likelihood than ML tree found! Please use consensus tree below." << endl;
                 }
             }
 
-			reportTree(out, params, tree, tree.candidateTrees.getBestScore(), tree.logl_variance, true);
+			reportTree(out, params, tree, tree.getBestScore(), tree.logl_variance, true);
 
 			if (tree.isSuperTree() && verbose_mode >= VB_MED) {
 				PhyloSuperTree *stree = (PhyloSuperTree*) &tree;
@@ -1487,7 +1487,7 @@ void printMiscInfo(Params &params, IQTree &iqtree, double *pattern_lh) {
 		cout << endl << "Computing site-specific rates by "
 				<< rate_mvh->full_name << "..." << endl;
 		rate_mvh->runIterativeProc(params, iqtree);
-		cout << endl << "BEST SCORE FOUND : " << iqtree.candidateTrees.getBestScore()<< endl;
+		cout << endl << "BEST SCORE FOUND : " << iqtree.getBestScore()<< endl;
 		string mhrate_file = params.out_prefix;
 		mhrate_file += ".mhrate";
 		iqtree.getRate()->writeSiteRates(mhrate_file.c_str());
@@ -1554,8 +1554,7 @@ void printFinalSearchInfo(Params &params, IQTree &iqtree, double search_cpu_time
 
 }
 
-void printTrees(CandidateSet &candidateTrees, Params &params, string suffix) {
-	vector<string> trees = candidateTrees.getBestTreeStrings();
+void printTrees(vector<string> trees, Params &params, string suffix) {
 	ofstream treesOut((string(params.out_prefix) + suffix).c_str(),
 			ofstream::out);
 	for (vector<string>::iterator it = trees.begin(); it != trees.end(); it++) {
@@ -1700,7 +1699,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 	iqtree.clearAllPartialLH();
 	initTree = iqtree.optimizeModelParameters(true, initEpsilon);
 	// Update best tree
-	iqtree.candidateTrees.update(initTree, iqtree.getCurScore());
+    iqtree.addTreeToCandidateSet(initTree, iqtree.getCurScore(), false);
 	iqtree.printResultTree();
 
     /****************** NOW PERFORM MAXIMUM LIKELIHOOD TREE RECONSTRUCTION ******************/
@@ -1729,7 +1728,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 					initTree = iqtree.optimizeBranches();
 				}
 				cout << "Log-likelihood of BIONJ tree: " << iqtree.getCurScore() << endl;
-				iqtree.candidateTrees.update(initTree, iqtree.getCurScore());
+                iqtree.addTreeToCandidateSet(initTree, iqtree.getCurScore(), false);
 			}
 		}
 	}
@@ -1793,7 +1792,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 	}
 
 	if (params.min_iterations) {
-		iqtree.readTreeString(iqtree.candidateTrees.getBestTrees()[0]);
+		iqtree.readTreeString(iqtree.getBestTrees()[0]);
         iqtree.initializeAllPartialLh();
         iqtree.clearAllPartialLH();
         cout << "--------------------------------------------------------------------" << endl;
@@ -1806,7 +1805,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
         else
             tree = iqtree.optimizeModelParameters(true);
         
-		iqtree.candidateTrees.update(tree, iqtree.getCurScore());
+		iqtree.addTreeToCandidateSet(tree, iqtree.getCurScore());
     }
 
 	if (iqtree.isSuperTree())
@@ -1814,8 +1813,8 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 
 	cout << "BEST SCORE FOUND : " << iqtree.getCurScore() << endl;
 
-	if ((params.snni && params.write_candidate_trees) || verbose_mode >= VB_MED) {
-		printTrees(iqtree.candidateTrees, params, ".candidate_trees");
+	if (params.write_candidate_trees) {
+		printTrees(iqtree.getBestTrees(), params, ".imd_trees");
 	}
 
 	if (params.pll)
@@ -1858,17 +1857,17 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 	// BUG FIX: readTreeString(bestTreeString) not needed before this line
 	iqtree.printResultTree();
 
-	if(params.upper_bound_NNI){
-		string out_file_UB = params.out_prefix;
-		out_file_UB += ".UB.NNI.main";
-		ofstream out_UB;
-		out_UB.exceptions(ios::failbit | ios::badbit);
-		out_UB.open((char*)out_file_UB.c_str(),std::ofstream::out | std::ofstream::app);
-		out_UB<<iqtree.leafNum<<"\t"<<iqtree.aln->getNSite()<<"\t"<<iqtree.params->upper_bound_frac<<"\t"
-				  <<iqtree.skippedNNIub<<"\t"<< iqtree.totalNNIub<<"\t"<<iqtree.candidateTrees.getBestScore() <<endl;
-					//iqtree.minUB << "\t" << iqtree.meanUB/iqtree.skippedNNIub << "\t" << iqtree.maxUB << endl;
-		out_UB.close();
-		}
+    if (params.upper_bound_NNI) {
+        string out_file_UB = params.out_prefix;
+        out_file_UB += ".UB.NNI.main";
+        ofstream out_UB;
+        out_UB.exceptions(ios::failbit | ios::badbit);
+        out_UB.open((char *) out_file_UB.c_str(), std::ofstream::out | std::ofstream::app);
+        out_UB << iqtree.leafNum << "\t" << iqtree.aln->getNSite() << "\t" << iqtree.params->upper_bound_frac << "\t"
+        << iqtree.skippedNNIub << "\t" << iqtree.totalNNIub << "\t" << iqtree.getBestScore() << endl;
+        //iqtree.minUB << "\t" << iqtree.meanUB/iqtree.skippedNNIub << "\t" << iqtree.maxUB << endl;
+        out_UB.close();
+    }
 
 	if (params.out_file)
 		iqtree.printTree(params.out_file);

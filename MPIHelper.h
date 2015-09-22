@@ -77,28 +77,27 @@ public:
      */
     void sendStopMsg(string msg);
 
+private:
     /**
-     *  Remove the buffers for finished messages
-     */
+    *  Remove the buffers for finished messages
+    */
     int cleanUpMessages();
 
 #endif
 
+private:
+    MPIHelper() { }; // Disable constructor
+    MPIHelper(MPIHelper const &) { }; // Disable copy constructor
+    void operator=(MPIHelper const &) { }; // Disable assignment
 
-        private:
-        MPIHelper()
-        { }; // Disable constructor
-        MPIHelper(MPIHelper const&) { }; // Disable copy constructor
-        void operator=(MPIHelper const &) { }; // Disable assignment
+    int processID;
 
-        int processID;
-
-        int numProcesses;
+    int numProcesses;
 
 #ifdef _IQTREE_MPI
-        list<pair<MPI_Request *, ObjectStream *> > sentMessages;
+    list<pair<MPI_Request *, ObjectStream *> > sentMessages;
 #endif
 
-    };
+};
 
 #endif

@@ -114,15 +114,6 @@ public:
      */
     vector<string> getBestTreeStrings(int numTree = 0);
 
-
-    /**
-     * 	Get tree(s) with the best score. There could be more than one
-     * 	tree that share the best score (this happens frequently with parsimony)
-     * 	@return
-     * 		A vector containing trees with the best score
-     */
-    vector<string> getBestTrees();
-
     /**
      * destructor
      */

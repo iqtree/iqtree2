@@ -1094,7 +1094,7 @@ public:
             search by a nearest neigbor interchange
             @return the likelihood of the tree
      */
-    double optimizeNNI();
+    //double optimizeNNI();
 
     /**
             search by a nearest neigbor interchange

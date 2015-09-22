@@ -12,13 +12,15 @@ MPIHelper& MPIHelper::getInstance() {
     static MPIHelper instance;
 #ifndef _IQTREE_MPI
     instance.setProcessID(0);
-    instance.setNumProcesses(0);
+    instance.setNumProcesses(1);
 #endif
     return instance;
 }
 
 #ifdef _IQTREE_MPI
 void MPIHelper::sendTreesToOthers(TreeCollection trees, int tag) {
+    if (getNumProcesses() == 1)
+        return;
     cleanUpMessages();
     for (int i = 0; i < getNumProcesses(); i++) {
         if (i != getProcessID()) {
@@ -31,6 +33,8 @@ void MPIHelper::sendTreesToOthers(TreeCollection trees, int tag) {
 }
 
 void MPIHelper::sendStopMsg(string msg) {
+    if (getNumProcesses() == 1)
+        return;
     cleanUpMessages();
     for (int i = 0; i < getNumProcesses(); i++) {
         if (i != getProcessID()) {
@@ -43,6 +47,9 @@ void MPIHelper::sendStopMsg(string msg) {
 }
 
 bool MPIHelper::receiveTrees(bool fromAll, TreeCollection &trees) {
+    if (getNumProcesses() == 1) {
+        return false;
+    }
     bool stop = false;
     int flag, totalMsg;
     bool nodes[getNumProcesses()];

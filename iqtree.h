@@ -300,8 +300,17 @@ public:
 
 
     /**
+     *  Optimize current tree using NNI
+     *
+     *  @return
+     *      <number of NNI steps, number of NNIs> done
      */
     pair<int, int> optimizeNNI();
+
+    /**
+     *  Return the current best score found
+     */
+    double getBestScore();
 
     /**
      * @brief Get branches for doing NNI that do not either belong to the tabu split or stable splits
@@ -577,6 +586,14 @@ protected:
      */
     int k_represent;
 
+protected:
+    /**
+     *  Set of candidate trees
+     */
+    CandidateSet candidateTrees;
+
+public:
+
     /**
      *  Update the candidate set with a new tree.
      *
@@ -590,19 +607,12 @@ protected:
      */
     bool addTreeToCandidateSet(string treeString, double score, bool updateStopRule = true);
 
-public:
-
     /**
      *  Generate the initial candidate tree set
      *  @param nParTrees number of parsimony trees to generate
      *  @param nNNITrees number of NNI locally optimal trees to generate
      */
     void initCandidateTreeSet(int nParTrees, int nNNITrees);
-
-    /**
-     *  Set of candidate trees
-     */
-    CandidateSet candidateTrees;
 
     /**
      * Generate the initial tree (usually used for model parameter estimation)
@@ -850,9 +860,18 @@ protected:
     double doTreePerturbation();
 
     void estimateLoglCutoffBS();
+
+    //void estimateNNICutoff(Params &params);
+
+public:
+    /**
+     *  Return best tree string from the candidate set
+     *
+     *  @param numTrees
+     *      Number of best trees to return
+     *  @return
+     *      A string vector of trees
+     */
+    vector<string> getBestTrees(int numTrees = 0);
 };
-
-void estimateNNICutoff(Params &params);
-
-
 #endif
