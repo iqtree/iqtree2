@@ -734,7 +734,7 @@ void PhyloTree::computeTipPartialLikelihood() {
 			}
 		}
 		break;
-    case SEQ_POMO: {
+    case SEQ_POMO:
         if (aln->pomo_states.size() > 0) { // added BQM 2015-07
             int N = aln->virtual_pop_size;
             DoubleVector logv; // BQM: log(0), log(1), log(2)..., for fast computation
@@ -831,19 +831,18 @@ void PhyloTree::computeTipPartialLikelihood() {
             aligned_free(real_partial_lh);
         }
 
-        // TODO: DEBUG THIS.  THERE IS STILL A SEGMENTATION FAULT.
-        // Handle STATE_UNKNOWN.
-        double *su_tip_partial_lh = &tip_partial_lh[(aln->STATE_UNKNOWN)*nstates*nmixtures];
-        memset(su_tip_partial_lh, 0, nmixtures*nstates*sizeof(double));
-        for (int m = 0; m < nmixtures; m++) {
-            double *inv_evec = &all_inv_evec[m*nstates*nstates];
-            for (int i = 0; i < nstates; i++)
-                for (int j = 0; j < nstates; j++)
-                    su_tip_partial_lh[m*nstates + i] +=
-                        inv_evec[i*nstates+j] * (double)1/nstates;
-        }
+        // // TODO: DEBUG THIS.  THERE IS STILL A SEGMENTATION FAULT.
+        // // Handle STATE_UNKNOWN.
+        // double *su_tip_partial_lh = &tip_partial_lh[(aln->STATE_UNKNOWN)*nstates*nmixtures];
+        // memset(su_tip_partial_lh, 0, nmixtures*nstates*sizeof(double));
+        // for (int m = 0; m < nmixtures; m++) {
+        //     double *inv_evec = &all_inv_evec[m*nstates*nstates];
+        //     for (int i = 0; i < nstates; i++)
+        //         for (int j = 0; j < nstates; j++)
+        //             su_tip_partial_lh[m*nstates + i] +=
+        //                 inv_evec[i*nstates+j] * (double)1/nstates;
+        // }
         break;
-    }
 	default:
 		break;
 	}

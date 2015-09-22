@@ -1842,6 +1842,7 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
     // The site numbers of the patterns that include unknown states.
     IntVector su_site_counts;
     int su_number = 0;
+    int su_site_count = 0;
     bool includes_state_unknown = false;
     
     // Open counts file.
@@ -1994,8 +1995,7 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
             else if (count == 0) {
                 state = STATE_UNKNOWN;
                 su_number++;
-                if (!pomo_random_sampling)
-                    includes_state_unknown = true;
+                includes_state_unknown = true;
             }
             else if (count > 2) {
                 if (verbose_mode >= VB_MAX) {
@@ -2058,18 +2058,18 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
         // patterns.
         if (everything_ok == true) {
             if (includes_state_unknown) {
-                su_buffer.push_back(pattern);
-                su_site_counts.push_back(site_count);
-                // PatternIntMap::iterator pat_it = su_pattern_index.find(pattern);
-                // if (pat_it == su_pattern_index.end()) {
-                //     su_pattern_index[pattern] = site_count;
-                // }
-                // else {
-                //     su_duplicate_pattern_counter++;
-                // }
+                su_site_count++;
+                if (!pomo_random_sampling) {
+                    su_buffer.push_back(pattern);
+                    su_site_counts.push_back(site_count);
+                }
+                else
+                    addPattern(pattern, site_count);
             }
-            else addPattern(pattern, site_count);
-            site_count++;
+            else {
+                addPattern(pattern, site_count);
+                site_count++;
+            }
         }
         else {
             fails++;
@@ -2080,19 +2080,19 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
         }
     }
 
-    if (site_count + fails != nsites) {
+    if (site_count + fails + su_site_count != nsites) {
         err_str << "Number of sites does not match NSITES.";
         throw err_str.str();
     }
 
+    // TODO: DEBUG HANDLING OF UNKNOWN SITE.  THERE IS STILL A SEGMENTATION FAULT.
     if (!pomo_random_sampling) {
         // Now we can correctly set STATE_UNKNOWN.
-        // STATE_UNKNOWN = pomo_states.size() + num_states + su_buffer.size() - su_duplicate_pattern_counter;
         STATE_UNKNOWN = pomo_states.size() + num_states;
 
-        // TODO: DEBUG HANDLING OF UNKNOWN SITE.  THERE IS STILL A SEGMENTATION FAULT.
         // Process sites that include an unknown state.
-        for (vector<Pattern>::iterator pat_it = su_buffer.begin(); pat_it != su_buffer.end(); pat_it++) {
+        for (vector<Pattern>::iterator pat_it = su_buffer.begin();
+             pat_it != su_buffer.end(); pat_it++) {
             for (Pattern::iterator sp_it = pat_it->begin(); sp_it != pat_it->end(); sp_it++)
                 if (*sp_it == 0xffffffff) *sp_it = STATE_UNKNOWN;
         }
@@ -2103,10 +2103,11 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
 
     cout << "Number of sites read:      " << site_count << endl;
     cout << "Number of fails:           " << fails << endl;
-    if (!pomo_random_sampling) cout << "Number of compound states: " << pomo_states.size() << endl;
-    cout << "Sites with unknown states: " << su_number << endl;
+    if (!pomo_random_sampling)
+        cout << "Number of compound states: " << pomo_states.size() << endl;
+    cout << "Number of unknown states:  " << su_number << endl;
 
-    site_pattern.resize(site_count);
+    site_pattern.resize(site_count + su_site_count);
 
     in.clear();
     // set the failbit again
