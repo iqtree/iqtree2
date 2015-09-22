@@ -492,8 +492,6 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
     }
 #endif
 
-    cout << getRealTime() - startTime << " seconds" << endl;
-
     /****************************************************************************************
                           Compute logl of all parsimony trees
     *****************************************************************************************/
