@@ -469,13 +469,21 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
 #endif
 
     int processID = MPIHelper::getInstance().getProcessID();
-
+    unsigned long curNumTrees = candidateTrees.size();
     for (int treeNr = 1; treeNr < nParTrees; treeNr++) {
         int parRandSeed = Params::getInstance().ran_seed + + processID * nParTrees + treeNr;
         string curParsTree = generateParsimonyTree(parRandSeed);
         bool updateStopRule = false;
-        addTreeToCandidateSet(curParsTree, -DBL_MAX, updateStopRule);
+        bool newTree = addTreeToCandidateSet(curParsTree, -DBL_MAX, updateStopRule);
+        // if a duplicated tree is generated, then randomize the tree
+        if (!newTree) {
+            readTreeString(curParsTree);
+            doTreePerturbation();
+            addTreeToCandidateSet(getTreeString(), curScore, updateStopRule);
+        }
     }
+    cout << getRealTime() - startTime << " seconds" << endl;
+    cout << "Number of distinct initial trees: " << candidateTrees.size() << endl;
 
 #ifdef _OPENMP
     if (params->start_tree == STT_PARSIMONY && nParTrees > 1) {
@@ -507,6 +515,7 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
         bool updateStopRule = false;
         addTreeToCandidateSet(treeString, score, updateStopRule);
     }
+    cout << getRealTime() - startTime << " seconds" << endl;
 
 #ifdef _IQTREE_MPI
     CandidateSet bestCandidateTrees = candidateTrees.getBestCandidateTrees();
@@ -517,37 +526,52 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
     // Get trees from other nodes
     bool getAllTrees = true;
     bool updateStopRule = false;
+    cout << "Getting trees from other processes ... " << endl;
     addTreesFromOtherProcesses(getAllTrees, updateStopRule);
 #endif
-    cout << getRealTime() - startTime << " seconds" << endl;
     cout << candidateTrees.size() << " distinct starting trees" << endl;
-    // Select best initial trees for doing NNI
-    vector<string> bestTreeStrings = candidateTrees.getBestTreeStrings(nNNITrees);
+    vector<string> bestTreeStrings; // Set of best initial trees for doing NNIs
 
 #ifdef _IQTREE_MPI
+    int treesPerProc; // Number of initial NNI search per process
+    int nNNITreesNew; // Total number of NNI searches
     // Determine the number of NNI searches for initial trees and devide the workload among processes
-    int treesPerProc = Params::getInstance().numNNITrees / MPIHelper::getInstance().getNumProcesses();
-    int rest = Params::getInstance().numNNITrees % MPIHelper::getInstance().getNumProcesses();
-    int numBestTrees = Params::getInstance().numNNITrees;
-    if (rest != 0) {
-        treesPerProc++;
-        numBestTrees = treesPerProc * MPIHelper::getInstance().getNumProcesses();
-        bestTreeStrings = candidateTrees.getBestTreeStrings(numBestTrees);
+    if (Params::getInstance().numNNITrees <= MPIHelper::getInstance().getNumProcesses()) {
+        treesPerProc = 1;
+    } else {
+        treesPerProc = Params::getInstance().numNNITrees / MPIHelper::getInstance().getNumProcesses();
+        int rest = Params::getInstance().numNNITrees % MPIHelper::getInstance().getNumProcesses();
+        if (rest != 0) {
+            treesPerProc++;
+        }
     }
-    cout << "Do NNI search on " << bestTreeStrings.size() << " best initial trees using " <<
-    MPIHelper::getInstance().getNumProcesses() << " processes" << endl;
+    nNNITreesNew = treesPerProc * MPIHelper::getInstance().getNumProcesses();
+    bestTreeStrings = candidateTrees.getBestTreeStrings(nNNITreesNew);
+
+    // Dataset is too small (4, 6 taxa) so that not enough distinct initial trees can be generated
+    if (bestTreeStrings.size() < MPIHelper::getInstance().getNumProcesses()) {
+        MPI_Finalize();
+        stringstream errorMsg;
+        errorMsg << "Maximum number of MPI processes for your dataset should only be ";
+        errorMsg << bestTreeStrings.size();
+        outError(errorMsg.str().c_str());
+    }
 
     // Determine on which initial trees the current process must do NNI search
-    vector<string> myTreeStrings;
+    vector<string> myBestTrees;
     int index = MPIHelper::getInstance().getProcessID() * treesPerProc;
     int maxIndex = index + treesPerProc;
     for ( ; index < maxIndex; index++) {
-        myTreeStrings.push_back(bestTreeStrings[index]);
+        myBestTrees.push_back(bestTreeStrings[index]);
     }
-    bestTreeStrings = myTreeStrings;
+    bestTreeStrings = myBestTrees;
     vector<string> nniTrees;
     vector<double> nniScores;
+#else
+    bestTreeStrings = candidateTrees.getBestTreeStrings(nNNITrees);
 #endif
+    cout << endl;
+    cout << "Do NNI search on " << bestTreeStrings.size() << " best initial trees" << endl;
     // Clear initial trees from candidate set so that it only contains NNI-optimal trees
     candidateTrees.clear();
     stop_rule.setCurIt(0);
