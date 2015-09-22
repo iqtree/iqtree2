@@ -1872,6 +1872,8 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
         err_str << "Counts-File identification line could not be read.";
         throw err_str.str();
     }
+    cout << endl;
+    cout << "----------------------------------------------------------------------" << endl;
     cout << "Number of populations:     " << npop << endl;
     cout << "Number of sites:           " << nsites << endl;
 
@@ -2063,6 +2065,9 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
                     su_buffer.push_back(pattern);
                     su_site_counts.push_back(site_count);
                 }
+                // Add pattern if we use random sampling because then,
+                // STATE_UNKNOWN = num_states is well defined already at
+                // this stage.
                 else
                     addPattern(pattern, site_count);
             }
@@ -2085,7 +2090,6 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
         throw err_str.str();
     }
 
-    // TODO: DEBUG HANDLING OF UNKNOWN SITE.  THERE IS STILL A SEGMENTATION FAULT.
     if (!pomo_random_sampling) {
         // Now we can correctly set STATE_UNKNOWN.
         STATE_UNKNOWN = pomo_states.size() + num_states;
@@ -2101,12 +2105,15 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
                 addPattern(su_buffer[i], su_site_counts[i]);        
     }
 
-    cout << "Number of sites read:      " << site_count << endl;
-    cout << "Number of fails:           " << fails << endl;
+    cout << "---" << endl;
+    cout << "Normal sites:              " << site_count << endl;
+    cout << "Sites with unknown states: " << su_site_count << endl;
+    cout << "Total sites read:          " << site_count + su_site_count << endl;
+    cout << "Fails:                     " << fails << endl;
     if (!pomo_random_sampling)
-        cout << "Number of compound states: " << pomo_states.size() << endl;
-    cout << "Number of unknown states:  " << su_number << endl;
-
+        cout << "---" << endl;
+        cout << "Compound states:           " << pomo_states.size() << endl;
+    cout << "----------------------------------------------------------------------" << endl << endl;
     site_pattern.resize(site_count + su_site_count);
 
     in.clear();

@@ -45,8 +45,6 @@ void ModelPoMo::init(const char *model_name,
 
     eps = 1e-6;
 
-    double test = estimateEmpiricalPolymorphicFreq();
-    
     // Mutation probabilities point to the rates of the DNA model.
     mutation_prob = dna_model->rates;
 	for (int i = 0; i < 6; i++) mutation_prob[i] = POMO_INIT_RATE;
@@ -109,6 +107,7 @@ double ModelPoMo::computeSumFreqFixedStates() {
     double norm_fixed = 0.0;
 	for (i = 0; i < 4; i++)
 		norm_fixed += freq_fixed_states[i];
+    return norm_fixed;
 }
 
 double ModelPoMo::computeSumFreqPolyStates() {
@@ -123,6 +122,7 @@ double ModelPoMo::computeSumFreqPolyStates() {
                 2 * freq_fixed_states[i] * freq_fixed_states[j] * mutCoeff(i, j);
 	}
 	norm_polymorphic *= N * harmonic;
+    return norm_polymorphic;
 }
 
 double ModelPoMo::computeNormConst() {

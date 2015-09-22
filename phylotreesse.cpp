@@ -831,8 +831,7 @@ void PhyloTree::computeTipPartialLikelihood() {
             aligned_free(real_partial_lh);
         }
 
-        // // TODO: DEBUG THIS.  THERE IS STILL A SEGMENTATION FAULT.
-        // // Handle STATE_UNKNOWN.
+        // // TODO: Do we need to handle STATE_UNKNOWN for PoMo here?
         // double *su_tip_partial_lh = &tip_partial_lh[(aln->STATE_UNKNOWN)*nstates*nmixtures];
         // memset(su_tip_partial_lh, 0, nmixtures*nstates*sizeof(double));
         // for (int m = 0; m < nmixtures; m++) {
