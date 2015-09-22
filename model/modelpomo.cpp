@@ -851,6 +851,11 @@ ModelPoMo::estimateEmpiricalFixedStateFreqs(double * freq_fixed_states)
     }
 }
 
+// TODO: This function is not being used yet.  Also, we might want to
+// enable the user to enter an estiamte of the polymorphisms.  We have
+// to think about how to use this estimate.  If theta_p is empirically
+// estimated or given by the user, the number of parameters of PoMo is
+// reduced by 1.
 double
 ModelPoMo::estimateEmpiricalPolymorphicFreq()
 {
