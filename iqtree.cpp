@@ -596,7 +596,7 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
 #ifdef _IQTREE_MPI
     // Send trees
     MPIHelper::getInstance().sendTreesToOthers(TreeCollection(nniTrees, nniScores), TREE_TAG);
-    MPI_Barrier(MPI_COMM_WORLD);
+    //MPI_Barrier(MPI_COMM_WORLD);
     // Receive trees
     getAllTrees = true;
     updateStopRule = true;
