@@ -414,7 +414,10 @@ void IQTree::computeInitialTree(string &dist_file, LikelihoodKernel kernel) {
 void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
 
     if (nParTrees > 0) {
-        cout << "Generating " << nParTrees  << " parsimony trees... ";
+        if (params->start_tree == STT_RANDOM_TREE)
+            cout << "Generating " << nParTrees  << " random trees... ";
+        else
+            cout << "Generating " << nParTrees  << " parsimony trees... ";
         cout.flush();
     }
     double startTime = getRealTime();
@@ -451,7 +454,11 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
 			PhyloTree::readTreeString(curParsTree);
 			wrapperFixNegativeBranch(true);
 			curParsTree = getTreeString();
-        } else {
+        } else if (params->start_tree == STT_RANDOM_TREE) {
+            generateRandomTree(YULE_HARDING);
+            wrapperFixNegativeBranch(true);
+			curParsTree = getTreeString();
+        } else if (params->start_tree == STT_PARSIMONY) {
             /********* Create parsimony tree using IQ-TREE *********/
 #ifdef _OPENMP
             curParsTree = pars_trees[treeNr-1];
@@ -459,6 +466,8 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
             computeParsimonyTree(NULL, aln);
             curParsTree = getTreeString();
 #endif
+        } else {
+            assert(0);
         }
 
         if (candidateTrees.treeExist(curParsTree)) {
