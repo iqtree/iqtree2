@@ -3046,7 +3046,7 @@ double PhyloTree::optimizeTreeLengthScaling(double &scaling, double gradient_eps
     is_opt_scaling = true;
     current_scaling = scaling;
     double negative_lh, ferror;
-    scaling = minimizeOneDimen(MIN_TREE_LENGTH_SCALE, scaling, MAX_TREE_LENGTH_SCALE, max(TOL_TREE_LENGTH_SCALE, gradient_epsilon), &negative_lh, &ferror);
+    scaling = minimizeOneDimen(min(current_scaling/2.0, MIN_TREE_LENGTH_SCALE), scaling, max(current_scaling*2.0, MAX_TREE_LENGTH_SCALE), max(TOL_TREE_LENGTH_SCALE, gradient_epsilon), &negative_lh, &ferror);
     if (scaling != current_scaling) {
         scaleLength(scaling / current_scaling);
         current_scaling = scaling;
