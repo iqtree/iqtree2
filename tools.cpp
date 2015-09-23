@@ -2998,6 +2998,7 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "                       number of categories (default: n=4)" << endl
             << "  -a <Gamma_shape>     Gamma shape parameter for site rates (default: estimate)" << endl
             << "  -gmedian             Computing mean for Gamma rate category (default: mean)" << endl
+            << "  --test-alpha         More thorough estimation for +I+G model parameters" << endl
             << "  -i <p_invar>         Proportion of invariable sites (default: estimate)" << endl
             << "  -mh                  Computing site-specific rates to .mhrate file using" << endl
             << "                       Meyer & von Haeseler (2003) method" << endl
