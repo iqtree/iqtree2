@@ -350,8 +350,10 @@ void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh, 
 	double AIC_score, AICc_score, BIC_score;
 	computeInformationScores(tree_lh, df, ssize, AIC_score, AICc_score, BIC_score);
     
-	out << "Log-likelihood of the tree: " << fixed << tree_lh << " (s.e. "
-			<< sqrt(lh_variance) << ")" << endl;
+	out << "Log-likelihood of the tree: " << fixed << tree_lh;
+    if (lh_variance > 0.0) 
+        out << " (s.e. " << sqrt(lh_variance) << ")";
+    out << endl;
     out	<< "Unconstrained log-likelihood (without tree): " << tree.aln->computeUnconstrainedLogL() << endl;
 
     out << "Number of free parameters (#branches + #model parameters): " << df << endl;
@@ -783,7 +785,8 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 						root_name = (*it)->aln->getSeqName(0);
 					(*it)->root = (*it)->findNodeName(root_name);
 					assert((*it)->root);
-					reportTree(out, params, *(*it), (*it)->computeLikelihood(), (*it)->computeLogLVariance(), false);
+//					reportTree(out, params, *(*it), (*it)->computeLikelihood(), (*it)->computeLogLVariance(), false);
+					reportTree(out, params, *(*it), stree->part_info[part].cur_score, 0.0, false);
 				}
 			}
 
