@@ -205,7 +205,7 @@ bool CandidateSet::update(string newTree, double newScore) {
 //					assert(candidateSplitsHash.getMaxValue() == params->numSupportTrees + 1);
 //					removeCandidateSplits(getNthBestTree(candidateSplitsHash.getMaxValue()).tree);
 //				}
-				buildTopSplits(Params::getInstance().stableSplitThreshold);
+				buildTopSplits(Params::getInstance().stableSplitThreshold, Params::getInstance().numSupportTrees);
 //				reportStableSplits();
 			}
 		}
@@ -316,11 +316,11 @@ void CandidateSet::removeCandidateTree(string topology) {
 	assert(removed);
 }
 
-int CandidateSet::buildTopSplits(double supportThreshold) {
+int CandidateSet::buildTopSplits(double supportThreshold, int numSupportTrees) {
 	candidateSplitsHash.clear();
 	CandidateSet bestCandidateTrees;
 
-	bestCandidateTrees = getBestCandidateTrees(Params::getInstance().numSupportTrees);
+	bestCandidateTrees = getBestCandidateTrees(numSupportTrees);
 	//assert(bestCandidateTrees.size() > 1);
 
 	candidateSplitsHash.setNumTree(bestCandidateTrees.size());
@@ -351,14 +351,11 @@ int CandidateSet::buildTopSplits(double supportThreshold) {
 			}
 		}
 	}
-	int newNumStableSplits = countStableSplits(supportThreshold);
-	if (newNumStableSplits > numStableSplits || verbose_mode >= VB_MED) {
-		numStableSplits = newNumStableSplits;
-		cout << ((double) numStableSplits / (aln->getNSeq() - 3)) * 100 ;
-		cout << " % of the splits are stable (support threshold " << supportThreshold;
-		cout << " from " << candidateSplitsHash.getNumTree() << " trees)" << endl;
-	}
-	return numStableSplits;
+    int newNumStableSplits = countStableSplits(supportThreshold);
+    cout << ((double) newNumStableSplits / (aln->getNSeq() - 3)) * 100;
+    cout << " % of the splits are stable (support threshold " << supportThreshold;
+    cout << " from " << candidateSplitsHash.getNumTree() << " trees)" << endl;
+    return numStableSplits;
 }
 
 int CandidateSet::countStableSplits(double thresHold) {

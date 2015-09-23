@@ -602,8 +602,8 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
     updateStopRule = true;
     addTreesFromOtherProcesses(getAllTrees, updateStopRule);
 #endif
-    if (params->fixStableSplits) {
-        candidateTrees.buildTopSplits(params->stableSplitThreshold);
+    if (params->fixStableSplits && candidateTrees.size() > 1) {
+        candidateTrees.buildTopSplits(Params::getInstance().stableSplitThreshold, Params::getInstance().numSupportTrees);
     }
 }
 
@@ -1868,6 +1868,10 @@ double IQTree::doTreeSearch() {
         nniInfos = doNNISearch();
         string curTree = getTreeString();
         addTreeToCandidateSet(curTree, curScore);
+        if (Params::getInstance().fixStableSplits && candidateTrees.getCandidateSplitHash().empty() &&
+                candidateTrees.size() > 1) {
+            candidateTrees.buildTopSplits(Params::getInstance().stableSplitThreshold, Params::getInstance().numSupportTrees);
+        }
 
 #ifdef _IQTREE_MPI
         sendTreeToAllNodes(curTree, curScore);
