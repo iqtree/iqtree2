@@ -2217,9 +2217,9 @@ void runStandardBootstrap(Params &params, string &original_model, Alignment *ali
 		if (params.num_bootstrap_samples == 1)
 			reportPhyloAnalysis(params, original_model, *boot_tree, *model_info);
 		// WHY was the following line missing, which caused memory leak?
+		bootstrap_alignment = boot_tree->aln;
 		delete boot_tree;
 		// fix bug: bootstrap_alignment might be changed
-		bootstrap_alignment = boot_tree->aln;
 		delete bootstrap_alignment;
 	}
 
