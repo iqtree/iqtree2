@@ -22,7 +22,7 @@
 
 //#define EIGEN_TUNE_FOR_CPU_CACHE_SIZE (512*256)
 //#define EIGEN_TUNE_FOR_CPU_CACHE_SIZE (8*512*512)
-#include "Eigen/Core"
+#include <Eigen/Core>
 #include "mtree.h"
 #include "alignment.h"
 #include "model/modelsubst.h"
