@@ -1842,7 +1842,9 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
     // The site numbers of the patterns that include unknown states.
     IntVector su_site_counts;
     int su_number = 0;
-    int su_site_count = 0;
+    
+    // BQM: not neccessary, su_site_count will be equal to su_site_counts.size()
+//    int su_site_count = 0;
     bool includes_state_unknown = false;
     
     // Open counts file.
@@ -2060,7 +2062,7 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
         // patterns.
         if (everything_ok == true) {
             if (includes_state_unknown) {
-                su_site_count++;
+//                su_site_count++;
                 if (!pomo_random_sampling) {
                     su_buffer.push_back(pattern);
                     su_site_counts.push_back(site_count);
@@ -2070,6 +2072,9 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
                 // this stage.
                 else
                     addPattern(pattern, site_count);
+                    
+                // BQM: it is neccessary to always increase site_count 
+                site_count++;
             }
             else {
                 addPattern(pattern, site_count);
@@ -2085,7 +2090,7 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
         }
     }
 
-    if (site_count + fails + su_site_count != nsites) {
+    if (site_count + fails != nsites) {
         err_str << "Number of sites does not match NSITES.";
         throw err_str.str();
     }
@@ -2106,15 +2111,16 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
     }
 
     cout << "---" << endl;
-    cout << "Normal sites:              " << site_count << endl;
-    cout << "Sites with unknown states: " << su_site_count << endl;
-    cout << "Total sites read:          " << site_count + su_site_count << endl;
+    cout << "Normal sites:              " << site_count - su_site_counts.size() << endl;
+    cout << "Sites with unknown states: " << su_site_counts.size() << endl;
+    cout << "Total sites read:          " << site_count << endl;
     cout << "Fails:                     " << fails << endl;
-    if (!pomo_random_sampling)
+    if (!pomo_random_sampling) {
         cout << "---" << endl;
         cout << "Compound states:           " << pomo_states.size() << endl;
+    }
     cout << "----------------------------------------------------------------------" << endl << endl;
-    site_pattern.resize(site_count + su_site_count);
+    site_pattern.resize(site_count);
 
     in.clear();
     // set the failbit again
