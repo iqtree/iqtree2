@@ -3,15 +3,9 @@
 
 #include "modeldna.h"
 
-/* TODO: Make it work with N arbitrary, this should not be too hard */
-/*       (phylotreesse.cpp has to be changed to). */
-/* TODO: Implement different DNA subsitution models. */
-
-//const double POMO_MIN_RATE = 3e-6;
-//const double POMO_MAX_RATE = 1e-4;
-const double POMO_MIN_RATE =  1e-5;
-const double POMO_INIT_RATE = 1e-4;
-const double POMO_MAX_RATE =  1e-3;
+const double POMO_MIN_RATE =  1e-4;
+const double POMO_INIT_RATE = 1e-3;
+const double POMO_MAX_RATE =  1e-2;
 /* The actual boundaries will be set, e.g., to
    #freq_fixed_states[i]*POMO_MIN_REL_FREQ. */
 const double POMO_MIN_REL_FREQ = 0.5;
@@ -29,9 +23,6 @@ class ModelPoMo : public ModelGTR
      * - allocates rates[getNumRateEntries()] = rates[n*(n-1)/2];
      *   cf. modelsubst.h
      * - allocates eigenvalues and eigenvectors.
-     *
-     * @todo Implement `model_params'.
-     * @todo Implement `freq_params'.
      *
      * @param model_name The name of the model (e.g., "HKY+P").
      * @param model_params The parameters of the model (user defined models.).
@@ -72,36 +63,36 @@ class ModelPoMo : public ModelGTR
      */
     void updatePoMoStatesAndRates();
 
-	/**
+    /**
      *  @return Number of free parameters.
      */
-	virtual int getNDim();
+    virtual int getNDim();
 
-	/**
-	 * Set bounds for joint optimization with BFGS.
-	 */
-	virtual void setBounds(double *lower_bound,
+    /**
+     * Set bounds for joint optimization with BFGS.
+     */
+    virtual void setBounds(double *lower_bound,
                            double *upper_bound,
                            bool *bound_check);
 
-	/**
+    /**
      * Write information to output stream (only with -vv).
      * @param out Output stream.
      */
-	virtual void writeInfo(ostream &out);
+    virtual void writeInfo(ostream &out);
 
     /**
      *  the target function which needs to be optimized
      *  @param x the input vector x
-     *	@return the function value at x
-	*/
-	virtual double targetFunk(double x[]);
+     *  @return the function value at x
+    */
+    virtual double targetFunk(double x[]);
 
     /**
      * @return TRUE if parameters are at the boundary that may cause
      * numerical unstability
-	 */
-	virtual bool isUnstableParameters();
+     */
+    virtual bool isUnstableParameters();
 
     virtual bool isPolymorphismAware() { return true; };
 
@@ -114,12 +105,12 @@ class ModelPoMo : public ModelGTR
     /*  * @param rate_spec a string of six letters describing how rates are related */
     /*  * @return TRUE if successful, FALSE otherwise */
     /*  *\/ */
-	/* bool setRateType(const char *rate_spec); */
+    /* bool setRateType(const char *rate_spec); */
 
     /**
      *  @return the number of rate entries
      */
-	virtual int getNumRateEntries() { return nnuc*(nnuc-1)/2; };
+    virtual int getNumRateEntries() { return nnuc*(nnuc-1)/2; };
 
     /* /\**  */
     /*  * Read state frequencies from an input stream.  If it fails, */
@@ -198,31 +189,31 @@ class ModelPoMo : public ModelGTR
 
     ModelDNA *dna_model;
 
- 	/**
- 		compute the rate matrix and then normalize it such that the total number of substitutions is 1.
- 		@param rate_matrix (IN/OUT) As input, it contains rate parameters. On output it is filled with rate matrix entries
- 		@param state_freq state frequencies
- 		@param num_state number of states
- 	*/
- 	virtual void computeRateMatrix(double **rate_matrix, double *state_freq, int num_state);
+    /**
+        compute the rate matrix and then normalize it such that the total number of substitutions is 1.
+        @param rate_matrix (OUT).  It is filled with rate matrix entries
+        @param state_freq state frequencies
+        @param num_state number of states
+    */
+    virtual void computeRateMatrix(double **rate_matrix, double *state_freq, int num_state);
 
-	/**
+    /**
      * This function is served for the multi-dimension
      * optimization. It should pack the model parameters into a vector
      * that is index from 1 (NOTE: not from 0)
      *
      * @param variables (OUT) Vector of variables, indexed from 1.
      */
-	virtual void setVariables(double *variables);
+    virtual void setVariables(double *variables);
 
-	/**
+    /**
      * This function is served for the multi-dimension
      * optimization. It should assign the model parameters from a
      * vector of variables that is index from 1 (NOTE: not from 0)
      *
      * @param variables Vector of variables, indexed from 1.
      */
-	virtual void getVariables(double *variables);
+    virtual void getVariables(double *variables);
 
 
  private:
@@ -354,7 +345,7 @@ class ModelPoMo : public ModelGTR
     /* /// Rate parameter specification, a string of 6 characters.  E.g., */
     /* /// for the HKY model, it will be set to '010010' by */
     /* /// SetRateType(). */
-	/* string param_spec; */
+    /* string param_spec; */
 
     /* /// Vector of boolean, TRUE if correspodning parameter is fixed */
     /* /// and FALSE otherwise.  Set by SetRateType(). */
