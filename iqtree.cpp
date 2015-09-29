@@ -26,9 +26,9 @@
 #include "model/rategamma.h"
 #include <numeric>
 #include "tools.h"
+#include "MPIHelper.h"
 #ifdef _IQTREE_MPI
 #include <mpi.h>
-#include "MPIHelper.h"
 #endif
 
 Params *globalParams;
@@ -579,6 +579,7 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
         readTreeString(*it);
         initLogl = computeLogL();
         nniInfo = doNNISearch();
+        addTreeToCandidateSet(getTreeString(), curScore);
         cout << "Iteration " << stop_rule.getCurIt();
         if (verbose_mode >= VB_MED) {
             cout << " / NNI steps, count: " << nniInfo.first << "," << nniInfo.second;
@@ -586,7 +587,6 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
         }
         cout << " /  Logl: " << getCurScore() ;
         cout << " / Time: " << convert_time(getRealTime() - params->start_real_time) << endl;
-        addTreeToCandidateSet(getTreeString(), curScore);
 
 #ifdef _IQTREE_MPI
         nniTrees.push_back(getTreeString());
@@ -596,7 +596,7 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
 #ifdef _IQTREE_MPI
     // Send trees
     MPIHelper::getInstance().sendTreesToOthers(TreeCollection(nniTrees, nniScores), TREE_TAG);
-    //MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Barrier(MPI_COMM_WORLD);
     // Receive trees
     getAllTrees = false;
     updateStopRule = true;
@@ -2032,6 +2032,7 @@ void IQTree::estimateLoglCutoffBS() {
     }
 }
 
+#ifdef _IQTREE_MPI
 bool IQTree::addTreesFromOtherProcesses(bool allTrees, bool updateStopRule) {
     bool stopSearch;
     TreeCollection inTrees;
@@ -2045,6 +2046,7 @@ bool IQTree::addTreesFromOtherProcesses(bool allTrees, bool updateStopRule) {
     }
     return stopSearch;
 }
+#endif
 
 double IQTree::doTreePerturbation() {
     if (iqp_assess_quartet == IQP_BOOTSTRAP) {
