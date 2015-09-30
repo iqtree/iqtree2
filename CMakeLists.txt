@@ -332,11 +332,11 @@ add_subdirectory(whtest)
 add_subdirectory(sprng)
 #add_subdirectory(zlib-1.2.7)
 add_subdirectory(vectorclass)
-# TODO: including Eigen3 (below) gave warnings
-#find_package(Eigen3)
-#if(EIGEN3_FOUND)
-#  include_directories(${EIGEN3_INCLUDE_DIR})
-#endif(EIGEN3_FOUND)
+LIST(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}")
+find_package(Eigen3)
+if(EIGEN3_FOUND)
+  include_directories(${EIGEN3_INCLUDE_DIR})
+endif(EIGEN3_FOUND)
 add_subdirectory(model)
 
 ##################################################################
