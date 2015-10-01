@@ -431,6 +431,7 @@ bool IQTree::addTreeToCandidateSet(string treeString, double score, bool updateS
             }
             cout << endl;
             printResultTree();
+            printInterationInfo();
         }
     }
     return newTree;
@@ -573,13 +574,6 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
         initLogl = computeLogL();
         nniInfo = doNNISearch();
         addTreeToCandidateSet(getTreeString(), curScore);
-        cout << "Iteration " << stop_rule.getCurIt();
-        if (verbose_mode >= VB_MED) {
-            cout << " / NNI steps, count: " << nniInfo.first << "," << nniInfo.second;
-            cout << " / Init. logl " << initLogl;
-        }
-        cout << " /  Logl: " << getCurScore() ;
-        cout << " / Time: " << convert_time(getRealTime() - params->start_real_time) << endl;
 
 #ifdef _IQTREE_MPI
         nniTrees.push_back(getTreeString());
@@ -1852,7 +1846,7 @@ double IQTree::doTreeSearch() {
         /*----------------------------------------
     	 * Perturb the tree
     	 *---------------------------------------*/
-        double perScore = doTreePerturbation();
+        double initScore = doTreePerturbation();
 
         /*----------------------------------------
     	 * Optimize tree with NNI
@@ -1885,25 +1879,7 @@ double IQTree::doTreeSearch() {
         /*----------------------------------------
     	 * Print information
     	 *---------------------------------------*/
-        double realtime_remaining = stop_rule.getRemainingTime(stop_rule.getCurIt(), cur_correlation);
-        cout.setf(ios::fixed, ios::floatfield);
-
-        // only print every 10th iteration or high verbose mode
-        if (stop_rule.getCurIt() % 10 == 0 || verbose_mode >= VB_MED) {
-            cout << ((iqp_assess_quartet == IQP_BOOTSTRAP) ? "Bootstrap " : "Iteration ") << stop_rule.getCurIt() <<
-            " / LogL: ";
-            if (verbose_mode >= VB_MED)
-                cout << perScore << " -> ";
-            cout << curScore;
-            if (verbose_mode >= VB_MED)
-                cout << " / (Steps, NNIs): (" << nniInfos.first << "," << nniInfos.second << ")";
-            cout << " / Time: " << convert_time(getRealTime() - params->start_real_time);
-
-            if (stop_rule.getCurIt() > 10) {
-                cout << " (" << convert_time(realtime_remaining) << " left)";
-            }
-            cout << endl;
-        }
+        printInterationInfo();
 
         if (params->write_intermediate_trees && save_all_trees != 2) {
             printIntermediateTree(WT_NEWLINE | WT_APPEND | WT_SORT_TAXA | WT_BR_LEN);
@@ -1998,6 +1974,24 @@ double IQTree::doTreeSearch() {
         exit(0);
     }
 #endif
+}
+
+void IQTree::printInterationInfo() {
+    double realtime_remaining = stop_rule.getRemainingTime(stop_rule.getCurIt());
+    cout.setf(ios_base::fixed, ios_base::floatfield);
+
+    // only print every 10th iteration or high verbose mode
+    if (stop_rule.getCurIt() % 10 == 0 || verbose_mode >= VB_MED) {
+            cout << ((iqp_assess_quartet == IQP_BOOTSTRAP) ? "Bootstrap " : "Iteration ") << stop_rule.getCurIt() <<
+            " / LogL: ";
+            cout << curScore;
+            cout << " / Time: " << convert_time(getRealTime() - params->start_real_time);
+
+            if (stop_rule.getCurIt() > 10) {
+                cout << " (" << convert_time(realtime_remaining) << " left)";
+            }
+            cout << endl;
+        }
 }
 
 void IQTree::estimateLoglCutoffBS() {
