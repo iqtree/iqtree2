@@ -726,6 +726,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.stop_confidence = 0.95;
     params.model_name = "";
     params.model_set = NULL;
+    params.model_extra_set = NULL;
     params.model_subset = NULL;
     params.state_freq_set = NULL;
     params.ratehet_set = NULL;
@@ -745,7 +746,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.p_invar_sites = -1.0;
     params.optimize_model_rate_joint = false;
     params.optimize_by_newton = true;
-    params.optimize_alg = "2-BFGS-B";
+    params.optimize_alg = "2-BFGS-B,EM";
     params.fixed_branch_length = false;
     params.iqp_assess_quartet = IQP_DISTANCE;
     params.iqp = false;
@@ -758,6 +759,8 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.mean_rate = 1.0;
     params.aLRT_threshold = 101;
     params.aLRT_replicates = 0;
+    params.aLRT_test = false;
+    params.aBayes_test = false;
     params.localbp_replicates = 0;
     params.SSE = LK_EIGEN_SSE;
     params.lk_no_avx = false;
@@ -810,7 +813,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.min_correlation = 0.99;
     params.step_iterations = 100;
     params.store_candidate_trees = false;
-	params.print_ufboot_trees = false;
+	params.print_ufboot_trees = 0;
     //const double INF_NNI_CUTOFF = -1000000.0;
     params.nni_cutoff = -1000000.0;
     params.estimate_nni_cutoff = false;
@@ -1697,6 +1700,13 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.model_set = argv[cnt];
 				continue;
 			}
+			if (strcmp(argv[cnt], "-madd") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -madd <extra_model_set>";
+				params.model_extra_set = argv[cnt];
+				continue;
+			}
 			if (strcmp(argv[cnt], "-msub") == 0) {
 				cnt++;
 				if (cnt >= argc)
@@ -2072,10 +2082,18 @@ void parseArg(int argc, char *argv[], Params &params) {
 			}
 			if (strcmp(argv[cnt], "-alrt") == 0) {
 				cnt++;
-				params.aLRT_replicates = convert_int(argv[cnt]);
-				if (params.aLRT_replicates < 1000
-						&& params.aLRT_replicates != 0)
-					throw "aLRT replicates must be at least 1000";
+                int reps = convert_int(argv[cnt]);
+                if (reps == 0)
+                    params.aLRT_test = true;
+                else {
+                    params.aLRT_replicates = reps;
+                    if (params.aLRT_replicates < 1000)
+                        throw "aLRT replicates must be at least 1000";
+                }
+				continue;
+			}
+			if (strcmp(argv[cnt], "-abayes") == 0) {
+				params.aBayes_test = true;
 				continue;
 			}
 			if (strcmp(argv[cnt], "-lbp") == 0) {
@@ -2297,7 +2315,12 @@ void parseArg(int argc, char *argv[], Params &params) {
 				continue;
 			}
 			if (strcmp(argv[cnt], "-wbt") == 0) {
-				params.print_ufboot_trees = true;
+				params.print_ufboot_trees = 1;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-wbtl") == 0) {
+                // print ufboot trees with branch lengths
+				params.print_ufboot_trees = 2;
 				continue;
 			}
 			if (strcmp(argv[cnt], "-bs") == 0) {
@@ -2911,6 +2934,7 @@ void usage_iqtree(char* argv[], bool full_command) {
             << endl << "ULTRAFAST BOOTSTRAP:" << endl
             << "  -bb <#replicates>    Ultrafast bootstrap (>=1000)" << endl
             << "  -wbt                 Write bootstrap trees to .ufboot file (default: none)" << endl
+            << "  -wbtl                Like -wbt but also writing branch lengths" << endl
 //            << "  -n <#iterations>     Minimum number of iterations (default: 100)" << endl
             << "  -nm <#iterations>    Maximum number of iterations (default: 1000)" << endl
 			<< "  -nstep <#iterations> #Iterations for UFBoot stopping rule (default: 100)" << endl
@@ -2920,9 +2944,11 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -b <#replicates>     Bootstrap + ML tree + consensus tree (>=100)" << endl
             << "  -bc <#replicates>    Bootstrap + consensus tree" << endl
             << "  -bo <#replicates>    Bootstrap only" << endl
-            << "  -t <threshold>       Minimum bootstrap support [0...1) for consensus tree" << endl
+//            << "  -t <threshold>       Minimum bootstrap support [0...1) for consensus tree" << endl
             << endl << "SINGLE BRANCH TEST:" << endl
             << "  -alrt <#replicates>  SH-like approximate likelihood ratio test (SH-aLRT)" << endl
+            << "  -alrt 0              Parametric aLRT test (Anisimova and Gascuel 2006)" << endl
+            << "  -abayes              approximate Bayes test (Anisimova et al. 2011)" << endl
             << "  -lbp <#replicates>   Fast local bootstrap probabilities" << endl
             << endl << "AUTOMATIC MODEL SELECTION:" << endl
             << "  -m TESTONLY          Standard model selection (like jModelTest, ProtTest)" << endl
@@ -2948,6 +2974,7 @@ void usage_iqtree(char* argv[], bool full_command) {
 //            << "  -msep                Perform model selection and then rate selection" << endl
             << "  -mtree               Performing full tree search for each model considered" << endl
             << "  -mredo               Ignoring model results computed earlier (default: no)" << endl
+            << "  -madd mx1,...,mxk    List of mixture models to also consider" << endl
             << "  -mdef <nexus_file>   A model definition NEXUS file (see Manual)" << endl
 
             << endl << "SUBSTITUTION MODEL:" << endl
@@ -2982,6 +3009,7 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "                       number of categories (default: n=4)" << endl
             << "  -a <Gamma_shape>     Gamma shape parameter for site rates (default: estimate)" << endl
             << "  -gmedian             Computing mean for Gamma rate category (default: mean)" << endl
+            << "  --test-alpha         More thorough estimation for +I+G model parameters" << endl
             << "  -i <p_invar>         Proportion of invariable sites (default: estimate)" << endl
             << "  -mh                  Computing site-specific rates to .mhrate file using" << endl
             << "                       Meyer & von Haeseler (2003) method" << endl

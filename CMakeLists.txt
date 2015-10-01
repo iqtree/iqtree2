@@ -317,7 +317,9 @@ configure_file (
 # add the binary tree to the search path for include files
 # so that we will find iqtree_config.h
 include_directories("${PROJECT_BINARY_DIR}")
-include_directories("${PROJECT_BINARY_DIR}/zlib-1.2.7")
+
+#zlib will be detected for appearance
+#include_directories("${PROJECT_BINARY_DIR}/zlib-1.2.7")
 
 
 ##################################################################
@@ -328,8 +330,13 @@ add_subdirectory(ncl)
 add_subdirectory(lbfgsb)
 add_subdirectory(whtest)
 add_subdirectory(sprng)
-add_subdirectory(zlib-1.2.7)
+#add_subdirectory(zlib-1.2.7)
 add_subdirectory(vectorclass)
+LIST(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}")
+find_package(Eigen3)
+if(EIGEN3_FOUND)
+  include_directories(${EIGEN3_INCLUDE_DIR})
+endif(EIGEN3_FOUND)
 add_subdirectory(model)
 
 ##################################################################
@@ -402,8 +409,20 @@ checkpoint.cpp
 upperbounds.cpp
 )
 
+find_package(ZLIB)
+if(ZLIB_FOUND)
+  message ("Using system zlib")
+  include_directories(${ZLIB_INCLUDE_DIRS})
+  target_link_libraries(iqtree ${ZLIB_LIBRARIES})
+else(ZLIB_FOUND)
+  message ("Using own zlib-1.2.7")
+  include_directories("${PROJECT_BINARY_DIR}/zlib-1.2.7" "${PROJECT_SOURCE_DIR}/zlib-1.2.7")
+  add_subdirectory(zlib-1.2.7)
+  target_link_libraries(iqtree zlibstatic)
+endif(ZLIB_FOUND)
+
 if (NOT IQTREE_FLAGS MATCHES "avx" AND NOT IQTREE_FLAGS MATCHES "fma")
-	set_target_properties(iqtree pll ncl lbfgsb whtest zlibstatic sprng vectorclass model PROPERTIES COMPILE_FLAGS "${SSE_FLAGS}")
+	set_target_properties(iqtree pll ncl lbfgsb whtest sprng vectorclass model PROPERTIES COMPILE_FLAGS "${SSE_FLAGS}")
 	if (NOT BINARY32 AND NOT IQTREE_FLAGS MATCHES "novx")
 		set_target_properties(avxkernel pllavx PROPERTIES COMPILE_FLAGS "${AVX_FLAGS}")
 	endif()
@@ -437,9 +456,9 @@ if (IQTREE_FLAGS MATCHES "omp")
 endif()
 
 if (BINARY32 OR IQTREE_FLAGS MATCHES "novx")
-    target_link_libraries(iqtree pll ncl lbfgsb whtest zlibstatic sprng vectorclass model ${PLATFORM_LIB} ${THREAD_LIB})	
+    target_link_libraries(iqtree pll ncl lbfgsb whtest sprng vectorclass model ${PLATFORM_LIB} ${THREAD_LIB})	
 else()
-    target_link_libraries(iqtree pll pllavx ncl lbfgsb whtest zlibstatic sprng vectorclass model avxkernel ${PLATFORM_LIB} ${THREAD_LIB})	
+    target_link_libraries(iqtree pll pllavx ncl lbfgsb whtest sprng vectorclass model avxkernel ${PLATFORM_LIB} ${THREAD_LIB})	
 endif()
 
 ##################################################################
@@ -474,8 +493,9 @@ endif()
 # add the install targets
 ##############################################################
 install (TARGETS iqtree DESTINATION bin)
-install (FILES "${PROJECT_SOURCE_DIR}/model/models.nex" DESTINATION bin)
-install (FILES "${PROJECT_SOURCE_DIR}/examples/example.phy" DESTINATION .)
+install (FILES "${PROJECT_SOURCE_DIR}/example/models.nex" DESTINATION .)
+install (FILES "${PROJECT_SOURCE_DIR}/example/example.phy" DESTINATION .)
+install (FILES "${PROJECT_SOURCE_DIR}/example/example.nex" DESTINATION .)
 install (FILES "${PROJECT_SOURCE_DIR}/Documents/iqtree-manual-1.0.pdf" DESTINATION .)
 
 if (WIN32)

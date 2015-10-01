@@ -117,10 +117,23 @@ double PartitionModelPlen::optimizeParameters(bool fixed_len, bool write_info, d
         	}
 
     	}
+        if (verbose_mode >= VB_MED)
+            cout << "LnL after optimizing individual models: " << cur_lh << endl;
+        assert(cur_lh > tree_lh - 1.0 && "individual model opt reduces LnL");
+        
     	tree->clearAllPartialLH();
     	// Optimizing gene rate
     	if(!tree->fixed_rates){
     		cur_lh = optimizeGeneRate(gradient_epsilon);
+            if (verbose_mode >= VB_MED) {
+                cout << "LnL after optimizing partition-specific rates: " << cur_lh << endl;
+                cout << "Partition-specific rates: ";
+                for(int part = 0; part < ntrees; part++){
+                    cout << " " << tree->part_info[part].part_rate;
+                }
+                cout << endl;
+            }
+            assert(cur_lh > tree_lh - 1.0 && "partition rate opt reduces LnL");
     	}
 
     	// Optimizing branch lengths
@@ -137,7 +150,7 @@ double PartitionModelPlen::optimizeParameters(bool fixed_len, bool write_info, d
     		break;
         }
     	// make sure that the new logl is not so bad compared with previous logl
-    	assert(cur_lh > tree_lh - 1.0);
+    	assert(cur_lh > tree_lh - 1.0 && "branch length opt reduces LnL");
     	tree_lh = cur_lh;
     }
 //    cout <<"OPTIMIZE MODEL has finished"<< endl;
@@ -349,7 +362,7 @@ void PhyloSuperTreePlen::deleteAllPartialLh() {
 		// reset these pointers so that they are not deleted
 		(*it)->central_partial_lh = NULL;
 		(*it)->central_scale_num = NULL;
-		(*it)->central_partial_pars = NULL;
+//		(*it)->central_partial_pars = NULL;
 		(*it)->_pattern_lh = NULL;
 		(*it)->_pattern_lh_cat = NULL;
 		(*it)->theta_all = NULL;
@@ -368,7 +381,7 @@ PhyloSuperTreePlen::~PhyloSuperTreePlen()
 		// reset these pointers so that they are not deleted
 		(*it)->central_partial_lh = NULL;
 		(*it)->central_scale_num = NULL;
-		(*it)->central_partial_pars = NULL;
+//		(*it)->central_partial_pars = NULL;
 		(*it)->_pattern_lh = NULL;
 		(*it)->_pattern_lh_cat = NULL;
 		(*it)->theta_all = NULL;

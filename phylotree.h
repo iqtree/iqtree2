@@ -22,7 +22,7 @@
 
 //#define EIGEN_TUNE_FOR_CPU_CACHE_SIZE (512*256)
 //#define EIGEN_TUNE_FOR_CPU_CACHE_SIZE (8*512*512)
-#include "Eigen/Core"
+#include <Eigen/Core>
 #include "mtree.h"
 #include "alignment.h"
 #include "model/modelsubst.h"
@@ -1330,15 +1330,16 @@ public:
     /**
             Test one branch of the tree with aLRT SH-like interpretation
      */
-    double testOneBranch(
-            double best_score, double *pattern_lh, int reps, int lbp_reps,
-            PhyloNode *node1, PhyloNode *node2, double &lbp_support);
+    double testOneBranch(double best_score, double *pattern_lh, 
+            int reps, int lbp_reps,
+            PhyloNode *node1, PhyloNode *node2, 
+            double &lbp_support, double &aLRT_support, double &aBayes_support);
 
     /**
             Test all branches of the tree with aLRT SH-like interpretation
      */
-    int testAllBranches(int threshold,
-            double best_score, double *pattern_lh, int reps, int lbp_reps,
+    int testAllBranches(int threshold, double best_score, double *pattern_lh, 
+            int reps, int lbp_reps, bool aLRT_test, bool aBayes_test,
             PhyloNode *node = NULL, PhyloNode *dad = NULL);
 
     /****************************************************************************

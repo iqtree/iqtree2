@@ -152,7 +152,7 @@ int RateFree::getNDim() {
     if (fix_params) return 0;
     if (optimizing_params == 0) return (2*ncategory-2); 
     if (optimizing_params == 1) // rates
-        return ncategory;
+        return ncategory-1;
     if (optimizing_params == 2) // proportions
         return ncategory-1;
     return 0;
@@ -183,8 +183,10 @@ double RateFree::optimizeParameters(double gradient_epsilon) {
 	if (verbose_mode >= VB_MED)
 		cout << "Optimizing " << name << " model parameters by " << optimize_alg << " algorithm..." << endl;
 
-    if (optimize_alg == "EM")
-        return optimizeWithEM();
+    if (optimize_alg.find("EM") != string::npos)
+        if (!phylo_tree->getModel()->isMixture() || phylo_tree->getModelFactory()->fused_mix_rate)
+            // call EM only if model is current supported, otherwise use BFGS engine
+            return optimizeWithEM();
 
 	//if (freq_type == FREQ_ESTIMATE) scaleStateFreq(false);
 
@@ -197,12 +199,13 @@ double RateFree::optimizeParameters(double gradient_epsilon) {
 //    score = optimizeWeights();
 
     int left = 1, right = 2;
-    if (optimize_alg.substr(0, 6) == "1-BFGS") {
+    if (optimize_alg.find("1-BFGS") != string::npos) {
         left = 0; 
         right = 0;
     }
 
-    for (optimizing_params = left; optimizing_params <= right; optimizing_params++) {
+    // changed to Wi -> Ri by Thomas on Sept 11, 15
+    for (optimizing_params = right; optimizing_params >= left; optimizing_params--) {
     
         ndim = getNDim();
         // by BFGS algorithm
@@ -212,7 +215,7 @@ double RateFree::optimizeParameters(double gradient_epsilon) {
 //        if (optimizing_params == 2 && optimize_alg.find("-EM") != string::npos)
 //            score = optimizeWeights();
 //        else 
-        if (optimize_alg.substr(optimize_alg.length()-2,2) == "-B")
+        if (optimize_alg.find("BFGS-B") != string::npos)
             score = -L_BFGS_B(ndim, variables+1, lower_bound+1, upper_bound+1, max(gradient_epsilon, TOL_FREE_RATE));
         else
             score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound, bound_check, max(gradient_epsilon, TOL_FREE_RATE));
@@ -290,7 +293,7 @@ void RateFree::setVariables(double *variables) {
             variables[i+1] = prop[i] / prop[ncategory-1];
     } else if (optimizing_params == 1) {
         // rates
-        for (i = 0; i < ncategory; i++)
+        for (i = 0; i < ncategory-1; i++)
             variables[i+1] = rates[i];
     } else {
         // both rates and weights
@@ -343,10 +346,30 @@ void RateFree::getVariables(double *variables) {
             prop[i] = variables[i+1] / sum;
         }
         prop[ncategory-1] = 1.0 / sum;
+        // added by Thomas on Sept 10, 15
+        // update the values of rates, in order to
+        // maintain the sum of prop[i]*rates[i] = 1
+//        sum = 0;
+//        for (i = 0; i < ncategory; i++) {
+//            sum += prop[i] * rates[i];
+//        }
+//        for (i = 0; i < ncategory; i++) {
+//            rates[i] = rates[i] / sum;
+//        }
     } else if (optimizing_params == 1) {
         // rates
-        for (i = 0; i < ncategory; i++)
+        for (i = 0; i < ncategory-1; i++)
             rates[i] = variables[i+1];
+        // added by Thomas on Sept 10, 15
+        // need to normalize the values of rates, in order to
+        // maintain the sum of prop[i]*rates[i] = 1
+//        sum = 0;
+//        for (i = 0; i < ncategory; i++) {
+//            sum += prop[i] * rates[i];
+//        }
+//        for (i = 0; i < ncategory; i++) {
+//            rates[i] = rates[i] / sum;
+//        }
     } else {
         // both weights and rates
         for (i = 0; i < ncategory-1; i++) {

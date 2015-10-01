@@ -91,9 +91,9 @@ bool StopRule::meetStopCondition(int cur_iteration, double cur_correlation) {
 		else
 			return cur_iteration > predicted_iteration;
 	case SC_UNSUCCESS_ITERATION:
-		return cur_iteration > getLastImprovedIteration() + unsuccess_iteration;
+		return cur_iteration >= getLastImprovedIteration() + unsuccess_iteration;
 	case SC_BOOTSTRAP_CORRELATION:
-		return ((cur_correlation >= min_correlation) && (cur_iteration > getLastImprovedIteration() + unsuccess_iteration))
+		return ((cur_correlation >= min_correlation) && (cur_iteration >= getLastImprovedIteration() + unsuccess_iteration))
 				|| cur_iteration > max_iteration;
 	case SC_REAL_TIME:
 		return (getRealTime() - start_real_time >= max_run_time);

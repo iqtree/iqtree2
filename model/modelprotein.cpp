@@ -3164,8 +3164,8 @@ void ModelProtein::init(const char *model_name, string model_params, StateFreqTy
 		readParameters(model_name);
 	}
 	if (freq_params != "") {
-		stringstream ss(freq_params);
-		readStateFreq(ss);
+//		stringstream ss(freq_params);
+		readStateFreq(freq_params);
 	}
 /*	if (name == "WAG") { model_str = model_WAG;}
 	else if (name == "cpREV") model_str = model_cpREV;
