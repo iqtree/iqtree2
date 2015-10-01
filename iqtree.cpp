@@ -430,9 +430,7 @@ bool IQTree::addTreeToCandidateSet(string treeString, double score, bool updateS
                 cout << "UPDATE BEST LOG-LIKELIHOOD: " << score;
             }
             cout << endl;
-            if (MPIHelper::getInstance().getProcessID() == MASTER) {
-                printResultTree();
-            }
+            printResultTree();
         }
     }
     return newTree;
@@ -502,14 +500,9 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
     for (CandidateSet::iterator it = candTrees.begin(); it != candTrees.end(); ++it) {
         string treeString;
         double score;
-        if (it->first == -DBL_MAX) {
-            readTreeString(it->second.tree);
-            treeString = optimizeBranches(2);
-            score = getCurScore();
-        } else {
-            treeString = it->second.tree;
-            score = it->first;
-        }
+        readTreeString(it->second.tree);
+        treeString = optimizeBranches(2);
+        score = getCurScore();
         bool updateStopRule = false;
         addTreeToCandidateSet(treeString, score, updateStopRule);
     }
@@ -2037,8 +2030,7 @@ bool IQTree::addTreesFromOtherProcesses(bool allTrees, bool updateStopRule) {
     bool stopSearch;
     TreeCollection inTrees;
     stopSearch = MPIHelper::getInstance().receiveTrees(allTrees, inTrees);
-    if (verbose_mode >= VB_MED)
-        cout << inTrees.getNumTrees() << " trees received from other processes" << endl;
+    cout << inTrees.getNumTrees() << " trees received from other processes" << endl;
 
     for (int i = 0; i < inTrees.getNumTrees(); i++) {
         pair<string, double> tree = inTrees.getTree(i);
@@ -2091,7 +2083,7 @@ double IQTree::doTreePerturbation() {
                     pllTreeCounter[perturb_tree_topo]++;
                 }
             }
-            optimizeBranches(1);
+            curScore = computeLikelihood();
         }
     return curScore;
 }
@@ -2236,7 +2228,7 @@ pair<int, int> IQTree::optimizeNNI() {
             break;
 
         if (params->snni && (curScore > curBestScore + 0.1)) {
-            optimizeModelParameters(false, 0.1);
+            optimizeModelParameters(false);
             curBestScore = curScore;
         }
     }
@@ -3216,6 +3208,11 @@ void IQTree::printResultTree(string suffix) {
     setRootNode(params->root);
     string tree_file_name = params->out_prefix;
     tree_file_name += ".treefile";
+#ifdef _IQTREE_MPI
+    stringstream processTreeFile;
+    processTreeFile << tree_file_name << "." << MPIHelper::getInstance().getProcessID();
+    tree_file_name = processTreeFile.str();
+#endif
     if (suffix.compare("") != 0) {
         string iter_tree_name = tree_file_name + "." + suffix;
         printTree(iter_tree_name.c_str(), WT_BR_LEN | WT_BR_LEN_FIXED_WIDTH | WT_SORT_TAXA | WT_NEWLINE);
