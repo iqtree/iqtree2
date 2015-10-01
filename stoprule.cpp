@@ -101,7 +101,7 @@ bool StopRule::meetStopCondition(int cur_iteration, double cur_correlation) {
 	return false;
 }
 
-double StopRule::getRemainingTime(int cur_iteration, double cur_correlation) {
+double StopRule::getRemainingTime(int cur_iteration) {
 	double realtime_secs = getRealTime() - start_real_time;
 	int niterations;
 	switch (stop_condition) {
