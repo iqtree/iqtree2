@@ -2166,10 +2166,6 @@ int main(int argc, char *argv[]) {
 	MPI_Comm_rank(MPI_COMM_WORLD, &task_id);
 	MPIHelper::getInstance().setNumProcesses(n_tasks);
 	MPIHelper::getInstance().setProcessID(task_id);
-
-	cout << "************************************************" << endl;
-	cout << "* START TREE SEARCH USING MPI WITH " << MPIHelper::getInstance().getNumProcesses() << " PROCESSES *" << endl;
-	cout << "************************************************" << endl;
 #endif
 
 	/*************************/
@@ -2221,6 +2217,9 @@ int main(int argc, char *argv[]) {
 	time_t cur_time;
 
 #ifdef _IQTREE_MPI
+	cout << "************************************************" << endl;
+	cout << "* START TREE SEARCH USING MPI WITH " << MPIHelper::getInstance().getNumProcesses() << " PROCESSES *" << endl;
+	cout << "************************************************" << endl;
 	unsigned int rndSeed;
 	if (MPIHelper::getInstance().getProcessID() == MASTER) {
 		rndSeed = Params::getInstance().ran_seed;
@@ -2230,9 +2229,7 @@ int main(int argc, char *argv[]) {
 	MPI_Bcast(&rndSeed, 1, MPI_INT, MASTER, MPI_COMM_WORLD);
 	if (MPIHelper::getInstance().getProcessID() != MASTER) {
 		Params::getInstance().ran_seed = rndSeed + task_id * 100000;
-#ifdef _MPI_DEBUG
 		printf("Process %d: random_seed = %d\n", task_id, Params::getInstance().ran_seed);
-#endif
 	}
 #endif
 

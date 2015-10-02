@@ -60,9 +60,9 @@ bool MPIHelper::checkStopMsg(string &msg) {
         recvBuffer = new char[numBytes];
         MPI_Recv(recvBuffer, numBytes, MPI_CHAR, status.MPI_SOURCE, status.MPI_TAG, MPI_COMM_WORLD, NULL);
         ObjectStream os(recvBuffer, numBytes);
-        stringstream stopMsg;
-        stopMsg << os.getObjectData();
-        msg = stopMsg.str();
+        string strMsg(os.getObjectData());
+        cout << strMsg << endl;
+        msg = strMsg;
         delete[] recvBuffer;
         return true;
     }

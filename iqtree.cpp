@@ -1803,15 +1803,9 @@ double IQTree::doTreeSearch() {
     /*==============================================================================================================
 	                                       MAIN LOOP OF THE IQ-TREE ALGORITHM
 	 *=============================================================================================================*/
+    bool stopReceived = false;
     while (!stop_rule.meetStopCondition(stop_rule.getCurIt(), cur_correlation)) {
 #ifdef _IQTREE_MPI
-        string stopMsg;
-        if (MPIHelper::getInstance().checkStopMsg(stopMsg)) {
-            cout << stopMsg << endl;
-            cout << "I have done my job, goodbye!" << endl;
-            MPI_Finalize();
-            exit(0);
-        }
         addTreesFromOtherProcesses(false, true);
         if (stop_rule.meetStopCondition(stop_rule.getCurIt(), cur_correlation))
             break;
@@ -1954,10 +1948,13 @@ double IQTree::doTreeSearch() {
         }
     }
 #ifdef _IQTREE_MPI
-    stringstream stopMessage;
-    stopMessage << "Stop requested from process " << MPIHelper::getInstance().getProcessID();
-    MPIHelper::getInstance().sendStopMsg(stopMessage.str());
-    MPI_Finalize();
+    if (MPIHelper::getInstance().getProcessID() != MASTER) {
+        cout << "Stopped after " << stop_rule.getCurIt() << " iterations" << endl;
+        MPI_Finalize();
+        exit(0);
+    } else {
+        MPI_Finalize();
+    }
 #endif
 }
 
@@ -3185,11 +3182,11 @@ void IQTree::printResultTree(string suffix) {
     setRootNode(params->root);
     string tree_file_name = params->out_prefix;
     tree_file_name += ".treefile";
-#ifdef _IQTREE_MPI
-    stringstream processTreeFile;
-    processTreeFile << tree_file_name << "." << MPIHelper::getInstance().getProcessID();
-    tree_file_name = processTreeFile.str();
-#endif
+    if (MPIHelper::getInstance().getProcessID() != MASTER) {
+        stringstream processTreeFile;
+        processTreeFile << tree_file_name << "." << MPIHelper::getInstance().getProcessID();
+        tree_file_name = processTreeFile.str();
+    }
     if (suffix.compare("") != 0) {
         string iter_tree_name = tree_file_name + "." + suffix;
         printTree(iter_tree_name.c_str(), WT_BR_LEN | WT_BR_LEN_FIXED_WIDTH | WT_SORT_TAXA | WT_NEWLINE);
