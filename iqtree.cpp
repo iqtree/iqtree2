@@ -431,8 +431,8 @@ bool IQTree::addTreeToCandidateSet(string treeString, double score, bool updateS
             }
             cout << endl;
             printResultTree();
-            printInterationInfo();
         }
+        printInterationInfo();
     }
     return newTree;
 }
@@ -472,13 +472,12 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
     for (int treeNr = 1; treeNr < nParTrees; treeNr++) {
         int parRandSeed = Params::getInstance().ran_seed + + processID * nParTrees + treeNr;
         string curParsTree = generateParsimonyTree(parRandSeed);
-        bool updateStopRule = false;
-        bool newTree = addTreeToCandidateSet(curParsTree, -DBL_MAX, updateStopRule);
+        bool newTree = addTreeToCandidateSet(curParsTree, -DBL_MAX, false);
         // if a duplicated tree is generated, then randomize the tree
         if (!newTree) {
             readTreeString(curParsTree);
             doTreePerturbation();
-            addTreeToCandidateSet(getTreeString(), curScore, updateStopRule);
+            addTreeToCandidateSet(getTreeString(), curScore, false);
         }
     }
     cout << getRealTime() - startTime << " seconds" << endl;
@@ -504,8 +503,7 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
         readTreeString(it->second.tree);
         treeString = optimizeBranches(2);
         score = getCurScore();
-        bool updateStopRule = false;
-        addTreeToCandidateSet(treeString, score, updateStopRule);
+        addTreeToCandidateSet(treeString, score, false);
     }
     cout << getRealTime() - startTime << " seconds" << endl;
 
@@ -583,7 +581,7 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
     MPIHelper::getInstance().sendTreesToOthers(TreeCollection(nniTrees, nniScores), TREE_TAG);
     MPI_Barrier(MPI_COMM_WORLD);
     // Receive trees
-    addTreesFromOtherProcesses(false, true);
+    addTreesFromOtherProcesses(true, true);
 #endif
     if (params->fixStableSplits && candidateTrees.size() > 1) {
         candidateTrees.buildTopSplits(Params::getInstance().stableSplitThreshold, Params::getInstance().numSupportTrees);
@@ -1867,7 +1865,7 @@ double IQTree::doTreeSearch() {
         /*----------------------------------------
     	 * Print information
     	 *---------------------------------------*/
-        printInterationInfo();
+        //printInterationInfo();
 
         if (params->write_intermediate_trees && save_all_trees != 2) {
             printIntermediateTree(WT_NEWLINE | WT_APPEND | WT_SORT_TAXA | WT_BR_LEN);
@@ -1974,7 +1972,7 @@ void IQTree::printInterationInfo() {
             cout << curScore;
             cout << " / Time: " << convert_time(getRealTime() - params->start_real_time);
 
-            if (stop_rule.getCurIt() > 10) {
+            if (stop_rule.getCurIt() > 20) {
                 cout << " (" << convert_time(realtime_remaining) << " left)";
             }
             cout << endl;
