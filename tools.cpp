@@ -717,7 +717,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.manuel_analytic_approx = false;
     params.leastSquareNNI = false;
     params.ls_var_type = OLS;
-    params.maxCandidates = 100;
+    params.maxCandidates = 200;
     params.popSize = 5;
     params.p_delete = -1;
     params.min_iterations = -1;
