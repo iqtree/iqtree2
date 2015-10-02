@@ -852,9 +852,8 @@ protected:
      *      If false, only collect trees that have been sent
      *  @param updateStopRule
      *      To update the stop rule or not
-     *  @return whether or not stop message is received
      */
-    bool addTreesFromOtherProcesses(bool allTrees, bool updateStopRule = true);
+    void addTreesFromOtherProcesses(bool allTrees, bool updateStopRule = true);
 #endif
 
     double doTreePerturbation();

@@ -516,10 +516,8 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
     MPI_Barrier(MPI_COMM_WORLD);
 
     // Get trees from other nodes
-    bool getAllTrees = true;
-    bool updateStopRule = false;
     cout << "Getting trees from other processes ... " << endl;
-    addTreesFromOtherProcesses(getAllTrees, updateStopRule);
+    addTreesFromOtherProcesses(true, false);
 #endif
     cout << candidateTrees.size() << " distinct starting trees" << endl;
     vector<string> bestTreeStrings; // Set of best initial trees for doing NNIs
@@ -585,15 +583,12 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
     MPIHelper::getInstance().sendTreesToOthers(TreeCollection(nniTrees, nniScores), TREE_TAG);
     MPI_Barrier(MPI_COMM_WORLD);
     // Receive trees
-    getAllTrees = false;
-    updateStopRule = true;
-    addTreesFromOtherProcesses(getAllTrees, updateStopRule);
+    addTreesFromOtherProcesses(false, true);
 #endif
     if (params->fixStableSplits && candidateTrees.size() > 1) {
         candidateTrees.buildTopSplits(Params::getInstance().stableSplitThreshold, Params::getInstance().numSupportTrees);
     }
 }
-
 
 string IQTree::generateParsimonyTree(int randomSeed) {
     string parsimonyTreeString;
@@ -1810,27 +1805,20 @@ double IQTree::doTreeSearch() {
     /*==============================================================================================================
 	                                       MAIN LOOP OF THE IQ-TREE ALGORITHM
 	 *=============================================================================================================*/
-    bool stopSearch = false;
-    while (!stopSearch) {
+    while (!stop_rule.meetStopCondition(stop_rule.getCurIt(), cur_correlation)) {
 #ifdef _IQTREE_MPI
-        bool allTrees = false;
-        bool updateStopRule = true;
-        stopSearch = addTreesFromOtherProcesses(allTrees, updateStopRule);
-        if (stopSearch) {
-            cout << "Stop request received!" << endl;
-            continue;
+        string stopMsg;
+        if (MPIHelper::getInstance().checkStopMsg(stopMsg)) {
+            cout << stopMsg << endl;
+            cout << "I have done my job, goodbye!" << endl;
+            MPI_Finalize();
+            exit(0);
         }
+        addTreesFromOtherProcesses(false, true);
+        if (stop_rule.meetStopCondition(stop_rule.getCurIt(), cur_correlation))
+            break;
 #endif
-        if (MPIHelper::getInstance().getProcessID() == MASTER &&
-                stop_rule.meetStopCondition(stop_rule.getCurIt(), cur_correlation)) {
-            stopSearch = true;
-#ifdef _IQTREE_MPI
-            MPIHelper::getInstance().sendStopMsg("Stop condition met!");
-#endif
-            continue;
-        }
         searchinfo.curIter = stop_rule.getCurIt();
-
         /*--------------------------------------------------
     	 * Estimate log-likelihood cutoff for bootstrap
     	 *-------------------------------------------------*/
@@ -1968,11 +1956,10 @@ double IQTree::doTreeSearch() {
         }
     }
 #ifdef _IQTREE_MPI
+    stringstream stopMessage;
+    stopMessage << "Stop requested from process " << MPIHelper::getInstance().getProcessID();
+    MPIHelper::getInstance().sendStopMsg(stopMessage.str());
     MPI_Finalize();
-    if (MPIHelper::getInstance().getProcessID() != MASTER) {
-        cout << "My job is done. Goodbye to all" << endl;
-        exit(0);
-    }
 #endif
 }
 
@@ -2020,17 +2007,15 @@ void IQTree::estimateLoglCutoffBS() {
 }
 
 #ifdef _IQTREE_MPI
-bool IQTree::addTreesFromOtherProcesses(bool allTrees, bool updateStopRule) {
-    bool stopSearch;
+void IQTree::addTreesFromOtherProcesses(bool allTrees, bool updateStopRule) {
     TreeCollection inTrees;
-    stopSearch = MPIHelper::getInstance().receiveTrees(allTrees, inTrees);
+    MPIHelper::getInstance().receiveTrees(allTrees, inTrees);
     cout << inTrees.getNumTrees() << " trees received from other processes" << endl;
 
     for (int i = 0; i < inTrees.getNumTrees(); i++) {
         pair<string, double> tree = inTrees.getTree(i);
         addTreeToCandidateSet(tree.first, tree.second, updateStopRule);
     }
-    return stopSearch;
 }
 #endif
 

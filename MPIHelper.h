@@ -55,10 +55,8 @@ public:
      *      wait for messages from all other processes
      *  @param trees[OUT]
      *      Trees received from other processes
-     *  @return
-     *      Whether or not the search is finished (only relevant for non-master processes)
      */
-    bool receiveTrees(bool fromAll, TreeCollection &trees);
+    void receiveTrees(bool fromAll, TreeCollection &trees);
 
 
     /**
@@ -76,6 +74,8 @@ public:
      *      Some useful message about the reason for stopping
      */
     void sendStopMsg(string msg);
+
+    bool checkStopMsg(string &msg);
 
 private:
     /**
@@ -97,6 +97,7 @@ private:
 #ifdef _IQTREE_MPI
     list<pair<MPI_Request *, ObjectStream *> > sentMessages;
 #endif
+
 
 };
 

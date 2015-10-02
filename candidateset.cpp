@@ -19,7 +19,7 @@ CandidateSet::~CandidateSet() {
 CandidateSet::CandidateSet() {
 	aln = NULL;
 	numStableSplits = 0;
-	maxSize = 1000;
+	maxSize = 50;
 }
 
 //void CandidateSet::getRandomStableSplits(int numSplit, SplitGraph& randomStableSplits) {
