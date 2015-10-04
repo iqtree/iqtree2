@@ -15,6 +15,7 @@ PhyloTreeMixlen::PhyloTreeMixlen() : IQTree() {
 	mixlen = 1;
     cur_mixture = -1;
     print_mix_brlen = false;
+    relative_rate = NULL;
 }
 
 PhyloTreeMixlen::PhyloTreeMixlen(Alignment *aln, int mixlen) : IQTree(aln) {
@@ -22,6 +23,12 @@ PhyloTreeMixlen::PhyloTreeMixlen(Alignment *aln, int mixlen) : IQTree(aln) {
     setMixlen(mixlen);
     cur_mixture = -1;
     print_mix_brlen = false;
+    relative_rate = NULL;
+}
+
+PhyloTreeMixlen::~PhyloTreeMixlen() {
+    if (relative_rate)
+        delete relative_rate;
 }
 
 Node* PhyloTreeMixlen::newNode(int node_id, const char* node_name) {
@@ -49,14 +56,15 @@ void PhyloTreeMixlen::initializeMixBranches(PhyloNode *node, PhyloNode *dad) {
         // assign length of left branch
         PhyloNeighborMixlen *nei = (PhyloNeighborMixlen*)(*it);
         nei->lengths.resize(mixlen, nei->length);
+        assert(nei->length >= 0);
         for (i = 0; i < mixlen; i++)
-            nei->lengths[i] = nei->length * getRate()->getRate(i);
+            nei->lengths[i] = nei->length * relative_rate->getRate(i);
 
         // assign length of right branch
         nei = (PhyloNeighborMixlen*)((*it)->node->findNeighbor(node));
         nei->lengths.resize(mixlen, nei->length);
         for (i = 0; i < mixlen; i++)
-            nei->lengths[i] = nei->length * getRate()->getRate(i);
+            nei->lengths[i] = nei->length * relative_rate->getRate(i);
             
         // recursive call
         initializeMixBranches((PhyloNode*)(*it)->node, node);
@@ -112,35 +120,35 @@ double PhyloTreeMixlen::optimizeAllBranches(int my_iterations, double tolerance,
     if (((PhyloNeighborMixlen*)root->neighbors[0])->lengths.empty()) {
         // initialize mixture branch lengths if empty
 
-        RateHeterogeneity *saved_rate = getRate();
-        bool saved_fused_mix_rate = model_factory->fused_mix_rate;
+        if (!relative_rate) {
+            RateHeterogeneity *saved_rate = getRate();
+            bool saved_fused_mix_rate = model_factory->fused_mix_rate;
 
-        // create new rate model
-        RateGamma *tmp_rate = new RateGamma(mixlen, -1.0, params->gamma_median, this);
-        tmp_rate->setTree(this);
-        
-        // setup new rate model
-        setRate(tmp_rate);
-        model_factory->site_rate = tmp_rate;
-        if (getModel()->isMixture()) {
-            model_factory->fused_mix_rate = true;
-            setLikelihoodKernel(sse);
+            // create new rate model
+            relative_rate = new RateGamma(mixlen, -1.0, params->gamma_median, this);
+            relative_rate->setTree(this);
+            
+            // setup new rate model
+            setRate(relative_rate);
+            model_factory->site_rate = relative_rate;
+            if (getModel()->isMixture()) {
+                model_factory->fused_mix_rate = true;
+                setLikelihoodKernel(sse);
+            }
+
+            // optimize rate model
+            relative_rate->optimizeParameters(tolerance);
+            // restore rate model
+            setRate(saved_rate);
+            model_factory->site_rate = saved_rate;
+            model_factory->fused_mix_rate = saved_fused_mix_rate;
+            if (getModel()->isMixture()) {
+                setLikelihoodKernel(sse);
+            }
         }
-
-        // optimize rate model
-        tmp_rate->optimizeParameters(tolerance);
         
         // assign branch length from rate model
         initializeMixBranches();
-        
-        // restore rate model
-        setRate(saved_rate);
-        model_factory->site_rate = saved_rate;
-        model_factory->fused_mix_rate = saved_fused_mix_rate;
-        if (getModel()->isMixture()) {
-            setLikelihoodKernel(sse);
-        }
-        
         clearAllPartialLH();
     }
     // EM algorithm
@@ -244,7 +252,7 @@ double PhyloTreeMixlen::optimizeAllBranches(int my_iterations, double tolerance,
 }
 
 void PhyloTreeMixlen::printBranchLength(ostream &out, int brtype, bool print_slash, Neighbor *length_nei) {
-    if (!print_mix_brlen)
+    if (!print_mix_brlen || ((PhyloNeighborMixlen*)length_nei)->lengths.empty())
         return PhyloTree::printBranchLength(out, brtype, print_slash, length_nei);
 
     PhyloNeighborMixlen *nei = (PhyloNeighborMixlen*) length_nei;

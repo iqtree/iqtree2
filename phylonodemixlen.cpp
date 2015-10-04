@@ -13,7 +13,7 @@ void PhyloNodeMixlen::addNeighbor(Node *node, double length, int id) {
 }
 
 void PhyloNodeMixlen::addNeighbor(Node *node, DoubleVector &length, int id) {
-	if (length.empty() == 0)
+	if (length.empty())
 		addNeighbor(node, -1.0, id);
 	else if (length.size() == 1)
 		addNeighbor(node, length[0], id);

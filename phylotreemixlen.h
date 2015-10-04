@@ -28,6 +28,7 @@ public:
 
     PhyloTreeMixlen(Alignment *aln, int mixlen);
 
+    virtual ~PhyloTreeMixlen();
 
     /**
             allocate a new node. Override this if you have an inherited Node class.
@@ -110,6 +111,9 @@ protected:
 
     /** current category, for printTree */
     int cur_mixture;
+    
+    /** relative rate, used to initialize branch lengths */
+    RateHeterogeneity *relative_rate;
 
     /** true to print mixture branch lengths when calling printTree */
     bool print_mix_brlen;
