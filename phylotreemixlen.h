@@ -98,6 +98,17 @@ public:
     void initializeMixBranches(PhyloNode *node = NULL, PhyloNode *dad = NULL);
 
     /**
+     * IMPORTANT: semantic change: this function does not return score anymore, for efficiency purpose
+            optimize one branch length by ML
+            @param node1 1st end node of the branch
+            @param node2 2nd end node of the branch
+            @param clearLH true to clear the partial likelihood, otherwise false
+            @param maxNRStep maximum number of Newton-Raphson steps
+            @return likelihood score
+     */
+    virtual void optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool clearLH = true, int maxNRStep = 100);
+
+    /**
             optimize all branch lengths of the tree
             @param iterations number of iterations to loop through all branches
             @return the likelihood of the tree
@@ -117,6 +128,10 @@ protected:
 
     /** true to print mixture branch lengths when calling printTree */
     bool print_mix_brlen;
+
+    /** category tree used internally to optimize parameters with EM algorithm */
+    PhyloTree *cat_tree;
+
 };
 
 #endif /* defined(__iqtree__phylotreemixlen__) */

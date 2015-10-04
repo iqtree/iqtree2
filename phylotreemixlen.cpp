@@ -16,19 +16,23 @@ PhyloTreeMixlen::PhyloTreeMixlen() : IQTree() {
     cur_mixture = -1;
     print_mix_brlen = false;
     relative_rate = NULL;
+    cat_tree = NULL;
 }
 
 PhyloTreeMixlen::PhyloTreeMixlen(Alignment *aln, int mixlen) : IQTree(aln) {
 	cout << "Initializing heterotachy model with " << mixlen << " mixture branch lengths" << endl;
-    setMixlen(mixlen);
     cur_mixture = -1;
     print_mix_brlen = false;
     relative_rate = NULL;
+    cat_tree = NULL;
+    setMixlen(mixlen);
 }
 
 PhyloTreeMixlen::~PhyloTreeMixlen() {
     if (relative_rate)
         delete relative_rate;
+    if (cat_tree)
+        delete cat_tree;
 }
 
 Node* PhyloTreeMixlen::newNode(int node_id, const char* node_name) {
@@ -58,13 +62,13 @@ void PhyloTreeMixlen::initializeMixBranches(PhyloNode *node, PhyloNode *dad) {
         nei->lengths.resize(mixlen, nei->length);
         assert(nei->length >= 0);
         for (i = 0; i < mixlen; i++)
-            nei->lengths[i] = nei->length * relative_rate->getRate(i);
+            nei->lengths[i] = max(MIN_BRANCH_LEN, nei->length * relative_rate->getRate(i));
 
         // assign length of right branch
         nei = (PhyloNeighborMixlen*)((*it)->node->findNeighbor(node));
         nei->lengths.resize(mixlen, nei->length);
         for (i = 0; i < mixlen; i++)
-            nei->lengths[i] = nei->length * relative_rate->getRate(i);
+            nei->lengths[i] = max(MIN_BRANCH_LEN, nei->length * relative_rate->getRate(i));
             
         // recursive call
         initializeMixBranches((PhyloNode*)(*it)->node, node);
@@ -115,6 +119,79 @@ void PhyloTreeMixlen::copyMixBranches(PhyloTree *tree, int category) {
     }
 }
 
+void PhyloTreeMixlen::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool clearLH, int maxNRStep) {
+    return PhyloTree::optimizeOneBranch(node1, node2, clearLH, maxNRStep);
+    size_t ptn, c;
+    size_t nptn = aln->getNPattern();
+    size_t nmix = model->getNMixtures();
+    assert(nmix == mixlen);
+
+    assert(cat_tree);
+    // first compute _pattern_lh_cat
+    double tree_lh;
+
+    if (!getModel()->isMixture())
+        tree_lh = computeLikelihoodBranchEigen((PhyloNeighbor*)node1->findNeighbor(node2), node1); 
+    else if (getModelFactory()->fused_mix_rate) {
+        outError("Heterotachy with fused mixture not supported");
+        tree_lh = computeMixrateLikelihoodBranchEigen((PhyloNeighbor*)node1->findNeighbor(node2), node1); 
+    } else {
+        tree_lh = computeMixtureLikelihoodBranchEigen((PhyloNeighbor*)node1->findNeighbor(node2), node1); 
+    }
+   
+    // E-step
+    // decoupled weights (prop) from _pattern_lh_cat to obtain L_ci and compute pattern likelihood L_i
+    for (ptn = 0; ptn < nptn; ptn++) {
+        double *this_lk_cat = _pattern_lh_cat + ptn*nmix;
+        double lk_ptn = 0.0;
+        for (c = 0; c < nmix; c++) {
+            lk_ptn += this_lk_cat[c];
+        }
+        lk_ptn = ptn_freq[ptn] / lk_ptn;
+        // transform _pattern_lh_cat into posterior probabilities of each category
+        for (c = 0; c < nmix; c++) {
+            this_lk_cat[c] *= lk_ptn;
+        }
+        
+    } 
+    
+    double new_tree_lh = 0.0;
+    
+    // now optimize categories one by one
+    for (c = 0; c < nmix; c++) {
+        assignMixBranches(c);
+        cat_tree->copyPhyloTree(this);
+        
+        ModelGTR *subst_model;
+        if (getModel()->isMixture())
+            subst_model = ((ModelMixture*)getModel())->at(c);
+        else
+            subst_model = (ModelGTR*)getModel();
+        cat_tree->setModel(subst_model);
+        subst_model->setTree(cat_tree);
+        cat_tree->getModelFactory()->model = subst_model;
+                    
+        // initialize likelihood
+        cat_tree->initializeAllPartialLh();
+        // copy posterior probability into ptn_freq
+        cat_tree->computePtnFreq();
+        double *this_lk_cat = _pattern_lh_cat+c;
+        for (ptn = 0; ptn < nptn; ptn++)
+            cat_tree->ptn_freq[ptn] = this_lk_cat[ptn*nmix];
+        
+        // TODO optimize branch lengths of mixture category
+        cat_tree->optimizeOneBranch(NULL, NULL, clearLH, maxNRStep);
+        
+        // copy optimized branch lengths
+        copyMixBranches(cat_tree, c);
+        
+        // reset subst model
+        cat_tree->setModel(NULL);
+        subst_model->setTree(this);
+    }
+     
+}
+
 
 double PhyloTreeMixlen::optimizeAllBranches(int my_iterations, double tolerance, int maxNRStep) {
     if (((PhyloNeighborMixlen*)root->neighbors[0])->lengths.empty()) {
@@ -125,7 +202,8 @@ double PhyloTreeMixlen::optimizeAllBranches(int my_iterations, double tolerance,
             bool saved_fused_mix_rate = model_factory->fused_mix_rate;
 
             // create new rate model
-            relative_rate = new RateGamma(mixlen, -1.0, params->gamma_median, this);
+            // random alpha
+            relative_rate = new RateGamma(mixlen, 0.0, params->gamma_median, this);
             relative_rate->setTree(this);
             
             // setup new rate model
@@ -157,22 +235,26 @@ double PhyloTreeMixlen::optimizeAllBranches(int my_iterations, double tolerance,
     size_t nmix = model->getNMixtures();
     assert(nmix == mixlen);
 
-    PhyloTree *tree = new PhyloTree;
     print_mix_brlen = false;
-    tree->copyPhyloTree(this);
-    tree->optimize_by_newton = optimize_by_newton;
-    tree->setLikelihoodKernel(sse);
-    // initialize model
-    ModelFactory *model_fac = new ModelFactory();
-    model_fac->joint_optimize = params->optimize_model_rate_joint;
 
-    RateHeterogeneity *site_rate = new RateHeterogeneity; 
-    tree->setRate(site_rate);
-    site_rate->setTree(tree);
+    if (!cat_tree) {
+        // set up category tree for EM algorithm
+        cat_tree = new PhyloTree;
+        cat_tree->copyPhyloTree(this);
+        cat_tree->optimize_by_newton = optimize_by_newton;
+        cat_tree->setLikelihoodKernel(sse);
+        // initialize model
+        ModelFactory *model_fac = new ModelFactory();
+        model_fac->joint_optimize = params->optimize_model_rate_joint;
+        RateHeterogeneity *site_rate = new RateHeterogeneity; 
+        cat_tree->setRate(site_rate);
+        site_rate->setTree(cat_tree);
+        model_fac->site_rate = site_rate;
+        cat_tree->model_factory = model_fac;
+        cat_tree->setParams(params);
+    }
+
             
-    model_fac->site_rate = site_rate;
-    tree->model_factory = model_fac;
-    tree->setParams(params);
     // first compute _pattern_lh_cat
     double tree_lh;
 
@@ -194,6 +276,7 @@ double PhyloTreeMixlen::optimizeAllBranches(int my_iterations, double tolerance,
         for (c = 0; c < nmix; c++) {
             lk_ptn += this_lk_cat[c];
         }
+        assert(lk_ptn != 0.0);
         lk_ptn = ptn_freq[ptn] / lk_ptn;
         // transform _pattern_lh_cat into posterior probabilities of each category
         for (c = 0; c < nmix; c++) {
@@ -207,33 +290,33 @@ double PhyloTreeMixlen::optimizeAllBranches(int my_iterations, double tolerance,
     // now optimize categories one by one
     for (c = 0; c < nmix; c++) {
         assignMixBranches(c);
-        tree->copyPhyloTree(this);
+        cat_tree->copyPhyloTree(this);
         
         ModelGTR *subst_model;
         if (getModel()->isMixture())
             subst_model = ((ModelMixture*)getModel())->at(c);
         else
             subst_model = (ModelGTR*)getModel();
-        tree->setModel(subst_model);
-        subst_model->setTree(tree);
-        model_fac->model = subst_model;
+        cat_tree->setModel(subst_model);
+        subst_model->setTree(cat_tree);
+        cat_tree->getModelFactory()->model = subst_model;
                     
         // initialize likelihood
-        tree->initializeAllPartialLh();
+        cat_tree->initializeAllPartialLh();
         // copy posterior probability into ptn_freq
-        tree->computePtnFreq();
+        cat_tree->computePtnFreq();
         double *this_lk_cat = _pattern_lh_cat+c;
         for (ptn = 0; ptn < nptn; ptn++)
-            tree->ptn_freq[ptn] = this_lk_cat[ptn*nmix];
+            cat_tree->ptn_freq[ptn] = this_lk_cat[ptn*nmix];
         
         // optimize branch lengths of mixture category
-        tree->optimizeAllBranches(my_iterations, tolerance, maxNRStep);
+        cat_tree->optimizeAllBranches(my_iterations, tolerance, maxNRStep);
         
         // copy optimized branch lengths
-        copyMixBranches(tree, c);
+        copyMixBranches(cat_tree, c);
         
         // reset subst model
-        tree->setModel(NULL);
+        cat_tree->setModel(NULL);
         subst_model->setTree(this);
     }
     
@@ -244,7 +327,7 @@ double PhyloTreeMixlen::optimizeAllBranches(int my_iterations, double tolerance,
 //    cout << "Optimized LnL = " << new_tree_lh << endl;
     assert(new_tree_lh >= tree_lh - 0.1);
     
-    delete tree;
+//    delete tree;
     
     print_mix_brlen = true;
     

@@ -21,6 +21,7 @@
 #include "phylosupertree.h"
 #include "phylosupertreeplen.h"
 #include "upperbounds.h"
+#include "phylonodemixlen.h"
 
 //const static int BINARY_SCALE = floor(log2(1/SCALING_THRESHOLD));
 //const static double LOG_BINARY_SCALE = -(log(2) * BINARY_SCALE);
@@ -3803,7 +3804,10 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
 	// save Neighbor and allocate new Neighbor pointer
 	for (id = 0; id < IT_NUM; id++) {
 		saved_nei[id] = (*saved_it[id]);
-		*saved_it[id] = new PhyloNeighbor(saved_nei[id]->node, saved_nei[id]->length);
+        if (isMixlen())
+            *saved_it[id] = new PhyloNeighborMixlen(saved_nei[id]->node, ((PhyloNeighborMixlen*)saved_nei[id])->lengths);
+        else
+            *saved_it[id] = new PhyloNeighbor(saved_nei[id]->node, saved_nei[id]->length);
 		((PhyloNeighbor*) (*saved_it[id]))->partial_lh = nni_partial_lh + id*partial_lh_size;
 		((PhyloNeighbor*) (*saved_it[id]))->scale_num = nni_scale_num + id*scale_num_size;
 //		((PhyloNeighbor*) (*saved_it[id]))->scale_num = newScaleNum();

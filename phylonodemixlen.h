@@ -21,25 +21,16 @@ class PhyloNeighborMixlen : public PhyloNeighbor {
 public:
 
     /**
-        construct class with a node and length		
-        @param anode the other end of the branch
-        @param alength length of branch
-     */
-    PhyloNeighborMixlen(Node *anode, double alength) : PhyloNeighbor(anode, alength) {
-        lengths.clear();
-    }
-
-    /**
         construct class with a node and length
         @param anode the other end of the branch
         @param alength length of branch
         @param aid branch ID
      */
-    PhyloNeighborMixlen(Node *anode, double alength, int aid) : PhyloNeighbor(anode, alength, aid) {
+    PhyloNeighborMixlen(Node *anode, double alength, int aid = -1) : PhyloNeighbor(anode, alength, aid) {
         lengths.clear();
     }
 
-    PhyloNeighborMixlen(Node *anode, DoubleVector &alength, int aid) : PhyloNeighbor(anode, -1.0, aid) {
+    PhyloNeighborMixlen(Node *anode, DoubleVector &alength, int aid = -1) : PhyloNeighbor(anode, -1.0, aid) {
         lengths = alength;
         if (!lengths.empty()) {
             length = 0.0;
