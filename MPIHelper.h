@@ -52,11 +52,14 @@ public:
      *  Receive trees that sent to the current process
      *
      *  @param fromAll
-     *      wait for messages from all other processes
+     *      wait until at least one tree from each remaining process has been received
+     *  @param maxNumTrees
+     *      Only received up to maxNumTrees to prevent the function to block because it can constantly receive
+     *      new trees
      *  @param trees[OUT]
      *      Trees received from other processes
      */
-    void receiveTrees(bool fromAll, TreeCollection &trees);
+    void receiveTrees(bool fromAll, int maxNumTrees, TreeCollection &trees);
 
 
     /**

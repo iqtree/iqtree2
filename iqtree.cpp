@@ -27,6 +27,8 @@
 #include <numeric>
 #include "tools.h"
 #include "MPIHelper.h"
+#include "pllnni.h"
+
 #ifdef _IQTREE_MPI
 #include <mpi.h>
 #endif
@@ -438,7 +440,6 @@ bool IQTree::addTreeToCandidateSet(string treeString, double score, bool updateS
 }
 
 void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
-
     cout << "--------------------------------------------------------------------" << endl;
     cout << "|             INITIALIZING CANDIDATE TREE SET                      |" << endl;
     cout << "--------------------------------------------------------------------" << endl;
@@ -469,15 +470,16 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
 
     int processID = MPIHelper::getInstance().getProcessID();
     unsigned long curNumTrees = candidateTrees.size();
-    for (int treeNr = 1; treeNr < nParTrees; treeNr++) {
+    for (int treeNr = 1; treeNr <= nParTrees; treeNr++) {
         int parRandSeed = Params::getInstance().ran_seed + + processID * nParTrees + treeNr;
         string curParsTree = generateParsimonyTree(parRandSeed);
         bool newTree = addTreeToCandidateSet(curParsTree, -DBL_MAX, false);
         // if a duplicated tree is generated, then randomize the tree
         if (!newTree) {
             readTreeString(curParsTree);
-            doTreePerturbation();
-            addTreeToCandidateSet(getTreeString(), curScore, false);
+            int nNNIs = floor((aln->getNSeq() - 3) * Params::getInstance().initPS);
+            string randTree = doRandomNNIs(nNNIs);
+            addTreeToCandidateSet(randTree, -DBL_MAX, false);
         }
     }
     cout << getRealTime() - startTime << " seconds" << endl;
@@ -507,6 +509,8 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
     }
     cout << getRealTime() - startTime << " seconds" << endl;
 
+
+
 #ifdef _IQTREE_MPI
     CandidateSet bestCandidateTrees = candidateTrees.getBestCandidateTrees();
     // Send all trees to other nodes
@@ -515,7 +519,8 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
 
     // Get trees from other nodes
     cout << "Getting trees from other processes ... " << endl;
-    addTreesFromOtherProcesses(true, false);
+    int maxNumTrees = nParTrees * (MPIHelper::getInstance().getNumProcesses() - 1);
+    addTreesFromOtherProcesses(true, maxNumTrees, false);
 #endif
     cout << candidateTrees.size() << " distinct starting trees" << endl;
     vector<string> bestTreeStrings; // Set of best initial trees for doing NNIs
@@ -545,6 +550,8 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
         outError(errorMsg.str().c_str());
     }
 
+    cout << "Number of NNI searches in total: " << bestTreeStrings.size() << endl;
+
     // Determine on which initial trees the current process must do NNI search
     vector<string> myBestTrees;
     int index = MPIHelper::getInstance().getProcessID() * treesPerProc;
@@ -564,16 +571,14 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
     candidateTrees.clear();
     stop_rule.setCurIt(0);
     for (vector<string>::iterator it = bestTreeStrings.begin(); it != bestTreeStrings.end(); it++) {
-        pair<int, int> nniInfo;
-        double initLogl;
         readTreeString(*it);
-        initLogl = computeLogL();
-        nniInfo = doNNISearch();
-        addTreeToCandidateSet(getTreeString(), curScore);
-
+        computeLogL();
+        doNNISearch();
+        string treeString = getTreeString();
+        addTreeToCandidateSet(treeString, curScore);
 #ifdef _IQTREE_MPI
-        nniTrees.push_back(getTreeString());
-        nniScores.push_back(getCurScore());
+        nniTrees.push_back(treeString);
+        nniScores.push_back(curScore);
 #endif
     }
 #ifdef _IQTREE_MPI
@@ -581,7 +586,8 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
     MPIHelper::getInstance().sendTreesToOthers(TreeCollection(nniTrees, nniScores), TREE_TAG);
     MPI_Barrier(MPI_COMM_WORLD);
     // Receive trees
-    addTreesFromOtherProcesses(true, true);
+    maxNumTrees = treesPerProc * (MPIHelper::getInstance().getNumProcesses() - 1);
+    addTreesFromOtherProcesses(true,maxNumTrees,true);
 #endif
     if (params->fixStableSplits && candidateTrees.size() > 1) {
         candidateTrees.buildTopSplits(Params::getInstance().stableSplitThreshold, Params::getInstance().numSupportTrees);
@@ -1804,9 +1810,10 @@ double IQTree::doTreeSearch() {
 	                                       MAIN LOOP OF THE IQ-TREE ALGORITHM
 	 *=============================================================================================================*/
     bool stopReceived = false;
+    int maxNumTrees = (MPIHelper::getInstance().getNumProcesses() - 1) * 2;
     while (!stop_rule.meetStopCondition(stop_rule.getCurIt(), cur_correlation)) {
 #ifdef _IQTREE_MPI
-        addTreesFromOtherProcesses(false, true);
+        addTreesFromOtherProcesses(false, maxNumTrees, true);
         if (stop_rule.meetStopCondition(stop_rule.getCurIt(), cur_correlation))
             break;
 #endif
@@ -2002,9 +2009,9 @@ void IQTree::estimateLoglCutoffBS() {
 }
 
 #ifdef _IQTREE_MPI
-void IQTree::addTreesFromOtherProcesses(bool allTrees, bool updateStopRule) {
+void IQTree::addTreesFromOtherProcesses(bool allTrees, int maxNumTrees, bool updateStopRule) {
     TreeCollection inTrees;
-    MPIHelper::getInstance().receiveTrees(allTrees, inTrees);
+    MPIHelper::getInstance().receiveTrees(allTrees, maxNumTrees, inTrees);
     cout << inTrees.getNumTrees() << " trees received from other processes" << endl;
 
     for (int i = 0; i < inTrees.getNumTrees(); i++) {
@@ -2031,7 +2038,7 @@ double IQTree::doTreePerturbation() {
             if (params->snni) {
                 int nNonStableBranches =
                         (int) (aln->getNSeq() - 3 - floor(candidateTrees.getNumStableSplits() * params->stableSplitThreshold));
-                int nNNI = (int) ceil(searchinfo.curPerStrength * nNonStableBranches);
+                int nNNI = (int) floor(Params::getInstance().initPS * nNonStableBranches);
                 if (params->five_plus_five) {
                     readTreeString(candidateTrees.getNextCandTree());
                 } else {

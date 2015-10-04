@@ -68,12 +68,11 @@ bool MPIHelper::checkStopMsg(string &msg) {
     }
 }
 
-void MPIHelper::receiveTrees(bool fromAll, TreeCollection &trees) {
+void MPIHelper::receiveTrees(bool fromAll, int maxNumTrees, TreeCollection &trees) {
     if (getNumProcesses() == 1) {
         return;
     }
     int flag, minNumTrees;
-    int maxNumTrees = getNumProcesses() * 2;
     bool nodes[getNumProcesses()];
     if (fromAll)
         minNumTrees = getNumProcesses() - 1;

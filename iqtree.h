@@ -847,13 +847,17 @@ protected:
 
     /**
      *  Receive tree from other nodes and add to the candidate set
+     *
      *  @param allTrees
      *      If true, wait for tree from every node
      *      If false, only collect trees that have been sent
+     *  @param maxNumTrees
+     *      Only received up to maxNumTrees to prevent the function to block because it can constantly receive
+     *      new trees
      *  @param updateStopRule
      *      To update the stop rule or not
      */
-    void addTreesFromOtherProcesses(bool allTrees, bool updateStopRule = true);
+    void addTreesFromOtherProcesses(bool allTrees, int maxNumTrees, bool updateStopRule);
 #endif
 
     double doTreePerturbation();
