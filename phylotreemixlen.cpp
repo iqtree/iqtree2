@@ -76,6 +76,22 @@ void PhyloTreeMixlen::assignMixBranches(int category, Node *node, Node *dad) {
     }
 }
 
+void PhyloTreeMixlen::assignMeanMixBranches(Node *node, Node *dad) {
+    if (!node) node = root;
+    FOR_NEIGHBOR_IT(node, dad, it) {
+        PhyloNeighborMixlen *nei = (PhyloNeighborMixlen*)(*it);
+        double mean_len = 0.0;
+        for (int i = 0; i < nei->lengths.size(); i++)
+            mean_len += nei->lengths[i];
+        mean_len /= nei->lengths.size();
+        nei->length = mean_len;
+        
+        nei = (PhyloNeighborMixlen*)(*it)->node->findNeighbor(node);
+        nei->length = mean_len;
+        assignMeanMixBranches((*it)->node, node);
+    }
+}
+
 void PhyloTreeMixlen::copyMixBranches(PhyloTree *tree, int category) {
     NodeVector this_nodes1, this_nodes2, tree_nodes1, tree_nodes2;
     tree->getBranches(tree_nodes1, tree_nodes2, tree->root->neighbors[0]->node);
@@ -212,6 +228,8 @@ double PhyloTreeMixlen::optimizeAllBranches(int my_iterations, double tolerance,
         tree->setModel(NULL);
         subst_model->setTree(this);
     }
+    
+    assignMeanMixBranches();
     
     clearAllPartialLH();
     new_tree_lh = computeLikelihood();

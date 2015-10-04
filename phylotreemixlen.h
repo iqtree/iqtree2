@@ -56,11 +56,15 @@ public:
     void setMixlen(int mixlen);
 
     /**
-     * assign branch lengths of a category to the overall branch length
+     * assign branch length by branch length of a category
      * @param category source category to assign
      */
     void assignMixBranches(int category, Node *node = NULL, Node *dad = NULL);
 
+    /**
+     * assign branch length as mean over all branch lengths of categories
+     */
+    void assignMeanMixBranches(Node *node = NULL, Node *dad = NULL);
 
     /**
      * copy branch lengths of a tree into a mixture category of this tree
