@@ -288,7 +288,7 @@ double convert_double(const char *str, int &end_pos) throw (string) {
 	return d;
 }
 
-void convert_double_vec(const char *str, DoubleVector &vec) throw (string) {
+void convert_double_vec(const char *str, DoubleVector &vec, char separator) throw (string) {
     char *beginptr = (char*)str, *endptr;
     vec.clear();
     do {
@@ -301,7 +301,7 @@ void convert_double_vec(const char *str, DoubleVector &vec) throw (string) {
 			throw err;
 		}
 		vec.push_back(d);
-		if (*endptr == ',') endptr++;
+		if (*endptr == separator) endptr++;
 		beginptr = endptr;
     } while (*endptr != 0);
 }

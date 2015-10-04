@@ -282,6 +282,22 @@ struct IntStringCmp
 
 typedef set<IntString*, IntStringCmp> IntStringSet;
 
+void MTree::printBranchLength(ostream &out, int brtype, bool print_slash, Neighbor *length_nei) {
+	double length = length_nei->length;
+    if (brtype & WT_BR_SCALE) length *= len_scale;
+    if (brtype & WT_BR_LEN_ROUNDING) length = round(length);
+    if (brtype & WT_BR_LEN) {
+        if (brtype & WT_BR_LEN_FIXED_WIDTH)
+            out << ":" << fixed << length;
+        else
+            out << ":" << length;
+    } else if (brtype & WT_BR_CLADE) {
+    	if (print_slash)
+    		out << "/";
+        out << length;
+    }
+}
+
 int MTree::printTree(ostream &out, int brtype, Node *node, Node *dad)
 {
     int smallest_taxid = leafNum;
@@ -297,19 +313,20 @@ int MTree::printTree(ostream &out, int brtype, Node *node, Node *dad)
         if (brtype & WT_BR_LEN) {
         	out.setf( std::ios::fixed, std:: ios::floatfield ); // some sofware does handle number format like '1.234e-6'
             out.precision(10); // increase precision to avoid zero branch (like in RAxML)
-        	double len = node->neighbors[0]->length;
-            if (brtype & WT_BR_SCALE) len *= len_scale;
-            if (brtype & WT_BR_LEN_ROUNDING) len = round(len);
-            if (brtype & WT_BR_LEN_FIXED_WIDTH)
-                out << ":" << fixed << len;
-            else
-                out << ":" << len;
+            printBranchLength(out, brtype, false, node->neighbors[0]);
+//        	double len = node->neighbors[0]->length;
+//            if (brtype & WT_BR_SCALE) len *= len_scale;
+//            if (brtype & WT_BR_LEN_ROUNDING) len = round(len);
+//            if (brtype & WT_BR_LEN_FIXED_WIDTH)
+//                out << ":" << fixed << len;
+//            else
+//                out << ":" << len;
         }
     } else {
         // internal node
         out << "(";
         bool first = true;
-        double length = 0.0;
+        Neighbor *length_nei = NULL;
         //for (int i = 0; i < node->neighbors.size(); i++)
         //if (node->neighbors[i]->node != dad)
         if (! (brtype & WT_SORT_TAXA)) {
@@ -321,9 +338,9 @@ int MTree::printTree(ostream &out, int brtype, Node *node, Node *dad)
                     if (taxid < smallest_taxid) smallest_taxid = taxid;
                     first = false;
                 } else
-                    length = (*it)->length;
+                    length_nei = (*it);
             } else {
-                length = (*it)->length;
+                length_nei = (*it);
             }
         } else {
             IntStringSet strout;
@@ -336,9 +353,9 @@ int MTree::printTree(ostream &out, int brtype, Node *node, Node *dad)
                     str->str = ss.str();
                     strout.insert(str);
                 } else
-                    length = (*it)->length;
+                	length_nei = (*it);
             } else {
-                length = (*it)->length;
+            	length_nei = (*it);
             }
             smallest_taxid = (*strout.begin())->id;
             IntStringSet::iterator iss;
@@ -355,18 +372,8 @@ int MTree::printTree(ostream &out, int brtype, Node *node, Node *dad)
             out << node->name;
         else if (brtype & WT_INT_NODE)
             out << node->id;
-        if (dad != NULL || length > 0.0) {
-            if (brtype & WT_BR_SCALE) length *= len_scale;
-            if (brtype & WT_BR_LEN_ROUNDING) length = round(length);
-            if (brtype & WT_BR_LEN) {
-                if (brtype & WT_BR_LEN_FIXED_WIDTH)
-                    out << ":" << fixed << length;
-                else
-                    out << ":" << length;
-            } else if (brtype & WT_BR_CLADE) {
-                if (! node->name.empty()) out << "/";
-                out << length;
-            }
+        if (dad != NULL || length_nei) {
+        	printBranchLength(out, brtype, !node->name.empty(), length_nei);
         }
     }
     return smallest_taxid;
@@ -508,12 +515,12 @@ void MTree::readTree(istream &in, bool &is_rooted)
 
         leafNum = 0;
 
-        double branch_len;
+        DoubleVector branch_len;
         Node *node;
         parseFile(in, ch, node, branch_len);
-        if (is_rooted || branch_len > 0.0) {
-            if (branch_len == -1.0) branch_len = 0.0;
-            if (branch_len < 0.0)
+        if (is_rooted || !branch_len.empty()) {
+            if (branch_len[0] == -1.0) branch_len[0] = 0.0;
+            if (branch_len[0] < 0.0)
                 throw ERR_NEG_BRANCH;
             is_rooted = true;
             root = newNode(leafNum, ROOT_NAME);
@@ -577,14 +584,14 @@ void MTree::initializeTree(Node *node, Node* dad)
 }
 
 
-void MTree::parseFile(istream &infile, char &ch, Node* &root, double &branch_len)
+void MTree::parseFile(istream &infile, char &ch, Node* &root, DoubleVector &branch_len)
 {
     Node *node;
     int maxlen = 10000;
     char seqname[10000];
     int seqlen;
-    double brlen;
-    branch_len = -1.0;
+    DoubleVector brlen;
+    branch_len.clear();
 
     root = newNode();
 
@@ -667,7 +674,7 @@ void MTree::parseFile(istream &infile, char &ch, Node* &root, double &branch_len
         if (seqlen == maxlen || infile.eof())
             throw "branch length format error.";
         seqname[seqlen] = 0;
-        branch_len = convert_double(seqname);
+        convert_double_vec(seqname, branch_len, '_');
     }
 }
 

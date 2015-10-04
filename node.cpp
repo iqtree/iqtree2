@@ -194,6 +194,14 @@ void Node::addNeighbor(Node *node, double length, int id) {
     neighbors.push_back(new Neighbor(node, length, id));
 }
 
+void Node::addNeighbor(Node *node, DoubleVector &length, int id) {
+//	assert(!length.empty());
+    if (length.empty())
+        addNeighbor(node, -1.0, id);
+    else
+        addNeighbor(node, length[0], id);
+}
+
 void Node::updateNeighbor(NeighborVec::iterator nei_it, Neighbor *newnei) {
     assert(nei_it != neighbors.end());
     *nei_it = newnei;

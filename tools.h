@@ -1868,8 +1868,9 @@ double convert_double(const char *str, int &end_pos) throw (string);
         convert comma-separated string to integer vector, with error checking
         @param str original string with integers separated by comma
         @param vec (OUT) integer vector
+        @param separator char separating elements
  */
-void convert_double_vec(const char *str, DoubleVector &vec) throw (string);
+void convert_double_vec(const char *str, DoubleVector &vec, char separator = ',') throw (string);
 
 /**
  * Convert seconds to hour, minute, second

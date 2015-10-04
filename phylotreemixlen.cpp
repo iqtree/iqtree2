@@ -14,12 +14,14 @@
 PhyloTreeMixlen::PhyloTreeMixlen() : IQTree() {
 	mixlen = 1;
     cur_mixture = -1;
+    print_mix_brlen = false;
 }
 
 PhyloTreeMixlen::PhyloTreeMixlen(Alignment *aln, int mixlen) : IQTree(aln) {
 	cout << "Initializing heterotachy model with " << mixlen << " mixture branch lengths" << endl;
     setMixlen(mixlen);
     cur_mixture = -1;
+    print_mix_brlen = false;
 }
 
 Node* PhyloTreeMixlen::newNode(int node_id, const char* node_name) {
@@ -132,6 +134,7 @@ double PhyloTreeMixlen::optimizeAllBranches(int my_iterations, double tolerance,
     assert(nmix == mixlen);
 
     PhyloTree *tree = new PhyloTree;
+    print_mix_brlen = false;
     tree->copyPhyloTree(this);
     tree->optimize_by_newton = optimize_by_newton;
     tree->setLikelihoodKernel(sse);
@@ -157,7 +160,7 @@ double PhyloTreeMixlen::optimizeAllBranches(int my_iterations, double tolerance,
     } else {
         tree_lh = computeMixtureLikelihoodBranchEigen((PhyloNeighbor*)root->neighbors[0], (PhyloNode*)root); 
     }
-    cout << "Init LnL = " << tree_lh << endl;
+//    cout << "Init LnL = " << tree_lh << endl;
 
     // E-step
     // decoupled weights (prop) from _pattern_lh_cat to obtain L_ci and compute pattern likelihood L_i
@@ -212,9 +215,38 @@ double PhyloTreeMixlen::optimizeAllBranches(int my_iterations, double tolerance,
     
     clearAllPartialLH();
     new_tree_lh = computeLikelihood();
-    cout << "Optimized LnL = " << new_tree_lh << endl;
+//    cout << "Optimized LnL = " << new_tree_lh << endl;
     assert(new_tree_lh >= tree_lh - 0.1);
     
     delete tree;
+    
+    print_mix_brlen = true;
+    
     return new_tree_lh;
+}
+
+void PhyloTreeMixlen::printBranchLength(ostream &out, int brtype, bool print_slash, Neighbor *length_nei) {
+    if (!print_mix_brlen)
+        return PhyloTree::printBranchLength(out, brtype, print_slash, length_nei);
+
+    PhyloNeighborMixlen *nei = (PhyloNeighborMixlen*) length_nei;
+    if (brtype & WT_BR_LEN) 
+        out << ":";
+    else if ((brtype & WT_BR_CLADE) && print_slash)
+        out << "/";
+        
+    for (int i = 0; i < mixlen; i++) {
+        if (i > 0) out << "_";
+        double length = nei->lengths[i];
+        if (brtype & WT_BR_SCALE) length *= len_scale;
+        if (brtype & WT_BR_LEN_ROUNDING) length = round(length);
+        if (brtype & WT_BR_LEN) {
+            if (brtype & WT_BR_LEN_FIXED_WIDTH)
+                out << fixed << length;
+            else
+                out << length;
+        } else if (brtype & WT_BR_CLADE) {
+            out << length;
+        }
+    }
 }

@@ -61,7 +61,21 @@ public:
      */
     void assignMixBranches(int category, Node *node = NULL, Node *dad = NULL);
 
+
+    /**
+     * copy branch lengths of a tree into a mixture category of this tree
+     * @param tree source tree where branch lengths will be copied
+     * @param category destination category
+     */
     void copyMixBranches(PhyloTree *tree, int category);
+
+    /**
+     *  internal function called by printTree to print branch length
+     *  @param out output stream
+     *  @param length_nei target Neighbor to print
+     */
+    virtual void printBranchLength(ostream &out, int brtype, bool print_slash, Neighbor *length_nei);
+
 
     /**
             print the tree to the output file in newick format
@@ -92,6 +106,9 @@ protected:
 
     /** current category, for printTree */
     int cur_mixture;
+
+    /** true to print mixture branch lengths when calling printTree */
+    bool print_mix_brlen;
 };
 
 #endif /* defined(__iqtree__phylotreemixlen__) */

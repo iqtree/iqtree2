@@ -157,6 +157,13 @@ public:
     string getTreeString();
 
     /**
+     *  internal function called by printTree to print branch length
+     *  @param out output stream
+     *  @param length_nei target Neighbor to print
+     */
+    virtual void printBranchLength(ostream &out, int brtype, bool print_slash, Neighbor *length_nei);
+
+    /**
             print the tree to the output file in newick format
             @param out the output file.
             @param node the starting node, NULL to start from the root
@@ -261,7 +268,7 @@ public:
             @param branch_len (OUT) branch length associated to the current root
 		
      */
-    void parseFile(istream &infile, char &ch, Node* &root, double &branch_len);
+    void parseFile(istream &infile, char &ch, Node* &root, DoubleVector &branch_len);
 
 
     /**
