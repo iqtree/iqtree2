@@ -26,6 +26,7 @@ public:
         @param alength length of branch
      */
     PhyloNeighborMixlen(Node *anode, double alength) : PhyloNeighbor(anode, alength) {
+        lengths.clear();
     }
 
     /**
@@ -35,6 +36,7 @@ public:
         @param aid branch ID
      */
     PhyloNeighborMixlen(Node *anode, double alength, int aid) : PhyloNeighbor(anode, alength, aid) {
+        lengths.clear();
     }
 
     /** branch lengths for mixture */

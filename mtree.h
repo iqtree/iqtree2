@@ -164,7 +164,7 @@ public:
             @param brtype type of branch to print
             @return ID of the taxon with smallest ID
      */
-    int printTree(ostream &out, int brtype, Node *node, Node *dad = NULL);
+    virtual int printTree(ostream &out, int brtype, Node *node, Node *dad = NULL);
 
 
     /**
