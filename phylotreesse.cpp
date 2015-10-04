@@ -2188,12 +2188,13 @@ void PhyloTree::computeMixturePartialLikelihoodEigen(PhyloNeighbor *dad_branch, 
 	double *eleft = new double[block*nstates], *eright = new double[block*nstates];
 
 	// precompute information buffer
+    double *expleft = new double[nstates];
+    double *expright = new double[nstates];
 	for (c = 0; c < ncat; c++) {
-		double *expleft = new double[nstates];
-		double *expright = new double[nstates];
-		double len_left = site_rate->getRate(c) * left->length;
-		double len_right = site_rate->getRate(c) * right->length;
 		for (m = 0; m < nmixture; m++) {
+            // length for heterotachy model
+            double len_left = site_rate->getRate(c) * left->getLength(m);
+            double len_right = site_rate->getRate(c) * right->getLength(m);
 			for (i = 0; i < nstates; i++) {
 				expleft[i] = exp(eval[m*nstates+i]*len_left);
 				expright[i] = exp(eval[m*nstates+i]*len_right);
@@ -2204,9 +2205,9 @@ void PhyloTree::computeMixturePartialLikelihoodEigen(PhyloNeighbor *dad_branch, 
 					eright[(m*ncat+c)*nstatesqr+x*nstates+i] = evec[m*nstatesqr+x*nstates+i] * expright[i];
 				}
 		}
-		delete [] expright;
-		delete [] expleft;
 	}
+    delete [] expright;
+    delete [] expleft;
 
 	if (left->node->isLeaf() && right->node->isLeaf()) {
 		// special treatment for TIP-TIP (cherry) case
@@ -2512,7 +2513,8 @@ void PhyloTree::computeMixtureLikelihoodDervEigen(PhyloNeighbor *dad_branch, Phy
 		for (m = 0; m < nmixture; m++) {
 			for (i = 0; i < nstates; i++) {
 				double cof = eval[m*nstates+i]*site_rate->getRate(c);
-				double val = exp(cof*dad_branch->length) * prop * ((ModelMixture*)model)->prop[m];
+                // length for heterotachy model
+				double val = exp(cof*dad_branch->getLength(m)) * prop * ((ModelMixture*)model)->prop[m];
 				double val1_ = cof*val;
 				val0[(m*ncat+c)*nstates+i] = val;
 				val1[(m*ncat+c)*nstates+i] = val1_;
@@ -2614,11 +2616,13 @@ double PhyloTree::computeMixtureLikelihoodBranchEigen(PhyloNeighbor *dad_branch,
 
     double *val = new double[block];
 	for (c = 0; c < ncat; c++) {
-		double len = site_rate->getRate(c)*dad_branch->length;
 		double prop = site_rate->getProp(c);
-		for (m = 0; m < nmixture; m++)
+		for (m = 0; m < nmixture; m++) {
+            // length for heterotachy model
+            double len = site_rate->getRate(c)*dad_branch->getLength(m);
 			for (i = 0; i < nstates; i++)
 				val[(m*ncat+c)*nstates+i] = exp(eval[m*nstates+i]*len) * prop * ((ModelMixture*)model)->prop[m];
+        }
 	}
 
 	double prob_const = 0.0;

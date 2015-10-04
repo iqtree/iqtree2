@@ -109,9 +109,10 @@ void PhyloTree::computeMixturePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_bran
 		VectorClass vc_evec;
 		VectorClass expleft[nstates/VCSIZE];
 		VectorClass expright[nstates/VCSIZE];
-		double len_left = site_rate->getRate(c) * left->length;
-		double len_right = site_rate->getRate(c) * right->length;
 		for (m = 0; m < nmixture; m++) {
+            // length for heterotachy model
+            double len_left = site_rate->getRate(c) * left->getLength(m);
+            double len_right = site_rate->getRate(c) * right->getLength(m);
 			size_t addr = (m*ncat+c)*nstatesqr/VCSIZE;
 			for (i = 0; i < nstates/VCSIZE; i++) {
 				// eval is not aligned!
@@ -492,10 +493,11 @@ void PhyloTree::computeMixtureLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch,
 	VectorClass *vc_val1 = (VectorClass*)aligned_alloc<double>(block);
 	VectorClass *vc_val2 = (VectorClass*)aligned_alloc<double>(block);
 
-	VectorClass vc_len = dad_branch->length;
 	for (c = 0; c < ncat; c++) {
 		VectorClass vc_rate = site_rate->getRate(c);
 		for (m = 0; m < nmixture; m++) {
+            // length for heterotachy model
+            VectorClass vc_len = dad_branch->getLength(m);
 			VectorClass vc_prop = VectorClass(site_rate->getProp(c) * ((ModelMixture*)model)->prop[m]);
 			for (i = 0; i < nstates/VCSIZE; i++) {
 				VectorClass cof = VectorClass().load_a(&eval[m*nstates+i*VCSIZE]) * vc_rate;
@@ -752,9 +754,9 @@ double PhyloTree::computeMixtureLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_bra
     VectorClass *vc_val = (VectorClass*)aligned_alloc<double>(block);
 
 	for (c = 0; c < ncat; c++) {
-		double len = site_rate->getRate(c)*dad_branch->length;
-		VectorClass vc_len(len);
 		for (m = 0; m < nmixture; m++) {
+            double len = site_rate->getRate(c)*dad_branch->getLength(m);
+            VectorClass vc_len(len);
 			VectorClass vc_prop = VectorClass(site_rate->getProp(c) * ((ModelMixture*)model)->prop[m]);
 			for (i = 0; i < nstates/VCSIZE; i++) {
 				// eval is not aligned!
@@ -1054,10 +1056,10 @@ double PhyloTree::computeMixtureLikelihoodFromBufferEigenSIMD() {
 
 	VectorClass *vc_val0 = (VectorClass*)aligned_alloc<double>(block);
 
-	VectorClass vc_len = current_it->length;
 	for (c = 0; c < ncat; c++) {
 		VectorClass vc_rate = site_rate->getRate(c);
 		for (m = 0; m < nmixture; m++) {
+            VectorClass vc_len = current_it->getLength(m);
 			VectorClass vc_prop = site_rate->getProp(c)*((ModelMixture*)model)->prop[m];
 			for (i = 0; i < nstates/VCSIZE; i++) {
 				VectorClass cof = VectorClass().load_a(&eval[m*nstates+i*VCSIZE]) * vc_rate;
