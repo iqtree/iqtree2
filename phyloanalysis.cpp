@@ -2341,10 +2341,27 @@ void runPhyloAnalysis(Params &params) {
 			alignment->addConstPatterns(params.freq_const_patterns);
 			cout << "INFO: " << alignment->getNSite() - orig_nsite << " const sites added into alignment" << endl;
 		}
-        if (params.num_mixlen == 1)
-            tree = new IQTree(alignment);
-        else
+
+        // allocate heterotachy tree if neccessary
+        if (params.num_mixlen > 1)
             tree = new PhyloTreeMixlen(alignment, params.num_mixlen);
+        int pos = params.model_name.find("+H");
+        if (pos != string::npos) {
+            int end_pos;
+            int num_mixlen = convert_int(params.model_name.substr(pos+2).c_str(), end_pos);
+            if (num_mixlen < 2)
+                outError("Heterotachy model [+H] must have at least 2 categories");
+            params.model_name = params.model_name.substr(0, pos) + params.model_name.substr(pos+end_pos+2);
+            if (params.model_name.find("MIX") == string::npos) {
+                string str = "MIX{" + params.model_name;
+                for (int i = 1; i < num_mixlen; i++)
+                    str += "," + params.model_name;
+                str += "}";
+                params.model_name = str;
+            }
+            tree = new PhyloTreeMixlen(alignment, num_mixlen);
+        } else
+            tree = new IQTree(alignment);
 	}
 
 	string original_model = params.model_name;
