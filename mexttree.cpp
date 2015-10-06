@@ -413,7 +413,8 @@ void MExtTree::reportDisagreedTrees(vector<string> &taxname, MTreeSet &trees, Sp
 }
 
 
-void MExtTree::createBootstrapSupport(vector<string> &taxname, MTreeSet &trees, SplitGraph &sg, SplitIntMap &hash_ss, Node *node, Node *dad) {
+void MExtTree::createBootstrapSupport(vector<string> &taxname, MTreeSet &trees, SplitGraph &sg, SplitIntMap &hash_ss, 
+    char *tag, Node *node, Node *dad) {
 	if (!node) node = root;	
 	FOR_NEIGHBOR_IT(node, dad, it) {
 		if (!node->isLeaf() && !(*it)->node->isLeaf()) {
@@ -438,6 +439,10 @@ void MExtTree::createBootstrapSupport(vector<string> &taxname, MTreeSet &trees, 
 				  tmp << sp->getWeight();
 				else
 				  tmp << "/" << sp->getWeight();
+                  
+                // assign tag
+                if (tag && (strcmp(tag, "ALL")==0 || (*it)->node->name == tag))
+                    tmp << sp->getName();                
 				(*it)->node->name.append(tmp.str());
 			} else {
 				if (!(*it)->node->name.empty()) (*it)->node->name.append("/");
@@ -453,7 +458,7 @@ void MExtTree::createBootstrapSupport(vector<string> &taxname, MTreeSet &trees, 
 				reportDisagreedTrees(taxname, trees, mysplit);
 			}
 		}
-		createBootstrapSupport(taxname, trees, sg, hash_ss, (*it)->node, node);
+		createBootstrapSupport(taxname, trees, sg, hash_ss, tag, (*it)->node, node);
 	}	
 }
 

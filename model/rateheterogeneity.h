@@ -166,6 +166,18 @@ public:
 	virtual double classifyRates(double tree_lh) { return tree_lh; }
 
 	/**
+	 * used to normal branch lengths if mean rate is not equal to 1 (e.g. FreeRate model)
+	 * @return mean rate, default = 1
+	 */
+	virtual double meanRates() { return 1.0; }
+
+	/**
+	 * rescale rates s.t. mean rate is equal to 1, useful for FreeRate model
+	 * @return rescaling factor
+	 */
+	virtual double rescaleRates() { return 1.0; }
+
+	/**
 		write information
 		@param out output stream
 	*/

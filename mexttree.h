@@ -129,7 +129,7 @@ public:
 		@param taxname vector of taxa names
 		@param trees set of trees
 	*/
-	void createBootstrapSupport(vector<string> &taxname, MTreeSet &trees, SplitGraph &sg, SplitIntMap &hash_ss, 
+	void createBootstrapSupport(vector<string> &taxname, MTreeSet &trees, SplitGraph &sg, SplitIntMap &hash_ss, char *tag,
 		Node *node = NULL, Node *dad = NULL);
 
 	void reportDisagreedTrees(vector<string> &taxname, MTreeSet &trees, Split &mysplit);

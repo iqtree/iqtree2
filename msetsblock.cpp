@@ -33,6 +33,11 @@ MSetsBlock::~MSetsBlock()
 		delete *it;
 	}
 	sets.clear();
+
+    for (vector<CharSet* >::reverse_iterator it2 = charsets.rbegin(); it2 != charsets.rend(); it2++)
+        delete *it2;
+        
+    charsets.clear();
 }
 
 
@@ -153,7 +158,7 @@ void MSetsBlock::Read(NxsToken &token)
 				myset->aln_file = myset->position_spec.substr(0, pos);
 				myset->position_spec = myset->position_spec.substr(pos+1);
 			}
-            if ((pos=myset->position_spec.find(',')) != string::npos) {
+            if ((pos=myset->position_spec.find(',')) != string::npos && isalpha(myset->position_spec[0])) {
                 myset->sequence_type = myset->position_spec.substr(0, pos);
                 myset->position_spec = myset->position_spec.substr(pos+1);
             }
