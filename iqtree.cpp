@@ -434,6 +434,7 @@ bool IQTree::addTreeToCandidateSet(string treeString, double score, bool updateS
             cout << endl;
             printResultTree();
         }
+        curScore = score;
         printInterationInfo();
     }
     return newTree;
