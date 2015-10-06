@@ -614,6 +614,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.fai = false;
     params.testAlpha = false;
     params.testAlphaEpsAdaptive = false;
+    params.randomAlpha = false;
     params.testAlphaEps = 0.1;
     params.exh_ai = false;
     params.alpha_invar_file = NULL;
@@ -2467,6 +2468,10 @@ void parseArg(int argc, char *argv[], Params &params) {
 			}
             if (strcmp(argv[cnt], "--adaptive-eps") == 0) {
                 params.testAlphaEpsAdaptive = true;
+                continue;
+            }
+            if (strcmp(argv[cnt], "--rand-alpha") == 0) {
+                params.randomAlpha = true;
                 continue;
             }
             if (strcmp(argv[cnt], "--test-alpha-eps") == 0) {

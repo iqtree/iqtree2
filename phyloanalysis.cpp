@@ -1994,7 +1994,18 @@ void searchGAMMAInvarByRestarting(IQTree &iqtree) {
 	else
 		iqtree.setCurScore(iqtree.computeLikelihood());
 	RateGammaInvar* site_rates = dynamic_cast<RateGammaInvar*>(iqtree.getRate());
-	double initAlphas[] = { 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0 };
+	double values[] = { 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0 };
+	vector<double> initAlphas;
+	if (Params::getInstance().randomAlpha) {
+		while (initAlphas.size() < 10) {
+			double initAlpha = random_double();
+			if (initAlpha != 0) {
+				initAlphas.push_back(initAlpha);
+			}
+		}
+	} else {
+		initAlphas.assign(values, values+10);
+	}
 	double bestLogl = iqtree.getCurScore();
 	double bestAlpha = 0.0;
 	double bestPInvar = 0.0;

@@ -440,6 +440,11 @@ public:
     bool testAlphaEpsAdaptive;
 
     /**
+     *  Use random starting points for alpha
+     */
+    bool randomAlpha;
+
+    /**
      *  Logl epsilon to test for initial alpha and pinvar values.
      *  This does not need to be small (default value = 100)
      */
