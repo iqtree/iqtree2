@@ -30,6 +30,8 @@
 
 const char ROOT_NAME[] = "_root";
 
+const char BRANCH_LENGTH_SEPARATOR = '/';
+
 class SplitGraph;
 
 /**

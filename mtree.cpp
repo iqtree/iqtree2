@@ -674,7 +674,7 @@ void MTree::parseFile(istream &infile, char &ch, Node* &root, DoubleVector &bran
         if (seqlen == maxlen || infile.eof())
             throw "branch length format error.";
         seqname[seqlen] = 0;
-        convert_double_vec(seqname, branch_len, '_');
+        convert_double_vec(seqname, branch_len, BRANCH_LENGTH_SEPARATOR);
     }
 }
 

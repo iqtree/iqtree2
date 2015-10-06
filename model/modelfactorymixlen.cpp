@@ -113,7 +113,8 @@ double ModelFactoryMixlen::optimizeParameters(bool fixed_len, bool write_info, d
             // optimize branch lengths of mixture category
             if (!fixed_len)
                 tree->cat_tree->optimizeAllBranches(min(i,3), logl_epsilon/nmix);  // loop only 3 times in total (previously in v0.9.6 5 times)
-            tree->cat_tree->getModelFactory()->optimizeParametersOnly(gradient_epsilon/nmix);
+            if (tree->getModel()->isMixture())
+                tree->cat_tree->getModelFactory()->optimizeParametersOnly(gradient_epsilon/nmix);
             
             // copy optimized branch lengths
             tree->copyMixBranches(tree->cat_tree, c);
