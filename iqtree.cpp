@@ -519,7 +519,7 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
 
     // Get trees from other nodes
     cout << "Getting trees from other processes ... " << endl;
-    int maxNumTrees = nParTrees * (MPIHelper::getInstance().getNumProcesses() - 1);
+    int maxNumTrees = (nParTrees + 1) * (MPIHelper::getInstance().getNumProcesses() - 1);
     addTreesFromOtherProcesses(true, maxNumTrees, false);
 #endif
     cout << candidateTrees.size() << " distinct starting trees" << endl;
