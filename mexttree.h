@@ -155,6 +155,15 @@ public:
 	*/
 	void createCluster(int clu_num, Node *node, Node *dad);
 
+/********************************************************
+	Miscellaneous
+********************************************************/
+
+    /**
+        collapse all branches with support lower than minsup (in back-slash separated format)
+        implemented for Ricardo
+    */
+    void collapseLowBranchSupport(DoubleVector &minsup, Node *node = NULL, Node *dad = NULL);
 
 };
 
