@@ -281,6 +281,15 @@ CandidateSet CandidateSet::getBestCandidateTrees(int numTrees) {
 	return res;
 }
 
+void CandidateSet::getAllTrees(vector<string> &trees, vector<double> &scores, bool compressed) {
+    trees.clear();
+    scores.clear();
+    for (reverse_iterator rit = rbegin(); rit != rend(); rit++) {
+        trees.push_back(rit->second.tree);
+        scores.push_back(rit->first);
+    }
+}
+
 bool CandidateSet::treeTopologyExist(string topo) {
 	return (topologies.find(topo) != topologies.end());
 }
@@ -402,3 +411,5 @@ CandidateSet CandidateSet::getCandidateTrees(double score) {
     }
     return res;
 }
+
+

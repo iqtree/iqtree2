@@ -513,9 +513,11 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
 
 
 #ifdef _IQTREE_MPI
-    CandidateSet bestCandidateTrees = candidateTrees.getBestCandidateTrees();
+    vector<string> trees;
+    vector<double> scores;
+    candidateTrees.getAllTrees(trees, scores);
     // Send all trees to other nodes
-    MPIHelper::getInstance().sendTreesToOthers(TreeCollection(bestCandidateTrees), TREE_TAG);
+    MPIHelper::getInstance().sendTreesToOthers(trees, scores, TREE_TAG);
     MPI_Barrier(MPI_COMM_WORLD);
 
     // Get trees from other nodes
@@ -584,7 +586,7 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
     }
 #ifdef _IQTREE_MPI
     // Send trees
-    MPIHelper::getInstance().sendTreesToOthers(TreeCollection(nniTrees, nniScores), TREE_TAG);
+    MPIHelper::getInstance().sendTreesToOthers(nniTrees, nniScores, TREE_TAG);
     MPI_Barrier(MPI_COMM_WORLD);
     // Receive trees
     maxNumTrees = treesPerProc * (MPIHelper::getInstance().getNumProcesses() - 1);

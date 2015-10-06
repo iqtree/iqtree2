@@ -115,6 +115,11 @@ public:
     vector<string> getBestTreeStrings(int numTree = 0);
 
     /**
+     *  Return trees which only contain ID and branch length with 6 characters
+     */
+    void getAllTrees(vector<string> &trees, vector<double> &scores, bool compressed = false);
+
+    /**
      * destructor
      */
     virtual ~CandidateSet();

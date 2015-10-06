@@ -68,7 +68,9 @@ public:
      *  @param trees a TreeCollection object
      *  @param tag tag used with the message
      */
-    void sendTreesToOthers(TreeCollection trees, int tag);
+    //void sendTreesToOthers(TreeCollection trees, int tag);
+
+    void sendTreesToOthers(vector<string> treeStrings, vector<double> scores, int tag);
 
     void sendTreeToOthers(string treeString, double score);
 

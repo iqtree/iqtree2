@@ -18,14 +18,15 @@ MPIHelper& MPIHelper::getInstance() {
 }
 
 #ifdef _IQTREE_MPI
-void MPIHelper::sendTreesToOthers(TreeCollection trees, int tag) {
+void MPIHelper::sendTreesToOthers(vector<string> treeStrings, vector<double> scores, int tag) {
+    TreeCollection outTrees(treeStrings, scores);
     if (getNumProcesses() == 1)
         return;
     cleanUpMessages();
     for (int i = 0; i < getNumProcesses(); i++) {
         if (i != getProcessID()) {
             MPI_Request *request = new MPI_Request;
-            ObjectStream *os = new ObjectStream(trees);
+            ObjectStream *os = new ObjectStream(outTrees);
             MPI_Isend(os->getObjectData(), os->getDataLength(), MPI_CHAR, i, tag, MPI_COMM_WORLD, request);
             sentMessages.push_back(make_pair(request, os));
         }
@@ -37,8 +38,7 @@ void MPIHelper::sendTreeToOthers(string treeString, double score) {
     vector<double> scores;
     trees.push_back(treeString);
     scores.push_back(score);
-    TreeCollection outTrees(trees, scores);
-    MPIHelper::getInstance().sendTreesToOthers(outTrees, TREE_TAG);
+    MPIHelper::getInstance().sendTreesToOthers(trees, scores, TREE_TAG);
 }
 
 void MPIHelper::sendStopMsg(string msg) {
