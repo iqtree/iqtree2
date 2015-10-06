@@ -32,6 +32,15 @@ void MPIHelper::sendTreesToOthers(TreeCollection trees, int tag) {
     }
 }
 
+void MPIHelper::sendTreeToOthers(string treeString, double score) {
+    vector<string> trees;
+    vector<double> scores;
+    trees.push_back(treeString);
+    scores.push_back(score);
+    TreeCollection outTrees(trees, scores);
+    MPIHelper::getInstance().sendTreesToOthers(outTrees, TREE_TAG);
+}
+
 void MPIHelper::sendStopMsg(string msg) {
     if (getNumProcesses() == 1)
         return;

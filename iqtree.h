@@ -835,16 +835,6 @@ protected:
     string generateParsimonyTree(int randomSeed);
 
 #ifdef _IQTREE_MPI
-
-    /**
-     *  Send a tree string and score to other processes
-     *  @param treeString
-     *      Newick string
-     *  @param score
-     *      Score of the tree
-     */
-    void sendTreeToAllNodes(string treeString, double score);
-
     /**
      *  Receive tree from other nodes and add to the candidate set
      *

@@ -70,6 +70,8 @@ public:
      */
     void sendTreesToOthers(TreeCollection trees, int tag);
 
+    void sendTreeToOthers(string treeString, double score);
+
     /**
      *  Send a stop message to other process
      *

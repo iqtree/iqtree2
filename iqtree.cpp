@@ -1849,7 +1849,7 @@ double IQTree::doTreeSearch() {
         }
 
 #ifdef _IQTREE_MPI
-        sendTreeToAllNodes(curTree, curScore);
+        MPIHelper::getInstance().sendTreeToOthers(curTree, curScore);
 #endif
 
         if (iqp_assess_quartet == IQP_BOOTSTRAP) {
@@ -2069,17 +2069,6 @@ double IQTree::doTreePerturbation() {
         }
     return curScore;
 }
-
-#ifdef _IQTREE_MPI
-void IQTree::sendTreeToAllNodes(string treeString, double score) {
-    vector<string> trees;
-    vector<double> scores;
-    trees.push_back(treeString);
-    scores.push_back(score);
-    TreeCollection outTrees(trees, scores);
-    MPIHelper::getInstance().sendTreesToOthers(outTrees, TREE_TAG);
-}
-#endif
 
 /****************************************************************************
  Fast Nearest Neighbor Interchange by maximum likelihood
