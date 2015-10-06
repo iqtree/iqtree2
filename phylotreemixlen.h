@@ -19,6 +19,8 @@
 */
 class PhyloTreeMixlen : public IQTree {
 
+    friend class ModelFactoryMixlen;
+
 public:
 
     /**
@@ -96,6 +98,9 @@ public:
         initialize mixture branch lengths
     */
     void initializeMixBranches(PhyloNode *node = NULL, PhyloNode *dad = NULL);
+
+    /** initialize parameters if necessary */
+    void initializeMixlen(double tolerance);
 
     /**
      * IMPORTANT: semantic change: this function does not return score anymore, for efficiency purpose

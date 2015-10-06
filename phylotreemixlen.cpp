@@ -193,7 +193,7 @@ void PhyloTreeMixlen::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool
 }
 
 
-double PhyloTreeMixlen::optimizeAllBranches(int my_iterations, double tolerance, int maxNRStep) {
+void PhyloTreeMixlen::initializeMixlen(double tolerance) {
     if (((PhyloNeighborMixlen*)root->neighbors[0])->lengths.empty()) {
         // initialize mixture branch lengths if empty
 
@@ -223,20 +223,17 @@ double PhyloTreeMixlen::optimizeAllBranches(int my_iterations, double tolerance,
             model_factory->fused_mix_rate = saved_fused_mix_rate;
             if (getModel()->isMixture()) {
                 setLikelihoodKernel(sse);
+                ModelMixture *mm = (ModelMixture*)getModel();
+                for (int i = 0; i < mm->getNMixtures(); i++)
+                    mm->prop[i] = relative_rate->getProp(i);
             }
+            
         }
         
         // assign branch length from rate model
         initializeMixBranches();
         clearAllPartialLH();
     }
-    // EM algorithm
-    size_t ptn, c;
-    size_t nptn = aln->getNPattern();
-    size_t nmix = model->getNMixtures();
-    assert(nmix == mixlen);
-
-    print_mix_brlen = false;
 
     if (!cat_tree) {
         // set up category tree for EM algorithm
@@ -254,6 +251,20 @@ double PhyloTreeMixlen::optimizeAllBranches(int my_iterations, double tolerance,
         cat_tree->model_factory = model_fac;
         cat_tree->setParams(params);
     }
+
+}
+
+double PhyloTreeMixlen::optimizeAllBranches(int my_iterations, double tolerance, int maxNRStep) {
+
+	initializeMixlen(tolerance);
+
+    // EM algorithm
+    size_t ptn, c;
+    size_t nptn = aln->getNPattern();
+    size_t nmix = model->getNMixtures();
+    assert(nmix == mixlen);
+
+    print_mix_brlen = false;
 
             
     // first compute _pattern_lh_cat

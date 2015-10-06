@@ -250,6 +250,7 @@ class PhyloTree : public MTree, public Optimization {
     friend class ModelMixture;
     friend class RateFree;
     friend class PhyloTreeMixlen;
+    friend class ModelFactoryMixlen;
 
 public:
     /**

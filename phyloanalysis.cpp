@@ -2343,10 +2343,11 @@ void runPhyloAnalysis(Params &params) {
 		}
 
         // allocate heterotachy tree if neccessary
-        if (params.num_mixlen > 1)
-            tree = new PhyloTreeMixlen(alignment, params.num_mixlen);
+        
         int pos = params.model_name.find("+H");
-        if (pos != string::npos) {
+        if (params.num_mixlen > 1) {
+            tree = new PhyloTreeMixlen(alignment, params.num_mixlen);
+        } else if (pos != string::npos) {
             int end_pos;
             int num_mixlen = convert_int(params.model_name.substr(pos+2).c_str(), end_pos);
             if (num_mixlen < 2)
