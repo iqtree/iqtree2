@@ -1960,6 +1960,7 @@ double IQTree::doTreeSearch() {
 #ifdef _IQTREE_MPI
     cout << "Number of tree received: " << MPIHelper::getInstance().getNumTreeReceived() << endl;
     cout << "Number of tree sent: " << MPIHelper::getInstance().getNumTreeSent() << endl;
+    cout << "Number of NNI search done: " << MPIHelper::getInstance().getNumNNISearch() << endl;
     if (MPIHelper::getInstance().getProcessID() != MASTER) {
         cout << "Stopped after " << stop_rule.getCurIt() << " iterations" << endl;
         MPI_Finalize();
@@ -2095,6 +2096,7 @@ pair<int, int> IQTree::doNNISearch() {
         if (params->print_site_posterior)
             computePatternCategories();
     }
+    MPIHelper::getInstance().setNumNNISearch(MPIHelper::getInstance().getNumNNISearch() + 1);
     return nniInfos;
 }
 

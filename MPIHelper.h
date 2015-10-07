@@ -123,6 +123,18 @@ private:
 
     int numTreeReceived;
 
+public:
+    int getNumNNISearch() const {
+        return numNNISearch;
+    }
+
+    void setNumNNISearch(int numNNISearch) {
+        MPIHelper::numNNISearch = numNNISearch;
+    }
+
+private:
+    int numNNISearch;
+
 #ifdef _IQTREE_MPI
     list<pair<MPI_Request *, ObjectStream *> > sentMessages;
 #endif

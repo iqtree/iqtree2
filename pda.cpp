@@ -2168,6 +2168,7 @@ int main(int argc, char *argv[]) {
 	MPIHelper::getInstance().setProcessID(task_id);
 	MPIHelper::getInstance().setNumTreeReceived(0);
 	MPIHelper::getInstance().setNumTreeSent(0);
+    MPIHelper::getInstance().setNumNNISearch(0);
 #endif
 
 	/*************************/
