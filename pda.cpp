@@ -2166,6 +2166,8 @@ int main(int argc, char *argv[]) {
 	MPI_Comm_rank(MPI_COMM_WORLD, &task_id);
 	MPIHelper::getInstance().setNumProcesses(n_tasks);
 	MPIHelper::getInstance().setProcessID(task_id);
+	MPIHelper::getInstance().setNumTreeReceived(0);
+	MPIHelper::getInstance().setNumTreeSent(0);
 #endif
 
 	/*************************/

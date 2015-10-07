@@ -31,6 +31,7 @@ void MPIHelper::sendTreesToOthers(vector<string> treeStrings, vector<double> sco
             sentMessages.push_back(make_pair(request, os));
         }
     }
+    //numTreeSent += treeStrings.size();
 }
 
 void MPIHelper::sendTreeToOthers(string treeString, double score) {
@@ -39,6 +40,7 @@ void MPIHelper::sendTreeToOthers(string treeString, double score) {
     trees.push_back(treeString);
     scores.push_back(score);
     MPIHelper::getInstance().sendTreesToOthers(trees, scores, TREE_TAG);
+    numTreeSent++;
 }
 
 void MPIHelper::sendStopMsg(string msg) {
@@ -115,7 +117,7 @@ void MPIHelper::receiveTrees(bool fromAll, int maxNumTrees, TreeCollection &tree
             TreeCollection curTrees = os.getTreeCollection();
             trees.addTrees(curTrees);
             if (trees.getNumTrees() >= maxNumTrees) {
-                return;
+                break;
             }
             if (fromAll && !nodes[status.MPI_SOURCE]) {
                 nodes[status.MPI_SOURCE] = true;
@@ -124,6 +126,7 @@ void MPIHelper::receiveTrees(bool fromAll, int maxNumTrees, TreeCollection &tree
             delete [] recvBuffer;
         }
     } while (minNumTrees > 0 || flag);
+    numTreeReceived += trees.getNumTrees();
 }
 
 int MPIHelper::cleanUpMessages() {

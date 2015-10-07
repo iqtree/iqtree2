@@ -101,6 +101,28 @@ private:
 
     int numProcesses;
 
+public:
+    int getNumTreeReceived() const {
+        return numTreeReceived;
+    }
+
+    void setNumTreeReceived(int numTreeReceived) {
+        MPIHelper::numTreeReceived = numTreeReceived;
+    }
+
+    int getNumTreeSent() const {
+        return numTreeSent;
+    }
+
+    void setNumTreeSent(int numTreeSent) {
+        MPIHelper::numTreeSent = numTreeSent;
+    }
+
+private:
+    int numTreeSent;
+
+    int numTreeReceived;
+
 #ifdef _IQTREE_MPI
     list<pair<MPI_Request *, ObjectStream *> > sentMessages;
 #endif

@@ -1958,6 +1958,8 @@ double IQTree::doTreeSearch() {
         }
     }
 #ifdef _IQTREE_MPI
+    cout << "Number of tree received: " << MPIHelper::getInstance().getNumTreeReceived() << endl;
+    cout << "Number of tree sent: " << MPIHelper::getInstance().getNumTreeSent() << endl;
     if (MPIHelper::getInstance().getProcessID() != MASTER) {
         cout << "Stopped after " << stop_rule.getCurIt() << " iterations" << endl;
         MPI_Finalize();
