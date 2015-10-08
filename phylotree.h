@@ -212,7 +212,7 @@ struct NNIMove {
     //double oldLen[5];
 
     // new branch lengths of 5 branches corresponding to the NNI
-    double newLen[5];
+    DoubleVector newLen[5];
 
     // pattern likelihoods
     double *ptnlh;
@@ -372,6 +372,11 @@ public:
         @return true if this is a tree with mixture branch lengths, default: false
     */
     virtual bool isMixlen() { return false; }
+
+    /**
+        @return number of mixture branch lengths, default: 1
+    */
+    virtual int getMixlen() { return 1; }
 
     /**
             allocate a new node. Override this if you have an inherited Node class.

@@ -362,12 +362,12 @@ public:
     /**
      * 	Save all the current branch lengths
      */
-    void saveBranches(PhyloNode *node = NULL, PhyloNode *dad = NULL);
+//    void saveBranches(PhyloNode *node = NULL, PhyloNode *dad = NULL);
 
     /**
      * 	 Restore the branch lengths from the saved values
      */
-    virtual void restoreAllBrans(PhyloNode *node = NULL, PhyloNode *dad = NULL);
+//    virtual void restoreAllBrans(PhyloNode *node = NULL, PhyloNode *dad = NULL);
 
     /**
      * Get the branch length of the branch node1-node2
@@ -375,7 +375,7 @@ public:
      * @param node2
      * @return the branch length
      */
-    double getBranLen(PhyloNode *node1, PhyloNode *node2);
+//    double getBranLen(PhyloNode *node1, PhyloNode *node2);
 
 
     /**
@@ -384,7 +384,7 @@ public:
             @param node1 the first node of the branch
             @param node2 the second node of the branch
      */
-    void changeBranLen(PhyloNode *node1, PhyloNode *node2, double branLen);
+//    void changeBranLen(PhyloNode *node1, PhyloNode *node2, double branLen);
 
     /**
      * Estimate the 95% quantile of the distribution of N (see paper for more d
@@ -557,7 +557,7 @@ protected:
     /**
         Optimal branch lengths
      */
-    mapString2Double optBrans;
+//    mapString2Double optBrans;
 
     /**
      *  @brief get branches, on which NNIs are evaluated for the next NNI step.
@@ -575,7 +575,7 @@ protected:
     /**
             Original branch lengths
      */
-    mapString2Double orgBrans;
+//    mapString2Double orgBrans;
 
     int k_delete, k_delete_min, k_delete_max, k_delete_stay;
 

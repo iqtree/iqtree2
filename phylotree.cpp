@@ -516,10 +516,10 @@ void PhyloTree::saveBranchLengths(DoubleVector &lenvec, int startid, PhyloNode *
     if (!node) {
         node = (PhyloNode*) root;
         assert(branchNum == nodeNum-1);
-        if (lenvec.empty()) lenvec.resize(branchNum+startid);
+        if (lenvec.empty()) lenvec.resize((branchNum+startid)*getMixlen());
     }
     FOR_NEIGHBOR_IT(node, dad, it){
-    	lenvec[(*it)->id + startid] = (*it)->length;
+    	(*it)->getLength(lenvec, ((*it)->id + startid)*getMixlen());
     	PhyloTree::saveBranchLengths(lenvec, startid, (PhyloNode*) (*it)->node, node);
     }
 }
@@ -530,7 +530,8 @@ void PhyloTree::restoreBranchLengths(DoubleVector &lenvec, int startid, PhyloNod
         assert(!lenvec.empty());
     }
     FOR_NEIGHBOR_IT(node, dad, it){
-    	(*it)->length = (*it)->node->findNeighbor(node)->length = lenvec[(*it)->id + startid];
+    	(*it)->setLength(lenvec, ((*it)->id + startid)*getMixlen(), getMixlen());
+        (*it)->node->findNeighbor(node)->setLength(lenvec, ((*it)->id + startid)*getMixlen(), getMixlen());
     	PhyloTree::restoreBranchLengths(lenvec, startid, (PhyloNode*) (*it)->node, node);
     }
 }
@@ -3731,8 +3732,8 @@ void PhyloTree::changeNNIBrans(NNIMove nnimove) {
 	PhyloNode *node2 = nnimove.node2;
 	PhyloNeighbor *node1_node2_nei = (PhyloNeighbor*) node1->findNeighbor(node2);
 	PhyloNeighbor *node2_node1_nei = (PhyloNeighbor*) node2->findNeighbor(node1);
-	node1_node2_nei->length = nnimove.newLen[0];
-	node2_node1_nei->length = nnimove.newLen[0];
+	node1_node2_nei->setLength(nnimove.newLen[0]);
+	node2_node1_nei->setLength(nnimove.newLen[0]);
 	if (params->nni5) {
 		int i = 1;
 		Neighbor* nei;
@@ -3742,16 +3743,16 @@ void PhyloTree::changeNNIBrans(NNIMove nnimove) {
 		{
 			nei = (*it)->node->findNeighbor(node1);
 			nei_back = (node1)->findNeighbor((*it)->node);
-			nei->length = nnimove.newLen[i];
-			nei_back->length = nnimove.newLen[i];
+			nei->setLength(nnimove.newLen[i]);
+			nei_back->setLength(nnimove.newLen[i]);
 			i++;
 		}
 		FOR_NEIGHBOR(node2, node1, it)
 		{
 			nei = (*it)->node->findNeighbor(node2);
 			nei_back = (node2)->findNeighbor((*it)->node);
-			nei->length = nnimove.newLen[i];
-			nei_back->length = nnimove.newLen[i];
+			nei->setLength(nnimove.newLen[i]);
+			nei_back->setLength(nnimove.newLen[i]);
 			i++;
 		}
 	}
@@ -3877,7 +3878,7 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
 //		double saved_len = node1_nei->length;
 
 		optimizeOneBranch(node1, node2, false, NNI_MAX_NR_STEP);
-		nniMoves[cnt].newLen[0] = node1->findNeighbor(node2)->length;
+		node1->findNeighbor(node2)->getLength(nniMoves[cnt].newLen[0]);
 
 		int i=1;
         if (params->nni5) {
@@ -3885,7 +3886,7 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
 			{
 				((PhyloNeighbor*) (*it)->node->findNeighbor(node1))->clearPartialLh();
 				optimizeOneBranch(node1, (PhyloNode*) (*it)->node, false, NNI_MAX_NR_STEP);
-				nniMoves[cnt].newLen[i] = node1->findNeighbor((*it)->node)->length;
+				node1->findNeighbor((*it)->node)->getLength(nniMoves[cnt].newLen[i]);
 				i++;
 			}
 
@@ -3896,7 +3897,7 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
 				((PhyloNeighbor*) (*it)->node->findNeighbor(node2))->clearPartialLh();
 				optimizeOneBranch(node2, (PhyloNode*) (*it)->node, false, NNI_MAX_NR_STEP);
 				//node2_lastnei = (PhyloNeighbor*) (*it);
-				nniMoves[cnt].newLen[i] = node2->findNeighbor((*it)->node)->length;
+				node2->findNeighbor((*it)->node)->getLength(nniMoves[cnt].newLen[i]);
 				i++;
 			}
 			 node12_it->clearPartialLh();
@@ -3934,9 +3935,9 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
 
 	 // restore the length of 4 branches around node1, node2
 	 FOR_NEIGHBOR(node1, node2, it)
-		 (*it)->length = (*it)->node->findNeighbor(node1)->length;
+		 (*it)->setLength((*it)->node->findNeighbor(node1));
 	 FOR_NEIGHBOR(node2, node1, it)
-		 (*it)->length = (*it)->node->findNeighbor(node2)->length;
+		 (*it)->setLength((*it)->node->findNeighbor(node2));
 
 	 // restore curScore
 	 curScore = backupScore;

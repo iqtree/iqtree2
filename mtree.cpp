@@ -912,7 +912,7 @@ void MTree::getBranches(NodeVector &nodes, NodeVector &nodes2, Node *node, Node 
     }
 }
 
-void MTree::getBranchLengths(DoubleVector &len, Node *node, Node *dad) {
+void MTree::getBranchLengths(vector<DoubleVector> &len, Node *node, Node *dad) {
     if (!node) {
         node = root;
         assert(len.size() == branchNum);
@@ -920,12 +920,12 @@ void MTree::getBranchLengths(DoubleVector &len, Node *node, Node *dad) {
     //for (NeighborVec::iterator it = node->neighbors.begin(); it != node->neighbors.end(); it++)
     //if ((*it)->node != dad)	{
     FOR_NEIGHBOR_IT(node, dad, it) {
-        len[(*it)->id] = (*it)->length;
+        (*it)->getLength(len[(*it)->id]);
         getBranchLengths(len, (*it)->node, node);
     }
 }
 
-void MTree::setBranchLengths(DoubleVector &len, Node *node, Node *dad) {
+void MTree::setBranchLengths(vector<DoubleVector> &len, Node *node, Node *dad) {
     if (!node) {
         node = root;
         assert(len.size() == branchNum);
@@ -933,7 +933,8 @@ void MTree::setBranchLengths(DoubleVector &len, Node *node, Node *dad) {
     //for (NeighborVec::iterator it = node->neighbors.begin(); it != node->neighbors.end(); it++)
     //if ((*it)->node != dad)	{
     FOR_NEIGHBOR_IT(node, dad, it) {
-        (*it)->length = (*it)->node->findNeighbor(node)->length = len[(*it)->id];
+        (*it)->setLength(len[(*it)->id]);
+        (*it)->node->findNeighbor(node)->setLength(len[(*it)->id]);
         setBranchLengths(len, (*it)->node, node);
     }
 }

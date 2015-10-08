@@ -39,10 +39,10 @@ struct PartitionInfo {
 	//DoubleVector nni1_score; // log-likelihood for 1st NNI for every branch
 	//DoubleVector nni2_score; // log-likelihood for 2nd NNI for every branch
 
-	DoubleVector cur_brlen;  // current branch lengths
+	vector<DoubleVector> cur_brlen;  // current branch lengths
 	//DoubleVector opt_brlen;  // optimized branch lengths for every branch
-	DoubleVector nni1_brlen; // branch length for 1st NNI for every branch
-	DoubleVector nni2_brlen; // branch length for 2nd NNI for every branch
+	vector<DoubleVector> nni1_brlen; // branch length for 1st NNI for every branch
+	vector<DoubleVector> nni2_brlen; // branch length for 2nd NNI for every branch
 
 	//double *mem_ptnlh; // total memory allocated for all pattern likelihood vectors
 	double *cur_ptnlh; // current pattern likelihoods of the tree

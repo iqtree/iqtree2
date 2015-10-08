@@ -591,18 +591,19 @@ void PhyloSuperTree::readTreeString(const string &tree_string) {
  * save branch lengths into a vector
  */
 void PhyloSuperTree::saveBranchLengths(DoubleVector &lenvec, int startid, PhyloNode *node, PhyloNode *dad) {
-	int totalBranchNum = branchNum;
+    assert(getMixlen() == 1); // supertree and treemixlen not allowed together
+	int totalBranchNum = branchNum * getMixlen();
 	iterator it;
 	for (it = begin(); it != end(); it++) {
-		totalBranchNum += (*it)->branchNum;
+		totalBranchNum += (*it)->branchNum * (*it)->getMixlen();
 	}
 	lenvec.resize(startid + totalBranchNum);
 
 	PhyloTree::saveBranchLengths(lenvec, startid);
-	startid += branchNum;
+	startid += branchNum * getMixlen();
 	for (iterator it = begin(); it != end(); it++) {
 		(*it)->saveBranchLengths(lenvec, startid);
-		startid += (*it)->branchNum;
+		startid += (*it)->branchNum * (*it)->getMixlen();
 	}
 }
 /**
@@ -610,10 +611,10 @@ void PhyloSuperTree::saveBranchLengths(DoubleVector &lenvec, int startid, PhyloN
  */
 void PhyloSuperTree::restoreBranchLengths(DoubleVector &lenvec, int startid, PhyloNode *node, PhyloNode *dad) {
 	PhyloTree::restoreBranchLengths(lenvec, startid);
-	startid += branchNum;
+	startid += branchNum * getMixlen();
 	for (iterator it = begin(); it != end(); it++) {
 		(*it)->restoreBranchLengths(lenvec, startid);
-		startid += (*it)->branchNum;
+		startid += (*it)->branchNum * (*it)->getMixlen();
 	}
 }
 
@@ -1007,13 +1008,13 @@ void PhyloSuperTree::initPartitionInfo() {
 	for (iterator it = begin(); it != end(); it++, part++) {
 		part_info[part].cur_score = 0.0;
 
-		part_info[part].cur_brlen.resize((*it)->branchNum, 0.0);
+		part_info[part].cur_brlen.resize((*it)->branchNum);
 		if (params->nni5) {
-			part_info[part].nni1_brlen.resize((*it)->branchNum * 5, 0.0);
-			part_info[part].nni2_brlen.resize((*it)->branchNum * 5, 0.0);
+			part_info[part].nni1_brlen.resize((*it)->branchNum * 5);
+			part_info[part].nni2_brlen.resize((*it)->branchNum * 5);
 		} else {
-			part_info[part].nni1_brlen.resize((*it)->branchNum, 0.0);
-			part_info[part].nni2_brlen.resize((*it)->branchNum, 0.0);
+			part_info[part].nni1_brlen.resize((*it)->branchNum);
+			part_info[part].nni2_brlen.resize((*it)->branchNum);
 		}
 
 		(*it)->getBranchLengths(part_info[part].cur_brlen);
@@ -1291,12 +1292,12 @@ void PhyloSuperTree::changeNNIBrans(NNIMove move) {
 
 }
 
-void PhyloSuperTree::restoreAllBrans(PhyloNode *node, PhyloNode *dad) {
-	int part = 0;
-	for (iterator it = begin(); it != end(); it++, part++) {
-		(*it)->setBranchLengths(part_info[part].cur_brlen);
-	}
-}
+//void PhyloSuperTree::restoreAllBrans(PhyloNode *node, PhyloNode *dad) {
+//	int part = 0;
+//	for (iterator it = begin(); it != end(); it++, part++) {
+//		(*it)->setBranchLengths(part_info[part].cur_brlen);
+//	}
+//}
 
 void PhyloSuperTree::reinsertLeaves(PhyloNodeVector &del_leaves) {
 	IQTree::reinsertLeaves(del_leaves);

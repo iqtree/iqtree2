@@ -56,6 +56,72 @@ public:
         return lengths[c];
     }
 
+    /**
+        get branch lengths, used by heterotachy model (PhyloNeighborMixlen)
+        the default is just to return a single branch length
+        @return branch length for class c
+    */
+    virtual void getLength(DoubleVector &vec) { 
+        vec = lengths;
+    }
+
+    /**
+        get branch lengths, used by heterotachy model (PhyloNeighborMixlen)
+        the default is just to return a single branch length
+        @param vec (OUT) destination branch length vector
+        @param start_pos starting position in vec to copy to
+    */
+    virtual void getLength(DoubleVector &vec, int start_pos) { 
+        assert(start_pos+lengths.size() <= vec.size());
+        for (int i = 0; i < lengths.size(); i++)
+            vec[start_pos+i] = lengths[i];
+    }
+
+
+    /**
+        set branch length for a mixture class c, used by heterotachy model (PhyloNeighborMixlen)
+        the default is just to return a single branch length
+        @param c class index
+        @return branch length for class c
+    */
+    virtual void setLength(int c, double len) { 
+        assert(c < lengths.size());
+        lengths[c] = len;
+    }
+
+    /**
+        get branch lengths, used by heterotachy model (PhyloNeighborMixlen)
+        the default is just to return a single branch length
+        @return branch length for class c
+    */
+    virtual void setLength(DoubleVector &vec) { 
+        lengths = vec;
+    }
+
+    /**
+        set branch length by length of a Neighbor, used by heterotachy model (PhyloNeighborMixlen)
+        the default is just to return a single branch length
+        @param nei source neigbor to copy branch lengths
+        @return branch length for class c
+    */
+    virtual void setLength(Neighbor *nei) { 
+        length = nei->length; 
+        lengths = ((PhyloNeighborMixlen*)nei)->lengths;
+    }
+    
+    /**
+        set branch lengths, used by heterotachy model (PhyloNeighborMixlen)
+        the default is just to return a single branch length
+        @param vec source branch length vector
+        @param start_pos starting position in vec to copy from
+    */
+    virtual void setLength(DoubleVector &vec, int start_pos, int num_elem) { 
+        assert(start_pos+num_elem <= vec.size());
+        lengths.resize(num_elem);
+        lengths.insert(lengths.begin(), vec.begin()+start_pos, vec.begin()+start_pos+num_elem);
+    }
+    
+
 protected:
 
 };

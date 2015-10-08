@@ -101,6 +101,73 @@ public:
      */
     virtual ~Neighbor() {
     }
+
+    /**
+        get branch length for a mixture class c, used by heterotachy model (PhyloNeighborMixlen)
+        the default is just to return a single branch length
+        @param c class index
+        @return branch length for class c
+    */
+    virtual double getLength(int c) { return length; }
+
+    /**
+        get branch lengths, used by heterotachy model (PhyloNeighborMixlen)
+        the default is just to return a single branch length
+        @return branch length for class c
+    */
+    virtual void getLength(DoubleVector &vec) { 
+        vec.resize(1, length);
+    }
+
+    /**
+        get branch lengths, used by heterotachy model (PhyloNeighborMixlen)
+        the default is just to return a single branch length
+        @param vec (OUT) destination branch length vector
+        @param start_pos starting position in vec to copy to
+    */
+    virtual void getLength(DoubleVector &vec, int start_pos) { 
+        assert(start_pos < vec.size());
+        vec[start_pos] = length;
+    }
+
+    /**
+        set branch length for a mixture class c, used by heterotachy model (PhyloNeighborMixlen)
+        the default is just to return a single branch length
+        @param c class index
+        @return branch length for class c
+    */
+    virtual void setLength(int c, double len) { length = len; }
+
+    /**
+        get branch lengths, used by heterotachy model (PhyloNeighborMixlen)
+        the default is just to return a single branch length
+        @return branch length for class c
+    */
+    virtual void setLength(DoubleVector &vec) { 
+        assert(vec.size() == 1);
+        length = vec[0];
+    }
+
+    /**
+        set branch length by length of a Neighbor, used by heterotachy model (PhyloNeighborMixlen)
+        the default is just to return a single branch length
+        @param nei source neigbor to copy branch lengths
+        @return branch length for class c
+    */
+    virtual void setLength(Neighbor *nei) { length = nei->length; }
+
+    /**
+        set branch lengths, used by heterotachy model (PhyloNeighborMixlen)
+        the default is just to return a single branch length
+        @param vec source branch length vector
+        @param start_pos starting position in vec to copy from
+    */
+    virtual void setLength(DoubleVector &vec, int start_pos, int num_elem) { 
+        assert(start_pos < vec.size());
+        assert(num_elem == 1);
+        length = vec[start_pos];
+    }
+
 };
 
 /**

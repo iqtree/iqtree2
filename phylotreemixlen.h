@@ -54,6 +54,11 @@ public:
     virtual bool isMixlen() { return true; }
 
     /**
+        @return number of mixture branch lengths, default: 1
+    */
+    virtual int getMixlen() { return mixlen; }
+
+    /**
         set number of mixture branch lengths
     */
     void setMixlen(int mixlen);

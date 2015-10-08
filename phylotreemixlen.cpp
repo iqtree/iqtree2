@@ -119,79 +119,6 @@ void PhyloTreeMixlen::copyMixBranches(PhyloTree *tree, int category) {
     }
 }
 
-void PhyloTreeMixlen::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool clearLH, int maxNRStep) {
-    return PhyloTree::optimizeOneBranch(node1, node2, clearLH, maxNRStep);
-    size_t ptn, c;
-    size_t nptn = aln->getNPattern();
-    size_t nmix = model->getNMixtures();
-    assert(nmix == mixlen);
-
-    assert(cat_tree);
-    // first compute _pattern_lh_cat
-    double tree_lh;
-
-    if (!getModel()->isMixture())
-        tree_lh = computeLikelihoodBranchEigen((PhyloNeighbor*)node1->findNeighbor(node2), node1); 
-    else if (getModelFactory()->fused_mix_rate) {
-        outError("Heterotachy with fused mixture not supported");
-        tree_lh = computeMixrateLikelihoodBranchEigen((PhyloNeighbor*)node1->findNeighbor(node2), node1); 
-    } else {
-        tree_lh = computeMixtureLikelihoodBranchEigen((PhyloNeighbor*)node1->findNeighbor(node2), node1); 
-    }
-   
-    // E-step
-    // decoupled weights (prop) from _pattern_lh_cat to obtain L_ci and compute pattern likelihood L_i
-    for (ptn = 0; ptn < nptn; ptn++) {
-        double *this_lk_cat = _pattern_lh_cat + ptn*nmix;
-        double lk_ptn = 0.0;
-        for (c = 0; c < nmix; c++) {
-            lk_ptn += this_lk_cat[c];
-        }
-        lk_ptn = ptn_freq[ptn] / lk_ptn;
-        // transform _pattern_lh_cat into posterior probabilities of each category
-        for (c = 0; c < nmix; c++) {
-            this_lk_cat[c] *= lk_ptn;
-        }
-        
-    } 
-    
-    double new_tree_lh = 0.0;
-    
-    // now optimize categories one by one
-    for (c = 0; c < nmix; c++) {
-        assignMixBranches(c);
-        cat_tree->copyPhyloTree(this);
-        
-        ModelGTR *subst_model;
-        if (getModel()->isMixture())
-            subst_model = ((ModelMixture*)getModel())->at(c);
-        else
-            subst_model = (ModelGTR*)getModel();
-        cat_tree->setModel(subst_model);
-        subst_model->setTree(cat_tree);
-        cat_tree->getModelFactory()->model = subst_model;
-                    
-        // initialize likelihood
-        cat_tree->initializeAllPartialLh();
-        // copy posterior probability into ptn_freq
-        cat_tree->computePtnFreq();
-        double *this_lk_cat = _pattern_lh_cat+c;
-        for (ptn = 0; ptn < nptn; ptn++)
-            cat_tree->ptn_freq[ptn] = this_lk_cat[ptn*nmix];
-        
-        // TODO optimize branch lengths of mixture category
-        cat_tree->optimizeOneBranch(NULL, NULL, clearLH, maxNRStep);
-        
-        // copy optimized branch lengths
-        copyMixBranches(cat_tree, c);
-        
-        // reset subst model
-        cat_tree->setModel(NULL);
-        subst_model->setTree(this);
-    }
-     
-}
-
 
 void PhyloTreeMixlen::initializeMixlen(double tolerance) {
     if (((PhyloNeighborMixlen*)root->neighbors[0])->lengths.empty()) {
@@ -253,6 +180,53 @@ void PhyloTreeMixlen::initializeMixlen(double tolerance) {
     }
 
 }
+
+void PhyloTreeMixlen::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool clearLH, int maxNRStep) {
+    double negative_lh;
+    current_it = (PhyloNeighbor*) node1->findNeighbor(node2);
+    assert(current_it);
+    current_it_back = (PhyloNeighbor*) node2->findNeighbor(node1);
+    assert(current_it_back);
+    double current_len = current_it->length;
+    double ferror, optx;
+    assert(current_len >= 0.0);
+    theta_computed = false;
+    if (optimize_by_newton) {
+    	// Newton-Raphson method
+    	optx = minimizeNewton(MIN_BRANCH_LEN, current_len, MAX_BRANCH_LEN, TOL_BRANCH_LEN, negative_lh, maxNRStep);
+        if (verbose_mode >= VB_DEBUG) {
+            cout << "minimizeNewton logl: " << computeLikelihoodFromBuffer() << endl;
+        }
+    	if (optx > MAX_BRANCH_LEN*0.95) {
+    		// newton raphson diverged, reset
+    	    double opt_lh = computeLikelihoodFromBuffer();
+    	    current_it->length = current_len;
+    	    current_it_back->length = current_len;
+    	    double orig_lh = computeLikelihoodFromBuffer();
+    	    if (orig_lh > opt_lh) {
+    	    	optx = current_len;
+    	    }
+    	}
+	}	else {
+        // Brent method
+        optx = minimizeOneDimen(MIN_BRANCH_LEN, current_len, MAX_BRANCH_LEN, TOL_BRANCH_LEN, &negative_lh, &ferror);
+        if (verbose_mode >= VB_DEBUG) {
+            cout << "minimizeBrent logl: " << -negative_lh << endl;
+        }
+	}
+
+    current_it->length = optx;
+    current_it_back->length = optx;
+    //curScore = -negative_lh;
+
+    if (clearLH && current_len != optx) {
+        node1->clearReversePartialLh(node2);
+        node2->clearReversePartialLh(node1);
+    }
+
+//    return -negative_lh;
+}
+
 
 double PhyloTreeMixlen::optimizeAllBranches(int my_iterations, double tolerance, int maxNRStep) {
 

@@ -1955,6 +1955,7 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
     int numNNIs = 0; // number of NNI to be applied in each step
     const int MAXSTEPS = aln->getNSeq(); // maximum number of NNI steps
     NodeVector nodes1, nodes2;
+    DoubleVector lenvec;
     for (nni_steps = 1; nni_steps <= MAXSTEPS; nni_steps++) {
         double oldScore = curScore;
         if (!rollBack) { // tree get improved and was not rollbacked
@@ -1969,10 +1970,12 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
             }
 
             nonConfNNIs.clear(); // Vector containing non-conflicting positive NNIs
-            optBrans.clear(); // Vector containing branch length of the positive NNIs
-            orgBrans.clear(); // Vector containing all current branch of the tree
+//            optBrans.clear(); // Vector containing branch length of the positive NNIs
+//            orgBrans.clear(); // Vector containing all current branch of the tree
             plusNNIs.clear(); // Vector containing all positive NNIs
-            saveBranches(); // save all current branch lengths
+//            saveBranches(); // save all current branch lengths
+            // save all current branch lengths
+            saveBranchLengths(lenvec);
             initPartitionInfo(); // for super tree
             int numRemoved;
             if (nodes1.size() == 0) {
@@ -2077,7 +2080,8 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
             for (int i = 0; i < numNNIs; i++)
                 doNNI(nonConfNNIs.at(i));
             // restore the branch lengths
-            restoreAllBrans();
+//            restoreAllBrans();
+            restoreBranchLengths(lenvec);
             // This is important because after restoring the branch lengths, all partial
             // likelihood need to be cleared.
 //            if (params->lh_mem_save == LM_PER_NODE) {
@@ -2382,51 +2386,51 @@ void IQTree::setDelete(int _delete) {
     k_delete = _delete;
 }
 
-void IQTree::changeBranLen(PhyloNode *node1, PhyloNode *node2, double newlen) {
-    node1->findNeighbor(node2)->length = newlen;
-    node2->findNeighbor(node1)->length = newlen;
-    node1->clearReversePartialLh(node2);
-    node2->clearReversePartialLh(node1);
-}
-
-double IQTree::getBranLen(PhyloNode *node1, PhyloNode *node2) {
-    return  node1->findNeighbor(node2)->length;
-}
-
-void IQTree::saveBranches(PhyloNode *node, PhyloNode *dad) {
-    if (!node) {
-        node = (PhyloNode*) root;
-    }
-    if (dad) {
-        double len = getBranLen(node, dad);
-        string key = getBranchID(node, dad);
-        orgBrans.insert(mapString2Double::value_type(key, len));
-    }
-
-    FOR_NEIGHBOR_IT(node, dad, it){
-    saveBranches((PhyloNode*) (*it)->node, node);
-}
-}
-
-void IQTree::restoreAllBrans(PhyloNode *node, PhyloNode *dad) {
-    if (!node) {
-        node = (PhyloNode*) root;
-    }
-    if (dad) {
-        string key = getBranchID(node, dad);
-        Neighbor* bran_it = node->findNeighbor(dad);
-        assert(bran_it);
-        Neighbor* bran_it_back = dad->findNeighbor(node);
-        assert(bran_it_back);
-        assert(orgBrans.count(key));
-        bran_it->length = orgBrans[key];
-        bran_it_back->length = orgBrans[key];
-    }
-
-    FOR_NEIGHBOR_IT(node, dad, it){
-    restoreAllBrans((PhyloNode*) (*it)->node, node);
-}
-}
+//void IQTree::changeBranLen(PhyloNode *node1, PhyloNode *node2, double newlen) {
+//    node1->findNeighbor(node2)->length = newlen;
+//    node2->findNeighbor(node1)->length = newlen;
+//    node1->clearReversePartialLh(node2);
+//    node2->clearReversePartialLh(node1);
+//}
+//
+//double IQTree::getBranLen(PhyloNode *node1, PhyloNode *node2) {
+//    return  node1->findNeighbor(node2)->length;
+//}
+//
+//void IQTree::saveBranches(PhyloNode *node, PhyloNode *dad) {
+//    if (!node) {
+//        node = (PhyloNode*) root;
+//    }
+//    if (dad) {
+//        double len = getBranLen(node, dad);
+//        string key = getBranchID(node, dad);
+//        orgBrans.insert(mapString2Double::value_type(key, len));
+//    }
+//
+//    FOR_NEIGHBOR_IT(node, dad, it){
+//    saveBranches((PhyloNode*) (*it)->node, node);
+//}
+//}
+//
+//void IQTree::restoreAllBrans(PhyloNode *node, PhyloNode *dad) {
+//    if (!node) {
+//        node = (PhyloNode*) root;
+//    }
+//    if (dad) {
+//        string key = getBranchID(node, dad);
+//        Neighbor* bran_it = node->findNeighbor(dad);
+//        assert(bran_it);
+//        Neighbor* bran_it_back = dad->findNeighbor(node);
+//        assert(bran_it_back);
+//        assert(orgBrans.count(key));
+//        bran_it->length = orgBrans[key];
+//        bran_it_back->length = orgBrans[key];
+//    }
+//
+//    FOR_NEIGHBOR_IT(node, dad, it){
+//    restoreAllBrans((PhyloNode*) (*it)->node, node);
+//}
+//}
 
 void IQTree::evalNNIs(PhyloNode *node, PhyloNode *dad) {
     if (!node) {

@@ -1393,7 +1393,7 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 
 		optimizeOneBranch(node1, node2, false, NNI_MAX_NR_STEP);
 //		double score = computeLikelihoodFromBuffer();
-		nniMoves[cnt].newLen[0] = node1->findNeighbor(node2)->length;
+		node1->findNeighbor(node2)->getLength(nniMoves[cnt].newLen[0]);
 
 //		if (verbose_mode >= VB_MED) {
 //			cout << "After_nni1 [" << score << "] ";
@@ -1432,7 +1432,7 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 	    		//cout<<"NNI5 : node1 : Before optimization"<<endl;
 	    		//checkBranchLen();
 	    		optimizeOneBranch(node1, (PhyloNode*) (*it)->node, false, NNI_MAX_NR_STEP);
-				nniMoves[cnt].newLen[i] = node1->findNeighbor((*it)->node)->length;
+				node1->findNeighbor((*it)->node)->getLength(nniMoves[cnt].newLen[i]);
 				i++;
 
 
@@ -1462,7 +1462,7 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 	    		}
 	    		// Optimize the branch incident to node2
 	    		optimizeOneBranch(node2, (PhyloNode*) (*it)->node, false, NNI_MAX_NR_STEP);
-				nniMoves[cnt].newLen[i] = node2->findNeighbor((*it)->node)->length;
+				node2->findNeighbor((*it)->node)->getLength(nniMoves[cnt].newLen[i]);
 				i++;
 	    	}
 	    }
@@ -1698,10 +1698,10 @@ void PhyloSuperTreePlen::linkCheckRe(int part,Node* node, Node* dad, PhyloNeighb
 		}
 	}
 }
-void PhyloSuperTreePlen::restoreAllBrans(PhyloNode *node, PhyloNode *dad) {
-	IQTree::restoreAllBrans(node,dad);
-	mapTrees();
-}
+//void PhyloSuperTreePlen::restoreAllBrans(PhyloNode *node, PhyloNode *dad) {
+//	IQTree::restoreAllBrans(node,dad);
+//	mapTrees();
+//}
 
 bool PhyloSuperTreePlen::checkBranchLen(){
 

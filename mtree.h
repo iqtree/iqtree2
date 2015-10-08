@@ -428,9 +428,9 @@ public:
      */
     bool isABranch(Node* node1, Node* node2);
 
-    void getBranchLengths(DoubleVector &len, Node *node = NULL, Node *dad = NULL);
+    void getBranchLengths(vector<DoubleVector> &len, Node *node = NULL, Node *dad = NULL);
 
-    void setBranchLengths(DoubleVector &len, Node *node = NULL, Node *dad = NULL);
+    void setBranchLengths(vector<DoubleVector> &len, Node *node = NULL, Node *dad = NULL);
 
     /**
             find a node with corresponding name

@@ -278,7 +278,7 @@ public:
 	void mapBranchLen(int part);
 	virtual void printMapInfo();
 
-	virtual void restoreAllBrans(PhyloNode *node, PhyloNode *dad);
+//	virtual void restoreAllBrans(PhyloNode *node, PhyloNode *dad);
 
 	/**
 	 * initialize partition information for super tree
