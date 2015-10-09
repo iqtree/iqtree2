@@ -2017,8 +2017,10 @@ void IQTree::estimateLoglCutoffBS() {
 #ifdef _IQTREE_MPI
 void IQTree::addTreesFromOtherProcesses(bool allTrees, int maxNumTrees, bool updateStopRule) {
     TreeCollection inTrees;
+    double start = getRealTime();
     MPIHelper::getInstance().receiveTrees(allTrees, maxNumTrees, inTrees);
-    cout << inTrees.getNumTrees() << " trees received from other processes" << endl;
+    cout << inTrees.getNumTrees() << " trees received from other processes in ";
+    cout << getRealTime() - start << " seconds" << endl;
 
     for (int i = 0; i < inTrees.getNumTrees(); i++) {
         pair<string, double> tree = inTrees.getTree(i);

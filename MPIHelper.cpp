@@ -3,6 +3,7 @@
 //
 
 #include "MPIHelper.h"
+#include "timeutil.h"
 
 /**
  *  Initialize the single getInstance of MPIHelper
@@ -35,11 +36,14 @@ void MPIHelper::sendTreesToOthers(vector<string> treeStrings, vector<double> sco
 }
 
 void MPIHelper::sendTreeToOthers(string treeString, double score) {
+    double start = getRealTime();
     vector<string> trees;
     vector<double> scores;
     trees.push_back(treeString);
     scores.push_back(score);
+    cout << "Sent tree to other processes in ";
     MPIHelper::getInstance().sendTreesToOthers(trees, scores, TREE_TAG);
+    cout << getRealTime() - start << " seconds" << endl;
     numTreeSent++;
 }
 
