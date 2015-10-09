@@ -299,7 +299,7 @@ void IQTree::createPLLPartition(Params &params, ostream &pllPartitionFileHandle)
                     if (name_ok)
                         pllPartitionFileHandle << modelStr;
                     else
-                        pllPartitionFileHandle << "WAG";                    
+                        pllPartitionFileHandle << "WAG";
                 } else {
                     pllPartitionFileHandle << "WAG";
                 }
@@ -336,7 +336,7 @@ void IQTree::computeInitialTree(string &dist_file, LikelihoodKernel kernel) {
     	params->numNNITrees = params->min_iterations;
     int fixed_number = 0;
     setParsimonyKernel(kernel);
-    
+
     if (params->user_file) {
         // start the search with user-defined tree
         cout << "Reading input tree file " << params->user_file << " ..." << endl;
@@ -553,8 +553,6 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
         outError(errorMsg.str().c_str());
     }
 
-    cout << "Number of NNI searches in total: " << bestTreeStrings.size() << endl;
-
     // Determine on which initial trees the current process must do NNI search
     vector<string> myBestTrees;
     int index = MPIHelper::getInstance().getProcessID() * treesPerProc;
@@ -580,18 +578,21 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
         string treeString = getTreeString();
         addTreeToCandidateSet(treeString, curScore);
 #ifdef _IQTREE_MPI
-        nniTrees.push_back(treeString);
-        nniScores.push_back(curScore);
+        maxNumTrees = treesPerProc * (MPIHelper::getInstance().getNumProcesses() - 1);
+        MPIHelper::getInstance().sendTreeToOthers(treeString, curScore);
+        addTreesFromOtherProcesses(false, maxNumTrees, true);
+        //nniTrees.push_back(treeString);
+        //nniScores.push_back(curScore);
 #endif
     }
-#ifdef _IQTREE_MPI
-    // Send trees
-    MPIHelper::getInstance().sendTreesToOthers(nniTrees, nniScores, TREE_TAG);
-    MPI_Barrier(MPI_COMM_WORLD);
-    // Receive trees
-    maxNumTrees = treesPerProc * (MPIHelper::getInstance().getNumProcesses() - 1);
-    addTreesFromOtherProcesses(true,maxNumTrees,true);
-#endif
+// #ifdef _IQTREE_MPI
+//     // Send trees
+//     MPIHelper::getInstance().sendTreesToOthers(nniTrees, nniScores, TREE_TAG);
+//     MPI_Barrier(MPI_COMM_WORLD);
+//     // Receive trees
+//     maxNumTrees = treesPerProc * (MPIHelper::getInstance().getNumProcesses() - 1);
+//     addTreesFromOtherProcesses(true,maxNumTrees,true);
+// #endif
     if (params->fixStableSplits && candidateTrees.size() > 1) {
         candidateTrees.buildTopSplits(Params::getInstance().stableSplitThreshold, Params::getInstance().numSupportTrees);
     }
@@ -1752,7 +1753,7 @@ double IQTree::doTreeSearch() {
 
     /********************************** INITIALIZE THE CANDIDATE TREE SET ***************************************/
     if (!params->user_file && (params->start_tree == STT_PARSIMONY || params->start_tree == STT_PLL_PARSIMONY)) {
-        
+
 #ifdef _IQTREE_MPI
         int treesPerProc = params->numInitTrees / MPIHelper::getInstance().getNumProcesses();
         int rest = params->numInitTrees % MPIHelper::getInstance().getNumProcesses();
@@ -2786,7 +2787,7 @@ void IQTree::saveCurrentTree(double cur_logl) {
                 better = random_double() <= 1.0 / (boot_counts[sample] + 1);
             }
             if (better) {
-                if (tree_str == "") 
+                if (tree_str == "")
                 #ifdef _OPENMP
                 #pragma omp critical
                 #endif
@@ -2943,7 +2944,7 @@ void IQTree::summarizeBootstrap(Params &params, MTreeSet &trees) {
     freeNode();
     // RARE BUG FIX: to avoid cases that identical seqs were removed and leaf name happens to be IDs
     MTree::readTree(tree_stream, rooted);
-    
+
     assignLeafNames();
     if (isSuperTree()) {
         ((PhyloSuperTree*) this)->mapTrees();
