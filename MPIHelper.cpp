@@ -96,8 +96,8 @@ void MPIHelper::receiveTrees(bool fromAll, int maxNumTrees, TreeCollection &tree
         nodes[i] = false;
     nodes[getProcessID()] = true;
     // Process all pending messages
+    MPI_Status status;
     do {
-        MPI_Status status;
         char* recvBuffer;
         int numBytes;
         // Check for incoming messages
@@ -108,7 +108,7 @@ void MPIHelper::receiveTrees(bool fromAll, int maxNumTrees, TreeCollection &tree
             MPI_Get_count(&status, MPI_CHAR, &numBytes);
 
             recvBuffer = new char[numBytes];
-            MPI_Recv(recvBuffer, numBytes, MPI_CHAR, status.MPI_SOURCE, status.MPI_TAG, MPI_COMM_WORLD, NULL);
+            MPI_Recv(recvBuffer, numBytes, MPI_CHAR, status.MPI_SOURCE, status.MPI_TAG, MPI_COMM_WORLD, &status);
             ObjectStream os(recvBuffer, numBytes);
             if (status.MPI_TAG == STOP_TAG) {
                 stringstream stopMsg;
