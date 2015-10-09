@@ -1317,7 +1317,7 @@ double ModelMixture::optimizeWeights() {
     
         
     // EM algorithm loop described in Wang, Li, Susko, and Roger (2008)
-    for (int step = 0; step < nmix; step++) {
+    for (int step = 0; step < nmix*3; step++) {
         // E-step
         memset(lk_ptn, 0, nptn*sizeof(double));
         if (step == 0) {
@@ -1362,7 +1362,6 @@ double ModelMixture::optimizeWeights() {
     
     aligned_free(new_prop);
     aligned_free(lk_ptn);
-    phylo_tree->clearAllPartialLH();
     return phylo_tree->computeLikelihood();
 }
 

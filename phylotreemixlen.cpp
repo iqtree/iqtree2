@@ -164,22 +164,22 @@ void PhyloTreeMixlen::initializeMixlen(double tolerance) {
         clearAllPartialLH();
     }
 
-    if (!cat_tree) {
-        // set up category tree for EM algorithm
-        cat_tree = new PhyloTree;
-        cat_tree->copyPhyloTree(this);
-        cat_tree->optimize_by_newton = optimize_by_newton;
-        cat_tree->setLikelihoodKernel(sse);
-        // initialize model
-        ModelFactory *model_fac = new ModelFactory();
-        model_fac->joint_optimize = params->optimize_model_rate_joint;
-        RateHeterogeneity *site_rate = new RateHeterogeneity; 
-        cat_tree->setRate(site_rate);
-        site_rate->setTree(cat_tree);
-        model_fac->site_rate = site_rate;
-        cat_tree->model_factory = model_fac;
-        cat_tree->setParams(params);
-    }
+//    if (!cat_tree) {
+//        // set up category tree for EM algorithm
+//        cat_tree = new PhyloTree;
+//        cat_tree->copyPhyloTree(this);
+//        cat_tree->optimize_by_newton = optimize_by_newton;
+//        cat_tree->setLikelihoodKernel(sse);
+//        // initialize model
+//        ModelFactory *model_fac = new ModelFactory();
+//        model_fac->joint_optimize = params->optimize_model_rate_joint;
+//        RateHeterogeneity *site_rate = new RateHeterogeneity; 
+//        cat_tree->setRate(site_rate);
+//        site_rate->setTree(cat_tree);
+//        model_fac->site_rate = site_rate;
+//        cat_tree->model_factory = model_fac;
+//        cat_tree->setParams(params);
+//    }
 
 }
 
@@ -188,7 +188,6 @@ void PhyloTreeMixlen::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool
     assert(current_it);
     current_it_back = (PhyloNeighbor*) node2->findNeighbor(node1);
     assert(current_it_back);
-
 
     size_t ptn, c;
     size_t nptn = aln->getNPattern();
@@ -239,9 +238,6 @@ void PhyloTreeMixlen::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool
         assert(current_len >= 0.0);
         // Newton-Raphson method
         optx = minimizeNewton(MIN_BRANCH_LEN, current_len, MAX_BRANCH_LEN, TOL_BRANCH_LEN, negative_lh, maxNRStep);
-        if (verbose_mode >= VB_DEBUG) {
-            cout << "minimizeNewton logl: " << computeLikelihoodFromBuffer() << endl;
-        }
 
         current_it->setLength(cur_mixture, optx);
         current_it_back->setLength(cur_mixture, optx);
@@ -254,8 +250,8 @@ void PhyloTreeMixlen::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool
     computePtnFreq();
     //curScore = -negative_lh;
 
-    double new_tree_lh = computeLikelihoodFromBuffer();
-    assert(new_tree_lh > tree_lh-1.0);
+//    double new_tree_lh = computeLikelihoodFromBuffer();
+//    assert(new_tree_lh > tree_lh-1.0);
     
     if (clearLH) {
         node1->clearReversePartialLh(node2);
@@ -343,6 +339,8 @@ double PhyloTreeMixlen::optimizeAllBranches(int my_iterations, double tolerance,
 //        cat_tree->setModel(NULL);
 //        subst_model->setTree(this);
 //    }
+    
+    clearAllPartialLH();
     
     double tree_lh = PhyloTree::optimizeAllBranches(my_iterations, tolerance, maxNRStep);
     
