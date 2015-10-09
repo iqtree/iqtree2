@@ -541,6 +541,7 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
             treesPerProc++;
         }
     }
+    maxNumTrees = 2 * (MPIHelper::getInstance().getNumProcesses() - 1);
     nNNITreesNew = treesPerProc * MPIHelper::getInstance().getNumProcesses();
     bestTreeStrings = candidateTrees.getBestTreeStrings(nNNITreesNew);
 
@@ -561,8 +562,6 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
         myBestTrees.push_back(bestTreeStrings[index]);
     }
     bestTreeStrings = myBestTrees;
-    vector<string> nniTrees;
-    vector<double> nniScores;
 #else
     bestTreeStrings = candidateTrees.getBestTreeStrings(nNNITrees);
 #endif
@@ -578,7 +577,6 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
         string treeString = getTreeString();
         addTreeToCandidateSet(treeString, curScore);
 #ifdef _IQTREE_MPI
-        maxNumTrees = treesPerProc * (MPIHelper::getInstance().getNumProcesses() - 1);
         MPIHelper::getInstance().sendTreeToOthers(treeString, curScore);
         addTreesFromOtherProcesses(false, maxNumTrees, true);
         //nniTrees.push_back(treeString);
