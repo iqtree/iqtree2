@@ -2079,7 +2079,7 @@ double PhyloTree::computeMixrateLikelihoodBranchEigen(PhyloNeighbor *dad_branch,
 
 			assert(lh_ptn > 0.0);
             if (ptn < orig_nptn) {
-				lh_ptn = log(lh_ptn);
+				lh_ptn = log(fabs(lh_ptn));
 				_pattern_lh[ptn] = lh_ptn;
 				tree_lh += lh_ptn * ptn_freq[ptn];
 			} else {
@@ -2719,9 +2719,9 @@ double PhyloTree::computeMixtureLikelihoodBranchEigen(PhyloNeighbor *dad_branch,
 //				}
 			}
 
-			assert(lh_ptn > 0.0);
+//			assert(lh_ptn > 0.0);
             if (ptn < orig_nptn) {
-				lh_ptn = log(lh_ptn);
+				lh_ptn = log(fabs(lh_ptn));
 				_pattern_lh[ptn] = lh_ptn;
 				tree_lh += lh_ptn * ptn_freq[ptn];
 			} else {

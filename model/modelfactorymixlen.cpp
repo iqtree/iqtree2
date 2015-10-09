@@ -21,6 +21,13 @@ ModelFactoryMixlen::ModelFactoryMixlen(Params &params, PhyloTree *tree, ModelsBl
 
 double ModelFactoryMixlen::optimizeParameters(bool fixed_len, bool write_info, double logl_epsilon, double gradient_epsilon) {
 
+	PhyloTreeMixlen *tree = (PhyloTreeMixlen*)site_rate->getTree();
+	assert(tree);
+    
+    tree->initializeMixlen(logl_epsilon);
+
+    return ModelFactory::optimizeParameters(fixed_len, write_info, logl_epsilon, gradient_epsilon);
+
 	assert(model);
 	assert(site_rate);
 
@@ -28,10 +35,6 @@ double ModelFactoryMixlen::optimizeParameters(bool fixed_len, bool write_info, d
 
 	double begin_time = getRealTime();
 	double cur_lh;
-	PhyloTreeMixlen *tree = (PhyloTreeMixlen*)site_rate->getTree();
-	assert(tree);
-    
-    tree->initializeMixlen(logl_epsilon);
 
 	stopStoringTransMatrix();
 

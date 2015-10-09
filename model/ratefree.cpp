@@ -450,6 +450,9 @@ double RateFree::optimizeWithEM() {
             outError("Mixture model does not work with FreeRate model!");
             score = phylo_tree->computeMixtureLikelihoodBranchEigen((PhyloNeighbor*)phylo_tree->root->neighbors[0], (PhyloNode*)phylo_tree->root); 
         }
+        
+        if (verbose_mode >= VB_MED)
+            cout << "EM score = " << score << endl;
         memset(new_prop, 0, nmix*sizeof(double));
                 
         // E-step

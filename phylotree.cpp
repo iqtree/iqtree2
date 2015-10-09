@@ -343,6 +343,8 @@ int PhyloTree::wrapperFixNegativeBranch(bool force_change) {
     	pllReadNewick(getTreeString());
     }
     resetCurScore();
+    if (verbose_mode >= VB_MAX)
+        printTree(cout);
 //    lhComputed = false;
     return numFixed;
 }
@@ -3184,10 +3186,10 @@ double PhyloTree::optimizeAllBranches(int my_iterations, double tolerance, int m
     if (verbose_mode >= VB_MAX) {
         cout << "Initial tree log-likelihood: " << tree_lh << endl;
     }
+    DoubleVector lenvec;
     //cout << tree_lh << endl;
     for (int i = 0; i < my_iterations; i++) {
 //    	string string_brlen = getTreeString();
-    	DoubleVector lenvec;
     	saveBranchLengths(lenvec);
 //        if (verbose_mode >= VB_DEBUG) {
 //            printTree(cout, WT_BR_LEN+WT_NEWLINE);
@@ -3214,7 +3216,7 @@ double PhyloTree::optimizeAllBranches(int my_iterations, double tolerance, int m
 //        }
         
 
-        if (new_tree_lh < tree_lh) {
+        if (new_tree_lh < tree_lh - TOL_LIKELIHOOD) {
         	// IN RARE CASE: tree log-likelihood decreases, revert the branch length and stop
         	if (verbose_mode >= VB_MED)
         		cout << "NOTE: Restoring branch lengths as tree log-likelihood decreases after branch length optimization: "

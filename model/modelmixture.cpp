@@ -1302,10 +1302,11 @@ double ModelMixture::targetFunk(double x[]) {
 
 double ModelMixture::optimizeWeights() {
     // first compute _pattern_lh_cat
+    double tree_lh;
     if (phylo_tree->getModelFactory()->fused_mix_rate) {
-        phylo_tree->computeMixrateLikelihoodBranchEigen((PhyloNeighbor*)phylo_tree->root->neighbors[0], (PhyloNode*)phylo_tree->root); 
+        tree_lh = phylo_tree->computeMixrateLikelihoodBranchEigen((PhyloNeighbor*)phylo_tree->root->neighbors[0], (PhyloNode*)phylo_tree->root); 
     } else {
-        phylo_tree->computeMixtureLikelihoodBranchEigen((PhyloNeighbor*)phylo_tree->root->neighbors[0], (PhyloNode*)phylo_tree->root); 
+        tree_lh = phylo_tree->computeMixtureLikelihoodBranchEigen((PhyloNeighbor*)phylo_tree->root->neighbors[0], (PhyloNode*)phylo_tree->root); 
     }
     size_t ptn, c;
     size_t nptn = phylo_tree->aln->getNPattern();
@@ -1361,6 +1362,7 @@ double ModelMixture::optimizeWeights() {
     
     aligned_free(new_prop);
     aligned_free(lk_ptn);
+    phylo_tree->clearAllPartialLH();
     return phylo_tree->computeLikelihood();
 }
 
@@ -1376,9 +1378,11 @@ double ModelMixture::optimizeParameters(double gradient_epsilon) {
 	int i, ncategory = size();
 	for (i = 0, sum = 0.0; i < ncategory; i++)
 		sum += prop[i]*at(i)->total_num_subst;
-	for (i = 0; i < ncategory; i++)
-		at(i)->total_num_subst /= sum;
-	decomposeRateMatrix();
+    if (sum != 1.0) {
+        for (i = 0; i < ncategory; i++)
+            at(i)->total_num_subst /= sum;
+        decomposeRateMatrix();
+    }
 	return score;
 }
 

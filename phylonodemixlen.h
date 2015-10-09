@@ -117,7 +117,7 @@ public:
     */
     virtual void setLength(DoubleVector &vec, int start_pos, int num_elem) { 
         assert(start_pos+num_elem <= vec.size());
-        lengths.resize(num_elem);
+        lengths.clear();
         lengths.insert(lengths.begin(), vec.begin()+start_pos, vec.begin()+start_pos+num_elem);
     }
     

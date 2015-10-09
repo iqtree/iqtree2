@@ -125,12 +125,23 @@ public:
      */
     virtual double optimizeAllBranches(int my_iterations = 100, double tolerance = TOL_LIKELIHOOD, int maxNRStep = 100);
 
+    /**
+            Inherited from Optimization class.
+            This function calculate f(value), first derivative f'(value) and 2nd derivative f''(value).
+            used by Newton raphson method to minimize the function.
+            @param value current branch length
+            @param df (OUT) first derivative
+            @param ddf (OUT) second derivative
+            @return negative of likelihood (for minimization)
+     */
+    virtual void computeFuncDerv(double value, double &df, double &ddf);
+
     /** number of mixture categories */
     int mixlen;
 
 protected:
 
-    /** current category, for printTree */
+    /** current category, for optimizing branch length */
     int cur_mixture;
     
     /** relative rate, used to initialize branch lengths */

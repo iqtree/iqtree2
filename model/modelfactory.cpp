@@ -828,7 +828,7 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info,
         new_lh = optimizeParametersOnly(gradient_epsilon);
 
 		if (new_lh == 0.0) {
-			if (!fixed_len) cur_lh = tree->optimizeAllBranches(100, logl_epsilon);
+			if (!fixed_len) cur_lh = tree->optimizeAllBranches(tree->params->num_param_iterations, logl_epsilon);
 			break;
 		}
 		if (verbose_mode >= VB_MED) {
