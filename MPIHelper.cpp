@@ -87,12 +87,11 @@ void MPIHelper::receiveTrees(bool fromAll, int maxNumTrees, TreeCollection &tree
     if (getNumProcesses() == 1) {
         return;
     }
-    int flag, minNumTrees;
+    int flag = 0;
+    int minNumTrees = 0;
     bool nodes[getNumProcesses()];
     if (fromAll)
         minNumTrees = getNumProcesses() - 1;
-    else
-        minNumTrees = 0;
     for (int i = 0; i < getNumProcesses(); i++)
         nodes[i] = false;
     nodes[getProcessID()] = true;
