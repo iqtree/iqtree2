@@ -1123,7 +1123,10 @@ void ModelMixture::initMixture(string orig_model_name, string model_name, string
 	}
 
 	DoubleVector weights;
-    name = orig_model_name;
+    if (models_block->findMixModel(orig_model_name))
+        name = orig_model_name;
+    else
+        name = "";
 	full_name = (string)"MIX" + OPEN_BRACKET;
 	if (model_list == "") model_list = model_name;
 	for (m = 0, cur_pos = 0; cur_pos < model_list.length(); m++) {
@@ -1496,14 +1499,27 @@ void ModelMixture::writeParameters(ostream &out) {
 	}
 }
 
+string ModelMixture::getName() {
+    if (name != "") return name;
+    string retname = "MIX";
+    retname += OPEN_BRACKET;
+    for (iterator it = begin(); it != end(); it++) {
+        if (it != begin()) retname += ",";
+        retname += (*it)->getName();
+    }
+    retname += CLOSE_BRACKET;
+    return retname;
+}
+
 string ModelMixture::getNameParams() {
-//	ostringstream retname;
-//	retname << "MIX" << OPEN_BRACKET;
-//    for (iterator it=begin(); it != end(); it++) {
-//        if (it != begin()) retname << ",";
-//        retname << (*it)->ModelSubst::getNameParams();
-//    }
-//	retname << CLOSE_BRACKET;
-//	return retname.str();
-    return full_name;
+    if (full_name != "")
+        return full_name;
+    string retname = "MIX";
+    retname += OPEN_BRACKET;
+    for (iterator it = begin(); it != end(); it++) {
+        if (it != begin()) retname += ",";
+        retname += (*it)->getNameParams();
+    }
+    retname += CLOSE_BRACKET;
+    return retname;
 }

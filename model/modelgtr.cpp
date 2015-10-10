@@ -68,10 +68,28 @@ void ModelGTR::setTree(PhyloTree *tree) {
 	phylo_tree = tree;
 }
 
+string ModelGTR::getName() {
+	if (getFreqType() == FREQ_EMPIRICAL)
+		return name + "+F";
+	else if (getFreqType() == FREQ_CODON_1x4)
+		return name += "+F1X4";
+	else if (getFreqType() == FREQ_CODON_3x4)
+		return name + "+F3X4";
+	else if (getFreqType() == FREQ_CODON_3x4C)
+		return name + "+F3X4C";
+	else if (getFreqType() == FREQ_ESTIMATE && phylo_tree->aln->seq_type != SEQ_DNA)
+		return name + "+FO";
+	else if (getFreqType() == FREQ_EQUAL && phylo_tree->aln->seq_type != SEQ_DNA)
+		return name + "+FQ";
+    else
+        return name;
+}
+
 string ModelGTR::getNameParams() {
+
 	ostringstream retname;
-	retname << "GTR";
-	if (num_states != 4) retname << num_states;
+	retname << name;
+//	if (num_states != 4) retname << num_states;
 	retname << '{';
 	int nrates = getNumRateEntries();
 	for (int i = 0; i < nrates; i++) {
@@ -79,7 +97,31 @@ string ModelGTR::getNameParams() {
 		retname << rates[i];
 	}
 	retname << '}';
-	return retname.str();
+    getNameParamsFreq(retname);
+    return retname.str();    
+}
+    
+void ModelGTR::getNameParamsFreq(ostream &retname) {
+	if (getFreqType() == FREQ_EMPIRICAL || (getFreqType() == FREQ_USER_DEFINED && phylo_tree->aln->seq_type == SEQ_DNA)) {
+		retname << "+F";
+        retname << "{" << state_freq[0];
+        for (int i = 1; i < num_states; i++)
+            retname << "," << state_freq[i];
+        retname << "}";
+	} else if (getFreqType() == FREQ_CODON_1x4)
+		retname << "+F1X4";
+	else if (getFreqType() == FREQ_CODON_3x4)
+		retname << "+F3X4";
+	else if (getFreqType() == FREQ_CODON_3x4C)
+		name += "+F3X4C";
+	else if (getFreqType() == FREQ_ESTIMATE) {
+		retname << "+FO";
+        retname << "{" << state_freq[0];
+        for (int i = 1; i < num_states; i++)
+            retname << "," << state_freq[i];
+        retname << "}";
+    } else if (getFreqType() == FREQ_EQUAL && phylo_tree->aln->seq_type != SEQ_DNA)
+		retname << "+FQ";
 }
 
 void ModelGTR::init(StateFreqType type) {

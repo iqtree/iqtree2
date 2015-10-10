@@ -45,6 +45,10 @@ public:
 	*/
 	virtual int getNDimFreq() { return 0; }
 	
+	/**
+	 * @return model name
+	 */
+	virtual string getName() { return name; }
 
 	/**
 	 * @return model name with parameters in form of e.g. GTR{a,b,c,d,e,f}
