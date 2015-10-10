@@ -3187,6 +3187,7 @@ void IQTree::printResultTree(string suffix) {
     string tree_file_name = params->out_prefix;
     tree_file_name += ".treefile";
     if (MPIHelper::getInstance().getProcessID() != MASTER) {
+        return;
         stringstream processTreeFile;
         processTreeFile << tree_file_name << "." << MPIHelper::getInstance().getProcessID();
         tree_file_name = processTreeFile.str();
