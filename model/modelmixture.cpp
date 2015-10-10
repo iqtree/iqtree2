@@ -1506,15 +1506,17 @@ double ModelMixture::optimizeParameters(double gradient_epsilon) {
     
 //	double score = ModelGTR::optimizeParameters(gradient_epsilon);
 	optimizing_submodels = false;
-//	if (getNDim() == 0) return score;
+	if (getNDim() == 0) return score;
 	// now rescale Q matrices to have proper interpretation of branch lengths
-//	double sum;
-//	int i, ncategory = size();
-//	for (i = 0, sum = 0.0; i < ncategory; i++)
-//		sum += prop[i]*at(i)->total_num_subst;
-//	for (i = 0; i < ncategory; i++)
-//		at(i)->total_num_subst /= sum;
-//	decomposeRateMatrix();
+	double sum;
+	int i, ncategory = size();
+	for (i = 0, sum = 0.0; i < ncategory; i++)
+		sum += prop[i]*at(i)->total_num_subst;
+    if (fabs(sum-1.0) > 1e-6) {
+        for (i = 0; i < ncategory; i++)
+            at(i)->total_num_subst /= sum;
+        decomposeRateMatrix();
+    }
 	return score;
 }
 
