@@ -14,25 +14,19 @@
 PhyloTreeMixlen::PhyloTreeMixlen() : IQTree() {
 	mixlen = 1;
     cur_mixture = -1;
-    print_mix_brlen = false;
     relative_rate = NULL;
-    cat_tree = NULL;
 }
 
 PhyloTreeMixlen::PhyloTreeMixlen(Alignment *aln, int mixlen) : IQTree(aln) {
 	cout << "Initializing heterotachy model with " << mixlen << " mixture branch lengths" << endl;
     cur_mixture = -1;
-    print_mix_brlen = false;
     relative_rate = NULL;
-    cat_tree = NULL;
     setMixlen(mixlen);
 }
 
 PhyloTreeMixlen::~PhyloTreeMixlen() {
     if (relative_rate)
         delete relative_rate;
-    if (cat_tree)
-        delete cat_tree;
 }
 
 Node* PhyloTreeMixlen::newNode(int node_id, const char* node_name) {
@@ -75,19 +69,6 @@ void PhyloTreeMixlen::initializeMixBranches(PhyloNode *node, PhyloNode *dad) {
     }
 }
 
-void PhyloTreeMixlen::assignMixBranches(int category, Node *node, Node *dad) {
-    if (!node) node = root;
-    FOR_NEIGHBOR_IT(node, dad, it) {
-        PhyloNeighborMixlen *nei = (PhyloNeighborMixlen*)(*it);
-        assert(category < nei->lengths.size());
-        nei->length = nei->lengths[category];
-        nei = (PhyloNeighborMixlen*)(*it)->node->findNeighbor(node);
-        assert(category < nei->lengths.size());
-        nei->length = nei->lengths[category];
-        assignMixBranches(category, (*it)->node, node);
-    }
-}
-
 void PhyloTreeMixlen::assignMeanMixBranches(Node *node, Node *dad) {
     if (!node) node = root;
     FOR_NEIGHBOR_IT(node, dad, it) {
@@ -103,22 +84,6 @@ void PhyloTreeMixlen::assignMeanMixBranches(Node *node, Node *dad) {
         assignMeanMixBranches((*it)->node, node);
     }
 }
-
-void PhyloTreeMixlen::copyMixBranches(PhyloTree *tree, int category) {
-    NodeVector this_nodes1, this_nodes2, tree_nodes1, tree_nodes2;
-    tree->getBranches(tree_nodes1, tree_nodes2, tree->root->neighbors[0]->node);
-    getBranches(this_nodes1, this_nodes2, root->neighbors[0]->node);
-    for (int i = 0; i < this_nodes1.size(); i++) {
-        PhyloNeighborMixlen *nei = (PhyloNeighborMixlen*)this_nodes1[i]->findNeighbor(this_nodes2[i]);
-        assert(category < nei->lengths.size());
-        nei->lengths[category] = tree_nodes1[i]->findNeighbor(tree_nodes2[i])->length;
-        
-        nei = (PhyloNeighborMixlen*)this_nodes2[i]->findNeighbor(this_nodes1[i]);
-        assert(category < nei->lengths.size());
-        nei->lengths[category] = tree_nodes2[i]->findNeighbor(tree_nodes1[i])->length;
-    }
-}
-
 
 void PhyloTreeMixlen::initializeMixlen(double tolerance) {
     if (((PhyloNeighborMixlen*)root->neighbors[0])->lengths.empty()) {
@@ -163,23 +128,6 @@ void PhyloTreeMixlen::initializeMixlen(double tolerance) {
         initializeMixBranches();
         clearAllPartialLH();
     }
-
-//    if (!cat_tree) {
-//        // set up category tree for EM algorithm
-//        cat_tree = new PhyloTree;
-//        cat_tree->copyPhyloTree(this);
-//        cat_tree->optimize_by_newton = optimize_by_newton;
-//        cat_tree->setLikelihoodKernel(sse);
-//        // initialize model
-//        ModelFactory *model_fac = new ModelFactory();
-//        model_fac->joint_optimize = params->optimize_model_rate_joint;
-//        RateHeterogeneity *site_rate = new RateHeterogeneity; 
-//        cat_tree->setRate(site_rate);
-//        site_rate->setTree(cat_tree);
-//        model_fac->site_rate = site_rate;
-//        cat_tree->model_factory = model_fac;
-//        cat_tree->setParams(params);
-//    }
 
 }
 
@@ -248,118 +196,28 @@ void PhyloTreeMixlen::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool
     // reset ptn_freq
     ptn_freq_computed = false;
     computePtnFreq();
-    //curScore = -negative_lh;
 
-//    double new_tree_lh = computeLikelihoodFromBuffer();
-//    assert(new_tree_lh > tree_lh-1.0);
-    
     if (clearLH) {
         node1->clearReversePartialLh(node2);
         node2->clearReversePartialLh(node1);
     }
 
-//    return -negative_lh;
 }
 
 
 double PhyloTreeMixlen::optimizeAllBranches(int my_iterations, double tolerance, int maxNRStep) {
 
-	initializeMixlen(tolerance);
-
-//    // EM algorithm
-//    size_t ptn, c;
-//    size_t nptn = aln->getNPattern();
-//    size_t nmix = model->getNMixtures();
-//    assert(nmix == mixlen);
-//
-//    print_mix_brlen = false;
-//
-//            
-//    // first compute _pattern_lh_cat
-//    double tree_lh;
-//
-//    if (!getModel()->isMixture())
-//        tree_lh = computeLikelihoodBranchEigen((PhyloNeighbor*)root->neighbors[0], (PhyloNode*)root); 
-//    else if (getModelFactory()->fused_mix_rate) {
-//        outError("Heterotachy with fused mixture not supported");
-//        tree_lh = computeMixrateLikelihoodBranchEigen((PhyloNeighbor*)root->neighbors[0], (PhyloNode*)root); 
-//    } else {
-//        tree_lh = computeMixtureLikelihoodBranchEigen((PhyloNeighbor*)root->neighbors[0], (PhyloNode*)root); 
-//    }
-////    cout << "Init LnL = " << tree_lh << endl;
-//
-//    // E-step
-//    // decoupled weights (prop) from _pattern_lh_cat to obtain L_ci and compute pattern likelihood L_i
-//    for (ptn = 0; ptn < nptn; ptn++) {
-//        double *this_lk_cat = _pattern_lh_cat + ptn*nmix;
-//        double lk_ptn = 0.0;
-//        for (c = 0; c < nmix; c++) {
-//            lk_ptn += this_lk_cat[c];
-//        }
-//        assert(lk_ptn != 0.0);
-//        lk_ptn = ptn_freq[ptn] / lk_ptn;
-//        // transform _pattern_lh_cat into posterior probabilities of each category
-//        for (c = 0; c < nmix; c++) {
-//            this_lk_cat[c] *= lk_ptn;
-//        }
-//        
-//    } 
-//    
-//    double new_tree_lh = 0.0;
-//    
-//    // now optimize categories one by one
-//    for (c = 0; c < nmix; c++) {
-//        assignMixBranches(c);
-//        cat_tree->copyPhyloTree(this);
-//        
-//        ModelGTR *subst_model;
-//        if (getModel()->isMixture())
-//            subst_model = ((ModelMixture*)getModel())->at(c);
-//        else
-//            subst_model = (ModelGTR*)getModel();
-//        cat_tree->setModel(subst_model);
-//        subst_model->setTree(cat_tree);
-//        cat_tree->getModelFactory()->model = subst_model;
-//                    
-//        // initialize likelihood
-//        cat_tree->initializeAllPartialLh();
-//        // copy posterior probability into ptn_freq
-//        cat_tree->computePtnFreq();
-//        double *this_lk_cat = _pattern_lh_cat+c;
-//        for (ptn = 0; ptn < nptn; ptn++)
-//            cat_tree->ptn_freq[ptn] = this_lk_cat[ptn*nmix];
-//        
-//        // optimize branch lengths of mixture category
-//        cat_tree->optimizeAllBranches(my_iterations, tolerance, maxNRStep);
-//        
-//        // copy optimized branch lengths
-//        copyMixBranches(cat_tree, c);
-//        
-//        // reset subst model
-//        cat_tree->setModel(NULL);
-//        subst_model->setTree(this);
-//    }
-    
+	initializeMixlen(tolerance);    
     clearAllPartialLH();
     
-    double tree_lh = PhyloTree::optimizeAllBranches(my_iterations, tolerance, maxNRStep);
-    
+    double tree_lh = PhyloTree::optimizeAllBranches(my_iterations, tolerance, maxNRStep);    
     assignMeanMixBranches();
-    
-//    clearAllPartialLH();
-//    new_tree_lh = computeLikelihood();
-//    cout << "Optimized LnL = " << new_tree_lh << endl;
-//    assert(new_tree_lh >= tree_lh - 0.1);
-    
-//    delete tree;
-    
-    print_mix_brlen = true;
     
     return tree_lh;
 }
 
 void PhyloTreeMixlen::printBranchLength(ostream &out, int brtype, bool print_slash, Neighbor *length_nei) {
-    if (!print_mix_brlen || ((PhyloNeighborMixlen*)length_nei)->lengths.empty())
+    if (((PhyloNeighborMixlen*)length_nei)->lengths.empty())
         return PhyloTree::printBranchLength(out, brtype, print_slash, length_nei);
 
     PhyloNeighborMixlen *nei = (PhyloNeighborMixlen*) length_nei;
@@ -467,17 +325,14 @@ void PhyloTreeMixlen::computeFuncDerv(double value, double &df, double &ddf) {
     double *val2 = new double[statecat];
 	for (c = 0; c < ncat; c++) {
 		double prop = site_rate->getProp(c);
-//		for (m = 0; m < nmixture; m++) 
-//        {
-			for (i = 0; i < nstates; i++) {
-				double cof = eval[cur_mixture*nstates+i]*site_rate->getRate(c);
-                // length for heterotachy model
-				double val = exp(cof*dad_branch->getLength(cur_mixture)) * prop * ((ModelMixture*)model)->prop[cur_mixture];
-				double val1_ = cof*val;
-				val0[(c)*nstates+i] = val;
-				val1[(c)*nstates+i] = val1_;
-				val2[(c)*nstates+i] = cof*val1_;
-//			}
+        for (i = 0; i < nstates; i++) {
+            double cof = eval[cur_mixture*nstates+i]*site_rate->getRate(c);
+            // length for heterotachy model
+            double val = exp(cof*dad_branch->getLength(cur_mixture)) * prop * ((ModelMixture*)model)->prop[cur_mixture];
+            double val1_ = cof*val;
+            val0[(c)*nstates+i] = val;
+            val1[(c)*nstates+i] = val1_;
+            val2[(c)*nstates+i] = cof*val1_;
 		}
 	}
 

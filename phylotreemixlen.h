@@ -64,22 +64,9 @@ public:
     void setMixlen(int mixlen);
 
     /**
-     * assign branch length by branch length of a category
-     * @param category source category to assign
-     */
-    void assignMixBranches(int category, Node *node = NULL, Node *dad = NULL);
-
-    /**
      * assign branch length as mean over all branch lengths of categories
      */
     void assignMeanMixBranches(Node *node = NULL, Node *dad = NULL);
-
-    /**
-     * copy branch lengths of a tree into a mixture category of this tree
-     * @param tree source tree where branch lengths will be copied
-     * @param category destination category
-     */
-    void copyMixBranches(PhyloTree *tree, int category);
 
     /**
      *  internal function called by printTree to print branch length
@@ -87,17 +74,6 @@ public:
      *  @param length_nei target Neighbor to print
      */
     virtual void printBranchLength(ostream &out, int brtype, bool print_slash, Neighbor *length_nei);
-
-
-    /**
-            print the tree to the output file in newick format
-            @param out the output file.
-            @param node the starting node, NULL to start from the root
-            @param dad dad of the node, used to direct the search
-            @param brtype type of branch to print
-            @return ID of the taxon with smallest ID
-     */
-//    virtual int printTree(ostream &out, int brtype, Node *node, Node *dad = NULL);
 
     /**
         initialize mixture branch lengths
@@ -146,12 +122,6 @@ protected:
     
     /** relative rate, used to initialize branch lengths */
     RateHeterogeneity *relative_rate;
-
-    /** true to print mixture branch lengths when calling printTree */
-    bool print_mix_brlen;
-
-    /** category tree used internally to optimize parameters with EM algorithm */
-    PhyloTree *cat_tree;
 
 };
 
