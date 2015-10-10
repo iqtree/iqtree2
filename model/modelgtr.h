@@ -220,6 +220,11 @@ public:
 		@return the number of dimensions
 	*/
 	virtual int getNDim();
+
+	/**
+		@return the number of dimensions corresponding to state frequencies
+	*/
+	virtual int getNDimFreq();
 	
 
 	/**

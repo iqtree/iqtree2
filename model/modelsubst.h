@@ -41,6 +41,12 @@ public:
 	virtual int getNDim() { return 0; }
 
 	/**
+		@return the number of dimensions corresponding to state frequencies
+	*/
+	virtual int getNDimFreq() { return 0; }
+	
+
+	/**
 	 * @return model name with parameters in form of e.g. GTR{a,b,c,d,e,f}
 	 */
 	virtual string getNameParams() { return name; }

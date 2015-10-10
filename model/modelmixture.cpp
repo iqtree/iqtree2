@@ -1284,6 +1284,13 @@ int ModelMixture::getNDim() {
 	return dim;
 }
 
+int ModelMixture::getNDimFreq() {
+    int dim = 0;
+	for (iterator it = begin(); it != end(); it++)
+		dim += (*it)->getNDimFreq();
+	return dim;
+}
+
 double ModelMixture::targetFunk(double x[]) {
 	getVariables(x);
 //	decomposeRateMatrix();

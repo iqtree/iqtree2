@@ -362,6 +362,16 @@ int ModelGTR::getNDim() {
 	return ndim;
 }
 
+int ModelGTR::getNDimFreq() { 
+	if (freq_type == FREQ_EMPIRICAL) 
+        return num_states-1;
+	else if (freq_type == FREQ_CODON_1x4) 
+        return 3;
+	else if (freq_type == FREQ_CODON_3x4 || freq_type == FREQ_CODON_3x4C) 
+        return 9;
+    
+    return 0;
+}
 
 void ModelGTR::scaleStateFreq(bool sum_one) {
 	int i;

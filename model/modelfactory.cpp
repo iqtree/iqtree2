@@ -553,13 +553,7 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 }
 
 int ModelFactory::getNParameters() {
-	int df = model->getNDim() + site_rate->getNDim() + site_rate->phylo_tree->branchNum;
-	if (model->freq_type == FREQ_EMPIRICAL) 
-        df += model->num_states-1;
-	else if (model->freq_type == FREQ_CODON_1x4) 
-        df += 3;
-	else if (model->freq_type == FREQ_CODON_3x4 || model->freq_type == FREQ_CODON_3x4C) 
-        df += 9;
+	int df = model->getNDim() + model->getNDimFreq() + site_rate->getNDim() + site_rate->phylo_tree->branchNum;
 	return df;
 }
 void ModelFactory::readSiteFreq(Alignment *aln, char* site_freq_file, IntVector &site_model, vector<double*> &freq_vec)
