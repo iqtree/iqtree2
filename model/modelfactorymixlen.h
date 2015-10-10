@@ -30,4 +30,10 @@ public:
 	virtual double optimizeParameters(bool fixed_len = false, bool write_info = true,
                                       double logl_epsilon = 0.1, double gradient_epsilon = 0.001);
 
+
+    /**
+     * @return #parameters of the model + # branches
+     */
+    virtual int getNParameters();
+
 };

@@ -30,3 +30,9 @@ double ModelFactoryMixlen::optimizeParameters(bool fixed_len, bool write_info, d
 
 
 }
+
+int ModelFactoryMixlen::getNParameters() {
+	int df = ModelFactory::getNParameters();
+    df += site_rate->phylo_tree->branchNum * (site_rate->phylo_tree->getMixlen()-1);
+	return df;
+}
