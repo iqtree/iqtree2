@@ -3061,7 +3061,7 @@ void PhyloTree::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool clear
         if (verbose_mode >= VB_DEBUG) {
             cout << "minimizeNewton logl: " << computeLikelihoodFromBuffer() << endl;
         }
-    	if (optx > MAX_BRANCH_LEN*0.95) {
+    	if (optx > MAX_BRANCH_LEN*0.95 && !isSuperTree()) {
     		// newton raphson diverged, reset
     	    double opt_lh = computeLikelihoodFromBuffer();
     	    current_it->length = current_len;
