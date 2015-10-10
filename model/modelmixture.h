@@ -87,7 +87,19 @@ public:
 	*/
 	virtual double targetFunk(double x[]);
 
+    /** 
+        optimize mixture weights using EM algorithm 
+        @return log-likelihood of optimized weights
+    */
     double optimizeWeights();
+
+    /** 
+        optimize rate parameters using EM algorithm
+        @param gradient_epsilon
+        @return log-likelihood of optimized parameters
+    */
+    double optimizeWithEM(double gradient_epsilon);
+
 
 	/**
 		optimize model parameters

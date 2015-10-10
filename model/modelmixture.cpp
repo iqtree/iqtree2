@@ -1123,9 +1123,8 @@ void ModelMixture::initMixture(string orig_model_name, string model_name, string
 	}
 
 	DoubleVector weights;
-    if (models_block->findMixModel(orig_model_name))
-        name = orig_model_name;
-    else
+    name = orig_model_name.substr(0, orig_model_name.find_first_of("+*"));
+    if (!models_block->findMixModel(name))
         name = "";
 	full_name = (string)"MIX" + OPEN_BRACKET;
 	if (model_list == "") model_list = model_name;
@@ -1374,21 +1373,148 @@ double ModelMixture::optimizeWeights() {
     return phylo_tree->computeLikelihood();
 }
 
+double ModelMixture::optimizeWithEM(double gradient_epsilon) {
+    size_t ptn, c;
+    size_t nptn = phylo_tree->aln->getNPattern();
+    size_t nmix = size();
+    
+//    double *lk_ptn = aligned_alloc<double>(nptn);
+    double *new_prop = aligned_alloc<double>(nmix);
+    PhyloTree *tree = new PhyloTree;
+    
+    // attach memory to save space
+    tree->central_partial_lh = phylo_tree->central_partial_lh;
+    tree->central_scale_num = phylo_tree->central_scale_num;
+    tree->central_partial_pars = phylo_tree->central_partial_pars;
+    
+    tree->copyPhyloTree(phylo_tree);
+    tree->optimize_by_newton = phylo_tree->optimize_by_newton;
+    tree->setLikelihoodKernel(phylo_tree->sse);
+    // initialize model
+    ModelFactory *model_fac = new ModelFactory();
+    model_fac->joint_optimize = phylo_tree->params->optimize_model_rate_joint;
+    model_fac->unobserved_ptns = phylo_tree->getModelFactory()->unobserved_ptns;
+
+    RateHeterogeneity *site_rate = new RateHeterogeneity; 
+    tree->setRate(site_rate);
+    site_rate->setTree(tree);
+            
+    model_fac->site_rate = site_rate;
+    tree->model_factory = model_fac;
+    tree->setParams(phylo_tree->params);
+    double score;
+        
+    int num_steps = (getNDim()+1)*3;
+    
+    // EM algorithm loop described in Wang, Li, Susko, and Roger (2008)
+    for (int step = 0; step < num_steps; step++) {
+        // first compute _pattern_lh_cat
+        if (phylo_tree->getModelFactory()->fused_mix_rate) {
+            score = phylo_tree->computeMixrateLikelihoodBranchEigen((PhyloNeighbor*)phylo_tree->root->neighbors[0], (PhyloNode*)phylo_tree->root); 
+        } else {
+            score = phylo_tree->computeMixtureLikelihoodBranchEigen((PhyloNeighbor*)phylo_tree->root->neighbors[0], (PhyloNode*)phylo_tree->root); 
+        }
+        
+        memset(new_prop, 0, nmix*sizeof(double));
+                
+        // E-step
+        // decoupled weights (prop) from _pattern_lh_cat to obtain L_ci and compute pattern likelihood L_i
+        for (ptn = 0; ptn < nptn; ptn++) {
+            double *this_lk_cat = phylo_tree->_pattern_lh_cat + ptn*nmix;
+            double lk_ptn = 0.0;
+            for (c = 0; c < nmix; c++) {
+                lk_ptn += this_lk_cat[c];
+            }
+            lk_ptn = phylo_tree->ptn_freq[ptn] / lk_ptn;
+            
+            // transform _pattern_lh_cat into posterior probabilities of each category
+            for (c = 0; c < nmix; c++) {
+                this_lk_cat[c] *= lk_ptn;
+                new_prop[c] += this_lk_cat[c];
+            }
+            
+        } 
+        
+        // M-step, update weights according to (*)        
+        
+        bool converged = !fix_prop;
+        
+        if (!fix_prop) {
+            for (c = 0; c < nmix; c++) {
+                new_prop[c] = new_prop[c] / phylo_tree->getAlnNSite();
+                // check for convergence
+                converged = converged && (fabs(prop[c]-new_prop[c]) < 1e-4);
+                prop[c] = new_prop[c];
+            }
+        }
+        
+        // now optimize model one by one
+        for (c = 0; c < nmix; c++) if (at(c)->getNDim() > 0) {
+            tree->copyPhyloTree(phylo_tree);
+            ModelGTR *subst_model;
+            subst_model = at(c);
+            tree->setModel(subst_model);
+            subst_model->setTree(tree);
+            model_fac->model = subst_model;
+                        
+            // initialize likelihood
+            tree->initializeAllPartialLh();
+            // copy posterior probability into ptn_freq
+            tree->computePtnFreq();
+            double *this_lk_cat = phylo_tree->_pattern_lh_cat+c;
+            for (ptn = 0; ptn < nptn; ptn++)
+                tree->ptn_freq[ptn] = this_lk_cat[ptn*nmix];
+            subst_model->optimizeParameters(gradient_epsilon);
+//            double scaling = rates[c];
+//            tree->scaleLength(scaling);
+//            tree->optimizeTreeLengthScaling(scaling, 0.001);
+//            converged = converged && (fabs(rates[c] - scaling) < 1e-4);
+//            rates[c] = scaling;
+//            sum += prop[c] * rates[c];
+            // reset subst model
+            tree->setModel(NULL);
+            subst_model->setTree(phylo_tree);
+            
+        }
+        
+        phylo_tree->clearAllPartialLH();
+        if (converged) break;
+    }
+    
+    // deattach memory
+    tree->central_partial_lh = NULL;
+    tree->central_scale_num = NULL;
+    tree->central_partial_pars = NULL;
+    
+    delete tree;
+    aligned_free(new_prop);
+    score = phylo_tree->computeLikelihood();
+    phylo_tree->clearAllPartialLH();
+    return score;
+}
+
 double ModelMixture::optimizeParameters(double gradient_epsilon) {
 	optimizing_submodels = true;
-	double score = ModelGTR::optimizeParameters(gradient_epsilon);
-	optimizing_submodels = false;
-    if (!fix_prop)
+    
+    int dim = getNDim();
+    double score = 0.0;
+    
+    if (dim > 0)
+        score = optimizeWithEM(gradient_epsilon);
+    else if (!fix_prop)
         score = optimizeWeights();
-	if (getNDim() == 0) return score;
+    
+//	double score = ModelGTR::optimizeParameters(gradient_epsilon);
+	optimizing_submodels = false;
+//	if (getNDim() == 0) return score;
 	// now rescale Q matrices to have proper interpretation of branch lengths
-	double sum;
-	int i, ncategory = size();
-	for (i = 0, sum = 0.0; i < ncategory; i++)
-		sum += prop[i]*at(i)->total_num_subst;
-	for (i = 0; i < ncategory; i++)
-		at(i)->total_num_subst /= sum;
-	decomposeRateMatrix();
+//	double sum;
+//	int i, ncategory = size();
+//	for (i = 0, sum = 0.0; i < ncategory; i++)
+//		sum += prop[i]*at(i)->total_num_subst;
+//	for (i = 0; i < ncategory; i++)
+//		at(i)->total_num_subst /= sum;
+//	decomposeRateMatrix();
 	return score;
 }
 

@@ -771,8 +771,8 @@ void ModelGTR::readStateFreq(string str) throw(const char*) {
 			outError("State frequency must be in [0,1] in ", str);
 		if (i == num_states-1 && end_pos < str.length())
 			outError("Unexpected end of string ", str);
-		if (end_pos < str.length() && str[end_pos] != ',')
-			outError("Comma to separate state frequencies not found in ", str);
+		if (end_pos < str.length() && str[end_pos] != ',' && str[end_pos] != ' ')
+			outError("Comma/Space to separate state frequencies not found in ", str);
 		end_pos++;
 	}
 	double sum = 0.0;
