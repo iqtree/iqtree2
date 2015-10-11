@@ -2354,11 +2354,13 @@ void runPhyloAnalysis(Params &params) {
                 outError("Heterotachy model [+H] must have at least 2 categories");
             params.model_name = params.model_name.substr(0, pos) + params.model_name.substr(pos+end_pos+2);
             if (params.model_name.find("MIX") == string::npos) {
-                string str = "MIX{" + params.model_name;
+                string mixpart = params.model_name.substr(0, params.model_name.find_first_of("+*"));
+                string str = "MIX{" + mixpart;
                 for (int i = 1; i < num_mixlen; i++)
-                    str += "," + params.model_name;
+                    str += "," + mixpart;
                 str += "}";
-                params.model_name = str;
+                params.model_name = str + params.model_name.substr(params.model_name.find_first_of("+*"));
+                cout << "Heterotachy mixture model name: " << params.model_name << endl;
             }
             tree = new PhyloTreeMixlen(alignment, num_mixlen);
         } else

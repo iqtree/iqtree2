@@ -1517,10 +1517,12 @@ double ModelMixture::optimizeParameters(double gradient_epsilon) {
 	int i, ncategory = size();
 	for (i = 0, sum = 0.0; i < ncategory; i++)
 		sum += prop[i]*at(i)->total_num_subst;
-    if (sum != 1.0) {
+//    sum += phylo_tree->getRate()->getPInvar();
+    if (fabs(sum-1.0) > 1e-6) {
         for (i = 0; i < ncategory; i++)
             at(i)->total_num_subst /= sum;
         decomposeRateMatrix();
+        phylo_tree->clearAllPartialLH();
     }
 	return score;
 }

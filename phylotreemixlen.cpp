@@ -117,9 +117,10 @@ void PhyloTreeMixlen::initializeMixlen(double tolerance) {
             if (getModel()->isMixture()) {
                 setLikelihoodKernel(sse);
                 ModelMixture *mm = (ModelMixture*)getModel();
+                double pinvar = site_rate->getPInvar();
                 if (!mm->fix_prop)
                     for (int i = 0; i < mm->getNMixtures(); i++)
-                        mm->prop[i] = relative_rate->getProp(i);
+                        mm->prop[i] = relative_rate->getProp(i)*(1.0-pinvar);
             }
             
         }
@@ -158,7 +159,7 @@ void PhyloTreeMixlen::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool
     // decoupled weights (prop) from _pattern_lh_cat to obtain L_ci and compute pattern likelihood L_i
     for (ptn = 0; ptn < nptn; ptn++) {
         double *this_lk_cat = _pattern_lh_cat + ptn*nmix;
-        double lk_ptn = 0.0;
+        double lk_ptn = ptn_invar[ptn];
         for (c = 0; c < nmix; c++) {
             lk_ptn += this_lk_cat[c];
         }
@@ -174,7 +175,7 @@ void PhyloTreeMixlen::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool
     double negative_lh;
     double optx;
     theta_computed = false;
-    ptn_freq_computed = true;
+    computePtnFreq();
     
     for (cur_mixture = 0; cur_mixture < mixlen; cur_mixture++) {
 
