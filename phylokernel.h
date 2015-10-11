@@ -1362,7 +1362,7 @@ void PhyloTree::computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, Phylo
     		break;
     	}
         // add dummy states
-        if (site > 0) {
+        if (site > 0 && site < NUM_BITS) {
             x += site/UINT_BITS;
         	*x |= ~((1<<(site%UINT_BITS)) - 1);
             x++;
