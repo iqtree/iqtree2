@@ -1320,56 +1320,93 @@ double ModelMixture::optimizeWeights() {
     size_t nptn = phylo_tree->aln->getNPattern();
     size_t nmix = getNMixtures();
     
-    double *lk_ptn = aligned_alloc<double>(nptn);
+//    double *lk_ptn = aligned_alloc<double>(nptn);
     double *new_prop = aligned_alloc<double>(nmix);
+    double *ratio_prop = aligned_alloc<double>(nmix);
     
         
     // EM algorithm loop described in Wang, Li, Susko, and Roger (2008)
     for (int step = 0; step < nmix; step++) {
         // E-step
-        memset(lk_ptn, 0, nptn*sizeof(double));
-        if (step == 0) {
-            for (c = 0; c < nmix; c++) 
-                new_prop[c] = 1.0 / prop[c];
-            // decoupled weights (prop) from _pattern_lh_cat to obtain L_ci and compute pattern likelihood L_i
+//        memset(lk_ptn, 0, nptn*sizeof(double));
+//        memcpy(lk_ptn, phylo_tree->ptn_invar, nptn*sizeof(double));
+
+        if (step > 0) {
+            // convert _pattern_lh_cat taking into account new weights
             for (ptn = 0; ptn < nptn; ptn++) {
                 double *this_lk_cat = phylo_tree->_pattern_lh_cat + ptn*nmix;
                 for (c = 0; c < nmix; c++) {
-                    lk_ptn[ptn] += this_lk_cat[c];
-                    this_lk_cat[c] *= new_prop[c];
+                    this_lk_cat[c] *= ratio_prop[c];
                 }
             } 
-        } else {
-            // update L_i according to (**)
-            for (ptn = 0; ptn < nptn; ptn++) {
-                double *this_lk_cat = phylo_tree->_pattern_lh_cat + ptn*nmix;
-                for (c = 0; c < nmix; c++) {
-                    lk_ptn[ptn] += this_lk_cat[c] * prop[c];
-                }
-            }        
         }
-        
-        // M-step, update weights according to (*)
         memset(new_prop, 0, nmix*sizeof(double));
         for (ptn = 0; ptn < nptn; ptn++) {
-            double inv_lk_ptn = phylo_tree->ptn_freq[ptn] / lk_ptn[ptn];
             double *this_lk_cat = phylo_tree->_pattern_lh_cat + ptn*nmix;
-            for (c = 0; c < nmix; c++)
-                new_prop[c] += this_lk_cat[c] * inv_lk_ptn;
-        }
-        
+            double lk_ptn = phylo_tree->ptn_invar[ptn];
+            for (c = 0; c < nmix; c++) {
+                lk_ptn += this_lk_cat[c];
+            }
+            lk_ptn = phylo_tree->ptn_freq[ptn] / lk_ptn;
+            for (c = 0; c < nmix; c++) {
+                new_prop[c] += this_lk_cat[c] * lk_ptn;
+            }
+        } 
         bool converged = true;
         for (c = 0; c < nmix; c++) {
-            new_prop[c] = prop[c] * (new_prop[c] / phylo_tree->getAlnNSite());
+            new_prop[c] = new_prop[c] / phylo_tree->getAlnNSite();
             // check for convergence
             converged = converged && (fabs(prop[c]-new_prop[c]) < 1e-4);
+            ratio_prop[c] = new_prop[c] / prop[c];
             prop[c] = new_prop[c];
         }
         if (converged) break;
+
+        
+//        if (step == 0) {
+//            for (c = 0; c < nmix; c++) 
+//                new_prop[c] = 1.0 / prop[c];
+//            // decoupled weights (prop) from _pattern_lh_cat to obtain L_ci and compute pattern likelihood L_i
+//            for (ptn = 0; ptn < nptn; ptn++) {
+//                double *this_lk_cat = phylo_tree->_pattern_lh_cat + ptn*nmix;
+//                for (c = 0; c < nmix; c++) {
+//                    lk_ptn[ptn] += this_lk_cat[c];
+//                    this_lk_cat[c] *= new_prop[c];
+//                }
+//            } 
+//        } else {
+//            // update L_i according to (**)
+//            for (ptn = 0; ptn < nptn; ptn++) {
+//                double *this_lk_cat = phylo_tree->_pattern_lh_cat + ptn*nmix;
+//                for (c = 0; c < nmix; c++) {
+//                    lk_ptn[ptn] += this_lk_cat[c] * prop[c];
+//                }
+//            }        
+//        }
+//        
+//        // M-step, update weights according to (*)
+//        memset(new_prop, 0, nmix*sizeof(double));
+//        for (ptn = 0; ptn < nptn; ptn++) {
+//            double inv_lk_ptn = phylo_tree->ptn_freq[ptn] / lk_ptn[ptn];
+//            double *this_lk_cat = phylo_tree->_pattern_lh_cat + ptn*nmix;
+//            for (c = 0; c < nmix; c++)
+//                new_prop[c] += this_lk_cat[c] * inv_lk_ptn;
+//        }
+//        
+//        bool converged = true;
+//        for (c = 0; c < nmix; c++) {
+//            new_prop[c] = prop[c] * (new_prop[c] / phylo_tree->getAlnNSite());
+//            // check for convergence
+//            converged = converged && (fabs(prop[c]-new_prop[c]) < 1e-4);
+//            ratio_prop[c] = new_prop[c] / prop[c];
+//            prop[c] = new_prop[c];
+//        }
+//        if (converged) break;
     }
     
+    aligned_free(ratio_prop);
     aligned_free(new_prop);
-    aligned_free(lk_ptn);
+//    aligned_free(lk_ptn);
     return phylo_tree->computeLikelihood();
 }
 
@@ -1421,7 +1458,7 @@ double ModelMixture::optimizeWithEM(double gradient_epsilon) {
         // decoupled weights (prop) from _pattern_lh_cat to obtain L_ci and compute pattern likelihood L_i
         for (ptn = 0; ptn < nptn; ptn++) {
             double *this_lk_cat = phylo_tree->_pattern_lh_cat + ptn*nmix;
-            double lk_ptn = 0.0;
+            double lk_ptn = phylo_tree->ptn_invar[ptn];
             for (c = 0; c < nmix; c++) {
                 lk_ptn += this_lk_cat[c];
             }
