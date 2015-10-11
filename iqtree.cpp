@@ -266,36 +266,70 @@ void IQTree::createPLLPartition(Params &params, ostream &pllPartitionFileHandle)
         // additional check for PLL hard limit
         if (siqtree->size() > PLL_NUM_BRANCHES)
         	outError("Number of partitions exceeds PLL limit, please increase PLL_NUM_BRANCHES constant in pll.h");
-        int i = 0;
-        int startPos = 1;
-        for (PhyloSuperTree::iterator it = siqtree->begin(); it != siqtree->end(); it++) {
-            i++;
-            int curLen = ((*it))->getAlnNSite();
-            if ((*it)->aln->seq_type == SEQ_DNA) {
-                pllPartitionFileHandle << "DNA";
-            } else if ((*it)->aln->seq_type == SEQ_PROTEIN) {
-            	if (siqtree->part_info[i-1].model_name != "" && siqtree->part_info[i-1].model_name.substr(0, 4) != "TEST") {
-                    string modelStr = siqtree->part_info[i - 1].model_name.
-                            substr(0, siqtree->part_info[i - 1].model_name.find_first_of("+{"));
-                    if (modelStr == "LG4")
-                        modelStr = "LG4M";
-                    bool name_ok = false;
-                    for (int j = 0; j < 18; j++)
-                        if (modelStr == aa_model_names_rax[j]) {
-                            name_ok = true;
-                            break;
+        if (params.pll) {
+            int i = 0;
+            int startPos = 1;
+            
+            // prepare proper partition file 
+            for (PhyloSuperTree::iterator it = siqtree->begin(); it != siqtree->end(); it++) {
+                i++;
+                int curLen = ((*it))->getAlnNSite();
+                if ((*it)->aln->seq_type == SEQ_DNA) {
+                    pllPartitionFileHandle << "DNA";
+                } else if ((*it)->aln->seq_type == SEQ_PROTEIN) {
+                    if (siqtree->part_info[i-1].model_name != "" && siqtree->part_info[i-1].model_name.substr(0, 4) != "TEST") {
+                        string modelStr = siqtree->part_info[i - 1].model_name.
+                                substr(0, siqtree->part_info[i - 1].model_name.find_first_of("+{"));
+                        if (modelStr == "LG4")
+                            modelStr = "LG4M";
+                        bool name_ok = false;
+                        for (int j = 0; j < 18; j++)
+                            if (modelStr == aa_model_names_rax[j]) {
+                                name_ok = true;
+                                break;
+                            }
+                        if (name_ok)
+                            pllPartitionFileHandle << modelStr;
+                        else
+                            pllPartitionFileHandle << "WAG";                    
+                    } else {
+                        pllPartitionFileHandle << "WAG";
+                    }
+                } else
+                    outError("PLL only works with DNA/protein alignments");
+                pllPartitionFileHandle << ", p" << i << " = " << startPos << "-" << startPos + curLen - 1 << endl;
+                startPos = startPos + curLen;
+            }
+        } else {
+            // only prepare partition file for computing parsimony trees
+            SeqType datatype[] = {SEQ_DNA, SEQ_PROTEIN};
+            PhyloSuperTree::iterator it;
+            
+            for (int i = 0; i < sizeof(datatype)/sizeof(SeqType); i++) {
+                bool first = true;
+                int startPos = 1;
+                for (it = siqtree->begin(); it != siqtree->end(); it++) 
+                    if ((*it)->aln->seq_type == datatype[i]) {
+                        if (first) {
+                        if (datatype[i] == SEQ_DNA)
+                            pllPartitionFileHandle << "DNA";
+                        else
+                            pllPartitionFileHandle << "WAG";
                         }
-                    if (name_ok)
-                        pllPartitionFileHandle << modelStr;
-                    else
-                        pllPartitionFileHandle << "WAG";                    
-                } else {
-                    pllPartitionFileHandle << "WAG";
-                }
-            } else
-            	outError("PLL only works with DNA/protein alignments");
-            pllPartitionFileHandle << ", p" << i << " = " << startPos << "-" << startPos + curLen - 1 << endl;
-            startPos = startPos + curLen;
+                        int curLen = (*it)->getAlnNSite();                    
+                        if (first) 
+                            pllPartitionFileHandle << ", p" << i << " = ";
+                        else
+                            pllPartitionFileHandle << ", ";
+                            
+                        pllPartitionFileHandle << startPos << "-" << startPos + curLen - 1;
+                        startPos = startPos + curLen;
+                        first = false;
+                    } else {
+                        startPos = startPos + (*it)->getAlnNSite();
+                    }
+                if (!first) pllPartitionFileHandle << endl;
+            }
         }
     } else {
         /* create a partition file */

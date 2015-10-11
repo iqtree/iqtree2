@@ -119,9 +119,20 @@ public:
 		fix_p_invar = fixPInvar;
 	}
 
-	void setPInvar(double pInvar) {
+
+	/**
+		set the proportion of invariable sites. Default: do nothing
+		@param pinv the proportion of invariable sites
+	*/
+	virtual void setPInvar(double pInvar) {
 		p_invar = pInvar;
 	}
+
+	/**
+		Set whether or not to optimize p_invar
+		@param opt TRUE to optimize p_invar, FALSE otherwise
+	*/
+	virtual void setOptimizePInvar(bool opt) { optimize_p_invar = opt; }
 
 	/**
 		proportion of invariable sites
@@ -132,6 +143,11 @@ public:
 		TRUE to fix the proportion of invariable sites
 	*/
 	bool fix_p_invar;
+
+    /**
+        TRUE to optimize p_invar (if not fixed), FALSE otherwise (e.g. in case of mixture model)
+    */
+    bool optimize_p_invar;
 
 protected:
 

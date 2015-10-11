@@ -1043,6 +1043,11 @@ public:
     double split_threshold;
 
     /**
+        thresholds of split frequency with back-slash separator
+     */
+    char* split_threshold_str;
+
+    /**
             threshold of split weight, splits with weight less than or equal to threshold will be discarded
      */
     double split_weight_threshold;

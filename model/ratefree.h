@@ -57,10 +57,11 @@ public:
 	*/
 	virtual double optimizeParameters(double gradient_epsilon);
 
-    /** optimize weights using EM algorithm */
+    /** 
+        optimize rate parameters using EM algorithm 
+        @return log-likelihood of optimized parameters
+    */
     double optimizeWithEM();
-
-    double optimizeWeights();
 
 	/**
 		return the number of dimensions

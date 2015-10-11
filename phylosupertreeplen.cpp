@@ -308,8 +308,9 @@ int PartitionModelPlen::getNParameters() {
     PhyloSuperTreePlen *tree = (PhyloSuperTreePlen*)site_rate->getTree();
 	int df = 0;
     for (PhyloSuperTreePlen::iterator it = tree->begin(); it != tree->end(); it++) {
-    	df += (*it)->getModelFactory()->model->getNDim()+(*it)->getModelFactory()->site_rate->getNDim();
-		if ( (*it)->getModelFactory()->model->freq_type == FREQ_EMPIRICAL) df +=  (*it)->getModelFactory()->model->num_states-1;
+    	df += (*it)->getModelFactory()->model->getNDim() +
+            (*it)->getModelFactory()->model->getNDimFreq() +
+            (*it)->getModelFactory()->site_rate->getNDim();
     }
     df += tree->branchNum;
     if(!tree->fixed_rates)

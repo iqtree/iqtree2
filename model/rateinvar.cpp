@@ -28,6 +28,7 @@ RateInvar::RateInvar(double p_invar_sites, PhyloTree *tree)
 	else
 		p_invar = MIN_PINVAR;
 	fix_p_invar = false;
+    optimize_p_invar = true;
 	phylo_tree = tree;
 	name = "+I";
 	full_name = "Invar";
@@ -66,7 +67,7 @@ void RateInvar::setBounds(double *lower_bound, double *upper_bound, bool *bound_
 }
 
 double RateInvar::optimizeParameters(double gradient_epsilon) {
-	if (fix_p_invar)
+	if (fix_p_invar || !optimize_p_invar)
 		return -computeFunction(p_invar);
 	if (verbose_mode >= VB_MAX)
 		cout << "Optimizing proportion of invariable sites..." << endl;

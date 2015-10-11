@@ -130,6 +130,18 @@ public:
 	virtual double getPInvar() { return 0.0; }
 
 	/**
+		set the proportion of invariable sites. Default: do nothing
+		@param pinv the proportion of invariable sites
+	*/
+	virtual void setPInvar(double pinv) { }
+
+	/**
+		Set whether or not to optimize p_invar
+		@param opt TRUE to optimize p_invar, FALSE otherwise
+	*/
+	virtual void setOptimizePInvar(bool opt) { }
+
+	/**
 		get the Gamma shape. Default returns 0.0 since it is homogeneous model
 		@return Gamma shape
 	*/	

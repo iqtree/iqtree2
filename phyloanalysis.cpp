@@ -277,8 +277,8 @@ void reportModel(ofstream &out, PhyloTree &tree) {
 	int i;
 
 	if (tree.getModel()->isMixture()) {
-		out << "Mixture model of substitution: " << tree.params->model_name << endl;
-		out << "Full name: " << tree.getModelName() << endl;
+		out << "Mixture model of substitution: " << tree.getModelName() << endl;
+//		out << "Full name: " << tree.getModelName() << endl;
 		ModelMixture *mmodel = (ModelMixture*) tree.getModel();
 		out << endl << "  No  Component      Rate    Weight   Parameters" << endl;
 		i = 0;

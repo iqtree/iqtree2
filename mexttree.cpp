@@ -496,3 +496,25 @@ void MExtTree::createCluster(int clu_num, Node *node, Node *dad) {
 	}
 }
 
+
+void MExtTree::collapseLowBranchSupport(DoubleVector &minsup, Node *node, Node *dad) {
+    if (!node) node = root;
+    FOR_NEIGHBOR_IT(node, dad, it) {
+        collapseLowBranchSupport(minsup, (*it)->node, node);
+    }
+    if (!node->isLeaf() && dad && node->name != "") {
+        DoubleVector vec;
+        convert_double_vec(node->name.c_str(), vec, '/');
+        if (vec.size() != minsup.size()) {
+            cout << "Branch with name " << node->name << " ignored" << endl;
+            return;
+        }
+        for (int i = 0; i < vec.size(); i++)
+            if (vec[i] < minsup[i]) {
+                // support smaller than threshold, mark this branch for deletion
+                dad->findNeighbor(node)->length = 0.0;
+                node->findNeighbor(dad)->length = 0.0;
+                break;
+            }
+    }
+}

@@ -676,6 +676,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.tree_burnin = 0;
     params.tree_max_count = 1000000;
     params.split_threshold = 0.0;
+    params.split_threshold_str = NULL;
     params.split_weight_threshold = -1000;
     params.split_weight_summary = SW_SUM;
     params.gurobi_format = true;
@@ -1422,6 +1423,13 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.split_threshold = convert_double(argv[cnt]);
 				if (params.split_threshold < 0 || params.split_threshold > 1)
 					throw "Split threshold must be between 0 and 1";
+				continue;
+			}
+			if (strcmp(argv[cnt], "-minsupnew") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -minsupnew <split_threshold_1/.../split_threshold_k>";
+				params.split_threshold_str = argv[cnt];
 				continue;
 			}
 			if (strcmp(argv[cnt], "-tw") == 0) {

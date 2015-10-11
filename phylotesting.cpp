@@ -572,7 +572,7 @@ int getModelList(Params &params, Alignment *aln, StrVector &models, bool separat
             for (int k = params.min_rate_cats+1; k <= params.max_rate_cats; k++) {
                 ratehet.insert(ratehet.begin()+j+k-params.min_rate_cats, str.substr(0, pos+2) + convertIntToString(k) + str.substr(pos+2));
             }
-            break;
+//            break;
         }
 
     if (separate_rate) {
