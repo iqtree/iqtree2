@@ -1080,6 +1080,13 @@ double PhyloTree::computeLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloN
     if (orig_nptn < nptn) {
     	// ascertainment bias correction
         assert(prob_const < 1.0);
+
+        // BQM 2015-10-11: fix this those functions using _pattern_lh_cat
+//        double inv_const = 1.0 / (1.0-prob_const);
+//        size_t nptn_cat = orig_nptn*ncat;
+//    	for (ptn = 0; ptn < nptn_cat; ptn++)
+//            _pattern_lh_cat[ptn] *= inv_const;
+        
     	prob_const = log(1.0 - prob_const);
     	for (ptn = 0; ptn < orig_nptn; ptn++)
     		_pattern_lh[ptn] -= prob_const;

@@ -1393,7 +1393,7 @@ double ModelMixture::optimizeWithEM(double gradient_epsilon) {
     // initialize model
     ModelFactory *model_fac = new ModelFactory();
     model_fac->joint_optimize = phylo_tree->params->optimize_model_rate_joint;
-    model_fac->unobserved_ptns = phylo_tree->getModelFactory()->unobserved_ptns;
+//    model_fac->unobserved_ptns = phylo_tree->getModelFactory()->unobserved_ptns;
 
     RateHeterogeneity *site_rate = new RateHeterogeneity; 
     tree->setRate(site_rate);
