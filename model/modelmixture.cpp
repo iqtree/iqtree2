@@ -1503,6 +1503,9 @@ double ModelMixture::optimizeParameters(double gradient_epsilon) {
     int dim = getNDim();
     double score = 0.0;
     
+    if (!phylo_tree->getModelFactory()->unobserved_ptns.empty())
+        outError("Mixture model +ASC is not supported yet. Contact author if needed.");
+    
     if (dim > 0)
         score = optimizeWithEM(gradient_epsilon);
     else if (!fix_prop)
