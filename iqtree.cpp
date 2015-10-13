@@ -262,9 +262,9 @@ void IQTree::createPLLPartition(Params &params, ostream &pllPartitionFileHandle)
     if (isSuperTree()) {
         PhyloSuperTree *siqtree = (PhyloSuperTree*) this;
         // additional check for PLL hard limit
-        if (siqtree->size() > PLL_NUM_BRANCHES)
-        	outError("Number of partitions exceeds PLL limit, please increase PLL_NUM_BRANCHES constant in pll.h");
         if (params.pll) {
+            if (siqtree->size() > PLL_NUM_BRANCHES)
+                outError("Number of partitions exceeds PLL limit, please increase PLL_NUM_BRANCHES constant in pll.h");
             int i = 0;
             int startPos = 1;
             
