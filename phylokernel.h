@@ -678,6 +678,8 @@ void PhyloTree::computeLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch, PhyloN
 
 			// ptn_invar[ptn] is not aligned
 			lh_ptn = horizontal_add(vc_ptn) + VectorClass().load(&ptn_invar[ptn]);
+			df_ptn = horizontal_add(vc_df);
+			ddf_ptn = horizontal_add(vc_ddf);
 
 		}
 		switch ((nptn-orig_nptn) % VCSIZE) {
@@ -1360,7 +1362,7 @@ void PhyloTree::computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, Phylo
     		break;
     	}
         // add dummy states
-        if (site > 0) {
+        if (site > 0 && site < NUM_BITS) {
             x += site/UINT_BITS;
         	*x |= ~((1<<(site%UINT_BITS)) - 1);
             x++;

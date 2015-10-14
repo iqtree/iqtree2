@@ -288,7 +288,7 @@ double convert_double(const char *str, int &end_pos) throw (string) {
 	return d;
 }
 
-void convert_double_vec(const char *str, DoubleVector &vec) throw (string) {
+void convert_double_vec(const char *str, DoubleVector &vec, char separator) throw (string) {
     char *beginptr = (char*)str, *endptr;
     vec.clear();
     do {
@@ -301,7 +301,7 @@ void convert_double_vec(const char *str, DoubleVector &vec) throw (string) {
 			throw err;
 		}
 		vec.push_back(d);
-		if (*endptr == ',') endptr++;
+		if (*endptr == separator) endptr++;
 		beginptr = endptr;
     } while (*endptr != 0);
 }
@@ -678,6 +678,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.tree_burnin = 0;
     params.tree_max_count = 1000000;
     params.split_threshold = 0.0;
+    params.split_threshold_str = NULL;
     params.split_weight_threshold = -1000;
     params.split_weight_summary = SW_SUM;
     params.gurobi_format = true;
@@ -1423,6 +1424,13 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.split_threshold = convert_double(argv[cnt]);
 				if (params.split_threshold < 0 || params.split_threshold > 1)
 					throw "Split threshold must be between 0 and 1";
+				continue;
+			}
+			if (strcmp(argv[cnt], "-minsupnew") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -minsupnew <split_threshold_1/.../split_threshold_k>";
+				params.split_threshold_str = argv[cnt];
 				continue;
 			}
 			if (strcmp(argv[cnt], "-tw") == 0) {

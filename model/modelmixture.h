@@ -76,13 +76,30 @@ public:
 	virtual int getNDim();
 
 	/**
+		@return the number of dimensions corresponding to state frequencies
+	*/
+	virtual int getNDimFreq();
+	
+	/**
 		the target function which needs to be optimized
 		@param x the input vector x
 		@return the function value at x
 	*/
 	virtual double targetFunk(double x[]);
 
+    /** 
+        optimize mixture weights using EM algorithm 
+        @return log-likelihood of optimized weights
+    */
     double optimizeWeights();
+
+    /** 
+        optimize rate parameters using EM algorithm
+        @param gradient_epsilon
+        @return log-likelihood of optimized parameters
+    */
+    double optimizeWithEM(double gradient_epsilon);
+
 
 	/**
 		optimize model parameters
@@ -111,6 +128,11 @@ public:
 		@param out output stream
 	*/
 	virtual void writeParameters(ostream &out);
+
+	/**
+	 * @return model name
+	 */
+	virtual string getName();
 
 	/**
 	 * @return model name with parameters in form of e.g. GTR{a,b,c,d,e,f}

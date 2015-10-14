@@ -1123,7 +1123,9 @@ void ModelMixture::initMixture(string orig_model_name, string model_name, string
 	}
 
 	DoubleVector weights;
-    name = orig_model_name;
+    name = orig_model_name.substr(0, orig_model_name.find_first_of("+*"));
+    if (!models_block->findMixModel(name))
+        name = "";
 	full_name = (string)"MIX" + OPEN_BRACKET;
 	if (model_list == "") model_list = model_name;
 	for (m = 0, cur_pos = 0; cur_pos < model_list.length(); m++) {
@@ -1284,6 +1286,13 @@ int ModelMixture::getNDim() {
 	return dim;
 }
 
+int ModelMixture::getNDimFreq() {
+    int dim = 0;
+	for (iterator it = begin(); it != end(); it++)
+		dim += (*it)->getNDimFreq();
+	return dim;
+}
+
 double ModelMixture::targetFunk(double x[]) {
 	getVariables(x);
 //	decomposeRateMatrix();
@@ -1311,74 +1320,212 @@ double ModelMixture::optimizeWeights() {
     size_t nptn = phylo_tree->aln->getNPattern();
     size_t nmix = getNMixtures();
     
-    double *lk_ptn = aligned_alloc<double>(nptn);
     double *new_prop = aligned_alloc<double>(nmix);
-    
-        
+    double *ratio_prop = aligned_alloc<double>(nmix);
+
     // EM algorithm loop described in Wang, Li, Susko, and Roger (2008)
     for (int step = 0; step < nmix; step++) {
         // E-step
-        memset(lk_ptn, 0, nptn*sizeof(double));
-        if (step == 0) {
-            for (c = 0; c < nmix; c++) 
-                new_prop[c] = 1.0 / prop[c];
-            // decoupled weights (prop) from _pattern_lh_cat to obtain L_ci and compute pattern likelihood L_i
+
+        if (step > 0) {
+            // convert _pattern_lh_cat taking into account new weights
             for (ptn = 0; ptn < nptn; ptn++) {
                 double *this_lk_cat = phylo_tree->_pattern_lh_cat + ptn*nmix;
                 for (c = 0; c < nmix; c++) {
-                    lk_ptn[ptn] += this_lk_cat[c];
-                    this_lk_cat[c] *= new_prop[c];
+                    this_lk_cat[c] *= ratio_prop[c];
                 }
             } 
-        } else {
-            // update L_i according to (**)
-            for (ptn = 0; ptn < nptn; ptn++) {
-                double *this_lk_cat = phylo_tree->_pattern_lh_cat + ptn*nmix;
-                for (c = 0; c < nmix; c++) {
-                    lk_ptn[ptn] += this_lk_cat[c] * prop[c];
-                }
-            }        
         }
-        
-        // M-step, update weights according to (*)
         memset(new_prop, 0, nmix*sizeof(double));
         for (ptn = 0; ptn < nptn; ptn++) {
-            double inv_lk_ptn = phylo_tree->ptn_freq[ptn] / lk_ptn[ptn];
             double *this_lk_cat = phylo_tree->_pattern_lh_cat + ptn*nmix;
-            for (c = 0; c < nmix; c++)
-                new_prop[c] += this_lk_cat[c] * inv_lk_ptn;
-        }
-        
+            double lk_ptn = phylo_tree->ptn_invar[ptn];
+            for (c = 0; c < nmix; c++) {
+                lk_ptn += this_lk_cat[c];
+            }
+            lk_ptn = phylo_tree->ptn_freq[ptn] / lk_ptn;
+            for (c = 0; c < nmix; c++) {
+                new_prop[c] += this_lk_cat[c] * lk_ptn;
+            }
+        } 
         bool converged = true;
+        double new_pinvar = 0.0;    
         for (c = 0; c < nmix; c++) {
-            new_prop[c] = prop[c] * (new_prop[c] / phylo_tree->getAlnNSite());
+            new_prop[c] /= phylo_tree->getAlnNSite();
             // check for convergence
             converged = converged && (fabs(prop[c]-new_prop[c]) < 1e-4);
+            ratio_prop[c] = new_prop[c] / prop[c];
             prop[c] = new_prop[c];
+            new_pinvar += prop[c];
         }
+        new_pinvar = 1.0 - new_pinvar;
+        if (new_pinvar != 0.0) {
+            converged = converged && (fabs(phylo_tree->getRate()->getPInvar()-new_pinvar) < 1e-4);
+            phylo_tree->getRate()->setPInvar(new_pinvar);
+            phylo_tree->getRate()->setOptimizePInvar(false);
+            phylo_tree->computePtnInvar();
+            
+        }
+        if (converged) break;
+
+    }
+    
+    aligned_free(ratio_prop);
+    aligned_free(new_prop);
+//    aligned_free(lk_ptn);
+    return phylo_tree->computeLikelihood();
+}
+
+double ModelMixture::optimizeWithEM(double gradient_epsilon) {
+    size_t ptn, c;
+    size_t nptn = phylo_tree->aln->getNPattern();
+    size_t nmix = size();
+    
+    double *new_prop = aligned_alloc<double>(nmix);
+    PhyloTree *tree = new PhyloTree;
+    
+    // attach memory to save space
+    tree->central_partial_lh = phylo_tree->central_partial_lh;
+    tree->central_scale_num = phylo_tree->central_scale_num;
+    tree->central_partial_pars = phylo_tree->central_partial_pars;
+    
+    tree->copyPhyloTree(phylo_tree);
+    tree->optimize_by_newton = phylo_tree->optimize_by_newton;
+    tree->setLikelihoodKernel(phylo_tree->sse);
+    // initialize model
+    ModelFactory *model_fac = new ModelFactory();
+    model_fac->joint_optimize = phylo_tree->params->optimize_model_rate_joint;
+//    model_fac->unobserved_ptns = phylo_tree->getModelFactory()->unobserved_ptns;
+
+    RateHeterogeneity *site_rate = new RateHeterogeneity; 
+    tree->setRate(site_rate);
+    site_rate->setTree(tree);
+            
+    model_fac->site_rate = site_rate;
+    tree->model_factory = model_fac;
+    tree->setParams(phylo_tree->params);
+    double score;
+        
+    int num_steps = (getNDim()+1)*3;
+    
+    // EM algorithm loop described in Wang, Li, Susko, and Roger (2008)
+    for (int step = 0; step < num_steps; step++) {
+        // first compute _pattern_lh_cat
+        if (phylo_tree->getModelFactory()->fused_mix_rate) {
+            score = phylo_tree->computeMixrateLikelihoodBranchEigen((PhyloNeighbor*)phylo_tree->root->neighbors[0], (PhyloNode*)phylo_tree->root); 
+        } else {
+            score = phylo_tree->computeMixtureLikelihoodBranchEigen((PhyloNeighbor*)phylo_tree->root->neighbors[0], (PhyloNode*)phylo_tree->root); 
+        }
+        
+        memset(new_prop, 0, nmix*sizeof(double));
+                
+        // E-step
+        // decoupled weights (prop) from _pattern_lh_cat to obtain L_ci and compute pattern likelihood L_i
+        for (ptn = 0; ptn < nptn; ptn++) {
+            double *this_lk_cat = phylo_tree->_pattern_lh_cat + ptn*nmix;
+            double lk_ptn = phylo_tree->ptn_invar[ptn];
+            for (c = 0; c < nmix; c++) {
+                lk_ptn += this_lk_cat[c];
+            }
+            lk_ptn = phylo_tree->ptn_freq[ptn] / lk_ptn;
+            
+            // transform _pattern_lh_cat into posterior probabilities of each category
+            for (c = 0; c < nmix; c++) {
+                this_lk_cat[c] *= lk_ptn;
+                new_prop[c] += this_lk_cat[c];
+            }
+        } 
+        
+        // M-step, update weights according to (*)        
+        
+        bool converged = !fix_prop;
+        
+        if (!fix_prop) {
+            double new_pinvar = 0.0;
+            for (c = 0; c < nmix; c++) {
+                new_prop[c] = new_prop[c] / phylo_tree->getAlnNSite();
+                // check for convergence
+                converged = converged && (fabs(prop[c]-new_prop[c]) < 1e-4);
+                prop[c] = new_prop[c];
+                new_pinvar += prop[c];
+            }
+            new_pinvar = 1.0 - new_pinvar;
+            if (new_pinvar != 0.0) {
+                converged = converged && (fabs(phylo_tree->getRate()->getPInvar()-new_pinvar) < 1e-4);
+                phylo_tree->getRate()->setPInvar(new_pinvar);
+                phylo_tree->getRate()->setOptimizePInvar(false);
+                phylo_tree->computePtnInvar();
+            }
+        }
+        
+        // now optimize model one by one
+        for (c = 0; c < nmix; c++) if (at(c)->getNDim() > 0) {
+            tree->copyPhyloTree(phylo_tree);
+            ModelGTR *subst_model;
+            subst_model = at(c);
+            tree->setModel(subst_model);
+            subst_model->setTree(tree);
+            model_fac->model = subst_model;
+                        
+            // initialize likelihood
+            tree->initializeAllPartialLh();
+            // copy posterior probability into ptn_freq
+            tree->computePtnFreq();
+            double *this_lk_cat = phylo_tree->_pattern_lh_cat+c;
+            for (ptn = 0; ptn < nptn; ptn++)
+                tree->ptn_freq[ptn] = this_lk_cat[ptn*nmix];
+            subst_model->optimizeParameters(gradient_epsilon);
+            // reset subst model
+            tree->setModel(NULL);
+            subst_model->setTree(phylo_tree);
+            
+        }
+        
+        phylo_tree->clearAllPartialLH();
         if (converged) break;
     }
     
+    // deattach memory
+    tree->central_partial_lh = NULL;
+    tree->central_scale_num = NULL;
+    tree->central_partial_pars = NULL;
+    
+    delete tree;
     aligned_free(new_prop);
-    aligned_free(lk_ptn);
-    return phylo_tree->computeLikelihood();
+    score = phylo_tree->computeLikelihood();
+    phylo_tree->clearAllPartialLH();
+    return score;
 }
 
 double ModelMixture::optimizeParameters(double gradient_epsilon) {
 	optimizing_submodels = true;
-	double score = ModelGTR::optimizeParameters(gradient_epsilon);
-	optimizing_submodels = false;
-    if (!fix_prop)
+    
+    int dim = getNDim();
+    double score = 0.0;
+    
+    if (!phylo_tree->getModelFactory()->unobserved_ptns.empty())
+        outError("Mixture model +ASC is not supported yet. Contact author if needed.");
+    
+    if (dim > 0)
+        score = optimizeWithEM(gradient_epsilon);
+    else if (!fix_prop)
         score = optimizeWeights();
+    
+//	double score = ModelGTR::optimizeParameters(gradient_epsilon);
+	optimizing_submodels = false;
 	if (getNDim() == 0) return score;
 	// now rescale Q matrices to have proper interpretation of branch lengths
 	double sum;
 	int i, ncategory = size();
 	for (i = 0, sum = 0.0; i < ncategory; i++)
 		sum += prop[i]*at(i)->total_num_subst;
-	for (i = 0; i < ncategory; i++)
-		at(i)->total_num_subst /= sum;
-	decomposeRateMatrix();
+//    sum += phylo_tree->getRate()->getPInvar();
+    if (fabs(sum-1.0) > 1e-6) {
+        for (i = 0; i < ncategory; i++)
+            at(i)->total_num_subst /= sum;
+        decomposeRateMatrix();
+        phylo_tree->clearAllPartialLH();
+    }
 	return score;
 }
 
@@ -1489,14 +1636,27 @@ void ModelMixture::writeParameters(ostream &out) {
 	}
 }
 
+string ModelMixture::getName() {
+    if (name != "") return name;
+    string retname = "MIX";
+    retname += OPEN_BRACKET;
+    for (iterator it = begin(); it != end(); it++) {
+        if (it != begin()) retname += ",";
+        retname += (*it)->getName();
+    }
+    retname += CLOSE_BRACKET;
+    return retname;
+}
+
 string ModelMixture::getNameParams() {
-//	ostringstream retname;
-//	retname << "MIX" << OPEN_BRACKET;
-//    for (iterator it=begin(); it != end(); it++) {
-//        if (it != begin()) retname << ",";
-//        retname << (*it)->ModelSubst::getNameParams();
-//    }
-//	retname << CLOSE_BRACKET;
-//	return retname.str();
-    return full_name;
+    if (full_name != "")
+        return full_name;
+    string retname = "MIX";
+    retname += OPEN_BRACKET;
+    for (iterator it = begin(); it != end(); it++) {
+        if (it != begin()) retname += ",";
+        retname += (*it)->getNameParams();
+    }
+    retname += CLOSE_BRACKET;
+    return retname;
 }

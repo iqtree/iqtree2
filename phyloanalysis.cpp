@@ -48,7 +48,7 @@
 #include "whtest_wrapper.h"
 #include "model/partitionmodel.h"
 #include "model/modelmixture.h"
-#include "guidedbootstrap.h"
+//#include "guidedbootstrap.h"
 #include "model/modelset.h"
 #include "timeutil.h"
 #include "upperbounds.h"
@@ -276,8 +276,8 @@ void reportModel(ofstream &out, PhyloTree &tree) {
 	int i;
 
 	if (tree.getModel()->isMixture()) {
-		out << "Mixture model of substitution: " << tree.params->model_name << endl;
-		out << "Full name: " << tree.getModelName() << endl;
+		out << "Mixture model of substitution: " << tree.getModelName() << endl;
+//		out << "Full name: " << tree.getModelName() << endl;
 		ModelMixture *mmodel = (ModelMixture*) tree.getModel();
 		out << endl << "  No  Component      Rate    Weight   Parameters" << endl;
 		i = 0;
@@ -1913,7 +1913,8 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 
 	if (params.gbo_replicates > 0) {
 		if (!params.online_bootstrap)
-			runGuidedBootstrap(params, iqtree.aln, iqtree);
+			outError("Obsolete feature");
+//			runGuidedBootstrap(params, iqtree.aln, iqtree);
 		else
 			iqtree.summarizeBootstrap(params);
 	}
@@ -2381,13 +2382,16 @@ void runPhyloAnalysis(Params &params) {
 		convertAlignment(params, tree);
 	} else if (params.gbo_replicates > 0 && params.user_file && params.second_tree) {
 		// run one of the UFBoot analysis
-		runGuidedBootstrap(params, alignment, *tree);
+//		runGuidedBootstrap(params, alignment, *tree);
+		outError("Obsolete feature");
 	} else if (params.avh_test) {
 		// run one of the wondering test for Arndt
-		runAvHTest(params, alignment, *tree);
+//		runAvHTest(params, alignment, *tree);
+		outError("Obsolete feature");
 	} else if (params.bootlh_test) {
 		// run Arndt's plot of tree likelihoods against bootstrap alignments
-		runBootLhTest(params, alignment, *tree);
+//		runBootLhTest(params, alignment, *tree);
+		outError("Obsolete feature");
 	} else if (params.num_bootstrap_samples == 0) {
 		// the main Maximum likelihood tree reconstruction
 		vector<ModelInfo> *model_info = new vector<ModelInfo>;

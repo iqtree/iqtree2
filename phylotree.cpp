@@ -446,7 +446,7 @@ void PhyloTree::computeAllPartialLh(PhyloNode *node, PhyloNode *dad) {
 }
 
 string PhyloTree::getModelName() {
-	string name = model->name;
+	string name = model->getName();
 	if (model_factory->unobserved_ptns.size() > 0)
 		name += "+ASC";
 	if (model_factory->fused_mix_rate) {
@@ -454,18 +454,6 @@ string PhyloTree::getModelName() {
 	} else {
 		name += site_rate->name;
 	}
-	if (model->getFreqType() == FREQ_EMPIRICAL)
-		name += "+F";
-	else if (model->getFreqType() == FREQ_CODON_1x4)
-		name += "+F1X4";
-	else if (model->getFreqType() == FREQ_CODON_3x4)
-		name += "+F3X4";
-	else if (model->getFreqType() == FREQ_CODON_3x4C)
-		name += "+F3X4C";
-	else if (model->getFreqType() == FREQ_ESTIMATE && aln->seq_type != SEQ_DNA)
-		name += "+FO";
-	else if (model->getFreqType() == FREQ_EQUAL && aln->seq_type != SEQ_DNA)
-		name += "+FQ";
 	return name;
 }
 
@@ -481,33 +469,6 @@ string PhyloTree::getModelNameParams() {
 		name += rate_name;
 	}
 
-	if (model->getFreqType() == FREQ_EMPIRICAL || (model->getFreqType() == FREQ_USER_DEFINED && aln->seq_type == SEQ_DNA)) {
-		name += "+F";
-        double *state_freq = new double[model->num_states];
-        model->getStateFrequency(state_freq);
-        name += "{" + convertDoubleToString(state_freq[0]);
-        for (int i = 1; i < model->num_states; i++)
-            name += "," + convertDoubleToString(state_freq[i]);
-        name += "}";
-        delete [] state_freq;
-	} else if (model->getFreqType() == FREQ_CODON_1x4)
-		name += "+F1X4";
-	else if (model->getFreqType() == FREQ_CODON_3x4)
-		name += "+F3X4";
-	else if (model->getFreqType() == FREQ_CODON_3x4C)
-		name += "+F3X4C";
-	else if (model->getFreqType() == FREQ_ESTIMATE) {
-		name += "+FO";
-        double *state_freq = new double[model->num_states];
-        model->getStateFrequency(state_freq);
-        name += "{" + convertDoubleToString(state_freq[0]);
-        for (int i = 1; i < model->num_states; i++)
-            name += "," + convertDoubleToString(state_freq[i]);
-        name += "}";
-        delete [] state_freq;
-    }
-	else if (model->getFreqType() == FREQ_EQUAL && aln->seq_type != SEQ_DNA)
-		name += "+FQ";
 	return name;
 }
 
@@ -3100,7 +3061,7 @@ void PhyloTree::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool clear
         if (verbose_mode >= VB_DEBUG) {
             cout << "minimizeNewton logl: " << computeLikelihoodFromBuffer() << endl;
         }
-    	if (optx > MAX_BRANCH_LEN*0.95) {
+    	if (optx > MAX_BRANCH_LEN*0.95 && !isSuperTree()) {
     		// newton raphson diverged, reset
     	    double opt_lh = computeLikelihoodFromBuffer();
     	    current_it->length = current_len;
