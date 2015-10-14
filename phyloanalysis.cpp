@@ -1999,7 +1999,7 @@ void searchGAMMAInvarByRestarting(IQTree &iqtree) {
 	if (Params::getInstance().randomAlpha) {
 		while (initAlphas.size() < 10) {
 			double initAlpha = random_double();
-			initAlphas.push_back(initAlpha + MIN_GAMMA_SHAPE);
+			initAlphas.push_back(initAlpha + MIN_GAMMA_SHAPE*2);
 		}
 	} else {
 		initAlphas.assign(values, values+10);
