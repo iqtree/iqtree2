@@ -444,14 +444,7 @@ double RateFree::optimizeWithEM() {
     for (int step = 0; step < ncategory; step++) {
         // first compute _pattern_lh_cat
         double score;
-        if (!phylo_tree->getModel()->isMixture())
-            score = phylo_tree->computeLikelihoodBranchEigen((PhyloNeighbor*)phylo_tree->root->neighbors[0], (PhyloNode*)phylo_tree->root); 
-        else if (phylo_tree->getModelFactory()->fused_mix_rate) {
-            score = phylo_tree->computeMixrateLikelihoodBranchEigen((PhyloNeighbor*)phylo_tree->root->neighbors[0], (PhyloNode*)phylo_tree->root); 
-        } else {
-            outError("Mixture model does not work with FreeRate model!");
-            score = phylo_tree->computeMixtureLikelihoodBranchEigen((PhyloNeighbor*)phylo_tree->root->neighbors[0], (PhyloNode*)phylo_tree->root); 
-        }
+        score = phylo_tree->computePatternLhCat();
         memset(new_prop, 0, nmix*sizeof(double));
                 
         // E-step

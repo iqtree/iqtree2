@@ -723,6 +723,12 @@ public:
     virtual double computeLikelihood(double *pattern_lh = NULL);
 
     /**
+     * compute _pattern_lh_cat for site-likelihood per category
+     * @return tree log-likelihood
+     */
+    virtual double computePatternLhCat();
+
+    /**
             compute pattern likelihoods only if the accumulated scaling factor is non-zero.
             Otherwise, copy the pattern_lh attribute
             @param pattern_lh (OUT) pattern log-likelihoods,

@@ -1530,6 +1530,19 @@ double PhyloTree::computeLikelihoodRooted(PhyloNeighbor *dad_branch, PhyloNode *
     return score;
 }
 
+double PhyloTree::computePatternLhCat() {
+    assert(current_it && current_it_back);
+    if (sse == LK_NORMAL || sse == LK_SSE)
+        return computeLikelihoodBranchNaive(current_it, (PhyloNode*)current_it_back->node);
+    else if (!getModel()->isMixture())
+        return computeLikelihoodBranchEigen(current_it, (PhyloNode*)current_it_back->node);
+    else if (getModelFactory()->fused_mix_rate)
+        return computeMixrateLikelihoodBranchEigen(current_it, (PhyloNode*)current_it_back->node);
+    else
+        return computeMixtureLikelihoodBranchEigen(current_it, (PhyloNode*)current_it_back->node);
+}
+
+
 void PhyloTree::computePatternLikelihood(double *ptn_lh, double *cur_logl, double *ptn_lh_cat) {
     /*	if (!dad_branch) {
      dad_branch = (PhyloNeighbor*) root->neighbors[0];
@@ -1542,24 +1555,7 @@ void PhyloTree::computePatternLikelihood(double *ptn_lh, double *cur_logl, doubl
         ncat *= getModel()->getNMixtures();
     if (ptn_lh_cat) {
     	// Right now only Naive version store _pattern_lh_cat!
-    	if (sse == LK_NORMAL || sse == LK_SSE)
-    		computeLikelihoodBranchNaive(current_it, (PhyloNode*)current_it_back->node);
-    	else {
-//    		switch (aln->num_states) {
-//    		case 4: computeLikelihoodBranchEigen<4>(current_it, (PhyloNode*)current_it_back->node); break;
-//    		case 20: computeLikelihoodBranchEigen<20>(current_it, (PhyloNode*)current_it_back->node); break;
-//    		case 2: computeLikelihoodBranchEigen<2>(current_it, (PhyloNode*)current_it_back->node); break;
-//    		case 64: computeLikelihoodBranchEigen<64>(current_it, (PhyloNode*)current_it_back->node); break;
-//    		default: outError("Option unsupported yet for this sequence type. Contact author if you really need it."); break;
-//    		}
-            if (!getModel()->isMixture()) {
-                computeLikelihoodBranchEigen(current_it, (PhyloNode*)current_it_back->node); 
-            } else if (getModelFactory()->fused_mix_rate) {
-                computeMixrateLikelihoodBranchEigen(current_it, (PhyloNode*)current_it_back->node); 
-            } else {
-                computeMixtureLikelihoodBranchEigen(current_it, (PhyloNode*)current_it_back->node); 
-            }
-        }
+        computePatternLhCat();
     }
     
     double sum_scaling = current_it->lh_scale_factor + current_it_back->lh_scale_factor;
@@ -1627,14 +1623,7 @@ void PhyloTree::computePatternLikelihood(double *ptn_lh, double *cur_logl, doubl
 int PhyloTree::computePatternCategories(IntVector *pattern_ncat) {
     if (sse != LK_EIGEN) {
         // compute _pattern_lh_cat
-        if (!getModel()->isMixture())
-            computeLikelihoodBranchEigen((PhyloNeighbor*)root->neighbors[0], (PhyloNode*)root);
-        else if (getModelFactory()->fused_mix_rate) {
-            computeMixrateLikelihoodBranchEigen((PhyloNeighbor*)root->neighbors[0], (PhyloNode*)root);
-            assert(getModel()->getNMixtures() == getRate()->getNRate());
-        } else {
-            computeMixtureLikelihoodBranchEigen((PhyloNeighbor*)root->neighbors[0], (PhyloNode*)root);
-        }
+        computePatternLhCat();
     }
     
 	size_t npattern = aln->getNPattern();

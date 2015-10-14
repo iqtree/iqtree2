@@ -1311,11 +1311,7 @@ double ModelMixture::targetFunk(double x[]) {
 
 double ModelMixture::optimizeWeights() {
     // first compute _pattern_lh_cat
-    if (phylo_tree->getModelFactory()->fused_mix_rate) {
-        phylo_tree->computeMixrateLikelihoodBranchEigen((PhyloNeighbor*)phylo_tree->root->neighbors[0], (PhyloNode*)phylo_tree->root); 
-    } else {
-        phylo_tree->computeMixtureLikelihoodBranchEigen((PhyloNeighbor*)phylo_tree->root->neighbors[0], (PhyloNode*)phylo_tree->root); 
-    }
+    phylo_tree->computePatternLhCat();
     size_t ptn, c;
     size_t nptn = phylo_tree->aln->getNPattern();
     size_t nmix = getNMixtures();
@@ -1411,11 +1407,7 @@ double ModelMixture::optimizeWithEM(double gradient_epsilon) {
     // EM algorithm loop described in Wang, Li, Susko, and Roger (2008)
     for (int step = 0; step < num_steps; step++) {
         // first compute _pattern_lh_cat
-        if (phylo_tree->getModelFactory()->fused_mix_rate) {
-            score = phylo_tree->computeMixrateLikelihoodBranchEigen((PhyloNeighbor*)phylo_tree->root->neighbors[0], (PhyloNode*)phylo_tree->root); 
-        } else {
-            score = phylo_tree->computeMixtureLikelihoodBranchEigen((PhyloNeighbor*)phylo_tree->root->neighbors[0], (PhyloNode*)phylo_tree->root); 
-        }
+        score = phylo_tree->computePatternLhCat();
         
         memset(new_prop, 0, nmix*sizeof(double));
                 
