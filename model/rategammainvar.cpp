@@ -97,11 +97,6 @@ double RateGammaInvar::optimizeParameters(double gradient_epsilon) {
 
 	if (!joint_optimize) {
 //		double lh = phylo_tree->computeLikelihood();
-		cur_optimize = 1;
-		double invar_lh = -DBL_MAX;
-        invar_lh = RateInvar::optimizeParameters(gradient_epsilon);
-//		assert(tree_lh >= lh-0.1);
-//		lh = tree_lh;
 		cur_optimize = 0;
 		double gamma_lh;
 		if (Params::getInstance().testAlpha) {
@@ -109,9 +104,16 @@ double RateGammaInvar::optimizeParameters(double gradient_epsilon) {
 		} else {
             gamma_lh = RateGamma::optimizeParameters(gradient_epsilon);
         }
-		assert(gamma_lh >= invar_lh - 0.1);
+		cur_optimize = 1;
+		double invar_lh = -DBL_MAX;
+        invar_lh = RateInvar::optimizeParameters(gradient_epsilon);
+//		assert(tree_lh >= lh-0.1);
+//		lh = tree_lh;
+
+//		assert(gamma_lh >= invar_lh - 0.1);
 		phylo_tree->clearAllPartialLH();
-		return gamma_lh;
+//		return gamma_lh;
+        return invar_lh;
 	}
 
 	if (verbose_mode >= VB_MAX)
