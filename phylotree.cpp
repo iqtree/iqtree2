@@ -1582,7 +1582,7 @@ void PhyloTree::computePatternLikelihood(double *ptn_lh, double *cur_logl, doubl
     if (ptn_lh_cat) {
     	// Right now only Naive version store _pattern_lh_cat!
         computePatternLhCat();
-    }
+    } 
     
     double sum_scaling = current_it->lh_scale_factor + current_it_back->lh_scale_factor;
     //double sum_scaling = 0.0;
