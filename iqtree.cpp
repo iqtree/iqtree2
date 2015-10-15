@@ -2329,6 +2329,9 @@ void IQTree::doNNIs(int nni2apply, bool changeBran) {
             changeNNIBrans(nonConfNNIs.at(i));
         }
     }
+    // 2015-10-14: has to reset this pointer when read in
+    current_it = current_it_back = NULL;
+    
 //    if (params->lh_mem_save == LM_PER_NODE) {
 //        initializeAllPartialLh();
 //    }

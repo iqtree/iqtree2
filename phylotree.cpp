@@ -210,10 +210,14 @@ PhyloTree::~PhyloTree() {
 
 void PhyloTree::readTree(const char *infile, bool &is_rooted) {
 	MTree::readTree(infile, is_rooted);
+    // 2015-10-14: has to reset this pointer when read in
+    current_it = current_it_back = NULL;
 }
 
 void PhyloTree::readTree(istream &in, bool &is_rooted) {
 	MTree::readTree(in, rooted);
+    // 2015-10-14: has to reset this pointer when read in
+    current_it = current_it_back = NULL;
 	// remove taxa if necessary
 	if (removed_seqs.size() > 0)
 		removeTaxa(removed_seqs);
@@ -431,6 +435,8 @@ void PhyloTree::clearAllPartialLH(bool make_null) {
         return;
     ((PhyloNode*) root->neighbors[0]->node)->clearAllPartialLh(make_null, (PhyloNode*) root);
     tip_partial_lh_computed = false;
+    // 2015-10-14: has to reset this pointer when read in
+    current_it = current_it_back = NULL;
 }
 
 void PhyloTree::computeAllPartialLh(PhyloNode *node, PhyloNode *dad) {
@@ -1474,15 +1480,31 @@ UBYTE *PhyloTree::newScaleNum() {
     return aligned_alloc<UBYTE>(aln->size()+aln->num_states);
 }
 
+Node *findFirstFarLeaf(Node *node, Node *dad = NULL) {
+
+    do {
+        FOR_NEIGHBOR_IT(node, dad, it) {
+            dad = node;
+            node = (*it)->node;
+            break; 
+        }
+    } while (!node->isLeaf());
+    return node;
+    
+}
+
 double PhyloTree::computeLikelihood(double *pattern_lh) {
     assert(model);
     assert(site_rate);
     assert(root->isLeaf());
-    PhyloNeighbor *nei = ((PhyloNeighbor*) root->neighbors[0]);
-    current_it = nei;
-    assert(current_it);
-    current_it_back = (PhyloNeighbor*) nei->node->findNeighbor(root);
-    assert(current_it_back);
+    Node *leaf = findFirstFarLeaf(root);
+    current_it = (PhyloNeighbor*)leaf->neighbors[0];
+    current_it_back = (PhyloNeighbor*)current_it->node->findNeighbor(leaf);
+//    PhyloNeighbor *nei = ((PhyloNeighbor*) root->neighbors[0]);
+//    current_it = nei;
+//    assert(current_it);
+//    current_it_back = (PhyloNeighbor*) nei->node->findNeighbor(root);
+//    assert(current_it_back);
 
     double score;
     string root_name = ROOT_NAME;
@@ -1492,16 +1514,16 @@ double PhyloTree::computeLikelihood(double *pattern_lh) {
             cout << __func__ << " HIT ROOT STATE " << endl;
         score = computeLikelihoodRooted((PhyloNeighbor*) vroot->neighbors[0], (PhyloNode*) vroot);
     } else {
-        score = computeLikelihoodBranch(nei, (PhyloNode*) root);
+        score = computeLikelihoodBranch(current_it, (PhyloNode*) current_it_back->node);
     }
     if (pattern_lh)
         memmove(pattern_lh, _pattern_lh, aln->size() * sizeof(double));
 
-    if (pattern_lh && nei->lh_scale_factor < 0.0) {
+    if (pattern_lh && current_it->lh_scale_factor < 0.0) {
         int nptn = aln->getNPattern();
         //double check_score = 0.0;
         for (int i = 0; i < nptn; i++) {
-            pattern_lh[i] += max(nei->scale_num[i], UBYTE(0)) * LOG_SCALING_THRESHOLD;
+            pattern_lh[i] += max(current_it->scale_num[i], UBYTE(0)) * LOG_SCALING_THRESHOLD;
             //check_score += (pattern_lh[i] * (aln->at(i).frequency));
         }
         /*       if (fabs(score - check_score) > 1e-6) {
@@ -1531,7 +1553,11 @@ double PhyloTree::computeLikelihoodRooted(PhyloNeighbor *dad_branch, PhyloNode *
 }
 
 double PhyloTree::computePatternLhCat() {
-    assert(current_it && current_it_back);
+    if (!current_it) {
+        Node *leaf = findFirstFarLeaf(root);
+        current_it = (PhyloNeighbor*)leaf->neighbors[0];
+        current_it_back = (PhyloNeighbor*)current_it->node->findNeighbor(leaf);
+    }
     if (sse == LK_NORMAL || sse == LK_SSE)
         return computeLikelihoodBranchNaive(current_it, (PhyloNode*)current_it_back->node);
     else if (!getModel()->isMixture())
@@ -3115,6 +3141,8 @@ void PhyloTree::optimizeAllBranchesLS(PhyloNode *node, PhyloNode *dad) {
 void PhyloTree::optimizeAllBranches(PhyloNode *node, PhyloNode *dad, int maxNRStep) {
 //    double tree_lh = -DBL_MAX;
 
+    if (!node) node = (PhyloNode*)root;
+
     for (NeighborVec::iterator it = (node)->neighbors.begin(); it != (node)->neighbors.end(); it++)
         if ((*it)->node != (dad)) {
             optimizeAllBranches((PhyloNode*) (*it)->node, node, maxNRStep);
@@ -3128,6 +3156,7 @@ void PhyloTree::optimizeAllBranches(PhyloNode *node, PhyloNode *dad, int maxNRSt
 double PhyloTree::optimizeAllBranches(int my_iterations, double tolerance, int maxNRStep) {
     if (verbose_mode >= VB_MAX)
         cout << "Optimizing branch lengths (max " << my_iterations << " loops)..." << endl;
+        
     double tree_lh = computeLikelihood();
     if (verbose_mode >= VB_MAX) {
         cout << "Initial tree log-likelihood: " << tree_lh << endl;
@@ -3141,7 +3170,8 @@ double PhyloTree::optimizeAllBranches(int my_iterations, double tolerance, int m
 //            printTree(cout, WT_BR_LEN+WT_NEWLINE);
 //        }
 
-    	optimizeAllBranches((PhyloNode*) root, NULL, maxNRStep);
+            optimizeAllBranches((PhyloNode*) root, NULL, maxNRStep);
+            
         double new_tree_lh = computeLikelihoodFromBuffer();
         //cout<<"After opt  log-lh = "<<new_tree_lh<<endl;
 
