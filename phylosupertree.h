@@ -90,7 +90,7 @@ public:
      * Return the tree string contining taxon names and branch lengths
      * @return
      */
-    virtual string getTreeString();
+    virtual string getTreeString(int format = WT_BR_LEN);
 
     /**
             Read the tree saved with Taxon Names and branch lengths.

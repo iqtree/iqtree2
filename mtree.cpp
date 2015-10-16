@@ -333,11 +333,13 @@ int MTree::printTree(ostream &out, int brtype, Node *node, Node *dad)
             out << node->name;
 
         if (brtype & WT_BR_LEN) {
+            int prec = 10;
         	out.setf( std::ios::fixed, std:: ios::floatfield ); // some sofware does handle number format like '1.234e-6'
-            out.precision(10); // increase precision to avoid zero branch (like in RAxML)
         	double len = node->neighbors[0]->length;
             if (brtype & WT_BR_SCALE) len *= len_scale;
+            if (brtype & WT_BR_LEN_SHORT) prec = 6;
             if (brtype & WT_BR_LEN_ROUNDING) len = round(len);
+            out.precision(prec);
             if (brtype & WT_BR_LEN_FIXED_WIDTH)
                 out << ":" << fixed << len;
             else

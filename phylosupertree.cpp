@@ -552,7 +552,7 @@ void PhyloSuperTree::changeLikelihoodKernel(LikelihoodKernel lk) {
 //    }
 }
 
-string PhyloSuperTree::getTreeString() {
+string PhyloSuperTree::getTreeString(int format) {
 	stringstream tree_stream;
 	printTree(tree_stream, WT_BR_LEN+WT_NEWLINE);
 	for (iterator it = begin(); it != end(); it++)

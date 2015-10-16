@@ -171,7 +171,7 @@ bool CandidateSet::update(string newTree, double newScore) {
 	bool notExisted = true;
 	CandidateTree candidate;
 	candidate.score = newScore;
-	candidate.topology = getTopology(newTree);
+	candidate.topology = convertTreeString(newTree);
 	candidate.tree = newTree;
 
 	if (treeTopologyExist(candidate.topology)) {
@@ -233,25 +233,20 @@ double CandidateSet::getBestScore() {
 		return rbegin()->first;
 }
 
-string CandidateSet::getTopology(string tree) {
+string CandidateSet::convertTreeString(string tree, int format) {
 	PhyloTree mtree;
-//	mtree.rooted = params->is_rooted;
 	mtree.aln = this->aln;
 	mtree.setParams(&(Params::getInstance()));
 
 	stringstream str;
 	str << tree;
 	str.seekg(0, ios::beg);
-//	freeNode();
 	mtree.readTree(str, Params::getInstance().is_rooted);
 	mtree.setAlignment(aln);
 	mtree.setRootNode(Params::getInstance().root);
 
-//	mtree.readTreeString(tree);
-//	mtree.setRootNode(params->root);
-
 	ostringstream ostr;
-	mtree.printTree(ostr, WT_TAXON_ID | WT_SORT_TAXA);
+	mtree.printTree(ostr, format);
 	return ostr.str();
 }
 
@@ -281,11 +276,16 @@ CandidateSet CandidateSet::getBestCandidateTrees(int numTrees) {
 	return res;
 }
 
-void CandidateSet::getAllTrees(vector<string> &trees, vector<double> &scores, bool compressed) {
+void CandidateSet::getAllTrees(vector<string> &trees, vector<double> &scores, int format) {
     trees.clear();
     scores.clear();
+
     for (reverse_iterator rit = rbegin(); rit != rend(); rit++) {
-        trees.push_back(rit->second.tree);
+        if (format != -1) {
+            trees.push_back(convertTreeString(rit->second.tree, format));
+        } else {
+            trees.push_back(rit->second.tree);
+        }
         scores.push_back(rit->first);
     }
 }
@@ -295,7 +295,7 @@ bool CandidateSet::treeTopologyExist(string topo) {
 }
 
 bool CandidateSet::treeExist(string tree) {
-	return treeTopologyExist(getTopology(tree));
+	return treeTopologyExist(convertTreeString(tree));
 }
 
 CandidateSet::iterator CandidateSet::getCandidateTree(string topology) {

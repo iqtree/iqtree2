@@ -814,10 +814,13 @@ public:
 
     /**
             Read the tree saved with Taxon Names and branch lengths.
-            @param tree_string tree string to read from
-            @param updatePLL if true, tree is read into PLL
+            @param
+                tree_string tree string to read from
+            @param
+                convertIDs if TRUE, the NEWICK string contains taxon-IDs instead of names. Thus, the IDs will replaced by
+                the corresponding sequence names in the alignments
      */
-    virtual void readTreeString(const string &tree_string);
+    virtual void readTreeString(const string &tree_string, bool convertIDs = false);
 
     /**
             Read the tree saved with Taxon Names and branch lengths.
@@ -827,9 +830,10 @@ public:
 
     /**
      * Return the tree string contining taxon names and branch lengths
-     * @return
+     * @param format (WT_TAXON_ID, WT_BR_LEN, ...)
+     * @return the tree string with the specified format
      */
-    virtual string getTreeString();
+    virtual string getTreeString(int format = WT_BR_LEN);
 
     /**
      * Assign branch lengths for branch that has no or negative length
@@ -848,8 +852,10 @@ public:
 
     /**
      *  Return the sorted topology without branch length, used to compare tree topology
+     *  @param
+     *      printBranchLength true/false
      */
-    string getTopologyString();
+    string getTopologyString(bool printBranchLength);
 
 
     bool checkEqualScalingFactor(double &sum_scaling, PhyloNode *node = NULL, PhyloNode *dad = NULL);

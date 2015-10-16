@@ -115,9 +115,13 @@ public:
     vector<string> getBestTreeStrings(int numTree = 0);
 
     /**
-     *  Return trees which only contain ID and branch length with 6 characters
+     *  Return a set of trees and a set of scores
+     *
+     *  @param trees vector of trees
+     *  @param scores vector of tree scores
+     *  @param treeFormat the NEWICK format used for tree string (WT_TAXON_ID, WT_BR_LEN, ..)
      */
-    void getAllTrees(vector<string> &trees, vector<double> &scores, bool compressed = false);
+    void getAllTrees(vector<string> &trees, vector<double> &scores, int treeFormat = -1);
 
     /**
      * destructor
@@ -146,10 +150,12 @@ public:
      *
      * 	@param tree
      * 		The newick tree string, from which the topology string will be generated
+     * 	@param convertOption
+     * 	    Use the same options as printTree() (WT_ID, WT_BR_LEN, ...)
      * 	@return
      * 		Newick string of the tree topology
      */
-    string getTopology(string tree);
+    string convertTreeString(const string tree, int format = WT_TAXON_ID | WT_SORT_TAXA);
 
     /**
      * return the score of \a topology

@@ -282,12 +282,15 @@ void PhyloTree::setRootNode(const char *my_root) {
     assert(root);
 }
 
-void PhyloTree::readTreeString(const string &tree_string) {
-	stringstream str;
-	str << tree_string;
-	str.seekg(0, ios::beg);
-	freeNode();
-	readTree(str, rooted);
+void PhyloTree::readTreeString(const string &tree_string, bool convertIDs) {
+    stringstream str;
+    str << tree_string;
+    str.seekg(0, ios::beg);
+    freeNode();
+    readTree(str, rooted);
+    if (convertIDs) {
+        assignLeafNames();
+    }
 	setAlignment(aln);
 	setRootNode(params->root);
 
@@ -339,18 +342,22 @@ void PhyloTree::readTreeFile(const string &file_name) {
     str.close();
 }
 
-string PhyloTree::getTreeString() {
+string PhyloTree::getTreeString(int format) {
 	stringstream tree_stream;
-	printTree(tree_stream);
+	printTree(tree_stream, format);
 	return tree_stream.str();
 }
 
-string PhyloTree::getTopologyString() {
+string PhyloTree::getTopologyString(bool printBranchLength) {
     stringstream tree_stream;
     // important: to make topology string unique
     setRootNode(params->root);
     //printTree(tree_stream, WT_TAXON_ID + WT_SORT_TAXA);
-    printTree(tree_stream, WT_SORT_TAXA);
+    if (printBranchLength) {
+        printTree(tree_stream, WT_SORT_TAXA + WT_BR_LEN + WT_TAXON_ID);
+    } else {
+        printTree(tree_stream, WT_SORT_TAXA);
+    }
     return tree_stream.str();
 }
 

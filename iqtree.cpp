@@ -515,7 +515,7 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
 #ifdef _IQTREE_MPI
     vector<string> trees;
     vector<double> scores;
-    candidateTrees.getAllTrees(trees, scores);
+    candidateTrees.getAllTrees(trees, scores, WT_TAXON_ID + WT_BR_LEN + WT_BR_LEN_SHORT);
     // Send all trees to other nodes
     MPIHelper::getInstance().sendTreesToOthers(trees, scores, TREE_TAG);
     MPI_Barrier(MPI_COMM_WORLD);
@@ -577,7 +577,7 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
         string treeString = getTreeString();
         addTreeToCandidateSet(treeString, curScore);
 #ifdef _IQTREE_MPI
-        MPIHelper::getInstance().sendTreeToOthers(treeString, curScore);
+        MPIHelper::getInstance().sendTreeToOthers(getTreeString(WT_TAXON_ID + WT_BR_LEN + WT_BR_LEN_SHORT), curScore);
         addTreesFromOtherProcesses(false, maxNumTrees, true);
         //nniTrees.push_back(treeString);
         //nniScores.push_back(curScore);
@@ -1850,7 +1850,7 @@ double IQTree::doTreeSearch() {
         }
 
 #ifdef _IQTREE_MPI
-        MPIHelper::getInstance().sendTreeToOthers(curTree, curScore);
+        MPIHelper::getInstance().sendTreeToOthers(getTreeString(WT_TAXON_ID + WT_BR_LEN + WT_BR_LEN_SHORT), curScore);
 #endif
 
         if (iqp_assess_quartet == IQP_BOOTSTRAP) {
@@ -2021,9 +2021,14 @@ void IQTree::addTreesFromOtherProcesses(bool allTrees, int maxNumTrees, bool upd
     cout << inTrees.getNumTrees() << " trees received from other processes in ";
     cout << getRealTime() - start << " seconds" << endl;
 
+    PhyloTree phyloTree;
+    phyloTree.aln = this->aln;
+    phyloTree.setParams(&(Params::getInstance()));
+
     for (int i = 0; i < inTrees.getNumTrees(); i++) {
         pair<string, double> tree = inTrees.getTree(i);
-        addTreeToCandidateSet(tree.first, tree.second, updateStopRule);
+        phyloTree.readTreeString(tree.first, true);
+        addTreeToCandidateSet(phyloTree.getTreeString(), tree.second, updateStopRule);
     }
 }
 #endif
@@ -2062,7 +2067,7 @@ double IQTree::doTreePerturbation() {
                 doIQP();
             }
             if (params->count_trees) {
-                string perturb_tree_topo = getTopologyString();
+                string perturb_tree_topo = getTopologyString(false);
                 if (pllTreeCounter.find(perturb_tree_topo) == pllTreeCounter.end()) {
                     // not found in hash_map
                     pllTreeCounter[perturb_tree_topo] = 1;
