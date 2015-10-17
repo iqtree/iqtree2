@@ -2022,8 +2022,12 @@ void IQTree::addTreesFromOtherProcesses(bool allTrees, int maxNumTrees, bool upd
     TreeCollection inTrees;
     double start = getRealTime();
     MPIHelper::getInstance().receiveTrees(allTrees, maxNumTrees, inTrees);
+    double commTime = getRealTime() - start;
     cout << inTrees.getNumTrees() << " trees received from other processes in ";
-    cout << getRealTime() - start << " seconds" << endl;
+    cout << commTime << " seconds" << endl;
+    if (commTime > 1.0) {
+        cout << "WARNING: Communication time is too slow. Please increase your eager buffer in your MPI library!" << endl;
+    }
 
     PhyloTree phyloTree;
     phyloTree.aln = this->aln;
@@ -2034,14 +2038,14 @@ void IQTree::addTreesFromOtherProcesses(bool allTrees, int maxNumTrees, bool upd
         if (tree.first == "notree") {
             if (updateStopRule) {
                 stop_rule.setCurIt(stop_rule.getCurIt() + 1);
-                cout << "Skipped tree" << endl;
                 curScore = tree.second;
+                cout << "Bad tree with score: " << tree.second << " skipped" << endl;
                 printInterationInfo();
             }
         } else {
             phyloTree.readTreeString(tree.first, true);
             string treeString = phyloTree.getTreeString();
-            addTreeToCandidateSet(treeString, tree.second, updateStopRule);
+            int pos = addTreeToCandidateSet(treeString, tree.second, updateStopRule);
         }
     }
 }
