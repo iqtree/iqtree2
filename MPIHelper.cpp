@@ -35,14 +35,14 @@ void MPIHelper::sendTreesToOthers(vector<string> treeStrings, vector<double> sco
     //numTreeSent += treeStrings.size();
 }
 
-void MPIHelper::sendTreeToOthers(string treeString, double score) {
+void MPIHelper::sendTreeToOthers(string treeString, double score, int tag) {
     double start = getRealTime();
     vector<string> trees;
     vector<double> scores;
     trees.push_back(treeString);
     scores.push_back(score);
     cout << "Sent tree to other processes in ";
-    MPIHelper::getInstance().sendTreesToOthers(trees, scores, TREE_TAG);
+    MPIHelper::getInstance().sendTreesToOthers(trees, scores, tag);
     cout << getRealTime() - start << " seconds" << endl;
     numTreeSent++;
 }

@@ -20,6 +20,7 @@
 #define MASTER 0
 #define TREE_TAG 1 // Message contain trees
 #define STOP_TAG 2 // Stop message
+#define NOTREE_TAG 3 // Message does not contain a tree but a score only
 
 using namespace std;
 
@@ -61,18 +62,19 @@ public:
      */
     void receiveTrees(bool fromAll, int maxNumTrees, TreeCollection &trees);
 
+    /**
+     *   @param treeStrings
+     *   @param scores
+     *   @param tag message tag
+     */
+    void sendTreesToOthers(vector<string> treeStrings, vector<double> scores, int tag = TREE_TAG);
 
     /**
-     *  Send a set of trees with scores to other nodes
-     *
-     *  @param trees a TreeCollection object
-     *  @param tag tag used with the message
-     */
-    //void sendTreesToOthers(TreeCollection trees, int tag);
-
-    void sendTreesToOthers(vector<string> treeStrings, vector<double> scores, int tag);
-
-    void sendTreeToOthers(string treeString, double score);
+    *   @param treeStrings
+    *   @param scores
+    *   @param tag message tag
+    */
+    void sendTreeToOthers(string treeString, double score, int tag);
 
     /**
      *  Send a stop message to other process

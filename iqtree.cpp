@@ -419,13 +419,13 @@ void IQTree::computeInitialTree(string &dist_file, LikelihoodKernel kernel) {
     }
 }
 
-bool IQTree::addTreeToCandidateSet(string treeString, double score, bool updateStopRule) {
+int IQTree::addTreeToCandidateSet(string treeString, double score, bool updateStopRule) {
     double curBestScore = candidateTrees.getBestScore();
-    bool newTree = candidateTrees.update(treeString, score);
+    int pos = candidateTrees.update(treeString, score);
     if (updateStopRule) {
         stop_rule.setCurIt(stop_rule.getCurIt() + 1);
         if (score > curBestScore) {
-            if (newTree) {
+            if (pos != -1) {
                 stop_rule.addImprovedIteration(stop_rule.getCurIt());
                 cout << "BETTER TREE FOUND at iteration " << stop_rule.getCurIt() << ": " << score;
             } else {
@@ -437,7 +437,7 @@ bool IQTree::addTreeToCandidateSet(string treeString, double score, bool updateS
         curScore = score;
         printInterationInfo();
     }
-    return newTree;
+    return pos;
 }
 
 void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
@@ -474,9 +474,9 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
     for (int treeNr = 1; treeNr <= nParTrees; treeNr++) {
         int parRandSeed = Params::getInstance().ran_seed + + processID * nParTrees + treeNr;
         string curParsTree = generateParsimonyTree(parRandSeed);
-        bool newTree = addTreeToCandidateSet(curParsTree, -DBL_MAX, false);
+        int pos = addTreeToCandidateSet(curParsTree, -DBL_MAX, false);
         // if a duplicated tree is generated, then randomize the tree
-        if (!newTree) {
+        if (pos == -1) {
             readTreeString(curParsTree);
             int nNNIs = floor((aln->getNSeq() - 3) * Params::getInstance().initPS);
             string randTree = doRandomNNIs(nNNIs);
@@ -577,7 +577,7 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
         string treeString = getTreeString();
         addTreeToCandidateSet(treeString, curScore);
 #ifdef _IQTREE_MPI
-        MPIHelper::getInstance().sendTreeToOthers(getTreeString(WT_TAXON_ID + WT_BR_LEN + WT_BR_LEN_SHORT), curScore);
+        MPIHelper::getInstance().sendTreeToOthers(getTreeString(WT_TAXON_ID + WT_BR_LEN + WT_BR_LEN_SHORT), curScore, TREE_TAG);
         addTreesFromOtherProcesses(false, maxNumTrees, true);
         //nniTrees.push_back(treeString);
         //nniScores.push_back(curScore);
@@ -1843,14 +1843,18 @@ double IQTree::doTreeSearch() {
         pair<int, int> nniInfos; // <num_NNIs, num_steps>
         nniInfos = doNNISearch();
         string curTree = getTreeString();
-        addTreeToCandidateSet(curTree, curScore);
+        int pos = addTreeToCandidateSet(curTree, curScore);
         if (Params::getInstance().fixStableSplits && candidateTrees.getCandidateSplitHash().empty() &&
                 candidateTrees.size() > 1) {
             candidateTrees.buildTopSplits(Params::getInstance().stableSplitThreshold, Params::getInstance().numSupportTrees);
         }
 
 #ifdef _IQTREE_MPI
-        MPIHelper::getInstance().sendTreeToOthers(getTreeString(WT_TAXON_ID + WT_BR_LEN + WT_BR_LEN_SHORT), curScore);
+        if (pos <= Params::getInstance().numSupportTrees) {
+            MPIHelper::getInstance().sendTreeToOthers(getTreeString(WT_TAXON_ID + WT_BR_LEN + WT_BR_LEN_SHORT), curScore, TREE_TAG);
+        } else {
+            MPIHelper::getInstance().sendTreeToOthers(string("notree"), curScore, NOTREE_TAG);
+        }
 #endif
 
         if (iqp_assess_quartet == IQP_BOOTSTRAP) {
@@ -2027,8 +2031,18 @@ void IQTree::addTreesFromOtherProcesses(bool allTrees, int maxNumTrees, bool upd
 
     for (int i = 0; i < inTrees.getNumTrees(); i++) {
         pair<string, double> tree = inTrees.getTree(i);
-        phyloTree.readTreeString(tree.first, true);
-        addTreeToCandidateSet(phyloTree.getTreeString(), tree.second, updateStopRule);
+        if (tree.first == "notree") {
+            if (updateStopRule) {
+                stop_rule.setCurIt(stop_rule.getCurIt() + 1);
+                cout << "Skipped tree" << endl;
+                curScore = tree.second;
+                printInterationInfo();
+            }
+        } else {
+            phyloTree.readTreeString(tree.first, true);
+            string treeString = phyloTree.getTreeString();
+            addTreeToCandidateSet(treeString, tree.second, updateStopRule);
+        }
     }
 }
 #endif

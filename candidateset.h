@@ -83,9 +83,10 @@ public:
      *  @param score
      * 	    The score (ML or parsimony) of \a tree
      *  @return
-     *      false if tree topology already exists
+     *      Relative position of the new tree to the current best tree.
+     *      Return -1 if the candidate set is not updated (duplicated tree)
      */
-    bool update(string newTree, double newScore);
+    int update(string newTree, double newScore);
 
     /**
      *  Get the \a numBestScores best scores in the candidate set

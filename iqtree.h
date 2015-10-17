@@ -603,9 +603,9 @@ public:
      *      the score of the new tree
      *  @param updateStopRule
      *      Whether or not to update the stop rule
-     *  @return whether a new tree topology is found
+     *  @return relative position of the new tree to the current best. -1 if duplicated
      */
-    bool addTreeToCandidateSet(string treeString, double score, bool updateStopRule = true);
+    int addTreeToCandidateSet(string treeString, double score, bool updateStopRule = true);
 
     /**
      *  Generate the initial candidate tree set

@@ -167,53 +167,53 @@ void CandidateSet::initParentTrees() {
 }
 
 
-bool CandidateSet::update(string newTree, double newScore) {
-	bool notExisted = true;
+int CandidateSet::update(string newTree, double newScore) {
 	CandidateTree candidate;
 	candidate.score = newScore;
 	candidate.topology = convertTreeString(newTree);
 	candidate.tree = newTree;
 
+    int treePos;
+    CandidateSet::iterator candidateTreeIt;
+
 	if (treeTopologyExist(candidate.topology)) {
-		notExisted = false;
 		// update new score if it is better the old score
 		double oldScore = topologies[candidate.topology];
-		if (oldScore < (newScore - 1e-6)) {
+		if (oldScore < (newScore - Params::getInstance().loglh_epsilon)) {
 			removeCandidateTree(candidate.topology);
 			// insert tree into candidate set
-			insert(CandidateSet::value_type(newScore, candidate));
+            candidateTreeIt = insert(CandidateSet::value_type(newScore, candidate));
 			topologies[candidate.topology] = newScore;
 		}
+        treePos = -1;
 	} else {
-		CandidateSet::iterator candidateTreeIt = insert(CandidateSet::value_type(newScore, candidate));
-		topologies[candidate.topology] = newScore;
+        candidateTreeIt = insert(CandidateSet::value_type(newScore, candidate));
+        topologies[candidate.topology] = newScore;
 
-		if (size() > maxSize) {
-			// remove the worst-scoring tree
-			topologies.erase(begin()->second.topology);
-			erase(begin());
-		}
-
-		if (!candidateSplitsHash.empty()) {
-			// ranking of the inserted tree
-			int it_pos = distance(candidateTreeIt, end());
-
-			// A new tree is inserted in the stable tree set
-			if (it_pos <= Params::getInstance().numSupportTrees) {
+        if (size() > maxSize) {
+            // remove the worst-scoring tree
+            topologies.erase(begin()->second.topology);
+            erase(begin());
+        }
+        treePos = distance(candidateTreeIt, end());
+    }
+    if (treePos != -1) {
+        if (!candidateSplitsHash.empty()) {
+            // A new tree is inserted in the stable tree set
+            if (treePos <= Params::getInstance().numSupportTrees) {
 //				addCandidateSplits(candidateTreeIt->second.tree);
 //				if (candidateSplitsHash.getMaxValue() > params->numSupportTrees) {
 //					assert(candidateSplitsHash.getMaxValue() == params->numSupportTrees + 1);
 //					removeCandidateSplits(getNthBestTree(candidateSplitsHash.getMaxValue()).tree);
 //				}
-				buildTopSplits(Params::getInstance().stableSplitThreshold, Params::getInstance().numSupportTrees);
+                buildTopSplits(Params::getInstance().stableSplitThreshold, Params::getInstance().numSupportTrees);
 //				reportStableSplits();
-			}
-		}
-
-	}
+            }
+        }
+    }
 
 	assert(topologies.size() == size());
-	return notExisted;
+	return treePos;
 }
 
 vector<double> CandidateSet::getBestScores(int numBestScore) {
