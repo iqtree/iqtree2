@@ -1012,6 +1012,8 @@ public:
      */
     void optimizeAllBranchesLS(PhyloNode *node = NULL, PhyloNode *dad = NULL);
 
+    void computeBestTraversal(NodeVector &nodes, NodeVector &nodes2);
+
     /**
             optimize all branch lengths of the tree
             @param iterations number of iterations to loop through all branches
@@ -1464,6 +1466,8 @@ public:
 
 	/** sequence that are identical to one of the removed sequences */
 	StrVector twin_seqs;
+
+	size_t num_partial_lh_computations;
 
 	/** remove identical sequences from the tree */
     virtual void removeIdenticalSeqs(Params &params);

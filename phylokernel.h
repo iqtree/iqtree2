@@ -75,6 +75,8 @@ void PhyloTree::computePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_branch, Phy
         return;
     dad_branch->partial_lh_computed |= 1;
 
+    num_partial_lh_computations++;
+
     size_t nptn = aln->size() + model_factory->unobserved_ptns.size();
     PhyloNode *node = (PhyloNode*)(dad_branch->node);
 
