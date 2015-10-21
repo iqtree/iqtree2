@@ -408,7 +408,10 @@ checkpoint.cpp
 upperbounds.cpp
 )
 
-find_package(ZLIB)
+if (NOT IQTREE_FLAGS MATCHES "nozlib")
+    find_package(ZLIB)
+endif()
+
 if(ZLIB_FOUND)
   message ("Using system zlib")
   include_directories(${ZLIB_INCLUDE_DIRS})
