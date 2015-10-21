@@ -3698,3 +3698,9 @@ void print_stacktrace(ostream &out, unsigned int max_frames)
 }
 
 #endif // WIN32
+
+bool memcmpcpy(void * destination, const void * source, size_t num) {
+    bool diff = (memcmp(destination, source, num) != 0);
+    memcpy(destination, source, num);
+    return diff;
+}

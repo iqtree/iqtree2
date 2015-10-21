@@ -66,10 +66,11 @@ void RateGammaInvar::setVariables(double *variables) {
 	RateInvar::setVariables(variables+gid);
 }
 
-void RateGammaInvar::getVariables(double *variables) {
+bool RateGammaInvar::getVariables(double *variables) {
 	int gid = RateGamma::getNDim();
-	RateGamma::getVariables(variables);
-	RateInvar::getVariables(variables+gid);
+	bool changed = RateGamma::getVariables(variables);
+	changed |= RateInvar::getVariables(variables+gid);
+    return changed;
 }
 
 double RateGammaInvar::targetFunk(double x[]) {

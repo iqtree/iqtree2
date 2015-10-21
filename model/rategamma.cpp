@@ -158,9 +158,11 @@ void RateGamma::setVariables(double *variables) {
 	variables[1] = gamma_shape;
 }
 
-void RateGamma::getVariables(double *variables) {
-	if (getNDim() == 0) return;
+bool RateGamma::getVariables(double *variables) {
+	if (getNDim() == 0) return false;
+    bool changed = (gamma_shape != variables[1]);
 	gamma_shape = variables[1];
+    return changed;
 }
 
 double RateGamma::optimizeParameters(double gradient_epsilon, double min_gamma, double max_gamma) {

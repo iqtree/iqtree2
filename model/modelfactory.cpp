@@ -1022,8 +1022,9 @@ void ModelFactory::setVariables(double *variables) {
 	site_rate->setVariables(variables + model->getNDim());
 }
 
-void ModelFactory::getVariables(double *variables) {
-	model->getVariables(variables);
-	site_rate->getVariables(variables + model->getNDim());
+bool ModelFactory::getVariables(double *variables) {
+	bool changed = model->getVariables(variables);
+	changed |= site_rate->getVariables(variables + model->getNDim());
+    return changed;
 }
 

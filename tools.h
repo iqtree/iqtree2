@@ -2268,4 +2268,13 @@ inline uint32_t popcount_lauradoux(unsigned *buf, int n) {
   return bitCount;
 }
 
+/**
+ * combination of memcmp and memcpy.
+ * @param destination destination memory to copy to
+ * @param source code memory to copy from
+ * @param num number of bytes to copy
+ * @return TRUE of memory are different, FALSE if identical
+ */
+bool memcmpcpy(void * destination, const void * source, size_t num);
+
 #endif

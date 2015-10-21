@@ -40,12 +40,14 @@ void PhyloNeighbor::reorientPartialLh(Node *dad) {
 
 
 void PhyloNode::clearReversePartialLh(PhyloNode *dad) {
-	PhyloNeighbor *node_nei = (PhyloNeighbor*)findNeighbor(dad);
-	assert(node_nei);
-	node_nei->partial_lh_computed = 0;
+//	PhyloNeighbor *node_nei = (PhyloNeighbor*)findNeighbor(dad);
+//	assert(node_nei);
+//	node_nei->partial_lh_computed = 0;
 	for (NeighborVec::iterator it = neighbors.begin(); it != neighbors.end(); it ++)
-		if ((*it)->node != dad)
+		if ((*it)->node != dad) {
+			((PhyloNeighbor*)(*it)->node->findNeighbor(this))->partial_lh_computed = 0;
 			((PhyloNode*)(*it)->node)->clearReversePartialLh(this);
+		}
 }
 
 void PhyloNode::clearAllPartialLh(bool make_null, PhyloNode *dad) {

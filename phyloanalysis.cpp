@@ -1552,7 +1552,7 @@ void printFinalSearchInfo(Params &params, IQTree &iqtree, double search_cpu_time
 	params.run_time = (getCPUTime() - params.startCPUTime);
 	cout << endl;
 	cout << "Total number of iterations: " << iqtree.stop_rule.getCurIt() << endl;
-    cout << "Total number of partial likelihood vector computations: " << iqtree.num_partial_lh_computations << endl;
+//    cout << "Total number of partial likelihood vector computations: " << iqtree.num_partial_lh_computations << endl;
 	cout << "CPU time used for tree search: " << search_cpu_time
 			<< " sec (" << convert_time(search_cpu_time) << ")" << endl;
 	cout << "Wall-clock time used for tree search: " << search_real_time

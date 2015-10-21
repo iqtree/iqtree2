@@ -306,10 +306,10 @@ void RateFree::setVariables(double *variables) {
 
 }
 
-void RateFree::getVariables(double *variables) {
-	if (getNDim() == 0) return;
+bool RateFree::getVariables(double *variables) {
+	if (getNDim() == 0) return false;
 	int i;
-
+    bool changed = false;
 	// Modified by Thomas on 13 May 2015
 	// --start--
 	/*
@@ -344,8 +344,10 @@ void RateFree::getVariables(double *variables) {
             sum += variables[i+1];
         }
         for (i = 0; i < ncategory-1; i++) {
+            changed |= (prop[i] != variables[i+1] / sum);
             prop[i] = variables[i+1] / sum;
         }
+        changed |= (prop[ncategory-1] != 1.0 / sum);
         prop[ncategory-1] = 1.0 / sum;
         // added by Thomas on Sept 10, 15
         // update the values of rates, in order to
@@ -359,8 +361,10 @@ void RateFree::getVariables(double *variables) {
 //        }
     } else if (optimizing_params == 1) {
         // rates
-        for (i = 0; i < ncategory-1; i++)
+        for (i = 0; i < ncategory-1; i++) {
+            changed |= (rates[i] != variables[i+1]);
             rates[i] = variables[i+1];
+        }
         // added by Thomas on Sept 10, 15
         // need to normalize the values of rates, in order to
         // maintain the sum of prop[i]*rates[i] = 1
@@ -377,8 +381,10 @@ void RateFree::getVariables(double *variables) {
             sum += variables[i+1];
         }
         for (i = 0; i < ncategory-1; i++) {
+            changed |= (prop[i] != variables[i+1] / sum);
             prop[i] = variables[i+1] / sum;
         }
+        changed |= (prop[ncategory-1] != 1.0 / sum);
         prop[ncategory-1] = 1.0 / sum;
         
         // then rates
@@ -387,12 +393,14 @@ void RateFree::getVariables(double *variables) {
     		sum += prop[i] * variables[i+ncategory];
     	}
     	for (i = 0; i < ncategory-1; i++) {
+            changed |= (rates[i] != variables[i+ncategory] / sum);
     		rates[i] = variables[i+ncategory] / sum;
     	}
+        changed |= (rates[ncategory-1] != 1.0 / sum);
     	rates[ncategory-1] = 1.0 / sum;
     }
 	// --end--
-
+    return changed;
 }
 
 /**
