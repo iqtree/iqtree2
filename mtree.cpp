@@ -2046,7 +2046,8 @@ void MTree::removeTaxa(StrVector &taxa_names) {
 Node *MTree::findFarthestLeaf(Node *node, Node *dad) {
     if (!node) 
         node = root;
-    else if (node->isLeaf()) {
+    
+    if (dad && node->isLeaf()) {
         node->height = 0.0;
         return node;
     }
@@ -2062,35 +2063,48 @@ Node *MTree::findFarthestLeaf(Node *node, Node *dad) {
     return res;
 }
 
-void MTree::sortNeighborBySubtreeSize(Node *node, Node *dad) {
-    if (dad && node->isLeaf()) {
-        node->height = 0.0;
-        return;
-    }
-    
-    node->height = 0.0;
-    FOR_NEIGHBOR_DECLARE(node, dad, it) {
-        sortNeighborBySubtreeSize((*it)->node, node);
-        if (node->height < (*it)->node->height+1)
-            node->height = (*it)->node->height+1;
-    }
-    
-    // sort neighbors in ascending order of tree height
-    FOR_NEIGHBOR(node, dad, it)
-        for (NeighborVec::iterator it2 = it+1; it2 != node->neighbors.end(); it2++)
-            if ((*it)->node != dad && (*it)->node->height > (*it2)->node->height) {
-                Neighbor *nei;
-                nei = *it;
-                *it = *it2;
-                *it2 = nei;
-            }
-}
+//void MTree::sortNeighborBySubtreeSize(Node *node, Node *dad) {
+//    if (dad && node->isLeaf()) {
+//        node->height = 0.0;
+//        return;
+//    }
+//    
+//    node->height = 0.0;
+//    FOR_NEIGHBOR_DECLARE(node, dad, it) {
+//        sortNeighborBySubtreeSize((*it)->node, node);
+//        if (node->height < (*it)->node->height+1)
+//            node->height = (*it)->node->height+1;
+//    }
+//    
+//    // sort neighbors in ascending order of tree height
+//    FOR_NEIGHBOR(node, dad, it)
+//        for (NeighborVec::iterator it2 = it+1; it2 != node->neighbors.end(); it2++)
+//            if ((*it)->node != dad && (*it)->node->height > (*it2)->node->height) {
+//                Neighbor *nei;
+//                nei = *it;
+//                *it = *it2;
+//                *it2 = nei;
+//            }
+//}
 
 void MTree::getPreOrderBranches(NodeVector &nodes, NodeVector &nodes2, Node *node, Node *dad) {
     if (dad) {
         nodes.push_back(node);
         nodes2.push_back(dad);
     }
-    FOR_NEIGHBOR_IT(node, dad, it) 
-        getPreOrderBranches(nodes, nodes2, (*it)->node, node);
+
+    NeighborVec neivec = node->neighbors;
+    NeighborVec::iterator i1, i2;
+    for (i1 = neivec.begin(); i1 != neivec.end(); i1++)
+        for (i2 = i1+1; i2 != neivec.end(); i2++)
+            if ((*i1)->node->height > (*i2)->node->height) {
+                Neighbor *nei = *i1;
+                *i1 = *i2;
+                *i2 = nei;
+            }
+    for (i1 = neivec.begin(); i1 != neivec.end(); i1++)
+        if ((*i1)->node != dad)
+            getPreOrderBranches(nodes, nodes2, (*i1)->node, node);
+//    FOR_NEIGHBOR_IT(node, dad, it) 
+//        getPreOrderBranches(nodes, nodes2, (*it)->node, node);
 }

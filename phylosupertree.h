@@ -241,7 +241,7 @@ public:
 	 * @param node the current node of the post-order tree traversal
 	 * @param dad the dad of that node used to direct the traversal
      */
-    virtual void restoreAllBrans(PhyloNode *node = NULL, PhyloNode *dad = NULL);
+//    virtual void restoreAllBrans(PhyloNode *node = NULL, PhyloNode *dad = NULL);
 
     /**
             reinsert the whole list of leaves back into the supertree then call mapTrees

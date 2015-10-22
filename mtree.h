@@ -615,14 +615,14 @@ public:
         @param dad dad of the node, used to direct the search
     */
     Node *findFarthestLeaf(Node *node = NULL, Node *dad = NULL);
-    
-    /**
-        sort neighbors below a subtree in ascending order of subtree size
-        @param node the starting node
-        @param dad dad of the node, used to direct the search        
+        
+    /** 
+        @get pre-order branches going into swallow subtrees first
+        @param nodes one endpoint of branch
+        @params nodes2 other endpoint of branch
+        @param node the starting node, NULL to start from the root
+        @param dad dad of the node, used to direct the search
     */
-    void sortNeighborBySubtreeSize(Node *node, Node *dad = NULL);
-    
     void getPreOrderBranches(NodeVector &nodes, NodeVector &nodes2, Node *node, Node *dad = NULL);
 
 	/********************************************************

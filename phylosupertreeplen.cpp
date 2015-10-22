@@ -1699,10 +1699,10 @@ void PhyloSuperTreePlen::linkCheckRe(int part,Node* node, Node* dad, PhyloNeighb
 		}
 	}
 }
-void PhyloSuperTreePlen::restoreAllBrans(PhyloNode *node, PhyloNode *dad) {
-	IQTree::restoreAllBrans(node,dad);
-	mapTrees();
-}
+//void PhyloSuperTreePlen::restoreAllBrans(PhyloNode *node, PhyloNode *dad) {
+//	IQTree::restoreAllBrans(node,dad);
+//	mapTrees();
+//}
 
 bool PhyloSuperTreePlen::checkBranchLen(){
 
