@@ -3882,9 +3882,6 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
 		// compute the score of the swapped topology
 //		double saved_len = node1_nei->length;
 
-		optimizeOneBranch(node1, node2, false, NNI_MAX_NR_STEP);
-		nniMoves[cnt].newLen[0] = node1->findNeighbor(node2)->length;
-
 		int i=1;
         if (params->nni5) {
 			FOR_NEIGHBOR(node1, node2, it)
@@ -3894,9 +3891,14 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
 				nniMoves[cnt].newLen[i] = node1->findNeighbor((*it)->node)->length;
 				i++;
 			}
+            node21_it->clearPartialLh();
+        }
 
-			 node21_it->clearPartialLh();
+		optimizeOneBranch(node1, node2, false, NNI_MAX_NR_STEP);
+		nniMoves[cnt].newLen[0] = node1->findNeighbor(node2)->length;
 
+
+        if (params->nni5) {
 			FOR_NEIGHBOR(node2, node1, it)
 			{
 				((PhyloNeighbor*) (*it)->node->findNeighbor(node2))->clearPartialLh();
@@ -3905,7 +3907,7 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
 				nniMoves[cnt].newLen[i] = node2->findNeighbor((*it)->node)->length;
 				i++;
 			}
-			 node12_it->clearPartialLh();
+			node12_it->clearPartialLh();
 		}
 		double score = computeLikelihoodFromBuffer();
 		nniMoves[cnt].newloglh = score;
