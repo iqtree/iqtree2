@@ -3159,6 +3159,8 @@ void PhyloTree::computeBestTraversal(NodeVector &nodes, NodeVector &nodes2) {
     Node *farleaf = findFarthestLeaf();
 //    Node *farleaf = root;
     sortNeighborBySubtreeSize(farleaf);
+    if (verbose_mode >= VB_MED)
+        cout << "Tree diameter: " << farleaf->height << endl;
     getPreOrderBranches(nodes, nodes2, farleaf);
 }
 

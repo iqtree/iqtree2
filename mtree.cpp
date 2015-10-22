@@ -2064,16 +2064,18 @@ Node *MTree::findFarthestLeaf(Node *node, Node *dad) {
 
 void MTree::sortNeighborBySubtreeSize(Node *node, Node *dad) {
     if (dad && node->isLeaf()) {
-        node->height = 1.0;
+        node->height = 0.0;
         return;
     }
     
     node->height = 0.0;
     FOR_NEIGHBOR_DECLARE(node, dad, it) {
         sortNeighborBySubtreeSize((*it)->node, node);
-        node->height += (*it)->node->height;
+        if (node->height < (*it)->node->height+1)
+            node->height = (*it)->node->height+1;
     }
     
+    // sort neighbors in ascending order of tree height
     FOR_NEIGHBOR(node, dad, it)
         for (NeighborVec::iterator it2 = it+1; it2 != node->neighbors.end(); it2++)
             if ((*it)->node != dad && (*it)->node->height > (*it2)->node->height) {
