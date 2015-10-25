@@ -825,7 +825,7 @@ SeqType Alignment::detectSequenceType(StrVector &sequences) {
 
     for (StrVector::iterator it = sequences.begin(); it != sequences.end(); it++)
         for (string::iterator i = it->begin(); i != it->end(); i++) {
-            if ((*i) != '?' && (*i) != '-' && (*i) != '.' && *i != 'N' && *i != 'X') num_ungap++;
+            if ((*i) != '?' && (*i) != '-' && (*i) != '.' && *i != 'N' && *i != 'X' &&  (*i) != '~') num_ungap++;
             if ((*i) == 'A' || (*i) == 'C' || (*i) == 'G' || (*i) == 'T' || (*i) == 'U')
                 num_nuc++;
             if ((*i) == '0' || (*i) == '1')
@@ -849,6 +849,7 @@ void Alignment::buildStateMap(char *map, SeqType seq_type) {
     assert(STATE_UNKNOWN < 126);
     map[(unsigned char)'?'] = STATE_UNKNOWN;
     map[(unsigned char)'-'] = STATE_UNKNOWN;
+    map[(unsigned char)'~'] = STATE_UNKNOWN;
     map[(unsigned char)'.'] = STATE_UNKNOWN;
     int len;
     switch (seq_type) {
@@ -911,7 +912,7 @@ void Alignment::buildStateMap(char *map, SeqType seq_type) {
 	@return state ID
 */
 char Alignment::convertState(char state, SeqType seq_type) {
-    if (state == '?' || state == '-' || state == '.')
+    if (state == '?' || state == '-' || state == '.' || state == '~')
         return STATE_UNKNOWN;
 
     char *loc;
@@ -1425,7 +1426,7 @@ int Alignment::readPhylip(char *filename, char *sequence_type) {
             } else
                 for (string::iterator it = line.begin(); it != line.end(); it++) {
                     if ((*it) <= ' ') continue;
-                    if (isalnum(*it) || (*it) == '-' || (*it) == '?'|| (*it) == '.' || (*it) == '*')
+                    if (isalnum(*it) || (*it) == '-' || (*it) == '?'|| (*it) == '.' || (*it) == '*' || (*it) == '~')
                         sequences[seq_id].append(1, toupper(*it));
                     else {
                         err_str << "Line " << line_num <<": Unrecognized character " << *it;
@@ -1483,7 +1484,7 @@ int Alignment::readFasta(char *filename, char *sequence_type) {
         if (sequences.empty()) throw "First line must begin with '>' to define sequence name";
         for (string::iterator it = line.begin(); it != line.end(); it++) {
             if ((*it) <= ' ') continue;
-            if (isalnum(*it) || (*it) == '-' || (*it) == '?'|| (*it) == '.' || (*it) == '*')
+            if (isalnum(*it) || (*it) == '-' || (*it) == '?'|| (*it) == '.' || (*it) == '*' || (*it) == '~')
                 sequences.back().append(1, toupper(*it));
             else {
                 err_str << "Line " << line_num <<": Unrecognized character " << *it;
@@ -1588,7 +1589,7 @@ int Alignment::readClustal(char *filename, char *sequence_type) {
         // read sequence contents
         for (string::iterator it = line.begin(); it != line.end(); it++) {
             if ((*it) <= ' ') continue;
-            if (isalnum(*it) || (*it) == '-' || (*it) == '?'|| (*it) == '.' || (*it) == '*')
+            if (isalnum(*it) || (*it) == '-' || (*it) == '?'|| (*it) == '.' || (*it) == '*' || (*it) == '~')
                 sequences[seq_count].append(1, toupper(*it));
             else {
                 throw "Line " +convertIntToString(line_num) + ": Unrecognized character " + *it;
