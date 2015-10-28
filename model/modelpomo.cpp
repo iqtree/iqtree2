@@ -953,7 +953,7 @@ void ModelPoMo::reportPoMoStateFreqs(ofstream &out) {
 
     // Output expected number of substitutions without
     // total_tree_length/t_fix.
-    out << "Total mutation rate:" << endl;
+    out << "Total mutation rate: ";
     double mu_tot = 0.0;
     // for (int i = 0; i < nnuc; i++)
     //     for (int j = 0; j < nnuc; j++)
@@ -962,11 +962,11 @@ void ModelPoMo::reportPoMoStateFreqs(ofstream &out) {
         for (int j = 0; j < num_states; j++)
             // if (i != j) mu_tot += (double) freq_fixed_states[i]*rate_matrix[i*num_states + j];
             if (i != j) mu_tot += (double) state_freq[i]*rate_matrix[i*num_states + j];
-    out << mu_tot << endl << endl;
+    out << mu_tot << endl;
 
     double fr_tot = 0.0;
     double row_sum;
-    out << "Total rate of frequency shifts:" << endl;
+    out << "Total rate of frequency shifts: ";
     // fr_tot = tot_sum-mu_tot;
     for (int i = nnuc; i < num_states; i++) {
         row_sum = 0.0;
@@ -975,15 +975,9 @@ void ModelPoMo::reportPoMoStateFreqs(ofstream &out) {
         }
         fr_tot += state_freq[i]*row_sum;
     }
-    out << fr_tot << endl << endl;
+    out << fr_tot << endl;
 
-    out << "Ratio of mutation rate to rate of frequency shifts:" << endl;
-    out << mu_tot / fr_tot << endl << endl;
-
-    out << "Ratio of mutation rate to total rate:" << endl;
-    out << mu_tot / (fr_tot + mu_tot) << endl << endl;
-
-    out << "Total rate (normalization constant of Q-matrix):" << endl;
+    out << "Total rate (normalization constant of Q-matrix): ";
     double tot_sum = 0.0;
     for (int i = 0; i < num_states; i++) {
         row_sum = 0.0;
@@ -992,5 +986,12 @@ void ModelPoMo::reportPoMoStateFreqs(ofstream &out) {
         }
         tot_sum += state_freq[i]*row_sum;
     }
-    out << tot_sum << endl << endl;
+    out << tot_sum << endl;
+
+    out << "Ratio of mutation rate to rate of frequency shifts: ";
+    out << mu_tot / fr_tot << endl;
+
+    out << "Ratio of mutation rate to total rate: ";
+    out << mu_tot / (fr_tot + mu_tot) << endl << endl;
+
 }

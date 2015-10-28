@@ -415,7 +415,13 @@ void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh, 
     }
     out << endl;
     
-	out << "Total tree length (sum of branch lengths): " << totalLen << endl;
+    if (tree.aln->seq_type == SEQ_POMO) {
+        int N = tree.aln->virtual_pop_size;
+        out << "Total tree length measured in number of events: " << totalLen << endl;
+        out << "Total tree length measured in number of substitutions: " << totalLen / (N * N) << endl;
+    }
+    else out << "Total tree length (sum of branch lengths): " << totalLen << endl;
+
 	double totalLenInternal = tree.treeLengthInternal(epsilon);
 	out << "Sum of internal branch lengths: " << totalLenInternal << " (" << totalLenInternal*100.0 / totalLen << "% of tree length)" << endl;
 //	out << "Sum of internal branch lengths divided by total tree length: "
