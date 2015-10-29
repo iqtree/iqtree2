@@ -242,6 +242,24 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk) {
     // population size N.  The size is 4 + 6*(N-1).  We decided to
     // hardcode the pointers for an improve of runtime (~ 10 to 20 per
     // cent).
+    case 10: // N=2
+        switch(sse) {
+        case LK_SSE:
+            computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchSSE<10>;
+            computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervSSE<10>;
+            computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodSSE<10>;
+            computeLikelihoodFromBufferPointer = NULL;
+            break;
+        case LK_EIGEN_SSE:
+            computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchEigenSIMD<Vec2d, 2, 10>;
+            computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervEigenSIMD<Vec2d, 2, 10>;
+            computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodEigenSIMD<Vec2d, 2, 10>;
+            computeLikelihoodFromBufferPointer = &PhyloTree::computeLikelihoodFromBufferEigenSIMD<Vec2d, 2, 10>;
+            break;
+        default:
+            break;
+        }
+        break;
     case 16: // N=3
         switch(sse) {
         case LK_SSE:
