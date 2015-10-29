@@ -754,7 +754,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.iqp_assess_quartet = IQP_DISTANCE;
     params.iqp = false;
     params.write_intermediate_trees = 0;
-    params.avoid_duplicated_trees = false;
+//    params.avoid_duplicated_trees = false;
     params.rf_dist_mode = 0;
     params.mvh_site_rate = false;
     params.rate_mh_type = true;
@@ -815,7 +815,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.online_bootstrap = true;
     params.min_correlation = 0.99;
     params.step_iterations = 100;
-    params.store_candidate_trees = false;
+//    params.store_candidate_trees = false;
 	params.print_ufboot_trees = 0;
     //const double INF_NNI_CUTOFF = -1000000.0;
     params.nni_cutoff = -1000000.0;
@@ -1691,7 +1691,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 					throw "Use -nb <#bootstrap_replicates>";
 				params.min_iterations = convert_int(argv[cnt]);
 				params.iqp_assess_quartet = IQP_BOOTSTRAP;
-				params.avoid_duplicated_trees = true;
+//				params.avoid_duplicated_trees = true;
 				continue;
 			}
 			if (strcmp(argv[cnt], "-mod") == 0
@@ -2029,13 +2029,13 @@ void parseArg(int argc, char *argv[], Params &params) {
 			}
 			if (strcmp(argv[cnt], "-wt2") == 0) {
 				params.write_intermediate_trees = 2;
-				params.avoid_duplicated_trees = true;
+//				params.avoid_duplicated_trees = true;
 				params.print_tree_lh = true;
 				continue;
 			}
 			if (strcmp(argv[cnt], "-wt3") == 0) {
 				params.write_intermediate_trees = 3;
-				params.avoid_duplicated_trees = true;
+//				params.avoid_duplicated_trees = true;
 				params.print_tree_lh = true;
 				continue;
 			}
@@ -2047,10 +2047,10 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.write_init_tree = true;
                 continue;
             }
-			if (strcmp(argv[cnt], "-nodup") == 0) {
-				params.avoid_duplicated_trees = true;
-				continue;
-			}
+//			if (strcmp(argv[cnt], "-nodup") == 0) {
+//				params.avoid_duplicated_trees = true;
+//				continue;
+//			}
 			if (strcmp(argv[cnt], "-rf_all") == 0) {
 				params.rf_dist_mode = RF_ALL_PAIR;
 				continue;
@@ -2306,7 +2306,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (cnt >= argc)
 					throw "Use -bb <#replicates>";
 				params.gbo_replicates = convert_int(argv[cnt]);
-				params.avoid_duplicated_trees = true;
+//				params.avoid_duplicated_trees = true;
 				if (params.gbo_replicates < 1000)
 					throw "#replicates must be >= 1000";
 				params.consensus_type = CT_CONSENSUS_TREE;
@@ -2368,11 +2368,11 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.online_bootstrap = false;
 				continue;
 			}
-			if (strcmp(argv[cnt], "-nostore") == 0
-					|| strcmp(argv[cnt], "-memsave") == 0) {
-				params.store_candidate_trees = false;
-				continue;
-			}
+//			if (strcmp(argv[cnt], "-nostore") == 0
+//					|| strcmp(argv[cnt], "-memsave") == 0) {
+//				params.store_candidate_trees = false;
+//				continue;
+//			}
 			if (strcmp(argv[cnt], "-lhmemsave") == 0) {
 				params.lh_mem_save = LM_PER_NODE;
 				continue;
@@ -2381,10 +2381,10 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.lh_mem_save = LM_ALL_BRANCH;
 				continue;
 			}
-			if (strcmp(argv[cnt], "-storetrees") == 0) {
-				params.store_candidate_trees = true;
-				continue;
-			}
+//			if (strcmp(argv[cnt], "-storetrees") == 0) {
+//				params.store_candidate_trees = true;
+//				continue;
+//			}
 			if (strcmp(argv[cnt], "-nodiff") == 0) {
 				params.distinct_trees = false;
 				continue;

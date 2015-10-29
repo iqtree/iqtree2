@@ -58,6 +58,8 @@ public:
 
 	void init(StringIntMap &treels, bool &is_rooted, IntVector &weights);
 
+	void init(StrVector &treels, bool &is_rooted);
+
 	/**
 	 *  Add trees from \a trees to the tree set
 	 *

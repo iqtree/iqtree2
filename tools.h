@@ -1257,7 +1257,7 @@ public:
     /**
         TRUE to avoid duplicated trees while writing intermediate trees
      */
-    bool avoid_duplicated_trees;
+//    bool avoid_duplicated_trees;
 
     /**
             Robinson-Foulds distance computation mode: RF_ADJACENT PAIR, RF_ALL_PAIR
@@ -1543,7 +1543,7 @@ public:
     int step_iterations;
 
     /** TRUE to store all candidate trees in memory */
-    bool store_candidate_trees;
+//    bool store_candidate_trees;
 
 	/** true to print all UFBoot trees to a file */
 	int print_ufboot_trees;
