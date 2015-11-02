@@ -195,8 +195,32 @@ public:
 	 */
 	void getNNIType(PhyloNode *node1, PhyloNode *node2, vector<NNIType> &nni_type);
 
-	virtual void computeFuncDerv(double value, double &df, double &ddf);
-	virtual double computeFunction(double value);
+    /**
+            Inherited from Optimization class.
+            This function calculate f(value), first derivative f'(value) and 2nd derivative f''(value).
+            used by Newton raphson method to minimize the function.
+            @param value current branch length
+            @param df (OUT) first derivative
+            @param ddf (OUT) second derivative
+            @return negative of likelihood (for minimization)
+     */
+    virtual void computeFuncDerv(double value, double &df, double &ddf);
+
+    /**
+            inherited from Optimization class, to return to likelihood of the tree
+            when the current branch length is set to value
+            @param value current branch length
+            @return negative of likelihood (for minimization)
+     */
+    virtual double computeFunction(double value);
+
+    /**
+            compute tree likelihood on a branch. used to optimize branch length
+            @param dad_branch the branch leading to the subtree
+            @param dad its dad, used to direct the tranversal
+            @return tree likelihood
+     */
+    virtual double computeLikelihoodBranch(PhyloNeighbor *dad_branch, PhyloNode *dad);
 
     /**
             compute tree likelihood on a branch given buffer (theta_all), used after optimizing branch length

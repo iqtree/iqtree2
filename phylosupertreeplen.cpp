@@ -582,6 +582,12 @@ double PhyloSuperTreePlen::computeFunction(double value) {
     return -tree_lh;
 }
 
+double PhyloSuperTreePlen::computeLikelihoodBranch(PhyloNeighbor *dad_branch, PhyloNode *dad) {
+    current_it = dad_branch;
+    current_it_back = (PhyloNeighbor*)dad_branch->node->findNeighbor(dad);
+    return -computeFunction(dad_branch->length);
+}
+
 double PhyloSuperTreePlen::computeLikelihoodFromBuffer() {
     //return -computeFunction(current_it->length);
 	double score = 0.0;
