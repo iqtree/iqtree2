@@ -1325,6 +1325,7 @@ double ModelMixture::optimizeWeights() {
     double *ratio_prop = aligned_alloc<double>(nmix);
 
     // EM algorithm loop described in Wang, Li, Susko, and Roger (2008)
+
     for (int step = 0; step < 100000; step++) {
         // E-step
 
@@ -1409,6 +1410,7 @@ double ModelMixture::optimizeWithEM(double gradient_epsilon) {
         
     // int num_steps = (getNDim()+1)*3;
     int num_steps = 100000; //SC
+
     // EM algorithm loop described in Wang, Li, Susko, and Roger (2008)
     for (int step = 0; step < num_steps; step++) {
         // first compute _pattern_lh_cat
