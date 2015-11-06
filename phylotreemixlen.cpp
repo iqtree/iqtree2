@@ -96,7 +96,7 @@ void PhyloTreeMixlen::initializeMixlen(double tolerance) {
             // create new rate model
             // random alpha
 //            relative_rate = new RateGamma(mixlen, 0.0, params->gamma_median, this);
-            relative_rate = new RateFree(mixlen, 0.0, "", true, params->optimize_alg, this);
+            relative_rate = new RateFree(mixlen, params->gamma_shape, "", true, params->optimize_alg, this);
             relative_rate->setTree(this);
             
             // setup new rate model
