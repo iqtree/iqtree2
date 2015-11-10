@@ -2917,8 +2917,7 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -sp <partition_file> Edge-unlinked partition model (like -M option of RAxML)" << endl
             << "  -t <start_tree_file> | BIONJ | RANDOM" << endl
             << "                       Starting tree (default: 100 parsimony trees and BIONJ)" << endl
-            << "  -te <user_tree_file> Evaluating a fixed user tree (no tree search performed)" << endl
-            << "  -z <trees_file>      Evaluating user trees at the end (can be used with -t, -te)" << endl
+            << "  -te <user_tree_file> Like -t but fixing user tree (no tree search performed)" << endl
             << "  -o <outgroup_taxon>  Outgroup taxon name for writing .treefile" << endl
             << "  -pre <PREFIX>        Using <PREFIX> for output files (default: aln/partition)" << endl
 #ifdef _OPENMP
@@ -3055,7 +3054,8 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "                       stored in <treefile> and <treefile2>" << endl
             << "  -rf_adj              Computing RF distances of adjacent trees in <treefile>" << endl
             << endl << "TREE TOPOLOGY TEST:" << endl
-            << "  -zb <#replicates>    BP,KH,SH,ELW tests with RELL for trees passed via -z" << endl
+            << "  -z <trees_file>      Evaluating a set of user trees" << endl
+            << "  -zb <#replicates>    Performing BP,KH,SH,ELW tests for trees passed via -z" << endl
             << "  -zw                  Also performing weighted-KH and weighted-SH tests" << endl
             << endl;
 
