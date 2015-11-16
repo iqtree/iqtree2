@@ -241,6 +241,20 @@ struct LeafFreq {
 /* maximum exp difference, such that 1.0+exp(-TP_MAX_EXP_DIFF) == 1.0 */
 const double TP_MAX_EXP_DIFF = 40.0;
 
+/* single counter array needed in likelihood mapping analysis */
+/* (makes above counters obsolete - up/down,right/left never needed) (HAS) */
+#define LM_REG1 0
+#define LM_REG2 1
+#define LM_REG3 2
+#define LM_REG4 3
+#define LM_REG5 4
+#define LM_REG6 5
+#define LM_REG7 6
+#define LM_AR1  7
+#define LM_AR2  8
+#define LM_AR3  9
+#define LM_MAX  10
+
 struct QuartetInfo {
     int seqID[4];
     double logl[3];    // log-lh for {0,1}|{2,3}  {0,2}|{1,3}  {0,3}|{1,4}
@@ -248,6 +262,10 @@ struct QuartetInfo {
     int corner;        // for the 3 corners of the simplex triangle (0:top, 1:right, 2:left)
     int area;          // for the 7 areas of the simplex triangle
 			// corners (0:top, 1:right, 2:left), rectangles (3:right, 4:left, 5:bottom), 6:center
+};
+
+struct SeqQuartetInfo {
+    unsigned long countarr[LM_MAX]; // the 7 areas of the simplex triangle [0-6; corners (0:top, 1:right, 2:left), rectangles (3:right, 4:left, 5:bottom), 6:center] and the 3 corners [7-9; 7:top, 8:right, 9:left]
 };
 
 /**
