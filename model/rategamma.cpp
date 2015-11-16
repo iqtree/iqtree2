@@ -131,9 +131,11 @@ void RateGamma::setGammaShape(double gs) {
 }
 
 double RateGamma::computeFunction(double shape) {
-	gamma_shape = shape;
-	computeRates();
-	phylo_tree->clearAllPartialLH();
+	if (gamma_shape != shape) {
+		gamma_shape = shape;
+		computeRates();
+		phylo_tree->clearAllPartialLH();
+	}
 	return -phylo_tree->computeLikelihood();
 }
 
@@ -170,10 +172,13 @@ double RateGamma::optimizeParameters(double gradient_epsilon, double min_gamma, 
 	double current_shape = gamma_shape;
 	double ferror, optx;
 	optx = minimizeOneDimen(min_gamma, current_shape, max_gamma, max(gradient_epsilon, TOL_GAMMA_SHAPE), &negative_lh, &ferror);
-	gamma_shape = optx;
-	computeRates();
-	phylo_tree->clearAllPartialLH();
-	return -negative_lh;
+//	if (gamma_shape != optx) {
+//		gamma_shape = optx;
+//		computeRates();
+//		phylo_tree->clearAllPartialLH();
+//	}
+//	return phylo_tree->computeLikelihood();
+	return -computeFunction(optx);
 }
 
 double RateGamma::optimizeParameters(double gradient_epsilon) {
@@ -185,10 +190,11 @@ double RateGamma::optimizeParameters(double gradient_epsilon) {
 	double current_shape = gamma_shape;
 	double ferror, optx;
 	optx = minimizeOneDimen(MIN_GAMMA_SHAPE, current_shape, MAX_GAMMA_SHAPE, max(gradient_epsilon, TOL_GAMMA_SHAPE), &negative_lh, &ferror);
-	gamma_shape = optx;
-	computeRates();
-	phylo_tree->clearAllPartialLH();
-	return -negative_lh;
+//	gamma_shape = optx;
+//	computeRates();
+//	phylo_tree->clearAllPartialLH();
+//	return -negative_lh;
+	return -computeFunction(optx);
 }
 
 void RateGamma::writeInfo(ostream &out) {

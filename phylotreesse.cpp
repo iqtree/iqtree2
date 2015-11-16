@@ -395,6 +395,14 @@ void PhyloTree::computeTipPartialLikelihood() {
 	// initialize ptn_freq and ptn_invar
 	//-------------------------------------------------------
 
+	computePtnFreq();
+	// for +I model
+	computePtnInvar();
+}
+
+void PhyloTree::computePtnFreq() {
+	if (ptn_freq_computed) return;
+	ptn_freq_computed = true;
 	size_t nptn = aln->getNPattern();
 	size_t maxptn = get_safe_upper_limit(nptn+model_factory->unobserved_ptns.size());
 	int ptn;
@@ -402,9 +410,6 @@ void PhyloTree::computeTipPartialLikelihood() {
 		ptn_freq[ptn] = (*aln)[ptn].frequency;
 	for (ptn = nptn; ptn < maxptn; ptn++)
 		ptn_freq[ptn] = 0.0;
-
-	// for +I model
-	computePtnInvar();
 }
 
 void PhyloTree::computePtnInvar() {
@@ -938,9 +943,11 @@ double PhyloTree::computeLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloN
     	node_branch = tmp_nei;
     }
     if ((dad_branch->partial_lh_computed & 1) == 0)
-        computePartialLikelihoodEigen(dad_branch, dad);
+//        computePartialLikelihoodEigen(dad_branch, dad);
+        computePartialLikelihood(dad_branch, dad);
     if ((node_branch->partial_lh_computed & 1) == 0)
-        computePartialLikelihoodEigen(node_branch, node);
+//        computePartialLikelihoodEigen(node_branch, node);
+        computePartialLikelihood(node_branch, node);
     double tree_lh = node_branch->lh_scale_factor + dad_branch->lh_scale_factor;
     size_t nstates = aln->num_states;
     size_t ncat = site_rate->getNRate();
@@ -1073,6 +1080,13 @@ double PhyloTree::computeLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloN
     if (orig_nptn < nptn) {
     	// ascertainment bias correction
         assert(prob_const < 1.0);
+
+        // BQM 2015-10-11: fix this those functions using _pattern_lh_cat
+//        double inv_const = 1.0 / (1.0-prob_const);
+//        size_t nptn_cat = orig_nptn*ncat;
+//    	for (ptn = 0; ptn < nptn_cat; ptn++)
+//            _pattern_lh_cat[ptn] *= inv_const;
+        
     	prob_const = log(1.0 - prob_const);
     	for (ptn = 0; ptn < orig_nptn; ptn++)
     		_pattern_lh[ptn] -= prob_const;
@@ -1970,9 +1984,11 @@ double PhyloTree::computeMixrateLikelihoodBranchEigen(PhyloNeighbor *dad_branch,
     	node_branch = tmp_nei;
     }
     if ((dad_branch->partial_lh_computed & 1) == 0)
-        computeMixratePartialLikelihoodEigen(dad_branch, dad);
+//        computeMixratePartialLikelihoodEigen(dad_branch, dad);
+        computePartialLikelihood(dad_branch, dad);
     if ((node_branch->partial_lh_computed & 1) == 0)
-        computeMixratePartialLikelihoodEigen(node_branch, node);
+//        computeMixratePartialLikelihoodEigen(node_branch, node);
+        computePartialLikelihood(node_branch, node);
     double tree_lh = node_branch->lh_scale_factor + dad_branch->lh_scale_factor;
     size_t nstates = aln->num_states;
     size_t ncat = site_rate->getNRate();
@@ -2584,9 +2600,10 @@ double PhyloTree::computeMixtureLikelihoodBranchEigen(PhyloNeighbor *dad_branch,
     	node_branch = tmp_nei;
     }
     if ((dad_branch->partial_lh_computed & 1) == 0)
-        computeMixturePartialLikelihoodEigen(dad_branch, dad);
+//        computeMixturePartialLikelihoodEigen(dad_branch, dad);
+        computePartialLikelihood(dad_branch, dad);
     if ((node_branch->partial_lh_computed & 1) == 0)
-        computeMixturePartialLikelihoodEigen(node_branch, node);
+        computePartialLikelihood(node_branch, node);
     double tree_lh = node_branch->lh_scale_factor + dad_branch->lh_scale_factor;
     size_t nstates = aln->num_states;
     size_t ncat = site_rate->getNRate();
@@ -2594,6 +2611,7 @@ double PhyloTree::computeMixtureLikelihoodBranchEigen(PhyloNeighbor *dad_branch,
 
     size_t block = ncat * nstates * nmixture;
     size_t statemix = nstates * nmixture;
+    size_t cat_states = ncat * nstates;
     size_t ptn; // for big data size > 4GB memory required
     size_t c, i, m;
     size_t orig_nptn = aln->size();
@@ -2611,7 +2629,8 @@ double PhyloTree::computeMixtureLikelihoodBranchEigen(PhyloNeighbor *dad_branch,
 	}
 
 	double prob_const = 0.0;
-	memset(_pattern_lh_cat, 0, nptn*ncat*nmixture*sizeof(double));
+    // 2018-08-14: _pattern_lh_cat now only stores mixture likelihoods
+	memset(_pattern_lh_cat, 0, nptn*nmixture*sizeof(double));
 
     if (dad->isLeaf()) {
     	// special treatment for TIP-INTERNAL NODE case
@@ -2640,20 +2659,27 @@ double PhyloTree::computeMixtureLikelihoodBranchEigen(PhyloNeighbor *dad_branch,
 #endif
     	for (ptn = 0; ptn < nptn; ptn++) {
 			double lh_ptn = ptn_invar[ptn];
-			double *lh_cat = _pattern_lh_cat + ptn*ncat*nmixture;
+			double *lh_cat = _pattern_lh_cat + ptn*nmixture;
 			double *partial_lh_dad = dad_branch->partial_lh + ptn*block;
 			int state_dad = (ptn < orig_nptn) ? (aln->at(ptn))[dad->id] : model_factory->unobserved_ptns[ptn-orig_nptn];
 			double *lh_node = partial_lh_node + state_dad*block;
 			for (m = 0; m < nmixture; m++) {
-				for (c = 0; c < ncat; c++) {
-					for (i = 0; i < nstates; i++) {
-						*lh_cat += lh_node[i] * partial_lh_dad[i];
-					}
-					lh_node += nstates;
-					partial_lh_dad += nstates;
-					lh_ptn += *lh_cat;
-					lh_cat++;
-				}
+                for (i = 0; i < cat_states; i++)
+                    *lh_cat += lh_node[i] * partial_lh_dad[i];
+                lh_ptn += *lh_cat;
+                lh_node += cat_states;
+                partial_lh_dad += cat_states;
+                lh_cat++;
+//				for (c = 0; c < ncat; c++) {
+//					for (i = 0; i < nstates; i++) {
+//						*lh_cat += lh_node[i] * partial_lh_dad[i];
+//					}
+//					lh_node += nstates;
+//					partial_lh_dad += nstates;
+//                    lh_ptn += *lh_cat;
+//					lh_cat++;
+//				}
+                
 			}
 //			assert(lh_ptn > 0.0);
 			if (ptn < orig_nptn) {
@@ -2672,21 +2698,28 @@ double PhyloTree::computeMixtureLikelihoodBranchEigen(PhyloNeighbor *dad_branch,
 #endif
     	for (ptn = 0; ptn < nptn; ptn++) {
 			double lh_ptn = ptn_invar[ptn];
-			double *lh_cat = _pattern_lh_cat + ptn*ncat*nmixture;
+			double *lh_cat = _pattern_lh_cat + ptn*nmixture;
 			double *partial_lh_dad = dad_branch->partial_lh + ptn*block;
 			double *partial_lh_node = node_branch->partial_lh + ptn*block;
 			double *val_tmp = val;
 			for (m = 0; m < nmixture; m++) {
-				for (c = 0; c < ncat; c++) {
-					for (i = 0; i < nstates; i++) {
-						*lh_cat +=  val_tmp[i] * partial_lh_node[i] * partial_lh_dad[i];
-					}
-					lh_ptn += *lh_cat;
-					partial_lh_node += nstates;
-					partial_lh_dad += nstates;
-					val_tmp += nstates;
-					lh_cat++;
-				}
+                for (i = 0; i < cat_states; i++)
+                    *lh_cat += val_tmp[i] * partial_lh_node[i] * partial_lh_dad[i];
+                lh_ptn += *lh_cat;
+                partial_lh_dad += cat_states;
+                partial_lh_node += cat_states;
+                val_tmp += cat_states;
+                lh_cat++;
+//				for (c = 0; c < ncat; c++) {
+//					for (i = 0; i < nstates; i++) {
+//						*lh_cat +=  val_tmp[i] * partial_lh_node[i] * partial_lh_dad[i];
+//					}
+//					lh_ptn += *lh_cat;
+//					partial_lh_node += nstates;
+//					partial_lh_dad += nstates;
+//					val_tmp += nstates;
+//					lh_cat++;
+//				}
 			}
 
 			assert(lh_ptn > 0.0);

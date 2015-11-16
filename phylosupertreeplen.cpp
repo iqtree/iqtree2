@@ -106,11 +106,34 @@ double PartitionModelPlen::optimizeParameters(bool fixed_len, bool write_info, d
                 tree->part_info[part].cur_score = tree->at(part)->computeLikelihood();
         	cur_lh += tree->part_info[part].cur_score;
 
+        	// normalize rates s.t. branch lengths are #subst per site
+        	double mean_rate = tree->at(part)->getRate()->rescaleRates();
+        	if (mean_rate != 1.0) {
+        		if (tree->fixed_rates) {
+        			outError("Partition " + tree->part_info[part].name + " follows FreeRate heterogeneity. Please use proportion edge-linked partition model (-spp)");
+                }
+                tree->at(part)->scaleLength(mean_rate);
+        		tree->part_info[part].part_rate *= mean_rate;
+        	}
+
     	}
+        if (verbose_mode >= VB_MED)
+            cout << "LnL after optimizing individual models: " << cur_lh << endl;
+        assert(cur_lh > tree_lh - 1.0 && "individual model opt reduces LnL");
+        
     	tree->clearAllPartialLH();
     	// Optimizing gene rate
     	if(!tree->fixed_rates){
     		cur_lh = optimizeGeneRate(gradient_epsilon);
+            if (verbose_mode >= VB_MED) {
+                cout << "LnL after optimizing partition-specific rates: " << cur_lh << endl;
+                cout << "Partition-specific rates: ";
+                for(int part = 0; part < ntrees; part++){
+                    cout << " " << tree->part_info[part].part_rate;
+                }
+                cout << endl;
+            }
+            assert(cur_lh > tree_lh - 1.0 && "partition rate opt reduces LnL");
     	}
 
     	// Optimizing branch lengths
@@ -127,7 +150,7 @@ double PartitionModelPlen::optimizeParameters(bool fixed_len, bool write_info, d
     		break;
         }
     	// make sure that the new logl is not so bad compared with previous logl
-    	assert(cur_lh > tree_lh - 1.0);
+    	assert(cur_lh > tree_lh - 1.0 && "branch length opt reduces LnL");
     	tree_lh = cur_lh;
     }
 //    cout <<"OPTIMIZE MODEL has finished"<< endl;
@@ -285,8 +308,9 @@ int PartitionModelPlen::getNParameters() {
     PhyloSuperTreePlen *tree = (PhyloSuperTreePlen*)site_rate->getTree();
 	int df = 0;
     for (PhyloSuperTreePlen::iterator it = tree->begin(); it != tree->end(); it++) {
-    	df += (*it)->getModelFactory()->model->getNDim()+(*it)->getModelFactory()->site_rate->getNDim();
-		if ( (*it)->getModelFactory()->model->freq_type == FREQ_EMPIRICAL) df +=  (*it)->getModelFactory()->model->num_states-1;
+    	df += (*it)->getModelFactory()->model->getNDim() +
+            (*it)->getModelFactory()->model->getNDimFreq() +
+            (*it)->getModelFactory()->site_rate->getNDim();
     }
     df += tree->branchNum;
     if(!tree->fixed_rates)
@@ -339,11 +363,12 @@ void PhyloSuperTreePlen::deleteAllPartialLh() {
 		// reset these pointers so that they are not deleted
 		(*it)->central_partial_lh = NULL;
 		(*it)->central_scale_num = NULL;
-		(*it)->central_partial_pars = NULL;
+//		(*it)->central_partial_pars = NULL;
 		(*it)->_pattern_lh = NULL;
 		(*it)->_pattern_lh_cat = NULL;
 		(*it)->theta_all = NULL;
 		(*it)->ptn_freq = NULL;
+		(*it)->ptn_freq_computed = false;
 		(*it)->ptn_invar = NULL;
         (*it)->nni_partial_lh = NULL;
         (*it)->nni_scale_num = NULL;
@@ -357,11 +382,12 @@ PhyloSuperTreePlen::~PhyloSuperTreePlen()
 		// reset these pointers so that they are not deleted
 		(*it)->central_partial_lh = NULL;
 		(*it)->central_scale_num = NULL;
-		(*it)->central_partial_pars = NULL;
+//		(*it)->central_partial_pars = NULL;
 		(*it)->_pattern_lh = NULL;
 		(*it)->_pattern_lh_cat = NULL;
 		(*it)->theta_all = NULL;
 		(*it)->ptn_freq = NULL;
+		(*it)->ptn_freq_computed = false;
 		(*it)->ptn_invar = NULL;
         (*it)->nni_partial_lh = NULL;
         (*it)->nni_scale_num = NULL;
@@ -1879,9 +1905,12 @@ void PhyloSuperTreePlen::initializeAllPartialLh() {
     if (!theta_all)
         theta_all = aligned_alloc<double>(total_block_size);
     front()->theta_all = theta_all;
-    if (!ptn_freq)
+    if (!ptn_freq) {
         ptn_freq = aligned_alloc<double>(total_mem_size);
+        ptn_freq_computed = false;
+    }
     front()->ptn_freq = ptn_freq;
+    front()->ptn_freq_computed = false;
     if (!ptn_invar)
         ptn_invar = aligned_alloc<double>(total_mem_size);
     front()->ptn_invar = ptn_invar;
@@ -1902,6 +1931,7 @@ void PhyloSuperTreePlen::initializeAllPartialLh() {
 		(*it)->_pattern_lh_cat = (*(it-1))->_pattern_lh_cat + lh_cat_size[part];
 		(*it)->theta_all = (*(it-1))->theta_all + block_size[part];
 		(*it)->ptn_freq = (*(it-1))->ptn_freq + mem_size[part];
+		(*it)->ptn_freq_computed = false;
 		(*it)->ptn_invar = (*(it-1))->ptn_invar + mem_size[part];
         (*it)->nni_partial_lh = (*(it-1))->nni_partial_lh + IT_NUM*block_size[part];
         (*it)->nni_scale_num = (*(it-1))->nni_scale_num + IT_NUM*mem_size[part];

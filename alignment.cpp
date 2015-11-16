@@ -463,6 +463,47 @@ void Alignment::computeUnknownState() {
     }
 }
 
+int getDataBlockMorphStates(NxsCharactersBlock *data_block) {
+    int nseq = data_block->GetNTax();
+    int nsite = data_block->GetNCharTotal();
+    int seq, site;
+    char ch;
+    int nstates = 0;
+    
+    for (site = 0; site < nsite; site++)
+        for (seq = 0; seq < nseq; seq++) {
+            int nstate = data_block->GetNumStates(seq, site);
+            if (nstate == 0)
+                continue;
+            if (nstate == 1) {
+                ch = data_block->GetState(seq, site, 0);
+                if (!isalnum(ch)) continue;
+                if (ch >= '0' && ch <= '9') 
+                    ch = ch - '0' + 1;
+                else if (ch >= 'A' && ch <= 'Z') 
+                    ch = ch - 'A' + 11;
+                else 
+                    outError(data_block->GetTaxonLabel(seq) + " has invalid state at site " + convertIntToString(site));
+                if (ch > nstates) nstates = ch;
+                continue;
+            }
+            for (int state = 0; state < nstate; state++) {
+                ch = data_block->GetState(seq, site, state);
+                if (!isalnum(ch)) continue;
+                if (ch >= '0' && ch <= '9') ch = ch - '0' + 1;
+                if (ch >= 'A' && ch <= 'Z') ch = ch - 'A' + 11;
+                if (ch >= '0' && ch <= '9') 
+                    ch = ch - '0' + 1;
+                else if (ch >= 'A' && ch <= 'Z') 
+                    ch = ch - 'A' + 11;
+                else 
+                    outError(data_block->GetTaxonLabel(seq) + " has invalid state at site " + convertIntToString(site));
+                if (ch > nstates) nstates = ch;
+            }
+        }
+    return nstates;
+}
+
 void Alignment::extractDataBlock(NxsCharactersBlock *data_block) {
     int nseq = data_block->GetNTax();
     int nsite = data_block->GetNCharTotal();
@@ -489,7 +530,8 @@ void Alignment::extractDataBlock(NxsCharactersBlock *data_block) {
         seq_type = SEQ_PROTEIN;
     } else {
     	// standard morphological character
-        num_states = data_block->GetMaxObsNumStates();
+//        num_states = data_block->GetMaxObsNumStates();
+        num_states = getDataBlockMorphStates(data_block);
         if (num_states > 32)
         	outError("Number of states can not exceed 32");
         if (num_states < 2)
@@ -1116,14 +1158,34 @@ void Alignment::initCodon(char *gene_code_id) {
 //	cout << "num_states = " << num_states << endl;
 }
 
-int getMaxObservedStates(StrVector &sequences) {
+int getMorphStates(StrVector &sequences) {
 	char maxstate = 0;
 	for (StrVector::iterator it = sequences.begin(); it != sequences.end(); it++)
 		for (string::iterator pos = it->begin(); pos != it->end(); pos++)
-			if ((*pos) > maxstate) maxstate = *pos;
+			if ((*pos) > maxstate && isalnum(*pos)) maxstate = *pos;
 	if (maxstate >= '0' && maxstate <= '9') return (maxstate - '0' + 1);
 	if (maxstate >= 'A' && maxstate <= 'V') return (maxstate - 'A' + 11);
 	return 0;
+}
+
+SeqType Alignment::getSeqType(const char *sequence_type) {
+    SeqType user_seq_type = SEQ_UNKNOWN;
+    if (strcmp(sequence_type, "BIN") == 0) {
+        user_seq_type = SEQ_BINARY;
+    } else if (strcmp(sequence_type, "NT") == 0 || strcmp(sequence_type, "DNA") == 0) {
+        user_seq_type = SEQ_DNA;
+    } else if (strcmp(sequence_type, "AA") == 0 || strcmp(sequence_type, "PROT") == 0) {
+        user_seq_type = SEQ_PROTEIN;
+    } else if (strncmp(sequence_type, "NT2AA", 5) == 0) {
+        user_seq_type = SEQ_PROTEIN;
+    } else if (strcmp(sequence_type, "NUM") == 0 || strcmp(sequence_type, "MORPH") == 0 || strcmp(sequence_type, "MULTI") == 0) {
+        user_seq_type = SEQ_MORPH;
+    } else if (strcmp(sequence_type, "TINA") == 0) {
+        user_seq_type = SEQ_MULTISTATE;
+    } else if (strncmp(sequence_type, "CODON", 5) == 0) {
+        user_seq_type = SEQ_CODON;
+    }
+    return user_seq_type;
 }
 
 int Alignment::buildPattern(StrVector &sequences, char *sequence_type, int nseq, int nsite) {
@@ -1182,7 +1244,7 @@ int Alignment::buildPattern(StrVector &sequences, char *sequence_type, int nseq,
         cout << "Alignment most likely contains protein sequences" << endl;
         break;
     case SEQ_MORPH:
-        num_states = getMaxObservedStates(sequences);
+        num_states = getMorphStates(sequences);
         if (num_states < 2 || num_states > 32) throw "Invalid number of states.";
         cout << "Alignment most likely contains " << num_states << "-state morphological data" << endl;
         break;
@@ -1211,7 +1273,7 @@ int Alignment::buildPattern(StrVector &sequences, char *sequence_type, int nseq,
             nt2aa = true;
             cout << "Translating to amino-acid sequences with genetic code " << &sequence_type[5] << " ..." << endl;
         } else if (strcmp(sequence_type, "NUM") == 0 || strcmp(sequence_type, "MORPH") == 0 || strcmp(sequence_type, "MULTI") == 0) {
-            num_states = getMaxObservedStates(sequences);
+            num_states = getMorphStates(sequences);
             if (num_states < 2 || num_states > 32) throw "Invalid number of states";
             user_seq_type = SEQ_MORPH;
         } else if (strcmp(sequence_type, "TINA") == 0) {
@@ -3127,7 +3189,7 @@ void Alignment::computeEmpiricalRateNonRev (double *rates) {
 }
 
 void Alignment::convfreq(double *stateFrqArr) {
-	int i, j, maxi=0;
+	int i, maxi=0;
 	double freq, maxfreq, sum;
 	int zero_states = 0;
 

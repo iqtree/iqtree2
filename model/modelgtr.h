@@ -71,9 +71,20 @@ public:
     virtual ~ModelGTR();
 
 	/**
+	 * @return model name
+	 */
+	virtual string getName();
+
+	/**
 	 * @return model name with parameters in form of e.g. GTR{a,b,c,d,e,f}
 	 */
 	virtual string getNameParams();
+
+    /**
+        internal function: return string for frequency
+        @param retname output stream
+    */
+    void getNameParamsFreq(ostream &retname);
 
 	/**
 		set the associated tree
@@ -220,6 +231,11 @@ public:
 		@return the number of dimensions
 	*/
 	virtual int getNDim();
+
+	/**
+		@return the number of dimensions corresponding to state frequencies
+	*/
+	virtual int getNDimFreq();
 	
 
 	/**

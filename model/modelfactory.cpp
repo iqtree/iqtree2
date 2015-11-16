@@ -463,13 +463,13 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 			site_rate = new RateGammaInvar(num_rate_cats, gamma_shape, params.gamma_median,
 					p_invar_sites, params.optimize_model_rate_joint, tree);
 		} else if (posI != string::npos && posR != string::npos) {
-			site_rate = new RateFreeInvar(num_rate_cats, gamma_shape, freerate_params, p_invar_sites, !fused_mix_rate, tree);
+			site_rate = new RateFreeInvar(num_rate_cats, gamma_shape, freerate_params, p_invar_sites, !fused_mix_rate, params.optimize_alg, tree);
 		} else if (posI != string::npos) {
 			site_rate = new RateInvar(p_invar_sites, tree);
 		} else if (posG != string::npos) {
 			site_rate = new RateGamma(num_rate_cats, gamma_shape, params.gamma_median, tree);
 		} else if (posR != string::npos) {
-			site_rate = new RateFree(num_rate_cats, gamma_shape, freerate_params, !fused_mix_rate, tree);
+			site_rate = new RateFree(num_rate_cats, gamma_shape, freerate_params, !fused_mix_rate, params.optimize_alg, tree);
 		} else if ((posX = rate_str.find("+M")) != string::npos) {
 			tree->setLikelihoodKernel(LK_NORMAL);
 			params.rate_mh_type = true;
@@ -553,13 +553,7 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 }
 
 int ModelFactory::getNParameters() {
-	int df = model->getNDim() + site_rate->getNDim() + site_rate->phylo_tree->branchNum;
-	if (model->freq_type == FREQ_EMPIRICAL) 
-        df += model->num_states-1;
-	else if (model->freq_type == FREQ_CODON_1x4) 
-        df += 3;
-	else if (model->freq_type == FREQ_CODON_3x4 || model->freq_type == FREQ_CODON_3x4C) 
-        df += 9;
+	int df = model->getNDim() + model->getNDimFreq() + site_rate->getNDim() + site_rate->phylo_tree->branchNum;
 	return df;
 }
 void ModelFactory::readSiteFreq(Alignment *aln, char* site_freq_file, IntVector &site_model, vector<double*> &freq_vec)
@@ -771,6 +765,10 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info,
 	assert(tree);
 
 	stopStoringTransMatrix();
+        // modified by Thomas Wong on Sept 11, 15
+        // no optimization of branch length in the first round
+        cur_lh = tree->computeLikelihood();
+        /*
 	if (fixed_len || tree->params->num_param_iterations == 0)
 		cur_lh = tree->computeLikelihood();
 	else {
@@ -779,6 +777,7 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info,
         else
             cur_lh = tree->computeLikelihood();
 	}
+        */
     tree->setCurScore(cur_lh);
 	if (verbose_mode >= VB_MED || write_info) 
 		cout << "1. Initial log-likelihood: " << cur_lh << endl;
@@ -816,6 +815,10 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info,
             Params::getInstance().fai = false;
         }
 
+                // changed to opimise edge length first, and then Q,W,R inside the loop by Thomas on Sept 11, 15
+		if (!fixed_len)
+			new_lh = tree->optimizeAllBranches(min(i,3), logl_epsilon);  // loop only 3 times in total (previously in v0.9.6 5 times)
+
         new_lh = optimizeParametersOnly(gradient_epsilon);
 
 		if (new_lh == 0.0) {
@@ -826,16 +829,17 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info,
 			model->writeInfo(cout);
 			site_rate->writeInfo(cout);
 		}
-		if (!fixed_len)
-			new_lh = tree->optimizeAllBranches(min(i,3), logl_epsilon);  // loop only 3 times in total (previously in v0.9.6 5 times)
 		if (new_lh > cur_lh + logl_epsilon) {
-            if (Params::getInstance().testAlpha && i == 3) {
-                double newEpsilon = (new_lh - cur_lh) * 0.01;
-                if (newEpsilon > defaultEpsilon) {
-                    logl_epsilon = newEpsilon;
-                    cout << "Estimate model parameters with new epsilon = " << logl_epsilon << endl;
-                }
-            }
+			if (Params::getInstance().testAlpha && Params::getInstance().testAlphaEpsAdaptive) {
+				if (i == 3) {
+					double newEpsilon = (new_lh - cur_lh) * 0.01;
+					if (newEpsilon > defaultEpsilon) {
+						logl_epsilon = newEpsilon;
+						cout << "Estimate model parameters with new epsilon = " << logl_epsilon << endl;
+					}
+				}
+			}
+
 //			if (gradient_epsilon > (new_lh - cur_lh) * logl_epsilon)
 //				gradient_epsilon = (new_lh - cur_lh) * logl_epsilon;
 			cur_lh = new_lh;
@@ -847,6 +851,14 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info,
 				break;
 		}
 	}
+
+	// normalize rates s.t. branch lengths are #subst per site
+    double mean_rate = site_rate->rescaleRates();
+    if (mean_rate != 1.0) {
+		tree->scaleLength(mean_rate);
+		tree->clearAllPartialLH();
+    }
+    
 	if (verbose_mode >= VB_MED || write_info)
 		cout << "Optimal log-likelihood: " << cur_lh << endl;
 

@@ -20,7 +20,7 @@
 
 
 
-#if (defined(__GNUC__) || defined(__clang__)) && !defined(WIN32)
+#if (defined(__GNUC__) || defined(__clang__)) && !defined(WIN32) && !defined(__CYGWIN__)
 #include <execinfo.h>
 #include <cxxabi.h>
 #endif
@@ -288,7 +288,7 @@ double convert_double(const char *str, int &end_pos) throw (string) {
 	return d;
 }
 
-void convert_double_vec(const char *str, DoubleVector &vec) throw (string) {
+void convert_double_vec(const char *str, DoubleVector &vec, char separator) throw (string) {
     char *beginptr = (char*)str, *endptr;
     vec.clear();
     do {
@@ -301,7 +301,7 @@ void convert_double_vec(const char *str, DoubleVector &vec) throw (string) {
 			throw err;
 		}
 		vec.push_back(d);
-		if (*endptr == ',') endptr++;
+		if (*endptr == separator) endptr++;
 		beginptr = endptr;
     } while (*endptr != 0);
 }
@@ -613,7 +613,9 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.user_file = NULL;
     params.fai = false;
     params.testAlpha = false;
-    params.testAlphaEps = 100.0;
+    params.testAlphaEpsAdaptive = false;
+    params.randomAlpha = false;
+    params.testAlphaEps = 0.1;
     params.exh_ai = false;
     params.alpha_invar_file = NULL;
     params.out_prefix = NULL;
@@ -676,6 +678,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.tree_burnin = 0;
     params.tree_max_count = 1000000;
     params.split_threshold = 0.0;
+    params.split_threshold_str = NULL;
     params.split_weight_threshold = -1000;
     params.split_weight_summary = SW_SUM;
     params.gurobi_format = true;
@@ -726,6 +729,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.stop_confidence = 0.95;
     params.model_name = "";
     params.model_set = NULL;
+    params.model_extra_set = NULL;
     params.model_subset = NULL;
     params.state_freq_set = NULL;
     params.ratehet_set = NULL;
@@ -745,6 +749,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.p_invar_sites = -1.0;
     params.optimize_model_rate_joint = false;
     params.optimize_by_newton = true;
+    params.optimize_alg = "2-BFGS-B,EM";
     params.fixed_branch_length = false;
     params.iqp_assess_quartet = IQP_DISTANCE;
     params.iqp = false;
@@ -757,6 +762,8 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.mean_rate = 1.0;
     params.aLRT_threshold = 101;
     params.aLRT_replicates = 0;
+    params.aLRT_test = false;
+    params.aBayes_test = false;
     params.localbp_replicates = 0;
     params.SSE = LK_EIGEN_SSE;
     params.lk_no_avx = false;
@@ -809,7 +816,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.min_correlation = 0.99;
     params.step_iterations = 100;
     params.store_candidate_trees = false;
-	params.print_ufboot_trees = false;
+	params.print_ufboot_trees = 0;
     //const double INF_NNI_CUTOFF = -1000000.0;
     params.nni_cutoff = -1000000.0;
     params.estimate_nni_cutoff = false;
@@ -979,6 +986,13 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (cnt >= argc)
 					throw "Use -o <taxon>";
 				params.root = argv[cnt];
+				continue;
+			}
+			if (strcmp(argv[cnt], "-optalg") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -opt_alg <1-BFGS|2-BFGS|EM>";
+				params.optimize_alg = argv[cnt];
 				continue;
 			}
 			if (strcmp(argv[cnt], "-root") == 0) {
@@ -1238,6 +1252,13 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.consensus_type = CT_ASSIGN_SUPPORT;
 				continue;
 			}
+			if (strcmp(argv[cnt], "-suptag") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -suptag <tagname or ALL>";
+				params.support_tag = argv[cnt];
+				continue;
+			}
 			if (strcmp(argv[cnt], "-sup2") == 0) {
 				cnt++;
 				if (cnt >= argc)
@@ -1405,6 +1426,13 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.split_threshold = convert_double(argv[cnt]);
 				if (params.split_threshold < 0 || params.split_threshold > 1)
 					throw "Split threshold must be between 0 and 1";
+				continue;
+			}
+			if (strcmp(argv[cnt], "-minsupnew") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -minsupnew <split_threshold_1/.../split_threshold_k>";
+				params.split_threshold_str = argv[cnt];
 				continue;
 			}
 			if (strcmp(argv[cnt], "-tw") == 0) {
@@ -1681,6 +1709,13 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (cnt >= argc)
 					throw "Use -mset <model_set>";
 				params.model_set = argv[cnt];
+				continue;
+			}
+			if (strcmp(argv[cnt], "-madd") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -madd <extra_model_set>";
+				params.model_extra_set = argv[cnt];
 				continue;
 			}
 			if (strcmp(argv[cnt], "-msub") == 0) {
@@ -2058,10 +2093,18 @@ void parseArg(int argc, char *argv[], Params &params) {
 			}
 			if (strcmp(argv[cnt], "-alrt") == 0) {
 				cnt++;
-				params.aLRT_replicates = convert_int(argv[cnt]);
-				if (params.aLRT_replicates < 1000
-						&& params.aLRT_replicates != 0)
-					throw "aLRT replicates must be at least 1000";
+                int reps = convert_int(argv[cnt]);
+                if (reps == 0)
+                    params.aLRT_test = true;
+                else {
+                    params.aLRT_replicates = reps;
+                    if (params.aLRT_replicates < 1000)
+                        throw "aLRT replicates must be at least 1000";
+                }
+				continue;
+			}
+			if (strcmp(argv[cnt], "-abayes") == 0) {
+				params.aBayes_test = true;
 				continue;
 			}
 			if (strcmp(argv[cnt], "-lbp") == 0) {
@@ -2283,7 +2326,12 @@ void parseArg(int argc, char *argv[], Params &params) {
 				continue;
 			}
 			if (strcmp(argv[cnt], "-wbt") == 0) {
-				params.print_ufboot_trees = true;
+				params.print_ufboot_trees = 1;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-wbtl") == 0) {
+                // print ufboot trees with branch lengths
+				params.print_ufboot_trees = 2;
 				continue;
 			}
 			if (strcmp(argv[cnt], "-bs") == 0) {
@@ -2428,6 +2476,14 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.testAlpha = true;
 				continue;
 			}
+            if (strcmp(argv[cnt], "--adaptive-eps") == 0) {
+                params.testAlphaEpsAdaptive = true;
+                continue;
+            }
+            if (strcmp(argv[cnt], "--rand-alpha") == 0) {
+                params.randomAlpha = true;
+                continue;
+            }
             if (strcmp(argv[cnt], "--test-alpha-eps") == 0) {
                 cnt++;
                 if (cnt >= argc)
@@ -2704,20 +2760,24 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.compute_seq_identity_along_tree = true;
 				continue;
 			}
-			if (strcmp(argv[cnt], "-t") == 0) {
+			if (strcmp(argv[cnt], "-t") == 0 || strcmp(argv[cnt], "-te") == 0) {
+                if (strcmp(argv[cnt], "-te") == 0) {
+                    params.min_iterations = 0;
+                    params.stop_condition = SC_FIXED_ITERATION;
+                }
 				cnt++;
 				if (cnt >= argc)
-					throw "Use -t <start_tree>";
-				params.user_file = argv[cnt];
-				continue;
-			}
-			if (strcmp(argv[cnt], "-te") == 0) {
-				cnt++;
-				if (cnt >= argc)
-					throw "Use -te <user_tree>";
-				params.user_file = argv[cnt];
-				params.min_iterations = 0;
-				params.stop_condition = SC_FIXED_ITERATION;
+					throw "Use -t,-te <start_tree | BIONJ | PARS | PLLPARS>";
+				if (strcmp(argv[cnt], "BIONJ") == 0)
+					params.start_tree = STT_BIONJ;
+				else if (strcmp(argv[cnt], "PARS") == 0)
+					params.start_tree = STT_PARSIMONY;
+				else if (strcmp(argv[cnt], "PLLPARS") == 0)
+					params.start_tree = STT_PLL_PARSIMONY;
+                else if (strcmp(argv[cnt], "RANDOM") == 0)
+					params.start_tree = STT_RANDOM_TREE;
+				else
+                    params.user_file = argv[cnt];
 				continue;
 			}
             
@@ -2872,7 +2932,8 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -q <partition_file>  Edge-linked partition model (file in NEXUS/RAxML format)" << endl
             << " -spp <partition_file> Like -q option but allowing partition-specific rates" << endl
             << "  -sp <partition_file> Edge-unlinked partition model (like -M option of RAxML)" << endl
-            << "  -t <start_tree_file> Starting tree for reconstruction (default: parsimony)" << endl
+            << "  -t <start_tree_file> | BIONJ | RANDOM" << endl
+            << "                       Starting tree (default: 100 parsimony trees and BIONJ)" << endl
             << "  -te <user_tree_file> Evaluating a fixed user tree (no tree search performed)" << endl
             << "  -z <trees_file>      Evaluating user trees at the end (can be used with -t, -te)" << endl
             << "  -o <outgroup_taxon>  Outgroup taxon name for writing .treefile" << endl
@@ -2897,6 +2958,7 @@ void usage_iqtree(char* argv[], bool full_command) {
             << endl << "ULTRAFAST BOOTSTRAP:" << endl
             << "  -bb <#replicates>    Ultrafast bootstrap (>=1000)" << endl
             << "  -wbt                 Write bootstrap trees to .ufboot file (default: none)" << endl
+            << "  -wbtl                Like -wbt but also writing branch lengths" << endl
 //            << "  -n <#iterations>     Minimum number of iterations (default: 100)" << endl
             << "  -nm <#iterations>    Maximum number of iterations (default: 1000)" << endl
 			<< "  -nstep <#iterations> #Iterations for UFBoot stopping rule (default: 100)" << endl
@@ -2906,9 +2968,11 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -b <#replicates>     Bootstrap + ML tree + consensus tree (>=100)" << endl
             << "  -bc <#replicates>    Bootstrap + consensus tree" << endl
             << "  -bo <#replicates>    Bootstrap only" << endl
-            << "  -t <threshold>       Minimum bootstrap support [0...1) for consensus tree" << endl
+//            << "  -t <threshold>       Minimum bootstrap support [0...1) for consensus tree" << endl
             << endl << "SINGLE BRANCH TEST:" << endl
             << "  -alrt <#replicates>  SH-like approximate likelihood ratio test (SH-aLRT)" << endl
+            << "  -alrt 0              Parametric aLRT test (Anisimova and Gascuel 2006)" << endl
+            << "  -abayes              approximate Bayes test (Anisimova et al. 2011)" << endl
             << "  -lbp <#replicates>   Fast local bootstrap probabilities" << endl
             << endl << "AUTOMATIC MODEL SELECTION:" << endl
             << "  -m TESTONLY          Standard model selection (like jModelTest, ProtTest)" << endl
@@ -2934,6 +2998,7 @@ void usage_iqtree(char* argv[], bool full_command) {
 //            << "  -msep                Perform model selection and then rate selection" << endl
             << "  -mtree               Performing full tree search for each model considered" << endl
             << "  -mredo               Ignoring model results computed earlier (default: no)" << endl
+            << "  -madd mx1,...,mxk    List of mixture models to also consider" << endl
             << "  -mdef <nexus_file>   A model definition NEXUS file (see Manual)" << endl
 
             << endl << "SUBSTITUTION MODEL:" << endl
@@ -2968,6 +3033,7 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "                       number of categories (default: n=4)" << endl
             << "  -a <Gamma_shape>     Gamma shape parameter for site rates (default: estimate)" << endl
             << "  -gmedian             Computing mean for Gamma rate category (default: mean)" << endl
+            << "  --test-alpha         More thorough estimation for +I+G model parameters" << endl
             << "  -i <p_invar>         Proportion of invariable sites (default: estimate)" << endl
             << "  -mh                  Computing site-specific rates to .mhrate file using" << endl
             << "                       Meyer & von Haeseler (2003) method" << endl
@@ -2999,6 +3065,7 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -con                 Computing consensus tree to .contree file" << endl
             << "  -net                 Computing consensus network to .nex file" << endl
             << "  -sup <target_tree>   Assigning support values for <target_tree> to .suptree" << endl
+            << "  -suptag <name>       Node name (or ALL) to assign tree IDs where node occurs" << endl
             << endl << "ROBINSON-FOULDS DISTANCE:" << endl
             << "  -rf_all              Computing all-to-all RF distances of trees in <treefile>" << endl
             << "  -rf <treefile2>      Computing all RF distances between two sets of trees" << endl
@@ -3554,7 +3621,7 @@ void print_stacktrace(ostream &out, unsigned int max_frames)
     // address of this function.
     for (int i = 1; i < addrlen; i++)
     {
-	char *begin_name = 0, *begin_offset = 0, *end_offset = 0;
+	char *begin_name = 0, *begin_offset = 0;
 
 	// find parentheses and +address offset surrounding the mangled name:
 #ifdef __clang__
@@ -3592,6 +3659,7 @@ void print_stacktrace(ostream &out, unsigned int max_frames)
 
 #else // !DARWIN - but is posix
          // ./module(function+0x15c) [0x8048a6d]
+    char *end_offset = 0;
 	for (char *p = symbollist[i]; *p; ++p)
 	{
 	    if (*p == '(')

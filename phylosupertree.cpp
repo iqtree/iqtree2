@@ -266,6 +266,8 @@ void PhyloSuperTree::readPartitionNexus(Params &params) {
 			trimString(info.sequence_type);
 			cout << endl << "Reading partition " << info.name << " (model=" << info.model_name << ", aln=" <<
 				info.aln_file << ", seq=" << info.sequence_type << ", pos=" << info.position_spec << ") ..." << endl;
+            if (info.sequence_type != "" && Alignment::getSeqType(info.sequence_type.c_str()) == SEQ_UNKNOWN)
+                outError("Unknown sequence type " + info.sequence_type);
 			//info.mem_ptnlh = NULL;
 			info.nniMoves[0].ptnlh = NULL;
 			info.nniMoves[1].ptnlh = NULL;
@@ -306,6 +308,7 @@ void PhyloSuperTree::readPartitionNexus(Params &params) {
 
     if (input_aln)
     	delete input_aln;
+    delete sets_block;
 }
 
 void PhyloSuperTree::printPartition(const char *filename) {

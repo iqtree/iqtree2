@@ -378,7 +378,7 @@ enum LEAST_SQUARE_VAR {
 };
 
 enum START_TREE_TYPE {
-	STT_BIONJ, STT_PARSIMONY, STT_PLL_PARSIMONY
+	STT_BIONJ, STT_PARSIMONY, STT_PLL_PARSIMONY, STT_RANDOM_TREE
 };
 
 const int MCAT_LOG = 1; // categorize by log(rate) for Meyer & von Haeseler model
@@ -433,6 +433,16 @@ public:
 	 *  Use random restart strategy for estimating alpha and p_invar
 	 */
 	bool testAlpha;
+
+    /**
+     *  Automatic adjust the log-likelihood espilon using some heuristic
+     */
+    bool testAlphaEpsAdaptive;
+
+    /**
+     *  Use random starting points for alpha
+     */
+    bool randomAlpha;
 
     /**
      *  Logl epsilon to test for initial alpha and pinvar values.
@@ -963,6 +973,11 @@ public:
      */
     char *second_tree;
 
+    /** 
+        tag each branch with the tree ID where it occurs; "ALL" to tag all branches
+    */
+    char *support_tag;
+
     /**
             2nd alignment used in computing multinomialProb (Added by MA)
      */
@@ -1038,6 +1053,11 @@ public:
     double split_threshold;
 
     /**
+        thresholds of split frequency with back-slash separator
+     */
+    char* split_threshold_str;
+
+    /**
             threshold of split weight, splits with weight less than or equal to threshold will be discarded
      */
     double split_weight_threshold;
@@ -1102,6 +1122,9 @@ public:
 
     /** set of models for testing */
     char *model_set;
+
+    /** set of models to be added into default set */
+    char *model_extra_set;
 
     /** subset of models for testing, e.g. viral, mitochondrial */
     char *model_subset;
@@ -1179,6 +1202,9 @@ public:
             TRUE if you want to optimize branch lengths by Newton-Raphson method
      */
     bool optimize_by_newton;
+
+    /** optimization algorithm for parameter estimation: 1-BFGS, 2-BFGS, EM */
+    string optimize_alg;
 
     /**
             TRUE if you want to fix branch lengths during model optimization
@@ -1269,6 +1295,12 @@ public:
             number of replicates, default: 1000
      */
     int aLRT_replicates;
+
+    /** true to perform aLRT branch test of Anisimova & Gascuel (2006) */
+    bool aLRT_test;
+
+    /** true to perform aBayes branch test of Anisimova et al (2011) */
+    bool aBayes_test;
 
     /**
             number of replicates for local bootstrap probabilities method of Adachi & Hasegawa (1996) in MOLPHY
@@ -1514,7 +1546,7 @@ public:
     bool store_candidate_trees;
 
 	/** true to print all UFBoot trees to a file */
-	bool print_ufboot_trees;
+	int print_ufboot_trees;
 
     /****** variables for NNI cutoff heuristics ******/
 
@@ -1855,8 +1887,9 @@ double convert_double(const char *str, int &end_pos) throw (string);
         convert comma-separated string to integer vector, with error checking
         @param str original string with integers separated by comma
         @param vec (OUT) integer vector
+        @param separator char separating elements
  */
-void convert_double_vec(const char *str, DoubleVector &vec) throw (string);
+void convert_double_vec(const char *str, DoubleVector &vec, char separator = ',') throw (string);
 
 /**
  * Convert seconds to hour, minute, second

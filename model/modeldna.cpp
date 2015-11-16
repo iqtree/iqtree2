@@ -243,6 +243,7 @@ string ModelDNA::getNameParams() {
 		}
 	}
 	retname << '}';
+    getNameParamsFreq(retname);
 	return retname.str();
 }
 
@@ -362,12 +363,27 @@ void ModelDNA::getVariables(double *variables) {
 			}
 	}
 	if (freq_type == FREQ_ESTIMATE) {
+        // 2015-09-07: relax the sum of state_freq to be 1, this will be done at the end of optimization
 		int ndim = getNDim();
 		memcpy(state_freq, variables+(ndim-num_states+2), (num_states-1)*sizeof(double));
-		double sum = 0;
-		for (i = 0; i < num_states-1; i++) 
-			sum += state_freq[i];
-		state_freq[num_states-1] = 1.0 - sum;
+//		double sum = 0;
+//		for (i = 0; i < num_states-1; i++) 
+//			sum += state_freq[i];
+//		state_freq[num_states-1] = 1.0 - sum;
+
+        // BUG FIX 2015.08.28
+//        int nrate = getNDim();
+//        if (freq_type == FREQ_ESTIMATE) nrate -= (num_states-1);
+//		double sum = 1.0;
+//		int i, j;
+//		for (i = 1; i < num_states; i++)
+//			sum += variables[nrate+i];
+//		for (i = 0, j = 1; i < num_states; i++)
+//			if (i != highest_freq_state) {
+//				state_freq[i] = variables[nrate+j] / sum;
+//				j++;
+//			}
+//		state_freq[highest_freq_state] = 1.0/sum;
 	}
 }
 
@@ -379,7 +395,18 @@ void ModelDNA::setVariables(double *variables) {
 				variables[(int)param_spec[i]] = rates[i];
 	}
 	if (freq_type == FREQ_ESTIMATE) {
+        // 2015-09-07: relax the sum of state_freq to be 1, this will be done at the end of optimization
 		int ndim = getNDim();
 		memcpy(variables+(ndim-num_states+2), state_freq, (num_states-1)*sizeof(double));
+
+        // BUG FIX 2015.08.28
+//        int nrate = getNDim();
+//        if (freq_type == FREQ_ESTIMATE) nrate -= (num_states-1);
+//		int i, j;
+//		for (i = 0, j = 1; i < num_states; i++)
+//			if (i != highest_freq_state) {
+//				variables[nrate+j] = state_freq[i] / state_freq[highest_freq_state];
+//				j++;
+//			}
 	}
 }

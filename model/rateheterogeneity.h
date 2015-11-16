@@ -130,6 +130,18 @@ public:
 	virtual double getPInvar() { return 0.0; }
 
 	/**
+		set the proportion of invariable sites. Default: do nothing
+		@param pinv the proportion of invariable sites
+	*/
+	virtual void setPInvar(double pinv) { }
+
+	/**
+		Set whether or not to optimize p_invar
+		@param opt TRUE to optimize p_invar, FALSE otherwise
+	*/
+	virtual void setOptimizePInvar(bool opt) { }
+
+	/**
 		get the Gamma shape. Default returns 0.0 since it is homogeneous model
 		@return Gamma shape
 	*/	
@@ -164,6 +176,18 @@ public:
 		@param tree_lh the current tree log-likelihood
 	*/
 	virtual double classifyRates(double tree_lh) { return tree_lh; }
+
+	/**
+	 * used to normal branch lengths if mean rate is not equal to 1 (e.g. FreeRate model)
+	 * @return mean rate, default = 1
+	 */
+	virtual double meanRates() { return 1.0; }
+
+	/**
+	 * rescale rates s.t. mean rate is equal to 1, useful for FreeRate model
+	 * @return rescaling factor
+	 */
+	virtual double rescaleRates() { return 1.0; }
 
 	/**
 		write information

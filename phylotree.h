@@ -22,7 +22,7 @@
 
 //#define EIGEN_TUNE_FOR_CPU_CACHE_SIZE (512*256)
 //#define EIGEN_TUNE_FOR_CPU_CACHE_SIZE (8*512*512)
-#include "Eigen/Core"
+#include <Eigen/Core>
 #include "mtree.h"
 #include "alignment.h"
 #include "model/modelsubst.h"
@@ -281,6 +281,7 @@ class PhyloTree : public MTree, public Optimization {
 	friend class RateGammaInvar;
 	friend class RateKategory;
     friend class ModelMixture;
+    friend class RateFree;
 
 public:
     /**
@@ -610,6 +611,7 @@ public:
     double *tip_partial_lh;
     bool tip_partial_lh_computed;
 
+    bool ptn_freq_computed;
 
     /****************************************************************************
             computing partial (conditional) likelihood of subtrees
@@ -617,6 +619,7 @@ public:
 
     void computeTipPartialLikelihood();
     void computePtnInvar();
+    void computePtnFreq();
 
     /**
             compute the partial likelihood at a subtree
@@ -751,6 +754,12 @@ public:
             @return tree likelihood
      */
     virtual double computeLikelihood(double *pattern_lh = NULL);
+
+    /**
+     * compute _pattern_lh_cat for site-likelihood per category
+     * @return tree log-likelihood
+     */
+    virtual double computePatternLhCat();
 
     /**
             compute pattern likelihoods only if the accumulated scaling factor is non-zero.
@@ -1036,6 +1045,8 @@ public:
      */
     void optimizeAllBranchesLS(PhyloNode *node = NULL, PhyloNode *dad = NULL);
 
+    void computeBestTraversal(NodeVector &nodes, NodeVector &nodes2);
+
     /**
             optimize all branch lengths of the tree
             @param iterations number of iterations to loop through all branches
@@ -1280,6 +1291,11 @@ public:
     /* compute Bayesian branch lengths based on ancestral sequence reconstruction */
     void computeAllBayesianBranchLengths(Node *node = NULL, Node *dad = NULL);
 
+    /**
+        generate random tree
+    */
+    void generateRandomTree(TreeGenType tree_type);
+
     /****************************************************************************
             Subtree Pruning and Regrafting by maximum likelihood
             NOTE: NOT DONE YET
@@ -1350,15 +1366,16 @@ public:
     /**
             Test one branch of the tree with aLRT SH-like interpretation
      */
-    double testOneBranch(
-            double best_score, double *pattern_lh, int reps, int lbp_reps,
-            PhyloNode *node1, PhyloNode *node2, double &lbp_support);
+    double testOneBranch(double best_score, double *pattern_lh, 
+            int reps, int lbp_reps,
+            PhyloNode *node1, PhyloNode *node2, 
+            double &lbp_support, double &aLRT_support, double &aBayes_support);
 
     /**
             Test all branches of the tree with aLRT SH-like interpretation
      */
-    int testAllBranches(int threshold,
-            double best_score, double *pattern_lh, int reps, int lbp_reps,
+    int testAllBranches(int threshold, double best_score, double *pattern_lh, 
+            int reps, int lbp_reps, bool aLRT_test, bool aBayes_test,
             PhyloNode *node = NULL, PhyloNode *dad = NULL);
 
     /****************************************************************************
@@ -1495,6 +1512,8 @@ public:
 
 	/** sequence that are identical to one of the removed sequences */
 	StrVector twin_seqs;
+
+	size_t num_partial_lh_computations;
 
 	/** remove identical sequences from the tree */
     virtual void removeIdenticalSeqs(Params &params);
