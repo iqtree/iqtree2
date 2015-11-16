@@ -1641,8 +1641,10 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 
     /*********************** INITIAL MODEL OPTIMIZATION *****************/
 
-    iqtree.initializeModel(params);
-    
+    iqtree.initializeModel(params, models_block);
+
+    delete models_block;
+
     // UpperBounds analysis. Here, to analyse the initial tree without any tree search or optimization
     if (params.upper_bound) {
     	iqtree.setCurScore(iqtree.computeLikelihood());
