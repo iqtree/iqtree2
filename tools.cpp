@@ -2959,10 +2959,12 @@ void usage_iqtree(char* argv[], bool full_command) {
             << endl << "AUTOMATIC MODEL SELECTION:" << endl
             << "  -m TESTONLY          Standard model selection (like jModelTest, ProtTest)" << endl
             << "  -m TEST              Like -m TESTONLY but followed by tree reconstruction" << endl
-            << "  -m TESTNEWONLY       New model selection with FreeRate model replacing I+G" << endl
+            << "  -m TESTNEWONLY       New model selection including FreeRate (+R) heterogeneity" << endl
             << "  -m TESTNEW           Like -m TESTNEWONLY but followed by tree reconstruction" << endl
             << "  -m TESTMERGEONLY     Select best-fit partition scheme (like PartitionFinder)" << endl
             << "  -m TESTMERGE         Like -m TESTMERGEONLY but followed by tree reconstruction" << endl
+            << "  -m TESTNEWMERGEONLY  Like -m TESTMERGEONLY but includes FreeRate heterogeneity" << endl
+            << "  -m TESTNEWMERGE      Like -m TESTNEWMERGEONLY followed by tree reconstruction" << endl
             << "  -rcluster <percent>  Percentage of partition pairs (relaxed clustering alg.)" << endl
             << "  -mset program        Restrict search to models supported by other programs" << endl
             << "                       (i.e., raxml, phyml or mrbayes)" << endl
