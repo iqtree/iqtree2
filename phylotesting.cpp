@@ -385,9 +385,11 @@ int getModelList(Params &params, Alignment *aln, StrVector &models, bool separat
 	const char *rate_options[]    = {  "", "+I", "+ASC", "+G", "+I+G", "+ASC+G", "+R", "+ASC+R"};
 	bool test_options_default[]   = {true, true,  false, true,   true,    false,false,    false};
 	bool test_options_morph[]     = {true,false,   true, true,  false,     true,false,    false};    
+	bool test_options_noASC_I[]   = {true,false,  false, true,  false,    false,false,    false};    
 	bool test_options_asc[]       ={false,false,   true,false,  false,     true,false,    false};
 	bool test_options_new[]       = {true, true,  false, true,   true,    false, true,    false};
 	bool test_options_morph_new[] = {true,false,   true, true,  false,     true, true,     true};
+	bool test_options_noASC_I_new[] = {true,false,  false, true,  false,    false, true,    false};
 	bool test_options_asc_new[]   ={false,false,   true,false,  false,     true,false,     true};
     bool *test_options = test_options_default;
 //	bool test_options_codon[] =  {true,false,  false,false,  false,    false};
@@ -509,15 +511,19 @@ int getModelList(Params &params, Alignment *aln, StrVector &models, bool separat
 //		for (i = 0; i < noptions; i++)
 //			test_options[i] = test_options_codon[i];
 //	} else 
-    if (seq_type == SEQ_MORPH || aln->frac_const_sites == 0.0) {
+    if (seq_type == SEQ_MORPH || (aln->frac_const_sites == 0.0)) {
         // morphological or SNP data: activate +ASC
         if (with_new) {
             if (with_asc)
                 test_options = test_options_asc_new;
+            else if (seq_type == SEQ_PROTEIN)
+                test_options = test_options_noASC_I_new;
             else
                 test_options = test_options_morph_new;
         } else if (with_asc)
             test_options = test_options_asc;
+        else if (seq_type == SEQ_PROTEIN)
+            test_options = test_options_noASC_I;
         else
             test_options = test_options_morph;
 	} else {
@@ -1356,6 +1362,11 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
                     tree->readTreeString(prev_tree_string);
                 }
                 prev_tree_string = "";
+                if (model_fac->unobserved_ptns.size() > 0 && tree->aln->seq_type == SEQ_PROTEIN) {
+                    // treatment for +ASC for protein data
+                    tree->fixNegativeBranch(true);
+                    tree->clearAllPartialLH();
+                }
                 info.logl = tree->getModelFactory()->optimizeParameters(false, false, TOL_LIKELIHOOD_MODELTEST, TOL_GRADIENT_MODELTEST);
                 info.tree_len = tree->treeLength();
                 if (prev_model_id >= 0) {

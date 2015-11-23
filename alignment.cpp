@@ -405,6 +405,7 @@ void Alignment::buildSeqStates(bool add_unobs_const) {
 			has_state[at(site)[seq]] = true;
 		for (string::iterator it = unobs_const.begin(); it != unobs_const.end(); it++)
 			has_state[*it] = true;
+        seq_states[seq].clear();
 		for (int state = 0; state < STATE_UNKNOWN; state++)
 			if (has_state[state])
 				seq_states[seq].push_back(state);
