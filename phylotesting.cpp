@@ -1778,6 +1778,9 @@ void evaluateTrees(Params &params, IQTree *tree, vector<TreeInfo> &info, IntVect
 		tree->freeNode();
 		tree->readTree(in, params.is_rooted);
 		tree->setAlignment(tree->aln);
+        tree->setRootNode(params.root);
+		if (tree->isSuperTree())
+			((PhyloSuperTree*) tree)->mapTrees();
 		if ((tree->sse == LK_EIGEN || tree->sse == LK_EIGEN_SSE) && !tree->isBifurcating()) {
 			cout << "NOTE: Changing to old kernel as user tree is multifurcating" << endl;
 			if (tree->sse == LK_EIGEN)
@@ -1788,8 +1791,6 @@ void evaluateTrees(Params &params, IQTree *tree, vector<TreeInfo> &info, IntVect
 
 		tree->initializeAllPartialLh();
 		tree->fixNegativeBranch(false);
-		if (tree->isSuperTree())
-			((PhyloSuperTree*) tree)->mapTrees();
 		if (!params.fixed_branch_length) {
 			tree->setCurScore(tree->optimizeAllBranches(100, 0.001));
 		} else {
