@@ -29,12 +29,9 @@ public:
 	*/
     Pattern();
 
-	/** 
-		determine if the pattern is constant. update the is_const variable.
-	*/
-	void computeConst();
+    Pattern(const Pattern &pat);
 
-	/**
+    /**
 		@param num_states number of states of the model
 		@return the number of ambiguous character incl. gaps 
 	*/
@@ -44,7 +41,9 @@ public:
 		@param num_states number of states of the model
 		@return the number of gaps 
 	*/
-	int computeGapChar(int num_states);
+	int computeGapChar(int num_states, int STATE_UNKNOWN);
+
+//    Pattern &operator= (Pattern pat);
 
 	/** 
 		destructor
@@ -58,10 +57,18 @@ public:
 
 	/**
 		true if this is a constant pattern
+		2015-03-04: is_const will also be true for pattern like "AA-A--AAA"
 	*/
 	bool is_const;
+    
+    /** true if pattern is informative, false otherwise */
+    bool is_informative;
 
+	/** 2015-03-04: if is_const is true, this will store the const character for the pattern */
+	char const_char;
 
+    /** number of different character states */
+    int num_chars;
 };
 
 #endif

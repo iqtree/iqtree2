@@ -54,6 +54,18 @@ bool Node::isLeaf() {
     return neighbors.size() <= 1;
 }
 
+bool Node::isInCherry() {
+	if (this->isLeaf()) {
+		if (neighbors[0]->node->isCherry()) {
+			return true;
+		} else {
+			return false;
+		}
+	} else {
+		return false;
+	}
+}
+
 bool Node::isCherry() {
     int num_leaves = 0;
     for (NeighborVec::iterator it = neighbors.begin(); it != neighbors.end(); it++)
@@ -151,7 +163,7 @@ double Node::longestPath2(Node* &node1, Node* &node2) {
 }
 
 Neighbor *Node::findNeighbor(Node *node) {
-    int size = neighbors.size();
+	int size = neighbors.size();
     for (int i = 0; i < size; i++)
         if (neighbors[i]->node == node) return neighbors[i];
     /*
@@ -161,6 +173,13 @@ Neighbor *Node::findNeighbor(Node *node) {
     cout << "ERROR : Could not find neighbors of node " << node->id << endl;
     assert(0);
     return NULL;
+}
+
+bool Node::isNeighbor(Node* node) {
+    int size = neighbors.size();
+    for (int i = 0; i < size; i++)
+        if (neighbors[i]->node == node) return true;
+    return false;
 }
 
 NeighborVec::iterator Node::findNeighborIt(Node *node) {

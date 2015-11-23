@@ -71,15 +71,25 @@ namespace std {
 } // namespace std
 
 
+#ifdef USE_HASH_MAP
 typedef unordered_map<IntVector*, int, hashfunc_IntVector> IntVectorMap;
+#else
+typedef map<IntVector*, int> IntVectorMap;
+#endif
 
 typedef vector<IntVector*> IntVectorCollection;
 
 /**
-	run guided bootstrap
+	OBSOLETE: run guided bootstrap (this function was only used at the beginning of the UFBoot project
 */
 void runGuidedBootstrap(Params &params, Alignment *alignment, IQTree &tree);
 
 void runAvHTest(Params &params, Alignment *alignment, IQTree &tree);
+
+/**
+ * make the plot with x-axis being the alignments and y-axis being the likelihood of all trees
+ * Right now we use Kullback-Leibler distance to arrange alignments on the x-axis
+ */
+void runBootLhTest(Params &params, Alignment *alignment, IQTree &tree);
 
 #endif

@@ -29,6 +29,13 @@
 #include "mtreeset.h"
 
 
+bool compareSplit(Split* sp1, Split* sp2) {
+	if (sp1->countTaxa() != sp2->countTaxa())
+		return sp1->countTaxa() < sp2->countTaxa();
+	else
+		return sp1->firstTaxon() < sp2->firstTaxon();
+}
+
 //#define MY_DEBUG
 /********************************************************
 	Defining SplitGraph methods
@@ -74,7 +81,7 @@ void SplitGraph::init(Params &params)
 		if (mtrees->isRooted() && params.root != NULL)
 			outError(ERR_CONFLICT_ROOT);
 		//SplitIntMap hash_ss;
-		mtrees->convertSplits(*this, params.split_threshold, SW_SUM, params.split_weight_threshold);
+		mtrees->convertSplits(*this, params.split_threshold, params.split_weight_summary, params.split_weight_threshold);
 
 		if (verbose_mode >= VB_DEBUG)
 			saveFileStarDot(cout);
@@ -146,7 +153,7 @@ void SplitGraph::init(Params &params)
 		//outError(ERR_NO_SPLITS);
 		createStarTree();
 	}
-	cout << endl << "Split network contains " << getNTaxa()-params.is_rooted << 
+	cout << getNTaxa()-params.is_rooted <<
 		" taxa and " << getNSplits()-params.is_rooted << " splits." << endl;
 
 }
@@ -182,9 +189,7 @@ void SplitGraph::AddTaxaFromSets() {
 			}	
 }
 
-void SplitGraph::freeMem()
-{
-	
+void SplitGraph::freeMem() {
 	for (reverse_iterator it = rbegin(); it != rend(); it++) {
 		//(*it)->report(cout);
 		delete *it;
@@ -256,6 +261,7 @@ void SplitGraph::report(ostream &out)
 	if (size() == 0)
 		return;
 
+	sort(begin(), end(), compareSplit);
 	int k = 0;
 	for (iterator it = begin(); it != end(); it++,k++)
 	{

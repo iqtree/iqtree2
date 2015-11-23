@@ -30,17 +30,25 @@ struct PartitionInfo {
 	string sequence_type; // sequence type (DNA/AA/BIN)
 	string position_spec; // position specification, e.g., "1-100\1 1-100\2"
 
-	double cur_score; // current log-likelihood
+	double cur_score;	// current log-likelihood
+	double part_rate;	// partition heterogeneity rate
+	int    evalNNIs;	// number of evaluated NNIs on subtree
 
-	DoubleVector null_score; // log-likelihood of each branch collapsed to zero
-	DoubleVector opt_score; // optimized log-likelihood for every branch
-	DoubleVector nni1_score; // log-likelihood for 1st NNI for every branch
-	DoubleVector nni2_score; // log-likelihood for 2nd NNI for every branch
+	//DoubleVector null_score; // log-likelihood of each branch collapsed to zero
+	//DoubleVector opt_score;  // optimized log-likelihood for every branch
+	//DoubleVector nni1_score; // log-likelihood for 1st NNI for every branch
+	//DoubleVector nni2_score; // log-likelihood for 2nd NNI for every branch
 
-	DoubleVector cur_brlen; // current branch lengths
-	DoubleVector opt_brlen; // optimized branch lengths for every branch
+	DoubleVector cur_brlen;  // current branch lengths
+	//DoubleVector opt_brlen;  // optimized branch lengths for every branch
 	DoubleVector nni1_brlen; // branch length for 1st NNI for every branch
 	DoubleVector nni2_brlen; // branch length for 2nd NNI for every branch
+
+	//double *mem_ptnlh; // total memory allocated for all pattern likelihood vectors
+	double *cur_ptnlh; // current pattern likelihoods of the tree
+	//double *nni1_ptnlh; // pattern likelihoods of 1st NNI tree
+	//double *nni2_ptnlh; // pattern likelihoods of 2nd NNI tree
+	NNIMove nniMoves[2];
 };
 
 class PhyloSuperTree;
@@ -94,6 +102,26 @@ public:
 	*/
 	virtual void getPatternFreq(IntVector &pattern_freq);
 
+
+    /**
+            extract sub-alignment of a sub-set of sequences
+            @param aln original input alignment
+            @param seq_id ID of sequences to extract from
+            @param min_true_cher the minimum number of non-gap characters, true_char<min_true_char -> delete the sequence
+     */
+    virtual void extractSubAlignment(Alignment *aln, IntVector &seq_id, int min_true_char);
+
+    /**
+     * remove identical sequences from alignment
+     * @param not_remove name of sequence where removal is avoided
+     * @param keep_two TRUE to keep 2 out of k identical sequences, false to keep only 1
+     * @param removed_seqs (OUT) name of removed sequences
+     * @param target_seqs (OUT) corresponding name of kept sequence that is identical to the removed sequences
+     * @return this if no sequences were removed, or new alignment if at least 1 sequence was removed
+     */
+    virtual Alignment *removeIdenticalSeq(string not_remove, bool keep_two, StrVector &removed_seqs, StrVector &target_seqs);
+
+
 	/**
 		Quit if some sequences contain only gaps or missing data
 	*/
@@ -103,20 +131,26 @@ public:
 		create a non-parametric bootstrap alignment by resampling sites within partitions
 		@param aln input alignment
 		@param pattern_freq (OUT) if not NULL, will store the resampled pattern frequencies
+        @param spec bootstrap specification of the form "l1:b1,l2:b2,...,lk:bk"
+            	to randomly draw b1 sites from the first l1 sites, etc. Note that l1+l2+...+lk
+            	must equal m, where m is the alignment length. Otherwise, an error will occur.
+            	If spec == NULL, a standard procedure is applied, i.e., randomly draw m sites.
 	*/
-	virtual void createBootstrapAlignment(Alignment *aln, IntVector* pattern_freq = NULL);
+	virtual void createBootstrapAlignment(Alignment *aln, IntVector* pattern_freq = NULL, const char *spec = NULL);
 
 	/**
 		resampling pattern frequency by a non-parametric bootstrap 
-		@param pattern_freq resampled pattern frequencies
+		@param pattern_freq (OUT) resampled pattern frequencies
+        @param spec bootstrap specification, see above
 	*/
-	virtual void createBootstrapAlignment(IntVector &pattern_freq);
+	virtual void createBootstrapAlignment(IntVector &pattern_freq, const char *spec = NULL);
 
 	/**
 		resampling pattern frequency by a non-parametric bootstrap
-		@param pattern_freq resampled pattern frequencies
+		@param pattern_freq (OUT) resampled pattern frequencies
+        @param spec bootstrap specification, see above
 	*/
-	virtual void createBootstrapAlignment(int *pattern_freq);
+	virtual void createBootstrapAlignment(int *pattern_freq, const char *spec = NULL);
 
 	/**
 	 * shuffle alignment by randomizing the order of sites over all sub-alignments
@@ -147,6 +181,8 @@ public:
 	 */
 	void printCombinedAlignment(const char *filename, bool append = false);
 
+	void printCombinedAlignment(ostream &out, bool append = false);
+
 	/**
 	 * print all sub alignments into files with prefix, suffix is the charset name
 	 * @param prefix prefix of output files
@@ -164,6 +200,13 @@ public:
 	double computeMissingData();
 
 	/**
+	 * build all patterns of super alignent from partitions and taxa_index
+	 * it is in form of a binary alignment, where 0 means absence and 1 means presence
+	 * of a gene in a sequence
+	 */
+	void buildPattern();
+
+	/**
 		actual partition alignments
 	*/
 	vector<Alignment*> partitions;
@@ -172,6 +215,14 @@ public:
 		matrix represents the index of taxon i in partition j, -1 if the taxon is not present
 	*/
 	vector<IntVector> taxa_index;
+
+	/**
+	 * concatenate subset of alignments
+	 * @param ids IDs of sub-alignments
+	 * @return concatenated alignment
+	 */
+    Alignment *concatenateAlignments(IntVector &ids);
+
 
 };
 

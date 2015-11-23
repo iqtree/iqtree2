@@ -46,6 +46,7 @@ public:
 	friend class PDNetwork;
 	friend class CircularNetwork;
 	friend class PDTree;
+    friend class MTreeSet;
 
 	/**
 		empty constructor
@@ -211,6 +212,13 @@ public:
 	void getTaxaList(vector<int> &invec, vector<int> &outvec);
 
 	/**
+	 *  Test whether the current split is smaller than \a sp
+	 *  @param sp the other split to compare
+	 *  @return true if the current split contains less taxa than \a sp
+	 */
+    bool operator<(const Split &sp) const;
+
+	/**
 		compare two split, do not compare the weight
 		@param sp the target split
 		@return TRUE if equal, FALSE otherwise
@@ -263,6 +271,7 @@ public:
 
 	Split *extractSubSplit(Split &taxa_mask);
 
+	string &getName() { return name; }
 protected:
 	/**
 		number of taxa
@@ -273,6 +282,9 @@ protected:
 		weight of split
 	*/
 	double weight;
+    
+    /** 2018-08-23: split name */
+    string name;
 
 };
 

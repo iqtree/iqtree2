@@ -17,8 +17,20 @@ Pattern::Pattern()
 {
     frequency = 0;
     is_const = false;
+    is_informative = false;
+    const_char = 255;
+    num_chars = 0;
 }
 
+Pattern::Pattern(const Pattern &pat)
+        : string(pat)
+{
+    frequency = pat.frequency;
+    is_const = pat.is_const;
+    is_informative = pat.is_informative;
+    const_char = pat.const_char;
+    num_chars = pat.num_chars;
+}
 
 Pattern::~Pattern()
 {
@@ -31,22 +43,17 @@ int Pattern::computeAmbiguousChar(int num_states) {
     return num;
 }
 
-int Pattern::computeGapChar(int num_states) {
+int Pattern::computeGapChar(int num_states, int STATE_UNKNOWN) {
     int num = 0;
     for (iterator i = begin(); i != end(); i++)
         if (*i == STATE_UNKNOWN) num++;
     return num;
 }
 
-
-void Pattern::computeConst() {
-    char ch = STATE_UNKNOWN;
-    is_const = true;
-    for (iterator i = begin(); i != end(); i++) {
-        if (ch != STATE_UNKNOWN && *i != STATE_UNKNOWN && *i != ch) {
-            is_const = false;
-            return;
-        }
-        if (*i != STATE_UNKNOWN) ch = *i;
-    }
-}
+//Pattern &Pattern::operator= (Pattern pat) {
+//    assign(pat);
+//    frequency = pat.frequency;
+//    is_const = pat.is_const;
+//    const_char = pat.const_char;
+//    return *this;
+//}

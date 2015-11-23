@@ -27,22 +27,22 @@
 #include "alignment.h"
 #include "superalignment.h"
 #include "iqtree.h"
-#include "gtrmodel.h"
-#include "modeldna.h"
+#include "model/modelgtr.h"
+#include "model/modeldna.h"
 #include "myreader.h"
-#include "rateheterogeneity.h"
-#include "rategamma.h"
-#include "rateinvar.h"
-#include "rategammainvar.h"
+#include "model/rateheterogeneity.h"
+#include "model/rategamma.h"
+#include "model/rateinvar.h"
+#include "model/rategammainvar.h"
 //#include "modeltest_wrapper.h"
-#include "modelprotein.h"
+#include "model/modelprotein.h"
 #include "stoprule.h"
 
 #include "mtreeset.h"
 #include "mexttree.h"
-#include "ratemeyerhaeseler.h"
+#include "model/ratemeyerhaeseler.h"
 #include "whtest_wrapper.h"
-#include "partitionmodel.h"
+#include "model/partitionmodel.h"
 
 //#include "zpipe.h"
 #include "gzstream.h"
@@ -101,8 +101,6 @@ void readPatternLogLL(Alignment* aln, char *fileName, vector<double*> &logLLs, D
     } catch (bad_alloc) {
         outError(ERR_NO_MEMORY);
     } catch (const char *str) {
-        outError(str);
-    } catch (char *str) {
         outError(str);
     } catch (string str) {
         outError(str);
@@ -205,7 +203,8 @@ inline double computeRELL(double *pattern_lh, IntVector &pattern_freq) {
 	computing Expected Likelihood Weights (ELW) of trees by Strimmer & Rambaut (2002)
 */
 void computeExpectedLhWeights(Alignment *aln, vector<double*> &pattern_lhs,
-                              IntVector &treeids, int num_replicates, DoubleVector &elw, DoubleVector *sh_pval = NULL) {
+                              IntVector &treeids, int num_replicates, DoubleVector &elw,
+                              const char* spec, DoubleVector *sh_pval = NULL) {
     cout << "Computing Expected Likelihood Weights (ELW) with " << num_replicates << " replicates ..." << endl;
     int i, j, ntrees = treeids.size();
     elw.resize(treeids.size(), 0.0);
@@ -213,7 +212,7 @@ void computeExpectedLhWeights(Alignment *aln, vector<double*> &pattern_lhs,
     // general RELL logl
     for (i = 0; i < num_replicates; i++) {
         IntVector pattern_freq;
-        aln->createBootstrapAlignment(pattern_freq);
+        aln->createBootstrapAlignment(pattern_freq, spec);
         DoubleVector logl;
         logl.resize(treeids.size(), 0.0);
         j = 0;
@@ -433,21 +432,23 @@ void readPatternLh(const char *infile, IQTree *tree, bool compression) {
 void computeAllPatternLh(Params &params, IQTree &tree) {
     /* this part copied from phyloanalysis.cpp */
     tree.optimize_by_newton = params.optimize_by_newton;
-    tree.sse = params.SSE;
+    ModelsBlock *models_block = new ModelsBlock;
+
     try {
         if (!tree.getModelFactory()) {
             if (tree.isSuperTree())
-                tree.setModelFactory(new PartitionModel(params, (PhyloSuperTree*)&tree));
+                tree.setModelFactory(new PartitionModel(params, (PhyloSuperTree*)&tree, models_block));
             else
-                tree.setModelFactory(new ModelFactory(params, &tree));
+                tree.setModelFactory(new ModelFactory(params, &tree, models_block));
         }
-    } catch (string str) {
+    } catch (string &str) {
         outError(str);
     }
+    delete models_block;
     tree.setModel(tree.getModelFactory()->model);
     tree.setRate(tree.getModelFactory()->site_rate);
-    tree.setStartLambda(params.lambda);
     if (tree.isSuperTree()) ((PhyloSuperTree*)&tree)->mapTrees();
+    tree.setLikelihoodKernel(params.SSE);
 
     int model_df = tree.getModel()->getNDim() + tree.getRate()->getNDim();
     cout << endl;
@@ -456,11 +457,11 @@ void computeAllPatternLh(Params &params, IQTree &tree) {
     /* optimize model parameters */
     cout << endl;
     cout << "Optimizing model parameters" << endl;
-    double bestTreeScore = tree.getModelFactory()->optimizeParameters(params.fixed_branch_length);
+    double bestTreeScore = tree.getModelFactory()->optimizeParameters(params.fixed_branch_length, true, TOL_LIKELIHOOD);
     cout << "Log-likelihood of the current tree: " << bestTreeScore << endl;
 
     //Update tree score
-    tree.curScore = bestTreeScore;
+    tree.setCurScore(bestTreeScore);
     if (tree.isSuperTree()) ((PhyloSuperTree*)&tree)->computeBranchLengths();
     stringstream best_tree_string;
     tree.printTree(best_tree_string, WT_TAXON_ID + WT_BR_LEN);
@@ -517,16 +518,16 @@ void computeAllPatternLh(Params &params, IQTree &tree) {
             if (tree.isSuperTree()) ((PhyloSuperTree*)&tree)->mapTrees();
             double *pattern_lh = new double [tree.aln->getNPattern()];
             if (!params.fixed_branch_length) {
-                tree.curScore = tree.optimizeAllBranches();
+                tree.setCurScore(tree.optimizeAllBranches());
                 tree.computePatternLikelihood(pattern_lh);
             } else {
-                tree.curScore = tree.computeLikelihood(pattern_lh);
+                tree.setCurScore(tree.computeLikelihood(pattern_lh));
             }
             if (expected_lh != 0.0)
-                max_logl_diff = max(max_logl_diff, fabs(tree.curScore-expected_lh));
+                max_logl_diff = max(max_logl_diff, fabs(tree.getCurScore()-expected_lh));
             tree.treels_ptnlh.push_back(pattern_lh);
-            tree.treels_logl.push_back(tree.curScore);
-			cout << "Tree " << tree.treels_logl.size() << ": " << tree.curScore << endl;
+            tree.treels_logl.push_back(tree.getCurScore());
+			cout << "Tree " << tree.treels_logl.size() << ": " << tree.getCurScore() << endl;
             if (tree.treels_ptnlh.size() % 500 == 0)
                 cout << tree.treels_ptnlh.size() << " trees evaluated" << endl;
         }
@@ -537,7 +538,7 @@ void computeAllPatternLh(Params &params, IQTree &tree) {
         if (params.do_compression) ((igzstream*)in)->close();
         else ((ifstream*)in)->close();
         delete in;
-    } catch (ios::failure) {
+    } catch (ios::failure&) {
         outError(ERR_READ_INPUT, params.user_file);
     }
 
@@ -693,7 +694,7 @@ void runGuidedBootstrapReal(Params &params, Alignment *alignment, IQTree &tree) 
     if (params.use_elw_method) { 	// compute ELW weights
 
         DoubleVector elw, sh_pval;
-        computeExpectedLhWeights(alignment, (*pattern_lhs), diff_tree_ids, params.gbo_replicates, elw, &sh_pval);
+        computeExpectedLhWeights(alignment, (*pattern_lhs), diff_tree_ids, params.gbo_replicates, elw, params.bootstrap_spec, &sh_pval);
         string elw_file_name = params.out_prefix;
         elw_file_name += ".elw";
         ofstream elw_file(elw_file_name.c_str());
@@ -731,7 +732,7 @@ void runGuidedBootstrapReal(Params &params, Alignment *alignment, IQTree &tree) 
         // generate bootstrap samples
         for (i = 0; i < params.gbo_replicates; i++) {
             IntVector pattern_freq;
-            alignment->createBootstrapAlignment(pattern_freq);
+            alignment->createBootstrapAlignment(pattern_freq, params.bootstrap_spec);
             double prob;
             if (params.use_weighted_bootstrap)
                 prob = alignment->multinomialProb(pattern_freq);
@@ -1044,9 +1045,9 @@ void runAvHTest(Params &params, Alignment *alignment, IQTree &tree) {
     int num_multi = 0;
     do {
         num_multi++;
-        /*cout << num_multi << ": ";
+        cout << num_multi << ": ";
         for (id = 0; id < afreq.size(); id++) cout << afreq[id] << " ";
-        cout << endl;*/
+        cout << endl;
         IntVector *boot_freq = new IntVector;
         *boot_freq = afreq;
         boot_map[boot_freq] = boot_freqs.size();
@@ -1060,7 +1061,7 @@ void runAvHTest(Params &params, Alignment *alignment, IQTree &tree) {
     int diff_boot_aln = 0;
     for (id = 0; id < params.avh_test; id++) {
         IntVector *boot_freq = new IntVector;
-        alignment->createBootstrapAlignment(*boot_freq);
+        alignment->createBootstrapAlignment(*boot_freq, params.bootstrap_spec);
         IntVectorMap::iterator it = boot_map.find(boot_freq);
         if (it == boot_map.end()) { // not found
             outError(__func__);
@@ -1090,7 +1091,7 @@ void runAvHTest(Params &params, Alignment *alignment, IQTree &tree) {
         boot_aln->extractPatternFreqs(alignment, *boot_freqs[id]);
 
         IQTree boot_tree(boot_aln);
-        runPhyloAnalysis(params, orig_model, boot_aln, boot_tree, model_info);
+        runTreeReconstruction(params, orig_model, boot_tree, model_info);
         boot_tree.setRootNode(params.root);
         stringstream ss;
         boot_tree.printTree(ss, WT_SORT_TAXA);
@@ -1122,7 +1123,7 @@ void runAvHTest(Params &params, Alignment *alignment, IQTree &tree) {
     out_file += ".trees";
     boot_trees.printTrees(out_file.c_str(),WT_SORT_TAXA);
     params.min_iterations = 0;
-    runPhyloAnalysis(params, orig_model, alignment, tree, model_info);
+    runTreeReconstruction(params, orig_model, tree, model_info);
     params.treeset_file = (char*)out_file.c_str();
     evaluateTrees(params, &tree);
 
@@ -1206,4 +1207,95 @@ void runAvHTest(Params &params, Alignment *alignment, IQTree &tree) {
     cout << "Results printed to " << out_file << endl;
     for (IntVectorCollection::reverse_iterator rit = boot_freqs.rbegin(); rit != boot_freqs.rend(); rit++)
         delete (*rit);
+}
+
+void runBootLhTest(Params &params, Alignment *alignment, IQTree &tree) {
+    // collection of distinct bootstrapped site-pattern frequency vectors
+    cout << "Doing likelihood-bootstrap plot using Kullback-Leibler distance with " << params.bootlh_test << " bootstrap replicates ..." << endl;
+    int id, ptn;
+    IntVector ptnfreq;
+    alignment->getPatternFreq(ptnfreq);
+    string orig_model = params.model_name;
+    vector<ModelInfo> model_info;
+    IntVector partitions;
+
+    if (params.bootlh_partitions) {
+    	convert_int_vec(params.bootlh_partitions, partitions);
+    	cout << "Using " << partitions.size() << " partitions" << endl;
+    }
+
+    string outfile = params.out_prefix;
+    outfile += ".bootlhtest";
+    ofstream out;
+    out.open(outfile.c_str());
+    string bootfreqfile = params.out_prefix; // bootstrap pattern frequency vector file
+    bootfreqfile += ".bootfreq";
+    ofstream outfreq;
+    outfreq.open(bootfreqfile.c_str());
+    //out << "ID KLdist" << endl;
+
+    out.precision(8);
+    params.min_iterations = 0; // do not do tree search
+    int start_site = 0;
+    for (id = 0; id < params.bootlh_test; id++) {
+    	Alignment *boot_aln;
+        IntVector boot_freq;
+        if (id==0) {
+        	// include original alignment
+        	boot_aln = alignment;
+        	boot_freq = ptnfreq;
+        } else if (id <= partitions.size()) {
+        	int end_site = start_site + partitions[id-1];
+        	boot_freq.resize(ptnfreq.size(), 0);
+        	for (int site = start_site; site < end_site; site++)
+        		boot_freq[alignment->getPatternID(site)]++;
+        	// now multiplying the frequencies
+        	for ( ptn = 0; ptn < boot_freq.size(); ptn++)
+        		boot_freq[ptn]*=partitions.size();
+    		if (alignment->isSuperAlignment())
+    			boot_aln = new SuperAlignment;
+    		else
+    			boot_aln = new Alignment;
+    		stringstream sitestr;
+    		sitestr << start_site+1 << "-" << end_site;
+        	cout << "-->Extracting sites " << sitestr.str() << endl;
+    		boot_aln->extractSites(alignment, sitestr.str().c_str());
+        	// now multiplying the frequencies
+    		for (ptn = 0; ptn < boot_aln->size(); ptn++)
+    			boot_aln->at(ptn).frequency *= partitions.size();
+    		start_site = end_site;
+        } else {
+    		if (alignment->isSuperAlignment())
+    			boot_aln = new SuperAlignment;
+    		else
+    			boot_aln = new Alignment;
+        	boot_aln->createBootstrapAlignment(alignment, &boot_freq, params.bootstrap_spec);
+        }
+        for ( ptn = 0; ptn < boot_freq.size(); ptn++)
+        	outfreq << "\t" << boot_freq[ptn];
+        outfreq << endl;
+        // computing Kullback-Leibler distance
+        double dist = 0.0;
+        for ( ptn = 0; ptn < ptnfreq.size(); ptn++)
+        	if (boot_freq[ptn]) {
+        		dist += log(((double)boot_freq[ptn])/ptnfreq[ptn]) * boot_freq[ptn];
+        	}
+        dist /= tree.getAlnNSite();
+        out << id+1 << " " << dist;
+        // now run analysis and compute tree likelihood for params.treeset_file
+        if (params.treeset_file) {
+			IQTree boot_tree(boot_aln);
+			runTreeReconstruction(params, orig_model, boot_tree, model_info);
+        	vector<TreeInfo> info;
+        	IntVector distinct_ids;
+        	evaluateTrees(params, &boot_tree, info, distinct_ids);
+            for (int i = 0; i < info.size(); i++)
+            	out << " " << info[i].logl;
+        }
+        out << endl;
+        if (id != 0)
+        	delete boot_aln;
+    }
+    out.close();
+    outfreq.close();
 }

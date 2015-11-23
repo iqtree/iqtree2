@@ -13,48 +13,32 @@
 #define ALIGNMENT_H
 
 #include <vector>
+#include <bitset>
 #include "pattern.h"
 #include "ncl/ncl.h"
 #include "tools.h"
 
-
-const char STATE_UNKNOWN = 126;
+// IMPORTANT: refactor STATE_UNKNOWN
+//const char STATE_UNKNOWN = 126;
 const char STATE_INVALID = 127;
 const int NUM_CHAR = 256;
+const double MIN_FREQUENCY          = 0.0001;
+const double MIN_FREQUENCY_DIFF     = 0.00001;
+
+typedef bitset<NUM_CHAR> StateBitset;
 
 enum SeqType {
-    SEQ_DNA, SEQ_PROTEIN, SEQ_BINARY, SEQ_MULTISTATE, SEQ_CODON, SEQ_UNKNOWN
+    SEQ_DNA, SEQ_PROTEIN, SEQ_BINARY, SEQ_MORPH, SEQ_MULTISTATE, SEQ_CODON, SEQ_UNKNOWN
 };
-
-
-#if	defined(USE_HASH_MAP) && GCC_VERSION < 40300
-/*
-        Define the hash function of Split
- */
-#if !defined(__GNUC__) 
-namespace stdext {
-#else
-namespace __gnu_cxx {
-#endif
-
-    template<>
-    struct hash<string> {
-
-        size_t operator()(string str) const {
-            hash<const char*> hash_str;
-            return hash_str(str.c_str());
-        }
-    };
-} // namespace
-#endif // USE_HASH_MAP
 
 
 #ifdef USE_HASH_MAP
 typedef unordered_map<string, int> StringIntMap;
+typedef unordered_map<string, double> StringDoubleHashMap;
 typedef unordered_map<string, int> PatternIntMap;
-//typedef map<string, int> PatternIntMap;
 #else
 typedef map<string, int> StringIntMap;
+typedef map<string, double> StringDoubleHashMap;
 typedef map<string, int> PatternIntMap;
 #endif
 
@@ -91,6 +75,10 @@ public:
             input alignment reader
      ****************************************************************************/
 
+    /** get the SeqType for a given string */
+    static SeqType getSeqType(const char *sequence_type);
+
+
     /**
             add a pattern into the alignment
             @param pat the pattern
@@ -101,6 +89,17 @@ public:
      */
     bool addPattern(Pattern &pat, int site, int freq = 1);
 
+	/**
+		determine if the pattern is constant. update the is_const variable.
+	*/
+	void computeConst(Pattern &pat);
+
+
+    /**
+     * add const patterns into the alignment
+     * @param freq_const_pattern comma-separated list of const pattern frequencies
+     */
+    void addConstPatterns(char *freq_const_patterns);
 
     /**
             read the alignment in NEXUS format
@@ -128,10 +127,35 @@ public:
     int readFasta(char *filename, char *sequence_type);
 
     /**
+            read the alignment in CLUSTAL format
+            @param filename file name
+            @param sequence_type type of the sequence, either "BIN", "DNA", "AA", or NULL
+            @return 1 on success, 0 on failure
+     */
+    int readClustal(char *filename, char *sequence_type);
+
+    /**
+            read the alignment in MSF format
+            @param filename file name
+            @param sequence_type type of the sequence, either "BIN", "DNA", "AA", or NULL
+            @return 1 on success, 0 on failure
+     */
+    int readMSF(char *filename, char *sequence_type);
+
+    /**
             extract the alignment from a nexus data block, called by readNexus()
             @param data_block data block of nexus file
      */
     void extractDataBlock(NxsCharactersBlock *data_block);
+
+    vector<Pattern> ordered_pattern;
+    
+    /** lower bound of sum parsimony scores for remaining pattern in ordered_pattern */
+    UINT *pars_lower_bound;
+
+    /** order pattern by number of character states and return in ptn_order
+    */
+    void orderPatternByNumChars();
 
     /**
      * un-group site-patterns, i.e., making #sites = #patterns and pattern frequency = 1 for all patterns
@@ -151,6 +175,10 @@ public:
             output alignment 
      ****************************************************************************/
     SeqType detectSequenceType(StrVector &sequences);
+
+    void computeUnknownState();
+
+    void buildStateMap(char *map, SeqType seq_type);
 
     virtual char convertState(char state, SeqType seq_type);
 
@@ -189,13 +217,16 @@ public:
     bool getSiteFromResidue(int seq_id, int &residue_left, int &residue_right);
 
     int buildRetainingSites(const char *aln_site_list, IntVector &kept_sites,
-            bool exclude_gaps, const char *ref_seq_name);
+            bool exclude_gaps, bool exclude_const_sites, const char *ref_seq_name);
 
-    void printPhylip(const char *filename, bool append = false,
-            const char *aln_site_list = NULL, bool exclude_gaps = false, const char *ref_seq_name = NULL);
+    void printPhylip(const char *filename, bool append = false, const char *aln_site_list = NULL,
+    		bool exclude_gaps = false, bool exclude_const_sites = false, const char *ref_seq_name = NULL);
 
-    void printFasta(const char *filename, bool append = false,
-            const char *aln_site_list = NULL, bool exclude_gaps = false, const char *ref_seq_name = NULL);
+    void printPhylip(ostream &out, bool append = false, const char *aln_site_list = NULL,
+    		bool exclude_gaps = false, bool exclude_const_sites = false, const char *ref_seq_name = NULL);
+
+    void printFasta(const char *filename, bool append = false, const char *aln_site_list = NULL,
+    		bool exclude_gaps = false, bool exclude_const_sites = false, const char *ref_seq_name = NULL);
 
     /**
             Print the number of gaps per site
@@ -255,6 +286,12 @@ public:
     string &getSeqName(int i);
 
     /**
+     *  Get a list of all sequence names
+     *  @return vector containing the sequence names
+     */
+    vector<string>& getSeqNames();
+
+    /**
             @param seq_name sequence name
             @return corresponding ID, -1 if not found
      */
@@ -275,6 +312,16 @@ public:
      * @return the number of sequences that are identical to one of the sequences
      */
     int checkIdenticalSeq();
+
+    /**
+     * remove identical sequences from alignment
+     * @param not_remove name of sequence where removal is avoided
+     * @param keep_two TRUE to keep 2 out of k identical sequences, false to keep only 1
+     * @param removed_seqs (OUT) name of removed sequences
+     * @param target_seqs (OUT) corresponding name of kept sequence that is identical to the removed sequences
+     * @return this if no sequences were removed, or new alignment if at least 1 sequence was removed
+     */
+    virtual Alignment *removeIdenticalSeq(string not_remove, bool keep_two, StrVector &removed_seqs, StrVector &target_seqs);
 
     /**
             Quit if some sequences contain only gaps or missing data
@@ -304,8 +351,9 @@ public:
             extract sub-alignment of a sub-set of sequences
             @param aln original input alignment
             @param seq_id ID of sequences to extract from
+            @param min_true_cher the minimum number of non-gap characters, true_char<min_true_char -> delete the sequence
      */
-    void extractSubAlignment(Alignment *aln, IntVector &seq_id, int min_true_char);
+    virtual void extractSubAlignment(Alignment *aln, IntVector &seq_id, int min_true_char);
 
     /**
             extract a sub-set of patterns
@@ -324,16 +372,27 @@ public:
     /**
             create a non-parametric bootstrap alignment from an input alignment
             @param aln input alignment
+            @param pattern_freq (OUT) resampled pattern frequencies if not NULL
+            @param spec bootstrap specification of the form "l1:b1,l2:b2,...,lk:bk"
+            	to randomly draw b1 sites from the first l1 sites, etc. Note that l1+l2+...+lk
+            	must equal m, where m is the alignment length. Otherwise, an error will occur.
+            	If spec == NULL, a standard procedure is applied, i.e., randomly draw m sites.
      */
-    virtual void createBootstrapAlignment(Alignment *aln, IntVector* pattern_freq = NULL);
+    virtual void createBootstrapAlignment(Alignment *aln, IntVector* pattern_freq = NULL, const char *spec = NULL);
 
     /**
             resampling pattern frequency by a non-parametric bootstrap 
-            @param pattern_freq resampled pattern frequencies
+            @param pattern_freq (OUT) resampled pattern frequencies
+            @param spec bootstrap specification, see above
      */
-    virtual void createBootstrapAlignment(IntVector &pattern_freq);
+    virtual void createBootstrapAlignment(IntVector &pattern_freq, const char *spec = NULL);
 
-    virtual void createBootstrapAlignment(int *pattern_freq);
+    /**
+            resampling pattern frequency by a non-parametric bootstrap
+            @param pattern_freq (OUT) resampled pattern frequencies
+            @param spec bootstrap specification, see above
+     */
+    virtual void createBootstrapAlignment(int *pattern_freq, const char *spec = NULL);
 
     /**
             create a gap masked alignment from an input alignment. Gap patterns of masked_aln 
@@ -373,6 +432,11 @@ public:
             @param spec specification of positions, e.g. "1-100,101-200\2"
      */
     void extractSites(Alignment *aln, const char* spec);
+
+    /**
+        convert a DNA alignment into codon or AA alignment
+    */
+    void convertToCodonOrAA(Alignment *aln, char *gene_code_id, bool nt2aa = false);
 
     /****************************************************************************
             Distance functions
@@ -446,7 +510,15 @@ public:
             @param state_freq (OUT) is filled with state frequencies, assuming state_freq was allocated with 
                     at least num_states entries.
      */
-    virtual void computeStateFreq(double *state_freq);
+    virtual void computeStateFreq(double *state_freq, size_t num_unknown_states = 0);
+
+    /**
+            compute empirical state frequencies for each sequence 
+            @param freq_per_sequence (OUT) state frequencies for each sequence, of size num_states*num_freq
+     */
+    void computeStateFreqPerSequence (double *freq_per_sequence);
+
+    void countStatePerSequence (unsigned *count_per_sequence);
 
     /**
      * Make all frequencies a little different and non-zero
@@ -481,6 +553,11 @@ public:
     virtual void countConstSite();
 
     /**
+     * @return unobserved constant patterns, each entry encoding for one constant character
+     */
+    string getUnobservedConstPatterns();
+
+    /**
             @return the number of ungappy and unambiguous characters from a sequence
             @param seq_id sequence ID
      */
@@ -490,6 +567,11 @@ public:
             @return unconstrained log-likelihood (without a tree)
      */
     virtual double computeUnconstrainedLogL();
+
+    /** either SEQ_BINARY, SEQ_DNA, SEQ_PROTEIN, SEQ_MORPH, or SEQ_CODON */
+    SeqType seq_type;
+
+    char STATE_UNKNOWN;
 
     /**
             number of states
@@ -501,16 +583,19 @@ public:
      */
     double frac_const_sites;
 
+    /** number of informative sites */
+    int num_informative_sites;
+    
 	/**
 	 *  map from 64 codon to non-stop codon index
 	 */
-    char *non_stop_codon;
+//    char *non_stop_codon;
 
 	/**
 	 * For codon sequences: index of 61 non-stop codons to 64 codons
 	 * For other sequences: NULL
 	 */
-	char *codon_table;
+//	char *codon_table;
 
 	/**
 	 * For codon_sequences: 64 amino-acid letters for genetic code of AAA,AAC,AAG,AAT,...,TTT
@@ -518,6 +603,24 @@ public:
 	 */
 	char *genetic_code;
 
+    vector<vector<int> > seq_states; // state set for each sequence in the alignment
+
+    /**
+     * @return true if data type is SEQ_CODON and state is a stop codon
+     */
+    bool isStopCodon(int state);
+
+    bool isStandardGeneticCode();
+
+	/**
+	 * @return number of non-stop codons in the genetic code
+	 */
+	int getNumNonstopCodons();
+
+    /* build seq_states containing set of states per sequence
+     * @param add_unobs_const TRUE to add all unobserved constant states (for +ASC model)
+     */
+    void buildSeqStates(bool add_unobs_const = false);
 
 
     /** Added by MA
@@ -549,12 +652,17 @@ public:
     double multinomialProb(IntVector &pattern_freq);
 
 
+    /**
+            get the appearance for a state, helpful for ambigious states
+            @param state the state index
+            @param state_app (OUT) state appearance
+     */
+    void getAppearance(char state, double *state_app);
+
+    void getAppearance(char state, StateBitset &state_app);
+
 protected:
 
-    /**
-     *  name of the file, from which the alignment was originally read in
-     */
-    char* phylip_file;
 
     /**
             sequence names
@@ -573,22 +681,14 @@ protected:
 
 
     /**
-            get the appearance for a state, helpful for ambigious states
-            @param state the state index
-            @param state_app (OUT) state appearance
-     */
-    void getAppearance(char state, double *state_app);
-
-	/**
 	 * special initialization for codon sequences, e.g., setting #states, genetic_code
 	 * @param sequence_type user-defined sequence type
 	 */
-	void initCodon(char *sequence_type);
+	void initCodon(char *gene_code_id);
 
 };
 
 
 void extractSiteID(Alignment *aln, const char* spec, IntVector &site_id);
-
 
 #endif

@@ -58,15 +58,18 @@
 #include "gss.h"
 #include "maalignment.h" //added by MA
 #include "ncbitree.h"
+#include "ecopd.h"
+#include "upperbounds.h"
+#include "ecopdmtreeset.h"
+#include "gurobiwrapper.h"
 #include "timeutil.h"
-#include <unistd.h>
+//#include <unistd.h>
 #include <stdlib.h>
-
+#include "vectorclass/vectorclass.h"
 
 #ifdef _OPENMP
 	#include <omp.h>
 #endif
-
 
 using namespace std;
 
@@ -198,9 +201,9 @@ void printCopyright(ostream &out) {
 #ifdef IQ_TREE
  	out << "IQ-TREE";
 	#ifdef _OPENMP
-	out << "-OpenMP";
+	out << " multicore";
 	#endif
- 	out << " beta version "; 
+ 	out << " version ";
 #else
  	out << "PDA - Phylogenetic Diversity Analyzer version ";
 #endif
@@ -224,9 +227,9 @@ void printCopyright(ostream &out) {
 #endif
 
 #ifdef IQ_TREE
-	out << endl << "Copyright (c) 2011-2013 Nguyen Lam Tung, Bui Quang Minh, and Arndt von Haeseler." << endl << endl;
+	out << endl << "Copyright (c) 2011-2015 Nguyen Lam Tung, Olga Chernomor, Arndt von Haeseler and Bui Quang Minh." << endl << endl;
 #else
-	out << endl << "Copyright (c) 2006-2008 Bui Quang Minh, Steffen Klaere and Arndt von Haeseler." << endl << endl;
+	out << endl << "Copyright (c) 2006-2014 Olga Chernomor, Arndt von Haeseler and Bui Quang Minh." << endl << endl;
 #endif
 }
 
@@ -238,7 +241,7 @@ void printRunMode(ostream &out, RunMode run_mode) {
 		case BOTH_ALG: out << "Greedy and Pruning"; break;
 		case EXHAUSTIVE: out << "Exhaustive"; break;
 		case DYNAMIC_PROGRAMMING: out << "Dynamic Programming"; break;
-		case LINEAR_PROGRAMMING: out << "Linear Programming"; break;
+		case LINEAR_PROGRAMMING: out << "Integer Linear Programming"; break;
 		default: outError(ERR_INTERNAL);
 	}
 }
@@ -248,14 +251,17 @@ void printRunMode(ostream &out, RunMode run_mode) {
 */
 void summarizeHeader(ostream &out, Params &params, bool budget_constraint, InputType analysis_type) {
 	printCopyright(out);
-	out << "Input file name: " << params.user_file << endl;
-	out << "Input file format: " << ((params.intype == IN_NEWICK) ? "Newick" : ( (params.intype == IN_NEXUS) ? "Nexus" : "Unknown" )) << endl;
+	out << "Input tree/split network file name: " << params.user_file << endl;
+	if(params.eco_dag_file)
+		out << "Input food web file name: "<<params.eco_dag_file<<endl;
+ 	out << "Input file format: " << ((params.intype == IN_NEWICK) ? "Newick" : ( (params.intype == IN_NEXUS) ? "Nexus" : "Unknown" )) << endl;
 	if (params.initial_file != NULL)
 		out << "Initial taxa file: " << params.initial_file << endl;
 	if (params.param_file != NULL)
 		out << "Parameter file: " << params.param_file << endl;
 	out << endl;
-	out << "Type of PD: " << ((params.root != NULL || params.is_rooted) ? "Rooted": "Unrooted");
+	out << "Type of measure: " << ((params.root != NULL || params.is_rooted) ? "Rooted": "Unrooted") <<
+			(analysis_type== IN_NEWICK ? " phylogenetic diversity (PD)" : " split diversity (SD)");
 	if (params.root != NULL) out << " at " << params.root;
 	out << endl;
 	if (params.run_mode != CALC_DIST && params.run_mode != PD_USER_SET) {
@@ -267,20 +273,20 @@ void summarizeHeader(ostream &out, Params &params, bool budget_constraint, Input
 			printRunMode(out, params.detected_mode);
 		}
 		out << endl;
-		out << "Search option: " << ((params.find_all) ? "Multiple optimal PD sets" : "Single optimal PD set") << endl;
+		out << "Search option: " << ((params.find_all) ? "Multiple optimal sets" : "Single optimal set") << endl;
 	}
 	out << endl;
 	out << "Type of analysis: ";
 	switch (params.run_mode) {
-		case PD_USER_SET: out << "PD of user sets";
+		case PD_USER_SET: out << "PD/SD of user sets";
 			if (params.pdtaxa_file) out << " (" << params.pdtaxa_file << ")"; break;
 		case CALC_DIST: out << "Distance matrix computation"; break;
 		default:
 			out << ((budget_constraint) ? "Budget constraint " : "Subset size k ");
 			if (params.intype == IN_NEWICK)
-				out << ((analysis_type == IN_NEWICK) ? "on tree" : "on tree -> network");
+				out << ((analysis_type == IN_NEWICK) ? "on tree" : "on tree -> split network");
 			else
-				out << "on network";
+				out << "on split network";
 	}
 	out << endl;
 	//out << "Random number seed: " << params.ran_seed << endl;
@@ -1237,7 +1243,7 @@ void calcTreeCluster(Params &params) {
 		out << "y" << endl;
 		out.close();
 		out2.close();
-		cout << "Cluster " << cnt << " printed to " << filename << " and " << filename2 << endl;
+		cout << "Cluster " << cnt << " printed to " << filename.rdbuf() << " and " << filename2.rdbuf() << endl;
 	}
 }
 
@@ -1530,7 +1536,7 @@ void branchStats(Params &params){
 	
 	/***** Following added by BQM to print internal branch lengths */
 	NodeVector nodes1, nodes2;
-	mytree.getInternalBranches(nodes1, nodes2);
+	mytree.getAllInnerBranches(nodes1, nodes2);
 	output = params.out_prefix;
 	output += ".inlen";
 	try {
@@ -1756,6 +1762,8 @@ int outstreambuf::sync() { // used for output buffer only
 
 outstreambuf _out_buf;
 string _log_file;
+int _exit_wait_optn = FALSE;
+
 
 extern "C" void startLogFile() {
 	_out_buf.open(_log_file.c_str());
@@ -1770,6 +1778,12 @@ extern "C" void endLogFile() {
 }
 
 void funcExit(void) {
+	if(_exit_wait_optn) {
+		printf("\npress [return] to finish: ");
+		fflush(stdout);
+		while (getchar() != '\n');
+	}
+	
 	endLogFile();
 }
 
@@ -1780,6 +1794,10 @@ extern "C" void funcAbort(int signal_number)
       because abort() was called, your program will exit or crash anyway
       (with a dialog box on Windows).
      */
+#if (defined(__GNUC__) || defined(__clang__)) && !defined(WIN32) && !defined(__CYGWIN__)
+	print_stacktrace(cerr);
+#endif
+
 	cout << endl << "*** IQ-TREE CRASHES WITH SIGNAL ";
 	switch (signal_number) {
 		case SIGABRT: cout << "ABORTED"; break;
@@ -1787,22 +1805,385 @@ extern "C" void funcAbort(int signal_number)
 		case SIGILL:  cout << "ILLEGAL INSTRUCTION"; break;
 		case SIGSEGV: cout << "SEGMENTATION FAULT"; break;
 	}
-	cout << endl << "*** For bug report please send developers:" << endl << "***    Log file: " << _log_file;
+    cout << endl;
+	cout << "*** For bug report please send to developers:" << endl << "***    Log file: " << _log_file;
 	cout << endl << "***    Alignment files (if possible)" << endl;
 	funcExit();
 	signal(signal_number, SIG_DFL);
 }
 
+extern "C" void getintargv(int *argc, char **argv[]) 
+{
+	int    done;
+	int    count;
+	int    n;
+	int    l;
+	char   ch;
+	char  *argtmp;
+	char **argstr;
+
+	argtmp = (char  *)calloc(10100, sizeof(char));
+	argstr = (char **)calloc(100, sizeof(char*));
+	for(n=0; n<100; n++) {
+		argstr[n] = &(argtmp[n * 100]);
+	}
+	n=1;
+
+	fprintf(stdout, "\nYou seem to have click-started this program,");
+	fprintf(stdout, "\ndo you want to enter commandline parameters: [y]es, [n]o: ");
+	fflush(stdout);
+
+	/* read one char */
+	ch = getc(stdin);
+	if (ch != '\n') {
+		do ;
+		while (getc(stdin) != '\n');
+	}
+	ch = (char) tolower((int) ch);
+
+	if (ch == 'y') {
+		done=FALSE;
+
+		fprintf(stdout, "\nEnter single parameter [! for none]: ");
+		fflush(stdout);
+		count = fscanf(stdin, "%s", argstr[n]);
+		do ;
+		while (getc(stdin) != '\n');
+
+		if(argstr[0][0] == '!') {
+			count = 0;
+		} else {
+			if (strlen(argstr[n]) > 100) {
+				fprintf(stdout, "\nParameter too long!!!\n");
+			} else {
+				n++;
+			}
+		}
+
+		while(!done) {
+			fprintf(stdout, "\nCurrent commandline: ");
+			for(l=1; l<n; l++) {
+				fprintf(stdout, "%s ", argstr[l]);
+			}
+			fprintf(stdout, "\nQuit [q]; confirm [y]%s%s%s: ",
+				(n<99 ? ", extend [e]" : ""),
+				(n>1 ? ", delete last [l]" : ""),
+				(n>1 ? ", delete all [a]" : ""));
+			fflush(stdout);
+
+			/* read one char */
+			ch = getc(stdin);
+			/* ch = getchar(); */
+			if (ch != '\n') {
+				do ;
+				while (getc(stdin) != '\n');
+				/* while (getchar() != '\n'); */
+			}
+			ch = (char) tolower((int) ch);
+		
+			switch (ch) {
+				case 'y': 
+					done=TRUE;
+					break;
+				case 'e': 
+					fprintf(stdout, "\nEnter single parameter [! for none]: ");
+					fflush(stdout);
+					count = fscanf(stdin, "%s", argstr[n]);
+					do ;
+					while (getc(stdin) != '\n');
+		
+					if(argstr[0][0] == '!') {
+						count = 0;
+					} else {
+						if (strlen(argstr[n]) > 100) {
+							fprintf(stdout, "\nParameter too long!!!\n");
+						} else {
+							n++;
+						}
+					}
+					break;
+				case 'l': 
+					if (n>1) n--;
+					break;
+				case 'a': 
+					n=1;
+					break;
+				case 'q': 
+   					// tp_exit(0, NULL, FALSE, __FILE__, __LINE__, _exit_wait_optn);
+					if(_exit_wait_optn) {
+						printf("\npress [return] to finish: ");
+						fflush(stdout);
+						while (getchar() != '\n');
+					}
+					exit(0);
+					break;
+			}
+		}
+	}
+
+	*argc = n;
+	*argv = argstr;
+} /* getintargv */
+
+/*********************************************************************************************************************************
+	Olga: ECOpd - phylogenetic diversity with ecological constraint: choosing a viable subset of species which maximizes PD/SD
+*********************************************************************************************************************************/
+
+void processECOpd(Params &params) {
+	double startTime = getCPUTime();
+	params.detected_mode = LINEAR_PROGRAMMING;
+	cout<<"----------------------------------------------------------------------------------------"<<endl;
+	int i;
+	double score;
+	double *variables;
+	int threads = params.gurobi_threads;
+	params.gurobi_format=true;
+
+	string model_file,subFoodWeb,outFile;
+
+	model_file = params.out_prefix;
+	model_file += ".lp";
+
+	subFoodWeb = params.out_prefix;
+	subFoodWeb += ".subFoodWeb";
+
+	outFile = params.out_prefix;
+	outFile += ".pda";
+
+	//Defining the input phylo type: t - rooted/unrooted tree, n - split network
+	params.intype=detectInputFile(params.user_file);
+	if(params.intype == IN_NEWICK){
+		params.eco_type = "t";
+	} else if(params.intype == IN_NEXUS){
+		params.eco_type = "n";
+	}
+
+	// Checking whether to treat the food web as weighted or non weighted
+	if(params.diet_max == 0){
+		params.eco_weighted = false;
+	}else if(params.diet_max > 100 || params.diet_max < 0){
+		cout<<"The minimum percentage of the diet to be conserved for each predator"<<endl;
+		cout<<"d = "<<params.diet_max<<endl;
+		cout<<"ERROR: Wrong value of parameter d. It must be within the range 0 <= d <= 100"<<endl;
+		exit(0);
+	}else{
+		params.eco_weighted = true;
+	}
+
+	if(strcmp(params.eco_type,"t")==0){
+	/*--------------------------------- EcoPD Trees ---------------------------------*/
+		ECOpd tree(params.user_file,params.is_rooted);
+
+		// Setting all the information-----------------
+		tree.phyloType = "t";
+		tree.TaxaNUM = tree.leafNum;
+		if(verbose_mode == VB_MAX){
+			cout<<"TaxaNUM = "<<tree.TaxaNUM<<endl;
+			cout<<"LeafNUM = "<<tree.leafNum<<endl;
+			cout<<"root_id = "<<tree.root->id<<" root_name = "<<tree.root->name<<endl;
+
+			for(i=0; i<tree.leafNum; i++){
+				cout<<i<<" "<<tree.findNodeID(i)->name <<endl;
+			}
+		}
+
+		//Getting Species Names from tree
+		for(i = 0; i < tree.TaxaNUM; i++)
+			(tree.phyloNames).push_back(tree.findNodeID(i)->name);
+		//for(i=0;i<tree.phyloNames.size();i++)
+		//	cout<<"["<<i<<"] "<<tree.phyloNames[i]<<endl;
+
+		// Full species list including info from tree and food web. Here adding names from phyloInput.
+		for(i=0; i<tree.TaxaNUM; i++)
+			tree.names.push_back(&(tree.phyloNames[i]));
+
+		// Read the taxa to be included in the final optimal subset
+		if(params.initial_file)
+			tree.readInitialTaxa(params.initial_file);
+
+		// Read the DAG file, Synchronize species on the Tree and in the Food Web
+		tree.weighted = params.eco_weighted;
+		tree.T = params.diet_max*0.01;
+		tree.readDAG(params.eco_dag_file);
+		tree.defineK(params);
+
+		// IP formulation
+		cout<<"Formulating an IP problem..."<<endl;
+		if(tree.rooted){
+			tree.printECOlpRooted(model_file.c_str(),tree);
+		} else {
+			tree.printECOlpUnrooted(model_file.c_str(),tree);
+		}
+
+		// Solve IP problem
+		cout<<"Solving the problem..."<<endl;
+		variables = new double[tree.nvar];
+		int g_return = gurobi_solve((char*)model_file.c_str(), tree.nvar, &score, variables, verbose_mode, threads);
+		if(verbose_mode == VB_MAX){
+			cout<<"GUROBI finished with "<<g_return<<" return."<<endl;
+			for(i=0; i<tree.nvar; i++)
+				cout<<"x"<<i<<" = "<<variables[i]<<endl;
+			cout<<"score = "<<score<<endl;
+		}
+		tree.dietConserved(variables);
+		params.run_time = getCPUTime() - startTime;
+		tree.printResults((char*)outFile.c_str(),variables,score,params);
+		tree.printSubFoodWeb((char*)subFoodWeb.c_str(),variables);
+		delete[] variables;
+
+	} else if(strcmp(params.eco_type,"n")==0){
+	/*----------------------------- EcoPD SplitNetwork ------------------------------*/
+		params.intype=detectInputFile(params.user_file);
+		PDNetwork splitSYS(params);
+		ECOpd ecoInfDAG;
+
+		// Get the species names from SplitNetwork
+		splitSYS.speciesList(&(ecoInfDAG.phyloNames));
+		//for(i=0;i<ecoInfDAG.phyloNames.size();i++)
+		//	cout<<"["<<i<<"] "<<ecoInfDAG.phyloNames[i]<<endl;
+
+		ecoInfDAG.phyloType = "n";
+		ecoInfDAG.TaxaNUM = splitSYS.getNTaxa();
+
+		// Full species list including info from tree and food web
+		for(i=0; i<ecoInfDAG.TaxaNUM; i++)
+			ecoInfDAG.names.push_back(&(ecoInfDAG.phyloNames[i]));
+
+		ecoInfDAG.weighted = params.eco_weighted;
+		// Read the taxa to be included in the final optimal subset
+		if(params.initial_file)
+			ecoInfDAG.readInitialTaxa(params.initial_file);
+		ecoInfDAG.T = params.diet_max*0.01;
+		ecoInfDAG.readDAG(params.eco_dag_file);
+		ecoInfDAG.defineK(params);
+
+		cout<<"Formulating an IP problem..."<<endl;
+		splitSYS.transformEcoLP(params, model_file.c_str(), 0);
+		/**
+		 * (subset_size-4) - influences constraints for conserved splits.
+		 * should be less than taxaNUM in the split system.
+		 * With 0 prints all the constraints.
+		 * Values different of 0 reduce the # of constraints.
+		 **/
+
+		ecoInfDAG.printInfDAG(model_file.c_str(),splitSYS,params);
+		cout<<"Solving the problem..."<<endl;
+		variables = new double[ecoInfDAG.nvar];
+		int g_return = gurobi_solve((char*)model_file.c_str(), ecoInfDAG.nvar, &score, variables, verbose_mode, threads);
+		if(verbose_mode == VB_MAX){
+			cout<<"GUROBI finished with "<<g_return<<" return."<<endl;
+			for(i=0; i<ecoInfDAG.nvar; i++)
+				cout<<"x"<<i<<" = "<<variables[i]<<endl;
+			cout<<"score = "<<score<<endl;
+		}
+		ecoInfDAG.splitsNUM = splitSYS.getNSplits();
+		ecoInfDAG.totalSD = splitSYS.calcWeight();
+		ecoInfDAG.dietConserved(variables);
+		params.run_time = getCPUTime() - startTime;
+		ecoInfDAG.printResults((char*)outFile.c_str(),variables, score,params);
+		ecoInfDAG.printSubFoodWeb((char*)subFoodWeb.c_str(),variables);
+		delete[] variables;
+	}
+}
+
+void collapseLowBranchSupport(char *user_file, char *split_threshold_str) {
+    DoubleVector minsup;
+    convert_double_vec(split_threshold_str, minsup, '/');
+    if (minsup.empty())
+        outError("wrong -minsupnew argument, please use back-slash separated string");
+    MExtTree tree;
+    bool isrooted = false;
+    tree.readTree(user_file, isrooted);
+    tree.collapseLowBranchSupport(minsup);
+    tree.collapseZeroBranches();
+    if (verbose_mode >= VB_MED)
+        tree.drawTree(cout);
+    string outfile = (string)user_file + ".collapsed";
+    tree.printTree(outfile.c_str());
+    cout << "Tree with collapsed branches written to " << outfile << endl;
+}
+
+
 /********************************************************
 	main function
 ********************************************************/
+/*
+int main(){
+	IQTree tree;
+	char * str = "(1, (2, 345));";
+	string k;
+	tree.pllConvertTaxaID2IQTreeForm(str, k);
+	cout << str << endl;
+	cout << k << endl;
+	cout << "WHAT" << endl;
+	return 0;
+}
+*/
+
+/*
+Instruction set ID reported by vectorclass::instrset_detect
+0           = 80386 instruction set
+1  or above = SSE (XMM) supported by CPU (not testing for O.S. support)
+2  or above = SSE2
+3  or above = SSE3
+4  or above = Supplementary SSE3 (SSSE3)
+5  or above = SSE4.1
+6  or above = SSE4.2
+7  or above = AVX supported by CPU and operating system
+8  or above = AVX2
+9  or above = AVX512F
+*/
+int instruction_set;
+
 int main(int argc, char *argv[])
 {
 
-	Params params;
-	parseArg(argc, argv, params);
+	/*************************/
+	{ /* local scope */
+		int found=FALSE;              /* "click" found in cmd name? */
+		int n, dummyint;
+		char *tmpstr;
+		int     intargc; 
+		char  **intargv; 
+		intargc = 0; 
+		intargv = NULL; 
+		
+		for (n = strlen(argv[0]) - 5; 
+		    (n >= 0) && !found && (argv[0][n] != '/')
+		             && (argv[0][n] != '\\'); n--) {
 
-	_log_file = params.out_prefix;
+			tmpstr = &(argv[0][n]);
+			dummyint = 0;
+			(void)sscanf(tmpstr, "click%n", &dummyint);
+			if (dummyint == 5) found = TRUE;
+			else {
+				dummyint = 0;
+				(void)sscanf(tmpstr, "CLICK%n", &dummyint);
+				if (dummyint == 5) found = TRUE;
+				else {
+					dummyint = 0;
+					(void)sscanf(tmpstr, "Click%n", &dummyint);
+					if (dummyint == 5) found = TRUE;
+				}
+			}
+		}
+		if(found) _exit_wait_optn = TRUE;
+
+		if (_exit_wait_optn) { // get commandline parameters from keyboard
+			getintargv(&intargc, &intargv); 
+			fprintf(stdout, "\n\n");
+			if(intargc > 1) { // if there were option entered, use them as argc/argv
+				argc = intargc; 
+				argv = intargv; 
+			} 
+		}
+	} /* local scope */
+	/*************************/
+
+	//Params params;
+	parseArg(argc, argv, Params::getInstance());
+
+	_log_file = Params::getInstance().out_prefix;
 	_log_file += ".log";
 	startLogFile();
 	atexit(funcExit);
@@ -1830,119 +2211,203 @@ int main(int argc, char *argv[])
 	//fgets(hostname, sizeof(hostname), pfile);
 	//pclose(pfile);
 
-	cout << "Host:    " << hostname << endl;
+	instruction_set = instrset_detect();
+#if defined(BINARY32) || defined(__NOAVX__)
+    instruction_set = min(instruction_set, 6);
+#endif
+	if (instruction_set < 3) outError("Your CPU does not support SSE3!");
+	bool has_fma3 = (instruction_set >= 7) && hasFMA3();
+	bool has_fma4 = (instruction_set >= 7) && hasFMA4();
+
+#ifdef __FMA__
+	bool has_fma =  has_fma3 || has_fma4;
+	if (!has_fma) {
+		outError("Your CPU does not support FMA instruction, quiting now...");
+	}
+#endif
+
+	cout << "Host:    " << hostname << " (";
+	switch (instruction_set) {
+	case 3: cout << "SSE3, "; break;
+	case 4: cout << "SSSE3, "; break;
+	case 5: cout << "SSE4.1, "; break;
+	case 6: cout << "SSE4.2, "; break;
+	case 7: cout << "AVX, "; break;
+	case 8: cout << "AVX2, "; break;
+	default: cout << "AVX512F, "; break;
+	}
+	if (has_fma3) cout << "FMA3, ";
+	if (has_fma4) cout << "FMA4, ";
+//#if defined __APPLE__ || defined __MACH__
+	cout << (int)(((getMemorySize()/1024.0)/1024)/1024) << " GB RAM)" << endl;
+//#else
+//	cout << (int)(((getMemorySize()/1000.0)/1000)/1000) << " GB RAM)" << endl;
+//#endif
+
 	cout << "Command:";
 	for (int i = 0; i < argc; i++)
 		cout << " " << argv[i];
 	cout << endl;
 
-	cout << "Seed:    " << params.ran_seed <<  " ";
-	init_random(params.ran_seed);
+	cout << "Seed:    " << Params::getInstance().ran_seed <<  " ";
+	init_random(Params::getInstance().ran_seed);
 
 	time_t cur_time;
 	time(&cur_time);
 	cout << "Time:    " << ctime(&cur_time);
 
-	cout.precision(3);
-	cout << fixed;
-	cout << "Memory:  " << ((getMemorySize()/1024.0)/1024)/1024 << " GB RAM detected" << endl;
-	
+	if (Params::getInstance().lk_no_avx)
+		instruction_set = min(instruction_set, 6);
+
+	cout << "Kernel:  ";
+	if (Params::getInstance().pll) {
+#ifdef __AVX__
+		cout << "PLL-AVX";
+#else
+		cout << "PLL-SSE3";
+#endif
+	} else {
+		switch (Params::getInstance().SSE) {
+		case LK_NORMAL: cout << "Slow"; break;
+		case LK_SSE: cout << "Slow SSE3"; break;
+		case LK_EIGEN: cout << "No SSE"; break;
+		case LK_EIGEN_SSE:
+			if (instruction_set >= 7) {
+				cout << "AVX";
+			} else {
+				cout << "SSE3";
+			}
+
+#ifdef __FMA__
+			cout << "+FMA";
+#endif
+			break;
+		}
+	}
+
+
+
 #ifdef _OPENMP
-	if (params.num_threads) omp_set_num_threads(params.num_threads);
-	int max_threads = omp_get_max_threads();
-	int max_procs = omp_get_num_procs();
-	cout << "Threads: " << max_threads << " (" << max_procs << " CPU cores detected)" << endl;
-	if (max_threads > max_procs) outWarning("You have specified more threads than CPU cores available");
+	if (Params::getInstance().num_threads == 0) {
+		cout << endl << endl;
+		outError("Please specify the number of cores to use (-nt option)!");
+	}
+	if (Params::getInstance().num_threads) omp_set_num_threads(Params::getInstance().num_threads);
+//	int max_threads = omp_get_max_threads();
+	Params::getInstance().num_threads = omp_get_max_threads();
+	int max_procs = countPhysicalCPUCores();
+	cout << " - " << Params::getInstance().num_threads  << " threads (" << max_procs << " CPU cores detected)";
+	if (Params::getInstance().num_threads  > max_procs) {
+		cout << endl;
+		outError("You have specified more threads than CPU cores available");
+	}
 	omp_set_nested(false); // don't allow nested OpenMP parallelism
+#else
+	if (Params::getInstance().num_threads != 1) {
+		cout << endl << endl;
+		outError("Number of threads must be 1 for sequential version.");
+	}
+    int num_procs = countPhysicalCPUCores();
+    if (num_procs > 1) {
+        cout << endl << endl << "NOTE: Consider using the multicore version because your CPU has " << num_procs << " cores!";
+    }
 #endif
 	//cout << "sizeof(int)=" << sizeof(int) << endl;
-	cout << endl;
-	
+	cout << endl << endl;
+
+	cout.precision(3);
+	cout.setf(ios::fixed);
+
 	// call the main function
-	if (params.tree_gen != NONE) {
-		generateRandomTree(params);
-	} else if (params.do_pars_multistate) {
-		doParsMultiState(params);
-	} else if (params.rf_dist_mode != 0) {
-		computeRFDist(params);
-	} else if (params.test_input != TEST_NONE) {
-		params.intype = detectInputFile(params.user_file);
-		testInputFile(params);
-	} else if (params.run_mode == PRINT_TAXA) {
-		printTaxa(params);
-	} else if (params.run_mode == PRINT_AREA) {
-		printAreaList(params);
-	} else if (params.run_mode == SCALE_BRANCH_LEN || params.run_mode == SCALE_NODE_NAME) {
-		scaleBranchLength(params);
-	} else if (params.run_mode == PD_DISTRIBUTION) {
-		calcDistribution(params);
-	} else if (params.run_mode == STATS){ /**MINH ANH: for some statistics on the input tree*/
-		branchStats(params); // MA
-	} else if (params.branch_cluster > 0) {
-		calcTreeCluster(params);
-	} else if (params.ncbi_taxid) {
-		processNCBITree(params);
-	} else if (params.aln_file || params.partition_file) {
-		if ((params.siteLL_file || params.second_align) && !params.gbo_replicates)
+	if (Params::getInstance().tree_gen != NONE) {
+		generateRandomTree(Params::getInstance());
+	} else if (Params::getInstance().do_pars_multistate) {
+		doParsMultiState(Params::getInstance());
+	} else if (Params::getInstance().rf_dist_mode != 0) {
+		computeRFDist(Params::getInstance());
+	} else if (Params::getInstance().test_input != TEST_NONE) {
+		Params::getInstance().intype = detectInputFile(Params::getInstance().user_file);
+		testInputFile(Params::getInstance());
+	} else if (Params::getInstance().run_mode == PRINT_TAXA) {
+		printTaxa(Params::getInstance());
+	} else if (Params::getInstance().run_mode == PRINT_AREA) {
+		printAreaList(Params::getInstance());
+	} else if (Params::getInstance().run_mode == SCALE_BRANCH_LEN || Params::getInstance().run_mode == SCALE_NODE_NAME) {
+		scaleBranchLength(Params::getInstance());
+	} else if (Params::getInstance().run_mode == PD_DISTRIBUTION) {
+		calcDistribution(Params::getInstance());
+	} else if (Params::getInstance().run_mode == STATS){ /**MINH ANH: for some statistics on the input tree*/
+		branchStats(Params::getInstance()); // MA
+	} else if (Params::getInstance().branch_cluster > 0) {
+		calcTreeCluster(Params::getInstance());
+	} else if (Params::getInstance().ncbi_taxid) {
+		processNCBITree(Params::getInstance());
+	} else if (Params::getInstance().user_file && Params::getInstance().eco_dag_file) { /**ECOpd analysis*/
+		processECOpd(Params::getInstance());
+	} else if (Params::getInstance().aln_file || Params::getInstance().partition_file) {
+		if ((Params::getInstance().siteLL_file || Params::getInstance().second_align) && !Params::getInstance().gbo_replicates)
 		{
-			if (params.siteLL_file)
-				guidedBootstrap(params);
-			if (params.second_align)
-				computeMulProb(params);
+			if (Params::getInstance().siteLL_file)
+				guidedBootstrap(Params::getInstance());
+			if (Params::getInstance().second_align)
+				computeMulProb(Params::getInstance());
 		} else {
-			runPhyloAnalysis(params);
+			runPhyloAnalysis(Params::getInstance());
 		}
-	} else if (params.ngs_file || params.ngs_mapped_reads) {
-		runNGSAnalysis(params);
-	} else if (params.pdtaxa_file && params.gene_scale_factor >=0.0 && params.gene_pvalue_file) {
-		runGSSAnalysis(params);
-	} else if (params.consensus_type != CT_NONE) {
+	} else if (Params::getInstance().ngs_file || Params::getInstance().ngs_mapped_reads) {
+		runNGSAnalysis(Params::getInstance());
+	} else if (Params::getInstance().pdtaxa_file && Params::getInstance().gene_scale_factor >=0.0 && Params::getInstance().gene_pvalue_file) {
+		runGSSAnalysis(Params::getInstance());
+	} else if (Params::getInstance().consensus_type != CT_NONE) {
 		MExtTree tree;
-		switch (params.consensus_type) {
+		switch (Params::getInstance().consensus_type) {
 			case CT_CONSENSUS_TREE:
-				computeConsensusTree(params.user_file, params.tree_burnin, params.tree_max_count, params.split_threshold,
-					params.split_weight_threshold, params.out_file, params.out_prefix, params.tree_weight_file, &params);
+				computeConsensusTree(Params::getInstance().user_file, Params::getInstance().tree_burnin, Params::getInstance().tree_max_count, Params::getInstance().split_threshold,
+					Params::getInstance().split_weight_threshold, Params::getInstance().out_file, Params::getInstance().out_prefix, Params::getInstance().tree_weight_file, &Params::getInstance());
 				break;
 			case CT_CONSENSUS_NETWORK:
-				computeConsensusNetwork(params.user_file, params.tree_burnin, params.tree_max_count, params.split_threshold,
-					params.split_weight_threshold, params.out_file, params.out_prefix, params.tree_weight_file);
+				computeConsensusNetwork(Params::getInstance().user_file, Params::getInstance().tree_burnin, Params::getInstance().tree_max_count, Params::getInstance().split_threshold,
+					Params::getInstance().split_weight_summary, Params::getInstance().split_weight_threshold, Params::getInstance().out_file, Params::getInstance().out_prefix, Params::getInstance().tree_weight_file);
 				break;
 			case CT_ASSIGN_SUPPORT:
-				assignBootstrapSupport(params.user_file, params.tree_burnin, params.tree_max_count, 
-					params.second_tree, params.is_rooted, params.out_file,
-					params.out_prefix, tree, params.tree_weight_file, &params);
+				assignBootstrapSupport(Params::getInstance().user_file, Params::getInstance().tree_burnin, Params::getInstance().tree_max_count, 
+					Params::getInstance().second_tree, Params::getInstance().is_rooted, Params::getInstance().out_file,
+					Params::getInstance().out_prefix, tree, Params::getInstance().tree_weight_file, &Params::getInstance());
 				break;
 			case CT_ASSIGN_SUPPORT_EXTENDED:
-				assignBranchSupportNew(params);
+				assignBranchSupportNew(Params::getInstance());
 				break;
 			case CT_NONE: break;
 			/**MINH ANH: for some comparison*/
-			case COMPARE: compare(params); break; //MA
+			case COMPARE: compare(Params::getInstance()); break; //MA
 		}
+    } else if (Params::getInstance().split_threshold_str) {
+        // for Ricardo: keep those splits from input tree above given support threshold
+        collapseLowBranchSupport(Params::getInstance().user_file, Params::getInstance().split_threshold_str);
 	} else {
-		params.intype = detectInputFile(params.user_file);
-		if (params.intype == IN_NEWICK && params.pdtaxa_file && params.tree_gen == NONE) {
-			if (params.budget_file) {
-				//if (params.budget < 0) params.run_mode = PD_USER_SET;
+		Params::getInstance().intype = detectInputFile(Params::getInstance().user_file);
+		if (Params::getInstance().intype == IN_NEWICK && Params::getInstance().pdtaxa_file && Params::getInstance().tree_gen == NONE) {
+			if (Params::getInstance().budget_file) {
+				//if (Params::getInstance().budget < 0) Params::getInstance().run_mode = PD_USER_SET;
 			} else {
-				if (params.sub_size < 1 && params.pd_proportion == 0.0)
-					params.run_mode = PD_USER_SET;
+				if (Params::getInstance().sub_size < 1 && Params::getInstance().pd_proportion == 0.0)
+					Params::getInstance().run_mode = PD_USER_SET;
 			}
 			// input is a tree, check if it is a reserve selection -> convert to splits
-			if (params.run_mode != PD_USER_SET) params.multi_tree = true;
+			if (Params::getInstance().run_mode != PD_USER_SET) Params::getInstance().multi_tree = true;
 		}
 
 
-		if (params.intype == IN_NEWICK && !params.find_all && params.budget_file == NULL &&
-			params.find_pd_min == false && params.calc_pdgain == false &&
-			params.run_mode != LINEAR_PROGRAMMING && params.multi_tree == false)
-			runPDTree(params);
-		else if (params.intype == IN_NEXUS || params.intype == IN_NEWICK) {
-			if (params.run_mode == LINEAR_PROGRAMMING && params.find_pd_min)
+		if (Params::getInstance().intype == IN_NEWICK && !Params::getInstance().find_all && Params::getInstance().budget_file == NULL &&
+			Params::getInstance().find_pd_min == false && Params::getInstance().calc_pdgain == false &&
+			Params::getInstance().run_mode != LINEAR_PROGRAMMING && Params::getInstance().multi_tree == false)
+			runPDTree(Params::getInstance());
+		else if (Params::getInstance().intype == IN_NEXUS || Params::getInstance().intype == IN_NEWICK) {
+			if (Params::getInstance().run_mode == LINEAR_PROGRAMMING && Params::getInstance().find_pd_min)
 				outError("Current linear programming does not support finding minimal PD sets!");
-			if (params.find_all && params.run_mode == LINEAR_PROGRAMMING)
-				params.binary_programming = true;
-			runPDSplit(params);
+			if (Params::getInstance().find_all && Params::getInstance().run_mode == LINEAR_PROGRAMMING)
+				Params::getInstance().binary_programming = true;
+			runPDSplit(Params::getInstance());
 		} else {
 			outError("Unknown file input format");
 		}
@@ -1951,5 +2416,6 @@ int main(int argc, char *argv[])
 	time(&cur_time);
 	cout << "Date and Time: " << ctime(&cur_time);
 
+	finish_random();
 	return EXIT_SUCCESS;
 }

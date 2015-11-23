@@ -22,7 +22,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include "tools.h"
+#include "whtools.h"
 
 void eliminateZero(DMat20 mat, DVec20 forg, int num, 
 	double **new_mat, DVec20 new_forg, int *new_num) {
@@ -198,10 +198,10 @@ int eigen_sym_core(double *mat, int n, double *eval) {
 	int i, j;
 	double *off_diag;
 
-	a = malloc(n * sizeof(double*));
+	a = (double **) malloc(n * sizeof(double*));
 	for (i = 0; i < n; i++)
-		a[i] = calloc(n, sizeof(double));
-	off_diag = malloc(n * sizeof(double*));
+		a[i] = (double *) calloc(n, sizeof(double));
+	off_diag = (double *) malloc(n * sizeof(double*));
 	
 	for (i = 0; i < n; i++)
 		for (j = 0; j < n; j++)
@@ -229,7 +229,7 @@ int eigen_sym(DMat20 H_mat, DVec20 Pi_vec, int num_state,
 	double zero;
 	double **a;
 
-	a = malloc(num_state * sizeof(double*));
+	a = (double **) malloc(num_state * sizeof(double*));
 	for (i = 0; i < num_state; i++)
 		a[i] = (double*) (calloc(num_state, sizeof(double)));
 

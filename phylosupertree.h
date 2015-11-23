@@ -33,17 +33,17 @@ Phylogenetic tree for partition model (multi-gene alignment)
 class PhyloSuperTree : public IQTree, public vector<PhyloTree* >
 {
 public:
-	/** 
+	/**
 		constructor
 	*/
     PhyloSuperTree();
 
-	/** 
+	/**
 		constructor
 	*/
     PhyloSuperTree(SuperAlignment *alignment, PhyloSuperTree *super_tree);
 
-	/** 
+	/**
 		constructor
 	*/
     PhyloSuperTree(Params &params);
@@ -54,15 +54,59 @@ public:
     /** read partition model file */
     void readPartition(Params &params);
 
+    /** read RAxML-style partition file */
+    void readPartitionRaxml(Params &params);
+
     /** read partition model file in NEXUS format into variable info */
     void readPartitionNexus(Params &params);
+
+    void printPartition(const char *filename);
+
+    void printPartitionRaxml(const char *filename);
+
+    void printBestPartition(const char *filename);
+    void printBestPartitionRaxml(const char *filename);
+
+    /** remove identical sequences from the tree */
+    virtual void removeIdenticalSeqs(Params &params);
+
+    /** reinsert identical sequences into the tree and reset original alignment */
+    virtual void reinsertIdenticalSeqs(Alignment *orig_aln);
+
+	virtual void setParams(Params* params);
 
 	/**
 	 * setup all necessary parameters  (declared as virtual needed for phylosupertree)
 	 */
-	virtual void setParams(Params& params);
-	
+	virtual void initSettings(Params& params);
+
+    virtual void setLikelihoodKernel(LikelihoodKernel lk);
+
+    virtual void changeLikelihoodKernel(LikelihoodKernel lk);
+
 	virtual bool isSuperTree() { return true; }
+
+    /**
+     * Return the tree string contining taxon names and branch lengths
+     * @return
+     */
+    virtual string getTreeString();
+
+    /**
+            Read the tree saved with Taxon Names and branch lengths.
+            @param tree_string tree string to read from
+            @param updatePLL if true, tree is read into PLL
+     */
+    virtual void readTreeString(const string &tree_string);
+
+    /**
+     * save branch lengths into a vector
+     */
+    virtual void saveBranchLengths(DoubleVector &lenvec, int startid = 0, PhyloNode *node = NULL, PhyloNode *dad = NULL);
+    /**
+     * restore branch lengths from a vector previously called with saveBranchLengths
+     */
+    virtual void restoreBranchLengths(DoubleVector &lenvec, int startid = 0, PhyloNode *node = NULL, PhyloNode *dad = NULL);
 
     /**
             allocate a new node. Override this if you have an inherited Node class.
@@ -103,7 +147,7 @@ public:
 		create sub-trees T|Y_1,...,T|Y_k of the current super-tree T
 		and map F={f_1,...,f_k} the edges of supertree T to edges of subtrees T|Y_i
 	*/
-	void mapTrees();
+	virtual void mapTrees();
 
 	/*
 	 * create one map f_i from supertree T to subtree indexed by part (called by mapTrees)
@@ -117,7 +161,7 @@ public:
 	/**
 	 * Given current supertree T and subtrees T|Y_1,...,T|Y_k, build all maps f_1,...,f_k
 	 */
-	void linkTrees();
+	virtual void linkTrees();
 
 	/**
 	 * link a branch from supertree to subtree (called by linkTree)
@@ -126,6 +170,23 @@ public:
 	 * @param dad_nei pointer to reverse branch
 	 */
 	void linkBranch(int part, SuperNeighbor *nei, SuperNeighbor *dad_nei);
+
+
+    /**
+            initialize partial_lh vector of all PhyloNeighbors, allocating central_partial_lh
+     */
+    virtual void initializeAllPartialLh();
+
+    /**
+            de-allocate central_partial_lh
+     */
+    virtual void deleteAllPartialLh();
+
+    /**
+     NEWLY ADDED (2014-12-04): clear all partial likelihood for a clean computation again
+     */
+    virtual void clearAllPartialLH(bool make_null = false);
+    
 
     /**
             compute the tree likelihood
@@ -140,8 +201,11 @@ public:
             Otherwise, copy the pattern_lh attribute
             @param pattern_lh (OUT) pattern log-likelihoods,
                             assuming pattern_lh has the size of the number of patterns
+            @param cur_logl current log-likelihood (for sanity check)
+            @param pattern_lh_cat (OUT) if not NULL, store all pattern-likelihood per category
      */
-	virtual void computePatternLikelihood(double *pattern_lh, double *cur_logl = NULL);
+    virtual void computePatternLikelihood(double *pattern_lh, double *cur_logl = NULL,
+    		double *pattern_lh_cat = NULL);
 
     /**
             optimize all branch lengths of all subtrees, then compute branch lengths
@@ -149,16 +213,7 @@ public:
             @param iterations number of iterations to loop through all branches
             @return the likelihood of the tree
      */
-    virtual double optimizeAllBranches(int my_iterations = 100, double tolerance = TOL_LIKELIHOOD);
-
-    /**
-            optimize one branch length by ML by optimizing all mapped branches of subtrees
-            @param node1 1st end node of the branch
-            @param node2 2nd end node of the branch
-            @param clearLH true to clear the partial likelihood, otherwise false
-            @return likelihood score
-     */
-    virtual double optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool clearLH = true);
+    virtual double optimizeAllBranches(int my_iterations = 100, double tolerance = TOL_LIKELIHOOD, int maxNRStep = 100);
 
     /**
             search the best swap for a branch
@@ -167,20 +222,26 @@ public:
             @param node1 1 of the 2 nodes on the branch
             @param node2 1 of the 2 nodes on the branch
      */
-    virtual NNIMove getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, bool approx_nni = false, bool useLS = false, double lh_contribution = -1.0);
+    virtual NNIMove getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove *nniMoves = NULL);
 
     /**
             Do an NNI on the supertree and synchronize all subtrees respectively
             @param move the single NNI
      */
-    virtual void doNNI(NNIMove &move);
+    virtual void doNNI(NNIMove &move, bool clearLH = true);
+
+    /**
+     *   Apply 5 new branch lengths stored in the NNI move
+     *   @param nnimove the NNI move currently in consideration
+     */
+    virtual void changeNNIBrans(NNIMove nnimove);
 
     /**
      * 	 Restore the branch lengths from the saved values
 	 * @param node the current node of the post-order tree traversal
 	 * @param dad the dad of that node used to direct the traversal
      */
-    virtual void restoreAllBranLen(PhyloNode *node = NULL, PhyloNode *dad = NULL);
+    virtual void restoreAllBrans(PhyloNode *node = NULL, PhyloNode *dad = NULL);
 
     /**
             reinsert the whole list of leaves back into the supertree then call mapTrees
@@ -191,28 +252,70 @@ public:
 	/**
 		compute the weighted average of branch lengths over partitions
 	*/
-	void computeBranchLengths();
+	virtual void computeBranchLengths();
 
 	/**
 	 * print debug information about all maps
 	 */
-	void printMapInfo();
-	
+	virtual void printMapInfo();
+
 	/**
 	 * initialize partition information for super tree
 	*/
 	virtual void initPartitionInfo();
 
+	int getMaxPartNameLength();
+
 	/**
 		partition information
 	*/
-	vector<PartitionInfo> part_info; 
+	vector<PartitionInfo> part_info;
+
+    /* partition ID sorted in descending order of computation cost */
+    IntVector part_order;
+    IntVector part_order_by_nptn;
+
+    /* compute part_order vector */
+    void computePartitionOrder();
 
     /**
             get the name of the model
     */
     virtual string getModelName();
-	
+	/**
+	 * extract subtree containing all taxa from partition IDs
+	 * @param ids partitions IDs
+	 * @return subtree
+	 */
+    PhyloTree *extractSubtree(IntVector &ids);
+
+    /**
+     * compute the memory size required for storing partial likelihood vectors
+     * @return memory size required in bytes
+     */
+    virtual uint64_t getMemoryRequired(size_t ncategory = 1);
+
+    /**
+     * count the number of super branches that map to no branches in gene trees
+     */
+    int countEmptyBranches(PhyloNode *node = NULL, PhyloNode *dad = NULL);
+
+    /**
+            Neighbor-joining/parsimony tree might contain negative branch length. This
+            function will fix this.
+            @param fixed_length fixed branch length to set to negative branch lengths
+            @param node the current node
+            @param dad dad of the node, used to direct the search
+            @return The number of branches that have no/negative length
+     */
+    virtual int fixNegativeBranch(bool force = false, Node *node = NULL, Node *dad = NULL);
+
+    virtual int computeParsimonyBranch(PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst = NULL);
+
+    /** True when mixed codon with other data type */
+    bool rescale_codon_brlen;
+    
+    int totalNNIs, evalNNIs;
 
 };
 

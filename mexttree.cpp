@@ -59,7 +59,7 @@ void MExtTree::generateRandomTree(TreeGenType tree_type, Params &params, bool bi
 
 void MExtTree::setZeroInternalBranches(int num_zero_len) {
 	NodeVector nodes, nodes2;
-	getInternalBranches(nodes, nodes2);
+	getAllInnerBranches(nodes, nodes2);
 	if (num_zero_len > nodes.size()) outError("The specified number of zero branches is too much");
 	for (int i = 0; i < num_zero_len;) {
 		int id = random_int(nodes.size());
@@ -370,7 +370,7 @@ void MExtTree::generateYuleHarding(Params &params, bool binary) {
 void MExtTree::generateStarTree(Params &params) {
 	generateYuleHarding(params);
 	NodeVector nodes, nodes2;
-	getInternalBranches(nodes, nodes2);
+	getAllInnerBranches(nodes, nodes2);
 	for (int i = 0; i < nodes.size(); i++) {
 		nodes[i]->findNeighbor(nodes2[i])->length = 0.0;
 		nodes2[i]->findNeighbor(nodes[i])->length = 0.0;
@@ -413,7 +413,8 @@ void MExtTree::reportDisagreedTrees(vector<string> &taxname, MTreeSet &trees, Sp
 }
 
 
-void MExtTree::createBootstrapSupport(vector<string> &taxname, MTreeSet &trees, SplitGraph &sg, SplitIntMap &hash_ss, Node *node, Node *dad) {
+void MExtTree::createBootstrapSupport(vector<string> &taxname, MTreeSet &trees, SplitGraph &sg, SplitIntMap &hash_ss, 
+    char *tag, Node *node, Node *dad) {
 	if (!node) node = root;	
 	FOR_NEIGHBOR_IT(node, dad, it) {
 		if (!node->isLeaf() && !(*it)->node->isLeaf()) {
@@ -438,6 +439,10 @@ void MExtTree::createBootstrapSupport(vector<string> &taxname, MTreeSet &trees, 
 				  tmp << sp->getWeight();
 				else
 				  tmp << "/" << sp->getWeight();
+                  
+                // assign tag
+                if (tag && (strcmp(tag, "ALL")==0 || (*it)->node->name == tag))
+                    tmp << sp->getName();                
 				(*it)->node->name.append(tmp.str());
 			} else {
 				if (!(*it)->node->name.empty()) (*it)->node->name.append("/");
@@ -453,7 +458,7 @@ void MExtTree::createBootstrapSupport(vector<string> &taxname, MTreeSet &trees, 
 				reportDisagreedTrees(taxname, trees, mysplit);
 			}
 		}
-		createBootstrapSupport(taxname, trees, sg, hash_ss, (*it)->node, node);
+		createBootstrapSupport(taxname, trees, sg, hash_ss, tag, (*it)->node, node);
 	}	
 }
 
@@ -491,3 +496,25 @@ void MExtTree::createCluster(int clu_num, Node *node, Node *dad) {
 	}
 }
 
+
+void MExtTree::collapseLowBranchSupport(DoubleVector &minsup, Node *node, Node *dad) {
+    if (!node) node = root;
+    FOR_NEIGHBOR_IT(node, dad, it) {
+        collapseLowBranchSupport(minsup, (*it)->node, node);
+    }
+    if (!node->isLeaf() && dad && node->name != "") {
+        DoubleVector vec;
+        convert_double_vec(node->name.c_str(), vec, '/');
+        if (vec.size() != minsup.size()) {
+            cout << "Branch with name " << node->name << " ignored" << endl;
+            return;
+        }
+        for (int i = 0; i < vec.size(); i++)
+            if (vec[i] < minsup[i]) {
+                // support smaller than threshold, mark this branch for deletion
+                dad->findNeighbor(node)->length = 0.0;
+                node->findNeighbor(dad)->length = 0.0;
+                break;
+            }
+    }
+}

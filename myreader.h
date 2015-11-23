@@ -70,7 +70,8 @@ public:
 	*/
 	virtual bool EnteringBlock(NxsString blockName)
 	{
-		cout << "Reading \"" << blockName << "\" block..." << endl;
+		if (verbose_mode >= VB_MED)
+			cout << "Reading \"" << blockName << "\" block..." << endl;
 
 		// Returning true means it is ok to delete any data associated with
 		// blocks of this type read in previously

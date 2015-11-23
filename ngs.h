@@ -23,7 +23,7 @@
 
 #include "phylotree.h"
 #include "alignmentpairwise.h"
-#include "ratemeyerdiscrete.h"
+#include "model/ratemeyerdiscrete.h"
 
 /*
 	collection of classes for Next-generation sequencing 
@@ -69,7 +69,7 @@ public:
 		@param state_freq (OUT) is filled with state frequencies, assuming state_freq was allocated with 
 			at least num_states entries.
 	*/
-	virtual void computeStateFreq(double *state_freq);
+	virtual void computeStateFreq(double *state_freq, size_t num_unknown_states = 0);
 
 	/**
 		compute the sum of pair state frequencies over all categories
@@ -106,7 +106,7 @@ public:
 		@param ddf (OUT) 2nd derivative
 		@return negative log-likelihood (for minimization purpose)
 	*/
-	double computeFuncDervCat(int cat, double value, double &df, double &ddf);
+	void computeFuncDervCat(int cat, double value, double &df, double &ddf);
 
 	/**
 		number of category
@@ -141,7 +141,7 @@ public:
             @param iterations number of iterations to loop through all branches
             @return the likelihood of the tree
      */
-    virtual double optimizeAllBranches(int my_iterations = 100, double tolerance = TOL_LIKELIHOOD);
+    virtual double optimizeAllBranches(int my_iterations = 100, double tolerance = TOL_LIKELIHOOD, int maxNRStep = 100);
 
 };
 
@@ -165,7 +165,7 @@ public:
 		compute categorized rates from the "continuous" rate of the original Meyer & von Haeseler model.
 		The current implementation uses the k-means algorithm with k-means++ package.
 	*/
-	virtual double optimizeParameters();
+	virtual double optimizeParameters(double epsilon);
 
 
 	/**
@@ -182,7 +182,7 @@ public:
 		@param ddf (OUT) second derivative
 		@return f(value) of function f you want to minimize
 	*/
-	virtual double computeFuncDerv(double value, double &df, double &ddf);
+	virtual void computeFuncDerv(double value, double &df, double &ddf);
 
 	/**
 		classify rates into categories.
@@ -211,7 +211,7 @@ public:
 		compute categorized rates from the "continuous" rate of the original Meyer & von Haeseler model.
 		The current implementation uses the k-means algorithm with k-means++ package.
 	*/
-	virtual double optimizeParameters();
+	virtual double optimizeParameters(double epsilon);
 
 
 	/**
@@ -370,7 +370,7 @@ public:
 		@param ddf (OUT) second derivative
 		@return f(value) of function f you want to minimize
 	*/
-	virtual double computeFuncDerv(double value, double &df, double &ddf);
+	virtual void computeFuncDerv(double value, double &df, double &ddf);
 	
 };
 

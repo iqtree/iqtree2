@@ -106,7 +106,7 @@ void NGSAlignment::readFritzFile(const char *filename) {
     cout << ncategory << " matrices of size " << num_states << endl;
 }
 
-void NGSAlignment::computeStateFreq (double *stateFrqArr) {
+void NGSAlignment::computeStateFreq (double *stateFrqArr, size_t num_unknown_states) {
     int cat, i, j, id = 0;
     double *state_count = new double[num_states];
     memset(state_count, 0, sizeof(double)*num_states);
@@ -208,9 +208,9 @@ double NGSAlignment::computeFunctionCat(int cat, double value) {
 }
 
 
-double NGSAlignment::computeFuncDervCat(int cat, double value, double &df, double &ddf) {
+void NGSAlignment::computeFuncDervCat(int cat, double value, double &df, double &ddf) {
     int trans_size = num_states*num_states;
-    double lh = 0.0;
+//    double lh = 0.0;
     df = 0.0;
     ddf = 0.0;
     int i;
@@ -227,7 +227,7 @@ double NGSAlignment::computeFuncDervCat(int cat, double value, double &df, doubl
             double d1 = trans_derv1[i] / trans_mat[i];
             derv1 += pair_pos[i] * d1;
             derv2 += pair_pos[i] * (trans_derv2[i]/trans_mat[i] - d1 * d1);
-            lh -= pair_pos[i] * log(trans_mat[i]);
+//            lh -= pair_pos[i] * log(trans_mat[i]);
         }
     //df -= derv1 * rate_val;
     //ddf -= derv2 * rate_val * rate_val;
@@ -236,7 +236,8 @@ double NGSAlignment::computeFuncDervCat(int cat, double value, double &df, doubl
 	delete [] trans_derv2;
 	delete [] trans_derv1;
 	delete [] trans_mat;
-    return lh;
+//    return lh;
+    return;
 }
 
 /****************************************************************************
@@ -259,15 +260,15 @@ NGSRate::NGSRate(PhyloTree *tree) {
 
 }
 
-double NGSRate::optimizeParameters() {
+double NGSRate::optimizeParameters(double epsilon) {
     int cat;
     double negative_lh;
     for (cat = 0; cat < ncategory; cat++) {
         optimizing_cat = cat;
         if (phylo_tree->optimize_by_newton)
-            rates[cat] = minimizeNewtonSafeMode(1e-6, rates[cat], 10.0, 1e-6, negative_lh);
+            rates[cat] = minimizeNewtonSafeMode(1e-6, rates[cat], 10.0, max(epsilon,1e-6), negative_lh);
         else
-            rates[cat] = minimizeOneDimenSafeMode(1e-6, rates[cat], 10.0, 1e-6, &negative_lh);
+            rates[cat] = minimizeOneDimenSafeMode(1e-6, rates[cat], 10.0, max(epsilon, 1e-6), &negative_lh);
     }
     return phylo_tree->computeLikelihood();
 }
@@ -276,8 +277,8 @@ double NGSRate::optimizeParameters() {
 double NGSRate::computeFunction(double value) {
     return ((NGSAlignment*)phylo_tree->aln)->computeFunctionCat(optimizing_cat, value);
 }
-double NGSRate::computeFuncDerv(double value, double &df, double &ddf) {
-    return ((NGSAlignment*)phylo_tree->aln)->computeFuncDervCat(optimizing_cat, value, df, ddf);
+void NGSRate::computeFuncDerv(double value, double &df, double &ddf) {
+    ((NGSAlignment*)phylo_tree->aln)->computeFuncDervCat(optimizing_cat, value, df, ddf);
 }
 
 void NGSRate::writeInfo(ostream &out) {
@@ -342,7 +343,7 @@ double NGSRateCat::targetFunk(double x[]) {
 }
 
 
-double NGSRateCat::optimizeParameters() {
+double NGSRateCat::optimizeParameters(double epsilon) {
     int ndim = getNDim();
 
     // return if nothing to be optimized
@@ -369,7 +370,7 @@ double NGSRateCat::optimizeParameters() {
     for (i = ndim-ncategory+2; i <= ndim; i++)
         upper_bound[i] = 1.0;
     //packData(variables, lower_bound, upper_bound, bound_check);
-    score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound, bound_check, 1e-6);
+    score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound, bound_check, max(epsilon, 1e-6));
 
     getVariables(variables);
 
@@ -408,14 +409,14 @@ NGSTree::NGSTree(Params &params, NGSAlignment *alignment) {
     model_factory = NULL;
     optimize_by_newton = params.optimize_by_newton;
     //tree.sse = params.SSE;
-    sse = false;
+    setLikelihoodKernel(LK_NORMAL);
 }
 
 double NGSTree::computeLikelihood(double *pattern_lh) {
     return -((NGSAlignment*)aln)->computeFunction(1.0);
 }
 
-double NGSTree::optimizeAllBranches(int my_iterations, double tolerance) {
+double NGSTree::optimizeAllBranches(int my_iterations, double tolerance, int maxNRStep) {
     return computeLikelihood();
 }
 
@@ -513,11 +514,11 @@ double NGSRead::computeFunction(double value) {
     return lh;
 }
 
-double NGSRead::computeFuncDerv(double value, double &df, double &ddf) {
+void NGSRead::computeFuncDerv(double value, double &df, double &ddf) {
     RateHeterogeneity *site_rate = tree->getRate();
     int i, rate_id;
     int nptn = scaff.length();
-    double lh = 0.0;
+//    double lh = 0.0;
     df = 0.0;
     ddf = 0.0;
 
@@ -528,7 +529,7 @@ double NGSRead::computeFuncDerv(double value, double &df, double &ddf) {
         double *trans_derv2 = new double[trans_size];
         tree->getModelFactory()->computeTransDerv(value * homo_rate, trans_mat, trans_derv1, trans_derv2);
         for (i = 0; i < trans_size; i++) if (pair_freq[i] > 1e-6) {
-                lh -= pair_freq[i] * log(trans_mat[i]);
+//                lh -= pair_freq[i] * log(trans_mat[i]);
                 double d1 = trans_derv1[i] / trans_mat[i];
                 df -=  pair_freq[i] * d1;
                 ddf -= pair_freq[i] * (trans_derv2[i]/trans_mat[i] - d1*d1);
@@ -538,7 +539,8 @@ double NGSRead::computeFuncDerv(double value, double &df, double &ddf) {
         delete [] trans_derv2;
         delete [] trans_derv1;
         delete [] trans_mat;
-        return lh;
+//        return lh;
+        return;
     }
 
     for (i = 0, rate_id = 0; i < nptn; i++) {
@@ -549,14 +551,14 @@ double NGSRead::computeFuncDerv(double value, double &df, double &ddf) {
         double rate_val = site_rate->getRate(rate_id);
         double rate_sqr = rate_val * rate_val;
         trans = tree->getModelFactory()->computeTrans(value * rate_val, state1, state2, derv1, derv2);
-        lh -= log(trans);
+//        lh -= log(trans);
         double d1 = derv1 / trans;
         df -= rate_val * d1;
         ddf -= rate_sqr * (derv2/trans - d1*d1);
         rate_id++;
     }
 
-    return lh;
+//    return lh;
 }
 
 /****************************************************************************
@@ -925,6 +927,7 @@ void testSingleRateModel(Params &params, NGSAlignment &aln, NGSTree &tree, strin
 {
     char model_name[20];
     NGSAlignment sum_aln(aln.num_states, 1, freq);
+    ModelsBlock *models_block = new ModelsBlock;
 
     NGSTree sum_tree(params, &sum_aln);
     sum_aln.tree = &sum_tree;
@@ -935,7 +938,7 @@ void testSingleRateModel(Params &params, NGSAlignment &aln, NGSTree &tree, strin
         sprintf(model_name, "%s+F1", model.c_str());
     try {
         params.model_name = model_name;
-        sum_tree.setModelFactory(new ModelFactory(params, &sum_tree));
+        sum_tree.setModelFactory(new ModelFactory(params, &sum_tree, models_block));
         sum_tree.setModel(sum_tree.getModelFactory()->model);
         sum_tree.setRate(sum_tree.getModelFactory()->site_rate);
         double bestTreeScore = sum_tree.getModelFactory()->optimizeParameters(false, write_info);
@@ -960,6 +963,7 @@ void testSingleRateModel(Params &params, NGSAlignment &aln, NGSTree &tree, strin
         rate_info.insert(rate_info.end(), rate_mat, rate_mat+aln.num_states);
     }
 	delete [] rate_mat;
+	delete models_block;
 
     if (report_file) {
         DoubleMatrix tmp(1);
@@ -975,8 +979,11 @@ void testTwoRateModel(Params &params, NGSAlignment &aln, NGSTree &tree, string m
     char model_name[20];
     NGSAlignment sum_aln(aln.num_states, 1, freq);
 
+
     NGSTreeCat sum_tree(params, &sum_aln);
     sum_aln.tree = &sum_tree;
+
+    ModelsBlock *models_block = new ModelsBlock;
 
     if (model == "")
         sprintf(model_name, "GTR+FC2");
@@ -984,7 +991,7 @@ void testTwoRateModel(Params &params, NGSAlignment &aln, NGSTree &tree, string m
         sprintf(model_name, "%s+FC2", model.c_str());
     try {
         params.model_name = model_name;
-        sum_tree.setModelFactory(new ModelFactory(params, &sum_tree));
+        sum_tree.setModelFactory(new ModelFactory(params, &sum_tree, models_block));
         sum_tree.setModel(sum_tree.getModelFactory()->model);
         sum_tree.setRate(sum_tree.getModelFactory()->site_rate);
         double bestTreeScore = sum_tree.getModelFactory()->optimizeParameters(false, write_info);
@@ -998,6 +1005,7 @@ void testTwoRateModel(Params &params, NGSAlignment &aln, NGSTree &tree, string m
         cout << str;
         return;
     }
+    delete models_block;
     //return sum_tree.getRate()->getRate(0);
 
     /*
@@ -1112,6 +1120,7 @@ void runNGSAnalysis(Params &params) {
     // initialize NGSTree
     NGSTree tree(params, &aln);
     aln.tree = &tree;
+    ModelsBlock *models_block = new ModelsBlock;
 
     // initialize Model
     string original_model = params.model_name;
@@ -1122,9 +1131,11 @@ void runNGSAnalysis(Params &params) {
     else
         sprintf(model_name, "%s+F%d", params.model_name.c_str(), aln.ncategory);
     params.model_name = model_name;
-    tree.setModelFactory(new ModelFactory(params, &tree));
+    tree.setModelFactory(new ModelFactory(params, &tree, models_block));
     tree.setModel(tree.getModelFactory()->model);
     tree.setRate(tree.getModelFactory()->site_rate);
+
+    delete models_block;
 
     int model_df = tree.getModel()->getNDim() + tree.getRate()->getNDim();
     cout << endl;

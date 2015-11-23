@@ -23,18 +23,12 @@
 
 #include "tools.h"
 #include "mexttree.h"
+#include "phylotesting.h"
+#include "upperbounds.h" // Olga: functions for Upper Bounds analysis
+#include "pllnni.h"
 
 class PhyloTree;
 class IQTree;
-
-struct ModelInfo {
-	string name;
-	double logl;
-	double AIC_score, AICc_score, BIC_score;
-	double AIC_weight, AICc_weight, BIC_weight;
-	bool AIC_conf, AICc_conf, BIC_conf;
-};
-
 
 /**
 	main function to carry out phylogenetic inference
@@ -42,10 +36,8 @@ struct ModelInfo {
 */
 void runPhyloAnalysis(Params &params);
 
-void runPhyloAnalysis(Params &params, string &original_model, Alignment *alignment,
+void runTreeReconstruction(Params &params, string &original_model,
 		IQTree &tree, vector<ModelInfo> &model_info);
-
-void evaluateTrees(Params &params, IQTree *tree);
 
 /**
 	take the collection of trees from input_trees, it assign support values to target_tree
@@ -93,8 +85,8 @@ void computeConsensusTree(const char *input_trees, int burnin, int max_count, do
 	@param output_tree (OUT, OVERWRITE IF EXIST) Resulting consensus tree will be written to this file. If NULL,
 		output_tree will be named input_trees appended with ".connetwork"
 */
-void computeConsensusNetwork(const char *input_trees, int burnin, int max_count, double cutoff, double weight_threshold,
+void computeConsensusNetwork(const char *input_trees, int burnin, int max_count, double cutoff,
+		int weight_summary, double weight_threshold,
 	const char *output_tree, const char *out_prefix, const char* tree_weight_file);
-
 
 #endif

@@ -58,6 +58,15 @@ public:
 
 	void init(StringIntMap &treels, bool &is_rooted, IntVector &weights);
 
+	/**
+	 *  Add trees from \a trees to the tree set
+	 *
+	 *  @param trees reference to a vector of NEWICK tree string
+	 *  @param taxonNames vector containing taxon names. The order of each taxon is used to assign its ID
+	 *  @param is_rooted specify whether the tree is rooted or not
+	 */
+	void init(vector<string> &trees, vector<string> &taxonNames, bool &is_rooted);
+
 
 	/**
 		read the tree from the input file in newick format
@@ -107,10 +116,11 @@ public:
 		@param hash_ss (OUT) hash split set
 		@param lensum TRUE if summing split length, FALSE to increment only
 		@param weight_threshold minimum weight cutoff
+        @param tag_str TRUE to tag for each split, which trees it appears.
 		@param sort_taxa TRUE to sort taxa alphabetically
 	*/
 	void convertSplits(vector<string> &taxname, SplitGraph &sg, SplitIntMap &hash_ss, 
-		int weighting_type, double weight_threshold, bool sort_taxa = true);
+		int weighting_type, double weight_threshold, char *tag_str, bool sort_taxa = true);
 
 	/**
 		convert all trees into the split system

@@ -20,6 +20,7 @@
 
 
 #include <string.h>
+#include <sstream>
 #include "tools.h"
 #include "gurobiwrapper.h"
 

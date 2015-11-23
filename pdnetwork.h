@@ -32,6 +32,7 @@ class PDNetwork : public SplitGraph
 public:
 
 	friend class MTree;
+	friend class ECOpd;
 
 	/**
 		empty constructor
@@ -180,6 +181,7 @@ public:
 	*/
 	void transformLP(Params &params, const char *outfile, int total_size, bool make_bin);
 	void transformLP2(Params &params, const char *outfile, int total_size, bool make_bin);
+	void transformEcoLP(Params &params, const char *outline, int total_size);
 
 	/**
 		transform the problem into an Integer Linear Programming and write to .lp file
@@ -249,6 +251,11 @@ public:
 		the set of areas, each item contains the set of taxa in the area.
 	*/
 	SplitSet area_taxa;
+
+	/**
+	 	speciesList is used in ECOpd analysis for synchronization of species in SplitNetwork with species in FoodWeb
+	 */
+	void speciesList(vector<string> *speciesNames);
 
 protected:
 

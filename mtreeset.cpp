@@ -30,7 +30,6 @@ MTreeSet::MTreeSet(const char *userTreeFile, bool &is_rooted,
 	init(userTreeFile, is_rooted, burnin, max_count, tree_weight_file);
 }
 
-
 void readIntVector(const char *file_name, int burnin, int max_count, IntVector &vec) {
 	cout << "Reading integer vector file " << file_name << " ..." << endl;
 	vec.clear();
@@ -100,8 +99,31 @@ void MTreeSet::init(StringIntMap &treels, bool &is_rooted, IntVector &weights) {
 		//cout << "Tree " << it->second << ": ";
 		//tree->printTree(cout, WT_NEWLINE);
 	}
-	cout << count << " tree(s) converted" << endl;
+	if (verbose_mode >= VB_MED)
+		cout << count << " tree(s) converted" << endl;
 	//tree_weights.resize(size(), 1);
+}
+
+void MTreeSet::init(vector<string> &trees, vector<string> &taxonNames, bool &is_rooted) {
+	int count = 0;
+	for (vector<string>::iterator it = trees.begin(); it != trees.end(); it++) {
+		MTree *tree = newTree();
+		stringstream ss(*it);
+		tree->readTree(ss, is_rooted);
+	    int nseq = taxonNames.size();
+	    assert(tree->getNumTaxa() == nseq);
+	    for (int seq = 0; seq < nseq; seq++) {
+	        string seq_name = taxonNames[seq];
+	        Node *node = tree->findLeafName(seq_name);
+	        assert(node);
+	        assert(node->isLeaf());
+	        node->id = seq;
+	    }
+		push_back(tree);
+		tree_weights.push_back(1);
+		count++;
+	}
+	cout << count << " tree(s) converted" << endl;
 }
 
 void MTreeSet::readTrees(const char *infile, bool &is_rooted, int burnin, int max_count,
@@ -170,6 +192,8 @@ void MTreeSet::readTrees(const char *infile, bool &is_rooted, int burnin, int ma
 		if (omitted) cout << omitted << " tree(s) omitted" << endl;
 		//in->exceptions(ios::failbit | ios::badbit);
 		if (compressed) ((igzstream*)in)->close(); else ((ifstream*)in)->close();
+		// following line was missing which caused small memory leak
+		delete in;
 	} catch (ios::failure) {
 		outError(ERR_READ_INPUT, infile);		
 	} catch (const char* str) {
@@ -267,6 +291,7 @@ void MTreeSet::convertSplits(SplitGraph &sg, double split_threshold, int weighti
 	int nsplits = sg.getNSplits();
 
 	double threshold = split_threshold * size();
+//	cout << "threshold = " << threshold << endl;
 	int count=0;
 	for (SplitGraph::iterator it = sg.begin(); it != sg.end(); ) {
 		count++;
@@ -311,26 +336,28 @@ void MTreeSet::convertSplits(SplitGraph &sg, double split_threshold, int weighti
 }
 
 
-void MTreeSet::convertSplits(SplitGraph &sg, SplitIntMap &hash_ss, 
-	int weighting_type, double weight_threshold) {
+void MTreeSet::convertSplits(SplitGraph &sg, SplitIntMap &hash_ss, int weighting_type, double weight_threshold) {
 	vector<string> taxname(front()->leafNum);
 	// make sure that the split system contains at least 1 split
 	if (size() == 0)
 		return;
 	
 	front()->getTaxaName(taxname);
-	convertSplits(taxname, sg, hash_ss, weighting_type, weight_threshold);
+	convertSplits(taxname, sg, hash_ss, weighting_type, weight_threshold, NULL);
 }
 
 void MTreeSet::convertSplits(vector<string> &taxname, SplitGraph &sg, SplitIntMap &hash_ss, 
-	int weighting_type, double weight_threshold, bool sort_taxa) {
+	int weighting_type, double weight_threshold, char *tag_str, bool sort_taxa) {
 
-#ifdef USE_HASH_MAP
-	cout << "Using hash_map" << endl;
-#else
-	cout << "Using map" << endl;
-#endif
-	cout << "Converting collection of tree(s) into split system..." << endl;
+	if (verbose_mode >= VB_MED) {
+	#ifdef USE_HASH_MAP
+		cout << "Using hash_map" << endl;
+	#else
+		cout << "Using map" << endl;
+	#endif
+
+		cout << "Converting collection of tree(s) into split system..." << endl;
+	}
 	SplitGraph::iterator itg;
 	vector<string>::iterator its;
 /*
@@ -352,6 +379,8 @@ void MTreeSet::convertSplits(vector<string> &taxname, SplitGraph &sg, SplitIntMa
 
 	SplitGraph *isg;
 	int tree_id = 0;
+//	cout << "Number of trees: " << size() << endl;
+//	cout << "Number of weight: " << tree_weights.size() << endl;
 	for (iterator it = begin(); it != end(); it++, tree_id++) {
 		if (tree_weights[tree_id] == 0) continue;
 		MTree *tree = *it;
@@ -364,8 +393,11 @@ void MTreeSet::convertSplits(vector<string> &taxname, SplitGraph &sg, SplitIntMa
 			sort(taxa.begin(), taxa.end(), nodenamecmp);
 			int i = 0;
 			for (NodeVector::iterator it2 = taxa.begin(); it2 != taxa.end(); it2++) {
-				if ((*it2)->name != taxname[i]) 
+				if ((*it2)->name != taxname[i]) {
+					cout << "Name 1: " <<  (*it2)->name << endl;
+					cout << "Name 2: " <<  taxname[i] << endl;
 					outError("Tree has different taxa names!");
+				}
 				(*it2)->id = i++;
 			}
 		}
@@ -398,8 +430,23 @@ void MTreeSet::convertSplits(vector<string> &taxname, SplitGraph &sg, SplitIntMa
 				
 				hash_ss.insertSplit(sp, tree_weights[tree_id]);
  			}
+            if (tag_str)
+                sp->name += "@" + convertIntToString(tree_id+1);
 		}
 		delete isg;
+	}
+
+	if (weighting_type == SW_AVG_PRESENT) {
+		for (itg = sg.begin(); itg != sg.end(); itg++) {
+			int value = 0;
+			if (!hash_ss.findSplit(*itg, value))
+				outError("Internal error ", __func__);
+			(*itg)->setWeight((*itg)->getWeight() / value);
+		}
+	} else if (weighting_type == SW_AVG_ALL) {
+		for (itg = sg.begin(); itg != sg.end(); itg++) {
+			(*itg)->setWeight((*itg)->getWeight() / tree_weights.size());
+		}
 	}
 
 	int discarded = 0;	

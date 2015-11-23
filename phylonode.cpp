@@ -19,6 +19,25 @@ void PhyloNeighbor::clearForwardPartialLh(Node *dad) {
 			((PhyloNeighbor*)*it)->clearForwardPartialLh(node);
 }
 
+void PhyloNeighbor::reorientPartialLh(Node *dad) {
+    if (partial_lh)
+        return;
+    bool done = false;
+    FOR_NEIGHBOR_IT(node, dad, it) {
+        PhyloNeighbor *backnei = (PhyloNeighbor*)(*it)->node->findNeighbor(node);
+        if (backnei->partial_lh) {
+            partial_lh = backnei->partial_lh;
+            scale_num = backnei->scale_num;
+            backnei->partial_lh = NULL;
+            backnei->scale_num = NULL;
+            backnei->partial_lh_computed &= ~1; // clear bit
+            done = true;
+            break;
+        }
+    }
+    assert(done && "partial_lh is not re-oriented");
+}
+
 
 void PhyloNode::clearReversePartialLh(PhyloNode *dad) {
 	PhyloNeighbor *node_nei = (PhyloNeighbor*)findNeighbor(dad);
@@ -29,14 +48,18 @@ void PhyloNode::clearReversePartialLh(PhyloNode *dad) {
 			((PhyloNode*)(*it)->node)->clearReversePartialLh(this);
 }
 
-void PhyloNode::clearAllPartialLh(PhyloNode *dad) {
+void PhyloNode::clearAllPartialLh(bool make_null, PhyloNode *dad) {
 	PhyloNeighbor *node_nei = (PhyloNeighbor*)findNeighbor(dad);
 	node_nei->partial_lh_computed = 0;
+	if (make_null) node_nei->partial_lh = NULL;
+
 	node_nei = (PhyloNeighbor*)dad->findNeighbor(this);
 	node_nei->partial_lh_computed = 0;
+	if (make_null) node_nei->partial_lh = NULL;
+
 	for (NeighborVec::iterator it = neighbors.begin(); it != neighbors.end(); it ++)
 		if ((*it)->node != dad)
-			((PhyloNode*)(*it)->node)->clearAllPartialLh(this);
+			((PhyloNode*)(*it)->node)->clearAllPartialLh(make_null, this);
 }
 
 

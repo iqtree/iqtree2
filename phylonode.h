@@ -25,8 +25,11 @@ class PhyloNeighbor : public Neighbor {
     friend class PhyloNode;
     friend class PhyloTree;
     friend class IQTree;
+    friend class PhyloSuperTree;
+
 public:
     friend class TinaTree;
+    friend class PhyloSuperTreePlen;
 
     /**
         construct class with a node and length		@param anode the other end of the branch
@@ -35,6 +38,7 @@ public:
      */
     PhyloNeighbor(Node *anode, double alength) : Neighbor(anode, alength) {
         partial_lh = NULL;
+        scale_num = NULL;
         partial_lh_computed = 0;
         lh_scale_factor = 0.0;
         partial_pars = NULL;
@@ -48,6 +52,7 @@ public:
      */
     PhyloNeighbor(Node *anode, double alength, int aid) : Neighbor(anode, alength, aid) {
         partial_lh = NULL;
+        scale_num = NULL;
         partial_lh_computed = 0;
         lh_scale_factor = 0.0;
         partial_pars = NULL;
@@ -72,6 +77,27 @@ public:
         @param dad dad of this neighbor
      */
     void clearForwardPartialLh(Node *dad);
+
+    /**
+        if partial_lh is NULL, reorient partial_lh (LM_PER_NODE technique)
+        @param dad dad of this neighbor
+    */
+    void reorientPartialLh(Node *dad);
+
+	/**
+	* For Upper Bounds analysis: get partial likelihood and lh scale factor
+	*/
+	double* get_partial_lh(){
+	return partial_lh;
+	}
+
+	double get_lh_scale_factor(){
+	return lh_scale_factor;
+	}
+
+	int get_partial_lh_computed(){
+	return partial_lh_computed;
+	}
 
 private:
 
@@ -154,12 +180,15 @@ public:
     /**
         tell that all partial likelihood vectors below this node are not computed
      */
-    void clearAllPartialLh(PhyloNode *dad);
+    void clearAllPartialLh(bool make_null, PhyloNode *dad);
 
     /**
         tell that all partial likelihood vectors (in reverse direction) below this node are not computed
      */
     void clearReversePartialLh(PhyloNode *dad);
+
+    void computeReversePartialLh(PhyloNode *dad);
+
 };
 
 
