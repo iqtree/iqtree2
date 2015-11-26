@@ -45,6 +45,8 @@ ModelsBlock *readModelsDefinition(Params &params) {
 
 	ModelsBlock *models_block = new ModelsBlock;
 
+// TODO: weird crash when compiling with clang under windows!
+#if !defined(WIN32) || !defined(__clang__)
 	try
 	{
 		// loading internal model definitions
@@ -65,6 +67,7 @@ ModelsBlock *readModelsDefinition(Params &params) {
 	} catch (...) {
         assert(0 && "predefined mixture models initialized");
     }
+#endif
 
 	if (params.model_def_file) {
 		cout << "Reading model definition file " << params.model_def_file << " ... ";
