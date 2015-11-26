@@ -50,12 +50,19 @@ void ModelPoMo::init(const char *model_name,
     for (int i = 0; i < 6; i++) mutation_prob[i] = POMO_INIT_RATE;
 
     // TODO: DOM; DEBUGGING IQ-TREE CONVERGENCE ONLY; REMOVE THIS.
-    mutation_prob[0] = 0.00123765;
-    mutation_prob[1] = 0.00679628;
-    mutation_prob[2] = 0.00123765;
-    mutation_prob[3] = 0.00123765;
-    mutation_prob[4] = 0.00679628;
-    mutation_prob[5] = 0.00123765;
+    mutation_prob[0] = 0.00153064;
+    mutation_prob[1] = 0.00399536;
+    mutation_prob[2] = 0.00153064;
+    mutation_prob[3] = 0.00153064;
+    mutation_prob[4] = 0.00399536;
+    mutation_prob[5] = 0.00153064;
+
+    // mutation_prob[0] = 0.0014;
+    // mutation_prob[1] = 0.00399536;
+    // mutation_prob[2] = 0.0014;
+    // mutation_prob[3] = 0.0014;
+    // mutation_prob[4] = 0.00399536;
+    // mutation_prob[5] = 0.0014;
 
     // Frequencies of the boundary states (fixed states, e.g., 10A).
     // These correspond to the state frequencies in the DNA
