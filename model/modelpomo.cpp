@@ -49,14 +49,21 @@ void ModelPoMo::init(const char *model_name,
     mutation_prob = dna_model->rates;
     for (int i = 0; i < 6; i++) mutation_prob[i] = POMO_INIT_RATE;
 
+    // TODO: DOM; DEBUGGING IQ-TREE CONVERGENCE ONLY; REMOVE THIS.
+    mutation_prob[0] = 0.00123765;
+    mutation_prob[1] = 0.00679628;
+    mutation_prob[2] = 0.00123765;
+    mutation_prob[3] = 0.00123765;
+    mutation_prob[4] = 0.00679628;
+    mutation_prob[5] = 0.00123765;
+
     // Frequencies of the boundary states (fixed states, e.g., 10A).
     // These correspond to the state frequencies in the DNA
     // substitution models.
     freq_fixed_states = dna_model->state_freq;
 
     // Create PoMo rate matrix.  This is the actual rate matrix of
-    // PoMo.  TODO: Is the distinction rates[] and rate_matrix[]
-    // really necessary?
+    // PoMo.
     rate_matrix = new double[num_states*num_states];
 
 
@@ -110,12 +117,18 @@ double ModelPoMo::computeSumFreqFixedStates() {
     return norm_fixed;
 }
 
+// Give back the harmonic number of n-1 (also needed for Watterson
+// theta).
+double harmonic(int n) {
+    double harmonic = 0.0;
+    for (int i = 1; i < n; i++)
+        harmonic += 1.0/(double)i;
+    return harmonic;
+}
+
 double ModelPoMo::computeSumFreqPolyStates() {
     double norm_polymorphic = 0.0;
     int i, j;
-    double harmonic = 0.0;
-    for (i = 1; i < N; i++)
-        harmonic += 1.0/(double)i;
     for (i = 0; i < 4; i++) {
         for (j = 0; j < i; j++)
             norm_polymorphic +=
@@ -123,7 +136,7 @@ double ModelPoMo::computeSumFreqPolyStates() {
     }
     // Changed Dom Tue Sep 29 13:13:21 CEST 2015
     // norm_polymorphic *= N * harmonic;
-    norm_polymorphic *= harmonic;
+    norm_polymorphic *= harmonic(N);
     return norm_polymorphic;
 }
 
@@ -457,6 +470,7 @@ void ModelPoMo::setVariables(double *variables) {
     // for (int i = 7; i <= 9; i++) {
     //  variables[i] = freq_fixed_states[i-7];
     // }
+
     if (num_params > 0) {
         int num_all = dna_model->param_spec.length();
         for (int i = 0; i < num_all; i++)
@@ -478,12 +492,15 @@ void ModelPoMo::getVariables(double *variables) {
     // }
     // updatePoMoStatesAndRates();
 
+    // TODO: DOM; DEBUGGING IQ-TREE CONVERGENCE ONLY; REMOVE THIS.
+    return;
+
     if (num_params > 0) {
         int num_all = dna_model->param_spec.length();
         if (verbose_mode >= VB_MAX) {
             for (i = 1; i <= num_params; i++) {
                 cout << setprecision(8);
-                cout << "  Estimated mutation probabilities[" << i << "] = ";
+                cout << "  Estimated mutation rates[" << i << "] = ";
                 cout << variables[i] << endl;
             }
         }
@@ -940,7 +957,21 @@ void ModelPoMo::reportPoMoStateFreqs(ofstream &out) {
         sum += freq_fixed_states[i];
     }
 
+    double poly = computeSumFreqPolyStates();
+    double prop_poly = poly / computeSumFreqFixedStates();
+    double watterson_theta = prop_poly / harmonic(N);
+
     out << setprecision(8);
+    out << "Sum of fixed states:" << endl;
+    out << computeSumFreqFixedStates() << endl;
+    out << "Sum of polymorphic states" << endl;
+    out << poly << endl;
+    out << "Proportion of polymorphic states:" << endl;
+    out << prop_poly << endl;
+    out << "Estimated Watterson Theta:" << endl;
+    out << watterson_theta << endl;
+    out << endl;
+
     out << "(Estimated) frequencies of fixed states:" << endl;
     for (int i = 0; i < nnuc; i++)
         out << freq_fixed_states[i] << " ";

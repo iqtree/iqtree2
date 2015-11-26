@@ -2022,8 +2022,6 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
                     if (sampled_values[id1] == 0) state = id2;
                     else if (sampled_values[id2] == 0) state = id1;
                     else {
-                        // Convert sampled_values to state.
-                        // FIXME: This could be improved.
                         if (id1 == 0) j = id2 - 1;
                         else j = id1 + id2;
                         state = nnuc + j*(N-2) + j + sampled_values[id1] - 1;
