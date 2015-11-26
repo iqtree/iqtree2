@@ -148,9 +148,9 @@ public:
 	virtual double getGammaShape() { return 0.0; }
 
 	/**
-		@return true if this is a Gamma model (default: false)
+		@return >0 if this is a Gamma model (default: 0)
 	*/	
-    virtual bool isGammaRate() { return false; }
+    virtual int isGammaRate() { return 0; }
 
 	/**
 		the target function which needs to be optimized

@@ -28,6 +28,9 @@ const double MIN_GAMMA_SHAPE = 0.02;
 const double MAX_GAMMA_SHAPE = 1000.0;
 const double TOL_GAMMA_SHAPE = 0.001;
 
+const int GAMMA_CUT_MEDIAN = 1; // 2 discrete Gamma approximations (mean or median) of Yang 1994
+const int GAMMA_CUT_MEAN   = 2;
+
 class PhyloTree;
 /**
 Discrete gamma distributed site-rate model from Yang 1994
@@ -56,7 +59,10 @@ public:
 	/**
 		@return true if this is a Gamma model (default: false)
 	*/	
-    virtual bool isGammaRate() { return true; }
+    virtual int isGammaRate() { 
+        if (cut_median) return GAMMA_CUT_MEDIAN; 
+        return GAMMA_CUT_MEAN;
+    }
 
 	virtual double getGammaShape() { return gamma_shape; }
 
@@ -69,8 +75,9 @@ public:
 
 	/**
 		@return TRUE to use median rate for discrete categories, FALSE to use mean rate instead
+        OBSOLETE, see isGammaRate()
 	*/
-	bool isCutMedian() { return cut_median; }
+//	bool isCutMedian() { return cut_median; }
 
 	/**
 		@return the number of rate categories

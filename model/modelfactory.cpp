@@ -39,15 +39,18 @@
 #include <string>
 #include "timeutil.h"
 #include "myreader.h"
+#include <sstream>
 
 ModelsBlock *readModelsDefinition(Params &params) {
 
 	ModelsBlock *models_block = new ModelsBlock;
 
-	if (true)
+	try
 	{
 		// loading internal model definitions
-		istringstream in(builtin_mixmodels_definition);
+		std::istringstream in(builtin_mixmodels_definition);
+        assert(in && "stringstream is OK");
+        cout << builtin_mixmodels_definition.length() << " vs " << in.str().length() << endl;
 		NxsReader nexus;
 		nexus.Add(models_block);
 	    MyToken token(in);
@@ -56,7 +59,9 @@ ModelsBlock *readModelsDefinition(Params &params) {
 //	    for (ModelsBlock::iterator it = models_block->begin(); it != models_block->end(); it++)
 //	    	if ((*it).flag & NM_FREQ) num_freq++; else num_model++;
 //	    cout << num_model << " models and " << num_freq << " frequency vectors loaded" << endl;
-	}
+	} catch (...) {
+        assert(0 && "predefined mixture models initialized");
+    }
 
 	if (params.model_def_file) {
 		cout << "Reading model definition file " << params.model_def_file << " ... ";

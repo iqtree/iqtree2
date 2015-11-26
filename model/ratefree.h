@@ -25,7 +25,7 @@ public:
 	/**
 		@return true if this is a Gamma model (default: false)
 	*/	
-    virtual bool isGammaRate() { return false; }
+    virtual int isGammaRate() { return 0; }
 
 	/**
 	 * @return model name with parameters in form of e.g. GTR{a,b,c,d,e,f}

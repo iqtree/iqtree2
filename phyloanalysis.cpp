@@ -332,7 +332,7 @@ void reportRate(ofstream &out, PhyloTree &tree) {
 			out << endl;
 		}
 		if (rate_model->isGammaRate()) {
-			out << "Relative rates are computed as " << ((dynamic_cast<RateGamma*>(rate_model)->isCutMedian()) ? "MEDIAN" : "MEAN") <<
+			out << "Relative rates are computed as " << ((rate_model->isGammaRate() == GAMMA_CUT_MEDIAN) ? "MEDIAN" : "MEAN") <<
 				" of the portion of the Gamma distribution falling in the category." << endl;
 		}
 	}
@@ -2296,6 +2296,7 @@ void convertAlignment(Params &params, IQTree *iqtree) {
 		bootstrap_alignment->createBootstrapAlignment(alignment, NULL, params.bootstrap_spec);
 		delete alignment;
 		alignment = bootstrap_alignment;
+        iqtree->aln = alignment;
 	}
 	if (alignment->isSuperAlignment()) {
 		((SuperAlignment*)alignment)->printCombinedAlignment(params.aln_output);
