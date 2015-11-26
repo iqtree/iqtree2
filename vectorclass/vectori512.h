@@ -51,13 +51,13 @@
 // Bug fix for missing intrinsics:
 // _mm512_cmpgt_epu32_mask, _mm512_cmpgt_epu64_mask
 // all typecast intrinsics
-// Fix expected in GCC version 4.9.2 but not seen yet https://gcc.gnu.org/bugzilla/show_bug.cgi?id=61878
+// Fix expected in GCC version 4.9.3 or 5.0. https://gcc.gnu.org/bugzilla/show_bug.cgi?id=61878
 
 // questionable
 // _mm512_mask_mov_epi32 check select(). Doc at https://software.intel.com/en-us/node/513888 is wrong. Bug report filed
 
 
-#if defined (GCC_VERSION) && GCC_VERSION < 41102 && !defined(__INTEL_COMPILER) && !defined(__clang__)
+#if defined (GCC_VERSION) && GCC_VERSION < 50000 && !defined(__INTEL_COMPILER) && !defined(__clang__)
 
 static inline  __m512i _mm512_castsi256_si512(__m256i x) {
     union {

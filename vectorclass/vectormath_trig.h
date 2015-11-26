@@ -1,7 +1,7 @@
 /****************************  vectormath_trig.h   ******************************
 * Author:        Agner Fog
 * Date created:  2014-04-18
-* Last modified: 2014-10-22
+* Last modified: 2015-02-10
 * Version:       1.16
 * Project:       vector classes
 * Description:
@@ -20,7 +20,7 @@
 *
 * For detailed instructions, see vectormath_common.h and VectorClass.pdf
 *
-* (c) Copyright 2014 GNU General Public License http://www.gnu.org/licenses
+* (c) Copyright 2015 GNU General Public License http://www.gnu.org/licenses
 ******************************************************************************/
 
 #ifndef VECTORMATH_TRIG_H
@@ -112,12 +112,12 @@ inline Vec8q vm_half_int_vector_to_full<Vec8q,Vec8i>(Vec8i const & x) {
 // VTYPE:  f.p. vector type
 // ITYPE:  integer vector type with same element size
 // ITYPEH: integer vector type with half the element size
-// BTYPE:  boolean vector type
+// BVTYPE: boolean vector type
 // SC:     1 = sin, 2 = cos, 3 = sincos
 // Paramterers:
 // xx = input x (radians)
 // cosret = return pointer (only if SC = 3)
-template<class VTYPE, class ITYPE, class ITYPEH, class BTYPE, int SC> 
+template<class VTYPE, class ITYPE, class ITYPEH, class BVTYPE, int SC> 
 static inline VTYPE sincos_d(VTYPE * cosret, VTYPE const & xx) {
 
     // define constants
@@ -145,10 +145,10 @@ static inline VTYPE sincos_d(VTYPE * cosret, VTYPE const & xx) {
     const double DP2sc = 3.77489470793079817668E-8;
     const double DP3sc = 2.69515142907905952645E-15;
     */
-    VTYPE xa, x, y, x2, s, c, sin1, cos1;        // data vectors
+    VTYPE  xa, x, y, x2, s, c, sin1, cos1;       // data vectors
     ITYPEH q;                                    // integer vectors, 32 bit
-    ITYPE qq, signsin, signcos;                  // integer vectors, 64 bit
-    BTYPE swap, overflow;                        // boolean vectors
+    ITYPE  qq, signsin, signcos;                 // integer vectors, 64 bit
+    BVTYPE swap, overflow;                       // boolean vectors
 
     xa = abs(xx);
 
@@ -177,7 +177,7 @@ static inline VTYPE sincos_d(VTYPE * cosret, VTYPE const & xx) {
 
     // correct for quadrant
     qq = vm_half_int_vector_to_full<ITYPE,ITYPEH>(q);
-    swap = BTYPE((qq & 2) != 0);
+    swap = BVTYPE((qq & 2) != 0);
 
     // check for overflow
     if (horizontal_or(q < 0)) {
@@ -251,12 +251,12 @@ static inline Vec8d sincos(Vec8d * cosret, Vec8d const & x) {
 // Template parameters:
 // VTYPE:  f.p. vector type
 // ITYPE:  integer vector type with same element size
-// BTYPE:  boolean vector type
+// BVTYPE: boolean vector type
 // SC:     1 = sin, 2 = cos, 3 = sincos, 4 = tan
 // Paramterers:
 // xx = input x (radians)
 // cosret = return pointer (only if SC = 3)
-template<class VTYPE, class ITYPE, class BTYPE, int SC> 
+template<class VTYPE, class ITYPE, class BVTYPE, int SC> 
 static inline VTYPE sincos_f(VTYPE * cosret, VTYPE const & xx) {
 
     // define constants
@@ -274,9 +274,9 @@ static inline VTYPE sincos_f(VTYPE * cosret, VTYPE const & xx) {
     const float P1cosf = -1.388731625493765E-3f;
     const float P2cosf =  2.443315711809948E-5f;
 
-    VTYPE xa, x, y, x2, s, c, sin1, cos1;  // data vectors
-    ITYPE q, signsin, signcos;             // integer vectors
-    BTYPE swap, overflow;                  // boolean vectors
+    VTYPE  xa, x, y, x2, s, c, sin1, cos1;  // data vectors
+    ITYPE  q, signsin, signcos;             // integer vectors
+    BVTYPE swap, overflow;                  // boolean vectors
 
     xa = abs(xx);
 
@@ -303,10 +303,10 @@ static inline VTYPE sincos_f(VTYPE * cosret, VTYPE const & xx) {
     c = polynomial_2(x2, P0cosf, P1cosf, P2cosf) * (x2*x2) + nmul_add(0.5f, x2, 1.0f);
 
     // correct for quadrant
-    swap = BTYPE((q & 2) != 0);
+    swap = BVTYPE((q & 2) != 0);
 
     // check for overflow
-    overflow = BTYPE(q < 0);  // q = 0x80000000 if overflow
+    overflow = BVTYPE(q < 0);  // q = 0x80000000 if overflow
     if (horizontal_or(overflow & is_finite(xa))) {
         s = select(overflow, 0.f, s);
         c = select(overflow, 1.f, c);
@@ -393,10 +393,10 @@ static inline Vec16f tan(Vec16f const & x) {
 // VTYPE:  f.p. vector type
 // ITYPE:  integer vector type with same element size
 // ITYPEH: integer vector type with half the element size
-// BTYPE:  boolean vector type
+// BVTYPE: boolean vector type
 // Paramterers:
 // x = input x (radians)
-template<class VTYPE, class ITYPE, class ITYPEH, class BTYPE> 
+template<class VTYPE, class ITYPE, class ITYPEH, class BVTYPE> 
 static inline VTYPE tan_d(VTYPE const & x) {
 
     // define constants
@@ -415,10 +415,10 @@ static inline VTYPE tan_d(VTYPE const & x) {
     const double Q1tan = 2.50083801823357915839E7;
     const double Q0tan = -5.38695755929454629881E7;
 
-    VTYPE xa, y, z, zz, px, qx, tn, recip;  // data vectors
+    VTYPE  xa, y, z, zz, px, qx, tn, recip; // data vectors
     ITYPEH q;                               // integer vector, 32 bit
-    ITYPE qq;                               // integer vector, 64 bit
-    BTYPE doinvert, xzero, overflow;        // boolean vectors
+    ITYPE  qq;                              // integer vector, 64 bit
+    BVTYPE doinvert, xzero, overflow;       // boolean vectors
 
     xa = abs(x);
 
@@ -447,7 +447,7 @@ static inline VTYPE tan_d(VTYPE const & x) {
 
     // if (q&2) tn = -1/tn
     qq = vm_half_int_vector_to_full<ITYPE,ITYPEH>(q);
-    doinvert = BTYPE((qq & 2) != 0);
+    doinvert = BVTYPE((qq & 2) != 0);
     xzero = (xa == 0.);
     // avoid division by 0. We will not be using recip anyway if xa == 0.
     // tn never becomes exactly 0 when x = pi/2 so we only have to make 
@@ -494,11 +494,11 @@ It is faster to use tan(x) = sin(x)/cos(x)
 // Template parameters:
 // VTYPE:  f.p. vector type
 // ITYPE:  integer vector type with same element size
-// BTYPE:  boolean vector type
+// BVTYPE: boolean vector type
 // Paramterers:
 // x = input x (radians)
 // cosret = return pointer (only if SC = 3)
-template<class VTYPE, class ITYPE, class BTYPE> 
+template<class VTYPE, class ITYPE, class BVTYPE> 
 static inline VTYPE tan_f(VTYPE const & x) {
 
     // define constants
@@ -515,9 +515,9 @@ static inline VTYPE tan_f(VTYPE const & x) {
     const float P1tanf = 1.33387994085E-1f;
     const float P0tanf = 3.33331568548E-1f;
 
-    VTYPE xa, y, z, zz, tn, recip;   // data vectors
-    ITYPE q;                         // integer vector
-    BTYPE doinvert, xzero;           // boolean vectors
+    VTYPE  xa, y, z, zz, tn, recip;  // data vectors
+    ITYPE  q;                        // integer vector
+    BVTYPE doinvert, xzero;          // boolean vectors
 
     xa = abs(x);
 
@@ -569,11 +569,11 @@ static inline Vec8f tan(Vec8f const & x) {
 // *************************************************************
 // Template parameters:
 // VTYPE:  f.p. vector type
-// BTYPE:  boolean vector type
+// BVTYPE: boolean vector type
 // AC: 0 = asin, 1 = acos
 // Paramterers:
 // x = input x
-template<class VTYPE, class BTYPE, int AC> 
+template<class VTYPE, class BVTYPE, int AC> 
 static inline VTYPE asin_d(VTYPE const & x) {
 
     // define constants
@@ -601,9 +601,9 @@ static inline VTYPE asin_d(VTYPE const & x) {
     const double Q1asin =  1.395105614657485689735E2;
     const double Q0asin = -4.918853881490881290097E1;
 
-    VTYPE xa, xb, x1, x2, x3, x4, x5, px, qx, rx, sx, vx, wx, y1, yb, z, z1, z2;
-    BTYPE big;
-    bool dobig, dosmall;
+    VTYPE  xa, xb, x1, x2, x3, x4, x5, px, qx, rx, sx, vx, wx, y1, yb, z, z1, z2;
+    BVTYPE big;
+    bool   dobig, dosmall;
 
     xa  = abs(x);
     big = xa >= 0.625;
@@ -719,11 +719,11 @@ static inline Vec8d acos(Vec8d const & x) {
 // *************************************************************
 // Template parameters:
 // VTYPE:  f.p. vector type
-// BTYPE:  boolean vector type
+// BVTYPE: boolean vector type
 // AC: 0 = asin, 1 = acos
 // Paramterers:
 // x = input x
-template<class VTYPE, class BTYPE, int AC> 
+template<class VTYPE, class BVTYPE, int AC> 
 static inline VTYPE asin_f(VTYPE const & x) {
 
     // define constants
@@ -733,8 +733,8 @@ static inline VTYPE asin_f(VTYPE const & x) {
     const float P1asinf = 7.4953002686E-2f;
     const float P0asinf = 1.6666752422E-1f;
 
-    VTYPE xa, x1, x2, x3, x4, xb, z, z1, z2;
-    BTYPE big;
+    VTYPE  xa, x1, x2, x3, x4, xb, z, z1, z2;
+    BVTYPE big;
 
     xa  = abs(x);
     big = xa > 0.5f;
@@ -802,14 +802,14 @@ static inline Vec16f acos(Vec16f const & x) {
 // *************************************************************
 // Template parameters:
 // VTYPE:  f.p. vector type
-// BTYPE:  boolean vector type
+// BVTYPE: boolean vector type
 // T2:     0 = atan, 1 = atan2
 // Paramterers:
 // y, x. calculate tan(y/x)
 // result is between -pi/2 and +pi/2 when x > 0
 // result is between -pi and -pi/2 or between pi/2 and pi when x < 0 for atan2
 // atan2(0,0) gives NAN. Future versions may give 0
-template<class VTYPE, class BTYPE, int T2> 
+template<class VTYPE, class BVTYPE, int T2> 
 static inline VTYPE atan_d(VTYPE const & y, VTYPE const & x) {
 
     // define constants
@@ -830,8 +830,8 @@ static inline VTYPE atan_d(VTYPE const & y, VTYPE const & x) {
 	const double Q1atan = 4.853903996359136964868E2;
 	const double Q0atan = 1.945506571482613964425E2;
 
-    VTYPE t, x1, x2, y1, y2, s, fac, a, b, z, zz, px, qx, re;  // data vectors
-    BTYPE swapxy, notbig, notsmal;                             // boolean vectors
+    VTYPE  t, x1, x2, y1, y2, s, fac, a, b, z, zz, px, qx, re;  // data vectors
+    BVTYPE swapxy, notbig, notsmal;                             // boolean vectors
 
     if (T2) {  // atan2(y,x)
         // move in first octant
@@ -924,14 +924,14 @@ static inline Vec8d atan(Vec8d const & y) {
 // *************************************************************
 // Template parameters:
 // VTYPE:  f.p. vector type
-// BTYPE:  boolean vector type
+// BVTYPE: boolean vector type
 // T2:     0 = atan, 1 = atan2
 // Paramterers:
 // y, x. calculate tan(y/x)
 // result is between -pi/2 and +pi/2 when x > 0
 // result is between -pi and -pi/2 or between pi/2 and pi when x < 0 for atan2
 // atan2(0,0) gives NAN. Future versions may give 0
-template<class VTYPE, class BTYPE, int T2> 
+template<class VTYPE, class BVTYPE, int T2> 
 static inline VTYPE atan_f(VTYPE const & y, VTYPE const & x) {
 
     // define constants
@@ -940,8 +940,8 @@ static inline VTYPE atan_f(VTYPE const & y, VTYPE const & x) {
     const float P1atanf =  1.99777106478E-1f;
     const float P0atanf = -3.33329491539E-1f;
 
-    VTYPE t, x1, x2, y1, y2, s, a, b, z, zz, re;   // data vectors
-    BTYPE swapxy, notbig, notsmal;                 // boolean vectors
+    VTYPE  t, x1, x2, y1, y2, s, a, b, z, zz, re;  // data vectors
+    BVTYPE swapxy, notbig, notsmal;                // boolean vectors
 
     if (T2) {  // atan2(y,x)
         // move in first octant

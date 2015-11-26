@@ -48,9 +48,12 @@ ModelsBlock *readModelsDefinition(Params &params) {
 	try
 	{
 		// loading internal model definitions
-		std::istringstream in(builtin_mixmodels_definition);
+		stringstream in(builtin_mixmodels_definition);
+//        in.exceptions(ios::failbit | ios::badbit);
+//        in << "test";
         assert(in && "stringstream is OK");
-        cout << builtin_mixmodels_definition.length() << " vs " << in.str().length() << endl;
+		in.seekg(0, in.beg);
+//        cout << builtin_mixmodels_definition.length() << " vs " << in.str().length() << endl;
 		NxsReader nexus;
 		nexus.Add(models_block);
 	    MyToken token(in);

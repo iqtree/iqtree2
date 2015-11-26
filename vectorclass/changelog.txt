@@ -1,7 +1,24 @@
 change log for vectorclass.zip
 ------------------------------
+2015-11-14 version 1.19
+  * fix various problems with Clang compiler
 
-2015-10-24 version 1.16
+
+2015-09-25 version 1.18
+  * fix compiler error for Vec8s divide_by_i(Vec8s const & x) under Clang compiler
+  * fix error in Vec4d::size() in vectorf256e.h
+
+
+2015-07-31 version 1.17
+  * improved operator > for Vec4uq
+  * more special cases in blend4q
+  * nan_code functions made static inline
+  * template parameter BTYPE renamed to BVTYPE in mathematical functions to avoid clash
+    with macro named BTYPE in winnt.h
+  * fixed bug in Vec4db constructor
+
+
+2014-10-24 version 1.16
   * workaround for problem in Clang compiler extended to version 3.09 because not fixed yet by Clang
     (vectorf128.h line 134)
   * recognize problem with Apple version of Clang reporting wrong version number
@@ -11,7 +28,7 @@ change log for vectorclass.zip
   * various minor changes
 
 
-2015-10-17 version 1.15
+2014-10-17 version 1.15
   * added files ranvec1.h and ranvec1.cpp for random number generator
   * constructors to make boolean vectors from their elements
   * constructors and = operators to broadcast boolean scalar into boolean vectors

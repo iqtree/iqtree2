@@ -1,8 +1,8 @@
 /****************************  vectorf128.h   *******************************
 * Author:        Agner Fog
 * Date created:  2012-05-30
-* Last modified: 2014-10-24
-* Version:       1.16
+* Last modified: 2015-11-07
+* Version:       1.19
 * Project:       vector classes
 * Description:
 * Header file defining floating point vector classes as interface to 
@@ -30,7 +30,7 @@
 *
 * For detailed instructions, see VectorClass.pdf
 *
-* (c) Copyright 2012 - 2014 GNU General Public License http://www.gnu.org/licenses
+* (c) Copyright 2012 - 2015 GNU General Public License http://www.gnu.org/licenses
 *****************************************************************************/
 #ifndef VECTORF128_H
 #define VECTORF128_H
@@ -1099,7 +1099,8 @@ static inline Vec4i exponent(Vec4f const & a) {
 
 // Extract the fraction part of a floating point number
 // a = 2^exponent(a) * fraction(a), except for a = 0
-// fraction(1.0f) = 1.0f, fraction(5.0f) = 1.25f 
+// fraction(1.0f) = 1.0f, fraction(5.0f) = 1.25f
+// NOTE: The name fraction clashes with an ENUM in MAC XCode CarbonCore script.h !
 static inline Vec4f fraction(Vec4f const & a) {
     Vec4ui t1 = _mm_castps_si128(a);   // reinterpret as 32-bit integer
     Vec4ui t2 = Vec4ui((t1 & 0x007FFFFF) | 0x3F800000); // set exponent to 0 + bias
@@ -1436,7 +1437,7 @@ DOZERO:
 template <int i0, int i1, int i2, int i3>
 static inline Vec4f change_sign(Vec4f const & a) {
     if ((i0 | i1 | i2 | i3) == 0) return a;
-    __m128i mask = constant4i<i0 ? 0x80000000 : 0, i1 ? 0x80000000 : 0, i2 ? 0x80000000 : 0, i3 ? 0x80000000 : 0>();
+    __m128i mask = constant4i<i0 ? (int)0x80000000 : 0, i1 ? (int)0x80000000 : 0, i2 ? (int)0x80000000 : 0, i3 ? (int)0x80000000 : 0>();
     return  _mm_xor_ps(a, _mm_castsi128_ps(mask));     // flip sign bits
 }
 
@@ -2125,7 +2126,8 @@ static inline Vec2q exponent(Vec2d const & a) {
 
 // Extract the fraction part of a floating point number
 // a = 2^exponent(a) * fraction(a), except for a = 0
-// fraction(1.0) = 1.0, fraction(5.0) = 1.25 
+// fraction(1.0) = 1.0, fraction(5.0) = 1.25
+// NOTE: The name fraction clashes with an ENUM in MAC XCode CarbonCore script.h !
 static inline Vec2d fraction(Vec2d const & a) {
     Vec2uq t1 = _mm_castpd_si128(a);   // reinterpret as 64-bit integer
     Vec2uq t2 = Vec2uq((t1 & 0x000FFFFFFFFFFFFFll) | 0x3FF0000000000000ll); // set exponent to 0 + bias
@@ -2371,7 +2373,7 @@ static inline Vec2d blend2d(Vec2d const & a, Vec2d const & b) {
 template <int i0, int i1>
 static inline Vec2d change_sign(Vec2d const & a) {
     if ((i0 | i1) == 0) return a;
-    __m128i mask = constant4i<0, i0 ? 0x80000000 : 0, 0, i1 ? 0x80000000 : 0> ();
+    __m128i mask = constant4i<0, i0 ? (int)0x80000000 : 0, 0, i1 ? (int)0x80000000 : 0> ();
     return  _mm_xor_pd(a, _mm_castsi128_pd(mask));     // flip sign bits
 }
 
