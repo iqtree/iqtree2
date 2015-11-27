@@ -879,7 +879,7 @@ void PDNetwork::findPD_LP(Params &params, vector<SplitSet> &taxa_set) {
 		taxa_set[index].push_back(pd_set);
 	}
 	cout << endl;
-	delete variables;	
+	delete [] variables;	
 }
 
 void PDNetwork::transformLP_Area2(Params &params, const char *outfile, int total_size, bool make_bin) {
@@ -988,7 +988,7 @@ double PDNetwork::findMinKArea_LP(Params &params, const char* filename, double p
 	} else {
 		budget_k = area.countTaxa();
 	}
-	delete variables;
+	delete [] variables;
 	return budget_k;
 }
 

@@ -319,7 +319,7 @@ void GSSNetwork::findPD(Params &params, vector<SplitSet> &taxa_set, vector<int> 
         taxa_set[index].push_back(pd_set);
     }
     cout << endl;
-    delete variables;
+    delete [] variables;
     // call the leaving function
     leaveFindPD(taxa_set);
 }
