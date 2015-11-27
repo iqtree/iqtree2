@@ -458,17 +458,17 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
     int numDupPars = 0;
 #ifdef _OPENMP
     StrVector pars_trees;
-    if (params->start_tree == STT_PARSIMONY && nParTrees > 1) {
-        pars_trees.resize(nParTrees-1);
+    if (params->start_tree == STT_PARSIMONY && nParTrees >= 1) {
+        pars_trees.resize(nParTrees);
         #pragma omp parallel
         {
             PhyloTree tree;
             tree.setParams(params);
             tree.setParsimonyKernel(params->SSE);
             #pragma omp for
-            for (int i = 1; i < nParTrees; i++) {
+            for (int i = 0; i < nParTrees; i++) {
                 tree.computeParsimonyTree(NULL, aln);
-                pars_trees[i-1] = tree.getTreeString();
+                pars_trees[i] = tree.getTreeString();
             }
         }
     }
@@ -521,6 +521,8 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
         	candidateTrees.update(curParsTree, -DBL_MAX, false);
         }
     }
+    
+
     double parsTime = getRealTime() - startTime;
     if (nParTrees > 0) {
         cout << parsTime << " seconds ";
