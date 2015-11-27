@@ -45,17 +45,11 @@ ModelsBlock *readModelsDefinition(Params &params) {
 
 	ModelsBlock *models_block = new ModelsBlock;
 
-// TODO: weird crash when compiling with clang under windows!
-#if !defined(WIN32) || !defined(__clang__)
 	try
 	{
 		// loading internal model definitions
 		stringstream in(builtin_mixmodels_definition);
-//        in.exceptions(ios::failbit | ios::badbit);
-//        in << "test";
         assert(in && "stringstream is OK");
-		in.seekg(0, in.beg);
-//        cout << builtin_mixmodels_definition.length() << " vs " << in.str().length() << endl;
 		NxsReader nexus;
 		nexus.Add(models_block);
 	    MyToken token(in);
@@ -67,7 +61,6 @@ ModelsBlock *readModelsDefinition(Params &params) {
 	} catch (...) {
         assert(0 && "predefined mixture models initialized");
     }
-#endif
 
 	if (params.model_def_file) {
 		cout << "Reading model definition file " << params.model_def_file << " ... ";

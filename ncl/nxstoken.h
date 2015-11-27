@@ -179,8 +179,6 @@ inline void NxsToken::AppendToToken(
 inline char NxsToken::GetNextChar()
 	{
 	int ch = in.get();
-//    char ch;
-//    in.get(ch);
 	int failed = in.bad();
 	if (failed)
 		{
@@ -195,7 +193,6 @@ inline char NxsToken::GetNextChar()
 
 		if (ch == 13 && (int)in.peek() == 10) 
 			ch = in.get();
-//            in.get(ch);
 
 		atEOL = 1;
 		}
@@ -210,7 +207,9 @@ inline char NxsToken::GetNextChar()
 #	if defined(__DECCXX)
 		filepos = 0L;
 #	else
-		filepos = in.tellg();
+    // BQM this cause crash compiling with clang under Windows!
+//		filepos = in.tellg();
+    filepos += 1;
 #	endif
 
 	if (atEOF)
