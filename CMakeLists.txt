@@ -4,25 +4,39 @@
 ##################################################################
 
 # Windows example usages:
+#------------------------
 # cmake -G "Visual Studio 12" <source_dir>			(32-bit version, compiled with MSVC)
 # cmake -G "Visual Studio 12 Win64" <source_dir>	(64-bit version, compiled with MSVC)
 # cmake -G "Visual Studio 12 Win64" -T "Intel C++ Compiler XE 15.0" <source_dir>		(64-bit version, compiled with ICC)
-# cmake -G "Visual Studio 12 Win64" -T "Intel C++ Compiler XE 15.0" -DIQTREE_FLAGS="omp" <source_dir>		(64-bit OpenMP version, compiled with ICC)
+# cmake -G “MinGW Makefiles” <source_dir> (TDM-GCC)
+# cmake -G “Unix Makefiles” -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ <source_dir> (TDM-GCC and clang)
 #
+
 # Linux example usages:
+#----------------------
 # cmake <source_dir>						   (sequential version)
 # cmake -DIQTREE_FLAGS="omp" <source_dir>      (OpenMP version)
 # cmake -DIQTREE_FLAGS="m32" <source_dir>      (32-bit sequential version)
 # cmake -DIQTREE_FLAGS="m32 omp" <source_dir>  (32-bit OpenMP version)
 #
+
 # Mac OSX example usages:
+#------------------------
 # cmake -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ <source_dir>							(sequential version)
 #
-# To build OpenMP version one needs to download and compile Clang-OpenMP. 
-# Then assuming clang2 and clang2++ are the newly built compilers, then:
-# cmake -DCMAKE_C_COMPILER=clang2 -DCMAKE_CXX_COMPILER=clang2++ -DIQTREE_FLAGS="omp" <source_dir>		(OpenMP version)
+# To build OpenMP version one needs to download Clang version 3.7 or later (as of November 2015) 
+# Then assuming clang3.7 and clang++3.7 are the newly built compilers, then:
+# cmake -DCMAKE_C_COMPILER=clang3.7 -DCMAKE_CXX_COMPILER=clang++3.7 -DIQTREE_FLAGS="omp" <source_dir>		(OpenMP version)
 #
 
+
+# Compile OpenMP version: cmake -DIQTREE_FLAGS=omp ....
+# Compile 32-bit version: cmake -DIQTREE_FLAGS=m32 ....
+# Compile static version: cmake -DIQTREE_FLAGS=static ....
+# Compile static OpenMP version: cmake -DIQTREE_FLAGS="omp static" ....
+
+#NOTE: Static linking with clang windows: make a symlink libgcc_eh.a to libgcc.a (administrator required)
+# C:\TDM-GCC-64\lib\gcc\x86_64-w64-mingw32\5.1.0>mklink libgcc_eh.a libgcc.a
 
 cmake_minimum_required(VERSION 2.8)
 set(CMAKE_LEGACY_CYGWIN_WIN32 0)
@@ -433,15 +447,12 @@ endif()
 # link special lib for WIN32
 if (WIN32) 
 	set(PLATFORM_LIB "ws2_32")
-    if (CLANG AND IQTREE_FLAGS MATCHES "static")
-#        set(STD_LIB "stdc++dll")
-    endif()
 else()
 	set(PLATFORM_LIB "m")
 endif()
 
-if(CLANG AND WIN32)
-    set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -L${PROJECT_SOURCE_DIR}/lib")
+if(CLANG AND WIN32 AND IQTREE_FLAGS MATCHES "static")
+    set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -pthread -Wl,--allow-multiple-definition")
 endif()
 
 set(THREAD_LIB "")
@@ -458,8 +469,8 @@ if (IQTREE_FLAGS MATCHES "omp")
 	elseif(CLANG AND APPLE)
 		set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -L${PROJECT_SOURCE_DIR}/libmac")
 	elseif(CLANG AND WIN32)
-		set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -pthread")
-        set(THREAD_LIB "omp")
+        set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -L${PROJECT_SOURCE_DIR}/lib")
+        set(THREAD_LIB "ompstatic")
 	endif()
 endif()
 
