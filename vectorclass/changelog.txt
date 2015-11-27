@@ -1,5 +1,9 @@
 change log for vectorclass.zip
 ------------------------------
+version 1.20
+  * round functions: suppress precision exception under SSE4.1 and higher
+
+
 2015-11-14 version 1.19
   * fix various problems with Clang compiler
 

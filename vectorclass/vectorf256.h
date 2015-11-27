@@ -1,8 +1,8 @@
 /****************************  vectorf256.h   *******************************
 * Author:        Agner Fog
 * Date created:  2012-05-30
-* Last modified: 2015-11-07
-* Version:       1.19
+* Last modified: 2015-11-27
+* Version:       1.20
 * Project:       vector classes
 * Description:
 * Header file defining 256-bit floating point vector classes as interface
@@ -1001,22 +1001,22 @@ static inline Vec8f pow(Vec8f const & a, Const_int_t<n>) {
 
 // function round: round to nearest integer (even). (result as float vector)
 static inline Vec8f round(Vec8f const & a) {
-    return _mm256_round_ps(a, 0);
+    return _mm256_round_ps(a, 0+8);
 }
 
 // function truncate: round towards zero. (result as float vector)
 static inline Vec8f truncate(Vec8f const & a) {
-    return _mm256_round_ps(a, 3);
+    return _mm256_round_ps(a, 3+8);
 }
 
 // function floor: round towards minus infinity. (result as float vector)
 static inline Vec8f floor(Vec8f const & a) {
-    return _mm256_round_ps(a, 1);
+    return _mm256_round_ps(a, 1+8);
 }
 
 // function ceil: round towards plus infinity. (result as float vector)
 static inline Vec8f ceil(Vec8f const & a) {
-    return _mm256_round_ps(a, 2);
+    return _mm256_round_ps(a, 2+8);
 }
 
 #ifdef VECTORI256_H  // 256 bit integer vectors are available
@@ -1755,22 +1755,22 @@ static inline Vec4d pow(Vec4d const & a, Const_int_t<n>) {
 
 // function round: round to nearest integer (even). (result as double vector)
 static inline Vec4d round(Vec4d const & a) {
-    return Vec4d(_mm256_round_pd(a, 0));
+    return _mm256_round_pd(a, 0+8);
 }
 
 // function truncate: round towards zero. (result as double vector)
 static inline Vec4d truncate(Vec4d const & a) {
-    return _mm256_round_pd(a, 3);
+    return _mm256_round_pd(a, 3+8);
 }
 
 // function floor: round towards minus infinity. (result as double vector)
 static inline Vec4d floor(Vec4d const & a) {
-    return _mm256_round_pd(a, 1);
+    return _mm256_round_pd(a, 1+8);
 }
 
 // function ceil: round towards plus infinity. (result as double vector)
 static inline Vec4d ceil(Vec4d const & a) {
-    return _mm256_round_pd(a, 2);
+    return _mm256_round_pd(a, 2+8);
 }
 
 // function round_to_int: round to nearest integer (even). (result as integer vector)

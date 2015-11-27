@@ -179,6 +179,8 @@ inline void NxsToken::AppendToToken(
 inline char NxsToken::GetNextChar()
 	{
 	int ch = in.get();
+//    char ch;
+//    in.get(ch);
 	int failed = in.bad();
 	if (failed)
 		{
@@ -191,8 +193,9 @@ inline char NxsToken::GetNextChar()
 		fileline++;
 		filecol = 1L;
 
-		if (ch == 13 && (int)in.peek() == 10)
+		if (ch == 13 && (int)in.peek() == 10) 
 			ch = in.get();
+//            in.get(ch);
 
 		atEOL = 1;
 		}

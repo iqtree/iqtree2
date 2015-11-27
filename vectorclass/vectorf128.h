@@ -1,8 +1,8 @@
 /****************************  vectorf128.h   *******************************
 * Author:        Agner Fog
 * Date created:  2012-05-30
-* Last modified: 2015-11-07
-* Version:       1.19
+* Last modified: 2015-11-27
+* Version:       1.20
 * Project:       vector classes
 * Description:
 * Header file defining floating point vector classes as interface to 
@@ -940,7 +940,7 @@ static inline Vec4f round(Vec4f const & a) __attribute__ ((optimize("-fno-unsafe
 // function round: round to nearest integer (even). (result as float vector)
 static inline Vec4f round(Vec4f const & a) {
 #if INSTRSET >= 5   // SSE4.1 supported
-    return _mm_round_ps(a, 0);
+    return _mm_round_ps(a, 8);
 #else // SSE2. Use magic number method
     // Note: assume MXCSR control register is set to rounding
     // (don't use conversion to int, it will limit the value to +/- 2^31)
@@ -960,7 +960,7 @@ static inline Vec4f round(Vec4f const & a) {
 // function truncate: round towards zero. (result as float vector)
 static inline Vec4f truncate(Vec4f const & a) {
 #if INSTRSET >= 5   // SSE4.1 supported
-    return _mm_round_ps(a, 3);
+    return _mm_round_ps(a, 3+8);
 #else  // SSE2. Use magic number method (conversion to int would limit the value to 2^31)
     uint32_t t1 = _mm_getcsr();        // MXCSR
     uint32_t t2 = t1 | (3 << 13);      // bit 13-14 = 11
@@ -974,7 +974,7 @@ static inline Vec4f truncate(Vec4f const & a) {
 // function floor: round towards minus infinity. (result as float vector)
 static inline Vec4f floor(Vec4f const & a) {
 #if INSTRSET >= 5   // SSE4.1 supported
-    return _mm_round_ps(a, 1);
+    return _mm_round_ps(a, 1+8);
 #else  // SSE2. Use magic number method (conversion to int would limit the value to 2^31)
     uint32_t t1 = _mm_getcsr();        // MXCSR
     uint32_t t2 = t1 | (1 << 13);      // bit 13-14 = 01
@@ -988,7 +988,7 @@ static inline Vec4f floor(Vec4f const & a) {
 // function ceil: round towards plus infinity. (result as float vector)
 static inline Vec4f ceil(Vec4f const & a) {
 #if INSTRSET >= 5   // SSE4.1 supported
-    return _mm_round_ps(a, 2);
+    return _mm_round_ps(a, 2+8);
 #else  // SSE2. Use magic number method (conversion to int would limit the value to 2^31)
     uint32_t t1 = _mm_getcsr();        // MXCSR
     uint32_t t2 = t1 | (2 << 13);      // bit 13-14 = 10
@@ -1902,7 +1902,7 @@ static inline Vec4f round(Vec4f const & a) __attribute__ ((optimize("-fno-unsafe
 // function round: round to nearest integer (even). (result as double vector)
 static inline Vec2d round(Vec2d const & a) {
 #if INSTRSET >= 5   // SSE4.1 supported
-    return _mm_round_pd(a, 0);
+    return _mm_round_pd(a, 0+8);
 #else // SSE2. Use magic number method
     // Note: assume MXCSR control register is set to rounding
     // (don't use conversion to int, it will limit the value to +/- 2^31)
@@ -1921,7 +1921,7 @@ static inline Vec2d round(Vec2d const & a) {
 static inline Vec2d truncate(Vec2d const & a) {
 // (note: may fail on MS Visual Studio 2008, works in later versions)
 #if INSTRSET >= 5   // SSE4.1 supported
-    return _mm_round_pd(a, 3);
+    return _mm_round_pd(a, 3+8);
 #else  // SSE2. Use magic number method (conversion to int would limit the value to 2^31)
     uint32_t t1 = _mm_getcsr();        // MXCSR
     uint32_t t2 = t1 | (3 << 13);      // bit 13-14 = 11
@@ -1936,7 +1936,7 @@ static inline Vec2d truncate(Vec2d const & a) {
 // (note: may fail on MS Visual Studio 2008, works in later versions)
 static inline Vec2d floor(Vec2d const & a) {
 #if INSTRSET >= 5   // SSE4.1 supported
-    return _mm_round_pd(a, 1);
+    return _mm_round_pd(a, 1+8);
 #else  // SSE2. Use magic number method (conversion to int would limit the value to 2^31)
     uint32_t t1 = _mm_getcsr();        // MXCSR
     uint32_t t2 = t1 | (1 << 13);      // bit 13-14 = 01
@@ -1950,7 +1950,7 @@ static inline Vec2d floor(Vec2d const & a) {
 // function ceil: round towards plus infinity. (result as double vector)
 static inline Vec2d ceil(Vec2d const & a) {
 #if INSTRSET >= 5   // SSE4.1 supported
-    return _mm_round_pd(a, 2);
+    return _mm_round_pd(a, 2+8);
 #else  // SSE2. Use magic number method (conversion to int would limit the value to 2^31)
     uint32_t t1 = _mm_getcsr();        // MXCSR
     uint32_t t2 = t1 | (2 << 13);      // bit 13-14 = 10
