@@ -8,8 +8,8 @@
 # cmake -G "Visual Studio 12" <source_dir>			(32-bit version, compiled with MSVC)
 # cmake -G "Visual Studio 12 Win64" <source_dir>	(64-bit version, compiled with MSVC)
 # cmake -G "Visual Studio 12 Win64" -T "Intel C++ Compiler XE 15.0" <source_dir>		(64-bit version, compiled with ICC)
-# cmake -G “MinGW Makefiles” <source_dir> (TDM-GCC)
-# cmake -G “Unix Makefiles” -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ <source_dir> (TDM-GCC and clang)
+# cmake -G "MinGW Makefiles" <source_dir> (TDM-GCC)
+# cmake -G "Unix Makefiles" -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ <source_dir> (TDM-GCC and clang)
 #
 
 # Linux example usages:
