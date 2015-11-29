@@ -1907,9 +1907,14 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
         if (params.aBayes_test)
             cout << "Testing tree branches by aBayes parametric test..." << endl;
 		iqtree.setRootNode(params.root);
-		iqtree.testAllBranches(params.aLRT_threshold, iqtree.getCurScore(),
-				pattern_lh, params.aLRT_replicates, params.localbp_replicates, params.aLRT_test, params.aBayes_test);
-		cout << "CPU Time used:  " << getCPUTime() - mytime << " sec." << endl;
+        if (iqtree.isBifurcating()) {
+            iqtree.testAllBranches(params.aLRT_threshold, iqtree.getCurScore(),
+                    pattern_lh, params.aLRT_replicates, params.localbp_replicates, params.aLRT_test, params.aBayes_test);
+            cout << "CPU Time used:  " << getCPUTime() - mytime << " sec." << endl;
+        } else {
+            outWarning("Tree is multifurcating and such test is not applicable");
+            params.aLRT_replicates = params.localbp_replicates = params.aLRT_test = params.aBayes_test = 0;
+        }
 	}
 
 	if (params.gbo_replicates > 0) {
