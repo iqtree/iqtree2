@@ -94,7 +94,11 @@ inline T *aligned_alloc(size_t size) {
     void *mem;
 
 #if defined WIN32 || defined _WIN32 || defined __WIN32__
-	mem = _aligned_malloc(size*sizeof(T), MEM_ALIGNMENT);
+    #if (defined(__MINGW32__) || defined(__clang__)) && defined(BINARY32)
+        mem = __mingw_aligned_malloc(size*sizeof(T), MEM_ALIGNMENT);
+    #else
+        mem = _aligned_malloc(size*sizeof(T), MEM_ALIGNMENT);
+    #endif
 #else
 	int res = posix_memalign(&mem, MEM_ALIGNMENT, size*sizeof(T));
     if (res == ENOMEM) {
@@ -115,7 +119,11 @@ inline T *aligned_alloc(size_t size) {
 
 inline void aligned_free(void *mem) {
 #if defined WIN32 || defined _WIN32 || defined __WIN32__
-	_aligned_free(mem);
+    #if (defined(__MINGW32__) || defined(__clang__)) && defined(BINARY32)
+        __mingw_aligned_free(mem);
+    #else
+        _aligned_free(mem);
+    #endif
 #else
 	free(mem);
 #endif
@@ -256,7 +264,7 @@ public:
      */
     PhyloTree();
 
-    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+//    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
     /**
      * Constructor with given alignment

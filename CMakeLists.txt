@@ -9,8 +9,7 @@
 # cmake -G "Visual Studio 12 Win64" <source_dir>	(64-bit version, compiled with MSVC)
 # cmake -G "Visual Studio 12 Win64" -T "Intel C++ Compiler XE 15.0" <source_dir>		(64-bit version, compiled with ICC)
 # cmake -G "MinGW Makefiles" <source_dir> (TDM-GCC)
-# cmake -G "Unix Makefiles" -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ <source_dir> (TDM-GCC and clang)
-#
+# cmake -G "Unix Makefiles" -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_MAKE_PROGRAM=mingw32-make <source_dir> (TDM-GCC and clang)
 
 # Linux example usages:
 #----------------------
@@ -470,7 +469,7 @@ if (IQTREE_FLAGS MATCHES "omp")
 		set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -L${PROJECT_SOURCE_DIR}/libmac")
 	elseif(CLANG AND WIN32)
         set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -L${PROJECT_SOURCE_DIR}/lib")
-        set(THREAD_LIB "ompstatic")
+#        set(THREAD_LIB "ompstatic")
 	endif()
 endif()
 
