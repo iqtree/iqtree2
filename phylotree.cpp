@@ -3551,10 +3551,31 @@ void PhyloTree::computeBioNJ(Params &params, Alignment *alignment, string &dist_
 //    setAlignment(alignment);
 }
 
+int PhyloTree::setNegativeBranch(bool force, double newlen, Node *node, Node *dad) {
+    if (!node) node = root;
+    int fixed = 0;
+
+    FOR_NEIGHBOR_IT(node, dad, it) {
+        if ((*it)->length < 0.0 || force) { // negative branch length detected
+            (*it)->length = newlen;
+            // set the backward branch length
+            (*it)->node->findNeighbor(node)->length = (*it)->length;
+            fixed++;
+        }
+        fixed += setNegativeBranch(force, newlen, (*it)->node, node);
+    }
+    return fixed;
+}
+
+
 int PhyloTree::fixNegativeBranch(bool force, Node *node, Node *dad) {
 
-    if (!node)
+    if (!node) {
         node = root;
+        // 2015-11-30: if not bifurcating, initialize unknown branch lengths with 0.1
+        if (!isBifurcating())
+            return setNegativeBranch(force, 0.1, root, NULL);
+    }
     int fixed = 0;
 
     FOR_NEIGHBOR_IT(node, dad, it){

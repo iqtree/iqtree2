@@ -1260,6 +1260,11 @@ public:
      */
     virtual int fixNegativeBranch(bool force = false, Node *node = NULL, Node *dad = NULL);
 
+    /**
+        set negative branch to a new len
+    */
+    int setNegativeBranch(bool force, double newlen, Node *node = NULL, Node *dad = NULL);
+
     // OBSOLETE: assignRandomBranchLengths no longer needed, use fixNegativeBranch instead!
 //    int assignRandomBranchLengths(bool force = false, Node *node = NULL, Node *dad = NULL);
 
