@@ -931,12 +931,12 @@ double PhyloSuperTree::computeLikelihood(double *pattern_lh) {
 	return tree_lh;
 }
 
-void PhyloSuperTree::computePatternLikelihood(double *pattern_lh, double *cur_logl, double *ptn_lh_cat) {
+void PhyloSuperTree::computePatternLikelihood(double *pattern_lh, double *cur_logl, double *ptn_lh_cat, SiteLoglType wsl) {
 	int offset = 0, offset_lh_cat = 0;
 	iterator it;
 	for (it = begin(); it != end(); it++) {
 		if (ptn_lh_cat)
-			(*it)->computePatternLikelihood(pattern_lh + offset, NULL, ptn_lh_cat + offset_lh_cat);
+			(*it)->computePatternLikelihood(pattern_lh + offset, NULL, ptn_lh_cat + offset_lh_cat, wsl);
 		else
 			(*it)->computePatternLikelihood(pattern_lh + offset);
 		offset += (*it)->aln->getNPattern();

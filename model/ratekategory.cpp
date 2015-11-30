@@ -99,7 +99,7 @@ int RateKategory::computePatternRates(DoubleVector& pattern_rates, IntVector& pa
 {
 	cout << "Computing site rates by empirical Bayes..." << endl;
 
-	phylo_tree->computePatternLhCat();
+	phylo_tree->computePatternLhCat(WSL_RATECAT);
 
 	int npattern = phylo_tree->aln->getNPattern();
 	pattern_rates.resize(npattern);

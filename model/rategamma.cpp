@@ -212,7 +212,7 @@ void RateGamma::writeParameters(ostream &out) {
 int RateGamma::computePatternRates(DoubleVector &pattern_rates, IntVector &pattern_cat) {
 	//cout << "Computing Gamma site rates by empirical Bayes..." << endl;
 
-	phylo_tree->computePatternLhCat();
+	phylo_tree->computePatternLhCat(WSL_RATECAT);
 
 	int npattern = phylo_tree->aln->getNPattern();
 	pattern_rates.resize(npattern);

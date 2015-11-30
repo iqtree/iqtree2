@@ -240,32 +240,27 @@ void printSiteLh(const char*filename, PhyloTree *tree, double *ptn_lh,
 
 void printSiteLhCategory(const char*filename, PhyloTree *tree, SiteLoglType wsl) {
 
-	int ncat = tree->getRate()->getNDiscreteRate();
-    if (tree->getModel()->isMixture() && !tree->getModelFactory()->fused_mix_rate)
-        ncat *= tree->getModel()->getNMixtures();
-
+    if (wsl == WSL_NONE || wsl == WSL_SITE)
+        return;
+    // error checking
+    if (!tree->getModel()->isMixture()) {
+        if (wsl != WSL_RATECAT) {
+            outWarning("Switch now to '-wslr' as it is the only option for non-mixture model");
+            wsl = WSL_RATECAT;
+        }
+    } else {
+        // mixture model
+        if (wsl == WSL_MIXTURE_RATECAT && tree->getModelFactory()->fused_mix_rate) {
+            outWarning("-wslmr is not suitable for fused mixture model, switch now to -wslm");
+            wsl = WSL_MIXTURE;
+        }
+    }
+	int ncat = tree->getNumLhCat(wsl);
 	double *pattern_lh, *pattern_lh_cat;
 	int i;
 	pattern_lh = new double[tree->getAlnNPattern()];
 	pattern_lh_cat = new double[tree->getAlnNPattern()*ncat];
-	tree->computePatternLikelihood(pattern_lh, NULL, pattern_lh_cat);
-
-    switch (wsl) {
-    case WSL_NONE: return;
-    case WSL_SITE: return;
-    case WSL_RATECAT: 
-        if (tree->getModel()->isMixture() && !tree->getModelFactory()->fused_mix_rate)
-            outError("Unsupported feature, please contact author if you really need this ", __func__);
-        ncat = tree->getRate()->getNDiscreteRate();
-        break;
-    case WSL_MIXTURE:
-        ncat = tree->getModel()->getNMixtures();
-        break;
-    case WSL_MIXTURE_RATECAT:
-        outError("Unsupported feature, please contact author if you really need this ", __func__);
-        break;
-    }
-
+	tree->computePatternLikelihood(pattern_lh, NULL, pattern_lh_cat, wsl);
 
     
 	try {
@@ -277,18 +272,27 @@ void printSiteLhCategory(const char*filename, PhyloTree *tree, SiteLoglType wsl)
             out << "P(D|M,rr[x]) is the probability of site D given the model M and the relative rate" << endl;
             out << "of evolution rr[x], where x is the class of rate to be considered." << endl;
             out << "We have P(D|M) = \\sum_x P(x) x P(D|M,rr[x])." << endl << endl;
+            out << "Site   logP(D|M)       ";
+            for (i = 0; i < ncat; i++)
+                out << "logP(D|M,rr[" << i+1 << "]=" << tree->getRate()->getRate(i)<< ") ";
         } else if (wsl == WSL_MIXTURE) {
             out << "P(D|M[x]) is the probability of site D given the model M[x]," << endl;
             out << "where x is the mixture class to be considered." << endl;
             out << "We have P(D|M) = \\sum_x P(x) x P(D|M[x])." << endl << endl;
-        }
-		out << "Site   logP(D|M)       ";
-		for (i = 0; i < ncat; i++) {
-            if (wsl == WSL_RATECAT) 
-                out << "logP(D|M,rr[" << i+1 << "]=" << tree->getRate()->getRate(i)<< ") ";
-            else
+            out << "Site   logP(D|M)       ";
+            for (i = 0; i < ncat; i++)
                 out << "logP(D|M[" << i+1 << "]) ";
-		}
+        } else {
+            // WSL_MIXTURE_RATECAT
+            out << "P(D|M[x],rr[y]) is the probability of site D given the model M[x] and the relative rate" << endl;
+            out << "of evolution rr[y], where x and y are the mixture class and rate class, respectively." << endl;
+            out << "We have P(D|M) = \\sum_x \\sum_y P(x) x P(y) x P(D|M[x],rr[y])." << endl << endl;
+            out << "Site   logP(D|M)       ";
+            for (i = 0; i < tree->getModel()->getNMixtures(); i++)
+                for (int j = 0; j < tree->getRate()->getNRate(); j++) {
+                    out << "logP(D|M[" << i+1 << "],rr[" << j+1 << "]=" << tree->getRate()->getRate(j) << ") ";
+                }
+        }
 		out << endl;
 		IntVector pattern_index;
 		tree->aln->getSitePatternIndex(pattern_index);
