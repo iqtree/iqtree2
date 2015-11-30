@@ -486,13 +486,16 @@ double RateFree::optimizeWithEM() {
         for (c = 0; c < nmix; c++) {
             tree->copyPhyloTree(phylo_tree);
             ModelGTR *subst_model;
-            if (phylo_tree->getModel()->isMixture())
+            if (phylo_tree->getModel()->isMixture() && phylo_tree->getModelFactory()->fused_mix_rate)
                 subst_model = ((ModelMixture*)phylo_tree->getModel())->at(c);
             else
                 subst_model = (ModelGTR*)phylo_tree->getModel();
             tree->setModel(subst_model);
             subst_model->setTree(tree);
             model_fac->model = subst_model;
+            if (subst_model->isMixture())
+                tree->setLikelihoodKernel(phylo_tree->sse);
+
                         
             // initialize likelihood
             tree->initializeAllPartialLh();
