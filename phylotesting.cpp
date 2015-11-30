@@ -1302,7 +1302,10 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 		ModelInfo info;        
 		info.set_name = set_name;
 		info.df = tree->getModelFactory()->getNParameters();
-		info.name = tree->getModelName();
+        if (mixture_model)
+            info.name = model_names[model];
+        else
+            info.name = tree->getModelName();
 		int model_id = -1;
         if (skip_model) {
             assert(prev_model_id>=0);
