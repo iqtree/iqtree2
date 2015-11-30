@@ -1395,8 +1395,8 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
                 if (tree->getMemoryRequired() > RAM_requirement) {
                     tree->deleteAllPartialLh();
                     RAM_requirement = tree->getMemoryRequired();
-                    tree->initializeAllPartialLh();
                 }
+                tree->initializeAllPartialLh();
                 if (prev_tree_string != "") {
                     tree->readTreeString(prev_tree_string);
                 }
