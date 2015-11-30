@@ -402,6 +402,10 @@ enum LhMemSave {
 	LM_DETECT, LM_ALL_BRANCH, LM_PER_NODE
 };
 
+enum SiteLoglType {
+    WSL_NONE, WSL_SITE, WSL_RATECAT, WSL_MIXTURE, WSL_MIXTURE_RATECAT
+};
+
 /** maximum number of newton-raphson steps for NNI branch evaluation */
 extern int NNI_MAX_NR_STEP;
 
@@ -1323,11 +1327,13 @@ public:
     bool lk_no_avx;
 
     /**
-     	 	0: do not print anything
-            1: print site log-likelihood
-            2: print site log-likelihood per Gamma category
+     	 	WSL_NONE: do not print anything
+            WSL_SITE: print site log-likelihood
+            WSL_RATECAT: print site log-likelihood per rate category
+            WSL_MIXTURE: print site log-likelihood per mixture class
+            WSL_MIXTURE_RATECAT: print site log-likelihood per mixture class per rate category
      */
-    int print_site_lh;
+    SiteLoglType print_site_lh;
 
     /** TRUE to print site-specific rates, default: FALSE */
     bool print_site_rate;

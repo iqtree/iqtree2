@@ -769,7 +769,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.localbp_replicates = 0;
     params.SSE = LK_EIGEN_SSE;
     params.lk_no_avx = false;
-    params.print_site_lh = 0;
+    params.print_site_lh = WSL_NONE;
     params.print_site_rate = false;
     params.print_site_posterior = 0;
     params.print_tree_lh = false;
@@ -2137,11 +2137,19 @@ void parseArg(int argc, char *argv[], Params &params) {
 				continue;
 			}
 			if (strcmp(argv[cnt], "-wsl") == 0) {
-				params.print_site_lh = 1;
+				params.print_site_lh = WSL_SITE;
 				continue;
 			}
-			if (strcmp(argv[cnt], "-wslg") == 0) {
-				params.print_site_lh = 2;
+			if (strcmp(argv[cnt], "-wslg") == 0 || strcmp(argv[cnt], "-wslr") == 0) {
+				params.print_site_lh = WSL_RATECAT;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-wslm") == 0) {
+				params.print_site_lh = WSL_MIXTURE;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-wslmr") == 0 || strcmp(argv[cnt], "-wslrm") == 0) {
+				params.print_site_lh = WSL_MIXTURE_RATECAT;
 				continue;
 			}
 			if (strcmp(argv[cnt], "-wsr") == 0) {
@@ -3095,12 +3103,13 @@ void usage_iqtree(char* argv[], bool full_command) {
 
 			cout << endl << "MISCELLANEOUS:" << endl
 		    << "  -wt                  Write locally optimal trees into .treels file" << endl
-			<< "  -blfix               Fix branch lengths of <treefile>." << endl
-            << "                       Used with -te to compute log-likelihood of <treefile>" << endl
+			<< "  -blfix               Fix branch lengths of user tree passed via -te" << endl
 			<< "  -blmin               Min branch length for optimization (default 0.000001)" << endl
-			<< "  -blmax               Max branch length for optimization (default 0.000001)" << endl
-			<< "  -wsl                 Writing site log-likelihoods to .sitelh file" << endl
-            << "  -wslg                Writing site log-likelihoods per Gamma category" << endl
+			<< "  -blmax               Max branch length for optimization (default 100)" << endl
+			<< "  -wsl                 Write site log-likelihoods to .sitelh file" << endl
+            << "  -wslr                Write site log-likelihoods per rate category" << endl
+            << "  -wslm                Write site log-likelihoods per mixture class" << endl
+            << "  -wslmr               Write site log-likelihoods per mixture+rate class" << endl
             << "  -fconst f1,...,fN    Add constant patterns into alignment (N=#nstates)" << endl;
 //            << "  -d <file>            Reading genetic distances from file (default: JC)" << endl
 //			<< "  -d <outfile>         Calculate the distance matrix inferred from tree" << endl

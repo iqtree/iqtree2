@@ -1426,7 +1426,7 @@ void printMiscInfo(Params &params, IQTree &iqtree, double *pattern_lh) {
 	if (params.print_site_lh && !params.pll) {
 		string site_lh_file = params.out_prefix;
 		site_lh_file += ".sitelh";
-		if (params.print_site_lh == 1)
+		if (params.print_site_lh == WSL_SITE)
 			printSiteLh(site_lh_file.c_str(), &iqtree, pattern_lh);
 		else
 			printSiteLhCategory(site_lh_file.c_str(), &iqtree);
