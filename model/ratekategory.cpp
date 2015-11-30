@@ -98,17 +98,8 @@ double RateKategory::optimizeParameters(double gradient_epsilon)
 int RateKategory::computePatternRates(DoubleVector& pattern_rates, IntVector& pattern_cat)
 {
 	cout << "Computing site rates by empirical Bayes..." << endl;
-	if (phylo_tree->sse == LK_NORMAL || phylo_tree->sse == LK_SSE)
-		phylo_tree->computeLikelihoodBranchNaive((PhyloNeighbor*)phylo_tree->root->neighbors[0], (PhyloNode*)phylo_tree->root);
-	else {
-//		switch (phylo_tree->aln->num_states) {
-//		case 4: phylo_tree->computeLikelihoodBranchEigen<4>((PhyloNeighbor*)phylo_tree->root->neighbors[0], (PhyloNode*)phylo_tree->root); break;
-//		case 20: phylo_tree->computeLikelihoodBranchEigen<20>((PhyloNeighbor*)phylo_tree->root->neighbors[0], (PhyloNode*)phylo_tree->root); break;
-//		case 2: phylo_tree->computeLikelihoodBranchEigen<2>((PhyloNeighbor*)phylo_tree->root->neighbors[0], (PhyloNode*)phylo_tree->root); break;
-//		default: outError("Option unsupported yet for this sequence type. Contact author if you really need it."); break;
-//		}
-        phylo_tree->computeLikelihoodBranchEigen((PhyloNeighbor*)phylo_tree->root->neighbors[0], (PhyloNode*)phylo_tree->root);
-	}
+
+	phylo_tree->computePatternLhCat();
 
 	int npattern = phylo_tree->aln->getNPattern();
 	pattern_rates.resize(npattern);
