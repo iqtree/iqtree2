@@ -751,6 +751,8 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.optimize_by_newton = true;
     params.optimize_alg = "2-BFGS-B,EM";
     params.fixed_branch_length = false;
+    params.min_branch_length = 0.000001;
+    params.max_branch_length = 100.0;
     params.iqp_assess_quartet = IQP_DISTANCE;
     params.iqp = false;
     params.write_intermediate_trees = 0;
@@ -1925,8 +1927,29 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.optimize_model_rate_joint = false;
 				continue;
 			}
-			if (strcmp(argv[cnt], "-fixbr") == 0) {
+			if (strcmp(argv[cnt], "-fixbr") == 0 || strcmp(argv[cnt], "-blfix") == 0) {
 				params.fixed_branch_length = true;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-blmin") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -blmin <min_branch_length>";
+				params.min_branch_length = convert_double(argv[cnt]);
+				if (params.min_branch_length < 0.0)
+					outError("Negative -blmin not allowed!");
+				if (params.min_branch_length == 0.0)
+					outError("Zero -blmin is not allowed due to numerical problems");
+
+				continue;
+			}
+			if (strcmp(argv[cnt], "-blmax") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -blmax <max_branch_length>";
+				params.max_branch_length = convert_double(argv[cnt]);
+				if (params.max_branch_length < 0.5)
+					outError("-blmax smaller than 0.5 is not allowed");
 				continue;
 			}
 			if (strcmp(argv[cnt], "-sr") == 0) {
@@ -3072,8 +3095,10 @@ void usage_iqtree(char* argv[], bool full_command) {
 
 			cout << endl << "MISCELLANEOUS:" << endl
 		    << "  -wt                  Write locally optimal trees into .treels file" << endl
-			<< "  -fixbr               Fix branch lengths of <treefile>." << endl
-            << "                       Used with -n 0 to compute log-likelihood of <treefile>" << endl
+			<< "  -blfix               Fix branch lengths of <treefile>." << endl
+            << "                       Used with -te to compute log-likelihood of <treefile>" << endl
+			<< "  -blmin               Min branch length for optimization (default 0.000001)" << endl
+			<< "  -blmax               Max branch length for optimization (default 0.000001)" << endl
 			<< "  -wsl                 Writing site log-likelihoods to .sitelh file" << endl
             << "  -wslg                Writing site log-likelihoods per Gamma category" << endl
             << "  -fconst f1,...,fN    Add constant patterns into alignment (N=#nstates)" << endl;

@@ -436,11 +436,11 @@ void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh, 
 		out << "         Such branches are denoted by '**' in the figure below"
 				<< endl << endl;
 	}
-	int long_branches = tree.countLongBranches(NULL, NULL, MAX_BRANCH_LEN-0.2);
+	int long_branches = tree.countLongBranches(NULL, NULL, params.max_branch_length-0.2);
 	if (long_branches > 0) {
 		//stringstream sstr;
 		out << "WARNING: " << long_branches << " too long branches (>" 
-            << MAX_BRANCH_LEN-0.2 << ") should be treated with caution!" << endl;
+            << params.max_branch_length-0.2 << ") should be treated with caution!" << endl;
 		//out << sstr.str();
 		//cout << sstr.str();
 	}

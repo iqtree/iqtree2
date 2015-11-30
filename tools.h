@@ -1211,6 +1211,13 @@ public:
      */
     bool fixed_branch_length;
 
+    /** minimum branch length for optimization, default 0.000001 */
+    double min_branch_length;
+
+    /** maximum branch length for optimization, default 100 */
+    double max_branch_length;
+
+
     /**
             criterion to assess important quartet
      */
