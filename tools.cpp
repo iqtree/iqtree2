@@ -881,6 +881,8 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.freq_const_patterns = NULL;
     params.no_rescale_gamma_invar = false;
     params.compute_seq_identity_along_tree = false;
+    params.link_alpha = false;
+
 
 	if (params.nni5) {
 	    params.nni_type = NNI5;
@@ -2810,6 +2812,11 @@ void parseArg(int argc, char *argv[], Params &params) {
 				continue;
 			}
             
+			if (strcmp(argv[cnt], "--link-alpha") == 0) {
+				params.link_alpha = true;
+				continue;
+			}
+
 			if (argv[cnt][0] == '-') {
                 string err = "Invalid \"";
                 err += argv[cnt];

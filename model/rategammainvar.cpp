@@ -25,6 +25,7 @@ RateGammaInvar::RateGammaInvar(int ncat, double shape, bool median,
 	name = "+I" + name;
 	full_name = "Invar+" + full_name;
 	joint_optimize = simultaneous;
+    cur_optimize = 0;
 	computeRates();
 }
 
@@ -114,6 +115,7 @@ double RateGammaInvar::optimizeParameters(double gradient_epsilon) {
 //		assert(gamma_lh >= invar_lh - 0.1);
 		phylo_tree->clearAllPartialLH();
 //		return gamma_lh;
+        cur_optimize = 0;
         return invar_lh;
 	}
 

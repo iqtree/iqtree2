@@ -117,6 +117,9 @@ double PartitionModelPlen::optimizeParameters(bool fixed_len, bool write_info, d
         	}
 
     	}
+        if (tree->params->link_alpha) {
+            cur_lh = optimizeLinkedAlpha(write_info, gradient_epsilon);
+        }
         if (verbose_mode >= VB_MED)
             cout << "LnL after optimizing individual models: " << cur_lh << endl;
         assert(cur_lh > tree_lh - 1.0 && "individual model opt reduces LnL");
@@ -315,6 +318,8 @@ int PartitionModelPlen::getNParameters() {
     df += tree->branchNum;
     if(!tree->fixed_rates)
     	df += tree->size()-1;
+    if (linked_alpha > 0.0)
+        df ++;
     return df;
 }
 

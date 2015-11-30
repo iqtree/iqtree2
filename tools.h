@@ -1647,6 +1647,9 @@ public:
 	/** TRUE to print concatenated alignment, default: false */
 	bool print_conaln;
 
+	/** TRUE to link alpha among Gamma model over partitions */
+	bool link_alpha;
+
 	/** true to count all distinct trees visited during tree search */
 	bool count_trees;
 
