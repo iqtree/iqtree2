@@ -212,8 +212,9 @@ class ModelPoMo : public ModelGTR
      * vector of variables that is index from 1 (NOTE: not from 0)
      *
      * @param variables Vector of variables, indexed from 1.
+     * @return TRUE if parameters are changed, FALSE otherwise (2015-10-20)
      */
-    virtual void getVariables(double *variables);
+    virtual bool getVariables(double *variables);
 
 
  private:

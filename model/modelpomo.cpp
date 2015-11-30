@@ -50,12 +50,12 @@ void ModelPoMo::init(const char *model_name,
     for (int i = 0; i < 6; i++) mutation_prob[i] = POMO_INIT_RATE;
 
     // TODO: DOM; DEBUGGING IQ-TREE CONVERGENCE ONLY; REMOVE THIS.
-    mutation_prob[0] = 0.00153064;
-    mutation_prob[1] = 0.00399536;
-    mutation_prob[2] = 0.00153064;
-    mutation_prob[3] = 0.00153064;
-    mutation_prob[4] = 0.00399536;
-    mutation_prob[5] = 0.00153064;
+    // mutation_prob[0] = 0.00153064;
+    // mutation_prob[1] = 0.00399536;
+    // mutation_prob[2] = 0.00153064;
+    // mutation_prob[3] = 0.00153064;
+    // mutation_prob[4] = 0.00399536;
+    // mutation_prob[5] = 0.00153064;
 
     // mutation_prob[0] = 0.0014;
     // mutation_prob[1] = 0.00399536;
@@ -489,7 +489,7 @@ void ModelPoMo::setVariables(double *variables) {
     }
 }
 
-void ModelPoMo::getVariables(double *variables) {
+bool ModelPoMo::getVariables(double *variables) {
     int i;
     // for (i = 1; i <= 6; i++) {
     //  mutation_prob[i-1] = variables[i];
@@ -500,8 +500,10 @@ void ModelPoMo::getVariables(double *variables) {
     // updatePoMoStatesAndRates();
 
     // TODO: DOM; DEBUGGING IQ-TREE CONVERGENCE ONLY; REMOVE THIS.
-    return;
+    // return;
 
+    bool changed = false;
+    
     if (num_params > 0) {
         int num_all = dna_model->param_spec.length();
         if (verbose_mode >= VB_MAX) {
@@ -511,11 +513,15 @@ void ModelPoMo::getVariables(double *variables) {
                 cout << variables[i] << endl;
             }
         }
-        for (i = 0; i < num_all; i++)
+        for (i = 0; i < num_all; i++) {
+            if (mutation_prob[i] != variables[(int)dna_model->param_spec[i]+1])
+                changed = true;
             mutation_prob[i] = variables[(int)dna_model->param_spec[i]+1];
+        }
     }
     if (freq_type == FREQ_ESTIMATE) {
         int ndim = getNDim();
+        changed = true;
         memcpy(freq_fixed_states, variables+(ndim-nnuc+2), (nnuc-1)*sizeof(double));
         if (verbose_mode >= VB_MAX) {
             for (i = 0; i < nnuc-1; i++) {
@@ -530,6 +536,7 @@ void ModelPoMo::getVariables(double *variables) {
         // state_freq[num_states-1] = 1.0 - sum;
     }
     updatePoMoStatesAndRates();
+    return changed;
 }
 
 void ModelPoMo::writeInfo(ostream &out) {
