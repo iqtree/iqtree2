@@ -238,28 +238,56 @@ void printSiteLh(const char*filename, PhyloTree *tree, double *ptn_lh,
 		delete[] pattern_lh;
 }
 
-void printSiteLhCategory(const char*filename, PhyloTree *tree) {
-    // TODO: mixture model!
+void printSiteLhCategory(const char*filename, PhyloTree *tree, SiteLoglType wsl) {
+
+	int ncat = tree->getRate()->getNDiscreteRate();
     if (tree->getModel()->isMixture() && !tree->getModelFactory()->fused_mix_rate)
-        outError("Unsupported feature, please contact author if you really need this", __func__);
+        ncat *= tree->getModel()->getNMixtures();
+
 	double *pattern_lh, *pattern_lh_cat;
 	int i;
-	int discrete_cat = tree->getRate()->getNDiscreteRate();
 	pattern_lh = new double[tree->getAlnNPattern()];
-	pattern_lh_cat = new double[tree->getAlnNPattern()*(discrete_cat)];
+	pattern_lh_cat = new double[tree->getAlnNPattern()*ncat];
 	tree->computePatternLikelihood(pattern_lh, NULL, pattern_lh_cat);
-        
+
+    switch (wsl) {
+    case WSL_NONE: return;
+    case WSL_SITE: return;
+    case WSL_RATECAT: 
+        if (tree->getModel()->isMixture() && !tree->getModelFactory()->fused_mix_rate)
+            outError("Unsupported feature, please contact author if you really need this ", __func__);
+        ncat = tree->getRate()->getNDiscreteRate();
+        break;
+    case WSL_MIXTURE:
+        ncat = tree->getModel()->getNMixtures();
+        break;
+    case WSL_MIXTURE_RATECAT:
+        outError("Unsupported feature, please contact author if you really need this ", __func__);
+        break;
+    }
+
+
+    
 	try {
 		ofstream out;
 		out.exceptions(ios::failbit | ios::badbit);
 		out.open(filename);
 		out << "Note : P(D|M) is the probability of site D given the model M (i.e., the site likelihood)" << endl;
-		out << "P(D|M,rr[x]) is the probability of site D given the model M and the relative rate" << endl;
-		out << "of evolution rr[x], where x is the class of rate to be considered." << endl;
-		out << "We have P(D|M) = \\sum_x P(x) x P(D|M,rr[x])." << endl << endl;
+        if (wsl == WSL_RATECAT) {
+            out << "P(D|M,rr[x]) is the probability of site D given the model M and the relative rate" << endl;
+            out << "of evolution rr[x], where x is the class of rate to be considered." << endl;
+            out << "We have P(D|M) = \\sum_x P(x) x P(D|M,rr[x])." << endl << endl;
+        } else if (wsl == WSL_MIXTURE) {
+            out << "P(D|M[x]) is the probability of site D given the model M[x]," << endl;
+            out << "where x is the mixture class to be considered." << endl;
+            out << "We have P(D|M) = \\sum_x P(x) x P(D|M[x])." << endl << endl;
+        }
 		out << "Site   logP(D|M)       ";
-		for (i = 0; i < discrete_cat; i++) {
-			out << "logP(D|M,rr[" << i+1 << "]=" << tree->getRate()->getRate(i)<< ") ";
+		for (i = 0; i < ncat; i++) {
+            if (wsl == WSL_RATECAT) 
+                out << "logP(D|M,rr[" << i+1 << "]=" << tree->getRate()->getRate(i)<< ") ";
+            else
+                out << "logP(D|M[" << i+1 << "]) ";
 		}
 		out << endl;
 		IntVector pattern_index;
@@ -269,9 +297,9 @@ void printSiteLhCategory(const char*filename, PhyloTree *tree) {
 			out << left << i+1 << " ";
 			out.width(15);
 			out << pattern_lh[pattern_index[i]] << " ";
-			for (int j = 0; j < discrete_cat; j++) {
+			for (int j = 0; j < ncat; j++) {
 				out.width(15);
-				out << pattern_lh_cat[pattern_index[i]*discrete_cat+j] << " ";
+				out << pattern_lh_cat[pattern_index[i]*ncat+j] << " ";
 			}
 			out << endl;
 		}

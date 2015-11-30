@@ -1429,7 +1429,7 @@ void printMiscInfo(Params &params, IQTree &iqtree, double *pattern_lh) {
 		if (params.print_site_lh == WSL_SITE)
 			printSiteLh(site_lh_file.c_str(), &iqtree, pattern_lh);
 		else
-			printSiteLhCategory(site_lh_file.c_str(), &iqtree);
+			printSiteLhCategory(site_lh_file.c_str(), &iqtree, params.print_site_lh);
 	}
 
     if (params.print_site_posterior) {
