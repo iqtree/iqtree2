@@ -1281,6 +1281,10 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
                 freq_type = FREQ_CODON_3x4;
             else if (model_names[model].find("+FQ") != string::npos)
                 freq_type = FREQ_EQUAL;
+            else if (model_names[model].find("+FO") != string::npos)
+                freq_type = FREQ_ESTIMATE;
+            else if (model_names[model].find("+FU") != string::npos)
+                freq_type = FREQ_USER_DEFINED;
             else if (model_names[model].find("+F") != string::npos)
                 freq_type = FREQ_EMPIRICAL;
                 
