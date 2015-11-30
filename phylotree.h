@@ -22,7 +22,7 @@
 
 //#define EIGEN_TUNE_FOR_CPU_CACHE_SIZE (512*256)
 //#define EIGEN_TUNE_FOR_CPU_CACHE_SIZE (8*512*512)
-#include "Eigen/Core"
+#include <Eigen/Core>
 #include "mtree.h"
 #include "alignment.h"
 #include "model/modelsubst.h"
@@ -723,6 +723,12 @@ public:
     virtual double computeLikelihood(double *pattern_lh = NULL);
 
     /**
+     * compute _pattern_lh_cat for site-likelihood per category
+     * @return tree log-likelihood
+     */
+    virtual double computePatternLhCat();
+
+    /**
             compute pattern likelihoods only if the accumulated scaling factor is non-zero.
             Otherwise, copy the pattern_lh attribute
             @param pattern_lh (OUT) pattern log-likelihoods,
@@ -1005,6 +1011,8 @@ public:
      * @param dad dad of the node, used to direct the search
      */
     void optimizeAllBranchesLS(PhyloNode *node = NULL, PhyloNode *dad = NULL);
+
+    void computeBestTraversal(NodeVector &nodes, NodeVector &nodes2);
 
     /**
             optimize all branch lengths of the tree
@@ -1458,6 +1466,8 @@ public:
 
 	/** sequence that are identical to one of the removed sequences */
 	StrVector twin_seqs;
+
+	size_t num_partial_lh_computations;
 
 	/** remove identical sequences from the tree */
     virtual void removeIdenticalSeqs(Params &params);

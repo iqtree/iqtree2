@@ -2035,3 +2035,53 @@ void MTree::removeTaxa(StrVector &taxa_names) {
 	leafNum = taxa.size();
 	initializeTree();
 }
+
+Node *MTree::findFarthestLeaf(Node *node, Node *dad) {
+    if (!node) 
+        node = root;
+    else if (node->isLeaf()) {
+        node->height = 0.0;
+        return node;
+    }
+    Node *res = NULL;
+    node->height = 0.0;
+    FOR_NEIGHBOR_IT(node, dad, it) {
+        Node *leaf = findFarthestLeaf((*it)->node, node);
+        if (node->height < (*it)->node->height+1) {
+            node->height = (*it)->node->height+1;
+            res = leaf;
+        }
+    }
+    return res;
+}
+
+void MTree::sortNeighborBySubtreeSize(Node *node, Node *dad) {
+    if (dad && node->isLeaf()) {
+        node->height = 1.0;
+        return;
+    }
+    
+    node->height = 0.0;
+    FOR_NEIGHBOR_DECLARE(node, dad, it) {
+        sortNeighborBySubtreeSize((*it)->node, node);
+        node->height += (*it)->node->height;
+    }
+    
+    FOR_NEIGHBOR(node, dad, it)
+        for (NeighborVec::iterator it2 = it+1; it2 != node->neighbors.end(); it2++)
+            if ((*it)->node != dad && (*it)->node->height > (*it2)->node->height) {
+                Neighbor *nei;
+                nei = *it;
+                *it = *it2;
+                *it2 = nei;
+            }
+}
+
+void MTree::getPreOrderBranches(NodeVector &nodes, NodeVector &nodes2, Node *node, Node *dad) {
+    if (dad) {
+        nodes.push_back(node);
+        nodes2.push_back(dad);
+    }
+    FOR_NEIGHBOR_IT(node, dad, it) 
+        getPreOrderBranches(nodes, nodes2, (*it)->node, node);
+}

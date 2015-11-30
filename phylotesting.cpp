@@ -572,7 +572,7 @@ int getModelList(Params &params, Alignment *aln, StrVector &models, bool separat
             for (int k = params.min_rate_cats+1; k <= params.max_rate_cats; k++) {
                 ratehet.insert(ratehet.begin()+j+k-params.min_rate_cats, str.substr(0, pos+2) + convertIntToString(k) + str.substr(pos+2));
             }
-            break;
+//            break;
         }
 
     if (separate_rate) {
@@ -1319,11 +1319,14 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
             info.tree = model_info[model_id].tree;
             prev_tree_string = model_info[model_id].tree;
         } else if (skip_model) {
+            assert(prev_model_id >= 0);
+            if (prev_model_id >= 0) {
             info.logl = model_info[prev_model_id].logl;
             info.tree_len = model_info[prev_model_id].tree_len;
 //            info.tree = model_info[prev_model_id].tree;
-            prev_tree_string = model_info[prev_model_id].tree;
+//            prev_tree_string = model_info[prev_model_id].tree;
 //            cout << "Skipped " << info.name << endl;
+            }
 		} else {
             if (params.model_test_and_tree) {
                 string original_model = params.model_name;

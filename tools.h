@@ -435,6 +435,16 @@ public:
 	bool testAlpha;
 
     /**
+     *  Automatic adjust the log-likelihood espilon using some heuristic
+     */
+    bool testAlphaEpsAdaptive;
+
+    /**
+     *  Use random starting points for alpha
+     */
+    bool randomAlpha;
+
+    /**
      *  Logl epsilon to test for initial alpha and pinvar values.
      *  This does not need to be small (default value = 100)
      */
@@ -1041,6 +1051,11 @@ public:
         threshold of split frequency, splits appear less than threshold will be discarded
      */
     double split_threshold;
+
+    /**
+        thresholds of split frequency with back-slash separator
+     */
+    char* split_threshold_str;
 
     /**
             threshold of split weight, splits with weight less than or equal to threshold will be discarded
@@ -1876,8 +1891,9 @@ double convert_double(const char *str, int &end_pos) throw (string);
         convert comma-separated string to integer vector, with error checking
         @param str original string with integers separated by comma
         @param vec (OUT) integer vector
+        @param separator char separating elements
  */
-void convert_double_vec(const char *str, DoubleVector &vec) throw (string);
+void convert_double_vec(const char *str, DoubleVector &vec, char separator = ',') throw (string);
 
 /**
  * Convert seconds to hour, minute, second

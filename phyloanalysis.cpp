@@ -49,7 +49,7 @@
 #include "whtest_wrapper.h"
 #include "model/partitionmodel.h"
 #include "model/modelmixture.h"
-#include "guidedbootstrap.h"
+//#include "guidedbootstrap.h"
 #include "model/modelset.h"
 #include "timeutil.h"
 #include "upperbounds.h"
@@ -283,8 +283,8 @@ void reportModel(ofstream &out, PhyloTree &tree) {
 	int i;
 
 	if (tree.getModel()->isMixture()) {
-		out << "Mixture model of substitution: " << tree.params->model_name << endl;
-		out << "Full name: " << tree.getModelName() << endl;
+		out << "Mixture model of substitution: " << tree.getModelName() << endl;
+//		out << "Full name: " << tree.getModelName() << endl;
 		ModelMixture *mmodel = (ModelMixture*) tree.getModel();
 		out << endl << "  No  Component      Rate    Weight   Parameters" << endl;
 		i = 0;
@@ -357,8 +357,10 @@ void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh, 
 	double AIC_score, AICc_score, BIC_score;
 	computeInformationScores(tree_lh, df, ssize, AIC_score, AICc_score, BIC_score);
     
-	out << "Log-likelihood of the tree: " << fixed << tree_lh << " (s.e. "
-			<< sqrt(lh_variance) << ")" << endl;
+	out << "Log-likelihood of the tree: " << fixed << tree_lh;
+    if (lh_variance > 0.0) 
+        out << " (s.e. " << sqrt(lh_variance) << ")";
+    out << endl;
     out	<< "Unconstrained log-likelihood (without tree): " << tree.aln->computeUnconstrainedLogL() << endl;
 
     out << "Number of free parameters (#branches + #model parameters): " << df << endl;
@@ -768,7 +770,7 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 			tree.setRootNode(params.root);
             
             if (params.gbo_replicates) {
-                if (tree.boot_consense_logl > tree.candidateTrees.getBestScore()) {
+                if (tree.boot_consense_logl > tree.candidateTrees.getBestScore() + 0.1) {
                     out << endl << "**NOTE**: Consensus tree has higher likelihood than ML tree found! Please use consensus tree below." << endl;
                 }
             }
@@ -797,7 +799,8 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 						root_name = (*it)->aln->getSeqName(0);
 					(*it)->root = (*it)->findNodeName(root_name);
 					assert((*it)->root);
-					reportTree(out, params, *(*it), (*it)->computeLikelihood(), (*it)->computeLogLVariance(), false);
+//					reportTree(out, params, *(*it), (*it)->computeLikelihood(), (*it)->computeLogLVariance(), false);
+					reportTree(out, params, *(*it), stree->part_info[part].cur_score, 0.0, false);
 				}
 			}
 
@@ -1563,6 +1566,7 @@ void printFinalSearchInfo(Params &params, IQTree &iqtree, double search_cpu_time
 	params.run_time = (getCPUTime() - params.startCPUTime);
 	cout << endl;
 	cout << "Total number of iterations: " << iqtree.stop_rule.getCurIt() << endl;
+    cout << "Total number of partial likelihood vector computations: " << iqtree.num_partial_lh_computations << endl;
 	cout << "CPU time used for tree search: " << search_cpu_time
 			<< " sec (" << convert_time(search_cpu_time) << ")" << endl;
 	cout << "Wall-clock time used for tree search: " << search_real_time
@@ -1827,7 +1831,8 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 		iqtree.readTreeString(iqtree.candidateTrees.getTopTrees()[0]);
 		iqtree.doTreeSearch();
 		iqtree.setAlignment(iqtree.aln);
-        cout << "TREE SEARCH COMPLETED AFTER " << iqtree.stop_rule.getCurIt() << " ITERATIONS" << endl << endl;
+        cout << "TREE SEARCH COMPLETED AFTER " << iqtree.stop_rule.getCurIt() << " ITERATIONS" 
+            << " / Time: " << convert_time(getRealTime() - params.start_real_time) << endl << endl;
 	} else {
 		/* do SPR with likelihood function */
 		if (params.tree_spr) {
@@ -1923,7 +1928,8 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 
 	if (params.gbo_replicates > 0) {
 		if (!params.online_bootstrap)
-			runGuidedBootstrap(params, iqtree.aln, iqtree);
+			outError("Obsolete feature");
+//			runGuidedBootstrap(params, iqtree.aln, iqtree);
 		else
 			iqtree.summarizeBootstrap(params);
 	}
@@ -2004,7 +2010,16 @@ void searchGAMMAInvarByRestarting(IQTree &iqtree) {
 	else
 		iqtree.setCurScore(iqtree.computeLikelihood());
 	RateGammaInvar* site_rates = dynamic_cast<RateGammaInvar*>(iqtree.getRate());
-	double initAlphas[] = { 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0 };
+	double values[] = { 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0 };
+	vector<double> initAlphas;
+	if (Params::getInstance().randomAlpha) {
+		while (initAlphas.size() < 10) {
+			double initAlpha = random_double();
+			initAlphas.push_back(initAlpha + MIN_GAMMA_SHAPE*2);
+		}
+	} else {
+		initAlphas.assign(values, values+10);
+	}
 	double bestLogl = iqtree.getCurScore();
 	double bestAlpha = 0.0;
 	double bestPInvar = 0.0;
@@ -2035,7 +2050,7 @@ void searchGAMMAInvarByRestarting(IQTree &iqtree) {
 		site_rates->setPInvar(initPInvar);
 		site_rates->computeRates();
 		iqtree.clearAllPartialLH();
-		iqtree.optimizeModelParameters(verbose_mode >= VB_MED, 0.1);
+		iqtree.optimizeModelParameters(verbose_mode >= VB_MED, Params::getInstance().testAlphaEps);
         double estAlpha = iqtree.getRate()->getGammaShape();
         double estPInv = iqtree.getRate()->getPInvar();
         double logl = iqtree.getCurScore();
@@ -2231,9 +2246,9 @@ void runStandardBootstrap(Params &params, string &original_model, Alignment *ali
 		if (params.num_bootstrap_samples == 1)
 			reportPhyloAnalysis(params, original_model, *boot_tree, *model_info);
 		// WHY was the following line missing, which caused memory leak?
+		bootstrap_alignment = boot_tree->aln;
 		delete boot_tree;
 		// fix bug: bootstrap_alignment might be changed
-		bootstrap_alignment = boot_tree->aln;
 		delete bootstrap_alignment;
 	}
 
@@ -2382,13 +2397,16 @@ void runPhyloAnalysis(Params &params) {
 		convertAlignment(params, tree);
 	} else if (params.gbo_replicates > 0 && params.user_file && params.second_tree) {
 		// run one of the UFBoot analysis
-		runGuidedBootstrap(params, alignment, *tree);
+//		runGuidedBootstrap(params, alignment, *tree);
+		outError("Obsolete feature");
 	} else if (params.avh_test) {
 		// run one of the wondering test for Arndt
-		runAvHTest(params, alignment, *tree);
+//		runAvHTest(params, alignment, *tree);
+		outError("Obsolete feature");
 	} else if (params.bootlh_test) {
 		// run Arndt's plot of tree likelihoods against bootstrap alignments
-		runBootLhTest(params, alignment, *tree);
+//		runBootLhTest(params, alignment, *tree);
+		outError("Obsolete feature");
 	} else if (params.num_bootstrap_samples == 0) {
 		// the main Maximum likelihood tree reconstruction
 		vector<ModelInfo> *model_info = new vector<ModelInfo>;
@@ -2484,9 +2502,12 @@ void runPhyloAnalysis(Params &params) {
 			((PhyloSuperTreePlen*) tree)->printNNIcasesNUM();
 		}
 	}
+    // 2015-09-22: bug fix, move this line to before deleting tree
+    alignment = tree->aln;
 	delete tree;
 	// BUG FIX: alignment can be changed, should delete tree->aln instead
-	alignment = tree->aln;
+    // 2015-09-22: THIS IS STUPID: after deleting tree, one cannot access tree->aln anymore
+//	alignment = tree->aln;
 	delete alignment;
 }
 

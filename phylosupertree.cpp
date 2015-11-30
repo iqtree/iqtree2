@@ -308,6 +308,7 @@ void PhyloSuperTree::readPartitionNexus(Params &params) {
 
     if (input_aln)
     	delete input_aln;
+    delete sets_block;
 }
 
 void PhyloSuperTree::printPartition(const char *filename) {

@@ -2086,6 +2086,24 @@ void processECOpd(Params &params) {
 	}
 }
 
+void collapseLowBranchSupport(char *user_file, char *split_threshold_str) {
+    DoubleVector minsup;
+    convert_double_vec(split_threshold_str, minsup, '/');
+    if (minsup.empty())
+        outError("wrong -minsupnew argument, please use back-slash separated string");
+    MExtTree tree;
+    bool isrooted = false;
+    tree.readTree(user_file, isrooted);
+    tree.collapseLowBranchSupport(minsup);
+    tree.collapseZeroBranches();
+    if (verbose_mode >= VB_MED)
+        tree.drawTree(cout);
+    string outfile = (string)user_file + ".collapsed";
+    tree.printTree(outfile.c_str());
+    cout << "Tree with collapsed branches written to " << outfile << endl;
+}
+
+
 /********************************************************
 	main function
 ********************************************************/
@@ -2363,6 +2381,9 @@ int main(int argc, char *argv[])
 			/**MINH ANH: for some comparison*/
 			case COMPARE: compare(Params::getInstance()); break; //MA
 		}
+    } else if (Params::getInstance().split_threshold_str) {
+        // for Ricardo: keep those splits from input tree above given support threshold
+        collapseLowBranchSupport(Params::getInstance().user_file, Params::getInstance().split_threshold_str);
 	} else {
 		Params::getInstance().intype = detectInputFile(Params::getInstance().user_file);
 		if (Params::getInstance().intype == IN_NEWICK && Params::getInstance().pdtaxa_file && Params::getInstance().tree_gen == NONE) {

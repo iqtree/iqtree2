@@ -68,10 +68,28 @@ void ModelGTR::setTree(PhyloTree *tree) {
 	phylo_tree = tree;
 }
 
+string ModelGTR::getName() {
+	if (getFreqType() == FREQ_EMPIRICAL)
+		return name + "+F";
+	else if (getFreqType() == FREQ_CODON_1x4)
+		return name += "+F1X4";
+	else if (getFreqType() == FREQ_CODON_3x4)
+		return name + "+F3X4";
+	else if (getFreqType() == FREQ_CODON_3x4C)
+		return name + "+F3X4C";
+	else if (getFreqType() == FREQ_ESTIMATE && phylo_tree->aln->seq_type != SEQ_DNA)
+		return name + "+FO";
+	else if (getFreqType() == FREQ_EQUAL && phylo_tree->aln->seq_type != SEQ_DNA)
+		return name + "+FQ";
+    else
+        return name;
+}
+
 string ModelGTR::getNameParams() {
+
 	ostringstream retname;
-	retname << "GTR";
-	if (num_states != 4) retname << num_states;
+	retname << name;
+//	if (num_states != 4) retname << num_states;
 	retname << '{';
 	int nrates = getNumRateEntries();
 	for (int i = 0; i < nrates; i++) {
@@ -79,7 +97,31 @@ string ModelGTR::getNameParams() {
 		retname << rates[i];
 	}
 	retname << '}';
-	return retname.str();
+    getNameParamsFreq(retname);
+    return retname.str();    
+}
+    
+void ModelGTR::getNameParamsFreq(ostream &retname) {
+	if (getFreqType() == FREQ_EMPIRICAL || (getFreqType() == FREQ_USER_DEFINED && phylo_tree->aln->seq_type == SEQ_DNA)) {
+		retname << "+F";
+        retname << "{" << state_freq[0];
+        for (int i = 1; i < num_states; i++)
+            retname << "," << state_freq[i];
+        retname << "}";
+	} else if (getFreqType() == FREQ_CODON_1x4)
+		retname << "+F1X4";
+	else if (getFreqType() == FREQ_CODON_3x4)
+		retname << "+F3X4";
+	else if (getFreqType() == FREQ_CODON_3x4C)
+		name += "+F3X4C";
+	else if (getFreqType() == FREQ_ESTIMATE) {
+		retname << "+FO";
+        retname << "{" << state_freq[0];
+        for (int i = 1; i < num_states; i++)
+            retname << "," << state_freq[i];
+        retname << "}";
+    } else if (getFreqType() == FREQ_EQUAL && phylo_tree->aln->seq_type != SEQ_DNA)
+		retname << "+FQ";
 }
 
 void ModelGTR::init(StateFreqType type) {
@@ -362,6 +404,16 @@ int ModelGTR::getNDim() {
 	return ndim;
 }
 
+int ModelGTR::getNDimFreq() { 
+	if (freq_type == FREQ_EMPIRICAL) 
+        return num_states-1;
+	else if (freq_type == FREQ_CODON_1x4) 
+        return 3;
+	else if (freq_type == FREQ_CODON_3x4 || freq_type == FREQ_CODON_3x4C) 
+        return 9;
+    
+    return 0;
+}
 
 void ModelGTR::scaleStateFreq(bool sum_one) {
 	int i;
@@ -503,10 +555,10 @@ double ModelGTR::optimizeParameters(double gradient_epsilon) {
 	setVariables(variables);
 	setBounds(lower_bound, upper_bound, bound_check);
 	//packData(variables, lower_bound, upper_bound, bound_check);
-    if (phylo_tree->params->optimize_alg.find("BFGS-B") == string::npos)
+//    if (phylo_tree->params->optimize_alg.find("BFGS-B") == string::npos)
         score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound, bound_check, max(gradient_epsilon, TOL_RATE));
-    else
-        score = -L_BFGS_B(ndim, variables+1, lower_bound+1, upper_bound+1, max(gradient_epsilon, TOL_RATE));
+//    else
+//        score = -L_BFGS_B(ndim, variables+1, lower_bound+1, upper_bound+1, max(gradient_epsilon, TOL_RATE));
 
 	getVariables(variables);
     // BQM 2015-09-07: normalize state_freq
@@ -719,8 +771,8 @@ void ModelGTR::readStateFreq(string str) throw(const char*) {
 			outError("State frequency must be in [0,1] in ", str);
 		if (i == num_states-1 && end_pos < str.length())
 			outError("Unexpected end of string ", str);
-		if (end_pos < str.length() && str[end_pos] != ',')
-			outError("Comma to separate state frequencies not found in ", str);
+		if (end_pos < str.length() && str[end_pos] != ',' && str[end_pos] != ' ')
+			outError("Comma/Space to separate state frequencies not found in ", str);
 		end_pos++;
 	}
 	double sum = 0.0;

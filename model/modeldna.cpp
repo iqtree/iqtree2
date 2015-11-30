@@ -243,6 +243,7 @@ string ModelDNA::getNameParams() {
 		}
 	}
 	retname << '}';
+    getNameParamsFreq(retname);
 	return retname.str();
 }
 

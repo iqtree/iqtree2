@@ -237,43 +237,23 @@ void IQTree::initSettings(Params &params) {
     }
 }
 
-void myPartitionsDestroy(partitionList *pl) {
-	int i;
-	for (i = 0; i < pl->numberOfPartitions; i++) {
-		rax_free(pl->partitionData[i]->partitionName);
-		rax_free(pl->partitionData[i]);
-	}
-	rax_free(pl->partitionData);
-	rax_free(pl);
-}
-
 IQTree::~IQTree() {
     //if (bonus_values)
     //delete bonus_values;
     //bonus_values = NULL;
-    if (dist_matrix)
-        delete[] dist_matrix;
-    dist_matrix = NULL;
-
-    if (var_matrix)
-        delete[] var_matrix;
-    var_matrix = NULL;
 
     for (vector<double*>::reverse_iterator it = treels_ptnlh.rbegin(); it != treels_ptnlh.rend(); it++)
         delete[] (*it);
     treels_ptnlh.clear();
     for (vector<SplitGraph*>::reverse_iterator it2 = boot_splits.rbegin(); it2 != boot_splits.rend(); it2++)
         delete (*it2);
+    boot_splits.clear();
     //if (boot_splits) delete boot_splits;
-    if (pllPartitions)
-    	myPartitionsDestroy(pllPartitions);
-    if (pllAlignment)
-    	pllAlignmentDataDestroy(pllAlignment);
-    if (pllInst)
-        pllDestroyInstance(pllInst);
 
-    if (!boot_samples.empty())
+    if (!boot_samples.empty()) {
     	aligned_free(boot_samples[0]); // free memory
+        boot_samples.clear();
+    }
 }
 
 extern const char *aa_model_names_rax[];
@@ -282,38 +262,72 @@ void IQTree::createPLLPartition(Params &params, ostream &pllPartitionFileHandle)
     if (isSuperTree()) {
         PhyloSuperTree *siqtree = (PhyloSuperTree*) this;
         // additional check for PLL hard limit
-        if (siqtree->size() > PLL_NUM_BRANCHES)
-        	outError("Number of partitions exceeds PLL limit, please increase PLL_NUM_BRANCHES constant in pll.h");
-        int i = 0;
-        int startPos = 1;
-        for (PhyloSuperTree::iterator it = siqtree->begin(); it != siqtree->end(); it++) {
-            i++;
-            int curLen = ((*it))->getAlnNSite();
-            if ((*it)->aln->seq_type == SEQ_DNA) {
-                pllPartitionFileHandle << "DNA";
-            } else if ((*it)->aln->seq_type == SEQ_PROTEIN) {
-            	if (siqtree->part_info[i-1].model_name != "" && siqtree->part_info[i-1].model_name.substr(0, 4) != "TEST") {
-                    string modelStr = siqtree->part_info[i - 1].model_name.
-                            substr(0, siqtree->part_info[i - 1].model_name.find_first_of("+{"));
-                    if (modelStr == "LG4")
-                        modelStr = "LG4M";
-                    bool name_ok = false;
-                    for (int j = 0; j < 18; j++)
-                        if (modelStr == aa_model_names_rax[j]) {
-                            name_ok = true;
-                            break;
+        if (params.pll) {
+            if (siqtree->size() > PLL_NUM_BRANCHES)
+                outError("Number of partitions exceeds PLL limit, please increase PLL_NUM_BRANCHES constant in pll.h");
+            int i = 0;
+            int startPos = 1;
+            
+            // prepare proper partition file 
+            for (PhyloSuperTree::iterator it = siqtree->begin(); it != siqtree->end(); it++) {
+                i++;
+                int curLen = ((*it))->getAlnNSite();
+                if ((*it)->aln->seq_type == SEQ_DNA) {
+                    pllPartitionFileHandle << "DNA";
+                } else if ((*it)->aln->seq_type == SEQ_PROTEIN) {
+                    if (siqtree->part_info[i-1].model_name != "" && siqtree->part_info[i-1].model_name.substr(0, 4) != "TEST") {
+                        string modelStr = siqtree->part_info[i - 1].model_name.
+                                substr(0, siqtree->part_info[i - 1].model_name.find_first_of("+{"));
+                        if (modelStr == "LG4")
+                            modelStr = "LG4M";
+                        bool name_ok = false;
+                        for (int j = 0; j < 18; j++)
+                            if (modelStr == aa_model_names_rax[j]) {
+                                name_ok = true;
+                                break;
+                            }
+                        if (name_ok)
+                            pllPartitionFileHandle << modelStr;
+                        else
+                            pllPartitionFileHandle << "WAG";                    
+                    } else {
+                        pllPartitionFileHandle << "WAG";
+                    }
+                } else
+                    outError("PLL only works with DNA/protein alignments");
+                pllPartitionFileHandle << ", p" << i << " = " << startPos << "-" << startPos + curLen - 1 << endl;
+                startPos = startPos + curLen;
+            }
+        } else {
+            // only prepare partition file for computing parsimony trees
+            SeqType datatype[] = {SEQ_DNA, SEQ_PROTEIN};
+            PhyloSuperTree::iterator it;
+            
+            for (int i = 0; i < sizeof(datatype)/sizeof(SeqType); i++) {
+                bool first = true;
+                int startPos = 1;
+                for (it = siqtree->begin(); it != siqtree->end(); it++) 
+                    if ((*it)->aln->seq_type == datatype[i]) {
+                        if (first) {
+                        if (datatype[i] == SEQ_DNA)
+                            pllPartitionFileHandle << "DNA";
+                        else
+                            pllPartitionFileHandle << "WAG";
                         }
-                    if (name_ok)
-                        pllPartitionFileHandle << modelStr;
-                    else
-                        pllPartitionFileHandle << "WAG";                    
-                } else {
-                    pllPartitionFileHandle << "WAG";
-                }
-            } else
-            	outError("PLL only works with DNA/protein alignments");
-            pllPartitionFileHandle << ", p" << i << " = " << startPos << "-" << startPos + curLen - 1 << endl;
-            startPos = startPos + curLen;
+                        int curLen = (*it)->getAlnNSite();                    
+                        if (first) 
+                            pllPartitionFileHandle << ", p" << i << " = ";
+                        else
+                            pllPartitionFileHandle << ", ";
+                            
+                        pllPartitionFileHandle << startPos << "-" << startPos + curLen - 1;
+                        startPos = startPos + curLen;
+                        first = false;
+                    } else {
+                        startPos = startPos + (*it)->getAlnNSite();
+                    }
+                if (!first) pllPartitionFileHandle << endl;
+            }
         }
     } else {
         /* create a partition file */
@@ -434,7 +448,10 @@ void IQTree::computeInitialTree(string &dist_file, LikelihoodKernel kernel) {
 void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
 
     if (nParTrees > 0) {
-        cout << "Generating " << nParTrees  << " parsimony trees... ";
+        if (params->start_tree == STT_RANDOM_TREE)
+            cout << "Generating " << nParTrees  << " random trees... ";
+        else
+            cout << "Generating " << nParTrees  << " parsimony trees... ";
         cout.flush();
     }
     double startTime = getRealTime();
@@ -471,7 +488,11 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
 			PhyloTree::readTreeString(curParsTree);
 			wrapperFixNegativeBranch(true);
 			curParsTree = getTreeString();
-        } else {
+        } else if (params->start_tree == STT_RANDOM_TREE) {
+            generateRandomTree(YULE_HARDING);
+            wrapperFixNegativeBranch(true);
+			curParsTree = getTreeString();
+        } else if (params->start_tree == STT_PARSIMONY) {
             /********* Create parsimony tree using IQ-TREE *********/
 #ifdef _OPENMP
             curParsTree = pars_trees[treeNr-1];
@@ -479,6 +500,8 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
             computeParsimonyTree(NULL, aln);
             curParsTree = getTreeString();
 #endif
+        } else {
+            assert(0);
         }
 
         if (candidateTrees.treeExist(curParsTree)) {
@@ -2306,6 +2329,9 @@ void IQTree::doNNIs(int nni2apply, bool changeBran) {
             changeNNIBrans(nonConfNNIs.at(i));
         }
     }
+    // 2015-10-14: has to reset this pointer when read in
+    current_it = current_it_back = NULL;
+    
 //    if (params->lh_mem_save == LM_PER_NODE) {
 //        initializeAllPartialLh();
 //    }

@@ -33,6 +33,11 @@ MSetsBlock::~MSetsBlock()
 		delete *it;
 	}
 	sets.clear();
+
+    for (vector<CharSet* >::reverse_iterator it2 = charsets.rbegin(); it2 != charsets.rend(); it2++)
+        delete *it2;
+        
+    charsets.clear();
 }
 
 

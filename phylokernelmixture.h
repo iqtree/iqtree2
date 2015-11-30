@@ -675,6 +675,8 @@ void PhyloTree::computeMixtureLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch,
 
 			// ptn_invar[ptn] is not aligned
 			lh_ptn = horizontal_add(vc_ptn) + VectorClass().load(&ptn_invar[ptn]);
+			df_ptn = horizontal_add(vc_df);
+			ddf_ptn = horizontal_add(vc_ddf);
 
 		}
 		switch ((nptn-orig_nptn) % VCSIZE) {
