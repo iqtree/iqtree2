@@ -1239,15 +1239,19 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
         
         if (models_block->findMixModel(model_names[model])) {
             // mixture model
-            mixture_model = true;
-            params.model_name = model_names[model];
-            this_model_fac = new ModelFactory(params, tree, models_block);
-            tree->setModelFactory(this_model_fac);
-            tree->setModel(this_model_fac->model);
-            tree->setRate(this_model_fac->site_rate);
-            tree->deleteAllPartialLh();
-            tree->initializeAllPartialLh();
-            RAM_requirement = max(RAM_requirement, tree->getMemoryRequired());
+            try {
+                mixture_model = true;
+                params.model_name = model_names[model];
+                this_model_fac = new ModelFactory(params, tree, models_block);
+                tree->setModelFactory(this_model_fac);
+                tree->setModel(this_model_fac->model);
+                tree->setRate(this_model_fac->site_rate);
+                tree->deleteAllPartialLh();
+                tree->initializeAllPartialLh();
+                RAM_requirement = max(RAM_requirement, tree->getMemoryRequired());
+            } catch (string &str) {
+                outError("Invalid -madd model " + model_names[model] + ": " + str);
+            }
         } else {
             // kernel might be changed if mixture model was tested
             in_tree->setLikelihoodKernel(params.SSE);
