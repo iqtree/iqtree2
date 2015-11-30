@@ -40,15 +40,17 @@
 #include <string>
 #include "timeutil.h"
 #include "myreader.h"
+#include <sstream>
 
 ModelsBlock *readModelsDefinition(Params &params) {
 
 	ModelsBlock *models_block = new ModelsBlock;
 
-	if (true)
+	try
 	{
 		// loading internal model definitions
-		istringstream in(builtin_mixmodels_definition);
+		stringstream in(builtin_mixmodels_definition);
+        assert(in && "stringstream is OK");
 		NxsReader nexus;
 		nexus.Add(models_block);
 	    MyToken token(in);
@@ -57,7 +59,9 @@ ModelsBlock *readModelsDefinition(Params &params) {
 //	    for (ModelsBlock::iterator it = models_block->begin(); it != models_block->end(); it++)
 //	    	if ((*it).flag & NM_FREQ) num_freq++; else num_model++;
 //	    cout << num_model << " models and " << num_freq << " frequency vectors loaded" << endl;
-	}
+	} catch (...) {
+        assert(0 && "predefined mixture models initialized");
+    }
 
 	if (params.model_def_file) {
 		cout << "Reading model definition file " << params.model_def_file << " ... ";
@@ -1049,8 +1053,9 @@ void ModelFactory::setVariables(double *variables) {
 	site_rate->setVariables(variables + model->getNDim());
 }
 
-void ModelFactory::getVariables(double *variables) {
-	model->getVariables(variables);
-	site_rate->getVariables(variables + model->getNDim());
+bool ModelFactory::getVariables(double *variables) {
+	bool changed = model->getVariables(variables);
+	changed |= site_rate->getVariables(variables + model->getNDim());
+    return changed;
 }
 

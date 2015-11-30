@@ -78,7 +78,7 @@ double PartitionModel::optimizeParameters(bool fixed_len, bool write_info, doubl
 
     if (tree->part_order.empty()) tree->computePartitionOrder();
 	#ifdef _OPENMP
-	#pragma omp parallel for reduction(+: tree_lh) schedule(dynamic)
+	#pragma omp parallel for reduction(+: tree_lh) schedule(dynamic) if(ntrees >= tree->params->num_threads)
 	#endif
     for (int i = 0; i < ntrees; i++) {
         int part = tree->part_order[i];

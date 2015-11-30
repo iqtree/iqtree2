@@ -295,6 +295,7 @@ void PhyloTree::setAlignment(Alignment *alignment) {
             node->id = seq;
         }
     }
+    if (err) outError("Tree taxa and alignment sequence do not match (see above)");
     StrVector taxname;
     getTaxaName(taxname);
     for (StrVector::iterator it = taxname.begin(); it != taxname.end(); it++)
@@ -2397,8 +2398,8 @@ double PhyloTree::computeBayesianBranchLength(PhyloNeighbor *dad_branch, PhyloNo
 
     }
     obsLen /= getAlnNSite();
-    if (obsLen < MIN_BRANCH_LEN)
-        obsLen = MIN_BRANCH_LEN;
+    if (obsLen < params->min_branch_length)
+        obsLen = params->min_branch_length;
     delete[] tmp_anscentral_state_prob2;
     delete[] tmp_anscentral_state_prob1;
     delete[] tmp_state_freq;
@@ -2415,7 +2416,7 @@ double PhyloTree::correctBranchLengthF81(double observedBran, double alpha) {
     observedBran = 1.0 - observedBran / H;
     // no gamma
     if (observedBran <= 0.0)
-        return MAX_BRANCH_LEN;
+        return params->max_branch_length;
 
     if (alpha <= 0.0) {
         correctedBranLen = -H * log(observedBran);
@@ -2425,10 +2426,10 @@ double PhyloTree::correctBranchLengthF81(double observedBran, double alpha) {
         correctedBranLen = H * alpha * (pow(observedBran, -1 / alpha) - 1);
     }
 
-    if (correctedBranLen < MIN_BRANCH_LEN)
-    	correctedBranLen = MIN_BRANCH_LEN;
-    if (correctedBranLen > MAX_BRANCH_LEN)
-    	correctedBranLen = MAX_BRANCH_LEN;
+    if (correctedBranLen < params->min_branch_length)
+    	correctedBranLen = params->min_branch_length;
+    if (correctedBranLen > params->max_branch_length)
+    	correctedBranLen = params->max_branch_length;
 
     return correctedBranLen;
 }
@@ -3074,11 +3075,11 @@ void PhyloTree::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool clear
     theta_computed = false;
     if (optimize_by_newton) {
     	// Newton-Raphson method
-    	optx = minimizeNewton(MIN_BRANCH_LEN, current_len, MAX_BRANCH_LEN, TOL_BRANCH_LEN, negative_lh, maxNRStep);
+    	optx = minimizeNewton(params->min_branch_length, current_len, params->max_branch_length, TOL_BRANCH_LEN, negative_lh, maxNRStep);
         if (verbose_mode >= VB_DEBUG) {
             cout << "minimizeNewton logl: " << computeLikelihoodFromBuffer() << endl;
         }
-    	if (optx > MAX_BRANCH_LEN*0.95 && !isSuperTree()) {
+    	if (optx > params->max_branch_length*0.95 && !isSuperTree()) {
     		// newton raphson diverged, reset
     	    double opt_lh = computeLikelihoodFromBuffer();
     	    current_it->length = current_len;
@@ -3090,7 +3091,7 @@ void PhyloTree::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool clear
     	}
 	}	else {
         // Brent method
-        optx = minimizeOneDimen(MIN_BRANCH_LEN, current_len, MAX_BRANCH_LEN, TOL_BRANCH_LEN, &negative_lh, &ferror);
+        optx = minimizeOneDimen(params->min_branch_length, current_len, params->max_branch_length, TOL_BRANCH_LEN, &negative_lh, &ferror);
         if (verbose_mode >= VB_DEBUG) {
             cout << "minimizeBrent logl: " << -negative_lh << endl;
         }
@@ -3158,7 +3159,11 @@ void PhyloTree::optimizeAllBranches(PhyloNode *node, PhyloNode *dad, int maxNRSt
 void PhyloTree::computeBestTraversal(NodeVector &nodes, NodeVector &nodes2) {
     Node *farleaf = findFarthestLeaf();
 //    Node *farleaf = root;
-    sortNeighborBySubtreeSize(farleaf);
+
+    // double call to farthest leaf to find the longest path on the tree
+    findFarthestLeaf(farleaf);
+    if (verbose_mode >= VB_MED)
+        cout << "Tree diameter: " << farleaf->height << endl;
     getPreOrderBranches(nodes, nodes2, farleaf);
 }
 
@@ -3547,10 +3552,31 @@ void PhyloTree::computeBioNJ(Params &params, Alignment *alignment, string &dist_
 //    setAlignment(alignment);
 }
 
+int PhyloTree::setNegativeBranch(bool force, double newlen, Node *node, Node *dad) {
+    if (!node) node = root;
+    int fixed = 0;
+
+    FOR_NEIGHBOR_IT(node, dad, it) {
+        if ((*it)->length < 0.0 || force) { // negative branch length detected
+            (*it)->length = newlen;
+            // set the backward branch length
+            (*it)->node->findNeighbor(node)->length = (*it)->length;
+            fixed++;
+        }
+        fixed += setNegativeBranch(force, newlen, (*it)->node, node);
+    }
+    return fixed;
+}
+
+
 int PhyloTree::fixNegativeBranch(bool force, Node *node, Node *dad) {
 
-    if (!node)
+    if (!node) {
         node = root;
+        // 2015-11-30: if not bifurcating, initialize unknown branch lengths with 0.1
+        if (!isBifurcating())
+            return setNegativeBranch(force, 0.1, root, NULL);
+    }
     int fixed = 0;
 
     FOR_NEIGHBOR_IT(node, dad, it){
@@ -3563,8 +3589,8 @@ int PhyloTree::fixNegativeBranch(bool force, Node *node, Node *dad) {
         double z = (double) aln->num_states / (aln->num_states - 1);
         double x = 1.0 - (z * branch_length);
         if (x > 0) branch_length = -log(x) / z;
-        if (branch_length < MIN_BRANCH_LEN)
-            branch_length = MIN_BRANCH_LEN;
+        if (branch_length < params->min_branch_length)
+            branch_length = params->min_branch_length;
 //        if (verbose_mode >= VB_DEBUG)
 //        	cout << "Negative branch length " << (*it)->length << " was set to ";
         //(*it)->length = fixed_length;
@@ -3577,7 +3603,7 @@ int PhyloTree::fixNegativeBranch(bool force, Node *node, Node *dad) {
         fixed++;
     }
     if ((*it)->length <= 0.0) {
-        (*it)->length = MIN_BRANCH_LEN;
+        (*it)->length = params->min_branch_length;
         (*it)->node->findNeighbor(node)->length = (*it)->length;
     }
     fixed += fixNegativeBranch(force, (*it)->node, node);
@@ -3878,9 +3904,6 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
 		// compute the score of the swapped topology
 //		double saved_len = node1_nei->length;
 
-		optimizeOneBranch(node1, node2, false, NNI_MAX_NR_STEP);
-		nniMoves[cnt].newLen[0] = node1->findNeighbor(node2)->length;
-
 		int i=1;
         if (params->nni5) {
 			FOR_NEIGHBOR(node1, node2, it)
@@ -3890,9 +3913,14 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
 				nniMoves[cnt].newLen[i] = node1->findNeighbor((*it)->node)->length;
 				i++;
 			}
+            node21_it->clearPartialLh();
+        }
 
-			 node21_it->clearPartialLh();
+		optimizeOneBranch(node1, node2, false, NNI_MAX_NR_STEP);
+		nniMoves[cnt].newLen[0] = node1->findNeighbor(node2)->length;
 
+
+        if (params->nni5) {
 			FOR_NEIGHBOR(node2, node1, it)
 			{
 				((PhyloNeighbor*) (*it)->node->findNeighbor(node2))->clearPartialLh();
@@ -3901,7 +3929,7 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
 				nniMoves[cnt].newLen[i] = node2->findNeighbor((*it)->node)->length;
 				i++;
 			}
-			 node12_it->clearPartialLh();
+			node12_it->clearPartialLh();
 		}
 		double score = computeLikelihoodFromBuffer();
 		nniMoves[cnt].newloglh = score;
@@ -5019,7 +5047,7 @@ void PhyloTree::reinsertLeaf(Node *leaf, Node *node, Node *dad) {
     Node *adjacent_node = leaf->neighbors[0]->node;
     Neighbor *nei = node->findNeighbor(dad);
     //double len = nei->length;
-    double len = max(nei->length, MIN_BRANCH_LEN * 2);
+    double len = max(nei->length, params->min_branch_length * 2);
     // to avoid too small branch length when reinserting leaf
 
     FOR_NEIGHBOR_IT(adjacent_node, leaf, it){

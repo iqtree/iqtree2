@@ -1,8 +1,8 @@
 /****************************  vectorf512.h   *******************************
 * Author:        Agner Fog
 * Date created:  2014-07-23
-* Last modified: 2014-10-22
-* Version:       1.16
+* Last modified: 2015-11-27
+* Version:       1.20
 * Project:       vector classes
 * Description:
 * Header file defining floating point vector classes as interface to intrinsic 
@@ -23,7 +23,7 @@
 *
 * For detailed instructions, see VectorClass.pdf
 *
-* (c) Copyright 2014 GNU General Public License http://www.gnu.org/licenses
+* (c) Copyright 2015 GNU General Public License http://www.gnu.org/licenses
 *****************************************************************************/
 
 // check combination of header files
@@ -767,27 +767,26 @@ static inline Vec16f pow(Vec16f const & a, Const_int_t<n>) {
 
 // function round: round to nearest integer (even). (result as float vector)
 static inline Vec16f round(Vec16f const & a) {
-    return _mm512_roundscale_ps(a, 0);
+    return _mm512_roundscale_ps(a, 0+8);
 }
 
 // function truncate: round towards zero. (result as float vector)
 static inline Vec16f truncate(Vec16f const & a) {
-    return _mm512_roundscale_ps(a, 3);
+    return _mm512_roundscale_ps(a, 3+8);
 }
 
 // function floor: round towards minus infinity. (result as float vector)
 static inline Vec16f floor(Vec16f const & a) {
-    return _mm512_roundscale_ps(a, 1);
+    return _mm512_roundscale_ps(a, 1+8);
 }
 
 // function ceil: round towards plus infinity. (result as float vector)
 static inline Vec16f ceil(Vec16f const & a) {
-    return _mm512_roundscale_ps(a, 2);
+    return _mm512_roundscale_ps(a, 2+8);
 }
 
 // function round_to_int: round to nearest integer (even). (result as integer vector)
 static inline Vec16i round_to_int(Vec16f const & a) {
-    // Note: assume MXCSR control register is set to rounding
     return _mm512_cvt_roundps_epi32(a, _MM_FROUND_NO_EXC);
 }
 
@@ -1438,8 +1437,8 @@ static inline Vec8d ceil(Vec8d const & a) {
 
 // function round_to_int: round to nearest integer (even). (result as integer vector)
 static inline Vec8i round_to_int(Vec8d const & a) {
-    // Note: assume MXCSR control register is set to rounding
-    return _mm512_cvtpd_epi32(a);
+    //return _mm512_cvtpd_epi32(a);
+    return _mm512_cvt_roundpd_epi32(a, __MM_FROUND_NO_EXC);
 }
 
 // function truncate_to_int: round towards zero. (result as integer vector)
@@ -1473,11 +1472,11 @@ static inline Vec8q round_to_int64(Vec8d const & a) {
 // function round_to_int64_limited: round to nearest integer (even)
 // result as 64-bit integer vector, but with limited range
 static inline Vec8q round_to_int64_limited(Vec8d const & a) {
-    // Note: assume MXCSR control register is set to rounding
-    Vec4q   b = _mm512_cvtpd_epi32(a);                     // round to 32-bit integers
-    __m512i c = permute8q<0,-256,1,-256,2,-256,3,-256>(Vec8q(b,b));      // get bits 64-127 to position 128-191, etc.
-    __m512i s = _mm512_srai_epi32(c, 31);                  // sign extension bits
-    return      _mm512_unpacklo_epi32(c, s);               // interleave with sign extensions
+    //Vec4q   b = _mm512_cvtpd_epi32(a);                             // round to 32-bit integers
+    Vec4q   b = _mm512_cvt_roundpd_epi32(a, __MM_FROUND_NO_EXC);     // round to 32-bit integers   
+    __m512i c = permute8q<0,-256,1,-256,2,-256,3,-256>(Vec8q(b,b));  // get bits 64-127 to position 128-191, etc.
+    __m512i s = _mm512_srai_epi32(c, 31);                            // sign extension bits
+    return      _mm512_unpacklo_epi32(c, s);                         // interleave with sign extensions
 }
 
 // function to_double: convert integer vector elements to double vector (inefficient)

@@ -1574,10 +1574,11 @@ void ModelMixture::setVariables(double *variables) {
 
 }
 
-void ModelMixture::getVariables(double *variables) {
+bool ModelMixture::getVariables(double *variables) {
 	int dim = 0;
+    bool changed = false;
 	for (iterator it = begin(); it != end(); it++) {
-		(*it)->getVariables(&variables[dim]);
+		changed |= (*it)->getVariables(&variables[dim]);
 		dim += (*it)->getNDim();
 	}
 //	if (fix_prop) return;
@@ -1614,6 +1615,7 @@ void ModelMixture::getVariables(double *variables) {
 //	}
 //	delete [] y;
 
+    return changed;
 }
 
 void ModelMixture::setBounds(double *lower_bound, double *upper_bound, bool *bound_check) {

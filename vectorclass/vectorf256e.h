@@ -1,8 +1,8 @@
 /****************************  vectorf256e.h   *******************************
 * Author:        Agner Fog
 * Date created:  2012-05-30
-* Last modified: 2014-10-22
-* Version:       1.16
+* Last modified: 2015-08-25
+* Version:       1.18
 * Project:       vector classes
 * Description:
 * Header file defining 256-bit floating point vector classes as interface
@@ -16,7 +16,7 @@
 *
 * For detailed instructions, see VectorClass.pdf
 *
-* (c) Copyright 2012 - 2014 GNU General Public License http://www.gnu.org/licenses
+* (c) Copyright 2012 - 2015 GNU General Public License http://www.gnu.org/licenses
 *****************************************************************************/
 
 // check combination of header files
@@ -1199,7 +1199,7 @@ public:
         return y1;
     }
     static int size () {
-        return 2;
+        return 4;
     }
 };
 

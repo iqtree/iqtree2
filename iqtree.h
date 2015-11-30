@@ -87,7 +87,7 @@ public:
 
     IQTree(Alignment *aln);
 
-    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+//    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
     /**
             destructor
@@ -362,12 +362,12 @@ public:
     /**
      * 	Save all the current branch lengths
      */
-    void saveBranches(PhyloNode *node = NULL, PhyloNode *dad = NULL);
+//    void saveBranches(PhyloNode *node = NULL, PhyloNode *dad = NULL);
 
     /**
      * 	 Restore the branch lengths from the saved values
      */
-    virtual void restoreAllBrans(PhyloNode *node = NULL, PhyloNode *dad = NULL);
+//    virtual void restoreAllBrans(PhyloNode *node = NULL, PhyloNode *dad = NULL);
 
     /**
      * Get the branch length of the branch node1-node2
@@ -375,7 +375,7 @@ public:
      * @param node2
      * @return the branch length
      */
-    double getBranLen(PhyloNode *node1, PhyloNode *node2);
+//    double getBranLen(PhyloNode *node1, PhyloNode *node2);
 
 
     /**
@@ -384,7 +384,7 @@ public:
             @param node1 the first node of the branch
             @param node2 the second node of the branch
      */
-    void changeBranLen(PhyloNode *node1, PhyloNode *node2, double branLen);
+//    void changeBranLen(PhyloNode *node1, PhyloNode *node2, double branLen);
 
     /**
      * Estimate the 95% quantile of the distribution of N (see paper for more d
@@ -557,7 +557,7 @@ protected:
     /**
         Optimal branch lengths
      */
-    mapString2Double optBrans;
+//    mapString2Double optBrans;
 
     /**
      *  @brief get branches, on which NNIs are evaluated for the next NNI step.
@@ -575,7 +575,7 @@ protected:
     /**
             Original branch lengths
      */
-    mapString2Double orgBrans;
+//    mapString2Double orgBrans;
 
     int k_delete, k_delete_min, k_delete_max, k_delete_stay;
 
@@ -620,22 +620,22 @@ public:
     /****** following variables are for ultra-fast bootstrap *******/
 
     /** TRUE to save also branch lengths into treels_newick */
-    bool save_all_br_lens;
+//    bool save_all_br_lens;
 
     /**
         this keeps the list of intermediate trees.
         it will be activated if params.avoid_duplicated_trees is TRUE.
      */
-    StringIntMap treels;
+//    StringIntMap treels;
 
     /** pattern log-likelihood vector for each treels */
-    vector<double* > treels_ptnlh;
+//    vector<double* > treels_ptnlh;
 
     /** tree log-likelihood for each treels */
     DoubleVector treels_logl;
 
     /** NEWICK string for each treels */
-    StrVector treels_newick;
+//    StrVector treels_newick;
 
     /** maximum number of distinct candidate trees (tau parameter) */
     int max_candidate_trees;
@@ -647,7 +647,7 @@ public:
     vector<BootValType* > boot_samples;
 
     /** newick string of corresponding bootstrap trees */
-    IntVector boot_trees;
+    StrVector boot_trees;
 
     /** bootstrap tree strings with branch lengths, for -wbtl option */
     StrVector boot_trees_brlen;

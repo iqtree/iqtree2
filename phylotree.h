@@ -39,8 +39,6 @@
 extern int instruction_set;
 
 
-const double MIN_BRANCH_LEN = 0.000001; // NEVER TOUCH THIS CONSTANT AGAIN PLEASE!
-const double MAX_BRANCH_LEN = 100.0;
 const double TOL_BRANCH_LEN = 0.000001; // NEVER TOUCH THIS CONSTANT AGAIN PLEASE!
 const double TOL_LIKELIHOOD = 0.001; // NEVER TOUCH THIS CONSTANT AGAIN PLEASE!
 const double TOL_LIKELIHOOD_PARAMOPT = 0.001; // BQM: newly introduced for ModelFactory::optimizeParameters
@@ -94,7 +92,11 @@ inline T *aligned_alloc(size_t size) {
     void *mem;
 
 #if defined WIN32 || defined _WIN32 || defined __WIN32__
-	mem = _aligned_malloc(size*sizeof(T), MEM_ALIGNMENT);
+    #if (defined(__MINGW32__) || defined(__clang__)) && defined(BINARY32)
+        mem = __mingw_aligned_malloc(size*sizeof(T), MEM_ALIGNMENT);
+    #else
+        mem = _aligned_malloc(size*sizeof(T), MEM_ALIGNMENT);
+    #endif
 #else
 	int res = posix_memalign(&mem, MEM_ALIGNMENT, size*sizeof(T));
     if (res == ENOMEM) {
@@ -115,7 +117,11 @@ inline T *aligned_alloc(size_t size) {
 
 inline void aligned_free(void *mem) {
 #if defined WIN32 || defined _WIN32 || defined __WIN32__
-	_aligned_free(mem);
+    #if (defined(__MINGW32__) || defined(__clang__)) && defined(BINARY32)
+        __mingw_aligned_free(mem);
+    #else
+        _aligned_free(mem);
+    #endif
 #else
 	free(mem);
 #endif
@@ -256,7 +262,7 @@ public:
      */
     PhyloTree();
 
-    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+//    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
     /**
      * Constructor with given alignment
@@ -1251,6 +1257,11 @@ public:
             @return The number of branches that have no/negative length
      */
     virtual int fixNegativeBranch(bool force = false, Node *node = NULL, Node *dad = NULL);
+
+    /**
+        set negative branch to a new len
+    */
+    int setNegativeBranch(bool force, double newlen, Node *node = NULL, Node *dad = NULL);
 
     // OBSOLETE: assignRandomBranchLengths no longer needed, use fixNegativeBranch instead!
 //    int assignRandomBranchLengths(bool force = false, Node *node = NULL, Node *dad = NULL);

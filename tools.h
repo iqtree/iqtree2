@@ -1211,6 +1211,13 @@ public:
      */
     bool fixed_branch_length;
 
+    /** minimum branch length for optimization, default 0.000001 */
+    double min_branch_length;
+
+    /** maximum branch length for optimization, default 100 */
+    double max_branch_length;
+
+
     /**
             criterion to assess important quartet
      */
@@ -1257,7 +1264,7 @@ public:
     /**
         TRUE to avoid duplicated trees while writing intermediate trees
      */
-    bool avoid_duplicated_trees;
+//    bool avoid_duplicated_trees;
 
     /**
             Robinson-Foulds distance computation mode: RF_ADJACENT PAIR, RF_ALL_PAIR
@@ -1543,7 +1550,7 @@ public:
     int step_iterations;
 
     /** TRUE to store all candidate trees in memory */
-    bool store_candidate_trees;
+//    bool store_candidate_trees;
 
 	/** true to print all UFBoot trees to a file */
 	int print_ufboot_trees;
@@ -2279,5 +2286,14 @@ inline uint32_t popcount_lauradoux(unsigned *buf, int n) {
   }
   return bitCount;
 }
+
+/**
+ * combination of memcmp and memcpy.
+ * @param destination destination memory to copy to
+ * @param source code memory to copy from
+ * @param num number of bytes to copy
+ * @return TRUE of memory are different, FALSE if identical
+ */
+bool memcmpcpy(void * destination, const void * source, size_t num);
 
 #endif

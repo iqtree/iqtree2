@@ -145,11 +145,12 @@ int RateKategory::computePatternRates(DoubleVector& pattern_rates, IntVector& pa
 //	delete [] ptn_rates;
 }
 
-void RateKategory::getVariables(double* variables)
+bool RateKategory::getVariables(double* variables)
 {
-	if (ncategory == 1) return;
+	if (ncategory == 1) return false;
+    bool changed = (rates[0] != 1.0);
 	rates[0] = 1.0;
-	memcpy(rates, variables+1, (ncategory-1) * sizeof(double));
+	changed |= memcmpcpy(rates, variables+1, (ncategory-1) * sizeof(double));
 	double sum = 0.0;
 	int i;
 	for (i = 0; i < ncategory-1; i++) 
@@ -157,7 +158,9 @@ void RateKategory::getVariables(double* variables)
 	/*
 	for (i = 0; i < ncategory; i++) 
 		rates[i] = rates[i]*ncategory/sum;*/
+    changed |= (rates[ncategory-1] != ncategory - sum);
 	rates[ncategory-1] = ncategory - sum;
+    return changed;
 }
 
 void RateKategory::setVariables(double* variables)

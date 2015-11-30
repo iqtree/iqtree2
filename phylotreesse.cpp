@@ -1293,9 +1293,13 @@ void PhyloTree::computeLikelihoodDervEigen(PhyloNeighbor *dad_branch, PhyloNode 
 				double *partial_lh_dad = dad_branch->partial_lh + ptn*block;
 				double *theta = theta_all + ptn*block;
 				double *lh_tip = tip_partial_lh + ((int)((ptn < orig_nptn) ? (aln->at(ptn))[dad->id] :  model_factory->unobserved_ptns[ptn-orig_nptn]))*nstates;
-				for (i = 0; i < block; i++) {
-					theta[i] = lh_tip[i%nstates] * partial_lh_dad[i];
-				}
+                for (c = 0; c < ncat; c++) {
+                    for (i = 0; i < nstates; i++) {
+                        theta[i] = lh_tip[i] * partial_lh_dad[i];
+                    }
+                    partial_lh_dad += nstates;
+                    theta += nstates;
+                }
 
 			}
 			// ascertainment bias correction
@@ -1310,20 +1314,9 @@ void PhyloTree::computeLikelihoodDervEigen(PhyloNeighbor *dad_branch, PhyloNode 
 				double *theta = theta_all + ptn*block;
 			    double *partial_lh_node = node_branch->partial_lh + ptn*block;
 			    double *partial_lh_dad = dad_branch->partial_lh + ptn*block;
-//			    double theta_max = 0.0;
 	    		for (i = 0; i < block; i++) {
 	    			theta[i] = partial_lh_node[i] * partial_lh_dad[i];
-//	    			theta_max = max(theta_max, fabs(theta[i]));
 	    		}
-//	    		if (theta_max <= 0) {
-//	    			// numerical underflow, recompute theta
-//	    			for (i = 0; i < block; i++) {
-//	    				partial_lh_node[i] *= SCALING_THRESHOLD_INVER;
-//		    			theta[i] = partial_lh_node[i] * partial_lh_dad[i];
-//	    			}
-//	    			node_branch->lh_scale_factor += LOG_SCALING_THRESHOLD*ptn_freq[ptn];
-//	    			node_branch->scale_num[ptn] += 1;
-//	    		}
 			}
 	    }
 		theta_computed = true;
@@ -1553,7 +1546,7 @@ double PhyloTree::computeLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloN
 
     if (orig_nptn < nptn) {
     	// ascertainment bias correction
-        assert(prob_const < 1.0);
+        assert(prob_const < 1.0 && prob_const >= 0.0);
 
         // BQM 2015-10-11: fix this those functions using _pattern_lh_cat
 //        double inv_const = 1.0 / (1.0-prob_const);

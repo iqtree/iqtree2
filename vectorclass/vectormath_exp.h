@@ -1,7 +1,7 @@
 /****************************  vectormath_exp.h   ******************************
 * Author:        Agner Fog
 * Date created:  2014-04-18
-* Last modified: 2014-12-18
+* Last modified: 2015-02-10
 * Version:       1.16
 * Project:       vector classes
 * Description:
@@ -114,15 +114,15 @@ static inline Vec16f vm_pow2n (Vec16f const & n) {
 // The limit of abs(x) is defined by max_x below
 // This function does not produce denormals
 // Template parameters:
-// VTYPE: double vector type
-// BTYPE: boolean vector type
+// VTYPE:  double vector type
+// BVTYPE: boolean vector type
 // M1: 0 for exp, 1 for expm1
 // BA: 0 for exp, 1 for 0.5*exp, 2 for pow(2,x), 10 for pow(10,x)
 
 #if 1  // choose method
 
 // Taylor expansion
-template<class VTYPE, class BTYPE, int M1, int BA> 
+template<class VTYPE, class BVTYPE, int M1, int BA> 
 static inline VTYPE exp_d(VTYPE const & initial_x) {    
 
     // Taylor coefficients, 1/n!
@@ -146,8 +146,8 @@ static inline VTYPE exp_d(VTYPE const & initial_x) {
     double max_x;
 
     // data vectors
-    VTYPE x, r, z, n2;
-    BTYPE inrange;                               // boolean vector
+    VTYPE  x, r, z, n2;
+    BVTYPE inrange;                              // boolean vector
 
     if (BA <= 1) { // exp(x)
         max_x = BA == 0 ? 708.39 : 709.7; // lower limit for 0.5*exp(x) is -707.6, but we are using 0.5*exp(x) only for positive x in hyperbolic functions
@@ -217,7 +217,7 @@ static inline VTYPE exp_d(VTYPE const & initial_x) {
 #else
 
 // Pade expansion uses less code and fewer registers, but is slower
-template<class VTYPE, class BTYPE, int M1, int BA> 
+template<class VTYPE, class BVTYPE, int M1, int BA> 
 static inline VTYPE exp_d(VTYPE const & initial_x) {
 
     // define constants
@@ -234,8 +234,8 @@ static inline VTYPE exp_d(VTYPE const & initial_x) {
     const double Q2exp = 2.52448340349684104192E-3;
     const double Q3exp = 3.00198505138664455042E-6;
 
-    VTYPE x, r, xx, px, qx, y, n2;               // data vectors
-    BTYPE inrange;                               // boolean vector
+    VTYPE  x, r, xx, px, qx, y, n2;              // data vectors
+    BVTYPE inrange;                              // boolean vector
 
     x = initial_x;
     r = round(initial_x*log2e);
@@ -349,12 +349,12 @@ static inline Vec8d exp10(Vec8d const & x) {
 // The limit of abs(x) is defined by max_x below
 // This function does not produce denormals
 // Template parameters:
-// VTYPE: float vector type
-// BTYPE: boolean vector type
+// VTYPE:  float vector type
+// BVTYPE: boolean vector type
 // M1: 0 for exp, 1 for expm1
 // BA: 0 for exp, 1 for 0.5*exp, 2 for pow(2,x), 10 for pow(10,x)
 
-template<class VTYPE, class BTYPE, int M1, int BA> 
+template<class VTYPE, class BVTYPE, int M1, int BA> 
 static inline VTYPE exp_f(VTYPE const & initial_x) {
 
     // Taylor coefficients
@@ -365,8 +365,8 @@ static inline VTYPE exp_f(VTYPE const & initial_x) {
     const float P4expf   =  1.f/720.f; 
     const float P5expf   =  1.f/5040.f; 
 
-    VTYPE x, r, x2, z, n2;                       // data vectors        
-    BTYPE inrange;                               // boolean vector
+    VTYPE  x, r, x2, z, n2;                      // data vectors        
+    BVTYPE inrange;                              // boolean vector
 
     // maximum abs(x), value depends on BA, defined below
     // The lower limit of x is slightly more restrictive than the upper limit.
@@ -660,10 +660,10 @@ static inline Vec8d exponent_f(Vec8d const & x) {
 
 // log function, double precision
 // template parameters:
-// VTYPE: f.p. vector type
-// BTYPE: boolean vector type
+// VTYPE:  f.p. vector type
+// BVTYPE: boolean vector type
 // M1: 0 for log, 1 for log1p
-template<class VTYPE, class BTYPE, int M1> 
+template<class VTYPE, class BVTYPE, int M1> 
 static inline VTYPE log_d(VTYPE const & initial_x) {
 
     // define constants
@@ -681,8 +681,8 @@ static inline VTYPE log_d(VTYPE const & initial_x) {
     const double Q3log  =  4.52279145837532221105E1;
     const double Q4log  =  1.12873587189167450590E1;
 
-    VTYPE x1, x, x2, px, qx, res, fe;            // data vectors
-    BTYPE blend, overflow, underflow;            // boolean vectors
+    VTYPE  x1, x, x2, px, qx, res, fe;           // data vectors
+    BVTYPE blend, overflow, underflow;           // boolean vectors
 
     if (M1 == 0) {
         x1 = initial_x;                          // log(x)
@@ -798,12 +798,12 @@ static inline Vec8d log10(Vec8d const & x) {
 
 // log function, single precision
 // template parameters:
-// VTYPE: f.p. vector type
-// ITYPE: integer vector type with same element size
-// BTYPE: boolean vector type
+// VTYPE:  f.p. vector type
+// ITYPE:  integer vector type with same element size
+// BVTYPE: boolean vector type
 // BTYPEI: boolean vector type for ITYPE
 // M1: 0 for log, 1 for log1p
-template<class VTYPE, class ITYPE, class BTYPE, class BTYPEI, int M1> 
+template<class VTYPE, class ITYPE, class BVTYPE, class BTYPEI, int M1> 
 static inline VTYPE log_f(VTYPE const & initial_x) {
 
     // define constants
@@ -819,9 +819,9 @@ static inline VTYPE log_f(VTYPE const & initial_x) {
     const float P7logf  = -1.1514610310E-1f;
     const float P8logf  =  7.0376836292E-2f;
 
-    VTYPE x1, x, res, x2, fe;                    // data vectors
-    ITYPE e;                                     // integer vector
-    BTYPE blend, overflow, underflow;            // boolean vectors
+    VTYPE  x1, x, res, x2, fe;                   // data vectors
+    ITYPE  e;                                    // integer vector
+    BVTYPE blend, overflow, underflow;           // boolean vectors
 
     if (M1 == 0) {
         x1 = initial_x;                          // log(x)
@@ -845,7 +845,7 @@ static inline VTYPE log_f(VTYPE const & initial_x) {
     }
     else {
         // log(x+1). Avoid loss of precision when adding 1 and later subtracting 1 if exponent = 0
-        x = select(BTYPE(e==0), initial_x, x - 1.0f);
+        x = select(BVTYPE(e==0), initial_x, x - 1.0f);
     }
 
     // Taylor expansion
@@ -941,15 +941,15 @@ static inline Vec16f log10(Vec16f const & x) {
 // VTYPE:  f.p. vector type
 // ITYPE:  uint32_t integer vector type with same total number of bits
 // ITYPE2: uint64_t integer vector type with same total number of bits
-// BTYPE:  boolean vector type
+// BVTYPE: boolean vector type
 // CR:     -1 for reciprocal cube root, 1 for cube root, 2 for cube root squared
-template<class VTYPE, class ITYPE, class ITYPE2, class BTYPE, int CR> 
+template<class VTYPE, class ITYPE, class ITYPE2, class BVTYPE, int CR> 
 static inline VTYPE cbrt_d(VTYPE const & x) {
     const int iter = 7;     // iteration count of x^(-1/3) loop
     int i;
     VTYPE  xa, xa3, a, a2;
     ITYPE  m1, m2;
-    BTYPE  underflow;
+    BVTYPE underflow;
     ITYPE2 q1(0x5540000000000000ULL);            // exponent bias
     ITYPE2 q2(0x0005555500000000ULL);            // exponent multiplier for 1/3
     ITYPE2 q3(0x0010000000000000ULL);            // denormal limit
@@ -963,7 +963,7 @@ static inline VTYPE cbrt_d(VTYPE const & x) {
     m1 = reinterpret_i(xa);
     m2 = ITYPE(q1) - (m1 >> 20) * ITYPE(q2);
     a  = reinterpret_d(m2);
-    underflow = BTYPE(ITYPE2(m1) < q3);          // true if denormal or zero
+    underflow = BVTYPE(ITYPE2(m1) < q3);          // true if denormal or zero
 
     // Newton Raphson iteration
     for (i = 0; i < iter-1; i++) {
@@ -1049,16 +1049,16 @@ static inline Vec8d square_cbrt(Vec8d const & x) {
 // template parameters:
 // VTYPE:  f.p. vector type
 // ITYPE:  uint32_t integer vector type
-// BTYPE:  boolean vector type
+// BVTYPE: boolean vector type
 // CR:     -1 for reciprocal cube root, 1 for cube root, 2 for cube root squared
-template<class VTYPE, class ITYPE, class BTYPE, int CR> 
+template<class VTYPE, class ITYPE, class BVTYPE, int CR> 
 static inline VTYPE cbrt_f(VTYPE const & x) {
 
     const int iter = 6;                          // iteration count of x^(-1/3) loop
     int i;
     VTYPE  xa, xa3, a, a2;
     ITYPE  m1, m2;
-    BTYPE  underflow;
+    BVTYPE underflow;
     ITYPE  q1(0x54800000U);                      // exponent bias
     ITYPE  q2(0x002AAAAAU);                      // exponent multiplier for 1/3
     ITYPE  q3(0x00800000U);                      // denormal limit
@@ -1073,7 +1073,7 @@ static inline VTYPE cbrt_f(VTYPE const & x) {
     m2 = q1 - (m1 >> 23) * q2;
     a  = reinterpret_f(m2);
 
-    underflow = BTYPE(m1 < q3);                  // true if denormal or zero
+    underflow = BVTYPE(m1 < q3);                  // true if denormal or zero
 
     // Newton Raphson iteration
     for (i = 0; i < iter-1; i++) {
@@ -1169,8 +1169,8 @@ static inline Vec16f square_cbrt(Vec16f const & x) {
 // Template parameters:
 // VTYPE:  data vector type
 // ITYPE:  signed integer vector type
-// BTYPE:  boolean vector type
-template <class VTYPE, class ITYPE, class BTYPE>
+// BVTYPE: boolean vector type
+template <class VTYPE, class ITYPE, class BVTYPE>
 static inline VTYPE pow_template_d(VTYPE const & x0, VTYPE const & y) {
 
     // define constants
@@ -1217,8 +1217,8 @@ static inline VTYPE pow_template_d(VTYPE const & x0, VTYPE const & y) {
     // integer vectors
     ITYPE ei, ej, yodd;
     // boolean vectors
-    BTYPE blend, xzero, xnegative;
-    BTYPE overflow, underflow, xfinite, yfinite, efinite;
+    BVTYPE blend, xzero, xnegative;
+    BVTYPE overflow, underflow, xfinite, yfinite, efinite;
 
     // remove sign
     x1 = abs(x0);
@@ -1286,8 +1286,8 @@ static inline VTYPE pow_template_d(VTYPE const & x0, VTYPE const & y) {
     // biased exponent of result:
     ej = ei + (ITYPE(reinterpret_i(z)) >> 52);
     // check exponent for overflow and underflow
-    overflow  = BTYPE(ej >= 0x07FF) | (ee >  3000.);
-    underflow = BTYPE(ej <= 0x0000) | (ee < -3000.);
+    overflow  = BVTYPE(ej >= 0x07FF) | (ee >  3000.);
+    underflow = BVTYPE(ej <= 0x0000) | (ee < -3000.);
 
     // add exponent by integer addition
     z = reinterpret_d(ITYPE(reinterpret_i(z)) + (ei << 52));
@@ -1397,9 +1397,9 @@ inline Vec8d pow<float>(Vec8d const & x, float y) {
 // Template parameters:
 // VTYPE:  data vector type
 // ITYPE:  signed integer vector type
-// BTYPE:  boolean vector type
+// BVTYPE: boolean vector type
 // Calculate x to the power of y
-template <class VTYPE, class ITYPE, class BTYPE>
+template <class VTYPE, class ITYPE, class BVTYPE>
 static inline VTYPE pow_template_f(VTYPE const & x0, VTYPE const & y) {
 
     // define constants
@@ -1436,8 +1436,8 @@ static inline VTYPE pow_template_f(VTYPE const & x0, VTYPE const & y) {
     // integer vectors
     ITYPE ei, ej, yodd;
     // boolean vectors
-    BTYPE blend, xzero, xnegative;
-    BTYPE overflow, underflow, xfinite, yfinite, efinite;
+    BVTYPE blend, xzero, xnegative;
+    BVTYPE overflow, underflow, xfinite, yfinite, efinite;
 
     // remove sign
     x1 = abs(x0);
@@ -1501,8 +1501,8 @@ static inline VTYPE pow_template_f(VTYPE const & x0, VTYPE const & y) {
     // biased exponent of result:
     ej = ei + (ITYPE(reinterpret_i(z)) >> 23);
     // check exponent for overflow and underflow
-    overflow  = BTYPE(ej >= 0x0FF) | (ee >  300.f);
-    underflow = BTYPE(ej <= 0x000) | (ee < -300.f);
+    overflow  = BVTYPE(ej >= 0x0FF) | (ee >  300.f);
+    underflow = BVTYPE(ej <= 0x000) | (ee < -300.f);
 
     // add exponent by integer addition
     z = reinterpret_f(ITYPE(reinterpret_i(z)) + (ei << 23)); // the extra 0x10000 is shifted out here

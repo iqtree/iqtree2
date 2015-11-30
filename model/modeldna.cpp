@@ -349,8 +349,9 @@ void ModelDNA::writeParameters(ostream &out) {
 }
 
 
-void ModelDNA::getVariables(double *variables) {
+bool ModelDNA::getVariables(double *variables) {
 	int i;
+    bool changed = false;
 	if (num_params > 0) {
 		int num_all = param_spec.length();
 		if (verbose_mode >= VB_MAX) {
@@ -359,13 +360,14 @@ void ModelDNA::getVariables(double *variables) {
 		}
 		for (i = 0; i < num_all; i++)
 			if (!param_fixed[param_spec[i]]) {
+                changed |= (rates[i] != variables[(int)param_spec[i]]);
 				rates[i] = variables[(int)param_spec[i]];
 			}
 	}
 	if (freq_type == FREQ_ESTIMATE) {
         // 2015-09-07: relax the sum of state_freq to be 1, this will be done at the end of optimization
 		int ndim = getNDim();
-		memcpy(state_freq, variables+(ndim-num_states+2), (num_states-1)*sizeof(double));
+		changed |= memcmpcpy(state_freq, variables+(ndim-num_states+2), (num_states-1)*sizeof(double));
 //		double sum = 0;
 //		for (i = 0; i < num_states-1; i++) 
 //			sum += state_freq[i];
@@ -385,6 +387,7 @@ void ModelDNA::getVariables(double *variables) {
 //			}
 //		state_freq[highest_freq_state] = 1.0/sum;
 	}
+    return changed;
 }
 
 void ModelDNA::setVariables(double *variables) {

@@ -95,7 +95,7 @@ double PartitionModelPlen::optimizeParameters(bool fixed_len, bool write_info, d
     	cur_lh = 0.0;
         if (tree->part_order.empty()) tree->computePartitionOrder();
         #ifdef _OPENMP
-        #pragma omp parallel for reduction(+: cur_lh) schedule(dynamic)
+        #pragma omp parallel for reduction(+: cur_lh) schedule(dynamic) if(ntrees >= tree->params->num_threads)
         #endif
     	for (int partid = 0; partid < ntrees; partid++) {
             int part = tree->part_order[partid];
@@ -219,7 +219,7 @@ double PartitionModelPlen::optimizeGeneRate(double gradient_epsilon)
 
     if (tree->part_order.empty()) tree->computePartitionOrder();
     #ifdef _OPENMP
-    #pragma omp parallel for reduction(+: score) private(i) schedule(dynamic)
+    #pragma omp parallel for reduction(+: score) private(i) schedule(dynamic) if(tree->size() >= tree->params->num_threads)
     #endif    
     for (int j = 0; j < tree->size(); j++) {
         int i = tree->part_order[j];
@@ -522,7 +522,7 @@ void PhyloSuperTreePlen::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, b
     if (part_order.empty()) computePartitionOrder();
 	// bug fix: assign cur_score into part_info
     #ifdef _OPENMP
-    #pragma omp parallel for private(part) schedule(dynamic)
+    #pragma omp parallel for private(part) schedule(dynamic) if(size() >= params->num_threads)
     #endif    
 	for (int partid = 0; partid < size(); partid++) {
         part = part_order_by_nptn[partid];
@@ -562,7 +562,7 @@ double PhyloSuperTreePlen::computeFunction(double value) {
 
     if (part_order.empty()) computePartitionOrder();
     #ifdef _OPENMP
-    #pragma omp parallel for reduction(+: tree_lh) schedule(dynamic)
+    #pragma omp parallel for reduction(+: tree_lh) schedule(dynamic) if(ntrees >= params->num_threads)
     #endif    
 	for (int partid = 0; partid < ntrees; partid++) {
             int part = part_order_by_nptn[partid];
@@ -582,6 +582,12 @@ double PhyloSuperTreePlen::computeFunction(double value) {
 			}
 		}
     return -tree_lh;
+}
+
+double PhyloSuperTreePlen::computeLikelihoodBranch(PhyloNeighbor *dad_branch, PhyloNode *dad) {
+    current_it = dad_branch;
+    current_it_back = (PhyloNeighbor*)dad_branch->node->findNeighbor(dad);
+    return -computeFunction(dad_branch->length);
 }
 
 double PhyloSuperTreePlen::computeLikelihoodFromBuffer() {
@@ -614,7 +620,7 @@ void PhyloSuperTreePlen::computeFuncDerv(double value, double &df_ret, double &d
 
     if (part_order.empty()) computePartitionOrder();
     #ifdef _OPENMP
-    #pragma omp parallel for reduction(+: df, ddf) schedule(dynamic)
+    #pragma omp parallel for reduction(+: df, ddf) schedule(dynamic) if(ntrees >= params->num_threads)
     #endif    
 	for (int partid = 0; partid < ntrees; partid++) {
         int part = part_order_by_nptn[partid];
@@ -899,6 +905,11 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 
 	int i = 0, id = 0;
 	int part, ntrees = size();
+    uint64_t total_block_size = 0, total_scale_block_size = 0;
+    for (int j = 0; j < ntrees; j++) {
+        total_block_size += block_size[j];
+        total_scale_block_size += scale_block_size[j];
+    }
 
 	/*===========================================================================================
 	 * Identify NNIType for partitions
@@ -1074,8 +1085,9 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 
 	// For ONE_epsilon case: saves "id" of the neighbors that have an empty image
 	int id_eps[part];
-
-	for(part = 0; part < ntrees; part++){
+    uint64_t lh_addr = 0, scale_addr = 0;
+	for(int partid = 0; partid < ntrees; partid++){
+        part = part_order[partid];
 		if(is_nni[part]==NNI_NO_EPSILON){
 			//evalNNIs++;
 			//part_info[part].evalNNIs++;
@@ -1095,8 +1107,8 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 
 				// Create a new PhyloNeighbor, with new partial lhs, scale number and set the branch id as before
 				*sub_saved_it[part*6 + id] = new PhyloNeighbor(nei_link, saved_nei[id]->link_neighbors[part]->length);
-				((PhyloNeighbor*) (*sub_saved_it[part*6 + id]))->partial_lh = at(part)->newPartialLh();
-				((PhyloNeighbor*) (*sub_saved_it[part*6 + id]))->scale_num = at(part)->newScaleNum();
+				((PhyloNeighbor*) (*sub_saved_it[part*6 + id]))->partial_lh = nni_partial_lh + (id*total_block_size + lh_addr);
+				((PhyloNeighbor*) (*sub_saved_it[part*6 + id]))->scale_num = nni_scale_num + (id*total_scale_block_size + scale_addr);
 				(*sub_saved_it[part*6 + id])->id = saved_nei[id]->link_neighbors[part]->id;
 
 				// update link_neighbor[part]: for New SuperNeighbor we set the corresponding new PhyloNeighbor on partition part
@@ -1110,8 +1122,8 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 					node_link = ((SuperNeighbor*)(*node_nei_it[id-2]))->link_neighbors[part]->node;
 					sub_saved_it[part*6 + id] = node_link->findNeighborIt(nei_link);
 					*sub_saved_it[part*6 + id] = new PhyloNeighbor(nei_link, saved_nei[id]->link_neighbors[part]->length);
-					((PhyloNeighbor*) (*sub_saved_it[part*6 + id]))->partial_lh = at(part)->newPartialLh();
-					((PhyloNeighbor*) (*sub_saved_it[part*6 + id]))->scale_num = at(part)->newScaleNum();
+					((PhyloNeighbor*) (*sub_saved_it[part*6 + id]))->partial_lh = nni_partial_lh + (id*total_block_size + lh_addr);
+					((PhyloNeighbor*) (*sub_saved_it[part*6 + id]))->scale_num = nni_scale_num + (id*total_scale_block_size + scale_addr);
 					(*sub_saved_it[part*6 + id])->id = saved_nei[id]->link_neighbors[part]->id;
 
 					// update link_neighbor[part]
@@ -1154,8 +1166,8 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 					sub_saved_branch[6*part + id] = nei->link_neighbors[part]->length;
 
 					*sub_saved_it[part*6 + id] = new PhyloNeighbor(nei_link, nei->link_neighbors[part]->length);
-					((PhyloNeighbor*) (*sub_saved_it[part*6 + id]))->partial_lh = at(part)->newPartialLh();
-					((PhyloNeighbor*) (*sub_saved_it[part*6 + id]))->scale_num = at(part)->newScaleNum();
+					((PhyloNeighbor*) (*sub_saved_it[part*6 + id]))->partial_lh = nni_partial_lh + (id*total_block_size + lh_addr);
+					((PhyloNeighbor*) (*sub_saved_it[part*6 + id]))->scale_num = nni_scale_num + (id*total_scale_block_size + scale_addr);
 					(*sub_saved_it[part*6 + id])->id = nei->link_neighbors[part]->id;
 
 					// If nni5 we update the link neighbors already here, otherwise
@@ -1184,6 +1196,8 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 				}
 			}
 		}
+        lh_addr += block_size[part];
+        scale_addr += scale_block_size[part];
 	}
 
 	/* -------------------------------------------------------------------
@@ -1624,8 +1638,8 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 				// restore the Neighbors*
 				for (i = IT_NUM-1; i >= 0; i--) {
 					if((*sub_saved_it[part*6+i])){
-						aligned_free(((PhyloNeighbor*) *sub_saved_it[part*6+i])->scale_num);
-						aligned_free(((PhyloNeighbor*) *sub_saved_it[part*6+i])->partial_lh);
+//						aligned_free(((PhyloNeighbor*) *sub_saved_it[part*6+i])->scale_num);
+//						aligned_free(((PhyloNeighbor*) *sub_saved_it[part*6+i])->partial_lh);
 						if (*sub_saved_it[part*6+i] == at(part)->current_it) at(part)->current_it = saved_nei[i]->link_neighbors[part];
 						if (*sub_saved_it[part*6+i] == at(part)->current_it_back) at(part)->current_it_back = saved_nei[i]->link_neighbors[part];
 
@@ -1647,8 +1661,8 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 				for (id = 5; id >= 2; id--) {
 					//if((*sub_saved_it[part*6+id])){
 					if(((SuperNeighbor*)(*node_nei_it[id-2]))->link_neighbors[part]){
-						aligned_free(((PhyloNeighbor*) *sub_saved_it[part*6+id])->scale_num);
-						aligned_free(((PhyloNeighbor*) *sub_saved_it[part*6+id])->partial_lh);
+//						aligned_free(((PhyloNeighbor*) *sub_saved_it[part*6+id])->scale_num);
+//						aligned_free(((PhyloNeighbor*) *sub_saved_it[part*6+id])->partial_lh);
 
 						// It was commented, not sure why.. Just keep in mind------------------
 						if (*sub_saved_it[part*6+id] == at(part)->current_it)
@@ -1701,10 +1715,10 @@ void PhyloSuperTreePlen::linkCheckRe(int part,Node* node, Node* dad, PhyloNeighb
 		}
 	}
 }
-void PhyloSuperTreePlen::restoreAllBrans(PhyloNode *node, PhyloNode *dad) {
-	IQTree::restoreAllBrans(node,dad);
-	mapTrees();
-}
+//void PhyloSuperTreePlen::restoreAllBrans(PhyloNode *node, PhyloNode *dad) {
+//	IQTree::restoreAllBrans(node,dad);
+//	mapTrees();
+//}
 
 bool PhyloSuperTreePlen::checkBranchLen(){
 
@@ -1870,7 +1884,7 @@ void PhyloSuperTreePlen::changeNNIBrans(NNIMove nnimove) {
  */
 void PhyloSuperTreePlen::initializeAllPartialLh() {
 	iterator it;
-	int part;
+	int part, partid;
 	int ntrees = size();
 
 	block_size.resize(ntrees);
@@ -1881,7 +1895,12 @@ void PhyloSuperTreePlen::initializeAllPartialLh() {
 	lh_cat_size.resize(ntrees);
 	uint64_t total_mem_size = 0, total_block_size = 0, total_lh_cat_size = 0;
 
-	for (it = begin(), part = 0; it != end(); it++, part++) {
+	if (part_order.empty())
+		computePartitionOrder();
+
+	for (partid = 0; partid < ntrees; partid++) {
+		part = part_order[partid];
+        it = begin() + part;
 		size_t nptn = (*it)->getAlnNPattern() + (*it)->aln->num_states; // extra #numStates for ascertainment bias correction
 		if (instruction_set >= 7)
 			mem_size[part] = ((nptn +3)/4)*4;
@@ -1900,43 +1919,46 @@ void PhyloSuperTreePlen::initializeAllPartialLh() {
 
     if (!_pattern_lh)
         _pattern_lh = aligned_alloc<double>(total_mem_size);
-    front()->_pattern_lh = _pattern_lh;
+    at(part_order[0])->_pattern_lh = _pattern_lh;
     if (!_pattern_lh_cat)
         _pattern_lh_cat = aligned_alloc<double>(total_lh_cat_size);
-    front()->_pattern_lh_cat = _pattern_lh_cat;
+    at(part_order[0])->_pattern_lh_cat = _pattern_lh_cat;
     if (!theta_all)
         theta_all = aligned_alloc<double>(total_block_size);
-    front()->theta_all = theta_all;
+    at(part_order[0])->theta_all = theta_all;
     if (!ptn_freq) {
         ptn_freq = aligned_alloc<double>(total_mem_size);
         ptn_freq_computed = false;
     }
-    front()->ptn_freq = ptn_freq;
-    front()->ptn_freq_computed = false;
+    at(part_order[0])->ptn_freq = ptn_freq;
+    at(part_order[0])->ptn_freq_computed = false;
     if (!ptn_invar)
         ptn_invar = aligned_alloc<double>(total_mem_size);
-    front()->ptn_invar = ptn_invar;
+    at(part_order[0])->ptn_invar = ptn_invar;
 
     size_t IT_NUM = (params->nni5) ? 6 : 2;
     if (!nni_partial_lh) {
         nni_partial_lh = aligned_alloc<double>(IT_NUM*total_block_size);
     }
-    front()->nni_partial_lh = nni_partial_lh;
+    at(part_order[0])->nni_partial_lh = nni_partial_lh;
     
     if (!nni_scale_num) {
         nni_scale_num = aligned_alloc<UBYTE>(IT_NUM*total_mem_size);
     }
-    front()->nni_scale_num = nni_scale_num;
+    at(part_order[0])->nni_scale_num = nni_scale_num;
 
-	for (it = begin()+1, part = 0; it != end(); it++, part++) {
-		(*it)->_pattern_lh = (*(it-1))->_pattern_lh + mem_size[part];
-		(*it)->_pattern_lh_cat = (*(it-1))->_pattern_lh_cat + lh_cat_size[part];
-		(*it)->theta_all = (*(it-1))->theta_all + block_size[part];
-		(*it)->ptn_freq = (*(it-1))->ptn_freq + mem_size[part];
+	for (partid = 1; partid < ntrees; partid++) {
+        part = part_order[partid-1];
+        it = begin() + part_order[partid];
+        iterator prev_it = begin()+part_order[partid-1];
+		(*it)->_pattern_lh = (*prev_it)->_pattern_lh + mem_size[part];
+		(*it)->_pattern_lh_cat = (*prev_it)->_pattern_lh_cat + lh_cat_size[part];
+		(*it)->theta_all = (*prev_it)->theta_all + block_size[part];
+		(*it)->ptn_freq = (*prev_it)->ptn_freq + mem_size[part];
 		(*it)->ptn_freq_computed = false;
-		(*it)->ptn_invar = (*(it-1))->ptn_invar + mem_size[part];
-        (*it)->nni_partial_lh = (*(it-1))->nni_partial_lh + IT_NUM*block_size[part];
-        (*it)->nni_scale_num = (*(it-1))->nni_scale_num + IT_NUM*mem_size[part];
+		(*it)->ptn_invar = (*prev_it)->ptn_invar + mem_size[part];
+        (*it)->nni_partial_lh = (*prev_it)->nni_partial_lh + IT_NUM*block_size[part];
+        (*it)->nni_scale_num = (*prev_it)->nni_scale_num + IT_NUM*mem_size[part];
 	}
 
 	// compute total memory for all partitions
@@ -1997,7 +2019,8 @@ void PhyloSuperTreePlen::initializeAllPartialLh(double* &lh_addr, UBYTE* &scale_
         // assign a region in central_partial_lh to both Neihgbors (dad->node, and node->dad)
         SuperNeighbor *nei = (SuperNeighbor*) node->findNeighbor(dad);
 		SuperNeighbor *nei_back = (SuperNeighbor*) dad->findNeighbor(node);
-        for (int part = 0; part < size(); part++) {
+        for (int partid = 0; partid < size(); partid++) {
+            int part = part_order[partid];
         	PhyloNeighbor *nei_part = nei->link_neighbors[part];
         	if (!nei_part) continue;
         	PhyloNeighbor *nei_part_back = nei_back->link_neighbors[part];

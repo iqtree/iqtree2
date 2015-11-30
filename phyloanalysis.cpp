@@ -339,7 +339,7 @@ void reportRate(ofstream &out, PhyloTree &tree) {
 			out << endl;
 		}
 		if (rate_model->isGammaRate()) {
-			out << "Relative rates are computed as " << ((dynamic_cast<RateGamma*>(rate_model)->isCutMedian()) ? "MEDIAN" : "MEAN") <<
+			out << "Relative rates are computed as " << ((rate_model->isGammaRate() == GAMMA_CUT_MEDIAN) ? "MEDIAN" : "MEAN") <<
 				" of the portion of the Gamma distribution falling in the category." << endl;
 		}
 	}
@@ -449,11 +449,11 @@ void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh, 
 		out << "         Such branches are denoted by '**' in the figure below"
 				<< endl << endl;
 	}
-	int long_branches = tree.countLongBranches(NULL, NULL, MAX_BRANCH_LEN-0.2);
+	int long_branches = tree.countLongBranches(NULL, NULL, params.max_branch_length-0.2);
 	if (long_branches > 0) {
 		//stringstream sstr;
 		out << "WARNING: " << long_branches << " too long branches (>" 
-            << MAX_BRANCH_LEN-0.2 << ") should be treated with caution!" << endl;
+            << params.max_branch_length-0.2 << ") should be treated with caution!" << endl;
 		//out << sstr.str();
 		//cout << sstr.str();
 	}
@@ -1566,7 +1566,7 @@ void printFinalSearchInfo(Params &params, IQTree &iqtree, double search_cpu_time
 	params.run_time = (getCPUTime() - params.startCPUTime);
 	cout << endl;
 	cout << "Total number of iterations: " << iqtree.stop_rule.getCurIt() << endl;
-    cout << "Total number of partial likelihood vector computations: " << iqtree.num_partial_lh_computations << endl;
+//    cout << "Total number of partial likelihood vector computations: " << iqtree.num_partial_lh_computations << endl;
 	cout << "CPU time used for tree search: " << search_cpu_time
 			<< " sec (" << convert_time(search_cpu_time) << ")" << endl;
 	cout << "Wall-clock time used for tree search: " << search_real_time
@@ -1921,9 +1921,14 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
         if (params.aBayes_test)
             cout << "Testing tree branches by aBayes parametric test..." << endl;
 		iqtree.setRootNode(params.root);
-		iqtree.testAllBranches(params.aLRT_threshold, iqtree.getCurScore(),
-				pattern_lh, params.aLRT_replicates, params.localbp_replicates, params.aLRT_test, params.aBayes_test);
-		cout << "CPU Time used:  " << getCPUTime() - mytime << " sec." << endl;
+        if (iqtree.isBifurcating()) {
+            iqtree.testAllBranches(params.aLRT_threshold, iqtree.getCurScore(),
+                    pattern_lh, params.aLRT_replicates, params.localbp_replicates, params.aLRT_test, params.aBayes_test);
+            cout << "CPU Time used:  " << getCPUTime() - mytime << " sec." << endl;
+        } else {
+            outWarning("Tree is multifurcating and such test is not applicable");
+            params.aLRT_replicates = params.localbp_replicates = params.aLRT_test = params.aBayes_test = 0;
+        }
 	}
 
 	if (params.gbo_replicates > 0) {
@@ -2310,6 +2315,7 @@ void convertAlignment(Params &params, IQTree *iqtree) {
 		bootstrap_alignment->createBootstrapAlignment(alignment, NULL, params.bootstrap_spec);
 		delete alignment;
 		alignment = bootstrap_alignment;
+        iqtree->aln = alignment;
 	}
 	if (alignment->isSuperAlignment()) {
 		((SuperAlignment*)alignment)->printCombinedAlignment(params.aln_output);

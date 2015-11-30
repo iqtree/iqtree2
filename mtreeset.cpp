@@ -104,6 +104,35 @@ void MTreeSet::init(StringIntMap &treels, bool &is_rooted, IntVector &weights) {
 	//tree_weights.resize(size(), 1);
 }
 
+void MTreeSet::init(StrVector &treels, bool &is_rooted) {
+	//resize(treels.size(), NULL);
+	int count = 0;
+	//IntVector ok_trees;
+	//ok_trees.resize(treels.size(), 0);
+	//for (i = 0; i < trees_id.size(); i++) ok_trees[trees_id[i]] = 1;
+
+	for (StrVector::iterator it = treels.begin(); it != treels.end(); it++)
+	{
+		count++;
+		MTree *tree = newTree();
+		stringstream ss(*it);
+		bool myrooted = is_rooted;
+		tree->readTree(ss, myrooted);
+		NodeVector taxa;
+		tree->getTaxa(taxa);
+		for (NodeVector::iterator taxit = taxa.begin(); taxit != taxa.end(); taxit++)
+			(*taxit)->id = atoi((*taxit)->name.c_str());
+		//at(it->second) = tree;
+		push_back(tree);
+		tree_weights.push_back(1);
+		//cout << "Tree " << it->second << ": ";
+		//tree->printTree(cout, WT_NEWLINE);
+	}
+	if (verbose_mode >= VB_MED)
+		cout << count << " tree(s) converted" << endl;
+	//tree_weights.resize(size(), 1);
+}
+
 void MTreeSet::init(vector<string> &trees, vector<string> &taxonNames, bool &is_rooted) {
 	int count = 0;
 	for (vector<string>::iterator it = trees.begin(); it != trees.end(); it++) {
