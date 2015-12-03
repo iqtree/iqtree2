@@ -88,6 +88,8 @@ double PartitionModel::computeFunction(double shape) {
         if ((*it)->getRate()->isGammaRate()) {
             res += (*it)->getRate()->computeFunction(shape);
         }
+    if (res == 0.0)
+        outError("No partition has Gamma rate heterogeneity!");
 	return res;
 }
 

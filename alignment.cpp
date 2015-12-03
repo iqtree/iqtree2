@@ -298,6 +298,12 @@ Alignment *Alignment::removeGappySeq() {
 		}
 	if (keep_seqs.size() == nseq)
 		return this;
+    // 2015-12-03: if resulting alignment has too few seqs, try to add some back
+    if (keep_seqs.size() < 3 && getNSeq() >= 3) {
+        for (i = 0; i < nseq && keep_seqs.size() < 3; i++)
+            if (isGapOnlySeq(i))
+                keep_seqs.push_back(i);
+    }
 	Alignment *aln = new Alignment;
 	aln->extractSubAlignment(this, keep_seqs, 0);
 	return aln;
