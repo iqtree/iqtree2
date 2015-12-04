@@ -1605,7 +1605,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
     }
 
     /***************** Initialization for PLL and sNNI ******************/
-    if (params.start_tree == STT_PLL_PARSIMONY || params.pll) {
+    if (params.start_tree == STT_PLL_PARSIMONY || params.start_tree == STT_RANDOM_TREE || params.pll) {
         /* Initialized all data structure for PLL*/
     	iqtree.initializePLL(params);
     }
@@ -1720,6 +1720,15 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 	iqtree.clearAllPartialLH();
 	initTree = iqtree.optimizeModelParameters(true, initEpsilon);
 
+    // now overwrite with random tree
+    if (params.start_tree == STT_RANDOM_TREE) {
+        cout << "Generate random initial Yule-Harding tree..." << endl;
+        iqtree.generateRandomTree(YULE_HARDING);
+        iqtree.wrapperFixNegativeBranch(true);
+        iqtree.initializeAllPartialLh();
+        initTree = iqtree.optimizeBranches(2);
+        cout << "Log-likelihood of random tree: " << iqtree.getCurScore() << endl;
+    }
 
     /****************** NOW PERFORM MAXIMUM LIKELIHOOD TREE RECONSTRUCTION ******************/
 

@@ -3214,7 +3214,7 @@ void PhyloTree::computeBestTraversal(NodeVector &nodes, NodeVector &nodes2) {
 
     // double call to farthest leaf to find the longest path on the tree
     findFarthestLeaf(farleaf);
-    if (verbose_mode >= VB_MED)
+    if (verbose_mode >= VB_MAX)
         cout << "Tree diameter: " << farleaf->height << endl;
     getPreOrderBranches(nodes, nodes2, farleaf);
 }
