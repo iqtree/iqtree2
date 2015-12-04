@@ -1625,7 +1625,7 @@ public:
     ModelTestCriterion model_test_criterion;
 
     /** either MTC_AIC, MTC_AICc, MTC_BIC, or MTC_ALL to stop +R increasing categories */
-    ModelTestCriterion model_test_stop_rule;
+//    ModelTestCriterion model_test_stop_rule;
 
     /** sample size for AICc and BIC */
     int model_test_sample_size;

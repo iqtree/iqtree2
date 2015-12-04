@@ -1440,7 +1440,7 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
             size_t pos_r = info.name.find("+R");
             if ( prev_pos_r != string::npos &&  pos_r != string::npos && 
             model_info[prev_model_id].name.substr(0,prev_pos_r) == info.name.substr(0, pos_r)) {
-                switch (params.model_test_stop_rule) {
+                switch (params.model_test_criterion) {
                 case MTC_ALL:
                     if (info.AIC_score > model_info[prev_model_id].AIC_score && info.AICc_score > model_info[prev_model_id].AICc_score &&
                         info.BIC_score > model_info[prev_model_id].BIC_score) {

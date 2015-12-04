@@ -863,7 +863,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.num_threads = 1;
 #endif
     params.model_test_criterion = MTC_BIC;
-    params.model_test_stop_rule = MTC_ALL;
+//    params.model_test_stop_rule = MTC_ALL;
     params.model_test_sample_size = 0;
     params.root_state = NULL;
     params.print_bootaln = false;
@@ -2739,11 +2739,11 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (cnt >= argc)
 					throw "Use -merit AIC|AICC|BIC";
                 if (strcmp(argv[cnt], "AIC") == 0)
-                    params.model_test_stop_rule = MTC_AIC;
+                    params.model_test_criterion = MTC_AIC;
                 else if (strcmp(argv[cnt], "AICc") == 0 || strcmp(argv[cnt], "AICC") == 0)
-                    params.model_test_stop_rule = MTC_AICC;
+                    params.model_test_criterion = MTC_AICC;
                 else if (strcmp(argv[cnt], "BIC") == 0)
-                    params.model_test_stop_rule = MTC_BIC;
+                    params.model_test_criterion = MTC_BIC;
                 else throw "Use -merit AIC|AICC|BIC";
 				continue;
 			}
