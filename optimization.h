@@ -14,6 +14,9 @@
 
 #include "checkpoint.h"
 
+#define CHECKPOINT(var) checkpoint->put((string)typeid(this).name()+"."+#var, var)
+#define CHECKPOINTARRAY(num, arr) checkpoint->putArray((string)typeid(this).name()+"."+#arr, num, arr)
+
 /**
 Optimization class, implement some methods like Brent, Newton-Raphson (for 1 variable function), BFGS (for multi-dimensional function)
 
@@ -29,17 +32,30 @@ public:
 		Checkpointing facility
 	*****************************************************/
 
+
+    /**
+        set checkpoint object
+        @param checkpoint 
+    */
+    void setCheckpoint(Checkpoint *checkpoint);
+
+    /**
+        get checkpoint object
+        @return checkpoint 
+    */
+    Checkpoint *getCheckpoint();
+
     /** 
         save object into the checkpoint
         @param[out] ckp checkpoint to save to
     */
-    void saveCheckpoint(Checkpoint *ckp);
+    virtual void saveCheckpoint();
 
     /** 
         restore object from the checkpoint
         @param ckp checkpoint to restore from
     */
-    void restoreCheckpoint(Checkpoint *ckp);
+    virtual void restoreCheckpoint();
 
 	/*****************************************************
 		One dimensional optimization with Brent method
@@ -185,6 +201,10 @@ public:
 		original numerical recipes method
 	*/
 	double brent(double ax, double bx, double cx, double tol, double *xmin);
+
+protected:
+
+    Checkpoint *checkpoint;
 
 private:
 

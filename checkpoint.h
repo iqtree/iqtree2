@@ -11,6 +11,9 @@
 #include <stdio.h>
 #include <map>
 #include <string>
+#include <sstream>
+#include <cassert>
+
 using namespace std;
 
 //#include "tools.h"
@@ -35,9 +38,15 @@ public:
 	void load();
 
 	/**
-	 * commit checkpoint information into file
+	 * dump checkpoint information into file
 	 */
-	void commit();
+	void dump();
+
+    /**
+        set dumping interval in seconds
+        @param interval dumping interval
+    */
+    void setDumpInterval(double interval);
 
 	/**
 	 * @return true if checkpoint contains the key
@@ -54,7 +63,12 @@ public:
         @param[out] value value for key
 	 */
 	template<class T>
-	void get(string key, T& value);
+    void get(string key, T& value) {
+        assert(containsKey(key));
+        stringstream ss((*this)[key]);
+        ss >> value;
+    }
+
 
     /** 
         @param key key name
@@ -91,7 +105,12 @@ public:
         @param value value
     */
 	template<class T>
-	void put(string key, T value);
+	void put(string key, T value) {
+        stringstream ss;
+        ss << value;
+        (*this)[key] = ss.str();
+    }
+    
 
     /**
         put an array to checkpoint
@@ -100,13 +119,30 @@ public:
         @param value value
     */
 	template<class T>
-	void putArray(string key, int num, T* value);
+	void putArray(string key, int num, T* value) {
+        stringstream ss;
+        for (int i = 0; i < num; i++) {
+            if (i > 0) ss << ',';
+            ss << value[i];
+        }
+        (*this)[key] = ss.str();
+    }
+    
 
     /** destructor */
 	virtual ~Checkpoint();
 
+protected:
+
     /** filename to write checkpoint */
 	string filename;
+    
+    /** previous dump time in seconds */
+    double prev_dump_time;
+    
+    /** dumping time interval */
+    double dump_interval;
 };
+
 
 #endif /* CHECKPOINT_H_ */

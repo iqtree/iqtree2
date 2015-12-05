@@ -7,6 +7,7 @@
 
 #include "checkpoint.h"
 #include "tools.h"
+#include "timeutil.h"
 
 /*
  * The following parameters have been saved for checkpoint in IQPNNI
@@ -52,6 +53,8 @@ Finished: 0
 
 Checkpoint::Checkpoint() {
 	filename = "";
+    prev_dump_time = 0;
+    dump_interval = 30; // dumping at most once per 30 seconds
 }
 
 
@@ -59,11 +62,14 @@ Checkpoint::~Checkpoint() {
 }
 
 
+const char* CKP_HEADER = "--- # IQ-TREE Checkpoint";
+
 void Checkpoint::setFileName(string filename) {
 	this->filename = filename;
 }
 void Checkpoint::load() {
 	assert(filename != "");
+    if (!fileExists(filename)) return;
     try {
         ifstream in;
         // set the failbit and badbit
@@ -71,15 +77,16 @@ void Checkpoint::load() {
         in.open(filename.c_str());
         string line;
         getline(in, line);
-        if (line != "Checkpoint file for IQ-TREE")
+        if (line != CKP_HEADER)
         	throw ("Invalid checkpoint file");
+        getline(in, line);
         // remove the failbit
         in.exceptions(ios::badbit);
         while (!in.eof()) {
         	getline(in, line);
-        	size_t pos = line.find(" := ");
+        	size_t pos = line.find(": ");
         	if (pos == string::npos)
-        		throw "':=' is expected between key and value";
+        		throw "': ' is expected between key and value";
         	(*this)[line.substr(0, pos)] = line.substr(pos+3);
         }
         in.clear();
@@ -95,15 +102,24 @@ void Checkpoint::load() {
     }
 }
 
-void Checkpoint::commit() {
+void Checkpoint::setDumpInterval(double interval) {
+    dump_interval = interval;
+}
+
+
+void Checkpoint::dump() {
 	assert(filename != "");
+    if (getRealTime() < prev_dump_time + dump_interval) {
+        return;
+    }
+    prev_dump_time = getRealTime();
     try {
         ofstream out;
         out.exceptions(ios::failbit | ios::badbit);
         out.open(filename.c_str());
-        out << "Checkpoint file for IQ-TREE" << endl;
+        out << CKP_HEADER << endl;
         for (iterator i = begin(); i != end(); i++)
-        	out << i->first << " := " << i->second << endl;
+        	out << i->first << ": " << i->second << endl;
         out.close();
     } catch (ios::failure &) {
         outError(ERR_WRITE_OUTPUT, filename.c_str());
@@ -117,13 +133,6 @@ bool Checkpoint::containsKey(string key) {
 /*-------------------------------------------------------------
  * series of get function to get value of a key
  *-------------------------------------------------------------*/
-
-template<class T>
-void Checkpoint::get(string key, T& value) {
-	assert(containsKey(key));
-	stringstream ss((*this)[key]);
-	ss >> value;
-}
 
 bool Checkpoint::getBool(string key) {
 	assert(containsKey(key));
@@ -146,26 +155,5 @@ int Checkpoint::getInt(string key) {
 	assert(containsKey(key));
 	return convert_int((*this)[key].c_str());
 
-}
-
-/*-------------------------------------------------------------
- * series of put function to put pair of (key,value)
- *-------------------------------------------------------------*/
-
-template<class T>
-void Checkpoint::put(string key, T value) {
-	stringstream ss;
-	ss << value;
-	(*this)[key] = ss.str();
-}
-
-template<class T>
-void Checkpoint::putArray(string key, int num, T* value) {
-	stringstream ss;
-	for (int i = 0; i < num; i++) {
-		if (i > 0) ss << ',';
-		ss << value[i];
-	}
-	(*this)[key] = ss.str();
 }
 

@@ -341,6 +341,8 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 		for (vector<double*>::reverse_iterator it = freq_vec.rbegin(); it != freq_vec.rend(); it++)
 			if (*it) delete [] (*it);
 	}
+    
+    model->setCheckpoint(tree->getCheckpoint());
 
 //	if (model->isMixture())
 //		cout << "Mixture model with " << model->getNMixtures() << " components!" << endl;
@@ -532,6 +534,8 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 		site_rate = new RateHeterogeneity();
 		site_rate->setTree(tree);
 	} 	
+
+    site_rate->setCheckpoint(tree->getCheckpoint());
 
 	if (fused_mix_rate) {
 		if (!model->isMixture())

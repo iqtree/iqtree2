@@ -23,6 +23,23 @@ ModelSubst::ModelSubst(int nstates) : Optimization()
 	freq_type = FREQ_EQUAL;
 }
 
+void ModelSubst::saveCheckpoint() {
+    CHECKPOINT(num_states);
+    CHECKPOINT(name);
+    CHECKPOINT(full_name);
+    CHECKPOINT(freq_type);
+    CHECKPOINTARRAY(num_states, state_freq);
+    Optimization::saveCheckpoint();
+}
+
+    /** 
+        restore object from the checkpoint
+        @param ckp checkpoint to restore from
+    */
+void ModelSubst::restoreCheckpoint() {
+    Optimization::restoreCheckpoint();
+}
+
 // here the simplest Juke-Cantor model is implemented, valid for all kind of data (DNA, AA,...)
 void ModelSubst::computeTransMatrix(double time, double *trans_matrix) {
 	double non_diagonal = (1.0 - exp(-time*num_states/(num_states - 1))) / num_states;

@@ -1719,6 +1719,8 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
     // Optimize model parameters and branch lengths using ML for the initial tree
 	iqtree.clearAllPartialLH();
 	initTree = iqtree.optimizeModelParameters(true, initEpsilon);
+    
+    iqtree.getModel()->saveCheckpoint();
 
     // now overwrite with random tree
     if (params.start_tree == STT_RANDOM_TREE) {
@@ -2341,6 +2343,12 @@ void convertAlignment(Params &params, IQTree *iqtree) {
 void runPhyloAnalysis(Params &params) {
 	Alignment *alignment;
 	IQTree *tree;
+    
+    // 2015-12-05
+    Checkpoint *checkpoint = new Checkpoint;
+    checkpoint->setFileName((string)params.out_prefix + ".checkpoint");
+    checkpoint->load();
+    checkpoint->setDumpInterval(0); // always dump for testing purpose
 
 	/****************** read in alignment **********************/
 	if (params.partition_file) {
@@ -2368,6 +2376,8 @@ void runPhyloAnalysis(Params &params) {
 		}
 		tree = new IQTree(alignment);
 	}
+
+    tree->setCheckpoint(checkpoint);
 
 	string original_model = params.model_name;
 
@@ -2510,6 +2520,7 @@ void runPhyloAnalysis(Params &params) {
     // 2015-09-22: THIS IS STUPID: after deleting tree, one cannot access tree->aln anymore
 //	alignment = tree->aln;
 	delete alignment;
+    delete checkpoint;
 }
 
 void assignBranchSupportNew(Params &params) {
