@@ -1675,6 +1675,9 @@ public:
 
     /** true to compute sequence identity along tree */
     bool compute_seq_identity_along_tree;
+    
+    /** true to ignore checkpoint file */
+    bool ignore_checkpoint;
 };
 
 /**

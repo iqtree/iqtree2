@@ -882,6 +882,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.no_rescale_gamma_invar = false;
     params.compute_seq_identity_along_tree = false;
     params.link_alpha = false;
+    params.ignore_checkpoint = false;
 
 
 	if (params.nni5) {
@@ -2814,6 +2815,11 @@ void parseArg(int argc, char *argv[], Params &params) {
             
 			if (strcmp(argv[cnt], "--link-alpha") == 0) {
 				params.link_alpha = true;
+				continue;
+			}
+
+			if (strcmp(argv[cnt], "-restart") == 0) {
+				params.ignore_checkpoint = true;
 				continue;
 			}
 

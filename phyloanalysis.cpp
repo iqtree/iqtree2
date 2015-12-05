@@ -2347,20 +2347,22 @@ void runPhyloAnalysis(Params &params) {
     // 2015-12-05
     Checkpoint *checkpoint = new Checkpoint;
     checkpoint->setFileName((string)params.out_prefix + ".checkpoint");
-    checkpoint->load();
-    if (checkpoint->containsKey("finished")) {
-        if (!checkpoint->getBool("finished")) {
-            cout << "NOTE: Resuming from a previous run..." << endl << endl;
+    if (!params.ignore_checkpoint) {
+        checkpoint->load();
+        if (checkpoint->containsKey("finished")) {
+            if (!checkpoint->getBool("finished")) {
+                cout << "NOTE: Resuming from a previous run..." << endl << endl;
+            } else {
+                outWarning("Quiting now because the previous run successfully finished");
+                outWarning("Use '-restart' if you really want to overwrite this run");
+                delete checkpoint;
+                return;
+            }
         } else {
-            outWarning("Quiting now because the previous run successfully finished");
-            outWarning("Use '-restart' if you really want to overwrite this run");
-            delete checkpoint;
-            return;
+            outWarning("Ignore invalid checkpoint file");
+            checkpoint->clear();
         }
-    } else {
-        outWarning("Ignore invalid checkpoint file");
-        checkpoint->clear();
-    } 
+    }
     
     checkpoint->putBool("finished", false);
     checkpoint->setDumpInterval(0); // always dump for testing purpose
