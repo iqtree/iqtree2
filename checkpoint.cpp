@@ -6,6 +6,7 @@
  */
 
 #include "checkpoint.h"
+#include "tools.h"
 
 /*
  * The following parameters have been saved for checkpoint in IQPNNI
@@ -52,6 +53,11 @@ Finished: 0
 Checkpoint::Checkpoint() {
 	filename = "";
 }
+
+
+Checkpoint::~Checkpoint() {
+}
+
 
 void Checkpoint::setFileName(string filename) {
 	this->filename = filename;
@@ -108,9 +114,9 @@ bool Checkpoint::containsKey(string key) {
 	return (find(key) != end());
 }
 
-/**
- * series of get functions
- */
+/*-------------------------------------------------------------
+ * series of get function to get value of a key
+ *-------------------------------------------------------------*/
 
 template<class T>
 void Checkpoint::get(string key, T& value) {
@@ -142,9 +148,9 @@ int Checkpoint::getInt(string key) {
 
 }
 
-/**
- * series of put functions
- */
+/*-------------------------------------------------------------
+ * series of put function to put pair of (key,value)
+ *-------------------------------------------------------------*/
 
 template<class T>
 void Checkpoint::put(string key, T value) {
@@ -161,9 +167,5 @@ void Checkpoint::putArray(string key, int num, T* value) {
 		ss << value[i];
 	}
 	(*this)[key] = ss.str();
-}
-
-
-Checkpoint::~Checkpoint() {
 }
 

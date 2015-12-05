@@ -12,6 +12,8 @@
 #ifndef OPTIMIZATION_H
 #define OPTIMIZATION_H
 
+#include "checkpoint.h"
+
 /**
 Optimization class, implement some methods like Brent, Newton-Raphson (for 1 variable function), BFGS (for multi-dimensional function)
 
@@ -19,8 +21,25 @@ Optimization class, implement some methods like Brent, Newton-Raphson (for 1 var
 */
 class Optimization{
 public:
+
+    /** constructor */
     Optimization();
 
+	/*****************************************************
+		Checkpointing facility
+	*****************************************************/
+
+    /** 
+        save object into the checkpoint
+        @param[out] ckp checkpoint to save to
+    */
+    void saveCheckpoint(Checkpoint *ckp);
+
+    /** 
+        restore object from the checkpoint
+        @param ckp checkpoint to restore from
+    */
+    void restoreCheckpoint(Checkpoint *ckp);
 
 	/*****************************************************
 		One dimensional optimization with Brent method
