@@ -164,27 +164,24 @@ bool Checkpoint::containsKey(string key) {
  *-------------------------------------------------------------*/
 
 bool Checkpoint::getBool(string key) {
-	if (!containsKey(key)) return false;
-	if ((*this)[key] == "true") return true;
-    if ((*this)[key] == "false") return false;
-    outError("Invalid boolean value for key " + key);
+    string value;
+    if (!get(key, value)) return false;
+	if (value == "true") return true;
+    if (value == "false") return false;
+    outError("Invalid boolean value " + value + " for key " + key);
     return false;
 }
 
-char Checkpoint::getChar(string key) {
-	if (!containsKey(key)) return char(0);
-	return (*this)[key][0];
-}
-
 double Checkpoint::getDouble(string key) {
-	if (!containsKey(key)) return -DBL_MAX;
-	return convert_double((*this)[key].c_str());
-
+    string value;
+    if (!get(key, value)) return -DBL_MAX;
+	return convert_double(value.c_str());
 }
 
 int Checkpoint::getInt(string key) {
-	if (!containsKey(key)) return -INT_MAX;
-	return convert_int((*this)[key].c_str());
+    string value;
+    if (!get(key, value)) return -INT_MAX;
+	return convert_int(value.c_str());
 }
 
 
@@ -193,11 +190,10 @@ int Checkpoint::getInt(string key) {
  *-------------------------------------------------------------*/
 
 void Checkpoint::putBool(string key, bool value) {
-    key = struct_name + key;
     if (value)
-        (*this)[key] = "true";
+        put(key, "true");
     else
-        (*this)[key] = "false";
+        put(key, "false");
 }
 
 

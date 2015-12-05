@@ -55,6 +55,16 @@ public:
 	
 	ModelFactory();
 
+    /**
+        save object into the checkpoint
+    */
+    virtual void saveCheckpoint();
+
+    /**
+        restore object from the checkpoint
+    */
+    virtual void restoreCheckpoint();
+
 	/**
 	 * read site specific state frequency vectors from a file to create corresponding model (Ingo's idea)
 	 * @param aln input alignment

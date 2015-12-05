@@ -25,11 +25,11 @@ ModelSubst::ModelSubst(int nstates) : Optimization()
 
 void ModelSubst::saveCheckpoint() {
     checkpoint->startStruct("ModelSubst");
-    CHECKPOINT(num_states);
-    CHECKPOINT(name);
-    CHECKPOINT(full_name);
-    CHECKPOINT(freq_type);
-    CHECKPOINTARRAY(num_states, state_freq);
+    CKP_SAVE(num_states);
+    CKP_SAVE(name);
+    CKP_SAVE(full_name);
+    CKP_SAVE(freq_type);
+    CKP_ARRAY_SAVE(num_states, state_freq);
     checkpoint->endStruct();
     Optimization::saveCheckpoint();
 }
@@ -40,6 +40,15 @@ void ModelSubst::saveCheckpoint() {
     */
 void ModelSubst::restoreCheckpoint() {
     Optimization::restoreCheckpoint();
+    checkpoint->startStruct("ModelSubst");
+    CKP_RESTORE(num_states);
+    CKP_RESTORE(name);
+    CKP_RESTORE(full_name);
+    int freq_type = this->freq_type;
+    CKP_RESTORE(freq_type);
+    this->freq_type = (StateFreqType)freq_type;
+    CKP_ARRAY_RESTORE(num_states, state_freq);
+    checkpoint->endStruct();
 }
 
 // here the simplest Juke-Cantor model is implemented, valid for all kind of data (DNA, AA,...)

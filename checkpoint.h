@@ -65,28 +65,47 @@ public:
 	/**
         @param key key name
         @param[out] value value for key
+        @return true if key exists, false otherwise
 	 */
 	template<class T>
-    void get(string key, T& value) {
+    bool get(string key, T& value) {
         key = struct_name + key;
-        if (!containsKey(key)) 
-            return;
-        stringstream ss((*this)[key]);
+        iterator it = find(key);
+        if (it == end())
+            return false;
+        stringstream ss(it->second);
         ss >> value;
+        return true;
     }
 
+    /**
+        get an array from checkpoint
+        @param key key name
+        @param num number of elements
+        @param[out] value value
+    */
+	template<class T>
+    bool getArray(string key, int maxnum, T* value) {
+        key = struct_name + key;
+        iterator it = find(key);
+        if (it == end())
+            return false;
+        size_t pos = 0, next_pos;
+        for (int i = 0; i < maxnum; i++) {
+        	next_pos = it->second.find(", ", pos);
+            stringstream ss(it->second.substr(pos, next_pos-pos));
+        	ss >> value[i];
+        	if (next_pos == string::npos) break;
+        	pos = next_pos+2;
+        }
+        return true;
+    }
 
     /** 
         @param key key name
         @return bool value for key
     */
 	bool getBool(string key);
-
-    /** 
-        @param key key name
-        @return char value for key
-    */
-	char getChar(string key);
 
     /** 
         @param key key name
@@ -135,7 +154,7 @@ public:
         key = struct_name + key;
         stringstream ss;
         for (int i = 0; i < num; i++) {
-            if (i > 0) ss << ',';
+            if (i > 0) ss << ", ";
             ss << value[i];
         }
         (*this)[key] = ss.str();

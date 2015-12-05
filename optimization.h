@@ -14,8 +14,11 @@
 
 #include "checkpoint.h"
 
-#define CHECKPOINT(var) checkpoint->put(#var, var)
-#define CHECKPOINTARRAY(num, arr) checkpoint->putArray(#arr, num, arr)
+#define CKP_SAVE(var) checkpoint->put(#var, var)
+#define CKP_ARRAY_SAVE(num, arr) checkpoint->putArray(#arr, num, arr)
+
+#define CKP_RESTORE(var) checkpoint->get(#var, var)
+#define CKP_ARRAY_RESTORE(num, arr) checkpoint->getArray(#arr, num, arr)
 
 /**
 Optimization class, implement some methods like Brent, Newton-Raphson (for 1 variable function), BFGS (for multi-dimensional function)
@@ -47,13 +50,11 @@ public:
 
     /** 
         save object into the checkpoint
-        @param[out] ckp checkpoint to save to
     */
     virtual void saveCheckpoint();
 
     /** 
         restore object from the checkpoint
-        @param ckp checkpoint to restore from
     */
     virtual void restoreCheckpoint();
 

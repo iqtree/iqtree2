@@ -38,6 +38,24 @@ RateInvar::RateInvar(double p_invar_sites, PhyloTree *tree)
 	}
 }
 
+void RateInvar::saveCheckpoint() {
+    checkpoint->startStruct("RateInvar");
+    CKP_SAVE(p_invar);
+    CKP_SAVE(fix_p_invar);
+    CKP_SAVE(optimize_p_invar);
+    checkpoint->endStruct();
+    RateHeterogeneity::saveCheckpoint();
+}
+
+void RateInvar::restoreCheckpoint() {
+    RateHeterogeneity::restoreCheckpoint();
+    checkpoint->startStruct("RateInvar");
+    CKP_RESTORE(p_invar);
+    CKP_RESTORE(fix_p_invar);
+    CKP_RESTORE(optimize_p_invar);
+    checkpoint->endStruct();
+}
+
 string RateInvar::getNameParams() {
 	ostringstream str;
 	str << "+I{" << p_invar << '}';

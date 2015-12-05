@@ -38,6 +38,21 @@ RateHeterogeneity::~RateHeterogeneity()
 {
 }
 
+void RateHeterogeneity::saveCheckpoint() {
+    checkpoint->startStruct("RateHeterogeneity");
+    CKP_SAVE(name);
+    CKP_SAVE(full_name);
+    checkpoint->endStruct();
+    Optimization::saveCheckpoint();
+}
+
+void RateHeterogeneity::restoreCheckpoint() {
+    checkpoint->startStruct("RateHeterogeneity");
+    CKP_RESTORE(name);
+    CKP_RESTORE(full_name);
+    checkpoint->endStruct();
+}
+
 void RateHeterogeneity::writeSiteRates(ostream &out, DoubleVector &pattern_rates, IntVector &pattern_cat, int ncategory) {
 	int nsite = phylo_tree->aln->getNSite();
 	int i;

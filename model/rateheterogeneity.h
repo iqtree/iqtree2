@@ -55,6 +55,16 @@ public:
 	*/
     virtual ~RateHeterogeneity();
 
+    /**
+        save object into the checkpoint
+    */
+    virtual void saveCheckpoint();
+
+    /**
+        restore object from the checkpoint
+    */
+    virtual void restoreCheckpoint();
+
 	/**
 		set phylogenetic tree
 		@param tree associated phyogenetic tree

@@ -342,8 +342,6 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 			if (*it) delete [] (*it);
 	}
     
-    model->setCheckpoint(tree->getCheckpoint());
-
 //	if (model->isMixture())
 //		cout << "Mixture model with " << model->getNMixtures() << " components!" << endl;
 
@@ -535,6 +533,9 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 		site_rate->setTree(tree);
 	} 	
 
+    // set checkpoint object
+    setCheckpoint(tree->getCheckpoint());
+    model->setCheckpoint(tree->getCheckpoint());
     site_rate->setCheckpoint(tree->getCheckpoint());
 
 	if (fused_mix_rate) {
@@ -558,6 +559,27 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 		outError(str);
 	}
 
+}
+
+void ModelFactory::saveCheckpoint() {
+    model->saveCheckpoint();
+    site_rate->saveCheckpoint();
+    checkpoint->startStruct("ModelFactory");
+    CKP_SAVE(fused_mix_rate);
+    CKP_SAVE(unobserved_ptns);
+    CKP_SAVE(joint_optimize);
+    checkpoint->endStruct();
+    Optimization::saveCheckpoint();
+}
+
+void ModelFactory::restoreCheckpoint() {
+    model->restoreCheckpoint();
+    site_rate->restoreCheckpoint();
+    checkpoint->startStruct("ModelFactory");
+    CKP_RESTORE(fused_mix_rate);
+    CKP_RESTORE(unobserved_ptns);
+    CKP_RESTORE(joint_optimize);
+    checkpoint->endStruct();
 }
 
 int ModelFactory::getNParameters() {

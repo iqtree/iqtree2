@@ -1718,9 +1718,9 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 
     // Optimize model parameters and branch lengths using ML for the initial tree
 	iqtree.clearAllPartialLH();
+    iqtree.getModelFactory()->restoreCheckpoint();
 	initTree = iqtree.optimizeModelParameters(true, initEpsilon);
-    
-    iqtree.getModel()->saveCheckpoint();
+    iqtree.getModelFactory()->saveCheckpoint();
 
     // now overwrite with random tree
     if (params.start_tree == STT_RANDOM_TREE) {
@@ -2538,7 +2538,7 @@ void runPhyloAnalysis(Params &params) {
 //	alignment = tree->aln;
 	delete alignment;
 
-    checkpoint->putBool("finished", true);
+//    checkpoint->putBool("finished", true);
     checkpoint->dump();
     delete checkpoint;
 }
