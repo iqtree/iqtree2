@@ -14,8 +14,8 @@
 
 #include "checkpoint.h"
 
-#define CHECKPOINT(var) checkpoint->put((string)typeid(this).name()+"."+#var, var)
-#define CHECKPOINTARRAY(num, arr) checkpoint->putArray((string)typeid(this).name()+"."+#arr, num, arr)
+#define CHECKPOINT(var) checkpoint->put(#var, var)
+#define CHECKPOINTARRAY(num, arr) checkpoint->putArray(#arr, num, arr)
 
 /**
 Optimization class, implement some methods like Brent, Newton-Raphson (for 1 variable function), BFGS (for multi-dimensional function)

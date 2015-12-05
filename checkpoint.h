@@ -13,6 +13,7 @@
 #include <string>
 #include <sstream>
 #include <cassert>
+#include <vector>
 
 using namespace std;
 
@@ -26,6 +27,9 @@ public:
 
     /** constructor */
 	Checkpoint();
+
+    /** destructor */
+	virtual ~Checkpoint();
 
 	/**
 	 * @param filename file name
@@ -64,7 +68,9 @@ public:
 	 */
 	template<class T>
     void get(string key, T& value) {
-        assert(containsKey(key));
+        key = struct_name + key;
+        if (!containsKey(key)) 
+            return;
         stringstream ss((*this)[key]);
         ss >> value;
     }
@@ -106,11 +112,17 @@ public:
     */
 	template<class T>
 	void put(string key, T value) {
+        key = struct_name + key;
         stringstream ss;
         ss << value;
         (*this)[key] = ss.str();
     }
     
+    /** 
+        @param key key name
+        @param value
+    */
+	void putBool(string key, bool value);
 
     /**
         put an array to checkpoint
@@ -120,6 +132,7 @@ public:
     */
 	template<class T>
 	void putArray(string key, int num, T* value) {
+        key = struct_name + key;
         stringstream ss;
         for (int i = 0; i < num; i++) {
             if (i > 0) ss << ',';
@@ -128,9 +141,20 @@ public:
         (*this)[key] = ss.str();
     }
     
+    /*-------------------------------------------------------------
+     * series of put function to put pair of (key,value)
+     *-------------------------------------------------------------*/
 
-    /** destructor */
-	virtual ~Checkpoint();
+    /**
+        start a new struct
+    */
+    void startStruct(string name);
+
+    /**
+        end the current struct
+    */
+    void endStruct();
+
 
 protected:
 
@@ -142,6 +166,11 @@ protected:
     
     /** dumping time interval */
     double dump_interval;
+    
+private:
+
+    string struct_name;
+
 };
 
 

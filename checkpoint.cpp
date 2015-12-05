@@ -55,6 +55,7 @@ Checkpoint::Checkpoint() {
 	filename = "";
     prev_dump_time = 0;
     dump_interval = 30; // dumping at most once per 30 seconds
+    struct_name = "";
 }
 
 
@@ -75,19 +76,37 @@ void Checkpoint::load() {
         // set the failbit and badbit
         in.exceptions(ios::failbit | ios::badbit);
         in.open(filename.c_str());
+        cout << "Loading checkpoint file " << filename << "..." << endl;
         string line;
         getline(in, line);
         if (line != CKP_HEADER)
         	throw ("Invalid checkpoint file");
-        getline(in, line);
         // remove the failbit
         in.exceptions(ios::badbit);
+        string struct_name;
+        size_t pos;
         while (!in.eof()) {
         	getline(in, line);
-        	size_t pos = line.find(": ");
+            pos = line.find('#');
+            if (pos != string::npos)
+                line.erase(pos);
+            line.erase(line.find_last_not_of(" \n\r\t")+1);
+//            trimString(line);
+            if (line.empty()) continue;
+            if (line[line.length()-1] == ':') {
+                line.erase(line.length()-1);
+                trimString(line);
+                struct_name = line + '.';
+                continue;
+            }
+            if (line[0] != ' ') {
+                struct_name = "";
+            }
+            trimString(line);
+        	pos = line.find(": ");
         	if (pos == string::npos)
         		throw "': ' is expected between key and value";
-        	(*this)[line.substr(0, pos)] = line.substr(pos+3);
+        	(*this)[struct_name + line.substr(0, pos)] = line.substr(pos+2);
         }
         in.clear();
         // set the failbit again
@@ -118,8 +137,18 @@ void Checkpoint::dump() {
         out.exceptions(ios::failbit | ios::badbit);
         out.open(filename.c_str());
         out << CKP_HEADER << endl;
-        for (iterator i = begin(); i != end(); i++)
-        	out << i->first << ": " << i->second << endl;
+        string struct_name;
+        size_t pos;
+        for (iterator i = begin(); i != end(); i++) {
+            if ((pos = i->first.find('.')) != string::npos) {
+                if (struct_name != i->first.substr(0, pos)) {
+                    struct_name = i->first.substr(0, pos);
+                    out << struct_name << ":" << endl;
+                }
+                out << "  " << i->first.substr(pos+1) << ": " << i->second << endl;
+            } else
+                out << i->first << ": " << i->second << endl;
+        }
         out.close();
     } catch (ios::failure &) {
         outError(ERR_WRITE_OUTPUT, filename.c_str());
@@ -135,25 +164,53 @@ bool Checkpoint::containsKey(string key) {
  *-------------------------------------------------------------*/
 
 bool Checkpoint::getBool(string key) {
-	assert(containsKey(key));
-	if ((*this)[key] == "1") return true;
-	return false;
+	if (!containsKey(key)) return false;
+	if ((*this)[key] == "true") return true;
+    if ((*this)[key] == "false") return false;
+    outError("Invalid boolean value for key " + key);
+    return false;
 }
 
 char Checkpoint::getChar(string key) {
-	assert(containsKey(key));
+	if (!containsKey(key)) return char(0);
 	return (*this)[key][0];
 }
 
 double Checkpoint::getDouble(string key) {
-	assert(containsKey(key));
+	if (!containsKey(key)) return -DBL_MAX;
 	return convert_double((*this)[key].c_str());
 
 }
 
 int Checkpoint::getInt(string key) {
-	assert(containsKey(key));
+	if (!containsKey(key)) return -INT_MAX;
 	return convert_int((*this)[key].c_str());
-
 }
 
+
+/*-------------------------------------------------------------
+ * series of put function to put pair of (key,value)
+ *-------------------------------------------------------------*/
+
+void Checkpoint::putBool(string key, bool value) {
+    key = struct_name + key;
+    if (value)
+        (*this)[key] = "true";
+    else
+        (*this)[key] = "false";
+}
+
+
+/*-------------------------------------------------------------
+ * nested structures
+ *-------------------------------------------------------------*/
+void Checkpoint::startStruct(string name) {
+    struct_name = name + '.';
+}
+
+/**
+    end the current struct
+*/
+void Checkpoint::endStruct() {
+    struct_name = "";
+}

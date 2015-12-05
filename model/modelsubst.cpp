@@ -24,11 +24,13 @@ ModelSubst::ModelSubst(int nstates) : Optimization()
 }
 
 void ModelSubst::saveCheckpoint() {
+    checkpoint->startStruct("ModelSubst");
     CHECKPOINT(num_states);
     CHECKPOINT(name);
     CHECKPOINT(full_name);
     CHECKPOINT(freq_type);
     CHECKPOINTARRAY(num_states, state_freq);
+    checkpoint->endStruct();
     Optimization::saveCheckpoint();
 }
 
