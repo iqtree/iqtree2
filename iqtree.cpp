@@ -72,7 +72,13 @@ IQTree::IQTree(Alignment *aln) : PhyloTree(aln) {
     IQTree::init();
 }
 
+void IQTree::setCheckpoint(Checkpoint *checkpoint) {
+    PhyloTree::setCheckpoint(checkpoint);
+    stop_rule.setCheckpoint(checkpoint);
+}
+
 void IQTree::saveCheckpoint() {
+    stop_rule.saveCheckpoint();
     checkpoint->startStruct("IQTree");
     checkpoint->endStruct();
     PhyloTree::saveCheckpoint();
@@ -80,6 +86,7 @@ void IQTree::saveCheckpoint() {
 
 void IQTree::restoreCheckpoint() {
     PhyloTree::restoreCheckpoint();
+    stop_rule.restoreCheckpoint();
     checkpoint->startStruct("IQTree");
     checkpoint->endStruct();
 }

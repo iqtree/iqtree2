@@ -76,7 +76,7 @@ ModelsBlock *readModelsDefinition(Params &params) {
 	return models_block;
 }
 
-ModelFactory::ModelFactory() { 
+ModelFactory::ModelFactory() : CheckpointFactory() { 
 	model = NULL; 
 	site_rate = NULL;
 	store_trans_matrix = false;
@@ -97,7 +97,7 @@ size_t findCloseBracket(string &str, size_t start_pos) {
 	return string::npos;
 }
 
-ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_block) {
+ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_block) : CheckpointFactory() {
 	store_trans_matrix = params.store_trans_matrix;
 	is_storing = false;
 	joint_optimize = params.optimize_model_rate_joint;

@@ -51,7 +51,7 @@ void SPRMoves::add(PhyloNode *prune_node, PhyloNode *prune_dad, PhyloNode *regra
  PhyloTree class
  ****************************************************************************/
 
-PhyloTree::PhyloTree() : MTree() {
+PhyloTree::PhyloTree() : MTree(), CheckpointFactory() {
     init();
 }
 
@@ -111,7 +111,7 @@ void PhyloTree::init() {
     num_partial_lh_computations = 0;
 }
 
-PhyloTree::PhyloTree(Alignment *aln) : MTree() {
+PhyloTree::PhyloTree(Alignment *aln) : MTree(), CheckpointFactory() {
     init();
     this->aln = aln;
 }

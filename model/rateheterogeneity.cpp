@@ -23,7 +23,7 @@
 
 
 RateHeterogeneity::RateHeterogeneity()
- : Optimization()
+ : Optimization(), CheckpointFactory()
 {
 	name = "";
 	full_name = "Uniform";

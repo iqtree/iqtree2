@@ -20,7 +20,7 @@
 #include "stoprule.h"
 #include "timeutil.h"
 
-StopRule::StopRule()
+StopRule::StopRule() : CheckpointFactory()
 {
 //	nTime_ = 0;
 	predicted_iteration = 0;
@@ -52,6 +52,45 @@ void StopRule::initialize(Params &params) {
 StopRule::~StopRule()
 {
 }
+
+void StopRule::saveCheckpoint() {
+    checkpoint->startStruct("StopRule");
+    CKP_SAVE(curIteration);
+    int stop_condition = this->stop_condition;
+    CKP_SAVE(stop_condition);
+    CKP_SAVE(confidence_value);
+    CKP_SAVE(min_iteration);
+    CKP_SAVE(max_iteration);
+    CKP_SAVE(unsuccess_iteration);
+    CKP_SAVE(min_correlation);
+    CKP_SAVE(step_iteration);
+    CKP_SAVE(max_run_time);
+    CKP_SAVE(start_real_time);
+    CKP_VECTOR_SAVE(time_vec);
+    checkpoint->endStruct();
+    CheckpointFactory::saveCheckpoint();
+}
+
+void StopRule::restoreCheckpoint() {
+    CheckpointFactory::restoreCheckpoint();
+    checkpoint->startStruct("StopRule");
+    CKP_RESTORE(curIteration);
+    int stop_condition;
+    CKP_RESTORE(stop_condition);
+    this->stop_condition = (STOP_CONDITION)stop_condition;
+    CKP_RESTORE(confidence_value);
+    CKP_RESTORE(min_iteration);
+    CKP_RESTORE(max_iteration);
+    CKP_RESTORE(unsuccess_iteration);
+    CKP_RESTORE(min_correlation);
+    CKP_RESTORE(step_iteration);
+    CKP_RESTORE(max_run_time);
+    CKP_RESTORE(start_real_time);
+    CKP_VECTOR_RESTORE(time_vec);
+    checkpoint->endStruct();
+}
+
+
 //
 //int StopRule::getNumIterations() {
 //	if (stop_condition == SC_FIXED_ITERATION || predicted_iteration == 0)

@@ -12,7 +12,7 @@
 #include "modelsubst.h"
 #include "tools.h"
 
-ModelSubst::ModelSubst(int nstates) : Optimization()
+ModelSubst::ModelSubst(int nstates) : Optimization(), CheckpointFactory()
 {
 	num_states = nstates;
 	name = "JC";

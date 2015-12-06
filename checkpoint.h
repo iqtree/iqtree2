@@ -20,9 +20,11 @@ using namespace std;
 // several useful declaration to save to or restore from a checkpoint
 #define CKP_SAVE(var) checkpoint->put(#var, var)
 #define CKP_ARRAY_SAVE(num, arr) checkpoint->putArray(#arr, num, arr)
+#define CKP_VECTOR_SAVE(arr) checkpoint->putVector(#arr, arr)
 
 #define CKP_RESTORE(var) checkpoint->get(#var, var)
 #define CKP_ARRAY_RESTORE(num, arr) checkpoint->getArray(#arr, num, arr)
+#define CKP_VECTOR_RESTORE(arr) checkpoint->getVector(#arr, arr)
 
 
 /**
@@ -107,6 +109,32 @@ public:
         return true;
     }
 
+    /**
+        get an array from checkpoint
+        @param key key name
+        @param num number of elements
+        @param[out] value value
+    */
+	template<class T>
+    bool getVector(string key, vector<T> &value) {
+        key = struct_name + key;
+        iterator it = find(key);
+        if (it == end())
+            return false;
+        size_t pos = 0, next_pos;
+        value.clear();
+        for (int i = 0; ; i++) {
+        	next_pos = it->second.find(", ", pos);
+            stringstream ss(it->second.substr(pos, next_pos-pos));
+            T val;
+        	ss >> val;
+            value.push_back(val);
+        	if (next_pos == string::npos) break;
+        	pos = next_pos+2;
+        }
+        return true;
+    }
+
     /** 
         @param key key name
         @return bool value for key
@@ -165,6 +193,23 @@ public:
         }
         (*this)[key] = ss.str();
     }
+
+    /**
+        put an STL vector to checkpoint
+        @param key key name
+        @param num number of elements
+        @param value value
+    */
+	template<class T>
+	void putVector(string key, vector<T> &value) {
+        key = struct_name + key;
+        stringstream ss;
+        for (int i = 0; i < value.size(); i++) {
+            if (i > 0) ss << ", ";
+            ss << value[i];
+        }
+        (*this)[key] = ss.str();
+    }
     
     /*-------------------------------------------------------------
      * series of put function to put pair of (key,value)
@@ -209,6 +254,8 @@ public:
 
     /** constructor */
     CheckpointFactory();
+
+    virtual ~CheckpointFactory() {}
 
     /**
         set checkpoint object
