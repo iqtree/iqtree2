@@ -96,6 +96,17 @@ public:
 
     void init();
 
+    /** 
+        save object into the checkpoint
+    */
+    virtual void saveCheckpoint();
+
+    /** 
+        restore object from the checkpoint
+    */
+    virtual void restoreCheckpoint();
+
+
     /**
      * setup all necessary parameters  (declared as virtual needed for phylosupertree)
      */

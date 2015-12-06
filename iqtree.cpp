@@ -72,6 +72,18 @@ IQTree::IQTree(Alignment *aln) : PhyloTree(aln) {
     IQTree::init();
 }
 
+void IQTree::saveCheckpoint() {
+    checkpoint->startStruct("IQTree");
+    checkpoint->endStruct();
+    PhyloTree::saveCheckpoint();
+}
+
+void IQTree::restoreCheckpoint() {
+    PhyloTree::restoreCheckpoint();
+    checkpoint->startStruct("IQTree");
+    checkpoint->endStruct();
+}
+
 void IQTree::initSettings(Params &params) {
     searchinfo.speednni = params.speednni;
     searchinfo.nni_type = params.nni_type;

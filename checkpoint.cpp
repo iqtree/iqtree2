@@ -90,23 +90,26 @@ void Checkpoint::load() {
             pos = line.find('#');
             if (pos != string::npos)
                 line.erase(pos);
-            line.erase(line.find_last_not_of(" \n\r\t")+1);
+            line.erase(line.find_last_not_of("\n\r\t")+1);
 //            trimString(line);
             if (line.empty()) continue;
-            if (line[line.length()-1] == ':') {
+            if (line[0] != ' ') {
+                struct_name = "";
+            }
+//            trimString(line);
+            line.erase(0, line.find_first_not_of(" \n\r\t"));
+            if (line.empty()) continue;
+        	pos = line.find(": ");
+        	if (pos != string::npos) {
+                (*this)[struct_name + line.substr(0, pos)] = line.substr(pos+2);
+            } else if (line[line.length()-1] == ':') {
                 line.erase(line.length()-1);
                 trimString(line);
                 struct_name = line + '.';
                 continue;
+            } else {
+        		throw "':' is expected between key and value";
             }
-            if (line[0] != ' ') {
-                struct_name = "";
-            }
-            trimString(line);
-        	pos = line.find(": ");
-        	if (pos == string::npos)
-        		throw "': ' is expected between key and value";
-        	(*this)[struct_name + line.substr(0, pos)] = line.substr(pos+2);
         }
         in.clear();
         // set the failbit again
