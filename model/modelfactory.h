@@ -56,6 +56,12 @@ public:
 	ModelFactory();
 
     /**
+        set checkpoint object
+        @param checkpoint
+    */
+    virtual void setCheckpoint(Checkpoint *checkpoint);
+
+    /**
         save object into the checkpoint
     */
     virtual void saveCheckpoint();

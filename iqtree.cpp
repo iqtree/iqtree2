@@ -358,6 +358,10 @@ void IQTree::computeInitialTree(string &dist_file, LikelihoodKernel kernel) {
     int fixed_number = 0;
     setParsimonyKernel(kernel);
     
+    restoreCheckpoint();
+    if (leafNum != 0) {
+        cout << "Initial tree restored from checkpoint" << endl;
+    } else
     if (params->user_file) {
         // start the search with user-defined tree
         cout << "Reading input tree file " << params->user_file << " ..." << endl;
@@ -427,6 +431,8 @@ void IQTree::computeInitialTree(string &dist_file, LikelihoodKernel kernel) {
 //        wrapperFixNegativeBranch(true);
 //        break;
     }
+    
+    saveCheckpoint();
 
     if (fixed_number) {
         cout << "WARNING: " << fixed_number << " undefined/negative branch lengths are initialized with parsimony" << endl;
@@ -688,6 +694,7 @@ void IQTree::initializeModel(Params &params, ModelsBlock *models_block) {
     }
     setModel(getModelFactory()->model);
     setRate(getModelFactory()->site_rate);
+    getModelFactory()->setCheckpoint(checkpoint);
 
     if (params.pll) {
         if (getRate()->getNDiscreteRate() == 1) {

@@ -1720,6 +1720,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 	iqtree.clearAllPartialLH();
     iqtree.getModelFactory()->restoreCheckpoint();
 	initTree = iqtree.optimizeModelParameters(true, initEpsilon);
+    iqtree.saveCheckpoint();
     iqtree.getModelFactory()->saveCheckpoint();
 
     // now overwrite with random tree

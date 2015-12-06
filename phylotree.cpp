@@ -116,6 +116,24 @@ PhyloTree::PhyloTree(Alignment *aln) : MTree() {
     this->aln = aln;
 }
 
+void PhyloTree::saveCheckpoint() {
+    checkpoint->startStruct("PhyloTree");
+    string newick = PhyloTree::getTreeString();
+    CKP_SAVE(newick);
+    checkpoint->endStruct();
+    Optimization::saveCheckpoint();
+}
+
+void PhyloTree::restoreCheckpoint() {
+    Optimization::restoreCheckpoint();
+    checkpoint->startStruct("PhyloTree");
+    string newick;
+    CKP_RESTORE(newick);
+    if (!newick.empty())
+        PhyloTree::readTreeString(newick);
+    checkpoint->endStruct();
+}
+
 void PhyloTree::discardSaturatedSite(bool val) {
     discard_saturated_site = val;
 }

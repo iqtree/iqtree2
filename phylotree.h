@@ -277,6 +277,17 @@ public:
      */
     virtual ~PhyloTree();
 
+
+    /** 
+        save object into the checkpoint
+    */
+    virtual void saveCheckpoint();
+
+    /** 
+        restore object from the checkpoint
+    */
+    virtual void restoreCheckpoint();
+
     /**
             read the tree from the input file in newick format
             @param infile the input file file.

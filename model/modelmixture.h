@@ -58,6 +58,22 @@ public:
 
     virtual ~ModelMixture();
 
+    /**
+        set checkpoint object
+        @param checkpoint
+    */
+    virtual void setCheckpoint(Checkpoint *checkpoint);
+
+    /**
+        save object into the checkpoint
+    */
+    virtual void saveCheckpoint();
+
+    /**
+        restore object from the checkpoint
+    */
+    virtual void restoreCheckpoint();
+
 
 	/**
 	 * @return TRUE if this is a mixture model, FALSE otherwise

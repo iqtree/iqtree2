@@ -150,6 +150,7 @@ void Checkpoint::dump() {
                 out << i->first << ": " << i->second << endl;
         }
         out.close();
+        cout << "Checkpoint dumped" << endl;
     } catch (ios::failure &) {
         outError(ERR_WRITE_OUTPUT, filename.c_str());
     }
@@ -201,12 +202,16 @@ void Checkpoint::putBool(string key, bool value) {
  * nested structures
  *-------------------------------------------------------------*/
 void Checkpoint::startStruct(string name) {
-    struct_name = name + '.';
+    struct_name = struct_name + name + '.';
 }
 
 /**
     end the current struct
 */
 void Checkpoint::endStruct() {
-    struct_name = "";
+    size_t pos = struct_name.find_last_of('.', struct_name.length()-2);
+    if (pos == string::npos)
+        struct_name = "";
+    else
+        struct_name.erase(pos+1);
 }

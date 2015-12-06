@@ -533,11 +533,6 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 		site_rate->setTree(tree);
 	} 	
 
-    // set checkpoint object
-    setCheckpoint(tree->getCheckpoint());
-    model->setCheckpoint(tree->getCheckpoint());
-    site_rate->setCheckpoint(tree->getCheckpoint());
-
 	if (fused_mix_rate) {
 		if (!model->isMixture())
 			outError("Model is not a mixture model");
@@ -559,6 +554,12 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 		outError(str);
 	}
 
+}
+
+void ModelFactory::setCheckpoint(Checkpoint *checkpoint) {
+	Optimization::setCheckpoint(checkpoint);
+	model->setCheckpoint(checkpoint);
+	site_rate->setCheckpoint(checkpoint);
 }
 
 void ModelFactory::saveCheckpoint() {

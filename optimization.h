@@ -40,7 +40,7 @@ public:
         set checkpoint object
         @param checkpoint 
     */
-    void setCheckpoint(Checkpoint *checkpoint);
+    virtual void setCheckpoint(Checkpoint *checkpoint);
 
     /**
         get checkpoint object

@@ -1276,6 +1276,44 @@ ModelMixture::~ModelMixture() {
 	}
 }
 
+void ModelMixture::setCheckpoint(Checkpoint *checkpoint) {
+	Optimization::setCheckpoint(checkpoint);
+	for (iterator it = begin(); it != end(); it++)
+		(*it)->setCheckpoint(checkpoint);
+}
+
+void ModelMixture::saveCheckpoint() {
+    checkpoint->startStruct("ModelMixture");
+    CKP_SAVE(fix_prop);
+    int nmix = getNMixtures();
+    CKP_ARRAY_SAVE(nmix, prop);
+    int part = 1;
+    for (iterator it = begin(); it != end(); it++, part++) {
+        checkpoint->startStruct("Component" + convertIntToString(part));
+        (*it)->saveCheckpoint();
+        checkpoint->endStruct();
+    }
+    checkpoint->endStruct();
+
+    ModelGTR::saveCheckpoint();
+}
+
+void ModelMixture::restoreCheckpoint() {
+    ModelGTR::restoreCheckpoint();
+
+    checkpoint->startStruct("ModelMixture");
+    CKP_RESTORE(fix_prop);
+    int nmix = getNMixtures();
+    CKP_ARRAY_RESTORE(nmix, prop);
+    int part = 1;
+    for (iterator it = begin(); it != end(); it++, part++) {
+        checkpoint->startStruct("Component" + convertIntToString(part));
+        (*it)->restoreCheckpoint();
+        checkpoint->endStruct();
+    }
+    checkpoint->endStruct();
+}
+
 int ModelMixture::getNDim() {
 //	int dim = (fix_prop) ? 0: (size()-1);
     int dim = 0;

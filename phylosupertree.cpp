@@ -49,6 +49,35 @@ PhyloSuperTree::PhyloSuperTree(SuperAlignment *alignment, PhyloSuperTree *super_
 	aln = alignment;
 }
 
+void PhyloSuperTree::setCheckpoint(Checkpoint *checkpoint) {
+	IQTree::setCheckpoint(checkpoint);
+	for (iterator it = begin(); it != end(); it++)
+		(*it)->setCheckpoint(checkpoint);
+}
+
+void PhyloSuperTree::saveCheckpoint() {
+    checkpoint->startStruct("PhyloSuperTree");
+    stringstream ss;
+    printTree(ss);
+    for (iterator it = begin(); it != end(); it++) {
+    	(*it)->printTree(ss);
+    }
+    string newick = ss.str();
+    CKP_SAVE(newick);
+    checkpoint->endStruct();
+    Optimization::saveCheckpoint();
+}
+
+void PhyloSuperTree::restoreCheckpoint() {
+    Optimization::restoreCheckpoint();
+    checkpoint->startStruct("PhyloSuperTree");
+    string newick;
+    CKP_RESTORE(newick);
+    if (!newick.empty())
+        readTreeString(newick);
+    checkpoint->endStruct();
+}
+
 void PhyloSuperTree::readPartition(Params &params) {
 	try {
 		ifstream in;
