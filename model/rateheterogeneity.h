@@ -24,6 +24,7 @@
 #include "optimization.h"
 #include <string>
 #include "tools.h"
+#include "checkpoint.h"
 
 using namespace std;
 
@@ -40,7 +41,7 @@ class for among-site rate heterogeneity, the default is homogeneous (equal) rate
 	@author BUI Quang Minh <minh.bui@univie.ac.at>
 */
 
-class RateHeterogeneity : public Optimization
+class RateHeterogeneity : public Optimization, public CheckpointFactory
 {
 	friend class ModelFactory;
 

@@ -121,11 +121,11 @@ void PhyloTree::saveCheckpoint() {
     string newick = PhyloTree::getTreeString();
     CKP_SAVE(newick);
     checkpoint->endStruct();
-    Optimization::saveCheckpoint();
+    CheckpointFactory::saveCheckpoint();
 }
 
 void PhyloTree::restoreCheckpoint() {
-    Optimization::restoreCheckpoint();
+    CheckpointFactory::restoreCheckpoint();
     checkpoint->startStruct("PhyloTree");
     string newick;
     CKP_RESTORE(newick);

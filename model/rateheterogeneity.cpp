@@ -43,7 +43,7 @@ void RateHeterogeneity::saveCheckpoint() {
     CKP_SAVE(name);
     CKP_SAVE(full_name);
     checkpoint->endStruct();
-    Optimization::saveCheckpoint();
+    CheckpointFactory::saveCheckpoint();
 }
 
 void RateHeterogeneity::restoreCheckpoint() {

@@ -65,11 +65,11 @@ void PhyloSuperTree::saveCheckpoint() {
     string newick = ss.str();
     CKP_SAVE(newick);
     checkpoint->endStruct();
-    Optimization::saveCheckpoint();
+    CheckpointFactory::saveCheckpoint();
 }
 
 void PhyloSuperTree::restoreCheckpoint() {
-    Optimization::restoreCheckpoint();
+    CheckpointFactory::restoreCheckpoint();
     checkpoint->startStruct("PhyloSuperTree");
     string newick;
     CKP_RESTORE(newick);

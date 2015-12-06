@@ -557,7 +557,7 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 }
 
 void ModelFactory::setCheckpoint(Checkpoint *checkpoint) {
-	Optimization::setCheckpoint(checkpoint);
+	CheckpointFactory::setCheckpoint(checkpoint);
 	model->setCheckpoint(checkpoint);
 	site_rate->setCheckpoint(checkpoint);
 }
@@ -570,7 +570,7 @@ void ModelFactory::saveCheckpoint() {
     CKP_SAVE(unobserved_ptns);
     CKP_SAVE(joint_optimize);
     checkpoint->endStruct();
-    Optimization::saveCheckpoint();
+    CheckpointFactory::saveCheckpoint();
 }
 
 void ModelFactory::restoreCheckpoint() {

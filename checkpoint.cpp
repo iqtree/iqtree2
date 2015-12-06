@@ -218,3 +218,29 @@ void Checkpoint::endStruct() {
     else
         struct_name.erase(pos+1);
 }
+
+/*-------------------------------------------------------------
+ * CheckpointFactory
+ *-------------------------------------------------------------*/
+
+CheckpointFactory::CheckpointFactory() {
+    checkpoint = NULL;
+}
+
+void CheckpointFactory::setCheckpoint(Checkpoint *checkpoint) {
+    this->checkpoint = checkpoint;
+}
+
+Checkpoint *CheckpointFactory::getCheckpoint() {
+    return checkpoint;
+}
+
+void CheckpointFactory::saveCheckpoint() {
+    if (!checkpoint) return;
+    checkpoint->dump();
+}
+
+void CheckpointFactory::restoreCheckpoint() {
+    // do nothing
+}
+

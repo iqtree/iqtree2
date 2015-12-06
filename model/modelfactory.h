@@ -24,6 +24,7 @@
 #include "modelsubst.h"
 #include "rateheterogeneity.h"
 #include "modelsblock.h"
+#include "checkpoint.h"
 
 
 ModelsBlock *readModelsDefinition(Params &params);
@@ -35,7 +36,7 @@ The values of the map contain 3 matricies consecutively: transition matrix, 1st,
 
 	@author BUI Quang Minh <minh.bui@univie.ac.at>
 */
-class ModelFactory : public unordered_map<int, double*>, public Optimization
+class ModelFactory : public unordered_map<int, double*>, public Optimization, public CheckpointFactory
 {
 public:
 

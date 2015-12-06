@@ -31,7 +31,7 @@ void ModelSubst::saveCheckpoint() {
     CKP_SAVE(freq_type);
     CKP_ARRAY_SAVE(num_states, state_freq);
     checkpoint->endStruct();
-    Optimization::saveCheckpoint();
+    CheckpointFactory::saveCheckpoint();
 }
 
     /** 
@@ -39,7 +39,7 @@ void ModelSubst::saveCheckpoint() {
         @param ckp checkpoint to restore from
     */
 void ModelSubst::restoreCheckpoint() {
-    Optimization::restoreCheckpoint();
+    CheckpointFactory::restoreCheckpoint();
     checkpoint->startStruct("ModelSubst");
     CKP_RESTORE(num_states);
     CKP_RESTORE(name);

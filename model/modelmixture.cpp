@@ -1277,7 +1277,7 @@ ModelMixture::~ModelMixture() {
 }
 
 void ModelMixture::setCheckpoint(Checkpoint *checkpoint) {
-	Optimization::setCheckpoint(checkpoint);
+	CheckpointFactory::setCheckpoint(checkpoint);
 	for (iterator it = begin(); it != end(); it++)
 		(*it)->setCheckpoint(checkpoint);
 }

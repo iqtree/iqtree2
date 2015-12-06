@@ -12,14 +12,6 @@
 #ifndef OPTIMIZATION_H
 #define OPTIMIZATION_H
 
-#include "checkpoint.h"
-
-#define CKP_SAVE(var) checkpoint->put(#var, var)
-#define CKP_ARRAY_SAVE(num, arr) checkpoint->putArray(#arr, num, arr)
-
-#define CKP_RESTORE(var) checkpoint->get(#var, var)
-#define CKP_ARRAY_RESTORE(num, arr) checkpoint->getArray(#arr, num, arr)
-
 /**
 Optimization class, implement some methods like Brent, Newton-Raphson (for 1 variable function), BFGS (for multi-dimensional function)
 
@@ -30,33 +22,6 @@ public:
 
     /** constructor */
     Optimization();
-
-	/*****************************************************
-		Checkpointing facility
-	*****************************************************/
-
-
-    /**
-        set checkpoint object
-        @param checkpoint 
-    */
-    virtual void setCheckpoint(Checkpoint *checkpoint);
-
-    /**
-        get checkpoint object
-        @return checkpoint 
-    */
-    Checkpoint *getCheckpoint();
-
-    /** 
-        save object into the checkpoint
-    */
-    virtual void saveCheckpoint();
-
-    /** 
-        restore object from the checkpoint
-    */
-    virtual void restoreCheckpoint();
 
 	/*****************************************************
 		One dimensional optimization with Brent method
@@ -202,10 +167,6 @@ public:
 		original numerical recipes method
 	*/
 	double brent(double ax, double bx, double cx, double tol, double *xmin);
-
-protected:
-
-    Checkpoint *checkpoint;
 
 private:
 

@@ -159,29 +159,11 @@ void fixBound(double x[], double lower[], double upper[], int n) {
 **********************************************/
 Optimization::Optimization()
 {
-    checkpoint = NULL;
 }
 
 
 Optimization::~Optimization()
 {
-}
-
-void Optimization::setCheckpoint(Checkpoint *checkpoint) {
-    this->checkpoint = checkpoint;
-}
-
-Checkpoint *Optimization::getCheckpoint() {
-    return checkpoint;
-}
-
-void Optimization::saveCheckpoint() {
-    if (!checkpoint) return;
-    checkpoint->dump();
-}
-
-void Optimization::restoreCheckpoint() {
-    // do nothing
 }
 
 /*****************************************************

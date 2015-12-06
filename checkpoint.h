@@ -17,7 +17,13 @@
 
 using namespace std;
 
-//#include "tools.h"
+// several useful declaration to save to or restore from a checkpoint
+#define CKP_SAVE(var) checkpoint->put(#var, var)
+#define CKP_ARRAY_SAVE(num, arr) checkpoint->putArray(#arr, num, arr)
+
+#define CKP_RESTORE(var) checkpoint->get(#var, var)
+#define CKP_ARRAY_RESTORE(num, arr) checkpoint->getArray(#arr, num, arr)
+
 
 /**
  * Checkpoint as map from key strings to value strings
@@ -192,5 +198,44 @@ private:
 
 };
 
+
+
+/**
+    Root class handling all checkpoint facilities. Inherit this class
+    if you want a class to be checkpointed.
+*/
+class CheckpointFactory {
+public:
+
+    /** constructor */
+    CheckpointFactory();
+
+    /**
+        set checkpoint object
+        @param checkpoint 
+    */
+    virtual void setCheckpoint(Checkpoint *checkpoint);
+
+    /**
+        get checkpoint object
+        @return checkpoint 
+    */
+    Checkpoint *getCheckpoint();
+
+    /** 
+        save object into the checkpoint
+    */
+    virtual void saveCheckpoint();
+
+    /** 
+        restore object from the checkpoint
+    */
+    virtual void restoreCheckpoint();
+
+protected:
+
+    Checkpoint *checkpoint;
+
+};
 
 #endif /* CHECKPOINT_H_ */
