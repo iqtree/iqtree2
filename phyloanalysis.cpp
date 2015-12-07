@@ -2369,6 +2369,17 @@ void runPhyloAnalysis(Params &params) {
 		tree = new IQTree(alignment);
 	}
 
+    if (params.min_branch_length <= 0.0) {
+        params.min_branch_length = 1e-6;
+        if (tree->getAlnNSite() >= 100000) {
+            params.min_branch_length = 0.1 / (tree->getAlnNSite());
+            tree->num_precision = max((int)ceil(-log10(Params::getInstance().min_branch_length))+1, 6);
+            cout.precision(12);
+            cout << "NOTE: minimal branch length is reduced to " << params.min_branch_length << " for long alignment" << endl;
+            cout.precision(3);
+        }
+    }
+
 	string original_model = params.model_name;
 
 	if (params.concatenate_aln) {
