@@ -58,23 +58,32 @@ void PhyloSuperTree::setCheckpoint(Checkpoint *checkpoint) {
 void PhyloSuperTree::saveCheckpoint() {
     checkpoint->startStruct("PhyloSuperTree");
     stringstream ss;
-    printTree(ss);
     for (iterator it = begin(); it != end(); it++) {
     	(*it)->printTree(ss);
     }
-    string newick = ss.str();
-    CKP_SAVE(newick);
+    string partition_trees = ss.str();
+    CKP_SAVE(partition_trees);
     checkpoint->endStruct();
-    CheckpointFactory::saveCheckpoint();
+    IQTree::saveCheckpoint();
 }
 
 void PhyloSuperTree::restoreCheckpoint() {
-    CheckpointFactory::restoreCheckpoint();
-    checkpoint->startStruct("PhyloSuperTree");
+    IQTree::restoreCheckpoint();
+    
+    // first get the newick string of super tree
+    checkpoint->startStruct("PhyloTree");
     string newick;
     CKP_RESTORE(newick);
-    if (!newick.empty())
+    checkpoint->endStruct();
+    
+    // now get partition tree strings
+    checkpoint->startStruct("PhyloSuperTree");
+    string partition_trees;
+    CKP_RESTORE(partition_trees);
+    if (!newick.empty() && !partition_trees.empty()) {
+        newick += partition_trees;
         readTreeString(newick);
+    }
     checkpoint->endStruct();
 }
 

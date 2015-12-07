@@ -16,10 +16,51 @@ void CandidateSet::init(Alignment* aln, Params *params) {
 CandidateSet::~CandidateSet() {
 }
 
-CandidateSet::CandidateSet() {
+CandidateSet::CandidateSet() : CheckpointFactory() {
 	aln = NULL;
 	params = NULL;
 }
+
+
+void CandidateSet::saveCheckpoint() {
+    checkpoint->startStruct("CandidateSet");
+	int ntrees = min(params->popSize, (int)size());
+    for (reverse_iterator it = rbegin(); it != rend() && ntrees > 0; it++, ntrees--) {
+        checkpoint->startListElement();
+        double score = it->second.score;
+//        string tree = it->second.tree;
+        bool localOpt = it->second.localOpt;
+
+        CKP_SAVE(score);
+        checkpoint->put("tree", it->second.tree);
+        CKP_SAVE(localOpt);
+        checkpoint->endListElement();
+    }
+    checkpoint->endStruct();
+    CheckpointFactory::saveCheckpoint();
+}
+
+void CandidateSet::restoreCheckpoint() {
+    CheckpointFactory::restoreCheckpoint();
+    checkpoint->startStruct("CandidateSet");
+    double score;
+    bool localOpt;
+    string tree;
+    for (;;) {
+        checkpoint->startListElement();
+        if (!CKP_RESTORE(score)) {
+            checkpoint->endListElement();
+            break;
+        }
+        CKP_RESTORE(localOpt);
+        CKP_RESTORE(tree);
+        update(tree, score, localOpt);
+        checkpoint->endListElement();
+        
+    }
+    checkpoint->endStruct();
+}
+
 
 vector<string> CandidateSet::getBestTrees() {
 	vector<string> res;

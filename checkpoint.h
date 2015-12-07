@@ -51,8 +51,9 @@ public:
 
 	/**
 	 * dump checkpoint information into file
+	 * @param force TRUE to dump no matter if time interval exceeded or not
 	 */
-	void dump();
+	void dump(bool force = false);
 
     /**
         set dumping interval in seconds
@@ -212,7 +213,7 @@ public:
     }
     
     /*-------------------------------------------------------------
-     * series of put function to put pair of (key,value)
+     * helper functions
      *-------------------------------------------------------------*/
 
     /**
@@ -225,6 +226,15 @@ public:
     */
     void endStruct();
 
+    /**
+        start a new list element in the current scope
+    */
+    void startListElement();
+    
+    /**
+        end the current list element
+    */
+    void endListElement();
 
 protected:
 
@@ -239,7 +249,11 @@ protected:
     
 private:
 
+    /** name of the current nested key */
     string struct_name;
+
+    /** current list element ID */
+    int list_element;
 
 };
 

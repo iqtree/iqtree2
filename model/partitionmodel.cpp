@@ -88,11 +88,11 @@ void PartitionModel::saveCheckpoint() {
     }
     checkpoint->endStruct();
 
-    ModelFactory::saveCheckpoint();
+    CheckpointFactory::saveCheckpoint();
 }
 
 void PartitionModel::restoreCheckpoint() {
-    ModelFactory::restoreCheckpoint();
+    CheckpointFactory::restoreCheckpoint();
     checkpoint->startStruct("PartitionModel");
     CKP_RESTORE(linked_alpha);
 

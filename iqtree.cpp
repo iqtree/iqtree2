@@ -75,10 +75,12 @@ IQTree::IQTree(Alignment *aln) : PhyloTree(aln) {
 void IQTree::setCheckpoint(Checkpoint *checkpoint) {
     PhyloTree::setCheckpoint(checkpoint);
     stop_rule.setCheckpoint(checkpoint);
+    candidateTrees.setCheckpoint(checkpoint);
 }
 
 void IQTree::saveCheckpoint() {
     stop_rule.saveCheckpoint();
+    candidateTrees.saveCheckpoint();
     checkpoint->startStruct("IQTree");
     checkpoint->endStruct();
     PhyloTree::saveCheckpoint();
@@ -87,6 +89,7 @@ void IQTree::saveCheckpoint() {
 void IQTree::restoreCheckpoint() {
     PhyloTree::restoreCheckpoint();
     stop_rule.restoreCheckpoint();
+    candidateTrees.restoreCheckpoint();
     checkpoint->startStruct("IQTree");
     checkpoint->endStruct();
 }
@@ -377,6 +380,7 @@ void IQTree::computeInitialTree(string &dist_file, LikelihoodKernel kernel) {
     int fixed_number = 0;
     setParsimonyKernel(kernel);
     
+    candidateTrees.init(aln, params);
     restoreCheckpoint();
     if (leafNum != 0) {
         cout << "Initial tree restored from checkpoint" << endl;
@@ -1959,6 +1963,8 @@ double IQTree::doTreeSearch() {
                                                                   stop_rule.getCurIt() % 10 == 0)
 				writeUFBootTrees(*params);
 
+        saveCheckpoint();
+        
        //if (params->partition_type)
        // 	((PhyloSuperTreePlen*)this)->printNNIcasesNUM();
        

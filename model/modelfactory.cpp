@@ -566,9 +566,9 @@ void ModelFactory::saveCheckpoint() {
     model->saveCheckpoint();
     site_rate->saveCheckpoint();
     checkpoint->startStruct("ModelFactory");
-    CKP_SAVE(fused_mix_rate);
-    CKP_SAVE(unobserved_ptns);
-    CKP_SAVE(joint_optimize);
+//    CKP_SAVE(fused_mix_rate);
+//    CKP_SAVE(unobserved_ptns);
+//    CKP_SAVE(joint_optimize);
     checkpoint->endStruct();
     CheckpointFactory::saveCheckpoint();
 }
@@ -577,9 +577,9 @@ void ModelFactory::restoreCheckpoint() {
     model->restoreCheckpoint();
     site_rate->restoreCheckpoint();
     checkpoint->startStruct("ModelFactory");
-    CKP_RESTORE(fused_mix_rate);
-    CKP_RESTORE(unobserved_ptns);
-    CKP_RESTORE(joint_optimize);
+//    CKP_RESTORE(fused_mix_rate);
+//    CKP_RESTORE(unobserved_ptns);
+//    CKP_RESTORE(joint_optimize);
     checkpoint->endStruct();
 }
 

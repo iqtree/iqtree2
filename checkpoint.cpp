@@ -56,6 +56,7 @@ Checkpoint::Checkpoint() {
     prev_dump_time = 0;
     dump_interval = 30; // dumping at most once per 30 seconds
     struct_name = "";
+    list_element = -1;
 }
 
 
@@ -129,9 +130,9 @@ void Checkpoint::setDumpInterval(double interval) {
 }
 
 
-void Checkpoint::dump() {
+void Checkpoint::dump(bool force) {
 	assert(filename != "");
-    if (getRealTime() < prev_dump_time + dump_interval) {
+    if (!force && getRealTime() < prev_dump_time + dump_interval) {
         return;
     }
     prev_dump_time = getRealTime();
@@ -206,6 +207,7 @@ void Checkpoint::putBool(string key, bool value) {
  *-------------------------------------------------------------*/
 void Checkpoint::startStruct(string name) {
     struct_name = struct_name + name + '.';
+    list_element = -1;
 }
 
 /**
@@ -217,6 +219,18 @@ void Checkpoint::endStruct() {
         struct_name = "";
     else
         struct_name.erase(pos+1);
+    list_element = -1;
+}
+
+void Checkpoint::startListElement() {
+    list_element++;    
+    struct_name += convertIntToString(list_element) + ".";
+}
+
+void Checkpoint::endListElement() {
+    size_t pos = struct_name.find_last_of('.', struct_name.length()-2);
+    assert(pos != string::npos);
+    struct_name.erase(pos+1);
 }
 
 /*-------------------------------------------------------------

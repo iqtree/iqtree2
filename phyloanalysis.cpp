@@ -1781,6 +1781,8 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
         }
     }
 
+    iqtree.saveCheckpoint();
+
 	double cputime_search_start = getCPUTime();
     double realtime_search_start = getRealTime();
 
@@ -1801,6 +1803,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
                 << getCPUTime() - initTime << endl;
 	}
 
+    iqtree.saveCheckpoint();
 
     if (params.leastSquareNNI) {
     	iqtree.computeSubtreeDists();
@@ -2366,7 +2369,7 @@ void runPhyloAnalysis(Params &params) {
     }
     
     checkpoint->putBool("finished", false);
-    checkpoint->setDumpInterval(0); // always dump for testing purpose
+    checkpoint->setDumpInterval(1); // always dump for testing purpose
 
 	/****************** read in alignment **********************/
 	if (params.partition_file) {
@@ -2540,7 +2543,7 @@ void runPhyloAnalysis(Params &params) {
 	delete alignment;
 
 //    checkpoint->putBool("finished", true);
-    checkpoint->dump();
+    checkpoint->dump(true);
     delete checkpoint;
 }
 
