@@ -298,9 +298,9 @@ double AlignmentPairwise::optimizeDist(double initial_dist, double &d2l) {
 
     double negative_lh, ferror;
     if (tree->optimize_by_newton) // Newton-Raphson method
-        dist = minimizeNewton(1e-6, dist, MAX_GENETIC_DIST, 1e-6, d2l);
+        dist = minimizeNewton(Params::getInstance().min_branch_length, dist, MAX_GENETIC_DIST, 1e-6, d2l);
     else // Brent method
-        dist = minimizeOneDimen(1e-6, dist, MAX_GENETIC_DIST, 1e-6, &negative_lh, &ferror);
+        dist = minimizeOneDimen(Params::getInstance().min_branch_length, dist, MAX_GENETIC_DIST, 1e-6, &negative_lh, &ferror);
 
     return dist;
 }
