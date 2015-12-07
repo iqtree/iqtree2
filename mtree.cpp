@@ -33,7 +33,10 @@ MTree::MTree() {
     leafNum = 0;
     nodeNum = 0;
     rooted = false;
-    num_precision = max(-(int)log10(Params::getInstance().min_branch_length), 6);
+    if (Params::getInstance().min_branch_length <= 0)
+        num_precision = 6;
+    else
+        num_precision = max((int)ceil(-log10(Params::getInstance().min_branch_length))+1, 6);
     len_scale = 1.0;
 	fig_char = "|-+++";
 }
@@ -44,7 +47,10 @@ MTree::MTree(const char *userTreeFile, bool &is_rooted)
 }
 
 void MTree::init(const char *userTreeFile, bool &is_rooted) {
-    num_precision = max(-(int)log10(Params::getInstance().min_branch_length), 6);
+    if (Params::getInstance().min_branch_length <= 0)
+        num_precision = 6;
+    else
+        num_precision = max((int)ceil(-log10(Params::getInstance().min_branch_length))+1, 6);
     len_scale = 1.0;
     readTree(userTreeFile, is_rooted);
     //printInfo();

@@ -2572,7 +2572,7 @@ void Alignment::printDist(ostream &out, double *dist_mat) {
     if (max_len < 10) max_len = 10;
     out << nseqs << endl;
     int pos = 0;
-    out.precision(std::max(-(int)log10(Params::getInstance().min_branch_length), 6));
+    out.precision(max((int)ceil(-log10(Params::getInstance().min_branch_length))+1, 6));
     out << fixed;
     for (int seq1 = 0; seq1 < nseqs; seq1 ++)  {
         out.width(max_len);

@@ -1079,7 +1079,7 @@ void checkZeroDist(Alignment *aln, double *dist) {
 		string str = "";
 		bool first = true;
 		for (j = i + 1; j < ntaxa; j++)
-			if (dist[i * ntaxa + j] <= 1e-6) {
+			if (dist[i * ntaxa + j] <= Params::getInstance().min_branch_length) {
 				if (first)
 					str = "ZERO distance between sequences "
 							+ aln->getSeqName(i);

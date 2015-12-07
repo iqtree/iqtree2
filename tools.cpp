@@ -751,7 +751,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.optimize_by_newton = true;
     params.optimize_alg = "2-BFGS-B,EM";
     params.fixed_branch_length = false;
-    params.min_branch_length = 0.000001;
+    params.min_branch_length = 0.0; // this is now adjusted later based on alignment length
     params.max_branch_length = 100.0;
     params.iqp_assess_quartet = IQP_DISTANCE;
     params.iqp = false;
@@ -1943,6 +1943,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 					outError("Negative -blmin not allowed!");
 				if (params.min_branch_length == 0.0)
 					outError("Zero -blmin is not allowed due to numerical problems");
+				if (params.min_branch_length > 0.1)
+					outError("-blmin must be < 0.1");
 
 				continue;
 			}
