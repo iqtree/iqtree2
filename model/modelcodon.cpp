@@ -293,6 +293,11 @@ void ModelCodon::restoreCheckpoint() {
     CKP_RESTORE(codon_freq_style);
     this->codon_freq_style = (CodonFreqStyle)codon_freq_style;
     checkpoint->endStruct();
+
+    decomposeRateMatrix();
+    if (phylo_tree)
+        phylo_tree->clearAllPartialLH();
+
 }
 
 StateFreqType ModelCodon::initCodon(const char *model_name, StateFreqType freq, bool reset_params) {

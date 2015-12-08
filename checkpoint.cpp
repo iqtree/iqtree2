@@ -168,27 +168,37 @@ bool Checkpoint::containsKey(string key) {
  * series of get function to get value of a key
  *-------------------------------------------------------------*/
 
-bool Checkpoint::getBool(string key) {
+bool Checkpoint::getBool(string key, bool &ret) {
     string value;
     if (!get(key, value)) return false;
-	if (value == "true") return true;
-    if (value == "false") return false;
-    outError("Invalid boolean value " + value + " for key " + key);
-    return false;
+	if (value == "true") 
+        ret = true;
+    else if (value == "false") 
+        ret = false;
+    else
+        outError("Invalid boolean value " + value + " for key " + key);
+    return true;
 }
 
-double Checkpoint::getDouble(string key) {
-    string value;
-    if (!get(key, value)) return -DBL_MAX;
-	return convert_double(value.c_str());
+bool Checkpoint::getBool(string key) {
+    bool ret;
+    if (!getBool(key, ret))
+        return false;
+    return ret;
 }
 
-int Checkpoint::getInt(string key) {
-    string value;
-    if (!get(key, value)) return -INT_MAX;
-	return convert_int(value.c_str());
-}
-
+//double Checkpoint::getDouble(string key) {
+//    string value;
+//    if (!get(key, value)) return -DBL_MAX;
+//	return convert_double(value.c_str());
+//}
+//
+//int Checkpoint::getInt(string key) {
+//    string value;
+//    if (!get(key, value)) return -INT_MAX;
+//	return convert_int(value.c_str());
+//}
+//
 
 /*-------------------------------------------------------------
  * series of put function to put pair of (key,value)

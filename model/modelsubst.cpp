@@ -49,6 +49,8 @@ void ModelSubst::restoreCheckpoint() {
     this->freq_type = (StateFreqType)freq_type;
     CKP_ARRAY_RESTORE(num_states, state_freq);
     checkpoint->endStruct();
+
+    decomposeRateMatrix();
 }
 
 // here the simplest Juke-Cantor model is implemented, valid for all kind of data (DNA, AA,...)

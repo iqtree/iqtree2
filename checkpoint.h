@@ -14,6 +14,7 @@
 #include <sstream>
 #include <cassert>
 #include <vector>
+#include <typeinfo>
 
 using namespace std;
 
@@ -26,6 +27,24 @@ using namespace std;
 #define CKP_ARRAY_RESTORE(num, arr) checkpoint->getArray(#arr, num, arr)
 #define CKP_VECTOR_RESTORE(arr) checkpoint->getVector(#arr, arr)
 
+/** checkpoint stream */
+class CkpStream : public stringstream {
+public:
+    explicit CkpStream (ios_base::openmode which = ios_base::in | ios_base::out) : stringstream(which) {}
+
+    explicit CkpStream (const string& str, ios_base::openmode which = ios_base::in | ios_base::out) : 
+        stringstream(str, which) {}
+
+};
+
+/* overload operators */
+//ostream& operator<<(ostream& os, const T& obj) {
+//        return os;
+//}
+//
+//std::istream& operator>>(std::istream& is, T& obj) {
+//    return is;
+//}
 
 /**
  * Checkpoint as map from key strings to value strings
@@ -82,7 +101,7 @@ public:
         iterator it = find(key);
         if (it == end())
             return false;
-        stringstream ss(it->second);
+        CkpStream ss(it->second);
         ss >> value;
         return true;
     }
@@ -102,7 +121,7 @@ public:
         size_t pos = 0, next_pos;
         for (int i = 0; i < maxnum; i++) {
         	next_pos = it->second.find(", ", pos);
-            stringstream ss(it->second.substr(pos, next_pos-pos));
+            CkpStream ss(it->second.substr(pos, next_pos-pos));
         	ss >> value[i];
         	if (next_pos == string::npos) break;
         	pos = next_pos+2;
@@ -126,7 +145,7 @@ public:
         value.clear();
         for (int i = 0; ; i++) {
         	next_pos = it->second.find(", ", pos);
-            stringstream ss(it->second.substr(pos, next_pos-pos));
+            CkpStream ss(it->second.substr(pos, next_pos-pos));
             T val;
         	ss >> val;
             value.push_back(val);
@@ -140,19 +159,20 @@ public:
         @param key key name
         @return bool value for key
     */
+	bool getBool(string key, bool &ret);
 	bool getBool(string key);
 
-    /** 
-        @param key key name
-        @return double value for key
-    */
-	double getDouble(string key);
-
-    /** 
-        @param key key name
-        @return int value for key
-    */
-	int getInt(string key);
+//    /** 
+//        @param key key name
+//        @return double value for key
+//    */
+//	double getDouble(string key);
+//
+//    /** 
+//        @param key key name
+//        @return int value for key
+//    */
+//	int getInt(string key);
 
 
     /*-------------------------------------------------------------
@@ -167,7 +187,9 @@ public:
 	template<class T>
 	void put(string key, T value) {
         key = struct_name + key;
-        stringstream ss;
+        CkpStream ss;
+        if (typeid(T) == typeid(double))
+            ss.precision(10);
         ss << value;
         (*this)[key] = ss.str();
     }
@@ -187,7 +209,9 @@ public:
 	template<class T>
 	void putArray(string key, int num, T* value) {
         key = struct_name + key;
-        stringstream ss;
+        CkpStream ss;
+        if (typeid(T) == typeid(double))
+            ss.precision(10);
         for (int i = 0; i < num; i++) {
             if (i > 0) ss << ", ";
             ss << value[i];
@@ -204,7 +228,9 @@ public:
 	template<class T>
 	void putVector(string key, vector<T> &value) {
         key = struct_name + key;
-        stringstream ss;
+        CkpStream ss;
+        if (typeid(T) == typeid(double))
+            ss.precision(10);
         for (int i = 0; i < value.size(); i++) {
             if (i > 0) ss << ", ";
             ss << value[i];

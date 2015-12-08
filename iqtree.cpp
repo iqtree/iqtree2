@@ -635,6 +635,7 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
         if (getCurScore() > candidateTrees.getBestScore() + params->modeps) {
             // Re-optimize model parameters (the sNNI algorithm)
         	tree = optimizeModelParameters(false, params->modeps * 10);
+            getModelFactory()->saveCheckpoint();
         	betterScore = true;
         }
         bool newTree = candidateTrees.update(tree, getCurScore());
@@ -1919,6 +1920,7 @@ double IQTree::doTreeSearch() {
         if (curScore > candidateTrees.getBestScore() + params->modeps) {
         	if (params->snni) {
         		imd_tree = optimizeModelParameters();
+                getModelFactory()->saveCheckpoint();
         	}
             if (!candidateTrees.treeExist(imd_tree)) {
                 stop_rule.addImprovedIteration(stop_rule.getCurIt());

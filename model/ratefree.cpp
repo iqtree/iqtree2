@@ -72,6 +72,8 @@ void RateFree::restoreCheckpoint() {
     CKP_RESTORE(optimize_alg);
     CKP_ARRAY_RESTORE(ncategory, prop);
     checkpoint->endStruct();
+
+	setNCategory(ncategory);
 }
 
 void RateFree::setNCategory(int ncat) {

@@ -62,6 +62,8 @@ void RateGamma::restoreCheckpoint() {
     CKP_RESTORE(ncategory);
     CKP_ARRAY_RESTORE(ncategory, rates);
     checkpoint->endStruct();
+
+	setNCategory(ncategory);
 }
 
 void RateGamma::setNCategory(int ncat) {

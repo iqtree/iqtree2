@@ -200,6 +200,10 @@ void ModelDNA::restoreCheckpoint() {
     checkpoint->startStruct("ModelDNA");
     CKP_ARRAY_RESTORE(6, rates);
     checkpoint->endStruct();
+
+    decomposeRateMatrix();
+    if (phylo_tree)
+        phylo_tree->clearAllPartialLH();
 }
 
 void ModelDNA::readRates(string str) throw(const char*) {

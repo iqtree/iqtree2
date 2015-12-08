@@ -1312,6 +1312,10 @@ void ModelMixture::restoreCheckpoint() {
         checkpoint->endStruct();
     }
     checkpoint->endStruct();
+
+    decomposeRateMatrix();
+    if (phylo_tree)
+        phylo_tree->clearAllPartialLH();
 }
 
 int ModelMixture::getNDim() {
