@@ -1873,3 +1873,12 @@ void PhyloSuperTreePlen::initializeAllPartialLh(int &index, int &indexlh, PhyloN
 	assert(0);
 }
 
+
+string PhyloSuperTreePlen::getTreeString() {
+    return PhyloTree::getTreeString();
+}
+
+void PhyloSuperTreePlen::readTreeString(const string &tree_string) {
+    PhyloTree::readTreeString(tree_string);
+
+}

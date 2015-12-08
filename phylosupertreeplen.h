@@ -150,6 +150,19 @@ public:
 	~PhyloSuperTreePlen();
 
     /**
+            Read the tree saved with Taxon Names and branch lengths.
+            @param tree_string tree string to read from
+     */
+    virtual void readTreeString(const string &tree_string);
+
+    /**
+     * Return the tree string containing taxon names and branch lengths
+     * @return tree string
+     */
+    virtual string getTreeString();
+
+
+    /**
             compute the distance between 2 sequences.
             @param seq1 index of sequence 1
             @param seq2 index of sequence 2
