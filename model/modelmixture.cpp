@@ -1284,7 +1284,7 @@ void ModelMixture::setCheckpoint(Checkpoint *checkpoint) {
 
 void ModelMixture::saveCheckpoint() {
     checkpoint->startStruct("ModelMixture");
-    CKP_SAVE(fix_prop);
+//    CKP_SAVE(fix_prop);
     int nmix = getNMixtures();
     CKP_ARRAY_SAVE(nmix, prop);
     int part = 1;
@@ -1302,7 +1302,7 @@ void ModelMixture::restoreCheckpoint() {
     ModelGTR::restoreCheckpoint();
 
     checkpoint->startStruct("ModelMixture");
-    CKP_RESTORE(fix_prop);
+//    CKP_RESTORE(fix_prop);
     int nmix = getNMixtures();
     CKP_ARRAY_RESTORE(nmix, prop);
     int part = 1;

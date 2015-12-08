@@ -122,7 +122,8 @@ public:
         for (int i = 0; i < maxnum; i++) {
         	next_pos = it->second.find(", ", pos);
             CkpStream ss(it->second.substr(pos, next_pos-pos));
-        	ss >> value[i];
+        	if (!(ss >> value[i]))
+                break;
         	if (next_pos == string::npos) break;
         	pos = next_pos+2;
         }
@@ -147,8 +148,10 @@ public:
         	next_pos = it->second.find(", ", pos);
             CkpStream ss(it->second.substr(pos, next_pos-pos));
             T val;
-        	ss >> val;
-            value.push_back(val);
+        	if (ss >> val)
+                value.push_back(val);
+            else
+                break;
         	if (next_pos == string::npos) break;
         	pos = next_pos+2;
         }

@@ -45,10 +45,9 @@ RateGamma::RateGamma(int ncat, double shape, bool median, PhyloTree *tree) : Rat
 void RateGamma::saveCheckpoint() {
     checkpoint->startStruct("RateGamma");
     CKP_SAVE(gamma_shape);
-    CKP_SAVE(fix_gamma_shape);
-    CKP_SAVE(cut_median);
-    CKP_SAVE(ncategory);
-    CKP_ARRAY_SAVE(ncategory, rates);
+//    CKP_SAVE(fix_gamma_shape);
+//    CKP_SAVE(cut_median);
+//    CKP_SAVE(ncategory);
     checkpoint->endStruct();
     RateHeterogeneity::saveCheckpoint();
 }
@@ -57,10 +56,9 @@ void RateGamma::restoreCheckpoint() {
     RateHeterogeneity::restoreCheckpoint();
     checkpoint->startStruct("RateGamma");
     CKP_RESTORE(gamma_shape);
-    CKP_RESTORE(fix_gamma_shape);
-    CKP_RESTORE(cut_median);
-    CKP_RESTORE(ncategory);
-    CKP_ARRAY_RESTORE(ncategory, rates);
+//    CKP_RESTORE(fix_gamma_shape);
+//    CKP_RESTORE(cut_median);
+//    CKP_RESTORE(ncategory);
     checkpoint->endStruct();
 
 	setNCategory(ncategory);

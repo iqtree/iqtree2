@@ -40,16 +40,16 @@ RateHeterogeneity::~RateHeterogeneity()
 
 void RateHeterogeneity::saveCheckpoint() {
     checkpoint->startStruct("RateHeterogeneity");
-    CKP_SAVE(name);
-    CKP_SAVE(full_name);
+//    CKP_SAVE(name);
+//    CKP_SAVE(full_name);
     checkpoint->endStruct();
     CheckpointFactory::saveCheckpoint();
 }
 
 void RateHeterogeneity::restoreCheckpoint() {
     checkpoint->startStruct("RateHeterogeneity");
-    CKP_RESTORE(name);
-    CKP_RESTORE(full_name);
+//    CKP_RESTORE(name);
+//    CKP_RESTORE(full_name);
     checkpoint->endStruct();
 }
 

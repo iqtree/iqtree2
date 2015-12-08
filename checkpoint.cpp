@@ -153,7 +153,7 @@ void Checkpoint::dump(bool force) {
                 out << i->first << ": " << i->second << endl;
         }
         out.close();
-//        cout << "Checkpoint dumped" << endl;
+        cout << "Checkpoint dumped" << endl;
     } catch (ios::failure &) {
         outError(ERR_WRITE_OUTPUT, filename.c_str());
     }

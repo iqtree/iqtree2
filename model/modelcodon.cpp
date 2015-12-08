@@ -261,17 +261,17 @@ ModelCodon::~ModelCodon() {
 
 void ModelCodon::saveCheckpoint() {
     checkpoint->startStruct("ModelCodon");
-    CKP_ARRAY_SAVE(12, ntfreq);
+//    CKP_ARRAY_SAVE(12, ntfreq);
     CKP_SAVE(omega);
-    CKP_SAVE(fix_omega);
-    int codon_kappa_style = this->codon_kappa_style;
-    CKP_SAVE(codon_kappa_style);
+//    CKP_SAVE(fix_omega);
+//    int codon_kappa_style = this->codon_kappa_style;
+//    CKP_SAVE(codon_kappa_style);
     CKP_SAVE(kappa);
-    CKP_SAVE(fix_kappa);
+//    CKP_SAVE(fix_kappa);
     CKP_SAVE(kappa2);
-    CKP_SAVE(fix_kappa2);
-    int codon_freq_style = this->codon_freq_style;
-    CKP_SAVE(codon_freq_style);
+//    CKP_SAVE(fix_kappa2);
+//    int codon_freq_style = this->codon_freq_style;
+//    CKP_SAVE(codon_freq_style);
     checkpoint->endStruct();
     ModelGTR::saveCheckpoint();
 }
@@ -279,19 +279,19 @@ void ModelCodon::saveCheckpoint() {
 void ModelCodon::restoreCheckpoint() {
     ModelGTR::restoreCheckpoint();
     checkpoint->startStruct("ModelCodon");
-    CKP_ARRAY_RESTORE(12, ntfreq);
+//    CKP_ARRAY_RESTORE(12, ntfreq);
     CKP_RESTORE(omega);
-    CKP_RESTORE(fix_omega);
-    int codon_kappa_style;
-    CKP_RESTORE(codon_kappa_style);
-    this->codon_kappa_style = (CodonKappaStyle)codon_kappa_style;
+//    CKP_RESTORE(fix_omega);
+//    int codon_kappa_style;
+//    CKP_RESTORE(codon_kappa_style);
+//    this->codon_kappa_style = (CodonKappaStyle)codon_kappa_style;
     CKP_RESTORE(kappa);
-    CKP_RESTORE(fix_kappa);
+//    CKP_RESTORE(fix_kappa);
     CKP_RESTORE(kappa2);
-    CKP_RESTORE(fix_kappa2);
-    int codon_freq_style;
-    CKP_RESTORE(codon_freq_style);
-    this->codon_freq_style = (CodonFreqStyle)codon_freq_style;
+//    CKP_RESTORE(fix_kappa2);
+//    int codon_freq_style;
+//    CKP_RESTORE(codon_freq_style);
+//    this->codon_freq_style = (CodonFreqStyle)codon_freq_style;
     checkpoint->endStruct();
 
     decomposeRateMatrix();

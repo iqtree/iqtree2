@@ -29,11 +29,11 @@ void CandidateSet::saveCheckpoint() {
         checkpoint->startListElement();
         double score = it->second.score;
 //        string tree = it->second.tree;
-        bool localOpt = it->second.localOpt;
+//        bool localOpt = it->second.localOpt;
 
         CKP_SAVE(score);
         checkpoint->put("tree", it->second.tree);
-        CKP_SAVE(localOpt);
+//        CKP_SAVE(localOpt);
         checkpoint->endListElement();
     }
     checkpoint->endStruct();
@@ -44,7 +44,7 @@ void CandidateSet::restoreCheckpoint() {
     CheckpointFactory::restoreCheckpoint();
     checkpoint->startStruct("CandidateSet");
     double score;
-    bool localOpt;
+//    bool localOpt;
     string tree;
     for (;;) {
         checkpoint->startListElement();
@@ -52,9 +52,9 @@ void CandidateSet::restoreCheckpoint() {
             checkpoint->endListElement();
             break;
         }
-        CKP_RESTORE(localOpt);
+//        CKP_RESTORE(localOpt);
         CKP_RESTORE(tree);
-        update(tree, score, localOpt);
+        update(tree, score);
         checkpoint->endListElement();
         
     }
