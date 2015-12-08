@@ -1003,16 +1003,17 @@ ModelSubst* createModel(string model_str, ModelsBlock *models_block, StateFreqTy
 	{
 		model = new ModelSubst(tree->aln->num_states);
 	} else */
-	if ((model_str == "GTR" && tree->aln->seq_type == SEQ_DNA) ||
-		(model_str == "GTR2" && tree->aln->seq_type == SEQ_BINARY) ||
-		(model_str == "GTR20" && tree->aln->seq_type == SEQ_PROTEIN)) {
-		model = new ModelGTR(tree, count_rates);
-		if (freq_params != "")
-			((ModelGTR*)model)->readStateFreq(freq_params);
-		if (model_params != "")
-			((ModelGTR*)model)->readRates(model_params);
-		((ModelGTR*)model)->init(freq_type);
-	} else if (model_str == "UNREST") {
+//	if ((model_str == "GTR" && tree->aln->seq_type == SEQ_DNA) ||
+//		(model_str == "GTR2" && tree->aln->seq_type == SEQ_BINARY) ||
+//		(model_str == "GTR20" && tree->aln->seq_type == SEQ_PROTEIN)) {
+//		model = new ModelGTR(tree, count_rates);
+//		if (freq_params != "")
+//			((ModelGTR*)model)->readStateFreq(freq_params);
+//		if (model_params != "")
+//			((ModelGTR*)model)->readRates(model_params);
+//		((ModelGTR*)model)->init(freq_type);
+//	} else
+	if (model_str == "UNREST") {
 		freq_type = FREQ_EQUAL;
 		//params.optimize_by_newton = false;
 		tree->optimize_by_newton = false;

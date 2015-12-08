@@ -1719,7 +1719,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
     // Optimize model parameters and branch lengths using ML for the initial tree
 	iqtree.clearAllPartialLH();
     iqtree.getModelFactory()->restoreCheckpoint();
-    if (iqtree.getCheckpoint()->getBool("finishedModelOpt")) {
+    if (iqtree.getCheckpoint()->getBool("finishedModelInit")) {
         // model optimization already done: ignore this step
         iqtree.setCurScore(iqtree.computeLikelihood());
         initTree = iqtree.getTreeString();
@@ -1728,7 +1728,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
         initTree = iqtree.optimizeModelParameters(true, initEpsilon);
         iqtree.saveCheckpoint();
         iqtree.getModelFactory()->saveCheckpoint();
-        iqtree.getCheckpoint()->putBool("finishedModelOpt", true);
+        iqtree.getCheckpoint()->putBool("finishedModelInit", true);
         iqtree.getCheckpoint()->dump();
     }
 
@@ -1891,7 +1891,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
         cout << "|                    FINALIZING TREE SEARCH                        |" << endl;
         cout << "--------------------------------------------------------------------" << endl;
         
-        if (iqtree.getCheckpoint()->getBool("finishedFinalModel")) {
+        if (iqtree.getCheckpoint()->getBool("finishedModelFinal")) {
             cout << "CHECKPOINT: Final model parameters restored" << endl;
         } else {
             cout << "Performs final model parameters optimization" << endl;
@@ -1901,7 +1901,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
             else
                 tree = iqtree.optimizeModelParameters(true);
             iqtree.candidateTrees.update(tree, iqtree.getCurScore(), true);
-            iqtree.getCheckpoint()->putBool("finishedFinalModel", true);
+            iqtree.getCheckpoint()->putBool("finishedModelFinal", true);
             iqtree.saveCheckpoint();
         }
         

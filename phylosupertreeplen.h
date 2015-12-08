@@ -150,6 +150,16 @@ public:
 	~PhyloSuperTreePlen();
 
     /**
+        save object into the checkpoint
+    */
+    virtual void saveCheckpoint();
+
+    /**
+        restore object from the checkpoint
+    */
+    virtual void restoreCheckpoint();
+
+    /**
             Read the tree saved with Taxon Names and branch lengths.
             @param tree_string tree string to read from
      */

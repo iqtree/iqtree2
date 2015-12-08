@@ -2275,16 +2275,17 @@ int main(int argc, char *argv[])
 //#endif
 
 	cout << "Command:";
-	for (int i = 0; i < argc; i++)
+    int i;
+	for (i = 0; i < argc; i++)
 		cout << " " << argv[i];
 	cout << endl;
 
 	cout << "Seed:    " << Params::getInstance().ran_seed <<  " ";
 	init_random(Params::getInstance().ran_seed);
 
-	time_t cur_time;
-	time(&cur_time);
-	cout << "Time:    " << ctime(&cur_time);
+	time_t start_time;
+	time(&start_time);
+	cout << "Time:    " << ctime(&start_time);
 
 	if (Params::getInstance().lk_no_avx)
 		instruction_set = min(instruction_set, 6);
@@ -2347,6 +2348,21 @@ int main(int argc, char *argv[])
 
 	cout.precision(3);
 	cout.setf(ios::fixed);
+    
+    // checkpoint general run information
+    checkpoint->startStruct("iqtree");
+    string command;
+	for (i = 1; i < argc; i++)
+        command += string(" ") + argv[i];
+    CKP_SAVE(command);
+    unsigned int seed = Params::getInstance().ran_seed;
+    CKP_SAVE(seed);
+    CKP_SAVE(start_time);
+    stringstream sversion;
+    sversion << iqtree_VERSION_MAJOR << "." << iqtree_VERSION_MINOR << "." << iqtree_VERSION_PATCH;
+    string version = sversion.str();
+    CKP_SAVE(version);
+    checkpoint->endStruct();
 
 	// call the main function
 	if (Params::getInstance().tree_gen != NONE) {
@@ -2444,8 +2460,8 @@ int main(int argc, char *argv[])
 	}
 
 	delete checkpoint;
-	time(&cur_time);
-	cout << "Date and Time: " << ctime(&cur_time);
+	time(&start_time);
+	cout << "Date and Time: " << ctime(&start_time);
 
 	finish_random();
 	return EXIT_SUCCESS;

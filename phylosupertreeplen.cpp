@@ -296,6 +296,34 @@ PhyloSuperTreePlen::~PhyloSuperTreePlen()
 	}
 }
 
+void PhyloSuperTreePlen::saveCheckpoint() {
+    checkpoint->startStruct("PhyloSuperTreePlen");
+    if (!fixed_rates) {
+        int nrates = part_info.size();
+        double *part_rates = new double[nrates];
+        for (int i = 0; i < nrates; i++)
+            part_rates[i] = part_info[i].part_rate;
+        CKP_ARRAY_SAVE(nrates, part_rates);
+        delete [] part_rates;
+    }
+    checkpoint->endStruct();
+    IQTree::saveCheckpoint();
+}
+
+void PhyloSuperTreePlen::restoreCheckpoint() {
+    checkpoint->startStruct("PhyloSuperTreePlen");
+    if (!fixed_rates) {
+        int nrates = part_info.size();
+        double *part_rates = new double[nrates];
+        if (CKP_ARRAY_RESTORE(nrates, part_rates))
+            for (int i = 0; i < nrates; i++)
+                part_info[i].part_rate = part_rates[i];
+        delete [] part_rates;
+    }
+    checkpoint->endStruct();
+    IQTree::restoreCheckpoint();
+}
+
 
 // -------------------------------------------------------------------------------------------------------------
 double PhyloSuperTreePlen::computeDist(int seq1, int seq2, double initial_dist, double &var) {
