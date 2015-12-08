@@ -1765,12 +1765,11 @@ string _log_file;
 int _exit_wait_optn = FALSE;
 
 
-extern "C" void startLogFile() {
-	_out_buf.open(_log_file.c_str());
-}
-
-extern "C" void appendLogFile() {
-	_out_buf.open(_log_file.c_str(), ios::app);
+extern "C" void startLogFile(bool append_log) {
+    if (append_log)
+        _out_buf.open(_log_file.c_str(), ios::app);
+    else
+        _out_buf.open(_log_file.c_str());
 }
 
 extern "C" void endLogFile() {
@@ -2183,9 +2182,40 @@ int main(int argc, char *argv[])
 	//Params params;
 	parseArg(argc, argv, Params::getInstance());
 
+    // 2015-12-05
+    Checkpoint *checkpoint = new Checkpoint;
+    string filename = (string)Params::getInstance().out_prefix + ".checkpoint";
+    checkpoint->setFileName(filename);
+    
+    bool append_log = false;
+    
+    if (!Params::getInstance().ignore_checkpoint) {
+        checkpoint->load();
+        if (checkpoint->containsKey("finished")) {
+            if (!checkpoint->getBool("finished")) {
+                append_log = true;
+            } else {
+                outWarning("Quiting now because a previous run successfully finished (" + filename + ")");
+                outWarning("Use '-restart' if you really want to overwrite output files of this run");
+                delete checkpoint;
+                return EXIT_SUCCESS;
+            }
+        } else {
+            outWarning("Ignore invalid checkpoint file " + filename);
+            checkpoint->clear();
+        }
+    }
+
+
 	_log_file = Params::getInstance().out_prefix;
 	_log_file += ".log";
-	startLogFile();
+	startLogFile(append_log);
+
+    if (append_log) {
+        cout << endl << "******************************************************"
+             << endl << "CHECKPOINT: Resuming analysis from " << filename << endl << endl;
+    }
+
 	atexit(funcExit);
 	signal(SIGABRT, &funcAbort);
 	signal(SIGFPE, &funcAbort);
@@ -2352,7 +2382,7 @@ int main(int argc, char *argv[])
 			if (Params::getInstance().second_align)
 				computeMulProb(Params::getInstance());
 		} else {
-			runPhyloAnalysis(Params::getInstance());
+			runPhyloAnalysis(Params::getInstance(), checkpoint);
 		}
 	} else if (Params::getInstance().ngs_file || Params::getInstance().ngs_mapped_reads) {
 		runNGSAnalysis(Params::getInstance());
@@ -2413,6 +2443,7 @@ int main(int argc, char *argv[])
 		}
 	}
 
+	delete checkpoint;
 	time(&cur_time);
 	cout << "Date and Time: " << ctime(&cur_time);
 

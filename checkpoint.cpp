@@ -77,11 +77,10 @@ void Checkpoint::load() {
         // set the failbit and badbit
         in.exceptions(ios::failbit | ios::badbit);
         in.open(filename.c_str());
-        cout << "Loading checkpoint file " << filename << "..." << endl;
         string line;
         getline(in, line);
         if (line != CKP_HEADER)
-        	throw ("Invalid checkpoint file");
+        	throw ("Invalid checkpoint file " + filename);
         // remove the failbit
         in.exceptions(ios::badbit);
         string struct_name;
@@ -154,7 +153,7 @@ void Checkpoint::dump(bool force) {
                 out << i->first << ": " << i->second << endl;
         }
         out.close();
-        cout << "Checkpoint dumped" << endl;
+//        cout << "Checkpoint dumped" << endl;
     } catch (ios::failure &) {
         outError(ERR_WRITE_OUTPUT, filename.c_str());
     }

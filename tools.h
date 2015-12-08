@@ -1678,6 +1678,10 @@ public:
     
     /** true to ignore checkpoint file */
     bool ignore_checkpoint;
+
+    /** time (in seconds) between checkpoint dump */
+    int checkpoint_dump_interval;
+
 };
 
 /**

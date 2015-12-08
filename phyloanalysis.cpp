@@ -1723,7 +1723,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
         // model optimization already done: ignore this step
         iqtree.setCurScore(iqtree.computeLikelihood());
         initTree = iqtree.getTreeString();
-        cout << "Model parameters restored from checkpoint, LogL: " << iqtree.getCurScore() << endl;
+        cout << "CHECKPOINT: Model parameters restored, LogL: " << iqtree.getCurScore() << endl;
     } else {
         initTree = iqtree.optimizeModelParameters(true, initEpsilon);
         iqtree.saveCheckpoint();
@@ -1816,7 +1816,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 	}
 
     if (finishedCandidateSet) {
-        cout << "Candidate tree set restored from checkpoint, best LnL: " << iqtree.candidateTrees.getBestScore() << endl;
+        cout << "CHECKPOINT: Candidate tree set restored, best LnL: " << iqtree.candidateTrees.getBestScore() << endl;
     } else {
         iqtree.saveCheckpoint();
         iqtree.getCheckpoint()->putBool("finishedCandidateSet", true);
@@ -1890,14 +1890,21 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
         cout << "--------------------------------------------------------------------" << endl;
         cout << "|                    FINALIZING TREE SEARCH                        |" << endl;
         cout << "--------------------------------------------------------------------" << endl;
-        cout << "Performs final model parameters optimization" << endl;
-		string tree;
-        if (params.testAlpha)
-            tree = iqtree.optimizeModelParameters(true, 0.001);
-        else
-            tree = iqtree.optimizeModelParameters(true);
         
-		iqtree.candidateTrees.update(tree, iqtree.getCurScore(), true);
+        if (iqtree.getCheckpoint()->getBool("finishedFinalModel")) {
+            cout << "CHECKPOINT: Final model parameters restored" << endl;
+        } else {
+            cout << "Performs final model parameters optimization" << endl;
+            string tree;
+            if (params.testAlpha)
+                tree = iqtree.optimizeModelParameters(true, 0.001);
+            else
+                tree = iqtree.optimizeModelParameters(true);
+            iqtree.candidateTrees.update(tree, iqtree.getCurScore(), true);
+            iqtree.getCheckpoint()->putBool("finishedFinalModel", true);
+            iqtree.saveCheckpoint();
+        }
+        
     }
 
 	if (iqtree.isSuperTree())
@@ -2362,32 +2369,12 @@ void convertAlignment(Params &params, IQTree *iqtree) {
 /**********************************************************
  * TOP-LEVEL FUNCTION
  ***********************************************************/
-void runPhyloAnalysis(Params &params) {
+void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
 	Alignment *alignment;
 	IQTree *tree;
     
-    // 2015-12-05
-    Checkpoint *checkpoint = new Checkpoint;
-    checkpoint->setFileName((string)params.out_prefix + ".checkpoint");
-    if (!params.ignore_checkpoint) {
-        checkpoint->load();
-        if (checkpoint->containsKey("finished")) {
-            if (!checkpoint->getBool("finished")) {
-                cout << "NOTE: Resuming from a previous run..." << endl << endl;
-            } else {
-                outWarning("Quiting now because the previous run successfully finished");
-                outWarning("Use '-restart' if you really want to overwrite this run");
-                delete checkpoint;
-                return;
-            }
-        } else {
-            outWarning("Ignore invalid checkpoint file");
-            checkpoint->clear();
-        }
-    }
-    
     checkpoint->putBool("finished", false);
-    checkpoint->setDumpInterval(1); // always dump for testing purpose
+    checkpoint->setDumpInterval(params.checkpoint_dump_interval);
 
 	/****************** read in alignment **********************/
 	if (params.partition_file) {
@@ -2570,9 +2557,8 @@ void runPhyloAnalysis(Params &params) {
 //	alignment = tree->aln;
 	delete alignment;
 
-//    checkpoint->putBool("finished", true);
+    checkpoint->putBool("finished", true);
     checkpoint->dump(true);
-    delete checkpoint;
 }
 
 void assignBranchSupportNew(Params &params) {

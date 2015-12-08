@@ -883,6 +883,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.compute_seq_identity_along_tree = false;
     params.link_alpha = false;
     params.ignore_checkpoint = false;
+    params.checkpoint_dump_interval = 20;
 
 
 	if (params.nni5) {
@@ -2822,6 +2823,14 @@ void parseArg(int argc, char *argv[], Params &params) {
 
 			if (strcmp(argv[cnt], "-restart") == 0) {
 				params.ignore_checkpoint = true;
+				continue;
+			}
+
+			if (strcmp(argv[cnt], "-cptime") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -cptime <checkpoint_time_interval>";
+				params.checkpoint_dump_interval = convert_int(argv[cnt]);
 				continue;
 			}
 

@@ -385,9 +385,9 @@ void IQTree::computeInitialTree(string &dist_file, LikelihoodKernel kernel) {
     if (leafNum != 0) {
         if (!candidateTrees.empty()) {
             readTreeString(candidateTrees.getTopTrees(1)[0]);
-            cout << "Current best tree restored from checkpoint" << endl;
+            cout << endl << "CHECKPOINT: Current best tree restored" << endl;
         } else
-            cout << "Initial tree restored from checkpoint" << endl;
+            cout << endl << "CHECKPOINT: Initial tree restored" << endl;
         return;
     } else if (params->user_file) {
         // start the search with user-defined tree
@@ -1778,7 +1778,7 @@ double IQTree::doTreeSearch() {
     if (stop_rule.getLastImprovedIteration() == 0)
     	stop_rule.addImprovedIteration(1);
     else
-    	cout << "First iteration restored from checkpoint" << endl;
+    	cout << "CHECKPOINT: " <<  stop_rule.getCurIt() << " search iterations restored" << endl;
     searchinfo.curPerStrength = params->initPS;
 
 	double cur_correlation = 0.0;
