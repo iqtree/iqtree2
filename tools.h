@@ -1682,6 +1682,9 @@ public:
     /** time (in seconds) between checkpoint dump */
     int checkpoint_dump_interval;
 
+    /** true if ignoring the "finished" flag in checkpoint file */
+    bool force_unfinished;
+
 };
 
 /**

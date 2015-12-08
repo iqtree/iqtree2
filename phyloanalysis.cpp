@@ -1223,8 +1223,9 @@ void initializeParams(Params &params, IQTree &iqtree, vector<ModelInfo> &model_i
     bool test_only = params.model_name.find("ONLY") != string::npos;
     /* initialize substitution model */
     if (params.model_name.substr(0, 4) == "TEST") {
-        if (iqtree.isSuperTree())
-            ((PhyloSuperTree*) &iqtree)->mapTrees();
+    	// TODO: check if necessary
+//        if (iqtree.isSuperTree())
+//            ((PhyloSuperTree*) &iqtree)->mapTrees();
         double start_cpu_time = getCPUTime();
         double start_real_time = getRealTime();
         ofstream fmodel;
@@ -1283,8 +1284,9 @@ void initializeParams(Params &params, IQTree &iqtree, vector<ModelInfo> &model_i
     if (params.gbo_replicates)
         params.speed_conf = 1.0;
 
-    if (iqtree.isSuperTree())
-        ((PhyloSuperTree*) &iqtree)->mapTrees();
+	// TODO: check if necessary
+//    if (iqtree.isSuperTree())
+//        ((PhyloSuperTree*) &iqtree)->mapTrees();
 
     // set parameter for the current tree
 //    iqtree.setParams(params);
@@ -1892,6 +1894,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
         cout << "--------------------------------------------------------------------" << endl;
         
         if (iqtree.getCheckpoint()->getBool("finishedModelFinal")) {
+            iqtree.setCurScore(iqtree.computeLikelihood());
             cout << "CHECKPOINT: Final model parameters restored" << endl;
         } else {
             cout << "Performs final model parameters optimization" << endl;

@@ -2192,13 +2192,17 @@ int main(int argc, char *argv[])
     if (!Params::getInstance().ignore_checkpoint) {
         checkpoint->load();
         if (checkpoint->containsKey("finished")) {
-            if (!checkpoint->getBool("finished")) {
-                append_log = true;
+            if (checkpoint->getBool("finished")) {
+                if (Params::getInstance().force_unfinished) {
+                    cout << "NOTE: Continue analysis although a previous run already finished" << endl;
+                } else {
+                    outWarning("Quiting now because a previous run successfully finished (" + filename + ")");
+                    outWarning("Use '-redo' if you want to redo the analysis and overwrite all output files");
+                    delete checkpoint;
+                    return EXIT_SUCCESS;
+                } 
             } else {
-                outWarning("Quiting now because a previous run successfully finished (" + filename + ")");
-                outWarning("Use '-restart' if you really want to overwrite output files of this run");
-                delete checkpoint;
-                return EXIT_SUCCESS;
+                append_log = true;
             }
         } else {
             outWarning("Ignore invalid checkpoint file " + filename);

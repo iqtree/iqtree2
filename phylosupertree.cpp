@@ -57,12 +57,14 @@ void PhyloSuperTree::setCheckpoint(Checkpoint *checkpoint) {
 
 void PhyloSuperTree::saveCheckpoint() {
     checkpoint->startStruct("PhyloSuperTree");
-    stringstream ss;
-    for (iterator it = begin(); it != end(); it++) {
-    	(*it)->printTree(ss);
+//    stringstream ss;
+    int part = 0;
+    for (iterator it = begin(); it != end(); it++, part++) {
+    	string key = part_info[part].name + ".tree";
+    	checkpoint->put(key, (*it)->getTreeString());
     }
-    string partition_trees = ss.str();
-    CKP_SAVE(partition_trees);
+//    string partition_trees = ss.str();
+//    CKP_SAVE(partition_trees);
     checkpoint->endStruct();
     IQTree::saveCheckpoint();
 }
@@ -75,16 +77,24 @@ void PhyloSuperTree::restoreCheckpoint() {
     string newick;
     CKP_RESTORE(newick);
     checkpoint->endStruct();
+
+    if (newick.empty()) return;
     
     // now get partition tree strings
     checkpoint->startStruct("PhyloSuperTree");
-    string partition_trees;
-    CKP_RESTORE(partition_trees);
-    if (!newick.empty() && !partition_trees.empty()) {
-        newick += partition_trees;
-        readTreeString(newick);
+    int part = 0;
+    for (iterator it = begin(); it != end(); it++, part++) {
+    	string key = part_info[part].name + ".tree";
+    	string part_tree;
+    	if (!checkpoint->get(key, part_tree))
+    		outError("No tree for partition " + part_info[part].name + " found from checkpoint");
+    	newick += part_tree;
     }
+
     checkpoint->endStruct();
+
+    readTreeString(newick);
+
 }
 
 void PhyloSuperTree::readPartition(Params &params) {
@@ -593,9 +603,9 @@ void PhyloSuperTree::changeLikelihoodKernel(LikelihoodKernel lk) {
 
 string PhyloSuperTree::getTreeString() {
 	stringstream tree_stream;
-	printTree(tree_stream, WT_BR_LEN+WT_NEWLINE);
+	printTree(tree_stream, WT_BR_LEN);
 	for (iterator it = begin(); it != end(); it++)
-		(*it)->printTree(tree_stream, WT_BR_LEN+WT_NEWLINE);
+		(*it)->printTree(tree_stream, WT_BR_LEN);
 	return tree_stream.str();
 }
 

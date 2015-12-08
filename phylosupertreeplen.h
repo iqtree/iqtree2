@@ -101,6 +101,16 @@ public:
     ~PartitionModelPlen();
 
     /**
+        save object into the checkpoint
+    */
+    virtual void saveCheckpoint();
+
+    /**
+        restore object from the checkpoint
+    */
+    virtual void restoreCheckpoint();
+
+    /**
      * @return #parameters of the model + # branches
      */
     virtual int getNParameters();
