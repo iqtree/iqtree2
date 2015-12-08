@@ -1719,12 +1719,23 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
     // Optimize model parameters and branch lengths using ML for the initial tree
 	iqtree.clearAllPartialLH();
     iqtree.getModelFactory()->restoreCheckpoint();
-	initTree = iqtree.optimizeModelParameters(true, initEpsilon);
-    iqtree.saveCheckpoint();
-    iqtree.getModelFactory()->saveCheckpoint();
+    if (iqtree.getCheckpoint()->getBool("finishedModelOpt")) {
+        // model optimization already done: ignore this step
+        iqtree.setCurScore(iqtree.computeLikelihood());
+        initTree = iqtree.getTreeString();
+        cout << "Model parameters restored from checkpoint, LogL: " << iqtree.getCurScore() << endl;
+    } else {
+        initTree = iqtree.optimizeModelParameters(true, initEpsilon);
+        iqtree.saveCheckpoint();
+        iqtree.getModelFactory()->saveCheckpoint();
+        iqtree.getCheckpoint()->putBool("finishedModelOpt", true);
+        iqtree.getCheckpoint()->dump();
+    }
+
+    bool finishedCandidateSet = iqtree.getCheckpoint()->getBool("finishedCandidateSet");
 
     // now overwrite with random tree
-    if (params.start_tree == STT_RANDOM_TREE) {
+    if (params.start_tree == STT_RANDOM_TREE && !finishedCandidateSet) {
         cout << "Generate random initial Yule-Harding tree..." << endl;
         iqtree.generateRandomTree(YULE_HARDING);
         iqtree.wrapperFixNegativeBranch(true);
@@ -1736,7 +1747,8 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
     /****************** NOW PERFORM MAXIMUM LIKELIHOOD TREE RECONSTRUCTION ******************/
 
     // Update best tree
-    iqtree.candidateTrees.update(initTree, iqtree.getCurScore());
+    if (!finishedCandidateSet)
+        iqtree.candidateTrees.update(initTree, iqtree.getCurScore());
 
     if (params.min_iterations > 0) {
         cout << "--------------------------------------------------------------------" << endl;
@@ -1759,7 +1771,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 //        params.compute_ml_dist = false;
 //    }
 
-    if ((!params.dist_file && params.compute_ml_dist) || params.leastSquareBranch) {
+    if (!finishedCandidateSet && ((!params.dist_file && params.compute_ml_dist) || params.leastSquareBranch)) {
         computeMLDist(params, iqtree, dist_file, getCPUTime());
         if (!params.user_file && params.start_tree != STT_RANDOM_TREE) {
             // NEW 2015-08-10: always compute BIONJ tree into the candidate set
@@ -1781,12 +1793,12 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
         }
     }
 
-    iqtree.saveCheckpoint();
+//    iqtree.saveCheckpoint();
 
 	double cputime_search_start = getCPUTime();
     double realtime_search_start = getRealTime();
 
-    if (params.min_iterations > 0) {
+    if (params.min_iterations > 0 && !finishedCandidateSet) {
         double initTime = getCPUTime();
 
 //        if (!params.user_file && (params.start_tree == STT_PARSIMONY || params.start_tree == STT_PLL_PARSIMONY)) 
@@ -1803,7 +1815,13 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
                 << getCPUTime() - initTime << endl;
 	}
 
-    iqtree.saveCheckpoint();
+    if (finishedCandidateSet) {
+        cout << "Candidate tree set restored from checkpoint, best LnL: " << iqtree.candidateTrees.getBestScore() << endl;
+    } else {
+        iqtree.saveCheckpoint();
+        iqtree.getCheckpoint()->putBool("finishedCandidateSet", true);
+        iqtree.getCheckpoint()->dump(true);
+    }
 
     if (params.leastSquareNNI) {
     	iqtree.computeSubtreeDists();
@@ -2399,6 +2417,16 @@ void runPhyloAnalysis(Params &params) {
 	}
 
     tree->setCheckpoint(checkpoint);
+    if (params.min_branch_length <= 0.0) {
+        params.min_branch_length = 1e-6;
+        if (tree->getAlnNSite() >= 100000) {
+            params.min_branch_length = 0.1 / (tree->getAlnNSite());
+            tree->num_precision = max((int)ceil(-log10(Params::getInstance().min_branch_length))+1, 6);
+            cout.precision(12);
+            cout << "NOTE: minimal branch length is reduced to " << params.min_branch_length << " for long alignment" << endl;
+            cout.precision(3);
+        }
+    }
 
 	string original_model = params.model_name;
 

@@ -251,7 +251,7 @@ Checkpoint *CheckpointFactory::getCheckpoint() {
 
 void CheckpointFactory::saveCheckpoint() {
     if (!checkpoint) return;
-    checkpoint->dump();
+//    checkpoint->dump();
 }
 
 void CheckpointFactory::restoreCheckpoint() {

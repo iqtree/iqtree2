@@ -383,9 +383,13 @@ void IQTree::computeInitialTree(string &dist_file, LikelihoodKernel kernel) {
     candidateTrees.init(aln, params);
     restoreCheckpoint();
     if (leafNum != 0) {
-        cout << "Initial tree restored from checkpoint" << endl;
-    } else
-    if (params->user_file) {
+        if (!candidateTrees.empty()) {
+            readTreeString(candidateTrees.getTopTrees(1)[0]);
+            cout << "Current best tree restored from checkpoint" << endl;
+        } else
+            cout << "Initial tree restored from checkpoint" << endl;
+        return;
+    } else if (params->user_file) {
         // start the search with user-defined tree
         cout << "Reading input tree file " << params->user_file << " ..." << endl;
         bool myrooted = params->is_rooted;
@@ -456,6 +460,7 @@ void IQTree::computeInitialTree(string &dist_file, LikelihoodKernel kernel) {
     }
     
     saveCheckpoint();
+    checkpoint->dump(true);
 
     if (fixed_number) {
         cout << "WARNING: " << fixed_number << " undefined/negative branch lengths are initialized with parsimony" << endl;
@@ -1768,7 +1773,11 @@ double IQTree::doTreeSearch() {
     //printTree(bestTopoStream, WT_TAXON_ID + WT_SORT_TAXA);
     //string best_tree_topo = bestTopoStream.str();
 
-    stop_rule.addImprovedIteration(1);
+    // if not zero, it means already recovered from checkpoint
+    if (stop_rule.getLastImprovedIteration() == 0)
+    	stop_rule.addImprovedIteration(1);
+    else
+    	cout << "First iteration restored from checkpoint" << endl;
     searchinfo.curPerStrength = params->initPS;
 
 	double cur_correlation = 0.0;
@@ -1964,6 +1973,7 @@ double IQTree::doTreeSearch() {
 				writeUFBootTrees(*params);
 
         saveCheckpoint();
+        checkpoint->dump();
         
        //if (params->partition_type)
        // 	((PhyloSuperTreePlen*)this)->printNNIcasesNUM();
