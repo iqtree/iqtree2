@@ -60,8 +60,8 @@ void RateGamma::restoreCheckpoint() {
 //    CKP_RESTORE(cut_median);
 //    CKP_RESTORE(ncategory);
     checkpoint->endStruct();
-
-	setNCategory(ncategory);
+    // necessary compute rates after restoring gamma_shape
+	computeRates();
 }
 
 void RateGamma::setNCategory(int ncat) {
