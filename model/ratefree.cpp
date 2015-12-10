@@ -56,12 +56,12 @@ RateFree::RateFree(int ncat, double start_alpha, string params, bool sorted_rate
 
 void RateFree::saveCheckpoint() {
     checkpoint->startStruct("RateFree");
-    checkpoint->endStruct();
 //    CKP_SAVE(fix_params);
 //    CKP_SAVE(sorted_rates);
 //    CKP_SAVE(optimize_alg);
     CKP_ARRAY_SAVE(ncategory, prop);
     CKP_ARRAY_SAVE(ncategory, rates);
+    checkpoint->endStruct();
     RateGamma::saveCheckpoint();
 }
 

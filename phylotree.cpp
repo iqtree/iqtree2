@@ -120,6 +120,7 @@ void PhyloTree::saveCheckpoint() {
     checkpoint->startStruct("PhyloTree");
     string newick = PhyloTree::getTreeString();
     CKP_SAVE(newick);
+    CKP_SAVE(curScore);
     checkpoint->endStruct();
     CheckpointFactory::saveCheckpoint();
 }
@@ -128,6 +129,7 @@ void PhyloTree::restoreCheckpoint() {
     CheckpointFactory::restoreCheckpoint();
     checkpoint->startStruct("PhyloTree");
     string newick;
+    CKP_RESTORE(curScore);
     CKP_RESTORE(newick);
     if (!newick.empty())
         PhyloTree::readTreeString(newick);

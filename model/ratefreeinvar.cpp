@@ -18,13 +18,13 @@ RateFreeInvar::RateFreeInvar(int ncat, double start_alpha, string params, bool s
 void RateFreeInvar::saveCheckpoint() {
     checkpoint->startStruct("RateFreeInvar");
     checkpoint->endStruct();
-    RateFree::saveCheckpoint();
     RateInvar::saveCheckpoint();
+    RateFree::saveCheckpoint();
 }
 
 void RateFreeInvar::restoreCheckpoint() {
-    RateFree::restoreCheckpoint();
     RateInvar::restoreCheckpoint();
+    RateFree::restoreCheckpoint();
     checkpoint->startStruct("RateFreeInvar");
     checkpoint->endStruct();
 }
