@@ -751,7 +751,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.optimize_by_newton = true;
     params.optimize_alg = "2-BFGS-B,EM";
     params.fixed_branch_length = false;
-    params.min_branch_length = 0.000001;
+    params.min_branch_length = 0.0; // this is now adjusted later based on alignment length
     params.max_branch_length = 100.0;
     params.iqp_assess_quartet = IQP_DISTANCE;
     params.iqp = false;
@@ -769,7 +769,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.localbp_replicates = 0;
     params.SSE = LK_EIGEN_SSE;
     params.lk_no_avx = false;
-    params.print_site_lh = 0;
+    params.print_site_lh = WSL_NONE;
     params.print_site_rate = false;
     params.print_site_posterior = 0;
     params.print_tree_lh = false;
@@ -863,7 +863,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.num_threads = 1;
 #endif
     params.model_test_criterion = MTC_BIC;
-    params.model_test_stop_rule = MTC_ALL;
+//    params.model_test_stop_rule = MTC_ALL;
     params.model_test_sample_size = 0;
     params.root_state = NULL;
     params.print_bootaln = false;
@@ -884,6 +884,8 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.freq_const_patterns = NULL;
     params.no_rescale_gamma_invar = false;
     params.compute_seq_identity_along_tree = false;
+    params.link_alpha = false;
+
 
 	if (params.nni5) {
 	    params.nni_type = NNI5;
@@ -1955,6 +1957,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 					outError("Negative -blmin not allowed!");
 				if (params.min_branch_length == 0.0)
 					outError("Zero -blmin is not allowed due to numerical problems");
+				if (params.min_branch_length > 0.1)
+					outError("-blmin must be < 0.1");
 
 				continue;
 			}
@@ -2152,11 +2156,19 @@ void parseArg(int argc, char *argv[], Params &params) {
 				continue;
 			}
 			if (strcmp(argv[cnt], "-wsl") == 0) {
-				params.print_site_lh = 1;
+				params.print_site_lh = WSL_SITE;
 				continue;
 			}
-			if (strcmp(argv[cnt], "-wslg") == 0) {
-				params.print_site_lh = 2;
+			if (strcmp(argv[cnt], "-wslg") == 0 || strcmp(argv[cnt], "-wslr") == 0) {
+				params.print_site_lh = WSL_RATECAT;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-wslm") == 0) {
+				params.print_site_lh = WSL_MIXTURE;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-wslmr") == 0 || strcmp(argv[cnt], "-wslrm") == 0) {
+				params.print_site_lh = WSL_MIXTURE_RATECAT;
 				continue;
 			}
 			if (strcmp(argv[cnt], "-wsr") == 0) {
@@ -2744,11 +2756,11 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (cnt >= argc)
 					throw "Use -merit AIC|AICC|BIC";
                 if (strcmp(argv[cnt], "AIC") == 0)
-                    params.model_test_stop_rule = MTC_AIC;
+                    params.model_test_criterion = MTC_AIC;
                 else if (strcmp(argv[cnt], "AICc") == 0 || strcmp(argv[cnt], "AICC") == 0)
-                    params.model_test_stop_rule = MTC_AICC;
+                    params.model_test_criterion = MTC_AICC;
                 else if (strcmp(argv[cnt], "BIC") == 0)
-                    params.model_test_stop_rule = MTC_BIC;
+                    params.model_test_criterion = MTC_BIC;
                 else throw "Use -merit AIC|AICC|BIC";
 				continue;
 			}
@@ -2817,6 +2829,11 @@ void parseArg(int argc, char *argv[], Params &params) {
 				continue;
 			}
             
+			if (strcmp(argv[cnt], "--link-alpha") == 0) {
+				params.link_alpha = true;
+				continue;
+			}
+
 			if (argv[cnt][0] == '-') {
                 string err = "Invalid \"";
                 err += argv[cnt];
@@ -3140,12 +3157,13 @@ void usage_iqtree(char* argv[], bool full_command) {
 
 			cout << endl << "MISCELLANEOUS:" << endl
 		    << "  -wt                  Write locally optimal trees into .treels file" << endl
-			<< "  -blfix               Fix branch lengths of <treefile>." << endl
-            << "                       Used with -te to compute log-likelihood of <treefile>" << endl
+			<< "  -blfix               Fix branch lengths of user tree passed via -te" << endl
 			<< "  -blmin               Min branch length for optimization (default 0.000001)" << endl
-			<< "  -blmax               Max branch length for optimization (default 0.000001)" << endl
-			<< "  -wsl                 Writing site log-likelihoods to .sitelh file" << endl
-            << "  -wslg                Writing site log-likelihoods per Gamma category" << endl
+			<< "  -blmax               Max branch length for optimization (default 100)" << endl
+			<< "  -wsl                 Write site log-likelihoods to .sitelh file" << endl
+            << "  -wslr                Write site log-likelihoods per rate category" << endl
+            << "  -wslm                Write site log-likelihoods per mixture class" << endl
+            << "  -wslmr               Write site log-likelihoods per mixture+rate class" << endl
             << "  -fconst f1,...,fN    Add constant patterns into alignment (N=#nstates)" << endl;
 //            << "  -d <file>            Reading genetic distances from file (default: JC)" << endl
 //			<< "  -d <outfile>         Calculate the distance matrix inferred from tree" << endl

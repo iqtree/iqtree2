@@ -1555,36 +1555,88 @@ double PhyloTree::computeLikelihoodRooted(PhyloNeighbor *dad_branch, PhyloNode *
     return score;
 }
 
-double PhyloTree::computePatternLhCat() {
+int PhyloTree::getNumLhCat(SiteLoglType wsl) {
+    int ncat = 0;
+    switch (wsl) {
+    case WSL_NONE: assert(0 && "is not WSL_NONE"); return 0;
+    case WSL_SITE: assert(0 && "is not WSL_SITE"); return 0;
+    case WSL_MIXTURE_RATECAT: 
+        ncat = getRate()->getNDiscreteRate();
+        if (getModel()->isMixture() && !getModelFactory()->fused_mix_rate)
+            ncat *= getModel()->getNMixtures();
+        return ncat;
+    case WSL_RATECAT:
+        return getRate()->getNDiscreteRate();
+    case WSL_MIXTURE:
+        return getModel()->getNMixtures();
+    }
+}
+
+double PhyloTree::computePatternLhCat(SiteLoglType wsl) {
     if (!current_it) {
         Node *leaf = findFirstFarLeaf(root);
         current_it = (PhyloNeighbor*)leaf->neighbors[0];
         current_it_back = (PhyloNeighbor*)current_it->node->findNeighbor(leaf);
     }
-    if (sse == LK_NORMAL || sse == LK_SSE)
+    if (sse == LK_NORMAL || sse == LK_SSE) {
+        if (getModel()->isMixture())
+            outError("Naive kernel does not support mixture models, contact author if you really need this feature");
         return computeLikelihoodBranchNaive(current_it, (PhyloNode*)current_it_back->node);
-    else if (!getModel()->isMixture())
+    } else if (!getModel()->isMixture())
         return computeLikelihoodBranchEigen(current_it, (PhyloNode*)current_it_back->node);
     else if (getModelFactory()->fused_mix_rate)
         return computeMixrateLikelihoodBranchEigen(current_it, (PhyloNode*)current_it_back->node);
-    else
-        return computeMixtureLikelihoodBranchEigen(current_it, (PhyloNode*)current_it_back->node);
+    else {
+        double score = computeMixtureLikelihoodBranchEigen(current_it, (PhyloNode*)current_it_back->node);
+        if (wsl == WSL_MIXTURE_RATECAT) return score;
+        
+        double *lh_cat = _pattern_lh_cat;
+        double *lh_res = _pattern_lh_cat;
+        size_t ptn, nptn = aln->getNPattern();
+        size_t m, nmixture = getModel()->getNMixtures();
+        size_t c, ncat = getRate()->getNRate();
+        if (wsl == WSL_MIXTURE && ncat > 1) {
+            // transform to lh per mixture class
+            for (ptn = 0; ptn < nptn; ptn++) {
+                for (m = 0; m < nmixture; m++) {
+                    double lh = lh_cat[0];
+                    for (c = 1; c < ncat; c++)
+                        lh += lh_cat[c];
+                    lh_res[m] = lh;
+                    lh_cat += ncat;
+                }
+                lh_res += nmixture;
+            }
+        } else if (wsl == WSL_RATECAT && nmixture > 1) {
+            // transform to lh per rate category
+            for (ptn = 0; ptn < nptn; ptn++) {
+                if (lh_res != lh_cat)
+                    memcpy(lh_res, lh_cat, ncat*sizeof(double));
+                lh_cat += ncat;
+                for (m = 1; m < nmixture; m++) {
+                    for (c = 0; c < ncat; c++)
+                        lh_res[c] += lh_cat[c];
+                    lh_cat += ncat;
+                }
+                lh_res += ncat;
+            }
+        }
+        return score;
+    }
 }
 
 
-void PhyloTree::computePatternLikelihood(double *ptn_lh, double *cur_logl, double *ptn_lh_cat) {
+void PhyloTree::computePatternLikelihood(double *ptn_lh, double *cur_logl, double *ptn_lh_cat, SiteLoglType wsl) {
     /*	if (!dad_branch) {
      dad_branch = (PhyloNeighbor*) root->neighbors[0];
      dad = (PhyloNode*) root;
      }*/
     int nptn = aln->getNPattern();
     int i;
-    int ncat = site_rate->getNDiscreteRate();
-    if (getModel()->isMixture() && !getModelFactory()->fused_mix_rate)
-        ncat *= getModel()->getNMixtures();
+    int ncat = getNumLhCat(wsl);
     if (ptn_lh_cat) {
     	// Right now only Naive version store _pattern_lh_cat!
-        computePatternLhCat();
+        computePatternLhCat(wsl);
     } 
     
     double sum_scaling = current_it->lh_scale_factor + current_it_back->lh_scale_factor;
@@ -1652,7 +1704,7 @@ void PhyloTree::computePatternLikelihood(double *ptn_lh, double *cur_logl, doubl
 int PhyloTree::computePatternCategories(IntVector *pattern_ncat) {
     if (sse != LK_EIGEN) {
         // compute _pattern_lh_cat
-        computePatternLhCat();
+        computePatternLhCat(WSL_MIXTURE_RATECAT);
     }
     
 	size_t npattern = aln->getNPattern();
@@ -3075,7 +3127,7 @@ void PhyloTree::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool clear
     theta_computed = false;
     if (optimize_by_newton) {
     	// Newton-Raphson method
-    	optx = minimizeNewton(params->min_branch_length, current_len, params->max_branch_length, TOL_BRANCH_LEN, negative_lh, maxNRStep);
+    	optx = minimizeNewton(params->min_branch_length, current_len, params->max_branch_length, params->min_branch_length, negative_lh, maxNRStep);
         if (verbose_mode >= VB_DEBUG) {
             cout << "minimizeNewton logl: " << computeLikelihoodFromBuffer() << endl;
         }
@@ -3091,7 +3143,7 @@ void PhyloTree::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool clear
     	}
 	}	else {
         // Brent method
-        optx = minimizeOneDimen(params->min_branch_length, current_len, params->max_branch_length, TOL_BRANCH_LEN, &negative_lh, &ferror);
+        optx = minimizeOneDimen(params->min_branch_length, current_len, params->max_branch_length, params->min_branch_length, &negative_lh, &ferror);
         if (verbose_mode >= VB_DEBUG) {
             cout << "minimizeBrent logl: " << -negative_lh << endl;
         }
@@ -3162,7 +3214,7 @@ void PhyloTree::computeBestTraversal(NodeVector &nodes, NodeVector &nodes2) {
 
     // double call to farthest leaf to find the longest path on the tree
     findFarthestLeaf(farleaf);
-    if (verbose_mode >= VB_MED)
+    if (verbose_mode >= VB_MAX)
         cout << "Tree diameter: " << farleaf->height << endl;
     getPreOrderBranches(nodes, nodes2, farleaf);
 }

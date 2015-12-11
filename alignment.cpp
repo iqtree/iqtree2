@@ -309,6 +309,12 @@ Alignment *Alignment::removeGappySeq() {
 		}
 	if (keep_seqs.size() == nseq)
 		return this;
+    // 2015-12-03: if resulting alignment has too few seqs, try to add some back
+    if (keep_seqs.size() < 3 && getNSeq() >= 3) {
+        for (i = 0; i < nseq && keep_seqs.size() < 3; i++)
+            if (isGapOnlySeq(i))
+                keep_seqs.push_back(i);
+    }
 	Alignment *aln = new Alignment;
 	aln->extractSubAlignment(this, keep_seqs, 0);
 	return aln;
@@ -2979,7 +2985,7 @@ void Alignment::printDist(ostream &out, double *dist_mat) {
     if (max_len < 10) max_len = 10;
     out << nseqs << endl;
     int pos = 0;
-    out.precision(6);
+    out.precision(max((int)ceil(-log10(Params::getInstance().min_branch_length))+1, 6));
     out << fixed;
     for (int seq1 = 0; seq1 < nseqs; seq1 ++)  {
         out.width(max_len);

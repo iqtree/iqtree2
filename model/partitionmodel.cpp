@@ -19,10 +19,12 @@
  ***************************************************************************/
 #include "partitionmodel.h"
 #include "superalignment.h"
+#include "model/rategamma.h"
 
 PartitionModel::PartitionModel()
         : ModelFactory()
 {
+	linked_alpha = -1.0;
 }
 
 PartitionModel::PartitionModel(Params &params, PhyloSuperTree *tree, ModelsBlock *models_block)
@@ -32,6 +34,7 @@ PartitionModel::PartitionModel(Params &params, PhyloSuperTree *tree, ModelsBlock
 	is_storing = false;
 	joint_optimize = params.optimize_model_rate_joint;
 	fused_mix_rate = false;
+    linked_alpha = -1.0;
 
 	// create dummy model
 	model = new ModelSubst(tree->aln->num_states);
@@ -41,6 +44,10 @@ PartitionModel::PartitionModel(Params &params, PhyloSuperTree *tree, ModelsBlock
     string model_name = params.model_name;
     PhyloSuperTree::iterator it;
     int part;
+    if (params.link_alpha) {
+        params.gamma_shape = fabs(params.gamma_shape);
+        linked_alpha = params.gamma_shape;
+    }
     for (it = tree->begin(), part = 0; it != tree->end(); it++, part++) {
         assert(!((*it)->getModelFactory()));
         params.model_name = tree->part_info[part].model_name;
@@ -55,6 +62,7 @@ PartitionModel::PartitionModel(Params &params, PhyloSuperTree *tree, ModelsBlock
         	(*it)->aln->computeStateFreq((*it)->getModel()->state_freq, (*it)->aln->getNSite() * (tree->aln->getNSeq() - (*it)->aln->getNSeq()));
         	(*it)->getModel()->decomposeRateMatrix();
         }
+        
         //string taxa_set = ((SuperAlignment*)tree->aln)->getPattern(part);
         //(*it)->copyTree(tree, taxa_set);
         //(*it)->drawTree(cout);
@@ -67,9 +75,36 @@ int PartitionModel::getNParameters() {
     for (PhyloSuperTree::iterator it = tree->begin(); it != tree->end(); it++) {
     	df += (*it)->getModelFactory()->getNParameters();
     }
+    if (linked_alpha > 0)
+        df ++;
     return df;
 }
 
+double PartitionModel::computeFunction(double shape) {
+    PhyloSuperTree *tree = (PhyloSuperTree*)site_rate->getTree();
+    double res = 0.0;
+    linked_alpha = shape;
+    for (PhyloSuperTree::iterator it = tree->begin(); it != tree->end(); it++) 
+        if ((*it)->getRate()->isGammaRate()) {
+            res += (*it)->getRate()->computeFunction(shape);
+        }
+    if (res == 0.0)
+        outError("No partition has Gamma rate heterogeneity!");
+	return res;
+}
+
+double PartitionModel::optimizeLinkedAlpha(bool write_info, double gradient_epsilon) {
+    if (write_info)
+        cout << "Optimizing linked gamma shape..." << endl;
+	double negative_lh;
+	double current_shape = linked_alpha;
+	double ferror, optx;
+	optx = minimizeOneDimen(MIN_GAMMA_SHAPE, current_shape, MAX_GAMMA_SHAPE, max(gradient_epsilon, TOL_GAMMA_SHAPE), &negative_lh, &ferror);
+    if (write_info)
+        cout << "Linked alpha across partitions: " << linked_alpha << endl;
+	return site_rate->getTree()->computeLikelihood();
+    
+}
 
 double PartitionModel::optimizeParameters(bool fixed_len, bool write_info, double logl_epsilon, double gradient_epsilon) {
     PhyloSuperTree *tree = (PhyloSuperTree*)site_rate->getTree();
@@ -95,6 +130,10 @@ double PartitionModel::optimizeParameters(bool fixed_len, bool write_info, doubl
             logl_epsilon/min(ntrees,10), gradient_epsilon/min(ntrees,10));
     }
     //return ModelFactory::optimizeParameters(fixed_len, write_info);
+
+    if (tree->params->link_alpha) {
+        tree_lh = optimizeLinkedAlpha(write_info, gradient_epsilon);
+    }
     return tree_lh;
 }
 

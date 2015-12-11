@@ -1093,7 +1093,7 @@ void checkZeroDist(Alignment *aln, double *dist) {
 		string str = "";
 		bool first = true;
 		for (j = i + 1; j < ntaxa; j++)
-			if (dist[i * ntaxa + j] <= 1e-6) {
+			if (dist[i * ntaxa + j] <= Params::getInstance().min_branch_length) {
 				if (first)
 					str = "ZERO distance between sequences "
 							+ aln->getSeqName(i);
@@ -1440,10 +1440,10 @@ void printMiscInfo(Params &params, IQTree &iqtree, double *pattern_lh) {
 	if (params.print_site_lh && !params.pll) {
 		string site_lh_file = params.out_prefix;
 		site_lh_file += ".sitelh";
-		if (params.print_site_lh == 1)
+		if (params.print_site_lh == WSL_SITE)
 			printSiteLh(site_lh_file.c_str(), &iqtree, pattern_lh);
 		else
-			printSiteLhCategory(site_lh_file.c_str(), &iqtree);
+			printSiteLhCategory(site_lh_file.c_str(), &iqtree, params.print_site_lh);
 	}
 
     if (params.print_site_posterior) {
@@ -1619,7 +1619,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
     }
 
     /***************** Initialization for PLL and sNNI ******************/
-    if (params.start_tree == STT_PLL_PARSIMONY || params.pll) {
+    if (params.start_tree == STT_PLL_PARSIMONY || params.start_tree == STT_RANDOM_TREE || params.pll) {
         /* Initialized all data structure for PLL*/
     	iqtree.initializePLL(params);
     }
@@ -1734,6 +1734,15 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 	iqtree.clearAllPartialLH();
 	initTree = iqtree.optimizeModelParameters(true, initEpsilon);
 
+    // now overwrite with random tree
+    if (params.start_tree == STT_RANDOM_TREE) {
+        cout << "Generate random initial Yule-Harding tree..." << endl;
+        iqtree.generateRandomTree(YULE_HARDING);
+        iqtree.wrapperFixNegativeBranch(true);
+        iqtree.initializeAllPartialLh();
+        initTree = iqtree.optimizeBranches(2);
+        cout << "Log-likelihood of random tree: " << iqtree.getCurScore() << endl;
+    }
 
     /****************** NOW PERFORM MAXIMUM LIKELIHOOD TREE RECONSTRUCTION ******************/
 
@@ -2373,6 +2382,17 @@ void runPhyloAnalysis(Params &params) {
 		}
 		tree = new IQTree(alignment);
 	}
+
+    if (params.min_branch_length <= 0.0) {
+        params.min_branch_length = 1e-6;
+        if (tree->getAlnNSite() >= 100000) {
+            params.min_branch_length = 0.1 / (tree->getAlnNSite());
+            tree->num_precision = max((int)ceil(-log10(Params::getInstance().min_branch_length))+1, 6);
+            cout.precision(12);
+            cout << "NOTE: minimal branch length is reduced to " << params.min_branch_length << " for long alignment" << endl;
+            cout.precision(3);
+        }
+    }
 
 	string original_model = params.model_name;
 

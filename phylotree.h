@@ -729,10 +729,15 @@ public:
     virtual double computeLikelihood(double *pattern_lh = NULL);
 
     /**
+     * @return number of elements per site lhl entry, used in conjunction with computePatternLhCat
+     */
+    int getNumLhCat(SiteLoglType wsl);
+
+    /**
      * compute _pattern_lh_cat for site-likelihood per category
      * @return tree log-likelihood
      */
-    virtual double computePatternLhCat();
+    virtual double computePatternLhCat(SiteLoglType wsl);
 
     /**
             compute pattern likelihoods only if the accumulated scaling factor is non-zero.
@@ -743,7 +748,7 @@ public:
             @param pattern_lh_cat (OUT) if not NULL, store all pattern-likelihood per category
      */
     virtual void computePatternLikelihood(double *pattern_lh, double *cur_logl = NULL,
-    		double *pattern_lh_cat = NULL);
+    		double *pattern_lh_cat = NULL, SiteLoglType wsl = WSL_RATECAT);
 
     vector<uint64_t> ptn_cat_mask;
 

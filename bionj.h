@@ -523,21 +523,21 @@ void Finish(float **delta, int n, POINTERS *trees, FILE *output)
   fprintf(output,":");
 /*   gcvt(length,PREC, str); */
 /*   fprintf(output,"%s,",str); */
-  fprintf(output,"%f,",length);
+  fprintf(output,"%10.8f,",length);
 
   length=Finish_branch_length(last[1],last[0],last[2],delta);
   Print_output(last[1],trees,output);
   fprintf(output,":");
 /*   gcvt(length,PREC, str); */
 /*   fprintf(output,"%s,",str); */
-  fprintf(output,"%f,",length);
+  fprintf(output,"%10.8f,",length);
 
   length=Finish_branch_length(last[2],last[1],last[0],delta);
   Print_output(last[2],trees,output);
   fprintf(output,":");
 /*   gcvt(length,PREC,str); */
 /*   fprintf(output,"%s",str); */
-  fprintf(output,"%f",length);
+  fprintf(output,"%10.8f",length);
   fprintf(output,");");
   fprintf(output,"\n");
 
@@ -738,7 +738,7 @@ int create(const char *inputFile, const char *outputFile) {
 	  strcpy(chain1,"");                     /* to the NEWSWICK format   */
 	  strcat(chain1,":");
 
-	  sprintf(chain1+strlen(chain1),"%f",la);
+	  sprintf(chain1+strlen(chain1),"%10.8f",la);
 /* 	  gcvt(la,PREC, chain2); */
 /* 	  strcat(chain1, chain2); */
 
@@ -749,7 +749,7 @@ int create(const char *inputFile, const char *outputFile) {
 	  strcpy(chain1,"");
 	  strcat(chain1,":");
 
-	  sprintf(chain1+strlen(chain1),"%f",lb);
+	  sprintf(chain1+strlen(chain1),"%10.8f",lb);
 /* 	  gcvt(lb, PREC, chain2); */
 /* 	  strcat(chain1, chain2); */
 	  strcat(chain1,")");

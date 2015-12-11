@@ -238,29 +238,61 @@ void printSiteLh(const char*filename, PhyloTree *tree, double *ptn_lh,
 		delete[] pattern_lh;
 }
 
-void printSiteLhCategory(const char*filename, PhyloTree *tree) {
-    // TODO: mixture model!
-    if (tree->getModel()->isMixture() && !tree->getModelFactory()->fused_mix_rate)
-        outError("Unsupported feature, please contact author if you really need this", __func__);
+void printSiteLhCategory(const char*filename, PhyloTree *tree, SiteLoglType wsl) {
+
+    if (wsl == WSL_NONE || wsl == WSL_SITE)
+        return;
+    // error checking
+    if (!tree->getModel()->isMixture()) {
+        if (wsl != WSL_RATECAT) {
+            outWarning("Switch now to '-wslr' as it is the only option for non-mixture model");
+            wsl = WSL_RATECAT;
+        }
+    } else {
+        // mixture model
+        if (wsl == WSL_MIXTURE_RATECAT && tree->getModelFactory()->fused_mix_rate) {
+            outWarning("-wslmr is not suitable for fused mixture model, switch now to -wslm");
+            wsl = WSL_MIXTURE;
+        }
+    }
+	int ncat = tree->getNumLhCat(wsl);
 	double *pattern_lh, *pattern_lh_cat;
 	int i;
-	int discrete_cat = tree->getRate()->getNDiscreteRate();
 	pattern_lh = new double[tree->getAlnNPattern()];
-	pattern_lh_cat = new double[tree->getAlnNPattern()*(discrete_cat)];
-	tree->computePatternLikelihood(pattern_lh, NULL, pattern_lh_cat);
-        
+	pattern_lh_cat = new double[tree->getAlnNPattern()*ncat];
+	tree->computePatternLikelihood(pattern_lh, NULL, pattern_lh_cat, wsl);
+
+    
 	try {
 		ofstream out;
 		out.exceptions(ios::failbit | ios::badbit);
 		out.open(filename);
 		out << "Note : P(D|M) is the probability of site D given the model M (i.e., the site likelihood)" << endl;
-		out << "P(D|M,rr[x]) is the probability of site D given the model M and the relative rate" << endl;
-		out << "of evolution rr[x], where x is the class of rate to be considered." << endl;
-		out << "We have P(D|M) = \\sum_x P(x) x P(D|M,rr[x])." << endl << endl;
-		out << "Site   logP(D|M)       ";
-		for (i = 0; i < discrete_cat; i++) {
-			out << "logP(D|M,rr[" << i+1 << "]=" << tree->getRate()->getRate(i)<< ") ";
-		}
+        if (wsl == WSL_RATECAT) {
+            out << "P(D|M,rr[x]) is the probability of site D given the model M and the relative rate" << endl;
+            out << "of evolution rr[x], where x is the class of rate to be considered." << endl;
+            out << "We have P(D|M) = \\sum_x P(x) x P(D|M,rr[x])." << endl << endl;
+            out << "Site   logP(D|M)       ";
+            for (i = 0; i < ncat; i++)
+                out << "logP(D|M,rr[" << i+1 << "]=" << tree->getRate()->getRate(i)<< ") ";
+        } else if (wsl == WSL_MIXTURE) {
+            out << "P(D|M[x]) is the probability of site D given the model M[x]," << endl;
+            out << "where x is the mixture class to be considered." << endl;
+            out << "We have P(D|M) = \\sum_x P(x) x P(D|M[x])." << endl << endl;
+            out << "Site   logP(D|M)       ";
+            for (i = 0; i < ncat; i++)
+                out << "logP(D|M[" << i+1 << "]) ";
+        } else {
+            // WSL_MIXTURE_RATECAT
+            out << "P(D|M[x],rr[y]) is the probability of site D given the model M[x] and the relative rate" << endl;
+            out << "of evolution rr[y], where x and y are the mixture class and rate class, respectively." << endl;
+            out << "We have P(D|M) = \\sum_x \\sum_y P(x) x P(y) x P(D|M[x],rr[y])." << endl << endl;
+            out << "Site   logP(D|M)       ";
+            for (i = 0; i < tree->getModel()->getNMixtures(); i++)
+                for (int j = 0; j < tree->getRate()->getNRate(); j++) {
+                    out << "logP(D|M[" << i+1 << "],rr[" << j+1 << "]=" << tree->getRate()->getRate(j) << ") ";
+                }
+        }
 		out << endl;
 		IntVector pattern_index;
 		tree->aln->getSitePatternIndex(pattern_index);
@@ -269,9 +301,9 @@ void printSiteLhCategory(const char*filename, PhyloTree *tree) {
 			out << left << i+1 << " ";
 			out.width(15);
 			out << pattern_lh[pattern_index[i]] << " ";
-			for (int j = 0; j < discrete_cat; j++) {
+			for (int j = 0; j < ncat; j++) {
 				out.width(15);
-				out << pattern_lh_cat[pattern_index[i]*discrete_cat+j] << " ";
+				out << pattern_lh_cat[pattern_index[i]*ncat+j] << " ";
 			}
 			out << endl;
 		}
@@ -1209,15 +1241,19 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
         
         if (models_block->findMixModel(model_names[model])) {
             // mixture model
-            mixture_model = true;
-            params.model_name = model_names[model];
-            this_model_fac = new ModelFactory(params, tree, models_block);
-            tree->setModelFactory(this_model_fac);
-            tree->setModel(this_model_fac->model);
-            tree->setRate(this_model_fac->site_rate);
-            tree->deleteAllPartialLh();
-            tree->initializeAllPartialLh();
-            RAM_requirement = max(RAM_requirement, tree->getMemoryRequired());
+            try {
+                mixture_model = true;
+                params.model_name = model_names[model];
+                this_model_fac = new ModelFactory(params, tree, models_block);
+                tree->setModelFactory(this_model_fac);
+                tree->setModel(this_model_fac->model);
+                tree->setRate(this_model_fac->site_rate);
+                tree->deleteAllPartialLh();
+                tree->initializeAllPartialLh();
+                RAM_requirement = max(RAM_requirement, tree->getMemoryRequired());
+            } catch (string &str) {
+                outError("Invalid -madd model " + model_names[model] + ": " + str);
+            }
         } else {
             // kernel might be changed if mixture model was tested
             in_tree->setLikelihoodKernel(params.SSE);
@@ -1251,6 +1287,10 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
                 freq_type = FREQ_CODON_3x4;
             else if (model_names[model].find("+FQ") != string::npos)
                 freq_type = FREQ_EQUAL;
+            else if (model_names[model].find("+FO") != string::npos)
+                freq_type = FREQ_ESTIMATE;
+            else if (model_names[model].find("+FU") != string::npos)
+                freq_type = FREQ_USER_DEFINED;
             else if (model_names[model].find("+F") != string::npos)
                 freq_type = FREQ_EMPIRICAL;
                 
@@ -1361,8 +1401,8 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
                 if (tree->getMemoryRequired() > RAM_requirement) {
                     tree->deleteAllPartialLh();
                     RAM_requirement = tree->getMemoryRequired();
-                    tree->initializeAllPartialLh();
                 }
+                tree->initializeAllPartialLh();
                 if (prev_tree_string != "") {
                     tree->readTreeString(prev_tree_string);
                 }
@@ -1402,7 +1442,7 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
             size_t pos_r = info.name.find("+R");
             if ( prev_pos_r != string::npos &&  pos_r != string::npos && 
             model_info[prev_model_id].name.substr(0,prev_pos_r) == info.name.substr(0, pos_r)) {
-                switch (params.model_test_stop_rule) {
+                switch (params.model_test_criterion) {
                 case MTC_ALL:
                     if (info.AIC_score > model_info[prev_model_id].AIC_score && info.AICc_score > model_info[prev_model_id].AICc_score &&
                         info.BIC_score > model_info[prev_model_id].BIC_score) {
