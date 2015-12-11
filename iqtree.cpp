@@ -82,6 +82,40 @@ void IQTree::saveCheckpoint() {
     stop_rule.saveCheckpoint();
     candidateTrees.saveCheckpoint();
     checkpoint->startStruct("IQTree");
+    
+    if (params->gbo_replicates > 0) {
+//        CKP_VECTOR_SAVE(treels_logl);
+        CKP_SAVE(max_candidate_trees);
+        CKP_SAVE(logl_cutoff);
+        // save boot_samples and boot_trees
+        int id = 0;
+        size_t orig_nptn = getAlnNPattern();
+        for (vector<BootValType* >::iterator it = boot_samples.begin(); it != boot_samples.end(); it++, id++) {
+            checkpoint->startListElement();
+            BootValType* bs = (*it);
+            CKP_ARRAY_SAVE(orig_nptn, bs);
+            string &bt = boot_trees[id];
+            CKP_SAVE(bt);
+            double bl = boot_logl[id];
+            CKP_SAVE(bl);
+            int bc = boot_counts[id];
+            CKP_SAVE(bc);
+            checkpoint->endListElement();
+        }
+        // boot_splits
+        checkpoint->startStruct("ss");
+        for (vector<SplitGraph*>::iterator sit = boot_splits.begin(); sit != boot_splits.end(); sit++) {
+            checkpoint->startListElement();
+//            (*sit)->setCheckpoint(checkpoint);
+            (*sit)->saveCheckpoint();
+            checkpoint->endListElement();
+        }
+        checkpoint->endStruct();
+//        CKP_VECTOR_SAVE(boot_counts);
+//        CKP_VECTOR_SAVE(boot_logl);
+        CKP_SAVE(boot_consense_logl);
+    }
+    
     checkpoint->endStruct();
     PhyloTree::saveCheckpoint();
 }
@@ -1949,6 +1983,7 @@ double IQTree::doTreeSearch() {
         	// compute split support every half step
             SplitGraph *sg = new SplitGraph;
             summarizeBootstrap(*sg);
+            sg->setCheckpoint(checkpoint);
             boot_splits.push_back(sg);
             if (params->max_candidate_trees == 0)
                 max_candidate_trees = treels_logl.size() * (stop_rule.getCurIt() + (params->step_iterations / 2)) /

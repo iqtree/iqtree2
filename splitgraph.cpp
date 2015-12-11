@@ -158,6 +158,30 @@ void SplitGraph::init(Params &params)
 
 }
 
+
+void SplitGraph::saveCheckpoint() {
+    int ntaxa = getNTaxa();
+    checkpoint->startStruct("SplitGraph");
+    for (iterator it = begin(); it != end(); it++) {
+        checkpoint->startListElement();
+        stringstream ss;
+        ss << (*it)->getWeight();
+        for (int i = 0; i < ntaxa; i++)
+            if ((*it)->containTaxon(i))
+                ss << " " << i+1;
+        checkpoint->put("", ss.str());
+        checkpoint->endListElement();
+    }
+    checkpoint->endStruct();
+    CheckpointFactory::saveCheckpoint();
+}
+
+void SplitGraph::restoreCheckpoint() {
+    CheckpointFactory::restoreCheckpoint();
+    checkpoint->startStruct("SplitGraph");
+    checkpoint->endStruct();
+}
+
 int SplitGraph::getNTrivialSplits() {
 	int count = 0;
 	for (iterator it = begin(); it != end(); it++)
