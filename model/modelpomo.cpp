@@ -104,6 +104,8 @@ void ModelPoMo::init(const char *model_name,
 
     updatePoMoStatesAndRates();
 
+    estimateEmpiricalPolymorphicFreq();
+    
     decomposeRateMatrix();
     if (verbose_mode >= VB_MAX)
         writeInfo(cout);
@@ -910,18 +912,16 @@ ModelPoMo::estimateEmpiricalPolymorphicFreq()
 {
     double theta_p = 0.0;
     int sum_pol = 0;
-    int sum_tot = 0;
+    int sum_fix = 0;
+    double sum_theta_w = 0.0;
 
     if (phylo_tree->aln->pomo_random_sampling) {
         unsigned int abs_state_freq[num_states];
         memset(abs_state_freq, 0, sizeof(unsigned int)*num_states);
         phylo_tree->aln->computeAbsoluteStateFreq(abs_state_freq);
-        int n;
-        int x;
-        int y;
-
-        for (int i = 0; i < nnuc; i++) sum_tot += abs_state_freq[i];
+        for (int i = 0; i < nnuc; i++) sum_fix += abs_state_freq[i];
         for (int i = nnuc; i < num_states; i++) sum_pol += abs_state_freq[i];
+        theta_p = (double) sum_pol / (double) (sum_fix + sum_pol);
     } else {
         for (Alignment::iterator it = phylo_tree->aln->begin();
              it != phylo_tree->aln->end(); it++) {
@@ -934,17 +934,28 @@ ModelPoMo::estimateEmpiricalPolymorphicFreq()
                 state -= num_states;
                 assert(state < phylo_tree->aln->pomo_states.size());
                 // Decode the id and counts.
-                int id1 = phylo_tree->aln->pomo_states[state] & 3;
-                int id2 = (phylo_tree->aln->pomo_states[state] >> 16) & 3;
+                // int id1 = phylo_tree->aln->pomo_states[state] & 3;
+                // int id2 = (phylo_tree->aln->pomo_states[state] >> 16) & 3;
                 int j1 = (phylo_tree->aln->pomo_states[state] >> 2) & 16383;
                 int j2 = (phylo_tree->aln->pomo_states[state] >> 18);
-                if (j2 == 0) sum_tot += it->frequency;
-                else sum_pol += it->frequency;
+                if (j2 == 0) sum_fix += it->frequency;
+                else {
+                    // Have to use Watterson Theta because sample size may be different.
+                    sum_pol += it->frequency;
+                    sum_theta_w += (double) it->frequency / harmonic(j1 + j2);
+                }
             }
         }
+        // Calculate Watterson Theta per site.
+        double theta_w_temp = sum_theta_w;
+        sum_theta_w = theta_w_temp / (double) (sum_fix + sum_pol);
+        // // DEBUG.
+        // cout << setprecision(8);
+        // cout << "DEBUG ==========: " << endl;
+        // cout << "Estimated Watterson's Theta: ";
+        // cout << sum_theta_w << endl;
+        theta_p = sum_theta_w * harmonic(N);
     }
-    sum_tot += sum_pol;
-    theta_p = (double) sum_pol/sum_tot;
     // Output vector if verbose mode.
     if (verbose_mode >= VB_MAX) {
         cout << setprecision(8);
@@ -974,14 +985,17 @@ void ModelPoMo::reportPoMoStateFreqs(ofstream &out) {
     double poly = computeSumFreqPolyStates();
     double prop_poly = poly / computeSumFreqFixedStates();
     double watterson_theta = prop_poly / harmonic(N);
-
+    double emp_prop_poly = estimateEmpiricalPolymorphicFreq();
+    
     out << setprecision(8);
-    out << "Sum of fixed states:" << endl;
+    out << "Estimated sum of fixed states:" << endl;
     out << computeSumFreqFixedStates() << endl;
-    out << "Sum of polymorphic states" << endl;
+    out << "Estimated sum of polymorphic states" << endl;
     out << poly << endl;
-    out << "Proportion of polymorphic states:" << endl;
+    out << "Estimated proportion of polymorphic states:" << endl;
     out << prop_poly << endl;
+    out << "Empirical proportion of polymorphic states:" << endl;
+    out << emp_prop_poly << endl;
     out << "Estimated Watterson Theta:" << endl;
     out << watterson_theta << endl;
     out << endl;
