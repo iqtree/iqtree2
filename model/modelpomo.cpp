@@ -972,12 +972,13 @@ void ModelPoMo::reportPoMoStateFreqs(ofstream &out) {
     }
 
     double poly = computeSumFreqPolyStates();
-    double prop_poly = poly / computeSumFreqFixedStates();
+    double fixed = computeSumFreqFixedStates();
+    double prop_poly = poly / (poly + fixed);
     double watterson_theta = prop_poly / harmonic(N);
 
     out << setprecision(8);
     out << "Sum of fixed states:" << endl;
-    out << computeSumFreqFixedStates() << endl;
+    out << fixed << endl;
     out << "Sum of polymorphic states" << endl;
     out << poly << endl;
     out << "Proportion of polymorphic states:" << endl;
