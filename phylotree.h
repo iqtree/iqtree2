@@ -30,7 +30,7 @@
 #include "phylonode.h"
 #include "optimization.h"
 #include "model/rateheterogeneity.h"
-#include "pllrepo/src/pll.h"
+#include "pll/pll.h"
 #include "checkpoint.h"
 
 #define BOOT_VAL_FLOAT
