@@ -518,7 +518,6 @@ install (TARGETS iqtree DESTINATION bin)
 install (FILES "${PROJECT_SOURCE_DIR}/example/models.nex" DESTINATION .)
 install (FILES "${PROJECT_SOURCE_DIR}/example/example.phy" DESTINATION .)
 install (FILES "${PROJECT_SOURCE_DIR}/example/example.nex" DESTINATION .)
-install (FILES "${PROJECT_SOURCE_DIR}/Documents/iqtree-manual-1.0.pdf" DESTINATION .)
 
 if (WIN32)
 	install (FILES "${BINARY_DIR}/iqtree${EXE_SUFFIX}-click.exe" DESTINATION bin)
