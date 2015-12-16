@@ -37,6 +37,11 @@ class ModelPoMo : public ModelGTR
 
     ~ModelPoMo();
 
+
+    // Tell the compiler we want both the init functions (resolve
+    // warning from clang about PoMo hiding the overloaded init
+    // function).
+    using ModelGTR::init;
     /**
      * Initialize the PoMo model. Run by constructor.
      *
