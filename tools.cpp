@@ -2781,10 +2781,10 @@ void parseArg(int argc, char *argv[], Params &params) {
 				continue;
 			}
             
-			if (strcmp(argv[cnt], "-lm") == 0) {
+			if (strcmp(argv[cnt], "-lmap") == 0) {
 				cnt++;
 				if (cnt >= argc)
-					throw "Use -lm <likelihood_mapping_num_quartets>";
+					throw "Use -lmap <likelihood_mapping_num_quartets>";
 				params.num_quartets = convert_int(argv[cnt]);
                 if (params.num_quartets < 1)
                     throw "Number of quartets must be >= 1";

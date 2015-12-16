@@ -688,7 +688,7 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 			reportRate(out, tree);
 		}
 
-		if (params.print_quartet_lh) {
+    		if (params.num_quartets) {
 			tree.reportLikelihoodMapping(out);
 		}
 
