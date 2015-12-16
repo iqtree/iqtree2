@@ -3006,6 +3006,9 @@ void usage_iqtree(char* argv[], bool full_command) {
             << endl << "CHECKPOINT:" << endl
             << "  -redo                Ignore checkpoint file (default: NO)" << endl
             << "  -cptime <seconds>    Checkpoint time interval (default: 20)" << endl
+            << endl << "LIKELIHOOD MAPPING ANALYSIS:" << endl
+            << "  -lmap <#quartets>    Number of quartets for likelihood mapping analysis" << endl
+            << "  -wql                 Print quartet log-likelihoods to .quartetlh" << endl
             << endl << "NEW STOCHASTIC TREE SEARCH ALGORITHM:" << endl
             << "  -pll                 Use phylogenetic likelihood library (PLL) (default: off)" << endl
             << "  -numpars <number>    Number of initial parsimony trees (default: 100)" << endl

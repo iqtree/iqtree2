@@ -1678,9 +1678,13 @@ public:
     
     /** true to ignore checkpoint file */
     bool ignore_checkpoint;
+    /** number of quartets for likelihood mapping */
+    int num_quartets;
 
     /** time (in seconds) between checkpoint dump */
     int checkpoint_dump_interval;
+    /** TRUE to print quartet log-likelihoods to .quartetlh file */
+    bool print_quartet_lh;
 
     /** true if ignoring the "finished" flag in checkpoint file */
     bool force_unfinished;

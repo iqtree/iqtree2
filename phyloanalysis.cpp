@@ -1739,14 +1739,13 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
         iqtree.getCheckpoint()->dump();
     }
 
-    bool finishedCandidateSet = iqtree.getCheckpoint()->getBool("finishedCandidateSet");
-
     if (params.num_quartets) {
         cout << "Performing likelihood mapping with " << params.num_quartets << " quartets..." << endl;
         double lkmap_time = getRealTime();
         iqtree.doLikelihoodMapping();
         cout << getRealTime()-lkmap_time << " seconds" << endl;
     }
+    bool finishedCandidateSet = iqtree.getCheckpoint()->getBool("finishedCandidateSet");
 
     // now overwrite with random tree
     if (params.start_tree == STT_RANDOM_TREE && !finishedCandidateSet) {
