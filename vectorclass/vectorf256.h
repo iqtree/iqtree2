@@ -1,8 +1,8 @@
 /****************************  vectorf256.h   *******************************
 * Author:        Agner Fog
 * Date created:  2012-05-30
-* Last modified: 2014-10-22
-* Version:       1.16
+* Last modified: 2015-11-27
+* Version:       1.20
 * Project:       vector classes
 * Description:
 * Header file defining 256-bit floating point vector classes as interface
@@ -27,7 +27,7 @@
 *
 * For detailed instructions, see VectorClass.pdf
 *
-* (c) Copyright 2012 - 2014 GNU General Public License http://www.gnu.org/licenses
+* (c) Copyright 2012 - 2015 GNU General Public License http://www.gnu.org/licenses
 *****************************************************************************/
 
 // check combination of header files
@@ -330,7 +330,7 @@ public:
 #else
         __m128 blo = _mm_castsi128_ps(_mm_setr_epi32(-(int)b0, -(int)b0, -(int)b1, -(int)b1));
         __m128 bhi = _mm_castsi128_ps(_mm_setr_epi32(-(int)b2, -(int)b2, -(int)b3, -(int)b3));
-        ymm = _mm256_castps_pd(set_m128r(bhi,blo));
+        ymm = _mm256_castps_pd(set_m128r(blo, bhi));
 #endif
     }
     // Constructor to build from two Vec2db:
@@ -1001,22 +1001,22 @@ static inline Vec8f pow(Vec8f const & a, Const_int_t<n>) {
 
 // function round: round to nearest integer (even). (result as float vector)
 static inline Vec8f round(Vec8f const & a) {
-    return _mm256_round_ps(a, 0);
+    return _mm256_round_ps(a, 0+8);
 }
 
 // function truncate: round towards zero. (result as float vector)
 static inline Vec8f truncate(Vec8f const & a) {
-    return _mm256_round_ps(a, 3);
+    return _mm256_round_ps(a, 3+8);
 }
 
 // function floor: round towards minus infinity. (result as float vector)
 static inline Vec8f floor(Vec8f const & a) {
-    return _mm256_round_ps(a, 1);
+    return _mm256_round_ps(a, 1+8);
 }
 
 // function ceil: round towards plus infinity. (result as float vector)
 static inline Vec8f ceil(Vec8f const & a) {
-    return _mm256_round_ps(a, 2);
+    return _mm256_round_ps(a, 2+8);
 }
 
 #ifdef VECTORI256_H  // 256 bit integer vectors are available
@@ -1292,8 +1292,8 @@ static inline Vec8f nan8f(int n = 0x10) {
 template <int i0, int i1, int i2, int i3, int i4, int i5, int i6, int i7>
 static inline Vec8f change_sign(Vec8f const & a) {
     if ((i0 | i1 | i2 | i3 | i4 | i5 | i6 | i7) == 0) return a;
-    __m256 mask = constant8f<i0 ? 0x80000000 : 0, i1 ? 0x80000000 : 0, i2 ? 0x80000000 : 0, i3 ? 0x80000000 : 0,
-        i4 ? 0x80000000 : 0, i5 ? 0x80000000 : 0, i6 ? 0x80000000 : 0, i7 ? 0x80000000 : 0> ();
+    __m256 mask = constant8f<i0 ? (int)0x80000000 : 0, i1 ? (int)0x80000000 : 0, i2 ? (int)0x80000000 : 0, i3 ? (int)0x80000000 : 0,
+        i4 ? (int)0x80000000 : 0, i5 ? (int)0x80000000 : 0, i6 ? (int)0x80000000 : 0, i7 ? (int)0x80000000 : 0> ();
     return _mm256_xor_ps(a, mask);
 }
 
@@ -1755,22 +1755,22 @@ static inline Vec4d pow(Vec4d const & a, Const_int_t<n>) {
 
 // function round: round to nearest integer (even). (result as double vector)
 static inline Vec4d round(Vec4d const & a) {
-    return _mm256_round_pd(a, 0);
+    return _mm256_round_pd(a, 0+8);
 }
 
 // function truncate: round towards zero. (result as double vector)
 static inline Vec4d truncate(Vec4d const & a) {
-    return _mm256_round_pd(a, 3);
+    return _mm256_round_pd(a, 3+8);
 }
 
 // function floor: round towards minus infinity. (result as double vector)
 static inline Vec4d floor(Vec4d const & a) {
-    return _mm256_round_pd(a, 1);
+    return _mm256_round_pd(a, 1+8);
 }
 
 // function ceil: round towards plus infinity. (result as double vector)
 static inline Vec4d ceil(Vec4d const & a) {
-    return _mm256_round_pd(a, 2);
+    return _mm256_round_pd(a, 2+8);
 }
 
 // function round_to_int: round to nearest integer (even). (result as integer vector)
@@ -2085,7 +2085,7 @@ static inline Vec4d nan4d(int n = 0x10) {
 template <int i0, int i1, int i2, int i3>
 static inline Vec4d change_sign(Vec4d const & a) {
     if ((i0 | i1 | i2 | i3) == 0) return a;
-    __m256 mask = constant8f<0, i0 ? 0x80000000 : 0, 0, i1 ? 0x80000000 : 0, 0, i2 ? 0x80000000 : 0, 0, i3 ? 0x80000000 : 0> ();
+    __m256 mask = constant8f<0, i0 ? (int)0x80000000 : 0, 0, i1 ? (int)0x80000000 : 0, 0, i2 ? (int)0x80000000 : 0, 0, i3 ? (int)0x80000000 : 0> ();
     return _mm256_xor_pd(a, _mm256_castps_pd(mask));
 }
 

@@ -402,6 +402,10 @@ enum LhMemSave {
 	LM_DETECT, LM_ALL_BRANCH, LM_PER_NODE
 };
 
+enum SiteLoglType {
+    WSL_NONE, WSL_SITE, WSL_RATECAT, WSL_MIXTURE, WSL_MIXTURE_RATECAT
+};
+
 /** maximum number of newton-raphson steps for NNI branch evaluation */
 extern int NNI_MAX_NR_STEP;
 
@@ -1211,6 +1215,13 @@ public:
      */
     bool fixed_branch_length;
 
+    /** minimum branch length for optimization, default 0.000001 */
+    double min_branch_length;
+
+    /** maximum branch length for optimization, default 100 */
+    double max_branch_length;
+
+
     /**
             criterion to assess important quartet
      */
@@ -1257,7 +1268,7 @@ public:
     /**
         TRUE to avoid duplicated trees while writing intermediate trees
      */
-    bool avoid_duplicated_trees;
+//    bool avoid_duplicated_trees;
 
     /**
             Robinson-Foulds distance computation mode: RF_ADJACENT PAIR, RF_ALL_PAIR
@@ -1316,11 +1327,13 @@ public:
     bool lk_no_avx;
 
     /**
-     	 	0: do not print anything
-            1: print site log-likelihood
-            2: print site log-likelihood per Gamma category
+     	 	WSL_NONE: do not print anything
+            WSL_SITE: print site log-likelihood
+            WSL_RATECAT: print site log-likelihood per rate category
+            WSL_MIXTURE: print site log-likelihood per mixture class
+            WSL_MIXTURE_RATECAT: print site log-likelihood per mixture class per rate category
      */
-    int print_site_lh;
+    SiteLoglType print_site_lh;
 
     /** TRUE to print site-specific rates, default: FALSE */
     bool print_site_rate;
@@ -1543,7 +1556,7 @@ public:
     int step_iterations;
 
     /** TRUE to store all candidate trees in memory */
-    bool store_candidate_trees;
+//    bool store_candidate_trees;
 
 	/** true to print all UFBoot trees to a file */
 	int print_ufboot_trees;
@@ -1612,7 +1625,7 @@ public:
     ModelTestCriterion model_test_criterion;
 
     /** either MTC_AIC, MTC_AICc, MTC_BIC, or MTC_ALL to stop +R increasing categories */
-    ModelTestCriterion model_test_stop_rule;
+//    ModelTestCriterion model_test_stop_rule;
 
     /** sample size for AICc and BIC */
     int model_test_sample_size;
@@ -1633,6 +1646,9 @@ public:
 
 	/** TRUE to print concatenated alignment, default: false */
 	bool print_conaln;
+
+	/** TRUE to link alpha among Gamma model over partitions */
+	bool link_alpha;
 
 	/** true to count all distinct trees visited during tree search */
 	bool count_trees;
@@ -2274,5 +2290,14 @@ inline uint32_t popcount_lauradoux(unsigned *buf, int n) {
   }
   return bitCount;
 }
+
+/**
+ * combination of memcmp and memcpy.
+ * @param destination destination memory to copy to
+ * @param source code memory to copy from
+ * @param num number of bytes to copy
+ * @return TRUE of memory are different, FALSE if identical
+ */
+bool memcmpcpy(void * destination, const void * source, size_t num);
 
 #endif

@@ -61,6 +61,19 @@ public:
 	 */
 	virtual bool isUnstableParameters();
 
+	/** optimize linked alpha parameter of over all partitions with Gamma rate */
+	double optimizeLinkedAlpha(bool write_info, double gradient_epsilon);
+
+	/**
+		override function from Optimization class, used by the minimizeOneDimen() to optimize
+		gamma shape parameter
+	*/
+	virtual double computeFunction(double shape);
+
+
+protected:
+	double linked_alpha;
+
 };
 
 #endif

@@ -506,8 +506,8 @@ PhyloSuperTree::PhyloSuperTree(Params &params) :  IQTree() {
     
 #ifdef _OPENMP
     if (params.num_threads > size()) {
-        outWarning("More threads (" + convertIntToString(params.num_threads) + ") than number of partitions (" + convertIntToString(size()) + ") is not necessary. ");
-        outWarning("Please rerun again with -nt " + convertIntToString(size()));
+        outWarning("More threads (" + convertIntToString(params.num_threads) + ") than number of partitions (" + convertIntToString(size()) + ") might not be necessary.");
+        outWarning("You are recommended to rerun with '-nt " + convertIntToString(size()) + "' and see if this is faster");
     }
 #endif
 	cout << endl;
@@ -920,7 +920,7 @@ double PhyloSuperTree::computeLikelihood(double *pattern_lh) {
 	} else {
         if (part_order.empty()) computePartitionOrder();
 		#ifdef _OPENMP
-		#pragma omp parallel for reduction(+: tree_lh) schedule(dynamic)
+		#pragma omp parallel for reduction(+: tree_lh) schedule(dynamic) if(ntrees >= params->num_threads)
 		#endif
 		for (int j = 0; j < ntrees; j++) {
             int i = part_order[j];
@@ -931,12 +931,12 @@ double PhyloSuperTree::computeLikelihood(double *pattern_lh) {
 	return tree_lh;
 }
 
-void PhyloSuperTree::computePatternLikelihood(double *pattern_lh, double *cur_logl, double *ptn_lh_cat) {
+void PhyloSuperTree::computePatternLikelihood(double *pattern_lh, double *cur_logl, double *ptn_lh_cat, SiteLoglType wsl) {
 	int offset = 0, offset_lh_cat = 0;
 	iterator it;
 	for (it = begin(); it != end(); it++) {
 		if (ptn_lh_cat)
-			(*it)->computePatternLikelihood(pattern_lh + offset, NULL, ptn_lh_cat + offset_lh_cat);
+			(*it)->computePatternLikelihood(pattern_lh + offset, NULL, ptn_lh_cat + offset_lh_cat, wsl);
 		else
 			(*it)->computePatternLikelihood(pattern_lh + offset);
 		offset += (*it)->aln->getNPattern();
@@ -967,7 +967,7 @@ double PhyloSuperTree::optimizeAllBranches(int my_iterations, double tolerance, 
 	int ntrees = size();
     if (part_order.empty()) computePartitionOrder();
 	#ifdef _OPENMP
-	#pragma omp parallel for reduction(+: tree_lh) schedule(dynamic)
+	#pragma omp parallel for reduction(+: tree_lh) schedule(dynamic) if(ntrees >= params->num_threads)
 	#endif
 	for (int j = 0; j < ntrees; j++) {
         int i = part_order[j];
@@ -1070,7 +1070,7 @@ NNIMove PhyloSuperTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NN
 
     if (part_order.empty()) computePartitionOrder();
 	#ifdef _OPENMP
-	#pragma omp parallel for reduction(+: nni_score1, nni_score2, local_totalNNIs, local_evalNNIs) private(part) schedule(dynamic)
+	#pragma omp parallel for reduction(+: nni_score1, nni_score2, local_totalNNIs, local_evalNNIs) private(part) schedule(dynamic) if(ntrees >= params->num_threads)
 	#endif
 	for (int treeid = 0; treeid < ntrees; treeid++) {
         part = part_order_by_nptn[treeid];
@@ -1291,12 +1291,12 @@ void PhyloSuperTree::changeNNIBrans(NNIMove move) {
 
 }
 
-void PhyloSuperTree::restoreAllBrans(PhyloNode *node, PhyloNode *dad) {
-	int part = 0;
-	for (iterator it = begin(); it != end(); it++, part++) {
-		(*it)->setBranchLengths(part_info[part].cur_brlen);
-	}
-}
+//void PhyloSuperTree::restoreAllBrans(PhyloNode *node, PhyloNode *dad) {
+//	int part = 0;
+//	for (iterator it = begin(); it != end(); it++, part++) {
+//		(*it)->setBranchLengths(part_info[part].cur_brlen);
+//	}
+//}
 
 void PhyloSuperTree::reinsertLeaves(PhyloNodeVector &del_leaves) {
 	IQTree::reinsertLeaves(del_leaves);

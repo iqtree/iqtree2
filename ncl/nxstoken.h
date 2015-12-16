@@ -191,7 +191,7 @@ inline char NxsToken::GetNextChar()
 		fileline++;
 		filecol = 1L;
 
-		if (ch == 13 && (int)in.peek() == 10)
+		if (ch == 13 && (int)in.peek() == 10) 
 			ch = in.get();
 
 		atEOL = 1;
@@ -207,7 +207,9 @@ inline char NxsToken::GetNextChar()
 #	if defined(__DECCXX)
 		filepos = 0L;
 #	else
-		filepos = in.tellg();
+    // BQM this cause crash compiling with clang under Windows!
+//		filepos = in.tellg();
+    filepos += 1;
 #	endif
 
 	if (atEOF)

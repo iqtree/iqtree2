@@ -94,7 +94,9 @@ void RateInvar::setVariables(double *variables) {
 	variables[1] = p_invar;
 }
 
-void RateInvar::getVariables(double *variables) {
-	if (RateInvar::getNDim() == 0) return;
+bool RateInvar::getVariables(double *variables) {
+	if (RateInvar::getNDim() == 0) return false;
+    bool changed = (p_invar != variables[1]);
 	p_invar = variables[1];
+    return changed;
 }

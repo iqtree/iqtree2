@@ -1311,7 +1311,7 @@ double ModelMixture::targetFunk(double x[]) {
 
 double ModelMixture::optimizeWeights() {
     // first compute _pattern_lh_cat
-    phylo_tree->computePatternLhCat();
+    phylo_tree->computePatternLhCat(WSL_MIXTURE);
     size_t ptn, c;
     size_t nptn = phylo_tree->aln->getNPattern();
     size_t nmix = getNMixtures();
@@ -1407,7 +1407,7 @@ double ModelMixture::optimizeWithEM(double gradient_epsilon) {
     // EM algorithm loop described in Wang, Li, Susko, and Roger (2008)
     for (int step = 0; step < num_steps; step++) {
         // first compute _pattern_lh_cat
-        score = phylo_tree->computePatternLhCat();
+        score = phylo_tree->computePatternLhCat(WSL_MIXTURE);
         
         memset(new_prop, 0, nmix*sizeof(double));
                 
@@ -1553,10 +1553,11 @@ void ModelMixture::setVariables(double *variables) {
 
 }
 
-void ModelMixture::getVariables(double *variables) {
+bool ModelMixture::getVariables(double *variables) {
 	int dim = 0;
+    bool changed = false;
 	for (iterator it = begin(); it != end(); it++) {
-		(*it)->getVariables(&variables[dim]);
+		changed |= (*it)->getVariables(&variables[dim]);
 		dim += (*it)->getNDim();
 	}
 //	if (fix_prop) return;
@@ -1593,6 +1594,7 @@ void ModelMixture::getVariables(double *variables) {
 //	}
 //	delete [] y;
 
+    return changed;
 }
 
 void ModelMixture::setBounds(double *lower_bound, double *upper_bound, bool *bound_check) {

@@ -205,7 +205,7 @@ public:
             @param pattern_lh_cat (OUT) if not NULL, store all pattern-likelihood per category
      */
     virtual void computePatternLikelihood(double *pattern_lh, double *cur_logl = NULL,
-    		double *pattern_lh_cat = NULL);
+    		double *pattern_lh_cat = NULL, SiteLoglType wsl = WSL_RATECAT);
 
     /**
             optimize all branch lengths of all subtrees, then compute branch lengths
@@ -241,7 +241,7 @@ public:
 	 * @param node the current node of the post-order tree traversal
 	 * @param dad the dad of that node used to direct the traversal
      */
-    virtual void restoreAllBrans(PhyloNode *node = NULL, PhyloNode *dad = NULL);
+//    virtual void restoreAllBrans(PhyloNode *node = NULL, PhyloNode *dad = NULL);
 
     /**
             reinsert the whole list of leaves back into the supertree then call mapTrees

@@ -332,7 +332,7 @@ void reportRate(ofstream &out, PhyloTree &tree) {
 			out << endl;
 		}
 		if (rate_model->isGammaRate()) {
-			out << "Relative rates are computed as " << ((dynamic_cast<RateGamma*>(rate_model)->isCutMedian()) ? "MEDIAN" : "MEAN") <<
+			out << "Relative rates are computed as " << ((rate_model->isGammaRate() == GAMMA_CUT_MEDIAN) ? "MEDIAN" : "MEAN") <<
 				" of the portion of the Gamma distribution falling in the category." << endl;
 		}
 	}
@@ -436,11 +436,11 @@ void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh, 
 		out << "         Such branches are denoted by '**' in the figure below"
 				<< endl << endl;
 	}
-	int long_branches = tree.countLongBranches(NULL, NULL, MAX_BRANCH_LEN-0.2);
+	int long_branches = tree.countLongBranches(NULL, NULL, params.max_branch_length-0.2);
 	if (long_branches > 0) {
 		//stringstream sstr;
 		out << "WARNING: " << long_branches << " too long branches (>" 
-            << MAX_BRANCH_LEN-0.2 << ") should be treated with caution!" << endl;
+            << params.max_branch_length-0.2 << ") should be treated with caution!" << endl;
 		//out << sstr.str();
 		//cout << sstr.str();
 	}
@@ -1084,7 +1084,7 @@ void checkZeroDist(Alignment *aln, double *dist) {
 		string str = "";
 		bool first = true;
 		for (j = i + 1; j < ntaxa; j++)
-			if (dist[i * ntaxa + j] <= 1e-6) {
+			if (dist[i * ntaxa + j] <= Params::getInstance().min_branch_length) {
 				if (first)
 					str = "ZERO distance between sequences "
 							+ aln->getSeqName(i);
@@ -1431,10 +1431,10 @@ void printMiscInfo(Params &params, IQTree &iqtree, double *pattern_lh) {
 	if (params.print_site_lh && !params.pll) {
 		string site_lh_file = params.out_prefix;
 		site_lh_file += ".sitelh";
-		if (params.print_site_lh == 1)
+		if (params.print_site_lh == WSL_SITE)
 			printSiteLh(site_lh_file.c_str(), &iqtree, pattern_lh);
 		else
-			printSiteLhCategory(site_lh_file.c_str(), &iqtree);
+			printSiteLhCategory(site_lh_file.c_str(), &iqtree, params.print_site_lh);
 	}
 
     if (params.print_site_posterior) {
@@ -1557,7 +1557,7 @@ void printFinalSearchInfo(Params &params, IQTree &iqtree, double search_cpu_time
 	params.run_time = (getCPUTime() - params.startCPUTime);
 	cout << endl;
 	cout << "Total number of iterations: " << iqtree.stop_rule.getCurIt() << endl;
-    cout << "Total number of partial likelihood vector computations: " << iqtree.num_partial_lh_computations << endl;
+//    cout << "Total number of partial likelihood vector computations: " << iqtree.num_partial_lh_computations << endl;
 	cout << "CPU time used for tree search: " << search_cpu_time
 			<< " sec (" << convert_time(search_cpu_time) << ")" << endl;
 	cout << "Wall-clock time used for tree search: " << search_real_time
@@ -1610,7 +1610,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
     }
 
     /***************** Initialization for PLL and sNNI ******************/
-    if (params.start_tree == STT_PLL_PARSIMONY || params.pll) {
+    if (params.start_tree == STT_PLL_PARSIMONY || params.start_tree == STT_RANDOM_TREE || params.pll) {
         /* Initialized all data structure for PLL*/
     	iqtree.initializePLL(params);
     }
@@ -1732,6 +1732,15 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
         cout << getRealTime()-lkmap_time << " seconds" << endl;
     }
 
+    // now overwrite with random tree
+    if (params.start_tree == STT_RANDOM_TREE) {
+        cout << "Generate random initial Yule-Harding tree..." << endl;
+        iqtree.generateRandomTree(YULE_HARDING);
+        iqtree.wrapperFixNegativeBranch(true);
+        iqtree.initializeAllPartialLh();
+        initTree = iqtree.optimizeBranches(2);
+        cout << "Log-likelihood of random tree: " << iqtree.getCurScore() << endl;
+    }
 
     /****************** NOW PERFORM MAXIMUM LIKELIHOOD TREE RECONSTRUCTION ******************/
 
@@ -1919,9 +1928,14 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
         if (params.aBayes_test)
             cout << "Testing tree branches by aBayes parametric test..." << endl;
 		iqtree.setRootNode(params.root);
-		iqtree.testAllBranches(params.aLRT_threshold, iqtree.getCurScore(),
-				pattern_lh, params.aLRT_replicates, params.localbp_replicates, params.aLRT_test, params.aBayes_test);
-		cout << "CPU Time used:  " << getCPUTime() - mytime << " sec." << endl;
+        if (iqtree.isBifurcating()) {
+            iqtree.testAllBranches(params.aLRT_threshold, iqtree.getCurScore(),
+                    pattern_lh, params.aLRT_replicates, params.localbp_replicates, params.aLRT_test, params.aBayes_test);
+            cout << "CPU Time used:  " << getCPUTime() - mytime << " sec." << endl;
+        } else {
+            outWarning("Tree is multifurcating and such test is not applicable");
+            params.aLRT_replicates = params.localbp_replicates = params.aLRT_test = params.aBayes_test = 0;
+        }
 	}
 
 	if (params.gbo_replicates > 0) {
@@ -2308,6 +2322,7 @@ void convertAlignment(Params &params, IQTree *iqtree) {
 		bootstrap_alignment->createBootstrapAlignment(alignment, NULL, params.bootstrap_spec);
 		delete alignment;
 		alignment = bootstrap_alignment;
+        iqtree->aln = alignment;
 	}
 	if (alignment->isSuperAlignment()) {
 		((SuperAlignment*)alignment)->printCombinedAlignment(params.aln_output);
@@ -2365,6 +2380,17 @@ void runPhyloAnalysis(Params &params) {
 		}
 		tree = new IQTree(alignment);
 	}
+
+    if (params.min_branch_length <= 0.0) {
+        params.min_branch_length = 1e-6;
+        if (tree->getAlnNSite() >= 100000) {
+            params.min_branch_length = 0.1 / (tree->getAlnNSite());
+            tree->num_precision = max((int)ceil(-log10(Params::getInstance().min_branch_length))+1, 6);
+            cout.precision(12);
+            cout << "NOTE: minimal branch length is reduced to " << params.min_branch_length << " for long alignment" << endl;
+            cout.precision(3);
+        }
+    }
 
 	string original_model = params.model_name;
 

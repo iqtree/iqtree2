@@ -185,9 +185,7 @@ double RateFree::optimizeParameters(double gradient_epsilon) {
 
     // TODO: turn off EM algorithm for +ASC model
     if (optimize_alg.find("EM") != string::npos && phylo_tree->getModelFactory()->unobserved_ptns.empty())
-        if (!phylo_tree->getModel()->isMixture() || phylo_tree->getModelFactory()->fused_mix_rate)
-            // call EM only if model is current supported, otherwise use BFGS engine
-            return optimizeWithEM();
+        return optimizeWithEM();
 
 	//if (freq_type == FREQ_ESTIMATE) scaleStateFreq(false);
 
@@ -306,10 +304,10 @@ void RateFree::setVariables(double *variables) {
 
 }
 
-void RateFree::getVariables(double *variables) {
-	if (getNDim() == 0) return;
+bool RateFree::getVariables(double *variables) {
+	if (getNDim() == 0) return false;
 	int i;
-
+    bool changed = false;
 	// Modified by Thomas on 13 May 2015
 	// --start--
 	/*
@@ -344,8 +342,10 @@ void RateFree::getVariables(double *variables) {
             sum += variables[i+1];
         }
         for (i = 0; i < ncategory-1; i++) {
+            changed |= (prop[i] != variables[i+1] / sum);
             prop[i] = variables[i+1] / sum;
         }
+        changed |= (prop[ncategory-1] != 1.0 / sum);
         prop[ncategory-1] = 1.0 / sum;
         // added by Thomas on Sept 10, 15
         // update the values of rates, in order to
@@ -359,8 +359,10 @@ void RateFree::getVariables(double *variables) {
 //        }
     } else if (optimizing_params == 1) {
         // rates
-        for (i = 0; i < ncategory-1; i++)
+        for (i = 0; i < ncategory-1; i++) {
+            changed |= (rates[i] != variables[i+1]);
             rates[i] = variables[i+1];
+        }
         // added by Thomas on Sept 10, 15
         // need to normalize the values of rates, in order to
         // maintain the sum of prop[i]*rates[i] = 1
@@ -377,8 +379,10 @@ void RateFree::getVariables(double *variables) {
             sum += variables[i+1];
         }
         for (i = 0; i < ncategory-1; i++) {
+            changed |= (prop[i] != variables[i+1] / sum);
             prop[i] = variables[i+1] / sum;
         }
+        changed |= (prop[ncategory-1] != 1.0 / sum);
         prop[ncategory-1] = 1.0 / sum;
         
         // then rates
@@ -387,12 +391,14 @@ void RateFree::getVariables(double *variables) {
     		sum += prop[i] * variables[i+ncategory];
     	}
     	for (i = 0; i < ncategory-1; i++) {
+            changed |= (rates[i] != variables[i+ncategory] / sum);
     		rates[i] = variables[i+ncategory] / sum;
     	}
+        changed |= (rates[ncategory-1] != 1.0 / sum);
     	rates[ncategory-1] = 1.0 / sum;
     }
 	// --end--
-
+    return changed;
 }
 
 /**
@@ -444,7 +450,7 @@ double RateFree::optimizeWithEM() {
     for (int step = 0; step < ncategory; step++) {
         // first compute _pattern_lh_cat
         double score;
-        score = phylo_tree->computePatternLhCat();
+        score = phylo_tree->computePatternLhCat(WSL_RATECAT);
         memset(new_prop, 0, nmix*sizeof(double));
                 
         // E-step
@@ -480,13 +486,16 @@ double RateFree::optimizeWithEM() {
         for (c = 0; c < nmix; c++) {
             tree->copyPhyloTree(phylo_tree);
             ModelGTR *subst_model;
-            if (phylo_tree->getModel()->isMixture())
+            if (phylo_tree->getModel()->isMixture() && phylo_tree->getModelFactory()->fused_mix_rate)
                 subst_model = ((ModelMixture*)phylo_tree->getModel())->at(c);
             else
                 subst_model = (ModelGTR*)phylo_tree->getModel();
             tree->setModel(subst_model);
             subst_model->setTree(tree);
             model_fac->model = subst_model;
+            if (subst_model->isMixture())
+                tree->setLikelihoodKernel(phylo_tree->sse);
+
                         
             // initialize likelihood
             tree->initializeAllPartialLh();

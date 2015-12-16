@@ -751,10 +751,12 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.optimize_by_newton = true;
     params.optimize_alg = "2-BFGS-B,EM";
     params.fixed_branch_length = false;
+    params.min_branch_length = 0.0; // this is now adjusted later based on alignment length
+    params.max_branch_length = 100.0;
     params.iqp_assess_quartet = IQP_DISTANCE;
     params.iqp = false;
     params.write_intermediate_trees = 0;
-    params.avoid_duplicated_trees = false;
+//    params.avoid_duplicated_trees = false;
     params.rf_dist_mode = 0;
     params.mvh_site_rate = false;
     params.rate_mh_type = true;
@@ -767,7 +769,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.localbp_replicates = 0;
     params.SSE = LK_EIGEN_SSE;
     params.lk_no_avx = false;
-    params.print_site_lh = 0;
+    params.print_site_lh = WSL_NONE;
     params.print_site_rate = false;
     params.print_site_posterior = 0;
     params.print_tree_lh = false;
@@ -815,7 +817,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.online_bootstrap = true;
     params.min_correlation = 0.99;
     params.step_iterations = 100;
-    params.store_candidate_trees = false;
+//    params.store_candidate_trees = false;
 	params.print_ufboot_trees = 0;
     //const double INF_NNI_CUTOFF = -1000000.0;
     params.nni_cutoff = -1000000.0;
@@ -861,7 +863,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.num_threads = 1;
 #endif
     params.model_test_criterion = MTC_BIC;
-    params.model_test_stop_rule = MTC_ALL;
+//    params.model_test_stop_rule = MTC_ALL;
     params.model_test_sample_size = 0;
     params.root_state = NULL;
     params.print_bootaln = false;
@@ -881,6 +883,8 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.compute_seq_identity_along_tree = false;
     params.num_quartets = 0;
     params.print_quartet_lh = false;
+    params.link_alpha = false;
+
 
 	if (params.nni5) {
 	    params.nni_type = NNI5;
@@ -1693,7 +1697,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 					throw "Use -nb <#bootstrap_replicates>";
 				params.min_iterations = convert_int(argv[cnt]);
 				params.iqp_assess_quartet = IQP_BOOTSTRAP;
-				params.avoid_duplicated_trees = true;
+//				params.avoid_duplicated_trees = true;
 				continue;
 			}
 			if (strcmp(argv[cnt], "-mod") == 0
@@ -1927,8 +1931,31 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.optimize_model_rate_joint = false;
 				continue;
 			}
-			if (strcmp(argv[cnt], "-fixbr") == 0) {
+			if (strcmp(argv[cnt], "-fixbr") == 0 || strcmp(argv[cnt], "-blfix") == 0) {
 				params.fixed_branch_length = true;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-blmin") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -blmin <min_branch_length>";
+				params.min_branch_length = convert_double(argv[cnt]);
+				if (params.min_branch_length < 0.0)
+					outError("Negative -blmin not allowed!");
+				if (params.min_branch_length == 0.0)
+					outError("Zero -blmin is not allowed due to numerical problems");
+				if (params.min_branch_length > 0.1)
+					outError("-blmin must be < 0.1");
+
+				continue;
+			}
+			if (strcmp(argv[cnt], "-blmax") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -blmax <max_branch_length>";
+				params.max_branch_length = convert_double(argv[cnt]);
+				if (params.max_branch_length < 0.5)
+					outError("-blmax smaller than 0.5 is not allowed");
 				continue;
 			}
 			if (strcmp(argv[cnt], "-sr") == 0) {
@@ -2031,13 +2058,13 @@ void parseArg(int argc, char *argv[], Params &params) {
 			}
 			if (strcmp(argv[cnt], "-wt2") == 0) {
 				params.write_intermediate_trees = 2;
-				params.avoid_duplicated_trees = true;
+//				params.avoid_duplicated_trees = true;
 				params.print_tree_lh = true;
 				continue;
 			}
 			if (strcmp(argv[cnt], "-wt3") == 0) {
 				params.write_intermediate_trees = 3;
-				params.avoid_duplicated_trees = true;
+//				params.avoid_duplicated_trees = true;
 				params.print_tree_lh = true;
 				continue;
 			}
@@ -2049,10 +2076,10 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.write_init_tree = true;
                 continue;
             }
-			if (strcmp(argv[cnt], "-nodup") == 0) {
-				params.avoid_duplicated_trees = true;
-				continue;
-			}
+//			if (strcmp(argv[cnt], "-nodup") == 0) {
+//				params.avoid_duplicated_trees = true;
+//				continue;
+//			}
 			if (strcmp(argv[cnt], "-rf_all") == 0) {
 				params.rf_dist_mode = RF_ALL_PAIR;
 				continue;
@@ -2116,11 +2143,19 @@ void parseArg(int argc, char *argv[], Params &params) {
 				continue;
 			}
 			if (strcmp(argv[cnt], "-wsl") == 0) {
-				params.print_site_lh = 1;
+				params.print_site_lh = WSL_SITE;
 				continue;
 			}
-			if (strcmp(argv[cnt], "-wslg") == 0) {
-				params.print_site_lh = 2;
+			if (strcmp(argv[cnt], "-wslg") == 0 || strcmp(argv[cnt], "-wslr") == 0) {
+				params.print_site_lh = WSL_RATECAT;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-wslm") == 0) {
+				params.print_site_lh = WSL_MIXTURE;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-wslmr") == 0 || strcmp(argv[cnt], "-wslrm") == 0) {
+				params.print_site_lh = WSL_MIXTURE_RATECAT;
 				continue;
 			}
 			if (strcmp(argv[cnt], "-wsr") == 0) {
@@ -2308,7 +2343,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (cnt >= argc)
 					throw "Use -bb <#replicates>";
 				params.gbo_replicates = convert_int(argv[cnt]);
-				params.avoid_duplicated_trees = true;
+//				params.avoid_duplicated_trees = true;
 				if (params.gbo_replicates < 1000)
 					throw "#replicates must be >= 1000";
 				params.consensus_type = CT_CONSENSUS_TREE;
@@ -2370,11 +2405,11 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.online_bootstrap = false;
 				continue;
 			}
-			if (strcmp(argv[cnt], "-nostore") == 0
-					|| strcmp(argv[cnt], "-memsave") == 0) {
-				params.store_candidate_trees = false;
-				continue;
-			}
+//			if (strcmp(argv[cnt], "-nostore") == 0
+//					|| strcmp(argv[cnt], "-memsave") == 0) {
+//				params.store_candidate_trees = false;
+//				continue;
+//			}
 			if (strcmp(argv[cnt], "-lhmemsave") == 0) {
 				params.lh_mem_save = LM_PER_NODE;
 				continue;
@@ -2383,10 +2418,10 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.lh_mem_save = LM_ALL_BRANCH;
 				continue;
 			}
-			if (strcmp(argv[cnt], "-storetrees") == 0) {
-				params.store_candidate_trees = true;
-				continue;
-			}
+//			if (strcmp(argv[cnt], "-storetrees") == 0) {
+//				params.store_candidate_trees = true;
+//				continue;
+//			}
 			if (strcmp(argv[cnt], "-nodiff") == 0) {
 				params.distinct_trees = false;
 				continue;
@@ -2708,11 +2743,11 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (cnt >= argc)
 					throw "Use -merit AIC|AICC|BIC";
                 if (strcmp(argv[cnt], "AIC") == 0)
-                    params.model_test_stop_rule = MTC_AIC;
+                    params.model_test_criterion = MTC_AIC;
                 else if (strcmp(argv[cnt], "AICc") == 0 || strcmp(argv[cnt], "AICC") == 0)
-                    params.model_test_stop_rule = MTC_AICC;
+                    params.model_test_criterion = MTC_AICC;
                 else if (strcmp(argv[cnt], "BIC") == 0)
-                    params.model_test_stop_rule = MTC_BIC;
+                    params.model_test_criterion = MTC_BIC;
                 else throw "Use -merit AIC|AICC|BIC";
 				continue;
 			}
@@ -2796,6 +2831,11 @@ void parseArg(int argc, char *argv[], Params &params) {
                 continue;
             }
             
+			if (strcmp(argv[cnt], "--link-alpha") == 0) {
+				params.link_alpha = true;
+				continue;
+			}
+
 			if (argv[cnt][0] == '-') {
                 string err = "Invalid \"";
                 err += argv[cnt];
@@ -2934,8 +2974,7 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -sp <partition_file> Edge-unlinked partition model (like -M option of RAxML)" << endl
             << "  -t <start_tree_file> | BIONJ | RANDOM" << endl
             << "                       Starting tree (default: 100 parsimony trees and BIONJ)" << endl
-            << "  -te <user_tree_file> Evaluating a fixed user tree (no tree search performed)" << endl
-            << "  -z <trees_file>      Evaluating user trees at the end (can be used with -t, -te)" << endl
+            << "  -te <user_tree_file> Like -t but fixing user tree (no tree search performed)" << endl
             << "  -o <outgroup_taxon>  Outgroup taxon name for writing .treefile" << endl
             << "  -pre <PREFIX>        Using <PREFIX> for output files (default: aln/partition)" << endl
 #ifdef _OPENMP
@@ -2977,10 +3016,12 @@ void usage_iqtree(char* argv[], bool full_command) {
             << endl << "AUTOMATIC MODEL SELECTION:" << endl
             << "  -m TESTONLY          Standard model selection (like jModelTest, ProtTest)" << endl
             << "  -m TEST              Like -m TESTONLY but followed by tree reconstruction" << endl
-            << "  -m TESTNEWONLY       New model selection with FreeRate model replacing I+G" << endl
+            << "  -m TESTNEWONLY       New model selection including FreeRate (+R) heterogeneity" << endl
             << "  -m TESTNEW           Like -m TESTNEWONLY but followed by tree reconstruction" << endl
             << "  -m TESTMERGEONLY     Select best-fit partition scheme (like PartitionFinder)" << endl
             << "  -m TESTMERGE         Like -m TESTMERGEONLY but followed by tree reconstruction" << endl
+            << "  -m TESTNEWMERGEONLY  Like -m TESTMERGEONLY but includes FreeRate heterogeneity" << endl
+            << "  -m TESTNEWMERGE      Like -m TESTNEWMERGEONLY followed by tree reconstruction" << endl
             << "  -rcluster <percent>  Percentage of partition pairs (relaxed clustering alg.)" << endl
             << "  -mset program        Restrict search to models supported by other programs" << endl
             << "                       (i.e., raxml, phyml or mrbayes)" << endl
@@ -3072,7 +3113,8 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "                       stored in <treefile> and <treefile2>" << endl
             << "  -rf_adj              Computing RF distances of adjacent trees in <treefile>" << endl
             << endl << "TREE TOPOLOGY TEST:" << endl
-            << "  -zb <#replicates>    BP,KH,SH,ELW tests with RELL for trees passed via -z" << endl
+            << "  -z <trees_file>      Evaluating a set of user trees" << endl
+            << "  -zb <#replicates>    Performing BP,KH,SH,ELW tests for trees passed via -z" << endl
             << "  -zw                  Also performing weighted-KH and weighted-SH tests" << endl
             << endl;
 
@@ -3087,10 +3129,13 @@ void usage_iqtree(char* argv[], bool full_command) {
 
 			cout << endl << "MISCELLANEOUS:" << endl
 		    << "  -wt                  Write locally optimal trees into .treels file" << endl
-			<< "  -fixbr               Fix branch lengths of <treefile>." << endl
-            << "                       Used with -n 0 to compute log-likelihood of <treefile>" << endl
-			<< "  -wsl                 Writing site log-likelihoods to .sitelh file" << endl
-            << "  -wslg                Writing site log-likelihoods per Gamma category" << endl
+			<< "  -blfix               Fix branch lengths of user tree passed via -te" << endl
+			<< "  -blmin               Min branch length for optimization (default 0.000001)" << endl
+			<< "  -blmax               Max branch length for optimization (default 100)" << endl
+			<< "  -wsl                 Write site log-likelihoods to .sitelh file" << endl
+            << "  -wslr                Write site log-likelihoods per rate category" << endl
+            << "  -wslm                Write site log-likelihoods per mixture class" << endl
+            << "  -wslmr               Write site log-likelihoods per mixture+rate class" << endl
             << "  -fconst f1,...,fN    Add constant patterns into alignment (N=#nstates)" << endl;
 //            << "  -d <file>            Reading genetic distances from file (default: JC)" << endl
 //			<< "  -d <outfile>         Calculate the distance matrix inferred from tree" << endl
@@ -3715,3 +3760,9 @@ void print_stacktrace(ostream &out, unsigned int max_frames)
 }
 
 #endif // WIN32
+
+bool memcmpcpy(void * destination, const void * source, size_t num) {
+    bool diff = (memcmp(destination, source, num) != 0);
+    memcpy(destination, source, num);
+    return diff;
+}
