@@ -20,7 +20,14 @@
 
 // IMPORTANT: refactor STATE_UNKNOWN
 //const char STATE_UNKNOWN = 126;
-const unsigned char STATE_INVALID = 255;
+
+/* PoMo: STATE_INVALID is not handled in PoMo.  Set STATE_INVALID to
+   127 to remove warning about comparison to char in alignment.cpp.
+   This is important if the maximum N will be increased above 21
+   because then the state space is larger than 127 and we have to
+   think about something else. */
+/* const unsigned char STATE_INVALID = 255; */
+const unsigned char STATE_INVALID = 127;
 const int NUM_CHAR = 256;
 const double MIN_FREQUENCY          = 0.0001;
 const double MIN_FREQUENCY_DIFF     = 0.00001;
