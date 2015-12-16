@@ -3,9 +3,9 @@
 
 #include "modeldna.h"
 
-const double POMO_MIN_RATE =  7e-5;
+const double POMO_MIN_RATE =  1e-4;
 const double POMO_INIT_RATE = 1e-3;
-const double POMO_MAX_RATE =  3e-2;
+const double POMO_MAX_RATE =  1e-2;
 /* The actual boundaries will be set, e.g., to
    #freq_fixed_states[i]*POMO_MIN_REL_FREQ. */
 const double POMO_MIN_REL_FREQ = 0.5;
@@ -309,6 +309,15 @@ class ModelPoMo : public ModelGTR
      */
     double mutCoeff(int nt1, int nt2);
 
+
+    /**
+     * Set the initial mutation coefficients which resemble the level
+     * of polymorphism in the data.
+     *
+     * @return
+     */
+    void setInitialMutCoeff();
+
     /**
      * Compute the sum of the frequencies of the fixed states.
      *
@@ -323,6 +332,16 @@ class ModelPoMo : public ModelGTR
      */
     double computeSumFreqPolyStates();
     
+    /**
+     * Computes the sum over lamda_pol without mutliplying with
+     * mutation coefficients.  This is useful if the mutation
+     * coefficient is constant, e.g., when the initial value is set.
+     * Compute part of normalization constant of polymorphic states.
+     *
+     * @return
+     */
+    double computeSumFreqPolyStatesNoMut();
+
     /**
      * Compute the normalization constant.  This constant ensures that
      * the stationary frequencies (invariant measure) sum up to 1
@@ -361,6 +380,14 @@ class ModelPoMo : public ModelGTR
     /// future, when we do not restrict PoMo to DNA models only.
     /// Eventual todo: do not hardcode this.
     int nnuc;
+
+    /**
+     * Empirical level of polymorphism.  Will be set by init() and is
+     * used to normalize the mutation coefficients.  This is needed to
+     * be done because PoMo had trouble to estimate this (especially,
+     * when N was large).
+     */
+    double empirical_level_of_polymorphism;
 };
 
 #endif /* _MODELPOMO_H_ */

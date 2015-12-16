@@ -34,6 +34,7 @@ void ModelPoMo::init(const char *model_name,
     phylo_tree->aln->num_states = 4;
     dna_model = new ModelDNA(model_name, model_params, freq_type, freq_params, phylo_tree);
     phylo_tree->aln->num_states = num_states;
+    // num_params = dna_model->num_params;
     num_params = dna_model->num_params + 1;
 
     this->name = dna_model->name + "+rP" + convertIntToString(N);
@@ -44,25 +45,6 @@ void ModelPoMo::init(const char *model_name,
         convertIntToString(num_states) + " states in total";
 
     eps = 1e-6;
-
-    // Mutation probabilities point to the rates of the DNA model.
-    mutation_prob = dna_model->rates;
-    for (int i = 0; i < 6; i++) mutation_prob[i] = POMO_INIT_RATE;
-
-    // TODO: DOM; DEBUGGING IQ-TREE CONVERGENCE ONLY; REMOVE THIS.
-    // mutation_prob[0] = 0.00153064;
-    // mutation_prob[1] = 0.00399536;
-    // mutation_prob[2] = 0.00153064;
-    // mutation_prob[3] = 0.00153064;
-    // mutation_prob[4] = 0.00399536;
-    // mutation_prob[5] = 0.00153064;
-
-    // mutation_prob[0] = 0.0014;
-    // mutation_prob[1] = 0.00399536;
-    // mutation_prob[2] = 0.0014;
-    // mutation_prob[3] = 0.0014;
-    // mutation_prob[4] = 0.00399536;
-    // mutation_prob[5] = 0.0014;
 
     // Frequencies of the boundary states (fixed states, e.g., 10A).
     // These correspond to the state frequencies in the DNA
@@ -102,10 +84,25 @@ void ModelPoMo::init(const char *model_name,
         break;
     }
 
+    empirical_level_of_polymorphism = estimateEmpiricalPolymorphicFreq();
+    setInitialMutCoeff();
+    // TODO: DOM; DEBUGGING IQ-TREE CONVERGENCE ONLY; REMOVE THIS.
+    // mutation_prob[0] = 0.00153064;
+    // mutation_prob[1] = 0.00399536;
+    // mutation_prob[2] = 0.00153064;
+    // mutation_prob[3] = 0.00153064;
+    // mutation_prob[4] = 0.00399536;
+    // mutation_prob[5] = 0.00153064;
+
+    // mutation_prob[0] = 0.0014;
+    // mutation_prob[1] = 0.00399536;
+    // mutation_prob[2] = 0.0014;
+    // mutation_prob[3] = 0.0014;
+    // mutation_prob[4] = 0.00399536;
+    // mutation_prob[5] = 0.0014;
+
     updatePoMoStatesAndRates();
 
-    estimateEmpiricalPolymorphicFreq();
-    
     decomposeRateMatrix();
     if (verbose_mode >= VB_MAX)
         writeInfo(cout);
@@ -133,6 +130,49 @@ double harmonic(int n) {
     for (int i = 1; i < n; i++)
         harmonic += 1.0/(double)i;
     return harmonic;
+}
+
+void ModelPoMo::setInitialMutCoeff() {
+    // Mutation probabilities point to the rates of the DNA model.
+    mutation_prob = dna_model->rates;
+    // for (int i = 0; i < 6; i++) mutation_prob[i] = POMO_INIT_RATE;
+    double m_init = 0;
+    double theta_p = empirical_level_of_polymorphism;
+    double lambda_fixed_sum = computeSumFreqFixedStates();
+    double lambda_poly_sum_no_mu = computeSumFreqPolyStatesNoMut();
+    // cout << "DEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUG" << endl;
+    // cout << theta_p << endl;
+    // cout << lambda_fixed_sum << endl;
+    // cout << lambda_poly_sum_no_mu << endl;
+
+    if (lambda_poly_sum_no_mu <= 0) {
+        outWarning("We strongly discourage to use PoMo on data without polymorphisms.");
+        outWarning("Set initial rates to predefined values.");
+        for (int i = 0; i < 6; i++) mutation_prob[i] = POMO_INIT_RATE;
+        return;
+    }
+
+    m_init = theta_p * lambda_fixed_sum / (lambda_poly_sum_no_mu * (1.0 - theta_p));
+    if (m_init < POMO_MIN_RATE || m_init > POMO_MAX_RATE)
+        outError("Initial rate not within boundaries.  Please check data.");
+    // cout << "DEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUG" << endl;
+    // cout << m_init << endl;
+    for (int i = 0; i < 6; i++) mutation_prob[i] = m_init;
+    return;
+}
+
+double ModelPoMo::computeSumFreqPolyStatesNoMut() {
+    double norm_polymorphic = 0.0;
+    int i, j;
+    for (i = 0; i < 4; i++) {
+        for (j = 0; j < i; j++)
+            norm_polymorphic +=
+                2 * freq_fixed_states[i] * freq_fixed_states[j];
+    }
+    // Changed Dom Tue Sep 29 13:13:21 CEST 2015
+    // norm_polymorphic *= N * harmonic;
+    norm_polymorphic *= harmonic(N);
+    return norm_polymorphic;
 }
 
 double ModelPoMo::computeSumFreqPolyStates() {
@@ -447,13 +487,17 @@ double ModelPoMo::computeProbBoundaryMutation(int state1, int state2) {
 }
 
 int ModelPoMo::getNDim() {
+    // DOM 2015-12-16: Fix theta_p.
     return dna_model->getNDim()+1;
+    // return dna_model->getNDim();
 }
 
 void ModelPoMo::setBounds(double *lower_bound,
                           double *upper_bound,
                           bool *bound_check) {
     int i, ndim = getNDim();
+    if (verbose_mode >= VB_MAX)
+        cout << "Set new bounds." << endl;
 
     // Mutation rates.
     for (i = 1; i <= ndim; i++) {
@@ -483,6 +527,8 @@ void ModelPoMo::setVariables(double *variables) {
     if (num_params > 0) {
         int num_all = dna_model->param_spec.length();
         for (int i = 0; i < num_all; i++)
+            // if (!dna_model->param_fixed[dna_model->param_spec[i]])
+            //     variables[(int)dna_model->param_spec[i]] = mutation_prob[i];
             variables[(int)dna_model->param_spec[i]+1] = mutation_prob[i];
     }
     if (freq_type == FREQ_ESTIMATE) {
@@ -501,13 +547,10 @@ bool ModelPoMo::getVariables(double *variables) {
     // }
     // updatePoMoStatesAndRates();
 
-    // TODO: DOM; DEBUGGING IQ-TREE CONVERGENCE ONLY; REMOVE THIS.
-    // return;
-
     bool changed = false;
-    
+    int num_all = dna_model->param_spec.length();
+
     if (num_params > 0) {
-        int num_all = dna_model->param_spec.length();
         if (verbose_mode >= VB_MAX) {
             for (i = 1; i <= num_params; i++) {
                 cout << setprecision(8);
@@ -519,12 +562,29 @@ bool ModelPoMo::getVariables(double *variables) {
             if (mutation_prob[i] != variables[(int)dna_model->param_spec[i]+1])
                 changed = true;
             mutation_prob[i] = variables[(int)dna_model->param_spec[i]+1];
+            // if (!dna_model->param_fixed[dna_model->param_spec[i]]) {
+            //     if (mutation_prob[i] != variables[(int)dna_model->param_spec[i]])
+            //         changed = true;
+            // mutation_prob[i] = variables[(int)dna_model->param_spec[i]];
+            // }
         }
     }
+
+    // TODO: This does not work somehow.  Why?
+    // // Normalize the mutation probability so that they resemble the
+    // // level of polymorphism in the data.
+    // computeStateFreq();
+    // double theta_p = empirical_level_of_polymorphism;
+    // double sum_pol = computeSumFreqPolyStates();
+    // double sum_fix = computeSumFreqFixedStates();
+    // double m_norm  = sum_pol * (1.0 - theta_p) / (sum_fix * theta_p);
+    // // cout << m_norm << endl;
+    // for (i = 0; i < num_all; i++)
+    //     mutation_prob[i] /= m_norm;
+
     if (freq_type == FREQ_ESTIMATE) {
         int ndim = getNDim();
-        changed = true;
-        memcpy(freq_fixed_states, variables+(ndim-nnuc+2), (nnuc-1)*sizeof(double));
+        changed |= memcmpcpy(freq_fixed_states, variables+(ndim-nnuc+2), (nnuc-1)*sizeof(double));
         if (verbose_mode >= VB_MAX) {
             for (i = 0; i < nnuc-1; i++) {
                 cout << setprecision(8);
@@ -537,13 +597,13 @@ bool ModelPoMo::getVariables(double *variables) {
         //  sum += state_freq[i];
         // state_freq[num_states-1] = 1.0 - sum;
     }
+
     updatePoMoStatesAndRates();
     return changed;
 }
 
 void ModelPoMo::writeInfo(ostream &out) {
     int i;
-    int state1;
     ios  state(NULL);
     state.copyfmt(out);
 
@@ -552,6 +612,7 @@ void ModelPoMo::writeInfo(ostream &out) {
     // DOM 2015-12-16: Reduce output to minum
     // out << endl;
 
+    // int state1;
     // out << "==========================" << endl;
     // out << "Frequency of fixed states: " << endl;;
     // for (i = 0; i < 4; i++)
@@ -579,7 +640,7 @@ void ModelPoMo::writeInfo(ostream &out) {
     for (i = 0; i < 6; i++)
         out << mutation_prob[i] << " ";
     out << endl;
-    
+
     // out << "Rates (upper triangular) without diagonal: ";
     // i = 0;
     // for (state1 = 0; state1 < num_states; state1++) {
@@ -887,10 +948,10 @@ ModelPoMo::estimateEmpiricalFixedStateFreqs(double * freq_fixed_states)
                 int state = (int)*it2;
                 if (state < num_states)
                     outError("Unknown PoMo state in pattern.");
-                else if (state == phylo_tree->aln->STATE_UNKNOWN)
+                else if ((unsigned int)state == phylo_tree->aln->STATE_UNKNOWN)
                     continue;
                 state -= num_states;
-                assert(state < phylo_tree->aln->pomo_states.size());
+                assert((unsigned int)state < phylo_tree->aln->pomo_states.size());
                 // Decode the id and counts.
                 int id1 = phylo_tree->aln->pomo_states[state] & 3;
                 int id2 = (phylo_tree->aln->pomo_states[state] >> 16) & 3;
@@ -939,10 +1000,10 @@ ModelPoMo::estimateEmpiricalPolymorphicFreq()
                 int state = (int)*it2;
                 if (state < num_states)
                     outError("Unknown PoMo state in pattern.");
-                else if (state == phylo_tree->aln->STATE_UNKNOWN)
+                else if ((unsigned int)state == phylo_tree->aln->STATE_UNKNOWN)
                     continue;
                 state -= num_states;
-                assert(state < phylo_tree->aln->pomo_states.size());
+                assert((unsigned int)state < phylo_tree->aln->pomo_states.size());
                 // Decode the id and counts.
                 // int id1 = phylo_tree->aln->pomo_states[state] & 3;
                 // int id2 = (phylo_tree->aln->pomo_states[state] >> 16) & 3;
@@ -996,8 +1057,8 @@ void ModelPoMo::reportPoMoStateFreqs(ofstream &out) {
     double fixed = computeSumFreqFixedStates();
     double prop_poly = poly / (poly + fixed);
     double watterson_theta = prop_poly / harmonic(N);
-    double emp_prop_poly = estimateEmpiricalPolymorphicFreq();
-    
+    double emp_prop_poly = empirical_level_of_polymorphism;
+
     out << setprecision(8);
     out << "Estimated sum of fixed states:" << endl;
     out << fixed << endl;

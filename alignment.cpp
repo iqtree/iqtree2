@@ -1757,6 +1757,7 @@ int Alignment::readMSF(char *filename, char *sequence_type) {
 
 }
 
+// TODO: Use outWarning to print warnings.
 int Alignment::readCountsFormat(char* filename, char* sequence_type) {
     int npop = 0;                // Number of populations.
     int nsites = 0;              // Number of sites.
