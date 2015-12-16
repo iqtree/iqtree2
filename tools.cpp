@@ -2982,6 +2982,9 @@ void usage_iqtree(char* argv[], bool full_command) {
 #endif
             << "  -seed <number>       Random seed number, normally used for debugging purpose" << endl
             << "  -v, -vv, -vvv        Verbose mode, printing more messages to screen" << endl
+            << endl << "LIKELIHOOD MAPPING ANALYSIS:" << endl
+            << "  -lmap <#quartets>    Number of quartets for likelihood mapping analysis" << endl
+            << "  -wql                 Print quartet log-likelihoods to .quartetlh" << endl
             << endl << "NEW STOCHASTIC TREE SEARCH ALGORITHM:" << endl
             << "  -pll                 Use phylogenetic likelihood library (PLL) (default: off)" << endl
             << "  -numpars <number>    Number of initial parsimony trees (default: 100)" << endl
