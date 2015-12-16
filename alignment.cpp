@@ -1852,8 +1852,16 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
     int su_number = 0;
     
     // BQM: not neccessary, su_site_count will be equal to su_site_counts.size()
-//    int su_site_count = 0;
+    //    int su_site_count = 0;
     bool includes_state_unknown = false;
+
+    // Variables to calculate mean number of samples per population.
+    // If N is way above the average number of samples, PoMo has been
+    // ovserved to be unstable and a big warning is printed.
+    int n_samples_sum = 0;
+    int n_sites_sum = 0;
+    // Average number of samples.
+    double n_samples_bar = 0;
     
     // Open counts file.
     // Set the failbit and badbit.
@@ -1984,6 +1992,8 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
             }
             // Determine state (cf. above).
             if (count == 1) {
+                n_samples_sum += values[id1];
+                n_sites_sum++;
                 if (pomo_random_sampling) {
                     // Fixed state, state ID is just id1.
                     state = id1;
@@ -2019,7 +2029,9 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
             	// throw err_str.str();
             }
             else if (count == 2) {
-            
+                n_samples_sum += values[id1];
+                n_samples_sum += values[id2];
+                n_sites_sum++;
                 if (pomo_random_sampling) {
                      // Binomial sampling.  2 bases are present.
                     for(int k = 0; k < N; k++) {
@@ -2126,6 +2138,19 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
         cout << "Compound states:           " << pomo_states.size() << endl;
     }
     cout << "----------------------------------------------------------------------" << endl << endl;
+
+    // Check if N is not too large.
+    n_samples_bar = n_samples_sum / (double) n_sites_sum;
+    cout << "The average number of samples is " << n_samples_bar << endl;
+    if (!pomo_random_sampling && n_samples_bar * 3.0 <= N) {
+        cout << "----------------------------------------------------------------------" << endl;
+        cout << "WARNING: The virtual population size N is much larger ";
+        cout << "than the average number of samples." << endl;
+        cout << "WARNING: This setting together with the /weighted/ sampling method ";
+        cout << "might be numerically unstable." << endl << endl;
+        cout << "----------------------------------------------------------------------" << endl;
+    }
+
     site_pattern.resize(site_count);
 
     in.clear();
