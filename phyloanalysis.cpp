@@ -688,6 +688,11 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 			reportRate(out, tree);
 		}
 
+    		if (params.num_quartets) {
+			tree.reportLikelihoodMapping(out);
+		}
+
+
 		/*
 		out << "RATE HETEROGENEITY" << endl << "------------------" << endl
 				<< endl;
@@ -1735,6 +1740,13 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
     }
 
     bool finishedCandidateSet = iqtree.getCheckpoint()->getBool("finishedCandidateSet");
+
+    if (params.num_quartets) {
+        cout << "Performing likelihood mapping with " << params.num_quartets << " quartets..." << endl;
+        double lkmap_time = getRealTime();
+        iqtree.doLikelihoodMapping();
+        cout << getRealTime()-lkmap_time << " seconds" << endl;
+    }
 
     // now overwrite with random tree
     if (params.start_tree == STT_RANDOM_TREE && !finishedCandidateSet) {

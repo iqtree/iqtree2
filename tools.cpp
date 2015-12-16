@@ -881,6 +881,8 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.freq_const_patterns = NULL;
     params.no_rescale_gamma_invar = false;
     params.compute_seq_identity_along_tree = false;
+    params.num_quartets = 0;
+    params.print_quartet_lh = false;
     params.link_alpha = false;
     params.ignore_checkpoint = false;
     params.checkpoint_dump_interval = 20;
@@ -2816,6 +2818,21 @@ void parseArg(int argc, char *argv[], Params &params) {
                     params.user_file = argv[cnt];
 				continue;
 			}
+            
+			if (strcmp(argv[cnt], "-lmap") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -lmap <likelihood_mapping_num_quartets>";
+				params.num_quartets = convert_int(argv[cnt]);
+                if (params.num_quartets < 1)
+                    throw "Number of quartets must be >= 1";
+				continue;
+			}
+            
+			if (strcmp(argv[cnt], "-wql") == 0) {
+                params.print_quartet_lh = true;
+                continue;
+            }
             
 			if (strcmp(argv[cnt], "--link-alpha") == 0) {
 				params.link_alpha = true;
