@@ -15,16 +15,16 @@
 
 /* single counter array needed in likelihood mapping analysis */
 /* (makes above counters obsolete - up/down,right/left never needed) (HAS) */
-#define LM_REG1 0
-#define LM_REG2 1
-#define LM_REG3 2
-#define LM_REG4 3
-#define LM_REG5 4
-#define LM_REG6 5
-#define LM_REG7 6
-#define LM_AR1  7
-#define LM_AR2  8
-#define LM_AR3  9
+#define LM_REG1 0   /* top corner */
+#define LM_REG2 1   /* bottom-right corner */
+#define LM_REG3 2   /* bottom-left corner */
+#define LM_REG4 3   /* right rectangle */
+#define LM_REG5 4   /* bottom rectangle */
+#define LM_REG6 5   /* left rectangle */
+#define LM_REG7 6   /* center */
+#define LM_AR1  7   /* top third */
+#define LM_AR2  8   /* bottom-right third */
+#define LM_AR3  9   /* bottom-left third */
 #define LM_MAX  10
 
 //*** likelihood mapping stuff (imported from lmap.c)
@@ -1916,14 +1916,27 @@ void PhyloTree::computeQuartetLikelihoods(vector<QuartetInfo> &quartet_info) {
 
 void PhyloTree::doLikelihoodMapping() {
     // TODO For Heiko: Please add code here
-    vector<QuartetInfo> quartet_info;
-    vector<SeqQuartetInfo> seq_quartet_info;
-    int areacount[8] = {0, 0, 0, 0, 0, 0, 0, 0};
-    int cornercount[4] = {0, 0, 0, 0};
+    // vector<QuartetInfo> quartet_info;
+    // vector<SeqQuartetInfo> seq_quartet_info;
+    // int areacount[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+    // int cornercount[4] = {0, 0, 0, 0};
     int resolved, partly, unresolved;
     int qid;
     ofstream out;
     string filename;
+
+    areacount[0] = 0;
+    areacount[1] = 0;
+    areacount[2] = 0;
+    areacount[3] = 0;
+    areacount[4] = 0;
+    areacount[5] = 0;
+    areacount[6] = 0;
+    areacount[7] = 0;
+    cornercount[0] = 0;
+    cornercount[1] = 0;
+    cornercount[2] = 0;
+    cornercount[3] = 0;
 
     seq_quartet_info.resize(leafNum+1);
     for (qid = 0; qid < leafNum; qid++) {
@@ -1945,13 +1958,13 @@ void PhyloTree::doLikelihoodMapping() {
 
 	tempreg = quartet_info[qid].area;
         areacount[tempreg]++;
-        seq_quartet_info[leafNum].countarr[tempreg]++;
+        seq_quartet_info[leafNum].countarr[tempreg]++; /* which of the 7 regions */
         seq_quartet_info[quartet_info[qid].seqID[0]].countarr[tempreg]++;
         seq_quartet_info[quartet_info[qid].seqID[1]].countarr[tempreg]++;
         seq_quartet_info[quartet_info[qid].seqID[2]].countarr[tempreg]++;
         seq_quartet_info[quartet_info[qid].seqID[3]].countarr[tempreg]++;
 
-        tempreg = LM_AR1+quartet_info[qid].corner;
+        tempreg = LM_AR1+quartet_info[qid].corner; /* which of the 3 corners */
         cornercount[quartet_info[qid].corner]++;
         seq_quartet_info[leafNum].countarr[tempreg]++;
         seq_quartet_info[quartet_info[qid].seqID[0]].countarr[tempreg]++;
@@ -2004,45 +2017,145 @@ void PhyloTree::doLikelihoodMapping() {
                 << "\t" << quartet_info[qid].qweight[1] 
                 << "\t" << quartet_info[qid].qweight[2] << endl;
         }
+
+        PhyloTree::reportLikelihoodMapping(out);
+
+    /**** begin of report output ****/
+    /**** moved to PhyloTree::reportLikelihoodMapping ****/
+#if 0
+	// LM_REG1 0   /* top corner */
+	// LM_REG2 1   /* bottom-right corner */
+	// LM_REG3 2   /* bottom-left corner */
+	// LM_REG4 3   /* right rectangle */
+	// LM_REG5 4   /* bottom rectangle */
+	// LM_REG6 5   /* left rectangle */
+	// LM_REG7 6   /* center */
+	// LM_AR1  7   /* top third */
+	// LM_AR2  8   /* bottom-right third */
+	// LM_AR3  9   /* bottom-left third */
+
+	out << "LIKELIHOOD MAPPING ANALYSIS" << endl << endl;
+	out << "Number of quartets: " << params->num_quartets << "(random choice)" << endl << endl;
+	out << "Quartet trees are based on the selected model of substitution." << endl << endl;
+	out << "Sequences are not grouped in clusters." << endl;
+
+        out << endl << endl;
+	out << "LIKELIHOOD MAPPING STATISTICS" << endl << endl;
+
+	out << "           (a,b)-(c,d)                              (a,b)-(c,d)      " << endl;
+	out << "                /\\                                      /\\           " << endl;
+	out << "               /  \\                                    /  \\          " << endl;
+	out << "              /    \\                                  /  1 \\         " << endl;
+	out << "             /  a1  \\                                / \\  / \\        " << endl;
+	out << "            /\\      /\\                              /   \\/   \\       " << endl;
+	out << "           /  \\    /  \\                            /    /\\    \\      " << endl;
+	out << "          /    \\  /    \\                          / 6  /  \\  4 \\     " << endl;
+	out << "         /      \\/      \\                        /\\   /  7 \\   /\\    " << endl;
+	out << "        /        |       \\                      /  \\ /______\\ /  \\   " << endl;
+	out << "       /   a3    |    a2  \\                    / 3  |    5   |  2 \\  " << endl;
+	out << "      /__________|_________\\                  /_____|________|_____\\ " << endl;
+	out << "(a,d)-(b,c)            (a,c)-(b,d)      (a,b)-(c,d)            (a,c)-(b,d) " << endl << endl;
+	out << "For more information about likelihood-mapping refer to" << endl;
+   	out << "   Strimmer and von Haeseler (1997) PNAS 94:6815-6819" << endl;
+	out << "   http://www.ncbi.nlm.nih.gov/pubmed/9192648" << endl;
+	out << "and/or" << endl;
+   	out << "   Schmidt and von Haeseler (2003) Current Protocols in Bioinformatics" << endl;
+   	out << "   (by Baxevanis et al., Eds.), Unit 6, Wiley&Sons, New York." << endl;
+	out << "   http://dx.doi.org/10.1002/0471250953.bi0606s17" << endl;
+
+
+        out << endl << endl;
+        out << "Quartet support of regions a1, a2, a3:" << endl << endl;
+        out << "     #quartets    a1 (% a1)        a2 (% a2)        a3 (% a3)    name" << endl;
         for (qid = 0; qid < leafNum; qid++) {
 	    //unsigned long sumq = seq_quartet_info[qid].countarr[0] + seq_quartet_info[qid].countarr[1] + seq_quartet_info[qid].countarr[2] + seq_quartet_info[qid].countarr[3] + seq_quartet_info[qid].countarr[4] + seq_quartet_info[qid].countarr[5] + seq_quartet_info[qid].countarr[6];
 	    unsigned long sumq = seq_quartet_info[qid].countarr[7] + seq_quartet_info[qid].countarr[8] + seq_quartet_info[qid].countarr[9];
 
-            out << "seq " << qid << "\t"
-        	<< sumq
-		<< "\t|\t"
-        	<< seq_quartet_info[qid].countarr[0] << " ("
-        	<< (double) 100.0*seq_quartet_info[qid].countarr[0]/sumq
-		<< ")\t"
-        	<< seq_quartet_info[qid].countarr[1] << " ("
-        	<< (double) 100.0*seq_quartet_info[qid].countarr[1]/sumq
-		<< ")\t"
-        	<< seq_quartet_info[qid].countarr[2] << " ("
-        	<< (double) 100.0*seq_quartet_info[qid].countarr[2]/sumq
-		<< ")\t"
-        	<< seq_quartet_info[qid].countarr[3] << " ("
-        	<< (double) 100.0*seq_quartet_info[qid].countarr[3]/sumq
-		<< ")\t"
-        	<< seq_quartet_info[qid].countarr[4] << " ("
-        	<< (double) 100.0*seq_quartet_info[qid].countarr[4]/sumq
-		<< ")\t"
-        	<< seq_quartet_info[qid].countarr[5] << " ("
-        	<< (double) 100.0*seq_quartet_info[qid].countarr[5]/sumq
-		<< ")\t"
-        	<< seq_quartet_info[qid].countarr[6] << " ("
-        	<< (double) 100.0*seq_quartet_info[qid].countarr[6]/sumq
-		<< ")\t|\t"
-        	<< seq_quartet_info[qid].countarr[7] << " ("
-        	<< (double) 100.0*seq_quartet_info[qid].countarr[7]/sumq
-		<< ")\t"
-        	<< seq_quartet_info[qid].countarr[8] << " ("
-        	<< (double) 100.0*seq_quartet_info[qid].countarr[8]/sumq
-		<< ")\t"
-        	<< seq_quartet_info[qid].countarr[9] << " ("
-        	<< (double) 100.0*seq_quartet_info[qid].countarr[9]/sumq
-		<< ")" << endl;
+            out.setf(ios::fixed, ios::floatfield); // set fixed floating format
+            out.precision(2);
+            out << setw(4) << qid+1 
+                << setw(9) << sumq
+        	<< setw(7) << seq_quartet_info[qid].countarr[7]
+        	<< " (" << setw(6) << (double) 100.0*seq_quartet_info[qid].countarr[7]/sumq << ") "
+        	<< setw(7) << seq_quartet_info[qid].countarr[8]
+        	<< " (" << setw(6) << (double) 100.0*seq_quartet_info[qid].countarr[8]/sumq << ") "
+        	<< setw(7) << seq_quartet_info[qid].countarr[9]
+        	<< " (" << setw(6) << (double) 100.0*seq_quartet_info[qid].countarr[9]/sumq << ")  " 
+        	<< PhyloTree::aln->getSeqName(qid) << endl;
         }
+
+        out << endl << endl << "Quartet support of areas 1-7:" << endl << endl;
+        out << "                   resolved                                           partly                                             unresolved  name" << endl;
+        out << "     #quartets     1 (% 1)          2 (% 2)          3 (% 3)          4 (% 4)          5 (% 5)          6 (% 6)          7 (% 7)" << endl;
+        for (qid = 0; qid < leafNum; qid++) {
+	    //unsigned long sumq = seq_quartet_info[qid].countarr[0] + seq_quartet_info[qid].countarr[1] + seq_quartet_info[qid].countarr[2] + seq_quartet_info[qid].countarr[3] + seq_quartet_info[qid].countarr[4] + seq_quartet_info[qid].countarr[5] + seq_quartet_info[qid].countarr[6];
+	    unsigned long sumq = seq_quartet_info[qid].countarr[7] + seq_quartet_info[qid].countarr[8] + seq_quartet_info[qid].countarr[9];
+
+            out.setf(ios::fixed, ios::floatfield); // set fixed floating format
+            out.precision(2);
+            out << setw(4) << qid+1 
+                << setw(9) << sumq
+                << setw(7) << seq_quartet_info[qid].countarr[0] 
+		<< " (" << setw(6) << (double) 100.0*seq_quartet_info[qid].countarr[0]/sumq << ") "
+        	<< setw(7) << seq_quartet_info[qid].countarr[1] 
+                << " (" << setw(6) << (double) 100.0*seq_quartet_info[qid].countarr[1]/sumq << ") "
+        	<< setw(7) << seq_quartet_info[qid].countarr[2]
+                << " (" << setw(6) << (double) 100.0*seq_quartet_info[qid].countarr[2]/sumq << ") "
+        	<< setw(7) << seq_quartet_info[qid].countarr[3]
+        	<< " (" << setw(6) << (double) 100.0*seq_quartet_info[qid].countarr[3]/sumq << ") "
+        	<< setw(7) << seq_quartet_info[qid].countarr[4]
+        	<< " (" << setw(6) << (double) 100.0*seq_quartet_info[qid].countarr[4]/sumq << ") "
+        	<< setw(7) << seq_quartet_info[qid].countarr[5]
+        	<< " (" << setw(6) << (double) 100.0*seq_quartet_info[qid].countarr[5]/sumq << ") "
+        	<< setw(7) << seq_quartet_info[qid].countarr[6]
+        	<< " (" << setw(6) << (double) 100.0*seq_quartet_info[qid].countarr[6]/sumq << ")  "
+        	<< PhyloTree::aln->getSeqName(qid) << endl;
+        }
+
+        out << endl << endl << "Quartet resolution per sequence:" << endl << endl;
+        out << "      #quartets   resolved           partly          unresolved  name" << endl;
+        for (qid = 0; qid < leafNum; qid++) {
+	    //unsigned long sumq = seq_quartet_info[qid].countarr[0] + seq_quartet_info[qid].countarr[1] + seq_quartet_info[qid].countarr[2] + seq_quartet_info[qid].countarr[3] + seq_quartet_info[qid].countarr[4] + seq_quartet_info[qid].countarr[5] + seq_quartet_info[qid].countarr[6];
+	    unsigned long resolved = seq_quartet_info[qid].countarr[LM_REG1] + seq_quartet_info[qid].countarr[LM_REG2] + seq_quartet_info[qid].countarr[LM_REG3];
+	    unsigned long partly   = seq_quartet_info[qid].countarr[LM_REG4] + seq_quartet_info[qid].countarr[LM_REG5] + seq_quartet_info[qid].countarr[LM_REG6];
+	    unsigned long unres    = seq_quartet_info[qid].countarr[LM_REG7];
+	    unsigned long sumq = seq_quartet_info[qid].countarr[7] + seq_quartet_info[qid].countarr[8] + seq_quartet_info[qid].countarr[9];
+
+            out.setf(ios::fixed, ios::floatfield); // set fixed floating format
+            out.precision(2);
+            out << setw(4) << qid+1 
+                << setw(9) << sumq
+                << setw(7) << resolved
+		<< " (" << setw(6) << (double) 100.0*resolved/sumq << ") "
+        	<< setw(7) << partly
+                << " (" << setw(6) << (double) 100.0*partly/sumq << ") "
+        	<< setw(7) << unres
+                << " (" << setw(6) << (double) 100.0*unres/sumq << ")  "
+        	<< PhyloTree::aln->getSeqName(qid) << endl;
+        }
+#endif
     }
+
+    resolved   = areacount[0] + areacount[1] + areacount[2];
+    partly     = areacount[3] + areacount[4] + areacount[5];
+    unresolved = areacount[6];
+	
+    out << endl << "LIKELIHOOD MAPPING SUMMARY" << endl << endl;
+    out << "Number of quartets: " << (resolved+partly+unresolved)
+        << " (randomly drawn with replacement)" << endl << endl;
+    out << "Overall quartet resolution:" << endl;
+    out << "Number of fully resolved  quartets: " << resolved   
+        << " (" << 100.0 * resolved/(resolved+partly+unresolved)   << "%)" << endl;
+    out << "Number of partly resolved quartets: " << partly     
+        << " (" << 100.0 * partly/(resolved+partly+unresolved)     << "%)" << endl;
+    out << "Number of unresolved      quartets: " << unresolved 
+        << " (" << 100.0 * unresolved/(resolved+partly+unresolved) << "%)" << endl << endl;
+
+#if 0
+#endif
+
+    /**** end of report output ****/
+    /**** moved to PhyloTree::reportLikelihoodMapping ****/
 
 
     if (params->print_quartet_lh) {
@@ -2059,20 +2172,6 @@ void PhyloTree::doLikelihoodMapping() {
     fclose(epsout);        
     cout << "likelihood mapping plot (EPS) written to " << epsfilename << endl;
 
-    resolved   = areacount[0] + areacount[1] + areacount[2];
-    partly     = areacount[3] + areacount[4] + areacount[5];
-    unresolved = areacount[6];
-	
-    cout << endl << "LIKELIHOOD MAPPING ANALYSIS" << endl << endl;
-    cout << "Number of quartets: " << (resolved+partly+unresolved)
-         << " (randomly drawn with replacement)" << endl << endl;
-    cout << "Overall quartet resolution:" << endl;
-    cout << "Number of fully resolved  quartets: " << resolved   
-         << " (" << 100.0 * resolved/(resolved+partly+unresolved)   << "%)" << endl;
-    cout << "Number of partly resolved quartets: " << partly     
-         << " (" << 100.0 * partly/(resolved+partly+unresolved)     << "%)" << endl;
-    cout << "Number of unresolved      quartets: " << unresolved 
-         << " (" << 100.0 * unresolved/(resolved+partly+unresolved) << "%)" << endl << endl;
 
 //    cout << "\nOverall quartet resolution: (from " << (resolved+partly+unresolved) << " randomly drawn quartets)" << endl;
 //    cout << "Fully resolved quartets:  " << resolved   << " (= "
@@ -2083,3 +2182,222 @@ void PhyloTree::doLikelihoodMapping() {
 //        << (double) unresolved * 100.0 / (resolved+partly+unresolved) << "%)" << endl << endl;
 
 } // end PhyloTree::doLikelihoodMapping
+
+
+
+
+void PhyloTree::reportLikelihoodMapping(ofstream &out) {
+    // int areacount[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+    // int cornercount[4] = {0, 0, 0, 0};
+    int resolved, partly, unresolved;
+    int qid;
+    int leafNum;
+    leafNum = PhyloTree::aln->getNSeq();
+    // vector<QuartetInfo> quartet_info;
+    // vector<SeqQuartetInfo> seq_quartet_info;
+
+
+	// LM_REG1 0   /* top corner */
+	// LM_REG2 1   /* bottom-right corner */
+	// LM_REG3 2   /* bottom-left corner */
+	// LM_REG4 3   /* right rectangle */
+	// LM_REG5 4   /* bottom rectangle */
+	// LM_REG6 5   /* left rectangle */
+	// LM_REG7 6   /* center */
+	// LM_AR1  7   /* top third */
+	// LM_AR2  8   /* bottom-right third */
+	// LM_AR3  9   /* bottom-left third */
+#if 0
+#define LM_REG1 0   /* top corner */
+#define LM_REG2 1   /* bottom-right corner */
+#define LM_REG3 2   /* bottom-left corner */
+#define LM_REG4 3   /* right rectangle */
+#define LM_REG5 4   /* bottom rectangle */
+#define LM_REG6 5   /* left rectangle */
+#define LM_REG7 6   /* center */
+#define LM_AR1  7   /* top third */
+#define LM_AR2  8   /* bottom-right third */
+#define LM_AR3  9   /* bottom-left third */
+#endif
+
+	out << "LIKELIHOOD MAPPING ANALYSIS" << endl;
+	out << "---------------------------" << endl << endl;
+	out << "Number of quartets: " << params->num_quartets << " (random choice)" << endl << endl;
+	out << "Quartet trees are based on the selected model of substitution." << endl << endl;
+	out << "Sequences are not grouped in clusters." << endl;
+
+        out << endl << endl;
+	out << "LIKELIHOOD MAPPING STATISTICS" << endl;
+	out << "-----------------------------" << endl << endl;
+
+	out << "           (a,b)-(c,d)                              (a,b)-(c,d)      " << endl;
+	out << "                /\\                                      /\\           " << endl;
+	out << "               /  \\                                    /  \\          " << endl;
+	out << "              /    \\                                  /  1 \\         " << endl;
+	out << "             /  a1  \\                                / \\  / \\        " << endl;
+	out << "            /\\      /\\                              /   \\/   \\       " << endl;
+	out << "           /  \\    /  \\                            /    /\\    \\      " << endl;
+	out << "          /    \\  /    \\                          / 6  /  \\  4 \\     " << endl;
+	out << "         /      \\/      \\                        /\\   /  7 \\   /\\    " << endl;
+	out << "        /        |       \\                      /  \\ /______\\ /  \\   " << endl;
+	out << "       /   a3    |    a2  \\                    / 3  |    5   |  2 \\  " << endl;
+	out << "      /__________|_________\\                  /_____|________|_____\\ " << endl;
+	out << "(a,d)-(b,c)            (a,c)-(b,d)      (a,b)-(c,d)            (a,c)-(b,d) " << endl << endl;
+	out << "Division of the likelihood mapping plots into 3 or 7 areas." << endl;
+	out << "On the left the areas show support for one of the different groupings like (a,b|c,d)." << endl;
+	out << "On the right the right quartets falling into the areas 1, 2 and 3 are informative." << endl;
+	out << "Those in the rectangles 4, 5 and 6 are partly informative and those in the center (7)" << endl;
+	out << "are not informative." << endl;
+	out << "Note, that the corners only make a difference if the sequences are clustered in groups." << endl << endl;
+	out << "For more information about likelihood-mapping refer to" << endl;
+   	out << " - Schmidt and von Haeseler (2009) The Phylogenetic Handbook, 2nd Ed." << endl;
+   	out << "   (by Lemey et al., Eds.), 181-209, Cambridge Univ. Press, UK." << endl;
+	out << "   http://www.thephylogenetichandbook.org" << endl;
+   	out << " - Schmidt and von Haeseler (2003) Current Protocols in Bioinformatics" << endl;
+   	out << "   (by Baxevanis et al., Eds.), Unit 6, Wiley&Sons, New York." << endl;
+	out << "   http://dx.doi.org/10.1002/0471250953.bi0606s17" << endl;
+	out << "and/or" << endl;
+   	out << " - Strimmer and von Haeseler (1997) PNAS 94:6815-6819" << endl;
+	out << "   http://www.ncbi.nlm.nih.gov/pubmed/9192648" << endl;
+
+
+        out << endl << endl;
+        out << "Quartet support of regions a1, a2, a3 (mainly for clustered analysis):" << endl << endl;
+        out << "     #quartets    a1 (% a1)        a2 (% a2)        a3 (% a3)    name" << endl;
+	out << "-----------------------------------------------------------------------------" << endl;
+        for (qid = 0; qid <= leafNum; qid++) {
+	    //unsigned long sumq = seq_quartet_info[qid].countarr[0] + seq_quartet_info[qid].countarr[1] + seq_quartet_info[qid].countarr[2] + seq_quartet_info[qid].countarr[3] + seq_quartet_info[qid].countarr[4] + seq_quartet_info[qid].countarr[5] + seq_quartet_info[qid].countarr[6];
+	    unsigned long sumq = seq_quartet_info[qid].countarr[7] + seq_quartet_info[qid].countarr[8] + seq_quartet_info[qid].countarr[9];
+
+	    if (qid < leafNum) {
+               out.setf(ios::fixed, ios::floatfield); // set fixed floating format
+               out.precision(2);
+               out << setw(4) << qid+1 
+                   << setw(9) << sumq
+        	   << setw(7) << seq_quartet_info[qid].countarr[7]
+        	   << " (" << setw(6) << (double) 100.0*seq_quartet_info[qid].countarr[7]/sumq << ") "
+        	   << setw(7) << seq_quartet_info[qid].countarr[8]
+        	   << " (" << setw(6) << (double) 100.0*seq_quartet_info[qid].countarr[8]/sumq << ") "
+        	   << setw(7) << seq_quartet_info[qid].countarr[9]
+        	   << " (" << setw(6) << (double) 100.0*seq_quartet_info[qid].countarr[9]/sumq << ")  " 
+        	   << PhyloTree::aln->getSeqName(qid) << endl;
+	    } else {
+	       out << "-----------------------------------------------------------------------------" << endl;
+               out.setf(ios::fixed, ios::floatfield); // set fixed floating format
+               out.precision(2);
+               out << "    "
+                   << setw(9) << sumq
+        	   << setw(7) << seq_quartet_info[qid].countarr[7]
+        	   << " (" << setw(6) << (double) 100.0*seq_quartet_info[qid].countarr[7]/sumq << ") "
+        	   << setw(7) << seq_quartet_info[qid].countarr[8]
+        	   << " (" << setw(6) << (double) 100.0*seq_quartet_info[qid].countarr[8]/sumq << ") "
+        	   << setw(7) << seq_quartet_info[qid].countarr[9]
+        	   << " (" << setw(6) << (double) 100.0*seq_quartet_info[qid].countarr[9]/sumq << ")  " << endl;
+	    }
+        }
+
+        out << endl << endl << "Quartet support of areas 1-7 (mainly for clustered analysis):" << endl << endl;
+        out << "                   resolved                                           partly                                             unresolved  name" << endl;
+        out << "     #quartets     1 (% 1)          2 (% 2)          3 (% 3)          4 (% 4)          5 (% 5)          6 (% 6)          7 (% 7)" << endl;
+	out << "------------------------------------------------------------------------------------------------------------------------------------------------" << endl;
+        for (qid = 0; qid <= leafNum; qid++) {
+	    //unsigned long sumq = seq_quartet_info[qid].countarr[0] + seq_quartet_info[qid].countarr[1] + seq_quartet_info[qid].countarr[2] + seq_quartet_info[qid].countarr[3] + seq_quartet_info[qid].countarr[4] + seq_quartet_info[qid].countarr[5] + seq_quartet_info[qid].countarr[6];
+	    unsigned long sumq = seq_quartet_info[qid].countarr[7] + seq_quartet_info[qid].countarr[8] + seq_quartet_info[qid].countarr[9];
+
+	    if (qid < leafNum) {
+               out.setf(ios::fixed, ios::floatfield); // set fixed floating format
+               out.precision(2);
+               out << setw(4) << qid+1 
+                   << setw(9) << sumq
+                   << setw(7) << seq_quartet_info[qid].countarr[0] 
+		   << " (" << setw(6) << (double) 100.0*seq_quartet_info[qid].countarr[0]/sumq << ") "
+        	   << setw(7) << seq_quartet_info[qid].countarr[1] 
+                   << " (" << setw(6) << (double) 100.0*seq_quartet_info[qid].countarr[1]/sumq << ") "
+        	   << setw(7) << seq_quartet_info[qid].countarr[2]
+                   << " (" << setw(6) << (double) 100.0*seq_quartet_info[qid].countarr[2]/sumq << ") "
+        	   << setw(7) << seq_quartet_info[qid].countarr[3]
+        	   << " (" << setw(6) << (double) 100.0*seq_quartet_info[qid].countarr[3]/sumq << ") "
+        	   << setw(7) << seq_quartet_info[qid].countarr[4]
+        	   << " (" << setw(6) << (double) 100.0*seq_quartet_info[qid].countarr[4]/sumq << ") "
+        	   << setw(7) << seq_quartet_info[qid].countarr[5]
+        	   << " (" << setw(6) << (double) 100.0*seq_quartet_info[qid].countarr[5]/sumq << ") "
+        	   << setw(7) << seq_quartet_info[qid].countarr[6]
+        	   << " (" << setw(6) << (double) 100.0*seq_quartet_info[qid].countarr[6]/sumq << ")  "
+        	   << PhyloTree::aln->getSeqName(qid) << endl;
+	    } else {
+	       out << "------------------------------------------------------------------------------------------------------------------------------------------------" << endl;
+               out.setf(ios::fixed, ios::floatfield); // set fixed floating format
+               out.precision(2);
+               out << "    "
+                   << setw(9) << sumq
+                   << setw(7) << seq_quartet_info[qid].countarr[0] 
+		   << " (" << setw(6) << (double) 100.0*seq_quartet_info[qid].countarr[0]/sumq << ") "
+        	   << setw(7) << seq_quartet_info[qid].countarr[1] 
+                   << " (" << setw(6) << (double) 100.0*seq_quartet_info[qid].countarr[1]/sumq << ") "
+        	   << setw(7) << seq_quartet_info[qid].countarr[2]
+                   << " (" << setw(6) << (double) 100.0*seq_quartet_info[qid].countarr[2]/sumq << ") "
+        	   << setw(7) << seq_quartet_info[qid].countarr[3]
+        	   << " (" << setw(6) << (double) 100.0*seq_quartet_info[qid].countarr[3]/sumq << ") "
+        	   << setw(7) << seq_quartet_info[qid].countarr[4]
+        	   << " (" << setw(6) << (double) 100.0*seq_quartet_info[qid].countarr[4]/sumq << ") "
+        	   << setw(7) << seq_quartet_info[qid].countarr[5]
+        	   << " (" << setw(6) << (double) 100.0*seq_quartet_info[qid].countarr[5]/sumq << ") "
+        	   << setw(7) << seq_quartet_info[qid].countarr[6]
+        	   << " (" << setw(6) << (double) 100.0*seq_quartet_info[qid].countarr[6]/sumq << ")  " 
+	           << endl << endl;
+	    }
+        }
+
+        out << endl << endl << "Quartet resolution per sequence (phylogenetic information):" << endl << endl;
+        out << "      #quartets   resolved           partly          unresolved  name" << endl;
+	out << "-----------------------------------------------------------------------------" << endl;
+        for (qid = 0; qid <= leafNum; qid++) {
+	    //unsigned long sumq = seq_quartet_info[qid].countarr[0] + seq_quartet_info[qid].countarr[1] + seq_quartet_info[qid].countarr[2] + seq_quartet_info[qid].countarr[3] + seq_quartet_info[qid].countarr[4] + seq_quartet_info[qid].countarr[5] + seq_quartet_info[qid].countarr[6];
+	    unsigned long resolved = seq_quartet_info[qid].countarr[LM_REG1] + seq_quartet_info[qid].countarr[LM_REG2] + seq_quartet_info[qid].countarr[LM_REG3];
+	    unsigned long partly   = seq_quartet_info[qid].countarr[LM_REG4] + seq_quartet_info[qid].countarr[LM_REG5] + seq_quartet_info[qid].countarr[LM_REG6];
+	    unsigned long unres    = seq_quartet_info[qid].countarr[LM_REG7];
+	    unsigned long sumq = seq_quartet_info[qid].countarr[7] + seq_quartet_info[qid].countarr[8] + seq_quartet_info[qid].countarr[9];
+
+	    if (qid < leafNum) {
+               out.setf(ios::fixed, ios::floatfield); // set fixed floating format
+               out.precision(2);
+               out << setw(4) << qid+1 
+                   << setw(9) << sumq
+                   << setw(7) << resolved
+		   << " (" << setw(6) << (double) 100.0*resolved/sumq << ") "
+        	   << setw(7) << partly
+                   << " (" << setw(6) << (double) 100.0*partly/sumq << ") "
+        	   << setw(7) << unres
+                   << " (" << setw(6) << (double) 100.0*unres/sumq << ")  "
+        	   << PhyloTree::aln->getSeqName(qid) << endl;
+	    } else {
+	       out << "-----------------------------------------------------------------------------" << endl;
+               out.setf(ios::fixed, ios::floatfield); // set fixed floating format
+               out.precision(2);
+               out << "    "
+                   << setw(9) << sumq
+                   << setw(7) << resolved
+		   << " (" << setw(6) << (double) 100.0*resolved/sumq << ") "
+        	   << setw(7) << partly
+                   << " (" << setw(6) << (double) 100.0*partly/sumq << ") "
+        	   << setw(7) << unres
+                   << " (" << setw(6) << (double) 100.0*unres/sumq << ")  " << endl;
+	    }
+        }
+
+    resolved   = areacount[0] + areacount[1] + areacount[2];
+    partly     = areacount[3] + areacount[4] + areacount[5];
+    unresolved = areacount[6];
+	
+    // out << endl << "LIKELIHOOD MAPPING ANALYSIS" << endl << endl;
+    // out << "Number of quartets: " << (resolved+partly+unresolved)
+    //    << " (randomly drawn with replacement)" << endl << endl;
+    out << "Overall quartet resolution:" << endl << endl;
+    out << "Number of fully resolved  quartets (regions 1+2+3): " << resolved   
+        << " (=" << 100.0 * resolved/(resolved+partly+unresolved)   << "%)" << endl;
+    out << "Number of partly resolved quartets (regions 4+5+6): " << partly     
+        << " (=" << 100.0 * partly/(resolved+partly+unresolved)     << "%)" << endl;
+    out << "Number of unresolved      quartets (region 7)     : " << unresolved 
+        << " (=" << 100.0 * unresolved/(resolved+partly+unresolved) << "%)" << endl << endl;
+
+} // end PhyloTree::reportLikelihoodMapping

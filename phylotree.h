@@ -1382,6 +1382,20 @@ public:
             Quartet functions
      ****************************************************************************/
 
+    /**
+     * for doLikelihoodMapping reportLikelihoodMapping: likelihood mapping information by region
+     */
+    vector<QuartetInfo> quartet_info;
+    int areacount[8];
+    int cornercount[4];
+    // int areacount[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+    // int cornercount[4] = {0, 0, 0, 0};
+
+    /**
+     * for doLikelihoodMapping, reportLikelihoodMapping: likelihood mapping information by sequence
+     */
+    vector<SeqQuartetInfo> seq_quartet_info;
+
     /** generate a bunch of quartets and compute likelihood for 3 quartet trees for each replicate
         @param num_quartets number of quartets
         @param quartet_info (OUT) vector of quartet information
@@ -1390,6 +1404,9 @@ public:
 
     /** main function that performs likelihood mapping analysis (Strimmer & von Haeseler 1997) */
     void doLikelihoodMapping();
+
+    /** output results of likelihood mapping analysis */
+    void reportLikelihoodMapping(ofstream &out);
 
     /****************************************************************************
             Collapse stable (highly supported) clades by one representative

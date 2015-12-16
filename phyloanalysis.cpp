@@ -688,6 +688,11 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 			reportRate(out, tree);
 		}
 
+		if (params.print_quartet_lh) {
+			tree.reportLikelihoodMapping(out);
+		}
+
+
 		/*
 		out << "RATE HETEROGENEITY" << endl << "------------------" << endl
 				<< endl;
