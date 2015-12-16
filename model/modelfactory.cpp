@@ -118,7 +118,8 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 		else if (tree->aln->seq_type == SEQ_MORPH) model_str = "MK";
         else if (tree->aln->seq_type == SEQ_POMO) model_str = "HKY+rP";
 		else model_str = "JC";
-        outWarning("Default model may be under-fitting. Use option '-m TEST' to select best-fit model.");
+        if (model_str != "HKY+rP")
+            outWarning("Default model may be under-fitting. Use option '-m TEST' to select best-fit model.");
 	}
 
 	/********* preprocessing model string ****************/
