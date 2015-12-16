@@ -548,28 +548,38 @@ void ModelPoMo::writeInfo(ostream &out) {
     state.copyfmt(out);
 
     out << setprecision(8);
-    out << endl;
 
-    out << "==========================" << endl;
-    out << "Frequency of fixed states: " << endl;;
+    // DOM 2015-12-16: Reduce output to minum
+    // out << endl;
+
+    // out << "==========================" << endl;
+    // out << "Frequency of fixed states: " << endl;;
+    // for (i = 0; i < 4; i++)
+    //     out << freq_fixed_states[i] << " ";
+    // out << endl << endl;
+
+    // out << "===============" << endl;
+    // out << "Mutation rates: " << endl;
+    // for (i = 0; i < 6; i++)
+    //     out << mutation_prob[i] << " ";
+    // out << endl << endl;;
+
+    // out << "==================================" << endl;
+    // out << "State frequency vector state_freq: " << endl;
+    // for (state1 = 0; state1 < num_states; state1++) {
+    //     if (state1 == 4 || (state1-4)%(N-1) == 0) out << endl;
+    //     out << state_freq[state1] << " ";
+    // }
+    // out << endl << endl;
+    out << "Frequency of fixed states: ";
     for (i = 0; i < 4; i++)
         out << freq_fixed_states[i] << " ";
-    out << endl << endl;
-
-    out << "===============" << endl;
-    out << "Mutation rates: " << endl;
+    out << endl;
+    out << "Mutation rates: ";
     for (i = 0; i < 6; i++)
         out << mutation_prob[i] << " ";
-    out << endl << endl;;
-
-    out << "==================================" << endl;
-    out << "State frequency vector state_freq: " << endl;
-    for (state1 = 0; state1 < num_states; state1++) {
-        if (state1 == 4 || (state1-4)%(N-1) == 0) out << endl;
-        out << state_freq[state1] << " ";
-    }
-    out << endl << endl;
-
+    out << endl;
+    
     // out << "Rates (upper triangular) without diagonal: ";
     // i = 0;
     // for (state1 = 0; state1 < num_states; state1++) {
