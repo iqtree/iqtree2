@@ -8,6 +8,7 @@
 #include "checkpoint.h"
 #include "tools.h"
 #include "timeutil.h"
+#include "gzstream.h"
 
 /*
  * The following parameters have been saved for checkpoint in IQPNNI
@@ -73,7 +74,7 @@ void Checkpoint::load() {
 	assert(filename != "");
     if (!fileExists(filename)) return;
     try {
-        ifstream in;
+        igzstream in;
         // set the failbit and badbit
         in.exceptions(ios::failbit | ios::badbit);
         in.open(filename.c_str());
@@ -136,7 +137,7 @@ void Checkpoint::dump(bool force) {
     }
     prev_dump_time = getRealTime();
     try {
-        ofstream out;
+        ogzstream out;
         out.exceptions(ios::failbit | ios::badbit);
         out.open(filename.c_str());
         out << CKP_HEADER << endl;
