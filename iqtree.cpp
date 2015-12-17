@@ -97,6 +97,8 @@ void IQTree::saveCheckpoint() {
             CKP_SAVE(bt);
             double bl = boot_logl[id];
             CKP_SAVE(bl);
+            double bol=boot_orig_logl[id];
+            CKP_SAVE(bol);
             int bc = boot_counts[id];
             CKP_SAVE(bc);
             checkpoint->endListElement();
@@ -254,6 +256,7 @@ void IQTree::initSettings(Params &params) {
         	boot_samples[i] = mem + i*nptn;
 
         boot_logl.resize(params.gbo_replicates, -DBL_MAX);
+        boot_orig_logl.resize(params.gbo_replicates, -DBL_MAX);
         boot_trees.resize(params.gbo_replicates, "");
         if (params.print_ufboot_trees == 2)
         	boot_trees_brlen.resize(params.gbo_replicates);
@@ -1794,14 +1797,15 @@ double IQTree::doTreeSearch() {
         searchinfo.curIter = stop_rule.getCurIt();
         // estimate logl_cutoff for bootstrap
         if (/*params->avoid_duplicated_trees &&*/ max_candidate_trees > 0 && treels_logl.size() > 1000) {
-        	int predicted_iteration = ((stop_rule.getCurIt()+params->step_iterations-1)/params->step_iterations)*params->step_iterations;
-            int num_entries = floor(max_candidate_trees * ((double) stop_rule.getCurIt() / predicted_iteration));
-            if (num_entries < treels_logl.size() * 0.9) {
-                DoubleVector logl = treels_logl;
-                nth_element(logl.begin(), logl.begin() + (treels_logl.size() - num_entries), logl.end());
-                logl_cutoff = logl[treels_logl.size() - num_entries] - 1.0;
-            } else
-                logl_cutoff = 0.0;
+//        	int predicted_iteration = ((stop_rule.getCurIt()+params->step_iterations-1)/params->step_iterations)*params->step_iterations;
+//            int num_entries = floor(max_candidate_trees * ((double) stop_rule.getCurIt() / predicted_iteration));
+//            if (num_entries < treels_logl.size() * 0.9) {
+//                DoubleVector logl = treels_logl;
+//                nth_element(logl.begin(), logl.begin() + (treels_logl.size() - num_entries), logl.end());
+//                logl_cutoff = logl[treels_logl.size() - num_entries] - 1.0;
+//            } else
+//                logl_cutoff = 0.0;
+            logl_cutoff = *min_element(boot_orig_logl.begin(), boot_orig_logl.end());
             if (verbose_mode >= VB_MED) {
                 if (stop_rule.getCurIt() % 10 == 0) {
                     cout << treels_logl.size() << " logls, logl_cutoff= " << logl_cutoff;
@@ -2648,6 +2652,7 @@ void IQTree::saveCurrentTree(double cur_logl) {
                     boot_counts[sample] = 1;
                 }
                 boot_logl[sample] = max(boot_logl[sample], rell);
+                boot_orig_logl[sample] = cur_logl;
                 boot_trees[sample] = tree_str;
                 if (params->print_ufboot_trees == 2) {
                 	boot_trees_brlen[sample] = tree_str_brlen;

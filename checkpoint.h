@@ -282,7 +282,7 @@ private:
     string struct_name;
 
     /** current list element ID */
-    int list_element;
+    vector<int> list_element;
 
 };
 

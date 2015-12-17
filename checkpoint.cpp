@@ -57,7 +57,6 @@ Checkpoint::Checkpoint() {
     prev_dump_time = 0;
     dump_interval = 30; // dumping at most once per 30 seconds
     struct_name = "";
-    list_element = -1;
 }
 
 
@@ -217,7 +216,7 @@ void Checkpoint::putBool(string key, bool value) {
  *-------------------------------------------------------------*/
 void Checkpoint::startStruct(string name) {
     struct_name = struct_name + name + '.';
-    list_element = -1;
+    list_element.push_back(-1);
 }
 
 /**
@@ -229,12 +228,14 @@ void Checkpoint::endStruct() {
         struct_name = "";
     else
         struct_name.erase(pos+1);
-    list_element = -1;
+    assert(!list_element.empty());
+    list_element.pop_back();
 }
 
 void Checkpoint::startListElement() {
-    list_element++;    
-    struct_name += convertIntToString(list_element) + ".";
+    assert(!list_element.empty());    
+    list_element.back()++;    
+    struct_name += convertIntToString(list_element.back()) + ".";
 }
 
 void Checkpoint::endListElement() {

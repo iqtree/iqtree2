@@ -675,6 +675,9 @@ public:
     /** corresponding RELL log-likelihood */
     DoubleVector boot_logl;
 
+    /** corresponding log-likelihood on original alignment */
+    DoubleVector boot_orig_logl;
+
     /** Set of splits occuring in bootstrap trees */
     vector<SplitGraph*> boot_splits;
 
