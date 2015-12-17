@@ -57,7 +57,7 @@ void IQTree::init() {
     testNNI = false;
     print_tree_lh = false;
     write_intermediate_trees = 0;
-    max_candidate_trees = 0;
+//    max_candidate_trees = 0;
     logl_cutoff = 0.0;
     len_scale = 10000;
 //    save_all_br_lens = false;
@@ -83,7 +83,7 @@ void IQTree::saveCheckpoint() {
     checkpoint->startStruct("IQTree");
     
     if (params->gbo_replicates > 0) {
-        CKP_SAVE(max_candidate_trees);
+//        CKP_SAVE(max_candidate_trees);
         CKP_SAVE(logl_cutoff);
         // save boot_samples and boot_trees
         int id = 0;
@@ -121,7 +121,7 @@ void IQTree::restoreCheckpoint() {
     checkpoint->startStruct("IQTree");
 
     if (params->gbo_replicates > 0) {
-        CKP_RESTORE(max_candidate_trees);
+//        CKP_RESTORE(max_candidate_trees);
         CKP_RESTORE(logl_cutoff);
         // save boot_samples and boot_trees
         int id = 0;
@@ -247,9 +247,9 @@ void IQTree::initSettings(Params &params) {
 //    if (params.gbo_replicates > 0 && params.do_compression)
 //        save_all_br_lens = true;
     print_tree_lh = params.print_tree_lh;
-    max_candidate_trees = params.max_candidate_trees;
-    if (max_candidate_trees == 0)
-        max_candidate_trees = aln->getNSeq() * params.step_iterations;
+//    max_candidate_trees = params.max_candidate_trees;
+//    if (max_candidate_trees == 0)
+//        max_candidate_trees = aln->getNSeq() * params.step_iterations;
     setRootNode(params.root);
 
     string bootaln_name = params.out_prefix;
@@ -314,7 +314,7 @@ void IQTree::initSettings(Params &params) {
         	cout << "Bootstrap alignments printed to " << bootaln_name << endl;
         }
 
-        cout << "Max candidate trees (tau): " << max_candidate_trees << endl;
+//        cout << "Max candidate trees (tau): " << max_candidate_trees << endl;
         
         // restore randstream
         finish_random();
@@ -1822,7 +1822,7 @@ double IQTree::doTreeSearch() {
         stop_rule.setCurIt(stop_rule.getCurIt() + 1);
         searchinfo.curIter = stop_rule.getCurIt();
         // estimate logl_cutoff for bootstrap
-        if (/*params->avoid_duplicated_trees &&*/ max_candidate_trees > 0 && treels_logl.size() > 1000) {
+        if (/*params->avoid_duplicated_trees && max_candidate_trees > 0 &&*/ stop_rule.getCurIt() > 2 /* && treels_logl.size() > 1000*/) {
 //        	int predicted_iteration = ((stop_rule.getCurIt()+params->step_iterations-1)/params->step_iterations)*params->step_iterations;
 //            int num_entries = floor(max_candidate_trees * ((double) stop_rule.getCurIt() / predicted_iteration));
 //            if (num_entries < treels_logl.size() * 0.9) {
@@ -1832,12 +1832,12 @@ double IQTree::doTreeSearch() {
 //            } else
 //                logl_cutoff = 0.0;
             logl_cutoff = *min_element(boot_orig_logl.begin(), boot_orig_logl.end());
-            if (verbose_mode >= VB_MED) {
-                if (stop_rule.getCurIt() % 10 == 0) {
-                    cout << treels_logl.size() << " logls, logl_cutoff= " << logl_cutoff;
-                        cout << endl;
-                }
-            }
+//            if (verbose_mode >= VB_MED) {
+//                if (stop_rule.getCurIt() % 10 == 0) {
+//                    cout << treels_logl.size() << " logls, logl_cutoff= " << logl_cutoff;
+//                        cout << endl;
+//                }
+//            }
         }
 
         if (estimate_nni_cutoff && nni_info.size() >= 500) {
@@ -1980,20 +1980,21 @@ double IQTree::doTreeSearch() {
             summarizeBootstrap(*sg);
             sg->setCheckpoint(checkpoint);
             boot_splits.push_back(sg);
-            if (params->max_candidate_trees == 0)
-                max_candidate_trees = treels_logl.size() * (stop_rule.getCurIt() + (params->step_iterations / 2)) /
-                                                           stop_rule.getCurIt();
-			cout << "NOTE: " << treels_logl.size() << " bootstrap candidate trees evaluated (logl-cutoff: " << logl_cutoff << ")" << endl;
+//            if (params->max_candidate_trees == 0)
+//                max_candidate_trees = treels_logl.size() * (stop_rule.getCurIt() + (params->step_iterations / 2)) /
+//                                                           stop_rule.getCurIt();
+//			cout << "NOTE: " << treels_logl.size() << " bootstrap candidate trees evaluated (logl-cutoff: " << logl_cutoff << ")" << endl;
+			cout << "Log-likelihood cutoff on original alignment: " << logl_cutoff << endl;
 
 			// check convergence every full step
 			if (stop_rule.getCurIt() % params->step_iterations == 0) {
 	        	cur_correlation = computeBootstrapCorrelation();
 	            cout << "NOTE: Bootstrap correlation coefficient of split occurrence frequencies: " << cur_correlation << endl;
 	            if (!stop_rule.meetStopCondition(stop_rule.getCurIt(), cur_correlation)) {
-	                if (params->max_candidate_trees == 0) {
-	                    max_candidate_trees = treels_logl.size() * (stop_rule.getCurIt() + params->step_iterations) /
-                                                                   stop_rule.getCurIt();
-	                }
+//	                if (params->max_candidate_trees == 0) {
+//	                    max_candidate_trees = treels_logl.size() * (stop_rule.getCurIt() + params->step_iterations) /
+//                                                                   stop_rule.getCurIt();
+//	                }
 //	                cout << "INFO: UFBoot does not converge, continue " << params->step_iterations << " more iterations" << endl;
 	            }
 	        }
@@ -2303,19 +2304,19 @@ void IQTree::pllInitUFBootData(){
         if(params->online_bootstrap && params->gbo_replicates > 0){
         	if(!pll2iqtree_pattern_index) pllBuildIQTreePatternIndex();
 
-            pllUFBootDataPtr->treels = pllHashInit(max_candidate_trees);
-            pllUFBootDataPtr->treels_size = max_candidate_trees; // track size of treels_logl, treels_newick, treels_ptnlh
+//            pllUFBootDataPtr->treels = pllHashInit(max_candidate_trees);
+//            pllUFBootDataPtr->treels_size = max_candidate_trees; // track size of treels_logl, treels_newick, treels_ptnlh
 
-            pllUFBootDataPtr->treels_logl =
-                (double *) malloc(max_candidate_trees * (sizeof(double)));
-            if(!pllUFBootDataPtr->treels_logl) outError("Not enough dynamic memory!");
+//            pllUFBootDataPtr->treels_logl =
+//                (double *) malloc(max_candidate_trees * (sizeof(double)));
+//            if(!pllUFBootDataPtr->treels_logl) outError("Not enough dynamic memory!");
 
 
 
-            pllUFBootDataPtr->treels_ptnlh =
-                (double **) malloc(max_candidate_trees * (sizeof(double *)));
-            if(!pllUFBootDataPtr->treels_ptnlh) outError("Not enough dynamic memory!");
-            memset(pllUFBootDataPtr->treels_ptnlh, 0, max_candidate_trees * (sizeof(double *)));
+//            pllUFBootDataPtr->treels_ptnlh =
+//                (double **) malloc(max_candidate_trees * (sizeof(double *)));
+//            if(!pllUFBootDataPtr->treels_ptnlh) outError("Not enough dynamic memory!");
+//            memset(pllUFBootDataPtr->treels_ptnlh, 0, max_candidate_trees * (sizeof(double *)));
 
             // aln->createBootstrapAlignment() must be called before this fragment
             pllUFBootDataPtr->boot_samples =
@@ -2347,7 +2348,7 @@ void IQTree::pllInitUFBootData(){
             pllUFBootDataPtr->duplication_counter = 0;
         }
     }
-    pllUFBootDataPtr->max_candidate_trees = max_candidate_trees;
+//    pllUFBootDataPtr->max_candidate_trees = max_candidate_trees;
     pllUFBootDataPtr->save_all_trees = save_all_trees;
     pllUFBootDataPtr->logl_cutoff = logl_cutoff;
     pllUFBootDataPtr->n_patterns = pllAlignment->sequenceLength;
@@ -2609,9 +2610,10 @@ void IQTree::estimateNNICutoff(Params* params) {
 
 void IQTree::saveCurrentTree(double cur_logl) {
 
-    if (logl_cutoff != 0.0 && cur_logl <= logl_cutoff + 1e-4)
+    if (logl_cutoff != 0.0 && cur_logl < logl_cutoff - 1.0)
         return;
-    treels_logl.push_back(cur_logl);
+//    treels_logl.push_back(cur_logl);
+//    num_trees_for_rell++;
 
     if (write_intermediate_trees)
         printTree(out_treels, WT_NEWLINE | WT_BR_LEN);
@@ -2902,9 +2904,9 @@ void IQTree::pllConvertUFBootData2IQTree(){
     // duplication_counter
     duplication_counter = pllUFBootDataPtr->duplication_counter;
     //treels_logl
-    treels_logl.clear();
-    for(int i = 0; i < pllUFBootDataPtr->candidate_trees_count; i++)
-        treels_logl.push_back(pllUFBootDataPtr->treels_logl[i]);
+//    treels_logl.clear();
+//    for(int i = 0; i < pllUFBootDataPtr->candidate_trees_count; i++)
+//        treels_logl.push_back(pllUFBootDataPtr->treels_logl[i]);
 
     //boot_trees
     boot_trees.clear();

@@ -648,14 +648,14 @@ public:
     /** pattern log-likelihood vector for each treels */
 //    vector<double* > treels_ptnlh;
 
-    /** tree log-likelihood for each treels */
-    DoubleVector treels_logl;
+    /** OBSOLETE: tree log-likelihood for each treels */
+//    DoubleVector treels_logl;
 
     /** NEWICK string for each treels */
 //    StrVector treels_newick;
 
-    /** maximum number of distinct candidate trees (tau parameter) */
-    int max_candidate_trees;
+    /** OBSOLETE: maximum number of distinct candidate trees (tau parameter) */
+//    int max_candidate_trees;
 
     /** log-likelihood threshold (l_min) */
     double logl_cutoff;
