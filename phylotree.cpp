@@ -5045,14 +5045,20 @@ int PhyloTree::testAllBranches(int threshold, double best_score, double *pattern
         double lbp_support, aLRT_support, aBayes_support;
         double SH_aLRT_support = (testOneBranch(best_score, pattern_lh, reps, lbp_reps,
             node, dad, lbp_support, aLRT_support, aBayes_support) * 100);
+        ostringstream ss;
+        ss.precision(3);
+        ss << node->name;
+        if (!node->name.empty())
+            ss << "/";
         if (reps)
-            node->name = convertDoubleToString(SH_aLRT_support);
+            ss << SH_aLRT_support;
         if (lbp_reps)
-            node->name += "/" + convertDoubleToString(lbp_support * 100);
+            ss << "/" << lbp_support * 100;
         if (aLRT_test)
-            node->name += "/" + convertDoubleToString(aLRT_support);
+            ss << "/" << aLRT_support;
         if (aBayes_test)
-            node->name += "/" + convertDoubleToString(aBayes_support);
+            ss << "/" << aBayes_support;
+        node->name = ss.str();
         if (SH_aLRT_support < threshold)
             num_low_support = 1;
         if (((PhyloNeighbor*) node->findNeighbor(dad))->partial_pars) {
