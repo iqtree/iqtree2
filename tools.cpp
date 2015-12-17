@@ -900,7 +900,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     // initialize random seed based on current time
     gettimeofday(&tv, &tz);
     //params.ran_seed = (unsigned) (tv.tv_sec+tv.tv_usec);
-    params.ran_seed = (unsigned) (tv.tv_usec);
+    params.ran_seed = (tv.tv_usec);
 
     for (cnt = 1; cnt < argc; cnt++) {
         try {
@@ -1244,7 +1244,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -seed <random_seed>";
-				params.ran_seed = (unsigned) convert_int(argv[cnt]);
+				params.ran_seed = abs(convert_int(argv[cnt]));
 				continue;
 			}
 			if (strcmp(argv[cnt], "-pdgain") == 0) {

@@ -950,7 +950,7 @@ public:
     /**
             random number seed
      */
-    unsigned int ran_seed;
+    int ran_seed;
 
     /**
             run time of the algorithm
@@ -2082,6 +2082,8 @@ double computePValueChiSquare(double x, int df);
 /*--------------------------------------------------------------*/
 /* random number generator */
 /*--------------------------------------------------------------*/
+
+extern int *randstream;
 
 /**
  * initialize the random number generator

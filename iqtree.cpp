@@ -88,11 +88,11 @@ void IQTree::saveCheckpoint() {
         CKP_SAVE(logl_cutoff);
         // save boot_samples and boot_trees
         int id = 0;
-        size_t orig_nptn = getAlnNPattern();
+//        size_t orig_nptn = getAlnNPattern();
         for (vector<BootValType* >::iterator it = boot_samples.begin(); it != boot_samples.end(); it++, id++) {
             checkpoint->startListElement();
-            BootValType* bs = (*it);
-            CKP_ARRAY_SAVE(orig_nptn, bs);
+//            BootValType* bs = (*it);
+//            CKP_ARRAY_SAVE(orig_nptn, bs);
             string &bt = boot_trees[id];
             CKP_SAVE(bt);
             double bl = boot_logl[id];
@@ -234,7 +234,12 @@ void IQTree::initSettings(Params &params) {
     size_t i;
 
     if (params.online_bootstrap && params.gbo_replicates > 0) {
-        cout << "Generating " << params.gbo_replicates << " samples for ultrafast bootstrap..." << endl;
+        // 2015-12-17: initialize random stream for creating bootstrap samples
+        // mainly so that checkpointing does not need to save bootstrap samples
+        int *saved_randstream = randstream;
+        init_random(params.ran_seed);
+        
+        cout << "Generating " << params.gbo_replicates << " samples for ultrafast bootstrap (seed: " << params.ran_seed << ")..." << endl;
         // allocate memory for boot_samples
         boot_samples.resize(params.gbo_replicates);
         size_t orig_nptn = getAlnNPattern();
@@ -281,6 +286,10 @@ void IQTree::initSettings(Params &params) {
         }
 
         cout << "Max candidate trees (tau): " << max_candidate_trees << endl;
+        
+        // restore randstream
+        finish_random();
+        randstream = saved_randstream;
     }
 
     if (params.root_state) {

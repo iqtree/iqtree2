@@ -2284,6 +2284,7 @@ int main(int argc, char *argv[])
 		cout << " " << argv[i];
 	cout << endl;
 
+    checkpoint->get("iqtree.seed", Params::getInstance().ran_seed);
 	cout << "Seed:    " << Params::getInstance().ran_seed <<  " ";
 	init_random(Params::getInstance().ran_seed);
 
@@ -2359,7 +2360,7 @@ int main(int argc, char *argv[])
 	for (i = 1; i < argc; i++)
         command += string(" ") + argv[i];
     CKP_SAVE(command);
-    unsigned int seed = Params::getInstance().ran_seed;
+    int seed = Params::getInstance().ran_seed;
     CKP_SAVE(seed);
     CKP_SAVE(start_time);
     stringstream sversion;
