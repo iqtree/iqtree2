@@ -83,16 +83,12 @@ void IQTree::saveCheckpoint() {
     checkpoint->startStruct("IQTree");
     
     if (params->gbo_replicates > 0) {
-//        CKP_VECTOR_SAVE(treels_logl);
         CKP_SAVE(max_candidate_trees);
         CKP_SAVE(logl_cutoff);
         // save boot_samples and boot_trees
         int id = 0;
-//        size_t orig_nptn = getAlnNPattern();
         for (vector<BootValType* >::iterator it = boot_samples.begin(); it != boot_samples.end(); it++, id++) {
             checkpoint->startListElement();
-//            BootValType* bs = (*it);
-//            CKP_ARRAY_SAVE(orig_nptn, bs);
             string &bt = boot_trees[id];
             CKP_SAVE(bt);
             double bl = boot_logl[id];
@@ -107,13 +103,10 @@ void IQTree::saveCheckpoint() {
         checkpoint->startStruct("ss");
         for (vector<SplitGraph*>::iterator sit = boot_splits.begin(); sit != boot_splits.end(); sit++) {
             checkpoint->startListElement();
-//            (*sit)->setCheckpoint(checkpoint);
             (*sit)->saveCheckpoint();
             checkpoint->endListElement();
         }
         checkpoint->endStruct();
-//        CKP_VECTOR_SAVE(boot_counts);
-//        CKP_VECTOR_SAVE(boot_logl);
         CKP_SAVE(boot_consense_logl);
     }
     
@@ -126,6 +119,39 @@ void IQTree::restoreCheckpoint() {
     stop_rule.restoreCheckpoint();
     candidateTrees.restoreCheckpoint();
     checkpoint->startStruct("IQTree");
+
+    if (params->gbo_replicates > 0) {
+        CKP_RESTORE(max_candidate_trees);
+        CKP_RESTORE(logl_cutoff);
+        // save boot_samples and boot_trees
+        int id = 0;
+        for (vector<BootValType* >::iterator it = boot_samples.begin(); it != boot_samples.end(); it++, id++) {
+            checkpoint->startListElement();
+            string bt;
+            CKP_RESTORE(bt);
+            boot_trees[id] = bt;
+            double bl;
+            CKP_RESTORE(bl);
+            boot_logl[id] = bl;
+            double bol;
+            CKP_RESTORE(bol);
+            boot_orig_logl[id] = bol;
+            int bc;
+            CKP_RESTORE(bc);
+            boot_counts[id] = bc;
+            checkpoint->endListElement();
+        }
+        // boot_splits
+        checkpoint->startStruct("ss");
+        for (vector<SplitGraph*>::iterator sit = boot_splits.begin(); sit != boot_splits.end(); sit++) {
+            checkpoint->startListElement();
+            (*sit)->restoreCheckpoint();
+            checkpoint->endListElement();
+        }
+        checkpoint->endStruct();
+        CKP_RESTORE(boot_consense_logl);
+    }
+
     checkpoint->endStruct();
 }
 
