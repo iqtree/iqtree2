@@ -185,7 +185,7 @@ void initsvg(FILE *ofp)
 void plotlmpointsvg(FILE *ofp, double w1, double w2)
 {
 	/* plot dots into triangle 1 (top) */
-	fprintf(ofp,"	<circle xxx cx=\"%.10f\" cy=\"%.10f\" r=\"2\" />\n", (0.5*w1 + w2)*1000, -(w1*866.0254038));
+	fprintf(ofp,"	<circle cx=\"%.10f\" cy=\"%.10f\" r=\"2\" />\n", (0.5*w1 + w2)*1000, -(w1*866.0254038));
 	// fprintf(epsofp,"%.10f tl %.10f tl dot\n", 0.5*w1 + w2, w1*0.8660254038);
 } /* plotlmpointsvg */
 
