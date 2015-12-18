@@ -1066,6 +1066,10 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 		cout << "  Site log-likelihoods:          " << params.out_prefix << ".sitelh" << endl;
 		}
 	}
+    	if (params.num_quartets) {
+		cout << "  Likelihood mapping plot (SVG): " << params.out_prefix << ".svg" << endl;
+		cout << "  Likelihood mapping plot (EPS): " << params.out_prefix << ".eps" << endl;
+	}
 	cout << "  Screen log file:               " << params.out_prefix << ".log" << endl;
 	/*	if (original_model == "WHTEST")
 	 cout <<"  WH-TEST report:           " << params.out_prefix << ".whtest" << endl;*/
