@@ -77,12 +77,15 @@ void Checkpoint::load() {
         // set the failbit and badbit
         in.exceptions(ios::failbit | ios::badbit);
         in.open(filename.c_str());
-        string line;
-        getline(in, line);
-        if (line != CKP_HEADER)
-        	throw ("Invalid checkpoint file " + filename);
         // remove the failbit
         in.exceptions(ios::badbit);
+        string line;
+        if (!getline(in, line)) {
+            in.close();
+            return;
+        }
+        if (line != CKP_HEADER)
+        	throw ("Invalid checkpoint file " + filename);
         string struct_name;
         size_t pos;
         while (!in.eof()) {
@@ -216,7 +219,6 @@ void Checkpoint::putBool(string key, bool value) {
  *-------------------------------------------------------------*/
 void Checkpoint::startStruct(string name) {
     struct_name = struct_name + name + '.';
-    list_element.push_back(-1);
 }
 
 /**
@@ -228,20 +230,41 @@ void Checkpoint::endStruct() {
         struct_name = "";
     else
         struct_name.erase(pos+1);
+}
+
+void Checkpoint::startList(int nelem) {
+    list_element.push_back(-1);
+//    if (nelem > 0)
+//        list_element_width.push_back((int)ceil(log10(nelem)));
+//    else
+//        list_element_width.push_back(1);
+}
+
+void Checkpoint::addListElement() {
+    list_element.back()++;
+    if (list_element.back() > 0) {
+        size_t pos = struct_name.find_last_of('.', struct_name.length()-2);
+        assert(pos != string::npos);
+        struct_name.erase(pos+1);
+    }
+    stringstream ss;
+//    ss << setw(list_element_width.back()) << setfill('0') << list_element.back();
+    ss << list_element.back();
+    struct_name += ss.str() + ".";
+}
+
+void Checkpoint::endList() {
     assert(!list_element.empty());
+
+    if (list_element.back() >= 0) {
+        size_t pos = struct_name.find_last_of('.', struct_name.length()-2);
+        assert(pos != string::npos);
+        struct_name.erase(pos+1);
+    }
+
     list_element.pop_back();
-}
+//    list_element_width.pop_back();
 
-void Checkpoint::startListElement() {
-    assert(!list_element.empty());    
-    list_element.back()++;    
-    struct_name += convertIntToString(list_element.back()) + ".";
-}
-
-void Checkpoint::endListElement() {
-    size_t pos = struct_name.find_last_of('.', struct_name.length()-2);
-    assert(pos != string::npos);
-    struct_name.erase(pos+1);
 }
 
 /*-------------------------------------------------------------

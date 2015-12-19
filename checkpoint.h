@@ -106,6 +106,20 @@ public:
         return true;
     }
 
+	/**
+        @param key key name
+        @param[out] value entire string
+        @return true if key exists, false otherwise
+	 */
+    bool getString(string key, string &value) {
+        key = struct_name + key;
+        iterator it = find(key);
+        if (it == end())
+            return false;
+        value = it->second;
+        return true;
+    }
+
     /**
         get an array from checkpoint
         @param key key name
@@ -256,14 +270,20 @@ public:
     void endStruct();
 
     /**
-        start a new list element in the current scope
+        start a new list in the current scope
+        @param nelem number of elements
     */
-    void startListElement();
+    void startList(int nelem);
+    
+    /** 
+        add an element to the current list
+    */
+    void addListElement();
     
     /**
-        end the current list element
+        end the current list
     */
-    void endListElement();
+    void endList();
 
 protected:
 
@@ -283,7 +303,10 @@ private:
 
     /** current list element ID */
     vector<int> list_element;
-
+    
+    /** width to element ID for prefixing with '0' */
+//    vector<int> list_element_width;
+    
 };
 
 

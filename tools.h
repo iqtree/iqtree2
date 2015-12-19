@@ -2088,8 +2088,9 @@ extern int *randstream;
 /**
  * initialize the random number generator
  * @param seed seed for generator
+ * @param write_info true to write information, false otherwise (default)
  */
-int init_random(int seed);
+int init_random(int seed, bool write_info = false);
 
 /**
  * finalize random number generator (e.g. free memory

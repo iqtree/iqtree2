@@ -160,25 +160,51 @@ void SplitGraph::init(Params &params)
 
 
 void SplitGraph::saveCheckpoint() {
-    int ntaxa = getNTaxa();
-    checkpoint->startStruct("SplitGraph");
+    int ntax = getNTaxa();
+    checkpoint->startStruct("S");
+    CKP_SAVE(ntax);
+    int nsplits = size();
+    CKP_SAVE(nsplits);
+    checkpoint->startList(size());
     for (iterator it = begin(); it != end(); it++) {
-        checkpoint->startListElement();
+        checkpoint->addListElement();
         stringstream ss;
         ss << (*it)->getWeight();
-        for (int i = 0; i < ntaxa; i++)
+        for (int i = 0; i < ntax; i++)
             if ((*it)->containTaxon(i))
-                ss << " " << i+1;
+                ss << " " << i;
         checkpoint->put("", ss.str());
-        checkpoint->endListElement();
     }
+    checkpoint->endList();
     checkpoint->endStruct();
     CheckpointFactory::saveCheckpoint();
 }
 
 void SplitGraph::restoreCheckpoint() {
+    int ntax, nsplits;
     CheckpointFactory::restoreCheckpoint();
-    checkpoint->startStruct("SplitGraph");
+    checkpoint->startStruct("S");
+    CKP_RESTORE(ntax);
+    CKP_RESTORE(nsplits);
+    checkpoint->startList(INT_MAX);
+    for (int split = 0; split < nsplits; split++) {
+        checkpoint->addListElement();
+        string str;
+        assert(checkpoint->getString("", str));
+        stringstream ss(str);
+        double weight;
+        ss >> weight;
+        Split *sp = new Split(ntax, weight);
+        for (int i = 0; i < ntax; i++) {
+            int tax;
+            if (ss >> tax) {
+                sp->addTaxon(tax);
+            } else
+                break;
+        }
+        push_back(sp);
+    }
+    checkpoint->endList();
     checkpoint->endStruct();
 }
 

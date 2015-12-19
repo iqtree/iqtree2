@@ -25,17 +25,14 @@ CandidateSet::CandidateSet() : CheckpointFactory() {
 void CandidateSet::saveCheckpoint() {
     checkpoint->startStruct("CandidateSet");
 	int ntrees = min(params->popSize, (int)size());
+    checkpoint->startList(params->popSize);
     for (reverse_iterator it = rbegin(); it != rend() && ntrees > 0; it++, ntrees--) {
-        checkpoint->startListElement();
+        checkpoint->addListElement();
         double score = it->second.score;
-//        string tree = it->second.tree;
-//        bool localOpt = it->second.localOpt;
-
         CKP_SAVE(score);
         checkpoint->put("tree", it->second.tree);
-//        CKP_SAVE(localOpt);
-        checkpoint->endListElement();
     }
+    checkpoint->endList();
     checkpoint->endStruct();
     CheckpointFactory::saveCheckpoint();
 }
@@ -44,20 +41,18 @@ void CandidateSet::restoreCheckpoint() {
     CheckpointFactory::restoreCheckpoint();
     checkpoint->startStruct("CandidateSet");
     double score;
-//    bool localOpt;
     string tree;
-    for (;;) {
-        checkpoint->startListElement();
+    checkpoint->startList(params->popSize);
+    for (int i = 0; i < params->popSize; i++) {
+        checkpoint->addListElement();
         if (!CKP_RESTORE(score)) {
-            checkpoint->endListElement();
             break;
         }
-//        CKP_RESTORE(localOpt);
         CKP_RESTORE(tree);
         update(tree, score);
-        checkpoint->endListElement();
         
     }
+    checkpoint->endList();
     checkpoint->endStruct();
 }
 

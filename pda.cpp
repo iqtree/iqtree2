@@ -2286,7 +2286,7 @@ int main(int argc, char *argv[])
 
     checkpoint->get("iqtree.seed", Params::getInstance().ran_seed);
 	cout << "Seed:    " << Params::getInstance().ran_seed <<  " ";
-	init_random(Params::getInstance().ran_seed);
+	init_random(Params::getInstance().ran_seed, true);
 
 	time_t start_time;
 	time(&start_time);
