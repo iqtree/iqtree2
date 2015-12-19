@@ -161,7 +161,7 @@ void SplitGraph::init(Params &params)
 
 void SplitGraph::saveCheckpoint() {
     int ntax = getNTaxa();
-    checkpoint->startStruct("S");
+//    checkpoint->startStruct("S");
     CKP_SAVE(ntax);
     int nsplits = size();
     CKP_SAVE(nsplits);
@@ -176,14 +176,14 @@ void SplitGraph::saveCheckpoint() {
         checkpoint->put("", ss.str());
     }
     checkpoint->endList();
-    checkpoint->endStruct();
+//    checkpoint->endStruct();
     CheckpointFactory::saveCheckpoint();
 }
 
 void SplitGraph::restoreCheckpoint() {
     int ntax, nsplits;
     CheckpointFactory::restoreCheckpoint();
-    checkpoint->startStruct("S");
+//    checkpoint->startStruct("S");
     CKP_RESTORE(ntax);
     CKP_RESTORE(nsplits);
     checkpoint->startList(INT_MAX);
@@ -205,7 +205,7 @@ void SplitGraph::restoreCheckpoint() {
         push_back(sp);
     }
     checkpoint->endList();
-    checkpoint->endStruct();
+//    checkpoint->endStruct();
 }
 
 int SplitGraph::getNTrivialSplits() {
@@ -750,4 +750,17 @@ int SplitGraph::findLeafName(string &name) {
 		if (taxa->GetTaxonLabel(i) == name)
 			return i;
 	return -1;
+}
+
+int SplitGraph::removeTrivialSplits() {
+    int removed = 0;
+	for (iterator itg = begin(); itg != end(); )  {
+		if ((*itg)->trivial() >= 0) {
+			removed++;
+			delete (*itg);
+			(*itg) = back();
+			pop_back(); 
+		} else itg++;
+	}
+    return removed;
 }

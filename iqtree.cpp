@@ -91,14 +91,18 @@ void IQTree::saveCheckpoint() {
         // TODO: save boot_trees_brlen
         for (vector<BootValType* >::iterator it = boot_samples.begin(); it != boot_samples.end(); it++, id++) {
             checkpoint->addListElement();
-            string &bt = boot_trees[id];
-            CKP_SAVE(bt);
-            double bl = boot_logl[id];
-            CKP_SAVE(bl);
-            double bol=boot_orig_logl[id];
-            CKP_SAVE(bol);
-            int bc = boot_counts[id];
-            CKP_SAVE(bc);
+            stringstream ss;
+            ss.precision(10);
+            ss << boot_counts[id] << " " << boot_logl[id] << " " << boot_orig_logl[id] << " " << boot_trees[id];
+            checkpoint->put("", ss.str());
+//            string &bt = boot_trees[id];
+//            CKP_SAVE(bt);
+//            double bl = boot_logl[id];
+//            CKP_SAVE(bl);
+//            double bol=boot_orig_logl[id];
+//            CKP_SAVE(bol);
+//            int bc = boot_counts[id];
+//            CKP_SAVE(bc);
         }
         checkpoint->endList();
         CKP_SAVE(boot_consense_logl);
@@ -107,14 +111,12 @@ void IQTree::saveCheckpoint() {
         checkpoint->endStruct();
 
         // boot_splits
-        checkpoint->startStruct("UFBootSplit");
-        checkpoint->startList(boot_splits_size);
-        for (vector<SplitGraph*>::iterator sit = boot_splits.begin(); sit != boot_splits.end(); sit++) {
-            checkpoint->addListElement();
+        id = 0;
+        for (vector<SplitGraph*>::iterator sit = boot_splits.begin(); sit != boot_splits.end(); sit++, id++) {
+            checkpoint->startStruct("UFBootSplit" + convertIntToString(id));
             (*sit)->saveCheckpoint();
+            checkpoint->endStruct();
         }
-        checkpoint->endList();
-        checkpoint->endStruct();
     }
     
     PhyloTree::saveCheckpoint();
@@ -138,18 +140,22 @@ void IQTree::restoreCheckpoint() {
         boot_counts.resize(params->gbo_replicates);
         for (id = 0; id < params->gbo_replicates; id++) {
             checkpoint->addListElement();
-            string bt;
-            CKP_RESTORE(bt);
-            boot_trees[id] = bt;
-            double bl;
-            CKP_RESTORE(bl);
-            boot_logl[id] = bl;
-            double bol;
-            CKP_RESTORE(bol);
-            boot_orig_logl[id] = bol;
-            int bc;
-            CKP_RESTORE(bc);
-            boot_counts[id] = bc;
+            string str;
+            checkpoint->getString("", str);
+            stringstream ss(str);
+            ss >> boot_counts[id] >> boot_logl[id] >> boot_orig_logl[id] >> boot_trees[id];
+//            string bt;
+//            CKP_RESTORE(bt);
+//            boot_trees[id] = bt;
+//            double bl;
+//            CKP_RESTORE(bl);
+//            boot_logl[id] = bl;
+//            double bol;
+//            CKP_RESTORE(bol);
+//            boot_orig_logl[id] = bol;
+//            int bc;
+//            CKP_RESTORE(bc);
+//            boot_counts[id] = bc;
         }
         checkpoint->endList();
         CKP_RESTORE(boot_consense_logl);
@@ -158,17 +164,14 @@ void IQTree::restoreCheckpoint() {
         checkpoint->endStruct();
 
         // boot_splits
-        checkpoint->startStruct("UFBootSplit");
-        checkpoint->startList(boot_splits_size);
-        for (int i = 0; i < boot_splits_size; i++) {
-            checkpoint->addListElement();
+        for (id = 0; id < boot_splits_size; id++) {
+            checkpoint->startStruct("UFBootSplit" + convertIntToString(id));
             SplitGraph *sg = new SplitGraph;
             sg->setCheckpoint(checkpoint);
             sg->restoreCheckpoint();
             boot_splits.push_back(sg);
+            checkpoint->endStruct();
         }
-        checkpoint->endList();
-        checkpoint->endStruct();
     }
 
 
@@ -2000,6 +2003,7 @@ double IQTree::doTreeSearch() {
         	// compute split support every half step
             SplitGraph *sg = new SplitGraph;
             summarizeBootstrap(*sg);
+            sg->removeTrivialSplits();
             sg->setCheckpoint(checkpoint);
             boot_splits.push_back(sg);
 //            if (params->max_candidate_trees == 0)

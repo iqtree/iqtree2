@@ -162,7 +162,7 @@ void Checkpoint::dump(bool force) {
     }
 }
 
-bool Checkpoint::containsKey(string key) {
+bool Checkpoint::hasKey(string key) {
 	return (find(key) != end());
 }
 

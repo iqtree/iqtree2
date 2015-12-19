@@ -378,6 +378,11 @@ public:
 	*/
 	void calcDistance(matrix(double) &dist, vector<int> &taxa_order);
 
+	/**
+	 * remove all trivial splits
+	 * @return number of trivial splits removed
+	*/
+	int removeTrivialSplits();
 
 protected:
 

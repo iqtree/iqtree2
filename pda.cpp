@@ -2191,7 +2191,7 @@ int main(int argc, char *argv[])
     
     if (!Params::getInstance().ignore_checkpoint) {
         checkpoint->load();
-        if (checkpoint->containsKey("finished")) {
+        if (checkpoint->hasKey("finished")) {
             if (checkpoint->getBool("finished")) {
                 if (Params::getInstance().force_unfinished) {
                     cout << "NOTE: Continue analysis although a previous run already finished" << endl;

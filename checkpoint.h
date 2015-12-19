@@ -84,7 +84,7 @@ public:
 	 * @return true if checkpoint contains the key
 	 * @param key key to search for
 	 */
-	bool containsKey(string key);
+	bool hasKey(string key);
 
     /*-------------------------------------------------------------
      * series of get function to get value of a key
@@ -97,7 +97,10 @@ public:
 	 */
 	template<class T>
     bool get(string key, T& value) {
-        key = struct_name + key;
+        if (key.empty())
+            key = struct_name.substr(0, struct_name.length()-1);
+        else
+            key = struct_name + key;
         iterator it = find(key);
         if (it == end())
             return false;
@@ -112,7 +115,10 @@ public:
         @return true if key exists, false otherwise
 	 */
     bool getString(string key, string &value) {
-        key = struct_name + key;
+        if (key.empty())
+            key = struct_name.substr(0, struct_name.length()-1);
+        else
+            key = struct_name + key;
         iterator it = find(key);
         if (it == end())
             return false;
@@ -128,7 +134,10 @@ public:
     */
 	template<class T>
     bool getArray(string key, int maxnum, T* value) {
-        key = struct_name + key;
+        if (key.empty())
+            key = struct_name.substr(0, struct_name.length()-1);
+        else
+            key = struct_name + key;
         iterator it = find(key);
         if (it == end())
             return false;
@@ -152,7 +161,10 @@ public:
     */
 	template<class T>
     bool getVector(string key, vector<T> &value) {
-        key = struct_name + key;
+        if (key.empty())
+            key = struct_name.substr(0, struct_name.length()-1);
+        else
+            key = struct_name + key;
         iterator it = find(key);
         if (it == end())
             return false;
@@ -203,7 +215,10 @@ public:
     */
 	template<class T>
 	void put(string key, T value) {
-        key = struct_name + key;
+        if (key.empty())
+            key = struct_name.substr(0, struct_name.length()-1);
+        else
+            key = struct_name + key;
         CkpStream ss;
         if (typeid(T) == typeid(double))
             ss.precision(10);
@@ -225,7 +240,10 @@ public:
     */
 	template<class T>
 	void putArray(string key, int num, T* value) {
-        key = struct_name + key;
+        if (key.empty())
+            key = struct_name.substr(0, struct_name.length()-1);
+        else
+            key = struct_name + key;
         CkpStream ss;
         if (typeid(T) == typeid(double))
             ss.precision(10);
@@ -244,7 +262,10 @@ public:
     */
 	template<class T>
 	void putVector(string key, vector<T> &value) {
-        key = struct_name + key;
+        if (key.empty())
+            key = struct_name.substr(0, struct_name.length()-1);
+        else
+            key = struct_name + key;
         CkpStream ss;
         if (typeid(T) == typeid(double))
             ss.precision(10);
