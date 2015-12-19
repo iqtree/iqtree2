@@ -10,47 +10,6 @@
 #include "timeutil.h"
 #include "gzstream.h"
 
-/*
- * The following parameters have been saved for checkpoint in IQPNNI
- *
-Number iterations: 200
-Maximum number iterations: 2000
-Current number iterations: 139
-Probability of deleting a sequence: 0.5
-Number representatives: 4
-Stopping rule (0: YES, 1: YES_MIN_ITER, 2: YES_MAX_ITER, 3: NO): 3
-Type of data (0:NUCLEOTIDE, 1:AMINO_ACID): 0
-Substitution model (0:HKY85, 1: TN93, 2:GTR, 3:WAG, 4:JTT, 5:VT, 6:MtREV24, 7:Blosum62, 8:Dayhoff, 9:rtREV, 10: User-defined): 0
-Frequency of Base A: 0.248672
-Frequency of Base C: 0.261687
-Frequency of Base G: 0.250996
-Frequency of Base T: 0.238645
-Type of parameters (0:ESTIMATE,  1:USER_DEFINED, 2: EQUAL): 0
-Transition/transversion ratito: 0.766912
-Type of parameters (0:ESTIMATE,  1:USER_DEFINED): 0
-Pyridimine/purine ratito: 1
-Type of parameters (0:ESTIMATE,  1:USER_DEFINED): 0
-Transition rate from A to G: -1
-Transition rate from C to T: -1
-Transversion rate from A to C: -1
-Transversion rate from A to T: -1
-Transversion rate from C to G: -1
-Transversion rate from G to T: -1
-Type of parameters (0:ESTIMATE,  1:USER_DEFINED): 0
-Type of rate heterogeneity (0:UNIFORM, 1:SITE_SPECIFIC, 2:GAMMA): 0
-Number rates: 1
-Gamma distribution parameter alpha: 1
-Type of parameters (0:ESTIMATE,  1:USER_DEFINED): 0
-Invariant type (0: NONE, 1:ESTIMATE, 2: USER_DEFINED): 0
-Proportion of invariable sites: 0
-Out group sequence: 0
-Bootstrap sample: 0
-Current bootstrap sample: 0
-Build consensus: 0
-Current best log-likelihood: -11833.35062
-Elapsed time: 23
-Finished: 0
- */
 
 Checkpoint::Checkpoint() {
 	filename = "";
@@ -88,6 +47,7 @@ void Checkpoint::load() {
         	throw ("Invalid checkpoint file " + filename);
         string struct_name;
         size_t pos;
+        int listid = 0;
         while (!in.eof()) {
         	getline(in, line);
             pos = line.find('#');
@@ -104,14 +64,20 @@ void Checkpoint::load() {
             if (line.empty()) continue;
         	pos = line.find(": ");
         	if (pos != string::npos) {
+                // mapping
                 (*this)[struct_name + line.substr(0, pos)] = line.substr(pos+2);
             } else if (line[line.length()-1] == ':') {
+                // start a new struct
                 line.erase(line.length()-1);
                 trimString(line);
                 struct_name = line + '.';
+                listid = 0;
                 continue;
             } else {
-        		throw "':' is expected between key and value";
+                // collection
+                (*this)[struct_name + convertIntToString(listid)] = line;
+                listid++;
+//        		throw "':' is expected between key and value";
             }
         }
         in.clear();
@@ -145,12 +111,15 @@ void Checkpoint::dump(bool force) {
         out << CKP_HEADER << endl;
         string struct_name;
         size_t pos;
+        int listid = 0;
         for (iterator i = begin(); i != end(); i++) {
             if ((pos = i->first.find('.')) != string::npos) {
                 if (struct_name != i->first.substr(0, pos)) {
                     struct_name = i->first.substr(0, pos);
                     out << struct_name << ":" << endl;
+                    listid = 0;
                 }
+                // check if key is a collection
                 out << "  " << i->first.substr(pos+1) << ": " << i->second << endl;
             } else
                 out << i->first << ": " << i->second << endl;
@@ -189,19 +158,6 @@ bool Checkpoint::getBool(string key) {
     return ret;
 }
 
-//double Checkpoint::getDouble(string key) {
-//    string value;
-//    if (!get(key, value)) return -DBL_MAX;
-//	return convert_double(value.c_str());
-//}
-//
-//int Checkpoint::getInt(string key) {
-//    string value;
-//    if (!get(key, value)) return -INT_MAX;
-//	return convert_int(value.c_str());
-//}
-//
-
 /*-------------------------------------------------------------
  * series of put function to put pair of (key,value)
  *-------------------------------------------------------------*/
@@ -234,10 +190,10 @@ void Checkpoint::endStruct() {
 
 void Checkpoint::startList(int nelem) {
     list_element.push_back(-1);
-//    if (nelem > 0)
-//        list_element_width.push_back((int)ceil(log10(nelem)));
-//    else
-//        list_element_width.push_back(1);
+    if (nelem > 0)
+        list_element_precision.push_back((int)ceil(log10(nelem)));
+    else
+        list_element_precision.push_back(0);
 }
 
 void Checkpoint::addListElement() {
@@ -248,8 +204,8 @@ void Checkpoint::addListElement() {
         struct_name.erase(pos+1);
     }
     stringstream ss;
-//    ss << setw(list_element_width.back()) << setfill('0') << list_element.back();
-    ss << list_element.back();
+    ss << setw(list_element_precision.back()) << setfill('0') << list_element.back();
+//    ss << list_element.back();
     struct_name += ss.str() + ".";
 }
 
@@ -263,7 +219,7 @@ void Checkpoint::endList() {
     }
 
     list_element.pop_back();
-//    list_element_width.pop_back();
+    list_element_precision.pop_back();
 
 }
 
@@ -284,8 +240,7 @@ Checkpoint *CheckpointFactory::getCheckpoint() {
 }
 
 void CheckpointFactory::saveCheckpoint() {
-    if (!checkpoint) return;
-//    checkpoint->dump();
+    // do nothing
 }
 
 void CheckpointFactory::restoreCheckpoint() {

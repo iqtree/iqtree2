@@ -186,7 +186,7 @@ void SplitGraph::restoreCheckpoint() {
 //    checkpoint->startStruct("S");
     CKP_RESTORE(ntax);
     CKP_RESTORE(nsplits);
-    checkpoint->startList(INT_MAX);
+    checkpoint->startList(nsplits);
     for (int split = 0; split < nsplits; split++) {
         checkpoint->addListElement();
         string str;

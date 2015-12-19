@@ -326,7 +326,7 @@ private:
     vector<int> list_element;
     
     /** width to element ID for prefixing with '0' */
-//    vector<int> list_element_width;
+    vector<int> list_element_precision;
     
 };
 

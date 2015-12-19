@@ -81,7 +81,7 @@ void IQTree::saveCheckpoint() {
     stop_rule.saveCheckpoint();
     candidateTrees.saveCheckpoint();
     
-    if (params->gbo_replicates > 0 && boot_samples.size() > 0) {
+    if (boot_samples.size() > 0 && !boot_trees.front().empty()) {
         checkpoint->startStruct("UFBoot");
 //        CKP_SAVE(max_candidate_trees);
         CKP_SAVE(logl_cutoff);
@@ -127,7 +127,7 @@ void IQTree::restoreCheckpoint() {
     stop_rule.restoreCheckpoint();
     candidateTrees.restoreCheckpoint();
 
-    if (params->gbo_replicates > 0 && checkpoint->find("UFBoot.logl_cutoff") != checkpoint->end()) {
+    if (params->gbo_replicates > 0 && checkpoint->hasKey("UFBoot.logl_cutoff")) {
         checkpoint->startStruct("UFBoot");
 //        CKP_RESTORE(max_candidate_trees);
         CKP_RESTORE(logl_cutoff);

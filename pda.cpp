@@ -2196,10 +2196,10 @@ int main(int argc, char *argv[])
                 if (Params::getInstance().force_unfinished) {
                     cout << "NOTE: Continue analysis although a previous run already finished" << endl;
                 } else {
-                    outWarning("Quiting now because a previous run successfully finished (" + filename + ")");
-                    outWarning("Use '-redo' if you want to redo the analysis and overwrite all output files");
+                    outError("Checkpoint (" + filename + ") indicates that a previous run successfully finished\n" +
+                        "Use `-redo` option if you really want to redo the analysis and overwrite all output files.");
                     delete checkpoint;
-                    return EXIT_SUCCESS;
+                    return EXIT_FAILURE;
                 } 
             } else {
                 append_log = true;
