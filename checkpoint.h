@@ -24,6 +24,7 @@ using namespace std;
 #define CKP_VECTOR_SAVE(arr) checkpoint->putVector(#arr, arr)
 
 #define CKP_RESTORE(var) checkpoint->get(#var, var)
+#define CKP_RESTORE_STRING(var) checkpoint->getString(#var, var)
 #define CKP_ARRAY_RESTORE(num, arr) checkpoint->getArray(#arr, num, arr)
 #define CKP_VECTOR_RESTORE(arr) checkpoint->getVector(#arr, arr)
 

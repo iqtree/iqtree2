@@ -2357,6 +2357,29 @@ int main(int argc, char *argv[])
     // checkpoint general run information
     checkpoint->startStruct("iqtree");
     string command;
+    
+    if (CKP_RESTORE_STRING(command)) {
+        // compare command between saved and current commands
+        stringstream ss(command);
+        string str;
+        bool mismatch = false;
+        for (i = 1; i < argc; i++) {
+            if (!(ss >> str)) {
+                outWarning("Number of command-line arguments differs from checkpoint");
+                mismatch = true;
+                break;
+            }
+            if (str != argv[i]) {
+                outWarning((string)"Command-line argument `" + argv[i] + "` differs from checkpoint `" + str + "`");
+                mismatch = true;
+            }
+        }
+        if (mismatch) {
+            outWarning("Command-line differs from checkpoint!");
+        }
+        command = "";
+    }
+    
 	for (i = 1; i < argc; i++)
         command += string(" ") + argv[i];
     CKP_SAVE(command);
