@@ -24,8 +24,8 @@ CandidateSet::CandidateSet() : CheckpointFactory() {
 
 void CandidateSet::saveCheckpoint() {
     checkpoint->startStruct("CandidateSet");
-	int ntrees = min(params->popSize, (int)size());
-    checkpoint->startList(params->popSize);
+	int ntrees = min(params->numNNITrees, (int)size());
+    checkpoint->startList(params->numNNITrees);
     for (reverse_iterator it = rbegin(); it != rend() && ntrees > 0; it++, ntrees--) {
         checkpoint->addListElement();
         double score = it->second.score;
@@ -42,8 +42,8 @@ void CandidateSet::restoreCheckpoint() {
     checkpoint->startStruct("CandidateSet");
     double score;
     string tree;
-    checkpoint->startList(params->popSize);
-    for (int i = 0; i < params->popSize; i++) {
+    checkpoint->startList(params->numNNITrees);
+    for (int i = 0; i < params->numNNITrees; i++) {
         checkpoint->addListElement();
         if (!CKP_RESTORE(score)) {
             break;

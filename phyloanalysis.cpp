@@ -1732,9 +1732,11 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
     iqtree.getModelFactory()->restoreCheckpoint();
     if (iqtree.getCheckpoint()->getBool("finishedModelInit")) {
         // model optimization already done: ignore this step
+        if (!iqtree.candidateTrees.empty())
+            iqtree.readTreeString(iqtree.candidateTrees.getTopTrees(1)[0]);
         iqtree.setCurScore(iqtree.computeLikelihood());
         initTree = iqtree.getTreeString();
-        cout << "CHECKPOINT: Model parameters restored, LogL: " << iqtree.getCurScore() << endl;
+        cout << "CHECKPOINT: Model parameters restored, LnL: " << iqtree.getCurScore() << endl;
     } else {
         initTree = iqtree.optimizeModelParameters(true, initEpsilon);
         iqtree.saveCheckpoint();
@@ -1750,9 +1752,10 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
         cout << getRealTime()-lkmap_time << " seconds" << endl;
     }
     bool finishedCandidateSet = iqtree.getCheckpoint()->getBool("finishedCandidateSet");
+    bool finishedInitTree = iqtree.getCheckpoint()->getBool("finishedInitTree");
 
     // now overwrite with random tree
-    if (params.start_tree == STT_RANDOM_TREE && !finishedCandidateSet) {
+    if (params.start_tree == STT_RANDOM_TREE && !finishedInitTree) {
         cout << "Generate random initial Yule-Harding tree..." << endl;
         iqtree.generateRandomTree(YULE_HARDING);
         iqtree.wrapperFixNegativeBranch(true);
@@ -1764,7 +1767,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
     /****************** NOW PERFORM MAXIMUM LIKELIHOOD TREE RECONSTRUCTION ******************/
 
     // Update best tree
-    if (!finishedCandidateSet)
+    if (!finishedInitTree)
         iqtree.candidateTrees.update(initTree, iqtree.getCurScore());
 
     if (params.min_iterations > 0) {
@@ -1788,7 +1791,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 //        params.compute_ml_dist = false;
 //    }
 
-    if (!finishedCandidateSet && ((!params.dist_file && params.compute_ml_dist) || params.leastSquareBranch)) {
+    if (!finishedInitTree && ((!params.dist_file && params.compute_ml_dist) || params.leastSquareBranch)) {
         computeMLDist(params, iqtree, dist_file, getCPUTime());
         if (!params.user_file && params.start_tree != STT_RANDOM_TREE) {
             // NEW 2015-08-10: always compute BIONJ tree into the candidate set

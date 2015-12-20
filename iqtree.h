@@ -604,6 +604,12 @@ protected:
 public:
 
     /**
+     *  Generate the initial parsimony/random trees, called by initCandidateTreeSet
+     *  @param nParTrees number of parsimony/random trees to generate
+     */
+    void createInitTrees(int nParTrees);
+
+    /**
      *  Generate the initial candidate tree set
      *  @param nParTrees number of parsimony trees to generate
      *  @param nNNITrees number of NNI locally optimal trees to generate

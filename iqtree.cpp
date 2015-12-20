@@ -573,8 +573,7 @@ void IQTree::computeInitialTree(string &dist_file, LikelihoodKernel kernel) {
     }
 }
 
-void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
-
+void IQTree::createInitTrees(int nParTrees) {
     if (nParTrees > 0) {
         if (params->start_tree == STT_RANDOM_TREE)
             cout << "Generating " << nParTrees  << " random trees... ";
@@ -690,17 +689,39 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
 
     double loglTime = getRealTime() - startTime;
     cout << loglTime << " seconds" << endl;
+}
+
+void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
+
+    bool finishedInitTree = checkpoint->getBool("finishedInitTree");
+
+    if (finishedInitTree) {
+        cout << "CHECKPOINT: " << min(nParTrees, (int)candidateTrees.size()) << " initial trees restored" << endl;
+    } else {
+        createInitTrees(nParTrees);
+        checkpoint->putBool("finishedInitTree", true);
+        saveCheckpoint();
+        checkpoint->dump();
+    }
 
     // Only select the best nNNITrees for doing NNI search
     CandidateSet initParsimonyTrees = candidateTrees.getBestCandidateTrees(nNNITrees);
     candidateTrees.clear();
 
     cout << "Optimizing top " << initParsimonyTrees.size() << " initial trees with NNI..." << endl;
-    startTime = getCPUTime();
+    double startTime = getCPUTime();
     /*********** START: Do NNI on the best parsimony trees ************************************/
-    CandidateSet::reverse_iterator rit;
-    stop_rule.setCurIt(0);
-    for (rit = initParsimonyTrees.rbegin(); rit != initParsimonyTrees.rend(); ++rit) {
+    CandidateSet::reverse_iterator rit = initParsimonyTrees.rbegin();
+
+//    stop_rule.setCurIt(0);
+    if (stop_rule.getCurIt() > 0) {
+        int step = stop_rule.getCurIt();
+        for (; rit != initParsimonyTrees.rend() && step > 0; ++rit, step--) {
+            // increase iterator accordingly
+        }
+        cout << "CHECKPOINT: " << stop_rule.getCurIt() << " initial iterations restored" << endl;
+    }
+    for (; rit != initParsimonyTrees.rend(); ++rit) {
         stop_rule.setCurIt(stop_rule.getCurIt() + 1);
     	int nniCount, nniStep;
         double initLogl, nniLogl;
@@ -740,6 +761,8 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
 				cout << "BETTER SCORE FOUND at iteration " << stop_rule.getCurIt() << ": "
 						<< getCurScore() << endl;
 		}
+        saveCheckpoint();
+        checkpoint->dump();
 //        if (params.partition_type)
 //        	((PhyloSuperTreePlen*)&iqtree)->printNNIcasesNUM();
     }
