@@ -306,6 +306,13 @@ public:
     */
     void endList();
 
+    /**
+        get a subset of checkpoint where the key string contains a given substring
+        @param[out] target checkpoint
+        @param sub_key key substring to search for
+    */
+    void getSubCheckpoint(Checkpoint *target, string sub_key);
+
 protected:
 
     /** filename to write checkpoint */

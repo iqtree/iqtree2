@@ -2212,41 +2212,58 @@ void runStandardBootstrap(Params &params, string &original_model, Alignment *ali
 	bootaln_name += ".bootaln";
 	string bootlh_name = params.out_prefix;
 	bootlh_name += ".bootlh";
-	// first empty the boottrees file
-	try {
-		ofstream tree_out;
-		tree_out.exceptions(ios::failbit | ios::badbit);
-		tree_out.open(boottrees_name.c_str());
-		tree_out.close();
-	} catch (ios::failure) {
-		outError(ERR_WRITE_OUTPUT, boottrees_name);
-	}
+    int bootSample = 0;
+    if (tree->getCheckpoint()->get("bootSample", bootSample)) {
+        cout << "CHECKPOINT: " << bootSample << " bootstrap analyses restored" << endl;
+    } else {
+        // first empty the boottrees file
+        try {
+            ofstream tree_out;
+            tree_out.exceptions(ios::failbit | ios::badbit);
+            tree_out.open(boottrees_name.c_str());
+            tree_out.close();
+        } catch (ios::failure) {
+            outError(ERR_WRITE_OUTPUT, boottrees_name);
+        }
 
-	// empty the bootaln file
-	if (params.print_bootaln)
-	try {
-		ofstream tree_out;
-		tree_out.exceptions(ios::failbit | ios::badbit);
-		tree_out.open(bootaln_name.c_str());
-		tree_out.close();
-	} catch (ios::failure) {
-		outError(ERR_WRITE_OUTPUT, bootaln_name);
-	}
-
+        // empty the bootaln file
+        if (params.print_bootaln)
+        try {
+            ofstream tree_out;
+            tree_out.exceptions(ios::failbit | ios::badbit);
+            tree_out.open(bootaln_name.c_str());
+            tree_out.close();
+        } catch (ios::failure) {
+            outError(ERR_WRITE_OUTPUT, bootaln_name);
+        }
+    }
+    
 	double start_time = getCPUTime();
 
+    
+    
 	// do bootstrap analysis
-	for (int sample = 0; sample < params.num_bootstrap_samples; sample++) {
+	for (int sample = bootSample; sample < params.num_bootstrap_samples; sample++) {
 		cout << endl << "===> START BOOTSTRAP REPLICATE NUMBER "
 				<< sample + 1 << endl << endl;
 
+        // 2015-12-17: initialize random stream for creating bootstrap samples
+        // mainly so that checkpointing does not need to save bootstrap samples
+        int *saved_randstream = randstream;
+        init_random(params.ran_seed + sample);
+
 		Alignment* bootstrap_alignment;
-		cout << "Creating bootstrap alignment..." << endl;
+		cout << "Creating bootstrap alignment (seed: " << params.ran_seed+sample << ")..." << endl;
 		if (alignment->isSuperAlignment())
 			bootstrap_alignment = new SuperAlignment;
 		else
 			bootstrap_alignment = new Alignment;
 		bootstrap_alignment->createBootstrapAlignment(alignment, NULL, params.bootstrap_spec);
+
+        // restore randstream
+        finish_random();
+        randstream = saved_randstream;
+
 		if (params.print_tree_lh) {
 			double prob;
 			bootstrap_alignment->multinomialProb(*alignment, prob);
@@ -2269,24 +2286,30 @@ void runStandardBootstrap(Params &params, string &original_model, Alignment *ali
 			boot_tree = new IQTree(bootstrap_alignment);
 		if (params.print_bootaln)
 			bootstrap_alignment->printPhylip(bootaln_name.c_str(), true);
+
+        // set checkpoint
+        boot_tree->setCheckpoint(tree->getCheckpoint());
+        boot_tree->num_precision = tree->num_precision;
+
 		runTreeReconstruction(params, original_model, *boot_tree, *model_info);
 		// read in the output tree file
-		string tree_str;
-		try {
-			ifstream tree_in;
-			tree_in.exceptions(ios::failbit | ios::badbit);
-			tree_in.open(treefile_name.c_str());
-			tree_in >> tree_str;
-			tree_in.close();
-		} catch (ios::failure) {
-			outError(ERR_READ_INPUT, treefile_name);
-		}
+        stringstream ss;
+        boot_tree->printTree(ss);
+//		try {
+//			ifstream tree_in;
+//			tree_in.exceptions(ios::failbit | ios::badbit);
+//			tree_in.open(treefile_name.c_str());
+//			tree_in >> tree_str;
+//			tree_in.close();
+//		} catch (ios::failure) {
+//			outError(ERR_READ_INPUT, treefile_name);
+//		}
 		// write the tree into .boottrees file
 		try {
 			ofstream tree_out;
 			tree_out.exceptions(ios::failbit | ios::badbit);
 			tree_out.open(boottrees_name.c_str(), ios_base::out | ios_base::app);
-			tree_out << tree_str << endl;
+			tree_out << ss.str() << endl;
 			tree_out.close();
 		} catch (ios::failure) {
 			outError(ERR_WRITE_OUTPUT, boottrees_name);
@@ -2305,7 +2328,19 @@ void runStandardBootstrap(Params &params, string &original_model, Alignment *ali
 		delete boot_tree;
 		// fix bug: bootstrap_alignment might be changed
 		delete bootstrap_alignment;
+        
+        // clear all checkpointed information
+        Checkpoint *newCheckpoint = new Checkpoint;
+        tree->getCheckpoint()->getSubCheckpoint(newCheckpoint, "iqtree");
+        tree->getCheckpoint()->clear();
+        tree->getCheckpoint()->insert(newCheckpoint->begin(), newCheckpoint->end());
+        tree->getCheckpoint()->put("bootSample", sample+1);
+        tree->getCheckpoint()->putBool("finished", false);
+        tree->getCheckpoint()->dump(true);
+        delete newCheckpoint;
+        
 	}
+
 
 	if (params.consensus_type == CT_CONSENSUS_TREE) {
 
@@ -2516,23 +2551,6 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
 
 			tree->initializeAllPartialLh();
 			tree->fixNegativeBranch(true);
-//	        if (tree->isSuperTree()) {
-//	        	if (params.partition_type == 0) {
-//	        		PhyloSuperTree *stree = (PhyloSuperTree*) tree;
-//	        		tree->clearAllPartialLH();
-//	        		// full partition model
-//	        		for (PhyloSuperTree::iterator it = stree->begin(); it != stree->end(); it++) {
-//	        			(*it)->fixNegativeBranch(true);
-//	        		}
-//	        		tree->clearAllPartialLH();
-//	        	} else {
-//	        		// joint/prop. partition model
-//					tree->assignRandomBranchLengths(true);
-//					((PhyloSuperTree*)tree)->mapTrees();
-//	        	}
-//	        } else {
-//	        	tree->fixNegativeBranch(true);
-//	    	}
 
 			tree->boot_consense_logl = tree->optimizeAllBranches();
 			cout << "Log-likelihood of consensus tree: " << tree->boot_consense_logl << endl;
@@ -2541,16 +2559,9 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
 			tree->printTree(splitsfile.c_str(), WT_BR_LEN | WT_BR_LEN_FIXED_WIDTH | WT_SORT_TAXA | WT_NEWLINE);
 			// revert the best tree
 			tree->readTreeString(current_tree);
-//			if (tree->isSuperTree()) {
-//				tree->optimizeAllBranches();
-//				((PhyloSuperTree*)tree)->computeBranchLengths();
-//			}
 		}
 		// reinsert identical sequences
 		if (tree->removed_seqs.size() > 0) {
-			// BUG HERE!
-//			delete tree->aln;
-//			tree->reinsertIdenticalSeqs(alignment);
 			// BUG FIX: dont use reinsertIdenticalSeqs anymore
 			tree->insertTaxa(tree->removed_seqs, tree->twin_seqs);
 			tree->printResultTree();

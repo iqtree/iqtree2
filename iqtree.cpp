@@ -1870,7 +1870,10 @@ double IQTree::doTreeSearch() {
         stop_rule.setCurIt(stop_rule.getCurIt() + 1);
         searchinfo.curIter = stop_rule.getCurIt();
         // estimate logl_cutoff for bootstrap
-        if (/*params->avoid_duplicated_trees && max_candidate_trees > 0 &&*/ stop_rule.getCurIt() > 2 /* && treels_logl.size() > 1000*/) {
+        if (!boot_orig_logl.empty())
+            logl_cutoff = *min_element(boot_orig_logl.begin(), boot_orig_logl.end());
+
+//        if (/*params->avoid_duplicated_trees && max_candidate_trees > 0 &&*/ stop_rule.getCurIt() > 2 /* && treels_logl.size() > 1000*/) {
 //        	int predicted_iteration = ((stop_rule.getCurIt()+params->step_iterations-1)/params->step_iterations)*params->step_iterations;
 //            int num_entries = floor(max_candidate_trees * ((double) stop_rule.getCurIt() / predicted_iteration));
 //            if (num_entries < treels_logl.size() * 0.9) {
@@ -1879,14 +1882,13 @@ double IQTree::doTreeSearch() {
 //                logl_cutoff = logl[treels_logl.size() - num_entries] - 1.0;
 //            } else
 //                logl_cutoff = 0.0;
-            logl_cutoff = *min_element(boot_orig_logl.begin(), boot_orig_logl.end());
 //            if (verbose_mode >= VB_MED) {
 //                if (stop_rule.getCurIt() % 10 == 0) {
 //                    cout << treels_logl.size() << " logls, logl_cutoff= " << logl_cutoff;
 //                        cout << endl;
 //                }
 //            }
-        }
+//        }
 
         if (estimate_nni_cutoff && nni_info.size() >= 500) {
             estimate_nni_cutoff = false;

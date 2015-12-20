@@ -223,6 +223,14 @@ void Checkpoint::endList() {
 
 }
 
+void Checkpoint::getSubCheckpoint(Checkpoint *target, string partial_key) {
+    for (iterator it = begin(); it != end(); it++) {
+        if (it->first.find(partial_key) != string::npos)
+            (*target)[it->first] = it->second;
+    }
+}
+
+
 /*-------------------------------------------------------------
  * CheckpointFactory
  *-------------------------------------------------------------*/
