@@ -1736,7 +1736,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
             iqtree.readTreeString(iqtree.candidateTrees.getTopTrees(1)[0]);
         iqtree.setCurScore(iqtree.computeLikelihood());
         initTree = iqtree.getTreeString();
-        cout << "CHECKPOINT: Model parameters restored, LnL: " << iqtree.getCurScore() << endl;
+        cout << "CHECKPOINT: Model parameters restored, LogL: " << iqtree.getCurScore() << endl;
     } else {
         initTree = iqtree.optimizeModelParameters(true, initEpsilon);
         iqtree.saveCheckpoint();
@@ -1836,7 +1836,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 	}
 
     if (finishedCandidateSet) {
-        cout << "CHECKPOINT: Candidate tree set restored, best LnL: " << iqtree.candidateTrees.getBestScore() << endl;
+        cout << "CHECKPOINT: Candidate tree set restored, best LogL: " << iqtree.candidateTrees.getBestScore() << endl;
     } else {
         iqtree.saveCheckpoint();
         iqtree.getCheckpoint()->putBool("finishedCandidateSet", true);

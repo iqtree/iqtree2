@@ -303,15 +303,16 @@ void IQTree::initSettings(Params &params) {
         for (i = 0; i < params.gbo_replicates; i++)
         	boot_samples[i] = mem + i*nptn;
 
-        if (boot_logl.empty()) {
+        if (boot_trees.empty()) {
             boot_logl.resize(params.gbo_replicates, -DBL_MAX);
             boot_orig_logl.resize(params.gbo_replicates, -DBL_MAX);
             boot_trees.resize(params.gbo_replicates, "");
             boot_counts.resize(params.gbo_replicates, 0);
             if (params.print_ufboot_trees == 2)
                 boot_trees_brlen.resize(params.gbo_replicates);
-        } else
-            cout << "CHECKPOINT: " << boot_trees.size() << " ufboot trees restored" << endl;
+        } else {
+            cout << "CHECKPOINT: " << boot_trees.size() << " UFBoot trees and " << boot_splits.size() << " UFBootSplits restored" << endl;
+        }
         VerboseMode saved_mode = verbose_mode;
         verbose_mode = VB_QUIET;
         for (i = 0; i < params.gbo_replicates; i++) {
@@ -478,7 +479,7 @@ void IQTree::computeInitialTree(string &dist_file, LikelihoodKernel kernel) {
     if (leafNum != 0) {
         if (!candidateTrees.empty()) {
             readTreeString(candidateTrees.getTopTrees(1)[0]);
-            cout << endl << "CHECKPOINT: Current best tree restored" << endl;
+            cout << endl << "CHECKPOINT: Current best tree restored, LogL: " << candidateTrees.getBestScore() << endl;
         } else
             cout << endl << "CHECKPOINT: Initial tree restored" << endl;
         return;
@@ -718,6 +719,7 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
         int step = stop_rule.getCurIt();
         for (; rit != initParsimonyTrees.rend() && step > 0; ++rit, step--) {
             // increase iterator accordingly
+            candidateTrees.update(rit->second.tree, rit->first);
         }
         cout << "CHECKPOINT: " << stop_rule.getCurIt() << " initial iterations restored" << endl;
     }
