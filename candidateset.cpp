@@ -28,9 +28,13 @@ void CandidateSet::saveCheckpoint() {
     checkpoint->startList(params->numNNITrees);
     for (reverse_iterator it = rbegin(); it != rend() && ntrees > 0; it++, ntrees--) {
         checkpoint->addListElement();
-        double score = it->second.score;
-        CKP_SAVE(score);
-        checkpoint->put("tree", it->second.tree);
+        stringstream ss;
+        ss.precision(12);
+        ss << it->second.score << " " << it->second.tree;
+//        double score = it->second.score;
+//        CKP_SAVE(score);
+//        checkpoint->put("tree", it->second.tree);
+        checkpoint->put("", ss.str());
     }
     checkpoint->endList();
     checkpoint->endStruct();
@@ -45,10 +49,13 @@ void CandidateSet::restoreCheckpoint() {
     checkpoint->startList(params->numNNITrees);
     for (int i = 0; i < params->numNNITrees; i++) {
         checkpoint->addListElement();
-        if (!CKP_RESTORE(score)) {
+        string str;
+        if (!checkpoint->getString("", str)) {
             break;
         }
-        CKP_RESTORE(tree);
+        stringstream ss(str);
+        ss >> score >> tree;
+//        CKP_RESTORE(tree);
         update(tree, score);
         
     }

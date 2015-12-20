@@ -475,15 +475,16 @@ void IQTree::computeInitialTree(string &dist_file, LikelihoodKernel kernel) {
     setParsimonyKernel(kernel);
     
     candidateTrees.init(aln, params);
-    restoreCheckpoint();
-    if (leafNum != 0) {
-        if (!candidateTrees.empty()) {
-            readTreeString(candidateTrees.getTopTrees(1)[0]);
-            cout << endl << "CHECKPOINT: Current best tree restored, LogL: " << candidateTrees.getBestScore() << endl;
-        } else
-            cout << endl << "CHECKPOINT: Initial tree restored" << endl;
-        return;
-    } else if (params->user_file) {
+//    restoreCheckpoint();
+//    if (leafNum != 0) {
+//        if (!candidateTrees.empty()) {
+//            readTreeString(candidateTrees.getTopTrees(1)[0]);
+//            cout << endl << "CHECKPOINT: Current best tree restored, LogL: " << candidateTrees.getBestScore() << endl;
+//        } else
+//            cout << endl << "CHECKPOINT: Initial tree restored" << endl;
+//        return;
+//    } else 
+    if (params->user_file) {
         // start the search with user-defined tree
         cout << "Reading input tree file " << params->user_file << " ..." << endl;
         bool myrooted = params->is_rooted;
@@ -502,59 +503,56 @@ void IQTree::computeInitialTree(string &dist_file, LikelihoodKernel kernel) {
 		}
 		if (params->pll)
 			pllReadNewick(getTreeString());
-    } else switch (params->start_tree) {
-    case STT_PARSIMONY:
-        // Create parsimony tree using IQ-Tree kernel
-        if (kernel == LK_EIGEN_SSE)
-            cout << "Creating fast SIMD initial parsimony tree by random order stepwise addition..." << endl;
-        else if (kernel == LK_EIGEN)
-            cout << "Creating fast initial parsimony tree by random order stepwise addition..." << endl;
-        else
-            cout << "Creating initial parsimony tree by random order stepwise addition..." << endl;
-//        aln->orderPatternByNumChars();
-        start = getRealTime();
-        score = computeParsimonyTree(params->out_prefix, aln);
-        cout << getRealTime() - start << " seconds, parsimony score: " << score
-        	<< " (based on " << aln->num_informative_sites << " informative sites)"<< endl;
-//		if (params->pll)
-//			pllReadNewick(getTreeString());
-	    wrapperFixNegativeBranch(false);
+    } else if (CKP_RESTORE(initTree)) {
+        readTreeString(initTree);
+        cout << endl << "CHECKPOINT: Initial tree restored" << endl;
+    } else {
+        switch (params->start_tree) {
+        case STT_PARSIMONY:
+            // Create parsimony tree using IQ-Tree kernel
+            if (kernel == LK_EIGEN_SSE)
+                cout << "Creating fast SIMD initial parsimony tree by random order stepwise addition..." << endl;
+            else if (kernel == LK_EIGEN)
+                cout << "Creating fast initial parsimony tree by random order stepwise addition..." << endl;
+            else
+                cout << "Creating initial parsimony tree by random order stepwise addition..." << endl;
+//            aln->orderPatternByNumChars();
+            start = getRealTime();
+            score = computeParsimonyTree(params->out_prefix, aln);
+            cout << getRealTime() - start << " seconds, parsimony score: " << score
+                << " (based on " << aln->num_informative_sites << " informative sites)"<< endl;
+            wrapperFixNegativeBranch(false);
 
-        break;
-    case STT_RANDOM_TREE:
-    case STT_PLL_PARSIMONY:
-        cout << endl;
-        cout << "Create initial parsimony tree by phylogenetic likelihood library (PLL)... ";
-        pllInst->randomNumberSeed = params->ran_seed;
-        pllComputeRandomizedStepwiseAdditionParsimonyTree(pllInst, pllPartitions, params->sprDist);
-        resetBranches(pllInst);
-        pllTreeToNewick(pllInst->tree_string, pllInst, pllPartitions, pllInst->start->back,
-                PLL_FALSE, PLL_TRUE, PLL_FALSE, PLL_FALSE, PLL_FALSE, PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
-        PhyloTree::readTreeString(string(pllInst->tree_string));
-        cout << getRealTime() - start << " seconds" << endl;
-	    wrapperFixNegativeBranch(true);
-        break;
-    case STT_BIONJ:
-        // This is the old default option: using BIONJ as starting tree
-        computeBioNJ(*params, aln, dist_file);
-        cout << getRealTime() - start << " seconds" << endl;
-        params->numInitTrees = 1;
-//		if (params->pll)
-//			pllReadNewick(getTreeString());
-        if (isSuperTree())
-        	wrapperFixNegativeBranch(true);
-        else
-        	fixed_number = wrapperFixNegativeBranch(false);
-		break;
-//    case STT_RANDOM_TREE:
-//        cout << "Generate random initial Yule-Harding tree..." << endl;
-//        generateRandomTree(YULE_HARDING);
-//        wrapperFixNegativeBranch(true);
-//        break;
+            break;
+        case STT_RANDOM_TREE:
+        case STT_PLL_PARSIMONY:
+            cout << endl;
+            cout << "Create initial parsimony tree by phylogenetic likelihood library (PLL)... ";
+            pllInst->randomNumberSeed = params->ran_seed;
+            pllComputeRandomizedStepwiseAdditionParsimonyTree(pllInst, pllPartitions, params->sprDist);
+            resetBranches(pllInst);
+            pllTreeToNewick(pllInst->tree_string, pllInst, pllPartitions, pllInst->start->back,
+                    PLL_FALSE, PLL_TRUE, PLL_FALSE, PLL_FALSE, PLL_FALSE, PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
+            PhyloTree::readTreeString(string(pllInst->tree_string));
+            cout << getRealTime() - start << " seconds" << endl;
+            wrapperFixNegativeBranch(true);
+            break;
+        case STT_BIONJ:
+            // This is the old default option: using BIONJ as starting tree
+            computeBioNJ(*params, aln, dist_file);
+            cout << getRealTime() - start << " seconds" << endl;
+            params->numInitTrees = 1;
+            if (isSuperTree())
+                wrapperFixNegativeBranch(true);
+            else
+                fixed_number = wrapperFixNegativeBranch(false);
+            break;
+        }
+        initTree = getTreeString();
+        CKP_SAVE(initTree);
+        saveCheckpoint();
+        checkpoint->dump(true);
     }
-    
-    saveCheckpoint();
-    checkpoint->dump(true);
 
     if (fixed_number) {
         cout << "WARNING: " << fixed_number << " undefined/negative branch lengths are initialized with parsimony" << endl;

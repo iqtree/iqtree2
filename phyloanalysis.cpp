@@ -1648,6 +1648,8 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 	ModelsBlock *models_block = readModelsDefinition(params);
 
     initializeParams(params, iqtree, model_info, models_block);
+
+    iqtree.restoreCheckpoint();
     iqtree.initSettings(params);
 
     /*********************** INITIAL MODEL OPTIMIZATION *****************/
@@ -1751,6 +1753,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
         iqtree.doLikelihoodMapping();
         cout << getRealTime()-lkmap_time << " seconds" << endl;
     }
+    
     bool finishedCandidateSet = iqtree.getCheckpoint()->getBool("finishedCandidateSet");
     bool finishedInitTree = iqtree.getCheckpoint()->getBool("finishedInitTree");
 

@@ -56,16 +56,13 @@ void PhyloSuperTree::setCheckpoint(Checkpoint *checkpoint) {
 }
 
 void PhyloSuperTree::saveCheckpoint() {
-    checkpoint->startStruct("PhyloSuperTree");
-//    stringstream ss;
-    int part = 0;
-    for (iterator it = begin(); it != end(); it++, part++) {
-    	string key = part_info[part].name + ".tree";
-    	checkpoint->put(key, (*it)->getTreeString());
-    }
-//    string partition_trees = ss.str();
-//    CKP_SAVE(partition_trees);
-    checkpoint->endStruct();
+//    checkpoint->startStruct("PhyloSuperTree");
+//    int part = 0;
+//    for (iterator it = begin(); it != end(); it++, part++) {
+//    	string key = part_info[part].name + ".tree";
+//    	checkpoint->put(key, (*it)->getTreeString());
+//    }
+//    checkpoint->endStruct();
     IQTree::saveCheckpoint();
 }
 
@@ -73,27 +70,27 @@ void PhyloSuperTree::restoreCheckpoint() {
     IQTree::restoreCheckpoint();
     
     // first get the newick string of super tree
-    checkpoint->startStruct("PhyloTree");
-    string newick;
-    CKP_RESTORE(newick);
-    checkpoint->endStruct();
-
-    if (newick.empty()) return;
-    
-    // now get partition tree strings
-    checkpoint->startStruct("PhyloSuperTree");
-    int part = 0;
-    for (iterator it = begin(); it != end(); it++, part++) {
-    	string key = part_info[part].name + ".tree";
-    	string part_tree;
-    	if (!checkpoint->get(key, part_tree))
-    		outError("No tree for partition " + part_info[part].name + " found from checkpoint");
-    	newick += part_tree;
-    }
-
-    checkpoint->endStruct();
-
-    readTreeString(newick);
+//    checkpoint->startStruct("PhyloTree");
+//    string newick;
+//    CKP_RESTORE(newick);
+//    checkpoint->endStruct();
+//
+//    if (newick.empty()) return;
+//    
+//    // now get partition tree strings
+//    checkpoint->startStruct("PhyloSuperTree");
+//    int part = 0;
+//    for (iterator it = begin(); it != end(); it++, part++) {
+//    	string key = part_info[part].name + ".tree";
+//    	string part_tree;
+//    	if (!checkpoint->get(key, part_tree))
+//    		outError("No tree for partition " + part_info[part].name + " found from checkpoint");
+//    	newick += part_tree;
+//    }
+//
+//    checkpoint->endStruct();
+//
+//    readTreeString(newick);
 
 }
 
