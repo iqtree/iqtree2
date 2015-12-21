@@ -429,20 +429,26 @@ SuperAlignment::~SuperAlignment()
 	partitions.clear();
 }
 
-void SuperAlignment::printCombinedAlignment(ostream &out, bool append) {
+void SuperAlignment::printCombinedAlignment(ostream &out, bool print_taxid) {
 	vector<Alignment*>::iterator pit;
 	int final_length = 0;
 	for (pit = partitions.begin(); pit != partitions.end(); pit++)
-		final_length += (*pit)->getNSite();
+        if ((*pit)->seq_type == SEQ_CODON)
+            final_length += 3*(*pit)->getNSite();
+        else
+            final_length += (*pit)->getNSite();
 
 	out << getNSeq() << " " << final_length << endl;
-	StrVector::iterator it;
 	int max_len = getMaxSeqNameLength();
+    if (print_taxid) max_len = 10;
 	if (max_len < 10) max_len = 10;
-	int seq_id = 0;
-	for (it = seq_names.begin(); it != seq_names.end(); it++, seq_id++) {
+	int seq_id;
+	for (seq_id = 0; seq_id < seq_names.size(); seq_id++) {
 		out.width(max_len);
-		out << left << (*it) << " ";
+        if (print_taxid)
+            out << left << seq_id << " ";
+        else
+            out << left << seq_names[seq_id] << " ";
 		int part = 0;
 		for (pit = partitions.begin(); pit != partitions.end(); pit++, part++) {
 			int part_seq_id = taxa_index[seq_id][part];
@@ -460,13 +466,6 @@ void SuperAlignment::printCombinedAlignment(ostream &out, bool append) {
 }
 
 void SuperAlignment::printCombinedAlignment(const char *file_name, bool append) {
-	vector<Alignment*>::iterator pit;
-	int final_length = 0;
-	for (pit = partitions.begin(); pit != partitions.end(); pit++)
-        if ((*pit)->seq_type == SEQ_CODON)
-            final_length += 3*(*pit)->getNSite();
-        else
-            final_length += (*pit)->getNSite();
 	try {
 		ofstream out;
 		out.exceptions(ios::failbit | ios::badbit);
@@ -475,28 +474,7 @@ void SuperAlignment::printCombinedAlignment(const char *file_name, bool append) 
 			out.open(file_name, ios_base::out | ios_base::app);
 		else
 			out.open(file_name);
-		out << getNSeq() << " " << final_length << endl;
-		StrVector::iterator it;
-		int max_len = getMaxSeqNameLength();
-		if (max_len < 10) max_len = 10;
-		int seq_id = 0;
-		for (it = seq_names.begin(); it != seq_names.end(); it++, seq_id++) {
-			out.width(max_len);
-			out << left << (*it) << " ";
-			int part = 0;
-			for (pit = partitions.begin(); pit != partitions.end(); pit++, part++) {
-				int part_seq_id = taxa_index[seq_id][part];
-				int nsite = (*pit)->getNSite();
-				if (part_seq_id >= 0) {
-					for (int i = 0; i < nsite; i++)
-						out << (*pit)->convertStateBackStr((*pit)->getPattern(i) [part_seq_id]);
-				} else {
-					string str(nsite, '?');
-					out << str;
-				}
-			}
-			out << endl;
-		}
+        printCombinedAlignment(out);
 		out.close();
 		cout << "Concatenated alignment was printed to " << file_name << endl;
 	} catch (ios::failure) {

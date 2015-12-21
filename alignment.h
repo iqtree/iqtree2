@@ -223,7 +223,7 @@ public:
     		bool exclude_gaps = false, bool exclude_const_sites = false, const char *ref_seq_name = NULL);
 
     void printPhylip(ostream &out, bool append = false, const char *aln_site_list = NULL,
-    		bool exclude_gaps = false, bool exclude_const_sites = false, const char *ref_seq_name = NULL);
+    		bool exclude_gaps = false, bool exclude_const_sites = false, const char *ref_seq_name = NULL, bool print_taxid = false);
 
     void printFasta(const char *filename, bool append = false, const char *aln_site_list = NULL,
     		bool exclude_gaps = false, bool exclude_const_sites = false, const char *ref_seq_name = NULL);

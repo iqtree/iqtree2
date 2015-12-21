@@ -2565,6 +2565,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				continue;
 			}
 			if (strcmp(argv[cnt], "-pll") == 0) {
+                outError("-pll option is discontinued.");
 				params.pll = true;
 				continue;
 			}
@@ -3010,7 +3011,7 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -lmap <#quartets>    Number of quartets for likelihood mapping analysis" << endl
             << "  -wql                 Print quartet log-likelihoods to .quartetlh" << endl
             << endl << "NEW STOCHASTIC TREE SEARCH ALGORITHM:" << endl
-            << "  -pll                 Use phylogenetic likelihood library (PLL) (default: off)" << endl
+//            << "  -pll                 Use phylogenetic likelihood library (PLL) (default: off)" << endl
             << "  -numpars <number>    Number of initial parsimony trees (default: 100)" << endl
             << "  -toppars <number>    Number of best parsimony trees (default: 20)" << endl
             << "  -sprrad <number>     Radius for parsimony SPR search (default: 6)" << endl
