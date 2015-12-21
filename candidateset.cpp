@@ -222,18 +222,22 @@ double CandidateSet::getWorstScore() {
 }
 
 string CandidateSet::getTopology(string tree) {
-	PhyloTree mtree;
+//	PhyloTree mtree;
 //	mtree.rooted = params->is_rooted;
-	mtree.aln = this->aln;
-	mtree.setParams(params);
-
+//	mtree.aln = this->aln;
+//	mtree.setParams(params);
+    MTree mtree;
+    
 	stringstream str;
 	str << tree;
 	str.seekg(0, ios::beg);
 //	freeNode();
 	mtree.readTree(str, params->is_rooted);
-	mtree.setAlignment(aln);
-	mtree.setRootNode(params->root);
+//	mtree.setAlignment(aln);
+//	mtree.setRootNode(params->root);
+    mtree.assignLeafID();
+    string x = "0";
+    mtree.root = mtree.findLeafName(x);
 
 //	mtree.readTreeString(tree);
 //	mtree.setRootNode(params->root);

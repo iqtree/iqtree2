@@ -1180,8 +1180,8 @@ void printAnalysisInfo(int model_df, IQTree& iqtree, Params& params) {
 
 void computeMLDist(Params& params, IQTree& iqtree, string &dist_file, double begin_time) {
 	double longest_dist;
-	stringstream best_tree_string;
-	iqtree.printTree(best_tree_string, WT_BR_LEN + WT_TAXON_ID);
+//	stringstream best_tree_string;
+//	iqtree.printTree(best_tree_string, WT_BR_LEN + WT_TAXON_ID);
 	cout << "Computing ML distances based on estimated model parameters...";
 	double *ml_dist = NULL;
     double *ml_var = NULL;

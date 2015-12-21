@@ -875,11 +875,19 @@ public:
     void rollBack(istream &best_tree_string);
 
     /**
-            Read the tree saved with Taxon Names and branch lengths.
+            refactored 2015-12-22: Taxon IDs instead of Taxon names to save space!
+            Read the tree saved with Taxon IDs and branch lengths.
             @param tree_string tree string to read from
             @param updatePLL if true, tree is read into PLL
      */
     virtual void readTreeString(const string &tree_string);
+
+    /**
+            Read the tree saved with Taxon names and branch lengths.
+            @param tree_string tree string to read from
+            @param updatePLL if true, tree is read into PLL
+     */
+    virtual void readTreeStringSeqName(const string &tree_string);
 
     /**
             Read the tree saved with Taxon Names and branch lengths.
@@ -888,7 +896,8 @@ public:
     void readTreeFile(const string &file_name);
 
     /**
-     * Return the tree string contining taxon names and branch lengths
+            refactored 2015-12-22: Taxon IDs instead of Taxon names to save space!
+     * Return the tree string contining taxon IDs and branch lengths
      * @return
      */
     virtual string getTreeString();

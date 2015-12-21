@@ -600,9 +600,9 @@ void PhyloSuperTree::changeLikelihoodKernel(LikelihoodKernel lk) {
 
 string PhyloSuperTree::getTreeString() {
 	stringstream tree_stream;
-	printTree(tree_stream, WT_BR_LEN);
+	printTree(tree_stream, WT_TAXON_ID + WT_BR_LEN + WT_SORT_TAXA);
 	for (iterator it = begin(); it != end(); it++)
-		(*it)->printTree(tree_stream, WT_BR_LEN);
+		(*it)->printTree(tree_stream, WT_TAXON_ID + WT_BR_LEN + WT_SORT_TAXA);
 	return tree_stream.str();
 }
 
@@ -612,11 +612,13 @@ void PhyloSuperTree::readTreeString(const string &tree_string) {
 	str.seekg(0, ios::beg);
 	freeNode();
 	readTree(str, rooted);
-	setAlignment(aln);
+    assignLeafNames();
+//	setAlignment(aln);
 	setRootNode(params->root);
 	for (iterator it = begin(); it != end(); it++) {
 		(*it)->freeNode();
 		(*it)->readTree(str, rooted);
+        (*it)->assignLeafNames();
 //		(*it)->setAlignment((*it)->aln);
 	}
 	linkTrees();

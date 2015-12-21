@@ -269,7 +269,7 @@ void PhyloTree::assignLeafNames(Node *node, Node *dad) {
     if (node->isLeaf()) {
         node->id = atoi(node->name.c_str());
         assert(node->id >= 0 && node->id < leafNum);
-        node->name = aln->getSeqName(node->id).c_str();
+        node->name = aln->getSeqName(node->id);
     }
     FOR_NEIGHBOR_IT(node, dad, it)assignLeafNames((*it)->node, node);
 }
@@ -341,11 +341,32 @@ void PhyloTree::setParams(Params* params) {
 }
 
 void PhyloTree::readTreeString(const string &tree_string) {
-	stringstream str;
-	str << tree_string;
-	str.seekg(0, ios::beg);
+	stringstream str(tree_string);
+//	str(tree_string);
+//	str.seekg(0, ios::beg);
 	freeNode();
 	readTree(str, rooted);
+    assignLeafNames();
+//	setAlignment(aln);
+	setRootNode(params->root);
+
+	if (isSuperTree()) {
+		((PhyloSuperTree*) this)->mapTrees();
+	}
+	if (params->pll) {
+		pllReadNewick(getTreeString());
+	}
+	resetCurScore();
+//	lhComputed = false;
+}
+
+void PhyloTree::readTreeStringSeqName(const string &tree_string) {
+	stringstream str(tree_string);
+//	str(tree_string);
+//	str.seekg(0, ios::beg);
+	freeNode();
+	readTree(str, rooted);
+//    assignLeafNames();
 	setAlignment(aln);
 	setRootNode(params->root);
 
@@ -396,7 +417,8 @@ void PhyloTree::readTreeFile(const string &file_name) {
 
 string PhyloTree::getTreeString() {
 	stringstream tree_stream;
-	printTree(tree_stream);
+    setRootNode(params->root);
+	printTree(tree_stream, WT_TAXON_ID + WT_BR_LEN + WT_SORT_TAXA);
 	return tree_stream.str();
 }
 

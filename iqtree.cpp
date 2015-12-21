@@ -533,7 +533,7 @@ void IQTree::computeInitialTree(string &dist_file, LikelihoodKernel kernel) {
             resetBranches(pllInst);
             pllTreeToNewick(pllInst->tree_string, pllInst, pllPartitions, pllInst->start->back,
                     PLL_FALSE, PLL_TRUE, PLL_FALSE, PLL_FALSE, PLL_FALSE, PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
-            PhyloTree::readTreeString(string(pllInst->tree_string));
+            PhyloTree::readTreeStringSeqName(string(pllInst->tree_string));
             cout << getRealTime() - start << " seconds" << endl;
             wrapperFixNegativeBranch(true);
             break;
@@ -611,7 +611,7 @@ void IQTree::createInitTrees(int nParTrees) {
 					pllInst->start->back, PLL_FALSE, PLL_TRUE, PLL_FALSE,
 					PLL_FALSE, PLL_FALSE, PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
 			curParsTree = string(pllInst->tree_string);
-			PhyloTree::readTreeString(curParsTree);
+			PhyloTree::readTreeStringSeqName(curParsTree);
 			wrapperFixNegativeBranch(true);
 			curParsTree = getTreeString();
         } else if (params->start_tree == STT_RANDOM_TREE) {
@@ -2696,7 +2696,8 @@ void IQTree::saveCurrentTree(double cur_logl) {
         int nsamples = boot_samples.size();
         ostringstream ostr;
         string tree_str, tree_str_brlen;
-        printTree(ostr, WT_TAXON_ID);
+        setRootNode(params->root);
+        printTree(ostr, WT_TAXON_ID + WT_SORT_TAXA);
         tree_str = ostr.str();
         if (params->print_ufboot_trees == 2) {
             ostringstream ostr_brlen;
