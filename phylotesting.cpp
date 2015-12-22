@@ -1143,6 +1143,7 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 		// select model for each partition
 		PhyloSuperTree *stree = (PhyloSuperTree*)in_tree;
 		testPartitionModel(params, stree, model_info, fmodel, models_block);
+        stree->linkTrees();
 		string res_models = "";
 		for (vector<PartitionInfo>::iterator it = stree->part_info.begin(); it != stree->part_info.end(); it++) {
 			if (it != stree->part_info.begin()) res_models += ",";
