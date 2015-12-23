@@ -2572,6 +2572,8 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
 		// the classical non-parameter bootstrap (SBS)
 		if (params.model_name.find("LINK") != string::npos || params.model_name.find("MERGE") != string::npos)
 			outError("-m TESTMERGE is not allowed when doing standard bootstrap. Please first\nfind partition scheme on the original alignment and use it for bootstrap analysis");
+        if (alignment->getNSeq() < 4)
+            outError("It makes no sense to perform bootstrap with less than 4 sequences.");
 		runStandardBootstrap(params, original_model, alignment, tree);
 	}
 

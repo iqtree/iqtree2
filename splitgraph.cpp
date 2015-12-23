@@ -160,6 +160,7 @@ void SplitGraph::init(Params &params)
 
 
 void SplitGraph::saveCheckpoint() {
+    if (empty()) return;
     int ntax = getNTaxa();
 //    checkpoint->startStruct("S");
     CKP_SAVE(ntax);
@@ -184,7 +185,8 @@ void SplitGraph::restoreCheckpoint() {
     int ntax, nsplits;
     CheckpointFactory::restoreCheckpoint();
 //    checkpoint->startStruct("S");
-    CKP_RESTORE(ntax);
+
+    if (!CKP_RESTORE(ntax)) return;
     CKP_RESTORE(nsplits);
     checkpoint->startList(nsplits);
     for (int split = 0; split < nsplits; split++) {

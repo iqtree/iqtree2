@@ -284,6 +284,8 @@ void IQTree::initSettings(Params &params) {
     size_t i;
 
     if (params.online_bootstrap && params.gbo_replicates > 0) {
+        if (aln->getNSeq() < 4)
+            outError("It makes no sense to perform bootstrap with less than 4 sequences.");
         // 2015-12-17: initialize random stream for creating bootstrap samples
         // mainly so that checkpointing does not need to save bootstrap samples
         int *saved_randstream = randstream;
