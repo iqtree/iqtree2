@@ -117,23 +117,38 @@ PhyloTree::PhyloTree(Alignment *aln) : MTree(), CheckpointFactory() {
 }
 
 void PhyloTree::saveCheckpoint() {
-//    checkpoint->startStruct("PhyloTree");
+    checkpoint->startStruct("PhyloTree");
+    StrVector leafNames;
+    getTaxaName(leafNames);
+    CKP_VECTOR_SAVE(leafNames);
 //    string newick = PhyloTree::getTreeString();
 //    CKP_SAVE(newick);
 //    CKP_SAVE(curScore);
-//    checkpoint->endStruct();
+    checkpoint->endStruct();
     CheckpointFactory::saveCheckpoint();
 }
 
 void PhyloTree::restoreCheckpoint() {
     CheckpointFactory::restoreCheckpoint();
-//    checkpoint->startStruct("PhyloTree");
+    checkpoint->startStruct("PhyloTree");
+    StrVector leafNames;
+    if (!CKP_VECTOR_RESTORE(leafNames))
+        outError("Checkpoint does not contain leafNames");
+    if (leafNames.size() != leafNum)
+        outError("Alignment mismatched from checkpoint!");
+
+    StrVector taxname;
+    getTaxaName(taxname);
+    for (int i = 0; i < taxname.size(); i++)
+        if (taxname[i] != leafNames[i])
+            outError("Sequence name " + taxname[i] + " mismatched from checkpoint");
+    
 //    string newick;
 //    CKP_RESTORE(curScore);
 //    CKP_RESTORE(newick);
 //    if (!newick.empty())
 //        PhyloTree::readTreeString(newick);
-//    checkpoint->endStruct();
+    checkpoint->endStruct();
 }
 
 void PhyloTree::discardSaturatedSite(bool val) {
