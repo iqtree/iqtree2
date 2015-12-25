@@ -1774,6 +1774,8 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
         iqtree.candidateTrees.update(initTree, iqtree.getCurScore());
 
     if (params.min_iterations > 0) {
+        if (!iqtree.isBifurcating())
+            outError("Tree search does not work with initial multifurcating tree. Please specify `-n 0` to avoid this.");
         cout << "--------------------------------------------------------------------" << endl;
         cout << "|             INITIALIZING CANDIDATE TREE SET                      |" << endl;
         cout << "--------------------------------------------------------------------" << endl;
