@@ -132,17 +132,16 @@ void PhyloTree::restoreCheckpoint() {
     CheckpointFactory::restoreCheckpoint();
     checkpoint->startStruct("PhyloTree");
     StrVector leafNames;
-    if (!CKP_VECTOR_RESTORE(leafNames))
-        outError("Checkpoint does not contain leafNames");
-    if (leafNames.size() != leafNum)
-        outError("Alignment mismatched from checkpoint!");
+    if (CKP_VECTOR_RESTORE(leafNames)) {
+        if (leafNames.size() != leafNum)
+            outError("Alignment mismatched from checkpoint!");
 
-    StrVector taxname;
-    getTaxaName(taxname);
-    for (int i = 0; i < taxname.size(); i++)
-        if (taxname[i] != leafNames[i])
-            outError("Sequence name " + taxname[i] + " mismatched from checkpoint");
-    
+        StrVector taxname;
+        getTaxaName(taxname);
+        for (int i = 0; i < taxname.size(); i++)
+            if (taxname[i] != leafNames[i])
+                outError("Sequence name " + taxname[i] + " mismatched from checkpoint");
+    }    
 //    string newick;
 //    CKP_RESTORE(curScore);
 //    CKP_RESTORE(newick);

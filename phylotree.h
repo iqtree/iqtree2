@@ -661,6 +661,9 @@ public:
 
     //template <const int nstates>
     void computePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
+    
+    /* version for multifurcating node, called internally */
+    void computePartialLikelihoodEigenMulti(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
 
     //template <const int nstates>
     void computeMixturePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
