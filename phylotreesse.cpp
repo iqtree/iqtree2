@@ -559,9 +559,21 @@ void PhyloTree::computePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNo
     
     double sum_scale = 0.0;
     
+        
+    double *eleft = echildren, *eright = echildren + block*nstates;
     
-    /*--------------------- multifurcating node ------------------*/
+	if (!left->node->isLeaf() && right->node->isLeaf()) {
+		PhyloNeighbor *tmp = left;
+		left = right;
+		right = tmp;
+        double *etmp = eleft;
+        eleft = eright;
+        eright = etmp;
+	}
+    
     if (node->degree() > 3) {
+
+        /*--------------------- multifurcating node ------------------*/
     
         // now for-loop computing partial_lh over all site-patterns
 #ifdef _OPENMP
@@ -593,14 +605,16 @@ void PhyloTree::computePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNo
                     double *partial_lh_child = child->partial_lh + ptn*block;
                     dad_branch->scale_num[ptn] += child->scale_num[ptn];
 
+                    double *echild_ptr = echild;
                     for (c = 0; c < ncat; c++) {
                         // compute real partial likelihood vector
                         for (x = 0; x < nstates; x++) {
                             double vchild = 0.0;
-                            double *echild_ptr = echild + (c*nstatesqr+x*nstates);
+//                            double *echild_ptr = echild + (c*nstatesqr+x*nstates);
                             for (i = 0; i < nstates; i++) {
                                 vchild += echild_ptr[i] * partial_lh_child[i];
                             }
+                            echild_ptr += nstates;
                             partial_lh[x] *= vchild;
                         }
                         partial_lh += nstates;
@@ -616,11 +630,13 @@ void PhyloTree::computePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNo
             double *partial_lh_tmp = partial_lh_all;
             double *partial_lh = dad_branch->partial_lh + ptn*block;
             for (c = 0; c < ncat; c++) {
+                double *inv_evec_ptr = inv_evec;
                 for (i = 0; i < nstates; i++) {
                     double res = 0.0;
                     for (x = 0; x < nstates; x++) {
-                        res += partial_lh_tmp[x]*inv_evec[i*nstates+x];
+                        res += partial_lh_tmp[x]*inv_evec_ptr[x];
                     }
+                    inv_evec_ptr += nstates;
                     partial_lh[i] = res;
                     lh_max = max(lh_max, fabs(res));
                 }
@@ -659,24 +675,10 @@ void PhyloTree::computePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNo
             dad_branch->lh_scale_factor += sum_scale;               
                 
         } // for ptn
-        delete [] partial_lh_leaves;
-        delete [] echildren;
-        return;
-    } // end multifurcating treatment
-        
-    double *eleft = echildren, *eright = echildren + block*nstates;
-    
-	if (!left->node->isLeaf() && right->node->isLeaf()) {
-		PhyloNeighbor *tmp = left;
-		left = right;
-		right = tmp;
-        double *etmp = eleft;
-        eleft = eright;
-        eright = etmp;
-	}
+        // end multifurcating treatment
+    } else if (left->node->isLeaf() && right->node->isLeaf()) {
 
-	if (left->node->isLeaf() && right->node->isLeaf()) {
-		// special treatment for TIP-TIP (cherry) case
+        /*--------------------- TIP-TIP (cherry) case ------------------*/
 
         double *partial_lh_left = partial_lh_leaves;
         double *partial_lh_right = partial_lh_leaves + (aln->STATE_UNKNOWN+1)*block;
@@ -700,17 +702,21 @@ void PhyloTree::computePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNo
 				}
 
 				// compute dot-product with inv_eigenvector
+                double *inv_evec_ptr = inv_evec;
 				for (i = 0; i < nstates; i++) {
 					double res = 0.0;
 					for (x = 0; x < nstates; x++) {
-						res += partial_lh_tmp[x]*inv_evec[i*nstates+x];
+						res += partial_lh_tmp[x]*inv_evec_ptr[x];
 					}
+                    inv_evec_ptr += nstates;
 					partial_lh[c*nstates+i] = res;
 				}
 			}
 		}
 	} else if (left->node->isLeaf() && !right->node->isLeaf()) {
-		// special treatment to TIP-INTERNAL NODE case
+
+        /*--------------------- TIP-INTERNAL NODE case ------------------*/
+
 		// only take scale_num from the right subtree
 		memcpy(dad_branch->scale_num, right->scale_num, nptn * sizeof(UBYTE));
 
@@ -725,25 +731,33 @@ void PhyloTree::computePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNo
 			double *partial_lh = dad_branch->partial_lh + ptn*block;
 			double *partial_lh_right = right->partial_lh + ptn*block;
 			int state_left = (ptn < orig_ntn) ? (aln->at(ptn))[left->node->id] : model_factory->unobserved_ptns[ptn-orig_ntn];
+            double *vleft = partial_lh_left + state_left*block;
             double lh_max = 0.0;
             
+            double *eright_ptr = eright;
 			for (c = 0; c < ncat; c++) {
 				// compute real partial likelihood vector
 				for (x = 0; x < nstates; x++) {
-					double vleft = 0.0, vright = 0.0;
-					size_t addr = c*nstatesqr+x*nstates;
-					vleft = partial_lh_left[state_left*block+c*nstates+x];
+					double vright = 0.0;
+//					size_t addr = c*nstatesqr+x*nstates;
+//					vleft = partial_lh_left[state_left*block+c*nstates+x];
 					for (i = 0; i < nstates; i++) {
-						vright += eright[addr+i] * partial_lh_right[c*nstates+i];
+						vright += eright_ptr[i] * partial_lh_right[i];
 					}
-					partial_lh_tmp[x] = vleft * (vright);
+                    eright_ptr += nstates;
+					partial_lh_tmp[x] = vleft[x] * (vright);
 				}
+                vleft += nstates;
+                partial_lh_right += nstates;
+                
 				// compute dot-product with inv_eigenvector
+                double *inv_evec_ptr = inv_evec;
 				for (i = 0; i < nstates; i++) {
 					double res = 0.0;
 					for (x = 0; x < nstates; x++) {
-						res += partial_lh_tmp[x]*inv_evec[i*nstates+x];
+						res += partial_lh_tmp[x]*inv_evec_ptr[x];
 					}
+                    inv_evec_ptr += nstates;
 					partial_lh[c*nstates+i] = res;
                     lh_max = max(fabs(res), lh_max);
 				}
@@ -782,7 +796,8 @@ void PhyloTree::computePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNo
 //		delete [] partial_lh_left;
 
 	} else {
-		// both left and right are internal node
+
+        /*--------------------- INTERNAL-INTERNAL NODE case ------------------*/
 
 #ifdef _OPENMP
 #pragma omp parallel for reduction(+: sum_scale) private(ptn, c, x, i) schedule(static)
@@ -795,24 +810,34 @@ void PhyloTree::computePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNo
             double lh_max = 0.0;
 			dad_branch->scale_num[ptn] = left->scale_num[ptn] + right->scale_num[ptn];
 
+            double *eleft_ptr = eleft;
+            double *eright_ptr = eright;
+
 			for (c = 0; c < ncat; c++) {
 				// compute real partial likelihood vector
 				for (x = 0; x < nstates; x++) {
 					double vleft = 0.0, vright = 0.0;
-					size_t addr = c*nstatesqr+x*nstates;
+//					size_t addr = c*nstatesqr+x*nstates;
 					for (i = 0; i < nstates; i++) {
-						vleft += eleft[addr+i] * partial_lh_left[c*nstates+i];
-						vright += eright[addr+i] * partial_lh_right[c*nstates+i];
+						vleft += eleft_ptr[i] * partial_lh_left[i];
+						vright += eright_ptr[i] * partial_lh_right[i];
 					}
+                    eleft_ptr += nstates;
+                    eright_ptr += nstates;
 					partial_lh_tmp[x] = vleft*vright;
 //                    assert(partial_lh_tmp[x] != 0.0);
 				}
+                partial_lh_left += nstates;
+                partial_lh_right += nstates;
+                
 				// compute dot-product with inv_eigenvector
+                double *inv_evec_ptr = inv_evec;
 				for (i = 0; i < nstates; i++) {
 					double res = 0.0;
 					for (x = 0; x < nstates; x++) {
-						res += partial_lh_tmp[x]*inv_evec[i*nstates+x];
+						res += partial_lh_tmp[x]*inv_evec_ptr[x];
 					}
+                    inv_evec_ptr += nstates;
 					partial_lh[c*nstates+i] = res;
                     lh_max = max(lh_max, fabs(res));
 				}
