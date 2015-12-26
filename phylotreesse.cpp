@@ -672,9 +672,9 @@ void PhyloTree::computePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNo
                 }
             }
 
-            dad_branch->lh_scale_factor += sum_scale;               
-                
         } // for ptn
+        dad_branch->lh_scale_factor += sum_scale;               
+                
         // end multifurcating treatment
     } else if (left->node->isLeaf() && right->node->isLeaf()) {
 
