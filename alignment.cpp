@@ -14,6 +14,9 @@
 #include <numeric>
 #include <sstream>
 #include "model/rategamma.h"
+#include "gsl/mygsl.h"
+
+
 using namespace std;
 
 char symbols_protein[] = "ARNDCQEGHILKMFPSTWYVX"; // X for unknown AA
@@ -2316,11 +2319,22 @@ void Alignment::createBootstrapAlignment(int *pattern_freq, const char *spec) {
     memset(pattern_freq, 0, getNPattern()*sizeof(int));
 	IntVector site_vec;
     if (!spec) {
-   		for (site = 0; site < nsite; site++) {
-   			int site_id = random_int(nsite);
-   			int ptn_id = getPatternID(site_id);
-   			pattern_freq[ptn_id]++;
-   		}
+//   		for (site = 0; site < nsite; site++) {
+//   			int site_id = random_int(nsite);
+//   			int ptn_id = getPatternID(site_id);
+//   			pattern_freq[ptn_id]++;
+//   		}
+        // BQM 2015-12-27: use multinomial sampling for faster generation
+        int nptn = getNPattern(), ptn;
+        double *prob = new double[nptn];
+        for (ptn = 0; ptn < nptn; ptn++)
+            prob[ptn] = at(ptn).frequency;
+        gsl_ran_multinomial(nptn, nsite, prob, (unsigned int*)pattern_freq);
+        int sum = 0;
+        for (ptn = 0; ptn < nptn; ptn++)
+            sum += pattern_freq[ptn];
+        assert(sum == nsite);
+        delete [] prob;
     } else if (strncmp(spec, "GENESITE,", 9) == 0) {
 		// resampling genes, then resampling sites within resampled genes
 		convert_int_vec(spec+9, site_vec);

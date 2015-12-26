@@ -1,5 +1,5 @@
 add_library(gsl
-binomial_tpe.c
-multinomial.c
-pow_int.c
+binomial_tpe.cpp
+multinomial.cpp
+pow_int.cpp
 )
