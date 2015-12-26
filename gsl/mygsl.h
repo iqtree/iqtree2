@@ -1,0 +1,28 @@
+/**
+	stripped GSL (GNU Scientific library) used for IQ-TREE code
+*/
+
+#ifndef _MYGSL_H
+#define _MYGSL_H
+
+#include <stdio.h>
+
+double gsl_pow_uint(double x, unsigned int n);
+
+/*
+    binomial sampling
+*/
+unsigned int gsl_ran_binomial (double p, unsigned int n);
+
+/*
+    multinomial sampling
+    @param K number of categories
+    @param N sample size
+    @param p probability vector of length K, will be normalized to 1 if not summing up to 1
+    @param[out] n output vector of length K as drawn from multinomial distribution, sum to N
+*/
+void gsl_ran_multinomial (const size_t K, const unsigned int N, const double p[], unsigned int n[]);
+
+
+#endif
+
