@@ -1495,7 +1495,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.do_weighted_test = true;
 				continue;
 			}
-			if (strcmp(argv[cnt], "-zau") == 0) {
+			if (strcmp(argv[cnt], "-au") == 0) {
 				params.do_au_test = true;
 				continue;
 			}

@@ -1,3 +1,4 @@
+
 /**
 	stripped GSL (GNU Scientific library) used for IQ-TREE code
 */
@@ -7,10 +8,17 @@
 
 #include <stdio.h>
 
+/*
+    x power n (x^n)
+    @return x^n
+*/
 double gsl_pow_uint(double x, unsigned int n);
 
 /*
     binomial sampling
+    @param p probability
+    @param n sample size
+    @return random value drawn from binominal distribution 
 */
 unsigned int gsl_ran_binomial (double p, unsigned int n);
 
@@ -23,6 +31,20 @@ unsigned int gsl_ran_binomial (double p, unsigned int n);
 */
 void gsl_ran_multinomial (const size_t K, const unsigned int N, const double p[], unsigned int n[]);
 
+
+/*
+    cumulative distribution function for standard normal distribution 
+    @param x x-value
+    @return CDF at x
+*/
+double gsl_cdf_ugaussian_P (const double x);
+
+/*
+    quantile function for standard normal distribution (or CDF-inverse function)
+    @param P probability value
+    @return x-value
+*/
+double gsl_cdf_ugaussian_Pinv (const double P);
 
 #endif
 

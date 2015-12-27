@@ -1767,10 +1767,10 @@ void evaluateTrees(Params &params, IQTree *tree, vector<TreeInfo> &info, IntVect
 	int *boot_samples = NULL;
 	int boot;
 	//double *saved_tree_lhs = NULL;
-	double *tree_lhs = NULL;
+	double *tree_lhs = NULL; // RELL score matrix of size #trees x #replicates
 	double *pattern_lh = NULL;
 	double *pattern_lhs = NULL;
-	double *orig_tree_lh = NULL;
+	double *orig_tree_lh = NULL; // Original tree log-likelihoods
 	double *max_lh = NULL;
 	double *lhdiff_weights = NULL;
 	int nptn = tree->getAlnNPattern();
@@ -2083,6 +2083,10 @@ void evaluateTrees(Params &params, IQTree *tree, vector<TreeInfo> &info, IntVect
 		if (fabs(prob_sum-1.0) > 0.01)
 			outError("Internal error: Wrong ", __func__);
 		delete [] sumL;
+
+        if (params.do_au_test) {
+            cout << "Performing approximately unbiased (AU) test..." << endl;
+        }
 
 		delete [] tree_ranks;
 		delete [] tree_probs;
