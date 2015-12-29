@@ -33,6 +33,13 @@ void gsl_ran_multinomial (const size_t K, const unsigned int N, const double p[]
 
 
 /*
+    probability density function for standard normal distribution
+    @param x x-value
+    @return probability density p(x)
+*/
+double gsl_ran_ugaussian_pdf (const double x);
+
+/*
     cumulative distribution function for standard normal distribution 
     @param x x-value
     @return CDF at x

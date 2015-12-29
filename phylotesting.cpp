@@ -33,6 +33,7 @@
 #include "timeutil.h"
 
 #include "phyloanalysis.h"
+#include "gsl/mygsl.h"
 
 
 /******* Binary model set ******/
@@ -1725,6 +1726,152 @@ int countDistinctTrees(const char *filename, bool rooted, IQTree *tree, IntVecto
 
 //const double TOL_RELL_SCORE = 0.01;
 
+/*
+    Problem: solve the following linear system equation:
+    a_1*x + b_1*y = c_1
+    a_2*x + b_2*y = c_2
+    ....
+    a_n*x + b_n*y = c_n
+    
+becomes minimizing weighted least square:
+
+    sum_k { w_k*[ c_k - (a_k*x + b_k*y) ]^2 }
+
+
+the solution is:
+
+    x = [(sum_k w_k*b_k*c_k)*(sum_k w_k*a_k*b_k) - (sum_k w_k*a_k*c_k)(sum_k w_k*b_k^2)] / 
+        [ (sum_k w_k*a_k*b_k)^2 - (sum_k w_k*a_k^2)*(sum_k w_k*b_k^2) ]
+    
+    y = [(sum_k w_k*a_k*c_k)*(sum_k w_k*a_k*b_k) - (sum_k w_k*b_k*c_k)(sum_k w_k*a_k^2)] / 
+        [ (sum_k w_k*a_k*b_k)^2 - (sum_k w_k*a_k^2)*(sum_k w*k*b_k^2) ]
+    
+    @param n number of data points
+    @param w weight vector of length n
+    @param a a value vector of length n
+    @param b b value vector of length n
+    @param c c value vector of length n
+    @param[out] x x-value
+    @param[out] y y-value
+    @return least square value
+*/
+double doWeightedLeastSquare(int n, double *w, double *a, double *b, double *c, double &x, double &y) {
+    int k;
+    double BC = 0.0, AB = 0.0, AC = 0.0, A2 = 0.0, B2 = 0.0;
+    double denom;
+    for (k = 0; k < n; k++) {
+        double wa = w[k]*a[k];
+        double wb = w[k]*b[k];
+        AB += wa*b[k];
+        BC += wb*c[k];
+        AC += wa*c[k];
+        A2 += wa*a[k];
+        B2 += wb*b[k];
+    }
+    denom = 1.0/(AB*AB - A2*B2);
+    x = (BC*AB - AC*B2) * denom;
+    y = (AC*AB - BC*A2) * denom;
+    
+    double rss = 0.0;
+    for (k = 0; k < n; k++) {
+        double diff = c[k] - (a[k]*x + b[k]*y);
+        rss += w[k] * diff * diff;
+    }
+    return rss;
+}
+
+/**
+    @param tree_lhs RELL score matrix of size #trees x #replicates
+*/
+void performAUTest(Params &params, double *tree_lhs, double *mean_lh, vector<TreeInfo> &info) {
+    
+    /* STEP 1: specify scale factors */
+    int nscales = 10;
+    double r[] = {0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4};
+    double rr[] = {sqrt(0.5), sqrt(0.6), sqrt(0.7), sqrt(0.8), sqrt(0.9), 1.0, 
+        sqrt(1.1), sqrt(1.2), sqrt(1.3), sqrt(1.4)};
+    double rr_inv[] = {sqrt(1/0.5), sqrt(1/0.6), sqrt(1/0.7), sqrt(1/0.8), sqrt(1/0.9), 1.0, 
+        sqrt(1/1.1), sqrt(1/1.2), sqrt(1/1.3), sqrt(1/1.4)};
+        
+    /* STEP 2: compute bootstrap proportion */
+    int ntrees = info.size();
+    int nrep = params.topotest_replicates;
+    double nrep_inv = 1.0 / nrep;
+    double *bp = new double[ntrees*nscales];
+    memset(bp, 0, sizeof(double)*ntrees*nscales);
+
+    
+    int *maxtid = new int[nrep];
+    double *maxL = new double[nrep];
+    int *maxcount = new int[nrep];
+    int k, boot, tid;
+    for (k = 0; k < nscales; k++) {
+		for (boot = 0; boot < nrep; boot++) {
+			maxcount[boot] = 1;
+            maxL[boot] = -1e20;
+            maxtid[boot] = -1;
+        }
+        
+		for (tid = 0; tid < ntrees; tid++) {
+            double norm = (1.0 - rr_inv[k])*mean_lh[tid];
+            double *tree_lhs_offset = tree_lhs + (tid*nrep);
+			for (boot = 0; boot < nrep; boot++) {
+                double tree_lh = tree_lhs_offset[boot] * rr_inv[k] + norm;
+				if (tree_lh > maxL[boot] + params.ufboot_epsilon) {
+					maxL[boot] = tree_lh;
+					maxtid[boot] = tid;
+					maxcount[boot] = 1;
+				} else if (tree_lh > maxL[boot] - params.ufboot_epsilon && random_double() <= 1.0/(maxcount[boot]+1)) {
+					maxL[boot] = max(maxL[boot], tree_lh);
+					maxtid[boot] = tid;
+					maxcount[boot]++;
+				}
+            }
+		}
+        double *bp_offset = bp + (k*ntrees);
+		for (boot = 0; boot < nrep; boot++)
+			bp_offset[maxtid[boot]] += 1.0;
+		for (tid = 0; tid < ntrees; tid++) {
+			bp_offset[tid] *= nrep_inv;
+		}
+    }
+    
+    for (k = 0; k < nscales; k++) {
+        cout << r[k];
+        double *bp_offset = bp + (k*ntrees);
+        for (tid = 0; tid < ntrees; tid++) {
+            cout << "\t" << bp_offset[tid];
+        }
+        cout << endl;
+    }
+    
+    /* STEP 3: weighted least square fit */
+    
+    double *cc = new double[nscales];
+    double *w = new double[nscales];
+    for (tid = 0; tid < ntrees; tid++) {
+        for (k = 0; k < nscales; k++) {
+            double bp_val = min(max(bp[tid + k*ntrees], 0.0001),0.9999);
+            double bp_cdf = gsl_cdf_ugaussian_Pinv(bp_val);
+            double bp_pdf = gsl_ran_ugaussian_pdf(bp_cdf);
+            cc[k] = gsl_cdf_ugaussian_Pinv(1.0 - bp_val);
+            w[k] = bp_pdf*bp_pdf*nrep / (bp_val*(1.0-bp_val));
+        }
+        double c, d, rss; // c, d in original paper
+        rss = doWeightedLeastSquare(nscales, w, rr, rr_inv, cc, d, c);
+        /* STEP 4: compute p-value according to Eq. 11 */
+        info[tid].au_pvalue = 1.0 - gsl_cdf_ugaussian_P(d-c);
+    }
+    
+    delete [] w;
+    delete [] cc;
+    delete [] maxcount;
+    delete [] maxL;
+    delete [] maxtid;
+    delete [] bp;
+}
+
+
 void evaluateTrees(Params &params, IQTree *tree, vector<TreeInfo> &info, IntVector &distinct_ids)
 {
 	if (!params.treeset_file)
@@ -2086,6 +2233,7 @@ void evaluateTrees(Params &params, IQTree *tree, vector<TreeInfo> &info, IntVect
 
         if (params.do_au_test) {
             cout << "Performing approximately unbiased (AU) test..." << endl;
+            performAUTest(params, tree_lhs, avg_lh, info);
         }
 
 		delete [] tree_ranks;
@@ -2126,3 +2274,6 @@ void evaluateTrees(Params &params, IQTree *tree) {
 	IntVector distinct_ids;
 	evaluateTrees(params, tree, info, distinct_ids);
 }
+
+
+

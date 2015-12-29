@@ -876,14 +876,19 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 			out << endl << "USER TREES" << endl << "----------" << endl << endl;
 			out << "See " << params.treeset_file << ".trees for trees with branch lengths." << endl << endl;
 			if (params.topotest_replicates && info.size() > 1) {
-				if (params.do_weighted_test) {
-					out << "Tree      logL    deltaL  bp-RELL    p-KH     p-SH    p-WKH    p-WSH    c-ELW" << endl;
-					out << "-------------------------------------------------------------------------------" << endl;
-				} else {
-					out << "Tree      logL    deltaL  bp-RELL    p-KH     p-SH    c-ELW" << endl;
-					out << "-------------------------------------------------------------" << endl;
-
-				}
+                out << "Tree      logL    deltaL  bp-RELL    p-KH     p-SH    ";
+				if (params.do_weighted_test)
+					out << "p-WKH    p-WSH    ";
+                out << "c-ELW";
+                if (params.do_au_test) 
+                    out << "     p-AU";
+                    
+                out << endl << "------------------------------------------------------------------";
+                if (params.do_weighted_test) 
+					out << "------------------";
+                if (params.do_au_test)
+                    out << "-------";
+                out << endl;
 			} else {
 				out << "Tree      logL    deltaL" << endl;
 				out << "-------------------------" << endl;
@@ -930,6 +935,7 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 					out << " - ";
 				else
 					out << " + ";
+                
 				if (params.do_weighted_test) {
 					out.width(6);
 					out << right << info[tid].wkh_pvalue;
@@ -947,9 +953,19 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 				out.width(6);
 				out << info[tid].elw_value;
 				if (info[tid].elw_confident)
-					out << " +";
+					out << " + ";
 				else
-					out << " -";
+					out << " - ";
+
+                if (params.do_au_test) {
+                    out.width(6);
+                    out << right << info[tid].au_pvalue;
+                    if (info[tid].au_pvalue < 0.05)
+                        out << " - ";
+                    else
+                        out << " + ";
+                }
+
 				out << endl;
 				tid++;
 			}
