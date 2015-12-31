@@ -34,6 +34,7 @@
 
 #include "phyloanalysis.h"
 #include "gsl/mygsl.h"
+#include "vectorclass/vectorclass.h"
 
 
 /******* Binary model set ******/
@@ -1783,7 +1784,7 @@ double doWeightedLeastSquare(int n, double *w, double *a, double *b, double *c, 
 /**
     @param tree_lhs RELL score matrix of size #trees x #replicates
 */
-void performAUTest(Params &params, IQTree *tree, double *pattern_lhs, vector<TreeInfo> &info) {
+void performAUTest(Params &params, PhyloTree *tree, double *pattern_lhs, vector<TreeInfo> &info) {
     
     /* STEP 1: specify scale factors */
     int nscales = 10;
@@ -1795,45 +1796,50 @@ void performAUTest(Params &params, IQTree *tree, double *pattern_lhs, vector<Tre
         
     /* STEP 2: compute bootstrap proportion */
     int ntrees = info.size();
-    int nboot = params.topotest_replicates;
+    size_t nboot = params.topotest_replicates;
     double nboot_inv = 1.0 / nboot;
     
     int nptn = tree->getAlnNPattern();
+    int maxnptn = get_safe_upper_limit(nptn);
+    double *pattern_lh = aligned_alloc<double>(maxnptn);
+    memset(pattern_lh, 0, maxnptn*sizeof(double));
     
-    int *boot_sample;
-    if (!(boot_sample = new int [nptn]))
-        outError(ERR_NO_MEMORY);
-    double *boot_samples;
+    int *boot_sample = aligned_alloc<int>(maxnptn);
+    memset(boot_sample, 0, maxnptn*sizeof(int));
     
-    if (!(boot_samples = new double [nboot*nptn]))
-        outError(ERR_NO_MEMORY);
-    
+    double *boot_samples = aligned_alloc<double>(nboot*maxnptn);    
     
     double *bp = new double[ntrees*nscales];
     memset(bp, 0, sizeof(double)*ntrees*nscales);
     
     int *maxtid = new int[nboot];
     double *maxL = new double[nboot];
-    int k, boot, tid, ptn;
+    int k, tid, ptn;
+    size_t boot;
     for (k = 0; k < nscales; k++) {
     
         string str = "SCALE=" + convertDoubleToString(r[k]);    
 		for (boot = 0; boot < nboot; boot++) {
 			tree->aln->createBootstrapAlignment(boot_sample, str.c_str());
-            double *this_boot_sample = boot_samples + (boot*nptn);
-            for (ptn = 0; ptn < nptn; ptn++)
+            double *this_boot_sample = boot_samples + (boot*maxnptn);
+            for (ptn = 0; ptn < maxnptn; ptn++)
                 this_boot_sample[ptn] = boot_sample[ptn];
             maxL[boot] = -1e20;
             maxtid[boot] = -1;
         }
         
 		for (tid = 0; tid < ntrees; tid++) {
-            double *pattern_lh = pattern_lhs + (tid*nptn);
+            memcpy(pattern_lh, pattern_lhs + (tid*nptn), nptn*sizeof(double));
 			for (boot = 0; boot < nboot; boot++) {
                 double tree_lh = 0.0;
-                double *this_boot_sample = boot_samples + (boot*nptn);
+                double *this_boot_sample = boot_samples + (boot*maxnptn);
                 for (ptn = 0; ptn < nptn; ptn++)
                     tree_lh += pattern_lh[ptn] * this_boot_sample[ptn];
+//                tree_lh = (tree->*dotProductDouble)(pattern_lh, this_boot_sample, nptn);
+//                if (instruction_set >= 7)
+//                    tree_lh = tree->dotProductSIMD<double, Vec4d, 4>(pattern_lh, this_boot_sample, nptn);
+//                else
+//                    tree_lh = tree->dotProductSIMD<double, Vec2d, 2>(pattern_lh, this_boot_sample, nptn);
 				if (tree_lh > maxL[boot]) {
 					maxL[boot] = tree_lh;
 					maxtid[boot] = tid;
@@ -1888,8 +1894,9 @@ void performAUTest(Params &params, IQTree *tree, double *pattern_lhs, vector<Tre
     delete [] maxL;
     delete [] maxtid;
     delete [] bp;
-    delete [] boot_samples;
-    delete [] boot_sample;
+    aligned_free(boot_samples);
+    aligned_free(boot_sample);
+    aligned_free(pattern_lh);
 }
 
 

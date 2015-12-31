@@ -27,6 +27,7 @@ void PhyloTree::setDotProductAVX() {
 		dotProduct = &PhyloTree::dotProductSIMD<double, Vec4d, 4>;
 #endif
 
+        dotProductDouble = &PhyloTree::dotProductSIMD<double, Vec4d, 4>;
 }
 
 void PhyloTree::setLikelihoodKernelAVX() {

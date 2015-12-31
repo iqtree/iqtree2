@@ -66,6 +66,7 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk) {
 #else
 		dotProduct = &PhyloTree::dotProductSIMD<double, Vec2d, 2>;
 #endif
+		dotProductDouble = &PhyloTree::dotProductSIMD<double, Vec2d, 2>;
 	}
 	sse = lk;
     if (!aln || lk == LK_NORMAL) {

@@ -465,6 +465,9 @@ public:
     typedef BootValType (PhyloTree::*DotProductType)(BootValType *x, BootValType *y, int size);
     DotProductType dotProduct;
 
+    typedef double (PhyloTree::*DotProductDoubleType)(double *x, double *y, int size);
+    DotProductDoubleType dotProductDouble;
+
 #if defined(BINARY32) || defined(__NOAVX__)
     void setDotProductAVX() {}
 #else
