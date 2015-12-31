@@ -1783,7 +1783,7 @@ double doWeightedLeastSquare(int n, double *w, double *a, double *b, double *c, 
 /**
     @param tree_lhs RELL score matrix of size #trees x #replicates
 */
-void performAUTest(Params &params, double *tree_lhs, double *mean_lh, vector<TreeInfo> &info) {
+void performAUTest(Params &params, IQTree *tree, double *pattern_lhs, vector<TreeInfo> &info) {
     
     /* STEP 1: specify scale factors */
     int nscales = 10;
@@ -1795,80 +1795,101 @@ void performAUTest(Params &params, double *tree_lhs, double *mean_lh, vector<Tre
         
     /* STEP 2: compute bootstrap proportion */
     int ntrees = info.size();
-    int nrep = params.topotest_replicates;
-    double nrep_inv = 1.0 / nrep;
+    int nboot = params.topotest_replicates;
+    double nboot_inv = 1.0 / nboot;
+    
+    int nptn = tree->getAlnNPattern();
+    
+    int *boot_sample;
+    if (!(boot_sample = new int [nptn]))
+        outError(ERR_NO_MEMORY);
+    double *boot_samples;
+    
+    if (!(boot_samples = new double [nboot*nptn]))
+        outError(ERR_NO_MEMORY);
+    
+    
     double *bp = new double[ntrees*nscales];
     memset(bp, 0, sizeof(double)*ntrees*nscales);
-
     
-    int *maxtid = new int[nrep];
-    double *maxL = new double[nrep];
-    int *maxcount = new int[nrep];
-    int k, boot, tid;
+    int *maxtid = new int[nboot];
+    double *maxL = new double[nboot];
+    int k, boot, tid, ptn;
     for (k = 0; k < nscales; k++) {
-		for (boot = 0; boot < nrep; boot++) {
-			maxcount[boot] = 1;
+    
+        string str = "SCALE=" + convertDoubleToString(r[k]);    
+		for (boot = 0; boot < nboot; boot++) {
+			tree->aln->createBootstrapAlignment(boot_sample, str.c_str());
+            double *this_boot_sample = boot_samples + (boot*nptn);
+            for (ptn = 0; ptn < nptn; ptn++)
+                this_boot_sample[ptn] = boot_sample[ptn];
             maxL[boot] = -1e20;
             maxtid[boot] = -1;
         }
         
 		for (tid = 0; tid < ntrees; tid++) {
-            double norm = (1.0 - rr_inv[k])*mean_lh[tid];
-            double *tree_lhs_offset = tree_lhs + (tid*nrep);
-			for (boot = 0; boot < nrep; boot++) {
-                double tree_lh = tree_lhs_offset[boot] * rr_inv[k] + norm;
-				if (tree_lh > maxL[boot] + params.ufboot_epsilon) {
+            double *pattern_lh = pattern_lhs + (tid*nptn);
+			for (boot = 0; boot < nboot; boot++) {
+                double tree_lh = 0.0;
+                double *this_boot_sample = boot_samples + (boot*nptn);
+                for (ptn = 0; ptn < nptn; ptn++)
+                    tree_lh += pattern_lh[ptn] * this_boot_sample[ptn];
+				if (tree_lh > maxL[boot]) {
 					maxL[boot] = tree_lh;
 					maxtid[boot] = tid;
-					maxcount[boot] = 1;
-				} else if (tree_lh > maxL[boot] - params.ufboot_epsilon && random_double() <= 1.0/(maxcount[boot]+1)) {
-					maxL[boot] = max(maxL[boot], tree_lh);
-					maxtid[boot] = tid;
-					maxcount[boot]++;
-				}
+				} 
             }
 		}
         double *bp_offset = bp + (k*ntrees);
-		for (boot = 0; boot < nrep; boot++)
+		for (boot = 0; boot < nboot; boot++)
 			bp_offset[maxtid[boot]] += 1.0;
 		for (tid = 0; tid < ntrees; tid++) {
-			bp_offset[tid] *= nrep_inv;
+			bp_offset[tid] *= nboot_inv;
 		}
     }
-    
-    for (k = 0; k < nscales; k++) {
-        cout << r[k];
-        double *bp_offset = bp + (k*ntrees);
-        for (tid = 0; tid < ntrees; tid++) {
-            cout << "\t" << bp_offset[tid];
-        }
+
+    if (verbose_mode >= VB_MED) {
+        cout << "scale";
+        for (k = 0; k < nscales; k++)
+            cout << "\t" << r[k];
         cout << endl;
+        for (tid = 0; tid < ntrees; tid++) {
+            cout << tid;
+            for (k = 0; k < nscales; k++) {
+                cout << "\t" << bp[tid+k*ntrees];
+            }
+            cout << endl;
+        }
     }
     
     /* STEP 3: weighted least square fit */
     
     double *cc = new double[nscales];
     double *w = new double[nscales];
+    cout << "ID\tAU\tRSS\td\tc" << endl;
     for (tid = 0; tid < ntrees; tid++) {
         for (k = 0; k < nscales; k++) {
             double bp_val = min(max(bp[tid + k*ntrees], 0.0001),0.9999);
             double bp_cdf = gsl_cdf_ugaussian_Pinv(bp_val);
             double bp_pdf = gsl_ran_ugaussian_pdf(bp_cdf);
             cc[k] = gsl_cdf_ugaussian_Pinv(1.0 - bp_val);
-            w[k] = bp_pdf*bp_pdf*nrep / (bp_val*(1.0-bp_val));
+            w[k] = bp_pdf*bp_pdf*nboot / (bp_val*(1.0-bp_val));
         }
         double c, d, rss; // c, d in original paper
         rss = doWeightedLeastSquare(nscales, w, rr, rr_inv, cc, d, c);
         /* STEP 4: compute p-value according to Eq. 11 */
         info[tid].au_pvalue = 1.0 - gsl_cdf_ugaussian_P(d-c);
+        cout << tid << "\t" << info[tid].au_pvalue << "\t" << rss << "\t" << d << "\t" << c;
+        cout << endl;
     }
     
     delete [] w;
     delete [] cc;
-    delete [] maxcount;
     delete [] maxL;
     delete [] maxtid;
     delete [] bp;
+    delete [] boot_samples;
+    delete [] boot_sample;
 }
 
 
@@ -1939,7 +1960,7 @@ void evaluateTrees(Params &params, IQTree *tree, vector<TreeInfo> &info, IntVect
 		//	outError(ERR_NO_MEMORY);
 		if (!(tree_lhs = new double [ntrees * params.topotest_replicates]))
 			outError(ERR_NO_MEMORY);
-		if (params.do_weighted_test) {
+		if (params.do_weighted_test || params.do_au_test) {
 			if (!(lhdiff_weights = new double [ntrees * ntrees]))
 				outError(ERR_NO_MEMORY);
 			if (!(pattern_lhs = new double[ntrees* nptn]))
@@ -1999,7 +2020,7 @@ void evaluateTrees(Params &params, IQTree *tree, vector<TreeInfo> &info, IntVect
 		if (pattern_lh) {
 			double curScore = tree->getCurScore();
 			tree->computePatternLikelihood(pattern_lh, &curScore);
-			if (params.do_weighted_test)
+			if (params.do_weighted_test || params.do_au_test)
 				memcpy(pattern_lhs + tid*nptn, pattern_lh, nptn*sizeof(double));
 		}
 		if (params.print_site_lh) {
@@ -2033,7 +2054,7 @@ void evaluateTrees(Params &params, IQTree *tree, vector<TreeInfo> &info, IntVect
 		int *tree_ranks = new int[ntrees];
 
 		/* perform RELL BP method */
-		cout << "Performing RELL test..." << endl;
+		cout << "Performing RELL-BP test..." << endl;
 		int *maxtid = new int[params.topotest_replicates];
 		double *maxL = new double[params.topotest_replicates];
 		int *maxcount = new int[params.topotest_replicates];
@@ -2233,7 +2254,7 @@ void evaluateTrees(Params &params, IQTree *tree, vector<TreeInfo> &info, IntVect
 
         if (params.do_au_test) {
             cout << "Performing approximately unbiased (AU) test..." << endl;
-            performAUTest(params, tree_lhs, avg_lh, info);
+            performAUTest(params, tree, pattern_lhs, info);
         }
 
 		delete [] tree_ranks;

@@ -980,7 +980,11 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 					out << "p-WKH   : p-value of weighted KH test." << endl
 					 << "p-WSH   : p-value of weighted SH test." << endl;
 				}
-				out	 << "c-ELW   : Expected Likelihood Weight (Strimmer & Rambaut 2002)." << endl << endl
+				out	 << "c-ELW   : Expected Likelihood Weight (Strimmer & Rambaut 2002)." << endl;
+                if (params.do_au_test) {
+					out << "p-AU    : p-value of approximately unbiased (AU) test (Shimodaira, 2002)." << endl;
+                }
+                out  << endl
 					 << "Plus signs denote the 95% confidence sets." << endl
 					 << "Minus signs denote significant exclusion."  << endl
 					 << "All tests performed "
