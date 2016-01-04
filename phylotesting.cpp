@@ -1756,7 +1756,7 @@ the solution is:
     @param[out] y y-value
     @return least square value
 */
-double doWeightedLeastSquare(int n, double *w, double *a, double *b, double *c, double &x, double &y) {
+void doWeightedLeastSquare(int n, double *w, double *a, double *b, double *c, double &x, double &y) {
     int k;
     double BC = 0.0, AB = 0.0, AC = 0.0, A2 = 0.0, B2 = 0.0;
     double denom;
@@ -1772,13 +1772,6 @@ double doWeightedLeastSquare(int n, double *w, double *a, double *b, double *c, 
     denom = 1.0/(AB*AB - A2*B2);
     x = (BC*AB - AC*B2) * denom;
     y = (AC*AB - BC*A2) * denom;
-    
-    double rss = 0.0;
-    for (k = 0; k < n; k++) {
-        double diff = c[k] - (a[k]*x + b[k]*y);
-        rss += w[k] * diff * diff;
-    }
-    return rss;
 }
 
 /**
@@ -1892,13 +1885,13 @@ void performAUTest(Params &params, PhyloTree *tree, double *pattern_lhs, vector<
 			for (boot = 0; boot < nboot; boot++) {
                 double tree_lh = 0.0;
                 double *this_boot_sample = boot_samples + (boot*maxnptn);
-                for (ptn = 0; ptn < nptn; ptn++)
-                    tree_lh += pattern_lh[ptn] * this_boot_sample[ptn];
+//                for (ptn = 0; ptn < nptn; ptn++)
+//                    tree_lh += pattern_lh[ptn] * this_boot_sample[ptn];
 //                tree_lh = (tree->*dotProductDouble)(pattern_lh, this_boot_sample, nptn);
-//                if (instruction_set >= 7)
-//                    tree_lh = tree->dotProductSIMD<double, Vec4d, 4>(pattern_lh, this_boot_sample, nptn);
-//                else
-//                    tree_lh = tree->dotProductSIMD<double, Vec2d, 2>(pattern_lh, this_boot_sample, nptn);
+                if (instruction_set >= 7)
+                    tree_lh = tree->dotProductSIMD<double, Vec4d, 4>(pattern_lh, this_boot_sample, nptn);
+                else
+                    tree_lh = tree->dotProductSIMD<double, Vec2d, 2>(pattern_lh, this_boot_sample, nptn);
 				if (tree_lh > maxL[boot]) {
 					maxL[boot] = tree_lh;
 					maxtid[boot] = tid;
@@ -1942,14 +1935,21 @@ void performAUTest(Params &params, PhyloTree *tree, double *pattern_lhs, vector<
             cc[k] = gsl_cdf_ugaussian_Pinv(1.0 - bp_val);
             w[k] = bp_pdf*bp_pdf*nboot / (bp_val*(1.0-bp_val));
         }
-        double c, d, rss; // c, d in original paper
-        rss = doWeightedLeastSquare(nscales, w, rr, rr_inv, cc, d, c);
+        double c, d; // c, d in original paper
+        doWeightedLeastSquare(nscales, w, rr, rr_inv, cc, d, c);
         OptimizationAUTest mle(d, c, nscales, this_bp, rr, rr_inv);
         mle.optimizeDC();
-        
+        double rss = 0.0;
+        for (k = 0; k < nscales; k++) {
+            double diff = cc[k] - (rr[k]*d + rr_inv[k]*c);
+            rss += w[k] * diff * diff;
+        }
+        double pchi2 = computePValueChiSquare(rss, nscales-2);
         /* STEP 4: compute p-value according to Eq. 11 */
         info[tid].au_pvalue = 1.0 - gsl_cdf_ugaussian_P(mle.d-mle.c);
         cout << tid+1 << "\t" << info[tid].au_pvalue << "\t" << rss << "\t" << d << "\t" << c << "\t" << mle.d << "\t" << mle.c;
+        if (pchi2 < 0.01) 
+            cout << " !!!";
         cout << endl;
     }
     
