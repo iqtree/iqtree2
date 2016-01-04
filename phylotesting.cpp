@@ -1782,6 +1782,65 @@ double doWeightedLeastSquare(int n, double *w, double *a, double *b, double *c, 
 }
 
 /**
+    MLE estimates for AU test
+*/
+class OptimizationAUTest : public Optimization {
+
+public:
+
+    OptimizationAUTest(double d, double c, int nscales, double *bp, double *rr, double *rr_inv) {
+        this->d = d;
+        this->c = c;
+        this->bp = bp;
+        this->rr = rr;
+        this->rr_inv = rr_inv;
+        this->nscales = nscales;
+        
+    }
+
+	/**
+		return the number of dimensions
+	*/
+	virtual int getNDim() { return 2; }
+
+
+	/**
+		the target function which needs to be optimized
+		@param x the input vector x
+		@return the function value at x
+	*/
+	virtual double targetFunk(double x[]) {
+        d = x[1];
+        c = x[2];
+        double res = 0.0;
+        for (int k = 0; k < nscales; k++) {
+            double cdf = gsl_cdf_ugaussian_P(d*rr[k] + c*rr_inv[k]);
+            res += bp[k] * log(1.0 - cdf) + (1.0-bp[k])*log(cdf);
+        }
+        return res;
+    }
+
+    void optimizeDC() {
+        double x[3], lower[3], upper[3];
+        bool bound_check[3];
+        x[1] = d;
+        x[2] = c;
+        lower[1] = lower[2] = 1e-4;
+        upper[1] = upper[2] = 100.0;
+        bound_check[1] = bound_check[2] = false;
+        minimizeMultiDimen(x, 2, lower, upper, bound_check, 1e-4);
+        d = x[1];
+        c = x[2];
+    }
+
+    double d, c;
+    int nscales;
+    double *bp;
+    double *rr;
+    double *rr_inv;
+};
+
+/**
     @param tree_lhs RELL score matrix of size #trees x #replicates
 */
 void performAUTest(Params &params, PhyloTree *tree, double *pattern_lhs, vector<TreeInfo> &info) {
@@ -1872,9 +1931,11 @@ void performAUTest(Params &params, PhyloTree *tree, double *pattern_lhs, vector<
     
     double *cc = new double[nscales];
     double *w = new double[nscales];
-    cout << "ID\tAU\tRSS\td\tc" << endl;
+    double *this_bp = new double[nscales];
+    cout << "TreeID\tAU\tRSS\td_WLS\tc_WLS\td_MLE\tc_MLE" << endl;
     for (tid = 0; tid < ntrees; tid++) {
         for (k = 0; k < nscales; k++) {
+            this_bp[k] = bp[tid + k*ntrees];
             double bp_val = min(max(bp[tid + k*ntrees], 0.0001),0.9999);
             double bp_cdf = gsl_cdf_ugaussian_Pinv(bp_val);
             double bp_pdf = gsl_ran_ugaussian_pdf(bp_cdf);
@@ -1883,12 +1944,16 @@ void performAUTest(Params &params, PhyloTree *tree, double *pattern_lhs, vector<
         }
         double c, d, rss; // c, d in original paper
         rss = doWeightedLeastSquare(nscales, w, rr, rr_inv, cc, d, c);
+        OptimizationAUTest mle(d, c, nscales, this_bp, rr, rr_inv);
+        mle.optimizeDC();
+        
         /* STEP 4: compute p-value according to Eq. 11 */
-        info[tid].au_pvalue = 1.0 - gsl_cdf_ugaussian_P(d-c);
-        cout << tid << "\t" << info[tid].au_pvalue << "\t" << rss << "\t" << d << "\t" << c;
+        info[tid].au_pvalue = 1.0 - gsl_cdf_ugaussian_P(mle.d-mle.c);
+        cout << tid+1 << "\t" << info[tid].au_pvalue << "\t" << rss << "\t" << d << "\t" << c << "\t" << mle.d << "\t" << mle.c;
         cout << endl;
     }
     
+    delete [] this_bp;
     delete [] w;
     delete [] cc;
     delete [] maxL;
