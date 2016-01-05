@@ -950,7 +950,7 @@ public:
     /**
             random number seed
      */
-    unsigned int ran_seed;
+    int ran_seed;
 
     /**
             run time of the algorithm
@@ -1675,6 +1675,20 @@ public:
 
     /** true to compute sequence identity along tree */
     bool compute_seq_identity_along_tree;
+    
+    /** true to ignore checkpoint file */
+    bool ignore_checkpoint;
+    /** number of quartets for likelihood mapping */
+    int num_quartets;
+
+    /** time (in seconds) between checkpoint dump */
+    int checkpoint_dump_interval;
+    /** TRUE to print quartet log-likelihoods to .quartetlh file */
+    bool print_quartet_lh;
+
+    /** true if ignoring the "finished" flag in checkpoint file */
+    bool force_unfinished;
+
 };
 
 /**
@@ -2069,11 +2083,14 @@ double computePValueChiSquare(double x, int df);
 /* random number generator */
 /*--------------------------------------------------------------*/
 
+extern int *randstream;
+
 /**
  * initialize the random number generator
  * @param seed seed for generator
+ * @param write_info true to write information, false otherwise (default)
  */
-int init_random(int seed);
+int init_random(int seed, bool write_info = false);
 
 /**
  * finalize random number generator (e.g. free memory

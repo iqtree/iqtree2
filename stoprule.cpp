@@ -20,7 +20,7 @@
 #include "stoprule.h"
 #include "timeutil.h"
 
-StopRule::StopRule()
+StopRule::StopRule() : CheckpointFactory()
 {
 //	nTime_ = 0;
 	predicted_iteration = 0;
@@ -52,6 +52,26 @@ void StopRule::initialize(Params &params) {
 StopRule::~StopRule()
 {
 }
+
+void StopRule::saveCheckpoint() {
+    checkpoint->startStruct("StopRule");
+    CKP_SAVE(curIteration);
+    CKP_SAVE(start_real_time);
+    CKP_VECTOR_SAVE(time_vec);
+    checkpoint->endStruct();
+    CheckpointFactory::saveCheckpoint();
+}
+
+void StopRule::restoreCheckpoint() {
+    CheckpointFactory::restoreCheckpoint();
+    checkpoint->startStruct("StopRule");
+    CKP_RESTORE(curIteration);
+    CKP_RESTORE(start_real_time);
+    CKP_VECTOR_RESTORE(time_vec);
+    checkpoint->endStruct();
+}
+
+
 //
 //int StopRule::getNumIterations() {
 //	if (stop_condition == SC_FIXED_ITERATION || predicted_iteration == 0)

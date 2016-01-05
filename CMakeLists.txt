@@ -347,6 +347,7 @@ if(EIGEN3_FOUND)
   include_directories(${EIGEN3_INCLUDE_DIR})
 endif(EIGEN3_FOUND)
 add_subdirectory(model)
+add_subdirectory(gsl)
 
 ##################################################################
 # the main executable
@@ -395,6 +396,7 @@ phylotreesse.cpp
 phylotreepars.cpp
 #phylotreeavx.cpp
 pruning.cpp
+quartet.cpp
 split.cpp
 splitgraph.cpp
 splitset.cpp
@@ -478,9 +480,9 @@ if (IQTREE_FLAGS MATCHES "omp")
 endif()
 
 if (BINARY32 OR IQTREE_FLAGS MATCHES "novx")
-    target_link_libraries(iqtree pll ncl lbfgsb whtest sprng vectorclass model ${PLATFORM_LIB} ${STD_LIB} ${THREAD_LIB})	
+    target_link_libraries(iqtree pll ncl lbfgsb whtest sprng vectorclass model gsl ${PLATFORM_LIB} ${STD_LIB} ${THREAD_LIB})	
 else()
-    target_link_libraries(iqtree pll pllavx ncl lbfgsb whtest sprng vectorclass model avxkernel ${PLATFORM_LIB} ${STD_LIB} ${THREAD_LIB})	
+    target_link_libraries(iqtree pll pllavx ncl lbfgsb whtest sprng vectorclass model avxkernel gsl ${PLATFORM_LIB} ${STD_LIB} ${THREAD_LIB})	
 endif()
 
 ##################################################################

@@ -22,6 +22,16 @@ public:
 
 	virtual ~RateFree();
 
+    /**
+        save object into the checkpoint
+    */
+    virtual void saveCheckpoint();
+
+    /**
+        restore object from the checkpoint
+    */
+    virtual void restoreCheckpoint();
+
 	/**
 		@return true if this is a Gamma model (default: false)
 	*/	

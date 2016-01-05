@@ -31,6 +31,7 @@
 #include "optimization.h"
 #include "model/rateheterogeneity.h"
 #include "pll/pll.h"
+#include "checkpoint.h"
 
 #define BOOT_VAL_FLOAT
 #define BootValType float
@@ -241,12 +242,45 @@ struct LeafFreq {
     }
 };
 
+
+// definitions for likelihood mapping
+
+/* maximum exp difference, such that 1.0+exp(-TP_MAX_EXP_DIFF) == 1.0 */
+const double TP_MAX_EXP_DIFF = 40.0;
+
+/* single counter array needed in likelihood mapping analysis */
+/* (makes above counters obsolete - up/down,right/left never needed) (HAS) */
+#define LM_REG1 0
+#define LM_REG2 1
+#define LM_REG3 2
+#define LM_REG4 3
+#define LM_REG5 4
+#define LM_REG6 5
+#define LM_REG7 6
+#define LM_AR1  7
+#define LM_AR2  8
+#define LM_AR3  9
+#define LM_MAX  10
+
+struct QuartetInfo {
+    int seqID[4];
+    double logl[3];    // log-lh for {0,1}|{2,3}  {0,2}|{1,3}  {0,3}|{1,4}
+    double qweight[3]; // weight for {0,1}|{2,3}  {0,2}|{1,3}  {0,3}|{1,4}
+    int corner;        // for the 3 corners of the simplex triangle (0:top, 1:right, 2:left)
+    int area;          // for the 7 areas of the simplex triangle
+			// corners (0:top, 1:right, 2:left), rectangles (3:right, 4:left, 5:bottom), 6:center
+};
+
+struct SeqQuartetInfo {
+    unsigned long countarr[LM_MAX]; // the 7 areas of the simplex triangle [0-6; corners (0:top, 1:right, 2:left), rectangles (3:right, 4:left, 5:bottom), 6:center] and the 3 corners [7-9; 7:top, 8:right, 9:left]
+};
+
 /**
 Phylogenetic Tree class
 
         @author BUI Quang Minh, Steffen Klaere, Arndt von Haeseler <minh.bui@univie.ac.at>
  */
-class PhyloTree : public MTree, public Optimization {
+class PhyloTree : public MTree, public Optimization, public CheckpointFactory {
 
 	friend class PhyloSuperTree;
 	friend class PhyloSuperTreePlen;
@@ -276,6 +310,17 @@ public:
             destructor
      */
     virtual ~PhyloTree();
+
+
+    /** 
+        save object into the checkpoint
+    */
+    virtual void saveCheckpoint();
+
+    /** 
+        restore object from the checkpoint
+    */
+    virtual void restoreCheckpoint();
 
     /**
             read the tree from the input file in newick format
@@ -419,6 +464,9 @@ public:
 
     typedef BootValType (PhyloTree::*DotProductType)(BootValType *x, BootValType *y, int size);
     DotProductType dotProduct;
+
+    typedef double (PhyloTree::*DotProductDoubleType)(double *x, double *y, int size);
+    DotProductDoubleType dotProductDouble;
 
 #if defined(BINARY32) || defined(__NOAVX__)
     void setDotProductAVX() {}
@@ -616,7 +664,7 @@ public:
 
     //template <const int nstates>
     void computePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
-
+    
     //template <const int nstates>
     void computeMixturePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
 
@@ -830,11 +878,19 @@ public:
     void rollBack(istream &best_tree_string);
 
     /**
-            Read the tree saved with Taxon Names and branch lengths.
+            refactored 2015-12-22: Taxon IDs instead of Taxon names to save space!
+            Read the tree saved with Taxon IDs and branch lengths.
             @param tree_string tree string to read from
             @param updatePLL if true, tree is read into PLL
      */
     virtual void readTreeString(const string &tree_string);
+
+    /**
+            Read the tree saved with Taxon names and branch lengths.
+            @param tree_string tree string to read from
+            @param updatePLL if true, tree is read into PLL
+     */
+    virtual void readTreeStringSeqName(const string &tree_string);
 
     /**
             Read the tree saved with Taxon Names and branch lengths.
@@ -843,7 +899,8 @@ public:
     void readTreeFile(const string &file_name);
 
     /**
-     * Return the tree string contining taxon names and branch lengths
+            refactored 2015-12-22: Taxon IDs instead of Taxon names to save space!
+     * Return the tree string contining taxon IDs and branch lengths
      * @return
      */
     virtual string getTreeString();
@@ -1034,7 +1091,7 @@ public:
 
     /**
             inherited from Optimization class, to return to likelihood of the tree
-            when the current branch length is set to value
+            when the current branceh length is set to value
             @param value current branch length
             @return negative of likelihood (for minimization)
      */
@@ -1360,6 +1417,36 @@ public:
     int testAllBranches(int threshold, double best_score, double *pattern_lh, 
             int reps, int lbp_reps, bool aLRT_test, bool aBayes_test,
             PhyloNode *node = NULL, PhyloNode *dad = NULL);
+
+    /****************************************************************************
+            Quartet functions
+     ****************************************************************************/
+
+    /**
+     * for doLikelihoodMapping reportLikelihoodMapping: likelihood mapping information by region
+     */
+    vector<QuartetInfo> quartet_info;
+    int areacount[8];
+    int cornercount[4];
+    // int areacount[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+    // int cornercount[4] = {0, 0, 0, 0};
+
+    /**
+     * for doLikelihoodMapping, reportLikelihoodMapping: likelihood mapping information by sequence
+     */
+    vector<SeqQuartetInfo> seq_quartet_info;
+
+    /** generate a bunch of quartets and compute likelihood for 3 quartet trees for each replicate
+        @param num_quartets number of quartets
+        @param quartet_info (OUT) vector of quartet information
+    */
+    void computeQuartetLikelihoods(vector<QuartetInfo> &quartet_info);
+
+    /** main function that performs likelihood mapping analysis (Strimmer & von Haeseler 1997) */
+    void doLikelihoodMapping();
+
+    /** output results of likelihood mapping analysis */
+    void reportLikelihoodMapping(ofstream &out);
 
     /****************************************************************************
             Collapse stable (highly supported) clades by one representative

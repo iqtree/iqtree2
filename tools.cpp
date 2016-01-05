@@ -881,7 +881,12 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.freq_const_patterns = NULL;
     params.no_rescale_gamma_invar = false;
     params.compute_seq_identity_along_tree = false;
+    params.num_quartets = 0;
+    params.print_quartet_lh = false;
     params.link_alpha = false;
+    params.ignore_checkpoint = false;
+    params.checkpoint_dump_interval = 20;
+    params.force_unfinished = false;
 
 
 	if (params.nni5) {
@@ -895,7 +900,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     // initialize random seed based on current time
     gettimeofday(&tv, &tz);
     //params.ran_seed = (unsigned) (tv.tv_sec+tv.tv_usec);
-    params.ran_seed = (unsigned) (tv.tv_usec);
+    params.ran_seed = (tv.tv_usec);
 
     for (cnt = 1; cnt < argc; cnt++) {
         try {
@@ -1239,7 +1244,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -seed <random_seed>";
-				params.ran_seed = (unsigned) convert_int(argv[cnt]);
+				params.ran_seed = abs(convert_int(argv[cnt]));
 				continue;
 			}
 			if (strcmp(argv[cnt], "-pdgain") == 0) {
@@ -1490,7 +1495,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.do_weighted_test = true;
 				continue;
 			}
-			if (strcmp(argv[cnt], "-zau") == 0) {
+			if (strcmp(argv[cnt], "-au") == 0) {
 				params.do_au_test = true;
 				continue;
 			}
@@ -2560,6 +2565,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				continue;
 			}
 			if (strcmp(argv[cnt], "-pll") == 0) {
+                outError("-pll option is discontinued.");
 				params.pll = true;
 				continue;
 			}
@@ -2814,8 +2820,41 @@ void parseArg(int argc, char *argv[], Params &params) {
 				continue;
 			}
             
+			if (strcmp(argv[cnt], "-lmap") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -lmap <likelihood_mapping_num_quartets>";
+				params.num_quartets = convert_int(argv[cnt]);
+                if (params.num_quartets < 1)
+                    throw "Number of quartets must be >= 1";
+				continue;
+			}
+            
+			if (strcmp(argv[cnt], "-wql") == 0) {
+                params.print_quartet_lh = true;
+                continue;
+            }
+            
 			if (strcmp(argv[cnt], "--link-alpha") == 0) {
 				params.link_alpha = true;
+				continue;
+			}
+
+			if (strcmp(argv[cnt], "-redo") == 0) {
+				params.ignore_checkpoint = true;
+				continue;
+			}
+
+			if (strcmp(argv[cnt], "--force-unfinish") == 0) {
+				params.force_unfinished = true;
+				continue;
+			}
+
+			if (strcmp(argv[cnt], "-cptime") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -cptime <checkpoint_time_interval>";
+				params.checkpoint_dump_interval = convert_int(argv[cnt]);
 				continue;
 			}
 
@@ -2965,8 +3004,14 @@ void usage_iqtree(char* argv[], bool full_command) {
 #endif
             << "  -seed <number>       Random seed number, normally used for debugging purpose" << endl
             << "  -v, -vv, -vvv        Verbose mode, printing more messages to screen" << endl
+            << endl << "CHECKPOINT:" << endl
+            << "  -redo                Ignore checkpoint file (default: NO)" << endl
+            << "  -cptime <seconds>    Checkpoint time interval (default: 20)" << endl
+            << endl << "LIKELIHOOD MAPPING ANALYSIS:" << endl
+            << "  -lmap <#quartets>    Number of quartets for likelihood mapping analysis" << endl
+            << "  -wql                 Print quartet log-likelihoods to .quartetlh" << endl
             << endl << "NEW STOCHASTIC TREE SEARCH ALGORITHM:" << endl
-            << "  -pll                 Use phylogenetic likelihood library (PLL) (default: off)" << endl
+//            << "  -pll                 Use phylogenetic likelihood library (PLL) (default: off)" << endl
             << "  -numpars <number>    Number of initial parsimony trees (default: 100)" << endl
             << "  -toppars <number>    Number of best parsimony trees (default: 20)" << endl
             << "  -sprrad <number>     Radius for parsimony SPR search (default: 6)" << endl
@@ -3099,6 +3144,7 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -z <trees_file>      Evaluating a set of user trees" << endl
             << "  -zb <#replicates>    Performing BP,KH,SH,ELW tests for trees passed via -z" << endl
             << "  -zw                  Also performing weighted-KH and weighted-SH tests" << endl
+            << "  -au                  Also performing approximately unbiased (AU) test" << endl
             << endl;
 
 			cout << "GENERATING RANDOM TREES:" << endl;
@@ -3394,18 +3440,19 @@ int finish_random() {
 
 int *randstream;
 
-int init_random(int seed) {
+int init_random(int seed, bool write_info) {
     //    srand((unsigned) time(NULL));
     if (seed < 0)
         seed = make_sprng_seed();
 #ifndef PARALLEL
-    cout << "(Using SPRNG - Scalable Parallel Random Number Generator)" << endl;
+    if (write_info)
+    	cout << "(Using SPRNG - Scalable Parallel Random Number Generator)" << endl;
     randstream = init_sprng(0, 1, seed, SPRNG_DEFAULT); /*init stream*/
     if (verbose_mode >= VB_MED) {
         print_sprng(randstream);
     }
 #else /* PARALLEL */
-    if (PP_IamMaster) {
+    if (PP_IamMaster && write_info) {
         cout << "(Using SPRNG - Scalable Parallel Random Number Generator)" << endl;
     }
     /* MPI_Bcast(&seed, 1, MPI_UNSIGNED, PP_MyMaster, MPI_COMM_WORLD); */

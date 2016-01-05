@@ -16,10 +16,53 @@ void CandidateSet::init(Alignment* aln, Params *params) {
 CandidateSet::~CandidateSet() {
 }
 
-CandidateSet::CandidateSet() {
+CandidateSet::CandidateSet() : CheckpointFactory() {
 	aln = NULL;
 	params = NULL;
 }
+
+
+void CandidateSet::saveCheckpoint() {
+    checkpoint->startStruct("CandidateSet");
+	int ntrees = min(params->numNNITrees, (int)size());
+    checkpoint->startList(params->numNNITrees);
+    for (reverse_iterator it = rbegin(); it != rend() && ntrees > 0; it++, ntrees--) {
+        checkpoint->addListElement();
+        stringstream ss;
+        ss.precision(12);
+        ss << it->second.score << " " << it->second.tree;
+//        double score = it->second.score;
+//        CKP_SAVE(score);
+//        checkpoint->put("tree", it->second.tree);
+        checkpoint->put("", ss.str());
+    }
+    checkpoint->endList();
+    checkpoint->endStruct();
+    CheckpointFactory::saveCheckpoint();
+}
+
+void CandidateSet::restoreCheckpoint() {
+    CheckpointFactory::restoreCheckpoint();
+    checkpoint->startStruct("CandidateSet");
+    double score;
+    string tree;
+    checkpoint->startList(params->numNNITrees);
+    for (int i = 0; i < params->numNNITrees; i++) {
+        checkpoint->addListElement();
+        string str;
+        if (!checkpoint->getString("", str)) {
+            break;
+        }
+        stringstream ss(str);
+        ss >> score >> tree;
+//        CKP_RESTORE(tree);
+        update(tree, score);
+        
+    }
+    checkpoint->endList();
+    checkpoint->endStruct();
+}
+
 
 vector<string> CandidateSet::getBestTrees() {
 	vector<string> res;
@@ -179,18 +222,22 @@ double CandidateSet::getWorstScore() {
 }
 
 string CandidateSet::getTopology(string tree) {
-	PhyloTree mtree;
+//	PhyloTree mtree;
 //	mtree.rooted = params->is_rooted;
-	mtree.aln = this->aln;
-	mtree.setParams(params);
-
+//	mtree.aln = this->aln;
+//	mtree.setParams(params);
+    MTree mtree;
+    
 	stringstream str;
 	str << tree;
 	str.seekg(0, ios::beg);
 //	freeNode();
 	mtree.readTree(str, params->is_rooted);
-	mtree.setAlignment(aln);
-	mtree.setRootNode(params->root);
+//	mtree.setAlignment(aln);
+//	mtree.setRootNode(params->root);
+    mtree.assignLeafID();
+    string x = "0";
+    mtree.root = mtree.findLeafName(x);
 
 //	mtree.readTreeString(tree);
 //	mtree.setRootNode(params->root);

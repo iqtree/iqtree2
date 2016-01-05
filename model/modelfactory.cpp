@@ -76,7 +76,7 @@ ModelsBlock *readModelsDefinition(Params &params) {
 	return models_block;
 }
 
-ModelFactory::ModelFactory() { 
+ModelFactory::ModelFactory() : CheckpointFactory() { 
 	model = NULL; 
 	site_rate = NULL;
 	store_trans_matrix = false;
@@ -97,7 +97,7 @@ size_t findCloseBracket(string &str, size_t start_pos) {
 	return string::npos;
 }
 
-ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_block) {
+ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_block) : CheckpointFactory() {
 	store_trans_matrix = params.store_trans_matrix;
 	is_storing = false;
 	joint_optimize = params.optimize_model_rate_joint;
@@ -341,7 +341,7 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 		for (vector<double*>::reverse_iterator it = freq_vec.rbegin(); it != freq_vec.rend(); it++)
 			if (*it) delete [] (*it);
 	}
-
+    
 //	if (model->isMixture())
 //		cout << "Mixture model with " << model->getNMixtures() << " components!" << endl;
 
@@ -554,6 +554,33 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 		outError(str);
 	}
 
+}
+
+void ModelFactory::setCheckpoint(Checkpoint *checkpoint) {
+	CheckpointFactory::setCheckpoint(checkpoint);
+	model->setCheckpoint(checkpoint);
+	site_rate->setCheckpoint(checkpoint);
+}
+
+void ModelFactory::saveCheckpoint() {
+    model->saveCheckpoint();
+    site_rate->saveCheckpoint();
+    checkpoint->startStruct("ModelFactory");
+//    CKP_SAVE(fused_mix_rate);
+//    CKP_SAVE(unobserved_ptns);
+//    CKP_SAVE(joint_optimize);
+    checkpoint->endStruct();
+    CheckpointFactory::saveCheckpoint();
+}
+
+void ModelFactory::restoreCheckpoint() {
+    model->restoreCheckpoint();
+    site_rate->restoreCheckpoint();
+    checkpoint->startStruct("ModelFactory");
+//    CKP_RESTORE(fused_mix_rate);
+//    CKP_RESTORE(unobserved_ptns);
+//    CKP_RESTORE(joint_optimize);
+    checkpoint->endStruct();
 }
 
 int ModelFactory::getNParameters() {

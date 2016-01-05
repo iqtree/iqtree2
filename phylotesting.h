@@ -38,6 +38,7 @@ struct TreeInfo {
 	double wkh_pvalue; // p-value by weighted Kishino-Hasegawa test
 	double elw_value; // ELW - expected likelihood weights test
 	bool elw_confident; // to represent confidence set of ELW test
+    double au_pvalue; // p-value by approximately unbiased (AU) test
 };
 
 

@@ -14,6 +14,9 @@
 #include <numeric>
 #include <sstream>
 #include "model/rategamma.h"
+#include "gsl/mygsl.h"
+
+
 using namespace std;
 
 char symbols_protein[] = "ARNDCQEGHILKMFPSTWYVX"; // X for unknown AA
@@ -1810,20 +1813,23 @@ int Alignment::buildRetainingSites(const char *aln_site_list, IntVector &kept_si
 }
 
 void Alignment::printPhylip(ostream &out, bool append, const char *aln_site_list,
-                            bool exclude_gaps, bool exclude_const_sites, const char *ref_seq_name) {
+                            bool exclude_gaps, bool exclude_const_sites, const char *ref_seq_name, bool print_taxid) {
     IntVector kept_sites;
     int final_length = buildRetainingSites(aln_site_list, kept_sites, exclude_gaps, exclude_const_sites, ref_seq_name);
     if (seq_type == SEQ_CODON)
         final_length *= 3;
 
 	out << getNSeq() << " " << final_length << endl;
-	StrVector::iterator it;
 	int max_len = getMaxSeqNameLength();
+    if (print_taxid) max_len = 10;
 	if (max_len < 10) max_len = 10;
-	int seq_id = 0;
-	for (it = seq_names.begin(); it != seq_names.end(); it++, seq_id++) {
+	int seq_id;
+	for (seq_id = 0; seq_id < seq_names.size(); seq_id++) {
 		out.width(max_len);
-		out << left << (*it) << "  ";
+        if (print_taxid)
+            out << left << seq_id << " ";
+        else
+            out << left << seq_names[seq_id] << " ";
 		int j = 0;
 		for (IntVector::iterator i = site_pattern.begin();  i != site_pattern.end(); i++, j++)
 			if (kept_sites[j])
@@ -1834,11 +1840,6 @@ void Alignment::printPhylip(ostream &out, bool append, const char *aln_site_list
 
 void Alignment::printPhylip(const char *file_name, bool append, const char *aln_site_list,
                             bool exclude_gaps, bool exclude_const_sites, const char *ref_seq_name) {
-    IntVector kept_sites;
-    int final_length = buildRetainingSites(aln_site_list, kept_sites, exclude_gaps, exclude_const_sites, ref_seq_name);
-    if (seq_type == SEQ_CODON)
-        final_length *= 3;
-
     try {
         ofstream out;
         out.exceptions(ios::failbit | ios::badbit);
@@ -1847,20 +1848,9 @@ void Alignment::printPhylip(const char *file_name, bool append, const char *aln_
             out.open(file_name, ios_base::out | ios_base::app);
         else
             out.open(file_name);
-        out << getNSeq() << " " << final_length << endl;
-        StrVector::iterator it;
-        int max_len = getMaxSeqNameLength();
-        if (max_len < 10) max_len = 10;
-        int seq_id = 0;
-        for (it = seq_names.begin(); it != seq_names.end(); it++, seq_id++) {
-            out.width(max_len);
-            out << left << (*it) << "  ";
-            int j = 0;
-            for (IntVector::iterator i = site_pattern.begin();  i != site_pattern.end(); i++, j++)
-                if (kept_sites[j])
-                    out << convertStateBackStr(at(*i)[seq_id]);
-            out << endl;
-        }
+
+        printPhylip(out, append, aln_site_list, exclude_gaps, exclude_const_sites, ref_seq_name);
+
         out.close();
         if (verbose_mode >= VB_MED)
         	cout << "Alignment was printed to " << file_name << endl;
@@ -2328,12 +2318,29 @@ void Alignment::createBootstrapAlignment(int *pattern_freq, const char *spec) {
     int site, nsite = getNSite();
     memset(pattern_freq, 0, getNPattern()*sizeof(int));
 	IntVector site_vec;
-    if (!spec) {
-   		for (site = 0; site < nsite; site++) {
-   			int site_id = random_int(nsite);
-   			int ptn_id = getPatternID(site_id);
-   			pattern_freq[ptn_id]++;
-   		}
+    if (!spec ||  strncmp(spec, "SCALE=", 6) == 0) {
+    
+//   		for (site = 0; site < nsite; site++) {
+//   			int site_id = random_int(nsite);
+//   			int ptn_id = getPatternID(site_id);
+//   			pattern_freq[ptn_id]++;
+//   		}
+        // BQM 2015-12-27: use multinomial sampling for faster generation
+        if (spec) {
+            double scale = convert_double(spec+6);
+            nsite = (int)round(scale * nsite);
+        }
+        int nptn = getNPattern(), ptn;
+        double *prob = new double[nptn];
+        for (ptn = 0; ptn < nptn; ptn++)
+            prob[ptn] = at(ptn).frequency;
+        gsl_ran_multinomial(nptn, nsite, prob, (unsigned int*)pattern_freq);
+        int sum = 0;
+        for (ptn = 0; ptn < nptn; ptn++)
+            sum += pattern_freq[ptn];
+        assert(sum == nsite);
+        delete [] prob;
+    
     } else if (strncmp(spec, "GENESITE,", 9) == 0) {
 		// resampling genes, then resampling sites within resampled genes
 		convert_int_vec(spec+9, site_vec);
