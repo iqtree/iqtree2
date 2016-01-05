@@ -3144,6 +3144,7 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -z <trees_file>      Evaluating a set of user trees" << endl
             << "  -zb <#replicates>    Performing BP,KH,SH,ELW tests for trees passed via -z" << endl
             << "  -zw                  Also performing weighted-KH and weighted-SH tests" << endl
+            << "  -au                  Also performing approximately unbiased (AU) test" << endl
             << endl;
 
 			cout << "GENERATING RANDOM TREES:" << endl;
