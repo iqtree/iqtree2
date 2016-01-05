@@ -1876,10 +1876,14 @@ void performAUTest(Params &params, PhyloTree *tree, double *pattern_lhs, vector<
             for (tid = 0; tid < ntrees; tid++) {
                 double *pattern_lh = pattern_lhs + (tid*nptn);
                 double tree_lh;
+#ifdef BINARY32
+                tree_lh = tree->dotProductSIMD<double, Vec2d, 2>(pattern_lh, boot_sample_dbl, nptn);
+#else
                 if (instruction_set >= 7)
                     tree_lh = tree->dotProductSIMD<double, Vec4d, 4>(pattern_lh, boot_sample_dbl, nptn);
                 else
                     tree_lh = tree->dotProductSIMD<double, Vec2d, 2>(pattern_lh, boot_sample_dbl, nptn);
+#endif
                 if (tree_lh > max_lh) {
                     max_lh = tree_lh;
                     max_tid = tid;
