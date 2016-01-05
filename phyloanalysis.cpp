@@ -750,11 +750,11 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 				<< "NNI log-likelihood cutoff: " << tree.getNNICutoff() << endl
 				<< endl;
 */
-		if (params.compute_ml_tree) {
+		if (params.compute_ml_tree && (params.min_iterations > 0 || original_model.find("ONLY") != string::npos)) {
 			if (original_model.find("ONLY") != string::npos)
 				out << "TREE USED FOR MODEL SELECTION" << endl
 					<< "-----------------------------" << endl << endl;
-			else
+            else 
 				out << "MAXIMUM LIKELIHOOD TREE" << endl
 					<< "-----------------------" << endl << endl;
 
@@ -872,9 +872,10 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 		if (params.treeset_file) {
 			evaluateTrees(params, &tree, info, distinct_trees);
 			out.precision(4);
+            out.setf(ios_base::fixed);
 
 			out << endl << "USER TREES" << endl << "----------" << endl << endl;
-			out << "See " << params.treeset_file << ".trees for trees with branch lengths." << endl << endl;
+			out << "See " << params.out_prefix << ".trees for trees with branch lengths." << endl << endl;
 			if (params.topotest_replicates && info.size() > 1) {
                 out << "Tree      logL    deltaL  bp-RELL    p-KH     p-SH    ";
 				if (params.do_weighted_test)
