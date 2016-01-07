@@ -990,6 +990,7 @@ double PhyloTree::computeLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, Ph
 
 	if (orig_nptn < nptn) {
     	// ascertainment bias correction
+        assert(prob_const < 1.0 && prob_const >= 0.0);
     	prob_const = log(1.0 - prob_const);
     	for (ptn = 0; ptn < orig_nptn; ptn++)
     		_pattern_lh[ptn] -= prob_const;
