@@ -321,7 +321,7 @@ void SuperAlignment::createBootstrapAlignment(IntVector &pattern_freq, const cha
 
 void SuperAlignment::createBootstrapAlignment(int *pattern_freq, const char *spec) {
 	if (!isSuperAlignment()) outError("Internal error: ", __func__);
-	if (spec && strncmp(spec, "GENE", 4) != 0) outError("Unsupported yet. ", __func__);
+//	if (spec && strncmp(spec, "GENE", 4) != 0) outError("Unsupported yet. ", __func__);
 
 	if (spec && strncmp(spec, "GENE", 4) == 0) {
 		// resampling whole genes
