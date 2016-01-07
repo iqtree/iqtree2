@@ -2270,6 +2270,9 @@ void evaluateTrees(Params &params, IQTree *tree, vector<TreeInfo> &info, IntVect
 				info[tid].wkh_pvalue /= params.topotest_replicates;
 			}
 		}
+        
+        delete [] avg_lh;
+        
 		/* now to ELW - Expected Likelihood Weight method */
 		cout << "Performing ELW test..." << endl;
 
