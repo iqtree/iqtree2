@@ -1854,21 +1854,31 @@ void performAUTest(Params &params, PhyloTree *tree, double *pattern_lhs, vector<
     int nptn = tree->getAlnNPattern();
     int maxnptn = get_safe_upper_limit(nptn);
     
+    double *bp = new double[ntrees*nscales];
+    memset(bp, 0, sizeof(double)*ntrees*nscales);
+    
+    int k, tid, ptn;
+#ifdef _OPENMP
+    #pragma omp parallel private(k, tid, ptn)
+    {
+    int *rstream;
+    init_random(params.ran_seed + omp_get_thread_num(), false, &rstream);
+#else
+    int *rstream = randstream;
+#endif
+    size_t boot;
     int *boot_sample = aligned_alloc<int>(maxnptn);
     memset(boot_sample, 0, maxnptn*sizeof(int));
     
     double *boot_sample_dbl = aligned_alloc<double>(maxnptn);
     
-    double *bp = new double[ntrees*nscales];
-    memset(bp, 0, sizeof(double)*ntrees*nscales);
-    
-    int k, tid, ptn;
-    size_t boot;
+#ifdef _OPENMP
+    #pragma omp for schedule(static)
+#endif
     for (k = 0; k < nscales; k++) {
-    
         string str = "SCALE=" + convertDoubleToString(r[k]);    
 		for (boot = 0; boot < nboot; boot++) {
-			tree->aln->createBootstrapAlignment(boot_sample, str.c_str());
+			tree->aln->createBootstrapAlignment(boot_sample, str.c_str(), rstream);
             for (ptn = 0; ptn < maxnptn; ptn++)
                 boot_sample_dbl[ptn] = boot_sample[ptn];
             double max_lh = -1e20;
@@ -1892,6 +1902,14 @@ void performAUTest(Params &params, PhyloTree *tree, double *pattern_lhs, vector<
             bp[k*ntrees+max_tid] += nboot_inv;
         }
     }
+
+    aligned_free(boot_sample_dbl);
+    aligned_free(boot_sample);
+
+#ifdef _OPENMP
+    finish_random(rstream);
+    }
+#endif
 
     if (verbose_mode >= VB_MED) {
         cout << "scale";
@@ -1952,8 +1970,6 @@ void performAUTest(Params &params, PhyloTree *tree, double *pattern_lhs, vector<
     delete [] w;
     delete [] cc;
     delete [] bp;
-    aligned_free(boot_sample_dbl);
-    aligned_free(boot_sample);
 }
 
 
@@ -1994,7 +2010,7 @@ void evaluateTrees(Params &params, IQTree *tree, vector<TreeInfo> &info, IntVect
 		site_lh_out.close();
 	}
 
-	double time_start = getCPUTime();
+	double time_start = getRealTime();
 
 	int *boot_samples = NULL;
 	int boot;
@@ -2352,7 +2368,7 @@ void evaluateTrees(Params &params, IQTree *tree, vector<TreeInfo> &info, IntVect
 	treeout.close();
 	in.close();
 
-	cout << "Time for evaluating all trees: " << getCPUTime() - time_start << " sec." << endl;
+	cout << "Time for evaluating all trees: " << getRealTime() - time_start << " sec." << endl;
 
 }
 

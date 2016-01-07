@@ -3440,33 +3440,44 @@ int finish_random() {
 
 int *randstream;
 
-int init_random(int seed, bool write_info) {
+int init_random(int seed, bool write_info, int** rstream) {
     //    srand((unsigned) time(NULL));
     if (seed < 0)
         seed = make_sprng_seed();
 #ifndef PARALLEL
     if (write_info)
     	cout << "(Using SPRNG - Scalable Parallel Random Number Generator)" << endl;
-    randstream = init_sprng(0, 1, seed, SPRNG_DEFAULT); /*init stream*/
-    if (verbose_mode >= VB_MED) {
-        print_sprng(randstream);
+    if (rstream) {
+        *rstream = init_sprng(0, 1, seed, SPRNG_DEFAULT); /*init stream*/
+    } else {
+        randstream = init_sprng(0, 1, seed, SPRNG_DEFAULT); /*init stream*/
+        if (verbose_mode >= VB_MED) {
+            print_sprng(randstream);
+        }
     }
 #else /* PARALLEL */
     if (PP_IamMaster && write_info) {
         cout << "(Using SPRNG - Scalable Parallel Random Number Generator)" << endl;
     }
     /* MPI_Bcast(&seed, 1, MPI_UNSIGNED, PP_MyMaster, MPI_COMM_WORLD); */
-    randstream = init_sprng(PP_Myid, PP_NumProcs, seed, SPRNG_DEFAULT); /*initialize stream*/
-    if (verbose_mode >= VB_MED) {
-        cout << "(" << PP_Myid << ") !!! random seed set to " << seed << " !!!" << endl;
-        print_sprng(randstream);
+    if (rstream) {
+        *rstream = init_sprng(PP_Myid, PP_NumProcs, seed, SPRNG_DEFAULT); /*initialize stream*/
+    } else {
+        randstream = init_sprng(PP_Myid, PP_NumProcs, seed, SPRNG_DEFAULT); /*initialize stream*/
+        if (verbose_mode >= VB_MED) {
+            cout << "(" << PP_Myid << ") !!! random seed set to " << seed << " !!!" << endl;
+            print_sprng(randstream);
+        }
     }
 #endif /* PARALLEL */
     return (seed);
 } /* initrandom */
 
-int finish_random() {
-	return free_sprng(randstream);
+int finish_random(int *rstream) {
+    if (rstream)
+        return free_sprng(rstream);
+    else
+        return free_sprng(randstream);
 }
 
 #endif /* USE_SPRNG */
@@ -3474,8 +3485,8 @@ int finish_random() {
 /******************/
 
 /* returns a random integer in the range [0; n - 1] */
-int random_int(int n) {
-    return (int) floor(random_double() * n);
+int random_int(int n, int *rstream) {
+    return (int) floor(random_double(rstream) * n);
 } /* randominteger */
 
 //int randint(int a, int b) {
@@ -3483,19 +3494,25 @@ int random_int(int n) {
 //}
 //
 
-double random_double() {
+double random_double(int *rstream) {
 #ifndef FIXEDINTRAND
 #ifndef PARALLEL
 #if RAN_TYPE == RAN_STANDARD
     return ((double) rand()) / ((double) RAND_MAX + 1);
 #elif RAN_TYPE == RAN_SPRNG
-    return sprng(randstream);
+    if (rstream)
+        return sprng(rstream);
+    else
+        return sprng(randstream);
 #else /* NO_SPRNG */
     return randomunitintervall();
 #endif /* NO_SPRNG */
 #else /* NOT PARALLEL */
 #if RAN_TYPE == RAN_SPRNG
-    return sprng(randstream);
+    if (rstream)
+        return sprng(rstream);
+    else
+        return sprng(randstream);
 #else /* NO_SPRNG */
     int m;
     for (m = 1; m < PP_NumProcs; m++)

@@ -2090,18 +2090,18 @@ extern int *randstream;
  * @param seed seed for generator
  * @param write_info true to write information, false otherwise (default)
  */
-int init_random(int seed, bool write_info = false);
+int init_random(int seed, bool write_info = false, int** rstream = NULL);
 
 /**
  * finalize random number generator (e.g. free memory
  */
-int finish_random();
+int finish_random(int *rstream = NULL);
 
 /**
  * returns a random integer in the range [0; n - 1]
  * @param n upper-bound of random number
  */
-int random_int(int n);
+int random_int(int n, int *rstream = NULL);
 
 /**
  *  return a random integer in the range [a,b]
@@ -2112,12 +2112,12 @@ int random_int(int n);
  * returns a random integer in the range [0; RAND_MAX - 1]
  * = random_int(RAND_MAX)
  */
-int random_int();
+//int random_int(int *rstream = NULL);
 
 /**
  * returns a random floating-point nuber in the range [0; 1)
  */
-double random_double();
+double random_double(int *rstream = NULL);
 
 template <class T>
 void my_random_shuffle (T first, T last)
