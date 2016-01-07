@@ -25,8 +25,7 @@
 #include "model/modelgtr.h"
 #include "model/rategamma.h"
 #include <numeric>
-#include "pllrepo/src/pllInternal.h"
-#include "pllrepo/src/pll.h"
+#include "pll/pllInternal.h"
 #include "pllnni.h"
 #include "vectorclass/vectorclass.h"
 #include "vectorclass/vectormath_common.h"

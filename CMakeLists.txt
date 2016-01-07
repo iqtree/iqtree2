@@ -193,11 +193,11 @@ if (IQTREE_FLAGS MATCHES "omp")
 	
 	if (VCC) 
   		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /openmp")
-  		include_directories("${PROJECT_SOURCE_DIR}/pllrepo/src") # for PThreads headers 
+  		include_directories("${PROJECT_SOURCE_DIR}/pll") # for PThreads headers 
 	elseif (ICC)
   		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Qopenmp")
   		if (WIN32)
-  			include_directories("${PROJECT_SOURCE_DIR}/pllrepo/src") # for PThreads headers
+  			include_directories("${PROJECT_SOURCE_DIR}/pll") # for PThreads headers
   		endif() 
   	elseif (GCC)
 		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pthread")
@@ -334,7 +334,7 @@ include_directories("${PROJECT_BINARY_DIR}")
 ##################################################################
 # subdirectories containing necessary libraries for the build 
 ##################################################################
-add_subdirectory(pllrepo/src)
+add_subdirectory(pll)
 add_subdirectory(ncl)
 add_subdirectory(lbfgsb)
 add_subdirectory(whtest)
@@ -518,7 +518,6 @@ install (TARGETS iqtree DESTINATION bin)
 install (FILES "${PROJECT_SOURCE_DIR}/example/models.nex" DESTINATION .)
 install (FILES "${PROJECT_SOURCE_DIR}/example/example.phy" DESTINATION .)
 install (FILES "${PROJECT_SOURCE_DIR}/example/example.nex" DESTINATION .)
-install (FILES "${PROJECT_SOURCE_DIR}/Documents/iqtree-manual-1.0.pdf" DESTINATION .)
 
 if (WIN32)
 	install (FILES "${BINARY_DIR}/iqtree${EXE_SUFFIX}-click.exe" DESTINATION bin)
@@ -564,7 +563,7 @@ endif()
 #set(CPACK_SOURCE_PACKAGE_FILE_NAME
 #  "${CMAKE_PROJECT_NAME}-${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSION_MINOR}")
 set(CPACK_SOURCE_IGNORE_FILES
-  "/build.*/;/debug.*/;/examples/;/test_scripts/;/manual/;/.bzr/;~$;/\\\\.svn/;/\\\\.git/;/pll/;/pllrepo.dox/;/pllrepo.examples/;/pllrepo.figures/;/pllrepo.legacy/;/pllrepo.m4/;/pllrepo.man/;/pllrepo.MPI/;/pllrepo.sMSA/;/pllrepo.testdata/;${CPACK_SOURCE_IGNORE_FILES}")
+  "/build.*/;/debug.*/;/examples/;/test_scripts/;/manual/;/.bzr/;~$;/\\\\.svn/;/\\\\.git/;/pllrepo/;${CPACK_SOURCE_IGNORE_FILES}")
 
 set (SYSTEM_NAME "${CMAKE_SYSTEM_NAME}")
 if (${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")

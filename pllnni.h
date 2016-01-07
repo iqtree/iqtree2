@@ -12,7 +12,7 @@
 #include <vector>
 //#include <unordered_set>
 extern "C" {
-#include "pllrepo/src/pllInternal.h"
+#include "pll/pllInternal.h"
 }
 
 typedef struct {
