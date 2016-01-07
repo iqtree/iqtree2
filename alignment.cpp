@@ -2320,27 +2320,32 @@ void Alignment::createBootstrapAlignment(int *pattern_freq, const char *spec) {
 	IntVector site_vec;
     if (!spec ||  strncmp(spec, "SCALE=", 6) == 0) {
     
-//   		for (site = 0; site < nsite; site++) {
-//   			int site_id = random_int(nsite);
-//   			int ptn_id = getPatternID(site_id);
-//   			pattern_freq[ptn_id]++;
-//   		}
-        // BQM 2015-12-27: use multinomial sampling for faster generation
         if (spec) {
             double scale = convert_double(spec+6);
             nsite = (int)round(scale * nsite);
         }
-        int nptn = getNPattern(), ptn;
-        double *prob = new double[nptn];
-        for (ptn = 0; ptn < nptn; ptn++)
-            prob[ptn] = at(ptn).frequency;
-        gsl_ran_multinomial(nptn, nsite, prob, (unsigned int*)pattern_freq);
-        int sum = 0;
-        for (ptn = 0; ptn < nptn; ptn++)
-            sum += pattern_freq[ptn];
-        assert(sum == nsite);
-        delete [] prob;
-    
+        int nptn = getNPattern();
+
+        if (nsite/8 < nptn) {
+            int orig_nsite = getNSite();
+            for (site = 0; site < nsite; site++) {
+                int site_id = random_int(orig_nsite);
+                int ptn_id = getPatternID(site_id);
+                pattern_freq[ptn_id]++;
+            }
+        } else {
+            // BQM 2015-12-27: use multinomial sampling for faster generation if #sites is much larger than #patterns
+            int ptn;
+            double *prob = new double[nptn];
+            for (ptn = 0; ptn < nptn; ptn++)
+                prob[ptn] = at(ptn).frequency;
+            gsl_ran_multinomial(nptn, nsite, prob, (unsigned int*)pattern_freq);
+            int sum = 0;
+            for (ptn = 0; ptn < nptn; ptn++)
+                sum += pattern_freq[ptn];
+            assert(sum == nsite);
+            delete [] prob;
+        }
     } else if (strncmp(spec, "GENESITE,", 9) == 0) {
 		// resampling genes, then resampling sites within resampled genes
 		convert_int_vec(spec+9, site_vec);
