@@ -839,7 +839,7 @@ double PhyloTree::computeLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, Ph
 #endif
 		tree_lh += horizontal_add(lh_final);
         if (isnan(tree_lh) || isinf(tree_lh)) {
-            cout << "WARNING: Numerical underflow caused by alignment sites";
+            cout << "WARNING: Numerical underflow caused by alignment sites there";
             i = aln->getNSite();
             for (j = 0; j < i; j++) {
                 ptn = aln->getPatternID(j);
@@ -854,6 +854,8 @@ double PhyloTree::computeLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, Ph
                 }
             	tree_lh += _pattern_lh[ptn] * ptn_freq[ptn];
             }
+            cout << endl;
+            printTree(cout);
             cout << endl;
 //            cout << "WARNING: Tree log-likelihood is set to " << tree_lh << endl;
         }
@@ -1079,7 +1081,7 @@ double PhyloTree::computeLikelihoodFromBufferEigenSIMD() {
 #endif
 	tree_lh += horizontal_add(lh_final);
     if (isnan(tree_lh) || isinf(tree_lh)) {
-        cout << "WARNING: Numerical underflow caused by alignment sites";
+        cout << "WARNING: Numerical underflow caused by alignment sites here";
         i = aln->getNSite();
         for (j = 0, c = 0; j < i; j++) {
             ptn = aln->getPatternID(j);
