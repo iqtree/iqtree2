@@ -30,10 +30,12 @@ class ModelPoMo : public ModelGTR
      * @param freq_params
      * @param tree Associated tree for the model.
      * @param is_reversible True if the reversible model should be used.
+     * @param pomo_params parameters for PoMo
      *
      * @return
      */
-    ModelPoMo(const char *model_name, string model_params, StateFreqType freq_type, string freq_params, PhyloTree *tree, bool is_reversible);
+    ModelPoMo(const char *model_name, string model_params, StateFreqType freq_type, string freq_params, 
+        PhyloTree *tree, bool is_reversible, string pomo_params);
 
     ~ModelPoMo();
 
@@ -55,7 +57,8 @@ class ModelPoMo : public ModelGTR
                       string model_params,
                       StateFreqType freq_type,
                       string freq_params,
-                      bool is_reversible);
+                      bool is_reversible,
+                      string pomo_params);
 
     /* /\** */
     /*  *  Deprecated!  Unreversible.  Initialize rate_matrix and */
@@ -381,13 +384,15 @@ class ModelPoMo : public ModelGTR
     /// Eventual todo: do not hardcode this.
     int nnuc;
 
+    bool fixed_level_of_polymorphism;
+
     /**
-     * Empirical level of polymorphism.  Will be set by init() and is
+     * level of polymorphism.  Will be set by init() and is
      * used to normalize the mutation coefficients.  This is needed to
      * be done because PoMo had trouble to estimate this (especially,
      * when N was large).
      */
-    double empirical_level_of_polymorphism;
+    double level_of_polymorphism;
 };
 
 #endif /* _MODELPOMO_H_ */

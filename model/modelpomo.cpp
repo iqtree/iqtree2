@@ -9,20 +9,24 @@ ModelPoMo::ModelPoMo(const char *model_name,
                      StateFreqType freq_type,
                      string freq_params,
                      PhyloTree *tree,
-                     bool is_reversible)
+                     bool is_reversible,
+                     string pomo_params)
     // Do not count rates; does not make sense for PoMo.
     : ModelGTR(tree, false) {
-    init(model_name, model_params, freq_type, freq_params, is_reversible);
+    init(model_name, model_params, freq_type, freq_params, is_reversible, pomo_params);
 }
 
 void ModelPoMo::init(const char *model_name,
                      string model_params,
                      StateFreqType freq_type,
                      string freq_params,
-                     bool is_reversible) {
+                     bool is_reversible,
+                     string pomo_params) {
     // Check num_states (set in Alignment::readCountsFormat()).
     N = phylo_tree->aln->virtual_pop_size;
     nnuc = 4;
+    // TODO: 
+    fixed_level_of_polymorphism = false;
     assert(num_states == (nnuc + (nnuc*(nnuc-1)/2 * (N-1))) );
 
     if (is_reversible != true) throw "Non-reversible PoMo not supported yet.";
@@ -84,7 +88,12 @@ void ModelPoMo::init(const char *model_name,
         break;
     }
 
-    empirical_level_of_polymorphism = estimateEmpiricalPolymorphicFreq();
+    level_of_polymorphism = estimateEmpiricalPolymorphicFreq();
+    if (pomo_params.length() > 0) {
+        level_of_polymorphism = convert_double(pomo_params.c_str());
+        fixed_level_of_polymorphism = true;
+        num_params--;
+    }
     setInitialMutCoeff();
     // TODO: DOM; DEBUGGING IQ-TREE CONVERGENCE ONLY; REMOVE THIS.
     // mutation_prob[0] = 0.00153064;
@@ -137,7 +146,7 @@ void ModelPoMo::setInitialMutCoeff() {
     mutation_prob = dna_model->rates;
     // for (int i = 0; i < 6; i++) mutation_prob[i] = POMO_INIT_RATE;
     double m_init = 0;
-    double theta_p = empirical_level_of_polymorphism;
+    double theta_p = level_of_polymorphism;
     double lambda_fixed_sum = computeSumFreqFixedStates();
     double lambda_poly_sum_no_mu = computeSumFreqPolyStatesNoMut();
     // cout << "DEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUG" << endl;
@@ -145,7 +154,7 @@ void ModelPoMo::setInitialMutCoeff() {
     // cout << lambda_fixed_sum << endl;
     // cout << lambda_poly_sum_no_mu << endl;
 
-    if (lambda_poly_sum_no_mu <= 0) {
+    if (!fixed_level_of_polymorphism && lambda_poly_sum_no_mu <= 0) {
         outWarning("We strongly discourage to use PoMo on data without polymorphisms.");
         outWarning("Set initial rates to predefined values.");
         for (int i = 0; i < 6; i++) mutation_prob[i] = POMO_INIT_RATE;
@@ -158,7 +167,6 @@ void ModelPoMo::setInitialMutCoeff() {
     // cout << "DEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUG" << endl;
     // cout << m_init << endl;
     for (int i = 0; i < 6; i++) mutation_prob[i] = m_init;
-    return;
 }
 
 double ModelPoMo::computeSumFreqPolyStatesNoMut() {
@@ -488,7 +496,10 @@ double ModelPoMo::computeProbBoundaryMutation(int state1, int state2) {
 
 int ModelPoMo::getNDim() {
     // DOM 2015-12-16: Fix theta_p.
-    return dna_model->getNDim()+1;
+    if (fixed_level_of_polymorphism)
+        return dna_model->getNDim();
+    else
+        return dna_model->getNDim()+1;
     // return dna_model->getNDim();
 }
 
@@ -558,6 +569,7 @@ bool ModelPoMo::getVariables(double *variables) {
                 cout << variables[i] << endl;
             }
         }
+        // TODO: works only if fixed_level_of_polymorphism is false
         for (i = 0; i < num_all; i++) {
             if (mutation_prob[i] != variables[(int)dna_model->param_spec[i]+1])
                 changed = true;
@@ -569,18 +581,6 @@ bool ModelPoMo::getVariables(double *variables) {
             // }
         }
     }
-
-    // TODO: This does not work somehow.  Why?
-    // // Normalize the mutation probability so that they resemble the
-    // // level of polymorphism in the data.
-    // computeStateFreq();
-    // double theta_p = empirical_level_of_polymorphism;
-    // double sum_pol = computeSumFreqPolyStates();
-    // double sum_fix = computeSumFreqFixedStates();
-    // double m_norm  = sum_pol * (1.0 - theta_p) / (sum_fix * theta_p);
-    // // cout << m_norm << endl;
-    // for (i = 0; i < num_all; i++)
-    //     mutation_prob[i] /= m_norm;
 
     if (freq_type == FREQ_ESTIMATE) {
         int ndim = getNDim();
@@ -596,6 +596,20 @@ bool ModelPoMo::getVariables(double *variables) {
         // for (i = 0; i < num_states-1; i++)
         //  sum += state_freq[i];
         // state_freq[num_states-1] = 1.0 - sum;
+    }
+
+    // TODO: This does not work somehow.  Why?
+    // // Normalize the mutation probability so that they resemble the
+    // // level of polymorphism in the data.
+    if (fixed_level_of_polymorphism) {
+        computeStateFreq();
+        double theta_p = level_of_polymorphism;
+        double sum_pol = computeSumFreqPolyStates();
+        double sum_fix = computeSumFreqFixedStates();
+        double m_norm  = sum_pol * (1.0 - theta_p) / (sum_fix * theta_p);
+        // cout << m_norm << endl;
+        for (i = 0; i < num_all; i++)
+         mutation_prob[i] /= m_norm;
     }
 
     updatePoMoStatesAndRates();
@@ -1057,7 +1071,7 @@ void ModelPoMo::reportPoMoStateFreqs(ofstream &out) {
     double fixed = computeSumFreqFixedStates();
     double prop_poly = poly / (poly + fixed);
     double watterson_theta = prop_poly / harmonic(N);
-    double emp_prop_poly = empirical_level_of_polymorphism;
+    double emp_prop_poly = estimateEmpiricalPolymorphicFreq();
 
     out << setprecision(8);
     out << "Estimated sum of fixed states:" << endl;

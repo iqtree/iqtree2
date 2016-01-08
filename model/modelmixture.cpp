@@ -994,9 +994,16 @@ ModelSubst* createModel(string model_str, ModelsBlock *models_block, StateFreqTy
     bool is_rev_pomo = true;
     size_t pos_rev_pomo = model_str.find("+rP");
     size_t pos_nonrev_pomo = model_str.find("+nrP");
+    string pomo_params;
     if (pos_rev_pomo != string::npos) {
         is_pomo = true;
         is_rev_pomo = true;
+        if (model_str.length() > pos_rev_pomo+3 && model_str[pos_rev_pomo+3] == '{') {
+            size_t pos_close_brack = model_str.find('}', pos_rev_pomo);
+            if (pos_close_brack == string::npos)
+                outError("Closing bracket for PoMo parameter not found");
+            pomo_params = model_str.substr(pos_rev_pomo+4, pos_close_brack-pos_rev_pomo-4);
+        }
         model_str = model_str.substr(0, pos_rev_pomo);
     }
     if (pos_nonrev_pomo != string::npos) {
@@ -1023,7 +1030,7 @@ ModelSubst* createModel(string model_str, ModelsBlock *models_block, StateFreqTy
 	} else */
     if ((is_pomo == true) ||
         (tree->aln->seq_type == SEQ_POMO))
-        model = new ModelPoMo(model_str.c_str(), model_params, freq_type, freq_params, tree, is_rev_pomo);
+        model = new ModelPoMo(model_str.c_str(), model_params, freq_type, freq_params, tree, is_rev_pomo, pomo_params);
 	else if ((model_str == "GTR" && tree->aln->seq_type == SEQ_DNA) ||
              (model_str == "GTR2" && tree->aln->seq_type == SEQ_BINARY) ||
              (model_str == "GTR20" && tree->aln->seq_type == SEQ_PROTEIN)) {
