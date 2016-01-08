@@ -3287,8 +3287,10 @@ double PhyloTree::optimizeAllBranches(int my_iterations, double tolerance, int m
         	//clearAllPartialLH();
 //        	readTreeString(string_brlen);
         	new_tree_lh = computeLikelihood();
-            if (fabs(new_tree_lh-tree_lh) > 1.0)
+            if (fabs(new_tree_lh-tree_lh) > 1.0) {
+                printTree(cout);
                 cout << "new_tree_lh: " << new_tree_lh << "   tree_lh: " << tree_lh << endl;
+            }
         	assert(fabs(new_tree_lh-tree_lh) < 1.0);
         	return new_tree_lh;
         }
