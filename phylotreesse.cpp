@@ -78,6 +78,14 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk) {
         return;
     }
     
+    if (getModel() && getModel()->isSiteSpecificModel()) {
+        computeLikelihoodBranchPointer = &PhyloTree::computeSitemodelLikelihoodBranchEigen;
+        computeLikelihoodDervPointer = &PhyloTree::computeSitemodelLikelihoodDervEigen;
+        computePartialLikelihoodPointer = &PhyloTree::computeSitemodelPartialLikelihoodEigen;
+        computeLikelihoodFromBufferPointer = NULL;
+        return;        
+    }
+    
     if (sse == LK_EIGEN) {
         if (model_factory && model_factory->model->isMixture()) {
             if (model_factory->fused_mix_rate) {
