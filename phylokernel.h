@@ -855,8 +855,10 @@ double PhyloTree::computeLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, Ph
             	tree_lh += _pattern_lh[ptn] * ptn_freq[ptn];
             }
             cout << endl;
-            printTree(cout);
-            cout << endl;
+            if (verbose_mode >= VB_MED) {
+                printTree(cout);
+                cout << endl;
+            }
 //            cout << "WARNING: Tree log-likelihood is set to " << tree_lh << endl;
         }
 

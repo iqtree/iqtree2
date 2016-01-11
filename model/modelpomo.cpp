@@ -598,9 +598,8 @@ bool ModelPoMo::getVariables(double *variables) {
         // state_freq[num_states-1] = 1.0 - sum;
     }
 
-    // TODO: This does not work somehow.  Why?
-    // // Normalize the mutation probability so that they resemble the
-    // // level of polymorphism in the data.
+    // Normalize the mutation probability so that they resemble the
+    // level of polymorphism in the data.
     if (fixed_level_of_polymorphism) {
         computeStateFreq();
         double theta_p = level_of_polymorphism;

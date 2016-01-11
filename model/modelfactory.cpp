@@ -813,8 +813,10 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info,
     tree->setCurScore(cur_lh);
 	if (verbose_mode >= VB_MED || write_info) {
 		cout << "1. Initial log-likelihood: " << cur_lh << endl;
-        tree->printTree(cout);
-        cout << endl;
+        if (verbose_mode >= VB_MAX) {
+            tree->printTree(cout);
+            cout << endl;
+        }
     }
 
 	// For UpperBounds -----------
