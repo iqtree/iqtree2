@@ -1562,7 +1562,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 			if (strcmp(argv[cnt], "-st") == 0) {
 				cnt++;
 				if (cnt >= argc)
-					throw "Use -st BIN or -st DNA or -st AA or -st CODON or -st MORPH";
+					throw "Use -st BIN or -st DNA or -st AA or -st CODON or -st MORPH or -st CRXX or -st CFxx.";
                 string arg = argv[cnt];
                 params.sequence_type = argv[cnt];
 //                if (arg.substr(0,2) == "CR") params.pomo_random_sampling = true;

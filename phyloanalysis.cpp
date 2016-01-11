@@ -2392,6 +2392,13 @@ void runPhyloAnalysis(Params &params) {
             cout << "NOTE: minimal branch length is reduced to " << params.min_branch_length << " for long alignment" << endl;
             cout.precision(3);
         }
+        // Increase the minimum branch length if PoMo is used.
+        if (alignment->seq_type == SEQ_POMO) {
+            params.min_branch_length *= alignment->virtual_pop_size * alignment->virtual_pop_size;
+            cout.precision(12);
+            cout << "NOTE: minimal branch length is increased to " << params.min_branch_length << " because PoMo infers number of events" << endl;
+            cout.precision(3);
+        }
     }
 
 	string original_model = params.model_name;
