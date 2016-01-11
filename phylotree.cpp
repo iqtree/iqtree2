@@ -1530,7 +1530,7 @@ void PhyloTree::initializeAllPartialLh(int &index, int &indexlh, PhyloNode *node
             }
         }
         
-        if (model->isSiteSpecificModel()) {
+        if (model->isSiteSpecificModel() && (sse == LK_EIGEN || sse == LK_EIGEN_SSE)) {
             // allocate tip memory for this model
             if (node->isLeaf()) {
                 nei2->scale_num = central_scale_num + ((indexlh) * scale_block_size);

@@ -82,7 +82,7 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk) {
         computeLikelihoodBranchPointer = &PhyloTree::computeSitemodelLikelihoodBranchEigen;
         computeLikelihoodDervPointer = &PhyloTree::computeSitemodelLikelihoodDervEigen;
         computePartialLikelihoodPointer = &PhyloTree::computeSitemodelPartialLikelihoodEigen;
-        computeLikelihoodFromBufferPointer = NULL;
+        computeLikelihoodFromBufferPointer = &PhyloTree::computeSitemodelLikelihoodFromBufferEigen;
         return;        
     }
     

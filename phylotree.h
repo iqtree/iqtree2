@@ -756,6 +756,8 @@ public:
     template <class VectorClass, const int VCSIZE, const int nstates>
     double computeMixtureLikelihoodFromBufferEigenSIMD();
 
+    double computeSitemodelLikelihoodFromBufferEigen();
+
     /**
             compute tree likelihood when a branch length collapses to zero
             @param dad_branch the branch leading to the subtree

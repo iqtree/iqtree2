@@ -1858,7 +1858,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (cnt >= argc)
 					throw "Use -fs <site_freq_file>";
 				params.site_freq_file = argv[cnt];
-				params.SSE = LK_EIGEN;
+//				params.SSE = LK_EIGEN;
 				continue;
 			}
 
