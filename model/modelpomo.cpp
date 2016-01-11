@@ -636,8 +636,8 @@ bool ModelPoMo::getVariables(double *variables) {
         //  sum += state_freq[i];
         // state_freq[num_states-1] = 1.0 - sum;
     }
-
-    normalizeMutationProbs();
+    if (fixed_level_of_polymorphism)
+        normalizeMutationProbs();
     updatePoMoStatesAndRates();
     return changed;
 }
