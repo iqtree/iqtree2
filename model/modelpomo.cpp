@@ -38,7 +38,7 @@ void ModelPoMo::init(const char *model_name,
     dna_model = new ModelDNA(model_name, model_params, freq_type, freq_params, phylo_tree);
     phylo_tree->aln->num_states = num_states;
     // num_params = dna_model->num_params;
-    num_params = dna_model->num_params + 1;
+    // num_params = dna_model->num_params + 1;
 
     this->name = dna_model->name + "+rP" + convertIntToString(N);
     this->full_name =
@@ -91,7 +91,7 @@ void ModelPoMo::init(const char *model_name,
     if (pomo_params.length() > 0) {
         level_of_polymorphism = convert_double(pomo_params.c_str());
         fixed_level_of_polymorphism = true;
-        num_params--;
+        // num_params--;
         outError("A fixed level of polymorphism is not implemented yet.");
     }
     setInitialMutCoeff();
@@ -521,7 +521,8 @@ void ModelPoMo::setVariables(double *variables) {
     //  variables[i] = freq_fixed_states[i-7];
     // }
 
-    if (num_params > 0) {
+    int ndim = getNDim();
+    if (ndim > 0) {
         int num_all = dna_model->param_spec.length();
         for (int i = 0; i < num_all; i++)
             // if (!dna_model->param_fixed[dna_model->param_spec[i]])
@@ -529,7 +530,6 @@ void ModelPoMo::setVariables(double *variables) {
             variables[(int)dna_model->param_spec[i]+1] = mutation_prob[i];
     }
     if (freq_type == FREQ_ESTIMATE) {
-        int ndim = getNDim();
         memcpy(variables+(ndim-nnuc+2), freq_fixed_states, (nnuc-1)*sizeof(double));
     }
 }
@@ -549,10 +549,12 @@ bool ModelPoMo::getVariables(double *variables) {
 
     // So far, this function only works if fixed_level_of_polymorphism is false.
     if (fixed_level_of_polymorphism == true) outError("A fixed level of polymorphism is not implemented yet.");
+
     
-    if (num_params > 0) {
+    int ndim = getNDim();
+    if (ndim > 0) {
         if (verbose_mode >= VB_MAX) {
-            for (i = 1; i <= num_params; i++) {
+            for (i = 1; i <= ndim; i++) {
                 cout << setprecision(8);
                 cout << "  Estimated mutation rates[" << i << "] = ";
                 cout << variables[i] << endl;
@@ -571,7 +573,6 @@ bool ModelPoMo::getVariables(double *variables) {
     }
 
     if (freq_type == FREQ_ESTIMATE) {
-        int ndim = getNDim();
         changed |= memcmpcpy(freq_fixed_states, variables+(ndim-nnuc+2), (nnuc-1)*sizeof(double));
         if (verbose_mode >= VB_MAX) {
             for (i = 0; i < nnuc-1; i++) {
