@@ -3286,12 +3286,16 @@ double PhyloTree::optimizeAllBranches(int my_iterations, double tolerance, int m
 
         	//clearAllPartialLH();
 //        	readTreeString(string_brlen);
+            double max_delta_lh = 1.0;
+            // Increase max delta with PoMo because log likelihood is very much lower.
+            if (aln->seq_type == SEQ_POMO) max_delta_lh = 3.0;
         	new_tree_lh = computeLikelihood();
-            if (fabs(new_tree_lh-tree_lh) > 1.0) {
+            if (fabs(new_tree_lh-tree_lh) > max_delta_lh) {
                 printTree(cout);
+                cout << endl;
                 cout << "new_tree_lh: " << new_tree_lh << "   tree_lh: " << tree_lh << endl;
             }
-        	assert(fabs(new_tree_lh-tree_lh) < 1.0);
+        	assert(fabs(new_tree_lh-tree_lh) < max_delta_lh);
         	return new_tree_lh;
         }
 
