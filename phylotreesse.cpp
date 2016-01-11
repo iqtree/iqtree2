@@ -78,7 +78,7 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk) {
         return;
     }
     
-    if (getModel() && getModel()->isSiteSpecificModel()) {
+    if (model_factory && model_factory->model->isSiteSpecificModel()) {
         computeLikelihoodBranchPointer = &PhyloTree::computeSitemodelLikelihoodBranchEigen;
         computeLikelihoodDervPointer = &PhyloTree::computeSitemodelLikelihoodDervEigen;
         computePartialLikelihoodPointer = &PhyloTree::computeSitemodelPartialLikelihoodEigen;

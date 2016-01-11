@@ -303,7 +303,7 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 			outError("JC is not suitable for site-specific model");
 		model = new ModelSet(model_str.c_str(), tree);
 		ModelSet *models = (ModelSet*)model; // assign pointer for convenience
-		models->init(params.freq_type);
+		models->init((params.freq_type != FREQ_UNKNOWN) ? params.freq_type : FREQ_EMPIRICAL);
 		IntVector site_model;
 		vector<double*> freq_vec;
 		readSiteFreq(tree->aln, params.site_freq_file, site_model, freq_vec);
@@ -321,7 +321,7 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 		for (i = 0; i < freq_vec.size(); i++) {
 			ModelGTR *modeli;
 			if (i == 0) {
-				modeli = (ModelGTR*)createModel(model_str, models_block, params.freq_type, "", tree, true);
+				modeli = (ModelGTR*)createModel(model_str, models_block, (params.freq_type != FREQ_UNKNOWN) ? params.freq_type : FREQ_EMPIRICAL, "", tree, true);
 				modeli->getStateFrequency(state_freq);
 				modeli->getRateMatrix(rates);
 			} else {

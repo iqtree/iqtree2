@@ -461,7 +461,7 @@ void PhyloTree::setModel(ModelSubst *amodel) {
 
 void PhyloTree::setModelFactory(ModelFactory *model_fac) {
     model_factory = model_fac;
-    if (model_factory && model_factory->model->isMixture())
+    if (model_factory && (model_factory->model->isMixture() || model_factory->model->isSiteSpecificModel()))
     	setLikelihoodKernel(sse);
 }
 
@@ -1244,10 +1244,17 @@ void PhyloTree::initializeAllPartialLh() {
     }
     assert(index == (nodeNum - 1) * 2);
     if (sse == LK_EIGEN || sse == LK_EIGEN_SSE) {
-        if (params->lh_mem_save == LM_PER_NODE)
-            assert(indexlh == nodeNum-leafNum);
-        else
-            assert(indexlh == (nodeNum-1)*2-leafNum);
+        if (params->lh_mem_save == LM_PER_NODE) {
+        	if (model->isSiteSpecificModel())
+        		assert(indexlh == nodeNum);
+        	else
+        		assert(indexlh == nodeNum-leafNum);
+        } else {
+        	if (model->isSiteSpecificModel())
+        		assert(indexlh == (nodeNum-1)*2);
+        	else
+        		assert(indexlh == (nodeNum-1)*2-leafNum);
+        }
     } else
     	assert(indexlh == (nodeNum-1)*2);
     clearAllPartialLH();
@@ -1402,10 +1409,15 @@ void PhyloTree::initializeAllPartialLh(int &index, int &indexlh, PhyloNode *node
         	uint64_t tip_partial_lh_size = aln->num_states * (aln->STATE_UNKNOWN+1) * model->getNMixtures();
             uint64_t mem_size = ((uint64_t)leafNum * 4 - 6) * (uint64_t) block_size + 2 + tip_partial_lh_size;
             if (sse == LK_EIGEN || sse == LK_EIGEN_SSE) {
-                if (params->lh_mem_save == LM_PER_NODE)
-                    mem_size -= ((uint64_t)leafNum * 3 - 4) * (uint64_t)block_size;
-                else 
-                    mem_size -= (uint64_t)leafNum * (uint64_t)block_size;
+                if (params->lh_mem_save == LM_PER_NODE) {
+                    if (model->isSiteSpecificModel())
+                        mem_size -= ((uint64_t)leafNum * 2 - 4) * (uint64_t)block_size;
+                    else
+                        mem_size -= ((uint64_t)leafNum * 3 - 4) * (uint64_t)block_size;
+                } else {
+                    if (!model->isSiteSpecificModel())
+                        mem_size -= (uint64_t)leafNum * (uint64_t)block_size;
+                }
             }
             if (verbose_mode >= VB_MED)
                 cout << "Allocating " << mem_size * sizeof(double) << " bytes for partial likelihood vectors" << endl;
@@ -1420,20 +1432,32 @@ void PhyloTree::initializeAllPartialLh(int &index, int &indexlh, PhyloNode *node
 
         // now always assign tip_partial_lh
         if (sse == LK_EIGEN || sse == LK_EIGEN_SSE) {
-            if (params->lh_mem_save == LM_PER_NODE)
-                tip_partial_lh = central_partial_lh + ((nodeNum - leafNum)*block_size);
-            else
-                tip_partial_lh = central_partial_lh + (((nodeNum - 1)*2-leafNum)*block_size);
+            if (params->lh_mem_save == LM_PER_NODE) {
+                if (model->isSiteSpecificModel()) 
+                    tip_partial_lh = central_partial_lh + ((nodeNum)*block_size);
+                else
+                    tip_partial_lh = central_partial_lh + ((nodeNum - leafNum)*block_size);
+            } else {
+                if (model->isSiteSpecificModel())
+                    tip_partial_lh = central_partial_lh + (((nodeNum - 1)*2)*block_size);
+                else
+                    tip_partial_lh = central_partial_lh + (((nodeNum - 1)*2-leafNum)*block_size);
+            }
         } else
             tip_partial_lh = central_partial_lh + (((nodeNum - 1)*2)*block_size);
 
         if (!central_scale_num) {
         	uint64_t mem_size = (leafNum - 1) * 4 * scale_block_size;
         	if (sse == LK_EIGEN || sse == LK_EIGEN_SSE) {
-                if (params->lh_mem_save == LM_PER_NODE)
-                    mem_size -= ((uint64_t)leafNum*3 - 2) * (uint64_t) scale_block_size;
-                else
-                    mem_size -= (uint64_t)leafNum * (uint64_t) scale_block_size;
+                if (params->lh_mem_save == LM_PER_NODE) {
+                    if (model->isSiteSpecificModel())
+                        mem_size -= ((uint64_t)leafNum*2 - 2) * (uint64_t) scale_block_size;
+                    else
+                        mem_size -= ((uint64_t)leafNum*3 - 2) * (uint64_t) scale_block_size;
+                } else {
+                    if (!model->isSiteSpecificModel())
+                        mem_size -= (uint64_t)leafNum * (uint64_t) scale_block_size;
+                }
             }
             if (verbose_mode >= VB_MED)
                 cout << "Allocating " << mem_size * sizeof(UBYTE) << " bytes for scale num vectors" << endl;
@@ -1502,6 +1526,20 @@ void PhyloTree::initializeAllPartialLh(int &index, int &indexlh, PhyloNode *node
             } else {
                 nei2->scale_num = central_scale_num + ((indexlh) * scale_block_size);
                 nei2->partial_lh = central_partial_lh + (indexlh * block_size);
+                indexlh++;
+            }
+        }
+        
+        if (model->isSiteSpecificModel()) {
+            // allocate tip memory for this model
+            if (node->isLeaf()) {
+                nei2->scale_num = central_scale_num + ((indexlh) * scale_block_size);
+                nei2->partial_lh = central_partial_lh + (indexlh * block_size);
+                indexlh++;
+            }
+            if (dad->isLeaf()) {
+                nei->scale_num = central_scale_num + ((indexlh) * scale_block_size);
+                nei->partial_lh = central_partial_lh + (indexlh * block_size);
                 indexlh++;
             }
         }
