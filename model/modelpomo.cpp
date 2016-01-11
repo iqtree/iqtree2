@@ -25,7 +25,6 @@ void ModelPoMo::init(const char *model_name,
     // Check num_states (set in Alignment::readCountsFormat()).
     N = phylo_tree->aln->virtual_pop_size;
     nnuc = 4;
-    // TODO: 
     fixed_level_of_polymorphism = false;
     assert(num_states == (nnuc + (nnuc*(nnuc-1)/2 * (N-1))) );
 
@@ -93,22 +92,9 @@ void ModelPoMo::init(const char *model_name,
         level_of_polymorphism = convert_double(pomo_params.c_str());
         fixed_level_of_polymorphism = true;
         num_params--;
+        outError("A fixed level of polymorphism is not implemented yet.");
     }
     setInitialMutCoeff();
-    // TODO: DOM; DEBUGGING IQ-TREE CONVERGENCE ONLY; REMOVE THIS.
-    // mutation_prob[0] = 0.00153064;
-    // mutation_prob[1] = 0.00399536;
-    // mutation_prob[2] = 0.00153064;
-    // mutation_prob[3] = 0.00153064;
-    // mutation_prob[4] = 0.00399536;
-    // mutation_prob[5] = 0.00153064;
-
-    // mutation_prob[0] = 0.0014;
-    // mutation_prob[1] = 0.00399536;
-    // mutation_prob[2] = 0.0014;
-    // mutation_prob[3] = 0.0014;
-    // mutation_prob[4] = 0.00399536;
-    // mutation_prob[5] = 0.0014;
 
     updatePoMoStatesAndRates();
 
@@ -561,6 +547,9 @@ bool ModelPoMo::getVariables(double *variables) {
     bool changed = false;
     int num_all = dna_model->param_spec.length();
 
+    // So far, this function only works if fixed_level_of_polymorphism is false.
+    if (fixed_level_of_polymorphism == true) outError("A fixed level of polymorphism is not implemented yet.");
+    
     if (num_params > 0) {
         if (verbose_mode >= VB_MAX) {
             for (i = 1; i <= num_params; i++) {
@@ -569,7 +558,6 @@ bool ModelPoMo::getVariables(double *variables) {
                 cout << variables[i] << endl;
             }
         }
-        // TODO: works only if fixed_level_of_polymorphism is false
         for (i = 0; i < num_all; i++) {
             if (mutation_prob[i] != variables[(int)dna_model->param_spec[i]+1])
                 changed = true;
@@ -986,11 +974,6 @@ ModelPoMo::estimateEmpiricalFixedStateFreqs(double * freq_fixed_states)
     }
 }
 
-// TODO: This function is not being used yet.  Also, we might want to
-// enable the user to enter an estiamte of the polymorphisms.  We have
-// to think about how to use this estimate.  If theta_p is empirically
-// estimated or given by the user, the number of parameters of PoMo is
-// reduced by 1.
 double
 ModelPoMo::estimateEmpiricalPolymorphicFreq()
 {
