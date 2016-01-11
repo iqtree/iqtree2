@@ -193,6 +193,13 @@ class ModelPoMo : public ModelGTR
      */
     void reportPoMoStateFreqs(ofstream &out);
 
+    /** 
+     * Normalize the mutation probabilities such that the given level of
+     * polymorphism is honored (level_of_polymorphism).
+     * 
+     */
+    void normalizeMutationProbs();
+
  protected:
 
     ModelDNA *dna_model;
