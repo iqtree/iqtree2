@@ -22,6 +22,7 @@
 #include "phylokernelmixture.h"
 #include "phylokernelmixrate.h"
 #include "model/modelgtr.h"
+#include "model/modelset.h"
 
 
 /* BQM: to ignore all-gapp subtree at an alignment site */
@@ -329,6 +330,89 @@ void PhyloTree::computeTipPartialLikelihood() {
 	if (tip_partial_lh_computed)
 		return;
 	tip_partial_lh_computed = true;
+    
+    
+	//-------------------------------------------------------
+	// initialize ptn_freq and ptn_invar
+	//-------------------------------------------------------
+
+	computePtnFreq();
+	// for +I model
+	computePtnInvar();
+
+    if (getModel()->isSiteSpecificModel()) {
+        ModelSet *models = (ModelSet*)model;
+        size_t nptn = aln->getNPattern(), tip_block_size = get_safe_upper_limit(nptn) * aln->num_states;
+        int nstates = aln->num_states;
+        int nseq = aln->getNSeq();
+#ifdef _OPENMP
+        #pragma omp parallel for schedule(static)
+#endif
+        for (int nodeid = 0; nodeid < nseq; nodeid++) {
+            int i, x;
+            double *partial_lh = tip_partial_lh + tip_block_size*nodeid;
+            for (size_t ptn = 0; ptn < nptn; ptn++, partial_lh += nstates) {
+                int state = aln->at(ptn)[nodeid];
+//                double *partial_lh = node_partial_lh + ptn*nstates;
+                double *inv_evec = models->at(ptn)->getInverseEigenvectors();
+
+                if (state < nstates) {
+                    for (i = 0; i < nstates; i++)
+                        partial_lh[i] = inv_evec[i*nstates+state];
+                } else if (state == aln->STATE_UNKNOWN) {
+                    // special treatment for unknown char
+                    for (i = 0; i < nstates; i++) {
+                        double lh_unknown = 0.0;
+                        double *this_inv_evec = inv_evec + i*nstates;
+                        for (x = 0; x < nstates; x++)
+                            lh_unknown += this_inv_evec[x];
+                        partial_lh[i] = lh_unknown;
+                    }
+                } else {
+                    double lh_ambiguous;
+                    // ambiguous characters
+                    int ambi_aa[] = {
+                        4+8, // B = N or D
+                        32+64, // Z = Q or E
+                        512+1024 // U = I or L
+                        };
+                    switch (aln->seq_type) {
+                    case SEQ_DNA:
+                        {
+                            int cstate = state-nstates+1;
+                            for (i = 0; i < nstates; i++) {
+                                lh_ambiguous = 0.0;
+                                for (x = 0; x < nstates; x++)
+                                    if ((cstate) & (1 << x))
+                                        lh_ambiguous += inv_evec[i*nstates+x];
+                                partial_lh[i] = lh_ambiguous;
+                            }
+                        }
+                        break;
+                    case SEQ_PROTEIN:
+                        //map[(unsigned char)'B'] = 4+8+19; // N or D
+                        //map[(unsigned char)'Z'] = 32+64+19; // Q or E
+                        {
+                            for (i = 0; i < nstates; i++) {
+                                lh_ambiguous = 0.0;
+                                for (x = 0; x < 11; x++)
+                                    if (ambi_aa[state] & (1 << x))
+                                        lh_ambiguous += inv_evec[i*nstates+x];
+                                partial_lh[i] = lh_ambiguous;
+                            }
+                        }
+                        break;
+                    default:
+                        assert(0);
+                        break;
+                    }
+                }
+                
+            }
+        }
+        return;
+    }
+    
 	int m, i, x, state, nstates = aln->num_states, nmixtures = model->getNMixtures();
 	double *all_inv_evec = model->getInverseEigenvectors();
 	assert(all_inv_evec);
@@ -399,14 +483,6 @@ void PhyloTree::computeTipPartialLikelihood() {
 		break;
 	}
 
-
-	//-------------------------------------------------------
-	// initialize ptn_freq and ptn_invar
-	//-------------------------------------------------------
-
-	computePtnFreq();
-	// for +I model
-	computePtnInvar();
 }
 
 void PhyloTree::computePtnFreq() {

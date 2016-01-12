@@ -22,7 +22,7 @@ void PhyloTree::computeSitemodelPartialLikelihoodEigen(PhyloNeighbor *dad_branch
 
 
     size_t nstates = aln->num_states;
-    size_t nptn = aln->size();
+    size_t nptn = aln->size(), tip_block_size = get_safe_upper_limit(nptn)*nstates;
     size_t ptn, c;
     size_t ncat = site_rate->getNRate();
     size_t i, x;
@@ -34,74 +34,11 @@ void PhyloTree::computeSitemodelPartialLikelihoodEigen(PhyloNeighbor *dad_branch
 	if (node->isLeaf()) {
 	    dad_branch->lh_scale_factor = 0.0;
 		// scale number must be ZERO
-	    memset(dad_branch->scale_num, 0, nptn * sizeof(UBYTE));
+//	    memset(dad_branch->scale_num, 0, nptn * sizeof(UBYTE));
 
 		if (!tip_partial_lh_computed)
 			computeTipPartialLikelihood();
-
-
-        for (ptn = 0; ptn < nptn; ptn++) {
-            int state = aln->at(ptn)[node->id];
-            double *partial_lh = dad_branch->partial_lh + ptn*block;
-            double *inv_evec = models->at(ptn)->getInverseEigenvectors();
-
-            if (state < nstates) {
-                for (i = 0; i < nstates; i++)
-                    partial_lh[i] = inv_evec[i*nstates+state];
-            } else if (state == aln->STATE_UNKNOWN) {
-                // special treatment for unknown char
-                for (i = 0; i < nstates; i++) {
-                    double lh_unknown = 0.0;
-                    double *this_inv_evec = inv_evec + i*nstates;
-                    for (x = 0; x < nstates; x++)
-                        lh_unknown += this_inv_evec[x];
-                    partial_lh[i] = lh_unknown;
-                }
-            } else {
-                double lh_ambiguous;
-                // ambiguous characters
-                int ambi_aa[] = {
-                    4+8, // B = N or D
-                    32+64, // Z = Q or E
-                    512+1024 // U = I or L
-                    };
-                switch (aln->seq_type) {
-                case SEQ_DNA:
-                    {
-                        int cstate = state-nstates+1;
-                        for (i = 0; i < nstates; i++) {
-                            lh_ambiguous = 0.0;
-                            for (x = 0; x < nstates; x++)
-                                if ((cstate) & (1 << x))
-                                    lh_ambiguous += inv_evec[i*nstates+x];
-                            partial_lh[i] = lh_ambiguous;
-                        }
-                    }
-                    break;
-                case SEQ_PROTEIN:
-                    //map[(unsigned char)'B'] = 4+8+19; // N or D
-                    //map[(unsigned char)'Z'] = 32+64+19; // Q or E
-                    {
-                        for (i = 0; i < nstates; i++) {
-                            lh_ambiguous = 0.0;
-                            for (x = 0; x < 11; x++)
-                                if (ambi_aa[state] & (1 << x))
-                                    lh_ambiguous += inv_evec[i*nstates+x];
-                            partial_lh[i] = lh_ambiguous;
-                        }
-                    }
-                    break;
-                default:
-                    assert(0);
-                    break;
-                }
-            }
-            
-            // copy partial_lh for all categories
-            for (c = 1; c < ncat; c++)
-                memcpy(partial_lh+c*nstates, partial_lh, nstates*sizeof(double));
-        }
-            
+   
 		return;
 	}
     
@@ -113,7 +50,7 @@ void PhyloTree::computeSitemodelPartialLikelihoodEigen(PhyloNeighbor *dad_branch
         PhyloNeighbor *nei = (PhyloNeighbor*)*it;
 		if (!left) left = (PhyloNeighbor*)(*it); else right = (PhyloNeighbor*)(*it);
         if ((nei->partial_lh_computed & 1) == 0)
-            computePartialLikelihood(nei, node);
+            computeSitemodelPartialLikelihoodEigen(nei, node);
         dad_branch->lh_scale_factor += nei->lh_scale_factor;
 	}
 
@@ -143,6 +80,8 @@ void PhyloTree::computeSitemodelPartialLikelihoodEigen(PhyloNeighbor *dad_branch
 		left = right;
 		right = tmp;
 	}
+    
+    assert(node->degree() == 3); // does not work with multifurcating tree yet
     
 //    if (node->degree() > 3) {
 //
@@ -254,6 +193,9 @@ void PhyloTree::computeSitemodelPartialLikelihoodEigen(PhyloNeighbor *dad_branch
 
         /*--------------------- TIP-TIP (cherry) case ------------------*/
 
+        double *tip_partial_lh_left = tip_partial_lh + (left->node->id * tip_block_size);
+        double *tip_partial_lh_right = tip_partial_lh + (right->node->id * tip_block_size);
+
 		// scale number must be ZERO
 	    memset(dad_branch->scale_num, 0, nptn * sizeof(UBYTE));
 #ifdef _OPENMP
@@ -262,8 +204,8 @@ void PhyloTree::computeSitemodelPartialLikelihoodEigen(PhyloNeighbor *dad_branch
 		for (ptn = 0; ptn < nptn; ptn++) {
 			double partial_lh_tmp[nstates];
 			double *partial_lh = dad_branch->partial_lh + ptn*block;
-			double *partial_lh_left = left->partial_lh + ptn*block;
-			double *partial_lh_right = right->partial_lh + ptn*block;
+			double *partial_lh_left = tip_partial_lh_left + ptn*nstates;
+			double *partial_lh_right = tip_partial_lh_right + ptn*nstates;
 
             double expleft[nstates];
             double expright[nstates];
@@ -290,7 +232,7 @@ void PhyloTree::computeSitemodelPartialLikelihoodEigen(PhyloNeighbor *dad_branch
 					partial_lh_tmp[x] = vleft*vright;
 				}
 
-                // do not increase partial_lh_left for tips
+                // do not increase partial_lh_left and right for tips
                 
 				// compute dot-product with inv_eigenvector
                 double *inv_evec_ptr = inv_evec;
@@ -310,6 +252,8 @@ void PhyloTree::computeSitemodelPartialLikelihoodEigen(PhyloNeighbor *dad_branch
 
         /*--------------------- TIP-INTERNAL NODE case ------------------*/
 
+        double *tip_partial_lh_left = tip_partial_lh + (left->node->id * tip_block_size);
+
 		// only take scale_num from the right subtree
 		memcpy(dad_branch->scale_num, right->scale_num, nptn * sizeof(UBYTE));
 #ifdef _OPENMP
@@ -318,7 +262,7 @@ void PhyloTree::computeSitemodelPartialLikelihoodEigen(PhyloNeighbor *dad_branch
 		for (ptn = 0; ptn < nptn; ptn++) {
 			double partial_lh_tmp[nstates];
 			double *partial_lh = dad_branch->partial_lh + ptn*block;
-			double *partial_lh_left = left->partial_lh + ptn*block;
+			double *partial_lh_left = tip_partial_lh_left + ptn*nstates;
 			double *partial_lh_right = right->partial_lh + ptn*block;
             double lh_max = 0.0;
 
@@ -514,13 +458,16 @@ void PhyloTree::computeSitemodelLikelihoodDervEigen(PhyloNeighbor *dad_branch, P
 
 	    if (dad->isLeaf()) {
 	    	// special treatment for TIP-INTERNAL NODE case
+            
+            double *tip_partial_lh_node = tip_partial_lh + (dad->id * get_safe_upper_limit(nptn)*nstates);
+            
 #ifdef _OPENMP
 #pragma omp parallel for private(ptn, i, c) schedule(static)
 #endif
 	    	for (ptn = 0; ptn < nptn; ptn++) {
 				double *partial_lh_dad = dad_branch->partial_lh + ptn*block;
 				double *theta = theta_all + ptn*block;
-				double *lh_tip = node_branch->partial_lh + ptn*block;
+				double *lh_tip = tip_partial_lh_node + ptn*nstates;
                 for (c = 0; c < ncat; c++) {
                     for (i = 0; i < nstates; i++) {
                         theta[i] = lh_tip[i] * partial_lh_dad[i];
@@ -563,15 +510,19 @@ void PhyloTree::computeSitemodelLikelihoodDervEigen(PhyloNeighbor *dad_branch, P
         double *eval = models->at(ptn)->getEigenvalues();
         
         for (c = 0; c < ncat; c++) {
-            double prop = site_rate->getProp(c);
+            double lh_cat = 0.0, df_cat = 0.0, ddf_cat = 0.0;
             for (i = 0; i < nstates; i++) {
                 double cof = eval[i]*site_rate->getRate(c);
-                double val = exp(cof*dad_branch->length) * prop * theta[i];
+                double val = exp(cof*dad_branch->length) * theta[i];
                 double val1 = cof*val;
-                lh_ptn += val;
-                df_ptn += val1;
-                ddf_ptn += cof*val1;
+                lh_cat += val;
+                df_cat += val1;
+                ddf_cat += cof*val1;
             }
+            double prop = site_rate->getProp(c);
+            lh_ptn += prop * lh_cat;
+            df_ptn += prop * df_cat;
+            ddf_ptn += prop * ddf_cat;
             theta += nstates;
         }
 
@@ -630,6 +581,7 @@ double PhyloTree::computeSitemodelLikelihoodBranchEigen(PhyloNeighbor *dad_branc
 
     if (dad->isLeaf()) {
     	// special treatment for TIP-INTERNAL NODE case
+        double *tip_partial_lh_node = tip_partial_lh + (dad->id * get_safe_upper_limit(nptn)*nstates);
 #ifdef _OPENMP
 #pragma omp parallel for reduction(+: tree_lh) private(ptn, i, c) schedule(static)
 #endif
@@ -637,7 +589,7 @@ double PhyloTree::computeSitemodelLikelihoodBranchEigen(PhyloNeighbor *dad_branc
 			double lh_ptn = ptn_invar[ptn];
 			double *lh_cat = _pattern_lh_cat + ptn*ncat;
 			double *partial_lh_dad = dad_branch->partial_lh + ptn*block;
-			double *partial_lh_node = node_branch->partial_lh + ptn*block;
+			double *partial_lh_node = tip_partial_lh_node + ptn*nstates;
             double *eval = models->at(ptn)->getEigenvalues();
 
 			for (c = 0; c < ncat; c++) {
