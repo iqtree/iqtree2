@@ -1101,7 +1101,7 @@ void ModelPoMo::reportPoMoStateFreqs(ofstream &out) {
     out << poly << endl;
     out << "Estimated proportion of polymorphic states:" << endl;
     out << prop_poly << endl;
-    out << "Empirical proportion of polymorphic states:" << endl;
+    out << "Empirical proportion of polymorphic states normalized to N samples:" << endl;
     out << emp_prop_poly << endl;
     out << "Estimated Watterson Theta:" << endl;
     out << watterson_theta << endl;

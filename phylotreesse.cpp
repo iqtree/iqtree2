@@ -772,22 +772,30 @@ void PhyloTree::computeTipPartialLikelihood() {
                 int id2 = (aln->pomo_states[state] >> 16) & 3;
                 int j = (aln->pomo_states[state] >> 2) & 16383;
                 int M = j + (aln->pomo_states[state] >> 18);
+                // TODO: Number of alleles is hardcoded here.
+                int nnuc = 4;
                 // Check if observed state is a fixed one.  If so, many
                 // PoMo states can lead to this data.  E.g., even (2A,8T)
                 // can lead to a sampled data of 7A.
                 if (j == M) {
-                    // TODO: Number of alleles is hardcoded here.
-                    // First: Fixed state.
-                    real_partial_lh[id1] = 1.0;
-                    double sum_lh = 1.0;
+                    // First: Fixed state.  Tue Jan 12 09:26:48 CET
+                    // TODO: 2016 DOM: Supposed BugFix.  The
+                    // likelihood of the fixed state is not only 1.0
+                    // but has to be multiplied by the number of
+                    // possible combinations of alleles, otherwise it
+                    // is weighted with low probability during
+                    // normalization.
+                    // real_partial_lh[id1] = 1.0;
+                    real_partial_lh[id1] = nnuc * (nnuc - 1) / 2;
+                    double sum_lh = real_partial_lh[id1];
                     // Second: Polymorphic states.
-                    for (int s_id1 = 0; s_id1 < 3; s_id1++) {
-                        for (int s_id2 = s_id1+1; s_id2 < 4; s_id2++) {
+                    for (int s_id1 = 0; s_id1 < nnuc-1; s_id1++) {
+                        for (int s_id2 = s_id1+1; s_id2 < nnuc; s_id2++) {
                             if ((s_id1 == id1) || (s_id2 == id1)) {
                                 int k;
                                 if (s_id1 == 0) k = s_id2 - 1;
                                 else k = s_id1 + s_id2;
-                                int real_state = 4 + k*(N-2) + k;
+                                int real_state = nnuc + k*(N-2) + k;
                                 for (i = 1; i < N; i++, real_state++) {
                                     assert(real_state < nstates);
                                     real_partial_lh[real_state] =
@@ -819,7 +827,7 @@ void PhyloTree::computeTipPartialLikelihood() {
                     int k;
                     if (id1 == 0) k = id2 - 1;
                     else k = id1 + id2;
-                    int real_state = 4 + k*(N-2) + k;
+                    int real_state = nnuc + k*(N-2) + k;
 
                     double sum_lh = 0.0;
                     for (i = 1; i < N; i++, real_state++) {
