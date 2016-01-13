@@ -182,7 +182,7 @@ double PartitionModelPlen::optimizeGeneRate(double gradient_epsilon)
     #endif    
     for (int j = 0; j < tree->size(); j++) {
         int i = tree->part_order[j];
-        tree->part_info[i].cur_score = tree->at(i)->optimizeTreeLengthScaling(tree->part_info[i].part_rate, gradient_epsilon);
+        tree->part_info[i].cur_score = tree->at(i)->optimizeTreeLengthScaling(tree->part_info[i].part_rate, max(tree->part_info[i].part_rate, 100.0), gradient_epsilon);
         score += tree->part_info[i].cur_score;
     }
     // now normalize the rates

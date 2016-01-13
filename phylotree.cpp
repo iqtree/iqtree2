@@ -3069,15 +3069,15 @@ void PhyloTree::computeLikelihoodDervNaive(PhyloNeighbor *dad_branch, PhyloNode 
  ****************************************************************************/
 
 const double MIN_TREE_LENGTH_SCALE = 0.001;
-const double MAX_TREE_LENGTH_SCALE = 1000.0;
+const double MAX_TREE_LENGTH_SCALE = 100.0;
 const double TOL_TREE_LENGTH_SCALE = 0.001;
 
 
-double PhyloTree::optimizeTreeLengthScaling(double &scaling, double gradient_epsilon) {
+double PhyloTree::optimizeTreeLengthScaling(double &scaling, double max_scaling, double gradient_epsilon) {
     is_opt_scaling = true;
     current_scaling = scaling;
     double negative_lh, ferror;
-    scaling = minimizeOneDimen(min(current_scaling/2.0, MIN_TREE_LENGTH_SCALE), scaling, max(current_scaling*2.0, MAX_TREE_LENGTH_SCALE), max(TOL_TREE_LENGTH_SCALE, gradient_epsilon), &negative_lh, &ferror);
+    scaling = minimizeOneDimen(min(current_scaling/2.0, MIN_TREE_LENGTH_SCALE), scaling, max_scaling, max(TOL_TREE_LENGTH_SCALE, gradient_epsilon), &negative_lh, &ferror);
     if (scaling != current_scaling) {
         scaleLength(scaling / current_scaling);
         current_scaling = scaling;
