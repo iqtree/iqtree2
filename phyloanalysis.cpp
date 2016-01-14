@@ -373,22 +373,15 @@ void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh, 
         
         out << endl
             << "**************************** WARNING ****************************" << endl
-            << "Number of parameters (K): " << df << endl
-            << "Sample size (n):          " << ssize << endl << endl
-            << "Given that K>=n, the model parameters are not identifiable." << endl
-            << "The program will still try to estimate the parameter values," << endl
-            << "but because of the small sample size, the parameter estimates" << endl 
-            << "are likely to be inaccurate." << endl << endl
-            
-            << "Phylogenetic estimates obtained under these conditions should be" << endl 
-            << "interpreted with extreme caution." << endl << endl 
+            << "Number of parameters (K, model parameters and branch lengths): " << df << endl
+            << "Sample size (n, alignment length): " << ssize << endl << endl
+            << "Given that K>=n, the parameter estimates might be inaccurate." << endl
+            << "Thus, phylogenetic estimates should be interpreted with caution." << endl << endl 
 
-            << "Ideally, it is desirable that n >> K. When selecting optimal" << endl
-            << "models," << endl
+            << "Ideally, it is desirable that n >> K. When selecting optimal models," << endl
             << "1. use AIC or BIC if n > 40K;" << endl 
             << "2. use AICc or BIC if 40K >= n > K;" << endl 
-            << "3. be extremely cautious if n <= K (because model parameters" << endl
-            << "   are not identifiable)." << endl << endl
+            << "3. be extremely cautious if n <= K" << endl << endl
 
             << "To improve the situation (3), consider the following options:" << endl
             << "  1. Increase the sample size (n)" << endl
