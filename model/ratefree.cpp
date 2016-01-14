@@ -533,9 +533,8 @@ double RateFree::optimizeWithEM() {
             for (ptn = 0; ptn < nptn; ptn++)
                 tree->ptn_freq[ptn] = this_lk_cat[ptn*nmix];
             double scaling = rates[c];
-            double max_scaling = max(scaling, 1.0/prop[c]);
             tree->scaleLength(scaling);
-            tree->optimizeTreeLengthScaling(scaling, max_scaling, 0.001);
+            tree->optimizeTreeLengthScaling(MIN_PROP, scaling, 1.0/prop[c], 0.001);
             converged = converged && (fabs(rates[c] - scaling) < 1e-4);
             rates[c] = scaling;
             sum += prop[c] * rates[c];

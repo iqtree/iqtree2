@@ -69,7 +69,7 @@ public:
 	*/
 	//string getModelName();
 
-	void writeInfo(ostream &out);
+	virtual void writeInfo(ostream &out) {}
 
 	/**
 		Start to store transition matrix for efficiency

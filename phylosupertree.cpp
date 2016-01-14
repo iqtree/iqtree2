@@ -70,7 +70,7 @@ void PhyloSuperTree::readPartition(Params &params) {
 			getline(in, info.position_spec);
             trimString(info.sequence_type);
 			cout << endl << "Reading partition " << info.name << " (model=" << info.model_name << ", aln=" <<
-					info.aln_file << ", seq=" << info.sequence_type << ", pos=" << info.position_spec << ") ..." << endl;
+					info.aln_file << ", seq=" << info.sequence_type << ", pos=" << ((info.position_spec.length() >= 20) ? info.position_spec.substr(0,20)+"..." : info.position_spec) << ") ..." << endl;
 
 			//info.mem_ptnlh = NULL;
 			info.nniMoves[0].ptnlh = NULL;
@@ -182,7 +182,7 @@ void PhyloSuperTree::readPartitionRaxml(Params &params) {
                 outError("Please specify alignment positions for partition" + info.name);
             std::replace(info.position_spec.begin(), info.position_spec.end(), ',', ' ');
             
-			cout << "Reading partition " << info.name << " (model=" << info.model_name << ", seq=" << info.sequence_type << ", pos=" << info.position_spec << ") ..." << endl;
+			cout << "Reading partition " << info.name << " (model=" << info.model_name << ", seq=" << info.sequence_type << ", pos=" << ((info.position_spec.length() >= 20) ? info.position_spec.substr(0,20)+"..." : info.position_spec) << ") ..." << endl;
 
 			//info.mem_ptnlh = NULL;
 			info.nniMoves[0].ptnlh = NULL;
@@ -265,7 +265,7 @@ void PhyloSuperTree::readPartitionNexus(Params &params) {
 			info.position_spec = (*it)->position_spec;
 			trimString(info.sequence_type);
 			cout << endl << "Reading partition " << info.name << " (model=" << info.model_name << ", aln=" <<
-				info.aln_file << ", seq=" << info.sequence_type << ", pos=" << info.position_spec << ") ..." << endl;
+				info.aln_file << ", seq=" << info.sequence_type << ", pos=" << ((info.position_spec.length() >= 20) ? info.position_spec.substr(0,20)+"..." : info.position_spec) << ") ..." << endl;
             if (info.sequence_type != "" && Alignment::getSeqType(info.sequence_type.c_str()) == SEQ_UNKNOWN)
                 outError("Unknown sequence type " + info.sequence_type);
 			//info.mem_ptnlh = NULL;

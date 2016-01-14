@@ -107,6 +107,12 @@ public:
     virtual int getNDim();
 
 	/**
+		write information
+		@param out output stream
+	*/
+	virtual void writeInfo(ostream &out);
+
+	/**
 		optimize model parameters and tree branch lengths
 		@param fixed_len TRUE to fix branch lengths, default is false
 		@return the best likelihood
