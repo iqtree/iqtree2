@@ -21,6 +21,7 @@
 #include "phylokernel.h"
 #include "phylokernelmixture.h"
 #include "phylokernelmixrate.h"
+#include "phylokernelsitemodel.h"
 #include "model/modelgtr.h"
 #include "model/modelset.h"
 
@@ -80,11 +81,36 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk) {
     }
     
     if (model_factory && model_factory->model->isSiteSpecificModel()) {
-        computeLikelihoodBranchPointer = &PhyloTree::computeSitemodelLikelihoodBranchEigen;
-        computeLikelihoodDervPointer = &PhyloTree::computeSitemodelLikelihoodDervEigen;
-        computePartialLikelihoodPointer = &PhyloTree::computeSitemodelPartialLikelihoodEigen;
-        computeLikelihoodFromBufferPointer = &PhyloTree::computeSitemodelLikelihoodFromBufferEigen;
-        return;        
+        if (sse == LK_EIGEN) {
+            computeLikelihoodBranchPointer = &PhyloTree::computeSitemodelLikelihoodBranchEigen;
+            computeLikelihoodDervPointer = &PhyloTree::computeSitemodelLikelihoodDervEigen;
+//            computePartialLikelihoodPointer = &PhyloTree::computeSitemodelPartialLikelihoodEigenSIMD<double, 1, 20>;
+            computePartialLikelihoodPointer = &PhyloTree::computeSitemodelPartialLikelihoodEigen;
+            computeLikelihoodFromBufferPointer = &PhyloTree::computeSitemodelLikelihoodFromBufferEigen;
+            return;        
+        }
+        // LK_EIGEN_SSE
+        switch (aln->num_states) {
+        case 4:
+            computeLikelihoodBranchPointer = &PhyloTree::computeSitemodelLikelihoodBranchEigen;
+            computeLikelihoodDervPointer = &PhyloTree::computeSitemodelLikelihoodDervEigen;
+            computePartialLikelihoodPointer = &PhyloTree::computeSitemodelPartialLikelihoodEigenSIMD<Vec2d, 2, 4>;
+            computeLikelihoodFromBufferPointer = &PhyloTree::computeSitemodelLikelihoodFromBufferEigen;
+            break;
+        case 20:
+            computeLikelihoodBranchPointer = &PhyloTree::computeSitemodelLikelihoodBranchEigen;
+            computeLikelihoodDervPointer = &PhyloTree::computeSitemodelLikelihoodDervEigen;
+            computePartialLikelihoodPointer = &PhyloTree::computeSitemodelPartialLikelihoodEigenSIMD<Vec2d, 2, 20>;
+            computeLikelihoodFromBufferPointer = &PhyloTree::computeSitemodelLikelihoodFromBufferEigen;
+            break;
+        default:
+            computeLikelihoodBranchPointer = &PhyloTree::computeSitemodelLikelihoodBranchEigen;
+            computeLikelihoodDervPointer = &PhyloTree::computeSitemodelLikelihoodDervEigen;
+            computePartialLikelihoodPointer = &PhyloTree::computeSitemodelPartialLikelihoodEigen;
+            computeLikelihoodFromBufferPointer = &PhyloTree::computeSitemodelLikelihoodFromBufferEigen;
+            break;
+        }
+        return;
     }
     
     if (sse == LK_EIGEN) {
