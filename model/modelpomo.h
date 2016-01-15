@@ -3,7 +3,7 @@
 
 #include "modeldna.h"
 
-const double POMO_MIN_RATE =  1e-4;
+const double POMO_MIN_RATE =  5e-5;
 const double POMO_INIT_RATE = 1e-3;
 const double POMO_MAX_RATE =  1e-2;
 /* The actual boundaries will be set, e.g., to
