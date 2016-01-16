@@ -707,6 +707,7 @@ double PhyloTree::computeSitemodelLikelihoodFromBufferEigen() {
         }
 
         lh_ptn = log(fabs(lh_ptn));
+        _pattern_lh[ptn] = lh_ptn;
         tree_lh += lh_ptn * ptn_freq[ptn];
     }
     return tree_lh;

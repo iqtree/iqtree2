@@ -9,6 +9,7 @@
 #include "phylokernel.h"
 #include "phylokernelmixture.h"
 #include "phylokernelmixrate.h"
+#include "phylokernelsitemodel.h"
 #include "vectorclass/vectorclass.h"
 
 #ifndef __AVX__
@@ -32,6 +33,30 @@ void PhyloTree::setDotProductAVX() {
 
 void PhyloTree::setLikelihoodKernelAVX() {
     setParsimonyKernelAVX();
+    if (model_factory && model_factory->model->isSiteSpecificModel()) {
+        switch (aln->num_states) {
+        case 4:
+            computeLikelihoodBranchPointer = &PhyloTree::computeSitemodelLikelihoodBranchEigenSIMD<Vec4d, 4, 4>;
+            computeLikelihoodDervPointer = &PhyloTree::computeSitemodelLikelihoodDervEigenSIMD<Vec4d, 4, 4>;
+            computePartialLikelihoodPointer = &PhyloTree::computeSitemodelPartialLikelihoodEigenSIMD<Vec4d, 4, 4>;
+            computeLikelihoodFromBufferPointer = &PhyloTree::computeSitemodelLikelihoodFromBufferEigenSIMD<Vec4d, 4, 4>;
+            break;
+        case 20:
+            computeLikelihoodBranchPointer = &PhyloTree::computeSitemodelLikelihoodBranchEigenSIMD<Vec4d, 4, 20>;
+            computeLikelihoodDervPointer = &PhyloTree::computeSitemodelLikelihoodDervEigenSIMD<Vec4d, 4, 20>;
+            computePartialLikelihoodPointer = &PhyloTree::computeSitemodelPartialLikelihoodEigenSIMD<Vec4d, 4, 20>;
+            computeLikelihoodFromBufferPointer = &PhyloTree::computeSitemodelLikelihoodFromBufferEigenSIMD<Vec4d, 4, 20>;
+            break;
+        default:
+            computeLikelihoodBranchPointer = &PhyloTree::computeSitemodelLikelihoodBranchEigen;
+            computeLikelihoodDervPointer = &PhyloTree::computeSitemodelLikelihoodDervEigen;
+            computePartialLikelihoodPointer = &PhyloTree::computeSitemodelPartialLikelihoodEigen;
+            computeLikelihoodFromBufferPointer = &PhyloTree::computeSitemodelLikelihoodFromBufferEigen;
+            break;        
+        }
+        return;
+    }
+
 	switch(aln->num_states) {
 	case 4:
 		if (model_factory && model_factory->model->isMixture()) {

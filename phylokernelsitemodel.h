@@ -467,7 +467,7 @@ void PhyloTree::computeSitemodelLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branc
             if (ptn+j < nptn) {
                 eval = (VectorClass*)models->at(ptn+j)->getEigenvalues();
             } else {
-                eval = (VectorClass*)models->at(0)->getEigenvalues();
+                eval = (VectorClass*)models->at(nptn-1)->getEigenvalues();
             }                
             for (c = 0; c < ncat; c++) {
                 VectorClass cat_rate = site_rate->getRate(c);
@@ -508,6 +508,221 @@ void PhyloTree::computeSitemodelLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branc
         outWarning("Numerical instability (some site-likelihood = 0)");
     }
 
+}
+
+template <class VectorClass, const int VCSIZE, const int nstates>
+double PhyloTree::computeSitemodelLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad) {
+    PhyloNode *node = (PhyloNode*) dad_branch->node;
+    PhyloNeighbor *node_branch = (PhyloNeighbor*) node->findNeighbor(dad);
+    if (!central_partial_lh)
+        initializeAllPartialLh();
+    if (node->isLeaf()) {
+    	PhyloNode *tmp_node = dad;
+    	dad = node;
+    	node = tmp_node;
+    	PhyloNeighbor *tmp_nei = dad_branch;
+    	dad_branch = node_branch;
+    	node_branch = tmp_nei;
+    }
+    if ((dad_branch->partial_lh_computed & 1) == 0)
+        computeSitemodelPartialLikelihoodEigenSIMD<VectorClass, VCSIZE, nstates>(dad_branch, dad);
+    if ((node_branch->partial_lh_computed & 1) == 0)
+        computeSitemodelPartialLikelihoodEigenSIMD<VectorClass, VCSIZE, nstates>(node_branch, node);
+    size_t ncat = site_rate->getNRate();
+
+    size_t block = ncat * nstates;
+    size_t ptn; // for big data size > 4GB memory required
+    size_t c, i, j;
+    size_t nptn = aln->size();
+    size_t maxptn = get_safe_upper_limit(nptn);
+
+    ModelSet *models = (ModelSet*)model;
+    VectorClass tree_lh = node_branch->lh_scale_factor + dad_branch->lh_scale_factor;
+    VectorClass dad_length = dad_branch->length;
+
+    if (dad->isLeaf()) {
+		// copy dummy values because VectorClass will access beyond nptn
+		for (ptn = nptn; ptn < maxptn; ptn++)
+			memcpy(&dad_branch->partial_lh[ptn*block], &dad_branch->partial_lh[(ptn-1)*block], block*sizeof(double));
+
+    	// special treatment for TIP-INTERNAL NODE case
+        double *tip_partial_lh_node = tip_partial_lh + (dad->id * get_safe_upper_limit(nptn)*nstates);
+#ifdef _OPENMP
+#pragma omp parallel for reduction(+: tree_lh) private(ptn, i, c, j) schedule(static)
+#endif
+        for (ptn = 0; ptn < nptn; ptn+=VCSIZE) {
+            VectorClass lh_ptn[VCSIZE];
+            VectorClass* eval;
+			VectorClass *partial_lh_dad = (VectorClass*)(dad_branch->partial_lh + ptn*block);
+			VectorClass *partial_lh_node = (VectorClass*)(tip_partial_lh_node + ptn*nstates);
+            
+            for (j = 0; j < VCSIZE; j++) {
+                lh_ptn[j] = 0.0;
+                if (ptn+j < nptn) {
+                    eval = (VectorClass*)models->at(ptn+j)->getEigenvalues();
+                } else {
+                    eval = (VectorClass*)models->at(nptn-1)->getEigenvalues();
+                }                
+                for (c = 0; c < ncat; c++) {
+                    VectorClass cat_rate = site_rate->getRate(c);
+                    VectorClass lh_cat = 0.0;
+                    for (i = 0; i < nstates/VCSIZE; i++) {
+                        VectorClass cof = eval[i]*cat_rate;
+                        VectorClass val = exp(cof*dad_length) * partial_lh_dad[i] * partial_lh_node[i];
+                        lh_cat += val;
+                    }
+                    VectorClass prop = site_rate->getProp(c);
+                    lh_ptn[j] += prop * lh_cat;
+                    partial_lh_dad += nstates/VCSIZE;
+//                    partial_lh_node += nstates/VCSIZE;
+                }
+                partial_lh_node += nstates/VCSIZE;
+            }
+
+            VectorClass freq;
+            freq.load_a(&ptn_freq[ptn]);
+            VectorClass lh_ptn_sum = horizontal_add(lh_ptn) + VectorClass().load_a(&ptn_invar[ptn]);
+            lh_ptn_sum = log(abs(lh_ptn_sum));
+            lh_ptn_sum.store_a(&_pattern_lh[ptn]);
+            tree_lh += lh_ptn_sum * freq;
+        }
+    } else 
+    {
+    	// both dad and node are internal nodes
+		// copy dummy values because VectorClass will access beyond nptn
+		for (ptn = nptn; ptn < maxptn; ptn++) {
+			memcpy(&dad_branch->partial_lh[ptn*block], &dad_branch->partial_lh[(ptn-1)*block], block*sizeof(double));
+			memcpy(&node_branch->partial_lh[ptn*block], &node_branch->partial_lh[(ptn-1)*block], block*sizeof(double));
+        }
+#ifdef _OPENMP
+#pragma omp parallel for reduction(+: tree_lh) private(ptn, i, c, j) schedule(static)
+#endif
+        for (ptn = 0; ptn < nptn; ptn+=VCSIZE) {
+            VectorClass lh_ptn[VCSIZE];
+            VectorClass* eval;
+			VectorClass *partial_lh_dad = (VectorClass*)(dad_branch->partial_lh + ptn*block);
+			VectorClass *partial_lh_node = (VectorClass*)(node_branch->partial_lh + ptn*block);
+            
+            for (j = 0; j < VCSIZE; j++) {
+                lh_ptn[j] = 0.0;
+                if (ptn+j < nptn) {
+                    eval = (VectorClass*)models->at(ptn+j)->getEigenvalues();
+                } else {
+                    eval = (VectorClass*)models->at(nptn-1)->getEigenvalues();
+                }                
+                for (c = 0; c < ncat; c++) {
+                    VectorClass cat_rate = site_rate->getRate(c);
+                    VectorClass lh_cat = 0.0;
+                    for (i = 0; i < nstates/VCSIZE; i++) {
+                        VectorClass cof = eval[i]*cat_rate;
+                        VectorClass val = exp(cof*dad_length) * partial_lh_dad[i] * partial_lh_node[i];
+                        lh_cat += val;
+                    }
+                    VectorClass prop = site_rate->getProp(c);
+                    lh_ptn[j] += prop * lh_cat;
+                    partial_lh_dad += nstates/VCSIZE;
+                    partial_lh_node += nstates/VCSIZE;
+                }
+            }
+
+            VectorClass freq;
+            freq.load_a(&ptn_freq[ptn]);
+            VectorClass lh_ptn_sum = horizontal_add(lh_ptn) + VectorClass().load_a(&ptn_invar[ptn]);
+            lh_ptn_sum = log(abs(lh_ptn_sum));
+            lh_ptn_sum.store_a(&_pattern_lh[ptn]);
+            tree_lh += lh_ptn_sum * freq;
+        }
+
+    }
+
+    double tree_lh_final = horizontal_add(tree_lh);
+
+    if (isnan(tree_lh_final) || isinf(tree_lh_final)) {
+        cout << "WARNING: Numerical underflow caused by alignment sites";
+        i = aln->getNSite();
+        int j;
+        for (j = 0, c = 0; j < i; j++) {
+            ptn = aln->getPatternID(j);
+            if (isnan(_pattern_lh[ptn]) || isinf(_pattern_lh[ptn])) {
+                cout << " " << j+1;
+                c++;
+                if (c >= 10) {
+                    cout << " ...";
+                    break;
+                }
+            }
+        }
+        cout << endl;
+        tree_lh = current_it->lh_scale_factor + current_it_back->lh_scale_factor;
+        for (ptn = 0; ptn < nptn; ptn++) {
+            if (isnan(_pattern_lh[ptn]) || isinf(_pattern_lh[ptn])) {
+                _pattern_lh[ptn] = LOG_SCALING_THRESHOLD*4; // log(2^(-1024))
+            }
+            tree_lh += _pattern_lh[ptn] * ptn_freq[ptn];
+        }
+    }
+
+	assert(!isnan(tree_lh_final) && !isinf(tree_lh_final));
+
+    return tree_lh_final;
+}
+
+
+template <class VectorClass, const int VCSIZE, const int nstates>
+double PhyloTree::computeSitemodelLikelihoodFromBufferEigenSIMD() {
+	assert(theta_all && theta_computed);
+
+//    size_t nstates = aln->num_states;
+    size_t ncat = site_rate->getNRate();
+
+    size_t block = ncat * nstates;
+    size_t ptn; // for big data size > 4GB memory required
+    size_t c, i, j;
+    size_t nptn = aln->size();
+
+    ModelSet *models = (ModelSet*)model;
+    
+    VectorClass dad_length = current_it->length;
+    VectorClass tree_lh = current_it->lh_scale_factor + current_it_back->lh_scale_factor;
+
+#ifdef _OPENMP
+#pragma omp parallel for reduction(+: tree_lh) private(ptn, i, c, j) schedule(static)
+#endif
+    for (ptn = 0; ptn < nptn; ptn+=VCSIZE) {
+        VectorClass lh_ptn[VCSIZE];
+        VectorClass* eval;
+        VectorClass *theta = (VectorClass*)(theta_all + ptn*block);
+        
+        for (j = 0; j < VCSIZE; j++) {
+            lh_ptn[j] = 0.0;
+            if (ptn+j < nptn) {
+                eval = (VectorClass*)models->at(ptn+j)->getEigenvalues();
+            } else {
+                eval = (VectorClass*)models->at(nptn-1)->getEigenvalues();
+            }                
+            for (c = 0; c < ncat; c++) {
+                VectorClass cat_rate = site_rate->getRate(c);
+                VectorClass lh_cat = 0.0;
+                for (i = 0; i < nstates/VCSIZE; i++) {
+                    VectorClass cof = eval[i]*cat_rate;
+                    VectorClass val = exp(cof*dad_length) * theta[i];
+                    lh_cat += val;
+                }
+                VectorClass prop = site_rate->getProp(c);
+                lh_ptn[j] += prop * lh_cat;
+                theta += nstates/VCSIZE;
+            }
+        }
+
+        VectorClass freq;
+        freq.load_a(&ptn_freq[ptn]);
+        VectorClass lh_ptn_sum = horizontal_add(lh_ptn) + VectorClass().load_a(&ptn_invar[ptn]);
+        lh_ptn_sum = log(abs(lh_ptn_sum));
+        lh_ptn_sum.store_a(&_pattern_lh[ptn]);
+        tree_lh += lh_ptn_sum * freq;
+    }
+    double tree_lh_final = horizontal_add(tree_lh);
+    return tree_lh_final;
 }
 
 

@@ -84,24 +84,28 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk) {
         if (sse == LK_EIGEN) {
             computeLikelihoodBranchPointer = &PhyloTree::computeSitemodelLikelihoodBranchEigen;
             computeLikelihoodDervPointer = &PhyloTree::computeSitemodelLikelihoodDervEigen;
-//            computePartialLikelihoodPointer = &PhyloTree::computeSitemodelPartialLikelihoodEigenSIMD<double, 1, 20>;
             computePartialLikelihoodPointer = &PhyloTree::computeSitemodelPartialLikelihoodEigen;
             computeLikelihoodFromBufferPointer = &PhyloTree::computeSitemodelLikelihoodFromBufferEigen;
             return;        
         }
         // LK_EIGEN_SSE
+        if (instruction_set >= 7) {
+            // CPU supports AVX
+            setLikelihoodKernelAVX();
+            return;
+        }
         switch (aln->num_states) {
         case 4:
-            computeLikelihoodBranchPointer = &PhyloTree::computeSitemodelLikelihoodBranchEigen;
+            computeLikelihoodBranchPointer = &PhyloTree::computeSitemodelLikelihoodBranchEigenSIMD<Vec2d, 2, 4>;
             computeLikelihoodDervPointer = &PhyloTree::computeSitemodelLikelihoodDervEigenSIMD<Vec2d, 2, 4>;
             computePartialLikelihoodPointer = &PhyloTree::computeSitemodelPartialLikelihoodEigenSIMD<Vec2d, 2, 4>;
-            computeLikelihoodFromBufferPointer = &PhyloTree::computeSitemodelLikelihoodFromBufferEigen;
+            computeLikelihoodFromBufferPointer = &PhyloTree::computeSitemodelLikelihoodFromBufferEigenSIMD<Vec2d, 2, 4>;
             break;
         case 20:
-            computeLikelihoodBranchPointer = &PhyloTree::computeSitemodelLikelihoodBranchEigen;
+            computeLikelihoodBranchPointer = &PhyloTree::computeSitemodelLikelihoodBranchEigenSIMD<Vec2d, 2, 20>;
             computeLikelihoodDervPointer = &PhyloTree::computeSitemodelLikelihoodDervEigenSIMD<Vec2d, 2, 20>;
             computePartialLikelihoodPointer = &PhyloTree::computeSitemodelPartialLikelihoodEigenSIMD<Vec2d, 2, 20>;
-            computeLikelihoodFromBufferPointer = &PhyloTree::computeSitemodelLikelihoodFromBufferEigen;
+            computeLikelihoodFromBufferPointer = &PhyloTree::computeSitemodelLikelihoodFromBufferEigenSIMD<Vec2d, 2, 20>;
             break;
         default:
             computeLikelihoodBranchPointer = &PhyloTree::computeSitemodelLikelihoodBranchEigen;
@@ -368,7 +372,7 @@ void PhyloTree::computeTipPartialLikelihood() {
 
     if (getModel()->isSiteSpecificModel()) {
         ModelSet *models = (ModelSet*)model;
-        size_t nptn = aln->getNPattern(), tip_block_size = get_safe_upper_limit(nptn) * aln->num_states;
+        size_t nptn = aln->getNPattern(), max_nptn = get_safe_upper_limit(nptn), tip_block_size = max_nptn * aln->num_states;
         int nstates = aln->num_states;
         int nseq = aln->getNSeq();
 #ifdef _OPENMP
@@ -377,7 +381,8 @@ void PhyloTree::computeTipPartialLikelihood() {
         for (int nodeid = 0; nodeid < nseq; nodeid++) {
             int i, x;
             double *partial_lh = tip_partial_lh + tip_block_size*nodeid;
-            for (size_t ptn = 0; ptn < nptn; ptn++, partial_lh += nstates) {
+            size_t ptn;
+            for (ptn = 0; ptn < nptn; ptn++, partial_lh += nstates) {
                 int state = aln->at(ptn)[nodeid];
 //                double *partial_lh = node_partial_lh + ptn*nstates;
                 double *inv_evec = models->at(ptn)->getInverseEigenvectors();
@@ -435,6 +440,9 @@ void PhyloTree::computeTipPartialLikelihood() {
                 }
                 
             }
+            // dummy values
+            for (ptn = nptn; ptn < max_nptn; ptn++, partial_lh += nstates)
+                memcpy(partial_lh, partial_lh-nstates, nstates*sizeof(double));
         }
         return;
     }
