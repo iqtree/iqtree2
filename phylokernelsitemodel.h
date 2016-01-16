@@ -365,4 +365,150 @@ void PhyloTree::computeSitemodelPartialLikelihoodEigenSIMD(PhyloNeighbor *dad_br
 
 }
 
+template <class VectorClass, const int VCSIZE, const int nstates>
+void PhyloTree::computeSitemodelLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf) {
+    PhyloNode *node = (PhyloNode*) dad_branch->node;
+    PhyloNeighbor *node_branch = (PhyloNeighbor*) node->findNeighbor(dad);
+    if (!central_partial_lh)
+        initializeAllPartialLh();
+    if (node->isLeaf()) {
+    	PhyloNode *tmp_node = dad;
+    	dad = node;
+    	node = tmp_node;
+    	PhyloNeighbor *tmp_nei = dad_branch;
+    	dad_branch = node_branch;
+    	node_branch = tmp_nei;
+    }
+    if ((dad_branch->partial_lh_computed & 1) == 0)
+        computeSitemodelPartialLikelihoodEigenSIMD<VectorClass,VCSIZE,nstates>(dad_branch, dad);
+    if ((node_branch->partial_lh_computed & 1) == 0)
+        computeSitemodelPartialLikelihoodEigenSIMD<VectorClass,VCSIZE,nstates>(node_branch, node);
+        
+//    size_t nstates = aln->num_states;
+    size_t ncat = site_rate->getNRate();
+
+    size_t block = ncat * nstates;
+    size_t ptn; // for big data size > 4GB memory required
+    size_t c, i, j;
+    size_t nptn = aln->size();
+    size_t maxptn = ((nptn+VCSIZE-1)/VCSIZE)*VCSIZE;
+
+	assert(theta_all);
+	if (!theta_computed) {
+		// precompute theta for fast branch length optimization
+
+	    if (dad->isLeaf()) {
+	    	// special treatment for TIP-INTERNAL NODE case
+            
+            double *tip_partial_lh_node = tip_partial_lh + (dad->id * get_safe_upper_limit(nptn)*nstates);
+            
+#ifdef _OPENMP
+#pragma omp parallel for private(ptn, i, c) schedule(static)
+#endif
+	    	for (ptn = 0; ptn < nptn; ptn++) {
+				VectorClass *partial_lh_dad = (VectorClass*)(dad_branch->partial_lh + ptn*block);
+				VectorClass *theta = (VectorClass*)(theta_all + ptn*block);
+				VectorClass *lh_tip = (VectorClass*)(tip_partial_lh_node + ptn*nstates);
+                for (c = 0; c < ncat; c++) {
+                    for (i = 0; i < nstates/VCSIZE; i++) {
+                        theta[i] = lh_tip[i] * partial_lh_dad[i];
+                    }
+                    partial_lh_dad += nstates/VCSIZE;
+                    theta += nstates/VCSIZE;
+                }
+
+			}
+	    } else 
+        {
+	    	// both dad and node are internal nodes
+
+            size_t block_VCSIZE = block/VCSIZE;
+
+//	    	size_t all_entries = nptn*block;
+#ifdef _OPENMP
+#pragma omp parallel for private(ptn, i) schedule(static)
+#endif
+	    	for (ptn = 0; ptn < nptn; ptn++) {
+				VectorClass *partial_lh_dad = (VectorClass*)(dad_branch->partial_lh + ptn*block);
+				VectorClass *theta = (VectorClass*)(theta_all + ptn*block);
+			    VectorClass *partial_lh_node = (VectorClass*)(node_branch->partial_lh + ptn*block);
+	    		for (i = 0; i < block_VCSIZE; i++) {
+	    			theta[i] = partial_lh_node[i] * partial_lh_dad[i];
+	    		}
+			}
+	    }
+		if (nptn < maxptn) {
+			// copy dummy values
+			for (ptn = nptn; ptn < maxptn; ptn++)
+				memcpy(&theta_all[ptn*block], theta_all, block*sizeof(double));
+		}
+		theta_computed = true;
+	}
+
+    ModelSet *models = (ModelSet*)model;
+    VectorClass my_df = 0.0, my_ddf = 0.0;
+    VectorClass dad_length = dad_branch->length;
+    VectorClass unit = 1.0;
+    
+#ifdef _OPENMP
+#pragma omp parallel for reduction(+: my_df, my_ddf) private(ptn, i, c, j) schedule(static)
+#endif
+    for (ptn = 0; ptn < nptn; ptn+=VCSIZE) {
+        VectorClass lh_ptn[VCSIZE];
+        VectorClass df_ptn[VCSIZE];
+        VectorClass ddf_ptn[VCSIZE];
+		VectorClass *theta = (VectorClass*)(theta_all + ptn*block);        
+        VectorClass* eval;
+        
+        for (j = 0; j < VCSIZE; j++) {
+            lh_ptn[j] = 0.0;
+            df_ptn[j] = 0.0;
+            ddf_ptn[j] = 0.0;
+            if (ptn+j < nptn) {
+                eval = (VectorClass*)models->at(ptn+j)->getEigenvalues();
+            } else {
+                eval = (VectorClass*)models->at(0)->getEigenvalues();
+            }                
+            for (c = 0; c < ncat; c++) {
+                VectorClass cat_rate = site_rate->getRate(c);
+                VectorClass lh_cat = 0.0, df_cat = 0.0, ddf_cat = 0.0;
+                for (i = 0; i < nstates/VCSIZE; i++) {
+                    VectorClass cof = eval[i]*cat_rate;
+                    VectorClass val = exp(cof*dad_length) * theta[i];
+                    VectorClass val1 = cof*val;
+                    lh_cat += val;
+                    df_cat += val1;
+                    ddf_cat += cof*val1;
+                }
+                VectorClass prop = site_rate->getProp(c);
+                lh_ptn[j] += prop * lh_cat;
+                df_ptn[j] += prop * df_cat;
+                ddf_ptn[j] += prop * ddf_cat;
+                theta += nstates/VCSIZE;
+            }
+        }
+
+        VectorClass inv_lh_ptn = horizontal_add(lh_ptn) + VectorClass().load_a(&ptn_invar[ptn]);
+        inv_lh_ptn = unit / abs(inv_lh_ptn);
+        VectorClass freq;
+        freq.load_a(&ptn_freq[ptn]);
+        
+        VectorClass df_ptn_sum = horizontal_add(df_ptn) * inv_lh_ptn;
+        VectorClass ddf_ptn_sum = horizontal_add(ddf_ptn) * inv_lh_ptn;
+        ddf_ptn_sum = ddf_ptn_sum - df_ptn_sum*df_ptn_sum;
+        
+        my_df += df_ptn_sum * freq;
+        my_ddf += ddf_ptn_sum * freq;
+    }
+	df = horizontal_add(my_df);
+	ddf = horizontal_add(my_ddf);
+    if (isnan(df) || isinf(df)) {
+        df = 0.0;
+        ddf = 0.0;
+        outWarning("Numerical instability (some site-likelihood = 0)");
+    }
+
+}
+
+
 #endif /* PHYLOKERNELSITEMODEL_H_ */
