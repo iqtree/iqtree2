@@ -130,8 +130,8 @@ void PhyloTree::computeSitemodelPartialLikelihoodEigenSIMD(PhyloNeighbor *dad_br
                         vleft[j] = 0.0;
                         vright[j] = 0.0;
                         for (i = 0; i < nstates/VCSIZE; i++) {
-                            vleft[j] += this_evec[i] * expleft[i];
-                            vright[j] += this_evec[i] * expright[i];
+                            vleft[j] = mul_add(this_evec[i], expleft[i], vleft[j]);
+                            vright[j] = mul_add(this_evec[i], expright[i], vright[j]);
                         }
                         this_evec += nstates/VCSIZE;
                     }
@@ -144,7 +144,7 @@ void PhyloTree::computeSitemodelPartialLikelihoodEigenSIMD(PhyloNeighbor *dad_br
                     for (j = 0; j < VCSIZE; j++) {
                         res[j] = 0.0;
                         for (x = 0; x < nstates/VCSIZE; x++) {
-                            res[j] += partial_lh_tmp[x]*this_evec[x];
+                            res[j] = mul_add(partial_lh_tmp[x], this_evec[x], res[j]);
                         }
                         this_evec += nstates/VCSIZE;
                     }
@@ -201,8 +201,8 @@ void PhyloTree::computeSitemodelPartialLikelihoodEigenSIMD(PhyloNeighbor *dad_br
                         vleft[j] = 0.0;
                         vright[j] = 0.0;
                         for (i = 0; i < nstates/VCSIZE; i++) {
-                            vleft[j] += this_evec[i] * expleft[i];
-                            vright[j] += this_evec[i] * expright[i];
+                            vleft[j] = mul_add(this_evec[i], expleft[i], vleft[j]);
+                            vright[j] = mul_add(this_evec[i], expright[i], vright[j]);
                         }
                         this_evec += nstates/VCSIZE;
                     }
@@ -215,7 +215,7 @@ void PhyloTree::computeSitemodelPartialLikelihoodEigenSIMD(PhyloNeighbor *dad_br
                     for (j = 0; j < VCSIZE; j++) {
                         res[j] = 0.0;
                         for (x = 0; x < nstates/VCSIZE; x++) {
-                            res[j] += partial_lh_tmp[x]*this_evec[x];
+                            res[j] = mul_add(partial_lh_tmp[x], this_evec[x], res[j]);
                         }
                         this_evec += nstates/VCSIZE;
                     }
@@ -302,8 +302,8 @@ void PhyloTree::computeSitemodelPartialLikelihoodEigenSIMD(PhyloNeighbor *dad_br
                         vright[j] = 0.0;
 //                        this_evec = evec + (x*VCSIZE+j)*nstates/VCSIZE;
                         for (i = 0; i < nstates/VCSIZE; i++) {
-                            vleft[j] += this_evec[i] * expleft[i];
-                            vright[j] += this_evec[i] * expright[i];
+                            vleft[j] = mul_add(this_evec[i], expleft[i], vleft[j]);
+                            vright[j] = mul_add(this_evec[i], expright[i], vright[j]);
                         }
                         this_evec += nstates/VCSIZE;
                     }
@@ -316,7 +316,7 @@ void PhyloTree::computeSitemodelPartialLikelihoodEigenSIMD(PhyloNeighbor *dad_br
                     for (j = 0; j < VCSIZE; j++) {
                         res[j] = 0.0;
                         for (x = 0; x < nstates/VCSIZE; x++) {
-                            res[j] += partial_lh_tmp[x]*this_evec[x];
+                            res[j] = mul_add(partial_lh_tmp[x], this_evec[x], res[j]);
                         }
                         this_evec += nstates/VCSIZE;
                     }
@@ -478,12 +478,12 @@ void PhyloTree::computeSitemodelLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branc
                     VectorClass val1 = cof*val;
                     lh_cat += val;
                     df_cat += val1;
-                    ddf_cat += cof*val1;
+                    ddf_cat = mul_add(cof, val1, ddf_cat);
                 }
                 VectorClass prop = site_rate->getProp(c);
-                lh_ptn[j] += prop * lh_cat;
-                df_ptn[j] += prop * df_cat;
-                ddf_ptn[j] += prop * ddf_cat;
+                lh_ptn[j] = mul_add(prop, lh_cat, lh_ptn[j]);
+                df_ptn[j] = mul_add(prop, df_cat, df_ptn[j]);
+                ddf_ptn[j] = mul_add(prop, ddf_cat, ddf_ptn[j]);
                 theta += nstates/VCSIZE;
             }
         }
@@ -495,10 +495,10 @@ void PhyloTree::computeSitemodelLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branc
         
         VectorClass df_ptn_sum = horizontal_add(df_ptn) * inv_lh_ptn;
         VectorClass ddf_ptn_sum = horizontal_add(ddf_ptn) * inv_lh_ptn;
-        ddf_ptn_sum = ddf_ptn_sum - df_ptn_sum*df_ptn_sum;
+        ddf_ptn_sum = nmul_add(df_ptn_sum, df_ptn_sum, ddf_ptn_sum);
         
-        my_df += df_ptn_sum * freq;
-        my_ddf += ddf_ptn_sum * freq;
+        my_df = mul_add(df_ptn_sum, freq, my_df);
+        my_ddf = mul_add(ddf_ptn_sum, freq, my_ddf);
     }
 	df = horizontal_add(my_df);
 	ddf = horizontal_add(my_ddf);
@@ -538,7 +538,12 @@ double PhyloTree::computeSitemodelLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_b
 
     ModelSet *models = (ModelSet*)model;
     VectorClass tree_lh = node_branch->lh_scale_factor + dad_branch->lh_scale_factor;
-    VectorClass dad_length = dad_branch->length;
+    VectorClass *cat_length = aligned_alloc<VectorClass>(ncat);
+    VectorClass *cat_prop = aligned_alloc<VectorClass>(ncat);
+    for (c = 0; c < ncat; c++) {
+        cat_length[c] = site_rate->getRate(c) * dad_branch->length;
+        cat_prop[c] = site_rate->getProp(c);
+    }
 
     if (dad->isLeaf()) {
 		// copy dummy values because VectorClass will access beyond nptn
@@ -564,15 +569,11 @@ double PhyloTree::computeSitemodelLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_b
                     eval = (VectorClass*)models->at(nptn-1)->getEigenvalues();
                 }                
                 for (c = 0; c < ncat; c++) {
-                    VectorClass cat_rate = site_rate->getRate(c);
                     VectorClass lh_cat = 0.0;
                     for (i = 0; i < nstates/VCSIZE; i++) {
-                        VectorClass cof = eval[i]*cat_rate;
-                        VectorClass val = exp(cof*dad_length) * partial_lh_dad[i] * partial_lh_node[i];
-                        lh_cat += val;
+                        lh_cat=mul_add(exp(eval[i]*cat_length[c]), partial_lh_dad[i] * partial_lh_node[i], lh_cat);
                     }
-                    VectorClass prop = site_rate->getProp(c);
-                    lh_ptn[j] += prop * lh_cat;
+                    lh_ptn[j] = mul_add(cat_prop[c], lh_cat, lh_ptn[j]);
                     partial_lh_dad += nstates/VCSIZE;
 //                    partial_lh_node += nstates/VCSIZE;
                 }
@@ -584,7 +585,7 @@ double PhyloTree::computeSitemodelLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_b
             VectorClass lh_ptn_sum = horizontal_add(lh_ptn) + VectorClass().load_a(&ptn_invar[ptn]);
             lh_ptn_sum = log(abs(lh_ptn_sum));
             lh_ptn_sum.store_a(&_pattern_lh[ptn]);
-            tree_lh += lh_ptn_sum * freq;
+            tree_lh = mul_add(lh_ptn_sum, freq, tree_lh);
         }
     } else 
     {
@@ -611,15 +612,11 @@ double PhyloTree::computeSitemodelLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_b
                     eval = (VectorClass*)models->at(nptn-1)->getEigenvalues();
                 }                
                 for (c = 0; c < ncat; c++) {
-                    VectorClass cat_rate = site_rate->getRate(c);
                     VectorClass lh_cat = 0.0;
                     for (i = 0; i < nstates/VCSIZE; i++) {
-                        VectorClass cof = eval[i]*cat_rate;
-                        VectorClass val = exp(cof*dad_length) * partial_lh_dad[i] * partial_lh_node[i];
-                        lh_cat += val;
+                        lh_cat = mul_add(exp(eval[i]*cat_length[c]), partial_lh_dad[i] * partial_lh_node[i], lh_cat);
                     }
-                    VectorClass prop = site_rate->getProp(c);
-                    lh_ptn[j] += prop * lh_cat;
+                    lh_ptn[j] = mul_add(cat_prop[c], lh_cat, lh_ptn[j]);
                     partial_lh_dad += nstates/VCSIZE;
                     partial_lh_node += nstates/VCSIZE;
                 }
@@ -630,7 +627,7 @@ double PhyloTree::computeSitemodelLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_b
             VectorClass lh_ptn_sum = horizontal_add(lh_ptn) + VectorClass().load_a(&ptn_invar[ptn]);
             lh_ptn_sum = log(abs(lh_ptn_sum));
             lh_ptn_sum.store_a(&_pattern_lh[ptn]);
-            tree_lh += lh_ptn_sum * freq;
+            tree_lh = mul_add(lh_ptn_sum, freq, tree_lh);
         }
 
     }
@@ -663,6 +660,9 @@ double PhyloTree::computeSitemodelLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_b
     }
 
 	assert(!isnan(tree_lh_final) && !isinf(tree_lh_final));
+    
+    aligned_free(cat_prop);
+    aligned_free(cat_length);
 
     return tree_lh_final;
 }
@@ -682,8 +682,13 @@ double PhyloTree::computeSitemodelLikelihoodFromBufferEigenSIMD() {
 
     ModelSet *models = (ModelSet*)model;
     
-    VectorClass dad_length = current_it->length;
     VectorClass tree_lh = current_it->lh_scale_factor + current_it_back->lh_scale_factor;
+    VectorClass *cat_length = aligned_alloc<VectorClass>(ncat);
+    VectorClass *cat_prop = aligned_alloc<VectorClass>(ncat);
+    for (c = 0; c < ncat; c++) {
+        cat_length[c] = site_rate->getRate(c) * current_it->length;
+        cat_prop[c] = site_rate->getProp(c);
+    }
 
 #ifdef _OPENMP
 #pragma omp parallel for reduction(+: tree_lh) private(ptn, i, c, j) schedule(static)
@@ -701,15 +706,11 @@ double PhyloTree::computeSitemodelLikelihoodFromBufferEigenSIMD() {
                 eval = (VectorClass*)models->at(nptn-1)->getEigenvalues();
             }                
             for (c = 0; c < ncat; c++) {
-                VectorClass cat_rate = site_rate->getRate(c);
                 VectorClass lh_cat = 0.0;
                 for (i = 0; i < nstates/VCSIZE; i++) {
-                    VectorClass cof = eval[i]*cat_rate;
-                    VectorClass val = exp(cof*dad_length) * theta[i];
-                    lh_cat += val;
+                    lh_cat = mul_add(exp(eval[i]*cat_length[c]), theta[i], lh_cat);
                 }
-                VectorClass prop = site_rate->getProp(c);
-                lh_ptn[j] += prop * lh_cat;
+                lh_ptn[j] = mul_add(cat_prop[c], lh_cat, lh_ptn[j]);
                 theta += nstates/VCSIZE;
             }
         }
@@ -719,9 +720,13 @@ double PhyloTree::computeSitemodelLikelihoodFromBufferEigenSIMD() {
         VectorClass lh_ptn_sum = horizontal_add(lh_ptn) + VectorClass().load_a(&ptn_invar[ptn]);
         lh_ptn_sum = log(abs(lh_ptn_sum));
         lh_ptn_sum.store_a(&_pattern_lh[ptn]);
-        tree_lh += lh_ptn_sum * freq;
+        tree_lh = mul_add(lh_ptn_sum, freq, tree_lh);
     }
     double tree_lh_final = horizontal_add(tree_lh);
+    
+    aligned_free(cat_prop);
+    aligned_free(cat_length);
+    
     return tree_lh_final;
 }
 
