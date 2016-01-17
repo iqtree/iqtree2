@@ -451,7 +451,11 @@ void PhyloTree::computeSitemodelLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branc
     VectorClass unit = 1.0;
     
 #ifdef _OPENMP
-#pragma omp parallel for reduction(+: my_df, my_ddf) private(ptn, i, c, j) schedule(static)
+#pragma omp parallel private(ptn, i, c, j)
+{
+    VectorClass my_df_thread = 0.0;
+    VectorClass my_ddf_thread = 0.0;
+#pragma omp for nowait schedule(static)
 #endif
     for (ptn = 0; ptn < nptn; ptn+=VCSIZE) {
         VectorClass lh_ptn[VCSIZE];
@@ -496,10 +500,25 @@ void PhyloTree::computeSitemodelLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branc
         VectorClass df_ptn_sum = horizontal_add(df_ptn) * inv_lh_ptn;
         VectorClass ddf_ptn_sum = horizontal_add(ddf_ptn) * inv_lh_ptn;
         ddf_ptn_sum = nmul_add(df_ptn_sum, df_ptn_sum, ddf_ptn_sum);
-        
+
+#ifdef _OPENMP
+        my_df_thread = mul_add(df_ptn_sum, freq, my_df_thread);
+        my_ddf_thread = mul_add(ddf_ptn_sum, freq, my_ddf_thread);
+#else
         my_df = mul_add(df_ptn_sum, freq, my_df);
         my_ddf = mul_add(ddf_ptn_sum, freq, my_ddf);
-    }
+#endif
+    } // for loop
+
+#ifdef _OPENMP
+#pragma omp critical
+	{
+		my_df += my_df_thread;
+		my_ddf += my_ddf_thread;
+	}
+}
+#endif
+
 	df = horizontal_add(my_df);
 	ddf = horizontal_add(my_ddf);
     if (isnan(df) || isinf(df)) {
@@ -553,7 +572,10 @@ double PhyloTree::computeSitemodelLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_b
     	// special treatment for TIP-INTERNAL NODE case
         double *tip_partial_lh_node = tip_partial_lh + (dad->id * get_safe_upper_limit(nptn)*nstates);
 #ifdef _OPENMP
-#pragma omp parallel for reduction(+: tree_lh) private(ptn, i, c, j) schedule(static)
+#pragma omp parallel private(ptn, i, c, j)
+{
+    VectorClass tree_lh_thread = 0.0;
+#pragma omp for nowait schedule(static)
 #endif
         for (ptn = 0; ptn < nptn; ptn+=VCSIZE) {
             VectorClass lh_ptn[VCSIZE];
@@ -585,8 +607,21 @@ double PhyloTree::computeSitemodelLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_b
             VectorClass lh_ptn_sum = horizontal_add(lh_ptn) + VectorClass().load_a(&ptn_invar[ptn]);
             lh_ptn_sum = log(abs(lh_ptn_sum));
             lh_ptn_sum.store_a(&_pattern_lh[ptn]);
+#ifdef _OPENMP
+            tree_lh_thread = mul_add(lh_ptn_sum, freq, tree_lh_thread);
+#else
             tree_lh = mul_add(lh_ptn_sum, freq, tree_lh);
-        }
+#endif
+        } // for loop
+        
+#ifdef _OPENMP
+#pragma omp critical
+	{
+		tree_lh += tree_lh_thread;
+	}
+}
+#endif
+
     } else 
     {
     	// both dad and node are internal nodes
@@ -596,7 +631,10 @@ double PhyloTree::computeSitemodelLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_b
 			memcpy(&node_branch->partial_lh[ptn*block], &node_branch->partial_lh[(ptn-1)*block], block*sizeof(double));
         }
 #ifdef _OPENMP
-#pragma omp parallel for reduction(+: tree_lh) private(ptn, i, c, j) schedule(static)
+#pragma omp parallel private(ptn, i, c, j)
+{
+    VectorClass tree_lh_thread = 0.0;
+#pragma omp for nowait schedule(static)
 #endif
         for (ptn = 0; ptn < nptn; ptn+=VCSIZE) {
             VectorClass lh_ptn[VCSIZE];
@@ -627,8 +665,21 @@ double PhyloTree::computeSitemodelLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_b
             VectorClass lh_ptn_sum = horizontal_add(lh_ptn) + VectorClass().load_a(&ptn_invar[ptn]);
             lh_ptn_sum = log(abs(lh_ptn_sum));
             lh_ptn_sum.store_a(&_pattern_lh[ptn]);
+#ifdef _OPENMP
+            tree_lh_thread = mul_add(lh_ptn_sum, freq, tree_lh_thread);
+#else
             tree_lh = mul_add(lh_ptn_sum, freq, tree_lh);
-        }
+#endif
+        } // for loop
+
+#ifdef _OPENMP
+#pragma omp critical
+	{
+		tree_lh += tree_lh_thread;
+	}
+}
+#endif
+
 
     }
 
@@ -650,12 +701,12 @@ double PhyloTree::computeSitemodelLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_b
             }
         }
         cout << endl;
-        tree_lh = current_it->lh_scale_factor + current_it_back->lh_scale_factor;
+        tree_lh_final = current_it->lh_scale_factor + current_it_back->lh_scale_factor;
         for (ptn = 0; ptn < nptn; ptn++) {
             if (isnan(_pattern_lh[ptn]) || isinf(_pattern_lh[ptn])) {
                 _pattern_lh[ptn] = LOG_SCALING_THRESHOLD*4; // log(2^(-1024))
             }
-            tree_lh += _pattern_lh[ptn] * ptn_freq[ptn];
+            tree_lh_final += _pattern_lh[ptn] * ptn_freq[ptn];
         }
     }
 
@@ -691,7 +742,10 @@ double PhyloTree::computeSitemodelLikelihoodFromBufferEigenSIMD() {
     }
 
 #ifdef _OPENMP
-#pragma omp parallel for reduction(+: tree_lh) private(ptn, i, c, j) schedule(static)
+#pragma omp parallel private(ptn, i, c, j)
+{
+    VectorClass tree_lh_thread = 0.0;
+#pragma omp for nowait schedule(static)
 #endif
     for (ptn = 0; ptn < nptn; ptn+=VCSIZE) {
         VectorClass lh_ptn[VCSIZE];
@@ -720,8 +774,21 @@ double PhyloTree::computeSitemodelLikelihoodFromBufferEigenSIMD() {
         VectorClass lh_ptn_sum = horizontal_add(lh_ptn) + VectorClass().load_a(&ptn_invar[ptn]);
         lh_ptn_sum = log(abs(lh_ptn_sum));
         lh_ptn_sum.store_a(&_pattern_lh[ptn]);
+#ifdef _OPENMP
+        tree_lh_thread = mul_add(lh_ptn_sum, freq, tree_lh_thread);
+#else
         tree_lh = mul_add(lh_ptn_sum, freq, tree_lh);
-    }
+#endif
+    } // for loop
+
+#ifdef _OPENMP
+#pragma omp critical
+	{
+		tree_lh += tree_lh_thread;
+	}
+}
+#endif
+
     double tree_lh_final = horizontal_add(tree_lh);
     
     aligned_free(cat_prop);
