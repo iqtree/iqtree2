@@ -20,7 +20,7 @@ double gsl_pow_uint(double x, unsigned int n);
     @param n sample size
     @return random value drawn from binominal distribution 
 */
-unsigned int gsl_ran_binomial (double p, unsigned int n);
+unsigned int gsl_ran_binomial (double p, unsigned int n, int *rstream);
 
 /*
     multinomial sampling
@@ -29,7 +29,7 @@ unsigned int gsl_ran_binomial (double p, unsigned int n);
     @param p probability vector of length K, will be normalized to 1 if not summing up to 1
     @param[out] n output vector of length K as drawn from multinomial distribution, sum to N
 */
-void gsl_ran_multinomial (const size_t K, const unsigned int N, const double p[], unsigned int n[]);
+void gsl_ran_multinomial (const size_t K, const unsigned int N, const double p[], unsigned int n[], int *rstream);
 
 
 /*

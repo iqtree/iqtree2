@@ -27,7 +27,7 @@
 //#include <gsl/gsl_pow_int.h>
 //#include <gsl/gsl_sf_gamma.h>
 
-extern double random_double();
+extern double random_double(int *rstream);
 
 
 /* The binomial distribution has the form,
@@ -94,7 +94,7 @@ Stirling (double y1)
 }
 
 unsigned int
-gsl_ran_binomial (double p, unsigned int n)
+gsl_ran_binomial (double p, unsigned int n, int *rstream)
 {
   int ix;                       /* return value */
   int flipped = 0;
@@ -130,7 +130,7 @@ gsl_ran_binomial (double p, unsigned int n)
            */
 
           double f = f0;
-          double u = random_double();
+          double u = random_double(rstream);
 
           for (ix = 0; ix <= BINV_CUTOFF; ++ix)
             {
@@ -211,8 +211,8 @@ gsl_ran_binomial (double p, unsigned int n)
     TryAgain:
 
       /* generate random variates, u specifies which region: Tri, Par, Tail */
-      u = random_double() * p4;
-      v = random_double();
+      u = random_double(rstream) * p4;
+      v = random_double(rstream);
 
       if (u <= p1)
         {

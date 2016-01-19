@@ -319,9 +319,9 @@ void SuperAlignment::createBootstrapAlignment(IntVector &pattern_freq, const cha
 }
 
 
-void SuperAlignment::createBootstrapAlignment(int *pattern_freq, const char *spec) {
+void SuperAlignment::createBootstrapAlignment(int *pattern_freq, const char *spec, int *rstream) {
 	if (!isSuperAlignment()) outError("Internal error: ", __func__);
-	if (spec && strncmp(spec, "GENE", 4) != 0) outError("Unsupported yet. ", __func__);
+//	if (spec && strncmp(spec, "GENE", 4) != 0) outError("Unsupported yet. ", __func__);
 
 	if (spec && strncmp(spec, "GENE", 4) == 0) {
 		// resampling whole genes
@@ -333,12 +333,12 @@ void SuperAlignment::createBootstrapAlignment(int *pattern_freq, const char *spe
 		}
 		memset(pattern_freq, 0, nptn * sizeof(int));
 		for (int i = 0; i < partitions.size(); i++) {
-			int part = random_int(partitions.size());
+			int part = random_int(partitions.size(), rstream);
 			Alignment *aln = partitions[part];
 			if (strncmp(spec,"GENESITE",8) == 0) {
 				// then resampling sites in resampled gene
 				for (int j = 0; j < aln->getNSite(); j++) {
-					int ptn_id = aln->getPatternID(random_int(aln->getNPattern()));
+					int ptn_id = aln->getPatternID(random_int(aln->getNPattern(), rstream));
 					pattern_freq[ptn_id + part_pos[part]]++;
 				}
 
@@ -352,9 +352,9 @@ void SuperAlignment::createBootstrapAlignment(int *pattern_freq, const char *spe
 		int offset = 0;
 		for (vector<Alignment*>::iterator it = partitions.begin(); it != partitions.end(); it++) {
             if (spec && strncmp(spec, "SCALE=", 6) == 0)
-                (*it)->createBootstrapAlignment(pattern_freq + offset, spec);
+                (*it)->createBootstrapAlignment(pattern_freq + offset, spec, rstream);
             else
-                (*it)->createBootstrapAlignment(pattern_freq + offset);
+                (*it)->createBootstrapAlignment(pattern_freq + offset, NULL, rstream);
 			offset += (*it)->getNPattern();
 		}
 	}

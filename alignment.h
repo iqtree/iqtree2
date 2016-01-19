@@ -391,8 +391,9 @@ public:
             resampling pattern frequency by a non-parametric bootstrap
             @param pattern_freq (OUT) resampled pattern frequencies
             @param spec bootstrap specification, see above
+            @param rstream random generator stream, NULL to use the global randstream
      */
-    virtual void createBootstrapAlignment(int *pattern_freq, const char *spec = NULL);
+    virtual void createBootstrapAlignment(int *pattern_freq, const char *spec = NULL, int *rstream = NULL);
 
     /**
             create a gap masked alignment from an input alignment. Gap patterns of masked_aln 

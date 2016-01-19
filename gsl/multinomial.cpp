@@ -45,7 +45,7 @@
 
 void
 gsl_ran_multinomial (const size_t K,
-                     const unsigned int N, const double p[], unsigned int n[])
+                     const unsigned int N, const double p[], unsigned int n[], int *rstream)
 {
   size_t k;
   double norm = 0.0;
@@ -67,7 +67,7 @@ gsl_ran_multinomial (const size_t K,
     {
       if (p[k] > 0.0)
         {
-          n[k] = gsl_ran_binomial (p[k] / (norm - sum_p), N - sum_n);
+          n[k] = gsl_ran_binomial (p[k] / (norm - sum_p), N - sum_n, rstream);
         }
       else
         {
