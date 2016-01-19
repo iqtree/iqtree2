@@ -839,9 +839,15 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInf
         dist[i] = -((double)this_aln->getNSeq())*this_aln->getNPattern()*this_aln->num_states;
     }
     
-    if (params.num_threads > 1)
+    if (params.num_threads > 1) 
+    {
         quicksort(dist, 0, in_tree->size()-1, distID);
-
+        if (verbose_mode >= VB_MED) {
+            for (i = 0; i < in_tree->size(); i++) {
+                cout << i+1 << "\t" << in_tree->part_info[distID[i]].name << endl;
+            }
+        }
+    }
 
 #ifdef _OPENMP
 //        for (i = 0; i < in_tree->size(); i++)
