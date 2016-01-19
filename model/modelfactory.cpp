@@ -340,6 +340,10 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 		cout << "Alignment is divided into " << models->size() << " partitions with " << tree->aln->getNPattern() << " patterns" << endl;
 		for (vector<double*>::reverse_iterator it = freq_vec.rbegin(); it != freq_vec.rend(); it++)
 			if (*it) delete [] (*it);
+            
+        // delete information of the old alignment
+        tree->aln->ordered_pattern.clear();
+        tree->deleteAllPartialLh();
 	}
     
 //	if (model->isMixture())
@@ -621,7 +625,8 @@ void ModelFactory::readSiteFreq(Alignment *aln, char* site_freq_file, IntVector 
 				sum += freq;
 			}
 			if (fabs(sum-1.0) > 1e-4) {
-                outWarning("Frequencies of " + site_spec + " do not sum up to 1 and will be normalized");
+                if (fabs(sum-1.0) > 1e-3)
+                    outWarning("Frequencies of site " + site_spec + " do not sum up to 1 and will be normalized");
                 sum = 1.0/sum;
                 for (i = 0; i < aln->num_states; i++) 
                     site_freq_entry[i] *= sum;
