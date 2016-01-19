@@ -598,6 +598,7 @@ void ModelFactory::readSiteFreq(Alignment *aln, char* site_freq_file, IntVector 
 		double freq;
 		string site_spec;
 		int specified_sites = 0;
+        int i;
 		in.exceptions(ios::badbit);
 		for (int model_id = 0; !in.eof(); model_id++) {
 			// remove the failbit
@@ -613,13 +614,18 @@ void ModelFactory::readSiteFreq(Alignment *aln, char* site_freq_file, IntVector 
 			}
 			double *site_freq_entry = new double[aln->num_states];
 			double sum = 0;
-			for (int i = 0; i < aln->num_states; i++) {
+			for (i = 0; i < aln->num_states; i++) {
 				in >> freq;
 				if (freq <= 0.0 || freq >= 1.0) throw "Invalid frequency entry";
 				site_freq_entry[i] = freq;
 				sum += freq;
 			}
-			if (fabs(sum-1.0) > 1e-4) throw "Frequencies do not sum up to 1";
+			if (fabs(sum-1.0) > 1e-4) {
+                outWarning("Frequencies of " + site_spec + " do not sum up to 1 and will be normalized");
+                sum = 1.0/sum;
+                for (i = 0; i < aln->num_states; i++) 
+                    site_freq_entry[i] *= sum;
+            }
 			aln->convfreq(site_freq_entry); // regularize frequencies (eg if some freq = 0)
 			freq_vec.push_back(site_freq_entry);
 		}
