@@ -21,6 +21,7 @@
 #include "phylosupertree.h"
 #include "phylosupertreeplen.h"
 #include "upperbounds.h"
+#include "model/modelmixture.h"
 
 //const static int BINARY_SCALE = floor(log2(1/SCALING_THRESHOLD));
 //const static double LOG_BINARY_SCALE = -(log(2) * BINARY_SCALE);
@@ -1697,6 +1698,43 @@ double PhyloTree::computePatternLhCat(SiteLoglType wsl) {
         return score;
     }
 }
+
+void PhyloTree::computePatternStateFreq(double *ptn_state_freq) {
+    assert(getModel()->isMixture());
+    computePatternLhCat(WSL_MIXTURE);
+    double *lh_cat = _pattern_lh_cat;
+    size_t ptn, nptn = getAlnNPattern(), m, nmixture = getModel()->getNMixtures();
+    double *ptn_freq = ptn_state_freq;
+    size_t state, nstates = aln->num_states;
+    ModelMixture *models = (ModelMixture*)model;
+    
+    // loop over all site-patterns
+    for (ptn = 0; ptn < nptn; ptn++) {
+    
+        // first compute posterior for each mixture component
+        double sum_lh = 0.0;
+        for (m = 0; m < nmixture; m++) {
+            sum_lh += lh_cat[m];
+        }
+        sum_lh = 1.0/sum_lh;
+        for (m = 0; m < nmixture; m++) {
+            lh_cat[m] *= sum_lh;
+        }
+        
+        // now compute state frequencies
+        for (state = 0; state < nstates; state++) {
+            double freq = 0;
+            for (m = 0; m < nmixture; m++)
+                freq += models->at(m)->state_freq[state] * lh_cat[m];
+            ptn_freq[state] = freq;
+        }
+        
+        // increase the pointers
+        lh_cat += nmixture;
+        ptn_freq += nstates;
+    }
+}
+
 
 
 void PhyloTree::computePatternLikelihood(double *ptn_lh, double *cur_logl, double *ptn_lh_cat, SiteLoglType wsl) {

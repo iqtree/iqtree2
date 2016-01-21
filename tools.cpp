@@ -770,6 +770,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.SSE = LK_EIGEN_SSE;
     params.lk_no_avx = false;
     params.print_site_lh = WSL_NONE;
+    params.print_site_state_freq = 0;
     params.print_site_rate = false;
     params.print_site_posterior = 0;
     params.print_tree_lh = false;
@@ -2167,6 +2168,10 @@ void parseArg(int argc, char *argv[], Params &params) {
 			}
 			if (strcmp(argv[cnt], "-wsp") == 0) {
 				params.print_site_posterior = 1;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-wsf") == 0) {
+				params.print_site_state_freq = 1;
 				continue;
 			}
 			if (strcmp(argv[cnt], "-wba") == 0) {

@@ -803,6 +803,13 @@ public:
     virtual double computePatternLhCat(SiteLoglType wsl);
 
     /**
+        compute state frequency for each pattern (for Huaichun)
+        @param[out] ptn_state_freq state frequency vector per pattern, 
+            should be pre-allocated with size of num_patterns * num_states
+    */
+    void computePatternStateFreq(double *ptn_state_freq);
+
+    /**
             compute pattern likelihoods only if the accumulated scaling factor is non-zero.
             Otherwise, copy the pattern_lh attribute
             @param pattern_lh (OUT) pattern log-likelihoods,

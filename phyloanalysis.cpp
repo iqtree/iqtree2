@@ -1456,6 +1456,12 @@ void printMiscInfo(Params &params, IQTree &iqtree, double *pattern_lh) {
 		else
 			printSiteLhCategory(site_lh_file.c_str(), &iqtree, params.print_site_lh);
 	}
+    
+    if (params.print_site_state_freq) {
+		string site_freq_file = params.out_prefix;
+		site_freq_file += ".sitesf";
+        printSiteStateFreq(site_freq_file.c_str(), &iqtree);
+    }
 
     if (params.print_site_posterior) {
         cout << "Computing mixture posterior probabilities" << endl;

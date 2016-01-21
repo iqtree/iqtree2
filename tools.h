@@ -1335,6 +1335,12 @@ public:
      */
     SiteLoglType print_site_lh;
 
+    /**
+        0: print nothing
+        1: print site state frequency vectors
+    */
+    int print_site_state_freq;
+
     /** TRUE to print site-specific rates, default: FALSE */
     bool print_site_rate;
 

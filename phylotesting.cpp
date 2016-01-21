@@ -333,6 +333,37 @@ void printSiteLhCategory(const char*filename, PhyloTree *tree, SiteLoglType wsl)
 
 }
 
+void printSiteStateFreq(const char*filename, PhyloTree *tree) {
+
+    int i, j, nsites = tree->getAlnNSite(), nstates = tree->aln->num_states;
+    double *ptn_state_freq = new double[tree->getAlnNPattern() * nstates];
+    
+    tree->computePatternStateFreq(ptn_state_freq);
+
+	try {
+		ofstream out;
+		out.exceptions(ios::failbit | ios::badbit);
+		out.open(filename);
+		IntVector pattern_index;
+		tree->aln->getSitePatternIndex(pattern_index);
+		for (i = 0; i < nsites; i++) {
+			out.width(6);
+			out << left << i+1 << " ";
+            double *state_freq = &ptn_state_freq[pattern_index[i]*nstates];
+			for (j = 0; j < nstates; j++) {
+				out.width(15);
+				out << state_freq[j] << " ";
+			}
+			out << endl;
+		}
+		out.close();
+		cout << "Site state frequency vectors printed to " << filename << endl;
+	} catch (ios::failure) {
+		outError(ERR_WRITE_OUTPUT, filename);
+	}
+    delete [] ptn_state_freq;
+}
+
 bool checkModelFile(ifstream &in, bool is_partitioned, vector<ModelInfo> &infos) {
 	if (!in.is_open()) return false;
 	in.exceptions(ios::badbit);
