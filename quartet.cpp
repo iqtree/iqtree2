@@ -1735,7 +1735,7 @@ void PhyloTree::computeQuartetLikelihoods(vector<QuartetInfo> &quartet_info) {
             string quartet_tree_str;
             quartet_tree_str = "(" + quartet_aln->getSeqName(qc[k*4]) + "," + quartet_aln->getSeqName(qc[k*4+1]) + ",(" + 
                 quartet_aln->getSeqName(qc[k*4+2]) + "," + quartet_aln->getSeqName(qc[k*4+3]) + "));";
-            quartet_tree->readTreeString(quartet_tree_str);
+            quartet_tree->readTreeStringSeqName(quartet_tree_str);
             quartet_tree->initializeAllPartialLh();
             quartet_tree->wrapperFixNegativeBranch(true);
             // optimize branch lengths with logl_epsilon=0.1 accuracy
