@@ -1722,6 +1722,17 @@ void PhyloTree::computeQuartetLikelihoods(vector<QuartetInfo> &quartet_info) {
         quartet_tree->setParams(params);
         quartet_tree->optimize_by_newton = params->optimize_by_newton;
         quartet_tree->setLikelihoodKernel(params->SSE);
+
+        // set up partition model
+        if (isSuperTree()) {
+            PhyloSuperTree *quartet_super_tree = (PhyloSuperTree*)quartet_tree;
+            PhyloSuperTree *super_tree = (PhyloSuperTree*)this;
+            for (int i = 0; i < super_tree->size(); i++) {
+                quartet_super_tree->at(i)->setModelFactory(super_tree->at(i)->getModelFactory());
+                quartet_super_tree->at(i)->setModel(super_tree->at(i)->getModel());
+                quartet_super_tree->at(i)->setRate(super_tree->at(i)->getRate());
+            }
+        }
         
         // set model and rate
         quartet_tree->setModelFactory(model_factory);
