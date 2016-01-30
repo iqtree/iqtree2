@@ -1231,6 +1231,10 @@ double PhyloTree::computeLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloN
 				_pattern_lh[ptn] = lh_ptn;
 				tree_lh += lh_ptn * ptn_freq[ptn];
 			} else {
+                // bugfix 2016-01-21, prob_const can be rescaled
+                if (dad_branch->scale_num[ptn] >= 1)
+                    lh_ptn *= SCALING_THRESHOLD;
+//				_pattern_lh[ptn] = lh_ptn;
 				prob_const += lh_ptn;
 			}
 		}
@@ -1263,6 +1267,10 @@ double PhyloTree::computeLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloN
 				_pattern_lh[ptn] = lh_ptn;
 				tree_lh += lh_ptn * ptn_freq[ptn];
 			} else {
+                // bugfix 2016-01-21, prob_const can be rescaled
+                if (dad_branch->scale_num[ptn] + node_branch->scale_num[ptn] >= 1)
+                    lh_ptn *= SCALING_THRESHOLD;
+//				_pattern_lh[ptn] = lh_ptn;
 				prob_const += lh_ptn;
 			}
 		}
@@ -1295,6 +1303,10 @@ double PhyloTree::computeLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloN
 
     if (orig_nptn < nptn) {
     	// ascertainment bias correction
+        if (prob_const >= 1.0 || prob_const < 0.0) {
+            printTree(cout, WT_TAXON_ID + WT_BR_LEN + WT_NEWLINE);
+            model->writeInfo(cout);
+        }
         assert(prob_const < 1.0 && prob_const >= 0.0);
 
         // BQM 2015-10-11: fix this those functions using _pattern_lh_cat
@@ -2274,6 +2286,9 @@ double PhyloTree::computeMixrateLikelihoodBranchEigen(PhyloNeighbor *dad_branch,
 				_pattern_lh[ptn] = lh_ptn;
 				tree_lh += lh_ptn * ptn_freq[ptn];
 			} else {
+                // bugfix 2016-01-21, prob_const can be rescaled
+                if (dad_branch->scale_num[ptn] >= 1)
+                    lh_ptn *= SCALING_THRESHOLD;
 				prob_const += lh_ptn;
 			}
 		}
@@ -2306,6 +2321,9 @@ double PhyloTree::computeMixrateLikelihoodBranchEigen(PhyloNeighbor *dad_branch,
 				_pattern_lh[ptn] = lh_ptn;
 				tree_lh += lh_ptn * ptn_freq[ptn];
 			} else {
+                // bugfix 2016-01-21, prob_const can be rescaled
+                if (dad_branch->scale_num[ptn] + node_branch->scale_num[ptn] >= 1)
+                    lh_ptn *= SCALING_THRESHOLD;
 				prob_const += lh_ptn;
 			}
 		}
@@ -2904,6 +2922,9 @@ double PhyloTree::computeMixtureLikelihoodBranchEigen(PhyloNeighbor *dad_branch,
 				_pattern_lh[ptn] = lh_ptn;
 				tree_lh += lh_ptn * ptn_freq[ptn];
 			} else {
+                // bugfix 2016-01-21, prob_const can be rescaled
+                if (dad_branch->scale_num[ptn] >= 1)
+                    lh_ptn *= SCALING_THRESHOLD;
 				prob_const += lh_ptn;
 			}
 		}
@@ -2945,6 +2966,9 @@ double PhyloTree::computeMixtureLikelihoodBranchEigen(PhyloNeighbor *dad_branch,
 				_pattern_lh[ptn] = lh_ptn;
 				tree_lh += lh_ptn * ptn_freq[ptn];
 			} else {
+                // bugfix 2016-01-21, prob_const can be rescaled
+                if (dad_branch->scale_num[ptn] + node_branch->scale_num[ptn] >= 1)
+                    lh_ptn *= SCALING_THRESHOLD;
 				prob_const += lh_ptn;
 			}
 		}
