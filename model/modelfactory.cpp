@@ -306,10 +306,13 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 		models->init((params.freq_type != FREQ_UNKNOWN) ? params.freq_type : FREQ_EMPIRICAL);
 		IntVector site_model;
 		vector<double*> freq_vec;
-		readSiteFreq(tree->aln, params.site_freq_file, site_model, freq_vec);
-		tree->aln->regroupSitePattern(freq_vec.size(), site_model);
-		//tree->aln->ungroupSitePattern();
-		tree->setAlignment(tree->aln);
+		bool aln_changed = readSiteFreq(tree->aln, params.site_freq_file, site_model, freq_vec);
+        if (aln_changed) {
+            cout << "Regrouping alignment sites..." << endl;
+            tree->aln->regroupSitePattern(freq_vec.size(), site_model);
+            //tree->aln->ungroupSitePattern();
+            tree->setAlignment(tree->aln);
+        }
 		int i;
 		models->pattern_model_map.resize(tree->aln->getNPattern(), -1);
 		for (i = 0; i < tree->aln->getNSite(); i++) {
@@ -591,10 +594,19 @@ int ModelFactory::getNParameters() {
 	int df = model->getNDim() + model->getNDimFreq() + site_rate->getNDim() + site_rate->phylo_tree->branchNum;
 	return df;
 }
-void ModelFactory::readSiteFreq(Alignment *aln, char* site_freq_file, IntVector &site_model, vector<double*> &freq_vec)
+bool ModelFactory::readSiteFreq(Alignment *aln, char* site_freq_file, IntVector &site_model, vector<double*> &freq_vec)
 {
 	cout << "Reading site-specific state frequency file " << site_freq_file << " ..." << endl;
 	site_model.resize(aln->getNSite(), -1);
+    int i;
+    IntVector pattern_to_site; // vector from pattern to the first site
+    pattern_to_site.resize(aln->getNPattern(), -1);
+    for (i = 0; i < aln->getNSite(); i++)
+        if (pattern_to_site[aln->getPatternID(i)] == -1)
+            pattern_to_site[aln->getPatternID(i)] = i;
+            
+    bool aln_changed = false;
+    
 	try {
 		ifstream in;
 		in.exceptions(ios::failbit | ios::badbit);
@@ -602,7 +614,6 @@ void ModelFactory::readSiteFreq(Alignment *aln, char* site_freq_file, IntVector 
 		double freq;
 		string site_spec;
 		int specified_sites = 0;
-        int i;
 		in.exceptions(ios::badbit);
 		for (int model_id = 0; !in.eof(); model_id++) {
 			// remove the failbit
@@ -614,7 +625,7 @@ void ModelFactory::readSiteFreq(Alignment *aln, char* site_freq_file, IntVector 
 			if (site_id.size() == 0) throw "No site ID specified";
 			for (IntVector::iterator it = site_id.begin(); it != site_id.end(); it++) {
 				if (site_model[*it] != -1) throw "Duplicated site ID";
-				site_model[*it] = model_id;
+				site_model[*it] = freq_vec.size();
 			}
 			double *site_freq_entry = new double[aln->num_states];
 			double sum = 0;
@@ -632,12 +643,35 @@ void ModelFactory::readSiteFreq(Alignment *aln, char* site_freq_file, IntVector 
                     site_freq_entry[i] *= sum;
             }
 			aln->convfreq(site_freq_entry); // regularize frequencies (eg if some freq = 0)
-			freq_vec.push_back(site_freq_entry);
+            
+            // 2016-02-01: now check for equality of sites with same site-pattern and same freq
+            int prev_site = pattern_to_site[aln->getPatternID(site_id[0])];
+            if (site_id.size() == 1 && prev_site < site_id[0] && site_model[prev_site] != -1) {
+                // compare freq with prev_site
+                bool matched_freq = true;
+                double *prev_freq = freq_vec[site_model[prev_site]];
+                for (i = 0; i < aln->num_states; i++) {
+                    if (site_freq_entry[i] != prev_freq[i]) {
+                        matched_freq = false;
+                        break;
+                    }
+                }
+                if (matched_freq) {
+                    site_model[site_id[0]] = site_model[prev_site];
+                } else
+                    aln_changed = true;
+            }
+            
+            if (site_model[site_id[0]] == freq_vec.size())
+                freq_vec.push_back(site_freq_entry);
+            else
+                delete [] site_freq_entry;
 		}
 		if (specified_sites < site_model.size()) {
+            aln_changed = true;
 			// there are some unspecified sites
 			cout << site_model.size() - specified_sites << " unspecified sites will get default frequencies" << endl;
-			for (int i = 0; i < site_model.size(); i++)
+			for (i = 0; i < site_model.size(); i++)
 				if (site_model[i] == -1) 
 					site_model[i] = freq_vec.size();
 			freq_vec.push_back(NULL);
@@ -653,6 +687,7 @@ void ModelFactory::readSiteFreq(Alignment *aln, char* site_freq_file, IntVector 
 	} catch(ios::failure) {
 		outError(ERR_READ_INPUT);
 	}
+    return aln_changed;
 }
 
 double ModelFactory::initGTRGammaIParameters(RateHeterogeneity *rate, ModelSubst *model, double initAlpha,
