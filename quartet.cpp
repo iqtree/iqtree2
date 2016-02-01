@@ -1681,20 +1681,29 @@ void PhyloTree::computeQuartetLikelihoods(vector<QuartetInfo> &quartet_info) {
 
 
 #ifdef _OPENMP
-    #pragma omp parallel for schedule(guided)
+    #pragma omp parallel
+    {
+    int *rstream;
+    init_random(params->ran_seed + omp_get_thread_num(), false, &rstream);
+#else
+    int *rstream = randstream;
+#endif    
+
+#ifdef _OPENMP
+    #pragma omp for schedule(guided)
 #endif
     for (int qid = 0; qid < params->num_quartets; qid++) {
 // fprintf(stderr, "%d\n", qid); 
         // uniformly draw 4 taxa
-        quartet_info[qid].seqID[0] = random_int(leafNum);
+        quartet_info[qid].seqID[0] = random_int(leafNum, rstream);
         do {
-            quartet_info[qid].seqID[1] = random_int(leafNum);
+            quartet_info[qid].seqID[1] = random_int(leafNum, rstream);
         } while (quartet_info[qid].seqID[1] == quartet_info[qid].seqID[0]);
         do {
-            quartet_info[qid].seqID[2] = random_int(leafNum);
+            quartet_info[qid].seqID[2] = random_int(leafNum, rstream);
         } while (quartet_info[qid].seqID[2] == quartet_info[qid].seqID[0] || quartet_info[qid].seqID[2] == quartet_info[qid].seqID[1]);
         do {
-            quartet_info[qid].seqID[3] = random_int(leafNum);
+            quartet_info[qid].seqID[3] = random_int(leafNum, rstream);
         } while (quartet_info[qid].seqID[3] == quartet_info[qid].seqID[0] || quartet_info[qid].seqID[3] == quartet_info[qid].seqID[1]
             || quartet_info[qid].seqID[3] == quartet_info[qid].seqID[2]);
             
@@ -1929,6 +1938,11 @@ void PhyloTree::computeQuartetLikelihoods(vector<QuartetInfo> &quartet_info) {
 	
 	
     } // end for num_quartets
+
+#ifdef _OPENMP
+    finish_random(rstream);
+    }
+#endif
 
 } // end PhyloTree::computeQuartetLikelihoods
 
