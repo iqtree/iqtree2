@@ -1758,6 +1758,15 @@ void PhyloTree::computeQuartetLikelihoods(vector<QuartetInfo> &quartet_info) {
         quartet_tree->setModelFactory(NULL);
         quartet_tree->setRate(NULL);
 
+        if (isSuperTree()) {
+            PhyloSuperTree *quartet_super_tree = (PhyloSuperTree*)quartet_tree;
+            for (int i = 0; i < quartet_super_tree->size(); i++) {
+                quartet_super_tree->at(i)->setModelFactory(NULL);
+                quartet_super_tree->at(i)->setModel(NULL);
+                quartet_super_tree->at(i)->setRate(NULL);
+            }
+        }
+
         delete quartet_tree;
         delete quartet_aln;
 
