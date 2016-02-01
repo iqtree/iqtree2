@@ -1779,161 +1779,161 @@ void PhyloTree::computeQuartetLikelihoods(vector<QuartetInfo> &quartet_info) {
         delete quartet_tree;
         delete quartet_aln;
 
-	// determine likelihood order
-	int qworder[3]; // local (thread-safe) vector for sorting
+        // determine likelihood order
+        int qworder[3]; // local (thread-safe) vector for sorting
 
-	if (quartet_info[qid].logl[0] > quartet_info[qid].logl[1]) {
-		if(quartet_info[qid].logl[2] > quartet_info[qid].logl[0]) {
-			qworder[0] = 2;
-			qworder[1] = 0;
-			qworder[2] = 1;		
-		} else if (quartet_info[qid].logl[2] < quartet_info[qid].logl[1]) {
-			qworder[0] = 0;
-			qworder[1] = 1;
-			qworder[2] = 2;		
-		} else {
-			qworder[0] = 0;
-			qworder[1] = 2;
-			qworder[2] = 1;		
-		}
-	} else {
-		if(quartet_info[qid].logl[2] > quartet_info[qid].logl[1]) {
-			qworder[0] = 2;
-			qworder[1] = 1;
-			qworder[2] = 0;		
-		} else if (quartet_info[qid].logl[2] < quartet_info[qid].logl[0]) {
-			qworder[0] = 1;
-			qworder[1] = 0;
-			qworder[2] = 2;		
-		} else {
-			qworder[0] = 1;
-			qworder[1] = 2;
-			qworder[2] = 0;		
-		}
-	}
+        if (quartet_info[qid].logl[0] > quartet_info[qid].logl[1]) {
+            if(quartet_info[qid].logl[2] > quartet_info[qid].logl[0]) {
+                qworder[0] = 2;
+                qworder[1] = 0;
+                qworder[2] = 1;		
+            } else if (quartet_info[qid].logl[2] < quartet_info[qid].logl[1]) {
+                qworder[0] = 0;
+                qworder[1] = 1;
+                qworder[2] = 2;		
+            } else {
+                qworder[0] = 0;
+                qworder[1] = 2;
+                qworder[2] = 1;		
+            }
+        } else {
+            if(quartet_info[qid].logl[2] > quartet_info[qid].logl[1]) {
+                qworder[0] = 2;
+                qworder[1] = 1;
+                qworder[2] = 0;		
+            } else if (quartet_info[qid].logl[2] < quartet_info[qid].logl[0]) {
+                qworder[0] = 1;
+                qworder[1] = 0;
+                qworder[2] = 2;		
+            } else {
+                qworder[0] = 1;
+                qworder[1] = 2;
+                qworder[2] = 0;		
+            }
+        }
 
-	// compute Bayesian weights
-	double temp;
+        // compute Bayesian weights
+        double temp;
 
-	quartet_info[qid].qweight[0] = quartet_info[qid].logl[0];
-	quartet_info[qid].qweight[1] = quartet_info[qid].logl[1];
-	quartet_info[qid].qweight[2] = quartet_info[qid].logl[2];
+        quartet_info[qid].qweight[0] = quartet_info[qid].logl[0];
+        quartet_info[qid].qweight[1] = quartet_info[qid].logl[1];
+        quartet_info[qid].qweight[2] = quartet_info[qid].logl[2];
 
-	temp = quartet_info[qid].qweight[qworder[1]]-quartet_info[qid].qweight[qworder[0]];
-	if(temp < -TP_MAX_EXP_DIFF)	/* possible, since 1.0+exp(>36) == 1.0 */
-	   quartet_info[qid].qweight[qworder[1]] = 0.0;
-	else
-	   quartet_info[qid].qweight[qworder[1]] = exp(temp);
+        temp = quartet_info[qid].qweight[qworder[1]]-quartet_info[qid].qweight[qworder[0]];
+        if(temp < -TP_MAX_EXP_DIFF)	/* possible, since 1.0+exp(>36) == 1.0 */
+           quartet_info[qid].qweight[qworder[1]] = 0.0;
+        else
+           quartet_info[qid].qweight[qworder[1]] = exp(temp);
 
-        temp = quartet_info[qid].qweight[qworder[2]]-quartet_info[qid].qweight[qworder[0]];
-	if(temp < -TP_MAX_EXP_DIFF)	/* possible, since 1.0+exp(>36) == 1.0 */
-	   quartet_info[qid].qweight[qworder[2]] = 0.0;
-	else
-	   quartet_info[qid].qweight[qworder[2]] = exp(temp);
+            temp = quartet_info[qid].qweight[qworder[2]]-quartet_info[qid].qweight[qworder[0]];
+        if(temp < -TP_MAX_EXP_DIFF)	/* possible, since 1.0+exp(>36) == 1.0 */
+           quartet_info[qid].qweight[qworder[2]] = 0.0;
+        else
+           quartet_info[qid].qweight[qworder[2]] = exp(temp);
 
-	quartet_info[qid].qweight[qworder[0]] = 1.0;
+        quartet_info[qid].qweight[qworder[0]] = 1.0;
 
-	temp = quartet_info[qid].qweight[0] + quartet_info[qid].qweight[1] + quartet_info[qid].qweight[2];
-	quartet_info[qid].qweight[0] = quartet_info[qid].qweight[0]/temp;
-	quartet_info[qid].qweight[1] = quartet_info[qid].qweight[1]/temp;
-	quartet_info[qid].qweight[2] = quartet_info[qid].qweight[2]/temp;
+        temp = quartet_info[qid].qweight[0] + quartet_info[qid].qweight[1] + quartet_info[qid].qweight[2];
+        quartet_info[qid].qweight[0] = quartet_info[qid].qweight[0]/temp;
+        quartet_info[qid].qweight[1] = quartet_info[qid].qweight[1]/temp;
+        quartet_info[qid].qweight[2] = quartet_info[qid].qweight[2]/temp;
 
-	// determine which of the three corners (only meaningful if seqIDs NOT sorted)
-	if (treebits[qworder[0]] == 1) {
-		quartet_info[qid].corner=0;
-	} else {
-		if (treebits[qworder[0]] == 2) {
-			quartet_info[qid].corner=1;
-		} else {
-			quartet_info[qid].corner=2;
-		}
-	}
+        // determine which of the three corners (only meaningful if seqIDs NOT sorted)
+        if (treebits[qworder[0]] == 1) {
+            quartet_info[qid].corner=0;
+        } else {
+            if (treebits[qworder[0]] == 2) {
+                quartet_info[qid].corner=1;
+            } else {
+                quartet_info[qid].corner=2;
+            }
+        }
 
-	// determine which of the 7 regions (only meaningful if seqIDs NOT sorted)
-	double temp1, temp2, temp3;
-	unsigned char discreteweight[3];
-	double sqdiff[3];
+        // determine which of the 7 regions (only meaningful if seqIDs NOT sorted)
+        double temp1, temp2, temp3;
+        unsigned char discreteweight[3];
+        double sqdiff[3];
 
-	/* 100 distribution */
-	temp1 = 1.0 - quartet_info[qid].qweight[qworder[0]];
-	sqdiff[0] = temp1*temp1 +
-		quartet_info[qid].qweight[qworder[1]]*quartet_info[qid].qweight[qworder[1]] +
-		quartet_info[qid].qweight[qworder[2]]*quartet_info[qid].qweight[qworder[2]];
-	discreteweight[0] = treebits[qworder[0]];
+        /* 100 distribution */
+        temp1 = 1.0 - quartet_info[qid].qweight[qworder[0]];
+        sqdiff[0] = temp1*temp1 +
+            quartet_info[qid].qweight[qworder[1]]*quartet_info[qid].qweight[qworder[1]] +
+            quartet_info[qid].qweight[qworder[2]]*quartet_info[qid].qweight[qworder[2]];
+        discreteweight[0] = treebits[qworder[0]];
 
-	/* 110 distribution */
-	temp1 = 0.5 - quartet_info[qid].qweight[qworder[0]];
-	temp2 = 0.5 - quartet_info[qid].qweight[qworder[1]];
-	sqdiff[1] = temp1*temp1 + temp2*temp2 +
-		quartet_info[qid].qweight[qworder[2]]*quartet_info[qid].qweight[qworder[2]];
-	discreteweight[1] = treebits[qworder[0]] + treebits[qworder[1]];
+        /* 110 distribution */
+        temp1 = 0.5 - quartet_info[qid].qweight[qworder[0]];
+        temp2 = 0.5 - quartet_info[qid].qweight[qworder[1]];
+        sqdiff[1] = temp1*temp1 + temp2*temp2 +
+            quartet_info[qid].qweight[qworder[2]]*quartet_info[qid].qweight[qworder[2]];
+        discreteweight[1] = treebits[qworder[0]] + treebits[qworder[1]];
 
-	/* 111 distribution */
-	temp1 = onethird - quartet_info[qid].qweight[qworder[0]];
-	temp2 = onethird - quartet_info[qid].qweight[qworder[1]];
-	temp3 = onethird - quartet_info[qid].qweight[qworder[2]];
-	sqdiff[2] = temp1 * temp1 + temp2 * temp2 + temp3 * temp3;
-	discreteweight[2] = (unsigned char) 7;
+        /* 111 distribution */
+        temp1 = onethird - quartet_info[qid].qweight[qworder[0]];
+        temp2 = onethird - quartet_info[qid].qweight[qworder[1]];
+        temp3 = onethird - quartet_info[qid].qweight[qworder[2]];
+        sqdiff[2] = temp1 * temp1 + temp2 * temp2 + temp3 * temp3;
+        discreteweight[2] = (unsigned char) 7;
 
-	/* sort in descending order */
-	int sqorder[3]; // local (thread-safe) vector for sorting
-	if (sqdiff[0] > sqdiff[1]) {
-		if(sqdiff[2] > sqdiff[0]) {
-			sqorder[0] = 2;
-			sqorder[1] = 0;
-			sqorder[2] = 1;		
-		} else if (sqdiff[2] < sqdiff[1]) {
-			sqorder[0] = 0;
-			sqorder[1] = 1;
-			sqorder[2] = 2;		
-		} else {
-			sqorder[0] = 0;
-			sqorder[1] = 2;
-			sqorder[2] = 1;		
-		}
-	} else {
-		if(sqdiff[2] > sqdiff[1]) {
-			sqorder[0] = 2;
-			sqorder[1] = 1;
-			sqorder[2] = 0;		
-		} else if (sqdiff[2] < sqdiff[0]) {
-			sqorder[0] = 1;
-			sqorder[1] = 0;
-			sqorder[2] = 2;		
-		} else {
-			sqorder[0] = 1;
-			sqorder[1] = 2;
-			sqorder[2] = 0;		
-		}
-	}
+        /* sort in descending order */
+        int sqorder[3]; // local (thread-safe) vector for sorting
+        if (sqdiff[0] > sqdiff[1]) {
+            if(sqdiff[2] > sqdiff[0]) {
+                sqorder[0] = 2;
+                sqorder[1] = 0;
+                sqorder[2] = 1;		
+            } else if (sqdiff[2] < sqdiff[1]) {
+                sqorder[0] = 0;
+                sqorder[1] = 1;
+                sqorder[2] = 2;		
+            } else {
+                sqorder[0] = 0;
+                sqorder[1] = 2;
+                sqorder[2] = 1;		
+            }
+        } else {
+            if(sqdiff[2] > sqdiff[1]) {
+                sqorder[0] = 2;
+                sqorder[1] = 1;
+                sqorder[2] = 0;		
+            } else if (sqdiff[2] < sqdiff[0]) {
+                sqorder[0] = 1;
+                sqorder[1] = 0;
+                sqorder[2] = 2;		
+            } else {
+                sqorder[0] = 1;
+                sqorder[1] = 2;
+                sqorder[2] = 0;		
+            }
+        }
 
 
-	// determine which of the 7 regions (only meaningful if seqIDs NOT sorted)
-	unsigned char qpbranching = (unsigned char) discreteweight[sqorder[2]];
+        // determine which of the 7 regions (only meaningful if seqIDs NOT sorted)
+        unsigned char qpbranching = (unsigned char) discreteweight[sqorder[2]];
 
-	if (qpbranching == 1) {
-		quartet_info[qid].area=0; // LM_REG1 - top
-	}
-	if (qpbranching == 2) {
-		quartet_info[qid].area=1; // LM_REG2 - right
-	}
-	if (qpbranching == 4) {
-		quartet_info[qid].area=2; // LM_REG3 - left
-	}
+        if (qpbranching == 1) {
+            quartet_info[qid].area=0; // LM_REG1 - top
+        }
+        if (qpbranching == 2) {
+            quartet_info[qid].area=1; // LM_REG2 - right
+        }
+        if (qpbranching == 4) {
+            quartet_info[qid].area=2; // LM_REG3 - left
+        }
 
-	if (qpbranching == 3) {
-		quartet_info[qid].area=3; // LM_REG4
-	}
-	if (qpbranching == 6) {
-		quartet_info[qid].area=4; // LM_REG5
-	}
-	if (qpbranching == 5) {
-		quartet_info[qid].area=5; // LM_REG6
-	}
+        if (qpbranching == 3) {
+            quartet_info[qid].area=3; // LM_REG4
+        }
+        if (qpbranching == 6) {
+            quartet_info[qid].area=4; // LM_REG5
+        }
+        if (qpbranching == 5) {
+            quartet_info[qid].area=5; // LM_REG6
+        }
 
-	if (qpbranching == 7) {
-		quartet_info[qid].area=6; // LM_REG7 - center 
-	}
+        if (qpbranching == 7) {
+            quartet_info[qid].area=6; // LM_REG7 - center 
+        }
 
 	
 	
