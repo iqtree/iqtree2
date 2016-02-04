@@ -45,7 +45,7 @@ add_definitions(-DIQ_TREE)
 # The version number.
 set (iqtree_VERSION_MAJOR 1)
 set (iqtree_VERSION_MINOR 3)
-set (iqtree_VERSION_PATCH "13") 
+set (iqtree_VERSION_PATCH "14") 
 
 set(BUILD_SHARED_LIBS OFF)
 
