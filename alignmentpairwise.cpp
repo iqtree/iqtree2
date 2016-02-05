@@ -270,7 +270,8 @@ void AlignmentPairwise::computeFuncDerv(double value, double &df, double &ddf) {
             sum_derv2[i] += trans_derv2[i] * rate_sqr;
         }
     }
-    for (i = 0; i < trans_size; i++) if (pair_freq[i] > Params::getInstance().min_branch_length) {
+    for (i = 0; i < trans_size; i++) 
+        if (pair_freq[i] > Params::getInstance().min_branch_length && sum_trans[i] > 0) {
 //            lh -= pair_freq[i] * log(sum_trans[i]);
             double d1 = sum_derv1[i] / sum_trans[i];
             df -= pair_freq[i] * d1;
