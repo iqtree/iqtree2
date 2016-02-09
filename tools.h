@@ -439,6 +439,12 @@ public:
 	bool testAlpha;
 
     /**
+     *  Restart the optimization of alpha and pinvar from different starting
+     *  pinv values (supercedes the option testAlpha
+     */
+    bool test_param;
+
+    /**
      *  Automatic adjust the log-likelihood espilon using some heuristic
      */
     bool testAlphaEpsAdaptive;

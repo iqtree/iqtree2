@@ -1707,6 +1707,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
             cout << "Testing alpha took: " << etime -stime << " CPU seconds" << endl;
             cout << endl;
 		}
+
 	}
 
     // Optimize model parameters and branch lengths using ML for the initial tree
