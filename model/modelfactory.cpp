@@ -972,6 +972,7 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info,
 	tree->mlCheck = 1;
 	// ---------------------------
 
+	tree->setCurScore(cur_lh);
 	return cur_lh;
 }
 
