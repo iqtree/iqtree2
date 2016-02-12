@@ -1311,12 +1311,7 @@ double ModelMixture::targetFunk(double x[]) {
 
 double ModelMixture::optimizeWeights() {
     // first compute _pattern_lh_cat
-    double tree_lh;
-    if (phylo_tree->getModelFactory()->fused_mix_rate) {
-        tree_lh = phylo_tree->computeMixrateLikelihoodBranchEigen((PhyloNeighbor*)phylo_tree->root->neighbors[0], (PhyloNode*)phylo_tree->root); 
-    } else {
-        tree_lh = phylo_tree->computeMixtureLikelihoodBranchEigen((PhyloNeighbor*)phylo_tree->root->neighbors[0], (PhyloNode*)phylo_tree->root); 
-    }
+    phylo_tree->computePatternLhCat(WSL_MIXTURE);
     size_t ptn, c;
     size_t nptn = phylo_tree->aln->getNPattern();
     size_t nmix = getNMixtures();

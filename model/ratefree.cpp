@@ -456,6 +456,7 @@ double RateFree::optimizeWithEM() {
             phylo_tree->printTree(cout, WT_BR_LEN+WT_NEWLINE);
             writeInfo(cout);
         }
+        assert(score < 0);
         
         if (verbose_mode >= VB_MED)
             cout << "EM score = " << score << endl;
