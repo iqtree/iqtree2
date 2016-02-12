@@ -3979,8 +3979,7 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
         }
 
 		optimizeOneBranch(node1, node2, false, NNI_MAX_NR_STEP);
-		nniMoves[cnt].newLen[0] = node1->findNeighbor(node2)->length;
-
+        node1->findNeighbor(node2)->getLength(nniMoves[cnt].newLen[0]);
 
         if (params->nni5) {
 			FOR_NEIGHBOR(node2, node1, it)

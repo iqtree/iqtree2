@@ -22,6 +22,7 @@
 //#include <fstream>
 #include <iterator>
 #include "splitgraph.h"
+#include "tools.h"
 using namespace std;
 
 /*********************************************
@@ -686,8 +687,8 @@ void MTree::parseFile(istream &infile, char &ch, Node* &root, DoubleVector &bran
             ch = readNextChar(infile, ch);
         if (seqlen == maxlen || infile.eof())
             throw "branch length format error.";
-        seqname[seqlen] = 0;
-        convert_double_vec(seqname, branch_len, BRANCH_LENGTH_SEPARATOR);
+//        seqname[seqlen] = 0;
+        convert_double_vec(seqname.c_str(), branch_len, BRANCH_LENGTH_SEPARATOR);
     }
 }
 

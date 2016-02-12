@@ -56,13 +56,13 @@ void PhyloTreeMixlen::initializeMixBranches(PhyloNode *node, PhyloNode *dad) {
         nei->lengths.resize(mixlen, nei->length);
         assert(nei->length >= 0);
         for (i = 0; i < mixlen; i++)
-            nei->lengths[i] = max(MIN_BRANCH_LEN, nei->length * relative_rate->getRate(i));
+            nei->lengths[i] = max(params->min_branch_length, nei->length * relative_rate->getRate(i));
 
         // assign length of right branch
         nei = (PhyloNeighborMixlen*)((*it)->node->findNeighbor(node));
         nei->lengths.resize(mixlen, nei->length);
         for (i = 0; i < mixlen; i++)
-            nei->lengths[i] = max(MIN_BRANCH_LEN, nei->length * relative_rate->getRate(i));
+            nei->lengths[i] = max(params->min_branch_length, nei->length * relative_rate->getRate(i));
             
         // recursive call
         initializeMixBranches((PhyloNode*)(*it)->node, node);
@@ -186,7 +186,7 @@ void PhyloTreeMixlen::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool
         double current_len = current_it->getLength(cur_mixture);
         assert(current_len >= 0.0);
         // Newton-Raphson method
-        optx = minimizeNewton(MIN_BRANCH_LEN, current_len, MAX_BRANCH_LEN, TOL_BRANCH_LEN, negative_lh, maxNRStep);
+        optx = minimizeNewton(params->min_branch_length, current_len, params->max_branch_length, params->min_branch_length, negative_lh, maxNRStep);
 
         current_it->setLength(cur_mixture, optx);
         current_it_back->setLength(cur_mixture, optx);
