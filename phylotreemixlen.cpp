@@ -280,6 +280,7 @@ void PhyloTreeMixlen::computeFuncDerv(double value, double &df, double &ddf) {
     size_t c, i, m = cur_mixture;
     size_t orig_nptn = aln->size();
     size_t nptn = aln->size()+model_factory->unobserved_ptns.size();
+    size_t maxptn = get_safe_upper_limit(nptn);
     double *eval = model->getEigenvalues();
     assert(eval);
 
@@ -318,6 +319,11 @@ void PhyloTreeMixlen::computeFuncDerv(double value, double &df, double &ddf) {
 				theta_all[i] = partial_lh_node[i] * partial_lh_dad[i];
 			}
 	    }
+		if (nptn < maxptn) {
+			// copy dummy values
+			for (ptn = nptn; ptn < maxptn; ptn++)
+				memcpy(&theta_all[ptn*block], &theta_all[(ptn-1)*block], block*sizeof(double));
+		}
 		theta_computed = true;
 	}
 
