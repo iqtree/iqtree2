@@ -3197,6 +3197,10 @@ int Alignment::convertPomoState(int state) {
     if (state < num_states) return state;
     if (state == STATE_UNKNOWN) return state;
     state -= num_states;
+    if (state >= pomo_states.size()) {
+        cout << state << endl;
+        cout << pomo_states.size() << endl;
+    }
     assert(state < pomo_states.size());
     int id1 = pomo_states[state] & 3;
     int id2 = (pomo_states[state] >> 16) & 3;

@@ -753,6 +753,8 @@ void PhyloTree::computeTipPartialLikelihood() {
 		}
 		break;
     case SEQ_POMO:
+        // If weighted method is used, we need to handle the
+        // pomo_states accordingly.
         if (aln->pomo_states.size() > 0) { // added BQM 2015-07
             int N = aln->virtual_pop_size;
             DoubleVector logv; // BQM: log(0), log(1), log(2)..., for fast computation
@@ -779,14 +781,11 @@ void PhyloTree::computeTipPartialLikelihood() {
                 // can lead to a sampled data of 7A.
                 if (j == M) {
                     // First: Fixed state.  Tue Jan 12 09:26:48 CET
-                    // TODO: 2016 DOM: Supposed BugFix.  The
-                    // likelihood of the fixed state is not only 1.0
-                    // but has to be multiplied by the number of
-                    // possible combinations of alleles, otherwise it
-                    // is weighted with low probability during
-                    // normalization.
+                    // FIXME: 2016 DOM: The likelihood of the fixed
+                    // state is increased to improve accuracy.
                     // real_partial_lh[id1] = 1.0;
                     real_partial_lh[id1] = nnuc * (nnuc - 1) / 2;
+                    // real_partial_lh[id1] = 3.0;
                     double sum_lh = real_partial_lh[id1];
                     // Second: Polymorphic states.
                     for (int s_id1 = 0; s_id1 < nnuc-1; s_id1++) {
@@ -805,10 +804,14 @@ void PhyloTree::computeTipPartialLikelihood() {
                             }
                         }
                     }
+                    // Fri Feb 12 12:55:32 CET 2016 Changed by Dom,
+                    // because normalization treats tip nodes
+                    // differently than interior nodes.
+
                     // normalize partial likelihoods to total of 1.0
-                    sum_lh = 1.0/sum_lh;
-                    for (i = 0; i < nstates; i++)
-                        real_partial_lh[i] *= sum_lh;
+                    // sum_lh = 1.0/sum_lh;
+                    // for (i = 0; i < nstates; i++)
+                    //     real_partial_lh[i] *= sum_lh;
                 }
                 // Observed state is polymorphic.  We only need to set the
                 // partial likelihoods for states that are also
@@ -836,10 +839,14 @@ void PhyloTree::computeTipPartialLikelihood() {
                         sum_lh += real_partial_lh[real_state];
                     }
 
-                    // normalize partial likelihoods to total of 1.0
-                    sum_lh = 1.0/sum_lh;
-                    for (i = 0; i < nstates; i++)
-                        real_partial_lh[i] *= sum_lh;
+                    // Fri Feb 12 12:55:32 CET 2016 Changed by Dom,
+                    // because normalization treats tip nodes
+                    // differently than interior nodes.
+
+                    // // normalize partial likelihoods to total of 1.0
+                    // sum_lh = 1.0/sum_lh;
+                    // for (i = 0; i < nstates; i++)
+                    //     real_partial_lh[i] *= sum_lh;
                 }
 
                 // BUG FIX 2015-09-03: tip_partial_lh stores inner product
