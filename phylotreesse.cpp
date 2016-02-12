@@ -424,10 +424,11 @@ void PhyloTree::computeTipPartialLikelihood() {
                         //map[(unsigned char)'B'] = 4+8+19; // N or D
                         //map[(unsigned char)'Z'] = 32+64+19; // Q or E
                         {
+                            int cstate = state-nstates;
                             for (i = 0; i < nstates; i++) {
                                 lh_ambiguous = 0.0;
                                 for (x = 0; x < 11; x++)
-                                    if (ambi_aa[state] & (1 << x))
+                                    if (ambi_aa[cstate] & (1 << x))
                                         lh_ambiguous += inv_evec[i*nstates+x];
                                 partial_lh[i] = lh_ambiguous;
                             }
@@ -438,6 +439,14 @@ void PhyloTree::computeTipPartialLikelihood() {
                         break;
                     }
                 }
+                // sanity check
+//                bool all_zero = true;
+//                for (i = 0; i < nstates; i++)
+//                    if (partial_lh[i] != 0) {
+//                        all_zero = false;
+//                        break;
+//                    }
+//                assert(!all_zero && "some tip_partial_lh are all zeros");
                 
             }
             // dummy values

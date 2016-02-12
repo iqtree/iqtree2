@@ -234,7 +234,7 @@ void PhyloTree::computeSitemodelPartialLikelihoodEigenSIMD(PhyloNeighbor *dad_br
             	if (dmax == 0.0) {
             		// for very shitty data
             		for (c = 0; c < ncat; c++)
-            			memcpy(&partial_lh[c*nstates/VCSIZE], &tip_partial_lh[aln->STATE_UNKNOWN*nstates], nstates*sizeof(double));
+            			memcpy(&partial_lh[c*nstates/VCSIZE], &tip_partial_lh[ptn*nstates], nstates*sizeof(double));
 					sum_scale += LOG_SCALING_THRESHOLD* 4 * ptn_freq[ptn];
 					//sum_scale += log(lh_max) * ptn_freq[ptn];
 					dad_branch->scale_num[ptn] += 4;
@@ -335,7 +335,7 @@ void PhyloTree::computeSitemodelPartialLikelihoodEigenSIMD(PhyloNeighbor *dad_br
             	if (dmax == 0.0) {
             		// for very shitty data
             		for (c = 0; c < ncat; c++)
-            			memcpy(&partial_lh[c*nstates/VCSIZE], &tip_partial_lh[aln->STATE_UNKNOWN*nstates], nstates*sizeof(double));
+            			memcpy(&partial_lh[c*nstates/VCSIZE], &tip_partial_lh[ptn*nstates], nstates*sizeof(double));
 					sum_scale += LOG_SCALING_THRESHOLD* 4 * ptn_freq[ptn];
 					//sum_scale += log(lh_max) * ptn_freq[ptn];
 					dad_branch->scale_num[ptn] += 4;
