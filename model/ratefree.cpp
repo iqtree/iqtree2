@@ -183,10 +183,9 @@ double RateFree::optimizeParameters(double gradient_epsilon) {
 	if (verbose_mode >= VB_MED)
 		cout << "Optimizing " << name << " model parameters by " << optimize_alg << " algorithm..." << endl;
 
-    if (optimize_alg.find("EM") != string::npos)
-        if (!phylo_tree->getModel()->isMixture() || phylo_tree->getModelFactory()->fused_mix_rate)
-            // call EM only if model is current supported, otherwise use BFGS engine
-            return optimizeWithEM();
+    // TODO: turn off EM algorithm for +ASC model
+    if (optimize_alg.find("EM") != string::npos && phylo_tree->getModelFactory()->unobserved_ptns.empty())
+        return optimizeWithEM();
 
 	//if (freq_type == FREQ_ESTIMATE) scaleStateFreq(false);
 
@@ -305,10 +304,10 @@ void RateFree::setVariables(double *variables) {
 
 }
 
-void RateFree::getVariables(double *variables) {
-	if (getNDim() == 0) return;
+bool RateFree::getVariables(double *variables) {
+	if (getNDim() == 0) return false;
 	int i;
-
+    bool changed = false;
 	// Modified by Thomas on 13 May 2015
 	// --start--
 	/*
@@ -343,8 +342,10 @@ void RateFree::getVariables(double *variables) {
             sum += variables[i+1];
         }
         for (i = 0; i < ncategory-1; i++) {
+            changed |= (prop[i] != variables[i+1] / sum);
             prop[i] = variables[i+1] / sum;
         }
+        changed |= (prop[ncategory-1] != 1.0 / sum);
         prop[ncategory-1] = 1.0 / sum;
         // added by Thomas on Sept 10, 15
         // update the values of rates, in order to
@@ -358,8 +359,10 @@ void RateFree::getVariables(double *variables) {
 //        }
     } else if (optimizing_params == 1) {
         // rates
-        for (i = 0; i < ncategory-1; i++)
+        for (i = 0; i < ncategory-1; i++) {
+            changed |= (rates[i] != variables[i+1]);
             rates[i] = variables[i+1];
+        }
         // added by Thomas on Sept 10, 15
         // need to normalize the values of rates, in order to
         // maintain the sum of prop[i]*rates[i] = 1
@@ -376,8 +379,10 @@ void RateFree::getVariables(double *variables) {
             sum += variables[i+1];
         }
         for (i = 0; i < ncategory-1; i++) {
+            changed |= (prop[i] != variables[i+1] / sum);
             prop[i] = variables[i+1] / sum;
         }
+        changed |= (prop[ncategory-1] != 1.0 / sum);
         prop[ncategory-1] = 1.0 / sum;
         
         // then rates
@@ -386,12 +391,14 @@ void RateFree::getVariables(double *variables) {
     		sum += prop[i] * variables[i+ncategory];
     	}
     	for (i = 0; i < ncategory-1; i++) {
+            changed |= (rates[i] != variables[i+ncategory] / sum);
     		rates[i] = variables[i+ncategory] / sum;
     	}
+        changed |= (rates[ncategory-1] != 1.0 / sum);
     	rates[ncategory-1] = 1.0 / sum;
     }
 	// --end--
-
+    return changed;
 }
 
 /**
@@ -419,6 +426,7 @@ double RateFree::optimizeWithEM() {
     size_t ptn, c;
     size_t nptn = phylo_tree->aln->getNPattern();
     size_t nmix = ncategory;
+    const double MIN_PROP = 1e-4;
     
 //    double *lk_ptn = aligned_alloc<double>(nptn);
     double *new_prop = aligned_alloc<double>(nmix);
@@ -443,13 +451,10 @@ double RateFree::optimizeWithEM() {
     for (int step = 0; step < ncategory; step++) {
         // first compute _pattern_lh_cat
         double score;
-        if (!phylo_tree->getModel()->isMixture())
-            score = phylo_tree->computeLikelihoodBranchEigen((PhyloNeighbor*)phylo_tree->root->neighbors[0], (PhyloNode*)phylo_tree->root); 
-        else if (phylo_tree->getModelFactory()->fused_mix_rate) {
-            score = phylo_tree->computeMixrateLikelihoodBranchEigen((PhyloNeighbor*)phylo_tree->root->neighbors[0], (PhyloNode*)phylo_tree->root); 
-        } else {
-            outError("Mixture model does not work with FreeRate model!");
-            score = phylo_tree->computeMixtureLikelihoodBranchEigen((PhyloNeighbor*)phylo_tree->root->neighbors[0], (PhyloNode*)phylo_tree->root); 
+        score = phylo_tree->computePatternLhCat(WSL_RATECAT);
+        if (score > 0.0) {
+            phylo_tree->printTree(cout, WT_BR_LEN+WT_NEWLINE);
+            writeInfo(cout);
         }
         
         if (verbose_mode >= VB_MED)
@@ -464,6 +469,7 @@ double RateFree::optimizeWithEM() {
             for (c = 0; c < nmix; c++) {
                 lk_ptn += this_lk_cat[c];
             }
+            assert(lk_ptn != 0.0);
             lk_ptn = phylo_tree->ptn_freq[ptn] / lk_ptn;
             
             // transform _pattern_lh_cat into posterior probabilities of each category
@@ -475,27 +481,51 @@ double RateFree::optimizeWithEM() {
         } 
         
         // M-step, update weights according to (*)        
-        
-        bool converged = true;
+        int maxpropid = 0;
         for (c = 0; c < nmix; c++) {
             new_prop[c] = new_prop[c] / phylo_tree->getAlnNSite();
+            if (new_prop[c] > new_prop[maxpropid])
+                maxpropid = c;
+        }
+        // regularize prop
+        bool zero_prop = false;
+        for (c = 0; c < nmix; c++) {
+            if (new_prop[c] < MIN_PROP) {
+                new_prop[maxpropid] -= (MIN_PROP - new_prop[c]);
+                new_prop[c] = MIN_PROP;
+                zero_prop = true;
+            }
+        }
+        // break if some probabilities too small
+        if (zero_prop) break;
+        
+        bool converged = true;
+        double sum_prop = 0.0;
+        for (c = 0; c < nmix; c++) {
+//            new_prop[c] = new_prop[c] / phylo_tree->getAlnNSite();
             // check for convergence
+            sum_prop += new_prop[c];
             converged = converged && (fabs(prop[c]-new_prop[c]) < 1e-4);
             prop[c] = new_prop[c];
         }
+
+        assert(fabs(sum_prop-1.0) < MIN_PROP);
         
         // now optimize rates one by one
         double sum = 0.0;
         for (c = 0; c < nmix; c++) {
             tree->copyPhyloTree(phylo_tree);
             ModelGTR *subst_model;
-            if (phylo_tree->getModel()->isMixture())
+            if (phylo_tree->getModel()->isMixture() && phylo_tree->getModelFactory()->fused_mix_rate)
                 subst_model = ((ModelMixture*)phylo_tree->getModel())->at(c);
             else
                 subst_model = (ModelGTR*)phylo_tree->getModel();
             tree->setModel(subst_model);
             subst_model->setTree(tree);
             model_fac->model = subst_model;
+            if (subst_model->isMixture())
+                tree->setLikelihoodKernel(phylo_tree->sse);
+
                         
             // initialize likelihood
             tree->initializeAllPartialLh();
@@ -506,7 +536,7 @@ double RateFree::optimizeWithEM() {
                 tree->ptn_freq[ptn] = this_lk_cat[ptn*nmix];
             double scaling = rates[c];
             tree->scaleLength(scaling);
-            tree->optimizeTreeLengthScaling(scaling, 0.001);
+            tree->optimizeTreeLengthScaling(MIN_PROP, scaling, 1.0/prop[c], 0.001);
             converged = converged && (fabs(rates[c] - scaling) < 1e-4);
             rates[c] = scaling;
             sum += prop[c] * rates[c];

@@ -77,7 +77,8 @@ double RateInvar::optimizeParameters(double gradient_epsilon) {
 	//p_invar = minimizeOneDimen(MIN_PINVAR, p_invar, 1.0 - MIN_PINVAR, TOL_PINVAR, &negative_lh, &ferror);
     phylo_tree->clearAllPartialLH();
 	phylo_tree->computePtnInvar();
-	return -negative_lh;
+//	return -negative_lh;
+    return phylo_tree->computeLikelihood();
 }
 
 void RateInvar::writeInfo(ostream &out) {
@@ -93,7 +94,9 @@ void RateInvar::setVariables(double *variables) {
 	variables[1] = p_invar;
 }
 
-void RateInvar::getVariables(double *variables) {
-	if (RateInvar::getNDim() == 0) return;
+bool RateInvar::getVariables(double *variables) {
+	if (RateInvar::getNDim() == 0) return false;
+    bool changed = (p_invar != variables[1]);
 	p_invar = variables[1];
+    return changed;
 }

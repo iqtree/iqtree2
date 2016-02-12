@@ -131,9 +131,11 @@ void RateGamma::setGammaShape(double gs) {
 }
 
 double RateGamma::computeFunction(double shape) {
-	gamma_shape = shape;
-	computeRates();
-	phylo_tree->clearAllPartialLH();
+	if (gamma_shape != shape) {
+		gamma_shape = shape;
+		computeRates();
+		phylo_tree->clearAllPartialLH();
+	}
 	return -phylo_tree->computeLikelihood();
 }
 
@@ -156,9 +158,11 @@ void RateGamma::setVariables(double *variables) {
 	variables[1] = gamma_shape;
 }
 
-void RateGamma::getVariables(double *variables) {
-	if (getNDim() == 0) return;
+bool RateGamma::getVariables(double *variables) {
+	if (getNDim() == 0) return false;
+    bool changed = (gamma_shape != variables[1]);
 	gamma_shape = variables[1];
+    return changed;
 }
 
 double RateGamma::optimizeParameters(double gradient_epsilon, double min_gamma, double max_gamma) {
@@ -170,10 +174,13 @@ double RateGamma::optimizeParameters(double gradient_epsilon, double min_gamma, 
 	double current_shape = gamma_shape;
 	double ferror, optx;
 	optx = minimizeOneDimen(min_gamma, current_shape, max_gamma, max(gradient_epsilon, TOL_GAMMA_SHAPE), &negative_lh, &ferror);
-	gamma_shape = optx;
-	computeRates();
-	phylo_tree->clearAllPartialLH();
-	return -negative_lh;
+//	if (gamma_shape != optx) {
+//		gamma_shape = optx;
+//		computeRates();
+//		phylo_tree->clearAllPartialLH();
+//	}
+//	return phylo_tree->computeLikelihood();
+	return -computeFunction(optx);
 }
 
 double RateGamma::optimizeParameters(double gradient_epsilon) {
@@ -185,10 +192,11 @@ double RateGamma::optimizeParameters(double gradient_epsilon) {
 	double current_shape = gamma_shape;
 	double ferror, optx;
 	optx = minimizeOneDimen(MIN_GAMMA_SHAPE, current_shape, MAX_GAMMA_SHAPE, max(gradient_epsilon, TOL_GAMMA_SHAPE), &negative_lh, &ferror);
-	gamma_shape = optx;
-	computeRates();
-	phylo_tree->clearAllPartialLH();
-	return -negative_lh;
+//	gamma_shape = optx;
+//	computeRates();
+//	phylo_tree->clearAllPartialLH();
+//	return -negative_lh;
+	return -computeFunction(optx);
 }
 
 void RateGamma::writeInfo(ostream &out) {
@@ -203,19 +211,8 @@ void RateGamma::writeParameters(ostream &out) {
 
 int RateGamma::computePatternRates(DoubleVector &pattern_rates, IntVector &pattern_cat) {
 	//cout << "Computing Gamma site rates by empirical Bayes..." << endl;
-//	double *ptn_rates = new double[npattern];
-	if (phylo_tree->sse == LK_NORMAL || phylo_tree->sse == LK_SSE)
-		phylo_tree->computeLikelihoodBranchNaive((PhyloNeighbor*)phylo_tree->root->neighbors[0], (PhyloNode*)phylo_tree->root);
-	else {
-//		switch (phylo_tree->aln->num_states) {
-//		case 4: phylo_tree->computeLikelihoodBranchEigen<4>((PhyloNeighbor*)phylo_tree->root->neighbors[0], (PhyloNode*)phylo_tree->root); break;
-//		case 20: phylo_tree->computeLikelihoodBranchEigen<20>((PhyloNeighbor*)phylo_tree->root->neighbors[0], (PhyloNode*)phylo_tree->root); break;
-//		case 2: phylo_tree->computeLikelihoodBranchEigen<2>((PhyloNeighbor*)phylo_tree->root->neighbors[0], (PhyloNode*)phylo_tree->root); break;
-//		case 64: phylo_tree->computeLikelihoodBranchEigen<64>((PhyloNeighbor*)phylo_tree->root->neighbors[0], (PhyloNode*)phylo_tree->root); break;
-//		default: outError("Option unsupported yet for this sequence type. Contact author if you really need it."); break;
-//		}
-        phylo_tree->computeLikelihoodBranchEigen((PhyloNeighbor*)phylo_tree->root->neighbors[0], (PhyloNode*)phylo_tree->root);
-	}
+
+	phylo_tree->computePatternLhCat(WSL_RATECAT);
 
 	int npattern = phylo_tree->aln->getNPattern();
 	pattern_rates.resize(npattern);

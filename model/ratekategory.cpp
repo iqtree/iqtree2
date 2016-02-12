@@ -98,17 +98,8 @@ double RateKategory::optimizeParameters(double gradient_epsilon)
 int RateKategory::computePatternRates(DoubleVector& pattern_rates, IntVector& pattern_cat)
 {
 	cout << "Computing site rates by empirical Bayes..." << endl;
-	if (phylo_tree->sse == LK_NORMAL || phylo_tree->sse == LK_SSE)
-		phylo_tree->computeLikelihoodBranchNaive((PhyloNeighbor*)phylo_tree->root->neighbors[0], (PhyloNode*)phylo_tree->root);
-	else {
-//		switch (phylo_tree->aln->num_states) {
-//		case 4: phylo_tree->computeLikelihoodBranchEigen<4>((PhyloNeighbor*)phylo_tree->root->neighbors[0], (PhyloNode*)phylo_tree->root); break;
-//		case 20: phylo_tree->computeLikelihoodBranchEigen<20>((PhyloNeighbor*)phylo_tree->root->neighbors[0], (PhyloNode*)phylo_tree->root); break;
-//		case 2: phylo_tree->computeLikelihoodBranchEigen<2>((PhyloNeighbor*)phylo_tree->root->neighbors[0], (PhyloNode*)phylo_tree->root); break;
-//		default: outError("Option unsupported yet for this sequence type. Contact author if you really need it."); break;
-//		}
-        phylo_tree->computeLikelihoodBranchEigen((PhyloNeighbor*)phylo_tree->root->neighbors[0], (PhyloNode*)phylo_tree->root);
-	}
+
+	phylo_tree->computePatternLhCat(WSL_RATECAT);
 
 	int npattern = phylo_tree->aln->getNPattern();
 	pattern_rates.resize(npattern);
@@ -145,11 +136,12 @@ int RateKategory::computePatternRates(DoubleVector& pattern_rates, IntVector& pa
 //	delete [] ptn_rates;
 }
 
-void RateKategory::getVariables(double* variables)
+bool RateKategory::getVariables(double* variables)
 {
-	if (ncategory == 1) return;
+	if (ncategory == 1) return false;
+    bool changed = (rates[0] != 1.0);
 	rates[0] = 1.0;
-	memcpy(rates, variables+1, (ncategory-1) * sizeof(double));
+	changed |= memcmpcpy(rates, variables+1, (ncategory-1) * sizeof(double));
 	double sum = 0.0;
 	int i;
 	for (i = 0; i < ncategory-1; i++) 
@@ -157,7 +149,9 @@ void RateKategory::getVariables(double* variables)
 	/*
 	for (i = 0; i < ncategory; i++) 
 		rates[i] = rates[i]*ncategory/sum;*/
+    changed |= (rates[ncategory-1] != ncategory - sum);
 	rates[ncategory-1] = ncategory - sum;
+    return changed;
 }
 
 void RateKategory::setVariables(double* variables)

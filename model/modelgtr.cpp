@@ -453,16 +453,23 @@ void ModelGTR::setVariables(double *variables) {
 	}
 }
 
-void ModelGTR::getVariables(double *variables) {
+bool ModelGTR::getVariables(double *variables) {
 	int nrate = getNDim();
+	int i;
+	bool changed = false;
 	if (freq_type == FREQ_ESTIMATE) nrate -= (num_states-1);
-	if (nrate > 0)
+	if (nrate > 0) {
+		for (i = 0; i < nrate; i++)
+			changed |= (rates[i] != variables[i+1]);
 		memcpy(rates, variables+1, nrate * sizeof(double));
+	}
 
 	if (freq_type == FREQ_ESTIMATE) {
         // 2015-09-07: relax the sum of state_freq to be 1, this will be done at the end of optimization
         // 2015-09-07: relax the sum of state_freq to be 1, this will be done at the end of optimization
 		int ndim = getNDim();
+		for (i = 0; i < num_states-1; i++)
+			changed |= (state_freq[i] != variables[i+ndim-num_states+2]);
 		memcpy(state_freq, variables+(ndim-num_states+2), (num_states-1)*sizeof(double));
 
 //		memcpy(state_freq, variables+nrate+1, (num_states-1)*sizeof(double));
@@ -484,14 +491,17 @@ void ModelGTR::getVariables(double *variables) {
 //			}
 //		state_freq[highest_freq_state] = 1.0/sum;
 	}
+	return changed;
 }
 
 double ModelGTR::targetFunk(double x[]) {
-	getVariables(x);
+	bool changed = getVariables(x);
 	if (state_freq[num_states-1] < 1e-4) return 1.0e+12;
-	decomposeRateMatrix();
-	assert(phylo_tree);
-	phylo_tree->clearAllPartialLH();
+	if (changed) {
+		decomposeRateMatrix();
+		assert(phylo_tree);
+		phylo_tree->clearAllPartialLH();
+	}
 	return -phylo_tree->computeLikelihood();
 }
 
@@ -560,11 +570,16 @@ double ModelGTR::optimizeParameters(double gradient_epsilon) {
 //    else
 //        score = -L_BFGS_B(ndim, variables+1, lower_bound+1, upper_bound+1, max(gradient_epsilon, TOL_RATE));
 
-	getVariables(variables);
+	bool changed = getVariables(variables);
     // BQM 2015-09-07: normalize state_freq
-	if (freq_type == FREQ_ESTIMATE) scaleStateFreq(true);
-	decomposeRateMatrix();
-	phylo_tree->clearAllPartialLH();
+	if (freq_type == FREQ_ESTIMATE) { 
+        scaleStateFreq(true);
+        changed = true;
+    }
+    if (changed) {
+        decomposeRateMatrix();
+        phylo_tree->clearAllPartialLH();
+    }
 	
 	delete [] bound_check;
 	delete [] lower_bound;

@@ -33,7 +33,10 @@ MTree::MTree() {
     leafNum = 0;
     nodeNum = 0;
     rooted = false;
-    num_precision = 6;
+    if (Params::getInstance().min_branch_length <= 0)
+        num_precision = 6;
+    else
+        num_precision = max((int)ceil(-log10(Params::getInstance().min_branch_length))+1, 6);
     len_scale = 1.0;
 	fig_char = "|-+++";
 }
@@ -44,7 +47,10 @@ MTree::MTree(const char *userTreeFile, bool &is_rooted)
 }
 
 void MTree::init(const char *userTreeFile, bool &is_rooted) {
-    num_precision = 10;
+    if (Params::getInstance().min_branch_length <= 0)
+        num_precision = 6;
+    else
+        num_precision = max((int)ceil(-log10(Params::getInstance().min_branch_length))+1, 6);
     len_scale = 1.0;
     readTree(userTreeFile, is_rooted);
     //printInfo();
@@ -587,8 +593,8 @@ void MTree::initializeTree(Node *node, Node* dad)
 void MTree::parseFile(istream &infile, char &ch, Node* &root, DoubleVector &branch_len)
 {
     Node *node;
-    int maxlen = 10000;
-    char seqname[10000];
+    int maxlen = 1000;
+    string seqname;
     int seqlen;
     DoubleVector brlen;
     branch_len.clear();
@@ -625,25 +631,30 @@ void MTree::parseFile(istream &infile, char &ch, Node* &root, DoubleVector &bran
     seqlen = 0;
     char end_ch = 0;
     if (ch == '\'' || ch == '"') end_ch = ch;
+    seqname = "";
 
     while (!infile.eof() && seqlen < maxlen)
     {
         if (end_ch == 0) {
             if (is_newick_token(ch) || controlchar(ch)) break;
         }
-        seqname[seqlen++] = ch;
+        seqname += ch;
+        seqlen++;
+//        seqname[seqlen++] = ch;
         ch = infile.get();
         in_column++;
         if (end_ch != 0 && ch == end_ch) {
-            seqname[seqlen++] = ch;
+            seqname += ch;
+            seqlen++;
+//            seqname[seqlen++] = ch;
             break;
         }
     }
     if ((controlchar(ch) || ch == '[' || ch == end_ch) && !infile.eof())
         ch = readNextChar(infile, ch);
     if (seqlen == maxlen)
-        throw "Too long name ( > 100)";
-    seqname[seqlen] = 0;
+        throw "Too long name ( > 1000)";
+//    seqname[seqlen] = 0;
     if (seqlen == 0 && root->isLeaf())
         throw "A taxon has no name.";
     if (seqlen > 0)
@@ -662,9 +673,11 @@ void MTree::parseFile(istream &infile, char &ch, Node* &root, DoubleVector &bran
     {
         ch = readNextChar(infile);
         seqlen = 0;
+        seqname = "";
         while (!is_newick_token(ch) && !controlchar(ch) && !infile.eof() && seqlen < maxlen)
         {
-            seqname[seqlen] = ch;
+//            seqname[seqlen] = ch;
+            seqname += ch;
             seqlen++;
             ch = infile.get();
             in_column++;
@@ -2042,4 +2055,70 @@ void MTree::removeTaxa(StrVector &taxa_names) {
 		(*nit)->id = id;
 	leafNum = taxa.size();
 	initializeTree();
+}
+
+Node *MTree::findFarthestLeaf(Node *node, Node *dad) {
+    if (!node) 
+        node = root;
+    
+    if (dad && node->isLeaf()) {
+        node->height = 0.0;
+        return node;
+    }
+    Node *res = NULL;
+    node->height = 0.0;
+    FOR_NEIGHBOR_IT(node, dad, it) {
+        Node *leaf = findFarthestLeaf((*it)->node, node);
+        if (node->height < (*it)->node->height+1) {
+            node->height = (*it)->node->height+1;
+            res = leaf;
+        }
+    }
+    return res;
+}
+
+//void MTree::sortNeighborBySubtreeSize(Node *node, Node *dad) {
+//    if (dad && node->isLeaf()) {
+//        node->height = 0.0;
+//        return;
+//    }
+//    
+//    node->height = 0.0;
+//    FOR_NEIGHBOR_DECLARE(node, dad, it) {
+//        sortNeighborBySubtreeSize((*it)->node, node);
+//        if (node->height < (*it)->node->height+1)
+//            node->height = (*it)->node->height+1;
+//    }
+//    
+//    // sort neighbors in ascending order of tree height
+//    FOR_NEIGHBOR(node, dad, it)
+//        for (NeighborVec::iterator it2 = it+1; it2 != node->neighbors.end(); it2++)
+//            if ((*it)->node != dad && (*it)->node->height > (*it2)->node->height) {
+//                Neighbor *nei;
+//                nei = *it;
+//                *it = *it2;
+//                *it2 = nei;
+//            }
+//}
+
+void MTree::getPreOrderBranches(NodeVector &nodes, NodeVector &nodes2, Node *node, Node *dad) {
+    if (dad) {
+        nodes.push_back(node);
+        nodes2.push_back(dad);
+    }
+
+    NeighborVec neivec = node->neighbors;
+    NeighborVec::iterator i1, i2;
+    for (i1 = neivec.begin(); i1 != neivec.end(); i1++)
+        for (i2 = i1+1; i2 != neivec.end(); i2++)
+            if ((*i1)->node->height > (*i2)->node->height) {
+                Neighbor *nei = *i1;
+                *i1 = *i2;
+                *i2 = nei;
+            }
+    for (i1 = neivec.begin(); i1 != neivec.end(); i1++)
+        if ((*i1)->node != dad)
+            getPreOrderBranches(nodes, nodes2, (*i1)->node, node);
+//    FOR_NEIGHBOR_IT(node, dad, it) 
+//        getPreOrderBranches(nodes, nodes2, (*it)->node, node);
 }

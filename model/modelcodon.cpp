@@ -774,22 +774,29 @@ double ModelCodon::computeEmpiricalOmega() {
     
 
 
-void ModelCodon::getVariables(double *variables) {
-	int i, j;
+bool ModelCodon::getVariables(double *variables) {
+	int j;
+    bool changed = false;
     if (num_params > 0) {
         j = 1;
-        if (!fix_omega)
+        if (!fix_omega) {
+            changed |= (omega != variables[j]);
             omega = variables[j++];
-        if (!fix_kappa)
+        }
+        if (!fix_kappa) {
+            changed |= (kappa != variables[j]);
             kappa = variables[j++];
-        if (!fix_kappa2)
+        }
+        if (!fix_kappa2) {
+            changed |= (kappa2 != variables[j]);
             kappa2 = variables[j++];
+        }
         assert(j == num_params+1);
     }
 	if (freq_type == FREQ_ESTIMATE) {
         // 2015-09-07: relax the sum of state_freq to be 1, this will be done at the end of optimization
 		int ndim = getNDim();
-		memcpy(state_freq, variables+(ndim-num_states+2), (num_states-1)*sizeof(double));
+		changed |= memcmpcpy(state_freq, variables+(ndim-num_states+2), (num_states-1)*sizeof(double));
 //		double sum = 0;
 //		for (i = 0; i < num_states-1; i++)
 //			sum += state_freq[i];
@@ -809,6 +816,7 @@ void ModelCodon::getVariables(double *variables) {
 //			}
 //		state_freq[highest_freq_state] = 1.0/sum;
 	}
+    return changed;
 }
 
 void ModelCodon::setVariables(double *variables) {

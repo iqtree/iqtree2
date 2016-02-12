@@ -321,13 +321,14 @@ void NGSRateCat::setVariables(double *variables) {
     memcpy(variables+ncategory+1, proportion, (ncategory-1)*sizeof(double));
 }
 
-void NGSRateCat::getVariables(double *variables) {
-    memcpy(rates, variables+1, ncategory * sizeof(double));
-    memcpy(proportion, variables+ncategory+1, (ncategory-1)*sizeof(double));
+bool NGSRateCat::getVariables(double *variables) {
+    bool changed = memcmpcpy(rates, variables+1, ncategory * sizeof(double));
+    changed |= memcmpcpy(proportion, variables+ncategory+1, (ncategory-1)*sizeof(double));
     double sum = 0.0;
     for (int i = 0; i < ncategory-1; i++)
         sum += proportion[i];
     proportion[ncategory-1] = 1.0 - sum;
+    return changed;
 }
 
 

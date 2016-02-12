@@ -141,7 +141,7 @@ double AlignmentPairwise::computeFunction(double value) {
         for (cat = 0; cat < ncat; cat++) {
             tree->getModelFactory()->computeTransMatrix(value*site_rate->getRate(cat), trans_mat);
             double *pair_pos = pair_freq + cat*trans_size;
-            for (i = 0; i < trans_size; i++) if (pair_pos[i] > 1e-6) {
+            for (i = 0; i < trans_size; i++) if (pair_pos[i] > Params::getInstance().min_branch_length) {
                     if (trans_mat[i] <= 0) throw "Negative transition probability";
                     lh -= pair_pos[i] * log(trans_mat[i]);
                 }
@@ -270,7 +270,8 @@ void AlignmentPairwise::computeFuncDerv(double value, double &df, double &ddf) {
             sum_derv2[i] += trans_derv2[i] * rate_sqr;
         }
     }
-    for (i = 0; i < trans_size; i++) if (pair_freq[i] > 1e-6) {
+    for (i = 0; i < trans_size; i++) 
+        if (pair_freq[i] > Params::getInstance().min_branch_length && sum_trans[i] > 0) {
 //            lh -= pair_freq[i] * log(sum_trans[i]);
             double d1 = sum_derv1[i] / sum_trans[i];
             df -= pair_freq[i] * d1;
@@ -298,9 +299,9 @@ double AlignmentPairwise::optimizeDist(double initial_dist, double &d2l) {
 
     double negative_lh, ferror;
     if (tree->optimize_by_newton) // Newton-Raphson method
-        dist = minimizeNewton(1e-6, dist, MAX_GENETIC_DIST, 1e-6, d2l);
+        dist = minimizeNewton(Params::getInstance().min_branch_length, dist, MAX_GENETIC_DIST, Params::getInstance().min_branch_length, d2l);
     else // Brent method
-        dist = minimizeOneDimen(1e-6, dist, MAX_GENETIC_DIST, 1e-6, &negative_lh, &ferror);
+        dist = minimizeOneDimen(Params::getInstance().min_branch_length, dist, MAX_GENETIC_DIST, Params::getInstance().min_branch_length, &negative_lh, &ferror);
 
     return dist;
 }

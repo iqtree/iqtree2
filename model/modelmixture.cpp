@@ -1414,11 +1414,7 @@ double ModelMixture::optimizeWithEM(double gradient_epsilon) {
     // EM algorithm loop described in Wang, Li, Susko, and Roger (2008)
     for (int step = 0; step < num_steps; step++) {
         // first compute _pattern_lh_cat
-        if (phylo_tree->getModelFactory()->fused_mix_rate) {
-            score = phylo_tree->computeMixrateLikelihoodBranchEigen((PhyloNeighbor*)phylo_tree->root->neighbors[0], (PhyloNode*)phylo_tree->root); 
-        } else {
-            score = phylo_tree->computeMixtureLikelihoodBranchEigen((PhyloNeighbor*)phylo_tree->root->neighbors[0], (PhyloNode*)phylo_tree->root); 
-        }
+        score = phylo_tree->computePatternLhCat(WSL_MIXTURE);
         
         memset(new_prop, 0, nmix*sizeof(double));
                 
@@ -1506,6 +1502,9 @@ double ModelMixture::optimizeParameters(double gradient_epsilon) {
     int dim = getNDim();
     double score = 0.0;
     
+    if (!phylo_tree->getModelFactory()->unobserved_ptns.empty())
+        outError("Mixture model +ASC is not supported yet. Contact author if needed.");
+    
     if (dim > 0)
         score = optimizeWithEM(gradient_epsilon);
     else if (!fix_prop)
@@ -1561,10 +1560,11 @@ void ModelMixture::setVariables(double *variables) {
 
 }
 
-void ModelMixture::getVariables(double *variables) {
+bool ModelMixture::getVariables(double *variables) {
 	int dim = 0;
+    bool changed = false;
 	for (iterator it = begin(); it != end(); it++) {
-		(*it)->getVariables(&variables[dim]);
+		changed |= (*it)->getVariables(&variables[dim]);
 		dim += (*it)->getNDim();
 	}
 //	if (fix_prop) return;
@@ -1601,6 +1601,7 @@ void ModelMixture::getVariables(double *variables) {
 //	}
 //	delete [] y;
 
+    return changed;
 }
 
 void ModelMixture::setBounds(double *lower_bound, double *upper_bound, bool *bound_check) {

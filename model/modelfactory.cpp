@@ -39,15 +39,17 @@
 #include <string>
 #include "timeutil.h"
 #include "myreader.h"
+#include <sstream>
 
 ModelsBlock *readModelsDefinition(Params &params) {
 
 	ModelsBlock *models_block = new ModelsBlock;
 
-	if (true)
+	try
 	{
 		// loading internal model definitions
-		istringstream in(builtin_mixmodels_definition);
+		stringstream in(builtin_mixmodels_definition);
+        assert(in && "stringstream is OK");
 		NxsReader nexus;
 		nexus.Add(models_block);
 	    MyToken token(in);
@@ -56,7 +58,9 @@ ModelsBlock *readModelsDefinition(Params &params) {
 //	    for (ModelsBlock::iterator it = models_block->begin(); it != models_block->end(); it++)
 //	    	if ((*it).flag & NM_FREQ) num_freq++; else num_model++;
 //	    cout << num_model << " models and " << num_freq << " frequency vectors loaded" << endl;
-	}
+	} catch (...) {
+        assert(0 && "predefined mixture models initialized");
+    }
 
 	if (params.model_def_file) {
 		cout << "Reading model definition file " << params.model_def_file << " ... ";
@@ -830,13 +834,16 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info,
 			site_rate->writeInfo(cout);
 		}
 		if (new_lh > cur_lh + logl_epsilon) {
-            if (Params::getInstance().testAlpha && i == 3) {
-                double newEpsilon = (new_lh - cur_lh) * 0.01;
-                if (newEpsilon > defaultEpsilon) {
-                    logl_epsilon = newEpsilon;
-                    cout << "Estimate model parameters with new epsilon = " << logl_epsilon << endl;
-                }
-            }
+			if (Params::getInstance().testAlpha && Params::getInstance().testAlphaEpsAdaptive) {
+				if (i == 3) {
+					double newEpsilon = (new_lh - cur_lh) * 0.01;
+					if (newEpsilon > defaultEpsilon) {
+						logl_epsilon = newEpsilon;
+						cout << "Estimate model parameters with new epsilon = " << logl_epsilon << endl;
+					}
+				}
+			}
+
 //			if (gradient_epsilon > (new_lh - cur_lh) * logl_epsilon)
 //				gradient_epsilon = (new_lh - cur_lh) * logl_epsilon;
 			cur_lh = new_lh;
@@ -1019,8 +1026,9 @@ void ModelFactory::setVariables(double *variables) {
 	site_rate->setVariables(variables + model->getNDim());
 }
 
-void ModelFactory::getVariables(double *variables) {
-	model->getVariables(variables);
-	site_rate->getVariables(variables + model->getNDim());
+bool ModelFactory::getVariables(double *variables) {
+	bool changed = model->getVariables(variables);
+	changed |= site_rate->getVariables(variables + model->getNDim());
+    return changed;
 }
 

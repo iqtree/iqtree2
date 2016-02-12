@@ -49,7 +49,7 @@
 #include "whtest_wrapper.h"
 #include "model/partitionmodel.h"
 #include "model/modelmixture.h"
-#include "guidedbootstrap.h"
+//#include "guidedbootstrap.h"
 #include "model/modelset.h"
 #include "timeutil.h"
 #include "upperbounds.h"
@@ -333,7 +333,7 @@ void reportRate(ofstream &out, PhyloTree &tree) {
 			out << endl;
 		}
 		if (rate_model->isGammaRate()) {
-			out << "Relative rates are computed as " << ((dynamic_cast<RateGamma*>(rate_model)->isCutMedian()) ? "MEDIAN" : "MEAN") <<
+			out << "Relative rates are computed as " << ((rate_model->isGammaRate() == GAMMA_CUT_MEDIAN) ? "MEDIAN" : "MEAN") <<
 				" of the portion of the Gamma distribution falling in the category." << endl;
 		}
 	}
@@ -374,22 +374,15 @@ void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh, 
         
         out << endl
             << "**************************** WARNING ****************************" << endl
-            << "Number of parameters (K): " << df << endl
-            << "Sample size (n):          " << ssize << endl << endl
-            << "Given that K>=n, the model parameters are not identifiable." << endl
-            << "The program will still try to estimate the parameter values," << endl
-            << "but because of the small sample size, the parameter estimates" << endl 
-            << "are likely to be inaccurate." << endl << endl
-            
-            << "Phylogenetic estimates obtained under these conditions should be" << endl 
-            << "interpreted with extreme caution." << endl << endl 
+            << "Number of parameters (K, model parameters and branch lengths): " << df << endl
+            << "Sample size (n, alignment length): " << ssize << endl << endl
+            << "Given that K>=n, the parameter estimates might be inaccurate." << endl
+            << "Thus, phylogenetic estimates should be interpreted with caution." << endl << endl 
 
-            << "Ideally, it is desirable that n >> K. When selecting optimal" << endl
-            << "models," << endl
+            << "Ideally, it is desirable that n >> K. When selecting optimal models," << endl
             << "1. use AIC or BIC if n > 40K;" << endl 
             << "2. use AICc or BIC if 40K >= n > K;" << endl 
-            << "3. be extremely cautious if n <= K (because model parameters" << endl
-            << "   are not identifiable)." << endl << endl
+            << "3. be extremely cautious if n <= K" << endl << endl
 
             << "To improve the situation (3), consider the following options:" << endl
             << "  1. Increase the sample size (n)" << endl
@@ -437,11 +430,11 @@ void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh, 
 		out << "         Such branches are denoted by '**' in the figure below"
 				<< endl << endl;
 	}
-	int long_branches = tree.countLongBranches(NULL, NULL, MAX_BRANCH_LEN-0.2);
+	int long_branches = tree.countLongBranches(NULL, NULL, params.max_branch_length-0.2);
 	if (long_branches > 0) {
 		//stringstream sstr;
 		out << "WARNING: " << long_branches << " too long branches (>" 
-            << MAX_BRANCH_LEN-0.2 << ") should be treated with caution!" << endl;
+            << params.max_branch_length-0.2 << ") should be treated with caution!" << endl;
 		//out << sstr.str();
 		//cout << sstr.str();
 	}
@@ -757,7 +750,7 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 			tree.setRootNode(params.root);
             
             if (params.gbo_replicates) {
-                if (tree.boot_consense_logl > tree.candidateTrees.getBestScore()) {
+                if (tree.boot_consense_logl > tree.candidateTrees.getBestScore() + 0.1) {
                     out << endl << "**NOTE**: Consensus tree has higher likelihood than ML tree found! Please use consensus tree below." << endl;
                 }
             }
@@ -1080,7 +1073,7 @@ void checkZeroDist(Alignment *aln, double *dist) {
 		string str = "";
 		bool first = true;
 		for (j = i + 1; j < ntaxa; j++)
-			if (dist[i * ntaxa + j] <= 1e-6) {
+			if (dist[i * ntaxa + j] <= Params::getInstance().min_branch_length) {
 				if (first)
 					str = "ZERO distance between sequences "
 							+ aln->getSeqName(i);
@@ -1427,10 +1420,10 @@ void printMiscInfo(Params &params, IQTree &iqtree, double *pattern_lh) {
 	if (params.print_site_lh && !params.pll) {
 		string site_lh_file = params.out_prefix;
 		site_lh_file += ".sitelh";
-		if (params.print_site_lh == 1)
+		if (params.print_site_lh == WSL_SITE)
 			printSiteLh(site_lh_file.c_str(), &iqtree, pattern_lh);
 		else
-			printSiteLhCategory(site_lh_file.c_str(), &iqtree);
+			printSiteLhCategory(site_lh_file.c_str(), &iqtree, params.print_site_lh);
 	}
 
     if (params.print_site_posterior) {
@@ -1553,6 +1546,7 @@ void printFinalSearchInfo(Params &params, IQTree &iqtree, double search_cpu_time
 	params.run_time = (getCPUTime() - params.startCPUTime);
 	cout << endl;
 	cout << "Total number of iterations: " << iqtree.stop_rule.getCurIt() << endl;
+//    cout << "Total number of partial likelihood vector computations: " << iqtree.num_partial_lh_computations << endl;
 	cout << "CPU time used for tree search: " << search_cpu_time
 			<< " sec (" << convert_time(search_cpu_time) << ")" << endl;
 	cout << "Wall-clock time used for tree search: " << search_real_time
@@ -1605,7 +1599,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
     }
 
     /***************** Initialization for PLL and sNNI ******************/
-    if (params.start_tree == STT_PLL_PARSIMONY || params.pll) {
+    if (params.start_tree == STT_PLL_PARSIMONY || params.start_tree == STT_RANDOM_TREE || params.pll) {
         /* Initialized all data structure for PLL*/
     	iqtree.initializePLL(params);
     }
@@ -1720,6 +1714,15 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 	iqtree.clearAllPartialLH();
 	initTree = iqtree.optimizeModelParameters(true, initEpsilon);
 
+    // now overwrite with random tree
+    if (params.start_tree == STT_RANDOM_TREE) {
+        cout << "Generate random initial Yule-Harding tree..." << endl;
+        iqtree.generateRandomTree(YULE_HARDING);
+        iqtree.wrapperFixNegativeBranch(true);
+        iqtree.initializeAllPartialLh();
+        initTree = iqtree.optimizeBranches(2);
+        cout << "Log-likelihood of random tree: " << iqtree.getCurScore() << endl;
+    }
 
     /****************** NOW PERFORM MAXIMUM LIKELIHOOD TREE RECONSTRUCTION ******************/
 
@@ -1907,14 +1910,20 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
         if (params.aBayes_test)
             cout << "Testing tree branches by aBayes parametric test..." << endl;
 		iqtree.setRootNode(params.root);
-		iqtree.testAllBranches(params.aLRT_threshold, iqtree.getCurScore(),
-				pattern_lh, params.aLRT_replicates, params.localbp_replicates, params.aLRT_test, params.aBayes_test);
-		cout << "CPU Time used:  " << getCPUTime() - mytime << " sec." << endl;
+        if (iqtree.isBifurcating()) {
+            iqtree.testAllBranches(params.aLRT_threshold, iqtree.getCurScore(),
+                    pattern_lh, params.aLRT_replicates, params.localbp_replicates, params.aLRT_test, params.aBayes_test);
+            cout << "CPU Time used:  " << getCPUTime() - mytime << " sec." << endl;
+        } else {
+            outWarning("Tree is multifurcating and such test is not applicable");
+            params.aLRT_replicates = params.localbp_replicates = params.aLRT_test = params.aBayes_test = 0;
+        }
 	}
 
 	if (params.gbo_replicates > 0) {
 		if (!params.online_bootstrap)
-			runGuidedBootstrap(params, iqtree.aln, iqtree);
+			outError("Obsolete feature");
+//			runGuidedBootstrap(params, iqtree.aln, iqtree);
 		else
 			iqtree.summarizeBootstrap(params);
 	}
@@ -1995,7 +2004,16 @@ void searchGAMMAInvarByRestarting(IQTree &iqtree) {
 	else
 		iqtree.setCurScore(iqtree.computeLikelihood());
 	RateGammaInvar* site_rates = dynamic_cast<RateGammaInvar*>(iqtree.getRate());
-	double initAlphas[] = { 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0 };
+	double values[] = { 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0 };
+	vector<double> initAlphas;
+	if (Params::getInstance().randomAlpha) {
+		while (initAlphas.size() < 10) {
+			double initAlpha = random_double();
+			initAlphas.push_back(initAlpha + MIN_GAMMA_SHAPE*2);
+		}
+	} else {
+		initAlphas.assign(values, values+10);
+	}
 	double bestLogl = iqtree.getCurScore();
 	double bestAlpha = 0.0;
 	double bestPInvar = 0.0;
@@ -2026,7 +2044,7 @@ void searchGAMMAInvarByRestarting(IQTree &iqtree) {
 		site_rates->setPInvar(initPInvar);
 		site_rates->computeRates();
 		iqtree.clearAllPartialLH();
-		iqtree.optimizeModelParameters(verbose_mode >= VB_MED, 0.1);
+		iqtree.optimizeModelParameters(verbose_mode >= VB_MED, Params::getInstance().testAlphaEps);
         double estAlpha = iqtree.getRate()->getGammaShape();
         double estPInv = iqtree.getRate()->getPInvar();
         double logl = iqtree.getCurScore();
@@ -2286,6 +2304,7 @@ void convertAlignment(Params &params, IQTree *iqtree) {
 		bootstrap_alignment->createBootstrapAlignment(alignment, NULL, params.bootstrap_spec);
 		delete alignment;
 		alignment = bootstrap_alignment;
+        iqtree->aln = alignment;
 	}
 	if (alignment->isSuperAlignment()) {
 		((SuperAlignment*)alignment)->printCombinedAlignment(params.aln_output);
@@ -2370,6 +2389,17 @@ void runPhyloAnalysis(Params &params) {
             tree = new IQTree(alignment);
 	}
 
+    if (params.min_branch_length <= 0.0) {
+        params.min_branch_length = 1e-6;
+        if (tree->getAlnNSite() >= 100000) {
+            params.min_branch_length = 0.1 / (tree->getAlnNSite());
+            tree->num_precision = max((int)ceil(-log10(Params::getInstance().min_branch_length))+1, 6);
+            cout.precision(12);
+            cout << "NOTE: minimal branch length is reduced to " << params.min_branch_length << " for long alignment" << endl;
+            cout.precision(3);
+        }
+    }
+
 	string original_model = params.model_name;
 
 	if (params.concatenate_aln) {
@@ -2399,13 +2429,16 @@ void runPhyloAnalysis(Params &params) {
 		convertAlignment(params, tree);
 	} else if (params.gbo_replicates > 0 && params.user_file && params.second_tree) {
 		// run one of the UFBoot analysis
-		runGuidedBootstrap(params, alignment, *tree);
+//		runGuidedBootstrap(params, alignment, *tree);
+		outError("Obsolete feature");
 	} else if (params.avh_test) {
 		// run one of the wondering test for Arndt
-		runAvHTest(params, alignment, *tree);
+//		runAvHTest(params, alignment, *tree);
+		outError("Obsolete feature");
 	} else if (params.bootlh_test) {
 		// run Arndt's plot of tree likelihoods against bootstrap alignments
-		runBootLhTest(params, alignment, *tree);
+//		runBootLhTest(params, alignment, *tree);
+		outError("Obsolete feature");
 	} else if (params.num_bootstrap_samples == 0) {
 		// the main Maximum likelihood tree reconstruction
 		vector<ModelInfo> *model_info = new vector<ModelInfo>;

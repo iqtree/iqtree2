@@ -396,7 +396,9 @@ int PhyloTree::computeParsimonyTree(const char *out_prefix, Alignment *alignment
         ((PhyloNeighbor*) new_taxon->findNeighbor(added_node))->partial_lh_computed |= 2;
         ((PhyloNeighbor*) new_taxon->findNeighbor(added_node))->partial_pars = new_taxon_partial_pars;
 
+        ((PhyloNeighbor*)target_dad->findNeighbor(added_node))->clearPartialLh();
         ((PhyloNeighbor*)target_dad->findNeighbor(added_node))->partial_pars = central_partial_pars + ((index++) * pars_block_size);
+        ((PhyloNeighbor*)target_node->findNeighbor(added_node))->clearPartialLh();
         ((PhyloNeighbor*)target_node->findNeighbor(added_node))->partial_pars = central_partial_pars + ((index++) * pars_block_size);
 
         target_dad->clearReversePartialLh(added_node);
