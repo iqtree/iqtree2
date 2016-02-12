@@ -115,10 +115,10 @@ public:
     /** number of mixture categories */
     int mixlen;
 
-protected:
-
     /** current category, for optimizing branch length */
     int cur_mixture;
+
+protected:
     
     /** relative rate, used to initialize branch lengths */
     RateHeterogeneity *relative_rate;

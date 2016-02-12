@@ -22,6 +22,7 @@
 #include "phylosupertreeplen.h"
 #include "upperbounds.h"
 #include "phylonodemixlen.h"
+#include "phylotreemixlen.h"
 
 //const static int BINARY_SCALE = floor(log2(1/SCALING_THRESHOLD));
 //const static double LOG_BINARY_SCALE = -(log(2) * BINARY_SCALE);
@@ -276,6 +277,16 @@ void PhyloTree::copyPhyloTree(PhyloTree *tree) {
     if (!tree->aln)
         return;
     setAlignment(tree->aln);
+}
+
+void PhyloTree::copyPhyloTreeMixlen(PhyloTree *tree, int mix) {
+    if (tree->isMixlen()) {
+        ((PhyloTreeMixlen*)tree)->cur_mixture = mix;
+    }
+    copyPhyloTree(tree);
+    if (tree->isMixlen()) {
+        ((PhyloTreeMixlen*)tree)->cur_mixture = -1;
+    }
 }
 
 void PhyloTree::setAlignment(Alignment *alignment) {

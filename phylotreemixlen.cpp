@@ -227,6 +227,22 @@ void PhyloTreeMixlen::printBranchLength(ostream &out, int brtype, bool print_sla
     else if ((brtype & WT_BR_CLADE) && print_slash)
         out << "/";
         
+    if (cur_mixture >= 0) {
+        // print branch length of a mixture component only!
+        double length = nei->lengths[cur_mixture];
+        if (brtype & WT_BR_SCALE) length *= len_scale;
+        if (brtype & WT_BR_LEN_ROUNDING) length = round(length);
+        if (brtype & WT_BR_LEN) {
+            if (brtype & WT_BR_LEN_FIXED_WIDTH)
+                out << fixed << length;
+            else
+                out << length;
+        } else if (brtype & WT_BR_CLADE) {
+            out << length;
+        }
+        return;
+    }
+        
     for (int i = 0; i < mixlen; i++) {
         if (i > 0) out << BRANCH_LENGTH_SEPARATOR;
         double length = nei->lengths[i];

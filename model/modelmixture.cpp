@@ -1454,7 +1454,7 @@ double ModelMixture::optimizeWithEM(double gradient_epsilon) {
         
         // now optimize model one by one
         for (c = 0; c < nmix; c++) if (at(c)->getNDim() > 0) {
-            tree->copyPhyloTree(phylo_tree);
+            tree->copyPhyloTreeMixlen(phylo_tree, c);
             ModelGTR *subst_model;
             subst_model = at(c);
             tree->setModel(subst_model);

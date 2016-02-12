@@ -314,6 +314,14 @@ public:
      */
     void copyPhyloTree(PhyloTree *tree);
 
+    /**
+            copy the phylogenetic tree structure into this tree, designed specifically for PhyloTree.
+            So there is some distinction with copyTree.
+            @param tree the tree to copy
+            @param mix mixture ID of branch lengths
+     */
+    virtual void copyPhyloTreeMixlen(PhyloTree *tree, int mix);
+
 
     /**
             Set the alignment, important to compute parsimony or likelihood score
