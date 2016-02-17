@@ -1687,6 +1687,9 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 
     iqtree.initializeAllPartialLh();
 	double initEpsilon = params.min_iterations == 0 ? params.modeps : (params.modeps*10);
+	if (params.test_param)
+		initEpsilon = 0.1;
+
 	string initTree;
 
 	if (iqtree.getRate()->name.find("+I+G") != string::npos) {

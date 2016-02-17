@@ -788,18 +788,22 @@ double ModelFactory::optimizeParametersGammaInvar(bool fixed_len, bool write_inf
 	double bestAlpha = 0.0;
 	double bestPInvar = 0.0;
 
-	double testInterval = (frac_const - MIN_PINVAR) / 10;
+	double testInterval = (frac_const - MIN_PINVAR*2) / 10;
 	double initPInv = MIN_PINVAR;
+	double initAlpha = site_rates->getGammaShape();
+
+	cout << "testInterval: " << testInterval << endl;
 
 	// Now perform testing different inital p_inv values
-	while (initPInv < frac_const) {
+	while (initPInv <= frac_const) {
 		cout << endl;
-		cout << "Testing pinv = " << initPInv << endl;
+		cout << "Testing with init. pinv = " << initPInv << " / init. alpha = "  << initAlpha << endl;
 		tree->restoreBranchLengths(lenvec);
 		((ModelGTR*) tree->getModel())->setRateMatrix(rates);
 		((ModelGTR*) tree->getModel())->setStateFrequency(state_freqs);
 		tree->getModel()->decomposeRateMatrix();
 		site_rates->setPInvar(initPInv);
+		site_rates->setGammaShape(initAlpha);
 		site_rates->computeRates();
 		tree->clearAllPartialLH();
 		optimizeParameters(fixed_len, write_info, logl_epsilon, gradient_epsilon);
