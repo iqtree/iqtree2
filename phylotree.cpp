@@ -1958,8 +1958,10 @@ double PhyloTree::computeLogLDiffVariance(double *pattern_lh_other, double *ptn_
 double PhyloTree::computeLogLDiffVariance(PhyloTree *other_tree, double *pattern_lh) {
     double *pattern_lh_other = new double[getAlnNPattern()];
     other_tree->computePatternLikelihood(pattern_lh_other);
-    delete[] pattern_lh_other;
+    // BUG FIX found by Xcode analyze (use of memory after it is freed)
+//    delete[] pattern_lh_other;
     double res = computeLogLDiffVariance(pattern_lh_other, pattern_lh);
+    delete[] pattern_lh_other;
     return res;
 }
 

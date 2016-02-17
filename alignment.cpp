@@ -2680,6 +2680,9 @@ double Alignment::readDist(istream &in, double *dist_mat) {
     string dist_file = params.out_prefix;
     dist_file += ".userdist";
     printDist(dist_file.c_str(), dist_mat);*/
+    
+    delete [] tmp_dist_mat;
+    
     return longest_dist;
 }
 
