@@ -1921,7 +1921,7 @@ void performAUTest(Params &params, PhyloTree *tree, double *pattern_lhs, vector<
             double max_lh = -1e20;
             int max_tid = -1;
             for (tid = 0; tid < ntrees; tid++) {
-                double *pattern_lh = pattern_lhs + (tid*nptn);
+                double *pattern_lh = pattern_lhs + (tid*maxnptn);
                 double tree_lh;
 #ifdef BINARY32
                 tree_lh = tree->dotProductSIMD<double, Vec2d, 2>(pattern_lh, boot_sample_dbl, nptn);
@@ -2059,6 +2059,8 @@ void evaluateTrees(Params &params, IQTree *tree, vector<TreeInfo> &info, IntVect
 	double *max_lh = NULL;
 	double *lhdiff_weights = NULL;
 	int nptn = tree->getAlnNPattern();
+    int maxnptn = get_safe_upper_limit(nptn);
+    
 	if (params.topotest_replicates && ntrees > 1) {
 		size_t mem_size = (size_t)params.topotest_replicates*nptn*sizeof(int) +
 				ntrees*params.topotest_replicates*sizeof(double) +
@@ -2080,11 +2082,13 @@ void evaluateTrees(Params &params, IQTree *tree, vector<TreeInfo> &info, IntVect
 		if (params.do_weighted_test || params.do_au_test) {
 			if (!(lhdiff_weights = new double [ntrees * ntrees]))
 				outError(ERR_NO_MEMORY);
-			if (!(pattern_lhs = new double[ntrees* nptn]))
-				outError(ERR_NO_MEMORY);
+            pattern_lhs = aligned_alloc<double>(ntrees*maxnptn);
+//			if (!(pattern_lhs = new double[ntrees* nptn]))
+//				outError(ERR_NO_MEMORY);
 		}
-		if (!(pattern_lh = new double[nptn]))
-			outError(ERR_NO_MEMORY);
+        pattern_lh = aligned_alloc<double>(maxnptn);
+//		if (!(pattern_lh = new double[nptn]))
+//			outError(ERR_NO_MEMORY);
 		if (!(orig_tree_lh = new double[ntrees]))
 			outError(ERR_NO_MEMORY);
 		if (!(max_lh = new double[params.topotest_replicates]))
@@ -2136,9 +2140,10 @@ void evaluateTrees(Params &params, IQTree *tree, vector<TreeInfo> &info, IntVect
 
 		if (pattern_lh) {
 			double curScore = tree->getCurScore();
+            memset(pattern_lh, 0, maxnptn*sizeof(double));
 			tree->computePatternLikelihood(pattern_lh, &curScore);
 			if (params.do_weighted_test || params.do_au_test)
-				memcpy(pattern_lhs + tid*nptn, pattern_lh, nptn*sizeof(double));
+				memcpy(pattern_lhs + tid*maxnptn, pattern_lh, maxnptn*sizeof(double));
 		}
 		if (params.print_site_lh) {
 			string tree_name = "Tree" + convertIntToString(tree_index+1);
@@ -2280,10 +2285,10 @@ void evaluateTrees(Params &params, IQTree *tree, vector<TreeInfo> &info, IntVect
 			cout << "Computing pairwise logl difference variance ..." << endl;
 			/* computing lhdiff_weights as 1/sqrt(lhdiff_variance) */
 			for (tid = 0; tid < ntrees; tid++) {
-				double *pattern_lh1 = pattern_lhs + (tid * nptn);
+				double *pattern_lh1 = pattern_lhs + (tid * maxnptn);
 				lhdiff_weights[tid*ntrees+tid] = 0.0;
 				for (tid2 = tid+1; tid2 < ntrees; tid2++) {
-					double lhdiff_variance = tree->computeLogLDiffVariance(pattern_lh1, pattern_lhs + (tid2*nptn));
+					double lhdiff_variance = tree->computeLogLDiffVariance(pattern_lh1, pattern_lhs + (tid2*maxnptn));
 					lhdiff_weights[tid*ntrees+tid2] = 1.0/sqrt(lhdiff_variance);
 					lhdiff_weights[tid2*ntrees+tid] = lhdiff_weights[tid*ntrees+tid2];
 				}
@@ -2386,9 +2391,9 @@ void evaluateTrees(Params &params, IQTree *tree, vector<TreeInfo> &info, IntVect
 	if (orig_tree_lh)
 		delete [] orig_tree_lh;
 	if (pattern_lh)
-		delete [] pattern_lh;
+        aligned_free(pattern_lh);
 	if (pattern_lhs)
-		delete [] pattern_lhs;
+        aligned_free(pattern_lhs);
 	if (lhdiff_weights)
 		delete [] lhdiff_weights;
 	if (tree_lhs)
