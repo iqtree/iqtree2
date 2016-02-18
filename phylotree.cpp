@@ -3516,7 +3516,7 @@ double PhyloTree::computeDist(int seq1, int seq2, double initial_dist, double &d
     // if no model or site rate is specified, return JC distance
     if (initial_dist == 0.0) {
     	if (params->compute_obs_dist)
-            initial_dist = aln->computeObsDist(seq1, seq2);
+            return (initial_dist = aln->computeObsDist(seq1, seq2));
     	else
     		initial_dist = aln->computeDist(seq1, seq2);
     }
