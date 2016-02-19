@@ -694,6 +694,8 @@ public:
     //template <const int nstates>
     void computeMixratePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
 
+    void computeSitemodelPartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
+
     template <class VectorClass, const int VCSIZE, const int nstates>
     void computePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
 
@@ -702,6 +704,9 @@ public:
 
     template <class VectorClass, const int VCSIZE, const int nstates>
     void computeMixturePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
+
+    template <class VectorClass, const int VCSIZE, const int nstates>
+    void computeSitemodelPartialLikelihoodEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
 
     /****************************************************************************
             computing likelihood on a branch
@@ -740,6 +745,8 @@ public:
     //template <const int nstates>
     double computeMixrateLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloNode *dad);
 
+    double computeSitemodelLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloNode *dad);
+
     template <class VectorClass, const int VCSIZE, const int nstates>
     double computeLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad);
 
@@ -748,6 +755,9 @@ public:
 
     template <class VectorClass, const int VCSIZE, const int nstates>
     double computeMixtureLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad);
+
+    template <class VectorClass, const int VCSIZE, const int nstates>
+    double computeSitemodelLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad);
 
     double computeLikelihoodBranchNaive(PhyloNeighbor *dad_branch, PhyloNode *dad);
 
@@ -774,6 +784,11 @@ public:
 
     template <class VectorClass, const int VCSIZE, const int nstates>
     double computeMixtureLikelihoodFromBufferEigenSIMD();
+
+    template <class VectorClass, const int VCSIZE, const int nstates>
+    double computeSitemodelLikelihoodFromBufferEigenSIMD();
+
+    double computeSitemodelLikelihoodFromBufferEigen();
 
     /**
             compute tree likelihood when a branch length collapses to zero
@@ -809,6 +824,13 @@ public:
      * @return tree log-likelihood
      */
     virtual double computePatternLhCat(SiteLoglType wsl);
+
+    /**
+        compute state frequency for each pattern (for Huaichun)
+        @param[out] ptn_state_freq state frequency vector per pattern, 
+            should be pre-allocated with size of num_patterns * num_states
+    */
+    void computePatternStateFreq(double *ptn_state_freq);
 
     /**
             compute pattern likelihoods only if the accumulated scaling factor is non-zero.
@@ -972,6 +994,8 @@ public:
     //template <const int nstates>
     void computeMixrateLikelihoodDervEigen(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
 
+    void computeSitemodelLikelihoodDervEigen(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
+
     template <class VectorClass, const int VCSIZE, const int nstates>
     void computeLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
 
@@ -980,6 +1004,9 @@ public:
 
     template <class VectorClass, const int VCSIZE, const int nstates>
     void computeMixtureLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
+
+    template <class VectorClass, const int VCSIZE, const int nstates>
+    void computeSitemodelLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
 
     /**
             compute tree likelihood and derivatives on a branch. used to optimize branch length

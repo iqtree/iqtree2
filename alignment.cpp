@@ -2556,8 +2556,11 @@ double Alignment::computeObsDist(int seq1, int seq2) {
             if ((*it)[seq1] != (*it)[seq2] )
                 diff_pos += (*it).frequency;
         }
-    if (!total_pos)
+    if (!total_pos) {
+        if (verbose_mode >= VB_MED)
+            outWarning("No overlapping characters between " + getSeqName(seq1) + " and " + getSeqName(seq2));
         return MAX_GENETIC_DIST; // return +INF if no overlap between two sequences
+    }
     return ((double)diff_pos) / total_pos;
 }
 
@@ -2680,6 +2683,9 @@ double Alignment::readDist(istream &in, double *dist_mat) {
     string dist_file = params.out_prefix;
     dist_file += ".userdist";
     printDist(dist_file.c_str(), dist_mat);*/
+    
+    delete [] tmp_dist_mat;
+    
     return longest_dist;
 }
 

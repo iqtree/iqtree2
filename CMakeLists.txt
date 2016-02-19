@@ -45,7 +45,7 @@ add_definitions(-DIQ_TREE)
 # The version number.
 set (iqtree_VERSION_MAJOR 1)
 set (iqtree_VERSION_MINOR 4)
-set (iqtree_VERSION_PATCH "0-beta2") 
+set (iqtree_VERSION_PATCH "0-beta3") 
 
 set(BUILD_SHARED_LIBS OFF)
 
@@ -398,6 +398,7 @@ phylosupertree.cpp
 phylotree.cpp
 phylotreesse.cpp
 phylotreepars.cpp
+phylokernelsitemodel.cpp
 #phylotreeavx.cpp
 pruning.cpp
 quartet.cpp

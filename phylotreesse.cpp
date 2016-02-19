@@ -21,7 +21,9 @@
 #include "phylokernel.h"
 #include "phylokernelmixture.h"
 #include "phylokernelmixrate.h"
+#include "phylokernelsitemodel.h"
 #include "model/modelgtr.h"
+#include "model/modelset.h"
 
 
 /* BQM: to ignore all-gapp subtree at an alignment site */
@@ -75,6 +77,43 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk) {
         computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodNaive;
         computeLikelihoodFromBufferPointer = NULL;
         sse = LK_NORMAL;
+        return;
+    }
+    
+    if (model_factory && model_factory->model->isSiteSpecificModel()) {
+        if (sse == LK_EIGEN) {
+            computeLikelihoodBranchPointer = &PhyloTree::computeSitemodelLikelihoodBranchEigen;
+            computeLikelihoodDervPointer = &PhyloTree::computeSitemodelLikelihoodDervEigen;
+            computePartialLikelihoodPointer = &PhyloTree::computeSitemodelPartialLikelihoodEigen;
+            computeLikelihoodFromBufferPointer = &PhyloTree::computeSitemodelLikelihoodFromBufferEigen;
+            return;        
+        }
+        // LK_EIGEN_SSE
+        if (instruction_set >= 7) {
+            // CPU supports AVX
+            setLikelihoodKernelAVX();
+            return;
+        }
+        switch (aln->num_states) {
+        case 4:
+            computeLikelihoodBranchPointer = &PhyloTree::computeSitemodelLikelihoodBranchEigenSIMD<Vec2d, 2, 4>;
+            computeLikelihoodDervPointer = &PhyloTree::computeSitemodelLikelihoodDervEigenSIMD<Vec2d, 2, 4>;
+            computePartialLikelihoodPointer = &PhyloTree::computeSitemodelPartialLikelihoodEigenSIMD<Vec2d, 2, 4>;
+            computeLikelihoodFromBufferPointer = &PhyloTree::computeSitemodelLikelihoodFromBufferEigenSIMD<Vec2d, 2, 4>;
+            break;
+        case 20:
+            computeLikelihoodBranchPointer = &PhyloTree::computeSitemodelLikelihoodBranchEigenSIMD<Vec2d, 2, 20>;
+            computeLikelihoodDervPointer = &PhyloTree::computeSitemodelLikelihoodDervEigenSIMD<Vec2d, 2, 20>;
+            computePartialLikelihoodPointer = &PhyloTree::computeSitemodelPartialLikelihoodEigenSIMD<Vec2d, 2, 20>;
+            computeLikelihoodFromBufferPointer = &PhyloTree::computeSitemodelLikelihoodFromBufferEigenSIMD<Vec2d, 2, 20>;
+            break;
+        default:
+            computeLikelihoodBranchPointer = &PhyloTree::computeSitemodelLikelihoodBranchEigen;
+            computeLikelihoodDervPointer = &PhyloTree::computeSitemodelLikelihoodDervEigen;
+            computePartialLikelihoodPointer = &PhyloTree::computeSitemodelPartialLikelihoodEigen;
+            computeLikelihoodFromBufferPointer = &PhyloTree::computeSitemodelLikelihoodFromBufferEigen;
+            break;
+        }
         return;
     }
     
@@ -321,6 +360,102 @@ void PhyloTree::computeTipPartialLikelihood() {
 	if (tip_partial_lh_computed)
 		return;
 	tip_partial_lh_computed = true;
+    
+    
+	//-------------------------------------------------------
+	// initialize ptn_freq and ptn_invar
+	//-------------------------------------------------------
+
+	computePtnFreq();
+	// for +I model
+	computePtnInvar();
+
+    if (getModel()->isSiteSpecificModel()) {
+        ModelSet *models = (ModelSet*)model;
+        size_t nptn = aln->getNPattern(), max_nptn = get_safe_upper_limit(nptn), tip_block_size = max_nptn * aln->num_states;
+        int nstates = aln->num_states;
+        int nseq = aln->getNSeq();
+#ifdef _OPENMP
+        #pragma omp parallel for schedule(static)
+#endif
+        for (int nodeid = 0; nodeid < nseq; nodeid++) {
+            int i, x;
+            double *partial_lh = tip_partial_lh + tip_block_size*nodeid;
+            size_t ptn;
+            for (ptn = 0; ptn < nptn; ptn++, partial_lh += nstates) {
+                int state = aln->at(ptn)[nodeid];
+//                double *partial_lh = node_partial_lh + ptn*nstates;
+                double *inv_evec = models->at(ptn)->getInverseEigenvectors();
+
+                if (state < nstates) {
+                    for (i = 0; i < nstates; i++)
+                        partial_lh[i] = inv_evec[i*nstates+state];
+                } else if (state == aln->STATE_UNKNOWN) {
+                    // special treatment for unknown char
+                    for (i = 0; i < nstates; i++) {
+                        double lh_unknown = 0.0;
+                        double *this_inv_evec = inv_evec + i*nstates;
+                        for (x = 0; x < nstates; x++)
+                            lh_unknown += this_inv_evec[x];
+                        partial_lh[i] = lh_unknown;
+                    }
+                } else {
+                    double lh_ambiguous;
+                    // ambiguous characters
+                    int ambi_aa[] = {
+                        4+8, // B = N or D
+                        32+64, // Z = Q or E
+                        512+1024 // U = I or L
+                        };
+                    switch (aln->seq_type) {
+                    case SEQ_DNA:
+                        {
+                            int cstate = state-nstates+1;
+                            for (i = 0; i < nstates; i++) {
+                                lh_ambiguous = 0.0;
+                                for (x = 0; x < nstates; x++)
+                                    if ((cstate) & (1 << x))
+                                        lh_ambiguous += inv_evec[i*nstates+x];
+                                partial_lh[i] = lh_ambiguous;
+                            }
+                        }
+                        break;
+                    case SEQ_PROTEIN:
+                        //map[(unsigned char)'B'] = 4+8+19; // N or D
+                        //map[(unsigned char)'Z'] = 32+64+19; // Q or E
+                        {
+                            int cstate = state-nstates;
+                            for (i = 0; i < nstates; i++) {
+                                lh_ambiguous = 0.0;
+                                for (x = 0; x < 11; x++)
+                                    if (ambi_aa[cstate] & (1 << x))
+                                        lh_ambiguous += inv_evec[i*nstates+x];
+                                partial_lh[i] = lh_ambiguous;
+                            }
+                        }
+                        break;
+                    default:
+                        assert(0);
+                        break;
+                    }
+                }
+                // sanity check
+//                bool all_zero = true;
+//                for (i = 0; i < nstates; i++)
+//                    if (partial_lh[i] != 0) {
+//                        all_zero = false;
+//                        break;
+//                    }
+//                assert(!all_zero && "some tip_partial_lh are all zeros");
+                
+            }
+            // dummy values
+            for (ptn = nptn; ptn < max_nptn; ptn++, partial_lh += nstates)
+                memcpy(partial_lh, partial_lh-nstates, nstates*sizeof(double));
+        }
+        return;
+    }
+    
 	int m, i, x, state, nstates = aln->num_states, nmixtures = model->getNMixtures();
 	double *all_inv_evec = model->getInverseEigenvectors();
 	assert(all_inv_evec);
@@ -391,14 +526,6 @@ void PhyloTree::computeTipPartialLikelihood() {
 		break;
 	}
 
-
-	//-------------------------------------------------------
-	// initialize ptn_freq and ptn_invar
-	//-------------------------------------------------------
-
-	computePtnFreq();
-	// for +I model
-	computePtnInvar();
 }
 
 void PhyloTree::computePtnFreq() {
@@ -918,7 +1045,7 @@ void PhyloTree::computeLikelihoodDervEigen(PhyloNeighbor *dad_branch, PhyloNode 
 	    if (dad->isLeaf()) {
 	    	// special treatment for TIP-INTERNAL NODE case
 #ifdef _OPENMP
-#pragma omp parallel for private(ptn, i) schedule(static)
+#pragma omp parallel for private(ptn, i, c) schedule(static)
 #endif
 	    	for (ptn = 0; ptn < nptn; ptn++) {
 				double *partial_lh_dad = dad_branch->partial_lh + ptn*block;

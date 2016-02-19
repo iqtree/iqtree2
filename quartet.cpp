@@ -11,6 +11,7 @@
 #include "phylotree.h"
 #include "phylosupertree.h"
 #include "phylosupertree.h"
+#include "model/partitionmodel.h"
 // #include "lmap.c"
 
 #if 0  /*** moved to phylotree.h ***/
@@ -938,7 +939,16 @@ LMGroups.numGroups = 0;
     
 
 #ifdef _OPENMP
-    #pragma omp parallel for schedule(guided)
+    #pragma omp parallel
+    {
+    int *rstream;
+    init_random(params->ran_seed + omp_get_thread_num(), false, &rstream);
+#else
+    int *rstream = randstream;
+#endif    
+
+#ifdef _OPENMP
+    #pragma omp for schedule(guided)
 #endif
     for (int qid = 0; qid < params->lmap_num_quartets; qid++) { /*** draw lmap_num_quartets quartets randomly ***/
 	// fprintf(stderr, "%d\n", qid); 
@@ -1009,6 +1019,17 @@ LMGroups.numGroups = 0;
         quartet_tree->setParams(params);
         quartet_tree->optimize_by_newton = params->optimize_by_newton;
         quartet_tree->setLikelihoodKernel(params->SSE);
+
+        // set up partition model
+        if (isSuperTree()) {
+            PhyloSuperTree *quartet_super_tree = (PhyloSuperTree*)quartet_tree;
+            PhyloSuperTree *super_tree = (PhyloSuperTree*)this;
+            for (int i = 0; i < super_tree->size(); i++) {
+                quartet_super_tree->at(i)->setModelFactory(super_tree->at(i)->getModelFactory());
+                quartet_super_tree->at(i)->setModel(super_tree->at(i)->getModel());
+                quartet_super_tree->at(i)->setRate(super_tree->at(i)->getRate());
+            }
+        }
         
         // set model and rate
         quartet_tree->setModelFactory(model_factory);
@@ -1033,6 +1054,15 @@ LMGroups.numGroups = 0;
         quartet_tree->setModel(NULL);
         quartet_tree->setModelFactory(NULL);
         quartet_tree->setRate(NULL);
+
+        if (isSuperTree()) {
+            PhyloSuperTree *quartet_super_tree = (PhyloSuperTree*)quartet_tree;
+            for (int i = 0; i < quartet_super_tree->size(); i++) {
+                quartet_super_tree->at(i)->setModelFactory(NULL);
+                quartet_super_tree->at(i)->setModel(NULL);
+                quartet_super_tree->at(i)->setRate(NULL);
+            }
+        }
 
         delete quartet_tree;
         delete quartet_aln;
@@ -1107,10 +1137,11 @@ LMGroups.numGroups = 0;
 		}
 	}
 
-	// determine which of the 7 regions (only meaningful if seqIDs NOT sorted)
-	double temp1, temp2, temp3;
-	unsigned char discreteweight[3];
-	double sqdiff[3];
+            temp = quartet_info[qid].qweight[qworder[2]]-quartet_info[qid].qweight[qworder[0]];
+        if(temp < -TP_MAX_EXP_DIFF)	/* possible, since 1.0+exp(>36) == 1.0 */
+           quartet_info[qid].qweight[qworder[2]] = 0.0;
+        else
+           quartet_info[qid].qweight[qworder[2]] = exp(temp);
 
 	/* 100 distribution */
 	temp1 = 1.0 - lmap_quartet_info[qid].qweight[qworder[0]];
@@ -1133,41 +1164,67 @@ LMGroups.numGroups = 0;
 	sqdiff[2] = temp1 * temp1 + temp2 * temp2 + temp3 * temp3;
 	discreteweight[2] = (unsigned char) 7;
 
-	/* sort in descending order */
-	int sqorder[3]; // local (thread-safe) vector for sorting
-	if (sqdiff[0] > sqdiff[1]) {
-		if(sqdiff[2] > sqdiff[0]) {
-			sqorder[0] = 2;
-			sqorder[1] = 0;
-			sqorder[2] = 1;		
-		} else if (sqdiff[2] < sqdiff[1]) {
-			sqorder[0] = 0;
-			sqorder[1] = 1;
-			sqorder[2] = 2;		
-		} else {
-			sqorder[0] = 0;
-			sqorder[1] = 2;
-			sqorder[2] = 1;		
-		}
-	} else {
-		if(sqdiff[2] > sqdiff[1]) {
-			sqorder[0] = 2;
-			sqorder[1] = 1;
-			sqorder[2] = 0;		
-		} else if (sqdiff[2] < sqdiff[0]) {
-			sqorder[0] = 1;
-			sqorder[1] = 0;
-			sqorder[2] = 2;		
-		} else {
-			sqorder[0] = 1;
-			sqorder[1] = 2;
-			sqorder[2] = 0;		
-		}
-	}
+        // determine which of the 7 regions (only meaningful if seqIDs NOT sorted)
+        double temp1, temp2, temp3;
+        unsigned char discreteweight[3];
+        double sqdiff[3];
+
+        /* 100 distribution */
+        temp1 = 1.0 - quartet_info[qid].qweight[qworder[0]];
+        sqdiff[0] = temp1*temp1 +
+            quartet_info[qid].qweight[qworder[1]]*quartet_info[qid].qweight[qworder[1]] +
+            quartet_info[qid].qweight[qworder[2]]*quartet_info[qid].qweight[qworder[2]];
+        discreteweight[0] = treebits[qworder[0]];
+
+        /* 110 distribution */
+        temp1 = 0.5 - quartet_info[qid].qweight[qworder[0]];
+        temp2 = 0.5 - quartet_info[qid].qweight[qworder[1]];
+        sqdiff[1] = temp1*temp1 + temp2*temp2 +
+            quartet_info[qid].qweight[qworder[2]]*quartet_info[qid].qweight[qworder[2]];
+        discreteweight[1] = treebits[qworder[0]] + treebits[qworder[1]];
+
+        /* 111 distribution */
+        temp1 = onethird - quartet_info[qid].qweight[qworder[0]];
+        temp2 = onethird - quartet_info[qid].qweight[qworder[1]];
+        temp3 = onethird - quartet_info[qid].qweight[qworder[2]];
+        sqdiff[2] = temp1 * temp1 + temp2 * temp2 + temp3 * temp3;
+        discreteweight[2] = (unsigned char) 7;
+
+        /* sort in descending order */
+        int sqorder[3]; // local (thread-safe) vector for sorting
+        if (sqdiff[0] > sqdiff[1]) {
+            if(sqdiff[2] > sqdiff[0]) {
+                sqorder[0] = 2;
+                sqorder[1] = 0;
+                sqorder[2] = 1;		
+            } else if (sqdiff[2] < sqdiff[1]) {
+                sqorder[0] = 0;
+                sqorder[1] = 1;
+                sqorder[2] = 2;		
+            } else {
+                sqorder[0] = 0;
+                sqorder[1] = 2;
+                sqorder[2] = 1;		
+            }
+        } else {
+            if(sqdiff[2] > sqdiff[1]) {
+                sqorder[0] = 2;
+                sqorder[1] = 1;
+                sqorder[2] = 0;		
+            } else if (sqdiff[2] < sqdiff[0]) {
+                sqorder[0] = 1;
+                sqorder[1] = 0;
+                sqorder[2] = 2;		
+            } else {
+                sqorder[0] = 1;
+                sqorder[1] = 2;
+                sqorder[2] = 0;		
+            }
+        }
 
 
-	// determine which of the 7 regions (only meaningful if seqIDs NOT sorted)
-	unsigned char qpbranching = (unsigned char) discreteweight[sqorder[2]];
+        // determine which of the 7 regions (only meaningful if seqIDs NOT sorted)
+        unsigned char qpbranching = (unsigned char) discreteweight[sqorder[2]];
 
 	if (qpbranching == 1) {
 		lmap_quartet_info[qid].area=0; // LM_REG1 - top
@@ -1194,6 +1251,11 @@ LMGroups.numGroups = 0;
 	}
 
     } /*** end draw lmap_num_quartets quartets randomly ***/
+
+#ifdef _OPENMP
+    finish_random(rstream);
+    }
+#endif
 
 } // end PhyloTree::computeQuartetLikelihoods
 
