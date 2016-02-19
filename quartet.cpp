@@ -1067,8 +1067,8 @@ LMGroups.numGroups = 0;
         delete quartet_tree;
         delete quartet_aln;
 
-	// determine likelihood order
-	int qworder[3]; // local (thread-safe) vector for sorting
+        // determine likelihood order
+        int qworder[3]; // local (thread-safe) vector for sorting
 
 	if (lmap_quartet_info[qid].logl[0] > lmap_quartet_info[qid].logl[1]) {
 		if(lmap_quartet_info[qid].logl[2] > lmap_quartet_info[qid].logl[0]) {
@@ -1100,8 +1100,8 @@ LMGroups.numGroups = 0;
 		}
 	}
 
-	// compute Bayesian weights
-	double temp;
+        // compute Bayesian weights
+        double temp;
 
 	lmap_quartet_info[qid].qweight[0] = lmap_quartet_info[qid].logl[0];
 	lmap_quartet_info[qid].qweight[1] = lmap_quartet_info[qid].logl[1];
@@ -1137,11 +1137,10 @@ LMGroups.numGroups = 0;
 		}
 	}
 
-            temp = quartet_info[qid].qweight[qworder[2]]-quartet_info[qid].qweight[qworder[0]];
-        if(temp < -TP_MAX_EXP_DIFF)	/* possible, since 1.0+exp(>36) == 1.0 */
-           quartet_info[qid].qweight[qworder[2]] = 0.0;
-        else
-           quartet_info[qid].qweight[qworder[2]] = exp(temp);
+        // determine which of the 7 regions (only meaningful if seqIDs NOT sorted)
+        double temp1, temp2, temp3;
+        unsigned char discreteweight[3];
+        double sqdiff[3];
 
 	/* 100 distribution */
 	temp1 = 1.0 - lmap_quartet_info[qid].qweight[qworder[0]];
@@ -1163,32 +1162,6 @@ LMGroups.numGroups = 0;
 	temp3 = onethird - lmap_quartet_info[qid].qweight[qworder[2]];
 	sqdiff[2] = temp1 * temp1 + temp2 * temp2 + temp3 * temp3;
 	discreteweight[2] = (unsigned char) 7;
-
-        // determine which of the 7 regions (only meaningful if seqIDs NOT sorted)
-        double temp1, temp2, temp3;
-        unsigned char discreteweight[3];
-        double sqdiff[3];
-
-        /* 100 distribution */
-        temp1 = 1.0 - quartet_info[qid].qweight[qworder[0]];
-        sqdiff[0] = temp1*temp1 +
-            quartet_info[qid].qweight[qworder[1]]*quartet_info[qid].qweight[qworder[1]] +
-            quartet_info[qid].qweight[qworder[2]]*quartet_info[qid].qweight[qworder[2]];
-        discreteweight[0] = treebits[qworder[0]];
-
-        /* 110 distribution */
-        temp1 = 0.5 - quartet_info[qid].qweight[qworder[0]];
-        temp2 = 0.5 - quartet_info[qid].qweight[qworder[1]];
-        sqdiff[1] = temp1*temp1 + temp2*temp2 +
-            quartet_info[qid].qweight[qworder[2]]*quartet_info[qid].qweight[qworder[2]];
-        discreteweight[1] = treebits[qworder[0]] + treebits[qworder[1]];
-
-        /* 111 distribution */
-        temp1 = onethird - quartet_info[qid].qweight[qworder[0]];
-        temp2 = onethird - quartet_info[qid].qweight[qworder[1]];
-        temp3 = onethird - quartet_info[qid].qweight[qworder[2]];
-        sqdiff[2] = temp1 * temp1 + temp2 * temp2 + temp3 * temp3;
-        discreteweight[2] = (unsigned char) 7;
 
         /* sort in descending order */
         int sqorder[3]; // local (thread-safe) vector for sorting
