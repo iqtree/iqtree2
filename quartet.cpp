@@ -956,16 +956,16 @@ LMGroups.numGroups = 0;
         // uniformly draw 4 taxa
 	// (a) sample taxon 1
         // was: lmap_quartet_info[qid].seqID[0] = random_int(leafNum);
-	lmap_quartet_info[qid].seqID[1] = LMGroups.GroupA[random_int(sizeA)];
+	lmap_quartet_info[qid].seqID[0] = LMGroups.GroupA[random_int(sizeA, rstream)];
 
         do {
 	    // (b) sample taxon 2 according to the number of clusters
             // was: lmap_quartet_info[qid].seqID[1] = random_int(leafNum);
 	    switch(numGroups){
-		case 1: lmap_quartet_info[qid].seqID[1] = LMGroups.GroupA[random_int(sizeA)]; break; // a1,A2|a3,a4
-		case 2: lmap_quartet_info[qid].seqID[1] = LMGroups.GroupA[random_int(sizeA)]; break; // a1,A2|b1,b2
-		case 3: lmap_quartet_info[qid].seqID[1] = LMGroups.GroupA[random_int(sizeA)]; break; // a1,A2|b, c
-		case 4: lmap_quartet_info[qid].seqID[1] = LMGroups.GroupB[random_int(sizeB)]; break; // a ,B |c, d
+		case 1: lmap_quartet_info[qid].seqID[1] = LMGroups.GroupA[random_int(sizeA, rstream)]; break; // a1,A2|a3,a4
+		case 2: lmap_quartet_info[qid].seqID[1] = LMGroups.GroupA[random_int(sizeA, rstream)]; break; // a1,A2|b1,b2
+		case 3: lmap_quartet_info[qid].seqID[1] = LMGroups.GroupA[random_int(sizeA, rstream)]; break; // a1,A2|b, c
+		case 4: lmap_quartet_info[qid].seqID[1] = LMGroups.GroupB[random_int(sizeB, rstream)]; break; // a ,B |c, d
 		default: outError("Unknown Likelihood Mapping sampling mode! PLEASE report this to the developers!"); break;
 	    }
         } while (lmap_quartet_info[qid].seqID[1] == lmap_quartet_info[qid].seqID[0]);
@@ -973,10 +973,10 @@ LMGroups.numGroups = 0;
 	    // (c) sample taxon 3 according to the number of clusters
             // was: lmap_quartet_info[qid].seqID[2] = random_int(leafNum);
 	    switch(numGroups){
-		case 1: lmap_quartet_info[qid].seqID[2] = LMGroups.GroupA[random_int(sizeA)]; break; // a1,a2|A3,a4
-		case 2: lmap_quartet_info[qid].seqID[2] = LMGroups.GroupB[random_int(sizeB)]; break; // a1,a2|B1,b2
-		case 3: lmap_quartet_info[qid].seqID[2] = LMGroups.GroupB[random_int(sizeB)]; break; // a1,a2|B, c
-		case 4: lmap_quartet_info[qid].seqID[2] = LMGroups.GroupC[random_int(sizeC)]; break; // a ,b |C, d
+		case 1: lmap_quartet_info[qid].seqID[2] = LMGroups.GroupA[random_int(sizeA, rstream)]; break; // a1,a2|A3,a4
+		case 2: lmap_quartet_info[qid].seqID[2] = LMGroups.GroupB[random_int(sizeB, rstream)]; break; // a1,a2|B1,b2
+		case 3: lmap_quartet_info[qid].seqID[2] = LMGroups.GroupB[random_int(sizeB, rstream)]; break; // a1,a2|B, c
+		case 4: lmap_quartet_info[qid].seqID[2] = LMGroups.GroupC[random_int(sizeC, rstream)]; break; // a ,b |C, d
 		default: outError("Unknown Likelihood Mapping sampling mode! PLEASE report this to the developers!"); break;
 	    }
         } while (lmap_quartet_info[qid].seqID[2] == lmap_quartet_info[qid].seqID[0] || lmap_quartet_info[qid].seqID[2] == lmap_quartet_info[qid].seqID[1]);
@@ -984,10 +984,10 @@ LMGroups.numGroups = 0;
 	    // (d) sample taxon 4 according to the number of clusters
             // was: lmap_quartet_info[qid].seqID[3] = random_int(leafNum);
 	    switch(numGroups){
-		case 1: lmap_quartet_info[qid].seqID[3] = LMGroups.GroupA[random_int(sizeA)]; break; // a1,a2|a3,A4
-		case 2: lmap_quartet_info[qid].seqID[3] = LMGroups.GroupB[random_int(sizeB)]; break; // a1,a2|b1,B2
-		case 3: lmap_quartet_info[qid].seqID[3] = LMGroups.GroupC[random_int(sizeC)]; break; // a1,a2|b, C
-		case 4: lmap_quartet_info[qid].seqID[3] = LMGroups.GroupD[random_int(sizeD)]; break; // a ,b |c, D
+		case 1: lmap_quartet_info[qid].seqID[3] = LMGroups.GroupA[random_int(sizeA, rstream)]; break; // a1,a2|a3,A4
+		case 2: lmap_quartet_info[qid].seqID[3] = LMGroups.GroupB[random_int(sizeB, rstream)]; break; // a1,a2|b1,B2
+		case 3: lmap_quartet_info[qid].seqID[3] = LMGroups.GroupC[random_int(sizeC, rstream)]; break; // a1,a2|b, C
+		case 4: lmap_quartet_info[qid].seqID[3] = LMGroups.GroupD[random_int(sizeD, rstream)]; break; // a ,b |c, D
 		default: outError("Unknown Likelihood Mapping sampling mode! PLEASE report this to the developers!"); break;
 	    }
         } while (lmap_quartet_info[qid].seqID[3] == lmap_quartet_info[qid].seqID[0] || lmap_quartet_info[qid].seqID[3] == lmap_quartet_info[qid].seqID[1]
