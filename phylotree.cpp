@@ -51,7 +51,7 @@ void SPRMoves::add(PhyloNode *prune_node, PhyloNode *prune_dad, PhyloNode *regra
  PhyloTree class
  ****************************************************************************/
 
-PhyloTree::PhyloTree() : MTree() {
+PhyloTree::PhyloTree() : MTree(), CheckpointFactory() {
     init();
 }
 
@@ -111,9 +111,43 @@ void PhyloTree::init() {
     num_partial_lh_computations = 0;
 }
 
-PhyloTree::PhyloTree(Alignment *aln) : MTree() {
+PhyloTree::PhyloTree(Alignment *aln) : MTree(), CheckpointFactory() {
     init();
     this->aln = aln;
+}
+
+void PhyloTree::saveCheckpoint() {
+    checkpoint->startStruct("PhyloTree");
+    StrVector leafNames;
+    getTaxaName(leafNames);
+    CKP_VECTOR_SAVE(leafNames);
+//    string newick = PhyloTree::getTreeString();
+//    CKP_SAVE(newick);
+//    CKP_SAVE(curScore);
+    checkpoint->endStruct();
+    CheckpointFactory::saveCheckpoint();
+}
+
+void PhyloTree::restoreCheckpoint() {
+    CheckpointFactory::restoreCheckpoint();
+    checkpoint->startStruct("PhyloTree");
+    StrVector leafNames;
+    if (CKP_VECTOR_RESTORE(leafNames)) {
+        if (leafNames.size() != leafNum)
+            outError("Alignment mismatched from checkpoint!");
+
+        StrVector taxname;
+        getTaxaName(taxname);
+        for (int i = 0; i < taxname.size(); i++)
+            if (taxname[i] != leafNames[i])
+                outError("Sequence name " + taxname[i] + " mismatched from checkpoint");
+    }    
+//    string newick;
+//    CKP_RESTORE(curScore);
+//    CKP_RESTORE(newick);
+//    if (!newick.empty())
+//        PhyloTree::readTreeString(newick);
+    checkpoint->endStruct();
 }
 
 void PhyloTree::discardSaturatedSite(bool val) {
@@ -249,7 +283,7 @@ void PhyloTree::assignLeafNames(Node *node, Node *dad) {
     if (node->isLeaf()) {
         node->id = atoi(node->name.c_str());
         assert(node->id >= 0 && node->id < leafNum);
-        node->name = aln->getSeqName(node->id).c_str();
+        node->name = aln->getSeqName(node->id);
     }
     FOR_NEIGHBOR_IT(node, dad, it)assignLeafNames((*it)->node, node);
 }
@@ -321,11 +355,32 @@ void PhyloTree::setParams(Params* params) {
 }
 
 void PhyloTree::readTreeString(const string &tree_string) {
-	stringstream str;
-	str << tree_string;
-	str.seekg(0, ios::beg);
+	stringstream str(tree_string);
+//	str(tree_string);
+//	str.seekg(0, ios::beg);
 	freeNode();
 	readTree(str, rooted);
+    assignLeafNames();
+//	setAlignment(aln);
+	setRootNode(params->root);
+
+	if (isSuperTree()) {
+		((PhyloSuperTree*) this)->mapTrees();
+	}
+	if (params->pll) {
+		pllReadNewick(getTreeString());
+	}
+	resetCurScore();
+//	lhComputed = false;
+}
+
+void PhyloTree::readTreeStringSeqName(const string &tree_string) {
+	stringstream str(tree_string);
+//	str(tree_string);
+//	str.seekg(0, ios::beg);
+	freeNode();
+	readTree(str, rooted);
+//    assignLeafNames();
 	setAlignment(aln);
 	setRootNode(params->root);
 
@@ -376,7 +431,8 @@ void PhyloTree::readTreeFile(const string &file_name) {
 
 string PhyloTree::getTreeString() {
 	stringstream tree_stream;
-	printTree(tree_stream);
+    setRootNode(params->root);
+	printTree(tree_stream, WT_TAXON_ID + WT_BR_LEN + WT_SORT_TAXA);
 	return tree_stream.str();
 }
 
@@ -3068,16 +3124,16 @@ void PhyloTree::computeLikelihoodDervNaive(PhyloNeighbor *dad_branch, PhyloNode 
  Branch length optimization by maximum likelihood
  ****************************************************************************/
 
-const double MIN_TREE_LENGTH_SCALE = 0.001;
-const double MAX_TREE_LENGTH_SCALE = 1000.0;
+//const double MIN_TREE_LENGTH_SCALE = 0.001;
+//const double MAX_TREE_LENGTH_SCALE = 100.0;
 const double TOL_TREE_LENGTH_SCALE = 0.001;
 
 
-double PhyloTree::optimizeTreeLengthScaling(double &scaling, double gradient_epsilon) {
+double PhyloTree::optimizeTreeLengthScaling(double min_scaling, double &scaling, double max_scaling, double gradient_epsilon) {
     is_opt_scaling = true;
     current_scaling = scaling;
     double negative_lh, ferror;
-    scaling = minimizeOneDimen(min(current_scaling/2.0, MIN_TREE_LENGTH_SCALE), scaling, max(current_scaling*2.0, MAX_TREE_LENGTH_SCALE), max(TOL_TREE_LENGTH_SCALE, gradient_epsilon), &negative_lh, &ferror);
+    scaling = minimizeOneDimen(min(scaling, min_scaling), scaling, max(max_scaling, scaling), max(TOL_TREE_LENGTH_SCALE, gradient_epsilon), &negative_lh, &ferror);
     if (scaling != current_scaling) {
         scaleLength(scaling / current_scaling);
         current_scaling = scaling;
@@ -5045,14 +5101,20 @@ int PhyloTree::testAllBranches(int threshold, double best_score, double *pattern
         double lbp_support, aLRT_support, aBayes_support;
         double SH_aLRT_support = (testOneBranch(best_score, pattern_lh, reps, lbp_reps,
             node, dad, lbp_support, aLRT_support, aBayes_support) * 100);
+        ostringstream ss;
+        ss.precision(3);
+        ss << node->name;
+        if (!node->name.empty())
+            ss << "/";
         if (reps)
-            node->name = convertDoubleToString(SH_aLRT_support);
+            ss << SH_aLRT_support;
         if (lbp_reps)
-            node->name += "/" + convertDoubleToString(lbp_support * 100);
+            ss << "/" << lbp_support * 100;
         if (aLRT_test)
-            node->name += "/" + convertDoubleToString(aLRT_support);
+            ss << "/" << aLRT_support;
         if (aBayes_test)
-            node->name += "/" + convertDoubleToString(aBayes_support);
+            ss << "/" << aBayes_support;
+        node->name = ss.str();
         if (SH_aLRT_support < threshold)
             num_low_support = 1;
         if (((PhyloNeighbor*) node->findNeighbor(dad))->partial_pars) {

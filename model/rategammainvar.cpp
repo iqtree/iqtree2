@@ -29,6 +29,23 @@ RateGammaInvar::RateGammaInvar(int ncat, double shape, bool median,
 	computeRates();
 }
 
+void RateGammaInvar::saveCheckpoint() {
+    checkpoint->startStruct("RateGammaInvar");
+//    CKP_SAVE(joint_optimize);
+    checkpoint->endStruct();
+    RateInvar::saveCheckpoint();
+    RateGamma::saveCheckpoint();
+}
+
+void RateGammaInvar::restoreCheckpoint() {
+    // should restore p_invar first before gamma, because RateGamma will call computeRates()
+    RateInvar::restoreCheckpoint();
+    RateGamma::restoreCheckpoint();
+    checkpoint->startStruct("RateGammaInvar");
+//    CKP_RESTORE(joint_optimize);
+    checkpoint->endStruct();
+}
+
 void RateGammaInvar::setNCategory(int ncat) {
 	RateGamma::setNCategory(ncat);
 	name = "+I" + name;

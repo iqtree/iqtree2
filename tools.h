@@ -950,7 +950,7 @@ public:
     /**
             random number seed
      */
-    unsigned int ran_seed;
+    int ran_seed;
 
     /**
             run time of the algorithm
@@ -1676,6 +1676,8 @@ public:
     /** true to compute sequence identity along tree */
     bool compute_seq_identity_along_tree;
     
+    /** true to ignore checkpoint file */
+    bool ignore_checkpoint;
     /** number of quartets for likelihood mapping */
     int lmap_num_quartets;
 
@@ -1684,8 +1686,13 @@ public:
      */
     char *lmap_cluster_file;
 
+    /** time (in seconds) between checkpoint dump */
+    int checkpoint_dump_interval;
     /** TRUE to print quartet log-likelihoods to .quartetlh file */
     bool print_lmap_quartet_lh;
+
+    /** true if ignoring the "finished" flag in checkpoint file */
+    bool force_unfinished;
 
 };
 
@@ -2081,22 +2088,25 @@ double computePValueChiSquare(double x, int df);
 /* random number generator */
 /*--------------------------------------------------------------*/
 
+extern int *randstream;
+
 /**
  * initialize the random number generator
  * @param seed seed for generator
+ * @param write_info true to write information, false otherwise (default)
  */
-int init_random(int seed);
+int init_random(int seed, bool write_info = false, int** rstream = NULL);
 
 /**
  * finalize random number generator (e.g. free memory
  */
-int finish_random();
+int finish_random(int *rstream = NULL);
 
 /**
  * returns a random integer in the range [0; n - 1]
  * @param n upper-bound of random number
  */
-int random_int(int n);
+int random_int(int n, int *rstream = NULL);
 
 /**
  *  return a random integer in the range [a,b]
@@ -2107,12 +2117,12 @@ int random_int(int n);
  * returns a random integer in the range [0; RAND_MAX - 1]
  * = random_int(RAND_MAX)
  */
-int random_int();
+//int random_int(int *rstream = NULL);
 
 /**
  * returns a random floating-point nuber in the range [0; 1)
  */
-double random_double();
+double random_double(int *rstream = NULL);
 
 template <class T>
 void my_random_shuffle (T first, T last)

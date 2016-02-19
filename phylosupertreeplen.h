@@ -101,10 +101,26 @@ public:
     ~PartitionModelPlen();
 
     /**
+        save object into the checkpoint
+    */
+    virtual void saveCheckpoint();
+
+    /**
+        restore object from the checkpoint
+    */
+    virtual void restoreCheckpoint();
+
+    /**
      * @return #parameters of the model + # branches
      */
     virtual int getNParameters();
     virtual int getNDim();
+
+	/**
+		write information
+		@param out output stream
+	*/
+	virtual void writeInfo(ostream &out);
 
 	/**
 		optimize model parameters and tree branch lengths
@@ -148,6 +164,16 @@ public:
 	PhyloSuperTreePlen(SuperAlignment *alignment, PhyloSuperTree *super_tree);
 
 	~PhyloSuperTreePlen();
+
+    /**
+        save object into the checkpoint
+    */
+    virtual void saveCheckpoint();
+
+    /**
+        restore object from the checkpoint
+    */
+    virtual void restoreCheckpoint();
 
     /**
             Read the tree saved with Taxon Names and branch lengths.

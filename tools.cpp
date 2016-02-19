@@ -885,6 +885,9 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.lmap_cluster_file = NULL;
     params.print_lmap_quartet_lh = false;
     params.link_alpha = false;
+    params.ignore_checkpoint = false;
+    params.checkpoint_dump_interval = 20;
+    params.force_unfinished = false;
 
 
 	if (params.nni5) {
@@ -898,7 +901,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     // initialize random seed based on current time
     gettimeofday(&tv, &tz);
     //params.ran_seed = (unsigned) (tv.tv_sec+tv.tv_usec);
-    params.ran_seed = (unsigned) (tv.tv_usec);
+    params.ran_seed = (tv.tv_usec);
 
     for (cnt = 1; cnt < argc; cnt++) {
         try {
@@ -1242,7 +1245,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -seed <random_seed>";
-				params.ran_seed = (unsigned) convert_int(argv[cnt]);
+				params.ran_seed = abs(convert_int(argv[cnt]));
 				continue;
 			}
 			if (strcmp(argv[cnt], "-pdgain") == 0) {
@@ -1493,7 +1496,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.do_weighted_test = true;
 				continue;
 			}
-			if (strcmp(argv[cnt], "-zau") == 0) {
+			if (strcmp(argv[cnt], "-au") == 0) {
 				params.do_au_test = true;
 				continue;
 			}
@@ -2563,6 +2566,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				continue;
 			}
 			if (strcmp(argv[cnt], "-pll") == 0) {
+                outError("-pll option is discontinued.");
 				params.pll = true;
 				continue;
 			}
@@ -2845,6 +2849,24 @@ void parseArg(int argc, char *argv[], Params &params) {
 				continue;
 			}
 
+			if (strcmp(argv[cnt], "-redo") == 0) {
+				params.ignore_checkpoint = true;
+				continue;
+			}
+
+			if (strcmp(argv[cnt], "--force-unfinish") == 0) {
+				params.force_unfinished = true;
+				continue;
+			}
+
+			if (strcmp(argv[cnt], "-cptime") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -cptime <checkpoint_time_interval>";
+				params.checkpoint_dump_interval = convert_int(argv[cnt]);
+				continue;
+			}
+
 			if (argv[cnt][0] == '-') {
                 string err = "Invalid \"";
                 err += argv[cnt];
@@ -2991,12 +3013,15 @@ void usage_iqtree(char* argv[], bool full_command) {
 #endif
             << "  -seed <number>       Random seed number, normally used for debugging purpose" << endl
             << "  -v, -vv, -vvv        Verbose mode, printing more messages to screen" << endl
+            << endl << "CHECKPOINT:" << endl
+            << "  -redo                Ignore checkpoint file (default: NO)" << endl
+            << "  -cptime <seconds>    Checkpoint time interval (default: 20)" << endl
             << endl << "LIKELIHOOD MAPPING ANALYSIS:" << endl
             << "  -lmap <#quartets>    Number of quartets for likelihood mapping analysis" << endl
             << "  -lmclust <clustfile> File containing clusters for likelihood mapping" << endl
             << "  -wql                 Print quartet log-likelihoods to .quartetlh" << endl
             << endl << "NEW STOCHASTIC TREE SEARCH ALGORITHM:" << endl
-            << "  -pll                 Use phylogenetic likelihood library (PLL) (default: off)" << endl
+//            << "  -pll                 Use phylogenetic likelihood library (PLL) (default: off)" << endl
             << "  -numpars <number>    Number of initial parsimony trees (default: 100)" << endl
             << "  -toppars <number>    Number of best parsimony trees (default: 20)" << endl
             << "  -sprrad <number>     Radius for parsimony SPR search (default: 6)" << endl
@@ -3129,6 +3154,7 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -z <trees_file>      Evaluating a set of user trees" << endl
             << "  -zb <#replicates>    Performing BP,KH,SH,ELW tests for trees passed via -z" << endl
             << "  -zw                  Also performing weighted-KH and weighted-SH tests" << endl
+            << "  -au                  Also performing approximately unbiased (AU) test" << endl
             << endl;
 
 			cout << "GENERATING RANDOM TREES:" << endl;
@@ -3424,32 +3450,44 @@ int finish_random() {
 
 int *randstream;
 
-int init_random(int seed) {
+int init_random(int seed, bool write_info, int** rstream) {
     //    srand((unsigned) time(NULL));
     if (seed < 0)
         seed = make_sprng_seed();
 #ifndef PARALLEL
-    cout << "(Using SPRNG - Scalable Parallel Random Number Generator)" << endl;
-    randstream = init_sprng(0, 1, seed, SPRNG_DEFAULT); /*init stream*/
-    if (verbose_mode >= VB_MED) {
-        print_sprng(randstream);
+    if (write_info)
+    	cout << "(Using SPRNG - Scalable Parallel Random Number Generator)" << endl;
+    if (rstream) {
+        *rstream = init_sprng(0, 1, seed, SPRNG_DEFAULT); /*init stream*/
+    } else {
+        randstream = init_sprng(0, 1, seed, SPRNG_DEFAULT); /*init stream*/
+        if (verbose_mode >= VB_MED) {
+            print_sprng(randstream);
+        }
     }
 #else /* PARALLEL */
-    if (PP_IamMaster) {
+    if (PP_IamMaster && write_info) {
         cout << "(Using SPRNG - Scalable Parallel Random Number Generator)" << endl;
     }
     /* MPI_Bcast(&seed, 1, MPI_UNSIGNED, PP_MyMaster, MPI_COMM_WORLD); */
-    randstream = init_sprng(PP_Myid, PP_NumProcs, seed, SPRNG_DEFAULT); /*initialize stream*/
-    if (verbose_mode >= VB_MED) {
-        cout << "(" << PP_Myid << ") !!! random seed set to " << seed << " !!!" << endl;
-        print_sprng(randstream);
+    if (rstream) {
+        *rstream = init_sprng(PP_Myid, PP_NumProcs, seed, SPRNG_DEFAULT); /*initialize stream*/
+    } else {
+        randstream = init_sprng(PP_Myid, PP_NumProcs, seed, SPRNG_DEFAULT); /*initialize stream*/
+        if (verbose_mode >= VB_MED) {
+            cout << "(" << PP_Myid << ") !!! random seed set to " << seed << " !!!" << endl;
+            print_sprng(randstream);
+        }
     }
 #endif /* PARALLEL */
     return (seed);
 } /* initrandom */
 
-int finish_random() {
-	return free_sprng(randstream);
+int finish_random(int *rstream) {
+    if (rstream)
+        return free_sprng(rstream);
+    else
+        return free_sprng(randstream);
 }
 
 #endif /* USE_SPRNG */
@@ -3457,8 +3495,8 @@ int finish_random() {
 /******************/
 
 /* returns a random integer in the range [0; n - 1] */
-int random_int(int n) {
-    return (int) floor(random_double() * n);
+int random_int(int n, int *rstream) {
+    return (int) floor(random_double(rstream) * n);
 } /* randominteger */
 
 //int randint(int a, int b) {
@@ -3466,19 +3504,25 @@ int random_int(int n) {
 //}
 //
 
-double random_double() {
+double random_double(int *rstream) {
 #ifndef FIXEDINTRAND
 #ifndef PARALLEL
 #if RAN_TYPE == RAN_STANDARD
     return ((double) rand()) / ((double) RAND_MAX + 1);
 #elif RAN_TYPE == RAN_SPRNG
-    return sprng(randstream);
+    if (rstream)
+        return sprng(rstream);
+    else
+        return sprng(randstream);
 #else /* NO_SPRNG */
     return randomunitintervall();
 #endif /* NO_SPRNG */
 #else /* NOT PARALLEL */
 #if RAN_TYPE == RAN_SPRNG
-    return sprng(randstream);
+    if (rstream)
+        return sprng(rstream);
+    else
+        return sprng(randstream);
 #else /* NO_SPRNG */
     int m;
     for (m = 1; m < PP_NumProcs; m++)

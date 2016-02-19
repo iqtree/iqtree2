@@ -149,8 +149,9 @@ public:
 		resampling pattern frequency by a non-parametric bootstrap
 		@param pattern_freq (OUT) resampled pattern frequencies
         @param spec bootstrap specification, see above
+        @param rstream random generator stream, NULL to use the global randstream
 	*/
-	virtual void createBootstrapAlignment(int *pattern_freq, const char *spec = NULL);
+	virtual void createBootstrapAlignment(int *pattern_freq, const char *spec = NULL, int *rstream = NULL);
 
 	/**
 	 * shuffle alignment by randomizing the order of sites over all sub-alignments
@@ -181,7 +182,13 @@ public:
 	 */
 	void printCombinedAlignment(const char *filename, bool append = false);
 
-	void printCombinedAlignment(ostream &out, bool append = false);
+    /**
+	 * print the super-alignment to a stream
+	 * @param out output stream
+	 * @param print_taxid true to print taxa IDs instead of names, default: false
+	 */
+    
+	void printCombinedAlignment(ostream &out, bool print_taxid = false);
 
 	/**
 	 * print all sub alignments into files with prefix, suffix is the charset name

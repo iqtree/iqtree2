@@ -11,6 +11,7 @@
 #include "alignment.h"
 #include "mtreeset.h"
 #include <stack>
+#include "checkpoint.h"
 
 struct CandidateTree {
 
@@ -47,7 +48,7 @@ struct CandidateTree {
 /**
  * Candidate tree set, sorted in ascending order of scores, i.e. the last element is the highest scoring tree
  */
-class CandidateSet : public multimap<double, CandidateTree> {
+class CandidateSet : public multimap<double, CandidateTree>, public CheckpointFactory {
 
 public:
     /**
@@ -56,6 +57,16 @@ public:
 	void init(Alignment* aln, Params *params);
 
 	CandidateSet();
+
+    /**
+        save object into the checkpoint
+    */
+    virtual void saveCheckpoint();
+
+    /**
+        restore object from the checkpoint
+    */
+    virtual void restoreCheckpoint();
 
     /**
      * return randomly one candidate tree from max_candidate

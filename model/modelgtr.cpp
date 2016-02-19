@@ -64,6 +64,19 @@ ModelGTR::ModelGTR(PhyloTree *tree, bool count_rates)
 	num_params = getNumRateEntries() - 1;
 }
 
+void ModelGTR::saveCheckpoint() {
+    checkpoint->startStruct("ModelGTR");
+    checkpoint->endStruct();
+    ModelSubst::saveCheckpoint();
+}
+
+void ModelGTR::restoreCheckpoint() {
+    ModelSubst::restoreCheckpoint();
+    checkpoint->startStruct("ModelGTR");
+    checkpoint->endStruct();
+}
+
+
 void ModelGTR::setTree(PhyloTree *tree) {
 	phylo_tree = tree;
 }

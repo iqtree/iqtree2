@@ -31,6 +31,7 @@
 #include "optimization.h"
 #include "model/rateheterogeneity.h"
 #include "pll/pll.h"
+#include "checkpoint.h"
 
 #define BOOT_VAL_FLOAT
 #define BootValType float
@@ -302,7 +303,7 @@ Phylogenetic Tree class
 
         @author BUI Quang Minh, Steffen Klaere, Arndt von Haeseler <minh.bui@univie.ac.at>
  */
-class PhyloTree : public MTree, public Optimization {
+class PhyloTree : public MTree, public Optimization, public CheckpointFactory {
 
 	friend class PhyloSuperTree;
 	friend class PhyloSuperTreePlen;
@@ -332,6 +333,17 @@ public:
             destructor
      */
     virtual ~PhyloTree();
+
+
+    /** 
+        save object into the checkpoint
+    */
+    virtual void saveCheckpoint();
+
+    /** 
+        restore object from the checkpoint
+    */
+    virtual void restoreCheckpoint();
 
     /**
             read the tree from the input file in newick format
@@ -475,6 +487,9 @@ public:
 
     typedef BootValType (PhyloTree::*DotProductType)(BootValType *x, BootValType *y, int size);
     DotProductType dotProduct;
+
+    typedef double (PhyloTree::*DotProductDoubleType)(double *x, double *y, int size);
+    DotProductDoubleType dotProductDouble;
 
 #if defined(BINARY32) || defined(__NOAVX__)
     void setDotProductAVX() {}
@@ -672,7 +687,7 @@ public:
 
     //template <const int nstates>
     void computePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
-
+    
     //template <const int nstates>
     void computeMixturePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
 
@@ -886,11 +901,19 @@ public:
     void rollBack(istream &best_tree_string);
 
     /**
-            Read the tree saved with Taxon Names and branch lengths.
+            refactored 2015-12-22: Taxon IDs instead of Taxon names to save space!
+            Read the tree saved with Taxon IDs and branch lengths.
             @param tree_string tree string to read from
             @param updatePLL if true, tree is read into PLL
      */
     virtual void readTreeString(const string &tree_string);
+
+    /**
+            Read the tree saved with Taxon names and branch lengths.
+            @param tree_string tree string to read from
+            @param updatePLL if true, tree is read into PLL
+     */
+    virtual void readTreeStringSeqName(const string &tree_string);
 
     /**
             Read the tree saved with Taxon Names and branch lengths.
@@ -899,7 +922,8 @@ public:
     void readTreeFile(const string &file_name);
 
     /**
-     * Return the tree string contining taxon names and branch lengths
+            refactored 2015-12-22: Taxon IDs instead of Taxon names to save space!
+     * Return the tree string contining taxon IDs and branch lengths
      * @return
      */
     virtual string getTreeString();
@@ -1113,7 +1137,7 @@ public:
         @param gradient_epsilon gradient epsilon
         @return optimal tree log-likelihood
     */
-    double optimizeTreeLengthScaling(double &scaling, double gradient_epsilon);
+    double optimizeTreeLengthScaling(double min_scaling, double &scaling, double max_scaling, double gradient_epsilon);
 
 
      /****************************************************************************

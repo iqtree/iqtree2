@@ -373,22 +373,15 @@ void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh, 
         
         out << endl
             << "**************************** WARNING ****************************" << endl
-            << "Number of parameters (K): " << df << endl
-            << "Sample size (n):          " << ssize << endl << endl
-            << "Given that K>=n, the model parameters are not identifiable." << endl
-            << "The program will still try to estimate the parameter values," << endl
-            << "but because of the small sample size, the parameter estimates" << endl 
-            << "are likely to be inaccurate." << endl << endl
-            
-            << "Phylogenetic estimates obtained under these conditions should be" << endl 
-            << "interpreted with extreme caution." << endl << endl 
+            << "Number of parameters (K, model parameters and branch lengths): " << df << endl
+            << "Sample size (n, alignment length): " << ssize << endl << endl
+            << "Given that K>=n, the parameter estimates might be inaccurate." << endl
+            << "Thus, phylogenetic estimates should be interpreted with caution." << endl << endl 
 
-            << "Ideally, it is desirable that n >> K. When selecting optimal" << endl
-            << "models," << endl
+            << "Ideally, it is desirable that n >> K. When selecting optimal models," << endl
             << "1. use AIC or BIC if n > 40K;" << endl 
             << "2. use AICc or BIC if 40K >= n > K;" << endl 
-            << "3. be extremely cautious if n <= K (because model parameters" << endl
-            << "   are not identifiable)." << endl << endl
+            << "3. be extremely cautious if n <= K" << endl << endl
 
             << "To improve the situation (3), consider the following options:" << endl
             << "  1. Increase the sample size (n)" << endl
@@ -750,11 +743,11 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 				<< "NNI log-likelihood cutoff: " << tree.getNNICutoff() << endl
 				<< endl;
 */
-		if (params.compute_ml_tree) {
+		if (params.compute_ml_tree && (params.min_iterations > 0 || original_model.find("ONLY") != string::npos)) {
 			if (original_model.find("ONLY") != string::npos)
 				out << "TREE USED FOR MODEL SELECTION" << endl
 					<< "-----------------------------" << endl << endl;
-			else
+            else 
 				out << "MAXIMUM LIKELIHOOD TREE" << endl
 					<< "-----------------------" << endl << endl;
 
@@ -872,18 +865,24 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 		if (params.treeset_file) {
 			evaluateTrees(params, &tree, info, distinct_trees);
 			out.precision(4);
+            out.setf(ios_base::fixed);
 
 			out << endl << "USER TREES" << endl << "----------" << endl << endl;
-			out << "See " << params.treeset_file << ".trees for trees with branch lengths." << endl << endl;
+			out << "See " << params.out_prefix << ".trees for trees with branch lengths." << endl << endl;
 			if (params.topotest_replicates && info.size() > 1) {
-				if (params.do_weighted_test) {
-					out << "Tree      logL    deltaL  bp-RELL    p-KH     p-SH    p-WKH    p-WSH    c-ELW" << endl;
-					out << "-------------------------------------------------------------------------------" << endl;
-				} else {
-					out << "Tree      logL    deltaL  bp-RELL    p-KH     p-SH    c-ELW" << endl;
-					out << "-------------------------------------------------------------" << endl;
-
-				}
+                out << "Tree      logL    deltaL  bp-RELL    p-KH     p-SH    ";
+				if (params.do_weighted_test)
+					out << "p-WKH    p-WSH    ";
+                out << "c-ELW";
+                if (params.do_au_test) 
+                    out << "     p-AU";
+                    
+                out << endl << "------------------------------------------------------------------";
+                if (params.do_weighted_test) 
+					out << "------------------";
+                if (params.do_au_test)
+                    out << "-------";
+                out << endl;
 			} else {
 				out << "Tree      logL    deltaL" << endl;
 				out << "-------------------------" << endl;
@@ -930,6 +929,7 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 					out << " - ";
 				else
 					out << " + ";
+                
 				if (params.do_weighted_test) {
 					out.width(6);
 					out << right << info[tid].wkh_pvalue;
@@ -947,9 +947,19 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 				out.width(6);
 				out << info[tid].elw_value;
 				if (info[tid].elw_confident)
-					out << " +";
+					out << " + ";
 				else
-					out << " -";
+					out << " - ";
+
+                if (params.do_au_test) {
+                    out.width(6);
+                    out << right << info[tid].au_pvalue;
+                    if (info[tid].au_pvalue < 0.05)
+                        out << " - ";
+                    else
+                        out << " + ";
+                }
+
 				out << endl;
 				tid++;
 			}
@@ -964,7 +974,11 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 					out << "p-WKH   : p-value of weighted KH test." << endl
 					 << "p-WSH   : p-value of weighted SH test." << endl;
 				}
-				out	 << "c-ELW   : Expected Likelihood Weight (Strimmer & Rambaut 2002)." << endl << endl
+				out	 << "c-ELW   : Expected Likelihood Weight (Strimmer & Rambaut 2002)." << endl;
+                if (params.do_au_test) {
+					out << "p-AU    : p-value of approximately unbiased (AU) test (Shimodaira, 2002)." << endl;
+                }
+                out  << endl
 					 << "Plus signs denote the 95% confidence sets." << endl
 					 << "Minus signs denote significant exclusion."  << endl
 					 << "All tests performed "
@@ -1180,8 +1194,8 @@ void printAnalysisInfo(int model_df, IQTree& iqtree, Params& params) {
 
 void computeMLDist(Params& params, IQTree& iqtree, string &dist_file, double begin_time) {
 	double longest_dist;
-	stringstream best_tree_string;
-	iqtree.printTree(best_tree_string, WT_BR_LEN + WT_TAXON_ID);
+//	stringstream best_tree_string;
+//	iqtree.printTree(best_tree_string, WT_BR_LEN + WT_TAXON_ID);
 	cout << "Computing ML distances based on estimated model parameters...";
 	double *ml_dist = NULL;
     double *ml_var = NULL;
@@ -1232,8 +1246,9 @@ void initializeParams(Params &params, IQTree &iqtree, vector<ModelInfo> &model_i
     bool test_only = params.model_name.find("ONLY") != string::npos;
     /* initialize substitution model */
     if (params.model_name.substr(0, 4) == "TEST") {
-        if (iqtree.isSuperTree())
-            ((PhyloSuperTree*) &iqtree)->mapTrees();
+    	// TODO: check if necessary
+//        if (iqtree.isSuperTree())
+//            ((PhyloSuperTree*) &iqtree)->mapTrees();
         double start_cpu_time = getCPUTime();
         double start_real_time = getRealTime();
         ofstream fmodel;
@@ -1292,8 +1307,9 @@ void initializeParams(Params &params, IQTree &iqtree, vector<ModelInfo> &model_i
     if (params.gbo_replicates)
         params.speed_conf = 1.0;
 
-    if (iqtree.isSuperTree())
-        ((PhyloSuperTree*) &iqtree)->mapTrees();
+	// TODO: check if necessary
+//    if (iqtree.isSuperTree())
+//        ((PhyloSuperTree*) &iqtree)->mapTrees();
 
     // set parameter for the current tree
 //    iqtree.setParams(params);
@@ -1646,6 +1662,8 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 	ModelsBlock *models_block = readModelsDefinition(params);
 
     initializeParams(params, iqtree, model_info, models_block);
+
+    iqtree.restoreCheckpoint();
     iqtree.initSettings(params);
 
     /*********************** INITIAL MODEL OPTIMIZATION *****************/
@@ -1727,7 +1745,21 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 
     // Optimize model parameters and branch lengths using ML for the initial tree
 	iqtree.clearAllPartialLH();
-	initTree = iqtree.optimizeModelParameters(true, initEpsilon);
+    iqtree.getModelFactory()->restoreCheckpoint();
+    if (iqtree.getCheckpoint()->getBool("finishedModelInit")) {
+        // model optimization already done: ignore this step
+        if (!iqtree.candidateTrees.empty())
+            iqtree.readTreeString(iqtree.candidateTrees.getTopTrees(1)[0]);
+        iqtree.setCurScore(iqtree.computeLikelihood());
+        initTree = iqtree.getTreeString();
+        cout << "CHECKPOINT: Model parameters restored, LogL: " << iqtree.getCurScore() << endl;
+    } else {
+        initTree = iqtree.optimizeModelParameters(true, initEpsilon);
+        iqtree.saveCheckpoint();
+        iqtree.getModelFactory()->saveCheckpoint();
+        iqtree.getCheckpoint()->putBool("finishedModelInit", true);
+        iqtree.getCheckpoint()->dump();
+    }
 
     if (params.lmap_num_quartets) {
         cout << "Performing likelihood mapping with " << params.lmap_num_quartets << " quartets..." << endl;
@@ -1735,9 +1767,12 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
         iqtree.doLikelihoodMapping();
         cout << getRealTime()-lkmap_time << " seconds" << endl;
     }
+    
+    bool finishedCandidateSet = iqtree.getCheckpoint()->getBool("finishedCandidateSet");
+    bool finishedInitTree = iqtree.getCheckpoint()->getBool("finishedInitTree");
 
     // now overwrite with random tree
-    if (params.start_tree == STT_RANDOM_TREE) {
+    if (params.start_tree == STT_RANDOM_TREE && !finishedInitTree) {
         cout << "Generate random initial Yule-Harding tree..." << endl;
         iqtree.generateRandomTree(YULE_HARDING);
         iqtree.wrapperFixNegativeBranch(true);
@@ -1749,9 +1784,12 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
     /****************** NOW PERFORM MAXIMUM LIKELIHOOD TREE RECONSTRUCTION ******************/
 
     // Update best tree
-    iqtree.candidateTrees.update(initTree, iqtree.getCurScore());
+    if (!finishedInitTree)
+        iqtree.candidateTrees.update(initTree, iqtree.getCurScore());
 
     if (params.min_iterations > 0) {
+        if (!iqtree.isBifurcating())
+            outError("Tree search does not work with initial multifurcating tree. Please specify `-n 0` to avoid this.");
         cout << "--------------------------------------------------------------------" << endl;
         cout << "|             INITIALIZING CANDIDATE TREE SET                      |" << endl;
         cout << "--------------------------------------------------------------------" << endl;
@@ -1772,7 +1810,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 //        params.compute_ml_dist = false;
 //    }
 
-    if ((!params.dist_file && params.compute_ml_dist) || params.leastSquareBranch) {
+    if (!finishedInitTree && ((!params.dist_file && params.compute_ml_dist) || params.leastSquareBranch)) {
         computeMLDist(params, iqtree, dist_file, getCPUTime());
         if (!params.user_file && params.start_tree != STT_RANDOM_TREE) {
             // NEW 2015-08-10: always compute BIONJ tree into the candidate set
@@ -1794,10 +1832,12 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
         }
     }
 
+//    iqtree.saveCheckpoint();
+
 	double cputime_search_start = getCPUTime();
     double realtime_search_start = getRealTime();
 
-    if (params.min_iterations > 0) {
+    if (params.min_iterations > 0 && !finishedCandidateSet) {
         double initTime = getCPUTime();
 
 //        if (!params.user_file && (params.start_tree == STT_PARSIMONY || params.start_tree == STT_PLL_PARSIMONY)) 
@@ -1814,6 +1854,13 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
                 << getCPUTime() - initTime << endl;
 	}
 
+    if (finishedCandidateSet) {
+        cout << "CHECKPOINT: Candidate tree set restored, best LogL: " << iqtree.candidateTrees.getBestScore() << endl;
+    } else {
+        iqtree.saveCheckpoint();
+        iqtree.getCheckpoint()->putBool("finishedCandidateSet", true);
+        iqtree.getCheckpoint()->dump(true);
+    }
 
     if (params.leastSquareNNI) {
     	iqtree.computeSubtreeDists();
@@ -1882,14 +1929,22 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
         cout << "--------------------------------------------------------------------" << endl;
         cout << "|                    FINALIZING TREE SEARCH                        |" << endl;
         cout << "--------------------------------------------------------------------" << endl;
-        cout << "Performs final model parameters optimization" << endl;
-		string tree;
-        if (params.testAlpha)
-            tree = iqtree.optimizeModelParameters(true, 0.001);
-        else
-            tree = iqtree.optimizeModelParameters(true);
         
-		iqtree.candidateTrees.update(tree, iqtree.getCurScore(), true);
+        if (iqtree.getCheckpoint()->getBool("finishedModelFinal")) {
+            iqtree.setCurScore(iqtree.computeLikelihood());
+            cout << "CHECKPOINT: Final model parameters restored" << endl;
+        } else {
+            cout << "Performs final model parameters optimization" << endl;
+            string tree;
+            if (params.testAlpha)
+                tree = iqtree.optimizeModelParameters(true, 0.001);
+            else
+                tree = iqtree.optimizeModelParameters(true);
+            iqtree.candidateTrees.update(tree, iqtree.getCurScore(), true);
+            iqtree.getCheckpoint()->putBool("finishedModelFinal", true);
+            iqtree.saveCheckpoint();
+        }
+        
     }
 
 	if (iqtree.isSuperTree())
@@ -2173,41 +2228,58 @@ void runStandardBootstrap(Params &params, string &original_model, Alignment *ali
 	bootaln_name += ".bootaln";
 	string bootlh_name = params.out_prefix;
 	bootlh_name += ".bootlh";
-	// first empty the boottrees file
-	try {
-		ofstream tree_out;
-		tree_out.exceptions(ios::failbit | ios::badbit);
-		tree_out.open(boottrees_name.c_str());
-		tree_out.close();
-	} catch (ios::failure) {
-		outError(ERR_WRITE_OUTPUT, boottrees_name);
-	}
+    int bootSample = 0;
+    if (tree->getCheckpoint()->get("bootSample", bootSample)) {
+        cout << "CHECKPOINT: " << bootSample << " bootstrap analyses restored" << endl;
+    } else {
+        // first empty the boottrees file
+        try {
+            ofstream tree_out;
+            tree_out.exceptions(ios::failbit | ios::badbit);
+            tree_out.open(boottrees_name.c_str());
+            tree_out.close();
+        } catch (ios::failure) {
+            outError(ERR_WRITE_OUTPUT, boottrees_name);
+        }
 
-	// empty the bootaln file
-	if (params.print_bootaln)
-	try {
-		ofstream tree_out;
-		tree_out.exceptions(ios::failbit | ios::badbit);
-		tree_out.open(bootaln_name.c_str());
-		tree_out.close();
-	} catch (ios::failure) {
-		outError(ERR_WRITE_OUTPUT, bootaln_name);
-	}
-
+        // empty the bootaln file
+        if (params.print_bootaln)
+        try {
+            ofstream tree_out;
+            tree_out.exceptions(ios::failbit | ios::badbit);
+            tree_out.open(bootaln_name.c_str());
+            tree_out.close();
+        } catch (ios::failure) {
+            outError(ERR_WRITE_OUTPUT, bootaln_name);
+        }
+    }
+    
 	double start_time = getCPUTime();
 
+    
+    
 	// do bootstrap analysis
-	for (int sample = 0; sample < params.num_bootstrap_samples; sample++) {
+	for (int sample = bootSample; sample < params.num_bootstrap_samples; sample++) {
 		cout << endl << "===> START BOOTSTRAP REPLICATE NUMBER "
 				<< sample + 1 << endl << endl;
 
+        // 2015-12-17: initialize random stream for creating bootstrap samples
+        // mainly so that checkpointing does not need to save bootstrap samples
+        int *saved_randstream = randstream;
+        init_random(params.ran_seed + sample);
+
 		Alignment* bootstrap_alignment;
-		cout << "Creating bootstrap alignment..." << endl;
+		cout << "Creating bootstrap alignment (seed: " << params.ran_seed+sample << ")..." << endl;
 		if (alignment->isSuperAlignment())
 			bootstrap_alignment = new SuperAlignment;
 		else
 			bootstrap_alignment = new Alignment;
 		bootstrap_alignment->createBootstrapAlignment(alignment, NULL, params.bootstrap_spec);
+
+        // restore randstream
+        finish_random();
+        randstream = saved_randstream;
+
 		if (params.print_tree_lh) {
 			double prob;
 			bootstrap_alignment->multinomialProb(*alignment, prob);
@@ -2230,24 +2302,30 @@ void runStandardBootstrap(Params &params, string &original_model, Alignment *ali
 			boot_tree = new IQTree(bootstrap_alignment);
 		if (params.print_bootaln)
 			bootstrap_alignment->printPhylip(bootaln_name.c_str(), true);
+
+        // set checkpoint
+        boot_tree->setCheckpoint(tree->getCheckpoint());
+        boot_tree->num_precision = tree->num_precision;
+
 		runTreeReconstruction(params, original_model, *boot_tree, *model_info);
 		// read in the output tree file
-		string tree_str;
-		try {
-			ifstream tree_in;
-			tree_in.exceptions(ios::failbit | ios::badbit);
-			tree_in.open(treefile_name.c_str());
-			tree_in >> tree_str;
-			tree_in.close();
-		} catch (ios::failure) {
-			outError(ERR_READ_INPUT, treefile_name);
-		}
+        stringstream ss;
+        boot_tree->printTree(ss);
+//		try {
+//			ifstream tree_in;
+//			tree_in.exceptions(ios::failbit | ios::badbit);
+//			tree_in.open(treefile_name.c_str());
+//			tree_in >> tree_str;
+//			tree_in.close();
+//		} catch (ios::failure) {
+//			outError(ERR_READ_INPUT, treefile_name);
+//		}
 		// write the tree into .boottrees file
 		try {
 			ofstream tree_out;
 			tree_out.exceptions(ios::failbit | ios::badbit);
 			tree_out.open(boottrees_name.c_str(), ios_base::out | ios_base::app);
-			tree_out << tree_str << endl;
+			tree_out << ss.str() << endl;
 			tree_out.close();
 		} catch (ios::failure) {
 			outError(ERR_WRITE_OUTPUT, boottrees_name);
@@ -2266,7 +2344,19 @@ void runStandardBootstrap(Params &params, string &original_model, Alignment *ali
 		delete boot_tree;
 		// fix bug: bootstrap_alignment might be changed
 		delete bootstrap_alignment;
+        
+        // clear all checkpointed information
+        Checkpoint *newCheckpoint = new Checkpoint;
+        tree->getCheckpoint()->getSubCheckpoint(newCheckpoint, "iqtree");
+        tree->getCheckpoint()->clear();
+        tree->getCheckpoint()->insert(newCheckpoint->begin(), newCheckpoint->end());
+        tree->getCheckpoint()->put("bootSample", sample+1);
+        tree->getCheckpoint()->putBool("finished", false);
+        tree->getCheckpoint()->dump(true);
+        delete newCheckpoint;
+        
 	}
+
 
 	if (params.consensus_type == CT_CONSENSUS_TREE) {
 
@@ -2354,9 +2444,12 @@ void convertAlignment(Params &params, IQTree *iqtree) {
 /**********************************************************
  * TOP-LEVEL FUNCTION
  ***********************************************************/
-void runPhyloAnalysis(Params &params) {
+void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
 	Alignment *alignment;
 	IQTree *tree;
+    
+    checkpoint->putBool("finished", false);
+    checkpoint->setDumpInterval(params.checkpoint_dump_interval);
 
 	/****************** read in alignment **********************/
 	if (params.partition_file) {
@@ -2385,6 +2478,7 @@ void runPhyloAnalysis(Params &params) {
 		tree = new IQTree(alignment);
 	}
 
+    tree->setCheckpoint(checkpoint);
     if (params.min_branch_length <= 0.0) {
         params.min_branch_length = 1e-6;
         if (tree->getAlnNSite() >= 100000) {
@@ -2463,33 +2557,16 @@ void runPhyloAnalysis(Params &params) {
 			splitsfile += ".contree";
 			tree->readTreeFile(splitsfile);
 			// bug fix
-			if ((tree->sse == LK_EIGEN || tree->sse == LK_EIGEN_SSE) && !tree->isBifurcating()) {
-				cout << "NOTE: Changing to old kernel as consensus tree is multifurcating" << endl;
-                if (tree->sse == LK_EIGEN)
-                    tree->changeLikelihoodKernel(LK_NORMAL);
-                else
-                    tree->changeLikelihoodKernel(LK_SSE);
-			}
+//			if ((tree->sse == LK_EIGEN || tree->sse == LK_EIGEN_SSE) && !tree->isBifurcating()) {
+//				cout << "NOTE: Changing to old kernel as consensus tree is multifurcating" << endl;
+//                if (tree->sse == LK_EIGEN)
+//                    tree->changeLikelihoodKernel(LK_NORMAL);
+//                else
+//                    tree->changeLikelihoodKernel(LK_SSE);
+//			}
 
 			tree->initializeAllPartialLh();
 			tree->fixNegativeBranch(true);
-//	        if (tree->isSuperTree()) {
-//	        	if (params.partition_type == 0) {
-//	        		PhyloSuperTree *stree = (PhyloSuperTree*) tree;
-//	        		tree->clearAllPartialLH();
-//	        		// full partition model
-//	        		for (PhyloSuperTree::iterator it = stree->begin(); it != stree->end(); it++) {
-//	        			(*it)->fixNegativeBranch(true);
-//	        		}
-//	        		tree->clearAllPartialLH();
-//	        	} else {
-//	        		// joint/prop. partition model
-//					tree->assignRandomBranchLengths(true);
-//					((PhyloSuperTree*)tree)->mapTrees();
-//	        	}
-//	        } else {
-//	        	tree->fixNegativeBranch(true);
-//	    	}
 
 			tree->boot_consense_logl = tree->optimizeAllBranches();
 			cout << "Log-likelihood of consensus tree: " << tree->boot_consense_logl << endl;
@@ -2498,16 +2575,9 @@ void runPhyloAnalysis(Params &params) {
 			tree->printTree(splitsfile.c_str(), WT_BR_LEN | WT_BR_LEN_FIXED_WIDTH | WT_SORT_TAXA | WT_NEWLINE);
 			// revert the best tree
 			tree->readTreeString(current_tree);
-//			if (tree->isSuperTree()) {
-//				tree->optimizeAllBranches();
-//				((PhyloSuperTree*)tree)->computeBranchLengths();
-//			}
 		}
 		// reinsert identical sequences
 		if (tree->removed_seqs.size() > 0) {
-			// BUG HERE!
-//			delete tree->aln;
-//			tree->reinsertIdenticalSeqs(alignment);
 			// BUG FIX: dont use reinsertIdenticalSeqs anymore
 			tree->insertTaxa(tree->removed_seqs, tree->twin_seqs);
 			tree->printResultTree();
@@ -2518,6 +2588,8 @@ void runPhyloAnalysis(Params &params) {
 		// the classical non-parameter bootstrap (SBS)
 		if (params.model_name.find("LINK") != string::npos || params.model_name.find("MERGE") != string::npos)
 			outError("-m TESTMERGE is not allowed when doing standard bootstrap. Please first\nfind partition scheme on the original alignment and use it for bootstrap analysis");
+        if (alignment->getNSeq() < 4)
+            outError("It makes no sense to perform bootstrap with less than 4 sequences.");
 		runStandardBootstrap(params, original_model, alignment, tree);
 	}
 
@@ -2537,6 +2609,9 @@ void runPhyloAnalysis(Params &params) {
     // 2015-09-22: THIS IS STUPID: after deleting tree, one cannot access tree->aln anymore
 //	alignment = tree->aln;
 	delete alignment;
+
+    checkpoint->putBool("finished", true);
+    checkpoint->dump(true);
 }
 
 void assignBranchSupportNew(Params &params) {

@@ -69,6 +69,44 @@ PartitionModel::PartitionModel(Params &params, PhyloSuperTree *tree, ModelsBlock
     }
 }
 
+void PartitionModel::setCheckpoint(Checkpoint *checkpoint) {
+	ModelFactory::setCheckpoint(checkpoint);
+    PhyloSuperTree *tree = (PhyloSuperTree*)site_rate->getTree();
+    for (PhyloSuperTree::iterator it = tree->begin(); it != tree->end(); it++)
+		(*it)->getModelFactory()->setCheckpoint(checkpoint);
+}
+
+void PartitionModel::saveCheckpoint() {
+    checkpoint->startStruct("PartitionModel");
+    CKP_SAVE(linked_alpha);
+    PhyloSuperTree *tree = (PhyloSuperTree*)site_rate->getTree();
+    int part = 0;
+    for (PhyloSuperTree::iterator it = tree->begin(); it != tree->end(); it++, part++) {
+        checkpoint->startStruct(tree->part_info[part].name);
+        (*it)->getModelFactory()->saveCheckpoint();
+        checkpoint->endStruct();
+    }
+    checkpoint->endStruct();
+
+    CheckpointFactory::saveCheckpoint();
+}
+
+void PartitionModel::restoreCheckpoint() {
+    CheckpointFactory::restoreCheckpoint();
+    checkpoint->startStruct("PartitionModel");
+    CKP_RESTORE(linked_alpha);
+
+    PhyloSuperTree *tree = (PhyloSuperTree*)site_rate->getTree();
+    int part = 0;
+    for (PhyloSuperTree::iterator it = tree->begin(); it != tree->end(); it++, part++) {
+        checkpoint->startStruct(tree->part_info[part].name);
+        (*it)->getModelFactory()->restoreCheckpoint();
+        checkpoint->endStruct();
+    }
+
+    checkpoint->endStruct();
+}
+
 int PartitionModel::getNParameters() {
     PhyloSuperTree *tree = (PhyloSuperTree*)site_rate->getTree();
 	int df = 0;

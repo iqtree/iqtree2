@@ -33,6 +33,8 @@
 #include "timeutil.h"
 
 #include "phyloanalysis.h"
+#include "gsl/mygsl.h"
+#include "vectorclass/vectorclass.h"
 
 
 /******* Binary model set ******/
@@ -837,9 +839,15 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInf
         dist[i] = -((double)this_aln->getNSeq())*this_aln->getNPattern()*this_aln->num_states;
     }
     
-    if (params.num_threads > 1)
+    if (params.num_threads > 1) 
+    {
         quicksort(dist, 0, in_tree->size()-1, distID);
-
+        if (verbose_mode >= VB_MED) {
+            for (i = 0; i < in_tree->size(); i++) {
+                cout << i+1 << "\t" << in_tree->part_info[distID[i]].name << endl;
+            }
+        }
+    }
 
 #ifdef _OPENMP
 //        for (i = 0; i < in_tree->size(); i++)
@@ -1143,6 +1151,8 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 		// select model for each partition
 		PhyloSuperTree *stree = (PhyloSuperTree*)in_tree;
 		testPartitionModel(params, stree, model_info, fmodel, models_block);
+//        stree->linkTrees();
+        stree->mapTrees();
 		string res_models = "";
 		for (vector<PartitionInfo>::iterator it = stree->part_info.begin(); it != stree->part_info.end(); it++) {
 			if (it != stree->part_info.begin()) res_models += ",";
@@ -1723,6 +1733,252 @@ int countDistinctTrees(const char *filename, bool rooted, IQTree *tree, IntVecto
 
 //const double TOL_RELL_SCORE = 0.01;
 
+/*
+    Problem: solve the following linear system equation:
+    a_1*x + b_1*y = c_1
+    a_2*x + b_2*y = c_2
+    ....
+    a_n*x + b_n*y = c_n
+    
+becomes minimizing weighted least square:
+
+    sum_k { w_k*[ c_k - (a_k*x + b_k*y) ]^2 }
+
+
+the solution is:
+
+    x = [(sum_k w_k*b_k*c_k)*(sum_k w_k*a_k*b_k) - (sum_k w_k*a_k*c_k)(sum_k w_k*b_k^2)] / 
+        [ (sum_k w_k*a_k*b_k)^2 - (sum_k w_k*a_k^2)*(sum_k w_k*b_k^2) ]
+    
+    y = [(sum_k w_k*a_k*c_k)*(sum_k w_k*a_k*b_k) - (sum_k w_k*b_k*c_k)(sum_k w_k*a_k^2)] / 
+        [ (sum_k w_k*a_k*b_k)^2 - (sum_k w_k*a_k^2)*(sum_k w*k*b_k^2) ]
+    
+    @param n number of data points
+    @param w weight vector of length n
+    @param a a value vector of length n
+    @param b b value vector of length n
+    @param c c value vector of length n
+    @param[out] x x-value
+    @param[out] y y-value
+    @return least square value
+*/
+void doWeightedLeastSquare(int n, double *w, double *a, double *b, double *c, double &x, double &y) {
+    int k;
+    double BC = 0.0, AB = 0.0, AC = 0.0, A2 = 0.0, B2 = 0.0;
+    double denom;
+    for (k = 0; k < n; k++) {
+        double wa = w[k]*a[k];
+        double wb = w[k]*b[k];
+        AB += wa*b[k];
+        BC += wb*c[k];
+        AC += wa*c[k];
+        A2 += wa*a[k];
+        B2 += wb*b[k];
+    }
+    denom = 1.0/(AB*AB - A2*B2);
+    x = (BC*AB - AC*B2) * denom;
+    y = (AC*AB - BC*A2) * denom;
+}
+
+/**
+    MLE estimates for AU test
+*/
+class OptimizationAUTest : public Optimization {
+
+public:
+
+    OptimizationAUTest(double d, double c, int nscales, double *bp, double *rr, double *rr_inv) {
+        this->d = d;
+        this->c = c;
+        this->bp = bp;
+        this->rr = rr;
+        this->rr_inv = rr_inv;
+        this->nscales = nscales;
+        
+    }
+
+	/**
+		return the number of dimensions
+	*/
+	virtual int getNDim() { return 2; }
+
+
+	/**
+		the target function which needs to be optimized
+		@param x the input vector x
+		@return the function value at x
+	*/
+	virtual double targetFunk(double x[]) {
+        d = x[1];
+        c = x[2];
+        double res = 0.0;
+        for (int k = 0; k < nscales; k++) {
+            double cdf = gsl_cdf_ugaussian_P(d*rr[k] + c*rr_inv[k]);
+            res += bp[k] * log(1.0 - cdf) + (1.0-bp[k])*log(cdf);
+        }
+        return res;
+    }
+
+    void optimizeDC() {
+        double x[3], lower[3], upper[3];
+        bool bound_check[3];
+        x[1] = d;
+        x[2] = c;
+        lower[1] = lower[2] = 1e-4;
+        upper[1] = upper[2] = 100.0;
+        bound_check[1] = bound_check[2] = false;
+        minimizeMultiDimen(x, 2, lower, upper, bound_check, 1e-4);
+        d = x[1];
+        c = x[2];
+    }
+
+    double d, c;
+    int nscales;
+    double *bp;
+    double *rr;
+    double *rr_inv;
+};
+
+/**
+    @param tree_lhs RELL score matrix of size #trees x #replicates
+*/
+void performAUTest(Params &params, PhyloTree *tree, double *pattern_lhs, vector<TreeInfo> &info) {
+    
+    /* STEP 1: specify scale factors */
+    int nscales = 10;
+    double r[] = {0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4};
+    double rr[] = {sqrt(0.5), sqrt(0.6), sqrt(0.7), sqrt(0.8), sqrt(0.9), 1.0, 
+        sqrt(1.1), sqrt(1.2), sqrt(1.3), sqrt(1.4)};
+    double rr_inv[] = {sqrt(1/0.5), sqrt(1/0.6), sqrt(1/0.7), sqrt(1/0.8), sqrt(1/0.9), 1.0, 
+        sqrt(1/1.1), sqrt(1/1.2), sqrt(1/1.3), sqrt(1/1.4)};
+        
+    /* STEP 2: compute bootstrap proportion */
+    int ntrees = info.size();
+    size_t nboot = params.topotest_replicates;
+    double nboot_inv = 1.0 / nboot;
+    
+    int nptn = tree->getAlnNPattern();
+    int maxnptn = get_safe_upper_limit(nptn);
+    
+    double *bp = new double[ntrees*nscales];
+    memset(bp, 0, sizeof(double)*ntrees*nscales);
+    
+    int k, tid, ptn;
+#ifdef _OPENMP
+    #pragma omp parallel private(k, tid, ptn)
+    {
+    int *rstream;
+    init_random(params.ran_seed + omp_get_thread_num(), false, &rstream);
+#else
+    int *rstream = randstream;
+#endif
+    size_t boot;
+    int *boot_sample = aligned_alloc<int>(maxnptn);
+    memset(boot_sample, 0, maxnptn*sizeof(int));
+    
+    double *boot_sample_dbl = aligned_alloc<double>(maxnptn);
+    
+#ifdef _OPENMP
+    #pragma omp for schedule(static)
+#endif
+    for (k = 0; k < nscales; k++) {
+        string str = "SCALE=" + convertDoubleToString(r[k]);    
+		for (boot = 0; boot < nboot; boot++) {
+			tree->aln->createBootstrapAlignment(boot_sample, str.c_str(), rstream);
+            for (ptn = 0; ptn < maxnptn; ptn++)
+                boot_sample_dbl[ptn] = boot_sample[ptn];
+            double max_lh = -1e20;
+            int max_tid = -1;
+            for (tid = 0; tid < ntrees; tid++) {
+                double *pattern_lh = pattern_lhs + (tid*nptn);
+                double tree_lh;
+#ifdef BINARY32
+                tree_lh = tree->dotProductSIMD<double, Vec2d, 2>(pattern_lh, boot_sample_dbl, nptn);
+#else
+                if (instruction_set >= 7)
+                    tree_lh = tree->dotProductSIMD<double, Vec4d, 4>(pattern_lh, boot_sample_dbl, nptn);
+                else
+                    tree_lh = tree->dotProductSIMD<double, Vec2d, 2>(pattern_lh, boot_sample_dbl, nptn);
+#endif
+                if (tree_lh > max_lh) {
+                    max_lh = tree_lh;
+                    max_tid = tid;
+                } 
+            }
+            bp[k*ntrees+max_tid] += nboot_inv;
+        }
+    }
+
+    aligned_free(boot_sample_dbl);
+    aligned_free(boot_sample);
+
+#ifdef _OPENMP
+    finish_random(rstream);
+    }
+#endif
+
+    if (verbose_mode >= VB_MED) {
+        cout << "scale";
+        for (k = 0; k < nscales; k++)
+            cout << "\t" << r[k];
+        cout << endl;
+        for (tid = 0; tid < ntrees; tid++) {
+            cout << tid;
+            for (k = 0; k < nscales; k++) {
+                cout << "\t" << bp[tid+k*ntrees];
+            }
+            cout << endl;
+        }
+    }
+    
+    /* STEP 3: weighted least square fit */
+    
+    double *cc = new double[nscales];
+    double *w = new double[nscales];
+    double *this_bp = new double[nscales];
+    cout << "TreeID\tAU\tRSS\td_WLS\tc_WLS\td_MLE\tc_MLE" << endl;
+    for (tid = 0; tid < ntrees; tid++) {
+        for (k = 0; k < nscales; k++) {
+            this_bp[k] = bp[tid + k*ntrees];
+            double bp_val = min(max(bp[tid + k*ntrees], nboot_inv),1.0-nboot_inv);
+            double bp_cdf = gsl_cdf_ugaussian_Pinv(bp_val);
+            double bp_pdf = gsl_ran_ugaussian_pdf(bp_cdf);
+            cc[k] = gsl_cdf_ugaussian_Pinv(1.0 - bp_val);
+            w[k] = bp_pdf*bp_pdf*nboot / (bp_val*(1.0-bp_val));
+        }
+        double c, d; // c, d in original paper
+        // first obtain d and c by weighted least square
+        doWeightedLeastSquare(nscales, w, rr, rr_inv, cc, d, c);
+        
+        // second, perform MLE estimate of d and c
+        OptimizationAUTest mle(d, c, nscales, this_bp, rr, rr_inv);
+        mle.optimizeDC();
+        
+        // compute sum of squared difference
+        double rss = 0.0;
+        for (k = 0; k < nscales; k++) {
+            double diff = cc[k] - (rr[k]*d + rr_inv[k]*c);
+            rss += w[k] * diff * diff;
+        }
+        
+        double pchi2 = computePValueChiSquare(rss, nscales-2);
+        /* STEP 4: compute p-value according to Eq. 11 */
+        info[tid].au_pvalue = 1.0 - gsl_cdf_ugaussian_P(mle.d-mle.c);
+        cout << tid+1 << "\t" << info[tid].au_pvalue << "\t" << rss << "\t" << d << "\t" << c << "\t" << mle.d << "\t" << mle.c;
+        
+        // warning if p-value of chi-square < 0.01 (rss too high)
+        if (pchi2 < 0.01) 
+            cout << " !!!";
+        cout << endl;
+    }
+    
+    delete [] this_bp;
+    delete [] w;
+    delete [] cc;
+    delete [] bp;
+}
+
+
 void evaluateTrees(Params &params, IQTree *tree, vector<TreeInfo> &info, IntVector &distinct_ids)
 {
 	if (!params.treeset_file)
@@ -1760,15 +2016,15 @@ void evaluateTrees(Params &params, IQTree *tree, vector<TreeInfo> &info, IntVect
 		site_lh_out.close();
 	}
 
-	double time_start = getCPUTime();
+	double time_start = getRealTime();
 
 	int *boot_samples = NULL;
 	int boot;
 	//double *saved_tree_lhs = NULL;
-	double *tree_lhs = NULL;
+	double *tree_lhs = NULL; // RELL score matrix of size #trees x #replicates
 	double *pattern_lh = NULL;
 	double *pattern_lhs = NULL;
-	double *orig_tree_lh = NULL;
+	double *orig_tree_lh = NULL; // Original tree log-likelihoods
 	double *max_lh = NULL;
 	double *lhdiff_weights = NULL;
 	int nptn = tree->getAlnNPattern();
@@ -1790,7 +2046,7 @@ void evaluateTrees(Params &params, IQTree *tree, vector<TreeInfo> &info, IntVect
 		//	outError(ERR_NO_MEMORY);
 		if (!(tree_lhs = new double [ntrees * params.topotest_replicates]))
 			outError(ERR_NO_MEMORY);
-		if (params.do_weighted_test) {
+		if (params.do_weighted_test || params.do_au_test) {
 			if (!(lhdiff_weights = new double [ntrees * ntrees]))
 				outError(ERR_NO_MEMORY);
 			if (!(pattern_lhs = new double[ntrees* nptn]))
@@ -1824,13 +2080,13 @@ void evaluateTrees(Params &params, IQTree *tree, vector<TreeInfo> &info, IntVect
         tree->setRootNode(params.root);
 		if (tree->isSuperTree())
 			((PhyloSuperTree*) tree)->mapTrees();
-		if ((tree->sse == LK_EIGEN || tree->sse == LK_EIGEN_SSE) && !tree->isBifurcating()) {
-			cout << "NOTE: Changing to old kernel as user tree is multifurcating" << endl;
-			if (tree->sse == LK_EIGEN)
-				tree->changeLikelihoodKernel(LK_NORMAL);
-			else
-				tree->changeLikelihoodKernel(LK_SSE);
-		}
+//		if ((tree->sse == LK_EIGEN || tree->sse == LK_EIGEN_SSE) && !tree->isBifurcating()) {
+//			cout << "NOTE: Changing to old kernel as user tree is multifurcating" << endl;
+//			if (tree->sse == LK_EIGEN)
+//				tree->changeLikelihoodKernel(LK_NORMAL);
+//			else
+//				tree->changeLikelihoodKernel(LK_SSE);
+//		}
 
 		tree->initializeAllPartialLh();
 		tree->fixNegativeBranch(false);
@@ -1850,7 +2106,7 @@ void evaluateTrees(Params &params, IQTree *tree, vector<TreeInfo> &info, IntVect
 		if (pattern_lh) {
 			double curScore = tree->getCurScore();
 			tree->computePatternLikelihood(pattern_lh, &curScore);
-			if (params.do_weighted_test)
+			if (params.do_weighted_test || params.do_au_test)
 				memcpy(pattern_lhs + tid*nptn, pattern_lh, nptn*sizeof(double));
 		}
 		if (params.print_site_lh) {
@@ -1884,7 +2140,7 @@ void evaluateTrees(Params &params, IQTree *tree, vector<TreeInfo> &info, IntVect
 		int *tree_ranks = new int[ntrees];
 
 		/* perform RELL BP method */
-		cout << "Performing RELL test..." << endl;
+		cout << "Performing RELL-BP test..." << endl;
 		int *maxtid = new int[params.topotest_replicates];
 		double *maxL = new double[params.topotest_replicates];
 		int *maxcount = new int[params.topotest_replicates];
@@ -2036,6 +2292,9 @@ void evaluateTrees(Params &params, IQTree *tree, vector<TreeInfo> &info, IntVect
 				info[tid].wkh_pvalue /= params.topotest_replicates;
 			}
 		}
+        
+        delete [] avg_lh;
+        
 		/* now to ELW - Expected Likelihood Weight method */
 		cout << "Performing ELW test..." << endl;
 
@@ -2082,6 +2341,11 @@ void evaluateTrees(Params &params, IQTree *tree, vector<TreeInfo> &info, IntVect
 			outError("Internal error: Wrong ", __func__);
 		delete [] sumL;
 
+        if (params.do_au_test) {
+            cout << "Performing approximately unbiased (AU) test..." << endl;
+            performAUTest(params, tree, pattern_lhs, info);
+        }
+
 		delete [] tree_ranks;
 		delete [] tree_probs;
 
@@ -2110,7 +2374,7 @@ void evaluateTrees(Params &params, IQTree *tree, vector<TreeInfo> &info, IntVect
 	treeout.close();
 	in.close();
 
-	cout << "Time for evaluating all trees: " << getCPUTime() - time_start << " sec." << endl;
+	cout << "Time for evaluating all trees: " << getRealTime() - time_start << " sec." << endl;
 
 }
 
@@ -2120,3 +2384,6 @@ void evaluateTrees(Params &params, IQTree *tree) {
 	IntVector distinct_ids;
 	evaluateTrees(params, tree, info, distinct_ids);
 }
+
+
+

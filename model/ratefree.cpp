@@ -54,6 +54,30 @@ RateFree::RateFree(int ncat, double start_alpha, string params, bool sorted_rate
 	}
 }
 
+void RateFree::saveCheckpoint() {
+    checkpoint->startStruct("RateFree");
+//    CKP_SAVE(fix_params);
+//    CKP_SAVE(sorted_rates);
+//    CKP_SAVE(optimize_alg);
+    CKP_ARRAY_SAVE(ncategory, prop);
+    CKP_ARRAY_SAVE(ncategory, rates);
+    checkpoint->endStruct();
+    RateGamma::saveCheckpoint();
+}
+
+void RateFree::restoreCheckpoint() {
+    RateGamma::restoreCheckpoint();
+    checkpoint->startStruct("RateFree");
+//    CKP_RESTORE(fix_params);
+//    CKP_RESTORE(sorted_rates);
+//    CKP_RESTORE(optimize_alg);
+    CKP_ARRAY_RESTORE(ncategory, prop);
+    CKP_ARRAY_RESTORE(ncategory, rates);
+    checkpoint->endStruct();
+
+//	setNCategory(ncategory);
+}
+
 void RateFree::setNCategory(int ncat) {
 
     // initialize with gamma rates
@@ -426,6 +450,7 @@ double RateFree::optimizeWithEM() {
     size_t ptn, c;
     size_t nptn = phylo_tree->aln->getNPattern();
     size_t nmix = ncategory;
+    const double MIN_PROP = 1e-4;
     
 //    double *lk_ptn = aligned_alloc<double>(nptn);
     double *new_prop = aligned_alloc<double>(nmix);
@@ -451,6 +476,11 @@ double RateFree::optimizeWithEM() {
         // first compute _pattern_lh_cat
         double score;
         score = phylo_tree->computePatternLhCat(WSL_RATECAT);
+        if (score > 0.0) {
+            phylo_tree->printTree(cout, WT_BR_LEN+WT_NEWLINE);
+            writeInfo(cout);
+        }
+        assert(score < 0);
         memset(new_prop, 0, nmix*sizeof(double));
                 
         // E-step
@@ -461,6 +491,7 @@ double RateFree::optimizeWithEM() {
             for (c = 0; c < nmix; c++) {
                 lk_ptn += this_lk_cat[c];
             }
+            assert(lk_ptn != 0.0);
             lk_ptn = phylo_tree->ptn_freq[ptn] / lk_ptn;
             
             // transform _pattern_lh_cat into posterior probabilities of each category
@@ -472,14 +503,35 @@ double RateFree::optimizeWithEM() {
         } 
         
         // M-step, update weights according to (*)        
-        
-        bool converged = true;
+        int maxpropid = 0;
         for (c = 0; c < nmix; c++) {
             new_prop[c] = new_prop[c] / phylo_tree->getAlnNSite();
+            if (new_prop[c] > new_prop[maxpropid])
+                maxpropid = c;
+        }
+        // regularize prop
+        bool zero_prop = false;
+        for (c = 0; c < nmix; c++) {
+            if (new_prop[c] < MIN_PROP) {
+                new_prop[maxpropid] -= (MIN_PROP - new_prop[c]);
+                new_prop[c] = MIN_PROP;
+                zero_prop = true;
+            }
+        }
+        // break if some probabilities too small
+        if (zero_prop) break;
+        
+        bool converged = true;
+        double sum_prop = 0.0;
+        for (c = 0; c < nmix; c++) {
+//            new_prop[c] = new_prop[c] / phylo_tree->getAlnNSite();
             // check for convergence
+            sum_prop += new_prop[c];
             converged = converged && (fabs(prop[c]-new_prop[c]) < 1e-4);
             prop[c] = new_prop[c];
         }
+
+        assert(fabs(sum_prop-1.0) < MIN_PROP);
         
         // now optimize rates one by one
         double sum = 0.0;
@@ -506,7 +558,7 @@ double RateFree::optimizeWithEM() {
                 tree->ptn_freq[ptn] = this_lk_cat[ptn*nmix];
             double scaling = rates[c];
             tree->scaleLength(scaling);
-            tree->optimizeTreeLengthScaling(scaling, 0.001);
+            tree->optimizeTreeLengthScaling(MIN_PROP, scaling, 1.0/prop[c], 0.001);
             converged = converged && (fabs(rates[c] - scaling) < 1e-4);
             rates[c] = scaling;
             sum += prop[c] * rates[c];
