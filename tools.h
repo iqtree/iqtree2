@@ -1677,10 +1677,15 @@ public:
     bool compute_seq_identity_along_tree;
     
     /** number of quartets for likelihood mapping */
-    int num_quartets;
+    int lmap_num_quartets;
+
+    /**
+            file containing the cluster information for clustered likelihood mapping
+     */
+    char *lmap_cluster_file;
 
     /** TRUE to print quartet log-likelihoods to .quartetlh file */
-    bool print_quartet_lh;
+    bool print_lmap_quartet_lh;
 
 };
 
