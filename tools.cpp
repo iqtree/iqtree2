@@ -881,8 +881,9 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.freq_const_patterns = NULL;
     params.no_rescale_gamma_invar = false;
     params.compute_seq_identity_along_tree = false;
-    params.num_quartets = 0;
-    params.print_quartet_lh = false;
+    params.lmap_num_quartets = 0;
+    params.lmap_cluster_file = NULL;
+    params.print_lmap_quartet_lh = false;
     params.link_alpha = false;
 
 
@@ -2820,16 +2821,24 @@ void parseArg(int argc, char *argv[], Params &params) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -lmap <likelihood_mapping_num_quartets>";
-				params.num_quartets = convert_int(argv[cnt]);
-                if (params.num_quartets < 1)
-                    throw "Number of quartets must be >= 1";
+				params.lmap_num_quartets = convert_int(argv[cnt]);
+				if (params.lmap_num_quartets < 1)
+					throw "Number of quartets must be >= 1";
 				continue;
 			}
-            
+
+			if (strcmp(argv[cnt], "-lmclust") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -lmclust <likelihood_mapping_cluster_file>";
+				params.lmap_cluster_file = argv[cnt];
+				continue;
+			}
+
 			if (strcmp(argv[cnt], "-wql") == 0) {
-                params.print_quartet_lh = true;
-                continue;
-            }
+				params.print_lmap_quartet_lh = true;
+				continue;
+			}
             
 			if (strcmp(argv[cnt], "--link-alpha") == 0) {
 				params.link_alpha = true;
@@ -2984,6 +2993,7 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -v, -vv, -vvv        Verbose mode, printing more messages to screen" << endl
             << endl << "LIKELIHOOD MAPPING ANALYSIS:" << endl
             << "  -lmap <#quartets>    Number of quartets for likelihood mapping analysis" << endl
+            << "  -lmclust <clustfile> File containing clusters for likelihood mapping" << endl
             << "  -wql                 Print quartet log-likelihoods to .quartetlh" << endl
             << endl << "NEW STOCHASTIC TREE SEARCH ALGORITHM:" << endl
             << "  -pll                 Use phylogenetic likelihood library (PLL) (default: off)" << endl
