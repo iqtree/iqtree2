@@ -274,6 +274,7 @@ struct QuartetGroups{
     int numQuartSeqs;	// number of seqs in analysis  (should be #A+#B+#C+#D)
     int numGrpSeqs[5];	// number of seqs in cluster A, B, C, D, and X (exclude)
     int uniqueQuarts;	// number of existing unique quartets for this grouping
+    string Name[5];	// seqIDs of cluster A
     vector<int> GroupA;	// seqIDs of cluster A
     vector<int> GroupB;	// seqIDs of cluster B
     vector<int> GroupC;	// seqIDs of cluster C
@@ -1498,6 +1499,9 @@ public:
 
     /** output results of likelihood mapping analysis */
     void reportLikelihoodMapping(ofstream &out);
+
+    /** read clusters for likelihood mapping analysis */
+    void readLikelihoodMappingGroups(char *filename, QuartetGroups &LMGroups);
 
     /****************************************************************************
             Collapse stable (highly supported) clades by one representative

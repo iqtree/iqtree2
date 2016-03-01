@@ -2841,6 +2841,9 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (cnt >= argc)
 					throw "Use -lmclust <likelihood_mapping_cluster_file>";
 				params.lmap_cluster_file = argv[cnt];
+				// '-keep_ident' is currently required to allow a 1-to-1 mapping of the 
+				// user-given groups (HAS) - possibly obsolete in the future versions
+				params.ignore_identical_seqs = false;
 				continue;
 			}
 

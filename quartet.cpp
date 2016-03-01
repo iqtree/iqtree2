@@ -7,11 +7,18 @@
 //
 
 #include <stdio.h>
+#include <string.h>
 
 #include "phylotree.h"
 #include "phylosupertree.h"
-#include "phylosupertree.h"
 #include "model/partitionmodel.h"
+#include "alignment.h"
+#if 0 // (HAS-bla)
+#include "tools.h"
+#endif
+#include "ncl/ncl.h"
+#include "msetsblock.h"
+#include "myreader.h"
 // #include "lmap.c"
 
 #if 0  /*** moved to phylotree.h ***/
@@ -65,7 +72,7 @@
 ***********************************/
 
 /* first lines of SVG likelihood mapping file */
-void initsvg(FILE *ofp)
+void initsvg(FILE *ofp, QuartetGroups &LMGroups)
 {
 	/* SVG preamble */
 	fprintf(ofp,"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\n");
@@ -100,59 +107,85 @@ void initsvg(FILE *ofp)
 
 
 #if LMAP_CLUSTER
-	if (numclust == 4) { /* four cluster analysis */
-		fprintf(ofp,"	<text\n");
-		fprintf(ofp,"	   x=\"500.0\"\n");
-		fprintf(ofp,"	   y=\"-896.0254038\"\n");
-		fprintf(ofp,"	   text-anchor=\"middle\"\n");
-		fprintf(ofp,"	   id=\"label_top_1\">(a,b)-(c,d)</text> <!-- CHANGE HERE IF NECESSARY -->\n");
-		fprintf(ofp,"	<text\n");
-		fprintf(ofp,"	   x=\"-30.0\"\n");
-		fprintf(ofp,"	   y=\"60.0\"\n");
-		fprintf(ofp,"	   text-anchor=\"middle\"\n");
-		fprintf(ofp,"	   id=\"label_left_1\">(a,d)-(b,c)</text> <!-- CHANGE HERE IF NECESSARY -->\n");
-		fprintf(ofp,"	<text\n");
-		fprintf(ofp,"	   x=\"1030.0\"\n");
-		fprintf(ofp,"	   y=\"60.0\"\n");
-		fprintf(ofp,"	   text-anchor=\"middle\"\n");
-		fprintf(ofp,"	   id=\"label_right_1\">(a,c)-(b,d)</text> <!-- CHANGE HERE IF NECESSARY -->\n");
-	}
-	if (numclust == 3) { /* three cluster analysis */
-		fprintf(ofp,"	<text\n");
-		fprintf(ofp,"	   x=\"500.0\"\n");
-		fprintf(ofp,"	   y=\"-896.0254038\"\n");
-		fprintf(ofp,"	   text-anchor=\"middle\"\n");
-		fprintf(ofp,"	   id=\"label_top_1\">(a,b)-(c,c)</text> <!-- CHANGE HERE IF NECESSARY -->\n");
-		fprintf(ofp,"	<text\n");
-		fprintf(ofp,"	   x=\"-30.0\"\n");
-		fprintf(ofp,"	   y=\"60.0\"\n");
-		fprintf(ofp,"	   text-anchor=\"middle\"\n");
-		fprintf(ofp,"	   id=\"label_left_1\">(a,c)-(b,c)</text> <!-- CHANGE HERE IF NECESSARY -->\n");
-		fprintf(ofp,"	<text\n");
-		fprintf(ofp,"	   x=\"1030.0\"\n");
-		fprintf(ofp,"	   y=\"60.0\"\n");
-		fprintf(ofp,"	   text-anchor=\"middle\"\n");
-		fprintf(ofp,"	   id=\"label_right_1\">(a,c)-(b,c)</text> <!-- CHANGE HERE IF NECESSARY -->\n");
-	}
-	if (numclust == 2) { /* two cluster analysis */
-		fprintf(ofp,"	<text\n");
-		fprintf(ofp,"	   x=\"500.0\"\n");
-		fprintf(ofp,"	   y=\"-896.0254038\"\n");
-		fprintf(ofp,"	   text-anchor=\"middle\"\n");
-		fprintf(ofp,"	   id=\"label_top_1\">(a,a)-(b,b)</text> <!-- CHANGE HERE IF NECESSARY -->\n");
-		fprintf(ofp,"	<text\n");
-		fprintf(ofp,"	   x=\"-30.0\"\n");
-		fprintf(ofp,"	   y=\"60.0\"\n");
-		fprintf(ofp,"	   text-anchor=\"middle\"\n");
-		fprintf(ofp,"	   id=\"label_left_1\">(a,b)-(a,b)</text> <!-- CHANGE HERE IF NECESSARY -->\n");
-		fprintf(ofp,"	<text\n");
-		fprintf(ofp,"	   x=\"1030.0\"\n");
-		fprintf(ofp,"	   y=\"60.0\"\n");
-		fprintf(ofp,"	   y=\"60.0\"\n");
-		fprintf(ofp,"	   text-anchor=\"middle\"\n");
-		fprintf(ofp,"	   id=\"label_right_1\">(a,b)-(a,b)</text> <!-- CHANGE HERE IF NECESSARY -->\n");
-	}
 #endif /* LMAP_CLUSTER */
+	if (LMGroups.numGroups == 2) { /* two cluster analysis */
+		fprintf(ofp,"	<text\n");
+		fprintf(ofp,"	   x=\"500.0\"\n");
+		fprintf(ofp,"	   y=\"-896.0254038\"\n");
+		fprintf(ofp,"	   text-anchor=\"middle\"\n");
+		// fprintf(ofp,"	   id=\"label_top_1\">(a,a)-(b,b)</text> <!-- CHANGE HERE IF NECESSARY -->\n");
+		fprintf(ofp,"	   id=\"label_top_1\">(%s,%s)-(%s,%s)</text> <!-- (a,a|b,b) - CHANGE HERE IF NECESSARY -->\n",
+			(LMGroups.Name[0]).c_str(),(LMGroups.Name[0]).c_str(),
+			(LMGroups.Name[1]).c_str(),(LMGroups.Name[1]).c_str());
+		fprintf(ofp,"	<text\n");
+		fprintf(ofp,"	   x=\"-30.0\"\n");
+		fprintf(ofp,"	   y=\"60.0\"\n");
+		fprintf(ofp,"	   text-anchor=\"middle\"\n");
+		// fprintf(ofp,"	   id=\"label_left_1\">(a,b)-(a,b)</text> <!-- CHANGE HERE IF NECESSARY -->\n");
+		fprintf(ofp,"	   id=\"label_left_1\">(%s,%s)-(%s,%s)</text> <!-- (a,b|a,b) - CHANGE HERE IF NECESSARY -->\n",
+			(LMGroups.Name[0]).c_str(),(LMGroups.Name[1]).c_str(),
+			(LMGroups.Name[0]).c_str(),(LMGroups.Name[1]).c_str());
+		fprintf(ofp,"	<text\n");
+		fprintf(ofp,"	   x=\"1030.0\"\n");
+		fprintf(ofp,"	   y=\"60.0\"\n");
+		fprintf(ofp,"	   text-anchor=\"middle\"\n");
+		// fprintf(ofp,"	   id=\"label_right_1\">(a,b)-(a,b)</text> <!-- CHANGE HERE IF NECESSARY -->\n");
+		fprintf(ofp,"	   id=\"label_right_1\">(%s,%s)-(%s,%s)</text> <!-- (a,b|a,b) - CHANGE HERE IF NECESSARY -->\n",
+			(LMGroups.Name[0]).c_str(),(LMGroups.Name[1]).c_str(),
+			(LMGroups.Name[0]).c_str(),(LMGroups.Name[1]).c_str());
+	}
+	if (LMGroups.numGroups == 3) { /* three cluster analysis */
+		fprintf(ofp,"	<text\n");
+		fprintf(ofp,"	   x=\"500.0\"\n");
+		fprintf(ofp,"	   y=\"-896.0254038\"\n");
+		fprintf(ofp,"	   text-anchor=\"middle\"\n");
+		// fprintf(ofp,"	   id=\"label_top_1\">(a,b)-(c,c)</text> <!-- CHANGE HERE IF NECESSARY -->\n");
+		fprintf(ofp,"	   id=\"label_top_1\">(%s,%s)-(%s,%s)</text> <!-- (a,b|c,c) - CHANGE HERE IF NECESSARY -->\n",
+			(LMGroups.Name[0]).c_str(),(LMGroups.Name[1]).c_str(),
+			(LMGroups.Name[2]).c_str(),(LMGroups.Name[2]).c_str());
+		fprintf(ofp,"	<text\n");
+		fprintf(ofp,"	   x=\"-30.0\"\n");
+		fprintf(ofp,"	   y=\"60.0\"\n");
+		fprintf(ofp,"	   text-anchor=\"middle\"\n");
+		// fprintf(ofp,"	   id=\"label_left_1\">(a,c)-(b,c)</text> <!-- CHANGE HERE IF NECESSARY -->\n");
+		fprintf(ofp,"	   id=\"label_left_1\">(%s,%s)-(%s,%s)</text> <!-- (a,c|b,c) - CHANGE HERE IF NECESSARY -->\n",
+			(LMGroups.Name[0]).c_str(),(LMGroups.Name[2]).c_str(),
+			(LMGroups.Name[1]).c_str(),(LMGroups.Name[2]).c_str());
+		fprintf(ofp,"	<text\n");
+		fprintf(ofp,"	   x=\"1030.0\"\n");
+		fprintf(ofp,"	   y=\"60.0\"\n");
+		fprintf(ofp,"	   text-anchor=\"middle\"\n");
+		// fprintf(ofp,"	   id=\"label_right_1\">(a,c)-(b,c)</text> <!-- CHANGE HERE IF NECESSARY -->\n");
+		fprintf(ofp,"	   id=\"label_right_1\">(%s,%s)-(%s,%s)</text> <!-- (a,c|b,c) - CHANGE HERE IF NECESSARY -->\n",
+			(LMGroups.Name[0]).c_str(),(LMGroups.Name[2]).c_str(),
+			(LMGroups.Name[1]).c_str(),(LMGroups.Name[2]).c_str());
+	}
+	if (LMGroups.numGroups == 4) { /* four cluster analysis */
+		fprintf(ofp,"	<text\n");
+		fprintf(ofp,"	   x=\"500.0\"\n");
+		fprintf(ofp,"	   y=\"-896.0254038\"\n");
+		fprintf(ofp,"	   text-anchor=\"middle\"\n");
+		// fprintf(ofp,"	   id=\"label_top_1\">(a,b)-(c,d)</text> <!-- CHANGE HERE IF NECESSARY -->\n");
+		fprintf(ofp,"	   id=\"label_top_1\">(%s,%s)-(%s,%s)</text> <!-- (a,b|c,d) - CHANGE HERE IF NECESSARY -->\n",
+			(LMGroups.Name[0]).c_str(),(LMGroups.Name[1]).c_str(),
+			(LMGroups.Name[2]).c_str(),(LMGroups.Name[3]).c_str());
+		fprintf(ofp,"	<text\n");
+		fprintf(ofp,"	   x=\"-30.0\"\n");
+		fprintf(ofp,"	   y=\"60.0\"\n");
+		fprintf(ofp,"	   text-anchor=\"middle\"\n");
+		// fprintf(ofp,"	   id=\"label_left_1\">(a,d)-(b,c)</text> <!-- CHANGE HERE IF NECESSARY -->\n");
+		fprintf(ofp,"	   id=\"label_left_1\">(%s,%s)-(%s,%s)</text> <!-- (a,d|b,c) - CHANGE HERE IF NECESSARY -->\n",
+			(LMGroups.Name[0]).c_str(),(LMGroups.Name[3]).c_str(),
+			(LMGroups.Name[1]).c_str(),(LMGroups.Name[2]).c_str());
+		fprintf(ofp,"	<text\n");
+		fprintf(ofp,"	   x=\"1030.0\"\n");
+		fprintf(ofp,"	   y=\"60.0\"\n");
+		fprintf(ofp,"	   text-anchor=\"middle\"\n");
+		// fprintf(ofp,"	   id=\"label_right_1\">(a,c)-(b,d)</text> <!-- CHANGE HERE IF NECESSARY -->\n");
+		fprintf(ofp,"	   id=\"label_right_1\">(%s,%s)-(%s,%s)</text> <!-- (a,c|b,d) - CHANGE HERE IF NECESSARY -->\n",
+			(LMGroups.Name[0]).c_str(),(LMGroups.Name[2]).c_str(),
+			(LMGroups.Name[1]).c_str(),(LMGroups.Name[3]).c_str());
+	}
 
 } /* initsvg */
 
@@ -326,7 +359,7 @@ void finishsvg(FILE *ofp, vector<SeqQuartetInfo> lmap_seq_quartet_info, int leaf
 ***********************************/
 
 /* first lines of EPSF likelihood mapping file */
-void initeps(FILE *ofp)
+void initeps(FILE *ofp, QuartetGroups &LMGroups)
 {
 	time_t Starttime;
 	time(&Starttime);
@@ -393,34 +426,61 @@ void initeps(FILE *ofp)
 	fprintf(ofp, "stroke\n");
 
 #if LMAP_CLUSTER
-	if (numclust == 4) { /* four cluster analysis */
-		fprintf(ofp, "%% label corners\n");
-		fprintf(ofp, "0.5 tl 0.9 tl moveto\n"); /* old: 0.375 0.9 */
-		fprintf(ofp, "((a,b)-(c,d)) centershow %% CHANGE HERE IF NECESSARY\n");
-		fprintf(ofp, "-0.045 tl -0.08 tl moveto\n"); /* old: -0.16 -0.08 */
-		fprintf(ofp, "((a,d)-(b,c)) centershow %% CHANGE HERE IF NECESSARY\n");
-		fprintf(ofp, "1.045 tl -0.08 tl moveto\n"); /* old: -0.92 -0.08 */
-		fprintf(ofp, "((a,c)-(b,d)) centershow %% CHANGE HERE IF NECESSARY\n");
-	}
-	if (numclust == 3) { /* three cluster analysis */
-		fprintf(ofp, "%% label corners\n");
-		fprintf(ofp, "0.5 tl 0.9 tl moveto\n"); /* old: 0.375 0.9 */
-		fprintf(ofp, "((a,b)-(c,c)) centershow %% CHANGE HERE IF NECESSARY\n");
-		fprintf(ofp, "-0.045 tl -0.08 tl moveto\n"); /* old: -0.16 -0.08 */
-		fprintf(ofp, "((a,c)-(b,c)) centershow %% CHANGE HERE IF NECESSARY\n");
-		fprintf(ofp, "1.045 tl -0.08 tl moveto\n"); /* old: -0.92 -0.08 */
-		fprintf(ofp, "((a,c)-(b,c)) centershow %% CHANGE HERE IF NECESSARY\n");
-	}
-	if (numclust == 2) { /* two cluster analysis */
-		fprintf(ofp, "%% label corners\n");
-		fprintf(ofp, "0.5 tl 0.9 tl moveto\n"); /* old: 0.375 0.9 */
-		fprintf(ofp, "((a,a)-(b,b)) centershow %% CHANGE HERE IF NECESSARY\n");
-		fprintf(ofp, "-0.045 tl -0.08 tl moveto\n"); /* old: -0.16 -0.08 */
-		fprintf(ofp, "((a,b)-(a,b)) centershow %% CHANGE HERE IF NECESSARY\n");
-		fprintf(ofp, "1.045 tl -0.08 tl moveto\n"); /* old: -0.92 -0.08 */
-		fprintf(ofp, "((a,b)-(a,b)) centershow %% CHANGE HERE IF NECESSARY\n");
-	}
 #endif /* LMAP_CLUSTER */
+	if (LMGroups.numGroups == 2) { /* two cluster analysis */
+		fprintf(ofp, "%% label corners\n");
+		fprintf(ofp, "0.5 tl 0.9 tl moveto\n"); /* old: 0.375 0.9 */
+		// fprintf(ofp, "((a,a)-(b,b)) centershow %% CHANGE HERE IF NECESSARY\n");
+		fprintf(ofp, "((%s,%s)-(%s,%s)) centershow %% (a,a|b,b) - CHANGE HERE IF NECESSARY\n",
+			(LMGroups.Name[0]).c_str(),(LMGroups.Name[0]).c_str(),
+			(LMGroups.Name[1]).c_str(),(LMGroups.Name[1]).c_str());
+		fprintf(ofp, "-0.045 tl -0.08 tl moveto\n"); /* old: -0.16 -0.08 */
+		// fprintf(ofp, "((a,b)-(a,b)) centershow %% CHANGE HERE IF NECESSARY\n");
+		fprintf(ofp, "((%s,%s)-(%s,%s)) centershow %% (a,b|a,b) - CHANGE HERE IF NECESSARY\n",
+			(LMGroups.Name[0]).c_str(),(LMGroups.Name[1]).c_str(),
+			(LMGroups.Name[0]).c_str(),(LMGroups.Name[1]).c_str());
+		fprintf(ofp, "1.045 tl -0.08 tl moveto\n"); /* old: -0.92 -0.08 */
+		// fprintf(ofp, "((a,b)-(a,b)) centershow %% CHANGE HERE IF NECESSARY\n");
+		fprintf(ofp, "((%s,%s)-(%s,%s)) centershow %% (a,b|a,b) - CHANGE HERE IF NECESSARY\n",
+			(LMGroups.Name[0]).c_str(),(LMGroups.Name[1]).c_str(),
+			(LMGroups.Name[0]).c_str(),(LMGroups.Name[1]).c_str());
+	}
+	if (LMGroups.numGroups == 3) { /* three cluster analysis */
+		fprintf(ofp, "%% label corners\n");
+		fprintf(ofp, "0.5 tl 0.9 tl moveto\n"); /* old: 0.375 0.9 */
+		// fprintf(ofp, "((a,b)-(c,c)) centershow %% CHANGE HERE IF NECESSARY\n");
+		fprintf(ofp, "((%s,%s)-(%s,%s)) centershow %% (a,b|c,c) - CHANGE HERE IF NECESSARY\n",
+			(LMGroups.Name[0]).c_str(),(LMGroups.Name[1]).c_str(),
+			(LMGroups.Name[2]).c_str(),(LMGroups.Name[2]).c_str());
+		fprintf(ofp, "-0.045 tl -0.08 tl moveto\n"); /* old: -0.16 -0.08 */
+		// fprintf(ofp, "((a,c)-(b,c)) centershow %% CHANGE HERE IF NECESSARY\n");
+		fprintf(ofp, "((%s,%s)-(%s,%s)) centershow %% (a,c|b,c) - CHANGE HERE IF NECESSARY\n",
+			(LMGroups.Name[0]).c_str(),(LMGroups.Name[2]).c_str(),
+			(LMGroups.Name[1]).c_str(),(LMGroups.Name[2]).c_str());
+		fprintf(ofp, "1.045 tl -0.08 tl moveto\n"); /* old: -0.92 -0.08 */
+		// fprintf(ofp, "((a,c)-(b,c)) centershow %% CHANGE HERE IF NECESSARY\n");
+		fprintf(ofp, "((%s,%s)-(%s,%s)) centershow %% (a,c|b,c) - CHANGE HERE IF NECESSARY\n",
+			(LMGroups.Name[0]).c_str(),(LMGroups.Name[2]).c_str(),
+			(LMGroups.Name[1]).c_str(),(LMGroups.Name[2]).c_str());
+	}
+	if (LMGroups.numGroups == 4) { /* four cluster analysis */
+		fprintf(ofp, "%% label corners\n");
+		fprintf(ofp, "0.5 tl 0.9 tl moveto\n"); /* old: 0.375 0.9 */
+		// fprintf(ofp, "((a,b)-(c,d)) centershow %% CHANGE HERE IF NECESSARY\n");
+		fprintf(ofp, "((%s,%s)-(%s,%s)) centershow %% (a,b|c,d) - CHANGE HERE IF NECESSARY\n",
+			(LMGroups.Name[0]).c_str(),(LMGroups.Name[1]).c_str(),
+			(LMGroups.Name[2]).c_str(),(LMGroups.Name[3]).c_str());
+		fprintf(ofp, "-0.045 tl -0.08 tl moveto\n"); /* old: -0.16 -0.08 */
+		// fprintf(ofp, "((a,d)-(b,c)) centershow %% CHANGE HERE IF NECESSARY\n");
+		fprintf(ofp, "((%s,%s)-(%s,%s)) centershow %% (a,d|b,c) - CHANGE HERE IF NECESSARY\n",
+			(LMGroups.Name[0]).c_str(),(LMGroups.Name[3]).c_str(),
+			(LMGroups.Name[1]).c_str(),(LMGroups.Name[2]).c_str());
+		fprintf(ofp, "1.045 tl -0.08 tl moveto\n"); /* old: -0.92 -0.08 */
+		// fprintf(ofp, "((a,c)-(b,d)) centershow %% CHANGE HERE IF NECESSARY\n");
+		fprintf(ofp, "((%s,%s)-(%s,%s)) centershow %% (a,c|b,d) - CHANGE HERE IF NECESSARY\n",
+			(LMGroups.Name[0]).c_str(),(LMGroups.Name[2]).c_str(),
+			(LMGroups.Name[1]).c_str(),(LMGroups.Name[3]).c_str());
+	}
 
 } /* initeps */
 
@@ -477,7 +537,6 @@ void plotlmpointcolor(FILE *epsofp, FILE *svgofp, double w1, double w2, int red,
 		Only the circles who belong to the "reddot" class will turn red 
 
 		you can use rgb values as well: fill: rgb(255,0,0);
-
 */
 		fprintf(svgofp,"    <circle cx=\"%.10f\" cy=\"%.10f\" r=\"2\" ", 
 			(0.5*w1 + w2)*1000, -(w1*866.0254038));
@@ -599,253 +658,6 @@ void finisheps(FILE *ofp, vector<SeqQuartetInfo> lmap_seq_quartet_info, int leaf
 /*  Likelihood mapping to EPS file  */
 
 
-
-/* switching on different color for each simplex area */
-#define COL_TEST
-#undef COL_TEST
-
-#if 0  /*** old code from TREE-PUZZLE ***/
-/* computes LM point from the three log-likelihood values,
-   plots the point, and does some statistics */
-/* input: log-likelihoods=b1/b2/b3, internal quartet edge length=bl1/bl2/bl3 */
-/*        min edgelen=minlen, max edgelen=maxlen, how to color=coltype */
-void makelmpoint(
-	FILE *fpeps, 				/* output file pointer */
-	FILE *fpsvg, 				/* output file pointer */
-	double  b1, 				/* log-likelihood: ab|cd */
-	double  b2, 				/* log-likelihood: ac|bd */
-	double  b3, 				/* log-likelihood: ad|bc */
-	int t1, int t2, int t3, int t4,		/* four taxa in the quartet */
-	vector<SeqQuartetInfo> lmap_seq_quartet_info,				/* taxon-specific  */
-	// unsigned long **countarr,				/* taxon-specific  */
-	double  bl1, 				/* internal branchlength: ab|cd */
-	double  bl2, 				/* internal branchlength: ac|bd */
-	double  bl3, 				/* internal branchlength: ad|bc */
-	double  minlen, 			/* lower branch-length bound */
-	double  maxlen, 			/* upper branch-length bound */
-	int     coltype				/* color to plot points on the branch-length bound */
-)
-{
-	double w1, w2, w3, temp;
-	unsigned char qpbranching;
-	double temp1, temp2, temp3, onethird;
-	double templog;
-	unsigned char discreteweight[3], treebits[3];
-	int nummin, nummax;
-	
-	onethird = 1.0/3.0;
-	treebits[0] = (unsigned char) 1;
-	treebits[1] = (unsigned char) 2;
-	treebits[2] = (unsigned char) 4;
-
-	/* sort in descending order */
-	qweight[0] = b1;
-	qweight[1] = b2;
-	qweight[2] = b3;
-	sort3doubles(qweight, qworder);
-
-	/* compute Bayesian weights */
-	templog = qweight[qworder[1]]-qweight[qworder[0]];
-	if(templog < -TP_MAX_EXP_DIFF)	/* possible, since 1.0+exp(>36) == 1.0 */
-	   qweight[qworder[1]] = 0.0;
-	else
-	   qweight[qworder[1]] = exp(templog);
-
-        templog = qweight[qworder[2]]-qweight[qworder[0]];
-	if(templog < -TP_MAX_EXP_DIFF)	/* possible, since 1.0+exp(>36) == 1.0 */
-	   qweight[qworder[2]] = 0.0;
-	else
-	   qweight[qworder[2]] = exp(templog);
-
-	qweight[qworder[0]] = 1.0;
-
-	temp = qweight[0] + qweight[1] + qweight[2];
-	qweight[0] = qweight[0]/temp;
-	qweight[1] = qweight[1]/temp;
-	qweight[2] = qweight[2]/temp;
-
-	/* plot one point in likelihood mapping triangle */
-	w1 = qweight[0];
-	w2 = qweight[1];
-	w3 = qweight[2];
-
-	/* check areas 1,2,3 */
-	if (treebits[qworder[0]] == 1) {
-		countarr[Maxspc][LM_AR1]++;
-		countarr[t1][LM_AR1]++;
-		countarr[t2][LM_AR1]++;
-		countarr[t3][LM_AR1]++;
-		countarr[t4][LM_AR1]++;
-	} else {
-		if (treebits[qworder[0]] == 2) {
-			countarr[Maxspc][LM_AR2]++;
-			countarr[t1][LM_AR2]++;
-			countarr[t2][LM_AR2]++;
-			countarr[t3][LM_AR2]++;
-			countarr[t4][LM_AR2]++;
-		} else {
-			countarr[Maxspc][LM_AR3]++;
-			countarr[t1][LM_AR3]++;
-			countarr[t2][LM_AR3]++;
-			countarr[t3][LM_AR3]++;
-			countarr[t4][LM_AR3]++;
-		}
-	}
-
-	/* check out regions 1,2,3,4,5,6,7 */
-
-	/* 100 distribution */
-	temp1 = 1.0 - qweight[qworder[0]];
-	sqdiff[0] = temp1*temp1 +
-		qweight[qworder[1]]*qweight[qworder[1]] +
-		qweight[qworder[2]]*qweight[qworder[2]];
-	discreteweight[0] = treebits[qworder[0]];
-
-	/* 110 distribution */
-	temp1 = 0.5 - qweight[qworder[0]];
-	temp2 = 0.5 - qweight[qworder[1]];
-	sqdiff[1] = temp1*temp1 + temp2*temp2 +
-		qweight[qworder[2]]*qweight[qworder[2]];
-	discreteweight[1] = treebits[qworder[0]] + treebits[qworder[1]];
-
-	/* 111 distribution */
-	temp1 = onethird - qweight[qworder[0]];
-	temp2 = onethird - qweight[qworder[1]];
-	temp3 = onethird - qweight[qworder[2]];
-	sqdiff[2] = temp1 * temp1 + temp2 * temp2 + temp3 * temp3;
-	discreteweight[2] = (unsigned char) 7;
-
-	/* sort in descending order */
-	sort3doubles(sqdiff, sqorder);
-			
-	qpbranching = (unsigned char) discreteweight[sqorder[2]];
-							
-/*
-                   (a,b)-(c,d)   => numclust == 4
-                   (a,b)-(c,c)   => numclust == 3
-                   (a,a)-(b,b)   => numclust == 2
-
-                     1l/\1r
-                      /  \
-                     /  1 \
-                 6u / \  / \ 4u
-                   /   \/   \
-               6d /    /\    \ 4d
-                 / 6  /  \  4 \
-                /\   /  7 \   /\
-             3u/  \ /______\ /  \2u
-              / 3  |    5   |  2 \
-             /_____|________|_____\
-	        3d   5l  5r   2d
-    (a,d)-(b,c)                  (a,c)-(b,d)   => numclust == 4
-    (a,c)-(b,c)                  (a,c)-(b,c)   => numclust == 3
-    (a,b)-(a,b)                  (a,b)-(a,b)   => numclust == 2
-
-*/
-
-	if (qpbranching == 1) {
-		countarr[Maxspc][LM_REG1]++;
-		countarr[t1][LM_REG1]++;
-		countarr[t2][LM_REG1]++;
-		countarr[t3][LM_REG1]++;
-		countarr[t4][LM_REG1]++;
-	}
-	if (qpbranching == 2) {
-		countarr[Maxspc][LM_REG2]++;
-		countarr[t1][LM_REG2]++;
-		countarr[t2][LM_REG2]++;
-		countarr[t3][LM_REG2]++;
-		countarr[t4][LM_REG2]++;
-	}
-	if (qpbranching == 4) {
-		countarr[Maxspc][LM_REG3]++;
-		countarr[t1][LM_REG3]++;
-		countarr[t2][LM_REG3]++;
-		countarr[t3][LM_REG3]++;
-		countarr[t4][LM_REG3]++;
-	}
-	if (qpbranching == 3) {
-		countarr[Maxspc][LM_REG4]++;
-		countarr[t1][LM_REG4]++;
-		countarr[t2][LM_REG4]++;
-		countarr[t3][LM_REG4]++;
-		countarr[t4][LM_REG4]++;
-	}
-	if (qpbranching == 6) {
-		countarr[Maxspc][LM_REG5]++;
-		countarr[t1][LM_REG5]++;
-		countarr[t2][LM_REG5]++;
-		countarr[t3][LM_REG5]++;
-		countarr[t4][LM_REG5]++;
-	}
-	if (qpbranching == 5) {
-		countarr[Maxspc][LM_REG6]++;
-		countarr[t1][LM_REG6]++;
-		countarr[t2][LM_REG6]++;
-		countarr[t3][LM_REG6]++;
-		countarr[t4][LM_REG6]++;
-	}
-	if (qpbranching == 7) {
-		countarr[Maxspc][LM_REG7]++;
-		countarr[t1][LM_REG7]++;
-		countarr[t2][LM_REG7]++;
-		countarr[t3][LM_REG7]++;
-		countarr[t4][LM_REG7]++;
-	}
-
-#if 0
-	switch (coltype) {
-		case LMAP_AREA:
-			switch (qpbranching) {
-				case 1: /* 001 */
-					plotlmpointcolor(fpeps, fpsvg, w1, w2, 0, 0, 1);
-					break;
-				case 2: /* 010 */
-					plotlmpointcolor(fpeps, fpsvg, w1, w2, 0, 1, 0);
-					break;
-				case 4: /* 100 */
-					plotlmpointcolor(fpeps, fpsvg, w1, w2, 1, 0, 0);
-					break;
-				case 3: /* 011 */
-					plotlmpointcolor(fpeps, fpsvg, w1, w2, 0, 1, 1);
-					break;
-				case 5: /* 101 */
-					plotlmpointcolor(fpeps, fpsvg, w1, w2, 1, 0, 1);
-					break;
-				case 6: /* 110 */
-					plotlmpointcolor(fpeps, fpsvg, w1, w2, 1, 1, 0);
-					break;
-				case 7: /* 111 */
-					plotlmpoint(fpeps, fpsvg, w1, w2);
-					break;
-			}
-			break;
-		case LMAP_MINMAXLEN:
-			nummin = nummax = 0;
-			if (bl1 <= minlen) nummin++;
-			if (bl2 <= minlen) nummin++;
-			if (bl3 <= minlen) nummin++;
-			if (nummin == 2) {
-				plotlmpointcolor(fpeps, fpsvg, w1, w2, 1, 0, 0);
-			} else { 
-				if (nummin == 1) {
-					plotlmpointcolor(fpeps, fpsvg, w1, w2, 0, 0, 1);
-				} else {
-					plotlmpoint(fpeps, fpsvg, w1, w2);
-				}
-			}
-			break;
-		case LMAP_NORMAL:
-		default:
-#endif
-			plotlmpoint(fpeps, fpsvg, w1, w2);
-#if 0
-			break;
-	}
-#endif
-} /* makelmpoint */
-#endif
-
 /****************************************/
 /*  end of Likelihood mapping routines  */
 /****************************************/
@@ -872,7 +684,7 @@ void PhyloTree::computeQuartetLikelihoods(vector<QuartetInfo> &lmap_quartet_info
     int sizeA, sizeB, sizeC, sizeD, numGroups;
     int size3, size2, size1, size0;
 
-LMGroups.numGroups = 0;
+	// LMGroups.numGroups = 0;
     if(LMGroups.numGroups == 0) { /* no grouping */
 	LMGroups.numGroups = 1;
 	LMGroups.GroupA.resize(leafNum);
@@ -903,8 +715,8 @@ LMGroups.numGroups = 0;
 		outError("2-cluster Likelihood Mapping requires clusters A and B to have >=2 taxa with unique sequences!"); 
 	   break;
 	case 3: 
-	   if((sizeA < 2)||(sizeB < 1)||(sizeC < 1)) 
-		outError("3-cluster Likelihood Mapping requires cluster A to have >=2 and clusters B and C >=1 taxa with unique sequences!"); 
+	   if((sizeA < 1)||(sizeB < 1)||(sizeC < 2)) 
+		outError("3-cluster Likelihood Mapping requires clusters B and C to have >=1 and cluster C >=2 taxa with unique sequences!"); 
 	   break;
 	case 4: 
 	   if((sizeA < 1)||(sizeB < 1)||(sizeA < 1)||(sizeD < 1)) 
@@ -929,7 +741,7 @@ LMGroups.numGroups = 0;
 	case 2: 
 	   LMGroups.uniqueQuarts = (sizeA * (sizeA - 1)) / 2 * (sizeB * (sizeB - 1)) / 2; break;
 	case 3: 
-	   LMGroups.uniqueQuarts = (sizeA * (sizeA - 1)) / 2 * sizeB * sizeC; break;
+	   LMGroups.uniqueQuarts = sizeA * sizeB * (sizeC * (sizeC - 1)) / 2; break;
 	case 4: 
 	   LMGroups.uniqueQuarts = sizeA * sizeB * sizeC * sizeD; break;
 	default: 
@@ -964,7 +776,7 @@ LMGroups.numGroups = 0;
 	    switch(numGroups){
 		case 1: lmap_quartet_info[qid].seqID[1] = LMGroups.GroupA[random_int(sizeA, rstream)]; break; // a1,A2|a3,a4
 		case 2: lmap_quartet_info[qid].seqID[1] = LMGroups.GroupA[random_int(sizeA, rstream)]; break; // a1,A2|b1,b2
-		case 3: lmap_quartet_info[qid].seqID[1] = LMGroups.GroupA[random_int(sizeA, rstream)]; break; // a1,A2|b, c
+		case 3: lmap_quartet_info[qid].seqID[1] = LMGroups.GroupB[random_int(sizeB, rstream)]; break; // a ,B |c1,c2
 		case 4: lmap_quartet_info[qid].seqID[1] = LMGroups.GroupB[random_int(sizeB, rstream)]; break; // a ,B |c, d
 		default: outError("Unknown Likelihood Mapping sampling mode! PLEASE report this to the developers!"); break;
 	    }
@@ -975,7 +787,7 @@ LMGroups.numGroups = 0;
 	    switch(numGroups){
 		case 1: lmap_quartet_info[qid].seqID[2] = LMGroups.GroupA[random_int(sizeA, rstream)]; break; // a1,a2|A3,a4
 		case 2: lmap_quartet_info[qid].seqID[2] = LMGroups.GroupB[random_int(sizeB, rstream)]; break; // a1,a2|B1,b2
-		case 3: lmap_quartet_info[qid].seqID[2] = LMGroups.GroupB[random_int(sizeB, rstream)]; break; // a1,a2|B, c
+		case 3: lmap_quartet_info[qid].seqID[2] = LMGroups.GroupC[random_int(sizeC, rstream)]; break; // a ,b |C1,c2
 		case 4: lmap_quartet_info[qid].seqID[2] = LMGroups.GroupC[random_int(sizeC, rstream)]; break; // a ,b |C, d
 		default: outError("Unknown Likelihood Mapping sampling mode! PLEASE report this to the developers!"); break;
 	    }
@@ -986,7 +798,7 @@ LMGroups.numGroups = 0;
 	    switch(numGroups){
 		case 1: lmap_quartet_info[qid].seqID[3] = LMGroups.GroupA[random_int(sizeA, rstream)]; break; // a1,a2|a3,A4
 		case 2: lmap_quartet_info[qid].seqID[3] = LMGroups.GroupB[random_int(sizeB, rstream)]; break; // a1,a2|b1,B2
-		case 3: lmap_quartet_info[qid].seqID[3] = LMGroups.GroupC[random_int(sizeC, rstream)]; break; // a1,a2|b, C
+		case 3: lmap_quartet_info[qid].seqID[3] = LMGroups.GroupC[random_int(sizeC, rstream)]; break; // a ,b |c1,C2
 		case 4: lmap_quartet_info[qid].seqID[3] = LMGroups.GroupD[random_int(sizeD, rstream)]; break; // a ,b |c, D
 		default: outError("Unknown Likelihood Mapping sampling mode! PLEASE report this to the developers!"); break;
 	    }
@@ -1235,8 +1047,109 @@ LMGroups.numGroups = 0;
 
 //**************************************
 
-void PhyloTree::readLikelihoodMappingGroups() {
-} // end PhyloTree::doLikelihoodMapping
+
+void PhyloTree::readLikelihoodMappingGroups(char *filename, QuartetGroups &LMGroups) {
+
+    int numsets, numtax, taxid;
+    char clustchar;
+    MSetsBlock *lmclusters;
+    lmclusters = new MSetsBlock();
+    cout << endl << "Reading likelihood mapping cluster file " << filename << "..." << endl;
+    cout << "(The leading numbers represent the order from the master alignment.)" << endl << endl;
+
+    MyReader nexus(filename);
+
+    nexus.Add(lmclusters);
+
+    MyToken token(nexus.inf);
+    nexus.Execute(token);
+
+    // lmclusters->Report(cout);
+
+    TaxaSetNameVector *allsets = lmclusters->getSets();
+    numsets = allsets->size();
+
+    if(numsets > 5) outError("Only up to 4 Likelihood Mapping clusters allowed, plus one 'ignored' cluster!");
+
+    int n = 0;
+    for (TaxaSetNameVector::iterator i = allsets->begin(); i != allsets->end(); i++) {
+	if ((*i)->name.compare("ignored")==0 || (*i)->name.compare("IGNORED")==0) {
+		LMGroups.Name[4] = (*i)->name;
+		numtax = (*i)->taxlist.size();
+		LMGroups.numGrpSeqs[4] = numtax;
+		LMGroups.GroupX.resize(numtax);
+		cout << "Cluster \"" << LMGroups.Name[4] << "\" lists " << (*i)->taxlist.size() << " sequences to be ignored:" << endl;
+		int t = 0;
+		for (vector<string>::iterator it = (*i)->taxlist.begin(); it != (*i)->taxlist.end(); it++) {
+			taxid = aln->getSeqID(*it);
+			if (taxid < 0) {
+				cout << "Warning: unknown sequence name \"" << (*it) << "\"! Will be ignored." << endl;
+			} else {
+				LMGroups.GroupX[t] = taxid;
+				// cout << "  " << (*it) << " (" << taxid << "," << LMGroups.GroupX[t] << ")" << endl;
+				cout << "  " << LMGroups.GroupX[t]+1 << ". " << (*it) << endl;
+				t++;
+			}
+		}
+		if (numtax != t) {
+			cout << "Warning: ignored cluster did contain unknown sequence names!" << endl;
+			LMGroups.numGrpSeqs[4] = t;
+		}
+	} else {
+		switch(n){
+			case 0: clustchar='A'; break;
+			case 1: clustchar='B'; break;
+			case 2: clustchar='C'; break;
+			case 3: clustchar='D'; break;
+    			default: outError("Only up to 4 Likelihood Mapping clusters allowed, plus one 'ignored' cluster!"); break;
+		}
+		LMGroups.Name[n] = (*i)->name;
+		numtax = (*i)->taxlist.size();
+		LMGroups.numGrpSeqs[n] = numtax;
+		switch(n){
+			case 0: LMGroups.GroupA.resize(numtax); break;
+			case 1: LMGroups.GroupB.resize(numtax); break;
+			case 2: LMGroups.GroupC.resize(numtax); break;
+			case 3: LMGroups.GroupD.resize(numtax); break;
+    			default: outError("Only up to 4 Likelihood Mapping clusters allowed, plus one 'ignored' cluster!"); break;
+		}
+
+		cout << "Cluster " << n+1 << " \"" << LMGroups.Name[n] << "\" lists " << (*i)->taxlist.size() << " sequences: " << endl;
+
+		int t = 0;
+		for (vector<string>::iterator it = (*i)->taxlist.begin(); it != (*i)->taxlist.end(); it++) {
+			taxid = aln->getSeqID(*it);
+			if (taxid < 0) {
+				cout << "Warning: sequence name \"" << (*it) << "\"! Will be ignored." << endl;
+			} else {
+				switch(n){
+					case 0: LMGroups.GroupA[t] = taxid;
+						cout << "  " << LMGroups.GroupA[t]+1 << ". " << (*it) << endl;
+						break;
+					case 1: LMGroups.GroupB[t] = taxid;
+						cout << "  " << LMGroups.GroupB[t]+1 << ". " << (*it) << endl;
+						break;
+					case 2: LMGroups.GroupC[t] = taxid;
+						cout << "  " << LMGroups.GroupC[t]+1 << ". " << (*it) << endl;
+						break;
+					case 3: LMGroups.GroupD[t] = taxid;
+						cout << "  " << LMGroups.GroupD[t]+1 << ". " << (*it) << endl;
+						break;
+    					default: outError("Only up to 4 Likelihood Mapping clusters allowed, plus one 'ignored' cluster!"); break;
+				}
+				t++;
+			}
+		}
+		LMGroups.numGrpSeqs[n] = t;
+		n++;
+	}
+	cout << endl;
+    }
+    LMGroups.numGroups = n;
+    
+
+} // end PhyloTree::readLikelihoodMappingGroups
+
 //**************************************
 
 void PhyloTree::doLikelihoodMapping() {
@@ -1249,6 +1162,13 @@ void PhyloTree::doLikelihoodMapping() {
     int qid;
     ofstream out;
     string filename;
+
+    if(params->lmap_cluster_file != NULL) {
+	// cout << "YYY: test reading" << params->lmap_cluster_file << endl;
+	readLikelihoodMappingGroups(params->lmap_cluster_file, LMGroups);
+    } else {
+	LMGroups.numGroups = 0; /* no clusterfile -> un-initialized */
+    }
 
     areacount[0] = 0;
     areacount[1] = 0;
@@ -1308,12 +1228,12 @@ void PhyloTree::doLikelihoodMapping() {
     string lmap_svgfilename = (string)params->out_prefix + ".lmap.svg";
     FILE *svgout;
     svgout = fopen(lmap_svgfilename.c_str(), "w");
-    initsvg(svgout);
+    initsvg(svgout, LMGroups);
 
     string lmap_epsfilename = (string)params->out_prefix + ".lmap.eps";
     FILE *epsout;
     epsout = fopen(lmap_epsfilename.c_str(), "w");
-    initeps(epsout);
+    initeps(epsout, LMGroups);
 
     for (qid = 0; qid < params->lmap_num_quartets; qid++) {
 
@@ -1548,9 +1468,51 @@ void PhyloTree::reportLikelihoodMapping(ofstream &out) {
 
 	out << "LIKELIHOOD MAPPING ANALYSIS" << endl;
 	out << "---------------------------" << endl << endl;
-	out << "Number of quartets: " << params->lmap_num_quartets << " (random choice)" << endl << endl;
+	out << "Number of quartets: " << params->lmap_num_quartets << " (randomly chosen from " 
+		<< LMGroups.uniqueQuarts << " existing unique quartets)" << endl << endl;
 	out << "Quartet trees are based on the selected model of substitution." << endl << endl;
-	out << "Sequences are not grouped in clusters." << endl;
+
+	if(LMGroups.numGroups == 1) {
+		int n=0, t;
+		out << "Sequences are not grouped in clusters. Using sequences:" << endl;
+		for (t=0; t<LMGroups.numGrpSeqs[n]; t++){
+		   out << "  " << LMGroups.GroupA[t]+1 << ". " 
+			<< PhyloTree::aln->getSeqName(LMGroups.GroupA[t]) << endl;
+		}
+		out << endl << "Ordered as in user-given cluster file, numbers according to alignment order." << endl;
+		out << "All other sequences have been ignored." << endl << endl;
+	}
+	if((LMGroups.numGroups > 1)&&(LMGroups.numGroups <= 4)) {
+		int n, t;
+		out << "Sequences are grouped into " << LMGroups.numGroups << " clusters." << endl << endl;
+		for (n=0; n<LMGroups.numGroups; n++){
+			out << "Cluster " << n+1 << " \"" << LMGroups.Name[n] << "\" lists " << LMGroups.numGrpSeqs[n] << " sequences: " << endl;
+			for (t=0; t<LMGroups.numGrpSeqs[n]; t++){
+			   switch(n){
+				case 0: 
+				   out << "  " << LMGroups.GroupA[t]+1 << ". " 
+					<< PhyloTree::aln->getSeqName(LMGroups.GroupA[t]) << endl;
+				   break;
+				case 1: 
+				   out << "  " << LMGroups.GroupB[t]+1 << ". " 
+					<< PhyloTree::aln->getSeqName(LMGroups.GroupB[t]) << endl;
+				   break;
+				case 2: 
+				   out << "  " << LMGroups.GroupC[t]+1 << ". " 
+					<< PhyloTree::aln->getSeqName(LMGroups.GroupC[t]) << endl;
+				   break;
+				case 3: 
+				   out << "  " << LMGroups.GroupD[t]+1 << ". " 
+					<< PhyloTree::aln->getSeqName(LMGroups.GroupD[t]) << endl;
+				   break;
+				default: outError("Number of Likelihood Mapping groups too high! PLEASE report this to the developers!"); break;
+	    }
+			}
+			out << endl;
+		}
+		out << "Ordered as in user-given cluster file, numbers according to alignment order." << endl;
+		out << "All other sequences have been ignored." << endl << endl;
+	}
 
         out << endl << endl;
 	out << "LIKELIHOOD MAPPING STATISTICS" << endl;
@@ -1569,12 +1531,17 @@ void PhyloTree::reportLikelihoodMapping(ofstream &out) {
 	out << "       /   a3    |    a2  \\                    / 3  |    5   |  2 \\  " << endl;
 	out << "      /__________|_________\\                  /_____|________|_____\\ " << endl;
 	out << "(a,d)-(b,c)            (a,c)-(b,d)      (a,b)-(c,d)            (a,c)-(b,d) " << endl << endl;
+        //      |<---                                   80 chars                           --->|
 	out << "Division of the likelihood mapping plots into 3 or 7 areas." << endl;
-	out << "On the left the areas show support for one of the different groupings like (a,b|c,d)." << endl;
-	out << "On the right the right quartets falling into the areas 1, 2 and 3 are informative." << endl;
-	out << "Those in the rectangles 4, 5 and 6 are partly informative and those in the center (7)" << endl;
-	out << "are not informative." << endl;
-	out << "Note, that the corners only make a difference if the sequences are clustered in groups." << endl << endl;
+	out << "On the left the areas show support for one of the different groupings" << endl;
+	out << "like (a,b|c,d)." << endl;
+	out << "On the right the right quartets falling into the areas 1, 2 and 3 are" << endl;
+	out << "informative. Those in the rectangles 4, 5 and 6 are partly informative" << endl;
+	out << "and those in the center (7) are not informative." << endl;
+	out << "Note, that the corners only make a difference if the sequences are" << endl;
+	out << "clustered in groups. Furthermore, while sequences should occur about" << endl;
+	out << "equally often in unclustered mappings, in clustered mappings their" << endl;
+	out << "occurrence rates depend on the group sizes the quartets are drawn from." << endl << endl;
 	out << "For more information about likelihood-mapping refer to" << endl;
    	out << " - Schmidt and von Haeseler (2009) The Phylogenetic Handbook, 2nd Ed." << endl;
    	out << "   (by Lemey et al., Eds.), 181-209, Cambridge Univ. Press, UK." << endl;
@@ -1593,7 +1560,9 @@ void PhyloTree::reportLikelihoodMapping(ofstream &out) {
 	out << "-----------------------------------------------------------------------------" << endl;
         for (qid = 0; qid <= leafNum; qid++) {
 	    //unsigned long sumq = lmap_seq_quartet_info[qid].countarr[0] + lmap_seq_quartet_info[qid].countarr[1] + lmap_seq_quartet_info[qid].countarr[2] + lmap_seq_quartet_info[qid].countarr[3] + lmap_seq_quartet_info[qid].countarr[4] + lmap_seq_quartet_info[qid].countarr[5] + lmap_seq_quartet_info[qid].countarr[6];
-	    unsigned long sumq = lmap_seq_quartet_info[qid].countarr[7] + lmap_seq_quartet_info[qid].countarr[8] + lmap_seq_quartet_info[qid].countarr[9];
+	    unsigned long sumq0, sumq = lmap_seq_quartet_info[qid].countarr[7] + lmap_seq_quartet_info[qid].countarr[8] + lmap_seq_quartet_info[qid].countarr[9];
+	    if (sumq>0) sumq0=sumq;
+	    else sumq0=1;
 
 	    if (qid < leafNum) {
                out.setf(ios::fixed, ios::floatfield); // set fixed floating format
@@ -1601,11 +1570,11 @@ void PhyloTree::reportLikelihoodMapping(ofstream &out) {
                out << setw(4) << qid+1 
                    << setw(9) << sumq
         	   << setw(7) << lmap_seq_quartet_info[qid].countarr[7]
-        	   << " (" << setw(6) << (double) 100.0*lmap_seq_quartet_info[qid].countarr[7]/sumq << ") "
+        	   << " (" << setw(6) << (double) 100.0*lmap_seq_quartet_info[qid].countarr[7]/sumq0 << ") "
         	   << setw(7) << lmap_seq_quartet_info[qid].countarr[8]
-        	   << " (" << setw(6) << (double) 100.0*lmap_seq_quartet_info[qid].countarr[8]/sumq << ") "
+        	   << " (" << setw(6) << (double) 100.0*lmap_seq_quartet_info[qid].countarr[8]/sumq0 << ") "
         	   << setw(7) << lmap_seq_quartet_info[qid].countarr[9]
-        	   << " (" << setw(6) << (double) 100.0*lmap_seq_quartet_info[qid].countarr[9]/sumq << ")  " 
+        	   << " (" << setw(6) << (double) 100.0*lmap_seq_quartet_info[qid].countarr[9]/sumq0 << ")  " 
         	   << PhyloTree::aln->getSeqName(qid) << endl;
 	    } else {
 	       out << "-----------------------------------------------------------------------------" << endl;
@@ -1614,11 +1583,11 @@ void PhyloTree::reportLikelihoodMapping(ofstream &out) {
                out << "    "
                    << setw(9) << sumq
         	   << setw(7) << lmap_seq_quartet_info[qid].countarr[7]
-        	   << " (" << setw(6) << (double) 100.0*lmap_seq_quartet_info[qid].countarr[7]/sumq << ") "
+        	   << " (" << setw(6) << (double) 100.0*lmap_seq_quartet_info[qid].countarr[7]/sumq0 << ") "
         	   << setw(7) << lmap_seq_quartet_info[qid].countarr[8]
-        	   << " (" << setw(6) << (double) 100.0*lmap_seq_quartet_info[qid].countarr[8]/sumq << ") "
+        	   << " (" << setw(6) << (double) 100.0*lmap_seq_quartet_info[qid].countarr[8]/sumq0 << ") "
         	   << setw(7) << lmap_seq_quartet_info[qid].countarr[9]
-        	   << " (" << setw(6) << (double) 100.0*lmap_seq_quartet_info[qid].countarr[9]/sumq << ")  " << endl;
+        	   << " (" << setw(6) << (double) 100.0*lmap_seq_quartet_info[qid].countarr[9]/sumq0 << ")  " << endl;
 	    }
         }
 
@@ -1628,7 +1597,9 @@ void PhyloTree::reportLikelihoodMapping(ofstream &out) {
 	out << "------------------------------------------------------------------------------------------------------------------------------------------------" << endl;
         for (qid = 0; qid <= leafNum; qid++) {
 	    //unsigned long sumq = lmap_seq_quartet_info[qid].countarr[0] + lmap_seq_quartet_info[qid].countarr[1] + lmap_seq_quartet_info[qid].countarr[2] + lmap_seq_quartet_info[qid].countarr[3] + lmap_seq_quartet_info[qid].countarr[4] + lmap_seq_quartet_info[qid].countarr[5] + lmap_seq_quartet_info[qid].countarr[6];
-	    unsigned long sumq = lmap_seq_quartet_info[qid].countarr[7] + lmap_seq_quartet_info[qid].countarr[8] + lmap_seq_quartet_info[qid].countarr[9];
+	    unsigned long sumq0, sumq = lmap_seq_quartet_info[qid].countarr[7] + lmap_seq_quartet_info[qid].countarr[8] + lmap_seq_quartet_info[qid].countarr[9];
+	    if (sumq>0) sumq0=sumq;
+	    else sumq0=1;
 
 	    if (qid < leafNum) {
                out.setf(ios::fixed, ios::floatfield); // set fixed floating format
@@ -1636,19 +1607,19 @@ void PhyloTree::reportLikelihoodMapping(ofstream &out) {
                out << setw(4) << qid+1 
                    << setw(9) << sumq
                    << setw(7) << lmap_seq_quartet_info[qid].countarr[0] 
-		   << " (" << setw(6) << (double) 100.0*lmap_seq_quartet_info[qid].countarr[0]/sumq << ") "
+		   << " (" << setw(6) << (double) 100.0*lmap_seq_quartet_info[qid].countarr[0]/sumq0 << ") "
         	   << setw(7) << lmap_seq_quartet_info[qid].countarr[1] 
-                   << " (" << setw(6) << (double) 100.0*lmap_seq_quartet_info[qid].countarr[1]/sumq << ") "
+                   << " (" << setw(6) << (double) 100.0*lmap_seq_quartet_info[qid].countarr[1]/sumq0 << ") "
         	   << setw(7) << lmap_seq_quartet_info[qid].countarr[2]
-                   << " (" << setw(6) << (double) 100.0*lmap_seq_quartet_info[qid].countarr[2]/sumq << ") "
+                   << " (" << setw(6) << (double) 100.0*lmap_seq_quartet_info[qid].countarr[2]/sumq0 << ") "
         	   << setw(7) << lmap_seq_quartet_info[qid].countarr[3]
-        	   << " (" << setw(6) << (double) 100.0*lmap_seq_quartet_info[qid].countarr[3]/sumq << ") "
+        	   << " (" << setw(6) << (double) 100.0*lmap_seq_quartet_info[qid].countarr[3]/sumq0 << ") "
         	   << setw(7) << lmap_seq_quartet_info[qid].countarr[4]
-        	   << " (" << setw(6) << (double) 100.0*lmap_seq_quartet_info[qid].countarr[4]/sumq << ") "
+        	   << " (" << setw(6) << (double) 100.0*lmap_seq_quartet_info[qid].countarr[4]/sumq0 << ") "
         	   << setw(7) << lmap_seq_quartet_info[qid].countarr[5]
-        	   << " (" << setw(6) << (double) 100.0*lmap_seq_quartet_info[qid].countarr[5]/sumq << ") "
+        	   << " (" << setw(6) << (double) 100.0*lmap_seq_quartet_info[qid].countarr[5]/sumq0 << ") "
         	   << setw(7) << lmap_seq_quartet_info[qid].countarr[6]
-        	   << " (" << setw(6) << (double) 100.0*lmap_seq_quartet_info[qid].countarr[6]/sumq << ")  "
+        	   << " (" << setw(6) << (double) 100.0*lmap_seq_quartet_info[qid].countarr[6]/sumq0 << ")  "
         	   << PhyloTree::aln->getSeqName(qid) << endl;
 	    } else {
 	       out << "------------------------------------------------------------------------------------------------------------------------------------------------" << endl;
@@ -1657,19 +1628,19 @@ void PhyloTree::reportLikelihoodMapping(ofstream &out) {
                out << "    "
                    << setw(9) << sumq
                    << setw(7) << lmap_seq_quartet_info[qid].countarr[0] 
-		   << " (" << setw(6) << (double) 100.0*lmap_seq_quartet_info[qid].countarr[0]/sumq << ") "
+		   << " (" << setw(6) << (double) 100.0*lmap_seq_quartet_info[qid].countarr[0]/sumq0 << ") "
         	   << setw(7) << lmap_seq_quartet_info[qid].countarr[1] 
-                   << " (" << setw(6) << (double) 100.0*lmap_seq_quartet_info[qid].countarr[1]/sumq << ") "
+                   << " (" << setw(6) << (double) 100.0*lmap_seq_quartet_info[qid].countarr[1]/sumq0 << ") "
         	   << setw(7) << lmap_seq_quartet_info[qid].countarr[2]
-                   << " (" << setw(6) << (double) 100.0*lmap_seq_quartet_info[qid].countarr[2]/sumq << ") "
+                   << " (" << setw(6) << (double) 100.0*lmap_seq_quartet_info[qid].countarr[2]/sumq0 << ") "
         	   << setw(7) << lmap_seq_quartet_info[qid].countarr[3]
-        	   << " (" << setw(6) << (double) 100.0*lmap_seq_quartet_info[qid].countarr[3]/sumq << ") "
+        	   << " (" << setw(6) << (double) 100.0*lmap_seq_quartet_info[qid].countarr[3]/sumq0 << ") "
         	   << setw(7) << lmap_seq_quartet_info[qid].countarr[4]
-        	   << " (" << setw(6) << (double) 100.0*lmap_seq_quartet_info[qid].countarr[4]/sumq << ") "
+        	   << " (" << setw(6) << (double) 100.0*lmap_seq_quartet_info[qid].countarr[4]/sumq0 << ") "
         	   << setw(7) << lmap_seq_quartet_info[qid].countarr[5]
-        	   << " (" << setw(6) << (double) 100.0*lmap_seq_quartet_info[qid].countarr[5]/sumq << ") "
+        	   << " (" << setw(6) << (double) 100.0*lmap_seq_quartet_info[qid].countarr[5]/sumq0 << ") "
         	   << setw(7) << lmap_seq_quartet_info[qid].countarr[6]
-        	   << " (" << setw(6) << (double) 100.0*lmap_seq_quartet_info[qid].countarr[6]/sumq << ")  " 
+        	   << " (" << setw(6) << (double) 100.0*lmap_seq_quartet_info[qid].countarr[6]/sumq0 << ")  " 
 	           << endl << endl;
 	    }
         }
@@ -1682,7 +1653,9 @@ void PhyloTree::reportLikelihoodMapping(ofstream &out) {
 	    unsigned long resolved = lmap_seq_quartet_info[qid].countarr[LM_REG1] + lmap_seq_quartet_info[qid].countarr[LM_REG2] + lmap_seq_quartet_info[qid].countarr[LM_REG3];
 	    unsigned long partly   = lmap_seq_quartet_info[qid].countarr[LM_REG4] + lmap_seq_quartet_info[qid].countarr[LM_REG5] + lmap_seq_quartet_info[qid].countarr[LM_REG6];
 	    unsigned long unres    = lmap_seq_quartet_info[qid].countarr[LM_REG7];
-	    unsigned long sumq = lmap_seq_quartet_info[qid].countarr[7] + lmap_seq_quartet_info[qid].countarr[8] + lmap_seq_quartet_info[qid].countarr[9];
+	    unsigned long sumq0, sumq = lmap_seq_quartet_info[qid].countarr[7] + lmap_seq_quartet_info[qid].countarr[8] + lmap_seq_quartet_info[qid].countarr[9];
+	    if (sumq>0) sumq0=sumq;
+	    else sumq0=1;
 
 	    if (qid < leafNum) {
                out.setf(ios::fixed, ios::floatfield); // set fixed floating format
@@ -1690,11 +1663,11 @@ void PhyloTree::reportLikelihoodMapping(ofstream &out) {
                out << setw(4) << qid+1 
                    << setw(9) << sumq
                    << setw(7) << resolved
-		   << " (" << setw(6) << (double) 100.0*resolved/sumq << ") "
+		   << " (" << setw(6) << (double) 100.0*resolved/sumq0 << ") "
         	   << setw(7) << partly
-                   << " (" << setw(6) << (double) 100.0*partly/sumq << ") "
+                   << " (" << setw(6) << (double) 100.0*partly/sumq0 << ") "
         	   << setw(7) << unres
-                   << " (" << setw(6) << (double) 100.0*unres/sumq << ")  "
+                   << " (" << setw(6) << (double) 100.0*unres/sumq0 << ")  "
         	   << PhyloTree::aln->getSeqName(qid) << endl;
 	    } else {
 	       out << "-----------------------------------------------------------------------------" << endl;
@@ -1703,11 +1676,11 @@ void PhyloTree::reportLikelihoodMapping(ofstream &out) {
                out << "    "
                    << setw(9) << sumq
                    << setw(7) << resolved
-		   << " (" << setw(6) << (double) 100.0*resolved/sumq << ") "
+		   << " (" << setw(6) << (double) 100.0*resolved/sumq0 << ") "
         	   << setw(7) << partly
-                   << " (" << setw(6) << (double) 100.0*partly/sumq << ") "
+                   << " (" << setw(6) << (double) 100.0*partly/sumq0 << ") "
         	   << setw(7) << unres
-                   << " (" << setw(6) << (double) 100.0*unres/sumq << ")  " << endl;
+                   << " (" << setw(6) << (double) 100.0*unres/sumq0 << ")  " << endl;
 	    }
         }
 
