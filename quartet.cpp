@@ -671,8 +671,8 @@ void finisheps(FILE *ofp, vector<SeqQuartetInfo> lmap_seq_quartet_info, int leaf
 
 void PhyloTree::computeQuartetLikelihoods(vector<QuartetInfo> &lmap_quartet_info, QuartetGroups &LMGroups) {
 
-    if (leafNum <= 4) 
-        outError("Tree must have 5 or more taxa with unique sequences!");
+    if (leafNum < 4) 
+        outError("Tree must have 4 or more taxa with unique sequences!");
         
     lmap_quartet_info.resize(params->lmap_num_quartets);
     
@@ -707,8 +707,8 @@ void PhyloTree::computeQuartetLikelihoods(vector<QuartetInfo> &lmap_quartet_info
 
     switch(LMGroups.numGroups){
 	case 1: 
-	   if(sizeA <= 4) 
-		outError("Likelihood Mapping requires 5 or more taxa with unique sequences!"); 
+	   if(sizeA < 4) 
+		outError("Likelihood Mapping requires 4 or more taxa with unique sequences!"); 
 	   break;
 	case 2: 
 	   if((sizeA < 2)||(sizeB < 2)) 
@@ -729,10 +729,10 @@ void PhyloTree::computeQuartetLikelihoods(vector<QuartetInfo> &lmap_quartet_info
     
     switch(LMGroups.numGroups){
 	case 1: 
-	   size3 = sizeA-3;
-	   size2 = sizeA-2;
-	   size1 = sizeA-1;
-	   size0 = sizeA;
+	   size3 = sizeA-4;
+	   size2 = sizeA-3;
+	   size1 = sizeA-2;
+	   size0 = sizeA-1;
 	   LMGroups.uniqueQuarts = 1     + size3 +
 	                           size2 * (size2-1) / 2 +
 	                           size1 * (size1-1) * (size1-2) / 6 +
@@ -748,6 +748,7 @@ void PhyloTree::computeQuartetLikelihoods(vector<QuartetInfo> &lmap_quartet_info
 	   outError("Unknown Likelihood Mapping mode! PLEASE report this to the developers!"); 
 	   break;
     }
+    // fprintf(stderr,"XXX - #quarts: %d; #groups: %d, A: %d, B:%d, C:%d, D:%d\n", LMGroups.uniqueQuarts, LMGroups.numGroups, sizeA, sizeB, sizeC, sizeD);
     
 
 #ifdef _OPENMP
@@ -1506,7 +1507,7 @@ void PhyloTree::reportLikelihoodMapping(ofstream &out) {
 					<< PhyloTree::aln->getSeqName(LMGroups.GroupD[t]) << endl;
 				   break;
 				default: outError("Number of Likelihood Mapping groups too high! PLEASE report this to the developers!"); break;
-	    }
+	    		   }
 			}
 			out << endl;
 		}
@@ -1518,7 +1519,17 @@ void PhyloTree::reportLikelihoodMapping(ofstream &out) {
 	out << "LIKELIHOOD MAPPING STATISTICS" << endl;
 	out << "-----------------------------" << endl << endl;
 
-	out << "           (a,b)-(c,d)                              (a,b)-(c,d)      " << endl;
+	switch(LMGroups.numGroups){
+	   case 1: 
+	      out << "           (a,b)-(c,d)                              (a,b)-(c,d)      " << endl; break;
+	   case 2: 
+	      out << "           (a,a)-(b,b)                              (a,a)-(b,b)      " << endl; break;
+	   case 3: 
+	      out << "           (a,b)-(c,c)                              (a,b)-(c,c)      " << endl; break;
+	   case 4: 
+	      out << "           (a,b)-(c,d)                              (a,b)-(c,d)      " << endl; break;
+	   default: outError("Number of Likelihood Mapping groups too high! PLEASE report this to the developers!"); break;
+	}
 	out << "                /\\                                      /\\           " << endl;
 	out << "               /  \\                                    /  \\          " << endl;
 	out << "              /    \\                                  /  1 \\         " << endl;
@@ -1530,18 +1541,59 @@ void PhyloTree::reportLikelihoodMapping(ofstream &out) {
 	out << "        /        |       \\                      /  \\ /______\\ /  \\   " << endl;
 	out << "       /   a3    |    a2  \\                    / 3  |    5   |  2 \\  " << endl;
 	out << "      /__________|_________\\                  /_____|________|_____\\ " << endl;
-	out << "(a,d)-(b,c)            (a,c)-(b,d)      (a,b)-(c,d)            (a,c)-(b,d) " << endl << endl;
+	switch(LMGroups.numGroups){
+	   case 1: 
+	      out << "(a,d)-(b,c)            (a,c)-(b,d)      (a,d)-(b,c)            (a,c)-(b,d) " 
+	          << endl << endl; break;
+	   case 2: 
+	      out << "(a,b)-(a,b)            (a,b)-(a,b)      (a,b)-(a,b)            (a,b)-(a,b) " 
+	          << endl << endl; break;
+	   case 3: 
+	      out << "(a,c)-(b,c)            (a,c)-(b,c)      (a,c)-(b,c)            (a,c)-(b,c) " 
+	          << endl << endl; break;
+	   case 4: 
+	      out << "(a,d)-(b,c)            (a,c)-(b,d)      (a,d)-(b,c)            (a,c)-(b,d) " 
+	          << endl << endl; break;
+	   default: outError("Number of Likelihood Mapping groups too high! PLEASE report this to the developers!"); break;
+	}
         //      |<---                                   80 chars                           --->|
 	out << "Division of the likelihood mapping plots into 3 or 7 areas." << endl;
 	out << "On the left the areas show support for one of the different groupings" << endl;
 	out << "like (a,b|c,d)." << endl;
+
 	out << "On the right the right quartets falling into the areas 1, 2 and 3 are" << endl;
 	out << "informative. Those in the rectangles 4, 5 and 6 are partly informative" << endl;
-	out << "and those in the center (7) are not informative." << endl;
+	out << "and those in the center (7) are not informative." << endl << endl;
+
+	switch(LMGroups.numGroups){
+	   case 1: 
+		out << "Sequences a,b,c,d are drawn from all included sequences." << endl << endl; break;
+	   case 2: 
+		out << "Sequences a(2x) and b(2x) are drawn from clusters 1 and 2, respectively, with" << endl;
+		out << "Cluster 1: " << LMGroups.Name[0] << endl;
+		out << "Cluster 2: " << LMGroups.Name[1] << endl << endl;
+		break;
+	   case 3: 
+		out << "Sequences a, b and c(2x) are drawn from clusters 1, 2 and 3, respectively, with" << endl;
+		out << "Cluster 1: " << LMGroups.Name[0] << endl;
+		out << "Cluster 2: " << LMGroups.Name[1] << endl;
+		out << "Cluster 3: " << LMGroups.Name[2] << endl << endl;
+		break;
+	   case 4: 
+		out << "Sequences a,b,c,d are drawn from clusters 1, 2, 3 and 4, respectively, with" << endl;
+		out << "Cluster 1: " << LMGroups.Name[0] << endl;
+		out << "Cluster 2: " << LMGroups.Name[1] << endl;
+		out << "Cluster 3: " << LMGroups.Name[2] << endl;
+		out << "Cluster 4: " << LMGroups.Name[3] << endl << endl;
+		break;
+	   default: outError("Number of Likelihood Mapping groups too high! PLEASE report this to the developers!"); break;
+	}
+
 	out << "Note, that the corners only make a difference if the sequences are" << endl;
 	out << "clustered in groups. Furthermore, while sequences should occur about" << endl;
 	out << "equally often in unclustered mappings, in clustered mappings their" << endl;
 	out << "occurrence rates depend on the group sizes the quartets are drawn from." << endl << endl;
+
 	out << "For more information about likelihood-mapping refer to" << endl;
    	out << " - Schmidt and von Haeseler (2009) The Phylogenetic Handbook, 2nd Ed." << endl;
    	out << "   (by Lemey et al., Eds.), 181-209, Cambridge Univ. Press, UK." << endl;
