@@ -576,7 +576,7 @@ int getModelList(Params &params, Alignment *aln, StrVector &models, bool separat
 //		for (i = 0; i < noptions; i++)
 //			test_options[i] = test_options_codon[i];
 //	} else 
-    if (seq_type == SEQ_MORPH || (aln->frac_const_sites == 0.0)) {
+    if (aln->frac_const_sites == 0.0) {
         // morphological or SNP data: activate +ASC
         if (with_new) {
             if (with_asc)
