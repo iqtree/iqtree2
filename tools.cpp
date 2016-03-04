@@ -1160,7 +1160,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.tree_gen = BALANCED;
 				continue;
 			}
-            if (strcmp(argv[cnt], "-keep_ident") == 0) {
+            if (strcmp(argv[cnt], "-keep_ident") == 0 || strcmp(argv[cnt], "-keep-ident") == 0) {
                 params.ignore_identical_seqs = false;
                 continue;
             }
@@ -3011,8 +3011,8 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -q <partition_file>  Edge-linked partition model (file in NEXUS/RAxML format)" << endl
             << " -spp <partition_file> Like -q option but allowing partition-specific rates" << endl
             << "  -sp <partition_file> Edge-unlinked partition model (like -M option of RAxML)" << endl
-            << "  -t <start_tree_file> | BIONJ | RANDOM" << endl
-            << "                       Starting tree (default: 100 parsimony trees and BIONJ)" << endl
+            << "  -t <start_tree_file> or -t BIONJ or -t RANDOM" << endl
+            << "                       Starting tree (default: 99 parsimony tree and BIONJ)" << endl
             << "  -te <user_tree_file> Like -t but fixing user tree (no tree search performed)" << endl
             << "  -o <outgroup_taxon>  Outgroup taxon name for writing .treefile" << endl
             << "  -pre <PREFIX>        Using <PREFIX> for output files (default: aln/partition)" << endl
@@ -3021,13 +3021,14 @@ void usage_iqtree(char* argv[], bool full_command) {
 #endif
             << "  -seed <number>       Random seed number, normally used for debugging purpose" << endl
             << "  -v, -vv, -vvv        Verbose mode, printing more messages to screen" << endl
-            << endl << "CHECKPOINT:" << endl
-            << "  -redo                Ignore checkpoint file (default: NO)" << endl
-            << "  -cptime <seconds>    Checkpoint time interval (default: 20)" << endl
+            << "  -keep-ident          Keep identical sequences (default: remove & finally add)" << endl
+            << endl << "CHECKPOINTING TO RESUME STOPPED RUN:" << endl
+            << "  -redo                Redo analysis even for successful runs (default: resume)" << endl
+            << "  -cptime <seconds>    Minimum checkpoint time interval (default: 20)" << endl
             << endl << "LIKELIHOOD MAPPING ANALYSIS:" << endl
             << "  -lmap <#quartets>    Number of quartets for likelihood mapping analysis" << endl
-            << "  -lmclust <clustfile> File containing clusters for likelihood mapping" << endl
-            << "  -wql                 Print quartet log-likelihoods to .quartetlh" << endl
+            << "  -lmclust <clustfile> NEXUS file containing clusters for likelihood mapping" << endl
+            << "  -wql                 Print quartet log-likelihoods to .quartetlh file" << endl
             << endl << "NEW STOCHASTIC TREE SEARCH ALGORITHM:" << endl
 //            << "  -pll                 Use phylogenetic likelihood library (PLL) (default: off)" << endl
             << "  -numpars <number>    Number of initial parsimony trees (default: 100)" << endl
