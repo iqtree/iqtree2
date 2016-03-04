@@ -271,28 +271,28 @@ void printSiteLhCategory(const char*filename, PhyloTree *tree, SiteLoglType wsl)
 		out.open(filename);
 		out << "Note : P(D|M) is the probability of site D given the model M (i.e., the site likelihood)" << endl;
         if (wsl == WSL_RATECAT) {
-            out << "P(D|M,rr[x]) is the probability of site D given the model M and the relative rate" << endl;
-            out << "of evolution rr[x], where x is the class of rate to be considered." << endl;
-            out << "We have P(D|M) = \\sum_x P(x) x P(D|M,rr[x])." << endl << endl;
+            out << "P(D|M,rr[i]) is the probability of site D given the model M and the relative rate" << endl;
+            out << "of evolution rr[i], where i is the class of rate to be considered." << endl;
+            out << "We have P(D|M) = \\sum_i P(i) x P(D|M,rr[i])." << endl << endl;
             out << "Site   logP(D|M)       ";
             for (i = 0; i < ncat; i++)
-                out << "logP(D|M,rr[" << i+1 << "]=" << tree->getRate()->getRate(i)<< ") ";
+                out << "log{P(" << i+1 << ")xP(D|M,rr[" << i+1 << "]=" << tree->getRate()->getRate(i)<< ")} ";
         } else if (wsl == WSL_MIXTURE) {
-            out << "P(D|M[x]) is the probability of site D given the model M[x]," << endl;
-            out << "where x is the mixture class to be considered." << endl;
-            out << "We have P(D|M) = \\sum_x P(x) x P(D|M[x])." << endl << endl;
+            out << "P(D|M[i]) is the probability of site D given the model M[i]," << endl;
+            out << "where i is the mixture class to be considered." << endl;
+            out << "We have P(D|M) = \\sum_i P(i) x P(D|M[i])." << endl << endl;
             out << "Site   logP(D|M)       ";
             for (i = 0; i < ncat; i++)
-                out << "logP(D|M[" << i+1 << "]) ";
+                out << "log{P(" << i+1 << ")xP(D|M[" << i+1 << "])} ";
         } else {
             // WSL_MIXTURE_RATECAT
-            out << "P(D|M[x],rr[y]) is the probability of site D given the model M[x] and the relative rate" << endl;
-            out << "of evolution rr[y], where x and y are the mixture class and rate class, respectively." << endl;
-            out << "We have P(D|M) = \\sum_x \\sum_y P(x) x P(y) x P(D|M[x],rr[y])." << endl << endl;
+            out << "P(D|M[i],rr[j]) is the probability of site D given the model M[i] and the relative rate" << endl;
+            out << "of evolution rr[j], where i and j are the mixture class and rate class, respectively." << endl;
+            out << "We have P(D|M) = \\sum_i \\sum_j P(i) x P(j) x P(D|M[i],rr[j])." << endl << endl;
             out << "Site   logP(D|M)       ";
             for (i = 0; i < tree->getModel()->getNMixtures(); i++)
                 for (int j = 0; j < tree->getRate()->getNRate(); j++) {
-                    out << "logP(D|M[" << i+1 << "],rr[" << j+1 << "]=" << tree->getRate()->getRate(j) << ") ";
+                    out << "log{P(" << i+1 << ")xP(" << j+1 << ")xP(D|M[" << i+1 << "],rr[" << j+1 << "]=" << tree->getRate()->getRate(j) << ")} ";
                 }
         }
 		out << endl;
