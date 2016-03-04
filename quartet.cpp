@@ -1198,6 +1198,8 @@ void PhyloTree::doLikelihoodMapping() {
         lmap_seq_quartet_info[qid].countarr[9] = 0;
     }
 
+    cout << "Computing quartet likelihoods..." << endl << endl;
+
     computeQuartetLikelihoods(lmap_quartet_info, LMGroups);
 
     for (qid = 0; qid < params->lmap_num_quartets; qid++) {
