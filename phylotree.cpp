@@ -5511,5 +5511,5 @@ void PhyloTree::generateRandomTree(TreeGenType tree_type) {
 		(*it)->name = aln->getSeqName((*it)->id);
     stringstream str;
     ext_tree.printTree(str);
-    PhyloTree::readTreeString(str.str());
+    PhyloTree::readTreeStringSeqName(str.str());
 }
