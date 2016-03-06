@@ -882,6 +882,9 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.freq_const_patterns = NULL;
     params.no_rescale_gamma_invar = false;
     params.compute_seq_identity_along_tree = false;
+    params.lmap_num_quartets = 0;
+    params.lmap_cluster_file = NULL;
+    params.print_lmap_quartet_lh = false;
     params.num_mixlen = 1;
     params.link_alpha = false;
     params.ignore_checkpoint = false;
@@ -2824,6 +2827,32 @@ void parseArg(int argc, char *argv[], Params &params) {
 				continue;
 			}
             
+			if (strcmp(argv[cnt], "-lmap") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -lmap <likelihood_mapping_num_quartets>";
+				params.lmap_num_quartets = convert_int(argv[cnt]);
+				if (params.lmap_num_quartets < 1)
+					throw "Number of quartets must be >= 1";
+				continue;
+			}
+
+			if (strcmp(argv[cnt], "-lmclust") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -lmclust <likelihood_mapping_cluster_file>";
+				params.lmap_cluster_file = argv[cnt];
+				// '-keep_ident' is currently required to allow a 1-to-1 mapping of the 
+				// user-given groups (HAS) - possibly obsolete in the future versions
+				params.ignore_identical_seqs = false;
+				continue;
+			}
+
+			if (strcmp(argv[cnt], "-wql") == 0) {
+				params.print_lmap_quartet_lh = true;
+				continue;
+			}
+
 			if (strcmp(argv[cnt], "-mixlen") == 0) {
 				cnt++;
 				if (cnt >= argc)
@@ -2833,7 +2862,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 					outError("-mixlen must be >= 1");
 				continue;
 			}
-
+            
 			if (strcmp(argv[cnt], "--link-alpha") == 0) {
 				params.link_alpha = true;
 				continue;

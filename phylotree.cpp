@@ -21,6 +21,7 @@
 #include "phylosupertree.h"
 #include "phylosupertreeplen.h"
 #include "upperbounds.h"
+#include "model/modelmixture.h"
 #include "phylonodemixlen.h"
 #include "phylotreemixlen.h"
 
