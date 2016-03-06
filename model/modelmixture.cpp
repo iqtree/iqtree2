@@ -1331,8 +1331,32 @@ int ModelMixture::getNDim() {
 
 int ModelMixture::getNDimFreq() {
     int dim = 0;
-	for (iterator it = begin(); it != end(); it++)
-		dim += (*it)->getNDimFreq();
+    int num_empirical = 0;
+    int num_codon_1x4 = 0;
+    int num_codon_3x4 = 0;
+	for (iterator it = begin(); it != end(); it++) {
+        // 2016-03-06: count empirical freq only once (thanks to Stephen Crotty)
+        switch ((*it)->freq_type) {
+        case FREQ_EMPIRICAL:
+            num_empirical++;
+            if (num_empirical==1)
+                dim += (*it)->getNDimFreq();
+            break;
+        case FREQ_CODON_1x4:
+            num_codon_1x4++;
+            if (num_codon_1x4==1)
+                dim += (*it)->getNDimFreq();
+            break;
+        case FREQ_CODON_3x4:
+        case FREQ_CODON_3x4C:
+            num_codon_3x4++;
+            if (num_codon_3x4==1)
+                dim += (*it)->getNDimFreq();
+            break;
+        default:
+            dim += (*it)->getNDimFreq();
+        }
+    }
 	return dim;
 }
 
