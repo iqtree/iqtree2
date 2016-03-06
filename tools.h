@@ -406,6 +406,10 @@ enum SiteLoglType {
     WSL_NONE, WSL_SITE, WSL_RATECAT, WSL_MIXTURE, WSL_MIXTURE_RATECAT
 };
 
+enum SiteFreqType {
+    WSF_NONE, WSF_POSTERIOR_MEAN, WSF_POSTERIOR_MAX
+};
+
 /** maximum number of newton-raphson steps for NNI branch evaluation */
 extern int NNI_MAX_NR_STEP;
 
@@ -1339,7 +1343,7 @@ public:
         0: print nothing
         1: print site state frequency vectors
     */
-    int print_site_state_freq;
+    SiteFreqType print_site_state_freq;
 
     /** TRUE to print site-specific rates, default: FALSE */
     bool print_site_rate;
