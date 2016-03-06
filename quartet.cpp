@@ -1148,6 +1148,7 @@ void PhyloTree::readLikelihoodMappingGroups(char *filename, QuartetGroups &LMGro
     }
     LMGroups.numGroups = n;
     
+    delete lmclusters;
 
 } // end PhyloTree::readLikelihoodMappingGroups
 
