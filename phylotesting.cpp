@@ -1428,6 +1428,10 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
                     outError("-mtree option is not supported for partition model");
                 }
                 IQTree *iqtree = new IQTree(in_tree->aln);
+                // set checkpoint
+                iqtree->setCheckpoint(in_tree->getCheckpoint());
+                iqtree->num_precision = in_tree->num_precision;
+                
                 cout << endl << "===> Testing model " << model+1 << ": " << params.model_name << endl;
                 runTreeReconstruction(params, original_model, *iqtree, model_info);
                 info.logl = iqtree->computeLikelihood();
@@ -1436,6 +1440,16 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
                 params.model_name = original_model;
                 params.user_file = orig_user_tree;
                 tree = iqtree;
+
+                // clear all checkpointed information
+                Checkpoint *newCheckpoint = new Checkpoint;
+                tree->getCheckpoint()->getSubCheckpoint(newCheckpoint, "iqtree");
+                tree->getCheckpoint()->clear();
+                tree->getCheckpoint()->insert(newCheckpoint->begin(), newCheckpoint->end());
+                tree->getCheckpoint()->putBool("finished", false);
+                tree->getCheckpoint()->dump(true);
+                delete newCheckpoint;
+
             } else {
                 if (tree->getMemoryRequired() > RAM_requirement) {
                     tree->deleteAllPartialLh();
