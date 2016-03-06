@@ -71,6 +71,39 @@ PartitionModelPlen::~PartitionModelPlen()
 {
 	}
 
+void PartitionModelPlen::saveCheckpoint() {
+    checkpoint->startStruct("PartitionModelPlen");
+    PhyloSuperTreePlen *tree = (PhyloSuperTreePlen*)site_rate->getTree();
+    if (!tree->fixed_rates) {
+        int nrates = tree->part_info.size();
+        double *part_rates = new double[nrates];
+        for (int i = 0; i < nrates; i++)
+            part_rates[i] = tree->part_info[i].part_rate;
+        CKP_ARRAY_SAVE(nrates, part_rates);
+        delete [] part_rates;
+    }
+    checkpoint->endStruct();
+    PartitionModel::saveCheckpoint();
+}
+
+void PartitionModelPlen::restoreCheckpoint() {
+    checkpoint->startStruct("PartitionModelPlen");
+    PhyloSuperTreePlen *tree = (PhyloSuperTreePlen*)site_rate->getTree();
+    if (!tree->fixed_rates) {
+        int nrates = tree->part_info.size();
+        double *part_rates = new double[nrates];
+        if (CKP_ARRAY_RESTORE(nrates, part_rates)) {
+            for (int i = 0; i < nrates; i++)
+                tree->part_info[i].part_rate = part_rates[i];
+            tree->mapTrees();
+        }
+        delete [] part_rates;
+    }
+    checkpoint->endStruct();
+    PartitionModel::restoreCheckpoint();
+}
+
+
 double PartitionModelPlen::optimizeParameters(bool fixed_len, bool write_info, double logl_epsilon, double gradient_epsilon) {
     PhyloSuperTreePlen *tree = (PhyloSuperTreePlen*)site_rate->getTree();
     double tree_lh = 0.0, cur_lh = 0.0;
@@ -304,6 +337,16 @@ PhyloSuperTreePlen::~PhyloSuperTreePlen()
         (*it)->nni_partial_lh = NULL;
         (*it)->nni_scale_num = NULL;
 	}
+}
+
+void PhyloSuperTreePlen::saveCheckpoint() {
+    // bypass PhyloSuperTree
+    IQTree::saveCheckpoint();
+}
+
+void PhyloSuperTreePlen::restoreCheckpoint() {
+    // bypass PhyloSuperTree
+    IQTree::restoreCheckpoint();
 }
 
 

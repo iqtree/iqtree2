@@ -237,11 +237,11 @@ void MTree::printTree(const char *ofile, int brtype)
     }
 }
 
-string MTree::getTreeString() {
-	stringstream tree_stream;
-	printTree(tree_stream);
-	return tree_stream.str();
-}
+//string MTree::getTreeString() {
+//	stringstream tree_stream;
+//	printTree(tree_stream);
+//	return tree_stream.str();
+//}
 
 void MTree::printTree(ostream &out, int brtype) {
     if (root->isLeaf()) {

@@ -45,6 +45,22 @@ public:
     ~PartitionModel();
 
     /**
+        set checkpoint object
+        @param checkpoint
+    */
+    virtual void setCheckpoint(Checkpoint *checkpoint);
+
+    /**
+        save object into the checkpoint
+    */
+    virtual void saveCheckpoint();
+
+    /**
+        restore object from the checkpoint
+    */
+    virtual void restoreCheckpoint();
+
+    /**
      * @return #parameters of the model + # branches
      */
     virtual int getNParameters();
@@ -72,6 +88,8 @@ public:
 
 
 protected:
+
+	/** linked Gamma shape alpha between partitions */
 	double linked_alpha;
 
 };

@@ -156,7 +156,7 @@ public:
     void printTree(ostream & out, int brtype = WT_BR_LEN);
 
 
-    string getTreeString();
+//    string getTreeString();
 
     /**
      *  internal function called by printTree to print branch length

@@ -15,6 +15,7 @@
 #include <string>
 #include "tools.h"
 #include "optimization.h"
+#include "checkpoint.h"
 
 using namespace std;
 
@@ -23,7 +24,7 @@ Substitution model abstract class
 
 	@author BUI Quang Minh, Steffen Klaere, Arndt von Haeseler <minh.bui@univie.ac.at>
 */
-class ModelSubst: public Optimization
+class ModelSubst: public Optimization, public CheckpointFactory
 {
 	friend class ModelFactory;
 
@@ -255,6 +256,20 @@ public:
 	virtual double *getInverseEigenvectors() const {
 		return NULL;
 	}
+
+	/*****************************************************
+		Checkpointing facility
+	*****************************************************/
+
+    /** 
+        save object into the checkpoint
+    */
+    virtual void saveCheckpoint();
+
+    /** 
+        restore object from the checkpoint
+    */
+    virtual void restoreCheckpoint();
 
 	/**
 		number of states

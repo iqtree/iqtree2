@@ -1003,16 +1003,17 @@ ModelSubst* createModel(string model_str, ModelsBlock *models_block, StateFreqTy
 	{
 		model = new ModelSubst(tree->aln->num_states);
 	} else */
-	if ((model_str == "GTR" && tree->aln->seq_type == SEQ_DNA) ||
-		(model_str == "GTR2" && tree->aln->seq_type == SEQ_BINARY) ||
-		(model_str == "GTR20" && tree->aln->seq_type == SEQ_PROTEIN)) {
-		model = new ModelGTR(tree, count_rates);
-		if (freq_params != "")
-			((ModelGTR*)model)->readStateFreq(freq_params);
-		if (model_params != "")
-			((ModelGTR*)model)->readRates(model_params);
-		((ModelGTR*)model)->init(freq_type);
-	} else if (model_str == "UNREST") {
+//	if ((model_str == "GTR" && tree->aln->seq_type == SEQ_DNA) ||
+//		(model_str == "GTR2" && tree->aln->seq_type == SEQ_BINARY) ||
+//		(model_str == "GTR20" && tree->aln->seq_type == SEQ_PROTEIN)) {
+//		model = new ModelGTR(tree, count_rates);
+//		if (freq_params != "")
+//			((ModelGTR*)model)->readStateFreq(freq_params);
+//		if (model_params != "")
+//			((ModelGTR*)model)->readRates(model_params);
+//		((ModelGTR*)model)->init(freq_type);
+//	} else
+	if (model_str == "UNREST") {
 		freq_type = FREQ_EQUAL;
 		//params.optimize_by_newton = false;
 		tree->optimize_by_newton = false;
@@ -1274,6 +1275,48 @@ ModelMixture::~ModelMixture() {
 		(*rit)->inv_eigenvectors = NULL;
 		delete (*rit);
 	}
+}
+
+void ModelMixture::setCheckpoint(Checkpoint *checkpoint) {
+	CheckpointFactory::setCheckpoint(checkpoint);
+	for (iterator it = begin(); it != end(); it++)
+		(*it)->setCheckpoint(checkpoint);
+}
+
+void ModelMixture::saveCheckpoint() {
+    checkpoint->startStruct("ModelMixture");
+//    CKP_SAVE(fix_prop);
+    int nmix = getNMixtures();
+    CKP_ARRAY_SAVE(nmix, prop);
+    int part = 1;
+    for (iterator it = begin(); it != end(); it++, part++) {
+        checkpoint->startStruct("Component" + convertIntToString(part));
+        (*it)->saveCheckpoint();
+        checkpoint->endStruct();
+    }
+    checkpoint->endStruct();
+
+    ModelGTR::saveCheckpoint();
+}
+
+void ModelMixture::restoreCheckpoint() {
+    ModelGTR::restoreCheckpoint();
+
+    checkpoint->startStruct("ModelMixture");
+//    CKP_RESTORE(fix_prop);
+    int nmix = getNMixtures();
+    CKP_ARRAY_RESTORE(nmix, prop);
+    int part = 1;
+    for (iterator it = begin(); it != end(); it++, part++) {
+        checkpoint->startStruct("Component" + convertIntToString(part));
+        (*it)->restoreCheckpoint();
+        checkpoint->endStruct();
+    }
+    checkpoint->endStruct();
+
+    decomposeRateMatrix();
+    if (phylo_tree)
+        phylo_tree->clearAllPartialLH();
 }
 
 int ModelMixture::getNDim() {

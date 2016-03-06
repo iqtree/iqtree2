@@ -188,6 +188,23 @@ void ModelDNA::init(const char *model_name, string model_params, StateFreqType f
 	ModelGTR::init(freq);
 }
 
+void ModelDNA::saveCheckpoint() {
+    checkpoint->startStruct("ModelDNA");
+    CKP_ARRAY_SAVE(6, rates);
+    checkpoint->endStruct();
+    ModelGTR::saveCheckpoint();
+}
+
+void ModelDNA::restoreCheckpoint() {
+    ModelGTR::restoreCheckpoint();
+    checkpoint->startStruct("ModelDNA");
+    CKP_ARRAY_RESTORE(6, rates);
+    checkpoint->endStruct();
+
+    decomposeRateMatrix();
+    if (phylo_tree)
+        phylo_tree->clearAllPartialLH();
+}
 
 void ModelDNA::readRates(string str) throw(const char*) {
 	int nrates = *max_element(param_spec.begin(), param_spec.end());

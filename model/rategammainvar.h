@@ -39,6 +39,16 @@ public:
 	*/
     RateGammaInvar(int ncat, double shape, bool median, double p_invar_sites, bool simultaneous, PhyloTree *tree);
 
+    /**
+        save object into the checkpoint
+    */
+    virtual void saveCheckpoint();
+
+    /**
+        restore object from the checkpoint
+    */
+    virtual void restoreCheckpoint();
+
 	/**
 		get the proportion of sites under a specified category.
 		@param category category ID from 0 to #category-1

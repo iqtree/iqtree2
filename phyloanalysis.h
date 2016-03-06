@@ -34,7 +34,7 @@ class IQTree;
 	main function to carry out phylogenetic inference
 	@param params program parameters
 */
-void runPhyloAnalysis(Params &params);
+void runPhyloAnalysis(Params &params, Checkpoint *checkpoint);
 
 void runTreeReconstruction(Params &params, string &original_model,
 		IQTree &tree, vector<ModelInfo> &model_info);

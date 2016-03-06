@@ -31,6 +31,7 @@
 #include "optimization.h"
 #include "model/rateheterogeneity.h"
 #include "pll/pll.h"
+#include "checkpoint.h"
 
 #define BOOT_VAL_FLOAT
 #define BootValType float
@@ -241,12 +242,69 @@ struct LeafFreq {
     }
 };
 
+
+// **********************************************
+// BEGIN definitions for likelihood mapping (HAS)
+// **********************************************
+
+/* maximum exp difference, such that 1.0+exp(-TP_MAX_EXP_DIFF) == 1.0 */
+const double TP_MAX_EXP_DIFF = 40.0;
+
+/* Index definition for counter array needed in likelihood mapping analysis (HAS) */
+#define LM_REG1 0
+#define LM_REG2 1
+#define LM_REG3 2
+#define LM_REG4 3
+#define LM_REG5 4
+#define LM_REG6 5
+#define LM_REG7 6
+#define LM_AR1  7
+#define LM_AR2  8
+#define LM_AR3  9
+#define LM_MAX  10
+
+struct QuartetGroups{
+    int numGroups;	// number of clusters:
+			// 0:	not initialized, default -> 1
+			// 1:	no clusters - any (a,b)|(c,d)
+			// 2:	2 clusters  - (a,a')|(b,b')
+			// 3:	3 clusters  - (a,a')|(b,c)	[rare]
+			// 4:	4 clusters  - (a,b)|(c,d)
+    int numSeqs;	// number of seqs in alignment (should be #A+#B+#C+#D+#X)
+    int numQuartSeqs;	// number of seqs in analysis  (should be #A+#B+#C+#D)
+    int numGrpSeqs[5];	// number of seqs in cluster A, B, C, D, and X (exclude)
+    int uniqueQuarts;	// number of existing unique quartets for this grouping
+    string Name[5];	// seqIDs of cluster A
+    vector<int> GroupA;	// seqIDs of cluster A
+    vector<int> GroupB;	// seqIDs of cluster B
+    vector<int> GroupC;	// seqIDs of cluster C
+    vector<int> GroupD;	// seqIDs of cluster D
+    vector<int> GroupX;	// seqIDs of cluster X
+};
+
+struct QuartetInfo {
+    int seqID[4];
+    double logl[3];    // log-lh for {0,1}|{2,3}  {0,2}|{1,3}  {0,3}|{1,4}
+    double qweight[3]; // weight for {0,1}|{2,3}  {0,2}|{1,3}  {0,3}|{1,4}
+    int corner;        // for the 3 corners of the simplex triangle (0:top, 1:right, 2:left)
+    int area;          // for the 7 areas of the simplex triangle
+			// corners (0:top, 1:right, 2:left), rectangles (3:right, 4:left, 5:bottom), 6:center
+};
+
+struct SeqQuartetInfo {
+    unsigned long countarr[LM_MAX]; // the 7 areas of the simplex triangle [0-6; corners (0:top, 1:right, 2:left), rectangles (3:right, 4:left, 5:bottom), 6:center] and the 3 corners [7-9; 7:top, 8:right, 9:left]
+};
+
+// ********************************************
+// END definitions for likelihood mapping (HAS)
+// ********************************************
+
 /**
 Phylogenetic Tree class
 
         @author BUI Quang Minh, Steffen Klaere, Arndt von Haeseler <minh.bui@univie.ac.at>
  */
-class PhyloTree : public MTree, public Optimization {
+class PhyloTree : public MTree, public Optimization, public CheckpointFactory {
 
 	friend class PhyloSuperTree;
 	friend class PhyloSuperTreePlen;
@@ -278,6 +336,17 @@ public:
             destructor
      */
     virtual ~PhyloTree();
+
+
+    /** 
+        save object into the checkpoint
+    */
+    virtual void saveCheckpoint();
+
+    /** 
+        restore object from the checkpoint
+    */
+    virtual void restoreCheckpoint();
 
     /**
             read the tree from the input file in newick format
@@ -439,6 +508,9 @@ public:
 
     typedef BootValType (PhyloTree::*DotProductType)(BootValType *x, BootValType *y, int size);
     DotProductType dotProduct;
+
+    typedef double (PhyloTree::*DotProductDoubleType)(double *x, double *y, int size);
+    DotProductDoubleType dotProductDouble;
 
 #if defined(BINARY32) || defined(__NOAVX__)
     void setDotProductAVX() {}
@@ -636,12 +708,14 @@ public:
 
     //template <const int nstates>
     void computePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
-
+    
     //template <const int nstates>
     void computeMixturePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
 
     //template <const int nstates>
     void computeMixratePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
+
+    void computeSitemodelPartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
 
     template <class VectorClass, const int VCSIZE, const int nstates>
     void computePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
@@ -651,6 +725,9 @@ public:
 
     template <class VectorClass, const int VCSIZE, const int nstates>
     void computeMixturePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
+
+    template <class VectorClass, const int VCSIZE, const int nstates>
+    void computeSitemodelPartialLikelihoodEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
 
     /****************************************************************************
             computing likelihood on a branch
@@ -689,6 +766,8 @@ public:
     //template <const int nstates>
     double computeMixrateLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloNode *dad);
 
+    double computeSitemodelLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloNode *dad);
+
     template <class VectorClass, const int VCSIZE, const int nstates>
     double computeLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad);
 
@@ -697,6 +776,9 @@ public:
 
     template <class VectorClass, const int VCSIZE, const int nstates>
     double computeMixtureLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad);
+
+    template <class VectorClass, const int VCSIZE, const int nstates>
+    double computeSitemodelLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad);
 
     double computeLikelihoodBranchNaive(PhyloNeighbor *dad_branch, PhyloNode *dad);
 
@@ -723,6 +805,11 @@ public:
 
     template <class VectorClass, const int VCSIZE, const int nstates>
     double computeMixtureLikelihoodFromBufferEigenSIMD();
+
+    template <class VectorClass, const int VCSIZE, const int nstates>
+    double computeSitemodelLikelihoodFromBufferEigenSIMD();
+
+    double computeSitemodelLikelihoodFromBufferEigen();
 
     /**
             compute tree likelihood when a branch length collapses to zero
@@ -758,6 +845,13 @@ public:
      * @return tree log-likelihood
      */
     virtual double computePatternLhCat(SiteLoglType wsl);
+
+    /**
+        compute state frequency for each pattern (for Huaichun)
+        @param[out] ptn_state_freq state frequency vector per pattern, 
+            should be pre-allocated with size of num_patterns * num_states
+    */
+    void computePatternStateFreq(double *ptn_state_freq);
 
     /**
             compute pattern likelihoods only if the accumulated scaling factor is non-zero.
@@ -850,11 +944,19 @@ public:
     void rollBack(istream &best_tree_string);
 
     /**
-            Read the tree saved with Taxon Names and branch lengths.
+            refactored 2015-12-22: Taxon IDs instead of Taxon names to save space!
+            Read the tree saved with Taxon IDs and branch lengths.
             @param tree_string tree string to read from
             @param updatePLL if true, tree is read into PLL
      */
     virtual void readTreeString(const string &tree_string);
+
+    /**
+            Read the tree saved with Taxon names and branch lengths.
+            @param tree_string tree string to read from
+            @param updatePLL if true, tree is read into PLL
+     */
+    virtual void readTreeStringSeqName(const string &tree_string);
 
     /**
             Read the tree saved with Taxon Names and branch lengths.
@@ -863,7 +965,8 @@ public:
     void readTreeFile(const string &file_name);
 
     /**
-     * Return the tree string contining taxon names and branch lengths
+            refactored 2015-12-22: Taxon IDs instead of Taxon names to save space!
+     * Return the tree string contining taxon IDs and branch lengths
      * @return
      */
     virtual string getTreeString();
@@ -912,6 +1015,8 @@ public:
     //template <const int nstates>
     void computeMixrateLikelihoodDervEigen(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
 
+    void computeSitemodelLikelihoodDervEigen(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
+
     template <class VectorClass, const int VCSIZE, const int nstates>
     void computeLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
 
@@ -920,6 +1025,9 @@ public:
 
     template <class VectorClass, const int VCSIZE, const int nstates>
     void computeMixtureLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
+
+    template <class VectorClass, const int VCSIZE, const int nstates>
+    void computeSitemodelLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
 
     /**
             compute tree likelihood and derivatives on a branch. used to optimize branch length
@@ -1054,7 +1162,7 @@ public:
 
     /**
             inherited from Optimization class, to return to likelihood of the tree
-            when the current branch length is set to value
+            when the current branceh length is set to value
             @param value current branch length
             @return negative of likelihood (for minimization)
      */
@@ -1380,6 +1488,40 @@ public:
     int testAllBranches(int threshold, double best_score, double *pattern_lh, 
             int reps, int lbp_reps, bool aLRT_test, bool aBayes_test,
             PhyloNode *node = NULL, PhyloNode *dad = NULL);
+
+    /****************************************************************************
+            Quartet functions
+     ****************************************************************************/
+
+    QuartetGroups LMGroups;
+    /**
+     * for doLikelihoodMapping reportLikelihoodMapping: likelihood mapping information by region
+     */
+    vector<QuartetInfo> lmap_quartet_info;
+    int areacount[8];
+    int cornercount[4];
+    // int areacount[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+    // int cornercount[4] = {0, 0, 0, 0};
+
+    /**
+     * for doLikelihoodMapping, reportLikelihoodMapping: likelihood mapping information by sequence
+     */
+    vector<SeqQuartetInfo> lmap_seq_quartet_info;
+
+    /** generate a bunch of quartets and compute likelihood for 3 quartet trees for each replicate
+        @param lmap_num_quartets number of quartets
+        @param lmap_quartet_info (OUT) vector of quartet information
+    */
+    void computeQuartetLikelihoods(vector<QuartetInfo> &lmap_quartet_info, QuartetGroups &LMGroups);
+
+    /** main function that performs likelihood mapping analysis (Strimmer & von Haeseler 1997) */
+    void doLikelihoodMapping();
+
+    /** output results of likelihood mapping analysis */
+    void reportLikelihoodMapping(ofstream &out);
+
+    /** read clusters for likelihood mapping analysis */
+    void readLikelihoodMappingGroups(char *filename, QuartetGroups &LMGroups);
 
     /****************************************************************************
             Collapse stable (highly supported) clades by one representative

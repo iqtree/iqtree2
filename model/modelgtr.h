@@ -70,6 +70,16 @@ public:
 	*/
     virtual ~ModelGTR();
 
+    /** 
+        save object into the checkpoint
+    */
+    virtual void saveCheckpoint();
+
+    /** 
+        restore object from the checkpoint
+    */
+    virtual void restoreCheckpoint();
+
 	/**
 	 * @return model name
 	 */

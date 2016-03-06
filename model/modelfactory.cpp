@@ -76,7 +76,7 @@ ModelsBlock *readModelsDefinition(Params &params) {
 	return models_block;
 }
 
-ModelFactory::ModelFactory() { 
+ModelFactory::ModelFactory() : CheckpointFactory() { 
 	model = NULL; 
 	site_rate = NULL;
 	store_trans_matrix = false;
@@ -97,7 +97,7 @@ size_t findCloseBracket(string &str, size_t start_pos) {
 	return string::npos;
 }
 
-ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_block) {
+ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_block) : CheckpointFactory() {
 	store_trans_matrix = params.store_trans_matrix;
 	is_storing = false;
 	joint_optimize = params.optimize_model_rate_joint;
@@ -303,13 +303,16 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 			outError("JC is not suitable for site-specific model");
 		model = new ModelSet(model_str.c_str(), tree);
 		ModelSet *models = (ModelSet*)model; // assign pointer for convenience
-		models->init(params.freq_type);
+		models->init((params.freq_type != FREQ_UNKNOWN) ? params.freq_type : FREQ_EMPIRICAL);
 		IntVector site_model;
 		vector<double*> freq_vec;
-		readSiteFreq(tree->aln, params.site_freq_file, site_model, freq_vec);
-		tree->aln->regroupSitePattern(freq_vec.size(), site_model);
-		//tree->aln->ungroupSitePattern();
-		tree->setAlignment(tree->aln);
+		bool aln_changed = readSiteFreq(tree->aln, params.site_freq_file, site_model, freq_vec);
+        if (aln_changed) {
+            cout << "Regrouping alignment sites..." << endl;
+            tree->aln->regroupSitePattern(freq_vec.size(), site_model);
+            //tree->aln->ungroupSitePattern();
+            tree->setAlignment(tree->aln);
+        }
 		int i;
 		models->pattern_model_map.resize(tree->aln->getNPattern(), -1);
 		for (i = 0; i < tree->aln->getNSite(); i++) {
@@ -321,7 +324,7 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 		for (i = 0; i < freq_vec.size(); i++) {
 			ModelGTR *modeli;
 			if (i == 0) {
-				modeli = (ModelGTR*)createModel(model_str, models_block, params.freq_type, "", tree, true);
+				modeli = (ModelGTR*)createModel(model_str, models_block, (params.freq_type != FREQ_UNKNOWN) ? params.freq_type : FREQ_EMPIRICAL, "", tree, true);
 				modeli->getStateFrequency(state_freq);
 				modeli->getRateMatrix(rates);
 			} else {
@@ -340,8 +343,12 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 		cout << "Alignment is divided into " << models->size() << " partitions with " << tree->aln->getNPattern() << " patterns" << endl;
 		for (vector<double*>::reverse_iterator it = freq_vec.rbegin(); it != freq_vec.rend(); it++)
 			if (*it) delete [] (*it);
+            
+        // delete information of the old alignment
+        tree->aln->ordered_pattern.clear();
+        tree->deleteAllPartialLh();
 	}
-
+    
 //	if (model->isMixture())
 //		cout << "Mixture model with " << model->getNMixtures() << " components!" << endl;
 
@@ -556,14 +563,50 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 
 }
 
+void ModelFactory::setCheckpoint(Checkpoint *checkpoint) {
+	CheckpointFactory::setCheckpoint(checkpoint);
+	model->setCheckpoint(checkpoint);
+	site_rate->setCheckpoint(checkpoint);
+}
+
+void ModelFactory::saveCheckpoint() {
+    model->saveCheckpoint();
+    site_rate->saveCheckpoint();
+    checkpoint->startStruct("ModelFactory");
+//    CKP_SAVE(fused_mix_rate);
+//    CKP_SAVE(unobserved_ptns);
+//    CKP_SAVE(joint_optimize);
+    checkpoint->endStruct();
+    CheckpointFactory::saveCheckpoint();
+}
+
+void ModelFactory::restoreCheckpoint() {
+    model->restoreCheckpoint();
+    site_rate->restoreCheckpoint();
+    checkpoint->startStruct("ModelFactory");
+//    CKP_RESTORE(fused_mix_rate);
+//    CKP_RESTORE(unobserved_ptns);
+//    CKP_RESTORE(joint_optimize);
+    checkpoint->endStruct();
+}
+
 int ModelFactory::getNParameters() {
 	int df = model->getNDim() + model->getNDimFreq() + site_rate->getNDim() + site_rate->phylo_tree->branchNum;
 	return df;
 }
-void ModelFactory::readSiteFreq(Alignment *aln, char* site_freq_file, IntVector &site_model, vector<double*> &freq_vec)
+bool ModelFactory::readSiteFreq(Alignment *aln, char* site_freq_file, IntVector &site_model, vector<double*> &freq_vec)
 {
 	cout << "Reading site-specific state frequency file " << site_freq_file << " ..." << endl;
 	site_model.resize(aln->getNSite(), -1);
+    int i;
+    IntVector pattern_to_site; // vector from pattern to the first site
+    pattern_to_site.resize(aln->getNPattern(), -1);
+    for (i = 0; i < aln->getNSite(); i++)
+        if (pattern_to_site[aln->getPatternID(i)] == -1)
+            pattern_to_site[aln->getPatternID(i)] = i;
+            
+    bool aln_changed = false;
+    
 	try {
 		ifstream in;
 		in.exceptions(ios::failbit | ios::badbit);
@@ -582,24 +625,53 @@ void ModelFactory::readSiteFreq(Alignment *aln, char* site_freq_file, IntVector 
 			if (site_id.size() == 0) throw "No site ID specified";
 			for (IntVector::iterator it = site_id.begin(); it != site_id.end(); it++) {
 				if (site_model[*it] != -1) throw "Duplicated site ID";
-				site_model[*it] = model_id;
+				site_model[*it] = freq_vec.size();
 			}
 			double *site_freq_entry = new double[aln->num_states];
 			double sum = 0;
-			for (int i = 0; i < aln->num_states; i++) {
+			for (i = 0; i < aln->num_states; i++) {
 				in >> freq;
 				if (freq <= 0.0 || freq >= 1.0) throw "Invalid frequency entry";
 				site_freq_entry[i] = freq;
 				sum += freq;
 			}
-			if (fabs(sum-1.0) > 1e-4) throw "Frequencies do not sum up to 1";
+			if (fabs(sum-1.0) > 1e-4) {
+                if (fabs(sum-1.0) > 1e-3)
+                    outWarning("Frequencies of site " + site_spec + " do not sum up to 1 and will be normalized");
+                sum = 1.0/sum;
+                for (i = 0; i < aln->num_states; i++) 
+                    site_freq_entry[i] *= sum;
+            }
 			aln->convfreq(site_freq_entry); // regularize frequencies (eg if some freq = 0)
-			freq_vec.push_back(site_freq_entry);
+            
+            // 2016-02-01: now check for equality of sites with same site-pattern and same freq
+            int prev_site = pattern_to_site[aln->getPatternID(site_id[0])];
+            if (site_id.size() == 1 && prev_site < site_id[0] && site_model[prev_site] != -1) {
+                // compare freq with prev_site
+                bool matched_freq = true;
+                double *prev_freq = freq_vec[site_model[prev_site]];
+                for (i = 0; i < aln->num_states; i++) {
+                    if (site_freq_entry[i] != prev_freq[i]) {
+                        matched_freq = false;
+                        break;
+                    }
+                }
+                if (matched_freq) {
+                    site_model[site_id[0]] = site_model[prev_site];
+                } else
+                    aln_changed = true;
+            }
+            
+            if (site_model[site_id[0]] == freq_vec.size())
+                freq_vec.push_back(site_freq_entry);
+            else
+                delete [] site_freq_entry;
 		}
 		if (specified_sites < site_model.size()) {
+            aln_changed = true;
 			// there are some unspecified sites
 			cout << site_model.size() - specified_sites << " unspecified sites will get default frequencies" << endl;
-			for (int i = 0; i < site_model.size(); i++)
+			for (i = 0; i < site_model.size(); i++)
 				if (site_model[i] == -1) 
 					site_model[i] = freq_vec.size();
 			freq_vec.push_back(NULL);
@@ -615,6 +687,7 @@ void ModelFactory::readSiteFreq(Alignment *aln, char* site_freq_file, IntVector 
 	} catch(ios::failure) {
 		outError(ERR_READ_INPUT);
 	}
+    return aln_changed;
 }
 
 double ModelFactory::initGTRGammaIParameters(RateHeterogeneity *rate, ModelSubst *model, double initAlpha,
