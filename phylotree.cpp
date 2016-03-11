@@ -5414,12 +5414,10 @@ void PhyloTree::removeIdenticalSeqs(Params &params) {
 	else
 		new_aln = aln->removeIdenticalSeq("", params.gbo_replicates > 0, removed_seqs, twin_seqs);
 	if (removed_seqs.size() > 0) {
-		cout << "NOTE: " << removed_seqs.size() << " identical sequences will be ignored during tree search" << endl;
-		if (verbose_mode >= VB_MED) {
-			for (int i = 0; i < removed_seqs.size(); i++) {
-				cout << removed_seqs[i] << " is identical to " << twin_seqs[i] << endl;
-			}
-		}
+		cout << "NOTE: " << removed_seqs.size() << " identical sequences (see below) will be ignored for subsequent analysis" << endl;
+        for (int i = 0; i < removed_seqs.size(); i++) {
+            cout << "NOTE: " << removed_seqs[i] << " (identical to " << twin_seqs[i] << ") is ignored but added at the end" << endl;
+        }
 		delete aln;
 		aln = new_aln;
 	}
@@ -5511,5 +5509,5 @@ void PhyloTree::generateRandomTree(TreeGenType tree_type) {
 		(*it)->name = aln->getSeqName((*it)->id);
     stringstream str;
     ext_tree.printTree(str);
-    PhyloTree::readTreeString(str.str());
+    PhyloTree::readTreeStringSeqName(str.str());
 }
