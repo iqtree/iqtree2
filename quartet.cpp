@@ -810,7 +810,7 @@ void PhyloTree::computeQuartetLikelihoods(vector<QuartetInfo> &lmap_quartet_info
 
 	// *** taxa should not be sorted, because that changes the corners a dot is assigned to - removed HAS ;^)
         // obsolete: sort(lmap_quartet_info[qid].seqID, lmap_quartet_info[qid].seqID+4); // why sort them?!? HAS ;^)
-            
+
         // initialize sub-alignment and sub-tree
         Alignment *quartet_aln;
         PhyloTree *quartet_tree;
@@ -1036,7 +1036,22 @@ void PhyloTree::computeQuartetLikelihoods(vector<QuartetInfo> &lmap_quartet_info
 		lmap_quartet_info[qid].area=6; // LM_REG7 - center 
 	}
 
+	{
+		int count = (qid+1);
+		if ((count % 100) == 0) {
+			cout << '.';
+			if ((count % 1000) == 0) { // separator after 10 dots
+				cout << ' ';
+				if ((count % 5000) == 0) // new-line after 50 dots
+					cout << " : " << count << endl;
+			}
+			cout.flush();
+		}
+	}
     } /*** end draw lmap_num_quartets quartets randomly ***/
+    if ((params->lmap_num_quartets % 5000) != 0) {
+	cout << ". : " << params->lmap_num_quartets << flush << endl << endl;
+    } else cout << endl;
 
 #ifdef _OPENMP
     finish_random(rstream);
@@ -1198,7 +1213,7 @@ void PhyloTree::doLikelihoodMapping() {
         lmap_seq_quartet_info[qid].countarr[9] = 0;
     }
 
-    cout << "Computing quartet likelihoods..." << endl << endl;
+    cout << "Computing quartet likelihoods (one dot represents 100 quartets)." << endl << endl;
 
     computeQuartetLikelihoods(lmap_quartet_info, LMGroups);
 
