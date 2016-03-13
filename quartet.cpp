@@ -1189,6 +1189,10 @@ void PhyloTree::doLikelihoodMapping() {
     int qid;
     ofstream out;
     string filename;
+    
+    if (params->lmap_num_quartets < 25*aln->getNSeq()) {
+        outWarning("Number of quartets is recommended to be at least " + convertIntToString(25*aln->getNSeq()) + " (25 times number of sequences)");
+    }
 
     if(params->lmap_cluster_file != NULL) {
 	// cout << "YYY: test reading" << params->lmap_cluster_file << endl;
@@ -1280,11 +1284,12 @@ void PhyloTree::doLikelihoodMapping() {
 
     if (params->print_lmap_quartet_lh) {
         // print quartet file
+        out << "SeqIDs\tlh1\tlh2\tlh3\tweight1\tweight2\tweight3" << endl;
         for (qid = 0; qid < params->lmap_num_quartets; qid++) {
-            out << "(" << lmap_quartet_info[qid].seqID[0] << ","
-                << lmap_quartet_info[qid].seqID[1] << ","
-                << lmap_quartet_info[qid].seqID[2] << ","
-                << lmap_quartet_info[qid].seqID[3] << ")"
+            out << "(" << lmap_quartet_info[qid].seqID[0]+1 << ","
+                << lmap_quartet_info[qid].seqID[1]+1 << ","
+                << lmap_quartet_info[qid].seqID[2]+1 << ","
+                << lmap_quartet_info[qid].seqID[3]+1 << ")"
                 << "\t" << lmap_quartet_info[qid].logl[0] 
                 << "\t" << lmap_quartet_info[qid].logl[1] 
                 << "\t" << lmap_quartet_info[qid].logl[2]
@@ -1293,7 +1298,7 @@ void PhyloTree::doLikelihoodMapping() {
                 << "\t" << lmap_quartet_info[qid].qweight[2] << endl;
         }
 
-        PhyloTree::reportLikelihoodMapping(out);
+//        PhyloTree::reportLikelihoodMapping(out);
 
     /**** begin of report output ****/
     /**** moved to PhyloTree::reportLikelihoodMapping ****/
@@ -1415,6 +1420,7 @@ void PhyloTree::doLikelihoodMapping() {
     partly     = areacount[3] + areacount[4] + areacount[5];
     unresolved = areacount[6];
 	
+#if 0
     out << endl << "LIKELIHOOD MAPPING SUMMARY" << endl << endl;
     out << "Number of quartets: " << (resolved+partly+unresolved)
         << " (randomly drawn with replacement)" << endl << endl;
@@ -1426,7 +1432,6 @@ void PhyloTree::doLikelihoodMapping() {
     out << "Number of unresolved      quartets: " << unresolved 
         << " (" << 100.0 * unresolved/(resolved+partly+unresolved) << "%)" << endl << endl;
 
-#if 0
 #endif
 
     /**** end of report output ****/
