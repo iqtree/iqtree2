@@ -813,7 +813,6 @@ void PhyloTree::computeQuartetLikelihoods(vector<QuartetInfo> &lmap_quartet_info
 
         // initialize sub-alignment and sub-tree
         Alignment *quartet_aln;
-        PhyloTree *quartet_tree;
         if (aln->isSuperAlignment()) {
             quartet_aln = new SuperAlignment;
         } else {
@@ -825,62 +824,71 @@ void PhyloTree::computeQuartetLikelihoods(vector<QuartetInfo> &lmap_quartet_info
         // only keep partitions with at least 3 sequences
         quartet_aln->extractSubAlignment(aln, seq_id, 0, 3, &kept_partitions);
                 
-        if (isSuperTree()) {
-            quartet_tree = new PhyloSuperTree((SuperAlignment*)quartet_aln, (PhyloSuperTree*)this);
+        if (kept_partitions.size() == 0) {
+            // nothing kept
+            for (int k = 0; k < 3; k++) {
+                lmap_quartet_info[qid].logl[k] = -1.0;
+            }
         } else {
-            quartet_tree = new PhyloTree(quartet_aln);
-        }
-
-        // set up parameters
-        quartet_tree->setParams(params);
-        quartet_tree->optimize_by_newton = params->optimize_by_newton;
-        quartet_tree->setLikelihoodKernel(params->SSE);
-
-        // set up partition model
-        if (isSuperTree()) {
-            PhyloSuperTree *quartet_super_tree = (PhyloSuperTree*)quartet_tree;
-            PhyloSuperTree *super_tree = (PhyloSuperTree*)this;
-            for (int i = 0; i < quartet_super_tree->size(); i++) {
-                quartet_super_tree->at(i)->setModelFactory(super_tree->at(kept_partitions[i])->getModelFactory());
-                quartet_super_tree->at(i)->setModel(super_tree->at(kept_partitions[i])->getModel());
-                quartet_super_tree->at(i)->setRate(super_tree->at(kept_partitions[i])->getRate());
+            // something partition kept, do computations
+            PhyloTree *quartet_tree;
+            if (isSuperTree()) {
+                quartet_tree = new PhyloSuperTree((SuperAlignment*)quartet_aln, (PhyloSuperTree*)this);
+            } else {
+                quartet_tree = new PhyloTree(quartet_aln);
             }
-        }
-        
-        // set model and rate
-        quartet_tree->setModelFactory(model_factory);
-        quartet_tree->setModel(getModel());
-        quartet_tree->setRate(getRate());
-        // NOTE: we don't need to set phylo_tree in model and rate because parameters are not reoptimized
-        
-        
-        
-        // loop over 3 quartets to compute likelihood
-        for (int k = 0; k < 3; k++) {
-            string quartet_tree_str;
-            quartet_tree_str = "(" + quartet_aln->getSeqName(qc[k*4]) + "," + quartet_aln->getSeqName(qc[k*4+1]) + ",(" + 
-                quartet_aln->getSeqName(qc[k*4+2]) + "," + quartet_aln->getSeqName(qc[k*4+3]) + "));";
-            quartet_tree->readTreeStringSeqName(quartet_tree_str);
-            quartet_tree->initializeAllPartialLh();
-            quartet_tree->wrapperFixNegativeBranch(true);
-            // optimize branch lengths with logl_epsilon=0.1 accuracy
-            lmap_quartet_info[qid].logl[k] = quartet_tree->optimizeAllBranches(10, 0.1);
-        }
-        // reset model & rate so that they are not deleted
-        quartet_tree->setModel(NULL);
-        quartet_tree->setModelFactory(NULL);
-        quartet_tree->setRate(NULL);
 
-        if (isSuperTree()) {
-            PhyloSuperTree *quartet_super_tree = (PhyloSuperTree*)quartet_tree;
-            for (int i = 0; i < quartet_super_tree->size(); i++) {
-                quartet_super_tree->at(i)->setModelFactory(NULL);
-                quartet_super_tree->at(i)->setModel(NULL);
-                quartet_super_tree->at(i)->setRate(NULL);
+            // set up parameters
+            quartet_tree->setParams(params);
+            quartet_tree->optimize_by_newton = params->optimize_by_newton;
+            quartet_tree->setLikelihoodKernel(params->SSE);
+
+            // set up partition model
+            if (isSuperTree()) {
+                PhyloSuperTree *quartet_super_tree = (PhyloSuperTree*)quartet_tree;
+                PhyloSuperTree *super_tree = (PhyloSuperTree*)this;
+                for (int i = 0; i < quartet_super_tree->size(); i++) {
+                    quartet_super_tree->at(i)->setModelFactory(super_tree->at(kept_partitions[i])->getModelFactory());
+                    quartet_super_tree->at(i)->setModel(super_tree->at(kept_partitions[i])->getModel());
+                    quartet_super_tree->at(i)->setRate(super_tree->at(kept_partitions[i])->getRate());
+                }
             }
-        }
+            
+            // set model and rate
+            quartet_tree->setModelFactory(model_factory);
+            quartet_tree->setModel(getModel());
+            quartet_tree->setRate(getRate());
+            // NOTE: we don't need to set phylo_tree in model and rate because parameters are not reoptimized
+            
+            
+            
+            // loop over 3 quartets to compute likelihood
+            for (int k = 0; k < 3; k++) {
+                string quartet_tree_str;
+                quartet_tree_str = "(" + quartet_aln->getSeqName(qc[k*4]) + "," + quartet_aln->getSeqName(qc[k*4+1]) + ",(" + 
+                    quartet_aln->getSeqName(qc[k*4+2]) + "," + quartet_aln->getSeqName(qc[k*4+3]) + "));";
+                quartet_tree->readTreeStringSeqName(quartet_tree_str);
+                quartet_tree->initializeAllPartialLh();
+                quartet_tree->wrapperFixNegativeBranch(true);
+                // optimize branch lengths with logl_epsilon=0.1 accuracy
+                lmap_quartet_info[qid].logl[k] = quartet_tree->optimizeAllBranches(10, 0.1);
+            }
+            // reset model & rate so that they are not deleted
+            quartet_tree->setModel(NULL);
+            quartet_tree->setModelFactory(NULL);
+            quartet_tree->setRate(NULL);
 
-        delete quartet_tree;
+            if (isSuperTree()) {
+                PhyloSuperTree *quartet_super_tree = (PhyloSuperTree*)quartet_tree;
+                for (int i = 0; i < quartet_super_tree->size(); i++) {
+                    quartet_super_tree->at(i)->setModelFactory(NULL);
+                    quartet_super_tree->at(i)->setModel(NULL);
+                    quartet_super_tree->at(i)->setRate(NULL);
+                }
+            }
+            delete quartet_tree;
+        }
+        
         delete quartet_aln;
 
         // determine likelihood order

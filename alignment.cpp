@@ -1930,6 +1930,8 @@ void Alignment::extractSubAlignment(Alignment *aln, IntVector &seq_id, int min_t
     countConstSite();
     buildSeqStates();
     assert(size() <= aln->size());
+    if (kept_partitions)
+        kept_partitions->push_back(0);
 }
 
 
