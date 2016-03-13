@@ -821,7 +821,10 @@ void PhyloTree::computeQuartetLikelihoods(vector<QuartetInfo> &lmap_quartet_info
         }
         IntVector seq_id;
         seq_id.insert(seq_id.begin(), lmap_quartet_info[qid].seqID, lmap_quartet_info[qid].seqID+4);
-        quartet_aln->extractSubAlignment(aln, seq_id, 0);
+        IntVector kept_partitions;
+        // only keep partitions with at least 3 sequences
+        quartet_aln->extractSubAlignment(aln, seq_id, 0, 3, &kept_partitions);
+                
         if (isSuperTree()) {
             quartet_tree = new PhyloSuperTree((SuperAlignment*)quartet_aln, (PhyloSuperTree*)this);
         } else {
@@ -837,10 +840,10 @@ void PhyloTree::computeQuartetLikelihoods(vector<QuartetInfo> &lmap_quartet_info
         if (isSuperTree()) {
             PhyloSuperTree *quartet_super_tree = (PhyloSuperTree*)quartet_tree;
             PhyloSuperTree *super_tree = (PhyloSuperTree*)this;
-            for (int i = 0; i < super_tree->size(); i++) {
-                quartet_super_tree->at(i)->setModelFactory(super_tree->at(i)->getModelFactory());
-                quartet_super_tree->at(i)->setModel(super_tree->at(i)->getModel());
-                quartet_super_tree->at(i)->setRate(super_tree->at(i)->getRate());
+            for (int i = 0; i < quartet_super_tree->size(); i++) {
+                quartet_super_tree->at(i)->setModelFactory(super_tree->at(kept_partitions[i])->getModelFactory());
+                quartet_super_tree->at(i)->setModel(super_tree->at(kept_partitions[i])->getModel());
+                quartet_super_tree->at(i)->setRate(super_tree->at(kept_partitions[i])->getRate());
             }
         }
         

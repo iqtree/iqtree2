@@ -1889,7 +1889,7 @@ void Alignment::printFasta(const char *file_name, bool append, const char *aln_s
 }
 
 
-void Alignment::extractSubAlignment(Alignment *aln, IntVector &seq_id, int min_true_char) {
+void Alignment::extractSubAlignment(Alignment *aln, IntVector &seq_id, int min_true_char, int min_taxa, IntVector *kept_partitions) {
     IntVector::iterator it;
     for (it = seq_id.begin(); it != seq_id.end(); it++) {
         assert(*it >= 0 && *it < aln->getNSeq());
