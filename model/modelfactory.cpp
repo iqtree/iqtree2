@@ -829,6 +829,114 @@ double ModelFactory::optimizeAllParameters(double gradient_epsilon) {
     return score;
 }
 
+double ModelFactory::optimizeParametersGammaInvar(bool fixed_len, bool write_info, double logl_epsilon, double gradient_epsilon) {
+	PhyloTree *tree = site_rate->getTree();
+
+	RateGammaInvar* site_rates = dynamic_cast<RateGammaInvar*>(tree->getRate());
+	if (site_rates == NULL) {
+//		outError("The model must be +I+G");
+        // model is not +I+G, call conventional function instead
+		return optimizeParameters(fixed_len, write_info, logl_epsilon, gradient_epsilon);
+	}
+
+	double frac_const = tree->aln->frac_const_sites;
+	if (fixed_len) {
+		tree->setCurScore(tree->computeLikelihood());
+	} else {
+		tree->optimizeAllBranches(1);
+	}
+
+
+	/* Back up branch lengths and substitutional rates */
+	DoubleVector lenvec;
+	DoubleVector bestLens;
+	tree->saveBranchLengths(lenvec);
+	int numRateEntries = tree->getModel()->getNumRateEntries();
+	double *rates = new double[numRateEntries];
+	double *bestRates = new double[numRateEntries];
+	tree->getModel()->getRateMatrix(rates);
+	int numStates = tree->aln->num_states;
+	double *state_freqs = new double[numStates];
+	tree->getModel()->getStateFrequency(state_freqs);
+
+	/* Best estimates found */
+	double *bestStateFreqs =  new double[numStates];
+	double bestLogl = tree->getCurScore();
+	double bestAlpha = 0.0;
+	double bestPInvar = 0.0;
+
+	double testInterval = (frac_const - MIN_PINVAR*2) / 10;
+	double initPInv = MIN_PINVAR;
+	double initAlpha = site_rates->getGammaShape();
+
+    if (write_info)
+        cout << "testInterval: " << testInterval << endl;
+
+	// Now perform testing different inital p_inv values
+	while (initPInv <= frac_const) {
+        if (write_info) {
+            cout << endl;
+            cout << "Testing with init. pinv = " << initPInv << " / init. alpha = "  << initAlpha << endl;
+        }
+		tree->restoreBranchLengths(lenvec);
+		((ModelGTR*) tree->getModel())->setRateMatrix(rates);
+		((ModelGTR*) tree->getModel())->setStateFrequency(state_freqs);
+		tree->getModel()->decomposeRateMatrix();
+		site_rates->setPInvar(initPInv);
+		site_rates->setGammaShape(initAlpha);
+		site_rates->computeRates();
+		tree->clearAllPartialLH();
+		optimizeParameters(fixed_len, write_info, logl_epsilon, gradient_epsilon);
+		double estAlpha = tree->getRate()->getGammaShape();
+		double estPInv = tree->getRate()->getPInvar();
+		double logl = tree->getCurScore();
+        if (write_info) {
+            cout << "Est. alpha: " << estAlpha << " / Est. pinv: " << estPInv
+            << " / Logl: " << logl << endl;
+        }
+		initPInv = initPInv + testInterval;
+
+		if (tree->getCurScore() > bestLogl) {
+			bestLogl = logl;
+			bestAlpha = estAlpha;
+			bestPInvar = estPInv;
+			bestLens.clear();
+			tree->saveBranchLengths(bestLens);
+			tree->getModel()->getRateMatrix(bestRates);
+			tree->getModel()->getStateFrequency(bestStateFreqs);
+		}
+	}
+
+	site_rates->setGammaShape(bestAlpha);
+//	site_rates->setFixGammaShape(false);
+	site_rates->setPInvar(bestPInvar);
+//	site_rates->setFixPInvar(false);
+	((ModelGTR*) tree->getModel())->setRateMatrix(bestRates);
+	((ModelGTR*) tree->getModel())->setStateFrequency(bestStateFreqs);
+	tree->restoreBranchLengths(bestLens);
+	tree->getModel()->decomposeRateMatrix();
+	site_rates->computeRates();
+	tree->clearAllPartialLH();
+	tree->setCurScore(tree->computeLikelihood());
+    if (write_info) {    
+        cout << endl;
+        cout << "Best initial alpha: " << bestAlpha << " / initial pinv: " << bestPInvar << " / ";
+        cout << "Logl: " << tree->getCurScore() << endl;
+    }
+
+	delete [] rates;
+	delete [] state_freqs;
+	delete [] bestRates;
+	delete [] bestStateFreqs;
+    
+    // updating global variable is not safe!
+//	Params::getInstance().testAlpha = false;
+    
+    // 2016-03-14: this was missing!
+    return tree->getCurScore();
+}
+
+
 double ModelFactory::optimizeParameters(bool fixed_len, bool write_info,
                                         double logl_epsilon, double gradient_epsilon) {
 	assert(model);
@@ -950,13 +1058,14 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info,
 	}
 	double elapsed_secs = getRealTime() - begin_time;
 	if (write_info)
-		cout << "Parameters optimization took " << i-1 << " rounds (" << elapsed_secs << " sec)" << endl << endl;
+		cout << "Parameters optimization took " << i-1 << " rounds (" << elapsed_secs << " sec)" << endl;
 	startStoringTransMatrix();
 
 	// For UpperBounds -----------
 	tree->mlCheck = 1;
 	// ---------------------------
 
+	tree->setCurScore(cur_lh);
 	return cur_lh;
 }
 
@@ -1104,4 +1213,5 @@ bool ModelFactory::getVariables(double *variables) {
 	changed |= site_rate->getVariables(variables + model->getNDim());
     return changed;
 }
+
 

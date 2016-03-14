@@ -1727,6 +1727,9 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 
     iqtree.initializeAllPartialLh();
 	double initEpsilon = params.min_iterations == 0 ? params.modeps : (params.modeps*10);
+	if (params.test_param)
+		initEpsilon = 0.1;
+
 	string initTree;
 
 	if (iqtree.getRate()->name.find("+I+G") != string::npos) {
@@ -1747,6 +1750,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
             cout << "Testing alpha took: " << etime -stime << " CPU seconds" << endl;
             cout << endl;
 		}
+
 	}
 
     // Optimize model parameters and branch lengths using ML for the initial tree
@@ -1942,10 +1946,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
         } else {
             cout << "Performs final model parameters optimization" << endl;
             string tree;
-            if (params.testAlpha)
-                tree = iqtree.optimizeModelParameters(true, 0.001);
-            else
-                tree = iqtree.optimizeModelParameters(true);
+            tree = iqtree.optimizeModelParameters(true);
             iqtree.candidateTrees.update(tree, iqtree.getCurScore(), true);
             iqtree.getCheckpoint()->putBool("finishedModelFinal", true);
             iqtree.saveCheckpoint();

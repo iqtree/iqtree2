@@ -613,6 +613,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.user_file = NULL;
     params.fai = false;
     params.testAlpha = false;
+    params.test_param = false;
     params.testAlphaEpsAdaptive = false;
     params.randomAlpha = false;
     params.testAlphaEps = 0.1;
@@ -2520,6 +2521,12 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.testAlpha = true;
 				continue;
 			}
+
+            if (strcmp(argv[cnt], "-test_param") == 0 || strcmp(argv[cnt], "--opt-gamma-inv") == 0) {
+                params.test_param = true;
+                continue;
+            }
+
             if (strcmp(argv[cnt], "--adaptive-eps") == 0) {
                 params.testAlphaEpsAdaptive = true;
                 continue;
@@ -3121,7 +3128,7 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "                       number of categories (default: n=4)" << endl
             << "  -a <Gamma_shape>     Gamma shape parameter for site rates (default: estimate)" << endl
             << "  -gmedian             Median approximation for +G site rates (default: mean)" << endl
-            << "  --test-alpha         More thorough estimation for +I+G model parameters" << endl
+            << "  --opt-gamma-inv      More thorough estimation for +I+G model parameters" << endl
             << "  -i <p_invar>         Proportion of invariable sites (default: estimate)" << endl
             << "  -mh                  Computing site-specific rates to .mhrate file using" << endl
             << "                       Meyer & von Haeseler (2003) method" << endl
