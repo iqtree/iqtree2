@@ -1946,10 +1946,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
         } else {
             cout << "Performs final model parameters optimization" << endl;
             string tree;
-            if (params.testAlpha)
-                tree = iqtree.optimizeModelParameters(true, 0.001);
-            else
-                tree = iqtree.optimizeModelParameters(true);
+            tree = iqtree.optimizeModelParameters(true);
             iqtree.candidateTrees.update(tree, iqtree.getCurScore(), true);
             iqtree.getCheckpoint()->putBool("finishedModelFinal", true);
             iqtree.saveCheckpoint();

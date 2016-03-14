@@ -2522,7 +2522,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				continue;
 			}
 
-            if (strcmp(argv[cnt], "-test_param") == 0) {
+            if (strcmp(argv[cnt], "-test_param") == 0 || strcmp(argv[cnt], "--opt-gamma-inv") == 0) {
                 params.test_param = true;
                 continue;
             }
