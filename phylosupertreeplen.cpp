@@ -197,6 +197,11 @@ double PartitionModelPlen::optimizeParameters(bool fixed_len, bool write_info, d
     return tree_lh;
 }
 
+double PartitionModelPlen::optimizeParametersGammaInvar(bool fixed_len, bool write_info, double logl_epsilon, double gradient_epsilon) {
+    outError("This option does not work with edge-linked partition model yet");
+    return 0.0;
+}
+
 void PartitionModelPlen::writeInfo(ostream &out) {
     PhyloSuperTreePlen *tree = (PhyloSuperTreePlen*)site_rate->getTree();
     int ntrees = tree->size();
