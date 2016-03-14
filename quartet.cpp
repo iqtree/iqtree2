@@ -1074,6 +1074,34 @@ void PhyloTree::computeQuartetLikelihoods(vector<QuartetInfo> &lmap_quartet_info
 
 //**************************************
 
+/**
+    read groups in following format "(A, B, C, D), (E, F), (G, H), (I);"
+**/
+void readGroupNewick(char *filename, MSetsBlock *sets) {
+    try {
+        ifstream in;
+        in.exceptions(ios::failbit | ios::badbit);
+        in.open(filename);
+        in.exceptions(ios::badbit);
+        char ch;
+        while (!in.eof()) {
+            in >> ch;
+            if (ch != '(')
+                throw "Cluster file does not start with '('";
+            in >> ch;
+            
+        }
+        
+        in.clear();
+        // set the failbit again
+        in.exceptions(ios::failbit | ios::badbit);
+        in.close();
+    } catch (ios::failure) {
+        outError(ERR_READ_INPUT);
+    } catch (const char* str) {
+        outError(str);
+    }
+}
 
 void PhyloTree::readLikelihoodMappingGroups(char *filename, QuartetGroups &LMGroups) {
 
