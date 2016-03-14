@@ -831,6 +831,14 @@ double ModelFactory::optimizeAllParameters(double gradient_epsilon) {
 
 double ModelFactory::optimizeParametersGammaInvar(bool fixed_len, bool write_info, double logl_epsilon, double gradient_epsilon) {
 	PhyloTree *tree = site_rate->getTree();
+
+	RateGammaInvar* site_rates = dynamic_cast<RateGammaInvar*>(tree->getRate());
+	if (site_rates == NULL) {
+//		outError("The model must be +I+G");
+        // model is not +I+G, call conventional function instead
+		return optimizeParameters(fixed_len, write_info, logl_epsilon, gradient_epsilon);
+	}
+
 	double frac_const = tree->aln->frac_const_sites;
 	if (fixed_len) {
 		tree->setCurScore(tree->computeLikelihood());
@@ -838,10 +846,6 @@ double ModelFactory::optimizeParametersGammaInvar(bool fixed_len, bool write_inf
 		tree->optimizeAllBranches(1);
 	}
 
-	RateGammaInvar* site_rates = dynamic_cast<RateGammaInvar*>(tree->getRate());
-	if (site_rates == NULL) {
-		outError("The model must be +I+G");
-	}
 
 	/* Back up branch lengths and substitutional rates */
 	DoubleVector lenvec;
@@ -865,12 +869,15 @@ double ModelFactory::optimizeParametersGammaInvar(bool fixed_len, bool write_inf
 	double initPInv = MIN_PINVAR;
 	double initAlpha = site_rates->getGammaShape();
 
-	cout << "testInterval: " << testInterval << endl;
+    if (write_info)
+        cout << "testInterval: " << testInterval << endl;
 
 	// Now perform testing different inital p_inv values
 	while (initPInv <= frac_const) {
-		cout << endl;
-		cout << "Testing with init. pinv = " << initPInv << " / init. alpha = "  << initAlpha << endl;
+        if (write_info) {
+            cout << endl;
+            cout << "Testing with init. pinv = " << initPInv << " / init. alpha = "  << initAlpha << endl;
+        }
 		tree->restoreBranchLengths(lenvec);
 		((ModelGTR*) tree->getModel())->setRateMatrix(rates);
 		((ModelGTR*) tree->getModel())->setStateFrequency(state_freqs);
@@ -883,8 +890,10 @@ double ModelFactory::optimizeParametersGammaInvar(bool fixed_len, bool write_inf
 		double estAlpha = tree->getRate()->getGammaShape();
 		double estPInv = tree->getRate()->getPInvar();
 		double logl = tree->getCurScore();
-		cout << "Est. alpha: " << estAlpha << " / Est. pinv: " << estPInv
-		<< " / Logl: " << logl << endl;
+        if (write_info) {
+            cout << "Est. alpha: " << estAlpha << " / Est. pinv: " << estPInv
+            << " / Logl: " << logl << endl;
+        }
 		initPInv = initPInv + testInterval;
 
 		if (tree->getCurScore() > bestLogl) {
@@ -899,9 +908,9 @@ double ModelFactory::optimizeParametersGammaInvar(bool fixed_len, bool write_inf
 	}
 
 	site_rates->setGammaShape(bestAlpha);
-	site_rates->setFixGammaShape(false);
+//	site_rates->setFixGammaShape(false);
 	site_rates->setPInvar(bestPInvar);
-	site_rates->setFixPInvar(false);
+//	site_rates->setFixPInvar(false);
 	((ModelGTR*) tree->getModel())->setRateMatrix(bestRates);
 	((ModelGTR*) tree->getModel())->setStateFrequency(bestStateFreqs);
 	tree->restoreBranchLengths(bestLens);
@@ -909,15 +918,22 @@ double ModelFactory::optimizeParametersGammaInvar(bool fixed_len, bool write_inf
 	site_rates->computeRates();
 	tree->clearAllPartialLH();
 	tree->setCurScore(tree->computeLikelihood());
-	cout << endl;
-	cout << "Best initial alpha: " << bestAlpha << " / initial pinv: " << bestPInvar << " / ";
-	cout << "Logl: " << tree->getCurScore() << endl;
+    if (write_info) {    
+        cout << endl;
+        cout << "Best initial alpha: " << bestAlpha << " / initial pinv: " << bestPInvar << " / ";
+        cout << "Logl: " << tree->getCurScore() << endl;
+    }
 
 	delete [] rates;
 	delete [] state_freqs;
 	delete [] bestRates;
 	delete [] bestStateFreqs;
-	Params::getInstance().testAlpha = false;
+    
+    // updating global variable is not safe!
+//	Params::getInstance().testAlpha = false;
+    
+    // 2016-03-14: this was missing!
+    return tree->getCurScore();
 }
 
 

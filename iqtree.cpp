@@ -1748,7 +1748,7 @@ string IQTree::optimizeModelParameters(bool printInfo, double logl_epsilon) {
         double modOptScore;
         if (params->test_param) { // DO RESTART ON ALPHA AND P_INVAR
             double stime = getRealTime();
-            getModelFactory()->optimizeParametersGammaInvar(params->fixed_branch_length, printInfo, logl_epsilon);
+            modOptScore = getModelFactory()->optimizeParametersGammaInvar(params->fixed_branch_length, printInfo, logl_epsilon);
             double etime = getRealTime();
             cout << "Testing param took: " << etime -stime << " CPU seconds" << endl;
             cout << endl;
