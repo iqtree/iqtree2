@@ -1155,7 +1155,6 @@ void PhyloTree::readLikelihoodMappingGroups(char *filename, QuartetGroups &LMGro
     MSetsBlock *lmclusters;
     lmclusters = new MSetsBlock();
     cout << endl << "Reading likelihood mapping cluster file " << filename << "..." << endl;
-    cout << "(The leading numbers represent the order from the master alignment.)" << endl << endl;
 
     InputType intype = detectInputFile(filename);
     
@@ -1167,9 +1166,14 @@ void PhyloTree::readLikelihoodMappingGroups(char *filename, QuartetGroups &LMGro
     } else if (intype == IN_NEWICK) {
         readGroupNewick(filename, lmclusters);
     } else
-        outError("Unknown cluster file format");
+        outError("Unknown cluster file format, please use NEXUS or RAxML-style format");
+
+    if (lmclusters->getNSets() == 0)
+        outError("No cluster found");
 
     // lmclusters->Report(cout);
+
+    cout << "(The leading numbers represent the order from the master alignment.)" << endl << endl;
 
     TaxaSetNameVector *allsets = lmclusters->getSets();
     numsets = allsets->size();
