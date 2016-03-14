@@ -810,10 +810,9 @@ void PhyloTree::computeQuartetLikelihoods(vector<QuartetInfo> &lmap_quartet_info
 
 	// *** taxa should not be sorted, because that changes the corners a dot is assigned to - removed HAS ;^)
         // obsolete: sort(lmap_quartet_info[qid].seqID, lmap_quartet_info[qid].seqID+4); // why sort them?!? HAS ;^)
-            
+
         // initialize sub-alignment and sub-tree
         Alignment *quartet_aln;
-        PhyloTree *quartet_tree;
         if (aln->isSuperAlignment()) {
             quartet_aln = new SuperAlignment;
         } else {
@@ -821,63 +820,75 @@ void PhyloTree::computeQuartetLikelihoods(vector<QuartetInfo> &lmap_quartet_info
         }
         IntVector seq_id;
         seq_id.insert(seq_id.begin(), lmap_quartet_info[qid].seqID, lmap_quartet_info[qid].seqID+4);
-        quartet_aln->extractSubAlignment(aln, seq_id, 0);
-        if (isSuperTree()) {
-            quartet_tree = new PhyloSuperTree((SuperAlignment*)quartet_aln, (PhyloSuperTree*)this);
+        IntVector kept_partitions;
+        // only keep partitions with at least 3 sequences
+        quartet_aln->extractSubAlignment(aln, seq_id, 0, 3, &kept_partitions);
+                
+        if (kept_partitions.size() == 0) {
+            // nothing kept
+            for (int k = 0; k < 3; k++) {
+                lmap_quartet_info[qid].logl[k] = -1.0;
+            }
         } else {
-            quartet_tree = new PhyloTree(quartet_aln);
-        }
-
-        // set up parameters
-        quartet_tree->setParams(params);
-        quartet_tree->optimize_by_newton = params->optimize_by_newton;
-        quartet_tree->setLikelihoodKernel(params->SSE);
-
-        // set up partition model
-        if (isSuperTree()) {
-            PhyloSuperTree *quartet_super_tree = (PhyloSuperTree*)quartet_tree;
-            PhyloSuperTree *super_tree = (PhyloSuperTree*)this;
-            for (int i = 0; i < super_tree->size(); i++) {
-                quartet_super_tree->at(i)->setModelFactory(super_tree->at(i)->getModelFactory());
-                quartet_super_tree->at(i)->setModel(super_tree->at(i)->getModel());
-                quartet_super_tree->at(i)->setRate(super_tree->at(i)->getRate());
+            // something partition kept, do computations
+            PhyloTree *quartet_tree;
+            if (isSuperTree()) {
+                quartet_tree = new PhyloSuperTree((SuperAlignment*)quartet_aln, (PhyloSuperTree*)this);
+            } else {
+                quartet_tree = new PhyloTree(quartet_aln);
             }
-        }
-        
-        // set model and rate
-        quartet_tree->setModelFactory(model_factory);
-        quartet_tree->setModel(getModel());
-        quartet_tree->setRate(getRate());
-        // NOTE: we don't need to set phylo_tree in model and rate because parameters are not reoptimized
-        
-        
-        
-        // loop over 3 quartets to compute likelihood
-        for (int k = 0; k < 3; k++) {
-            string quartet_tree_str;
-            quartet_tree_str = "(" + quartet_aln->getSeqName(qc[k*4]) + "," + quartet_aln->getSeqName(qc[k*4+1]) + ",(" + 
-                quartet_aln->getSeqName(qc[k*4+2]) + "," + quartet_aln->getSeqName(qc[k*4+3]) + "));";
-            quartet_tree->readTreeStringSeqName(quartet_tree_str);
-            quartet_tree->initializeAllPartialLh();
-            quartet_tree->wrapperFixNegativeBranch(true);
-            // optimize branch lengths with logl_epsilon=0.1 accuracy
-            lmap_quartet_info[qid].logl[k] = quartet_tree->optimizeAllBranches(10, 0.1);
-        }
-        // reset model & rate so that they are not deleted
-        quartet_tree->setModel(NULL);
-        quartet_tree->setModelFactory(NULL);
-        quartet_tree->setRate(NULL);
 
-        if (isSuperTree()) {
-            PhyloSuperTree *quartet_super_tree = (PhyloSuperTree*)quartet_tree;
-            for (int i = 0; i < quartet_super_tree->size(); i++) {
-                quartet_super_tree->at(i)->setModelFactory(NULL);
-                quartet_super_tree->at(i)->setModel(NULL);
-                quartet_super_tree->at(i)->setRate(NULL);
+            // set up parameters
+            quartet_tree->setParams(params);
+            quartet_tree->optimize_by_newton = params->optimize_by_newton;
+            quartet_tree->setLikelihoodKernel(params->SSE);
+
+            // set up partition model
+            if (isSuperTree()) {
+                PhyloSuperTree *quartet_super_tree = (PhyloSuperTree*)quartet_tree;
+                PhyloSuperTree *super_tree = (PhyloSuperTree*)this;
+                for (int i = 0; i < quartet_super_tree->size(); i++) {
+                    quartet_super_tree->at(i)->setModelFactory(super_tree->at(kept_partitions[i])->getModelFactory());
+                    quartet_super_tree->at(i)->setModel(super_tree->at(kept_partitions[i])->getModel());
+                    quartet_super_tree->at(i)->setRate(super_tree->at(kept_partitions[i])->getRate());
+                }
             }
-        }
+            
+            // set model and rate
+            quartet_tree->setModelFactory(model_factory);
+            quartet_tree->setModel(getModel());
+            quartet_tree->setRate(getRate());
+            // NOTE: we don't need to set phylo_tree in model and rate because parameters are not reoptimized
+            
+            
+            
+            // loop over 3 quartets to compute likelihood
+            for (int k = 0; k < 3; k++) {
+                string quartet_tree_str;
+                quartet_tree_str = "(" + quartet_aln->getSeqName(qc[k*4]) + "," + quartet_aln->getSeqName(qc[k*4+1]) + ",(" + 
+                    quartet_aln->getSeqName(qc[k*4+2]) + "," + quartet_aln->getSeqName(qc[k*4+3]) + "));";
+                quartet_tree->readTreeStringSeqName(quartet_tree_str);
+                quartet_tree->initializeAllPartialLh();
+                quartet_tree->wrapperFixNegativeBranch(true);
+                // optimize branch lengths with logl_epsilon=0.1 accuracy
+                lmap_quartet_info[qid].logl[k] = quartet_tree->optimizeAllBranches(10, 0.1);
+            }
+            // reset model & rate so that they are not deleted
+            quartet_tree->setModel(NULL);
+            quartet_tree->setModelFactory(NULL);
+            quartet_tree->setRate(NULL);
 
-        delete quartet_tree;
+            if (isSuperTree()) {
+                PhyloSuperTree *quartet_super_tree = (PhyloSuperTree*)quartet_tree;
+                for (int i = 0; i < quartet_super_tree->size(); i++) {
+                    quartet_super_tree->at(i)->setModelFactory(NULL);
+                    quartet_super_tree->at(i)->setModel(NULL);
+                    quartet_super_tree->at(i)->setRate(NULL);
+                }
+            }
+            delete quartet_tree;
+        }
+        
         delete quartet_aln;
 
         // determine likelihood order
@@ -1036,7 +1047,22 @@ void PhyloTree::computeQuartetLikelihoods(vector<QuartetInfo> &lmap_quartet_info
 		lmap_quartet_info[qid].area=6; // LM_REG7 - center 
 	}
 
+	{
+		int count = (qid+1);
+		if ((count % 100) == 0) {
+			cout << '.';
+			if ((count % 1000) == 0) { // separator after 10 dots
+				cout << ' ';
+				if ((count % 5000) == 0) // new-line after 50 dots
+					cout << " : " << count << endl;
+			}
+			cout.flush();
+		}
+	}
     } /*** end draw lmap_num_quartets quartets randomly ***/
+    if ((params->lmap_num_quartets % 5000) != 0) {
+	cout << ". : " << params->lmap_num_quartets << flush << endl << endl;
+    } else cout << endl;
 
 #ifdef _OPENMP
     finish_random(rstream);
@@ -1164,6 +1190,10 @@ void PhyloTree::doLikelihoodMapping() {
     int qid;
     ofstream out;
     string filename;
+    
+    if (params->lmap_num_quartets < 25*aln->getNSeq()) {
+        outWarning("Number of quartets is recommended to be at least " + convertIntToString(25*aln->getNSeq()) + " (25 times number of sequences)");
+    }
 
     if(params->lmap_cluster_file != NULL) {
 	// cout << "YYY: test reading" << params->lmap_cluster_file << endl;
@@ -1199,7 +1229,7 @@ void PhyloTree::doLikelihoodMapping() {
         lmap_seq_quartet_info[qid].countarr[9] = 0;
     }
 
-    cout << "Computing quartet likelihoods..." << endl << endl;
+    cout << "Computing quartet likelihoods (one dot represents 100 quartets)." << endl << endl;
 
     computeQuartetLikelihoods(lmap_quartet_info, LMGroups);
 
@@ -1255,11 +1285,12 @@ void PhyloTree::doLikelihoodMapping() {
 
     if (params->print_lmap_quartet_lh) {
         // print quartet file
+        out << "SeqIDs\tlh1\tlh2\tlh3\tweight1\tweight2\tweight3" << endl;
         for (qid = 0; qid < params->lmap_num_quartets; qid++) {
-            out << "(" << lmap_quartet_info[qid].seqID[0] << ","
-                << lmap_quartet_info[qid].seqID[1] << ","
-                << lmap_quartet_info[qid].seqID[2] << ","
-                << lmap_quartet_info[qid].seqID[3] << ")"
+            out << "(" << lmap_quartet_info[qid].seqID[0]+1 << ","
+                << lmap_quartet_info[qid].seqID[1]+1 << ","
+                << lmap_quartet_info[qid].seqID[2]+1 << ","
+                << lmap_quartet_info[qid].seqID[3]+1 << ")"
                 << "\t" << lmap_quartet_info[qid].logl[0] 
                 << "\t" << lmap_quartet_info[qid].logl[1] 
                 << "\t" << lmap_quartet_info[qid].logl[2]
@@ -1268,7 +1299,7 @@ void PhyloTree::doLikelihoodMapping() {
                 << "\t" << lmap_quartet_info[qid].qweight[2] << endl;
         }
 
-        PhyloTree::reportLikelihoodMapping(out);
+//        PhyloTree::reportLikelihoodMapping(out);
 
     /**** begin of report output ****/
     /**** moved to PhyloTree::reportLikelihoodMapping ****/
@@ -1390,6 +1421,7 @@ void PhyloTree::doLikelihoodMapping() {
     partly     = areacount[3] + areacount[4] + areacount[5];
     unresolved = areacount[6];
 	
+#if 0
     out << endl << "LIKELIHOOD MAPPING SUMMARY" << endl << endl;
     out << "Number of quartets: " << (resolved+partly+unresolved)
         << " (randomly drawn with replacement)" << endl << endl;
@@ -1401,7 +1433,6 @@ void PhyloTree::doLikelihoodMapping() {
     out << "Number of unresolved      quartets: " << unresolved 
         << " (" << 100.0 * unresolved/(resolved+partly+unresolved) << "%)" << endl << endl;
 
-#if 0
 #endif
 
     /**** end of report output ****/
