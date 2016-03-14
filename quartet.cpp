@@ -1077,19 +1077,62 @@ void PhyloTree::computeQuartetLikelihoods(vector<QuartetInfo> &lmap_quartet_info
 /**
     read groups in following format "(A, B, C, D), (E, F), (G, H), (I);"
 **/
-void readGroupNewick(char *filename, MSetsBlock *sets) {
+void readGroupNewick(char *filename, MSetsBlock *sets_block) {
     try {
         ifstream in;
         in.exceptions(ios::failbit | ios::badbit);
         in.open(filename);
         in.exceptions(ios::badbit);
         char ch;
+        string name;
+        TaxaSetNameVector *sets = sets_block->getSets();
         while (!in.eof()) {
+            // read the cluster
+            TaxaSetName *myset = new TaxaSetName;
+			sets->push_back(myset);            
             in >> ch;
             if (ch != '(')
-                throw "Cluster file does not start with '('";
+                throw "Cluster does not start with '('";
+            // read taxon name
+            do {
+                in >> ch;
+                name = "";
+                do {
+                    name += ch;
+                    ch = in.get();
+                    if (controlchar(ch)) {
+                        in >> ch;
+                        break;
+                    }
+                } while (ch != ',' && ch != ')');
+                myset->taxlist.push_back(name);
+                if (ch == ',') continue; // continue to read next taxon name
+                if (ch == ')') break;
+                throw "No ',' or ')' found after " + name;
+            } while (ch != ')');
             in >> ch;
-            
+            if (isalnum(ch)) {
+                // read cluster name
+                name = "";
+                do {
+                    name += ch;
+                    ch = in.get();
+                    if (controlchar(ch)) {
+                        in >> ch;
+                        break;
+                    }
+                } while (ch != ',' && ch != ';');
+                myset->name = name;
+            } else {
+                myset->name = "Cluster" + convertIntToString(sets->size());
+            }
+            // check for duplicated name
+            for (TaxaSetNameVector::iterator it = sets->begin(); it != sets->end()-1; it++)
+                if ((*it)->name == myset->name)
+                    throw "Duplicated cluster name " + myset->name;
+            if (ch == ',') continue; // continue to read next cluster
+            if (ch == ';') break;
+            throw "No ',' or ';' found after " + name + ")";
         }
         
         in.clear();
@@ -1099,6 +1142,8 @@ void readGroupNewick(char *filename, MSetsBlock *sets) {
     } catch (ios::failure) {
         outError(ERR_READ_INPUT);
     } catch (const char* str) {
+        outError(str);
+    } catch (string &str) {
         outError(str);
     }
 }
@@ -1112,12 +1157,17 @@ void PhyloTree::readLikelihoodMappingGroups(char *filename, QuartetGroups &LMGro
     cout << endl << "Reading likelihood mapping cluster file " << filename << "..." << endl;
     cout << "(The leading numbers represent the order from the master alignment.)" << endl << endl;
 
-    MyReader nexus(filename);
-
-    nexus.Add(lmclusters);
-
-    MyToken token(nexus.inf);
-    nexus.Execute(token);
+    InputType intype = detectInputFile(filename);
+    
+    if (intype == IN_NEXUS) {
+        MyReader nexus(filename);
+        nexus.Add(lmclusters);
+        MyToken token(nexus.inf);
+        nexus.Execute(token);
+    } else if (intype == IN_NEWICK) {
+        readGroupNewick(filename, lmclusters);
+    } else
+        outError("Unknown cluster file format");
 
     // lmclusters->Report(cout);
 
