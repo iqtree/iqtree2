@@ -1718,9 +1718,6 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 
     /****************** NOW PERFORM MAXIMUM LIKELIHOOD TREE RECONSTRUCTION ******************/
 
-    // Update best tree
-    iqtree.candidateTrees.update(initTree, iqtree.getCurScore());
-
     if (params.min_iterations > 0) {
         cout << "--------------------------------------------------------------------" << endl;
         cout << "|             INITIALIZING CANDIDATE TREE SET                      |" << endl;
@@ -1738,54 +1735,35 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
     if ((params.user_file || params.start_tree == STT_RANDOM_TREE) && params.snni && !params.iqp) {
         params.compute_ml_dist = false;
     }
-//    if ( params.user_file && params.min_iterations == 0) {
-//        params.compute_ml_dist = false;
-//    }
 
-    if ((!params.dist_file && params.compute_ml_dist) || params.leastSquareBranch) {
-        computeMLDist(params, iqtree, dist_file, getCPUTime());
-        if (!params.user_file && params.start_tree != STT_RANDOM_TREE) {
-            // NEW 2015-08-10: always compute BIONJ tree into the candidate set
-            iqtree.resetCurScore();
-            double start_bionj = getRealTime();
-            iqtree.computeBioNJ(params, iqtree.aln, dist_file);
-            cout << getRealTime() - start_bionj << " seconds" << endl;
-            if (iqtree.isSuperTree())
-                iqtree.wrapperFixNegativeBranch(true);
-            else
-                iqtree.wrapperFixNegativeBranch(false);
-            if (params.start_tree == STT_BIONJ) {
-                initTree = iqtree.optimizeModelParameters(params.min_iterations==0, initEpsilon);
-            } else {
-                initTree = iqtree.optimizeBranches();
-            }
-            cout << "Log-likelihood of BIONJ tree: " << iqtree.getCurScore() << endl;
-            iqtree.candidateTrees.update(initTree, iqtree.getCurScore());
-        }
-    }
-
-	double cputime_search_start = getCPUTime();
-    double realtime_search_start = getRealTime();
-
-    if (params.min_iterations > 0) {
-        double initTime = getCPUTime();
-
-//        if (!params.user_file && (params.start_tree == STT_PARSIMONY || params.start_tree == STT_PLL_PARSIMONY)) 
-//        {
-        	iqtree.initCandidateTreeSet(params.numInitTrees - iqtree.candidateTrees.size(), params.numNNITrees);
-        	assert(iqtree.candidateTrees.size() != 0);
-        	cout << "Finish initializing candidate tree set. ";
-        	cout << "Number of distinct locally optimal trees: " << iqtree.candidateTrees.size() << endl;
-        	if (params.write_local_optimal_trees) {
-        		printSuboptimalTrees(iqtree, params, ".init_suboptimal_trees");
-        	}
-//        }
-        cout << "Current best tree score: " << iqtree.candidateTrees.getBestScore() << " / CPU time: "
-                << getCPUTime() - initTime << endl;
+	/************************************** Compute BIONJ tree *********************************************/
+	if (MPIHelper::getInstance().getProcessID() == MASTER) { // Only compute BIONJ tree at the master node
+		if ((!params.dist_file && params.compute_ml_dist) || params.leastSquareBranch) {
+			computeMLDist(params, iqtree, dist_file, getCPUTime());
+			if (!params.user_file) {
+				// NEW 2015-08-10: always compute BIONJ tree into the candidate set
+				iqtree.resetCurScore();
+				double start_bionj = getRealTime();
+				iqtree.computeBioNJ(params, iqtree.aln, dist_file);
+				cout << getRealTime() - start_bionj << " seconds" << endl;
+				if (iqtree.isSuperTree())
+					iqtree.wrapperFixNegativeBranch(true);
+				else
+					iqtree.wrapperFixNegativeBranch(false);
+				if (params.start_tree == STT_BIONJ) {
+					initTree = iqtree.optimizeModelParameters(params.min_iterations == 0, initEpsilon);
+				} else {
+					initTree = iqtree.optimizeBranches();
+				}
+				cout << "Log-likelihood of BIONJ tree: " << iqtree.getCurScore() << endl;
+                iqtree.addTreeToCandidateSet(initTree, iqtree.getCurScore(), false);
+			}
+		}
 	}
 
 	double cputime_search_start = getCPUTime();
     double realtime_search_start = getRealTime();
+
 
     if (params.leastSquareNNI) {
     	iqtree.computeSubtreeDists();

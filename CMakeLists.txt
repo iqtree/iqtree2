@@ -19,6 +19,12 @@
 # cmake -DIQTREE_FLAGS="m32" <source_dir>      (32-bit SSE3 version)
 # cmake -DIQTREE_FLAGS="m32 omp" <source_dir>  (32-bit SSE3+OpenMP version)
 #
+# To compile with CLANG on Linux:
+# export CC=/usr/bin/clang
+# export CXX=/usr/bin/clang++
+# Best practices for setting up CMAKE for diffrent compiler can be found here:
+# http://stackoverflow.com/questions/7031126/switching-between-gcc-and-clang-llvm-using-cmake
+#
 # Mac OSX example usages:
 # cmake -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ <source_dir>							(SSE3 version)
 # cmake -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DIQTREE_FLAGS="avx" <source_dir>		(AVX version)
@@ -31,6 +37,21 @@
 
 cmake_minimum_required(VERSION 2.8)
 set(CMAKE_LEGACY_CYGWIN_WIN32 0)
+
+##################################################################
+# configure MPI compilation
+##################################################################
+if (IQTREE_FLAGS MATCHES "mpi")
+    message("MPI enabled")
+	set(IQTREE_FLAGS "${IQTREE_FLAGS} dynamic")
+	add_definitions(-D_IQTREE_MPI)
+    set(CMAKE_CXX_COMPILER "mpicxx")
+	set(CMAKE_C_COMPILER "mpicc")
+    if (IQTREE_FLAGS MATCHES "debug")
+        add_definitions(-D_MPI_DEBUG)
+        message("Debug information enabled")
+    endif()
+endif()
 
 project(iqtree)
 add_definitions(-DIQ_TREE)
@@ -110,7 +131,16 @@ elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 	set(CLANG "TRUE")
 #	set(COMBINED_FLAGS "-Wall -Wno-unused-function -Wno-sign-compare -pedantic -D_GNU_SOURCE -Wno-nested-anon-types")
 	set(CMAKE_CXX_FLAGS_RELEASE "-O3")
-	set(CMAKE_C_FLAGS_RELEASE "-O3")	
+	set(CMAKE_C_FLAGS_RELEASE "-O3")
+    set(CMAKE_AR      "/usr/bin/llvm-ar")
+    set(CMAKE_LINKER  "/usr/bin/llvm-ld")
+    set(CMAKE_NM      "/usr/bin/llvm-nm")
+    set(CMAKE_OBJDUMP "/usr/bin/llvm-objdump")
+    set(CMAKE_RANLIB  "/usr/bin/llvm-ranlib")
+    # The two lines below are important, other it won't compile. There is a bug in CLANG that add "-rdynamic" flag
+    # to the linker even if "-static" is specified. The two command below remove all flags for shared libraries.
+    set(CMAKE_SHARED_LIBRARY_LINK_C_FLAGS " ")
+    set(CMAKE_SHARED_LIBRARY_LINK_CXX_FLAGS " ")
 elseif (CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
 	set(VCC "TRUE")
 	message("Compiler      : MS Visual C++ Compiler")
@@ -176,7 +206,7 @@ endif()
 # change the executable name if compiled for OpenMP parallel version
 ##################################################################
 if (IQTREE_FLAGS MATCHES "omp")
-	message("Parallel      : OpenMP/PThreads")
+	message("OpenMP      : Yes")
 	SET(EXE_SUFFIX "${EXE_SUFFIX}-omp")	
 	add_definitions(-D_USE_PTHREADS)
 	if (MSVC) 
@@ -198,7 +228,15 @@ if (IQTREE_FLAGS MATCHES "omp")
   		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp")
   	endif()
 else()
-	message("Parallel      : None")
+	message("OpenMP      : NONE")
+endif()
+
+
+if (IQTREE_FLAGS MATCHES "mpi")
+	message("MPI      : Yes")
+	SET(EXE_SUFFIX "${EXE_SUFFIX}-mpi")	
+else()
+	message("MPI      : NONE")
 endif()
 
 ##################################################################
@@ -272,6 +310,8 @@ endif()
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${COMBINED_FLAGS}")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${COMBINED_FLAGS}")
+set(CMAKE_CXX_FLAGS_PROFILE "${CMAKE_CXX_FLAGS} -fno-inline-functions -fno-inline-functions-called-once -fno-optimize-sibling-calls -fno-default-inline -fno-inline -O2 -fno-omit-frame-pointer -g")
+set(CMAKE_C_FLAGS_PROFILE "${CMAKE_C_FLAGS} -fno-inline-functions -fno-inline-functions-called-once -fno-optimize-sibling-calls -O2 -fno-omit-frame-pointer -g")
 
 if (CMAKE_BUILD_TYPE STREQUAL "Release")
 	message("C flags    : ${CMAKE_C_FLAGS} ${CMAKE_C_FLAGS_RELEASE}") 
@@ -283,8 +323,11 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug")
 	message("CXX flags  : ${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_DEBUG}") 
 endif()
 
-set(CMAKE_CXX_FLAGS_PROFILE "-fno-inline-functions -fno-inline-functions-called-once -fno-optimize-sibling-calls -fno-default-inline -fno-inline -O0 -fno-omit-frame-pointer -pg")
-set(CMAKE_C_FLAGS_PROFILE "-fno-inline-functions -fno-inline-functions-called-once -fno-optimize-sibling-calls -O0 -fno-omit-frame-pointer -pg")
+if (CMAKE_BUILD_TYPE STREQUAL "Profile")
+	message("C flags    : ${CMAKE_C_FLAGS_PROFILE} ") 
+	message("CXX flags  : ${CMAKE_CXX_FLAGS_PROFILE} ") 
+endif()
+
 
 if (GCC) 
 	set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g -fno-inline-functions -fno-inline-functions-called-once -fno-default-inline -fno-inline")
@@ -344,7 +387,11 @@ add_subdirectory(model)
 ##################################################################
 
 if (NOT BINARY32 AND NOT IQTREE_FLAGS MATCHES "novx")
-add_library(avxkernel phylotreeavx.cpp)
+    add_library(avxkernel phylotreeavx.cpp)
+endif()
+
+if (IQTREE_FLAGS MATCHES "mpi")
+	add_library(mpi TreeCollection.cpp ObjectStream.cpp)
 endif()
 
 add_executable(iqtree
@@ -406,6 +453,7 @@ graph.cpp
 candidateset.cpp
 checkpoint.cpp
 upperbounds.cpp
+MPIHelper.cpp
 )
 
 find_package(ZLIB)
@@ -454,13 +502,17 @@ if (IQTREE_FLAGS MATCHES "omp")
 	endif()
 endif()
 
-if (BINARY32 OR IQTREE_FLAGS MATCHES "novx")
-    target_link_libraries(iqtree pll ncl lbfgsb whtest sprng vectorclass model ${PLATFORM_LIB} ${THREAD_LIB})	
-else()
-    target_link_libraries(iqtree pll pllavx ncl lbfgsb whtest sprng vectorclass model avxkernel ${PLATFORM_LIB} ${THREAD_LIB})	
+set (MYMPI_LIB "")
+if (IQTREE_FLAGS MATCHES "mpi")
+    set (MYMPI_LIB "mpi")
 endif()
 
-##################################################################
+if (BINARY32 OR IQTREE_FLAGS MATCHES "novx")
+    target_link_libraries(iqtree pll ncl lbfgsb whtest sprng vectorclass model ${PLATFORM_LIB} ${THREAD_LIB} ${MYMPI_LIB})	
+else()
+    target_link_libraries(iqtree pll pllavx ncl lbfgsb whtest sprng vectorclass model avxkernel ${PLATFORM_LIB} ${THREAD_LIB} ${MYMPI_LIB})	
+endif()
+
 # setup the executable name 
 ##################################################################
 set_target_properties(iqtree PROPERTIES OUTPUT_NAME "iqtree${EXE_SUFFIX}")

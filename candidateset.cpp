@@ -373,14 +373,9 @@ int CandidateSet::countStableSplits(double thresHold) {
 	if (candidateSplitsHash.empty())
 		return 0;
 	int numMaxSupport = 0;
-	vector<string> trees = getBestLocalOptimalTrees(numTree);
-	assert(trees.size() > 1);
-	int maxSupport = trees.size();
-	boot_trees.init(trees, aln->getSeqNames(), params->is_rooted);
-	boot_trees.convertSplits(aln->getSeqNames(), sg, hash_ss, SW_COUNT, -1, NULL, false);
-
-	for (SplitIntMap::iterator it = hash_ss.begin(); it != hash_ss.end(); it++) {
-		if (it->second == maxSupport && it->first->countTaxa() > 1) {
+	for (SplitIntMap::iterator it = candidateSplitsHash.begin(); it != candidateSplitsHash.end(); it++) {
+		if (it->first->getWeight() > thresHold && it->first->countTaxa() > 1) {
+			//cout << "Stable support: " << it->first->getWeight() << endl;
 			numMaxSupport++;
 		}
 	}
