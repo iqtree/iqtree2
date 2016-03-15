@@ -8,9 +8,9 @@
 #include "phylotree.h"
 #include "candidateset.h"
 
-void CandidateSet::init(Alignment* aln, Params *params) {
+void CandidateSet::init(Alignment* aln) {
     this->aln = aln;
-    this->params = params;
+	maxSize = Params::getInstance().maxCandidates;
 }
 
 CandidateSet::~CandidateSet() {
@@ -18,23 +18,30 @@ CandidateSet::~CandidateSet() {
 
 CandidateSet::CandidateSet() {
 	aln = NULL;
-	params = NULL;
+	numStableSplits = 0;
+	maxSize = 200;
 }
 
-vector<string> CandidateSet::getBestTrees() {
-	vector<string> res;
-	double bestScore = rbegin()->first;
-	for (reverse_iterator rit = rbegin(); rit != rend() && rit->second.score == bestScore; rit++) {
-		res.push_back(rit->second.tree);
-	}
-	return res;
-}
+//void CandidateSet::getRandomStableSplits(int numSplit, SplitGraph& randomStableSplits) {
+//	/*
+//	 *  Use reservoir sampling technique
+//	 */
+//	randomStableSplits.clear();
+//	assert(numSplit < candidateSplitsHash.size());
+//	randomStableSplits.insert(randomStableSplits.begin(), candidateSplitsHash.begin(), candidateSplitsHash.begin() + numSplit);
+//	for (int i = numSplit; i < candidateSplitsHash.size(); i++) {
+//		int j = random_int(1, i);
+//		if (j <= numSplit) {
+//			randomStableSplits[j] = candidateSplitsHash[i];
+//		}
+//	}
+//}
 
 string CandidateSet::getRandCandTree() {
 	assert(!empty());
 	if (empty())
 		return "";
-	int id = random_int(min(params->popSize, (int)size()) );
+	int id = random_int(min(Params::getInstance().popSize, (int)size()) );
 	for (reverse_iterator i = rbegin(); i != rend(); i++, id--)
 		if (id == 0)
 			return i->second.tree;
@@ -42,10 +49,9 @@ string CandidateSet::getRandCandTree() {
 	return "";
 }
 
-vector<string> CandidateSet::getTopTrees(int numTree) {
-	assert(numTree <= params->maxCandidates);
-	if (numTree == 0) {
-		numTree = params->maxCandidates;
+vector<string> CandidateSet::getBestTreeStrings(int numTree) {
+	if (numTree == 0 || numTree > maxSize) {
+		numTree = maxSize;
 	}
 	vector<string> res;
 	int cnt = numTree;
@@ -55,27 +61,28 @@ vector<string> CandidateSet::getTopTrees(int numTree) {
 	return res;
 }
 
-vector<string> CandidateSet::getBestLocalOptimalTrees(int numTree) {
-	assert(numTree <= params->maxCandidates);
-	if (numTree == 0) {
-		numTree = params->maxCandidates;
-	}
-	vector<string> res;
-	int cnt = numTree;
-	for (reverse_iterator rit = rbegin(); rit != rend() && cnt > 0; rit++) {
-		if (rit->second.localOpt) {
-			res.push_back(rit->second.tree);
-			cnt--;
-		}
-	}
-	return res;
-}
+//vector<string> CandidateSet::getBestLocalOptimalTrees(int numTree) {
+//	assert(numTree <= params->maxPopSize);
+//	if (numTree == 0) {
+//		numTree = params->maxPopSize;
+//	}
+//	vector<string> res;
+//	int cnt = numTree;
+//	for (reverse_iterator rit = rbegin(); rit != rend() && cnt > 0; rit++) {
+//		if (rit->second.localOpt) {
+//			res.push_back(rit->second.tree);
+//			cnt--;
+//		}
+//	}
+//	return res;
+//}
+
 /*
 bool CandidateSet::replaceTree(string tree, double score) {
     CandidateTree candidate;
     candidate.tree = tree;
     candidate.score = score;
-    candidate.topology = getTopology(tree);
+    candidate.topology = getTopologyString(tree);
     if (treeTopologyExist(candidate.topology)) {
         topologies[candidate.topology] = score;
         for (reverse_iterator i = rbegin(); i != rend(); i++) {
@@ -89,6 +96,53 @@ bool CandidateSet::replaceTree(string tree, double score) {
         return false;
     }
     return true;
+}
+*/
+
+
+void CandidateSet::addCandidateSplits(string treeString) {
+	vector<string> taxaNames = aln->getSeqNames();
+	MTree tree(treeString, taxaNames, Params::getInstance().is_rooted);
+	SplitGraph allSplits;
+	tree.convertSplits(allSplits);
+	for (SplitGraph::iterator splitIt = allSplits.begin(); splitIt != allSplits.end(); splitIt++) {
+		int value;
+		Split *sp = candidateSplitsHash.findSplit(*splitIt, value);
+		if (sp != NULL) {
+			sp->setWeight(value + 1);
+			candidateSplitsHash.setValue(sp, value + 1);
+		} else {
+			sp = new Split(*(*splitIt));
+			sp->setWeight(1);
+			candidateSplitsHash.insertSplit(sp, 1);
+		}
+	}
+	candidateSplitsHash.setNumTree(candidateSplitsHash.getNumTree() + 1);
+}
+
+void CandidateSet::removeCandidateSplits(string treeString) {
+	vector<string> taxaNames = aln->getSeqNames();
+	MTree tree(treeString, taxaNames, Params::getInstance().is_rooted);
+	SplitGraph allSplits;
+	tree.convertSplits(allSplits);
+	for (SplitGraph::iterator splitIt = allSplits.begin(); splitIt != allSplits.end(); splitIt++) {
+		int value = 0;
+		Split *sp;
+		sp = candidateSplitsHash.findSplit(*splitIt, value);
+		if (value == 0) {
+			cout << "Cannot find split: ";
+			(*splitIt)->report(cout);
+			exit(1);
+		} else {
+			assert(sp->getWeight() >= 1);
+			if (sp->getWeight() > 1) {
+				sp->setWeight(value - 1);
+			} else {
+				candidateSplitsHash.eraseSplit(*splitIt);
+			}
+		}
+	}
+	candidateSplitsHash.setNumTree(candidateSplitsHash.getNumTree() - 1);
 }
 
 string CandidateSet::getNextCandTree() {
@@ -104,57 +158,62 @@ string CandidateSet::getNextCandTree() {
 
 void CandidateSet::initParentTrees() {
     if (parentTrees.empty()) {
-        int count = params->popSize;
+		int count = Params::getInstance().popSize;
         for (reverse_iterator i = rbegin(); i != rend() && count >0 ; i++, count--) {
             parentTrees.push(i->second.tree);
             //cout << i->first << endl;
         }
     }
 }
-*/
-bool CandidateSet::update(string tree, double score, bool localOpt) {
-	bool newTree = true;
+
+
+int CandidateSet::update(string newTree, double newScore) {
 	CandidateTree candidate;
-	candidate.score = score;
-	candidate.topology = getTopology(tree);
-	candidate.localOpt = localOpt;
-//	cout << "Updating candidate tree " << tree << endl;
-	candidate.tree = tree;
+	candidate.score = newScore;
+	candidate.topology = convertTreeString(newTree);
+	candidate.tree = newTree;
+
+    int treePos;
+    CandidateSet::iterator candidateTreeIt;
 
 	if (treeTopologyExist(candidate.topology)) {
-		newTree = false;
-	    /* If tree topology already exist but the score is better, we replace the old one
-	    by the new one (with new branch lengths) and update the score */
-		if (topologies[candidate.topology] < score) {
+		// update new score if it is better the old score
+		double oldScore = topologies[candidate.topology];
+		if (oldScore < (newScore - Params::getInstance().loglh_epsilon)) {
 			removeCandidateTree(candidate.topology);
-			topologies[candidate.topology] = score;
 			// insert tree into candidate set
-			insert(CandidateSet::value_type(score, candidate));
-		} else if (candidate.localOpt) {
-			CandidateSet::iterator treePtr = getCandidateTree(candidate.topology);
-			treePtr->second.localOpt = candidate.localOpt;
+            candidateTreeIt = insert(CandidateSet::value_type(newScore, candidate));
+			topologies[candidate.topology] = newScore;
 		}
+        treePos = -1;
 	} else {
-		if (getWorstScore() < score && size() >= params->maxCandidates) {
-			// remove the worst-scoring tree
-			topologies.erase(begin()->second.topology);
-			erase(begin());
-		}
-		CandidateSet::iterator it = insert(CandidateSet::value_type(score, candidate));
-		topologies[candidate.topology] = score;
-		if (params->fix_stable_splits && getNumLocalOptTrees() >= params->numSupportTrees) {
-			int it_pos = distance(it, end());
-			// The new tree is one of the numSupportTrees best trees.
-			// Thus recompute supported splits
-			if (it_pos <= params->numSupportTrees) {
-				int nSupportedSplits = computeSplitSupport(params->numSupportTrees);
-				cout << ((double) nSupportedSplits / (aln->getNSeq() - 3)) * 100
-						<< " % of the splits have 100% support and can be fixed." << endl;
-			}
-		}
-	}
+        candidateTreeIt = insert(CandidateSet::value_type(newScore, candidate));
+        topologies[candidate.topology] = newScore;
+
+        if (size() > maxSize) {
+            // remove the worst-scoring tree
+            topologies.erase(begin()->second.topology);
+            erase(begin());
+        }
+        treePos = distance(candidateTreeIt, end());
+    }
+    if (treePos != -1) {
+        if (!candidateSplitsHash.empty()) {
+            // A new tree is inserted in the stable tree set
+            if (treePos <= Params::getInstance().numSupportTrees) {
+//				addCandidateSplits(candidateTreeIt->second.tree);
+//				if (candidateSplitsHash.getMaxValue() > params->numSupportTrees) {
+//					assert(candidateSplitsHash.getMaxValue() == params->numSupportTrees + 1);
+//					removeCandidateSplits(getNthBestTree(candidateSplitsHash.getMaxValue()).tree);
+//				}
+                buildTopSplits(Params::getInstance().stableSplitThreshold, Params::getInstance().numSupportTrees);
+//				reportStableSplits();
+            }
+        }
+    }
+
 	assert(topologies.size() == size());
-	return newTree;
+	return treePos;
 }
 
 vector<double> CandidateSet::getBestScores(int numBestScore) {
@@ -174,29 +233,20 @@ double CandidateSet::getBestScore() {
 		return rbegin()->first;
 }
 
-double CandidateSet::getWorstScore() {
-	return begin()->first;
-}
-
-string CandidateSet::getTopology(string tree) {
+string CandidateSet::convertTreeString(string tree, int format) {
 	PhyloTree mtree;
-//	mtree.rooted = params->is_rooted;
 	mtree.aln = this->aln;
-	mtree.setParams(params);
+	mtree.setParams(&(Params::getInstance()));
 
 	stringstream str;
 	str << tree;
 	str.seekg(0, ios::beg);
-//	freeNode();
-	mtree.readTree(str, params->is_rooted);
+	mtree.readTree(str, Params::getInstance().is_rooted);
 	mtree.setAlignment(aln);
-	mtree.setRootNode(params->root);
-
-//	mtree.readTreeString(tree);
-//	mtree.setRootNode(params->root);
+	mtree.setRootNode(Params::getInstance().root);
 
 	ostringstream ostr;
-	mtree.printTree(ostr, WT_TAXON_ID | WT_SORT_TAXA);
+	mtree.printTree(ostr, format);
 	return ostr.str();
 }
 
@@ -217,12 +267,27 @@ void CandidateSet::clearTopologies() {
 
 CandidateSet CandidateSet::getBestCandidateTrees(int numTrees) {
 	CandidateSet res;
-	if (numTrees >= size())
-		numTrees = size();
+	if (numTrees >= size() || numTrees == 0)
+		numTrees = (int) size();
+
 	for (reverse_iterator rit = rbegin(); rit != rend() && numTrees > 0; rit++, numTrees--) {
 		res.insert(*rit);
 	}
 	return res;
+}
+
+void CandidateSet::getAllTrees(vector<string> &trees, vector<double> &scores, int format) {
+    trees.clear();
+    scores.clear();
+
+    for (reverse_iterator rit = rbegin(); rit != rend(); rit++) {
+        if (format != -1) {
+            trees.push_back(convertTreeString(rit->second.tree, format));
+        } else {
+            trees.push_back(rit->second.tree);
+        }
+        scores.push_back(rit->first);
+    }
 }
 
 bool CandidateSet::treeTopologyExist(string topo) {
@@ -230,7 +295,7 @@ bool CandidateSet::treeTopologyExist(string topo) {
 }
 
 bool CandidateSet::treeExist(string tree) {
-	return treeTopologyExist(getTopology(tree));
+	return treeTopologyExist(convertTreeString(tree));
 }
 
 CandidateSet::iterator CandidateSet::getCandidateTree(string topology) {
@@ -243,28 +308,70 @@ CandidateSet::iterator CandidateSet::getCandidateTree(string topology) {
 
 void CandidateSet::removeCandidateTree(string topology) {
 	bool removed = false;
-	for (CandidateSet::reverse_iterator rit = rbegin(); rit != rend(); rit++) {
-			if (rit->second.topology == topology) {
-				erase( --(rit.base()) );
-				topologies.erase(topology);
-				removed = true;
-				break;
-			}
+	double treeScore;
+	// Find the score of the topology
+	treeScore = topologies[topology];
+	pair<CandidateSet::iterator, CandidateSet::iterator> treeItPair;
+	// Find all trees with that score
+	treeItPair = equal_range(treeScore);
+	CandidateSet::iterator it;
+	for (it = treeItPair.first; it != treeItPair.second; ++it) {
+		if (it->second.topology == topology) {
+			erase(it);
+			removed = true;
+			break;
+		}
 	}
 	assert(removed);
 }
 
-bool CandidateSet::isStableSplit(Split& sp) {
-	return stableSplit.containSplit(sp);
+int CandidateSet::buildTopSplits(double supportThreshold, int numSupportTrees) {
+	candidateSplitsHash.clear();
+	CandidateSet bestCandidateTrees;
+
+	bestCandidateTrees = getBestCandidateTrees(numSupportTrees);
+	//assert(bestCandidateTrees.size() > 1);
+
+	candidateSplitsHash.setNumTree(bestCandidateTrees.size());
+
+	/* Store all splits in the best trees in candidateSplitsHash.
+	 * The variable numTree in SpitInMap is the number of trees, from which the splits are converted.
+	 */
+	CandidateSet::iterator treeIt;
+	vector<string> taxaNames = aln->getSeqNames();
+	for (treeIt = bestCandidateTrees.begin(); treeIt != bestCandidateTrees.end(); treeIt++) {
+		MTree tree(treeIt->second.tree, taxaNames, Params::getInstance().is_rooted);
+		SplitGraph splits;
+		tree.convertSplits(splits);
+		SplitGraph::iterator itg;
+		for (itg = splits.begin(); itg != splits.end(); itg++) {
+			int value;
+			Split *sp = candidateSplitsHash.findSplit(*itg, value);
+			if (sp != NULL) {
+				int newHashWeight = value + 1;
+				double newSupport = (double) newHashWeight / (double) candidateSplitsHash.getNumTree();
+				sp->setWeight(newSupport);
+				candidateSplitsHash.setValue(sp, newHashWeight);
+			}
+			else {
+				sp = new Split(*(*itg));
+				sp->setWeight(1.0 / (double) candidateSplitsHash.getNumTree());
+				candidateSplitsHash.insertSplit(sp, 1);
+			}
+		}
+	}
+    int newNumStableSplits = countStableSplits(supportThreshold);
+    cout << ((double) newNumStableSplits / (aln->getNSeq() - 3)) * 100;
+    cout << " % of the splits are stable (support threshold " << supportThreshold;
+    cout << " from " << candidateSplitsHash.getNumTree() << " trees)" << endl;
+    return numStableSplits;
 }
 
-int CandidateSet::computeSplitSupport(int numTree) {
-	stableSplit.clear();
-	if (numTree == 0)
-		numTree = getNumLocalOptTrees();
-	SplitIntMap hash_ss;
-	SplitGraph sg;
-	MTreeSet boot_trees;
+int CandidateSet::countStableSplits(double thresHold) {
+	if (thresHold > 1.0)
+		thresHold = 1.0;
+	if (candidateSplitsHash.empty())
+		return 0;
 	int numMaxSupport = 0;
 	vector<string> trees = getBestLocalOptimalTrees(numTree);
 	assert(trees.size() > 1);
@@ -275,24 +382,39 @@ int CandidateSet::computeSplitSupport(int numTree) {
 	for (SplitIntMap::iterator it = hash_ss.begin(); it != hash_ss.end(); it++) {
 		if (it->second == maxSupport && it->first->countTaxa() > 1) {
 			numMaxSupport++;
-			Split* supportedSplit = new Split(*(it->first));
-			stableSplit.push_back(supportedSplit);
 		}
 	}
-	//cout << "Number of supported splits = " << numMaxSupport << endl;
 	return numMaxSupport;
+}
+
+void CandidateSet::reportStableSplits() {
+	if (candidateSplitsHash.empty()) {
+		cout << "The set of stable splits is empty! " << endl;
+		return;
+	}
+
+	int numMaxSupport = 0;
+	for (SplitIntMap::iterator it = candidateSplitsHash.begin(); it != candidateSplitsHash.end(); it++) {
+		if (it->second == candidateSplitsHash.getNumTree() && it->first->countTaxa() > 1) {
+			cout << it->first->getWeight() << " / " << candidateSplitsHash.getNumTree() << endl;
+			assert(it->first->getWeight() == candidateSplitsHash.getNumTree());
+			it->first->report(cout);
+		}
+	}
 }
 
 void CandidateSet::setAln(Alignment* aln) {
 	this->aln = aln;
 }
 
-int CandidateSet::getNumLocalOptTrees() {
-	int numLocalOptima = 0;
-	for (reverse_iterator rit = rbegin(); rit != rend(); rit++) {
-		if (rit->second.localOpt) {
-			numLocalOptima++;
-		}
-	}
-	return numLocalOptima;
+CandidateSet CandidateSet::getCandidateTrees(double score) {
+    CandidateSet res;
+    for (CandidateSet::iterator it = begin(); it != end(); it++) {
+        if (abs(it->first - score) < 0.1) {
+            res.insert(*it);
+        }
+    }
+    return res;
 }
+
+

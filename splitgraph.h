@@ -368,7 +368,6 @@ public:
 	*/
 	void calcDistance(matrix(double) &dist, vector<int> &taxa_order);
 
-
 protected:
 
 	/**

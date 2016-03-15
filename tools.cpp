@@ -719,7 +719,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.manuel_analytic_approx = false;
     params.leastSquareNNI = false;
     params.ls_var_type = OLS;
-    params.maxCandidates = 1000;
+    params.maxCandidates = 200;
     params.popSize = 5;
     params.p_delete = -1;
     params.min_iterations = -1;
@@ -834,7 +834,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 #else
     params.pll = false;
 #endif
-    params.modeps = 0.01;
+    params.modelEps = 0.01;
     params.parbran = false;
     params.binary_aln_file = NULL;
     params.maxtime = 1000000;
@@ -844,9 +844,12 @@ void parseArg(int argc, char *argv[], Params &params) {
 //    params.autostop = true; // turn on auto stopping rule by default now
     params.unsuccess_iteration = 100;
     params.speednni = true; // turn on reduced hill-climbing NNI by default now
-    params.reduction = false;
     params.numInitTrees = 100;
-    params.fix_stable_splits = false;
+    params.fixStableSplits = false;
+    params.stableSplitThreshold = 0.9;
+    params.five_plus_five = false;
+    params.memCheck = false;
+    params.tabu = false;
     params.numSupportTrees = 20;
 //    params.sprDist = 20;
     params.sprDist = 6;
@@ -875,7 +878,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.print_splits_file = false;
     params.ignore_identical_seqs = true;
     params.write_init_tree = false;
-    params.write_local_optimal_trees = false;
+    params.write_candidate_trees = false;
     params.freq_const_patterns = NULL;
     params.no_rescale_gamma_invar = false;
     params.compute_seq_identity_along_tree = false;
@@ -2018,11 +2021,11 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.iqp = true;
 				continue;
 			}
-			if (strcmp(argv[cnt], "-wlt") == 0) {
-				// write all candidate trees
-				params.write_local_optimal_trees = true;
+			if (strcmp(argv[cnt], "-wct") == 0) {
+				params.write_candidate_trees = true;
 				continue;
 			}
+
 			if (strcmp(argv[cnt], "-wt") == 0) {
 				params.write_intermediate_trees = 1;
 				continue;
@@ -2445,9 +2448,33 @@ void parseArg(int argc, char *argv[], Params &params) {
 				continue;
 			}
 			if (strcmp(argv[cnt], "-fss") == 0) {
-				params.fix_stable_splits = true;
+				params.fixStableSplits = true;
+//				params.five_plus_five = true;
 				continue;
 			}
+            if (strcmp(argv[cnt], "-ss_thres") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use -ss_thres <support_value_threshold>";
+                params.stableSplitThreshold = convert_double(argv[cnt]);
+                continue;
+            }
+			if (strcmp(argv[cnt], "-ff") == 0) {
+				params.five_plus_five = true;
+				continue;
+			}
+
+			if (strcmp(argv[cnt], "-tabu") == 0) {
+                params.fixStableSplits = true;
+				params.tabu = true;
+				continue;
+			}
+
+            if (strcmp(argv[cnt], "-memcheck") == 0) {
+                params.memCheck = true;
+                continue;
+            }
+
 			if (strcmp(argv[cnt], "-toppars") == 0) {
 				cnt++;
 				if (cnt >= argc)
@@ -2532,10 +2559,10 @@ void parseArg(int argc, char *argv[], Params &params) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -me <model_epsilon>";
-				params.modeps = convert_double(argv[cnt]);
-				if (params.modeps <= 0.0)
+				params.modelEps = convert_double(argv[cnt]);
+				if (params.modelEps <= 0.0)
 					throw "Model epsilon must be positive";
-				if (params.modeps > 0.1)
+				if (params.modelEps > 0.1)
 					throw "Model epsilon must not be larger than 0.1";
 				continue;
 			}
@@ -2547,10 +2574,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.speednni = false;
 				continue;
 			}
-			if (strcmp(argv[cnt], "-reduction") == 0) {
-				params.reduction = true;
-				continue;
-			}
+            
 			if (strcmp(argv[cnt], "-snni") == 0) {
 				params.snni = true;
 				// dont need to turn this on here
@@ -2563,7 +2587,6 @@ void parseArg(int argc, char *argv[], Params &params) {
 			if (strcmp(argv[cnt], "-iqpnni") == 0) {
 				params.snni = false;
 				params.start_tree = STT_BIONJ;
-				params.reduction = false;
 				params.numNNITrees = 1;
 //            continue; } if (strcmp(argv[cnt], "-auto") == 0) {
 //            	params.autostop = true;
@@ -3386,10 +3409,13 @@ int random_int(int n) {
     return (int) floor(random_double() * n);
 } /* randominteger */
 
-//int randint(int a, int b) {
-//	return a + (RAND_MAX * rand() + rand()) % (b + 1 - a);
-//}
-//
+/* returns a random integer in the range [a; b] */
+int random_int(int a, int b) {
+	assert(b > a);
+	//return a + (RAND_MAX * rand() + rand()) % (b + 1 - a);
+	return a + random_int(b - a);
+}
+
 
 double random_double() {
 #ifndef FIXEDINTRAND
@@ -3522,6 +3548,8 @@ void trimString(string &str) {
     str.erase(0, str.find_first_not_of(" \n\r\t"));
     str.erase(str.find_last_not_of(" \n\r\t")+1);
 }
+
+
 
 Params& Params::getInstance() {
     static Params instance;

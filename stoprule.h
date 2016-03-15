@@ -69,7 +69,7 @@ public:
 	bool meetStopCondition(int cur_iteration, double cur_correlation);
 	
 	/** get the remaining time to converge, in seconds */
-	double getRemainingTime(int cur_iteration, double cur_correlation);
+	double getRemainingTime(int cur_iteration);
 
 	/**
 		@return the number of iterations required to stop the search

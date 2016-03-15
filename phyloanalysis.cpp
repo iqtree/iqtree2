@@ -52,6 +52,7 @@
 #include "model/modelset.h"
 #include "timeutil.h"
 #include "upperbounds.h"
+#include "MPIHelper.h"
 
 
 void reportReferences(Params &params, ofstream &out, string &original_model) {
@@ -756,12 +757,12 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 			tree.setRootNode(params.root);
             
             if (params.gbo_replicates) {
-                if (tree.boot_consense_logl > tree.candidateTrees.getBestScore()) {
+                if (tree.boot_consense_logl > tree.getBestScore()) {
                     out << endl << "**NOTE**: Consensus tree has higher likelihood than ML tree found! Please use consensus tree below." << endl;
                 }
             }
 
-			reportTree(out, params, tree, tree.candidateTrees.getBestScore(), tree.logl_variance, true);
+			reportTree(out, params, tree, tree.getBestScore(), tree.logl_variance, true);
 
 			if (tree.isSuperTree() && verbose_mode >= VB_MED) {
 				PhyloSuperTree *stree = (PhyloSuperTree*) &tree;
@@ -996,9 +997,6 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 			cout << "  Maximum-likelihood tree:       " << params.out_prefix << ".treefile" << endl;
 		else
 			cout << "  Tree used for model selection: " << params.out_prefix << ".treefile" << endl;
-		if (params.snni && params.write_local_optimal_trees) {
-			cout << "  Locally optimal trees (" << tree.candidateTrees.getNumLocalOptTrees() << "):    " << params.out_prefix << ".suboptimal_trees" << endl;
-		}
 	}
 	if (!params.user_file && params.start_tree == STT_BIONJ) {
 		cout << "  BIONJ tree:                    " << params.out_prefix << ".bionj"
@@ -1322,8 +1320,7 @@ void pruneTaxa(Params &params, IQTree &iqtree, double *pattern_lh, NodeVector &p
 		iqtree.clearAllPartialLH();
 		iqtree.setCurScore(iqtree.optimizeAllBranches());
 		//cout << "Log-likelihood	after reoptimizing model parameters: " << tree.curScore << endl;
-		int nni_count, nni_steps;
-		iqtree.setCurScore(iqtree.optimizeNNI(nni_count, nni_steps));
+		pair<int, int> nniInfo = iqtree.optimizeNNI();
 		cout << "Log-likelihood after optimizing partial tree: "
 				<< iqtree.getCurScore() << endl;
 	}
@@ -1340,8 +1337,8 @@ void restoreTaxa(IQTree &iqtree, double *saved_dist_mat, NodeVector &pruned_taxa
 		iqtree.clearAllPartialLH();
 		iqtree.setCurScore(iqtree.optimizeAllBranches());
 		//cout << "Log-likelihood	after reoptimizing model parameters: " << tree.curScore << endl;
-		int nni_count, nni_steps;
-		iqtree.setCurScore(iqtree.optimizeNNI(nni_count, nni_steps));
+		pair<int, int> nniInfo;
+		nniInfo = iqtree.optimizeNNI();
 		cout << "Log-likelihood	after reoptimizing full tree: " << iqtree.getCurScore() << endl;
 		//iqtree.setBestScore(iqtree.getModelFactory()->optimizeParameters(params.fixed_branch_length, true, params.model_eps));
 
@@ -1497,7 +1494,7 @@ void printMiscInfo(Params &params, IQTree &iqtree, double *pattern_lh) {
 		cout << endl << "Computing site-specific rates by "
 				<< rate_mvh->full_name << "..." << endl;
 		rate_mvh->runIterativeProc(params, iqtree);
-		cout << endl << "BEST SCORE FOUND : " << iqtree.candidateTrees.getBestScore()<< endl;
+		cout << endl << "BEST SCORE FOUND : " << iqtree.getBestScore()<< endl;
 		string mhrate_file = params.out_prefix;
 		mhrate_file += ".mhrate";
 		iqtree.getRate()->writeSiteRates(mhrate_file.c_str());
@@ -1564,8 +1561,7 @@ void printFinalSearchInfo(Params &params, IQTree &iqtree, double search_cpu_time
 
 }
 
-void printSuboptimalTrees(IQTree& iqtree, Params& params, string suffix) {
-	vector<string> trees = iqtree.candidateTrees.getTopTrees();
+void printTrees(vector<string> trees, Params &params, string suffix) {
 	ofstream treesOut((string(params.out_prefix) + suffix).c_str(),
 			ofstream::out);
 	for (vector<string>::iterator it = trees.begin(); it != trees.end(); it++) {
@@ -1620,12 +1616,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 
     /********************** Create an initial tree **********************/
     iqtree.computeInitialTree(dist_file, params.SSE);
-    
-    //*** FOR TUNG: This is wrong! a NULL root was already treated correctly
-//    if (params.root == NULL) {
-//    	params.root = iqtree.aln->getSeqName(0).c_str();
-//    	iqtree.setRootNode(params.root);
-//    }
+
    	iqtree.setRootNode(params.root);
 
     /*************** SET UP PARAMETERS and model testing ****************/
@@ -1678,6 +1669,8 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
         if (mem_size >= total_mem) {
             outError("Memory required exceeds your computer RAM size!");
         }
+		if (params.memCheck)
+			exit(0);
 #ifdef BINARY32
         if (mem_size >= 2000000000) {
             outError("Memory required exceeds 2GB limit of 32-bit executable");
@@ -1692,8 +1685,8 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
     }
 
     iqtree.initializeAllPartialLh();
-	double initEpsilon = params.min_iterations == 0 ? params.modeps : (params.modeps*10);
-	string initTree;
+	double initEpsilon = params.min_iterations == 0 ? params.modelEps : (params.modelEps * 100);
+	Params::getInstance().testAlphaEps = initEpsilon;
 
 	if (iqtree.getRate()->name.find("+I+G") != string::npos) {
 		if (params.alpha_invar_file != NULL) { // COMPUTE TREE LIKELIHOOD BASED ON THE INPUT ALPHA AND P_INVAR VALUE
@@ -1716,9 +1709,12 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 	}
 
     // Optimize model parameters and branch lengths using ML for the initial tree
+	string initTree;
 	iqtree.clearAllPartialLH();
 	initTree = iqtree.optimizeModelParameters(true, initEpsilon);
-
+	// Update best tree
+    iqtree.addTreeToCandidateSet(initTree, iqtree.getCurScore(), false);
+	iqtree.printResultTree();
 
     /****************** NOW PERFORM MAXIMUM LIKELIHOOD TREE RECONSTRUCTION ******************/
 
@@ -1788,15 +1784,13 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
                 << getCPUTime() - initTime << endl;
 	}
 
+	double cputime_search_start = getCPUTime();
+    double realtime_search_start = getRealTime();
 
     if (params.leastSquareNNI) {
     	iqtree.computeSubtreeDists();
     }
-    /* TUNG: what happens if params.root is not set? This is usually the case.
-     * I added code to ininialize the root above.
-     */
-    //iqtree.setRootNode(params.root); // Important for NNI below
-
+	
 	if (original_model == "WHTEST") {
 		cout << endl << "Testing model homogeneity by Weiss & von Haeseler (2003)..." << endl;
 		WHTest(params, iqtree);
@@ -1812,8 +1806,8 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 	// prune stable taxa
 	pruneTaxa(params, iqtree, pattern_lh, pruned_taxa, linked_name);
 
-	if (params.min_iterations > 1) {
-		iqtree.readTreeString(iqtree.candidateTrees.getTopTrees()[0]);
+	/***************************************** DO STOCHASTIC TREE SEARCH *******************************************/
+	if (params.min_iterations > 0) {
 		iqtree.doTreeSearch();
 		iqtree.setAlignment(iqtree.aln);
         cout << "TREE SEARCH COMPLETED AFTER " << iqtree.stop_rule.getCurIt() << " ITERATIONS" 
@@ -1844,13 +1838,13 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 //			((PhyloSuperTree*) &iqtree)->mapTrees();
 
 	if (params.snni && params.min_iterations && verbose_mode >= VB_MED) {
-		cout << "Log-likelihoods of best " << params.popSize << " trees: " << endl;
-		iqtree.printBestScores(params.popSize);
+		cout << "Log-likelihoods of " << params.popSize << " best candidate trees: " << endl;
+		iqtree.printBestScores();
 		cout << endl;
 	}
 
 	if (params.min_iterations) {
-		iqtree.readTreeString(iqtree.candidateTrees.getBestTrees()[0]);
+		iqtree.readTreeString(iqtree.getBestTrees()[0]);
         iqtree.initializeAllPartialLh();
         iqtree.clearAllPartialLH();
         cout << "--------------------------------------------------------------------" << endl;
@@ -1863,7 +1857,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
         else
             tree = iqtree.optimizeModelParameters(true);
         
-		iqtree.candidateTrees.update(tree, iqtree.getCurScore(), true);
+		iqtree.addTreeToCandidateSet(tree, iqtree.getCurScore());
     }
 
 	if (iqtree.isSuperTree())
@@ -1871,8 +1865,8 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 
 	cout << "BEST SCORE FOUND : " << iqtree.getCurScore() << endl;
 
-	if (params.write_local_optimal_trees) {
-		printSuboptimalTrees(iqtree, params, ".suboptimal_trees");
+	if (params.write_candidate_trees) {
+		printTrees(iqtree.getBestTrees(), params, ".imd_trees");
 	}
 
 	if (params.pll)
@@ -1924,17 +1918,17 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 	// BUG FIX: readTreeString(bestTreeString) not needed before this line
 	iqtree.printResultTree();
 
-	if(params.upper_bound_NNI){
-		string out_file_UB = params.out_prefix;
-		out_file_UB += ".UB.NNI.main";
-		ofstream out_UB;
-		out_UB.exceptions(ios::failbit | ios::badbit);
-		out_UB.open((char*)out_file_UB.c_str(),std::ofstream::out | std::ofstream::app);
-		out_UB<<iqtree.leafNum<<"\t"<<iqtree.aln->getNSite()<<"\t"<<iqtree.params->upper_bound_frac<<"\t"
-				  <<iqtree.skippedNNIub<<"\t"<< iqtree.totalNNIub<<"\t"<<iqtree.candidateTrees.getBestScore() <<endl;
-					//iqtree.minUB << "\t" << iqtree.meanUB/iqtree.skippedNNIub << "\t" << iqtree.maxUB << endl;
-		out_UB.close();
-		}
+    if (params.upper_bound_NNI) {
+        string out_file_UB = params.out_prefix;
+        out_file_UB += ".UB.NNI.main";
+        ofstream out_UB;
+        out_UB.exceptions(ios::failbit | ios::badbit);
+        out_UB.open((char *) out_file_UB.c_str(), std::ofstream::out | std::ofstream::app);
+        out_UB << iqtree.leafNum << "\t" << iqtree.aln->getNSite() << "\t" << iqtree.params->upper_bound_frac << "\t"
+        << iqtree.skippedNNIub << "\t" << iqtree.totalNNIub << "\t" << iqtree.getBestScore() << endl;
+        //iqtree.minUB << "\t" << iqtree.meanUB/iqtree.skippedNNIub << "\t" << iqtree.maxUB << endl;
+        out_UB.close();
+    }
 
 	if (params.out_file)
 		iqtree.printTree(params.out_file);
@@ -2393,7 +2387,9 @@ void runPhyloAnalysis(Params &params) {
 //		runBootLhTest(params, alignment, *tree);
 		outError("Obsolete feature");
 	} else if (params.num_bootstrap_samples == 0) {
-		// the main Maximum likelihood tree reconstruction
+	/********************************************************************************
+                    THE MAIN MAXIMUM LIKELIHOOD TREE RECONSTRUCTION
+	 ********************************************************************************/
 		vector<ModelInfo> *model_info = new vector<ModelInfo>;
 		alignment->checkGappySeq(params.remove_empty_seq);
 
@@ -2405,6 +2401,7 @@ void runPhyloAnalysis(Params &params) {
 
 		// call main tree reconstruction
         runTreeReconstruction(params, original_model, *tree, *model_info);
+
 		if (params.gbo_replicates && params.online_bootstrap) {
 			if (params.print_ufboot_trees)
 				tree->writeUFBootTrees(params);
@@ -2494,6 +2491,7 @@ void runPhyloAnalysis(Params &params) {
     // 2015-09-22: THIS IS STUPID: after deleting tree, one cannot access tree->aln anymore
 //	alignment = tree->aln;
 	delete alignment;
+	delete tree; // TUNG: Fix the segmentation fault bug
 }
 
 void assignBranchSupportNew(Params &params) {

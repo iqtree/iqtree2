@@ -67,6 +67,11 @@
 #include <stdlib.h>
 #include "vectorclass/vectorclass.h"
 
+#include "MPIHelper.h"
+#ifdef _IQTREE_MPI
+#include <mpi.h>
+#endif
+
 #ifdef _OPENMP
 	#include <omp.h>
 #endif
@@ -1536,7 +1541,7 @@ void branchStats(Params &params){
 	
 	/***** Following added by BQM to print internal branch lengths */
 	NodeVector nodes1, nodes2;
-	mytree.getAllInnerBranches(nodes1, nodes2);
+	mytree.generateNNIBraches(nodes1, nodes2);
 	output = params.out_prefix;
 	output += ".inlen";
 	try {
@@ -1721,49 +1726,82 @@ protected:
     virtual int     sync();
 };
 
-
-outstreambuf* outstreambuf::open( const char* name, ios::openmode mode) {
-    fout.open(name, mode);
-	if (!fout.is_open()) {
-		cout << "Could not open " << name << " for logging" << endl;
-		return NULL;
-	}
-	cout_buf = cout.rdbuf();
-	cerr_buf = cerr.rdbuf();
-	fout_buf = fout.rdbuf();
-	cout.rdbuf(this);
-	cerr.rdbuf(this);
-    return this;
-}
-
-outstreambuf* outstreambuf::close() {
-    if ( fout.is_open()) {
-        sync();
-        cout.rdbuf(cout_buf);
-        cerr.rdbuf(cerr_buf);
-		fout.close();
-        return this;
-    }
-    return NULL;
-}
-
-int outstreambuf::overflow( int c) { // used for output buffer only
-	if (verbose_mode >= VB_MIN)
-		if (cout_buf->sputc(c) == EOF) return EOF;
-	if (fout_buf->sputc(c) == EOF) return EOF;
-	return c;
-}
-
-int outstreambuf::sync() { // used for output buffer only
-	if (verbose_mode >= VB_MIN)
-		cout_buf->pubsync();
-	return fout_buf->pubsync();
-}
-
+/*********************************************************************************
+ * GLOBAL VARIABLES
+ *********************************************************************************/
 outstreambuf _out_buf;
 string _log_file;
 int _exit_wait_optn = FALSE;
 
+outstreambuf* outstreambuf::open( const char* name, ios::openmode mode) {
+	if (MPIHelper::getInstance().getProcessID() == MASTER) {
+		fout.open(name, mode);
+		if (!fout.is_open()) {
+			cout << "Could not open " << name << " for logging" << endl;
+			return NULL;
+		}
+		cout_buf = cout.rdbuf();
+		cerr_buf = cerr.rdbuf();
+		fout_buf = fout.rdbuf();
+		cout.rdbuf(this);
+		cerr.rdbuf(this);
+		return this;
+	} else {
+		cout_buf = cout.rdbuf();
+		cerr_buf = cerr.rdbuf();
+		cout.rdbuf(this);
+		cerr.rdbuf(this);
+		return this;
+	}
+}
+
+outstreambuf* outstreambuf::close() {
+	if (MPIHelper::getInstance().getProcessID() == MASTER) {
+		if (fout.is_open()) {
+			sync();
+			cout.rdbuf(cout_buf);
+			cerr.rdbuf(cerr_buf);
+			fout.close();
+			return this;
+		}
+		return NULL;
+	} else {
+		sync();
+		cout.rdbuf(cout_buf);
+		cerr.rdbuf(cerr_buf);
+		return this;
+	}
+}
+
+int outstreambuf::overflow( int c) { // used for output buffer only
+	if (MPIHelper::getInstance().getProcessID() == MASTER) {
+		if (verbose_mode >= VB_MIN) {
+			if (cout_buf->sputc(c) == EOF) return EOF;
+		}
+		if (fout_buf->sputc(c) == EOF) return EOF;
+		return c;
+	} else {
+#ifdef _MPI_DEBUG
+		if (cout_buf->sputc(c) == EOF) return EOF;
+#endif
+		return c;
+	}
+}
+
+
+
+int outstreambuf::sync() { // used for output buffer only
+	if (MPIHelper::getInstance().getProcessID() == MASTER) {
+		if (verbose_mode >= VB_MIN)
+			cout_buf->pubsync();
+		return fout_buf->pubsync();
+	} else {
+#ifdef _MPI_DEBUG
+		return cout_buf->pubsync();
+#endif
+	}
+	return 0;
+}
 
 extern "C" void startLogFile() {
 	_out_buf.open(_log_file.c_str());
@@ -2135,69 +2173,100 @@ Instruction set ID reported by vectorclass::instrset_detect
 */
 int instruction_set;
 
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
+#ifdef _IQTREE_MPI
+	double time_initial, time_current;
+	int n_tasks, task_id;
+	if (MPI_Init(&argc, &argv) != MPI_SUCCESS) {
+		outError("MPI initialization failed!");
+	}
+	MPI_Comm_size(MPI_COMM_WORLD, &n_tasks);
+	MPI_Comm_rank(MPI_COMM_WORLD, &task_id);
+	MPIHelper::getInstance().setNumProcesses(n_tasks);
+	MPIHelper::getInstance().setProcessID(task_id);
+	MPIHelper::getInstance().setNumTreeReceived(0);
+	MPIHelper::getInstance().setNumTreeSent(0);
+    MPIHelper::getInstance().setNumNNISearch(0);
+#endif
 
 	/*************************/
 	{ /* local scope */
-		int found=FALSE;              /* "click" found in cmd name? */
+		int found = FALSE;              /* "click" found in cmd name? */
 		int n, dummyint;
 		char *tmpstr;
-		int     intargc; 
-		char  **intargv; 
-		intargc = 0; 
-		intargv = NULL; 
-		
-		for (n = strlen(argv[0]) - 5; 
-		    (n >= 0) && !found && (argv[0][n] != '/')
-		             && (argv[0][n] != '\\'); n--) {
+		int intargc;
+		char **intargv;
+		intargc = 0;
+		intargv = NULL;
+
+		for (n = strlen(argv[0]) - 5;
+			 (n >= 0) && !found && (argv[0][n] != '/')
+			 && (argv[0][n] != '\\'); n--) {
 
 			tmpstr = &(argv[0][n]);
 			dummyint = 0;
-			(void)sscanf(tmpstr, "click%n", &dummyint);
+			(void) sscanf(tmpstr, "click%n", &dummyint);
 			if (dummyint == 5) found = TRUE;
 			else {
 				dummyint = 0;
-				(void)sscanf(tmpstr, "CLICK%n", &dummyint);
+				(void) sscanf(tmpstr, "CLICK%n", &dummyint);
 				if (dummyint == 5) found = TRUE;
 				else {
 					dummyint = 0;
-					(void)sscanf(tmpstr, "Click%n", &dummyint);
+					(void) sscanf(tmpstr, "Click%n", &dummyint);
 					if (dummyint == 5) found = TRUE;
 				}
 			}
 		}
-		if(found) _exit_wait_optn = TRUE;
+		if (found) _exit_wait_optn = TRUE;
 
 		if (_exit_wait_optn) { // get commandline parameters from keyboard
-			getintargv(&intargc, &intargv); 
+			getintargv(&intargc, &intargv);
 			fprintf(stdout, "\n\n");
-			if(intargc > 1) { // if there were option entered, use them as argc/argv
-				argc = intargc; 
-				argv = intargv; 
-			} 
+			if (intargc > 1) { // if there were option entered, use them as argc/argv
+				argc = intargc;
+				argv = intargv;
+			}
 		}
 	} /* local scope */
 	/*************************/
 
-	//Params params;
 	parseArg(argc, argv, Params::getInstance());
-
 	_log_file = Params::getInstance().out_prefix;
 	_log_file += ".log";
 	startLogFile();
+	time_t cur_time;
+
+#ifdef _IQTREE_MPI
+	cout << "************************************************" << endl;
+	cout << "* START TREE SEARCH USING MPI WITH " << MPIHelper::getInstance().getNumProcesses() << " PROCESSES *" << endl;
+	cout << "************************************************" << endl;
+	unsigned int rndSeed;
+	if (MPIHelper::getInstance().getProcessID() == MASTER) {
+		rndSeed = Params::getInstance().ran_seed;
+		cout << "Random seed of master = " << rndSeed << endl;
+	}
+	// Broadcast random seed
+	MPI_Bcast(&rndSeed, 1, MPI_INT, MASTER, MPI_COMM_WORLD);
+	if (MPIHelper::getInstance().getProcessID() != MASTER) {
+		Params::getInstance().ran_seed = rndSeed + task_id * 100000;
+		printf("Process %d: random_seed = %d\n", task_id, Params::getInstance().ran_seed);
+	}
+#endif
+
 	atexit(funcExit);
 	signal(SIGABRT, &funcAbort);
 	signal(SIGFPE, &funcAbort);
 	signal(SIGILL, &funcAbort);
 	signal(SIGSEGV, &funcAbort);
 	printCopyright(cout);
+
 	/*
-	double x=1e-100;
-	double y=1e-101;
-	if (x > y) cout << "ok!" << endl;
-	else cout << "shit!" << endl;
-	*/
+    double x=1e-100;
+    double y=1e-101;
+    if (x > y) cout << "ok!" << endl;
+    else cout << "shit!" << endl;
+    */
 	//FILE *pfile = popen("hostname","r");
 	char hostname[100];
 #if defined WIN32 || defined _WIN32 || defined __WIN32__
@@ -2228,13 +2297,13 @@ int main(int argc, char *argv[])
 
 	cout << "Host:    " << hostname << " (";
 	switch (instruction_set) {
-	case 3: cout << "SSE3, "; break;
-	case 4: cout << "SSSE3, "; break;
-	case 5: cout << "SSE4.1, "; break;
-	case 6: cout << "SSE4.2, "; break;
-	case 7: cout << "AVX, "; break;
-	case 8: cout << "AVX2, "; break;
-	default: cout << "AVX512F, "; break;
+		case 3: cout << "SSE3, "; break;
+		case 4: cout << "SSSE3, "; break;
+		case 5: cout << "SSE4.1, "; break;
+		case 6: cout << "SSE4.2, "; break;
+		case 7: cout << "AVX, "; break;
+		case 8: cout << "AVX2, "; break;
+		default: cout << "AVX512F, "; break;
 	}
 	if (has_fma3) cout << "FMA3, ";
 	if (has_fma4) cout << "FMA4, ";
@@ -2252,7 +2321,6 @@ int main(int argc, char *argv[])
 	cout << "Seed:    " << Params::getInstance().ran_seed <<  " ";
 	init_random(Params::getInstance().ran_seed);
 
-	time_t cur_time;
 	time(&cur_time);
 	cout << "Time:    " << ctime(&cur_time);
 
@@ -2285,8 +2353,6 @@ int main(int argc, char *argv[])
 		}
 	}
 
-
-
 #ifdef _OPENMP
 	if (Params::getInstance().num_threads == 0) {
 		cout << endl << endl;
@@ -2308,9 +2374,11 @@ int main(int argc, char *argv[])
 		outError("Number of threads must be 1 for sequential version.");
 	}
     int num_procs = countPhysicalCPUCores();
+#ifndef _IQTREE_MPI
     if (num_procs > 1) {
         cout << endl << endl << "NOTE: Consider using the multicore version because your CPU has " << num_procs << " cores!";
     }
+#endif
 #endif
 	//cout << "sizeof(int)=" << sizeof(int) << endl;
 	cout << endl << endl;
@@ -2318,6 +2386,7 @@ int main(int argc, char *argv[])
 	cout.precision(3);
 	cout.setf(ios::fixed);
 
+#ifndef _IQTREE_MPI
 	// call the main function
 	if (Params::getInstance().tree_gen != NONE) {
 		generateRandomTree(Params::getInstance());
@@ -2412,6 +2481,10 @@ int main(int argc, char *argv[])
 			outError("Unknown file input format");
 		}
 	}
+
+#else
+	runPhyloAnalysis(Params::getInstance());
+#endif
 
 	time(&cur_time);
 	cout << "Date and Time: " << ctime(&cur_time);

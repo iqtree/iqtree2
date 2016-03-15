@@ -90,7 +90,7 @@ public:
      * Return the tree string contining taxon names and branch lengths
      * @return
      */
-    virtual string getTreeString();
+    virtual string getTreeString(int format = WT_BR_LEN);
 
     /**
             Read the tree saved with Taxon Names and branch lengths.
@@ -237,11 +237,12 @@ public:
     virtual void changeNNIBrans(NNIMove nnimove);
 
     /**
+        OBSOLETE!
      * 	 Restore the branch lengths from the saved values
 	 * @param node the current node of the post-order tree traversal
 	 * @param dad the dad of that node used to direct the traversal
      */
-    virtual void restoreAllBrans(PhyloNode *node = NULL, PhyloNode *dad = NULL);
+//    virtual void restoreAllBrans(PhyloNode *node = NULL, PhyloNode *dad = NULL);
 
     /**
             reinsert the whole list of leaves back into the supertree then call mapTrees

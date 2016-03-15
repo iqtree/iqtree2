@@ -587,7 +587,7 @@ void SplitGraph::scaleWeight(double norm, bool make_int, int precision) {
 		else 
 			(*itg)->setWeight( round((*itg)->getWeight()*norm*pow((double)10.0,precision))/pow((double)10.0,precision));
 }
-
+// TODO Implement a more efficient function using Hash Table
 bool SplitGraph::containSplit(Split &sp) {
 	Split invert_sp(sp);
 	invert_sp.invert();

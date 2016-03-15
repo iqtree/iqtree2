@@ -553,7 +553,7 @@ void PhyloSuperTree::changeLikelihoodKernel(LikelihoodKernel lk) {
 //    }
 }
 
-string PhyloSuperTree::getTreeString() {
+string PhyloSuperTree::getTreeString(int format) {
 	stringstream tree_stream;
 	printTree(tree_stream, WT_BR_LEN+WT_NEWLINE);
 	for (iterator it = begin(); it != end(); it++)
@@ -1291,12 +1291,12 @@ void PhyloSuperTree::changeNNIBrans(NNIMove move) {
 
 }
 
-void PhyloSuperTree::restoreAllBrans(PhyloNode *node, PhyloNode *dad) {
-	int part = 0;
-	for (iterator it = begin(); it != end(); it++, part++) {
-		(*it)->setBranchLengths(part_info[part].cur_brlen);
-	}
-}
+//void PhyloSuperTree::restoreAllBrans(PhyloNode *node, PhyloNode *dad) {
+//	int part = 0;
+//	for (iterator it = begin(); it != end(); it++, part++) {
+//		(*it)->setBranchLengths(part_info[part].cur_brlen);
+//	}
+//}
 
 void PhyloSuperTree::reinsertLeaves(PhyloNodeVector &del_leaves) {
 	IQTree::reinsertLeaves(del_leaves);

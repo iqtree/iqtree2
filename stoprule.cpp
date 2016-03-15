@@ -76,17 +76,14 @@ StopRule::~StopRule()
 //		return ((cur_iteration+step_iteration-1)/step_iteration)*step_iteration;
 //	case SC_REAL_TIME:
 ////		return ((max_run_time - realtime_secs)/max_run_time);
-//		assert(0); // TODO
+//		assert(0);
 //		return 0;
 //	}
 //}
 
 bool StopRule::meetStopCondition(int cur_iteration, double cur_correlation) {
 	switch (stop_condition) {
-	case SC_FIXED_ITERATION:
-		return cur_iteration > min_iteration;
-	case SC_WEIBULL:
-		if (predicted_iteration == 0)
+		case SC_FIXED_ITERATION:
 			return cur_iteration > min_iteration;
 		else
 			return cur_iteration > predicted_iteration;
@@ -101,7 +98,7 @@ bool StopRule::meetStopCondition(int cur_iteration, double cur_correlation) {
 	return false;
 }
 
-double StopRule::getRemainingTime(int cur_iteration, double cur_correlation) {
+double StopRule::getRemainingTime(int cur_iteration) {
 	double realtime_secs = getRealTime() - start_real_time;
 	int niterations;
 	switch (stop_condition) {

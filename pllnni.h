@@ -31,7 +31,6 @@ typedef struct {
 
 typedef struct {
     // FOR GENERAL TREE SEARCH
-	bool speednni;
 	vector<pllNNIMove> posNNIList; // positive NNIs
 	unordered_set<string> aBranches; // Set of branches that are affected by the previous NNIs
 	double curLogl; // Current tree log-likelihood

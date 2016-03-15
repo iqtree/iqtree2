@@ -21,6 +21,7 @@
 #include "phylosupertree.h"
 #include "phylosupertreeplen.h"
 #include "upperbounds.h"
+#include "MPIHelper.h"
 
 //const static int BINARY_SCALE = floor(log2(1/SCALING_THRESHOLD));
 //const static double LOG_BINARY_SCALE = -(log(2) * BINARY_SCALE);
@@ -113,6 +114,15 @@ void PhyloTree::init() {
 PhyloTree::PhyloTree(Alignment *aln) : MTree() {
     init();
     this->aln = aln;
+}
+
+PhyloTree::PhyloTree(string& treeString, Alignment* aln, bool isRooted) : MTree() {
+    stringstream str;
+    str << treeString;
+    str.seekg(0, ios::beg);
+    freeNode();
+    readTree(str, isRooted);
+    setAlignment(aln);
 }
 
 void PhyloTree::discardSaturatedSite(bool val) {
@@ -314,16 +324,15 @@ void PhyloTree::setRootNode(const char *my_root) {
     assert(root);
 }
 
-void PhyloTree::setParams(Params* params) {
-	this->params = params;
-}
-
-void PhyloTree::readTreeString(const string &tree_string) {
-	stringstream str;
-	str << tree_string;
-	str.seekg(0, ios::beg);
-	freeNode();
-	readTree(str, rooted);
+void PhyloTree::readTreeString(const string &tree_string, bool convertIDs) {
+    stringstream str;
+    str << tree_string;
+    str.seekg(0, ios::beg);
+    freeNode();
+    readTree(str, rooted);
+    if (convertIDs) {
+        assignLeafNames();
+    }
 	setAlignment(aln);
 	setRootNode(params->root);
 
@@ -335,6 +344,9 @@ void PhyloTree::readTreeString(const string &tree_string) {
 	}
 	resetCurScore();
 //	lhComputed = false;
+    if (params->fixStableSplits) {
+        buildNodeSplit();
+    }
 }
 
 int PhyloTree::wrapperFixNegativeBranch(bool force_change) {
@@ -372,17 +384,22 @@ void PhyloTree::readTreeFile(const string &file_name) {
     str.close();
 }
 
-string PhyloTree::getTreeString() {
+string PhyloTree::getTreeString(int format) {
 	stringstream tree_stream;
-	printTree(tree_stream);
+	printTree(tree_stream, format);
 	return tree_stream.str();
 }
 
-string PhyloTree::getTopology() {
+string PhyloTree::getTopologyString(bool printBranchLength) {
     stringstream tree_stream;
     // important: to make topology string unique
     setRootNode(params->root);
-    printTree(tree_stream, WT_TAXON_ID + WT_SORT_TAXA);
+    //printTree(tree_stream, WT_TAXON_ID + WT_SORT_TAXA);
+    if (printBranchLength) {
+        printTree(tree_stream, WT_SORT_TAXA + WT_BR_LEN + WT_TAXON_ID);
+    } else {
+        printTree(tree_stream, WT_SORT_TAXA);
+    }
     return tree_stream.str();
 }
 
@@ -3589,51 +3606,49 @@ int PhyloTree::fixNegativeBranch(bool force, Node *node, Node *dad) {
  Nearest Neighbor Interchange by maximum likelihood
  ****************************************************************************/
 
-void PhyloTree::doOneRandomNNI(Node *node1, Node *node2) {
-	assert(isInnerBranch(node1, node2));
-    Neighbor *node1Nei = NULL;
-    Neighbor *node2Nei = NULL;
-    // randomly choose one neighbor from node1 and one neighbor from node2
-    bool chooseNext = false;
-	FOR_NEIGHBOR_IT(node1, node2, it){
-		if (chooseNext) {
-			node1Nei = (*it);
-			break;
-		}
-		int randNum = random_int(1);
-		if (randNum == 0) {
-			node1Nei = (*it);
+void PhyloTree::doOneRandomNNI(Branch branch) {
+	assert(isInnerBranch(branch.first, branch.second));
+    NNIMove nni;
+    nni.node1 = (PhyloNode*) branch.first;
+    nni.node2 = (PhyloNode*) branch.second;
+	FOR_NEIGHBOR_IT(branch.first, branch.second, node1NeiIt) {
+		nni.node1Nei_it = node1NeiIt;
+		break;
+	}
+    int randInt = random_int(branch.second->neighbors.size()-1);
+    int cnt = 0;
+	FOR_NEIGHBOR_IT(branch.second, branch.first, node2NeiIt) {
+		if (cnt == randInt) {
+			nni.node2Nei_it = node2NeiIt;
 			break;
 		} else {
-			chooseNext = true;
+			cnt++;
 		}
 	}
-	chooseNext = false;
-	FOR_NEIGHBOR_IT(node2, node1, it){
-		if (chooseNext) {
-			node2Nei = (*it);
-			break;
-		}
-		int randNum = random_int(1);
-		if (randNum == 0) {
-			node2Nei = (*it);
-			break;
-		} else {
-			chooseNext = true;
-		}
-	}
-	assert(node1Nei != NULL && node2Nei != NULL);
+    doNNI(nni, true);
+}
 
-    NeighborVec::iterator node1NeiIt = node1->findNeighborIt(node1Nei->node);
-    NeighborVec::iterator node2NeiIt = node2->findNeighborIt(node2Nei->node);
-    assert(node1NeiIt != node1->neighbors.end());
-    assert(node1NeiIt != node2->neighbors.end());
+NNIMove PhyloTree::getRandomNNI(Branch &branch) {
+    assert(isInnerBranch(branch.first, branch.second));
+    NNIMove nni;
+    nni.node1 = (PhyloNode*) branch.first;
+    nni.node2 = (PhyloNode*) branch.second;
 
-    node1->updateNeighbor(node1NeiIt, node2Nei);
-    node2Nei->node->updateNeighbor(node2, node1);
-
-    node2->updateNeighbor(node2NeiIt, node1Nei);
-    node1Nei->node->updateNeighbor(node1, node2);
+    FOR_NEIGHBOR_IT(branch.first, branch.second, node1NeiIt) {
+            nni.node1Nei_it = node1NeiIt;
+            break;
+        }
+    int randInt = random_int(branch.second->neighbors.size()-1);
+    int cnt = 0;
+    FOR_NEIGHBOR_IT(branch.second, branch.first, node2NeiIt) {
+            if (cnt == randInt) {
+                nni.node2Nei_it = node2NeiIt;
+                break;
+            } else {
+                cnt++;
+            }
+        }
+    return nni;
 }
 
 void PhyloTree::doNNI(NNIMove &move, bool clearLH) {
@@ -3688,11 +3703,13 @@ void PhyloTree::doNNI(NNIMove &move, bool clearLH) {
      outError("Wrong ID");
      }*/
 
+    PhyloNeighbor *nei12 = (PhyloNeighbor*) node1->findNeighbor(node2); // return neighbor of node1 which points to node 2
+    PhyloNeighbor *nei21 = (PhyloNeighbor*) node2->findNeighbor(node1); // return neighbor of node2 which points to node 1
 
     if (clearLH) {
         // clear partial likelihood vector
-        node12_it->clearPartialLh();
-        node21_it->clearPartialLh();
+        nei12->clearPartialLh();
+        nei21->clearPartialLh();
 
         node2->clearReversePartialLh(node1);
         node1->clearReversePartialLh(node2);
@@ -3702,6 +3719,20 @@ void PhyloTree::doNNI(NNIMove &move, bool clearLH) {
 
     if (params->leastSquareNNI) {
     	updateSubtreeDists(move);
+    }
+
+    // update split store in node
+    if (nei12->split != NULL || nei21->split != NULL) {
+        delete nei12->split;
+        nei12->split = new Split(leafNum);
+        delete nei21->split;
+        nei21->split = new Split(leafNum);
+
+        FOR_NEIGHBOR_IT(nei12->node, node1, it)
+                *(nei12->split) += *((*it)->split);
+
+        FOR_NEIGHBOR_IT(nei21->node, node2, it)
+                *(nei21->split) += *((*it)->split);
     }
 }
 
@@ -3746,8 +3777,8 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
     size_t scale_num_size = getScaleNumBytes()/sizeof(UBYTE);
 
     // Upper Bounds ---------------
-    totalNNIub += 2;
     if(params->upper_bound_NNI){
+    	totalNNIub += 2;
     	NNIMove resMove;
     	resMove = getBestNNIForBranUB(node1,node2,this);
     	/* if UB is smaller than the current likelihood, then we don't recompute the likelihood of the swapped topology.

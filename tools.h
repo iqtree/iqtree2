@@ -1,4 +1,4 @@
-/***************************************************************************
+/****************************************************************************
  *   Copyright (C) 2006 by BUI Quang Minh, Steffen Klaere, Arndt von Haeseler   *
  *   minh.bui@univie.ac.at   *
  *                                                                         *
@@ -32,6 +32,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <stdint.h>
+#include <string.h>
 
 //#include <sys/time.h>
 //#include <time.h>
@@ -207,7 +208,7 @@ typedef vector<string> StrVector;
 /**
         matrix of double number
  */
-#define matrix(T) vector<vector<T> >
+#define matrix(T) vector< vector<T> >
 
 /**
         matrix of double
@@ -272,6 +273,7 @@ const int WT_NEWLINE = 128;
 const int WT_BR_LEN_FIXED_WIDTH = 256;
 const int WT_BR_ID = 512;
 const int WT_BR_LEN_ROUNDING = 1024;
+const int WT_BR_LEN_SHORT = 2048; // store only 6 digits after the comma for branch lengths
 const int TRUE = 1;
 const int FALSE = 0;
 
@@ -429,8 +431,18 @@ public:
     */
     bool fai;
 
+    /**
+     *  Option to check memory consumption only
+     */
+    bool memCheck;
+
+    /**
+     *  The support threshold for stable splits (Default = 0.9)
+     */
+    double stableSplitThreshold;
+
 	/**
-	 *  Use random restart strategy for estimating alpha and p_invar
+	 *  Option to do mutlipe start for estimating alpha and p_invar
 	 */
 	bool testAlpha;
 
@@ -456,17 +468,30 @@ public:
     bool exh_ai;
 
 	/**
-	 *  User file contains the alpha and invar parameters
+	 *  Text file contain all pairs of alpha and p_invar to
+	 *  evaluate.
+	 *  TODO Remove this option and implement the exhaustive search
+	 *  directly into IQ-TREE
 	 */
 	char* alpha_invar_file;
 
 	/**
-	 * Turn on feature to identify stable splits and fix them during tree search
+	 *  Enable tabu search for NNI
 	 */
-	bool fix_stable_splits;
+	bool tabu;
+
+    /**
+	 *  Use (5+5)-ES strategy
+	 */
+	bool five_plus_five;
 
 	/**
-	 *  Number of distinct locally optimal trees
+	 * Turn on feature to identify stable splits and fix them during tree search
+	 */
+	bool fixStableSplits;
+
+	/**
+	 *  Number of best trees used to compute stable splits
 	 */
 	int numSupportTrees;
 
@@ -488,11 +513,14 @@ public:
 
 	/**
 	 *  Number of best trees in the candidate set used to generate perturbed trees
+	 *  In term of evolutionary algorithm, this is the population size
 	 */
 	int popSize;
 
 	/**
 	 *  Maximum number of trees stored in the candidate tree set
+	 *  This is just a technical constraint to ensure that the candidate tree set
+	 *  does not have to store a lot of trees
 	 */
 	int maxCandidates;
 
@@ -501,10 +529,6 @@ public:
 	 */
 	bool speednni;
 
-	/**
-	 *  use reduction technique to constraint tree space
-	 */
-	bool reduction;
 
 	/**
 	 *  portion of NNI used for perturbing the tree
@@ -514,7 +538,7 @@ public:
 	/**
 	 *  logl epsilon for model parameter optimization
 	 */
-	double modeps;
+	double modelEps;
 
 	/**
 	 *  New search heuristics (DEFAULT: ON)
@@ -1250,9 +1274,10 @@ public:
     int write_intermediate_trees;
 
     /**
-     *  Write out all candidate trees (the locally optimal trees)
+     *  Write trees obtained at the end of each NNI search
      */
-    int write_local_optimal_trees;
+    bool write_candidate_trees;
+
 
     /**
         TRUE to avoid duplicated trees while writing intermediate trees
@@ -1653,7 +1678,6 @@ public:
 
     /** frequencies of const patterns to be inserted into alignment */
     char *freq_const_patterns;
-
     /** BQM 2015-02-25: true to NOT rescale Gamma+Invar rates by (1-p_invar) */
     bool no_rescale_gamma_invar;
 
@@ -2069,6 +2093,10 @@ int finish_random();
  * @param n upper-bound of random number
  */
 int random_int(int n);
+/**
+ * returns a random integer in the range [a; b]
+ */
+int random_int(int a, int b);
 
 /**
  *  return a random integer in the range [a,b]

@@ -502,37 +502,37 @@ int getModelList(Params &params, Alignment *aln, StrVector &models, bool separat
         }
     }
 
-    bool with_new = params.model_name.find("NEW") != string::npos;
-    bool with_asc = params.model_name.find("ASC") != string::npos;
+	bool with_new = params.model_name.find("NEW") != string::npos;
+	bool with_asc = params.model_name.find("ASC") != string::npos;
 
 //	if (seq_type == SEQ_CODON) {
 //		for (i = 0; i < noptions; i++)
 //			test_options[i] = test_options_codon[i];
 //	} else 
-    if (seq_type == SEQ_MORPH || aln->frac_const_sites == 0.0) {
-        // morphological or SNP data: activate +ASC
-        if (with_new) {
-            if (with_asc)
-                test_options = test_options_asc_new;
-            else
-                test_options = test_options_morph_new;
-        } else if (with_asc)
-            test_options = test_options_asc;
-        else
-            test_options = test_options_morph;
+	if (seq_type == SEQ_MORPH || aln->frac_const_sites == 0.0) {
+		// morphological or SNP data: activate +ASC
+		if (with_new) {
+			if (with_asc)
+				test_options = test_options_asc_new;
+			else
+				test_options = test_options_morph_new;
+		} else if (with_asc)
+			test_options = test_options_asc;
+		else
+			test_options = test_options_morph;
 	} else {
-        // normal data, use +I instead
-        if (with_new) {
-            // change +I+G to +R
-            if (with_asc)
-                test_options = test_options_asc_new;
-            else
-                test_options = test_options_new;
-        } else if (with_asc) {
-            test_options = test_options_asc;
-        } else
-            test_options = test_options_default;
-    }
+		// normal data, use +I instead
+		if (with_new) {
+			// change +I+G to +R
+			if (with_asc)
+				test_options = test_options_asc_new;
+			else
+				test_options = test_options_new;
+		} else if (with_asc) {
+			test_options = test_options_asc;
+		} else
+			test_options = test_options_default;
+	}
     
 
     StrVector ratehet;

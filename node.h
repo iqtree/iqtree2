@@ -33,8 +33,8 @@
 //#include <time.h>
 #include <math.h>
 #include "ncl/ncl.h"
-
 #include "tools.h"
+#include "split.h"
 
 using namespace std;
 
@@ -46,6 +46,7 @@ class Node;
     Neighbor list of a node in the tree
  */
 class Neighbor {
+
 public:
 
     /**
@@ -64,6 +65,11 @@ public:
     int id;
 
     /**
+    *   The set of taxa underneath the neighbor
+    */
+    Split* split;
+
+    /**
         construct class with a node and length
         @param anode the other end of the branch
         @param alength length of branch
@@ -72,6 +78,7 @@ public:
         node = anode;
         length = alength;
         id = -1;
+        split = NULL;
     }
 
     /**
@@ -84,6 +91,7 @@ public:
         node = anode;
         length = alength;
         id = aid;
+        split = NULL;
     }
 
     /**
@@ -94,6 +102,7 @@ public:
         node = nei->node;
         length = nei->length;
         id = nei->id;
+        split = NULL;
     }
 
     /**
@@ -112,6 +121,9 @@ typedef vector<Neighbor*> NeighborVec;
     Node vector
  */
 typedef vector<Node*> NodeVector;
+
+typedef pair<Node*, Node*> Branch;
+typedef vector<Branch> Branches;
 
 /*--------------------------------------------------------------*/
 /*--------------------------------------------------------------*/

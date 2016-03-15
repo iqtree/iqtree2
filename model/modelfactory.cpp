@@ -779,7 +779,7 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info,
 	}
         */
     tree->setCurScore(cur_lh);
-	if (verbose_mode >= VB_MED || write_info) 
+	if (write_info)
 		cout << "1. Initial log-likelihood: " << cur_lh << endl;
 
 	// For UpperBounds -----------
@@ -825,7 +825,7 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info,
 			if (!fixed_len) cur_lh = tree->optimizeAllBranches(100, logl_epsilon);
 			break;
 		}
-		if (verbose_mode >= VB_MED) {
+		if (write_info) {
 			model->writeInfo(cout);
 			site_rate->writeInfo(cout);
 		}
@@ -843,7 +843,7 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info,
 //			if (gradient_epsilon > (new_lh - cur_lh) * logl_epsilon)
 //				gradient_epsilon = (new_lh - cur_lh) * logl_epsilon;
 			cur_lh = new_lh;
-			if (verbose_mode >= VB_MED || write_info)
+			if (write_info)
 				cout << i << ". Current log-likelihood: " << cur_lh << endl;
 		} else {
 			site_rate->classifyRates(new_lh);
@@ -867,7 +867,7 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info,
 		tree->mlFirstOpt = cur_lh;
 	// ---------------------------
 
-	if (verbose_mode <= VB_MIN && write_info) {
+	if (write_info) {
 		model->writeInfo(cout);
 		site_rate->writeInfo(cout);
 	}

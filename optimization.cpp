@@ -702,7 +702,7 @@ void Optimization::dfpmin(double p[], int n, double lower[], double upper[], dou
 		//checkDirection(p, xi);
 		//if (*iter > 200) cout << "iteration=" << *iter << endl;
 	}
-	// BQM: TODO disable this message!
+	// BQM: disable this message!
 	//nrerror("too many iterations in dfpmin");
 	FREEALL
 }

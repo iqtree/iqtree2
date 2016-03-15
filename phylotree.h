@@ -31,6 +31,7 @@
 #include "optimization.h"
 #include "model/rateheterogeneity.h"
 #include "pllrepo/src/pll.h"
+#include "candidateset.h"
 
 #define BOOT_VAL_FLOAT
 #define BootValType float
@@ -143,6 +144,30 @@ typedef std::map< int, PhyloNode* > IntPhyloNodeMap;
 
 const int MAX_SPR_MOVES = 20;
 
+struct NNIMove {
+
+    // Two nodes representing the central branch
+    PhyloNode *node1, *node2;
+
+    // Roots of the two subtree that are swapped
+    NeighborVec::iterator node1Nei_it, node2Nei_it;
+
+    // log-likelihood of the tree after applying the NNI
+    double newloglh;
+
+    int swap_id;
+
+    // new branch lengths of 5 branches corresponding to the NNI
+    double newLen[5];
+
+    // pattern likelihoods
+    double *ptnlh;
+
+    bool operator<(const NNIMove & rhs) const {
+        return newloglh > rhs.newloglh;
+    }
+};
+
 /**
         an SPR move.
  */
@@ -197,34 +222,6 @@ struct SwapNNIParam {
     double *nni2_ptnlh;
 };
 
-struct NNIMove {
-    // Two nodes representing the central branch
-    PhyloNode *node1, *node2;
-    // Roots of the two subtree that are swapped
-    NeighborVec::iterator node1Nei_it, node2Nei_it;
-
-    // log-likelihood of the tree after applying the NNI
-    double newloglh;
-
-    int swap_id;
-
-    // old branch lengths of 5 branches before doing NNI
-    //double oldLen[5];
-
-    // new branch lengths of 5 branches corresponding to the NNI
-    double newLen[5];
-
-    // pattern likelihoods
-    double *ptnlh;
-
-    bool operator<(const NNIMove & rhs) const {
-        return newloglh > rhs.newloglh;
-        //return delta > rhs.delta;
-    }
-};
-
-
-
 struct LeafFreq {
     int leaf_id;
 
@@ -263,6 +260,12 @@ public:
      * @param alignment
      */
     PhyloTree(Alignment *aln);
+
+    /**
+     *  Create a phylotree from the tree string and assign alignment.
+     *  Taxa IDs are numbered according to their orders in the alignment.
+     */
+    PhyloTree(string& treeString, Alignment *aln, bool isRooted);
 
     void init();
 
@@ -820,10 +823,13 @@ public:
 
     /**
             Read the tree saved with Taxon Names and branch lengths.
-            @param tree_string tree string to read from
-            @param updatePLL if true, tree is read into PLL
+            @param
+                tree_string tree string to read from
+            @param
+                convertIDs if TRUE, the NEWICK string contains taxon-IDs instead of names. Thus, the IDs will replaced by
+                the corresponding sequence names in the alignments
      */
-    virtual void readTreeString(const string &tree_string);
+    virtual void readTreeString(const string &tree_string, bool convertIDs = false);
 
     /**
             Read the tree saved with Taxon Names and branch lengths.
@@ -833,9 +839,10 @@ public:
 
     /**
      * Return the tree string contining taxon names and branch lengths
-     * @return
+     * @param format (WT_TAXON_ID, WT_BR_LEN, ...)
+     * @return the tree string with the specified format
      */
-    virtual string getTreeString();
+    virtual string getTreeString(int format = WT_BR_LEN);
 
     /**
      * Assign branch lengths for branch that has no or negative length
@@ -854,8 +861,10 @@ public:
 
     /**
      *  Return the sorted topology without branch length, used to compare tree topology
+     *  @param
+     *      printBranchLength true/false
      */
-    string getTopology();
+    string getTopologyString(bool printBranchLength);
 
 
     bool checkEqualScalingFactor(double &sum_scaling, PhyloNode *node = NULL, PhyloNode *dad = NULL);
@@ -1100,7 +1109,7 @@ public:
             search by a nearest neigbor interchange
             @return the likelihood of the tree
      */
-    double optimizeNNI();
+    //double optimizeNNI();
 
     /**
             search by a nearest neigbor interchange
@@ -1134,12 +1143,20 @@ public:
     virtual void doNNI(NNIMove &move, bool clearLH = true);
 
     /**
+     * [DEPRECATED]
      * Randomly choose perform an NNI, out of the two defined by branch node1-node2.
      * This function also clear the corresponding partial likelihood vectors
-     * @param node1 one node of the branch
-     * @param node2 one node of the branch
+     *
+     * @param branch on which a random NNI is done
      */
-    void doOneRandomNNI(Node *node1, Node *node2);
+    void doOneRandomNNI(Branch branch);
+
+    /**
+    *   Get a random NNI from an internal branch
+    *   @param branch the internal branch
+    *   @return an NNIMove
+    */
+    NNIMove getRandomNNI(Branch& branch);
 
 
     /**
@@ -1454,11 +1471,6 @@ public:
 
 	double minStateFreq;
 
-    /*
-     * 		Store the all the parameters for the program
-     */
-    Params* params;
-
     /** sequence names that were removed */
 	StrVector removed_seqs;
 
@@ -1514,10 +1526,7 @@ public:
 
     void approxAllBranches(PhyloNode *node = NULL, PhyloNode *dad = NULL);
 
-    /** set pointer of params variable */
-	virtual void setParams(Params* params);
-
-	double getCurScore() {
+    double getCurScore() {
 		return curScore;
 	}
 
@@ -1535,7 +1544,6 @@ public:
 		    curScore = -DBL_MAX;
         if (model)
             initializeAllPartialLh();
-//		clearAllPartialLH();
 	}
 
     void computeSeqIdentityAlongTree(Split &resp, Node *node = NULL, Node *dad = NULL);
@@ -1547,11 +1555,6 @@ protected:
      *  Instance of the phylogenetic likelihood library. This is basically the tree data strucutre in RAxML
      */
     pllInstance *pllInst;
-
-    /**
-     *  Whether the partial likelihood vectors have been computed for PLL
-     */
-//    bool lhComputed;
 
     /**
      *	PLL data structure for alignment
@@ -1574,7 +1577,7 @@ protected:
     bool subTreeDistComputed;
 
     /**
-     * Map data structure to store distance between subtree.
+     * Map data structure to store distance Candidate trees between subtree.
      * The key is a string which is constructed by concatenating IDs of
      * the 2 nodes, e.g. 15-16
      */

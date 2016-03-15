@@ -1,7 +1,7 @@
 /*
  * candidateset.h
  *
- *  Created on: Jun 1, 2014
+ *      Created on: Jun 1, 2014
  *      Author: Tung Nguyen
  */
 
@@ -32,15 +32,6 @@ struct CandidateTree {
 	 * log-likelihood or parsimony score
 	 */
 	double score;
-
-	/**
-	 *  Indicate whether the tree is NNI locally optimal.
-	 *  The reason to have this variable is that if the -reduction is
-	 *  enabled, we will also store non-locally optimal trees in the set.
-	 *  This is done to identify trees that belong to the same basin of attraction
-	 */
-	bool localOpt;
-
 };
 
 
@@ -50,10 +41,11 @@ struct CandidateTree {
 class CandidateSet : public multimap<double, CandidateTree> {
 
 public:
+
     /**
      * Initialization
      */
-	void init(Alignment* aln, Params *params);
+	void init(Alignment* aln);
 
 	CandidateSet();
 
@@ -68,7 +60,7 @@ public:
      * been used for reproduction. If all candidate trees have been used, we select the
      * current best trees as the new parent trees
      */
-//    string getNextCandTree();
+    string getNextCandTree();
 
     /**
      *  Replace an existing tree in the candidate set
@@ -81,21 +73,20 @@ public:
     /**
      *  create the parent tree set containing top trees
      */
-//    void initParentTrees();
+    void initParentTrees();
 
     /**
-     * update/insert \a tree into the candidate set if its score is higher than the worst tree
+     *  update/insert \a tree into the candidate set if its score is higher than the worst tree
      *
-     * @param tree
-     * 	The new tree string (with branch lengths)
-     * @param score
-     * 	The score (ML or parsimony) of \a tree
-     * @param localOpt
-     * 	Tells whether \a tree is a locally optimal (DEFAULT: true)
-     * @return false if tree topology already exists
-     *
+     *  @param tree
+     * 	    The new tree string (with branch lengths)
+     *  @param score
+     * 	    The score (ML or parsimony) of \a tree
+     *  @return
+     *      Relative position of the new tree to the current best tree.
+     *      Return -1 if the candidate set is not updated (duplicated tree)
      */
-    bool update(string tree, double score, bool localOpt = true);
+    int update(string newTree, double newScore);
 
     /**
      *  Get the \a numBestScores best scores in the candidate set
@@ -106,13 +97,6 @@ public:
      *  	Vector containing \a numBestScore best scores
      */
     vector<double> getBestScores(int numBestScores = 0);
-
-    /**
-     * Get the worst score
-     *
-     * @return the worst score
-     */
-    double getWorstScore();
 
     /**
      * Get best score
@@ -129,24 +113,16 @@ public:
      *  @return
      *  	Vector of current best trees
      */
-    vector<string> getTopTrees(int numTree = 0);
+    vector<string> getBestTreeStrings(int numTree = 0);
 
     /**
-     * 	Get \a numTree best locally optimal trees
-     * 	@param numTree
-     * 		Number of locally optimal trees
-     * 	@return
-     * 		Vector of current best locally optimal trees
+     *  Return a set of trees and a set of scores
+     *
+     *  @param trees vector of trees
+     *  @param scores vector of tree scores
+     *  @param treeFormat the NEWICK format used for tree string (WT_TAXON_ID, WT_BR_LEN, ..)
      */
-    vector<string> getBestLocalOptimalTrees(int numTree = 0);
-
-    /**
-     * 	Get tree(s) with the best score. There could be more than one
-     * 	tree that share the best score (this happens frequently with parsimony)
-     * 	@return
-     * 		A vector containing trees with the best score
-     */
-    vector<string> getBestTrees();
+    void getAllTrees(vector<string> &trees, vector<double> &scores, int treeFormat = -1);
 
     /**
      * destructor
@@ -175,10 +151,12 @@ public:
      *
      * 	@param tree
      * 		The newick tree string, from which the topology string will be generated
+     * 	@param convertOption
+     * 	    Use the same options as printTree() (WT_ID, WT_BR_LEN, ...)
      * 	@return
      * 		Newick string of the tree topology
      */
-    string getTopology(string tree);
+    string convertTreeString(const string tree, int format = WT_TAXON_ID | WT_SORT_TAXA);
 
     /**
      * return the score of \a topology
@@ -201,18 +179,38 @@ public:
     void clearTopologies();
 
     /**
-     * Compute the split support from the \a numTree best local optimal trees in the candidate sets
-     * @param numTree the number of best trees used to calculate support values
-     * @return number of splits with 100% support value
+     *  Create a SplitInMap of splits from the current best trees
+     *
+     *  @param supportThres
+     *      a number in (0,1] representing the support value threshold for stable splits
+     *  @param numSupportTrees
+     *      number of best trees used to compute support values
+     *  @return number of splits with 100% support value
      */
-    int computeSplitSupport(int numTree = 0);
+    int buildTopSplits(double supportThres, int numSupportTrees);
+
+   /**
+    *   Get number of stable splits
+    *   @param thresHold A number between (0,1.0], all splits have support values above this threshold
+    *   are considered stable
+    */
+    int countStableSplits(double thresHold);
+
+    void reportStableSplits();
 
     /**
-     * Check whether the
-     * @param sp the split to check, must have the same taxon set as the trees in CandidateSet.
-     * @return true if the \a supportedSplits contain \a sp, false otherwise.
+     *  Update the set of stable split when a new tree is inserted
+     *  to the set of best trees used for computing stable splits.
+     *
+     *  This function will remove all splits that belong to oldTree and add all
+     *  splits of newTree
+     *
+     *  @param
+     *  	oldTree tree that will be replace by \a newTree
+     *  @param
+     *  	newTree the new tree
      */
-    bool isStableSplit(Split& sp);
+    void updateStableSplit(string oldTree, string newTree);
 
     /**
      * Return a pointer to the \a CandidateTree that has topology equal to \a topology
@@ -229,43 +227,74 @@ public:
 
     /* Getter and Setter function */
 	void setAln(Alignment* aln);
-	int getMaxCandidates() const;
-	void setMaxCandidates(int maxCandidates);
-	int getPopSize() const;
-	void setPopSize(int popSize);
-	void setIsRooted(bool isRooted);
+
 	const StringDoubleHashMap& getTopologies() const {
 		return topologies;
 	}
 
-	/**
-	 * get number of locally optimal trees in the set
-	 * @return
-	 */
-	int getNumLocalOptTrees();
-
     /**
-     * Return a CandidateSet containing \a numTrees of current best candidate trees
+     * Return a CandidateSet containing \a numTrees candidate trees
      * @param numTrees
      * @return
      */
-    CandidateSet getBestCandidateTrees(int numTrees);
+    CandidateSet getBestCandidateTrees(int numTrees = 0);
 
-	SplitGraph& getStableSplits() {
-		return stableSplit;
+    /**
+     *  Return a set of trees whose score are equal \a score
+     */
+    CandidateSet getCandidateTrees(double score);
+
+
+	SplitIntMap& getCandidateSplitHash() {
+		return candidateSplitsHash;
 	}
+
+	/**
+	 * @brief Get a random subset containing \a numSplit from the
+	 * set of stable splits.
+	 * @param
+	 * 		numSplit size of the subset
+	 * @param
+	 * 		splits (OUT) a random subset of the stable splits
+	 */
+	//void getRandomStableSplits(int numSplit, SplitGraph& splits);
+
+	/**
+	 *  Add splits from \a treeString to the current candidate splits
+	 *
+	 *  @param tree collect splits from this tree
+	 */
+	void addCandidateSplits(string treeString);
+
+	/**
+	 *  Remove splits that appear from \a treeString.
+	 *  If an existing split has weight > 1, their weight will be
+	 *  reduced by 1.
+	 */
+	void removeCandidateSplits(string treeString);
+
+public:
+    int getNumStableSplits() const {
+        return numStableSplits;
+    }
 
 private:
 
     /**
-     *  Set of supported splits by the best trees
+     *  Maximum number of trees stored
      */
-    SplitGraph stableSplit;
+    int maxSize;
 
     /**
-     *  Shared params pointing to the global params
+     *  Number of stable splits identified
      */
-    Params* params;
+    int numStableSplits;
+
+    /**
+     *  Set of splits from the current best trees.
+     *  The number of current best trees is specified in params->numSupportTrees
+     */
+	SplitIntMap candidateSplitsHash;
 
     /**
      *  Map data structure storing <topology_string, score>
@@ -281,7 +310,6 @@ private:
      * pointer to alignment, just to assign correct IDs for taxa
      */
     Alignment *aln;
-
 };
 
 #endif /* CANDIDATESET_H_ */
