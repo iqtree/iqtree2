@@ -12,7 +12,7 @@
 #include <vector>
 //#include <unordered_set>
 extern "C" {
-#include "pllrepo/src/pllInternal.h"
+#include "pll/pllInternal.h"
 }
 
 typedef struct {
@@ -199,19 +199,19 @@ typedef struct{
     int max_candidate_trees;
     int treels_size;
     int save_all_trees;
-    pllBoolean save_all_br_lens;
+//    pllBoolean save_all_br_lens;
     double logl_cutoff;
     int duplication_counter;
     int n_patterns;
     struct pllHashTable * treels;
     unsigned int candidate_trees_count; /* counter of trees in pllHashTable */
     double * treels_logl; // maintain size == treels_size
-    char ** treels_newick; // maintain size == treels_size
+//    char ** treels_newick; // maintain size == treels_size
     double ** treels_ptnlh; // maintain size == treels_size
     int ** boot_samples;
     double * boot_logl;
     int * boot_counts;
-    int * boot_trees;
+    StrVector boot_trees;
 } pllUFBootData;
 
 /**

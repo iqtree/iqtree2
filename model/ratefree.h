@@ -25,7 +25,7 @@ public:
 	/**
 		@return true if this is a Gamma model (default: false)
 	*/	
-    virtual bool isGammaRate() { return false; }
+    virtual int isGammaRate() { return 0; }
 
 	/**
 	 * @return model name with parameters in form of e.g. GTR{a,b,c,d,e,f}
@@ -116,8 +116,9 @@ protected:
 		this function is served for the multi-dimension optimization. It should assign the model parameters
 		from a vector of variables that is index from 1 (NOTE: not from 0)
 		@param variables vector of variables, indexed from 1
+		@return TRUE if parameters are changed, FALSE otherwise (2015-10-20)
 	*/
-	virtual void getVariables(double *variables);
+	virtual bool getVariables(double *variables);
 
 	/**
 	 * proportion of sites for each rate categories

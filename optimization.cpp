@@ -300,8 +300,9 @@ double Optimization::minimizeOneDimen(double xmin, double xguess, double xmax, d
 	if (cx > xmax) cx = xmax;
 	
 	/* check if this works */
-	fa = computeFunction(ax);
+    // compute fb first to save some computation, if any
 	fb = computeFunction(bx);
+	fa = computeFunction(ax);
 	fc = computeFunction(cx);
 
 	/* if it works use these borders else be conservative */
@@ -730,6 +731,7 @@ double Optimization::derivativeFunk(double x[], double dfx[]) {
 	double *h = new double[ndim+1];
     double temp;
     int dim;
+	double fx = targetFunk(x);
 	for (dim = 1; dim <= ndim; dim++ ){
 		temp = x[dim];
 		h[dim] = ERROR_X * fabs(temp);
@@ -739,7 +741,6 @@ double Optimization::derivativeFunk(double x[], double dfx[]) {
 		dfx[dim] = (targetFunk(x));
 		x[dim] = temp;
 	}
-	double fx = targetFunk(x);
 	for (dim = 1; dim <= ndim; dim++ )
         dfx[dim] = (dfx[dim] - fx) / h[dim];
     delete [] h;

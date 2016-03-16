@@ -148,9 +148,9 @@ public:
 	virtual double getGammaShape() { return 0.0; }
 
 	/**
-		@return true if this is a Gamma model (default: false)
+		@return >0 if this is a Gamma model (default: 0)
 	*/	
-    virtual bool isGammaRate() { return false; }
+    virtual int isGammaRate() { return 0; }
 
 	/**
 		the target function which needs to be optimized
@@ -251,8 +251,9 @@ protected:
 		this function is served for the multi-dimension optimization. It should assign the model parameters
 		from a vector of variables that is index from 1 (NOTE: not from 0)
 		@param variables vector of variables, indexed from 1
+		@return TRUE if parameters are changed, FALSE otherwise (2015-10-20)
 	*/
-	virtual void getVariables(double *variables) {}
+	virtual bool getVariables(double *variables) { return false; }
 
 	
 };

@@ -107,6 +107,12 @@ public:
     virtual int getNDim();
 
 	/**
+		write information
+		@param out output stream
+	*/
+	virtual void writeInfo(ostream &out);
+
+	/**
 		optimize model parameters and tree branch lengths
 		@param fixed_len TRUE to fix branch lengths, default is false
 		@return the best likelihood
@@ -148,6 +154,19 @@ public:
 	PhyloSuperTreePlen(SuperAlignment *alignment, PhyloSuperTree *super_tree);
 
 	~PhyloSuperTreePlen();
+
+    /**
+            Read the tree saved with Taxon Names and branch lengths.
+            @param tree_string tree string to read from
+     */
+    virtual void readTreeString(const string &tree_string);
+
+    /**
+     * Return the tree string containing taxon names and branch lengths
+     * @return tree string
+     */
+    virtual string getTreeString();
+
 
     /**
             compute the distance between 2 sequences.
@@ -195,8 +214,32 @@ public:
 	 */
 	void getNNIType(PhyloNode *node1, PhyloNode *node2, vector<NNIType> &nni_type);
 
-	virtual void computeFuncDerv(double value, double &df, double &ddf);
-	virtual double computeFunction(double value);
+    /**
+            Inherited from Optimization class.
+            This function calculate f(value), first derivative f'(value) and 2nd derivative f''(value).
+            used by Newton raphson method to minimize the function.
+            @param value current branch length
+            @param df (OUT) first derivative
+            @param ddf (OUT) second derivative
+            @return negative of likelihood (for minimization)
+     */
+    virtual void computeFuncDerv(double value, double &df, double &ddf);
+
+    /**
+            inherited from Optimization class, to return to likelihood of the tree
+            when the current branch length is set to value
+            @param value current branch length
+            @return negative of likelihood (for minimization)
+     */
+    virtual double computeFunction(double value);
+
+    /**
+            compute tree likelihood on a branch. used to optimize branch length
+            @param dad_branch the branch leading to the subtree
+            @param dad its dad, used to direct the tranversal
+            @return tree likelihood
+     */
+    virtual double computeLikelihoodBranch(PhyloNeighbor *dad_branch, PhyloNode *dad);
 
     /**
             compute tree likelihood on a branch given buffer (theta_all), used after optimizing branch length

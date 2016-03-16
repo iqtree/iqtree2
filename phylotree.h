@@ -40,8 +40,6 @@
 extern int instruction_set;
 
 
-const double MIN_BRANCH_LEN = 0.000001; // NEVER TOUCH THIS CONSTANT AGAIN PLEASE!
-const double MAX_BRANCH_LEN = 100.0;
 const double TOL_BRANCH_LEN = 0.000001; // NEVER TOUCH THIS CONSTANT AGAIN PLEASE!
 const double TOL_LIKELIHOOD = 0.001; // NEVER TOUCH THIS CONSTANT AGAIN PLEASE!
 const double TOL_LIKELIHOOD_PARAMOPT = 0.001; // BQM: newly introduced for ModelFactory::optimizeParameters
@@ -95,7 +93,11 @@ inline T *aligned_alloc(size_t size) {
     void *mem;
 
 #if defined WIN32 || defined _WIN32 || defined __WIN32__
-	mem = _aligned_malloc(size*sizeof(T), MEM_ALIGNMENT);
+    #if (defined(__MINGW32__) || defined(__clang__)) && defined(BINARY32)
+        mem = __mingw_aligned_malloc(size*sizeof(T), MEM_ALIGNMENT);
+    #else
+        mem = _aligned_malloc(size*sizeof(T), MEM_ALIGNMENT);
+    #endif
 #else
 	int res = posix_memalign(&mem, MEM_ALIGNMENT, size*sizeof(T));
     if (res == ENOMEM) {
@@ -116,7 +118,11 @@ inline T *aligned_alloc(size_t size) {
 
 inline void aligned_free(void *mem) {
 #if defined WIN32 || defined _WIN32 || defined __WIN32__
-	_aligned_free(mem);
+    #if (defined(__MINGW32__) || defined(__clang__)) && defined(BINARY32)
+        __mingw_aligned_free(mem);
+    #else
+        _aligned_free(mem);
+    #endif
 #else
 	free(mem);
 #endif
@@ -253,7 +259,7 @@ public:
      */
     PhyloTree();
 
-    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+//    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
     /**
      * Constructor with given alignment
@@ -726,10 +732,15 @@ public:
     virtual double computeLikelihood(double *pattern_lh = NULL);
 
     /**
+     * @return number of elements per site lhl entry, used in conjunction with computePatternLhCat
+     */
+    int getNumLhCat(SiteLoglType wsl);
+
+    /**
      * compute _pattern_lh_cat for site-likelihood per category
      * @return tree log-likelihood
      */
-    virtual double computePatternLhCat();
+    virtual double computePatternLhCat(SiteLoglType wsl);
 
     /**
             compute pattern likelihoods only if the accumulated scaling factor is non-zero.
@@ -740,7 +751,7 @@ public:
             @param pattern_lh_cat (OUT) if not NULL, store all pattern-likelihood per category
      */
     virtual void computePatternLikelihood(double *pattern_lh, double *cur_logl = NULL,
-    		double *pattern_lh_cat = NULL);
+    		double *pattern_lh_cat = NULL, SiteLoglType wsl = WSL_RATECAT);
 
     vector<uint64_t> ptn_cat_mask;
 
@@ -1021,6 +1032,8 @@ public:
      */
     void optimizeAllBranchesLS(PhyloNode *node = NULL, PhyloNode *dad = NULL);
 
+    void computeBestTraversal(NodeVector &nodes, NodeVector &nodes2);
+
     /**
             optimize all branch lengths of the tree
             @param iterations number of iterations to loop through all branches
@@ -1053,7 +1066,7 @@ public:
         @param gradient_epsilon gradient epsilon
         @return optimal tree log-likelihood
     */
-    double optimizeTreeLengthScaling(double &scaling, double gradient_epsilon);
+    double optimizeTreeLengthScaling(double min_scaling, double &scaling, double max_scaling, double gradient_epsilon);
 
 
      /****************************************************************************
@@ -1267,6 +1280,11 @@ public:
      */
     virtual int fixNegativeBranch(bool force = false, Node *node = NULL, Node *dad = NULL);
 
+    /**
+        set negative branch to a new len
+    */
+    int setNegativeBranch(bool force, double newlen, Node *node = NULL, Node *dad = NULL);
+
     // OBSOLETE: assignRandomBranchLengths no longer needed, use fixNegativeBranch instead!
 //    int assignRandomBranchLengths(bool force = false, Node *node = NULL, Node *dad = NULL);
 
@@ -1476,6 +1494,8 @@ public:
 
 	/** sequence that are identical to one of the removed sequences */
 	StrVector twin_seqs;
+
+	size_t num_partial_lh_computations;
 
 	/** remove identical sequences from the tree */
     virtual void removeIdenticalSeqs(Params &params);

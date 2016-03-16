@@ -74,9 +74,11 @@ void RateFreeInvar::setVariables(double *variables) {
 	from a vector of variables that is index from 1 (NOTE: not from 0)
 	@param variables vector of variables, indexed from 1
 */
-void RateFreeInvar::getVariables(double *variables) {
-	RateFree::getVariables(variables);
-	if (RateInvar::getNDim() == 0) return;
+bool RateFreeInvar::getVariables(double *variables) {
+	bool changed = RateFree::getVariables(variables);
+	if (RateInvar::getNDim() == 0) return changed;
+    changed |= (p_invar != variables[getNDim()]);
 	p_invar = variables[getNDim()];
+    return changed;
 }
 

@@ -28,6 +28,9 @@ const double MIN_GAMMA_SHAPE = 0.02;
 const double MAX_GAMMA_SHAPE = 1000.0;
 const double TOL_GAMMA_SHAPE = 0.001;
 
+const int GAMMA_CUT_MEDIAN = 1; // 2 discrete Gamma approximations (mean or median) of Yang 1994
+const int GAMMA_CUT_MEAN   = 2;
+
 class PhyloTree;
 /**
 Discrete gamma distributed site-rate model from Yang 1994
@@ -56,7 +59,10 @@ public:
 	/**
 		@return true if this is a Gamma model (default: false)
 	*/	
-    virtual bool isGammaRate() { return true; }
+    virtual int isGammaRate() { 
+        if (cut_median) return GAMMA_CUT_MEDIAN; 
+        return GAMMA_CUT_MEAN;
+    }
 
 	virtual double getGammaShape() { return gamma_shape; }
 
@@ -69,8 +75,9 @@ public:
 
 	/**
 		@return TRUE to use median rate for discrete categories, FALSE to use mean rate instead
+        OBSOLETE, see isGammaRate()
 	*/
-	bool isCutMedian() { return cut_median; }
+//	bool isCutMedian() { return cut_median; }
 
 	/**
 		@return the number of rate categories
@@ -192,8 +199,9 @@ protected:
 		this function is served for the multi-dimension optimization. It should assign the model parameters
 		from a vector of variables that is index from 1 (NOTE: not from 0)
 		@param variables vector of variables, indexed from 1
+		@return TRUE if parameters are changed, FALSE otherwise (2015-10-20)
 	*/
-	virtual void getVariables(double *variables);
+	virtual bool getVariables(double *variables);
 
 	/**
 		number of rate categories

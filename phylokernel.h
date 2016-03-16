@@ -75,6 +75,8 @@ void PhyloTree::computePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_branch, Phy
         return;
     dad_branch->partial_lh_computed |= 1;
 
+    num_partial_lh_computations++;
+
     size_t nptn = aln->size() + model_factory->unobserved_ptns.size();
     PhyloNode *node = (PhyloNode*)(dad_branch->node);
 
@@ -881,6 +883,12 @@ double PhyloTree::computeLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, Ph
 						vc_ptn[j] = mul_add(vc_val[i] * vc_tip_partial_lh[j*(nstates/VCSIZE)+i%(nstates/VCSIZE)],
 								vc_partial_lh_dad[j], vc_ptn[j]);
 					}
+                    
+                // bugfix 2016-01-21, prob_const can be rescaled
+                for (j = 0; j < VCSIZE; j++)
+                    if (dad_branch->scale_num[ptn+j] >= 1)
+                        vc_ptn[j] = vc_ptn[j] * SCALING_THRESHOLD;
+
 				// ptn_invar[ptn] is not aligned
 				lh_ptn = horizontal_add(vc_ptn) + VectorClass().load(&ptn_invar[ptn]);
 			}
@@ -971,6 +979,11 @@ double PhyloTree::computeLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, Ph
 					}
 				}
 
+                // bugfix 2016-01-21, prob_const can be rescaled
+                for (j = 0; j < VCSIZE; j++)
+                    if (dad_branch->scale_num[ptn+j] + node_branch->scale_num[ptn+j] >= 1)
+                        vc_ptn[j] = vc_ptn[j] * SCALING_THRESHOLD;
+
 				// ptn_invar[ptn] is not aligned
 				lh_ptn = horizontal_add(vc_ptn) + VectorClass().load(&ptn_invar[ptn]);
 				partial_lh_node += block*VCSIZE;
@@ -988,6 +1001,7 @@ double PhyloTree::computeLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, Ph
 
 	if (orig_nptn < nptn) {
     	// ascertainment bias correction
+        assert(prob_const < 1.0 && prob_const >= 0.0);
     	prob_const = log(1.0 - prob_const);
     	for (ptn = 0; ptn < orig_nptn; ptn++)
     		_pattern_lh[ptn] -= prob_const;
@@ -1106,7 +1120,19 @@ double PhyloTree::computeLikelihoodFromBufferEigenSIMD() {
 		lh_ptn = 0.0;
 		double prob_const;// df_const, ddf_const;
 		double *theta = &theta_all[orig_nptn*block];
-		for (ptn = orig_nptn; ptn < nptn; ptn+=VCSIZE) {
+
+        UBYTE sum_scale_num[nstates+VCSIZE];
+        memset(sum_scale_num, 0, sizeof(UBYTE)*(nstates+VCSIZE));
+        if (current_it->node->isLeaf())
+            memcpy(sum_scale_num, current_it_back->scale_num+orig_nptn, sizeof(UBYTE)*(nptn-orig_nptn));
+        else if (current_it_back->node->isLeaf())
+            memcpy(sum_scale_num, current_it->scale_num+orig_nptn, sizeof(UBYTE)*(nptn-orig_nptn));
+        else {
+            for (ptn = orig_nptn; ptn < nptn; ptn++)
+                sum_scale_num[ptn-orig_nptn] = current_it->scale_num[ptn] + current_it_back->scale_num[ptn];
+        }
+
+        for (ptn = orig_nptn; ptn < nptn; ptn+=VCSIZE) {
 			lh_final += lh_ptn;
 
 			// initialization
@@ -1120,6 +1146,11 @@ double PhyloTree::computeLikelihoodFromBufferEigenSIMD() {
 				}
 			}
 			theta += block*VCSIZE;
+
+            // bugfix 2016-01-21, prob_const can be rescaled
+            for (j = 0; j < VCSIZE; j++)
+                if (sum_scale_num[ptn+j-orig_nptn] >= 1)
+                    vc_ptn[j] = vc_ptn[j] * SCALING_THRESHOLD;
 
 			// ptn_invar[ptn] is not aligned
 			lh_ptn = horizontal_add(vc_ptn) + VectorClass().load(&ptn_invar[ptn]);

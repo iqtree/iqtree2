@@ -106,11 +106,13 @@ void ModelSet::decomposeRateMatrix()
 }
 
 
-void ModelSet::getVariables(double* variables)
+bool ModelSet::getVariables(double* variables)
 {
 	assert(size());
+    bool changed = false;
 	for (iterator it = begin(); it != end(); it++)
-		(*it)->getVariables(variables);
+		changed |= (*it)->getVariables(variables);
+    return changed;
 }
 
 void ModelSet::setVariables(double* variables)

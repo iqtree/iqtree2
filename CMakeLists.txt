@@ -1,23 +1,22 @@
 ##################################################################
 # IQ-TREE cmake build definition
-# Copyright (c) 2012-2014 Bui Quang Minh, Lam Tung Nguyen
+# Copyright (c) 2012-2015 Bui Quang Minh, Lam Tung Nguyen
 ##################################################################
 
 # Windows example usages:
-# cmake -G "Visual Studio 12" <source_dir>			(32-bit SSE3 version, compiled with MSVC)
-# cmake -G "Visual Studio 12 Win64" <source_dir>	(64-bit SSE3 version, compiled with MSVC)
-# cmake -G "Visual Studio 12 Win64" -T "Intel C++ Compiler XE 15.0" <source_dir>		(64-bit SSE3 version, compiled with ICC)
-# cmake -G "Visual Studio 12 Win64" -T "Intel C++ Compiler XE 15.0" -DIQTREE_FLAGS="avx" <source_dir>		(64-bit AVX version, compiled with ICC)
-# cmake -G "Visual Studio 12 Win64" -T "Intel C++ Compiler XE 15.0" -DIQTREE_FLAGS="omp" <source_dir>		(64-bit SSE3+OpenMP version, compiled with ICC)
-# cmake -G "Visual Studio 12 Win64" -T "Intel C++ Compiler XE 15.0" -DIQTREE_FLAGS="avx omp" <source_dir>	(64-bit AVX+OpenMP version, compiled with ICC)
-#
+#------------------------
+# cmake -G "Visual Studio 12" <source_dir>			(32-bit version, compiled with MSVC)
+# cmake -G "Visual Studio 12 Win64" <source_dir>	(64-bit version, compiled with MSVC)
+# cmake -G "Visual Studio 12 Win64" -T "Intel C++ Compiler XE 15.0" <source_dir>		(64-bit version, compiled with ICC)
+# cmake -G "MinGW Makefiles" <source_dir> (TDM-GCC)
+# cmake -G "Unix Makefiles" -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_MAKE_PROGRAM=mingw32-make <source_dir> (TDM-GCC and clang)
+
 # Linux example usages:
-# cmake <source_dir>						   (SSE3 version)
-# cmake -DIQTREE_FLAGS="avx" <source_dir>      (AVX version)
+#----------------------
+# cmake <source_dir>						   (sequential version)
 # cmake -DIQTREE_FLAGS="omp" <source_dir>      (OpenMP version)
-# cmake -DIQTREE_FLAGS="omp avx" <source_dir>  (AVX+OpenMP version)
-# cmake -DIQTREE_FLAGS="m32" <source_dir>      (32-bit SSE3 version)
-# cmake -DIQTREE_FLAGS="m32 omp" <source_dir>  (32-bit SSE3+OpenMP version)
+# cmake -DIQTREE_FLAGS="m32" <source_dir>      (32-bit sequential version)
+# cmake -DIQTREE_FLAGS="m32 omp" <source_dir>  (32-bit OpenMP version)
 #
 # To compile with CLANG on Linux:
 # export CC=/usr/bin/clang
@@ -26,14 +25,22 @@
 # http://stackoverflow.com/questions/7031126/switching-between-gcc-and-clang-llvm-using-cmake
 #
 # Mac OSX example usages:
-# cmake -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ <source_dir>							(SSE3 version)
-# cmake -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DIQTREE_FLAGS="avx" <source_dir>		(AVX version)
-# To build OpenMP version one needs to download and compile Clang-OpenMP. 
-# Then assuming clang2 and clang2++ are the newly built compilers, then:
-# cmake -DCMAKE_C_COMPILER=clang2 -DCMAKE_CXX_COMPILER=clang2++ -DIQTREE_FLAGS="omp" <source_dir>		(SSE3+OpenMP version)
-# cmake -DCMAKE_C_COMPILER=clang2 -DCMAKE_CXX_COMPILER=clang2++ -DIQTREE_FLAGS="omp avx" <source_dir>	(AVX+OpenMP version)
+#------------------------
+# cmake -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ <source_dir>							(sequential version)
+#
+# To build OpenMP version one needs to download Clang version 3.7 or later (as of November 2015) 
+# Then assuming clang3.7 and clang++3.7 are the newly built compilers, then:
+# cmake -DCMAKE_C_COMPILER=clang3.7 -DCMAKE_CXX_COMPILER=clang++3.7 -DIQTREE_FLAGS="omp" <source_dir>		(OpenMP version)
 #
 
+
+# Compile OpenMP version: cmake -DIQTREE_FLAGS=omp ....
+# Compile 32-bit version: cmake -DIQTREE_FLAGS=m32 ....
+# Compile static version: cmake -DIQTREE_FLAGS=static ....
+# Compile static OpenMP version: cmake -DIQTREE_FLAGS="omp static" ....
+
+#NOTE: Static linking with clang windows: make a symlink libgcc_eh.a to libgcc.a (administrator required)
+# C:\TDM-GCC-64\lib\gcc\x86_64-w64-mingw32\5.1.0>mklink libgcc_eh.a libgcc.a
 
 cmake_minimum_required(VERSION 2.8)
 set(CMAKE_LEGACY_CYGWIN_WIN32 0)
@@ -58,7 +65,7 @@ add_definitions(-DIQ_TREE)
 # The version number.
 set (iqtree_VERSION_MAJOR 1)
 set (iqtree_VERSION_MINOR 3)
-set (iqtree_VERSION_PATCH 10) 
+set (iqtree_VERSION_PATCH "13") 
 
 set(BUILD_SHARED_LIBS OFF)
 
@@ -215,17 +222,18 @@ if (IQTREE_FLAGS MATCHES "omp")
 	
 	if (VCC) 
   		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /openmp")
-  		include_directories("${PROJECT_SOURCE_DIR}/pllrepo/src") # for PThreads headers 
+  		include_directories("${PROJECT_SOURCE_DIR}/pll") # for PThreads headers 
 	elseif (ICC)
   		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Qopenmp")
   		if (WIN32)
-  			include_directories("${PROJECT_SOURCE_DIR}/pllrepo/src") # for PThreads headers
+  			include_directories("${PROJECT_SOURCE_DIR}/pll") # for PThreads headers
   		endif() 
   	elseif (GCC)
 		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pthread")
   		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp")
   	elseif (CLANG) 
-  		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp")
+		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pthread")
+  		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp=libomp")
   	endif()
 else()
 	message("OpenMP      : NONE")
@@ -368,7 +376,7 @@ include_directories("${PROJECT_BINARY_DIR}")
 ##################################################################
 # subdirectories containing necessary libraries for the build 
 ##################################################################
-add_subdirectory(pllrepo/src)
+add_subdirectory(pll)
 add_subdirectory(ncl)
 add_subdirectory(lbfgsb)
 add_subdirectory(whtest)
@@ -456,7 +464,10 @@ upperbounds.cpp
 MPIHelper.cpp
 )
 
-find_package(ZLIB)
+if (NOT IQTREE_FLAGS MATCHES "nozlib")
+    find_package(ZLIB)
+endif()
+
 if(ZLIB_FOUND)
   message ("Using system zlib")
   include_directories(${ZLIB_INCLUDE_DIRS})
@@ -486,6 +497,10 @@ else()
 	set(PLATFORM_LIB "m")
 endif()
 
+if(CLANG AND WIN32 AND IQTREE_FLAGS MATCHES "static")
+    set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -pthread -Wl,--allow-multiple-definition")
+endif()
+
 set(THREAD_LIB "")
 if (IQTREE_FLAGS MATCHES "omp") 
 	link_directories(${PROJECT_SOURCE_DIR}/lib)
@@ -498,7 +513,14 @@ if (IQTREE_FLAGS MATCHES "omp")
 			set(THREAD_LIB "pthreadVC2")
 		endif()
 	elseif(CLANG AND APPLE)
-		set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -L${PROJECT_SOURCE_DIR}/lib")
+		set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -L${PROJECT_SOURCE_DIR}/libmac")
+	elseif(CLANG AND WIN32)
+        if (BINARY32) 
+            set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -L${PROJECT_SOURCE_DIR}/lib32 libiomp5md.dll")
+        else()
+            set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -L${PROJECT_SOURCE_DIR}/lib libiomp5md.dll")
+        endif()
+#        set(THREAD_LIB "ompstatic")
 	endif()
 endif()
 
@@ -547,20 +569,29 @@ install (TARGETS iqtree DESTINATION bin)
 install (FILES "${PROJECT_SOURCE_DIR}/example/models.nex" DESTINATION .)
 install (FILES "${PROJECT_SOURCE_DIR}/example/example.phy" DESTINATION .)
 install (FILES "${PROJECT_SOURCE_DIR}/example/example.nex" DESTINATION .)
-install (FILES "${PROJECT_SOURCE_DIR}/Documents/iqtree-manual-1.0.pdf" DESTINATION .)
 
 if (WIN32)
 	install (FILES "${BINARY_DIR}/iqtree${EXE_SUFFIX}-click.exe" DESTINATION bin)
 	if (EXE_SUFFIX MATCHES "omp" AND MSVC)
-if (BINARY32)
-		install(FILES  "${PROJECT_SOURCE_DIR}/lib32/pthreadVC2.dll" DESTINATION bin)
-else()
-		install(FILES  "${PROJECT_SOURCE_DIR}/lib/pthreadVC2.dll" DESTINATION bin)
-endif()
-		install(FILES  "${PROJECT_SOURCE_DIR}/lib/libiomp5md.dll" DESTINATION bin)
+        if (BINARY32)
+            install(FILES  "${PROJECT_SOURCE_DIR}/lib32/pthreadVC2.dll" DESTINATION bin)
+            install(FILES  "${PROJECT_SOURCE_DIR}/lib32/libiomp5md.dll" DESTINATION bin)
+        else()
+            install(FILES  "${PROJECT_SOURCE_DIR}/lib/pthreadVC2.dll" DESTINATION bin)
+            install(FILES  "${PROJECT_SOURCE_DIR}/lib/libiomp5md.dll" DESTINATION bin)
+        endif()
 #		install(FILES  "${PROJECT_SOURCE_DIR}/lib/pthreadGC2.dll" DESTINATION bin)
 #		install(FILES  "${PROJECT_SOURCE_DIR}/lib/pthreadGC2_64.dll" DESTINATION bin)
 	endif()
+
+	if (EXE_SUFFIX MATCHES "omp" AND CLANG)
+        if (BINARY32)
+            install(FILES  "${PROJECT_SOURCE_DIR}/lib32/libiomp5md.dll" DESTINATION bin)
+        else()
+            install(FILES  "${PROJECT_SOURCE_DIR}/lib/libiomp5md.dll" DESTINATION bin)
+        endif()
+	endif()
+
 endif()
 
 ##############################################################
@@ -583,7 +614,7 @@ endif()
 #set(CPACK_SOURCE_PACKAGE_FILE_NAME
 #  "${CMAKE_PROJECT_NAME}-${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSION_MINOR}")
 set(CPACK_SOURCE_IGNORE_FILES
-  "/build.*/;/debug.*/;/examples/;/test_scripts/;/manual/;/.bzr/;~$;/\\\\.svn/;/\\\\.git/;/pll/;/pllrepo.dox/;/pllrepo.examples/;/pllrepo.figures/;/pllrepo.legacy/;/pllrepo.m4/;/pllrepo.man/;/pllrepo.MPI/;/pllrepo.sMSA/;/pllrepo.testdata/;${CPACK_SOURCE_IGNORE_FILES}")
+  "/build.*/;/debug.*/;/examples/;/test_scripts/;/manual/;/.bzr/;~$;/\\\\.svn/;/\\\\.git/;/pllrepo/;${CPACK_SOURCE_IGNORE_FILES}")
 
 set (SYSTEM_NAME "${CMAKE_SYSTEM_NAME}")
 if (${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")

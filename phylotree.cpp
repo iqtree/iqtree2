@@ -109,6 +109,7 @@ void PhyloTree::init() {
     params = NULL;
     current_scaling = 1.0;
     is_opt_scaling = false;
+    num_partial_lh_computations = 0;
 }
 
 PhyloTree::PhyloTree(Alignment *aln) : MTree() {
@@ -304,6 +305,7 @@ void PhyloTree::setAlignment(Alignment *alignment) {
             node->id = seq;
         }
     }
+    if (err) outError("Tree taxa and alignment sequence do not match (see above)");
     StrVector taxname;
     getTaxaName(taxname);
     for (StrVector::iterator it = taxname.begin(); it != taxname.end(); it++)
@@ -1514,15 +1516,16 @@ double PhyloTree::computeLikelihood(double *pattern_lh) {
     assert(model);
     assert(site_rate);
     assert(root->isLeaf());
-    Node *leaf = findFirstFarLeaf(root);
-    current_it = (PhyloNeighbor*)leaf->neighbors[0];
-    current_it_back = (PhyloNeighbor*)current_it->node->findNeighbor(leaf);
-//    PhyloNeighbor *nei = ((PhyloNeighbor*) root->neighbors[0]);
-//    current_it = nei;
-//    assert(current_it);
-//    current_it_back = (PhyloNeighbor*) nei->node->findNeighbor(root);
-//    assert(current_it_back);
-
+    if (!current_it) {
+        Node *leaf = findFarthestLeaf();
+        current_it = (PhyloNeighbor*)leaf->neighbors[0];
+        current_it_back = (PhyloNeighbor*)current_it->node->findNeighbor(leaf);
+//        PhyloNeighbor *nei = ((PhyloNeighbor*) root->neighbors[0]);
+//        current_it = nei;
+//        assert(current_it);
+//        current_it_back = (PhyloNeighbor*) nei->node->findNeighbor(root);
+//        assert(current_it_back);
+    }
     double score;
     string root_name = ROOT_NAME;
     Node *vroot = findLeafName(root_name);
@@ -1569,36 +1572,88 @@ double PhyloTree::computeLikelihoodRooted(PhyloNeighbor *dad_branch, PhyloNode *
     return score;
 }
 
-double PhyloTree::computePatternLhCat() {
+int PhyloTree::getNumLhCat(SiteLoglType wsl) {
+    int ncat = 0;
+    switch (wsl) {
+    case WSL_NONE: assert(0 && "is not WSL_NONE"); return 0;
+    case WSL_SITE: assert(0 && "is not WSL_SITE"); return 0;
+    case WSL_MIXTURE_RATECAT: 
+        ncat = getRate()->getNDiscreteRate();
+        if (getModel()->isMixture() && !getModelFactory()->fused_mix_rate)
+            ncat *= getModel()->getNMixtures();
+        return ncat;
+    case WSL_RATECAT:
+        return getRate()->getNDiscreteRate();
+    case WSL_MIXTURE:
+        return getModel()->getNMixtures();
+    }
+}
+
+double PhyloTree::computePatternLhCat(SiteLoglType wsl) {
     if (!current_it) {
         Node *leaf = findFirstFarLeaf(root);
         current_it = (PhyloNeighbor*)leaf->neighbors[0];
         current_it_back = (PhyloNeighbor*)current_it->node->findNeighbor(leaf);
     }
-    if (sse == LK_NORMAL || sse == LK_SSE)
+    if (sse == LK_NORMAL || sse == LK_SSE) {
+        if (getModel()->isMixture())
+            outError("Naive kernel does not support mixture models, contact author if you really need this feature");
         return computeLikelihoodBranchNaive(current_it, (PhyloNode*)current_it_back->node);
-    else if (!getModel()->isMixture())
+    } else if (!getModel()->isMixture())
         return computeLikelihoodBranchEigen(current_it, (PhyloNode*)current_it_back->node);
     else if (getModelFactory()->fused_mix_rate)
         return computeMixrateLikelihoodBranchEigen(current_it, (PhyloNode*)current_it_back->node);
-    else
-        return computeMixtureLikelihoodBranchEigen(current_it, (PhyloNode*)current_it_back->node);
+    else {
+        double score = computeMixtureLikelihoodBranchEigen(current_it, (PhyloNode*)current_it_back->node);
+        if (wsl == WSL_MIXTURE_RATECAT) return score;
+        
+        double *lh_cat = _pattern_lh_cat;
+        double *lh_res = _pattern_lh_cat;
+        size_t ptn, nptn = aln->getNPattern();
+        size_t m, nmixture = getModel()->getNMixtures();
+        size_t c, ncat = getRate()->getNRate();
+        if (wsl == WSL_MIXTURE && ncat > 1) {
+            // transform to lh per mixture class
+            for (ptn = 0; ptn < nptn; ptn++) {
+                for (m = 0; m < nmixture; m++) {
+                    double lh = lh_cat[0];
+                    for (c = 1; c < ncat; c++)
+                        lh += lh_cat[c];
+                    lh_res[m] = lh;
+                    lh_cat += ncat;
+                }
+                lh_res += nmixture;
+            }
+        } else if (wsl == WSL_RATECAT && nmixture > 1) {
+            // transform to lh per rate category
+            for (ptn = 0; ptn < nptn; ptn++) {
+                if (lh_res != lh_cat)
+                    memcpy(lh_res, lh_cat, ncat*sizeof(double));
+                lh_cat += ncat;
+                for (m = 1; m < nmixture; m++) {
+                    for (c = 0; c < ncat; c++)
+                        lh_res[c] += lh_cat[c];
+                    lh_cat += ncat;
+                }
+                lh_res += ncat;
+            }
+        }
+        return score;
+    }
 }
 
 
-void PhyloTree::computePatternLikelihood(double *ptn_lh, double *cur_logl, double *ptn_lh_cat) {
+void PhyloTree::computePatternLikelihood(double *ptn_lh, double *cur_logl, double *ptn_lh_cat, SiteLoglType wsl) {
     /*	if (!dad_branch) {
      dad_branch = (PhyloNeighbor*) root->neighbors[0];
      dad = (PhyloNode*) root;
      }*/
     int nptn = aln->getNPattern();
     int i;
-    int ncat = site_rate->getNDiscreteRate();
-    if (getModel()->isMixture() && !getModelFactory()->fused_mix_rate)
-        ncat *= getModel()->getNMixtures();
+    int ncat = getNumLhCat(wsl);
     if (ptn_lh_cat) {
     	// Right now only Naive version store _pattern_lh_cat!
-        computePatternLhCat();
+        computePatternLhCat(wsl);
     } 
     
     double sum_scaling = current_it->lh_scale_factor + current_it_back->lh_scale_factor;
@@ -1666,7 +1721,7 @@ void PhyloTree::computePatternLikelihood(double *ptn_lh, double *cur_logl, doubl
 int PhyloTree::computePatternCategories(IntVector *pattern_ncat) {
     if (sse != LK_EIGEN) {
         // compute _pattern_lh_cat
-        computePatternLhCat();
+        computePatternLhCat(WSL_MIXTURE_RATECAT);
     }
     
 	size_t npattern = aln->getNPattern();
@@ -2412,8 +2467,8 @@ double PhyloTree::computeBayesianBranchLength(PhyloNeighbor *dad_branch, PhyloNo
 
     }
     obsLen /= getAlnNSite();
-    if (obsLen < MIN_BRANCH_LEN)
-        obsLen = MIN_BRANCH_LEN;
+    if (obsLen < params->min_branch_length)
+        obsLen = params->min_branch_length;
     delete[] tmp_anscentral_state_prob2;
     delete[] tmp_anscentral_state_prob1;
     delete[] tmp_state_freq;
@@ -2430,7 +2485,7 @@ double PhyloTree::correctBranchLengthF81(double observedBran, double alpha) {
     observedBran = 1.0 - observedBran / H;
     // no gamma
     if (observedBran <= 0.0)
-        return MAX_BRANCH_LEN;
+        return params->max_branch_length;
 
     if (alpha <= 0.0) {
         correctedBranLen = -H * log(observedBran);
@@ -2440,10 +2495,10 @@ double PhyloTree::correctBranchLengthF81(double observedBran, double alpha) {
         correctedBranLen = H * alpha * (pow(observedBran, -1 / alpha) - 1);
     }
 
-    if (correctedBranLen < MIN_BRANCH_LEN)
-    	correctedBranLen = MIN_BRANCH_LEN;
-    if (correctedBranLen > MAX_BRANCH_LEN)
-    	correctedBranLen = MAX_BRANCH_LEN;
+    if (correctedBranLen < params->min_branch_length)
+    	correctedBranLen = params->min_branch_length;
+    if (correctedBranLen > params->max_branch_length)
+    	correctedBranLen = params->max_branch_length;
 
     return correctedBranLen;
 }
@@ -3030,16 +3085,16 @@ void PhyloTree::computeLikelihoodDervNaive(PhyloNeighbor *dad_branch, PhyloNode 
  Branch length optimization by maximum likelihood
  ****************************************************************************/
 
-const double MIN_TREE_LENGTH_SCALE = 0.001;
-const double MAX_TREE_LENGTH_SCALE = 1000.0;
+//const double MIN_TREE_LENGTH_SCALE = 0.001;
+//const double MAX_TREE_LENGTH_SCALE = 100.0;
 const double TOL_TREE_LENGTH_SCALE = 0.001;
 
 
-double PhyloTree::optimizeTreeLengthScaling(double &scaling, double gradient_epsilon) {
+double PhyloTree::optimizeTreeLengthScaling(double min_scaling, double &scaling, double max_scaling, double gradient_epsilon) {
     is_opt_scaling = true;
     current_scaling = scaling;
     double negative_lh, ferror;
-    scaling = minimizeOneDimen(min(current_scaling/2.0, MIN_TREE_LENGTH_SCALE), scaling, max(current_scaling*2.0, MAX_TREE_LENGTH_SCALE), max(TOL_TREE_LENGTH_SCALE, gradient_epsilon), &negative_lh, &ferror);
+    scaling = minimizeOneDimen(min(scaling, min_scaling), scaling, max(max_scaling, scaling), max(TOL_TREE_LENGTH_SCALE, gradient_epsilon), &negative_lh, &ferror);
     if (scaling != current_scaling) {
         scaleLength(scaling / current_scaling);
         current_scaling = scaling;
@@ -3089,11 +3144,11 @@ void PhyloTree::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool clear
     theta_computed = false;
     if (optimize_by_newton) {
     	// Newton-Raphson method
-    	optx = minimizeNewton(MIN_BRANCH_LEN, current_len, MAX_BRANCH_LEN, TOL_BRANCH_LEN, negative_lh, maxNRStep);
+    	optx = minimizeNewton(params->min_branch_length, current_len, params->max_branch_length, params->min_branch_length, negative_lh, maxNRStep);
         if (verbose_mode >= VB_DEBUG) {
             cout << "minimizeNewton logl: " << computeLikelihoodFromBuffer() << endl;
         }
-    	if (optx > MAX_BRANCH_LEN*0.95 && !isSuperTree()) {
+    	if (optx > params->max_branch_length*0.95 && !isSuperTree()) {
     		// newton raphson diverged, reset
     	    double opt_lh = computeLikelihoodFromBuffer();
     	    current_it->length = current_len;
@@ -3105,7 +3160,7 @@ void PhyloTree::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool clear
     	}
 	}	else {
         // Brent method
-        optx = minimizeOneDimen(MIN_BRANCH_LEN, current_len, MAX_BRANCH_LEN, TOL_BRANCH_LEN, &negative_lh, &ferror);
+        optx = minimizeOneDimen(params->min_branch_length, current_len, params->max_branch_length, params->min_branch_length, &negative_lh, &ferror);
         if (verbose_mode >= VB_DEBUG) {
             cout << "minimizeBrent logl: " << -negative_lh << endl;
         }
@@ -3170,11 +3225,26 @@ void PhyloTree::optimizeAllBranches(PhyloNode *node, PhyloNode *dad, int maxNRSt
 //    return tree_lh;
 }
 
+void PhyloTree::computeBestTraversal(NodeVector &nodes, NodeVector &nodes2) {
+    Node *farleaf = findFarthestLeaf();
+//    Node *farleaf = root;
+
+    // double call to farthest leaf to find the longest path on the tree
+    findFarthestLeaf(farleaf);
+    if (verbose_mode >= VB_MAX)
+        cout << "Tree diameter: " << farleaf->height << endl;
+    getPreOrderBranches(nodes, nodes2, farleaf);
+}
+
 double PhyloTree::optimizeAllBranches(int my_iterations, double tolerance, int maxNRStep) {
     if (verbose_mode >= VB_MAX)
         cout << "Optimizing branch lengths (max " << my_iterations << " loops)..." << endl;
-        
-    double tree_lh = computeLikelihood();
+    
+    NodeVector nodes, nodes2;
+    computeBestTraversal(nodes, nodes2);
+    
+    double tree_lh = computeLikelihoodBranch((PhyloNeighbor*)nodes[0]->findNeighbor(nodes2[0]), (PhyloNode*)nodes[0]);
+    
     if (verbose_mode >= VB_MAX) {
         cout << "Initial tree log-likelihood: " << tree_lh << endl;
     }
@@ -3187,7 +3257,20 @@ double PhyloTree::optimizeAllBranches(int my_iterations, double tolerance, int m
 //            printTree(cout, WT_BR_LEN+WT_NEWLINE);
 //        }
 
-            optimizeAllBranches((PhyloNode*) root, NULL, maxNRStep);
+        for (int j = 0; j < nodes.size(); j++)
+            optimizeOneBranch((PhyloNode*)nodes[j], (PhyloNode*)nodes2[j]);
+
+//        if (i == 0) 
+//            optimizeOneBranch((PhyloNode*)nodes[0], (PhyloNode*)nodes2[0]);
+//        if (i % 2 == 0) {
+//            for (int j = 1; j < nodes.size(); j++)
+//                optimizeOneBranch((PhyloNode*)nodes[j], (PhyloNode*)nodes2[j]);
+//        } else {
+//            for (int j = nodes.size()-2; j >= 0; j--)
+//                optimizeOneBranch((PhyloNode*)nodes[j], (PhyloNode*)nodes2[j]);
+//        }
+
+//            optimizeAllBranches((PhyloNode*) root, NULL, maxNRStep);
             
         double new_tree_lh = computeLikelihoodFromBuffer();
         //cout<<"After opt  log-lh = "<<new_tree_lh<<endl;
@@ -3538,10 +3621,31 @@ void PhyloTree::computeBioNJ(Params &params, Alignment *alignment, string &dist_
 //    setAlignment(alignment);
 }
 
+int PhyloTree::setNegativeBranch(bool force, double newlen, Node *node, Node *dad) {
+    if (!node) node = root;
+    int fixed = 0;
+
+    FOR_NEIGHBOR_IT(node, dad, it) {
+        if ((*it)->length < 0.0 || force) { // negative branch length detected
+            (*it)->length = newlen;
+            // set the backward branch length
+            (*it)->node->findNeighbor(node)->length = (*it)->length;
+            fixed++;
+        }
+        fixed += setNegativeBranch(force, newlen, (*it)->node, node);
+    }
+    return fixed;
+}
+
+
 int PhyloTree::fixNegativeBranch(bool force, Node *node, Node *dad) {
 
-    if (!node)
+    if (!node) {
         node = root;
+        // 2015-11-30: if not bifurcating, initialize unknown branch lengths with 0.1
+        if (!isBifurcating())
+            return setNegativeBranch(force, 0.1, root, NULL);
+    }
     int fixed = 0;
 
     FOR_NEIGHBOR_IT(node, dad, it){
@@ -3554,8 +3658,8 @@ int PhyloTree::fixNegativeBranch(bool force, Node *node, Node *dad) {
         double z = (double) aln->num_states / (aln->num_states - 1);
         double x = 1.0 - (z * branch_length);
         if (x > 0) branch_length = -log(x) / z;
-        if (branch_length < MIN_BRANCH_LEN)
-            branch_length = MIN_BRANCH_LEN;
+        if (branch_length < params->min_branch_length)
+            branch_length = params->min_branch_length;
 //        if (verbose_mode >= VB_DEBUG)
 //        	cout << "Negative branch length " << (*it)->length << " was set to ";
         //(*it)->length = fixed_length;
@@ -3568,7 +3672,7 @@ int PhyloTree::fixNegativeBranch(bool force, Node *node, Node *dad) {
         fixed++;
     }
     if ((*it)->length <= 0.0) {
-        (*it)->length = MIN_BRANCH_LEN;
+        (*it)->length = params->min_branch_length;
         (*it)->node->findNeighbor(node)->length = (*it)->length;
     }
     fixed += fixNegativeBranch(force, (*it)->node, node);
@@ -3883,9 +3987,6 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
 		// compute the score of the swapped topology
 //		double saved_len = node1_nei->length;
 
-		optimizeOneBranch(node1, node2, false, NNI_MAX_NR_STEP);
-		nniMoves[cnt].newLen[0] = node1->findNeighbor(node2)->length;
-
 		int i=1;
         if (params->nni5) {
 			FOR_NEIGHBOR(node1, node2, it)
@@ -3895,9 +3996,14 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
 				nniMoves[cnt].newLen[i] = node1->findNeighbor((*it)->node)->length;
 				i++;
 			}
+            node21_it->clearPartialLh();
+        }
 
-			 node21_it->clearPartialLh();
+		optimizeOneBranch(node1, node2, false, NNI_MAX_NR_STEP);
+		nniMoves[cnt].newLen[0] = node1->findNeighbor(node2)->length;
 
+
+        if (params->nni5) {
 			FOR_NEIGHBOR(node2, node1, it)
 			{
 				((PhyloNeighbor*) (*it)->node->findNeighbor(node2))->clearPartialLh();
@@ -3906,7 +4012,7 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
 				nniMoves[cnt].newLen[i] = node2->findNeighbor((*it)->node)->length;
 				i++;
 			}
-			 node12_it->clearPartialLh();
+			node12_it->clearPartialLh();
 		}
 		double score = computeLikelihoodFromBuffer();
 		nniMoves[cnt].newloglh = score;
@@ -5024,7 +5130,7 @@ void PhyloTree::reinsertLeaf(Node *leaf, Node *node, Node *dad) {
     Node *adjacent_node = leaf->neighbors[0]->node;
     Neighbor *nei = node->findNeighbor(dad);
     //double len = nei->length;
-    double len = max(nei->length, MIN_BRANCH_LEN * 2);
+    double len = max(nei->length, params->min_branch_length * 2);
     // to avoid too small branch length when reinserting leaf
 
     FOR_NEIGHBOR_IT(adjacent_node, leaf, it){

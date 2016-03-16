@@ -849,13 +849,13 @@ void pllSaveCurrentTree(pllInstance* tr, partitionList *pr, nodeptr p){
             printf("Updated logl %f to %f\n", pllUFBootDataPtr->treels_logl[tree_index], cur_logl);
         pllUFBootDataPtr->treels_logl[tree_index] = cur_logl;
 
-        if (pllUFBootDataPtr->save_all_br_lens) {
-            pllTree2StringREC(tr->tree_string, tr, pr, tr->start->back, PLL_TRUE,
-                    PLL_FALSE, PLL_FALSE, PLL_FALSE, PLL_TRUE, PLL_SUMMARIZE_LENGTH, PLL_FALSE, PLL_FALSE);
-            char * tree_str_br_lens = (char *) malloc (strlen(tr->tree_string) + 1);
-            strcpy(tree_str_br_lens, tr->tree_string);
-            pllUFBootDataPtr->treels_newick[tree_index] = tree_str_br_lens;
-        }
+//        if (pllUFBootDataPtr->save_all_br_lens) {
+//            pllTree2StringREC(tr->tree_string, tr, pr, tr->start->back, PLL_TRUE,
+//                    PLL_FALSE, PLL_FALSE, PLL_FALSE, PLL_TRUE, PLL_SUMMARIZE_LENGTH, PLL_FALSE, PLL_FALSE);
+//            char * tree_str_br_lens = (char *) malloc (strlen(tr->tree_string) + 1);
+//            strcpy(tree_str_br_lens, tr->tree_string);
+//            pllUFBootDataPtr->treels_newick[tree_index] = tree_str_br_lens;
+//        }
         if (pllUFBootDataPtr->boot_samples == NULL) {
             (pllUFBootDataPtr->treels_ptnlh)[tree_index] =
                     (double *) malloc(pllUFBootDataPtr->n_patterns * sizeof(double));
@@ -941,13 +941,13 @@ void pllSaveCurrentTree(pllInstance* tr, partitionList *pr, nodeptr p){
 /*        if (updated && verbose_mode >= VB_MAX)
          printf("%d boot trees updated\n", updated);*/
     }
-    if (pllUFBootDataPtr->save_all_br_lens) {
-        pllTree2StringREC(tr->tree_string, tr, pr, tr->start->back, PLL_TRUE,
-                PLL_FALSE, PLL_FALSE, PLL_FALSE, PLL_TRUE, PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
-        char * s = (char *) malloc (strlen(tr->tree_string) + 1);
-        strcpy(s, tr->tree_string);
-        pllUFBootDataPtr->treels_newick[tree_index] = s;
-    }
+//    if (pllUFBootDataPtr->save_all_br_lens) {
+//        pllTree2StringREC(tr->tree_string, tr, pr, tr->start->back, PLL_TRUE,
+//                PLL_FALSE, PLL_FALSE, PLL_FALSE, PLL_TRUE, PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
+//        char * s = (char *) malloc (strlen(tr->tree_string) + 1);
+//        strcpy(s, tr->tree_string);
+//        pllUFBootDataPtr->treels_newick[tree_index] = s;
+//    }
 
 //    if(!globalParam->store_candidate_trees){
 //        free(tree_str);
@@ -1000,13 +1000,13 @@ void pllResizeUFBootData(){
     free(pllUFBootDataPtr->treels_logl);
     pllUFBootDataPtr->treels_logl = rtreels_logl;
 
-    char ** rtreels_newick =
-            (char **) malloc(2 * count * (sizeof(char *)));
-    if(!rtreels_newick) outError("Not enough dynamic memory!");
-    memset(rtreels_newick, 0, 2 * count * sizeof(char *));
-    memcpy(rtreels_newick, pllUFBootDataPtr->treels_newick, count * sizeof(char *));
-    free(pllUFBootDataPtr->treels_newick);
-    pllUFBootDataPtr->treels_newick = rtreels_newick;
+//    char ** rtreels_newick =
+//            (char **) malloc(2 * count * (sizeof(char *)));
+//    if(!rtreels_newick) outError("Not enough dynamic memory!");
+//    memset(rtreels_newick, 0, 2 * count * sizeof(char *));
+//    memcpy(rtreels_newick, pllUFBootDataPtr->treels_newick, count * sizeof(char *));
+//    free(pllUFBootDataPtr->treels_newick);
+//    pllUFBootDataPtr->treels_newick = rtreels_newick;
 
     double ** rtreels_ptnlh =
         (double **) malloc(2 * count * (sizeof(double *)));
