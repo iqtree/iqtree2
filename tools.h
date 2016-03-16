@@ -1913,7 +1913,7 @@ void convert_int_vec(const char *str, IntVector &vec) throw (string);
         @param str original string
         @return the number
  */
-int64_t convert_int64_t(const char *str) throw (string);
+int64_t convert_int64(const char *str) throw (string);
 
 /**
         convert string to int64_t, with error checking
@@ -1921,7 +1921,7 @@ int64_t convert_int64_t(const char *str) throw (string);
         @param end_pos end position
         @return the number
  */
-int64_t convert_int64_t(const char *str, int64_t &end_pos) throw (string);
+int64_t convert_int64(const char *str, int64_t &end_pos) throw (string);
 
 /**
         convert string to double, with error checking

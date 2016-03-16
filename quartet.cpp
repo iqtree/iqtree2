@@ -734,9 +734,9 @@ void PhyloTree::computeQuartetLikelihoods(vector<QuartetInfo> &lmap_quartet_info
 	   size1 = sizeA-2;
 	   size0 = sizeA-1;
 	   LMGroups.uniqueQuarts = (int64_t)1 + size3 +
-	                           size2 * (size2-1) / 2 +
-	                           size1 * (size1-1) * (size1-2) / 6 +
-	                           size0 * (size0-1) * (size0-2) * (size0-3) / 24;
+	                           (int64_t)size2 * (size2-1) / 2 +
+	                           (int64_t)size1 * (size1-1) * (size1-2) / 6 +
+	                           (int64_t)size0 * (size0-1) * (size0-2) * (size0-3) / 24;
 	   break;
 	case 2: 
 	   LMGroups.uniqueQuarts = ((int64_t)sizeA * (sizeA - 1)) / 2 * (sizeB * (sizeB - 1)) / 2; break;
@@ -1274,7 +1274,7 @@ void PhyloTree::doLikelihoodMapping() {
     string filename;
     
     if (params->lmap_num_quartets < (int64_t)25*aln->getNSeq()) {
-        outWarning("Number of quartets is recommended to be at least " + convertIntToString(25*aln->getNSeq()) + " (25 times number of sequences)");
+        outWarning("Number of quartets is recommended to be at least " + convertInt64ToString((int64_t)25*aln->getNSeq()) + " (25 times number of sequences)");
     }
 
     if(params->lmap_cluster_file != NULL) {
