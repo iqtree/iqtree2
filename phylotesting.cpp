@@ -543,17 +543,21 @@ int getModelList(Params &params, Alignment *aln, StrVector &models, bool separat
 //		for (i = 0; i < noptions; i++)
 //			test_options[i] = test_options_codon[i];
 //	} else 
-	if (seq_type == SEQ_MORPH || aln->frac_const_sites == 0.0) {
-		// morphological or SNP data: activate +ASC
-		if (with_new) {
-			if (with_asc)
-				test_options = test_options_asc_new;
-			else
-				test_options = test_options_morph_new;
-		} else if (with_asc)
-			test_options = test_options_asc;
-		else
-			test_options = test_options_morph;
+    if (seq_type == SEQ_MORPH || (aln->frac_const_sites == 0.0)) {
+        // morphological or SNP data: activate +ASC
+        if (with_new) {
+            if (with_asc)
+                test_options = test_options_asc_new;
+            else if (seq_type == SEQ_PROTEIN)
+                test_options = test_options_noASC_I_new;
+            else
+                test_options = test_options_morph_new;
+        } else if (with_asc)
+            test_options = test_options_asc;
+        else if (seq_type == SEQ_PROTEIN)
+            test_options = test_options_noASC_I;
+        else
+            test_options = test_options_morph;
 	} else {
 		// normal data, use +I instead
 		if (with_new) {

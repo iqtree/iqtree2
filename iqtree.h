@@ -398,13 +398,13 @@ public:
     /**
      * 	Save all the current branch lengths
      */
-    void saveBranches(map<string, double> &branchLengths, PhyloNode *node = NULL, PhyloNode *dad = NULL);
+//    void saveBranches(PhyloNode *node = NULL, PhyloNode *dad = NULL);
 
     /**
         OBSOLETE: Please use restoreBranchLengths!
      * 	 Restore the branch lengths from the saved values
      */
-//    virtual void restoreAllBrans(map<string, double>& branchLengths, PhyloNode *node = NULL, PhyloNode *dad = NULL);
+//    virtual void restoreAllBrans(PhyloNode *node = NULL, PhyloNode *dad = NULL);
 
     /**
      * Get the branch length of the branch node1-node2
@@ -570,6 +570,26 @@ protected:
      *  Vector contains approximated improvement pro NNI at each iterations
      */
     vector<double> vecImpProNNI;
+
+    /**
+        List of positive NNI for the current tree;
+     */
+    vector<NNIMove> plusNNIs;
+
+    /**
+        List of non-conflicting NNIs for the current tree;
+     */
+    vector<NNIMove> nonConfNNIs;
+
+    /**
+     *  NNIs that have been applied in the previous step
+     */
+    vector<NNIMove> appliedNNIs;
+
+    /**
+        Optimal branch lengths
+     */
+//    mapString2Double optBrans;
 
     /**
      *  @brief get branches, on which NNIs are evaluated for the next NNI step.

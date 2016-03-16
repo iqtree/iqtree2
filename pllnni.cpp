@@ -828,9 +828,9 @@ void pllSaveCurrentTree(pllInstance* tr, partitionList *pr, nodeptr p){
 
     pllBoolean is_stored = PLL_FALSE;
 
-    if(globalParams->store_candidate_trees){
-        is_stored = pllHashSearch(pllUFBootDataPtr->treels, tree_str, &(item_ptr->data));
-    }
+//    if(globalParam->store_candidate_trees){
+//        is_stored = pllHashSearch(pllUFBootDataPtr->treels, tree_str, &(item_ptr->data));
+//    }
 
     if(is_stored){ // if found the tree_str
         pllUFBootDataPtr->duplication_counter++;
@@ -881,11 +881,11 @@ void pllSaveCurrentTree(pllInstance* tr, partitionList *pr, nodeptr p){
 
 		tree_index = pllUFBootDataPtr->candidate_trees_count;
 		pllUFBootDataPtr->candidate_trees_count++;
-		if (globalParams->store_candidate_trees){
-			*((int *)item_ptr->data) = tree_index;
-			item_ptr->str = tree_str;
-			pllHashAdd(pllUFBootDataPtr->treels, pllHashString(tree_str, pllUFBootDataPtr->treels->size), tree_str, item_ptr->data);
-		}
+//		if (globalParam->store_candidate_trees){
+//			*((int *)item_ptr->data) = tree_index;
+//			item_ptr->str = tree_str;
+//			pllHashAdd(pllUFBootDataPtr->treels, pllHashString(tree_str, pllUFBootDataPtr->treels->size), tree_str, item_ptr->data);
+//		}
 		pllUFBootDataPtr->treels_logl[tree_index] = cur_logl;
 
 		if (verbose_mode >= VB_MAX)
@@ -915,7 +915,8 @@ void pllSaveCurrentTree(pllInstance* tr, partitionList *pr, nodeptr p){
             if (rell > pllUFBootDataPtr->boot_logl[sample] + globalParams->ufboot_epsilon ||
                 (rell > pllUFBootDataPtr->boot_logl[sample] - globalParams->ufboot_epsilon &&
                     random_double() <= 1.0/(pllUFBootDataPtr->boot_counts[sample]+1))) {
-                if (!globalParams->store_candidate_trees){
+//                if (!globalParam->store_candidate_trees)
+                {
                     is_stored = pllHashSearch(pllUFBootDataPtr->treels, tree_str, &(item_ptr->data));
                     if(is_stored)
                         tree_index = *((int *)item_ptr->data);

@@ -341,6 +341,7 @@ int MTree::printTree(ostream &out, int brtype, Node *node, Node *dad)
         if (brtype & WT_BR_LEN) {
             int prec = 10;
         	out.setf( std::ios::fixed, std:: ios::floatfield ); // some sofware does handle number format like '1.234e-6'
+//            out.precision(10); // increase precision to avoid zero branch (like in RAxML)
         	double len = node->neighbors[0]->length;
             if (brtype & WT_BR_SCALE) len *= len_scale;
             if (brtype & WT_BR_LEN_SHORT) prec = 6;
@@ -2172,4 +2173,70 @@ void MTree::initializeSplitMap(Split *resp, Node *node, Node *dad) {
     if (!has_child) {
         resp->addTaxon(node->id);
     }
+}
+
+Node *MTree::findFarthestLeaf(Node *node, Node *dad) {
+    if (!node) 
+        node = root;
+    
+    if (dad && node->isLeaf()) {
+        node->height = 0.0;
+        return node;
+    }
+    Node *res = NULL;
+    node->height = 0.0;
+    FOR_NEIGHBOR_IT(node, dad, it) {
+        Node *leaf = findFarthestLeaf((*it)->node, node);
+        if (node->height < (*it)->node->height+1) {
+            node->height = (*it)->node->height+1;
+            res = leaf;
+        }
+    }
+    return res;
+}
+
+//void MTree::sortNeighborBySubtreeSize(Node *node, Node *dad) {
+//    if (dad && node->isLeaf()) {
+//        node->height = 0.0;
+//        return;
+//    }
+//    
+//    node->height = 0.0;
+//    FOR_NEIGHBOR_DECLARE(node, dad, it) {
+//        sortNeighborBySubtreeSize((*it)->node, node);
+//        if (node->height < (*it)->node->height+1)
+//            node->height = (*it)->node->height+1;
+//    }
+//    
+//    // sort neighbors in ascending order of tree height
+//    FOR_NEIGHBOR(node, dad, it)
+//        for (NeighborVec::iterator it2 = it+1; it2 != node->neighbors.end(); it2++)
+//            if ((*it)->node != dad && (*it)->node->height > (*it2)->node->height) {
+//                Neighbor *nei;
+//                nei = *it;
+//                *it = *it2;
+//                *it2 = nei;
+//            }
+//}
+
+void MTree::getPreOrderBranches(NodeVector &nodes, NodeVector &nodes2, Node *node, Node *dad) {
+    if (dad) {
+        nodes.push_back(node);
+        nodes2.push_back(dad);
+    }
+
+    NeighborVec neivec = node->neighbors;
+    NeighborVec::iterator i1, i2;
+    for (i1 = neivec.begin(); i1 != neivec.end(); i1++)
+        for (i2 = i1+1; i2 != neivec.end(); i2++)
+            if ((*i1)->node->height > (*i2)->node->height) {
+                Neighbor *nei = *i1;
+                *i1 = *i2;
+                *i2 = nei;
+            }
+    for (i1 = neivec.begin(); i1 != neivec.end(); i1++)
+        if ((*i1)->node != dad)
+            getPreOrderBranches(nodes, nodes2, (*i1)->node, node);
+//    FOR_NEIGHBOR_IT(node, dad, it) 
+//        getPreOrderBranches(nodes, nodes2, (*it)->node, node);
 }

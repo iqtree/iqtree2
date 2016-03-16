@@ -530,9 +530,9 @@ if (IQTREE_FLAGS MATCHES "mpi")
 endif()
 
 if (BINARY32 OR IQTREE_FLAGS MATCHES "novx")
-    target_link_libraries(iqtree pll ncl lbfgsb whtest sprng vectorclass model ${PLATFORM_LIB} ${THREAD_LIB} ${MYMPI_LIB})	
+    target_link_libraries(iqtree pll ncl lbfgsb whtest sprng vectorclass model ${PLATFORM_LIB} ${STD_LIB} ${THREAD_LIB} ${MYMPI_LIB})	
 else()
-    target_link_libraries(iqtree pll pllavx ncl lbfgsb whtest sprng vectorclass model avxkernel ${PLATFORM_LIB} ${THREAD_LIB} ${MYMPI_LIB})	
+    target_link_libraries(iqtree pll pllavx ncl lbfgsb whtest sprng vectorclass model avxkernel ${PLATFORM_LIB} ${STD_LIB} ${THREAD_LIB} ${MYMPI_LIB})	
 endif()
 
 # setup the executable name 

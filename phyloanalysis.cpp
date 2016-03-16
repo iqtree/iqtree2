@@ -750,7 +750,7 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 			tree.setRootNode(params.root);
             
             if (params.gbo_replicates) {
-                if (tree.boot_consense_logl > tree.getBestScore()) {
+                if (tree.boot_consense_logl > tree.getBestScore() + 0.1) {
                     out << endl << "**NOTE**: Consensus tree has higher likelihood than ML tree found! Please use consensus tree below." << endl;
                 }
             }
@@ -1709,6 +1709,16 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 	// Update best tree
     iqtree.addTreeToCandidateSet(initTree, iqtree.getCurScore(), false);
 	iqtree.printResultTree();
+
+    // now overwrite with random tree
+    if (params.start_tree == STT_RANDOM_TREE) {
+        cout << "Generate random initial Yule-Harding tree..." << endl;
+        iqtree.generateRandomTree(YULE_HARDING);
+        iqtree.wrapperFixNegativeBranch(true);
+        iqtree.initializeAllPartialLh();
+        initTree = iqtree.optimizeBranches(2);
+        cout << "Log-likelihood of random tree: " << iqtree.getCurScore() << endl;
+    }
 
     /****************** NOW PERFORM MAXIMUM LIKELIHOOD TREE RECONSTRUCTION ******************/
 
