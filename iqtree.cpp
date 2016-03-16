@@ -1778,10 +1778,10 @@ double IQTree::doTreeSearch() {
     double initCPUTime = getRealTime();
 
     /********************************** INITIALIZE THE CANDIDATE TREE SET ***************************************/
-    if (!params->user_file && (params->start_tree == STT_PARSIMONY || params->start_tree == STT_PLL_PARSIMONY)) {
+//    if (!params->user_file && (params->start_tree == STT_PARSIMONY || params->start_tree == STT_PLL_PARSIMONY)) {
 
 #ifdef _IQTREE_MPI
-        int treesPerProc = params->numInitTrees / MPIHelper::getInstance().getNumProcesses();
+        int treesPerProc = (params->numInitTrees - candidateTrees.size()) / MPIHelper::getInstance().getNumProcesses();
         int rest = params->numInitTrees % MPIHelper::getInstance().getNumProcesses();
         if (rest != 0) {
             treesPerProc++;
@@ -1792,15 +1792,15 @@ double IQTree::doTreeSearch() {
         }
         initCandidateTreeSet(treesPerProc, params->numNNITrees);
 #else
-        initCandidateTreeSet(params->numInitTrees - 2, params->numNNITrees);
+        initCandidateTreeSet(params->numInitTrees - candidateTrees.size(), params->numNNITrees);
 #endif
         assert(candidateTrees.size() != 0);
         cout << "Finish initializing candidate tree set (" << candidateTrees.size() << ")" << endl;
-    } else {
-        cout << "Doing NNI on the user-input tree ... " << endl;
-        doNNISearch();
-        addTreeToCandidateSet(getTreeString(), curScore);
-    }
+//    } else {
+//        cout << "Doing NNI on the user-input tree ... " << endl;
+//        doNNISearch();
+//        addTreeToCandidateSet(getTreeString(), curScore);
+//    }
 
     cout << "Current best tree score: " << candidateTrees.getBestScore() << " / CPU time: " <<
     getRealTime() - initCPUTime << endl;
@@ -2148,6 +2148,11 @@ pair<int, int> IQTree::doNNISearch() {
         if (params->print_site_posterior)
             computePatternCategories();
     }
+    // Better tree or score is found
+    if (getCurScore() > candidateTrees.getBestScore() + params->modelEps) {
+        // Re-optimize model parameters (the sNNI algorithm)
+        optimizeModelParameters();
+    }
     MPIHelper::getInstance().setNumNNISearch(MPIHelper::getInstance().getNumNNISearch() + 1);
     return nniInfos;
 }
@@ -2262,7 +2267,7 @@ pair<int, int> IQTree::optimizeNNI() {
             break;
 
         if (params->snni && (curScore > curBestScore + 0.1)) {
-            optimizeModelParameters(false);
+//            optimizeModelParameters(false);
             curBestScore = curScore;
         }
     }

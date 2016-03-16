@@ -2490,7 +2490,6 @@ void runPhyloAnalysis(Params &params) {
     // 2015-09-22: THIS IS STUPID: after deleting tree, one cannot access tree->aln anymore
 //	alignment = tree->aln;
 	delete alignment;
-	delete tree; // TUNG: Fix the segmentation fault bug
 }
 
 void assignBranchSupportNew(Params &params) {
