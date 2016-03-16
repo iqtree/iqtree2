@@ -1803,6 +1803,7 @@ int outstreambuf::sync() { // used for output buffer only
 	return 0;
 }
 
+
 extern "C" void startLogFile(bool append_log) {
     if (append_log)
         _out_buf.open(_log_file.c_str(), ios::app);
@@ -2231,11 +2232,45 @@ int main(int argc, char *argv[]) {
 	/*************************/
 
 	parseArg(argc, argv, Params::getInstance());
+
+    // 2015-12-05
+    Checkpoint *checkpoint = new Checkpoint;
+    string filename = (string)Params::getInstance().out_prefix + ".ckp.gz";
+    checkpoint->setFileName(filename);
+    
+    bool append_log = false;
+    
+    if (!Params::getInstance().ignore_checkpoint) {
+        checkpoint->load();
+        if (checkpoint->hasKey("finished")) {
+            if (checkpoint->getBool("finished")) {
+                if (Params::getInstance().force_unfinished) {
+                    cout << "NOTE: Continue analysis although a previous run already finished" << endl;
+                } else {
+                    outError("Checkpoint (" + filename + ") indicates that a previous run successfully finished\n" +
+                        "Use `-redo` option if you really want to redo the analysis and overwrite all output files.");
+                    delete checkpoint;
+                    return EXIT_FAILURE;
+                } 
+            } else {
+                append_log = true;
+            }
+        } else {
+            outWarning("Ignore invalid checkpoint file " + filename);
+            checkpoint->clear();
+        }
+    }
+
+
 	_log_file = Params::getInstance().out_prefix;
 	_log_file += ".log";
-	startLogFile();
-	time_t cur_time;
+	startLogFile(append_log);
+	time_t start_time;
 
+    if (append_log) {
+        cout << endl << "******************************************************"
+             << endl << "CHECKPOINT: Resuming analysis from " << filename << endl << endl;
+    }
 #ifdef _IQTREE_MPI
 	cout << "************************************************" << endl;
 	cout << "* START TREE SEARCH USING MPI WITH " << MPIHelper::getInstance().getNumProcesses() << " PROCESSES *" << endl;
@@ -2322,8 +2357,8 @@ int main(int argc, char *argv[]) {
 	cout << "Seed:    " << Params::getInstance().ran_seed <<  " ";
 	init_random(Params::getInstance().ran_seed, true);
 
-	time(&cur_time);
-	cout << "Time:    " << ctime(&cur_time);
+	time(&start_time);
+	cout << "Time:    " << ctime(&start_time);
 
 	if (Params::getInstance().lk_no_avx)
 		instruction_set = min(instruction_set, 6);
@@ -2525,8 +2560,9 @@ int main(int argc, char *argv[]) {
 	runPhyloAnalysis(Params::getInstance());
 #endif
 
-	time(&cur_time);
-	cout << "Date and Time: " << ctime(&cur_time);
+	time(&start_time);
+	cout << "Date and Time: " << ctime(&start_time);
+	delete checkpoint;
 
 	finish_random();
 	return EXIT_SUCCESS;

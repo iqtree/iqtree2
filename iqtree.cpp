@@ -583,6 +583,7 @@ int IQTree::addTreeToCandidateSet(string treeString, double score, bool updateSt
 
 void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
 
+
     if (nParTrees > 0) {
         if (params->start_tree == STT_RANDOM_TREE)
             cout << "Generating " << nParTrees  << " random trees... ";
@@ -607,6 +608,7 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
                 pars_trees[i] = tree.getTreeString();
             }
         }
+    }
 #endif
 
     int processID = MPIHelper::getInstance().getProcessID();
@@ -614,14 +616,35 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
     for (int treeNr = 1; treeNr <= nParTrees; treeNr++) {
         int parRandSeed = Params::getInstance().ran_seed + processID * nParTrees + treeNr;
         string curParsTree;
+
+        /********* Create parsimony tree using PLL *********/
+        if (params->start_tree == STT_PLL_PARSIMONY) {
+			pllInst->randomNumberSeed = params->ran_seed + treeNr * 12345;
+	        pllComputeRandomizedStepwiseAdditionParsimonyTree(pllInst, pllPartitions, params->sprDist);
+	        resetBranches(pllInst);
+			pllTreeToNewick(pllInst->tree_string, pllInst, pllPartitions,
+					pllInst->start->back, PLL_FALSE, PLL_TRUE, PLL_FALSE,
+					PLL_FALSE, PLL_FALSE, PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
+			curParsTree = string(pllInst->tree_string);
+			PhyloTree::readTreeStringSeqName(curParsTree);
+			wrapperFixNegativeBranch(true);
+			curParsTree = getTreeString();
+        } else if (params->start_tree == STT_RANDOM_TREE) {
+            generateRandomTree(YULE_HARDING);
+            wrapperFixNegativeBranch(true);
+			curParsTree = getTreeString();
+        } else if (params->start_tree == STT_PARSIMONY) {
+            /********* Create parsimony tree using IQ-TREE *********/
 #ifdef _OPENMP
-        if (params->start_tree == STT_PARSIMONY)
-            curParsTree = pars_trees[treeNr-1];
-        else
-            curParsTree = generateParsimonyTree(parRandSeed);
+            if (params->start_tree == STT_PARSIMONY)
+                curParsTree = pars_trees[treeNr-1];
+            else
+                curParsTree = generateParsimonyTree(parRandSeed);
 #else
-        curParsTree = generateParsimonyTree(parRandSeed);
+            curParsTree = generateParsimonyTree(parRandSeed);
 #endif
+        }
+        
         int pos = addTreeToCandidateSet(curParsTree, -DBL_MAX, false);
         // if a duplicated tree is generated, then randomize the tree
         if (pos == -1) {
@@ -1962,6 +1985,11 @@ double IQTree::doTreeSearch() {
 
     setRootNode(params->root);
 
+    // if not zero, it means already recovered from checkpoint
+    if (stop_rule.getLastImprovedIteration() == 0)
+    	stop_rule.addImprovedIteration(1);
+    else
+    	cout << "CHECKPOINT: " <<  stop_rule.getCurIt() << " search iterations restored" << endl;
     searchinfo.curPerStrength = params->initPS;
 
     double cur_correlation = 0.0;
@@ -2287,6 +2315,7 @@ pair<int, int> IQTree::doNNISearch() {
     if (getCurScore() > candidateTrees.getBestScore() + params->modelEps) {
         // Re-optimize model parameters (the sNNI algorithm)
         optimizeModelParameters();
+        getModelFactory()->saveCheckpoint();
     }
     MPIHelper::getInstance().setNumNNISearch(MPIHelper::getInstance().getNumNNISearch() + 1);
     return nniInfos;

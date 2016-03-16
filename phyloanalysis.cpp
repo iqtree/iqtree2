@@ -1719,8 +1719,10 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
     }
 
     iqtree.initializeAllPartialLh();
-	double initEpsilon = params.min_iterations == 0 ? params.modelEps : (params.modelEps * 100);
-	Params::getInstance().testAlphaEps = initEpsilon;
+	double initEpsilon = params.min_iterations == 0 ? params.modelEps : (params.modelEps*10);
+	if (params.test_param)
+		initEpsilon = 0.1;
+
 
 	if (iqtree.getRate()->name.find("+I+G") != string::npos) {
 		if (params.alpha_invar_file != NULL) { // COMPUTE TREE LIKELIHOOD BASED ON THE INPUT ALPHA AND P_INVAR VALUE
@@ -1746,10 +1748,31 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
     // Optimize model parameters and branch lengths using ML for the initial tree
 	string initTree;
 	iqtree.clearAllPartialLH();
-	initTree = iqtree.optimizeModelParameters(true, initEpsilon);
-	// Update best tree
-    iqtree.addTreeToCandidateSet(initTree, iqtree.getCurScore(), false);
-	iqtree.printResultTree();
+    iqtree.getModelFactory()->restoreCheckpoint();
+    if (iqtree.getCheckpoint()->getBool("finishedModelInit")) {
+        // model optimization already done: ignore this step
+        if (!iqtree.candidateTrees.empty())
+            iqtree.readTreeString(iqtree.getBestTrees()[0]);
+        iqtree.setCurScore(iqtree.computeLikelihood());
+        initTree = iqtree.getTreeString();
+        cout << "CHECKPOINT: Model parameters restored, LogL: " << iqtree.getCurScore() << endl;
+    } else {
+        initTree = iqtree.optimizeModelParameters(true, initEpsilon);
+        iqtree.saveCheckpoint();
+        iqtree.getModelFactory()->saveCheckpoint();
+        iqtree.getCheckpoint()->putBool("finishedModelInit", true);
+        iqtree.getCheckpoint()->dump();
+    }
+
+    if (params.lmap_num_quartets) {
+        cout << "Performing likelihood mapping with " << params.lmap_num_quartets << " quartets..." << endl;
+        double lkmap_time = getRealTime();
+        iqtree.doLikelihoodMapping();
+        cout << getRealTime()-lkmap_time << " seconds" << endl;
+    }
+    
+    bool finishedCandidateSet = iqtree.getCheckpoint()->getBool("finishedCandidateSet");
+    bool finishedInitTree = iqtree.getCheckpoint()->getBool("finishedInitTree");
 
     // now overwrite with random tree
     if (params.start_tree == STT_RANDOM_TREE && !finishedInitTree) {
@@ -1762,6 +1785,12 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
     }
 
     /****************** NOW PERFORM MAXIMUM LIKELIHOOD TREE RECONSTRUCTION ******************/
+
+    // Update best tree
+    if (!finishedInitTree) {
+        iqtree.addTreeToCandidateSet(initTree, iqtree.getCurScore(), false);
+        iqtree.printResultTree();
+    }
 
     if (params.min_iterations > 0) {
         if (!iqtree.isBifurcating())
@@ -1783,36 +1812,56 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
         params.compute_ml_dist = false;
     }
 
-	/************************************** Compute BIONJ tree *********************************************/
 	if (MPIHelper::getInstance().getProcessID() == MASTER) { // Only compute BIONJ tree at the master node
-		if ((!params.dist_file && params.compute_ml_dist) || params.leastSquareBranch) {
-			computeMLDist(params, iqtree, dist_file, getCPUTime());
-			if (!params.user_file) {
-				// NEW 2015-08-10: always compute BIONJ tree into the candidate set
-				iqtree.resetCurScore();
-				double start_bionj = getRealTime();
-				iqtree.computeBioNJ(params, iqtree.aln, dist_file);
-				cout << getRealTime() - start_bionj << " seconds" << endl;
-				if (iqtree.isSuperTree())
-					iqtree.wrapperFixNegativeBranch(true);
-				else
-					iqtree.wrapperFixNegativeBranch(false);
-				if (params.start_tree == STT_BIONJ) {
-					initTree = iqtree.optimizeModelParameters(params.min_iterations == 0, initEpsilon);
-				} else {
-					initTree = iqtree.optimizeBranches();
-				}
-				cout << "Log-likelihood of BIONJ tree: " << iqtree.getCurScore() << endl;
-                iqtree.addTreeToCandidateSet(initTree, iqtree.getCurScore(), false);
-			}
-		}
-	}
-
+        if (!finishedInitTree && ((!params.dist_file && params.compute_ml_dist) || params.leastSquareBranch)) {
+            computeMLDist(params, iqtree, dist_file, getCPUTime());
+            if (!params.user_file && params.start_tree != STT_RANDOM_TREE) {
+                // NEW 2015-08-10: always compute BIONJ tree into the candidate set
+                iqtree.resetCurScore();
+                double start_bionj = getRealTime();
+                iqtree.computeBioNJ(params, iqtree.aln, dist_file);
+                cout << getRealTime() - start_bionj << " seconds" << endl;
+                if (iqtree.isSuperTree())
+                    iqtree.wrapperFixNegativeBranch(true);
+                else
+                    iqtree.wrapperFixNegativeBranch(false);
+                if (params.start_tree == STT_BIONJ) {
+                    initTree = iqtree.optimizeModelParameters(params.min_iterations==0, initEpsilon);
+                } else {
+                    initTree = iqtree.optimizeBranches();
+                }
+                cout << "Log-likelihood of BIONJ tree: " << iqtree.getCurScore() << endl;
+                iqtree.candidateTrees.update(initTree, iqtree.getCurScore());
+            }
+        }
+    }
+    
 //    iqtree.saveCheckpoint();
 
 	double cputime_search_start = getCPUTime();
     double realtime_search_start = getRealTime();
 
+    if (params.min_iterations > 0 && !finishedCandidateSet) {
+        double initTime = getCPUTime();
+
+//        if (!params.user_file && (params.start_tree == STT_PARSIMONY || params.start_tree == STT_PLL_PARSIMONY)) 
+//        {
+        	iqtree.initCandidateTreeSet(params.numInitTrees - iqtree.candidateTrees.size(), params.numNNITrees);
+        	assert(iqtree.candidateTrees.size() != 0);
+        	cout << "Finish initializing candidate tree set. ";
+        	cout << "Number of distinct locally optimal trees: " << iqtree.candidateTrees.size() << endl;
+//        }
+        cout << "Current best tree score: " << iqtree.candidateTrees.getBestScore() << " / CPU time: "
+                << getCPUTime() - initTime << endl;
+	}
+
+    if (finishedCandidateSet) {
+        cout << "CHECKPOINT: Candidate tree set restored, best LogL: " << iqtree.candidateTrees.getBestScore() << endl;
+    } else {
+        iqtree.saveCheckpoint();
+        iqtree.getCheckpoint()->putBool("finishedCandidateSet", true);
+        iqtree.getCheckpoint()->dump(true);
+    }
 
     if (params.leastSquareNNI) {
     	iqtree.computeSubtreeDists();
@@ -1885,12 +1934,11 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
             cout << "Performs final model parameters optimization" << endl;
             string tree;
             tree = iqtree.optimizeModelParameters(true);
-            iqtree.candidateTrees.update(tree, iqtree.getCurScore(), true);
+            iqtree.addTreeToCandidateSet(tree, iqtree.getCurScore());
             iqtree.getCheckpoint()->putBool("finishedModelFinal", true);
             iqtree.saveCheckpoint();
         }
         
-		iqtree.addTreeToCandidateSet(tree, iqtree.getCurScore());
     }
 
 	if (iqtree.isSuperTree())

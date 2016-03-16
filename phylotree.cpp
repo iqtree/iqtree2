@@ -22,6 +22,7 @@
 #include "phylosupertreeplen.h"
 #include "upperbounds.h"
 #include "MPIHelper.h"
+#include "model/modelmixture.h"
 
 //const static int BINARY_SCALE = floor(log2(1/SCALING_THRESHOLD));
 //const static double LOG_BINARY_SCALE = -(log(2) * BINARY_SCALE);
@@ -124,6 +125,40 @@ PhyloTree::PhyloTree(string& treeString, Alignment* aln, bool isRooted) : MTree(
     freeNode();
     readTree(str, isRooted);
     setAlignment(aln);
+}
+
+void PhyloTree::saveCheckpoint() {
+    checkpoint->startStruct("PhyloTree");
+    StrVector leafNames;
+    getTaxaName(leafNames);
+    CKP_VECTOR_SAVE(leafNames);
+//    string newick = PhyloTree::getTreeString();
+//    CKP_SAVE(newick);
+//    CKP_SAVE(curScore);
+    checkpoint->endStruct();
+    CheckpointFactory::saveCheckpoint();
+}
+
+void PhyloTree::restoreCheckpoint() {
+    CheckpointFactory::restoreCheckpoint();
+    checkpoint->startStruct("PhyloTree");
+    StrVector leafNames;
+    if (CKP_VECTOR_RESTORE(leafNames)) {
+        if (leafNames.size() != leafNum)
+            outError("Alignment mismatched from checkpoint!");
+
+        StrVector taxname;
+        getTaxaName(taxname);
+        for (int i = 0; i < taxname.size(); i++)
+            if (taxname[i] != leafNames[i])
+                outError("Sequence name " + taxname[i] + " mismatched from checkpoint");
+    }    
+//    string newick;
+//    CKP_RESTORE(curScore);
+//    CKP_RESTORE(newick);
+//    if (!newick.empty())
+//        PhyloTree::readTreeString(newick);
+    checkpoint->endStruct();
 }
 
 void PhyloTree::discardSaturatedSite(bool val) {
@@ -326,15 +361,37 @@ void PhyloTree::setRootNode(const char *my_root) {
     assert(root);
 }
 
-void PhyloTree::readTreeString(const string &tree_string, bool convertIDs) {
-    stringstream str;
-    str << tree_string;
-    str.seekg(0, ios::beg);
-    freeNode();
-    readTree(str, rooted);
-    if (convertIDs) {
-        assignLeafNames();
-    }
+//void PhyloTree::setParams(Params* params) {
+//	this->params = params;
+//}
+
+void PhyloTree::readTreeString(const string &tree_string) {
+	stringstream str(tree_string);
+//	str(tree_string);
+//	str.seekg(0, ios::beg);
+	freeNode();
+	readTree(str, rooted);
+    assignLeafNames();
+//	setAlignment(aln);
+	setRootNode(params->root);
+
+	if (isSuperTree()) {
+		((PhyloSuperTree*) this)->mapTrees();
+	}
+	if (params->pll) {
+		pllReadNewick(getTreeString());
+	}
+	resetCurScore();
+//	lhComputed = false;
+}
+
+void PhyloTree::readTreeStringSeqName(const string &tree_string) {
+	stringstream str(tree_string);
+//	str(tree_string);
+//	str.seekg(0, ios::beg);
+	freeNode();
+	readTree(str, rooted);
+//    assignLeafNames();
 	setAlignment(aln);
 	setRootNode(params->root);
 
@@ -386,9 +443,10 @@ void PhyloTree::readTreeFile(const string &file_name) {
     str.close();
 }
 
-string PhyloTree::getTreeString(int format) {
+string PhyloTree::getTreeString() {
 	stringstream tree_stream;
-	printTree(tree_stream, format);
+    setRootNode(params->root);
+	printTree(tree_stream, WT_TAXON_ID + WT_BR_LEN + WT_SORT_TAXA);
 	return tree_stream.str();
 }
 

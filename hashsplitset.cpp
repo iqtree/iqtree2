@@ -56,9 +56,7 @@ void SplitIntMap::eraseSplit(Split *sp) {
 }
 
 void SplitIntMap::insertSplit(Split *sp, int value) {
-    if (findSplit(sp)) {
-        outError(__func__);
-    }
+    assert(!findSplit(sp));
     if (verbose_mode >= VB_MAX) sp->report(cout);
     (*this)[sp] = value;
 }

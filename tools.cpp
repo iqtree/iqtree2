@@ -3545,7 +3545,6 @@ int random_int(int a, int b) {
 	return a + random_int(b - a);
 }
 
-
 double random_double(int *rstream) {
 #ifndef FIXEDINTRAND
 #ifndef PARALLEL

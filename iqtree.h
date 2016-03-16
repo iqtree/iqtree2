@@ -623,13 +623,13 @@ protected:
      */
     int k_represent;
 
-protected:
+public:
+
     /**
      *  Set of candidate trees
      */
     CandidateSet candidateTrees;
 
-public:
 
     /**
      *  Update the candidate set with a new tree.

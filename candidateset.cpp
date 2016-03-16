@@ -22,20 +22,48 @@ CandidateSet::CandidateSet() : CheckpointFactory() {
 	maxSize = 200;
 }
 
-//void CandidateSet::getRandomStableSplits(int numSplit, SplitGraph& randomStableSplits) {
-//	/*
-//	 *  Use reservoir sampling technique
-//	 */
-//	randomStableSplits.clear();
-//	assert(numSplit < candidateSplitsHash.size());
-//	randomStableSplits.insert(randomStableSplits.begin(), candidateSplitsHash.begin(), candidateSplitsHash.begin() + numSplit);
-//	for (int i = numSplit; i < candidateSplitsHash.size(); i++) {
-//		int j = random_int(1, i);
-//		if (j <= numSplit) {
-//			randomStableSplits[j] = candidateSplitsHash[i];
-//		}
-//	}
-//}
+
+void CandidateSet::saveCheckpoint() {
+    checkpoint->startStruct("CandidateSet");
+	int ntrees = min(Params::getInstance().numNNITrees, (int)size());
+    checkpoint->startList(Params::getInstance().numNNITrees);
+    for (reverse_iterator it = rbegin(); it != rend() && ntrees > 0; it++, ntrees--) {
+        checkpoint->addListElement();
+        stringstream ss;
+        ss.precision(12);
+        ss << it->second.score << " " << it->second.tree;
+//        double score = it->second.score;
+//        CKP_SAVE(score);
+//        checkpoint->put("tree", it->second.tree);
+        checkpoint->put("", ss.str());
+    }
+    checkpoint->endList();
+    checkpoint->endStruct();
+    CheckpointFactory::saveCheckpoint();
+}
+
+void CandidateSet::restoreCheckpoint() {
+    CheckpointFactory::restoreCheckpoint();
+    checkpoint->startStruct("CandidateSet");
+    double score;
+    string tree;
+    checkpoint->startList(Params::getInstance().numNNITrees);
+    for (int i = 0; i < Params::getInstance().numNNITrees; i++) {
+        checkpoint->addListElement();
+        string str;
+        if (!checkpoint->getString("", str)) {
+            break;
+        }
+        stringstream ss(str);
+        ss >> score >> tree;
+//        CKP_RESTORE(tree);
+        update(tree, score);
+        
+    }
+    checkpoint->endList();
+    checkpoint->endStruct();
+}
+
 
 string CandidateSet::getRandCandTree() {
 	assert(!empty());
@@ -247,6 +275,29 @@ string CandidateSet::convertTreeString(string tree, int format) {
 
 	ostringstream ostr;
 	mtree.printTree(ostr, format);
+	return ostr.str();
+}
+
+string CandidateSet::getTopology(string tree) {
+//	PhyloTree mtree;
+//	mtree.rooted = params->is_rooted;
+//	mtree.aln = this->aln;
+//	mtree.setParams(params);
+    MTree mtree;
+    
+	stringstream str;
+	str << tree;
+	str.seekg(0, ios::beg);
+//	freeNode();
+	mtree.readTree(str, Params::getInstance().is_rooted);
+//	mtree.setAlignment(aln);
+//	mtree.setRootNode(params->root);
+    mtree.assignLeafID();
+    string x = "0";
+    mtree.root = mtree.findLeafName(x);
+
+	ostringstream ostr;
+	mtree.printTree(ostr, WT_TAXON_ID | WT_SORT_TAXA);
 	return ostr.str();
 }
 

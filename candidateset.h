@@ -170,6 +170,17 @@ public:
     string convertTreeString(const string tree, int format = WT_TAXON_ID | WT_SORT_TAXA);
 
     /**
+     * 	Return a unique topology (sorted by taxon names, rooted at taxon with alphabetically smallest name)
+     * 	without branch lengths
+     *
+     * 	@param tree
+     * 		The newick tree string, from which the topology string will be generated
+     * 	@return
+     * 		Newick string of the tree topology
+     */
+    string getTopology(string tree);
+    
+    /**
      * return the score of \a topology
      *
      * @param topology

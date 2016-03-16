@@ -2142,11 +2142,7 @@ int finish_random(int *rstream = NULL);
  * returns a random integer in the range [0; n - 1]
  * @param n upper-bound of random number
  */
-int random_int(int n);
-/**
- * returns a random integer in the range [a; b]
- */
-int random_int(int a, int b);
+int random_int(int n, int *rstream = NULL);
 
 /**
  *  return a random integer in the range [a,b]

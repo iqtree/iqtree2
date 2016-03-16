@@ -927,14 +927,12 @@ public:
     void rollBack(istream &best_tree_string);
 
     /**
-            Read the tree saved with Taxon Names and branch lengths.
-            @param
-                tree_string tree string to read from
-            @param
-                convertIDs if TRUE, the NEWICK string contains taxon-IDs instead of names. Thus, the IDs will replaced by
-                the corresponding sequence names in the alignments
+            refactored 2015-12-22: Taxon IDs instead of Taxon names to save space!
+            Read the tree saved with Taxon IDs and branch lengths.
+            @param tree_string tree string to read from
+            @param updatePLL if true, tree is read into PLL
      */
-    virtual void readTreeString(const string &tree_string, bool convertIDs = false);
+    virtual void readTreeString(const string &tree_string);
 
     /**
             Read the tree saved with Taxon names and branch lengths.
@@ -948,13 +946,15 @@ public:
             @param tree_string tree string to read from
      */
     void readTreeFile(const string &file_name);
-
-    /**
-     * Return the tree string contining taxon names and branch lengths
+    
+    /*
+            refactored 2015-12-22: Taxon IDs instead of Taxon names to save space!
+     * Return the tree string contining taxon IDs and branch lengths
+     * @return
      * @param format (WT_TAXON_ID, WT_BR_LEN, ...)
      * @return the tree string with the specified format
      */
-    virtual string getTreeString(int format = WT_BR_LEN);
+    virtual string getTreeString();
 
     /**
      * Assign branch lengths for branch that has no or negative length
