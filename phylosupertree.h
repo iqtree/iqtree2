@@ -51,6 +51,22 @@ public:
 
     ~PhyloSuperTree();
 
+    /**
+        set checkpoint object
+        @param checkpoint
+    */
+    virtual void setCheckpoint(Checkpoint *checkpoint);
+
+    /**
+        save object into the checkpoint
+    */
+    virtual void saveCheckpoint();
+
+    /**
+        restore object from the checkpoint
+    */
+    virtual void restoreCheckpoint();
+
     /** read partition model file */
     void readPartition(Params &params);
 

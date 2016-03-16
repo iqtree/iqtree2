@@ -95,6 +95,23 @@ public:
     void init();
 
     /**
+        set checkpoint object
+        @param checkpoint
+    */
+    virtual void setCheckpoint(Checkpoint *checkpoint);
+
+    /** 
+        save object into the checkpoint
+    */
+    virtual void saveCheckpoint();
+
+    /** 
+        restore object from the checkpoint
+    */
+    virtual void restoreCheckpoint();
+
+
+    /**
      * setup all necessary parameters  (declared as virtual needed for phylosupertree)
      */
     virtual void initSettings(Params& params);
@@ -628,6 +645,12 @@ public:
     int addTreeToCandidateSet(string treeString, double score, bool updateStopRule = true);
 
     /**
+     *  Generate the initial parsimony/random trees, called by initCandidateTreeSet
+     *  @param nParTrees number of parsimony/random trees to generate
+     */
+    void createInitTrees(int nParTrees);
+
+    /**
      *  Generate the initial candidate tree set
      *  @param nParTrees number of parsimony trees to generate
      *  @param nNNITrees number of NNI locally optimal trees to generate
@@ -668,14 +691,14 @@ public:
     /** pattern log-likelihood vector for each treels */
 //    vector<double* > treels_ptnlh;
 
-    /** tree log-likelihood for each treels */
-    DoubleVector treels_logl;
+    /** OBSOLETE: tree log-likelihood for each treels */
+//    DoubleVector treels_logl;
 
     /** NEWICK string for each treels */
 //    StrVector treels_newick;
 
-    /** maximum number of distinct candidate trees (tau parameter) */
-    int max_candidate_trees;
+    /** OBSOLETE: maximum number of distinct candidate trees (tau parameter) */
+//    int max_candidate_trees;
 
     /** log-likelihood threshold (l_min) */
     double logl_cutoff;
@@ -694,6 +717,9 @@ public:
 
     /** corresponding RELL log-likelihood */
     DoubleVector boot_logl;
+
+    /** corresponding log-likelihood on original alignment */
+    DoubleVector boot_orig_logl;
 
     /** Set of splits occuring in bootstrap trees */
     vector<SplitGraph*> boot_splits;

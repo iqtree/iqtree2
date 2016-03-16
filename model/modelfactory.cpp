@@ -76,7 +76,7 @@ ModelsBlock *readModelsDefinition(Params &params) {
 	return models_block;
 }
 
-ModelFactory::ModelFactory() { 
+ModelFactory::ModelFactory() : CheckpointFactory() { 
 	model = NULL; 
 	site_rate = NULL;
 	store_trans_matrix = false;
@@ -97,7 +97,7 @@ size_t findCloseBracket(string &str, size_t start_pos) {
 	return string::npos;
 }
 
-ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_block) {
+ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_block) : CheckpointFactory() {
 	store_trans_matrix = params.store_trans_matrix;
 	is_storing = false;
 	joint_optimize = params.optimize_model_rate_joint;
@@ -303,13 +303,16 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 			outError("JC is not suitable for site-specific model");
 		model = new ModelSet(model_str.c_str(), tree);
 		ModelSet *models = (ModelSet*)model; // assign pointer for convenience
-		models->init(params.freq_type);
+		models->init((params.freq_type != FREQ_UNKNOWN) ? params.freq_type : FREQ_EMPIRICAL);
 		IntVector site_model;
 		vector<double*> freq_vec;
-		readSiteFreq(tree->aln, params.site_freq_file, site_model, freq_vec);
-		tree->aln->regroupSitePattern(freq_vec.size(), site_model);
-		//tree->aln->ungroupSitePattern();
-		tree->setAlignment(tree->aln);
+		bool aln_changed = readSiteFreq(tree->aln, params.site_freq_file, site_model, freq_vec);
+        if (aln_changed) {
+            cout << "Regrouping alignment sites..." << endl;
+            tree->aln->regroupSitePattern(freq_vec.size(), site_model);
+            //tree->aln->ungroupSitePattern();
+            tree->setAlignment(tree->aln);
+        }
 		int i;
 		models->pattern_model_map.resize(tree->aln->getNPattern(), -1);
 		for (i = 0; i < tree->aln->getNSite(); i++) {
@@ -321,7 +324,7 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 		for (i = 0; i < freq_vec.size(); i++) {
 			ModelGTR *modeli;
 			if (i == 0) {
-				modeli = (ModelGTR*)createModel(model_str, models_block, params.freq_type, "", tree, true);
+				modeli = (ModelGTR*)createModel(model_str, models_block, (params.freq_type != FREQ_UNKNOWN) ? params.freq_type : FREQ_EMPIRICAL, "", tree, true);
 				modeli->getStateFrequency(state_freq);
 				modeli->getRateMatrix(rates);
 			} else {
@@ -340,8 +343,12 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 		cout << "Alignment is divided into " << models->size() << " partitions with " << tree->aln->getNPattern() << " patterns" << endl;
 		for (vector<double*>::reverse_iterator it = freq_vec.rbegin(); it != freq_vec.rend(); it++)
 			if (*it) delete [] (*it);
+            
+        // delete information of the old alignment
+        tree->aln->ordered_pattern.clear();
+        tree->deleteAllPartialLh();
 	}
-
+    
 //	if (model->isMixture())
 //		cout << "Mixture model with " << model->getNMixtures() << " components!" << endl;
 
@@ -556,14 +563,50 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 
 }
 
+void ModelFactory::setCheckpoint(Checkpoint *checkpoint) {
+	CheckpointFactory::setCheckpoint(checkpoint);
+	model->setCheckpoint(checkpoint);
+	site_rate->setCheckpoint(checkpoint);
+}
+
+void ModelFactory::saveCheckpoint() {
+    model->saveCheckpoint();
+    site_rate->saveCheckpoint();
+    checkpoint->startStruct("ModelFactory");
+//    CKP_SAVE(fused_mix_rate);
+//    CKP_SAVE(unobserved_ptns);
+//    CKP_SAVE(joint_optimize);
+    checkpoint->endStruct();
+    CheckpointFactory::saveCheckpoint();
+}
+
+void ModelFactory::restoreCheckpoint() {
+    model->restoreCheckpoint();
+    site_rate->restoreCheckpoint();
+    checkpoint->startStruct("ModelFactory");
+//    CKP_RESTORE(fused_mix_rate);
+//    CKP_RESTORE(unobserved_ptns);
+//    CKP_RESTORE(joint_optimize);
+    checkpoint->endStruct();
+}
+
 int ModelFactory::getNParameters() {
 	int df = model->getNDim() + model->getNDimFreq() + site_rate->getNDim() + site_rate->phylo_tree->branchNum;
 	return df;
 }
-void ModelFactory::readSiteFreq(Alignment *aln, char* site_freq_file, IntVector &site_model, vector<double*> &freq_vec)
+bool ModelFactory::readSiteFreq(Alignment *aln, char* site_freq_file, IntVector &site_model, vector<double*> &freq_vec)
 {
 	cout << "Reading site-specific state frequency file " << site_freq_file << " ..." << endl;
 	site_model.resize(aln->getNSite(), -1);
+    int i;
+    IntVector pattern_to_site; // vector from pattern to the first site
+    pattern_to_site.resize(aln->getNPattern(), -1);
+    for (i = 0; i < aln->getNSite(); i++)
+        if (pattern_to_site[aln->getPatternID(i)] == -1)
+            pattern_to_site[aln->getPatternID(i)] = i;
+            
+    bool aln_changed = false;
+    
 	try {
 		ifstream in;
 		in.exceptions(ios::failbit | ios::badbit);
@@ -582,24 +625,53 @@ void ModelFactory::readSiteFreq(Alignment *aln, char* site_freq_file, IntVector 
 			if (site_id.size() == 0) throw "No site ID specified";
 			for (IntVector::iterator it = site_id.begin(); it != site_id.end(); it++) {
 				if (site_model[*it] != -1) throw "Duplicated site ID";
-				site_model[*it] = model_id;
+				site_model[*it] = freq_vec.size();
 			}
 			double *site_freq_entry = new double[aln->num_states];
 			double sum = 0;
-			for (int i = 0; i < aln->num_states; i++) {
+			for (i = 0; i < aln->num_states; i++) {
 				in >> freq;
 				if (freq <= 0.0 || freq >= 1.0) throw "Invalid frequency entry";
 				site_freq_entry[i] = freq;
 				sum += freq;
 			}
-			if (fabs(sum-1.0) > 1e-4) throw "Frequencies do not sum up to 1";
+			if (fabs(sum-1.0) > 1e-4) {
+                if (fabs(sum-1.0) > 1e-3)
+                    outWarning("Frequencies of site " + site_spec + " do not sum up to 1 and will be normalized");
+                sum = 1.0/sum;
+                for (i = 0; i < aln->num_states; i++) 
+                    site_freq_entry[i] *= sum;
+            }
 			aln->convfreq(site_freq_entry); // regularize frequencies (eg if some freq = 0)
-			freq_vec.push_back(site_freq_entry);
+            
+            // 2016-02-01: now check for equality of sites with same site-pattern and same freq
+            int prev_site = pattern_to_site[aln->getPatternID(site_id[0])];
+            if (site_id.size() == 1 && prev_site < site_id[0] && site_model[prev_site] != -1) {
+                // compare freq with prev_site
+                bool matched_freq = true;
+                double *prev_freq = freq_vec[site_model[prev_site]];
+                for (i = 0; i < aln->num_states; i++) {
+                    if (site_freq_entry[i] != prev_freq[i]) {
+                        matched_freq = false;
+                        break;
+                    }
+                }
+                if (matched_freq) {
+                    site_model[site_id[0]] = site_model[prev_site];
+                } else
+                    aln_changed = true;
+            }
+            
+            if (site_model[site_id[0]] == freq_vec.size())
+                freq_vec.push_back(site_freq_entry);
+            else
+                delete [] site_freq_entry;
 		}
 		if (specified_sites < site_model.size()) {
+            aln_changed = true;
 			// there are some unspecified sites
 			cout << site_model.size() - specified_sites << " unspecified sites will get default frequencies" << endl;
-			for (int i = 0; i < site_model.size(); i++)
+			for (i = 0; i < site_model.size(); i++)
 				if (site_model[i] == -1) 
 					site_model[i] = freq_vec.size();
 			freq_vec.push_back(NULL);
@@ -615,6 +687,7 @@ void ModelFactory::readSiteFreq(Alignment *aln, char* site_freq_file, IntVector 
 	} catch(ios::failure) {
 		outError(ERR_READ_INPUT);
 	}
+    return aln_changed;
 }
 
 double ModelFactory::initGTRGammaIParameters(RateHeterogeneity *rate, ModelSubst *model, double initAlpha,
@@ -756,6 +829,114 @@ double ModelFactory::optimizeAllParameters(double gradient_epsilon) {
     return score;
 }
 
+double ModelFactory::optimizeParametersGammaInvar(bool fixed_len, bool write_info, double logl_epsilon, double gradient_epsilon) {
+	PhyloTree *tree = site_rate->getTree();
+
+	RateGammaInvar* site_rates = dynamic_cast<RateGammaInvar*>(tree->getRate());
+	if (site_rates == NULL) {
+//		outError("The model must be +I+G");
+        // model is not +I+G, call conventional function instead
+		return optimizeParameters(fixed_len, write_info, logl_epsilon, gradient_epsilon);
+	}
+
+	double frac_const = tree->aln->frac_const_sites;
+	if (fixed_len) {
+		tree->setCurScore(tree->computeLikelihood());
+	} else {
+		tree->optimizeAllBranches(1);
+	}
+
+
+	/* Back up branch lengths and substitutional rates */
+	DoubleVector lenvec;
+	DoubleVector bestLens;
+	tree->saveBranchLengths(lenvec);
+	int numRateEntries = tree->getModel()->getNumRateEntries();
+	double *rates = new double[numRateEntries];
+	double *bestRates = new double[numRateEntries];
+	tree->getModel()->getRateMatrix(rates);
+	int numStates = tree->aln->num_states;
+	double *state_freqs = new double[numStates];
+	tree->getModel()->getStateFrequency(state_freqs);
+
+	/* Best estimates found */
+	double *bestStateFreqs =  new double[numStates];
+	double bestLogl = tree->getCurScore();
+	double bestAlpha = 0.0;
+	double bestPInvar = 0.0;
+
+	double testInterval = (frac_const - MIN_PINVAR*2) / 10;
+	double initPInv = MIN_PINVAR;
+	double initAlpha = site_rates->getGammaShape();
+
+    if (write_info)
+        cout << "testInterval: " << testInterval << endl;
+
+	// Now perform testing different inital p_inv values
+	while (initPInv <= frac_const) {
+        if (write_info) {
+            cout << endl;
+            cout << "Testing with init. pinv = " << initPInv << " / init. alpha = "  << initAlpha << endl;
+        }
+		tree->restoreBranchLengths(lenvec);
+		((ModelGTR*) tree->getModel())->setRateMatrix(rates);
+		((ModelGTR*) tree->getModel())->setStateFrequency(state_freqs);
+		tree->getModel()->decomposeRateMatrix();
+		site_rates->setPInvar(initPInv);
+		site_rates->setGammaShape(initAlpha);
+		site_rates->computeRates();
+		tree->clearAllPartialLH();
+		optimizeParameters(fixed_len, write_info, logl_epsilon, gradient_epsilon);
+		double estAlpha = tree->getRate()->getGammaShape();
+		double estPInv = tree->getRate()->getPInvar();
+		double logl = tree->getCurScore();
+        if (write_info) {
+            cout << "Est. alpha: " << estAlpha << " / Est. pinv: " << estPInv
+            << " / Logl: " << logl << endl;
+        }
+		initPInv = initPInv + testInterval;
+
+		if (tree->getCurScore() > bestLogl) {
+			bestLogl = logl;
+			bestAlpha = estAlpha;
+			bestPInvar = estPInv;
+			bestLens.clear();
+			tree->saveBranchLengths(bestLens);
+			tree->getModel()->getRateMatrix(bestRates);
+			tree->getModel()->getStateFrequency(bestStateFreqs);
+		}
+	}
+
+	site_rates->setGammaShape(bestAlpha);
+//	site_rates->setFixGammaShape(false);
+	site_rates->setPInvar(bestPInvar);
+//	site_rates->setFixPInvar(false);
+	((ModelGTR*) tree->getModel())->setRateMatrix(bestRates);
+	((ModelGTR*) tree->getModel())->setStateFrequency(bestStateFreqs);
+	tree->restoreBranchLengths(bestLens);
+	tree->getModel()->decomposeRateMatrix();
+	site_rates->computeRates();
+	tree->clearAllPartialLH();
+	tree->setCurScore(tree->computeLikelihood());
+    if (write_info) {    
+        cout << endl;
+        cout << "Best initial alpha: " << bestAlpha << " / initial pinv: " << bestPInvar << " / ";
+        cout << "Logl: " << tree->getCurScore() << endl;
+    }
+
+	delete [] rates;
+	delete [] state_freqs;
+	delete [] bestRates;
+	delete [] bestStateFreqs;
+    
+    // updating global variable is not safe!
+//	Params::getInstance().testAlpha = false;
+    
+    // 2016-03-14: this was missing!
+    return tree->getCurScore();
+}
+
+
 double ModelFactory::optimizeParameters(bool fixed_len, bool write_info,
                                         double logl_epsilon, double gradient_epsilon) {
 	assert(model);
@@ -877,13 +1058,14 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info,
 	}
 	double elapsed_secs = getRealTime() - begin_time;
 	if (write_info)
-		cout << "Parameters optimization took " << i-1 << " rounds (" << elapsed_secs << " sec)" << endl << endl;
+		cout << "Parameters optimization took " << i-1 << " rounds (" << elapsed_secs << " sec)" << endl;
 	startStoringTransMatrix();
 
 	// For UpperBounds -----------
 	tree->mlCheck = 1;
 	// ---------------------------
 
+	tree->setCurScore(cur_lh);
 	return cur_lh;
 }
 
@@ -1031,4 +1213,5 @@ bool ModelFactory::getVariables(double *variables) {
 	changed |= site_rate->getVariables(variables + model->getNDim());
     return changed;
 }
+
 

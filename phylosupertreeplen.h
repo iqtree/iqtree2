@@ -101,6 +101,16 @@ public:
     ~PartitionModelPlen();
 
     /**
+        save object into the checkpoint
+    */
+    virtual void saveCheckpoint();
+
+    /**
+        restore object from the checkpoint
+    */
+    virtual void restoreCheckpoint();
+
+    /**
      * @return #parameters of the model + # branches
      */
     virtual int getNParameters();
@@ -119,6 +129,15 @@ public:
 	*/
 	virtual double optimizeParameters(bool fixed_len = false, bool write_info = true,
                                       double logl_epsilon = 0.1, double gradient_epsilon = 0.001);
+
+
+	/**
+	 *  optimize model parameters and tree branch lengths for the +I+G model
+	 *  using restart strategy.
+	 * 	@param fixed_len TRUE to fix branch lengths, default is false
+	 *	@return the best likelihood
+	 */
+	virtual double optimizeParametersGammaInvar(bool fixed_len = false, bool write_info = true, double logl_epsilon = 0.1, double gradient_epsilon = 0.001);
 
 	double optimizeGeneRate(double tol);
 
@@ -154,6 +173,16 @@ public:
 	PhyloSuperTreePlen(SuperAlignment *alignment, PhyloSuperTree *super_tree);
 
 	~PhyloSuperTreePlen();
+
+    /**
+        save object into the checkpoint
+    */
+    virtual void saveCheckpoint();
+
+    /**
+        restore object from the checkpoint
+    */
+    virtual void restoreCheckpoint();
 
     /**
             Read the tree saved with Taxon Names and branch lengths.

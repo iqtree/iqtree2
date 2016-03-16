@@ -69,6 +69,13 @@ Numeric PhyloTree::dotProductSIMD(Numeric *x, Numeric *y, int size) {
 
 template <class VectorClass, const int VCSIZE, const int nstates>
 void PhyloTree::computePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad) {
+
+    if (dad_branch->node->degree() > 3) {
+        // TODO: SIMD version for multifurcating node
+        computePartialLikelihoodEigen(dad_branch, dad);
+        return;
+    }
+
     // don't recompute the likelihood
 	assert(dad);
     if (dad_branch->partial_lh_computed & 1)

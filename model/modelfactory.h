@@ -24,6 +24,7 @@
 #include "modelsubst.h"
 #include "rateheterogeneity.h"
 #include "modelsblock.h"
+#include "checkpoint.h"
 
 
 ModelsBlock *readModelsDefinition(Params &params);
@@ -35,7 +36,7 @@ The values of the map contain 3 matricies consecutively: transition matrix, 1st,
 
 	@author BUI Quang Minh <minh.bui@univie.ac.at>
 */
-class ModelFactory : public unordered_map<int, double*>, public Optimization
+class ModelFactory : public unordered_map<int, double*>, public Optimization, public CheckpointFactory
 {
 public:
 
@@ -55,14 +56,31 @@ public:
 	
 	ModelFactory();
 
+    /**
+        set checkpoint object
+        @param checkpoint
+    */
+    virtual void setCheckpoint(Checkpoint *checkpoint);
+
+    /**
+        save object into the checkpoint
+    */
+    virtual void saveCheckpoint();
+
+    /**
+        restore object from the checkpoint
+    */
+    virtual void restoreCheckpoint();
+
 	/**
 	 * read site specific state frequency vectors from a file to create corresponding model (Ingo's idea)
 	 * @param aln input alignment
 	 * @param site_freq_file file name
 	 * @param site_model (OUT) site to model ID map
 	 * @param freq_vec (OUT) vector of frequency vectors
+     * @return TRUE if alignment needs to be changed, FALSE otherwise
 	 */
-	void readSiteFreq(Alignment *aln, char* site_freq_file, IntVector &site_model, vector<double*> &freq_vec);
+	bool readSiteFreq(Alignment *aln, char* site_freq_file, IntVector &site_model, vector<double*> &freq_vec);
 
 	/**
 		get the name of the model
@@ -149,6 +167,14 @@ public:
 	*/
 	virtual double optimizeParameters(bool fixed_len = false, bool write_info = true,
                                       double logl_epsilon = 0.1, double gradient_epsilon = 0.001);
+
+	/**
+	 *  optimize model parameters and tree branch lengths for the +I+G model
+	 *  using restart strategy.
+	 * 	@param fixed_len TRUE to fix branch lengths, default is false
+	 *	@return the best likelihood
+	 */
+	virtual double optimizeParametersGammaInvar(bool fixed_len = false, bool write_info = true, double logl_epsilon = 0.1, double gradient_epsilon = 0.001);
 
 	/**
 	 * @return TRUE if parameters are at the boundary that may cause numerical unstability

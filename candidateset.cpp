@@ -16,7 +16,7 @@ void CandidateSet::init(Alignment* aln) {
 CandidateSet::~CandidateSet() {
 }
 
-CandidateSet::CandidateSet() {
+CandidateSet::CandidateSet() : CheckpointFactory() {
 	aln = NULL;
 	numStableSplits = 0;
 	maxSize = 200;

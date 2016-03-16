@@ -1803,12 +1803,11 @@ int outstreambuf::sync() { // used for output buffer only
 	return 0;
 }
 
-extern "C" void startLogFile() {
-	_out_buf.open(_log_file.c_str());
-}
-
-extern "C" void appendLogFile() {
-	_out_buf.open(_log_file.c_str(), ios::app);
+extern "C" void startLogFile(bool append_log) {
+    if (append_log)
+        _out_buf.open(_log_file.c_str(), ios::app);
+    else
+        _out_buf.open(_log_file.c_str());
 }
 
 extern "C" void endLogFile() {
@@ -2314,12 +2313,14 @@ int main(int argc, char *argv[]) {
 //#endif
 
 	cout << "Command:";
-	for (int i = 0; i < argc; i++)
+    int i;
+	for (i = 0; i < argc; i++)
 		cout << " " << argv[i];
 	cout << endl;
 
+    checkpoint->get("iqtree.seed", Params::getInstance().ran_seed);
 	cout << "Seed:    " << Params::getInstance().ran_seed <<  " ";
-	init_random(Params::getInstance().ran_seed);
+	init_random(Params::getInstance().ran_seed, true);
 
 	time(&cur_time);
 	cout << "Time:    " << ctime(&cur_time);
@@ -2385,6 +2386,44 @@ int main(int argc, char *argv[]) {
 
 	cout.precision(3);
 	cout.setf(ios::fixed);
+    
+    // checkpoint general run information
+    checkpoint->startStruct("iqtree");
+    string command;
+    
+    if (CKP_RESTORE_STRING(command)) {
+        // compare command between saved and current commands
+        stringstream ss(command);
+        string str;
+        bool mismatch = false;
+        for (i = 1; i < argc; i++) {
+            if (!(ss >> str)) {
+                outWarning("Number of command-line arguments differs from checkpoint");
+                mismatch = true;
+                break;
+            }
+            if (str != argv[i]) {
+                outWarning((string)"Command-line argument `" + argv[i] + "` differs from checkpoint `" + str + "`");
+                mismatch = true;
+            }
+        }
+        if (mismatch) {
+            outWarning("Command-line differs from checkpoint!");
+        }
+        command = "";
+    }
+    
+	for (i = 1; i < argc; i++)
+        command += string(" ") + argv[i];
+    CKP_SAVE(command);
+    int seed = Params::getInstance().ran_seed;
+    CKP_SAVE(seed);
+    CKP_SAVE(start_time);
+    stringstream sversion;
+    sversion << iqtree_VERSION_MAJOR << "." << iqtree_VERSION_MINOR << "." << iqtree_VERSION_PATCH;
+    string version = sversion.str();
+    CKP_SAVE(version);
+    checkpoint->endStruct();
 
 #ifndef _IQTREE_MPI
 	// call the main function
@@ -2421,7 +2460,7 @@ int main(int argc, char *argv[]) {
 			if (Params::getInstance().second_align)
 				computeMulProb(Params::getInstance());
 		} else {
-			runPhyloAnalysis(Params::getInstance());
+			runPhyloAnalysis(Params::getInstance(), checkpoint);
 		}
 	} else if (Params::getInstance().ngs_file || Params::getInstance().ngs_mapped_reads) {
 		runNGSAnalysis(Params::getInstance());

@@ -42,7 +42,7 @@
 #NOTE: Static linking with clang windows: make a symlink libgcc_eh.a to libgcc.a (administrator required)
 # C:\TDM-GCC-64\lib\gcc\x86_64-w64-mingw32\5.1.0>mklink libgcc_eh.a libgcc.a
 
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 2.8.10 FATAL_ERROR)
 set(CMAKE_LEGACY_CYGWIN_WIN32 0)
 
 ##################################################################
@@ -64,8 +64,8 @@ project(iqtree)
 add_definitions(-DIQ_TREE)
 # The version number.
 set (iqtree_VERSION_MAJOR 1)
-set (iqtree_VERSION_MINOR 3)
-set (iqtree_VERSION_PATCH "13") 
+set (iqtree_VERSION_MINOR 4)
+set (iqtree_VERSION_PATCH "1-rc") 
 
 set(BUILD_SHARED_LIBS OFF)
 
@@ -133,6 +133,10 @@ if (CMAKE_COMPILER_IS_GNUCXX)
 #	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++98")
 	set(CMAKE_CXX_FLAGS_RELEASE "-O3 -g")
 	set(CMAKE_C_FLAGS_RELEASE "-O3 -g")
+    # require at least gcc 4.6
+    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 4.6)
+        message(FATAL_ERROR "GCC version must be at least 4.6!")
+    endif()
 elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 	message("Compiler      : Clang")
 	set(CLANG "TRUE")
@@ -380,6 +384,7 @@ if(EIGEN3_FOUND)
   include_directories(${EIGEN3_INCLUDE_DIR})
 endif(EIGEN3_FOUND)
 add_subdirectory(model)
+add_subdirectory(gsl)
 
 ##################################################################
 # the main executable
@@ -430,8 +435,10 @@ phylosupertree.cpp
 phylotree.cpp
 phylotreesse.cpp
 phylotreepars.cpp
+phylokernelsitemodel.cpp
 #phylotreeavx.cpp
 pruning.cpp
+quartet.cpp
 split.cpp
 splitgraph.cpp
 splitset.cpp

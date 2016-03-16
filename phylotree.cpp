@@ -52,7 +52,7 @@ void SPRMoves::add(PhyloNode *prune_node, PhyloNode *prune_dad, PhyloNode *regra
  PhyloTree class
  ****************************************************************************/
 
-PhyloTree::PhyloTree() : MTree() {
+PhyloTree::PhyloTree() : MTree(), CheckpointFactory() {
     init();
 }
 
@@ -112,7 +112,7 @@ void PhyloTree::init() {
     num_partial_lh_computations = 0;
 }
 
-PhyloTree::PhyloTree(Alignment *aln) : MTree() {
+PhyloTree::PhyloTree(Alignment *aln) : MTree(), CheckpointFactory() {
     init();
     this->aln = aln;
 }
@@ -259,7 +259,7 @@ void PhyloTree::assignLeafNames(Node *node, Node *dad) {
     if (node->isLeaf()) {
         node->id = atoi(node->name.c_str());
         assert(node->id >= 0 && node->id < leafNum);
-        node->name = aln->getSeqName(node->id).c_str();
+        node->name = aln->getSeqName(node->id);
     }
     FOR_NEIGHBOR_IT(node, dad, it)assignLeafNames((*it)->node, node);
 }
@@ -422,7 +422,7 @@ void PhyloTree::setModel(ModelSubst *amodel) {
 
 void PhyloTree::setModelFactory(ModelFactory *model_fac) {
     model_factory = model_fac;
-    if (model_factory && model_factory->model->isMixture())
+    if (model_factory && (model_factory->model->isMixture() || model_factory->model->isSiteSpecificModel()))
     	setLikelihoodKernel(sse);
 }
 
@@ -1205,10 +1205,11 @@ void PhyloTree::initializeAllPartialLh() {
     }
     assert(index == (nodeNum - 1) * 2);
     if (sse == LK_EIGEN || sse == LK_EIGEN_SSE) {
-        if (params->lh_mem_save == LM_PER_NODE)
+        if (params->lh_mem_save == LM_PER_NODE) {
             assert(indexlh == nodeNum-leafNum);
-        else
+        } else {
             assert(indexlh == (nodeNum-1)*2-leafNum);
+        }
     } else
     	assert(indexlh == (nodeNum-1)*2);
     clearAllPartialLH();
@@ -1337,14 +1338,15 @@ void PhyloTree::initializeAllPartialLh(int &index, int &indexlh, PhyloNode *node
     size_t block_size;
     if (instruction_set >= 7)
     	// block size must be divisible by 4
-    	block_size = ((nptn+3)/4)*4;
+    	nptn = ((nptn+3)/4)*4;
 	else
 		// block size must be divisible by 2
-		block_size = ((nptn % 2) == 0) ? nptn : (nptn + 1);
+		nptn = ((nptn % 2) == 0) ? nptn : (nptn + 1);
 
     size_t scale_block_size = nptn;
+//    size_t tip_block_size = nptn * model->num_states;
 
-    block_size = block_size * model->num_states * site_rate->getNRate() * ((model_factory->fused_mix_rate)? 1 : model->getNMixtures());
+    block_size = nptn * model->num_states * site_rate->getNRate() * ((model_factory->fused_mix_rate)? 1 : model->getNMixtures());
     if (!node) {
         node = (PhyloNode*) root;
         // allocate the big central partial likelihoods memory
@@ -1361,12 +1363,15 @@ void PhyloTree::initializeAllPartialLh(int &index, int &indexlh, PhyloNode *node
 
         if (!central_partial_lh) {
         	uint64_t tip_partial_lh_size = aln->num_states * (aln->STATE_UNKNOWN+1) * model->getNMixtures();
+            if (model->isSiteSpecificModel() && (sse == LK_EIGEN || sse == LK_EIGEN_SSE))
+                tip_partial_lh_size = get_safe_upper_limit(aln->size()) * model->num_states * leafNum;
             uint64_t mem_size = ((uint64_t)leafNum * 4 - 6) * (uint64_t) block_size + 2 + tip_partial_lh_size;
             if (sse == LK_EIGEN || sse == LK_EIGEN_SSE) {
-                if (params->lh_mem_save == LM_PER_NODE)
+                if (params->lh_mem_save == LM_PER_NODE) {
                     mem_size -= ((uint64_t)leafNum * 3 - 4) * (uint64_t)block_size;
-                else 
+                } else {
                     mem_size -= (uint64_t)leafNum * (uint64_t)block_size;
+                }
             }
             if (verbose_mode >= VB_MED)
                 cout << "Allocating " << mem_size * sizeof(double) << " bytes for partial likelihood vectors" << endl;
@@ -1381,20 +1386,22 @@ void PhyloTree::initializeAllPartialLh(int &index, int &indexlh, PhyloNode *node
 
         // now always assign tip_partial_lh
         if (sse == LK_EIGEN || sse == LK_EIGEN_SSE) {
-            if (params->lh_mem_save == LM_PER_NODE)
+            if (params->lh_mem_save == LM_PER_NODE) {
                 tip_partial_lh = central_partial_lh + ((nodeNum - leafNum)*block_size);
-            else
+            } else {
                 tip_partial_lh = central_partial_lh + (((nodeNum - 1)*2-leafNum)*block_size);
+            }
         } else
             tip_partial_lh = central_partial_lh + (((nodeNum - 1)*2)*block_size);
 
         if (!central_scale_num) {
         	uint64_t mem_size = (leafNum - 1) * 4 * scale_block_size;
         	if (sse == LK_EIGEN || sse == LK_EIGEN_SSE) {
-                if (params->lh_mem_save == LM_PER_NODE)
+                if (params->lh_mem_save == LM_PER_NODE) {
                     mem_size -= ((uint64_t)leafNum*3 - 2) * (uint64_t) scale_block_size;
-                else
+                } else {
                     mem_size -= (uint64_t)leafNum * (uint64_t) scale_block_size;
+                }
             }
             if (verbose_mode >= VB_MED)
                 cout << "Allocating " << mem_size * sizeof(UBYTE) << " bytes for scale num vectors" << endl;
@@ -1466,6 +1473,16 @@ void PhyloTree::initializeAllPartialLh(int &index, int &indexlh, PhyloNode *node
                 indexlh++;
             }
         }
+        
+//        if (model->isSiteSpecificModel() && (sse == LK_EIGEN || sse == LK_EIGEN_SSE)) {
+//            // allocate tip memory for this model
+//            if (node->isLeaf()) {
+//                nei2->partial_lh = tip_partial_lh + (node->id * tip_block_size);
+//            }
+//            if (dad->isLeaf()) {
+//                nei->partial_lh = tip_partial_lh + (dad->id * tip_block_size);
+//            }
+//        }
     }
     FOR_NEIGHBOR_IT(node, dad, it) initializeAllPartialLh(index, indexlh, (PhyloNode*) (*it)->node, node);
 }
@@ -1641,6 +1658,43 @@ double PhyloTree::computePatternLhCat(SiteLoglType wsl) {
         return score;
     }
 }
+
+void PhyloTree::computePatternStateFreq(double *ptn_state_freq) {
+    assert(getModel()->isMixture());
+    computePatternLhCat(WSL_MIXTURE);
+    double *lh_cat = _pattern_lh_cat;
+    size_t ptn, nptn = getAlnNPattern(), m, nmixture = getModel()->getNMixtures();
+    double *ptn_freq = ptn_state_freq;
+    size_t state, nstates = aln->num_states;
+    ModelMixture *models = (ModelMixture*)model;
+    
+    // loop over all site-patterns
+    for (ptn = 0; ptn < nptn; ptn++) {
+    
+        // first compute posterior for each mixture component
+        double sum_lh = 0.0;
+        for (m = 0; m < nmixture; m++) {
+            sum_lh += lh_cat[m];
+        }
+        sum_lh = 1.0/sum_lh;
+        for (m = 0; m < nmixture; m++) {
+            lh_cat[m] *= sum_lh;
+        }
+        
+        // now compute state frequencies
+        for (state = 0; state < nstates; state++) {
+            double freq = 0;
+            for (m = 0; m < nmixture; m++)
+                freq += models->at(m)->state_freq[state] * lh_cat[m];
+            ptn_freq[state] = freq;
+        }
+        
+        // increase the pointers
+        lh_cat += nmixture;
+        ptn_freq += nstates;
+    }
+}
+
 
 
 void PhyloTree::computePatternLikelihood(double *ptn_lh, double *cur_logl, double *ptn_lh_cat, SiteLoglType wsl) {
@@ -1864,8 +1918,10 @@ double PhyloTree::computeLogLDiffVariance(double *pattern_lh_other, double *ptn_
 double PhyloTree::computeLogLDiffVariance(PhyloTree *other_tree, double *pattern_lh) {
     double *pattern_lh_other = new double[getAlnNPattern()];
     other_tree->computePatternLikelihood(pattern_lh_other);
-    delete[] pattern_lh_other;
+    // BUG FIX found by Xcode analyze (use of memory after it is freed)
+//    delete[] pattern_lh_other;
     double res = computeLogLDiffVariance(pattern_lh_other, pattern_lh);
+    delete[] pattern_lh_other;
     return res;
 }
 
@@ -3420,7 +3476,7 @@ double PhyloTree::computeDist(int seq1, int seq2, double initial_dist, double &d
     // if no model or site rate is specified, return JC distance
     if (initial_dist == 0.0) {
     	if (params->compute_obs_dist)
-            initial_dist = aln->computeObsDist(seq1, seq2);
+            return (initial_dist = aln->computeObsDist(seq1, seq2));
     	else
     		initial_dist = aln->computeDist(seq1, seq2);
     }
@@ -5076,14 +5132,20 @@ int PhyloTree::testAllBranches(int threshold, double best_score, double *pattern
         double lbp_support, aLRT_support, aBayes_support;
         double SH_aLRT_support = (testOneBranch(best_score, pattern_lh, reps, lbp_reps,
             node, dad, lbp_support, aLRT_support, aBayes_support) * 100);
+        ostringstream ss;
+        ss.precision(3);
+        ss << node->name;
+        if (!node->name.empty())
+            ss << "/";
         if (reps)
-            node->name = convertDoubleToString(SH_aLRT_support);
+            ss << SH_aLRT_support;
         if (lbp_reps)
-            node->name += "/" + convertDoubleToString(lbp_support * 100);
+            ss << "/" << lbp_support * 100;
         if (aLRT_test)
-            node->name += "/" + convertDoubleToString(aLRT_support);
+            ss << "/" << aLRT_support;
         if (aBayes_test)
-            node->name += "/" + convertDoubleToString(aBayes_support);
+            ss << "/" << aBayes_support;
+        node->name = ss.str();
         if (SH_aLRT_support < threshold)
             num_low_support = 1;
         if (((PhyloNeighbor*) node->findNeighbor(dad))->partial_pars) {
@@ -5326,12 +5388,10 @@ void PhyloTree::removeIdenticalSeqs(Params &params) {
 	else
 		new_aln = aln->removeIdenticalSeq("", params.gbo_replicates > 0, removed_seqs, twin_seqs);
 	if (removed_seqs.size() > 0) {
-		cout << "NOTE: " << removed_seqs.size() << " identical sequences will be ignored during tree search" << endl;
-		if (verbose_mode >= VB_MED) {
-			for (int i = 0; i < removed_seqs.size(); i++) {
-				cout << removed_seqs[i] << " is identical to " << twin_seqs[i] << endl;
-			}
-		}
+		cout << "NOTE: " << removed_seqs.size() << " identical sequences (see below) will be ignored for subsequent analysis" << endl;
+        for (int i = 0; i < removed_seqs.size(); i++) {
+            cout << "NOTE: " << removed_seqs[i] << " (identical to " << twin_seqs[i] << ") is ignored but added at the end" << endl;
+        }
 		delete aln;
 		aln = new_aln;
 	}
@@ -5423,5 +5483,5 @@ void PhyloTree::generateRandomTree(TreeGenType tree_type) {
 		(*it)->name = aln->getSeqName((*it)->id);
     stringstream str;
     ext_tree.printTree(str);
-    PhyloTree::readTreeString(str.str());
+    PhyloTree::readTreeStringSeqName(str.str());
 }

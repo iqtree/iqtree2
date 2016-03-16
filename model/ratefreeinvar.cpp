@@ -15,6 +15,20 @@ RateFreeInvar::RateFreeInvar(int ncat, double start_alpha, string params, bool s
 	full_name = "Invar+" + full_name;
 }
 
+void RateFreeInvar::saveCheckpoint() {
+    checkpoint->startStruct("RateFreeInvar");
+    checkpoint->endStruct();
+    RateInvar::saveCheckpoint();
+    RateFree::saveCheckpoint();
+}
+
+void RateFreeInvar::restoreCheckpoint() {
+    RateInvar::restoreCheckpoint();
+    RateFree::restoreCheckpoint();
+    checkpoint->startStruct("RateFreeInvar");
+    checkpoint->endStruct();
+}
+
 void RateFreeInvar::setNCategory(int ncat) {
 	RateFree::setNCategory(ncat);
 	name = "+I" + name;

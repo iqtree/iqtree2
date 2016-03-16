@@ -64,6 +64,19 @@ ModelGTR::ModelGTR(PhyloTree *tree, bool count_rates)
 	num_params = getNumRateEntries() - 1;
 }
 
+void ModelGTR::saveCheckpoint() {
+    checkpoint->startStruct("ModelGTR");
+    checkpoint->endStruct();
+    ModelSubst::saveCheckpoint();
+}
+
+void ModelGTR::restoreCheckpoint() {
+    ModelSubst::restoreCheckpoint();
+    checkpoint->startStruct("ModelGTR");
+    checkpoint->endStruct();
+}
+
+
 void ModelGTR::setTree(PhyloTree *tree) {
 	phylo_tree = tree;
 }
@@ -606,8 +619,8 @@ void ModelGTR::decomposeRateMatrix(){
 		for (i = 1; i < num_states; i++)
 			eigenvalues[i] = -mu;
 
-		double *f = new double[num_states];
-		for (i = 0; i < num_states; i++) f[i] = sqrt(state_freq[i]);
+//		double *f = new double[num_states];
+//		for (i = 0; i < num_states; i++) f[i] = sqrt(state_freq[i]);
 		// compute eigenvectors
 		memset(eigenvectors, 0, num_states*num_states*sizeof(double));
 		memset(inv_eigenvectors, 0, num_states*num_states*sizeof(double));

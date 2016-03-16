@@ -49,6 +49,51 @@ PhyloSuperTree::PhyloSuperTree(SuperAlignment *alignment, PhyloSuperTree *super_
 	aln = alignment;
 }
 
+void PhyloSuperTree::setCheckpoint(Checkpoint *checkpoint) {
+	IQTree::setCheckpoint(checkpoint);
+	for (iterator it = begin(); it != end(); it++)
+		(*it)->setCheckpoint(checkpoint);
+}
+
+void PhyloSuperTree::saveCheckpoint() {
+//    checkpoint->startStruct("PhyloSuperTree");
+//    int part = 0;
+//    for (iterator it = begin(); it != end(); it++, part++) {
+//    	string key = part_info[part].name + ".tree";
+//    	checkpoint->put(key, (*it)->getTreeString());
+//    }
+//    checkpoint->endStruct();
+    IQTree::saveCheckpoint();
+}
+
+void PhyloSuperTree::restoreCheckpoint() {
+    IQTree::restoreCheckpoint();
+    
+    // first get the newick string of super tree
+//    checkpoint->startStruct("PhyloTree");
+//    string newick;
+//    CKP_RESTORE(newick);
+//    checkpoint->endStruct();
+//
+//    if (newick.empty()) return;
+//    
+//    // now get partition tree strings
+//    checkpoint->startStruct("PhyloSuperTree");
+//    int part = 0;
+//    for (iterator it = begin(); it != end(); it++, part++) {
+//    	string key = part_info[part].name + ".tree";
+//    	string part_tree;
+//    	if (!checkpoint->get(key, part_tree))
+//    		outError("No tree for partition " + part_info[part].name + " found from checkpoint");
+//    	newick += part_tree;
+//    }
+//
+//    checkpoint->endStruct();
+//
+//    readTreeString(newick);
+
+}
+
 void PhyloSuperTree::readPartition(Params &params) {
 	try {
 		ifstream in;
@@ -555,9 +600,9 @@ void PhyloSuperTree::changeLikelihoodKernel(LikelihoodKernel lk) {
 
 string PhyloSuperTree::getTreeString(int format) {
 	stringstream tree_stream;
-	printTree(tree_stream, WT_BR_LEN+WT_NEWLINE);
+	printTree(tree_stream, WT_TAXON_ID + WT_BR_LEN + WT_SORT_TAXA);
 	for (iterator it = begin(); it != end(); it++)
-		(*it)->printTree(tree_stream, WT_BR_LEN+WT_NEWLINE);
+		(*it)->printTree(tree_stream, WT_TAXON_ID + WT_BR_LEN + WT_SORT_TAXA);
 	return tree_stream.str();
 }
 
@@ -567,11 +612,13 @@ void PhyloSuperTree::readTreeString(const string &tree_string) {
 	str.seekg(0, ios::beg);
 	freeNode();
 	readTree(str, rooted);
-	setAlignment(aln);
+    assignLeafNames();
+//	setAlignment(aln);
 	setRootNode(params->root);
 	for (iterator it = begin(); it != end(); it++) {
 		(*it)->freeNode();
 		(*it)->readTree(str, rooted);
+        (*it)->assignLeafNames();
 //		(*it)->setAlignment((*it)->aln);
 	}
 	linkTrees();

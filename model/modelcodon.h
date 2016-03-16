@@ -49,6 +49,16 @@ public:
 	 */
 	virtual ~ModelCodon();
 
+    /**
+        save object into the checkpoint
+    */
+    virtual void saveCheckpoint();
+
+    /**
+        restore object from the checkpoint
+    */
+    virtual void restoreCheckpoint();
+
 	/**
 		@return the number of rate entries, equal to the number of non-diagonal elements of the rate matrix
         since we store full matrix here
