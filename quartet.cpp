@@ -201,7 +201,7 @@ void plotlmpointsvg(FILE *ofp, double w1, double w2)
 
 
 // void finishsvg(FILE *ofp, unsigned long **countarr)
-void finishsvg(FILE *ofp, vector<SeqQuartetInfo> lmap_seq_quartet_info, int leafNum, unsigned long Numquartets)
+void finishsvg(FILE *ofp, vector<SeqQuartetInfo> lmap_seq_quartet_info, int leafNum, int64_t Numquartets)
 {
 	fprintf(ofp,"  </g>\n");
 	/* end triangle 1 (top) */
@@ -550,7 +550,7 @@ void plotlmpointcolor(FILE *epsofp, FILE *svgofp, double w1, double w2, int red,
 
 /* last lines of EPSF likelihood mapping file */
 //void finisheps(FILE *ofp, unsigned long **countarr)
-void finisheps(FILE *ofp, vector<SeqQuartetInfo> lmap_seq_quartet_info, int leafNum, unsigned long Numquartets)
+void finisheps(FILE *ofp, vector<SeqQuartetInfo> lmap_seq_quartet_info, int leafNum, int64_t Numquartets)
 {
 	fprintf(ofp, "stroke\n");
 	fprintf(ofp, "%% second triangle (the one with 3 basins)\n");
@@ -733,17 +733,17 @@ void PhyloTree::computeQuartetLikelihoods(vector<QuartetInfo> &lmap_quartet_info
 	   size2 = sizeA-3;
 	   size1 = sizeA-2;
 	   size0 = sizeA-1;
-	   LMGroups.uniqueQuarts = 1     + size3 +
+	   LMGroups.uniqueQuarts = (int64_t)1 + size3 +
 	                           size2 * (size2-1) / 2 +
 	                           size1 * (size1-1) * (size1-2) / 6 +
 	                           size0 * (size0-1) * (size0-2) * (size0-3) / 24;
 	   break;
 	case 2: 
-	   LMGroups.uniqueQuarts = (sizeA * (sizeA - 1)) / 2 * (sizeB * (sizeB - 1)) / 2; break;
+	   LMGroups.uniqueQuarts = ((int64_t)sizeA * (sizeA - 1)) / 2 * (sizeB * (sizeB - 1)) / 2; break;
 	case 3: 
-	   LMGroups.uniqueQuarts = sizeA * sizeB * (sizeC * (sizeC - 1)) / 2; break;
+	   LMGroups.uniqueQuarts = (int64_t)sizeA * sizeB * (sizeC * (sizeC - 1)) / 2; break;
 	case 4: 
-	   LMGroups.uniqueQuarts = sizeA * sizeB * sizeC * sizeD; break;
+	   LMGroups.uniqueQuarts = (int64_t)sizeA * sizeB * sizeC * sizeD; break;
 	default: 
 	   outError("Unknown Likelihood Mapping mode! PLEASE report this to the developers!"); 
 	   break;
@@ -763,8 +763,8 @@ void PhyloTree::computeQuartetLikelihoods(vector<QuartetInfo> &lmap_quartet_info
 #ifdef _OPENMP
     #pragma omp for schedule(guided)
 #endif
-    for (int qid = 0; qid < params->lmap_num_quartets; qid++) { /*** draw lmap_num_quartets quartets randomly ***/
-	// fprintf(stderr, "%d\n", qid); 
+    for (int64_t qid = 0; qid < params->lmap_num_quartets; qid++) { /*** draw lmap_num_quartets quartets randomly ***/
+	// fprintf(stderr, "%I64d\n", qid); 
 
         // uniformly draw 4 taxa
 	// (a) sample taxon 1
@@ -1048,7 +1048,7 @@ void PhyloTree::computeQuartetLikelihoods(vector<QuartetInfo> &lmap_quartet_info
 	}
 
 	{
-		int count = (qid+1);
+		int64_t count = (qid+1);
 		if ((count % 100) == 0) {
 			cout << '.';
 			if ((count % 1000) == 0) { // separator after 10 dots
@@ -1268,12 +1268,12 @@ void PhyloTree::doLikelihoodMapping() {
     // vector<SeqQuartetInfo> lmap_seq_quartet_info;
     // int areacount[8] = {0, 0, 0, 0, 0, 0, 0, 0};
     // int cornercount[4] = {0, 0, 0, 0};
-    int resolved, partly, unresolved;
-    int qid;
+    int64_t resolved, partly, unresolved;
+    int64_t qid;
     ofstream out;
     string filename;
     
-    if (params->lmap_num_quartets < 25*aln->getNSeq()) {
+    if (params->lmap_num_quartets < (int64_t)25*aln->getNSeq()) {
         outWarning("Number of quartets is recommended to be at least " + convertIntToString(25*aln->getNSeq()) + " (25 times number of sequences)");
     }
 
@@ -1383,127 +1383,13 @@ void PhyloTree::doLikelihoodMapping() {
 
 //        PhyloTree::reportLikelihoodMapping(out);
 
-    /**** begin of report output ****/
-    /**** moved to PhyloTree::reportLikelihoodMapping ****/
-#if 0
-	// LM_REG1 0   /* top corner */
-	// LM_REG2 1   /* bottom-right corner */
-	// LM_REG3 2   /* bottom-left corner */
-	// LM_REG4 3   /* right rectangle */
-	// LM_REG5 4   /* bottom rectangle */
-	// LM_REG6 5   /* left rectangle */
-	// LM_REG7 6   /* center */
-	// LM_AR1  7   /* top third */
-	// LM_AR2  8   /* bottom-right third */
-	// LM_AR3  9   /* bottom-left third */
-
-	out << "LIKELIHOOD MAPPING ANALYSIS" << endl << endl;
-	out << "Number of quartets: " << params->lmap_num_quartets << "(random choice)" << endl << endl;
-	out << "Quartet trees are based on the selected model of substitution." << endl << endl;
-	out << "Sequences are not grouped in clusters." << endl;
-
-        out << endl << endl;
-	out << "LIKELIHOOD MAPPING STATISTICS" << endl << endl;
-
-	out << "           (a,b)-(c,d)                              (a,b)-(c,d)      " << endl;
-	out << "                /\\                                      /\\           " << endl;
-	out << "               /  \\                                    /  \\          " << endl;
-	out << "              /    \\                                  /  1 \\         " << endl;
-	out << "             /  a1  \\                                / \\  / \\        " << endl;
-	out << "            /\\      /\\                              /   \\/   \\       " << endl;
-	out << "           /  \\    /  \\                            /    /\\    \\      " << endl;
-	out << "          /    \\  /    \\                          / 6  /  \\  4 \\     " << endl;
-	out << "         /      \\/      \\                        /\\   /  7 \\   /\\    " << endl;
-	out << "        /        |       \\                      /  \\ /______\\ /  \\   " << endl;
-	out << "       /   a3    |    a2  \\                    / 3  |    5   |  2 \\  " << endl;
-	out << "      /__________|_________\\                  /_____|________|_____\\ " << endl;
-	out << "(a,d)-(b,c)            (a,c)-(b,d)      (a,b)-(c,d)            (a,c)-(b,d) " << endl << endl;
-	out << "For more information about likelihood-mapping refer to" << endl;
-   	out << "   Strimmer and von Haeseler (1997) PNAS 94:6815-6819" << endl;
-	out << "   http://www.ncbi.nlm.nih.gov/pubmed/9192648" << endl;
-	out << "and/or" << endl;
-   	out << "   Schmidt and von Haeseler (2003) Current Protocols in Bioinformatics" << endl;
-   	out << "   (by Baxevanis et al., Eds.), Unit 6, Wiley&Sons, New York." << endl;
-	out << "   http://dx.doi.org/10.1002/0471250953.bi0606s17" << endl;
-
-
-        out << endl << endl;
-        out << "Quartet support of regions a1, a2, a3:" << endl << endl;
-        out << "     #quartets    a1 (% a1)        a2 (% a2)        a3 (% a3)    name" << endl;
-        for (qid = 0; qid < leafNum; qid++) {
-	    //unsigned long sumq = lmap_seq_quartet_info[qid].countarr[0] + lmap_seq_quartet_info[qid].countarr[1] + lmap_seq_quartet_info[qid].countarr[2] + lmap_seq_quartet_info[qid].countarr[3] + lmap_seq_quartet_info[qid].countarr[4] + lmap_seq_quartet_info[qid].countarr[5] + lmap_seq_quartet_info[qid].countarr[6];
-	    unsigned long sumq = lmap_seq_quartet_info[qid].countarr[7] + lmap_seq_quartet_info[qid].countarr[8] + lmap_seq_quartet_info[qid].countarr[9];
-
-            out.setf(ios::fixed, ios::floatfield); // set fixed floating format
-            out.precision(2);
-            out << setw(4) << qid+1 
-                << setw(9) << sumq
-        	<< setw(7) << lmap_seq_quartet_info[qid].countarr[7]
-        	<< " (" << setw(6) << (double) 100.0*lmap_seq_quartet_info[qid].countarr[7]/sumq << ") "
-        	<< setw(7) << lmap_seq_quartet_info[qid].countarr[8]
-        	<< " (" << setw(6) << (double) 100.0*lmap_seq_quartet_info[qid].countarr[8]/sumq << ") "
-        	<< setw(7) << lmap_seq_quartet_info[qid].countarr[9]
-        	<< " (" << setw(6) << (double) 100.0*lmap_seq_quartet_info[qid].countarr[9]/sumq << ")  " 
-        	<< PhyloTree::aln->getSeqName(qid) << endl;
-        }
-
-        out << endl << endl << "Quartet support of areas 1-7:" << endl << endl;
-        out << "                   resolved                                           partly                                             unresolved  name" << endl;
-        out << "     #quartets     1 (% 1)          2 (% 2)          3 (% 3)          4 (% 4)          5 (% 5)          6 (% 6)          7 (% 7)" << endl;
-        for (qid = 0; qid < leafNum; qid++) {
-	    //unsigned long sumq = lmap_seq_quartet_info[qid].countarr[0] + lmap_seq_quartet_info[qid].countarr[1] + lmap_seq_quartet_info[qid].countarr[2] + lmap_seq_quartet_info[qid].countarr[3] + lmap_seq_quartet_info[qid].countarr[4] + lmap_seq_quartet_info[qid].countarr[5] + lmap_seq_quartet_info[qid].countarr[6];
-	    unsigned long sumq = lmap_seq_quartet_info[qid].countarr[7] + lmap_seq_quartet_info[qid].countarr[8] + lmap_seq_quartet_info[qid].countarr[9];
-
-            out.setf(ios::fixed, ios::floatfield); // set fixed floating format
-            out.precision(2);
-            out << setw(4) << qid+1 
-                << setw(9) << sumq
-                << setw(7) << lmap_seq_quartet_info[qid].countarr[0] 
-		<< " (" << setw(6) << (double) 100.0*lmap_seq_quartet_info[qid].countarr[0]/sumq << ") "
-        	<< setw(7) << lmap_seq_quartet_info[qid].countarr[1] 
-                << " (" << setw(6) << (double) 100.0*lmap_seq_quartet_info[qid].countarr[1]/sumq << ") "
-        	<< setw(7) << lmap_seq_quartet_info[qid].countarr[2]
-                << " (" << setw(6) << (double) 100.0*lmap_seq_quartet_info[qid].countarr[2]/sumq << ") "
-        	<< setw(7) << lmap_seq_quartet_info[qid].countarr[3]
-        	<< " (" << setw(6) << (double) 100.0*lmap_seq_quartet_info[qid].countarr[3]/sumq << ") "
-        	<< setw(7) << lmap_seq_quartet_info[qid].countarr[4]
-        	<< " (" << setw(6) << (double) 100.0*lmap_seq_quartet_info[qid].countarr[4]/sumq << ") "
-        	<< setw(7) << lmap_seq_quartet_info[qid].countarr[5]
-        	<< " (" << setw(6) << (double) 100.0*lmap_seq_quartet_info[qid].countarr[5]/sumq << ") "
-        	<< setw(7) << lmap_seq_quartet_info[qid].countarr[6]
-        	<< " (" << setw(6) << (double) 100.0*lmap_seq_quartet_info[qid].countarr[6]/sumq << ")  "
-        	<< PhyloTree::aln->getSeqName(qid) << endl;
-        }
-
-        out << endl << endl << "Quartet resolution per sequence:" << endl << endl;
-        out << "      #quartets   resolved           partly          unresolved  name" << endl;
-        for (qid = 0; qid < leafNum; qid++) {
-	    //unsigned long sumq = lmap_seq_quartet_info[qid].countarr[0] + lmap_seq_quartet_info[qid].countarr[1] + lmap_seq_quartet_info[qid].countarr[2] + lmap_seq_quartet_info[qid].countarr[3] + lmap_seq_quartet_info[qid].countarr[4] + lmap_seq_quartet_info[qid].countarr[5] + lmap_seq_quartet_info[qid].countarr[6];
-	    unsigned long resolved = lmap_seq_quartet_info[qid].countarr[LM_REG1] + lmap_seq_quartet_info[qid].countarr[LM_REG2] + lmap_seq_quartet_info[qid].countarr[LM_REG3];
-	    unsigned long partly   = lmap_seq_quartet_info[qid].countarr[LM_REG4] + lmap_seq_quartet_info[qid].countarr[LM_REG5] + lmap_seq_quartet_info[qid].countarr[LM_REG6];
-	    unsigned long unres    = lmap_seq_quartet_info[qid].countarr[LM_REG7];
-	    unsigned long sumq = lmap_seq_quartet_info[qid].countarr[7] + lmap_seq_quartet_info[qid].countarr[8] + lmap_seq_quartet_info[qid].countarr[9];
-
-            out.setf(ios::fixed, ios::floatfield); // set fixed floating format
-            out.precision(2);
-            out << setw(4) << qid+1 
-                << setw(9) << sumq
-                << setw(7) << resolved
-		<< " (" << setw(6) << (double) 100.0*resolved/sumq << ") "
-        	<< setw(7) << partly
-                << " (" << setw(6) << (double) 100.0*partly/sumq << ") "
-        	<< setw(7) << unres
-                << " (" << setw(6) << (double) 100.0*unres/sumq << ")  "
-        	<< PhyloTree::aln->getSeqName(qid) << endl;
-        }
-#endif
     }
 
     resolved   = areacount[0] + areacount[1] + areacount[2];
     partly     = areacount[3] + areacount[4] + areacount[5];
     unresolved = areacount[6];
 	
-#if 0
+#if 0  // for debugging purposes only (HAS)
     out << endl << "LIKELIHOOD MAPPING SUMMARY" << endl << endl;
     out << "Number of quartets: " << (resolved+partly+unresolved)
         << " (randomly drawn with replacement)" << endl << endl;
@@ -1516,10 +1402,6 @@ void PhyloTree::doLikelihoodMapping() {
         << " (" << 100.0 * unresolved/(resolved+partly+unresolved) << "%)" << endl << endl;
 
 #endif
-
-    /**** end of report output ****/
-    /**** moved to PhyloTree::reportLikelihoodMapping ****/
-
 
     if (params->print_lmap_quartet_lh) {
         // print quartet file
@@ -1535,25 +1417,14 @@ void PhyloTree::doLikelihoodMapping() {
     fclose(epsout);        
     cout << "likelihood mapping plot (EPS) written to " << lmap_epsfilename << endl;
 
-
-//    cout << "\nOverall quartet resolution: (from " << (resolved+partly+unresolved) << " randomly drawn quartets)" << endl;
-//    cout << "Fully resolved quartets:  " << resolved   << " (= "
-//        << (double) resolved * 100.0   / (resolved+partly+unresolved) << "%)" << endl;
-//    cout << "Partly resolved quartets: " << partly     << " (= "
-//        << (double) partly * 100.0     / (resolved+partly+unresolved) << "%)" << endl;
-//    cout << "Unresolved quartets:      " << unresolved << " (= "
-//        << (double) unresolved * 100.0 / (resolved+partly+unresolved) << "%)" << endl << endl;
-
 } // end PhyloTree::doLikelihoodMapping
 
 
 
 
 void PhyloTree::reportLikelihoodMapping(ofstream &out) {
-    // int areacount[8] = {0, 0, 0, 0, 0, 0, 0, 0};
-    // int cornercount[4] = {0, 0, 0, 0};
-    int resolved, partly, unresolved;
-    int qid;
+    int64_t resolved, partly, unresolved;
+    int64_t qid;
     int leafNum;
     leafNum = PhyloTree::aln->getNSeq();
     // vector<QuartetInfo> lmap_quartet_info;
@@ -1570,18 +1441,6 @@ void PhyloTree::reportLikelihoodMapping(ofstream &out) {
 	// LM_AR1  7   /* top third */
 	// LM_AR2  8   /* bottom-right third */
 	// LM_AR3  9   /* bottom-left third */
-#if 0
-#define LM_REG1 0   /* top corner */
-#define LM_REG2 1   /* bottom-right corner */
-#define LM_REG3 2   /* bottom-left corner */
-#define LM_REG4 3   /* right rectangle */
-#define LM_REG5 4   /* bottom rectangle */
-#define LM_REG6 5   /* left rectangle */
-#define LM_REG7 6   /* center */
-#define LM_AR1  7   /* top third */
-#define LM_AR2  8   /* bottom-right third */
-#define LM_AR3  9   /* bottom-left third */
-#endif
 
 	out << "LIKELIHOOD MAPPING ANALYSIS" << endl;
 	out << "---------------------------" << endl << endl;
@@ -1727,8 +1586,7 @@ void PhyloTree::reportLikelihoodMapping(ofstream &out) {
         out << "     #quartets    a1 (% a1)        a2 (% a2)        a3 (% a3)    name" << endl;
 	out << "-----------------------------------------------------------------------------" << endl;
         for (qid = 0; qid <= leafNum; qid++) {
-	    //unsigned long sumq = lmap_seq_quartet_info[qid].countarr[0] + lmap_seq_quartet_info[qid].countarr[1] + lmap_seq_quartet_info[qid].countarr[2] + lmap_seq_quartet_info[qid].countarr[3] + lmap_seq_quartet_info[qid].countarr[4] + lmap_seq_quartet_info[qid].countarr[5] + lmap_seq_quartet_info[qid].countarr[6];
-	    unsigned long sumq0, sumq = lmap_seq_quartet_info[qid].countarr[7] + lmap_seq_quartet_info[qid].countarr[8] + lmap_seq_quartet_info[qid].countarr[9];
+	    int64_t sumq0, sumq = lmap_seq_quartet_info[qid].countarr[7] + lmap_seq_quartet_info[qid].countarr[8] + lmap_seq_quartet_info[qid].countarr[9];
 	    if (sumq>0) sumq0=sumq;
 	    else sumq0=1;
 
@@ -1764,8 +1622,7 @@ void PhyloTree::reportLikelihoodMapping(ofstream &out) {
         out << "     #quartets     1 (% 1)          2 (% 2)          3 (% 3)          4 (% 4)          5 (% 5)          6 (% 6)          7 (% 7)" << endl;
 	out << "------------------------------------------------------------------------------------------------------------------------------------------------" << endl;
         for (qid = 0; qid <= leafNum; qid++) {
-	    //unsigned long sumq = lmap_seq_quartet_info[qid].countarr[0] + lmap_seq_quartet_info[qid].countarr[1] + lmap_seq_quartet_info[qid].countarr[2] + lmap_seq_quartet_info[qid].countarr[3] + lmap_seq_quartet_info[qid].countarr[4] + lmap_seq_quartet_info[qid].countarr[5] + lmap_seq_quartet_info[qid].countarr[6];
-	    unsigned long sumq0, sumq = lmap_seq_quartet_info[qid].countarr[7] + lmap_seq_quartet_info[qid].countarr[8] + lmap_seq_quartet_info[qid].countarr[9];
+	    int64_t sumq0, sumq = lmap_seq_quartet_info[qid].countarr[7] + lmap_seq_quartet_info[qid].countarr[8] + lmap_seq_quartet_info[qid].countarr[9];
 	    if (sumq>0) sumq0=sumq;
 	    else sumq0=1;
 
@@ -1817,11 +1674,10 @@ void PhyloTree::reportLikelihoodMapping(ofstream &out) {
         out << "      #quartets   resolved           partly          unresolved  name" << endl;
 	out << "-----------------------------------------------------------------------------" << endl;
         for (qid = 0; qid <= leafNum; qid++) {
-	    //unsigned long sumq = lmap_seq_quartet_info[qid].countarr[0] + lmap_seq_quartet_info[qid].countarr[1] + lmap_seq_quartet_info[qid].countarr[2] + lmap_seq_quartet_info[qid].countarr[3] + lmap_seq_quartet_info[qid].countarr[4] + lmap_seq_quartet_info[qid].countarr[5] + lmap_seq_quartet_info[qid].countarr[6];
-	    unsigned long resolved = lmap_seq_quartet_info[qid].countarr[LM_REG1] + lmap_seq_quartet_info[qid].countarr[LM_REG2] + lmap_seq_quartet_info[qid].countarr[LM_REG3];
-	    unsigned long partly   = lmap_seq_quartet_info[qid].countarr[LM_REG4] + lmap_seq_quartet_info[qid].countarr[LM_REG5] + lmap_seq_quartet_info[qid].countarr[LM_REG6];
-	    unsigned long unres    = lmap_seq_quartet_info[qid].countarr[LM_REG7];
-	    unsigned long sumq0, sumq = lmap_seq_quartet_info[qid].countarr[7] + lmap_seq_quartet_info[qid].countarr[8] + lmap_seq_quartet_info[qid].countarr[9];
+	    int64_t resolved = lmap_seq_quartet_info[qid].countarr[LM_REG1] + lmap_seq_quartet_info[qid].countarr[LM_REG2] + lmap_seq_quartet_info[qid].countarr[LM_REG3];
+	    int64_t partly   = lmap_seq_quartet_info[qid].countarr[LM_REG4] + lmap_seq_quartet_info[qid].countarr[LM_REG5] + lmap_seq_quartet_info[qid].countarr[LM_REG6];
+	    int64_t unres    = lmap_seq_quartet_info[qid].countarr[LM_REG7];
+	    int64_t sumq0, sumq = lmap_seq_quartet_info[qid].countarr[7] + lmap_seq_quartet_info[qid].countarr[8] + lmap_seq_quartet_info[qid].countarr[9];
 	    if (sumq>0) sumq0=sumq;
 	    else sumq0=1;
 
@@ -1868,3 +1724,4 @@ void PhyloTree::reportLikelihoodMapping(ofstream &out) {
         << " (=" << 100.0 * unresolved/(resolved+partly+unresolved) << "%)" << endl << endl;
 
 } // end PhyloTree::reportLikelihoodMapping
+

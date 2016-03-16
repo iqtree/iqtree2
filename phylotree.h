@@ -264,22 +264,22 @@ const double TP_MAX_EXP_DIFF = 40.0;
 #define LM_MAX  10
 
 struct QuartetGroups{
-    int numGroups;	// number of clusters:
-			// 0:	not initialized, default -> 1
-			// 1:	no clusters - any (a,b)|(c,d)
-			// 2:	2 clusters  - (a,a')|(b,b')
-			// 3:	3 clusters  - (a,a')|(b,c)	[rare]
-			// 4:	4 clusters  - (a,b)|(c,d)
-    int numSeqs;	// number of seqs in alignment (should be #A+#B+#C+#D+#X)
-    int numQuartSeqs;	// number of seqs in analysis  (should be #A+#B+#C+#D)
-    int numGrpSeqs[5];	// number of seqs in cluster A, B, C, D, and X (exclude)
-    int uniqueQuarts;	// number of existing unique quartets for this grouping
-    string Name[5];	// seqIDs of cluster A
-    vector<int> GroupA;	// seqIDs of cluster A
-    vector<int> GroupB;	// seqIDs of cluster B
-    vector<int> GroupC;	// seqIDs of cluster C
-    vector<int> GroupD;	// seqIDs of cluster D
-    vector<int> GroupX;	// seqIDs of cluster X
+    int numGroups;		// number of clusters:
+				// 0:	not initialized, default -> 1
+				// 1:	no clusters - any (a,b)|(c,d)
+				// 2:	2 clusters  - (a,a')|(b,b')
+				// 3:	3 clusters  - (a,a')|(b,c)	[rare]
+				// 4:	4 clusters  - (a,b)|(c,d)
+    int numSeqs;		// number of seqs in alignment (should be #A+#B+#C+#D+#X)
+    int numQuartSeqs;		// number of seqs in analysis  (should be #A+#B+#C+#D)
+    int numGrpSeqs[5];		// number of seqs in cluster A, B, C, D, and X (exclude)
+    int64_t uniqueQuarts;	// number of existing unique quartets for this grouping
+    string Name[5];		// seqIDs of cluster A
+    vector<int> GroupA;		// seqIDs of cluster A
+    vector<int> GroupB;		// seqIDs of cluster B
+    vector<int> GroupC;		// seqIDs of cluster C
+    vector<int> GroupD;		// seqIDs of cluster D
+    vector<int> GroupX;		// seqIDs of cluster X
 };
 
 struct QuartetInfo {
@@ -292,7 +292,7 @@ struct QuartetInfo {
 };
 
 struct SeqQuartetInfo {
-    unsigned long countarr[LM_MAX]; // the 7 areas of the simplex triangle [0-6; corners (0:top, 1:right, 2:left), rectangles (3:right, 4:left, 5:bottom), 6:center] and the 3 corners [7-9; 7:top, 8:right, 9:left]
+    int64_t countarr[LM_MAX]; // the 7 areas of the simplex triangle [0-6; corners (0:top, 1:right, 2:left), rectangles (3:right, 4:left, 5:bottom), 6:center] and the 3 corners [7-9; 7:top, 8:right, 9:left]
 };
 
 // ********************************************

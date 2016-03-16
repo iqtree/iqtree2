@@ -1772,10 +1772,10 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
     }
 
     if (params.lmap_num_quartets) {
-        cout << "Performing likelihood mapping with " << params.lmap_num_quartets << " quartets..." << endl;
+        cout << endl << "Performing likelihood mapping with " << params.lmap_num_quartets << " quartets..." << endl;
         double lkmap_time = getRealTime();
         iqtree.doLikelihoodMapping();
-        cout << getRealTime()-lkmap_time << " seconds" << endl;
+        cout << "Likelihood mapping needed " << getRealTime()-lkmap_time << " seconds" << endl << endl;
     }
     
     bool finishedCandidateSet = iqtree.getCheckpoint()->getBool("finishedCandidateSet");

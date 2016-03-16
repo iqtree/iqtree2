@@ -263,6 +263,35 @@ void convert_int_vec(const char *str, IntVector &vec) throw (string) {
 }
 
 
+int64_t convert_int64(const char *str) throw (string) {
+    char *endptr;
+    int64_t i = (int64_t)strtoll(str, &endptr, 10); // casted because 'long long' may be larger than int64_t
+
+    if ((i == 0 && endptr == str) || abs(i) == HUGE_VALL || *endptr != 0) {
+        string err = "Expecting large integer , but found \"";
+        err += str;
+        err += "\" instead";
+        throw err;
+    }
+
+    return i;
+}
+
+int64_t convert_int64(const char *str, int &end_pos) throw (string) {
+	char *endptr;
+	int64_t i = (int64_t)strtoll(str, &endptr, 10); // casted because 'long long' may be larger than int64_t
+
+	if ((i == 0 && endptr == str) || abs(i) == HUGE_VALL) {
+		string err = "Expecting large integer, but found \"";
+		err += str;
+		err += "\" instead";
+		throw err;
+	}
+	end_pos = endptr - str;
+	return i;
+}
+
+
 double convert_double(const char *str) throw (string) {
     char *endptr;
     double d = strtod(str, &endptr);
@@ -2837,7 +2866,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -lmap <likelihood_mapping_num_quartets>";
-				params.lmap_num_quartets = convert_int(argv[cnt]);
+				params.lmap_num_quartets = convert_int64(argv[cnt]);
 				if (params.lmap_num_quartets < 1)
 					throw "Number of quartets must be >= 1";
 				continue;
