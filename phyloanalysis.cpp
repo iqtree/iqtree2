@@ -1649,6 +1649,9 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
     /********************** Create an initial tree **********************/
     iqtree.computeInitialTree(dist_file, params.SSE);
 
+    if (!iqtree.isBifurcating())
+        outError("Tree search does not work with initial multifurcating tree. Please specify `-n 0` to avoid this.");
+
    	iqtree.setRootNode(params.root);
 
     /*************** SET UP PARAMETERS and model testing ****************/
@@ -1792,14 +1795,6 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
         iqtree.printResultTree();
     }
 
-    if (params.min_iterations > 0) {
-        if (!iqtree.isBifurcating())
-            outError("Tree search does not work with initial multifurcating tree. Please specify `-n 0` to avoid this.");
-        cout << "--------------------------------------------------------------------" << endl;
-        cout << "|             INITIALIZING CANDIDATE TREE SET                      |" << endl;
-        cout << "--------------------------------------------------------------------" << endl;
-    }
-
     // Compute maximum likelihood distance
     // ML distance is only needed for IQP
 //    if ( params.start_tree != STT_BIONJ && ((params.snni && !params.iqp) || params.min_iterations == 0)) {
@@ -1812,7 +1807,8 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
         params.compute_ml_dist = false;
     }
 
-	if (MPIHelper::getInstance().getProcessID() == MASTER) { // Only compute BIONJ tree at the master node
+	//Generate BIONJ tree
+	if (MPIHelper::getInstance().getProcessID() == MASTER) {
         if (!finishedInitTree && ((!params.dist_file && params.compute_ml_dist) || params.leastSquareBranch)) {
             computeMLDist(params, iqtree, dist_file, getCPUTime());
             if (!params.user_file && params.start_tree != STT_RANDOM_TREE) {
@@ -1840,28 +1836,6 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 
 	double cputime_search_start = getCPUTime();
     double realtime_search_start = getRealTime();
-
-    if (params.min_iterations > 0 && !finishedCandidateSet) {
-        double initTime = getCPUTime();
-
-//        if (!params.user_file && (params.start_tree == STT_PARSIMONY || params.start_tree == STT_PLL_PARSIMONY)) 
-//        {
-        	iqtree.initCandidateTreeSet(params.numInitTrees - iqtree.candidateTrees.size(), params.numNNITrees);
-        	assert(iqtree.candidateTrees.size() != 0);
-        	cout << "Finish initializing candidate tree set. ";
-        	cout << "Number of distinct locally optimal trees: " << iqtree.candidateTrees.size() << endl;
-//        }
-        cout << "Current best tree score: " << iqtree.candidateTrees.getBestScore() << " / CPU time: "
-                << getCPUTime() - initTime << endl;
-	}
-
-    if (finishedCandidateSet) {
-        cout << "CHECKPOINT: Candidate tree set restored, best LogL: " << iqtree.candidateTrees.getBestScore() << endl;
-    } else {
-        iqtree.saveCheckpoint();
-        iqtree.getCheckpoint()->putBool("finishedCandidateSet", true);
-        iqtree.getCheckpoint()->dump(true);
-    }
 
     if (params.leastSquareNNI) {
     	iqtree.computeSubtreeDists();
