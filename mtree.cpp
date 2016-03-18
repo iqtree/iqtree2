@@ -72,6 +72,15 @@ MTree::MTree(string& treeString, vector<string>& taxaNames, bool isRooted) {
     str.seekg(0, ios::beg);
     readTree(str, isRooted);
     assignIDs(taxaNames);
+    assignLeafID();
+}
+
+MTree::MTree(string& treeString, bool isRooted) {
+    stringstream str;
+    str << treeString;
+    str.seekg(0, ios::beg);
+    readTree(str, isRooted);
+    assignLeafID();
 }
 
 void MTree::init(MTree &tree) {

@@ -367,12 +367,9 @@ void PhyloTree::setRootNode(const char *my_root) {
 
 void PhyloTree::readTreeString(const string &tree_string) {
 	stringstream str(tree_string);
-//	str(tree_string);
-//	str.seekg(0, ios::beg);
 	freeNode();
 	readTree(str, rooted);
     assignLeafNames();
-//	setAlignment(aln);
 	setRootNode(params->root);
 
 	if (isSuperTree()) {
@@ -382,7 +379,9 @@ void PhyloTree::readTreeString(const string &tree_string) {
 		pllReadNewick(getTreeString());
 	}
 	resetCurScore();
-//	lhComputed = false;
+    if (params->fixStableSplits) {
+        buildNodeSplit();
+    }
 }
 
 void PhyloTree::readTreeStringSeqName(const string &tree_string) {

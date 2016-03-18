@@ -64,6 +64,12 @@ public:
     MTree(string& treeString, vector<string>& taxaNames, bool isRooted);
 
     /**
+     *  Read tree from string assuming that the taxa names are numeric numbers
+     *  Leaf IDs are then assigned according to the number in the taxa names
+     */
+    MTree(string& treeString, bool isRooted);
+
+    /**
      *   Assign taxa IDs according to the order in taxaNames
      */
     void assignIDs(vector<string>& taxaNames);
