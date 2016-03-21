@@ -123,7 +123,7 @@ typedef vector<Neighbor*> NeighborVec;
 typedef vector<Node*> NodeVector;
 
 typedef pair<Node*, Node*> Branch;
-typedef vector<Branch> Branches;
+typedef map<int, Branch> Branches;
 
 /*--------------------------------------------------------------*/
 /*--------------------------------------------------------------*/

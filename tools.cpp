@@ -3866,3 +3866,7 @@ bool memcmpcpy(void * destination, const void * source, size_t num) {
     memcpy(destination, source, num);
     return diff;
 }
+
+int pairInteger(int int1, int int2) {
+    return ((int1 + int2)*(int1 + int2 + 1)/2 + int2);
+}

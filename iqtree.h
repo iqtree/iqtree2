@@ -331,8 +331,10 @@ public:
 
     /**
      * @brief Get branches for doing NNI that do not either belong to the tabu split or stable splits
-     * @param nniBranches [OUT]
-     * @param nonNNIBranches [OUT]
+     * @param
+     *      nniBranches [OUT] Branches on which NNIs will be evaluated
+     * @param
+     *      nonNNIBranches [OUT] Branches on which NNI evaluation will be skipped
      * @param dad for navigation
      * @param node for navigation
      */
@@ -920,5 +922,15 @@ public:
      *  Print the iteration number and the tree score
      */
     void printInterationInfo();
+
+    /**
+     *  Return branches that are 2 branches away from the branches, on which NNIs were applied
+     *  in the previous NNI steps.
+     *  @param
+     *      previousNNIBranches[IN] a set of branches on which NNIs were performed in the previous NNI step.
+     *  @return
+     *      a set of branches, on which NNIs should be evaluated for the current NNI steps
+     */
+    Branches getReducedListOfNNIBranches(Branches &previousNNIBranches);
 };
 #endif

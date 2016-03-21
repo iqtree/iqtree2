@@ -2351,4 +2351,13 @@ inline uint32_t popcount_lauradoux(unsigned *buf, int n) {
  */
 bool memcmpcpy(void * destination, const void * source, size_t num);
 
+/**
+ *  Generating a unique integer from a pair of 2 integer
+ *  This method is called cantor pairing function (see wikepedia)
+ *  @param int1 the first integer
+ *  @param int2 the second integer
+ *  @return the encoding of the 2 integer
+ */
+int pairInteger(int int1, int int2);
+
 #endif

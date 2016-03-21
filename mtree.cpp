@@ -899,34 +899,36 @@ void MTree::generateNNIBraches(NodeVector &nodes1, NodeVector &nodes2, SplitGrap
     }
 }
 
-bool MTree::branchExist(Node* node1, Node* node2, NodeVector& nodes1, NodeVector& nodes2) {
-	assert(nodes1.size() == nodes2.size());
-	bool existed = false;
-	for (int i = 0; i < nodes1.size(); i++) {
-		if (nodes1[i] == node1) {
-			if (nodes2[i] == node2) {
-				existed = true;
-				break;
-			}
-		}
-		if (nodes1[i] == node2) {
-			if (nodes2[i] == node1) {
-				existed = true;
-				break;
-			}
-		}
-	}
-	return existed;
-}
+//bool MTree::branchExist(Node* node1, Node* node2, NodeVector& nodes1, NodeVector& nodes2) {
+//	assert(nodes1.size() == nodes2.size());
+//	bool existed = false;
+//	for (int i = 0; i < nodes1.size(); i++) {
+//		if (nodes1[i] == node1) {
+//			if (nodes2[i] == node2) {
+//				existed = true;
+//				break;
+//			}
+//		}
+//		if (nodes1[i] == node2) {
+//			if (nodes2[i] == node1) {
+//				existed = true;
+//				break;
+//			}
+//		}
+//	}
+//	return existed;
+//}
 
-void MTree::getSurroundingInnerBranches(NodeVector &nodes1, NodeVector &nodes2, int depth, Node *node, Node *dad) {
+void MTree::getSurroundingInnerBranches(Node *node, Node *dad, int depth, Branches &surrBranches) {
     if (depth == 0)
       return;
     FOR_NEIGHBOR_IT(node, dad, it) {
-        if (!(*it)->node->isLeaf() && !branchExist(node, (*it)->node, nodes1, nodes2)) {
-        	nodes1.push_back(node);
-        	nodes2.push_back((*it)->node);
-            getSurroundingInnerBranches(nodes1, nodes2, depth-1, (*it)->node, node);
+        if (!(*it)->node->isLeaf()) {
+            Branch curBranch;
+            curBranch.first = node;
+            curBranch.second = (*it)->node;
+            surrBranches.insert(pair<int,Branch>(pairInteger(node->id, (*it)->node->id), curBranch));
+            getSurroundingInnerBranches((*it)->node, node, depth-1, surrBranches);
         }
     }
 }
@@ -960,14 +962,9 @@ void MTree::getInnerBranches(Branches& branches, Node *node, Node *dad) {
     FOR_NEIGHBOR_IT(node, dad, it) {
     	if (isInnerBranch((*it)->node, node)) {
             Branch branch;
-            if (node->id < (*it)->node->id) {
-                branch.first = node;
-                branch.second = (*it)->node;
-            } else {
-                branch.first = (*it)->node;
-                branch.second = node;
-            }
-            branches.push_back(branch);
+            branch.first = node;
+            branch.second = (*it)->node;
+            branches.insert(pair<int, Branch>(pairInteger(branch.first->id, branch.second->id), branch));
     	}
     	getInnerBranches(branches, (*it)->node, node);
     }
