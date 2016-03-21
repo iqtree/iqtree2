@@ -1424,7 +1424,7 @@ double IQTree::getAlphaFromPLL() {
 
 void IQTree::inputModelPLL2IQTree() {
     // TODO add support for partitioned model
-    dynamic_cast<RateGamma*>(getRate())->setGammaShape(pllPartitions->partitionData[0]->alpha);
+    getRate()->setGammaShape(pllPartitions->partitionData[0]->alpha);
     if (aln->num_states == 4) {
         ((ModelGTR*) getModel())->setRateMatrix(pllPartitions->partitionData[0]->substRates);
         getModel()->decomposeRateMatrix();

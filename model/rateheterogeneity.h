@@ -146,6 +146,11 @@ public:
 	*/
 	virtual void setPInvar(double pinv) { }
 
+    /**
+        set whether to fix p_invar
+    */
+	virtual void setFixPInvar(bool fixPInvar) {}
+
 	/**
 		Set whether or not to optimize p_invar
 		@param opt TRUE to optimize p_invar, FALSE otherwise
@@ -157,6 +162,17 @@ public:
 		@return Gamma shape
 	*/	
 	virtual double getGammaShape() { return 0.0; }
+
+	/**
+		set the Gamma shape. Default: nothing
+		@param gs Gamma shape
+	*/	
+	virtual void setGammaShape(double gs) {}
+
+    /**
+        set whether to fix gamma shape
+    */
+	virtual void setFixGammaShape(bool fixGammaShape) {}
 
 	/**
 		@return >0 if this is a Gamma model (default: 0)

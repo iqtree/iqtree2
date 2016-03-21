@@ -2039,7 +2039,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 }
 
 void computeLoglFromUserInputGAMMAInvar(Params &params, IQTree &iqtree) {
-	RateGammaInvar *site_rates = dynamic_cast<RateGammaInvar *>(iqtree.getRate());
+	RateHeterogeneity *site_rates = iqtree.getRate();
 	site_rates->setFixPInvar(true);
 	site_rates->setFixGammaShape(true);
 	vector<double> alphas, p_invars, logl;
@@ -2071,7 +2071,6 @@ void computeLoglFromUserInputGAMMAInvar(Params &params, IQTree &iqtree) {
 		aiFileResults << alphas.at(i) << " " << p_invars.at(i) << " ";
 		site_rates->setGammaShape(alphas.at(i));
 		site_rates->setPInvar(p_invars.at(i));
-		site_rates->computeRates();
 		iqtree.clearAllPartialLH();
 		double lh = iqtree.getModelFactory()->optimizeParameters(params.fixed_branch_length, false, 0.001);
 		aiFileResults << lh << " " << iqtree.treeLength() << "\n";
@@ -2087,7 +2086,7 @@ void searchGAMMAInvarByRestarting(IQTree &iqtree) {
 		iqtree.setCurScore(iqtree.optimizeAllBranches(1));
 	else
 		iqtree.setCurScore(iqtree.computeLikelihood());
-	RateGammaInvar* site_rates = dynamic_cast<RateGammaInvar*>(iqtree.getRate());
+	RateHeterogeneity* site_rates = (iqtree.getRate());
 	double values[] = { 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0 };
 	vector<double> initAlphas;
 	if (Params::getInstance().randomAlpha) {
@@ -2126,7 +2125,6 @@ void searchGAMMAInvarByRestarting(IQTree &iqtree) {
         iqtree.getModel()->decomposeRateMatrix();
         site_rates->setGammaShape(initAlphas[i]);
 		site_rates->setPInvar(initPInvar);
-		site_rates->computeRates();
 		iqtree.clearAllPartialLH();
 		iqtree.optimizeModelParameters(verbose_mode >= VB_MED, Params::getInstance().testAlphaEps);
         double estAlpha = iqtree.getRate()->getGammaShape();
@@ -2153,7 +2151,6 @@ void searchGAMMAInvarByRestarting(IQTree &iqtree) {
     ((ModelGTR*) iqtree.getModel())->setStateFrequency(bestStateFreqs);
 	iqtree.restoreBranchLengths(bestLens);
     iqtree.getModel()->decomposeRateMatrix();
-    site_rates->computeRates();
 	iqtree.clearAllPartialLH();
     iqtree.setCurScore(iqtree.computeLikelihood());
     cout << endl;
@@ -2184,7 +2181,7 @@ void exhaustiveSearchGAMMAInvar(Params &params, IQTree &iqtree) {
 	DoubleVector lenvec;
 	iqtree.saveBranchLengths(lenvec);
 
-	RateGammaInvar* site_rates = dynamic_cast<RateGammaInvar*>(iqtree.getRate());
+	RateHeterogeneity* site_rates = (iqtree.getRate());
 	site_rates->setFixPInvar(true);
 	site_rates->setFixGammaShape(true);
 
@@ -2192,7 +2189,6 @@ void exhaustiveSearchGAMMAInvar(Params &params, IQTree &iqtree) {
         for (double p_invar = p_invarMin; p_invar < p_invarMax; p_invar = p_invar + stepSize) {
             site_rates->setGammaShape(alpha);
             site_rates->setPInvar(p_invar);
-            site_rates->computeRates();
             iqtree.clearAllPartialLH();
             double lh = iqtree.getModelFactory()->optimizeParameters(params.fixed_branch_length, false, 0.001);
             stringstream ss;

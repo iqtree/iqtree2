@@ -693,22 +693,20 @@ bool ModelFactory::readSiteFreq(Alignment *aln, char* site_freq_file, IntVector 
 double ModelFactory::initGTRGammaIParameters(RateHeterogeneity *rate, ModelSubst *model, double initAlpha,
                                            double initPInvar, double *initRates, double *initStateFreqs)  {
 
-    RateGammaInvar* rateGammaInvar = dynamic_cast<RateGammaInvar*>(rate);
-    ModelGTR* modelGTR = dynamic_cast<ModelGTR*>(model);
+    RateHeterogeneity* rateGammaInvar = rate;
+    ModelGTR* modelGTR = (ModelGTR*)(model);
     modelGTR->setRateMatrix(initRates);
     modelGTR->setStateFrequency(initStateFreqs);
     rateGammaInvar->setGammaShape(initAlpha);
     rateGammaInvar->setPInvar(initPInvar);
     modelGTR->decomposeRateMatrix();
-    rateGammaInvar->computeRates();
     site_rate->phylo_tree->clearAllPartialLH();
     return site_rate->phylo_tree->computeLikelihood();
 }
 
 double ModelFactory::optimizeParametersOnly(double gradient_epsilon) {
     double logl;
-    if (Params::getInstance().fai && dynamic_cast<RateGammaInvar*>(site_rate) != NULL
-        && dynamic_cast<ModelGTR*>(model) != NULL) {
+    if (Params::getInstance().fai && site_rate != NULL && model != NULL) {
         cout << "Optimize substitutional and site rates with restart ..." << endl;
         PhyloTree* tree = site_rate->phylo_tree;
         double initAlpha = 0.1;
@@ -740,8 +738,8 @@ double ModelFactory::optimizeParametersOnly(double gradient_epsilon) {
                 site_rate->optimizeParameters(gradient_epsilon);
                 logl = tree->optimizeAllBranches(1);
             }
-            RateGammaInvar* rateGammaInvar = dynamic_cast<RateGammaInvar*>(site_rate);
-            ModelGTR* modelGTR = dynamic_cast<ModelGTR*>(model);
+            RateHeterogeneity* rateGammaInvar = site_rate;
+            ModelGTR* modelGTR = (ModelGTR*)(model);
             double curAlpha = rateGammaInvar->getGammaShape();
             double curPInvar = rateGammaInvar->getPInvar();
             if (logl > bestLogl) {
@@ -832,7 +830,7 @@ double ModelFactory::optimizeAllParameters(double gradient_epsilon) {
 double ModelFactory::optimizeParametersGammaInvar(bool fixed_len, bool write_info, double logl_epsilon, double gradient_epsilon) {
 	PhyloTree *tree = site_rate->getTree();
 
-	RateGammaInvar* site_rates = dynamic_cast<RateGammaInvar*>(tree->getRate());
+	RateHeterogeneity* site_rates = tree->getRate();
 	if (site_rates == NULL) {
 //		outError("The model must be +I+G");
         // model is not +I+G, call conventional function instead
@@ -884,7 +882,6 @@ double ModelFactory::optimizeParametersGammaInvar(bool fixed_len, bool write_inf
 		tree->getModel()->decomposeRateMatrix();
 		site_rates->setPInvar(initPInv);
 		site_rates->setGammaShape(initAlpha);
-		site_rates->computeRates();
 		tree->clearAllPartialLH();
 		optimizeParameters(fixed_len, write_info, logl_epsilon, gradient_epsilon);
 		double estAlpha = tree->getRate()->getGammaShape();
@@ -915,7 +912,6 @@ double ModelFactory::optimizeParametersGammaInvar(bool fixed_len, bool write_inf
 	((ModelGTR*) tree->getModel())->setStateFrequency(bestStateFreqs);
 	tree->restoreBranchLengths(bestLens);
 	tree->getModel()->decomposeRateMatrix();
-	site_rates->computeRates();
 	tree->clearAllPartialLH();
 	tree->setCurScore(tree->computeLikelihood());
     if (write_info) {    
