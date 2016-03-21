@@ -991,7 +991,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInf
             this_aln = in_tree->at(distID[i] & ((1<<16)-1))->aln;
             dist[i] -= ((double)this_aln->getNSeq())*this_aln->getNPattern()*this_aln->num_states;
         }
-        if (params.num_threads > 1)
+        if (params.num_threads > 1 && num_pairs >= 1)
             quicksort(dist, 0, num_pairs-1, distID);
 
 #ifdef _OPENMP
