@@ -1907,6 +1907,8 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
         } else {
             cout << "Performs final model parameters optimization" << endl;
             string tree;
+//            Params::getInstance().fixStableSplits = false;
+//			iqtree.doNNISearch();
             tree = iqtree.optimizeModelParameters(true);
             iqtree.addTreeToCandidateSet(tree, iqtree.getCurScore());
             iqtree.getCheckpoint()->putBool("finishedModelFinal", true);

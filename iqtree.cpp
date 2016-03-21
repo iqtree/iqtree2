@@ -563,17 +563,24 @@ void IQTree::computeInitialTree(string &dist_file, LikelihoodKernel kernel) {
 int IQTree::addTreeToCandidateSet(string treeString, double score, bool updateStopRule) {
     double curBestScore = candidateTrees.getBestScore();
     int pos = candidateTrees.update(treeString, score);
+
     if (updateStopRule) {
         stop_rule.setCurIt(stop_rule.getCurIt() + 1);
         if (score > curBestScore) {
             if (pos != -1) {
                 stop_rule.addImprovedIteration(stop_rule.getCurIt());
-                cout << "BETTER TREE FOUND at iteration " << stop_rule.getCurIt() << ": " << score;
+                cout << "BETTER TREE FOUND at iteration " << stop_rule.getCurIt() << ": " << score << endl;
+                if (Params::getInstance().fixStableSplits && candidateTrees.size() >= 20) {
+                    candidateTrees.buildTopSplits(Params::getInstance().stableSplitThreshold, Params::getInstance().numSupportTrees);
+                }
             } else {
-                cout << "UPDATE BEST LOG-LIKELIHOOD: " << score;
+                cout << "UPDATE BEST LOG-LIKELIHOOD: " << score << endl;
             }
-            cout << endl;
             printResultTree();
+        } else {
+            if (pos != -1 && Params::getInstance().fixStableSplits && candidateTrees.size() < 20) {
+                candidateTrees.buildTopSplits(Params::getInstance().stableSplitThreshold, Params::getInstance().numSupportTrees);
+            }
         }
         curScore = score;
         printInterationInfo();
@@ -761,9 +768,9 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
 //     maxNumTrees = treesPerProc * (MPIHelper::getInstance().getNumProcesses() - 1);
 //     addTreesFromOtherProcesses(true,maxNumTrees,true);
 // #endif
-    if (params->fixStableSplits && candidateTrees.size() > 1) {
-        candidateTrees.buildTopSplits(Params::getInstance().stableSplitThreshold, Params::getInstance().numSupportTrees);
-    }
+//    if (params->fixStableSplits && candidateTrees.size() > 1) {
+//        candidateTrees.buildTopSplits(Params::getInstance().stableSplitThreshold, Params::getInstance().numSupportTrees);
+//    }
 }
 
 string IQTree::generateParsimonyTree(int randomSeed) {
@@ -2029,11 +2036,11 @@ double IQTree::doTreeSearch() {
         nniInfos = doNNISearch();
         string curTree = getTreeString();
         int pos = addTreeToCandidateSet(curTree, curScore);
-        if (Params::getInstance().fixStableSplits && candidateTrees.getCandidateSplitHash().empty() &&
-            candidateTrees.size() > 1) {
-            candidateTrees.buildTopSplits(Params::getInstance().stableSplitThreshold,
-                                          Params::getInstance().numSupportTrees);
-        }
+//        if (Params::getInstance().fixStableSplits && candidateTrees.getCandidateSplitHash().empty() &&
+//            candidateTrees.size() > 1) {
+//            candidateTrees.buildTopSplits(Params::getInstance().stableSplitThreshold,
+//                                          Params::getInstance().numSupportTrees);
+//        }
 
 #ifdef _IQTREE_MPI
         if (pos <= Params::getInstance().numSupportTrees) {

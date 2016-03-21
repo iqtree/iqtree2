@@ -410,9 +410,12 @@ int CandidateSet::buildTopSplits(double supportThreshold, int numSupportTrees) {
         }
     }
     int newNumStableSplits = countStableSplits(supportThreshold);
-    cout << ((double) newNumStableSplits / (aln->getNSeq() - 3)) * 100;
-    cout << " % of the splits are stable (support threshold " << supportThreshold;
-    cout << " from " << candidateSplitsHash.getNumTree() << " trees)" << endl;
+    if (verbose_mode >= VB_MED) {
+        cout << ((double) newNumStableSplits / (aln->getNSeq() - 3)) * 100;
+        cout << " % of the splits are stable (support threshold " << supportThreshold;
+        cout << " from " << candidateSplitsHash.getNumTree() << " trees)" << endl;
+    }
+
     return numStableSplits;
 }
 
