@@ -2557,7 +2557,7 @@ int main(int argc, char *argv[]) {
 	}
 
 #else
-	runPhyloAnalysis(Params::getInstance());
+	runPhyloAnalysis(Params::getInstance(), checkpoint);
 #endif
 
 	time(&start_time);

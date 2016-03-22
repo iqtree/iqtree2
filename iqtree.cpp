@@ -754,7 +754,7 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
         string treeString = getTreeString();
         addTreeToCandidateSet(treeString, curScore);
 #ifdef _IQTREE_MPI
-        MPIHelper::getInstance().sendTreeToOthers(getTreeString(WT_TAXON_ID + WT_BR_LEN + WT_BR_LEN_SHORT), curScore, TREE_TAG);
+        MPIHelper::getInstance().sendTreeToOthers(getTreeString(), curScore, TREE_TAG);
         addTreesFromOtherProcesses(false, maxNumTrees, true);
         //nniTrees.push_back(treeString);
         //nniScores.push_back(curScore);
@@ -2050,7 +2050,7 @@ double IQTree::doTreeSearch() {
 
 #ifdef _IQTREE_MPI
         if (pos <= Params::getInstance().numSupportTrees) {
-            MPIHelper::getInstance().sendTreeToOthers(getTreeString(WT_TAXON_ID + WT_BR_LEN + WT_BR_LEN_SHORT), curScore, TREE_TAG);
+            MPIHelper::getInstance().sendTreeToOthers(getTreeString(), curScore, TREE_TAG);
         } else {
             MPIHelper::getInstance().sendTreeToOthers(string("notree"), curScore, NOTREE_TAG);
         }
@@ -2219,9 +2219,9 @@ void IQTree::addTreesFromOtherProcesses(bool allTrees, int maxNumTrees, bool upd
         cout << "WARNING: Communication time is too slow. Please increase your eager buffer in your MPI library!" << endl;
     }
 
-    PhyloTree phyloTree;
-    phyloTree.aln = this->aln;
-    phyloTree.setParams(&(Params::getInstance()));
+//    PhyloTree phyloTree;
+//    phyloTree.aln = this->aln;
+//    phyloTree.setParams(&(Params::getInstance()));
 
     for (int i = 0; i < inTrees.getNumTrees(); i++) {
         pair<string, double> tree = inTrees.getTree(i);
@@ -2233,9 +2233,9 @@ void IQTree::addTreesFromOtherProcesses(bool allTrees, int maxNumTrees, bool upd
                 printInterationInfo();
             }
         } else {
-            phyloTree.readTreeString(tree.first, true);
-            string treeString = phyloTree.getTreeString();
-            int pos = addTreeToCandidateSet(treeString, tree.second, updateStopRule);
+//            phyloTree.readTreeString(tree.first, true);
+//            string treeString = phyloTree.getTreeString();
+            int pos = addTreeToCandidateSet(tree.first, tree.second, updateStopRule);
         }
     }
 }
