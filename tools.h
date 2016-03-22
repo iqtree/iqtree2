@@ -33,6 +33,7 @@
 #include <math.h>
 #include <stdint.h>
 #include <string.h>
+#include <sstream>
 
 //#include <sys/time.h>
 //#include <time.h>
@@ -2359,5 +2360,21 @@ bool memcmpcpy(void * destination, const void * source, size_t num);
  *  @return the encoding of the 2 integer
  */
 int pairInteger(int int1, int int2);
+
+template <typename T>
+string NumberToString ( T Number )
+{
+    ostringstream ss;
+    ss << Number;
+    return ss.str();
+}
+
+template <typename T>
+T StringToNumber ( const string &Text )
+{
+    istringstream ss(Text);
+    T result;
+    return ss >> result ? result : 0;
+}
 
 #endif

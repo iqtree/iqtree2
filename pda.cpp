@@ -2235,7 +2235,7 @@ int main(int argc, char *argv[]) {
 
     // 2015-12-05
     Checkpoint *checkpoint = new Checkpoint;
-    string filename = (string)Params::getInstance().out_prefix + ".ckp.gz";
+    string filename = (string)Params::getInstance().out_prefix +".ckp.gz";
     checkpoint->setFileName(filename);
     
     bool append_log = false;

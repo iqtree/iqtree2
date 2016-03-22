@@ -2418,7 +2418,7 @@ void convertAlignment(Params &params, IQTree *iqtree) {
 void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
 	Alignment *alignment;
 	IQTree *tree;
-    
+
     checkpoint->putBool("finished", false);
     checkpoint->setDumpInterval(params.checkpoint_dump_interval);
 

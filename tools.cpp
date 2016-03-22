@@ -27,6 +27,7 @@
 
 #include "tools.h"
 #include "timeutil.h"
+#include "MPIHelper.h"
 
 VerboseMode verbose_mode;
 
@@ -2957,6 +2958,11 @@ void parseArg(int argc, char *argv[], Params &params) {
         else
             params.out_prefix = params.user_file;
     }
+    if (MPIHelper::getInstance().getProcessID() != MASTER) {
+        string newPrefix = params.out_prefix + NumberToString(MPIHelper::getInstance().getProcessID());
+        params.out_prefix = (char *) newPrefix.c_str();
+    }
+
 }
 
 extern void printCopyright(ostream &out);
