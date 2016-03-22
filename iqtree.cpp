@@ -1947,8 +1947,9 @@ double IQTree::doTreeSearch() {
 
     double initCPUTime = getRealTime();
 
+    int treesPerProc;
 #ifdef _IQTREE_MPI
-    int treesPerProc = (params->numInitTrees - candidateTrees.size()) / MPIHelper::getInstance().getNumProcesses();
+    treesPerProc = (params->numInitTrees - candidateTrees.size()) / MPIHelper::getInstance().getNumProcesses();
     int rest = params->numInitTrees % MPIHelper::getInstance().getNumProcesses();
     if (rest != 0) {
         treesPerProc++;
@@ -1957,19 +1958,22 @@ double IQTree::doTreeSearch() {
     if (MPIHelper::getInstance().getProcessID() == MASTER) {
         treesPerProc--;
     }
-    initCandidateTreeSet(treesPerProc, params->numNNITrees);
 #else
+    treesPerProc = params->numInitTrees - candidateTrees.size();
+#endif
+
     if (!getCheckpoint()->getBool("finishedCandidateSet")) {
-        initCandidateTreeSet(params->numInitTrees - candidateTrees.size(), params->numNNITrees);
+        initCandidateTreeSet(treesPerProc, params->numNNITrees);
         saveCheckpoint();
         getCheckpoint()->putBool("finishedCandidateSet", true);
         getCheckpoint()->dump(true);
     } else {
         cout << "CHECKPOINT: Candidate tree set restored, best LogL: " << candidateTrees.getBestScore() << endl;
     }
-#endif
+
     assert(candidateTrees.size() != 0);
     cout << "Finish initializing candidate tree set (" << candidateTrees.size() << ")" << endl;
+
 
     cout << "Current best tree score: " << candidateTrees.getBestScore() << " / CPU time: " <<
     getRealTime() - initCPUTime << endl;
