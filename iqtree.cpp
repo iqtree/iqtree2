@@ -54,8 +54,8 @@ void IQTree::init() {
     nni_cutoff = -1e6;
     nni_sort = false;
     testNNI = false;
-    print_tree_lh = false;
-    write_intermediate_trees = 0;
+//    print_tree_lh = false;
+//    write_intermediate_trees = 0;
 //    max_candidate_trees = 0;
     logl_cutoff = 0.0;
     len_scale = 10000;
@@ -63,6 +63,22 @@ void IQTree::init() {
     duplication_counter = 0;
     //boot_splits = new SplitGraph;
     pll2iqtree_pattern_index = NULL;
+
+    treels_name = Params::getInstance().out_prefix;
+    treels_name += ".treels";
+    out_lh_file = Params::getInstance().out_prefix;
+    out_lh_file += ".treelh";
+    site_lh_file = Params::getInstance().out_prefix;
+    site_lh_file += ".sitelh";
+
+    if (Params::getInstance().print_tree_lh) {
+        out_treelh.open(out_lh_file.c_str());
+        out_sitelh.open(site_lh_file.c_str());
+    }
+
+    if (Params::getInstance().write_intermediate_trees)
+        out_treels.open(treels_name.c_str());
+
 }
 
 IQTree::IQTree(Alignment *aln) : PhyloTree(aln) {
@@ -252,9 +268,9 @@ void IQTree::initSettings(Params &params) {
 	globalParams = &params;
     globalAlignment = aln;
 
-    write_intermediate_trees = params.write_intermediate_trees;
+    //write_intermediate_trees = params.write_intermediate_trees;
 
-    if (write_intermediate_trees > 2 || params.gbo_replicates > 0) {
+    if (Params::getInstance().write_intermediate_trees > 2 || params.gbo_replicates > 0) {
         save_all_trees = 1;
     }
     if (params.gbo_replicates > 0) {
@@ -264,7 +280,7 @@ void IQTree::initSettings(Params &params) {
     }
 //    if (params.gbo_replicates > 0 && params.do_compression)
 //        save_all_br_lens = true;
-    print_tree_lh = params.print_tree_lh;
+//    print_tree_lh = params.print_tree_lh;
 //    max_candidate_trees = params.max_candidate_trees;
 //    if (max_candidate_trees == 0)
 //        max_candidate_trees = aln->getNSeq() * params.step_iterations;
@@ -1984,24 +2000,24 @@ double IQTree::doTreeSearch() {
     cout << "|               OPTIMIZING CANDIDATE TREE SET                      |" << endl;
     cout << "--------------------------------------------------------------------" << endl;
 
-    string treels_name = params->out_prefix;
-    treels_name += ".treels";
-    string out_lh_file = params->out_prefix;
-    out_lh_file += ".treelh";
-    string site_lh_file = params->out_prefix;
-    site_lh_file += ".sitelh";
+//    string treels_name = params->out_prefix;
+//    treels_name += ".treels";
+//    string out_lh_file = params->out_prefix;
+//    out_lh_file += ".treelh";
+//    string site_lh_file = params->out_prefix;
+//    site_lh_file += ".sitelh";
+//
+//    if (params->print_tree_lh) {
+//        out_treelh.open(out_lh_file.c_str());
+//        out_sitelh.open(site_lh_file.c_str());
+//    }
 
-    if (params->print_tree_lh) {
-        out_treelh.open(out_lh_file.c_str());
-        out_sitelh.open(site_lh_file.c_str());
-    }
+//    if (params->write_intermediate_trees)
+//        out_treels.open(treels_name.c_str());
 
-    if (params->write_intermediate_trees)
-        out_treels.open(treels_name.c_str());
-
-    if (params->write_intermediate_trees && save_all_trees != 2) {
-        printIntermediateTree(WT_NEWLINE | WT_APPEND | WT_SORT_TAXA | WT_BR_LEN);
-    }
+//    if (params->write_intermediate_trees && save_all_trees != 2) {
+//        printIntermediateTree(WT_NEWLINE | WT_APPEND | WT_SORT_TAXA | WT_BR_LEN);
+//    }
 
     setRootNode(params->root);
 
@@ -2077,9 +2093,9 @@ double IQTree::doTreeSearch() {
     	 *---------------------------------------*/
         //printInterationInfo();
 
-        if (params->write_intermediate_trees && save_all_trees != 2) {
-            printIntermediateTree(WT_NEWLINE | WT_APPEND | WT_SORT_TAXA | WT_BR_LEN);
-        }
+//        if (params->write_intermediate_trees && save_all_trees != 2) {
+//            printIntermediateTree(WT_NEWLINE | WT_APPEND | WT_SORT_TAXA | WT_BR_LEN);
+//        }
 
         if (params->snni && verbose_mode >= VB_DEBUG) {
             printBestScores();
@@ -2288,7 +2304,7 @@ double IQTree::doTreePerturbation() {
                     pllTreeCounter[perturb_tree_topo]++;
                 }
             }
-            curScore = computeLikelihood();
+            curScore = optimizeAllBranches(1);
         }
     return curScore;
 }
@@ -2298,6 +2314,11 @@ double IQTree::doTreePerturbation() {
  ****************************************************************************/
 pair<int, int> IQTree::doNNISearch() {
     computeLogL();
+
+    if (Params::getInstance().write_intermediate_trees && save_all_trees != 2) {
+        printIntermediateTree(WT_NEWLINE | WT_APPEND | WT_SORT_TAXA | WT_BR_LEN);
+    }
+
     pair<int, int> nniInfos; // Number of NNIs and number of steps
     if (params->pll) {
     	if (params->partition_file)
@@ -2321,6 +2342,7 @@ pair<int, int> IQTree::doNNISearch() {
         getModelFactory()->saveCheckpoint();
     }
     MPIHelper::getInstance().setNumNNISearch(MPIHelper::getInstance().getNumNNISearch() + 1);
+
     return nniInfos;
 }
 
@@ -2433,6 +2455,10 @@ pair<int, int> IQTree::optimizeNNI() {
         if (params->snni && (curScore > curBestScore + 0.1)) {
 //            optimizeModelParameters(false);
             curBestScore = curScore;
+        }
+
+        if (Params::getInstance().write_intermediate_trees && save_all_trees != 2) {
+            printIntermediateTree(WT_NEWLINE | WT_APPEND | WT_SORT_TAXA | WT_BR_LEN);
         }
     }
 
@@ -2838,7 +2864,7 @@ void IQTree::saveCurrentTree(double cur_logl) {
 //    treels_logl.push_back(cur_logl);
 //    num_trees_for_rell++;
 
-    if (write_intermediate_trees)
+    if (Params::getInstance().write_intermediate_trees)
         printTree(out_treels, WT_NEWLINE | WT_BR_LEN);
 
     int nptn = getAlnNPattern();
@@ -2912,7 +2938,7 @@ void IQTree::saveCurrentTree(double cur_logl) {
             }
         }
     }
-    if (print_tree_lh) {
+    if (Params::getInstance().print_tree_lh) {
         out_treelh << cur_logl;
         double prob;
 #ifdef BOOT_VAL_FLOAT
@@ -3264,8 +3290,9 @@ void IQTree::printIntermediateTree(int brtype) {
         computePatternLikelihood(pattern_lh, &logl);
     }
 
-    if (write_intermediate_trees)
+    if (Params::getInstance().write_intermediate_trees)
         printTree(out_treels, brtype);
+
     if (params->print_tree_lh) {
         out_treelh.precision(10);
         out_treelh << logl;

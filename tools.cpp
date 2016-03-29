@@ -2066,6 +2066,13 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.write_intermediate_trees = 1;
 				continue;
 			}
+
+            if (strcmp(argv[cnt], "-wt0") == 0) {
+                params.write_intermediate_trees = 1;
+                params.print_tree_lh = true;
+                continue;
+            }
+
 			if (strcmp(argv[cnt], "-wt2") == 0) {
 				params.write_intermediate_trees = 2;
 //				params.avoid_duplicated_trees = true;

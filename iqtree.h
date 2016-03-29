@@ -765,11 +765,12 @@ protected:
     ofstream outNNI;
 protected:
 
-    bool print_tree_lh;
+    //bool print_tree_lh;
 
-    int write_intermediate_trees;
+    //int write_intermediate_trees;
 
     ofstream out_treels, out_treelh, out_sitelh, out_treebetter;
+    string treels_name, out_lh_file, site_lh_file;
 
     void estimateNNICutoff(Params* params);
 
