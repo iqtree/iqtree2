@@ -1,6 +1,8 @@
-/****************************************************************************
- *   Copyright (C) 2006 by BUI Quang Minh, Steffen Klaere, Arndt von Haeseler   *
- *   minh.bui@univie.ac.at   *
+/***************************************************************************
+ *   Copyright (C) 2009-2015 by                                            *
+ *   BUI Quang Minh <minh.bui@univie.ac.at>                                *
+ *   Lam-Tung Nguyen <nltung@gmail.com>                                    *
+ *                                                                         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -1290,6 +1292,13 @@ public:
             2 if output all intermediate trees + 1-NNI-away trees
      */
     int write_intermediate_trees;
+
+    /**
+     *  Write all distinct intermediate trees and there likelihoods
+     *  Note: intermediate trees are trees that have been visited by the search. These include trees created by
+     *  NNI-steps within each NNI iteration.
+     */
+    bool writeDistImdTrees;
 
     /**
      *  Write trees obtained at the end of each NNI search

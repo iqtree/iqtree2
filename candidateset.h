@@ -21,7 +21,6 @@ struct CandidateTree {
 	 */
 	string tree;
 
-
 	/**
 	 * tree topology WITHOUT branch lengths
 	 * and WITH TAXON ID (instead of taxon names)
@@ -33,6 +32,11 @@ struct CandidateTree {
 	 * log-likelihood or parsimony score
 	 */
 	double score;
+
+    /**
+     *  Indicate that this is a NNI-optimal tree
+     */
+    bool lopt;
 };
 
 
@@ -93,11 +97,14 @@ public:
      * 	    The new tree string (with branch lengths)
      *  @param score
      * 	    The score (ML or parsimony) of \a tree
+     * 	@param lopt
+     * 	    TRUE: This is an NNI-optimal tree
+     * 	    FALSE: Not an NNI-optimal tree
      *  @return
      *      Relative position of the new tree to the current best tree.
      *      Return -1 if the candidate set is not updated (duplicated tree)
      */
-    int update(string newTree, double newScore);
+    int update(string newTree, double newScore, bool lopt = true);
 
     /**
      *  Get the \a numBestScores best scores in the candidate set
@@ -295,10 +302,15 @@ public:
 	 */
 	void removeCandidateSplits(string treeString);
 
-public:
     int getNumStableSplits() const {
         return numStableSplits;
     }
+
+    /**
+     *  Print candidate trees and their likelihood
+     *  @param numTree number of candidate trees to print, starting from the best tree
+     */
+    void printTrees(int numTree = 0);
 
 private:
 

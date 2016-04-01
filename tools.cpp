@@ -1,6 +1,8 @@
 /***************************************************************************
- *   Copyright (C) 2006 by BUI Quang Minh, Steffen Klaere, Arndt von Haeseler   *
- *   minh.bui@univie.ac.at   *
+ *   Copyright (C) 2009-2015 by                                            *
+ *   BUI Quang Minh <minh.bui@univie.ac.at>                                *
+ *   Lam-Tung Nguyen <nltung@gmail.com>                                    *
+ *                                                                         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -759,6 +761,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.iqp = false;
     params.write_intermediate_trees = 0;
 //    params.avoid_duplicated_trees = false;
+    params.writeDistImdTrees = false;
     params.rf_dist_mode = 0;
     params.mvh_site_rate = false;
     params.rate_mh_type = true;
@@ -2067,7 +2070,12 @@ void parseArg(int argc, char *argv[], Params &params) {
 				continue;
 			}
 
-            if (strcmp(argv[cnt], "-wt0") == 0) {
+            if (strcmp(argv[cnt], "-wdt") == 0) {
+                params.writeDistImdTrees = true;
+                continue;
+            }
+
+            if (strcmp(argv[cnt], "-wtc") == 0) {
                 params.write_intermediate_trees = 1;
                 params.print_tree_lh = true;
                 continue;

@@ -2,7 +2,8 @@
  * candidateset.cpp
  *
  *  Created on: Jun 1, 2014
- *      Author: Tung Nguyen
+ *  Author: Tung Nguyen
+ *  Email: nltung@gmail.com
  */
 
 #include "phylotree.h"
@@ -10,7 +11,11 @@
 
 void CandidateSet::init(Alignment *aln) {
     this->aln = aln;
-    maxSize = Params::getInstance().maxCandidates;
+    if (Params::getInstance().writeDistImdTrees) {
+        maxSize = 100000;
+    } else {
+        maxSize = Params::getInstance().maxCandidates;
+    }
 }
 
 CandidateSet::~CandidateSet() {
@@ -70,9 +75,12 @@ string CandidateSet::getRandCandTree() {
     if (empty())
         return "";
     int id = random_int(min(Params::getInstance().popSize, (int) size()));
-    for (reverse_iterator i = rbegin(); i != rend(); i++, id--)
-        if (id == 0)
-            return i->second.tree;
+    for (reverse_iterator it = rbegin(); it != rend(); it++)
+        if (it->second.lopt) {
+            if (id == 0)
+                return it->second.tree;
+            id--;
+        }
     assert(0);
     return "";
 }
@@ -195,11 +203,12 @@ void CandidateSet::initParentTrees() {
 }
 
 
-int CandidateSet::update(string newTree, double newScore) {
+int CandidateSet::update(string newTree, double newScore, bool lopt) {
     CandidateTree candidate;
     candidate.score = newScore;
     candidate.topology = convertTreeString(newTree);
     candidate.tree = newTree;
+    candidate.lopt = lopt;
 
     int treePos;
     CandidateSet::iterator candidateTreeIt;
@@ -463,5 +472,24 @@ CandidateSet CandidateSet::getCandidateTrees(double score) {
     }
     return res;
 }
+
+void CandidateSet::printTrees(int numTree) {
+    if (numTree == 0)
+        numTree = size();
+    int cnt = numTree;
+    ofstream outTrees, outLHs;
+    string outTreesFile = string(Params::getInstance().out_prefix) + "." + "ctrees";
+    string outLHsFile = string(Params::getInstance().out_prefix) + "." + "clhs";
+    outTrees.open(outTreesFile.c_str());
+    outLHs.open(outLHsFile.c_str());
+    for (reverse_iterator rit = rbegin(); rit != rend() && cnt > 0; rit++, cnt--) {
+        outLHs << rit->first << endl;
+        outTrees << rit->second.topology << endl;
+    }
+    outTrees.close();
+    outLHs.close();
+}
+
+
 
 

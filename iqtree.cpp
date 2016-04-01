@@ -1,6 +1,8 @@
 /***************************************************************************
- *   Copyright (C) 2009 by BUI Quang Minh   *
- *   minh.bui@univie.ac.at   *
+ *   Copyright (C) 2009-2015 by                                            *
+ *   BUI Quang Minh <minh.bui@univie.ac.at>                                *
+ *   Lam-Tung Nguyen <nltung@gmail.com>                                    *
+ *                                                                         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -576,9 +578,9 @@ void IQTree::computeInitialTree(string &dist_file, LikelihoodKernel kernel) {
     }
 }
 
-int IQTree::addTreeToCandidateSet(string treeString, double score, bool updateStopRule) {
+int IQTree::addTreeToCandidateSet(string treeString, double score, bool updateStopRule, bool loptTree) {
     double curBestScore = candidateTrees.getBestScore();
-    int pos = candidateTrees.update(treeString, score);
+    int pos = candidateTrees.update(treeString, score, loptTree);
 
     if (updateStopRule) {
         stop_rule.setCurIt(stop_rule.getCurIt() + 1);
@@ -668,13 +670,13 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
 #endif
         }
         
-        int pos = addTreeToCandidateSet(curParsTree, -DBL_MAX, false);
+        int pos = addTreeToCandidateSet(curParsTree, -DBL_MAX, false, false);
         // if a duplicated tree is generated, then randomize the tree
         if (pos == -1) {
             readTreeString(curParsTree);
             int nNNIs = floor((aln->getNSeq() - 3) * Params::getInstance().initPS);
             string randTree = doRandomNNIs(nNNIs);
-            addTreeToCandidateSet(randTree, -DBL_MAX, false);
+            addTreeToCandidateSet(randTree, -DBL_MAX, false, false);
         }
     }
 
@@ -699,7 +701,7 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
         readTreeString(it->second.tree);
         treeString = optimizeBranches(2);
         score = getCurScore();
-        addTreeToCandidateSet(treeString, score, false);
+        addTreeToCandidateSet(treeString, score, false, false);
     }
     cout << getRealTime() - startTime << " seconds" << endl;
 
@@ -768,7 +770,7 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
         computeLogL();
         doNNISearch();
         string treeString = getTreeString();
-        addTreeToCandidateSet(treeString, curScore);
+        addTreeToCandidateSet(treeString, curScore, true, true);
 #ifdef _IQTREE_MPI
         MPIHelper::getInstance().sendTreeToOthers(getTreeString(), curScore, TREE_TAG);
         addTreesFromOtherProcesses(false, maxNumTrees, true);
@@ -2304,7 +2306,7 @@ double IQTree::doTreePerturbation() {
                     pllTreeCounter[perturb_tree_topo]++;
                 }
             }
-            curScore = optimizeAllBranches(1);
+            curScore = computeLogL();
         }
     return curScore;
 }
@@ -2459,6 +2461,10 @@ pair<int, int> IQTree::optimizeNNI() {
 
         if (Params::getInstance().write_intermediate_trees && save_all_trees != 2) {
             printIntermediateTree(WT_NEWLINE | WT_APPEND | WT_SORT_TAXA | WT_BR_LEN);
+        }
+
+        if (Params::getInstance().writeDistImdTrees) {
+            addTreeToCandidateSet(getTreeString(),curScore, false, false);
         }
     }
 

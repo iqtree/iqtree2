@@ -1,6 +1,8 @@
 /***************************************************************************
- *   Copyright (C) 2009 by BUI Quang Minh   *
- *   minh.bui@univie.ac.at   *
+ *   Copyright (C) 2009-2015 by                                            *
+ *   BUI Quang Minh <minh.bui@univie.ac.at>                                *
+ *   Lam-Tung Nguyen <nltung@gmail.com>                                    *
+ *                                                                         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -642,9 +644,11 @@ public:
      *      the score of the new tree
      *  @param updateStopRule
      *      Whether or not to update the stop rule
+     *  @param loptTrees
+     *      Specify whether this tree is a NNI-optimal trees or not.
      *  @return relative position of the new tree to the current best. -1 if duplicated
      */
-    int addTreeToCandidateSet(string treeString, double score, bool updateStopRule = true);
+    int addTreeToCandidateSet(string treeString, double score, bool updateStopRule = true, bool loptTrees = true);
 
     /**
      *  Generate the initial parsimony/random trees, called by initCandidateTreeSet

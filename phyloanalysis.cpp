@@ -1,6 +1,8 @@
 /***************************************************************************
- *   Copyright (C) 2009 by BUI Quang Minh   *
- *   minh.bui@univie.ac.at   *
+ *   Copyright (C) 2009-2015 by                                            *
+ *   BUI Quang Minh <minh.bui@univie.ac.at>                                *
+ *   Lam-Tung Nguyen <nltung@gmail.com>                                    *
+ *                                                                         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -1059,6 +1061,12 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 		cout << "  All intermediate trees:        " << params.out_prefix << ".treels"
 				<< endl;
 
+    if (params.writeDistImdTrees) {
+        tree.candidateTrees.printTrees();
+        cout << "  Distinct intermediate trees:        " << params.out_prefix <<  ".ctrees" << endl;
+        cout << "  Logl of intermediate trees:        " << params.out_prefix <<  ".clhs" << endl;
+    }
+
 	if (params.gbo_replicates) {
 		cout << endl << "Ultrafast bootstrap approximation results written to:" << endl
 			 << "  Split support values:          " << params.out_prefix << ".splits.nex" << endl
@@ -1791,7 +1799,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 
     // Update best tree
     if (!finishedInitTree) {
-        iqtree.addTreeToCandidateSet(initTree, iqtree.getCurScore(), false);
+        iqtree.addTreeToCandidateSet(initTree, iqtree.getCurScore(), false, false);
         iqtree.printResultTree();
     }
 
@@ -1857,7 +1865,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 	pruneTaxa(params, iqtree, pattern_lh, pruned_taxa, linked_name);
 
 	/***************************************** DO STOCHASTIC TREE SEARCH *******************************************/
-	if (params.min_iterations > 0) {
+	if (params.min_iterations > 0 && !params.tree_spr) {
 		iqtree.doTreeSearch();
 		iqtree.setAlignment(iqtree.aln);
         cout << "TREE SEARCH COMPLETED AFTER " << iqtree.stop_rule.getCurIt() << " ITERATIONS" 
@@ -1911,7 +1919,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
             Params::getInstance().tabu = false;
             iqtree.doNNISearch();
             tree = iqtree.optimizeModelParameters(true);
-            iqtree.addTreeToCandidateSet(tree, iqtree.getCurScore());
+            iqtree.addTreeToCandidateSet(tree, iqtree.getCurScore(), false, true);
             iqtree.getCheckpoint()->putBool("finishedModelFinal", true);
             iqtree.saveCheckpoint();
         }
