@@ -697,6 +697,8 @@ public:
 
     void computeSitemodelPartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
 
+    void computeNonrevPartialLikelihood(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
+
     template <class VectorClass, const int VCSIZE, const int nstates>
     void computePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
 
@@ -748,6 +750,8 @@ public:
 
     double computeSitemodelLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloNode *dad);
 
+    double computeNonrevLikelihoodBranch(PhyloNeighbor *dad_branch, PhyloNode *dad);
+
     template <class VectorClass, const int VCSIZE, const int nstates>
     double computeLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad);
 
@@ -790,6 +794,8 @@ public:
     double computeSitemodelLikelihoodFromBufferEigenSIMD();
 
     double computeSitemodelLikelihoodFromBufferEigen();
+
+    double computeNonrevLikelihoodFromBuffer();
 
     /**
             compute tree likelihood when a branch length collapses to zero
@@ -996,6 +1002,8 @@ public:
     void computeMixrateLikelihoodDervEigen(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
 
     void computeSitemodelLikelihoodDervEigen(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
+
+    void computeNonrevLikelihoodDerv(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
 
     template <class VectorClass, const int VCSIZE, const int nstates>
     void computeLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
@@ -1702,6 +1710,11 @@ public:
 
     void computeSeqIdentityAlongTree(Split &resp, Node *node = NULL, Node *dad = NULL);
     void computeSeqIdentityAlongTree();
+
+    /**
+     * for rooted tree update direction for all branches
+     */
+    void computeBranchDirection(PhyloNode *node = NULL, PhyloNode *dad = NULL);
 
 protected:
 

@@ -399,6 +399,7 @@ phylotree.cpp
 phylotreesse.cpp
 phylotreepars.cpp
 phylokernelsitemodel.cpp
+phylokernelnonrev.cpp
 #phylotreeavx.cpp
 pruning.cpp
 quartet.cpp

@@ -5511,3 +5511,20 @@ void PhyloTree::generateRandomTree(TreeGenType tree_type) {
     ext_tree.printTree(str);
     PhyloTree::readTreeStringSeqName(str.str());
 }
+
+void PhyloTree::computeBranchDirection(PhyloNode *node, PhyloNode *dad) {
+	if (!node) {
+		node = (PhyloNode*)root;
+	}
+	if (dad)
+		((PhyloNeighbor*)node->findNeighbor(dad))->direction = TOWARD_ROOT;
+	FOR_NEIGHBOR_IT(node, dad, it) {
+		// do not update if direction was already computed
+		assert(((PhyloNeighbor*)*it)->direction != TOWARD_ROOT);
+		if (((PhyloNeighbor*)*it)->direction != UNDEFINED_DIRECTION)
+			continue;
+		// otherwise undefined.
+		((PhyloNeighbor*)*it)->direction = AWAYFROM_ROOT;
+		computeBranchDirection((PhyloNode*)(*it)->node, node);
+	}
+}

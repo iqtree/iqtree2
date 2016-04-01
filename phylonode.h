@@ -17,6 +17,11 @@
 typedef short int UBYTE;
 
 /**
+ * direction of a Neighbor from the root, for rooted tree only
+ */
+enum RootDirection {UNDEFINED_DIRECTION, TOWARD_ROOT, AWAYFROM_ROOT};
+
+/**
 A neighbor in a phylogenetic tree
 
     @author BUI Quang Minh, Steffen Klaere, Arndt von Haeseler <minh.bui@univie.ac.at>
@@ -42,6 +47,7 @@ public:
         partial_lh_computed = 0;
         lh_scale_factor = 0.0;
         partial_pars = NULL;
+        direction = UNDEFINED_DIRECTION;
     }
 
     /**
@@ -56,6 +62,7 @@ public:
         partial_lh_computed = 0;
         lh_scale_factor = 0.0;
         partial_pars = NULL;
+        direction = UNDEFINED_DIRECTION;
     }
 
     /**
@@ -99,6 +106,14 @@ public:
 	return partial_lh_computed;
 	}
 
+	/**
+	 * true if this Neighbor is directed towards the root
+	 */
+	bool isTowardsRoot() {
+		assert(direction != UNDEFINED_DIRECTION);
+		return (direction == TOWARD_ROOT);
+	}
+
 private:
 
     /**
@@ -126,6 +141,10 @@ private:
      */
     UINT *partial_pars;
 
+    /**
+     * direction of the Neighbor in a rooted tree
+     */
+    RootDirection direction;
 };
 
 /**
