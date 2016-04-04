@@ -440,7 +440,10 @@ void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh, 
 
 			//<< "Total tree length: " << tree.treeLength() << endl << endl
 	tree.sortTaxa();
-    out << "NOTE: Tree is UNROOTED although outgroup taxon '" << tree.root->name << "' is drawn at root" << endl;
+    if (tree.rooted)
+        out << "NOTE: Tree is ROOTED at virtual root '" << tree.root->name << "'" << endl;
+    else
+        out << "NOTE: Tree is UNROOTED although outgroup taxon '" << tree.root->name << "' is drawn at root" << endl;
 
     if (tree.isSuperTree() && params.partition_type == 0)
         out	<< "NOTE: Branch lengths are weighted average over all partitions" << endl
