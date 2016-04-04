@@ -28,7 +28,7 @@
 #include "hashsplitset.h"
 #include "splitset.h"
 
-const char ROOT_NAME[] = "_root";
+const char ROOT_NAME[] = "__root__"; // special name that does not occur elsewhere in the tree
 
 class SplitGraph;
 

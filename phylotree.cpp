@@ -251,7 +251,7 @@ void PhyloTree::readTree(const char *infile, bool &is_rooted) {
 }
 
 void PhyloTree::readTree(istream &in, bool &is_rooted) {
-	MTree::readTree(in, rooted);
+	MTree::readTree(in, is_rooted);
     // 2015-10-14: has to reset this pointer when read in
     current_it = current_it_back = NULL;
 	// remove taxa if necessary
@@ -330,11 +330,15 @@ void PhyloTree::setAlignment(Alignment *alignment) {
             node->id = seq;
         }
     }
+    if (rooted) {
+        assert(root->name == ROOT_NAME);
+        root->id = nseq;
+    }
     if (err) outError("Tree taxa and alignment sequence do not match (see above)");
     StrVector taxname;
     getTaxaName(taxname);
     for (StrVector::iterator it = taxname.begin(); it != taxname.end(); it++)
-    	if (alignment->getSeqID(*it) < 0) {
+    	if ((*it) != ROOT_NAME && alignment->getSeqID(*it) < 0) {
     		outError((string)"Tree taxon " + (*it) + " does not appear in the alignment", false);
     		err = true;
     	}
@@ -343,12 +347,16 @@ void PhyloTree::setAlignment(Alignment *alignment) {
 
 void PhyloTree::setRootNode(const char *my_root) {
     string root_name;
-    if (my_root)
+    if (rooted)
+        root_name = ROOT_NAME;
+    else if (my_root)
         root_name = my_root;
     else
         root_name = aln->getSeqName(0);
     root = findNodeName(root_name);
     assert(root);
+    if (rooted)
+        computeBranchDirection();
 }
 
 void PhyloTree::setParams(Params* params) {
@@ -462,7 +470,8 @@ void PhyloTree::setModel(ModelSubst *amodel) {
 
 void PhyloTree::setModelFactory(ModelFactory *model_fac) {
     model_factory = model_fac;
-    if (model_factory && (model_factory->model->isMixture() || model_factory->model->isSiteSpecificModel()))
+    if (model_factory && (model_factory->model->isMixture() || model_factory->model->isSiteSpecificModel() 
+        || !model_factory->model->isReversible()))
     	setLikelihoodKernel(sse);
 }
 
@@ -1584,13 +1593,14 @@ double PhyloTree::computeLikelihood(double *pattern_lh) {
 //        assert(current_it_back);
     }
     double score;
-    string root_name = ROOT_NAME;
-    Node *vroot = findLeafName(root_name);
-    if (root_state != aln->STATE_UNKNOWN && vroot) {
-        if (verbose_mode >= VB_DEBUG)
-            cout << __func__ << " HIT ROOT STATE " << endl;
-        score = computeLikelihoodRooted((PhyloNeighbor*) vroot->neighbors[0], (PhyloNode*) vroot);
-    } else {
+//    string root_name = ROOT_NAME;
+//    Node *vroot = findLeafName(root_name);
+//    if (root_state != aln->STATE_UNKNOWN && vroot) {
+//        if (verbose_mode >= VB_DEBUG)
+//            cout << __func__ << " HIT ROOT STATE " << endl;
+//        score = computeLikelihoodRooted((PhyloNeighbor*) vroot->neighbors[0], (PhyloNode*) vroot);
+//    } else 
+    {
         score = computeLikelihoodBranch(current_it, (PhyloNode*) current_it_back->node);
     }
     if (pattern_lh)
@@ -3315,6 +3325,8 @@ void PhyloTree::optimizeAllBranches(PhyloNode *node, PhyloNode *dad, int maxNRSt
         if ((*it)->node != (dad)) {
             optimizeAllBranches((PhyloNode*) (*it)->node, node, maxNRStep);
         }
+    if (rooted && (node == root || dad == root)) 
+        return; // do not optimize branch to virtual root
     if (dad)
         optimizeOneBranch(node, dad, true, maxNRStep); // BQM 2014-02-24: true was missing
 

@@ -2050,6 +2050,8 @@ void MTree::removeTaxa(StrVector &taxa_names) {
 }
 
 Node *MTree::findFarthestLeaf(Node *node, Node *dad) {
+    if (rooted) // special treatment for rooted tree
+        return root;
     if (!node) 
         node = root;
     

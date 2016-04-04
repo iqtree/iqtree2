@@ -31,17 +31,14 @@ void PhyloTree::computeNonrevPartialLikelihood(PhyloNeighbor *dad_branch, PhyloN
 		return;
 	}
     
+    assert(node->degree() >= 3);
+    
     size_t ptn, c;
     size_t orig_ntn = aln->size();
     size_t ncat = site_rate->getNRate();
     const size_t nstatesqr=nstates*nstates;
     size_t i, x;
     size_t block = nstates * ncat;
-
-	double *evec = model->getEigenvectors();
-	double *inv_evec = model->getInverseEigenvectors();
-	assert(inv_evec && evec);
-	double *eval = model->getEigenvalues();
 
     dad_branch->lh_scale_factor = 0.0;
 
@@ -51,7 +48,7 @@ void PhyloTree::computeNonrevPartialLikelihood(PhyloNeighbor *dad_branch, PhyloN
         PhyloNeighbor *nei = (PhyloNeighbor*)*it;
 		if (!left) left = (PhyloNeighbor*)(*it); else right = (PhyloNeighbor*)(*it);
         if ((nei->partial_lh_computed & 1) == 0)
-            computePartialLikelihood(nei, node);
+            computeNonrevPartialLikelihood(nei, node);
         dad_branch->lh_scale_factor += nei->lh_scale_factor;
 	}
 
@@ -80,31 +77,42 @@ void PhyloTree::computeNonrevPartialLikelihood(PhyloNeighbor *dad_branch, PhyloN
     double *partial_lh_leaf = partial_lh_leaves;
 
     FOR_NEIGHBOR_IT(node, dad, it) {
-        double expchild[nstates];
         PhyloNeighbor *child = (PhyloNeighbor*)*it;
         // precompute information buffer
-        for (c = 0; c < ncat; c++) {
-            double len_child = site_rate->getRate(c) * child->length;
-            for (i = 0; i < nstates; i++) {
-                expchild[i] = exp(eval[i]*len_child);
+        if (child->direction == TOWARD_ROOT) {
+            // tranpose probability matrix
+            double mat[nstatesqr];
+            for (c = 0; c < ncat; c++) {
+                double len_child = site_rate->getRate(c) * child->length;
+                model_factory->computeTransMatrix(len_child, mat);
+                double *echild_ptr = &echild[c*nstatesqr];
+                for (i = 0; i < nstates; i++)
+                    for (x = 0; x < nstates; x++)
+                        echild_ptr[i*nstates+x] = mat[x*nstates+i];
             }
-            for (x = 0; x < nstates; x++)
-                for (i = 0; i < nstates; i++) {
-                    echild[c*nstatesqr+x*nstates+i] = evec[x*nstates+i] * expchild[i];
-                }
+        } else {
+            for (c = 0; c < ncat; c++) {
+                double len_child = site_rate->getRate(c) * child->length;
+                model_factory->computeTransMatrix(len_child, &echild[c*nstatesqr]);
+            }
         }
 
         // pre compute information for tip
-        if (child->node->isLeaf()) {
+        if (child->node == root) {
+            model->getStateFrequency(partial_lh_leaf);
+            for (c = 1; c < ncat; c++)
+                memcpy(partial_lh_leaf+c*nstates, partial_lh_leaf, nstates*sizeof(double));
+            partial_lh_leaf += (aln->STATE_UNKNOWN+1)*block;
+        } else if (child->node->isLeaf()) {
             vector<int>::iterator it;
             for (it = aln->seq_states[child->node->id].begin(); it != aln->seq_states[child->node->id].end(); it++) {
-                int state = (*it);
+                double *this_tip_partial_lh = &tip_partial_lh[(*it)*nstates];
                 for (x = 0; x < block; x++) {
                     double vchild = 0.0;
                     for (i = 0; i < nstates; i++) {
-                        vchild += echild[x*nstates+i] * tip_partial_lh[state*nstates+i];
+                        vchild += echild[x*nstates+i] * this_tip_partial_lh[i];
                     }
-                    partial_lh_leaf[state*block+x] = vchild;
+                    partial_lh_leaf[(*it)*block+x] = vchild;
                 }
             }
             for (x = 0; x < block; x++) {
@@ -131,7 +139,7 @@ void PhyloTree::computeNonrevPartialLikelihood(PhyloNeighbor *dad_branch, PhyloN
         eright = etmp;
 	}
     
-    if (node->degree() > 3) {
+    if (node->degree() >= 3) {
 
         /*--------------------- multifurcating node ------------------*/
     
@@ -140,7 +148,7 @@ void PhyloTree::computeNonrevPartialLikelihood(PhyloNeighbor *dad_branch, PhyloN
 #pragma omp parallel for reduction(+: sum_scale) private(ptn, c, x, i) schedule(static)
 #endif
         for (ptn = 0; ptn < nptn; ptn++) {
-            double partial_lh_all[block];
+            double *partial_lh_all = dad_branch->partial_lh + ptn*block;
             for (i = 0; i < block; i++)
                 partial_lh_all[i] = 1.0;
             dad_branch->scale_num[ptn] = 0;
@@ -152,7 +160,10 @@ void PhyloTree::computeNonrevPartialLikelihood(PhyloNeighbor *dad_branch, PhyloN
                 PhyloNeighbor *child = (PhyloNeighbor*)*it;
                 if (child->node->isLeaf()) {
                     // external node
-                    int state_child = (ptn < orig_ntn) ? (aln->at(ptn))[child->node->id] : model_factory->unobserved_ptns[ptn-orig_ntn];
+                    int state_child;
+                    if (child->node == root) 
+                        state_child = 0;
+                    else state_child = (ptn < orig_ntn) ? (aln->at(ptn))[child->node->id] : model_factory->unobserved_ptns[ptn-orig_ntn];
                     double *child_lh = partial_lh_leaf + state_child*block;
                     for (c = 0; c < block; c++) {
                         // compute real partial likelihood vector
@@ -170,7 +181,6 @@ void PhyloTree::computeNonrevPartialLikelihood(PhyloNeighbor *dad_branch, PhyloN
                         // compute real partial likelihood vector
                         for (x = 0; x < nstates; x++) {
                             double vchild = 0.0;
-//                            double *echild_ptr = echild + (c*nstatesqr+x*nstates);
                             for (i = 0; i < nstates; i++) {
                                 vchild += echild_ptr[i] * partial_lh_child[i];
                             }
@@ -185,51 +195,34 @@ void PhyloTree::computeNonrevPartialLikelihood(PhyloNeighbor *dad_branch, PhyloN
             } // FOR_NEIGHBOR
             
         
-            // compute dot-product with inv_eigenvector
-            double lh_max = 0.0;
-            double *partial_lh_tmp = partial_lh_all;
-            double *partial_lh = dad_branch->partial_lh + ptn*block;
-            for (c = 0; c < ncat; c++) {
-                double *inv_evec_ptr = inv_evec;
-                for (i = 0; i < nstates; i++) {
-                    double res = 0.0;
-                    for (x = 0; x < nstates; x++) {
-                        res += partial_lh_tmp[x]*inv_evec_ptr[x];
-                    }
-                    inv_evec_ptr += nstates;
-                    partial_lh[i] = res;
-                    lh_max = max(lh_max, fabs(res));
-                }
-                partial_lh += nstates;
-                partial_lh_tmp += nstates;
-            }
+            double lh_max = partial_lh_all[0];
+            for (i = 1; i < block; i++)
+                lh_max = max(lh_max, partial_lh_all[i]);
+                
             // check if one should scale partial likelihoods
-            if (lh_max < SCALING_THRESHOLD) {
-                partial_lh = dad_branch->partial_lh + ptn*block;
-                if (lh_max == 0.0) {
-                    // for very shitty data
-                    for (c = 0; c < ncat; c++)
-                        memcpy(&partial_lh[c*nstates], &tip_partial_lh[aln->STATE_UNKNOWN*nstates], nstates*sizeof(double));
-                    sum_scale += LOG_SCALING_THRESHOLD* 4 * ptn_freq[ptn];
-                    //sum_scale += log(lh_max) * ptn_freq[ptn];
-                    dad_branch->scale_num[ptn] += 4;
-                    int nsite = aln->getNSite();
-                    for (i = 0, x = 0; i < nsite && x < ptn_freq[ptn]; i++)
-                        if (aln->getPatternID(i) == ptn) {
-                            outWarning((string)"Numerical underflow for site " + convertIntToString(i+1));
-                            x++;
-                        }
-                } else {
-                    // now do the likelihood scaling
-                    for (i = 0; i < block; i++) {
-                        partial_lh[i] *= SCALING_THRESHOLD_INVER;
-                        //partial_lh[i] /= lh_max;
+            if (lh_max == 0.0) {
+                // for very shitty data
+                for (c = 0; c < ncat; c++)
+                    memcpy(&partial_lh_all[c*nstates], &tip_partial_lh[aln->STATE_UNKNOWN*nstates], nstates*sizeof(double));
+                sum_scale += LOG_SCALING_THRESHOLD* 4 * ptn_freq[ptn];
+                //sum_scale += log(lh_max) * ptn_freq[ptn];
+                dad_branch->scale_num[ptn] += 4;
+                int nsite = aln->getNSite();
+                for (i = 0, x = 0; i < nsite && x < ptn_freq[ptn]; i++)
+                    if (aln->getPatternID(i) == ptn) {
+                        outWarning((string)"Numerical underflow for site " + convertIntToString(i+1));
+                        x++;
                     }
-                    // unobserved const pattern will never have underflow
-                    sum_scale += LOG_SCALING_THRESHOLD * ptn_freq[ptn];
-                    //sum_scale += log(lh_max) * ptn_freq[ptn];
-                    dad_branch->scale_num[ptn] += 1;
+            } else if (lh_max < SCALING_THRESHOLD) {
+                // now do the likelihood scaling
+                for (i = 0; i < block; i++) {
+                    partial_lh_all[i] *= SCALING_THRESHOLD_INVER;
+                    //partial_lh[i] /= lh_max;
                 }
+                // unobserved const pattern will never have underflow
+                sum_scale += LOG_SCALING_THRESHOLD * ptn_freq[ptn];
+                //sum_scale += log(lh_max) * ptn_freq[ptn];
+                dad_branch->scale_num[ptn] += 1;
             }
 
         } // for ptn
@@ -249,29 +242,13 @@ void PhyloTree::computeNonrevPartialLikelihood(PhyloNeighbor *dad_branch, PhyloN
 #pragma omp parallel for private(ptn, c, x, i) schedule(static)
 #endif
 		for (ptn = 0; ptn < nptn; ptn++) {
-			double partial_lh_tmp[nstates];
 			double *partial_lh = dad_branch->partial_lh + ptn*block;
 			int state_left = (ptn < orig_ntn) ? (aln->at(ptn))[left->node->id] : model_factory->unobserved_ptns[ptn-orig_ntn];
 			int state_right = (ptn < orig_ntn) ? (aln->at(ptn))[right->node->id] : model_factory->unobserved_ptns[ptn-orig_ntn];
-			for (c = 0; c < ncat; c++) {
-				// compute real partial likelihood vector
-				double *left = partial_lh_left + (state_left*block+c*nstates);
-				double *right = partial_lh_right + (state_right*block+c*nstates);
-				for (x = 0; x < nstates; x++) {
-					partial_lh_tmp[x] = left[x] * right[x];
-				}
-
-				// compute dot-product with inv_eigenvector
-                double *inv_evec_ptr = inv_evec;
-				for (i = 0; i < nstates; i++) {
-					double res = 0.0;
-					for (x = 0; x < nstates; x++) {
-						res += partial_lh_tmp[x]*inv_evec_ptr[x];
-					}
-                    inv_evec_ptr += nstates;
-					partial_lh[c*nstates+i] = res;
-				}
-			}
+            double *vleft = partial_lh_left + (state_left*block);
+            double *vright = partial_lh_right + (state_right*block);
+            for (i = 0; i < block; i++)
+                partial_lh[i] = vleft[i] * vright[i];
 		}
 	} else if (left->node->isLeaf() && !right->node->isLeaf()) {
 
@@ -287,7 +264,6 @@ void PhyloTree::computeNonrevPartialLikelihood(PhyloNeighbor *dad_branch, PhyloN
 #pragma omp parallel for reduction(+: sum_scale) private(ptn, c, x, i) schedule(static)
 #endif
 		for (ptn = 0; ptn < nptn; ptn++) {
-			double partial_lh_tmp[nstates];
 			double *partial_lh = dad_branch->partial_lh + ptn*block;
 			double *partial_lh_right = right->partial_lh + ptn*block;
 			int state_left = (ptn < orig_ntn) ? (aln->at(ptn))[left->node->id] : model_factory->unobserved_ptns[ptn-orig_ntn];
@@ -299,58 +275,40 @@ void PhyloTree::computeNonrevPartialLikelihood(PhyloNeighbor *dad_branch, PhyloN
 				// compute real partial likelihood vector
 				for (x = 0; x < nstates; x++) {
 					double vright = 0.0;
-//					size_t addr = c*nstatesqr+x*nstates;
-//					vleft = partial_lh_left[state_left*block+c*nstates+x];
 					for (i = 0; i < nstates; i++) {
 						vright += eright_ptr[i] * partial_lh_right[i];
 					}
                     eright_ptr += nstates;
-					partial_lh_tmp[x] = vleft[x] * (vright);
+                    lh_max = max(lh_max, (partial_lh[c*nstates+x] = vleft[x]*vright));
 				}
                 vleft += nstates;
                 partial_lh_right += nstates;
-                
-				// compute dot-product with inv_eigenvector
-                double *inv_evec_ptr = inv_evec;
-				for (i = 0; i < nstates; i++) {
-					double res = 0.0;
-					for (x = 0; x < nstates; x++) {
-						res += partial_lh_tmp[x]*inv_evec_ptr[x];
-					}
-                    inv_evec_ptr += nstates;
-					partial_lh[c*nstates+i] = res;
-                    lh_max = max(fabs(res), lh_max);
-				}
 			}
             // check if one should scale partial likelihoods
-            if (lh_max < SCALING_THRESHOLD) {
-            	if (lh_max == 0.0) {
-            		// for very shitty data
-            		for (c = 0; c < ncat; c++)
-            			memcpy(&partial_lh[c*nstates], &tip_partial_lh[aln->STATE_UNKNOWN*nstates], nstates*sizeof(double));
-					sum_scale += LOG_SCALING_THRESHOLD* 4 * ptn_freq[ptn];
-					//sum_scale += log(lh_max) * ptn_freq[ptn];
-					dad_branch->scale_num[ptn] += 4;
-					int nsite = aln->getNSite();
-					for (i = 0, x = 0; i < nsite && x < ptn_freq[ptn]; i++)
-						if (aln->getPatternID(i) == ptn) {
-							outWarning((string)"Numerical underflow for site " + convertIntToString(i+1));
-							x++;
-						}
-            	} else {
-					// now do the likelihood scaling
-					for (i = 0; i < block; i++) {
-						partial_lh[i] *= SCALING_THRESHOLD_INVER;
-	                    //partial_lh[i] /= lh_max;
-					}
-					// unobserved const pattern will never have underflow
-					sum_scale += LOG_SCALING_THRESHOLD * ptn_freq[ptn];
-					//sum_scale += log(lh_max) * ptn_freq[ptn];
-					dad_branch->scale_num[ptn] += 1;
-            	}
+            if (lh_max == 0.0) {
+                // for very shitty data
+                for (c = 0; c < ncat; c++)
+                    memcpy(&partial_lh[c*nstates], &tip_partial_lh[aln->STATE_UNKNOWN*nstates], nstates*sizeof(double));
+                sum_scale += LOG_SCALING_THRESHOLD* 4 * ptn_freq[ptn];
+                //sum_scale += log(lh_max) * ptn_freq[ptn];
+                dad_branch->scale_num[ptn] += 4;
+                int nsite = aln->getNSite();
+                for (i = 0, x = 0; i < nsite && x < ptn_freq[ptn]; i++)
+                    if (aln->getPatternID(i) == ptn) {
+                        outWarning((string)"Numerical underflow for site " + convertIntToString(i+1));
+                        x++;
+                    }
+            } else if (lh_max < SCALING_THRESHOLD) {
+                // now do the likelihood scaling
+                for (i = 0; i < block; i++) {
+                    partial_lh[i] *= SCALING_THRESHOLD_INVER;
+                    //partial_lh[i] /= lh_max;
+                }
+                // unobserved const pattern will never have underflow
+                sum_scale += LOG_SCALING_THRESHOLD * ptn_freq[ptn];
+                //sum_scale += log(lh_max) * ptn_freq[ptn];
+                dad_branch->scale_num[ptn] += 1;
             }
-
-
 		}
 		dad_branch->lh_scale_factor += sum_scale;
 //		delete [] partial_lh_left;
@@ -363,7 +321,6 @@ void PhyloTree::computeNonrevPartialLikelihood(PhyloNeighbor *dad_branch, PhyloN
 #pragma omp parallel for reduction(+: sum_scale) private(ptn, c, x, i) schedule(static)
 #endif
 		for (ptn = 0; ptn < nptn; ptn++) {
-			double partial_lh_tmp[nstates];
 			double *partial_lh = dad_branch->partial_lh + ptn*block;
 			double *partial_lh_left = left->partial_lh + ptn*block;
 			double *partial_lh_right = right->partial_lh + ptn*block;
@@ -377,58 +334,42 @@ void PhyloTree::computeNonrevPartialLikelihood(PhyloNeighbor *dad_branch, PhyloN
 				// compute real partial likelihood vector
 				for (x = 0; x < nstates; x++) {
 					double vleft = 0.0, vright = 0.0;
-//					size_t addr = c*nstatesqr+x*nstates;
 					for (i = 0; i < nstates; i++) {
 						vleft += eleft_ptr[i] * partial_lh_left[i];
 						vright += eright_ptr[i] * partial_lh_right[i];
 					}
                     eleft_ptr += nstates;
                     eright_ptr += nstates;
-					partial_lh_tmp[x] = vleft*vright;
-//                    assert(partial_lh_tmp[x] != 0.0);
+					lh_max=max(lh_max, (partial_lh[c*nstates+x] = vleft*vright));
 				}
                 partial_lh_left += nstates;
                 partial_lh_right += nstates;
-                
-				// compute dot-product with inv_eigenvector
-                double *inv_evec_ptr = inv_evec;
-				for (i = 0; i < nstates; i++) {
-					double res = 0.0;
-					for (x = 0; x < nstates; x++) {
-						res += partial_lh_tmp[x]*inv_evec_ptr[x];
-					}
-                    inv_evec_ptr += nstates;
-					partial_lh[c*nstates+i] = res;
-                    lh_max = max(lh_max, fabs(res));
-				}
-			}
+            }
 
-            // check if one should scale partial likelihoods
-            if (lh_max < SCALING_THRESHOLD) {
-            	if (lh_max == 0.0) {
-            		// for very shitty data
-            		for (c = 0; c < ncat; c++)
-            			memcpy(&partial_lh[c*nstates], &tip_partial_lh[aln->STATE_UNKNOWN*nstates], nstates*sizeof(double));
-					sum_scale += LOG_SCALING_THRESHOLD* 4 * ptn_freq[ptn];
-					//sum_scale += log(lh_max) * ptn_freq[ptn];
-					dad_branch->scale_num[ptn] += 4;
-					int nsite = aln->getNSite();
-					for (i = 0, x = 0; i < nsite && x < ptn_freq[ptn]; i++)
-						if (aln->getPatternID(i) == ptn) {
-							outWarning((string)"Numerical underflow for site " + convertIntToString(i+1));
-							x++;
-						}
-            	} else {
-					// now do the likelihood scaling
-					for (i = 0; i < block; i++) {
-						partial_lh[i] *= SCALING_THRESHOLD_INVER;
-	                    //partial_lh[i] /= lh_max;
-					}
-					// unobserved const pattern will never have underflow
-					sum_scale += LOG_SCALING_THRESHOLD * ptn_freq[ptn];
-					//sum_scale += log(lh_max) * ptn_freq[ptn];
-					dad_branch->scale_num[ptn] += 1;
-            	}
+            // check if one should scale partial likelihoods            
+            if (lh_max == 0.0) {
+                // for very shitty data
+                for (c = 0; c < ncat; c++)
+                    memcpy(&partial_lh[c*nstates], &tip_partial_lh[aln->STATE_UNKNOWN*nstates], nstates*sizeof(double));
+                sum_scale += LOG_SCALING_THRESHOLD* 4 * ptn_freq[ptn];
+                //sum_scale += log(lh_max) * ptn_freq[ptn];
+                dad_branch->scale_num[ptn] += 4;
+                int nsite = aln->getNSite();
+                for (i = 0, x = 0; i < nsite && x < ptn_freq[ptn]; i++)
+                    if (aln->getPatternID(i) == ptn) {
+                        outWarning((string)"Numerical underflow for site " + convertIntToString(i+1));
+                        x++;
+                    }
+            } else if (lh_max < SCALING_THRESHOLD) {
+                // now do the likelihood scaling
+                for (i = 0; i < block; i++) {
+                    partial_lh[i] *= SCALING_THRESHOLD_INVER;
+                    //partial_lh[i] /= lh_max;
+                }
+                // unobserved const pattern will never have underflow
+                sum_scale += LOG_SCALING_THRESHOLD * ptn_freq[ptn];
+                //sum_scale += log(lh_max) * ptn_freq[ptn];
+                dad_branch->scale_num[ptn] += 1;
             }
 
 		}
@@ -591,7 +532,7 @@ double PhyloTree::computeNonrevLikelihoodBranch(PhyloNeighbor *dad_branch, Phylo
     PhyloNeighbor *node_branch = (PhyloNeighbor*) node->findNeighbor(dad);
     if (!central_partial_lh)
         initializeAllPartialLh();
-    if (node->isLeaf()) {
+    if (node->isLeaf() || (dad_branch->direction == AWAYFROM_ROOT && dad != root)) {
     	PhyloNode *tmp_node = dad;
     	dad = node;
     	node = tmp_node;
@@ -600,29 +541,28 @@ double PhyloTree::computeNonrevLikelihoodBranch(PhyloNeighbor *dad_branch, Phylo
     	node_branch = tmp_nei;
     }
     if ((dad_branch->partial_lh_computed & 1) == 0)
-//        computePartialLikelihoodEigen(dad_branch, dad);
-        computePartialLikelihood(dad_branch, dad);
+        computeNonrevPartialLikelihood(dad_branch, dad);
     if ((node_branch->partial_lh_computed & 1) == 0)
-//        computePartialLikelihoodEigen(node_branch, node);
-        computePartialLikelihood(node_branch, node);
+        computeNonrevPartialLikelihood(node_branch, node);
     double tree_lh = node_branch->lh_scale_factor + dad_branch->lh_scale_factor;
     size_t nstates = aln->num_states;
+    size_t nstatesqr = nstates*nstates;
     size_t ncat = site_rate->getNRate();
 
     size_t block = ncat * nstates;
     size_t ptn; // for big data size > 4GB memory required
-    size_t c, i;
+    size_t c, i, x;
     size_t orig_nptn = aln->size();
     size_t nptn = aln->size()+model_factory->unobserved_ptns.size();
-    double *eval = model->getEigenvalues();
-    assert(eval);
 
-    double *val = new double[block];
+    double *trans_mat = new double[block*nstates];
 	for (c = 0; c < ncat; c++) {
 		double len = site_rate->getRate(c)*dad_branch->length;
 		double prop = site_rate->getProp(c);
-		for (i = 0; i < nstates; i++)
-			val[c*nstates+i] = exp(eval[i]*len) * prop;
+        double *this_trans_mat = &trans_mat[c*nstatesqr];
+        model->computeTransMatrix(len, this_trans_mat);
+		for (i = 0; i < nstatesqr; i++)
+			this_trans_mat[i] *= prop;
 	}
 
 	double prob_const = 0.0;
@@ -631,21 +571,33 @@ double PhyloTree::computeNonrevLikelihoodBranch(PhyloNeighbor *dad_branch, Phylo
     if (dad->isLeaf()) {
     	// special treatment for TIP-INTERNAL NODE case
     	double *partial_lh_node = new double[(aln->STATE_UNKNOWN+1)*block];
-    	IntVector states_dad = aln->seq_states[dad->id];
-    	states_dad.push_back(aln->STATE_UNKNOWN);
-    	// precompute information from one tip
-    	for (IntVector::iterator it = states_dad.begin(); it != states_dad.end(); it++) {
-    		double *lh_node = partial_lh_node +(*it)*block;
-    		double *lh_tip = tip_partial_lh + (*it)*nstates;
-    		double *val_tmp = val;
-			for (c = 0; c < ncat; c++) {
-				for (i = 0; i < nstates; i++) {
-					  lh_node[i] = val_tmp[i] * lh_tip[i];
-				}
-				lh_node += nstates;
-				val_tmp += nstates;
-			}
-    	}
+        if (dad == root) {
+            for (c = 0; c < ncat; c++) {
+                double *lh_node = partial_lh_node + c*nstates;
+                model->getStateFrequency(lh_node);
+                double prop = site_rate->getProp(c);
+                for (i = 0; i < nstates; i++)
+                    lh_node[i] *= prop;
+            }
+        } else {
+            IntVector states_dad = aln->seq_states[dad->id];
+            states_dad.push_back(aln->STATE_UNKNOWN);
+            // precompute information from one tip
+            for (IntVector::iterator it = states_dad.begin(); it != states_dad.end(); it++) {
+                double *lh_node = partial_lh_node +(*it)*block;
+                double *lh_tip = tip_partial_lh + (*it)*nstates;
+                double *trans_mat_tmp = trans_mat;
+                for (c = 0; c < ncat; c++) {
+                    for (i = 0; i < nstates; i++) {
+                        lh_node[i] = 0.0;
+                        for (x = 0; x < nstates; x++)
+                            lh_node[i] += trans_mat_tmp[x] * lh_tip[x];
+                        trans_mat_tmp += nstates;
+                    }
+                    lh_node += nstates;
+                }
+            }
+        }
 
     	// now do the real computation
 #ifdef _OPENMP
@@ -655,7 +607,11 @@ double PhyloTree::computeNonrevLikelihoodBranch(PhyloNeighbor *dad_branch, Phylo
 			double lh_ptn = ptn_invar[ptn];
 			double *lh_cat = _pattern_lh_cat + ptn*ncat;
 			double *partial_lh_dad = dad_branch->partial_lh + ptn*block;
-			int state_dad = (ptn < orig_nptn) ? (aln->at(ptn))[dad->id] : model_factory->unobserved_ptns[ptn-orig_nptn];
+			int state_dad;
+            if (dad == root) 
+                state_dad = 0;
+            else
+                state_dad = (ptn < orig_nptn) ? (aln->at(ptn))[dad->id] : model_factory->unobserved_ptns[ptn-orig_nptn];
 			double *lh_node = partial_lh_node + state_dad*block;
 			for (c = 0; c < ncat; c++) {
 				for (i = 0; i < nstates; i++) {
@@ -666,7 +622,7 @@ double PhyloTree::computeNonrevLikelihoodBranch(PhyloNeighbor *dad_branch, Phylo
 				lh_ptn += *lh_cat;
 				lh_cat++;
 			}
-//			assert(lh_ptn > -1e-10);
+			assert(lh_ptn > 0.0);
 			if (ptn < orig_nptn) {
 				lh_ptn = log(fabs(lh_ptn));
 				_pattern_lh[ptn] = lh_ptn;
@@ -690,19 +646,22 @@ double PhyloTree::computeNonrevLikelihoodBranch(PhyloNeighbor *dad_branch, Phylo
 			double *lh_cat = _pattern_lh_cat + ptn*ncat;
 			double *partial_lh_dad = dad_branch->partial_lh + ptn*block;
 			double *partial_lh_node = node_branch->partial_lh + ptn*block;
-			double *val_tmp = val;
+			double *trans_mat_tmp = trans_mat;
 			for (c = 0; c < ncat; c++) {
 				for (i = 0; i < nstates; i++) {
-					*lh_cat +=  val_tmp[i] * partial_lh_node[i] * partial_lh_dad[i];
+                    double lh_state = 0.0;
+                    for (x = 0; x < nstates; x++)
+                        lh_state += trans_mat_tmp[x] * partial_lh_node[x];
+                    *lh_cat += partial_lh_dad[i] * lh_state;
+                    trans_mat_tmp += nstates;
 				}
 				lh_ptn += *lh_cat;
 				partial_lh_node += nstates;
 				partial_lh_dad += nstates;
-				val_tmp += nstates;
 				lh_cat++;
 			}
 
-//			assert(lh_ptn > 0.0);
+			assert(lh_ptn > 0.0);
             if (ptn < orig_nptn) {
 				lh_ptn = log(fabs(lh_ptn));
 				_pattern_lh[ptn] = lh_ptn;
@@ -765,6 +724,6 @@ double PhyloTree::computeNonrevLikelihoodBranch(PhyloNeighbor *dad_branch, Phylo
 
 	assert(!isnan(tree_lh) && !isinf(tree_lh));
 
-    delete [] val;
+    delete [] trans_mat;
     return tree_lh;
 }

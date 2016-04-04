@@ -129,7 +129,7 @@ void ModelNonRev::decomposeRateMatrix() {
     int i, j, k;
     double sum;
     //double m[num_states];
-    double *space = new double[num_states*(num_states+1)];
+    double space[num_states*(num_states+1)];
 
     for (i = 0; i < num_states; i++)
         state_freq[i] = 1.0/num_states;
@@ -159,7 +159,7 @@ void ModelNonRev::decomposeRateMatrix() {
             rate_matrix[i*num_states+j] *= delta;
         }
     }
-    delete [] space;
+//    delete [] space;
 }
 
 

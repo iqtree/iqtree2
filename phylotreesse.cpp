@@ -80,6 +80,16 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk) {
         return;
     }
     
+    if (model_factory && !model_factory->model->isReversible()) {
+        // if nonreversible model
+        computeLikelihoodBranchPointer = &PhyloTree::computeNonrevLikelihoodBranch;
+//        computeLikelihoodDervPointer = &PhyloTree::computeNonrevLikelihoodDerv;
+        computeLikelihoodDervPointer = NULL;
+        computePartialLikelihoodPointer = &PhyloTree::computeNonrevPartialLikelihood;
+        computeLikelihoodFromBufferPointer = NULL;
+        return;        
+    }    
+    
     if (model_factory && model_factory->model->isSiteSpecificModel()) {
         if (sse == LK_EIGEN) {
             computeLikelihoodBranchPointer = &PhyloTree::computeSitemodelLikelihoodBranchEigen;
@@ -456,10 +466,57 @@ void PhyloTree::computeTipPartialLikelihood() {
         return;
     }
     
-	int m, i, x, state, nstates = aln->num_states, nmixtures = model->getNMixtures();
+	int i, state, nstates = aln->num_states;
+	assert(tip_partial_lh);
+	// ambiguous characters
+	int ambi_aa[] = {
+        4+8, // B = N or D
+        32+64, // Z = Q or E
+        512+1024 // U = I or L
+    };
+
+    if (!getModel()->isReversible()) {
+        // nonreversible model
+        memset(tip_partial_lh, 0, (aln->STATE_UNKNOWN)*nstates*sizeof(double));
+        for (state = 0; state < nstates; state++) {
+            tip_partial_lh[state*nstates+state] = 1.0;
+        }
+        double *this_tip_partial_lh = &tip_partial_lh[aln->STATE_UNKNOWN*nstates];
+        // special treatment for unknown char
+        for (i = 0; i < nstates; i++) {
+            this_tip_partial_lh[i] = 1.0;
+        }
+        // special treatment for ambiguous characters
+        switch (aln->seq_type) {
+        case SEQ_DNA:
+            for (state = 4; state < 18; state++) {
+                int cstate = state-nstates+1;
+                this_tip_partial_lh = &tip_partial_lh[state*nstates];
+                for (i = 0; i < nstates; i++) {
+                    if ((cstate) & (1 << i))
+                        this_tip_partial_lh[i] = 1.0;
+                }
+            }
+            break;
+        case SEQ_PROTEIN:
+            for (state = 0; state < sizeof(ambi_aa)/sizeof(int); state++) {
+                this_tip_partial_lh = &tip_partial_lh[(state+20)*nstates];
+                for (i = 0; i < nstates; i++) {
+                    if (ambi_aa[state] & (1 << i))
+                        this_tip_partial_lh[i] = 1.0;
+                }
+            }
+            break;
+        default:
+            break;
+        }
+        return;
+    }
+    
+    int m, x, nmixtures = model->getNMixtures();
 	double *all_inv_evec = model->getInverseEigenvectors();
 	assert(all_inv_evec);
-	assert(tip_partial_lh);
+
 
 	for (state = 0; state < nstates; state++) {
 		double *this_tip_partial_lh = &tip_partial_lh[state*nstates*nmixtures];
@@ -481,13 +538,8 @@ void PhyloTree::computeTipPartialLikelihood() {
 		}
 	}
 
+    // special treatment for ambiguous characters
 	double lh_ambiguous;
-	// ambiguous characters
-	int ambi_aa[] = {
-        4+8, // B = N or D
-        32+64, // Z = Q or E
-        512+1024 // U = I or L
-        };
 	switch (aln->seq_type) {
 	case SEQ_DNA:
 		for (state = 4; state < 18; state++) {
