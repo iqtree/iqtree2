@@ -2153,7 +2153,7 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
             if (nodes1.size() == 0) {
             	assert (nodes2.size() == 0);
             	getAllInnerBranches(nodes1, nodes2, &candidateTrees.getStableSplits());
-            	assert(nodes1.size() == (aln->getNSeq() - 3 - candidateTrees.getStableSplits().size()));
+            	assert(nodes1.size() == (leafNum - 3 - candidateTrees.getStableSplits().size()));
             } else {
             	// exclude stable splits from NNI evaluation
                 numRemoved = removeBranches(nodes1, nodes2, candidateTrees.getStableSplits());

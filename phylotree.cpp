@@ -282,9 +282,13 @@ void PhyloTree::assignLeafNames(Node *node, Node *dad) {
     if (!node)
         node = root;
     if (node->isLeaf()) {
-        node->id = atoi(node->name.c_str());
+        if (rooted && node == root) {
+            assert(node->id == leafNum-1);
+        } else {
+            node->id = atoi(node->name.c_str());
+            node->name = aln->getSeqName(node->id);
+        }
         assert(node->id >= 0 && node->id < leafNum);
-        node->name = aln->getSeqName(node->id);
     }
     FOR_NEIGHBOR_IT(node, dad, it)assignLeafNames((*it)->node, node);
 }
@@ -3239,11 +3243,16 @@ void PhyloTree::computeFuncDerv(double value, double &df, double &ddf) {
 }
 
 void PhyloTree::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool clearLH, int maxNRStep) {
+
+    if (rooted && (node1 == root || node2 == root))
+        return; // does not optimize virtual branch from root
+        
     double negative_lh;
     current_it = (PhyloNeighbor*) node1->findNeighbor(node2);
     assert(current_it);
     current_it_back = (PhyloNeighbor*) node2->findNeighbor(node1);
     assert(current_it_back);
+
     double current_len = current_it->length;
     double ferror, optx;
     assert(current_len >= 0.0);
@@ -3325,8 +3334,6 @@ void PhyloTree::optimizeAllBranches(PhyloNode *node, PhyloNode *dad, int maxNRSt
         if ((*it)->node != (dad)) {
             optimizeAllBranches((PhyloNode*) (*it)->node, node, maxNRStep);
         }
-    if (rooted && (node == root || dad == root)) 
-        return; // do not optimize branch to virtual root
     if (dad)
         optimizeOneBranch(node, dad, true, maxNRStep); // BQM 2014-02-24: true was missing
 
@@ -3779,7 +3786,7 @@ int PhyloTree::fixNegativeBranch(bool force, Node *node, Node *dad) {
         (*it)->node->findNeighbor(node)->length = (*it)->length;
         fixed++;
     }
-    if ((*it)->length <= 0.0) {
+    if ((*it)->length <= 0.0 && (!rooted || node != root)) {
         (*it)->length = params->min_branch_length;
         (*it)->node->findNeighbor(node)->length = (*it)->length;
     }
@@ -3969,6 +3976,13 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
 
 	assert(!node1->isLeaf() && !node2->isLeaf());
     assert(node1->degree() == 3 && node2->degree() == 3);
+    
+    if (((PhyloNeighbor*)node1->findNeighbor(node2))->direction == TOWARD_ROOT) {
+        // swap node1 and node2 if the direction is not right, only for nonreversible models
+        PhyloNode *tmp = node1;
+        node1 = node2;
+        node2 = tmp;
+    }
 
 	int IT_NUM = (params->nni5) ? 6 : 2;
     size_t partial_lh_size = getPartialLhBytes()/sizeof(double);
@@ -4043,7 +4057,10 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
     		if (!node2->findNeighbor((*nniMoves[cnt].node2Nei_it)->node)) outError(__func__);
     	}
     } else {
-        FOR_NEIGHBOR_IT(node1, node2, node1_it) {
+        cnt = 0;
+        FOR_NEIGHBOR_IT(node1, node2, node1_it) 
+        if (((PhyloNeighbor*)*node1_it)->direction != TOWARD_ROOT)
+        {
 			cnt = 0;
 			FOR_NEIGHBOR_IT(node2, node1, node2_it) {
 				//   Initialize the 2 NNI moves
@@ -4053,6 +4070,7 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
 			}
 			break;
         }
+        assert(cnt == 2);
     }
 
     // Initialize node1 and node2 in nniMoves
