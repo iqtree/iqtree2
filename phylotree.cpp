@@ -3419,8 +3419,10 @@ double PhyloTree::optimizeAllBranches(int my_iterations, double tolerance, int m
         	//clearAllPartialLH();
 //        	readTreeString(string_brlen);
         	new_tree_lh = computeLikelihood();
-            if (fabs(new_tree_lh-tree_lh) > 1.0)
+            if (fabs(new_tree_lh-tree_lh) > 1.0) {
                 cout << "new_tree_lh: " << new_tree_lh << "   tree_lh: " << tree_lh << endl;
+                printTree(cout);
+            }
         	assert(fabs(new_tree_lh-tree_lh) < 1.0);
         	return new_tree_lh;
         }
@@ -3729,6 +3731,7 @@ void PhyloTree::computeBioNJ(Params &params, Alignment *alignment, string &dist_
 //    if (root)
 //        freeNode();
     readTreeFile(bionj_file.c_str());
+    
 
     if (non_empty_tree) {
         initializeAllPartialLh();
@@ -5558,4 +5561,30 @@ void PhyloTree::computeBranchDirection(PhyloNode *node, PhyloNode *dad) {
 		((PhyloNeighbor*)*it)->direction = AWAYFROM_ROOT;
 		computeBranchDirection((PhyloNode*)(*it)->node, node);
 	}
+}
+
+void PhyloTree::convertToRooted() {
+    string name;
+    if (params->root)
+        name = params->root;
+    else
+        name = aln->getSeqName(0);
+    Node *node = findNodeName(name);
+    if (!node)
+        outError("Cannot find leaf with name " + name);
+    assert(node->isLeaf());
+    Node *dad = node->neighbors[0]->node;
+    rooted = true;
+    root = newNode(leafNum, ROOT_NAME);
+    Node *root_int = newNode();
+    root->addNeighbor(root_int, 0.0);
+    root_int->addNeighbor(root, 0.0);
+    leafNum++;
+    double newlen = node->neighbors[0]->length/2.0;
+    node->updateNeighbor(dad, root_int, newlen);
+    root_int->addNeighbor(node, newlen);
+    dad->updateNeighbor(node, root_int, newlen);
+    root_int->addNeighbor(dad, newlen);
+    initializeTree();
+    computeBranchDirection();
 }

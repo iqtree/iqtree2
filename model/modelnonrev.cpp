@@ -36,6 +36,10 @@ ModelNonRev::ModelNonRev(PhyloTree *tree, bool count_rates)
     full_name = "Unrestricted model (non-reversible)";
     rate_matrix = new double[num_states*num_states];
     temp_space =  new double[num_states*num_states];
+    if (!tree->rooted) {
+        cout << "Converting unrooted to rooted tree..." << endl;
+        tree->convertToRooted();
+    }
 }
 
 void ModelNonRev::freeMem() {

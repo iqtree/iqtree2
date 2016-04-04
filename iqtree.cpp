@@ -584,6 +584,9 @@ void IQTree::createInitTrees(int nParTrees) {
     }
     double startTime = getRealTime();
     int numDupPars = 0;
+    bool orig_rooted = rooted;
+    rooted = false;
+    
 #ifdef _OPENMP
     StrVector pars_trees;
     if (params->start_tree == STT_PARSIMONY && nParTrees >= 1) {
@@ -596,6 +599,8 @@ void IQTree::createInitTrees(int nParTrees) {
             #pragma omp for
             for (int i = 0; i < nParTrees; i++) {
                 tree.computeParsimonyTree(NULL, aln);
+                if (orig_rooted)
+                    convertToRooted();
                 pars_trees[i] = tree.getTreeString();
             }
         }
@@ -613,19 +618,28 @@ void IQTree::createInitTrees(int nParTrees) {
 					pllInst->start->back, PLL_FALSE, PLL_TRUE, PLL_FALSE,
 					PLL_FALSE, PLL_FALSE, PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
 			curParsTree = string(pllInst->tree_string);
+            rooted = false;
 			PhyloTree::readTreeStringSeqName(curParsTree);
 			wrapperFixNegativeBranch(true);
+            if (orig_rooted)
+                convertToRooted();
 			curParsTree = getTreeString();
         } else if (params->start_tree == STT_RANDOM_TREE) {
             generateRandomTree(YULE_HARDING);
             wrapperFixNegativeBranch(true);
+            rooted = false;
+            if (orig_rooted)
+                convertToRooted();
 			curParsTree = getTreeString();
         } else if (params->start_tree == STT_PARSIMONY) {
             /********* Create parsimony tree using IQ-TREE *********/
 #ifdef _OPENMP
             curParsTree = pars_trees[treeNr-1];
 #else
+            rooted = false;
             computeParsimonyTree(NULL, aln);
+            if (orig_rooted)
+                convertToRooted();
             curParsTree = getTreeString();
 #endif
         } else {

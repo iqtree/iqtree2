@@ -528,6 +528,9 @@ void PhyloTree::computeNonrevLikelihoodDerv(PhyloNeighbor *dad_branch, PhyloNode
 
 //template <const int nstates>
 double PhyloTree::computeNonrevLikelihoodBranch(PhyloNeighbor *dad_branch, PhyloNode *dad) {
+
+    assert(rooted);
+
     PhyloNode *node = (PhyloNode*) dad_branch->node;
     PhyloNeighbor *node_branch = (PhyloNeighbor*) node->findNeighbor(dad);
     if (!central_partial_lh)

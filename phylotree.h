@@ -1716,6 +1716,11 @@ public:
      */
     void computeBranchDirection(PhyloNode *node = NULL, PhyloNode *dad = NULL);
 
+    /**
+        convert from unrooted to rooted tree
+    */
+    void convertToRooted();
+
 protected:
 
     /**
