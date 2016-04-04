@@ -5564,6 +5564,7 @@ void PhyloTree::computeBranchDirection(PhyloNode *node, PhyloNode *dad) {
 }
 
 void PhyloTree::convertToRooted() {
+    assert(leafNum == aln->getNSeq());
     string name;
     if (params->root)
         name = params->root;

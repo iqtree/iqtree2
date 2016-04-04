@@ -591,7 +591,8 @@ void ModelFactory::restoreCheckpoint() {
 }
 
 int ModelFactory::getNParameters() {
-	int df = model->getNDim() + model->getNDimFreq() + site_rate->getNDim() + site_rate->phylo_tree->branchNum;
+	int df = model->getNDim() + model->getNDimFreq() + site_rate->getNDim();
+    df += site_rate->phylo_tree->branchNum - (int)site_rate->phylo_tree->rooted;
 	return df;
 }
 bool ModelFactory::readSiteFreq(Alignment *aln, char* site_freq_file, IntVector &site_model, vector<double*> &freq_vec)
