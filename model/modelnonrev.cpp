@@ -129,7 +129,7 @@ void ModelNonRev::decomposeRateMatrix() {
     int i, j, k;
     double sum;
     //double m[num_states];
-    double space[num_states*(num_states+1)];
+    double *space = new double[num_states*(num_states+1)+1];
 
     for (i = 0; i < num_states; i++)
         state_freq[i] = 1.0/num_states;
@@ -159,7 +159,7 @@ void ModelNonRev::decomposeRateMatrix() {
             rate_matrix[i*num_states+j] *= delta;
         }
     }
-//    delete [] space;
+    delete [] space;
 }
 
 
@@ -255,4 +255,52 @@ double ModelNonRev::computeTrans(double time, int state1, int state2) {
     double trans = trans_matrix[state1*num_states+state2];
     delete [] trans_matrix;
     return trans;
+}
+
+int ModelNonRev::getNDim() { 
+	int ndim = num_params;
+	return ndim;
+}
+
+void ModelNonRev::setBounds(double *lower_bound, double *upper_bound, bool *bound_check) {
+	int i, ndim = getNDim();
+
+	for (i = 1; i <= ndim; i++) {
+		lower_bound[i] = 0.01;
+		upper_bound[i] = 10.0;
+		bound_check[i] = false;
+	}
+}
+
+void ModelNonRev::setVariables(double *variables) {
+	int nrate = getNDim();
+	if (nrate > 0)
+		memcpy(variables+1, rates, nrate*sizeof(double));
+}
+
+bool ModelNonRev::getVariables(double *variables) {
+	int nrate = getNDim();
+	int i;
+	bool changed = false;
+	if (nrate > 0) {
+		for (i = 0; i < nrate; i++)
+			changed |= (rates[i] != variables[i+1]);
+		memcpy(rates, variables+1, nrate * sizeof(double));
+	}
+
+	return changed;
+}
+
+void ModelNonRev::saveCheckpoint() {
+    checkpoint->startStruct("ModelNonRev");
+    CKP_ARRAY_SAVE(num_params+1, rates);
+    checkpoint->endStruct();
+    ModelSubst::saveCheckpoint();
+}
+
+void ModelNonRev::restoreCheckpoint() {
+    ModelSubst::restoreCheckpoint();
+    checkpoint->startStruct("ModelNonRev");
+    CKP_ARRAY_RESTORE(num_params+1, rates);
+    checkpoint->endStruct();
 }

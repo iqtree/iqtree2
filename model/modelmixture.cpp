@@ -1014,7 +1014,7 @@ ModelSubst* createModel(string model_str, ModelsBlock *models_block, StateFreqTy
 //		((ModelGTR*)model)->init(freq_type);
 //	} else
 	if (model_str == "UNREST") {
-		freq_type = FREQ_EQUAL;
+		freq_type = FREQ_ESTIMATE;
 		//params.optimize_by_newton = false;
 		tree->optimize_by_newton = false;
 		model = new ModelNonRev(tree, count_rates);

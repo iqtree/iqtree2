@@ -1000,8 +1000,7 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info,
 		if (!fixed_len)
 			new_lh = tree->optimizeAllBranches(min(i,3), logl_epsilon);  // loop only 3 times in total (previously in v0.9.6 5 times)
 
-        if (model->isReversible()) // temporary: not working with nonreversible models
-            new_lh = optimizeParametersOnly(gradient_epsilon);
+        new_lh = optimizeParametersOnly(gradient_epsilon);
 
 		if (new_lh == 0.0) {
 			if (!fixed_len) cur_lh = tree->optimizeAllBranches(100, logl_epsilon);
