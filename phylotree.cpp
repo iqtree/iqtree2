@@ -4027,6 +4027,7 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
 	for (id = 0; id < IT_NUM; id++) {
 		saved_nei[id] = (*saved_it[id]);
 		*saved_it[id] = new PhyloNeighbor(saved_nei[id]->node, saved_nei[id]->length);
+        ((PhyloNeighbor*)*saved_it[id])->direction = ((PhyloNeighbor*)saved_nei[id])->direction;
 		((PhyloNeighbor*) (*saved_it[id]))->partial_lh = nni_partial_lh + id*partial_lh_size;
 		((PhyloNeighbor*) (*saved_it[id]))->scale_num = nni_scale_num + id*scale_num_size;
 //		((PhyloNeighbor*) (*saved_it[id]))->scale_num = newScaleNum();
