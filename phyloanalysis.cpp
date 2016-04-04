@@ -1062,9 +1062,9 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 				<< endl;
 
     if (params.writeDistImdTrees) {
-        tree.candidateTrees.printTrees();
-        cout << "  Distinct intermediate trees:        " << params.out_prefix <<  ".ctrees" << endl;
-        cout << "  Logl of intermediate trees:        " << params.out_prefix <<  ".clhs" << endl;
+        tree.intermediateTrees.printTrees(string("ditrees"));
+        cout << "  Distinct intermediate trees:   " << params.out_prefix <<  ".ditrees" << endl;
+        cout << "  Logl of intermediate trees:    " << params.out_prefix <<  ".ditrees_lh" << endl;
     }
 
 	if (params.gbo_replicates) {
@@ -1730,7 +1730,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
     }
 
     iqtree.initializeAllPartialLh();
-	double initEpsilon = params.min_iterations == 0 ? params.modelEps : (params.modelEps*10);
+	double initEpsilon = params.min_iterations == 0 ? params.modelEps : (params.modelEps * 10);
 	if (params.test_param)
 		initEpsilon = 0.1;
 
@@ -1799,7 +1799,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 
     // Update best tree
     if (!finishedInitTree) {
-        iqtree.addTreeToCandidateSet(initTree, iqtree.getCurScore(), false, false);
+        iqtree.addTreeToCandidateSet(initTree, iqtree.getCurScore(), false);
         iqtree.printResultTree();
     }
 
@@ -1919,7 +1919,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
             Params::getInstance().tabu = false;
             iqtree.doNNISearch();
             tree = iqtree.optimizeModelParameters(true);
-            iqtree.addTreeToCandidateSet(tree, iqtree.getCurScore(), false, true);
+            iqtree.addTreeToCandidateSet(tree, iqtree.getCurScore(), false);
             iqtree.getCheckpoint()->putBool("finishedModelFinal", true);
             iqtree.saveCheckpoint();
         }

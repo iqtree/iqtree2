@@ -723,7 +723,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.manuel_analytic_approx = false;
     params.leastSquareNNI = false;
     params.ls_var_type = OLS;
-    params.maxCandidates = 200;
+    params.maxCandidates = 20;
     params.popSize = 5;
     params.p_delete = -1;
     params.min_iterations = -1;
@@ -2530,6 +2530,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 			if (strcmp(argv[cnt], "-tabu") == 0) {
                 params.fixStableSplits = true;
 				params.tabu = true;
+                params.maxCandidates = params.numSupportTrees;
 				continue;
 			}
 

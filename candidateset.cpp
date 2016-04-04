@@ -9,13 +9,9 @@
 #include "phylotree.h"
 #include "candidateset.h"
 
-void CandidateSet::init(Alignment *aln) {
+void CandidateSet::init(Alignment *aln, int maxSize) {
     this->aln = aln;
-    if (Params::getInstance().writeDistImdTrees) {
-        maxSize = 100000;
-    } else {
-        maxSize = Params::getInstance().maxCandidates;
-    }
+    this->maxSize = maxSize;
 }
 
 CandidateSet::~CandidateSet() {
@@ -24,8 +20,15 @@ CandidateSet::~CandidateSet() {
 CandidateSet::CandidateSet() : CheckpointFactory() {
     aln = NULL;
     numStableSplits = 0;
-    maxSize = 200;
+    this->maxSize = Params::getInstance().maxCandidates;
 }
+
+void CandidateSet::initTrees(CandidateSet& candSet) {
+    int curMaxSize = this->maxSize;
+    *this = candSet;
+    setMaxSize(curMaxSize);
+}
+
 
 
 void CandidateSet::saveCheckpoint() {
@@ -75,12 +78,11 @@ string CandidateSet::getRandCandTree() {
     if (empty())
         return "";
     int id = random_int(min(Params::getInstance().popSize, (int) size()));
-    for (reverse_iterator it = rbegin(); it != rend(); it++)
-        if (it->second.lopt) {
-            if (id == 0)
-                return it->second.tree;
-            id--;
-        }
+    for (reverse_iterator it = rbegin(); it != rend(); it++) {
+        if (id == 0)
+            return it->second.tree;
+        id--;
+    }
     assert(0);
     return "";
 }
@@ -203,12 +205,16 @@ void CandidateSet::initParentTrees() {
 }
 
 
-int CandidateSet::update(string newTree, double newScore, bool lopt) {
+int CandidateSet::update(string newTree, double newScore) {
+    // Do not update candidate set if the new tree has worse score than the
+    // worst tree in the candidate set
+    if (newScore < begin()->first && size() >= maxSize) {
+        return -2;
+    }
     CandidateTree candidate;
     candidate.score = newScore;
     candidate.topology = convertTreeString(newTree);
     candidate.tree = newTree;
-    candidate.lopt = lopt;
 
     int treePos;
     CandidateSet::iterator candidateTreeIt;
@@ -216,40 +222,25 @@ int CandidateSet::update(string newTree, double newScore, bool lopt) {
     if (treeTopologyExist(candidate.topology)) {
         // update new score if it is better the old score
         double oldScore = topologies[candidate.topology];
-        if (oldScore < (newScore - Params::getInstance().loglh_epsilon)) {
+        if (oldScore < newScore) {
             removeCandidateTree(candidate.topology);
-            // insert tree into candidate set
-            candidateTreeIt = insert(CandidateSet::value_type(newScore, candidate));
+            insert(CandidateSet::value_type(newScore, candidate));
             topologies[candidate.topology] = newScore;
         }
-        treePos = -1;
-    } else {
-        candidateTreeIt = insert(CandidateSet::value_type(newScore, candidate));
-        topologies[candidate.topology] = newScore;
-
-        if (size() > maxSize) {
-            // remove the worst-scoring tree
-            topologies.erase(begin()->second.topology);
-            erase(begin());
-        }
-        treePos = distance(candidateTreeIt, end());
-    }
-    if (treePos != -1) {
-        if (!candidateSplitsHash.empty()) {
-            // A new tree is inserted in the stable tree set
-            if (treePos <= Params::getInstance().numSupportTrees) {
-//				addCandidateSplits(candidateTreeIt->second.tree);
-//				if (candidateSplitsHash.getMaxValue() > params->numSupportTrees) {
-//					assert(candidateSplitsHash.getMaxValue() == params->numSupportTrees + 1);
-//					removeCandidateSplits(getNthBestTree(candidateSplitsHash.getMaxValue()).tree);
-//				}
-                buildTopSplits(Params::getInstance().stableSplitThreshold, Params::getInstance().numSupportTrees);
-//				reportStableSplits();
-            }
-        }
+        assert(topologies.size() == size());
+        return -1;
     }
 
+    candidateTreeIt = insert(CandidateSet::value_type(newScore, candidate));
+    topologies[candidate.topology] = newScore;
+
+    if (size() > maxSize) {
+        removeWorstTree();
+    }
     assert(topologies.size() == size());
+
+    treePos = distance(candidateTreeIt, end());
+
     return treePos;
 }
 
@@ -369,6 +360,8 @@ void CandidateSet::removeCandidateTree(string topology) {
     double treeScore;
     // Find the score of the topology
     treeScore = topologies[topology];
+    // Remove the topology
+    topologies.erase(topology);
     pair<CandidateSet::iterator, CandidateSet::iterator> treeItPair;
     // Find all trees with that score
     treeItPair = equal_range(treeScore);
@@ -383,21 +376,22 @@ void CandidateSet::removeCandidateTree(string topology) {
     assert(removed);
 }
 
-int CandidateSet::buildTopSplits(double supportThreshold, int numSupportTrees) {
+
+void CandidateSet::removeWorstTree() {
+    topologies.erase(begin()->second.topology);
+    erase(begin());
+}
+
+int CandidateSet::inferStableSplits(double supportThreshold) {
     candidateSplitsHash.clear();
-    CandidateSet bestCandidateTrees;
-
-    bestCandidateTrees = getBestCandidateTrees(numSupportTrees);
-    //assert(bestCandidateTrees.size() > 1);
-
-    candidateSplitsHash.setNumTree(bestCandidateTrees.size());
+    candidateSplitsHash.setNumTree(size());
 
     /* Store all splits in the best trees in candidateSplitsHash.
      * The variable numTree in SpitInMap is the number of trees, from which the splits are converted.
      */
     CandidateSet::iterator treeIt;
     //vector<string> taxaNames = aln->getSeqNames();
-    for (treeIt = bestCandidateTrees.begin(); treeIt != bestCandidateTrees.end(); treeIt++) {
+    for (treeIt = begin(); treeIt != end(); treeIt++) {
         MTree tree(treeIt->second.tree, Params::getInstance().is_rooted);
         SplitGraph splits;
         tree.convertSplits(splits);
@@ -473,22 +467,23 @@ CandidateSet CandidateSet::getCandidateTrees(double score) {
     return res;
 }
 
-void CandidateSet::printTrees(int numTree) {
-    if (numTree == 0)
-        numTree = size();
-    int cnt = numTree;
+void CandidateSet::printTrees(string suffix) {
     ofstream outTrees, outLHs;
-    string outTreesFile = string(Params::getInstance().out_prefix) + "." + "ctrees";
-    string outLHsFile = string(Params::getInstance().out_prefix) + "." + "clhs";
+    string outTreesFile = string(Params::getInstance().out_prefix) + "." + suffix;
+    string outLHsFile = string(Params::getInstance().out_prefix) + "." + suffix + "_lh";
     outTrees.open(outTreesFile.c_str());
     outLHs.open(outLHsFile.c_str());
-    for (reverse_iterator rit = rbegin(); rit != rend() && cnt > 0; rit++, cnt--) {
+    outLHs.precision(15);
+    for (reverse_iterator rit = rbegin(); rit != rend(); rit++) {
         outLHs << rit->first << endl;
         outTrees << rit->second.topology << endl;
     }
     outTrees.close();
     outLHs.close();
 }
+
+
+
 
 
 

@@ -32,11 +32,6 @@ struct CandidateTree {
 	 * log-likelihood or parsimony score
 	 */
 	double score;
-
-    /**
-     *  Indicate that this is a NNI-optimal tree
-     */
-    bool lopt;
 };
 
 
@@ -50,9 +45,17 @@ public:
     /**
      * Initialization
      */
-	void init(Alignment* aln);
+	void init(Alignment* aln, int maxSize);
 
-	CandidateSet();
+    CandidateSet();
+
+	CandidateSet(int maxSize);
+
+    /**
+     *  Replace the current candidate trees by those in another candidate set
+     *  @param candSet the candidate set whose trees will be copied over
+     */
+    void initTrees(CandidateSet& candSet);
 
     /**
         save object into the checkpoint
@@ -97,14 +100,12 @@ public:
      * 	    The new tree string (with branch lengths)
      *  @param score
      * 	    The score (ML or parsimony) of \a tree
-     * 	@param lopt
-     * 	    TRUE: This is an NNI-optimal tree
-     * 	    FALSE: Not an NNI-optimal tree
      *  @return
      *      Relative position of the new tree to the current best tree.
-     *      Return -1 if the candidate set is not updated (duplicated tree)
+     *      Return -1 if the tree topology already existed
+     *      Return -2 if the candidate set is not updated
      */
-    int update(string newTree, double newScore, bool lopt = true);
+    int update(string newTree, double newScore);
 
     /**
      *  Get the \a numBestScores best scores in the candidate set
@@ -212,11 +213,9 @@ public:
      *
      *  @param supportThres
      *      a number in (0,1] representing the support value threshold for stable splits
-     *  @param numSupportTrees
-     *      number of best trees used to compute support values
      *  @return number of splits with 100% support value
      */
-    int buildTopSplits(double supportThres, int numSupportTrees);
+    int inferStableSplits(double supportThres);
 
    /**
     *   Get number of stable splits
@@ -249,10 +248,15 @@ public:
     iterator getCandidateTree(string topology);
 
     /**
-     * Remove the \a CandidateTree with topology equal to \a topology
+     * Remove candidate trees with topology equal to the specified topology
      * @param topology
      */
     void removeCandidateTree(string topology);
+
+    /**
+     *  Remove the worst tree in the candidate set
+     */
+    void removeWorstTree();
 
     /* Getter and Setter function */
 	void setAln(Alignment* aln);
@@ -308,14 +312,20 @@ public:
 
     /**
      *  Print candidate trees and their likelihood
-     *  @param numTree number of candidate trees to print, starting from the best tree
      */
-    void printTrees(int numTree = 0);
+    void printTrees(string suffix);
+
+    int getMaxSize() const {
+        return maxSize;
+    }
+
+    void setMaxSize(int maxSize) {
+        this->maxSize = maxSize;
+    }
 
 private:
-
     /**
-     *  Maximum number of trees stored
+     *  Maximum number of candidate trees
      */
     int maxSize;
 
