@@ -1750,7 +1750,7 @@ int countDistinctTrees(const char *filename, bool rooted, IQTree *tree, IntVecto
 				tree->freeNode();
 				tree->readTree(in, rooted);
 				tree->setAlignment(tree->aln);
-				tree->setRootNode((char*)tree->aln->getSeqName(0).c_str());
+				tree->setRootNode(tree->params->root);
 				StringIntMap::iterator it = treels.end();
 				ostringstream ostr;
 				tree->printTree(ostr, WT_TAXON_ID | WT_SORT_TAXA);

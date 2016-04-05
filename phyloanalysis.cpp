@@ -779,13 +779,7 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 						it != stree->end(); it++, part++) {
 					out << "FOR PARTITION " << stree->part_info[part].name
 							<< ":" << endl << endl;
-					string root_name;
-					if (params.root)
-						root_name = params.root;
-					else
-						root_name = (*it)->aln->getSeqName(0);
-					(*it)->root = (*it)->findNodeName(root_name);
-					assert((*it)->root);
+                    (*it)->setRootNode(params.root);
 //					reportTree(out, params, *(*it), (*it)->computeLikelihood(), (*it)->computeLogLVariance(), false);
 					reportTree(out, params, *(*it), stree->part_info[part].cur_score, 0.0, false);
 				}
@@ -1978,6 +1972,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
     // BQM: WHY SETTING THIS ROOT NODE????
 //	iqtree.root = iqtree.findLeafName(iqtree.aln->getSeqName(0));
 //	assert(iqtree.root);
+    iqtree.setRootNode(params.root);
 
 
 	if (!params.pll) {

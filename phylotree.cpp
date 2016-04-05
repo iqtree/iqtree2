@@ -5387,7 +5387,7 @@ int PhyloTree::restoreStableClade(Alignment *original_aln, NodeVector &pruned_ta
     nodeNum = leafNum;
     initializeTree();
     setAlignment(original_aln);
-    root = findNodeName(aln->getSeqName(0));
+    setRootNode(params->root);
     //if (verbose_mode >= VB_MED) drawTree(cout);
 
     return 0;
