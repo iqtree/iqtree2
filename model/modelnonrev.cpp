@@ -20,7 +20,7 @@
 #include "modelnonrev.h"
 //#include "whtest/eigen.h"
 
-ModelNonRev::ModelNonRev(PhyloTree *tree, bool count_rates)
+ModelNonRev::ModelNonRev(PhyloTree *tree, string model_params, bool count_rates)
         : ModelGTR(tree, false)
 {
     num_params = getNumRateEntries() - 1;
@@ -32,6 +32,11 @@ ModelNonRev::ModelNonRev(PhyloTree *tree, bool count_rates)
 	else 
 		for (int i = 0; i <= num_params; i++) 
 			rates[i] = 1.0;
+
+	if (model_params != "") {
+		readRates(model_params);
+	}
+
     name = "UNREST";
     full_name = "Unrestricted model (non-reversible)";
     rate_matrix = new double[num_states*num_states];

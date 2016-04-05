@@ -1017,7 +1017,7 @@ ModelSubst* createModel(string model_str, ModelsBlock *models_block, StateFreqTy
 		freq_type = FREQ_ESTIMATE;
 		//params.optimize_by_newton = false;
 		tree->optimize_by_newton = false;
-		model = new ModelNonRev(tree, count_rates);
+		model = new ModelNonRev(tree, model_params, count_rates);
 		((ModelNonRev*)model)->init(freq_type);
 	} else if (tree->aln->seq_type == SEQ_BINARY) {
 		model = new ModelBIN(model_str.c_str(), model_params, freq_type, freq_params, tree, count_rates);

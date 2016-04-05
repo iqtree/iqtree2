@@ -31,7 +31,7 @@ The general non-reversible model
 class ModelNonRev : public ModelGTR
 {
 public:
-    ModelNonRev(PhyloTree *tree, bool count_rates = true);
+    ModelNonRev(PhyloTree *tree, string model_params, bool count_rates = true);
 
     /** 
         save object into the checkpoint
