@@ -1975,8 +1975,9 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 		iqtree.inputModelPLL2IQTree();
 
 	/* root the tree at the first sequence */
-	iqtree.root = iqtree.findLeafName(iqtree.aln->getSeqName(0));
-	assert(iqtree.root);
+    // BQM: WHY SETTING THIS ROOT NODE????
+//	iqtree.root = iqtree.findLeafName(iqtree.aln->getSeqName(0));
+//	assert(iqtree.root);
 
 
 	if (!params.pll) {

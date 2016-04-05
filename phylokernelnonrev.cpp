@@ -130,16 +130,16 @@ void PhyloTree::computeNonrevPartialLikelihood(PhyloNeighbor *dad_branch, PhyloN
         
     double *eleft = echildren, *eright = echildren + block*nstates;
     
-	if (!left->node->isLeaf() && right->node->isLeaf()) {
+	if ((!left->node->isLeaf() && right->node->isLeaf())) {
 		PhyloNeighbor *tmp = left;
 		left = right;
 		right = tmp;
         double *etmp = eleft;
         eleft = eright;
         eright = etmp;
-	}
-    
-    if (node->degree() >= 3) {
+    }
+
+    if (node->degree() > 3) {
 
         /*--------------------- multifurcating node ------------------*/
     
@@ -153,7 +153,7 @@ void PhyloTree::computeNonrevPartialLikelihood(PhyloNeighbor *dad_branch, PhyloN
                 partial_lh_all[i] = 1.0;
             dad_branch->scale_num[ptn] = 0;
                 
-            double *partial_lh_leaf = partial_lh_leaves;
+            partial_lh_leaf = partial_lh_leaves;
             double *echild = echildren;
 
             FOR_NEIGHBOR_IT(node, dad, it) {
@@ -236,14 +236,31 @@ void PhyloTree::computeNonrevPartialLikelihood(PhyloNeighbor *dad_branch, PhyloN
         double *partial_lh_left = partial_lh_leaves;
         double *partial_lh_right = partial_lh_leaves + (aln->STATE_UNKNOWN+1)*block;
 
+        if (right->node == root) {
+            // swap so that left node is the root
+            PhyloNeighbor *tmp = left;
+            left = right;
+            right = tmp;
+            double *etmp = eleft;
+            eleft = eright;
+            eright = etmp;
+            etmp = partial_lh_left;
+            partial_lh_left = partial_lh_right;
+            partial_lh_right = etmp;
+        }
+    
 		// scale number must be ZERO
 	    memset(dad_branch->scale_num, 0, nptn * sizeof(UBYTE));
 #ifdef _OPENMP
-#pragma omp parallel for private(ptn, c, x, i) schedule(static)
+#pragma omp parallel for private(ptn, i) schedule(static)
 #endif
 		for (ptn = 0; ptn < nptn; ptn++) {
 			double *partial_lh = dad_branch->partial_lh + ptn*block;
-			int state_left = (ptn < orig_ntn) ? (aln->at(ptn))[left->node->id] : model_factory->unobserved_ptns[ptn-orig_ntn];
+			int state_left;
+            if (left->node == root)
+                state_left = 0;
+            else
+                state_left = (ptn < orig_ntn) ? (aln->at(ptn))[left->node->id] : model_factory->unobserved_ptns[ptn-orig_ntn];
 			int state_right = (ptn < orig_ntn) ? (aln->at(ptn))[right->node->id] : model_factory->unobserved_ptns[ptn-orig_ntn];
             double *vleft = partial_lh_left + (state_left*block);
             double *vright = partial_lh_right + (state_right*block);
@@ -266,7 +283,11 @@ void PhyloTree::computeNonrevPartialLikelihood(PhyloNeighbor *dad_branch, PhyloN
 		for (ptn = 0; ptn < nptn; ptn++) {
 			double *partial_lh = dad_branch->partial_lh + ptn*block;
 			double *partial_lh_right = right->partial_lh + ptn*block;
-			int state_left = (ptn < orig_ntn) ? (aln->at(ptn))[left->node->id] : model_factory->unobserved_ptns[ptn-orig_ntn];
+			int state_left;
+            if (left->node == root)
+                state_left = 0;
+            else
+                state_left = (ptn < orig_ntn) ? (aln->at(ptn))[left->node->id] : model_factory->unobserved_ptns[ptn-orig_ntn];
             double *vleft = partial_lh_left + state_left*block;
             double lh_max = 0.0;
             
