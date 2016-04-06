@@ -94,10 +94,10 @@ int matinv (double x[], int n, int m, double space[])
         for (j=0; j < n; j++) {
             if (j == i) continue;
             t1 = t*x[j*m+i];
-            for (k=0; k<=m; k++)  x[j*m+k] -= t1*x[i*m+k];
+            for (k=0; k<m; k++)  x[j*m+k] -= t1*x[i*m+k];
             x[j*m+i] = -t1;
         }
-        for (j=0; j <= m; j++)   x[i*m+j] *= t;
+        for (j=0; j < m; j++)   x[i*m+j] *= t;
         x[i*m+i] = t;
     }                            /* for(i) */
     for (i=n-1; i>=0; i--) {
@@ -138,7 +138,7 @@ void ModelNonRev::decomposeRateMatrix() {
     int i, j, k;
     double sum;
     //double m[num_states];
-    double *space = new double[num_states*(num_states+1)+1];
+    double *space = new double[num_states*(num_states+1)];
 
     for (i = 0; i < num_states; i++)
         state_freq[i] = 1.0/num_states;
@@ -253,8 +253,14 @@ int matexp (double Q[], double t, int n, int TimeSquare, double space[])
 const int TimeSquare = 10;
 
 void ModelNonRev::computeTransMatrix(double time, double *trans_matrix) {
-    memcpy(trans_matrix, rate_matrix, num_states*num_states*sizeof(double));
+    int statesqr = num_states*num_states;
+    memcpy(trans_matrix, rate_matrix, statesqr*sizeof(double));
     matexp(trans_matrix, time, num_states, TimeSquare, temp_space);
+    // 2016-04-05: 2nd version
+//    for (int i = 0; i < statesqr; i++) 
+//        trans_matrix[i] *= time;
+//    double space[NCODE*NCODE*3] = {0};
+//    matexp2(trans_matrix, num_states, 7, 5, space);
 }
 
 double ModelNonRev::computeTrans(double time, int state1, int state2) {
