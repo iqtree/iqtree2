@@ -317,6 +317,44 @@ double ModelNonRev::targetFunk(double x[]) {
 	return -phylo_tree->computeLikelihood();
 }
 
+double ModelNonRev::optimizeParameters(double gradient_epsilon) {
+	int ndim = getNDim();
+	
+	// return if nothing to be optimized
+	if (ndim == 0) return 0.0;
+
+	if (verbose_mode >= VB_MAX)
+		cout << "Optimizing " << name << " model parameters..." << endl;
+
+	double *variables = new double[ndim+1];
+	double *upper_bound = new double[ndim+1];
+	double *lower_bound = new double[ndim+1];
+	bool *bound_check = new bool[ndim+1];
+	double score;
+
+	// by BFGS algorithm
+	setVariables(variables);
+	setBounds(lower_bound, upper_bound, bound_check);
+    if (phylo_tree->params->optimize_alg.find("BFGS-B") == string::npos)
+        score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound, bound_check, max(gradient_epsilon, TOL_RATE));
+    else
+        score = -L_BFGS_B(ndim, variables+1, lower_bound+1, upper_bound+1, max(gradient_epsilon, TOL_RATE));
+
+	bool changed = getVariables(variables);
+    if (changed) {
+        decomposeRateMatrix();
+        phylo_tree->clearAllPartialLH();
+    }
+	
+	delete [] bound_check;
+	delete [] lower_bound;
+	delete [] upper_bound;
+	delete [] variables;
+
+	return score;
+}
+
+
 void ModelNonRev::saveCheckpoint() {
     checkpoint->startStruct("ModelNonRev");
     CKP_ARRAY_SAVE(num_params+1, rates);

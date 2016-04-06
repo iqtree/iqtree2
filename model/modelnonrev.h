@@ -61,6 +61,12 @@ public:
 	virtual double targetFunk(double x[]);
 
 	/**
+		optimize model parameters
+		@return the best likelihood 
+	*/
+	virtual double optimizeParameters(double gradient_epsilon);
+
+	/**
 		@return the number of rate entries, equal to the number of non-diagonal elements
 			of the rate matrix (since model is NOT reversible)
 	*/
