@@ -54,6 +54,13 @@ public:
 	virtual int getNDim();
 
 	/**
+		the target function which needs to be optimized
+		@param x the input vector x
+		@return the function value at x
+	*/
+	virtual double targetFunk(double x[]);
+
+	/**
 		@return the number of rate entries, equal to the number of non-diagonal elements
 			of the rate matrix (since model is NOT reversible)
 	*/

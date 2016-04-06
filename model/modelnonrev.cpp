@@ -306,6 +306,17 @@ bool ModelNonRev::getVariables(double *variables) {
 	return changed;
 }
 
+double ModelNonRev::targetFunk(double x[]) {
+	bool changed = getVariables(x);
+//	if (state_freq[num_states-1] < 1e-4) return 1.0e+12;
+	if (changed) {
+		decomposeRateMatrix();
+		assert(phylo_tree);
+		phylo_tree->clearAllPartialLH();
+	}
+	return -phylo_tree->computeLikelihood();
+}
+
 void ModelNonRev::saveCheckpoint() {
     checkpoint->startStruct("ModelNonRev");
     CKP_ARRAY_SAVE(num_params+1, rates);

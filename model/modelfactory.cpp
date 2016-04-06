@@ -768,7 +768,7 @@ double ModelFactory::optimizeParametersOnly(double gradient_epsilon) {
     } else {
         /* Optimize substitutional and heterogeneity rates independetly */
         if (!joint_optimize) {
-            double model_lh = model->optimizeParameters(gradient_epsilon);
+            double model_lh = model->optimizeParameters(model->isReversible() ? gradient_epsilon : gradient_epsilon/10.0);
             double rate_lh = site_rate->optimizeParameters(gradient_epsilon);
             if (rate_lh == 0.0)
                 logl = model_lh;
