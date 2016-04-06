@@ -6,7 +6,7 @@
  *  Email: nltung@gmail.com
  */
 
-#include "phylotree.h"
+#include "iqtree.h"
 #include "candidateset.h"
 
 void CandidateSet::init(Alignment *aln, int maxSize) {
@@ -481,6 +481,17 @@ void CandidateSet::printTrees(string suffix) {
     outTrees.close();
     outLHs.close();
 }
+
+void CandidateSet::recomputeLoglOfAllTrees(IQTree &treeObject) {
+    vector<string> allTreeStrings = getBestTreeStrings();
+    for (vector<string>:: iterator it = allTreeStrings.begin(); it != allTreeStrings.end(); it++) {
+        treeObject.readTreeString(*it);
+        double score = treeObject.optimizeAllBranches(1);
+        update(treeObject.getTreeString(), score);
+    }
+}
+
+
 
 
 

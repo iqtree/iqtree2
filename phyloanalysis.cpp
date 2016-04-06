@@ -1045,6 +1045,7 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 		if (raxml_format_printed)
 			 cout << "           in RAxML format:      " << params.out_prefix << ".best_scheme" << endl;
 	}
+
 	if (tree.getRate()->getGammaShape() > 0 && params.print_site_rate)
 		cout << "  Gamma-distributed rates:       " << params.out_prefix << ".rate"
 				<< endl;
@@ -1076,21 +1077,23 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 
 	}
 
-	if (params.treeset_file) {
-		cout << "  Evaluated user trees:          " << params.out_prefix << ".trees" << endl;
+    if (params.treeset_file) {
+        cout << "  Evaluated user trees:          " << params.out_prefix << ".trees" << endl;
 
-		if (params.print_tree_lh) {
-		cout << "  Tree log-likelihoods:          " << params.out_prefix << ".treelh" << endl;
-		}
-		if (params.print_site_lh) {
-		cout << "  Site log-likelihoods:          " << params.out_prefix << ".sitelh" << endl;
-		}
-	}
-    	if (params.lmap_num_quartets) {
-		cout << "  Likelihood mapping plot (SVG): " << params.out_prefix << ".lmap.svg" << endl;
-		cout << "  Likelihood mapping plot (EPS): " << params.out_prefix << ".lmap.eps" << endl;
-	}
-	cout << "  Screen log file:               " << params.out_prefix << ".log" << endl;
+        if (params.print_tree_lh) {
+            cout << "  Tree log-likelihoods:          " << params.out_prefix << ".treelh" << endl;
+        }
+        if (params.print_site_lh) {
+            cout << "  Site log-likelihoods:          " << params.out_prefix << ".sitelh" << endl;
+        }
+    }
+
+    if (params.lmap_num_quartets) {
+        cout << "  Likelihood mapping plot (SVG): " << params.out_prefix << ".lmap.svg" << endl;
+        cout << "  Likelihood mapping plot (EPS): " << params.out_prefix << ".lmap.eps" << endl;
+    }
+
+    cout << "  Screen log file:               " << params.out_prefix << ".log" << endl;
 	/*	if (original_model == "WHTEST")
 	 cout <<"  WH-TEST report:           " << params.out_prefix << ".whtest" << endl;*/
 	cout << endl;
@@ -1801,6 +1804,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
     if (!finishedInitTree) {
         iqtree.addTreeToCandidateSet(initTree, iqtree.getCurScore(), false);
         iqtree.printResultTree();
+        iqtree.intermediateTrees.update(iqtree.getTreeString(), iqtree.getCurScore());
     }
 
     // Compute maximum likelihood distance
@@ -2564,6 +2568,11 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
 			tree->insertTaxa(tree->removed_seqs, tree->twin_seqs);
 			tree->printResultTree();
 		}
+		if (Params::getInstance().writeDistImdTrees) {
+            cout << endl;
+            cout << "Recomputing the log-likelihood of the intermediate trees ... " << endl;
+            tree->intermediateTrees.recomputeLoglOfAllTrees(*tree);
+        }
 		reportPhyloAnalysis(params, original_model, *tree, *model_info);
         delete model_info;
 	} else {
