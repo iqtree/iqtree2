@@ -281,8 +281,8 @@ void ModelNonRev::setBounds(double *lower_bound, double *upper_bound, bool *boun
 	int i, ndim = getNDim();
 
 	for (i = 1; i <= ndim; i++) {
-		lower_bound[i] = 0.1;
-		upper_bound[i] = 10.0;
+		lower_bound[i] = 0.01;
+		upper_bound[i] = 100.0;
 		bound_check[i] = false;
 	}
 }
