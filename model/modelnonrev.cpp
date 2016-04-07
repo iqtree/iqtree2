@@ -344,6 +344,7 @@ double ModelNonRev::optimizeParameters(double gradient_epsilon) {
     if (changed) {
         decomposeRateMatrix();
         phylo_tree->clearAllPartialLH();
+        score = phylo_tree->computeLikelihood();
     }
 	
 	delete [] bound_check;
