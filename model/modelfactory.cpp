@@ -820,6 +820,8 @@ double ModelFactory::optimizeAllParameters(double gradient_epsilon) {
     model->decomposeRateMatrix();
     site_rate->phylo_tree->clearAllPartialLH();
 
+    score = site_rate->phylo_tree->computeLikelihood();
+
     delete [] bound_check;
     delete [] lower_bound;
     delete [] upper_bound;

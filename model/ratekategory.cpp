@@ -86,6 +86,7 @@ double RateKategory::optimizeParameters(double gradient_epsilon)
 	getVariables(variables);
 	//sort(rates, rates+ncategory);
 	phylo_tree->clearAllPartialLH();
+    score = phylo_tree->computeLikelihood();
 	
 	delete [] bound_check;
 	delete [] lower_bound;

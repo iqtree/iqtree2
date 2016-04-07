@@ -137,6 +137,8 @@ double PartitionModelPlen::optimizeParameters(bool fixed_len, bool write_info, d
             if (tree->part_info[part].cur_score == 0.0)
                 tree->part_info[part].cur_score = tree->at(part)->computeLikelihood();
         	cur_lh += tree->part_info[part].cur_score;
+            
+            
 
         	// normalize rates s.t. branch lengths are #subst per site
         	double mean_rate = tree->at(part)->getRate()->rescaleRates();
