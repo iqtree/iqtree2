@@ -179,6 +179,7 @@ double RateGammaInvar::optimizeParameters(double gradient_epsilon) {
 	getVariables(variables);
 
 	phylo_tree->clearAllPartialLH();
+    score = phylo_tree->computeLikelihood();
 
 	delete [] bound_check;
 	delete [] lower_bound;
