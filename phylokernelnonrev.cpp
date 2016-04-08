@@ -19,6 +19,7 @@ void PhyloTree::computeNonrevPartialLikelihood(PhyloNeighbor *dad_branch, PhyloN
     dad_branch->partial_lh_computed |= 1;
     PhyloNode *node = (PhyloNode*)(dad_branch->node);
 
+    assert(dad_branch->direction != UNDEFINED_DIRECTION);
 
     size_t nstates = aln->num_states;
     size_t nptn = aln->size()+model_factory->unobserved_ptns.size();
