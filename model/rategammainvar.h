@@ -95,6 +95,11 @@ public:
 	*/
 	virtual double optimizeParameters(double gradient_epsilon);
 
+	/**
+        optimize rate parameters using EM algorithm
+        @return log-likelihood of optimized parameters
+    */
+	double optimizeWithEM();
 
 	/**
 		return the number of dimensions
@@ -160,6 +165,8 @@ private:
 		current parameter to optimize. 0 if gamma shape or 1 if p_invar.
 	*/
 	int cur_optimize;
+
+	double optimizeWithEM(double gradient_epsilon);
 };
 
 #endif

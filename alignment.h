@@ -268,6 +268,11 @@ public:
     }
 
     /**
+     *  @return the positions of the constant patterns
+     */
+    vector<int> getContantPatternPos();
+
+    /**
      * @param pattern_index (OUT) vector of size = alignment length storing pattern index of all sites
      */
     virtual void getSitePatternIndex(IntVector &pattern_index) {

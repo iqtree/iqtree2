@@ -114,6 +114,11 @@ double RateGammaInvar::optimizeParameters(double gradient_epsilon) {
 	if (ndim == 0)
 		return phylo_tree->computeLikelihood();
 
+	if (verbose_mode >= VB_MED)
+		cout << "Optimizing " << name << " model parameters by " << optimize_alg << " algorithm..." << endl;
+
+	if (optimize_alg.find("EM") != string::npos && phylo_tree->getModelFactory()->unobserved_ptns.empty())
+		return optimizeWithEM(gradient_epsilon);
 
 	if (!joint_optimize) {
 		double lh = phylo_tree->computeLikelihood();
@@ -218,4 +223,27 @@ int RateGammaInvar::computePatternRates(DoubleVector &pattern_rates, IntVector &
 	}
     return ncategory+1;
 }
+
+double RateGammaInvar::optimizeWithEM(double gradient_epsilon) {
+	// optimize alhpa
+    double lh = phylo_tree->computeLikelihood();
+    cur_optimize = 0;
+    double gamma_lh = RateGamma::optimizeParameters(gradient_epsilon);
+    assert(gamma_lh >= lh-0.1);
+
+    double p_invar = getPInvar();
+
+    // compute the pattern likelihood for invariant sites
+    phylo_tree->computePatternLhCat(WSL_RATECAT);
+    phylo_tree->computePtnInvar();
+
+    // compute the posterior probabilities for each sites
+    vector<int> constPtnPos = phylo_tree->aln->getContantPatternPos();
+    vector<double> postProbConst;
+    postProbConst.reserve(constPtnPos.size());
+
+
+}
+
+
 

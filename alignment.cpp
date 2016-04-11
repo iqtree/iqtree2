@@ -3472,3 +3472,14 @@ double Alignment::multinomialProb (IntVector &pattern_freq)
     }
     return (fac - sumFac + sumProb);
 }
+
+vector<int> Alignment::getContantPatternPos() {
+    vector<int> constPtnPos;
+    for (int pos = 0; pos < size(); pos++) {
+        if (this->at(pos).is_const)
+            constPtnPos.push_back(pos);
+    }
+    return constPtnPos;
+}
+
+
