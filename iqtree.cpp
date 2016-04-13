@@ -1720,8 +1720,8 @@ extern pllUFBootData * pllUFBootDataPtr;
 string IQTree::optimizeModelParameters(bool printInfo, double logl_epsilon) {
 	if (logl_epsilon == -1)
 		logl_epsilon = params->modeps;
-//    if (params->test_param)
-//        logl_epsilon = 1.0;
+    if (params->test_param)
+        logl_epsilon = logl_epsilon * 10;
     cout << "Estimate model parameters (epsilon = " << logl_epsilon << ")" << endl;
 	double stime = getRealTime();
 	string newTree;

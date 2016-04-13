@@ -120,8 +120,8 @@ double RateGammaInvar::optimizeParameters(double gradient_epsilon) {
     if (verbose_mode >= VB_MED)
         cout << "Optimizing " << name << " model parameters by " << optimize_alg << " algorithm..." << endl;
 
-	if (optimize_alg.find("EM") != string::npos) {
-        return optimizeWithEM(gradient_epsilon);
+	if (optimize_alg.find("EM_RR") != string::npos) {
+        return randomRestartOptimization(gradient_epsilon);
     } else if (optimize_alg.find("Brent") != string::npos) {
 		double lh = phylo_tree->computeLikelihood();
 		cur_optimize = 0;
@@ -133,8 +133,8 @@ double RateGammaInvar::optimizeParameters(double gradient_epsilon) {
 		assert(invar_lh >= gamma_lh-0.1);
         cur_optimize = 0;
         return invar_lh;
-	} else if (optimize_alg.find("EM_RR") != string::npos) {
-        randomRestartOptimization(gradient_epsilon);
+	} else if (optimize_alg.find("EM") != string::npos) {
+        return optimizeWithEM(gradient_epsilon);
     } else if (optimize_alg.find("BFGS") != string::npos) {
         //if (freq_type == FREQ_ESTIMATE) scaleStateFreq(false);
         double *variables = new double[ndim+1];
@@ -201,55 +201,37 @@ double RateGammaInvar::optimizeWithEM(double gradient_epsilon) {
     size_t ncat = getNRate();
     size_t nptn = phylo_tree->aln->getNPattern();
     size_t nSites = phylo_tree->aln->getNSite();
-    //setPInvar(0.5);
-    //phylo_tree->clearAllPartialLH();
-    double curPInvar = getPInvar();
 
-    for (int step = 0; step < ncat + 1; step++) {
-        // Compute the pattern likelihood for each category (invariable and variable category)
-        phylo_tree->computePatternLhCat(WSL_RATECAT);
-        phylo_tree->computePtnInvar();
+    // Compute the pattern likelihood for each category (invariable and variable category)
+    phylo_tree->computePatternLhCat(WSL_RATECAT);
+    phylo_tree->computePtnInvar();
 
-        double ppInvar = 0;
-        for (size_t ptn = 0; ptn < nptn; ptn++) {
-            double *this_lk_cat = phylo_tree->_pattern_lh_cat + ptn * ncat;
-            double lk_ptn = 0.0;
-            for (size_t cat = 0; cat < ncat; cat++) {
-                lk_ptn += this_lk_cat[cat];
-            }
-            if (phylo_tree->ptn_invar[ptn] != 0) {
-                lk_ptn += phylo_tree->ptn_invar[ptn];
-                assert(lk_ptn != 0.0);
-                ppInvar += (phylo_tree->ptn_invar[ptn]) * phylo_tree->ptn_freq[ptn]/ lk_ptn;
-            }
+    double ppInvar = 0;
+    for (size_t ptn = 0; ptn < nptn; ptn++) {
+        double *this_lk_cat = phylo_tree->_pattern_lh_cat + ptn * ncat;
+        double lk_ptn = 0.0;
+        for (size_t cat = 0; cat < ncat; cat++) {
+            lk_ptn += this_lk_cat[cat];
         }
-        double newPInvar = ppInvar / nSites;
-        assert(newPInvar <= 1.0);
-        if (fabs(newPInvar - curPInvar) < 1e-4) {
-            return curlh;
-        } else {
-            curPInvar = newPInvar;
+        if (phylo_tree->ptn_invar[ptn] != 0) {
+            lk_ptn += phylo_tree->ptn_invar[ptn];
+            assert(lk_ptn != 0.0);
+            ppInvar += (phylo_tree->ptn_invar[ptn]) * phylo_tree->ptn_freq[ptn] / lk_ptn;
         }
-        setPInvar(newPInvar);
-        cur_optimize = 0;
-        double gammaShape = getGammaShape();
-        //double treeLH = phylo_tree->computeLikelihood();
-        double gamma_lh = RateGamma::optimizeParameters(gradient_epsilon);
-        //cout << " curlh = " << curlh << " / newlh = " << gamma_lh << " / p_inv = " << newPInvar << " / new_gamma = " << getGammaShape() << endl;
-        //cout.flush();
-        //assert(gamma_lh >= curlh - 1.0);
-        //cur_optimize = 1;
-        if (fabs(gamma_lh - curlh) < 0.1 || gamma_lh < curlh) {
-            if (gamma_lh > curlh) {
-                curlh = gamma_lh;
-            } else {
-                setGammaShape(gammaShape);
-                phylo_tree->clearAllPartialLH();
-            }
-            break;
-        } else {
-            curlh = gamma_lh;
-        }
+    }
+    double newPInvar = ppInvar / nSites;
+    assert(newPInvar <= 1.0);
+    setPInvar(newPInvar);
+    phylo_tree->clearAllPartialLH();
+    cur_optimize = 0;
+    double oldGammaShape = getGammaShape();
+    double gamma_lh = RateGamma::optimizeParameters(gradient_epsilon);
+
+    if (gamma_lh < curlh) {
+        // Restore the preivous gamma shape value
+        setGammaShape(oldGammaShape);
+        phylo_tree->clearAllPartialLH();
+        curlh = phylo_tree->computeLikelihood();
     }
     return curlh;
 }
