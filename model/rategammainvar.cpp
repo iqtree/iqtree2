@@ -195,6 +195,7 @@ double RateGammaInvar::optimizeWithEM(double gradient_epsilon) {
     double curlh = phylo_tree->computeLikelihood();
     size_t ncat = getNRate();
     size_t nptn = phylo_tree->aln->getNPattern();
+    size_t nSites = phylo_tree->aln->getNSite();
     double curPInvar = getPInvar();
 
     for (int step = 0; step < ncat + 1; step++) {
@@ -215,15 +216,16 @@ double RateGammaInvar::optimizeWithEM(double gradient_epsilon) {
                 ppInvar += (phylo_tree->ptn_invar[ptn] * curPInvar) * phylo_tree->ptn_freq[ptn]/ lk_ptn;
             }
         }
-        double newPInvar = ppInvar / nptn;
+        double newPInvar = ppInvar / nSites;
+        assert(newPInvar <= 1.0);
         setPInvar(newPInvar);
         cur_optimize = 0;
         double gammaShape = getGammaShape();
         phylo_tree->clearAllPartialLH();
         double gamma_lh = RateGamma::optimizeParameters(gradient_epsilon);
-        cout << "gamma_lh = " << gamma_lh << " / p_inv = " << newPInvar << " / new_gamma = " << getGammaShape() << endl;
+        cout << "gamma_lh = " << gamma_lh << " / curlh = " << curlh << " / p_inv = " << newPInvar << " / new_gamma = " << getGammaShape() << endl;
         cout.flush();
-        assert(gamma_lh >= curlh);
+        assert(gamma_lh >= curlh - 0.1);
         cur_optimize = 1;
         if (fabs(gamma_lh - curlh) < 0.1 || gamma_lh < curlh) {
             if (gamma_lh > curlh) {
