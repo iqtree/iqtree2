@@ -239,11 +239,6 @@ protected:
 	*/
 	bool cut_median;
 
-	/**
-	 *
-	 */
-	string optimize_alg;
-
 public:
 
 	//Normally, beta is assigned equal to alpha

@@ -20,11 +20,11 @@
 #include "rategammainvar.h"
 
 RateGammaInvar::RateGammaInvar(int ncat, double shape, bool median,
-		double p_invar_sites, bool simultaneous, PhyloTree *tree) :
+		double p_invar_sites, string optimize_alg, PhyloTree *tree) :
 		RateInvar(p_invar_sites, tree), RateGamma(ncat, shape, median, tree) {
 	name = "+I" + name;
 	full_name = "Invar+" + full_name;
-	joint_optimize = simultaneous;
+    this->optimize_alg = optimize_alg;
     cur_optimize = 0;
 	computeRates();
 }
@@ -114,84 +114,51 @@ double RateGammaInvar::optimizeParameters(double gradient_epsilon) {
 	if (ndim == 0)
 		return phylo_tree->computeLikelihood();
 
-	if (verbose_mode >= VB_MED)
-		cout << "Optimizing " << name << " model parameters by " << optimize_alg << " algorithm..." << endl;
+    if (verbose_mode >= VB_MED)
+        cout << "Optimizing " << name << " model parameters by " << optimize_alg << " algorithm..." << endl;
 
-	if (optimize_alg.find("EM") != string::npos && phylo_tree->getModelFactory()->unobserved_ptns.empty())
-		return optimizeWithEM(gradient_epsilon);
-
-	if (!joint_optimize) {
+	if (optimize_alg.find("EM") != string::npos) {
+        return optimizeWithEM(gradient_epsilon);
+    } else if (optimize_alg.find("Brent") != string::npos) {
 		double lh = phylo_tree->computeLikelihood();
 		cur_optimize = 0;
-		double gamma_lh;
-		if (Params::getInstance().testAlpha) {
-			gamma_lh = RateGamma::optimizeParameters(gradient_epsilon, 0.05, 10);
-		} else {
-            gamma_lh = RateGamma::optimizeParameters(gradient_epsilon);
-        }
+		double gamma_lh = RateGamma::optimizeParameters(gradient_epsilon);
 		assert(gamma_lh >= lh-0.1);
 		cur_optimize = 1;
 		double invar_lh = -DBL_MAX;
         invar_lh = RateInvar::optimizeParameters(gradient_epsilon);
 		assert(invar_lh >= gamma_lh-0.1);
-		//lh = tree_lh;
-
-		//assert(gamma_lh >= invar_lh - 0.1);
-//		phylo_tree->clearAllPartialLH();
-//		return gamma_lh;
         cur_optimize = 0;
         return invar_lh;
-	}
+	} else if (optimize_alg.find("BFGS") != string::npos) {
+        //if (freq_type == FREQ_ESTIMATE) scaleStateFreq(false);
+        double *variables = new double[ndim+1];
+        double *upper_bound = new double[ndim+1];
+        double *lower_bound = new double[ndim+1];
+        bool *bound_check = new bool[ndim+1];
+        double score;
 
-/*
-	if (!joint_optimize) {
-//		double lh = phylo_tree->computeLikelihood();
-		cur_optimize = 1;
-		double invar_lh = -DBL_MAX;
-		invar_lh = RateInvar::optimizeParameters(gradient_epsilon);
-//		assert(tree_lh >= lh-0.1);
-//		lh = tree_lh;
-		cur_optimize = 0;
-		double gamma_lh;
-		if (Params::getInstance().testAlpha) {
-			gamma_lh = RateGamma::optimizeParameters(gradient_epsilon, 0.05, 10);
-		} else {
-			gamma_lh = RateGamma::optimizeParameters(gradient_epsilon);
-		}
-		//assert(gamma_lh >= invar_lh - 0.1);
-		phylo_tree->clearAllPartialLH();
-		return gamma_lh;
-	}
-*/
+        // by BFGS algorithm
+        setVariables(variables);
+        setBounds(lower_bound, upper_bound, bound_check);
 
-	if (verbose_mode >= VB_MAX)
-		cout << "Optimizing " << name << " model parameters by BFGS..." << endl;
+        score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound, bound_check, max(gradient_epsilon, TOL_GAMMA_SHAPE));
 
-	//if (freq_type == FREQ_ESTIMATE) scaleStateFreq(false);
+        getVariables(variables);
 
-	double *variables = new double[ndim+1];
-	double *upper_bound = new double[ndim+1];
-	double *lower_bound = new double[ndim+1];
-	bool *bound_check = new bool[ndim+1];
-	double score;
+        phylo_tree->clearAllPartialLH();
+        score = phylo_tree->computeLikelihood();
 
-	// by BFGS algorithm
-	setVariables(variables);
-	setBounds(lower_bound, upper_bound, bound_check);
+        delete [] bound_check;
+        delete [] lower_bound;
+        delete [] upper_bound;
+        delete [] variables;
 
-	score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound, bound_check, max(gradient_epsilon, TOL_GAMMA_SHAPE));
-
-	getVariables(variables);
-
-	phylo_tree->clearAllPartialLH();
-    score = phylo_tree->computeLikelihood();
-
-	delete [] bound_check;
-	delete [] lower_bound;
-	delete [] upper_bound;
-	delete [] variables;
-
-	return score;
+        return score;
+    } else {
+        string errMsg = "Unknown optimization algorithm: " + optimize_alg;
+        outError(errMsg.c_str());
+    }
 }
 
 
@@ -225,24 +192,51 @@ int RateGammaInvar::computePatternRates(DoubleVector &pattern_rates, IntVector &
 }
 
 double RateGammaInvar::optimizeWithEM(double gradient_epsilon) {
-	// optimize alhpa
-    double lh = phylo_tree->computeLikelihood();
-    cur_optimize = 0;
-    double gamma_lh = RateGamma::optimizeParameters(gradient_epsilon);
-    assert(gamma_lh >= lh-0.1);
+    double curlh = phylo_tree->computeLikelihood();
+    size_t ncat = getNRate();
+    size_t nptn = phylo_tree->aln->getNPattern();
+    double curPInvar = getPInvar();
 
-    double p_invar = getPInvar();
+    for (int step = 0; step < ncat + 1; step++) {
+        // Compute the pattern likelihood for each category (invariable and variable category)
+        phylo_tree->computePatternLhCat(WSL_RATECAT);
+        phylo_tree->computePtnInvar();
 
-    // compute the pattern likelihood for invariant sites
-    phylo_tree->computePatternLhCat(WSL_RATECAT);
-    phylo_tree->computePtnInvar();
-
-    // compute the posterior probabilities for each sites
-    vector<int> constPtnPos = phylo_tree->aln->getContantPatternPos();
-    vector<double> postProbConst;
-    postProbConst.reserve(constPtnPos.size());
-
-
+        double ppInvar = 0;
+        for (size_t ptn = 0; ptn < nptn; ptn++) {
+            double *this_lk_cat = phylo_tree->_pattern_lh_cat + ptn * ncat;
+            double lk_ptn = 0.0;
+            for (size_t cat = 0; cat < ncat; cat++) {
+                lk_ptn += this_lk_cat[cat];
+            }
+            if (phylo_tree->ptn_invar[ptn] != 0) {
+                lk_ptn += phylo_tree->ptn_invar[ptn];
+                assert(lk_ptn != 0.0);
+                ppInvar += (phylo_tree->ptn_invar[ptn] * curPInvar) * phylo_tree->ptn_freq[ptn]/ lk_ptn;
+            }
+        }
+        double newPInvar = ppInvar / nptn;
+        setPInvar(newPInvar);
+        cur_optimize = 0;
+        double gammaShape = getGammaShape();
+        phylo_tree->clearAllPartialLH();
+        double gamma_lh = RateGamma::optimizeParameters(gradient_epsilon);
+        cout << "gamma_lh = " << gamma_lh << " / p_inv = " << newPInvar << " / new_gamma = " << getGammaShape() << endl;
+        cout.flush();
+        assert(gamma_lh >= curlh);
+        cur_optimize = 1;
+        if (fabs(gamma_lh - curlh) < 0.1 || gamma_lh < curlh) {
+            if (gamma_lh > curlh) {
+                curlh = gamma_lh;
+            } else {
+                setGammaShape(gammaShape);
+            }
+            break;
+        } else {
+            curlh = gamma_lh;
+        }
+    }
+    return curlh;
 }
 
 

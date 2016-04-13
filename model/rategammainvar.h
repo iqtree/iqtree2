@@ -37,7 +37,7 @@ public:
 		@param tree associated phylogenetic tree
 		@param testAlpha turn on option for doing random restart optimization of alpha and p_invar
 	*/
-    RateGammaInvar(int ncat, double shape, bool median, double p_invar_sites, bool simultaneous, PhyloTree *tree);
+    RateGammaInvar(int ncat, double shape, bool median, double p_invar_sites, string optimize_alg, PhyloTree *tree);
 
     /**
         save object into the checkpoint
@@ -126,7 +126,7 @@ public:
 	virtual void writeParameters(ostream &out);
 
 	/** TRUE to jointly optimize gamma shape and p_invar using BFGS, default: FALSE */
-	bool joint_optimize;
+	//bool joint_optimize;
 
 	virtual void setNCategory(int ncat);
 
@@ -155,11 +155,10 @@ protected:
 	virtual bool getVariables(double *variables);
 
 private:
-
-	/**
-	 *  TRUE to turn on random restart optimization for estimating alpha and p_invar
-	 */
-//	bool rr_ai;
+    /**
+     *  Determine which algorithm is used to optimized p_inv and alpha
+     */
+	string optimize_alg;
 
 	/**
 		current parameter to optimize. 0 if gamma shape or 1 if p_invar.

@@ -1201,7 +1201,7 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 	rate_class[0] = new RateHeterogeneity();
 	rate_class[1] = new RateInvar(-1, NULL);
 	rate_class[2] = new RateGamma(params.num_rate_cats, params.gamma_shape, params.gamma_median, NULL);
-	rate_class[3] = new RateGammaInvar(params.num_rate_cats, params.gamma_shape, params.gamma_median, -1, params.optimize_model_rate_joint, NULL);
+	rate_class[3] = new RateGammaInvar(params.num_rate_cats, params.gamma_shape, params.gamma_median, -1, params.optimize_alg_gammai, NULL);
     
     RateFree ** rate_class_free = new RateFree*[params.max_rate_cats-1];
     
