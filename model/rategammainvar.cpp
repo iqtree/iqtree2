@@ -1,6 +1,8 @@
 /***************************************************************************
- *   Copyright (C) 2009 by BUI Quang Minh   *
- *   minh.bui@univie.ac.at   *
+ *   Copyright (C) 2009-2015 by                                            *
+ *   BUI Quang Minh <minh.bui@univie.ac.at>                                *
+ *   Lam-Tung Nguyen <nltung@gmail.com>                                    *
+ *                                                                         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -20,12 +22,13 @@
 #include "rategammainvar.h"
 
 RateGammaInvar::RateGammaInvar(int ncat, double shape, bool median,
-		double p_invar_sites, string optimize_alg, PhyloTree *tree) :
+		double p_invar_sites, string optimize_alg, PhyloTree *tree, bool testParamDone) :
 		RateInvar(p_invar_sites, tree), RateGamma(ncat, shape, median, tree) {
 	name = "+I" + name;
 	full_name = "Invar+" + full_name;
     this->optimize_alg = optimize_alg;
     cur_optimize = 0;
+    this->testParamDone = testParamDone;
 	computeRates();
 }
 
@@ -130,7 +133,9 @@ double RateGammaInvar::optimizeParameters(double gradient_epsilon) {
 		assert(invar_lh >= gamma_lh-0.1);
         cur_optimize = 0;
         return invar_lh;
-	} else if (optimize_alg.find("BFGS") != string::npos) {
+	} else if (optimize_alg.find("EM_RR") != string::npos) {
+        randomRestartOptimization(gradient_epsilon);
+    } else if (optimize_alg.find("BFGS") != string::npos) {
         //if (freq_type == FREQ_ESTIMATE) scaleStateFreq(false);
         double *variables = new double[ndim+1];
         double *upper_bound = new double[ndim+1];
@@ -196,6 +201,8 @@ double RateGammaInvar::optimizeWithEM(double gradient_epsilon) {
     size_t ncat = getNRate();
     size_t nptn = phylo_tree->aln->getNPattern();
     size_t nSites = phylo_tree->aln->getNSite();
+    //setPInvar(0.5);
+    //phylo_tree->clearAllPartialLH();
     double curPInvar = getPInvar();
 
     for (int step = 0; step < ncat + 1; step++) {
@@ -213,25 +220,31 @@ double RateGammaInvar::optimizeWithEM(double gradient_epsilon) {
             if (phylo_tree->ptn_invar[ptn] != 0) {
                 lk_ptn += phylo_tree->ptn_invar[ptn];
                 assert(lk_ptn != 0.0);
-                ppInvar += (phylo_tree->ptn_invar[ptn] * curPInvar) * phylo_tree->ptn_freq[ptn]/ lk_ptn;
+                ppInvar += (phylo_tree->ptn_invar[ptn]) * phylo_tree->ptn_freq[ptn]/ lk_ptn;
             }
         }
         double newPInvar = ppInvar / nSites;
         assert(newPInvar <= 1.0);
+        if (fabs(newPInvar - curPInvar) < 1e-4) {
+            return curlh;
+        } else {
+            curPInvar = newPInvar;
+        }
         setPInvar(newPInvar);
         cur_optimize = 0;
         double gammaShape = getGammaShape();
-        phylo_tree->clearAllPartialLH();
+        //double treeLH = phylo_tree->computeLikelihood();
         double gamma_lh = RateGamma::optimizeParameters(gradient_epsilon);
-        cout << "gamma_lh = " << gamma_lh << " / curlh = " << curlh << " / p_inv = " << newPInvar << " / new_gamma = " << getGammaShape() << endl;
-        cout.flush();
-        assert(gamma_lh >= curlh - 0.1);
-        cur_optimize = 1;
+        //cout << " curlh = " << curlh << " / newlh = " << gamma_lh << " / p_inv = " << newPInvar << " / new_gamma = " << getGammaShape() << endl;
+        //cout.flush();
+        //assert(gamma_lh >= curlh - 1.0);
+        //cur_optimize = 1;
         if (fabs(gamma_lh - curlh) < 0.1 || gamma_lh < curlh) {
             if (gamma_lh > curlh) {
                 curlh = gamma_lh;
             } else {
                 setGammaShape(gammaShape);
+                phylo_tree->clearAllPartialLH();
             }
             break;
         } else {
@@ -240,6 +253,58 @@ double RateGammaInvar::optimizeWithEM(double gradient_epsilon) {
     }
     return curlh;
 }
+
+double RateGammaInvar::randomRestartOptimization(double gradient_epsilon) {
+    if (testParamDone) {
+        return optimizeWithEM(gradient_epsilon);
+    }
+    double frac_const = phylo_tree->aln->frac_const_sites;
+    double bestLogl = phylo_tree->getCurScore();
+    double bestAlpha = 0.0;
+    double bestPInvar = 0.0;
+    double testInterval = (frac_const - MIN_PINVAR*2) / 10;
+    double initPInv = MIN_PINVAR;
+    double initAlpha = getGammaShape();
+
+    while (initPInv <= frac_const) {
+        if (verbose_mode >= VB_MED) {
+            cout << endl;
+            cout << "Testing with init. pinv = " << initPInv << " / init. alpha = " << initAlpha << endl;
+        }
+        setPInvar(initPInv);
+        setGammaShape(initAlpha);
+        phylo_tree->clearAllPartialLH();
+        double logl = optimizeWithEM(gradient_epsilon);
+        double estAlpha = getGammaShape();
+        double estPInv = getPInvar();
+
+        if (verbose_mode >= VB_MED) {
+            cout << "Est. alpha: " << estAlpha << " / Est. pinv: " << estPInv
+            << " / Logl: " << logl << endl;
+        }
+
+        initPInv = initPInv + testInterval;
+
+        if (logl > bestLogl) {
+            bestLogl = logl;
+            bestAlpha = estAlpha;
+            bestPInvar = estPInv;
+        }
+    }
+
+    if (verbose_mode >= VB_MED) {
+        cout << "Best gamma shape: " << bestAlpha << " / best p_inv: " << bestPInvar
+        << " / logl: " << bestLogl << endl;
+    }
+
+    setPInvar(bestPInvar);
+    setGammaShape(bestAlpha);
+    phylo_tree->clearAllPartialLH();
+    testParamDone = true;
+    return phylo_tree->computeLikelihood();
+}
+
+
 
 
 

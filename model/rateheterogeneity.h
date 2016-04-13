@@ -255,6 +255,12 @@ public:
 	string name;
 
 
+    /**
+     *  Specify whether the initial starting value of the gamma shape and p_inv
+     *  has already been tested.
+     */
+    bool testParamDone;
+
 	/**
 		full name of the rate heterogeneity type
 	*/

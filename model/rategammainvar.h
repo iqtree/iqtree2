@@ -37,7 +37,7 @@ public:
 		@param tree associated phylogenetic tree
 		@param testAlpha turn on option for doing random restart optimization of alpha and p_invar
 	*/
-    RateGammaInvar(int ncat, double shape, bool median, double p_invar_sites, string optimize_alg, PhyloTree *tree);
+    RateGammaInvar(int ncat, double shape, bool median, double p_invar_sites, string optimize_alg, PhyloTree *tree, bool testParamDone);
 
     /**
         save object into the checkpoint
@@ -165,7 +165,15 @@ private:
 	*/
 	int cur_optimize;
 
+    /**
+     *  Optimize p_inv and gamma shape using the EM algorithm
+     */
 	double optimizeWithEM(double gradient_epsilon);
+
+    /**
+     *  Start with different initial values of p_inv
+     */
+    double randomRestartOptimization(double gradient_epsilon);
 };
 
 #endif

@@ -1608,6 +1608,7 @@ double PhyloTree::computeLikelihood(double *pattern_lh) {
          outError("Scaling error ", __func__);
          }*/
     }
+    curScore = score;
     return score;
 }
 
@@ -3411,6 +3412,7 @@ double PhyloTree::optimizeAllBranches(int my_iterations, double tolerance, int m
         	return new_tree_lh;
         tree_lh = new_tree_lh;
     }
+    curScore = tree_lh;
     return tree_lh;
 }
 
