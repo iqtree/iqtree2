@@ -439,6 +439,12 @@ public:
 	bool testAlpha;
 
     /**
+     *  Restart the optimization of alpha and pinvar from different starting
+     *  pinv values (supercedes the option testAlpha
+     */
+    bool test_param;
+
+    /**
      *  Automatic adjust the log-likelihood espilon using some heuristic
      */
     bool testAlphaEpsAdaptive;
@@ -1904,6 +1910,21 @@ int convert_int(const char *str, int &end_pos) throw (string);
         @param vec (OUT) integer vector
  */
 void convert_int_vec(const char *str, IntVector &vec) throw (string);
+
+/**
+        convert string to int64_t, with error checking
+        @param str original string
+        @return the number
+ */
+int64_t convert_int64(const char *str) throw (string);
+
+/**
+        convert string to int64_t, with error checking
+        @param str original string
+        @param end_pos end position
+        @return the number
+ */
+int64_t convert_int64(const char *str, int64_t &end_pos) throw (string);
 
 /**
         convert string to double, with error checking

@@ -991,7 +991,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInf
             this_aln = in_tree->at(distID[i] & ((1<<16)-1))->aln;
             dist[i] -= ((double)this_aln->getNSeq())*this_aln->getNPattern()*this_aln->num_states;
         }
-        if (params.num_threads > 1)
+        if (params.num_threads > 1 && num_pairs >= 1)
             quicksort(dist, 0, num_pairs-1, distID);
 
 #ifdef _OPENMP
@@ -1195,15 +1195,18 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 	in_tree->optimize_by_newton = params.optimize_by_newton;
 	in_tree->setLikelihoodKernel(params.SSE);
 
-    int num_rate_classes = 3 + params.max_rate_cats;
+//    int num_rate_classes = 3 + params.max_rate_cats;
 
-	RateHeterogeneity ** rate_class = new RateHeterogeneity*[num_rate_classes];
+	RateHeterogeneity ** rate_class = new RateHeterogeneity*[4];
 	rate_class[0] = new RateHeterogeneity();
 	rate_class[1] = new RateInvar(-1, NULL);
 	rate_class[2] = new RateGamma(params.num_rate_cats, params.gamma_shape, params.gamma_median, NULL);
 	rate_class[3] = new RateGammaInvar(params.num_rate_cats, params.gamma_shape, params.gamma_median, -1, params.optimize_model_rate_joint, NULL);
-    for (model = 4; model < num_rate_classes; model++)
-        rate_class[model] = new RateFree(model-2, params.gamma_shape, "", false, params.optimize_alg, NULL);
+    
+    RateFree ** rate_class_free = new RateFree*[params.max_rate_cats-1];
+    
+    for (model = 0; model < params.max_rate_cats-1; model++)
+        rate_class_free[model] = new RateFree(model+2, params.gamma_shape, "", false, params.optimize_alg, NULL);
         
 	ModelGTR *subst_model = NULL;
 	if (seq_type == SEQ_BINARY)
@@ -1348,7 +1351,7 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
                 if (ncat <= 1) outError("Number of rate categories for " + model_names[model] + " is <= 1");
                 if (ncat > params.max_rate_cats)
                     outError("Number of rate categories for " + model_names[model] + " exceeds " + convertIntToString(params.max_rate_cats));
-                tree->setRate(rate_class[2+ncat]);
+                tree->setRate(rate_class_free[ncat-2]);
             } else if (model_names[model].find("+I") != string::npos && (pos = model_names[model].find("+G")) != string::npos) {
                 tree->setRate(rate_class[3]);
                 if (model_names[model].length() > pos+2 && isdigit(model_names[model][pos+2])) {
@@ -1428,6 +1431,10 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
                     outError("-mtree option is not supported for partition model");
                 }
                 IQTree *iqtree = new IQTree(in_tree->aln);
+                // set checkpoint
+                iqtree->setCheckpoint(in_tree->getCheckpoint());
+                iqtree->num_precision = in_tree->num_precision;
+                
                 cout << endl << "===> Testing model " << model+1 << ": " << params.model_name << endl;
                 runTreeReconstruction(params, original_model, *iqtree, model_info);
                 info.logl = iqtree->computeLikelihood();
@@ -1436,6 +1443,16 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
                 params.model_name = original_model;
                 params.user_file = orig_user_tree;
                 tree = iqtree;
+
+                // clear all checkpointed information
+                Checkpoint *newCheckpoint = new Checkpoint;
+                tree->getCheckpoint()->getSubCheckpoint(newCheckpoint, "iqtree");
+                tree->getCheckpoint()->clear();
+                tree->getCheckpoint()->insert(newCheckpoint->begin(), newCheckpoint->end());
+                tree->getCheckpoint()->putBool("finished", false);
+                tree->getCheckpoint()->dump(true);
+                delete newCheckpoint;
+
             } else {
                 if (tree->getMemoryRequired() > RAM_requirement) {
                     tree->deleteAllPartialLh();
@@ -1463,7 +1480,8 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
                     {
                         if (verbose_mode >= VB_MED)
                             cout << "reoptimizing from previous parameters of +R...." << endl;
-                        dynamic_cast<RateFree*>(rate_class[2+ncat])->setRateAndProp(dynamic_cast<RateFree*>(rate_class[1+ncat]));
+                        assert(ncat >= 3);
+                        rate_class_free[ncat-2]->setRateAndProp(rate_class_free[ncat-3]);
                         info.logl = tree->getModelFactory()->optimizeParameters(false, false, TOL_LIKELIHOOD_MODELTEST, TOL_GRADIENT_MODELTEST);
                         info.tree_len = tree->treeLength();                        
                     }
@@ -1688,10 +1706,17 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 
 	delete model_fac;
 	delete subst_model;
-	for (int rate_type = num_rate_classes-1; rate_type >= 0; rate_type--) {
+    int rate_type;
+	for (rate_type = 3; rate_type >= 0; rate_type--) {
 		delete rate_class[rate_type];
     }
     delete [] rate_class;
+    
+	for (rate_type = params.max_rate_cats-2; rate_type >= 0; rate_type--) {
+		delete rate_class_free[rate_type];
+    }
+    delete [] rate_class_free;
+    
 //	delete tree_hetero;
 //	delete tree_homo;
 	in_tree->deleteAllPartialLh();

@@ -10,7 +10,7 @@
 
 #include "rategamma.h"
 
-class RateFree: virtual public RateGamma {
+class RateFree: public RateGamma {
 public:
 	/**
 		constructor

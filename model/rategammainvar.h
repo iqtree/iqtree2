@@ -64,6 +64,15 @@ public:
 	virtual double getRate(int category) { return RateGamma::getRate(category); }
 
 	/**
+		set the proportion of invariable sites. Default: do nothing
+		@param pinv the proportion of invariable sites
+	*/
+	virtual void setPInvar(double pInvar) {
+		p_invar = pInvar;
+        computeRates();
+	}
+
+	/**
 	 * @return model name with parameters in form of e.g. GTR{a,b,c,d,e,f}
 	 */
 	virtual string getNameParams();

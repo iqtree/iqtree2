@@ -372,7 +372,10 @@ void PhyloTree::readTreeString(const string &tree_string) {
 //	str(tree_string);
 //	str.seekg(0, ios::beg);
 	freeNode();
-	readTree(str, rooted);
+    
+    // bug fix 2016-04-14: in case taxon name happens to be ID
+	MTree::readTree(str, rooted);
+    
     assignLeafNames();
 //	setAlignment(aln);
 	setRootNode(params->root);

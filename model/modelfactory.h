@@ -169,6 +169,14 @@ public:
                                       double logl_epsilon = 0.1, double gradient_epsilon = 0.001);
 
 	/**
+	 *  optimize model parameters and tree branch lengths for the +I+G model
+	 *  using restart strategy.
+	 * 	@param fixed_len TRUE to fix branch lengths, default is false
+	 *	@return the best likelihood
+	 */
+	virtual double optimizeParametersGammaInvar(bool fixed_len = false, bool write_info = true, double logl_epsilon = 0.1, double gradient_epsilon = 0.001);
+
+	/**
 	 * @return TRUE if parameters are at the boundary that may cause numerical unstability
 	 */
 	virtual bool isUnstableParameters();

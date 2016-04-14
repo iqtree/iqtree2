@@ -248,6 +248,7 @@ double RateFree::optimizeParameters(double gradient_epsilon) {
         if (sorted_rates)
             quicksort(rates, 0, ncategory-1, prop);
         phylo_tree->clearAllPartialLH();
+        score = phylo_tree->computeLikelihood();
     }
     optimizing_params = 0;
 
