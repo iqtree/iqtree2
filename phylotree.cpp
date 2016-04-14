@@ -4090,8 +4090,9 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
 		// compute the score of the swapped topology
 //		double saved_len = node1_nei->length;
 
-		optimizeOneBranch(node1, node2, false, NNI_MAX_NR_STEP);
-		node1->findNeighbor(node2)->getLength(nniMoves[cnt].newLen[0]);
+        // BUG FIX: commented out following (reported by Stephen Crotty)
+//		optimizeOneBranch(node1, node2, false, NNI_MAX_NR_STEP);
+//		node1->findNeighbor(node2)->getLength(nniMoves[cnt].newLen[0]);
 
 		int i=1;
         if (params->nni5) {
