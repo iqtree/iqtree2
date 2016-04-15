@@ -912,7 +912,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.freq_const_patterns = NULL;
     params.no_rescale_gamma_invar = false;
     params.compute_seq_identity_along_tree = false;
-    params.lmap_num_quartets = 0;
+    params.lmap_num_quartets = -1;
     params.lmap_cluster_file = NULL;
     params.print_lmap_quartet_lh = false;
     params.link_alpha = false;
@@ -2866,9 +2866,13 @@ void parseArg(int argc, char *argv[], Params &params) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -lmap <likelihood_mapping_num_quartets>";
-				params.lmap_num_quartets = convert_int64(argv[cnt]);
-				if (params.lmap_num_quartets < 1)
-					throw "Number of quartets must be >= 1";
+                if (strcmp(argv[cnt],"ALL") == 0) {
+                    params.lmap_num_quartets = 0;
+                } else {
+                    params.lmap_num_quartets = convert_int64(argv[cnt]);
+                    if (params.lmap_num_quartets < 0)
+                        throw "Number of quartets must be >= 1";
+                }
 				continue;
 			}
 
@@ -2880,6 +2884,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 				// '-keep_ident' is currently required to allow a 1-to-1 mapping of the 
 				// user-given groups (HAS) - possibly obsolete in the future versions
 				params.ignore_identical_seqs = false;
+                if (params.lmap_num_quartets < 0)
+                    params.lmap_num_quartets = 0;
 				continue;
 			}
 

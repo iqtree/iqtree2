@@ -681,7 +681,7 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 			reportRate(out, tree);
 		}
 
-    		if (params.lmap_num_quartets) {
+    		if (params.lmap_num_quartets >= 0) {
 			tree.reportLikelihoodMapping(out);
 		}
 
@@ -1080,7 +1080,7 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 		cout << "  Site log-likelihoods:          " << params.out_prefix << ".sitelh" << endl;
 		}
 	}
-    	if (params.lmap_num_quartets) {
+    	if (params.lmap_num_quartets >= 0) {
 		cout << "  Likelihood mapping plot (SVG): " << params.out_prefix << ".lmap.svg" << endl;
 		cout << "  Likelihood mapping plot (EPS): " << params.out_prefix << ".lmap.eps" << endl;
 	}
@@ -1771,8 +1771,13 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
         iqtree.getCheckpoint()->dump();
     }
 
-    if (params.lmap_num_quartets) {
-        cout << endl << "Performing likelihood mapping with " << params.lmap_num_quartets << " quartets..." << endl;
+    if (params.lmap_num_quartets >= 0) {
+        cout << endl << "Performing likelihood mapping with ";
+        if (params.lmap_num_quartets > 0)
+            cout << params.lmap_num_quartets;
+        else
+            cout << "all";
+        cout << " quartets..." << endl;
         double lkmap_time = getRealTime();
         iqtree.doLikelihoodMapping();
         cout << "Likelihood mapping needed " << getRealTime()-lkmap_time << " seconds" << endl << endl;
