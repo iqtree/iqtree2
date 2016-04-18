@@ -1720,8 +1720,8 @@ extern pllUFBootData * pllUFBootDataPtr;
 string IQTree::optimizeModelParameters(bool printInfo, double logl_epsilon) {
 	if (logl_epsilon == -1)
 		logl_epsilon = params->modeps;
-    if (params->test_param)
-        logl_epsilon = logl_epsilon * 10;
+//    if (params->opt_gammai)
+//        logl_epsilon = 0.1;
     cout << "Estimate model parameters (epsilon = " << logl_epsilon << ")" << endl;
 	double stime = getRealTime();
 	string newTree;
@@ -1746,13 +1746,13 @@ string IQTree::optimizeModelParameters(bool printInfo, double logl_epsilon) {
             cout << etime - stime << " seconds (logl: " << curScore << ")" << endl;
 	} else {
         double modOptScore;
-        if (params->test_param) { // DO RESTART ON ALPHA AND P_INVAR
+        if (params->opt_gammai) { // DO RESTART ON ALPHA AND P_INVAR
             double stime = getRealTime();
             modOptScore = getModelFactory()->optimizeParametersGammaInvar(params->fixed_branch_length, printInfo, logl_epsilon);
             double etime = getRealTime();
             cout << "Testing param took: " << etime -stime << " CPU seconds" << endl;
             cout << endl;
-            params->test_param = false;
+            params->opt_gammai = false;
         } else {
             modOptScore = getModelFactory()->optimizeParameters(params->fixed_branch_length, printInfo, logl_epsilon);
         }

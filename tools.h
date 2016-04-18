@@ -442,7 +442,13 @@ public:
      *  Restart the optimization of alpha and pinvar from different starting
      *  pinv values (supercedes the option testAlpha
      */
-    bool test_param;
+    bool opt_gammai;
+
+    /**
+     *  A faster version of opt_gammai using a heuristic similar to binary search.
+     *  Thus, one does not need to perform 10 independent trials as in opt_gammai.
+     */
+    bool opt_gammai_fast;
 
     /**
      *  Automatic adjust the log-likelihood espilon using some heuristic

@@ -834,8 +834,6 @@ double ModelFactory::optimizeParametersGammaInvar(bool fixed_len, bool write_inf
 
 	RateHeterogeneity* site_rates = tree->getRate();
 	if (site_rates == NULL) {
-//		outError("The model must be +I+G");
-        // model is not +I+G, call conventional function instead
 		return optimizeParameters(fixed_len, write_info, logl_epsilon, gradient_epsilon);
 	}
 
@@ -861,50 +859,90 @@ double ModelFactory::optimizeParametersGammaInvar(bool fixed_len, bool write_inf
 
 	/* Best estimates found */
 	double *bestStateFreqs =  new double[numStates];
-	double bestLogl = tree->getCurScore();
+	double bestLogl = -DBL_MAX;
 	double bestAlpha = 0.0;
 	double bestPInvar = 0.0;
 
-	double testInterval = (frac_const - MIN_PINVAR*2) / 10;
+	double testInterval = (frac_const - MIN_PINVAR * 2) / 10;
 	double initPInv = MIN_PINVAR;
 	double initAlpha = site_rates->getGammaShape();
 
-    if (write_info)
-        cout << "testInterval: " << testInterval << endl;
+    if (Params::getInstance().opt_gammai_fast) {
+        initPInv = frac_const/2;
+        bool stop = false;
+        while(!stop) {
+            if (write_info) {
+                cout << endl;
+                cout << "Testing with init. pinv = " << initPInv << " / init. alpha = "  << initAlpha << endl;
+            }
 
-	// Now perform testing different inital p_inv values
-	while (initPInv <= frac_const) {
-        if (write_info) {
-            cout << endl;
-            cout << "Testing with init. pinv = " << initPInv << " / init. alpha = "  << initAlpha << endl;
-        }
-		tree->restoreBranchLengths(lenvec);
-		((ModelGTR*) tree->getModel())->setRateMatrix(rates);
-		((ModelGTR*) tree->getModel())->setStateFrequency(state_freqs);
-		tree->getModel()->decomposeRateMatrix();
-		site_rates->setPInvar(initPInv);
-		site_rates->setGammaShape(initAlpha);
-		tree->clearAllPartialLH();
-		optimizeParameters(fixed_len, write_info, logl_epsilon, gradient_epsilon);
-		double estAlpha = tree->getRate()->getGammaShape();
-		double estPInv = tree->getRate()->getPInvar();
-		double logl = tree->getCurScore();
-        if (write_info) {
-            cout << "Est. alpha: " << estAlpha << " / Est. pinv: " << estPInv
-            << " / Logl: " << logl << endl;
-        }
-		initPInv = initPInv + testInterval;
+            vector<double> estResults = optimizeGammaInvWithInitValue(fixed_len, logl_epsilon, gradient_epsilon, tree, site_rates, rates, state_freqs,
+                                                                   initPInv, initAlpha, lenvec);
 
-		if (tree->getCurScore() > bestLogl) {
-			bestLogl = logl;
-			bestAlpha = estAlpha;
-			bestPInvar = estPInv;
-			bestLens.clear();
-			tree->saveBranchLengths(bestLens);
-			tree->getModel()->getRateMatrix(bestRates);
-			tree->getModel()->getStateFrequency(bestStateFreqs);
-		}
-	}
+            if (write_info) {
+                cout << "Est. p_inv: " << estResults[0] << " / Est. gamma shape: " << estResults[1]
+                << " / Logl: " << estResults[2] << endl;
+            }
+
+            if (estResults[2] > bestLogl) {
+                bestLogl = estResults[2];
+                bestAlpha = estResults[1];
+                bestPInvar = estResults[0];
+                bestLens.clear();
+                tree->saveBranchLengths(bestLens);
+                tree->getModel()->getRateMatrix(bestRates);
+                tree->getModel()->getStateFrequency(bestStateFreqs);
+                if (estResults[0] < initPInv) {
+                    initPInv = estResults[0] - testInterval;
+                    if (initPInv < 0.0)
+                        initPInv = 0.0;
+                } else {
+                    initPInv = estResults[0] + testInterval;
+                    if (initPInv > frac_const)
+                        initPInv = frac_const;
+                }
+                //cout << "New initPInv = " << initPInv << endl;
+            }  else {
+                stop = true;
+            }
+        }
+    } else {
+        // Now perform testing different inital p_inv values
+        while (initPInv <= frac_const) {
+            if (write_info) {
+                cout << endl;
+                cout << "Testing with init. pinv = " << initPInv << " / init. alpha = "  << initAlpha << endl;
+            }
+            vector<double> estResults = optimizeGammaInvWithInitValue(fixed_len, logl_epsilon, gradient_epsilon, tree, site_rates, rates, state_freqs,
+                                                                      initPInv, initAlpha, lenvec);
+//		tree->restoreBranchLengths(lenvec);
+//		((ModelGTR*) tree->getModel())->setRateMatrix(rates);
+//		((ModelGTR*) tree->getModel())->setStateFrequency(state_freqs);
+//		tree->getModel()->decomposeRateMatrix();
+//		site_rates->setPInvar(initPInv);
+//		site_rates->setGammaShape(initAlpha);
+//		tree->clearAllPartialLH();
+//		optimizeParameters(fixed_len, false, logl_epsilon, gradient_epsilon);
+//		double estAlpha = tree->getRate()->getGammaShape();
+//		double estPInv = tree->getRate()->getPInvar();
+//		double logl = tree->getCurScore();
+            if (write_info) {
+                cout << "Est. p_inv: " << estResults[0] << " / Est. gamma shape: " << estResults[1]
+                << " / Logl: " << estResults[2] << endl;
+            }
+            initPInv = initPInv + testInterval;
+
+            if (estResults[2] > bestLogl) {
+                bestLogl = estResults[2];
+                bestAlpha = estResults[1];
+                bestPInvar = estResults[0];
+                bestLens.clear();
+                tree->saveBranchLengths(bestLens);
+                tree->getModel()->getRateMatrix(bestRates);
+                tree->getModel()->getStateFrequency(bestStateFreqs);
+            }
+        }
+    }
 
 	site_rates->setGammaShape(bestAlpha);
 //	site_rates->setFixGammaShape(false);
@@ -918,7 +956,7 @@ double ModelFactory::optimizeParametersGammaInvar(bool fixed_len, bool write_inf
 	tree->setCurScore(tree->computeLikelihood());
     if (write_info) {    
         cout << endl;
-        cout << "Best initial alpha: " << bestAlpha << " / initial pinv: " << bestPInvar << " / ";
+        cout << "Best ini. p_inv: " << bestPInvar << " / initial pinv: " << bestAlpha << " / ";
         cout << "Logl: " << tree->getCurScore() << endl;
     }
 
@@ -932,6 +970,29 @@ double ModelFactory::optimizeParametersGammaInvar(bool fixed_len, bool write_inf
     
     // 2016-03-14: this was missing!
     return tree->getCurScore();
+}
+
+vector<double> ModelFactory::optimizeGammaInvWithInitValue(bool fixed_len, double logl_epsilon, double gradient_epsilon,
+                                                 PhyloTree *tree, RateHeterogeneity *site_rates, double *rates,
+                                                 double *state_freqs, double initPInv, double initAlpha,
+                                                 DoubleVector &lenvec) {
+    tree->restoreBranchLengths(lenvec);
+    ((ModelGTR*) tree->getModel())->setRateMatrix(rates);
+    ((ModelGTR*) tree->getModel())->setStateFrequency(state_freqs);
+    tree->getModel()->decomposeRateMatrix();
+    site_rates->setPInvar(initPInv);
+    site_rates->setGammaShape(initAlpha);
+    tree->clearAllPartialLH();
+    optimizeParameters(fixed_len, false, logl_epsilon, gradient_epsilon);
+
+    vector<double> estResults;
+    double estPInv = tree->getRate()->getPInvar();
+    double estAlpha = tree->getRate()->getGammaShape();
+    double logl = tree->getCurScore();
+    estResults.push_back(estPInv);
+    estResults.push_back(estAlpha);
+    estResults.push_back(logl);
+    return estResults;
 }
 
 
@@ -1000,9 +1061,10 @@ else {
 
 		// changed to opimise edge length first, and then Q,W,R inside the loop by Thomas on Sept 11, 15
 		if (!fixed_len)
-			new_lh = tree->optimizeAllBranches(min(i, 3),
-											   logl_epsilon);  // loop only 3 times in total (previously in v0.9.6 5 times)
+			//new_lh = tree->optimizeAllBranches(min(i, 3),
+			//								   logl_epsilon);  // loop only 3 times in total (previously in v0.9.6 5 times)
 
+			new_lh = tree->optimizeAllBranches(1,logl_epsilon);
 		new_lh = optimizeParametersOnly(gradient_epsilon);
 
 		if (new_lh == 0.0) {

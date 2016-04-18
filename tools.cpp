@@ -642,7 +642,8 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.user_file = NULL;
     params.fai = false;
     params.testAlpha = false;
-    params.test_param = false;
+    params.opt_gammai = false;
+    params.opt_gammai_fast = false;
     params.testAlphaEpsAdaptive = false;
     params.randomAlpha = false;
     params.testAlphaEps = 0.1;
@@ -2559,8 +2560,14 @@ void parseArg(int argc, char *argv[], Params &params) {
 				continue;
 			}
 
-            if (strcmp(argv[cnt], "-test_param") == 0 || strcmp(argv[cnt], "--opt-gamma-inv") == 0) {
-                params.test_param = true;
+            if (strcmp(argv[cnt], "-opt_gammai") == 0 || strcmp(argv[cnt], "--opt-gamma-inv") == 0) {
+                params.opt_gammai = true;
+                continue;
+            }
+
+            if (strcmp(argv[cnt], "--opt-gammai-fast") == 0) {
+                params.opt_gammai_fast = true;
+                params.opt_gammai = true;
                 continue;
             }
 
