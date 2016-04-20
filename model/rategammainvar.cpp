@@ -198,12 +198,17 @@ int RateGammaInvar::computePatternRates(DoubleVector &pattern_rates, IntVector &
 
 double RateGammaInvar::optimizeWithEM(double gradient_epsilon) {
     double curlh = phylo_tree->computeLikelihood();
+    double curGammaShape = getGammaShape();
+    double curPInv = getPInvar();
+
+    cur_optimize = 0;
+    double gamma_lh = RateGamma::optimizeParameters(gradient_epsilon);
+    assert(gamma_lh > curlh - 1.0);
+    curlh = gamma_lh;
+
     size_t ncat = getNRate();
     size_t nptn = phylo_tree->aln->getNPattern();
     size_t nSites = phylo_tree->aln->getNSite();
-    double curGammaShape = getGammaShape();
-//    double curPInvar = getPInvar();
-//    cout << "curGammaShape = " << curGammaShape << " / curPInvar = " << curPInvar << endl;
 
     // Compute the pattern likelihood for each category (invariable and variable category)
     phylo_tree->computePatternLhCat(WSL_RATECAT);
@@ -248,19 +253,13 @@ double RateGammaInvar::optimizeWithEM(double gradient_epsilon) {
 //    cout << "newGammaShape = " << newGammaShape << endl;
 
     double newPInvar = ppInvar / nSites;
-    assert(newPInvar <= 1.0);
+    assert(newPInvar < 1.0);
     setPInvar(newPInvar);
     phylo_tree->clearAllPartialLH();
-    cur_optimize = 0;
-    double gamma_lh = RateGamma::optimizeParameters(gradient_epsilon);
-
-    if (gamma_lh < curlh) {
-        // Restore the preivous gamma shape value
-        setGammaShape(curGammaShape);
-        phylo_tree->clearAllPartialLH();
-        curlh = phylo_tree->computeLikelihood();
-    }
-    return curlh;
+    phylo_tree->scaleLength((1-newPInvar)/(1-curPInv));
+    double pinvLH = phylo_tree->computeLikelihood();
+    assert(pinvLH > curlh - 1.0);
+    return pinvLH;
 }
 
 double RateGammaInvar::randomRestartOptimization(double gradient_epsilon) {

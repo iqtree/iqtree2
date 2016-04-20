@@ -915,17 +915,6 @@ double ModelFactory::optimizeParametersGammaInvar(bool fixed_len, bool write_inf
             }
             vector<double> estResults = optimizeGammaInvWithInitValue(fixed_len, logl_epsilon, gradient_epsilon, tree, site_rates, rates, state_freqs,
                                                                       initPInv, initAlpha, lenvec);
-//		tree->restoreBranchLengths(lenvec);
-//		((ModelGTR*) tree->getModel())->setRateMatrix(rates);
-//		((ModelGTR*) tree->getModel())->setStateFrequency(state_freqs);
-//		tree->getModel()->decomposeRateMatrix();
-//		site_rates->setPInvar(initPInv);
-//		site_rates->setGammaShape(initAlpha);
-//		tree->clearAllPartialLH();
-//		optimizeParameters(fixed_len, false, logl_epsilon, gradient_epsilon);
-//		double estAlpha = tree->getRate()->getGammaShape();
-//		double estPInv = tree->getRate()->getPInvar();
-//		double logl = tree->getCurScore();
             if (write_info) {
                 cout << "Est. p_inv: " << estResults[0] << " / Est. gamma shape: " << estResults[1]
                 << " / Logl: " << estResults[2] << endl;
@@ -956,7 +945,7 @@ double ModelFactory::optimizeParametersGammaInvar(bool fixed_len, bool write_inf
 	tree->setCurScore(tree->computeLikelihood());
     if (write_info) {    
         cout << endl;
-        cout << "Best ini. p_inv: " << bestPInvar << " / initial pinv: " << bestAlpha << " / ";
+        cout << "Best p_inv: " << bestPInvar << " / best gamma shape: " << bestAlpha << " / ";
         cout << "Logl: " << tree->getCurScore() << endl;
     }
 
@@ -1061,10 +1050,9 @@ else {
 
 		// changed to opimise edge length first, and then Q,W,R inside the loop by Thomas on Sept 11, 15
 		if (!fixed_len)
-			//new_lh = tree->optimizeAllBranches(min(i, 3),
-			//								   logl_epsilon);  // loop only 3 times in total (previously in v0.9.6 5 times)
+			new_lh = tree->optimizeAllBranches(min(i, 3), logl_epsilon);  // loop only 3 times in total (previously in v0.9.6 5 times)
 
-			new_lh = tree->optimizeAllBranches(1,logl_epsilon);
+			//new_lh = tree->optimizeAllBranches(1,logl_epsilon);
 		new_lh = optimizeParametersOnly(gradient_epsilon);
 
 		if (new_lh == 0.0) {
