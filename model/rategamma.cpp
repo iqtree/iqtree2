@@ -150,6 +150,7 @@ void RateGamma::computeRatesMean () {
 
 void RateGamma::setGammaShape(double gs) {
 	gamma_shape = gs;
+    computeRates();
 }
 
 double RateGamma::computeFunction(double shape) {

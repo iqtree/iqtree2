@@ -60,7 +60,7 @@ string RateGammaInvar::getNameParams() {
 double RateGammaInvar::computeFunction(double value) {
 	if (cur_optimize == 0)
 		gamma_shape = value;
-	else 
+	else
 		p_invar = value;
 	// need to compute rates again if p_inv or Gamma shape changes!
 	computeRates();
@@ -114,8 +114,9 @@ double RateGammaInvar::optimizeParameters(double gradient_epsilon) {
 	if (ndim == 0)
 		return phylo_tree->computeLikelihood();
 
+
 	if (!joint_optimize) {
-//		double lh = phylo_tree->computeLikelihood();
+		double lh = phylo_tree->computeLikelihood();
 		cur_optimize = 0;
 		double gamma_lh;
 		if (Params::getInstance().testAlpha) {
@@ -123,18 +124,40 @@ double RateGammaInvar::optimizeParameters(double gradient_epsilon) {
 		} else {
             gamma_lh = RateGamma::optimizeParameters(gradient_epsilon);
         }
+		assert(gamma_lh >= lh-0.1);
 		cur_optimize = 1;
 		double invar_lh = -DBL_MAX;
         invar_lh = RateInvar::optimizeParameters(gradient_epsilon);
-//		assert(tree_lh >= lh-0.1);
-//		lh = tree_lh;
+		assert(invar_lh >= gamma_lh-0.1);
+		//lh = tree_lh;
 
-//		assert(gamma_lh >= invar_lh - 0.1);
-		phylo_tree->clearAllPartialLH();
+		//assert(gamma_lh >= invar_lh - 0.1);
+//		phylo_tree->clearAllPartialLH();
 //		return gamma_lh;
         cur_optimize = 0;
         return invar_lh;
 	}
+
+/*
+	if (!joint_optimize) {
+//		double lh = phylo_tree->computeLikelihood();
+		cur_optimize = 1;
+		double invar_lh = -DBL_MAX;
+		invar_lh = RateInvar::optimizeParameters(gradient_epsilon);
+//		assert(tree_lh >= lh-0.1);
+//		lh = tree_lh;
+		cur_optimize = 0;
+		double gamma_lh;
+		if (Params::getInstance().testAlpha) {
+			gamma_lh = RateGamma::optimizeParameters(gradient_epsilon, 0.05, 10);
+		} else {
+			gamma_lh = RateGamma::optimizeParameters(gradient_epsilon);
+		}
+		//assert(gamma_lh >= invar_lh - 0.1);
+		phylo_tree->clearAllPartialLH();
+		return gamma_lh;
+	}
+*/
 
 	if (verbose_mode >= VB_MAX)
 		cout << "Optimizing " << name << " model parameters by BFGS..." << endl;
@@ -156,6 +179,7 @@ double RateGammaInvar::optimizeParameters(double gradient_epsilon) {
 	getVariables(variables);
 
 	phylo_tree->clearAllPartialLH();
+    score = phylo_tree->computeLikelihood();
 
 	delete [] bound_check;
 	delete [] lower_bound;

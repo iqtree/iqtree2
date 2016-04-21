@@ -263,6 +263,35 @@ void convert_int_vec(const char *str, IntVector &vec) throw (string) {
 }
 
 
+int64_t convert_int64(const char *str) throw (string) {
+    char *endptr;
+    int64_t i = (int64_t)strtoll(str, &endptr, 10); // casted because 'long long' may be larger than int64_t
+
+    if ((i == 0 && endptr == str) || abs(i) == HUGE_VALL || *endptr != 0) {
+        string err = "Expecting large integer , but found \"";
+        err += str;
+        err += "\" instead";
+        throw err;
+    }
+
+    return i;
+}
+
+int64_t convert_int64(const char *str, int &end_pos) throw (string) {
+	char *endptr;
+	int64_t i = (int64_t)strtoll(str, &endptr, 10); // casted because 'long long' may be larger than int64_t
+
+	if ((i == 0 && endptr == str) || abs(i) == HUGE_VALL) {
+		string err = "Expecting large integer, but found \"";
+		err += str;
+		err += "\" instead";
+		throw err;
+	}
+	end_pos = endptr - str;
+	return i;
+}
+
+
 double convert_double(const char *str) throw (string) {
     char *endptr;
     double d = strtod(str, &endptr);
@@ -613,6 +642,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.user_file = NULL;
     params.fai = false;
     params.testAlpha = false;
+    params.test_param = false;
     params.testAlphaEpsAdaptive = false;
     params.randomAlpha = false;
     params.testAlphaEps = 0.1;
@@ -882,7 +912,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.freq_const_patterns = NULL;
     params.no_rescale_gamma_invar = false;
     params.compute_seq_identity_along_tree = false;
-    params.lmap_num_quartets = 0;
+    params.lmap_num_quartets = -1;
     params.lmap_cluster_file = NULL;
     params.print_lmap_quartet_lh = false;
     params.link_alpha = false;
@@ -2524,6 +2554,12 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.testAlpha = true;
 				continue;
 			}
+
+            if (strcmp(argv[cnt], "-test_param") == 0 || strcmp(argv[cnt], "--opt-gamma-inv") == 0) {
+                params.test_param = true;
+                continue;
+            }
+
             if (strcmp(argv[cnt], "--adaptive-eps") == 0) {
                 params.testAlphaEpsAdaptive = true;
                 continue;
@@ -2834,9 +2870,13 @@ void parseArg(int argc, char *argv[], Params &params) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -lmap <likelihood_mapping_num_quartets>";
-				params.lmap_num_quartets = convert_int(argv[cnt]);
-				if (params.lmap_num_quartets < 1)
-					throw "Number of quartets must be >= 1";
+                if (strcmp(argv[cnt],"ALL") == 0) {
+                    params.lmap_num_quartets = 0;
+                } else {
+                    params.lmap_num_quartets = convert_int64(argv[cnt]);
+                    if (params.lmap_num_quartets < 0)
+                        throw "Number of quartets must be >= 1";
+                }
 				continue;
 			}
 
@@ -2848,6 +2888,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 				// '-keep_ident' is currently required to allow a 1-to-1 mapping of the 
 				// user-given groups (HAS) - possibly obsolete in the future versions
 				params.ignore_identical_seqs = false;
+                if (params.lmap_num_quartets < 0)
+                    params.lmap_num_quartets = 0;
 				continue;
 			}
 
@@ -3125,7 +3167,7 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "                       number of categories (default: n=4)" << endl
             << "  -a <Gamma_shape>     Gamma shape parameter for site rates (default: estimate)" << endl
             << "  -gmedian             Median approximation for +G site rates (default: mean)" << endl
-            << "  --test-alpha         More thorough estimation for +I+G model parameters" << endl
+            << "  --opt-gamma-inv      More thorough estimation for +I+G model parameters" << endl
             << "  -i <p_invar>         Proportion of invariable sites (default: estimate)" << endl
             << "  -mh                  Computing site-specific rates to .mhrate file using" << endl
             << "                       Meyer & von Haeseler (2003) method" << endl

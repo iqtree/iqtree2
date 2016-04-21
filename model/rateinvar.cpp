@@ -93,10 +93,10 @@ double RateInvar::optimizeParameters(double gradient_epsilon) {
 	double ferror;
 	p_invar = minimizeOneDimen(MIN_PINVAR, p_invar, min(phylo_tree->aln->frac_const_sites, 1.0-MIN_PINVAR), max(gradient_epsilon, TOL_PINVAR), &negative_lh, &ferror);
 	//p_invar = minimizeOneDimen(MIN_PINVAR, p_invar, 1.0 - MIN_PINVAR, TOL_PINVAR, &negative_lh, &ferror);
-    phylo_tree->clearAllPartialLH();
-	phylo_tree->computePtnInvar();
+//    phylo_tree->clearAllPartialLH();
+//	phylo_tree->computePtnInvar();
 //	return -negative_lh;
-    return phylo_tree->computeLikelihood();
+    return -computeFunction(p_invar);
 }
 
 void RateInvar::writeInfo(ostream &out) {

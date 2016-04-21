@@ -2189,7 +2189,7 @@ int main(int argc, char *argv[])
     
     bool append_log = false;
     
-    if (!Params::getInstance().ignore_checkpoint) {
+    if (!Params::getInstance().ignore_checkpoint && fileExists(filename)) {
         checkpoint->load();
         if (checkpoint->hasKey("finished")) {
             if (checkpoint->getBool("finished")) {

@@ -681,7 +681,7 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 			reportRate(out, tree);
 		}
 
-    		if (params.lmap_num_quartets) {
+    		if (params.lmap_num_quartets >= 0) {
 			tree.reportLikelihoodMapping(out);
 		}
 
@@ -1080,7 +1080,7 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 		cout << "  Site log-likelihoods:          " << params.out_prefix << ".sitelh" << endl;
 		}
 	}
-    	if (params.lmap_num_quartets) {
+    	if (params.lmap_num_quartets >= 0) {
 		cout << "  Likelihood mapping plot (SVG): " << params.out_prefix << ".lmap.svg" << endl;
 		cout << "  Likelihood mapping plot (EPS): " << params.out_prefix << ".lmap.eps" << endl;
 	}
@@ -1727,6 +1727,9 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 
     iqtree.initializeAllPartialLh();
 	double initEpsilon = params.min_iterations == 0 ? params.modeps : (params.modeps*10);
+	if (params.test_param)
+		initEpsilon = 0.1;
+
 	string initTree;
 
 	if (iqtree.getRate()->name.find("+I+G") != string::npos) {
@@ -1747,6 +1750,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
             cout << "Testing alpha took: " << etime -stime << " CPU seconds" << endl;
             cout << endl;
 		}
+
 	}
 
     // Optimize model parameters and branch lengths using ML for the initial tree
@@ -1767,11 +1771,16 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
         iqtree.getCheckpoint()->dump();
     }
 
-    if (params.lmap_num_quartets) {
-        cout << "Performing likelihood mapping with " << params.lmap_num_quartets << " quartets..." << endl;
+    if (params.lmap_num_quartets >= 0) {
+        cout << endl << "Performing likelihood mapping with ";
+        if (params.lmap_num_quartets > 0)
+            cout << params.lmap_num_quartets;
+        else
+            cout << "all";
+        cout << " quartets..." << endl;
         double lkmap_time = getRealTime();
         iqtree.doLikelihoodMapping();
-        cout << getRealTime()-lkmap_time << " seconds" << endl;
+        cout << "Likelihood mapping needed " << getRealTime()-lkmap_time << " seconds" << endl << endl;
     }
     
     bool finishedCandidateSet = iqtree.getCheckpoint()->getBool("finishedCandidateSet");
@@ -1942,10 +1951,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
         } else {
             cout << "Performs final model parameters optimization" << endl;
             string tree;
-            if (params.testAlpha)
-                tree = iqtree.optimizeModelParameters(true, 0.001);
-            else
-                tree = iqtree.optimizeModelParameters(true);
+            tree = iqtree.optimizeModelParameters(true);
             iqtree.candidateTrees.update(tree, iqtree.getCurScore(), true);
             iqtree.getCheckpoint()->putBool("finishedModelFinal", true);
             iqtree.saveCheckpoint();
@@ -2038,7 +2044,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 }
 
 void computeLoglFromUserInputGAMMAInvar(Params &params, IQTree &iqtree) {
-	RateGammaInvar *site_rates = dynamic_cast<RateGammaInvar *>(iqtree.getRate());
+	RateHeterogeneity *site_rates = iqtree.getRate();
 	site_rates->setFixPInvar(true);
 	site_rates->setFixGammaShape(true);
 	vector<double> alphas, p_invars, logl;
@@ -2070,7 +2076,6 @@ void computeLoglFromUserInputGAMMAInvar(Params &params, IQTree &iqtree) {
 		aiFileResults << alphas.at(i) << " " << p_invars.at(i) << " ";
 		site_rates->setGammaShape(alphas.at(i));
 		site_rates->setPInvar(p_invars.at(i));
-		site_rates->computeRates();
 		iqtree.clearAllPartialLH();
 		double lh = iqtree.getModelFactory()->optimizeParameters(params.fixed_branch_length, false, 0.001);
 		aiFileResults << lh << " " << iqtree.treeLength() << "\n";
@@ -2086,7 +2091,7 @@ void searchGAMMAInvarByRestarting(IQTree &iqtree) {
 		iqtree.setCurScore(iqtree.optimizeAllBranches(1));
 	else
 		iqtree.setCurScore(iqtree.computeLikelihood());
-	RateGammaInvar* site_rates = dynamic_cast<RateGammaInvar*>(iqtree.getRate());
+	RateHeterogeneity* site_rates = (iqtree.getRate());
 	double values[] = { 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0 };
 	vector<double> initAlphas;
 	if (Params::getInstance().randomAlpha) {
@@ -2125,7 +2130,6 @@ void searchGAMMAInvarByRestarting(IQTree &iqtree) {
         iqtree.getModel()->decomposeRateMatrix();
         site_rates->setGammaShape(initAlphas[i]);
 		site_rates->setPInvar(initPInvar);
-		site_rates->computeRates();
 		iqtree.clearAllPartialLH();
 		iqtree.optimizeModelParameters(verbose_mode >= VB_MED, Params::getInstance().testAlphaEps);
         double estAlpha = iqtree.getRate()->getGammaShape();
@@ -2152,7 +2156,6 @@ void searchGAMMAInvarByRestarting(IQTree &iqtree) {
     ((ModelGTR*) iqtree.getModel())->setStateFrequency(bestStateFreqs);
 	iqtree.restoreBranchLengths(bestLens);
     iqtree.getModel()->decomposeRateMatrix();
-    site_rates->computeRates();
 	iqtree.clearAllPartialLH();
     iqtree.setCurScore(iqtree.computeLikelihood());
     cout << endl;
@@ -2183,7 +2186,7 @@ void exhaustiveSearchGAMMAInvar(Params &params, IQTree &iqtree) {
 	DoubleVector lenvec;
 	iqtree.saveBranchLengths(lenvec);
 
-	RateGammaInvar* site_rates = dynamic_cast<RateGammaInvar*>(iqtree.getRate());
+	RateHeterogeneity* site_rates = (iqtree.getRate());
 	site_rates->setFixPInvar(true);
 	site_rates->setFixGammaShape(true);
 
@@ -2191,7 +2194,6 @@ void exhaustiveSearchGAMMAInvar(Params &params, IQTree &iqtree) {
         for (double p_invar = p_invarMin; p_invar < p_invarMax; p_invar = p_invar + stepSize) {
             site_rates->setGammaShape(alpha);
             site_rates->setPInvar(p_invar);
-            site_rates->computeRates();
             iqtree.clearAllPartialLH();
             double lh = iqtree.getModelFactory()->optimizeParameters(params.fixed_branch_length, false, 0.001);
             stringstream ss;
