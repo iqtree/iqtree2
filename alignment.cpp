@@ -3140,7 +3140,7 @@ void Alignment::computeCodonFreq(StateFreqType freq, double *state_freq, double 
 	convfreq(state_freq);
 }
 
-void Alignment::computeEmpiricalRate (double *rates) {
+void Alignment::computeDivergenceMatrix(double *rates) {
     int i, j, k;
     assert(rates);
     int nseqs = getNSeq();
@@ -3181,8 +3181,8 @@ void Alignment::computeEmpiricalRate (double *rates) {
         for (j = i+1; j < num_states; j++) {
             rates[k++] = (pair_rates[i*num_states+j] + pair_rates[j*num_states+i]) / last_rate;
             // BIG WARNING: zero rates might cause numerical instability!
-            if (rates[k-1] <= 0.0001) rates[k-1] = 0.01;
-            if (rates[k-1] > 100.0) rates[k-1] = 50.0;
+//            if (rates[k-1] <= 0.0001) rates[k-1] = 0.01;
+//            if (rates[k-1] > 100.0) rates[k-1] = 50.0;
         }
     rates[k-1] = 1;
     if (verbose_mode >= VB_MAX) {
@@ -3199,11 +3199,11 @@ void Alignment::computeEmpiricalRate (double *rates) {
     delete [] pair_rates;
 }
 
-void Alignment::computeEmpiricalRateNonRev (double *rates) {
+void Alignment::computeDivergenceMatrixNonRev (double *rates) {
     double *rates_mat = new double[num_states*num_states];
     int i, j, k;
 
-    computeEmpiricalRate(rates);
+    computeDivergenceMatrix(rates);
 
     for (i = 0, k = 0; i < num_states-1; i++)
         for (j = i+1; j < num_states; j++)

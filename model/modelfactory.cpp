@@ -934,7 +934,6 @@ double ModelFactory::optimizeParametersGammaInvar(bool fixed_len, bool write_inf
     return tree->getCurScore();
 }
 
-
 double ModelFactory::optimizeParameters(bool fixed_len, bool write_info,
                                         double logl_epsilon, double gradient_epsilon) {
 	assert(model);
@@ -977,8 +976,6 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info,
 	//bool optimize_rate = true;
 //	double gradient_epsilon = min(logl_epsilon, 0.01); // epsilon for parameters starts at epsilon for logl
 	for (i = 2; i < tree->params->num_param_iterations; i++) {
-//        if (gradient_epsilon < 0.001)
-//            gradient_epsilon = 0.001;
 		/*
 		double model_lh = model->optimizeParameters(param_epsilon);
 		double rate_lh = 0.0;

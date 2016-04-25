@@ -142,7 +142,7 @@ void NGSAlignment::computeSumPairFreq (double *sum_pair_freq) {
     }
 }
 
-void NGSAlignment::computeEmpiricalRate (double *rates) {
+void NGSAlignment::computeDivergenceMatrix (double *rates) {
     int i, j, k, cat, id;
     assert(rates);
     double **pair_rates = (double**) new double[num_states];

@@ -166,7 +166,7 @@ public:
 		@return the best likelihood 
 	*/
 	virtual double optimizeParameters(bool fixed_len = false, bool write_info = true,
-                                      double logl_epsilon = 0.1, double gradient_epsilon = 0.001);
+                                      double logl_epsilon = 0.1, double gradient_epsilon = 0.0001);
 
 	/**
 	 *  optimize model parameters and tree branch lengths for the +I+G model

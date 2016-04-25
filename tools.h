@@ -1694,7 +1694,7 @@ public:
     /** true to ignore checkpoint file */
     bool ignore_checkpoint;
     /** number of quartets for likelihood mapping */
-    int lmap_num_quartets;
+    int64_t lmap_num_quartets;
 
     /**
             file containing the cluster information for clustered likelihood mapping
