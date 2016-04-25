@@ -768,6 +768,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.model_test_and_tree = 0;
     params.model_test_separate_rate = false;
     params.optimize_mixmodel_weight = false;
+    params.optimize_rate_matrix = false;
     params.store_trans_matrix = false;
     //params.freq_type = FREQ_EMPIRICAL;
     params.freq_type = FREQ_UNKNOWN;
@@ -1803,6 +1804,10 @@ void parseArg(int argc, char *argv[], Params &params) {
 			}
 			if (strcmp(argv[cnt], "-mwopt") == 0) {
 				params.optimize_mixmodel_weight = true;
+				continue;
+			}
+			if (strcmp(argv[cnt], "--opt-rate-mat") == 0) {
+				params.optimize_rate_matrix = true;
 				continue;
 			}
 			if (strcmp(argv[cnt], "-mh") == 0) {
