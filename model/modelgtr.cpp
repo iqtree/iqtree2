@@ -56,7 +56,7 @@ ModelGTR::ModelGTR(PhyloTree *tree, bool count_rates)
 	eigen_coeff = aligned_alloc<double>(ncoeff);
 
 //	if (count_rates) 
-//		phylo_tree->aln->computeEmpiricalRate(rates);
+//		computeEmpiricalRate();
 //	else
 		for (i=0; i < nrate; i++) rates[i] = 1.0;
 	//eigen_coeff_derv1 = new double[ncoeff];
@@ -578,10 +578,10 @@ double ModelGTR::optimizeParameters(double gradient_epsilon) {
 	setVariables(variables);
 	setBounds(lower_bound, upper_bound, bound_check);
 	//packData(variables, lower_bound, upper_bound, bound_check);
-    if (phylo_tree->params->optimize_alg.find("BFGS-B") == string::npos)
+//    if (phylo_tree->params->optimize_alg.find("BFGS-B") == string::npos)
         score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound, bound_check, max(gradient_epsilon, TOL_RATE));
-    else
-        score = -L_BFGS_B(ndim, variables+1, lower_bound+1, upper_bound+1, max(gradient_epsilon, TOL_RATE));
+//    else
+//        score = -L_BFGS_B(ndim, variables+1, lower_bound+1, upper_bound+1, max(gradient_epsilon, TOL_RATE));
 
 	bool changed = getVariables(variables);
     // BQM 2015-09-07: normalize state_freq
