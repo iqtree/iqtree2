@@ -1166,6 +1166,8 @@ public:
 
     /** number of mixture branch lengths, default 1 */
     int num_mixlen;
+    /** TRUE to always optimize rate matrix even if user parameters are specified in e.g. GTR{1,2,3,4,5} */
+    bool optimize_rate_matrix;
 
     /**
             TRUE to store transition matrix into a hash table for computation efficiency
