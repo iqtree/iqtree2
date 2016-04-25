@@ -921,7 +921,7 @@ double ModelFactory::optimizeParametersGammaInvar(bool fixed_len, bool write_inf
             }
             initPInv = initPInv + testInterval;
 
-            if (estResults[2] > bestLogl) {
+            if (estResults[2] > bestLogl + logl_epsilon) {
                 bestLogl = estResults[2];
                 bestAlpha = estResults[1];
                 bestPInvar = estResults[0];
@@ -934,9 +934,7 @@ double ModelFactory::optimizeParametersGammaInvar(bool fixed_len, bool write_inf
     }
 
 	site_rates->setGammaShape(bestAlpha);
-//	site_rates->setFixGammaShape(false);
 	site_rates->setPInvar(bestPInvar);
-//	site_rates->setFixPInvar(false);
 	((ModelGTR*) tree->getModel())->setRateMatrix(bestRates);
 	((ModelGTR*) tree->getModel())->setStateFrequency(bestStateFreqs);
 	tree->restoreBranchLengths(bestLens);
