@@ -3260,7 +3260,7 @@ void PhyloTree::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool clear
 	}	else {
         // Brent method
         optx = minimizeOneDimen(params->min_branch_length, current_len, params->max_branch_length, params->min_branch_length, &negative_lh, &ferror);
-        if (verbose_mode >= VB_DEBUG) {
+        if (verbose_mode >= VB_MAX) {
             cout << "minimizeBrent logl: " << -negative_lh << endl;
         }
 	}
