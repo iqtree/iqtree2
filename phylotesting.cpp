@@ -1143,6 +1143,20 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInf
 	in_tree->printBestPartitionRaxml((string(params.out_prefix) + ".best_scheme").c_str());
 }
 
+bool isMixtureModel(ModelsBlock *models_block, string &model_str) {
+    size_t mix_pos;
+    for (mix_pos = 0; mix_pos < model_str.length(); mix_pos++) {
+        size_t next_mix_pos = model_str.find_first_of("+*", mix_pos);
+        string sub_model_str = model_str.substr(mix_pos, next_mix_pos-mix_pos);
+        if (models_block->findMixModel(sub_model_str))
+            return true;
+        if (next_mix_pos == string::npos)
+            break;
+        mix_pos = next_mix_pos;
+    }
+    return false;
+}
+
 string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_info, ostream &fmodel, ModelsBlock *models_block,
     string set_name, bool print_mem_usage) 
 {
@@ -1281,7 +1295,7 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
         int ncat = 0;
         string orig_name = params.model_name;
         
-        if (models_block->findMixModel(model_names[model])) {
+        if (isMixtureModel(models_block, model_names[model])) {
             // mixture model
             try {
                 mixture_model = true;

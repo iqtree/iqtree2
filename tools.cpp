@@ -768,6 +768,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.model_test_and_tree = 0;
     params.model_test_separate_rate = false;
     params.optimize_mixmodel_weight = false;
+    params.optimize_rate_matrix = false;
     params.store_trans_matrix = false;
     //params.freq_type = FREQ_EMPIRICAL;
     params.freq_type = FREQ_UNKNOWN;
@@ -1803,6 +1804,10 @@ void parseArg(int argc, char *argv[], Params &params) {
 			}
 			if (strcmp(argv[cnt], "-mwopt") == 0) {
 				params.optimize_mixmodel_weight = true;
+				continue;
+			}
+			if (strcmp(argv[cnt], "--opt-rate-mat") == 0) {
+				params.optimize_rate_matrix = true;
 				continue;
 			}
 			if (strcmp(argv[cnt], "-mh") == 0) {
@@ -3169,6 +3174,7 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -gmedian             Median approximation for +G site rates (default: mean)" << endl
             << "  --opt-gamma-inv      More thorough estimation for +I+G model parameters" << endl
             << "  -i <p_invar>         Proportion of invariable sites (default: estimate)" << endl
+            << "  -wsr                 Write site rates to .rate file" << endl
             << "  -mh                  Computing site-specific rates to .mhrate file using" << endl
             << "                       Meyer & von Haeseler (2003) method" << endl
             //<< "  -c <#categories>     Number of Gamma rate categories (default: 4)" << endl

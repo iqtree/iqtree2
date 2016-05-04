@@ -9,6 +9,9 @@
 #include <string>
 
 
+const double MIN_OMEGA_KAPPA = 0.001;
+const double MAX_OMEGA_KAPPA = 50.0;
+
 /* Empirical codon model restricted (Kosiol et al. 2007), source: http://www.ebi.ac.uk/goldman/ECM/ */
 string model_ECMrest1 =
 "11.192024 \
@@ -889,6 +892,77 @@ void ModelCodon::setVariables(double *variables) {
 //			}
 	}
 }
+
+void ModelCodon::setBounds(double *lower_bound, double *upper_bound, bool *bound_check) {
+	int i, ndim = getNDim();
+
+	for (i = 1; i <= ndim; i++) {
+		//cout << variables[i] << endl;
+		lower_bound[i] = MIN_OMEGA_KAPPA;
+		upper_bound[i] = MAX_OMEGA_KAPPA;
+		bound_check[i] = false;
+	}
+
+	if (freq_type == FREQ_ESTIMATE) {
+		for (i = ndim-num_states+2; i <= ndim; i++) {
+//            lower_bound[i] = MIN_FREQUENCY/state_freq[highest_freq_state];
+//			upper_bound[i] = state_freq[highest_freq_state]/MIN_FREQUENCY;
+            lower_bound[i]  = MIN_FREQUENCY;
+//            upper_bound[i] = 100.0;
+            upper_bound[i] = 1.0;
+            bound_check[i] = false;
+        }
+	}
+}
+
+double ModelCodon::optimizeParameters(double gradient_epsilon) {
+	int ndim = getNDim();
+	
+	// return if nothing to be optimized
+	if (ndim == 0) return 0.0;
+    
+	if (verbose_mode >= VB_MAX)
+		cout << "Optimizing " << name << " model parameters..." << endl;
+
+
+	double *variables = new double[ndim+1];
+	double *upper_bound = new double[ndim+1];
+	double *lower_bound = new double[ndim+1];
+	bool *bound_check = new bool[ndim+1];
+	double score;
+
+    for (int i = 0; i < num_states; i++)
+        if (state_freq[i] > state_freq[highest_freq_state])
+            highest_freq_state = i;
+
+	// by BFGS algorithm
+	setVariables(variables);
+	setBounds(lower_bound, upper_bound, bound_check);
+//    if (phylo_tree->params->optimize_alg.find("BFGS-B") == string::npos)
+//        score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound, bound_check, max(gradient_epsilon, TOL_RATE));
+//    else
+        score = -L_BFGS_B(ndim, variables+1, lower_bound+1, upper_bound+1, max(gradient_epsilon, TOL_RATE));
+
+	bool changed = getVariables(variables);
+    // BQM 2015-09-07: normalize state_freq
+	if (freq_type == FREQ_ESTIMATE) { 
+        scaleStateFreq(true);
+        changed = true;
+    }
+    if (changed) {
+        decomposeRateMatrix();
+        phylo_tree->clearAllPartialLH();
+        score = phylo_tree->computeLikelihood();
+    }
+	
+	delete [] bound_check;
+	delete [] lower_bound;
+	delete [] upper_bound;
+	delete [] variables;
+
+	return score;
+}
+
 
 void ModelCodon::writeInfo(ostream &out) {
     if (name.find('_') == string::npos)

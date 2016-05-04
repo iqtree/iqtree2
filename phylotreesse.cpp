@@ -591,11 +591,11 @@ void PhyloTree::computePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNo
     size_t nstates = aln->num_states;
     size_t nptn = aln->size()+model_factory->unobserved_ptns.size();
 
+    if (!tip_partial_lh_computed)
+        computeTipPartialLikelihood();
+
 	if (node->isLeaf()) {
 	    dad_branch->lh_scale_factor = 0.0;
-
-		if (!tip_partial_lh_computed)
-			computeTipPartialLikelihood();
 		return;
 	}
     
@@ -787,7 +787,7 @@ void PhyloTree::computePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNo
                             outWarning((string)"Numerical underflow for site " + convertIntToString(i+1));
                             x++;
                         }
-                } else {
+                } else if (ptn_invar[ptn] == 0.0) {
                     // now do the likelihood scaling
                     for (i = 0; i < block; i++) {
                         partial_lh[i] *= SCALING_THRESHOLD_INVER;
@@ -905,7 +905,7 @@ void PhyloTree::computePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNo
 							outWarning((string)"Numerical underflow for site " + convertIntToString(i+1));
 							x++;
 						}
-            	} else {
+            	} else if (ptn_invar[ptn] == 0.0) {
 					// now do the likelihood scaling
 					for (i = 0; i < block; i++) {
 						partial_lh[i] *= SCALING_THRESHOLD_INVER;
@@ -986,7 +986,8 @@ void PhyloTree::computePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNo
 							outWarning((string)"Numerical underflow for site " + convertIntToString(i+1));
 							x++;
 						}
-            	} else {
+            	} else if (ptn_invar[ptn] == 0.0) {
+                    // BQM 2016-05-03: only scale for non-constant sites
 					// now do the likelihood scaling
 					for (i = 0; i < block; i++) {
 						partial_lh[i] *= SCALING_THRESHOLD_INVER;
@@ -1221,19 +1222,19 @@ double PhyloTree::computeLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloN
 #endif
     	for (ptn = 0; ptn < nptn; ptn++) {
 			double lh_ptn = ptn_invar[ptn];
-			double *lh_cat = _pattern_lh_cat + ptn*ncat;
-			double *partial_lh_dad = dad_branch->partial_lh + ptn*block;
-			int state_dad = (ptn < orig_nptn) ? (aln->at(ptn))[dad->id] : model_factory->unobserved_ptns[ptn-orig_nptn];
-			double *lh_node = partial_lh_node + state_dad*block;
-			for (c = 0; c < ncat; c++) {
-				for (i = 0; i < nstates; i++) {
-					*lh_cat += lh_node[i] * partial_lh_dad[i];
-				}
-				lh_node += nstates;
-				partial_lh_dad += nstates;
-				lh_ptn += *lh_cat;
-				lh_cat++;
-			}
+            double *lh_cat = _pattern_lh_cat + ptn*ncat;
+            double *partial_lh_dad = dad_branch->partial_lh + ptn*block;
+            int state_dad = (ptn < orig_nptn) ? (aln->at(ptn))[dad->id] : model_factory->unobserved_ptns[ptn-orig_nptn];
+            double *lh_node = partial_lh_node + state_dad*block;
+            for (c = 0; c < ncat; c++) {
+                for (i = 0; i < nstates; i++) {
+                    *lh_cat += lh_node[i] * partial_lh_dad[i];
+                }
+                lh_node += nstates;
+                partial_lh_dad += nstates;
+                lh_ptn += *lh_cat;
+                lh_cat++;
+            }
 //			assert(lh_ptn > -1e-10);
 			if (ptn < orig_nptn) {
 				lh_ptn = log(fabs(lh_ptn));
@@ -1255,20 +1256,20 @@ double PhyloTree::computeLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloN
 #endif
     	for (ptn = 0; ptn < nptn; ptn++) {
 			double lh_ptn = ptn_invar[ptn];
-			double *lh_cat = _pattern_lh_cat + ptn*ncat;
-			double *partial_lh_dad = dad_branch->partial_lh + ptn*block;
-			double *partial_lh_node = node_branch->partial_lh + ptn*block;
-			double *val_tmp = val;
-			for (c = 0; c < ncat; c++) {
-				for (i = 0; i < nstates; i++) {
-					*lh_cat +=  val_tmp[i] * partial_lh_node[i] * partial_lh_dad[i];
-				}
-				lh_ptn += *lh_cat;
-				partial_lh_node += nstates;
-				partial_lh_dad += nstates;
-				val_tmp += nstates;
-				lh_cat++;
-			}
+            double *lh_cat = _pattern_lh_cat + ptn*ncat;
+            double *partial_lh_dad = dad_branch->partial_lh + ptn*block;
+            double *partial_lh_node = node_branch->partial_lh + ptn*block;
+            double *val_tmp = val;
+            for (c = 0; c < ncat; c++) {
+                for (i = 0; i < nstates; i++) {
+                    *lh_cat +=  val_tmp[i] * partial_lh_node[i] * partial_lh_dad[i];
+                }
+                lh_ptn += *lh_cat;
+                partial_lh_node += nstates;
+                partial_lh_dad += nstates;
+                val_tmp += nstates;
+                lh_cat++;
+            }
 
 //			assert(lh_ptn > 0.0);
             if (ptn < orig_nptn) {
