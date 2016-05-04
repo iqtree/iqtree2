@@ -9,6 +9,9 @@
 #include <string>
 
 
+const double MIN_OMEGA_KAPPA = 0.001;
+const double MAX_OMEGA_KAPPA = 20.0;
+
 /* Empirical codon model restricted (Kosiol et al. 2007), source: http://www.ebi.ac.uk/goldman/ECM/ */
 string model_ECMrest1 =
 "11.192024 \
@@ -887,6 +890,28 @@ void ModelCodon::setVariables(double *variables) {
 //				variables[nrate+j] = state_freq[i] / state_freq[highest_freq_state];
 //				j++;
 //			}
+	}
+}
+
+void ModelCodon::setBounds(double *lower_bound, double *upper_bound, bool *bound_check) {
+	int i, ndim = getNDim();
+
+	for (i = 1; i <= ndim; i++) {
+		//cout << variables[i] << endl;
+		lower_bound[i] = MIN_OMEGA_KAPPA;
+		upper_bound[i] = MAX_OMEGA_KAPPA;
+		bound_check[i] = false;
+	}
+
+	if (freq_type == FREQ_ESTIMATE) {
+		for (i = ndim-num_states+2; i <= ndim; i++) {
+//            lower_bound[i] = MIN_FREQUENCY/state_freq[highest_freq_state];
+//			upper_bound[i] = state_freq[highest_freq_state]/MIN_FREQUENCY;
+            lower_bound[i]  = MIN_FREQUENCY;
+//            upper_bound[i] = 100.0;
+            upper_bound[i] = 1.0;
+            bound_check[i] = false;
+        }
 	}
 }
 
