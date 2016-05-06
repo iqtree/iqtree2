@@ -568,7 +568,7 @@ public:
     int computeParsimonyBranchFastSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst = NULL);
 
 
-    void printParsimonyStates(PhyloNeighbor *dad_branch = NULL, PhyloNode *dad = NULL);
+//    void printParsimonyStates(PhyloNeighbor *dad_branch = NULL, PhyloNode *dad = NULL);
 
     virtual void setParsimonyKernel(LikelihoodKernel lk);
 #if defined(BINARY32) || defined(__NOAVX__)
@@ -1850,55 +1850,6 @@ protected:
             @return the allocated memory
      */
     UINT *newBitsBlock();
-
-    /**
-            @return size of the bits entry (for storing num_states bits)
-     */
-    int getBitsEntrySize();
-
-    /**
-            @param bits_entry
-            @return TRUE if bits_entry contains all 0s, FALSE otherwise
-     */
-    bool isEmptyBitsEntry(UINT *bits_entry);
-
-    /**
-            @param bits_entry1
-            @param bits_entry1
-            @param bits_union (OUT) union of bits_entry1 and bits_entry2
-     */
-    void unionBitsEntry(UINT *bits_entry1, UINT *bits_entry2, UINT* &bits_union);
-
-    /**
-            set a single bit to 1
-            @param bits_entry
-            @param id index of the bit in the entry to set to 1
-     */
-    void setBitsEntry(UINT* &bits_entry, int id);
-
-    /**
-            get a single bit content
-            @param bits_entry
-            @param id index of the bit in the entry
-            @return TRUE if bit ID is 1, FALSE otherwise
-     */
-    bool getBitsEntry(UINT* &bits_entry, int id);
-
-    /**
-            get bit blocks, each block span num_state bits
-            @param bit_vec bit block vector
-            @param index block index
-            @param bits_entry (OUT) content of the block at index
-     */
-    void getBitsBlock(UINT *bit_vec, int index, UINT* &bits_entry);
-
-    /**
-            set bit blocks, each block span num_state bits
-            @param bit_vec (OUT) bit block vector
-            @param index block index
-            @param bits_entry the content of the block at index
-     */
-    void setBitsBlock(UINT* &bit_vec, int index, UINT *bits_entry);
 
     virtual void saveCurrentTree(double logl) {
     } // save current tree
