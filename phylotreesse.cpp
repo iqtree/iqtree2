@@ -71,14 +71,14 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk) {
 		dotProductDouble = &PhyloTree::dotProductSIMD<double, Vec2d, 2>;
 	}
 	sse = lk;
-//    if (!aln || lk == LK_NORMAL) {
-//        computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchNaive;
-//        computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervNaive;
-//        computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodNaive;
-//        computeLikelihoodFromBufferPointer = NULL;
-//        sse = LK_NORMAL;
-//        return;
-//    }
+    if (!aln) {
+        computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchEigen;
+        computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervEigen;
+        computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodEigen;
+        computeLikelihoodFromBufferPointer = NULL;
+        sse = LK_EIGEN;
+        return;
+    }
     
     if (model_factory && model_factory->model->isSiteSpecificModel()) {
         if (sse == LK_EIGEN) {
