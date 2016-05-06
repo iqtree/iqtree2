@@ -22,7 +22,7 @@
 
 //#define EIGEN_TUNE_FOR_CPU_CACHE_SIZE (512*256)
 //#define EIGEN_TUNE_FOR_CPU_CACHE_SIZE (8*512*512)
-#include <Eigen/Core>
+//#include <Eigen/Core>
 #include "mtree.h"
 #include "alignment.h"
 #include "model/modelsubst.h"
@@ -55,7 +55,7 @@ const double TOL_LIKELIHOOD_PARAMOPT = 0.001; // BQM: newly introduced for Model
 
 const int SPR_DEPTH = 2;
 
-using namespace Eigen;
+//using namespace Eigen;
 
 inline size_t get_safe_upper_limit(size_t cur_limit) {
 	if (instruction_set >= 7)
@@ -132,7 +132,7 @@ inline void aligned_free(void *mem) {
 /**
  *  Row Major Array For Eigen
  */
-typedef Array<double, Dynamic, Dynamic, RowMajor> RowMajorArrayXXd;
+//typedef Array<double, Dynamic, Dynamic, RowMajor> RowMajorArrayXXd;
 
 
 typedef std::map< string, double > StringDoubleMap;
@@ -675,16 +675,6 @@ public:
     typedef void (PhyloTree::*ComputePartialLikelihoodType)(PhyloNeighbor *, PhyloNode *);
     ComputePartialLikelihoodType computePartialLikelihoodPointer;
 
-    /**
-     * original naive version in IQ-TREE
-     */
-    void computePartialLikelihoodNaive(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
-
-    /**
-     * this implements the SSE version using Eigen library
-     */
-    template<int NSTATES>
-    void computePartialLikelihoodSSE(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
 
     //template <const int nstates>
     void computePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
@@ -725,12 +715,6 @@ public:
     ComputeLikelihoodBranchType computeLikelihoodBranchPointer;
 
     /**
-     * this implements the SSE version using Eigen library
-     */
-    template<int NSTATES>
-    double computeLikelihoodBranchSSE(PhyloNeighbor *dad_branch, PhyloNode *dad);
-
-    /**
      * MINH: this implements the fast alternative strategy for reversible model (March 2013)
      * where partial likelihoods at nodes store real partial likelihoods times eigenvectors
      */
@@ -759,8 +743,6 @@ public:
 
     template <class VectorClass, const int VCSIZE, const int nstates>
     double computeSitemodelLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad);
-
-    double computeLikelihoodBranchNaive(PhyloNeighbor *dad_branch, PhyloNode *dad);
 
     /****************************************************************************
             computing likelihood on a branch using buffer
@@ -805,7 +787,7 @@ public:
         @param dad its dad, used to direct the tranversal
         @return tree likelihood
      */
-    virtual double computeLikelihoodRooted(PhyloNeighbor *dad_branch, PhyloNode *dad);
+//    virtual double computeLikelihoodRooted(PhyloNeighbor *dad_branch, PhyloNode *dad);
 
     /**
             compute the tree likelihood
@@ -977,14 +959,6 @@ public:
     /****************************************************************************
             computing derivatives of likelihood function
      ****************************************************************************/
-
-    void computeLikelihoodDervNaive(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
-
-    /**
-     * this implements the SSE version using Eigen library
-     */
-    template<int NSTATES>
-    void computeLikelihoodDervSSE(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
 
     //template <const int nstates>
     void computeLikelihoodDervEigen(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);

@@ -1587,15 +1587,15 @@ double PhyloTree::computeLikelihood(double *pattern_lh) {
 //        assert(current_it_back);
     }
     double score;
-    string root_name = ROOT_NAME;
-    Node *vroot = findLeafName(root_name);
-    if (root_state != aln->STATE_UNKNOWN && vroot) {
-        if (verbose_mode >= VB_DEBUG)
-            cout << __func__ << " HIT ROOT STATE " << endl;
-        score = computeLikelihoodRooted((PhyloNeighbor*) vroot->neighbors[0], (PhyloNode*) vroot);
-    } else {
+//    string root_name = ROOT_NAME;
+//    Node *vroot = findLeafName(root_name);
+//    if (root_state != aln->STATE_UNKNOWN && vroot) {
+//        if (verbose_mode >= VB_DEBUG)
+//            cout << __func__ << " HIT ROOT STATE " << endl;
+//        score = computeLikelihoodRooted((PhyloNeighbor*) vroot->neighbors[0], (PhyloNode*) vroot);
+//    } else {
         score = computeLikelihoodBranch(current_it, (PhyloNode*) current_it_back->node);
-    }
+//    }
     if (pattern_lh)
         memmove(pattern_lh, _pattern_lh, aln->size() * sizeof(double));
 
@@ -1614,23 +1614,23 @@ double PhyloTree::computeLikelihood(double *pattern_lh) {
     return score;
 }
 
-double PhyloTree::computeLikelihoodRooted(PhyloNeighbor *dad_branch, PhyloNode *dad) {
-    double score = computeLikelihoodBranchNaive(dad_branch, dad);
-    if (verbose_mode >= VB_DEBUG) {
-        printTransMatrices(dad_branch->node, dad);
-        /*
-         FOR_NEIGHBOR_IT(dad_branch->node, dad, it) {
-         PhyloNeighbor *pit = (PhyloNeighbor*)(*it);
-         cout << pit->node->name << "\t" << pit->partial_lh[0] << endl;
-
-         }*/
-    }
-    double* state_freq = new double[aln->num_states];
-    model->getStateFrequency(state_freq);
-    score -= log(state_freq[(int) root_state]);
-    delete[] state_freq;
-    return score;
-}
+//double PhyloTree::computeLikelihoodRooted(PhyloNeighbor *dad_branch, PhyloNode *dad) {
+//    double score = computeLikelihoodBranchNaive(dad_branch, dad);
+//    if (verbose_mode >= VB_DEBUG) {
+//        printTransMatrices(dad_branch->node, dad);
+//        /*
+//         FOR_NEIGHBOR_IT(dad_branch->node, dad, it) {
+//         PhyloNeighbor *pit = (PhyloNeighbor*)(*it);
+//         cout << pit->node->name << "\t" << pit->partial_lh[0] << endl;
+//
+//         }*/
+//    }
+//    double* state_freq = new double[aln->num_states];
+//    model->getStateFrequency(state_freq);
+//    score -= log(state_freq[(int) root_state]);
+//    delete[] state_freq;
+//    return score;
+//}
 
 int PhyloTree::getNumLhCat(SiteLoglType wsl) {
     int ncat = 0;
@@ -1655,11 +1655,12 @@ double PhyloTree::computePatternLhCat(SiteLoglType wsl) {
         current_it = (PhyloNeighbor*)leaf->neighbors[0];
         current_it_back = (PhyloNeighbor*)current_it->node->findNeighbor(leaf);
     }
-    if (sse == LK_NORMAL || sse == LK_SSE) {
-        if (getModel()->isMixture())
-            outError("Naive kernel does not support mixture models, contact author if you really need this feature");
-        return computeLikelihoodBranchNaive(current_it, (PhyloNode*)current_it_back->node);
-    } else if (!getModel()->isMixture())
+//    if (sse == LK_NORMAL || sse == LK_SSE) {
+//        if (getModel()->isMixture())
+//            outError("Naive kernel does not support mixture models, contact author if you really need this feature");
+//        return computeLikelihoodBranchNaive(current_it, (PhyloNode*)current_it_back->node);
+//    } else 
+    if (!getModel()->isMixture())
         return computeLikelihoodBranchEigen(current_it, (PhyloNode*)current_it_back->node);
     else if (getModelFactory()->fused_mix_rate)
         return computeMixrateLikelihoodBranchEigen(current_it, (PhyloNode*)current_it_back->node);
@@ -2621,149 +2622,6 @@ void PhyloTree::computeAllBayesianBranchLengths(Node *node, Node *dad) {
     }
 }
 
-//double PhyloTree::computeLikelihoodBranchNaive(PhyloNeighbor *dad_branch, PhyloNode *dad, double *pattern_lh, double *pattern_rate) {
-double PhyloTree::computeLikelihoodBranchNaive(PhyloNeighbor *dad_branch, PhyloNode *dad) {
-    PhyloNode *node = (PhyloNode*) dad_branch->node;
-    PhyloNeighbor *node_branch = (PhyloNeighbor*) node->findNeighbor(dad);
-    //assert(node_branch);
-    //assert(!site_rate->isSiteSpecificRate() || !model->isSiteSpecificModel());
-    if (!central_partial_lh)
-        initializeAllPartialLh();
-    // swap node and dad if dad is a leaf
-    // NEW: swap if root_state is given
-    if (node->isLeaf() || (node->name == ROOT_NAME && root_state != aln->STATE_UNKNOWN)) {
-        PhyloNode *tmp_node = dad;
-        dad = node;
-        node = tmp_node;
-        PhyloNeighbor *tmp_nei = dad_branch;
-        dad_branch = node_branch;
-        node_branch = tmp_nei;
-        //cout << "swapped\n";
-    }
-
-    if ((dad_branch->partial_lh_computed & 1) == 0)
-        computePartialLikelihood(dad_branch, dad);
-    if ((node_branch->partial_lh_computed & 1) == 0)
-        computePartialLikelihood(node_branch, node);
-    // now combine likelihood at the branch
-
-    double tree_lh = node_branch->lh_scale_factor + dad_branch->lh_scale_factor;
-    int ncat = site_rate->getNRate();
-    double p_invar = site_rate->getPInvar();
-    double p_var_cat = (1.0 - p_invar) / (double) ncat;
-    int nstates = aln->num_states;
-    size_t block = ncat * nstates;
-    int trans_size = model->getTransMatrixSize();
-    size_t ptn; // for big data size > 4GB memory required
-    int cat, state1, state2;
-    size_t nptn = aln->size() + model_factory->unobserved_ptns.size();
-    size_t orig_nptn = aln->size();
-    int discrete_cat = site_rate->getNDiscreteRate();
-    double *trans_mat = new double[discrete_cat * trans_size];
-    double *state_freq = new double[nstates];
-    model->getStateFrequency(state_freq);
-
-    if (!site_rate->isSiteSpecificRate())
-        for (cat = 0; cat < discrete_cat; cat++) {
-            //trans_mat[cat] = model->newTransMatrix();
-            double *trans_cat = trans_mat + (cat * trans_size);
-            model_factory->computeTransMatrixFreq(dad_branch->length * site_rate->getRate(cat), state_freq, trans_cat);
-        }
-
-    bool not_ptn_cat = (site_rate->getPtnCat(0) < 0);
-    double prob_const = 0.0; // probability of unobserved const patterns
-#ifdef _OPENMP
-#pragma omp parallel for reduction(+: tree_lh, prob_const) private(ptn, cat, state1, state2)
-#endif
-    for (ptn = 0; ptn < nptn; ptn++) {
-        double lh_ptn = 0.0; // likelihood of the pattern
-        int dad_state = 1000; // just something big enough
-        int ptn_cat = site_rate->getPtnCat(ptn);
-        if (dad->name == ROOT_NAME && root_state != aln->STATE_UNKNOWN) {
-            dad_state = root_state;
-        } else if (dad->isLeaf()) {
-        	if (ptn < orig_nptn)
-        		dad_state = (*aln)[ptn][dad->id];
-        	else
-        		dad_state = model_factory->unobserved_ptns[ptn-orig_nptn];
-        }
-        int dad_offset = dad_state * nstates;
-        if (site_rate->isSiteSpecificRate()) {
-        	if (ptn < orig_nptn)
-        		model_factory->computeTransMatrixFreq(dad_branch->length * site_rate->getPtnRate(ptn), state_freq, trans_mat);
-        	else
-        		model_factory->computeTransMatrixFreq(dad_branch->length, state_freq, trans_mat);
-        }
-        for (cat = 0; cat < ncat; cat++) {
-            double lh_cat = 0.0; // likelihood of the pattern's category
-            size_t lh_offset = cat * nstates + ptn * block;
-            double *partial_lh_site = node_branch->partial_lh + lh_offset;
-            double *partial_lh_child = dad_branch->partial_lh + lh_offset;
-            if (dad_state < nstates) { // single state
-                // external node
-                double *trans_state = trans_mat + ((not_ptn_cat ? cat : ptn_cat) * trans_size + dad_offset);
-                if (model->isSiteSpecificModel() && ptn < nptn)
-                    trans_state += (nstates * nstates * model->getPtnModelID(ptn));
-                for (state2 = 0; state2 < nstates; state2++)
-                    lh_cat += partial_lh_child[state2] * trans_state[state2];
-            } else {
-                // internal node, or external node but ambiguous character
-                for (state1 = 0; state1 < nstates; state1++) {
-                    double lh_state = 0.0; // likelihood of state1
-                    double *trans_state = trans_mat + ((not_ptn_cat ? cat : ptn_cat) * trans_size + state1 * nstates);
-                    if (model->isSiteSpecificModel() && ptn < nptn)
-                        trans_state += (nstates * nstates * model->getPtnModelID(ptn));
-                    for (state2 = 0; state2 < nstates; state2++)
-                        lh_state += partial_lh_child[state2] * trans_state[state2];
-                    lh_cat += lh_state * partial_lh_site[state1];
-                }
-            }
-            lh_ptn += lh_cat;
-            _pattern_lh_cat[ptn * ncat + cat] = lh_cat;
-//            if (pattern_rate)
-//                rate_ptn += lh_cat * site_rate->getRate(cat);
-        }
-        if (ptn < orig_nptn) {
-//			if (pattern_rate)
-//				pattern_rate[ptn] = rate_ptn / lh_ptn;
-			lh_ptn *= p_var_cat;
-			if ((*aln)[ptn].const_char == nstates)
-				lh_ptn += p_invar;
-			else if ((*aln)[ptn].const_char < nstates) {
-				lh_ptn += p_invar * state_freq[(int) (*aln)[ptn].const_char];
-			}
-			//#ifdef DEBUG
-			if (lh_ptn <= 0.0)
-				cout << "Negative likelihood: " << lh_ptn << " " << site_rate->getPtnRate(ptn) << endl;
-			//#endif
-        	lh_ptn = log(lh_ptn);
-			_pattern_lh[ptn] = lh_ptn;
-			if (discard_saturated_site && site_rate->isSiteSpecificRate() && site_rate->getPtnRate(ptn) >= MAX_SITE_RATE)
-				continue;
-			tree_lh += lh_ptn * aln->at(ptn).frequency;
-        } else {
-        	lh_ptn = lh_ptn*p_var_cat + p_invar*state_freq[(int)model_factory->unobserved_ptns[ptn-orig_nptn]];
-        	prob_const += lh_ptn;
-        }
-
-    }
-    if (orig_nptn < nptn) {
-    	// ascertainment bias correction
-    	prob_const = log(1.0 - prob_const);
-    	for (ptn = 0; ptn < orig_nptn; ptn++)
-    		_pattern_lh[ptn] -= prob_const;
-    	tree_lh -= aln->getNSite()*prob_const;
-    }
-//    if (pattern_lh)
-//        memmove(pattern_lh, _pattern_lh, aln->size() * sizeof(double));
-    delete[] state_freq;
-    delete[] trans_mat;
-    //for (cat = ncat-1; cat >= 0; cat--)
-    //delete trans_mat[cat];
-    //delete state_freq;
-
-    return tree_lh;
-}
 
 double PhyloTree::computeLikelihoodZeroBranch(PhyloNeighbor *dad_branch, PhyloNode *dad) {
     double lh_zero_branch;
@@ -2779,406 +2637,6 @@ double PhyloTree::computeLikelihoodZeroBranch(PhyloNeighbor *dad_branch, PhyloNo
     return lh_zero_branch;
 }
 
-void PhyloTree::computePartialLikelihoodNaive(PhyloNeighbor *dad_branch, PhyloNode *dad) {
-    // don't recompute the likelihood
-    if (dad_branch->partial_lh_computed & 1)
-        return;
-    Node * node = dad_branch->node;
-    size_t ptn, cat;
-    int ncat = site_rate->getNRate();
-    int nstates = aln->num_states;
-    size_t block = nstates * site_rate->getNRate();
-    int trans_size = model->getTransMatrixSize();
-    size_t lh_size = (aln->size()+model_factory->unobserved_ptns.size()) * block;
-    double *partial_lh_site;
-    size_t nptn = aln->size()+model_factory->unobserved_ptns.size();
-    size_t orig_nptn = aln->size();
-
-    dad_branch->lh_scale_factor = 0.0;
-    memset(dad_branch->scale_num, 0, nptn * sizeof(UBYTE));
-
-    assert(dad_branch->partial_lh);
-    //if (!dad_branch->partial_lh)
-    //	dad_branch->partial_lh = newPartialLh();
-    if (node->isLeaf() && dad) {
-        /* external node */
-        memset(dad_branch->partial_lh, 0, lh_size * sizeof(double));
-        for (ptn = 0; ptn < nptn; ptn++) {
-            char state;
-            partial_lh_site = dad_branch->partial_lh + (ptn * block);
-            if (node->name == ROOT_NAME) {
-                state = aln->STATE_UNKNOWN;
-            } else {
-                assert(node->id < aln->getNSeq());
-                if (ptn < orig_nptn)
-                	state = (aln->at(ptn))[node->id];
-                else // ascertainment bias correction
-                	state = model_factory->unobserved_ptns[ptn-orig_nptn];
-            }
-            if (state < nstates) {
-				for (cat = 0; cat < ncat; cat++)
-					partial_lh_site[cat * nstates + state] = 1.0;
-			} else if (state == aln->STATE_UNKNOWN) {
-                // fill all entries (also over rate category) with 1.0
-                dad_branch->scale_num[ptn] = -1;
-                for (int state2 = 0; state2 < block; state2++) {
-                    partial_lh_site[state2] = 1.0;
-                }
-            } else if (aln->seq_type == SEQ_DNA) {
-                // ambiguous character, for DNA, RNA
-                state = state - (nstates - 1);
-                for (int state2 = 0; state2 < nstates && state2 <= 6; state2++)
-                    if (state & (1 << state2)) {
-                        for (cat = 0; cat < ncat; cat++)
-                            partial_lh_site[cat * nstates + state2] = 1.0;
-                    }
-            } else if (aln->seq_type == SEQ_PROTEIN) {
-                // ambiguous character, for DNA, RNA
-                state = state - (nstates);
-                assert(state < 3);
-                int state_map[] = {4+8,32+64,512+1024};
-                for (int state2 = 0; state2 < 11; state2++)
-                    if (state_map[(int)state] & (1 << state2)) {
-                        for (cat = 0; cat < ncat; cat++)
-                            partial_lh_site[cat * nstates + state2] = 1.0;
-                    }
-            } else {
-            	outError("Internal error ", __func__);
-            }
-        }
-    } else {
-        /* internal node */
-        int discrete_cat = site_rate->getNDiscreteRate();
-        double *trans_mat = new double[discrete_cat * trans_size];
-        //for (cat = 0; cat < discrete_cat; cat++) trans_mat[cat] = model->newTransMatrix();
-        for (ptn = 0; ptn < lh_size; ptn++) {
-            dad_branch->partial_lh[ptn] = 1.0;
-        }
-        for (ptn = 0; ptn < nptn; ptn++)
-            dad_branch->scale_num[ptn] = -1;
-
-        FOR_NEIGHBOR_IT(node, dad, it)if ((*it)->node->name != ROOT_NAME) {
-            computePartialLikelihoodNaive((PhyloNeighbor*) (*it), (PhyloNode*) node);
-
-            dad_branch->lh_scale_factor += ((PhyloNeighbor*) (*it))->lh_scale_factor;
-
-            if (!site_rate->isSiteSpecificRate())
-            for (cat = 0; cat < discrete_cat; cat++)
-            model_factory->computeTransMatrix((*it)->length * site_rate->getRate(cat), trans_mat + (cat * trans_size));
-
-            bool not_ptn_cat = (site_rate->getPtnCat(0) < 0);
-
-            double sum_scale = 0.0;
-#ifdef _OPENMP
-#pragma omp parallel for reduction(+: sum_scale) private(ptn, cat, partial_lh_site)
-#endif
-            for (ptn = 0; ptn < nptn; ptn++)
-            if (((PhyloNeighbor*) (*it))->scale_num[ptn] >= 0) {
-                // avoid the case that all child partial likelihoods equal 1.0
-                //double *partial_lh_child = ((PhyloNeighbor*) (*it))->partial_lh + (ptn*block);
-                //if (partial_lh_child[0] < 0.0) continue;
-                //
-                if (dad_branch->scale_num[ptn] < 0) dad_branch->scale_num[ptn] = 0;
-                dad_branch->scale_num[ptn] += ((PhyloNeighbor*) (*it))->scale_num[ptn];
-                int ptn_cat = 0;
-                if (ptn < orig_nptn) {
-                	ptn_cat = site_rate->getPtnCat(ptn);
-					if (site_rate->isSiteSpecificRate())
-						model_factory->computeTransMatrix((*it)->length * site_rate->getPtnRate(ptn), trans_mat);
-                } else {
-					if (site_rate->isSiteSpecificRate())
-						model_factory->computeTransMatrix((*it)->length, trans_mat);
-                }
-                for (cat = 0; cat < ncat; cat++) {
-                    size_t lh_offset = cat * nstates + ptn*block;
-                    partial_lh_site = dad_branch->partial_lh + lh_offset;
-                    double *partial_lh_child = ((PhyloNeighbor*) (*it))->partial_lh + lh_offset;
-                    for (int state = 0; state < nstates; state++) {
-                        double lh_child = 0.0;
-                        double *trans_state = trans_mat + ((not_ptn_cat ? cat : ptn_cat) * trans_size + state * nstates);
-                        if (model->isSiteSpecificModel() && ptn < orig_nptn)
-                        	trans_state += (nstates * nstates * model->getPtnModelID(ptn));
-                        for (int state2 = 0; state2 < nstates; state2++)
-                        lh_child += trans_state[state2] * partial_lh_child[state2];
-
-                        if (!isfinite(lh_child))
-                        	outError("Numerical error with ", __func__);
-                        partial_lh_site[state] *= lh_child;
-                    }
-                }
-                // check if one should scale partial likelihoods
-                bool do_scale = true;
-                partial_lh_site = dad_branch->partial_lh + (ptn * block);
-                for (cat = 0; cat < block; cat++)
-                if (partial_lh_site[cat] > SCALING_THRESHOLD) {
-                    do_scale = false;
-                    break;
-                }
-                if (!do_scale) continue;
-                // now do the likelihood scaling
-                /*
-                 double lh_max = partial_lh_site[0];
-                 for (cat = 1; cat < block; cat++)
-                 if (lh_max < partial_lh_site[cat]) lh_max = partial_lh_site[cat];
-                 for (cat = 0; cat < block; cat++)
-                 partial_lh_site[cat] /= lh_max;
-                 dad_branch->lh_scale_factor += log(lh_max) * (*aln)[ptn].frequency;
-
-                 */
-                for (cat = 0; cat < block; cat++)
-                partial_lh_site[cat] /= SCALING_THRESHOLD;
-                // unobserved const pattern will never have underflow
-                sum_scale += LOG_SCALING_THRESHOLD * (*aln)[ptn].frequency;
-                dad_branch->scale_num[ptn] += 1;
-
-//                if (pattern_scale)
-//                pattern_scale[ptn] += LOG_SCALING_THRESHOLD;
-            }
-            dad_branch->lh_scale_factor += sum_scale;
-        }
-        delete[] trans_mat;
-        //for (cat = ncat - 1; cat >= 0; cat--)
-        //  delete [] trans_mat[cat];
-    }
-    dad_branch->partial_lh_computed |= 1;
-
-}
-
-void PhyloTree::computeLikelihoodDervNaive(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf) {
-    PhyloNode *node = (PhyloNode*) dad_branch->node;
-    PhyloNeighbor *node_branch = (PhyloNeighbor*) node->findNeighbor(dad);
-    assert(node_branch);
-    // swap node and dad if dad is a leaf
-    // NEW: swap if root_state is given
-    if (node->isLeaf() || (node->name == ROOT_NAME && root_state != aln->STATE_UNKNOWN)) {
-        PhyloNode *tmp_node = dad;
-        dad = node;
-        node = tmp_node;
-        PhyloNeighbor *tmp_nei = dad_branch;
-        dad_branch = node_branch;
-        node_branch = tmp_nei;
-        //cout << "swapped\n";
-    }
-    if ((dad_branch->partial_lh_computed & 1) == 0)
-        computePartialLikelihoodNaive(dad_branch, dad);
-    if ((node_branch->partial_lh_computed & 1) == 0)
-        computePartialLikelihoodNaive(node_branch, node);
-
-    // now combine likelihood at the branch
-//    double tree_lh = node_branch->lh_scale_factor + dad_branch->lh_scale_factor;
-    df = ddf = 0.0;
-    int ncat = site_rate->getNRate();
-    double p_invar = site_rate->getPInvar();
-    double p_var_cat = (1.0 - p_invar) / (double) ncat;
-    int nstates = aln->num_states;
-    size_t block = ncat * nstates;
-    int trans_size = model->getTransMatrixSize();
-    size_t nptn = aln->size() + model_factory->unobserved_ptns.size();
-    size_t orig_nptn = aln->size();
-    size_t ptn, cat, state1, state2;
-
-    int discrete_cat = site_rate->getNDiscreteRate();
-
-    double *trans_mat = new double[discrete_cat * trans_size];
-    double *trans_derv1 = new double[discrete_cat * trans_size];
-    double *trans_derv2 = new double[discrete_cat * trans_size];
-    double *state_freq = new double[nstates];
-    model->getStateFrequency(state_freq);
-
-    if (!site_rate->isSiteSpecificRate())
-        for (cat = 0; cat < discrete_cat; cat++) {
-            //trans_mat[cat] = model->newTransMatrix();
-            double *trans_cat = trans_mat + (cat * trans_size);
-            double *derv1_cat = trans_derv1 + (cat * trans_size);
-            double *derv2_cat = trans_derv2 + (cat * trans_size);
-            double rate_val = site_rate->getRate(cat);
-            //double rate_sqr = rate_val * rate_val;
-            model_factory->computeTransDervFreq(dad_branch->length, rate_val, state_freq, trans_cat, derv1_cat,
-                    derv2_cat);
-            /*
-             for (state1 = 0; state1 < nstates; state1++) {
-             double *trans_mat_state = trans_cat + (state1 * nstates);
-             double *trans_derv1_state = derv1_cat + (state1 * nstates);
-             double *trans_derv2_state = derv2_cat + (state1 * nstates);
-
-             for (state2 = 0; state2 < nstates; state2++) {
-             trans_mat_state[state2] *= state_freq[state1];
-             trans_derv1_state[state2] *= (state_freq[state1] * rate_val);
-             trans_derv2_state[state2] *= (state_freq[state1] * rate_sqr);
-             }
-             }*/
-        }
-
-    bool not_ptn_cat = (site_rate->getPtnCat(0) < 0);
-    double derv1_frac;
-    double derv2_frac;
-
-    double my_df = 0.0;
-    double my_ddf = 0.0;
-    double prob_const = 0.0;
-    double prob_const_derv1 = 0.0, prob_const_derv2 = 0.0;
-
-#ifdef _OPENMP
-#pragma omp parallel for reduction(+: my_df, my_ddf, prob_const, prob_const_derv1, prob_const_derv2) private(ptn, cat, state1, state2, derv1_frac, derv2_frac)
-#endif
-    for (ptn = 0; ptn < nptn; ptn++) {
-        int ptn_cat = site_rate->getPtnCat(ptn);
-        if (discard_saturated_site && site_rate->isSiteSpecificRate() && nptn<orig_nptn &&site_rate->getPtnRate(ptn) >= MAX_SITE_RATE)
-            continue;
-        double lh_ptn = 0.0; // likelihood of the pattern
-        double lh_ptn_derv1 = 0.0;
-        double lh_ptn_derv2 = 0.0;
-        int dad_state = aln->STATE_UNKNOWN;
-
-        if (dad->name == ROOT_NAME && root_state != aln->STATE_UNKNOWN)
-            dad_state = root_state;
-        else if (dad->isLeaf()) {
-        	if (ptn < orig_nptn)
-        		dad_state = (*aln)[ptn][dad->id];
-        	else
-        		dad_state = model_factory->unobserved_ptns[ptn-orig_nptn];
-        }
-        int dad_offset = dad_state * nstates;
-        if (site_rate->isSiteSpecificRate()) {
-        	if (ptn < orig_nptn)
-            model_factory->computeTransDervFreq(dad_branch->length, site_rate->getPtnRate(ptn), state_freq, trans_mat,
-                    trans_derv1, trans_derv2);
-        	else
-                model_factory->computeTransDervFreq(dad_branch->length, 1.0, state_freq, trans_mat,
-                        trans_derv1, trans_derv2);
-        }
-        for (cat = 0; cat < ncat; cat++) {
-            size_t lh_offset = cat * nstates + ptn * block;
-            double *partial_lh_site = node_branch->partial_lh + lh_offset;
-            double *partial_lh_child = dad_branch->partial_lh + lh_offset;
-            if (dad_state < nstates) {
-                // external node
-                int cat2 = (not_ptn_cat ? cat : ptn_cat) * trans_size + dad_offset;
-                if (model->isSiteSpecificModel() && ptn < orig_nptn)
-                    cat2 += (nstates * nstates * model->getPtnModelID(ptn));
-                double *trans_state = trans_mat + cat2;
-                double *derv1_state = trans_derv1 + cat2;
-                double *derv2_state = trans_derv2 + cat2;
-                for (state2 = 0; state2 < nstates; state2++) {
-                    lh_ptn += partial_lh_child[state2] * trans_state[state2];
-                    lh_ptn_derv1 += partial_lh_child[state2] * derv1_state[state2];
-                    lh_ptn_derv2 += partial_lh_child[state2] * derv2_state[state2];
-                }
-            } else {
-                // internal node, or external node but ambiguous character
-                for (state1 = 0; state1 < nstates; state1++) {
-                    double lh_state = 0.0; // likelihood of state1
-                    double lh_state_derv1 = 0.0;
-                    double lh_state_derv2 = 0.0;
-                    int cat2 = (not_ptn_cat ? cat : ptn_cat) * trans_size + state1 * nstates;
-                    if (model->isSiteSpecificModel() && ptn < orig_nptn)
-                        cat2 += (nstates * nstates * model->getPtnModelID(ptn));
-                    double *trans_state = trans_mat + cat2;
-                    double *derv1_state = trans_derv1 + cat2;
-                    double *derv2_state = trans_derv2 + cat2;
-                    for (state2 = 0; state2 < nstates; state2++) {
-                        lh_state += partial_lh_child[state2] * trans_state[state2];
-                        lh_state_derv1 += partial_lh_child[state2] * derv1_state[state2];
-                        lh_state_derv2 += partial_lh_child[state2] * derv2_state[state2];
-                    }
-                    lh_ptn += lh_state * partial_lh_site[state1];
-                    lh_ptn_derv1 += lh_state_derv1 * partial_lh_site[state1];
-                    lh_ptn_derv2 += lh_state_derv2 * partial_lh_site[state1];
-                }
-            }
-        }
-        /*		if (p_invar > 0.0) {
-         lh_ptn *= p_var_cat;
-         lh_ptn_derv1 *= p_var_cat;
-         lh_ptn_derv2 *= p_var_cat;
-         if ((*aln)[ptn].is_const && (*aln)[ptn].const_char < nstates) {
-         lh_ptn += p_invar * state_freq[(int) (*aln)[ptn].const_char];
-         }
-         assert(lh_ptn > 0);
-         double derv1_frac = lh_ptn_derv1 / lh_ptn;
-         double derv2_frac = lh_ptn_derv2 / lh_ptn;
-         tree_lh += log(lh_ptn) * (*aln)[ptn].frequency;
-         df += derv1_frac * (*aln)[ptn].frequency;
-         ddf += (derv2_frac - derv1_frac * derv1_frac) * (*aln)[ptn].frequency;
-         } else {
-         double derv1_frac = lh_ptn_derv1 / lh_ptn;
-         double derv2_frac = lh_ptn_derv2 / lh_ptn;
-         lh_ptn *= p_var_cat;
-         assert(lh_ptn > 0);
-         tree_lh += log(lh_ptn) * (*aln)[ptn].frequency;
-         df += derv1_frac * (*aln)[ptn].frequency;
-         ddf += (derv2_frac - derv1_frac * derv1_frac) * (*aln)[ptn].frequency;
-
-         }
-         */
-        // Tung beo's trick
-        if (lh_ptn<=0) {
-            cout << "Abnormal " << __func__;
-            abort();
-        }
-
-        if (ptn < orig_nptn) {
-            lh_ptn = lh_ptn * p_var_cat;
-			if ((*aln)[ptn].const_char == nstates)
-				lh_ptn += p_invar;
-			else if ((*aln)[ptn].const_char < nstates) {
-				lh_ptn += p_invar * state_freq[(int) (*aln)[ptn].const_char];
-			}
-	        double pad = p_var_cat / lh_ptn;
-	        if (std::isinf(pad)) {
-	            lh_ptn_derv1 *= p_var_cat;
-	            lh_ptn_derv2 *= p_var_cat;
-	            derv1_frac = lh_ptn_derv1 / lh_ptn;
-	            derv2_frac = lh_ptn_derv2 / lh_ptn;
-	        } else {
-	            derv1_frac = lh_ptn_derv1 * pad;
-	            derv2_frac = lh_ptn_derv2 * pad;
-	        }
-	        double freq = (*aln)[ptn].frequency;
-	        double tmp1 = derv1_frac * freq;
-	        double tmp2 = derv2_frac * freq;
-	        my_df += tmp1;
-	        my_ddf += tmp2 - tmp1 * derv1_frac;
-//	        lh_ptn = log(lh_ptn);
-//	        tree_lh += lh_ptn * freq;
-//	        _pattern_lh[ptn] = lh_ptn;
-	        if (!isfinite(lh_ptn) || !isfinite(my_df) || !isfinite(my_ddf)) {
-	            cout << "Abnormal " << __func__;
-	            abort();
-	        }
-        } else {
-        	lh_ptn = lh_ptn*p_var_cat + p_invar*state_freq[(int)model_factory->unobserved_ptns[ptn-orig_nptn]];
-        	prob_const += lh_ptn;
-        	prob_const_derv1 += lh_ptn_derv1 * p_var_cat;
-        	prob_const_derv2 += lh_ptn_derv2 * p_var_cat;
-        }
-
-    }
-    if (orig_nptn < nptn) {
-    	// ascertainment bias correction
-    	prob_const = 1.0 - prob_const;
-    	derv1_frac = prob_const_derv1 / prob_const;
-    	derv2_frac = prob_const_derv2 / prob_const;
-    	int nsites = aln->getNSite();
-    	my_df += nsites * derv1_frac;
-    	my_ddf += nsites *(derv2_frac + derv1_frac*derv1_frac);
-//    	prob_const = log(prob_const);
-//    	tree_lh -= nsites * prob_const;
-//    	for (ptn = 0; ptn < orig_nptn; ptn++)
-//    		_pattern_lh[ptn] -= prob_const;
-    }
-    delete[] state_freq;
-    delete[] trans_derv2;
-    delete[] trans_derv1;
-    delete[] trans_mat;
-    //for (cat = ncat-1; cat >= 0; cat--)
-    //delete trans_mat[cat];
-    //delete state_freq;
-    df = my_df;
-    ddf = my_ddf;
-
-//    return tree_lh;
-}
 
 /****************************************************************************
  Branch length optimization by maximum likelihood

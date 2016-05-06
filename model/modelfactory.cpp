@@ -481,48 +481,48 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 			site_rate = new RateGamma(num_rate_cats, gamma_shape, params.gamma_median, tree);
 		} else if (posR != string::npos) {
 			site_rate = new RateFree(num_rate_cats, gamma_shape, freerate_params, !fused_mix_rate, params.optimize_alg, tree);
-		} else if ((posX = rate_str.find("+M")) != string::npos) {
-			tree->setLikelihoodKernel(LK_NORMAL);
-			params.rate_mh_type = true;
-			if (rate_str.length() > posX+2 && isdigit(rate_str[posX+2])) {
-				num_rate_cats = convert_int(rate_str.substr(posX+2).c_str());
-				if (num_rate_cats < 0) outError("Wrong number of rate categories");
-			} else num_rate_cats = -1;
-			if (num_rate_cats >= 0)
-				site_rate = new RateMeyerDiscrete(num_rate_cats, params.mcat_type, 
-					params.rate_file, tree, params.rate_mh_type);
-			else
-				site_rate = new RateMeyerHaeseler(params.rate_file, tree, params.rate_mh_type);
-			site_rate->setTree(tree);
-		} else if ((posX = rate_str.find("+D")) != string::npos) {
-			tree->setLikelihoodKernel(LK_NORMAL);
-			params.rate_mh_type = false;
-			if (rate_str.length() > posX+2 && isdigit(rate_str[posX+2])) {
-				num_rate_cats = convert_int(rate_str.substr(posX+2).c_str());
-				if (num_rate_cats < 0) outError("Wrong number of rate categories");
-			} else num_rate_cats = -1;
-			if (num_rate_cats >= 0)
-				site_rate = new RateMeyerDiscrete(num_rate_cats, params.mcat_type, 
-					params.rate_file, tree, params.rate_mh_type);
-			else
-				site_rate = new RateMeyerHaeseler(params.rate_file, tree, params.rate_mh_type);
-			site_rate->setTree(tree);
-		} else if ((posX = rate_str.find("+NGS")) != string::npos) {
-			tree->setLikelihoodKernel(LK_NORMAL);
-			if (rate_str.length() > posX+4 && isdigit(rate_str[posX+4])) {
-				num_rate_cats = convert_int(rate_str.substr(posX+4).c_str());
-				if (num_rate_cats < 0) outError("Wrong number of rate categories");
-			} else num_rate_cats = -1;
-			site_rate = new NGSRateCat(tree, num_rate_cats);
-			site_rate->setTree(tree);
-		} else if ((posX = rate_str.find("+NGS")) != string::npos) {
-			tree->setLikelihoodKernel(LK_NORMAL);
-			if (rate_str.length() > posX+4 && isdigit(rate_str[posX+4])) {
-				num_rate_cats = convert_int(rate_str.substr(posX+4).c_str());
-				if (num_rate_cats < 0) outError("Wrong number of rate categories");
-			} else num_rate_cats = -1;
-			site_rate = new NGSRate(tree);
-			site_rate->setTree(tree);
+//		} else if ((posX = rate_str.find("+M")) != string::npos) {
+//			tree->setLikelihoodKernel(LK_NORMAL);
+//			params.rate_mh_type = true;
+//			if (rate_str.length() > posX+2 && isdigit(rate_str[posX+2])) {
+//				num_rate_cats = convert_int(rate_str.substr(posX+2).c_str());
+//				if (num_rate_cats < 0) outError("Wrong number of rate categories");
+//			} else num_rate_cats = -1;
+//			if (num_rate_cats >= 0)
+//				site_rate = new RateMeyerDiscrete(num_rate_cats, params.mcat_type, 
+//					params.rate_file, tree, params.rate_mh_type);
+//			else
+//				site_rate = new RateMeyerHaeseler(params.rate_file, tree, params.rate_mh_type);
+//			site_rate->setTree(tree);
+//		} else if ((posX = rate_str.find("+D")) != string::npos) {
+//			tree->setLikelihoodKernel(LK_NORMAL);
+//			params.rate_mh_type = false;
+//			if (rate_str.length() > posX+2 && isdigit(rate_str[posX+2])) {
+//				num_rate_cats = convert_int(rate_str.substr(posX+2).c_str());
+//				if (num_rate_cats < 0) outError("Wrong number of rate categories");
+//			} else num_rate_cats = -1;
+//			if (num_rate_cats >= 0)
+//				site_rate = new RateMeyerDiscrete(num_rate_cats, params.mcat_type, 
+//					params.rate_file, tree, params.rate_mh_type);
+//			else
+//				site_rate = new RateMeyerHaeseler(params.rate_file, tree, params.rate_mh_type);
+//			site_rate->setTree(tree);
+//		} else if ((posX = rate_str.find("+NGS")) != string::npos) {
+//			tree->setLikelihoodKernel(LK_NORMAL);
+//			if (rate_str.length() > posX+4 && isdigit(rate_str[posX+4])) {
+//				num_rate_cats = convert_int(rate_str.substr(posX+4).c_str());
+//				if (num_rate_cats < 0) outError("Wrong number of rate categories");
+//			} else num_rate_cats = -1;
+//			site_rate = new NGSRateCat(tree, num_rate_cats);
+//			site_rate->setTree(tree);
+//		} else if ((posX = rate_str.find("+NGS")) != string::npos) {
+//			tree->setLikelihoodKernel(LK_NORMAL);
+//			if (rate_str.length() > posX+4 && isdigit(rate_str[posX+4])) {
+//				num_rate_cats = convert_int(rate_str.substr(posX+4).c_str());
+//				if (num_rate_cats < 0) outError("Wrong number of rate categories");
+//			} else num_rate_cats = -1;
+//			site_rate = new NGSRate(tree);
+//			site_rate->setTree(tree);
 		} else if ((posX = rate_str.find("+K")) != string::npos) {
 			if (rate_str.length() > posX+2 && isdigit(rate_str[posX+2])) {
 				num_rate_cats = convert_int(rate_str.substr(posX+2).c_str());
