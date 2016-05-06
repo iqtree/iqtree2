@@ -514,7 +514,7 @@ public:
      * 		Return the approximated branch length estimation using corrected parsimony branch length
      * 		This is usually used as the starting point before using Newton-Raphson
      */
-    double computeCorrectedParsimonyBranch(PhyloNeighbor *dad_branch, PhyloNode *dad);
+//    double computeCorrectedParsimonyBranch(PhyloNeighbor *dad_branch, PhyloNode *dad);
 
     /**
             initialize partial_pars vector of all PhyloNeighbors, allocating central_partial_pars
@@ -576,23 +576,6 @@ public:
 #else
     virtual void setParsimonyKernelAVX();
 #endif
-    /**
-            SLOW VERSION: compute the parsimony score of the tree, given the alignment
-            @return the parsimony score
-     */
-    int computeParsimonyScore();
-
-
-    /**
-            SLOW VERSION: compute the parsimony score of the tree, given the alignment
-            @return the parsimony score
-            @param node the current node
-            @param dad dad of the node, used to direct the search
-            @param ptn pattern ID
-            @param states set of admissible states at the current node (in binary code)
-     */
-    int computeParsimonyScore(int ptn, int &states, PhyloNode *node = NULL, PhyloNode *dad = NULL);
-
 
     /****************************************************************************
             likelihood function
@@ -1021,50 +1004,6 @@ public:
      */
     int computeParsimonyTree(const char *out_prefix, Alignment *alignment);
 
-    /**
-            SLOW VERSION: grow the tree by step-wise addition
-            @param alignment input alignment
-     */
-    void growTreeMP(Alignment *alignment);
-
-    /**
-            used internally by growTreeMP() to find the best target branch to add into the tree
-            @param added_node node to add
-            @param target_node (OUT) one end of the best branch found
-            @param target_dad (OUT) the other end of the best branch found
-            @param node the current node
-            @param dad dad of the node, used to direct the search
-            @return the parsimony score of the tree
-     */
-    int addTaxonMP(Node *added_node, Node* &target_node, Node* &target_dad, Node *node, Node *dad);
-
-
-    /****************************************************************************
-            Nearest Neighbor Interchange with parsimony
-     ****************************************************************************/
-    /**
-            search by a nearest neigbor interchange with parsimony
-     */
-    void searchNNI();
-
-    /**
-            search by a nearest neigbor interchange with parsimony
-            @param node the current node
-            @param dad dad of the node, used to direct the search
-            @param cur_score current score
-            @return best score
-     */
-    double searchNNI(double cur_score, PhyloNode *node = NULL, PhyloNode *dad = NULL);
-
-    /**
-            try to swap the tree with nearest neigbor interchange at the branch connecting node1-node2.
-            If a swap shows better score, return the swapped tree and the score.
-            @param cur_score current score
-            @param node1 1st end node of the branch
-            @param node2 2nd end node of the branch
-            @return best score
-     */
-    double swapNNI(double cur_score, PhyloNode *node1, PhyloNode *node2);
 
     /****************************************************************************
             Branch length optimization by maximum likelihood
