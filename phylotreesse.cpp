@@ -2261,14 +2261,6 @@ double PhyloTree::computeMixrateLikelihoodBranchEigen(PhyloNeighbor *dad_branch,
     		double *lh_tip = tip_partial_lh + (*it)*block;
     		for (i = 0; i < block; i++)
     			lh_node[i] = val[i]*lh_tip[i];
-//    		double *val_tmp = val;
-//			for (c = 0; c < ncat; c++) {
-//				for (i = 0; i < nstates; i++) {
-//					  lh_node[i] = val_tmp[i] * lh_tip[i];
-//				}
-//				lh_node += nstates;
-//				val_tmp += nstates;
-//			}
     	}
 
     	// now do the real computation
@@ -2427,8 +2419,6 @@ void PhyloTree::computeMixturePartialLikelihoodEigen(PhyloNeighbor *dad_branch, 
     }
 
         
-//	dad_branch->lh_scale_factor = left->lh_scale_factor + right->lh_scale_factor;
-//	double partial_lh_tmp[nstates];
     double *echildren = new double[block*nstates*(node->degree()-1)];
     double *partial_lh_leaves = new double[(aln->STATE_UNKNOWN+1)*block*(node->degree()-1)];
     double *echild = echildren;
@@ -2487,7 +2477,7 @@ void PhyloTree::computeMixturePartialLikelihoodEigen(PhyloNeighbor *dad_branch, 
         eright = etmp;
 	}
     
-    if (node->degree() >= 3) {
+    if (node->degree() > 3) {
         /*--------------------- multifurcating node ------------------*/
         // now for-loop computing partial_lh over all site-patterns
         double sum_scale = 0.0;
@@ -2585,47 +2575,6 @@ void PhyloTree::computeMixturePartialLikelihoodEigen(PhyloNeighbor *dad_branch, 
 		double *partial_lh_left = partial_lh_leaves;
 		double *partial_lh_right = partial_lh_leaves + (aln->STATE_UNKNOWN+1)*block;
 
-//		vector<int>::iterator it;
-//		for (it = aln->seq_states[left->node->id].begin(); it != aln->seq_states[left->node->id].end(); it++) {
-//			int state = (*it);
-//			for (m = 0; m < nmixture; m++) {
-//				double *this_eleft = &eleft[m*nstatesqr*ncat];
-//				double *this_tip_partial_lh = &tip_partial_lh[state*nstates*nmixture + m*nstates];
-//				double *this_partial_lh_left = &partial_lh_left[state*block+m*statecat];
-//
-//				for (x = 0; x < statecat; x++) {
-//					double vleft = 0.0;
-//					for (i = 0; i < nstates; i++) {
-//						vleft += this_eleft[x*nstates+i] * this_tip_partial_lh[i];
-//					}
-//					this_partial_lh_left[x] = vleft;
-//				}
-//			}
-//		}
-//
-//		for (it = aln->seq_states[right->node->id].begin(); it != aln->seq_states[right->node->id].end(); it++) {
-//			int state = (*it);
-//			for (m = 0; m < nmixture; m++) {
-//				double *this_eright = &eright[m*nstatesqr*ncat];
-//				double *this_tip_partial_lh = &tip_partial_lh[state*nstates*nmixture + m*nstates];
-//				double *this_partial_lh_right = &partial_lh_right[state*block+m*statecat];
-//				for (x = 0; x < statecat; x++) {
-//					double vright = 0.0;
-//					for (i = 0; i < nstates; i++) {
-//						vright += this_eright[x*nstates+i] * this_tip_partial_lh[i];
-//					}
-//					this_partial_lh_right[x] = vright;
-//				}
-//			}
-//		}
-//
-//		size_t addr = aln->STATE_UNKNOWN * block;
-//		for (x = 0; x < block; x++) {
-//			partial_lh_left[addr+x] = 1.0;
-//			partial_lh_right[addr+x] = 1.0;
-//		}
-//
-
 		// scale number must be ZERO
 	    memset(dad_branch->scale_num, 0, nptn * sizeof(UBYTE));
 #ifdef _OPENMP
@@ -2656,8 +2605,6 @@ void PhyloTree::computeMixturePartialLikelihoodEigen(PhyloNeighbor *dad_branch, 
 				}
 			}
 		}
-//		delete [] partial_lh_right;
-//		delete [] partial_lh_left;
 	} else if (left->node->isLeaf() && !right->node->isLeaf()) {
 		// special treatment to TIP-INTERNAL NODE case
 		// only take scale_num from the right subtree
@@ -2665,27 +2612,6 @@ void PhyloTree::computeMixturePartialLikelihoodEigen(PhyloNeighbor *dad_branch, 
 
 		// pre compute information for left tip
 		double *partial_lh_left = partial_lh_leaves;
-
-//		vector<int>::iterator it;
-//		for (it = aln->seq_states[left->node->id].begin(); it != aln->seq_states[left->node->id].end(); it++) {
-//			int state = (*it);
-//			for (m = 0; m < nmixture; m++) {
-//				double *this_eleft = &eleft[m*nstatesqr*ncat];
-//				double *this_tip_partial_lh = &tip_partial_lh[state*nstates*nmixture + m*nstates];
-//				double *this_partial_lh_left = &partial_lh_left[state*block+m*statecat];
-//				for (x = 0; x < statecat; x++) {
-//					double vleft = 0.0;
-//					for (i = 0; i < nstates; i++) {
-//						vleft += this_eleft[x*nstates+i] * this_tip_partial_lh[i];
-//					}
-//					this_partial_lh_left[x] = vleft;
-//				}
-//			}
-//		}
-//		size_t addr = aln->STATE_UNKNOWN * block;
-//		for (x = 0; x < block; x++) {
-//			partial_lh_left[addr+x] = 1.0;
-//		}
 
 		double sum_scale = 0.0;
 #ifdef _OPENMP
@@ -2735,7 +2661,6 @@ void PhyloTree::computeMixturePartialLikelihoodEigen(PhyloNeighbor *dad_branch, 
 
 		}
 		dad_branch->lh_scale_factor += sum_scale;
-//		delete [] partial_lh_left;
 
 	} else {
 		// both left and right are internal node
@@ -2965,7 +2890,6 @@ double PhyloTree::computeMixtureLikelihoodBranchEigen(PhyloNeighbor *dad_branch,
 
     size_t block = ncat * nstates * nmixture;
     size_t statemix = nstates * nmixture;
-    size_t cat_states = ncat * nstates;
     size_t catmix = ncat * nmixture;
     size_t ptn; // for big data size > 4GB memory required
     size_t c, i, m;
@@ -3019,12 +2943,6 @@ double PhyloTree::computeMixtureLikelihoodBranchEigen(PhyloNeighbor *dad_branch,
 			int state_dad = (ptn < orig_nptn) ? (aln->at(ptn))[dad->id] : model_factory->unobserved_ptns[ptn-orig_nptn];
 			double *lh_node = partial_lh_node + state_dad*block;
 			for (m = 0; m < nmixture; m++) {
-//                for (i = 0; i < cat_states; i++)
-//                    *lh_cat += lh_node[i] * partial_lh_dad[i];
-//                lh_ptn += *lh_cat;
-//                lh_node += cat_states;
-//                partial_lh_dad += cat_states;
-//                lh_cat++;
 				for (c = 0; c < ncat; c++) {
 					for (i = 0; i < nstates; i++) {
 						*lh_cat += lh_node[i] * partial_lh_dad[i];
@@ -3061,13 +2979,6 @@ double PhyloTree::computeMixtureLikelihoodBranchEigen(PhyloNeighbor *dad_branch,
 			double *partial_lh_node = node_branch->partial_lh + ptn*block;
 			double *val_tmp = val;
 			for (m = 0; m < nmixture; m++) {
-//                for (i = 0; i < cat_states; i++)
-//                    *lh_cat += val_tmp[i] * partial_lh_node[i] * partial_lh_dad[i];
-//                lh_ptn += *lh_cat;
-//                partial_lh_dad += cat_states;
-//                partial_lh_node += cat_states;
-//                val_tmp += cat_states;
-//                lh_cat++;
 				for (c = 0; c < ncat; c++) {
 					for (i = 0; i < nstates; i++) {
 						*lh_cat +=  val_tmp[i] * partial_lh_node[i] * partial_lh_dad[i];
