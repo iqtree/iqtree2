@@ -457,6 +457,7 @@ StateFreqType ModelCodon::initGY94(bool fix_kappa, CodonKappaStyle kappa_style) 
     if (fix_kappa)
         kappa = 1.0;
     fix_kappa2 = true;
+    codon_freq_style = CF_TARGET_CODON;
     this->codon_kappa_style = kappa_style;
     if (kappa_style == CK_TWO_KAPPA)
         fix_kappa2 = false;

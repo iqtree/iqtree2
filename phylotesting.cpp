@@ -559,7 +559,8 @@ int getModelList(Params &params, Alignment *aln, StrVector &models, bool separat
                     // disallow MG+F
                     if (freq_names[i] == "+F" && orig_model_names[j].find("MG") != string::npos)
                         continue;
-                    if (freq_names[i] != "" || model_type == 2) // empirical model also allow ""
+                    if (freq_names[i] != "" || (model_type == 2 && orig_model_names[j].find("MG") == string::npos)) 
+                        // empirical model also allow ""
                         model_names.push_back(orig_model_names[j] + freq_names[i]);
                 }
             } else {
