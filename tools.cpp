@@ -1810,18 +1810,18 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.optimize_rate_matrix = true;
 				continue;
 			}
-			if (strcmp(argv[cnt], "-mh") == 0) {
-				params.mvh_site_rate = true;
-				params.discard_saturated_site = false;
-				params.SSE = LK_NORMAL;
-				continue;
-			}
-			if (strcmp(argv[cnt], "-mhs") == 0) {
-				params.mvh_site_rate = true;
-				params.discard_saturated_site = true;
-				params.SSE = LK_NORMAL;
-				continue;
-			}
+//			if (strcmp(argv[cnt], "-mh") == 0) {
+//				params.mvh_site_rate = true;
+//				params.discard_saturated_site = false;
+//				params.SSE = LK_NORMAL;
+//				continue;
+//			}
+//			if (strcmp(argv[cnt], "-mhs") == 0) {
+//				params.mvh_site_rate = true;
+//				params.discard_saturated_site = true;
+//				params.SSE = LK_NORMAL;
+//				continue;
+//			}
 			if (strcmp(argv[cnt], "-rl") == 0) {
 				params.rate_mh_type = false;
 				continue;
@@ -1850,14 +1850,14 @@ void parseArg(int argc, char *argv[], Params &params) {
 					throw "Lambda must be in (0,1]";
 				continue;
 			}
-			if (strcmp(argv[cnt], "-nosse") == 0) {
-				params.SSE = LK_NORMAL;
-				continue;
-			}
-			if (strcmp(argv[cnt], "-slowsse") == 0) {
-				params.SSE = LK_SSE;
-				continue;
-			}
+//			if (strcmp(argv[cnt], "-nosse") == 0) {
+//				params.SSE = LK_NORMAL;
+//				continue;
+//			}
+//			if (strcmp(argv[cnt], "-slowsse") == 0) {
+//				params.SSE = LK_SSE;
+//				continue;
+//			}
 			if (strcmp(argv[cnt], "-fastlk") == 0) {
 				params.SSE = LK_EIGEN;
 				continue;
@@ -2818,14 +2818,14 @@ void parseArg(int argc, char *argv[], Params &params) {
 					throw "At least 1 thread please";
 				continue;
 			}
-			if (strcmp(argv[cnt], "-rootstate") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -rootstate <rootstate>";
-                params.root_state = argv[cnt];
-                params.SSE = LK_NORMAL;
-                continue;
-			}
+//			if (strcmp(argv[cnt], "-rootstate") == 0) {
+//                cnt++;
+//                if (cnt >= argc)
+//                    throw "Use -rootstate <rootstate>";
+//                params.root_state = argv[cnt];
+//                params.SSE = LK_NORMAL;
+//                continue;
+//			}
 			if (strcmp(argv[cnt], "-ct") == 0) {
             	params.count_trees = true;
             	continue;

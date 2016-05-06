@@ -34,10 +34,10 @@
 void PhyloTree::setParsimonyKernel(LikelihoodKernel lk) {
     // set parsimony kernel
     switch (lk) {
-    case LK_SSE:
-        computeParsimonyBranchPointer = &PhyloTree::computeParsimonyBranchNaive;
-        computePartialParsimonyPointer = &PhyloTree::computePartialParsimonyNaive;
-    	break;
+//    case LK_SSE:
+//        computeParsimonyBranchPointer = &PhyloTree::computeParsimonyBranchNaive;
+//        computePartialParsimonyPointer = &PhyloTree::computePartialParsimonyNaive;
+//    	break;
     case LK_EIGEN:
         computeParsimonyBranchPointer = &PhyloTree::computeParsimonyBranchFast;
         computePartialParsimonyPointer = &PhyloTree::computePartialParsimonyFast;
@@ -50,10 +50,10 @@ void PhyloTree::setParsimonyKernel(LikelihoodKernel lk) {
             computePartialParsimonyPointer = &PhyloTree::computePartialParsimonyFastSIMD<Vec4ui>;
         }
     	break;
-    default:
-        computeParsimonyBranchPointer = &PhyloTree::computeParsimonyBranchNaive;
-        computePartialParsimonyPointer = &PhyloTree::computePartialParsimonyNaive;
-    	break;
+//    default:
+//        computeParsimonyBranchPointer = &PhyloTree::computeParsimonyBranchNaive;
+//        computePartialParsimonyPointer = &PhyloTree::computePartialParsimonyNaive;
+//    	break;
     }
 }
 
@@ -312,18 +312,18 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk) {
 
 void PhyloTree::changeLikelihoodKernel(LikelihoodKernel lk) {
 	if (sse == lk) return;
-	if ((sse == LK_EIGEN || sse == LK_EIGEN_SSE) && (lk == LK_NORMAL || lk == LK_SSE)) {
-		// need to increase the memory usage when changing from new kernel to old kernel
-        if (params->lh_mem_save == LM_PER_NODE)
-            params->lh_mem_save = LM_ALL_BRANCH;
-		setLikelihoodKernel(lk);
-		deleteAllPartialLh();
-		initializeAllPartialLh();
-		clearAllPartialLH();
-	} else {
+//	if ((sse == LK_EIGEN || sse == LK_EIGEN_SSE) && (lk == LK_NORMAL || lk == LK_SSE)) {
+//		// need to increase the memory usage when changing from new kernel to old kernel
+//        if (params->lh_mem_save == LM_PER_NODE)
+//            params->lh_mem_save = LM_ALL_BRANCH;
+//		setLikelihoodKernel(lk);
+//		deleteAllPartialLh();
+//		initializeAllPartialLh();
+//		clearAllPartialLH();
+//	} else {
 		// otherwise simply assign variable sse
 		setLikelihoodKernel(lk);
-	}
+//	}
 }
 
 /*******************************************************
