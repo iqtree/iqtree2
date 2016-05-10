@@ -849,6 +849,7 @@ double ModelFactory::optimizeParametersGammaInvar(bool fixed_len, bool write_inf
 	DoubleVector initBranLens;
 	DoubleVector bestLens;
 	tree->saveBranchLengths(initBranLens);
+    bestLens = initBranLens;
 	int numRateEntries = tree->getModel()->getNumRateEntries();
 	double *rates = new double[numRateEntries];
 	double *bestRates = new double[numRateEntries];
@@ -913,7 +914,12 @@ double ModelFactory::optimizeParametersGammaInvar(bool fixed_len, bool write_inf
                 cout << endl;
                 cout << "Testing with init. pinv = " << initPInv << " / init. alpha = "  << initAlpha << endl;
             }
-            vector<double> estResults = optimizeGammaInvWithInitValue(fixed_len, logl_epsilon, gradient_epsilon, tree, site_rates, rates, state_freqs,
+            vector<double> estResults;
+            if (Params::getInstance().opt_gammai_keep_bran)
+                estResults = optimizeGammaInvWithInitValue(fixed_len, logl_epsilon, gradient_epsilon, tree, site_rates, rates, state_freqs,
+                                                                          initPInv, initAlpha, bestLens);
+            else
+                estResults = optimizeGammaInvWithInitValue(fixed_len, logl_epsilon, gradient_epsilon, tree, site_rates, rates, state_freqs,
                                                                       initPInv, initAlpha, initBranLens);
             if (write_info) {
                 cout << "Est. p_inv: " << estResults[0] << " / Est. gamma shape: " << estResults[1]
@@ -963,8 +969,7 @@ vector<double> ModelFactory::optimizeGammaInvWithInitValue(bool fixed_len, doubl
                                                  PhyloTree *tree, RateHeterogeneity *site_rates, double *rates,
                                                  double *state_freqs, double initPInv, double initAlpha,
                                                  DoubleVector &lenvec) {
-	if (!Params::getInstance().opt_gammai_keep_bran)
-        tree->restoreBranchLengths(lenvec);
+    tree->restoreBranchLengths(lenvec);
     ((ModelGTR*) tree->getModel())->setRateMatrix(rates);
     ((ModelGTR*) tree->getModel())->setStateFrequency(state_freqs);
     tree->getModel()->decomposeRateMatrix();
