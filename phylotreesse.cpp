@@ -2259,7 +2259,7 @@ void PhyloTree::computeMixturePartialLikelihoodEigen(PhyloNeighbor *dad_branch, 
 		// scale number must be ZERO
 	    memset(dad_branch->scale_num, 0, nptn * sizeof(UBYTE));
 #ifdef _OPENMP
-//#pragma omp parallel for private(ptn, c, x, i, m)
+#pragma omp parallel for private(ptn, c, x, i, m)
 #endif
 		for (ptn = 0; ptn < nptn; ptn++) {
 			double partial_lh_tmp[nstates];
