@@ -846,9 +846,9 @@ double ModelFactory::optimizeParametersGammaInvar(bool fixed_len, bool write_inf
 
 
 	/* Back up branch lengths and substitutional rates */
-	DoubleVector lenvec;
+	DoubleVector initBranLens;
 	DoubleVector bestLens;
-	tree->saveBranchLengths(lenvec);
+	tree->saveBranchLengths(initBranLens);
 	int numRateEntries = tree->getModel()->getNumRateEntries();
 	double *rates = new double[numRateEntries];
 	double *bestRates = new double[numRateEntries];
@@ -863,7 +863,7 @@ double ModelFactory::optimizeParametersGammaInvar(bool fixed_len, bool write_inf
 	double bestAlpha = 0.0;
 	double bestPInvar = 0.0;
 
-	double testInterval = (frac_const - MIN_PINVAR * 2) / 10;
+	double testInterval = (frac_const - MIN_PINVAR * 2) / 9;
 	double initPInv = MIN_PINVAR;
 	double initAlpha = site_rates->getGammaShape();
 
@@ -877,7 +877,7 @@ double ModelFactory::optimizeParametersGammaInvar(bool fixed_len, bool write_inf
             }
 
             vector<double> estResults = optimizeGammaInvWithInitValue(fixed_len, logl_epsilon, gradient_epsilon, tree, site_rates, rates, state_freqs,
-                                                                   initPInv, initAlpha, lenvec);
+                                                                   initPInv, initAlpha, initBranLens);
 
             if (write_info) {
                 cout << "Est. p_inv: " << estResults[0] << " / Est. gamma shape: " << estResults[1]
@@ -914,7 +914,7 @@ double ModelFactory::optimizeParametersGammaInvar(bool fixed_len, bool write_inf
                 cout << "Testing with init. pinv = " << initPInv << " / init. alpha = "  << initAlpha << endl;
             }
             vector<double> estResults = optimizeGammaInvWithInitValue(fixed_len, logl_epsilon, gradient_epsilon, tree, site_rates, rates, state_freqs,
-                                                                      initPInv, initAlpha, lenvec);
+                                                                      initPInv, initAlpha, initBranLens);
             if (write_info) {
                 cout << "Est. p_inv: " << estResults[0] << " / Est. gamma shape: " << estResults[1]
                 << " / Logl: " << estResults[2] << endl;
@@ -963,7 +963,8 @@ vector<double> ModelFactory::optimizeGammaInvWithInitValue(bool fixed_len, doubl
                                                  PhyloTree *tree, RateHeterogeneity *site_rates, double *rates,
                                                  double *state_freqs, double initPInv, double initAlpha,
                                                  DoubleVector &lenvec) {
-    tree->restoreBranchLengths(lenvec);
+	if (!Params::getInstance().opt_gammai_keep_bran)
+        tree->restoreBranchLengths(lenvec);
     ((ModelGTR*) tree->getModel())->setRateMatrix(rates);
     ((ModelGTR*) tree->getModel())->setStateFrequency(state_freqs);
     tree->getModel()->decomposeRateMatrix();

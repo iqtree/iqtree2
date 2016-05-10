@@ -2167,7 +2167,7 @@ void searchGAMMAInvarByRestarting(IQTree &iqtree) {
 // Test alpha fom 0.1 to 15 and p_invar from 0.1 to 0.99, stepsize = 0.01
 void exhaustiveSearchGAMMAInvar(Params &params, IQTree &iqtree) {
 	double alphaMin = 0.01;
-	double alphaMax = 15.00;
+	double alphaMax = 2.00;
 	double p_invarMin = 0.01;
 	double p_invarMax = 1.00;
 	double stepSize = 0.01;

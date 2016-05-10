@@ -450,6 +450,8 @@ public:
      */
     bool opt_gammai_fast;
 
+    bool opt_gammai_keep_bran;
+
     /**
      *  Automatic adjust the log-likelihood espilon using some heuristic
      */

@@ -644,6 +644,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.testAlpha = false;
     params.opt_gammai = false;
     params.opt_gammai_fast = false;
+    params.opt_gammai_keep_bran = false;
     params.testAlphaEpsAdaptive = false;
     params.randomAlpha = false;
     params.testAlphaEps = 0.1;
@@ -2567,6 +2568,12 @@ void parseArg(int argc, char *argv[], Params &params) {
 
             if (strcmp(argv[cnt], "--opt-gammai-fast") == 0) {
                 params.opt_gammai_fast = true;
+                params.opt_gammai = true;
+                continue;
+            }
+
+            if (strcmp(argv[cnt], "--opt-gammai-kb") == 0) {
+                params.opt_gammai_keep_bran = true;
                 params.opt_gammai = true;
                 continue;
             }
