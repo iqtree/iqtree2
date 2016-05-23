@@ -927,7 +927,9 @@ void MTree::getSurroundingInnerBranches(Node *node, Node *dad, int depth, Branch
             Branch curBranch;
             curBranch.first = node;
             curBranch.second = (*it)->node;
-            surrBranches.insert(pair<int,Branch>(pairInteger(node->id, (*it)->node->id), curBranch));
+            int branchID = pairInteger(node->id, (*it)->node->id);
+            if (surrBranches.find(branchID) == surrBranches.end())
+                surrBranches.insert(pair<int,Branch>(branchID, curBranch));
             getSurroundingInnerBranches((*it)->node, node, depth-1, surrBranches);
         }
     }

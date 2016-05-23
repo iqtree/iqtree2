@@ -324,7 +324,7 @@ public:
      *  @return
      *      <number of NNI steps, number of NNIs> done
      */
-    pair<int, int> optimizeNNI();
+    pair<int, int> optimizeNNI(bool speedNNI = true);
 
     /**
      *  Return the current best score found
@@ -346,6 +346,16 @@ public:
      */
     Branches getNNIBranches(Branches &nonNNIBranches, SplitIntMap &tabuSplits,
              SplitIntMap &candidateSplitHash, Node *dad = NULL, Node *node = NULL);
+
+    /**
+     *  If curBranch does not correspond to either the tabu list or a stable split
+     *  then add it to nniBranches
+     */
+    void selectNNIBranch(Branch curBranch, Split* curSplit, Branches &tabuBranches, SplitIntMap &tabuSplits,
+                                 SplitIntMap &candidateSplitHash, Branches &nniBranches);
+
+    Branches getNNIBranches(Branches restrictedNNIBranches, Branches &nonNNIBranches, SplitIntMap &tabuSplits,
+                            SplitIntMap &candidateSplitHash);
 
     /**
      *  @brief Only select NNI branches that are 2 branches away from the previously

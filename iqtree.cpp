@@ -1369,6 +1369,35 @@ void IQTree::getSplitBranches(Branches &branches, SplitIntMap &splits, Node *nod
         }
 }
 
+void IQTree::selectNNIBranch(Branch curBranch, Split *curSplit, Branches &tabuBranches, SplitIntMap &tabuSplits,
+                             SplitIntMap &candidateSplitHash, Branches &nniBranches) {
+
+    /******************** CHECK TABU SPLIT **************************/
+    if (tabuSplits.findSplit(curSplit) != NULL) {
+        tabuBranches.insert(
+                pair<int, Branch>(pairInteger(curBranch.first->id, curBranch.second->id), curBranch));
+        return;
+    }
+
+    if (!candidateSplitHash.empty()) {
+        Split *_curSplit;
+        /******************** CHECK STABLE SPLIT **************************/
+        int value;
+        _curSplit = candidateSplitHash.findSplit(curSplit, value);
+        if (_curSplit == NULL || _curSplit->getWeight() <= params->stableSplitThreshold) {
+            nniBranches.insert(pair<int, Branch>(pairInteger(curBranch.first->id, curBranch.second->id),
+                                                 curBranch));
+        } else { // add a stable branch with a certain probability
+            double rndDbl = random_double();
+            if (rndDbl > params->stableSplitThreshold) {
+                nniBranches.insert(
+                        pair<int, Branch>(pairInteger(curBranch.first->id, curBranch.second->id),
+                                          curBranch));
+            }
+        }
+    }
+}
+
 
 Branches IQTree::getNNIBranches(Branches &tabuBranches, SplitIntMap &tabuSplits,
                                 SplitIntMap &candidateSplitHash, Node *node, Node *dad) {
@@ -1389,33 +1418,7 @@ Branches IQTree::getNNIBranches(Branches &tabuBranches, SplitIntMap &tabuSplits,
                     curSplit = new Split(*sp);
                     if (curSplit->shouldInvert())
                         curSplit->invert();
-
-                    /******************** CHECK TABU SPLIT **************************/
-                    if (tabuSplits.findSplit(curSplit) != NULL) {
-                        tabuBranches.insert(
-                                pair<int, Branch>(pairInteger(curBranch.first->id, curBranch.second->id), curBranch));
-                    } else if (!candidateSplitHash.empty()) {
-                        Split *_curSplit;
-                        /******************** CHECK STABLE SPLIT **************************/
-                        int value;
-                        _curSplit = candidateSplitHash.findSplit(curSplit, value);
-                        if (_curSplit == NULL || _curSplit->getWeight() <= params->stableSplitThreshold) {
-                            nniBranches.insert(pair<int, Branch>(pairInteger(curBranch.first->id, curBranch.second->id),
-                                                                 curBranch));
-                        } else { // add a stable branch with a certain probability
-                            double rndDbl = random_double();
-                            if (rndDbl > params->stableSplitThreshold) {
-                                nniBranches.insert(
-                                        pair<int, Branch>(pairInteger(curBranch.first->id, curBranch.second->id),
-                                                          curBranch));
-//                                if (_curSplit->getWeight() != 1.0)
-//                                    cout << "Split support: " << _curSplit->getWeight() << endl;
-                            }
-                        }
-                    } else {
-                        nniBranches.insert(
-                                pair<int, Branch>(pairInteger(curBranch.first->id, curBranch.second->id), curBranch));
-                    }
+                    selectNNIBranch(curBranch, curSplit, tabuBranches, tabuSplits, candidateSplitHash, nniBranches);
                     delete curSplit;
                 } else {
                     nniBranches.insert(
@@ -2352,7 +2355,7 @@ pair<int, int> IQTree::doNNISearch() {
     // Better tree or score is found
     if (getCurScore() > curBestScore + params->modelEps) {
         // Re-optimize model parameters (the sNNI algorithm)
-        optimizeModelParameters();
+        optimizeModelParameters(false, params->modelEps * 10);
         getModelFactory()->saveCheckpoint();
     }
     MPIHelper::getInstance().setNumNNISearch(MPIHelper::getInstance().getNumNNISearch() + 1);
@@ -2360,7 +2363,7 @@ pair<int, int> IQTree::doNNISearch() {
     return nniInfos;
 }
 
-pair<int, int> IQTree::optimizeNNI() {
+pair<int, int> IQTree::optimizeNNI(bool speedNNI) {
 
     unsigned int numNNIs = 0;
     unsigned int numSteps = 0;
@@ -2372,8 +2375,6 @@ pair<int, int> IQTree::optimizeNNI() {
     Branches nonNNIBranches;
     vector<NNIMove> positiveNNIs;
     vector<NNIMove> compatibleNNIs;
-    positiveNNIs.reserve(numInnerBranches);
-    compatibleNNIs.reserve(numInnerBranches);
     SplitIntMap tabuSplits;
     if (!initTabuSplits.empty()) {
         //tabuSplits.insert(initTabuSplits.begin(), initTabuSplits.end());
@@ -2404,18 +2405,22 @@ pair<int, int> IQTree::optimizeNNI() {
 
         nniBranches.clear();
         nonNNIBranches.clear();
-        nniBranches = getNNIBranches(nonNNIBranches, tabuSplits, candidateTrees.getCandidateSplitHash());
-        if (!tabuSplits.empty()) {
-            tabuSplits.clear();
-            initTabuSplits.clear();
+
+        if (speedNNI && !compatibleNNIs.empty()) {
+            Branches filteredNNIBranches = filterNNIBranches(compatibleNNIs);
+            if (tabuSplits.size() != 0 || candidateTrees.getCandidateSplitHash().size() != 0) {
+                Branches nonTabuBranches = getNNIBranches(nonNNIBranches, tabuSplits, candidateTrees.getCandidateSplitHash());
+                for (Branches::iterator it = filteredNNIBranches.begin(); it != filteredNNIBranches.end(); it++) {
+                    if (nonTabuBranches.find(it->first) != nonNNIBranches.end()) {
+                        nniBranches.insert(*it);
+                    }
+                }
+            } else {
+                nniBranches = filteredNNIBranches;
+            }
+        } else {
+            nniBranches = getNNIBranches(nonNNIBranches, tabuSplits, candidateTrees.getCandidateSplitHash());
         }
-
-//        if (compatibleNNIs.empty()) {
-//
-//        } else {
-//            nniBranches = filterNNIBranches(compatibleNNIs);
-//        }
-
 
         // evaluate NNIs
         positiveNNIs.clear();
@@ -2444,23 +2449,21 @@ pair<int, int> IQTree::optimizeNNI() {
         doNNIs(compatibleNNIs);
         curScore = optimizeAllBranches(1, params->loglh_epsilon, PLL_NEWZPERCYCLE);
 
-        if (curScore < compatibleNNIs.at(0).newloglh - params->loglh_epsilon) {
-            //cout << "Tree getting worse: curScore = " << curScore << " / best score = " <<  compatibleNNIs.at(0).newloglh << endl;
-            // tree cannot be worse if only 1 NNI is applied
-            assert(compatibleNNIs.size() != 1);
-            doNNIs(compatibleNNIs);
-            restoreBranchLengths(lenvec);
-            clearAllPartialLH();
-            // only do the best NNI
-            compatibleNNIs.resize(1);
-            doNNIs(compatibleNNIs);
-            curScore = optimizeAllBranches(1, params->loglh_epsilon, PLL_NEWZPERCYCLE);
-            assert(curScore > compatibleNNIs.at(0).newloglh - params->loglh_epsilon);
-        }
+//        if (curScore < compatibleNNIs.at(0).newloglh - params->loglh_epsilon) {
+//            //cout << "Tree getting worse: curScore = " << curScore << " / best score = " <<  compatibleNNIs.at(0).newloglh << endl;
+//            // tree cannot be worse if only 1 NNI is applied
+//            assert(compatibleNNIs.size() != 1);
+//            doNNIs(compatibleNNIs);
+//            restoreBranchLengths(lenvec);
+//            clearAllPartialLH();
+//            // only do the best NNI
+//            compatibleNNIs.resize(1);
+//            doNNIs(compatibleNNIs);
+//            curScore = optimizeAllBranches(1, params->loglh_epsilon, PLL_NEWZPERCYCLE);
+//            assert(curScore > compatibleNNIs.at(0).newloglh - params->loglh_epsilon);
+//        }
 
         numNNIs += compatibleNNIs.size();
-
-
 
         if (curScore - oldScore <  params->loglh_epsilon)
             break;
@@ -2494,7 +2497,9 @@ Branches IQTree::filterNNIBranches(vector<NNIMove> appliedNNIs) {
         Branch curBranch;
         curBranch.first = it->node1;
         curBranch.second = it->node2;
-        nniBranches.insert(pair<int,Branch>(pairInteger(it->node1->id, it->node2->id), curBranch));
+        int branchID = pairInteger(it->node1->id, it->node2->id);
+        if (nniBranches.find(branchID) == nniBranches.end())
+            nniBranches.insert(pair<int,Branch>(branchID, curBranch));
         getSurroundingInnerBranches(it->node1, it->node2, 2, nniBranches);
         getSurroundingInnerBranches(it->node2, it->node1, 2, nniBranches);
     }
