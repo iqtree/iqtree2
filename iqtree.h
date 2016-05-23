@@ -332,16 +332,31 @@ public:
     double getBestScore();
 
     /**
-     * @brief Get branches for doing NNI that do not either belong to the tabu split or stable splits
+     * @brief Generate a list of internal branches on which NNI moves will be evaluated
      * @param
      *      nniBranches [OUT] Branches on which NNIs will be evaluated
      * @param
      *      nonNNIBranches [OUT] Branches on which NNI evaluation will be skipped
+     * @param
+     *      tabuSplits [IN] A list of splits that are considered tabu
+     * @param
+     *      candidateSplitHash [IN] Lists that appear on the best 20 candidate trees
      * @param dad for navigation
      * @param node for navigation
      */
-    void getNNIBranches(Branches &nniBranches, Branches &nonNNIBranches, SplitIntMap &tabuSplits,
+    Branches getNNIBranches(Branches &nonNNIBranches, SplitIntMap &tabuSplits,
              SplitIntMap &candidateSplitHash, Node *dad = NULL, Node *node = NULL);
+
+    /**
+     *  @brief Only select NNI branches that are 2 branches away from the previously
+     *  appied NNIs
+     *  @param
+     *      appliedNNIs List of previously applied NNIs
+     *  @return
+     *      List of branches to be evaluated
+     */
+    Branches filterNNIBranches(vector<NNIMove> appliedNNIs);
+
     
     /**
      * @brief get branches that correspond to the splits in \a nniSplits
@@ -376,9 +391,9 @@ public:
      * @brief Evaluate all NNIs on branch defined by \a branches
      *
      * @param nniBranches [IN] branches the branches on which NNIs will be evaluated
-     * @param positiveNNI [OUT]
+     * @return list positive NNIs
      */
-    void evaluateNNIs(Branches &nniBranches, vector<NNIMove> &positiveNNIs);
+    vector<NNIMove> evaluateNNIs(Branches &nniBranches);
 
     double optimizeNNIBranches(Branches &nniBranches);
 
@@ -389,12 +404,11 @@ public:
     void evalNNIsSort(bool approx_nni);
 
     /**
-            apply nni2apply NNIs from the non-conflicting NNI list
-            @param nni2apply number of NNIs to apply from the list
+            apply  NNIs from the non-conflicting NNI list
             @param compatibleNNIs vector of all compatible NNIs
             @param changeBran whether or not the computed branch lengths should be applied
      */
-    virtual void doNNIs(int nni2apply, vector<NNIMove> compatibleNNIs, bool changeBran = true);
+    virtual void doNNIs(vector<NNIMove> compatibleNNIs, bool changeBran = true);
 
     /**
      *  Restore the old 5 branch lengths stored in the NNI move.
@@ -407,9 +421,9 @@ public:
     /**
      *  @brief get a list of compatible NNIs from a list of positive NNIs
      *  @param [IN] positiveNNIs list of positive NNIs
-     *  @param [OUT] compatibleNNIs list of compatible positive NNIs
+     *  @return compatibleNNIs list of compatible positive NNIs
      */
-    void getCompatibleNNIs(vector<NNIMove> &positiveNNIs, vector<NNIMove> &compatibleNNIs);
+    vector<NNIMove> getCompatibleNNIs(vector<NNIMove> &positiveNNIs);
 
     /**
             add a NNI move to the list of possible NNI moves;
