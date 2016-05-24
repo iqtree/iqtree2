@@ -749,8 +749,8 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
 
     // Determine on which initial trees the current process must do NNI search
     vector<string> myBestTrees;
-    int index = MPIHelper::getInstance().getProcessID() * treesPerProc;
-    int maxIndex = index + treesPerProc;
+    int index = MPIHelper::getInstance().getProcessID() * nniPerProc;
+    int maxIndex = index + nniPerProc;
     for ( ; index < maxIndex; index++) {
         myBestTrees.push_back(bestTreeStrings[index]);
     }
