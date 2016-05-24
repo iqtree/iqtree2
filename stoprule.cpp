@@ -104,7 +104,7 @@ void StopRule::restoreCheckpoint() {
 bool StopRule::meetStopCondition(int cur_iteration, double cur_correlation) {
 	switch (stop_condition) {
 		case SC_FIXED_ITERATION:
-			return cur_iteration > min_iteration;
+			return cur_iteration >= min_iteration;
 		case SC_WEIBULL:
 			if (predicted_iteration == 0)
 				return cur_iteration > min_iteration;

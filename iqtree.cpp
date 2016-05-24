@@ -675,6 +675,7 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
 
 
     double parsTime = getRealTime() - startTime;
+    cout << parsTime << " second" << endl;
 
     /****************************************************************************************
                           Compute logl of all initial trees
@@ -701,7 +702,6 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
     cout << getRealTime() - startTime << " seconds" << endl;
 
     if (nParTrees > 0) {
-        cout << parsTime << " seconds " << endl;
         cout << "Current best score: " << candidateTrees.getBestScore() << endl;
     }
 
@@ -2008,10 +2008,6 @@ double IQTree::doTreeSearch() {
     cout << "Number of iterations: " << stop_rule.getCurIt() << endl;
     cout << endl;
 
-    cout << "--------------------------------------------------------------------" << endl;
-    cout << "|               OPTIMIZING CANDIDATE TREE SET                      |" << endl;
-    cout << "--------------------------------------------------------------------" << endl;
-
 //    string treels_name = params->out_prefix;
 //    treels_name += ".treels";
 //    string out_lh_file = params->out_prefix;
@@ -2049,7 +2045,15 @@ double IQTree::doTreeSearch() {
 	 *=============================================================================================================*/
     bool stopReceived = false;
     int maxNumTrees = (MPIHelper::getInstance().getNumProcesses() - 1) * 2;
+    if (!stop_rule.meetStopCondition(stop_rule.getCurIt(), cur_correlation)) {
+        cout << "--------------------------------------------------------------------" << endl;
+        cout << "|               OPTIMIZING CANDIDATE TREE SET                      |" << endl;
+        cout << "--------------------------------------------------------------------" << endl;
+    }
+
     while (!stop_rule.meetStopCondition(stop_rule.getCurIt(), cur_correlation)) {
+
+
 #ifdef _IQTREE_MPI
         addTreesFromOtherProcesses(false, maxNumTrees, true);
         if (stop_rule.meetStopCondition(stop_rule.getCurIt(), cur_correlation))
