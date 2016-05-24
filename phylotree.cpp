@@ -812,11 +812,11 @@ void PhyloTree::getMemoryRequired(uint64_t &partial_lh_entries, uint64_t &scale_
 	uint64_t tip_partial_lh_size = aln->num_states * (aln->STATE_UNKNOWN+1) * model->getNMixtures();
     if (sse == LK_EIGEN || sse == LK_EIGEN_SSE) {
         if (params->lh_mem_save == LM_PER_NODE)
-            partial_lh_entries = ((uint64_t)leafNum - 2) * (uint64_t) block_size + 2 + tip_partial_lh_size;
+            partial_lh_entries = ((uint64_t)leafNum - 2) * (uint64_t) block_size + 4 + tip_partial_lh_size;
         else
-            partial_lh_entries = ((uint64_t)leafNum * 3 - 6) * (uint64_t) block_size + 2 + tip_partial_lh_size;
+            partial_lh_entries = ((uint64_t)leafNum * 3 - 6) * (uint64_t) block_size + 4 + tip_partial_lh_size;
     } else
-    	partial_lh_entries = ((uint64_t)leafNum * 4 - 6) * (uint64_t) block_size + 2 + tip_partial_lh_size;
+    	partial_lh_entries = ((uint64_t)leafNum * 4 - 6) * (uint64_t) block_size + 4 + tip_partial_lh_size;
 
 
 	if (sse == LK_EIGEN || sse == LK_EIGEN_SSE) {
