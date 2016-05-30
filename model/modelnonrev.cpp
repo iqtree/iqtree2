@@ -18,27 +18,18 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 #include "modelnonrev.h"
+#include "modelunrest.h"
 //#include "whtest/eigen.h"
 
-ModelNonRev::ModelNonRev(PhyloTree *tree, string model_params, bool count_rates)
+ModelNonRev::ModelNonRev(PhyloTree *tree)
         : ModelGTR(tree, false)
 {
-    num_params = getNumRateEntries() - 1;
+	// model_parameters must be initialized by subclass
+    int num_rates = getNumRateEntries();
     delete [] rates;
-    rates = new double [num_params+1];
-    memset(rates, 0, sizeof(double) * (num_params+1));
-	if (count_rates)
-		phylo_tree->aln->computeEmpiricalRateNonRev(rates);
-	else 
-		for (int i = 0; i <= num_params; i++) 
-			rates[i] = 1.0;
+    rates = new double [num_rates];
+    memset(rates, 0, sizeof(double) * (num_rates));
 
-	if (model_params != "") {
-		readRates(model_params);
-	}
-
-    name = "UNREST";
-    full_name = "Unrestricted model (non-reversible)";
     rate_matrix = new double[num_states*num_states];
     temp_space =  new double[num_states*num_states];
     if (!tree->rooted) {
@@ -51,6 +42,20 @@ void ModelNonRev::freeMem() {
     ModelGTR::freeMem();
     delete [] temp_space;
     delete [] rate_matrix;
+    delete [] model_parameters;
+}
+
+/* static */ ModelNonRev* ModelNonRev::getModelByName(string model_name, PhyloTree *tree, string model_params, bool count_rates) {
+	if (ModelUnrest::validModelName(model_name)) {
+		return((ModelNonRev*)new ModelUnrest(tree, model_params, count_rates));
+	} else {
+		cerr << "Unrecognized model name " << model_name << endl;
+		return((ModelNonRev*)NULL);
+	}
+}
+
+/* static */ bool ModelNonRev::validModelName(string model_name) {
+	return ModelUnrest::validModelName(model_name);
 }
 
 void ModelNonRev::getQMatrix(double *rate_mat) {
@@ -173,9 +178,13 @@ void ModelNonRev::decomposeRateMatrix() {
 
 
 void ModelNonRev::writeInfo(ostream &out) {
+	int i, j, k;
+    out << "Model parameters: " << model_parameters[0];
+    for (i=0; i < num_params; i++) out << "," << model_parameters[i];
+    out << endl;
+
     if (num_states != 4) return;
     out << "Rate parameters:" << endl;
-    int i, j, k;
     for (i = 0, k = 0; i < num_states; i++) {
         switch (i) {
         case 0:
@@ -273,18 +282,12 @@ double ModelNonRev::computeTrans(double time, int state1, int state2) {
 }
 
 int ModelNonRev::getNDim() { 
-	int ndim = num_params;
-	return ndim;
+	return(num_params);
 }
 
 void ModelNonRev::setBounds(double *lower_bound, double *upper_bound, bool *bound_check) {
-	int i, ndim = getNDim();
-
-	for (i = 1; i <= ndim; i++) {
-		lower_bound[i] = 0.01;
-		upper_bound[i] = 100.0;
-		bound_check[i] = false;
-	}
+	// I don't know the proper C++ way to handle this: got error if I didn't define something here.
+	cerr << "setBounds should only be called on subclass of ModelNonRev\n";
 }
 
 void ModelNonRev::setVariables(double *variables) {
@@ -297,13 +300,17 @@ bool ModelNonRev::getVariables(double *variables) {
 	int nrate = getNDim();
 	int i;
 	bool changed = false;
-	if (nrate > 0) {
-		for (i = 0; i < nrate; i++)
-			changed |= (rates[i] != variables[i+1]);
-		memcpy(rates, variables+1, nrate * sizeof(double));
+	for (i = 0; i < nrate && !changed; i++) changed = (model_parameters[i] != variables[i+1]);
+	if (changed) {
+		memcpy(model_parameters, variables+1, nrate * sizeof(double));
+		this->setRates();
 	}
-
 	return changed;
+}
+
+void ModelNonRev::setRates() {
+	// I don't know the proper C++ way to handle this: got error if I didn't define something here.
+	cerr << "setRates should only be called on subclass of ModelNonRev\n";
 }
 
 double ModelNonRev::targetFunk(double x[]) {
@@ -358,7 +365,7 @@ double ModelNonRev::optimizeParameters(double gradient_epsilon) {
 
 void ModelNonRev::saveCheckpoint() {
     checkpoint->startStruct("ModelNonRev");
-    CKP_ARRAY_SAVE(num_params+1, rates);
+    CKP_ARRAY_SAVE(num_params, model_parameters);
     checkpoint->endStruct();
     ModelSubst::saveCheckpoint();
 }
@@ -366,6 +373,7 @@ void ModelNonRev::saveCheckpoint() {
 void ModelNonRev::restoreCheckpoint() {
     ModelSubst::restoreCheckpoint();
     checkpoint->startStruct("ModelNonRev");
-    CKP_ARRAY_RESTORE(num_params+1, rates);
+    CKP_ARRAY_RESTORE(num_params, model_parameters);
     checkpoint->endStruct();
+    this->setRates();
 }

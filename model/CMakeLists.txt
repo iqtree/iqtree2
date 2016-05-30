@@ -20,4 +20,5 @@ ratefreeinvar.cpp
 modelcodon.cpp
 modelmorphology.cpp
 modelmixture.cpp
+modelunrest.cpp
 )

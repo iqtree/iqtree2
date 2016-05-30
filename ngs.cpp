@@ -23,6 +23,7 @@
 */
 
 #include "ngs.h"
+#include "model/modelnonrev.h"
 //#include "modeltest_wrapper.h"
 
 /****************************************************************************
@@ -832,7 +833,12 @@ void reportNGSAnalysis(const char *file_name, Params &params, NGSAlignment &aln,
 
     tree.getModel()->getRateMatrix(rate_param);
 
-    if (tree.getModel()->name == "UNREST") {
+    /*
+     * This isn't a good way of doing it. Rather somewhere high up in the model heirarchy
+     * define a bool isSymmetric() method, which is true for time reversible models and
+     * not true for nonTR models. ! ModelGTR has 'half_matrix' member, which should do the job.
+     */
+    if (ModelNonRev::validModelName(tree.getModel()->name)) {
         for (i = 0, k=0; i < aln.num_states; i++)
             for (j = 0; j < aln.num_states; j++)
                 if (i != j)

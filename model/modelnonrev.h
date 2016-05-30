@@ -31,7 +31,17 @@ The general non-reversible model
 class ModelNonRev : public ModelGTR
 {
 public:
-    ModelNonRev(PhyloTree *tree, string model_params, bool count_rates = true);
+    ModelNonRev(PhyloTree *tree);
+
+    /**
+     * Return a model of type given by model_name. (Will be some subclass of ModelNonRev.)
+     */
+    static ModelNonRev* getModelByName(string model_name, PhyloTree *tree, string model_params, bool count_rates);
+
+    /**
+     * true if model_name is the name of some known non-reversible model
+     */
+    static bool validModelName(string model_name);
 
     /** 
         save object into the checkpoint
@@ -108,6 +118,13 @@ public:
 
 protected:
 
+	/*
+	 * MDW:
+	 * I strongly object to the function naming here - it completely threw me.
+	 * a 'get' method should copy data from the object, and a 'set' method should
+	 * write data into the object. These are named completely the wrong way around!
+	 */
+
 	/**
 		this function is served for the multi-dimension optimization. It should pack the model parameters 
 		into a vector that is index from 1 (NOTE: not from 0)
@@ -123,7 +140,20 @@ protected:
 	*/
 	virtual bool getVariables(double *variables);
 
+	/**
+	 * Called from getVariables to update the rate matrix for the new
+	 * model parameters.
+	 */
+	virtual void setRates();
+
 	virtual void freeMem();
+
+	/**
+	    Model parameters - cached so we know when they change, and thus when
+	    recalculations are needed.
+
+	 */
+	double *model_parameters;
 
 	/**
 		unrestricted Q matrix. Note that Q is normalized to 1 and has row sums of 0.
