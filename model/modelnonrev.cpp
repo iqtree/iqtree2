@@ -19,6 +19,7 @@
  ***************************************************************************/
 #include "modelnonrev.h"
 #include "modelunrest.h"
+#include "modelliemarkov.h"
 //#include "whtest/eigen.h"
 
 ModelNonRev::ModelNonRev(PhyloTree *tree)
@@ -48,6 +49,8 @@ void ModelNonRev::freeMem() {
 /* static */ ModelNonRev* ModelNonRev::getModelByName(string model_name, PhyloTree *tree, string model_params, bool count_rates) {
 	if (ModelUnrest::validModelName(model_name)) {
 		return((ModelNonRev*)new ModelUnrest(tree, model_params, count_rates));
+	} else if (ModelLieMarkov::validModelName(model_name)) {
+	        return((ModelNonRev*)new ModelLieMarkov(model_name, tree, model_params, count_rates));
 	} else {
 		cerr << "Unrecognized model name " << model_name << endl;
 		return((ModelNonRev*)NULL);
