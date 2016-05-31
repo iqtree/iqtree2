@@ -58,7 +58,8 @@ void ModelNonRev::freeMem() {
 }
 
 /* static */ bool ModelNonRev::validModelName(string model_name) {
-	return ModelUnrest::validModelName(model_name);
+	return ModelUnrest::validModelName(model_name) 
+	  || ModelLieMarkov::validModelName(model_name);
 }
 
 void ModelNonRev::getQMatrix(double *rate_mat) {

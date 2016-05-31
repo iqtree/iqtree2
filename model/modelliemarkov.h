@@ -22,12 +22,14 @@ private:
 	void setRates();
 
 	static void parseModelName(string model_name, int* model_num, int* symmetry);
+	/*
 	const static double ***BASES;
 	const static int *MODEL_PARAMS;
 	const static string *SYMMETRY;
 	const static string *MODEL_NAMES;
 	const static int NUM_RATES;
 	const static int NUM_LM_MODELS;
+	*/
 };
 
 #endif /* MODELLIEMARKOV_H_ */
