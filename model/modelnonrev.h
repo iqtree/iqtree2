@@ -33,6 +33,7 @@ class ModelNonRev : public ModelGTR
 public:
     ModelNonRev(PhyloTree *tree);
 
+    virtual ~ModelNonRev();
     /**
      * Return a model of type given by model_name. (Will be some subclass of ModelNonRev.)
      */

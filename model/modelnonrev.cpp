@@ -39,6 +39,10 @@ ModelNonRev::ModelNonRev(PhyloTree *tree)
     }
 }
 
+ModelNonRev::~ModelNonRev() {
+	freeMem();
+}
+
 void ModelNonRev::freeMem() {
     ModelGTR::freeMem();
     delete [] temp_space;

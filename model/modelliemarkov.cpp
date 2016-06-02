@@ -19,6 +19,8 @@
  */
 #include "modelliemarkov.h"
 #include <float.h>
+#undef NDEBUG
+#include <assert.h>
 
 /*
  * TO DO: It is inconvenient to have all of these const declarations
@@ -66,7 +68,7 @@ const static double C[]  = { 0,-1,+1, 0,+1,-1,+1,-1, 0,-1,+1, 0};
  * 0 0 + -
  * 0 0 - +
  */
-const static double D1[] = {-1,+1, 0,+1,-1, 0, 0,+1,-1, 0,-1,+1};
+const static double D1[] = {+1, 0, 0,+1, 0, 0, 0, 0,-1, 0, 0,-1};
 /* D:
  * + + + +
  * + + + +
@@ -140,7 +142,7 @@ const static double *BASIS_516[]  = {A2,D, G1,G2};
 const static double *BASIS_66[]   = {A2,B, C, D, D1};
 const static double *BASIS_67A[]  = {A2,B, D, E1,E2};
 const static double *BASIS_67B[]  = {A2,C, D, E1,E2};
-const static double *BASIS_68A[]  = {A2,D, D1,G1,G2};
+const static double *BASIS_68A[]  = {A2,D, D1,E1,E2};
 const static double *BASIS_68B[]  = {A2,D, D1,G1,G2};
 const static double *BASIS_617A[] = {A2,B, D, G1,G2};
 const static double *BASIS_617B[] = {A2,C, D, G1,G2};
@@ -194,6 +196,7 @@ const static int NUM_RATES = 12;
 ModelLieMarkov::ModelLieMarkov(string model_name, PhyloTree *tree, string model_params, bool count_rates)
 	: ModelNonRev(tree)
 {
+    assert(NUM_RATES==getNumRateEntries());
     parseModelName(model_name,&model_num,&symmetry);
     if (model_num<0) {
         // should never happen - model_name should have been accepted 
@@ -222,6 +225,11 @@ ModelLieMarkov::ModelLieMarkov(string model_name, PhyloTree *tree, string model_
     name = "LM"+MODEL_NAMES[model_num]+SYMMETRY[symmetry];
     full_name = "Lie Markov model "+MODEL_NAMES[model_num]+SYMMETRY[symmetry]+" (non reversible)";
 }
+
+ModelLieMarkov::~ModelLieMarkov() {
+  // Do nothing, for now. model_parameters is reclaimed in ~ModelNonRev
+}
+
 
 /* static */ bool ModelLieMarkov::validModelName(string model_name) {
     int model_num, symmetry;

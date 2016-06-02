@@ -12,7 +12,9 @@
 
 class ModelLieMarkov: public ModelNonRev {
 public:
-  ModelLieMarkov(string model_name, PhyloTree *tree, string model_params, bool count_rates);
+        ModelLieMarkov(string model_name, PhyloTree *tree, string model_params, bool count_rates);
+        virtual ~ModelLieMarkov();
+
 	static bool validModelName(string model_name);
 	void setBounds(double *lower_bound, double *upper_bound, bool *bound_check);
 private:
