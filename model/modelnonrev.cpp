@@ -40,7 +40,9 @@ ModelNonRev::ModelNonRev(PhyloTree *tree)
 }
 
 ModelNonRev::~ModelNonRev() {
-	freeMem();
+    // this is not necessary and causes double free memory, because freeMem is a virtual function
+    // thus will be called by the destructor of ModelGTR anyway.
+//	freeMem();
 }
 
 void ModelNonRev::freeMem() {
