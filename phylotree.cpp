@@ -379,16 +379,16 @@ void PhyloTree::readTreeString(const string &tree_string) {
 	freeNode();
 	readTree(str, rooted);
     assignLeafNames();
-	setRootNode(params->root);
+	setRootNode(Params::getInstance().root);
 
 	if (isSuperTree()) {
 		((PhyloSuperTree*) this)->mapTrees();
 	}
-	if (params->pll) {
+	if (Params::getInstance().pll) {
 		pllReadNewick(getTreeString());
 	}
 	resetCurScore();
-    if (params->fixStableSplits) {
+    if (Params::getInstance().fixStableSplits || Params::getInstance().adaptPertubation) {
         buildNodeSplit();
     }
 }

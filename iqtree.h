@@ -240,7 +240,7 @@ public:
      *  Do a random NNI on splits that are shared among all the candidate trees.
      *  @return the perturbed newick string
      */
-    string pertubStableSplits();
+    string perturbStableSplits(double supportValue);
 
 
     /**
@@ -352,8 +352,7 @@ public:
      *      node[IN] for navigation
      * @return A list of branches for evaluating NNIs
      */
-    Branches getNNIBranches(Branches &nonNNIBranches, SplitIntMap &tabuSplits,
-             SplitIntMap &candidateSplitHash, Node *dad = NULL, Node *node = NULL);
+    Branches getNNIBranches(SplitIntMap &tabuSplits, SplitIntMap &candidateSplitHash, Branches &nonNNIBranches, Node *dad = NULL, Node *node = NULL);
 
     /**
      *  Return internal branches that appear in \a candidateSplitHash
@@ -369,13 +368,16 @@ public:
      *  @return
      *      A list of branches fufilling the aforementioned conditions.
      */
-    Branches getStableBranches(SplitIntMap &candidateSplitHash, double supportValue, Node *dad = NULL, Node *node = NULL);
+    Branches getStableBranches(SplitIntMap &candSplits, double supportValue, Node *dad = NULL, Node *node = NULL);
 
 
     /**
      *
      *  If curBranch does not correspond to either the tabu list or a stable split
      *  then add it to nniBranches
+     *  @param curBranch [IN] the current branch in consideration
+     *  @param curSplit [IN] the split that correspond to the current branch
+     *
      */
     void selectNNIBranch(Branch curBranch, Split* curSplit, Branches &tabuBranches, SplitIntMap &tabuSplits,
                                  SplitIntMap &candidateSplitHash, Branches &nniBranches);

@@ -448,6 +448,12 @@ public:
      */
     double stableSplitThreshold;
 
+    /**
+     *  Option for adaptive perturbation.
+     *  Branches that are shared among all candidate trees will be perturbed
+     */
+    bool adaptPertubation;
+
 	/**
 	 *  Option to do mutlipe start for estimating alpha and p_invar
 	 */

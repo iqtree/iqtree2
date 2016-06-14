@@ -858,6 +858,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.five_plus_five = false;
     params.memCheck = false;
     params.tabu = false;
+    params.adaptPertubation = false;
     params.numSupportTrees = 20;
 //    params.sprDist = 20;
     params.sprDist = 6;
@@ -2533,6 +2534,16 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.maxCandidates = params.numSupportTrees;
 				continue;
 			}
+
+            if (strcmp(argv[cnt], "--adt-pert") == 0) {
+                if (params.tabu == true) {
+                    outError("option -tabu and --adt-pert cannot be combined");
+                }
+                params.adaptPertubation = true;
+                params.stableSplitThreshold = 1.0;
+                params.numSupportTrees = params.popSize;
+                continue;
+            }
 
             if (strcmp(argv[cnt], "-memcheck") == 0) {
                 params.memCheck = true;

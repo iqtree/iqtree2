@@ -1399,8 +1399,7 @@ void IQTree::selectNNIBranch(Branch curBranch, Split *curSplit, Branches &tabuBr
 }
 
 
-Branches IQTree::getNNIBranches(Branches &tabuBranches, SplitIntMap &tabuSplits,
-                                SplitIntMap &candidateSplitHash, Node *node, Node *dad) {
+Branches IQTree::getNNIBranches(SplitIntMap &tabuSplits, SplitIntMap &candidateSplitHash,Branches &nonNNIBranches, Node *node, Node *dad) {
     Branches nniBranches;
     if (!node) {
         node = root;
@@ -1418,28 +1417,80 @@ Branches IQTree::getNNIBranches(Branches &tabuBranches, SplitIntMap &tabuSplits,
                     curSplit = new Split(*sp);
                     if (curSplit->shouldInvert())
                         curSplit->invert();
-                    selectNNIBranch(curBranch, curSplit, tabuBranches, tabuSplits, candidateSplitHash, nniBranches);
+                    selectNNIBranch(curBranch, curSplit, nonNNIBranches, tabuSplits, candidateSplitHash, nniBranches);
                     delete curSplit;
                 } else {
                     nniBranches.insert(
                             pair<int, Branch>(pairInteger(curBranch.first->id, curBranch.second->id), curBranch));
                 }
             }
-            Branches _nniBranches = getNNIBranches(tabuBranches, tabuSplits, candidateSplitHash, (*it)->node, node);
+            Branches _nniBranches = getNNIBranches(tabuSplits, candidateSplitHash, nonNNIBranches, (*it)->node, node);
             nniBranches.insert(_nniBranches.begin(), _nniBranches.end());
         }
     return nniBranches;
 }
 
-Branches IQTree::getStableBranches(SplitIntMap &candidateSplitHash, double supportValue, Node *dad = NULL,
-                                   Node *node = NULL) {
+Branches IQTree::getStableBranches(SplitIntMap &candSplits, double supportValue, Node *dad, Node *node) {
+    Branches stableBranches;
+    if (!node) {
+        node = root;
+    }
 
+    cout << "Number of splits = " << candSplits.size() << endl;
+
+    FOR_NEIGHBOR_IT(node, dad, it) {
+            if (isInnerBranch((*it)->node, node)) {
+                Branch curBranch;
+                curBranch.first = (*it)->node;
+                curBranch.second = node;
+                Split *curSplit;
+                Split *sp = (*it)->split;
+                assert(sp != NULL);
+                curSplit = new Split(*sp);
+                if (curSplit->shouldInvert())
+                    curSplit->invert();
+                int occurences;
+                sp = candSplits.findSplit(curSplit, occurences);
+                if (sp != NULL) {
+                    double splitSupport = (double) occurences / candSplits.getNumTree();
+                    cout << "splitSupport = " << splitSupport << endl;
+                    exit(0);
+
+                    if ( splitSupport >= supportValue) {
+                        stableBranches.insert(
+                                pair<int, Branch>(pairInteger(curBranch.first->id, curBranch.second->id), curBranch));
+                    }
+                }
+                delete curSplit;
+
+            }
+            Branches _stableBranches = getStableBranches(candSplits, supportValue, (*it)->node, node);
+            stableBranches.insert(_stableBranches.begin(), _stableBranches.end());
+        }
+    return stableBranches;
 }
 
 
-string IQTree::pertubStableSplits() {
-    Branches nonNNIBranches;
-    Branches nniBranches = getNNIBranches(nonNNIBranches, initTabuSplits, candidateTrees.getCandidateSplitHash());
+string IQTree::perturbStableSplits(double supporValue) {
+    Branches stableBranches = getStableBranches(candidateTrees.getCandSplits(), supporValue);
+    cout << "Number of stable branches = " << stableBranches.size() << endl;
+    for (map<int, Branch>::iterator it = stableBranches.begin(); it != stableBranches.end(); it++) {
+        NNIMove randNNI = getRandomNNI(it->second);
+        doNNI(randNNI);
+    }
+    setAlignment(aln);
+    setRootNode(params->root);
+
+    if (isSuperTree()) {
+        ((PhyloSuperTree*) this)->mapTrees();
+    }
+    if (params->pll) {
+        pllReadNewick(getTreeString());
+    }
+
+    resetCurScore();
+
+    return getTreeString();
 }
 
 string IQTree::doRandomNNIs(int numNNI) {
@@ -1451,7 +1502,7 @@ string IQTree::doRandomNNIs(int numNNI) {
     while (cntNNI < numNNI) {
         nniBranches.clear();
         nonNNIBranches.clear();
-        nniBranches = getNNIBranches(nonNNIBranches, initTabuSplits, candidateTrees.getCandidateSplitHash());
+        nniBranches = getNNIBranches(initTabuSplits, candidateTrees.getCandSplits(), nonNNIBranches);
         if (nniBranches.size() == 0) break;
         // Convert the map data strucutre Branches to vector of Branch
         vector<Branch> vectorNNIBranches;
@@ -1460,7 +1511,7 @@ string IQTree::doRandomNNIs(int numNNI) {
         }
         int randInt = random_int((int) vectorNNIBranches.size());
         NNIMove randNNI = getRandomNNI(vectorNNIBranches[randInt]);
-        doNNI(randNNI, true);
+        doNNI(randNNI);
         if (params->tabu) {
             Split *sp = getSplit(randNNI.node1, randNNI.node2);
             Split *tabuSplit = new Split(*sp);
@@ -2045,7 +2096,7 @@ double IQTree::doTreeSearch() {
     double cur_correlation = 0.0;
 
 
-    if (Params::getInstance().tabu && candidateTrees.size() > 1) {
+    if ((Params::getInstance().tabu || Params::getInstance().adaptPertubation) && candidateTrees.size() > 1) {
         candidateTrees.computeSplitOccurances(Params::getInstance().stableSplitThreshold);
     }
 
@@ -2307,13 +2358,15 @@ double IQTree::doTreePerturbation() {
                     (int) (aln->getNSeq() - 3 -
                            floor(candidateTrees.getNumStableSplits() * params->stableSplitThreshold));
             int nNNI = (int) floor(Params::getInstance().initPS * nNonStableBranches);
-            if (params->five_plus_five) {
+            if (Params::getInstance().five_plus_five) {
                 readTreeString(candidateTrees.getNextCandTree());
             } else {
                 readTreeString(candidateTrees.getRandCandTree());
             }
-            if (params->iqp) {
+            if (Params::getInstance().iqp) {
                 doIQP();
+            } else if (Params::getInstance().adaptPertubation) {
+                perturbStableSplits(Params::getInstance().stableSplitThreshold);
             } else {
                 doRandomNNIs(nNNI);
             }
@@ -2358,7 +2411,7 @@ pair<int, int> IQTree::doNNISearch() {
                 PLL_TRUE, 0, 0, 0, PLL_SUMMARIZE_LH, 0, 0);
         readTreeString(string(pllInst->tree_string));
     } else {
-        nniInfos = optimizeNNI();
+        nniInfos = optimizeNNI(Params::getInstance().speednni);
         if (isSuperTree()) {
             ((PhyloSuperTree*) this)->computeBranchLengths();
         }
@@ -2421,8 +2474,8 @@ pair<int, int> IQTree::optimizeNNI(bool speedNNI) {
 
         if (speedNNI && !compatibleNNIs.empty()) {
             Branches filteredNNIBranches = filterNNIBranches(compatibleNNIs);
-            if (tabuSplits.size() != 0 || candidateTrees.getCandidateSplitHash().size() != 0) {
-                Branches nonTabuBranches = getNNIBranches(nonNNIBranches, tabuSplits, candidateTrees.getCandidateSplitHash());
+            if (tabuSplits.size() != 0 || candidateTrees.getCandSplits().size() != 0) {
+                Branches nonTabuBranches = getNNIBranches(tabuSplits, candidateTrees.getCandSplits(), nonNNIBranches);
                 for (Branches::iterator it = filteredNNIBranches.begin(); it != filteredNNIBranches.end(); it++) {
                     if (nonTabuBranches.find(it->first) != nonNNIBranches.end()) {
                         nniBranches.insert(*it);
@@ -2432,7 +2485,7 @@ pair<int, int> IQTree::optimizeNNI(bool speedNNI) {
                 nniBranches = filteredNNIBranches;
             }
         } else {
-            nniBranches = getNNIBranches(nonNNIBranches, tabuSplits, candidateTrees.getCandidateSplitHash());
+            nniBranches = getNNIBranches(tabuSplits, candidateTrees.getCandSplits(), nonNNIBranches);
         }
 
         // evaluate NNIs

@@ -297,7 +297,7 @@ public:
     CandidateSet getCandidateTrees(double score);
 
 
-	SplitIntMap& getCandidateSplitHash() {
+	SplitIntMap& getCandSplits() {
 		return candidateSplitsHash;
 	}
 
