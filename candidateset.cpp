@@ -382,7 +382,7 @@ void CandidateSet::removeWorstTree() {
     erase(begin());
 }
 
-int CandidateSet::inferStableSplits(double supportThreshold) {
+int CandidateSet::computeSplitOccurances(double supportThreshold) {
     candidateSplitsHash.clear();
     candidateSplitsHash.setNumTree(size());
 

@@ -228,13 +228,13 @@ public:
     void clearTopologies();
 
     /**
-     *  Create a SplitInMap of splits from the current best trees
+     *  Collect all splits from the set of current best trees and compute for each of them the number of occurances.
      *
      *  @param supportThres
      *      a number in (0,1] representing the support value threshold for stable splits
      *  @return number of splits with 100% support value
      */
-    int inferStableSplits(double supportThres);
+    int computeSplitOccurances(double supportThres);
 
    /**
     *   Get number of stable splits
@@ -361,8 +361,8 @@ private:
     int numStableSplits;
 
     /**
-     *  Set of splits from the current best trees.
-     *  The number of current best trees is specified in params->numSupportTrees
+     *  Set of splits and the number of their occurences from the current best trees.
+     *  The number of current best tree is parameterized.
      */
 	SplitIntMap candidateSplitsHash;
 

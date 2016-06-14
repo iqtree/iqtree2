@@ -785,7 +785,7 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
 //     addTreesFromOtherProcesses(true,maxNumTrees,true);
 // #endif
 //    if (params->fixStableSplits && candidateTrees.size() > 1) {
-//        candidateTrees.inferStableSplits(Params::getInstance().stableSplitThreshold, Params::getInstance().numSupportTrees);
+//        candidateTrees.computeSplitOccurances(Params::getInstance().stableSplitThreshold, Params::getInstance().numSupportTrees);
 //    }
 }
 
@@ -1431,7 +1431,16 @@ Branches IQTree::getNNIBranches(Branches &tabuBranches, SplitIntMap &tabuSplits,
     return nniBranches;
 }
 
+Branches IQTree::getStableBranches(SplitIntMap &candidateSplitHash, double supportValue, Node *dad = NULL,
+                                   Node *node = NULL) {
 
+}
+
+
+string IQTree::pertubStableSplits() {
+    Branches nonNNIBranches;
+    Branches nniBranches = getNNIBranches(nonNNIBranches, initTabuSplits, candidateTrees.getCandidateSplitHash());
+}
 
 string IQTree::doRandomNNIs(int numNNI) {
     int cntNNI = 0;
@@ -2037,7 +2046,7 @@ double IQTree::doTreeSearch() {
 
 
     if (Params::getInstance().tabu && candidateTrees.size() > 1) {
-        candidateTrees.inferStableSplits(Params::getInstance().stableSplitThreshold);
+        candidateTrees.computeSplitOccurances(Params::getInstance().stableSplitThreshold);
     }
 
     /*==============================================================================================================
@@ -2084,7 +2093,7 @@ double IQTree::doTreeSearch() {
         string curTree = getTreeString();
         int pos = addTreeToCandidateSet(curTree, curScore);
         if (pos != -2 && pos != -1)
-            candidateTrees.inferStableSplits(Params::getInstance().stableSplitThreshold);
+            candidateTrees.computeSplitOccurances(Params::getInstance().stableSplitThreshold);
 
 #ifdef _IQTREE_MPI
         if (pos <= Params::getInstance().numSupportTrees) {

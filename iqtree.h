@@ -237,6 +237,13 @@ public:
     string doRandomNNIs(int numNNI);
 
     /**
+     *  Do a random NNI on splits that are shared among all the candidate trees.
+     *  @return the perturbed newick string
+     */
+    string pertubStableSplits();
+
+
+    /**
      *   input model parameters from IQ-TREE to PLL
      */
     void inputModelIQTree2PLL();
@@ -334,28 +341,45 @@ public:
     /**
      * @brief Generate a list of internal branches on which NNI moves will be evaluated
      * @param
-     *      nniBranches [OUT] Branches on which NNIs will be evaluated
-     * @param
      *      nonNNIBranches [OUT] Branches on which NNI evaluation will be skipped
      * @param
      *      tabuSplits [IN] A list of splits that are considered tabu
      * @param
      *      candidateSplitHash [IN] Lists that appear on the best 20 candidate trees
-     * @param dad for navigation
-     * @param node for navigation
+     * @param
+     *      dad [IN] for navigation
+     * @param
+     *      node[IN] for navigation
+     * @return A list of branches for evaluating NNIs
      */
     Branches getNNIBranches(Branches &nonNNIBranches, SplitIntMap &tabuSplits,
              SplitIntMap &candidateSplitHash, Node *dad = NULL, Node *node = NULL);
 
     /**
+     *  Return internal branches that appear in \a candidateSplitHash
+     *  and has support value >= \a supportValue.
+     *  @param
+     *      candidateSplitHash [IN]   A set of splits with the number of occurences.
+     *  @param
+     *      supportValue [IN]  Only consider split whose support value is higher than this number
+     *  @param
+     *      dad [IN] for navigation
+     *  @param
+     *      node[IN] for navigation
+     *  @return
+     *      A list of branches fufilling the aforementioned conditions.
+     */
+    Branches getStableBranches(SplitIntMap &candidateSplitHash, double supportValue, Node *dad = NULL, Node *node = NULL);
+
+
+    /**
+     *
      *  If curBranch does not correspond to either the tabu list or a stable split
      *  then add it to nniBranches
      */
     void selectNNIBranch(Branch curBranch, Split* curSplit, Branches &tabuBranches, SplitIntMap &tabuSplits,
                                  SplitIntMap &candidateSplitHash, Branches &nniBranches);
 
-    Branches getNNIBranches(Branches restrictedNNIBranches, Branches &nonNNIBranches, SplitIntMap &tabuSplits,
-                            SplitIntMap &candidateSplitHash);
 
     /**
      *  @brief Only select NNI branches that are 2 branches away from the previously
