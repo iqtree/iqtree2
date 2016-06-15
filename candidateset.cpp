@@ -423,13 +423,13 @@ int CandidateSet::computeSplitOccurances(double supportThreshold) {
 }
 
 int CandidateSet::countStableSplits(double thresHold) {
-    if (thresHold > 1.0)
-        thresHold = 1.0;
+    if (thresHold >= 1.0)
+        thresHold = 0.99;
     if (candidateSplitsHash.empty())
         return 0;
     int numMaxSupport = 0;
     for (SplitIntMap::iterator it = candidateSplitsHash.begin(); it != candidateSplitsHash.end(); it++) {
-        if (it->first->getWeight() > thresHold && it->first->countTaxa() > 1) {
+        if (it->first->getWeight() >= thresHold && it->first->countTaxa() > 1) {
             //cout << "Stable support: " << it->first->getWeight() << endl;
             numMaxSupport++;
         }

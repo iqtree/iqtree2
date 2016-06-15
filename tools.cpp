@@ -2516,10 +2516,10 @@ void parseArg(int argc, char *argv[], Params &params) {
 //				params.five_plus_five = true;
 				continue;
 			}
-            if (strcmp(argv[cnt], "-ss_thres") == 0) {
+            if (strcmp(argv[cnt], "--stable-thres") == 0) {
                 cnt++;
                 if (cnt >= argc)
-                    throw "Use -ss_thres <support_value_threshold>";
+                    throw "Use --stable-thres <support_value_threshold>";
                 params.stableSplitThreshold = convert_double(argv[cnt]);
                 continue;
             }
@@ -2557,10 +2557,10 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.numNNITrees = convert_int(argv[cnt]);
 				continue;
 			}
-			if (strcmp(argv[cnt], "-nsp") == 0) {
+			if (strcmp(argv[cnt], "--num-sup-trees") == 0) {
 				cnt++;
 				if (cnt >= argc)
-					throw "Use -nsp <number_of_support_trees>";
+					throw "Use --num-sup-trees <number_of_support_trees>";
 				params.numSupportTrees = convert_int(argv[cnt]);
 				continue;
 			}

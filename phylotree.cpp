@@ -3437,6 +3437,7 @@ double PhyloTree::optimizeAllBranches(int my_iterations, double tolerance, int m
         	return new_tree_lh;
         tree_lh = new_tree_lh;
     }
+    curScore = tree_lh;
     return tree_lh;
 }
 
@@ -3874,6 +3875,7 @@ NNIMove PhyloTree::getRandomNNI(Branch &branch) {
                 cnt++;
             }
         }
+    nni.newloglh = 0.0;
     return nni;
 }
 

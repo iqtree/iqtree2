@@ -373,14 +373,15 @@ public:
 
     /**
      *
-     *  If curBranch does not correspond to either the tabu list or a stable split
-     *  then add it to nniBranches
-     *  @param curBranch [IN] the current branch in consideration
-     *  @param curSplit [IN] the split that correspond to the current branch
+     *  Determine whether to evaluate NNI moves on the branch corresponding to the current split
      *
+     *  @param curSplit [IN] the split that correspond to the current branch
+     *  @param tabuSplits [IN] tabu splits
+     *  @param candSplits [IN] splits contained in all candidate trees
+     *  @param nonNNIBranches [OUT] branches that are not inserted to nniBranches are store here
+     *  @param nniBranches [OUT] if the split is neither stable nor tabu it is inserted in this list
      */
-    void selectNNIBranch(Branch curBranch, Split* curSplit, Branches &tabuBranches, SplitIntMap &tabuSplits,
-                                 SplitIntMap &candidateSplitHash, Branches &nniBranches);
+    bool shouldEvaluate(Split* curSplit, SplitIntMap &tabuSplits, SplitIntMap &candSplits);
 
 
     /**
@@ -455,44 +456,16 @@ public:
 
 
     /**
-     *  @brief get a list of compatible NNIs from a list of positive NNIs
-     *  @param [IN] positiveNNIs list of positive NNIs
-     *  @return compatibleNNIs list of compatible positive NNIs
+     *  @brief get a list of compatible NNIs from a list of NNIs
+     *  @param nniMoves [IN] list of NNIs
+     *  @return list of compatible NNIs
      */
-    vector<NNIMove> getCompatibleNNIs(vector<NNIMove> &positiveNNIs);
+    vector<NNIMove> getCompatibleNNIs(vector<NNIMove> &nniMoves);
 
     /**
             add a NNI move to the list of possible NNI moves;
      */
     void addPositiveNNIMove(NNIMove myMove);
-
-    /**
-     * 	Save all the current branch lengths
-     */
-//    void saveBranches(PhyloNode *node = NULL, PhyloNode *dad = NULL);
-
-    /**
-        OBSOLETE: Please use restoreBranchLengths!
-     * 	 Restore the branch lengths from the saved values
-     */
-//    virtual void restoreAllBrans(PhyloNode *node = NULL, PhyloNode *dad = NULL);
-
-    /**
-     * Get the branch length of the branch node1-node2
-     * @param node1
-     * @param node2
-     * @return the branch length
-     */
-//    double getBranLen(PhyloNode *node1, PhyloNode *node2);
-
-
-    /**
-            Described in PhyML paper: apply change to branch that does not
-            correspond to a swap with the following formula l = l + lamda(la - l)
-            @param node1 the first node of the branch
-            @param node2 the second node of the branch
-     */
-//    void changeBranLen(PhyloNode *node1, PhyloNode *node2, double branLen);
 
     /**
      * Estimate the 95% quantile of the distribution of N (see paper for more d

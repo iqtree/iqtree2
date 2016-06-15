@@ -274,6 +274,7 @@ public:
 	Split *extractSubSplit(Split &taxa_mask);
 
 	string &getName() { return name; }
+
 protected:
 	/**
 		number of taxa
