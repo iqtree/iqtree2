@@ -87,9 +87,10 @@ public:
     virtual void restoreCheckpoint();
 
     /**
-     * return randomly one candidate tree from max_candidate
+     * return randomly one of the current best trees
+     * @param numTopTrees [IN] Number of current best trees, from which a random tree is chosen.
      */
-    string getRandCandTree();
+    string getRandTopTree(int numTopTrees);
 
     /**
      * return the next parent tree for reproduction.
@@ -234,7 +235,7 @@ public:
      *      a number in (0,1] representing the support value threshold for stable splits
      *  @return number of splits with 100% support value
      */
-    int computeSplitOccurances(double supportThres);
+    int computeSplitOccurences(double supportThres);
 
    /**
     *   Get number of stable splits
@@ -298,7 +299,7 @@ public:
 
 
 	SplitIntMap& getCandSplits() {
-		return candidateSplitsHash;
+		return candSplits;
 	}
 
 	/**
@@ -364,7 +365,7 @@ private:
      *  Set of splits and the number of their occurences from the current best trees.
      *  The number of current best tree is parameterized.
      */
-	SplitIntMap candidateSplitsHash;
+	SplitIntMap candSplits;
 
     /**
      *  Map data structure storing <topology_string, score>

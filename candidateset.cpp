@@ -73,11 +73,11 @@ void CandidateSet::restoreCheckpoint() {
 }
 
 
-string CandidateSet::getRandCandTree() {
+string CandidateSet::getRandTopTree(int numTopTrees) {
     assert(!empty());
     if (empty())
         return "";
-    int id = random_int(min(Params::getInstance().popSize, (int) size()));
+    int id = random_int(min(numTopTrees, (int) size()));
     for (reverse_iterator it = rbegin(); it != rend(); it++) {
         if (id == 0)
             return it->second.tree;
@@ -145,17 +145,17 @@ void CandidateSet::addCandidateSplits(string treeString) {
     tree.convertSplits(allSplits);
     for (SplitGraph::iterator splitIt = allSplits.begin(); splitIt != allSplits.end(); splitIt++) {
         int value;
-        Split *sp = candidateSplitsHash.findSplit(*splitIt, value);
+        Split *sp = candSplits.findSplit(*splitIt, value);
         if (sp != NULL) {
             sp->setWeight(value + 1);
-            candidateSplitsHash.setValue(sp, value + 1);
+            candSplits.setValue(sp, value + 1);
         } else {
             sp = new Split(*(*splitIt));
             sp->setWeight(1);
-            candidateSplitsHash.insertSplit(sp, 1);
+            candSplits.insertSplit(sp, 1);
         }
     }
-    candidateSplitsHash.setNumTree(candidateSplitsHash.getNumTree() + 1);
+    candSplits.setNumTree(candSplits.getNumTree() + 1);
 }
 
 void CandidateSet::removeCandidateSplits(string treeString) {
@@ -166,7 +166,7 @@ void CandidateSet::removeCandidateSplits(string treeString) {
     for (SplitGraph::iterator splitIt = allSplits.begin(); splitIt != allSplits.end(); splitIt++) {
         int value = 0;
         Split *sp;
-        sp = candidateSplitsHash.findSplit(*splitIt, value);
+        sp = candSplits.findSplit(*splitIt, value);
         if (value == 0) {
             cout << "Cannot find split: ";
             (*splitIt)->report(cout);
@@ -176,11 +176,11 @@ void CandidateSet::removeCandidateSplits(string treeString) {
             if (sp->getWeight() > 1) {
                 sp->setWeight(value - 1);
             } else {
-                candidateSplitsHash.eraseSplit(*splitIt);
+                candSplits.eraseSplit(*splitIt);
             }
         }
     }
-    candidateSplitsHash.setNumTree(candidateSplitsHash.getNumTree() - 1);
+    candSplits.setNumTree(candSplits.getNumTree() - 1);
 }
 
 string CandidateSet::getNextCandTree() {
@@ -382,11 +382,11 @@ void CandidateSet::removeWorstTree() {
     erase(begin());
 }
 
-int CandidateSet::computeSplitOccurances(double supportThreshold) {
-    candidateSplitsHash.clear();
-    candidateSplitsHash.setNumTree(size());
+int CandidateSet::computeSplitOccurences(double supportThreshold) {
+    candSplits.clear();
+    candSplits.setNumTree(size());
 
-    /* Store all splits in the best trees in candidateSplitsHash.
+    /* Store all splits in the best trees in candSplits.
      * The variable numTree in SpitInMap is the number of trees, from which the splits are converted.
      */
     CandidateSet::iterator treeIt;
@@ -398,17 +398,17 @@ int CandidateSet::computeSplitOccurances(double supportThreshold) {
         SplitGraph::iterator itg;
         for (itg = splits.begin(); itg != splits.end(); itg++) {
             int value;
-            Split *sp = candidateSplitsHash.findSplit(*itg, value);
+            Split *sp = candSplits.findSplit(*itg, value);
             if (sp != NULL) {
                 int newHashWeight = value + 1;
-                double newSupport = (double) newHashWeight / (double) candidateSplitsHash.getNumTree();
+                double newSupport = (double) newHashWeight / (double) candSplits.getNumTree();
                 sp->setWeight(newSupport);
-                candidateSplitsHash.setValue(sp, newHashWeight);
+                candSplits.setValue(sp, newHashWeight);
             }
             else {
                 sp = new Split(*(*itg));
-                sp->setWeight(1.0 / (double) candidateSplitsHash.getNumTree());
-                candidateSplitsHash.insertSplit(sp, 1);
+                sp->setWeight(1.0 / (double) candSplits.getNumTree());
+                candSplits.insertSplit(sp, 1);
             }
         }
     }
@@ -416,7 +416,7 @@ int CandidateSet::computeSplitOccurances(double supportThreshold) {
     if (verbose_mode >= VB_MED) {
         cout << ((double) newNumStableSplits / (aln->getNSeq() - 3)) * 100;
         cout << " % of the splits are stable (support threshold " << supportThreshold;
-        cout << " from " << candidateSplitsHash.getNumTree() << " trees)" << endl;
+        cout << " from " << candSplits.getNumTree() << " trees)" << endl;
     }
 
     return numStableSplits;
@@ -425,10 +425,10 @@ int CandidateSet::computeSplitOccurances(double supportThreshold) {
 int CandidateSet::countStableSplits(double thresHold) {
     if (thresHold >= 1.0)
         thresHold = 0.99;
-    if (candidateSplitsHash.empty())
+    if (candSplits.empty())
         return 0;
     int numMaxSupport = 0;
-    for (SplitIntMap::iterator it = candidateSplitsHash.begin(); it != candidateSplitsHash.end(); it++) {
+    for (SplitIntMap::iterator it = candSplits.begin(); it != candSplits.end(); it++) {
         if (it->first->getWeight() >= thresHold && it->first->countTaxa() > 1) {
             //cout << "Stable support: " << it->first->getWeight() << endl;
             numMaxSupport++;
@@ -438,16 +438,16 @@ int CandidateSet::countStableSplits(double thresHold) {
 }
 
 void CandidateSet::reportStableSplits() {
-    if (candidateSplitsHash.empty()) {
+    if (candSplits.empty()) {
         cout << "The set of stable splits is empty! " << endl;
         return;
     }
 
     int numMaxSupport = 0;
-    for (SplitIntMap::iterator it = candidateSplitsHash.begin(); it != candidateSplitsHash.end(); it++) {
-        if (it->second == candidateSplitsHash.getNumTree() && it->first->countTaxa() > 1) {
-            cout << it->first->getWeight() << " / " << candidateSplitsHash.getNumTree() << endl;
-            assert(it->first->getWeight() == candidateSplitsHash.getNumTree());
+    for (SplitIntMap::iterator it = candSplits.begin(); it != candSplits.end(); it++) {
+        if (it->second == candSplits.getNumTree() && it->first->countTaxa() > 1) {
+            cout << it->first->getWeight() << " / " << candSplits.getNumTree() << endl;
+            assert(it->first->getWeight() == candSplits.getNumTree());
             it->first->report(cout);
         }
     }

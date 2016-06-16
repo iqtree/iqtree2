@@ -231,10 +231,9 @@ public:
 
     /**
      * 		Perform a series of random NNI moves
-     * 		@param numNNI number of random NNIs
      * 		@return the perturbed newick string
      */
-    string doRandomNNIs(int numNNI);
+    string doRandomNNIs(bool storeTabu = false);
 
     /**
      *  Do a random NNI on splits that are shared among all the candidate trees.

@@ -2541,7 +2541,6 @@ void parseArg(int argc, char *argv[], Params &params) {
                 }
                 params.adaptPertubation = true;
                 params.stableSplitThreshold = 1.0;
-                params.numSupportTrees = params.popSize;
                 continue;
             }
 
