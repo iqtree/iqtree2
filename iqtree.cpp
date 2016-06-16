@@ -1465,9 +1465,11 @@ Branches IQTree::getStableBranches(SplitIntMap &candSplits, double supportValue,
 }
 
 string IQTree::perturbStableSplits(double suppValue) {
+    int numRandNNI = 0;
     Branches stableBranches;
-    int numRandomNNI = 0;
-    int maxNNI = (int) floor(Params::getInstance().initPS * aln->getNSeq());
+//    initTabuSplits.clear();
+//    stableBranches = getStableBranches(candidateTrees.getCandSplits(), suppValue);
+//    int maxRandNNI = stableBranches.size() / 2;
     do {
         stableBranches = getStableBranches(candidateTrees.getCandSplits(), suppValue);
         vector<NNIMove> randomNNIs;
@@ -1479,15 +1481,23 @@ string IQTree::perturbStableSplits(double suppValue) {
         compatibleNNIs = getCompatibleNNIs(randomNNIs);
         for (vector<NNIMove>::iterator it = compatibleNNIs.begin(); it != compatibleNNIs.end(); it++) {
             doNNI(*it);
+            numRandNNI++;
+//            Split *sp = getSplit(it->node1, it->node2);
+//            Split *tabuSplit = new Split(*sp);
+//            if (tabuSplit->shouldInvert()) {
+//                tabuSplit->invert();
+//            }
+//            initTabuSplits.insertSplit(tabuSplit, 1);
         }
     } while (stableBranches.size() > 0);
 
+    if (verbose_mode >= VB_MED) {
+        cout << "Tree perturbation: number of random NNI performed = " << numRandNNI << endl;
+    }
     setAlignment(aln);
     setRootNode(params->root);
 
     clearAllPartialLH();
-
-    //cout << "Number or random NNIs performed = " << numRandomNNI << endl;
 
     if (isSuperTree()) {
         ((PhyloSuperTree*) this)->mapTrees();
@@ -1497,7 +1507,6 @@ string IQTree::perturbStableSplits(double suppValue) {
     }
 
     resetCurScore();
-
     return getTreeString();
 }
 
@@ -2768,7 +2777,7 @@ void IQTree::doNNIs(vector<NNIMove> compatibleNNIs, bool changeBran) {
     }
     // 2015-10-14: has to reset this pointer when read in
     current_it = current_it_back = NULL;
-    
+
 }
 
 
