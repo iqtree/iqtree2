@@ -73,6 +73,13 @@ public:
 	}
 
 	/**
+	 * rescale rates s.t. mean rate is equal to 1, useful for FreeRate model
+	 * @return rescaling factor
+	 */
+	virtual double rescaleRates();
+
+
+	/**
 	 * @return model name with parameters in form of e.g. GTR{a,b,c,d,e,f}
 	 */
 	virtual string getNameParams();

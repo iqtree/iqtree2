@@ -254,9 +254,10 @@ double RateGammaInvar::optimizeWithEM(double gradient_epsilon) {
 
     double newPInvar = ppInvar / nSites;
     assert(newPInvar < 1.0);
-    setPInvar(newPInvar);
+//    setPInvar(newPInvar);
+    p_invar = newPInvar;
     phylo_tree->clearAllPartialLH();
-    phylo_tree->scaleLength((1-newPInvar)/(1-curPInv));
+//    phylo_tree->scaleLength((1-newPInvar)/(1-curPInv));
     double pinvLH = phylo_tree->computeLikelihood();
     assert(pinvLH > curlh - 1.0);
     return pinvLH;
@@ -312,6 +313,17 @@ double RateGammaInvar::randomRestartOptimization(double gradient_epsilon) {
     return phylo_tree->computeLikelihood();
 }
 
+
+/**
+ * rescale rates s.t. mean rate is equal to 1, useful for FreeRate model
+ * @return rescaling factor
+ */
+double RateGammaInvar::rescaleRates() {
+	double norm = meanRates();
+	for (int i = 0; i < ncategory; i++)
+		rates[i] /= norm;
+	return norm;
+}
 
 
 
