@@ -50,7 +50,7 @@ public:
 		@param tree associated tree for the model
 	*/
     ModelGTR(PhyloTree *tree, bool count_rates = true);
-	
+
 	/**
 		init the model and decompose the rate matrix. This function should always be called
 		after creating the class. Otherwise it will not work properly.

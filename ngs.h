@@ -82,7 +82,7 @@ public:
 		compute empirical rates between state pairs
 		@param rates (OUT) vector of size num_states*(num_states-1)/2 for the rates
 	*/
-	virtual void computeEmpiricalRate (double *rates);
+	virtual void computeDivergenceMatrix (double *rates);
 
 	/**
 		compute the empirical distance for a category, used to initialize rate scaling factor

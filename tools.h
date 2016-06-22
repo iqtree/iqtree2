@@ -395,7 +395,7 @@ struct NNIInfo {
 };
 
 enum LikelihoodKernel {
-	LK_NORMAL, LK_SSE, LK_EIGEN, LK_EIGEN_SSE
+	LK_EIGEN, LK_EIGEN_SSE
 };
 
 enum LhMemSave {
@@ -1172,6 +1172,9 @@ public:
     /** TRUE to optimize mixture model weights */
     bool optimize_mixmodel_weight;
 
+    /** TRUE to always optimize rate matrix even if user parameters are specified in e.g. GTR{1,2,3,4,5} */
+    bool optimize_rate_matrix;
+
     /**
             TRUE to store transition matrix into a hash table for computation efficiency
      */
@@ -1704,7 +1707,7 @@ public:
     /** true to ignore checkpoint file */
     bool ignore_checkpoint;
     /** number of quartets for likelihood mapping */
-    int lmap_num_quartets;
+    int64_t lmap_num_quartets;
 
     /**
             file containing the cluster information for clustered likelihood mapping

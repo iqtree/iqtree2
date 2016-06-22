@@ -87,12 +87,12 @@ void PhyloTree::computePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_branch, Phy
     size_t nptn = aln->size() + model_factory->unobserved_ptns.size();
     PhyloNode *node = (PhyloNode*)(dad_branch->node);
 
+    if (!tip_partial_lh_computed)
+        computeTipPartialLikelihood();
+
 	if (node->isLeaf()) {
 	    dad_branch->lh_scale_factor = 0.0;
 	    //memset(dad_branch->scale_num, 0, nptn * sizeof(UBYTE));
-
-		if (!tip_partial_lh_computed)
-			computeTipPartialLikelihood();
 		return;
 	}
 
@@ -378,7 +378,7 @@ void PhyloTree::computePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_branch, Phy
 			}
             // check if one should scale partial likelihoods
 			double lh_max = horizontal_max(vc_max);
-            if (lh_max < SCALING_THRESHOLD) {
+            if (lh_max < SCALING_THRESHOLD && ptn_invar[ptn] == 0.0) {
             	// now do the likelihood scaling
             	partial_lh -= block; // revert its pointer
             	VectorClass scale_thres(SCALING_THRESHOLD_INVER);
@@ -460,7 +460,7 @@ void PhyloTree::computePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_branch, Phy
 
             // check if one should scale partial likelihoods
 			double lh_max = horizontal_max(vc_max);
-            if (lh_max < SCALING_THRESHOLD) {
+            if (lh_max < SCALING_THRESHOLD && ptn_invar[ptn] == 0.0) {
 				// now do the likelihood scaling
             	partial_lh -= block; // revert its pointer
             	VectorClass scale_thres(SCALING_THRESHOLD_INVER);
