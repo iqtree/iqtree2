@@ -227,6 +227,7 @@ void MSetsBlock::Read(NxsToken &token)
 					errormsg += " instead";
 					throw NxsException(errormsg, token.GetFilePosition(), token.GetFileLine(), token.GetFileColumn());
 				}
+                token.SetLabileFlagBit(NxsToken::preserveUnderscores);
 				if (token.Equals(";"))
 					break;
 				else

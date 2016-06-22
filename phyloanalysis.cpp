@@ -61,17 +61,15 @@ void reportReferences(Params &params, ofstream &out, string &original_model) {
 		<< "maximum likelihood phylogenies. Mol. Biol. Evol., 32:268-274." << endl << endl;
 
 	if (params.gbo_replicates)
-	out << "Since you also used ultrafast bootstrap (UFBoot) please cite: " << endl << endl
+	out << "Since you used ultrafast bootstrap (UFBoot) please also cite: " << endl << endl
 		<< "Bui Quang Minh, Minh Anh Thi Nguyen, and Arndt von Haeseler (2013) Ultrafast" << endl
 		<< "approximation for phylogenetic bootstrap. Mol. Biol. Evol., 30:1188-1195." << endl << endl;
 
-	/*		"*** If you use the parallel version, please cite: " << endl << endl <<
-	 "Bui Quang Minh, Le Sy Vinh, Arndt von Haeseler, and Heiko A. Schmidt (2005)" << endl <<
-	 "pIQPNNI - parallel reconstruction of large maximum likelihood phylogenies." << endl <<
-	 "Bioinformatics, 21:3794-3796." << endl << endl;*/
+    if (params.partition_file) 
+    out << "Since you used partition models please also cite:" << endl << endl
+        << "Olga Chernomor, Arndt von Haeseler, and Bui Quang Minh (2016) Terrace aware data" << endl
+        << "structure for phylogenomic inference from supermatrices. Syst. Biol., in press." << endl << endl;
 
-// 	if (original_model == "TEST" || original_model == "TESTONLY")
-// 		out << "Since you used Modeltest please also cite Posada and Crandall (1998)" << endl << endl;
 }
 
 void reportAlignment(ofstream &out, Alignment &alignment, int nremoved_seqs) {
@@ -681,7 +679,7 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 			reportRate(out, tree);
 		}
 
-    		if (params.lmap_num_quartets) {
+    		if (params.lmap_num_quartets >= 0) {
 			tree.reportLikelihoodMapping(out);
 		}
 
@@ -1080,7 +1078,7 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 		cout << "  Site log-likelihoods:          " << params.out_prefix << ".sitelh" << endl;
 		}
 	}
-    	if (params.lmap_num_quartets) {
+    	if (params.lmap_num_quartets >= 0) {
 		cout << "  Likelihood mapping plot (SVG): " << params.out_prefix << ".lmap.svg" << endl;
 		cout << "  Likelihood mapping plot (EPS): " << params.out_prefix << ".lmap.eps" << endl;
 	}
@@ -1771,8 +1769,13 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
         iqtree.getCheckpoint()->dump();
     }
 
-    if (params.lmap_num_quartets) {
-        cout << endl << "Performing likelihood mapping with " << params.lmap_num_quartets << " quartets..." << endl;
+    if (params.lmap_num_quartets >= 0) {
+        cout << endl << "Performing likelihood mapping with ";
+        if (params.lmap_num_quartets > 0)
+            cout << params.lmap_num_quartets;
+        else
+            cout << "all";
+        cout << " quartets..." << endl;
         double lkmap_time = getRealTime();
         iqtree.doLikelihoodMapping();
         cout << "Likelihood mapping needed " << getRealTime()-lkmap_time << " seconds" << endl << endl;

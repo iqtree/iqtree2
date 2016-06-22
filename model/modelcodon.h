@@ -115,6 +115,16 @@ public:
     /** compute the corrected empirical omega (Kosiol et al 2007) */
     double computeEmpiricalOmega();
     
+	/**
+	 * setup the bounds for joint optimization with BFGS
+	 */
+	virtual void setBounds(double *lower_bound, double *upper_bound, bool *bound_check);
+
+	/**
+		optimize model parameters
+		@return the best likelihood
+	*/
+	virtual double optimizeParameters(double gradient_epsilon);
 
 	/** 3x4 matrix of nucleotide frequencies at 1st,2nd,3rd codon position */
 	double *ntfreq;
