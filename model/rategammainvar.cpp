@@ -314,6 +314,14 @@ double RateGammaInvar::randomRestartOptimization(double gradient_epsilon) {
 }
 
 
+double RateGammaInvar::meanRates() {
+	double ret = 0.0;
+	for (int i = 0; i < ncategory; i++)
+		ret += rates[i];
+    ret *= (1.0-getPInvar())/ncategory;
+	return ret;
+}
+
 /**
  * rescale rates s.t. mean rate is equal to 1, useful for FreeRate model
  * @return rescaling factor

@@ -73,6 +73,12 @@ public:
 	}
 
 	/**
+	 * used to normal branch lengths if mean rate is not equal to 1 (e.g. FreeRate model)
+	 * @return mean rate, default = 1
+	 */
+	virtual double meanRates();
+
+	/**
 	 * rescale rates s.t. mean rate is equal to 1, useful for FreeRate model
 	 * @return rescaling factor
 	 */
