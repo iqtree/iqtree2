@@ -198,8 +198,6 @@ int RateGammaInvar::computePatternRates(DoubleVector &pattern_rates, IntVector &
 
 double RateGammaInvar::optimizeWithEM(double gradient_epsilon) {
     double curlh = phylo_tree->computeLikelihood();
-    double curGammaShape = getGammaShape();
-    double curPInv = getPInvar();
 
     cur_optimize = 0;
     double gamma_lh = RateGamma::optimizeParameters(gradient_epsilon);
@@ -215,9 +213,6 @@ double RateGammaInvar::optimizeWithEM(double gradient_epsilon) {
     phylo_tree->computePtnInvar();
 
     double ppInvar = 0;
-    double sumRates = 0;
-    double sumLogRates = 0;
-    size_t numVarSites = 0;
     for (size_t ptn = 0; ptn < nptn; ptn++) {
         double *this_lk_cat = phylo_tree->_pattern_lh_cat + ptn * ncat;
         double lk_ptn = phylo_tree->ptn_invar[ptn];
@@ -227,30 +222,8 @@ double RateGammaInvar::optimizeWithEM(double gradient_epsilon) {
         assert(lk_ptn != 0.0);
         ppInvar += (phylo_tree->ptn_invar[ptn]) * phylo_tree->ptn_freq[ptn] / lk_ptn;
 
-        // Determine the best rate categories for each site
-//        double bestPostProp = phylo_tree->ptn_invar[ptn] / lk_ptn;
-//        double bestRate = 0.0;
-//        for (size_t cat = 0; cat < ncat; cat++) {
-//            double ppCat = this_lk_cat[cat] / lk_ptn;
-//            if (ppCat > bestPostProp) {
-//                bestPostProp = ppCat;
-//                bestRate = getRate(cat);
-//            }
-//        }
-//        if (bestRate != 0) {
-//            sumRates = sumRates +  bestRate * phylo_tree->ptn_freq[ptn];
-//            sumLogRates = sumLogRates +  log(bestRate) * phylo_tree->ptn_freq[ptn];
-//            numVarSites = numVarSites + (int) phylo_tree->ptn_freq[ptn];
-//        }
-    }
 
-    // Approximate new gamma shape (https://en.wikipedia.org/wiki/Gamma_distribution)
-//    cout << "sumRates = " << sumRates << endl;
-//    cout << "sumLogRates = " << sumLogRates << endl;
-//    double s = log(sumRates/numVarSites) - sumLogRates/numVarSites;
-//    cout << "s = " << s << endl;
-//    double newGammaShape = (3 - s + sqrt((s-3)*(s-3) + 24*s)) / (12 * s);
-//    cout << "newGammaShape = " << newGammaShape << endl;
+    }
 
     double newPInvar = ppInvar / nSites;
     assert(newPInvar < 1.0);

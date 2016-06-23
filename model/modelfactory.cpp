@@ -840,12 +840,7 @@ double ModelFactory::optimizeParametersGammaInvar(bool fixed_len, bool write_inf
 	}
 
 	double frac_const = tree->aln->frac_const_sites;
-	if (fixed_len) {
-		tree->setCurScore(tree->computeLikelihood());
-	} else {
-		tree->optimizeAllBranches(1);
-	}
-
+    tree->setCurScore(tree->computeLikelihood());
 
 	/* Back up branch lengths and substitutional rates */
 	DoubleVector initBranLens;
@@ -910,13 +905,13 @@ double ModelFactory::optimizeParametersGammaInvar(bool fixed_len, bool write_inf
             }
         }
     } else {
-        // Now perform testing different inital p_inv values
+        // Now perform testing different initial p_inv values
         while (initPInv <= frac_const) {
             if (write_info) {
                 cout << endl;
                 cout << "Testing with init. pinv = " << initPInv << " / init. alpha = "  << initAlpha << endl;
             }
-            vector<double> estResults;
+            vector<double> estResults; // vector of p_inv, alpha and logl
             if (Params::getInstance().opt_gammai_keep_bran)
                 estResults = optimizeGammaInvWithInitValue(fixed_len, logl_epsilon, gradient_epsilon, tree, site_rates, rates, state_freqs,
                                                                           initPInv, initAlpha, bestLens);
@@ -927,6 +922,7 @@ double ModelFactory::optimizeParametersGammaInvar(bool fixed_len, bool write_inf
                 cout << "Est. p_inv: " << estResults[0] << " / Est. gamma shape: " << estResults[1]
                 << " / Logl: " << estResults[2] << endl;
             }
+
             initPInv = initPInv + testInterval;
 
             if (estResults[2] > bestLogl + logl_epsilon) {
@@ -942,9 +938,7 @@ double ModelFactory::optimizeParametersGammaInvar(bool fixed_len, bool write_inf
     }
 
 	site_rates->setGammaShape(bestAlpha);
-//	site_rates->setFixGammaShape(false);
 	site_rates->setPInvar(bestPInvar);
-//	site_rates->setFixPInvar(false);
 	((ModelGTR*) tree->getModel())->setRateMatrix(bestRates);
 	((ModelGTR*) tree->getModel())->setStateFrequency(bestStateFreqs);
 	tree->restoreBranchLengths(bestLens);

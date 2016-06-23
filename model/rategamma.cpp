@@ -122,9 +122,11 @@ void RateGamma::computeRates() {
 		return;
 
 	/* if invariable sites are present */
-	double p_inv = getPInvar();
-	for (cat = 0; cat < ncategory; cat++)
-		rates[cat] = rates[cat]/(1.0 - p_inv);
+	if (Params::getInstance().optimize_alg_gammai != "EM") {
+		double p_inv = getPInvar();
+		for (cat = 0; cat < ncategory; cat++)
+			rates[cat] = rates[cat]/(1.0 - p_inv);
+	}
 
 	/* check for very small rates */
 //	for (cat = 0; cat < ncategory; cat ++)
