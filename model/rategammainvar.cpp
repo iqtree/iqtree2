@@ -221,16 +221,15 @@ double RateGammaInvar::optimizeWithEM(double gradient_epsilon) {
         }
         assert(lk_ptn != 0.0);
         ppInvar += (phylo_tree->ptn_invar[ptn]) * phylo_tree->ptn_freq[ptn] / lk_ptn;
-
-
     }
 
     double newPInvar = ppInvar / nSites;
     assert(newPInvar < 1.0);
-//    setPInvar(newPInvar);
+    //double curPInv = getPInvar();
+    //setPInvar(newPInvar);
     p_invar = newPInvar;
     phylo_tree->clearAllPartialLH();
-//    phylo_tree->scaleLength((1-newPInvar)/(1-curPInv));
+    //phylo_tree->scaleLength((1-newPInvar)/(1-curPInv));
     double pinvLH = phylo_tree->computeLikelihood();
     assert(pinvLH > curlh - 1.0);
     return pinvLH;

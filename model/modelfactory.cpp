@@ -765,7 +765,7 @@ double ModelFactory::optimizeParametersOnly(double gradient_epsilon) {
         delete [] initStateFreqs;
         delete [] bestStateFreqs;
     } else {
-        /* Optimize substitutional and heterogeneity rates independetly */
+        /* Optimize substitution and heterogeneity rates independently */
         if (!joint_optimize) {
             double model_lh = model->optimizeParameters(gradient_epsilon);
             double rate_lh = site_rate->optimizeParameters(gradient_epsilon);
@@ -774,7 +774,7 @@ double ModelFactory::optimizeParametersOnly(double gradient_epsilon) {
             else
                 logl = rate_lh;
         } else {
-            /* Optimize substitutional and heterogeneity rates jointly using BFGS */
+            /* Optimize substitution and heterogeneity rates jointly using BFGS */
             logl = optimizeAllParameters(gradient_epsilon);
         }
     }
@@ -877,6 +877,7 @@ double ModelFactory::optimizeParametersGammaInvar(bool fixed_len, bool write_inf
             vector<double> estResults = optimizeGammaInvWithInitValue(fixed_len, logl_epsilon, gradient_epsilon, tree, site_rates, rates, state_freqs,
                                                                    initPInv, initAlpha, initBranLens);
 
+
             if (write_info) {
                 cout << "Est. p_inv: " << estResults[0] << " / Est. gamma shape: " << estResults[1]
                 << " / Logl: " << estResults[2] << endl;
@@ -939,12 +940,14 @@ double ModelFactory::optimizeParametersGammaInvar(bool fixed_len, bool write_inf
 
 	site_rates->setGammaShape(bestAlpha);
 	site_rates->setPInvar(bestPInvar);
+    //site_rates->rescaleRates();
 	((ModelGTR*) tree->getModel())->setRateMatrix(bestRates);
 	((ModelGTR*) tree->getModel())->setStateFrequency(bestStateFreqs);
 	tree->restoreBranchLengths(bestLens);
 	tree->getModel()->decomposeRateMatrix();
 	tree->clearAllPartialLH();
 	tree->setCurScore(tree->computeLikelihood());
+    assert(fabs(tree->getCurScore() - bestLogl) < 1.0);
     if (write_info) {    
         cout << endl;
         cout << "Best p_inv: " << bestPInvar << " / best gamma shape: " << bestAlpha << " / ";
