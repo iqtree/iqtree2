@@ -32,6 +32,13 @@ RateGammaInvar::RateGammaInvar(int ncat, double shape, bool median,
 	computeRates();
 }
 
+void RateGammaInvar::setPInvar(double pInvar) {
+    p_invar = pInvar;
+    for (int cat = 0; cat < ncategory; cat++)
+        rates[cat] = 1.0/(1.0-p_invar);
+    computeRates();
+}
+
 void RateGammaInvar::saveCheckpoint() {
     checkpoint->startStruct("RateGammaInvar");
 //    CKP_SAVE(joint_optimize);
@@ -51,6 +58,8 @@ void RateGammaInvar::restoreCheckpoint() {
 
 void RateGammaInvar::setNCategory(int ncat) {
 	RateGamma::setNCategory(ncat);
+    for (int cat = 0; cat < ncategory; cat++)
+        rates[cat] = 1.0/(1.0-p_invar);
 	name = "+I" + name;
 	full_name = "Invar+" + full_name;
 	computeRates();
@@ -226,10 +235,10 @@ double RateGammaInvar::optimizeWithEM(double gradient_epsilon) {
     double newPInvar = ppInvar / nSites;
     assert(newPInvar < 1.0);
     //double curPInv = getPInvar();
-    //setPInvar(newPInvar);
+//    setPInvar(newPInvar);
     p_invar = newPInvar;
     phylo_tree->clearAllPartialLH();
-    //phylo_tree->scaleLength((1-newPInvar)/(1-curPInv));
+//    phylo_tree->scaleLength((1-newPInvar)/(1-curPInv));
     double pinvLH = phylo_tree->computeLikelihood();
     assert(pinvLH > curlh - 1.0);
     return pinvLH;

@@ -67,10 +67,7 @@ public:
 		set the proportion of invariable sites. Default: do nothing
 		@param pinv the proportion of invariable sites
 	*/
-	virtual void setPInvar(double pInvar) {
-		p_invar = pInvar;
-        computeRates();
-	}
+	virtual void setPInvar(double pInvar);
 
 	/**
 	 * used to normal branch lengths if mean rate is not equal to 1 (e.g. FreeRate model)

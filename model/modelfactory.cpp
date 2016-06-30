@@ -940,11 +940,11 @@ double ModelFactory::optimizeParametersGammaInvar(bool fixed_len, bool write_inf
 
 	site_rates->setGammaShape(bestAlpha);
 	site_rates->setPInvar(bestPInvar);
-    //site_rates->rescaleRates();
 	((ModelGTR*) tree->getModel())->setRateMatrix(bestRates);
 	((ModelGTR*) tree->getModel())->setStateFrequency(bestStateFreqs);
 	tree->restoreBranchLengths(bestLens);
 	tree->getModel()->decomposeRateMatrix();
+
 	tree->clearAllPartialLH();
 	tree->setCurScore(tree->computeLikelihood());
     assert(fabs(tree->getCurScore() - bestLogl) < 1.0);
@@ -1003,19 +1003,9 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info,
 	assert(tree);
 
 	stopStoringTransMatrix();
-        // modified by Thomas Wong on Sept 11, 15
-        // no optimization of branch length in the first round
-        cur_lh = tree->computeLikelihood();
-        /*
-	if (fixed_len || tree->params->num_param_iterations == 0)
-		cur_lh = tree->computeLikelihood();
-	else {
-        if (!Params::getInstance().testAlpha && !Params::getInstance().fai)
-		    cur_lh = tree->optimizeAllBranches(1);
-        else
-            cur_lh = tree->computeLikelihood();
-	}
-        */
+    // modified by Thomas Wong on Sept 11, 15
+    // no optimization of branch length in the first round
+    cur_lh = tree->computeLikelihood();
     tree->setCurScore(cur_lh);
 	if (verbose_mode >= VB_MED || write_info) 
 		cout << "1. Initial log-likelihood: " << cur_lh << endl;
@@ -1032,26 +1022,13 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info,
 	//bool optimize_rate = true;
 //	double gradient_epsilon = min(logl_epsilon, 0.01); // epsilon for parameters starts at epsilon for logl
 	for (i = 2; i < tree->params->num_param_iterations; i++) {
-		/*
-		double model_lh = model->optimizeParameters(param_epsilon);
-		double rate_lh = 0.0;
-		if (optimize_rate) {
-			rate_lh = site_rate->optimizeParameters(param_epsilon);
-			if (rate_lh < model_lh+1e-6 && model_lh != 0.0) optimize_rate = false;
-		}
-		if (model_lh == 0.0 && rate_lh == 0.0) {
-			if (!fixed_len) cur_lh = tree->optimizeAllBranches(100, logl_epsilon);
-			break;
-		}
-		double new_lh = (rate_lh != 0.0) ? rate_lh : model_lh;
-		*/
         double new_lh;
 
         if (Params::getInstance().fai && i > 2) {
             Params::getInstance().fai = false;
         }
 
-                // changed to opimise edge length first, and then Q,W,R inside the loop by Thomas on Sept 11, 15
+        // changed to opimise edge length first, and then Q,W,R inside the loop by Thomas on Sept 11, 15
 		if (!fixed_len)
 			new_lh = tree->optimizeAllBranches(min(i,3), logl_epsilon);  // loop only 3 times in total (previously in v0.9.6 5 times)
 
@@ -1076,8 +1053,6 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info,
 				}
 			}
 
-//			if (gradient_epsilon > (new_lh - cur_lh) * logl_epsilon)
-//				gradient_epsilon = (new_lh - cur_lh) * logl_epsilon;
 			cur_lh = new_lh;
 			if (verbose_mode >= VB_MED || write_info)
 				cout << i << ". Current log-likelihood: " << cur_lh << endl;
@@ -1089,11 +1064,16 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info,
 	}
 
 	// normalize rates s.t. branch lengths are #subst per site
-    double mean_rate = site_rate->rescaleRates();
-    if (mean_rate != 1.0) {
-		tree->scaleLength(mean_rate);
-		tree->clearAllPartialLH();
+//    if (Params::getInstance().optimize_alg_gammai != "EM") 
+    {
+        double mean_rate = site_rate->rescaleRates();
+        if (mean_rate != 1.0) {
+            tree->scaleLength(mean_rate);
+            tree->clearAllPartialLH();
+        }
     }
+    
+
     
 	if (verbose_mode >= VB_MED || write_info)
 		cout << "Optimal log-likelihood: " << cur_lh << endl;
