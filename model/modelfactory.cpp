@@ -84,6 +84,8 @@ ModelFactory::ModelFactory() : CheckpointFactory() {
 	joint_optimize = false;
 	fused_mix_rate = false;
 	unobserved_ptns = "";
+    gammai = false;
+
 }
 
 size_t findCloseBracket(string &str, size_t start_pos) {
@@ -102,8 +104,9 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 	is_storing = false;
 	joint_optimize = params.optimize_model_rate_joint;
 	fused_mix_rate = false;
+    gammai = false;
 
-	string model_str = params.model_name;
+    string model_str = params.model_name;
 	string rate_str;
 
 	try {
@@ -473,6 +476,7 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 		if (posI != string::npos && posG != string::npos) {
 			site_rate = new RateGammaInvar(num_rate_cats, gamma_shape, params.gamma_median,
 					p_invar_sites, params.optimize_alg_gammai, tree, false);
+            gammai = true;
 		} else if (posI != string::npos && posR != string::npos) {
 			site_rate = new RateFreeInvar(num_rate_cats, gamma_shape, freerate_params, p_invar_sites, !fused_mix_rate, params.optimize_alg, tree);
 		} else if (posI != string::npos) {
@@ -830,15 +834,7 @@ double ModelFactory::optimizeAllParameters(double gradient_epsilon) {
 }
 
 double ModelFactory::optimizeParametersGammaInvar(bool fixed_len, bool write_info, double logl_epsilon, double gradient_epsilon) {
-	PhyloTree *tree = site_rate->getTree();
-
-	RateHeterogeneity* site_rates = tree->getRate();
-	if (site_rates == NULL) {
-//		outError("The model must be +I+G");
-        // model is not +I+G, call conventional function instead
-		return optimizeParameters(fixed_len, write_info, logl_epsilon, gradient_epsilon);
-	}
-
+    PhyloTree *tree = site_rate->getTree();
 	double frac_const = tree->aln->frac_const_sites;
     tree->setCurScore(tree->computeLikelihood());
 
@@ -863,7 +859,7 @@ double ModelFactory::optimizeParametersGammaInvar(bool fixed_len, bool write_inf
 
 	double testInterval = (frac_const - MIN_PINVAR * 2) / 9;
 	double initPInv = MIN_PINVAR;
-	double initAlpha = site_rates->getGammaShape();
+	double initAlpha = site_rate->getGammaShape();
 
     if (Params::getInstance().opt_gammai_fast) {
         initPInv = frac_const/2;
@@ -874,7 +870,7 @@ double ModelFactory::optimizeParametersGammaInvar(bool fixed_len, bool write_inf
                 cout << "Testing with init. pinv = " << initPInv << " / init. alpha = "  << initAlpha << endl;
             }
 
-            vector<double> estResults = optimizeGammaInvWithInitValue(fixed_len, logl_epsilon, gradient_epsilon, tree, site_rates, rates, state_freqs,
+            vector<double> estResults = optimizeGammaInvWithInitValue(fixed_len, logl_epsilon, gradient_epsilon, tree, site_rate, rates, state_freqs,
                                                                    initPInv, initAlpha, initBranLens);
 
 
@@ -914,10 +910,10 @@ double ModelFactory::optimizeParametersGammaInvar(bool fixed_len, bool write_inf
             }
             vector<double> estResults; // vector of p_inv, alpha and logl
             if (Params::getInstance().opt_gammai_keep_bran)
-                estResults = optimizeGammaInvWithInitValue(fixed_len, logl_epsilon, gradient_epsilon, tree, site_rates, rates, state_freqs,
+                estResults = optimizeGammaInvWithInitValue(fixed_len, logl_epsilon, gradient_epsilon, tree, site_rate, rates, state_freqs,
                                                                           initPInv, initAlpha, bestLens);
             else
-                estResults = optimizeGammaInvWithInitValue(fixed_len, logl_epsilon, gradient_epsilon, tree, site_rates, rates, state_freqs,
+                estResults = optimizeGammaInvWithInitValue(fixed_len, logl_epsilon, gradient_epsilon, tree, site_rate, rates, state_freqs,
                                                                       initPInv, initAlpha, initBranLens);
             if (write_info) {
                 cout << "Est. p_inv: " << estResults[0] << " / Est. gamma shape: " << estResults[1]
@@ -938,8 +934,8 @@ double ModelFactory::optimizeParametersGammaInvar(bool fixed_len, bool write_inf
         }
     }
 
-	site_rates->setGammaShape(bestAlpha);
-	site_rates->setPInvar(bestPInvar);
+    site_rate->setGammaShape(bestAlpha);
+    site_rate->setPInvar(bestPInvar);
 	((ModelGTR*) tree->getModel())->setRateMatrix(bestRates);
 	((ModelGTR*) tree->getModel())->setStateFrequency(bestStateFreqs);
 	tree->restoreBranchLengths(bestLens);
@@ -1031,7 +1027,6 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info,
         // changed to opimise edge length first, and then Q,W,R inside the loop by Thomas on Sept 11, 15
 		if (!fixed_len)
 			new_lh = tree->optimizeAllBranches(min(i,3), logl_epsilon);  // loop only 3 times in total (previously in v0.9.6 5 times)
-
         new_lh = optimizeParametersOnly(gradient_epsilon);
 
 		if (new_lh == 0.0) {
