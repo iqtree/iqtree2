@@ -488,7 +488,7 @@ double RateFree::optimizeWithEM() {
         // decoupled weights (prop) from _pattern_lh_cat to obtain L_ci and compute pattern likelihood L_i
         for (ptn = 0; ptn < nptn; ptn++) {
             double *this_lk_cat = phylo_tree->_pattern_lh_cat + ptn*nmix;
-            double lk_ptn = 0.0;
+            double lk_ptn = phylo_tree->ptn_invar[ptn];
             for (c = 0; c < nmix; c++) {
                 lk_ptn += this_lk_cat[c];
             }
@@ -505,6 +505,7 @@ double RateFree::optimizeWithEM() {
         
         // M-step, update weights according to (*)        
         int maxpropid = 0;
+        double new_pinvar = 0.0;    
         for (c = 0; c < nmix; c++) {
             new_prop[c] = new_prop[c] / phylo_tree->getAlnNSite();
             if (new_prop[c] > new_prop[maxpropid])
@@ -530,9 +531,19 @@ double RateFree::optimizeWithEM() {
             sum_prop += new_prop[c];
             converged = converged && (fabs(prop[c]-new_prop[c]) < 1e-4);
             prop[c] = new_prop[c];
+            new_pinvar += new_prop[c];
         }
 
-        assert(fabs(sum_prop-1.0) < MIN_PROP);
+        new_pinvar = 1.0 - new_pinvar;
+
+        if (new_pinvar != 0.0) {
+            converged = converged && (fabs(phylo_tree->getRate()->getPInvar()-new_pinvar) < 1e-4);
+            setPInvar(new_pinvar);
+            setOptimizePInvar(false);
+            phylo_tree->computePtnInvar();
+        }
+        
+        assert(fabs(sum_prop+new_pinvar-1.0) < MIN_PROP);
         
         // now optimize rates one by one
         double sum = 0.0;
