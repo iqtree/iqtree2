@@ -1226,8 +1226,10 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 
     RateFreeInvar ** rate_class_freeinvar = new RateFreeInvar*[params.max_rate_cats-1];
     
-    for (model = 0; model < params.max_rate_cats-1; model++)
-        rate_class_freeinvar[model] = new RateFreeInvar(model+2, params.gamma_shape, "", false, -1, params.optimize_alg, NULL);
+    for (model = 0; model < params.max_rate_cats-1; model++) {
+        rate_class_freeinvar[model] = new RateFreeInvar(model+2, params.gamma_shape, "", false, in_tree->aln->frac_const_sites/2.0, params.optimize_alg, NULL);
+        rate_class_freeinvar[model]->setFixPInvar(false);
+    }
         
         
 	ModelGTR *subst_model = NULL;
