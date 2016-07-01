@@ -110,6 +110,7 @@ void RateFree::setNCategory(int ncat) {
 
 void RateFree::setRateAndProp(RateFree *input) {
     assert(input->ncategory == ncategory-1);
+    setPInvar(input->getPInvar());
     int k = 0, i;
     // get the category k with largest proportion
     for (i = 1; i < ncategory-1; i++)
