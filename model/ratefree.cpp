@@ -87,7 +87,7 @@ void RateFree::setNCategory(int ncat) {
 
     int i;
 	for (i = 0; i < ncategory; i++)
-        prop[i] = 1.0/ncategory;
+        prop[i] = (1.0-getPInvar())/ncategory;
     
 //	double sum_prop = (ncategory)*(ncategory+1)/2.0;
 //	double sum = 0.0;
@@ -472,7 +472,7 @@ double RateFree::optimizeWithEM() {
     model_fac->site_rate = site_rate;
     tree->model_factory = model_fac;
     tree->setParams(phylo_tree->params);
-        
+    double old_score = 0.0;
     // EM algorithm loop described in Wang, Li, Susko, and Roger (2008)
     for (int step = 0; step < ncategory; step++) {
         // first compute _pattern_lh_cat
@@ -483,6 +483,12 @@ double RateFree::optimizeWithEM() {
             writeInfo(cout);
         }
         assert(score < 0);
+        
+        if (step > 0)
+            assert(score > old_score-0.1);
+            
+        old_score = score;
+        
         memset(new_prop, 0, nmix*sizeof(double));
                 
         // E-step
@@ -538,9 +544,9 @@ double RateFree::optimizeWithEM() {
         new_pinvar = 1.0 - new_pinvar;
 
         if (new_pinvar != 0.0) {
-            converged = converged && (fabs(phylo_tree->getRate()->getPInvar()-new_pinvar) < 1e-4);
+            converged = converged && (fabs(getPInvar()-new_pinvar) < 1e-4);
             setPInvar(new_pinvar);
-            setOptimizePInvar(false);
+//            setOptimizePInvar(false);
             phylo_tree->computePtnInvar();
         }
         
