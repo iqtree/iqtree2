@@ -1428,7 +1428,8 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
         if (skip_model) {
             assert(prev_model_id>=0);
             size_t pos_r = info.name.find("+R");
-            if (pos_r == string::npos || info.name.substr(0, pos_r) != model_info[prev_model_id].name.substr(0, pos_r))
+            size_t prev_pos_r = model_info[prev_model_id].name.find("+R");
+            if (pos_r == string::npos || prev_pos_r == string::npos || info.name.substr(0, pos_r) != model_info[prev_model_id].name.substr(0, prev_pos_r))
                 skip_model = 0;
         }
 		for (int i = 0; i < model_info.size(); i++)
