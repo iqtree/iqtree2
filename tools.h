@@ -395,7 +395,7 @@ struct NNIInfo {
 };
 
 enum LikelihoodKernel {
-	LK_NORMAL, LK_SSE, LK_EIGEN, LK_EIGEN_SSE
+	LK_EIGEN, LK_EIGEN_SSE
 };
 
 enum LhMemSave {

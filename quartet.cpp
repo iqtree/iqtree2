@@ -21,6 +21,10 @@
 #include "myreader.h"
 // #include "lmap.c"
 
+#ifdef _OPENMP
+#include <omp.h>
+#endif
+
 #if 0  /*** moved to phylotree.h ***/
 /* Index definition for counter array needed in likelihood mapping analysis (HAS) */
 #define LM_REG1 0   /* top corner */
