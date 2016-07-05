@@ -143,7 +143,7 @@ void NGSAlignment::computeSumPairFreq (double *sum_pair_freq) {
     }
 }
 
-void NGSAlignment::computeEmpiricalRate (double *rates) {
+void NGSAlignment::computeDivergenceMatrix (double *rates) {
     int i, j, k, cat, id;
     assert(rates);
     double **pair_rates = (double**) new double[num_states];
@@ -411,7 +411,7 @@ NGSTree::NGSTree(Params &params, NGSAlignment *alignment) {
     model_factory = NULL;
     optimize_by_newton = params.optimize_by_newton;
     //tree.sse = params.SSE;
-    setLikelihoodKernel(LK_NORMAL);
+    setLikelihoodKernel(LK_EIGEN);
 }
 
 double NGSTree::computeLikelihood(double *pattern_lh) {

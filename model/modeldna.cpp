@@ -219,10 +219,14 @@ void ModelDNA::readRates(string str) throw(const char*) {
 		if (str[end_pos] == '?') {
 			param_fixed[i+1] = false;
 			end_pos++;
-			rate = i + 0.4;
+			rate = 1.0;
 			num_params++;
 		} else {
-			param_fixed[i+1] = true;
+            if (Params::getInstance().optimize_rate_matrix) {
+                num_params++;
+                param_fixed[i+1] = false;
+            } else
+                param_fixed[i+1] = true;
 			try {
 				rate = convert_double(str.substr(end_pos).c_str(), new_end_pos);
 			} catch (string str) {
@@ -233,7 +237,7 @@ void ModelDNA::readRates(string str) throw(const char*) {
 		if (rate < 0.0)
 			outError("Negative rates found");
 		if (i == nrates-1 && end_pos < str.length())
-			outError("String too long ", str);
+			outError("More than " + convertIntToString(nrates) + " rate parameters specified in " + str);
 		if (i < nrates-1 && end_pos >= str.length())
 			outError("Unexpected end of string ", str);
 		if (end_pos < str.length() && str[end_pos] != ',')

@@ -24,6 +24,7 @@
 #include "model/rateinvar.h"
 #include "model/rategammainvar.h"
 #include "model/ratefree.h"
+#include "model/ratefreeinvar.h"
 //#include "modeltest_wrapper.h"
 #include "model/modelprotein.h"
 #include "model/modelbin.h"
@@ -559,7 +560,8 @@ int getModelList(Params &params, Alignment *aln, StrVector &models, bool separat
                     // disallow MG+F
                     if (freq_names[i] == "+F" && orig_model_names[j].find("MG") != string::npos)
                         continue;
-                    if (freq_names[i] != "" || model_type == 2) // empirical model also allow ""
+                    if (freq_names[i] != "" || (model_type == 2 && orig_model_names[j].find("MG") == string::npos)) 
+                        // empirical model also allow ""
                         model_names.push_back(orig_model_names[j] + freq_names[i]);
                 }
             } else {
@@ -1143,6 +1145,20 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInf
 	in_tree->printBestPartitionRaxml((string(params.out_prefix) + ".best_scheme").c_str());
 }
 
+bool isMixtureModel(ModelsBlock *models_block, string &model_str) {
+    size_t mix_pos;
+    for (mix_pos = 0; mix_pos < model_str.length(); mix_pos++) {
+        size_t next_mix_pos = model_str.find_first_of("+*", mix_pos);
+        string sub_model_str = model_str.substr(mix_pos, next_mix_pos-mix_pos);
+        if (models_block->findMixModel(sub_model_str))
+            return true;
+        if (next_mix_pos == string::npos)
+            break;
+        mix_pos = next_mix_pos;
+    }
+    return false;
+}
+
 string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_info, ostream &fmodel, ModelsBlock *models_block,
     string set_name, bool print_mem_usage) 
 {
@@ -1207,6 +1223,14 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
     
     for (model = 0; model < params.max_rate_cats-1; model++)
         rate_class_free[model] = new RateFree(model+2, params.gamma_shape, "", false, params.optimize_alg, NULL);
+
+    RateFreeInvar ** rate_class_freeinvar = new RateFreeInvar*[params.max_rate_cats-1];
+    
+    for (model = 0; model < params.max_rate_cats-1; model++) {
+        rate_class_freeinvar[model] = new RateFreeInvar(model+2, params.gamma_shape, "", false, in_tree->aln->frac_const_sites/2.0, params.optimize_alg, NULL);
+        rate_class_freeinvar[model]->setFixPInvar(false);
+    }
+        
         
 	ModelGTR *subst_model = NULL;
 	if (seq_type == SEQ_BINARY)
@@ -1281,7 +1305,7 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
         int ncat = 0;
         string orig_name = params.model_name;
         
-        if (models_block->findMixModel(model_names[model])) {
+        if (isMixtureModel(models_block, model_names[model])) {
             // mixture model
             try {
                 mixture_model = true;
@@ -1342,7 +1366,17 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
             tree->setModel(subst_model);
             // initialize rate
             size_t pos;
-            if ((pos = model_names[model].find("+R")) != string::npos) {
+            if (model_names[model].find("+I") != string::npos && (pos = model_names[model].find("+R")) != string::npos) {
+                ncat = params.num_rate_cats;
+                if (model_names[model].length() > pos+2 && isdigit(model_names[model][pos+2])) {
+                    ncat = convert_int(model_names[model].c_str() + pos+2);
+    //                tree->getRate()->setNCategory(ncat);
+                }
+                if (ncat <= 1) outError("Number of rate categories for " + model_names[model] + " is <= 1");
+                if (ncat > params.max_rate_cats)
+                    outError("Number of rate categories for " + model_names[model] + " exceeds " + convertIntToString(params.max_rate_cats));
+                tree->setRate(rate_class_freeinvar[ncat-2]);
+            } else if ((pos = model_names[model].find("+R")) != string::npos) {
                 ncat = params.num_rate_cats;
                 if (model_names[model].length() > pos+2 && isdigit(model_names[model][pos+2])) {
                     ncat = convert_int(model_names[model].c_str() + pos+2);
@@ -1394,7 +1428,8 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
         if (skip_model) {
             assert(prev_model_id>=0);
             size_t pos_r = info.name.find("+R");
-            if (pos_r == string::npos || info.name.substr(0, pos_r) != model_info[prev_model_id].name.substr(0, pos_r))
+            size_t prev_pos_r = model_info[prev_model_id].name.find("+R");
+            if (pos_r == string::npos || prev_pos_r == string::npos || info.name.substr(0, pos_r) != model_info[prev_model_id].name.substr(0, prev_pos_r))
                 skip_model = 0;
         }
 		for (int i = 0; i < model_info.size(); i++)
@@ -1481,7 +1516,10 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
                         if (verbose_mode >= VB_MED)
                             cout << "reoptimizing from previous parameters of +R...." << endl;
                         assert(ncat >= 3);
-                        rate_class_free[ncat-2]->setRateAndProp(rate_class_free[ncat-3]);
+                        if (tree->getRate()->getPInvar() != 0.0)                        
+                            rate_class_freeinvar[ncat-2]->setRateAndProp(rate_class_freeinvar[ncat-3]);
+                        else
+                            rate_class_free[ncat-2]->setRateAndProp(rate_class_free[ncat-3]);
                         info.logl = tree->getModelFactory()->optimizeParameters(false, false, TOL_LIKELIHOOD_MODELTEST, TOL_GRADIENT_MODELTEST);
                         info.tree_len = tree->treeLength();                        
                     }
@@ -1716,6 +1754,11 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 		delete rate_class_free[rate_type];
     }
     delete [] rate_class_free;
+
+	for (rate_type = params.max_rate_cats-2; rate_type >= 0; rate_type--) {
+		delete rate_class_freeinvar[rate_type];
+    }
+    delete [] rate_class_freeinvar;
     
 //	delete tree_hetero;
 //	delete tree_homo;

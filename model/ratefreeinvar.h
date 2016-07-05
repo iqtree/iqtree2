@@ -42,7 +42,7 @@ public:
 		@param category category ID from 0 to #category-1
 		@return the proportion of the specified category
 	*/
-	virtual double getProp(int category) { return (1.0-p_invar)*prop[category]; }
+	virtual double getProp(int category) { return prop[category]; }
 
 	/**
 		get the rate of a specified category. Default returns 1.0 since it is homogeneous model

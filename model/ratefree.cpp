@@ -87,7 +87,7 @@ void RateFree::setNCategory(int ncat) {
 
     int i;
 	for (i = 0; i < ncategory; i++)
-        prop[i] = 1.0/ncategory;
+        prop[i] = (1.0-getPInvar())/ncategory;
     
 //	double sum_prop = (ncategory)*(ncategory+1)/2.0;
 //	double sum = 0.0;
@@ -110,6 +110,7 @@ void RateFree::setNCategory(int ncat) {
 
 void RateFree::setRateAndProp(RateFree *input) {
     assert(input->ncategory == ncategory-1);
+    setPInvar(input->getPInvar());
     int k = 0, i;
     // get the category k with largest proportion
     for (i = 1; i < ncategory-1; i++)
@@ -471,7 +472,7 @@ double RateFree::optimizeWithEM() {
     model_fac->site_rate = site_rate;
     tree->model_factory = model_fac;
     tree->setParams(phylo_tree->params);
-        
+    double old_score = 0.0;
     // EM algorithm loop described in Wang, Li, Susko, and Roger (2008)
     for (int step = 0; step < ncategory; step++) {
         // first compute _pattern_lh_cat
@@ -482,13 +483,19 @@ double RateFree::optimizeWithEM() {
             writeInfo(cout);
         }
         assert(score < 0);
+        
+        if (step > 0)
+            assert(score > old_score-0.1);
+            
+        old_score = score;
+        
         memset(new_prop, 0, nmix*sizeof(double));
                 
         // E-step
         // decoupled weights (prop) from _pattern_lh_cat to obtain L_ci and compute pattern likelihood L_i
         for (ptn = 0; ptn < nptn; ptn++) {
             double *this_lk_cat = phylo_tree->_pattern_lh_cat + ptn*nmix;
-            double lk_ptn = 0.0;
+            double lk_ptn = phylo_tree->ptn_invar[ptn];
             for (c = 0; c < nmix; c++) {
                 lk_ptn += this_lk_cat[c];
             }
@@ -505,6 +512,7 @@ double RateFree::optimizeWithEM() {
         
         // M-step, update weights according to (*)        
         int maxpropid = 0;
+        double new_pinvar = 0.0;    
         for (c = 0; c < nmix; c++) {
             new_prop[c] = new_prop[c] / phylo_tree->getAlnNSite();
             if (new_prop[c] > new_prop[maxpropid])
@@ -530,9 +538,19 @@ double RateFree::optimizeWithEM() {
             sum_prop += new_prop[c];
             converged = converged && (fabs(prop[c]-new_prop[c]) < 1e-4);
             prop[c] = new_prop[c];
+            new_pinvar += new_prop[c];
         }
 
-        assert(fabs(sum_prop-1.0) < MIN_PROP);
+        new_pinvar = 1.0 - new_pinvar;
+
+        if (new_pinvar != 0.0) {
+            converged = converged && (fabs(getPInvar()-new_pinvar) < 1e-4);
+            setPInvar(new_pinvar);
+//            setOptimizePInvar(false);
+            phylo_tree->computePtnInvar();
+        }
+        
+        assert(fabs(sum_prop+new_pinvar-1.0) < MIN_PROP);
         
         // now optimize rates one by one
         double sum = 0.0;
