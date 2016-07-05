@@ -1813,15 +1813,15 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
     int fails = 0;
 
     // Check if sequence type flag matches and for custom virtual population size.
+    pomo_random_sampling = false;
     if (sequence_type) {
         string st (sequence_type);
-        if (st.substr(0,2) != "CF" && st.substr(0,2) != "CR")
-            throw "Counts File detected but sequence type (-st) is neither 'CF' nor 'CR'.";
         if (st.substr(0,2) == "CR")
             pomo_random_sampling = true;
-        else
-            // The default; use partial lh.
+        else if (st.substr(0,2) == "CF")
             pomo_random_sampling = false;
+        else
+            throw "Counts File detected but sequence type (-st) is neither 'CF' nor 'CR'.";
         string virt_pop_size_str = st.substr(2);
         if (virt_pop_size_str != "") {
             int virt_pop_size = atoi(virt_pop_size_str.c_str());
@@ -1999,11 +1999,11 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
                     // Fixed state, state ID is just id1.
                     state = id1;
                 } else {
-                    if (values[id1] >= 16384)
-                        // Cannot add sites where more than 16384
-                        // individuals have the same base within one
-                        // population.
+                    if (values[id1] >= 16384) {
+                        cout << "WARNING: Pattern on line " <<
+                            line_num << " exceeds count limit of 16384." << endl;
                         everything_ok = false;
+                    }
                     uint32_t pomo_state = (id1 | (values[id1]) << 2);
                     IntIntMap::iterator pit = pomo_states_index.find(pomo_state);
                     if (pit == pomo_states_index.end()) { // not found
@@ -3207,17 +3207,23 @@ int Alignment::convertPomoState(int state) {
     int value1 = (pomo_states[state] >> 2) & 16383;
     int value2 = pomo_states[state] >> 18;
     int N = virtual_pop_size;
-    value1 = (int)round((double)value1*N/(value1+value2));
+    // Mon Jun 13 13:24:55 CEST 2016.  Make this a little bit more
+    // stochastic.  This is important if the sample size is small..
+    int M = value1 + value2;
+    double stoch = (double) rand() / RAND_MAX - 0.5;
+    stoch /= 2.0;
+    int pick = (int)round(((double) value1*N/M) + stoch);
+    // int pick = (int)round(((double) value1*N/M));
     int real_state;
-    if (value1 == 0) 
+    if (pick <= 0) 
         real_state = id2;
-    else if (value1 >= N)
+    else if (pick >= N)
         real_state = id1;
     else {
         int j;
         if (id1 == 0) j = id2 - 1;
         else j = id1 + id2;
-        real_state = 4 + j*(N-2) + j + value1 - 1;
+        real_state = 3 + j*(N-1) + pick;
     }
     state = real_state;
     assert(state < num_states);

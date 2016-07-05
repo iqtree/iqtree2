@@ -783,22 +783,41 @@ void PhyloTree::computeTipPartialLikelihood() {
                     // First: Fixed state.  Tue Jan 12 09:26:48 CET
                     // FIXME: 2016 DOM: The likelihood of the fixed
                     // state is increased to improve accuracy.
-                    // real_partial_lh[id1] = 1.0;
-                    real_partial_lh[id1] = nnuc * (nnuc - 1) / 2;
+                    real_partial_lh[id1] = 1.0;
+                    // real_partial_lh[id1] = nnuc * (nnuc - 1) / 2;
                     // real_partial_lh[id1] = 3.0;
                     double sum_lh = real_partial_lh[id1];
                     // Second: Polymorphic states.
                     for (int s_id1 = 0; s_id1 < nnuc-1; s_id1++) {
                         for (int s_id2 = s_id1+1; s_id2 < nnuc; s_id2++) {
-                            if ((s_id1 == id1) || (s_id2 == id1)) {
+                            if (s_id1 == id1) {
+                                // States are in the order {FIXED,
+                                // 1A(N-1)C, ..., (N-1)A1C, ...}.
                                 int k;
                                 if (s_id1 == 0) k = s_id2 - 1;
                                 else k = s_id1 + s_id2;
-                                int real_state = nnuc + k*(N-2) + k;
+                                // Start one earlier because increment
+                                // happens after execution of for loop
+                                // body.
+                                int real_state = nnuc - 1 + k*(N-1) + 1;
                                 for (i = 1; i < N; i++, real_state++) {
                                     assert(real_state < nstates);
                                     real_partial_lh[real_state] =
                                         std::pow((double)i/(double)N,j);
+                                    sum_lh += real_partial_lh[real_state];
+                                }
+                            }
+                            // Same but fixed allele is the second one
+                            // in polymorphic states.
+                            else if (s_id2 == id1) {
+                                int k;
+                                if (s_id1 == 0) k = s_id2 - 1;
+                                else k = s_id1 + s_id2;
+                                int real_state = nnuc - 1 + k*(N-1) + 1;
+                                for (i = 1; i < N; i++, real_state++) {
+                                    assert(real_state < nstates);
+                                    real_partial_lh[real_state] =
+                                        std::pow((double)(N-i)/(double)N,j);
                                     sum_lh += real_partial_lh[real_state];
                                 }
                             }
@@ -822,15 +841,16 @@ void PhyloTree::computeTipPartialLikelihood() {
                         for (i = logv.size(); i <= M; i++)
                             logv.push_back(log((double)i));
                     }
-                    // compute (M choose (M-j) = M choose j)
+                    // Compute (M choose (M-j) = M choose j).
                     double res = 0.0;
                     for (i = j+1; i <= M; i++)
                         res += (logv[i] - logv[i-j]);
+                    // Divide through N**M.
                     res -= M * logv[N];
                     int k;
                     if (id1 == 0) k = id2 - 1;
                     else k = id1 + id2;
-                    int real_state = nnuc + k*(N-2) + k;
+                    int real_state = nnuc + k*(N-1);
 
                     double sum_lh = 0.0;
                     for (i = 1; i < N; i++, real_state++) {
@@ -843,11 +863,19 @@ void PhyloTree::computeTipPartialLikelihood() {
                     // because normalization treats tip nodes
                     // differently than interior nodes.
 
-                    // // normalize partial likelihoods to total of 1.0
+                    // normalize partial likelihoods to total of 1.0
                     // sum_lh = 1.0/sum_lh;
                     // for (i = 0; i < nstates; i++)
                     //     real_partial_lh[i] *= sum_lh;
                 }
+
+                // //DEBUG.
+                // cout << "State: M, j, id1, id2: ";
+                // cout << M << ", " << j << ", " << id1 << ", " << id2 << endl;
+                // for (i = 0; i < nstates; i++) {
+                //     cout << " " << real_partial_lh[i];
+                // }
+                // cout << endl;
 
                 // BUG FIX 2015-09-03: tip_partial_lh stores inner product
                 // of real_partial_lh and inverse eigenvector for each
