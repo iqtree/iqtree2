@@ -1062,8 +1062,7 @@ double PhyloTree::computeLikelihood(double *pattern_lh) {
 //        if (verbose_mode >= VB_DEBUG)
 //            cout << __func__ << " HIT ROOT STATE " << endl;
 //        score = computeLikelihoodRooted((PhyloNeighbor*) vroot->neighbors[0], (PhyloNode*) vroot);
-//    } else 
-    {
+//    } else {
         score = computeLikelihoodBranch(current_it, (PhyloNode*) current_it_back->node);
 //    }
     if (pattern_lh)
