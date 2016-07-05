@@ -44,8 +44,8 @@ project(iqtree)
 add_definitions(-DIQ_TREE)
 # The version number.
 set (iqtree_VERSION_MAJOR 1)
-set (iqtree_VERSION_MINOR 4)
-set (iqtree_VERSION_PATCH "3-beta") 
+set (iqtree_VERSION_MINOR 5)
+set (iqtree_VERSION_PATCH "0") 
 
 set(BUILD_SHARED_LIBS OFF)
 

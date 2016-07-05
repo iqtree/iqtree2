@@ -626,8 +626,13 @@ void Alignment::extractDataBlock(NxsCharactersBlock *data_block) {
 	determine if the pattern is constant. update the is_const variable.
 */
 void Alignment::computeConst(Pattern &pat) {
+
+    // TODO For Dominik: this does not work yet properly with PoMo
+    
     pat.is_const = false;
     pat.is_informative = false;
+    pat.const_char = STATE_UNKNOWN;
+
     // critical fix: const_char was set wrongly to num_states in some data type (binary, codon),
     // causing wrong log-likelihood computation for +I or +I+G model
     if (STATE_UNKNOWN == num_states)

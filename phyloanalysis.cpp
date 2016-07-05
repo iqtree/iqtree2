@@ -56,6 +56,15 @@
 
 
 void reportReferences(Params &params, ofstream &out, string &original_model) {
+
+    if (detectInputFile(params.aln_file) == IN_COUNTS) {
+        // TODO for Dominik: more elegant way to detect this
+        out << "For polymorphism-aware models please cite:" << endl << endl 
+            << "Dominik Schrempf, Bui Quang Minh, Nicola De Maio, Arndt von Haeseler, and Carolin Kosiol" << endl
+            << "(2016) Reversible polymorphism-aware phylogenetic models and their application to" << endl
+            << "tree inference. J. Theor. Biol., in press." << endl << endl;
+    }
+
 	out << "To cite IQ-TREE please use:" << endl << endl
 		<< "Lam-Tung Nguyen, Heiko A. Schmidt, Arndt von Haeseler, and Bui Quang Minh (2015)" << endl
 		<< "IQ-TREE: A fast and effective stochastic algorithm for estimating" << endl
@@ -216,7 +225,11 @@ void reportModel(ofstream &out, Alignment *aln, ModelSubst *m) {
 		out.unsetf(ios_base::fixed);
 		delete[] rate_mat;
 	}
-    if (aln->seq_type == SEQ_POMO) ((ModelPoMo*) m)->reportPoMoRates(out);
+    if (aln->seq_type == SEQ_POMO) { 
+        ((ModelPoMo*) m)->reportPoMoRates(out);
+        ((ModelPoMo*) m)->reportPoMoStateFreqs(out);
+        return;
+    }
 	out << "State frequencies: ";
 	if (m->isSiteSpecificModel())
 		out << "(site specific frequencies)" << endl << endl;
@@ -272,7 +285,6 @@ void reportModel(ofstream &out, Alignment *aln, ModelSubst *m) {
 			out << endl;
 			delete[] q_mat;
 		}
-        if (aln->seq_type == SEQ_POMO) ((ModelPoMo*) m)->reportPoMoStateFreqs(out);
 	}
 }
 

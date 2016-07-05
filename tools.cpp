@@ -3189,7 +3189,7 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "                       R: Random binomial sampling of PoMo states from data (sampled)." << endl
             << "                       Default is `CF9`."                                            << endl
             // TODO Cite reversible PoMo paper here (how does sampling work now).
-            << "  -m <sm>+<pm>+<ft>    Default: `HKY+rP+FO`."                                        << endl
+            << "  -m <sm>+<pm>+<ft>    Default: `HKY+rP+F`."                                        << endl
             << "                 <sm>: Substitution model."                                          << endl
             << "                  DNA: HKY (default), JC, F81, K2P, K3P, K81uf, TN/TrN, TNef,"       << endl
             << "                       TIM, TIMef, TVM, TVMef, SYM, GTR, or a 6-digit model"         << endl
@@ -3202,7 +3202,6 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "                       F or +FO or +FU or +FQ."                                      << endl
             << "                       Counted, optimized, user-defined, equal state frequency."     << endl
             << "                       This overwrites the specifications of the DNA model."         << endl
-            << "  The default model string is: -m HKY+rP+F."                                         << endl
             << "  Until now, only DNA models work with PoMo."                                        << endl
             << "  Model testing and rate heterogeneity do not work with PoMo yet."                   << endl
             << "  Example of a standard run:" << endl
