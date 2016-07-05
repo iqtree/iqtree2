@@ -2657,6 +2657,13 @@ void Alignment::createBootstrapAlignment(Alignment *aln, IntVector* pattern_freq
     site_pattern.resize(nsite, -1);
     clear();
     pattern_index.clear();
+    
+    // 2016-07-05: copy variables for PoMo
+    pomo_states = aln->pomo_states;
+    pomo_states_index = aln->pomo_states_index;
+    pomo_random_sampling = aln->pomo_random_sampling;
+    virtual_pop_size = aln->virtual_pop_size;
+    
     VerboseMode save_mode = verbose_mode;
     verbose_mode = min(verbose_mode, VB_MIN); // to avoid printing gappy sites in addPattern
     if (pattern_freq) {
