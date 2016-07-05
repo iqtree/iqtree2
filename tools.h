@@ -657,6 +657,9 @@ public:
      */
     char *aln_file;
 
+    /** true if sequential phylip format is used, default: false (interleaved format) */
+    bool phylip_sequential_format;
+
     /**
             file containing multiple trees to evaluate at the end
      */
