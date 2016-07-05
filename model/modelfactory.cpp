@@ -631,7 +631,7 @@ bool ModelFactory::readSiteFreq(Alignment *aln, char* site_freq_file, IntVector 
 			double sum = 0;
 			for (i = 0; i < aln->num_states; i++) {
 				in >> freq;
-				if (freq <= 0.0 || freq >= 1.0) throw "Invalid frequency entry";
+				if (freq <= 0.0 || freq >= 1.0) throw "Frequencies must be strictly positive and smaller than 1";
 				site_freq_entry[i] = freq;
 				sum += freq;
 			}
