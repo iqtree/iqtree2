@@ -51,7 +51,7 @@ public:
 		@param tree associated tree for the model
 	*/
     ModelGTR(PhyloTree *tree, bool count_rates = true);
-	
+
 	/**
 		init the model and decompose the rate matrix. This function should always be called
 		after creating the class. Otherwise it will not work properly.
@@ -70,6 +70,16 @@ public:
 		destructor
 	*/
     virtual ~ModelGTR();
+
+    /** 
+        save object into the checkpoint
+    */
+    virtual void saveCheckpoint();
+
+    /** 
+        restore object from the checkpoint
+    */
+    virtual void restoreCheckpoint();
 
 	/**
 	 * @return model name

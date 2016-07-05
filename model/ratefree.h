@@ -10,7 +10,7 @@
 
 #include "rategamma.h"
 
-class RateFree: virtual public RateGamma {
+class RateFree: public RateGamma {
 public:
 	/**
 		constructor
@@ -21,6 +21,16 @@ public:
     RateFree(int ncat, double start_alpha, string params, bool sorted_rates, string opt_alg, PhyloTree *tree);
 
 	virtual ~RateFree();
+
+    /**
+        save object into the checkpoint
+    */
+    virtual void saveCheckpoint();
+
+    /**
+        restore object from the checkpoint
+    */
+    virtual void restoreCheckpoint();
 
 	/**
 		@return true if this is a Gamma model (default: false)

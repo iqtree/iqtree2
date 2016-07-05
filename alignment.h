@@ -252,7 +252,7 @@ public:
     		bool exclude_gaps = false, bool exclude_const_sites = false, const char *ref_seq_name = NULL);
 
     void printPhylip(ostream &out, bool append = false, const char *aln_site_list = NULL,
-    		bool exclude_gaps = false, bool exclude_const_sites = false, const char *ref_seq_name = NULL);
+    		bool exclude_gaps = false, bool exclude_const_sites = false, const char *ref_seq_name = NULL, bool print_taxid = false);
 
     void printFasta(const char *filename, bool append = false, const char *aln_site_list = NULL,
     		bool exclude_gaps = false, bool exclude_const_sites = false, const char *ref_seq_name = NULL);
@@ -381,8 +381,10 @@ public:
             @param aln original input alignment
             @param seq_id ID of sequences to extract from
             @param min_true_cher the minimum number of non-gap characters, true_char<min_true_char -> delete the sequence
+            @param min_taxa only keep alignment that has >= min_taxa sequences
+            @param[out] kept_partitions (for SuperAlignment) indices of kept partitions
      */
-    virtual void extractSubAlignment(Alignment *aln, IntVector &seq_id, int min_true_char);
+    virtual void extractSubAlignment(Alignment *aln, IntVector &seq_id, int min_true_char, int min_taxa = 0, IntVector *kept_partitions = NULL);
 
     /**
             extract a sub-set of patterns
@@ -420,8 +422,9 @@ public:
             resampling pattern frequency by a non-parametric bootstrap
             @param pattern_freq (OUT) resampled pattern frequencies
             @param spec bootstrap specification, see above
+            @param rstream random generator stream, NULL to use the global randstream
      */
-    virtual void createBootstrapAlignment(int *pattern_freq, const char *spec = NULL);
+    virtual void createBootstrapAlignment(int *pattern_freq, const char *spec = NULL, int *rstream = NULL);
 
     /**
             create a gap masked alignment from an input alignment. Gap patterns of masked_aln 
@@ -580,13 +583,13 @@ public:
             compute empirical rates between state pairs
             @param rates (OUT) vector of size num_states*(num_states-1)/2 for the rates
      */
-    virtual void computeEmpiricalRate(double *rates);
+    virtual void computeDivergenceMatrix(double *rates);
 
     /**
             compute non-reversible empirical rates between state pairs
             @param rates (OUT) vector of size num_states*(num_states-1) for the rates
      */
-    virtual void computeEmpiricalRateNonRev(double *rates);
+    virtual void computeDivergenceMatrixNonRev(double *rates);
 
     /**
             count the fraction of constant sites in the alignment, update the variable frac_const_sites

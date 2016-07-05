@@ -39,6 +39,16 @@ public:
 	*/
     RateGammaInvar(int ncat, double shape, bool median, double p_invar_sites, bool simultaneous, PhyloTree *tree);
 
+    /**
+        save object into the checkpoint
+    */
+    virtual void saveCheckpoint();
+
+    /**
+        restore object from the checkpoint
+    */
+    virtual void restoreCheckpoint();
+
 	/**
 		get the proportion of sites under a specified category.
 		@param category category ID from 0 to #category-1
@@ -52,6 +62,15 @@ public:
 		@return the rate of the specified category
 	*/
 	virtual double getRate(int category) { return RateGamma::getRate(category); }
+
+	/**
+		set the proportion of invariable sites. Default: do nothing
+		@param pinv the proportion of invariable sites
+	*/
+	virtual void setPInvar(double pInvar) {
+		p_invar = pInvar;
+        computeRates();
+	}
 
 	/**
 	 * @return model name with parameters in form of e.g. GTR{a,b,c,d,e,f}

@@ -38,6 +38,7 @@ struct TreeInfo {
 	double wkh_pvalue; // p-value by weighted Kishino-Hasegawa test
 	double elw_value; // ELW - expected likelihood weights test
 	bool elw_confident; // to represent confidence set of ELW test
+    double au_pvalue; // p-value by approximately unbiased (AU) test
 };
 
 
@@ -87,6 +88,13 @@ void printSiteLh(const char*filename, PhyloTree *tree, double *ptn_lh = NULL,
  * @param tree phylogenetic tree
  */
 void printSiteLhCategory(const char*filename, PhyloTree *tree, SiteLoglType wsl);
+
+/**
+ * print site state frequency vectors (for Huaichun)
+ * @param filename output file name
+ * @param tree phylogenetic tree
+*/
+void printSiteStateFreq(const char*filename, PhyloTree *tree);
 
 /**
  * Evaluate user-trees with possibility of tree topology tests

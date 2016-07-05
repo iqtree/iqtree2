@@ -8,11 +8,26 @@
 #include "ratefreeinvar.h"
 
 RateFreeInvar::RateFreeInvar(int ncat, double start_alpha, string params, bool sorted_rates, double p_invar_sites, string opt_alg, PhyloTree *tree)
-: RateGamma(ncat, 1.0, false, tree), RateInvar(p_invar_sites, tree), RateFree(ncat, start_alpha, params, sorted_rates, opt_alg, tree)
+: RateInvar(p_invar_sites, tree), RateFree(ncat, start_alpha, params, sorted_rates, opt_alg, tree)
 {
 	cur_optimize = 0;
 	name = "+I" + name;
 	full_name = "Invar+" + full_name;
+    setNCategory(ncat);
+}
+
+void RateFreeInvar::saveCheckpoint() {
+    checkpoint->startStruct("RateFreeInvar");
+    checkpoint->endStruct();
+    RateInvar::saveCheckpoint();
+    RateFree::saveCheckpoint();
+}
+
+void RateFreeInvar::restoreCheckpoint() {
+    RateInvar::restoreCheckpoint();
+    RateFree::restoreCheckpoint();
+    checkpoint->startStruct("RateFreeInvar");
+    checkpoint->endStruct();
 }
 
 void RateFreeInvar::setNCategory(int ncat) {

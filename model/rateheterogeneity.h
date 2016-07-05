@@ -24,6 +24,7 @@
 #include "optimization.h"
 #include <string>
 #include "tools.h"
+#include "checkpoint.h"
 
 using namespace std;
 
@@ -40,7 +41,7 @@ class for among-site rate heterogeneity, the default is homogeneous (equal) rate
 	@author BUI Quang Minh <minh.bui@univie.ac.at>
 */
 
-class RateHeterogeneity : public Optimization
+class RateHeterogeneity : public Optimization, public CheckpointFactory
 {
 	friend class ModelFactory;
 
@@ -54,6 +55,16 @@ public:
 		destructor
 	*/
     virtual ~RateHeterogeneity();
+
+    /**
+        save object into the checkpoint
+    */
+    virtual void saveCheckpoint();
+
+    /**
+        restore object from the checkpoint
+    */
+    virtual void restoreCheckpoint();
 
 	/**
 		set phylogenetic tree
@@ -135,6 +146,11 @@ public:
 	*/
 	virtual void setPInvar(double pinv) { }
 
+    /**
+        set whether to fix p_invar
+    */
+	virtual void setFixPInvar(bool fixPInvar) {}
+
 	/**
 		Set whether or not to optimize p_invar
 		@param opt TRUE to optimize p_invar, FALSE otherwise
@@ -146,6 +162,17 @@ public:
 		@return Gamma shape
 	*/	
 	virtual double getGammaShape() { return 0.0; }
+
+	/**
+		set the Gamma shape. Default: nothing
+		@param gs Gamma shape
+	*/	
+	virtual void setGammaShape(double gs) {}
+
+    /**
+        set whether to fix gamma shape
+    */
+	virtual void setFixGammaShape(bool fixGammaShape) {}
 
 	/**
 		@return >0 if this is a Gamma model (default: 0)

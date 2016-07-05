@@ -31,7 +31,7 @@
 #include "node.h"
 #include "splitset.h"
 #include "mtree.h"
-
+#include "checkpoint.h"
 
 class MTreeSet;
 
@@ -42,7 +42,7 @@ SplitGraph class
 
 @author BUI Quang Minh, Steffen Klaere, Arndt von Haeseler
 */
-class SplitGraph : public vector<Split*>
+class SplitGraph : public vector<Split*>, public CheckpointFactory
 {
 public:
 
@@ -70,6 +70,16 @@ public:
 		@param params program parameters
 	*/
     void init(Params &params);
+
+    /** 
+        save object into the checkpoint
+    */
+    virtual void saveCheckpoint();
+
+    /** 
+        restore object from the checkpoint
+    */
+    virtual void restoreCheckpoint();
 	
 	/**
 		if no taxa block found, but the sets block is present, then 
@@ -368,6 +378,11 @@ public:
 	*/
 	void calcDistance(matrix(double) &dist, vector<int> &taxa_order);
 
+	/**
+	 * remove all trivial splits
+	 * @return number of trivial splits removed
+	*/
+	int removeTrivialSplits();
 
 protected:
 

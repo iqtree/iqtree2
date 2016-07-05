@@ -56,6 +56,16 @@ public:
 	*/
     virtual ~RateGamma();
 
+    /**
+        save object into the checkpoint
+    */
+    virtual void saveCheckpoint();
+
+    /**
+        restore object from the checkpoint
+    */
+    virtual void restoreCheckpoint();
+
 	/**
 		@return true if this is a Gamma model (default: false)
 	*/	
@@ -176,7 +186,7 @@ public:
 		return fix_gamma_shape;
 	}
 
-	void setFixGammaShape(bool fixGammaShape) {
+	virtual void setFixGammaShape(bool fixGammaShape) {
 		fix_gamma_shape = fixGammaShape;
 	}
 

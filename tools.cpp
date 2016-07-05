@@ -263,6 +263,35 @@ void convert_int_vec(const char *str, IntVector &vec) throw (string) {
 }
 
 
+int64_t convert_int64(const char *str) throw (string) {
+    char *endptr;
+    int64_t i = (int64_t)strtoll(str, &endptr, 10); // casted because 'long long' may be larger than int64_t
+
+    if ((i == 0 && endptr == str) || abs(i) == HUGE_VALL || *endptr != 0) {
+        string err = "Expecting large integer , but found \"";
+        err += str;
+        err += "\" instead";
+        throw err;
+    }
+
+    return i;
+}
+
+int64_t convert_int64(const char *str, int &end_pos) throw (string) {
+	char *endptr;
+	int64_t i = (int64_t)strtoll(str, &endptr, 10); // casted because 'long long' may be larger than int64_t
+
+	if ((i == 0 && endptr == str) || abs(i) == HUGE_VALL) {
+		string err = "Expecting large integer, but found \"";
+		err += str;
+		err += "\" instead";
+		throw err;
+	}
+	end_pos = endptr - str;
+	return i;
+}
+
+
 double convert_double(const char *str) throw (string) {
     char *endptr;
     double d = strtod(str, &endptr);
@@ -613,6 +642,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.user_file = NULL;
     params.fai = false;
     params.testAlpha = false;
+    params.test_param = false;
     params.testAlphaEpsAdaptive = false;
     params.randomAlpha = false;
     params.testAlphaEps = 0.1;
@@ -738,6 +768,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.model_test_and_tree = 0;
     params.model_test_separate_rate = false;
     params.optimize_mixmodel_weight = false;
+    params.optimize_rate_matrix = false;
     params.store_trans_matrix = false;
     //params.freq_type = FREQ_EMPIRICAL;
     params.freq_type = FREQ_UNKNOWN;
@@ -770,6 +801,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.SSE = LK_EIGEN_SSE;
     params.lk_no_avx = false;
     params.print_site_lh = WSL_NONE;
+    params.print_site_state_freq = 0;
     params.print_site_rate = false;
     params.print_site_posterior = 0;
     params.print_tree_lh = false;
@@ -884,7 +916,13 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.freq_const_patterns = NULL;
     params.no_rescale_gamma_invar = false;
     params.compute_seq_identity_along_tree = false;
+    params.lmap_num_quartets = -1;
+    params.lmap_cluster_file = NULL;
+    params.print_lmap_quartet_lh = false;
     params.link_alpha = false;
+    params.ignore_checkpoint = false;
+    params.checkpoint_dump_interval = 20;
+    params.force_unfinished = false;
 
 
 	if (params.nni5) {
@@ -898,7 +936,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     // initialize random seed based on current time
     gettimeofday(&tv, &tz);
     //params.ran_seed = (unsigned) (tv.tv_sec+tv.tv_usec);
-    params.ran_seed = (unsigned) (tv.tv_usec);
+    params.ran_seed = (tv.tv_usec);
 
     for (cnt = 1; cnt < argc; cnt++) {
         try {
@@ -1156,7 +1194,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.tree_gen = BALANCED;
 				continue;
 			}
-            if (strcmp(argv[cnt], "-keep_ident") == 0) {
+            if (strcmp(argv[cnt], "-keep_ident") == 0 || strcmp(argv[cnt], "-keep-ident") == 0) {
                 params.ignore_identical_seqs = false;
                 continue;
             }
@@ -1242,7 +1280,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -seed <random_seed>";
-				params.ran_seed = (unsigned) convert_int(argv[cnt]);
+				params.ran_seed = abs(convert_int(argv[cnt]));
 				continue;
 			}
 			if (strcmp(argv[cnt], "-pdgain") == 0) {
@@ -1493,7 +1531,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.do_weighted_test = true;
 				continue;
 			}
-			if (strcmp(argv[cnt], "-zau") == 0) {
+			if (strcmp(argv[cnt], "-au") == 0) {
 				params.do_au_test = true;
 				continue;
 			}
@@ -1782,18 +1820,22 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.optimize_mixmodel_weight = true;
 				continue;
 			}
-			if (strcmp(argv[cnt], "-mh") == 0) {
-				params.mvh_site_rate = true;
-				params.discard_saturated_site = false;
-				params.SSE = LK_NORMAL;
+			if (strcmp(argv[cnt], "--opt-rate-mat") == 0) {
+				params.optimize_rate_matrix = true;
 				continue;
 			}
-			if (strcmp(argv[cnt], "-mhs") == 0) {
-				params.mvh_site_rate = true;
-				params.discard_saturated_site = true;
-				params.SSE = LK_NORMAL;
-				continue;
-			}
+//			if (strcmp(argv[cnt], "-mh") == 0) {
+//				params.mvh_site_rate = true;
+//				params.discard_saturated_site = false;
+//				params.SSE = LK_NORMAL;
+//				continue;
+//			}
+//			if (strcmp(argv[cnt], "-mhs") == 0) {
+//				params.mvh_site_rate = true;
+//				params.discard_saturated_site = true;
+//				params.SSE = LK_NORMAL;
+//				continue;
+//			}
 			if (strcmp(argv[cnt], "-rl") == 0) {
 				params.rate_mh_type = false;
 				continue;
@@ -1822,14 +1864,14 @@ void parseArg(int argc, char *argv[], Params &params) {
 					throw "Lambda must be in (0,1]";
 				continue;
 			}
-			if (strcmp(argv[cnt], "-nosse") == 0) {
-				params.SSE = LK_NORMAL;
-				continue;
-			}
-			if (strcmp(argv[cnt], "-slowsse") == 0) {
-				params.SSE = LK_SSE;
-				continue;
-			}
+//			if (strcmp(argv[cnt], "-nosse") == 0) {
+//				params.SSE = LK_NORMAL;
+//				continue;
+//			}
+//			if (strcmp(argv[cnt], "-slowsse") == 0) {
+//				params.SSE = LK_SSE;
+//				continue;
+//			}
 			if (strcmp(argv[cnt], "-fastlk") == 0) {
 				params.SSE = LK_EIGEN;
 				continue;
@@ -1867,7 +1909,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (cnt >= argc)
 					throw "Use -fs <site_freq_file>";
 				params.site_freq_file = argv[cnt];
-				params.SSE = LK_NORMAL;
+//				params.SSE = LK_EIGEN;
 				continue;
 			}
 
@@ -2176,6 +2218,10 @@ void parseArg(int argc, char *argv[], Params &params) {
 			}
 			if (strcmp(argv[cnt], "-wsp") == 0) {
 				params.print_site_posterior = 1;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-wsf") == 0) {
+				params.print_site_state_freq = 1;
 				continue;
 			}
 			if (strcmp(argv[cnt], "-wba") == 0) {
@@ -2523,6 +2569,12 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.testAlpha = true;
 				continue;
 			}
+
+            if (strcmp(argv[cnt], "-test_param") == 0 || strcmp(argv[cnt], "--opt-gamma-inv") == 0) {
+                params.test_param = true;
+                continue;
+            }
+
             if (strcmp(argv[cnt], "--adaptive-eps") == 0) {
                 params.testAlphaEpsAdaptive = true;
                 continue;
@@ -2574,6 +2626,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				continue;
 			}
 			if (strcmp(argv[cnt], "-pll") == 0) {
+                outError("-pll option is discontinued.");
 				params.pll = true;
 				continue;
 			}
@@ -2779,14 +2832,14 @@ void parseArg(int argc, char *argv[], Params &params) {
 					throw "At least 1 thread please";
 				continue;
 			}
-			if (strcmp(argv[cnt], "-rootstate") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -rootstate <rootstate>";
-                params.root_state = argv[cnt];
-                params.SSE = LK_NORMAL;
-                continue;
-			}
+//			if (strcmp(argv[cnt], "-rootstate") == 0) {
+//                cnt++;
+//                if (cnt >= argc)
+//                    throw "Use -rootstate <rootstate>";
+//                params.root_state = argv[cnt];
+//                params.SSE = LK_NORMAL;
+//                continue;
+//			}
 			if (strcmp(argv[cnt], "-ct") == 0) {
             	params.count_trees = true;
             	continue;
@@ -2828,8 +2881,58 @@ void parseArg(int argc, char *argv[], Params &params) {
 				continue;
 			}
             
+			if (strcmp(argv[cnt], "-lmap") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -lmap <likelihood_mapping_num_quartets>";
+                if (strcmp(argv[cnt],"ALL") == 0) {
+                    params.lmap_num_quartets = 0;
+                } else {
+                    params.lmap_num_quartets = convert_int64(argv[cnt]);
+                    if (params.lmap_num_quartets < 0)
+                        throw "Number of quartets must be >= 1";
+                }
+				continue;
+			}
+
+			if (strcmp(argv[cnt], "-lmclust") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -lmclust <likelihood_mapping_cluster_file>";
+				params.lmap_cluster_file = argv[cnt];
+				// '-keep_ident' is currently required to allow a 1-to-1 mapping of the 
+				// user-given groups (HAS) - possibly obsolete in the future versions
+				params.ignore_identical_seqs = false;
+                if (params.lmap_num_quartets < 0)
+                    params.lmap_num_quartets = 0;
+				continue;
+			}
+
+			if (strcmp(argv[cnt], "-wql") == 0) {
+				params.print_lmap_quartet_lh = true;
+				continue;
+			}
+            
 			if (strcmp(argv[cnt], "--link-alpha") == 0) {
 				params.link_alpha = true;
+				continue;
+			}
+
+			if (strcmp(argv[cnt], "-redo") == 0) {
+				params.ignore_checkpoint = true;
+				continue;
+			}
+
+			if (strcmp(argv[cnt], "--force-unfinish") == 0) {
+				params.force_unfinished = true;
+				continue;
+			}
+
+			if (strcmp(argv[cnt], "-cptime") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -cptime <checkpoint_time_interval>";
+				params.checkpoint_dump_interval = convert_int(argv[cnt]);
 				continue;
 			}
 
@@ -2969,8 +3072,8 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -q <partition_file>  Edge-linked partition model (file in NEXUS/RAxML format)" << endl
             << " -spp <partition_file> Like -q option but allowing partition-specific rates" << endl
             << "  -sp <partition_file> Edge-unlinked partition model (like -M option of RAxML)" << endl
-            << "  -t <start_tree_file> | BIONJ | RANDOM" << endl
-            << "                       Starting tree (default: 100 parsimony trees and BIONJ)" << endl
+            << "  -t <start_tree_file> or -t BIONJ or -t RANDOM" << endl
+            << "                       Starting tree (default: 99 parsimony tree and BIONJ)" << endl
             << "  -te <user_tree_file> Like -t but fixing user tree (no tree search performed)" << endl
             << "  -o <outgroup_taxon>  Outgroup taxon name for writing .treefile" << endl
             << "  -pre <PREFIX>        Using <PREFIX> for output files (default: aln/partition)" << endl
@@ -2979,8 +3082,16 @@ void usage_iqtree(char* argv[], bool full_command) {
 #endif
             << "  -seed <number>       Random seed number, normally used for debugging purpose" << endl
             << "  -v, -vv, -vvv        Verbose mode, printing more messages to screen" << endl
+            << "  -keep-ident          Keep identical sequences (default: remove & finally add)" << endl
+            << endl << "CHECKPOINTING TO RESUME STOPPED RUN:" << endl
+            << "  -redo                Redo analysis even for successful runs (default: resume)" << endl
+            << "  -cptime <seconds>    Minimum checkpoint time interval (default: 20)" << endl
+            << endl << "LIKELIHOOD MAPPING ANALYSIS:" << endl
+            << "  -lmap <#quartets>    Number of quartets for likelihood mapping analysis" << endl
+            << "  -lmclust <clustfile> NEXUS file containing clusters for likelihood mapping" << endl
+            << "  -wql                 Print quartet log-likelihoods to .quartetlh file" << endl
             << endl << "NEW STOCHASTIC TREE SEARCH ALGORITHM:" << endl
-            << "  -pll                 Use phylogenetic likelihood library (PLL) (default: off)" << endl
+//            << "  -pll                 Use phylogenetic likelihood library (PLL) (default: off)" << endl
             << "  -numpars <number>    Number of initial parsimony trees (default: 100)" << endl
             << "  -toppars <number>    Number of best parsimony trees (default: 20)" << endl
             << "  -sprrad <number>     Radius for parsimony SPR search (default: 6)" << endl
@@ -3102,9 +3213,10 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "                       Invar, Gamma, Invar+Gamma, or FreeRate model where 'n' is" << endl
             << "                       number of categories (default: n=4)" << endl
             << "  -a <Gamma_shape>     Gamma shape parameter for site rates (default: estimate)" << endl
-            << "  -gmedian             Computing mean for Gamma rate category (default: mean)" << endl
-            << "  --test-alpha         More thorough estimation for +I+G model parameters" << endl
+            << "  -gmedian             Median approximation for +G site rates (default: mean)" << endl
+            << "  --opt-gamma-inv      More thorough estimation for +I+G model parameters" << endl
             << "  -i <p_invar>         Proportion of invariable sites (default: estimate)" << endl
+            << "  -wsr                 Write site rates to .rate file" << endl
             << "  -mh                  Computing site-specific rates to .mhrate file using" << endl
             << "                       Meyer & von Haeseler (2003) method" << endl
             //<< "  -c <#categories>     Number of Gamma rate categories (default: 4)" << endl
@@ -3145,6 +3257,7 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -z <trees_file>      Evaluating a set of user trees" << endl
             << "  -zb <#replicates>    Performing BP,KH,SH,ELW tests for trees passed via -z" << endl
             << "  -zw                  Also performing weighted-KH and weighted-SH tests" << endl
+            << "  -au                  Also performing approximately unbiased (AU) test" << endl
             << endl;
 
 			cout << "GENERATING RANDOM TREES:" << endl;
@@ -3442,32 +3555,44 @@ int finish_random() {
 
 int *randstream;
 
-int init_random(int seed) {
+int init_random(int seed, bool write_info, int** rstream) {
     //    srand((unsigned) time(NULL));
     if (seed < 0)
         seed = make_sprng_seed();
 #ifndef PARALLEL
-    cout << "(Using SPRNG - Scalable Parallel Random Number Generator)" << endl;
-    randstream = init_sprng(0, 1, seed, SPRNG_DEFAULT); /*init stream*/
-    if (verbose_mode >= VB_MED) {
-        print_sprng(randstream);
+    if (write_info)
+    	cout << "(Using SPRNG - Scalable Parallel Random Number Generator)" << endl;
+    if (rstream) {
+        *rstream = init_sprng(0, 1, seed, SPRNG_DEFAULT); /*init stream*/
+    } else {
+        randstream = init_sprng(0, 1, seed, SPRNG_DEFAULT); /*init stream*/
+        if (verbose_mode >= VB_MED) {
+            print_sprng(randstream);
+        }
     }
 #else /* PARALLEL */
-    if (PP_IamMaster) {
+    if (PP_IamMaster && write_info) {
         cout << "(Using SPRNG - Scalable Parallel Random Number Generator)" << endl;
     }
     /* MPI_Bcast(&seed, 1, MPI_UNSIGNED, PP_MyMaster, MPI_COMM_WORLD); */
-    randstream = init_sprng(PP_Myid, PP_NumProcs, seed, SPRNG_DEFAULT); /*initialize stream*/
-    if (verbose_mode >= VB_MED) {
-        cout << "(" << PP_Myid << ") !!! random seed set to " << seed << " !!!" << endl;
-        print_sprng(randstream);
+    if (rstream) {
+        *rstream = init_sprng(PP_Myid, PP_NumProcs, seed, SPRNG_DEFAULT); /*initialize stream*/
+    } else {
+        randstream = init_sprng(PP_Myid, PP_NumProcs, seed, SPRNG_DEFAULT); /*initialize stream*/
+        if (verbose_mode >= VB_MED) {
+            cout << "(" << PP_Myid << ") !!! random seed set to " << seed << " !!!" << endl;
+            print_sprng(randstream);
+        }
     }
 #endif /* PARALLEL */
     return (seed);
 } /* initrandom */
 
-int finish_random() {
-	return free_sprng(randstream);
+int finish_random(int *rstream) {
+    if (rstream)
+        return free_sprng(rstream);
+    else
+        return free_sprng(randstream);
 }
 
 #endif /* USE_SPRNG */
@@ -3475,8 +3600,8 @@ int finish_random() {
 /******************/
 
 /* returns a random integer in the range [0; n - 1] */
-int random_int(int n) {
-    return (int) floor(random_double() * n);
+int random_int(int n, int *rstream) {
+    return (int) floor(random_double(rstream) * n);
 } /* randominteger */
 
 //int randint(int a, int b) {
@@ -3484,19 +3609,25 @@ int random_int(int n) {
 //}
 //
 
-double random_double() {
+double random_double(int *rstream) {
 #ifndef FIXEDINTRAND
 #ifndef PARALLEL
 #if RAN_TYPE == RAN_STANDARD
     return ((double) rand()) / ((double) RAND_MAX + 1);
 #elif RAN_TYPE == RAN_SPRNG
-    return sprng(randstream);
+    if (rstream)
+        return sprng(rstream);
+    else
+        return sprng(randstream);
 #else /* NO_SPRNG */
     return randomunitintervall();
 #endif /* NO_SPRNG */
 #else /* NOT PARALLEL */
 #if RAN_TYPE == RAN_SPRNG
-    return sprng(randstream);
+    if (rstream)
+        return sprng(rstream);
+    else
+        return sprng(randstream);
 #else /* NO_SPRNG */
     int m;
     for (m = 1; m < PP_NumProcs; m++)

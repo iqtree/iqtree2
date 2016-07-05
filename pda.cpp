@@ -1765,12 +1765,11 @@ string _log_file;
 int _exit_wait_optn = FALSE;
 
 
-extern "C" void startLogFile() {
-	_out_buf.open(_log_file.c_str());
-}
-
-extern "C" void appendLogFile() {
-	_out_buf.open(_log_file.c_str(), ios::app);
+extern "C" void startLogFile(bool append_log) {
+    if (append_log)
+        _out_buf.open(_log_file.c_str(), ios::app);
+    else
+        _out_buf.open(_log_file.c_str());
 }
 
 extern "C" void endLogFile() {
@@ -2183,9 +2182,44 @@ int main(int argc, char *argv[])
 	//Params params;
 	parseArg(argc, argv, Params::getInstance());
 
+    // 2015-12-05
+    Checkpoint *checkpoint = new Checkpoint;
+    string filename = (string)Params::getInstance().out_prefix + ".ckp.gz";
+    checkpoint->setFileName(filename);
+    
+    bool append_log = false;
+    
+    if (!Params::getInstance().ignore_checkpoint && fileExists(filename)) {
+        checkpoint->load();
+        if (checkpoint->hasKey("finished")) {
+            if (checkpoint->getBool("finished")) {
+                if (Params::getInstance().force_unfinished) {
+                    cout << "NOTE: Continue analysis although a previous run already finished" << endl;
+                } else {
+                    outError("Checkpoint (" + filename + ") indicates that a previous run successfully finished\n" +
+                        "Use `-redo` option if you really want to redo the analysis and overwrite all output files.");
+                    delete checkpoint;
+                    return EXIT_FAILURE;
+                } 
+            } else {
+                append_log = true;
+            }
+        } else {
+            outWarning("Ignore invalid checkpoint file " + filename);
+            checkpoint->clear();
+        }
+    }
+
+
 	_log_file = Params::getInstance().out_prefix;
 	_log_file += ".log";
-	startLogFile();
+	startLogFile(append_log);
+
+    if (append_log) {
+        cout << endl << "******************************************************"
+             << endl << "CHECKPOINT: Resuming analysis from " << filename << endl << endl;
+    }
+
 	atexit(funcExit);
 	signal(SIGABRT, &funcAbort);
 	signal(SIGFPE, &funcAbort);
@@ -2245,16 +2279,18 @@ int main(int argc, char *argv[])
 //#endif
 
 	cout << "Command:";
-	for (int i = 0; i < argc; i++)
+    int i;
+	for (i = 0; i < argc; i++)
 		cout << " " << argv[i];
 	cout << endl;
 
+    checkpoint->get("iqtree.seed", Params::getInstance().ran_seed);
 	cout << "Seed:    " << Params::getInstance().ran_seed <<  " ";
-	init_random(Params::getInstance().ran_seed);
+	init_random(Params::getInstance().ran_seed, true);
 
-	time_t cur_time;
-	time(&cur_time);
-	cout << "Time:    " << ctime(&cur_time);
+	time_t start_time;
+	time(&start_time);
+	cout << "Time:    " << ctime(&start_time);
 
 	if (Params::getInstance().lk_no_avx)
 		instruction_set = min(instruction_set, 6);
@@ -2268,8 +2304,6 @@ int main(int argc, char *argv[])
 #endif
 	} else {
 		switch (Params::getInstance().SSE) {
-		case LK_NORMAL: cout << "Slow"; break;
-		case LK_SSE: cout << "Slow SSE3"; break;
 		case LK_EIGEN: cout << "No SSE"; break;
 		case LK_EIGEN_SSE:
 			if (instruction_set >= 7) {
@@ -2317,6 +2351,44 @@ int main(int argc, char *argv[])
 
 	cout.precision(3);
 	cout.setf(ios::fixed);
+    
+    // checkpoint general run information
+    checkpoint->startStruct("iqtree");
+    string command;
+    
+    if (CKP_RESTORE_STRING(command)) {
+        // compare command between saved and current commands
+        stringstream ss(command);
+        string str;
+        bool mismatch = false;
+        for (i = 1; i < argc; i++) {
+            if (!(ss >> str)) {
+                outWarning("Number of command-line arguments differs from checkpoint");
+                mismatch = true;
+                break;
+            }
+            if (str != argv[i]) {
+                outWarning((string)"Command-line argument `" + argv[i] + "` differs from checkpoint `" + str + "`");
+                mismatch = true;
+            }
+        }
+        if (mismatch) {
+            outWarning("Command-line differs from checkpoint!");
+        }
+        command = "";
+    }
+    
+	for (i = 1; i < argc; i++)
+        command += string(" ") + argv[i];
+    CKP_SAVE(command);
+    int seed = Params::getInstance().ran_seed;
+    CKP_SAVE(seed);
+    CKP_SAVE(start_time);
+    stringstream sversion;
+    sversion << iqtree_VERSION_MAJOR << "." << iqtree_VERSION_MINOR << "." << iqtree_VERSION_PATCH;
+    string version = sversion.str();
+    CKP_SAVE(version);
+    checkpoint->endStruct();
 
 	// call the main function
 	if (Params::getInstance().tree_gen != NONE) {
@@ -2352,7 +2424,7 @@ int main(int argc, char *argv[])
 			if (Params::getInstance().second_align)
 				computeMulProb(Params::getInstance());
 		} else {
-			runPhyloAnalysis(Params::getInstance());
+			runPhyloAnalysis(Params::getInstance(), checkpoint);
 		}
 	} else if (Params::getInstance().ngs_file || Params::getInstance().ngs_mapped_reads) {
 		runNGSAnalysis(Params::getInstance());
@@ -2413,8 +2485,9 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	time(&cur_time);
-	cout << "Date and Time: " << ctime(&cur_time);
+	delete checkpoint;
+	time(&start_time);
+	cout << "Date and Time: " << ctime(&start_time);
 
 	finish_random();
 	return EXIT_SUCCESS;

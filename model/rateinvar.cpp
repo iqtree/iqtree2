@@ -38,6 +38,24 @@ RateInvar::RateInvar(double p_invar_sites, PhyloTree *tree)
 	}
 }
 
+void RateInvar::saveCheckpoint() {
+    checkpoint->startStruct("RateInvar");
+    CKP_SAVE(p_invar);
+//    CKP_SAVE(fix_p_invar);
+//    CKP_SAVE(optimize_p_invar);
+    checkpoint->endStruct();
+    RateHeterogeneity::saveCheckpoint();
+}
+
+void RateInvar::restoreCheckpoint() {
+    RateHeterogeneity::restoreCheckpoint();
+    checkpoint->startStruct("RateInvar");
+    CKP_RESTORE(p_invar);
+//    CKP_RESTORE(fix_p_invar);
+//    CKP_RESTORE(optimize_p_invar);
+    checkpoint->endStruct();
+}
+
 string RateInvar::getNameParams() {
 	ostringstream str;
 	str << "+I{" << p_invar << '}';
@@ -75,10 +93,10 @@ double RateInvar::optimizeParameters(double gradient_epsilon) {
 	double ferror;
 	p_invar = minimizeOneDimen(MIN_PINVAR, p_invar, min(phylo_tree->aln->frac_const_sites, 1.0-MIN_PINVAR), max(gradient_epsilon, TOL_PINVAR), &negative_lh, &ferror);
 	//p_invar = minimizeOneDimen(MIN_PINVAR, p_invar, 1.0 - MIN_PINVAR, TOL_PINVAR, &negative_lh, &ferror);
-    phylo_tree->clearAllPartialLH();
-	phylo_tree->computePtnInvar();
+//    phylo_tree->clearAllPartialLH();
+//	phylo_tree->computePtnInvar();
 //	return -negative_lh;
-    return phylo_tree->computeLikelihood();
+    return -computeFunction(p_invar);
 }
 
 void RateInvar::writeInfo(ostream &out) {

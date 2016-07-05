@@ -555,7 +555,7 @@ void Optimization::lnsrch(int n, double xold[], double fold, double g[], double 
 
 
 const int MAX_ITER = 3;
-extern double random_double();
+extern double random_double(int *rstream);
 
 double Optimization::minimizeMultiDimen(double guess[], int ndim, double lower[], double upper[], bool bound_check[], double gtol) {
 	int i, iter;

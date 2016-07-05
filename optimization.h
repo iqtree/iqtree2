@@ -19,8 +19,9 @@ Optimization class, implement some methods like Brent, Newton-Raphson (for 1 var
 */
 class Optimization{
 public:
-    Optimization();
 
+    /** constructor */
+    Optimization();
 
 	/*****************************************************
 		One dimensional optimization with Brent method

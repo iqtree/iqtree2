@@ -55,14 +55,27 @@ ModelGTR::ModelGTR(PhyloTree *tree, bool count_rates)
 		
 	eigen_coeff = aligned_alloc<double>(ncoeff);
 
-	if (count_rates) 
-		phylo_tree->aln->computeEmpiricalRate(rates);
-	else
+//	if (count_rates) 
+//		computeEmpiricalRate();
+//	else
 		for (i=0; i < nrate; i++) rates[i] = 1.0;
 	//eigen_coeff_derv1 = new double[ncoeff];
 	//eigen_coeff_derv2 = new double[ncoeff];
 	num_params = getNumRateEntries() - 1;
 }
+
+void ModelGTR::saveCheckpoint() {
+    checkpoint->startStruct("ModelGTR");
+    checkpoint->endStruct();
+    ModelSubst::saveCheckpoint();
+}
+
+void ModelGTR::restoreCheckpoint() {
+    ModelSubst::restoreCheckpoint();
+    checkpoint->startStruct("ModelGTR");
+    checkpoint->endStruct();
+}
+
 
 void ModelGTR::setTree(PhyloTree *tree) {
 	phylo_tree = tree;
@@ -545,7 +558,7 @@ double ModelGTR::optimizeParameters(double gradient_epsilon) {
 	
 	// return if nothing to be optimized
 	if (ndim == 0) return 0.0;
-
+    
 	if (verbose_mode >= VB_MAX)
 		cout << "Optimizing " << name << " model parameters..." << endl;
 
@@ -579,6 +592,7 @@ double ModelGTR::optimizeParameters(double gradient_epsilon) {
     if (changed) {
         decomposeRateMatrix();
         phylo_tree->clearAllPartialLH();
+        score = phylo_tree->computeLikelihood();
     }
 	
 	delete [] bound_check;
@@ -606,8 +620,8 @@ void ModelGTR::decomposeRateMatrix(){
 		for (i = 1; i < num_states; i++)
 			eigenvalues[i] = -mu;
 
-		double *f = new double[num_states];
-		for (i = 0; i < num_states; i++) f[i] = sqrt(state_freq[i]);
+//		double *f = new double[num_states];
+//		for (i = 0; i < num_states; i++) f[i] = sqrt(state_freq[i]);
 		// compute eigenvectors
 		memset(eigenvectors, 0, num_states*num_states*sizeof(double));
 		memset(inv_eigenvectors, 0, num_states*num_states*sizeof(double));

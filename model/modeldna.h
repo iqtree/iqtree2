@@ -63,6 +63,16 @@ public:
 	*/
 	virtual void init(const char *model_name, string model_params, StateFreqType freq, string freq_params);
 
+    /**
+        save object into the checkpoint
+    */
+    virtual void saveCheckpoint();
+
+    /**
+        restore object from the checkpoint
+    */
+    virtual void restoreCheckpoint();
+
 	/**
 	 * @return model name with parameters in form of e.g. GTR{a,b,c,d,e,f}
 	 */

@@ -27,9 +27,9 @@ ModelNonRev::ModelNonRev(PhyloTree *tree, bool count_rates)
     delete [] rates;
     rates = new double [num_params+1];
     memset(rates, 0, sizeof(double) * (num_params+1));
-	if (count_rates)
-		phylo_tree->aln->computeEmpiricalRateNonRev(rates);
-	else 
+//	if (count_rates)
+//		computeEmpiricalRate();
+//	else 
 		for (int i = 0; i <= num_params; i++) 
 			rates[i] = 1.0;
     name = "UNREST";

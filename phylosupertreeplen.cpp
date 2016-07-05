@@ -71,6 +71,39 @@ PartitionModelPlen::~PartitionModelPlen()
 {
 	}
 
+void PartitionModelPlen::saveCheckpoint() {
+    checkpoint->startStruct("PartitionModelPlen");
+    PhyloSuperTreePlen *tree = (PhyloSuperTreePlen*)site_rate->getTree();
+    if (!tree->fixed_rates) {
+        int nrates = tree->part_info.size();
+        double *part_rates = new double[nrates];
+        for (int i = 0; i < nrates; i++)
+            part_rates[i] = tree->part_info[i].part_rate;
+        CKP_ARRAY_SAVE(nrates, part_rates);
+        delete [] part_rates;
+    }
+    checkpoint->endStruct();
+    PartitionModel::saveCheckpoint();
+}
+
+void PartitionModelPlen::restoreCheckpoint() {
+    checkpoint->startStruct("PartitionModelPlen");
+    PhyloSuperTreePlen *tree = (PhyloSuperTreePlen*)site_rate->getTree();
+    if (!tree->fixed_rates) {
+        int nrates = tree->part_info.size();
+        double *part_rates = new double[nrates];
+        if (CKP_ARRAY_RESTORE(nrates, part_rates)) {
+            for (int i = 0; i < nrates; i++)
+                tree->part_info[i].part_rate = part_rates[i];
+            tree->mapTrees();
+        }
+        delete [] part_rates;
+    }
+    checkpoint->endStruct();
+    PartitionModel::restoreCheckpoint();
+}
+
+
 double PartitionModelPlen::optimizeParameters(bool fixed_len, bool write_info, double logl_epsilon, double gradient_epsilon) {
     PhyloSuperTreePlen *tree = (PhyloSuperTreePlen*)site_rate->getTree();
     double tree_lh = 0.0, cur_lh = 0.0;
@@ -104,6 +137,8 @@ double PartitionModelPlen::optimizeParameters(bool fixed_len, bool write_info, d
             if (tree->part_info[part].cur_score == 0.0)
                 tree->part_info[part].cur_score = tree->at(part)->computeLikelihood();
         	cur_lh += tree->part_info[part].cur_score;
+            
+            
 
         	// normalize rates s.t. branch lengths are #subst per site
         	double mean_rate = tree->at(part)->getRate()->rescaleRates();
@@ -121,6 +156,11 @@ double PartitionModelPlen::optimizeParameters(bool fixed_len, bool write_info, d
         }
         if (verbose_mode >= VB_MED)
             cout << "LnL after optimizing individual models: " << cur_lh << endl;
+        if (cur_lh <= tree_lh - 1.0) {
+            // more info for ASSERTION 
+            writeInfo(cout);
+            tree->printTree(cout, WT_BR_LEN+WT_NEWLINE);
+        }
         assert(cur_lh > tree_lh - 1.0 && "individual model opt reduces LnL");
         
     	tree->clearAllPartialLH();
@@ -129,11 +169,7 @@ double PartitionModelPlen::optimizeParameters(bool fixed_len, bool write_info, d
     		cur_lh = optimizeGeneRate(gradient_epsilon);
             if (verbose_mode >= VB_MED) {
                 cout << "LnL after optimizing partition-specific rates: " << cur_lh << endl;
-                cout << "Partition-specific rates: ";
-                for(int part = 0; part < ntrees; part++){
-                    cout << " " << tree->part_info[part].part_rate;
-                }
-                cout << endl;
+                writeInfo(cout);
             }
             assert(cur_lh > tree_lh - 1.0 && "partition rate opt reduces LnL");
     	}
@@ -156,33 +192,47 @@ double PartitionModelPlen::optimizeParameters(bool fixed_len, bool write_info, d
     	tree_lh = cur_lh;
     }
 //    cout <<"OPTIMIZE MODEL has finished"<< endl;
-    if (!tree->fixed_rates) {
-        cout << "Partition-specific rates: ";
-        for(int part = 0; part < ntrees; part++){
-            cout << " " << tree->part_info[part].part_rate;
-        }
-        cout << endl;
-    }
-	cout << "Parameters optimization took " << i-1 << " rounds (" << getRealTime()-begin_time << " sec)" << endl << endl;
+    if (write_info)
+        writeInfo(cout);
+    cout << "Parameters optimization took " << i-1 << " rounds (" << getRealTime()-begin_time << " sec)" << endl << endl;
 
     return tree_lh;
 }
 
+double PartitionModelPlen::optimizeParametersGammaInvar(bool fixed_len, bool write_info, double logl_epsilon, double gradient_epsilon) {
+    outError("This option does not work with edge-linked partition model yet");
+    return 0.0;
+}
 
+void PartitionModelPlen::writeInfo(ostream &out) {
+    PhyloSuperTreePlen *tree = (PhyloSuperTreePlen*)site_rate->getTree();
+    int ntrees = tree->size();
+    if (!tree->fixed_rates) {
+        out << "Partition-specific rates: ";
+        for(int part = 0; part < ntrees; part++){
+            out << " " << tree->part_info[part].part_rate;
+        }
+        out << endl;
+    }
+}
+    
 double PartitionModelPlen::optimizeGeneRate(double gradient_epsilon)
 {
 	PhyloSuperTreePlen *tree = (PhyloSuperTreePlen*)site_rate->getTree();
     // BQM 22-05-2015: change to optimize individual rates
     int i;
     double score = 0.0;
+    double nsites = tree->getAlnNSite();
 
     if (tree->part_order.empty()) tree->computePartitionOrder();
+
     #ifdef _OPENMP
     #pragma omp parallel for reduction(+: score) private(i) schedule(dynamic) if(tree->size() >= tree->params->num_threads)
     #endif    
     for (int j = 0; j < tree->size(); j++) {
         int i = tree->part_order[j];
-        tree->part_info[i].cur_score = tree->at(i)->optimizeTreeLengthScaling(tree->part_info[i].part_rate, gradient_epsilon);
+        double max_scaling = nsites / tree->at(i)->getAlnNSite();
+        tree->part_info[i].cur_score = tree->at(i)->optimizeTreeLengthScaling(1.0/tree->at(i)->getAlnNSite(), tree->part_info[i].part_rate, max_scaling, gradient_epsilon);
         score += tree->part_info[i].cur_score;
     }
     // now normalize the rates
@@ -294,6 +344,16 @@ PhyloSuperTreePlen::~PhyloSuperTreePlen()
         (*it)->nni_partial_lh = NULL;
         (*it)->nni_scale_num = NULL;
 	}
+}
+
+void PhyloSuperTreePlen::saveCheckpoint() {
+    // bypass PhyloSuperTree
+    IQTree::saveCheckpoint();
+}
+
+void PhyloSuperTreePlen::restoreCheckpoint() {
+    // bypass PhyloSuperTree
+    IQTree::restoreCheckpoint();
 }
 
 
@@ -1807,6 +1867,7 @@ void PhyloSuperTreePlen::initializeAllPartialLh() {
     for (it = begin(), part = 0; it != end(); it++, part++) {
         (*it)->tip_partial_lh = lh_addr;
         uint64_t tip_partial_lh_size = (*it)->aln->num_states * ((*it)->aln->STATE_UNKNOWN+1) * (*it)->model->getNMixtures();
+        tip_partial_lh_size = ((tip_partial_lh_size+3)/4)*4;
         lh_addr += tip_partial_lh_size;
     }
 }

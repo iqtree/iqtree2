@@ -395,7 +395,7 @@ struct NNIInfo {
 };
 
 enum LikelihoodKernel {
-	LK_NORMAL, LK_SSE, LK_EIGEN, LK_EIGEN_SSE
+	LK_EIGEN, LK_EIGEN_SSE
 };
 
 enum LhMemSave {
@@ -437,6 +437,12 @@ public:
 	 *  Use random restart strategy for estimating alpha and p_invar
 	 */
 	bool testAlpha;
+
+    /**
+     *  Restart the optimization of alpha and pinvar from different starting
+     *  pinv values (supercedes the option testAlpha
+     */
+    bool test_param;
 
     /**
      *  Automatic adjust the log-likelihood espilon using some heuristic
@@ -950,7 +956,7 @@ public:
     /**
             random number seed
      */
-    unsigned int ran_seed;
+    int ran_seed;
 
     /**
             run time of the algorithm
@@ -1158,6 +1164,9 @@ public:
     /** TRUE to optimize mixture model weights */
     bool optimize_mixmodel_weight;
 
+    /** TRUE to always optimize rate matrix even if user parameters are specified in e.g. GTR{1,2,3,4,5} */
+    bool optimize_rate_matrix;
+
     /**
             TRUE to store transition matrix into a hash table for computation efficiency
      */
@@ -1334,6 +1343,12 @@ public:
             WSL_MIXTURE_RATECAT: print site log-likelihood per mixture class per rate category
      */
     SiteLoglType print_site_lh;
+
+    /**
+        0: print nothing
+        1: print site state frequency vectors
+    */
+    int print_site_state_freq;
 
     /** TRUE to print site-specific rates, default: FALSE */
     bool print_site_rate;
@@ -1691,6 +1706,25 @@ public:
 
     /** true to compute sequence identity along tree */
     bool compute_seq_identity_along_tree;
+    
+    /** true to ignore checkpoint file */
+    bool ignore_checkpoint;
+    /** number of quartets for likelihood mapping */
+    int64_t lmap_num_quartets;
+
+    /**
+            file containing the cluster information for clustered likelihood mapping
+     */
+    char *lmap_cluster_file;
+
+    /** time (in seconds) between checkpoint dump */
+    int checkpoint_dump_interval;
+    /** TRUE to print quartet log-likelihoods to .quartetlh file */
+    bool print_lmap_quartet_lh;
+
+    /** true if ignoring the "finished" flag in checkpoint file */
+    bool force_unfinished;
+
 };
 
 /**
@@ -1889,6 +1923,21 @@ int convert_int(const char *str, int &end_pos) throw (string);
 void convert_int_vec(const char *str, IntVector &vec) throw (string);
 
 /**
+        convert string to int64_t, with error checking
+        @param str original string
+        @return the number
+ */
+int64_t convert_int64(const char *str) throw (string);
+
+/**
+        convert string to int64_t, with error checking
+        @param str original string
+        @param end_pos end position
+        @return the number
+ */
+int64_t convert_int64(const char *str, int64_t &end_pos) throw (string);
+
+/**
         convert string to double, with error checking
         @param str original string
         @return the double
@@ -2081,22 +2130,25 @@ double computePValueChiSquare(double x, int df);
 /* random number generator */
 /*--------------------------------------------------------------*/
 
+extern int *randstream;
+
 /**
  * initialize the random number generator
  * @param seed seed for generator
+ * @param write_info true to write information, false otherwise (default)
  */
-int init_random(int seed);
+int init_random(int seed, bool write_info = false, int** rstream = NULL);
 
 /**
  * finalize random number generator (e.g. free memory
  */
-int finish_random();
+int finish_random(int *rstream = NULL);
 
 /**
  * returns a random integer in the range [0; n - 1]
  * @param n upper-bound of random number
  */
-int random_int(int n);
+int random_int(int n, int *rstream = NULL);
 
 /**
  *  return a random integer in the range [a,b]
@@ -2107,12 +2159,12 @@ int random_int(int n);
  * returns a random integer in the range [0; RAND_MAX - 1]
  * = random_int(RAND_MAX)
  */
-int random_int();
+//int random_int(int *rstream = NULL);
 
 /**
  * returns a random floating-point nuber in the range [0; 1)
  */
-double random_double();
+double random_double(int *rstream = NULL);
 
 template <class T>
 void my_random_shuffle (T first, T last)
