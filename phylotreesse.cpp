@@ -284,12 +284,6 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk) {
     // cent).
     case 10: // N=2
         switch(sse) {
-        case LK_SSE:
-            computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchSSE<10>;
-            computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervSSE<10>;
-            computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodSSE<10>;
-            computeLikelihoodFromBufferPointer = NULL;
-            break;
         case LK_EIGEN_SSE:
             computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchEigenSIMD<Vec2d, 2, 10>;
             computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervEigenSIMD<Vec2d, 2, 10>;
@@ -302,12 +296,6 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk) {
         break;
     case 16: // N=3
         switch(sse) {
-        case LK_SSE:
-            computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchSSE<16>;
-            computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervSSE<16>;
-            computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodSSE<16>;
-            computeLikelihoodFromBufferPointer = NULL;
-            break;
         case LK_EIGEN_SSE:
 			if (instruction_set >= 7) {
 				setLikelihoodKernelAVX();
@@ -324,12 +312,6 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk) {
         break;
     case 28: // N=5
         switch(sse) {
-        case LK_SSE:
-            computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchSSE<28>;
-            computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervSSE<28>;
-            computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodSSE<28>;
-            computeLikelihoodFromBufferPointer = NULL;
-            break;
         case LK_EIGEN_SSE:
 			if (instruction_set >= 7) {
 				setLikelihoodKernelAVX();
@@ -367,12 +349,6 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk) {
     //     break;
     case 40: // N=7
         switch(sse) {
-        case LK_SSE:
-            computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchSSE<40>;
-            computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervSSE<40>;
-            computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodSSE<40>;
-            computeLikelihoodFromBufferPointer = NULL;
-            break;
         case LK_EIGEN_SSE:
 			if (instruction_set >= 7) {
 				setLikelihoodKernelAVX();
@@ -410,12 +386,6 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk) {
     //     break;
     case 52: // N=9
         switch(sse) {
-        case LK_SSE:
-            computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchSSE<52>;
-            computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervSSE<52>;
-            computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodSSE<52>;
-            computeLikelihoodFromBufferPointer = NULL;
-            break;
         case LK_EIGEN_SSE:
 			if (instruction_set >= 7) {
 				setLikelihoodKernelAVX();
@@ -432,12 +402,6 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk) {
         break;
     case 58: // N=10
         switch(sse) {
-        case LK_SSE:
-            computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchSSE<58>;
-            computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervSSE<58>;
-            computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodSSE<58>;
-            computeLikelihoodFromBufferPointer = NULL;
-            break;
         case LK_EIGEN_SSE:
             computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchEigenSIMD<Vec2d, 2, 58>;
             computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervEigenSIMD<Vec2d, 2, 58>;
@@ -473,12 +437,6 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk) {
     //     break;
     case 76: // PoMo model N=13
         switch(sse) {
-        case LK_SSE:
-            computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchSSE<76>;
-            computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervSSE<76>;
-            computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodSSE<76>;
-            computeLikelihoodFromBufferPointer = NULL;
-            break;
         case LK_EIGEN_SSE:
 			if (instruction_set >= 7) {
 				setLikelihoodKernelAVX();
@@ -516,12 +474,6 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk) {
     //     break;
     case 88: // PoMo model N=15
         switch(sse) {
-        case LK_SSE:
-            computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchSSE<88>;
-            computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervSSE<88>;
-            computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodSSE<88>;
-            computeLikelihoodFromBufferPointer = NULL;
-            break;
         case LK_EIGEN_SSE:
 			if (instruction_set >= 7) {
 				setLikelihoodKernelAVX();
@@ -559,12 +511,6 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk) {
     //     break;
     case 100: // PoMo model N=17; my favorite ;-).
         switch(sse) {
-        case LK_SSE:
-            computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchSSE<100>;
-            computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervSSE<100>;
-            computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodSSE<100>;
-            computeLikelihoodFromBufferPointer = NULL;
-            break;
         case LK_EIGEN_SSE:
 			if (instruction_set >= 7) {
 				setLikelihoodKernelAVX();
@@ -602,12 +548,6 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk) {
     //     break;
     case 112: // PoMo model N=19
         switch(sse) {
-        case LK_SSE:
-            computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchSSE<112>;
-            computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervSSE<112>;
-            computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodSSE<112>;
-            computeLikelihoodFromBufferPointer = NULL;
-            break;
         case LK_EIGEN_SSE:
 			if (instruction_set >= 7) {
 				setLikelihoodKernelAVX();

@@ -2997,7 +2997,9 @@ double Alignment::computeObsDist(int seq1, int seq2) {
                 diff_pos += (*it).frequency;
         }
     }
-    if (!total_pos)
+    if (!total_pos) {
+        if (verbose_mode >= VB_MED)
+            outWarning("No overlapping characters between " + getSeqName(seq1) + " and " + getSeqName(seq2));
         return MAX_GENETIC_DIST; // return +INF if no overlap between two sequences
     }
     return ((double)diff_pos) / total_pos;
