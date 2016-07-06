@@ -56,9 +56,7 @@
 
 
 void reportReferences(Params &params, ofstream &out, string &original_model) {
-
-    if (detectInputFile(params.aln_file) == IN_COUNTS) {
-        // TODO for Dominik: more elegant way to detect this
+    if (params.pomo) {
         out << "For polymorphism-aware models please cite:" << endl << endl 
             << "Dominik Schrempf, Bui Quang Minh, Nicola De Maio, Arndt von Haeseler, and Carolin Kosiol" << endl
             << "(2016) Reversible polymorphism-aware phylogenetic models and their application to" << endl
@@ -2502,6 +2500,12 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
 		alignment = tree->aln;
 	} else {
 		alignment = new Alignment(params.aln_file, params.sequence_type, params.intype);
+        // Set PoMo parameters if needed.
+        if (alignment->seq_type == SEQ_POMO) {
+            params.pomo = true;
+            if (!params.sequence_type)
+                params.sequence_type = (char *) "CF09";
+        }
 		if (params.freq_const_patterns) {
 			int orig_nsite = alignment->getNSite();
 			alignment->addConstPatterns(params.freq_const_patterns);
@@ -2524,7 +2528,7 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
         if (alignment->seq_type == SEQ_POMO) {
             params.min_branch_length *= alignment->virtual_pop_size * alignment->virtual_pop_size;
             cout.precision(12);
-            cout << "NOTE: minimal branch length is increased to " << params.min_branch_length << " because PoMo infers number of events" << endl;
+            cout << "NOTE: minimal branch length is increased to " << params.min_branch_length << " because PoMo infers number of mutations and frequency shifts" << endl;
             cout.precision(3);
         }
     }

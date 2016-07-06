@@ -903,9 +903,10 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.print_partition_info = false;
 	params.print_conaln = false;
 	params.count_trees = false;
-//    params.pomo_random_sampling = false;
+    params.pomo = false;
+    params.pomo_random_sampling = false;
 	// params.pomo_counts_file_flag = false;
-	// params.pomo_pop_size = 10;
+	params.pomo_pop_size = 9;
 	params.print_branch_lengths = false;
 	params.lh_mem_save = LM_PER_NODE; // auto detect
 	params.start_tree = STT_PLL_PARSIMONY;
@@ -1603,9 +1604,11 @@ void parseArg(int argc, char *argv[], Params &params) {
 					throw "Use -st BIN or -st DNA or -st AA or -st CODON or -st MORPH or -st CRXX or -st CFxx.";
                 string arg = argv[cnt];
                 params.sequence_type = argv[cnt];
+                if (arg.substr(0,2) == "CR") params.pomo_random_sampling = true;
                 if (arg.substr(0,2) == "CF" || arg.substr(0,2) == "CR") {
                     if (arg.length() > 2) {
                         int ps = convert_int(arg.substr(2).c_str());
+                        params.pomo_pop_size = ps;
                         if (((ps != 10) && (ps != 2) && (ps % 2 == 0)) || (ps < 2) || (ps > 19)) {
                             std::cout << "Please give a correct PoMo sequence type parameter; e.g., `-st CF09`." << std::endl;
                             outError("Custom virtual population size of PoMo not 2, 10 or any other odd number between 3 and 19.");   

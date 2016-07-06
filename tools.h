@@ -1668,21 +1668,14 @@ public:
 	/** true to count all distinct trees visited during tree search */
 	bool count_trees;
 
-    /** true to do random sampling for PoMo model, false to do binomial sampling */
-    // OBSOLETE: now specified with -st CR 
-//    bool pomo_random_sampling;
+    /// True if PoMo is run; otherwise false.
+    bool pomo;
 
-	/* /\** */
-	/*  * If `true`, Counts File input type has been specified with "-st */
-	/*  * CF[ps]", where `ps` is optional and denotes a custome virtual */
-	/*  * population size. */
-	/*  *\/ */
-	/* int pomo_counts_file_flag; */
+    /// True if sampled input method is used (-st CR..); otherwise false.
+    bool pomo_random_sampling;
 
-	/* /\** */
-	/*  * virtual population size for PoMo model */
-	/*  *\/ */
-	/* int pomo_pop_size; */
+	/// Virtual population size for PoMo model.
+	int pomo_pop_size;
 
 	/* -1 (auto-detect): will be set to 0 if there is enough memory, 1 otherwise
 	 * 0: store all partial likelihood vectors

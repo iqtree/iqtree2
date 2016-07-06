@@ -648,7 +648,7 @@ public:
 	char *genetic_code;
 
 	/**
-	 * virtual population size for PoMo model
+	 * Virtual population size for PoMo model
 	 */
 	int virtual_pop_size;
 
