@@ -224,8 +224,7 @@ void reportModel(ofstream &out, Alignment *aln, ModelSubst *m) {
 		delete[] rate_mat;
 	}
     if (aln->seq_type == SEQ_POMO) { 
-        ((ModelPoMo*) m)->reportPoMoRates(out);
-        ((ModelPoMo*) m)->reportPoMoStateFreqs(out);
+        ((ModelPoMo*) m)->report(out);
         return;
     }
 	out << "State frequencies: ";

@@ -51,6 +51,9 @@ void ModelPoMo::init(const char *model_name,
     // These correspond to the state frequencies in the DNA
     // substitution models.
     freq_fixed_states = dna_model->state_freq;
+    freq_fixed_states_emp = new double[4];
+    // Get the fixed state frequencies from the data.
+    estimateEmpiricalFixedStateFreqs(freq_fixed_states_emp);
 
     // Create PoMo rate matrix.  This is the actual rate matrix of
     // PoMo.
@@ -68,9 +71,8 @@ void ModelPoMo::init(const char *model_name,
         for (int i = 0; i < 4; i++) freq_fixed_states[i] = 1.0;
         break;
     case FREQ_EMPIRICAL:        // '+F'
-        // Get the fixed state frequencies from the data and normalize
-        // them such that the last one is 1.0.
-        estimateEmpiricalFixedStateFreqs(freq_fixed_states);
+        for (int i = 0; i < 4; i++)
+            freq_fixed_states[i] = freq_fixed_states_emp[i] / freq_fixed_states_emp[nnuc-1];
         break;
     case FREQ_USER_DEFINED:     // '+FU'
         // ModelDNA should have set them already.
@@ -86,7 +88,7 @@ void ModelPoMo::init(const char *model_name,
     }
 
     // Treat fixation of the level of polymorphism.
-    level_of_polymorphism = estimateEmpiricalPolymorphicFreq();
+    level_of_polymorphism = estimateEmpiricalWattersonTheta();
     if (pomo_params.length() > 0) {
         if (pomo_params == "EMP") {
             cout << "Level of polymorphism will be fixed to the estimate from the data: ";
@@ -115,7 +117,7 @@ void ModelPoMo::init(const char *model_name,
         cout << "-m rP{EMP}." << endl;
         outError ("Abort.");
     }
-    
+
     updatePoMoStatesAndRates();
 
     decomposeRateMatrix();
@@ -128,7 +130,8 @@ ModelPoMo::~ModelPoMo() {
 //  delete [] freq_fixed_states;
     delete dna_model;
 //  delete [] mutation_prob;
-}
+    delete [] freq_fixed_states_emp;
+    }
 
 double ModelPoMo::computeSumFreqFixedStates() {
     int i;
@@ -1002,9 +1005,12 @@ ModelPoMo::estimateEmpiricalFixedStateFreqs(double * freq_fixed_states)
             }
         }
     }
-    // Normalize frequencies so that the last entry is 1.0.
+    // Normalize frequencies so that they sum to 1.0.
+    double sum = 0.0;
     for (int i = 0; i < nnuc; i++)
-        freq_fixed_states[i] /= freq_fixed_states[nnuc-1];
+        sum += freq_fixed_states[i];
+    for (int i = 0; i < nnuc; i++)
+        freq_fixed_states[i] /= sum;
     if (verbose_mode >= VB_MAX) {
         std::cout << "The empirical frequencies of the fixed states are:" << std::endl;
         for (int i = 0; i < nnuc; i++)
@@ -1014,7 +1020,7 @@ ModelPoMo::estimateEmpiricalFixedStateFreqs(double * freq_fixed_states)
 }
 
 double
-ModelPoMo::estimateEmpiricalPolymorphicFreq()
+ModelPoMo::estimateEmpiricalWattersonTheta()
 {
     double theta_p = 0.0;
     int sum_pol = 0;
@@ -1060,7 +1066,11 @@ ModelPoMo::estimateEmpiricalPolymorphicFreq()
         // cout << "DEBUG ==========: " << endl;
         // cout << "Estimated Watterson's Theta: ";
         // cout << sum_theta_w << endl;
-        theta_p = sum_theta_w * harmonic(N);
+
+        // Wed Jul 6 15:03:06 CEST 2016; I think Watterson's theta is
+        // without * harmonic(N).
+        // theta_p = sum_theta_w * harmonic(N);
+        theta_p = sum_theta_w;
     }
     // Output vector if verbose mode.
     if (verbose_mode >= VB_MAX) {
@@ -1073,91 +1083,108 @@ ModelPoMo::estimateEmpiricalPolymorphicFreq()
     return theta_p;
 }
 
-void ModelPoMo::reportPoMoRates(ofstream &out) {
+void ModelPoMo::report_rates(ofstream &out) {
+    // The stationary frequencies in IQ-TREE are normalized such that
+    // the last entry is 1.0.  This leads to smaller mutation rates
+    // (because the stationary distribution is the same).  The
+    // stationary distribution is of the form pi_a pi_b r_ab.  Hence,
+    // if the stationary frequencies are doubled, the mutation rates
+    // need to be divided by four.
     out << setprecision(8);
-    out << "Estimated mutation rates:" << endl;
-    for (int i = 0; i < 6; i++)
-        out << mutation_prob[i] << " ";
-    out << endl << endl;;
-
-}
-
-void ModelPoMo::reportPoMoStateFreqs(ofstream &out) {
+    out << "Estimated mutation rates (in the order AC, AG, AT, CG, CT, GT):" << endl;
     double sum = 0.0;
     for (int i = 0; i < nnuc; i++) {
         sum += freq_fixed_states[i];
     }
+    for (int i = 0; i < 6; i++)
+        out << mutation_prob[i] / (sum*sum) << " ";
+    out << endl << endl;;
 
-    double poly = computeSumFreqPolyStates();
-    double fixed = computeSumFreqFixedStates();
-    double prop_poly = poly / (poly + fixed);
-    double watterson_theta = prop_poly / harmonic(N);
-    double emp_prop_poly = estimateEmpiricalPolymorphicFreq();
+}
 
-    out << setprecision(8);
-    out << "Estimated sum of fixed states:" << endl;
-    out << fixed << endl;
-    out << "Estimated sum of polymorphic states" << endl;
-    out << poly << endl;
-    out << "Estimated proportion of polymorphic states:" << endl;
-    out << prop_poly << endl;
-    out << "Empirical proportion of polymorphic states normalized to N samples:" << endl;
-    out << emp_prop_poly << endl;
-    out << "Estimated Watterson Theta:" << endl;
-    out << watterson_theta << endl;
+void ModelPoMo::report(ofstream &out) {
+    out << "Empirical frequencies of fixed states:" << endl;
+    for (int i = 0; i < nnuc; i++)
+        out << freq_fixed_states_emp[i] << " ";
     out << endl;
 
-    out << "(Estimated) frequencies of fixed states:" << endl;
-    for (int i = 0; i < nnuc; i++)
-        out << freq_fixed_states[i] << " ";
-    out << endl << endl;
-
-    out << "(Estimated) normalized frequencies of fixed states:" << endl;
+    double sum = 0.0;
+    for (int i = 0; i < nnuc; i++) {
+        sum += freq_fixed_states[i];
+    }
+    out << "Estimated frequencies of fixed states:" << endl;
     for (int i = 0; i < nnuc; i++)
         out << freq_fixed_states[i]/sum << " ";
     out << endl << endl;
 
-    // Output expected number of substitutions without
-    // total_tree_length/t_fix.
-    out << "Total mutation rate: ";
-    double mu_tot = 0.0;
+    report_rates(out);
+    
+    double poly = computeSumFreqPolyStates();
+    double fixed = computeSumFreqFixedStates();
+    double prop_poly = poly / (poly + fixed);
+    double watterson_theta = prop_poly / harmonic(N);
+    double emp_watterson_theta = estimateEmpiricalWattersonTheta();
+
+    out << setprecision(8);
+    // out << "Estimated sum of fixed states:" << endl;
+    // out << fixed << endl;
+    // out << "Estimated sum of polymorphic states" << endl;
+    // out << poly << endl;
+    // out << "(Estimated) proportion of polymorphic states:" << endl;
+    // out << prop_poly << endl;
+    out << "Empirical Watterson's Theta:" << endl;
+    out << emp_watterson_theta << endl;
+    out << "Estimated Watterson Theta:" << endl;
+    out << watterson_theta << endl;
+    out << endl;
+
+    // out << "(Estimated) frequencies of fixed states:" << endl;
     // for (int i = 0; i < nnuc; i++)
-    //     for (int j = 0; j < nnuc; j++)
-    //         if (i != j) mu_tot1 += (double) freq_fixed_states[i]*freq_fixed_states[j]*mutCoeff(i,j);
-    for (int i = 0; i < nnuc; i++)
-        for (int j = 0; j < num_states; j++)
-            // if (i != j) mu_tot += (double) freq_fixed_states[i]*rate_matrix[i*num_states + j];
-            if (i != j) mu_tot += (double) state_freq[i]*rate_matrix[i*num_states + j];
-    out << mu_tot << endl;
+    //     out << freq_fixed_states[i] << " ";
+    // out << endl << endl;
 
-    double fr_tot = 0.0;
-    double row_sum;
-    out << "Total rate of frequency shifts: ";
-    // fr_tot = tot_sum-mu_tot;
-    for (int i = nnuc; i < num_states; i++) {
-        row_sum = 0.0;
-        for (int j = 0; j < num_states; j++) {
-            if (i != j) row_sum += rate_matrix[i*num_states +j];
-        }
-        fr_tot += state_freq[i]*row_sum;
-    }
-    out << fr_tot << endl;
+    // out << "Total rate: ";
+    // double tot_sum = 0.0;
+    // for (int i = 0; i < num_states; i++) {
+    //     double row_sum;
+    //     row_sum = 0.0;
+    //     for (int j = 0; j < num_states; j++) {
+    //         if (i != j) row_sum += rate_matrix[i*num_states + j];
+    //     }
+    //     tot_sum += state_freq[i]*row_sum;
+    // }
+    // out << tot_sum << endl;
 
-    out << "Total rate (normalization constant of Q-matrix): ";
-    double tot_sum = 0.0;
-    for (int i = 0; i < num_states; i++) {
-        row_sum = 0.0;
-        for (int j = 0; j < num_states; j++) {
-            if (i != j) row_sum += rate_matrix[i*num_states + j];
-        }
-        tot_sum += state_freq[i]*row_sum;
-    }
-    out << tot_sum << endl;
+    // // Output expected number of substitutions without
+    // // total_tree_length/t_fix.
+    // out << "Total rate (mutations only): ";
+    // double mu_tot = 0.0;
+    // // for (int i = 0; i < nnuc; i++)
+    // //     for (int j = 0; j < nnuc; j++)
+    // //         if (i != j) mu_tot1 += (double) freq_fixed_states[i]*freq_fixed_states[j]*mutCoeff(i,j);
+    // for (int i = 0; i < nnuc; i++)
+    //     for (int j = 0; j < num_states; j++)
+    //         // if (i != j) mu_tot += (double) freq_fixed_states[i]*rate_matrix[i*num_states + j];
+    //         if (i != j) mu_tot += (double) state_freq[i]*rate_matrix[i*num_states + j];
+    // out << mu_tot << endl;
 
-    out << "Ratio of mutation rate to rate of frequency shifts: ";
-    out << mu_tot / fr_tot << endl;
+    // double fr_tot = 0.0;
+    // out << "Total rate (drift or frequency shifts only): ";
+    // // fr_tot = tot_sum-mu_tot;
+    // for (int i = nnuc; i < num_states; i++) {
+    //     double row_sum;
+    //     row_sum = 0.0;
+    //     for (int j = 0; j < num_states; j++) {
+    //         if (i != j) row_sum += rate_matrix[i*num_states +j];
+    //     }
+    //     fr_tot += state_freq[i]*row_sum;
+    // }
+    // out << fr_tot << endl;
 
-    out << "Ratio of mutation rate to total rate: ";
-    out << mu_tot / (fr_tot + mu_tot) << endl << endl;
+    // out << "Ratio of mutation to drift (indicates if boundary mutation model is adequate): ";
+    // out << mu_tot / fr_tot << endl;
+
+    // out << "Ratio of mutation rate to total rate: ";
+    // out << mu_tot / (fr_tot + mu_tot) << endl << endl;
 
 }

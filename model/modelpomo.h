@@ -177,21 +177,21 @@ class ModelPoMo : public ModelGTR
      * the relative proportion of all sites is calculated and returned.
      *
      */
-    double estimateEmpiricalPolymorphicFreq();
+    double estimateEmpiricalWattersonTheta();
 
     /**
      * Report the model rates to the output file stream 'out'.
      *
      * @param out Output file stream.
      */
-    void reportPoMoRates(ofstream &out);
+    void report_rates(ofstream &out);
 
     /**
      * Report the state frequencies to the output file stream 'out'.
      *
      * @param out Output file stream.
      */
-    void reportPoMoStateFreqs(ofstream &out);
+    void report(ofstream &out);
 
     /** 
      * Normalize the mutation probabilities such that the given level of
@@ -246,6 +246,11 @@ class ModelPoMo : public ModelGTR
      * 4 unnormalized stationary frequencies of fixed states.
      */
     double *freq_fixed_states;
+
+    /**
+     * Normalized empirical stationary frequencies.
+     */
+    double *freq_fixed_states_emp;
 
     /**
      * The rate matrix of the PoMo model.
