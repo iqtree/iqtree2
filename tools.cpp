@@ -3298,8 +3298,9 @@ void usage_iqtree(char* argv[], bool full_command) {
 
 void quickStartGuide() {
     printCopyright(cout);
+    cout << "---" << endl;
     cout << "Minimal command-line examples (replace 'iqtree ...' with actual path to executable):" << endl << endl
-        << "1. Reconstruct maximum-likelihood tree from a sequence alignment (example.phy)" << endl
+         << "1. Reconstruct maximum-likelihood tree from a sequence alignment (example.phy)" << endl
          << "   with the best-fit substitution model automatically selected:" << endl
          << "     iqtree -s example.phy -m TEST" << endl << endl
          << "2. Reconstruct ML tree and assess branch supports with ultrafast bootstrap" << endl
@@ -3315,6 +3316,17 @@ void quickStartGuide() {
 #ifdef _OPENMP
          << "6. Use 4 CPU cores to speed up computation: add '-nt 4' option" << endl << endl
 #endif
+         << "---" << endl
+         << "PoMo command-line examples:" << endl
+         << "1. Standard tree inference (HKY model and empirical nucleotide frequencies):" << endl
+         << "     iqtree -s counts_file.cf" << endl << endl
+         << "2. Set virtual population size to 15 (SequenceType=Counts File; N=15):" << endl
+         << "     iqtree -s counts_file.cf -st CF15" << endl << endl
+         << "3. Use GTR model and estimate allele frequencies during maximization of likelihood:" << endl
+         << "     iqtree -s counts_file.cf -m GTR+FO" << endl << endl
+         << "4. Use the sampled input method and N=9 (advanced setting; see manual or publication):" << endl
+         << "     iqtree -s counts_file.cf -st CR09" << endl << endl
+         << "---" << endl
          << "To show all available options: run 'iqtree -h'" << endl << endl
          << "Have a look at the tutorial and manual for more information:" << endl
          << "     http://www.cibiv.at/software/iqtree" << endl << endl;
