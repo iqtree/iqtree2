@@ -3185,19 +3185,12 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "PoMo is run when"                                                                    << endl
             << "- a Counts File is used as input file, and/or when"                                  << endl
             << "- it is specified in the model string (see below)."                                  << endl
-            << "  -st C[FR] or C[FR]ps Counts File (automatically detected)."                        << endl
-            << "                       Useful to customize the virtual population size `ps`"         << endl
-            << "                       3 <= ps <= 19; ps has to be an odd number, 2 or 10."          << endl
-            << "                       F: Sum over partial likelihoods at the tip of the tree (weighted)." << endl
-            << "                       R: Random binomial sampling of PoMo states from data (sampled)." << endl
-            << "                       Default is `CF9`."                                            << endl
-            // TODO Cite reversible PoMo paper here (how does sampling work now).
-            << "  -m <sm>+<pm>+<ft>    Default: `HKY+rP+F`."                                        << endl
+            << "  -m <sm>+<pm>+<ft>    Default: `HKY+rP+F`."                                         << endl
             << "                 <sm>: Substitution model."                                          << endl
             << "                  DNA: HKY (default), JC, F81, K2P, K3P, K81uf, TN/TrN, TNef,"       << endl
             << "                       TIM, TIMef, TVM, TVMef, SYM, GTR, or a 6-digit model"         << endl
             << "                       specification (e.g., 010010 = HKY)."                          << endl
-            << "                 <pm>: PoMo model."                                                  << endl
+            << "                 <pm>: PoMo model (optional)."                                       << endl
             << "                       - rP (default; reversible PoMo with tree inference)."         << endl
             // << "                       - nrP (non-reversible PoMo; tree has to be given separately;" << endl
             // << "                         not implemented yet)."                                      << endl
@@ -3205,10 +3198,16 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "                       F or +FO or +FU or +FQ."                                      << endl
             << "                       Counted, optimized, user-defined, equal state frequency."     << endl
             << "                       This overwrites the specifications of the DNA model."         << endl
+            << "  -st C[FR] or C[FR]ps Counts File (automatically detected)."                        << endl
+            << "                       Useful to customize the virtual population size `ps`"         << endl
+            << "                       3 <= ps <= 19; ps has to be an odd number, 2 or 10."          << endl
+            << "                       F: Sum over partial likelihoods at the tip of the tree (weighted)." << endl
+            << "                       R: Random binomial sampling of PoMo states from data (sampled)." << endl
+            << "                       Default is `CF09`."                                           << endl
             << "  Until now, only DNA models work with PoMo."                                        << endl
             << "  Model testing and rate heterogeneity do not work with PoMo yet."                   << endl
-            << "  Example of a standard run:" << endl
-            << "    iqtree -s data_in_counts_file_format" << endl
+            << "  Example of a standard run (for more examples please see the manual):" << endl
+            << "    iqtree -s counts_file.cf" << endl
 
             << endl << "RATE HETEROGENEITY:" << endl
             << "  -m <model_name>+I or +G[n] or +I+G[n] or +R[n]" << endl
