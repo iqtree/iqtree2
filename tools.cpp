@@ -717,6 +717,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.bootstrap_spec = NULL;
 
     params.aln_file = NULL;
+    params.phylip_sequential_format = false;
     params.treeset_file = NULL;
     params.topotest_replicates = 0;
     params.do_weighted_test = false;
@@ -1508,6 +1509,10 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.aln_file = argv[cnt];
 				continue;
 			}
+			if (strcmp(argv[cnt], "--sequential") == 0) {
+                params.phylip_sequential_format = true;
+                continue;
+            }
 			if (strcmp(argv[cnt], "-z") == 0) {
 				cnt++;
 				if (cnt >= argc)
