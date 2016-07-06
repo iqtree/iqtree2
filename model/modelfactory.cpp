@@ -277,7 +277,7 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 
 	/******************** initialize model ****************************/
 
-	if (!params.site_freq_file) {
+	if (tree->aln->site_state_freq.empty()) {
 		if (model_str.substr(0, 3) == "MIX" || freq_type == FREQ_MIXTURE) {
 			string model_list;
 			if (model_str.substr(0, 3) == "MIX") {
@@ -304,24 +304,15 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 		model = new ModelSet(model_str.c_str(), tree);
 		ModelSet *models = (ModelSet*)model; // assign pointer for convenience
 		models->init((params.freq_type != FREQ_UNKNOWN) ? params.freq_type : FREQ_EMPIRICAL);
-		IntVector site_model;
-		vector<double*> freq_vec;
-		bool aln_changed = readSiteFreq(tree->aln, params.site_freq_file, site_model, freq_vec);
-        if (aln_changed) {
-            cout << "Regrouping alignment sites..." << endl;
-            tree->aln->regroupSitePattern(freq_vec.size(), site_model);
-            //tree->aln->ungroupSitePattern();
-            tree->setAlignment(tree->aln);
-        }
 		int i;
 		models->pattern_model_map.resize(tree->aln->getNPattern(), -1);
 		for (i = 0; i < tree->aln->getNSite(); i++) {
-			models->pattern_model_map[tree->aln->getPatternID(i)] = site_model[i];
+			models->pattern_model_map[tree->aln->getPatternID(i)] = tree->aln->site_model[i];
 			//cout << "site " << i << " ptn " << tree->aln->getPatternID(i) << " -> model " << site_model[i] << endl;
 		}
 		double *state_freq = new double[model->num_states];
 		double *rates = new double[model->getNumRateEntries()];
-		for (i = 0; i < freq_vec.size(); i++) {
+		for (i = 0; i < tree->aln->site_state_freq.size(); i++) {
 			ModelGTR *modeli;
 			if (i == 0) {
 				modeli = (ModelGTR*)createModel(model_str, models_block, (params.freq_type != FREQ_UNKNOWN) ? params.freq_type : FREQ_EMPIRICAL, "", tree, true);
@@ -332,21 +323,18 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 				modeli->setStateFrequency(state_freq);
 				modeli->setRateMatrix(rates);
 			}
-			if (freq_vec[i])
-				modeli->setStateFrequency (freq_vec[i]);
+			if (tree->aln->site_state_freq[i])
+				modeli->setStateFrequency (tree->aln->site_state_freq[i]);
 
 			modeli->init(FREQ_USER_DEFINED);
 			models->push_back(modeli);
 		}
 		delete [] rates;
 		delete [] state_freq;
-		cout << "Alignment is divided into " << models->size() << " partitions with " << tree->aln->getNPattern() << " patterns" << endl;
-		for (vector<double*>::reverse_iterator it = freq_vec.rbegin(); it != freq_vec.rend(); it++)
-			if (*it) delete [] (*it);
-            
+
         // delete information of the old alignment
-        tree->aln->ordered_pattern.clear();
-        tree->deleteAllPartialLh();
+//        tree->aln->ordered_pattern.clear();
+//        tree->deleteAllPartialLh();
 	}
     
 //	if (model->isMixture())
@@ -593,101 +581,6 @@ void ModelFactory::restoreCheckpoint() {
 int ModelFactory::getNParameters() {
 	int df = model->getNDim() + model->getNDimFreq() + site_rate->getNDim() + site_rate->phylo_tree->branchNum;
 	return df;
-}
-bool ModelFactory::readSiteFreq(Alignment *aln, char* site_freq_file, IntVector &site_model, vector<double*> &freq_vec)
-{
-	cout << "Reading site-specific state frequency file " << site_freq_file << " ..." << endl;
-	site_model.resize(aln->getNSite(), -1);
-    int i;
-    IntVector pattern_to_site; // vector from pattern to the first site
-    pattern_to_site.resize(aln->getNPattern(), -1);
-    for (i = 0; i < aln->getNSite(); i++)
-        if (pattern_to_site[aln->getPatternID(i)] == -1)
-            pattern_to_site[aln->getPatternID(i)] = i;
-            
-    bool aln_changed = false;
-    
-	try {
-		ifstream in;
-		in.exceptions(ios::failbit | ios::badbit);
-		in.open(site_freq_file);
-		double freq;
-		string site_spec;
-		int specified_sites = 0;
-		in.exceptions(ios::badbit);
-		for (int model_id = 0; !in.eof(); model_id++) {
-			// remove the failbit
-			in >> site_spec;
-			if (in.eof()) break;
-			IntVector site_id;
-			extractSiteID(aln, site_spec.c_str(), site_id);
-			specified_sites += site_id.size();
-			if (site_id.size() == 0) throw "No site ID specified";
-			for (IntVector::iterator it = site_id.begin(); it != site_id.end(); it++) {
-				if (site_model[*it] != -1) throw "Duplicated site ID";
-				site_model[*it] = freq_vec.size();
-			}
-			double *site_freq_entry = new double[aln->num_states];
-			double sum = 0;
-			for (i = 0; i < aln->num_states; i++) {
-				in >> freq;
-				if (freq <= 0.0 || freq >= 1.0) throw "Frequencies must be strictly positive and smaller than 1";
-				site_freq_entry[i] = freq;
-				sum += freq;
-			}
-			if (fabs(sum-1.0) > 1e-4) {
-                if (fabs(sum-1.0) > 1e-3)
-                    outWarning("Frequencies of site " + site_spec + " do not sum up to 1 and will be normalized");
-                sum = 1.0/sum;
-                for (i = 0; i < aln->num_states; i++) 
-                    site_freq_entry[i] *= sum;
-            }
-			aln->convfreq(site_freq_entry); // regularize frequencies (eg if some freq = 0)
-            
-            // 2016-02-01: now check for equality of sites with same site-pattern and same freq
-            int prev_site = pattern_to_site[aln->getPatternID(site_id[0])];
-            if (site_id.size() == 1 && prev_site < site_id[0] && site_model[prev_site] != -1) {
-                // compare freq with prev_site
-                bool matched_freq = true;
-                double *prev_freq = freq_vec[site_model[prev_site]];
-                for (i = 0; i < aln->num_states; i++) {
-                    if (site_freq_entry[i] != prev_freq[i]) {
-                        matched_freq = false;
-                        break;
-                    }
-                }
-                if (matched_freq) {
-                    site_model[site_id[0]] = site_model[prev_site];
-                } else
-                    aln_changed = true;
-            }
-            
-            if (site_model[site_id[0]] == freq_vec.size())
-                freq_vec.push_back(site_freq_entry);
-            else
-                delete [] site_freq_entry;
-		}
-		if (specified_sites < site_model.size()) {
-            aln_changed = true;
-			// there are some unspecified sites
-			cout << site_model.size() - specified_sites << " unspecified sites will get default frequencies" << endl;
-			for (i = 0; i < site_model.size(); i++)
-				if (site_model[i] == -1) 
-					site_model[i] = freq_vec.size();
-			freq_vec.push_back(NULL);
-		}
-		in.clear();
-		// set the failbit again
-		in.exceptions(ios::failbit | ios::badbit);
-		in.close();
-	} catch (const char* str) {
-		outError(str);
-	} catch (string str) {
-		outError(str);
-	} catch(ios::failure) {
-		outError(ERR_READ_INPUT);
-	}
-    return aln_changed;
 }
 
 double ModelFactory::initGTRGammaIParameters(RateHeterogeneity *rate, ModelSubst *model, double initAlpha,

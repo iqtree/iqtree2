@@ -2481,6 +2481,10 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
 			alignment->addConstPatterns(params.freq_const_patterns);
 			cout << "INFO: " << alignment->getNSite() - orig_nsite << " const sites added into alignment" << endl;
 		}
+        if (params.site_freq_file) {
+            alignment->readSiteStateFreq(params.site_freq_file);
+        }
+            
 		tree = new IQTree(alignment);
 	}
 
