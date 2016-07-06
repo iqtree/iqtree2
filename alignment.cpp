@@ -2295,6 +2295,13 @@ void Alignment::createBootstrapAlignment(Alignment *aln, IntVector* pattern_freq
         pattern_freq->resize(0);
         pattern_freq->resize(aln->getNPattern(), 0);
     }
+    
+    if (!aln->site_state_freq.empty()) {
+        // resampling also the per-site state frequency vector
+        if (aln->site_state_freq.size() != aln->getNPattern() || spec)
+            outError("Unsupported bootstrap feature, pls contact the developers");
+    }
+    
 	IntVector site_vec;
     if (!spec) {
 		// standard bootstrap
@@ -2302,7 +2309,14 @@ void Alignment::createBootstrapAlignment(Alignment *aln, IntVector* pattern_freq
 			int site_id = random_int(nsite);
 			int ptn_id = aln->getPatternID(site_id);
 			Pattern pat = aln->at(ptn_id);
+            int nptn = getNPattern();
 			addPattern(pat, site);
+            if (!aln->site_state_freq.empty() && getNPattern() > nptn) {
+                // a new pattern is added, copy state frequency vector
+                double *state_freq = new double[num_states];
+                memcpy(state_freq, aln->site_state_freq[ptn_id], num_states*sizeof(double));
+                site_state_freq.push_back(state_freq);
+            }
 			if (pattern_freq) ((*pattern_freq)[ptn_id])++;
 		}
     } else if (strncmp(spec, "GENESITE,", 9) == 0) {
@@ -2373,6 +2387,10 @@ void Alignment::createBootstrapAlignment(Alignment *aln, IntVector* pattern_freq
     		begin_site += site_vec[part];
     		out_site += site_vec[part+1];
     	}
+    }
+    if (!aln->site_state_freq.empty()) {
+        site_model = site_pattern;
+        assert(site_state_freq.size() == getNPattern());
     }
     verbose_mode = save_mode;
     countConstSite();
@@ -3648,6 +3666,6 @@ bool Alignment::readSiteStateFreq(char* site_freq_file)
         cout << "Regrouping alignment sites..." << endl;
         regroupSitePattern(site_state_freq.size(), site_model);
     }
-    cout << getNPattern() << " distinct per-site state frequency vectors detected" << endl;
+    cout << site_state_freq.size() << " distinct per-site state frequency vectors detected" << endl;
     return aln_changed;
 }
