@@ -667,7 +667,6 @@ void Alignment::computeConst(Pattern &pat) {
     
     pat.is_const = false;
     pat.is_informative = false;
-    pat.const_char = STATE_UNKNOWN;
 
     // critical fix: const_char was set wrongly to num_states in some data type (binary, codon),
     // causing wrong log-likelihood computation for +I or +I+G model

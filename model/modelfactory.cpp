@@ -166,13 +166,20 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
             string::size_type pos_nonrev_pomo = model_str.find("+nrP");
             if (pos_nonrev_pomo != string::npos)
                 outError("Non reversible PoMo not supported yet.");
-            else if (pos_rev_pomo != string::npos) {
+            else if (pos_rev_pomo + 3 != string::npos) {
                 size_t sspec_pos = model_str.find_first_of("+", spec_pos+1);
                 std::string pomo;
                 if (sspec_pos != string::npos) {
                     rate_str  = model_str.substr(sspec_pos);
                     model_str = model_str.substr(0,sspec_pos);
-                } else rate_str  = "";
+                }
+                else {
+                    if (pos_rev_pomo + 3 != model_str.length()) {
+                    string err = "Error in model string: " + model_str;
+                    outError(err);
+                    }
+                    rate_str  = "";
+                }
                 // Check that only supported flags are given.
                 if (rate_str.find("+ASC") != string::npos)
                     outError("Ascertainment bias correction with PoMo not yet supported.");
@@ -180,7 +187,8 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
                     (rate_str.find("+G") != string::npos) ||
                     (rate_str.find("+R") != string::npos))
                     outError("Rate heterogeneity with PoMo not yet supported.");
-            } else {
+            }
+            else {
                 rate_str = model_str.substr(spec_pos);
                 model_str = model_str.substr(0, spec_pos);
             }
