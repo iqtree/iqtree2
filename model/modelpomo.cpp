@@ -1091,40 +1091,37 @@ void ModelPoMo::report_rates(ofstream &out) {
     // if the stationary frequencies are doubled, the mutation rates
     // need to be divided by four.
     out << setprecision(8);
-    out << "Estimated mutation rates (in the order AC, AG, AT, CG, CT, GT):" << endl;
+    out << "Mutation rates (in the order AC, AG, AT, CG, CT, GT):" << endl;
     double sum = 0.0;
     for (int i = 0; i < nnuc; i++) {
         sum += freq_fixed_states[i];
     }
     for (int i = 0; i < 6; i++)
         out << mutation_prob[i] / (sum*sum) << " ";
-    out << endl << endl;;
+    out << endl;
 
 }
 
 void ModelPoMo::report(ofstream &out) {
-    out << "Empirical frequencies of fixed states:" << endl;
-    for (int i = 0; i < nnuc; i++)
-        out << freq_fixed_states_emp[i] << " ";
-    out << endl;
+    out << "Estimated quantities" << endl;
+    out << "--------------------" << endl;
 
     double sum = 0.0;
     for (int i = 0; i < nnuc; i++) {
         sum += freq_fixed_states[i];
     }
-    out << "Estimated frequencies of fixed states:" << endl;
+    out << "Frequencies of fixed states (in the order A, C, G T):" << endl;
     for (int i = 0; i < nnuc; i++)
         out << freq_fixed_states[i]/sum << " ";
-    out << endl << endl;
+    out << endl;
 
     report_rates(out);
-    
+
     double poly = computeSumFreqPolyStates();
     double fixed = computeSumFreqFixedStates();
     double prop_poly = poly / (poly + fixed);
     double watterson_theta = prop_poly / harmonic(N);
     double emp_watterson_theta = estimateEmpiricalWattersonTheta();
-
     out << setprecision(8);
     // out << "Estimated sum of fixed states:" << endl;
     // out << fixed << endl;
@@ -1132,12 +1129,19 @@ void ModelPoMo::report(ofstream &out) {
     // out << poly << endl;
     // out << "(Estimated) proportion of polymorphic states:" << endl;
     // out << prop_poly << endl;
-    out << "Empirical Watterson's Theta:" << endl;
-    out << emp_watterson_theta << endl;
-    out << "Estimated Watterson Theta:" << endl;
-    out << watterson_theta << endl;
+    out << "Estimated Watterson Theta: " << watterson_theta << endl;
+
+    out << endl;
+    out << "Empirical quantities" << endl;
+    out << "--------------------" << endl;
+
+    out << "Empirical frequencies of fixed states:" << endl;
+    for (int i = 0; i < nnuc; i++)
+        out << freq_fixed_states_emp[i] << " ";
     out << endl;
 
+    out << "Watterson's Theta: " << emp_watterson_theta << endl;
+    out << endl;
     // out << "(Estimated) frequencies of fixed states:" << endl;
     // for (int i = 0; i < nnuc; i++)
     //     out << freq_fixed_states[i] << " ";
