@@ -1103,18 +1103,27 @@ void ModelPoMo::report_rates(ofstream &out) {
 }
 
 void ModelPoMo::report(ofstream &out) {
+
+    out << "Virtual population size N: " << N << endl;
+    if (phylo_tree->aln->pomo_random_sampling == true)
+        out << "Sampling method: sampled." << endl;
+    else
+        out << "Sampling method: weighted." << endl;
+
+    out << endl;
     out << "Estimated quantities" << endl;
     out << "--------------------" << endl;
 
-    double sum = 0.0;
-    for (int i = 0; i < nnuc; i++) {
-        sum += freq_fixed_states[i];
+    if (freq_type == FREQ_ESTIMATE) {
+        double sum = 0.0;
+        for (int i = 0; i < nnuc; i++) {
+            sum += freq_fixed_states[i];
+        }
+        out << "Frequencies of fixed states (in the order A, C, G T):" << endl;
+        for (int i = 0; i < nnuc; i++)
+            out << freq_fixed_states[i]/sum << " ";
+        out << endl;
     }
-    out << "Frequencies of fixed states (in the order A, C, G T):" << endl;
-    for (int i = 0; i < nnuc; i++)
-        out << freq_fixed_states[i]/sum << " ";
-    out << endl;
-
     report_rates(out);
 
     double poly = computeSumFreqPolyStates();
@@ -1129,13 +1138,13 @@ void ModelPoMo::report(ofstream &out) {
     // out << poly << endl;
     // out << "(Estimated) proportion of polymorphic states:" << endl;
     // out << prop_poly << endl;
-    out << "Estimated Watterson Theta: " << watterson_theta << endl;
+    out << "Watterson Theta: " << watterson_theta << endl;
 
     out << endl;
     out << "Empirical quantities" << endl;
     out << "--------------------" << endl;
 
-    out << "Empirical frequencies of fixed states:" << endl;
+    out << "Frequencies of fixed states:" << endl;
     for (int i = 0; i < nnuc; i++)
         out << freq_fixed_states_emp[i] << " ";
     out << endl;
