@@ -29,6 +29,8 @@ RateGammaInvar::RateGammaInvar(int ncat, double shape, bool median,
     this->optimize_alg = optimize_alg;
     cur_optimize = 0;
     this->testParamDone = testParamDone;
+    for (int cat = 0; cat < ncategory; cat++)
+        rates[cat] = 1.0/(1.0-p_invar);
 	computeRates();
 }
 
@@ -72,8 +74,11 @@ string RateGammaInvar::getNameParams() {
 double RateGammaInvar::computeFunction(double value) {
 	if (cur_optimize == 0)
 		gamma_shape = value;
-	else
+	else {
 		p_invar = value;
+        for (int cat = 0; cat < ncategory; cat++)
+            rates[cat] = 1.0/(1.0-p_invar);
+    }
 	// need to compute rates again if p_inv or Gamma shape changes!
 	computeRates();
 	phylo_tree->clearAllPartialLH();

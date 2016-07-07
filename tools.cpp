@@ -1561,6 +1561,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 					throw "Use -q <type of partition model>";
 				params.partition_file = argv[cnt];
 				params.partition_type = 'j';
+                params.optimize_alg_gammai = "Brent";
 				continue;
 			}
 			if (strcmp(argv[cnt], "-M") == 0) {
