@@ -12,7 +12,7 @@ ModelUnrest::ModelUnrest(PhyloTree *tree, string model_params, bool count_rates)
 {
 	num_params = getNumRateEntries() - 1;
 	model_parameters = new double [num_params];
-	for (int i=0; i<= num_params; i++) model_parameters[i] = 1;
+	for (int i=0; i< num_params; i++) model_parameters[i] = 1;
 	this->setRates();
 	/*
 	 * I'm not sure how to correctly handle count_rates, so for now I'm just

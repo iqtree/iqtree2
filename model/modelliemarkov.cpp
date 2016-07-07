@@ -207,7 +207,7 @@ ModelLieMarkov::ModelLieMarkov(string model_name, PhyloTree *tree, string model_
     basis = BASES[model_num];
     num_params = MODEL_PARAMS[model_num];
     model_parameters = new double [num_params];
-    for (int i=0; i<= num_params; i++) model_parameters[i] = 0;
+    for (int i=0; i< num_params; i++) model_parameters[i] = 0;
     this->setRates();
 	/*
 	 * I'm not sure how to correctly handle count_rates, so for now I'm just
@@ -303,6 +303,7 @@ void ModelLieMarkov::setRates() {
     memset(rates, 0, NUM_RATES*sizeof(double));
     double max_abs = 0;
     for (int param=0; param<num_params; param++) {
+        // COMMENT: is this abs() or fabs()? abs is for int type, whereas fabs for double 
         max_abs = (abs(model_parameters[param])>max_abs ? abs(model_parameters[param]) : max_abs);
         for (int rate=0; rate<NUM_RATES; rate++) 
             rates[rate] += model_parameters[param]*basis[param][SYMMETRY_PERM[symmetry][rate]];

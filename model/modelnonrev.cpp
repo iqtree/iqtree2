@@ -190,7 +190,7 @@ void ModelNonRev::decomposeRateMatrix() {
 void ModelNonRev::writeInfo(ostream &out) {
 	int i, j, k;
     out << "Model parameters: " << model_parameters[0];
-    for (i=0; i < num_params; i++) out << "," << model_parameters[i];
+    for (i=1; i < num_params; i++) out << "," << model_parameters[i];
     out << endl;
 
     if (num_states != 4) return;
