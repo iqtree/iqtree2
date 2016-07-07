@@ -13,6 +13,7 @@ RateFreeInvar::RateFreeInvar(int ncat, double start_alpha, string params, bool s
 	cur_optimize = 0;
 	name = "+I" + name;
 	full_name = "Invar+" + full_name;
+    setNCategory(ncat);
 }
 
 void RateFreeInvar::saveCheckpoint() {
