@@ -304,7 +304,7 @@ void ModelLieMarkov::setRates() {
     double max_abs = 0;
     for (int param=0; param<num_params; param++) {
         // COMMENT: is this abs() or fabs()? abs is for int type, whereas fabs for double 
-        max_abs = (abs(model_parameters[param])>max_abs ? abs(model_parameters[param]) : max_abs);
+        max_abs = (fabs(model_parameters[param])>max_abs ? fabs(model_parameters[param]) : max_abs);
         for (int rate=0; rate<NUM_RATES; rate++) 
             rates[rate] += model_parameters[param]*basis[param][SYMMETRY_PERM[symmetry][rate]];
     }
