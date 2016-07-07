@@ -153,7 +153,7 @@ public:
 	*/
 	virtual void decomposeRateMatrix();
 
-    ~ModelSet();
+    virtual ~ModelSet();
 
 	/** map from pattern ID to model ID */
 	IntVector pattern_model_map;
