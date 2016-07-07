@@ -146,9 +146,10 @@ void Alignment::checkSeqName() {
     countStatePerSequence(count_per_seq);
 
     /*if (verbose_mode >= VB_MIN)*/ {
+        cout << "NOTE: The composition test for PoMo only tests the proportion of fixed states!" << endl;
         int max_len = getMaxSeqNameLength()+1;
-//        cout << "  ID  ";
-//        cout <<  "  Sequence";
+        // cout << "  ID  ";
+        // cout <<  "  Sequence";
         cout.width(max_len+14);
         cout << right << "Gap/Ambiguity";
         if (do_comp_test) 
@@ -179,24 +180,59 @@ void Alignment::checkSeqName() {
             if (do_comp_test) {
                 double chi2 = 0.0;
                 unsigned sum_count = 0;
-                for (j = 0; j < num_states; j++)
-                    sum_count += count_per_seq[i*num_states+j];
-                double sum_inv = 1.0/sum_count;
-                for (j = 0; j < num_states; j++)
-                    freq_per_sequence[j] = count_per_seq[i*num_states+j]*sum_inv;
-                for (j = 0; j < num_states; j++)
-                    chi2 += (state_freq[j] - freq_per_sequence[j]) * (state_freq[j] - freq_per_sequence[j]) / state_freq[j];
+                if (seq_type == SEQ_POMO) {
+                    // FIXME: Number of nucleotides hardcoded here.
+                    int nnuc = 4;
+                    // Have to normalize allele frequencies.
+                    double state_freq_norm[nnuc];
+                    double sum_freq = 0.0;
+                    for (j = 0; j < nnuc; j++) {
+                        sum_freq += state_freq[j];
+                        state_freq_norm[j] = state_freq[j];
+                    }
+                    for (j = 0; j < nnuc; j++) {
+                        state_freq_norm[j] /= sum_freq;
+                    }
+                    
+                    for (j = 0; j < nnuc; j++)
+                        sum_count += count_per_seq[i*num_states+j];
+                    double sum_inv = 1.0/sum_count;
+                    for (j = 0; j < nnuc; j++)
+                        freq_per_sequence[j] = count_per_seq[i*num_states+j]*sum_inv;
+                    for (j = 0; j < nnuc; j++)
+                        chi2 += (state_freq_norm[j] - freq_per_sequence[j]) * (state_freq_norm[j] - freq_per_sequence[j]) / state_freq_norm[j];
 
-//            chi2 *= getNSite();
-                chi2 *= sum_count;
-                double pvalue = chi2prob(num_states-1, chi2);
-                if (pvalue < 0.05) {
-                    cout << "    failed ";
-                    num_failed++;
-                } else
-                    cout << "    passed ";
-                cout.width(9);
-                cout << right << pvalue*100 << "%";
+                    // chi2 *= getNSite();
+                    chi2 *= sum_count;
+                    double pvalue = chi2prob(nnuc-1, chi2);
+                    if (pvalue < 0.05) {
+                        cout << "    failed ";
+                        num_failed++;
+                    } else
+                        cout << "    passed ";
+                    cout.width(9);
+                    cout << right << pvalue*100 << "%";
+                }
+                else {
+                    for (j = 0; j < num_states; j++)
+                        sum_count += count_per_seq[i*num_states+j];
+                    double sum_inv = 1.0/sum_count;
+                    for (j = 0; j < num_states; j++)
+                        freq_per_sequence[j] = count_per_seq[i*num_states+j]*sum_inv;
+                    for (j = 0; j < num_states; j++)
+                        chi2 += (state_freq[j] - freq_per_sequence[j]) * (state_freq[j] - freq_per_sequence[j]) / state_freq[j];
+
+                    // chi2 *= getNSite();
+                    chi2 *= sum_count;
+                    double pvalue = chi2prob(num_states-1, chi2);
+                    if (pvalue < 0.05) {
+                        cout << "    failed ";
+                        num_failed++;
+                    } else
+                        cout << "    passed ";
+                    cout.width(9);
+                    cout << right << pvalue*100 << "%";
+                }
             }
 //            cout << "  " << chi2;
 			cout << endl;
