@@ -193,18 +193,6 @@ public:
 	*/
 	RateHeterogeneity *site_rate;
 
-    /**
-     *  check whether +I+G is used
-     */
-    bool isGammai() const {
-        return gammai;
-    }
-
-/**
-	 *  To determine whether the model is +I+G or not
-	 */
-	bool gammai;
-
 	/* TRUE if a fused mixture and rate model, e.g. LG4M and LG4X */
 	bool fused_mix_rate;
 

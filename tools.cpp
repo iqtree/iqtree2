@@ -1553,6 +1553,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 					throw "Use -spp <type of partition model>";
 				params.partition_file = argv[cnt];
 				params.partition_type = 'p';
+                params.opt_gammai = false;
 				continue;
 			}
 			if (strcmp(argv[cnt], "-spj") == 0 || strcmp(argv[cnt], "-q") == 0) {
@@ -1562,6 +1563,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.partition_file = argv[cnt];
 				params.partition_type = 'j';
                 params.optimize_alg_gammai = "Brent";
+                params.opt_gammai = false;
 				continue;
 			}
 			if (strcmp(argv[cnt], "-M") == 0) {

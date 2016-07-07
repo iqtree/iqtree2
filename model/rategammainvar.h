@@ -40,6 +40,13 @@ public:
     RateGammaInvar(int ncat, double shape, bool median, double p_invar_sites, string optimize_alg, PhyloTree *tree, bool testParamDone);
 
     /**
+     *  check whether +I+G is used
+     */
+    virtual bool isGammai() const {
+        return true;
+    }
+
+    /**
         save object into the checkpoint
     */
     virtual void saveCheckpoint();

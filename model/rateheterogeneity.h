@@ -179,6 +179,13 @@ public:
 	*/	
     virtual int isGammaRate() { return 0; }
 
+    /**
+     *  check whether +I+G is used
+     */
+    virtual bool isGammai() const {
+        return false;
+    }
+
 	/**
 		the target function which needs to be optimized
 		@param x the input vector x

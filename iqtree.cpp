@@ -1746,7 +1746,7 @@ string IQTree::optimizeModelParameters(bool printInfo, double logl_epsilon) {
             cout << etime - stime << " seconds (logl: " << curScore << ")" << endl;
 	} else {
         double modOptScore;
-        if (params->opt_gammai && getModelFactory()->isGammai()) { // DO RESTART ON ALPHA AND P_INVAR
+        if (params->opt_gammai) { // DO RESTART ON ALPHA AND P_INVAR
             double stime = getRealTime();
             modOptScore = getModelFactory()->optimizeParametersGammaInvar(params->fixed_branch_length, printInfo, logl_epsilon);
             double etime = getRealTime();

@@ -84,8 +84,6 @@ ModelFactory::ModelFactory() : CheckpointFactory() {
 	joint_optimize = false;
 	fused_mix_rate = false;
 	unobserved_ptns = "";
-    gammai = false;
-
 }
 
 size_t findCloseBracket(string &str, size_t start_pos) {
@@ -104,8 +102,6 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 	is_storing = false;
 	joint_optimize = params.optimize_model_rate_joint;
 	fused_mix_rate = false;
-    gammai = false;
-
     string model_str = params.model_name;
 	string rate_str;
 
@@ -476,7 +472,6 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 		if (posI != string::npos && posG != string::npos) {
 			site_rate = new RateGammaInvar(num_rate_cats, gamma_shape, params.gamma_median,
 					p_invar_sites, params.optimize_alg_gammai, tree, false);
-            gammai = true;
 		} else if (posI != string::npos && posR != string::npos) {
 			site_rate = new RateFreeInvar(num_rate_cats, gamma_shape, freerate_params, p_invar_sites, !fused_mix_rate, params.optimize_alg, tree);
 		} else if (posI != string::npos) {
@@ -774,6 +769,9 @@ double ModelFactory::optimizeAllParameters(double gradient_epsilon) {
 }
 
 double ModelFactory::optimizeParametersGammaInvar(bool fixed_len, bool write_info, double logl_epsilon, double gradient_epsilon) {
+    if (!site_rate->isGammai())
+        return optimizeParameters(fixed_len, write_info, logl_epsilon, gradient_epsilon);
+        
     PhyloTree *tree = site_rate->getTree();
 	double frac_const = tree->aln->frac_const_sites;
     tree->setCurScore(tree->computeLikelihood());
