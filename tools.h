@@ -429,16 +429,6 @@ private:
 public:
 
     /**
-    *  Fast and accurate optimiation for alpha and p_invar
-    */
-    bool fai;
-
-	/**
-	 *  Use random restart strategy for estimating alpha and p_invar
-	 */
-	bool testAlpha;
-
-    /**
      *  Restart the optimization of alpha and pinvar from different starting
      *  pinv values (supercedes the option testAlpha
      */

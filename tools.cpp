@@ -640,8 +640,6 @@ void parseArg(int argc, char *argv[], Params &params) {
     verbose_mode = VB_MIN;
     params.tree_gen = NONE;
     params.user_file = NULL;
-    params.fai = false;
-    params.testAlpha = false;
     params.opt_gammai = true;
     params.opt_gammai_fast = false;
     params.opt_gammai_keep_bran = false;
@@ -2561,11 +2559,6 @@ void parseArg(int argc, char *argv[], Params &params) {
 				continue;
 			}
 
-			if (strcmp(argv[cnt], "--test-alpha") == 0) {
-				params.testAlpha = true;
-				continue;
-			}
-
             if (strcmp(argv[cnt], "-opt_gammai") == 0 || strcmp(argv[cnt], "--opt-gamma-inv") == 0) {
                 params.opt_gammai = true;
                 continue;
@@ -2589,19 +2582,6 @@ void parseArg(int argc, char *argv[], Params &params) {
             }
             if (strcmp(argv[cnt], "--rand-alpha") == 0) {
                 params.randomAlpha = true;
-                continue;
-            }
-            if (strcmp(argv[cnt], "--test-alpha-eps") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use --test-alpha-eps <logl_eps>";
-                params.testAlphaEps = convert_double(argv[cnt]);
-                params.testAlpha = true;
-                continue;
-            }
-
-            if (strcmp(argv[cnt], "-fai") == 0) {
-                params.fai = true;
                 continue;
             }
 

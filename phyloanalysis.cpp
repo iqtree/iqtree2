@@ -1741,14 +1741,6 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 			exit(0);
 		}
 
-		if (params.testAlpha) { // DO RESTART ON ALPHA AND P_INVAR
-			double stime = getRealTime();
-			searchGAMMAInvarByRestarting(iqtree);
-			double etime = getRealTime();
-            cout << "Testing alpha took: " << etime -stime << " CPU seconds" << endl;
-            cout << endl;
-		}
-
 	}
 
     // Optimize model parameters and branch lengths using ML for the initial tree
@@ -2164,7 +2156,6 @@ void searchGAMMAInvarByRestarting(IQTree &iqtree) {
     delete [] state_freqs;
     delete [] bestRates;
     delete [] bestStateFreqs;
-	Params::getInstance().testAlpha = false;
 }
 
 // Test alpha fom 0.1 to 15 and p_invar from 0.1 to 0.99, stepsize = 0.01
