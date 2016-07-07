@@ -251,6 +251,7 @@ void ModelPoMo::updatePoMoStatesAndRates () {
 
     // Activate this if frequencies of fixed states sum up to 1.0.
     // updateFreqFixedState();
+
     computeStateFreq();
 
     // Loop over rows (transition starting from state1).
@@ -1200,4 +1201,29 @@ void ModelPoMo::report(ofstream &out) {
     // out << "Ratio of mutation rate to total rate: ";
     // out << mu_tot / (fr_tot + mu_tot) << endl << endl;
 
+}
+
+void ModelPoMo::saveCheckpoint() {
+    int n_rates = nnuc * (nnuc-1) / 2;
+    checkpoint->startStruct("ModelPoMo");
+    CKP_ARRAY_SAVE(n_rates, dna_model->rates);
+    CKP_ARRAY_SAVE(nnuc, dna_model->state_freq);
+    checkpoint->endStruct();
+    ModelGTR::saveCheckpoint();
+}
+
+void ModelPoMo::restoreCheckpoint() {
+    int n_rates = nnuc * (nnuc-1) / 2;
+    // First, get variables from checkpoint.
+    checkpoint->startStruct("ModelPoMo");
+    CKP_ARRAY_RESTORE(n_rates, dna_model->rates);
+    CKP_ARRAY_RESTORE(nnuc, dna_model->state_freq);
+    checkpoint->endStruct();
+    // Second, update states and rates.
+    updatePoMoStatesAndRates();
+    // Third, restore ModelGTR.
+    ModelGTR::restoreCheckpoint();
+    decomposeRateMatrix();
+    if (phylo_tree)
+        phylo_tree->clearAllPartialLH();
 }
