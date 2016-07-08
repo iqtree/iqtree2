@@ -106,7 +106,6 @@ void MPIHelper::receiveTrees(bool fromAll, int maxNumTrees, TreeCollection &tree
         if (flag) {
             //cout << "Getting messages from node " << status.MPI_SOURCE << endl;
             MPI_Get_count(&status, MPI_CHAR, &numBytes);
-
             recvBuffer = new char[numBytes];
             MPI_Recv(recvBuffer, numBytes, MPI_CHAR, status.MPI_SOURCE, status.MPI_TAG, MPI_COMM_WORLD, &status);
             ObjectStream os(recvBuffer, numBytes);
