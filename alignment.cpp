@@ -1820,7 +1820,7 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
     int field_num;              // Field number counter.
     int site_count = 0;         // Site / base counter.
     // Delimiters
-    char const field_delim = '\t';
+//    char const field_delim = '\t';
     char const value_delim = ',';
 
     // Vector of nucleotide base counts in order A, C, G, T.
@@ -1955,8 +1955,8 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
 
     // Headerline.
     istringstream ss2(line);
-    field_num = 0;
-    for ( ; getline(ss2, field, field_delim); ) {
+    
+    for (field_num = 0; (ss2 >> field); field_num++) {
         if (field_num == 0) {
             if ((field.compare("Chrom") != 0) && (field.compare("CHROM") != 0)) {
                 err_str << "Unrecognized header field " << field << ".";
@@ -1973,7 +1973,6 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
             //Read in sequence names.
             seq_names.push_back(field);
         }
-        field_num++;
     }
     if ((int) seq_names.size() != npop) {
                 err_str << "Number of populations in headerline doesn't match NPOP.";
@@ -1990,7 +1989,7 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
         includes_state_unknown = false;
         istringstream fieldstream(line);
         // Loop over populations / individuals.
-        for ( ; getline(fieldstream, field, field_delim); ) {
+        for ( ; (fieldstream >> field); ) {
             // Skip Chrom and Pos columns.
             if ( (field_num == 0) || (field_num == 1)) {
                 field_num++;
