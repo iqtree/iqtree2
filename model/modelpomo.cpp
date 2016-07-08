@@ -22,6 +22,8 @@ void ModelPoMo::init(const char *model_name,
                      string freq_params,
                      bool is_reversible,
                      string pomo_params) {
+    if (model_params.length() > 0) 
+        outError("Fixing DNA model parameters unsupported yet");
     // Check num_states (set in Alignment::readCountsFormat()).
     N = phylo_tree->aln->virtual_pop_size;
     nnuc = 4;
@@ -107,7 +109,9 @@ void ModelPoMo::init(const char *model_name,
     // polymorphism is fixed; otherwise it does not make sense.  For
     // the future: maybe also allow to fix all mutation parameters
     // with, e.g., HKY{0.1,0.3}.
-    if (!fixed_level_of_polymorphism && model_params.length() > 0) {
+    if (!fixed_level_of_polymorphism && pomo_params.length() > 0) {
+    
+        // TODO: for dominik
         cout << endl;
         cout << "----------------------------------------------------------------------" << endl;
         cout << "PoMo has one more parameter than its underlying substitution model." << endl;

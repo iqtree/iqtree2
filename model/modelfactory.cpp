@@ -173,9 +173,9 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
         outError("Non reversible PoMo not supported yet.");
     
     if (pos_rev_pomo != string::npos) {
+        // move +rP to model_str
         model_str = model_str + "+rP";
         rate_str = rate_str.substr(0, pos_rev_pomo) + rate_str.substr(pos_rev_pomo+3);
-        cout << "rate_str " << rate_str << endl;
     }
     if (pos_rev_pomo != string::npos || tree->aln->seq_type == SEQ_POMO) {
         // Check that only supported flags are given.
