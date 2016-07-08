@@ -38,7 +38,7 @@ void ModelPoMo::init(const char *model_name,
     dna_model = new ModelDNA(model_name, model_params, freq_type, freq_params, phylo_tree);
     phylo_tree->aln->num_states = num_states;
 
-    this->name = dna_model->name + "+rP" + convertIntToString(N);
+    this->name = dna_model->name + "+rP";
     this->full_name =
         "reversible PoMo with N=" +
         convertIntToString(N) + " and " +
@@ -511,6 +511,10 @@ int ModelPoMo::getNDim() {
     else
         return dna_model->getNDim()+1;
     // return dna_model->getNDim();
+}
+
+int ModelPoMo::getNDimFreq() { 
+    return dna_model->getNDimFreq();
 }
 
 void ModelPoMo::setBounds(double *lower_bound,

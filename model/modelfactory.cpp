@@ -159,44 +159,34 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 				outError("Model name has wrong bracket notation '{...}'");
 			rate_str = model_str.substr(pos+1);
 			model_str = model_str.substr(0, pos+1);
-		} else if (model_str[spec_pos] == '+') {
-            // Check for PoMo and set model_str and rate_str
-            // accordingly.
-            string::size_type pos_rev_pomo = model_str.find("+rP");
-            string::size_type pos_nonrev_pomo = model_str.find("+nrP");
-            if (pos_nonrev_pomo != string::npos)
-                outError("Non reversible PoMo not supported yet.");
-            else if (pos_rev_pomo + 3 != string::npos) {
-                size_t sspec_pos = model_str.find_first_of("+", spec_pos+1);
-                std::string pomo;
-                if (sspec_pos != string::npos) {
-                    rate_str  = model_str.substr(sspec_pos);
-                    model_str = model_str.substr(0,sspec_pos);
-                }
-                else {
-                    if (pos_rev_pomo + 3 != model_str.length()) {
-                    string err = "Error in model string: " + model_str;
-                    outError(err);
-                    }
-                    rate_str  = "";
-                }
-                // Check that only supported flags are given.
-                if (rate_str.find("+ASC") != string::npos)
-                    outError("Ascertainment bias correction with PoMo not yet supported.");
-                if ((rate_str.find("+I") != string::npos) ||
-                    (rate_str.find("+G") != string::npos) ||
-                    (rate_str.find("+R") != string::npos))
-                    outError("Rate heterogeneity with PoMo not yet supported.");
-            }
-            else {
-                rate_str = model_str.substr(spec_pos);
-                model_str = model_str.substr(0, spec_pos);
-            }
         } else {
             rate_str = model_str.substr(spec_pos);
             model_str = model_str.substr(0, spec_pos);
         }
     }
+
+    // Check for PoMo and set model_str and rate_str
+    // accordingly.
+    string::size_type pos_rev_pomo = rate_str.find("+rP");
+    string::size_type pos_nonrev_pomo = rate_str.find("+nrP");
+    if (pos_nonrev_pomo != string::npos)
+        outError("Non reversible PoMo not supported yet.");
+    
+    if (pos_rev_pomo != string::npos) {
+        model_str = model_str + "+rP";
+        rate_str = rate_str.substr(0, pos_rev_pomo) + rate_str.substr(pos_rev_pomo+3);
+        cout << "rate_str " << rate_str << endl;
+    }
+    if (pos_rev_pomo != string::npos || tree->aln->seq_type == SEQ_POMO) {
+        // Check that only supported flags are given.
+        if (rate_str.find("+ASC") != string::npos)
+            outError("Ascertainment bias correction with PoMo not yet supported.");
+        if ((rate_str.find("+I") != string::npos) ||
+            (rate_str.find("+G") != string::npos) ||
+            (rate_str.find("+R") != string::npos))
+            outError("Rate heterogeneity with PoMo not yet supported.");
+    }
+
 
 //	nxsmodel = models_block->findModel(model_str);
 //	if (nxsmodel && nxsmodel->description.find("MIX") != string::npos) {

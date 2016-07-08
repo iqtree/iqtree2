@@ -76,6 +76,12 @@ class ModelPoMo : public ModelGTR
      */
     virtual int getNDim();
 
+	/**
+		@return the number of dimensions corresponding to state frequencies
+	*/
+	virtual int getNDimFreq();
+	
+
     /**
      * Set bounds for joint optimization with BFGS.
      */
