@@ -1728,6 +1728,9 @@ void parseArg(int argc, char *argv[], Params &params) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -n <#iterations>";
+                if (params.gbo_replicates != 0) {
+                    outError("Ultrafast bootstrap does not work with -n option");
+                }
 				params.min_iterations = convert_int(argv[cnt]);
 				params.stop_condition = SC_FIXED_ITERATION;
 //                params.autostop = false;
@@ -2402,6 +2405,9 @@ void parseArg(int argc, char *argv[], Params &params) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -bb <#replicates>";
+                if (params.min_iterations != -1) {
+                    outError("Ultrafast bootstrap does not work with -te or -n option");
+                }
 				params.gbo_replicates = convert_int(argv[cnt]);
 //				params.avoid_duplicated_trees = true;
 				if (params.gbo_replicates < 1000)
@@ -2858,6 +2864,9 @@ void parseArg(int argc, char *argv[], Params &params) {
 			}
 			if (strcmp(argv[cnt], "-t") == 0 || strcmp(argv[cnt], "-te") == 0) {
                 if (strcmp(argv[cnt], "-te") == 0) {
+                    if (params.gbo_replicates != 0) {
+                        outError("Ultrafast bootstrap does not work with -te option");
+                    }
                     params.min_iterations = 0;
                     params.stop_condition = SC_FIXED_ITERATION;
                 }
