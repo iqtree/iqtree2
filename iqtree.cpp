@@ -316,7 +316,16 @@ void IQTree::initSettings(Params &params) {
             cout << "CHECKPOINT: " << boot_trees.size() << " UFBoot trees and " << boot_splits.size() << " UFBootSplits restored" << endl;
             // TODO: quick and dirty fix, no branch lengths are saved after checkpointing
             if (params.print_ufboot_trees == 2) {
-                boot_trees_brlen = boot_trees;
+                boot_trees_brlen.resize(params.gbo_replicates);
+                string ufboot_file = params.out_prefix + string(".ufboot");
+                if (fileExists(ufboot_file)) {
+                    ifstream in(ufboot_file.c_str());
+                    for (i = 0; i < params.gbo_replicates && !in.eof(); i++)
+                        in >> boot_trees_brlen[i];
+                    in.close();
+                } else {
+                    outWarning("Cannot properly restore bootstrap trees with branch lengths");
+                }
             }
         }
         VerboseMode saved_mode = verbose_mode;
