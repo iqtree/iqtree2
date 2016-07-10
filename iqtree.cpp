@@ -314,6 +314,10 @@ void IQTree::initSettings(Params &params) {
                 boot_trees_brlen.resize(params.gbo_replicates);
         } else {
             cout << "CHECKPOINT: " << boot_trees.size() << " UFBoot trees and " << boot_splits.size() << " UFBootSplits restored" << endl;
+            // TODO: quick and dirty fix, no branch lengths are saved after checkpointing
+            if (params.print_ufboot_trees == 2)
+                boot_trees_brlen = boot_trees;
+            }
         }
         VerboseMode saved_mode = verbose_mode;
         verbose_mode = VB_QUIET;
