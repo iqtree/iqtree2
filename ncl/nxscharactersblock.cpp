@@ -1826,7 +1826,7 @@ void NxsCharactersBlock::HandleStdMatrix(
 				{
 				// This should be the taxon label
 				//
-				token.SetLabileFlagBit(token.hyphenNotPunctuation);
+				token.SetLabileFlagBit(NxsToken::hyphenNotPunctuation + NxsToken::preserveUnderscores);
 				token.GetNextToken();
 
 				if (page == 0 && newtaxa)
