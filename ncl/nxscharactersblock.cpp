@@ -1419,6 +1419,13 @@ void NxsCharactersBlock::HandleFormat(
 			{
 			break;
 			}
+        else 
+            {
+				errormsg = "Expecting ';' but found ";
+                errormsg += token.GetToken();
+                errormsg += " at the end of FORMAT command";
+				throw NxsException(errormsg, token.GetFilePosition(), token.GetFileLine(), token.GetFileColumn());                
+            }
 		}
 
 	// Perform some last checks before leaving the FORMAT command
