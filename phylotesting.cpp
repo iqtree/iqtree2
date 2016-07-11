@@ -1334,7 +1334,7 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
             // normal model
             if (model_names[model].find("+ASC") != string::npos) {
                 model_fac->unobserved_ptns = in_tree->aln->getUnobservedConstPatterns();
-                if (model_fac->unobserved_ptns.size() == 0) {
+                if (model_fac->unobserved_ptns.size() < tree->aln->getNumNonstopCodons() || in_tree->aln->frac_const_sites > 0.0) {
                     cout.width(3);
                     cout << right << model+1 << "  ";
                     cout.width(13);
