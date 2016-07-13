@@ -1928,6 +1928,10 @@ double IQTree::doTreeSearch() {
     	 * Perturb the tree
     	 *---------------------------------------*/
         double perturbScore = 0.0;
+        int numStableBranches = aln->getNSeq() - 3 - candidateTrees.getStableSplits().size();
+        // Change from floor to ceil to make sure perturbing at least 1 branch
+        int numPerturb = ceil(searchinfo.curPerStrength * numStableBranches);
+        bool treechanged = false;
         if (iqp_assess_quartet == IQP_BOOTSTRAP) {
             // create bootstrap sample
             Alignment* bootstrap_alignment;
@@ -1942,8 +1946,6 @@ double IQTree::doTreeSearch() {
             curScore = optimizeAllBranches();
         } else {
             if (params->snni) {
-            	int numStableBranches = aln->getNSeq() - 3 - candidateTrees.getStableSplits().size();
-                int numNNI = floor(searchinfo.curPerStrength * numStableBranches);
 //                string candidateTree = candidateTrees.getRandCandTree();
 //                readTreeString(candidateTree);
                 readTreeString(candidateTrees.getRandCandTree());
@@ -1952,7 +1954,7 @@ double IQTree::doTreeSearch() {
                 if (params->iqp) {
                     doIQP();
                 } else {
-                    doRandomNNIs(numNNI);
+                    doRandomNNIs(numPerturb);
                 }
             } else {
             	readTreeString(candidateTrees.getBestTrees()[0]);
@@ -1970,8 +1972,11 @@ double IQTree::doTreeSearch() {
                 }
             }
 
+            double oldScore = curScore;
             computeLogL();
             perturbScore = curScore;
+            if (perturbScore < oldScore - 0.01)
+                treechanged = true;
         }
 
     	/*----------------------------------------
@@ -1981,6 +1986,10 @@ double IQTree::doTreeSearch() {
         int nni_steps = 0;
 
         imd_tree = doNNISearch(nni_count, nni_steps);
+        
+        if (nni_count == 0 && params->snni && numPerturb > 0 && treechanged) {
+            assert(0 && "BUG: NNI could not improved perturbed tree");
+        }
 
         if (iqp_assess_quartet == IQP_BOOTSTRAP) {
             // restore alignment
@@ -2287,8 +2296,9 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
             numNNIs = 1;
             curScore = oldScore;
         }
-        if (curScore - oldScore < 0.1)
-        	break;
+        // BUG in following line, causing premature break by rollBack! that's why commented out 
+//        if (curScore - oldScore < 0.1)
+//        	break;
     }
 
     if (nni_count == 0 && verbose_mode >= VB_MED) {
