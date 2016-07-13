@@ -3247,6 +3247,7 @@ void usage_iqtree(char* argv[], bool full_command) {
 			<< "  -blfix               Fix branch lengths of user tree passed via -te" << endl
 			<< "  -blmin               Min branch length for optimization (default 0.000001)" << endl
 			<< "  -blmax               Max branch length for optimization (default 100)" << endl
+			<< "  -wsr                 Write site rates and categories to .rate file" << endl
 			<< "  -wsl                 Write site log-likelihoods to .sitelh file" << endl
             << "  -wslr                Write site log-likelihoods per rate category" << endl
             << "  -wslm                Write site log-likelihoods per mixture class" << endl
