@@ -741,13 +741,21 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 				<< "NNI log-likelihood cutoff: " << tree.getNNICutoff() << endl
 				<< endl;
 */
-		if (params.compute_ml_tree && (params.min_iterations > 0 || original_model.find("ONLY") != string::npos)) {
-			if (original_model.find("ONLY") != string::npos)
+		if (params.compute_ml_tree) {
+			if (original_model.find("ONLY") != string::npos) {
 				out << "TREE USED FOR MODEL SELECTION" << endl
 					<< "-----------------------------" << endl << endl;
-            else 
+            } else if (params.min_iterations == 0) {
+                if (params.user_file)
+                    out << "USER TREE" << endl
+                        << "---------" << endl << endl;
+                else
+                    out << "STARTING TREE" << endl
+                        << "-------------" << endl << endl;                
+            } else { 
 				out << "MAXIMUM LIKELIHOOD TREE" << endl
 					<< "-----------------------" << endl << endl;
+            }
 
 			tree.setRootNode(params.root);
             
