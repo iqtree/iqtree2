@@ -558,10 +558,10 @@ void PhyloTree::saveBranchLengths(DoubleVector &lenvec, int startid, PhyloNode *
     if (!node) {
         node = (PhyloNode*) root;
         assert(branchNum == nodeNum-1);
-        if (lenvec.empty()) lenvec.resize((branchNum+startid)*getMixlen());
+        if (lenvec.empty()) lenvec.resize(branchNum*getMixlen() + startid);
     }
     FOR_NEIGHBOR_IT(node, dad, it){
-    	(*it)->getLength(lenvec, ((*it)->id + startid)*getMixlen());
+    	(*it)->getLength(lenvec, (*it)->id*getMixlen() + startid);
     	PhyloTree::saveBranchLengths(lenvec, startid, (PhyloNode*) (*it)->node, node);
     }
 }
@@ -572,8 +572,8 @@ void PhyloTree::restoreBranchLengths(DoubleVector &lenvec, int startid, PhyloNod
         assert(!lenvec.empty());
     }
     FOR_NEIGHBOR_IT(node, dad, it){
-    	(*it)->setLength(lenvec, ((*it)->id + startid)*getMixlen(), getMixlen());
-        (*it)->node->findNeighbor(node)->setLength(lenvec, ((*it)->id + startid)*getMixlen(), getMixlen());
+    	(*it)->setLength(lenvec, (*it)->id*getMixlen() + startid, getMixlen());
+        (*it)->node->findNeighbor(node)->setLength(lenvec, (*it)->id*getMixlen() + startid, getMixlen());
     	PhyloTree::restoreBranchLengths(lenvec, startid, (PhyloNode*) (*it)->node, node);
     }
 }
