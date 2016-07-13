@@ -2105,27 +2105,74 @@ void PhyloTree::computeMixturePartialLikelihoodEigen(PhyloNeighbor *dad_branch, 
     double *echild = echildren;
     double *partial_lh_leaf = partial_lh_leaves;
 
-	// precompute information buffer
-    double *expleft = new double[nstates];
-    double *expright = new double[nstates];
-	for (c = 0; c < ncat; c++) {
-		for (m = 0; m < nmixture; m++) {
-            // length for heterotachy model
-            double len_left = site_rate->getRate(c) * left->getLength(m);
-            double len_right = site_rate->getRate(c) * right->getLength(m);
-			for (i = 0; i < nstates; i++) {
-				expleft[i] = exp(eval[m*nstates+i]*len_left);
-				expright[i] = exp(eval[m*nstates+i]*len_right);
-			}
-			for (x = 0; x < nstates; x++)
-				for (i = 0; i < nstates; i++) {
-					eleft[(m*ncat+c)*nstatesqr+x*nstates+i] = evec[m*nstatesqr+x*nstates+i] * expleft[i];
-					eright[(m*ncat+c)*nstatesqr+x*nstates+i] = evec[m*nstatesqr+x*nstates+i] * expright[i];
-				}
-		}
+    FOR_NEIGHBOR_IT(node, dad, it) {
+        // precompute information buffer
+        double expchild[nstates];
+        PhyloNeighbor *child = (PhyloNeighbor*)*it;
+        for (c = 0; c < ncat; c++) {
+            double len_child = site_rate->getRate(c) * child->length;
+            for (m = 0; m < nmixture; m++) {
+                for (i = 0; i < nstates; i++) {
+                    expchild[i] = exp(eval[m*nstates+i]*len_child);
+                }
+                for (x = 0; x < nstates; x++)
+                    for (i = 0; i < nstates; i++) {
+                        echild[(m*ncat+c)*nstatesqr+x*nstates+i] = evec[m*nstatesqr+x*nstates+i] * expchild[i];
+                    }
+            }
+        }
+        if (child->node->isLeaf()) {
+            vector<int>::iterator it;
+            for (it = aln->seq_states[child->node->id].begin(); it != aln->seq_states[child->node->id].end(); it++) {
+                int state = (*it);
+                for (m = 0; m < nmixture; m++) {
+                    double *this_echild = &echild[m*nstatesqr*ncat];
+                    double *this_tip_partial_lh = &tip_partial_lh[state*nstates*nmixture + m*nstates];
+                    double *this_partial_lh_leaf = &partial_lh_leaf[state*block+m*statecat];
+                    for (x = 0; x < statecat; x++) {
+                        double vchild = 0.0;
+                        for (i = 0; i < nstates; i++) {
+                            vchild += this_echild[x*nstates+i] * this_tip_partial_lh[i];
+                        }
+                        this_partial_lh_leaf[x] = vchild;
+                    }
+                }
+            }
+            size_t addr = aln->STATE_UNKNOWN * block;
+            for (x = 0; x < block; x++) {
+                partial_lh_leaf[addr+x] = 1.0;
+            }
+            partial_lh_leaf += (aln->STATE_UNKNOWN+1)*block;
+        }
+        echild += block*nstates;
+    }
+
+    double *eleft = echildren, *eright = echildren + block*nstates;
+    
+	if (!left->node->isLeaf() && right->node->isLeaf()) {
+		PhyloNeighbor *tmp = left;
+		left = right;
+		right = tmp;
+        double *etmp = eleft;
+        eleft = eright;
+        eright = etmp;
 	}
-    delete [] expright;
-    delete [] expleft;
+    
+    if (node->degree() > 3) {
+        /*--------------------- multifurcating node ------------------*/
+        // now for-loop computing partial_lh over all site-patterns
+        double sum_scale = 0.0;
+#ifdef _OPENMP
+#pragma omp parallel for reduction(+: sum_scale) private(ptn, c, x, i, m) schedule(static)
+#endif
+        for (ptn = 0; ptn < nptn; ptn++) {
+            double partial_lh_all[block];
+            for (i = 0; i < block; i++)
+                partial_lh_all[i] = 1.0;
+            dad_branch->scale_num[ptn] = 0;
+                
+            double *partial_lh_leaf = partial_lh_leaves;
+            double *echild = echildren;
 
             FOR_NEIGHBOR_IT(node, dad, it) {
                 PhyloNeighbor *child = (PhyloNeighbor*)*it;

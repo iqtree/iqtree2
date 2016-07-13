@@ -484,8 +484,11 @@ double RateFree::optimizeWithEM() {
         }
         assert(score < 0);
         
-        if (verbose_mode >= VB_MED)
-            cout << "EM score = " << score << endl;
+        if (step > 0)
+            assert(score > old_score-0.1);
+            
+        old_score = score;
+        
         memset(new_prop, 0, nmix*sizeof(double));
                 
         // E-step
