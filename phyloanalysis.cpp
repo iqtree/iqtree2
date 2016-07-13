@@ -62,17 +62,15 @@ void reportReferences(Params &params, ofstream &out, string &original_model) {
 		<< "maximum likelihood phylogenies. Mol. Biol. Evol., 32:268-274." << endl << endl;
 
 	if (params.gbo_replicates)
-	out << "Since you also used ultrafast bootstrap (UFBoot) please cite: " << endl << endl
+	out << "Since you used ultrafast bootstrap (UFBoot) please also cite: " << endl << endl
 		<< "Bui Quang Minh, Minh Anh Thi Nguyen, and Arndt von Haeseler (2013) Ultrafast" << endl
 		<< "approximation for phylogenetic bootstrap. Mol. Biol. Evol., 30:1188-1195." << endl << endl;
 
-	/*		"*** If you use the parallel version, please cite: " << endl << endl <<
-	 "Bui Quang Minh, Le Sy Vinh, Arndt von Haeseler, and Heiko A. Schmidt (2005)" << endl <<
-	 "pIQPNNI - parallel reconstruction of large maximum likelihood phylogenies." << endl <<
-	 "Bioinformatics, 21:3794-3796." << endl << endl;*/
+    if (params.partition_file) 
+    out << "Since you used partition models please also cite:" << endl << endl
+        << "Olga Chernomor, Arndt von Haeseler, and Bui Quang Minh (2016) Terrace aware data" << endl
+        << "structure for phylogenomic inference from supermatrices. Syst. Biol., in press." << endl << endl;
 
-// 	if (original_model == "TEST" || original_model == "TESTONLY")
-// 		out << "Since you used Modeltest please also cite Posada and Crandall (1998)" << endl << endl;
 }
 
 void reportAlignment(ofstream &out, Alignment &alignment, int nremoved_seqs) {
@@ -744,13 +742,21 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 				<< "NNI log-likelihood cutoff: " << tree.getNNICutoff() << endl
 				<< endl;
 */
-		if (params.compute_ml_tree && (params.min_iterations > 0 || original_model.find("ONLY") != string::npos)) {
-			if (original_model.find("ONLY") != string::npos)
+		if (params.compute_ml_tree) {
+			if (original_model.find("ONLY") != string::npos) {
 				out << "TREE USED FOR MODEL SELECTION" << endl
 					<< "-----------------------------" << endl << endl;
-            else 
+            } else if (params.min_iterations == 0) {
+                if (params.user_file)
+                    out << "USER TREE" << endl
+                        << "---------" << endl << endl;
+                else
+                    out << "STARTING TREE" << endl
+                        << "-------------" << endl << endl;                
+            } else { 
 				out << "MAXIMUM LIKELIHOOD TREE" << endl
 					<< "-----------------------" << endl << endl;
+            }
 
 			tree.setRootNode(params.root);
             
@@ -1728,7 +1734,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 
     iqtree.initializeAllPartialLh();
 	double initEpsilon = params.min_iterations == 0 ? params.modeps : (params.modeps*10);
-	if (params.test_param)
+	if (params.opt_gammai)
 		initEpsilon = 0.1;
 
 	string initTree;
@@ -1742,14 +1748,6 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 		if (params.exh_ai) {
 			exhaustiveSearchGAMMAInvar(params, iqtree);
 			exit(0);
-		}
-
-		if (params.testAlpha) { // DO RESTART ON ALPHA AND P_INVAR
-			double stime = getRealTime();
-			searchGAMMAInvarByRestarting(iqtree);
-			double etime = getRealTime();
-            cout << "Testing alpha took: " << etime -stime << " CPU seconds" << endl;
-            cout << endl;
 		}
 
 	}
@@ -2167,13 +2165,12 @@ void searchGAMMAInvarByRestarting(IQTree &iqtree) {
     delete [] state_freqs;
     delete [] bestRates;
     delete [] bestStateFreqs;
-	Params::getInstance().testAlpha = false;
 }
 
 // Test alpha fom 0.1 to 15 and p_invar from 0.1 to 0.99, stepsize = 0.01
 void exhaustiveSearchGAMMAInvar(Params &params, IQTree &iqtree) {
 	double alphaMin = 0.01;
-	double alphaMax = 15.00;
+	double alphaMax = 2.00;
 	double p_invarMin = 0.01;
 	double p_invarMax = 1.00;
 	double stepSize = 0.01;

@@ -2304,8 +2304,6 @@ int main(int argc, char *argv[])
 #endif
 	} else {
 		switch (Params::getInstance().SSE) {
-		case LK_NORMAL: cout << "Slow"; break;
-		case LK_SSE: cout << "Slow SSE3"; break;
 		case LK_EIGEN: cout << "No SSE"; break;
 		case LK_EIGEN_SSE:
 			if (instruction_set >= 7) {

@@ -1,6 +1,8 @@
 /***************************************************************************
- *   Copyright (C) 2009 by BUI Quang Minh   *
- *   minh.bui@univie.ac.at   *
+ *   Copyright (C) 2009-2015 by                                            *
+ *   BUI Quang Minh <minh.bui@univie.ac.at>                                *
+ *   Lam-Tung Nguyen <nltung@gmail.com>                                    *
+ *                                                                         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -68,6 +70,8 @@ void RateGamma::setNCategory(int ncat) {
 	ncategory = ncat;
 	if (rates) delete [] rates;
 	rates = new double[ncategory];
+    for (int cat = 0; cat < ncategory; cat++)
+        rates[cat] = 1.0;
 	name = "+G" + convertIntToString(ncategory);
 	full_name = "Gamma with " + convertIntToString(ncategory) + " categories";
 	computeRates();
@@ -95,6 +99,10 @@ void RateGamma::computeRates() {
 		return;
 	}
 
+    double curScale = 0.0;
+    for (cat = 0; cat < ncategory; cat++)
+        curScale += rates[cat];
+
 	if (!cut_median) {
 		computeRatesMean();
 	} else {
@@ -119,10 +127,21 @@ void RateGamma::computeRates() {
 	if (phylo_tree && phylo_tree->params && phylo_tree->params->no_rescale_gamma_invar)
 		return;
 
+    double newScale = 0.0;
+    for (cat = 0; cat < ncategory; cat++)
+        newScale += rates[cat];
+
+    if (newScale != curScale) {
+        for (cat = 0; cat < ncategory; cat++)
+            rates[cat] *= curScale/newScale;    
+    }
+
 	/* if invariable sites are present */
-	double p_inv = getPInvar();
-	for (cat = 0; cat < ncategory; cat++)
-		rates[cat] = rates[cat]/(1.0 - p_inv);
+//	if (Params::getInstance().optimize_alg_gammai != "EM") {
+//		double p_inv = getPInvar();
+//		for (cat = 0; cat < ncategory; cat++)
+//			rates[cat] = rates[cat]/(1.0 - p_inv);
+//	}
 
 	/* check for very small rates */
 //	for (cat = 0; cat < ncategory; cat ++)

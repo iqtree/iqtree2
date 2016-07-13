@@ -174,7 +174,8 @@ public:
 	 * 	@param fixed_len TRUE to fix branch lengths, default is false
 	 *	@return the best likelihood
 	 */
-	virtual double optimizeParametersGammaInvar(bool fixed_len = false, bool write_info = true, double logl_epsilon = 0.1, double gradient_epsilon = 0.001);
+	virtual double optimizeParametersGammaInvar(bool fixed_len = false, bool write_info = true,
+												double logl_epsilon = 0.1, double gradient_epsilon = 0.001);
 
 	/**
 	 * @return TRUE if parameters are at the boundary that may cause numerical unstability
@@ -259,6 +260,9 @@ protected:
 	*/
 	virtual bool getVariables(double *variables);
 
+    vector<double> optimizeGammaInvWithInitValue(bool fixed_len, double logl_epsilon, double gradient_epsilon, PhyloTree *tree,
+                                       RateHeterogeneity *site_rates, double *rates, double *state_freqs,
+                                       double initPInv, double initAlpha, DoubleVector &lenvec);
 };
 
 #endif
