@@ -2222,9 +2222,16 @@ void runStandardBootstrap(Params &params, string &original_model, Alignment *ali
 	vector<ModelInfo> *model_info = new vector<ModelInfo>;
 	StrVector removed_seqs, twin_seqs;
 
-	// turn off aLRT test
+	// turn off all branch tests
 	int saved_aLRT_replicates = params.aLRT_replicates;
+    int saved_localbp_replicates = params.localbp_replicates;
+    bool saved_aLRT_test = params.aLRT_test;
+    bool saved_aBayes_test = params.aBayes_test;
 	params.aLRT_replicates = 0;
+    params.localbp_replicates = 0;
+    params.aLRT_test = false;
+    params.aBayes_test = false;
+    
 	string treefile_name = params.out_prefix;
 	treefile_name += ".treefile";
 	string boottrees_name = params.out_prefix;
@@ -2373,7 +2380,12 @@ void runStandardBootstrap(Params &params, string &original_model, Alignment *ali
 
 	if (params.compute_ml_tree) {
 		cout << endl << "===> START ANALYSIS ON THE ORIGINAL ALIGNMENT" << endl << endl;
+        // restore branch tests
 		params.aLRT_replicates = saved_aLRT_replicates;
+        params.localbp_replicates = saved_localbp_replicates;
+        params.aLRT_test = saved_aLRT_test;
+        params.aBayes_test = saved_aBayes_test;
+        
 		runTreeReconstruction(params, original_model, *tree, *model_info);
 
 		cout << endl << "===> ASSIGN BOOTSTRAP SUPPORTS TO THE TREE FROM ORIGINAL ALIGNMENT" << endl << endl;
