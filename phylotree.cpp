@@ -2999,6 +2999,8 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
         node2->updateNeighbor(node2_it, node1_nei);
         node1_nei->node->updateNeighbor(node1, node2);
 
+        for (int step = 0; step < params->nni5_num_eval; step++) {
+
 		// clear partial likelihood vector
 		node12_it->clearPartialLh();
 		node21_it->clearPartialLh();
@@ -3036,6 +3038,7 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
 			}
 			node12_it->clearPartialLh();
 		}
+        }
 		double score = computeLikelihoodFromBuffer();
 		nniMoves[cnt].newloglh = score;
 		// compute the pattern likelihoods if wanted

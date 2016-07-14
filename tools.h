@@ -551,6 +551,11 @@ public:
 	 */
 	bool nni5;
 
+	/**
+	 *  Number of steps for the loop evaluating 5 branches around NNI 
+	 */
+	int nni5_num_eval;
+
     /**
      *  Number of branch length optimization rounds performed after
      *  each NNI step (DEFAULT: 1)

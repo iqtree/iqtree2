@@ -744,6 +744,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.loglh_epsilon = 0.001;
     params.numSmoothTree = 1;
     params.nni5 = true;
+    params.nni5_num_eval = 1;
     params.leastSquareBranch = false;
     params.pars_branch_length = false;
     params.bayes_branch_length = false;
@@ -2709,6 +2710,17 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.nni5 = false;
 				continue;
 			}
+            
+            if (strcmp(argv[cnt], "-nni-eval") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -nni-eval <num_evaluation>";
+                params.nni5_num_eval = convert_int(argv[cnt]);
+                if (params.nni5_num_eval < 1)
+                    outError("Positive -nni-eval expected");
+                continue;
+            }
+            
 			if (strcmp(argv[cnt], "-smooth") == 0) {
 				cnt++;
 				if (cnt >= argc)
