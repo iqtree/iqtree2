@@ -1067,6 +1067,7 @@ double PhyloTree::computeLikelihood(double *pattern_lh) {
          outError("Scaling error ", __func__);
          }*/
     }
+    curScore = score;
     return score;
 }
 
@@ -2327,7 +2328,7 @@ double PhyloTree::optimizeAllBranches(int my_iterations, double tolerance, int m
 //        }
         
 
-        if (new_tree_lh < tree_lh) {
+        if (new_tree_lh < tree_lh - tolerance*0.1) {
         	// IN RARE CASE: tree log-likelihood decreases, revert the branch length and stop
         	if (verbose_mode >= VB_MED)
         		cout << "NOTE: Restoring branch lengths as tree log-likelihood decreases after branch length optimization: "
@@ -2350,6 +2351,7 @@ double PhyloTree::optimizeAllBranches(int my_iterations, double tolerance, int m
         	return new_tree_lh;
         tree_lh = new_tree_lh;
     }
+    curScore = tree_lh;
     return tree_lh;
 }
 

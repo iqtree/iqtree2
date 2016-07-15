@@ -433,20 +433,18 @@ private:
 public:
 
     /**
-    *  Fast and accurate optimiation for alpha and p_invar
-    */
-    bool fai;
-
-	/**
-	 *  Use random restart strategy for estimating alpha and p_invar
-	 */
-	bool testAlpha;
-
-    /**
      *  Restart the optimization of alpha and pinvar from different starting
      *  pinv values (supercedes the option testAlpha
      */
-    bool test_param;
+    bool opt_gammai;
+
+    /**
+     *  A faster version of opt_gammai using a heuristic similar to binary search.
+     *  Thus, one does not need to perform 10 independent trials as in opt_gammai.
+     */
+    bool opt_gammai_fast;
+
+    bool opt_gammai_keep_bran;
 
     /**
      *  Automatic adjust the log-likelihood espilon using some heuristic
@@ -1225,6 +1223,11 @@ public:
 
     /** optimization algorithm for parameter estimation: 1-BFGS, 2-BFGS, EM */
     string optimize_alg;
+
+    /**
+     *  Optimization algorithm for +I+G
+     */
+    string optimize_alg_gammai;
 
     /**
             TRUE if you want to fix branch lengths during model optimization

@@ -640,9 +640,9 @@ void parseArg(int argc, char *argv[], Params &params) {
     verbose_mode = VB_MIN;
     params.tree_gen = NONE;
     params.user_file = NULL;
-    params.fai = false;
-    params.testAlpha = false;
-    params.test_param = false;
+    params.opt_gammai = true;
+    params.opt_gammai_fast = false;
+    params.opt_gammai_keep_bran = false;
     params.testAlphaEpsAdaptive = false;
     params.randomAlpha = false;
     params.testAlphaEps = 0.1;
@@ -782,6 +782,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.optimize_model_rate_joint = false;
     params.optimize_by_newton = true;
     params.optimize_alg = "2-BFGS-B,EM";
+    params.optimize_alg_gammai = "EM";
     params.fixed_branch_length = false;
     params.min_branch_length = 0.0; // this is now adjusted later based on alignment length
     params.max_branch_length = 100.0;
@@ -1036,6 +1037,13 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.optimize_alg = argv[cnt];
 				continue;
 			}
+            if (strcmp(argv[cnt], "-optalg_gammai") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use -optalg_gammai <Brent|BFGS|EM>";
+                params.optimize_alg_gammai = argv[cnt];
+                continue;
+            }
 			if (strcmp(argv[cnt], "-root") == 0) {
 				params.is_rooted = true;
 				continue;
@@ -1550,6 +1558,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 					throw "Use -spp <type of partition model>";
 				params.partition_file = argv[cnt];
 				params.partition_type = 'p';
+                params.opt_gammai = false;
 				continue;
 			}
 			if (strcmp(argv[cnt], "-spj") == 0 || strcmp(argv[cnt], "-q") == 0) {
@@ -1558,6 +1567,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 					throw "Use -q <type of partition model>";
 				params.partition_file = argv[cnt];
 				params.partition_type = 'j';
+                params.optimize_alg_gammai = "Brent";
+                params.opt_gammai = false;
 				continue;
 			}
 			if (strcmp(argv[cnt], "-M") == 0) {
@@ -1717,6 +1728,9 @@ void parseArg(int argc, char *argv[], Params &params) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -n <#iterations>";
+                if (params.gbo_replicates != 0) {
+                    outError("Ultrafast bootstrap does not work with -n option");
+                }
 				params.min_iterations = convert_int(argv[cnt]);
 				params.stop_condition = SC_FIXED_ITERATION;
 //                params.autostop = false;
@@ -2395,6 +2409,9 @@ void parseArg(int argc, char *argv[], Params &params) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -bb <#replicates>";
+                if (params.min_iterations != -1) {
+                    outError("Ultrafast bootstrap does not work with -te or -n option");
+                }
 				params.gbo_replicates = convert_int(argv[cnt]);
 //				params.avoid_duplicated_trees = true;
 				if (params.gbo_replicates < 1000)
@@ -2560,13 +2577,20 @@ void parseArg(int argc, char *argv[], Params &params) {
 				continue;
 			}
 
-			if (strcmp(argv[cnt], "--test-alpha") == 0) {
-				params.testAlpha = true;
-				continue;
-			}
+            if (strcmp(argv[cnt], "-opt_gammai") == 0 || strcmp(argv[cnt], "--opt-gamma-inv") == 0) {
+                params.opt_gammai = true;
+                continue;
+            }
 
-            if (strcmp(argv[cnt], "-test_param") == 0 || strcmp(argv[cnt], "--opt-gamma-inv") == 0) {
-                params.test_param = true;
+            if (strcmp(argv[cnt], "--opt-gammai-fast") == 0) {
+                params.opt_gammai_fast = true;
+                params.opt_gammai = true;
+                continue;
+            }
+
+            if (strcmp(argv[cnt], "--opt-gammai-kb") == 0) {
+                params.opt_gammai_keep_bran = true;
+                params.opt_gammai = true;
                 continue;
             }
 
@@ -2576,19 +2600,6 @@ void parseArg(int argc, char *argv[], Params &params) {
             }
             if (strcmp(argv[cnt], "--rand-alpha") == 0) {
                 params.randomAlpha = true;
-                continue;
-            }
-            if (strcmp(argv[cnt], "--test-alpha-eps") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use --test-alpha-eps <logl_eps>";
-                params.testAlphaEps = convert_double(argv[cnt]);
-                params.testAlpha = true;
-                continue;
-            }
-
-            if (strcmp(argv[cnt], "-fai") == 0) {
-                params.fai = true;
                 continue;
             }
 
@@ -2857,6 +2868,9 @@ void parseArg(int argc, char *argv[], Params &params) {
 			}
 			if (strcmp(argv[cnt], "-t") == 0 || strcmp(argv[cnt], "-te") == 0) {
                 if (strcmp(argv[cnt], "-te") == 0) {
+                    if (params.gbo_replicates != 0) {
+                        outError("Ultrafast bootstrap does not work with -te option");
+                    }
                     params.min_iterations = 0;
                     params.stop_condition = SC_FIXED_ITERATION;
                 }
@@ -3237,6 +3251,7 @@ void usage_iqtree(char* argv[], bool full_command) {
 			<< "  -blfix               Fix branch lengths of user tree passed via -te" << endl
 			<< "  -blmin               Min branch length for optimization (default 0.000001)" << endl
 			<< "  -blmax               Max branch length for optimization (default 100)" << endl
+			<< "  -wsr                 Write site rates and categories to .rate file" << endl
 			<< "  -wsl                 Write site log-likelihoods to .sitelh file" << endl
             << "  -wslr                Write site log-likelihoods per rate category" << endl
             << "  -wslm                Write site log-likelihoods per mixture class" << endl
