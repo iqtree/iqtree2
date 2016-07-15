@@ -772,6 +772,8 @@ double ModelFactory::optimizeParametersGammaInvar(bool fixed_len, bool write_inf
     if (!site_rate->isGammai())
         return optimizeParameters(fixed_len, write_info, logl_epsilon, gradient_epsilon);
         
+	double begin_time = getRealTime();
+        
     PhyloTree *tree = site_rate->getTree();
 	double frac_const = tree->aln->frac_const_sites;
     tree->setCurScore(tree->computeLikelihood());
@@ -892,6 +894,10 @@ double ModelFactory::optimizeParametersGammaInvar(bool fixed_len, bool write_inf
 	delete [] state_freqs;
 	delete [] bestRates;
 	delete [] bestStateFreqs;
+    
+	double elapsed_secs = getRealTime() - begin_time;
+	if (write_info)
+		cout << "Parameters optimization took " << elapsed_secs << " sec" << endl;
     
     // updating global variable is not safe!
 //	Params::getInstance().testAlpha = false;
