@@ -479,6 +479,11 @@ public:
 	int numSupportTrees;
 
 	/**
+	 *  Maximum number of trees stored in the candidate tree set
+	 */
+	int maxCandidates;
+
+	/**
 	 *  Number of starting parsimony trees
 	 */
 	int numInitTrees;
@@ -499,10 +504,6 @@ public:
 	 */
 	int popSize;
 
-	/**
-	 *  Maximum number of trees stored in the candidate tree set
-	 */
-	int maxCandidates;
 
 	/**
 	 *  heuristics for speeding up NNI evaluation

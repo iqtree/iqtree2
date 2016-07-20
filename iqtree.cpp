@@ -616,7 +616,10 @@ void IQTree::createInitTrees(int nParTrees) {
         }
     }
 #endif
-    for (int treeNr = 1; treeNr <= nParTrees; treeNr++) {
+
+    int numRandomTrees = 0;
+    int treeNr;
+    for (treeNr = 1; treeNr <= nParTrees; treeNr++) {
         string curParsTree;
 
         /********* Create parsimony tree using PLL *********/
@@ -635,6 +638,8 @@ void IQTree::createInitTrees(int nParTrees) {
             generateRandomTree(YULE_HARDING);
             wrapperFixNegativeBranch(true);
 			curParsTree = getTreeString();
+            if (!candidateTrees.treeExist(curParsTree))
+                numRandomTrees++;
         } else if (params->start_tree == STT_PARSIMONY) {
             /********* Create parsimony tree using IQ-TREE *********/
 #ifdef _OPENMP
@@ -645,6 +650,16 @@ void IQTree::createInitTrees(int nParTrees) {
 #endif
         } else {
             assert(0);
+        }
+        
+        
+        // create random tree if already exist! so as to fill up candidate set as much as possible
+        if (candidateTrees.treeExist(curParsTree)) {
+            generateRandomTree(YULE_HARDING);
+            wrapperFixNegativeBranch(true);
+			curParsTree = getTreeString();        
+            if (!candidateTrees.treeExist(curParsTree))
+                numRandomTrees++;
         }
 
         if (candidateTrees.treeExist(curParsTree)) {
@@ -670,6 +685,8 @@ void IQTree::createInitTrees(int nParTrees) {
     if (nParTrees > 0) {
         cout << parsTime << " seconds ";
         cout << candidateTrees.size() << " distinct starting trees" << endl;
+        if (numRandomTrees > 0)
+            cout << numRandomTrees << " random trees created" << endl;
     }
 
     /****************************************************************************************
@@ -722,10 +739,10 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
 
     // Only select the best nNNITrees for doing NNI search
     CandidateSet initParsimonyTrees = candidateTrees.getBestCandidateTrees(nNNITrees);
-    candidateTrees.clear();
+//    candidateTrees.clear();
 
     cout << "Optimizing top " << initParsimonyTrees.size() << " initial trees with NNI..." << endl;
-    double startTime = getCPUTime();
+    double startTime = getRealTime();
     /*********** START: Do NNI on the best parsimony trees ************************************/
     CandidateSet::reverse_iterator rit = initParsimonyTrees.rbegin();
 
@@ -783,8 +800,23 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
 //        if (params.partition_type)
 //        	((PhyloSuperTreePlen*)&iqtree)->printNNIcasesNUM();
     }
-    double nniTime = getCPUTime() - startTime;
+    double nniTime = getRealTime() - startTime;
     cout << "Average CPU time for 1 NNI search: " << nniTime / initParsimonyTrees.size() << endl;
+
+    cout << "Optimizing branch lengths for " << min((int)candidateTrees.size(), params->popSize) << " candidate trees... ";
+
+    startTime = getRealTime();
+    initParsimonyTrees = candidateTrees.getBestCandidateTrees(params->popSize);
+    for (rit = initParsimonyTrees.rbegin(); rit != initParsimonyTrees.rend(); rit++) {
+        string tree;
+        readTreeString(rit->second.tree);
+        tree = optimizeBranches();
+        candidateTrees.update(tree, getCurScore());
+        saveCheckpoint();
+        checkpoint->dump();
+    }
+    
+    cout << getRealTime() - startTime << " seconds" << endl;
 }
 
 void IQTree::initializePLL(Params &params) {
