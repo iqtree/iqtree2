@@ -556,6 +556,11 @@ public:
 	 */
 	int nni5_num_eval;
 
+	/**
+	 *  Number of traversal for all branch lengths optimization of the initial tree 
+	 */
+	int brlen_num_traversal;
+
     /**
      *  Number of branch length optimization rounds performed after
      *  each NNI step (DEFAULT: 1)

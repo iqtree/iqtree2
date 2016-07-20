@@ -686,7 +686,7 @@ void IQTree::createInitTrees(int nParTrees) {
         double score;
         if (it->first == -DBL_MAX) {
             readTreeString(it->second.tree);
-            treeString = optimizeBranches(2);
+            treeString = optimizeBranches(params->brlen_num_traversal);
             score = getCurScore();
         } else {
             treeString = it->second.tree;

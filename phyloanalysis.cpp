@@ -1791,7 +1791,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
         iqtree.generateRandomTree(YULE_HARDING);
         iqtree.wrapperFixNegativeBranch(true);
         iqtree.initializeAllPartialLh();
-        initTree = iqtree.optimizeBranches(2);
+        initTree = iqtree.optimizeBranches(params.brlen_num_traversal);
         cout << "Log-likelihood of random tree: " << iqtree.getCurScore() << endl;
     }
 
