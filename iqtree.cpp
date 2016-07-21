@@ -803,14 +803,16 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
     double nniTime = getRealTime() - startTime;
     cout << "Average CPU time for 1 NNI search: " << nniTime / initParsimonyTrees.size() << endl;
 
-    cout << "Optimizing branch lengths for " << min((int)candidateTrees.size(), params->popSize) << " candidate trees... ";
+    cout << "Optimizing branch lengths for top " << min((int)candidateTrees.size(), params->popSize) << " candidate trees... " << endl;
 
     startTime = getRealTime();
     initParsimonyTrees = candidateTrees.getBestCandidateTrees(params->popSize);
-    for (rit = initParsimonyTrees.rbegin(); rit != initParsimonyTrees.rend(); rit++) {
+    int treenr;
+    for (rit = initParsimonyTrees.rbegin(), treenr=1; rit != initParsimonyTrees.rend(); rit++,treenr++) {
         string tree;
         readTreeString(rit->second.tree);
         tree = optimizeBranches();
+        cout << "Tree " << treenr << " / LogL: " << getCurScore() << endl;
         candidateTrees.update(tree, getCurScore());
         saveCheckpoint();
         checkpoint->dump();
