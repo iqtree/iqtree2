@@ -314,6 +314,19 @@ void IQTree::initSettings(Params &params) {
                 boot_trees_brlen.resize(params.gbo_replicates);
         } else {
             cout << "CHECKPOINT: " << boot_trees.size() << " UFBoot trees and " << boot_splits.size() << " UFBootSplits restored" << endl;
+            // TODO: quick and dirty fix, no branch lengths are saved after checkpointing
+            if (params.print_ufboot_trees == 2) {
+                boot_trees_brlen.resize(params.gbo_replicates);
+                string ufboot_file = params.out_prefix + string(".ufboot");
+                if (fileExists(ufboot_file)) {
+                    ifstream in(ufboot_file.c_str());
+                    for (i = 0; i < params.gbo_replicates && !in.eof(); i++)
+                        in >> boot_trees_brlen[i];
+                    in.close();
+                } else {
+                    outWarning("Cannot properly restore bootstrap trees with branch lengths");
+                }
+            }
         }
         VerboseMode saved_mode = verbose_mode;
         verbose_mode = VB_QUIET;
@@ -1720,8 +1733,8 @@ extern pllUFBootData * pllUFBootDataPtr;
 string IQTree::optimizeModelParameters(bool printInfo, double logl_epsilon) {
 	if (logl_epsilon == -1)
 		logl_epsilon = params->modeps;
-//    if (params->test_param)
-//        logl_epsilon = 1.0;
+//    if (params->opt_gammai)
+//        logl_epsilon = 0.1;
     cout << "Estimate model parameters (epsilon = " << logl_epsilon << ")" << endl;
 	double stime = getRealTime();
 	string newTree;
@@ -1746,13 +1759,9 @@ string IQTree::optimizeModelParameters(bool printInfo, double logl_epsilon) {
             cout << etime - stime << " seconds (logl: " << curScore << ")" << endl;
 	} else {
         double modOptScore;
-        if (params->test_param) { // DO RESTART ON ALPHA AND P_INVAR
-            double stime = getRealTime();
+        if (params->opt_gammai) { // DO RESTART ON ALPHA AND P_INVAR
             modOptScore = getModelFactory()->optimizeParametersGammaInvar(params->fixed_branch_length, printInfo, logl_epsilon);
-            double etime = getRealTime();
-            cout << "Testing param took: " << etime -stime << " CPU seconds" << endl;
-            cout << endl;
-            params->test_param = false;
+            params->opt_gammai = false;
         } else {
             modOptScore = getModelFactory()->optimizeParameters(params->fixed_branch_length, printInfo, logl_epsilon);
         }
@@ -1915,6 +1924,10 @@ double IQTree::doTreeSearch() {
     	 * Perturb the tree
     	 *---------------------------------------*/
         double perturbScore = 0.0;
+        int numStableBranches = aln->getNSeq() - 3 - candidateTrees.getStableSplits().size();
+        // Change from floor to ceil to make sure perturbing at least 1 branch
+        int numPerturb = ceil(searchinfo.curPerStrength * numStableBranches);
+        bool treechanged = false;
         if (iqp_assess_quartet == IQP_BOOTSTRAP) {
             // create bootstrap sample
             Alignment* bootstrap_alignment;
@@ -1929,8 +1942,6 @@ double IQTree::doTreeSearch() {
             curScore = optimizeAllBranches();
         } else {
             if (params->snni) {
-            	int numStableBranches = aln->getNSeq() - 3 - candidateTrees.getStableSplits().size();
-                int numNNI = floor(searchinfo.curPerStrength * numStableBranches);
 //                string candidateTree = candidateTrees.getRandCandTree();
 //                readTreeString(candidateTree);
                 readTreeString(candidateTrees.getRandCandTree());
@@ -1939,7 +1950,7 @@ double IQTree::doTreeSearch() {
                 if (params->iqp) {
                     doIQP();
                 } else {
-                    doRandomNNIs(numNNI);
+                    doRandomNNIs(numPerturb);
                 }
             } else {
             	readTreeString(candidateTrees.getBestTrees()[0]);
@@ -1957,8 +1968,11 @@ double IQTree::doTreeSearch() {
                 }
             }
 
+            double oldScore = curScore;
             computeLogL();
             perturbScore = curScore;
+            if (perturbScore < oldScore - 0.01)
+                treechanged = true;
         }
 
     	/*----------------------------------------
@@ -1968,6 +1982,10 @@ double IQTree::doTreeSearch() {
         int nni_steps = 0;
 
         imd_tree = doNNISearch(nni_count, nni_steps);
+        
+        if (nni_count == 0 && params->snni && numPerturb > 0 && treechanged) {
+            assert(0 && "BUG: NNI could not improved perturbed tree");
+        }
 
         if (iqp_assess_quartet == IQP_BOOTSTRAP) {
             // restore alignment
@@ -2274,8 +2292,9 @@ double IQTree::optimizeNNI(int &nni_count, int &nni_steps) {
             numNNIs = 1;
             curScore = oldScore;
         }
-        if (curScore - oldScore < 0.1)
-        	break;
+        // BUG in following line, causing premature break by rollBack! that's why commented out 
+//        if (curScore - oldScore < 0.1)
+//        	break;
     }
 
     if (nni_count == 0 && verbose_mode >= VB_MED) {

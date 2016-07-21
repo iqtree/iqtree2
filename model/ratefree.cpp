@@ -273,7 +273,7 @@ void RateFree::setBounds(double *lower_bound, double *upper_bound, bool *bound_c
         }
     } else if (optimizing_params == 1){
         // rates
-        for (i = 1; i <= ncategory; i++) {
+        for (i = 1; i < ncategory; i++) {
             lower_bound[i] = MIN_FREE_RATE;
             upper_bound[i] = MAX_FREE_RATE;
             bound_check[i] = false;

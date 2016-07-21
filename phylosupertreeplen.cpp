@@ -138,13 +138,12 @@ double PartitionModelPlen::optimizeParameters(bool fixed_len, bool write_info, d
                 tree->part_info[part].cur_score = tree->at(part)->computeLikelihood();
         	cur_lh += tree->part_info[part].cur_score;
             
-            
 
         	// normalize rates s.t. branch lengths are #subst per site
         	double mean_rate = tree->at(part)->getRate()->rescaleRates();
-        	if (mean_rate != 1.0) {
+        	if (fabs(mean_rate-1.0) > 1e-6) {
         		if (tree->fixed_rates) {
-        			outError("Partition " + tree->part_info[part].name + " follows FreeRate heterogeneity. Please use proportion edge-linked partition model (-spp)");
+        			outError("Unsupported -spj. Please use proportion edge-linked partition model (-spp)");
                 }
                 tree->at(part)->scaleLength(mean_rate);
         		tree->part_info[part].part_rate *= mean_rate;

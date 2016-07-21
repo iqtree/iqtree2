@@ -179,6 +179,13 @@ public:
 	*/	
     virtual int isGammaRate() { return 0; }
 
+    /**
+     *  check whether +I+G is used
+     */
+    virtual bool isGammai() const {
+        return false;
+    }
+
 	/**
 		the target function which needs to be optimized
 		@param x the input vector x
@@ -254,6 +261,12 @@ public:
 	*/
 	string name;
 
+
+    /**
+     *  Specify whether the initial starting value of the gamma shape and p_inv
+     *  has already been tested.
+     */
+    bool testParamDone;
 
 	/**
 		full name of the rate heterogeneity type
