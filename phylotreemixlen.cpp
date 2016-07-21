@@ -109,7 +109,11 @@ void PhyloTreeMixlen::initializeMixlen(double tolerance) {
 
             // optimize rate model
             double tree_lh = relative_rate->optimizeParameters(tolerance);
+            // 2016-07-22: BUGFIX should rescale rates
+            relative_rate->rescaleRates();
             cout << "tree_lh = " << tree_lh << endl;
+            if (verbose_mode >= VB_MED)
+                relative_rate->writeInfo(cout);
             // restore rate model
             setRate(saved_rate);
             model_factory->site_rate = saved_rate;

@@ -591,6 +591,10 @@ double RateFree::optimizeWithEM() {
         if (converged) break;
     }
     
+        // sort the rates in increasing order
+    if (sorted_rates)
+        quicksort(rates, 0, ncategory-1, prop);
+    
     delete tree;
     aligned_free(new_prop);
     return phylo_tree->computeLikelihood();
