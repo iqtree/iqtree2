@@ -27,6 +27,7 @@
 
 #include "tools.h"
 #include "timeutil.h"
+#include "gzstream.h"
 
 VerboseMode verbose_mode;
 

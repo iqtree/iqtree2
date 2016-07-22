@@ -15,7 +15,7 @@
 #include <sstream>
 #include "model/rategamma.h"
 #include "gsl/mygsl.h"
-
+#include "gzstream.h"
 
 using namespace std;
 

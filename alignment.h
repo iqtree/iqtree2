@@ -17,7 +17,6 @@
 #include "pattern.h"
 #include "ncl/ncl.h"
 #include "tools.h"
-#include "gzstream.h"
 
 // IMPORTANT: refactor STATE_UNKNOWN
 //const char STATE_UNKNOWN = 126;
