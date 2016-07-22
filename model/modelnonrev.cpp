@@ -189,7 +189,6 @@ void ModelNonRev::decomposeRateMatrix() {
 
 void ModelNonRev::writeInfo(ostream &out) {
 	int i, j, k;
-
     out << "Model parameters: ";
     if (num_params>0) out << model_parameters[0];
     for (i=1; i < num_params; i++) out << "," << model_parameters[i];
@@ -305,7 +304,7 @@ void ModelNonRev::setBounds(double *lower_bound, double *upper_bound, bool *boun
 void ModelNonRev::setVariables(double *variables) {
 	int nrate = getNDim();
 	if (nrate > 0)
-		memcpy(variables+1, rates, nrate*sizeof(double));
+		memcpy(variables+1, model_parameters, nrate*sizeof(double));
 }
 
 bool ModelNonRev::getVariables(double *variables) {

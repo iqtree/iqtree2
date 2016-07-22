@@ -717,6 +717,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.bootstrap_spec = NULL;
 
     params.aln_file = NULL;
+    params.phylip_sequential_format = false;
     params.treeset_file = NULL;
     params.topotest_replicates = 0;
     params.do_weighted_test = false;
@@ -768,6 +769,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.model_test_and_tree = 0;
     params.model_test_separate_rate = false;
     params.optimize_mixmodel_weight = false;
+    params.optimize_rate_matrix = false;
     params.store_trans_matrix = false;
     //params.freq_type = FREQ_EMPIRICAL;
     params.freq_type = FREQ_UNKNOWN;
@@ -912,7 +914,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.freq_const_patterns = NULL;
     params.no_rescale_gamma_invar = false;
     params.compute_seq_identity_along_tree = false;
-    params.lmap_num_quartets = 0;
+    params.lmap_num_quartets = -1;
     params.lmap_cluster_file = NULL;
     params.print_lmap_quartet_lh = false;
     params.link_alpha = false;
@@ -1507,6 +1509,10 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.aln_file = argv[cnt];
 				continue;
 			}
+			if (strcmp(argv[cnt], "--sequential") == 0) {
+                params.phylip_sequential_format = true;
+                continue;
+            }
 			if (strcmp(argv[cnt], "-z") == 0) {
 				cnt++;
 				if (cnt >= argc)
@@ -1805,18 +1811,22 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.optimize_mixmodel_weight = true;
 				continue;
 			}
-			if (strcmp(argv[cnt], "-mh") == 0) {
-				params.mvh_site_rate = true;
-				params.discard_saturated_site = false;
-				params.SSE = LK_NORMAL;
+			if (strcmp(argv[cnt], "--opt-rate-mat") == 0) {
+				params.optimize_rate_matrix = true;
 				continue;
 			}
-			if (strcmp(argv[cnt], "-mhs") == 0) {
-				params.mvh_site_rate = true;
-				params.discard_saturated_site = true;
-				params.SSE = LK_NORMAL;
-				continue;
-			}
+//			if (strcmp(argv[cnt], "-mh") == 0) {
+//				params.mvh_site_rate = true;
+//				params.discard_saturated_site = false;
+//				params.SSE = LK_NORMAL;
+//				continue;
+//			}
+//			if (strcmp(argv[cnt], "-mhs") == 0) {
+//				params.mvh_site_rate = true;
+//				params.discard_saturated_site = true;
+//				params.SSE = LK_NORMAL;
+//				continue;
+//			}
 			if (strcmp(argv[cnt], "-rl") == 0) {
 				params.rate_mh_type = false;
 				continue;
@@ -1845,14 +1855,14 @@ void parseArg(int argc, char *argv[], Params &params) {
 					throw "Lambda must be in (0,1]";
 				continue;
 			}
-			if (strcmp(argv[cnt], "-nosse") == 0) {
-				params.SSE = LK_NORMAL;
-				continue;
-			}
-			if (strcmp(argv[cnt], "-slowsse") == 0) {
-				params.SSE = LK_SSE;
-				continue;
-			}
+//			if (strcmp(argv[cnt], "-nosse") == 0) {
+//				params.SSE = LK_NORMAL;
+//				continue;
+//			}
+//			if (strcmp(argv[cnt], "-slowsse") == 0) {
+//				params.SSE = LK_SSE;
+//				continue;
+//			}
 			if (strcmp(argv[cnt], "-fastlk") == 0) {
 				params.SSE = LK_EIGEN;
 				continue;
@@ -2813,14 +2823,14 @@ void parseArg(int argc, char *argv[], Params &params) {
 					throw "At least 1 thread please";
 				continue;
 			}
-			if (strcmp(argv[cnt], "-rootstate") == 0) {
-                cnt++;
-                if (cnt >= argc)
-                    throw "Use -rootstate <rootstate>";
-                params.root_state = argv[cnt];
-                params.SSE = LK_NORMAL;
-                continue;
-			}
+//			if (strcmp(argv[cnt], "-rootstate") == 0) {
+//                cnt++;
+//                if (cnt >= argc)
+//                    throw "Use -rootstate <rootstate>";
+//                params.root_state = argv[cnt];
+//                params.SSE = LK_NORMAL;
+//                continue;
+//			}
 			if (strcmp(argv[cnt], "-ct") == 0) {
             	params.count_trees = true;
             	continue;
@@ -2866,9 +2876,13 @@ void parseArg(int argc, char *argv[], Params &params) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -lmap <likelihood_mapping_num_quartets>";
-				params.lmap_num_quartets = convert_int64(argv[cnt]);
-				if (params.lmap_num_quartets < 1)
-					throw "Number of quartets must be >= 1";
+                if (strcmp(argv[cnt],"ALL") == 0) {
+                    params.lmap_num_quartets = 0;
+                } else {
+                    params.lmap_num_quartets = convert_int64(argv[cnt]);
+                    if (params.lmap_num_quartets < 0)
+                        throw "Number of quartets must be >= 1";
+                }
 				continue;
 			}
 
@@ -2880,6 +2894,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 				// '-keep_ident' is currently required to allow a 1-to-1 mapping of the 
 				// user-given groups (HAS) - possibly obsolete in the future versions
 				params.ignore_identical_seqs = false;
+                if (params.lmap_num_quartets < 0)
+                    params.lmap_num_quartets = 0;
 				continue;
 			}
 
@@ -3159,6 +3175,7 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -gmedian             Median approximation for +G site rates (default: mean)" << endl
             << "  --opt-gamma-inv      More thorough estimation for +I+G model parameters" << endl
             << "  -i <p_invar>         Proportion of invariable sites (default: estimate)" << endl
+            << "  -wsr                 Write site rates to .rate file" << endl
             << "  -mh                  Computing site-specific rates to .mhrate file using" << endl
             << "                       Meyer & von Haeseler (2003) method" << endl
             //<< "  -c <#categories>     Number of Gamma rate categories (default: 4)" << endl

@@ -15,8 +15,8 @@ public:
 	ModelUnrest(PhyloTree *tree, string model_params, bool count_rates);
 	static bool validModelName(string model_name);
 	void setBounds(double *lower_bound, double *upper_bound, bool *bound_check);
-private:
-	void setRates();
+protected:
+	virtual void setRates();
 };
 
 #endif /* MODELUNREST_H_ */

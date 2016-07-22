@@ -347,7 +347,10 @@ Alignment::Alignment(char *filename, char *sequence_type, InputType &intype) : v
             readFasta(filename, sequence_type);
         } else if (intype == IN_PHYLIP) {
             cout << "Phylip format detected" << endl;
-            readPhylip(filename, sequence_type);
+            if (Params::getInstance().phylip_sequential_format)
+                readPhylipSequential(filename, sequence_type);
+            else
+                readPhylip(filename, sequence_type);
         } else if (intype == IN_CLUSTAL) {
             cout << "Clustal format detected" << endl;
             readClustal(filename, sequence_type);
@@ -1453,6 +1456,76 @@ int Alignment::readPhylip(char *filename, char *sequence_type) {
                 seq_id = 0;
                 // make sure that all sequences have the same length at this moment
             }
+        }
+        //sequences.
+    }
+    in.clear();
+    // set the failbit again
+    in.exceptions(ios::failbit | ios::badbit);
+    in.close();
+
+    return buildPattern(sequences, sequence_type, nseq, nsite);
+}
+
+int Alignment::readPhylipSequential(char *filename, char *sequence_type) {
+
+    StrVector sequences;
+    ostringstream err_str;
+    ifstream in;
+    int line_num = 1;
+    // set the failbit and badbit
+    in.exceptions(ios::failbit | ios::badbit);
+    in.open(filename);
+    int nseq = 0, nsite = 0;
+    int seq_id = 0;
+    string line;
+    // remove the failbit
+    in.exceptions(ios::badbit);
+    num_states = 0;
+
+    for (; !in.eof(); line_num++) {
+        getline(in, line);
+        line = line.substr(0, line.find_first_of("\n\r"));
+        if (line == "") continue;
+
+        //cout << line << endl;
+        if (nseq == 0) { // read number of sequences and sites
+            istringstream line_in(line);
+            if (!(line_in >> nseq >> nsite))
+                throw "Invalid PHYLIP format. First line must contain number of sequences and sites";
+            //cout << "nseq: " << nseq << "  nsite: " << nsite << endl;
+            if (nseq < 3)
+                throw "There must be at least 3 sequences";
+            if (nsite < 1)
+                throw "No alignment columns";
+
+            seq_names.resize(nseq, "");
+            sequences.resize(nseq, "");
+
+        } else { // read sequence contents
+            if (seq_id >= nseq)
+                throw "Line " + convertIntToString(line_num) + ": Too many sequences detected";
+                
+            if (seq_names[seq_id] == "") { // cut out the sequence name
+                string::size_type pos = line.find_first_of(" \t");
+                if (pos == string::npos) pos = 10; //  assume standard phylip
+                seq_names[seq_id] = line.substr(0, pos);
+                line.erase(0, pos);
+            }
+            for (string::iterator it = line.begin(); it != line.end(); it++) {
+                if ((*it) <= ' ') continue;
+                if (isalnum(*it) || (*it) == '-' || (*it) == '?'|| (*it) == '.' || (*it) == '*' || (*it) == '~')
+                    sequences[seq_id].append(1, toupper(*it));
+                else {
+                    err_str << "Line " << line_num <<": Unrecognized character " << *it;
+                    throw err_str.str();
+                }
+            }
+            if (sequences[seq_id].length() > nsite)
+                throw ("Line " + convertIntToString(line_num) + ": Sequence " + seq_names[seq_id] + " is too long (" + convertIntToString(sequences[seq_id].length()) + ")");
+            if (sequences[seq_id].length() == nsite) {
+                seq_id++;
+            }                
         }
         //sequences.
     }
@@ -3140,7 +3213,7 @@ void Alignment::computeCodonFreq(StateFreqType freq, double *state_freq, double 
 	convfreq(state_freq);
 }
 
-void Alignment::computeEmpiricalRate (double *rates) {
+void Alignment::computeDivergenceMatrix(double *rates) {
     int i, j, k;
     assert(rates);
     int nseqs = getNSeq();
@@ -3181,8 +3254,8 @@ void Alignment::computeEmpiricalRate (double *rates) {
         for (j = i+1; j < num_states; j++) {
             rates[k++] = (pair_rates[i*num_states+j] + pair_rates[j*num_states+i]) / last_rate;
             // BIG WARNING: zero rates might cause numerical instability!
-            if (rates[k-1] <= 0.0001) rates[k-1] = 0.01;
-            if (rates[k-1] > 100.0) rates[k-1] = 50.0;
+//            if (rates[k-1] <= 0.0001) rates[k-1] = 0.01;
+//            if (rates[k-1] > 100.0) rates[k-1] = 50.0;
         }
     rates[k-1] = 1;
     if (verbose_mode >= VB_MAX) {
@@ -3199,11 +3272,11 @@ void Alignment::computeEmpiricalRate (double *rates) {
     delete [] pair_rates;
 }
 
-void Alignment::computeEmpiricalRateNonRev (double *rates) {
+void Alignment::computeDivergenceMatrixNonRev (double *rates) {
     double *rates_mat = new double[num_states*num_states];
     int i, j, k;
 
-    computeEmpiricalRate(rates);
+    computeDivergenceMatrix(rates);
 
     for (i = 0, k = 0; i < num_states-1; i++)
         for (j = i+1; j < num_states; j++)

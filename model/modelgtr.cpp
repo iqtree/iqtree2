@@ -55,9 +55,9 @@ ModelGTR::ModelGTR(PhyloTree *tree, bool count_rates)
 		
 	eigen_coeff = aligned_alloc<double>(ncoeff);
 
-	if (count_rates) 
-		phylo_tree->aln->computeEmpiricalRate(rates);
-	else
+//	if (count_rates) 
+//		computeEmpiricalRate();
+//	else
 		for (i=0; i < nrate; i++) rates[i] = 1.0;
 	//eigen_coeff_derv1 = new double[ncoeff];
 	//eigen_coeff_derv2 = new double[ncoeff];
@@ -558,7 +558,7 @@ double ModelGTR::optimizeParameters(double gradient_epsilon) {
 	
 	// return if nothing to be optimized
 	if (ndim == 0) return 0.0;
-
+    
 	if (verbose_mode >= VB_MAX)
 		cout << "Optimizing " << name << " model parameters..." << endl;
 

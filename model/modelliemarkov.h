@@ -17,11 +17,11 @@ public:
 
 	static bool validModelName(string model_name);
 	void setBounds(double *lower_bound, double *upper_bound, bool *bound_check);
-private:
+protected:
 	const double **basis;
 	int symmetry; // RY->0, WS->1, MK->2
 	int model_num; // 0->1.1, etc to 36->12.12
-	void setRates();
+	virtual void setRates();
 
 	static void parseModelName(string model_name, int* model_num, int* symmetry);
 	/*
