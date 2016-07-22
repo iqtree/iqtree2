@@ -39,6 +39,7 @@
 #include <math.h>
 #include "ncl/ncl.h"
 #include "msetsblock.h"
+#include "gzstream.h"
 
 #define SPRNG
 #include "sprng/sprng.h"

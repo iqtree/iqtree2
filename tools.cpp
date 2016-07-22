@@ -3355,7 +3355,7 @@ void quickStartGuide() {
 InputType detectInputFile(char *input_file) {
 
     try {
-        ifstream in;
+        igzstream in;
         in.exceptions(ios::failbit | ios::badbit);
         in.open(input_file);
 

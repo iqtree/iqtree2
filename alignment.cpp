@@ -1882,7 +1882,7 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
                                  // will be set to XX below.
     int nnuc = 4;                // Number of nucleotides (base states).
     ostringstream err_str;
-    ifstream in;
+    igzstream in;
 
     // Variables to stream the data.
     string line;
