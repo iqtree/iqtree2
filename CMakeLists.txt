@@ -421,6 +421,7 @@ ecopdmtreeset.cpp
 graph.cpp
 candidateset.cpp
 checkpoint.cpp
+constrainttree.cpp
 upperbounds.cpp
 )
 
