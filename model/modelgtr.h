@@ -302,6 +302,14 @@ public:
 
 	void setEigenvectors(double *eigenvectors);
 
+    /**
+     * compute the memory size for the model, can be large for site-specific models
+     * @return memory size required in bytes
+     */
+    virtual uint64_t getMemoryRequired() {
+    	return ModelSubst::getMemoryRequired() + sizeof(double)*num_states*num_states*3;
+    }
+
     /** default TRUE: store only upper half of the rate matrix */
     bool half_matrix;
 

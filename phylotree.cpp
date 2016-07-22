@@ -791,6 +791,8 @@ uint64_t PhyloTree::getMemoryRequired(size_t ncategory) {
     mem_size += tip_partial_lh_size;
     if (params->gbo_replicates)
         mem_size += params->gbo_replicates*nptn*sizeof(BootValType);
+    if (model)
+    	mem_size += model->getMemoryRequired();
     return mem_size;
 }
 
