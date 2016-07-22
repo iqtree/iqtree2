@@ -989,6 +989,8 @@ ModelSubst* createModel(string model_str, ModelsBlock *models_block, StateFreqTy
     NxsModel *nxsmodel = models_block->findModel(model_str);
 	if (nxsmodel) model_params = nxsmodel->description;
 
+
+
     // Check for PoMo.
     bool is_pomo = false;
     bool is_rev_pomo = true;

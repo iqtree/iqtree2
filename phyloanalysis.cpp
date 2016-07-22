@@ -304,8 +304,11 @@ void reportModel(ofstream &out, PhyloTree &tree) {
 			out << (*m)->total_num_subst << "  ";
 			out.width(7);
 			out << mmodel->prop[i] << "  " << (*m)->getNameParams() << endl;
-//			out << "Model for mixture component "  << (m-mmodel->begin())+1 << ": " << (*m)->name << endl;
-//			reportModel(out, tree.aln, *m);
+            
+            if (tree.aln->seq_type == SEQ_POMO) {
+                out << endl << "Model for mixture component "  << (m-mmodel->begin())+1 << ": " << (*m)->name << endl;
+                reportModel(out, tree.aln, *m);
+            }
 		}
 		out << endl;
 	} else {

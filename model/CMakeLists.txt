@@ -21,4 +21,5 @@ modelcodon.cpp
 modelmorphology.cpp
 modelmixture.cpp
 modelpomo.cpp
+modelpomomixture.cpp
 )

@@ -161,21 +161,24 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
         } else {
             rate_str = model_str.substr(spec_pos);
             model_str = model_str.substr(0, spec_pos);
+            // Check for PoMo and set model_str and rate_str
+            // accordingly.
+            string::size_type pos_rev_pomo = rate_str.find("+rP");
+            string::size_type pos_nonrev_pomo = rate_str.find("+nrP");
+            if (pos_nonrev_pomo != string::npos)
+                outError("Non reversible PoMo not supported yet.");
+            
+            if (pos_rev_pomo != string::npos) {
+                // move +rP to model_str
+                model_str = model_str + "+rP";
+                rate_str = rate_str.substr(0, pos_rev_pomo) + rate_str.substr(pos_rev_pomo+3);
+            }
+
         }
     }
 
-    // Check for PoMo and set model_str and rate_str
-    // accordingly.
     string::size_type pos_rev_pomo = rate_str.find("+rP");
-    string::size_type pos_nonrev_pomo = rate_str.find("+nrP");
-    if (pos_nonrev_pomo != string::npos)
-        outError("Non reversible PoMo not supported yet.");
-    
-    if (pos_rev_pomo != string::npos) {
-        // move +rP to model_str
-        model_str = model_str + "+rP";
-        rate_str = rate_str.substr(0, pos_rev_pomo) + rate_str.substr(pos_rev_pomo+3);
-    }
+
     if (pos_rev_pomo != string::npos || tree->aln->seq_type == SEQ_POMO) {
         // Check that only supported flags are given.
         if (rate_str.find("+ASC") != string::npos)
