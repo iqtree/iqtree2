@@ -640,6 +640,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     verbose_mode = VB_MIN;
     params.tree_gen = NONE;
     params.user_file = NULL;
+    params.constraint_tree_file = NULL;
     params.opt_gammai = true;
     params.opt_gammai_fast = false;
     params.opt_gammai_keep_bran = false;
@@ -1052,8 +1053,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.find_all = true;
 				continue;
 			}
-			if (strcmp(argv[cnt], "-g") == 0
-					|| strcmp(argv[cnt], "--greedy") == 0) {
+			if (strcmp(argv[cnt], "--greedy") == 0) {
 				params.run_mode = GREEDY;
 				continue;
 			}
@@ -2885,6 +2885,14 @@ void parseArg(int argc, char *argv[], Params &params) {
                     params.user_file = argv[cnt];
 				continue;
 			}
+            
+            if (strcmp(argv[cnt], "-g") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use -g <constraint_tree>";
+                params.constraint_tree_file = argv[cnt];
+                continue;
+            }
             
 			if (strcmp(argv[cnt], "-lmap") == 0) {
 				cnt++;

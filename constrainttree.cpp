@@ -12,18 +12,13 @@
 #include "splitgraph.h"
 
 ConstraintTree::ConstraintTree() : MTree(), SplitIntMap() {
-    full_tree = NULL;
 }
 
-void ConstraintTree::initConstraint(const char *constraint_file, MTree *full_tree) {
+void ConstraintTree::initConstraint(const char *constraint_file, StrVector &fulltaxname) {
     bool is_rooted = false;
     MTree::init(constraint_file, is_rooted);
-    if (is_rooted != full_tree->rooted)
-        outError("Constraint tree and full tree do not agree on rooting");
     if (leafNum <= 3)
         outError("Constraint tree must contain at least 4 taxa");
-        
-    this->full_tree = full_tree;
     
     // build taxon name to ID index
     StrVector taxname;
@@ -36,6 +31,7 @@ void ConstraintTree::initConstraint(const char *constraint_file, MTree *full_tre
     // convert into split system
     SplitGraph sg;
     convertSplits(taxname, sg);
+    sg.removeTrivialSplits();
     for (SplitGraph::iterator sit = sg.begin(); sit != sg.end(); sit++) {
         if (!(*sit)->containTaxon(0))
             (*sit)->invert();
@@ -43,8 +39,6 @@ void ConstraintTree::initConstraint(const char *constraint_file, MTree *full_tre
     }
     
     // check that constraint tree has a subset of taxa
-    StrVector fulltaxname;
-    full_tree->getTaxaName(fulltaxname);
     StringIntMap fulltax_index;
     for (it = fulltaxname.begin(); it != fulltaxname.end(); it++)
         fulltax_index[(*it)] = it - fulltaxname.begin();
@@ -64,6 +58,9 @@ void ConstraintTree::initConstraint(const char *constraint_file, MTree *full_tre
 
 
 bool ConstraintTree::isCompatible(StrVector &tax1, StrVector &tax2) {
+
+    if (SplitIntMap::empty()) 
+        return true;
 
     if (tax1.size() + tax2.size() <= 3)
         return true;
@@ -116,8 +113,20 @@ bool ConstraintTree::isCompatible(StrVector &tax1, StrVector &tax2) {
     } else {
         // partial split
         assert(tax_count1 + tax_count2 < leafNum);
-        // TODO
+        Split taxa_mask(sp1);
+        taxa_mask += sp2;
+        Split* subsp = sp1.extractSubSplit(taxa_mask);
+        bool res = true;
+        for (iterator sit = begin(); sit != end(); sit++) {
+            Split *subit = sit->first->extractSubSplit(taxa_mask);
+            if (!subit->compatible(*subsp)) {
+                res = false;
+                delete subit;
+                break;
+            }
+            delete subit;
+        }
+        delete subsp;
+        return res;
     }
-    
-    return true;
 }

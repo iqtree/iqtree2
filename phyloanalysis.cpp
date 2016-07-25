@@ -2515,6 +2515,11 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
 		alignment->concatenateAlignment(&aln);
 	}
 
+    if (params.constraint_tree_file) {
+        cout << "Reading constraint tree " << params.constraint_tree_file << "..." << endl;
+        tree->constraintTree.initConstraint(params.constraint_tree_file, alignment->getSeqNames());
+    }
+
     if (params.compute_seq_identity_along_tree) {
         if (!params.user_file)
             outError("Please supply a user tree file!");

@@ -26,9 +26,9 @@ public:
     /**
             initialize constraint tree
             @param constraint_file the name of the constraint tree file
-            @param full_tree the full tree with all taxa
+            @param fulltaxname the full list of all taxa names
      */
-    void initConstraint(const char *constraint_file, MTree *full_tree);
+    void initConstraint(const char *constraint_file, StrVector &fulltaxname);
 
     /** 
         check if a "partial" split defined by two taxa name sets is compatible with the constraint tree.
@@ -43,9 +43,6 @@ protected:
 
     /* map from taxon name to its index, used for quick taxon name search */
     StringIntMap taxname_index;
-
-    /** full tree that contains all taxa */
-    MTree *full_tree;
 
 };
 
