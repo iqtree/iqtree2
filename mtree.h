@@ -358,9 +358,18 @@ public:
             get the descending taxa names below the node
             @param node the starting node, NULL to start from the root
             @param dad dad of the node, used to direct the search
-            @param taxname (OUT) taxa name
+            @param[out] taxname taxa name, with size equal leafNum and ordered with taxon ID
      */
     void getTaxaName(vector<string> &taxname, Node *node = NULL, Node *dad = NULL);
+
+    /**
+            get the descending taxa names below the node. different from getTaxaName() in that the
+            taxa are not ordered by ID at all!
+            @param node the starting node, NULL to start from the root
+            @param dad dad of the node, used to direct the search
+            @param[out] taxname taxa name
+     */
+    void getUnorderedTaxaName(vector<string> &taxname, Node *node, Node *dad);
 
     /**
             get the descending internal nodes below \a node

@@ -367,6 +367,21 @@ int PhyloTree::computeParsimonyTree(const char *out_prefix, Alignment *alignment
         added_node->addNeighbor((Node*) 2, -1.0);
 
         for (int nodeid = 0; nodeid < nodes1.size(); nodeid++) {
+        
+            // check for compatible with constraint tree
+            if (!constraintTree.empty()) {
+                StrVector taxset1, taxset2;
+                getUnorderedTaxaName(taxset1, nodes1[nodeid], nodes2[nodeid]);
+                getUnorderedTaxaName(taxset2, nodes2[nodeid], nodes1[nodeid]);
+                taxset1.push_back(new_taxon->name);
+                if (!constraintTree.isCompatible(taxset1, taxset2))
+                    continue;
+                taxset1.pop_back();
+                taxset2.push_back(new_taxon->name);
+                if (!constraintTree.isCompatible(taxset1, taxset2))
+                    continue;                
+            }
+
             int score = addTaxonMPFast(new_taxon, added_node, nodes1[nodeid], nodes2[nodeid]);
             if (score < best_pars_score) {
                 best_pars_score = score;

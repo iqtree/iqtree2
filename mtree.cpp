@@ -971,6 +971,18 @@ void MTree::getTaxaName(vector<string> &taxname, Node *node, Node *dad) {
 }
 
 
+void MTree::getUnorderedTaxaName(vector<string> &taxname, Node *node, Node *dad) {
+    if (!node) node = root;
+    if (node->isLeaf()) {
+    	taxname.push_back(node->name);
+    }
+    //for (NeighborVec::iterator it = node->neighbors.begin(); it != node->neighbors.end(); it++)
+    //if ((*it)->node != dad)	{
+    FOR_NEIGHBOR_IT(node, dad, it) {
+        getUnorderedTaxaName(taxname, (*it)->node, node);
+    }
+}
+
 void MTree::getTaxaID(vector<int> &taxa, Node *node, Node *dad) {
     if (!node) node = root;
     if (node->isLeaf()) {

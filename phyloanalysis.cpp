@@ -2518,6 +2518,11 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
     if (params.constraint_tree_file) {
         cout << "Reading constraint tree " << params.constraint_tree_file << "..." << endl;
         tree->constraintTree.initConstraint(params.constraint_tree_file, alignment->getSeqNames());
+        if (params.start_tree == STT_PLL_PARSIMONY)
+            params.start_tree = STT_PARSIMONY;
+        else if (params.start_tree == STT_BIONJ)
+            outError("Constraint tree does not work with -t BIONJ");
+            
     }
 
     if (params.compute_seq_identity_along_tree) {

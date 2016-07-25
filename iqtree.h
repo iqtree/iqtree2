@@ -31,7 +31,6 @@
 #include "node.h"
 #include "candidateset.h"
 #include "pllnni.h"
-#include "constrainttree.h"
 
 typedef std::map< string, double > mapString2Double;
 typedef std::multiset< double, std::less< double > > multiSetDB;
@@ -477,9 +476,6 @@ public:
      *  information and parameters for the tree search procedure
      */
     SearchInfo searchinfo;
-
-    /** constraint tree used to guide tree search */
-    ConstraintTree constraintTree;
 
     /**
      *  Vector contains number of NNIs used at each iterations

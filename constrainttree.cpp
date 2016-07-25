@@ -35,7 +35,7 @@ void ConstraintTree::initConstraint(const char *constraint_file, StrVector &full
     for (SplitGraph::iterator sit = sg.begin(); sit != sg.end(); sit++) {
         if (!(*sit)->containTaxon(0))
             (*sit)->invert();
-        insertSplit(*sit, 1);
+        insertSplit(new Split(**sit), 1);
     }
     
     // check that constraint tree has a subset of taxa
@@ -59,10 +59,9 @@ void ConstraintTree::initConstraint(const char *constraint_file, StrVector &full
 
 bool ConstraintTree::isCompatible(StrVector &tax1, StrVector &tax2) {
 
-    if (SplitIntMap::empty()) 
-        return true;
-
-    if (tax1.size() + tax2.size() <= 3)
+    assert(!empty());
+    
+    if (tax1.size() <= 1 || tax2.size() <= 1)
         return true;
 
     Split sp1(leafNum);
@@ -90,11 +89,10 @@ bool ConstraintTree::isCompatible(StrVector &tax1, StrVector &tax2) {
             sp2.addTaxon(mit->second);
         }
     
-    if (tax_count2 <= 1) return true;
-    
-    if (tax_count1 + tax_count2 <= 3) {
+    if (tax_count2 <= 1) 
         return true;
-    } else if (tax_count1 + tax_count2 == leafNum) {
+    
+    if (tax_count1 + tax_count2 == leafNum) {
         // tax1 and tax2 form all taxa in the constraint tree
         
         // quick check if this split is contained in the tree
