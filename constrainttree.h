@@ -12,23 +12,37 @@
 #define CONSTRAINTTREE_H
 
 #include "mtree.h"
+#include "alignment.h"
 
 /**
     ConstraintTree used to guide tree search.
     Note that constraint tree may contain only a subset of taxa from a full tree.
 */
-class ConstraintTree : public MTree {
+class ConstraintTree : public MTree, public SplitIntMap {
 public:
 
-    /**
-            constructor, read constraint tree from user file
-            @param full_tree the full tree with all taxa
-            @param constraint_file the name of the constraint tree file
-     */
-    ConstraintTree(MTree *full_tree, const char *constraint_file);
+    ConstraintTree();
 
+    /**
+            initialize constraint tree
+            @param constraint_file the name of the constraint tree file
+            @param full_tree the full tree with all taxa
+     */
+    void initConstraint(const char *constraint_file, MTree *full_tree);
+
+    /** 
+        check if a "partial" split defined by two taxa name sets is compatible with the constraint tree.
+        The union of 2 taxa set do not need to comprise all taxa in the constraint tree.
+        @param[in] tax1 names of taxa in one side of split
+        @param[in] tax2 names of taxa in other side of split
+        @return true if the split is compatible with all splits in the constraint tree, false otherwise.
+     */ 
+    bool isCompatible(StrVector &tax1, StrVector &tax2);
 
 protected:
+
+    /* map from taxon name to its index, used for quick taxon name search */
+    StringIntMap taxname_index;
 
     /** full tree that contains all taxa */
     MTree *full_tree;

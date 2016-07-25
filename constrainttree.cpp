@@ -9,16 +9,115 @@
 //
 
 #include "constrainttree.h"
+#include "splitgraph.h"
 
+ConstraintTree::ConstraintTree() : MTree(), SplitIntMap() {
+    full_tree = NULL;
+}
 
-ConstraintTree::ConstraintTree(MTree *full_tree, const char *constraint_file) : MTree() {
+void ConstraintTree::initConstraint(const char *constraint_file, MTree *full_tree) {
     bool is_rooted = false;
-    init(constraint_file, is_rooted);
+    MTree::init(constraint_file, is_rooted);
     if (is_rooted != full_tree->rooted)
         outError("Constraint tree and full tree do not agree on rooting");
+    if (leafNum <= 3)
+        outError("Constraint tree must contain at least 4 taxa");
+        
     this->full_tree = full_tree;
+    
+    // build taxon name to ID index
+    StrVector taxname;
+    StrVector::iterator it;
+    getTaxaName(taxname);
+    taxname_index.clear();
+    for (it = taxname.begin(); it != taxname.end(); it++)
+        taxname_index[(*it)] = it - taxname.begin();
+
+    // convert into split system
+    SplitGraph sg;
+    convertSplits(taxname, sg);
+    for (SplitGraph::iterator sit = sg.begin(); sit != sg.end(); sit++) {
+        if (!(*sit)->containTaxon(0))
+            (*sit)->invert();
+        insertSplit(*sit, 1);
+    }
+    
     // check that constraint tree has a subset of taxa
+    StrVector fulltaxname;
+    full_tree->getTaxaName(fulltaxname);
+    StringIntMap fulltax_index;
+    for (it = fulltaxname.begin(); it != fulltaxname.end(); it++)
+        fulltax_index[(*it)] = it - fulltaxname.begin();
+
+    bool err = false;
+        
+    for(it = taxname.begin(); it != taxname.end(); it++)
+        if (fulltax_index.find(*it) == fulltax_index.end()) {
+            cout << "ERROR: Taxon " << (*it) << " in constraint tree does not appear in full tree" << endl;
+            err = true;
+        }
+    if (err) {
+        outError("Bad constraint tree (see above)");
+    }
     
 }
 
 
+bool ConstraintTree::isCompatible(StrVector &tax1, StrVector &tax2) {
+
+    if (tax1.size() + tax2.size() <= 3)
+        return true;
+
+    Split sp1(leafNum);
+    Split sp2(leafNum);
+    
+    StrVector::iterator it;
+    StringIntMap::iterator mit;
+    
+    int tax_count1 = 0;
+    
+    for (it = tax1.begin(); it != tax1.end(); it++)
+        if ((mit = taxname_index.find(*it)) != taxname_index.end()) {
+            // taxon found
+            tax_count1++;
+            sp1.addTaxon(mit->second);
+        }
+    if (tax_count1 <= 1)
+        return true;
+        
+    int tax_count2 = 0;
+    for (it = tax2.begin(); it != tax2.end(); it++)
+        if ((mit = taxname_index.find(*it)) != taxname_index.end()) {
+            // taxon found
+            tax_count2++;
+            sp2.addTaxon(mit->second);
+        }
+    
+    if (tax_count2 <= 1) return true;
+    
+    if (tax_count1 + tax_count2 <= 3) {
+        return true;
+    } else if (tax_count1 + tax_count2 == leafNum) {
+        // tax1 and tax2 form all taxa in the constraint tree
+        
+        // quick check if this split is contained in the tree
+        Split *res = NULL;
+        if (sp1.containTaxon(0))
+            res = findSplit(&sp1);
+        else
+            res = findSplit(&sp2);
+        if (res) return true;
+        
+        // otherwise, check for compatibility with all splits
+        for (iterator sit = begin(); sit != end(); sit++)
+            if (!sit->first->compatible(sp1))
+               return false;
+        return true;
+    } else {
+        // partial split
+        assert(tax_count1 + tax_count2 < leafNum);
+        // TODO
+    }
+    
+    return true;
+}
