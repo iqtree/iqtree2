@@ -1819,6 +1819,10 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
     if ((params.user_file || params.start_tree == STT_RANDOM_TREE) && params.snni && !params.iqp) {
         params.compute_ml_dist = false;
     }
+    
+    if (params.constraint_tree_file)
+        params.compute_ml_dist = false;
+
 //    if ( params.user_file && params.min_iterations == 0) {
 //        params.compute_ml_dist = false;
 //    }

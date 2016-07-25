@@ -2770,6 +2770,20 @@ void PhyloTree::doOneRandomNNI(Node *node1, Node *node2) {
 
     node2->updateNeighbor(node2NeiIt, node1Nei);
     node1Nei->node->updateNeighbor(node1, node2);
+    
+    if (!constraintTree.empty()) {
+        StrVector taxset1, taxset2;
+        getUnorderedTaxaName(taxset1, node1, node2);
+        getUnorderedTaxaName(taxset2, node2, node1);
+        if (!constraintTree.isCompatible(taxset1, taxset2)) {
+            // revert NNI if violating constraint tree
+            node1->updateNeighbor(node1NeiIt, node1Nei);
+            node1Nei->node->updateNeighbor(node2, node1);
+            node2->updateNeighbor(node2NeiIt, node2Nei);
+            node2Nei->node->updateNeighbor(node1, node2);
+        }
+    }
+    
 }
 
 void PhyloTree::doNNI(NNIMove &move, bool clearLH) {
@@ -2981,6 +2995,18 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
         node2->updateNeighbor(node2_it, node1_nei);
         node1_nei->node->updateNeighbor(node1, node2);
 
+        // check if NNI obeys constraint tree
+        bool ok_constraint = true;
+        if (!constraintTree.empty()) {
+            StrVector taxset1, taxset2;
+            getUnorderedTaxaName(taxset1, node1, node2);
+            getUnorderedTaxaName(taxset2, node2, node1);
+            if (!constraintTree.isCompatible(taxset1, taxset2))
+                ok_constraint = false;
+        }
+
+        if (ok_constraint) {
+
 		// clear partial likelihood vector
 		node12_it->clearPartialLh();
 		node21_it->clearPartialLh();
@@ -3024,7 +3050,10 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
 		if (save_all_trees == 2) {
 			saveCurrentTree(score); // BQM: for new bootstrap
 		}
-
+        } else {
+            // NNI violates constraint tree
+            nniMoves[cnt].newloglh = -DBL_MAX;
+        }
         // else, swap back, also recover the branch lengths
 		node1->updateNeighbor(node1_it, node1_nei);
 		node1_nei->node->updateNeighbor(node2, node1);
