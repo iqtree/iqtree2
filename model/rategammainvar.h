@@ -37,7 +37,14 @@ public:
 		@param tree associated phylogenetic tree
 		@param testAlpha turn on option for doing random restart optimization of alpha and p_invar
 	*/
-    RateGammaInvar(int ncat, double shape, bool median, double p_invar_sites, bool simultaneous, PhyloTree *tree);
+    RateGammaInvar(int ncat, double shape, bool median, double p_invar_sites, string optimize_alg, PhyloTree *tree, bool testParamDone);
+
+    /**
+     *  check whether +I+G is used
+     */
+    virtual bool isGammai() const {
+        return true;
+    }
 
     /**
         save object into the checkpoint
@@ -67,10 +74,20 @@ public:
 		set the proportion of invariable sites. Default: do nothing
 		@param pinv the proportion of invariable sites
 	*/
-	virtual void setPInvar(double pInvar) {
-		p_invar = pInvar;
-        computeRates();
-	}
+	virtual void setPInvar(double pInvar);
+
+	/**
+	 * used to normal branch lengths if mean rate is not equal to 1 (e.g. FreeRate model)
+	 * @return mean rate, default = 1
+	 */
+	virtual double meanRates();
+
+	/**
+	 * rescale rates s.t. mean rate is equal to 1, useful for FreeRate model
+	 * @return rescaling factor
+	 */
+	virtual double rescaleRates();
+
 
 	/**
 	 * @return model name with parameters in form of e.g. GTR{a,b,c,d,e,f}
@@ -95,6 +112,11 @@ public:
 	*/
 	virtual double optimizeParameters(double gradient_epsilon);
 
+	/**
+        optimize rate parameters using EM algorithm
+        @return log-likelihood of optimized parameters
+    */
+	double optimizeWithEM();
 
 	/**
 		return the number of dimensions
@@ -121,7 +143,7 @@ public:
 	virtual void writeParameters(ostream &out);
 
 	/** TRUE to jointly optimize gamma shape and p_invar using BFGS, default: FALSE */
-	bool joint_optimize;
+	//bool joint_optimize;
 
 	virtual void setNCategory(int ncat);
 
@@ -150,16 +172,25 @@ protected:
 	virtual bool getVariables(double *variables);
 
 private:
-
-	/**
-	 *  TRUE to turn on random restart optimization for estimating alpha and p_invar
-	 */
-//	bool rr_ai;
+    /**
+     *  Determine which algorithm is used to optimized p_inv and alpha
+     */
+	string optimize_alg;
 
 	/**
 		current parameter to optimize. 0 if gamma shape or 1 if p_invar.
 	*/
 	int cur_optimize;
+
+    /**
+     *  Optimize p_inv and gamma shape using the EM algorithm
+     */
+	double optimizeWithEM(double gradient_epsilon);
+
+    /**
+     *  Start with different initial values of p_inv
+     */
+    double randomRestartOptimization(double gradient_epsilon);
 };
 
 #endif

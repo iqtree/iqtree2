@@ -885,7 +885,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInf
 #ifdef _OPENMP
 //        for (i = 0; i < in_tree->size(); i++)
 //            cout << distID[i]+1 << "\t" << in_tree->part_info[distID[i]].name << "\t" << -dist[i] << endl;
-#pragma omp parallel for private(i) schedule(dynamic) reduction(+: lhsum, dfsum)
+#pragma omp parallel for private(i) schedule(dynamic) reduction(+: lhsum, dfsum) if(!params.model_test_and_tree)
 #endif
 	for (int j = 0; j < in_tree->size(); j++) {
         i = distID[j];
@@ -997,7 +997,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInf
             quicksort(dist, 0, num_pairs-1, distID);
 
 #ifdef _OPENMP
-#pragma omp parallel for private(i) schedule(dynamic)
+#pragma omp parallel for private(i) schedule(dynamic) if(!params.model_test_and_tree)
 #endif
         for (int pair = 0; pair < num_pairs; pair++) {
             int part1 = distID[pair] >> 16;
@@ -1036,6 +1036,11 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInf
                 PhyloTree *tree = in_tree->extractSubtree(merged_set);
                 tree->setAlignment(aln);
                 extractModelInfo(set_name, model_info, part_model_info);
+//                TODO
+                tree->num_precision = in_tree->num_precision;
+                if (params.model_test_and_tree) {
+                    tree->setCheckpoint(new Checkpoint());
+                }
 //#ifdef _OPENMP
                 model = testModel(params, tree, part_model_info, this_fmodel, models_block, set_name);
 //#else
@@ -1044,6 +1049,9 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInf
                 logl = part_model_info[0].logl;
                 df = part_model_info[0].df;
                 treelen = part_model_info[0].tree_len;
+                if (params.model_test_and_tree) {
+                    delete tree->getCheckpoint();
+                }
                 delete tree;
                 delete aln;
             }
@@ -1217,7 +1225,7 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 	rate_class[0] = new RateHeterogeneity();
 	rate_class[1] = new RateInvar(-1, NULL);
 	rate_class[2] = new RateGamma(params.num_rate_cats, params.gamma_shape, params.gamma_median, NULL);
-	rate_class[3] = new RateGammaInvar(params.num_rate_cats, params.gamma_shape, params.gamma_median, -1, params.optimize_model_rate_joint, NULL);
+	rate_class[3] = new RateGammaInvar(params.num_rate_cats, params.gamma_shape, params.gamma_median, -1, params.optimize_alg_gammai, NULL, false);
     
     RateFree ** rate_class_free = new RateFree*[params.max_rate_cats-1];
     
@@ -1326,7 +1334,7 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
             // normal model
             if (model_names[model].find("+ASC") != string::npos) {
                 model_fac->unobserved_ptns = in_tree->aln->getUnobservedConstPatterns();
-                if (model_fac->unobserved_ptns.size() == 0) {
+                if (model_fac->unobserved_ptns.size() < tree->aln->getNumNonstopCodons() || in_tree->aln->frac_const_sites > 0.0) {
                     cout.width(3);
                     cout << right << model+1 << "  ";
                     cout.width(13);

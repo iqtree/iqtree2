@@ -744,13 +744,21 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 				<< "NNI log-likelihood cutoff: " << tree.getNNICutoff() << endl
 				<< endl;
 */
-		if (params.compute_ml_tree && (params.min_iterations > 0 || original_model.find("ONLY") != string::npos)) {
-			if (original_model.find("ONLY") != string::npos)
+		if (params.compute_ml_tree) {
+			if (original_model.find("ONLY") != string::npos) {
 				out << "TREE USED FOR MODEL SELECTION" << endl
 					<< "-----------------------------" << endl << endl;
-            else 
+            } else if (params.min_iterations == 0) {
+                if (params.user_file)
+                    out << "USER TREE" << endl
+                        << "---------" << endl << endl;
+                else
+                    out << "STARTING TREE" << endl
+                        << "-------------" << endl << endl;                
+            } else { 
 				out << "MAXIMUM LIKELIHOOD TREE" << endl
 					<< "-----------------------" << endl << endl;
+            }
 
 			tree.setRootNode(params.root);
             
@@ -1722,7 +1730,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 
     iqtree.initializeAllPartialLh();
 	double initEpsilon = params.min_iterations == 0 ? params.modeps : (params.modeps*10);
-	if (params.test_param)
+	if (params.opt_gammai)
 		initEpsilon = 0.1;
 
 	string initTree;
@@ -1736,14 +1744,6 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 		if (params.exh_ai) {
 			exhaustiveSearchGAMMAInvar(params, iqtree);
 			exit(0);
-		}
-
-		if (params.testAlpha) { // DO RESTART ON ALPHA AND P_INVAR
-			double stime = getRealTime();
-			searchGAMMAInvarByRestarting(iqtree);
-			double etime = getRealTime();
-            cout << "Testing alpha took: " << etime -stime << " CPU seconds" << endl;
-            cout << endl;
 		}
 
 	}
@@ -2168,13 +2168,12 @@ void searchGAMMAInvarByRestarting(IQTree &iqtree) {
     delete [] state_freqs;
     delete [] bestRates;
     delete [] bestStateFreqs;
-	Params::getInstance().testAlpha = false;
 }
 
 // Test alpha fom 0.1 to 15 and p_invar from 0.1 to 0.99, stepsize = 0.01
 void exhaustiveSearchGAMMAInvar(Params &params, IQTree &iqtree) {
 	double alphaMin = 0.01;
-	double alphaMax = 15.00;
+	double alphaMax = 2.00;
 	double p_invarMin = 0.01;
 	double p_invarMax = 1.00;
 	double stepSize = 0.01;
@@ -2227,9 +2226,16 @@ void runStandardBootstrap(Params &params, string &original_model, Alignment *ali
 	vector<ModelInfo> *model_info = new vector<ModelInfo>;
 	StrVector removed_seqs, twin_seqs;
 
-	// turn off aLRT test
+	// turn off all branch tests
 	int saved_aLRT_replicates = params.aLRT_replicates;
+    int saved_localbp_replicates = params.localbp_replicates;
+    bool saved_aLRT_test = params.aLRT_test;
+    bool saved_aBayes_test = params.aBayes_test;
 	params.aLRT_replicates = 0;
+    params.localbp_replicates = 0;
+    params.aLRT_test = false;
+    params.aBayes_test = false;
+    
 	string treefile_name = params.out_prefix;
 	treefile_name += ".treefile";
 	string boottrees_name = params.out_prefix;
@@ -2378,7 +2384,12 @@ void runStandardBootstrap(Params &params, string &original_model, Alignment *ali
 
 	if (params.compute_ml_tree) {
 		cout << endl << "===> START ANALYSIS ON THE ORIGINAL ALIGNMENT" << endl << endl;
+        // restore branch tests
 		params.aLRT_replicates = saved_aLRT_replicates;
+        params.localbp_replicates = saved_localbp_replicates;
+        params.aLRT_test = saved_aLRT_test;
+        params.aBayes_test = saved_aBayes_test;
+        
 		runTreeReconstruction(params, original_model, *tree, *model_info);
 
 		cout << endl << "===> ASSIGN BOOTSTRAP SUPPORTS TO THE TREE FROM ORIGINAL ALIGNMENT" << endl << endl;

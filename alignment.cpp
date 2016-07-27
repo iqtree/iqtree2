@@ -3545,3 +3545,6 @@ double Alignment::multinomialProb (IntVector &pattern_freq)
     }
     return (fac - sumFac + sumProb);
 }
+
+
+
