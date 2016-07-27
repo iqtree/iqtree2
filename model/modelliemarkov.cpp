@@ -189,8 +189,27 @@ const static bool TIME_REVERSIBLE[] =
 	      false,false,false,false,false,
 	      false,false,false,false,false,
 	      false,false};
-const static string SYMMETRY[] = {"RY","WS","MK"};
-const static int SYMMETRY_PERM[][12] = {{1,0,2,6,7,8,3,4,5,9,11,10},{7,6,8,4,3,5,1,0,2,11,10,9},{0,1,2,3,4,5,6,7,8,9,10,11}};
+/*
+ * symmetry 3 (empty string) is only for models with full symmetry
+ * (RY, WS, MK models are isomorphic). FULL_SYMMETRY identifies
+ * these models (1.1, 3.3a, 4.4a, 6.7a, 9.20b, 12.12).
+ * (this is cosmetic - names of these models don't have RY, WS or MK appended.)
+ */
+const static string SYMMETRY[] = {"RY","WS","MK",""};
+const static int SYMMETRY_PERM[][12] = 
+                   {{1,0,2,6,7,8,3,4,5,9,11,10},
+		    {7,6,8,4,3,5,1,0,2,11,10,9},
+		    {0,1,2,3,4,5,6,7,8,9,10,11},
+		    {0,1,2,3,4,5,6,7,8,9,10,11}};
+const static bool FULL_SYMMETRY[] = 
+             {true, false,true, false,false,
+	      false,true, false,false,false,
+	      false,false,false,false,false,
+	      false,false,false,false,false,
+	      true, false,false,false,false,
+	      false,false,false,false,false,
+	      false,false,false,true, false,
+	      false,true};
 const static int NUM_RATES = 12;
 
 ModelLieMarkov::ModelLieMarkov(string model_name, PhyloTree *tree, string model_params, bool count_rates)
@@ -278,6 +297,8 @@ ModelLieMarkov::~ModelLieMarkov() {
 	        break;
 	    }
 	}
+        // set full symmetry if have a fully symmetric model
+        if (*model_num>=0 && FULL_SYMMETRY[*model_num]) *symmetry = 3;
     }
     return;
 }
