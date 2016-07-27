@@ -705,80 +705,20 @@ double ModelFactory::initGTRGammaIParameters(RateHeterogeneity *rate, ModelSubst
 }
 
 double ModelFactory::optimizeParametersOnly(double gradient_epsilon) {
-    double logl;
-    if (Params::getInstance().fai && site_rate != NULL && model != NULL) {
-        cout << "Optimize substitutional and site rates with restart ..." << endl;
-        PhyloTree* tree = site_rate->phylo_tree;
-        double initAlpha = 0.1;
-        double maxInitAlpha = 1.0;
-        double alphaStep = 0.1;
-        double bestLogl = -DBL_MAX;
-        double bestAlpha = 0.0;
-        double bestPInvar = 0.0;
-        double initPInvar = site_rate->getPInvar();
-        int numRateEntries = model->getNumRateEntries();
-        double *initRates = new double[numRateEntries];
-        double *bestRates = new double[numRateEntries];
-        model->getRateMatrix(initRates);
-        int numStates = model->num_states;
-        double *initStateFreqs = new double[numStates];
-        model->getStateFrequency(initStateFreqs);
-        double *bestStateFreqs =  new double[numStates];
-        DoubleVector initBranchLengths;
-        DoubleVector bestBranchLengths;
-        tree->saveBranchLengths(initBranchLengths);
-
-        while (initAlpha <= maxInitAlpha) {
-            tree->restoreBranchLengths(initBranchLengths);
-            double initLogl = initGTRGammaIParameters(site_rate, model, initAlpha, initPInvar, initRates, initStateFreqs);
-            if (joint_optimize) {
-                logl = optimizeAllParameters(gradient_epsilon);
-            } else {
-                model->optimizeParameters(gradient_epsilon);
-                site_rate->optimizeParameters(gradient_epsilon);
-                logl = tree->optimizeAllBranches(1);
-            }
-            RateHeterogeneity* rateGammaInvar = site_rate;
-            ModelGTR* modelGTR = (ModelGTR*)(model);
-            double curAlpha = rateGammaInvar->getGammaShape();
-            double curPInvar = rateGammaInvar->getPInvar();
-            if (logl > bestLogl) {
-                bestLogl = logl;
-                bestAlpha = curAlpha;
-                bestPInvar = curPInvar;
-                modelGTR->getRateMatrix(bestRates);
-                modelGTR->getStateFrequency(bestStateFreqs);
-                tree->saveBranchLengths(bestBranchLengths);
-            }
-            if (verbose_mode >= VB_MED) {
-                cout << "Init. alpha = " << initAlpha << " / Init. PInvar = " << initPInvar << " / Init. Logl = " <<
-                initLogl << " / Est. alpha = " << curAlpha
-                << "/ Est. pinv = " << curPInvar << " / Final Logl = " << logl << endl;
-            }
-            initAlpha = initAlpha + alphaStep;
-        }
-        cout << "Best alpha = " << bestAlpha << " / best p_invar = " << bestPInvar << endl;
-        tree->restoreBranchLengths(bestBranchLengths);
-        logl = initGTRGammaIParameters(site_rate, model, bestAlpha, bestPInvar, bestRates, bestStateFreqs);
-        delete [] initRates;
-        delete [] bestRates;
-        delete [] initStateFreqs;
-        delete [] bestStateFreqs;
-    } else {
-        /* Optimize substitutional and heterogeneity rates independetly */
-        if (!joint_optimize) {
-            double model_lh = model->optimizeParameters(model->isReversible() ? gradient_epsilon : gradient_epsilon/10.0);
-            double rate_lh = site_rate->optimizeParameters(gradient_epsilon);
-            if (rate_lh == 0.0)
-                logl = model_lh;
-            else
-                logl = rate_lh;
-        } else {
-            /* Optimize substitutional and heterogeneity rates jointly using BFGS */
-            logl = optimizeAllParameters(gradient_epsilon);
-        }
-    }
-    return logl;
+	double logl;
+	/* Optimize substitution and heterogeneity rates independently */
+	if (!joint_optimize) {
+		double model_lh = model->optimizeParameters(model->isReversible() ? gradient_epsilon : gradient_epsilon/10.0);
+		double rate_lh = site_rate->optimizeParameters(gradient_epsilon);
+		if (rate_lh == 0.0)
+			logl = model_lh;
+		else
+			logl = rate_lh;
+	} else {
+		/* Optimize substitution and heterogeneity rates jointly using BFGS */
+		logl = optimizeAllParameters(gradient_epsilon);
+	}
+	return logl;
 }
 
 double ModelFactory::optimizeAllParameters(double gradient_epsilon) {
