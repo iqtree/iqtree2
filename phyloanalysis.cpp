@@ -1186,7 +1186,8 @@ void printAnalysisInfo(int model_df, IQTree& iqtree, Params& params) {
 	    cout << "NNI assessed on: " << ((params.nni5) ? "5 branches" : "1 branch") << endl;
 	}
 	cout << "Phylogenetic likelihood library: " << (params.pll ? "Yes" : "No") << endl;
-    cout << "Branch length optimization method: "
+    if (!params.fixed_branch_length)
+        cout << "Branch length optimization method: "
             << ((iqtree.optimize_by_newton) ? "Newton" : "Brent") << endl;
     cout << "Number of Newton-Raphson steps in NNI evaluation and branch length optimization: " << NNI_MAX_NR_STEP
             << " / " << PLL_NEWZPERCYCLE << endl;
