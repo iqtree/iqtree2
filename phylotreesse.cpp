@@ -285,10 +285,26 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk) {
     case 10: // N=2
         switch(sse) {
         case LK_EIGEN_SSE:
-            computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchEigenSIMD<Vec2d, 2, 10>;
-            computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervEigenSIMD<Vec2d, 2, 10>;
-            computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodEigenSIMD<Vec2d, 2, 10>;
-            computeLikelihoodFromBufferPointer = &PhyloTree::computeLikelihoodFromBufferEigenSIMD<Vec2d, 2, 10>;
+            if (model_factory && model_factory->model->isMixture()) {
+                if (model_factory->fused_mix_rate) {
+                    computeLikelihoodBranchPointer = &PhyloTree::computeMixrateLikelihoodBranchEigenSIMD<Vec2d, 2, 10>;
+                    computeLikelihoodDervPointer = &PhyloTree::computeMixrateLikelihoodDervEigenSIMD<Vec2d, 2, 10>;
+                    computePartialLikelihoodPointer = &PhyloTree::computeMixratePartialLikelihoodEigenSIMD<Vec2d, 2, 10>;
+                    computeLikelihoodFromBufferPointer = &PhyloTree::computeMixrateLikelihoodFromBufferEigenSIMD<Vec2d, 2, 10>;
+                    // cout << "Fast-SSE-semi-mixture" << endl;
+                } else {
+                    computeLikelihoodBranchPointer = &PhyloTree::computeMixtureLikelihoodBranchEigenSIMD<Vec2d, 2, 10>;
+                    computeLikelihoodDervPointer = &PhyloTree::computeMixtureLikelihoodDervEigenSIMD<Vec2d, 2, 10>;
+                    computePartialLikelihoodPointer = &PhyloTree::computeMixturePartialLikelihoodEigenSIMD<Vec2d, 2, 10>;
+                    computeLikelihoodFromBufferPointer = &PhyloTree::computeMixtureLikelihoodFromBufferEigenSIMD<Vec2d, 2, 10>;
+                    // cout << "Fast-SSE-mixture" << endl;
+                }
+            } else {
+                computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchEigenSIMD<Vec2d, 2, 10>;
+                computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervEigenSIMD<Vec2d, 2, 10>;
+                computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodEigenSIMD<Vec2d, 2, 10>;
+                computeLikelihoodFromBufferPointer = &PhyloTree::computeLikelihoodFromBufferEigenSIMD<Vec2d, 2, 10>;
+            }
             break;
         default:
             break;
@@ -300,10 +316,26 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk) {
 			if (instruction_set >= 7) {
 				setLikelihoodKernelAVX();
 			} else {
-                computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchEigenSIMD<Vec2d, 2, 16>;
-                computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervEigenSIMD<Vec2d, 2, 16>;
-                computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodEigenSIMD<Vec2d, 2, 16>;
-                computeLikelihoodFromBufferPointer = &PhyloTree::computeLikelihoodFromBufferEigenSIMD<Vec2d, 2, 16>;
+                if (model_factory && model_factory->model->isMixture()) {
+                    if (model_factory->fused_mix_rate) {
+                        computeLikelihoodBranchPointer = &PhyloTree::computeMixrateLikelihoodBranchEigenSIMD<Vec2d, 2, 16>;
+                        computeLikelihoodDervPointer = &PhyloTree::computeMixrateLikelihoodDervEigenSIMD<Vec2d, 2, 16>;
+                        computePartialLikelihoodPointer = &PhyloTree::computeMixratePartialLikelihoodEigenSIMD<Vec2d, 2, 16>;
+                        computeLikelihoodFromBufferPointer = &PhyloTree::computeMixrateLikelihoodFromBufferEigenSIMD<Vec2d, 2, 16>;
+                        // cout << "Fast-SSE-semi-mixture" << endl;
+                    } else {
+                        computeLikelihoodBranchPointer = &PhyloTree::computeMixtureLikelihoodBranchEigenSIMD<Vec2d, 2, 16>;
+                        computeLikelihoodDervPointer = &PhyloTree::computeMixtureLikelihoodDervEigenSIMD<Vec2d, 2, 16>;
+                        computePartialLikelihoodPointer = &PhyloTree::computeMixturePartialLikelihoodEigenSIMD<Vec2d, 2, 16>;
+                        computeLikelihoodFromBufferPointer = &PhyloTree::computeMixtureLikelihoodFromBufferEigenSIMD<Vec2d, 2, 16>;
+                        // cout << "Fast-SSE-mixture" << endl;
+                    }
+                } else {
+                    computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchEigenSIMD<Vec2d, 2, 16>;
+                    computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervEigenSIMD<Vec2d, 2, 16>;
+                    computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodEigenSIMD<Vec2d, 2, 16>;
+                    computeLikelihoodFromBufferPointer = &PhyloTree::computeLikelihoodFromBufferEigenSIMD<Vec2d, 2, 16>;
+                }
             }
             break;
         default:
@@ -316,84 +348,90 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk) {
 			if (instruction_set >= 7) {
 				setLikelihoodKernelAVX();
 			} else {
-                computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchEigenSIMD<Vec2d, 2, 28>;
-                computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervEigenSIMD<Vec2d, 2, 28>;
-                computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodEigenSIMD<Vec2d, 2, 28>;
-                computeLikelihoodFromBufferPointer = &PhyloTree::computeLikelihoodFromBufferEigenSIMD<Vec2d, 2, 28>;
+                if (model_factory && model_factory->model->isMixture()) {
+                    if (model_factory->fused_mix_rate) {
+                        computeLikelihoodBranchPointer = &PhyloTree::computeMixrateLikelihoodBranchEigenSIMD<Vec2d, 2, 28>;
+                        computeLikelihoodDervPointer = &PhyloTree::computeMixrateLikelihoodDervEigenSIMD<Vec2d, 2, 28>;
+                        computePartialLikelihoodPointer = &PhyloTree::computeMixratePartialLikelihoodEigenSIMD<Vec2d, 2, 28>;
+                        computeLikelihoodFromBufferPointer = &PhyloTree::computeMixrateLikelihoodFromBufferEigenSIMD<Vec2d, 2, 28>;
+                        // cout << "Fast-SSE-semi-mixture" << endl;
+                    } else {
+                        computeLikelihoodBranchPointer = &PhyloTree::computeMixtureLikelihoodBranchEigenSIMD<Vec2d, 2, 28>;
+                        computeLikelihoodDervPointer = &PhyloTree::computeMixtureLikelihoodDervEigenSIMD<Vec2d, 2, 28>;
+                        computePartialLikelihoodPointer = &PhyloTree::computeMixturePartialLikelihoodEigenSIMD<Vec2d, 2, 28>;
+                        computeLikelihoodFromBufferPointer = &PhyloTree::computeMixtureLikelihoodFromBufferEigenSIMD<Vec2d, 2, 28>;
+                        // cout << "Fast-SSE-mixture" << endl;
+                    }
+                } else {
+                    computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchEigenSIMD<Vec2d, 2, 28>;
+                    computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervEigenSIMD<Vec2d, 2, 28>;
+                    computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodEigenSIMD<Vec2d, 2, 28>;
+                    computeLikelihoodFromBufferPointer = &PhyloTree::computeLikelihoodFromBufferEigenSIMD<Vec2d, 2, 28>;
+                }
             }
             break;
         default:
             break;
         }
         break;
-        // Fri Sep 11 13:24:47 CEST 2015 Commented out to decrease
-        // size of executable.  Additionally, odd virtual population
-        // size numbers use AVX kernel.
-    // case 34: // N=6
-    //     switch(sse) {
-    //     case LK_SSE:
-    //         computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchSSE<34>;
-    //         computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervSSE<34>;
-    //         computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodSSE<34>;
-    //         computeLikelihoodFromBufferPointer = NULL;
-    //         break;
-    //     case LK_EIGEN_SSE:
-    //         computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchEigenSIMD<Vec2d, 2, 34>;
-    //         computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervEigenSIMD<Vec2d, 2, 34>;
-    //         computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodEigenSIMD<Vec2d, 2, 34>;
-    //         computeLikelihoodFromBufferPointer = &PhyloTree::computeLikelihoodFromBufferEigenSIMD<Vec2d, 2, 34>;
-    //         break;
-    //     default:
-    //         break;
-    //     }
-    //     break;
     case 40: // N=7
         switch(sse) {
         case LK_EIGEN_SSE:
 			if (instruction_set >= 7) {
 				setLikelihoodKernelAVX();
 			} else {
-                computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchEigenSIMD<Vec2d, 2, 40>;
-                computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervEigenSIMD<Vec2d, 2, 40>;
-                computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodEigenSIMD<Vec2d, 2, 40>;
-                computeLikelihoodFromBufferPointer = &PhyloTree::computeLikelihoodFromBufferEigenSIMD<Vec2d, 2, 40>;
+                if (model_factory && model_factory->model->isMixture()) {
+                    if (model_factory->fused_mix_rate) {
+                        computeLikelihoodBranchPointer = &PhyloTree::computeMixrateLikelihoodBranchEigenSIMD<Vec2d, 2, 40>;
+                        computeLikelihoodDervPointer = &PhyloTree::computeMixrateLikelihoodDervEigenSIMD<Vec2d, 2, 40>;
+                        computePartialLikelihoodPointer = &PhyloTree::computeMixratePartialLikelihoodEigenSIMD<Vec2d, 2, 40>;
+                        computeLikelihoodFromBufferPointer = &PhyloTree::computeMixrateLikelihoodFromBufferEigenSIMD<Vec2d, 2, 40>;
+                        // cout << "Fast-SSE-semi-mixture" << endl;
+                    } else {
+                        computeLikelihoodBranchPointer = &PhyloTree::computeMixtureLikelihoodBranchEigenSIMD<Vec2d, 2, 40>;
+                        computeLikelihoodDervPointer = &PhyloTree::computeMixtureLikelihoodDervEigenSIMD<Vec2d, 2, 40>;
+                        computePartialLikelihoodPointer = &PhyloTree::computeMixturePartialLikelihoodEigenSIMD<Vec2d, 2, 40>;
+                        computeLikelihoodFromBufferPointer = &PhyloTree::computeMixtureLikelihoodFromBufferEigenSIMD<Vec2d, 2, 40>;
+                        // cout << "Fast-SSE-mixture" << endl;
+                    }
+                } else {
+                    computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchEigenSIMD<Vec2d, 2, 40>;
+                    computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervEigenSIMD<Vec2d, 2, 40>;
+                    computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodEigenSIMD<Vec2d, 2, 40>;
+                    computeLikelihoodFromBufferPointer = &PhyloTree::computeLikelihoodFromBufferEigenSIMD<Vec2d, 2, 40>;
+                }
             }
             break;
         default:
             break;
         }
         break;
-        // Fri Sep 11 13:24:47 CEST 2015 Commented out to decrease
-        // size of executable.  Additionally, odd virtual population
-        // size numbers use AVX kernel.
-    // case 46: // N=8
-    //     switch(sse) {
-    //     case LK_SSE:
-    //         computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchSSE<46>;
-    //         computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervSSE<46>;
-    //         computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodSSE<46>;
-    //         computeLikelihoodFromBufferPointer = NULL;
-    //         break;
-    //     case LK_EIGEN_SSE:
-    //         computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchEigenSIMD<Vec2d, 2, 46>;
-    //         computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervEigenSIMD<Vec2d, 2, 46>;
-    //         computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodEigenSIMD<Vec2d, 2, 46>;
-    //         computeLikelihoodFromBufferPointer = &PhyloTree::computeLikelihoodFromBufferEigenSIMD<Vec2d, 2, 46>;
-    //         break;
-    //     default:
-    //         break;
-    //     }
-    //     break;
     case 52: // N=9
         switch(sse) {
         case LK_EIGEN_SSE:
 			if (instruction_set >= 7) {
 				setLikelihoodKernelAVX();
 			} else {
-                computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchEigenSIMD<Vec2d, 2, 52>;
-                computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervEigenSIMD<Vec2d, 2, 52>;
-                computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodEigenSIMD<Vec2d, 2, 52>;
-                computeLikelihoodFromBufferPointer = &PhyloTree::computeLikelihoodFromBufferEigenSIMD<Vec2d, 2, 52>;
+                if (model_factory && model_factory->model->isMixture()) {
+                    if (model_factory->fused_mix_rate) {
+                        computeLikelihoodBranchPointer = &PhyloTree::computeMixrateLikelihoodBranchEigenSIMD<Vec2d, 2, 52>;
+                        computeLikelihoodDervPointer = &PhyloTree::computeMixrateLikelihoodDervEigenSIMD<Vec2d, 2, 52>;
+                        computePartialLikelihoodPointer = &PhyloTree::computeMixratePartialLikelihoodEigenSIMD<Vec2d, 2, 52>;
+                        computeLikelihoodFromBufferPointer = &PhyloTree::computeMixrateLikelihoodFromBufferEigenSIMD<Vec2d, 2, 52>;
+                        // cout << "Fast-SSE-semi-mixture" << endl;
+                    } else {
+                        computeLikelihoodBranchPointer = &PhyloTree::computeMixtureLikelihoodBranchEigenSIMD<Vec2d, 2, 52>;
+                        computeLikelihoodDervPointer = &PhyloTree::computeMixtureLikelihoodDervEigenSIMD<Vec2d, 2, 52>;
+                        computePartialLikelihoodPointer = &PhyloTree::computeMixturePartialLikelihoodEigenSIMD<Vec2d, 2, 52>;
+                        computeLikelihoodFromBufferPointer = &PhyloTree::computeMixtureLikelihoodFromBufferEigenSIMD<Vec2d, 2, 52>;
+                        // cout << "Fast-SSE-mixture" << endl;
+                    }
+                } else {
+                    computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchEigenSIMD<Vec2d, 2, 52>;
+                    computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervEigenSIMD<Vec2d, 2, 52>;
+                    computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodEigenSIMD<Vec2d, 2, 52>;
+                    computeLikelihoodFromBufferPointer = &PhyloTree::computeLikelihoodFromBufferEigenSIMD<Vec2d, 2, 52>;
+                }
             }
             break;
         default:
@@ -403,186 +441,160 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk) {
     case 58: // N=10
         switch(sse) {
         case LK_EIGEN_SSE:
-            computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchEigenSIMD<Vec2d, 2, 58>;
-            computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervEigenSIMD<Vec2d, 2, 58>;
-            computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodEigenSIMD<Vec2d, 2, 58>;
-            computeLikelihoodFromBufferPointer = &PhyloTree::computeLikelihoodFromBufferEigenSIMD<Vec2d, 2, 58>;
+            if (model_factory && model_factory->model->isMixture()) {
+                if (model_factory->fused_mix_rate) {
+                    computeLikelihoodBranchPointer = &PhyloTree::computeMixrateLikelihoodBranchEigenSIMD<Vec2d, 2, 58>;
+                    computeLikelihoodDervPointer = &PhyloTree::computeMixrateLikelihoodDervEigenSIMD<Vec2d, 2, 58>;
+                    computePartialLikelihoodPointer = &PhyloTree::computeMixratePartialLikelihoodEigenSIMD<Vec2d, 2, 58>;
+                    computeLikelihoodFromBufferPointer = &PhyloTree::computeMixrateLikelihoodFromBufferEigenSIMD<Vec2d, 2, 58>;
+                    // cout << "Fast-SSE-semi-mixture" << endl;
+                } else {
+                    computeLikelihoodBranchPointer = &PhyloTree::computeMixtureLikelihoodBranchEigenSIMD<Vec2d, 2, 58>;
+                    computeLikelihoodDervPointer = &PhyloTree::computeMixtureLikelihoodDervEigenSIMD<Vec2d, 2, 58>;
+                    computePartialLikelihoodPointer = &PhyloTree::computeMixturePartialLikelihoodEigenSIMD<Vec2d, 2, 58>;
+                    computeLikelihoodFromBufferPointer = &PhyloTree::computeMixtureLikelihoodFromBufferEigenSIMD<Vec2d, 2, 58>;
+                    // cout << "Fast-SSE-mixture" << endl;
+                }
+            } else {
+                computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchEigenSIMD<Vec2d, 2, 58>;
+                computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervEigenSIMD<Vec2d, 2, 58>;
+                computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodEigenSIMD<Vec2d, 2, 58>;
+                computeLikelihoodFromBufferPointer = &PhyloTree::computeLikelihoodFromBufferEigenSIMD<Vec2d, 2, 58>;
+            }
             break;
         default:
             break;
         }
         break;
-    // N=11 means a state space size of 64 which is covered above
-    // (CODON and PoMo with N=10).
-        // Fri Sep 11 13:24:47 CEST 2015 Commented out to decrease
-        // size of executable.  Additionally, odd virtual population
-        // size numbers use AVX kernel.
-    // case 70: // PoMo model N=12
-    //     switch(sse) {
-    //     case LK_SSE:
-    //         computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchSSE<70>;
-    //         computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervSSE<70>;
-    //         computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodSSE<70>;
-    //         computeLikelihoodFromBufferPointer = NULL;
-    //         break;
-    //     case LK_EIGEN_SSE:
-    //         computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchEigenSIMD<Vec2d, 2, 70>;
-    //         computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervEigenSIMD<Vec2d, 2, 70>;
-    //         computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodEigenSIMD<Vec2d, 2, 70>;
-    //         computeLikelihoodFromBufferPointer = &PhyloTree::computeLikelihoodFromBufferEigenSIMD<Vec2d, 2, 70>;
-    //         break;
-    //     default:
-    //         break;
-    //     }
-    //     break;
     case 76: // PoMo model N=13
         switch(sse) {
         case LK_EIGEN_SSE:
 			if (instruction_set >= 7) {
 				setLikelihoodKernelAVX();
 			} else {
-                computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchEigenSIMD<Vec2d, 2, 76>;
-                computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervEigenSIMD<Vec2d, 2, 76>;
-                computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodEigenSIMD<Vec2d, 2, 76>;
-                computeLikelihoodFromBufferPointer = &PhyloTree::computeLikelihoodFromBufferEigenSIMD<Vec2d, 2, 76>;
+                if (model_factory && model_factory->model->isMixture()) {
+                    if (model_factory->fused_mix_rate) {
+                        computeLikelihoodBranchPointer = &PhyloTree::computeMixrateLikelihoodBranchEigenSIMD<Vec2d, 2, 76>;
+                        computeLikelihoodDervPointer = &PhyloTree::computeMixrateLikelihoodDervEigenSIMD<Vec2d, 2, 76>;
+                        computePartialLikelihoodPointer = &PhyloTree::computeMixratePartialLikelihoodEigenSIMD<Vec2d, 2, 76>;
+                        computeLikelihoodFromBufferPointer = &PhyloTree::computeMixrateLikelihoodFromBufferEigenSIMD<Vec2d, 2, 76>;
+                        // cout << "Fast-SSE-semi-mixture" << endl;
+                    } else {
+                        computeLikelihoodBranchPointer = &PhyloTree::computeMixtureLikelihoodBranchEigenSIMD<Vec2d, 2, 76>;
+                        computeLikelihoodDervPointer = &PhyloTree::computeMixtureLikelihoodDervEigenSIMD<Vec2d, 2, 76>;
+                        computePartialLikelihoodPointer = &PhyloTree::computeMixturePartialLikelihoodEigenSIMD<Vec2d, 2, 76>;
+                        computeLikelihoodFromBufferPointer = &PhyloTree::computeMixtureLikelihoodFromBufferEigenSIMD<Vec2d, 2, 76>;
+                        // cout << "Fast-SSE-mixture" << endl;
+                    }
+                } else {
+                    computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchEigenSIMD<Vec2d, 2, 76>;
+                    computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervEigenSIMD<Vec2d, 2, 76>;
+                    computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodEigenSIMD<Vec2d, 2, 76>;
+                    computeLikelihoodFromBufferPointer = &PhyloTree::computeLikelihoodFromBufferEigenSIMD<Vec2d, 2, 76>;
+                }
             }
             break;
         default:
             break;
         }
         break;
-        // Fri Sep 11 13:24:47 CEST 2015 Commented out to decrease
-        // size of executable.  Additionally, odd virtual population
-        // size numbers use AVX kernel.
-    // case 82: // PoMo model N=14
-    //     switch(sse) {
-    //     case LK_SSE:
-    //         computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchSSE<82>;
-    //         computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervSSE<82>;
-    //         computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodSSE<82>;
-    //         computeLikelihoodFromBufferPointer = NULL;
-    //         break;
-    //     case LK_EIGEN_SSE:
-    //         computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchEigenSIMD<Vec2d, 2, 82>;
-    //         computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervEigenSIMD<Vec2d, 2, 82>;
-    //         computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodEigenSIMD<Vec2d, 2, 82>;
-    //         computeLikelihoodFromBufferPointer = &PhyloTree::computeLikelihoodFromBufferEigenSIMD<Vec2d, 2, 82>;
-    //         break;
-    //     default:
-    //         break;
-    //     }
-    //     break;
     case 88: // PoMo model N=15
         switch(sse) {
         case LK_EIGEN_SSE:
 			if (instruction_set >= 7) {
 				setLikelihoodKernelAVX();
 			} else {
-                computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchEigenSIMD<Vec2d, 2, 88>;
-                computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervEigenSIMD<Vec2d, 2, 88>;
-                computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodEigenSIMD<Vec2d, 2, 88>;
-                computeLikelihoodFromBufferPointer = &PhyloTree::computeLikelihoodFromBufferEigenSIMD<Vec2d, 2, 88>;
+                if (model_factory && model_factory->model->isMixture()) {
+                    if (model_factory->fused_mix_rate) {
+                        computeLikelihoodBranchPointer = &PhyloTree::computeMixrateLikelihoodBranchEigenSIMD<Vec2d, 2, 88>;
+                        computeLikelihoodDervPointer = &PhyloTree::computeMixrateLikelihoodDervEigenSIMD<Vec2d, 2, 88>;
+                        computePartialLikelihoodPointer = &PhyloTree::computeMixratePartialLikelihoodEigenSIMD<Vec2d, 2, 88>;
+                        computeLikelihoodFromBufferPointer = &PhyloTree::computeMixrateLikelihoodFromBufferEigenSIMD<Vec2d, 2, 88>;
+                        // cout << "Fast-SSE-semi-mixture" << endl;
+                    } else {
+                        computeLikelihoodBranchPointer = &PhyloTree::computeMixtureLikelihoodBranchEigenSIMD<Vec2d, 2, 88>;
+                        computeLikelihoodDervPointer = &PhyloTree::computeMixtureLikelihoodDervEigenSIMD<Vec2d, 2, 88>;
+                        computePartialLikelihoodPointer = &PhyloTree::computeMixturePartialLikelihoodEigenSIMD<Vec2d, 2, 88>;
+                        computeLikelihoodFromBufferPointer = &PhyloTree::computeMixtureLikelihoodFromBufferEigenSIMD<Vec2d, 2, 88>;
+                        // cout << "Fast-SSE-mixture" << endl;
+                    }
+                } else {
+                    computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchEigenSIMD<Vec2d, 2, 88>;
+                    computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervEigenSIMD<Vec2d, 2, 88>;
+                    computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodEigenSIMD<Vec2d, 2, 88>;
+                    computeLikelihoodFromBufferPointer = &PhyloTree::computeLikelihoodFromBufferEigenSIMD<Vec2d, 2, 88>;
+                }
             }
             break;
         default:
             break;
         }
         break;
-        // Fri Sep 11 13:24:47 CEST 2015 Commented out to decrease
-        // size of executable.  Additionally, odd virtual population
-        // size numbers use AVX kernel.
-    // case 94: // PoMo model N=16
-    //     switch(sse) {
-    //     case LK_SSE:
-    //         computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchSSE<94>;
-    //         computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervSSE<94>;
-    //         computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodSSE<94>;
-    //         computeLikelihoodFromBufferPointer = NULL;
-    //         break;
-    //     case LK_EIGEN_SSE:
-    //         computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchEigenSIMD<Vec2d, 2, 94>;
-    //         computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervEigenSIMD<Vec2d, 2, 94>;
-    //         computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodEigenSIMD<Vec2d, 2, 94>;
-    //         computeLikelihoodFromBufferPointer = &PhyloTree::computeLikelihoodFromBufferEigenSIMD<Vec2d, 2, 94>;
-    //         break;
-    //     default:
-    //         break;
-    //     }
-    //     break;
     case 100: // PoMo model N=17; my favorite ;-).
         switch(sse) {
         case LK_EIGEN_SSE:
 			if (instruction_set >= 7) {
 				setLikelihoodKernelAVX();
 			} else {
-                computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchEigenSIMD<Vec2d, 2, 100>;
-                computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervEigenSIMD<Vec2d, 2, 100>;
-                computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodEigenSIMD<Vec2d, 2, 100>;
-                computeLikelihoodFromBufferPointer = &PhyloTree::computeLikelihoodFromBufferEigenSIMD<Vec2d, 2, 100>;
+                if (model_factory && model_factory->model->isMixture()) {
+                    if (model_factory->fused_mix_rate) {
+                        computeLikelihoodBranchPointer = &PhyloTree::computeMixrateLikelihoodBranchEigenSIMD<Vec2d, 2, 100>;
+                        computeLikelihoodDervPointer = &PhyloTree::computeMixrateLikelihoodDervEigenSIMD<Vec2d, 2, 100>;
+                        computePartialLikelihoodPointer = &PhyloTree::computeMixratePartialLikelihoodEigenSIMD<Vec2d, 2, 100>;
+                        computeLikelihoodFromBufferPointer = &PhyloTree::computeMixrateLikelihoodFromBufferEigenSIMD<Vec2d, 2, 100>;
+                        // cout << "Fast-SSE-semi-mixture" << endl;
+                    } else {
+                        computeLikelihoodBranchPointer = &PhyloTree::computeMixtureLikelihoodBranchEigenSIMD<Vec2d, 2, 100>;
+                        computeLikelihoodDervPointer = &PhyloTree::computeMixtureLikelihoodDervEigenSIMD<Vec2d, 2, 100>;
+                        computePartialLikelihoodPointer = &PhyloTree::computeMixturePartialLikelihoodEigenSIMD<Vec2d, 2, 100>;
+                        computeLikelihoodFromBufferPointer = &PhyloTree::computeMixtureLikelihoodFromBufferEigenSIMD<Vec2d, 2, 100>;
+                        // cout << "Fast-SSE-mixture" << endl;
+                    }
+                } else {
+                    computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchEigenSIMD<Vec2d, 2, 100>;
+                    computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervEigenSIMD<Vec2d, 2, 100>;
+                    computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodEigenSIMD<Vec2d, 2, 100>;
+                    computeLikelihoodFromBufferPointer = &PhyloTree::computeLikelihoodFromBufferEigenSIMD<Vec2d, 2, 100>;
+                }
             }
             break;
         default:
             break;
         }
         break;
-        // Fri Sep 11 13:24:47 CEST 2015 Commented out to decrease
-        // size of executable.  Additionally, odd virtual population
-        // size numbers use AVX kernel.
-    // case 106: // PoMo model N=18
-    //     switch(sse) {
-    //     case LK_SSE:
-    //         computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchSSE<106>;
-    //         computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervSSE<106>;
-    //         computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodSSE<106>;
-    //         computeLikelihoodFromBufferPointer = NULL;
-    //         break;
-    //     case LK_EIGEN_SSE:
-    //         computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchEigenSIMD<Vec2d, 2, 106>;
-    //         computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervEigenSIMD<Vec2d, 2, 106>;
-    //         computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodEigenSIMD<Vec2d, 2, 106>;
-    //         computeLikelihoodFromBufferPointer = &PhyloTree::computeLikelihoodFromBufferEigenSIMD<Vec2d, 2, 106>;
-    //         break;
-    //     default:
-    //         break;
-    //     }
-    //     break;
+
     case 112: // PoMo model N=19
         switch(sse) {
         case LK_EIGEN_SSE:
 			if (instruction_set >= 7) {
 				setLikelihoodKernelAVX();
 			} else {
-                computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchEigenSIMD<Vec2d, 2, 112>;
-                computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervEigenSIMD<Vec2d, 2, 112>;
-                computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodEigenSIMD<Vec2d, 2, 112>;
-                computeLikelihoodFromBufferPointer = &PhyloTree::computeLikelihoodFromBufferEigenSIMD<Vec2d, 2, 112>;
+                if (model_factory && model_factory->model->isMixture()) {
+                    if (model_factory->fused_mix_rate) {
+                        computeLikelihoodBranchPointer = &PhyloTree::computeMixrateLikelihoodBranchEigenSIMD<Vec2d, 2, 112>;
+                        computeLikelihoodDervPointer = &PhyloTree::computeMixrateLikelihoodDervEigenSIMD<Vec2d, 2, 112>;
+                        computePartialLikelihoodPointer = &PhyloTree::computeMixratePartialLikelihoodEigenSIMD<Vec2d, 2, 112>;
+                        computeLikelihoodFromBufferPointer = &PhyloTree::computeMixrateLikelihoodFromBufferEigenSIMD<Vec2d, 2, 112>;
+                        // cout << "Fast-SSE-semi-mixture" << endl;
+                    } else {
+                        computeLikelihoodBranchPointer = &PhyloTree::computeMixtureLikelihoodBranchEigenSIMD<Vec2d, 2, 112>;
+                        computeLikelihoodDervPointer = &PhyloTree::computeMixtureLikelihoodDervEigenSIMD<Vec2d, 2, 112>;
+                        computePartialLikelihoodPointer = &PhyloTree::computeMixturePartialLikelihoodEigenSIMD<Vec2d, 2, 112>;
+                        computeLikelihoodFromBufferPointer = &PhyloTree::computeMixtureLikelihoodFromBufferEigenSIMD<Vec2d, 2, 112>;
+                        // cout << "Fast-SSE-mixture" << endl;
+                    }
+                } else {
+                    computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchEigenSIMD<Vec2d, 2, 112>;
+                    computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervEigenSIMD<Vec2d, 2, 112>;
+                    computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodEigenSIMD<Vec2d, 2, 112>;
+                    computeLikelihoodFromBufferPointer = &PhyloTree::computeLikelihoodFromBufferEigenSIMD<Vec2d, 2, 112>;
+                }
             }
             break;
         default:
             break;
         }
         break;
-        // Fri Sep 11 13:24:47 CEST 2015 Commented out to decrease
-        // size of executable.  Additionally, odd virtual population
-        // size numbers use AVX kernel.
-    // case 118: // PoMo model N=20
-    //     switch(sse) {
-    //     case LK_SSE:
-    //         computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchSSE<118>;
-    //         computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervSSE<118>;
-    //         computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodSSE<118>;
-    //         computeLikelihoodFromBufferPointer = NULL;
-    //         break;
-    //     case LK_EIGEN_SSE:
-    //         computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchEigenSIMD<Vec2d, 2, 118>;
-    //         computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervEigenSIMD<Vec2d, 2, 118>;
-    //         computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodEigenSIMD<Vec2d, 2, 118>;
-    //         computeLikelihoodFromBufferPointer = &PhyloTree::computeLikelihoodFromBufferEigenSIMD<Vec2d, 2, 118>;
-    //         break;
-    //     default:
-    //         break;
-    //     }
-    //     break;
 
 	default:
         if (sse == LK_EIGEN_SSE) {
