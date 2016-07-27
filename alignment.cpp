@@ -3336,9 +3336,11 @@ int Alignment::convertPomoState(int state) {
     if (state < num_states) return state;
     if (state == STATE_UNKNOWN) return state;
     state -= num_states;
+    if (pomo_states.size() <= 0)
+        outError("Alignment file is too short.");
     if (state >= pomo_states.size()) {
-        cout << state << endl;
-        cout << pomo_states.size() << endl;
+        cout << "state:              " << state << endl;
+        cout << "pomo_states.size(): " << pomo_states.size() << endl;
     }
     assert(state < pomo_states.size());
     int id1 = pomo_states[state] & 3;

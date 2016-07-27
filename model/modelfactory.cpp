@@ -169,13 +169,26 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
                 outError("Non reversible PoMo not supported yet.");
             
             if (pos_rev_pomo != string::npos) {
-                // move +rP to model_str
-                model_str = model_str + "+rP";
-                rate_str = rate_str.substr(0, pos_rev_pomo) + rate_str.substr(pos_rev_pomo+3);
+                // Move +rP and PoMo params to model string.
+                if (rate_str[pos_rev_pomo+3] == '{') {
+                    string::size_type close_bracket = rate_str.find("}");
+                    if (close_bracket == string::npos)
+                        outError("No closing bracket in PoMo parameters.");
+                    else {
+                        string pomo_params = rate_str.substr(pos_rev_pomo+3,close_bracket-pos_rev_pomo-3+1);
+                        // cout << pomo_params << endl;
+                        model_str = model_str + "+rP" + pomo_params;
+                        rate_str = rate_str.substr(0, pos_rev_pomo) + rate_str.substr(close_bracket+1);
+                    }
+                }
+                else {
+                    model_str = model_str + "+rP";
+                    rate_str = rate_str.substr(0, pos_rev_pomo) + rate_str.substr(pos_rev_pomo + 3);
+                }
             }
-
         }
     }
+    // cout << model_str << "  " << rate_str << endl;
 
     string::size_type pos_rev_pomo = rate_str.find("+rP");
 

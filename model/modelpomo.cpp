@@ -92,6 +92,7 @@ void ModelPoMo::init(const char *model_name,
     // Treat fixation of the level of polymorphism.
     level_of_polymorphism = estimateEmpiricalWattersonTheta();
     if (pomo_params.length() > 0) {
+        outError("Level of polymorphism cannot be fixed yet.");
         if (pomo_params == "EMP") {
             cout << "Level of polymorphism will be fixed to the estimate from the data: ";
             cout << level_of_polymorphism << "." << endl;
