@@ -22,11 +22,10 @@ void ModelPoMo::init(const char *model_name,
                      string freq_params,
                      bool is_reversible,
                      string pomo_params) {
-    // if (model_params.length() > 0)
-    //     outError("Fixing DNA model parameters unsupported yet");
     // Check num_states (set in Alignment::readCountsFormat()).
     N = phylo_tree->aln->virtual_pop_size;
     nnuc = 4;
+    n_connections = nnuc * (nnuc-1) / 2;
     fixed_level_of_polymorphism = false;
     assert(num_states == (nnuc + (nnuc*(nnuc-1)/2 * (N-1))) );
 
@@ -43,10 +42,12 @@ void ModelPoMo::init(const char *model_name,
     // Reset the number of states.
     phylo_tree->aln->num_states = num_states;
 
+    this->name = dna_model->name;
+    if (model_params.length() > 0)
+        this->name += "{" + model_params + "}";
+    this->name += "+rP";
     if (pomo_params.length() > 0)
-        this->name = dna_model->name + "+rP{" + pomo_params + "}";
-    else
-        this->name = dna_model->name + "+rP";
+        this->name += "{" + pomo_params + "}";
     this->full_name =
         "reversible PoMo with N=" +
         convertIntToString(N) + " and " +
@@ -109,6 +110,18 @@ void ModelPoMo::init(const char *model_name,
         fixed_level_of_polymorphism = true;
     }
 
+    fixed_model_params_ratio = new double[n_connections];
+    if (model_params.length() > 0) {
+        fixed_model_params = true;
+        for (int i = 0; i < n_connections; i++)
+            fixed_model_params_ratio[i] = dna_model->rates[i];
+        // for (int i = 0; i < n_connections; i++)
+        //     cout << fixed_model_params_ratio[i] << " " << endl;
+        // outError("Fixing DNA model parameters unsupported yet");
+    }
+    else
+        fixed_model_params = false;
+
     setInitialMutCoeff();
 
     updatePoMoStatesAndRates();
@@ -126,8 +139,8 @@ ModelPoMo::~ModelPoMo() {
     delete [] rate_matrix;
 //  delete [] freq_fixed_states;
     delete dna_model;
-//  delete [] mutation_prob;
     delete [] freq_fixed_states_emp;
+    delete [] fixed_model_params_ratio;
     }
 
 double ModelPoMo::computeSumFreqFixedStates() {
@@ -446,109 +459,84 @@ void ModelPoMo::normalizeMutationProbs() {
 }
 
 bool ModelPoMo::getVariables(double *variables) {
-    // TODO: These two functions don't work at the moment.
+    // A drawback: IQ-TREE looks at the values at the boundaries a
+    // lot.  E.g., if HKY{3.0} is specified, the mutation_prob[0] will
+    // be set to 0.01=BOUNDARY_MAX a lot, but then, e.g.,
+    // mutation_prob[1] will be set to 3*0.01 which is outside the
+    // boundaries.  How should this be handled?
 
-    // TODO: (A) A clean way to handle the index shift between
-    // variables and mutation_prob is to shift variables by one
-    // (because the first entry is not being used).
-
-    // TODO: (B) If parameters are fixed, use the initial value of
-    // dna_model->rates and dna_model->param_spec to set the mutation
-    // probabilities of PoMo.
-
-    // TODO: (C) A drawback: IQ-TREE looks at the values at the
-    // boundaries a lot.  E.g., if HKY{3.0} is specified, the
-    // mutation_prob[0] will be set to 0.01=BOUNDARY_MAX a lot, but
-    // then, e.g., mutation_prob[1] will be set to 3*0.01 which is
-    // outside the boundaries.  How should this be handled?
-    
     int i;
-    // for (i = 1; i <= 6; i++) {
-    //  mutation_prob[i-1] = variables[i];
-    // }
-    // for (i = 7; i <= 9; i++) {
-    //  freq_fixed_states[i-7] = variables[i];
-    // }
-    // updatePoMoStatesAndRates();
-
+    // Use a zero indexed array (variables starts at one).
+    double *vars = variables+1;
     bool changed = false;
-    int num_all = dna_model->param_spec.length();
 
-    // FIXME: So far, this function only works if fixed_level_of_polymorphism is false.
-    if (dna_model->num_params > 0 || !fixed_level_of_polymorphism) {
-        if (verbose_mode >= VB_MAX) {
-            for (i = 1; i <= dna_model->num_params+1; i++) {
-                cout << setprecision(8);
-                cout << "  Estimated mutation rates[" << i << "] = ";
-                cout << variables[i] << endl;
-            }
-        }
-        for (i = 0; i < num_all; i++) {
-            changed |= (mutation_prob[i] != variables[(int)dna_model->param_spec[i]]);
-            mutation_prob[i] = variables[(int)dna_model->param_spec[i]];
-            // if (fixed_level_of_polymorphism == false) {
-            //     if (mutation_prob[i] != variables[(int)dna_model->param_spec[i]+1])
-            //         changed = true;
-            //     mutation_prob[i] = variables[(int)dna_model->param_spec[i]+1];
-            // If the level of polymorphism is fixed, allow also
-            // fixation of parameters.  Use varaibles[0] to save the
-            // first fixed parameter (one parameter is always fixed
-            // because theta_p is fixed).
-            // else if (!dna_model->param_fixed[dna_model->param_spec[i]]) {
-            //     if (mutation_prob[i] != variables[(int)dna_model->param_spec[i]])
-            //         changed = true;
-            //     mutation_prob[i] = variables[(int)dna_model->param_spec[i]];
-            // }
+    if (verbose_mode >= VB_MAX) {
+        for (i = 0; i < dna_model->num_params+1; i++) {
+            cout << setprecision(8);
+            cout << "  Estimated mutation rates[" << i << "] = ";
+            cout << vars[i] << endl;
         }
     }
 
+    int num_all = dna_model->param_spec.length();
+    if (!fixed_level_of_polymorphism) {
+        if (!fixed_model_params) {
+            for (i = 0; i < num_all; i++) {
+                changed |= (mutation_prob[i] != vars[(int)dna_model->param_spec[i]]);
+                mutation_prob[i] = vars[(int)dna_model->param_spec[i]];
+            }
+        }
+        else {
+            for (i = 0; i < num_all; i++) {
+                changed |= (mutation_prob[i] != fixed_model_params_ratio[i] * vars[0]);
+                mutation_prob[i] = fixed_model_params_ratio[i] * vars[0];
+            }
+        }
+    }
+    else {
+        outError("Fixed level of polymorphism not implemented yet.");
+    }
+
+    int ndim = getNDim();
     if (freq_type == FREQ_ESTIMATE) {
-        int ndim = getNDim();
-        changed |= memcmpcpy(freq_fixed_states, variables+(ndim-nnuc+2), (nnuc-1)*sizeof(double));
+        changed |= memcmpcpy(freq_fixed_states, vars+(ndim-nnuc+1), (nnuc-1)*sizeof(double));
         if (verbose_mode >= VB_MAX) {
             for (i = 0; i < nnuc-1; i++) {
                 cout << setprecision(8);
                 cout << "  Estimated fixed frequencies[" << i << "] = ";
-                cout << variables[ndim-nnuc+2+i] << endl;
+                cout << vars[ndim-nnuc+1+i] << endl;
             }
         }
-        // double sum = 0;
-        // for (i = 0; i < num_states-1; i++)
-        //  sum += state_freq[i];
-        // state_freq[num_states-1] = 1.0 - sum;
     }
+
     if (fixed_level_of_polymorphism)
         normalizeMutationProbs();
     updatePoMoStatesAndRates();
-    writeInfo(cout);
+    // writeInfo(cout);
     return changed;
 }
 
 void ModelPoMo::setVariables(double *variables) {
-    // for (int i = 1; i <= 6; i++) {
-    //  variables[i] = mutation_prob[i-1];
-    // }
-    // for (int i = 7; i <= 9; i++) {
-    //  variables[i] = freq_fixed_states[i-7];
-    // }
-
-    // FIXME: So far, this function only works if fixed_level_of_polymorphism is false.
-    if (dna_model->num_params > 0 || !fixed_level_of_polymorphism) {
-        int num_all = dna_model->param_spec.length();
-        for (int i = 0; i < num_all; i++) {
-            variables[(int)dna_model->param_spec[i]] = mutation_prob[i];
-            // if (fixed_level_of_polymorphism == false)
-            //     variables[(int)dna_model->param_spec[i]+1] = mutation_prob[i];
-            // // If the level of polymorphism is fixed, varaibles[0] is
-            // // used to save the first fixed parameter (one parameter
-            // // is always fixed because theta_p is fixed).
-            // else if (!dna_model->param_fixed[dna_model->param_spec[i]])
-            //     variables[(int)dna_model->param_spec[i]] = mutation_prob[i];
+    // Use a zero indexed array (variables starts at one).
+    double * vars = variables+1;
+    if (!fixed_level_of_polymorphism) {
+        if (!fixed_model_params) {
+            for (unsigned int i = 0; i < dna_model->param_spec.length(); i++)
+                vars[(int)dna_model->param_spec[i]] = mutation_prob[i];
+        }
+        else {
+            for (unsigned int i = 0; i < dna_model->param_spec.length(); i++)
+                if (dna_model->param_spec[i] == 0)
+                    vars[0] = mutation_prob[i];
         }
     }
+    else {
+        outError("Fixed level of polymorphism not supported yet.");
+    }
+
     if (freq_type == FREQ_ESTIMATE) {
         int ndim = getNDim();
-        memcpy(variables+(ndim-nnuc+2), freq_fixed_states, (nnuc-1)*sizeof(double));
+        memcpy(vars+(ndim-nnuc+1), freq_fixed_states, (nnuc-1)*sizeof(double));
     }
 }
 

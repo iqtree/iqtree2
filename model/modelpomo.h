@@ -412,6 +412,8 @@ class ModelPoMo : public ModelGTR
     /// Eventual todo: do not hardcode this.
     int nnuc;
 
+    /// True if the level of polymorphism has been fixed (either to a
+    /// user given value or to the empirically observed one).
     bool fixed_level_of_polymorphism;
 
     /**
@@ -421,6 +423,21 @@ class ModelPoMo : public ModelGTR
      * when N was large).
      */
     double level_of_polymorphism;
+
+    /// True if the model parameters are fixed (e.g., if the
+    /// transition to transversion ratio is set in the HKY model).
+    bool fixed_model_params;
+
+    /// This array contains the ratio of the fixed mutation
+    /// probability to the base mutation rate that is still estimated
+    /// and describes the amount of polymorphism.  I.e., for the HKY
+    /// model with transition to transversion ratio 2.0, this vector
+    /// would look like [1, 2, 1, 1, 2, 1]
+    double * fixed_model_params_ratio;
+
+    /// The number of connections between the alleles (e.g., 6 for 4
+    /// nucleotides).
+    int n_connections;
 };
 
 #endif /* _MODELPOMO_H_ */
