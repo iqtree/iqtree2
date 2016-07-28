@@ -48,10 +48,15 @@ void ModelPoMo::init(const char *model_name,
     this->name += "+rP";
     if (pomo_params.length() > 0)
         this->name += "{" + pomo_params + "}";
+
+    string sampling_method = "Weighted";
+    if (phylo_tree->aln->pomo_random_sampling)
+        sampling_method = "Sampled";
     this->full_name =
         "reversible PoMo with N=" +
         convertIntToString(N) + " and " +
         dna_model->full_name + " substitution model; " +
+        "Sampling method: " + sampling_method + "; " +
         convertIntToString(num_states) + " states in total";
 
     eps = 1e-6;
@@ -129,8 +134,8 @@ void ModelPoMo::init(const char *model_name,
     decomposeRateMatrix();
 
     cout << "Initialized PoMo model." << endl;
-    cout << "Model name: " << this->name;
-    cout << "; " << this->full_name << endl;
+    cout << "Model name: " << this->name << endl;
+    cout << this->full_name << endl;
     if (verbose_mode >= VB_MAX)
         writeInfo(cout);
 }
@@ -822,12 +827,11 @@ void ModelPoMo::report_rates(ofstream &out) {
 }
 
 void ModelPoMo::report(ofstream &out) {
-
     out << "Virtual population size N: " << N << endl;
     if (phylo_tree->aln->pomo_random_sampling == true)
-        out << "Sampling method: sampled." << endl;
+        out << "Sampling method: Sampled." << endl;
     else
-        out << "Sampling method: weighted." << endl;
+        out << "Sampling method: Weighted." << endl;
 
     out << endl;
     out << "Estimated quantities" << endl;

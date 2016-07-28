@@ -304,7 +304,7 @@ void reportModel(ofstream &out, PhyloTree &tree) {
 			out << (*m)->total_num_subst << "  ";
 			out.width(7);
 			out << mmodel->prop[i] << "  " << (*m)->getNameParams() << endl;
-            
+
             if (tree.aln->seq_type == SEQ_POMO) {
                 out << endl << "Model for mixture component "  << (m-mmodel->begin())+1 << ": " << (*m)->name << endl;
                 reportModel(out, tree.aln, *m);
@@ -792,8 +792,8 @@ void reportPhyloAnalysis(Params &params, string &original_model,
                         << "---------" << endl << endl;
                 else
                     out << "STARTING TREE" << endl
-                        << "-------------" << endl << endl;                
-            } else { 
+                        << "-------------" << endl << endl;
+            } else {
 				out << "MAXIMUM LIKELIHOOD TREE" << endl
 					<< "-----------------------" << endl << endl;
             }
@@ -2272,7 +2272,7 @@ void runStandardBootstrap(Params &params, string &original_model, Alignment *ali
     params.localbp_replicates = 0;
     params.aLRT_test = false;
     params.aBayes_test = false;
-    
+
 	string treefile_name = params.out_prefix;
 	treefile_name += ".treefile";
 	string boottrees_name = params.out_prefix;
@@ -2426,7 +2426,7 @@ void runStandardBootstrap(Params &params, string &original_model, Alignment *ali
         params.localbp_replicates = saved_localbp_replicates;
         params.aLRT_test = saved_aLRT_test;
         params.aBayes_test = saved_aBayes_test;
-        
+
 		runTreeReconstruction(params, original_model, *tree, *model_info);
 
 		cout << endl << "===> ASSIGN BOOTSTRAP SUPPORTS TO THE TREE FROM ORIGINAL ALIGNMENT" << endl << endl;
@@ -2527,13 +2527,44 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
 		// this alignment will actually be of type SuperAlignment
 		alignment = tree->aln;
 	} else {
-		alignment = new Alignment(params.aln_file, params.sequence_type, params.intype);
-        // Set PoMo parameters if needed.
-        if (alignment->seq_type == SEQ_POMO) {
+        if (!params.sequence_type && detectInputFile(params.aln_file) == IN_COUNTS) {
             params.pomo = true;
-            if (!params.sequence_type)
-                params.sequence_type = (char *) "CF09";
+            string N = "09";
+            SamplingType sampling_type = SAMPLING_WEIGHTED;
+            size_t n_pos = params.model_name.find("+N");
+            if (n_pos != string::npos) {
+                N = params.model_name.substr(n_pos+2,2);
+                int ps = convert_int(N.c_str());
+                if (((ps != 10) && (ps != 2) && (ps % 2 == 0)) || (ps < 2) || (ps > 19))
+                    outError("Custom virtual population size of PoMo not 2, 10 or any other odd number between 3 and 19.");   
+                params.model_name = params.model_name.substr(0, n_pos)
+                    + params.model_name.substr(n_pos+4);
+            }
+            if (params.model_name.find("+W") != string::npos &&
+                params.model_name.find("+S") != string::npos)
+                outError("Multiple sampling methods specified.");
+            size_t w_pos = params.model_name.find("+W");
+            if (w_pos != string::npos) {
+                sampling_type = SAMPLING_WEIGHTED;
+                params.model_name = params.model_name.substr(0, w_pos)
+                    + params.model_name.substr(w_pos+2);
+            }
+            size_t s_pos = params.model_name.find("+S");
+            if ( s_pos != string::npos) {
+                sampling_type = SAMPLING_SAMPLED;
+                params.model_name = params.model_name.substr(0, s_pos)
+                    + params.model_name.substr(s_pos+2);
+            }
+            string pomo_st;
+            if (sampling_type == SAMPLING_WEIGHTED)
+                pomo_st = "CF" + N;
+            else if (sampling_type == SAMPLING_SAMPLED)
+                pomo_st = "CR" + N;
+            params.sequence_type = (char *) pomo_st.c_str();
         }
+
+		alignment = new Alignment(params.aln_file, params.sequence_type, params.intype);
+
 		if (params.freq_const_patterns) {
 			int orig_nsite = alignment->getNSite();
 			alignment->addConstPatterns(params.freq_const_patterns);

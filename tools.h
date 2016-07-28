@@ -317,6 +317,10 @@ enum InputType {
     IN_NEWICK, IN_NEXUS, IN_FASTA, IN_PHYLIP, IN_COUNTS, IN_CLUSTAL, IN_MSF, IN_OTHER
 };
 
+enum SamplingType {
+    SAMPLING_WEIGHTED, SAMPLING_SAMPLED
+};
+
 /**
         verbose mode, determine how verbose should the screen be printed.
  */
