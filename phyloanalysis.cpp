@@ -1063,8 +1063,10 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 		cout << "  Site log-likelihoods:          " << params.out_prefix << ".sitelh"
 				<< endl;
 
-    if (params.print_ancestral_sequence)
+    if (params.print_ancestral_sequence) {
+        cout << "  Ancestral state probabilities: " << params.out_prefix << ".ancestralprob" << endl;
         cout << "  Ancestral sequences:           " << params.out_prefix << ".ancestralseq" << endl;
+    }
 
 	if (params.write_intermediate_trees)
 		cout << "  All intermediate trees:        " << params.out_prefix << ".treels"
@@ -1467,9 +1469,7 @@ void printMiscInfo(Params &params, IQTree &iqtree, double *pattern_lh) {
 	}
     
     if (params.print_ancestral_sequence) {
-        string ancseq_file = params.out_prefix;
-        ancseq_file += ".ancestralseq";
-        printAncestralSequences(ancseq_file.c_str(), &iqtree, params.print_ancestral_sequence);
+        printAncestralSequences(params.out_prefix, &iqtree, params.print_ancestral_sequence);
     }
     
     if (params.print_site_state_freq) {

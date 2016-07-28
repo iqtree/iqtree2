@@ -334,57 +334,89 @@ void printSiteLhCategory(const char*filename, PhyloTree *tree, SiteLoglType wsl)
 
 }
 
-void printAncestralSequences(const char*filename, PhyloTree *tree, AncestralSeqType ast) {
+void printAncestralSequences(const char *out_prefix, PhyloTree *tree, AncestralSeqType ast) {
 
-    int i, j, nsites = tree->getAlnNSite(), nstates = tree->aln->num_states;
+    int i, j, nsites = tree->getAlnNSite(), nstates = tree->aln->num_states, nptn = tree->getAlnNPattern();
+
+    string filename = (string)out_prefix + ".ancestralprob";
+    string filenameseq = (string)out_prefix + ".ancestralseq";
 
     try {
 		ofstream out;
 		out.exceptions(ios::failbit | ios::badbit);
-		out.open(filename);
+		out.open(filename.c_str());
+
+		ofstream outseq;
+		outseq.exceptions(ios::failbit | ios::badbit);
+		outseq.open(filenameseq.c_str());
 
         NodeVector nodes;
         tree->getInternalNodes(nodes);
 		IntVector pattern_index;
 		tree->aln->getSitePatternIndex(pattern_index);
 
-        double *ptn_ancestral_prob = new double[tree->getAlnNPattern()*tree->getModel()->num_states];
+        double *ptn_ancestral_prob = new double[nptn * tree->getModel()->num_states];
+        int *ptn_ancestral_seq = new int[nptn];
 
-        out << "Site\tNode\tState";
+        out << "Node\tSite\tState";
         for (i = 0; i < nstates; i++)
             out << "\tp_" << tree->aln->convertStateBackStr(i);
         out << endl;
+        
+        outseq << tree->nodeNum - tree->leafNum << " " << nsites << endl;
+        
         double flat_prob = 1.0/tree->getModel()->num_states;
+        int name_width = tree->aln->getMaxSeqNameLength();
+        name_width = max(name_width, 10); 
 
         for (NodeVector::iterator it = nodes.begin(); it != nodes.end(); it++) {
             PhyloNode *node = (PhyloNode*)(*it);
             PhyloNode *dad = (PhyloNode*)node->neighbors[0]->node;
             tree->computeMarginalAncestralProbability((PhyloNeighbor*)dad->findNeighbor(node), dad, ptn_ancestral_prob);
-            if (node->name.empty() || !isalpha(node->name[0])) {
-                node->name = "N" + convertIntToString(node->id-tree->leafNum+1);
-            }
             
-            for (i = 0; i < nsites; i++) {
-                int ptn = pattern_index[i];
-                double *prob = ptn_ancestral_prob + (ptn*nstates);
+            // compute state with highest probability
+            for (i = 0; i < nptn; i++) {
+                double *prob = ptn_ancestral_prob + (i*nstates);
                 int state_best = 0;
                 for (j = 1; j < nstates; j++)
                     if (prob[j] > prob[state_best])
                         state_best = j;
                 if (fabs(prob[state_best]-flat_prob) < 1e-5)
                     state_best = tree->aln->STATE_UNKNOWN;
-                out.width(6);
-                out << left << i+1 << "\t" << node->name << "\t" << tree->aln->convertStateBackStr(state_best);
+                ptn_ancestral_seq[i] = state_best;
+            }
+            
+            // set node name if neccessary
+            if (node->name.empty() || !isalpha(node->name[0])) {
+                node->name = "N" + convertIntToString(node->id-tree->leafNum+1);
+            }
+            
+            // print ancestral state probabilities
+            for (i = 0; i < nsites; i++) {
+                int ptn = pattern_index[i];
+                out << node->name << "\t" << i+1 << "\t" << tree->aln->convertStateBackStr(ptn_ancestral_seq[ptn]);
                 for (j = 0; j < nstates; j++) {
                     out << "\t" << ptn_ancestral_prob[ptn*nstates+j];
                 }
                 out << endl;
             }
+            
+            outseq.width(name_width);
+            outseq << left << node->name << " ";
+            // print ancestral sequences
+            for (i = 0; i < nsites; i++) 
+                outseq << tree->aln->convertStateBackStr(ptn_ancestral_seq[pattern_index[i]]);
+            outseq << endl;
         }
+
+        delete[] ptn_ancestral_seq;
         delete[] ptn_ancestral_prob;
         
 		out.close();
-		cout << "Ancestral sequences printed to " << filename << endl;
+        outseq.close();
+		cout << "Ancestral state probabilities printed to " << filename << endl;
+		cout << "Ancestral sequences printed to " << filenameseq << endl;
+        
 	} catch (ios::failure) {
 		outError(ERR_WRITE_OUTPUT, filename);
 	}
