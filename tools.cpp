@@ -806,6 +806,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.print_site_state_freq = 0;
     params.print_site_rate = false;
     params.print_site_posterior = 0;
+    params.print_ancestral_sequence = AST_NONE;
     params.print_tree_lh = false;
     params.lambda = 1;
     params.speed_conf = 1.0;
@@ -2217,6 +2218,17 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.print_site_lh = WSL_MIXTURE_RATECAT;
 				continue;
 			}
+
+			if (strcmp(argv[cnt], "-wma") == 0) {
+				params.print_ancestral_sequence = AST_MARGINAL;
+				continue;
+			}
+
+			if (strcmp(argv[cnt], "-wja") == 0) {
+				params.print_ancestral_sequence = AST_JOINT;
+				continue;
+			}
+
 			if (strcmp(argv[cnt], "-wsr") == 0) {
 				params.print_site_rate = true;
 				continue;
@@ -3252,6 +3264,8 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -wslr                Write site log-likelihoods per rate category" << endl
             << "  -wslm                Write site log-likelihoods per mixture class" << endl
             << "  -wslmr               Write site log-likelihoods per mixture+rate class" << endl
+            << "  -wma                 Write ancestral sequences by marginal reconstruction" << endl
+            << "  -wja                 Write ancestral sequences by joint reconstruction" << endl
             << "  -fconst f1,...,fN    Add constant patterns into alignment (N=#nstates)" << endl;
 //            << "  -d <file>            Reading genetic distances from file (default: JC)" << endl
 //			<< "  -d <outfile>         Calculate the distance matrix inferred from tree" << endl

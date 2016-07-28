@@ -243,7 +243,7 @@ void printSiteLh(const char*filename, PhyloTree *tree, double *ptn_lh,
 
 void printSiteLhCategory(const char*filename, PhyloTree *tree, SiteLoglType wsl) {
 
-    if (wsl == WSL_NONE || wsl == WSL_SITE)
+    if (wsl == WSL_NONE || wsl == WSL_SITE || wsl == WSL_STATE)
         return;
     // error checking
     if (!tree->getModel()->isMixture()) {

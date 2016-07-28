@@ -403,7 +403,11 @@ enum LhMemSave {
 };
 
 enum SiteLoglType {
-    WSL_NONE, WSL_SITE, WSL_RATECAT, WSL_MIXTURE, WSL_MIXTURE_RATECAT
+    WSL_NONE, WSL_SITE, WSL_RATECAT, WSL_MIXTURE, WSL_MIXTURE_RATECAT, WSL_STATE
+};
+
+enum AncestralSeqType {
+    AST_NONE, AST_MARGINAL, AST_JOINT
 };
 
 /** maximum number of newton-raphson steps for NNI branch evaluation */
@@ -1347,8 +1351,16 @@ public:
             WSL_RATECAT: print site log-likelihood per rate category
             WSL_MIXTURE: print site log-likelihood per mixture class
             WSL_MIXTURE_RATECAT: print site log-likelihood per mixture class per rate category
+            WSL_STATE: print site log-likelihood per state
      */
     SiteLoglType print_site_lh;
+
+    /**
+        AST_NONE: do not print ancestral sequences (default)
+        AST_MARGINAL: print ancestral sequences by marginal reconstruction
+        AST_JOINT: print ancestral sequences by joint reconstruction
+    */
+    AncestralSeqType print_ancestral_sequence;
 
     /**
         0: print nothing

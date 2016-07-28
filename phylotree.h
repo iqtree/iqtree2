@@ -1677,11 +1677,16 @@ protected:
     double *_pattern_lh;
 
     /**
-            internal pattern likelihoods per category, always stored after calling computeLikelihood()
-            or related functions. Note that scaling factors are not incorporated here.
-            If you want to get real pattern likelihoods, please use computePatternLikelihood()
-     */
+            internal pattern likelihoods per category, 
+            only stored after calling non-SSE computeLikelihood for efficiency purpose
+    */
     double *_pattern_lh_cat;
+
+    /**
+            internal pattern likelihoods per state per category 
+            only stored after calling non-SSE computeLikelihood for efficiency purpose
+    */
+    double *_pattern_lh_all;
 
     /**
             associated substitution model
