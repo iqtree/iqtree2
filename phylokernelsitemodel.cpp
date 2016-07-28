@@ -577,7 +577,6 @@ double PhyloTree::computeSitemodelLikelihoodBranchEigen(PhyloNeighbor *dad_branc
 
 
 	memset(_pattern_lh_cat, 0, sizeof(double)*nptn*ncat);
-	memset(_pattern_lh_all, 0, sizeof(double)*nptn*ncat*nstates);
     ModelSet *models = (ModelSet*)model;
 
     if (dad->isLeaf()) {
@@ -589,7 +588,6 @@ double PhyloTree::computeSitemodelLikelihoodBranchEigen(PhyloNeighbor *dad_branc
     	for (ptn = 0; ptn < nptn; ptn++) {
 			double lh_ptn = ptn_invar[ptn];
 			double *lh_cat = _pattern_lh_cat + ptn*ncat;
-            double *lh_all = _pattern_lh_all + ptn*block;
 			double *partial_lh_dad = dad_branch->partial_lh + ptn*block;
 			double *partial_lh_node = tip_partial_lh_node + ptn*nstates;
             double *eval = models->at(ptn)->getEigenvalues();
@@ -598,14 +596,13 @@ double PhyloTree::computeSitemodelLikelihoodBranchEigen(PhyloNeighbor *dad_branc
                 double len = site_rate->getRate(c)*dad_branch->length;
                 double prop = site_rate->getProp(c);
 				for (i = 0; i < nstates; i++) {
-					*lh_cat +=  (lh_all[i] = exp(eval[i]*len) * partial_lh_node[i] * partial_lh_dad[i]);
+					*lh_cat +=  (exp(eval[i]*len) * partial_lh_node[i] * partial_lh_dad[i]);
 				}
                 *lh_cat *= prop;
 				lh_ptn += *lh_cat;
                 // don't increase partial_lh_node pointer
 				partial_lh_dad += nstates;
 				lh_cat++;
-                lh_all += nstates;
 			}
 
             lh_ptn = log(fabs(lh_ptn));
@@ -621,7 +618,6 @@ double PhyloTree::computeSitemodelLikelihoodBranchEigen(PhyloNeighbor *dad_branc
     	for (ptn = 0; ptn < nptn; ptn++) {
 			double lh_ptn = ptn_invar[ptn];
 			double *lh_cat = _pattern_lh_cat + ptn*ncat;
-            double *lh_all = _pattern_lh_all + ptn*block;
 			double *partial_lh_dad = dad_branch->partial_lh + ptn*block;
 			double *partial_lh_node = node_branch->partial_lh + ptn*block;
             double *eval = models->at(ptn)->getEigenvalues();
@@ -630,14 +626,13 @@ double PhyloTree::computeSitemodelLikelihoodBranchEigen(PhyloNeighbor *dad_branc
                 double len = site_rate->getRate(c)*dad_branch->length;
                 double prop = site_rate->getProp(c);
 				for (i = 0; i < nstates; i++) {
-					*lh_cat +=  (lh_all[i] = exp(eval[i]*len) * partial_lh_node[i] * partial_lh_dad[i]);
+					*lh_cat +=  (exp(eval[i]*len) * partial_lh_node[i] * partial_lh_dad[i]);
 				}
                 *lh_cat *= prop;
 				lh_ptn += *lh_cat;
 				partial_lh_node += nstates;
 				partial_lh_dad += nstates;
 				lh_cat++;
-                lh_all += nstates;
 			}
 
             lh_ptn = log(fabs(lh_ptn));

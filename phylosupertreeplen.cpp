@@ -317,7 +317,6 @@ void PhyloSuperTreePlen::deleteAllPartialLh() {
 //		(*it)->central_partial_pars = NULL;
 		(*it)->_pattern_lh = NULL;
 		(*it)->_pattern_lh_cat = NULL;
-        (*it)->_pattern_lh_all = NULL;
 		(*it)->theta_all = NULL;
 		(*it)->ptn_freq = NULL;
 		(*it)->ptn_freq_computed = false;
@@ -337,7 +336,6 @@ PhyloSuperTreePlen::~PhyloSuperTreePlen()
 //		(*it)->central_partial_pars = NULL;
 		(*it)->_pattern_lh = NULL;
 		(*it)->_pattern_lh_cat = NULL;
-        (*it)->_pattern_lh_all = NULL;
 		(*it)->theta_all = NULL;
 		(*it)->ptn_freq = NULL;
 		(*it)->ptn_freq_computed = false;
@@ -1780,10 +1778,7 @@ void PhyloSuperTreePlen::initializeAllPartialLh() {
     at(part_order[0])->_pattern_lh = _pattern_lh;
     if (!_pattern_lh_cat)
         _pattern_lh_cat = aligned_alloc<double>(total_lh_cat_size);
-    if (!_pattern_lh_all)
-        _pattern_lh_all = aligned_alloc<double>(total_block_size);
     at(part_order[0])->_pattern_lh_cat = _pattern_lh_cat;
-    at(part_order[0])->_pattern_lh_all = _pattern_lh_all;
     if (!theta_all)
         theta_all = aligned_alloc<double>(total_block_size);
     at(part_order[0])->theta_all = theta_all;
@@ -1814,7 +1809,6 @@ void PhyloSuperTreePlen::initializeAllPartialLh() {
         iterator prev_it = begin()+part_order[partid-1];
 		(*it)->_pattern_lh = (*prev_it)->_pattern_lh + mem_size[part];
 		(*it)->_pattern_lh_cat = (*prev_it)->_pattern_lh_cat + lh_cat_size[part];
-		(*it)->_pattern_lh_all = (*prev_it)->_pattern_lh_all + block_size[part];
 		(*it)->theta_all = (*prev_it)->theta_all + block_size[part];
 		(*it)->ptn_freq = (*prev_it)->ptn_freq + mem_size[part];
 		(*it)->ptn_freq_computed = false;

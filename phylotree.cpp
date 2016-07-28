@@ -81,7 +81,6 @@ void PhyloTree::init() {
     discard_saturated_site = true;
     _pattern_lh = NULL;
     _pattern_lh_cat = NULL;
-    _pattern_lh_all = NULL;
     //root_state = STATE_UNKNOWN;
     root_state = 126;
     theta_all = NULL;
@@ -209,9 +208,6 @@ PhyloTree::~PhyloTree() {
     if (_pattern_lh_cat)
         aligned_free(_pattern_lh_cat);
     _pattern_lh_cat = NULL;
-    if (_pattern_lh_all)
-        aligned_free(_pattern_lh_all);
-    _pattern_lh_all = NULL;
     if (_pattern_lh)
         aligned_free(_pattern_lh);
     _pattern_lh = NULL;
@@ -687,8 +683,6 @@ void PhyloTree::initializeAllPartialLh() {
         _pattern_lh = aligned_alloc<double>(mem_size);
     if (!_pattern_lh_cat)
         _pattern_lh_cat = aligned_alloc<double>(mem_size * site_rate->getNDiscreteRate() * ((model_factory->fused_mix_rate)? 1 : model->getNMixtures()));
-    if (!_pattern_lh_all)
-        _pattern_lh_all = aligned_alloc<double>(mem_size * model->num_states * site_rate->getNDiscreteRate() * ((model_factory->fused_mix_rate)? 1 : model->getNMixtures()));
     if (!theta_all)
         theta_all = aligned_alloc<double>(block_size);
     if (!ptn_freq) {
@@ -748,8 +742,6 @@ void PhyloTree::deleteAllPartialLh() {
 
 	if (_pattern_lh_cat)
 		aligned_free(_pattern_lh_cat);
-	if (_pattern_lh_all)
-		aligned_free(_pattern_lh_all);
 	if (_pattern_lh)
 		aligned_free(_pattern_lh);
 	central_partial_lh = NULL;
@@ -761,7 +753,6 @@ void PhyloTree::deleteAllPartialLh() {
 	ptn_freq_computed = false;
 	theta_all = NULL;
 	_pattern_lh_cat = NULL;
-	_pattern_lh_all = NULL;
 	_pattern_lh = NULL;
 
     tip_partial_lh = NULL;
@@ -1167,59 +1158,6 @@ double PhyloTree::computePatternLhCat(SiteLoglType wsl) {
     
     return score;
 }
-
-/*
-void PhyloTree::computePatternAncestralProb(PhyloNode *node, double *ptn_ancestral_prob) {
-    double score;
-
-    if (!getModel()->isMixture())
-        score = computeLikelihoodBranchEigen((PhyloNeighbor*)node->neighbors[0], node);
-    else if (getModelFactory()->fused_mix_rate)
-        score = computeMixrateLikelihoodBranchEigen((PhyloNeighbor*)node->neighbors[0], node);
-    else {
-        score = computeMixtureLikelihoodBranchEigen((PhyloNeighbor*)node->neighbors[0], node);
-    }
-    
-    double *evec = model->getEigenvectors();
-    
-    size_t step = site_rate->getNRate();
-    if (model->isMixture() && !model_factory->fused_mix_rate)
-        step *= model->getNMixtures();
-    size_t ptn, nptn = aln->getNPattern();
-    double *lh_all = _pattern_lh_all;
-    size_t i, x;
-    size_t nstates = model->num_states;
-    double lh_sum[nstates];
-    double *lh_state = ptn_ancestral_prob;
-    memset(ptn_ancestral_prob, 0, sizeof(double)*nptn);
-    
-    for (ptn = 0; ptn < nptn; ptn++) {
-        memcpy(lh_sum, lh_all, sizeof(double)*nstates);
-        lh_all += nstates; 
-        for (i = 1; i < step; i++) {
-            for (x = 0; x < nstates; x++)
-                lh_sum[x] += lh_all[x];
-            lh_all += nstates;
-        }
-        
-        for (x = 0; x < nstates; x++) {
-            for (i = 0; i < nstates; i++)
-                lh_state[x] += lh_sum[i]*evec[x*nstates+i];
-        }
-            
-        
-        double lh_total = lh_state[0];
-        for (i = 1; i < nstates; i++)
-            lh_total += lh_state[i];
-        lh_total = 1.0/lh_total;
-        for (i = 0; i < nstates; i++)
-            lh_state[i] *= lh_total;
-            
-        lh_state += nstates;
-    }
-
-}
-*/
 
 void PhyloTree::computePatternStateFreq(double *ptn_state_freq) {
     assert(getModel()->isMixture());

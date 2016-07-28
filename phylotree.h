@@ -1691,12 +1691,6 @@ protected:
     double *_pattern_lh_cat;
 
     /**
-            internal pattern likelihoods per state per category 
-            only stored after calling non-SSE computeLikelihood for efficiency purpose
-    */
-    double *_pattern_lh_all;
-
-    /**
             associated substitution model
      */
     ModelSubst *model;

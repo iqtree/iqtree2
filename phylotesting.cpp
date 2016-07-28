@@ -359,7 +359,7 @@ void printAncestralSequences(const char*filename, PhyloTree *tree, AncestralSeqT
         for (NodeVector::iterator it = nodes.begin(); it != nodes.end(); it++) {
             PhyloNode *node = (PhyloNode*)(*it);
             PhyloNode *dad = (PhyloNode*)node->neighbors[0]->node;
-            tree->computeAncestralProbability((PhyloNeighbor*)dad->findNeighbor(node), dad, ptn_ancestral_prob);
+            tree->computeMarginalAncestralProbability((PhyloNeighbor*)dad->findNeighbor(node), dad, ptn_ancestral_prob);
             if (node->name.empty() || !isalpha(node->name[0])) {
                 node->name = "N" + convertIntToString(node->id-tree->leafNum+1);
             }
