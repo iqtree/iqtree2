@@ -2716,3 +2716,142 @@ double PhyloTree::computeMixtureLikelihoodBranchEigen(PhyloNeighbor *dad_branch,
     delete [] val;
     return tree_lh;
 }
+
+void PhyloTree::computeMarginalAncestralProb(PhyloNeighbor *dad_branch, PhyloNode *dad, double *ptn_ancestral_prob) {
+    PhyloNode *node = (PhyloNode*) dad_branch->node;
+    PhyloNeighbor *node_branch = (PhyloNeighbor*) node->findNeighbor(dad);
+    if (!central_partial_lh)
+        initializeAllPartialLh();
+    assert(!node->isLeaf());
+
+    if ((dad_branch->partial_lh_computed & 1) == 0)
+        computePartialLikelihood(dad_branch, dad);
+    if ((node_branch->partial_lh_computed & 1) == 0)
+        computePartialLikelihood(node_branch, node);
+    size_t nstates = aln->num_states;
+    const size_t nstatesqr=nstates*nstates;
+    size_t ncat = site_rate->getNRate();
+    size_t statecat = nstates * ncat;
+    size_t nmixture = model->getNMixtures();
+
+    size_t block = ncat * nstates * nmixture;
+    size_t ptn; // for big data size > 4GB memory required
+    size_t c, i, m, x;
+    size_t nptn = aln->size();
+    double *eval = model->getEigenvalues();
+    double *evec = model->getEigenvectors();
+    double *inv_evec = model->getInverseEigenvectors();
+    assert(eval);
+
+    double echild[block*nstates];
+
+    for (c = 0; c < ncat; c++) {
+        double expchild[nstates];
+        double len_child = site_rate->getRate(c) * dad_branch->length;
+        for (m = 0; m < nmixture; m++) {
+            for (i = 0; i < nstates; i++) {
+                expchild[i] = exp(eval[m*nstates+i]*len_child);
+            }
+            for (x = 0; x < nstates; x++)
+                for (i = 0; i < nstates; i++) {
+                    echild[(m*ncat+c)*nstatesqr+x*nstates+i] = evec[m*nstatesqr+x*nstates+i] * expchild[i];
+                }
+        }
+    }
+
+
+	memset(ptn_ancestral_prob, 0, sizeof(double)*nptn*nstates);
+
+    if (dad->isLeaf()) {
+    	// special treatment for TIP-INTERNAL NODE case
+        double partial_lh_leaf[(aln->STATE_UNKNOWN+1)*block];
+
+        for (IntVector::iterator it = aln->seq_states[dad->id].begin(); it != aln->seq_states[dad->id].end(); it++) {
+            int state = (*it);
+            for (m = 0; m < nmixture; m++) {
+                double *this_echild = &echild[m*nstatesqr*ncat];
+                double *this_tip_partial_lh = &tip_partial_lh[state*nstates*nmixture + m*nstates];
+                double *this_partial_lh_leaf = &partial_lh_leaf[state*block+m*statecat];
+                for (x = 0; x < statecat; x++) {
+                    double vchild = 0.0;
+                    for (i = 0; i < nstates; i++) {
+                        vchild += this_echild[x*nstates+i] * this_tip_partial_lh[i];
+                    }
+                    this_partial_lh_leaf[x] = vchild;
+                }
+            }
+        }
+        size_t addr = aln->STATE_UNKNOWN * block;
+        for (x = 0; x < block; x++) {
+            partial_lh_leaf[addr+x] = 1.0;
+        }
+
+
+    	// now do the real computation
+#ifdef _OPENMP
+#pragma omp parallel for private(ptn, i, c, m, x)
+#endif
+    	for (ptn = 0; ptn < nptn; ptn++) {
+            double *lh_state = ptn_ancestral_prob + ptn*nstates;
+			double *partial_lh_dad = dad_branch->partial_lh + ptn*block;
+			int state_dad = (aln->at(ptn))[dad->id];
+			double *lh_leaf = partial_lh_leaf + state_dad*block;
+            for (m = 0; m < nmixture; m++) {
+                double *this_inv_evec = inv_evec + (m*nstatesqr); 
+				for (c = 0; c < ncat; c++) {
+					// compute real partial likelihood vector
+					for (x = 0; x < nstates; x++) {
+						double vnode = 0.0;
+						for (i = 0; i < nstates; i++) {
+							vnode += this_inv_evec[i*nstates+x] * partial_lh_dad[i];
+						}
+						lh_state[x] += lh_leaf[x] * vnode;
+					}
+                    lh_leaf += nstates;
+                    partial_lh_dad += nstates;
+                }
+            }
+            
+            double lh_sum = lh_state[0];
+            for (x = 1; x < nstates; x++)
+                lh_sum += lh_state[x];
+            lh_sum = 1.0/lh_sum;
+            for (x = 0; x < nstates; x++)
+                lh_state[x] *= lh_sum;
+		}
+    } else {
+    	// both dad and node are internal nodes
+#ifdef _OPENMP
+#pragma omp parallel for reduction(+: tree_lh, prob_const) private(ptn, i, c, m)
+#endif
+    	for (ptn = 0; ptn < nptn; ptn++) {
+            double *lh_state = ptn_ancestral_prob + ptn*nstates;
+			double *partial_lh_dad = dad_branch->partial_lh + ptn*block;
+			double *partial_lh_node = node_branch->partial_lh + ptn*block;
+
+			for (m = 0; m < nmixture; m++) {
+                double *this_inv_evec = inv_evec + (m*nstatesqr); 
+				for (c = 0; c < ncat; c++) {
+					// compute real partial likelihood vector
+					for (x = 0; x < nstates; x++) {
+						double vdad = 0.0, vnode = 0.0;
+						size_t addr = (m*ncat+c)*nstatesqr+x*nstates;
+						for (i = 0; i < nstates; i++) {
+							vdad += echild[addr+i] * partial_lh_node[m*statecat+c*nstates+i];
+                            vnode += this_inv_evec[i*nstates+x] * partial_lh_dad[m*statecat+c*nstates+i];
+						}
+						lh_state[x] += vnode*vdad;
+					}
+				}
+			}
+
+            double lh_sum = lh_state[0];
+            for (x = 1; x < nstates; x++)
+                lh_sum += lh_state[x];
+            lh_sum = 1.0/lh_sum;
+            for (x = 0; x < nstates; x++)
+                lh_state[x] *= lh_sum;
+
+		}
+    }
+}

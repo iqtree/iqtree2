@@ -243,7 +243,7 @@ void printSiteLh(const char*filename, PhyloTree *tree, double *ptn_lh,
 
 void printSiteLhCategory(const char*filename, PhyloTree *tree, SiteLoglType wsl) {
 
-    if (wsl == WSL_NONE || wsl == WSL_SITE || wsl == WSL_STATE)
+    if (wsl == WSL_NONE || wsl == WSL_SITE)
         return;
     // error checking
     if (!tree->getModel()->isMixture()) {
@@ -331,6 +331,63 @@ void printSiteLhCategory(const char*filename, PhyloTree *tree, SiteLoglType wsl)
 
 	delete[] pattern_lh_cat;
 	delete[] pattern_lh;
+
+}
+
+void printAncestralSequences(const char*filename, PhyloTree *tree, AncestralSeqType ast) {
+
+    int i, j, nsites = tree->getAlnNSite(), nstates = tree->aln->num_states;
+
+    try {
+		ofstream out;
+		out.exceptions(ios::failbit | ios::badbit);
+		out.open(filename);
+
+        NodeVector nodes;
+        tree->getInternalNodes(nodes);
+		IntVector pattern_index;
+		tree->aln->getSitePatternIndex(pattern_index);
+
+        double *ptn_ancestral_prob = new double[tree->getAlnNPattern()*tree->getModel()->num_states];
+
+        out << "Site\tNode\tState";
+        for (i = 0; i < nstates; i++)
+            out << "\tp_" << tree->aln->convertStateBackStr(i);
+        out << endl;
+        double flat_prob = 1.0/tree->getModel()->num_states;
+
+        for (NodeVector::iterator it = nodes.begin(); it != nodes.end(); it++) {
+            PhyloNode *node = (PhyloNode*)(*it);
+            PhyloNode *dad = (PhyloNode*)node->neighbors[0]->node;
+            tree->computeAncestralProbability((PhyloNeighbor*)dad->findNeighbor(node), dad, ptn_ancestral_prob);
+            if (node->name.empty() || !isalpha(node->name[0])) {
+                node->name = "N" + convertIntToString(node->id-tree->leafNum+1);
+            }
+            
+            for (i = 0; i < nsites; i++) {
+                int ptn = pattern_index[i];
+                double *prob = ptn_ancestral_prob + (ptn*nstates);
+                int state_best = 0;
+                for (j = 1; j < nstates; j++)
+                    if (prob[j] > prob[state_best])
+                        state_best = j;
+                if (fabs(prob[state_best]-flat_prob) < 1e-5)
+                    state_best = tree->aln->STATE_UNKNOWN;
+                out.width(6);
+                out << left << i+1 << "\t" << node->name << "\t" << tree->aln->convertStateBackStr(state_best);
+                for (j = 0; j < nstates; j++) {
+                    out << "\t" << ptn_ancestral_prob[ptn*nstates+j];
+                }
+                out << endl;
+            }
+        }
+        delete[] ptn_ancestral_prob;
+        
+		out.close();
+		cout << "Ancestral sequences printed to " << filename << endl;
+	} catch (ios::failure) {
+		outError(ERR_WRITE_OUTPUT, filename);
+	}
 
 }
 
