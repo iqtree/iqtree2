@@ -3205,7 +3205,7 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "PoMo is run when"                                                                    << endl
             << "- a Counts File is used as input file, and/or when"                                  << endl
             << "- it is specified in the model string (see below)."                                  << endl
-            << "  -m <sm>+<pm>+<ft>    Default: `HKY+rP+F`."                                         << endl
+            << "  -m <sm>+<pm>         Default: `HKY+rP+F`."                                         << endl
             << "                 <sm>: Substitution model."                                          << endl
             << "                  DNA: HKY (default), JC, F81, K2P, K3P, K81uf, TN/TrN, TNef,"       << endl
             << "                       TIM, TIMef, TVM, TVMef, SYM, GTR, or a 6-digit model"         << endl
@@ -3214,10 +3214,12 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "                       - rP (default; reversible PoMo with tree inference)."         << endl
             // << "                       - nrP (non-reversible PoMo; tree has to be given separately;" << endl
             // << "                         not implemented yet)."                                      << endl
-            << "                 <ft>: Frequency type (optional; default: +F, counted)."             << endl
+            << "  You can also use mixture models like so: -m \"MIX{JC+rP,HKY+rP}\"."                << endl
+            << "  -m <model_name>+<ft>: Frequency type (optional; default: +F, counted)."            << endl
             << "                       F or +FO or +FU or +FQ."                                      << endl
             << "                       Counted, optimized, user-defined, equal state frequency."     << endl
             << "                       This overwrites the specifications of the DNA model."         << endl
+            << "  E.g., a mixture model with equal state frequency: -m \"MIX{JC,HKY}+FQ\"."          << endl
             << "  -st C[FR] or C[FR]ps Counts File (automatically detected)."                        << endl
             << "                       Useful to customize the virtual population size `ps`"         << endl
             << "                       3 <= ps <= 19; ps has to be an odd number, 2 or 10."          << endl
