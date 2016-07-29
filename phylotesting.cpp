@@ -381,14 +381,15 @@ void printAncestralSequences(const char *out_prefix, PhyloTree *tree, AncestralS
                 for (j = 1; j < nstates; j++)
                     if (prob[j] > prob[state_best])
                         state_best = j;
-                if (fabs(prob[state_best]-flat_prob) < 1e-5)
-                    state_best = tree->aln->STATE_UNKNOWN;
+                //if (fabs(prob[state_best]-flat_prob) < 1e-5)
+                if (prob[state_best] < 0.95)
+                    state_best = STATE_INVALID;
                 ptn_ancestral_seq[i] = state_best;
             }
             
             // set node name if neccessary
             if (node->name.empty() || !isalpha(node->name[0])) {
-                node->name = "N" + convertIntToString(node->id-tree->leafNum+1);
+                node->name = "Node" + convertIntToString(node->id-tree->leafNum+1);
             }
             
             // print ancestral state probabilities
