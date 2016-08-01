@@ -70,9 +70,23 @@ void RateHeterogeneity::writeSiteRates(ostream &out, DoubleVector &pattern_rates
 		out << i+1 << "\t";
 		if (pattern_rates[ptn] >= MAX_SITE_RATE) out << "100.0"; else out << pattern_rates[ptn];
 		//cout << i << " "<< ptn << " " << pattern_cat[ptn] << endl;
-		if (!pattern_cat.empty()) out << "\t" << pattern_cat[ptn]+1 << "\t" << getRate(pattern_cat[ptn]);
+        if (!pattern_cat.empty()) {
+            int site_cat;
+            double cat_rate;
+            if (getPInvar() == 0.0) {
+                site_cat = pattern_cat[ptn]+1;
+                cat_rate = getRate(pattern_cat[ptn]);
+            } else {
+                site_cat = pattern_cat[ptn];
+                if (site_cat == 0)
+                    cat_rate = 0.0;
+                else
+                    cat_rate = getRate(pattern_cat[ptn]-1);
+            }
+            out << "\t" << site_cat << "\t" << cat_rate;
+            count[pattern_cat[ptn]]++;
+        }
 		out << endl;
-        count[pattern_cat[ptn]]++;
 	}
     cout << "Empirical proportions for each category:";
     for (i = 0; i < count.size(); i++)

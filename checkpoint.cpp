@@ -99,7 +99,9 @@ void Checkpoint::setDumpInterval(double interval) {
 
 
 void Checkpoint::dump(bool force) {
-	assert(filename != "");
+    if (filename == "")
+        return;
+        
     if (!force && getRealTime() < prev_dump_time + dump_interval) {
         return;
     }

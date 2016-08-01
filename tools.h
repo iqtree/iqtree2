@@ -400,7 +400,7 @@ struct NNIInfo {
 };
 
 enum LikelihoodKernel {
-	LK_NORMAL, LK_SSE, LK_EIGEN, LK_EIGEN_SSE
+	LK_EIGEN, LK_EIGEN_SSE
 };
 
 enum LhMemSave {
@@ -463,7 +463,15 @@ public:
      *  Restart the optimization of alpha and pinvar from different starting
      *  pinv values (supercedes the option testAlpha
      */
-    bool test_param;
+    bool opt_gammai;
+
+    /**
+     *  A faster version of opt_gammai using a heuristic similar to binary search.
+     *  Thus, one does not need to perform 10 independent trials as in opt_gammai.
+     */
+    bool opt_gammai_fast;
+
+    bool opt_gammai_keep_bran;
 
     /**
      *  Automatic adjust the log-likelihood espilon using some heuristic
@@ -689,6 +697,9 @@ public:
             alignment file name
      */
     char *aln_file;
+
+    /** true if sequential phylip format is used, default: false (interleaved format) */
+    bool phylip_sequential_format;
 
     /**
             file containing multiple trees to evaluate at the end
@@ -1197,6 +1208,9 @@ public:
     /** TRUE to optimize mixture model weights */
     bool optimize_mixmodel_weight;
 
+    /** TRUE to always optimize rate matrix even if user parameters are specified in e.g. GTR{1,2,3,4,5} */
+    bool optimize_rate_matrix;
+
     /**
             TRUE to store transition matrix into a hash table for computation efficiency
      */
@@ -1248,6 +1262,11 @@ public:
 
     /** optimization algorithm for parameter estimation: 1-BFGS, 2-BFGS, EM */
     string optimize_alg;
+
+    /**
+     *  Optimization algorithm for +I+G
+     */
+    string optimize_alg_gammai;
 
     /**
             TRUE if you want to fix branch lengths during model optimization
@@ -1731,7 +1750,7 @@ public:
     /** true to ignore checkpoint file */
     bool ignore_checkpoint;
     /** number of quartets for likelihood mapping */
-    int lmap_num_quartets;
+    int64_t lmap_num_quartets;
 
     /**
             file containing the cluster information for clustered likelihood mapping
@@ -1947,6 +1966,21 @@ int convert_int(const char *str, int &end_pos) throw (string);
         @param vec (OUT) integer vector
  */
 void convert_int_vec(const char *str, IntVector &vec) throw (string);
+
+/**
+        convert string to int64_t, with error checking
+        @param str original string
+        @return the number
+ */
+int64_t convert_int64(const char *str) throw (string);
+
+/**
+        convert string to int64_t, with error checking
+        @param str original string
+        @param end_pos end position
+        @return the number
+ */
+int64_t convert_int64(const char *str, int64_t &end_pos) throw (string);
 
 /**
         convert string to double, with error checking

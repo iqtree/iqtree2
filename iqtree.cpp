@@ -329,6 +329,19 @@ void IQTree::initSettings(Params &params) {
                 boot_trees_brlen.resize(params.gbo_replicates);
         } else {
             cout << "CHECKPOINT: " << boot_trees.size() << " UFBoot trees and " << boot_splits.size() << " UFBootSplits restored" << endl;
+            // TODO: quick and dirty fix, no branch lengths are saved after checkpointing
+            if (params.print_ufboot_trees == 2) {
+                boot_trees_brlen.resize(params.gbo_replicates);
+                string ufboot_file = params.out_prefix + string(".ufboot");
+                if (fileExists(ufboot_file)) {
+                    ifstream in(ufboot_file.c_str());
+                    for (i = 0; i < params.gbo_replicates && !in.eof(); i++)
+                        in >> boot_trees_brlen[i];
+                    in.close();
+                } else {
+                    outWarning("Cannot properly restore bootstrap trees with branch lengths");
+                }
+            }
         }
         VerboseMode saved_mode = verbose_mode;
         verbose_mode = VB_QUIET;
@@ -1650,7 +1663,7 @@ double IQTree::getAlphaFromPLL() {
 
 void IQTree::inputModelPLL2IQTree() {
     // TODO add support for partitioned model
-    dynamic_cast<RateGamma*>(getRate())->setGammaShape(pllPartitions->partitionData[0]->alpha);
+    getRate()->setGammaShape(pllPartitions->partitionData[0]->alpha);
     if (aln->num_states == 4) {
         ((ModelGTR*) getModel())->setRateMatrix(pllPartitions->partitionData[0]->substRates);
         getModel()->decomposeRateMatrix();
@@ -1970,13 +1983,9 @@ string IQTree::optimizeModelParameters(bool printInfo, double logl_epsilon) {
             cout << etime - stime << " seconds (logl: " << curScore << ")" << endl;
 	} else {
         double modOptScore;
-        if (params->test_param) { // DO RESTART ON ALPHA AND P_INVAR
-            double stime = getRealTime();
+        if (params->opt_gammai) { // DO RESTART ON ALPHA AND P_INVAR
             modOptScore = getModelFactory()->optimizeParametersGammaInvar(params->fixed_branch_length, printInfo, logl_epsilon);
-            double etime = getRealTime();
-            cout << "Testing param took: " << etime -stime << " CPU seconds" << endl;
-            cout << endl;
-            params->test_param = false;
+            params->opt_gammai = false;
         } else {
             modOptScore = getModelFactory()->optimizeParameters(params->fixed_branch_length, printInfo, logl_epsilon);
         }
