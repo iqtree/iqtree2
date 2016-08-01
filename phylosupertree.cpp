@@ -598,7 +598,7 @@ void PhyloSuperTree::changeLikelihoodKernel(LikelihoodKernel lk) {
 //    }
 }
 
-string PhyloSuperTree::getTreeString(int format) {
+string PhyloSuperTree::getTreeString() {
 	stringstream tree_stream;
 	printTree(tree_stream, WT_TAXON_ID + WT_BR_LEN + WT_SORT_TAXA);
 	for (iterator it = begin(); it != end(); it++)

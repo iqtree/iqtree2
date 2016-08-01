@@ -2189,6 +2189,11 @@ double IQTree::doTreeSearch() {
         }
 #endif
 
+        // TODO: cannot check yet, need to somehow return treechanged
+//        if (nni_count == 0 && params->snni && numPerturb > 0 && treechanged) {
+//            assert(0 && "BUG: NNI could not improved perturbed tree");
+//        }
+//
         if (iqp_assess_quartet == IQP_BOOTSTRAP) {
             // restore alignment
             delete aln;
@@ -2878,13 +2883,13 @@ vector<NNIMove> IQTree::evaluateNNIs(Branches &nniBranches) {
     return positiveNNIs;
 }
 
-Branches IQTree::getReducedListOfNNIBranches(Branches &previousNNIBranches) {
-    Branches resBranches;
-    for (Branches::iterator it = previousNNIBranches.begin(); it != previousNNIBranches.end(); it++) {
-        getSurroundingInnerBranches(it->second.first, it->second.second, 2, resBranches);
-        getSurroundingInnerBranches(it->second.second, it->second.first, 2, resBranches);
-    }
-}
+//Branches IQTree::getReducedListOfNNIBranches(Branches &previousNNIBranches) {
+//    Branches resBranches;
+//    for (Branches::iterator it = previousNNIBranches.begin(); it != previousNNIBranches.end(); it++) {
+//        getSurroundingInnerBranches(it->second.first, it->second.second, 2, resBranches);
+//        getSurroundingInnerBranches(it->second.second, it->second.first, 2, resBranches);
+//    }
+//}
 
 double IQTree::optimizeNNIBranches(Branches &nniBranches) {
     for (Branches::iterator it = nniBranches.begin(); it != nniBranches.end(); it++) {

@@ -1086,20 +1086,18 @@ void reportPhyloAnalysis(Params &params, string &original_model,
     if (params.treeset_file) {
         cout << "  Evaluated user trees:          " << params.out_prefix << ".trees" << endl;
 
-        if (params.print_tree_lh) {
-            cout << "  Tree log-likelihoods:          " << params.out_prefix << ".treelh" << endl;
-        }
-        if (params.print_site_lh) {
-            cout << "  Site log-likelihoods:          " << params.out_prefix << ".sitelh" << endl;
-        }
-    }
-
-    if (params.lmap_num_quartets) {
-        cout << "  Likelihood mapping plot (SVG): " << params.out_prefix << ".lmap.svg" << endl;
-        cout << "  Likelihood mapping plot (EPS): " << params.out_prefix << ".lmap.eps" << endl;
-    }
-
-    cout << "  Screen log file:               " << params.out_prefix << ".log" << endl;
+		if (params.print_tree_lh) {
+		cout << "  Tree log-likelihoods:          " << params.out_prefix << ".treelh" << endl;
+		}
+		if (params.print_site_lh) {
+		cout << "  Site log-likelihoods:          " << params.out_prefix << ".sitelh" << endl;
+		}
+	}
+    	if (params.lmap_num_quartets >= 0) {
+		cout << "  Likelihood mapping plot (SVG): " << params.out_prefix << ".lmap.svg" << endl;
+		cout << "  Likelihood mapping plot (EPS): " << params.out_prefix << ".lmap.eps" << endl;
+	}
+	cout << "  Screen log file:               " << params.out_prefix << ".log" << endl;
 	/*	if (original_model == "WHTEST")
 	 cout <<"  WH-TEST report:           " << params.out_prefix << ".whtest" << endl;*/
 	cout << endl;
@@ -1739,8 +1737,8 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
     }
 
     iqtree.initializeAllPartialLh();
-	double initEpsilon = params.min_iterations == 0 ? params.modelEps : (params.modelEps * 10);
-	if (params.test_param)
+	double initEpsilon = params.min_iterations == 0 ? params.modelEps : (params.modelEps*10);
+	if (params.opt_gammai)
 		initEpsilon = 0.1;
 
 
@@ -1788,7 +1786,9 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
         cout << "Likelihood mapping needed " << getRealTime()-lkmap_time << " seconds" << endl << endl;
     }
     
-    bool finishedCandidateSet = iqtree.getCheckpoint()->getBool("finishedCandidateSet");
+    // TODO: why is this variable not used? 
+    // ANSWER: moved to doTreeSearch
+//    bool finishedCandidateSet = iqtree.getCheckpoint()->getBool("finishedCandidateSet");
     bool finishedInitTree = iqtree.getCheckpoint()->getBool("finishedInitTree");
 
     // now overwrite with random tree
