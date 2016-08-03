@@ -2,9 +2,9 @@
 '''
 Created on Jan. 26, 2015
 
-@author: tung
+@author: Tung Nguyen <nltung@gmail.com>
 '''
-import sys, os, time, multiprocessing, optparse 
+import sys, os, time, multiprocessing, optparse
 import subprocess, logging, datetime
 
 def parse_config(config_file):
@@ -22,15 +22,15 @@ def parse_config(config_file):
       readSingleAln = True
       continue
     if line == 'END_SINGLE_ALN':
-      readSingleAln = False 
+      readSingleAln = False
       continue
     if readSingleAln:
-      singleAln.append(line) 
+      singleAln.append(line)
     if line == 'START_PARTITION_ALN':
       readPartAln = True
       continue
     if line == 'END_PARTITION_ALN':
-      readPartAln = False 
+      readPartAln = False
       continue
     if readPartAln:
       partitionAln.append(line.split())
@@ -51,7 +51,7 @@ def parse_config(config_file):
     if genericOpt:
       genericOpts.append(line)
   return (singleAln, partitionAln, genericOpts, partOpts)
-      
+
 
 if __name__ == '__main__':
   usage = "USAGE: %prog [options]"
@@ -80,13 +80,10 @@ if __name__ == '__main__':
   for cmd in testCmds:
     testIDRel = os.path.basename(options.iqtree_bin) + "_TEST_" + str(testNr)
     testCMD = testIDRel + " " + options.iqtree_bin + " -pre " + testIDRel + " " + cmd
-    testNr = testNr + 1 
+    testNr = testNr + 1
     jobs.append(testCMD)
 #  print "\n".join(jobs)
   outfile = open(os.path.basename(options.iqtree_bin) + '_test_standard_cmds.txt', "wb")
   for job in jobs:
     print >> outfile, job
   outfile.close()
-
-
-
