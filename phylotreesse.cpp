@@ -2933,7 +2933,7 @@ void PhyloTree::computeAncestralLikelihood(PhyloNeighbor *dad_branch, PhyloNode 
             // for unknown state
             double *this_lh_leaf = lh_leaf + (aln->STATE_UNKNOWN*nstates);
             for (parent = 0; parent < nstates; parent++)
-                this_lh_leaf[parent] = 1.0;
+                this_lh_leaf[parent] = 0.0;
             
             // special treatment for ambiguous characters
             switch (aln->seq_type) {
@@ -2988,15 +2988,13 @@ void PhyloTree::computeAncestralLikelihood(PhyloNeighbor *dad_branch, PhyloNode 
                 double *lh_leaf = lh_leaves+leafid*nstates*(aln->STATE_UNKNOWN+1); 
                 // external node
                 int state_child;
-                if ((*it)->node == root) 
-                    state_child = 0;
-                else state_child = (aln->at(ptn))[(*it)->node->id];
+                state_child = (aln->at(ptn))[(*it)->node->id];
                 double *child_lh = lh_leaf + state_child*nstates;
                 for (child = 0; child < nstates; child++)
                     sumlh[child] += child_lh[child];
                 leafid++;
             } else {
-                double *child_lh = childnei->partial_lh + nptn*nstates;
+                double *child_lh = childnei->partial_lh + ptn*nstates;
                 for (child = 0; child < nstates; child++)
                     sumlh[child] += child_lh[child];
             }

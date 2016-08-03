@@ -367,10 +367,9 @@ void printAncestralSequences(const char *out_prefix, PhyloTree *tree, AncestralS
             out << "\tp_" << tree->aln->convertStateBackStr(i);
         out << endl;
         
-        outseq << tree->nodeNum - tree->leafNum << " " << nsites << endl;
+        outseq << 2*(tree->nodeNum-tree->leafNum) << " " << nsites << endl;
         
-        int name_width = tree->aln->getMaxSeqNameLength();
-        name_width = max(name_width, 10); 
+        int name_width = max(tree->aln->getMaxSeqNameLength(),6)+10;
 
         for (NodeVector::iterator it = nodes.begin(); it != nodes.end(); it++) {
             PhyloNode *node = (PhyloNode*)(*it);
@@ -408,11 +407,16 @@ void printAncestralSequences(const char *out_prefix, PhyloTree *tree, AncestralS
                 out << endl;
             }
             
-            outseq.width(name_width);
-            outseq << left << node->name << " ";
             // print ancestral sequences
+            outseq.width(name_width);
+            outseq << left << (node->name+"_marginal") << " ";
             for (i = 0; i < nsites; i++) 
                 outseq << tree->aln->convertStateBackStr(marginal_ancestral_seq[pattern_index[i]]);
+            outseq << endl;
+            outseq.width(name_width);
+            outseq << left << (node->name+"_joint") << " ";
+            for (i = 0; i < nsites; i++) 
+                outseq << tree->aln->convertStateBackStr(joint_ancestral_node[pattern_index[i]]);
             outseq << endl;
         }
 

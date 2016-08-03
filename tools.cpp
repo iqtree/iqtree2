@@ -2221,6 +2221,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 
 			if (strcmp(argv[cnt], "-wma") == 0) {
 				params.print_ancestral_sequence = AST_MARGINAL;
+                params.ignore_identical_seqs = false;
 				continue;
 			}
 
