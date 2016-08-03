@@ -798,13 +798,42 @@ public:
     */
     void computePatternStateFreq(double *ptn_state_freq);
 
+    /****************************************************************************
+            ancestral sequence reconstruction
+     ****************************************************************************/
+
     /**
-        compute ancestral sequence probability for an internal node by marginal reconstruction 
+        compute ancestral sequence probability for an internal node by marginal reconstruction
+        (Yang, Kumar and Nei 1995)
         @param dad_branch branch leading to an internal node where to obtain ancestral sequence
         @param dad dad of the target internal node
         @param[out] ptn_ancestral_prob pattern ancestral probability vector of dad_branch->node
     */
     void computeMarginalAncestralProbability(PhyloNeighbor *dad_branch, PhyloNode *dad, double *ptn_ancestral_prob);
+
+    /**
+     	 compute the joint ancestral states at a pattern (Pupko et al. 2000)
+     */
+    void computeJointAncestralSequences(int *ancestral_seqs);
+
+    /**
+     * compute max ancestral likelihood according to
+     *  step 1-3 of the dynamic programming algorithm of Pupko et al. 2000, MBE 17:890-896
+     *  @param dad_branch branch leading to an internal node where to obtain ancestral sequence
+     *  @param dad dad of the target internal node
+     *  @param[out] C array storing all information about max ancestral states
+     */
+    void computeAncestralLikelihood(PhyloNeighbor *dad_branch, PhyloNode *dad, int *C);
+
+    /**
+     * compute max ancestral states according to
+     *  step 4-5 of the dynamic programming algorithm of Pupko et al. 2000, MBE 17:890-896
+     *  @param dad_branch branch leading to an internal node where to obtain ancestral sequence
+     *  @param dad dad of the target internal node
+     *  @param C array storing all information about max ancestral states
+     *  @param[out] ancestral_seqs array of size nptn*nnode for ancestral sequences at all internal nodes
+     */
+    void computeAncestralState(PhyloNeighbor *dad_branch, PhyloNode *dad, int *C, int *ancestral_seqs);
 
     /**
             compute pattern likelihoods only if the accumulated scaling factor is non-zero.

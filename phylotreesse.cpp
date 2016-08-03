@@ -2807,7 +2807,7 @@ void PhyloTree::computeMarginalAncestralProbability(PhyloNeighbor *dad_branch, P
     } else {
     	// both dad and node are internal nodes
 #ifdef _OPENMP
-#pragma omp parallel for reduction(+: tree_lh, prob_const) private(ptn, i, c, m)
+#pragma omp parallel for reduction(+: tree_lh, prob_const) private(ptn, i, c, m, x)
 #endif
     	for (ptn = 0; ptn < nptn; ptn++) {
             double *lh_state = ptn_ancestral_prob + ptn*nstates;
@@ -2840,3 +2840,228 @@ void PhyloTree::computeMarginalAncestralProbability(PhyloNeighbor *dad_branch, P
 		}
     }
 }
+
+void PhyloTree::computeJointAncestralSequences(int *ancestral_seqs) {
+
+    // step 1-3 of the dynamic programming algorithm of Pupko et al. 2000, MBE 17:890-896
+    assert(root->isLeaf());
+    int *C = new int[(size_t)getAlnNPattern()*model->num_states*leafNum];
+    computeAncestralLikelihood((PhyloNeighbor*)root->neighbors[0], NULL, C);
+    
+    // step 4-5 of the dynamic programming algorithm of Pupko et al. 2000, MBE 17:890-896
+    computeAncestralState((PhyloNeighbor*)root->neighbors[0], NULL, C, ancestral_seqs);
+    
+    clearAllPartialLH();
+    
+    delete[] C;
+}
+
+void PhyloTree::computeAncestralLikelihood(PhyloNeighbor *dad_branch, PhyloNode *dad, int *C) {
+    PhyloNode *node = (PhyloNode*)dad_branch->node;
+    if (node->isLeaf())
+        return;
+    
+    int num_leaves = 0;
+    
+    // recursive into subtree
+    FOR_NEIGHBOR_DECLARE(node, dad, it) {
+        if ((*it)->node->isLeaf()) {
+            num_leaves++;
+        } else {
+            computeAncestralLikelihood((PhyloNeighbor*)(*it), node, C);
+        }
+    }
+    
+    if (params->lh_mem_save == LM_PER_NODE && !dad_branch->partial_lh) {
+        // re-orient partial_lh
+        bool done = false;
+        FOR_NEIGHBOR_IT(node, dad, it2) {
+            PhyloNeighbor *backnei = ((PhyloNeighbor*)(*it2)->node->findNeighbor(node));
+            if (backnei->partial_lh) {
+                dad_branch->partial_lh = backnei->partial_lh;
+                dad_branch->scale_num = backnei->scale_num;
+                backnei->partial_lh = NULL;
+                backnei->scale_num = NULL;
+                backnei->partial_lh_computed &= ~1; // clear bit
+                done = true;
+                break;
+            }
+        }
+        assert(done && "partial_lh is not re-oriented");
+    }
+    
+    size_t nptn = aln->getNPattern();
+    size_t ptn;
+    size_t nstates = model->num_states;
+    size_t nstatesqr = nstates*nstates;
+    size_t parent, child;
+    double *trans_mat = new double[nstatesqr];
+    double *lh_leaves = NULL;
+    if (num_leaves > 0) {
+        lh_leaves = new double[(aln->STATE_UNKNOWN+1)*nstates*num_leaves];
+    }
+    if (dad) {
+        model->computeTransMatrix(dad_branch->length, trans_mat);
+        for (parent = 0; parent < nstatesqr; parent++)
+            trans_mat[parent] = log(trans_mat[parent]);
+    } else {
+        model->getStateFrequency(trans_mat);
+        for (parent = 0; parent < nstates; parent++)
+            trans_mat[parent] = log(trans_mat[parent]);
+        for (parent = 1; parent < nstates; parent++)
+            memcpy(trans_mat+parent*nstates, trans_mat, sizeof(double)*nstates);
+    }
+    
+    // compute information buffer for leaves
+	int ambi_aa[] = {
+        4+8, // B = N or D
+        32+64, // Z = Q or E
+        512+1024 // U = I or L
+    };
+    int leafid = 0; 
+    FOR_NEIGHBOR(node, dad, it) {
+        if ((*it)->node->isLeaf()) {
+            double trans_leaf[nstatesqr];
+            model->computeTransMatrix((*it)->length, trans_leaf);
+            double *lh_leaf = lh_leaves+leafid*nstates*(aln->STATE_UNKNOWN+1);
+            
+            // assign lh_leaf for normal states
+            for (parent = 0; parent < nstates; parent++)
+                for (child = 0; child < nstates; child++)
+                    lh_leaf[child*nstates+parent] = log(trans_leaf[parent*nstates+child]);
+            
+            // for unknown state
+            double *this_lh_leaf = lh_leaf + (aln->STATE_UNKNOWN*nstates);
+            for (parent = 0; parent < nstates; parent++)
+                this_lh_leaf[parent] = 1.0;
+            
+            // special treatment for ambiguous characters
+            switch (aln->seq_type) {
+            case SEQ_DNA:
+                for (int state = 4; state < 18; state++) {
+                    this_lh_leaf = lh_leaf + (state*nstates);
+                    int cstate = state-nstates+1;
+                    for (parent = 0; parent < nstates; parent++) {
+                        double sumlh = 0.0;
+                        for (child = 0; child < nstates; child++) {
+                            if ((cstate) & (1 << child))
+                                sumlh += trans_leaf[parent*nstates+child];
+                        }
+                        this_lh_leaf[parent] = log(sumlh);
+                    }
+                }
+                break;
+            case SEQ_PROTEIN:
+                for (int state = 0; state < sizeof(ambi_aa)/sizeof(int); state++) {
+                    this_lh_leaf = lh_leaf + ((state+20)*nstates);
+                    for (parent = 0; parent < nstates; parent++) {
+                        double sumlh = 0.0;                
+                        for (child = 0; child < nstates; child++) {
+                            if (ambi_aa[state] & (1 << child))
+                                sumlh += trans_leaf[parent*nstates+child];
+                        }
+                        this_lh_leaf[parent] = log(sumlh);
+                    }
+                }
+                break;
+            default:
+                break;
+            }
+            leafid++;
+        }
+    }
+
+    // initialize L_y(i) and C_y(i)
+//    memset(dad_branch->partial_lh, 0, nptn*nstates*sizeof(double));
+
+    int *C_node = C + (node->id-leafNum)*nptn*nstates;
+
+    for (ptn = 0; ptn < nptn; ptn++) {
+        double *lh_dad = dad_branch->partial_lh+ptn*nstates;
+        int *this_C_node = C_node + (ptn*nstates);
+        leafid = 0;
+        double sumlh[nstates];
+        memset(sumlh, 0, sizeof(double)*nstates);
+        FOR_NEIGHBOR(node, dad, it) {
+            PhyloNeighbor *childnei = (PhyloNeighbor*)(*it);
+            if ((*it)->node->isLeaf()) {
+                double *lh_leaf = lh_leaves+leafid*nstates*(aln->STATE_UNKNOWN+1); 
+                // external node
+                int state_child;
+                if ((*it)->node == root) 
+                    state_child = 0;
+                else state_child = (aln->at(ptn))[(*it)->node->id];
+                double *child_lh = lh_leaf + state_child*nstates;
+                for (child = 0; child < nstates; child++)
+                    sumlh[child] += child_lh[child];
+                leafid++;
+            } else {
+                double *child_lh = childnei->partial_lh + nptn*nstates;
+                for (child = 0; child < nstates; child++)
+                    sumlh[child] += child_lh[child];
+            }
+        }
+        
+        
+        if (dad) {
+            // internal node
+            for (parent = 0; parent < nstates; parent++) {
+                lh_dad[parent] = trans_mat[parent*nstates] + sumlh[0];
+                this_C_node[parent] = 0;
+                for (child = 1; child < nstates; child++) {
+                    double lh = trans_mat[parent*nstates+child] + sumlh[child];
+                    if (lh > lh_dad[parent]) {
+                        lh_dad[parent] = lh;
+                        this_C_node[parent] = child;
+                    }
+                }
+            }
+        } else {
+            // at the root
+            lh_dad[0] = trans_mat[0] + sumlh[0];
+            this_C_node[0] = 0;
+            for (parent = 1; parent < nstates; parent++) {
+                double lh = trans_mat[parent] + sumlh[parent];
+                if (lh > lh_dad[0]) {
+                    lh_dad[0] = lh;
+                    this_C_node[0] = parent;
+                }
+            }
+        }
+    }
+    
+
+    if (lh_leaves)
+        delete[] lh_leaves;
+    delete[] trans_mat;
+}
+
+
+void PhyloTree::computeAncestralState(PhyloNeighbor *dad_branch, PhyloNode *dad, int *C, int *ancestral_seqs) {
+    PhyloNode *node = (PhyloNode*)dad_branch->node;
+    if (node->isLeaf())
+        return;
+
+    size_t nptn = aln->getNPattern();
+    size_t ptn;
+    size_t nstates = model->num_states;
+
+    int *C_node = C + (node->id-leafNum)*nptn*nstates;
+    int *ancestral_seqs_node = ancestral_seqs + (node->id-leafNum)*nptn; 
+    if (dad) {
+        // at an internal node
+        int *ancestral_seqs_dad = ancestral_seqs + (dad->id-leafNum)*nptn;
+        for (ptn = 0; ptn < nptn; ptn++)
+            ancestral_seqs_node[ptn] = C_node[ptn*nstates+ancestral_seqs_dad[ptn]];
+        
+    } else {
+        // at the root
+        for (ptn = 0; ptn < nptn; ptn++)
+            ancestral_seqs_node[ptn] = C_node[ptn*nstates];
+    }
+    FOR_NEIGHBOR_IT(node, dad, it)
+        computeAncestralState((PhyloNeighbor*)(*it), node, C, ancestral_seqs);
+}
+
+
+

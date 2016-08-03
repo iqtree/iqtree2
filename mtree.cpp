@@ -774,7 +774,7 @@ void MTree::getTaxa(NodeVector &taxa, Node *node, Node *dad) {
 }
 
 void MTree::getAllNodesInSubtree(Node *node, Node *dad, NodeVector &nodeList) {
-    assert(node && dad);
+    assert(node);
     nodeList.push_back(node);
     if (node->isLeaf()) {
         return;
