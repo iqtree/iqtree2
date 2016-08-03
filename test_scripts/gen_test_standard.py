@@ -79,7 +79,7 @@ if __name__ == '__main__':
   jobs = []
   for cmd in testCmds:
     testIDRel = os.path.basename(options.iqtree_bin) + "_TEST_" + str(testNr)
-    testCMD = testIDRel + " " + options.iqtree_bin + " -pre " + testIDRel + " " + cmd
+    testCMD = testIDRel + " " + os.path.abspath(options.iqtree_bin) + " -pre " + testIDRel + " " + cmd
     testNr = testNr + 1
     jobs.append(testCMD)
 #  print "\n".join(jobs)
