@@ -94,7 +94,7 @@ void printSiteLhCategory(const char*filename, PhyloTree *tree, SiteLoglType wsl)
  * @param filename output file name
  * @param tree phylogenetic tree
 */
-void printSiteStateFreq(const char*filename, PhyloTree *tree);
+void printSiteStateFreq(const char*filename, PhyloTree *tree, double *state_freqs = NULL);
 
 /**
  * Evaluate user-trees with possibility of tree topology tests

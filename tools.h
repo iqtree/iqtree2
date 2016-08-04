@@ -1643,6 +1643,11 @@ public:
      */
     char *site_freq_file;
 
+    /**
+        user tree file used to estimate site-specific state frequency model 
+    */
+    char *tree_freq_file;
+
     /** number of threads for OpenMP version     */
     int num_threads;
 

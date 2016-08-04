@@ -2457,6 +2457,63 @@ void convertAlignment(Params &params, IQTree *iqtree) {
 				params.aln_nogaps, params.aln_no_const_sites, params.ref_seq_name);
 }
 
+/**
+    2016-08-04: compute a site frequency model for profile mixture model
+*/
+void computeSiteFrequencyModel(Params &params, Alignment *alignment) {
+
+    cout << endl << "===> COMPUTING SITE FREQUENCY MODEL BASED ON TREE FILE " << params.tree_freq_file << endl;
+    assert(params.tree_freq_file);
+    PhyloTree *tree = new PhyloTree(alignment);
+    tree->setParams(&params);
+    bool myrooted = params.is_rooted;
+    tree->readTree(params.tree_freq_file, myrooted);
+    tree->setAlignment(alignment);
+    tree->setRootNode(params.root);
+    
+	ModelsBlock *models_block = readModelsDefinition(params);
+    tree->setModelFactory(new ModelFactory(params, tree, models_block));
+    delete models_block;
+    tree->setModel(tree->getModelFactory()->model);
+    tree->setRate(tree->getModelFactory()->site_rate);
+    tree->setLikelihoodKernel(params.SSE);
+
+    if (!tree->getModel()->isMixture())
+        outError("No mixture model was specified!");
+    uint64_t mem_size = tree->getMemoryRequired();
+    uint64_t total_mem = getMemorySize();
+    cout << "NOTE: " << (mem_size / 1024) / 1024 << " MB RAM is required!" << endl;
+    if (mem_size >= total_mem) {
+        outError("Memory required exceeds your computer RAM size!");
+    }
+#ifdef BINARY32
+    if (mem_size >= 2000000000) {
+        outError("Memory required exceeds 2GB limit of 32-bit executable");
+    }
+#endif
+
+    tree->initializeAllPartialLh();
+    tree->getModelFactory()->optimizeParameters(params.fixed_branch_length, true, params.modeps);
+
+    size_t nptn = alignment->getNPattern(), nstates = alignment->num_states;
+    double *ptn_state_freq = new double[nptn*nstates];
+    tree->computePatternStateFreq(ptn_state_freq);
+    alignment->site_state_freq.resize(nptn);
+    for (size_t ptn = 0; ptn < nptn; ptn++) {
+        double *f = new double[nstates];
+        memcpy(f, ptn_state_freq+ptn*nstates, sizeof(double)*nstates);
+        alignment->site_state_freq[ptn] = f;
+    }
+    alignment->getSitePatternIndex(alignment->site_model);
+    printSiteStateFreq(((string)params.out_prefix+".sitefreq").c_str(), tree, ptn_state_freq);
+    params.print_site_state_freq = WSF_NONE;
+    
+    delete [] ptn_state_freq;
+    delete tree;
+    
+    cout << endl << "===> CONTINUE ANALYSIS USING THE INFERRED SITE FREQUENCY MODEL" << endl;
+}
+
 
 /**********************************************************
  * TOP-LEVEL FUNCTION
@@ -2492,6 +2549,10 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
 			alignment->addConstPatterns(params.freq_const_patterns);
 			cout << "INFO: " << alignment->getNSite() - orig_nsite << " const sites added into alignment" << endl;
 		}
+        
+        if (params.tree_freq_file) {
+            computeSiteFrequencyModel(params, alignment);
+        }
         if (params.site_freq_file) {
             alignment->readSiteStateFreq(params.site_freq_file);
         }

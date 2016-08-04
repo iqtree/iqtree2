@@ -334,12 +334,16 @@ void printSiteLhCategory(const char*filename, PhyloTree *tree, SiteLoglType wsl)
 
 }
 
-void printSiteStateFreq(const char*filename, PhyloTree *tree) {
+void printSiteStateFreq(const char*filename, PhyloTree *tree, double *state_freqs) {
 
     int i, j, nsites = tree->getAlnNSite(), nstates = tree->aln->num_states;
-    double *ptn_state_freq = new double[tree->getAlnNPattern() * nstates];
-    
-    tree->computePatternStateFreq(ptn_state_freq);
+    double *ptn_state_freq;
+    if (state_freqs) {
+    	ptn_state_freq = state_freqs;
+    } else {
+    	ptn_state_freq = new double[tree->getAlnNPattern() * nstates];
+        tree->computePatternStateFreq(ptn_state_freq);
+    }
 
 	try {
 		ofstream out;
@@ -362,7 +366,8 @@ void printSiteStateFreq(const char*filename, PhyloTree *tree) {
 	} catch (ios::failure) {
 		outError(ERR_WRITE_OUTPUT, filename);
 	}
-    delete [] ptn_state_freq;
+	if (!state_freqs)
+        delete [] ptn_state_freq;
 }
 
 bool checkModelFile(ifstream &in, bool is_partitioned, vector<ModelInfo> &infos) {

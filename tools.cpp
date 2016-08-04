@@ -891,6 +891,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.bootlh_test = 0;
     params.bootlh_partitions = NULL;
     params.site_freq_file = NULL;
+    params.tree_freq_file = NULL;
 #ifdef _OPENMP
     params.num_threads = 0;
 #else
@@ -1910,6 +1911,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 				continue;
 			}
 			if (strcmp(argv[cnt], "-fs") == 0) {
+                if (params.tree_freq_file)
+                    throw "Specifying both -fs and -ft not allowed";
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -fs <site_freq_file>";
@@ -1917,6 +1920,16 @@ void parseArg(int argc, char *argv[], Params &params) {
 //				params.SSE = LK_EIGEN;
 				continue;
 			}
+			if (strcmp(argv[cnt], "-ft") == 0) {
+                if (params.site_freq_file)
+                    throw "Specifying both -fs and -ft not allowed";
+                cnt++;
+				if (cnt >= argc)
+					throw "Use -ft <treefile_to_infer_site_frequency_model>";
+                params.tree_freq_file = argv[cnt];
+                params.print_site_state_freq = WSF_POSTERIOR_MEAN;
+                continue;
+            }
 
 			if (strcmp(argv[cnt], "-fconst") == 0) {
 				cnt++;
@@ -3185,7 +3198,7 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -m \"MIX{m1,...mK}\"   Mixture model with K components" << endl
             << "  -m \"FMIX{f1,...fK}\"  Frequency mixture model with K components" << endl
             << "  -mwopt               Turn on optimizing mixture weights (default: none)" << endl
-            << endl << "RATE HETEROGENEITY:" << endl
+            << endl << "RATE HETEROGENEITY AMONG SITES:" << endl
             << "  -m <model_name>+I or +G[n] or +I+G[n] or +R[n]" << endl
             << "                       Invar, Gamma, Invar+Gamma, or FreeRate model where 'n' is" << endl
             << "                       number of categories (default: n=4)" << endl
@@ -3196,11 +3209,15 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -wsr                 Write site rates to .rate file" << endl
             << "  -mh                  Computing site-specific rates to .mhrate file using" << endl
             << "                       Meyer & von Haeseler (2003) method" << endl
+            << endl << "SITE-SPECIFIC FREQUENCY MODEL:" << endl 
+            << "  -ft <tree_file>      Input tree to infer site frequency model" << endl
+            << "  -fs <in_freq_file>   Input site frequency model file" << endl
+            << "  -wsf                 Write site frequency model to .sitefreq file" << endl
             //<< "  -c <#categories>     Number of Gamma rate categories (default: 4)" << endl
-            << endl << "TEST OF MODEL HOMOGENEITY:" << endl
-            << "  -m WHTEST            Testing model (GTR+G) homogeneity assumption using" << endl
-            << "                       Weiss & von Haeseler (2003) method" << endl
-            << "  -ns <#simulations>   #Simulations to obtain null-distribution (default: 1000)" << endl
+//            << endl << "TEST OF MODEL HOMOGENEITY:" << endl
+//            << "  -m WHTEST            Testing model (GTR+G) homogeneity assumption using" << endl
+//            << "                       Weiss & von Haeseler (2003) method" << endl
+//            << "  -ns <#simulations>   #Simulations to obtain null-distribution (default: 1000)" << endl
 //            << endl << "TREE INFERENCE:" << endl
 //            << "  -p <probability>     IQP: Probability of deleting leaves (default: auto)" << endl
 //            << "  -k <#representative> IQP: Size of representative leaf set (default: 4)" << endl
