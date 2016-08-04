@@ -3568,7 +3568,7 @@ double Alignment::multinomialProb (IntVector &pattern_freq)
     return (fac - sumFac + sumProb);
 }
 
-bool Alignment::readSiteStateFreq(char* site_freq_file)
+bool Alignment::readSiteStateFreq(const char* site_freq_file)
 {
 	cout << endl << "Reading site-specific state frequency file " << site_freq_file << " ..." << endl;
 	site_model.resize(getNSite(), -1);
