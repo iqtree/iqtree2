@@ -128,6 +128,7 @@ void NxsTaxaBlock::Read(
 
 			for (unsigned i = 0; (int)i < nominal_ntax; i++)
 				{
+                token.SetLabileFlagBit(NxsToken::hyphenNotPunctuation + NxsToken::preserveUnderscores);
 				token.GetNextToken();
 				//@pol should check to make sure this is not punctuation
 				AddTaxonLabel(token.GetToken());

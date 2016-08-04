@@ -2330,6 +2330,7 @@ void NxsCharactersBlock::HandleTaxlabels(
 
 	for (;;)
 		{
+        token.SetLabileFlagBit(NxsToken::hyphenNotPunctuation + NxsToken::preserveUnderscores);
 		token.GetNextToken();
 
 		// Token should either be ';' or the name of a taxon
