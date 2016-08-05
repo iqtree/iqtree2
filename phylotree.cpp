@@ -1297,6 +1297,29 @@ void PhyloTree::computePatternLikelihood(double *ptn_lh, double *cur_logl, doubl
     //return score;
 }
 
+void PhyloTree::computePatternProbabilityCategory(double *ptn_prob_cat, SiteLoglType wsl) {
+    /*	if (!dad_branch) {
+     dad_branch = (PhyloNeighbor*) root->neighbors[0];
+     dad = (PhyloNode*) root;
+     }*/
+    size_t ptn, nptn = aln->getNPattern();
+    size_t cat, ncat = getNumLhCat(wsl);
+    // Right now only Naive version store _pattern_lh_cat!
+    computePatternLhCat(wsl);
+
+    memcpy(ptn_prob_cat, _pattern_lh_cat, sizeof(double)*nptn*ncat);
+
+    for (ptn = 0; ptn < nptn; ptn++) {
+        double *lh_cat = ptn_prob_cat + ptn*ncat;
+        double sum = lh_cat[0];
+        for (cat = 1; cat < ncat; cat++)
+            sum += lh_cat[cat];
+        sum = 1.0/sum;
+        for (cat = 0; cat < ncat; cat++)
+            lh_cat[cat] *= sum;
+    }
+}
+
 int PhyloTree::computePatternCategories(IntVector *pattern_ncat) {
     if (sse != LK_EIGEN) {
         // compute _pattern_lh_cat

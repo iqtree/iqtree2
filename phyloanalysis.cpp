@@ -1063,6 +1063,10 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 		cout << "  Site log-likelihoods:          " << params.out_prefix << ".sitelh"
 				<< endl;
 
+	if (params.print_site_prob)
+		cout << "  Site probability per rate/mix: " << params.out_prefix << ".siteprob"
+				<< endl;
+
 	if (params.write_intermediate_trees)
 		cout << "  All intermediate trees:        " << params.out_prefix << ".treels"
 				<< endl;
@@ -1461,6 +1465,10 @@ void printMiscInfo(Params &params, IQTree &iqtree, double *pattern_lh) {
 			printSiteLh(site_lh_file.c_str(), &iqtree, pattern_lh);
 		else
 			printSiteLhCategory(site_lh_file.c_str(), &iqtree, params.print_site_lh);
+	}
+
+	if (params.print_site_prob && !params.pll) {
+        printSiteProbCategory(((string)params.out_prefix + ".siteprob").c_str(), &iqtree, params.print_site_prob);
 	}
     
     if (params.print_site_state_freq != WSF_NONE) {

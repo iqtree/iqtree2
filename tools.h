@@ -1355,6 +1355,15 @@ public:
     SiteLoglType print_site_lh;
 
     /**
+        control printing posterior probability of each site belonging to a rate/mixture categories
+        same meaning as print_site_lh, but results are printed to .siteprob file
+        WSL_RATECAT: print site probability per rate category
+        WSL_MIXTURE: print site probability per mixture class
+        WSL_MIXTURE_RATECAT: print site probability per mixture class per rate category
+    */
+    SiteLoglType print_site_prob;
+
+    /**
         0: print nothing
         1: print site state frequency vectors
     */
