@@ -806,7 +806,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.print_site_prob = WSL_NONE;
     params.print_site_state_freq = WSF_NONE;
     params.print_site_rate = false;
-    params.print_site_posterior = 0;
+    params.print_trees_site_posterior = 0;
     params.print_tree_lh = false;
     params.lambda = 1;
     params.speed_conf = 1.0;
@@ -2252,8 +2252,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.print_site_rate = true;
 				continue;
 			}
-			if (strcmp(argv[cnt], "-wsp") == 0) {
-				params.print_site_posterior = 1;
+			if (strcmp(argv[cnt], "-wsptrees") == 0) {
+				params.print_trees_site_posterior = 1;
 				continue;
 			}
 			if (strcmp(argv[cnt], "-wsf") == 0) {

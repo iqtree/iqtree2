@@ -1477,7 +1477,7 @@ void printMiscInfo(Params &params, IQTree &iqtree, double *pattern_lh) {
         printSiteStateFreq(site_freq_file.c_str(), &iqtree);
     }
 
-    if (params.print_site_posterior) {
+    if (params.print_trees_site_posterior) {
         cout << "Computing mixture posterior probabilities" << endl;
         IntVector pattern_cat;
         int num_mix = iqtree.computePatternCategories(&pattern_cat);

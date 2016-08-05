@@ -1372,8 +1372,8 @@ public:
     /** TRUE to print site-specific rates, default: FALSE */
     bool print_site_rate;
 
-    /* 1: print site posterior probability */
-    int print_site_posterior;
+    /* 1: print site posterior probability for many trees during tree search */
+    int print_trees_site_posterior;
 
     /**
             TRUE to print tree log-likelihood
