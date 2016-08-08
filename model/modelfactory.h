@@ -73,16 +73,6 @@ public:
     virtual void restoreCheckpoint();
 
 	/**
-	 * read site specific state frequency vectors from a file to create corresponding model (Ingo's idea)
-	 * @param aln input alignment
-	 * @param site_freq_file file name
-	 * @param site_model (OUT) site to model ID map
-	 * @param freq_vec (OUT) vector of frequency vectors
-     * @return TRUE if alignment needs to be changed, FALSE otherwise
-	 */
-	bool readSiteFreq(Alignment *aln, char* site_freq_file, IntVector &site_model, vector<double*> &freq_vec);
-
-	/**
 		get the name of the model
 	*/
 	//string getModelName();

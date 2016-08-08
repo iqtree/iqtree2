@@ -803,7 +803,7 @@ public:
     /**
      * @return number of elements per site lhl entry, used in conjunction with computePatternLhCat
      */
-    int getNumLhCat(SiteLoglType wsl);
+    virtual int getNumLhCat(SiteLoglType wsl);
 
     /**
      * compute _pattern_lh_cat for site-likelihood per category
@@ -828,6 +828,13 @@ public:
      */
     virtual void computePatternLikelihood(double *pattern_lh, double *cur_logl = NULL,
     		double *pattern_lh_cat = NULL, SiteLoglType wsl = WSL_RATECAT);
+
+    /**
+            compute pattern posterior probabilities per rate/mixture category
+            @param pattern_prob_cat (OUT) all pattern-probabilities per category
+            @param wsl either WSL_RATECAT, WSL_MIXTURE or WSL_MIXTURE_RATECAT
+     */
+    virtual void computePatternProbabilityCategory(double *pattern_prob_cat, SiteLoglType wsl);
 
     vector<uint64_t> ptn_cat_mask;
 
@@ -1635,6 +1642,8 @@ public:
 
     void computeSeqIdentityAlongTree(Split &resp, Node *node = NULL, Node *dad = NULL);
     void computeSeqIdentityAlongTree();
+
+    double *getPatternLhCatPointer() { return _pattern_lh_cat; }
 
 protected:
 

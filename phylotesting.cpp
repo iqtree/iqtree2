@@ -243,6 +243,11 @@ void printSiteLh(const char*filename, PhyloTree *tree, double *ptn_lh,
 
 void printSiteLhCategory(const char*filename, PhyloTree *tree, SiteLoglType wsl) {
 
+    if (tree->isSuperTree()) {
+        cout << "WARNING: -wslm, -wslr do not work with partition models yet" << endl;
+        return;
+    }
+
     if (wsl == WSL_NONE || wsl == WSL_SITE)
         return;
     // error checking
@@ -334,12 +339,85 @@ void printSiteLhCategory(const char*filename, PhyloTree *tree, SiteLoglType wsl)
 
 }
 
-void printSiteStateFreq(const char*filename, PhyloTree *tree) {
+void printSiteProbCategory(const char*filename, PhyloTree *tree, SiteLoglType wsl) {
+
+    if (wsl == WSL_NONE || wsl == WSL_SITE)
+        return;
+    // error checking
+    if (!tree->getModel()->isMixture()) {
+        if (wsl != WSL_RATECAT) {
+            outWarning("Switch now to '-wspr' as it is the only option for non-mixture model");
+            wsl = WSL_RATECAT;
+        }
+    } else {
+        // mixture model
+        if (wsl == WSL_MIXTURE_RATECAT && tree->getModelFactory()->fused_mix_rate) {
+            outWarning("-wspmr is not suitable for fused mixture model, switch now to -wspm");
+            wsl = WSL_MIXTURE;
+        }
+    }
+	size_t cat, ncat = tree->getNumLhCat(wsl);
+    double *ptn_prob_cat = new double[tree->getAlnNPattern()*ncat];
+	tree->computePatternProbabilityCategory(ptn_prob_cat, wsl);
+    
+	try {
+		ofstream out;
+		out.exceptions(ios::failbit | ios::badbit);
+		out.open(filename);
+        if (tree->isSuperTree())
+            out << "Set\t";
+        out << "Site";
+        for (cat = 0; cat < ncat; cat++)
+            out << "\tp" << cat+1;
+		out << endl;
+		IntVector pattern_index;
+        if (tree->isSuperTree()) {
+            PhyloSuperTree *super_tree = (PhyloSuperTree*)tree;
+            size_t offset = 0;
+            for (PhyloSuperTree::iterator it = super_tree->begin(); it != super_tree->end(); it++) {
+                size_t part_ncat = (*it)->getNumLhCat(wsl); 
+                (*it)->aln->getSitePatternIndex(pattern_index);
+                size_t site, nsite = (*it)->aln->getNSite();
+                for (site = 0; site < nsite; site++) {
+                    out << (it-super_tree->begin())+1 << "\t" << site+1;
+                    double *prob_cat = ptn_prob_cat + (offset+pattern_index[site]*part_ncat);
+                    for (cat = 0; cat < part_ncat; cat++)
+                        out << "\t" << prob_cat[cat];
+                    out << endl;
+                }
+                offset += (*it)->aln->getNPattern()*(*it)->getNumLhCat(wsl);
+            }
+        } else {
+            tree->aln->getSitePatternIndex(pattern_index);
+            int nsite = tree->getAlnNSite();
+            for (int site = 0; site < nsite; site++) {
+                out << site+1;
+                double *prob_cat = ptn_prob_cat + pattern_index[site]*ncat;
+                for (cat = 0; cat < ncat; cat++) {
+                    out << "\t" << prob_cat[cat];
+                }
+                out << endl;
+            }
+        }
+		out.close();
+		cout << "Site probabilities per category printed to " << filename << endl;
+	} catch (ios::failure) {
+		outError(ERR_WRITE_OUTPUT, filename);
+	}
+
+}
+
+
+void printSiteStateFreq(const char*filename, PhyloTree *tree, double *state_freqs) {
 
     int i, j, nsites = tree->getAlnNSite(), nstates = tree->aln->num_states;
-    double *ptn_state_freq = new double[tree->getAlnNPattern() * nstates];
-    
-    tree->computePatternStateFreq(ptn_state_freq);
+    double *ptn_state_freq;
+    if (state_freqs) {
+    	ptn_state_freq = state_freqs;
+    } else {
+    	ptn_state_freq = new double[tree->getAlnNPattern() * nstates];
+        tree->computePatternStateFreq(ptn_state_freq);
+    }
 
 	try {
 		ofstream out;
@@ -362,7 +440,8 @@ void printSiteStateFreq(const char*filename, PhyloTree *tree) {
 	} catch (ios::failure) {
 		outError(ERR_WRITE_OUTPUT, filename);
 	}
-    delete [] ptn_state_freq;
+	if (!state_freqs)
+        delete [] ptn_state_freq;
 }
 
 bool checkModelFile(ifstream &in, bool is_partitioned, vector<ModelInfo> &infos) {

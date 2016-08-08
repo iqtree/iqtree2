@@ -1234,13 +1234,13 @@ void ModelMixture::initMixture(string orig_model_name, string model_name, string
 	if (eigenvalues) aligned_free(eigenvalues);
 	if (eigenvectors) aligned_free(eigenvectors);
 	if (inv_eigenvectors) aligned_free(inv_eigenvectors);
-	if (eigen_coeff) aligned_free(eigen_coeff);
+//	if (eigen_coeff) aligned_free(eigen_coeff);
 
 	eigenvalues = aligned_alloc<double>(num_states*nmixtures);
 	eigenvectors = aligned_alloc<double>(num_states*num_states*nmixtures);
 	inv_eigenvectors = aligned_alloc<double>(num_states*num_states*nmixtures);
 	int ncoeff = num_states*num_states*num_states;
-	eigen_coeff = aligned_alloc<double>(ncoeff*nmixtures);
+//	eigen_coeff = aligned_alloc<double>(ncoeff*nmixtures);
 
 	// assigning memory for individual models
 	m = 0;
@@ -1249,18 +1249,18 @@ void ModelMixture::initMixture(string orig_model_name, string model_name, string
         memcpy(&eigenvalues[m*num_states], (*it)->eigenvalues, num_states*sizeof(double));
         memcpy(&eigenvectors[m*num_states*num_states], (*it)->eigenvectors, num_states*num_states*sizeof(double));
         memcpy(&inv_eigenvectors[m*num_states*num_states], (*it)->inv_eigenvectors, num_states*num_states*sizeof(double));
-        memcpy(&eigen_coeff[m*ncoeff], (*it)->eigen_coeff, ncoeff*sizeof(double));
+//        memcpy(&eigen_coeff[m*ncoeff], (*it)->eigen_coeff, ncoeff*sizeof(double));
         // then delete
 		if ((*it)->eigenvalues) aligned_free((*it)->eigenvalues);
 		if ((*it)->eigenvectors) aligned_free((*it)->eigenvectors);
 		if ((*it)->inv_eigenvectors) aligned_free((*it)->inv_eigenvectors);
-		if ((*it)->eigen_coeff) aligned_free((*it)->eigen_coeff);
+//		if ((*it)->eigen_coeff) aligned_free((*it)->eigen_coeff);
 
         // and assign new memory
 		(*it)->eigenvalues = &eigenvalues[m*num_states];
 		(*it)->eigenvectors = &eigenvectors[m*num_states*num_states];
 		(*it)->inv_eigenvectors = &inv_eigenvectors[m*num_states*num_states];
-		(*it)->eigen_coeff = &eigen_coeff[m*ncoeff];
+//		(*it)->eigen_coeff = &eigen_coeff[m*ncoeff];
 	}
 	decomposeRateMatrix();
 }
@@ -1269,7 +1269,7 @@ ModelMixture::~ModelMixture() {
 	if (prop)
 		aligned_free(prop);
 	for (reverse_iterator rit = rbegin(); rit != rend(); rit++) {
-		(*rit)->eigen_coeff = NULL;
+//		(*rit)->eigen_coeff = NULL;
 		(*rit)->eigenvalues = NULL;
 		(*rit)->eigenvectors = NULL;
 		(*rit)->inv_eigenvectors = NULL;

@@ -804,9 +804,10 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.SSE = LK_EIGEN_SSE;
     params.lk_no_avx = false;
     params.print_site_lh = WSL_NONE;
-    params.print_site_state_freq = 0;
+    params.print_site_prob = WSL_NONE;
+    params.print_site_state_freq = WSF_NONE;
     params.print_site_rate = false;
-    params.print_site_posterior = 0;
+    params.print_trees_site_posterior = 0;
     params.print_tree_lh = false;
     params.lambda = 1;
     params.speed_conf = 1.0;
@@ -893,6 +894,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.bootlh_test = 0;
     params.bootlh_partitions = NULL;
     params.site_freq_file = NULL;
+    params.tree_freq_file = NULL;
 #ifdef _OPENMP
     params.num_threads = 0;
 #else
@@ -1913,6 +1915,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 				continue;
 			}
 			if (strcmp(argv[cnt], "-fs") == 0) {
+                if (params.tree_freq_file)
+                    throw "Specifying both -fs and -ft not allowed";
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -fs <site_freq_file>";
@@ -1920,6 +1924,16 @@ void parseArg(int argc, char *argv[], Params &params) {
 //				params.SSE = LK_EIGEN;
 				continue;
 			}
+			if (strcmp(argv[cnt], "-ft") == 0) {
+                if (params.site_freq_file)
+                    throw "Specifying both -fs and -ft not allowed";
+                cnt++;
+				if (cnt >= argc)
+					throw "Use -ft <treefile_to_infer_site_frequency_model>";
+                params.tree_freq_file = argv[cnt];
+                params.print_site_state_freq = WSF_POSTERIOR_MEAN;
+                continue;
+            }
 
 			if (strcmp(argv[cnt], "-fconst") == 0) {
 				cnt++;
@@ -2212,6 +2226,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.print_site_lh = WSL_RATECAT;
 				continue;
 			}
+
 			if (strcmp(argv[cnt], "-wslm") == 0) {
 				params.print_site_lh = WSL_MIXTURE;
 				continue;
@@ -2220,16 +2235,36 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.print_site_lh = WSL_MIXTURE_RATECAT;
 				continue;
 			}
+
+			if (strcmp(argv[cnt], "-wspr") == 0) {
+				params.print_site_prob = WSL_RATECAT;
+				continue;
+			}
+
+			if (strcmp(argv[cnt], "-wspm") == 0) {
+				params.print_site_prob = WSL_MIXTURE;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-wspmr") == 0 || strcmp(argv[cnt], "-wsprm") == 0) {
+				params.print_site_prob = WSL_MIXTURE_RATECAT;
+				continue;
+			}
+
+
 			if (strcmp(argv[cnt], "-wsr") == 0) {
 				params.print_site_rate = true;
 				continue;
 			}
-			if (strcmp(argv[cnt], "-wsp") == 0) {
-				params.print_site_posterior = 1;
+			if (strcmp(argv[cnt], "-wsptrees") == 0) {
+				params.print_trees_site_posterior = 1;
 				continue;
 			}
 			if (strcmp(argv[cnt], "-wsf") == 0) {
-				params.print_site_state_freq = 1;
+				params.print_site_state_freq = WSF_POSTERIOR_MEAN;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-wsfm") == 0) {
+				params.print_site_state_freq = WSF_POSTERIOR_MAX;
 				continue;
 			}
 			if (strcmp(argv[cnt], "-wba") == 0) {
@@ -3227,11 +3262,15 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -wsr                 Write site rates to .rate file" << endl
             << "  -mh                  Computing site-specific rates to .mhrate file using" << endl
             << "                       Meyer & von Haeseler (2003) method" << endl
+            << endl << "SITE-SPECIFIC FREQUENCY MODEL:" << endl 
+            << "  -ft <tree_file>      Input tree to infer site frequency model" << endl
+            << "  -fs <in_freq_file>   Input site frequency model file" << endl
+            << "  -wsf                 Write site frequency model to .sitefreq file" << endl
             //<< "  -c <#categories>     Number of Gamma rate categories (default: 4)" << endl
-            << endl << "TEST OF MODEL HOMOGENEITY:" << endl
-            << "  -m WHTEST            Testing model (GTR+G) homogeneity assumption using" << endl
-            << "                       Weiss & von Haeseler (2003) method" << endl
-            << "  -ns <#simulations>   #Simulations to obtain null-distribution (default: 1000)" << endl
+//            << endl << "TEST OF MODEL HOMOGENEITY:" << endl
+//            << "  -m WHTEST            Testing model (GTR+G) homogeneity assumption using" << endl
+//            << "                       Weiss & von Haeseler (2003) method" << endl
+//            << "  -ns <#simulations>   #Simulations to obtain null-distribution (default: 1000)" << endl
 //            << endl << "TREE INFERENCE:" << endl
 //            << "  -p <probability>     IQP: Probability of deleting leaves (default: auto)" << endl
 //            << "  -k <#representative> IQP: Size of representative leaf set (default: 4)" << endl
@@ -3287,6 +3326,9 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -wslr                Write site log-likelihoods per rate category" << endl
             << "  -wslm                Write site log-likelihoods per mixture class" << endl
             << "  -wslmr               Write site log-likelihoods per mixture+rate class" << endl
+            << "  -wspr                Write site probabilities per rate category" << endl
+            << "  -wspm                Write site probabilities per mixture class" << endl
+            << "  -wspmr               Write site probabilities per mixture+rate class" << endl
             << "  -fconst f1,...,fN    Add constant patterns into alignment (N=#nstates)" << endl;
 //            << "  -d <file>            Reading genetic distances from file (default: JC)" << endl
 //			<< "  -d <outfile>         Calculate the distance matrix inferred from tree" << endl

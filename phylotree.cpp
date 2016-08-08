@@ -806,6 +806,8 @@ uint64_t PhyloTree::getMemoryRequired(size_t ncategory) {
     mem_size += tip_partial_lh_size;
     if (params->gbo_replicates)
         mem_size += params->gbo_replicates*nptn*sizeof(BootValType);
+    if (model)
+    	mem_size += model->getMemoryRequired();
     return mem_size;
 }
 
@@ -1184,30 +1186,52 @@ void PhyloTree::computePatternStateFreq(double *ptn_state_freq) {
     size_t state, nstates = aln->num_states;
     ModelMixture *models = (ModelMixture*)model;
     
-    // loop over all site-patterns
-    for (ptn = 0; ptn < nptn; ptn++) {
-    
-        // first compute posterior for each mixture component
-        double sum_lh = 0.0;
-        for (m = 0; m < nmixture; m++) {
-            sum_lh += lh_cat[m];
-        }
-        sum_lh = 1.0/sum_lh;
-        for (m = 0; m < nmixture; m++) {
-            lh_cat[m] *= sum_lh;
-        }
+    if (params->print_site_state_freq == WSF_POSTERIOR_MEAN) {
+        cout << "Computing posterior mean site frequencies...." << endl;
+        // loop over all site-patterns
+        for (ptn = 0; ptn < nptn; ptn++) {
         
-        // now compute state frequencies
-        for (state = 0; state < nstates; state++) {
-            double freq = 0;
-            for (m = 0; m < nmixture; m++)
-                freq += models->at(m)->state_freq[state] * lh_cat[m];
-            ptn_freq[state] = freq;
+            // first compute posterior for each mixture component
+            double sum_lh = 0.0;
+            for (m = 0; m < nmixture; m++) {
+                sum_lh += lh_cat[m];
+            }
+            sum_lh = 1.0/sum_lh;
+            for (m = 0; m < nmixture; m++) {
+                lh_cat[m] *= sum_lh;
+            }
+            
+            // now compute state frequencies
+            for (state = 0; state < nstates; state++) {
+                double freq = 0;
+                for (m = 0; m < nmixture; m++)
+                    freq += models->at(m)->state_freq[state] * lh_cat[m];
+                ptn_freq[state] = freq;
+            }
+            
+            // increase the pointers
+            lh_cat += nmixture;
+            ptn_freq += nstates;
         }
+    } else if (params->print_site_state_freq == WSF_POSTERIOR_MAX) {
+        cout << "Computing posterior max site frequencies...." << endl;
+        // loop over all site-patterns
+        for (ptn = 0; ptn < nptn; ptn++) {
         
-        // increase the pointers
-        lh_cat += nmixture;
-        ptn_freq += nstates;
+            // first compute posterior for each mixture component
+            size_t max_comp = 0;
+            for (m = 1; m < nmixture; m++)
+                if (lh_cat[m] > lh_cat[max_comp]) {
+                    max_comp = m;
+                }
+            
+            // now compute state frequencies
+            memcpy(ptn_freq, models->at(max_comp)->state_freq, nstates*sizeof(double));
+            
+            // increase the pointers
+            lh_cat += nmixture;
+            ptn_freq += nstates;
+        }
     }
 }
 
@@ -1286,6 +1310,29 @@ void PhyloTree::computePatternLikelihood(double *ptn_lh, double *cur_logl, doubl
 //    }
     //double score = computeLikelihoodBranch(dad_branch, dad, pattern_lh);
     //return score;
+}
+
+void PhyloTree::computePatternProbabilityCategory(double *ptn_prob_cat, SiteLoglType wsl) {
+    /*	if (!dad_branch) {
+     dad_branch = (PhyloNeighbor*) root->neighbors[0];
+     dad = (PhyloNode*) root;
+     }*/
+    size_t ptn, nptn = aln->getNPattern();
+    size_t cat, ncat = getNumLhCat(wsl);
+    // Right now only Naive version store _pattern_lh_cat!
+    computePatternLhCat(wsl);
+
+    memcpy(ptn_prob_cat, _pattern_lh_cat, sizeof(double)*nptn*ncat);
+
+    for (ptn = 0; ptn < nptn; ptn++) {
+        double *lh_cat = ptn_prob_cat + ptn*ncat;
+        double sum = lh_cat[0];
+        for (cat = 1; cat < ncat; cat++)
+            sum += lh_cat[cat];
+        sum = 1.0/sum;
+        for (cat = 0; cat < ncat; cat++)
+            lh_cat[cat] *= sum;
+    }
 }
 
 int PhyloTree::computePatternCategories(IntVector *pattern_ncat) {
