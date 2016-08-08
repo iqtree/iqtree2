@@ -3250,7 +3250,6 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -m \"MIX{m1,...mK}\"   Mixture model with K components" << endl
             << "  -m \"FMIX{f1,...fK}\"  Frequency mixture model with K components" << endl
             << "  -mwopt               Turn on optimizing mixture weights (default: none)" << endl
-            << "  -mixlen <n>          Heterotachy mixture branch length model with n categories" << endl
             << endl << "RATE HETEROGENEITY AMONG SITES:" << endl
             << "  -m <model_name>+I or +G[n] or +I+G[n] or +R[n]" << endl
             << "                       Invar, Gamma, Invar+Gamma, or FreeRate model where 'n' is" << endl
@@ -3262,6 +3261,12 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -wsr                 Write site rates to .rate file" << endl
             << "  -mh                  Computing site-specific rates to .mhrate file using" << endl
             << "                       Meyer & von Haeseler (2003) method" << endl
+
+            << endl << "SINGLE TOPOLOGY HETEROTACHY MODEL:" << endl
+            << " -m <model_name>+H[k]  Heterotachy model mixed branch lengths with k classes" << endl
+            << " -m \"MIX{m1,...mK}+H\"" << endl
+            << " -nni-eval <m>         Loop m times for NNI evaluation (default m=1)" << endl
+
             << endl << "SITE-SPECIFIC FREQUENCY MODEL:" << endl 
             << "  -ft <tree_file>      Input tree to infer site frequency model" << endl
             << "  -fs <in_freq_file>   Input site frequency model file" << endl
