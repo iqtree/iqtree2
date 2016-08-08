@@ -2559,6 +2559,23 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
 			cout << "INFO: " << alignment->getNSite() - orig_nsite << " const sites added into alignment" << endl;
 		}
 
+        // Initialize site-frequency model
+        if (params.tree_freq_file) {
+            if (checkpoint->getBool("finishedSiteFreqFile")) {
+                alignment->readSiteStateFreq(((string)params.out_prefix + ".sitefreq").c_str());
+                params.print_site_state_freq = WSF_NONE;
+                cout << "CHECKPOINT: Site frequency model restored" << endl;
+            } else {
+                computeSiteFrequencyModel(params, alignment);
+                checkpoint->putBool("finishedSiteFreqFile", true);
+                checkpoint->dump();
+            }
+        }
+        if (params.site_freq_file) {
+            alignment->readSiteStateFreq(params.site_freq_file);
+        }
+
+
         // allocate heterotachy tree if neccessary
         
         int pos = params.model_name.find("+H");

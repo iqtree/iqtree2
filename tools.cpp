@@ -3251,7 +3251,7 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -m \"FMIX{f1,...fK}\"  Frequency mixture model with K components" << endl
             << "  -mwopt               Turn on optimizing mixture weights (default: none)" << endl
             << "  -mixlen <n>          Heterotachy mixture branch length model with n categories" << endl
-            << endl << "RATE HETEROGENEITY:" << endl
+            << endl << "RATE HETEROGENEITY AMONG SITES:" << endl
             << "  -m <model_name>+I or +G[n] or +I+G[n] or +R[n]" << endl
             << "                       Invar, Gamma, Invar+Gamma, or FreeRate model where 'n' is" << endl
             << "                       number of categories (default: n=4)" << endl
