@@ -812,8 +812,10 @@ void ModelPoMo::report_rates(ofstream &out) {
     // the last entry is 1.0.  This leads to smaller mutation rates
     // (because the stationary distribution is the same).  The
     // stationary distribution is of the form pi_a pi_b r_ab.  Hence,
-    // if the stationary frequencies are doubled, the mutation rates
-    // need to be divided by four.
+    // if the stationary frequencies are doubled, the polymorphic
+    // entries are four times larger than before, or twice as large as
+    // the monomorphic entries, so the mutation rates need to be divided
+    // by two.
     out << setprecision(8);
     out << "Mutation rates (in the order AC, AG, AT, CG, CT, GT):" << endl;
     double sum = 0.0;
@@ -821,7 +823,7 @@ void ModelPoMo::report_rates(ofstream &out) {
         sum += freq_fixed_states[i];
     }
     for (int i = 0; i < 6; i++)
-        out << mutation_prob[i] / (sum*sum) << " ";
+        out << mutation_prob[i] / (sum) << " ";
     out << endl;
 
 }
