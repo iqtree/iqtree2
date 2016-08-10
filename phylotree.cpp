@@ -994,7 +994,7 @@ double *PhyloTree::newPartialLh() {
     return ret;
 }
 
-int PhyloTree::getPartialLhBytes() {
+size_t PhyloTree::getPartialLhBytes() {
     size_t nptn = aln->size()+aln->num_states; // +num_states for ascertainment bias correction
     size_t block_size;
     if (instruction_set >= 7)
@@ -1009,7 +1009,7 @@ int PhyloTree::getPartialLhBytes() {
 	return block_size * sizeof(double);
 }
 
-int PhyloTree::getScaleNumBytes() {
+size_t PhyloTree::getScaleNumBytes() {
 	return (aln->size()+aln->num_states) * sizeof(UBYTE);
 }
 

@@ -622,7 +622,7 @@ public:
     double *newPartialLh();
 
     /** get the number of bytes occupied by partial_lh */
-    int getPartialLhBytes();
+    size_t getPartialLhBytes();
 
     /**
             allocate memory for a scale num vector
@@ -630,7 +630,7 @@ public:
     UBYTE *newScaleNum();
 
     /** get the number of bytes occupied by scale_num */
-    int getScaleNumBytes();
+    size_t getScaleNumBytes();
 
     /**
      * this stores partial_lh for each state at the leaves of the tree because they are the same between leaves
