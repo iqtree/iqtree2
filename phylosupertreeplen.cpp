@@ -561,6 +561,7 @@ void PhyloSuperTreePlen::computeFuncDerv(double value, double &df_ret, double &d
 				if(nei1_part->length<-1e-4){
 					cout<<"lambda = "<<lambda<<endl;
 					cout<<"NEGATIVE BRANCH len = "<<nei1_part->length<<endl<<" rate = "<<part_info[part].part_rate<<endl;
+                    assert(0);
 					outError("shit!!   ",__func__);
 				}
 				at(part)->computeLikelihoodDerv(nei2_part,(PhyloNode*)nei1_part->node, df_aux, ddf_aux);
@@ -645,7 +646,7 @@ NNIMove PhyloSuperTreePlen::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2
 	return myMove;
 }
 
-void PhyloSuperTreePlen::doNNIs(vector<NNIMove> compatibleNNIs, bool changeBran) {
+void PhyloSuperTreePlen::doNNIs(vector<NNIMove> &compatibleNNIs, bool changeBran) {
 	IQTree::doNNIs(compatibleNNIs, changeBran);
 	mapBranchLen();
 	//clearAllPartialLH();

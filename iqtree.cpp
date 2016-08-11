@@ -1485,7 +1485,7 @@ string IQTree::perturbStableSplits(double suppValue) {
             NNIMove randNNI = getRandomNNI(it->second);
             randomNNIs.push_back(randNNI);
         }
-        compatibleNNIs = getCompatibleNNIs(randomNNIs);
+        getCompatibleNNIs(randomNNIs, compatibleNNIs);
         for (vector<NNIMove>::iterator it = compatibleNNIs.begin(); it != compatibleNNIs.end(); it++) {
             doNNI(*it);
             numRandNNI++;
@@ -2474,7 +2474,7 @@ pair<int, int> IQTree::optimizeNNI(bool speedNNI) {
     }
 
     for (numSteps = 1; numSteps <= MAXSTEPS; numSteps++) {
-        cout << "numSteps = " << numSteps << endl;
+//        cout << "numSteps = " << numSteps << endl;
         double oldScore = curScore;
         if (save_all_trees == 2) {
             saveCurrentTree(curScore); // BQM: for new bootstrap
@@ -2559,7 +2559,7 @@ pair<int, int> IQTree::optimizeNNI(bool speedNNI) {
 
         /* remove conflicting NNIs */
         appliedNNIs.clear();
-        appliedNNIs = getCompatibleNNIs(positiveNNIs);
+        getCompatibleNNIs(positiveNNIs, appliedNNIs);
 
         // do non-conflicting positive NNIs
         doNNIs(appliedNNIs);
@@ -2573,11 +2573,12 @@ pair<int, int> IQTree::optimizeNNI(bool speedNNI) {
             restoreBranchLengths(lenvec);
             clearAllPartialLH();
             // only do the best NNI
-            //appliedNNIs.resize(1);
-            doNNI(appliedNNIs[0]);
+            appliedNNIs.resize(1);
+            doNNIs(appliedNNIs);
+//            doNNI(appliedNNIs[0]);
             totalNNIApplied++;
             curScore = optimizeAllBranches(1, params->loglh_epsilon, PLL_NEWZPERCYCLE);
-            //assert(curScore > appliedNNIs.at(0).newloglh - params->loglh_epsilon);
+            assert(curScore > appliedNNIs.at(0).newloglh - params->loglh_epsilon);
         } else {
             totalNNIApplied += appliedNNIs.size();
         }
@@ -2785,8 +2786,8 @@ void IQTree::doNNIs(vector<NNIMove> &compatibleNNIs, bool changeBran) {
 }
 
 
-vector<NNIMove> IQTree::getCompatibleNNIs(vector<NNIMove> &nniMoves) {
-    vector<NNIMove> compatibleNNIs;
+void IQTree::getCompatibleNNIs(vector<NNIMove> &nniMoves, vector<NNIMove> &compatibleNNIs) {
+    compatibleNNIs.clear();
 	for (vector<NNIMove>::iterator it1 = nniMoves.begin(); it1 != nniMoves.end(); it1++) {
 		bool select = true;
 		for (vector<NNIMove>::iterator it2 = compatibleNNIs.begin(); it2 != compatibleNNIs.end(); it2++) {
@@ -2802,7 +2803,6 @@ vector<NNIMove> IQTree::getCompatibleNNIs(vector<NNIMove> &nniMoves) {
             compatibleNNIs.push_back(*it1);
         }
     }
-    return compatibleNNIs;
 }
 
 //double IQTree::estN95() {

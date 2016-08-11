@@ -315,7 +315,7 @@ public:
             @param compatibleNNIs vector of all compatible NNIs
             @param changeBran whether or not the computed branch lengths should be applied
      */
-    virtual void doNNIs(vector<NNIMove> compatibleNNIs, bool changeBran = true);
+    virtual void doNNIs(vector<NNIMove> &compatibleNNIs, bool changeBran = true);
 
     /**
      *   Apply 5 new branch lengths stored in the NNI move
