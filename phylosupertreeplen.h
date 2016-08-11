@@ -346,11 +346,6 @@ public:
 	*/
 	virtual void computeBranchLengths();
 
-    /**
-     * restore branch lengths from a vector previously called with saveBranchLengths
-     */
-	virtual void restoreBranchLengths(DoubleVector &lenvec, int startid = 0, PhyloNode *node = NULL, PhyloNode *dad = NULL);
-
 	bool checkBranchLen();
 	void mapBranchLen();
 	void mapBranchLen(int part);

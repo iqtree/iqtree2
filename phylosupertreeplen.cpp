@@ -1576,11 +1576,6 @@ void PhyloSuperTreePlen::linkCheckRe(int part,Node* node, Node* dad, PhyloNeighb
 //	mapTrees();
 //}
 
-void PhyloSuperTreePlen::restoreBranchLengths(DoubleVector &lenvec, int startid, PhyloNode *node, PhyloNode *dad) {
-	PhyloTree::restoreBranchLengths(lenvec, startid);
-	mapTrees();
-}
-
 bool PhyloSuperTreePlen::checkBranchLen(){
 
 //	NodeVector nodes1,nodes2;

@@ -351,7 +351,7 @@ public:
      *      node[IN] for navigation
      * @return A list of branches for evaluating NNIs
      */
-    Branches getNNIBranches(SplitIntMap &tabuSplits, SplitIntMap &candidateSplitHash, Branches &nonNNIBranches, Node *dad = NULL, Node *node = NULL);
+    void getNNIBranches(SplitIntMap &tabuSplits, SplitIntMap &candidateSplitHash, Branches &nonNNIBranches, Branches &outBranches, Node *dad = NULL, Node *node = NULL);
 
     /**
      *  Return internal branches that appear in \a candidateSplitHash
@@ -367,7 +367,7 @@ public:
      *  @return
      *      A list of branches fufilling the aforementioned conditions.
      */
-    Branches getStableBranches(SplitIntMap &candSplits, double supportValue, Node *dad = NULL, Node *node = NULL);
+    void getStableBranches(SplitIntMap &candSplits, double supportValue, Branches &outBranches, Node *dad = NULL, Node *node = NULL);
 
 
     /**
@@ -391,7 +391,7 @@ public:
      *  @return
      *      List of branches to be evaluated
      */
-    Branches filterNNIBranches(vector<NNIMove> appliedNNIs);
+    void filterNNIBranches(vector<NNIMove> &appliedNNIs, Branches &outBranches);
 
     
     /**
@@ -429,7 +429,7 @@ public:
      * @param nniBranches [IN] branches the branches on which NNIs will be evaluated
      * @return list positive NNIs
      */
-    vector<NNIMove> evaluateNNIs(Branches &nniBranches);
+    void evaluateNNIs(Branches &nniBranches, vector<NNIMove> &outNNIMoves);
 
     double optimizeNNIBranches(Branches &nniBranches);
 
@@ -444,7 +444,7 @@ public:
             @param compatibleNNIs vector of all compatible NNIs
             @param changeBran whether or not the computed branch lengths should be applied
      */
-    virtual void doNNIs(vector<NNIMove> compatibleNNIs, bool changeBran = true);
+    virtual void doNNIs(vector<NNIMove> &compatibleNNIs, bool changeBran = true);
 
     /**
      *  Restore the old 5 branch lengths stored in the NNI move.
@@ -464,7 +464,7 @@ public:
     /**
             add a NNI move to the list of possible NNI moves;
      */
-    void addPositiveNNIMove(NNIMove myMove);
+    void addPositiveNNIMove(NNIMove &myMove);
 
     /**
      * Estimate the 95% quantile of the distribution of N (see paper for more d
@@ -613,21 +613,6 @@ protected:
      *  Vector contains approximated improvement pro NNI at each iterations
      */
     vector<double> vecImpProNNI;
-
-    /**
-        List of positive NNI for the current tree;
-     */
-    vector<NNIMove> plusNNIs;
-
-    /**
-        List of non-conflicting NNIs for the current tree;
-     */
-    vector<NNIMove> nonConfNNIs;
-
-    /**
-     *  NNIs that have been applied in the previous step
-     */
-    vector<NNIMove> appliedNNIs;
 
     /**
         Optimal branch lengths

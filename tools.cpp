@@ -3960,6 +3960,7 @@ bool memcmpcpy(void * destination, const void * source, size_t num) {
     return diff;
 }
 
+// Pairing function: see https://en.wikipedia.org/wiki/Pairing_function
 int pairInteger(int int1, int int2) {
     if (int1 <= int2) {
         return ((int1 + int2)*(int1 + int2 + 1)/2 + int2);
