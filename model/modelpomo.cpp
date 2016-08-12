@@ -869,7 +869,7 @@ void ModelPoMo::report(ofstream &out) {
     out << "Empirical quantities" << endl;
     out << "--------------------" << endl;
 
-    out << "Frequencies of fixed states:" << endl;
+    out << "Frequencies of fixed states (in the order A, C, G, T):" << endl;
     for (int i = 0; i < nnuc; i++)
         out << freq_fixed_states_emp[i] << " ";
     out << endl;
