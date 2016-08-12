@@ -2611,8 +2611,13 @@ void parseArg(int argc, char *argv[], Params &params) {
 				continue;
 			}
 
-            if (strcmp(argv[cnt], "-opt_gammai") == 0 || strcmp(argv[cnt], "--opt-gamma-inv") == 0) {
+            if (strcmp(argv[cnt], "--opt-gamma-inv") == 0) {
                 params.opt_gammai = true;
+                continue;
+            }
+
+            if (strcmp(argv[cnt], "--no-opt-gamma-inv") == 0) {
+                params.opt_gammai = false;
                 continue;
             }
 
