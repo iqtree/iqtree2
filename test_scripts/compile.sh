@@ -1,4 +1,4 @@
-#!/bin/bash -
+cib#!/bin/bash -
 #===============================================================================
 #
 #          FILE: compile.sh
@@ -48,7 +48,6 @@ require_clean_work_tree () {
 }
 
 #Check whether the git work tree is clean
-#require_clean_work_tree
 
 if [ "$#" -lt 1 ]
 then
@@ -57,41 +56,41 @@ then
     exit 1
 fi
 
+#require_clean_work_tree
 
 #Determine hash code of current branch
 #branch=`git status | grep "On branch" | awk '{print $3}'`
 branch=$1
 flags=$2
+flagOMP="${flags} omp" # flags used to compile OpenMP version of IQ-TREE
 echo "Compiling branch ${branch} using flags ${flags}"
 #Take the first 6 characters of the current head commit
 commit_cur=`git log | head -n1 | awk '{print $2}' | cut -c 1-6`
 
-#Dictionary and binary names
-cur_build="build_${branch}"
-release_build="build_release"
-release_binary_prefix="iqtree_release"
-#cur_binary="iqtree_${commit_cur}"
-cur_binary="iqtree_${branch}"
-bin_dir="iqtree_binaries"
+#Assign names to build and binary directories
+flagSuffix=`echo ${flags} | sed 's/ /-/g'`
+buildDir="build-${branch}-${flagSuffix}"
+buildDirOMP="build-${branch}-${flagSuffix}-omp"
+binaryName="iqtree-${branch}"
+binaryNameOMP="${binaryName}-omp"
+binDir="iqtree-${branch}-bin"
 
-#Clean up
-if [ -e $cur_build ]
+#Create the build directory
+if [[ ! -e $buildDir ]]
 then
-  rm -rf $cur_build
-  mkdir $cur_build
+  mkdir $buildDir
 fi
-#if [ -e $release_build ]
-#then
-#  rm -rf $release_build
-#fi
-#if [ -e $bin_dir ]
-#then
-#  rm -rf $bin_dir
-#fi
-if [ ! -e $bin_dir ]
+if [[ ! -e $buildDirOMP ]]
 then
-    mkdir $bin_dir
+  mkdir $buildDirOMP
 fi
+
+#Create binary directory
+if [[ ! -e $binDir ]]
+then
+    mkdir $binDir
+fi
+
 #Fetch changes from server
 git fetch
 curBranch=`git status | grep 'On branch' | awk '{print $3}'`
@@ -104,25 +103,25 @@ then
     git pull
     #git submodule update
 fi
-cmake -B${cur_build} -H.. -DIQTREE_FLAGS=${flags}
-make -C ${cur_build} -j4
-cp ${cur_build}/iqtree ${bin_dir}/${cur_binary}
-#rm -rf ${cur_build}
-#mkdir $release_build
-##Find the hash code of the most recent release in master
-#commit=`git log origin/master | grep -m 1 -B 4 "release version" | grep "commit" | awk '{print $2}'`
-#version=`git log origin/master | grep -m 1 "release version [0-9]*" | awk '{print $3}'`
-#git checkout ${commit}
-#git submodule update
-#cmake -B${release_build} -H..
-#make -C ${release_build} -j4
-#cp ${release_build}/iqtree ${bin_dir}/${release_binary_prefix}_${version}
-#git checkout ${curBranch}
-#git stash apply
-#git submodule update
+
+#Build the selected
+
+echo -e "\nGENERATING MAKEFILE FOR SEQUENTIAL VERSION OF IQ-TREE FOR BRANCH ${branch}\n"
+cmake -B${buildDir} -H.. -DIQTREE_FLAGS="${flags}"
+echo -e "\nBUILDING SEQUENTIAL VERSION OF IQ-TREE FOR BRANCH ${branch}\n"
+make -C ${buildDir} -j4
+
+echo -e "\nGENERATING MAKEFILE FOR OPENMP VERSION OF IQ-TREE FOR BRANCH ${branch}\n"
+echo ${flagOMP}
+echo ${buildDirOMP}
+cmake -B${buildDirOMP} -H.. -DIQTREE_FLAGS="${flagOMP}"
+echo -e "\nBUILDING OPENMP VERSION OF IQ-TREE FOR BRANCH ${branch}\n"
+make -C ${buildDirOMP} -j4
+
+#cp ${buildDir}/iqtree- ${binDir}/${binaryName}
 
 #Clean up
-#rm -rf $cur_build
+#rm -rf $buildDir
 
-echo -e "\nBinary file ${cur_binary} is stored in ${bin_dir}"
+#echo -e "Binaries of IQ-TREE for branch ${branch} are stored in $binDir"
 #rm -rf $release_build
