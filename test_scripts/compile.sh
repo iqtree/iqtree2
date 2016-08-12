@@ -56,14 +56,14 @@ then
     exit 1
 fi
 
-#require_clean_work_tree
+require_clean_work_tree
 
 #Determine hash code of current branch
 #branch=`git status | grep "On branch" | awk '{print $3}'`
 branch=$1
 flags=$2
 flagOMP="${flags} omp" # flags used to compile OpenMP version of IQ-TREE
-echo "Compiling branch ${branch} using flags ${flags}"
+echo "COMPILING BRANCH ${branch} USING FLAGS ${flags}"
 #Take the first 6 characters of the current head commit
 commit_cur=`git log | head -n1 | awk '{print $2}' | cut -c 1-6`
 
