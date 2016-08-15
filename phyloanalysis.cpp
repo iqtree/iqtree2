@@ -170,14 +170,15 @@ void reportModelSelection(ofstream &out, Params &params, vector<ModelInfo> &mode
 void reportModel(ofstream &out, Alignment *aln, ModelSubst *m) {
 	int i, j, k;
 	assert(aln->num_states == m->num_states);
+    double *rate_mat = new double[m->num_states * m->num_states];
+    if (!m->isSiteSpecificModel())
+        m->getRateMatrix(rate_mat);
+    else
+        ((ModelSet*)m)->front()->getRateMatrix(rate_mat);
+
 	if (m->num_states <= 4) {
 		out << "Rate parameter R:" << endl << endl;
 
-		double *rate_mat = new double[m->num_states * m->num_states];
-		if (!m->isSiteSpecificModel())
-			m->getRateMatrix(rate_mat);
-		else
-			((ModelSet*)m)->front()->getRateMatrix(rate_mat);
 		if (m->num_states > 4)
 			out << fixed;
 		if (m->isReversible()) {
@@ -209,8 +210,29 @@ void reportModel(ofstream &out, Alignment *aln, ModelSubst *m) {
 		//if (tree.aln->num_states > 4)
 		out << endl;
 		out.unsetf(ios_base::fixed);
-		delete[] rate_mat;
-	}
+	} else if (aln->seq_type == SEQ_PROTEIN && m->getNDim() > 20) {
+        assert(m->num_states == 20);
+        out << "WARNING: This model has " << m->getNDim() + m->getNDimFreq() << " parameters that may be overfitting. Please use with caution!" << endl << endl;
+        double full_mat[400];
+        for (i = 0, k = 0; i < m->num_states - 1; i++)
+            for (j = i + 1; j < m->num_states; j++, k++) {
+                full_mat[i*m->num_states+j] = rate_mat[k];
+            }
+        out << "Substitution parameters (lower-diagonal) and state frequencies in PAML format (can be used as input for IQ-TREE): " << endl << endl;
+        for (i = 1; i < m->num_states; i++) {
+            for (j = 0; j < i; j++)
+                out << "\t" << full_mat[j*m->num_states+i];
+            out << endl;
+        }
+        double state_freq[20];
+        m->getStateFrequency(state_freq);
+        for (i = 0; i < m->num_states; i++)
+            out << "\t" << state_freq[i];
+        out << endl << endl;
+    }
+    
+    delete[] rate_mat;
+
 	out << "State frequencies: ";
 	if (m->isSiteSpecificModel())
 		out << "(site specific frequencies)" << endl << endl;

@@ -3155,13 +3155,21 @@ void ModelProtein::init(const char *model_name, string model_params, StateFreqTy
 		for (i = 0, k = 0; i < num_states-1; i++)
 			for (j = i+1; j < num_states; j++)
 				rates[k++] = daa[i*20+j];
+        num_params = 0;
 	} else if (!model_params.empty()) {
 		stringstream ss(model_params);
 		readRates(ss);
 		readStateFreq(ss);
+        num_params = 0;
+    } else if (name_upper == "GTR20") {
+        outWarning("GTR20 model will estimate 189 substitution rates that might be overfitting!");
+        outWarning("Please only use GTR20 with very large data and always test for model fit!");
+        if (freq == FREQ_UNKNOWN || freq == FREQ_USER_DEFINED)
+            freq = FREQ_EMPIRICAL;
 	} else {
 		// if name does not match, read the user-defined model
 		readParameters(model_name);
+        num_params = 0;
 	}
 	if (freq_params != "") {
 //		stringstream ss(freq_params);
@@ -3212,7 +3220,6 @@ void ModelProtein::init(const char *model_name, string model_params, StateFreqTy
 		readParameters(model_name);
 	}*/
 
-	num_params = 0;
 	//assert(freq != FREQ_ESTIMATE);
 	if (freq == FREQ_UNKNOWN) freq = FREQ_USER_DEFINED;
 	ModelGTR::init(freq);
