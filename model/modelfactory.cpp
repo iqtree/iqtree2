@@ -210,7 +210,13 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
     }
 
     // then normal frequency
-	posfreq = rate_str.find("+F");
+    if (rate_str.find("+FO") != string::npos)
+        posfreq = rate_str.find("+FO");
+    else if (rate_str.find("+Fo") != string::npos)
+        posfreq = rate_str.find("+Fo");
+    else
+        posfreq = rate_str.find("+F");
+        
     bool optimize_mixmodel_weight = params.optimize_mixmodel_weight;
 
 	if (posfreq != string::npos) {
@@ -251,9 +257,10 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
             else
                 freq_type = FREQ_EQUAL;
 		} else if (freq_str == "+FO" || freq_str == "+Fo") {
-            if (freq_type == FREQ_MIXTURE)
-                outError("Mixture frequency with optimized frequency is not allowed");
-            else
+            if (freq_type == FREQ_MIXTURE) {
+                freq_params = "optimize," + freq_params;
+                optimize_mixmodel_weight = true;                
+            } else
                 freq_type = FREQ_ESTIMATE;
 		} else if (freq_str == "+F1x4" || freq_str == "+F1X4") {
             if (freq_type == FREQ_MIXTURE)

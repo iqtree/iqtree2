@@ -31,7 +31,7 @@ ModelGTR::ModelGTR(PhyloTree *tree, bool count_rates)
     half_matrix = true;
 	int i;
 	int nrate = getNumRateEntries();
-	int ncoeff = num_states*num_states*num_states;
+//	int ncoeff = num_states*num_states*num_states;
 	
 	highest_freq_state = num_states-1;
 	name = "GTR";

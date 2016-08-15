@@ -721,7 +721,7 @@ frequency Fclass1 = 0.02549352 0.01296012 0.005545202 0.006005566 0.01002193 0.0
 frequency Fclass2 = 0.09596966 0.008786096 0.02805857 0.01880183 0.005026264 0.006454635 0.01582725 0.7215719 0.003379354 0.002257725 0.003013483 0.01343441 0.001511657 0.002107865 0.006751404 0.04798539 0.01141559 0.000523736 0.002188483 0.004934972;\n\
 frequency Fclass3 = 0.01726065 0.005467988 0.01092937 0.3627871 0.001046402 0.01984758 0.5149206 0.004145081 0.002563289 0.002955213 0.005286931 0.01558693 0.002693098 0.002075771 0.003006167 0.01263069 0.01082144 0.000253451 0.001144787 0.004573568;\n\
 frequency Fclass4 = 0.1263139 0.09564027 0.07050061 0.03316681 0.02095119 0.05473468 0.02790523 0.009007538 0.03441334 0.005855319 0.008061884 0.1078084 0.009019514 0.05018693 0.07948 0.09447839 0.09258897 0.01390669 0.05367769 0.01230413;\n\
-model CF4 = POISSON+FMIX{empirical,Fclass1,Fclass2,Fclass3,Fclass4}+G;\n\
+model CF4 = POISSON+FMIX{Fclass1,Fclass2,Fclass3,Fclass4}+F+G;\n\
 model JTTCF4G = JTT+FMIX{empirical,Fclass1,Fclass2,Fclass3,Fclass4}+G;\n\
 \n\
 [ ---------------------------------------------------------\n\
@@ -1063,6 +1063,11 @@ void ModelMixture::initMixture(string orig_model_name, string model_name, string
 	size_t cur_pos;
 	int m;
 
+    NxsModel *nxs_freq_empirical = new NxsModel("empirical"); 
+    NxsModel *nxs_freq_optimize = new NxsModel("optimize");
+
+    int num_pre_freq = 0;
+
 	vector<NxsModel*> freq_vec;
 	DoubleVector freq_rates;
 	DoubleVector freq_weights;
@@ -1096,8 +1101,12 @@ void ModelMixture::initMixture(string orig_model_name, string model_name, string
 			freq_rates.push_back(rate);
 			freq_weights.push_back(weight);
 			cur_pos = pos+1;
-			if (this_name == "empirical") {
-				freq_vec.push_back(NULL);
+			if (this_name == nxs_freq_empirical->name) {
+				freq_vec.push_back(nxs_freq_empirical);
+                num_pre_freq++;
+            } else if (this_name == nxs_freq_optimize->name) {
+                freq_vec.push_back(nxs_freq_optimize);
+                num_pre_freq++;
 			} else {
 				NxsModel *freq_mod = models_block->findModel(this_name);
 				if (!freq_mod)
@@ -1108,13 +1117,15 @@ void ModelMixture::initMixture(string orig_model_name, string model_name, string
 				}
 				freq_vec.push_back(freq_mod);
 			}
+            if (num_pre_freq >= 2)
+                outError("Defining both empirical and optimize frequencies not allowed");
 		}
         double sum_weights = 0.0;
         for (m = 0; m < freq_weights.size(); m++)
-            if (freq_vec[m]) 
+            if (freq_vec[m] != nxs_freq_empirical && freq_vec[m] != nxs_freq_optimize) 
                 sum_weights += freq_weights[m];
         for (m = 0; m < freq_weights.size(); m++)
-            if (!freq_vec[m]) 
+            if (freq_vec[m] == nxs_freq_empirical || freq_vec[m] == nxs_freq_optimize) 
                 freq_weights[m] = sum_weights/freq_weights.size();
 		ModelGTR::init(FREQ_USER_DEFINED);
 	} else {
@@ -1155,10 +1166,12 @@ void ModelMixture::initMixture(string orig_model_name, string model_name, string
 		ModelGTR* model;
 		if (freq == FREQ_MIXTURE) {
 			for(int f = 0; f != freq_vec.size(); f++) {
-				if (freq_vec[f])
-					model = (ModelGTR*)createModel(this_name, models_block, FREQ_USER_DEFINED, freq_vec[f]->description, tree, count_rates);
-				else
+                if (freq_vec[f] == nxs_freq_empirical)
 					model = (ModelGTR*)createModel(this_name, models_block, FREQ_EMPIRICAL, "", tree, count_rates);
+                else if (freq_vec[f] == nxs_freq_optimize)
+					model = (ModelGTR*)createModel(this_name, models_block, FREQ_ESTIMATE, "", tree, count_rates);
+				else
+					model = (ModelGTR*)createModel(this_name, models_block, FREQ_USER_DEFINED, freq_vec[f]->description, tree, count_rates);
 				model->total_num_subst = rate * freq_rates[f];
 				push_back(model);
 				weights.push_back(weight * freq_weights[f]);
@@ -1166,12 +1179,15 @@ void ModelMixture::initMixture(string orig_model_name, string model_name, string
 //					name += ',';
 					full_name += ',';
 				}
-				if (freq_vec[f]) {
-					model->name += "+F" +freq_vec[f]->name + "";
-					model->full_name += "+F" +freq_vec[f]->name + "";
-				} else {
+				if (freq_vec[f] == nxs_freq_empirical) {
 					model->name += "+F";
 					model->full_name += "+F";
+                } else if (freq_vec[f] == nxs_freq_optimize) {
+					model->name += "+FO";
+					model->full_name += "+FO";
+				} else {
+					model->name += "+F" +freq_vec[f]->name + "";
+					model->full_name += "+F" +freq_vec[f]->name + "";
 				}
 //				name += model->name;
 				full_name += model->name;
@@ -1239,7 +1255,7 @@ void ModelMixture::initMixture(string orig_model_name, string model_name, string
 	eigenvalues = aligned_alloc<double>(num_states*nmixtures);
 	eigenvectors = aligned_alloc<double>(num_states*num_states*nmixtures);
 	inv_eigenvectors = aligned_alloc<double>(num_states*num_states*nmixtures);
-	int ncoeff = num_states*num_states*num_states;
+//	int ncoeff = num_states*num_states*num_states;
 //	eigen_coeff = aligned_alloc<double>(ncoeff*nmixtures);
 
 	// assigning memory for individual models
@@ -1263,6 +1279,10 @@ void ModelMixture::initMixture(string orig_model_name, string model_name, string
 //		(*it)->eigen_coeff = &eigen_coeff[m*ncoeff];
 	}
 	decomposeRateMatrix();
+    
+    delete nxs_freq_optimize;
+    delete nxs_freq_empirical;
+    
 }
 
 ModelMixture::~ModelMixture() {
