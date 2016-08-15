@@ -2028,6 +2028,8 @@ public:
     double *rr_inv;
 };
 
+/* BEGIN CODE WAS TAKEN FROM CONSEL PROGRAM */
+
 /* binary search for a sorted vector 
    find k s.t. vec[k-1] <= t < vec[k]
  */
@@ -2088,15 +2090,106 @@ double cntdist3(double *vec, int bb, double t)
   return p;
 }
 
-//#define I_SQRT_2_PI 0.398942280401432677939946059934 /* 1/sqrt(2pi) */
-//double dnorm(double x) {
-//  return  I_SQRT_2_PI*exp(-0.5*x*x);
-//}
+double log3(double x)
+{
+  double y,z1,z2,z3,z4,z5;
+  if(fabs(x)>1.0e-3) {
+    y=-log(1.0-x);
+  } else {
+    z1=x; z2=z1*x; z3=z2*x; z4=z3*x; z5=z4*x;
+    y=((((z5/5.0)+z4/4.0)+z3/3.0)+z2/2.0)+z1;
+  }
+  return y;
+}
+
+int mleloopmax=30;
+double mleeps=1e-10;
+int mlecoef(double *cnts, double *rr, double bb, int kk,
+	    double *coef0, /* set initinal value (size=2) */
+	    double *lrt, double *df, /* LRT statistic */
+        double *se
+	    )
+{
+  int i,m,loop;
+  double coef[2], update[2];
+  double d1f, d2f, d11f, d12f, d22f; /* derivatives */
+  double v11, v12, v22; /* inverse of -d??f */
+  double a,e;
+  double s[kk], r[kk],c[kk], b[kk],z[kk],p[kk],d[kk],g[kk],h[kk];
+
+  m=0;
+  for(i=0;i<kk;i++)
+    {
+      r[m]=rr[i]; s[m]=sqrt(rr[i]); c[m]=cnts[i]*bb; b[m]=bb;
+      m++;
+    }
+  if(m<2) return 1;
+
+  coef[0]=coef0[0]; /* signed distance */
+  coef[1]=coef0[1]; /* curvature */
+
+  for(loop=0;loop<mleloopmax;loop++) {
+    d1f=d2f=d11f=d12f=d22f=0.0;
+    for(i=0;i<m;i++) {
+      z[i]=coef[0]*s[i]+coef[1]/s[i];
+      p[i]=gsl_cdf_ugaussian_P(-z[i]);
+      d[i]=gsl_ran_ugaussian_pdf(z[i]);
+      if(p[i]>0.0 && p[i]<1.0) {
+	g[i]=d[i]*( d[i]*(-c[i]+2.0*c[i]*p[i]-b[i]*p[i]*p[i])/
+		    (p[i]*p[i]*(1.0-p[i])*(1.0-p[i]))
+		    + z[i]*(c[i]-b[i]*p[i])/(p[i]*(1.0-p[i])) );
+	h[i]=d[i]*(c[i]-b[i]*p[i])/(p[i]*(1.0-p[i]));
+      } else { g[i]=h[i]=0.0; }
+      d1f+= -h[i]*s[i]; d2f+= -h[i]/s[i];
+      d11f+= g[i]*r[i]; d12f+= g[i]; d22f+= g[i]/r[i];
+    }
+
+    a=d11f*d22f-d12f*d12f;
+    if(a==0.0) {
+      return 2;
+    }
+    v11=-d22f/a; v12=d12f/a; v22=-d11f/a;
+
+    /* Newton-Raphson update */
+    update[0]=v11*d1f+v12*d2f; update[1]=v12*d1f+v22*d2f;
+    coef[0]+=update[0]; coef[1]+=update[1];
+
+    /* check convergence */
+    e=-d11f*update[0]*update[0]-2.0*d12f*update[0]*update[1]
+      -d22f*update[1]*update[1];
+
+    if(e<mleeps) break;
+  }
+
+  /* calc log-likelihood */
+  *lrt=0.0; *df=0.0;
+  for(i=0;i<m;i++) {
+    if(p[i]>0.0 && p[i]<1.0) {
+      *df+=1.0;
+      if(c[i]>0.0) a=c[i]*log(c[i]/b[i]/p[i]); else a=0.0;
+      if(c[i]<b[i]) a+=(b[i]-c[i])*(log3(p[i])-log3(c[i]/b[i]));
+      *lrt += a;
+    }
+  }
+  *lrt *= 2.0; *df -= 2.0;
+
+  /* write back the results */
+  coef0[0]=coef[0]; coef0[1]=coef[1];
+  *se = v11 + v22 - 2*v12;
+//  vmat[0][0]=v11;vmat[0][1]=vmat[1][0]=v12;vmat[1][1]=v22; 
+  if(loop==mleloopmax || *df< -0.01) i=1; else i=0;
+  return i;
+}
+
+/* END CODE WAS TAKEN FROM CONSEL PROGRAM */
 
 /**
     @param tree_lhs RELL score matrix of size #trees x #replicates
 */
 void performAUTest(Params &params, PhyloTree *tree, double *pattern_lhs, vector<TreeInfo> &info) {
+    
+    if (params.topotest_replicates < 10000)
+        outWarning("Too few replicates for AU test. At least -zb 10000 for reliable results!");
     
     /* STEP 1: specify scale factors */
     size_t nscales = 10;
@@ -2109,7 +2202,7 @@ void performAUTest(Params &params, PhyloTree *tree, double *pattern_lhs, vector<
     /* STEP 2: compute bootstrap proportion */
     size_t ntrees = info.size();
     size_t nboot = params.topotest_replicates;
-    double nboot_inv = 1.0 / nboot;
+//    double nboot_inv = 1.0 / nboot;
     
     size_t nptn = tree->getAlnNPattern();
     size_t maxnptn = get_safe_upper_limit(nptn);
@@ -2124,6 +2217,11 @@ void performAUTest(Params &params, PhyloTree *tree, double *pattern_lhs, vector<
         outError("Not enough memory to perform AU test!");
     
     size_t k, tid, ptn;
+
+    double start_time = getRealTime();
+
+    cout << "Generating " << nscales << " x " << nboot << " multiscale bootstrap replicates... ";
+
 #ifdef _OPENMP
     #pragma omp parallel private(k, tid, ptn)
     {
@@ -2137,10 +2235,6 @@ void performAUTest(Params &params, PhyloTree *tree, double *pattern_lhs, vector<
     memset(boot_sample, 0, maxnptn*sizeof(int));
     
     double *boot_sample_dbl = aligned_alloc<double>(maxnptn);
-    
-    double start_time = getRealTime();
-    
-    cout << "Generating " << nscales << " x " << nboot << " multiscale bootstrap replicates..." << endl;
     
 #ifdef _OPENMP
     #pragma omp for schedule(static)
@@ -2156,14 +2250,20 @@ void performAUTest(Params &params, PhyloTree *tree, double *pattern_lhs, vector<
             for (tid = 0; tid < ntrees; tid++) {
                 double *pattern_lh = pattern_lhs + (tid*maxnptn);
                 double tree_lh;
+                if (params.SSE == LK_EIGEN) {
+                    tree_lh = 0.0;
+                    for (ptn = 0; ptn < nptn; ptn++)
+                        tree_lh += pattern_lh[ptn] * boot_sample_dbl[ptn];
+                } else {
 #ifdef BINARY32
-                tree_lh = tree->dotProductSIMD<double, Vec2d, 2>(pattern_lh, boot_sample_dbl, nptn);
-#else
-                if (instruction_set >= 7)
-                    tree_lh = tree->dotProductSIMD<double, Vec4d, 4>(pattern_lh, boot_sample_dbl, nptn);
-                else
                     tree_lh = tree->dotProductSIMD<double, Vec2d, 2>(pattern_lh, boot_sample_dbl, nptn);
+#else
+                    if (instruction_set >= 7)
+                        tree_lh = tree->dotProductSIMD<double, Vec4d, 4>(pattern_lh, boot_sample_dbl, nptn);
+                    else
+                        tree_lh = tree->dotProductSIMD<double, Vec2d, 2>(pattern_lh, boot_sample_dbl, nptn);
 #endif
+                }
                 // rescale lh
                 tree_lh /= r[k];
                 
@@ -2223,7 +2323,7 @@ void performAUTest(Params &params, PhyloTree *tree, double *pattern_lhs, vector<
     double *cc = new double[nscales];
     double *w = new double[nscales];
     double *this_bp = new double[nscales];
-    cout << "TreeID\tAU\tRSS\td_WLS\tc_WLS\td_MLE\tc_MLE" << endl;
+    cout << "TreeID\tAU\tRSS\td\tc" << endl;
     for (tid = 0; tid < ntrees; tid++) {
         double *this_stat = treelhs + tid*nscales*nboot;
         double xn = this_stat[(nscales/2)*nboot + nboot/2], x;
@@ -2231,8 +2331,11 @@ void performAUTest(Params &params, PhyloTree *tree, double *pattern_lhs, vector<
         int idf0 = -2;
         double z = 0.0, z0 = 0.0, thp = 0.0, th = 0.0, ze = 0.0, ze0 = 0.0;
         double pval, se;
+        int df;
+        double rss = 0.0;
         int step;
         const int max_step = 30;
+        bool failed = false;
         for (step = 0; step < max_step; step++) {
             x = xn;
             int num_k = 0;
@@ -2241,16 +2344,18 @@ void performAUTest(Params &params, PhyloTree *tree, double *pattern_lhs, vector<
                 if (this_bp[k] <= 0 || this_bp[k] >= 1) {
                     cc[k] = w[k] = 0.0;
                 } else {
-                    double bp_val = min(max(this_bp[k], nboot_inv),1.0-nboot_inv);
+                    double bp_val = this_bp[k];
                     cc[k] = -gsl_cdf_ugaussian_Pinv(bp_val);
                     double bp_pdf = gsl_ran_ugaussian_pdf(cc[k]);
                     w[k] = bp_pdf*bp_pdf*nboot / (bp_val*(1.0-bp_val));
                     num_k++;
                 }
             }
+            df = num_k-2;
             if (num_k >= 2) {
                 // first obtain d and c by weighted least square
                 doWeightedLeastSquare(nscales, w, rr, rr_inv, cc, d, c, se);
+                
                 se = gsl_ran_ugaussian_pdf(d-c)*sqrt(se);
                 
                 // second, perform MLE estimate of d and c
@@ -2263,6 +2368,13 @@ void performAUTest(Params &params, PhyloTree *tree, double *pattern_lhs, vector<
                 pval = 1.0 - gsl_cdf_ugaussian_P(d-c);
                 z = -pval;
                 ze = se;
+                // compute sum of squared difference
+                rss = 0.0;
+                for (k = 0; k < nscales; k++) {
+                    double diff = cc[k] - (rr[k]*d + rr_inv[k]*c);
+                    rss += w[k] * diff * diff;
+                }
+                
             } else {
                 // not enough data for WLS
                 double sum = 0.0;
@@ -2274,16 +2386,32 @@ void performAUTest(Params &params, PhyloTree *tree, double *pattern_lhs, vector<
                     pval = 1.0;
                 se = 0.0;
                 d = c = 0.0;
+                rss = 0.0;
                 if (verbose_mode >= VB_MED)
                     cout << "   error in wls" << endl;
             }
+
+            // maximum likelhood fit
+//            double coef0[2] = {d, c};
+//            double df;
+//            int mlefail = mlecoef(this_bp, r, nboot, nscales, coef0, &rss, &df, &se);
+//            
+//            if (!mlefail) {
+//                d = coef0[0];
+//                c = coef0[1];
+//                pval = 1.0 - gsl_cdf_ugaussian_P(d-c);
+//                z = -pval;
+//                ze = se;
+//            }
             
             if (verbose_mode >= VB_MED) {
-                cout << "\t" << step << "\t" << th << "\t" << x << "\t" << info[tid].au_pvalue << "\t" << se << "\t" << nscales-2 << "\t" << d << "\t" << c << "\t" << z << "\t" << ze << endl;
                 cout.unsetf(ios::fixed);
+                cout << "\t" << step << "\t" << th << "\t" << x << "\t" << pval << "\t" << se << "\t" << nscales-2 << "\t" << d << "\t" << c << "\t" << z << "\t" << ze << "\t" << rss << endl;
             }
             
-            if(idf0 >= 0 && (z-z0)*(x-thp) > 0.0 && fabs(z-z0)>0.1*ze0) {
+            if(df < 0 && idf0 < 0) { failed = true; break;} /* degenerated */
+            
+            if ((df < 0) || (idf0 >= 0 && (z-z0)*(x-thp) > 0.0 && fabs(z-z0)>0.1*ze0)) {
                 if (verbose_mode >= VB_MED)
                     cout << "   non-monotone" << endl;
                 th=x;
@@ -2304,18 +2432,17 @@ void performAUTest(Params &params, PhyloTree *tree, double *pattern_lhs, vector<
             if(fabs(x-th)<1e-10) break;
         }
         
+        if (failed && verbose_mode >= VB_MED)
+            cout << "   degenerated" << endl;
+        
         if (step == max_step) {
-            cout << "   non-convergence" << endl; 
-        }
-        // compute sum of squared difference
-        double rss = 0.0;
-        for (k = 0; k < nscales; k++) {
-            double diff = cc[k] - (rr[k]*d + rr_inv[k]*c);
-            rss += w[k] * diff * diff;
+            if (verbose_mode >= VB_MED)
+                cout << "   non-convergence" << endl; 
+            failed = true;
         }
         
-        double pchi2 = computePValueChiSquare(rss, nscales-2);
-        cout << tid+1 << "\t" << info[tid].au_pvalue << "\t" << rss << "\t" << d << "\t" << c << "\t" << d << "\t" << c;
+        double pchi2 = (failed) ? 0.0 : computePValueChiSquare(rss, df);
+        cout << tid+1 << "\t" << info[tid].au_pvalue << "\t" << rss << "\t" << d << "\t" << c;
         
         // warning if p-value of chi-square < 0.01 (rss too high)
         if (pchi2 < 0.01) 
