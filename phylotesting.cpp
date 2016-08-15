@@ -1948,7 +1948,7 @@ the solution is:
     @param[out] y y-value
     @return least square value
 */
-void doWeightedLeastSquare(int n, double *w, double *a, double *b, double *c, double &x, double &y) {
+void doWeightedLeastSquare(int n, double *w, double *a, double *b, double *c, double &x, double &y, double &se) {
     int k;
     double BC = 0.0, AB = 0.0, AC = 0.0, A2 = 0.0, B2 = 0.0;
     double denom;
@@ -1964,6 +1964,9 @@ void doWeightedLeastSquare(int n, double *w, double *a, double *b, double *c, do
     denom = 1.0/(AB*AB - A2*B2);
     x = (BC*AB - AC*B2) * denom;
     y = (AC*AB - BC*A2) * denom;
+    
+    se = -denom*(B2+A2+2*AB);
+    assert(se >= 0.0);
 }
 
 /**
@@ -2025,13 +2028,78 @@ public:
     double *rr_inv;
 };
 
+/* binary search for a sorted vector 
+   find k s.t. vec[k-1] <= t < vec[k]
+ */
+int cntdist2(double *vec, int bb, double t)
+{
+  int i,i0,i1;
+
+  i0=0; i1=bb-1;
+  if(t < vec[0]) return 0;
+  else if(vec[bb-1] <= t) return bb;
+
+  while(i1-i0>1) {
+    i=(i0+i1)/2;
+    if(vec[i] <= t) i0=i;
+    else i1=i;
+  }
+
+  return i1;
+}
+
+/*
+  smoothing the counting for a sorted vector
+  the piecewise linear function connecting
+  F(v[i]) =  1/(2n) + i/n, for i=0,...,n-1
+  F(1.5v[0]-0.5v[1]) = 0
+  F(1.5v[n-1]-0.5v[n-2]) = 1.
+
+  1. F(x)=0 for x<=1.5v[0]-0.5v[1] 
+
+  2. F(x)=1/(2n) + (1/n)*(x-v[0])/(v[1]-v[0])
+  for 1.5v[0]-0.5v[1] < x <= v[0]
+
+  3. F(x)=1/(2n) + i/n + (1/n)*(x-v[i])/(v[i]-v[i+1])
+  for v[i] < x <= v[i+1], i=0,...,
+
+  4. F(x)=1-(1/2n) + (1/n)*(x-v[n-1])/(v[n-1]-v[n-2])
+  for v[n-1] < x <= 1.5v[n-1]-0.5v[n-2]
+
+  5. F(x)=1 for x > 1.5v[n-1]-0.5v[n-2]
+ */
+double cntdist3(double *vec, int bb, double t)
+{
+  double p,n;
+  int i;
+  i=cntdist2(vec,bb,t)-1; /* to find vec[i] <= t < vec[i+1] */
+  n=(double)bb;
+  if(i<0) {
+    if(vec[1]>vec[0]) p=0.5+(t-vec[0])/(vec[1]-vec[0]);
+    else p=0.0;
+  } else if(i<bb-1) {
+    if(vec[i+1]>vec[i]) p=0.5+(double)i+(t-vec[i])/(vec[i+1]-vec[i]);
+    else p=0.5+(double)i; /* <- should never happen */
+  } else {
+    if(vec[bb-1]-vec[bb-2]>0) p=n-0.5+(t-vec[bb-1])/(vec[bb-1]-vec[bb-2]);
+    else p=n;
+  }
+  if(p>n) p=n; else if(p<0.0) p=0.0;
+  return p;
+}
+
+//#define I_SQRT_2_PI 0.398942280401432677939946059934 /* 1/sqrt(2pi) */
+//double dnorm(double x) {
+//  return  I_SQRT_2_PI*exp(-0.5*x*x);
+//}
+
 /**
     @param tree_lhs RELL score matrix of size #trees x #replicates
 */
 void performAUTest(Params &params, PhyloTree *tree, double *pattern_lhs, vector<TreeInfo> &info) {
     
     /* STEP 1: specify scale factors */
-    int nscales = 10;
+    size_t nscales = 10;
     double r[] = {0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4};
     double rr[] = {sqrt(0.5), sqrt(0.6), sqrt(0.7), sqrt(0.8), sqrt(0.9), 1.0, 
         sqrt(1.1), sqrt(1.2), sqrt(1.3), sqrt(1.4)};
@@ -2039,17 +2107,23 @@ void performAUTest(Params &params, PhyloTree *tree, double *pattern_lhs, vector<
         sqrt(1/1.1), sqrt(1/1.2), sqrt(1/1.3), sqrt(1/1.4)};
         
     /* STEP 2: compute bootstrap proportion */
-    int ntrees = info.size();
+    size_t ntrees = info.size();
     size_t nboot = params.topotest_replicates;
     double nboot_inv = 1.0 / nboot;
     
-    int nptn = tree->getAlnNPattern();
-    int maxnptn = get_safe_upper_limit(nptn);
+    size_t nptn = tree->getAlnNPattern();
+    size_t maxnptn = get_safe_upper_limit(nptn);
     
-    double *bp = new double[ntrees*nscales];
-    memset(bp, 0, sizeof(double)*ntrees*nscales);
+//    double *bp = new double[ntrees*nscales];
+//    memset(bp, 0, sizeof(double)*ntrees*nscales);
     
-    int k, tid, ptn;
+    double *treelhs;
+    cout << (ntrees*nscales*nboot*sizeof(double) >> 20) << " MB required for AU test" << endl;
+    treelhs = new double[ntrees*nscales*nboot];
+    if (!treelhs)
+        outError("Not enough memory to perform AU test!");
+    
+    size_t k, tid, ptn;
 #ifdef _OPENMP
     #pragma omp parallel private(k, tid, ptn)
     {
@@ -2064,6 +2138,10 @@ void performAUTest(Params &params, PhyloTree *tree, double *pattern_lhs, vector<
     
     double *boot_sample_dbl = aligned_alloc<double>(maxnptn);
     
+    double start_time = getRealTime();
+    
+    cout << "Generating " << nscales << " x " << nboot << " multiscale bootstrap replicates..." << endl;
+    
 #ifdef _OPENMP
     #pragma omp for schedule(static)
 #endif
@@ -2073,7 +2151,7 @@ void performAUTest(Params &params, PhyloTree *tree, double *pattern_lhs, vector<
 			tree->aln->createBootstrapAlignment(boot_sample, str.c_str(), rstream);
             for (ptn = 0; ptn < maxnptn; ptn++)
                 boot_sample_dbl[ptn] = boot_sample[ptn];
-            double max_lh = -1e20;
+            double max_lh = -DBL_MAX, second_max_lh = -DBL_MAX;
             int max_tid = -1;
             for (tid = 0; tid < ntrees; tid++) {
                 double *pattern_lh = pattern_lhs + (tid*maxnptn);
@@ -2086,13 +2164,34 @@ void performAUTest(Params &params, PhyloTree *tree, double *pattern_lhs, vector<
                 else
                     tree_lh = tree->dotProductSIMD<double, Vec2d, 2>(pattern_lh, boot_sample_dbl, nptn);
 #endif
+                // rescale lh
+                tree_lh /= r[k];
+                
+                // find the max and second max
                 if (tree_lh > max_lh) {
+                    second_max_lh = max_lh;
                     max_lh = tree_lh;
                     max_tid = tid;
-                } 
+                } else if (tree_lh > second_max_lh)
+                    second_max_lh = tree_lh;
+                    
+                treelhs[(tid*nscales+k)*nboot + boot] = tree_lh; 
             }
-            bp[k*ntrees+max_tid] += nboot_inv;
+            
+            // compute difference from max_lh
+            for (tid = 0; tid < ntrees; tid++) 
+                if (tid != max_tid)
+                    treelhs[(tid*nscales+k)*nboot + boot] = max_lh - treelhs[(tid*nscales+k)*nboot + boot];
+                else
+                    treelhs[(tid*nscales+k)*nboot + boot] = second_max_lh - max_lh;
+//            bp[k*ntrees+max_tid] += nboot_inv;
         }
+        
+        // sort the replicates
+        for (tid = 0; tid < ntrees; tid++) {
+            quicksort<double,int>(treelhs + (tid*nscales+k)*nboot, 0, nboot-1);
+        }
+        
     }
 
     aligned_free(boot_sample_dbl);
@@ -2103,19 +2202,21 @@ void performAUTest(Params &params, PhyloTree *tree, double *pattern_lhs, vector<
     }
 #endif
 
-    if (verbose_mode >= VB_MED) {
-        cout << "scale";
-        for (k = 0; k < nscales; k++)
-            cout << "\t" << r[k];
-        cout << endl;
-        for (tid = 0; tid < ntrees; tid++) {
-            cout << tid;
-            for (k = 0; k < nscales; k++) {
-                cout << "\t" << bp[tid+k*ntrees];
-            }
-            cout << endl;
-        }
-    }
+//    if (verbose_mode >= VB_MED) {
+//        cout << "scale";
+//        for (k = 0; k < nscales; k++)
+//            cout << "\t" << r[k];
+//        cout << endl;
+//        for (tid = 0; tid < ntrees; tid++) {
+//            cout << tid;
+//            for (k = 0; k < nscales; k++) {
+//                cout << "\t" << bp[tid+k*ntrees];
+//            }
+//            cout << endl;
+//        }
+//    }
+    
+    cout << getRealTime() - start_time << " seconds" << endl;
     
     /* STEP 3: weighted least square fit */
     
@@ -2124,22 +2225,88 @@ void performAUTest(Params &params, PhyloTree *tree, double *pattern_lhs, vector<
     double *this_bp = new double[nscales];
     cout << "TreeID\tAU\tRSS\td_WLS\tc_WLS\td_MLE\tc_MLE" << endl;
     for (tid = 0; tid < ntrees; tid++) {
-        for (k = 0; k < nscales; k++) {
-            this_bp[k] = bp[tid + k*ntrees];
-            double bp_val = min(max(bp[tid + k*ntrees], nboot_inv),1.0-nboot_inv);
-            double bp_cdf = gsl_cdf_ugaussian_Pinv(bp_val);
-            double bp_pdf = gsl_ran_ugaussian_pdf(bp_cdf);
-            cc[k] = gsl_cdf_ugaussian_Pinv(1.0 - bp_val);
-            w[k] = bp_pdf*bp_pdf*nboot / (bp_val*(1.0-bp_val));
-        }
+        double *this_stat = treelhs + tid*nscales*nboot;
+        double xn = this_stat[(nscales/2)*nboot + nboot/2], x;
         double c, d; // c, d in original paper
-        // first obtain d and c by weighted least square
-        doWeightedLeastSquare(nscales, w, rr, rr_inv, cc, d, c);
+        int idf0 = -2;
+        double z = 0.0, z0 = 0.0, thp = 0.0, th = 0.0, ze = 0.0, ze0 = 0.0;
+        double pval, se;
+        int step;
+        const int max_step = 30;
+        for (step = 0; step < max_step; step++) {
+            x = xn;
+            int num_k = 0;
+            for (k = 0; k < nscales; k++) {
+                this_bp[k] = cntdist3(this_stat + k*nboot, nboot, x) / nboot;
+                if (this_bp[k] <= 0 || this_bp[k] >= 1) {
+                    cc[k] = w[k] = 0.0;
+                } else {
+                    double bp_val = min(max(this_bp[k], nboot_inv),1.0-nboot_inv);
+                    cc[k] = -gsl_cdf_ugaussian_Pinv(bp_val);
+                    double bp_pdf = gsl_ran_ugaussian_pdf(cc[k]);
+                    w[k] = bp_pdf*bp_pdf*nboot / (bp_val*(1.0-bp_val));
+                    num_k++;
+                }
+            }
+            if (num_k >= 2) {
+                // first obtain d and c by weighted least square
+                doWeightedLeastSquare(nscales, w, rr, rr_inv, cc, d, c, se);
+                se = gsl_ran_ugaussian_pdf(d-c)*sqrt(se);
+                
+                // second, perform MLE estimate of d and c
+    //            OptimizationAUTest mle(d, c, nscales, this_bp, rr, rr_inv);
+    //            mle.optimizeDC();
+    //            d = mle.d;
+    //            c = mle.c;
+
+                /* STEP 4: compute p-value according to Eq. 11 */
+                pval = 1.0 - gsl_cdf_ugaussian_P(d-c);
+                z = -pval;
+                ze = se;
+            } else {
+                // not enough data for WLS
+                double sum = 0.0;
+                for (k = 0; k < nscales; k++)
+                    sum += cc[k];
+                if (sum >= 0.0) 
+                    pval = 0.0;
+                else
+                    pval = 1.0;
+                se = 0.0;
+                d = c = 0.0;
+                if (verbose_mode >= VB_MED)
+                    cout << "   error in wls" << endl;
+            }
+            
+            if (verbose_mode >= VB_MED) {
+                cout << "\t" << step << "\t" << th << "\t" << x << "\t" << info[tid].au_pvalue << "\t" << se << "\t" << nscales-2 << "\t" << d << "\t" << c << "\t" << z << "\t" << ze << endl;
+                cout.unsetf(ios::fixed);
+            }
+            
+            if(idf0 >= 0 && (z-z0)*(x-thp) > 0.0 && fabs(z-z0)>0.1*ze0) {
+                if (verbose_mode >= VB_MED)
+                    cout << "   non-monotone" << endl;
+                th=x;
+                xn=0.5*x+0.5*thp;
+                continue;
+            }
+            if(idf0 >= 0 && (fabs(z-z0)<0.01*ze0)) {
+                if(fabs(th)<1e-10) 
+                    xn=th; 
+                else th=x;
+            } else 
+                xn=0.5*th+0.5*x;
+            info[tid].au_pvalue = pval;
+            thp=x; 
+            z0=z;
+            ze0=ze;
+            idf0 = nscales-2;
+            if(fabs(x-th)<1e-10) break;
+        }
         
-        // second, perform MLE estimate of d and c
-        OptimizationAUTest mle(d, c, nscales, this_bp, rr, rr_inv);
-        mle.optimizeDC();
-        
+        if (step == max_step) {
+            cout << "   non-convergence" << endl; 
+        }
         // compute sum of squared difference
         double rss = 0.0;
         for (k = 0; k < nscales; k++) {
@@ -2148,9 +2315,7 @@ void performAUTest(Params &params, PhyloTree *tree, double *pattern_lhs, vector<
         }
         
         double pchi2 = computePValueChiSquare(rss, nscales-2);
-        /* STEP 4: compute p-value according to Eq. 11 */
-        info[tid].au_pvalue = 1.0 - gsl_cdf_ugaussian_P(mle.d-mle.c);
-        cout << tid+1 << "\t" << info[tid].au_pvalue << "\t" << rss << "\t" << d << "\t" << c << "\t" << mle.d << "\t" << mle.c;
+        cout << tid+1 << "\t" << info[tid].au_pvalue << "\t" << rss << "\t" << d << "\t" << c << "\t" << d << "\t" << c;
         
         // warning if p-value of chi-square < 0.01 (rss too high)
         if (pchi2 < 0.01) 
@@ -2161,7 +2326,7 @@ void performAUTest(Params &params, PhyloTree *tree, double *pattern_lhs, vector<
     delete [] this_bp;
     delete [] w;
     delete [] cc;
-    delete [] bp;
+//    delete [] bp;
 }
 
 
