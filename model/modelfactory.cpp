@@ -762,7 +762,7 @@ double ModelFactory::optimizeParametersGammaInvar(bool fixed_len, bool write_inf
 
             initPInv = initPInv + testInterval;
 
-            if (estResults[2] > bestLogl + logl_epsilon) {
+            if (estResults[2] > bestLogl) {
                 bestLogl = estResults[2];
                 bestAlpha = estResults[1];
                 bestPInvar = estResults[0];
