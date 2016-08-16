@@ -1087,6 +1087,11 @@ public:
     */
     double optimizeTreeLengthScaling(double min_scaling, double &scaling, double max_scaling, double gradient_epsilon);
 
+    /**
+        print tree length scaling to a file (requested by Rob Lanfear)
+        @param filename output file name written in YAML format 
+    */
+    void printTreeLengthScaling(const char *filename);
 
      /****************************************************************************
             Branch length optimization by Least Squares

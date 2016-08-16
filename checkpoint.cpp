@@ -10,20 +10,22 @@
 #include "timeutil.h"
 #include "gzstream.h"
 
+const char* CKP_HEADER = "--- # IQ-TREE Checkpoint";
+
 
 Checkpoint::Checkpoint() {
 	filename = "";
     prev_dump_time = 0;
     dump_interval = 30; // dumping at most once per 30 seconds
     struct_name = "";
+    compression = true;
+    header = CKP_HEADER;
 }
 
 
 Checkpoint::~Checkpoint() {
 }
 
-
-const char* CKP_HEADER = "--- # IQ-TREE Checkpoint";
 
 void Checkpoint::setFileName(string filename) {
 	this->filename = filename;
@@ -43,7 +45,7 @@ void Checkpoint::load() {
             in.close();
             return;
         }
-        if (line != CKP_HEADER)
+        if (line != header)
         	throw ("Invalid checkpoint file " + filename);
         string struct_name;
         size_t pos;
@@ -93,6 +95,18 @@ void Checkpoint::load() {
     }
 }
 
+void Checkpoint::setCompression(bool compression) {
+    this->compression = compression;
+}
+
+/**
+    set the header line to overwrite the default header
+    @param header header line
+*/
+void Checkpoint::setHeader(string header) {
+    this->header = "--- # " + header;
+}
+
 void Checkpoint::setDumpInterval(double interval) {
     dump_interval = interval;
 }
@@ -107,10 +121,13 @@ void Checkpoint::dump(bool force) {
     }
     prev_dump_time = getRealTime();
     try {
-        ogzstream out;
-        out.exceptions(ios::failbit | ios::badbit);
-        out.open(filename.c_str());
-        out << CKP_HEADER << endl;
+        ostream *out;
+        if (compression) 
+            out = new ogzstream(filename.c_str());
+        else
+            out = new ofstream(filename.c_str()); 
+        out->exceptions(ios::failbit | ios::badbit);
+        *out << header << endl;
         string struct_name;
         size_t pos;
         int listid = 0;
@@ -118,15 +135,18 @@ void Checkpoint::dump(bool force) {
             if ((pos = i->first.find('.')) != string::npos) {
                 if (struct_name != i->first.substr(0, pos)) {
                     struct_name = i->first.substr(0, pos);
-                    out << struct_name << ":" << endl;
+                    *out << struct_name << ":" << endl;
                     listid = 0;
                 }
                 // check if key is a collection
-                out << "  " << i->first.substr(pos+1) << ": " << i->second << endl;
+                *out << "  " << i->first.substr(pos+1) << ": " << i->second << endl;
             } else
-                out << i->first << ": " << i->second << endl;
+                *out << i->first << ": " << i->second << endl;
         }
-        out.close();
+        if (compression)
+            ((ogzstream*)out)->close();
+        else
+            ((ofstream*)out)->close();
 //        cout << "Checkpoint dumped" << endl;
     } catch (ios::failure &) {
         outError(ERR_WRITE_OUTPUT, filename.c_str());

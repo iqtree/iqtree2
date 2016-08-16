@@ -648,6 +648,9 @@ public:
 
     /* type of starting tree */
     START_TREE_TYPE start_tree;
+    
+    /** true to optimize a scaling for tree length given via -t option */
+    bool optimize_tree_len_scaling;
 
     /**
             prefix of the output file, default is the same as input file

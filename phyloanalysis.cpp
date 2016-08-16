@@ -1599,6 +1599,12 @@ void printMiscInfo(Params &params, IQTree &iqtree, double *pattern_lh) {
 		}
 	}
 
+    if (params.optimize_tree_len_scaling) {
+        string filename = (string)params.out_prefix + ".treescale";
+        iqtree.printTreeLengthScaling(filename.c_str());
+        cout << "Tree length scaler printed to " << filename << endl;
+    }
+
 }
 
 void printFinalSearchInfo(Params &params, IQTree &iqtree, double search_cpu_time, double search_real_time) {

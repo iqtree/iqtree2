@@ -924,6 +924,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.ignore_checkpoint = false;
     params.checkpoint_dump_interval = 20;
     params.force_unfinished = false;
+    params.optimize_tree_len_scaling = false;
 
 
 	if (params.nni5) {
@@ -2006,6 +2007,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 			}
 			if (strcmp(argv[cnt], "-fixbr") == 0 || strcmp(argv[cnt], "-blfix") == 0) {
 				params.fixed_branch_length = true;
+                params.optimize_alg_gammai = "Brent";
+                params.opt_gammai = false;
 				continue;
 			}
 			if (strcmp(argv[cnt], "-blmin") == 0) {
@@ -2980,6 +2983,16 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.checkpoint_dump_interval = convert_int(argv[cnt]);
 				continue;
 			}
+            
+			if (strcmp(argv[cnt], "-wts") == 0) {
+				params.optimize_tree_len_scaling = true;
+                params.min_iterations = 0;
+                params.stop_condition = SC_FIXED_ITERATION;
+                params.fixed_branch_length = true;
+                params.optimize_alg_gammai = "Brent";
+                params.opt_gammai = false;
+				continue;
+			}
 
 			if (argv[cnt][0] == '-') {
                 string err = "Invalid \"";
@@ -3278,13 +3291,13 @@ void usage_iqtree(char* argv[], bool full_command) {
             << endl;
 
 			cout << "GENERATING RANDOM TREES:" << endl;
-			cout << "  -r <num_taxa>        Create a random tree under Yule-Harding model." << endl;
-			cout << "  -ru <num_taxa>       Create a random tree under Uniform model." << endl;
-			cout << "  -rcat <num_taxa>     Create a random caterpillar tree." << endl;
-			cout << "  -rbal <num_taxa>     Create a random balanced tree." << endl;
-			cout << "  -rcsg <num_taxa>     Create a random circular split network." << endl;
+			cout << "  -r <num_taxa>        Create a random tree under Yule-Harding model" << endl;
+			cout << "  -ru <num_taxa>       Create a random tree under Uniform model" << endl;
+			cout << "  -rcat <num_taxa>     Create a random caterpillar tree" << endl;
+			cout << "  -rbal <num_taxa>     Create a random balanced tree" << endl;
+			cout << "  -rcsg <num_taxa>     Create a random circular split network" << endl;
 			cout << "  -rlen <min_len> <mean_len> <max_len>  " << endl;
-			cout << "                       min, mean, and max branch lengths of random trees." << endl;
+			cout << "                       min, mean, and max branch lengths of random trees" << endl;
 
 			cout << endl << "MISCELLANEOUS:" << endl
 		    << "  -wt                  Write locally optimal trees into .treels file" << endl
@@ -3299,7 +3312,8 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -wspr                Write site probabilities per rate category" << endl
             << "  -wspm                Write site probabilities per mixture class" << endl
             << "  -wspmr               Write site probabilities per mixture+rate class" << endl
-            << "  -fconst f1,...,fN    Add constant patterns into alignment (N=#nstates)" << endl;
+            << "  -fconst f1,...,fN    Add constant patterns into alignment (N=#nstates)" << endl
+            << "  -wts                 Optimize tree length scaling for tree given via -t" << endl;
 //            << "  -d <file>            Reading genetic distances from file (default: JC)" << endl
 //			<< "  -d <outfile>         Calculate the distance matrix inferred from tree" << endl
 //			<< "  -stats <outfile>     Output some statistics about branch lengths" << endl

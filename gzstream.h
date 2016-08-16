@@ -35,6 +35,8 @@
 //#include "zlib-1.2.7/zlib.h"
 #include <zlib.h>
 
+#define GZ_NO_COMPRESSION (1L << 11)
+
 #ifdef GZSTREAM_NAMESPACE
 namespace GZSTREAM_NAMESPACE {
 #endif

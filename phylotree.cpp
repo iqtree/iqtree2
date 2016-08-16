@@ -2165,6 +2165,31 @@ double PhyloTree::optimizeTreeLengthScaling(double min_scaling, double &scaling,
     return computeLikelihood();
 }
 
+void PhyloTree::printTreeLengthScaling(const char *filename) {
+    double treescale = 1.0;
+    
+    cout << "Optimizing tree length scaling ..." << endl;
+    
+    double lh = optimizeTreeLengthScaling(0.001, treescale, 100.0, 0.001);
+    
+    cout << "treescale: " << treescale << " / LogL: " << lh << endl;
+    
+    Checkpoint *saved_checkpoint = getModelFactory()->getCheckpoint();
+    Checkpoint *new_checkpoint = new Checkpoint;
+    new_checkpoint->setFileName(filename);
+    new_checkpoint->setCompression(false);
+    new_checkpoint->setHeader("IQ-TREE tree length scaling optimizer");
+    
+    getModelFactory()->setCheckpoint(new_checkpoint);
+    
+    new_checkpoint->put("treescale", treescale);
+    new_checkpoint->put("treelength", treeLength());
+    getModelFactory()->saveCheckpoint();
+    new_checkpoint->dump();
+    
+    getModelFactory()->setCheckpoint(saved_checkpoint);
+}
+
 double PhyloTree::computeFunction(double value) {
     if (!is_opt_scaling) {
         current_it->length = value;
