@@ -477,8 +477,8 @@ void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh, 
             }
     }
     if (is_codon)
-        out << endl << "NOTE: Branch lengths are intepreted as number of nucleotide substitutions per codon site!" 
-            << endl << "      Rescale them by 1/3 if you want to have #nt substitutions per nt site" << endl;
+		out << endl << "NOTE: Branch lengths are interpreted as number of nucleotide substitutions per codon site!"
+				<< endl << "      Rescale them by 1/3 if you want to have #nt substitutions per nt site" << endl;
     if (main_tree) 
     if (params.aLRT_replicates > 0 || params.gbo_replicates || (params.num_bootstrap_samples && params.compute_ml_tree)) {
         out << "Numbers in parentheses are ";
@@ -570,7 +570,7 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 		}
 		for (IntVector::iterator i2 = counts.begin(); i2 != counts.end(); i2++) {
 		    if (*i2 != 0) {
-	            cout << "#Trees occuring " << (i2-counts.begin()) << " times: " << *i2 << endl;
+				cout << "#Trees occurring " << (i2-counts.begin()) << " times: " << *i2 << endl;
 		    }
 		}
 	}

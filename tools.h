@@ -1884,8 +1884,7 @@ const char ERR_WRITE_OUTPUT[] = "Cannot write to file ";
 const char ERR_NO_K[] = "You must specify the number of taxa in the PD set.";
 const char ERR_TOO_SMALL_K[] = "Size of PD-set must be at least the size of initial set.";
 const char ERR_NO_BUDGET[] = "Total budget is not specified or less than zero.";
-const char ERR_TOO_SMALL_BUDGET[] = "Not enough budget to conserve the inital set of taxa.";
-
+const char ERR_TOO_SMALL_BUDGET[] = "Not enough budget to conserve the initial set of taxa.";
 const char ERR_INTERNAL[] = "Internal error, pls contact authors!";
 
 /*--------------------------------------------------------------*/
