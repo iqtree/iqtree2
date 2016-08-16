@@ -58,7 +58,8 @@ if __name__ == '__main__':
   parser = optparse.OptionParser(usage=usage)
   parser.add_option('-b','--binary', dest="iqtree_bin", help='Path to your IQ-TREE binary')
   parser.add_option('-c','--config', dest="config_file", help='Path to test configuration file')
-  parser.add_option('-p', '--prefix', dest="prefix", help='prefix for output files')
+  parser.add_option('-o', '--output', dest="outFile", help='Output file for test cases')
+  parser.add_option('-f', '--flags', dest="flags", help='Additional flags for IQ-TREE')
   (options, args) = parser.parse_args()
   if not options.iqtree_bin or not options.config_file:
     parser.print_help()
@@ -68,14 +69,19 @@ if __name__ == '__main__':
   # Generate test commands for single model
   for aln in singleAln:
     for opt in genericOpts:
-      cmd = '-s ' + aln + ' ' + opt
-      testCmds.append(cmd)
+      cmd = '-s ' + aln + ' -redo ' + opt
+      if options.flags:
+        cmd = cmd + ' ' + options.flags
+        testCmds.append(cmd)
   # Generate test commands for partition model
   for aln in partitionAln:
     for opt in genericOpts:
       for partOpt in partOpts:
-        cmd = '-s ' + aln[0] + ' ' + opt + ' ' + partOpt + ' ' + aln[1]
+        cmd = '-s ' + aln[0] + ' -redo ' + opt + ' ' + partOpt + ' ' + aln[1]
+        if options.flags:
+            cmd = cmd + ' ' + options.flags
         testCmds.append(cmd)
+
   testNr = 1
   jobs = []
   for cmd in testCmds:
@@ -84,7 +90,7 @@ if __name__ == '__main__':
     testNr = testNr + 1
     jobs.append(testCMD)
 #  print "\n".join(jobs)
-  outfile = open(options.prefix + '_test_standard_cmds.txt', "wb")
+  outfile = open(options.outFile, "wb")
   for job in jobs:
     print >> outfile, job
   outfile.close()

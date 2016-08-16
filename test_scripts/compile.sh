@@ -1,4 +1,4 @@
-cib#!/bin/bash -
+#!/bin/bash -
 #===============================================================================
 #
 #          FILE: compile.sh
@@ -48,6 +48,7 @@ require_clean_work_tree () {
 }
 
 #Check whether the git work tree is clean
+#require_clean_work_tree
 
 if [ "$#" -lt 1 ]
 then
@@ -56,7 +57,6 @@ then
     exit 1
 fi
 
-require_clean_work_tree
 
 #Determine hash code of current branch
 #branch=`git status | grep "On branch" | awk '{print $3}'`
