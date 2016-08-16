@@ -3299,7 +3299,8 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -wspr                Write site probabilities per rate category" << endl
             << "  -wspm                Write site probabilities per mixture class" << endl
             << "  -wspmr               Write site probabilities per mixture+rate class" << endl
-            << "  -fconst f1,...,fN    Add constant patterns into alignment (N=#nstates)" << endl;
+            << "  -fconst f1,...,fN    Add constant patterns into alignment (N=#nstates)" << endl
+            << "  -me <epsilon>        Logl epsilon for model parameter optimization (default 0.01)" << endl;
 //            << "  -d <file>            Reading genetic distances from file (default: JC)" << endl
 //			<< "  -d <outfile>         Calculate the distance matrix inferred from tree" << endl
 //			<< "  -stats <outfile>     Output some statistics about branch lengths" << endl
