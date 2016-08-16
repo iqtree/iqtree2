@@ -33,5 +33,5 @@ flags=$2
 source compile.sh ${branchName} "$flags"
 
 #Generate test cases
-echo "Generate test cases for the sequential version"
-./gen_test_standard.py -b ${buildDir}/iqtree -c test_configs.txt
+echo -e "\nGENERATE TEST CASES FOR THE SEQUENTIAL VERSION\n"
+./gen_test_standard.py -b ${buildDir}/iqtree -c test_configs.txt -p "${branchName}-seq"

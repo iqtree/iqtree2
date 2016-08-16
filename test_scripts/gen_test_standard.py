@@ -58,6 +58,7 @@ if __name__ == '__main__':
   parser = optparse.OptionParser(usage=usage)
   parser.add_option('-b','--binary', dest="iqtree_bin", help='Path to your IQ-TREE binary')
   parser.add_option('-c','--config', dest="config_file", help='Path to test configuration file')
+  parser.add_option('-p', '--prefix', dest="prefix", help='prefix for output files')
   (options, args) = parser.parse_args()
   if not options.iqtree_bin or not options.config_file:
     parser.print_help()
@@ -83,7 +84,7 @@ if __name__ == '__main__':
     testNr = testNr + 1
     jobs.append(testCMD)
 #  print "\n".join(jobs)
-  outfile = open(os.path.basename(options.iqtree_bin) + '_test_standard_cmds.txt', "wb")
+  outfile = open(options.prefix + '_test_standard_cmds.txt', "wb")
   for job in jobs:
     print >> outfile, job
   outfile.close()
