@@ -67,6 +67,32 @@ endif()
 include_directories("${PROJECT_SOURCE_DIR}")
 
 ##################################################################
+# configure MPI compilation
+##################################################################
+if (IQTREE_FLAGS MATCHES "mpi")
+    find_package(MPI REQUIRED)
+    #set(IQTREE_FLAGS "${IQTREE_FLAGS} dynamic")
+    add_definitions(-D_IQTREE_MPI)
+    #message("${MPI_CXX_COMPILER}")
+    #message("${MPI_C_COMPILER}")
+    #set(CMAKE_CXX_COMPILER ${MPI_CXX_COMPILER})
+    #set(CMAKE_C_COMPILER ${MPI_C_COMPILER})
+    #set(CMAKE_CXX_COMPILE_FLAGS ${CMAKE_CXX_COMPILE_FLAGS} ${MPI_CXX_COMPILE_FLAGS})
+    #set(CMAKE_C_COMPILE_FLAGS ${CMAKE_C_COMPILE_FLAGS} ${MPI_C_COMPILE_FLAGS})
+    #set(CMAKE_CXX_LINK_FLAGS ${CMAKE_CXX_LINK_FLAGS} ${MPI_CXX_LINK_FLAGS})
+    #set(CMAKE_C_LINK_FLAGS ${CMAKE_C_LINK_FLAGS} ${MPI_C_LINK_FLAGS})
+    #include_directories(MPI_C_INCLUDE_PATH)
+    #include_directories(MPI_CXX_INCLUDE_PATH)
+    #target_link_libraries(iqtree ${MPI_C_LIBRARIES} ${MPI_CXX_LIBRARIES})
+    if (IQTREE_FLAGS MATCHES "debug")
+        add_definitions(-D_MPI_DEBUG)
+        message("Debug information enabled")
+    endif()
+endif()
+
+
+
+##################################################################
 # Setup source code files for compilation
 ##################################################################
 if (NOT BINARY32 AND NOT IQTREE_FLAGS MATCHES "novx")
@@ -229,28 +255,6 @@ if (MSVC)
 			add_definitions(/O3)
 		endif()
 	endif()
-endif()
-
-##################################################################
-# configure MPI compilation
-##################################################################
-if (IQTREE_FLAGS MATCHES "mpi")
-    find_package(MPI REQUIRED)
-	set(IQTREE_FLAGS "${IQTREE_FLAGS} dynamic")
-	add_definitions(-D_IQTREE_MPI)
-	set(CMAKE_CXX_COMPILER ${MPI_CXX_COMPILER})
-	set(CMAKE_C_COMPILER ${MPI_C_COMPILER})
-	set(CMAKE_CXX_COMPILE_FLAGS ${CMAKE_CXX_COMPILE_FLAGS} ${MPI_CXX_COMPILE_FLAGS})
-    set(CMAKE_C_COMPILE_FLAGS ${CMAKE_C_COMPILE_FLAGS} ${MPI_C_COMPILE_FLAGS})
-    set(CMAKE_CXX_LINK_FLAGS ${CMAKE_CXX_LINK_FLAGS} ${MPI_CXX_LINK_FLAGS})
-    set(CMAKE_C_LINK_FLAGS ${CMAKE_C_LINK_FLAGS} ${MPI_C_LINK_FLAGS})
-	include_directories(MPI_C_INCLUDE_PATH)
-	include_directories(MPI_CXX_INCLUDE_PATH)
-    target_link_libraries(iqtree ${MPI_C_LIBRARIES} ${MPI_CXX_LIBRARIES})
-    if (IQTREE_FLAGS MATCHES "debug")
-        add_definitions(-D_MPI_DEBUG)
-        message("Debug information enabled")
-    endif()
 endif()
 
 ##################################################################

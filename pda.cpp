@@ -205,6 +205,9 @@ inline void separator(ostream &out, int type = 0) {
 void printCopyright(ostream &out) {
 #ifdef IQ_TREE
  	out << "IQ-TREE";
+    #ifdef _IQTREE_MPI
+    out << " MPI";
+    #endif
 	#ifdef _OPENMP
 	out << " multicore";
 	#endif
