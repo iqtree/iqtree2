@@ -3182,7 +3182,7 @@ void usage_iqtree(char* argv[], bool full_command) {
             << endl << "AUTOMATIC MODEL SELECTION:" << endl
             << "  -m TESTONLY          Standard model selection (like jModelTest, ProtTest)" << endl
             << "  -m TEST              Like -m TESTONLY but followed by tree reconstruction" << endl
-            << "  -m TESTNEWONLY       New model selection including FreeRate (+R) heterogeneity" << endl
+            << "  -m TESTNEWONLY       Extended model selection incl. FreeRate (+R) heterogeneity" << endl
             << "  -m TESTNEW           Like -m TESTNEWONLY but followed by tree reconstruction" << endl
             << "  -m TESTMERGEONLY     Select best-fit partition scheme (like PartitionFinder)" << endl
             << "  -m TESTMERGE         Like -m TESTMERGEONLY but followed by tree reconstruction" << endl

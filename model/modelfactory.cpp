@@ -110,12 +110,12 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 
 	if (model_str == "") {
 		if (tree->aln->seq_type == SEQ_DNA) model_str = "HKY";
-		else if (tree->aln->seq_type == SEQ_PROTEIN) model_str = "WAG";
+		else if (tree->aln->seq_type == SEQ_PROTEIN) model_str = "LG";
 		else if (tree->aln->seq_type == SEQ_BINARY) model_str = "GTR2";
 		else if (tree->aln->seq_type == SEQ_CODON) model_str = "GY";
 		else if (tree->aln->seq_type == SEQ_MORPH) model_str = "MK";
 		else model_str = "JC";
-		outWarning("Default model may be under-fitting. Use option '-m TEST' to select best-fit model.");
+		outWarning("Default model "+model_str + " may be under-fitting. Use option '-m TEST' to determine the best-fit model.");
 	}
 
 	/********* preprocessing model string ****************/

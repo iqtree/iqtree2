@@ -58,17 +58,20 @@ void reportReferences(Params &params, ofstream &out, string &original_model) {
 	out << "To cite IQ-TREE please use:" << endl << endl
 		<< "Lam-Tung Nguyen, Heiko A. Schmidt, Arndt von Haeseler, and Bui Quang Minh (2015)" << endl
 		<< "IQ-TREE: A fast and effective stochastic algorithm for estimating" << endl
-		<< "maximum likelihood phylogenies. Mol. Biol. Evol., 32:268-274." << endl << endl;
+		<< "maximum likelihood phylogenies. Mol. Biol. Evol., 32:268-274." << endl
+        << "http://dx.doi.org/10.1093/molbev/msu300" << endl << endl;
 
 	if (params.gbo_replicates)
 	out << "Since you used ultrafast bootstrap (UFBoot) please also cite: " << endl << endl
 		<< "Bui Quang Minh, Minh Anh Thi Nguyen, and Arndt von Haeseler (2013) Ultrafast" << endl
-		<< "approximation for phylogenetic bootstrap. Mol. Biol. Evol., 30:1188-1195." << endl << endl;
+		<< "approximation for phylogenetic bootstrap. Mol. Biol. Evol., 30:1188-1195." << endl
+        << "http://dx.doi.org/10.1093/molbev/mst024" << endl << endl;
 
     if (params.partition_file) 
     out << "Since you used partition models please also cite:" << endl << endl
         << "Olga Chernomor, Arndt von Haeseler, and Bui Quang Minh (2016) Terrace aware data" << endl
-        << "structure for phylogenomic inference from supermatrices. Syst. Biol., in press." << endl << endl;
+        << "structure for phylogenomic inference from supermatrices. Syst. Biol., in press." << endl
+        << "http://dx.doi.org/10.1093/sysbio/syw037" << endl << endl;
 
 }
 
