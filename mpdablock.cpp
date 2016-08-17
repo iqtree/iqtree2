@@ -56,7 +56,7 @@ void MPdaBlock::Read(NxsToken &token)
 
 	int ntax = sgraph->getNTaxa();
 	if (ntax <= 0) {
-		errormsg = "PDA Block should be preceeded by Splits Block";
+		errormsg = "PDA Block should be preceded by Splits Block";
 		throw NxsException(errormsg, token.GetFilePosition(), token.GetFileLine(), token.GetFileColumn());
 		
 	}

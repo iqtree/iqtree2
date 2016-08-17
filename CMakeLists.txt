@@ -170,7 +170,7 @@ if(CMAKE_SIZEOF_VOID_P EQUAL 4 OR IQTREE_FLAGS MATCHES "m32")
 	if (CMAKE_GENERATOR MATCHES "Win64")
 		error("Both 32-bit and 64-bit mode cannot be specified")
 	endif()
-	SET(EXE_SUFFIX "${EXE_SUFFIX}32")
+	SET(EXE_SUFFIX "${EXE_SUFFIX}")
 	if (GCC OR CLANG) 
 		set(COMBINED_FLAGS "${COMBINED_FLAGS} -m32")
   	endif()
@@ -270,12 +270,10 @@ elseif (IQTREE_FLAGS MATCHES "avx") # AVX instruction set
  	message("Vectorization : AVX")
 	add_definitions(-D__SSE3 -D__AVX) # define both SSE3 and AVX directive
 	set(COMBINED_FLAGS "${COMBINED_FLAGS} ${AVX_FLAGS}")
-
 	SET(EXE_SUFFIX "${EXE_SUFFIX}-avx")
 else() #SSE intruction set
 	message("Vectorization : SSE3")
 	add_definitions(-D__SSE3)
-
 endif()
 
 
