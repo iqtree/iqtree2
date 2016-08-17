@@ -3125,6 +3125,7 @@ void ModelProtein::init(const char *model_name, string model_params, StateFreqTy
 	//string model_str;
 	//bool user_model = false;
 	double daa[400];
+    double f[20];
 	string name_upper = model_name;
 	for (string::iterator it = name_upper.begin(); it != name_upper.end(); it++)
 		(*it) = toupper(*it);
@@ -3166,6 +3167,12 @@ void ModelProtein::init(const char *model_name, string model_params, StateFreqTy
         outWarning("Please only use GTR20 with very large data and always test for model fit!");
         if (freq == FREQ_UNKNOWN || freq == FREQ_USER_DEFINED)
             freq = FREQ_EMPIRICAL;
+        // initialize rate matrix with LG
+		int i, j, k;
+        initProtMat(f, daa, "LG");
+		for (i = 0, k = 0; i < num_states-1; i++)
+			for (j = i+1; j < num_states; j++)
+				rates[k++] = daa[i*20+j];        
 	} else {
 		// if name does not match, read the user-defined model
 		readParameters(model_name);
@@ -3223,6 +3230,28 @@ void ModelProtein::init(const char *model_name, string model_params, StateFreqTy
 	//assert(freq != FREQ_ESTIMATE);
 	if (freq == FREQ_UNKNOWN) freq = FREQ_USER_DEFINED;
 	ModelGTR::init(freq);
+}
+
+void ModelProtein::saveCheckpoint() {
+    if (num_params > 0) {
+        checkpoint->startStruct("ModelProtein");
+        CKP_ARRAY_SAVE(getNumRateEntries(), rates);
+        checkpoint->endStruct();
+    }
+    ModelGTR::saveCheckpoint();
+}
+
+void ModelProtein::restoreCheckpoint() {
+    ModelGTR::restoreCheckpoint();
+
+    if (num_params > 0) {
+        checkpoint->startStruct("ModelProtein");
+        CKP_ARRAY_RESTORE(getNumRateEntries(), rates);
+        checkpoint->endStruct();
+        decomposeRateMatrix();
+        if (phylo_tree)
+            phylo_tree->clearAllPartialLH();
+    }
 }
 
 void ModelProtein::readRates(istream &in) throw(const char*, string) {
