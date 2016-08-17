@@ -2342,8 +2342,10 @@ void IQTree::addTreesFromOtherProcesses(bool allTrees, int maxNumTrees, bool upd
     double start = getRealTime();
     MPIHelper::getInstance().receiveTrees(allTrees, maxNumTrees, inTrees);
     double commTime = getRealTime() - start;
+    if (verbose_mode >= VB_MED) {
     cout << inTrees.getNumTrees() << " trees received from other processes in ";
     cout << commTime << " seconds" << endl;
+    }
     if (commTime > 1.0) {
         cout << "WARNING: Communication time is too slow. Please increase your eager buffer in your MPI library!" << endl;
     }
