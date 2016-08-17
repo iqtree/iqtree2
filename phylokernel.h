@@ -15,6 +15,10 @@
 inline Vec2d horizontal_add(Vec2d x[2]) {
 #if  INSTRSET >= 3  // SSE3
     return _mm_hadd_pd(x[0],x[1]);
+#elif INSTRSET >= 2
+    Vec2d help0 = _mm_shuffle_pd(x[0], x[1], _MM_SHUFFLE2(0,0));
+    Vec2d help1 = _mm_shuffle_pd(x[0], x[1], _MM_SHUFFLE2(1,1));
+    return _mm_add_pd(help0, help1);
 #else
 #error "You must compile with SSE3 enabled!"
 #endif
