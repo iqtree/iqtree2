@@ -601,14 +601,15 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 			outError("Model is not a mixture model");
 		if (model->getNMixtures() != site_rate->getNRate())
 			outError("Mixture model and site rate model do not have the same number of categories");
-		ModelMixture *mmodel = (ModelMixture*)model;
+//		ModelMixture *mmodel = (ModelMixture*)model;
 		// reset mixture model
-		mmodel->fix_prop = true;
-		for (ModelMixture::iterator it = mmodel->begin(); it != mmodel->end(); it++) {
-			(*it)->total_num_subst = 1.0;
-			mmodel->prop[it-mmodel->begin()] = 1.0;
+		model->setFixMixtureWeight(true);
+        int mix, nmix = model->getNMixtures();
+		for (mix = 0; mix < nmix; mix++) {
+			((ModelGTR*)model->getMixtureClass(mix))->total_num_subst = 1.0;
+			model->setMixtureWeight(mix, 1.0);
 		}
-		mmodel->decomposeRateMatrix();
+		model->decomposeRateMatrix();
 	}
 
 	tree->discardSaturatedSite(params.discard_saturated_site);

@@ -810,7 +810,7 @@ ModelPoMo::estimateEmpiricalWattersonTheta()
     return theta_p;
 }
 
-void ModelPoMo::report_rates(ofstream &out) {
+void ModelPoMo::report_rates(ostream &out) {
     // The stationary frequencies in IQ-TREE are normalized such that
     // the last entry is 1.0.  This leads to smaller mutation rates
     // (because the stationary distribution is the same).  The
@@ -831,7 +831,7 @@ void ModelPoMo::report_rates(ofstream &out) {
 
 }
 
-void ModelPoMo::report(ofstream &out) {
+void ModelPoMo::report(ostream &out) {
     out << "Virtual population size N: " << N << endl;
     if (phylo_tree->aln->pomo_random_sampling == true)
         out << "Sampling method: Sampled." << endl;

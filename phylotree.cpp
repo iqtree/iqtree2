@@ -1167,7 +1167,7 @@ void PhyloTree::computePatternStateFreq(double *ptn_state_freq) {
     size_t ptn, nptn = getAlnNPattern(), m, nmixture = getModel()->getNMixtures();
     double *ptn_freq = ptn_state_freq;
     size_t state, nstates = aln->num_states;
-    ModelMixture *models = (ModelMixture*)model;
+//    ModelMixture *models = (ModelMixture*)model;
     
     // loop over all site-patterns
     for (ptn = 0; ptn < nptn; ptn++) {
@@ -1186,7 +1186,7 @@ void PhyloTree::computePatternStateFreq(double *ptn_state_freq) {
         for (state = 0; state < nstates; state++) {
             double freq = 0;
             for (m = 0; m < nmixture; m++)
-                freq += models->at(m)->state_freq[state] * lh_cat[m];
+                freq += model->getMixtureClass(m)->state_freq[state] * lh_cat[m];
             ptn_freq[state] = freq;
         }
         

@@ -224,7 +224,7 @@ void reportModel(ofstream &out, Alignment *aln, ModelSubst *m) {
 		delete[] rate_mat;
 	}
     if (aln->seq_type == SEQ_POMO) {
-        ((ModelPoMo*) m)->report(out);
+        m->report(out);
         return;
     }
 	out << "State frequencies: ";
@@ -292,22 +292,24 @@ void reportModel(ofstream &out, PhyloTree &tree) {
 	if (tree.getModel()->isMixture()) {
 		out << "Mixture model of substitution: " << tree.getModelName() << endl;
 //		out << "Full name: " << tree.getModelName() << endl;
-		ModelMixture *mmodel = (ModelMixture*) tree.getModel();
+		ModelSubst *mmodel = tree.getModel();
 		out << endl << "  No  Component      Rate    Weight   Parameters" << endl;
 		i = 0;
-		for (ModelMixture::iterator m = mmodel->begin(); m != mmodel->end(); m++, i++) {
+        int nmix = mmodel->getNMixtures();
+		for (i = 0; i < nmix; i++) {
+            ModelGTR *m = (ModelGTR*)mmodel->getMixtureClass(i);
 			out.width(4);
 			out << right << i+1 << "  ";
 			out.width(12);
-			out << left << (*m)->name << "  ";
+			out << left << (m)->name << "  ";
 			out.width(7);
-			out << (*m)->total_num_subst << "  ";
+			out << (m)->total_num_subst << "  ";
 			out.width(7);
-			out << mmodel->prop[i] << "  " << (*m)->getNameParams() << endl;
+			out << mmodel->getMixtureWeight(i) << "  " << (m)->getNameParams() << endl;
 
             if (tree.aln->seq_type == SEQ_POMO) {
-                out << endl << "Model for mixture component "  << (m-mmodel->begin())+1 << ": " << (*m)->name << endl;
-                reportModel(out, tree.aln, *m);
+                out << endl << "Model for mixture component "  << i+1 << ": " << (m)->name << endl;
+                reportModel(out, tree.aln, m);
             }
 		}
 		out << endl;

@@ -35,7 +35,7 @@ ModelSubst *createModel(string model_str, ModelsBlock *models_block, StateFreqTy
 /**
  * mixture model
  */
-class ModelMixture: public ModelGTR, public vector<ModelGTR*> {
+class ModelMixture: virtual public ModelGTR, public vector<ModelGTR*> {
 public:
     
 	/**
@@ -86,6 +86,30 @@ public:
 	 * @return the number of mixture model components
 	 */
 	virtual int getNMixtures() {return size(); }
+
+	/**
+	 * @param cat mixture class
+	 * @return weight of a mixture model component
+	 */
+	virtual double getMixtureWeight(int cat) { return prop[cat]; }
+
+	/**
+	 * @param cat mixture class
+	 * @return weight of a mixture model component
+	 */
+	virtual void setMixtureWeight(int cat, double weight) { prop[cat] = weight; }
+
+	/**
+	 * @param cat mixture class
+	 * @return weight of a mixture model component
+	 */
+	virtual void setFixMixtureWeight(bool fix_prop) { this->fix_prop = fix_prop; }
+
+	/**
+	 * @param cat mixture class ID
+	 * @return corresponding mixture model component
+	 */
+    virtual ModelSubst* getMixtureClass(int cat) { return at(cat); }
 
 	/**
 		@return the number of dimensions

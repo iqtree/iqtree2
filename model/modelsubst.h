@@ -84,6 +84,30 @@ public:
 	virtual int getNMixtures() { return 1; }
 
 	/**
+	 * @param cat mixture class
+	 * @return weight of a mixture model component
+	 */
+	virtual double getMixtureWeight(int cat) { return 1.0; }
+
+	/**
+	 * @param cat mixture class
+	 * @return weight of a mixture model component
+	 */
+	virtual void setMixtureWeight(int cat, double weight) {}
+
+	/**
+	 * @param cat mixture class
+	 * @return weight of a mixture model component
+	 */
+	virtual void setFixMixtureWeight(bool fix_prop) {}
+
+	/**
+	 * @param cat mixture class ID
+	 * @return corresponding mixture model component
+	 */
+    virtual ModelSubst* getMixtureClass(int cat) { return NULL; }
+
+	/**
 		@return the number of rate entries, equal to the number of elements
 			in the upper-diagonal of the rate matrix (since model is reversible)
 	*/
@@ -251,6 +275,12 @@ public:
 		@param out output stream
 	*/
 	virtual void writeInfo(ostream &out) {}
+
+	/**
+		report model
+		@param out output stream
+	*/
+    virtual void report(ostream &out) {}
 
 	virtual double *getEigenvalues() const {
 		return NULL;

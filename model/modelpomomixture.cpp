@@ -15,17 +15,61 @@ ModelPoMoMixture::ModelPoMoMixture(const char *model_name,
                      PhyloTree *tree,
                      bool is_reversible,
                      string pomo_params, string pomo_rate_str)
-	: ModelPoMo(tree)
+	:  
+        ModelGTR(tree),
+        ModelPoMo(model_name, model_params, freq_type, freq_params, tree, is_reversible, pomo_params),
+        ModelMixture(tree)
+    
 {
-
-    init(model_name, model_params, freq_type, freq_params, is_reversible, pomo_params);
-
     // initialize pomo_mixture
-    pomo_mixture = new ModelMixture(tree, false);
 }
 
 
 ModelPoMoMixture::~ModelPoMoMixture() {
-    delete pomo_mixture;
 }
+
+void ModelPoMoMixture::saveCheckpoint() {
+    ModelPoMo::saveCheckpoint();
+}
+
+void ModelPoMoMixture::restoreCheckpoint() {
+    ModelPoMo::restoreCheckpoint();
+}
+
+
+int ModelPoMoMixture::getNDim() {
+    return ModelPoMo::getNDim();
+}
+
+
+int ModelPoMoMixture::getNDimFreq() {
+    return ModelPoMo::getNDimFreq();
+}
+
+
+double ModelPoMoMixture::targetFunk(double x[]) {
+    return ModelPoMo::targetFunk(x);
+}
+
+
+
+void ModelPoMoMixture::setBounds(double *lower_bound, double *upper_bound, bool *bound_check) {
+    ModelPoMo::setBounds(lower_bound, upper_bound, bound_check);
+}
+
+
+void ModelPoMoMixture::writeInfo(ostream &out) {
+    ModelPoMo::writeInfo(out);
+}
+
+
+void ModelPoMoMixture::setVariables(double *variables) {
+    ModelPoMo::setVariables(variables);
+}
+
+
+bool ModelPoMoMixture::getVariables(double *variables) {
+    return ModelPoMo::getVariables(variables);
+}
+
 

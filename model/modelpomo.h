@@ -11,7 +11,7 @@ const double POMO_MAX_RATE =  1e-2;
 const double POMO_MIN_REL_FREQ = 0.5;
 const double POMO_MAX_REL_FREQ = 2.0;
 
-class ModelPoMo : public ModelGTR
+class ModelPoMo : virtual public ModelGTR
 {
  public:
     /**
@@ -192,14 +192,14 @@ class ModelPoMo : public ModelGTR
      *
      * @param out Output file stream.
      */
-    void report_rates(ofstream &out);
+    void report_rates(ostream &out);
 
     /**
      * Report the state frequencies to the output file stream 'out'.
      *
      * @param out Output file stream.
      */
-    void report(ofstream &out);
+    virtual void report(ostream &out);
 
     /** 
      * Normalize the mutation probabilities such that the given level of

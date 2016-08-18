@@ -1032,11 +1032,12 @@ ModelSubst* createModel(string model_str, ModelsBlock *models_block, StateFreqTy
 		model = new ModelSubst(tree->aln->num_states);
 	} else */
     if ((is_pomo == true) ||
-        (tree->aln->seq_type == SEQ_POMO))
+        (tree->aln->seq_type == SEQ_POMO)) {
         if (pomo_rate_str == "")
             model = new ModelPoMo(model_str.c_str(), model_params, freq_type, freq_params, tree, is_rev_pomo, pomo_params);
         else
             model = new ModelPoMoMixture(model_str.c_str(), model_params, freq_type, freq_params, tree, is_rev_pomo, pomo_params, pomo_rate_str);
+        cout << ((model->isMixture()) ? "mixture pomo" : "non-mixture pomo") << endl;
 //	else if ((model_str == "GTR" && tree->aln->seq_type == SEQ_DNA) ||
 //             (model_str == "GTR2" && tree->aln->seq_type == SEQ_BINARY) ||
 //             (model_str == "GTR20" && tree->aln->seq_type == SEQ_PROTEIN)) {
@@ -1046,7 +1047,7 @@ ModelSubst* createModel(string model_str, ModelsBlock *models_block, StateFreqTy
 //		if (model_params != "")
 //			((ModelGTR*)model)->readRates(model_params);
 //		((ModelGTR*)model)->init(freq_type);
-	else if (model_str == "UNREST") {
+	} else if (model_str == "UNREST") {
 		freq_type = FREQ_EQUAL;
 		//params.optimize_by_newton = false;
 		tree->optimize_by_newton = false;
