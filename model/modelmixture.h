@@ -50,6 +50,8 @@ public:
     void initMixture(string orig_model_name, string model_name, string model_list, ModelsBlock *models_block,
     		StateFreqType freq, string freq_params, PhyloTree *tree, bool optimize_weights, bool count_rates = true);
 
+    void initMem();
+
     /**
 		constructor
 		@param tree associated tree for the model

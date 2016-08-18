@@ -1281,6 +1281,17 @@ void ModelMixture::initMixture(string orig_model_name, string model_name, string
 	fix_prop |= (nmixtures == 1);
 	// use central eigen etc. stufffs
 
+	decomposeRateMatrix();
+
+    delete nxs_freq_optimize;
+    delete nxs_freq_empirical;
+
+}
+
+void ModelMixture::initMem() {
+
+	int nmixtures = size();
+
 	if (eigenvalues) aligned_free(eigenvalues);
 	if (eigenvectors) aligned_free(eigenvectors);
 	if (inv_eigenvectors) aligned_free(inv_eigenvectors);
@@ -1293,7 +1304,7 @@ void ModelMixture::initMixture(string orig_model_name, string model_name, string
 //	eigen_coeff = aligned_alloc<double>(ncoeff*nmixtures);
 
 	// assigning memory for individual models
-	m = 0;
+	int m = 0;
 	for (iterator it = begin(); it != end(); it++, m++) {
         // first copy memory for eigen stuffs
         memcpy(&eigenvalues[m*num_states], (*it)->eigenvalues, num_states*sizeof(double));
@@ -1312,11 +1323,7 @@ void ModelMixture::initMixture(string orig_model_name, string model_name, string
 		(*it)->inv_eigenvectors = &inv_eigenvectors[m*num_states*num_states];
 //		(*it)->eigen_coeff = &eigen_coeff[m*ncoeff];
 	}
-	decomposeRateMatrix();
-    
-    delete nxs_freq_optimize;
-    delete nxs_freq_empirical;
-    
+
 }
 
 ModelMixture::~ModelMixture() {

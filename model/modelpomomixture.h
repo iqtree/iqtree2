@@ -13,6 +13,7 @@
 #include <stdio.h>
 #include "modelpomo.h"
 #include "modelmixture.h"
+#include "rateheterogeneity.h"
 
 /**
     Mixture PoMo models
@@ -72,10 +73,28 @@ public:
 	virtual void setBounds(double *lower_bound, double *upper_bound, bool *bound_check);
 
 	/**
+		optimize model parameters
+		@return the best likelihood 
+	*/
+	virtual double optimizeParameters(double gradient_epsilon);
+
+	/**
 		write information
 		@param out output stream
 	*/
 	virtual void writeInfo(ostream &out);
+
+	/**
+		decompose the rate matrix into eigenvalues and eigenvectors
+	*/
+	virtual void decomposeRateMatrix();
+
+
+
+    /**
+        rate heterogeneity among sites 
+    */
+    RateHeterogeneity *ratehet;
 
 protected:
 
