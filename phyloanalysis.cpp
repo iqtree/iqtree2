@@ -225,12 +225,34 @@ void reportModel(ofstream &out, Alignment *aln, ModelSubst *m) {
 		//if (tree.aln->num_states > 4)
 		out << endl;
 		out.unsetf(ios_base::fixed);
-		delete[] rate_mat;
-	}
+	} else if (aln->seq_type == SEQ_PROTEIN && m->getNDim() > 20) {
+        assert(m->num_states == 20);
+        out << "WARNING: This model has " << m->getNDim() + m->getNDimFreq() << " parameters that may be overfitting. Please use with caution!" << endl << endl;
+        double full_mat[400];
+        for (i = 0, k = 0; i < m->num_states - 1; i++)
+            for (j = i + 1; j < m->num_states; j++, k++) {
+                full_mat[i*m->num_states+j] = rate_mat[k];
+            }
+        out << "Substitution parameters (lower-diagonal) and state frequencies in PAML format (can be used as input for IQ-TREE): " << endl << endl;
+        for (i = 1; i < m->num_states; i++) {
+            for (j = 0; j < i; j++)
+                out << "\t" << full_mat[j*m->num_states+i];
+            out << endl;
+        }
+        double state_freq[20];
+        m->getStateFrequency(state_freq);
+        for (i = 0; i < m->num_states; i++)
+            out << "\t" << state_freq[i];
+        out << endl << endl;
+    }
+    
+    delete[] rate_mat;
+
     if (aln->seq_type == SEQ_POMO) {
         m->report(out);
         return;
     }
+
 	out << "State frequencies: ";
 	if (m->isSiteSpecificModel())
 		out << "(site specific frequencies)" << endl << endl;
@@ -499,9 +521,9 @@ void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh, 
             }
     }
     if (is_codon)
-        out << endl << "NOTE: Branch lengths are intepreted as number of nucleotide substitutions per codon site!"
-            << endl << "      Rescale them by 1/3 if you want to have #nt substitutions per nt site" << endl;
-    if (main_tree)
+		out << endl << "NOTE: Branch lengths are interpreted as number of nucleotide substitutions per codon site!"
+				<< endl << "      Rescale them by 1/3 if you want to have #nt substitutions per nt site" << endl;
+    if (main_tree) 
     if (params.aLRT_replicates > 0 || params.gbo_replicates || (params.num_bootstrap_samples && params.compute_ml_tree)) {
         out << "Numbers in parentheses are ";
         if (params.aLRT_replicates > 0) {
@@ -1514,7 +1536,11 @@ void printMiscInfo(Params &params, IQTree &iqtree, double *pattern_lh) {
 			printSiteLhCategory(site_lh_file.c_str(), &iqtree, params.print_site_lh);
 	}
 
-    if (params.print_site_state_freq) {
+	if (params.print_site_prob && !params.pll) {
+        printSiteProbCategory(((string)params.out_prefix + ".siteprob").c_str(), &iqtree, params.print_site_prob);
+	}
+    
+    if (params.print_site_state_freq != WSF_NONE) {
 		string site_freq_file = params.out_prefix;
 		site_freq_file += ".sitesf";
         printSiteStateFreq(site_freq_file.c_str(), &iqtree);

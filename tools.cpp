@@ -3288,7 +3288,7 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  Example of a standard run (for more examples please see the manual):"              << endl
             << "    iqtree -s counts_file.cf"                                                        << endl
 
-            << endl << "RATE HETEROGENEITY:" << endl
+            << endl << "RATE HETEROGENEITY AMONG SITES:" << endl
             << "  -m <model_name>+I or +G[n] or +I+G[n] or +R[n]" << endl
             << "                       Invar, Gamma, Invar+Gamma, or FreeRate model where 'n' is" << endl
             << "                       number of categories (default: n=4)" << endl
