@@ -51,10 +51,20 @@ void ModelPoMo::init(const char *model_name,
     this->name += "+rP";
     if (pomo_params.length() > 0)
         this->name += "{" + pomo_params + "}";
+    this->name += "+N" + convertIntToString(N);
+    sampling_type = phylo_tree->aln->pomo_sampling_type;
+    if (sampling_type == SAMPLING_SAMPLED)
+        this->name += "+S";
+    else if (sampling_type == SAMPLING_WEIGHTED)
+        this->name += "+W";
+    else outError("Sampling type is not supported.");
 
-    string sampling_method = "Weighted";
-    if (phylo_tree->aln->pomo_random_sampling)
+    string sampling_method;
+    if (sampling_type == SAMPLING_SAMPLED)
         sampling_method = "Sampled";
+    else if (sampling_type == SAMPLING_WEIGHTED)
+        sampling_method = "Weighted";
+    else outError("Sampling type is not supported.");
     this->full_name =
         "reversible PoMo with N=" +
         convertIntToString(N) + " and " +
@@ -102,10 +112,36 @@ void ModelPoMo::init(const char *model_name,
         break;
     }
 
+    // Check if model parameters are fixed.
+    // fixed_model_params_ratio = new double[n_connections];
+    if (model_params.length() > 0) {
+        fixed_model_params = true;
+        // Optimize level of polymorphism.  Only if level of
+        // polymorphism is set, no parameters are optimized.
+        dna_model->param_fixed.front() = false;
+        // for (int i = 0; i < n_connections; i++)
+        //     fixed_model_params_ratio[i] = dna_model->rates[i];
+        // for (int i = 0; i < n_connections; i++)
+        //     cout << fixed_model_params_ratio[i] << " " << endl;
+        // outError("Fixing DNA model parameters unsupported yet");
+    }
+    else {
+        fixed_model_params = false;
+        // Optimize all parameters (because also polymorphism is optimized).
+        for (vector<bool>::iterator i = dna_model->param_fixed.begin();
+             i != dna_model->param_fixed.end(); i++)
+            *i = false;
+    }
+
     // Treat fixation of the level of polymorphism.
     level_of_polymorphism = estimateEmpiricalWattersonTheta();
     if (pomo_params.length() > 0) {
-        outError("Level of polymorphism cannot be fixed yet.");
+        if (!fixed_model_params) {
+            cout << "Model parameters are not fixed, but level of polymorphism is." << endl;
+            cout << "This cannot be done because IQ-TREE does not support optimization with constraints." << endl;
+            outError("Abort.");
+        }
+        cout << setprecision(5);
         if (pomo_params == "EMP") {
             cout << "Level of polymorphism will be fixed to the estimate from the data: ";
             cout << level_of_polymorphism << "." << endl;
@@ -116,19 +152,10 @@ void ModelPoMo::init(const char *model_name,
             cout << level_of_polymorphism << "." << endl;
         }
         fixed_level_of_polymorphism = true;
+        // Level of polymorphism is fixed, so do not optimize any
+        // parameters.
+        dna_model->param_fixed.front() = true;        
     }
-
-    fixed_model_params_ratio = new double[n_connections];
-    if (model_params.length() > 0) {
-        fixed_model_params = true;
-        for (int i = 0; i < n_connections; i++)
-            fixed_model_params_ratio[i] = dna_model->rates[i];
-        // for (int i = 0; i < n_connections; i++)
-        //     cout << fixed_model_params_ratio[i] << " " << endl;
-        // outError("Fixing DNA model parameters unsupported yet");
-    }
-    else
-        fixed_model_params = false;
 
     setInitialMutCoeff();
 
@@ -148,7 +175,7 @@ ModelPoMo::~ModelPoMo() {
 //  delete [] freq_fixed_states;
     delete dna_model;
     delete [] freq_fixed_states_emp;
-    delete [] fixed_model_params_ratio;
+    // delete [] fixed_model_params_ratio;
     }
 
 double ModelPoMo::computeSumFreqFixedStates() {
@@ -172,14 +199,14 @@ void ModelPoMo::setInitialMutCoeff() {
     // Mutation probabilities point to the rates of the DNA model.
     mutation_prob = dna_model->rates;
     // for (int i = 0; i < 6; i++) mutation_prob[i] = POMO_INIT_RATE;
-    double m_init = 0;
-    double theta_p = level_of_polymorphism;
-    double lambda_fixed_sum = computeSumFreqFixedStates();
+    // double m_init = 0;
+    // double theta_p = level_of_polymorphism;
+    // double lambda_fixed_sum = computeSumFreqFixedStates();
     double lambda_poly_sum_no_mu = computeSumFreqPolyStatesNoMut();
-    // cout << "DEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUG" << endl;
-    // cout << theta_p << endl;
-    // cout << lambda_fixed_sum << endl;
-    // cout << lambda_poly_sum_no_mu << endl;
+    // // cout << "DEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUG" << endl;
+    // // cout << theta_p << endl;
+    // // cout << lambda_fixed_sum << endl;
+    // // cout << lambda_poly_sum_no_mu << endl;
 
     if (!fixed_level_of_polymorphism && lambda_poly_sum_no_mu <= 0) {
         outWarning("We strongly discourage to use PoMo on data without polymorphisms.");
@@ -188,19 +215,20 @@ void ModelPoMo::setInitialMutCoeff() {
         return;
     }
 
-    m_init = theta_p * lambda_fixed_sum / (lambda_poly_sum_no_mu * (1.0 - theta_p));
-    if (m_init < POMO_MIN_RATE || m_init > POMO_MAX_RATE)
-        outError("Initial rate not within boundaries.  Please check data.");
-    // cout << "DEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUG" << endl;
-    // cout << m_init << endl;
-    // Honor fixed rate specifications.
-    double sum = 0;
-    int n_mu = 6;
-    for (int i = 0; i < n_mu; i++) sum += mutation_prob[i];
-    for (int i = 0; i < n_mu; i++) {
-        double new_mut_prob = m_init*mutation_prob[i]*n_mu/sum;
-        mutation_prob[i] = new_mut_prob;
-    }
+    normalizeMutationProbs();
+    // m_init = theta_p * lambda_fixed_sum / (lambda_poly_sum_no_mu * (1.0 - theta_p));
+    // if (m_init < POMO_MIN_RATE || m_init > POMO_MAX_RATE)
+    //     outError("Initial rate not within boundaries.  Please check data.");
+    // // cout << "DEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUG" << endl;
+    // // cout << m_init << endl;
+    // // Honor fixed rate specifications.
+    // double sum = 0;
+    // int n_mu = 6;
+    // for (int i = 0; i < n_mu; i++) sum += mutation_prob[i];
+    // for (int i = 0; i < n_mu; i++) {
+    //     double new_mut_prob = m_init*mutation_prob[i]*n_mu/sum;
+    //     mutation_prob[i] = new_mut_prob;
+    // }
 }
 
 double ModelPoMo::computeSumFreqPolyStatesNoMut() {
@@ -444,15 +472,12 @@ void ModelPoMo::setBounds(double *lower_bound,
 }
 
 void ModelPoMo::normalizeMutationProbs() {
-    // TODO: Implement this.  I think it only works when this
-    // constraint is honored already during model optimization.
-    outError("Cannot fix level of polymophism yet.");
     int num_all = dna_model->param_spec.length();
 
     // Normalize the mutation probability so that they resemble the
-    // level of polymorphism in the data.
-    if (fixed_level_of_polymorphism == false)
-        outError ("Cannot normalize mutation_probs when theta_p is not fixed.");
+    // given level of polymorphism.
+    // if (!fixed_level_of_polymorphism)
+    //     outError ("Please only run this function when level of polymorphism is fixed.");
     computeStateFreq();
     double theta_p = level_of_polymorphism;
     double sum_pol = computeSumFreqPolyStates();
@@ -461,8 +486,10 @@ void ModelPoMo::normalizeMutationProbs() {
     if (verbose_mode >= VB_MAX) cout << "Normalization constant of mutation rates: " << m_norm << endl;
     for (int i = 0; i < num_all; i++) {
         mutation_prob[i] /= m_norm;
-        if (mutation_prob[i] <= POMO_MIN_RATE) mutation_prob[i] = POMO_MIN_RATE;
-        if (mutation_prob[i] >= POMO_MAX_RATE) mutation_prob[i] = POMO_MAX_RATE;
+        if (mutation_prob[i] <= POMO_MIN_RATE)
+            outWarning("Mutation rate below boundary after normalization.");
+        if (mutation_prob[i] >= POMO_MAX_RATE)
+            outWarning("Mutation rate above boundary after normalization.");
     }
 }
 
@@ -487,23 +514,25 @@ bool ModelPoMo::getVariables(double *variables) {
     }
 
     int num_all = dna_model->param_spec.length();
-    if (!fixed_level_of_polymorphism) {
-        if (!fixed_model_params) {
-            for (i = 0; i < num_all; i++) {
+    // if (!fixed_level_of_polymorphism) {
+        // if (!fixed_model_params) {
+        for (i = 0; i < num_all; i++) {
+            if (!dna_model->param_fixed[dna_model->param_spec[i]]) {
                 changed |= (mutation_prob[i] != vars[(int)dna_model->param_spec[i]]);
                 mutation_prob[i] = vars[(int)dna_model->param_spec[i]];
             }
         }
-        else {
-            for (i = 0; i < num_all; i++) {
-                changed |= (mutation_prob[i] != fixed_model_params_ratio[i] * vars[0]);
-                mutation_prob[i] = fixed_model_params_ratio[i] * vars[0];
-            }
-        }
-    }
-    else {
-        outError("Fixed level of polymorphism not implemented yet.");
-    }
+        // }
+        // else {
+        //     for (i = 0; i < num_all; i++) {
+        //         changed |= (mutation_prob[i] != fixed_model_params_ratio[i] * vars[0]);
+        //         mutation_prob[i] = fixed_model_params_ratio[i] * vars[0];
+        //     }
+        // }
+    // }
+    // else {
+    //     outError("Fixed level of polymorphism not implemented yet.");
+    // }
 
     int ndim = getNDim();
     if (freq_type == FREQ_ESTIMATE) {
@@ -517,8 +546,8 @@ bool ModelPoMo::getVariables(double *variables) {
         }
     }
 
-    if (fixed_level_of_polymorphism)
-        normalizeMutationProbs();
+    // if (fixed_level_of_polymorphism)
+    //     normalizeMutationProbs();
     updatePoMoStatesAndRates();
     // writeInfo(cout);
     return changed;
@@ -527,20 +556,24 @@ bool ModelPoMo::getVariables(double *variables) {
 void ModelPoMo::setVariables(double *variables) {
     // Use a zero indexed array (variables starts at one).
     double * vars = variables+1;
-    if (!fixed_level_of_polymorphism) {
-        if (!fixed_model_params) {
-            for (unsigned int i = 0; i < dna_model->param_spec.length(); i++)
-                vars[(int)dna_model->param_spec[i]] = mutation_prob[i];
-        }
-        else {
-            for (unsigned int i = 0; i < dna_model->param_spec.length(); i++)
-                if (dna_model->param_spec[i] == 0)
-                    vars[0] = mutation_prob[i];
-        }
-    }
-    else {
-        outError("Fixed level of polymorphism not supported yet.");
-    }
+    int num_all = dna_model->param_spec.length();
+    for (int i = 0; i < num_all; i++)
+        if (!dna_model->param_fixed[dna_model->param_spec[i]])
+            vars[(int)dna_model->param_spec[i]] = mutation_prob[i];
+    // if (!fixed_level_of_polymorphism) {
+        // if (!fixed_model_params) {
+        //     for (unsigned int i = 0; i < dna_model->param_spec.length(); i++)
+        //         vars[(int)dna_model->param_spec[i]] = mutation_prob[i];
+        // }
+        // else {
+        //     for (unsigned int i = 0; i < dna_model->param_spec.length(); i++)
+        //         if (dna_model->param_spec[i] == 0)
+        //             vars[0] = mutation_prob[i];
+        // }
+    // }
+    // else {
+    //     outError("Fixed level of polymorphism not supported yet.");
+    // }
 
     if (freq_type == FREQ_ESTIMATE) {
         int ndim = getNDim();
@@ -677,7 +710,7 @@ ModelPoMo::estimateEmpiricalFixedStateFreqs(double * freq_fixed_states)
 {
     memset(freq_fixed_states, 0, sizeof(double)*nnuc);
 
-    if (phylo_tree->aln->pomo_random_sampling) {
+    if (sampling_type == SAMPLING_SAMPLED) {
         unsigned int abs_state_freq[num_states];
         memset(abs_state_freq, 0, sizeof(unsigned int)*num_states);
         phylo_tree->aln->computeAbsoluteStateFreq(abs_state_freq);
@@ -754,7 +787,7 @@ ModelPoMo::estimateEmpiricalWattersonTheta()
     int sum_fix = 0;
     double sum_theta_w = 0.0;
 
-    if (phylo_tree->aln->pomo_random_sampling) {
+    if (sampling_type == SAMPLING_SAMPLED) {
         unsigned int abs_state_freq[num_states];
         memset(abs_state_freq, 0, sizeof(unsigned int)*num_states);
         phylo_tree->aln->computeAbsoluteStateFreq(abs_state_freq);
@@ -828,12 +861,12 @@ void ModelPoMo::report_rates(ofstream &out) {
     for (int i = 0; i < 6; i++)
         out << mutation_prob[i] / (sum) << " ";
     out << endl;
-
 }
 
 void ModelPoMo::report(ofstream &out) {
+    out << "Reversible PoMo." << endl;
     out << "Virtual population size N: " << N << endl;
-    if (phylo_tree->aln->pomo_random_sampling == true)
+    if (sampling_type == SAMPLING_SAMPLED)
         out << "Sampling method: Sampled." << endl;
     else
         out << "Sampling method: Weighted." << endl;
@@ -857,16 +890,24 @@ void ModelPoMo::report(ofstream &out) {
     double poly = computeSumFreqPolyStates();
     double fixed = computeSumFreqFixedStates();
     double prop_poly = poly / (poly + fixed);
-    double watterson_theta = prop_poly / harmonic(N);
+    // Thu Aug 18 22:00:49 CEST 2016; I realized that prop_poly is
+    // already the Watterson's theta, so the following calculation was
+    // wrong!
+    // double watterson_theta = prop_poly / harmonic(N);
     double emp_watterson_theta = estimateEmpiricalWattersonTheta();
     out << setprecision(8);
     // out << "Estimated sum of fixed states:" << endl;
     // out << fixed << endl;
     // out << "Estimated sum of polymorphic states" << endl;
     // out << poly << endl;
+
+    // Thu Aug 18 22:01:35 CEST 2016; see about ten lines above.
+    if (!fixed_level_of_polymorphism)
+        out << "Watterson's theta: " << prop_poly << endl;
+
     // out << "(Estimated) proportion of polymorphic states:" << endl;
     // out << prop_poly << endl;
-    out << "Watterson Theta: " << watterson_theta << endl;
+    // out << "Watterson Theta: " << watterson_theta << endl;
 
     out << endl;
     out << "Empirical quantities" << endl;

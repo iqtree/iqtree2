@@ -170,6 +170,26 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
             outError("Non reversible PoMo not supported yet.");
         
         if (pos_rev_pomo != string::npos) {
+            // Remove +NXX and +W or +S.
+            size_t n_pos = rate_str.find("+N");
+            if (n_pos != string::npos) {
+                rate_str = rate_str.substr(0, n_pos)
+                    + rate_str.substr(n_pos+4);
+            }
+            size_t w_pos = rate_str.find("+W");
+            if (w_pos != string::npos) {
+                rate_str = rate_str.substr(0, w_pos)
+                    + rate_str.substr(w_pos+2);
+            }
+            size_t s_pos = rate_str.find("+S");
+            if ( s_pos != string::npos) {
+                rate_str = rate_str.substr(0, s_pos)
+                    + rate_str.substr(s_pos+2);
+            }
+            // Update pos_rev_pomo in case something has been removed
+            // before "+rP".
+            string::size_type pos_rev_pomo = rate_str.find("+rP");
+
             // Move +rP and PoMo params to model string.
             if (rate_str[pos_rev_pomo+3] == '{') {
                 string::size_type close_bracket = rate_str.find("}");

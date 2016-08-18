@@ -2527,44 +2527,6 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
 		// this alignment will actually be of type SuperAlignment
 		alignment = tree->aln;
 	} else {
-        if (!params.sequence_type && detectInputFile(params.aln_file) == IN_COUNTS) {
-            params.pomo = true;
-            string N = "09";
-            SamplingType sampling_type = SAMPLING_WEIGHTED;
-            size_t n_pos = params.model_name.find("+N");
-            if (n_pos != string::npos) {
-                N = params.model_name.substr(n_pos+2,2);
-                int ps = convert_int(N.c_str());
-                if (((ps != 10) && (ps != 2) && (ps % 2 == 0)) || (ps < 2) || (ps > 19))
-                    outError("Custom virtual population size of PoMo not 2, 10 or any other odd number between 3 and 19.");   
-                params.model_name = params.model_name.substr(0, n_pos)
-                    + params.model_name.substr(n_pos+4);
-            }
-            if (params.model_name.find("+W") != string::npos &&
-                params.model_name.find("+S") != string::npos)
-                outError("Multiple sampling methods specified.");
-            size_t w_pos = params.model_name.find("+W");
-            if (w_pos != string::npos) {
-                sampling_type = SAMPLING_WEIGHTED;
-                params.model_name = params.model_name.substr(0, w_pos)
-                    + params.model_name.substr(w_pos+2);
-            }
-            size_t s_pos = params.model_name.find("+S");
-            if ( s_pos != string::npos) {
-                sampling_type = SAMPLING_SAMPLED;
-                params.model_name = params.model_name.substr(0, s_pos)
-                    + params.model_name.substr(s_pos+2);
-            }
-            string pomo_st;
-            if (sampling_type == SAMPLING_WEIGHTED)
-                pomo_st = "CF" + N;
-            else if (sampling_type == SAMPLING_SAMPLED)
-                pomo_st = "CR" + N;
-            // TODO: this line cause invalid memory access
-//            params.sequence_type = (char *) pomo_st.c_str();
-            // you can access model string with Params::getInstance().model_name
-        }
-
 		alignment = new Alignment(params.aln_file, params.sequence_type, params.intype);
 
 		if (params.freq_const_patterns) {
