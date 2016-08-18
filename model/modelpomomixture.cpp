@@ -8,10 +8,24 @@
 
 #include "modelpomomixture.h"
 
-ModelPoMoMixture::ModelPoMoMixture(string orig_model_name, string model_name, string model_list, ModelsBlock *models_block,
-		StateFreqType freq, string freq_params, PhyloTree *tree, bool optimize_weights, bool is_reversible,
-                     string pomo_params, bool count_rates)
-	: ModelMixture(orig_model_name, model_name, model_list, models_block,
-		freq, freq_params, tree, optimize_weights, count_rates)
+ModelPoMoMixture::ModelPoMoMixture(const char *model_name,
+                     string model_params,
+                     StateFreqType freq_type,
+                     string freq_params,
+                     PhyloTree *tree,
+                     bool is_reversible,
+                     string pomo_params, string pomo_rate_str)
+	: ModelPoMo(tree)
 {
+
+    init(model_name, model_params, freq_type, freq_params, is_reversible, pomo_params);
+
+    // initialize pomo_mixture
+    pomo_mixture = new ModelMixture(tree, false);
 }
+
+
+ModelPoMoMixture::~ModelPoMoMixture() {
+    delete pomo_mixture;
+}
+

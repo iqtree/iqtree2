@@ -191,15 +191,30 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
     // cout << model_str << "  " << rate_str << endl;
 
     string::size_type pos_rev_pomo = rate_str.find("+rP");
+    // for rate heterogeneity of PoMo model
+    string pomo_rate_str = "";
 
     if (pos_rev_pomo != string::npos || tree->aln->seq_type == SEQ_POMO) {
         // Check that only supported flags are given.
         if (rate_str.find("+ASC") != string::npos)
             outError("Ascertainment bias correction with PoMo not yet supported.");
         if ((rate_str.find("+I") != string::npos) ||
-            (rate_str.find("+G") != string::npos) ||
             (rate_str.find("+R") != string::npos))
             outError("Rate heterogeneity with PoMo not yet supported.");
+        
+        size_t start_pos;
+        if ((start_pos = rate_str.find("+G")) != string::npos) {
+            // move +G from rate string to model string
+            size_t end_pos = rate_str.find_first_of("+*", start_pos+1);
+            if (end_pos == string::npos) {
+                pomo_rate_str = rate_str.substr(start_pos, rate_str.length() - start_pos);
+                rate_str = rate_str.substr(0, start_pos);
+            } else {
+                pomo_rate_str = rate_str.substr(start_pos, end_pos - start_pos);
+                rate_str = rate_str.substr(0, start_pos) + rate_str.substr(end_pos);
+            }
+        }
+
     }
 
 
@@ -335,7 +350,7 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 //			string model_desc;
 //			NxsModel *nxsmodel = models_block->findModel(model_str);
 //			if (nxsmodel) model_desc = nxsmodel->description;
-			model = createModel(model_str, models_block, freq_type, freq_params, tree);
+			model = createModel(model_str, models_block, freq_type, freq_params, tree, false, pomo_rate_str);
 		}
 //		fused_mix_rate &= model->isMixture() && site_rate->getNRate() > 1;
 	} else {

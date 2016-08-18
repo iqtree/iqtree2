@@ -37,6 +37,8 @@ class ModelPoMo : public ModelGTR
     ModelPoMo(const char *model_name, string model_params, StateFreqType freq_type, string freq_params, 
         PhyloTree *tree, bool is_reversible, string pomo_params);
 
+    ModelPoMo(PhyloTree *tree);
+
     ~ModelPoMo();
 
 

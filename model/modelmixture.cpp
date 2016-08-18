@@ -16,6 +16,7 @@
 #include "modelmixture.h"
 #include "modelpomo.h"
 #include "phylokernelmixture.h"
+#include "modelpomomixture.h"
 
 const string builtin_mixmodels_definition =
 "#nexus\n\
@@ -981,7 +982,7 @@ const double MIN_MIXTURE_PROP = 0.001;
 //const double MAX_MIXTURE_RATE = 100.0;
 
 ModelSubst* createModel(string model_str, ModelsBlock *models_block, StateFreqType freq_type, string freq_params,
-		PhyloTree* tree, bool count_rates)
+		PhyloTree* tree, bool count_rates, string pomo_rate_str)
 {
 	ModelSubst *model = NULL;
 	//cout << "Numstates: " << tree->aln->num_states << endl;
@@ -1032,7 +1033,10 @@ ModelSubst* createModel(string model_str, ModelsBlock *models_block, StateFreqTy
 	} else */
     if ((is_pomo == true) ||
         (tree->aln->seq_type == SEQ_POMO))
-        model = new ModelPoMo(model_str.c_str(), model_params, freq_type, freq_params, tree, is_rev_pomo, pomo_params);
+        if (pomo_rate_str == "")
+            model = new ModelPoMo(model_str.c_str(), model_params, freq_type, freq_params, tree, is_rev_pomo, pomo_params);
+        else
+            model = new ModelPoMoMixture(model_str.c_str(), model_params, freq_type, freq_params, tree, is_rev_pomo, pomo_params, pomo_rate_str);
 //	else if ((model_str == "GTR" && tree->aln->seq_type == SEQ_DNA) ||
 //             (model_str == "GTR2" && tree->aln->seq_type == SEQ_BINARY) ||
 //             (model_str == "GTR20" && tree->aln->seq_type == SEQ_PROTEIN)) {

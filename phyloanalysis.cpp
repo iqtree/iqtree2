@@ -2560,7 +2560,9 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
                 pomo_st = "CF" + N;
             else if (sampling_type == SAMPLING_SAMPLED)
                 pomo_st = "CR" + N;
-            params.sequence_type = (char *) pomo_st.c_str();
+            // TODO: this line cause invalid memory access
+//            params.sequence_type = (char *) pomo_st.c_str();
+            // you can access model string with Params::getInstance().model_name
         }
 
 		alignment = new Alignment(params.aln_file, params.sequence_type, params.intype);

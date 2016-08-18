@@ -17,7 +17,7 @@
 /**
     Mixture PoMo models
 */
-class ModelPoMoMixture : public ModelMixture {
+class ModelPoMoMixture : public ModelPoMo {
 
 public:
 	/**
@@ -26,12 +26,21 @@ public:
 		@param freq state frequency type
 		@param tree associated phylogenetic tree
 	*/
-    ModelPoMoMixture(string orig_model_name, string model_name, string model_list, ModelsBlock *models_block,
-    		StateFreqType freq, string freq_params, PhyloTree *tree, bool optimize_weights, bool is_reversible,
-                     string pomo_params, bool count_rates = true);
+    ModelPoMoMixture(const char *model_name,
+                     string model_params,
+                     StateFreqType freq_type,
+                     string freq_params,
+                     PhyloTree *tree,
+                     bool is_reversible,
+                     string pomo_params,
+                     string pomo_rate_str);
 
-    void initMixture(string orig_model_name, string model_name, string model_list, ModelsBlock *models_block,
-    		StateFreqType freq, string freq_params, PhyloTree *tree, bool optimize_weights, bool count_rates = true);
+    ~ModelPoMoMixture();
+
+protected:
+
+    /** associated mixture model */
+    ModelMixture *pomo_mixture;
 
 };
 

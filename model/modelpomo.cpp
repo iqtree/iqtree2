@@ -4,6 +4,9 @@
 #include <assert.h>
 #include <string.h>
 
+ModelPoMo::ModelPoMo(PhyloTree *tree) : ModelGTR(tree, false) {
+}
+
 ModelPoMo::ModelPoMo(const char *model_name,
                      string model_params,
                      StateFreqType freq_type,

@@ -29,7 +29,7 @@ extern const string builtin_mixmodels_definition;
  * @return substitution model created
  */
 ModelSubst *createModel(string model_str, ModelsBlock *models_block, StateFreqType freq_type, string freq_params,
-		PhyloTree *tree, bool count_rates = true);
+		PhyloTree *tree, bool count_rates = true, string pomo_rate_str = "");
 
 
 /**
@@ -37,6 +37,7 @@ ModelSubst *createModel(string model_str, ModelsBlock *models_block, StateFreqTy
  */
 class ModelMixture: public ModelGTR, public vector<ModelGTR*> {
 public:
+    
 	/**
 		constructor
 		@param model_name model name, e.g., JC, HKY.
