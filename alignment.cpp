@@ -523,7 +523,7 @@ void Alignment::computeUnknownState() {
     case SEQ_DNA: STATE_UNKNOWN = 18; break;
     case SEQ_PROTEIN: STATE_UNKNOWN = 23; break;
     case SEQ_POMO: {
-        if (pomo_random_sampling) STATE_UNKNOWN = num_states;
+        if (pomo_sampling_type == SAMPLING_SAMPLED) STATE_UNKNOWN = num_states;
         else STATE_UNKNOWN = 0xffffffff;
         break;
     }
@@ -1928,23 +1928,62 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
     bool everything_ok = true;
     int fails = 0;
 
-    // Check if sequence type flag matches and for custom virtual population size.
-    pomo_random_sampling = false;
-    if (sequence_type) {
-        string st (sequence_type);
-        if (st.substr(0,2) == "CR")
-            pomo_random_sampling = true;
-        else if (st.substr(0,2) == "CF")
-            pomo_random_sampling = false;
+    // Access model_name in global parameters; needed to get N and
+    // sampling type.
+    Params params = Params::getInstance();
+    // TODO: Do not temper with params; use another way to set PoMo
+    // flag.
+    params.pomo = true;
+
+    // Initialize sampling type.
+    pomo_sampling_type = SAMPLING_WEIGHTED;
+
+    // Check for custom virtual population size or sampling type.
+    size_t n_pos_start = params.model_name.find("+N");
+    size_t n_pos_end   = params.model_name.find_first_of("+", n_pos_start+1);
+    if (n_pos_start != string::npos) {
+        int length;
+        if (n_pos_end != string::npos)
+            length = n_pos_end - n_pos_start - 2;
         else
-            throw "Counts File detected but sequence type (-st) is neither 'CF' nor 'CR'.";
-        string virt_pop_size_str = st.substr(2);
-        if (virt_pop_size_str != "") {
-            int virt_pop_size = atoi(virt_pop_size_str.c_str());
-            N = virt_pop_size;
-        }
+            length = params.model_name.length() - n_pos_start - 2;
+        N = convert_int(params.model_name.substr(n_pos_start+2,length).c_str());
+        if (((N != 10) && (N != 2) && (N % 2 == 0)) || (N < 2) || (N > 19))
+            outError("Custom virtual population size of PoMo not 2, 10 or any other odd number between 3 and 19.");   
     }
+    // TODO: probably remove virtual_pop_size and use N only.
     virtual_pop_size = N;
+    if (params.model_name.find("+W") != string::npos &&
+        params.model_name.find("+S") != string::npos)
+        outError("Multiple sampling methods specified.");
+    size_t w_pos = params.model_name.find("+W");
+    if (w_pos != string::npos)
+        pomo_sampling_type = SAMPLING_WEIGHTED;
+    size_t s_pos = params.model_name.find("+S");
+    if (s_pos != string::npos)
+        pomo_sampling_type = SAMPLING_SAMPLED;
+
+    // Print error if sequence type is given (not supported anymore).
+    if (sequence_type) {
+        cout << "PoMo does not support -st flag anymore." << endl;
+        cout << "Please use model string to specifcy virtual population size and sampling method." << endl;
+        outError("Abort.");
+    }
+        
+    // if (sequence_type) {
+    //     string st (sequence_type);
+    //     if (st.substr(0,2) == "CR")
+    //         pomo_random_sampling = true;
+    //     else if (st.substr(0,2) == "CF")
+    //         pomo_random_sampling = false;
+    //     else
+    //         throw "Counts File detected but sequence type (-st) is neither 'CF' nor 'CR'.";
+    //     string virt_pop_size_str = st.substr(2);
+    //     if (virt_pop_size_str != "") {
+    //         int virt_pop_size = atoi(virt_pop_size_str.c_str());
+    //         N = virt_pop_size;
+    //     }
+    // }
 
     // Set the number of states.  If nnuc=4:
     // 4 + (4 choose 2)*(N-1) = 58.
@@ -2110,7 +2149,7 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
             if (count == 1) {
                 n_samples_sum += values[id1];
                 n_sites_sum++;
-                if (pomo_random_sampling) {
+                if (pomo_sampling_type == SAMPLING_SAMPLED) {
                     // Fixed state, state ID is just id1.
                     state = id1;
                 } else {
@@ -2148,7 +2187,7 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
                 n_samples_sum += values[id1];
                 n_samples_sum += values[id2];
                 n_sites_sum++;
-                if (pomo_random_sampling) {
+                if (pomo_sampling_type == SAMPLING_SAMPLED) {
                      // Binomial sampling.  2 bases are present.
                     for(int k = 0; k < N; k++) {
                         r_int = random_int(sum);
@@ -2197,7 +2236,7 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
         if (everything_ok == true) {
             if (includes_state_unknown) {
 //                su_site_count++;
-                if (!pomo_random_sampling) {
+                if (pomo_sampling_type == SAMPLING_WEIGHTED) {
                     su_buffer.push_back(pattern);
                     su_site_counts.push_back(site_count);
                 }
@@ -2229,7 +2268,7 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
         throw err_str.str();
     }
 
-    if (!pomo_random_sampling) {
+    if (pomo_sampling_type == SAMPLING_WEIGHTED) {
         // Now we can correctly set STATE_UNKNOWN.
         STATE_UNKNOWN = pomo_states.size() + num_states;
 
@@ -2249,7 +2288,7 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
     cout << "Sites with unknown states: " << su_site_counts.size() << endl;
     cout << "Total sites read:          " << site_count << endl;
     cout << "Fails:                     " << fails << endl;
-    if (!pomo_random_sampling) {
+    if (pomo_sampling_type == SAMPLING_WEIGHTED) {
         cout << "---" << endl;
         cout << "Compound states:           " << pomo_states.size() << endl;
     }
@@ -2258,7 +2297,8 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
     // Check if N is not too large.
     n_samples_bar = n_samples_sum / (double) n_sites_sum;
     cout << "The average number of samples is " << n_samples_bar << endl;
-    if (!pomo_random_sampling && n_samples_bar * 3.0 <= N) {
+    if ((pomo_sampling_type == SAMPLING_WEIGHTED) &&
+        (n_samples_bar * 3.0 <= N)) {
         cout << "----------------------------------------------------------------------" << endl;
         cout << "WARNING: The virtual population size N is much larger ";
         cout << "than the average number of samples." << endl;
@@ -2768,7 +2808,7 @@ void Alignment::createBootstrapAlignment(Alignment *aln, IntVector* pattern_freq
     // 2016-07-05: copy variables for PoMo
     pomo_states = aln->pomo_states;
     pomo_states_index = aln->pomo_states_index;
-    pomo_random_sampling = aln->pomo_random_sampling;
+    pomo_sampling_type = aln->pomo_sampling_type;
     virtual_pop_size = aln->virtual_pop_size;
     
     VerboseMode save_mode = verbose_mode;

@@ -440,6 +440,10 @@ class ModelPoMo : virtual public ModelGTR
     /// The number of connections between the alleles (e.g., 6 for 4
     /// nucleotides).
     int n_connections;
+
+    /// Random binomial sampling or weighted; specified when alignment
+    /// is created already (Alignment::readCountsFormat()).
+    SamplingType sampling_type;
 };
 
 #endif /* _MODELPOMO_H_ */

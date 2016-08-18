@@ -1624,19 +1624,19 @@ void parseArg(int argc, char *argv[], Params &params) {
 					throw "Use -st BIN or -st DNA or -st AA or -st CODON or -st MORPH or -st CRXX or -st CFxx.";
                 string arg = argv[cnt];
                 params.sequence_type = argv[cnt];
-                if (arg.substr(0,2) == "CR") params.pomo_random_sampling = true;
-                if (arg.substr(0,2) == "CF" || arg.substr(0,2) == "CR") {
-                    outWarning("Setting the sampling method and population size with this flag is deprecated.");
-                    outWarning("Please use the model string instead (see `iqtree --help`).");
-                    if (arg.length() > 2) {
-                        int ps = convert_int(arg.substr(2).c_str());
-                        params.pomo_pop_size = ps;
-                        if (((ps != 10) && (ps != 2) && (ps % 2 == 0)) || (ps < 2) || (ps > 19)) {
-                            std::cout << "Please give a correct PoMo sequence type parameter; e.g., `-st CF09`." << std::endl;
-                            outError("Custom virtual population size of PoMo not 2, 10 or any other odd number between 3 and 19.");   
-                        }
-                    }
-                }
+                // if (arg.substr(0,2) == "CR") params.pomo_random_sampling = true;
+                // if (arg.substr(0,2) == "CF" || arg.substr(0,2) == "CR") {
+                //     outWarning("Setting the sampling method and population size with this flag is deprecated.");
+                //     outWarning("Please use the model string instead (see `iqtree --help`).");
+                //     if (arg.length() > 2) {
+                //         int ps = convert_int(arg.substr(2).c_str());
+                //         params.pomo_pop_size = ps;
+                //         if (((ps != 10) && (ps != 2) && (ps % 2 == 0)) || (ps < 2) || (ps > 19)) {
+                //             std::cout << "Please give a correct PoMo sequence type parameter; e.g., `-st CF09`." << std::endl;
+                //             outError("Custom virtual population size of PoMo not 2, 10 or any other odd number between 3 and 19.");   
+                //         }
+                //     }
+                // }
 				continue;
 			}
             
@@ -3272,7 +3272,7 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "                       Counted, optimized, user-defined, equal state frequency."     << endl
             << "                       This overwrites the specifications of the DNA model."         << endl
             << "  -m <model>+N<ps>     Define virtual population size to be `ps` (defaults to 9)."   << endl
-            << "                       3 <= ps <= 19; ps has to be an odd number, 2 or 10."          << endl
+            << "                       3 <= ps <= 19; ps has to be an odd number or 2 or 10."        << endl
             << "  -m <model>+[W|S]     Specify sampling method (W; default) or S."                   << endl
             << "                       W: Weighted sampling method (partial likelihoods at the tip"  << endl
             << "                          of the tree are set to the probabilities of leading to the"<< endl

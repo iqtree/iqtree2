@@ -660,14 +660,9 @@ public:
 	 */
 	int virtual_pop_size;
 
-    /**
-     * If true do random binomial sampling from data to get PoMo
-     * states.  This is not the default behavior which uses partial
-     * likelihoods at the tips of the tree.
-     * 
-     */
-    bool pomo_random_sampling;
-    
+    /// The sampling type (defaults to SAMPLING_WEIGHTED).
+    SamplingType pomo_sampling_type;
+
     /** BQM: 2015-07-06, 
         for PoMo data: map from state ID to pair of base1 and base2 
         represented in the high 16-bit and the low 16-bit of uint32_t
