@@ -864,6 +864,7 @@ void ModelPoMo::report_rates(ostream &out) {
 }
 
 void ModelPoMo::report(ostream &out) {
+    out << "Reversible PoMo." << endl;
     out << "Virtual population size N: " << N << endl;
     if (sampling_type == SAMPLING_SAMPLED)
         out << "Sampling method: Sampled." << endl;
