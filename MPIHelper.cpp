@@ -19,7 +19,7 @@ MPIHelper& MPIHelper::getInstance() {
 }
 
 #ifdef _IQTREE_MPI
-void MPIHelper::sendTreesToOthers(vector<string> treeStrings, vector<double> scores, int tag) {
+void MPIHelper::distributeTrees(vector<string> treeStrings, vector<double> scores, int tag) {
     TreeCollection outTrees(treeStrings, scores);
     if (getNumProcesses() == 1)
         return;
@@ -35,14 +35,14 @@ void MPIHelper::sendTreesToOthers(vector<string> treeStrings, vector<double> sco
     //numTreeSent += treeStrings.size();
 }
 
-void MPIHelper::sendTreeToOthers(string treeString, double score, int tag) {
+void MPIHelper::distributeTree(string treeString, double score, int tag) {
     double start = getRealTime();
     vector<string> trees;
     vector<double> scores;
     trees.push_back(treeString);
     scores.push_back(score);
     cout << "Sent tree to other processes in ";
-    MPIHelper::getInstance().sendTreesToOthers(trees, scores, tag);
+    MPIHelper::getInstance().distributeTrees(trees, scores, tag);
     cout << getRealTime() - start << " seconds" << endl;
     numTreeSent++;
 }
@@ -135,19 +135,20 @@ int MPIHelper::cleanUpMessages() {
     int numMsgCleaned = 0;
     int flag = 0;
     MPI_Status status;
-    list< pair<MPI_Request*, ObjectStream*> >::iterator it;
-    it = sentMessages.begin();
-    while ( it != sentMessages.end() ) {
+    vector< pair<MPI_Request*, ObjectStream*> >::iterator it;
+
+    for (it = sentMessages.begin(); it != sentMessages.end(); ) {
         MPI_Test(it->first, &flag, &status);
         if (flag) {
             delete it->first;
             delete it->second;
             numMsgCleaned++;
-            sentMessages.erase(it++);
+            it = sentMessages.erase(it);
         } else {
             ++it;
         }
     }
+
     return numMsgCleaned;
 }
 #endif
