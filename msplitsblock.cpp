@@ -274,7 +274,7 @@ void MSplitsBlock::Read(NxsToken &token)
 				errormsg += " instead";
 				throw NxsException(errormsg, token);
 			}
-		}	// if (token.Equals("TAXLABELS"))
+		}	// if (token.Equals("MATRIX"))
 
 		else if (token.Equals("END") || token.Equals("ENDBLOCK"))
 		{

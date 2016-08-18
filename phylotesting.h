@@ -90,11 +90,18 @@ void printSiteLh(const char*filename, PhyloTree *tree, double *ptn_lh = NULL,
 void printSiteLhCategory(const char*filename, PhyloTree *tree, SiteLoglType wsl);
 
 /**
+ * print site posterior probabilities per rate/mixture category to a file
+ * @param filename output file name
+ * @param tree phylogenetic tree
+ */
+void printSiteProbCategory(const char*filename, PhyloTree *tree, SiteLoglType wsl);
+
+/**
  * print site state frequency vectors (for Huaichun)
  * @param filename output file name
  * @param tree phylogenetic tree
 */
-void printSiteStateFreq(const char*filename, PhyloTree *tree);
+void printSiteStateFreq(const char*filename, PhyloTree *tree, double *state_freqs = NULL);
 
 /**
  * Evaluate user-trees with possibility of tree topology tests

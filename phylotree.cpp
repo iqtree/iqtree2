@@ -791,6 +791,8 @@ uint64_t PhyloTree::getMemoryRequired(size_t ncategory) {
     mem_size += tip_partial_lh_size;
     if (params->gbo_replicates)
         mem_size += params->gbo_replicates*nptn*sizeof(BootValType);
+    if (model)
+    	mem_size += model->getMemoryRequired();
     return mem_size;
 }
 
@@ -992,7 +994,7 @@ double *PhyloTree::newPartialLh() {
     return ret;
 }
 
-int PhyloTree::getPartialLhBytes() {
+size_t PhyloTree::getPartialLhBytes() {
     size_t nptn = aln->size()+aln->num_states; // +num_states for ascertainment bias correction
     size_t block_size;
     if (instruction_set >= 7)
@@ -1007,7 +1009,7 @@ int PhyloTree::getPartialLhBytes() {
 	return block_size * sizeof(double);
 }
 
-int PhyloTree::getScaleNumBytes() {
+size_t PhyloTree::getScaleNumBytes() {
 	return (aln->size()+aln->num_states) * sizeof(UBYTE);
 }
 
@@ -1169,18 +1171,10 @@ void PhyloTree::computePatternStateFreq(double *ptn_state_freq) {
     size_t state, nstates = aln->num_states;
 //    ModelMixture *models = (ModelMixture*)model;
     
-    // loop over all site-patterns
-    for (ptn = 0; ptn < nptn; ptn++) {
-    
-        // first compute posterior for each mixture component
-        double sum_lh = 0.0;
-        for (m = 0; m < nmixture; m++) {
-            sum_lh += lh_cat[m];
-        }
-        sum_lh = 1.0/sum_lh;
-        for (m = 0; m < nmixture; m++) {
-            lh_cat[m] *= sum_lh;
-        }
+    if (params->print_site_state_freq == WSF_POSTERIOR_MEAN) {
+        cout << "Computing posterior mean site frequencies...." << endl;
+        // loop over all site-patterns
+        for (ptn = 0; ptn < nptn; ptn++) {
         
         // now compute state frequencies
         for (state = 0; state < nstates; state++) {
@@ -1189,10 +1183,25 @@ void PhyloTree::computePatternStateFreq(double *ptn_state_freq) {
                 freq += model->getMixtureClass(m)->state_freq[state] * lh_cat[m];
             ptn_freq[state] = freq;
         }
+    } else if (params->print_site_state_freq == WSF_POSTERIOR_MAX) {
+        cout << "Computing posterior max site frequencies...." << endl;
+        // loop over all site-patterns
+        for (ptn = 0; ptn < nptn; ptn++) {
         
-        // increase the pointers
-        lh_cat += nmixture;
-        ptn_freq += nstates;
+            // first compute posterior for each mixture component
+            size_t max_comp = 0;
+            for (m = 1; m < nmixture; m++)
+                if (lh_cat[m] > lh_cat[max_comp]) {
+                    max_comp = m;
+                }
+            
+            // now compute state frequencies
+            memcpy(ptn_freq, models->at(max_comp)->state_freq, nstates*sizeof(double));
+            
+            // increase the pointers
+            lh_cat += nmixture;
+            ptn_freq += nstates;
+        }
     }
 }
 
@@ -1271,6 +1280,29 @@ void PhyloTree::computePatternLikelihood(double *ptn_lh, double *cur_logl, doubl
 //    }
     //double score = computeLikelihoodBranch(dad_branch, dad, pattern_lh);
     //return score;
+}
+
+void PhyloTree::computePatternProbabilityCategory(double *ptn_prob_cat, SiteLoglType wsl) {
+    /*	if (!dad_branch) {
+     dad_branch = (PhyloNeighbor*) root->neighbors[0];
+     dad = (PhyloNode*) root;
+     }*/
+    size_t ptn, nptn = aln->getNPattern();
+    size_t cat, ncat = getNumLhCat(wsl);
+    // Right now only Naive version store _pattern_lh_cat!
+    computePatternLhCat(wsl);
+
+    memcpy(ptn_prob_cat, _pattern_lh_cat, sizeof(double)*nptn*ncat);
+
+    for (ptn = 0; ptn < nptn; ptn++) {
+        double *lh_cat = ptn_prob_cat + ptn*ncat;
+        double sum = lh_cat[0];
+        for (cat = 1; cat < ncat; cat++)
+            sum += lh_cat[cat];
+        sum = 1.0/sum;
+        for (cat = 0; cat < ncat; cat++)
+            lh_cat[cat] *= sum;
+    }
 }
 
 int PhyloTree::computePatternCategories(IntVector *pattern_ncat) {
@@ -2118,6 +2150,31 @@ double PhyloTree::optimizeTreeLengthScaling(double min_scaling, double &scaling,
     return computeLikelihood();
 }
 
+void PhyloTree::printTreeLengthScaling(const char *filename) {
+    double treescale = 1.0;
+    
+    cout << "Optimizing tree length scaling ..." << endl;
+    
+    double lh = optimizeTreeLengthScaling(0.001, treescale, 100.0, 0.001);
+    
+    cout << "treescale: " << treescale << " / LogL: " << lh << endl;
+    
+    Checkpoint *saved_checkpoint = getModelFactory()->getCheckpoint();
+    Checkpoint *new_checkpoint = new Checkpoint;
+    new_checkpoint->setFileName(filename);
+    new_checkpoint->setCompression(false);
+    new_checkpoint->setHeader("IQ-TREE tree length scaling optimizer");
+    
+    getModelFactory()->setCheckpoint(new_checkpoint);
+    
+    new_checkpoint->put("treescale", treescale);
+    new_checkpoint->put("treelength", treeLength());
+    getModelFactory()->saveCheckpoint();
+    new_checkpoint->dump();
+    
+    getModelFactory()->setCheckpoint(saved_checkpoint);
+}
+
 double PhyloTree::computeFunction(double value) {
     if (!is_opt_scaling) {
         current_it->length = value;
@@ -2747,7 +2804,8 @@ void PhyloTree::doOneRandomNNI(Node *node1, Node *node2) {
 			node1Nei = (*it);
 			break;
 		}
-		int randNum = random_int(1);
+         
+		int randNum = random_int(2); // randNum is either 0 or 1
 		if (randNum == 0) {
 			node1Nei = (*it);
 			break;
@@ -2761,7 +2819,7 @@ void PhyloTree::doOneRandomNNI(Node *node1, Node *node2) {
 			node2Nei = (*it);
 			break;
 		}
-		int randNum = random_int(1);
+		int randNum = random_int(2);
 		if (randNum == 0) {
 			node2Nei = (*it);
 			break;

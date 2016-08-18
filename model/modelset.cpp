@@ -124,6 +124,8 @@ void ModelSet::setVariables(double* variables)
 
 ModelSet::~ModelSet()
 {
-
+    for (reverse_iterator rit = rbegin(); rit != rend(); rit++)
+        delete (*rit);
+    
 }
 

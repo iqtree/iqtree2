@@ -87,7 +87,7 @@ public:
 	LeafSet::iterator nearestLeaf();
 
 	/**
-		mark the node in the inital set to be not PRUNABLE
+		mark the node in the initial set to be not PRUNABLE
 	*/
 	void doInitialSet();
 
