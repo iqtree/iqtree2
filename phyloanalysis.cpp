@@ -539,6 +539,8 @@ void computeLoglFromUserInputGAMMAInvar(Params &params, IQTree &iqtree);
 
 void reportPhyloAnalysis(Params &params, string &original_model,
 		IQTree &tree, vector<ModelInfo> &model_info) {
+    if (!MPIHelper::getInstance().isMaster())
+        return;
 	if (params.count_trees) {
 		// addon: print #distinct trees
 		cout << endl << "NOTE: " << pllTreeCounter.size() << " distinct trees evaluated during whole tree search" << endl;
@@ -1259,6 +1261,8 @@ void initializeParams(Params &params, IQTree &iqtree, vector<ModelInfo> &model_i
     bool test_only = params.model_name.find("ONLY") != string::npos;
     /* initialize substitution model */
     if (params.model_name.substr(0, 4) == "TEST") {
+        if (MPIHelper::getInstance().getNumProcesses() > 1)
+            outError("Model selection does not work with MPI version yet");
     	// TODO: check if necessary
 //        if (iqtree.isSuperTree())
 //            ((PhyloSuperTree*) &iqtree)->mapTrees();
@@ -1767,7 +1771,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
         initTree = iqtree.getTreeString();
         cout << "CHECKPOINT: Model parameters restored, LogL: " << iqtree.getCurScore() << endl;
     } else {
-        initTree = iqtree.optimizeModelParameters(true, initEpsilon);
+        initTree = iqtree.optimizeModelParameters(false, initEpsilon);
         iqtree.saveCheckpoint();
         iqtree.getModelFactory()->saveCheckpoint();
         iqtree.getCheckpoint()->putBool("finishedModelInit", true);
@@ -1902,6 +1906,11 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 //	if (iqtree.isSuperTree())
 //			((PhyloSuperTree*) &iqtree)->mapTrees();
 
+    if (!MPIHelper::getInstance().isMaster()) {
+        delete[] pattern_lh;
+        return;
+    }
+
 	if (params.snni && params.min_iterations && verbose_mode >= VB_MED) {
 		cout << "Log-likelihoods of " << params.popSize << " best candidate trees: " << endl;
 		iqtree.printBestScores();
@@ -1925,7 +1934,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
             Params::getInstance().fixStableSplits = false;
             Params::getInstance().tabu = false;
             iqtree.doNNISearch();
-            tree = iqtree.optimizeModelParameters(true);
+            tree = iqtree.optimizeModelParameters(false);
             iqtree.addTreeToCandidateSet(tree, iqtree.getCurScore(), false);
             iqtree.getCheckpoint()->putBool("finishedModelFinal", true);
             iqtree.saveCheckpoint();
@@ -2243,6 +2252,7 @@ void runStandardBootstrap(Params &params, string &original_model, Alignment *ali
     }
     
 	double start_time = getCPUTime();
+	double start_real_time = getRealTime();
 
     
     
@@ -2268,7 +2278,7 @@ void runStandardBootstrap(Params &params, string &original_model, Alignment *ali
         finish_random();
         randstream = saved_randstream;
 
-		if (params.print_tree_lh) {
+		if (params.print_tree_lh && MPIHelper::getInstance().isMaster()) {
 			double prob;
 			bootstrap_alignment->multinomialProb(*alignment, prob);
 			ofstream boot_lh;
@@ -2288,7 +2298,7 @@ void runStandardBootstrap(Params &params, string &original_model, Alignment *ali
 			}
 		} else
 			boot_tree = new IQTree(bootstrap_alignment);
-		if (params.print_bootaln)
+		if (params.print_bootaln && MPIHelper::getInstance().isMaster())
 			bootstrap_alignment->printPhylip(bootaln_name.c_str(), true);
 
         // set checkpoint
@@ -2309,6 +2319,7 @@ void runStandardBootstrap(Params &params, string &original_model, Alignment *ali
 //			outError(ERR_READ_INPUT, treefile_name);
 //		}
 		// write the tree into .boottrees file
+        if (MPIHelper::getInstance().isMaster())
 		try {
 			ofstream tree_out;
 			tree_out.exceptions(ios::failbit | ios::badbit);
@@ -2346,7 +2357,7 @@ void runStandardBootstrap(Params &params, string &original_model, Alignment *ali
 	}
 
 
-	if (params.consensus_type == CT_CONSENSUS_TREE) {
+	if (params.consensus_type == CT_CONSENSUS_TREE && MPIHelper::getInstance().isMaster()) {
 
 		cout << endl << "===> COMPUTE CONSENSUS TREE FROM "
 				<< params.num_bootstrap_samples << " BOOTSTRAP TREES" << endl << endl;
@@ -2364,6 +2375,7 @@ void runStandardBootstrap(Params &params, string &original_model, Alignment *ali
         
 		runTreeReconstruction(params, original_model, *tree, *model_info);
 
+        if (MPIHelper::getInstance().isMaster()) {
 		cout << endl << "===> ASSIGN BOOTSTRAP SUPPORTS TO THE TREE FROM ORIGINAL ALIGNMENT" << endl << endl;
 		MExtTree ext_tree;
 		assignBootstrapSupport(boottrees_name.c_str(), 0, 1e6,
@@ -2371,7 +2383,8 @@ void runStandardBootstrap(Params &params, string &original_model, Alignment *ali
 				params.out_prefix, ext_tree, NULL, &params);
 		tree->copyTree(&ext_tree);
 		reportPhyloAnalysis(params, original_model, *tree, *model_info);
-	} else if (params.consensus_type == CT_CONSENSUS_TREE) {
+        }
+	} else if (params.consensus_type == CT_CONSENSUS_TREE && MPIHelper::getInstance().isMaster()) {
 		int mi = params.min_iterations;
 		STOP_CONDITION sc = params.stop_condition;
 		params.min_iterations = 0;
@@ -2384,7 +2397,9 @@ void runStandardBootstrap(Params &params, string &original_model, Alignment *ali
 	} else
 		cout << endl;
 
-	cout << "Total CPU time for bootstrap: " << (getCPUTime() - start_time) << " seconds." << endl << endl;
+    if (MPIHelper::getInstance().isMaster()) {
+	cout << "Total CPU time for bootstrap: " << (getCPUTime() - start_time) << " seconds." << endl;
+	cout << "Total wall-clock time for bootstrap: " << (getRealTime() - start_real_time) << " seconds." << endl << endl;
 	cout << "Non-parametric bootstrap results written to:" << endl;
 	if (params.print_bootaln)
 		cout << "  Bootstrap alignments:     " << params.out_prefix << ".bootaln" << endl;
@@ -2392,7 +2407,7 @@ void runStandardBootstrap(Params &params, string &original_model, Alignment *ali
 	if (params.consensus_type == CT_CONSENSUS_TREE)
 		cout << "  Consensus tree:           " << params.out_prefix << ".contree" << endl;
 	cout << endl;
-    
+    }
     delete model_info;
 }
 
@@ -2537,6 +2552,8 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
 
 		// call main tree reconstruction
         runTreeReconstruction(params, original_model, *tree, *model_info);
+        
+        if (MPIHelper::getInstance().isMaster()) {
 
 		if (params.gbo_replicates && params.online_bootstrap) {
 			if (params.print_ufboot_trees)
@@ -2552,14 +2569,6 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
 			splitsfile = params.out_prefix;
 			splitsfile += ".contree";
 			tree->readTreeFile(splitsfile);
-			// bug fix
-//			if ((tree->sse == LK_EIGEN || tree->sse == LK_EIGEN_SSE) && !tree->isBifurcating()) {
-//				cout << "NOTE: Changing to old kernel as consensus tree is multifurcating" << endl;
-//                if (tree->sse == LK_EIGEN)
-//                    tree->changeLikelihoodKernel(LK_NORMAL);
-//                else
-//                    tree->changeLikelihoodKernel(LK_SSE);
-//			}
 
 			tree->initializeAllPartialLh();
 			tree->fixNegativeBranch(true);
@@ -2572,18 +2581,20 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
 			// revert the best tree
 			tree->readTreeString(current_tree);
 		}
-		// reinsert identical sequences
-		if (tree->removed_seqs.size() > 0) {
-			// BUG FIX: dont use reinsertIdenticalSeqs anymore
-			tree->insertTaxa(tree->removed_seqs, tree->twin_seqs);
-			tree->printResultTree();
-		}
 		if (Params::getInstance().writeDistImdTrees) {
             cout << endl;
             cout << "Recomputing the log-likelihood of the intermediate trees ... " << endl;
             tree->intermediateTrees.recomputeLoglOfAllTrees(*tree);
         }
 		reportPhyloAnalysis(params, original_model, *tree, *model_info);
+        }
+
+		// reinsert identical sequences
+		if (tree->removed_seqs.size() > 0) {
+			// BUG FIX: dont use reinsertIdenticalSeqs anymore
+			tree->insertTaxa(tree->removed_seqs, tree->twin_seqs);
+			tree->printResultTree();
+		}
         delete model_info;
 	} else {
 		// the classical non-parameter bootstrap (SBS)

@@ -20,9 +20,9 @@ MPIHelper& MPIHelper::getInstance() {
 
 #ifdef _IQTREE_MPI
 void MPIHelper::distributeTrees(vector<string> treeStrings, vector<double> scores, int tag) {
-    TreeCollection outTrees(treeStrings, scores);
     if (getNumProcesses() == 1)
         return;
+    TreeCollection outTrees(treeStrings, scores);
     cleanUpMessages();
     for (int i = 0; i < getNumProcesses(); i++) {
         if (i != getProcessID()) {
@@ -48,6 +48,8 @@ void MPIHelper::sendTrees(int dest, vector<string> treeStrings, vector<double> s
 }
 
 void MPIHelper::distributeTree(string treeString, double score, int tag) {
+    if (getNumProcesses() == 1)
+        return;
     double start = getRealTime();
     vector<string> trees;
     vector<double> scores;
@@ -77,11 +79,17 @@ void MPIHelper::sendStopMsg() {
 bool MPIHelper::checkStopMsg() {
     int flag=0;
     MPI_Status status;
+    char *recvBuffer;
+    int numBytes;
     // Check for incoming messages
     MPI_Iprobe(MASTER, STOP_TAG, MPI_COMM_WORLD, &flag, &status);
     // flag == true if there is a message
     if (flag) {
-        cout << "Worker " << getProcessID() << ": Getting stop message " << endl;
+        MPI_Get_count(&status, MPI_CHAR, &numBytes);
+        recvBuffer = new char[numBytes];
+        MPI_Recv(recvBuffer, numBytes, MPI_CHAR, status.MPI_SOURCE, status.MPI_TAG, MPI_COMM_WORLD, NULL);
+        cout << "Worker " << getProcessID() << " gets stop message " << recvBuffer << endl;
+        delete[] recvBuffer;
         return true;
     }
     return false;

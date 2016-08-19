@@ -751,7 +751,7 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
     bestInitTrees = candidateTrees.getBestTreeStrings(totalNNISearches);
 
     // Dataset is too small (4, 6 taxa) so that not enough distinct initial trees can be generated
-    if (bestInitTrees.size() < totalNNISearches) {
+    if (bestInitTrees.size() < MPIHelper::getInstance().getNumProcesses()) {
         MPI_Finalize();
         stringstream errorMsg;
         errorMsg << "The number of taxa is too small. It does not make sense to use MPI because only ";
@@ -2154,8 +2154,9 @@ double IQTree::doTreeSearch() {
                 break;
             }
         } else {
-            if(MPIHelper::getInstance().checkStopMsg())
+            if(MPIHelper::getInstance().checkStopMsg()) {
                 break;
+            }
         }     
 #else         
         if (stop_rule.meetStopCondition(stop_rule.getCurIt(), cur_correlation))
@@ -2300,8 +2301,10 @@ double IQTree::doTreeSearch() {
     cout << "Number of tree received: " << MPIHelper::getInstance().getNumTreeReceived() << endl;
     cout << "Number of tree sent: " << MPIHelper::getInstance().getNumTreeSent() << endl;
     cout << "Number of NNI search done: " << MPIHelper::getInstance().getNumNNISearch() << endl;
+    MPIHelper::getInstance().resetNumbers();
 
-    // send bootstrap trees between processes
+    // send UFBoot trees between processes
+    if (boot_trees.size() > 0) {
     if (MPIHelper::getInstance().isMaster()) {
         TreeCollection trees;
         int count = 0;
@@ -2325,11 +2328,12 @@ double IQTree::doTreeSearch() {
         // worker
         MPIHelper::getInstance().sendTrees(MASTER, boot_trees, boot_logl, BOOT_TREE_TAG);
     }
-
-    MPI_Finalize();
-    if (MPIHelper::getInstance().getProcessID() != MASTER) {
-        exit(0);
     }
+
+//    MPI_Finalize();
+//    if (MPIHelper::getInstance().getProcessID() != MASTER) {
+//        exit(0);
+//    }
 #endif
 
 
@@ -2382,6 +2386,8 @@ void IQTree::printInterationInfo() {
 
 #ifdef _IQTREE_MPI
 void IQTree::MPI_CollectTrees(bool allTrees, int maxNumTrees, bool updateStopRule) {
+    if (MPIHelper::getInstance().getNumProcesses() == 1)
+        return;
     TreeCollection inTrees;
     double start = getRealTime();
     MPIHelper::getInstance().receiveTrees(allTrees, maxNumTrees, inTrees, TREE_TAG);

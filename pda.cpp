@@ -2561,7 +2561,11 @@ int main(int argc, char *argv[]) {
 	}
 
 #else
-	runPhyloAnalysis(Params::getInstance(), checkpoint);
+    if (Params::getInstance().aln_file || Params::getInstance().partition_file) {
+        runPhyloAnalysis(Params::getInstance(), checkpoint);
+    } else {
+        outError("MPI version only works with phylo analysis, please specify an alignment (-s) or a partition file (-sp,-spp,-q)!");
+    }
 #endif
 
 	time(&start_time);
@@ -2569,5 +2573,9 @@ int main(int argc, char *argv[]) {
 	delete checkpoint;
 
 	finish_random();
+    
+#ifdef _IQTREE_MPI
+    MPI_Finalize();
+#endif    
 	return EXIT_SUCCESS;
 }

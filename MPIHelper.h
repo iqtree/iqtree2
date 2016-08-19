@@ -164,6 +164,12 @@ public:
     void setNumTreeSent(int numTreeSent) {
         MPIHelper::numTreeSent = numTreeSent;
     }
+    
+    void resetNumbers() {
+        numTreeSent = 0;
+        numTreeReceived = 0;
+        numNNISearch = 0;
+    }
 
 private:
     int numTreeSent;
