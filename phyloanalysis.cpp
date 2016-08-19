@@ -1771,7 +1771,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
         initTree = iqtree.getTreeString();
         cout << "CHECKPOINT: Model parameters restored, LogL: " << iqtree.getCurScore() << endl;
     } else {
-        initTree = iqtree.optimizeModelParameters(false, initEpsilon);
+        initTree = iqtree.optimizeModelParameters(true, initEpsilon);
         iqtree.saveCheckpoint();
         iqtree.getModelFactory()->saveCheckpoint();
         iqtree.getCheckpoint()->putBool("finishedModelInit", true);
@@ -1934,7 +1934,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
             Params::getInstance().fixStableSplits = false;
             Params::getInstance().tabu = false;
             iqtree.doNNISearch();
-            tree = iqtree.optimizeModelParameters(false);
+            tree = iqtree.optimizeModelParameters(true);
             iqtree.addTreeToCandidateSet(tree, iqtree.getCurScore(), false);
             iqtree.getCheckpoint()->putBool("finishedModelFinal", true);
             iqtree.saveCheckpoint();

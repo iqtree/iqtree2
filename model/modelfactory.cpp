@@ -973,7 +973,7 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info,
 			if (!fixed_len) cur_lh = tree->optimizeAllBranches(100, logl_epsilon);
 			break;
 		}
-		if (write_info) {
+		if (verbose_mode >= VB_MED) {
 			model->writeInfo(cout);
 			site_rate->writeInfo(cout);
 		}
@@ -1008,7 +1008,7 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info,
 		tree->mlFirstOpt = cur_lh;
 	// ---------------------------
 
-	if (write_info) {
+	if (verbose_mode <= VB_MIN && write_info) {
 		model->writeInfo(cout);
 		site_rate->writeInfo(cout);
 	}
