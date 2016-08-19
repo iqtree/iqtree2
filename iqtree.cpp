@@ -548,7 +548,7 @@ void IQTree::computeInitialTree(string &dist_file, LikelihoodKernel kernel) {
         case STT_PLL_PARSIMONY:
             cout << endl;
             cout << "Create initial parsimony tree by phylogenetic likelihood library (PLL)... ";
-            pllInst->randomNumberSeed = params->ran_seed;
+            pllInst->randomNumberSeed = params->ran_seed + MPIHelper::getInstance().getProcessID();
             pllComputeRandomizedStepwiseAdditionParsimonyTree(pllInst, pllPartitions, params->sprDist);
             resetBranches(pllInst);
             pllTreeToNewick(pllInst->tree_string, pllInst, pllPartitions, pllInst->start->back,
@@ -650,7 +650,7 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
 
         /********* Create parsimony tree using PLL *********/
         if (params->start_tree == STT_PLL_PARSIMONY) {
-			pllInst->randomNumberSeed = params->ran_seed + treeNr * 12345;
+			pllInst->randomNumberSeed = parRandSeed;
 	        pllComputeRandomizedStepwiseAdditionParsimonyTree(pllInst, pllPartitions, params->sprDist);
 	        resetBranches(pllInst);
 			pllTreeToNewick(pllInst->tree_string, pllInst, pllPartitions,

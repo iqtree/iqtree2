@@ -2288,8 +2288,9 @@ int main(int argc, char *argv[]) {
 	// Broadcast random seed
 	MPI_Bcast(&rndSeed, 1, MPI_INT, MASTER, MPI_COMM_WORLD);
 	if (MPIHelper::getInstance().getProcessID() != MASTER) {
-		Params::getInstance().ran_seed = rndSeed + task_id * 100000;
-		printf("Process %d: random_seed = %d\n", task_id, Params::getInstance().ran_seed);
+//		Params::getInstance().ran_seed = rndSeed + task_id * 100000;
+		Params::getInstance().ran_seed = rndSeed;
+//		printf("Process %d: random_seed = %d\n", task_id, Params::getInstance().ran_seed);
 	}
 #endif
 
@@ -2360,7 +2361,7 @@ int main(int argc, char *argv[]) {
 
     checkpoint->get("iqtree.seed", Params::getInstance().ran_seed);
 	cout << "Seed:    " << Params::getInstance().ran_seed <<  " ";
-	init_random(Params::getInstance().ran_seed, true);
+	init_random(Params::getInstance().ran_seed + MPIHelper::getInstance().getProcessID(), true);
 
 	time(&start_time);
 	cout << "Time:    " << ctime(&start_time);
