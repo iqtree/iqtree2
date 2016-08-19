@@ -47,12 +47,13 @@ void MPIHelper::distributeTree(string treeString, double score, int tag) {
     numTreeSent++;
 }
 
-void MPIHelper::sendStopMsg(string msg) {
+void MPIHelper::sendStopMsg() {
     if (getNumProcesses() == 1)
         return;
     cleanUpMessages();
     for (int i = 0; i < getNumProcesses(); i++) {
         if (i != getProcessID()) {
+            string msg = "STOP!";
             MPI_Request *request = new MPI_Request;
             ObjectStream *os = new ObjectStream(msg.c_str(), msg.size()+1);
             MPI_Isend(os->getObjectData(), os->getDataLength(), MPI_CHAR, i, STOP_TAG, MPI_COMM_WORLD, request);
@@ -61,26 +62,17 @@ void MPIHelper::sendStopMsg(string msg) {
     }
 }
 
-bool MPIHelper::checkStopMsg(string &msg) {
-    int flag;
+bool MPIHelper::checkStopMsg() {
+    int flag=0;
     MPI_Status status;
-    char *recvBuffer;
-    int numBytes;
     // Check for incoming messages
-    MPI_Iprobe(MPI_ANY_SOURCE, STOP_TAG, MPI_COMM_WORLD, &flag, &status);
+    MPI_Iprobe(MASTER, STOP_TAG, MPI_COMM_WORLD, &flag, &status);
     // flag == true if there is a message
     if (flag) {
-        //cout << "Getting messages from node " << status.MPI_SOURCE << endl;
-        MPI_Get_count(&status, MPI_CHAR, &numBytes);
-        recvBuffer = new char[numBytes];
-        MPI_Recv(recvBuffer, numBytes, MPI_CHAR, status.MPI_SOURCE, status.MPI_TAG, MPI_COMM_WORLD, NULL);
-        ObjectStream os(recvBuffer, numBytes);
-        string strMsg(os.getObjectData());
-        cout << strMsg << endl;
-        msg = strMsg;
-        delete[] recvBuffer;
+        cout << "Worker " << getProcessID() << ": Getting stop message " << endl;
         return true;
     }
+    return false;
 }
 
 void MPIHelper::receiveTrees(bool fromAll, int maxNumTrees, TreeCollection &trees) {

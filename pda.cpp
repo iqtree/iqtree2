@@ -1749,7 +1749,8 @@ outstreambuf* outstreambuf::open( const char* name, ios::openmode mode) {
 		cout.rdbuf(this);
 		cerr.rdbuf(this);
 		return this;
-	} else {
+	}
+     else {
 		cout_buf = cout.rdbuf();
 		cerr_buf = cerr.rdbuf();
 		cout.rdbuf(this);
@@ -1768,7 +1769,8 @@ outstreambuf* outstreambuf::close() {
 			return this;
 		}
 		return NULL;
-	} else {
+	}
+    else {
 		sync();
 		cout.rdbuf(cout_buf);
 		cerr.rdbuf(cerr_buf);
@@ -1784,9 +1786,8 @@ int outstreambuf::overflow( int c) { // used for output buffer only
 		if (fout_buf->sputc(c) == EOF) return EOF;
 		return c;
 	} else {
-#ifdef _MPI_DEBUG
-		if (cout_buf->sputc(c) == EOF) return EOF;
-#endif
+        if (verbose_mode >= VB_MED)
+            if (cout_buf->sputc(c) == EOF) return EOF;
 		return c;
 	}
 }
@@ -1798,7 +1799,8 @@ int outstreambuf::sync() { // used for output buffer only
 		if (verbose_mode >= VB_MIN)
 			cout_buf->pubsync();
 		return fout_buf->pubsync();
-	} else {
+	} 
+    else {
 #ifdef _MPI_DEBUG
 		return cout_buf->pubsync();
 #endif

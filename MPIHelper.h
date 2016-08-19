@@ -60,6 +60,10 @@ public:
         return processID;
     }
 
+    bool isMaster() const {
+        return processID == MASTER;
+    }
+
     void setProcessID(int processID) {
         MPIHelper::processID = processID;
     }
@@ -101,9 +105,9 @@ public:
      *  @param msg
      *      Some useful message about the reason for stopping
      */
-    void sendStopMsg(string msg);
+    void sendStopMsg();
 
-    bool checkStopMsg(string &msg);
+    bool checkStopMsg();
 
 private:
     /**

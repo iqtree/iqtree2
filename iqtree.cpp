@@ -2140,14 +2140,29 @@ double IQTree::doTreeSearch() {
         cout << "--------------------------------------------------------------------" << endl;
     }
 
-    while (!stop_rule.meetStopCondition(stop_rule.getCurIt(), cur_correlation)) {
+    // count threshold for computing bootstrap correlation
+    int ufboot_count = (stop_rule.getCurIt()/(params->step_iterations/2)+1)*(params->step_iterations/2);
+    int ufboot_count_check = (stop_rule.getCurIt()/(params->step_iterations)+1)*(params->step_iterations);
+
+    while (true) {
 
 
 #ifdef _IQTREE_MPI
         MPI_CollectTrees(false, maxNumTrees, true);
+        if (MPIHelper::getInstance().isMaster()) { 
+            if (stop_rule.meetStopCondition(stop_rule.getCurIt(), cur_correlation)) {
+                MPIHelper::getInstance().sendStopMsg();
+                break;
+            }
+        } else {
+            if(MPIHelper::getInstance().checkStopMsg())
+                break;
+        }     
+#else         
         if (stop_rule.meetStopCondition(stop_rule.getCurIt(), cur_correlation))
             break;
 #endif
+
         searchinfo.curIter = stop_rule.getCurIt();
         // estimate logl_cutoff for bootstrap
         if (!boot_orig_logl.empty())
@@ -2221,8 +2236,10 @@ double IQTree::doTreeSearch() {
         /*----------------------------------------
          * convergence criterion for ultrafast bootstrap
          *---------------------------------------*/
-        if ((stop_rule.getCurIt()) % (params->step_iterations / 2) == 0 &&
-            params->stop_condition == SC_BOOTSTRAP_CORRELATION) {
+        if ((stop_rule.getCurIt()) >= ufboot_count &&
+            params->stop_condition == SC_BOOTSTRAP_CORRELATION && MPIHelper::getInstance().isMaster()) {
+//            collectUFBootTreesFromWorkers();
+            ufboot_count += params->step_iterations/2;
             // compute split support every half step
             SplitGraph *sg = new SplitGraph;
             summarizeBootstrap(*sg);
@@ -2236,7 +2253,8 @@ double IQTree::doTreeSearch() {
             cout << "Log-likelihood cutoff on original alignment: " << logl_cutoff << endl;
 
             // check convergence every full step
-            if (stop_rule.getCurIt() % params->step_iterations == 0) {
+            if (stop_rule.getCurIt() >= ufboot_count_check) {
+                ufboot_count_check += params->step_iterations;
                 cur_correlation = computeBootstrapCorrelation();
                 cout << "NOTE: Bootstrap correlation coefficient of split occurrence frequencies: " <<
                 cur_correlation << endl;
@@ -2248,12 +2266,12 @@ double IQTree::doTreeSearch() {
 //	                cout << "INFO: UFBoot does not converge, continue " << params->step_iterations << " more iterations" << endl;
                 }
             }
+            if (params->gbo_replicates && params->online_bootstrap && params->print_ufboot_trees)
+                writeUFBootTrees(*params);
+
         } // end of bootstrap convergence test
 
         // print UFBoot trees every 10 iterations
-        if (params->gbo_replicates && params->online_bootstrap && params->print_ufboot_trees &&
-            stop_rule.getCurIt() % 10 == 0)
-            writeUFBootTrees(*params);
 
         saveCheckpoint();
         checkpoint->dump();
