@@ -2132,7 +2132,6 @@ double IQTree::doTreeSearch() {
     /*==============================================================================================================
 	                                       MAIN LOOP OF THE IQ-TREE ALGORITHM
 	 *=============================================================================================================*/
-    bool stopReceived = false;
     int maxNumTrees = (MPIHelper::getInstance().getNumProcesses() - 1) * 2;
     if (!stop_rule.meetStopCondition(stop_rule.getCurIt(), cur_correlation)) {
         cout << "--------------------------------------------------------------------" << endl;
@@ -2301,11 +2300,38 @@ double IQTree::doTreeSearch() {
     cout << "Number of tree received: " << MPIHelper::getInstance().getNumTreeReceived() << endl;
     cout << "Number of tree sent: " << MPIHelper::getInstance().getNumTreeSent() << endl;
     cout << "Number of NNI search done: " << MPIHelper::getInstance().getNumNNISearch() << endl;
+
+    // send bootstrap trees between processes
+    if (MPIHelper::getInstance().isMaster()) {
+        TreeCollection trees;
+        int count = 0;
+        do {
+            int source = MPIHelper::getInstance().receiveTrees(trees, BOOT_TREE_TAG);
+            if (source > 0) {
+                count++;
+                assert(trees.getNumTrees() == boot_trees.size());
+                int better_trees = 0;
+                for (int id = 0; id < trees.getNumTrees(); id++)
+                    if (trees.getScores()[id] > boot_logl[id]) {
+                        boot_trees[id] = trees.getTreeStrings()[id];
+                        boot_logl[id] = trees.getScores()[id];
+                        better_trees++; 
+                    }
+                trees.clear();
+                cout << better_trees << " better bootstrap trees from process " << source << endl;
+            }
+        } while (count < MPIHelper::getInstance().getNumProcesses()-1);
+    } else {
+        // worker
+        MPIHelper::getInstance().sendTrees(MASTER, boot_trees, boot_logl, BOOT_TREE_TAG);
+    }
+
     MPI_Finalize();
     if (MPIHelper::getInstance().getProcessID() != MASTER) {
         exit(0);
     }
 #endif
+
 
     return candidateTrees.getBestScore();
 
@@ -2358,7 +2384,7 @@ void IQTree::printInterationInfo() {
 void IQTree::MPI_CollectTrees(bool allTrees, int maxNumTrees, bool updateStopRule) {
     TreeCollection inTrees;
     double start = getRealTime();
-    MPIHelper::getInstance().receiveTrees(allTrees, maxNumTrees, inTrees);
+    MPIHelper::getInstance().receiveTrees(allTrees, maxNumTrees, inTrees, TREE_TAG);
     double commTime = getRealTime() - start;
     if (verbose_mode >= VB_MED) {
     cout << inTrees.getNumTrees() << " trees received from other processes in ";

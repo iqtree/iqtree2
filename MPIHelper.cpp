@@ -35,6 +35,18 @@ void MPIHelper::distributeTrees(vector<string> treeStrings, vector<double> score
     //numTreeSent += treeStrings.size();
 }
 
+void MPIHelper::sendTrees(int dest, vector<string> treeStrings, vector<double> scores, int tag) {
+    TreeCollection outTrees(treeStrings, scores);
+    if (getNumProcesses() == 1)
+        return;
+    cleanUpMessages();
+    MPI_Request *request = new MPI_Request;
+    ObjectStream *os = new ObjectStream(outTrees);
+    MPI_Isend(os->getObjectData(), os->getDataLength(), MPI_CHAR, dest, tag, MPI_COMM_WORLD, request);
+    sentMessages.push_back(make_pair(request, os));
+    //numTreeSent += treeStrings.size();
+}
+
 void MPIHelper::distributeTree(string treeString, double score, int tag) {
     double start = getRealTime();
     vector<string> trees;
@@ -75,7 +87,7 @@ bool MPIHelper::checkStopMsg() {
     return false;
 }
 
-void MPIHelper::receiveTrees(bool fromAll, int maxNumTrees, TreeCollection &trees) {
+void MPIHelper::receiveTrees(bool fromAll, int maxNumTrees, TreeCollection &trees, int tag) {
     if (getNumProcesses() == 1) {
         return;
     }
@@ -93,7 +105,7 @@ void MPIHelper::receiveTrees(bool fromAll, int maxNumTrees, TreeCollection &tree
         char* recvBuffer;
         int numBytes;
         // Check for incoming messages
-        MPI_Iprobe(MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &flag, &status);
+        MPI_Iprobe(MPI_ANY_SOURCE, tag, MPI_COMM_WORLD, &flag, &status);
         // flag == true if there is a message
         if (flag) {
             //cout << "Getting messages from node " << status.MPI_SOURCE << endl;
@@ -121,6 +133,33 @@ void MPIHelper::receiveTrees(bool fromAll, int maxNumTrees, TreeCollection &tree
         }
     } while (minNumTrees > 0 || flag);
     numTreeReceived += trees.getNumTrees();
+}
+
+int MPIHelper::receiveTrees(TreeCollection &trees, int tag) {
+    if (getNumProcesses() == 1) {
+        return -1;
+    }
+    int flag = 0;
+    // Process all pending messages
+    MPI_Status status;
+    char* recvBuffer;
+    int numBytes;
+    // Check for incoming messages
+    MPI_Iprobe(MPI_ANY_SOURCE, tag, MPI_COMM_WORLD, &flag, &status);
+    // flag == true if there is a message
+    if (flag) {
+        //cout << "Getting messages from node " << status.MPI_SOURCE << endl;
+        MPI_Get_count(&status, MPI_CHAR, &numBytes);
+        recvBuffer = new char[numBytes];
+        MPI_Recv(recvBuffer, numBytes, MPI_CHAR, status.MPI_SOURCE, status.MPI_TAG, MPI_COMM_WORLD, &status);
+        ObjectStream os(recvBuffer, numBytes);
+        TreeCollection curTrees = os.getTreeCollection();
+        trees.addTrees(curTrees);
+        delete [] recvBuffer;
+        return status.MPI_SOURCE;
+    } else {
+        return -1;
+    }
 }
 
 int MPIHelper::cleanUpMessages() {

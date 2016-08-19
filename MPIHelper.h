@@ -38,6 +38,7 @@
 #define TREE_TAG 1 // Message contain trees
 #define STOP_TAG 2 // Stop message
 #define NOTREE_TAG 3 // Message does not contain a tree but a score only
+#define BOOT_TREE_TAG 4 // bootstrap tree tag
 
 using namespace std;
 
@@ -80,8 +81,20 @@ public:
      *      new trees
      *  @param trees[OUT]
      *      Trees received from other processes
+     *  @param tag MPI tag
      */
-    void receiveTrees(bool fromAll, int maxNumTrees, TreeCollection &trees);
+    void receiveTrees(bool fromAll, int maxNumTrees, TreeCollection &trees, int tag);
+
+
+    /**
+     *  Receive trees that sent to the current process
+     *
+     *  @param trees[OUT]
+     *      Trees received from other processes
+     *  @param tag MPI tag
+     *  @return source process ID
+     */
+    int receiveTrees(TreeCollection &trees, int tag);
 
     /**
      *   Send trees to all other processes
@@ -98,6 +111,15 @@ public:
     *   @param tag
     */
     void distributeTree(string treeString, double score, int tag);
+
+    /**
+     *   Send trees to a dest process
+     *   @param dest MPI rank of destination process
+     *   @param treeStrings vector of trees
+     *   @param scores vector containing scores of the trees with same order as in treeStrings
+     *   @param tag used to classified the message
+     */
+    void sendTrees(int dest, vector<string> treeStrings, vector<double> scores, int tag);
 
     /**
      *  Send a stop message to other process
