@@ -34,7 +34,7 @@ class ModelPoMo : virtual public ModelGTR
      *
      * @return
      */
-    ModelPoMo(const char *model_name, string model_params, StateFreqType freq_type, string freq_params, 
+    ModelPoMo(const char *model_name, string model_params, StateFreqType freq_type, string freq_params,
         PhyloTree *tree, bool is_reversible, string pomo_params);
 
     ModelPoMo(PhyloTree *tree);
@@ -71,7 +71,7 @@ class ModelPoMo : virtual public ModelGTR
     /**
      * Initialize rate_matrix and state_freq for boundary mutation model.
      */
-    void updatePoMoStatesAndRates();
+    void updatePoMoStatesAndRateMatrix();
 
     /**
      *  @return Number of free parameters.
@@ -82,7 +82,7 @@ class ModelPoMo : virtual public ModelGTR
 		@return the number of dimensions corresponding to state frequencies
 	*/
 	virtual int getNDimFreq();
-	
+
 
     /**
      * Set bounds for joint optimization with BFGS.
@@ -201,10 +201,10 @@ class ModelPoMo : virtual public ModelGTR
      */
     virtual void report(ostream &out);
 
-    /** 
+    /**
      * Normalize the mutation probabilities such that the given level of
      * polymorphism is honored (level_of_polymorphism).
-     * 
+     *
      */
     void normalizeMutationProbs();
 
@@ -229,6 +229,14 @@ class ModelPoMo : virtual public ModelGTR
         @param num_state number of states
     */
     virtual void computeRateMatrix(double **rate_matrix, double *state_freq, int num_state);
+
+    /** 
+     * Scale the mutation rates by SCALE.  I.e., new_mutation_prob[i]
+     * = scale*old_mutation_prob[i].
+     * 
+     * @param scale (IN).
+     */ 
+    void scaleMutationRatesAndUpdateRateMatrix(double scale)
 
     /**
      * This function is served for the multi-dimension
@@ -364,7 +372,7 @@ class ModelPoMo : virtual public ModelGTR
      * @return
      */
     double computeSumFreqPolyStates();
-    
+
     /**
      * Computes the sum over lamda_pol without mutliplying with
      * mutation coefficients.  This is useful if the mutation
@@ -437,8 +445,9 @@ class ModelPoMo : virtual public ModelGTR
     /// would look like [1, 2, 1, 1, 2, 1]
     double * fixed_model_params_ratio;
 
-    /// The number of connections between the alleles (e.g., 6 for 4
-    /// nucleotides).
+    /// The number of connections between nucleotides.  If nnuc=4,
+    /// there are 6 connections.  Set in ModelPoMo::init().
+    int n_connections;
     int n_connections;
 
     /// Random binomial sampling or weighted; specified when alignment

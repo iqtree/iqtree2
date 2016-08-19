@@ -159,8 +159,8 @@ void ModelPoMo::init(const char *model_name,
 
     setInitialMutCoeff();
 
+    // Update PoMo states and rate matrix before eigendecomposition.
     updatePoMoStatesAndRates();
-
     decomposeRateMatrix();
 
     cout << "Initialized PoMo model." << endl;
@@ -286,7 +286,7 @@ void ModelPoMo::computeStateFreq () {
     }
 }
 
-void ModelPoMo::updatePoMoStatesAndRates () {
+void ModelPoMo::updatePoMoStatesAndRateMatrix () {
     int state1, state2;
 
     // Activate this if frequencies of fixed states sum up to 1.0.
@@ -305,22 +305,6 @@ void ModelPoMo::updatePoMoStatesAndRates () {
                      computeProbBoundaryMutation(state1, state2));
             }
         rate_matrix[state1*num_states+state1] = -(row_sum);
-    }
-    if (verbose_mode >= VB_MAX) {
-        std::cout << std::setprecision(7)
-                  << "DEBUG: Rate Matrix calculated." << std::endl
-                  << "DEBUG: mu=" << "\t"
-                  << mutation_prob[0] << "\t"
-                  << mutation_prob[1] << "\t"
-                  << mutation_prob[2] << "\t"
-                  << mutation_prob[3] << "\t"
-                  << mutation_prob[4] << "\t"
-                  << mutation_prob[5] << std::endl;
-        std::cout << "DEBUG: " << std::setprecision(3) << "PIs:\t"
-                  << freq_fixed_states[0] << "\t"
-                  << freq_fixed_states[1] << "\t"
-                  << freq_fixed_states[2] << "\t"
-                  << freq_fixed_states[3] << std::endl;
     }
 }
 
@@ -493,6 +477,13 @@ void ModelPoMo::normalizeMutationProbs() {
     }
 }
 
+void ModelPoMo::scaleMutationRatesAndUpdateRateMatrix(double scale) {
+    for (int i = 0; i < n_connections; i++) {
+        mutation_prob[i] = mutation_prob[i]*scale;
+    }
+    updatePoMoStatesAndRateMatrix();
+}
+
 bool ModelPoMo::getVariables(double *variables) {
     // A drawback: IQ-TREE looks at the values at the boundaries a
     // lot.  E.g., if HKY{3.0} is specified, the mutation_prob[0] will
@@ -514,25 +505,12 @@ bool ModelPoMo::getVariables(double *variables) {
     }
 
     int num_all = dna_model->param_spec.length();
-    // if (!fixed_level_of_polymorphism) {
-        // if (!fixed_model_params) {
-        for (i = 0; i < num_all; i++) {
-            if (!dna_model->param_fixed[dna_model->param_spec[i]]) {
-                changed |= (mutation_prob[i] != vars[(int)dna_model->param_spec[i]]);
-                mutation_prob[i] = vars[(int)dna_model->param_spec[i]];
-            }
+    for (i = 0; i < num_all; i++) {
+        if (!dna_model->param_fixed[dna_model->param_spec[i]]) {
+            changed |= (mutation_prob[i] != vars[(int)dna_model->param_spec[i]]);
+            mutation_prob[i] = vars[(int)dna_model->param_spec[i]];
         }
-        // }
-        // else {
-        //     for (i = 0; i < num_all; i++) {
-        //         changed |= (mutation_prob[i] != fixed_model_params_ratio[i] * vars[0]);
-        //         mutation_prob[i] = fixed_model_params_ratio[i] * vars[0];
-        //     }
-        // }
-    // }
-    // else {
-    //     outError("Fixed level of polymorphism not implemented yet.");
-    // }
+    }
 
     int ndim = getNDim();
     if (freq_type == FREQ_ESTIMATE) {
@@ -548,8 +526,10 @@ bool ModelPoMo::getVariables(double *variables) {
 
     // if (fixed_level_of_polymorphism)
     //     normalizeMutationProbs();
-    updatePoMoStatesAndRates();
-    // writeInfo(cout);
+
+    // Mutation rates have been updated but state frequencies and rate
+    // matrix still needs to be computed.
+    updatePoMoStatesAndRateMatrix();
     return changed;
 }
 
@@ -560,20 +540,6 @@ void ModelPoMo::setVariables(double *variables) {
     for (int i = 0; i < num_all; i++)
         if (!dna_model->param_fixed[dna_model->param_spec[i]])
             vars[(int)dna_model->param_spec[i]] = mutation_prob[i];
-    // if (!fixed_level_of_polymorphism) {
-        // if (!fixed_model_params) {
-        //     for (unsigned int i = 0; i < dna_model->param_spec.length(); i++)
-        //         vars[(int)dna_model->param_spec[i]] = mutation_prob[i];
-        // }
-        // else {
-        //     for (unsigned int i = 0; i < dna_model->param_spec.length(); i++)
-        //         if (dna_model->param_spec[i] == 0)
-        //             vars[0] = mutation_prob[i];
-        // }
-    // }
-    // else {
-    //     outError("Fixed level of polymorphism not supported yet.");
-    // }
 
     if (freq_type == FREQ_ESTIMATE) {
         int ndim = getNDim();
@@ -588,29 +554,6 @@ void ModelPoMo::writeInfo(ostream &out) {
 
     out << setprecision(8);
 
-    // DOM 2015-12-16: Reduce output to minum
-    // out << endl;
-
-    // int state1;
-    // out << "==========================" << endl;
-    // out << "Frequency of fixed states: " << endl;;
-    // for (i = 0; i < 4; i++)
-    //     out << freq_fixed_states[i] << " ";
-    // out << endl << endl;
-
-    // out << "===============" << endl;
-    // out << "Mutation rates: " << endl;
-    // for (i = 0; i < 6; i++)
-    //     out << mutation_prob[i] << " ";
-    // out << endl << endl;;
-
-    // out << "==================================" << endl;
-    // out << "State frequency vector state_freq: " << endl;
-    // for (state1 = 0; state1 < num_states; state1++) {
-    //     if (state1 == 4 || (state1-4)%(N-1) == 0) out << endl;
-    //     out << state_freq[state1] << " ";
-    // }
-    // out << endl << endl;
     out << "Frequency of fixed states: ";
     for (i = 0; i < 4; i++)
         out << freq_fixed_states[i] << " ";
@@ -620,33 +563,15 @@ void ModelPoMo::writeInfo(ostream &out) {
         out << mutation_prob[i] << " ";
     out << endl;
 
-    // out << "Rates (upper triangular) without diagonal: ";
-    // i = 0;
-    // for (state1 = 0; state1 < num_states; state1++) {
-    //     for (state2 = state1+1; state2 < num_states; state2++) {
-    //         out << rates[i++] << '\t';
-    //     }
-    //     out << endl;
-    // }
-
-    // out << "PoMo rate matrix:" << endl;
-    // for (int state1 = 0; state1 < num_states; state1++) {
-    //     for (int state2 = 0; state2 < num_states; state2++)
-    //         out << rate_matrix[state1*num_states+state2] << "\t";
-    //     out << endl;
-    // }
-
     out.copyfmt(state);
 }
 
+// TODO: ModelGTR::decomposeRateMatrix() calls
+// EigenDecomposition::eigensystem_sym() which in turn calls
+// ModelPoMo::computeRateMatrix().  I believe that there is
+// unnecessary allocation of rate parameters involved in
+// ModelGTR::decomposeRateMatrix() which can be removed.
 void ModelPoMo::computeRateMatrix(double **r_matrix, double *s_freqs, int n_states) {
-    // Normalize the rate matrix such that on average one mutation
-    // event happens per delta_t = 1.0.
-    // double sum = 0.0;
-    // for (int i = 0; i < 4; i++) {
-    //     sum -= s_freqs[i]*rate_matrix[i*n_states + i];
-    // }
-
     // Normalzie the rate matrix such that on average one event
     // happens per delta_t = 1.0.  This seems to be more stable.
     double tot_sum = 0.0;
@@ -664,27 +589,6 @@ void ModelPoMo::computeRateMatrix(double **r_matrix, double *s_freqs, int n_stat
             r_matrix[i][j] = rate_matrix[i*n_states+j] / tot_sum;
         }
     }
-
-    // // Set rate matrix without normalization.
-    // for (int i = 0; i < n_states; i++) {
-    //     for (int j = 0; j < n_states; j++) {
-    //         r_matrix[i][j] = rate_matrix[i*n_states+j];
-    //     }
-    // }
-
-    // std::cout << "DEBUG Rate Matrix." << std::endl;
-    // for (int i = 0; i < n_states; i++) {
-    //     std::cout << "Row " << i << ": ";
-    //     for (int j = 0; j < n_states; j++) {
-    //         std::cout << rate_matrix[i*n_states+j] << " ";
-    //     }
-    //     std::cout << std::endl;
-    // }
-    // std::cout << "DEBUG State Frequency." << setprecision(10) << std::endl;
-    // for (int i = 0; i < n_states; i++) {
-    //     std::cout << s_freqs[i] << " ";
-    // }
-    // std::cout << std::endl;
 }
 
 double ModelPoMo::targetFunk(double x[]) {
@@ -987,8 +891,8 @@ void ModelPoMo::restoreCheckpoint() {
     CKP_ARRAY_RESTORE(n_rates, dna_model->rates);
     CKP_ARRAY_RESTORE(nnuc, dna_model->state_freq);
     checkpoint->endStruct();
-    // Second, update states and rates.
-    updatePoMoStatesAndRates();
+    // Second, update states and rate matrix.
+    updatePoMoStatesAndRateMatrix();
     // Third, restore ModelGTR.
     ModelGTR::restoreCheckpoint();
     decomposeRateMatrix();
