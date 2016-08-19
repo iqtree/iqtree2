@@ -908,7 +908,7 @@ protected:
 
 #ifdef _IQTREE_MPI
     /**
-     *  Receive tree from other nodes and add to the candidate set
+     *  Receive trees from other processes and add them to the candidate set
      *
      *  @param allTrees
      *      If true, wait for tree from every node
@@ -919,7 +919,7 @@ protected:
      *  @param updateStopRule
      *      To update the stop rule or not
      */
-    void addTreesFromOtherProcesses(bool allTrees, int maxNumTrees, bool updateStopRule);
+    void MPI_CollectTrees(bool allTrees, int maxNumTrees, bool updateStopRule);
 #endif
 
     double doTreePerturbation();

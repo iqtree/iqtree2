@@ -80,18 +80,20 @@ public:
     void receiveTrees(bool fromAll, int maxNumTrees, TreeCollection &trees);
 
     /**
-     *   @param treeStrings
-     *   @param scores
-     *   @param tag message tag
+     *   Send trees to all other processes
+     *   @param treeStrings vector of trees
+     *   @param scores vector containing scores of the trees with same order as in treeStrings
+     *   @param tag used to classified the message
      */
-    void sendTreesToOthers(vector<string> treeStrings, vector<double> scores, int tag = TREE_TAG);
+    void distributeTrees(vector<string> treeStrings, vector<double> scores, int tag = TREE_TAG);
 
     /**
-    *   @param treeStrings
-    *   @param scores
-    *   @param tag message tag
+    *   Similar to distributeTrees but only 1 tree is sent
+    *   @param treeString
+    *   @param score
+    *   @param tag
     */
-    void sendTreeToOthers(string treeString, double score, int tag);
+    void distributeTree(string treeString, double score, int tag);
 
     /**
      *  Send a stop message to other process
@@ -155,7 +157,9 @@ private:
     int numNNISearch;
 
 #ifdef _IQTREE_MPI
-    list<pair<MPI_Request *, ObjectStream *> > sentMessages;
+    // A list storing messages and the corresponding requests that have been sent from the current process.
+    // When a message has been successfully received, it will be deleted from the list
+    vector< pair<MPI_Request *, ObjectStream *> > sentMessages;
 #endif
 
 
