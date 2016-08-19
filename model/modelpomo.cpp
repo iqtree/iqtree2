@@ -160,7 +160,7 @@ void ModelPoMo::init(const char *model_name,
     setInitialMutCoeff();
 
     // Update PoMo states and rate matrix before eigendecomposition.
-    updatePoMoStatesAndRates();
+    updatePoMoStatesAndRateMatrix();
     decomposeRateMatrix();
 
     cout << "Initialized PoMo model." << endl;
@@ -287,24 +287,30 @@ void ModelPoMo::computeStateFreq () {
 }
 
 void ModelPoMo::updatePoMoStatesAndRateMatrix () {
-    int state1, state2;
-
     // Activate this if frequencies of fixed states sum up to 1.0.
     // updateFreqFixedState();
-
     computeStateFreq();
 
-    // Loop over rows (transition starting from state1).
-    for (state1 = 0; state1 < num_states; state1++) {
+    // Compute and normalzie the rate matrix such that on average one
+    // event happens per delta_t = 1.0.  This seems to be stable.
+    int i, j;
+    double tot_sum = 0.0;
+    for (i = 0; i < num_states; i++) {
         double row_sum = 0.0;
         // Loop over columns in row state1 (transition to state2).
-        for (state2 = 0; state2 < num_states; state2++)
-            if (state2 != state1) {
+        for (j = 0; j < num_states; j++)
+            if (i != j) {
                 row_sum +=
-                    (rate_matrix[state1*num_states+state2] =
-                     computeProbBoundaryMutation(state1, state2));
+                    (rate_matrix[i*num_states+j] =
+                     computeProbBoundaryMutation(i, j));
             }
-        rate_matrix[state1*num_states+state1] = -(row_sum);
+        tot_sum += state_freq[i]*row_sum;
+        rate_matrix[i*num_states+i] = -(row_sum);
+    }
+    for (int i = 0; i < num_states; i++) {
+        for (int j = 0; j < num_states; j++) {
+            rate_matrix[i*num_states+j] /= tot_sum;
+        }
     }
 }
 
@@ -572,21 +578,9 @@ void ModelPoMo::writeInfo(ostream &out) {
 // unnecessary allocation of rate parameters involved in
 // ModelGTR::decomposeRateMatrix() which can be removed.
 void ModelPoMo::computeRateMatrix(double **r_matrix, double *s_freqs, int n_states) {
-    // Normalzie the rate matrix such that on average one event
-    // happens per delta_t = 1.0.  This seems to be more stable.
-    double tot_sum = 0.0;
-    double row_sum;
-
-    for (int i = 0; i < n_states; i++) {
-        row_sum = 0.0;
-        for (int j = 0; j < n_states; j++) {
-            if (i != j) row_sum += rate_matrix[i*n_states + j];
-        }
-        tot_sum += s_freqs[i]*row_sum;
-    }
     for (int i = 0; i < n_states; i++) {
         for (int j = 0; j < n_states; j++) {
-            r_matrix[i][j] = rate_matrix[i*n_states+j] / tot_sum;
+            r_matrix[i][j] = rate_matrix[i*n_states+j];
         }
     }
 }

@@ -236,7 +236,7 @@ class ModelPoMo : virtual public ModelGTR
      * 
      * @param scale (IN).
      */ 
-    void scaleMutationRatesAndUpdateRateMatrix(double scale)
+    void scaleMutationRatesAndUpdateRateMatrix(double scale);
 
     /**
      * This function is served for the multi-dimension
@@ -447,7 +447,6 @@ class ModelPoMo : virtual public ModelGTR
 
     /// The number of connections between nucleotides.  If nnuc=4,
     /// there are 6 connections.  Set in ModelPoMo::init().
-    int n_connections;
     int n_connections;
 
     /// Random binomial sampling or weighted; specified when alignment
