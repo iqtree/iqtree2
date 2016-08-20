@@ -130,7 +130,7 @@ void outError(const char *error, string msg, bool quit) {
         @param error warning message
  */
 void outWarning(const char *warn) {
-    cerr << "WARNING: " << warn << endl;
+    cout << "WARNING: " << warn << endl;
 }
 
 void outWarning(string warn) {
@@ -924,6 +924,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.ignore_checkpoint = false;
     params.checkpoint_dump_interval = 20;
     params.force_unfinished = false;
+    params.suppress_output_flags = 0;
 
 
 	if (params.nni5) {
@@ -2993,6 +2994,25 @@ void parseArg(int argc, char *argv[], Params &params) {
 				continue;
 			}
             
+			if (strcmp(argv[cnt], "--no-log") == 0) {
+				params.suppress_output_flags |= OUT_LOG;
+				continue;
+			}
+
+			if (strcmp(argv[cnt], "--no-treefile") == 0) {
+				params.suppress_output_flags |= OUT_TREEFILE;
+				continue;
+			}
+			if (strcmp(argv[cnt], "--no-iqtree") == 0) {
+				params.suppress_output_flags |= OUT_IQTREE;
+				continue;
+			}
+			if (strcmp(argv[cnt], "--no-outfiles") == 0) {
+				params.suppress_output_flags |= OUT_LOG + OUT_TREEFILE + OUT_IQTREE;
+				continue;
+			}
+
+
 			if (argv[cnt][0] == '-') {
                 string err = "Invalid \"";
                 err += argv[cnt];

@@ -414,6 +414,10 @@ const int BRLEN_OPTIMIZE = 0; // optimize branch lengths
 const int BRLEN_FIX      = 1; // fix branch lengths
 const int BRLEN_SCALE    = 2; // scale branch lengths
 
+const int OUT_LOG       = 1; // .log file written or not
+const int OUT_TREEFILE  = 2; // .treefile file written or not
+const int OUT_IQTREE    = 4; // .iqtree file written or not
+
 /** maximum number of newton-raphson steps for NNI branch evaluation */
 extern int NNI_MAX_NR_STEP;
 
@@ -1738,6 +1742,13 @@ public:
 
     /** true if ignoring the "finished" flag in checkpoint file */
     bool force_unfinished;
+
+    /** control output files to be written
+     * OUT_LOG
+     * OUT_TREEFILE
+     * OUT_IQTREE
+     */
+    int suppress_output_flags;
 
 };
 

@@ -1844,8 +1844,6 @@ double IQTree::doTreeSearch() {
     cout << "--------------------------------------------------------------------" << endl;
     cout << "|               OPTIMIZING CANDIDATE TREE SET                      |" << endl;
     cout << "--------------------------------------------------------------------" << endl;
-    string tree_file_name = params->out_prefix;
-    tree_file_name += ".treefile";
     // PLEASE PRINT TREE HERE!
     printResultTree();
     string treels_name = params->out_prefix;
@@ -3081,6 +3079,8 @@ void IQTree::addPositiveNNIMove(NNIMove myMove) {
 
 void IQTree::printResultTree(string suffix) {
     setRootNode(params->root);
+    if (params->suppress_output_flags & OUT_TREEFILE)
+        return;
     string tree_file_name = params->out_prefix;
     tree_file_name += ".treefile";
     if (suffix.compare("") != 0) {
