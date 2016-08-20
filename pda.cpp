@@ -1714,6 +1714,9 @@ public:
     streambuf *get_fout_buf() {
         return fout_buf;
     }
+    ofstream *get_fout() {
+        return &fout;
+    }
     
 protected:
 	ofstream fout;
@@ -1814,7 +1817,8 @@ extern "C" void startLogFile(bool append_log) {
 }
 
 extern "C" void endLogFile() {
-//	_out_buf.close();
+	_out_buf.close();
+    
 }
 
 void funcExit(void) {
