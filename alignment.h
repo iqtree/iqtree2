@@ -616,6 +616,14 @@ public:
 
     vector<vector<int> > seq_states; // state set for each sequence in the alignment
 
+    /* for site-specific state frequency model with Huaichun, Edward, Andrew */
+    
+    /* site to model ID map */
+    IntVector site_model;
+    
+    /** site to state frequency vector */
+    vector<double*> site_state_freq;
+
     /**
      * @return true if data type is SEQ_CODON and state is a stop codon
      */
@@ -671,6 +679,16 @@ public:
     void getAppearance(char state, double *state_app);
 
     void getAppearance(char state, StateBitset &state_app);
+
+	/**
+	 * read site specific state frequency vectors from a file to create corresponding model
+     * update site_model and site_state_freq variables for this class
+	 * @param aln input alignment
+	 * @param site_freq_file file name
+     * @return TRUE if alignment needs to be changed, FALSE otherwise
+	 */
+	bool readSiteStateFreq(const char* site_freq_file);
+
 
 protected:
 

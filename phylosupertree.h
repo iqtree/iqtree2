@@ -213,6 +213,11 @@ public:
     virtual double computeLikelihood(double *pattern_lh = NULL);
 
     /**
+     * @return number of elements per site lhl entry, used in conjunction with computePatternLhCat
+     */
+    virtual int getNumLhCat(SiteLoglType wsl);
+
+    /**
             compute pattern likelihoods only if the accumulated scaling factor is non-zero.
             Otherwise, copy the pattern_lh attribute
             @param pattern_lh (OUT) pattern log-likelihoods,
@@ -222,6 +227,13 @@ public:
      */
     virtual void computePatternLikelihood(double *pattern_lh, double *cur_logl = NULL,
     		double *pattern_lh_cat = NULL, SiteLoglType wsl = WSL_RATECAT);
+
+    /**
+            compute pattern posterior probabilities per rate/mixture category
+            @param pattern_prob_cat (OUT) all pattern-probabilities per category
+            @param wsl either WSL_RATECAT, WSL_MIXTURE or WSL_MIXTURE_RATECAT
+     */
+    virtual void computePatternProbabilityCategory(double *pattern_prob_cat, SiteLoglType wsl);
 
     /**
             optimize all branch lengths of all subtrees, then compute branch lengths

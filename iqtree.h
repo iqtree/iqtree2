@@ -743,13 +743,13 @@ public:
     /** corresponding log-likelihood on original alignment */
     DoubleVector boot_orig_logl;
 
-    /** Set of splits occuring in bootstrap trees */
+    /** Set of splits occurring in bootstrap trees */
     vector<SplitGraph*> boot_splits;
 
     /** log-likelihood of bootstrap consensus tree */
     double boot_consense_logl;
 
-    /** Corresponding map for set of splits occuring in bootstrap trees */
+    /** Corresponding map for set of splits occurring in bootstrap trees */
     //SplitIntMap boot_splits_map;
 
     /** summarize all bootstrap trees */

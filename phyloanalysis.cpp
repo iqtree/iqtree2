@@ -61,17 +61,20 @@ void reportReferences(Params &params, ofstream &out, string &original_model) {
 	out << "To cite IQ-TREE please use:" << endl << endl
 		<< "Lam-Tung Nguyen, Heiko A. Schmidt, Arndt von Haeseler, and Bui Quang Minh (2015)" << endl
 		<< "IQ-TREE: A fast and effective stochastic algorithm for estimating" << endl
-		<< "maximum likelihood phylogenies. Mol. Biol. Evol., 32:268-274." << endl << endl;
+		<< "maximum likelihood phylogenies. Mol. Biol. Evol., 32:268-274." << endl
+        << "http://dx.doi.org/10.1093/molbev/msu300" << endl << endl;
 
 	if (params.gbo_replicates)
 	out << "Since you used ultrafast bootstrap (UFBoot) please also cite: " << endl << endl
 		<< "Bui Quang Minh, Minh Anh Thi Nguyen, and Arndt von Haeseler (2013) Ultrafast" << endl
-		<< "approximation for phylogenetic bootstrap. Mol. Biol. Evol., 30:1188-1195." << endl << endl;
+		<< "approximation for phylogenetic bootstrap. Mol. Biol. Evol., 30:1188-1195." << endl
+        << "http://dx.doi.org/10.1093/molbev/mst024" << endl << endl;
 
     if (params.partition_file) 
     out << "Since you used partition models please also cite:" << endl << endl
         << "Olga Chernomor, Arndt von Haeseler, and Bui Quang Minh (2016) Terrace aware data" << endl
-        << "structure for phylogenomic inference from supermatrices. Syst. Biol., in press." << endl << endl;
+        << "structure for phylogenomic inference from supermatrices. Syst. Biol., in press." << endl
+        << "http://dx.doi.org/10.1093/sysbio/syw037" << endl << endl;
 
 }
 
@@ -173,14 +176,15 @@ void reportModelSelection(ofstream &out, Params &params, vector<ModelInfo> &mode
 void reportModel(ofstream &out, Alignment *aln, ModelSubst *m) {
 	int i, j, k;
 	assert(aln->num_states == m->num_states);
+    double *rate_mat = new double[m->num_states * m->num_states];
+    if (!m->isSiteSpecificModel())
+        m->getRateMatrix(rate_mat);
+    else
+        ((ModelSet*)m)->front()->getRateMatrix(rate_mat);
+
 	if (m->num_states <= 4) {
 		out << "Rate parameter R:" << endl << endl;
 
-		double *rate_mat = new double[m->num_states * m->num_states];
-		if (!m->isSiteSpecificModel())
-			m->getRateMatrix(rate_mat);
-		else
-			((ModelSet*)m)->front()->getRateMatrix(rate_mat);
 		if (m->num_states > 4)
 			out << fixed;
 		if (m->isReversible()) {
@@ -212,8 +216,29 @@ void reportModel(ofstream &out, Alignment *aln, ModelSubst *m) {
 		//if (tree.aln->num_states > 4)
 		out << endl;
 		out.unsetf(ios_base::fixed);
-		delete[] rate_mat;
-	}
+	} else if (aln->seq_type == SEQ_PROTEIN && m->getNDim() > 20) {
+        assert(m->num_states == 20);
+        out << "WARNING: This model has " << m->getNDim() + m->getNDimFreq() << " parameters that may be overfitting. Please use with caution!" << endl << endl;
+        double full_mat[400];
+        for (i = 0, k = 0; i < m->num_states - 1; i++)
+            for (j = i + 1; j < m->num_states; j++, k++) {
+                full_mat[i*m->num_states+j] = rate_mat[k];
+            }
+        out << "Substitution parameters (lower-diagonal) and state frequencies in PAML format (can be used as input for IQ-TREE): " << endl << endl;
+        for (i = 1; i < m->num_states; i++) {
+            for (j = 0; j < i; j++)
+                out << "\t" << full_mat[j*m->num_states+i];
+            out << endl;
+        }
+        double state_freq[20];
+        m->getStateFrequency(state_freq);
+        for (i = 0; i < m->num_states; i++)
+            out << "\t" << state_freq[i];
+        out << endl << endl;
+    }
+    
+    delete[] rate_mat;
+
 	out << "State frequencies: ";
 	if (m->isSiteSpecificModel())
 		out << "(site specific frequencies)" << endl << endl;
@@ -458,8 +483,8 @@ void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh, 
             }
     }
     if (is_codon)
-        out << endl << "NOTE: Branch lengths are intepreted as number of nucleotide substitutions per codon site!" 
-            << endl << "      Rescale them by 1/3 if you want to have #nt substitutions per nt site" << endl;
+		out << endl << "NOTE: Branch lengths are interpreted as number of nucleotide substitutions per codon site!"
+				<< endl << "      Rescale them by 1/3 if you want to have #nt substitutions per nt site" << endl;
     if (main_tree) 
     if (params.aLRT_replicates > 0 || params.gbo_replicates || (params.num_bootstrap_samples && params.compute_ml_tree)) {
         out << "Numbers in parentheses are ";
@@ -553,7 +578,7 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 		}
 		for (IntVector::iterator i2 = counts.begin(); i2 != counts.end(); i2++) {
 		    if (*i2 != 0) {
-	            cout << "#Trees occuring " << (i2-counts.begin()) << " times: " << *i2 << endl;
+				cout << "#Trees occurring " << (i2-counts.begin()) << " times: " << *i2 << endl;
 		    }
 		}
 	}
@@ -1066,6 +1091,10 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 		cout << "  Site log-likelihoods:          " << params.out_prefix << ".sitelh"
 				<< endl;
 
+	if (params.print_site_prob)
+		cout << "  Site probability per rate/mix: " << params.out_prefix << ".siteprob"
+				<< endl;
+
 	if (params.write_intermediate_trees)
 		cout << "  All intermediate trees:        " << params.out_prefix << ".treels"
 				<< endl;
@@ -1472,14 +1501,18 @@ void printMiscInfo(Params &params, IQTree &iqtree, double *pattern_lh) {
 		else
 			printSiteLhCategory(site_lh_file.c_str(), &iqtree, params.print_site_lh);
 	}
+
+	if (params.print_site_prob && !params.pll) {
+        printSiteProbCategory(((string)params.out_prefix + ".siteprob").c_str(), &iqtree, params.print_site_prob);
+	}
     
-    if (params.print_site_state_freq) {
+    if (params.print_site_state_freq != WSF_NONE) {
 		string site_freq_file = params.out_prefix;
 		site_freq_file += ".sitesf";
         printSiteStateFreq(site_freq_file.c_str(), &iqtree);
     }
 
-    if (params.print_site_posterior) {
+    if (params.print_trees_site_posterior) {
         cout << "Computing mixture posterior probabilities" << endl;
         IntVector pattern_cat;
         int num_mix = iqtree.computePatternCategories(&pattern_cat);
@@ -1578,6 +1611,12 @@ void printMiscInfo(Params &params, IQTree &iqtree, double *pattern_lh) {
 			}
 		}
 	}
+
+    if (params.optimize_tree_len_scaling) {
+        string filename = (string)params.out_prefix + ".treescale";
+        iqtree.printTreeLengthScaling(filename.c_str());
+        cout << "Tree length scaler printed to " << filename << endl;
+    }
 
 }
 
@@ -2448,6 +2487,63 @@ void convertAlignment(Params &params, IQTree *iqtree) {
 				params.aln_nogaps, params.aln_no_const_sites, params.ref_seq_name);
 }
 
+/**
+    2016-08-04: compute a site frequency model for profile mixture model
+*/
+void computeSiteFrequencyModel(Params &params, Alignment *alignment) {
+
+    cout << endl << "===> COMPUTING SITE FREQUENCY MODEL BASED ON TREE FILE " << params.tree_freq_file << endl;
+    assert(params.tree_freq_file);
+    PhyloTree *tree = new PhyloTree(alignment);
+    tree->setParams(&params);
+    bool myrooted = params.is_rooted;
+    tree->readTree(params.tree_freq_file, myrooted);
+    tree->setAlignment(alignment);
+    tree->setRootNode(params.root);
+    
+	ModelsBlock *models_block = readModelsDefinition(params);
+    tree->setModelFactory(new ModelFactory(params, tree, models_block));
+    delete models_block;
+    tree->setModel(tree->getModelFactory()->model);
+    tree->setRate(tree->getModelFactory()->site_rate);
+    tree->setLikelihoodKernel(params.SSE);
+
+    if (!tree->getModel()->isMixture())
+        outError("No mixture model was specified!");
+    uint64_t mem_size = tree->getMemoryRequired();
+    uint64_t total_mem = getMemorySize();
+    cout << "NOTE: " << (mem_size / 1024) / 1024 << " MB RAM is required!" << endl;
+    if (mem_size >= total_mem) {
+        outError("Memory required exceeds your computer RAM size!");
+    }
+#ifdef BINARY32
+    if (mem_size >= 2000000000) {
+        outError("Memory required exceeds 2GB limit of 32-bit executable");
+    }
+#endif
+
+    tree->initializeAllPartialLh();
+    tree->getModelFactory()->optimizeParameters(params.fixed_branch_length, true, params.modeps);
+
+    size_t nptn = alignment->getNPattern(), nstates = alignment->num_states;
+    double *ptn_state_freq = new double[nptn*nstates];
+    tree->computePatternStateFreq(ptn_state_freq);
+    alignment->site_state_freq.resize(nptn);
+    for (size_t ptn = 0; ptn < nptn; ptn++) {
+        double *f = new double[nstates];
+        memcpy(f, ptn_state_freq+ptn*nstates, sizeof(double)*nstates);
+        alignment->site_state_freq[ptn] = f;
+    }
+    alignment->getSitePatternIndex(alignment->site_model);
+    printSiteStateFreq(((string)params.out_prefix+".sitefreq").c_str(), tree, ptn_state_freq);
+    params.print_site_state_freq = WSF_NONE;
+    
+    delete [] ptn_state_freq;
+    delete tree;
+    
+    cout << endl << "===> CONTINUE ANALYSIS USING THE INFERRED SITE FREQUENCY MODEL" << endl;
+}
+
 
 /**********************************************************
  * TOP-LEVEL FUNCTION
@@ -2483,6 +2579,22 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
 			alignment->addConstPatterns(params.freq_const_patterns);
 			cout << "INFO: " << alignment->getNSite() - orig_nsite << " const sites added into alignment" << endl;
 		}
+        
+        if (params.tree_freq_file) {
+            if (checkpoint->getBool("finishedSiteFreqFile")) {
+                alignment->readSiteStateFreq(((string)params.out_prefix + ".sitefreq").c_str());
+                params.print_site_state_freq = WSF_NONE;
+                cout << "CHECKPOINT: Site frequency model restored" << endl;
+            } else {
+                computeSiteFrequencyModel(params, alignment);
+                checkpoint->putBool("finishedSiteFreqFile", true);
+                checkpoint->dump();
+            }
+        }
+        if (params.site_freq_file) {
+            alignment->readSiteStateFreq(params.site_freq_file);
+        }
+            
 		tree = new IQTree(alignment);
 	}
 

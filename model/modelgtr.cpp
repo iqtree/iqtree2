@@ -31,7 +31,7 @@ ModelGTR::ModelGTR(PhyloTree *tree, bool count_rates)
     half_matrix = true;
 	int i;
 	int nrate = getNumRateEntries();
-	int ncoeff = num_states*num_states*num_states;
+//	int ncoeff = num_states*num_states*num_states;
 	
 	highest_freq_state = num_states-1;
 	name = "GTR";
@@ -53,7 +53,7 @@ ModelGTR::ModelGTR(PhyloTree *tree, bool count_rates)
 //	for (i = 0; i < num_states; i++)
 //		inv_eigenvectors[i] = new double[num_states];
 		
-	eigen_coeff = aligned_alloc<double>(ncoeff);
+//	eigen_coeff = aligned_alloc<double>(ncoeff);
 
 //	if (count_rates) 
 //		computeEmpiricalRate();
@@ -237,10 +237,10 @@ void ModelGTR::computeTransMatrix(double time, double *trans_matrix) {
 		for (j = i+1; j < num_states; j ++) { 
 			// compute upper triangle entries
 			double *trans_entry = trans_row + j;
-			double *coeff_entry = eigen_coeff + ((row_offset+j)*num_states);
+//			double *coeff_entry = eigen_coeff + ((row_offset+j)*num_states);
 			*trans_entry = 0.0;
 			for (k = 0; k < num_states; k ++) {
-				*trans_entry += coeff_entry[k] * exptime[k];
+				*trans_entry += eigenvectors[i*num_states+k] * inv_eigenvectors[k*num_states+j] * exptime[k];
 			}
 			if (*trans_entry < 0.0) {
 				*trans_entry = 0.0;
@@ -272,10 +272,10 @@ double ModelGTR::computeTrans(double time, int state1, int state2) {
 	double evol_time = time / total_num_subst;
 	int i;
 
-	double *coeff_entry = eigen_coeff + ((state1*num_states+state2)*num_states);
+//	double *coeff_entry = eigen_coeff + ((state1*num_states+state2)*num_states);
 	double trans_prob = 0.0;
 	for (i = 0; i < num_states; i++) {
-		trans_prob += coeff_entry[i] * exp(evol_time * eigenvalues[i]);
+		trans_prob += eigenvectors[state1*num_states+i] * inv_eigenvectors[i*num_states+state2] * exp(evol_time * eigenvalues[i]);
 	}
 	return trans_prob;
 }
@@ -284,11 +284,11 @@ double ModelGTR::computeTrans(double time, int state1, int state2, double &derv1
 	double evol_time = time / total_num_subst;
 	int i;
 
-	double *coeff_entry = eigen_coeff + ((state1*num_states+state2)*num_states);
+//	double *coeff_entry = eigen_coeff + ((state1*num_states+state2)*num_states);
 	double trans_prob = 0.0;
 	derv1 = derv2 = 0.0;
 	for (i = 0; i < num_states; i++) {
-		double trans = coeff_entry[i] * exp(evol_time * eigenvalues[i]);
+		double trans = eigenvectors[state1*num_states+i] * inv_eigenvectors[i*num_states+state2] * exp(evol_time * eigenvalues[i]);
 		double trans2 = trans * eigenvalues[i];
 		trans_prob += trans;
 		derv1 += trans2;
@@ -317,13 +317,13 @@ void ModelGTR::computeTransDerv(double time, double *trans_matrix,
 			double *derv1_entry = trans_derv1 + offset;
 			double *derv2_entry = trans_derv2 + offset;
 
-			int coeff_offset = offset*num_states;
-			double *coeff_entry       = eigen_coeff + coeff_offset;
+//			int coeff_offset = offset*num_states;
+//			double *coeff_entry       = eigen_coeff + coeff_offset;
 			*trans_entry = 0.0;
 			*derv1_entry = 0.0;
 			*derv2_entry = 0.0;
 			for (k = 0; k < num_states; k ++) {
-				double trans = coeff_entry[k] * exptime[k];
+				double trans = eigenvectors[i*num_states+k] * inv_eigenvectors[k*num_states+j] * exptime[k];
 				double trans2 = trans * eigenvalues[k];
 				*trans_entry += trans;
 				*derv1_entry += trans2;
@@ -699,25 +699,25 @@ void ModelGTR::decomposeRateMatrix(){
 			delete [] rate_matrix[i];
 		delete [] rate_matrix;
 	}
-	for (i = 0; i < num_states; i++)
-		for (j = 0; j < num_states; j++) {
-			int offset = (i*num_states+j)*num_states;
-			double sum = 0.0;
-			for (k = 0; k < num_states; k++) {
-				eigen_coeff[offset+k] = eigenvectors[i*num_states+k] * inv_eigenvectors[k*num_states+j];
-				sum += eigen_coeff[offset+k];
-				//eigen_coeff_derv1[offset+k] = eigen_coeff[offset+k] * eigenvalues[k];
-				//eigen_coeff_derv2[offset+k] = eigen_coeff_derv1[offset+k] * eigenvalues[k];
-			}
-			if (i == j) {
-				if (fabs(sum-1.0) > 1e-6) {
-					cout << "sum = " << sum << endl;
-					assert(0);
-				}
-			}
-			else assert(fabs(sum) < 1e-6);
-		}
-
+//	for (i = 0; i < num_states; i++)
+//		for (j = 0; j < num_states; j++) {
+//			int offset = (i*num_states+j)*num_states;
+//			double sum = 0.0;
+//			for (k = 0; k < num_states; k++) {
+//				eigen_coeff[offset+k] = eigenvectors[i*num_states+k] * inv_eigenvectors[k*num_states+j];
+//				sum += eigen_coeff[offset+k];
+//				//eigen_coeff_derv1[offset+k] = eigen_coeff[offset+k] * eigenvalues[k];
+//				//eigen_coeff_derv2[offset+k] = eigen_coeff_derv1[offset+k] * eigenvalues[k];
+//			}
+//			if (i == j) {
+//				if (fabs(sum-1.0) > 1e-6) {
+//					cout << "sum = " << sum << endl;
+//					assert(0);
+//				}
+//			}
+//			else assert(fabs(sum) < 1e-6);
+//		}
+//
 
 } 
 
@@ -837,7 +837,7 @@ void ModelGTR::freeMem()
 //	int i;
 	//delete eigen_coeff_derv2;
 	//delete eigen_coeff_derv1;
-	aligned_free(eigen_coeff);
+//	aligned_free(eigen_coeff);
 
 //	for (i = num_states-1; i>=0; i--)
 //		delete [] inv_eigenvectors[i];
@@ -851,11 +851,11 @@ void ModelGTR::freeMem()
 	if (rates) delete [] rates;
 }
 
-double *ModelGTR::getEigenCoeff() const
-{
-    return eigen_coeff;
-}
-
+//double *ModelGTR::getEigenCoeff() const
+//{
+//    return eigen_coeff;
+//}
+//
 double *ModelGTR::getEigenvalues() const
 {
     return eigenvalues;
@@ -870,10 +870,10 @@ double* ModelGTR::getInverseEigenvectors() const {
 	return inv_eigenvectors;
 }
 
-void ModelGTR::setEigenCoeff(double *eigenCoeff)
-{
-    eigen_coeff = eigenCoeff;
-}
+//void ModelGTR::setEigenCoeff(double *eigenCoeff)
+//{
+//    eigen_coeff = eigenCoeff;
+//}
 
 void ModelGTR::setEigenvalues(double *eigenvalues)
 {

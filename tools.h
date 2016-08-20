@@ -411,6 +411,10 @@ enum SiteLoglType {
     WSL_NONE, WSL_SITE, WSL_RATECAT, WSL_MIXTURE, WSL_MIXTURE_RATECAT
 };
 
+enum SiteFreqType {
+    WSF_NONE, WSF_POSTERIOR_MEAN, WSF_POSTERIOR_MAX
+};
+
 /** maximum number of newton-raphson steps for NNI branch evaluation */
 extern int NNI_MAX_NR_STEP;
 
@@ -687,6 +691,9 @@ public:
 
     /* type of starting tree */
     START_TREE_TYPE start_tree;
+    
+    /** true to optimize a scaling for tree length given via -t option */
+    bool optimize_tree_len_scaling;
 
     /**
             prefix of the output file, default is the same as input file
@@ -1402,16 +1409,25 @@ public:
     SiteLoglType print_site_lh;
 
     /**
+        control printing posterior probability of each site belonging to a rate/mixture categories
+        same meaning as print_site_lh, but results are printed to .siteprob file
+        WSL_RATECAT: print site probability per rate category
+        WSL_MIXTURE: print site probability per mixture class
+        WSL_MIXTURE_RATECAT: print site probability per mixture class per rate category
+    */
+    SiteLoglType print_site_prob;
+
+    /**
         0: print nothing
         1: print site state frequency vectors
     */
-    int print_site_state_freq;
+    SiteFreqType print_site_state_freq;
 
     /** TRUE to print site-specific rates, default: FALSE */
     bool print_site_rate;
 
-    /* 1: print site posterior probability */
-    int print_site_posterior;
+    /* 1: print site posterior probability for many trees during tree search */
+    int print_trees_site_posterior;
 
     /**
             TRUE to print tree log-likelihood
@@ -1690,6 +1706,11 @@ public:
      */
     char *site_freq_file;
 
+    /**
+        user tree file used to estimate site-specific state frequency model 
+    */
+    char *tree_freq_file;
+
     /** number of threads for OpenMP version     */
     int num_threads;
 
@@ -1913,8 +1934,7 @@ const char ERR_WRITE_OUTPUT[] = "Cannot write to file ";
 const char ERR_NO_K[] = "You must specify the number of taxa in the PD set.";
 const char ERR_TOO_SMALL_K[] = "Size of PD-set must be at least the size of initial set.";
 const char ERR_NO_BUDGET[] = "Total budget is not specified or less than zero.";
-const char ERR_TOO_SMALL_BUDGET[] = "Not enough budget to conserve the inital set of taxa.";
-
+const char ERR_TOO_SMALL_BUDGET[] = "Not enough budget to conserve the initial set of taxa.";
 const char ERR_INTERNAL[] = "Internal error, pls contact authors!";
 
 /*--------------------------------------------------------------*/

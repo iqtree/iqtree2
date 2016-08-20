@@ -64,6 +64,18 @@ public:
 	 */
 	void setFileName(string filename);
 
+    /** 
+        set compression for checkpoint file
+        @param compression true to compress checkpoint file, or false: no compression 
+    */
+    void setCompression(bool compression);
+
+    /**
+        set the header line to overwrite the default header
+        @param header header line
+    */
+    void setHeader(string header);
+
 	/**
 	 * load checkpoint information from file
 	 */
@@ -324,6 +336,12 @@ protected:
     
     /** dumping time interval */
     double dump_interval;
+    
+    /** true (default) to compress checkpoint file, false: no compression */
+    bool compression;
+    
+    /** header line of checkpoint file */
+    string header;
     
 private:
 

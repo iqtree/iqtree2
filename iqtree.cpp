@@ -2002,7 +2002,7 @@ string IQTree::optimizeModelParameters(bool printInfo, double logl_epsilon) {
 			curScore = modOptScore;
 			newTree = getTreeString();
 		}
-        if (params->print_site_posterior)
+        if (params->print_trees_site_posterior)
             computePatternCategories();
 	}
 
