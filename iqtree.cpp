@@ -2495,7 +2495,7 @@ pair<int, int> IQTree::doNNISearch() {
         if (isSuperTree()) {
             ((PhyloSuperTree*) this)->computeBranchLengths();
         }
-        if (params->print_site_posterior)
+        if (params->print_trees_site_posterior)
             computePatternCategories();
     }
     // Better tree or score is found

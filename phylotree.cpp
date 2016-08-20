@@ -2838,6 +2838,11 @@ void PhyloTree::doOneRandomNNI(Branch branch) {
 		if (cnt == randInt) {
 			nni.node2Nei_it = node2NeiIt;
 			break;
+		}
+		int randNum = random_int(2);
+		if (randNum == 0) {
+			node2Nei = (*it);
+			break;
 		} else {
 			cnt++;
 		}
