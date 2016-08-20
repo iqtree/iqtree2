@@ -124,10 +124,14 @@ public:
 
 	/**
 		optimize model parameters and tree branch lengths
-		@param fixed_len TRUE to fix branch lengths, default is false
-		@return the best likelihood
+        NOTE 2016-08-20: refactor the semantic of fixed_len
+		@param fixed_len 0: optimize branch lengths, 1: fix branch lengths, 2: scale branch lengths
+        @param write_info TRUE to write model parameters every optimization step, FALSE to only print at the end
+        @param logl_epsilon log-likelihood epsilon to stop
+        @param gradient_epsilon gradient (derivative) epsilon to stop
+		@return the best likelihood 
 	*/
-	virtual double optimizeParameters(bool fixed_len = false, bool write_info = true,
+	virtual double optimizeParameters(int fixed_len = BRLEN_OPTIMIZE, bool write_info = true,
                                       double logl_epsilon = 0.1, double gradient_epsilon = 0.001);
 
 
@@ -137,7 +141,7 @@ public:
 	 * 	@param fixed_len TRUE to fix branch lengths, default is false
 	 *	@return the best likelihood
 	 */
-	virtual double optimizeParametersGammaInvar(bool fixed_len = false, bool write_info = true, double logl_epsilon = 0.1, double gradient_epsilon = 0.001);
+	virtual double optimizeParametersGammaInvar(int fixed_len = BRLEN_OPTIMIZE, bool write_info = true, double logl_epsilon = 0.1, double gradient_epsilon = 0.001);
 
 	double optimizeGeneRate(double tol);
 

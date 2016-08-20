@@ -506,7 +506,7 @@ void IQTree::computeInitialTree(string &dist_file, LikelihoodKernel kernel) {
         readTree(params->user_file, myrooted);
         setAlignment(aln);
         if (isSuperTree())
-        	wrapperFixNegativeBranch(!params->fixed_branch_length);
+        	wrapperFixNegativeBranch(params->fixed_branch_length == BRLEN_OPTIMIZE);
         else
         	fixed_number = wrapperFixNegativeBranch(false);
         params->numInitTrees = 1;

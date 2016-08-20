@@ -1602,10 +1602,10 @@ void printMiscInfo(Params &params, IQTree &iqtree, double *pattern_lh) {
 		}
 	}
 
-    if (params.optimize_tree_len_scaling) {
-        string filename = (string)params.out_prefix + ".treescale";
+    if (params.fixed_branch_length == BRLEN_SCALE) {
+        string filename = (string)params.out_prefix + ".blscale";
         iqtree.printTreeLengthScaling(filename.c_str());
-        cout << "Tree length scaler printed to " << filename << endl;
+        cout << "Scaled tree length and model parameters printed to " << filename << endl;
     }
 
 }

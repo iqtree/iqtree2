@@ -668,7 +668,7 @@ double ModelFactory::optimizeAllParameters(double gradient_epsilon) {
     return score;
 }
 
-double ModelFactory::optimizeParametersGammaInvar(bool fixed_len, bool write_info, double logl_epsilon, double gradient_epsilon) {
+double ModelFactory::optimizeParametersGammaInvar(int fixed_len, bool write_info, double logl_epsilon, double gradient_epsilon) {
     if (!site_rate->isGammai())
         return optimizeParameters(fixed_len, write_info, logl_epsilon, gradient_epsilon);
         
@@ -806,7 +806,7 @@ double ModelFactory::optimizeParametersGammaInvar(bool fixed_len, bool write_inf
     return tree->getCurScore();
 }
 
-vector<double> ModelFactory::optimizeGammaInvWithInitValue(bool fixed_len, double logl_epsilon, double gradient_epsilon,
+vector<double> ModelFactory::optimizeGammaInvWithInitValue(int fixed_len, double logl_epsilon, double gradient_epsilon,
                                                  PhyloTree *tree, RateHeterogeneity *site_rates, double *rates,
                                                  double *state_freqs, double initPInv, double initAlpha,
                                                  DoubleVector &lenvec) {
@@ -830,7 +830,7 @@ vector<double> ModelFactory::optimizeGammaInvWithInitValue(bool fixed_len, doubl
 }
 
 
-double ModelFactory::optimizeParameters(bool fixed_len, bool write_info,
+double ModelFactory::optimizeParameters(int fixed_len, bool write_info,
                                         double logl_epsilon, double gradient_epsilon) {
 	assert(model);
 	assert(site_rate);
@@ -865,12 +865,21 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info,
         double new_lh;
 
         // changed to opimise edge length first, and then Q,W,R inside the loop by Thomas on Sept 11, 15
-		if (!fixed_len)
+		if (fixed_len == BRLEN_OPTIMIZE)
 			new_lh = tree->optimizeAllBranches(min(i,3), logl_epsilon);  // loop only 3 times in total (previously in v0.9.6 5 times)
+        else if (fixed_len == BRLEN_SCALE) {
+            double scaling = 1.0;
+            new_lh = tree->optimizeTreeLengthScaling(MIN_BRLEN_SCALE, scaling, MAX_BRLEN_SCALE, gradient_epsilon);
+        }
         new_lh = optimizeParametersOnly(gradient_epsilon);
 
 		if (new_lh == 0.0) {
-			if (!fixed_len) cur_lh = tree->optimizeAllBranches(100, logl_epsilon);
+            if (fixed_len == BRLEN_OPTIMIZE)
+                cur_lh = tree->optimizeAllBranches(100, logl_epsilon);
+            else if (fixed_len == BRLEN_SCALE) {
+                double scaling = 1.0;
+                cur_lh = tree->optimizeTreeLengthScaling(MIN_BRLEN_SCALE, scaling, MAX_BRLEN_SCALE, gradient_epsilon);
+            }
 			break;
 		}
 		if (verbose_mode >= VB_MED) {
@@ -883,8 +892,13 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info,
 				cout << i << ". Current log-likelihood: " << cur_lh << endl;
 		} else {
 			site_rate->classifyRates(new_lh);
-			if (!fixed_len) cur_lh = tree->optimizeAllBranches(100, logl_epsilon);
-				break;
+            if (fixed_len == BRLEN_OPTIMIZE)
+                cur_lh = tree->optimizeAllBranches(100, logl_epsilon);
+            else if (fixed_len == BRLEN_SCALE) {
+                double scaling = 1.0;
+                cur_lh = tree->optimizeTreeLengthScaling(MIN_BRLEN_SCALE, scaling, MAX_BRLEN_SCALE, gradient_epsilon);
+            }
+            break;
 		}
 	}
 
@@ -893,6 +907,8 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info,
     {
         double mean_rate = site_rate->rescaleRates();
         if (mean_rate != 1.0) {
+            if (fixed_len == BRLEN_FIX)
+                outError("Fixing branch lengths not supported under specified site rate model");
             tree->scaleLength(mean_rate);
             tree->clearAllPartialLH();
         }

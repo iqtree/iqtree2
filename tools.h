@@ -410,6 +410,10 @@ enum SiteFreqType {
     WSF_NONE, WSF_POSTERIOR_MEAN, WSF_POSTERIOR_MAX
 };
 
+const int BRLEN_OPTIMIZE = 0; // optimize branch lengths
+const int BRLEN_FIX      = 1; // fix branch lengths
+const int BRLEN_SCALE    = 2; // scale branch lengths
+
 /** maximum number of newton-raphson steps for NNI branch evaluation */
 extern int NNI_MAX_NR_STEP;
 
@@ -648,9 +652,6 @@ public:
 
     /* type of starting tree */
     START_TREE_TYPE start_tree;
-    
-    /** true to optimize a scaling for tree length given via -t option */
-    bool optimize_tree_len_scaling;
 
     /**
             prefix of the output file, default is the same as input file
@@ -1233,9 +1234,11 @@ public:
     string optimize_alg_gammai;
 
     /**
-            TRUE if you want to fix branch lengths during model optimization
+            BRLEN_OPTIMIZE optimize branch lengths during model optimization
+            BRLEN_FIX      fix branch lengths during model optimization
+            BRLEN_SCALE    scale all branch lengths by the same factor during model optimization
      */
-    bool fixed_branch_length;
+    int fixed_branch_length;
 
     /** minimum branch length for optimization, default 0.000001 */
     double min_branch_length;
