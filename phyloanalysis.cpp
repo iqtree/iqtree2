@@ -2521,7 +2521,7 @@ void computeSiteFrequencyModel(Params &params, Alignment *alignment) {
 #endif
 
     tree->initializeAllPartialLh();
-    tree->getModelFactory()->optimizeParameters(params.fixed_branch_length, true, params.modeps);
+    tree->getModelFactory()->optimizeParameters(params.fixed_branch_length, true, params.modelEps);
 
     size_t nptn = alignment->getNPattern(), nstates = alignment->num_states;
     double *ptn_state_freq = new double[nptn*nstates];
