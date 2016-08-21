@@ -2328,7 +2328,9 @@ void runStandardBootstrap(Params &params, string &original_model, Alignment *ali
     params.localbp_replicates = 0;
     params.aLRT_test = false;
     params.aBayes_test = false;
-
+    
+    if (params.suppress_output_flags & OUT_TREEFILE)
+        outError("Suppress .treefile not allowed for standard bootstrap");
 	string treefile_name = params.out_prefix;
 	treefile_name += ".treefile";
 	string boottrees_name = params.out_prefix;
