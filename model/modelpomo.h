@@ -258,7 +258,7 @@ class ModelPoMo : virtual public ModelGTR
     virtual bool getVariables(double *variables);
 
 
- private:
+ protected:
 
     /// Virtual population size of the PoMo model.
     int N;

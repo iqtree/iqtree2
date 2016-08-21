@@ -39,7 +39,7 @@ ModelPoMoMixture::ModelPoMoMixture(const char *model_name,
     for (m = 0; m < num_rate_cats; m++) {
         ModelGTR* model = new ModelGTR(tree);
         model->init(FREQ_USER_DEFINED);
-        model->total_num_subst = ratehet->getRate(m);
+//        model->total_num_subst = ratehet->getRate(m);
         push_back(model);
         prop[m] = ratehet->getProp(m);
     }
@@ -91,19 +91,31 @@ void ModelPoMoMixture::writeInfo(ostream &out) {
 }
 
 void ModelPoMoMixture::decomposeRateMatrix() {
-    ModelPoMo::decomposeRateMatrix();
     // propagate eigenvalues and eigenvectors
     int m, nmix = getNMixtures(), num_states_2 = num_states*num_states;
-    for (m = 1; m < nmix; m++) {
-        memcpy(eigenvalues+m*num_states, eigenvalues+(m-1)*num_states, sizeof(double)*num_states);
-        memcpy(eigenvectors+m*num_states_2, eigenvectors+(m-1)*num_states_2, sizeof(double)*num_states_2);
-        memcpy(inv_eigenvectors+m*num_states_2, inv_eigenvectors+(m-1)*num_states_2, sizeof(double)*num_states_2);
+    double saved_mutation_prob[n_connections]; 
+    memcpy(saved_mutation_prob, mutation_prob, sizeof(double)*n_connections);
+
+    // trick: reverse loop to retain eigenvalues and eigenvectors of the 0th mixture class 
+    for (m = nmix-1; m >= 0; m--) {
+        // rescale mutation_prob
+        scaleMutationRatesAndUpdateRateMatrix(ratehet->getRate(m));
+        ModelPoMo::decomposeRateMatrix();
+        // copy eigenvalues and eigenvectors
+        if (m > 0) {
+            memcpy(eigenvalues+m*num_states, eigenvalues, sizeof(double)*num_states);
+            memcpy(eigenvectors+m*num_states_2, eigenvectors, sizeof(double)*num_states_2);
+            memcpy(inv_eigenvectors+m*num_states_2, inv_eigenvectors, sizeof(double)*num_states_2);
+        }
+        // restore mutation_prob
+        memcpy(mutation_prob, saved_mutation_prob, sizeof(double)*n_connections);
     }
+    updatePoMoStatesAndRateMatrix();
 }
 
 
 void ModelPoMoMixture::setVariables(double *variables) {
-    ModelPoMo::setVariables(variables);
+    ModelPoMo::setVariables(variables);     
 }
 
 
@@ -113,5 +125,13 @@ bool ModelPoMoMixture::getVariables(double *variables) {
 
 
 double ModelPoMoMixture::optimizeParameters(double gradient_epsilon) {
-    return ModelPoMo::optimizeParameters(gradient_epsilon);
+
+    // first optimize pomo model parameters
+    double score = ModelPoMo::optimizeParameters(gradient_epsilon);
+    
+    // then optimize rate heterogeneity
+
+    ratehet->writeInfo(cout);
+
+    return score;
 }
