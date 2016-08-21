@@ -44,6 +44,7 @@ class for among-site rate heterogeneity, the default is homogeneous (equal) rate
 class RateHeterogeneity : public Optimization, public CheckpointFactory
 {
 	friend class ModelFactory;
+	friend class ModelPoMoMixture;
 
 public:
 	/**

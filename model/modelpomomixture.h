@@ -89,6 +89,12 @@ public:
 	*/
 	virtual void decomposeRateMatrix();
 
+    /**
+     * Report the state frequencies to the output file stream 'out'.
+     *
+     * @param out Output file stream.
+     */
+    virtual void report(ostream &out);
 
 
     /**
@@ -97,6 +103,9 @@ public:
     RateHeterogeneity *ratehet;
 
 protected:
+
+    /** normally false, set to true while optimizing rate heterogeneity */
+    bool optimizing_ratehet;
 
 	/**
 		this function is served for the multi-dimension optimization. It should pack the model parameters 

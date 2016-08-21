@@ -315,7 +315,7 @@ void reportModel(ofstream &out, PhyloTree &tree) {
 //	int i, j, k;
 	int i;
 
-	if (tree.getModel()->isMixture()) {
+	if (tree.getModel()->isMixture() && !tree.getModel()->isPolymorphismAware()) {
 		out << "Mixture model of substitution: " << tree.getModelName() << endl;
 //		out << "Full name: " << tree.getModelName() << endl;
 		ModelSubst *mmodel = tree.getModel();
@@ -345,7 +345,7 @@ void reportModel(ofstream &out, PhyloTree &tree) {
 	}
 }
 
-void reportRate(ofstream &out, PhyloTree &tree) {
+void reportRate(ostream &out, PhyloTree &tree) {
 	int i;
 	RateHeterogeneity *rate_model = tree.getRate();
 	out << "Model of rate heterogeneity: " << rate_model->full_name << endl;

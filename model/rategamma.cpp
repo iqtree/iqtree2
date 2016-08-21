@@ -183,7 +183,6 @@ double RateGamma::computeFunction(double shape) {
 
 double RateGamma::targetFunk(double x[]) {
 	getVariables(x);
-	computeRates();
 	phylo_tree->clearAllPartialLH();
 	return -phylo_tree->computeLikelihood();
 }
@@ -204,6 +203,8 @@ bool RateGamma::getVariables(double *variables) {
 	if (getNDim() == 0) return false;
     bool changed = (gamma_shape != variables[1]);
 	gamma_shape = variables[1];
+    if (changed)
+        computeRates();
     return changed;
 }
 

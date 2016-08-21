@@ -25,7 +25,8 @@
 #include <stdlib.h>
 #include "tools.h"
 
-const double ZERO = 0.000001;
+//const double ZERO = 0.000001;
+const double ZERO = 0.00000;
 using namespace std;
 
 EigenDecomposition::EigenDecomposition()

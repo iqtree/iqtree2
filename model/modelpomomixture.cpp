@@ -22,6 +22,8 @@ ModelPoMoMixture::ModelPoMoMixture(const char *model_name,
         ModelMixture(tree)
     
 {
+    optimizing_ratehet = false;
+
     // get number of categories
     int m, num_rate_cats = 4;
     if (pomo_rate_str.length() > 2 && isdigit(pomo_rate_str[2])) {
@@ -66,6 +68,8 @@ void ModelPoMoMixture::restoreCheckpoint() {
 
 
 int ModelPoMoMixture::getNDim() {
+    if (optimizing_ratehet)
+        return ratehet->getNDim();
     return ModelPoMo::getNDim();
 }
 
@@ -76,12 +80,24 @@ int ModelPoMoMixture::getNDimFreq() {
 
 
 double ModelPoMoMixture::targetFunk(double x[]) {
+    if (optimizing_ratehet) {
+        getVariables(x);
+        phylo_tree->clearAllPartialLH();
+        return -phylo_tree->computeLikelihood();
+    }
     return ModelPoMo::targetFunk(x);
 }
 
 
 
 void ModelPoMoMixture::setBounds(double *lower_bound, double *upper_bound, bool *bound_check) {
+    if (optimizing_ratehet) {
+//        ratehet->setBounds(lower_bound, upper_bound, bound_check);
+        lower_bound[1] = 0.2;
+        upper_bound[1] = 100.0;
+        bound_check[1] = false;
+        return;
+    }
     ModelPoMo::setBounds(lower_bound, upper_bound, bound_check);
 }
 
@@ -115,11 +131,22 @@ void ModelPoMoMixture::decomposeRateMatrix() {
 
 
 void ModelPoMoMixture::setVariables(double *variables) {
+    if (optimizing_ratehet) {
+        ratehet->setVariables(variables);
+        return;
+    }
     ModelPoMo::setVariables(variables);     
 }
 
 
 bool ModelPoMoMixture::getVariables(double *variables) {
+    if (optimizing_ratehet) {
+        bool changed = ratehet->getVariables(variables);
+        if (changed) {
+            decomposeRateMatrix();
+        }
+        return changed;
+    }
     return ModelPoMo::getVariables(variables);
 }
 
@@ -130,8 +157,23 @@ double ModelPoMoMixture::optimizeParameters(double gradient_epsilon) {
     double score = ModelPoMo::optimizeParameters(gradient_epsilon);
     
     // then optimize rate heterogeneity
-
-    ratehet->writeInfo(cout);
-
+    if (ratehet->getNDim() > 0) {
+        optimizing_ratehet = true;
+        double score_ratehet = ModelPoMo::optimizeParameters(gradient_epsilon);
+        ratehet->writeInfo(cout);
+        optimizing_ratehet = false;
+        assert(score_ratehet >= score-0.1);
+        return score_ratehet;
+    }
     return score;
+}
+
+void reportRate(ostream &out, PhyloTree &tree);
+
+void ModelPoMoMixture::report(ostream &out) {
+    ModelPoMo::report(out);
+    RateHeterogeneity *saved_rate = phylo_tree->getRate();
+    phylo_tree->setRate(ratehet);
+    reportRate(out, *phylo_tree);
+    phylo_tree->setRate(saved_rate);
 }
