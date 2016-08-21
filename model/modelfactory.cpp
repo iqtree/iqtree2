@@ -885,6 +885,8 @@ double ModelFactory::optimizeParameters(int fixed_len, bool write_info,
 		if (verbose_mode >= VB_MED) {
 			model->writeInfo(cout);
 			site_rate->writeInfo(cout);
+            if (fixed_len == BRLEN_SCALE)
+                cout << "Scaled tree length: " << tree->treeLength() << endl;
 		}
 		if (new_lh > cur_lh + logl_epsilon) {
 			cur_lh = new_lh;
@@ -927,6 +929,8 @@ double ModelFactory::optimizeParameters(int fixed_len, bool write_info,
 	if (verbose_mode <= VB_MIN && write_info) {
 		model->writeInfo(cout);
 		site_rate->writeInfo(cout);
+        if (fixed_len == BRLEN_SCALE)
+            cout << "Scaled tree length: " << tree->treeLength() << endl;
 	}
 	double elapsed_secs = getRealTime() - begin_time;
 	if (write_info)
