@@ -1711,36 +1711,40 @@ public:
     outstreambuf* open( const char* name, ios::openmode mode = ios::out);
     outstreambuf* close();
     ~outstreambuf() { close(); }
+    streambuf *get_fout_buf() {
+        return fout_buf;
+    }
+    ofstream *get_fout() {
+        return &fout;
+    }
     
 protected:
 	ofstream fout;
 	streambuf *cout_buf;
-	streambuf *cerr_buf;
 	streambuf *fout_buf;
     virtual int     overflow( int c = EOF);
     virtual int     sync();
 };
 
-
 outstreambuf* outstreambuf::open( const char* name, ios::openmode mode) {
-    fout.open(name, mode);
-	if (!fout.is_open()) {
-		cout << "Could not open " << name << " for logging" << endl;
-		return NULL;
-	}
+    if (!(Params::getInstance().suppress_output_flags & OUT_LOG)) {
+        fout.open(name, mode);
+        if (!fout.is_open()) {
+            cout << "Could not open " << name << " for logging" << endl;
+            return NULL;
+        }
+        fout_buf = fout.rdbuf();
+    }
 	cout_buf = cout.rdbuf();
-	cerr_buf = cerr.rdbuf();
-	fout_buf = fout.rdbuf();
 	cout.rdbuf(this);
 	cerr.rdbuf(this);
     return this;
 }
 
 outstreambuf* outstreambuf::close() {
+    cout.rdbuf(cout_buf);
     if ( fout.is_open()) {
         sync();
-        cout.rdbuf(cout_buf);
-        cerr.rdbuf(cerr_buf);
 		fout.close();
         return this;
     }
@@ -1750,6 +1754,8 @@ outstreambuf* outstreambuf::close() {
 int outstreambuf::overflow( int c) { // used for output buffer only
 	if (verbose_mode >= VB_MIN)
 		if (cout_buf->sputc(c) == EOF) return EOF;
+    if (Params::getInstance().suppress_output_flags & OUT_LOG)
+        return c;
 	if (fout_buf->sputc(c) == EOF) return EOF;
 	return c;
 }
@@ -1757,10 +1763,47 @@ int outstreambuf::overflow( int c) { // used for output buffer only
 int outstreambuf::sync() { // used for output buffer only
 	if (verbose_mode >= VB_MIN)
 		cout_buf->pubsync();
+    if (Params::getInstance().suppress_output_flags & OUT_LOG)
+        return 0;        
 	return fout_buf->pubsync();
 }
 
+class errstreambuf : public streambuf {
+public:
+    void init(streambuf *fout_buf) {
+        this->fout_buf = fout_buf;
+        cerr_buf = cerr.rdbuf();
+    }
+    
+    ~errstreambuf() {
+        cerr.rdbuf(cerr_buf);
+    }
+    
+protected:
+	streambuf *cerr_buf;
+	streambuf *fout_buf;
+    
+    virtual int overflow( int c = EOF) {
+        if (cerr_buf->sputc(c) == EOF) return EOF;
+        if (Params::getInstance().suppress_output_flags & OUT_LOG)
+            return c;
+        if (fout_buf->sputc(c) == EOF) return EOF;
+        return c;
+    }
+    
+    virtual int sync() {
+        cerr_buf->pubsync();
+        if (Params::getInstance().suppress_output_flags & OUT_LOG)
+            return 0;        
+        return fout_buf->pubsync();
+    }
+};
+
+
+
+
 outstreambuf _out_buf;
+errstreambuf _err_buf;
 string _log_file;
 int _exit_wait_optn = FALSE;
 
@@ -1770,10 +1813,12 @@ extern "C" void startLogFile(bool append_log) {
         _out_buf.open(_log_file.c_str(), ios::app);
     else
         _out_buf.open(_log_file.c_str());
+    _err_buf.init(_out_buf.get_fout_buf());
 }
 
 extern "C" void endLogFile() {
 	_out_buf.close();
+    
 }
 
 void funcExit(void) {
@@ -1783,7 +1828,7 @@ void funcExit(void) {
 		while (getchar() != '\n');
 	}
 	
-	endLogFile();
+    endLogFile();
 }
 
 extern "C" void funcAbort(int signal_number)
@@ -1797,16 +1842,16 @@ extern "C" void funcAbort(int signal_number)
 	print_stacktrace(cerr);
 #endif
 
-	cout << endl << "*** IQ-TREE CRASHES WITH SIGNAL ";
+	cerr << endl << "*** IQ-TREE CRASHES WITH SIGNAL ";
 	switch (signal_number) {
-		case SIGABRT: cout << "ABORTED"; break;
-		case SIGFPE:  cout << "ERRONEOUS NUMERIC"; break;
-		case SIGILL:  cout << "ILLEGAL INSTRUCTION"; break;
-		case SIGSEGV: cout << "SEGMENTATION FAULT"; break;
+		case SIGABRT: cerr << "ABORTED"; break;
+		case SIGFPE:  cerr << "ERRONEOUS NUMERIC"; break;
+		case SIGILL:  cerr << "ILLEGAL INSTRUCTION"; break;
+		case SIGSEGV: cerr << "SEGMENTATION FAULT"; break;
 	}
-    cout << endl;
-	cout << "*** For bug report please send to developers:" << endl << "***    Log file: " << _log_file;
-	cout << endl << "***    Alignment files (if possible)" << endl;
+    cerr << endl;
+	cerr << "*** For bug report please send to developers:" << endl << "***    Log file: " << _log_file;
+	cerr << endl << "***    Alignment files (if possible)" << endl;
 	funcExit();
 	signal(signal_number, SIG_DFL);
 }
@@ -2210,10 +2255,9 @@ int main(int argc, char *argv[])
         }
     }
 
-
-	_log_file = Params::getInstance().out_prefix;
-	_log_file += ".log";
-	startLogFile(append_log);
+    _log_file = Params::getInstance().out_prefix;
+    _log_file += ".log";
+    startLogFile(append_log);
 
     if (append_log) {
         cout << endl << "******************************************************"

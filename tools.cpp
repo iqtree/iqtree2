@@ -131,7 +131,7 @@ void outError(const char *error, string msg, bool quit) {
         @param error warning message
  */
 void outWarning(const char *warn) {
-    cerr << "WARNING: " << warn << endl;
+    cout << "WARNING: " << warn << endl;
 }
 
 void outWarning(string warn) {
@@ -929,7 +929,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.ignore_checkpoint = false;
     params.checkpoint_dump_interval = 20;
     params.force_unfinished = false;
-    params.optimize_tree_len_scaling = false;
+    params.suppress_output_flags = 0;
 
 
 	if (params.nni5) {
@@ -2026,9 +2026,19 @@ void parseArg(int argc, char *argv[], Params &params) {
 				continue;
 			}
 			if (strcmp(argv[cnt], "-fixbr") == 0 || strcmp(argv[cnt], "-blfix") == 0) {
-				params.fixed_branch_length = true;
+				params.fixed_branch_length = BRLEN_FIX;
                 params.optimize_alg_gammai = "Brent";
                 params.opt_gammai = false;
+                params.min_iterations = 0;
+                params.stop_condition = SC_FIXED_ITERATION;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-blscale") == 0) {
+				params.fixed_branch_length = BRLEN_SCALE;
+                params.optimize_alg_gammai = "Brent";
+                params.opt_gammai = false;
+                params.min_iterations = 0;
+                params.stop_condition = SC_FIXED_ITERATION;
 				continue;
 			}
 			if (strcmp(argv[cnt], "-blmin") == 0) {
@@ -3004,15 +3014,24 @@ void parseArg(int argc, char *argv[], Params &params) {
 				continue;
 			}
             
-			if (strcmp(argv[cnt], "-wts") == 0) {
-				params.optimize_tree_len_scaling = true;
-                params.min_iterations = 0;
-                params.stop_condition = SC_FIXED_ITERATION;
-                params.fixed_branch_length = true;
-                params.optimize_alg_gammai = "Brent";
-                params.opt_gammai = false;
+			if (strcmp(argv[cnt], "--no-log") == 0) {
+				params.suppress_output_flags |= OUT_LOG;
 				continue;
 			}
+
+			if (strcmp(argv[cnt], "--no-treefile") == 0) {
+				params.suppress_output_flags |= OUT_TREEFILE;
+				continue;
+			}
+			if (strcmp(argv[cnt], "--no-iqtree") == 0) {
+				params.suppress_output_flags |= OUT_IQTREE;
+				continue;
+			}
+			if (strcmp(argv[cnt], "--no-outfiles") == 0) {
+				params.suppress_output_flags |= OUT_LOG + OUT_TREEFILE + OUT_IQTREE;
+				continue;
+			}
+
 
 			if (argv[cnt][0] == '-') {
                 string err = "Invalid \"";
@@ -3356,6 +3375,7 @@ void usage_iqtree(char* argv[], bool full_command) {
 			cout << endl << "MISCELLANEOUS:" << endl
 		    << "  -wt                  Write locally optimal trees into .treels file" << endl
 			<< "  -blfix               Fix branch lengths of user tree passed via -te" << endl
+            << "  -blscale             Scale branch lengths of user tree passed via -t" << endl
 			<< "  -blmin               Min branch length for optimization (default 0.000001)" << endl
 			<< "  -blmax               Max branch length for optimization (default 100)" << endl
 			<< "  -wsr                 Write site rates and categories to .rate file" << endl
@@ -3367,7 +3387,6 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -wspm                Write site probabilities per mixture class" << endl
             << "  -wspmr               Write site probabilities per mixture+rate class" << endl
             << "  -fconst f1,...,fN    Add constant patterns into alignment (N=#nstates)" << endl
-            << "  -wts                 Optimize tree length scaling for tree given via -t" << endl
             << "  -me <epsilon>        Logl epsilon for model parameter optimization (default 0.01)" << endl;
 //            << "  -d <file>            Reading genetic distances from file (default: JC)" << endl
 //			<< "  -d <outfile>         Calculate the distance matrix inferred from tree" << endl
