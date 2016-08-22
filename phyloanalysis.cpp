@@ -562,6 +562,101 @@ void searchGAMMAInvarByRestarting(IQTree &iqtree);
 
 void computeLoglFromUserInputGAMMAInvar(Params &params, IQTree &iqtree);
 
+void printOutfilesInfo(Params &params, string &original_model, IQTree &tree) {
+
+	cout << endl << "Analysis results written to: " << endl;
+    if (!(params.suppress_output_flags & OUT_IQTREE))
+		cout<< "  IQ-TREE report:                " << params.out_prefix << ".iqtree"
+			<< endl;
+	if (params.compute_ml_tree) {
+        if (!(params.suppress_output_flags & OUT_TREEFILE)) {
+            if (original_model.find("ONLY") == string::npos)
+                cout << "  Maximum-likelihood tree:       " << params.out_prefix << ".treefile" << endl;
+            else
+                cout << "  Tree used for model selection: " << params.out_prefix << ".treefile" << endl;
+        }
+		if (params.snni && params.write_local_optimal_trees) {
+			cout << "  Locally optimal trees (" << tree.candidateTrees.getNumLocalOptTrees() << "):    " << params.out_prefix << ".suboptimal_trees" << endl;
+		}
+	}
+	if (!params.user_file && params.start_tree == STT_BIONJ) {
+		cout << "  BIONJ tree:                    " << params.out_prefix << ".bionj"
+				<< endl;
+	}
+	if (!params.dist_file) {
+		//cout << "  Juke-Cantor distances:    " << params.out_prefix << ".jcdist" << endl;
+		if (params.compute_ml_dist)
+		cout << "  Likelihood distances:          " << params.out_prefix
+					<< ".mldist" << endl;
+		if (params.print_conaln)
+		cout << "  Concatenated alignment:        " << params.out_prefix
+					<< ".conaln" << endl;
+	}
+	if (original_model.find("TEST") != string::npos && tree.isSuperTree()) {
+		cout << "  Best partitioning scheme:      " << params.out_prefix << ".best_scheme.nex" << endl;
+		bool raxml_format_printed = true;
+
+		for (vector<PartitionInfo>::iterator it = ((PhyloSuperTree*)&tree)->part_info.begin();
+				it != ((PhyloSuperTree*)&tree)->part_info.end(); it++)
+			if (!it->aln_file.empty()) {
+				raxml_format_printed = false;
+				break;
+			}
+		if (raxml_format_printed)
+			 cout << "           in RAxML format:      " << params.out_prefix << ".best_scheme" << endl;
+	}
+	if (tree.getRate()->getGammaShape() > 0 && params.print_site_rate)
+		cout << "  Gamma-distributed rates:       " << params.out_prefix << ".rate"
+				<< endl;
+
+	if ((tree.getRate()->isSiteSpecificRate() || tree.getRate()->getPtnCat(0) >= 0) && params.print_site_rate)
+		cout << "  Site-rates by MH model:        " << params.out_prefix << ".rate"
+				<< endl;
+
+	if (params.print_site_lh)
+		cout << "  Site log-likelihoods:          " << params.out_prefix << ".sitelh"
+				<< endl;
+
+	if (params.print_site_prob)
+		cout << "  Site probability per rate/mix: " << params.out_prefix << ".siteprob"
+				<< endl;
+
+	if (params.write_intermediate_trees)
+		cout << "  All intermediate trees:        " << params.out_prefix << ".treels"
+				<< endl;
+
+	if (params.gbo_replicates) {
+		cout << endl << "Ultrafast bootstrap approximation results written to:" << endl
+			 << "  Split support values:          " << params.out_prefix << ".splits.nex" << endl
+			 << "  Consensus tree:                " << params.out_prefix << ".contree" << endl;
+		if (params.print_ufboot_trees)
+		cout << "  UFBoot trees:                  " << params.out_prefix << ".ufboot" << endl;
+
+	}
+
+	if (params.treeset_file) {
+		cout << "  Evaluated user trees:          " << params.out_prefix << ".trees" << endl;
+
+		if (params.print_tree_lh) {
+		cout << "  Tree log-likelihoods:          " << params.out_prefix << ".treelh" << endl;
+		}
+		if (params.print_site_lh) {
+		cout << "  Site log-likelihoods:          " << params.out_prefix << ".sitelh" << endl;
+		}
+	}
+    	if (params.lmap_num_quartets >= 0) {
+		cout << "  Likelihood mapping plot (SVG): " << params.out_prefix << ".lmap.svg" << endl;
+		cout << "  Likelihood mapping plot (EPS): " << params.out_prefix << ".lmap.eps" << endl;
+	}
+    if (!(params.suppress_output_flags & OUT_LOG))
+    	cout << "  Screen log file:               " << params.out_prefix << ".log" << endl;
+	/*	if (original_model == "WHTEST")
+	 cout <<"  WH-TEST report:           " << params.out_prefix << ".whtest" << endl;*/
+	cout << endl;
+
+}
+
+
 void reportPhyloAnalysis(Params &params, string &original_model,
 		IQTree &tree, vector<ModelInfo> &model_info) {
     if (!MPIHelper::getInstance().isMaster())
@@ -1612,10 +1707,10 @@ void printMiscInfo(Params &params, IQTree &iqtree, double *pattern_lh) {
 		}
 	}
 
-    if (params.optimize_tree_len_scaling) {
-        string filename = (string)params.out_prefix + ".treescale";
+    if (params.fixed_branch_length == BRLEN_SCALE) {
+        string filename = (string)params.out_prefix + ".blscale";
         iqtree.printTreeLengthScaling(filename.c_str());
-        cout << "Tree length scaler printed to " << filename << endl;
+        cout << "Scaled tree length and model parameters printed to " << filename << endl;
     }
 
 }
@@ -2254,6 +2349,8 @@ void runStandardBootstrap(Params &params, string &original_model, Alignment *ali
     params.aLRT_test = false;
     params.aBayes_test = false;
     
+    if (params.suppress_output_flags & OUT_TREEFILE)
+        outError("Suppress .treefile not allowed for standard bootstrap");
 	string treefile_name = params.out_prefix;
 	treefile_name += ".treefile";
 	string boottrees_name = params.out_prefix;

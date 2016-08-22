@@ -1719,11 +1719,16 @@ public:
     outstreambuf* open( const char* name, ios::openmode mode = ios::out);
     outstreambuf* close();
     ~outstreambuf() { close(); }
+    streambuf *get_fout_buf() {
+        return fout_buf;
+    }
+    ofstream *get_fout() {
+        return &fout;
+    }
     
 protected:
 	ofstream fout;
 	streambuf *cout_buf;
-	streambuf *cerr_buf;
 	streambuf *fout_buf;
     virtual int     overflow( int c = EOF);
     virtual int     sync();
@@ -1814,10 +1819,12 @@ extern "C" void startLogFile(bool append_log) {
         _out_buf.open(_log_file.c_str(), ios::app);
     else
         _out_buf.open(_log_file.c_str());
+    _err_buf.init(_out_buf.get_fout_buf());
 }
 
 extern "C" void endLogFile() {
 	_out_buf.close();
+    
 }
 
 void funcExit(void) {
@@ -1827,7 +1834,7 @@ void funcExit(void) {
 		while (getchar() != '\n');
 	}
 	
-	endLogFile();
+    endLogFile();
 }
 
 extern "C" void funcAbort(int signal_number)
@@ -1841,16 +1848,16 @@ extern "C" void funcAbort(int signal_number)
 	print_stacktrace(cerr);
 #endif
 
-	cout << endl << "*** IQ-TREE CRASHES WITH SIGNAL ";
+	cerr << endl << "*** IQ-TREE CRASHES WITH SIGNAL ";
 	switch (signal_number) {
-		case SIGABRT: cout << "ABORTED"; break;
-		case SIGFPE:  cout << "ERRONEOUS NUMERIC"; break;
-		case SIGILL:  cout << "ILLEGAL INSTRUCTION"; break;
-		case SIGSEGV: cout << "SEGMENTATION FAULT"; break;
+		case SIGABRT: cerr << "ABORTED"; break;
+		case SIGFPE:  cerr << "ERRONEOUS NUMERIC"; break;
+		case SIGILL:  cerr << "ILLEGAL INSTRUCTION"; break;
+		case SIGSEGV: cerr << "SEGMENTATION FAULT"; break;
 	}
-    cout << endl;
-	cout << "*** For bug report please send to developers:" << endl << "***    Log file: " << _log_file;
-	cout << endl << "***    Alignment files (if possible)" << endl;
+    cerr << endl;
+	cerr << "*** For bug report please send to developers:" << endl << "***    Log file: " << _log_file;
+	cerr << endl << "***    Alignment files (if possible)" << endl;
 	funcExit();
 	signal(signal_number, SIG_DFL);
 }
