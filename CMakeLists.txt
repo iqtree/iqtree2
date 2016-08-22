@@ -54,6 +54,10 @@ set (iqtree_VERSION_PATCH "4-beta")
 
 set(BUILD_SHARED_LIBS OFF)
 
+if (CMAKE_C_COMPILER MATCHES "mpi")
+    set(IQTREE_FLAGS "${IQTREE_FLAGS} mpi")
+endif()
+
 message("IQ-TREE flags : ${IQTREE_FLAGS}")
 
 if (NOT CMAKE_BUILD_TYPE)
@@ -234,12 +238,19 @@ endif()
 ##################################################################
 # configure MPI compilation
 ##################################################################
+
 if (IQTREE_FLAGS MATCHES "mpi")
     find_package(MPI REQUIRED)
     #set(IQTREE_FLAGS "${IQTREE_FLAGS} dynamic")
     add_definitions(-D_IQTREE_MPI)
-    message("Using CXX compiler: ${CMAKE_CXX_COMPILER}")
-    message("Using C Compiler: ${CMAKE_C_COMPILER}")
+    message("Using MPI CXX compiler: ${CMAKE_CXX_COMPILER}")
+    message("Using MPI C Compiler: ${CMAKE_C_COMPILER}")
+    if (NOT CMAKE_CXX_COMPILER MATCHES ${MPI_CXX_COMPILER})
+        message("WARNING: MPI C++ compiler ${CMAKE_CXX_COMPILER} does not match ${MPI_CXX_COMPILER}")
+    endif()
+    if (NOT CMAKE_C_COMPILER MATCHES ${MPI_C_COMPILER})
+        message("WARNING: MPI C compiler ${CMAKE_C_COMPILER} does not match ${MPI_C_COMPILER}")
+    endif()
     #set(CMAKE_CXX_COMPILER ${MPI_CXX_COMPILER})
     #set(CMAKE_C_COMPILER ${MPI_C_COMPILER})
     #set(CMAKE_CXX_COMPILE_FLAGS ${CMAKE_CXX_COMPILE_FLAGS} ${MPI_CXX_COMPILE_FLAGS})

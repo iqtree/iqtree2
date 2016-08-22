@@ -8,6 +8,7 @@
 
 #include "iqtree.h"
 #include "candidateset.h"
+#include "MPIHelper.h"
 
 void CandidateSet::init(Alignment *aln, int maxSize) {
     this->aln = aln;
@@ -98,6 +99,25 @@ vector<string> CandidateSet::getBestTreeStrings(int numTree) {
     }
     return res;
 }
+
+vector<string> CandidateSet::getBestTreeStringsForProcess(int numTree) {
+    int numProc = MPIHelper::getInstance().getNumProcesses();
+    int procID = MPIHelper::getInstance().getProcessID();
+    vector<string> alltrees = getBestTreeStrings(numTree);
+    if (numProc == 1) return alltrees;
+    
+    if (numTree == 0 || numTree > alltrees.size()) {
+        numTree = alltrees.size();
+    }
+    int cnt = 0;
+    vector<string> res;
+    // process will get trees indexed procID, procID+1*numProc, procID+2*numProc,...
+    for (cnt = procID; cnt < numTree; cnt+=numProc) {
+        res.push_back(alltrees[cnt]);
+    }
+    return res;
+}
+
 
 //vector<string> CandidateSet::getBestLocalOptimalTrees(int numTree) {
 //	assert(numTree <= params->maxPopSize);

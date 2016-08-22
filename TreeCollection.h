@@ -13,6 +13,7 @@ class TreeCollection {
 private:
     vector<string> treeStrings;
     vector<double> scores;
+    vector<int> sourceProcID;
 public:
 
     /**
@@ -22,7 +23,7 @@ public:
 
     TreeCollection() {};
 
-    TreeCollection(vector<string>& trees, vector<double>& scores);
+    TreeCollection(vector<string>& trees, vector<double>& scores, vector<int> &sourceProcID);
 
     void addTrees(TreeCollection &trees);
 
@@ -50,6 +51,10 @@ public:
 
     const vector<double> &getScores() const {
         return scores;
+    }
+
+    const vector<int> &getSourceProcID() const {
+        return sourceProcID;
     }
 
 };

@@ -3,6 +3,7 @@
 //
 
 #include "TreeCollection.h"
+#include "MPIHelper.h"
 
 using namespace std;
 
@@ -11,13 +12,17 @@ TreeCollection::TreeCollection(CandidateSet &candidateTrees) {
     for (rit = candidateTrees.rbegin(); rit != candidateTrees.rend(); rit++) {
        treeStrings.push_back(rit->second.tree);
        scores.push_back(rit->first);
+       sourceProcID.push_back(MPIHelper::getInstance().getProcessID());
     }
 }
 
-TreeCollection::TreeCollection(vector<string>& trees, vector<double>& scores) {
+TreeCollection::TreeCollection(vector<string>& trees, vector<double>& scores, vector<int> &sourceProcID) {
     assert(trees.size() == scores.size());
     this->treeStrings = trees;
     this->scores = scores;
+    this->sourceProcID = sourceProcID;
+//    this->sourceProcID.clear();
+//    this->sourceProcID.insert(this->sourceProcID.end(), scores.size(), MPIHelper::getInstance().getProcessID());
 }
 
 pair<string, double> TreeCollection::getTree(int i) {
@@ -31,10 +36,14 @@ void TreeCollection::clear() {
 }
 
 void TreeCollection::addTrees(TreeCollection &trees) {
-    for (int i = 0; i < trees.getNumTrees(); i++) {
-        treeStrings.push_back(trees.getTree(i).first);
-        scores.push_back(trees.getTree(i).second);
-    }
+//    for (int i = 0; i < trees.getNumTrees(); i++) {
+//        treeStrings.push_back(trees.getTree(i).first);
+//        scores.push_back(trees.getTree(i).second);
+//        
+//    }
+    treeStrings.insert(treeStrings.end(), trees.treeStrings.begin(), trees.treeStrings.end());
+    scores.insert(scores.end(), trees.scores.begin(), trees.scores.end());
+    sourceProcID.insert(sourceProcID.end(), trees.sourceProcID.begin(), trees.sourceProcID.end());
 }
 
 size_t TreeCollection::getNumTrees() {

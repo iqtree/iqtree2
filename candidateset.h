@@ -155,6 +155,16 @@ public:
     vector<string> getBestTreeStrings(int numTree = 0);
 
     /**
+     *  Get \a numTree top scoring trees for this MPI process. Also work for sequential version.
+     *
+     *  @param numTree
+     *  	Number of top scoring trees
+     *  @return
+     *  	Vector of current best trees
+     */
+    vector<string> getBestTreeStringsForProcess(int totalNumTree);
+
+    /**
      *  Return a set of trees and a set of scores
      *
      *  @param trees vector of trees

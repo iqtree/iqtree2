@@ -19,12 +19,14 @@ ObjectStream::ObjectStream(TreeCollection &trees) {
 void ObjectStream::initFromTreeCollection(TreeCollection &trees) {
     vector<string> treeStrings = trees.getTreeStrings();
     vector<double> scores = trees.getScores();
+    vector<int> sourceProcID = trees.getSourceProcID();
 
     char* stringData;
     size_t stringDataSize = serializeStrings(treeStrings, stringData);
     size_t doubleDataSize = scores.size() * sizeof(double);
+    size_t intDataSize = sourceProcID.size() * sizeof(int);
 
-    objectDataSize = sizeof(size_t) * 2 + stringDataSize + doubleDataSize;
+    objectDataSize = sizeof(size_t) * 3 + stringDataSize + doubleDataSize + intDataSize;
 
     if (objectData != NULL) {
         delete[] objectData;
@@ -37,28 +39,41 @@ void ObjectStream::initFromTreeCollection(TreeCollection &trees) {
     pos = pos + sizeof(size_t);
     memcpy(pos, &doubleDataSize, sizeof(size_t));
     pos = pos + sizeof(size_t);
+    memcpy(pos, &intDataSize, sizeof(size_t));
+    pos = pos + sizeof(size_t);
 
     // Add string block and double block afterwards
     memcpy(pos, stringData, stringDataSize);
     pos = pos + stringDataSize;
+    
     memcpy(pos, scores.data(), doubleDataSize);
+    pos = pos + doubleDataSize;
+    
+    memcpy(pos, sourceProcID.data(), intDataSize);
 
     delete [] stringData;
 }
 
 TreeCollection ObjectStream::getTreeCollection() {
-    size_t metaInfo[2];
-    memcpy(metaInfo, objectData, sizeof(size_t) * 2);
+    size_t metaInfo[3];
+    memcpy(metaInfo, objectData, sizeof(size_t) * 3);
     size_t stringDataSize = metaInfo[0];
     size_t doubleDataSize = metaInfo[1];
+    size_t intDataSize = metaInfo[2];
     size_t numTrees = doubleDataSize / sizeof(double);
     vector<string> treeStrings;
-    deserializeStrings(objectData + sizeof(size_t) * 2, stringDataSize, treeStrings);
+    deserializeStrings(objectData + sizeof(size_t) * 3, stringDataSize, treeStrings);
     assert(treeStrings.size() == numTrees);
+
     double scoreArr[numTrees];
-    memcpy(scoreArr, objectData + sizeof(size_t) * 2 + stringDataSize, doubleDataSize);
+    memcpy(scoreArr, objectData + sizeof(size_t) * 3 + stringDataSize, doubleDataSize);
     vector<double> scores(scoreArr, scoreArr + sizeof(scoreArr) / sizeof(scoreArr[0]));
-    TreeCollection decodedTrees(treeStrings, scores);
+
+    int sourceProcIDArr[numTrees];
+    memcpy(sourceProcIDArr, objectData + sizeof(size_t) * 3 + stringDataSize + doubleDataSize, intDataSize);
+    vector<int> sourceProcID(sourceProcIDArr, sourceProcIDArr + sizeof(sourceProcIDArr) / sizeof(sourceProcIDArr[0]));
+
+    TreeCollection decodedTrees(treeStrings, scores, sourceProcID);
     return decodedTrees;
 }
 

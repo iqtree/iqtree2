@@ -664,7 +664,7 @@ public:
      *      -1 if duplicated
      *      -2 if the candidate set is not updated
      */
-    int addTreeToCandidateSet(string treeString, double score, bool updateStopRule = true);
+    int addTreeToCandidateSet(string treeString, double score, bool updateStopRule = true, int sourceProcID = 0);
 
     /**
      *  Generate the initial parsimony/random trees, called by initCandidateTreeSet
@@ -942,7 +942,7 @@ public:
     /**
      *  Print the iteration number and the tree score
      */
-    void printInterationInfo();
+    void printIterationInfo(int sourceProcID);
 
     /**
      *  Return branches that are 2 branches away from the branches, on which NNIs were applied

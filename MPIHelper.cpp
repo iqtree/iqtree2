@@ -22,7 +22,9 @@ MPIHelper& MPIHelper::getInstance() {
 void MPIHelper::distributeTrees(vector<string> treeStrings, vector<double> scores, int tag) {
     if (getNumProcesses() == 1)
         return;
-    TreeCollection outTrees(treeStrings, scores);
+    vector<int> sourceProcID;
+    sourceProcID.insert(sourceProcID.end(), scores.size(), MPIHelper::getInstance().getProcessID());
+    TreeCollection outTrees(treeStrings, scores, sourceProcID);
     cleanUpMessages();
     for (int i = 0; i < getNumProcesses(); i++) {
         if (i != getProcessID()) {
@@ -36,7 +38,9 @@ void MPIHelper::distributeTrees(vector<string> treeStrings, vector<double> score
 }
 
 void MPIHelper::sendTrees(int dest, vector<string> treeStrings, vector<double> scores, int tag) {
-    TreeCollection outTrees(treeStrings, scores);
+    vector<int> sourceProcID;
+    sourceProcID.insert(sourceProcID.end(), scores.size(), MPIHelper::getInstance().getProcessID());
+    TreeCollection outTrees(treeStrings, scores, sourceProcID);
     if (getNumProcesses() == 1)
         return;
     cleanUpMessages();
