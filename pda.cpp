@@ -1734,85 +1734,91 @@ protected:
     virtual int     sync();
 };
 
-/*********************************************************************************
- * GLOBAL VARIABLES
- *********************************************************************************/
-outstreambuf _out_buf;
-string _log_file;
-int _exit_wait_optn = FALSE;
-
 outstreambuf* outstreambuf::open( const char* name, ios::openmode mode) {
-	if (MPIHelper::getInstance().getProcessID() == MASTER) {
-		fout.open(name, mode);
-		if (!fout.is_open()) {
-			cout << "Could not open " << name << " for logging" << endl;
-			return NULL;
-		}
-		cout_buf = cout.rdbuf();
-		cerr_buf = cerr.rdbuf();
-		fout_buf = fout.rdbuf();
-		cout.rdbuf(this);
-		cerr.rdbuf(this);
-		return this;
-	}
-     else {
-		cout_buf = cout.rdbuf();
-		cerr_buf = cerr.rdbuf();
-		cout.rdbuf(this);
-		cerr.rdbuf(this);
-		return this;
-	}
+    if (!(Params::getInstance().suppress_output_flags & OUT_LOG) && MPIHelper::getInstance().isMaster()) {
+        fout.open(name, mode);
+        if (!fout.is_open()) {
+            cout << "Could not open " << name << " for logging" << endl;
+            return NULL;
+        }
+        fout_buf = fout.rdbuf();
+    }
+	cout_buf = cout.rdbuf();
+	cout.rdbuf(this);
+    return this;
 }
 
 outstreambuf* outstreambuf::close() {
-	if (MPIHelper::getInstance().getProcessID() == MASTER) {
-		if (fout.is_open()) {
-			sync();
-			cout.rdbuf(cout_buf);
-			cerr.rdbuf(cerr_buf);
-			fout.close();
-			return this;
-		}
-		return NULL;
-	}
-    else {
-		sync();
-		cout.rdbuf(cout_buf);
-		cerr.rdbuf(cerr_buf);
-		return this;
-	}
+    cout.rdbuf(cout_buf);
+    if ( fout.is_open()) {
+        sync();
+		fout.close();
+        return this;
+    }
+    return NULL;
 }
 
 int outstreambuf::overflow( int c) { // used for output buffer only
-	if (MPIHelper::getInstance().getProcessID() == MASTER) {
-		if (verbose_mode >= VB_MIN) {
-			if (cout_buf->sputc(c) == EOF) return EOF;
-		}
-		if (fout_buf->sputc(c) == EOF) return EOF;
-		return c;
-	} else {
-        if (verbose_mode >= VB_MED)
-            if (cout_buf->sputc(c) == EOF) return EOF;
-		return c;
-	}
+	if ((verbose_mode >= VB_MIN && MPIHelper::getInstance().isMaster()) || verbose_mode >= VB_MED)
+		if (cout_buf->sputc(c) == EOF) return EOF;
+    if (Params::getInstance().suppress_output_flags & OUT_LOG)
+        return c;
+    if (!MPIHelper::getInstance().isMaster())
+        return c;
+	if (fout_buf->sputc(c) == EOF) return EOF;
+	return c;
 }
 
 
 
 int outstreambuf::sync() { // used for output buffer only
-	if (MPIHelper::getInstance().getProcessID() == MASTER) {
-		if (verbose_mode >= VB_MIN)
-			cout_buf->pubsync();
-		return fout_buf->pubsync();
-	} 
-    else {
-#ifdef _MPI_DEBUG
-		return cout_buf->pubsync();
-#endif
-	}
-	return 0;
+	if ((verbose_mode >= VB_MIN && MPIHelper::getInstance().isMaster()) || verbose_mode >= VB_MED)
+		cout_buf->pubsync();
+    if ((Params::getInstance().suppress_output_flags & OUT_LOG) || !MPIHelper::getInstance().isMaster())
+        return 0;        
+	return fout_buf->pubsync();
 }
 
+class errstreambuf : public streambuf {
+public:
+    void init(streambuf *fout_buf) {
+        this->fout_buf = fout_buf;
+        cerr_buf = cerr.rdbuf();
+    }
+    
+    ~errstreambuf() {
+        cerr.rdbuf(cerr_buf);
+    }
+    
+protected:
+	streambuf *cerr_buf;
+	streambuf *fout_buf;
+    
+    virtual int overflow( int c = EOF) {
+        if (cerr_buf->sputc(c) == EOF) return EOF;
+        if ((Params::getInstance().suppress_output_flags & OUT_LOG))
+            return c;
+        if (fout_buf->sputc(c) == EOF) return EOF;
+        return c;
+    }
+    
+    virtual int sync() {
+        cerr_buf->pubsync();
+        if (Params::getInstance().suppress_output_flags & OUT_LOG)
+            return 0;        
+        return fout_buf->pubsync();
+    }
+};
+
+
+
+/*********************************************************************************
+ * GLOBAL VARIABLES
+ *********************************************************************************/
+outstreambuf _out_buf;
+errstreambuf _err_buf;
+string _log_file;
+int _exit_wait_optn = FALSE;
 
 extern "C" void startLogFile(bool append_log) {
     if (append_log)
@@ -2273,7 +2279,6 @@ int main(int argc, char *argv[]) {
         }
     }
 
-
 	_log_file = Params::getInstance().out_prefix;
 	_log_file += ".log";
 	startLogFile(append_log);
@@ -2471,7 +2476,13 @@ int main(int argc, char *argv[]) {
     CKP_SAVE(version);
     checkpoint->endStruct();
 
-#ifndef _IQTREE_MPI
+    if (MPIHelper::getInstance().getNumProcesses() > 1) {
+        if (Params::getInstance().aln_file || Params::getInstance().partition_file) {
+            runPhyloAnalysis(Params::getInstance(), checkpoint);
+        } else {
+            outError("Please use one MPI process! The feature you wanted does not need parallelization.");
+        }
+    } else
 	// call the main function
 	if (Params::getInstance().tree_gen != NONE) {
 		generateRandomTree(Params::getInstance());
@@ -2566,14 +2577,6 @@ int main(int argc, char *argv[]) {
 			outError("Unknown file input format");
 		}
 	}
-
-#else
-    if (Params::getInstance().aln_file || Params::getInstance().partition_file) {
-        runPhyloAnalysis(Params::getInstance(), checkpoint);
-    } else {
-        outError("MPI version only works with phylo analysis, please specify an alignment (-s) or a partition file (-sp,-spp,-q)!");
-    }
-#endif
 
 	time(&start_time);
 	cout << "Date and Time: " << ctime(&start_time);

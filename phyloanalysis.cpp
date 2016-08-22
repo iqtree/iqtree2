@@ -575,9 +575,9 @@ void printOutfilesInfo(Params &params, string &original_model, IQTree &tree) {
             else
                 cout << "  Tree used for model selection: " << params.out_prefix << ".treefile" << endl;
         }
-		if (params.snni && params.write_local_optimal_trees) {
-			cout << "  Locally optimal trees (" << tree.candidateTrees.getNumLocalOptTrees() << "):    " << params.out_prefix << ".suboptimal_trees" << endl;
-		}
+//		if (params.snni && params.write_local_optimal_trees) {
+//			cout << "  Locally optimal trees (" << tree.candidateTrees.getNumLocalOptTrees() << "):    " << params.out_prefix << ".suboptimal_trees" << endl;
+//		}
 	}
 	if (!params.user_file && params.start_tree == STT_BIONJ) {
 		cout << "  BIONJ tree:                    " << params.out_prefix << ".bionj"
@@ -625,6 +625,12 @@ void printOutfilesInfo(Params &params, string &original_model, IQTree &tree) {
 		cout << "  All intermediate trees:        " << params.out_prefix << ".treels"
 				<< endl;
 
+    if (params.writeDistImdTrees) {
+        tree.intermediateTrees.printTrees(string("ditrees"));
+        cout << "  Distinct intermediate trees:   " << params.out_prefix <<  ".ditrees" << endl;
+        cout << "  Logl of intermediate trees:    " << params.out_prefix <<  ".ditrees_lh" << endl;
+    }
+
 	if (params.gbo_replicates) {
 		cout << endl << "Ultrafast bootstrap approximation results written to:" << endl
 			 << "  Split support values:          " << params.out_prefix << ".splits.nex" << endl
@@ -659,8 +665,14 @@ void printOutfilesInfo(Params &params, string &original_model, IQTree &tree) {
 
 void reportPhyloAnalysis(Params &params, string &original_model,
 		IQTree &tree, vector<ModelInfo> &model_info) {
-    if (!MPIHelper::getInstance().isMaster())
+    if (!MPIHelper::getInstance().isMaster()) {
         return;
+    }
+    if (params.suppress_output_flags & OUT_IQTREE) {
+        printOutfilesInfo(params, original_model, tree);
+        return;
+    }
+        
 	if (params.count_trees) {
 		// addon: print #distinct trees
 		cout << endl << "NOTE: " << pllTreeCounter.size() << " distinct trees evaluated during whole tree search" << endl;
@@ -1137,97 +1149,8 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 	} catch (ios::failure) {
 		outError(ERR_WRITE_OUTPUT, outfile);
 	}
-
-	cout << endl << "Analysis results written to: " << endl
-			<< "  IQ-TREE report:                " << params.out_prefix << ".iqtree"
-			<< endl;
-	if (params.compute_ml_tree) {
-		if (original_model.find("ONLY") == string::npos)
-			cout << "  Maximum-likelihood tree:       " << params.out_prefix << ".treefile" << endl;
-		else
-			cout << "  Tree used for model selection: " << params.out_prefix << ".treefile" << endl;
-	}
-	if (!params.user_file && params.start_tree == STT_BIONJ) {
-		cout << "  BIONJ tree:                    " << params.out_prefix << ".bionj"
-				<< endl;
-	}
-	if (!params.dist_file) {
-		//cout << "  Juke-Cantor distances:    " << params.out_prefix << ".jcdist" << endl;
-		if (params.compute_ml_dist)
-		cout << "  Likelihood distances:          " << params.out_prefix
-					<< ".mldist" << endl;
-		if (params.print_conaln)
-		cout << "  Concatenated alignment:        " << params.out_prefix
-					<< ".conaln" << endl;
-	}
-	if (original_model.find("TEST") != string::npos && tree.isSuperTree()) {
-		cout << "  Best partitioning scheme:      " << params.out_prefix << ".best_scheme.nex" << endl;
-		bool raxml_format_printed = true;
-
-		for (vector<PartitionInfo>::iterator it = ((PhyloSuperTree*)&tree)->part_info.begin();
-				it != ((PhyloSuperTree*)&tree)->part_info.end(); it++)
-			if (!it->aln_file.empty()) {
-				raxml_format_printed = false;
-				break;
-			}
-		if (raxml_format_printed)
-			 cout << "           in RAxML format:      " << params.out_prefix << ".best_scheme" << endl;
-	}
-
-	if (tree.getRate()->getGammaShape() > 0 && params.print_site_rate)
-		cout << "  Gamma-distributed rates:       " << params.out_prefix << ".rate"
-				<< endl;
-
-	if ((tree.getRate()->isSiteSpecificRate() || tree.getRate()->getPtnCat(0) >= 0) && params.print_site_rate)
-		cout << "  Site-rates by MH model:        " << params.out_prefix << ".rate"
-				<< endl;
-
-	if (params.print_site_lh)
-		cout << "  Site log-likelihoods:          " << params.out_prefix << ".sitelh"
-				<< endl;
-
-	if (params.print_site_prob)
-		cout << "  Site probability per rate/mix: " << params.out_prefix << ".siteprob"
-				<< endl;
-
-	if (params.write_intermediate_trees)
-		cout << "  All intermediate trees:        " << params.out_prefix << ".treels"
-				<< endl;
-
-    if (params.writeDistImdTrees) {
-        tree.intermediateTrees.printTrees(string("ditrees"));
-        cout << "  Distinct intermediate trees:   " << params.out_prefix <<  ".ditrees" << endl;
-        cout << "  Logl of intermediate trees:    " << params.out_prefix <<  ".ditrees_lh" << endl;
-    }
-
-	if (params.gbo_replicates) {
-		cout << endl << "Ultrafast bootstrap approximation results written to:" << endl
-			 << "  Split support values:          " << params.out_prefix << ".splits.nex" << endl
-			 << "  Consensus tree:                " << params.out_prefix << ".contree" << endl;
-		if (params.print_ufboot_trees)
-		cout << "  UFBoot trees:                  " << params.out_prefix << ".ufboot" << endl;
-
-	}
-
-    if (params.treeset_file) {
-        cout << "  Evaluated user trees:          " << params.out_prefix << ".trees" << endl;
-
-		if (params.print_tree_lh) {
-		cout << "  Tree log-likelihoods:          " << params.out_prefix << ".treelh" << endl;
-		}
-		if (params.print_site_lh) {
-		cout << "  Site log-likelihoods:          " << params.out_prefix << ".sitelh" << endl;
-		}
-	}
-    	if (params.lmap_num_quartets >= 0) {
-		cout << "  Likelihood mapping plot (SVG): " << params.out_prefix << ".lmap.svg" << endl;
-		cout << "  Likelihood mapping plot (EPS): " << params.out_prefix << ".lmap.eps" << endl;
-	}
-	cout << "  Screen log file:               " << params.out_prefix << ".log" << endl;
-	/*	if (original_model == "WHTEST")
-	 cout <<"  WH-TEST report:           " << params.out_prefix << ".whtest" << endl;*/
-	cout << endl;
-
+    
+    printOutfilesInfo(params, original_model, tree);
 }
 
 void checkZeroDist(Alignment *aln, double *dist) {
@@ -1386,7 +1309,7 @@ void initializeParams(Params &params, IQTree &iqtree, vector<ModelInfo> &model_i
     /* initialize substitution model */
     if (params.model_name.substr(0, 4) == "TEST") {
         if (MPIHelper::getInstance().getNumProcesses() > 1)
-            outError("Model selection does not work with MPI version yet");
+            outError("Please use only 1 MPI process! We are currently working on the MPI parallelization of model selection.");
     	// TODO: check if necessary
 //        if (iqtree.isSuperTree())
 //            ((PhyloSuperTree*) &iqtree)->mapTrees();
