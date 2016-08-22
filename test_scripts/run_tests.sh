@@ -29,6 +29,10 @@ fi
 branchName=$1
 flags=$2
 
+if [ "$flags" == "" ]; then
+    flags="static"
+fi
+
 #Compile the specified branch
 source compile.sh ${branchName} "$flags"
 
