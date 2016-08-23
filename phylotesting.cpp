@@ -321,7 +321,7 @@ void printSiteLhCategory(const char*filename, PhyloTree *tree, SiteLoglType wsl)
             cout << "Log-likelihood of constant sites: " << endl;
             double const_prob = 0.0;
             for (i = 0; i < tree->aln->getNPattern(); i++)
-                if (tree->aln->at(i).is_const) {
+                if (tree->aln->at(i).isConst()) {
                     Pattern pat = tree->aln->at(i);
                     for (Pattern::iterator it = pat.begin(); it != pat.end(); it++)
                         cout << tree->aln->convertStateBackStr(*it);
@@ -657,7 +657,7 @@ int getModelList(Params &params, Alignment *aln, StrVector &models, bool separat
 //		for (i = 0; i < noptions; i++)
 //			test_options[i] = test_options_codon[i];
 //	} else 
-    if (aln->frac_const_sites == 0.0) {
+    if (aln->frac_invariant_sites == 0.0) {
         // morphological or SNP data: activate +ASC
         if (with_new) {
             if (with_asc)
@@ -684,6 +684,12 @@ int getModelList(Params &params, Alignment *aln, StrVector &models, bool separat
             test_options = test_options_asc;
         } else
             test_options = test_options_default;
+        if (aln->frac_const_sites == 0.0) {
+            // deactivate +I
+            for (j = 0; j < noptions; j++)
+                if (strstr(rate_options[j], "+I"))
+                    test_options[j] = false;
+        }
     }
     
 
@@ -1413,7 +1419,7 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
             // normal model
             if (model_names[model].find("+ASC") != string::npos) {
                 model_fac->unobserved_ptns = in_tree->aln->getUnobservedConstPatterns();
-                if (model_fac->unobserved_ptns.size() < tree->aln->getNumNonstopCodons() || in_tree->aln->frac_const_sites > 0.0) {
+                if (model_fac->unobserved_ptns.size() < tree->aln->getNumNonstopCodons() || in_tree->aln->frac_invariant_sites > 0.0) {
                     cout.width(3);
                     cout << right << model+1 << "  ";
                     cout.width(13);
@@ -1422,8 +1428,6 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
                     continue;
                 }
                 tree->aln->buildSeqStates(true);
-                if (model_fac->unobserved_ptns.size() < tree->aln->getNumNonstopCodons())
-                    outError("Invalid use of +ASC because constant patterns are observed in the alignment");
             } else {
                 model_fac->unobserved_ptns = "";
                 tree->aln->buildSeqStates(false);
