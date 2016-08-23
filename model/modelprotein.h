@@ -45,6 +45,16 @@ public:
 	*/
 	virtual void init(const char *model_name, string model_params, StateFreqType freq, string freq_params);
 
+    /**
+        save object into the checkpoint
+    */
+    virtual void saveCheckpoint();
+
+    /**
+        restore object from the checkpoint
+    */
+    virtual void restoreCheckpoint();
+
 	/**
 		read the rates from an input stream. it will throw error messages if failed
 		@param in input stream

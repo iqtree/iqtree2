@@ -21,8 +21,17 @@ public:
 	/* model description */
 	string description;
 
-	/* true if model the basic model (no mixture etc.) */
+	/* flag as NM_ATOMIC or NM_FREQ or both */
 	int flag;
+
+    NxsModel() {
+        flag = 0;
+    }
+
+    NxsModel(string name) {
+        this->name = name;
+        flag = 0;
+    }
 
 	virtual ~NxsModel() {}
 };

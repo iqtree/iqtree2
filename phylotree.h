@@ -622,7 +622,7 @@ public:
     double *newPartialLh();
 
     /** get the number of bytes occupied by partial_lh */
-    int getPartialLhBytes();
+    size_t getPartialLhBytes();
 
     /**
             allocate memory for a scale num vector
@@ -630,7 +630,7 @@ public:
     UBYTE *newScaleNum();
 
     /** get the number of bytes occupied by scale_num */
-    int getScaleNumBytes();
+    size_t getScaleNumBytes();
 
     /**
      * this stores partial_lh for each state at the leaves of the tree because they are the same between leaves
@@ -789,7 +789,7 @@ public:
     /**
      * @return number of elements per site lhl entry, used in conjunction with computePatternLhCat
      */
-    int getNumLhCat(SiteLoglType wsl);
+    virtual int getNumLhCat(SiteLoglType wsl);
 
     /**
      * compute _pattern_lh_cat for site-likelihood per category
@@ -814,6 +814,13 @@ public:
      */
     virtual void computePatternLikelihood(double *pattern_lh, double *cur_logl = NULL,
     		double *pattern_lh_cat = NULL, SiteLoglType wsl = WSL_RATECAT);
+
+    /**
+            compute pattern posterior probabilities per rate/mixture category
+            @param pattern_prob_cat (OUT) all pattern-probabilities per category
+            @param wsl either WSL_RATECAT, WSL_MIXTURE or WSL_MIXTURE_RATECAT
+     */
+    virtual void computePatternProbabilityCategory(double *pattern_prob_cat, SiteLoglType wsl);
 
     vector<uint64_t> ptn_cat_mask;
 
@@ -1088,6 +1095,11 @@ public:
     */
     double optimizeTreeLengthScaling(double min_scaling, double &scaling, double max_scaling, double gradient_epsilon);
 
+    /**
+        print tree length scaling to a file (requested by Rob Lanfear)
+        @param filename output file name written in YAML format 
+    */
+    void printTreeLengthScaling(const char *filename);
 
      /****************************************************************************
             Branch length optimization by Least Squares

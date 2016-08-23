@@ -289,18 +289,26 @@ public:
 	*/
 	virtual void decomposeRateMatrix();
 
-	double *getEigenCoeff() const;
+//	double *getEigenCoeff() const;
 
 	virtual double *getEigenvalues() const;
 
 	virtual double *getEigenvectors() const;
 	virtual double *getInverseEigenvectors() const;
 
-	void setEigenCoeff(double *eigenCoeff);
+//	void setEigenCoeff(double *eigenCoeff);
 
 	void setEigenvalues(double *eigenvalues);
 
 	void setEigenvectors(double *eigenvectors);
+
+    /**
+     * compute the memory size for the model, can be large for site-specific models
+     * @return memory size required in bytes
+     */
+    virtual uint64_t getMemoryRequired() {
+    	return ModelSubst::getMemoryRequired() + sizeof(double)*num_states*num_states*3;
+    }
 
     /** default TRUE: store only upper half of the rate matrix */
     bool half_matrix;
@@ -358,7 +366,7 @@ protected:
 	/**
 		coefficient cache, served for fast computation of the P(t) matrix
 	*/
-	double *eigen_coeff;
+//	double *eigen_coeff;
 
 	/** state with highest frequency, used when optimizing state frequencies +FO */
 	int highest_freq_state;

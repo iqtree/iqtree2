@@ -153,7 +153,18 @@ public:
 	*/
 	virtual void decomposeRateMatrix();
 
-    ~ModelSet();
+    virtual ~ModelSet();
+
+    /**
+     * compute the memory size for the model, can be large for site-specific models
+     * @return memory size required in bytes
+     */
+    virtual uint64_t getMemoryRequired() {
+    	uint64_t mem = ModelGTR::getMemoryRequired();
+    	for (iterator it = begin(); it != end(); it++)
+    		mem += (*it)->getMemoryRequired();
+    	return mem;
+    }
 
 	/** map from pattern ID to model ID */
 	IntVector pattern_model_map;
