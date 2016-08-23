@@ -171,11 +171,16 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
         
         if (pos_rev_pomo != string::npos) {
             // Remove +NXX and +W or +S.
-            size_t n_pos = rate_str.find("+N");
-            if (n_pos != string::npos) {
-                rate_str = rate_str.substr(0, n_pos)
-                    + rate_str.substr(n_pos+4);
+            size_t n_pos_start = rate_str.find("+N");
+            size_t n_pos_end   = rate_str.find_first_of("+", n_pos_start+1);
+            if (n_pos_start != string::npos) {
+                if (n_pos_end != string::npos)
+                    rate_str = rate_str.substr(0, n_pos_start)
+                        + rate_str.substr(n_pos_end);
+                else
+                    rate_str = rate_str.substr(0, n_pos_start);
             }
+            
             size_t w_pos = rate_str.find("+W");
             if (w_pos != string::npos) {
                 rate_str = rate_str.substr(0, w_pos)
@@ -601,6 +606,7 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 			}
 			site_rate = new RateKategory(num_rate_cats, tree);
 		} else
+            cout << "rate_str: " << rate_str << endl;
 			outError("Invalid rate heterogeneity type");
 //		if (model_str.find('+') != string::npos)
 //			model_str = model_str.substr(0, model_str.find('+'));
