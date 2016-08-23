@@ -1636,6 +1636,8 @@ public:
     void computeSeqIdentityAlongTree(Split &resp, Node *node = NULL, Node *dad = NULL);
     void computeSeqIdentityAlongTree();
 
+    double *getPatternLhCatPointer() { return _pattern_lh_cat; }
+    
     /**
      * for rooted tree update direction for all branches
      */
