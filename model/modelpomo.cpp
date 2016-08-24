@@ -66,11 +66,11 @@ void ModelPoMo::init(const char *model_name,
         sampling_method = "Weighted";
     else outError("Sampling type is not supported.");
     this->full_name =
-        "reversible PoMo with N=" +
+        "Reversible PoMo with N=" +
         convertIntToString(N) + " and " +
         dna_model->full_name + " substitution model; " +
         "Sampling method: " + sampling_method + "; " +
-        convertIntToString(num_states) + " states in total";
+        convertIntToString(num_states) + " states in total.";
 
     eps = 1e-6;
 
@@ -164,7 +164,7 @@ void ModelPoMo::init(const char *model_name,
     decomposeRateMatrix();
 
     cout << "Initialized PoMo model." << endl;
-    cout << "Model name: " << this->name << endl;
+    cout << "Model name: " << this->name << "." << endl;
     cout << this->full_name << endl;
     if (verbose_mode >= VB_MAX)
         writeInfo(cout);

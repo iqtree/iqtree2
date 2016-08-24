@@ -23,7 +23,7 @@ ModelPoMoMixture::ModelPoMoMixture(const char *model_name,
     
 {
     optimizing_ratehet = false;
-
+    
     // get number of categories
     int m, num_rate_cats = 4;
     if (pomo_rate_str.length() > 2 && isdigit(pomo_rate_str[2])) {
@@ -46,7 +46,6 @@ ModelPoMoMixture::ModelPoMoMixture(const char *model_name,
         prop[m] = ratehet->getProp(m);
     }
     initMem();
-
 
     ModelGTR::init(FREQ_USER_DEFINED);
     

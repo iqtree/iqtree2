@@ -3276,13 +3276,13 @@ void usage_iqtree(char* argv[], bool full_command) {
             << endl
 
             << "POLYMORPHISM AWARE MODELS (PoMo):"                                                   << endl
-            << "PoMo uses counts files.  If a counts file is detected, PoMo is used automatically."  << endl
+            << "PoMo uses counts files (please refer to the manual)."                                << endl
             << "  -m <sm>+<pm>         Default: `HKY+rP`."                                           << endl
             << "                 <sm>: Substitution model."                                          << endl
             << "                  DNA: HKY (default), JC, F81, K2P, K3P, K81uf, TN/TrN, TNef,"       << endl
             << "                       TIM, TIMef, TVM, TVMef, SYM, GTR, or a 6-digit model"         << endl
             << "                       specification (e.g., 010010 = HKY)."                          << endl
-            << "                 <pm>: PoMo model (optional)."                                       << endl
+            << "                 <pm>: PoMo model."                                                  << endl
             << "                       - rP (default; reversible PoMo with tree inference)."         << endl
             // << "                       - nrP (non-reversible PoMo; tree has to be given separately;" << endl
             // << "                         not implemented yet)."                                      << endl
@@ -3290,15 +3290,15 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "                       F or +FO or +FU or +FQ."                                      << endl
             << "                       Counted, optimized, user-defined, equal state frequency."     << endl
             << "                       This overwrites the specifications of the DNA model."         << endl
-            << "  -m <model>+N<ps>     Define virtual population size to be `ps` (defaults to 9)."   << endl
+            << "  -m <model>+N<ps>     Set virtual population size to `ps` (optional; default: 9)."  << endl
             << "                       3 <= ps <= 19; ps has to be an odd number or 2 or 10."        << endl
-            << "  -m <model>+[W|S]     Specify sampling method (W; default) or S."                   << endl
+            << "  -m <model>+[W|S]     Specify sampling method (optional; default: W)."              << endl
             << "                       W: Weighted sampling method (partial likelihoods at the tip"  << endl
             << "                          of the tree are set to the probabilities of leading to the"<< endl
             << "                          observed data)."                                           << endl
             << "                       S: Sampled sampling method (determine PoMo states by randomly"<< endl
             << "                          drawing N bases per site from the data)."                  << endl
-            << "  The full default model string is: `-m HKY+rP+N09+W+F."                                    << endl
+            << "  The full default model string is: `-m HKY+rP+N9+W+F."                              << endl
             << "  Another example: `-m GTR+rP+N15+S."                                                << endl
             << "  You can use mixture models like so: -m \"MIX{JC+rP,HKY+rP}+N11\"."                 << endl
             << "  A mixture model with equal state frequency: -m \"MIX{JC,HKY}+FQ\"."                << endl
@@ -3428,11 +3428,11 @@ void quickStartGuide() {
          << "1. Standard tree inference (HKY model and empirical nucleotide frequencies):" << endl
          << "     iqtree -s counts_file.cf" << endl << endl
          << "2. Set virtual population size to 15:" << endl
-         << "     iqtree -s counts_file.cf -m HKY+N15" << endl << endl
+         << "     iqtree -s counts_file.cf -m HKY+rP+N15" << endl << endl
          << "3. Use GTR model and estimate allele frequencies during maximization of likelihood:" << endl
-         << "     iqtree -s counts_file.cf -m GTR+FO" << endl << endl
+         << "     iqtree -s counts_file.cf -m GTR+rP+FO" << endl << endl
          << "4. Use the sampled input method and N=9 (advanced setting; see manual or publication):" << endl
-         << "     iqtree -s counts_file.cf -m HKY+N09+S" << endl << endl
+         << "     iqtree -s counts_file.cf -m HKY+rP+N9+S" << endl << endl
          << "---" << endl
          << "To show all available options: run 'iqtree -h'" << endl << endl
          << "Have a look at the tutorial and manual for more information:" << endl

@@ -117,8 +117,8 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 		else if (tree->aln->seq_type == SEQ_MORPH) model_str = "MK";
         else if (tree->aln->seq_type == SEQ_POMO) model_str = "HKY+rP";
 		else model_str = "JC";
-        if (model_str != "HKY+rP")
-		outWarning("Default model "+model_str + " may be under-fitting. Use option '-m TEST' to determine the best-fit model.");
+        if (tree->aln->seq_type != SEQ_POMO)
+            outWarning("Default model "+model_str + " may be under-fitting. Use option '-m TEST' to determine the best-fit model.");
 	}
 
 	/********* preprocessing model string ****************/
@@ -168,6 +168,12 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
         string::size_type pos_nonrev_pomo = rate_str.find("+nrP");
         if (pos_nonrev_pomo != string::npos)
             outError("Non reversible PoMo not supported yet.");
+
+        // Throw error if sequence type is PoMo but +rP is not given.
+        // This makes the model string cleaner and compareable.
+        if ((pos_rev_pomo == string::npos) &&
+            (tree->aln->seq_type == SEQ_POMO))
+            outError("Provided alignment is used by PoMo but model string does not contain, e.g., \"+rP\".");
         
         if (pos_rev_pomo != string::npos) {
             // Remove +NXX and +W or +S.
@@ -606,7 +612,6 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 			}
 			site_rate = new RateKategory(num_rate_cats, tree);
 		} else
-            cout << "rate_str: " << rate_str << endl;
 			outError("Invalid rate heterogeneity type");
 //		if (model_str.find('+') != string::npos)
 //			model_str = model_str.substr(0, model_str.find('+'));

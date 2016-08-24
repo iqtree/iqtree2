@@ -1037,7 +1037,8 @@ ModelSubst* createModel(string model_str, ModelsBlock *models_block, StateFreqTy
             model = new ModelPoMo(model_str.c_str(), model_params, freq_type, freq_params, tree, is_rev_pomo, pomo_params);
         else
             model = new ModelPoMoMixture(model_str.c_str(), model_params, freq_type, freq_params, tree, is_rev_pomo, pomo_params, pomo_rate_str);
-        cout << ((model->isMixture()) ? "mixture pomo" : "non-mixture pomo") << endl;
+        if (model->isMixture())
+            cout << "PoMo mixture model for Gamma rate heterogeneity." << endl;
 //	else if ((model_str == "GTR" && tree->aln->seq_type == SEQ_DNA) ||
 //             (model_str == "GTR2" && tree->aln->seq_type == SEQ_BINARY) ||
 //             (model_str == "GTR20" && tree->aln->seq_type == SEQ_PROTEIN)) {

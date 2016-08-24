@@ -1606,16 +1606,17 @@ int Alignment::readFasta(char *filename, char *sequence_type) {
 
     StrVector sequences;
     ostringstream err_str;
-    ifstream in;
+    igzstream in;
+    // ifstream in;
     int line_num = 1;
     string line;
 
     // PoMo with Fasta files is not supported yet.
-    if (sequence_type) {
-        string st (sequence_type);
-        if (st.substr(0,2) != "CF")
-            throw "PoMo does not support reading fasta files yet, please use a Counts File.";
-    }
+    // if (sequence_type) {
+    //     string st (sequence_type);
+    //     if (st.substr(0,2) != "CF")
+    //         throw "PoMo does not support reading fasta files yet, please use a Counts File.";
+    // }
 
     // set the failbit and badbit
     in.exceptions(ios::failbit | ios::badbit);
@@ -1965,7 +1966,8 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
 
     // Print error if sequence type is given (not supported anymore).
     if (sequence_type) {
-        cout << "PoMo does not support -st flag anymore." << endl;
+        cout << "Counts files are auto detected." << endl;
+        cout << "PoMo does not support -st flag." << endl;
         cout << "Please use model string to specifcy virtual population size and sampling method." << endl;
         outError("Abort.");
     }
