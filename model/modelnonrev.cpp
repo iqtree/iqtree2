@@ -26,13 +26,21 @@ ModelNonRev::ModelNonRev(PhyloTree *tree)
         : ModelGTR(tree, false)
 {
 	// model_parameters must be initialized by subclass
+//    ModelGTR::freeMem();
     int num_rates = getNumRateEntries();
+    
+    // reallocate the mem spaces
     delete [] rates;
     rates = new double [num_rates];
     memset(rates, 0, sizeof(double) * (num_rates));
 
     rate_matrix = new double[num_states*num_states];
     temp_space =  new double[num_states*num_states];
+    
+    ceval = aligned_alloc<complex<double> >(num_states);
+    cevec = aligned_alloc<complex<double> >(num_states*num_states);
+    cinv_evec = aligned_alloc<complex<double> >(num_states*num_states);
+    
     if (!tree->rooted) {
         cout << "Converting unrooted to rooted tree..." << endl;
         tree->convertToRooted();
@@ -50,6 +58,9 @@ void ModelNonRev::freeMem() {
     delete [] temp_space;
     delete [] rate_matrix;
     delete [] model_parameters;
+    aligned_free(cinv_evec);
+    aligned_free(cevec);
+    aligned_free(ceval);
 }
 
 /* static */ ModelNonRev* ModelNonRev::getModelByName(string model_name, PhyloTree *tree, string model_params, bool count_rates) {

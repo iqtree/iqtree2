@@ -251,7 +251,27 @@ void EigenDecomposition::eigensystem_sym(double **rate_params, double *state_fre
 //			inv_evec[i*num_state+j] = 0.0;
 		}
 
-
+	if (verbose_mode >= VB_MAX) {
+		cout << "eigenvalues:";
+		for (i = 0; i < num_state; i++)
+			cout << "\t" << eval[i];
+		cout << endl;
+		cout << "eigenvectors:" << endl;
+		for (i = 0; i < num_state; i++) {
+			for (j = 0; j < num_state; j++) {
+				cout << "\t" << evec[i*num_state+j];
+			}
+			cout << endl;
+		}
+		cout << "inv_eigenvectors:" << endl;
+		for (i = 0; i < num_state; i++) {
+			for (j = 0; j < num_state; j++) {
+				cout << "\t" << inv_evec[i*num_state+j];
+			}
+			cout << endl;
+		}
+		cout << endl;
+	}
 
 	/* check eigenvalue equation */
 	error = 0.0;

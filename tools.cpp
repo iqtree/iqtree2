@@ -925,6 +925,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.checkpoint_dump_interval = 20;
     params.force_unfinished = false;
     params.suppress_output_flags = 0;
+    params.matrix_exp_technique = MET_SCALING_SQUARING;
 
 
 	if (params.nni5) {
@@ -3012,7 +3013,20 @@ void parseArg(int argc, char *argv[], Params &params) {
 				continue;
 			}
 
-
+            
+            if (strcmp(argv[cnt], "--matexp-scaling-squaring") == 0) {
+                params.matrix_exp_technique = MET_SCALING_SQUARING;
+                continue;
+            }
+            if (strcmp(argv[cnt], "--matexp-eigen") == 0) {
+                params.matrix_exp_technique = MET_EIGEN_DECOMPOSITION;
+                continue;
+            }
+            if (strcmp(argv[cnt], "--matexp-lm") == 0) {
+                params.matrix_exp_technique = MET_LIE_MARKOV_DECOMPOSITION;
+                continue;
+            }
+            
 			if (argv[cnt][0] == '-') {
                 string err = "Invalid \"";
                 err += argv[cnt];

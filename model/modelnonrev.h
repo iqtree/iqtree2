@@ -22,6 +22,7 @@
 
 #include "phylotree.h"
 #include "modelgtr.h"
+#include <complex>
 
 /**
 The general non-reversible model
@@ -166,6 +167,13 @@ protected:
 		temporary working space
 	*/
 	double *temp_space;
+    
+    /**
+        complex eigenvalues and eigenvectors, pointing to the same pointer 
+        to the previous double *eigenvalues and double *eigenvectors
+    */
+    std::complex<double> *ceval, *cevec, *cinv_evec;
+    
 };
 
 #endif

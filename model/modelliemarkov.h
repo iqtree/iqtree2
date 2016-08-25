@@ -17,6 +17,26 @@ public:
 
 	static bool validModelName(string model_name);
 	void setBounds(double *lower_bound, double *upper_bound, bool *bound_check);
+	
+	/**
+		decompose the rate matrix into eigenvalues and eigenvectors
+	*/
+	virtual void decomposeRateMatrix();
+
+    /** decompose rate matrix using closed formula derived by Michael Woodhams */
+    void decomposeRateMatrixClosedForm();
+
+    /** decompose rate matrix using Eigen library */
+    void decomposeRateMatrixEigen();
+
+	/**
+		compute the transition probability matrix.
+		@param time time between two events
+		@param trans_matrix (OUT) the transition matrix between all pairs of states.
+			Assume trans_matrix has size of num_states * num_states.
+	*/
+	virtual void computeTransMatrix(double time, double *trans_matrix);
+
 protected:
 	const double **basis;
 	int symmetry; // RY->0, WS->1, MK->2
