@@ -3014,15 +3014,15 @@ void parseArg(int argc, char *argv[], Params &params) {
 			}
 
             
-            if (strcmp(argv[cnt], "--matexp-scaling-squaring") == 0) {
+            if (strcmp(argv[cnt], "--scaling-squaring") == 0) {
                 params.matrix_exp_technique = MET_SCALING_SQUARING;
                 continue;
             }
-            if (strcmp(argv[cnt], "--matexp-eigen") == 0) {
+            if (strcmp(argv[cnt], "--eigenlib") == 0) {
                 params.matrix_exp_technique = MET_EIGEN_DECOMPOSITION;
                 continue;
             }
-            if (strcmp(argv[cnt], "--matexp-lm") == 0) {
+            if (strcmp(argv[cnt], "--lie-markov") == 0) {
                 params.matrix_exp_technique = MET_LIE_MARKOV_DECOMPOSITION;
                 continue;
             }
@@ -3365,7 +3365,8 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -wspm                Write site probabilities per mixture class" << endl
             << "  -wspmr               Write site probabilities per mixture+rate class" << endl
             << "  -fconst f1,...,fN    Add constant patterns into alignment (N=#nstates)" << endl
-            << "  -me <epsilon>        Logl epsilon for model parameter optimization (default 0.01)" << endl;
+            << "  -me <epsilon>        Logl epsilon for model parameter optimization (default 0.01)" << endl
+            << "  --eigenlib           Use Eigen3 library" << endl;
 //            << "  -d <file>            Reading genetic distances from file (default: JC)" << endl
 //			<< "  -d <outfile>         Calculate the distance matrix inferred from tree" << endl
 //			<< "  -stats <outfile>     Output some statistics about branch lengths" << endl

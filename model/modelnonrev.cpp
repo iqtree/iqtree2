@@ -34,8 +34,8 @@ ModelNonRev::ModelNonRev(PhyloTree *tree)
     rates = new double [num_rates];
     memset(rates, 0, sizeof(double) * (num_rates));
 
-    rate_matrix = new double[num_states*num_states];
-    temp_space =  new double[num_states*num_states];
+    rate_matrix = aligned_alloc<double>(num_states*num_states);
+    temp_space =  aligned_alloc<double>(num_states*num_states);
     
     ceval = aligned_alloc<complex<double> >(num_states);
     cevec = aligned_alloc<complex<double> >(num_states*num_states);
@@ -55,8 +55,8 @@ ModelNonRev::~ModelNonRev() {
 
 void ModelNonRev::freeMem() {
     ModelGTR::freeMem();
-    delete [] temp_space;
-    delete [] rate_matrix;
+    aligned_free(temp_space);
+    aligned_free(rate_matrix);
     delete [] model_parameters;
     aligned_free(cinv_evec);
     aligned_free(cevec);

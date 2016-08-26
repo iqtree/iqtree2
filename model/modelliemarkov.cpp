@@ -18,9 +18,7 @@
  * Would be more efficient to apply it just once to basis in constructor.
  */
 #ifdef USE_EIGEN3
-#include <Eigen/Core>
 #include <Eigen/Dense>
-#include <Eigen/Eigenvalues>
 #endif
 #include "modelliemarkov.h"
 #include <float.h>
@@ -368,19 +366,23 @@ using namespace Eigen;
 void ModelLieMarkov::decomposeRateMatrixEigen() {
 #ifdef USE_EIGEN3
     Matrix4d mat(rate_matrix);
+    mat.transpose();
     EigenSolver<Matrix4d> eigensolver(mat);
     assert (eigensolver.info() == Eigen::Success);
-    Vector4cd eval = eigensolver.eigenvalues();
-    Matrix4cd evec = eigensolver.eigenvectors();
-    Matrix4cd inv_evec = evec.inverse();
-    int i, j;
-    for (i = 0; i < 4; i++) {
-        ceval[i] = eval(i);
-        for (j = 0; j < 4; j++) {
-            cevec[j*4+i] = evec(i, j);
-            cinv_evec[j*4+i] = inv_evec(i, j);
-        }
-    }
+    Map<Vector4cd,Aligned> eval(ceval);
+    eval = eigensolver.eigenvalues();
+    Map<Matrix4cd,Aligned> evec(cevec);
+    evec = eigensolver.eigenvectors();
+    Map<Matrix4cd,Aligned> inv_evec(cinv_evec);
+    inv_evec = evec.inverse();
+//    int i, j;
+//    for (i = 0; i < 4; i++) {
+//        ceval[i] = eval(i);
+//        for (j = 0; j < 4; j++) {
+//            cevec[j*4+i] = evec(i, j);
+//            cinv_evec[j*4+i] = inv_evec(i, j);
+//        }
+//    }
    Matrix4cd eval_diag = eval.asDiagonal();
 //   cout << "eigenvalues:" << endl << eval_diag << endl;
 //   cout << "columns right eigenvectors" << endl << evec << endl;    
@@ -392,6 +394,10 @@ void ModelLieMarkov::decomposeRateMatrixEigen() {
 //   cout << "check: " << endl << (inv_evec * mat * evec - eval_diag) << endl;
 //    Matrix4cd cmat = mat;
 //    cout << "check: " << endl << (evec * eval_diag * inv_evec) << endl;
+    Matrix4cd check = inv_evec * mat * evec - eval_diag;
+    for (int i = 0; i < 4; i++)
+        for (int j = 0; j < 4; j++)
+            assert(abs(check(i,j)) < 1e-4);
 #else
     outError("Please install Eigen3 library for this option ", __func__);
 #endif
@@ -612,22 +618,20 @@ void ModelLieMarkov::computeTransMatrix(double time, double *trans_matrix) {
         Vector4cd ceval_exp;
         for (i = 0; i < 4; i++)
             ceval_exp(i) = exp(ceval[i]*time);
-//        cout << "ceval_exp: " << ceval_exp << endl;
         Matrix4cd cevectors(cevec);
         Matrix4cd cinv_evectors(cinv_evec);
         Matrix4cd res = cevectors * ceval_exp.asDiagonal() * cinv_evectors;
-//        cout << "cevec:\n" << cevectors << endl;
-//        cout << "cinv_evec:\n" << cinv_evectors << endl;
-//        cout << "P(t):\n" << res << endl;
         for (i = 0; i < 4; i++) {
             for (int j = 0; j < 4; j++) {
                 trans_matrix[i*4+j] = res(i, j).real();
                 assert(fabs(res(i,j).imag()) < 1e-6);
             }
-            assert(fabs(trans_matrix[i*4]+trans_matrix[i*4+1]+trans_matrix[i*4+2]+trans_matrix[i*4+3]-1.0) < 1e-6);
+            assert(fabs(trans_matrix[i*4]+trans_matrix[i*4+1]+trans_matrix[i*4+2]+trans_matrix[i*4+3]-1.0) < 1e-4);
         }
         
 #endif
+    } else {
+        outError("Not supported yet");
     }
 }
 
