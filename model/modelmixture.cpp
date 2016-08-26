@@ -1014,10 +1014,8 @@ ModelSubst* createModel(string model_str, ModelsBlock *models_block, StateFreqTy
 //		((ModelGTR*)model)->init(freq_type);
 //	} else
 	if (ModelNonRev::validModelName(model_str)) {
-		freq_type = FREQ_ESTIMATE;
-		tree->optimize_by_newton = false;
 		model = ModelNonRev::getModelByName(model_str, tree, model_params, count_rates);
-		((ModelNonRev*)model)->init(freq_type);
+//		((ModelNonRev*)model)->init(freq_type);
 	} else if (tree->aln->seq_type == SEQ_BINARY) {
 		model = new ModelBIN(model_str.c_str(), model_params, freq_type, freq_params, tree, count_rates);
 	} else if (tree->aln->seq_type == SEQ_DNA) {

@@ -12,8 +12,15 @@
 
 class ModelLieMarkov: public ModelNonRev {
 public:
-        ModelLieMarkov(string model_name, PhyloTree *tree, string model_params, bool count_rates);
+        ModelLieMarkov(string model_name, PhyloTree *tree, string model_params, bool count_rates = false);
         virtual ~ModelLieMarkov();
+
+	/**
+		this function is served for model testing
+		@param model_name name of the model
+		@param freq_type state frequency type, can be FREQ_USER_DEFINED, FREQ_EQUAL, FREQ_EMPIRICAL, or FREQ_ESTIMATE
+	*/
+	virtual void init(const char *model_name, string model_params, StateFreqType freq, string freq_params);
 
 	static bool validModelName(string model_name);
 	void setBounds(double *lower_bound, double *upper_bound, bool *bound_check);

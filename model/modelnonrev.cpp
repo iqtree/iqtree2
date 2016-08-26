@@ -29,6 +29,9 @@ ModelNonRev::ModelNonRev(PhyloTree *tree)
 //    ModelGTR::freeMem();
 
 	fixed_parameters = false;
+    model_parameters = NULL;
+    // TODO: right right Newton-Raphson does not work
+	tree->optimize_by_newton = false;
 
     int num_rates = getNumRateEntries();
     

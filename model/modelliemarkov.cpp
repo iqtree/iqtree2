@@ -219,7 +219,11 @@ const double MIN_LIE_WEIGHT = -0.9999;
 const double MAX_LIE_WEIGHT =  0.9999;
 
 ModelLieMarkov::ModelLieMarkov(string model_name, PhyloTree *tree, string model_params, bool count_rates)
-	: ModelNonRev(tree)
+	: ModelNonRev(tree) {
+    init(model_name.c_str(), model_params, FREQ_ESTIMATE, "");
+}
+
+void ModelLieMarkov::init(const char *model_name, string model_params, StateFreqType freq, string freq_params)
 {
     assert(NUM_RATES==getNumRateEntries());
     parseModelName(model_name,&model_num,&symmetry);
@@ -227,10 +231,13 @@ ModelLieMarkov::ModelLieMarkov(string model_name, PhyloTree *tree, string model_
         // should never happen - model_name should have been accepted 
         // by validModelName before constructor was called.
         cerr << "Bad model name in ModelLieMarkov constructor" << endl;
-        exit(1);
+        abort();
     }
+    freq_type = FREQ_ESTIMATE;
     basis = BASES[model_num];
     num_params = MODEL_PARAMS[model_num];
+    if (model_parameters)
+        delete[] model_parameters;
     model_parameters = new double [num_params];
     memset(model_parameters, 0, sizeof(double)*num_params);
     this->setRates();
@@ -261,6 +268,7 @@ ModelLieMarkov::ModelLieMarkov(string model_name, PhyloTree *tree, string model_
     }
     name = "LM"+MODEL_NAMES[model_num]+SYMMETRY[symmetry];
     full_name = "Lie Markov model "+MODEL_NAMES[model_num]+SYMMETRY[symmetry]+" (non reversible)";
+    ModelNonRev::init(freq_type);
 }
 
 ModelLieMarkov::~ModelLieMarkov() {

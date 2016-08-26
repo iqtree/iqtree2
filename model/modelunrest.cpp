@@ -29,6 +29,7 @@ ModelUnrest::ModelUnrest(PhyloTree *tree, string model_params, bool count_rates)
 	}
     name = "UNREST";
     full_name = "Unrestricted model (non-reversible)";
+    ModelNonRev::init(FREQ_ESTIMATE);
 }
 
 /* static */ bool ModelUnrest::validModelName(string model_name) {
