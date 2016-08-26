@@ -2819,26 +2819,26 @@ int PhyloTree::fixNegativeBranch(bool force, Node *node, Node *dad) {
 
 void PhyloTree::doOneRandomNNI(Node *node1, Node *node2) {
 	assert(isInnerBranch(node1, node2));
+
+    if (((PhyloNeighbor*)node1->findNeighbor(node2))->direction == TOWARD_ROOT) {
+        // swap node1 and node2 if the direction is not right, only for nonreversible models
+        Node *tmp = node1;
+        node1 = node2;
+        node2 = tmp;
+    }
     Neighbor *node1Nei = NULL;
     Neighbor *node2Nei = NULL;
     // randomly choose one neighbor from node1 and one neighbor from node2
     bool chooseNext = false;
-	FOR_NEIGHBOR_IT(node1, node2, it){
-		if (chooseNext) {
-			node1Nei = (*it);
-			break;
-		}
-         
-		int randNum = random_int(2); // randNum is either 0 or 1
-		if (randNum == 0) {
-			node1Nei = (*it);
-			break;
-		} else {
-			chooseNext = true;
-		}
+	FOR_NEIGHBOR_IT(node1, node2, it)
+    if (((PhyloNeighbor*)*it)->direction != TOWARD_ROOT)
+    {
+        node1Nei = (*it); // for the first neighbor, no need to choose randomly
+        break;
 	}
 	chooseNext = false;
 	FOR_NEIGHBOR_IT(node2, node1, it){
+        // if this loop, is it sure that direction is away from root because node1->node2 is away from root
 		if (chooseNext) {
 			node2Nei = (*it);
 			break;
@@ -2852,6 +2852,7 @@ void PhyloTree::doOneRandomNNI(Node *node1, Node *node2) {
 		}
 	}
 	assert(node1Nei != NULL && node2Nei != NULL);
+    assert(((PhyloNeighbor*)node1Nei)->direction != TOWARD_ROOT && ((PhyloNeighbor*)node2Nei)->direction != TOWARD_ROOT);
 
     NeighborVec::iterator node1NeiIt = node1->findNeighborIt(node1Nei->node);
     NeighborVec::iterator node2NeiIt = node2->findNeighborIt(node2Nei->node);
