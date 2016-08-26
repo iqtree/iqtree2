@@ -27,6 +27,9 @@ ModelNonRev::ModelNonRev(PhyloTree *tree)
 {
 	// model_parameters must be initialized by subclass
 //    ModelGTR::freeMem();
+
+	fixed_parameters = false;
+
     int num_rates = getNumRateEntries();
     
     // reallocate the mem spaces
@@ -138,7 +141,7 @@ int matinv (double x[], int n, int m, double space[])
     return(0);
 }
 
-int QtoPi (double Q[], double pi[], int n, double space[])
+int computeStateFreqFromQMatrix (double Q[], double pi[], int n, double space[])
 {
     /* from rate matrix Q[] to pi, the stationary frequencies:
        Q' * pi = 0     pi * 1 = 1
@@ -178,7 +181,7 @@ void ModelNonRev::decomposeRateMatrix() {
             }
         rate_matrix[i*num_states+i] = -row_sum;
     }
-    QtoPi(rate_matrix, state_freq, num_states, space);
+    computeStateFreqFromQMatrix(rate_matrix, state_freq, num_states, space);
 
 
     for (i = 0, sum = 0.0; i < num_states; i++) {
@@ -303,7 +306,9 @@ double ModelNonRev::computeTrans(double time, int state1, int state2) {
     return trans;
 }
 
-int ModelNonRev::getNDim() { 
+int ModelNonRev::getNDim() {
+	if (fixed_parameters)
+		return 0;
 	return(num_params);
 }
 

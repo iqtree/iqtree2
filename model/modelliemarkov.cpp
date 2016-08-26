@@ -215,6 +215,9 @@ const static bool FULL_SYMMETRY[] =
 	      false,true};
 const static int NUM_RATES = 12;
 
+const double MIN_LIE_WEIGHT = -0.9999;
+const double MAX_LIE_WEIGHT =  0.9999;
+
 ModelLieMarkov::ModelLieMarkov(string model_name, PhyloTree *tree, string model_params, bool count_rates)
 	: ModelNonRev(tree)
 {
@@ -229,7 +232,7 @@ ModelLieMarkov::ModelLieMarkov(string model_name, PhyloTree *tree, string model_
     basis = BASES[model_num];
     num_params = MODEL_PARAMS[model_num];
     model_parameters = new double [num_params];
-    for (int i=0; i< num_params; i++) model_parameters[i] = 0;
+    memset(model_parameters, 0, sizeof(double)*num_params);
     this->setRates();
 	/*
 	 * I'm not sure how to correctly handle count_rates, so for now I'm just
@@ -237,12 +240,24 @@ ModelLieMarkov::ModelLieMarkov(string model_name, PhyloTree *tree, string model_
 	 * Whatever happens should leave model_parameters[] and rates[]
 	 * consistent with each other.
 	 */
-    if (count_rates)
-        cerr << "WARNING: count_rates=TRUE not implemented in ModelLieMarkov constructor -- ignored" << endl;
+     // Minh's answer: count_rates is not used anymore. This behaviour is correct!
+//    if (count_rates)
+//        cerr << "WARNING: count_rates=TRUE not implemented in ModelLieMarkov constructor -- ignored" << endl;
 	/* phylo_tree->aln->computeEmpiricalRateNonRev(rates); */
     if (model_params != "") {
-        cerr << "WARNING: Supplying model params to constructor not yet properly implemented -- ignored" << endl;
-        // TODO: parse model_params into model_parameters, then call setRates().
+//        cerr << "WARNING: Supplying model params to constructor not yet properly implemented -- ignored" << endl;
+        DoubleVector vec;
+        convert_double_vec(model_params.c_str(), vec);
+        if (vec.size() != num_params) 
+            outError("String '"+ model_params + "' does not have exactly " + convertIntToString(num_params) + " parameters");
+        for (int i = 0; i < num_params; i++) {
+            if (vec[i] <= MIN_LIE_WEIGHT || vec[i] >= MAX_LIE_WEIGHT)
+                outError("Weights for Lie Markov model must be between " + convertDoubleToString(MIN_LIE_WEIGHT) + " and " +
+                    convertDoubleToString(MAX_LIE_WEIGHT));
+            model_parameters[i] = vec[i];
+            fixed_parameters = true;
+        }
+        setRates();
     }
     name = "LM"+MODEL_NAMES[model_num]+SYMMETRY[symmetry];
     full_name = "Lie Markov model "+MODEL_NAMES[model_num]+SYMMETRY[symmetry]+" (non reversible)";
@@ -314,8 +329,9 @@ void ModelLieMarkov::setBounds(double *lower_bound, double *upper_bound, bool *b
 	int i, ndim = getNDim();
 
 	for (i = 1; i <= ndim; i++) {
-		lower_bound[i] = -0.9999;
-		upper_bound[i] =  0.9999;
+		lower_bound[i] = MIN_LIE_WEIGHT;
+		upper_bound[i] = MAX_LIE_WEIGHT;
+        // answer: this is correct, typically no bound check is performed
 		bound_check[i] = false; // I've no idea what this does, so don't know if 'false' is appropriate - MDW.
 	}
 }

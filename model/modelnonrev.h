@@ -157,6 +157,9 @@ protected:
 	 */
 	double *model_parameters;
 
+	/** true to fix parameters, otherwise false */
+	bool fixed_parameters;
+
 	/**
 		unrestricted Q matrix. Note that Q is normalized to 1 and has row sums of 0.
 		no state frequencies are involved here since Q is a general matrix.
