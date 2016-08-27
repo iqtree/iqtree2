@@ -30,6 +30,7 @@ ModelNonRev::ModelNonRev(PhyloTree *tree)
 
 	fixed_parameters = false;
     model_parameters = NULL;
+    ignore_state_freq = true;
     // TODO: right right Newton-Raphson does not work
 	tree->optimize_by_newton = false;
 
@@ -42,6 +43,7 @@ ModelNonRev::ModelNonRev(PhyloTree *tree)
 
     rate_matrix = aligned_alloc<double>(num_states*num_states);
     temp_space =  aligned_alloc<double>(num_states*num_states);
+    eigenvalues_imag = aligned_alloc<double>(num_states);
     
     ceval = aligned_alloc<complex<double> >(num_states);
     cevec = aligned_alloc<complex<double> >(num_states*num_states);
@@ -61,12 +63,13 @@ ModelNonRev::~ModelNonRev() {
 
 void ModelNonRev::freeMem() {
     ModelGTR::freeMem();
-    aligned_free(temp_space);
-    aligned_free(rate_matrix);
-    delete [] model_parameters;
     aligned_free(cinv_evec);
     aligned_free(cevec);
     aligned_free(ceval);
+    aligned_free(eigenvalues_imag);
+    aligned_free(temp_space);
+    aligned_free(rate_matrix);
+    delete [] model_parameters;
 }
 
 /* static */ ModelNonRev* ModelNonRev::getModelByName(string model_name, PhyloTree *tree, string model_params, bool count_rates) {
@@ -201,6 +204,10 @@ void ModelNonRev::decomposeRateMatrix() {
         }
     }
     delete [] space;
+
+    if (phylo_tree->params->matrix_exp_technique == MET_EIGEN_DECOMPOSITION) {
+        eigensystem_nonrev(rate_matrix, state_freq, eigenvalues, eigenvalues_imag, eigenvectors, inv_eigenvectors, num_states);
+    }
 }
 
 
@@ -289,10 +296,69 @@ int matexp (double Q[], double t, int n, int TimeSquare, double space[])
 
 const int TimeSquare = 10;
 
+
+void ModelNonRev::computeTransMatrixEigen(double time, double *trans_matrix) {
+	/* compute P(t) */
+	double evol_time = time / total_num_subst;
+    int nstates_2 = num_states*num_states;
+	double *exptime = new double[nstates_2];
+	int i, j, k;
+
+    memset(exptime, 0, sizeof(double)*nstates_2);
+	for (i = 0; i < num_states; i++)
+        if (eigenvalues_imag[i] == 0.0) {
+            exptime[i*num_states+i] = exp(evol_time * eigenvalues[i]);
+        } else {
+            assert(i < num_states-1 && eigenvalues_imag[i+1] != 0.0 && eigenvalues_imag[i] > 0.0);
+            complex<double> exp_eval(eigenvalues[i] * evol_time, eigenvalues_imag[i] * evol_time);
+            exp_eval = exp(exp_eval);
+            exptime[i*num_states+i] = exp_eval.real();
+            exptime[i*num_states+i+1] = exp_eval.imag();
+            i++;
+            exptime[i*num_states+i] = exp_eval.real();
+            exptime[i*num_states+i-1] = -exp_eval.imag();
+        }
+
+
+    // compute V * exp(L t)
+    for (i = 0; i < num_states; i++)
+        for (j = 0; j < num_states; j++) {
+            double val = 0;
+            for (k = 0; k < num_states; k++)
+                val += eigenvectors[i*num_states+k] * exptime[k*num_states+j];
+            trans_matrix[i*num_states+j] = val;
+        }
+
+    memcpy(exptime, trans_matrix, sizeof(double)*nstates_2);
+
+    // then compute V * exp(L t) * V^{-1}
+    for (i = 0; i < num_states; i++) {
+        double row_sum = 0.0;
+        for (j = 0; j < num_states; j++) {
+            double val = 0;
+            for (k = 0; k < num_states; k++)
+                val += exptime[i*num_states+k] * inv_eigenvectors[k*num_states+j];
+            // make sure that trans_matrix are non-negative
+            assert(val >= -0.001);
+            val = fabs(val);
+            trans_matrix[i*num_states+j] = val;
+            row_sum += val;
+        }
+        assert(fabs(row_sum-1.0) < 1e-4);
+    }
+
+    delete [] exptime;
+}
+
 void ModelNonRev::computeTransMatrix(double time, double *trans_matrix) {
-    int statesqr = num_states*num_states;
-    memcpy(trans_matrix, rate_matrix, statesqr*sizeof(double));
-    matexp(trans_matrix, time, num_states, TimeSquare, temp_space);
+    if (phylo_tree->params->matrix_exp_technique == MET_EIGEN_DECOMPOSITION) {
+        computeTransMatrixEigen(time, trans_matrix);
+    } else {
+        // scaling and squaring technique
+        int statesqr = num_states*num_states;
+        memcpy(trans_matrix, rate_matrix, statesqr*sizeof(double));
+        matexp(trans_matrix, time, num_states, TimeSquare, temp_space);
+    }
     // 2016-04-05: 2nd version
 //    for (int i = 0; i < statesqr; i++) 
 //        trans_matrix[i] *= time;
@@ -302,8 +368,9 @@ void ModelNonRev::computeTransMatrix(double time, double *trans_matrix) {
 
 double ModelNonRev::computeTrans(double time, int state1, int state2) {
     double *trans_matrix = new double[num_states*num_states];
-    memcpy(trans_matrix, rate_matrix, num_states*num_states*sizeof(double));
-    matexp(trans_matrix, time, num_states, TimeSquare, temp_space);
+//    memcpy(trans_matrix, rate_matrix, num_states*num_states*sizeof(double));
+//    matexp(trans_matrix, time, num_states, TimeSquare, temp_space);
+    computeTransMatrix(time, trans_matrix);
     double trans = trans_matrix[state1*num_states+state2];
     delete [] trans_matrix;
     return trans;

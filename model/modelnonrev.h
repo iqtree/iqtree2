@@ -106,6 +106,14 @@ public:
 	virtual void computeTransMatrix(double time, double *trans_matrix);
 
 	/**
+		compute the transition probability matrix using (complex) eigenvalues
+		@param time time between two events
+		@param trans_matrix (OUT) the transition matrix between all pairs of states.
+			Assume trans_matrix has size of num_states * num_states.
+	*/
+	void computeTransMatrixEigen(double time, double *trans_matrix);
+
+	/**
 		compute the transition probability between two states
 		@param time time between two events
 		@param state1 first state
@@ -165,6 +173,9 @@ protected:
 		no state frequencies are involved here since Q is a general matrix.
 	*/
 	double *rate_matrix;
+
+	/** imaginary part of eigenvalues */
+	double *eigenvalues_imag;
 	
 	/**
 		temporary working space

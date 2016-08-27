@@ -3019,6 +3019,10 @@ void parseArg(int argc, char *argv[], Params &params) {
                 continue;
             }
             if (strcmp(argv[cnt], "--eigenlib") == 0) {
+                params.matrix_exp_technique = MET_EIGEN3LIB_DECOMPOSITION;
+                continue;
+            }
+            if (strcmp(argv[cnt], "--eigen") == 0) {
                 params.matrix_exp_technique = MET_EIGEN_DECOMPOSITION;
                 continue;
             }

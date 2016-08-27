@@ -34,7 +34,7 @@ public:
     void decomposeRateMatrixClosedForm();
 
     /** decompose rate matrix using Eigen library */
-    void decomposeRateMatrixEigen();
+    void decomposeRateMatrixEigen3lib();
 
 	/**
 		compute the transition probability matrix.

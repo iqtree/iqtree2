@@ -377,17 +377,20 @@ void ModelLieMarkov::decomposeRateMatrix() {
     ModelNonRev::decomposeRateMatrix();
     if (phylo_tree->params->matrix_exp_technique == MET_SCALING_SQUARING) 
         return;
-    if (phylo_tree->params->matrix_exp_technique == MET_EIGEN_DECOMPOSITION) {
+    if (phylo_tree->params->matrix_exp_technique == MET_EIGEN3LIB_DECOMPOSITION) {
         // using Eigen library
-        decomposeRateMatrixEigen();
+        decomposeRateMatrixEigen3lib();
         return;
     }
-    decomposeRateMatrixClosedForm();
+    if (phylo_tree->params->matrix_exp_technique == MET_LIE_MARKOV_DECOMPOSITION) {
+        decomposeRateMatrixClosedForm();
+        return;
+    }
 }
 
 using namespace Eigen;
 
-void ModelLieMarkov::decomposeRateMatrixEigen() {
+void ModelLieMarkov::decomposeRateMatrixEigen3lib() {
 #ifdef USE_EIGEN3
     Matrix4d mat(rate_matrix);
     mat.transpose();
@@ -634,9 +637,7 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
 }
 
 void ModelLieMarkov::computeTransMatrix(double time, double *trans_matrix) {
-    if (phylo_tree->params->matrix_exp_technique == MET_SCALING_SQUARING) {
-        ModelNonRev::computeTransMatrix(time, trans_matrix);
-    } else if (phylo_tree->params->matrix_exp_technique == MET_EIGEN_DECOMPOSITION) {
+    if (phylo_tree->params->matrix_exp_technique == MET_EIGEN3LIB_DECOMPOSITION) {
 #ifdef USE_EIGEN3
         int i;
         Vector4cd ceval_exp;
@@ -651,11 +652,10 @@ void ModelLieMarkov::computeTransMatrix(double time, double *trans_matrix) {
                 assert(fabs(res(i,j).imag()) < 1e-6);
             }
             assert(fabs(trans_matrix[i*4]+trans_matrix[i*4+1]+trans_matrix[i*4+2]+trans_matrix[i*4+3]-1.0) < 1e-4);
-        }
-        
+        }        
 #endif
     } else {
-        outError("Not supported yet");
+        ModelNonRev::computeTransMatrix(time, trans_matrix);
     }
 }
 
