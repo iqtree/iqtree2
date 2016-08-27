@@ -31,8 +31,6 @@ ModelNonRev::ModelNonRev(PhyloTree *tree)
 	fixed_parameters = false;
     model_parameters = NULL;
     ignore_state_freq = true;
-    // TODO: right right Newton-Raphson does not work
-	tree->optimize_by_newton = false;
 
     int num_rates = getNumRateEntries();
     
@@ -376,6 +374,28 @@ double ModelNonRev::computeTrans(double time, int state1, int state2) {
     return trans;
 }
 
+void ModelNonRev::computeTransDerv(double time, double *trans_matrix, double *trans_derv1, double *trans_derv2) {
+    computeTransMatrix(time, trans_matrix);
+    int i, j, k;
+    // First derivative = Q * e^(Qt)
+    for (i = 0; i < num_states; i++)
+        for (j = 0; j < num_states; j++) {
+            double val = 0.0;
+            for (k = 0; k < num_states; k++)
+                val += rate_matrix[i*num_states+k] * trans_matrix[k*num_states+j];
+            trans_derv1[i*num_states+j] = val;
+        }
+        
+    // Second derivative = Q * Q * e^(Qt)
+    for (i = 0; i < num_states; i++)
+        for (j = 0; j < num_states; j++) {
+            double val = 0.0;
+            for (k = 0; k < num_states; k++)
+                val += rate_matrix[i*num_states+k] * trans_derv1[k*num_states+j];
+            trans_derv2[i*num_states+j] = val;
+        }
+}
+
 int ModelNonRev::getNDim() {
 	if (fixed_parameters)
 		return 0;
@@ -442,10 +462,10 @@ double ModelNonRev::optimizeParameters(double gradient_epsilon) {
 	// by BFGS algorithm
 	setVariables(variables);
 	setBounds(lower_bound, upper_bound, bound_check);
-    if (phylo_tree->params->optimize_alg.find("BFGS-B") == string::npos)
+//    if (phylo_tree->params->optimize_alg.find("BFGS-B") == string::npos)
         score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound, bound_check, max(gradient_epsilon, TOL_RATE));
-    else
-        score = -L_BFGS_B(ndim, variables+1, lower_bound+1, upper_bound+1, max(gradient_epsilon, TOL_RATE));
+//    else
+//        score = -L_BFGS_B(ndim, variables+1, lower_bound+1, upper_bound+1, max(gradient_epsilon, TOL_RATE));
 
 	bool changed = getVariables(variables);
     if (changed) {

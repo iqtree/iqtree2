@@ -405,11 +405,14 @@ void PhyloTree::computeNonrevPartialLikelihood(PhyloNeighbor *dad_branch, PhyloN
 
 //template <const int nstates>
 void PhyloTree::computeNonrevLikelihoodDerv(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf) {
+
+    assert(rooted);
+
     PhyloNode *node = (PhyloNode*) dad_branch->node;
     PhyloNeighbor *node_branch = (PhyloNeighbor*) node->findNeighbor(dad);
     if (!central_partial_lh)
         initializeAllPartialLh();
-    if (node->isLeaf()) {
+    if (node->isLeaf() || (dad_branch->direction == AWAYFROM_ROOT && dad != root)) {
     	PhyloNode *tmp_node = dad;
     	dad = node;
     	node = tmp_node;
@@ -418,119 +421,179 @@ void PhyloTree::computeNonrevLikelihoodDerv(PhyloNeighbor *dad_branch, PhyloNode
     	node_branch = tmp_nei;
     }
     if ((dad_branch->partial_lh_computed & 1) == 0)
-        computePartialLikelihood(dad_branch, dad);
+        computeNonrevPartialLikelihood(dad_branch, dad);
     if ((node_branch->partial_lh_computed & 1) == 0)
-        computePartialLikelihood(node_branch, node);
-        
+        computeNonrevPartialLikelihood(node_branch, node);
     size_t nstates = aln->num_states;
+    size_t nstatesqr = nstates*nstates;
     size_t ncat = site_rate->getNRate();
 
     size_t block = ncat * nstates;
     size_t ptn; // for big data size > 4GB memory required
-    size_t c, i;
+    size_t c, i, x;
     size_t orig_nptn = aln->size();
     size_t nptn = aln->size()+model_factory->unobserved_ptns.size();
-    double *eval = model->getEigenvalues();
-    assert(eval);
 
-	assert(theta_all);
-	if (!theta_computed) {
-		// precompute theta for fast branch length optimization
-
-	    if (dad->isLeaf()) {
-	    	// special treatment for TIP-INTERNAL NODE case
-#ifdef _OPENMP
-#pragma omp parallel for private(ptn, i, c) schedule(static)
-#endif
-	    	for (ptn = 0; ptn < nptn; ptn++) {
-				double *partial_lh_dad = dad_branch->partial_lh + ptn*block;
-				double *theta = theta_all + ptn*block;
-				double *lh_tip = tip_partial_lh + ((int)((ptn < orig_nptn) ? (aln->at(ptn))[dad->id] :  model_factory->unobserved_ptns[ptn-orig_nptn]))*nstates;
-                for (c = 0; c < ncat; c++) {
-                    for (i = 0; i < nstates; i++) {
-                        theta[i] = lh_tip[i] * partial_lh_dad[i];
-                    }
-                    partial_lh_dad += nstates;
-                    theta += nstates;
-                }
-
-			}
-			// ascertainment bias correction
-	    } else {
-	    	// both dad and node are internal nodes
-
-//	    	size_t all_entries = nptn*block;
-#ifdef _OPENMP
-#pragma omp parallel for private(ptn, i) schedule(static)
-#endif
-	    	for (ptn = 0; ptn < nptn; ptn++) {
-				double *theta = theta_all + ptn*block;
-			    double *partial_lh_node = node_branch->partial_lh + ptn*block;
-			    double *partial_lh_dad = dad_branch->partial_lh + ptn*block;
-	    		for (i = 0; i < block; i++) {
-	    			theta[i] = partial_lh_node[i] * partial_lh_dad[i];
-	    		}
-			}
-	    }
-		theta_computed = true;
-	}
-
-    double *val0 = new double[block];
-    double *val1 = new double[block];
-    double *val2 = new double[block];
+    double *trans_mat = new double[block*nstates*3];
+    double *trans_derv1 = trans_mat + block*nstates;
+    double *trans_derv2 = trans_derv1 + block*nstates;
+    
 	for (c = 0; c < ncat; c++) {
+		double len = site_rate->getRate(c)*dad_branch->length;
 		double prop = site_rate->getProp(c);
-		for (i = 0; i < nstates; i++) {
-			double cof = eval[i]*site_rate->getRate(c);
-			double val = exp(cof*dad_branch->length) * prop;
-			double val1_ = cof*val;
-			val0[c*nstates+i] = val;
-			val1[c*nstates+i] = val1_;
-			val2[c*nstates+i] = cof*val1_;
-		}
+        double *this_trans_mat = &trans_mat[c*nstatesqr];
+        double *this_trans_derv1 = &trans_derv1[c*nstatesqr];
+        double *this_trans_derv2 = &trans_derv2[c*nstatesqr];
+        model->computeTransDerv(len, this_trans_mat, this_trans_derv1, this_trans_derv2);
+        double prop_rate = prop*site_rate->getRate(c);
+        double prop_rate_2 = prop_rate * site_rate->getRate(c); 
+		for (i = 0; i < nstatesqr; i++) {
+			this_trans_mat[i] *= prop;
+            this_trans_derv1[i] *= prop_rate;
+            this_trans_derv2[i] *= prop_rate_2;
+        }
 	}
-
 
     double my_df = 0.0, my_ddf = 0.0, prob_const = 0.0, df_const = 0.0, ddf_const = 0.0;
-//    double tree_lh = node_branch->lh_scale_factor + dad_branch->lh_scale_factor;
 
+    if (dad->isLeaf()) {
+         // make sure that we do not estimate the virtual branch length from the root
+        assert(dad != root);
+    	// special treatment for TIP-INTERNAL NODE case
+    	double *partial_lh_node = new double[(aln->STATE_UNKNOWN+1)*block*3];
+        double *partial_lh_derv1 = partial_lh_node + (aln->STATE_UNKNOWN+1)*block; 
+        double *partial_lh_derv2 = partial_lh_derv1 + (aln->STATE_UNKNOWN+1)*block; 
+        IntVector states_dad = aln->seq_states[dad->id];
+        states_dad.push_back(aln->STATE_UNKNOWN);
+        // precompute information from one tip
+        for (IntVector::iterator it = states_dad.begin(); it != states_dad.end(); it++) {
+            double *lh_node = partial_lh_node +(*it)*block;
+            double *lh_derv1 = partial_lh_derv1 +(*it)*block;
+            double *lh_derv2 = partial_lh_derv2 +(*it)*block;
+            double *lh_tip = tip_partial_lh + (*it)*nstates;
+            double *trans_mat_tmp = trans_mat;
+            double *trans_derv1_tmp = trans_derv1;
+            double *trans_derv2_tmp = trans_derv2;
+            for (c = 0; c < ncat; c++) {
+                for (i = 0; i < nstates; i++) {
+                    lh_node[i] = 0.0;
+                    lh_derv1[i] = 0.0;
+                    lh_derv2[i] = 0.0;
+                    for (x = 0; x < nstates; x++) {
+                        lh_node[i] += trans_mat_tmp[x] * lh_tip[x];
+                        lh_derv1[i] += trans_derv1_tmp[x] * lh_tip[x];
+                        lh_derv2[i] += trans_derv2_tmp[x] * lh_tip[x];
+                    }
+                    trans_mat_tmp += nstates;
+                    trans_derv1_tmp += nstates;
+                    trans_derv2_tmp += nstates;
+                }
+                lh_node += nstates;
+                lh_derv1 += nstates;
+                lh_derv2 += nstates;
+            }
+        }
+
+    	// now do the real computation
 #ifdef _OPENMP
-#pragma omp parallel for reduction(+: my_df, my_ddf, prob_const, df_const, ddf_const) private(ptn, i) schedule(static)
+#pragma omp parallel for reduction(+: my_df, my_ddf, prob_const, df_const, ddf_const) private(ptn, i, c) schedule(static)
 #endif
-    for (ptn = 0; ptn < nptn; ptn++) {
-		double lh_ptn = ptn_invar[ptn], df_ptn = 0.0, ddf_ptn = 0.0;
-		double *theta = theta_all + ptn*block;
-		for (i = 0; i < block; i++) {
-			lh_ptn += val0[i] * theta[i];
-			df_ptn += val1[i] * theta[i];
-			ddf_ptn += val2[i] * theta[i];
-		}
+    	for (ptn = 0; ptn < nptn; ptn++) {
+			double lh_ptn = ptn_invar[ptn], df_ptn = 0.0, ddf_ptn = 0.0;
+			double *partial_lh_dad = dad_branch->partial_lh + ptn*block;
+			int state_dad;
+            state_dad = (ptn < orig_nptn) ? (aln->at(ptn))[dad->id] : model_factory->unobserved_ptns[ptn-orig_nptn];
+			double *lh_node = partial_lh_node + state_dad*block;
+			double *lh_derv1 = partial_lh_derv1 + state_dad*block;
+			double *lh_derv2 = partial_lh_derv2 + state_dad*block;
+			for (c = 0; c < ncat; c++) {
+				for (i = 0; i < nstates; i++) {
+					lh_ptn += lh_node[i] * partial_lh_dad[i];
+					df_ptn += lh_derv1[i] * partial_lh_dad[i];
+					ddf_ptn += lh_derv2[i] * partial_lh_dad[i];
+				}
+				lh_node += nstates;
+				lh_derv1 += nstates;
+				lh_derv2 += nstates;
+				partial_lh_dad += nstates;
+			}
+			assert(lh_ptn > 0.0);
+            if (ptn < orig_nptn) {
+                double df_frac = df_ptn / lh_ptn;
+                double ddf_frac = ddf_ptn / lh_ptn;
+                double freq = ptn_freq[ptn];
+                double tmp1 = df_frac * freq;
+                double tmp2 = ddf_frac * freq;
+                my_df += tmp1;
+                my_ddf += tmp2 - tmp1 * df_frac;
+			} else {
+                // bugfix 2016-01-21, prob_const can be rescaled
+                if (dad_branch->scale_num[ptn] + node_branch->scale_num[ptn] >= 1)
+                    lh_ptn *= SCALING_THRESHOLD;
+//				_pattern_lh[ptn] = lh_ptn;
+				prob_const += lh_ptn;
+                df_const += df_ptn;
+                ddf_const += ddf_ptn;
+			}
+        }
+		delete [] partial_lh_node;
+    } else {
+    	// both dad and node are internal nodes
+#ifdef _OPENMP
+#pragma omp parallel for reduction(+: my_df, my_ddf, prob_const, df_const, ddf_const) private(ptn, i, c) schedule(static)
+#endif
+    	for (ptn = 0; ptn < nptn; ptn++) {
+			double lh_ptn = ptn_invar[ptn], df_ptn = 0.0, ddf_ptn = 0.0;
+			double *partial_lh_dad = dad_branch->partial_lh + ptn*block;
+			double *partial_lh_node = node_branch->partial_lh + ptn*block;
+			double *trans_mat_tmp = trans_mat;
+			double *trans_derv1_tmp = trans_derv1;
+			double *trans_derv2_tmp = trans_derv2;
+			for (c = 0; c < ncat; c++) {
+				for (i = 0; i < nstates; i++) {
+                    double lh_state = 0.0;
+                    double lh_derv1 = 0.0;
+                    double lh_derv2 = 0.0;
+                    for (x = 0; x < nstates; x++) {
+                        lh_state += trans_mat_tmp[x] * partial_lh_node[x];
+                        lh_derv1 += trans_derv1_tmp[x] * partial_lh_node[x];
+                        lh_derv2 += trans_derv2_tmp[x] * partial_lh_node[x];
+                    }
+                    lh_ptn += partial_lh_dad[i] * lh_state;
+                    df_ptn += partial_lh_dad[i] * lh_derv1;
+                    ddf_ptn += partial_lh_dad[i] * lh_derv2;
+                    trans_mat_tmp += nstates;
+                    trans_derv1_tmp += nstates;
+                    trans_derv2_tmp += nstates;
+				}
+				partial_lh_node += nstates;
+				partial_lh_dad += nstates;
+			}
 
-//        assert(lh_ptn > 0.0);
-        lh_ptn = fabs(lh_ptn);
-        
-        if (ptn < orig_nptn) {
-			double df_frac = df_ptn / lh_ptn;
-			double ddf_frac = ddf_ptn / lh_ptn;
-			double freq = ptn_freq[ptn];
-			double tmp1 = df_frac * freq;
-			double tmp2 = ddf_frac * freq;
-			my_df += tmp1;
-			my_ddf += tmp2 - tmp1 * df_frac;
-		} else {
-			// ascertainment bias correction
-			prob_const += lh_ptn;
-			df_const += df_ptn;
-			ddf_const += ddf_ptn;
+			assert(lh_ptn > 0.0);
+            if (ptn < orig_nptn) {
+                double df_frac = df_ptn / lh_ptn;
+                double ddf_frac = ddf_ptn / lh_ptn;
+                double freq = ptn_freq[ptn];
+                double tmp1 = df_frac * freq;
+                double tmp2 = ddf_frac * freq;
+                my_df += tmp1;
+                my_ddf += tmp2 - tmp1 * df_frac;
+			} else {
+                // bugfix 2016-01-21, prob_const can be rescaled
+                if (dad_branch->scale_num[ptn] + node_branch->scale_num[ptn] >= 1)
+                    lh_ptn *= SCALING_THRESHOLD;
+//				_pattern_lh[ptn] = lh_ptn;
+				prob_const += lh_ptn;
+                df_const += df_ptn;
+                ddf_const += ddf_ptn;
+			}
 		}
     }
+
 	df = my_df;
 	ddf = my_ddf;
-    if (isnan(df) || isinf(df)) {
-        df = 0.0;
-        ddf = 0.0;
-//        outWarning("Numerical instability (some site-likelihood = 0)");
-    }
+    assert(!isnan(df) && !isinf(df));
 
 	if (orig_nptn < nptn) {
     	// ascertainment bias correction
@@ -542,10 +605,7 @@ void PhyloTree::computeNonrevLikelihoodDerv(PhyloNeighbor *dad_branch, PhyloNode
     	ddf += nsites *(ddf_frac + df_frac*df_frac);
     }
 
-
-    delete [] val2;
-    delete [] val1;
-    delete [] val0;
+    delete [] trans_mat;
 }
 
 //template <const int nstates>

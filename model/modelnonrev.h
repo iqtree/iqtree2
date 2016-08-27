@@ -122,6 +122,17 @@ public:
 	virtual double computeTrans(double time, int state1, int state2);
 
 	/**
+		compute the transition probability matrix.and the derivative 1 and 2
+		@param time time between two events
+		@param trans_matrix (OUT) the transition matrix between all pairs of states. 
+			Assume trans_matrix has size of num_states * num_states.
+		@param trans_derv1 (OUT) the 1st derivative matrix between all pairs of states. 
+		@param trans_derv2 (OUT) the 2nd derivative matrix between all pairs of states. 
+	*/
+	virtual void computeTransDerv(double time, double *trans_matrix, 
+		double *trans_derv1, double *trans_derv2);
+
+	/**
 	 * setup the bounds for joint optimization with BFGS
 	 */
 	virtual void setBounds(double *lower_bound, double *upper_bound, bool *bound_check);

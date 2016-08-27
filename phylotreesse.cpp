@@ -83,8 +83,8 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk) {
     if (model_factory && !model_factory->model->isReversible()) {
         // if nonreversible model
         computeLikelihoodBranchPointer = &PhyloTree::computeNonrevLikelihoodBranch;
-//        computeLikelihoodDervPointer = &PhyloTree::computeNonrevLikelihoodDerv;
-        computeLikelihoodDervPointer = NULL;
+        computeLikelihoodDervPointer = &PhyloTree::computeNonrevLikelihoodDerv;
+//        computeLikelihoodDervPointer = NULL;
         computePartialLikelihoodPointer = &PhyloTree::computeNonrevPartialLikelihood;
         computeLikelihoodFromBufferPointer = NULL;
         return;        
