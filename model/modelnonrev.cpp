@@ -418,6 +418,9 @@ double ModelNonRev::targetFunk(double x[]) {
 		assert(phylo_tree);
 		phylo_tree->clearAllPartialLH();
 	}
+    for (int i = 0; i < num_states; i++)
+        if (state_freq[i] < 1e-4)
+            return 1e12;
 	return -phylo_tree->computeLikelihood();
 }
 
