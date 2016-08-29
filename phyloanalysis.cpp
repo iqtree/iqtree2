@@ -86,10 +86,14 @@ void reportAlignment(ofstream &out, Alignment &alignment, int nremoved_seqs) {
 					((alignment.seq_type == SEQ_DNA) ? "nucleotide" :
 					(alignment.seq_type == SEQ_PROTEIN) ? "amino-acid" :
 					(alignment.seq_type == SEQ_CODON) ? "codon": "morphological"))
-			<< " sites" << endl << "Number of constant sites: "
+			<< " sites" 
+            << endl << "Number of constant sites: "
 			<< round(alignment.frac_const_sites * alignment.getNSite())
 			<< " (= " << alignment.frac_const_sites * 100 << "% of all sites)"
-			<< endl << "Number of site patterns: " << alignment.size() << endl
+            << endl << "Number of invariant (constant or ambiguous constant) sites: "
+			<< round(alignment.frac_invariant_sites * alignment.getNSite())
+			<< " (= " << alignment.frac_invariant_sites * 100 << "% of all sites)"
+			<< endl << "Number of distinct site patterns: " << alignment.size() << endl
 			<< endl;
 }
 

@@ -3214,6 +3214,7 @@ void usage_iqtree(char* argv[], bool full_command) {
 #endif
             << "  -seed <number>       Random seed number, normally used for debugging purpose" << endl
             << "  -v, -vv, -vvv        Verbose mode, printing more messages to screen" << endl
+            << "  -quiet               Silent mode, suppress printing to screen (stdout)" << endl
             << "  -keep-ident          Keep identical sequences (default: remove & finally add)" << endl
             << endl << "CHECKPOINTING TO RESUME STOPPED RUN:" << endl
             << "  -redo                Redo analysis even for successful runs (default: resume)" << endl
@@ -3287,9 +3288,9 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "                  DNA: HKY (default), JC, F81, K2P, K3P, K81uf, TN/TrN, TNef," << endl
             << "                       TIM, TIMef, TVM, TVMef, SYM, GTR, or 6-digit model" << endl
             << "                       specification (e.g., 010010 = HKY)" << endl
-            << "              Protein: WAG (default), Poisson, cpREV, mtREV, Dayhoff, mtMAM," << endl
-            << "                       JTT, LG, mtART, mtZOA, VT, rtREV, DCMut, PMB, HIVb," << endl
-            << "                       HIVw, JTTDCMut, FLU, Blosum62" << endl
+            << "              Protein: LG (default), Poisson, cpREV, mtREV, Dayhoff, mtMAM," << endl
+            << "                       JTT, WAG, mtART, mtZOA, VT, rtREV, DCMut, PMB, HIVb," << endl
+            << "                       HIVw, JTTDCMut, FLU, Blosum62, GTR20" << endl
             << "      Protein mixture: C10,...,C60, EX2, EX3, EHO, UL2, UL3, EX_EHO, LG4M, LG4X," << endl
             << "                       JTTCF4G" << endl
             << "               Binary: JC2 (default), GTR2" << endl
@@ -3388,7 +3389,8 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -wspm                Write site probabilities per mixture class" << endl
             << "  -wspmr               Write site probabilities per mixture+rate class" << endl
             << "  -fconst f1,...,fN    Add constant patterns into alignment (N=#nstates)" << endl
-            << "  -me <epsilon>        Logl epsilon for model parameter optimization (default 0.01)" << endl;
+            << "  -me <epsilon>        Logl epsilon for model parameter optimization (default 0.01)" << endl
+            << "  --no-outfiles        Suppress printing output files" << endl;
 //            << "  -d <file>            Reading genetic distances from file (default: JC)" << endl
 //			<< "  -d <outfile>         Calculate the distance matrix inferred from tree" << endl
 //			<< "  -stats <outfile>     Output some statistics about branch lengths" << endl

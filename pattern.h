@@ -17,6 +17,10 @@
 
 using namespace std;
 
+const int PAT_CONST       = 1; // const site pattern, e.g. AAAAAA, CC-C-CCCC
+const int PAT_INVARIANT   = 2; // invariant site pattern, including const patterns and e.g., GS--G-GGG (S = G/C)
+const int PAT_INFORMATIVE = 4; // parsimony informative sites
+
 /**
 	Site-patterns in a multiple sequence alignment
 	@author BUI Quang Minh, Steffen Klaere, Arndt von Haeseler <minh.bui@univie.ac.at>
@@ -50,6 +54,18 @@ public:
 	*/
     virtual ~Pattern();
 
+    inline bool isConst() {
+        return (flag & PAT_CONST) != 0;
+    }
+
+    inline bool isInvariant() {
+        return (flag & PAT_INVARIANT) != 0;
+    }
+
+    inline bool isInformative() {
+        return (flag & PAT_INFORMATIVE) != 0;
+    }
+
 	/**
 		frequency appearance of the pattern
 	*/
@@ -59,10 +75,12 @@ public:
 		true if this is a constant pattern
 		2015-03-04: is_const will also be true for pattern like "AA-A--AAA"
 	*/
-	bool is_const;
+//	bool is_const;
     
     /** true if pattern is informative, false otherwise */
-    bool is_informative;
+//    bool is_informative;
+
+    int flag;
 
 	/** 2015-03-04: if is_const is true, this will store the const character for the pattern */
 	char const_char;
