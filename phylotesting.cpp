@@ -673,18 +673,24 @@ int getModelList(Params &params, Alignment *aln, StrVector &models, bool separat
         else
             test_options = test_options_morph;
 	} else {
-		// normal data, use +I instead
-		if (with_new) {
-			// change +I+G to +R
-			if (with_asc)
-				test_options = test_options_asc_new;
-			else
-				test_options = test_options_new;
-		} else if (with_asc) {
-			test_options = test_options_asc;
-		} else
-			test_options = test_options_default;
-	}
+        // normal data, use +I instead
+        if (with_new) {
+            // change +I+G to +R
+            if (with_asc)
+                test_options = test_options_asc_new;
+            else
+                test_options = test_options_new;
+        } else if (with_asc) {
+            test_options = test_options_asc;
+        } else
+            test_options = test_options_default;
+        if (aln->frac_const_sites == 0.0) {
+            // deactivate +I
+            for (j = 0; j < noptions; j++)
+                if (strstr(rate_options[j], "+I"))
+                    test_options[j] = false;
+        }
+    }
     
 
     StrVector ratehet;
