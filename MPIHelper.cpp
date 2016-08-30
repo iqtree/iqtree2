@@ -18,10 +18,10 @@ MPIHelper& MPIHelper::getInstance() {
     return instance;
 }
 
-#ifdef _IQTREE_MPI
 void MPIHelper::distributeTrees(vector<string> treeStrings, vector<double> scores, int tag) {
     if (getNumProcesses() == 1)
         return;
+#ifdef _IQTREE_MPI
     vector<int> sourceProcID;
     sourceProcID.insert(sourceProcID.end(), scores.size(), getProcessID());
     TreeCollection outTrees(treeStrings, scores, sourceProcID);
@@ -35,11 +35,13 @@ void MPIHelper::distributeTrees(vector<string> treeStrings, vector<double> score
         }
     }
     //numTreeSent += treeStrings.size();
+#endif
 }
 
 void MPIHelper::distributeTree(string treeString, double score, int tag) {
     if (getNumProcesses() == 1)
         return;
+#ifdef _IQTREE_MPI
     double start = getRealTime();
     vector<string> trees;
     vector<double> scores;
@@ -49,11 +51,13 @@ void MPIHelper::distributeTree(string treeString, double score, int tag) {
     if (verbose_mode >= VB_MED)
         cout << "Sent tree to other processes in " << getRealTime() - start << " seconds" << endl;
     numTreeSent++;
+#endif
 }
 
 void MPIHelper::sendTrees(int dest, vector<string> treeStrings, vector<double> scores, int tag) {
     if (getNumProcesses() == 1 || dest == getProcessID())
         return;
+#ifdef _IQTREE_MPI
     vector<int> sourceProcID;
     sourceProcID.insert(sourceProcID.end(), scores.size(), getProcessID());
     TreeCollection outTrees(treeStrings, scores, sourceProcID);
@@ -63,56 +67,81 @@ void MPIHelper::sendTrees(int dest, vector<string> treeStrings, vector<double> s
     MPI_Isend(os->getObjectData(), os->getDataLength(), MPI_CHAR, dest, tag, MPI_COMM_WORLD, request);
     sentMessages.push_back(make_pair(request, os));
     numTreeSent += treeStrings.size();
+#endif
 }
 
 void MPIHelper::sendTree(int dest, string treeString, double score, int tag) {
     if (getNumProcesses() == 1 || dest == getProcessID())
         return;
+#ifdef _IQTREE_MPI
     StrVector treeStrings;
     treeStrings.push_back(treeString);
     DoubleVector scores;
     scores.push_back(score);
     sendTrees(dest, treeStrings, scores, tag);
+#endif
 }
 
-void MPIHelper::sendStopMsg() {
+void MPIHelper::sendMsg(int tag, string msg) {
     if (getNumProcesses() == 1)
         return;
-    cleanUpMessages();
+#ifdef _IQTREE_MPI
+    if (tag == STOP_TAG)
+        cleanUpMessages();
     for (int i = 0; i < getNumProcesses(); i++) {
         if (i != getProcessID()) {
-            string msg = "STOP!";
             MPI_Request *request = new MPI_Request;
             ObjectStream *os = new ObjectStream(msg.c_str(), msg.size()+1);
-            MPI_Isend(os->getObjectData(), os->getDataLength(), MPI_CHAR, i, STOP_TAG, MPI_COMM_WORLD, request);
+            MPI_Isend(os->getObjectData(), os->getDataLength(), MPI_CHAR, i, tag, MPI_COMM_WORLD, request);
             sentMessages.push_back(make_pair(request, os));
         }
     }
+#endif
 }
 
-bool MPIHelper::checkStopMsg() {
+bool MPIHelper::checkMsg(int tag, string &msg) {
+    if (getNumProcesses() == 1)
+        return true;
+#ifdef _IQTREE_MPI
     int flag=0;
     MPI_Status status;
     char *recvBuffer;
     int numBytes;
     // Check for incoming messages
-    MPI_Iprobe(MASTER, STOP_TAG, MPI_COMM_WORLD, &flag, &status);
+    MPI_Iprobe(PROC_MASTER, tag, MPI_COMM_WORLD, &flag, &status);
     // flag == true if there is a message
     if (flag) {
         MPI_Get_count(&status, MPI_CHAR, &numBytes);
         recvBuffer = new char[numBytes];
         MPI_Recv(recvBuffer, numBytes, MPI_CHAR, status.MPI_SOURCE, status.MPI_TAG, MPI_COMM_WORLD, NULL);
-        cout << "Worker " << getProcessID() << " gets stop message " << recvBuffer << endl;
+        msg = recvBuffer;
         delete[] recvBuffer;
         return true;
     }
+#endif
     return false;
 }
+
+bool MPIHelper::checkMsg(int tag) {
+    if (getNumProcesses() == 1) {
+        return false;
+    }
+#ifdef _IQTREE_MPI
+    string msg;
+    if (checkMsg(tag, msg)) {
+        cout << "Worker " << getProcessID() << " gets message " << msg << endl;
+        return true;
+    }
+#endif
+    return false;
+}
+
 
 void MPIHelper::receiveTrees(bool fromAll, int maxNumTrees, TreeCollection &trees, int tag) {
     if (getNumProcesses() == 1) {
         return;
     }
+#ifdef _IQTREE_MPI
     int flag = 0;
     int minNumTrees = 0;
     bool nodes[getNumProcesses()];
@@ -155,12 +184,14 @@ void MPIHelper::receiveTrees(bool fromAll, int maxNumTrees, TreeCollection &tree
         }
     } while (minNumTrees > 0 || flag);
     numTreeReceived += trees.getNumTrees();
+#endif
 }
 
 int MPIHelper::receiveTrees(TreeCollection &trees, int tag) {
     if (getNumProcesses() == 1) {
         return -1;
     }
+#ifdef _IQTREE_MPI
     int flag = 0;
     // Process all pending messages
     MPI_Status status;
@@ -182,9 +213,11 @@ int MPIHelper::receiveTrees(TreeCollection &trees, int tag) {
     } else {
         return -1;
     }
+#endif
 }
 
 int MPIHelper::cleanUpMessages() {
+#ifdef _IQTREE_MPI
     int numMsgCleaned = 0;
     int flag = 0;
     MPI_Status status;
@@ -201,9 +234,10 @@ int MPIHelper::cleanUpMessages() {
             ++it;
         }
     }
-
     return numMsgCleaned;
-}
+#else
+    return 0;
 #endif
+}
 
 

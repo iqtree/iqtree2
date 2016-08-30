@@ -1886,7 +1886,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
     }
 
 	//Generate BIONJ tree
-	if (MPIHelper::getInstance().getProcessID() == MASTER) {
+	if (MPIHelper::getInstance().isMaster()) {
         if (!finishedInitTree && ((!params.dist_file && params.compute_ml_dist) || params.leastSquareBranch)) {
             computeMLDist(params, iqtree, dist_file, getCPUTime());
             if (!params.user_file && params.start_tree != STT_RANDOM_TREE) {

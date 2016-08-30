@@ -293,6 +293,9 @@ public:
      */
     double swapTaxa(PhyloNode *node1, PhyloNode *node2);
 
+    /** collect boostrap trees from workers to master */
+    void collectBootTrees();
+
     /**
             perform tree search
             @return best likelihood found

@@ -34,11 +34,12 @@
 
 #endif
 
-#define MASTER 0
+#define PROC_MASTER 0
 #define TREE_TAG 1 // Message contain trees
 #define STOP_TAG 2 // Stop message
-#define NOTREE_TAG 3 // Message does not contain a tree but a score only
+#define BOOT_TAG 3 // Message to please send bootstrap trees
 #define BOOT_TREE_TAG 4 // bootstrap tree tag
+#define LOGL_CUTOFF_TAG 5 // send logl_cutoff for ultrafast bootstrap
 
 using namespace std;
 
@@ -62,14 +63,16 @@ public:
     }
 
     bool isMaster() const {
-        return processID == MASTER;
+        return processID == PROC_MASTER;
+    }
+
+    bool isWorker() const {
+        return processID != PROC_MASTER;
     }
 
     void setProcessID(int processID) {
         MPIHelper::processID = processID;
     }
-
-#ifdef _IQTREE_MPI
 
     /**
      *  Receive trees that sent to the current process
@@ -131,22 +134,25 @@ public:
     void sendTree(int dest, string treeString, double score, int tag);
 
     /**
-     *  Send a stop message to other process
+     *  Send a message to other process, e.g. STOP_TAG
      */
-    void sendStopMsg();
+    void sendMsg(int tag, string msg);
 
     /**
-     *  Check if a stop message is received
+     *  Check if a message is received, e.g. STOP_TAG
      */
-    bool checkStopMsg();
+    bool checkMsg(int tag);
+
+    /**
+     *  Check if a message is received, e.g. STOP_TAG
+     */
+    bool checkMsg(int tag, string &msg);
 
 private:
     /**
     *  Remove the buffers for finished messages
     */
     int cleanUpMessages();
-
-#endif
 
 private:
     MPIHelper() { }; // Disable constructor

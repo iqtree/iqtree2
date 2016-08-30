@@ -2293,13 +2293,13 @@ int main(int argc, char *argv[]) {
 	cout << "* START TREE SEARCH USING MPI WITH " << MPIHelper::getInstance().getNumProcesses() << " PROCESSES *" << endl;
 	cout << "************************************************" << endl;
 	unsigned int rndSeed;
-	if (MPIHelper::getInstance().getProcessID() == MASTER) {
+	if (MPIHelper::getInstance().isMaster()) {
 		rndSeed = Params::getInstance().ran_seed;
 		cout << "Random seed of master = " << rndSeed << endl;
 	}
 	// Broadcast random seed
-	MPI_Bcast(&rndSeed, 1, MPI_INT, MASTER, MPI_COMM_WORLD);
-	if (MPIHelper::getInstance().getProcessID() != MASTER) {
+	MPI_Bcast(&rndSeed, 1, MPI_INT, PROC_MASTER, MPI_COMM_WORLD);
+	if (MPIHelper::getInstance().isWorker()) {
 //		Params::getInstance().ran_seed = rndSeed + task_id * 100000;
 		Params::getInstance().ran_seed = rndSeed;
 //		printf("Process %d: random_seed = %d\n", task_id, Params::getInstance().ran_seed);

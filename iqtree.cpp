@@ -2023,6 +2023,44 @@ string IQTree::optimizeBranches(int maxTraversal) {
     return tree;
 }
 
+void IQTree::collectBootTrees() {
+#ifdef _IQTREE_MPI
+	if (boot_trees.size() == 0)
+			return;
+    // send UFBoot trees between processes
+    if (MPIHelper::getInstance().isMaster()) {
+        MPIHelper::getInstance().sendMsg(BOOT_TAG, "BOOT TREES PLEASE!");
+        TreeCollection trees;
+        int count = 0;
+        do {
+            int source = MPIHelper::getInstance().receiveTrees(trees, BOOT_TREE_TAG);
+            if (source > 0) {
+                count++;
+                assert(trees.getNumTrees() == boot_trees.size());
+                int better_trees = 0;
+                for (int id = 0; id < trees.getNumTrees(); id++)
+                    if (trees.getScores()[id] > boot_logl[id]) {
+                        boot_trees[id] = trees.getTreeStrings()[id];
+                        boot_logl[id] = trees.getScores()[id];
+                        better_trees++; 
+                    }
+                trees.clear();
+                cout << better_trees << " better bootstrap trees from process " << source << endl;
+            }
+        } while (count < MPIHelper::getInstance().getNumProcesses()-1);
+    } else {
+        // worker
+        if (MPIHelper::getInstance().checkMsg(BOOT_TAG))
+            MPIHelper::getInstance().sendTrees(PROC_MASTER, boot_trees, boot_logl, BOOT_TREE_TAG);
+        string msg;
+        if (MPIHelper::getInstance().checkMsg(LOGL_CUTOFF_TAG, msg)) {
+            logl_cutoff = convert_double(msg.c_str());
+            cout << "Log-likelihood cutoff on original alignment: " << logl_cutoff << endl;            
+        }
+    }
+#endif
+}
+
 double IQTree::doTreeSearch() {
     cout << "--------------------------------------------------------------------" << endl;
     cout << "|             INITIALIZING CANDIDATE TREE SET                      |" << endl;
@@ -2038,7 +2076,7 @@ double IQTree::doTreeSearch() {
         treesPerProc++;
     }
     // Master node does one tree less because it already created the BIONJ tree
-    if (MPIHelper::getInstance().getProcessID() == MASTER) {
+    if (MPIHelper::getInstance().isMaster()) {
         treesPerProc--;
     }
 #else
@@ -2114,11 +2152,11 @@ double IQTree::doTreeSearch() {
         // check stopping rule
         if (MPIHelper::getInstance().isMaster()) { 
             if (stop_rule.meetStopCondition(stop_rule.getCurIt(), cur_correlation)) {
-                MPIHelper::getInstance().sendStopMsg();
+                MPIHelper::getInstance().sendMsg(STOP_TAG, "STOP!");
                 break;
             }
         } else {
-            if(MPIHelper::getInstance().checkStopMsg()) {
+            if(MPIHelper::getInstance().checkMsg(STOP_TAG)) {
                 break;
             }
         }     
@@ -2166,7 +2204,7 @@ double IQTree::doTreeSearch() {
             }
         } else {
             // worker: always send tree to MASTER
-            MPIHelper::getInstance().sendTree(MASTER, getTreeString(), curScore, TREE_TAG);
+            MPIHelper::getInstance().sendTree(PROC_MASTER, getTreeString(), curScore, TREE_TAG);
             MPI_CollectTrees(false, maxNumTrees, true);
         }
 #endif
@@ -2209,9 +2247,15 @@ double IQTree::doTreeSearch() {
         /*----------------------------------------
          * convergence criterion for ultrafast bootstrap
          *---------------------------------------*/
+         
+        // workers send bootstrap trees
+        if (params->stop_condition == SC_BOOTSTRAP_CORRELATION && MPIHelper::getInstance().isWorker())
+            collectBootTrees();
+        
+        // MASTER receives bootstrap trees and perform stop convergence test 
         if ((stop_rule.getCurIt()) >= ufboot_count &&
             params->stop_condition == SC_BOOTSTRAP_CORRELATION && MPIHelper::getInstance().isMaster()) {
-//            collectUFBootTreesFromWorkers();
+            collectBootTrees();
             ufboot_count += params->step_iterations/2;
             // compute split support every half step
             SplitGraph *sg = new SplitGraph;
@@ -2219,11 +2263,8 @@ double IQTree::doTreeSearch() {
             sg->removeTrivialSplits();
             sg->setCheckpoint(checkpoint);
             boot_splits.push_back(sg);
-//            if (params->max_candidate_trees == 0)
-//                max_candidate_trees = treels_logl.size() * (stop_rule.getCurIt() + (params->step_iterations / 2)) /
-//                                                           stop_rule.getCurIt();
-//			cout << "NOTE: " << treels_logl.size() << " bootstrap candidate trees evaluated (logl-cutoff: " << logl_cutoff << ")" << endl;
             cout << "Log-likelihood cutoff on original alignment: " << logl_cutoff << endl;
+            MPIHelper::getInstance().sendMsg(LOGL_CUTOFF_TAG, convertDoubleToString(logl_cutoff));
 
             // check convergence every full step
             if (stop_rule.getCurIt() >= ufboot_count_check) {
@@ -2231,12 +2272,8 @@ double IQTree::doTreeSearch() {
                 cur_correlation = computeBootstrapCorrelation();
                 cout << "NOTE: Bootstrap correlation coefficient of split occurrence frequencies: " <<
                 cur_correlation << endl;
-                if (!stop_rule.meetStopCondition(stop_rule.getCurIt(), cur_correlation)) {
-//	                if (params->max_candidate_trees == 0) {
-//	                    max_candidate_trees = treels_logl.size() * (stop_rule.getCurIt() + params->step_iterations) /
-//                                                                   stop_rule.getCurIt();
-//	                }
-//	                cout << "INFO: UFBoot does not converge, continue " << params->step_iterations << " more iterations" << endl;
+                if (!stop_rule.meetCorrelation(cur_correlation)) {
+	                cout << "NOTE: UFBoot does not converge, continue at least " << params->step_iterations << " more iterations" << endl;
                 }
             }
             if (params->gbo_replicates && params->online_bootstrap && params->print_ufboot_trees)
@@ -2275,34 +2312,6 @@ double IQTree::doTreeSearch() {
     cout << "Number of tree sent: " << MPIHelper::getInstance().getNumTreeSent() << endl;
     cout << "Number of NNI search done: " << MPIHelper::getInstance().getNumNNISearch() << endl;
     MPIHelper::getInstance().resetNumbers();
-
-    // send UFBoot trees between processes
-    if (boot_trees.size() > 0) {
-    if (MPIHelper::getInstance().isMaster()) {
-        TreeCollection trees;
-        int count = 0;
-        do {
-            int source = MPIHelper::getInstance().receiveTrees(trees, BOOT_TREE_TAG);
-            if (source > 0) {
-                count++;
-                assert(trees.getNumTrees() == boot_trees.size());
-                int better_trees = 0;
-                for (int id = 0; id < trees.getNumTrees(); id++)
-                    if (trees.getScores()[id] > boot_logl[id]) {
-                        boot_trees[id] = trees.getTreeStrings()[id];
-                        boot_logl[id] = trees.getScores()[id];
-                        better_trees++; 
-                    }
-                trees.clear();
-                cout << better_trees << " better bootstrap trees from process " << source << endl;
-            }
-        } while (count < MPIHelper::getInstance().getNumProcesses()-1);
-    } else {
-        // worker
-        MPIHelper::getInstance().sendTrees(MASTER, boot_trees, boot_logl, BOOT_TREE_TAG);
-    }
-    }
-
 //    MPI_Finalize();
 //    if (MPIHelper::getInstance().getProcessID() != MASTER) {
 //        exit(0);
@@ -3411,7 +3420,7 @@ void IQTree::printResultTree(string suffix) {
         return;
     string tree_file_name = params->out_prefix;
     tree_file_name += ".treefile";
-    if (MPIHelper::getInstance().getProcessID() != MASTER) {
+    if (MPIHelper::getInstance().isWorker()) {
         return;
         stringstream processTreeFile;
         processTreeFile << tree_file_name << "." << MPIHelper::getInstance().getProcessID();

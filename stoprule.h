@@ -77,6 +77,14 @@ public:
 		@return TRUE if stop condition is met, FALSE otherwise
 	*/
 	bool meetStopCondition(int cur_iteration, double cur_correlation);
+
+    /**
+        return TRUE if cur_correlation is high enough
+        @param cur_correlation correlation coefficient
+    */
+    bool meetCorrelation(double cur_correlation) {
+        return cur_correlation >= min_correlation;
+    }
 	
 	/** get the remaining time to converge, in seconds */
 	double getRemainingTime(int cur_iteration);
