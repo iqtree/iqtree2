@@ -3115,10 +3115,11 @@ void parseArg(int argc, char *argv[], Params &params) {
         else
             params.out_prefix = params.user_file;
     }
-    if (MPIHelper::getInstance().isWorker()) {
-        string newPrefix = string(params.out_prefix) + "."  + NumberToString(MPIHelper::getInstance().getProcessID()) ;
-        params.out_prefix = (char *) newPrefix.c_str();
-    }
+//    if (MPIHelper::getInstance().isWorker()) {
+    // BUG: setting out_prefix this way cause access to stack, which is cleaned up after returning from this function
+//        string newPrefix = string(params.out_prefix) + "."  + NumberToString(MPIHelper::getInstance().getProcessID()) ;
+//        params.out_prefix = (char *) newPrefix.c_str();
+//    }
 
 }
 

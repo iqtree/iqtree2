@@ -2279,6 +2279,10 @@ int main(int argc, char *argv[]) {
         }
     }
 
+    // after loading, workers are not allowed to write checkpoint anymore
+    if (MPIHelper::getInstance().isWorker())
+        checkpoint->setFileName("");
+
 	_log_file = Params::getInstance().out_prefix;
 	_log_file += ".log";
 	startLogFile(append_log);
