@@ -664,7 +664,7 @@ public:
      *      -1 if duplicated
      *      -2 if the candidate set is not updated
      */
-    int addTreeToCandidateSet(string treeString, double score, bool updateStopRule = true, int sourceProcID = 0);
+    int addTreeToCandidateSet(string treeString, double score, bool updateStopRule, int sourceProcID);
 
     /**
      *  Generate the initial parsimony/random trees, called by initCandidateTreeSet
@@ -919,7 +919,7 @@ protected:
      *  @param updateStopRule
      *      To update the stop rule or not
      */
-    void MPI_CollectTrees(bool allTrees, int maxNumTrees, bool updateStopRule);
+    bool MPI_CollectTrees(bool allTrees, int maxNumTrees, bool updateStopRule);
 #endif
 
     double doTreePerturbation();

@@ -1868,7 +1868,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 
     // Update best tree
     if (!finishedInitTree) {
-        iqtree.addTreeToCandidateSet(initTree, iqtree.getCurScore(), false);
+        iqtree.addTreeToCandidateSet(initTree, iqtree.getCurScore(), false, MPIHelper::getInstance().getProcessID());
         iqtree.printResultTree();
         iqtree.intermediateTrees.update(iqtree.getTreeString(), iqtree.getCurScore());
     }
@@ -1994,7 +1994,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
             Params::getInstance().tabu = false;
             iqtree.doNNISearch();
             tree = iqtree.optimizeModelParameters(true);
-            iqtree.addTreeToCandidateSet(tree, iqtree.getCurScore(), false);
+            iqtree.addTreeToCandidateSet(tree, iqtree.getCurScore(), false, MPIHelper::getInstance().getProcessID());
             iqtree.getCheckpoint()->putBool("finishedModelFinal", true);
             iqtree.saveCheckpoint();
         }

@@ -122,13 +122,22 @@ public:
     void sendTrees(int dest, vector<string> treeStrings, vector<double> scores, int tag);
 
     /**
+     *   Send one tree to a dest process
+     *   @param dest MPI rank of destination process
+     *   @param treeString NEWICK tree string
+     *   @param score its score
+     *   @param tag used to classified the message
+     */
+    void sendTree(int dest, string treeString, double score, int tag);
+
+    /**
      *  Send a stop message to other process
-     *
-     *  @param msg
-     *      Some useful message about the reason for stopping
      */
     void sendStopMsg();
 
+    /**
+     *  Check if a stop message is received
+     */
     bool checkStopMsg();
 
 private:

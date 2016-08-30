@@ -23,7 +23,7 @@ void MPIHelper::distributeTrees(vector<string> treeStrings, vector<double> score
     if (getNumProcesses() == 1)
         return;
     vector<int> sourceProcID;
-    sourceProcID.insert(sourceProcID.end(), scores.size(), MPIHelper::getInstance().getProcessID());
+    sourceProcID.insert(sourceProcID.end(), scores.size(), getProcessID());
     TreeCollection outTrees(treeStrings, scores, sourceProcID);
     cleanUpMessages();
     for (int i = 0; i < getNumProcesses(); i++) {
@@ -37,20 +37,6 @@ void MPIHelper::distributeTrees(vector<string> treeStrings, vector<double> score
     //numTreeSent += treeStrings.size();
 }
 
-void MPIHelper::sendTrees(int dest, vector<string> treeStrings, vector<double> scores, int tag) {
-    vector<int> sourceProcID;
-    sourceProcID.insert(sourceProcID.end(), scores.size(), MPIHelper::getInstance().getProcessID());
-    TreeCollection outTrees(treeStrings, scores, sourceProcID);
-    if (getNumProcesses() == 1)
-        return;
-    cleanUpMessages();
-    MPI_Request *request = new MPI_Request;
-    ObjectStream *os = new ObjectStream(outTrees);
-    MPI_Isend(os->getObjectData(), os->getDataLength(), MPI_CHAR, dest, tag, MPI_COMM_WORLD, request);
-    sentMessages.push_back(make_pair(request, os));
-    //numTreeSent += treeStrings.size();
-}
-
 void MPIHelper::distributeTree(string treeString, double score, int tag) {
     if (getNumProcesses() == 1)
         return;
@@ -59,10 +45,34 @@ void MPIHelper::distributeTree(string treeString, double score, int tag) {
     vector<double> scores;
     trees.push_back(treeString);
     scores.push_back(score);
-    MPIHelper::getInstance().distributeTrees(trees, scores, tag);
+    distributeTrees(trees, scores, tag);
     if (verbose_mode >= VB_MED)
         cout << "Sent tree to other processes in " << getRealTime() - start << " seconds" << endl;
     numTreeSent++;
+}
+
+void MPIHelper::sendTrees(int dest, vector<string> treeStrings, vector<double> scores, int tag) {
+    if (getNumProcesses() == 1 || dest == getProcessID())
+        return;
+    vector<int> sourceProcID;
+    sourceProcID.insert(sourceProcID.end(), scores.size(), getProcessID());
+    TreeCollection outTrees(treeStrings, scores, sourceProcID);
+    cleanUpMessages();
+    MPI_Request *request = new MPI_Request;
+    ObjectStream *os = new ObjectStream(outTrees);
+    MPI_Isend(os->getObjectData(), os->getDataLength(), MPI_CHAR, dest, tag, MPI_COMM_WORLD, request);
+    sentMessages.push_back(make_pair(request, os));
+    numTreeSent += treeStrings.size();
+}
+
+void MPIHelper::sendTree(int dest, string treeString, double score, int tag) {
+    if (getNumProcesses() == 1 || dest == getProcessID())
+        return;
+    StrVector treeStrings;
+    treeStrings.push_back(treeString);
+    DoubleVector scores;
+    scores.push_back(score);
+    sendTrees(dest, treeStrings, scores, tag);
 }
 
 void MPIHelper::sendStopMsg() {
