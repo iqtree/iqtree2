@@ -113,7 +113,7 @@ bool MPIHelper::checkMsg(int tag, string &msg) {
     if (flag) {
         MPI_Get_count(&status, MPI_CHAR, &numBytes);
         recvBuffer = new char[numBytes];
-        MPI_Recv(recvBuffer, numBytes, MPI_CHAR, status.MPI_SOURCE, status.MPI_TAG, MPI_COMM_WORLD, NULL);
+        MPI_Recv(recvBuffer, numBytes, MPI_CHAR, status.MPI_SOURCE, status.MPI_TAG, MPI_COMM_WORLD, &status);
         msg = recvBuffer;
         delete[] recvBuffer;
         return true;
