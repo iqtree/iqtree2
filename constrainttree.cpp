@@ -19,6 +19,27 @@ void ConstraintTree::initConstraint(const char *constraint_file, StrVector &full
     MTree::init(constraint_file, is_rooted);
     if (leafNum <= 3)
         outError("Constraint tree must contain at least 4 taxa");
+    if (is_rooted)
+        outError("Rooted constraint tree not accepted");
+
+	// collapse any internal node of degree 2
+	NodeVector nodes;
+	getInternalNodes(nodes);
+	int num_collapsed = 0;
+	for (NodeVector::iterator it = nodes.begin(); it != nodes.end(); it++)
+		if ((*it)->degree() == 2) {
+			Node *left = (*it)->neighbors[0]->node;
+			Node *right = (*it)->neighbors[1]->node;
+			double len = (*it)->neighbors[0]->length+(*it)->neighbors[1]->length;
+			left->updateNeighbor((*it), right, len);
+			right->updateNeighbor((*it), left, len);
+			delete (*it);
+			num_collapsed++;
+			if (verbose_mode >= VB_MED)
+				cout << "Node of degree 2 collapsed" << endl;
+		}
+	if (num_collapsed)
+		initializeTree();
     
     // build taxon name to ID index
     StrVector taxname;
@@ -128,3 +149,22 @@ bool ConstraintTree::isCompatible(StrVector &tax1, StrVector &tax2) {
         return res;
     }
 }
+
+bool ConstraintTree::isCompatible (MTree *tree) {
+    NodeVector nodes1, nodes2;
+    tree->getAllInnerBranches(nodes1, nodes2);
+    StrVector taxset1, taxset2;
+    
+    // check that all internal branches are compatible with constraint
+    for (int i = 0; i < nodes1.size(); i++) {
+        taxset1.clear();
+        taxset2.clear();
+        getUnorderedTaxaName(taxset1, nodes1[i], nodes2[i]);
+        getUnorderedTaxaName(taxset2, nodes2[i], nodes1[i]);
+        if (!isCompatible(taxset1, taxset2))
+            return false;
+    }
+    return true;
+}
+
+

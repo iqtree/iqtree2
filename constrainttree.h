@@ -40,6 +40,12 @@ public:
     bool isCompatible(StrVector &tax1, StrVector &tax2);
 
     /**
+        @param tree input tree
+        @return TRUE if input tree is compatible with constraint, FALSE otherwise
+    */
+    bool isCompatible (MTree *tree);
+
+    /**
         @param taxname taxon name to search for
         @return TRUE if constraint tree has a taxon, FALSE otherwise
     */

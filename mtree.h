@@ -77,6 +77,14 @@ public:
     Node* copyTree(MTree *tree, string &taxa_set, double &len, Node *node = NULL, Node *dad = NULL);
 
     /**
+            remove multifurcation randomly
+            @param node the starting node, NULL to start from the root
+            @param dad dad of the node, used to direct the search
+     */
+    void removeMultifurcation(Node *node = NULL, Node *dad = NULL);
+
+
+    /**
             initialize the tree from a NEWICK tree file
             @param userTreeFile the name of the user tree
             @param is_rooted (IN/OUT) true if tree is rooted

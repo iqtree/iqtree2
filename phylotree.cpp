@@ -330,7 +330,10 @@ void PhyloTree::setAlignment(Alignment *alignment) {
             node->id = seq;
         }
     }
-    if (err) outError("Tree taxa and alignment sequence do not match (see above)");
+    if (err) {
+        printTree(cout, WT_NEWLINE);
+        outError("Tree taxa and alignment sequence do not match (see above)");
+    }
     StrVector taxname;
     getTaxaName(taxname);
     for (StrVector::iterator it = taxname.begin(); it != taxname.end(); it++)
