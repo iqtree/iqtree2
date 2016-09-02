@@ -47,7 +47,7 @@ void ConstraintTree::initConstraint(const char *constraint_file, StrVector &full
         
     for(it = taxname.begin(); it != taxname.end(); it++)
         if (fulltax_index.find(*it) == fulltax_index.end()) {
-            cout << "ERROR: Taxon " << (*it) << " in constraint tree does not appear in full tree" << endl;
+            cerr << "ERROR: Taxon " << (*it) << " in constraint tree does not appear in full tree" << endl;
             err = true;
         }
     if (err) {

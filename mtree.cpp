@@ -1250,6 +1250,7 @@ int MTree::freeNode(Node *node, Node *dad)
             num_nodes += freeNode((*it)->node, node);
         }
     delete node;
+    root = NULL;
     return num_nodes;
 }
 

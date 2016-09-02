@@ -314,26 +314,93 @@ int PhyloTree::computeParsimonyTree(const char *out_prefix, Alignment *alignment
 
     freeNode();
 
-    root = newNode(size);
-
     IntVector taxon_order;
-    taxon_order.resize(size);
-    for (int i = 0; i < size; i++)
-        taxon_order[i] = i;
-    // randomize the addition order
-    my_random_shuffle(taxon_order.begin(), taxon_order.end());
+    taxon_order.reserve(size);
 
-    // create initial tree with 3 taxa
-    for (leafNum = 0; leafNum < 3; leafNum++) {
-        if (verbose_mode >= VB_MAX)
-            cout << "Add " << aln->getSeqName(taxon_order[leafNum]) << " to the tree" << endl;
-        Node *new_taxon = newNode(taxon_order[leafNum], aln->getSeqName(taxon_order[leafNum]).c_str());
-        root->addNeighbor(new_taxon, -1.0);
-        new_taxon->addNeighbor(root, -1.0);
+    if (constraintTree.empty()) {
+        taxon_order.resize(size);
+        for (int i = 0; i < size; i++)
+            taxon_order[i] = i;
+        // randomize the addition order
+        my_random_shuffle(taxon_order.begin(), taxon_order.end());
+
+        root = newNode(size);
+
+        // create initial tree with 3 taxa
+        for (leafNum = 0; leafNum < 3; leafNum++) {
+            if (verbose_mode >= VB_MAX)
+                cout << "Add " << aln->getSeqName(taxon_order[leafNum]) << " to the tree" << endl;
+            Node *new_taxon = newNode(taxon_order[leafNum], aln->getSeqName(taxon_order[leafNum]).c_str());
+            root->addNeighbor(new_taxon, -1.0);
+            new_taxon->addNeighbor(root, -1.0);
+        }
+    } else {
+        // start with constraint tree
+        int i;
+        for (i = 0; i < size; i++)
+            if (constraintTree.hasTaxon(aln->getSeqName(i))) {
+                taxon_order.push_back(i);
+            }
+        assert(taxon_order.size() == constraintTree.leafNum);
+        for (int i = 0; i < size; i++)
+            if (!constraintTree.hasTaxon(aln->getSeqName(i))) {
+                taxon_order.push_back(i);
+            }
+        // randomize the addition order
+        my_random_shuffle(taxon_order.begin(), taxon_order.begin()+constraintTree.leafNum);
+        my_random_shuffle(taxon_order.begin()+constraintTree.leafNum, taxon_order.end());
+        // first copy the constraint tree
+        MTree::copyTree(&constraintTree);
+        
+        // assign proper taxon IDs
+        NodeVector nodes;
+        NodeVector::iterator it;
+        getTaxa(nodes);
+        for (it = nodes.begin(); it != nodes.end(); it++) {
+            (*it)->id = aln->getSeqID((*it)->name);
+            assert((*it)->id >= 0);
+        }
+        
+        // randomly resolve multifurcating node
+        nodes.clear();
+        getInternalNodes(nodes);
+        for (it = nodes.begin(); it != nodes.end(); it++)
+            while ((*it)->degree() > 3) {
+                Node *new_node = newNode();
+                int id1 = random_int((*it)->degree());
+                int id2;
+                do {
+                    id2 = random_int((*it)->degree());
+                } while (id2 == id1);
+                
+                // make sure that id1 < id2
+                if (id1 > id2) {
+                    int tmp = id1;
+                    id1 = id2;
+                    id2 = tmp;
+                }
+                Neighbor *nei1 = (*it)->neighbors[id1];
+                Neighbor *nei2 = (*it)->neighbors[id2];
+                
+                // connect id1 with new_node
+                nei1->node->updateNeighbor((*it), new_node);
+                new_node->neighbors.push_back(nei1);
+                
+                // connect id2 with new_node
+                nei2->node->updateNeighbor((*it), new_node);
+                new_node->neighbors.push_back(nei2);
+                
+                // connect new_node with old node
+                new_node->addNeighbor((*it), -1.0);
+                (*it)->neighbors.erase((*it)->neighbors.begin() + id2);
+                (*it)->neighbors.erase((*it)->neighbors.begin() + id1);
+                (*it)->addNeighbor(new_node, -1.0);
+            }
+        
     }
     root = findNodeID(taxon_order[0]);
     initializeAllPartialPars();
-    size_t index = 6;
+    size_t index = (2*leafNum-3)*2;
     size_t pars_block_size = getBitsBlockSize();
 
     if (isSuperTree())
@@ -342,10 +409,10 @@ int PhyloTree::computeParsimonyTree(const char *out_prefix, Alignment *alignment
     UINT *tmp_partial_pars;
     tmp_partial_pars = newBitsBlock();
 
-    // stepwise adding the next taxon
-    for (leafNum = 3; leafNum < size; leafNum++) {
+    // stepwise adding the next taxon for the remaining taxa
+    for (; leafNum < size; leafNum++) {
         if (verbose_mode >= VB_MAX)
-            cout << "Add " << aln->getSeqName(taxon_order[leafNum]) << " to the tree";
+            cout << "Adding " << aln->getSeqName(taxon_order[leafNum]) << " to the tree..." << endl;
         NodeVector nodes1, nodes2;
         getBranches(nodes1, nodes2);
         PhyloNode *target_node = NULL;
@@ -368,20 +435,6 @@ int PhyloTree::computeParsimonyTree(const char *out_prefix, Alignment *alignment
 
         for (int nodeid = 0; nodeid < nodes1.size(); nodeid++) {
         
-            // check for compatible with constraint tree
-            if (!constraintTree.empty()) {
-                StrVector taxset1, taxset2;
-                getUnorderedTaxaName(taxset1, nodes1[nodeid], nodes2[nodeid]);
-                getUnorderedTaxaName(taxset2, nodes2[nodeid], nodes1[nodeid]);
-                taxset1.push_back(new_taxon->name);
-                if (!constraintTree.isCompatible(taxset1, taxset2))
-                    continue;
-                taxset1.pop_back();
-                taxset2.push_back(new_taxon->name);
-                if (!constraintTree.isCompatible(taxset1, taxset2))
-                    continue;                
-            }
-
             int score = addTaxonMPFast(new_taxon, added_node, nodes1[nodeid], nodes2[nodeid]);
             if (score < best_pars_score) {
                 best_pars_score = score;

@@ -39,6 +39,14 @@ public:
      */ 
     bool isCompatible(StrVector &tax1, StrVector &tax2);
 
+    /**
+        @param taxname taxon name to search for
+        @return TRUE if constraint tree has a taxon, FALSE otherwise
+    */
+    bool hasTaxon(string &taxname) {
+        return taxname_index.find(taxname) != taxname_index.end();
+    }
+
 protected:
 
     /* map from taxon name to its index, used for quick taxon name search */
