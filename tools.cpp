@@ -3186,8 +3186,9 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -allnni              Perform more thorough NNI search (default: off)" << endl
             << "  -numstop <number>    Number of unsuccessful iterations to stop (default: 100)" << endl
             << "  -n <#iterations>     Fix number of iterations to <#iterations> (default: auto)" << endl
-            << "  -iqp                 Use the IQP tree perturbation (default: randomized NNI)" << endl
-            << "  -iqpnni              Switch back to the old IQPNNI tree search algorithm" << endl
+            << "  -g <constraint_tree> (Multifurcating) topological constraint tree file" << endl
+//            << "  -iqp                 Use the IQP tree perturbation (default: randomized NNI)" << endl
+//            << "  -iqpnni              Switch back to the old IQPNNI tree search algorithm" << endl
             << endl << "ULTRAFAST BOOTSTRAP:" << endl
             << "  -bb <#replicates>    Ultrafast bootstrap (>=1000)" << endl
             << "  -wbt                 Write bootstrap trees to .ufboot file (default: none)" << endl

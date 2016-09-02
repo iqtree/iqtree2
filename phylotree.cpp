@@ -2807,7 +2807,8 @@ void PhyloTree::doOneRandomNNI(Node *node1, Node *node2) {
 			node1Nei = (*it);
 			break;
 		}
-		int randNum = random_int(2);
+         
+		int randNum = random_int(2); // randNum is either 0 or 1
 		if (randNum == 0) {
 			node1Nei = (*it);
 			break;
