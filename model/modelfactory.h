@@ -27,6 +27,9 @@
 #include "checkpoint.h"
 
 
+const double MIN_BRLEN_SCALE = 0.01;
+const double MAX_BRLEN_SCALE = 100.0;
+
 ModelsBlock *readModelsDefinition(Params &params);
 
 /**
@@ -71,16 +74,6 @@ public:
         restore object from the checkpoint
     */
     virtual void restoreCheckpoint();
-
-	/**
-	 * read site specific state frequency vectors from a file to create corresponding model (Ingo's idea)
-	 * @param aln input alignment
-	 * @param site_freq_file file name
-	 * @param site_model (OUT) site to model ID map
-	 * @param freq_vec (OUT) vector of frequency vectors
-     * @return TRUE if alignment needs to be changed, FALSE otherwise
-	 */
-	bool readSiteFreq(Alignment *aln, char* site_freq_file, IntVector &site_model, vector<double*> &freq_vec);
 
 	/**
 		get the name of the model
@@ -162,11 +155,15 @@ public:
 
 	/**
 		optimize model parameters and tree branch lengths
-		@param fixed_len TRUE to fix branch lengths, default is false
+        NOTE 2016-08-20: refactor the semantic of fixed_len
+		@param fixed_len 0: optimize branch lengths, 1: fix branch lengths, 2: scale branch lengths
+        @param write_info TRUE to write model parameters every optimization step, FALSE to only print at the end
+        @param logl_epsilon log-likelihood epsilon to stop
+        @param gradient_epsilon gradient (derivative) epsilon to stop
 		@return the best likelihood 
 	*/
-	virtual double optimizeParameters(bool fixed_len = false, bool write_info = true,
-                                      double logl_epsilon = 0.1, double gradient_epsilon = 0.0001);
+	virtual double optimizeParameters(int fixed_len = BRLEN_OPTIMIZE, bool write_info = true,
+                                      double logl_epsilon = 0.1, double gradient_epsilon = 0.001);
 
 	/**
 	 *  optimize model parameters and tree branch lengths for the +I+G model
@@ -174,7 +171,7 @@ public:
 	 * 	@param fixed_len TRUE to fix branch lengths, default is false
 	 *	@return the best likelihood
 	 */
-	virtual double optimizeParametersGammaInvar(bool fixed_len = false, bool write_info = true,
+	virtual double optimizeParametersGammaInvar(int fixed_len = BRLEN_OPTIMIZE, bool write_info = true,
 												double logl_epsilon = 0.1, double gradient_epsilon = 0.001);
 
 	/**
@@ -260,7 +257,7 @@ protected:
 	*/
 	virtual bool getVariables(double *variables);
 
-    vector<double> optimizeGammaInvWithInitValue(bool fixed_len, double logl_epsilon, double gradient_epsilon, PhyloTree *tree,
+    vector<double> optimizeGammaInvWithInitValue(int fixed_len, double logl_epsilon, double gradient_epsilon, PhyloTree *tree,
                                        RateHeterogeneity *site_rates, double *rates, double *state_freqs,
                                        double initPInv, double initAlpha, DoubleVector &lenvec);
 };

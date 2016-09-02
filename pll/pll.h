@@ -82,7 +82,7 @@ extern "C" {
 #define PLL_VECTOR_WIDTH 2
 
 #else
-#define PLL_BYTE_ALIGNMENT 1
+#define PLL_BYTE_ALIGNMENT 8
 #define PLL_VECTOR_WIDTH 1
 #endif
 

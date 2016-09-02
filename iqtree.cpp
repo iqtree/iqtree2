@@ -506,7 +506,7 @@ void IQTree::computeInitialTree(string &dist_file, LikelihoodKernel kernel) {
         readTree(params->user_file, myrooted);
         setAlignment(aln);
         if (isSuperTree())
-        	wrapperFixNegativeBranch(!params->fixed_branch_length);
+        	wrapperFixNegativeBranch(params->fixed_branch_length == BRLEN_OPTIMIZE);
         else
         	fixed_number = wrapperFixNegativeBranch(false);
         params->numInitTrees = 1;
@@ -1784,7 +1784,7 @@ string IQTree::optimizeModelParameters(bool printInfo, double logl_epsilon) {
 			curScore = modOptScore;
 			newTree = getTreeString();
 		}
-        if (params->print_site_posterior)
+        if (params->print_trees_site_posterior)
             computePatternCategories();
 	}
 
@@ -1844,8 +1844,6 @@ double IQTree::doTreeSearch() {
     cout << "--------------------------------------------------------------------" << endl;
     cout << "|               OPTIMIZING CANDIDATE TREE SET                      |" << endl;
     cout << "--------------------------------------------------------------------" << endl;
-    string tree_file_name = params->out_prefix;
-    tree_file_name += ".treefile";
     // PLEASE PRINT TREE HERE!
     printResultTree();
     string treels_name = params->out_prefix;
@@ -2134,7 +2132,7 @@ string IQTree::doNNISearch(int& nniCount, int& nniSteps) {
             ((PhyloSuperTree*) this)->computeBranchLengths();
         }
         treeString = getTreeString();
-        if (params->print_site_posterior)
+        if (params->print_trees_site_posterior)
             computePatternCategories();
     }
     return treeString;
@@ -3081,6 +3079,8 @@ void IQTree::addPositiveNNIMove(NNIMove myMove) {
 
 void IQTree::printResultTree(string suffix) {
     setRootNode(params->root);
+    if (params->suppress_output_flags & OUT_TREEFILE)
+        return;
     string tree_file_name = params->out_prefix;
     tree_file_name += ".treefile";
     if (suffix.compare("") != 0) {

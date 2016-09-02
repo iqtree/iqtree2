@@ -144,7 +144,7 @@ double PartitionModel::optimizeLinkedAlpha(bool write_info, double gradient_epsi
     
 }
 
-double PartitionModel::optimizeParameters(bool fixed_len, bool write_info, double logl_epsilon, double gradient_epsilon) {
+double PartitionModel::optimizeParameters(int fixed_len, bool write_info, double logl_epsilon, double gradient_epsilon) {
     PhyloSuperTree *tree = (PhyloSuperTree*)site_rate->getTree();
     double tree_lh = 0.0;
     int ntrees = tree->size();
@@ -176,7 +176,7 @@ double PartitionModel::optimizeParameters(bool fixed_len, bool write_info, doubl
 }
 
 
-double PartitionModel::optimizeParametersGammaInvar(bool fixed_len, bool write_info, double logl_epsilon, double gradient_epsilon) {
+double PartitionModel::optimizeParametersGammaInvar(int fixed_len, bool write_info, double logl_epsilon, double gradient_epsilon) {
     PhyloSuperTree *tree = (PhyloSuperTree*)site_rate->getTree();
     double tree_lh = 0.0;
     int ntrees = tree->size();

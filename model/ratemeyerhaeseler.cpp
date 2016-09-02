@@ -218,7 +218,7 @@ double RateMeyerHaeseler::optimizeRate(int pattern) {
 	double current_rate = at(pattern);
 	double ferror, optx;
 	/* constant site alway have ZERO rates */
-	if (phylo_tree->aln->at(pattern).is_const) {
+	if (phylo_tree->aln->at(pattern).isConst()) {
 		return (at(pattern) = MIN_SITE_RATE);
 	}
 
@@ -231,7 +231,7 @@ double RateMeyerHaeseler::optimizeRate(int pattern) {
     if (phylo_tree->optimize_by_newton && rate_mh) // Newton-Raphson method 
 	{
     	optx = minimizeNewtonSafeMode(MIN_SITE_RATE, current_rate, max_rate, TOL_SITE_RATE, negative_lh);
-		if (optx > MAX_SITE_RATE*0.99 || (optx < MIN_SITE_RATE*2 && !phylo_tree->aln->at(pattern).is_const)) 
+		if (optx > MAX_SITE_RATE*0.99 || (optx < MIN_SITE_RATE*2 && !phylo_tree->aln->at(pattern).isConst())) 
 		{
 			double optx2, negative_lh2;
 			optx2 = minimizeOneDimen(MIN_SITE_RATE, current_rate, max_rate, TOL_SITE_RATE, &negative_lh2, &ferror);
@@ -268,7 +268,7 @@ double RateMeyerHaeseler::optimizeRate(int pattern) {
 	}
 
 //#ifndef NDEBUG		
-	if (optx == MAX_SITE_RATE || (optx == MIN_SITE_RATE && !phylo_tree->aln->at(pattern).is_const)) {
+	if (optx == MAX_SITE_RATE || (optx == MIN_SITE_RATE && !phylo_tree->aln->at(pattern).isConst())) {
 		ofstream out;
 	
 		if (verbose_mode >= VB_MED)  {

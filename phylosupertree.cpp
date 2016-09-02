@@ -978,8 +978,17 @@ double PhyloSuperTree::computeLikelihood(double *pattern_lh) {
 	return tree_lh;
 }
 
+int PhyloSuperTree::getNumLhCat(SiteLoglType wsl) {
+    int ncat = 0, it_cat;
+    for (iterator it = begin(); it != end(); it++)
+        if ((it_cat = (*it)->getNumLhCat(wsl)) > ncat)
+            ncat = it_cat;
+    return ncat;
+}
+
+
 void PhyloSuperTree::computePatternLikelihood(double *pattern_lh, double *cur_logl, double *ptn_lh_cat, SiteLoglType wsl) {
-	int offset = 0, offset_lh_cat = 0;
+	size_t offset = 0, offset_lh_cat = 0;
 	iterator it;
 	for (it = begin(); it != end(); it++) {
 		if (ptn_lh_cat)
@@ -987,10 +996,7 @@ void PhyloSuperTree::computePatternLikelihood(double *pattern_lh, double *cur_lo
 		else
 			(*it)->computePatternLikelihood(pattern_lh + offset);
 		offset += (*it)->aln->getNPattern();
-        if ((*it)->getModel()->isMixture() && !(*it)->getModelFactory()->fused_mix_rate)
-            offset_lh_cat += (*it)->aln->getNPattern() * (*it)->site_rate->getNDiscreteRate() * (*it)->model->getNMixtures();
-        else
-            offset_lh_cat += (*it)->aln->getNPattern() * (*it)->site_rate->getNDiscreteRate();
+        offset_lh_cat += (*it)->aln->getNPattern() * (*it)->getNumLhCat(wsl);
 	}
 	if (cur_logl) { // sanity check
 		double sum_logl = 0;
@@ -1006,6 +1012,14 @@ void PhyloSuperTree::computePatternLikelihood(double *pattern_lh, double *cur_lo
 //            outError("Wrong PhyloSuperTree::", __func__);
 		}
         assert(fabs(sum_logl - *cur_logl) < 0.001);
+	}
+}
+
+void PhyloSuperTree::computePatternProbabilityCategory(double *ptn_prob_cat, SiteLoglType wsl) {
+	size_t offset = 0;
+	for (iterator it = begin(); it != end(); it++) {
+        (*it)->computePatternProbabilityCategory(ptn_prob_cat + offset, wsl);
+        offset += (*it)->aln->getNPattern() * (*it)->getNumLhCat(wsl);
 	}
 }
 

@@ -257,6 +257,14 @@ public:
 		return NULL;
 	}
 
+    /**
+     * compute the memory size for the model, can be large for site-specific models
+     * @return memory size required in bytes
+     */
+    virtual uint64_t getMemoryRequired() {
+    	return num_states*sizeof(double);
+    }
+
 	/*****************************************************
 		Checkpointing facility
 	*****************************************************/

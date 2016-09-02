@@ -45,7 +45,7 @@ add_definitions(-DIQ_TREE)
 # The version number.
 set (iqtree_VERSION_MAJOR 1)
 set (iqtree_VERSION_MINOR 4)
-set (iqtree_VERSION_PATCH "3") 
+set (iqtree_VERSION_PATCH "4") 
 
 set(BUILD_SHARED_LIBS OFF)
 
@@ -270,12 +270,10 @@ elseif (IQTREE_FLAGS MATCHES "avx") # AVX instruction set
  	message("Vectorization : AVX")
 	add_definitions(-D__SSE3 -D__AVX) # define both SSE3 and AVX directive
 	set(COMBINED_FLAGS "${COMBINED_FLAGS} ${AVX_FLAGS}")
-
 	SET(EXE_SUFFIX "${EXE_SUFFIX}-avx")
 else() #SSE intruction set
 	message("Vectorization : SSE3")
 	add_definitions(-D__SSE3)
-
 endif()
 
 
@@ -582,7 +580,12 @@ if (${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
 	endif()
 endif()
 
-set (PROJECT_NAME_SUFFIX "${EXE_SUFFIX}")
+if (BINARY32) 
+    set (PROJECT_NAME_SUFFIX "${EXE_SUFFIX}")
+else()
+    set (PROJECT_NAME_SUFFIX "${EXE_SUFFIX}")
+endif()
+
 #if (NOT IQTREE_FLAGS MATCHES "omp" AND NOT IQTREE_FLAGS MATCHES "avx" AND NOT IQTREE_FLAGS MATCHES "fma")  
 #	set (PROJECT_NAME_SUFFIX "${PROJECT_NAME_SUFFIX}-sse") 
 #endif()
