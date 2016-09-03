@@ -339,14 +339,14 @@ int PhyloTree::computeParsimonyTree(const char *out_prefix, Alignment *alignment
         MTree::copyTree(&constraintTree);
         
         // convert to birfucating tree if needed
-        removeMultifurcation();
+        extractBifurcatingSubTree();
         assert(isBifurcating());
         
         // assign proper taxon IDs
         NodeVector nodes;
         NodeVector::iterator it;
         getTaxa(nodes);
-        leafNum = nodes.size();
+        assert(leafNum == nodes.size());
         vector<int> pushed;
         pushed.resize(size, 0);
         for (it = nodes.begin(); it != nodes.end(); it++) {
@@ -371,43 +371,7 @@ int PhyloTree::computeParsimonyTree(const char *out_prefix, Alignment *alignment
         // randomize the addition order
         my_random_shuffle(taxon_order.begin()+leafNum, taxon_order.begin()+constraintTree.leafNum);
         my_random_shuffle(taxon_order.begin()+constraintTree.leafNum, taxon_order.end());
-        
-        // randomly resolve multifurcating node
-//        nodes.clear();
-//        getInternalNodes(nodes);
-//        for (it = nodes.begin(); it != nodes.end(); it++)
-//            while ((*it)->degree() > 3) {
-//                Node *new_node = newNode();
-//                int id1 = random_int((*it)->degree());
-//                int id2;
-//                do {
-//                    id2 = random_int((*it)->degree());
-//                } while (id2 == id1);
-//                
-//                // make sure that id1 < id2
-//                if (id1 > id2) {
-//                    int tmp = id1;
-//                    id1 = id2;
-//                    id2 = tmp;
-//                }
-//                Neighbor *nei1 = (*it)->neighbors[id1];
-//                Neighbor *nei2 = (*it)->neighbors[id2];
-//                
-//                // connect id1 with new_node
-//                nei1->node->updateNeighbor((*it), new_node);
-//                new_node->neighbors.push_back(nei1);
-//                
-//                // connect id2 with new_node
-//                nei2->node->updateNeighbor((*it), new_node);
-//                new_node->neighbors.push_back(nei2);
-//                
-//                // connect new_node with old node
-//                new_node->addNeighbor((*it), -1.0);
-//                (*it)->neighbors.erase((*it)->neighbors.begin() + id2);
-//                (*it)->neighbors.erase((*it)->neighbors.begin() + id1);
-//                (*it)->addNeighbor(new_node, -1.0);
-//            }
-        
+
     }
     root = findNodeID(taxon_order[0]);
     initializeAllPartialPars();

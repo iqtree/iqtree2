@@ -153,7 +153,8 @@ Node* MTree::copyTree(MTree *tree, string &taxa_set, double &len, Node *node, No
     return int_node;
 }
 
-void MTree::removeMultifurcation(Node *node, Node *dad) {
+void MTree::extractBifurcatingSubTree(Node *node, Node *dad) {
+    Node* saved_root = root;
     if (!node) node = root;
     if (node->degree() > 3) {
         int id1, id2, id3;
@@ -187,15 +188,58 @@ void MTree::removeMultifurcation(Node *node, Node *dad) {
             }
         }
         // remove all neighbors except id1, id2, id3
-        node->neighbors[0] = node->neighbors[id1];
-        node->neighbors[1] = node->neighbors[id2];
-        node->neighbors[2] = node->neighbors[id3];
+        std::swap(node->neighbors[0], node->neighbors[id1]);
+        std::swap(node->neighbors[1], node->neighbors[id2]);
+        std::swap(node->neighbors[2], node->neighbors[id3]);
+        for (NeighborVec::iterator it = node->neighbors.begin()+3; it != node->neighbors.end(); it++)
+            leafNum -= freeNode((*it)->node, node);
         node->neighbors.erase(node->neighbors.begin()+3, node->neighbors.end());
     }
     FOR_NEIGHBOR_IT(node, dad, it) {
         if (!(*it)->node->isLeaf())
-            removeMultifurcation((*it)->node, node);
+            extractBifurcatingSubTree((*it)->node, node);
     }
+    if (saved_root)
+        root = saved_root;
+}
+
+void MTree::resolveMultifurcation() {
+    // randomly resolve multifurcating node
+
+    NodeVector nodes;
+    getInternalNodes(nodes);
+    for (NodeVector::iterator it = nodes.begin(); it != nodes.end(); it++)
+        while ((*it)->degree() > 3) {
+            Node *new_node = newNode();
+            int id1 = random_int((*it)->degree());
+            int id2;
+            do {
+                id2 = random_int((*it)->degree());
+            } while (id2 == id1);
+            
+            // make sure that id1 < id2
+            if (id1 > id2) {
+                int tmp = id1;
+                id1 = id2;
+                id2 = tmp;
+            }
+            Neighbor *nei1 = (*it)->neighbors[id1];
+            Neighbor *nei2 = (*it)->neighbors[id2];
+            
+            // connect id1 with new_node
+            nei1->node->updateNeighbor((*it), new_node);
+            new_node->neighbors.push_back(nei1);
+            
+            // connect id2 with new_node
+            nei2->node->updateNeighbor((*it), new_node);
+            new_node->neighbors.push_back(nei2);
+            
+            // connect new_node with old node
+            new_node->addNeighbor((*it), -1.0);
+            (*it)->neighbors.erase((*it)->neighbors.begin() + id2);
+            (*it)->neighbors.erase((*it)->neighbors.begin() + id1);
+            (*it)->addNeighbor(new_node, -1.0);
+        }
 }
 
 Node* MTree::newNode(int node_id, const char* node_name) {

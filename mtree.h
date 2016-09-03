@@ -77,12 +77,19 @@ public:
     Node* copyTree(MTree *tree, string &taxa_set, double &len, Node *node = NULL, Node *dad = NULL);
 
     /**
-            remove multifurcation randomly
+            In case of mulfurcating tree, extract a bifurcating subtree by randomly removing multifurcation
+            If the tree is bifurcating, nothing change
             @param node the starting node, NULL to start from the root
             @param dad dad of the node, used to direct the search
      */
-    void removeMultifurcation(Node *node = NULL, Node *dad = NULL);
+    void extractBifurcatingSubTree(Node *node = NULL, Node *dad = NULL);
 
+
+    /**
+            In case of mulfurcating tree, randomly resolve multifurcating node to obtain strictly bifurcating tree
+            If the tree is bifurcating, nothing change
+     */
+    void resolveMultifurcation();
 
     /**
             initialize the tree from a NEWICK tree file

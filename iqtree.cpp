@@ -522,7 +522,11 @@ void IQTree::computeInitialTree(string &dist_file, LikelihoodKernel kernel) {
         readTreeString(initTree);
         cout << endl << "CHECKPOINT: Initial tree restored" << endl;
     } else {
-        switch (params->start_tree) {
+        START_TREE_TYPE start_tree = params->start_tree;
+        // only own parsimony kernel supports constraint tree
+        if (!constraintTree.empty())
+            start_tree = STT_PARSIMONY;
+        switch (start_tree) {
         case STT_PARSIMONY:
             // Create parsimony tree using IQ-Tree kernel
             if (kernel == LK_EIGEN_SSE)
@@ -568,6 +572,9 @@ void IQTree::computeInitialTree(string &dist_file, LikelihoodKernel kernel) {
         saveCheckpoint();
         checkpoint->dump(true);
     }
+
+    if (!constraintTree.empty() && !constraintTree.isCompatible(this))
+        outError("Initial tree is not compatible with constraint tree");
 
     if (fixed_number) {
         cout << "WARNING: " << fixed_number << " undefined/negative branch lengths are initialized with parsimony" << endl;

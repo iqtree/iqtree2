@@ -4501,35 +4501,41 @@ void PhyloTree::computeSeqIdentityAlongTree() {
 }
 
 void PhyloTree::generateRandomTree(TreeGenType tree_type) {
+    if (!constraintTree.empty() && tree_type != YULE_HARDING)
+        outError("Only Yule-Harding ramdom tree supported with constraint tree");
     assert(aln);
     int orig_size = params->sub_size;
     params->sub_size = aln->getNSeq();
     MExtTree ext_tree;
-	switch (tree_type) {
-	case YULE_HARDING: 
-		ext_tree.generateYuleHarding(*params);
-		break;
-	case UNIFORM:
-		ext_tree.generateUniform(params->sub_size);
-		break;
-	case CATERPILLAR:
-		ext_tree.generateCaterpillar(params->sub_size);
-		break;
-	case BALANCED:
-		ext_tree.generateBalanced(params->sub_size);
-		break;
-	case STAR_TREE:
-		ext_tree.generateStarTree(*params);
-		break;
-	default:
-		break;
-	}
+    if (constraintTree.empty()) {
+        switch (tree_type) {
+        case YULE_HARDING: 
+            ext_tree.generateYuleHarding(*params);
+            break;
+        case UNIFORM:
+            ext_tree.generateUniform(params->sub_size);
+            break;
+        case CATERPILLAR:
+            ext_tree.generateCaterpillar(params->sub_size);
+            break;
+        case BALANCED:
+            ext_tree.generateBalanced(params->sub_size);
+            break;
+        case STAR_TREE:
+            ext_tree.generateStarTree(*params);
+            break;
+        default:
+            break;
+        }
+        NodeVector taxa;
+        ext_tree.getTaxa(taxa);
+        assert(taxa.size() == aln->getNSeq());
+        for (NodeVector::iterator it = taxa.begin(); it != taxa.end(); it++)
+            (*it)->name = aln->getSeqName((*it)->id);
+    } else {
+        ext_tree.generateConstrainedYuleHarding(*params, &constraintTree, aln->getSeqNames());
+    }
     params->sub_size = orig_size;
-	NodeVector taxa;
-	ext_tree.getTaxa(taxa);
-	assert(taxa.size() == aln->getNSeq());
-	for (NodeVector::iterator it = taxa.begin(); it != taxa.end(); it++)
-		(*it)->name = aln->getSeqName((*it)->id);
     stringstream str;
     ext_tree.printTree(str);
     PhyloTree::readTreeStringSeqName(str.str());
