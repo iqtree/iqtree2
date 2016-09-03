@@ -154,7 +154,6 @@ Node* MTree::copyTree(MTree *tree, string &taxa_set, double &len, Node *node, No
 }
 
 void MTree::extractBifurcatingSubTree(Node *node, Node *dad) {
-    Node* saved_root = root;
     if (!node) node = root;
     if (node->degree() > 3) {
         int id1, id2, id3;
@@ -188,19 +187,20 @@ void MTree::extractBifurcatingSubTree(Node *node, Node *dad) {
             }
         }
         // remove all neighbors except id1, id2, id3
-        std::swap(node->neighbors[0], node->neighbors[id1]);
-        std::swap(node->neighbors[1], node->neighbors[id2]);
-        std::swap(node->neighbors[2], node->neighbors[id3]);
-        for (NeighborVec::iterator it = node->neighbors.begin()+3; it != node->neighbors.end(); it++)
-            leafNum -= freeNode((*it)->node, node);
+        for (int i = 0; i != node->neighbors.size(); i++)
+            if (i != id1 && i != id2 && i != id3) {
+                freeNode(node->neighbors[i]->node, node);
+                delete node->neighbors[i];
+            }
+        node->neighbors[0] = node->neighbors[id1];
+        node->neighbors[1] = node->neighbors[id2];
+        node->neighbors[2] = node->neighbors[id3];
         node->neighbors.erase(node->neighbors.begin()+3, node->neighbors.end());
     }
     FOR_NEIGHBOR_IT(node, dad, it) {
         if (!(*it)->node->isLeaf())
             extractBifurcatingSubTree((*it)->node, node);
     }
-    if (saved_root)
-        root = saved_root;
 }
 
 void MTree::resolveMultifurcation() {
@@ -1339,7 +1339,6 @@ int MTree::freeNode(Node *node, Node *dad)
             num_nodes += freeNode((*it)->node, node);
         }
     delete node;
-    root = NULL;
     return num_nodes;
 }
 

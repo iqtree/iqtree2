@@ -312,12 +312,11 @@ int PhyloTree::computeParsimonyTree(const char *out_prefix, Alignment *alignment
     if (size < 3)
         outError(ERR_FEW_TAXA);
 
-    freeNode();
-
     IntVector taxon_order;
     taxon_order.reserve(size);
 
     if (constraintTree.empty()) {
+        freeNode();
         taxon_order.resize(size);
         for (int i = 0; i < size; i++)
             taxon_order[i] = i;
@@ -346,7 +345,7 @@ int PhyloTree::computeParsimonyTree(const char *out_prefix, Alignment *alignment
         NodeVector nodes;
         NodeVector::iterator it;
         getTaxa(nodes);
-        assert(leafNum == nodes.size());
+        leafNum = nodes.size();
         vector<int> pushed;
         pushed.resize(size, 0);
         for (it = nodes.begin(); it != nodes.end(); it++) {

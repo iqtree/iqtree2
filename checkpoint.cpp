@@ -147,6 +147,7 @@ void Checkpoint::dump(bool force) {
             ((ogzstream*)out)->close();
         else
             ((ofstream*)out)->close();
+        delete out;
 //        cout << "Checkpoint dumped" << endl;
     } catch (ios::failure &) {
         outError(ERR_WRITE_OUTPUT, filename.c_str());
