@@ -1929,7 +1929,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (cnt >= argc)
 					throw "Use -ft <treefile_to_infer_site_frequency_model>";
                 params.tree_freq_file = argv[cnt];
-                params.print_site_state_freq = WSF_POSTERIOR_MEAN;
+                if (params.print_site_state_freq == WSF_NONE)
+                    params.print_site_state_freq = WSF_POSTERIOR_MEAN;
                 continue;
             }
 
@@ -2273,7 +2274,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.print_site_state_freq = WSF_POSTERIOR_MEAN;
 				continue;
 			}
-			if (strcmp(argv[cnt], "-wsfm") == 0) {
+			if (strcmp(argv[cnt], "-wsfm") == 0 || strcmp(argv[cnt], "-fmax") == 0) {
 				params.print_site_state_freq = WSF_POSTERIOR_MAX;
 				continue;
 			}
@@ -3059,6 +3060,10 @@ void parseArg(int argc, char *argv[], Params &params) {
         usage(argv, false);
 #endif
     }
+    
+    if (params.do_au_test && params.topotest_replicates == 0)
+        outError("For AU test please please specify number of bootstrap replicates via -zb option");
+    
     if (!params.out_prefix) {
     	if (params.eco_dag_file)
     		params.out_prefix = params.eco_dag_file;
@@ -3277,7 +3282,8 @@ void usage_iqtree(char* argv[], bool full_command) {
             << endl << "SITE-SPECIFIC FREQUENCY MODEL:" << endl 
             << "  -ft <tree_file>      Input tree to infer site frequency model" << endl
             << "  -fs <in_freq_file>   Input site frequency model file" << endl
-            << "  -wsf                 Write site frequency model to .sitefreq file" << endl
+            << "  -fmax                Posterior maximum instead of posterior mean approximation" << endl
+            //<< "  -wsf                 Write site frequency model to .sitefreq file" << endl
             //<< "  -c <#categories>     Number of Gamma rate categories (default: 4)" << endl
 //            << endl << "TEST OF MODEL HOMOGENEITY:" << endl
 //            << "  -m WHTEST            Testing model (GTR+G) homogeneity assumption using" << endl
