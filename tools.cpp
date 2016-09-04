@@ -807,7 +807,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.print_site_prob = WSL_NONE;
     params.print_site_state_freq = WSF_NONE;
     params.print_site_rate = false;
-    params.print_site_posterior = 0;
+    params.print_trees_site_posterior = 0;
     params.print_ancestral_sequence = AST_NONE;
     params.print_tree_lh = false;
     params.lambda = 1;
@@ -2248,6 +2248,20 @@ void parseArg(int argc, char *argv[], Params &params) {
 				continue;
 			}
 
+			if (strcmp(argv[cnt], "-wspr") == 0) {
+				params.print_site_prob = WSL_RATECAT;
+				continue;
+			}
+
+			if (strcmp(argv[cnt], "-wspm") == 0) {
+				params.print_site_prob = WSL_MIXTURE;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-wspmr") == 0 || strcmp(argv[cnt], "-wsprm") == 0) {
+				params.print_site_prob = WSL_MIXTURE_RATECAT;
+				continue;
+			}
+
 			if (strcmp(argv[cnt], "-wma") == 0) {
 				params.print_ancestral_sequence = AST_MARGINAL;
                 params.ignore_identical_seqs = false;
@@ -3342,9 +3356,14 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -wslr                Write site log-likelihoods per rate category" << endl
             << "  -wslm                Write site log-likelihoods per mixture class" << endl
             << "  -wslmr               Write site log-likelihoods per mixture+rate class" << endl
+            << "  -wspr                Write site probabilities per rate category" << endl
+            << "  -wspm                Write site probabilities per mixture class" << endl
+            << "  -wspmr               Write site probabilities per mixture+rate class" << endl
             << "  -wma                 Write ancestral sequences by marginal reconstruction" << endl
             << "  -wja                 Write ancestral sequences by joint reconstruction" << endl
-            << "  -fconst f1,...,fN    Add constant patterns into alignment (N=#nstates)" << endl;
+            << "  -fconst f1,...,fN    Add constant patterns into alignment (N=#nstates)" << endl
+            << "  -me <epsilon>        Logl epsilon for model parameter optimization (default 0.01)" << endl
+            << "  --no-outfiles        Suppress printing output files" << endl;
 //            << "  -d <file>            Reading genetic distances from file (default: JC)" << endl
 //			<< "  -d <outfile>         Calculate the distance matrix inferred from tree" << endl
 //			<< "  -stats <outfile>     Output some statistics about branch lengths" << endl

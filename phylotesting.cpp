@@ -441,7 +441,7 @@ void printAncestralSequences(const char *out_prefix, PhyloTree *tree, AncestralS
 
 }
 
-void printSiteStateFreq(const char*filename, PhyloTree *tree) {
+void printSiteProbCategory(const char*filename, PhyloTree *tree, SiteLoglType wsl) {
 
     if (wsl == WSL_NONE || wsl == WSL_SITE)
         return;

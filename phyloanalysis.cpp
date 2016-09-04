@@ -622,6 +622,11 @@ void printOutfilesInfo(Params &params, string &original_model, IQTree &tree) {
 		cout << "  Site probability per rate/mix: " << params.out_prefix << ".siteprob"
 				<< endl;
 
+    if (params.print_ancestral_sequence) {
+        cout << "  Ancestral state probabilities: " << params.out_prefix << ".ancestralprob" << endl;
+        cout << "  Ancestral sequences:           " << params.out_prefix << ".ancestralseq" << endl;
+    }
+
 	if (params.write_intermediate_trees)
 		cout << "  All intermediate trees:        " << params.out_prefix << ".treels"
 				<< endl;
@@ -1142,94 +1147,8 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 	} catch (ios::failure) {
 		outError(ERR_WRITE_OUTPUT, outfile);
 	}
-
-	cout << endl << "Analysis results written to: " << endl
-			<< "  IQ-TREE report:                " << params.out_prefix << ".iqtree"
-			<< endl;
-	if (params.compute_ml_tree) {
-		if (original_model.find("ONLY") == string::npos)
-			cout << "  Maximum-likelihood tree:       " << params.out_prefix << ".treefile" << endl;
-		else
-			cout << "  Tree used for model selection: " << params.out_prefix << ".treefile" << endl;
-		if (params.snni && params.write_local_optimal_trees) {
-			cout << "  Locally optimal trees (" << tree.candidateTrees.getNumLocalOptTrees() << "):    " << params.out_prefix << ".suboptimal_trees" << endl;
-		}
-	}
-	if (!params.user_file && params.start_tree == STT_BIONJ) {
-		cout << "  BIONJ tree:                    " << params.out_prefix << ".bionj"
-				<< endl;
-	}
-	if (!params.dist_file) {
-		//cout << "  Juke-Cantor distances:    " << params.out_prefix << ".jcdist" << endl;
-		if (params.compute_ml_dist)
-		cout << "  Likelihood distances:          " << params.out_prefix
-					<< ".mldist" << endl;
-		if (params.print_conaln)
-		cout << "  Concatenated alignment:        " << params.out_prefix
-					<< ".conaln" << endl;
-	}
-	if (original_model.find("TEST") != string::npos && tree.isSuperTree()) {
-		cout << "  Best partitioning scheme:      " << params.out_prefix << ".best_scheme.nex" << endl;
-		bool raxml_format_printed = true;
-
-		for (vector<PartitionInfo>::iterator it = ((PhyloSuperTree*)&tree)->part_info.begin();
-				it != ((PhyloSuperTree*)&tree)->part_info.end(); it++)
-			if (!it->aln_file.empty()) {
-				raxml_format_printed = false;
-				break;
-			}
-		if (raxml_format_printed)
-			 cout << "           in RAxML format:      " << params.out_prefix << ".best_scheme" << endl;
-	}
-	if (tree.getRate()->getGammaShape() > 0 && params.print_site_rate)
-		cout << "  Gamma-distributed rates:       " << params.out_prefix << ".rate"
-				<< endl;
-
-	if ((tree.getRate()->isSiteSpecificRate() || tree.getRate()->getPtnCat(0) >= 0) && params.print_site_rate)
-		cout << "  Site-rates by MH model:        " << params.out_prefix << ".rate"
-				<< endl;
-
-	if (params.print_site_lh)
-		cout << "  Site log-likelihoods:          " << params.out_prefix << ".sitelh"
-				<< endl;
-
-    if (params.print_ancestral_sequence) {
-        cout << "  Ancestral state probabilities: " << params.out_prefix << ".ancestralprob" << endl;
-        cout << "  Ancestral sequences:           " << params.out_prefix << ".ancestralseq" << endl;
-    }
-
-	if (params.write_intermediate_trees)
-		cout << "  All intermediate trees:        " << params.out_prefix << ".treels"
-				<< endl;
-
-	if (params.gbo_replicates) {
-		cout << endl << "Ultrafast bootstrap approximation results written to:" << endl
-			 << "  Split support values:          " << params.out_prefix << ".splits.nex" << endl
-			 << "  Consensus tree:                " << params.out_prefix << ".contree" << endl;
-		if (params.print_ufboot_trees)
-		cout << "  UFBoot trees:                  " << params.out_prefix << ".ufboot" << endl;
-
-	}
-
-	if (params.treeset_file) {
-		cout << "  Evaluated user trees:          " << params.out_prefix << ".trees" << endl;
-
-		if (params.print_tree_lh) {
-		cout << "  Tree log-likelihoods:          " << params.out_prefix << ".treelh" << endl;
-		}
-		if (params.print_site_lh) {
-		cout << "  Site log-likelihoods:          " << params.out_prefix << ".sitelh" << endl;
-		}
-	}
-    	if (params.lmap_num_quartets >= 0) {
-		cout << "  Likelihood mapping plot (SVG): " << params.out_prefix << ".lmap.svg" << endl;
-		cout << "  Likelihood mapping plot (EPS): " << params.out_prefix << ".lmap.eps" << endl;
-	}
-	cout << "  Screen log file:               " << params.out_prefix << ".log" << endl;
-	/*	if (original_model == "WHTEST")
-	 cout <<"  WH-TEST report:           " << params.out_prefix << ".whtest" << endl;*/
-	cout << endl;
-
+    
+    printOutfilesInfo(params, original_model, tree);
 }
 
 void checkZeroDist(Alignment *aln, double *dist) {
@@ -1606,7 +1525,7 @@ void printMiscInfo(Params &params, IQTree &iqtree, double *pattern_lh) {
         printAncestralSequences(params.out_prefix, &iqtree, params.print_ancestral_sequence);
     }
     
-    if (params.print_site_state_freq) {
+    if (params.print_site_state_freq != WSF_NONE) {
 		string site_freq_file = params.out_prefix;
 		site_freq_file += ".sitesf";
         printSiteStateFreq(site_freq_file.c_str(), &iqtree);

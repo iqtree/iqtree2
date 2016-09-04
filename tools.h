@@ -421,9 +421,21 @@ enum SiteLoglType {
     WSL_NONE, WSL_SITE, WSL_RATECAT, WSL_MIXTURE, WSL_MIXTURE_RATECAT
 };
 
+enum SiteFreqType {
+    WSF_NONE, WSF_POSTERIOR_MEAN, WSF_POSTERIOR_MAX
+};
+
 enum AncestralSeqType {
     AST_NONE, AST_MARGINAL, AST_JOINT
 };
+
+const int BRLEN_OPTIMIZE = 0; // optimize branch lengths
+const int BRLEN_FIX      = 1; // fix branch lengths
+const int BRLEN_SCALE    = 2; // scale branch lengths
+
+const int OUT_LOG       = 1; // .log file written or not
+const int OUT_TREEFILE  = 2; // .treefile file written or not
+const int OUT_IQTREE    = 4; // .iqtree file written or not
 
 /** maximum number of newton-raphson steps for NNI branch evaluation */
 extern int NNI_MAX_NR_STEP;
@@ -1374,6 +1386,15 @@ public:
             WSL_STATE: print site log-likelihood per state
      */
     SiteLoglType print_site_lh;
+
+    /**
+        control printing posterior probability of each site belonging to a rate/mixture categories
+        same meaning as print_site_lh, but results are printed to .siteprob file
+        WSL_RATECAT: print site probability per rate category
+        WSL_MIXTURE: print site probability per mixture class
+        WSL_MIXTURE_RATECAT: print site probability per mixture class per rate category
+    */
+    SiteLoglType print_site_prob;
 
     /**
         AST_NONE: do not print ancestral sequences (default)
