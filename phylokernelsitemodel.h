@@ -18,6 +18,12 @@ inline double horizontal_add(double x) {
 template <class VectorClass, const int VCSIZE, const int nstates>
 void PhyloTree::computeSitemodelPartialLikelihoodEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad) {
 
+    if (dad_branch->node->degree() > 3) {
+        // TODO: SIMD version for multifurcating node
+        computeSitemodelPartialLikelihoodEigen(dad_branch, dad);
+        return;
+    }
+
     // don't recompute the likelihood
 	assert(dad);
     if (dad_branch->partial_lh_computed & 1)

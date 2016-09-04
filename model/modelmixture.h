@@ -124,6 +124,11 @@ public:
 	virtual double optimizeParameters(double gradient_epsilon);
 
 	/**
+	 * @return TRUE if parameters are at the boundary that may cause numerical unstability
+	 */
+	virtual bool isUnstableParameters();
+
+	/**
 		decompose the rate matrix into eigenvalues and eigenvectors
 	*/
 	virtual void decomposeRateMatrix();
@@ -154,6 +159,17 @@ public:
 	 * @return model name with parameters in form of e.g. GTR{a,b,c,d,e,f}
 	 */
 	virtual string getNameParams();
+
+    /**
+     * compute the memory size for the model, can be large for site-specific models
+     * @return memory size required in bytes
+     */
+    virtual uint64_t getMemoryRequired() {
+    	uint64_t mem = ModelGTR::getMemoryRequired();
+    	for (iterator it = begin(); it != end(); it++)
+    		mem += (*it)->getMemoryRequired();
+    	return mem;
+    }
 
 	/**
 		rates of mixture components

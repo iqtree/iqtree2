@@ -43,6 +43,21 @@
 #define SPRNG
 #include "sprng/sprng.h"
 
+// redefine assertion
+inline void _my_assert(const char* expression, const char *func, const char* file, int line)
+{
+    char *sfile = (char*)strrchr(file, '/');
+    if (!sfile) sfile = (char*)file; else sfile++;
+    cerr << "Assertion (" << expression << ") failed, function " << func << ", file " << sfile << ", line " << line << endl;
+    abort();
+}
+ 
+#ifdef NDEBUG
+#define ASSERT(EXPRESSION) ((void)0)
+#else
+#define ASSERT(EXPRESSION) ((EXPRESSION) ? (void)0 : _my_assert(#EXPRESSION, __func__, __FILE__, __LINE__))
+#endif
+
 
 #define USE_HASH_MAP
 
@@ -649,6 +664,9 @@ public:
     /* type of starting tree */
     START_TREE_TYPE start_tree;
 
+    /** name of constraint tree file in NEWICK format */
+    char *constraint_tree_file;
+
     /**
             prefix of the output file, default is the same as input file
      */
@@ -1230,9 +1248,11 @@ public:
     string optimize_alg_gammai;
 
     /**
-            TRUE if you want to fix branch lengths during model optimization
+            BRLEN_OPTIMIZE optimize branch lengths during model optimization
+            BRLEN_FIX      fix branch lengths during model optimization
+            BRLEN_SCALE    scale all branch lengths by the same factor during model optimization
      */
-    bool fixed_branch_length;
+    int fixed_branch_length;
 
     /** minimum branch length for optimization, default 0.000001 */
     double min_branch_length;
@@ -1366,13 +1386,13 @@ public:
         0: print nothing
         1: print site state frequency vectors
     */
-    int print_site_state_freq;
+    SiteFreqType print_site_state_freq;
 
     /** TRUE to print site-specific rates, default: FALSE */
     bool print_site_rate;
 
-    /* 1: print site posterior probability */
-    int print_site_posterior;
+    /* 1: print site posterior probability for many trees during tree search */
+    int print_trees_site_posterior;
 
     /**
             TRUE to print tree log-likelihood
@@ -1651,6 +1671,11 @@ public:
      */
     char *site_freq_file;
 
+    /**
+        user tree file used to estimate site-specific state frequency model 
+    */
+    char *tree_freq_file;
+
     /** number of threads for OpenMP version     */
     int num_threads;
 
@@ -1726,6 +1751,13 @@ public:
 
     /** true if ignoring the "finished" flag in checkpoint file */
     bool force_unfinished;
+
+    /** control output files to be written
+     * OUT_LOG
+     * OUT_TREEFILE
+     * OUT_IQTREE
+     */
+    int suppress_output_flags;
 
 };
 
@@ -1875,8 +1907,7 @@ const char ERR_WRITE_OUTPUT[] = "Cannot write to file ";
 const char ERR_NO_K[] = "You must specify the number of taxa in the PD set.";
 const char ERR_TOO_SMALL_K[] = "Size of PD-set must be at least the size of initial set.";
 const char ERR_NO_BUDGET[] = "Total budget is not specified or less than zero.";
-const char ERR_TOO_SMALL_BUDGET[] = "Not enough budget to conserve the inital set of taxa.";
-
+const char ERR_TOO_SMALL_BUDGET[] = "Not enough budget to conserve the initial set of taxa.";
 const char ERR_INTERNAL[] = "Internal error, pls contact authors!";
 
 /*--------------------------------------------------------------*/

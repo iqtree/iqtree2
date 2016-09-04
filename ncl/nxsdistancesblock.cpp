@@ -494,6 +494,7 @@ void NxsDistancesBlock::HandleTaxlabelsCommand(
 
 	for (unsigned i = 0; i < ntax; i++)
 		{
+        token.SetLabileFlagBit(NxsToken::hyphenNotPunctuation + NxsToken::preserveUnderscores);
 		token.GetNextToken();
 		taxa->AddTaxonLabel(token.GetToken());
 		}

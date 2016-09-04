@@ -130,7 +130,7 @@ void outError(const char *error, string msg, bool quit) {
         @param error warning message
  */
 void outWarning(const char *warn) {
-    cerr << "WARNING: " << warn << endl;
+    cout << "WARNING: " << warn << endl;
 }
 
 void outWarning(string warn) {
@@ -640,6 +640,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     verbose_mode = VB_MIN;
     params.tree_gen = NONE;
     params.user_file = NULL;
+    params.constraint_tree_file = NULL;
     params.opt_gammai = true;
     params.opt_gammai_fast = false;
     params.opt_gammai_keep_bran = false;
@@ -803,7 +804,8 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.SSE = LK_EIGEN_SSE;
     params.lk_no_avx = false;
     params.print_site_lh = WSL_NONE;
-    params.print_site_state_freq = 0;
+    params.print_site_prob = WSL_NONE;
+    params.print_site_state_freq = WSF_NONE;
     params.print_site_rate = false;
     params.print_site_posterior = 0;
     params.print_ancestral_sequence = AST_NONE;
@@ -892,6 +894,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.bootlh_test = 0;
     params.bootlh_partitions = NULL;
     params.site_freq_file = NULL;
+    params.tree_freq_file = NULL;
 #ifdef _OPENMP
     params.num_threads = 0;
 #else
@@ -923,6 +926,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.ignore_checkpoint = false;
     params.checkpoint_dump_interval = 20;
     params.force_unfinished = false;
+    params.suppress_output_flags = 0;
 
 
 	if (params.nni5) {
@@ -1053,8 +1057,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.find_all = true;
 				continue;
 			}
-			if (strcmp(argv[cnt], "-g") == 0
-					|| strcmp(argv[cnt], "--greedy") == 0) {
+			if (strcmp(argv[cnt], "--greedy") == 0) {
 				params.run_mode = GREEDY;
 				continue;
 			}
@@ -1911,6 +1914,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 				continue;
 			}
 			if (strcmp(argv[cnt], "-fs") == 0) {
+                if (params.tree_freq_file)
+                    throw "Specifying both -fs and -ft not allowed";
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -fs <site_freq_file>";
@@ -1918,6 +1923,17 @@ void parseArg(int argc, char *argv[], Params &params) {
 //				params.SSE = LK_EIGEN;
 				continue;
 			}
+			if (strcmp(argv[cnt], "-ft") == 0) {
+                if (params.site_freq_file)
+                    throw "Specifying both -fs and -ft not allowed";
+                cnt++;
+				if (cnt >= argc)
+					throw "Use -ft <treefile_to_infer_site_frequency_model>";
+                params.tree_freq_file = argv[cnt];
+                if (params.print_site_state_freq == WSF_NONE)
+                    params.print_site_state_freq = WSF_POSTERIOR_MEAN;
+                continue;
+            }
 
 			if (strcmp(argv[cnt], "-fconst") == 0) {
 				cnt++;
@@ -1992,7 +2008,19 @@ void parseArg(int argc, char *argv[], Params &params) {
 				continue;
 			}
 			if (strcmp(argv[cnt], "-fixbr") == 0 || strcmp(argv[cnt], "-blfix") == 0) {
-				params.fixed_branch_length = true;
+				params.fixed_branch_length = BRLEN_FIX;
+                params.optimize_alg_gammai = "Brent";
+                params.opt_gammai = false;
+                params.min_iterations = 0;
+                params.stop_condition = SC_FIXED_ITERATION;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-blscale") == 0) {
+				params.fixed_branch_length = BRLEN_SCALE;
+                params.optimize_alg_gammai = "Brent";
+                params.opt_gammai = false;
+                params.min_iterations = 0;
+                params.stop_condition = SC_FIXED_ITERATION;
 				continue;
 			}
 			if (strcmp(argv[cnt], "-blmin") == 0) {
@@ -2210,6 +2238,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.print_site_lh = WSL_RATECAT;
 				continue;
 			}
+
 			if (strcmp(argv[cnt], "-wslm") == 0) {
 				params.print_site_lh = WSL_MIXTURE;
 				continue;
@@ -2234,12 +2263,16 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.print_site_rate = true;
 				continue;
 			}
-			if (strcmp(argv[cnt], "-wsp") == 0) {
-				params.print_site_posterior = 1;
+			if (strcmp(argv[cnt], "-wsptrees") == 0) {
+				params.print_trees_site_posterior = 1;
 				continue;
 			}
 			if (strcmp(argv[cnt], "-wsf") == 0) {
-				params.print_site_state_freq = 1;
+				params.print_site_state_freq = WSF_POSTERIOR_MEAN;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-wsfm") == 0 || strcmp(argv[cnt], "-fmax") == 0) {
+				params.print_site_state_freq = WSF_POSTERIOR_MAX;
 				continue;
 			}
 			if (strcmp(argv[cnt], "-wba") == 0) {
@@ -2586,8 +2619,13 @@ void parseArg(int argc, char *argv[], Params &params) {
 				continue;
 			}
 
-            if (strcmp(argv[cnt], "-opt_gammai") == 0 || strcmp(argv[cnt], "--opt-gamma-inv") == 0) {
+            if (strcmp(argv[cnt], "--opt-gamma-inv") == 0) {
                 params.opt_gammai = true;
+                continue;
+            }
+
+            if (strcmp(argv[cnt], "--no-opt-gamma-inv") == 0) {
+                params.opt_gammai = false;
                 continue;
             }
 
@@ -2899,6 +2937,14 @@ void parseArg(int argc, char *argv[], Params &params) {
 				continue;
 			}
             
+            if (strcmp(argv[cnt], "-g") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use -g <constraint_tree>";
+                params.constraint_tree_file = argv[cnt];
+                continue;
+            }
+            
 			if (strcmp(argv[cnt], "-lmap") == 0) {
 				cnt++;
 				if (cnt >= argc)
@@ -2953,6 +2999,25 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.checkpoint_dump_interval = convert_int(argv[cnt]);
 				continue;
 			}
+            
+			if (strcmp(argv[cnt], "--no-log") == 0) {
+				params.suppress_output_flags |= OUT_LOG;
+				continue;
+			}
+
+			if (strcmp(argv[cnt], "--no-treefile") == 0) {
+				params.suppress_output_flags |= OUT_TREEFILE;
+				continue;
+			}
+			if (strcmp(argv[cnt], "--no-iqtree") == 0) {
+				params.suppress_output_flags |= OUT_IQTREE;
+				continue;
+			}
+			if (strcmp(argv[cnt], "--no-outfiles") == 0) {
+				params.suppress_output_flags |= OUT_LOG + OUT_TREEFILE + OUT_IQTREE;
+				continue;
+			}
+
 
 			if (argv[cnt][0] == '-') {
                 string err = "Invalid \"";
@@ -2992,6 +3057,10 @@ void parseArg(int argc, char *argv[], Params &params) {
         usage(argv, false);
 #endif
     }
+    
+    if (params.do_au_test && params.topotest_replicates == 0)
+        outError("For AU test please please specify number of bootstrap replicates via -zb option");
+    
     if (!params.out_prefix) {
     	if (params.eco_dag_file)
     		params.out_prefix = params.eco_dag_file;
@@ -3100,6 +3169,7 @@ void usage_iqtree(char* argv[], bool full_command) {
 #endif
             << "  -seed <number>       Random seed number, normally used for debugging purpose" << endl
             << "  -v, -vv, -vvv        Verbose mode, printing more messages to screen" << endl
+            << "  -quiet               Silent mode, suppress printing to screen (stdout)" << endl
             << "  -keep-ident          Keep identical sequences (default: remove & finally add)" << endl
             << endl << "CHECKPOINTING TO RESUME STOPPED RUN:" << endl
             << "  -redo                Redo analysis even for successful runs (default: resume)" << endl
@@ -3118,8 +3188,9 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -allnni              Perform more thorough NNI search (default: off)" << endl
             << "  -numstop <number>    Number of unsuccessful iterations to stop (default: 100)" << endl
             << "  -n <#iterations>     Fix number of iterations to <#iterations> (default: auto)" << endl
-            << "  -iqp                 Use the IQP tree perturbation (default: randomized NNI)" << endl
-            << "  -iqpnni              Switch back to the old IQPNNI tree search algorithm" << endl
+            << "  -g <constraint_tree> (Multifurcating) topological constraint tree file" << endl
+//            << "  -iqp                 Use the IQP tree perturbation (default: randomized NNI)" << endl
+//            << "  -iqpnni              Switch back to the old IQPNNI tree search algorithm" << endl
             << endl << "ULTRAFAST BOOTSTRAP:" << endl
             << "  -bb <#replicates>    Ultrafast bootstrap (>=1000)" << endl
             << "  -wbt                 Write bootstrap trees to .ufboot file (default: none)" << endl
@@ -3142,7 +3213,7 @@ void usage_iqtree(char* argv[], bool full_command) {
             << endl << "AUTOMATIC MODEL SELECTION:" << endl
             << "  -m TESTONLY          Standard model selection (like jModelTest, ProtTest)" << endl
             << "  -m TEST              Like -m TESTONLY but followed by tree reconstruction" << endl
-            << "  -m TESTNEWONLY       New model selection including FreeRate (+R) heterogeneity" << endl
+            << "  -m TESTNEWONLY       Extended model selection incl. FreeRate (+R) heterogeneity" << endl
             << "  -m TESTNEW           Like -m TESTNEWONLY but followed by tree reconstruction" << endl
             << "  -m TESTMERGEONLY     Select best-fit partition scheme (like PartitionFinder)" << endl
             << "  -m TESTMERGE         Like -m TESTMERGEONLY but followed by tree reconstruction" << endl
@@ -3173,9 +3244,9 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "                  DNA: HKY (default), JC, F81, K2P, K3P, K81uf, TN/TrN, TNef," << endl
             << "                       TIM, TIMef, TVM, TVMef, SYM, GTR, or 6-digit model" << endl
             << "                       specification (e.g., 010010 = HKY)" << endl
-            << "              Protein: WAG (default), Poisson, cpREV, mtREV, Dayhoff, mtMAM," << endl
-            << "                       JTT, LG, mtART, mtZOA, VT, rtREV, DCMut, PMB, HIVb," << endl
-            << "                       HIVw, JTTDCMut, FLU, Blosum62" << endl
+            << "              Protein: LG (default), Poisson, cpREV, mtREV, Dayhoff, mtMAM," << endl
+            << "                       JTT, WAG, mtART, mtZOA, VT, rtREV, DCMut, PMB, HIVb," << endl
+            << "                       HIVw, JTTDCMut, FLU, Blosum62, GTR20" << endl
             << "      Protein mixture: C10,...,C60, EX2, EX3, EHO, UL2, UL3, EX_EHO, LG4M, LG4X," << endl
             << "                       JTTCF4G" << endl
             << "               Binary: JC2 (default), GTR2" << endl
@@ -3194,7 +3265,7 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -m \"MIX{m1,...mK}\"   Mixture model with K components" << endl
             << "  -m \"FMIX{f1,...fK}\"  Frequency mixture model with K components" << endl
             << "  -mwopt               Turn on optimizing mixture weights (default: none)" << endl
-            << endl << "RATE HETEROGENEITY:" << endl
+            << endl << "RATE HETEROGENEITY AMONG SITES:" << endl
             << "  -m <model_name>+I or +G[n] or +I+G[n] or +R[n]" << endl
             << "                       Invar, Gamma, Invar+Gamma, or FreeRate model where 'n' is" << endl
             << "                       number of categories (default: n=4)" << endl
@@ -3205,11 +3276,16 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -wsr                 Write site rates to .rate file" << endl
             << "  -mh                  Computing site-specific rates to .mhrate file using" << endl
             << "                       Meyer & von Haeseler (2003) method" << endl
+            << endl << "SITE-SPECIFIC FREQUENCY MODEL:" << endl 
+            << "  -ft <tree_file>      Input tree to infer site frequency model" << endl
+            << "  -fs <in_freq_file>   Input site frequency model file" << endl
+            << "  -fmax                Posterior maximum instead of posterior mean approximation" << endl
+            //<< "  -wsf                 Write site frequency model to .sitefreq file" << endl
             //<< "  -c <#categories>     Number of Gamma rate categories (default: 4)" << endl
-            << endl << "TEST OF MODEL HOMOGENEITY:" << endl
-            << "  -m WHTEST            Testing model (GTR+G) homogeneity assumption using" << endl
-            << "                       Weiss & von Haeseler (2003) method" << endl
-            << "  -ns <#simulations>   #Simulations to obtain null-distribution (default: 1000)" << endl
+//            << endl << "TEST OF MODEL HOMOGENEITY:" << endl
+//            << "  -m WHTEST            Testing model (GTR+G) homogeneity assumption using" << endl
+//            << "                       Weiss & von Haeseler (2003) method" << endl
+//            << "  -ns <#simulations>   #Simulations to obtain null-distribution (default: 1000)" << endl
 //            << endl << "TREE INFERENCE:" << endl
 //            << "  -p <probability>     IQP: Probability of deleting leaves (default: auto)" << endl
 //            << "  -k <#representative> IQP: Size of representative leaf set (default: 4)" << endl
@@ -3247,17 +3323,18 @@ void usage_iqtree(char* argv[], bool full_command) {
             << endl;
 
 			cout << "GENERATING RANDOM TREES:" << endl;
-			cout << "  -r <num_taxa>        Create a random tree under Yule-Harding model." << endl;
-			cout << "  -ru <num_taxa>       Create a random tree under Uniform model." << endl;
-			cout << "  -rcat <num_taxa>     Create a random caterpillar tree." << endl;
-			cout << "  -rbal <num_taxa>     Create a random balanced tree." << endl;
-			cout << "  -rcsg <num_taxa>     Create a random circular split network." << endl;
+			cout << "  -r <num_taxa>        Create a random tree under Yule-Harding model" << endl;
+			cout << "  -ru <num_taxa>       Create a random tree under Uniform model" << endl;
+			cout << "  -rcat <num_taxa>     Create a random caterpillar tree" << endl;
+			cout << "  -rbal <num_taxa>     Create a random balanced tree" << endl;
+			cout << "  -rcsg <num_taxa>     Create a random circular split network" << endl;
 			cout << "  -rlen <min_len> <mean_len> <max_len>  " << endl;
-			cout << "                       min, mean, and max branch lengths of random trees." << endl;
+			cout << "                       min, mean, and max branch lengths of random trees" << endl;
 
 			cout << endl << "MISCELLANEOUS:" << endl
 		    << "  -wt                  Write locally optimal trees into .treels file" << endl
 			<< "  -blfix               Fix branch lengths of user tree passed via -te" << endl
+            << "  -blscale             Scale branch lengths of user tree passed via -t" << endl
 			<< "  -blmin               Min branch length for optimization (default 0.000001)" << endl
 			<< "  -blmax               Max branch length for optimization (default 100)" << endl
 			<< "  -wsr                 Write site rates and categories to .rate file" << endl
@@ -3304,7 +3381,7 @@ void quickStartGuide() {
 #endif
          << "To show all available options: run 'iqtree -h'" << endl << endl
          << "Have a look at the tutorial and manual for more information:" << endl
-         << "     http://www.cibiv.at/software/iqtree" << endl << endl;
+         << "     http://www.iqtree.org" << endl << endl;
     exit(0);
 }
 

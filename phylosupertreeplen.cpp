@@ -104,7 +104,7 @@ void PartitionModelPlen::restoreCheckpoint() {
 }
 
 
-double PartitionModelPlen::optimizeParameters(bool fixed_len, bool write_info, double logl_epsilon, double gradient_epsilon) {
+double PartitionModelPlen::optimizeParameters(int fixed_len, bool write_info, double logl_epsilon, double gradient_epsilon) {
     PhyloSuperTreePlen *tree = (PhyloSuperTreePlen*)site_rate->getTree();
     double tree_lh = 0.0, cur_lh = 0.0;
     int ntrees = tree->size();
@@ -115,11 +115,12 @@ double PartitionModelPlen::optimizeParameters(bool fixed_len, bool write_info, d
 	for(int part = 0; part < ntrees; part++){
 		tree->part_info[part].cur_score = 0.0;
 	}
-	if (fixed_len) {
-		tree_lh = tree->computeLikelihood();
-	} else {
+
+	if (fixed_len == BRLEN_OPTIMIZE) {
 		tree_lh = tree->optimizeAllBranches(1);
-	}
+	} else {
+		tree_lh = tree->computeLikelihood();
+    }
 
     cout<<"Initial log-likelihood: "<<tree_lh<<endl;
 	double begin_time = getRealTime();
@@ -176,11 +177,16 @@ double PartitionModelPlen::optimizeParameters(bool fixed_len, bool write_info, d
     	// Optimizing branch lengths
     	int my_iter = min(5,i+1);
 
-    	if(!fixed_len){
+    	if (fixed_len == BRLEN_OPTIMIZE){
             double new_lh = tree->optimizeAllBranches(my_iter, logl_epsilon);
             assert(new_lh > cur_lh - 1.0);
             cur_lh = new_lh;
-    	}
+    	} else if (fixed_len == BRLEN_SCALE) {
+            double scaling = 1.0;
+            double new_lh = tree->optimizeTreeLengthScaling(MIN_BRLEN_SCALE, scaling, MAX_BRLEN_SCALE, gradient_epsilon);
+            assert(new_lh > cur_lh - 1.0);
+            cur_lh = new_lh;
+        } 
     	cout<<"Current log-likelihood at step "<<i<<": "<<cur_lh<<endl;
     	if(fabs(cur_lh-tree_lh) < logl_epsilon) {
             tree_lh = cur_lh;
@@ -198,8 +204,8 @@ double PartitionModelPlen::optimizeParameters(bool fixed_len, bool write_info, d
     return tree_lh;
 }
 
-double PartitionModelPlen::optimizeParametersGammaInvar(bool fixed_len, bool write_info, double logl_epsilon, double gradient_epsilon) {
-    outError("This option does not work with edge-linked partition model yet");
+double PartitionModelPlen::optimizeParametersGammaInvar(int fixed_len, bool write_info, double logl_epsilon, double gradient_epsilon) {
+    outError("Thorough I+G parameter optimization does not work with edge-linked partition model yet");
     return 0.0;
 }
 

@@ -243,6 +243,11 @@ void printSiteLh(const char*filename, PhyloTree *tree, double *ptn_lh,
 
 void printSiteLhCategory(const char*filename, PhyloTree *tree, SiteLoglType wsl) {
 
+    if (tree->isSuperTree()) {
+        cout << "WARNING: -wslm, -wslr do not work with partition models yet" << endl;
+        return;
+    }
+
     if (wsl == WSL_NONE || wsl == WSL_SITE)
         return;
     // error checking
@@ -316,7 +321,7 @@ void printSiteLhCategory(const char*filename, PhyloTree *tree, SiteLoglType wsl)
             cout << "Log-likelihood of constant sites: " << endl;
             double const_prob = 0.0;
             for (i = 0; i < tree->aln->getNPattern(); i++)
-                if (tree->aln->at(i).is_const) {
+                if (tree->aln->at(i).isConst()) {
                     Pattern pat = tree->aln->at(i);
                     for (Pattern::iterator it = pat.begin(); it != pat.end(); it++)
                         cout << tree->aln->convertStateBackStr(*it);
@@ -438,10 +443,83 @@ void printAncestralSequences(const char *out_prefix, PhyloTree *tree, AncestralS
 
 void printSiteStateFreq(const char*filename, PhyloTree *tree) {
 
-    int i, j, nsites = tree->getAlnNSite(), nstates = tree->aln->num_states;
-    double *ptn_state_freq = new double[tree->getAlnNPattern() * nstates];
+    if (wsl == WSL_NONE || wsl == WSL_SITE)
+        return;
+    // error checking
+    if (!tree->getModel()->isMixture()) {
+        if (wsl != WSL_RATECAT) {
+            outWarning("Switch now to '-wspr' as it is the only option for non-mixture model");
+            wsl = WSL_RATECAT;
+        }
+    } else {
+        // mixture model
+        if (wsl == WSL_MIXTURE_RATECAT && tree->getModelFactory()->fused_mix_rate) {
+            outWarning("-wspmr is not suitable for fused mixture model, switch now to -wspm");
+            wsl = WSL_MIXTURE;
+        }
+    }
+	size_t cat, ncat = tree->getNumLhCat(wsl);
+    double *ptn_prob_cat = new double[tree->getAlnNPattern()*ncat];
+	tree->computePatternProbabilityCategory(ptn_prob_cat, wsl);
     
-    tree->computePatternStateFreq(ptn_state_freq);
+	try {
+		ofstream out;
+		out.exceptions(ios::failbit | ios::badbit);
+		out.open(filename);
+        if (tree->isSuperTree())
+            out << "Set\t";
+        out << "Site";
+        for (cat = 0; cat < ncat; cat++)
+            out << "\tp" << cat+1;
+		out << endl;
+		IntVector pattern_index;
+        if (tree->isSuperTree()) {
+            PhyloSuperTree *super_tree = (PhyloSuperTree*)tree;
+            size_t offset = 0;
+            for (PhyloSuperTree::iterator it = super_tree->begin(); it != super_tree->end(); it++) {
+                size_t part_ncat = (*it)->getNumLhCat(wsl); 
+                (*it)->aln->getSitePatternIndex(pattern_index);
+                size_t site, nsite = (*it)->aln->getNSite();
+                for (site = 0; site < nsite; site++) {
+                    out << (it-super_tree->begin())+1 << "\t" << site+1;
+                    double *prob_cat = ptn_prob_cat + (offset+pattern_index[site]*part_ncat);
+                    for (cat = 0; cat < part_ncat; cat++)
+                        out << "\t" << prob_cat[cat];
+                    out << endl;
+                }
+                offset += (*it)->aln->getNPattern()*(*it)->getNumLhCat(wsl);
+            }
+        } else {
+            tree->aln->getSitePatternIndex(pattern_index);
+            int nsite = tree->getAlnNSite();
+            for (int site = 0; site < nsite; site++) {
+                out << site+1;
+                double *prob_cat = ptn_prob_cat + pattern_index[site]*ncat;
+                for (cat = 0; cat < ncat; cat++) {
+                    out << "\t" << prob_cat[cat];
+                }
+                out << endl;
+            }
+        }
+		out.close();
+		cout << "Site probabilities per category printed to " << filename << endl;
+	} catch (ios::failure) {
+		outError(ERR_WRITE_OUTPUT, filename);
+	}
+
+}
+
+
+void printSiteStateFreq(const char*filename, PhyloTree *tree, double *state_freqs) {
+
+    int i, j, nsites = tree->getAlnNSite(), nstates = tree->aln->num_states;
+    double *ptn_state_freq;
+    if (state_freqs) {
+    	ptn_state_freq = state_freqs;
+    } else {
+    	ptn_state_freq = new double[tree->getAlnNPattern() * nstates];
+        tree->computePatternStateFreq(ptn_state_freq);
+    }
 
 	try {
 		ofstream out;
@@ -464,7 +542,8 @@ void printSiteStateFreq(const char*filename, PhyloTree *tree) {
 	} catch (ios::failure) {
 		outError(ERR_WRITE_OUTPUT, filename);
 	}
-    delete [] ptn_state_freq;
+	if (!state_freqs)
+        delete [] ptn_state_freq;
 }
 
 bool checkModelFile(ifstream &in, bool is_partitioned, vector<ModelInfo> &infos) {
@@ -680,7 +759,7 @@ int getModelList(Params &params, Alignment *aln, StrVector &models, bool separat
 //		for (i = 0; i < noptions; i++)
 //			test_options[i] = test_options_codon[i];
 //	} else 
-    if (aln->frac_const_sites == 0.0) {
+    if (aln->frac_invariant_sites == 0.0) {
         // morphological or SNP data: activate +ASC
         if (with_new) {
             if (with_asc)
@@ -707,6 +786,12 @@ int getModelList(Params &params, Alignment *aln, StrVector &models, bool separat
             test_options = test_options_asc;
         } else
             test_options = test_options_default;
+        if (aln->frac_const_sites == 0.0) {
+            // deactivate +I
+            for (j = 0; j < noptions; j++)
+                if (strstr(rate_options[j], "+I"))
+                    test_options[j] = false;
+        }
     }
     
 
@@ -1436,7 +1521,7 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
             // normal model
             if (model_names[model].find("+ASC") != string::npos) {
                 model_fac->unobserved_ptns = in_tree->aln->getUnobservedConstPatterns();
-                if (model_fac->unobserved_ptns.size() < tree->aln->getNumNonstopCodons() || in_tree->aln->frac_const_sites > 0.0) {
+                if (model_fac->unobserved_ptns.size() < tree->aln->getNumNonstopCodons() || in_tree->aln->frac_invariant_sites > 0.0) {
                     cout.width(3);
                     cout << right << model+1 << "  ";
                     cout.width(13);
@@ -1445,8 +1530,6 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
                     continue;
                 }
                 tree->aln->buildSeqStates(true);
-                if (model_fac->unobserved_ptns.size() < tree->aln->getNumNonstopCodons())
-                    outError("Invalid use of +ASC because constant patterns are observed in the alignment");
             } else {
                 model_fac->unobserved_ptns = "";
                 tree->aln->buildSeqStates(false);
@@ -1971,7 +2054,7 @@ the solution is:
     @param[out] y y-value
     @return least square value
 */
-void doWeightedLeastSquare(int n, double *w, double *a, double *b, double *c, double &x, double &y) {
+void doWeightedLeastSquare(int n, double *w, double *a, double *b, double *c, double &x, double &y, double &se) {
     int k;
     double BC = 0.0, AB = 0.0, AC = 0.0, A2 = 0.0, B2 = 0.0;
     double denom;
@@ -1987,6 +2070,9 @@ void doWeightedLeastSquare(int n, double *w, double *a, double *b, double *c, do
     denom = 1.0/(AB*AB - A2*B2);
     x = (BC*AB - AC*B2) * denom;
     y = (AC*AB - BC*A2) * denom;
+    
+    se = -denom*(B2+A2+2*AB);
+    assert(se >= 0.0);
 }
 
 /**
@@ -2048,13 +2134,171 @@ public:
     double *rr_inv;
 };
 
+/* BEGIN CODE WAS TAKEN FROM CONSEL PROGRAM */
+
+/* binary search for a sorted vector 
+   find k s.t. vec[k-1] <= t < vec[k]
+ */
+int cntdist2(double *vec, int bb, double t)
+{
+  int i,i0,i1;
+
+  i0=0; i1=bb-1;
+  if(t < vec[0]) return 0;
+  else if(vec[bb-1] <= t) return bb;
+
+  while(i1-i0>1) {
+    i=(i0+i1)/2;
+    if(vec[i] <= t) i0=i;
+    else i1=i;
+  }
+
+  return i1;
+}
+
+/*
+  smoothing the counting for a sorted vector
+  the piecewise linear function connecting
+  F(v[i]) =  1/(2n) + i/n, for i=0,...,n-1
+  F(1.5v[0]-0.5v[1]) = 0
+  F(1.5v[n-1]-0.5v[n-2]) = 1.
+
+  1. F(x)=0 for x<=1.5v[0]-0.5v[1] 
+
+  2. F(x)=1/(2n) + (1/n)*(x-v[0])/(v[1]-v[0])
+  for 1.5v[0]-0.5v[1] < x <= v[0]
+
+  3. F(x)=1/(2n) + i/n + (1/n)*(x-v[i])/(v[i]-v[i+1])
+  for v[i] < x <= v[i+1], i=0,...,
+
+  4. F(x)=1-(1/2n) + (1/n)*(x-v[n-1])/(v[n-1]-v[n-2])
+  for v[n-1] < x <= 1.5v[n-1]-0.5v[n-2]
+
+  5. F(x)=1 for x > 1.5v[n-1]-0.5v[n-2]
+ */
+double cntdist3(double *vec, int bb, double t)
+{
+  double p,n;
+  int i;
+  i=cntdist2(vec,bb,t)-1; /* to find vec[i] <= t < vec[i+1] */
+  n=(double)bb;
+  if(i<0) {
+    if(vec[1]>vec[0]) p=0.5+(t-vec[0])/(vec[1]-vec[0]);
+    else p=0.0;
+  } else if(i<bb-1) {
+    if(vec[i+1]>vec[i]) p=0.5+(double)i+(t-vec[i])/(vec[i+1]-vec[i]);
+    else p=0.5+(double)i; /* <- should never happen */
+  } else {
+    if(vec[bb-1]-vec[bb-2]>0) p=n-0.5+(t-vec[bb-1])/(vec[bb-1]-vec[bb-2]);
+    else p=n;
+  }
+  if(p>n) p=n; else if(p<0.0) p=0.0;
+  return p;
+}
+
+double log3(double x)
+{
+  double y,z1,z2,z3,z4,z5;
+  if(fabs(x)>1.0e-3) {
+    y=-log(1.0-x);
+  } else {
+    z1=x; z2=z1*x; z3=z2*x; z4=z3*x; z5=z4*x;
+    y=((((z5/5.0)+z4/4.0)+z3/3.0)+z2/2.0)+z1;
+  }
+  return y;
+}
+
+int mleloopmax=30;
+double mleeps=1e-10;
+int mlecoef(double *cnts, double *rr, double bb, int kk,
+	    double *coef0, /* set initinal value (size=2) */
+	    double *lrt, double *df, /* LRT statistic */
+        double *se
+	    )
+{
+  int i,m,loop;
+  double coef[2], update[2];
+  double d1f, d2f, d11f, d12f, d22f; /* derivatives */
+  double v11, v12, v22; /* inverse of -d??f */
+  double a,e;
+  double s[kk], r[kk],c[kk], b[kk],z[kk],p[kk],d[kk],g[kk],h[kk];
+
+  m=0;
+  for(i=0;i<kk;i++)
+    {
+      r[m]=rr[i]; s[m]=sqrt(rr[i]); c[m]=cnts[i]*bb; b[m]=bb;
+      m++;
+    }
+  if(m<2) return 1;
+
+  coef[0]=coef0[0]; /* signed distance */
+  coef[1]=coef0[1]; /* curvature */
+
+  for(loop=0;loop<mleloopmax;loop++) {
+    d1f=d2f=d11f=d12f=d22f=0.0;
+    for(i=0;i<m;i++) {
+      z[i]=coef[0]*s[i]+coef[1]/s[i];
+      p[i]=gsl_cdf_ugaussian_P(-z[i]);
+      d[i]=gsl_ran_ugaussian_pdf(z[i]);
+      if(p[i]>0.0 && p[i]<1.0) {
+	g[i]=d[i]*( d[i]*(-c[i]+2.0*c[i]*p[i]-b[i]*p[i]*p[i])/
+		    (p[i]*p[i]*(1.0-p[i])*(1.0-p[i]))
+		    + z[i]*(c[i]-b[i]*p[i])/(p[i]*(1.0-p[i])) );
+	h[i]=d[i]*(c[i]-b[i]*p[i])/(p[i]*(1.0-p[i]));
+      } else { g[i]=h[i]=0.0; }
+      d1f+= -h[i]*s[i]; d2f+= -h[i]/s[i];
+      d11f+= g[i]*r[i]; d12f+= g[i]; d22f+= g[i]/r[i];
+    }
+
+    a=d11f*d22f-d12f*d12f;
+    if(a==0.0) {
+      return 2;
+    }
+    v11=-d22f/a; v12=d12f/a; v22=-d11f/a;
+
+    /* Newton-Raphson update */
+    update[0]=v11*d1f+v12*d2f; update[1]=v12*d1f+v22*d2f;
+    coef[0]+=update[0]; coef[1]+=update[1];
+
+    /* check convergence */
+    e=-d11f*update[0]*update[0]-2.0*d12f*update[0]*update[1]
+      -d22f*update[1]*update[1];
+
+    if(e<mleeps) break;
+  }
+
+  /* calc log-likelihood */
+  *lrt=0.0; *df=0.0;
+  for(i=0;i<m;i++) {
+    if(p[i]>0.0 && p[i]<1.0) {
+      *df+=1.0;
+      if(c[i]>0.0) a=c[i]*log(c[i]/b[i]/p[i]); else a=0.0;
+      if(c[i]<b[i]) a+=(b[i]-c[i])*(log3(p[i])-log3(c[i]/b[i]));
+      *lrt += a;
+    }
+  }
+  *lrt *= 2.0; *df -= 2.0;
+
+  /* write back the results */
+  coef0[0]=coef[0]; coef0[1]=coef[1];
+  *se = v11 + v22 - 2*v12;
+//  vmat[0][0]=v11;vmat[0][1]=vmat[1][0]=v12;vmat[1][1]=v22; 
+  if(loop==mleloopmax || *df< -0.01) i=1; else i=0;
+  return i;
+}
+
+/* END CODE WAS TAKEN FROM CONSEL PROGRAM */
+
 /**
     @param tree_lhs RELL score matrix of size #trees x #replicates
 */
 void performAUTest(Params &params, PhyloTree *tree, double *pattern_lhs, vector<TreeInfo> &info) {
     
+    if (params.topotest_replicates < 10000)
+        outWarning("Too few replicates for AU test. At least -zb 10000 for reliable results!");
+    
     /* STEP 1: specify scale factors */
-    int nscales = 10;
+    size_t nscales = 10;
     double r[] = {0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4};
     double rr[] = {sqrt(0.5), sqrt(0.6), sqrt(0.7), sqrt(0.8), sqrt(0.9), 1.0, 
         sqrt(1.1), sqrt(1.2), sqrt(1.3), sqrt(1.4)};
@@ -2062,17 +2306,28 @@ void performAUTest(Params &params, PhyloTree *tree, double *pattern_lhs, vector<
         sqrt(1/1.1), sqrt(1/1.2), sqrt(1/1.3), sqrt(1/1.4)};
         
     /* STEP 2: compute bootstrap proportion */
-    int ntrees = info.size();
+    size_t ntrees = info.size();
     size_t nboot = params.topotest_replicates;
-    double nboot_inv = 1.0 / nboot;
+//    double nboot_inv = 1.0 / nboot;
     
-    int nptn = tree->getAlnNPattern();
-    int maxnptn = get_safe_upper_limit(nptn);
+    size_t nptn = tree->getAlnNPattern();
+    size_t maxnptn = get_safe_upper_limit(nptn);
     
-    double *bp = new double[ntrees*nscales];
-    memset(bp, 0, sizeof(double)*ntrees*nscales);
+//    double *bp = new double[ntrees*nscales];
+//    memset(bp, 0, sizeof(double)*ntrees*nscales);
     
-    int k, tid, ptn;
+    double *treelhs;
+    cout << (ntrees*nscales*nboot*sizeof(double) >> 20) << " MB required for AU test" << endl;
+    treelhs = new double[ntrees*nscales*nboot];
+    if (!treelhs)
+        outError("Not enough memory to perform AU test!");
+    
+    size_t k, tid, ptn;
+
+    double start_time = getRealTime();
+
+    cout << "Generating " << nscales << " x " << nboot << " multiscale bootstrap replicates... ";
+
 #ifdef _OPENMP
     #pragma omp parallel private(k, tid, ptn)
     {
@@ -2088,7 +2343,7 @@ void performAUTest(Params &params, PhyloTree *tree, double *pattern_lhs, vector<
     double *boot_sample_dbl = aligned_alloc<double>(maxnptn);
     
 #ifdef _OPENMP
-    #pragma omp for schedule(static)
+    #pragma omp for schedule(dynamic)
 #endif
     for (k = 0; k < nscales; k++) {
         string str = "SCALE=" + convertDoubleToString(r[k]);    
@@ -2096,26 +2351,53 @@ void performAUTest(Params &params, PhyloTree *tree, double *pattern_lhs, vector<
 			tree->aln->createBootstrapAlignment(boot_sample, str.c_str(), rstream);
             for (ptn = 0; ptn < maxnptn; ptn++)
                 boot_sample_dbl[ptn] = boot_sample[ptn];
-            double max_lh = -1e20;
+            double max_lh = -DBL_MAX, second_max_lh = -DBL_MAX;
             int max_tid = -1;
             for (tid = 0; tid < ntrees; tid++) {
                 double *pattern_lh = pattern_lhs + (tid*maxnptn);
                 double tree_lh;
+                if (params.SSE == LK_EIGEN) {
+                    tree_lh = 0.0;
+                    for (ptn = 0; ptn < nptn; ptn++)
+                        tree_lh += pattern_lh[ptn] * boot_sample_dbl[ptn];
+                } else {
 #ifdef BINARY32
-                tree_lh = tree->dotProductSIMD<double, Vec2d, 2>(pattern_lh, boot_sample_dbl, nptn);
-#else
-                if (instruction_set >= 7)
-                    tree_lh = tree->dotProductSIMD<double, Vec4d, 4>(pattern_lh, boot_sample_dbl, nptn);
-                else
                     tree_lh = tree->dotProductSIMD<double, Vec2d, 2>(pattern_lh, boot_sample_dbl, nptn);
+#else
+                    if (instruction_set >= 7)
+                        tree_lh = tree->dotProductSIMD<double, Vec4d, 4>(pattern_lh, boot_sample_dbl, nptn);
+                    else
+                        tree_lh = tree->dotProductSIMD<double, Vec2d, 2>(pattern_lh, boot_sample_dbl, nptn);
 #endif
+                }
+                // rescale lh
+                tree_lh /= r[k];
+                
+                // find the max and second max
                 if (tree_lh > max_lh) {
+                    second_max_lh = max_lh;
                     max_lh = tree_lh;
                     max_tid = tid;
-                } 
+                } else if (tree_lh > second_max_lh)
+                    second_max_lh = tree_lh;
+                    
+                treelhs[(tid*nscales+k)*nboot + boot] = tree_lh; 
             }
-            bp[k*ntrees+max_tid] += nboot_inv;
+            
+            // compute difference from max_lh
+            for (tid = 0; tid < ntrees; tid++) 
+                if (tid != max_tid)
+                    treelhs[(tid*nscales+k)*nboot + boot] = max_lh - treelhs[(tid*nscales+k)*nboot + boot];
+                else
+                    treelhs[(tid*nscales+k)*nboot + boot] = second_max_lh - max_lh;
+//            bp[k*ntrees+max_tid] += nboot_inv;
         }
+        
+        // sort the replicates
+        for (tid = 0; tid < ntrees; tid++) {
+            quicksort<double,int>(treelhs + (tid*nscales+k)*nboot, 0, nboot-1);
+        }
+        
     }
 
     aligned_free(boot_sample_dbl);
@@ -2126,54 +2408,147 @@ void performAUTest(Params &params, PhyloTree *tree, double *pattern_lhs, vector<
     }
 #endif
 
-    if (verbose_mode >= VB_MED) {
-        cout << "scale";
-        for (k = 0; k < nscales; k++)
-            cout << "\t" << r[k];
-        cout << endl;
-        for (tid = 0; tid < ntrees; tid++) {
-            cout << tid;
-            for (k = 0; k < nscales; k++) {
-                cout << "\t" << bp[tid+k*ntrees];
-            }
-            cout << endl;
-        }
-    }
+//    if (verbose_mode >= VB_MED) {
+//        cout << "scale";
+//        for (k = 0; k < nscales; k++)
+//            cout << "\t" << r[k];
+//        cout << endl;
+//        for (tid = 0; tid < ntrees; tid++) {
+//            cout << tid;
+//            for (k = 0; k < nscales; k++) {
+//                cout << "\t" << bp[tid+k*ntrees];
+//            }
+//            cout << endl;
+//        }
+//    }
+    
+    cout << getRealTime() - start_time << " seconds" << endl;
     
     /* STEP 3: weighted least square fit */
     
     double *cc = new double[nscales];
     double *w = new double[nscales];
     double *this_bp = new double[nscales];
-    cout << "TreeID\tAU\tRSS\td_WLS\tc_WLS\td_MLE\tc_MLE" << endl;
+    cout << "TreeID\tAU\tRSS\td\tc" << endl;
     for (tid = 0; tid < ntrees; tid++) {
-        for (k = 0; k < nscales; k++) {
-            this_bp[k] = bp[tid + k*ntrees];
-            double bp_val = min(max(bp[tid + k*ntrees], nboot_inv),1.0-nboot_inv);
-            double bp_cdf = gsl_cdf_ugaussian_Pinv(bp_val);
-            double bp_pdf = gsl_ran_ugaussian_pdf(bp_cdf);
-            cc[k] = gsl_cdf_ugaussian_Pinv(1.0 - bp_val);
-            w[k] = bp_pdf*bp_pdf*nboot / (bp_val*(1.0-bp_val));
-        }
+        double *this_stat = treelhs + tid*nscales*nboot;
+        double xn = this_stat[(nscales/2)*nboot + nboot/2], x;
         double c, d; // c, d in original paper
-        // first obtain d and c by weighted least square
-        doWeightedLeastSquare(nscales, w, rr, rr_inv, cc, d, c);
-        
-        // second, perform MLE estimate of d and c
-        OptimizationAUTest mle(d, c, nscales, this_bp, rr, rr_inv);
-        mle.optimizeDC();
-        
-        // compute sum of squared difference
+        int idf0 = -2;
+        double z = 0.0, z0 = 0.0, thp = 0.0, th = 0.0, ze = 0.0, ze0 = 0.0;
+        double pval, se;
+        int df;
         double rss = 0.0;
-        for (k = 0; k < nscales; k++) {
-            double diff = cc[k] - (rr[k]*d + rr_inv[k]*c);
-            rss += w[k] * diff * diff;
+        int step;
+        const int max_step = 30;
+        bool failed = false;
+        for (step = 0; step < max_step; step++) {
+            x = xn;
+            int num_k = 0;
+            for (k = 0; k < nscales; k++) {
+                this_bp[k] = cntdist3(this_stat + k*nboot, nboot, x) / nboot;
+                if (this_bp[k] <= 0 || this_bp[k] >= 1) {
+                    cc[k] = w[k] = 0.0;
+                } else {
+                    double bp_val = this_bp[k];
+                    cc[k] = -gsl_cdf_ugaussian_Pinv(bp_val);
+                    double bp_pdf = gsl_ran_ugaussian_pdf(cc[k]);
+                    w[k] = bp_pdf*bp_pdf*nboot / (bp_val*(1.0-bp_val));
+                    num_k++;
+                }
+            }
+            df = num_k-2;
+            if (num_k >= 2) {
+                // first obtain d and c by weighted least square
+                doWeightedLeastSquare(nscales, w, rr, rr_inv, cc, d, c, se);
+                
+                se = gsl_ran_ugaussian_pdf(d-c)*sqrt(se);
+                
+                // second, perform MLE estimate of d and c
+    //            OptimizationAUTest mle(d, c, nscales, this_bp, rr, rr_inv);
+    //            mle.optimizeDC();
+    //            d = mle.d;
+    //            c = mle.c;
+
+                /* STEP 4: compute p-value according to Eq. 11 */
+                pval = 1.0 - gsl_cdf_ugaussian_P(d-c);
+                z = -pval;
+                ze = se;
+                // compute sum of squared difference
+                rss = 0.0;
+                for (k = 0; k < nscales; k++) {
+                    double diff = cc[k] - (rr[k]*d + rr_inv[k]*c);
+                    rss += w[k] * diff * diff;
+                }
+                
+            } else {
+                // not enough data for WLS
+                double sum = 0.0;
+                for (k = 0; k < nscales; k++)
+                    sum += cc[k];
+                if (sum >= 0.0) 
+                    pval = 0.0;
+                else
+                    pval = 1.0;
+                se = 0.0;
+                d = c = 0.0;
+                rss = 0.0;
+                if (verbose_mode >= VB_MED)
+                    cout << "   error in wls" << endl;
+            }
+
+            // maximum likelhood fit
+//            double coef0[2] = {d, c};
+//            double df;
+//            int mlefail = mlecoef(this_bp, r, nboot, nscales, coef0, &rss, &df, &se);
+//            
+//            if (!mlefail) {
+//                d = coef0[0];
+//                c = coef0[1];
+//                pval = 1.0 - gsl_cdf_ugaussian_P(d-c);
+//                z = -pval;
+//                ze = se;
+//            }
+            
+            if (verbose_mode >= VB_MED) {
+                cout.unsetf(ios::fixed);
+                cout << "\t" << step << "\t" << th << "\t" << x << "\t" << pval << "\t" << se << "\t" << nscales-2 << "\t" << d << "\t" << c << "\t" << z << "\t" << ze << "\t" << rss << endl;
+            }
+            
+            if(df < 0 && idf0 < 0) { failed = true; break;} /* degenerated */
+            
+            if ((df < 0) || (idf0 >= 0 && (z-z0)*(x-thp) > 0.0 && fabs(z-z0)>0.1*ze0)) {
+                if (verbose_mode >= VB_MED)
+                    cout << "   non-monotone" << endl;
+                th=x;
+                xn=0.5*x+0.5*thp;
+                continue;
+            }
+            if(idf0 >= 0 && (fabs(z-z0)<0.01*ze0)) {
+                if(fabs(th)<1e-10) 
+                    xn=th; 
+                else th=x;
+            } else 
+                xn=0.5*th+0.5*x;
+            info[tid].au_pvalue = pval;
+            thp=x; 
+            z0=z;
+            ze0=ze;
+            idf0 = nscales-2;
+            if(fabs(x-th)<1e-10) break;
         }
         
-        double pchi2 = computePValueChiSquare(rss, nscales-2);
-        /* STEP 4: compute p-value according to Eq. 11 */
-        info[tid].au_pvalue = 1.0 - gsl_cdf_ugaussian_P(mle.d-mle.c);
-        cout << tid+1 << "\t" << info[tid].au_pvalue << "\t" << rss << "\t" << d << "\t" << c << "\t" << mle.d << "\t" << mle.c;
+        if (failed && verbose_mode >= VB_MED)
+            cout << "   degenerated" << endl;
+        
+        if (step == max_step) {
+            if (verbose_mode >= VB_MED)
+                cout << "   non-convergence" << endl; 
+            failed = true;
+        }
+        
+        double pchi2 = (failed) ? 0.0 : computePValueChiSquare(rss, df);
+        cout << tid+1 << "\t" << info[tid].au_pvalue << "\t" << rss << "\t" << d << "\t" << c;
         
         // warning if p-value of chi-square < 0.01 (rss too high)
         if (pchi2 < 0.01) 
@@ -2184,7 +2559,7 @@ void performAUTest(Params &params, PhyloTree *tree, double *pattern_lhs, vector<
     delete [] this_bp;
     delete [] w;
     delete [] cc;
-    delete [] bp;
+//    delete [] bp;
 }
 
 
