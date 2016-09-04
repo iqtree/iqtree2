@@ -3387,7 +3387,7 @@ void quickStartGuide() {
 #endif
          << "To show all available options: run 'iqtree -h'" << endl << endl
          << "Have a look at the tutorial and manual for more information:" << endl
-         << "     http://www.cibiv.at/software/iqtree" << endl << endl;
+         << "     http://www.iqtree.org" << endl << endl;
     exit(0);
 }
 
