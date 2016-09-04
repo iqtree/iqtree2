@@ -1882,7 +1882,7 @@ int Alignment::buildRetainingSites(const char *aln_site_list, IntVector &kept_si
     }
     if (exclude_const_sites) {
         for (j = 0; j < kept_sites.size(); j++)
-        	if (at(site_pattern[j]).isConst())
+        	if (at(site_pattern[j]).isInvariant())
         		kept_sites[j] = 0;
 
     }
