@@ -715,6 +715,9 @@ public:
     /* type of starting tree */
     START_TREE_TYPE start_tree;
 
+    /** name of constraint tree file in NEWICK format */
+    char *constraint_tree_file;
+
     /**
             prefix of the output file, default is the same as input file
      */

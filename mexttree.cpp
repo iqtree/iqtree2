@@ -367,6 +367,75 @@ void MExtTree::generateYuleHarding(Params &params, bool binary) {
 
 }
 
+void MExtTree::generateConstrainedYuleHarding(Params &params, MTree* constraint_tree, StrVector &taxnames) {
+	int size = taxnames.size();
+	if (size < 3)
+		outError(ERR_FEW_TAXA);
+	NodeVector myleaves;
+	NodeVector innodes;
+    StrVector names;
+    StringIntMap namemap;
+    StrVector::iterator it;
+    
+    // copy constraint tree and resolve multifurcation
+    copyTree(constraint_tree);
+    resolveMultifurcation();
+    
+    getTaxa(myleaves);
+    getTaxaName(names);
+    for (it = names.begin(); it != names.end(); it++)
+        namemap[*it] = 1;
+
+    // add the remaining taxa names
+    for (it = taxnames.begin(); it != taxnames.end(); it++)
+        if (namemap.find(*it) == namemap.end())
+            names.push_back(*it);
+    assert(names.size() == taxnames.size());
+    my_random_shuffle(names.begin()+leafNum, names.end());
+
+	// additionally add a leaf
+	for (; leafNum < size; leafNum++)
+	{
+		int index;
+		index = random_int(leafNum);
+        Node *leaf = myleaves[index];
+        Node *dad = leaf->neighbors[0]->node;
+        // add the first leaf
+        
+        Node *newleaf = newNode(leafNum, names[leafNum].c_str());
+        Node *node = newNode();
+
+        // redirect the current leaf
+        node->addNeighbor(leaf, -1.0);
+        leaf->updateNeighbor(dad, node);
+        
+        // add the new leaf
+        node->addNeighbor(newleaf, -1.0);
+        newleaf->addNeighbor(node, -1.0);
+
+        // connect dad and new node
+        dad->updateNeighbor(leaf, node);
+        node->addNeighbor(dad, -1.0);
+
+        myleaves.push_back(newleaf);
+	}
+
+    // assign random branch lengths
+    myleaves.clear();
+    innodes.clear();
+    getBranches(myleaves, innodes);
+    for (int i = 0; i < myleaves.size(); i++) {
+        double len = randomLen(params);
+        myleaves[i]->findNeighbor(innodes[i])->length = len;
+        innodes[i]->findNeighbor(myleaves[i])->length = len;
+    }
+    
+
+	nodeNum = leafNum;
+	initializeTree();
+
+}
+
 void MExtTree::generateStarTree(Params &params) {
 	generateYuleHarding(params);
 	NodeVector nodes, nodes2;

@@ -75,6 +75,16 @@ public:
 	void generateYuleHarding(Params &params, bool binary = true);
 
 	/**
+		generate a random tree following Yule-Harding model satisfying a constraint tree
+		@param params program parameters
+		@param binary TRUE if you want to generate a binary tree
+        @param constraint_tree a (multifurcating) constraint tree
+        @param taxnames taxa names
+	*/
+	void generateConstrainedYuleHarding(Params &params, MTree* constraint_tree, StrVector &taxnames);
+
+
+	/**
 		generate a random tree following uniform model
 		@param size number of taxa
 		@param binary TRUE if you want to generate a binary tree

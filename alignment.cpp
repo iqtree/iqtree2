@@ -1882,7 +1882,7 @@ int Alignment::buildRetainingSites(const char *aln_site_list, IntVector &kept_si
     }
     if (exclude_const_sites) {
         for (j = 0; j < kept_sites.size(); j++)
-        	if (at(site_pattern[j]).isConst())
+        	if (at(site_pattern[j]).isInvariant())
         		kept_sites[j] = 0;
 
     }
@@ -1990,10 +1990,12 @@ void Alignment::extractSubAlignment(Alignment *aln, IntVector &seq_id, int min_t
     site_pattern.resize(aln->getNSite(), -1);
     clear();
     pattern_index.clear();
-    int site = 0;
+    int site = 0, removed_sites = 0;
     VerboseMode save_mode = verbose_mode;
     verbose_mode = min(verbose_mode, VB_MIN); // to avoid printing gappy sites in addPattern
-    for (iterator pit = aln->begin(); pit != aln->end(); pit++) {
+//    for (iterator pit = aln->begin(); pit != aln->end(); pit++) {
+    for (site = 0; site < aln->getNSite(); site++) {
+        iterator pit = aln->begin() + (aln->getPatternID(site)); 
         Pattern pat;
         int true_char = 0;
         for (it = seq_id.begin(); it != seq_id.end(); it++) {
@@ -2001,12 +2003,14 @@ void Alignment::extractSubAlignment(Alignment *aln, IntVector &seq_id, int min_t
             if (ch != STATE_UNKNOWN) true_char++;
             pat.push_back(ch);
         }
-        if (true_char < min_true_char) continue;
-        addPattern(pat, site, (*pit).frequency);
-        for (int i = 0; i < (*pit).frequency; i++)
-            site_pattern[site++] = size()-1;
+        if (true_char < min_true_char)
+            removed_sites++;
+        else
+            addPattern(pat, site-removed_sites);
+//        for (int i = 0; i < (*pit).frequency; i++)
+//            site_pattern[site++] = size()-1;
     }
-    site_pattern.resize(site);
+    site_pattern.resize(aln->getNSite() - removed_sites);
     verbose_mode = save_mode;
     countConstSite();
     buildSeqStates();
