@@ -1252,7 +1252,9 @@ double PhyloTree::computeLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloN
     if (dad->isLeaf()) {
     	// special treatment for TIP-INTERNAL NODE case
     	double *partial_lh_node = new double[(aln->STATE_UNKNOWN+1)*block];
-    	IntVector states_dad = aln->seq_states[dad->id];
+    	IntVector states_dad;
+        if (dad->id < aln->getNSeq())
+            states_dad = aln->seq_states[dad->id];
     	states_dad.push_back(aln->STATE_UNKNOWN);
     	// precompute information from one tip
     	for (IntVector::iterator it = states_dad.begin(); it != states_dad.end(); it++) {
@@ -1276,7 +1278,11 @@ double PhyloTree::computeLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloN
 			double lh_ptn = ptn_invar[ptn];
             double *lh_cat = _pattern_lh_cat + ptn*ncat;
             double *partial_lh_dad = dad_branch->partial_lh + ptn*block;
-            int state_dad = (ptn < orig_nptn) ? (aln->at(ptn))[dad->id] : model_factory->unobserved_ptns[ptn-orig_nptn];
+            int state_dad;
+            if (dad->id < aln->getNSeq())
+                state_dad = (ptn < orig_nptn) ? (aln->at(ptn))[dad->id] : model_factory->unobserved_ptns[ptn-orig_nptn];
+            else
+                state_dad = aln->STATE_UNKNOWN;
             double *lh_node = partial_lh_node + state_dad*block;
             for (c = 0; c < ncat; c++) {
                 for (i = 0; i < nstates; i++) {
