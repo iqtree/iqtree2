@@ -467,12 +467,15 @@ StateFreqType ModelCodon::initGY94(bool fix_kappa, CodonKappaStyle kappa_style) 
 
 
 void ModelCodon::computeRateAttributes() {
+    char symbols_protein[] = "ARNDCQEGHILKMFPSTWYVX"; // X for unknown AA
     int i, j, ts, tv;
     int nrates = getNumRateEntries();
     if (!rate_attr) {
         rate_attr = new int[nrates];
         memset(rate_attr, 0, sizeof(int)*nrates);
     }
+    char aa_cost_change[400];
+    memset(aa_cost_change, 10, sizeof(char)*400);
     for (i = 0; i < num_states; i++) {
         int *rate_attr_row = &rate_attr[i*num_states];
         if (phylo_tree->aln->isStopCodon(i)) {
@@ -493,6 +496,15 @@ void ModelCodon::computeRateAttributes() {
             else
                 attr |= CA_NONSYNONYMOUS;
                 
+                
+            int nt_changes = ((i/16) != (j/16)) + (((i%16)/4) != ((j%16)/4)) + ((i%4) != (j%4));
+            int aa1 = strchr(symbols_protein, phylo_tree->aln->genetic_code[i]) - symbols_protein;
+            int aa2 = strchr(symbols_protein, phylo_tree->aln->genetic_code[j]) - symbols_protein;
+            assert(aa1 >= 0 && aa1 < 20 && aa2 >= 0 && aa2 < 20);
+            if (nt_changes < aa_cost_change[aa1*20+aa2]) {
+                aa_cost_change[aa1*20+aa2] = aa_cost_change[aa2*20+aa1] = nt_changes;
+            }
+            
             if ((nuc1=i/16) != (nuc2=j/16)) {
                 if (abs(nuc1-nuc2)==2) { // transition 
                     attr |= CA_TRANSITION_1NT;
@@ -530,6 +542,24 @@ void ModelCodon::computeRateAttributes() {
             rate_attr_row[j] = attr;
         }
     }
+    
+    if (verbose_mode >= VB_MAX) {
+        cout << "cost matrix by number of nt changes for TNT use" << endl;
+        cout << "smatrix =1 (aa_nt_changes)";
+        for (i = 0; i < 19; i++)
+            for (j = i+1; j < 20; j++)
+                cout << " " << symbols_protein[i] << "/" << symbols_protein[j] << " " << (int)aa_cost_change[i*20+j];
+        cout << ";" << endl;
+        cout << 20 << endl;
+        for (i = 0; i < 20; i++) {
+            aa_cost_change[i*20+i] = 0;
+            for (j = 0; j < 20; j++)
+                cout << (int)aa_cost_change[i*20+j] << " ";
+            cout << endl;
+        }
+        
+    }
+    
 }
 
 void ModelCodon::combineRateNTFreq() {

@@ -593,6 +593,11 @@ public:
             fraction of constant sites
      */
     double frac_const_sites;
+    
+    /**
+            fraction of invariant sites, incl. const sites and site like G-S-GG-GGGG
+     */
+    double frac_invariant_sites;
 
     /** number of informative sites */
     int num_informative_sites;

@@ -508,7 +508,7 @@ void IQTree::computeInitialTree(string &dist_file, LikelihoodKernel kernel) {
         readTree(params->user_file, myrooted);
         setAlignment(aln);
         if (isSuperTree())
-        	wrapperFixNegativeBranch(!params->fixed_branch_length);
+        	wrapperFixNegativeBranch(params->fixed_branch_length == BRLEN_OPTIMIZE);
         else
         	fixed_number = wrapperFixNegativeBranch(false);
         params->numInitTrees = 1;
@@ -524,7 +524,11 @@ void IQTree::computeInitialTree(string &dist_file, LikelihoodKernel kernel) {
         readTreeString(initTree);
         cout << endl << "CHECKPOINT: Initial tree restored" << endl;
     } else {
-        switch (params->start_tree) {
+        START_TREE_TYPE start_tree = params->start_tree;
+        // only own parsimony kernel supports constraint tree
+        if (!constraintTree.empty())
+            start_tree = STT_PARSIMONY;
+        switch (start_tree) {
         case STT_PARSIMONY:
             // Create parsimony tree using IQ-Tree kernel
             if (kernel == LK_EIGEN_SSE)
@@ -570,6 +574,9 @@ void IQTree::computeInitialTree(string &dist_file, LikelihoodKernel kernel) {
         saveCheckpoint();
         checkpoint->dump(true);
     }
+
+    if (!constraintTree.empty() && !constraintTree.isCompatible(this))
+        outError("Initial tree is not compatible with constraint tree");
 
     if (fixed_number) {
         cout << "WARNING: " << fixed_number << " undefined/negative branch lengths are initialized with parsimony" << endl;
@@ -1882,8 +1889,6 @@ double IQTree::doTreeSearch() {
     cout << "--------------------------------------------------------------------" << endl;
     cout << "|               OPTIMIZING CANDIDATE TREE SET                      |" << endl;
     cout << "--------------------------------------------------------------------" << endl;
-    string tree_file_name = params->out_prefix;
-    tree_file_name += ".treefile";
     // PLEASE PRINT TREE HERE!
     printResultTree();
     string treels_name = params->out_prefix;
@@ -3166,6 +3171,8 @@ void IQTree::addPositiveNNIMove(NNIMove myMove) {
 
 void IQTree::printResultTree(string suffix) {
     setRootNode(params->root);
+    if (params->suppress_output_flags & OUT_TREEFILE)
+        return;
     string tree_file_name = params->out_prefix;
     tree_file_name += ".treefile";
     if (suffix.compare("") != 0) {

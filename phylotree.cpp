@@ -342,7 +342,10 @@ void PhyloTree::setAlignment(Alignment *alignment) {
             node->id = seq;
         }
     }
-    if (err) outError("Tree taxa and alignment sequence do not match (see above)");
+    if (err) {
+        printTree(cout, WT_NEWLINE);
+        outError("Tree taxa and alignment sequence do not match (see above)");
+    }
     StrVector taxname;
     getTaxaName(taxname);
     for (StrVector::iterator it = taxname.begin(); it != taxname.end(); it++)
@@ -2180,6 +2183,30 @@ double PhyloTree::optimizeTreeLengthScaling(double min_scaling, double &scaling,
     return computeLikelihood();
 }
 
+void PhyloTree::printTreeLengthScaling(const char *filename) {
+//    double treescale = 1.0;
+//    
+//    cout << "Optimizing tree length scaling ..." << endl;
+//    
+//    double lh = optimizeTreeLengthScaling(MIN_BRLEN_SCALE, treescale, MAX_BRLEN_SCALE, 0.001);
+//    
+//    cout << "treescale: " << treescale << " / LogL: " << lh << endl;
+    
+    Checkpoint *saved_checkpoint = getModelFactory()->getCheckpoint();
+    Checkpoint *new_checkpoint = new Checkpoint;
+    new_checkpoint->setFileName(filename);
+    new_checkpoint->setCompression(false);
+    new_checkpoint->setHeader("IQ-TREE scaled tree length and model parameters");
+    new_checkpoint->put("treelength", treeLength());
+    saved_checkpoint->put("treelength", treeLength()); // also put treelength into current checkpoint
+    
+    getModelFactory()->setCheckpoint(new_checkpoint);    
+    getModelFactory()->saveCheckpoint();
+    new_checkpoint->dump();
+    
+    getModelFactory()->setCheckpoint(saved_checkpoint);
+}
+
 double PhyloTree::computeFunction(double value) {
     if (!is_opt_scaling) {
         current_it->length = value;
@@ -2798,7 +2825,8 @@ void PhyloTree::doOneRandomNNI(Node *node1, Node *node2) {
 			node1Nei = (*it);
 			break;
 		}
-		int randNum = random_int(1);
+         
+		int randNum = random_int(2); // randNum is either 0 or 1
 		if (randNum == 0) {
 			node1Nei = (*it);
 			break;
@@ -2812,7 +2840,7 @@ void PhyloTree::doOneRandomNNI(Node *node1, Node *node2) {
 			node2Nei = (*it);
 			break;
 		}
-		int randNum = random_int(1);
+		int randNum = random_int(2);
 		if (randNum == 0) {
 			node2Nei = (*it);
 			break;
@@ -2832,6 +2860,20 @@ void PhyloTree::doOneRandomNNI(Node *node1, Node *node2) {
 
     node2->updateNeighbor(node2NeiIt, node1Nei);
     node1Nei->node->updateNeighbor(node1, node2);
+    
+    if (!constraintTree.empty()) {
+        StrVector taxset1, taxset2;
+        getUnorderedTaxaName(taxset1, node1, node2);
+        getUnorderedTaxaName(taxset2, node2, node1);
+        if (!constraintTree.isCompatible(taxset1, taxset2)) {
+            // revert NNI if violating constraint tree
+            node1->updateNeighbor(node1NeiIt, node1Nei);
+            node1Nei->node->updateNeighbor(node2, node1);
+            node2->updateNeighbor(node2NeiIt, node2Nei);
+            node2Nei->node->updateNeighbor(node1, node2);
+        }
+    }
+    
 }
 
 void PhyloTree::doNNI(NNIMove &move, bool clearLH) {
@@ -3095,7 +3137,10 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
 		if (save_all_trees == 2) {
 			saveCurrentTree(score); // BQM: for new bootstrap
 		}
-
+        } else {
+            // NNI violates constraint tree
+            nniMoves[cnt].newloglh = -DBL_MAX;
+        }
         // else, swap back, also recover the branch lengths
 		node1->updateNeighbor(node1_it, node1_nei);
 		node1_nei->node->updateNeighbor(node2, node1);
@@ -4468,35 +4513,41 @@ void PhyloTree::computeSeqIdentityAlongTree() {
 }
 
 void PhyloTree::generateRandomTree(TreeGenType tree_type) {
+    if (!constraintTree.empty() && tree_type != YULE_HARDING)
+        outError("Only Yule-Harding ramdom tree supported with constraint tree");
     assert(aln);
     int orig_size = params->sub_size;
     params->sub_size = aln->getNSeq();
     MExtTree ext_tree;
-	switch (tree_type) {
-	case YULE_HARDING: 
-		ext_tree.generateYuleHarding(*params);
-		break;
-	case UNIFORM:
-		ext_tree.generateUniform(params->sub_size);
-		break;
-	case CATERPILLAR:
-		ext_tree.generateCaterpillar(params->sub_size);
-		break;
-	case BALANCED:
-		ext_tree.generateBalanced(params->sub_size);
-		break;
-	case STAR_TREE:
-		ext_tree.generateStarTree(*params);
-		break;
-	default:
-		break;
-	}
+    if (constraintTree.empty()) {
+        switch (tree_type) {
+        case YULE_HARDING: 
+            ext_tree.generateYuleHarding(*params);
+            break;
+        case UNIFORM:
+            ext_tree.generateUniform(params->sub_size);
+            break;
+        case CATERPILLAR:
+            ext_tree.generateCaterpillar(params->sub_size);
+            break;
+        case BALANCED:
+            ext_tree.generateBalanced(params->sub_size);
+            break;
+        case STAR_TREE:
+            ext_tree.generateStarTree(*params);
+            break;
+        default:
+            break;
+        }
+        NodeVector taxa;
+        ext_tree.getTaxa(taxa);
+        assert(taxa.size() == aln->getNSeq());
+        for (NodeVector::iterator it = taxa.begin(); it != taxa.end(); it++)
+            (*it)->name = aln->getSeqName((*it)->id);
+    } else {
+        ext_tree.generateConstrainedYuleHarding(*params, &constraintTree, aln->getSeqNames());
+    }
     params->sub_size = orig_size;
-	NodeVector taxa;
-	ext_tree.getTaxa(taxa);
-	assert(taxa.size() == aln->getNSeq());
-	for (NodeVector::iterator it = taxa.begin(); it != taxa.end(); it++)
-		(*it)->name = aln->getSeqName((*it)->id);
     stringstream str;
     ext_tree.printTree(str);
     PhyloTree::readTreeStringSeqName(str.str());

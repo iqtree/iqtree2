@@ -677,11 +677,11 @@ void MTreeSet::computeRFDist(int *rfdist, MTreeSet *treeset2,
 
 	if (info_file) {
 		oinfo.close();
-		cout << "Detailed split occurences printed to " << info_file << endl;
+		cout << "Detailed split occurrences printed to " << info_file << endl;
 	}
 	if (tree_file) {
 		otree.close();
-		cout << "Detailed split occurences on tree printed to " << tree_file << endl;
+		cout << "Detailed split occurrences on tree printed to " << tree_file << endl;
 	}
 }
 

@@ -154,6 +154,95 @@ Node* MTree::copyTree(MTree *tree, string &taxa_set, double &len, Node *node, No
     return int_node;
 }
 
+void MTree::extractBifurcatingSubTree(Node *node, Node *dad) {
+    if (!node) node = root;
+    if (node->degree() > 3) {
+        int id1, id2, id3;
+        id1 = node->findNeighborIt(dad) - node->neighbors.begin();
+        do {
+            id2 = random_int(node->degree());
+        } while (id2 == id1);
+        
+        // make sure that id1 < id2
+        if (id1 > id2) {
+            int tmp = id1;
+            id1 = id2;
+            id2 = tmp;
+        }
+        do {
+            id3 = random_int(node->degree());
+        } while (id3 == id1 || id3 == id2);
+        //make sure that id1 < id2 < id3
+        if (id3 < id2) {
+            if (id3 < id1) {
+                // id3 < id1 < id2
+                int tmp = id1;
+                id1 = id3;
+                id3 = id2;
+                id2 = tmp;
+            } else {
+                // id1 < id3 < id2
+                int tmp = id2;
+                id2 = id3;
+                id3 = tmp;
+            }
+        }
+        // remove all neighbors except id1, id2, id3
+        for (int i = 0; i != node->neighbors.size(); i++)
+            if (i != id1 && i != id2 && i != id3) {
+                freeNode(node->neighbors[i]->node, node);
+                delete node->neighbors[i];
+            }
+        node->neighbors[0] = node->neighbors[id1];
+        node->neighbors[1] = node->neighbors[id2];
+        node->neighbors[2] = node->neighbors[id3];
+        node->neighbors.erase(node->neighbors.begin()+3, node->neighbors.end());
+    }
+    FOR_NEIGHBOR_IT(node, dad, it) {
+        if (!(*it)->node->isLeaf())
+            extractBifurcatingSubTree((*it)->node, node);
+    }
+}
+
+void MTree::resolveMultifurcation() {
+    // randomly resolve multifurcating node
+
+    NodeVector nodes;
+    getInternalNodes(nodes);
+    for (NodeVector::iterator it = nodes.begin(); it != nodes.end(); it++)
+        while ((*it)->degree() > 3) {
+            Node *new_node = newNode();
+            int id1 = random_int((*it)->degree());
+            int id2;
+            do {
+                id2 = random_int((*it)->degree());
+            } while (id2 == id1);
+            
+            // make sure that id1 < id2
+            if (id1 > id2) {
+                int tmp = id1;
+                id1 = id2;
+                id2 = tmp;
+            }
+            Neighbor *nei1 = (*it)->neighbors[id1];
+            Neighbor *nei2 = (*it)->neighbors[id2];
+            
+            // connect id1 with new_node
+            nei1->node->updateNeighbor((*it), new_node);
+            new_node->neighbors.push_back(nei1);
+            
+            // connect id2 with new_node
+            nei2->node->updateNeighbor((*it), new_node);
+            new_node->neighbors.push_back(nei2);
+            
+            // connect new_node with old node
+            new_node->addNeighbor((*it), -1.0);
+            (*it)->neighbors.erase((*it)->neighbors.begin() + id2);
+            (*it)->neighbors.erase((*it)->neighbors.begin() + id1);
+            (*it)->addNeighbor(new_node, -1.0);
+        }
+}
+
 Node* MTree::newNode(int node_id, const char* node_name) {
     return new Node(node_id, node_name);
 }
@@ -979,6 +1068,18 @@ void MTree::getTaxaName(vector<string> &taxname, Node *node, Node *dad) {
     }
 }
 
+
+void MTree::getUnorderedTaxaName(vector<string> &taxname, Node *node, Node *dad) {
+    if (!node) node = root;
+    if (node->isLeaf()) {
+    	taxname.push_back(node->name);
+    }
+    //for (NeighborVec::iterator it = node->neighbors.begin(); it != node->neighbors.end(); it++)
+    //if ((*it)->node != dad)	{
+    FOR_NEIGHBOR_IT(node, dad, it) {
+        getUnorderedTaxaName(taxname, (*it)->node, node);
+    }
+}
 
 void MTree::getTaxaID(vector<int> &taxa, Node *node, Node *dad) {
     if (!node) node = root;

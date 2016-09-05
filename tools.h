@@ -43,6 +43,21 @@
 #define SPRNG
 #include "sprng/sprng.h"
 
+// redefine assertion
+inline void _my_assert(const char* expression, const char *func, const char* file, int line)
+{
+    char *sfile = (char*)strrchr(file, '/');
+    if (!sfile) sfile = (char*)file; else sfile++;
+    cerr << "Assertion (" << expression << ") failed, function " << func << ", file " << sfile << ", line " << line << endl;
+    abort();
+}
+ 
+#ifdef NDEBUG
+#define ASSERT(EXPRESSION) ((void)0)
+#else
+#define ASSERT(EXPRESSION) ((EXPRESSION) ? (void)0 : _my_assert(#EXPRESSION, __func__, __FILE__, __LINE__))
+#endif
+
 
 #define USE_HASH_MAP
 
@@ -410,6 +425,14 @@ enum SiteFreqType {
     WSF_NONE, WSF_POSTERIOR_MEAN, WSF_POSTERIOR_MAX
 };
 
+const int BRLEN_OPTIMIZE = 0; // optimize branch lengths
+const int BRLEN_FIX      = 1; // fix branch lengths
+const int BRLEN_SCALE    = 2; // scale branch lengths
+
+const int OUT_LOG       = 1; // .log file written or not
+const int OUT_TREEFILE  = 2; // .treefile file written or not
+const int OUT_IQTREE    = 4; // .iqtree file written or not
+
 /** maximum number of newton-raphson steps for NNI branch evaluation */
 extern int NNI_MAX_NR_STEP;
 
@@ -659,6 +682,9 @@ public:
 
     /* type of starting tree */
     START_TREE_TYPE start_tree;
+
+    /** name of constraint tree file in NEWICK format */
+    char *constraint_tree_file;
 
     /**
             prefix of the output file, default is the same as input file
@@ -1243,9 +1269,11 @@ public:
     string optimize_alg_gammai;
 
     /**
-            TRUE if you want to fix branch lengths during model optimization
+            BRLEN_OPTIMIZE optimize branch lengths during model optimization
+            BRLEN_FIX      fix branch lengths during model optimization
+            BRLEN_SCALE    scale all branch lengths by the same factor during model optimization
      */
-    bool fixed_branch_length;
+    int fixed_branch_length;
 
     /** minimum branch length for optimization, default 0.000001 */
     double min_branch_length;
@@ -1746,6 +1774,13 @@ public:
     /** true if ignoring the "finished" flag in checkpoint file */
     bool force_unfinished;
 
+    /** control output files to be written
+     * OUT_LOG
+     * OUT_TREEFILE
+     * OUT_IQTREE
+     */
+    int suppress_output_flags;
+
 };
 
 /**
@@ -1894,8 +1929,7 @@ const char ERR_WRITE_OUTPUT[] = "Cannot write to file ";
 const char ERR_NO_K[] = "You must specify the number of taxa in the PD set.";
 const char ERR_TOO_SMALL_K[] = "Size of PD-set must be at least the size of initial set.";
 const char ERR_NO_BUDGET[] = "Total budget is not specified or less than zero.";
-const char ERR_TOO_SMALL_BUDGET[] = "Not enough budget to conserve the inital set of taxa.";
-
+const char ERR_TOO_SMALL_BUDGET[] = "Not enough budget to conserve the initial set of taxa.";
 const char ERR_INTERNAL[] = "Internal error, pls contact authors!";
 
 /*--------------------------------------------------------------*/

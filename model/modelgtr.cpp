@@ -19,7 +19,6 @@
  ***************************************************************************/
 #include "modelgtr.h"
 #include <stdlib.h>
-#include <assert.h>
 #include <string.h>
 
 //const double MIN_FREQ_RATIO = MIN_FREQUENCY;
@@ -31,7 +30,7 @@ ModelGTR::ModelGTR(PhyloTree *tree, bool count_rates)
     half_matrix = true;
 	int i;
 	int nrate = getNumRateEntries();
-	int ncoeff = num_states*num_states*num_states;
+//	int ncoeff = num_states*num_states*num_states;
 	
 	highest_freq_state = num_states-1;
 	name = "GTR";
@@ -813,8 +812,9 @@ void ModelGTR::readStateFreq(string str) throw(const char*) {
 void ModelGTR::readParameters(const char *file_name) { 
 	try {
 		ifstream in(file_name);
-		if (in.fail())
+		if (in.fail()) {
 			outError("Invalid model name ", file_name);
+        }
 		cout << "Reading model parameters from file " << file_name << endl;
 		readRates(in);
 		readStateFreq(in);

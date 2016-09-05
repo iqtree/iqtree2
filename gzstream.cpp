@@ -57,7 +57,10 @@ gzstreambuf* gzstreambuf::open( const char* name, int open_mode) {
     else if ( mode & std::ios::out)
         *fmodeptr++ = 'w';
     *fmodeptr++ = 'b';
-    *fmodeptr++ = '9'; // best compression ratio
+    if (mode & GZ_NO_COMPRESSION)
+        *fmodeptr++ = '0'; // no compression
+    else
+        *fmodeptr++ = '9'; // best compression ratio
     *fmodeptr = '\0';
     file = gzopen( name, fmode);
     if (file == 0)

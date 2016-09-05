@@ -110,12 +110,12 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 
 	if (model_str == "") {
 		if (tree->aln->seq_type == SEQ_DNA) model_str = "HKY";
-		else if (tree->aln->seq_type == SEQ_PROTEIN) model_str = "WAG";
+		else if (tree->aln->seq_type == SEQ_PROTEIN) model_str = "LG";
 		else if (tree->aln->seq_type == SEQ_BINARY) model_str = "GTR2";
 		else if (tree->aln->seq_type == SEQ_CODON) model_str = "GY";
 		else if (tree->aln->seq_type == SEQ_MORPH) model_str = "MK";
 		else model_str = "JC";
-		outWarning("Default model may be under-fitting. Use option '-m TEST' to select best-fit model.");
+		outWarning("Default model "+model_str + " may be under-fitting. Use option '-m TEST' to determine the best-fit model.");
 	}
 
 	/********* preprocessing model string ****************/
@@ -210,7 +210,13 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
     }
 
     // then normal frequency
-	posfreq = rate_str.find("+F");
+    if (rate_str.find("+FO") != string::npos)
+        posfreq = rate_str.find("+FO");
+    else if (rate_str.find("+Fo") != string::npos)
+        posfreq = rate_str.find("+Fo");
+    else
+        posfreq = rate_str.find("+F");
+        
     bool optimize_mixmodel_weight = params.optimize_mixmodel_weight;
 
 	if (posfreq != string::npos) {
@@ -251,9 +257,10 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
             else
                 freq_type = FREQ_EQUAL;
 		} else if (freq_str == "+FO" || freq_str == "+Fo") {
-            if (freq_type == FREQ_MIXTURE)
-                outError("Mixture frequency with optimized frequency is not allowed");
-            else
+            if (freq_type == FREQ_MIXTURE) {
+                freq_params = "optimize," + freq_params;
+                optimize_mixmodel_weight = true;                
+            } else
                 freq_type = FREQ_ESTIMATE;
 		} else if (freq_str == "+F1x4" || freq_str == "+F1X4") {
             if (freq_type == FREQ_MIXTURE)
@@ -350,8 +357,23 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 		tree->aln->buildSeqStates(true);
 //		if (unobserved_ptns.size() <= 0)
 //			outError("Invalid use of +ASC because all constant patterns are observed in the alignment");
-		if (unobserved_ptns.size() < tree->aln->getNumNonstopCodons())
-			outError("Invalid use of +ASC because constant patterns are observed in the alignment");
+		if (tree->aln->frac_invariant_sites > 0) {
+//            cerr << tree->aln->frac_invariant_sites*tree->aln->getNSite() << " invariant sites observed in the alignment" << endl;
+//            for (Alignment::iterator pit = tree->aln->begin(); pit != tree->aln->end(); pit++)
+//                if (pit->isInvariant()) {
+//                    string pat_str = "";
+//                    for (Pattern::iterator it = pit->begin(); it != pit->end(); it++)
+//                        pat_str += tree->aln->convertStateBackStr(*it);
+//                    cerr << pat_str << " is invariant site pattern" << endl;
+//                }
+            if (!params.partition_file) {                
+                string varsites_file = ((string)params.out_prefix + ".varsites.phy");
+                tree->aln->printPhylip(varsites_file.c_str(), false, NULL, false, true);
+                cerr << "For your convenience alignment with variable sites printed to " << varsites_file << endl;
+            } 
+            outError("Invalid use of +ASC because of " + convertIntToString(tree->aln->frac_invariant_sites*tree->aln->getNSite()) +
+                " invariant sites in the alignment");
+        }
 		cout << "Ascertainment bias correction: " << unobserved_ptns.size() << " unobservable constant patterns"<< endl;
 		rate_str = rate_str.substr(0, posasc) + rate_str.substr(posasc+4);
 	}
@@ -661,7 +683,7 @@ double ModelFactory::optimizeAllParameters(double gradient_epsilon) {
     return score;
 }
 
-double ModelFactory::optimizeParametersGammaInvar(bool fixed_len, bool write_info, double logl_epsilon, double gradient_epsilon) {
+double ModelFactory::optimizeParametersGammaInvar(int fixed_len, bool write_info, double logl_epsilon, double gradient_epsilon) {
     if (!site_rate->isGammai())
         return optimizeParameters(fixed_len, write_info, logl_epsilon, gradient_epsilon);
         
@@ -755,7 +777,7 @@ double ModelFactory::optimizeParametersGammaInvar(bool fixed_len, bool write_inf
 
             initPInv = initPInv + testInterval;
 
-            if (estResults[2] > bestLogl + logl_epsilon) {
+            if (estResults[2] > bestLogl) {
                 bestLogl = estResults[2];
                 bestAlpha = estResults[1];
                 bestPInvar = estResults[0];
@@ -799,7 +821,7 @@ double ModelFactory::optimizeParametersGammaInvar(bool fixed_len, bool write_inf
     return tree->getCurScore();
 }
 
-vector<double> ModelFactory::optimizeGammaInvWithInitValue(bool fixed_len, double logl_epsilon, double gradient_epsilon,
+vector<double> ModelFactory::optimizeGammaInvWithInitValue(int fixed_len, double logl_epsilon, double gradient_epsilon,
                                                  PhyloTree *tree, RateHeterogeneity *site_rates, double *rates,
                                                  double *state_freqs, double initPInv, double initAlpha,
                                                  DoubleVector &lenvec) {
@@ -823,7 +845,7 @@ vector<double> ModelFactory::optimizeGammaInvWithInitValue(bool fixed_len, doubl
 }
 
 
-double ModelFactory::optimizeParameters(bool fixed_len, bool write_info,
+double ModelFactory::optimizeParameters(int fixed_len, bool write_info,
                                         double logl_epsilon, double gradient_epsilon) {
 	assert(model);
 	assert(site_rate);
@@ -858,8 +880,12 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info,
         double new_lh;
 
         // changed to opimise edge length first, and then Q,W,R inside the loop by Thomas on Sept 11, 15
-		if (!fixed_len)
+		if (fixed_len == BRLEN_OPTIMIZE)
 			new_lh = tree->optimizeAllBranches(min(i,3), logl_epsilon);  // loop only 3 times in total (previously in v0.9.6 5 times)
+        else if (fixed_len == BRLEN_SCALE) {
+            double scaling = 1.0;
+            new_lh = tree->optimizeTreeLengthScaling(MIN_BRLEN_SCALE, scaling, MAX_BRLEN_SCALE, gradient_epsilon);
+        }
         new_lh = optimizeParametersOnly(gradient_epsilon);
 
 		if (new_lh == 0.0) {
@@ -869,6 +895,8 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info,
 		if (verbose_mode >= VB_MED) {
 			model->writeInfo(cout);
 			site_rate->writeInfo(cout);
+            if (fixed_len == BRLEN_SCALE)
+                cout << "Scaled tree length: " << tree->treeLength() << endl;
 		}
 		if (new_lh > cur_lh + logl_epsilon) {
 			cur_lh = new_lh;
@@ -876,8 +904,13 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info,
 				cout << i << ". Current log-likelihood: " << cur_lh << endl;
 		} else {
 			site_rate->classifyRates(new_lh);
-			if (!fixed_len) cur_lh = tree->optimizeAllBranches(100, logl_epsilon);
-				break;
+            if (fixed_len == BRLEN_OPTIMIZE)
+                cur_lh = tree->optimizeAllBranches(100, logl_epsilon);
+            else if (fixed_len == BRLEN_SCALE) {
+                double scaling = 1.0;
+                cur_lh = tree->optimizeTreeLengthScaling(MIN_BRLEN_SCALE, scaling, MAX_BRLEN_SCALE, gradient_epsilon);
+            }
+            break;
 		}
 	}
 
@@ -886,6 +919,8 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info,
     {
         double mean_rate = site_rate->rescaleRates();
         if (mean_rate != 1.0) {
+            if (fixed_len == BRLEN_FIX)
+                outError("Fixing branch lengths not supported under specified site rate model");
             tree->scaleLength(mean_rate);
             tree->clearAllPartialLH();
         }
@@ -904,6 +939,8 @@ double ModelFactory::optimizeParameters(bool fixed_len, bool write_info,
 	if (verbose_mode <= VB_MIN && write_info) {
 		model->writeInfo(cout);
 		site_rate->writeInfo(cout);
+        if (fixed_len == BRLEN_SCALE)
+            cout << "Scaled tree length: " << tree->treeLength() << endl;
 	}
 	double elapsed_secs = getRealTime() - begin_time;
 	if (write_info)

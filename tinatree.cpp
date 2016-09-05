@@ -89,7 +89,7 @@ int TinaTree::computeParsimonyScore() {
 
     int score = 0;
     for (int ptn = 0; ptn < aln->size(); ptn++)
-        if (!aln->at(ptn).is_const) {
+        if (!aln->at(ptn).isConst()) {
             int states;
             int ptn_score = computeParsimonyScore(ptn, states);
             score += ptn_score * (*aln)[ptn].frequency;
