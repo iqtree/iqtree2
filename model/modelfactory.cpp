@@ -889,7 +889,12 @@ double ModelFactory::optimizeParameters(int fixed_len, bool write_info,
         new_lh = optimizeParametersOnly(gradient_epsilon);
 
 		if (new_lh == 0.0) {
-			if (!fixed_len) cur_lh = tree->optimizeAllBranches(tree->params->num_param_iterations, logl_epsilon);
+            if (fixed_len == BRLEN_OPTIMIZE)
+                cur_lh = tree->optimizeAllBranches(tree->params->num_param_iterations, logl_epsilon);
+            else if (fixed_len == BRLEN_SCALE) {
+                double scaling = 1.0;
+                cur_lh = tree->optimizeTreeLengthScaling(MIN_BRLEN_SCALE, scaling, MAX_BRLEN_SCALE, gradient_epsilon);
+            }
 			break;
 		}
 		if (verbose_mode >= VB_MED) {
