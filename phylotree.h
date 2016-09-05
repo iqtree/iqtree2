@@ -1210,9 +1210,9 @@ public:
     void doOneRandomNNI(Branch branch);
 
     /**
-    *   Get a random NNI from an internal branch
+    *   Get a random NNI from an internal branch, checking for consistency with constraintTree
     *   @param branch the internal branch
-    *   @return an NNIMove
+    *   @return an NNIMove, node1 and node2 are set to NULL if not consistent with constraintTree
     */
     NNIMove getRandomNNI(Branch& branch);
 

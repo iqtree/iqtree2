@@ -1455,7 +1455,8 @@ string IQTree::perturbStableSplits(double suppValue) {
         vector<NNIMove> compatibleNNIs;
         for (map<int, Branch>::iterator it = stableBranches.begin(); it != stableBranches.end(); it++) {
             NNIMove randNNI = getRandomNNI(it->second);
-            randomNNIs.push_back(randNNI);
+            if (randNNI.node1)
+                randomNNIs.push_back(randNNI);
         }
         getCompatibleNNIs(randomNNIs, compatibleNNIs);
         for (vector<NNIMove>::iterator it = compatibleNNIs.begin(); it != compatibleNNIs.end(); it++) {
@@ -1516,14 +1517,17 @@ string IQTree::doRandomNNIs(bool storeTabu) {
         }
         int randInt = random_int((int) vectorNNIBranches.size());
         NNIMove randNNI = getRandomNNI(vectorNNIBranches[randInt]);
-        doNNI(randNNI);
-        if (storeTabu) {
-            Split *sp = getSplit(randNNI.node1, randNNI.node2);
-            Split *tabuSplit = new Split(*sp);
-            if (tabuSplit->shouldInvert()) {
-                tabuSplit->invert();
+        if (randNNI.node1) {
+            // only if random NNI satisfies constraintTree
+            doNNI(randNNI);
+            if (storeTabu) {
+                Split *sp = getSplit(randNNI.node1, randNNI.node2);
+                Split *tabuSplit = new Split(*sp);
+                if (tabuSplit->shouldInvert()) {
+                    tabuSplit->invert();
+                }
+                initTabuSplits.insertSplit(tabuSplit, 1);
             }
-            initTabuSplits.insertSplit(tabuSplit, 1);
         }
         cntNNI++;
     }

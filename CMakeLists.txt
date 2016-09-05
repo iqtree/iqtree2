@@ -142,6 +142,7 @@ graph.cpp
 candidateset.cpp
 checkpoint.cpp
 upperbounds.cpp
+constrainttree.cpp
 MPIHelper.cpp
 )
 

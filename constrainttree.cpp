@@ -152,7 +152,8 @@ bool ConstraintTree::isCompatible(StrVector &tax1, StrVector &tax2) {
 
 bool ConstraintTree::isCompatible (MTree *tree) {
     NodeVector nodes1, nodes2;
-    tree->getAllInnerBranches(nodes1, nodes2);
+    tree->generateNNIBraches(nodes1, nodes2);
+//    tree->getAllInnerBranches(nodes1, nodes2);
     StrVector taxset1, taxset2;
     
     // check that all internal branches are compatible with constraint

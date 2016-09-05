@@ -1885,6 +1885,9 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
         params.compute_ml_dist = false;
     }
 
+    if (params.constraint_tree_file)
+        params.compute_ml_dist = false;
+
 	//Generate BIONJ tree
 	if (MPIHelper::getInstance().isMaster()) {
         if (!finishedInitTree && ((!params.dist_file && params.compute_ml_dist) || params.leastSquareBranch)) {
