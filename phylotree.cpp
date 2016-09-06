@@ -654,7 +654,7 @@ void PhyloTree::initializeAllPartialPars(int &index, PhyloNode *node, PhyloNode 
 size_t PhyloTree::getBitsBlockSize() {
     // reserve the last entry for parsimony score
 //    return (aln->num_states * aln->size() + UINT_BITS - 1) / UINT_BITS + 1;
-    size_t len = aln->num_states * ((max(aln->size(), (size_t)aln->num_informative_sites) + SIMD_BITS - 1) / UINT_BITS) + 4;
+    size_t len = aln->getMaxNumStates() * ((max(aln->size(), (size_t)aln->num_informative_sites) + SIMD_BITS - 1) / UINT_BITS) + 4;
     len = ((len+7)/8)*8;
     return len;
 }
@@ -4594,4 +4594,37 @@ void PhyloTree::generateRandomTree(TreeGenType tree_type) {
     stringstream str;
     ext_tree.printTree(str);
     PhyloTree::readTreeStringSeqName(str.str());
+}
+
+bool PhyloTree::satisfyConstraint(NNIMove &nni) {
+    if (constraintTree.empty())
+        return true;
+    // check for consistency with constraint tree
+    StrVector taxset1, taxset2;
+    
+    // get taxa set 1 (below node1)
+    FOR_NEIGHBOR_DECLARE(nni.node1, nni.node2, it)
+        if (it != nni.node1Nei_it) {
+            getUnorderedTaxaName(taxset1, (*it)->node, nni.node1);
+        }
+    //taxset1 also includes taxa below node2Nei_it if doing NNI 
+    getUnorderedTaxaName(taxset1, (*nni.node2Nei_it)->node, nni.node2);
+    
+    // get taxa set 1 (below node1)
+    FOR_NEIGHBOR(nni.node2, nni.node1, it)
+        if (it != nni.node2Nei_it) {
+            getUnorderedTaxaName(taxset2, (*it)->node, nni.node2);
+        }
+    //taxset2 also includes taxa below node1Nei_it if doing NNI 
+    getUnorderedTaxaName(taxset2, (*nni.node1Nei_it)->node, nni.node1);
+    
+//        getUnorderedTaxaName(taxset1, node1, node2);
+//        getUnorderedTaxaName(taxset2, node2, node1);
+    if (!constraintTree.isCompatible(taxset1, taxset2)) {
+        // NNI violates constraint tree
+        nni.node1 = NULL;
+        nni.node2 = NULL;
+        return false;
+    }
+    return true;
 }

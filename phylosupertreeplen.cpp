@@ -629,10 +629,18 @@ NNIMove PhyloSuperTreePlen::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2
     // Initialize node1 and node2 in nniMoves
 	nniMoves[0].node1 = nniMoves[1].node1 = node1;
 	nniMoves[0].node2 = nniMoves[1].node2 = node2;
+    nniMoves[0].newloglh = nniMoves[1].newloglh = -DBL_MAX;
+
+    // check for compatibility with constraint
+    // check for consistency with constraint tree
+    for (cnt = 0; cnt < 2; cnt++) {
+        satisfyConstraint(nniMoves[cnt]);
+    }
 
 	//--------------------------------------------------------------------------
 
-	this->swapNNIBranch(0.0, node1, node2, &nni_param, nniMoves);
+    if (nniMoves[0].node1 || nniMoves[1].node1)
+        this->swapNNIBranch(0.0, node1, node2, &nni_param, nniMoves);
 
 
 	 // restore curScore
@@ -1094,7 +1102,8 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 	 *	- restore if necessary.
 	 *===========================================================================================*/
 	int cnt;
-	for (cnt = 0; cnt < 2; cnt++) {
+	for (cnt = 0; cnt < 2; cnt++) if (nniMoves[cnt].node1) // only if nniMove satisfy constraint 
+    {
 		//cout<<"NNI Loop-----------------------------NNI."<<cnt<<endl;
 
     	NeighborVec::iterator node1_it = nniMoves[cnt].node1Nei_it;
