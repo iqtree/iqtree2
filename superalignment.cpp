@@ -635,11 +635,12 @@ void SuperAlignment::orderPatternByNumChars() {
         // partial_partition
         for (vector<Pattern>::iterator pit = partitions[part]->ordered_pattern.begin(); pit != partitions[part]->ordered_pattern.end(); pit++) {
             Pattern pattern(*pit);
-            pattern.clear();
-            pattern.resize(nseq, CHAR_MAX); // maximal unknown states
+            pattern.resize(nseq); // maximal unknown states
             for (int j = 0; j < nseq; j++)
-                if (taxa_index[part][j] >= 0)
+                if (taxa_index[j][part] >= 0)
                     pattern[j] = (*pit)[taxa_index[j][part]];
+                else
+                    pattern[j] = CHAR_MAX;
             ordered_pattern.push_back(pattern);
         }
         sum_scores[part] = partitions[part]->pars_lower_bound[0];
