@@ -628,7 +628,7 @@ void PhyloTree::initializeAllPartialPars(int &index, PhyloNode *node, PhyloNode 
 size_t PhyloTree::getBitsBlockSize() {
     // reserve the last entry for parsimony score
 //    return (aln->num_states * aln->size() + UINT_BITS - 1) / UINT_BITS + 1;
-    size_t len = aln->num_states * ((max(aln->size(), (size_t)aln->num_informative_sites) + SIMD_BITS - 1) / UINT_BITS) + 4;
+    size_t len = aln->getMaxNumStates() * ((max(aln->size(), (size_t)aln->num_informative_sites) + SIMD_BITS - 1) / UINT_BITS) + 4;
     len = ((len+7)/8)*8;
     return len;
 }

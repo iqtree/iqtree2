@@ -891,7 +891,7 @@ void PhyloSuperTree::clearAllPartialLH(bool make_null) {
     }
 }
 
-int PhyloSuperTree::computeParsimonyBranch(PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst) {
+int PhyloSuperTree::computeParsimonyBranchObsolete(PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst) {
     int score = 0, part = 0;
     SuperNeighbor *dad_nei = (SuperNeighbor*)dad_branch;
     SuperNeighbor *node_nei = (SuperNeighbor*)(dad_branch->node->findNeighbor(dad));
