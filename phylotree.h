@@ -1634,6 +1634,13 @@ public:
 
     double *getPatternLhCatPointer() { return _pattern_lh_cat; }
 
+    /** check if an NNI is compatible with the constraint tree or not
+        @param nni an NNIMove
+        @return TRUE if the NNI is compatible, FALSE otherwise
+    */
+    bool satisfyConstraint(NNIMove &nni);
+
+
 protected:
 
     /**
