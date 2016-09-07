@@ -210,10 +210,9 @@ int MPIHelper::receiveTrees(TreeCollection &trees, int tag) {
         trees.addTrees(curTrees);
         delete [] recvBuffer;
         return status.MPI_SOURCE;
-    } else {
-        return -1;
     }
 #endif
+    return -1;
 }
 
 int MPIHelper::cleanUpMessages() {

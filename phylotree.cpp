@@ -2844,7 +2844,8 @@ void PhyloTree::doOneRandomNNI(Branch branch) {
 			cnt++;
 		}
 	}
-    doNNI(nni, true);
+    if (constraintTree.isCompatible(nni))
+        doNNI(nni, true);
 }
 
     
@@ -2869,34 +2870,6 @@ NNIMove PhyloTree::getRandomNNI(Branch &branch) {
             }
         }
     nni.newloglh = 0.0;
-    // check for consistency with constraint tree
-    if (!constraintTree.empty()) {
-        StrVector taxset1, taxset2;
-        
-        // get taxa set 1 (below node1)
-        FOR_NEIGHBOR_DECLARE(nni.node1, nni.node2, it)
-            if (it != nni.node1Nei_it) {
-                getUnorderedTaxaName(taxset1, (*it)->node, nni.node1);
-            }
-        //taxset1 also includes taxa below node2Nei_it if doing NNI 
-        getUnorderedTaxaName(taxset1, (*nni.node2Nei_it)->node, nni.node2);
-        
-        // get taxa set 1 (below node1)
-        FOR_NEIGHBOR(nni.node2, nni.node1, it)
-            if (it != nni.node2Nei_it) {
-                getUnorderedTaxaName(taxset2, (*it)->node, nni.node2);
-            }
-        //taxset2 also includes taxa below node1Nei_it if doing NNI 
-        getUnorderedTaxaName(taxset2, (*nni.node1Nei_it)->node, nni.node1);
-        
-//        getUnorderedTaxaName(taxset1, node1, node2);
-//        getUnorderedTaxaName(taxset2, node2, node1);
-        if (!constraintTree.isCompatible(taxset1, taxset2)) {
-            // NNI violates constraint tree
-            nni.node1 = NULL;
-            nni.node2 = NULL;
-        }
-    }    
     return nni;
 }
 
