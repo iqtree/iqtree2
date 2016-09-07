@@ -634,7 +634,9 @@ NNIMove PhyloSuperTreePlen::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2
     // check for compatibility with constraint
     // check for consistency with constraint tree
     for (cnt = 0; cnt < 2; cnt++) {
-        satisfyConstraint(nniMoves[cnt]);
+        if (!constraintTree.isCompatible(nniMoves[cnt])) {
+            nniMoves[cnt].node1 = nniMoves[cnt].node2 = NULL;
+        }
     }
 
 	//--------------------------------------------------------------------------

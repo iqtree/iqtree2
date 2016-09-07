@@ -3109,10 +3109,12 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
     // Initialize node1 and node2 in nniMoves
 	nniMoves[0].node1 = nniMoves[1].node1 = node1;
 	nniMoves[0].node2 = nniMoves[1].node2 = node2;
+    nniMoves[0].newloglh = nniMoves[1].newloglh = -DBL_MAX;
 
     double backupScore = curScore;
 
-    for (cnt = 0; cnt < 2; cnt++) {
+    for (cnt = 0; cnt < 2; cnt++) if (constraintTree.isCompatible(nniMoves[cnt])) 
+    {
         // do the NNI swap
     	NeighborVec::iterator node1_it = nniMoves[cnt].node1Nei_it;
     	NeighborVec::iterator node2_it = nniMoves[cnt].node2Nei_it;
@@ -3124,18 +3126,6 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
 
         node2->updateNeighbor(node2_it, node1_nei);
         node1_nei->node->updateNeighbor(node1, node2);
-
-        // check if NNI obeys constraint tree
-        bool ok_constraint = true;
-        if (!constraintTree.empty()) {
-            StrVector taxset1, taxset2;
-            getUnorderedTaxaName(taxset1, node1, node2);
-            getUnorderedTaxaName(taxset2, node2, node1);
-            if (!constraintTree.isCompatible(taxset1, taxset2))
-                ok_constraint = false;
-        }
-
-        if (ok_constraint) {
 
 		// clear partial likelihood vector
 		node12_it->clearPartialLh();
@@ -3180,10 +3170,6 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
 		if (save_all_trees == 2) {
 			saveCurrentTree(score); // BQM: for new bootstrap
 		}
-        } else {
-            // NNI violates constraint tree
-            nniMoves[cnt].newloglh = -DBL_MAX;
-        }
         // else, swap back, also recover the branch lengths
 		node1->updateNeighbor(node1_it, node1_nei);
 		node1_nei->node->updateNeighbor(node2, node1);
@@ -4594,37 +4580,4 @@ void PhyloTree::generateRandomTree(TreeGenType tree_type) {
     stringstream str;
     ext_tree.printTree(str);
     PhyloTree::readTreeStringSeqName(str.str());
-}
-
-bool PhyloTree::satisfyConstraint(NNIMove &nni) {
-    if (constraintTree.empty())
-        return true;
-    // check for consistency with constraint tree
-    StrVector taxset1, taxset2;
-    
-    // get taxa set 1 (below node1)
-    FOR_NEIGHBOR_DECLARE(nni.node1, nni.node2, it)
-        if (it != nni.node1Nei_it) {
-            getUnorderedTaxaName(taxset1, (*it)->node, nni.node1);
-        }
-    //taxset1 also includes taxa below node2Nei_it if doing NNI 
-    getUnorderedTaxaName(taxset1, (*nni.node2Nei_it)->node, nni.node2);
-    
-    // get taxa set 1 (below node1)
-    FOR_NEIGHBOR(nni.node2, nni.node1, it)
-        if (it != nni.node2Nei_it) {
-            getUnorderedTaxaName(taxset2, (*it)->node, nni.node2);
-        }
-    //taxset2 also includes taxa below node1Nei_it if doing NNI 
-    getUnorderedTaxaName(taxset2, (*nni.node1Nei_it)->node, nni.node1);
-    
-//        getUnorderedTaxaName(taxset1, node1, node2);
-//        getUnorderedTaxaName(taxset2, node2, node1);
-    if (!constraintTree.isCompatible(taxset1, taxset2)) {
-        // NNI violates constraint tree
-        nni.node1 = NULL;
-        nni.node2 = NULL;
-        return false;
-    }
-    return true;
 }
