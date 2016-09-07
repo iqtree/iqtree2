@@ -2801,19 +2801,22 @@ int PhyloTree::fixNegativeBranch(bool force, Node *node, Node *dad) {
 
 void PhyloTree::doOneRandomNNI(Node *node1, Node *node2) {
 	assert(isInnerBranch(node1, node2));
-    Neighbor *node1Nei = NULL;
-    Neighbor *node2Nei = NULL;
+    NNIMove nni;
+    nni.node1 = (PhyloNode*)node1;
+    nni.node2 = (PhyloNode*)node2;
+//    Neighbor *node1Nei = NULL;
+//    Neighbor *node2Nei = NULL;
     // randomly choose one neighbor from node1 and one neighbor from node2
     bool chooseNext = false;
 	FOR_NEIGHBOR_IT(node1, node2, it){
 		if (chooseNext) {
-			node1Nei = (*it);
+			nni.node1Nei_it = it;
 			break;
 		}
          
 		int randNum = random_int(2); // randNum is either 0 or 1
 		if (randNum == 0) {
-			node1Nei = (*it);
+			nni.node1Nei_it = it;
 			break;
 		} else {
 			chooseNext = true;
@@ -2822,42 +2825,35 @@ void PhyloTree::doOneRandomNNI(Node *node1, Node *node2) {
 	chooseNext = false;
 	FOR_NEIGHBOR_IT(node2, node1, it){
 		if (chooseNext) {
-			node2Nei = (*it);
+			nni.node2Nei_it = it;
 			break;
 		}
 		int randNum = random_int(2);
 		if (randNum == 0) {
-			node2Nei = (*it);
+			nni.node2Nei_it = it;
 			break;
 		} else {
 			chooseNext = true;
 		}
 	}
-	assert(node1Nei != NULL && node2Nei != NULL);
+//	assert(node1Nei != NULL && node2Nei != NULL);
 
-    NeighborVec::iterator node1NeiIt = node1->findNeighborIt(node1Nei->node);
-    NeighborVec::iterator node2NeiIt = node2->findNeighborIt(node2Nei->node);
-    assert(node1NeiIt != node1->neighbors.end());
-    assert(node1NeiIt != node2->neighbors.end());
+//    NeighborVec::iterator node1NeiIt = node1->findNeighborIt(node1Nei->node);
+//    NeighborVec::iterator node2NeiIt = node2->findNeighborIt(node2Nei->node);
+//    assert(node1NeiIt != node1->neighbors.end());
+//    assert(node1NeiIt != node2->neighbors.end());
+    
+    if (!constraintTree.isCompatible(nni))
+        return;
 
-    node1->updateNeighbor(node1NeiIt, node2Nei);
+    Neighbor *node1Nei = *nni.node1Nei_it;
+    Neighbor *node2Nei = *nni.node2Nei_it;
+
+    node1->updateNeighbor(nni.node1Nei_it, node2Nei);
     node2Nei->node->updateNeighbor(node2, node1);
 
-    node2->updateNeighbor(node2NeiIt, node1Nei);
+    node2->updateNeighbor(nni.node2Nei_it, node1Nei);
     node1Nei->node->updateNeighbor(node1, node2);
-    
-    if (!constraintTree.empty()) {
-        StrVector taxset1, taxset2;
-        getUnorderedTaxaName(taxset1, node1, node2);
-        getUnorderedTaxaName(taxset2, node2, node1);
-        if (!constraintTree.isCompatible(taxset1, taxset2)) {
-            // revert NNI if violating constraint tree
-            node1->updateNeighbor(node1NeiIt, node1Nei);
-            node1Nei->node->updateNeighbor(node2, node1);
-            node2->updateNeighbor(node2NeiIt, node2Nei);
-            node2Nei->node->updateNeighbor(node1, node2);
-        }
-    }
     
 }
 
@@ -3054,10 +3050,12 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
     // Initialize node1 and node2 in nniMoves
 	nniMoves[0].node1 = nniMoves[1].node1 = node1;
 	nniMoves[0].node2 = nniMoves[1].node2 = node2;
+    nniMoves[0].newloglh = nniMoves[1].newloglh = -DBL_MAX;
 
     double backupScore = curScore;
 
-    for (cnt = 0; cnt < 2; cnt++) {
+    for (cnt = 0; cnt < 2; cnt++) if (constraintTree.isCompatible(nniMoves[cnt])) 
+    {
         // do the NNI swap
     	NeighborVec::iterator node1_it = nniMoves[cnt].node1Nei_it;
     	NeighborVec::iterator node2_it = nniMoves[cnt].node2Nei_it;
@@ -3069,18 +3067,6 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
 
         node2->updateNeighbor(node2_it, node1_nei);
         node1_nei->node->updateNeighbor(node1, node2);
-
-        // check if NNI obeys constraint tree
-        bool ok_constraint = true;
-        if (!constraintTree.empty()) {
-            StrVector taxset1, taxset2;
-            getUnorderedTaxaName(taxset1, node1, node2);
-            getUnorderedTaxaName(taxset2, node2, node1);
-            if (!constraintTree.isCompatible(taxset1, taxset2))
-                ok_constraint = false;
-        }
-
-        if (ok_constraint) {
 
 		// clear partial likelihood vector
 		node12_it->clearPartialLh();
@@ -3125,10 +3111,6 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
 		if (save_all_trees == 2) {
 			saveCurrentTree(score); // BQM: for new bootstrap
 		}
-        } else {
-            // NNI violates constraint tree
-            nniMoves[cnt].newloglh = -DBL_MAX;
-        }
         // else, swap back, also recover the branch lengths
 		node1->updateNeighbor(node1_it, node1_nei);
 		node1_nei->node->updateNeighbor(node2, node1);
@@ -4539,37 +4521,4 @@ void PhyloTree::generateRandomTree(TreeGenType tree_type) {
     stringstream str;
     ext_tree.printTree(str);
     PhyloTree::readTreeStringSeqName(str.str());
-}
-
-bool PhyloTree::satisfyConstraint(NNIMove &nni) {
-    if (constraintTree.empty())
-        return true;
-    // check for consistency with constraint tree
-    StrVector taxset1, taxset2;
-    
-    // get taxa set 1 (below node1)
-    FOR_NEIGHBOR_DECLARE(nni.node1, nni.node2, it)
-        if (it != nni.node1Nei_it) {
-            getUnorderedTaxaName(taxset1, (*it)->node, nni.node1);
-        }
-    //taxset1 also includes taxa below node2Nei_it if doing NNI 
-    getUnorderedTaxaName(taxset1, (*nni.node2Nei_it)->node, nni.node2);
-    
-    // get taxa set 1 (below node1)
-    FOR_NEIGHBOR(nni.node2, nni.node1, it)
-        if (it != nni.node2Nei_it) {
-            getUnorderedTaxaName(taxset2, (*it)->node, nni.node2);
-        }
-    //taxset2 also includes taxa below node1Nei_it if doing NNI 
-    getUnorderedTaxaName(taxset2, (*nni.node1Nei_it)->node, nni.node1);
-    
-//        getUnorderedTaxaName(taxset1, node1, node2);
-//        getUnorderedTaxaName(taxset2, node2, node1);
-    if (!constraintTree.isCompatible(taxset1, taxset2)) {
-        // NNI violates constraint tree
-        nni.node1 = NULL;
-        nni.node2 = NULL;
-        return false;
-    }
-    return true;
 }

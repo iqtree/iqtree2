@@ -1132,7 +1132,7 @@ NNIMove PhyloSuperTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NN
         nni.node2 = node2;
         nni.node1Nei_it = node1->findNeighborIt(node1_nei->node);
         nni.node2Nei_it = node2_it;
-        nni_ok[nniid++] = satisfyConstraint(nni);
+        nni_ok[nniid++] = constraintTree.isCompatible(nni);
     }
     assert(nniid == 2);
     myMove.node1 = myMove.node2 = NULL;

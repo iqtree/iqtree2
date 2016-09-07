@@ -573,7 +573,7 @@ void IQTree::computeInitialTree(string &dist_file, LikelihoodKernel kernel) {
         checkpoint->dump(true);
     }
 
-    if (!constraintTree.empty() && !constraintTree.isCompatible(this))
+    if (!constraintTree.isCompatible(this))
         outError("Initial tree is not compatible with constraint tree");
 
     if (fixed_number) {
