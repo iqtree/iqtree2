@@ -2700,6 +2700,14 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
 		// remove identical sequences
         if (params.ignore_identical_seqs) {
             tree->removeIdenticalSeqs(params);
+            if (tree->removed_seqs.size() > 0) {
+                string filename = (string)params.out_prefix + ".uniqueseq.phy";
+                if (tree->isSuperTree())
+                    ((SuperAlignment*)tree->aln)->printCombinedAlignment(filename.c_str());
+                else
+                    tree->aln->printPhylip(filename.c_str());
+                cout << endl << "For your convenience alignment with unique sequences printed to " << filename << endl;
+            }
         }
         alignment = NULL; // from now on use tree->aln instead
 

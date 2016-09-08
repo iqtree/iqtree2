@@ -1312,7 +1312,7 @@ void PhyloTree::computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, Phylo
                             }
                             x[state*VCSIZE + site/UINT_BITS] |= (1 << (site % UINT_BITS));
                         }
-                    } else if (state == CHAR_MAX) {
+                    } else if (state == (*alnit)->STATE_UNKNOWN) {
                         for (int j = 0; j < freq; j++, site++) {
                             if (site == NUM_BITS) {
                                 x += nstates*VCSIZE;
@@ -1355,7 +1355,7 @@ void PhyloTree::computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, Phylo
                             }
                             x[state*VCSIZE + site/UINT_BITS] |= (1 << (site % UINT_BITS));
                         }
-                    } else if (state == CHAR_MAX) {
+                    } else if (state == (*alnit)->STATE_UNKNOWN) {
                         for (int j = 0; j < freq; j++, site++) {
                             if (site == NUM_BITS) {
                                 x += nstates*VCSIZE;
@@ -1388,7 +1388,7 @@ void PhyloTree::computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, Phylo
                     Alignment::iterator pat = aln->ordered_pattern.begin()+ patid;
                     int state = pat->at(leafid);
                     int freq = pat->frequency;
-                    if (state < nstates) {
+                    if (state < (*alnit)->num_states) {
                         for (int j = 0; j < freq; j++, site++) {
                             if (site == NUM_BITS) {
                                 x += nstates*VCSIZE;
@@ -1396,7 +1396,7 @@ void PhyloTree::computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, Phylo
                             }
                             x[state*VCSIZE + site/UINT_BITS] |= (1 << (site % UINT_BITS));
                         }
-                    } else if (state == CHAR_MAX) {
+                    } else if (state == (*alnit)->STATE_UNKNOWN) {
                         for (int j = 0; j < freq; j++, site++) {
                             if (site == NUM_BITS) {
                                 x += nstates*VCSIZE;

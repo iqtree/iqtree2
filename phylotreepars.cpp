@@ -53,7 +53,7 @@ void PhyloTree::computePartialParsimonyFast(PhyloNeighbor *dad_branch, PhyloNode
                         for (int j = 0; j < freq; j++, site++) {
                             dad_branch->partial_pars[(site/UINT_BITS)*nstates+state] |= (1 << (site % UINT_BITS));
                         }
-                    } else if (state == CHAR_MAX) {
+                    } else if (state == (*alnit)->STATE_UNKNOWN) {
                         for (int j = 0; j < freq; j++, site++) {
                             UINT *p = dad_branch->partial_pars+((site/UINT_BITS)*nstates);
                             UINT bit1 = (1 << (site%UINT_BITS));
@@ -64,6 +64,7 @@ void PhyloTree::computePartialParsimonyFast(PhyloNeighbor *dad_branch, PhyloNode
                         }
                     } else {
                         state -= 3;
+                        assert(state < 15);
                         for (int j = 0; j < freq; j++, site++) {
                             UINT *p = dad_branch->partial_pars+((site/UINT_BITS)*nstates);
                             UINT bit1 = (1 << (site%UINT_BITS));
@@ -87,7 +88,7 @@ void PhyloTree::computePartialParsimonyFast(PhyloNeighbor *dad_branch, PhyloNode
                         for (int j = 0; j < freq; j++, site++) {
                             dad_branch->partial_pars[(site/UINT_BITS)*nstates+state] |= (1 << (site % UINT_BITS));
                         }
-                    } else if (state == CHAR_MAX) {
+                    } else if (state == (*alnit)->STATE_UNKNOWN) {
                         for (int j = 0; j < freq; j++, site++) {
                             UINT *p = dad_branch->partial_pars+((site/UINT_BITS)*nstates);
                             UINT bit1 = (1 << (site%UINT_BITS));
@@ -115,11 +116,11 @@ void PhyloTree::computePartialParsimonyFast(PhyloNeighbor *dad_branch, PhyloNode
                     Alignment::iterator pat = aln->ordered_pattern.begin()+ patid;
                     int state = pat->at(leafid);
                     int freq = pat->frequency;
-                    if (state < nstates) {
+                    if (state < (*alnit)->num_states) {
                         for (int j = 0; j < freq; j++, site++) {
                             dad_branch->partial_pars[(site/UINT_BITS)*nstates+state] |= (1 << (site % UINT_BITS));
                         }
-                    } else if (state == CHAR_MAX) {
+                    } else if (state == (*alnit)->STATE_UNKNOWN) {
                         for (int j = 0; j < freq; j++, site++) {
                             UINT *p = dad_branch->partial_pars+((site/UINT_BITS)*nstates);
                             UINT bit1 = (1 << (site%UINT_BITS));
