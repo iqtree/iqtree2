@@ -14,6 +14,8 @@
 #include "mtree.h"
 #include "alignment.h"
 
+struct NNIMove;
+
 /**
     ConstraintTree used to guide tree search.
     Note that constraint tree may contain only a subset of taxa from a full tree.
@@ -40,10 +42,26 @@ public:
     bool isCompatible(StrVector &tax1, StrVector &tax2);
 
     /**
+        check if a branch defined by two nodes in any tree is compatible or not
+        @param node1 one end node of the branch
+        @param node2 the other end node of the same branch
+        @return TRUE if the branch is compatible, FALSE otherwise 
+    */
+    bool isCompatible(Node *node1, Node *node2);
+
+    /**
         @param tree input tree
         @return TRUE if input tree is compatible with constraint, FALSE otherwise
     */
     bool isCompatible (MTree *tree);
+
+
+    /** 
+        check if an NNI is compatible with the constraint tree or not
+        @param nni an NNIMove
+        @return TRUE if the NNI is compatible, FALSE otherwise
+    */
+    bool isCompatible(NNIMove &nni);
 
     /**
         @param taxname taxon name to search for

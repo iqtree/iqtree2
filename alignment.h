@@ -163,7 +163,7 @@ public:
 
     /** order pattern by number of character states and return in ptn_order
     */
-    void orderPatternByNumChars();
+    virtual void orderPatternByNumChars();
 
     /**
      * un-group site-patterns, i.e., making #sites = #patterns and pattern frequency = 1 for all patterns
@@ -578,6 +578,11 @@ public:
             @return unconstrained log-likelihood (without a tree)
      */
     virtual double computeUnconstrainedLogL();
+
+    /**
+     * 	@return number of states, if it is a partition model, return max num_states across all partitions
+     */
+    virtual int getMaxNumStates() { return num_states; }
 
     /** either SEQ_BINARY, SEQ_DNA, SEQ_PROTEIN, SEQ_MORPH, or SEQ_CODON */
     SeqType seq_type;

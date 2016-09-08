@@ -1671,6 +1671,7 @@ public:
 
     double *getPatternLhCatPointer() { return _pattern_lh_cat; }
 
+
 protected:
 
     /**
