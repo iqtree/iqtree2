@@ -1404,7 +1404,7 @@ void PhyloTree::computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, Phylo
                             }
                             UINT bit1 = (1 << (site%UINT_BITS));
                             UINT *p = x+(site/UINT_BITS);
-                            for (int i = 0; i < nstates; i++)
+                            for (int i = 0; i < (*alnit)->num_states; i++)
                                 p[i*VCSIZE] |= bit1;
                         }
                     } else {

@@ -124,7 +124,7 @@ void PhyloTree::computePartialParsimonyFast(PhyloNeighbor *dad_branch, PhyloNode
                         for (int j = 0; j < freq; j++, site++) {
                             UINT *p = dad_branch->partial_pars+((site/UINT_BITS)*nstates);
                             UINT bit1 = (1 << (site%UINT_BITS));
-                            for (int i = 0; i < nstates; i++)
+                            for (int i = 0; i < (*alnit)->num_states; i++)
                                     p[i] |= bit1;
                         }
                     } else {
@@ -240,7 +240,7 @@ int PhyloTree::computeParsimonyBranchFast(PhyloNeighbor *dad_branch, PhyloNode *
         #pragma omp parallel for private (site) reduction(+: score) if(nsites>200)
         #endif
 		for (site = 0; site < nsites; site++) {
-            size_t offset = nstates*site;
+            size_t offset = 4*site;
             UINT *x = dad_branch->partial_pars + offset;
             UINT *y = node_branch->partial_pars + offset;
 			UINT w = (x[0] & y[0]) | (x[1] & y[1]) | (x[2] & y[2]) | (x[3] & y[3]);
