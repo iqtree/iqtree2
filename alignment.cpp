@@ -790,6 +790,7 @@ void Alignment::orderPatternByNumChars() {
     }
     delete [] ptn_order;
     delete [] num_chars;
+//    cout << ordered_pattern.size() << " ordered_pattern" << endl;
 }
 
 void Alignment::ungroupSitePattern()

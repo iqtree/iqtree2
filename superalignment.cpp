@@ -640,7 +640,7 @@ void SuperAlignment::orderPatternByNumChars() {
                 if (taxa_index[j][part] >= 0)
                     pattern[j] = (*pit)[taxa_index[j][part]];
                 else
-                    pattern[j] = CHAR_MAX;
+                    pattern[j] = partitions[part]->STATE_UNKNOWN;
             ordered_pattern.push_back(pattern);
         }
         sum_scores[part] = partitions[part]->pars_lower_bound[0];
