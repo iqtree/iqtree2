@@ -1417,7 +1417,7 @@ void PhyloTree::computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, Phylo
         } // of end FOR LOOP
 
         assert(start_pos == aln->ordered_pattern.size());
-        assert(site == aln->num_informative_sites % NUM_BITS);
+//        assert(site == aln->num_informative_sites % NUM_BITS);
         // add dummy states
         if (site > 0 && site < NUM_BITS) {
             x += site/UINT_BITS;
