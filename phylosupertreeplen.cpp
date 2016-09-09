@@ -229,6 +229,14 @@ double PartitionModelPlen::optimizeGeneRate(double gradient_epsilon)
     double score = 0.0;
     double nsites = tree->getAlnNSite();
 
+    DoubleVector brlen;
+    brlen.resize(tree->branchNum);
+    tree->getBranchLengths(brlen);
+    double max_brlen = 0.0;
+    for (i = 0; i < brlen.size(); i++)
+        if (brlen[i] > max_brlen)
+            max_brlen = brlen[i];
+
     if (tree->part_order.empty()) tree->computePartitionOrder();
 
     #ifdef _OPENMP
@@ -236,8 +244,13 @@ double PartitionModelPlen::optimizeGeneRate(double gradient_epsilon)
     #endif    
     for (int j = 0; j < tree->size(); j++) {
         int i = tree->part_order[j];
+        double min_scaling = 1.0/tree->at(i)->getAlnNSite();
         double max_scaling = nsites / tree->at(i)->getAlnNSite();
-        tree->part_info[i].cur_score = tree->at(i)->optimizeTreeLengthScaling(1.0/tree->at(i)->getAlnNSite(), tree->part_info[i].part_rate, max_scaling, gradient_epsilon);
+        if (max_scaling < tree->part_info[i].part_rate)
+            max_scaling = tree->part_info[i].part_rate;
+        if (min_scaling > tree->part_info[i].part_rate)
+            min_scaling = tree->part_info[i].part_rate;
+        tree->part_info[i].cur_score = tree->at(i)->optimizeTreeLengthScaling(min_scaling, tree->part_info[i].part_rate, max_scaling, gradient_epsilon);
         score += tree->part_info[i].cur_score;
     }
     // now normalize the rates
@@ -251,6 +264,12 @@ double PartitionModelPlen::optimizeGeneRate(double gradient_epsilon)
             nsite += tree->at(i)->aln->getNSite();
     }
     sum /= nsite;
+    
+    if (sum > tree->params->max_branch_length / max_brlen) {
+        cerr << endl << "ERROR: Too high (saturated) partition rates of the proportion partition model!"
+            << endl <<  "Please switch to the edge-equal partition model via -q option instead of -spp" << endl << endl;
+        exit(EXIT_FAILURE);
+    }
     tree->scaleLength(sum);
     sum = 1.0/sum;
     for (i = 0; i < tree->size(); i++)
