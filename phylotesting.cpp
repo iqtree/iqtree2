@@ -1558,6 +1558,7 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
                 }
                 IQTree *iqtree = new IQTree(in_tree->aln);
                 // set checkpoint
+                in_tree->getCheckpoint()->clear();
                 iqtree->setCheckpoint(in_tree->getCheckpoint());
                 iqtree->num_precision = in_tree->num_precision;
                 
