@@ -1558,9 +1558,15 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
                 }
                 IQTree *iqtree = new IQTree(in_tree->aln);
                 // set checkpoint
-                in_tree->getCheckpoint()->clear();
                 iqtree->setCheckpoint(in_tree->getCheckpoint());
                 iqtree->num_precision = in_tree->num_precision;
+
+                // clear all checkpointed information
+                Checkpoint *newCheckpoint = new Checkpoint;
+                iqtree->getCheckpoint()->getSubCheckpoint(newCheckpoint, "iqtree");
+                iqtree->getCheckpoint()->clear();
+                iqtree->getCheckpoint()->insert(newCheckpoint->begin(), newCheckpoint->end());
+                delete newCheckpoint;
                 
                 cout << endl << "===> Testing model " << model+1 << ": " << params.model_name << endl;
                 runTreeReconstruction(params, original_model, *iqtree, model_info);
@@ -1572,7 +1578,7 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
                 tree = iqtree;
 
                 // clear all checkpointed information
-                Checkpoint *newCheckpoint = new Checkpoint;
+                newCheckpoint = new Checkpoint;
                 tree->getCheckpoint()->getSubCheckpoint(newCheckpoint, "iqtree");
                 tree->getCheckpoint()->clear();
                 tree->getCheckpoint()->insert(newCheckpoint->begin(), newCheckpoint->end());
