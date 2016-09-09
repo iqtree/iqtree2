@@ -343,9 +343,12 @@ void printAncestralSequences(const char *out_prefix, PhyloTree *tree, AncestralS
 
     int i, j, nsites = tree->getAlnNSite(), nstates = tree->aln->num_states, nptn = tree->getAlnNPattern();
 
-    int *joint_ancestral = new int[nptn*tree->leafNum];
+    int *joint_ancestral = NULL;
     
-    tree->computeJointAncestralSequences(joint_ancestral);
+    if (tree->params->print_ancestral_sequence == AST_JOINT) {
+        joint_ancestral = new int[nptn*tree->leafNum];    
+        tree->computeJointAncestralSequences(joint_ancestral);
+    }
 
     string filename = (string)out_prefix + ".ancestralprob";
     string filenameseq = (string)out_prefix + ".ancestralseq";
@@ -367,12 +370,15 @@ void printAncestralSequences(const char *out_prefix, PhyloTree *tree, AncestralS
         double *marginal_ancestral_prob = new double[nptn * tree->getModel()->num_states];
         int *marginal_ancestral_seq = new int[nptn];
 
-        out << "Node\tSite\tJoint\tMargin";
+        out << "Node\tSite\tMargin";
         for (i = 0; i < nstates; i++)
             out << "\tp_" << tree->aln->convertStateBackStr(i);
         out << endl;
         
-        outseq << 2*(tree->nodeNum-tree->leafNum) << " " << nsites << endl;
+        if (tree->params->print_ancestral_sequence == AST_JOINT)
+            outseq << 2*(tree->nodeNum-tree->leafNum) << " " << nsites << endl;
+        else
+            outseq << (tree->nodeNum-tree->leafNum) << " " << nsites << endl;
         
         int name_width = max(tree->aln->getMaxSeqNameLength(),6)+10;
 
@@ -391,7 +397,7 @@ void printAncestralSequences(const char *out_prefix, PhyloTree *tree, AncestralS
                     if (prob[j] > prob[state_best])
                         state_best = j;
                 //if (fabs(prob[state_best]-flat_prob) < 1e-5)
-                if (prob[state_best] < 0.95)
+                if (prob[state_best] < tree->params->min_ancestral_prob)
                     state_best = STATE_INVALID;
                 marginal_ancestral_seq[i] = state_best;
             }
@@ -404,8 +410,10 @@ void printAncestralSequences(const char *out_prefix, PhyloTree *tree, AncestralS
             // print ancestral state probabilities
             for (i = 0; i < nsites; i++) {
                 int ptn = pattern_index[i];
-                out << node->name << "\t" << i+1 << "\t" << tree->aln->convertStateBackStr(joint_ancestral_node[ptn])
-                    << "\t" << tree->aln->convertStateBackStr(marginal_ancestral_seq[ptn]);
+                out << node->name << "\t" << i+1 << "\t";
+                if (tree->params->print_ancestral_sequence == AST_JOINT)
+                    out << tree->aln->convertStateBackStr(joint_ancestral_node[ptn]) << "\t";
+                out << tree->aln->convertStateBackStr(marginal_ancestral_seq[ptn]);
                 for (j = 0; j < nstates; j++) {
                     out << "\t" << marginal_ancestral_prob[ptn*nstates+j];
                 }
@@ -418,11 +426,14 @@ void printAncestralSequences(const char *out_prefix, PhyloTree *tree, AncestralS
             for (i = 0; i < nsites; i++) 
                 outseq << tree->aln->convertStateBackStr(marginal_ancestral_seq[pattern_index[i]]);
             outseq << endl;
-            outseq.width(name_width);
-            outseq << left << (node->name+"_joint") << " ";
-            for (i = 0; i < nsites; i++) 
-                outseq << tree->aln->convertStateBackStr(joint_ancestral_node[pattern_index[i]]);
-            outseq << endl;
+            
+            if (tree->params->print_ancestral_sequence == AST_JOINT) {
+                outseq.width(name_width);
+                outseq << left << (node->name+"_joint") << " ";
+                for (i = 0; i < nsites; i++) 
+                    outseq << tree->aln->convertStateBackStr(joint_ancestral_node[pattern_index[i]]);
+                outseq << endl;
+            }
         }
 
         delete[] marginal_ancestral_seq;
@@ -437,7 +448,8 @@ void printAncestralSequences(const char *out_prefix, PhyloTree *tree, AncestralS
 		outError(ERR_WRITE_OUTPUT, filename);
 	}
     
-    delete[] joint_ancestral;
+    if (joint_ancestral)
+        delete[] joint_ancestral;
 
 }
 

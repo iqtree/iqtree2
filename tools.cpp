@@ -809,6 +809,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.print_site_rate = false;
     params.print_trees_site_posterior = 0;
     params.print_ancestral_sequence = AST_NONE;
+    params.min_ancestral_prob = 0.95;
     params.print_tree_lh = false;
     params.lambda = 1;
     params.speed_conf = 1.0;
@@ -1868,7 +1869,9 @@ void parseArg(int argc, char *argv[], Params &params) {
 			}
 			if (strcmp(argv[cnt], "-lmd") == 0) {
 				cnt++;
-				params.lambda = convert_double(argv[cnt]);
+				if (cnt >= argc)
+					throw "Use -lmd <lambda>";
+                params.lambda = convert_double(argv[cnt]);
 				if (params.lambda > 1.0)
 					throw "Lambda must be in (0,1]";
 				continue;
@@ -2208,6 +2211,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 			}
 			if (strcmp(argv[cnt], "-alrt") == 0) {
 				cnt++;
+				if (cnt >= argc)
+					throw "Use -alrt <#replicates | 0>";
                 int reps = convert_int(argv[cnt]);
                 if (reps == 0)
                     params.aLRT_test = true;
@@ -2224,6 +2229,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 			}
 			if (strcmp(argv[cnt], "-lbp") == 0) {
 				cnt++;
+				if (cnt >= argc)
+					throw "Use -lbp <#replicates>";
 				params.localbp_replicates = convert_int(argv[cnt]);
 				if (params.localbp_replicates < 1000
 						&& params.localbp_replicates != 0)
@@ -2262,14 +2269,26 @@ void parseArg(int argc, char *argv[], Params &params) {
 				continue;
 			}
 
-			if (strcmp(argv[cnt], "-wma") == 0) {
+			if (strcmp(argv[cnt], "-asr") == 0) {
 				params.print_ancestral_sequence = AST_MARGINAL;
                 params.ignore_identical_seqs = false;
 				continue;
 			}
 
-			if (strcmp(argv[cnt], "-wja") == 0) {
+			if (strcmp(argv[cnt], "-asr-min") == 0) {
+                cnt++;
+				if (cnt >= argc)
+					throw "Use -asr-min <probability>";
+                
+                params.min_ancestral_prob = convert_double(argv[cnt]);
+                if (params.min_ancestral_prob < 0.5 || params.min_ancestral_prob > 1)
+                    throw "Minimum ancestral probability [-asr-min] must be between 0.5 and 1.0";
+                continue;
+            }
+
+			if (strcmp(argv[cnt], "-asr-joint") == 0) {
 				params.print_ancestral_sequence = AST_JOINT;
+                params.ignore_identical_seqs = false;
 				continue;
 			}
 
@@ -2742,7 +2761,11 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (params.stop_condition != SC_BOOTSTRAP_CORRELATION)
 					params.stop_condition = SC_UNSUCCESS_ITERATION;
 				cnt++;
+				if (cnt >= argc)
+					throw "Use -numstop <#iterations>";
 				params.unsuccess_iteration = convert_int(argv[cnt]);
+                if (params.unsuccess_iteration <= 0)
+                    throw "-numstop iterations must be positive";
 				continue;
 			}
 			if (strcmp(argv[cnt], "-lsbran") == 0) {
@@ -3334,6 +3357,12 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -zb <#replicates>    Performing BP,KH,SH,ELW tests for trees passed via -z" << endl
             << "  -zw                  Also performing weighted-KH and weighted-SH tests" << endl
             << "  -au                  Also performing approximately unbiased (AU) test" << endl
+            << endl << "ANCESTRAL SEQUENCE RECONSTRUCTION:" << endl
+            << "  -asr                 Compute ancestral states by marginal reconstruction" << endl
+            << "  -asr-min <prob>      Min probability to assign ancestral sequence (default: 0.95)" << endl
+//            << "  -wja                 Write ancestral sequences by joint reconstruction" << endl
+
+
             << endl;
 
 			cout << "GENERATING RANDOM TREES:" << endl;
@@ -3359,8 +3388,6 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -wspr                Write site probabilities per rate category" << endl
             << "  -wspm                Write site probabilities per mixture class" << endl
             << "  -wspmr               Write site probabilities per mixture+rate class" << endl
-            << "  -wma                 Write ancestral sequences by marginal reconstruction" << endl
-            << "  -wja                 Write ancestral sequences by joint reconstruction" << endl
             << "  -fconst f1,...,fN    Add constant patterns into alignment (N=#nstates)" << endl
             << "  -me <epsilon>        Logl epsilon for model parameter optimization (default 0.01)" << endl
             << "  --no-outfiles        Suppress printing output files" << endl;

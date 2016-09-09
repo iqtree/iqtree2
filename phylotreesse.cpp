@@ -2807,7 +2807,7 @@ void PhyloTree::computeMarginalAncestralProbability(PhyloNeighbor *dad_branch, P
     } else {
     	// both dad and node are internal nodes
 #ifdef _OPENMP
-#pragma omp parallel for reduction(+: tree_lh, prob_const) private(ptn, i, c, m, x)
+#pragma omp parallel for private(ptn, i, c, m, x)
 #endif
     	for (ptn = 0; ptn < nptn; ptn++) {
             double *lh_state = ptn_ancestral_prob + ptn*nstates;

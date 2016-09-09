@@ -1403,6 +1403,9 @@ public:
     */
     AncestralSeqType print_ancestral_sequence;
 
+    /** minimum probability to assign an ancestral state */
+    double min_ancestral_prob;
+
     /**
         0: print nothing
         1: print site state frequency vectors
