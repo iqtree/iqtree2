@@ -1122,7 +1122,9 @@ double PhyloTree::computePatternLhCat(SiteLoglType wsl) {
 //            outError("Naive kernel does not support mixture models, contact author if you really need this feature");
 //        return computeLikelihoodBranchNaive(current_it, (PhyloNode*)current_it_back->node);
 //    } else 
-    if (!getModel()->isMixture())
+    if (getModel()->isSiteSpecificModel()) {
+        return computeSitemodelLikelihoodBranchEigen(current_it, (PhyloNode*)current_it_back->node);
+    } else if (!getModel()->isMixture())
         return computeLikelihoodBranchEigen(current_it, (PhyloNode*)current_it_back->node);
     else if (getModelFactory()->fused_mix_rate)
         return computeMixrateLikelihoodBranchEigen(current_it, (PhyloNode*)current_it_back->node);
