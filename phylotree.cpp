@@ -1120,7 +1120,9 @@ double PhyloTree::computePatternLhCat(SiteLoglType wsl) {
 
     double score;
 
-    if (!getModel()->isMixture())
+    if (getModel()->isSiteSpecificModel()) {
+        score = computeSitemodelLikelihoodBranchEigen(current_it, (PhyloNode*)current_it_back->node);
+    } else if (!getModel()->isMixture())
         score = computeLikelihoodBranchEigen(current_it, (PhyloNode*)current_it_back->node);
     else if (getModelFactory()->fused_mix_rate)
         score = computeMixrateLikelihoodBranchEigen(current_it, (PhyloNode*)current_it_back->node);
