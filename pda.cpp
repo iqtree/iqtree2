@@ -1848,6 +1848,7 @@ extern "C" void funcAbort(int signal_number)
 		case SIGFPE:  cerr << "ERRONEOUS NUMERIC"; break;
 		case SIGILL:  cerr << "ILLEGAL INSTRUCTION"; break;
 		case SIGSEGV: cerr << "SEGMENTATION FAULT"; break;
+		case SIGBUS: cerr << "BUS ERROR"; break;
 	}
     cerr << endl;
 	cerr << "*** For bug report please send to developers:" << endl << "***    Log file: " << _log_file;
@@ -2269,6 +2270,7 @@ int main(int argc, char *argv[])
 	signal(SIGFPE, &funcAbort);
 	signal(SIGILL, &funcAbort);
 	signal(SIGSEGV, &funcAbort);
+	signal(SIGBUS, &funcAbort);
 	printCopyright(cout);
 	/*
 	double x=1e-100;
