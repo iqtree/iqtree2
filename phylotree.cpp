@@ -1125,7 +1125,7 @@ double PhyloTree::computePatternLhCat(SiteLoglType wsl) {
     } else if (!getModel()->isMixture())
         score = computeLikelihoodBranchEigen(current_it, (PhyloNode*)current_it_back->node);
     else if (getModelFactory()->fused_mix_rate)
-        score = computeMixrateLikelihoodBranchEigen(current_it, (PhyloNode*)current_it_back->node);
+        score = computeLikelihoodBranchEigen(current_it, (PhyloNode*)current_it_back->node);
     else {
         score = computeMixtureLikelihoodBranchEigen(current_it, (PhyloNode*)current_it_back->node);
         if (wsl == WSL_MIXTURE || wsl == WSL_RATECAT) {
