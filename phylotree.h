@@ -663,9 +663,6 @@ public:
     //template <const int nstates>
     void computePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
     
-    //template <const int nstates>
-    void computeMixturePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
-
     void computeSitemodelPartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
 
     template <class VectorClass, const int VCSIZE, const int nstates>
@@ -704,9 +701,6 @@ public:
 
     //template <const int nstates>
     double computeLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloNode *dad);
-
-    //template <const int nstates>
-    double computeMixtureLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloNode *dad);
 
     double computeSitemodelLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloNode *dad);
 
@@ -984,9 +978,6 @@ public:
 
     //template <const int nstates>
     void computeLikelihoodDervEigen(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
-
-    //template <const int nstates>
-    void computeMixtureLikelihoodDervEigen(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
 
     void computeSitemodelLikelihoodDervEigen(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
 
