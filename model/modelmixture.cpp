@@ -14,7 +14,7 @@
 #include "modelmorphology.h"
 #include "modelset.h"
 #include "modelmixture.h"
-#include "phylokernelmixture.h"
+//#include "phylokernelmixture.h"
 
 const string builtin_mixmodels_definition =
 "#nexus\n\
