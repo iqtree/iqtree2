@@ -1785,7 +1785,7 @@ void PhyloSuperTreePlen::initializeAllPartialLh() {
 	vector<uint64_t> mem_size, lh_cat_size;
 	mem_size.resize(ntrees);
 	lh_cat_size.resize(ntrees);
-	uint64_t total_mem_size = 0, total_block_size = 0, total_lh_cat_size = 0;
+	uint64_t total_mem_size = 0, total_block_size = 0, total_scale_block_size = 0, total_lh_cat_size = 0;
 
 	if (part_order.empty())
 		computePartitionOrder();
@@ -1794,11 +1794,12 @@ void PhyloSuperTreePlen::initializeAllPartialLh() {
 		part = part_order[partid];
         it = begin() + part;
 		size_t nptn = (*it)->getAlnNPattern() + (*it)->aln->num_states; // extra #numStates for ascertainment bias correction
+		scale_block_size[part] = nptn * (*it)->getRate()->getNRate() *
+				(((*it)->model_factory->fused_mix_rate)? 1 : (*it)->getModel()->getNMixtures());
 		if (instruction_set >= 7)
 			mem_size[part] = ((nptn +3)/4)*4;
 		else
 			mem_size[part] = ((nptn % 2) == 0) ? nptn : (nptn + 1);
-		scale_block_size[part] = nptn;
 		block_size[part] = mem_size[part] * (*it)->aln->num_states * (*it)->getRate()->getNRate() *
 				(((*it)->model_factory->fused_mix_rate)? 1 : (*it)->getModel()->getNMixtures());
 
@@ -1806,6 +1807,7 @@ void PhyloSuperTreePlen::initializeAllPartialLh() {
 				(((*it)->model_factory->fused_mix_rate)? 1 : (*it)->getModel()->getNMixtures());
 		total_mem_size += mem_size[part];
 		total_block_size += block_size[part];
+        total_scale_block_size += scale_block_size[part];
 		total_lh_cat_size += lh_cat_size[part];
 	}
 
@@ -1835,7 +1837,7 @@ void PhyloSuperTreePlen::initializeAllPartialLh() {
     at(part_order[0])->nni_partial_lh = nni_partial_lh;
     
     if (!nni_scale_num) {
-        nni_scale_num = aligned_alloc<UBYTE>(IT_NUM*total_mem_size);
+        nni_scale_num = aligned_alloc<UBYTE>(IT_NUM*total_scale_block_size);
     }
     at(part_order[0])->nni_scale_num = nni_scale_num;
 
@@ -1850,7 +1852,7 @@ void PhyloSuperTreePlen::initializeAllPartialLh() {
 		(*it)->ptn_freq_computed = false;
 		(*it)->ptn_invar = (*prev_it)->ptn_invar + mem_size[part];
         (*it)->nni_partial_lh = (*prev_it)->nni_partial_lh + IT_NUM*block_size[part];
-        (*it)->nni_scale_num = (*prev_it)->nni_scale_num + IT_NUM*mem_size[part];
+        (*it)->nni_scale_num = (*prev_it)->nni_scale_num + IT_NUM*scale_block_size[part];
 	}
 
 	// compute total memory for all partitions

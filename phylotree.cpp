@@ -802,6 +802,7 @@ uint64_t PhyloTree::getMemoryRequired(size_t ncategory) {
 void PhyloTree::getMemoryRequired(uint64_t &partial_lh_entries, uint64_t &scale_num_entries, uint64_t &partial_pars_entries) {
 	size_t nptn = aln->getNPattern() + aln->num_states; // +num_states for ascertainment bias correction
 	uint64_t block_size;
+    size_t scale_size = nptn;
 	if (instruction_set >= 7)
 		// block size must be divisible by 4
 		block_size = ((nptn+3)/4)*4;
@@ -809,10 +810,14 @@ void PhyloTree::getMemoryRequired(uint64_t &partial_lh_entries, uint64_t &scale_
 		// block size must be divisible by 2
 		block_size = ((nptn % 2) == 0) ? nptn : (nptn + 1);
     block_size = block_size * aln->num_states;
-    if (site_rate)
+    if (site_rate) {
     	block_size *= site_rate->getNRate();
-    if (model && !model_factory->fused_mix_rate)
+        scale_size *= site_rate->getNRate();
+    }
+    if (model && !model_factory->fused_mix_rate) {
     	block_size *= model->getNMixtures();
+        scale_size *= model->getNMixtures();
+    }
 
 	uint64_t tip_partial_lh_size = aln->num_states * (aln->STATE_UNKNOWN+1) * model->getNMixtures();
     if (sse == LK_EIGEN || sse == LK_EIGEN_SSE) {
@@ -826,11 +831,11 @@ void PhyloTree::getMemoryRequired(uint64_t &partial_lh_entries, uint64_t &scale_
 
 	if (sse == LK_EIGEN || sse == LK_EIGEN_SSE) {
         if (params->lh_mem_save == LM_PER_NODE)
-            scale_num_entries = (leafNum - 2) * nptn;
+            scale_num_entries = (leafNum - 2) * scale_size;
         else
-            scale_num_entries = (leafNum*3 - 4) * nptn;
+            scale_num_entries = (leafNum*3 - 4) * scale_size;
 	} else
-		scale_num_entries = (leafNum*4 - 4) * nptn;
+		scale_num_entries = (leafNum*4 - 4) * scale_size;
 
     size_t pars_block_size = getBitsBlockSize();
     partial_pars_entries = (leafNum - 1) * 4 * pars_block_size;
@@ -847,7 +852,7 @@ void PhyloTree::initializeAllPartialLh(int &index, int &indexlh, PhyloNode *node
 		// block size must be divisible by 2
 		nptn = ((nptn % 2) == 0) ? nptn : (nptn + 1);
 
-    size_t scale_block_size = nptn;
+    size_t scale_block_size = nptn * site_rate->getNRate() * ((model_factory->fused_mix_rate)? 1 : model->getNMixtures());
 //    size_t tip_block_size = nptn * model->num_states;
 
     block_size = nptn * model->num_states * site_rate->getNRate() * ((model_factory->fused_mix_rate)? 1 : model->getNMixtures());
@@ -1013,11 +1018,11 @@ size_t PhyloTree::getPartialLhBytes() {
 }
 
 size_t PhyloTree::getScaleNumBytes() {
-	return (aln->size()+aln->num_states) * sizeof(UBYTE);
+	return (aln->size()+aln->num_states) * sizeof(UBYTE) * site_rate->getNRate() * ((model_factory->fused_mix_rate)? 1 : model->getNMixtures());
 }
 
 UBYTE *PhyloTree::newScaleNum() {
-    return aligned_alloc<UBYTE>(aln->size()+aln->num_states);
+    return aligned_alloc<UBYTE>((aln->size()+aln->num_states)* site_rate->getNRate() * ((model_factory->fused_mix_rate)? 1 : model->getNMixtures()));
 }
 
 Node *findFirstFarLeaf(Node *node, Node *dad = NULL) {
