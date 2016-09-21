@@ -778,6 +778,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.num_rate_cats = 4;
     params.max_rate_cats = 10;
     params.gamma_shape = -1.0;
+    params.min_gamma_shape = MIN_GAMMA_SHAPE;
     params.gamma_median = false;
     params.p_invar_sites = -1.0;
     params.optimize_model_rate_joint = false;
@@ -1977,10 +1978,21 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (cnt >= argc)
 					throw "Use -a <gamma_shape>";
 				params.gamma_shape = convert_double(argv[cnt]);
-//				if (params.gamma_shape < 0)
-//					throw "Wrong number of gamma shape parameter (alpha)";
+				if (params.gamma_shape <= 0)
+					throw "Wrong gamma shape parameter (alpha)";
 				continue;
 			}
+
+			if (strcmp(argv[cnt], "-amin") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -amin <min_gamma_shape>";
+				params.min_gamma_shape = convert_double(argv[cnt]);
+				if (params.min_gamma_shape <= 0)
+					throw "Wrong minimum gamma shape parameter (alpha)";
+				continue;
+			}
+
 			if (strcmp(argv[cnt], "-gmean") == 0) {
 				params.gamma_median = false;
 				continue;
@@ -3307,6 +3319,7 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "                       Invar, Gamma, Invar+Gamma, or FreeRate model where 'n' is" << endl
             << "                       number of categories (default: n=4)" << endl
             << "  -a <Gamma_shape>     Gamma shape parameter for site rates (default: estimate)" << endl
+            << "  -amin <min_shape>    Min Gamma shape parameter for site rates (default: 0.02)" << endl
             << "  -gmedian             Median approximation for +G site rates (default: mean)" << endl
             << "  --opt-gamma-inv      More thorough estimation for +I+G model parameters" << endl
             << "  -i <p_invar>         Proportion of invariable sites (default: estimate)" << endl

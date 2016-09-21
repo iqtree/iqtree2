@@ -437,6 +437,14 @@ const int OUT_LOG       = 1; // .log file written or not
 const int OUT_TREEFILE  = 2; // .treefile file written or not
 const int OUT_IQTREE    = 4; // .iqtree file written or not
 
+
+const double MIN_GAMMA_RATE = 1e-6;
+// change from 0.01 to 0.02 as 0.01 causes numerical problems
+const double MIN_GAMMA_SHAPE = 0.02;
+const double MAX_GAMMA_SHAPE = 1000.0;
+const double TOL_GAMMA_SHAPE = 0.001;
+
+
 /** maximum number of newton-raphson steps for NNI branch evaluation */
 extern int NNI_MAX_NR_STEP;
 
@@ -1232,6 +1240,11 @@ public:
             shape parameter (alpha) of the Gamma distribution for site rates
      */
     double gamma_shape;
+
+    /**
+            minimum shape parameter (alpha) of the Gamma distribution for site rates
+     */
+    double min_gamma_shape;
 
     /**
             TRUE to use median rate for discrete categories, FALSE to use mean rate instead
