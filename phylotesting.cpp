@@ -2475,7 +2475,7 @@ void evaluateTrees(Params &params, IQTree *tree, vector<TreeInfo> &info, IntVect
 	cout << endl;
 	//MTreeSet trees(params.treeset_file, params.is_rooted, params.tree_burnin, params.tree_max_count);
 	cout << "Reading trees in " << params.treeset_file << " ..." << endl;
-	int ntrees = countDistinctTrees(params.treeset_file, params.is_rooted, tree, distinct_ids, params.distinct_trees);
+	size_t ntrees = countDistinctTrees(params.treeset_file, params.is_rooted, tree, distinct_ids, params.distinct_trees);
 	if (ntrees < distinct_ids.size()) {
 		cout << "WARNING: " << distinct_ids.size() << " trees detected but only " << ntrees << " distinct trees will be evaluated" << endl;
 	} else {
@@ -2508,7 +2508,7 @@ void evaluateTrees(Params &params, IQTree *tree, vector<TreeInfo> &info, IntVect
 	double time_start = getRealTime();
 
 	int *boot_samples = NULL;
-	int boot;
+	size_t boot;
 	//double *saved_tree_lhs = NULL;
 	double *tree_lhs = NULL; // RELL score matrix of size #trees x #replicates
 	double *pattern_lh = NULL;
@@ -2516,8 +2516,8 @@ void evaluateTrees(Params &params, IQTree *tree, vector<TreeInfo> &info, IntVect
 	double *orig_tree_lh = NULL; // Original tree log-likelihoods
 	double *max_lh = NULL;
 	double *lhdiff_weights = NULL;
-	int nptn = tree->getAlnNPattern();
-    int maxnptn = get_safe_upper_limit(nptn);
+	size_t nptn = tree->getAlnNPattern();
+    size_t maxnptn = get_safe_upper_limit(nptn);
     
 	if (params.topotest_replicates && ntrees > 1) {
 		size_t mem_size = (size_t)params.topotest_replicates*nptn*sizeof(int) +
@@ -2531,8 +2531,22 @@ void evaluateTrees(Params &params, IQTree *tree, vector<TreeInfo> &info, IntVect
 		cout << "Creating " << params.topotest_replicates << " bootstrap replicates..." << endl;
 		if (!(boot_samples = new int [params.topotest_replicates*nptn]))
 			outError(ERR_NO_MEMORY);
+#ifdef _OPENMP
+        #pragma omp parallel private(boot) if(nptn > 10000)
+        {
+        int *rstream;
+        init_random(params.ran_seed + omp_get_thread_num(), false, &rstream);
+        #pragma omp for schedule(static)
+#else
+        int *rstream = randstream;
+#endif
 		for (boot = 0; boot < params.topotest_replicates; boot++)
-			tree->aln->createBootstrapAlignment(boot_samples + (boot*nptn), params.bootstrap_spec);
+			tree->aln->createBootstrapAlignment(boot_samples + (boot*nptn), params.bootstrap_spec, rstream);
+#ifdef _OPENMP
+        finish_random(rstream);
+        }
+#endif
+        cout << "done" << endl;
 		//if (!(saved_tree_lhs = new double [ntrees * params.topotest_replicates]))
 		//	outError(ERR_NO_MEMORY);
 		if (!(tree_lhs = new double [ntrees * params.topotest_replicates]))
@@ -2619,7 +2633,7 @@ void evaluateTrees(Params &params, IQTree *tree, vector<TreeInfo> &info, IntVect
 		for (boot = 0; boot < params.topotest_replicates; boot++) {
 			double lh = 0.0;
 			int *this_boot_sample = boot_samples + (boot*nptn);
-			for (int ptn = 0; ptn < nptn; ptn++)
+			for (size_t ptn = 0; ptn < nptn; ptn++)
 				lh += pattern_lh[ptn] * this_boot_sample[ptn];
 			tree_lhs_offset[boot] = lh;
 		}
@@ -2700,9 +2714,9 @@ void evaluateTrees(Params &params, IQTree *tree, vector<TreeInfo> &info, IntVect
 		}
 
 		double orig_max_lh = orig_tree_lh[0];
-		int orig_max_id = 0;
+		size_t orig_max_id = 0;
 		double orig_2ndmax_lh = -DBL_MAX;
-		int orig_2ndmax_id = -1;
+		size_t orig_2ndmax_id = -1;
 		// find the max tree ID
 		for (tid = 1; tid < ntrees; tid++)
 			if (orig_max_lh < orig_tree_lh[tid]) {
@@ -2723,7 +2737,7 @@ void evaluateTrees(Params &params, IQTree *tree, vector<TreeInfo> &info, IntVect
 			// SH compute original deviation from max_lh
 			info[tid].kh_pvalue = 0.0;
 			info[tid].sh_pvalue = 0.0;
-			int max_id = (tid != orig_max_id) ? orig_max_id : orig_2ndmax_id;
+			size_t max_id = (tid != orig_max_id) ? orig_max_id : orig_2ndmax_id;
 			double orig_diff = orig_tree_lh[max_id] - orig_tree_lh[tid] - avg_lh[tid];
 			double *max_kh = tree_lhs + (max_id * params.topotest_replicates);
 			for (boot = 0; boot < params.topotest_replicates; boot++) {
@@ -2759,7 +2773,7 @@ void evaluateTrees(Params &params, IQTree *tree, vector<TreeInfo> &info, IntVect
 				info[tid].wkh_pvalue = 0.0;
 				info[tid].wsh_pvalue = 0.0;
 				double worig_diff = -DBL_MAX;
-				int max_id = -1;
+				size_t max_id = -1;
 				for (tid2 = 0; tid2 < ntrees; tid2++)
 					if (tid2 != tid) {
 						double wdiff = (orig_tree_lh[tid2] - orig_tree_lh[tid])*lhdiff_weights[tid*ntrees+tid2];
