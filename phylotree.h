@@ -1141,6 +1141,9 @@ public:
      */
     double* theta_all;
 
+    /** total scaling buffer */
+    double buffer_scale_all;
+
 
     /**
      * frequencies of alignment patterns, used as buffer for likelihood computation
