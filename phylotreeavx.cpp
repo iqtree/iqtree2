@@ -10,7 +10,12 @@
 //#include "phylokernelmixture.h"
 //#include "phylokernelmixrate.h"
 #include "phylokernelsitemodel.h"
-#include "vectorclass/vectorclass.h"
+
+#include "phylokernelnew.h"
+#define KERNEL_FIX_STATES
+#include "phylokernelnew.h"
+
+//#include "vectorclass/vectorclass.h"
 
 #ifndef __AVX__
 #error "You must compile this file with AVX enabled!"
@@ -58,11 +63,17 @@ void PhyloTree::setLikelihoodKernelAVX() {
     }
 
 	switch(aln->num_states) {
+	case 2:
+        computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchNewSIMD<Vec4d, NORM_LH, 2>;
+        computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervNewSIMD<Vec4d, NORM_LH, 2>;
+        computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodNewSIMD<Vec4d, NORM_LH, 2>;
+        computeLikelihoodFromBufferPointer = &PhyloTree::computeLikelihoodFromBufferNewSIMD<Vec4d, NORM_LH, 2>;
+		break;
 	case 4:
-        computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchEigenSIMD<Vec4d, 4, 4>;
-        computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervEigenSIMD<Vec4d, 4, 4>;
-        computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodEigenSIMD<Vec4d, 4, 4>;
-        computeLikelihoodFromBufferPointer = &PhyloTree::computeLikelihoodFromBufferEigenSIMD<Vec4d, 4, 4>;
+        computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchNewSIMD<Vec4d, NORM_LH, 4>;
+        computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervNewSIMD<Vec4d, NORM_LH, 4>;
+        computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodNewSIMD<Vec4d, NORM_LH, 4>;
+        computeLikelihoodFromBufferPointer = &PhyloTree::computeLikelihoodFromBufferNewSIMD<Vec4d, NORM_LH, 4>;
 		break;
 	case 20:
         computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchEigenSIMD<Vec4d, 4, 20>;
@@ -70,14 +81,19 @@ void PhyloTree::setLikelihoodKernelAVX() {
         computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodEigenSIMD<Vec4d, 4, 20>;
         computeLikelihoodFromBufferPointer = &PhyloTree::computeLikelihoodFromBufferEigenSIMD<Vec4d, 4, 20>;
 		break;
-	case 64:
-        computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchEigenSIMD<Vec4d, 4, 64>;
-        computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervEigenSIMD<Vec4d, 4, 64>;
-        computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodEigenSIMD<Vec4d, 4, 64>;
-        computeLikelihoodFromBufferPointer = &PhyloTree::computeLikelihoodFromBufferEigenSIMD<Vec4d, 4, 64>;
-		break;
+//	case 64:
+//        computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchEigenSIMD<Vec4d, 4, 64>;
+//        computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervEigenSIMD<Vec4d, 4, 64>;
+//        computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodEigenSIMD<Vec4d, 4, 64>;
+//        computeLikelihoodFromBufferPointer = &PhyloTree::computeLikelihoodFromBufferEigenSIMD<Vec4d, 4, 64>;
+//		break;
 	default:
-		assert(0);
+        computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchSIMD<Vec4d, NORM_LH>;
+        computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervSIMD<Vec4d, NORM_LH>;
+        computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodSIMD<Vec4d, NORM_LH>;
+        computeLikelihoodFromBufferPointer = &PhyloTree::computeLikelihoodFromBufferSIMD<Vec4d, NORM_LH>;
+		break;
+
 		break;
 	}
 }

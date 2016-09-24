@@ -27,8 +27,8 @@
 #include <numeric>
 #include "pll/pllInternal.h"
 #include "pllnni.h"
-#include "vectorclass/vectorclass.h"
-#include "vectorclass/vectormath_common.h"
+//#include "vectorclass/vectorclass.h"
+//#include "vectorclass/vectormath_common.h"
 
 
 Params *globalParam;
