@@ -238,4 +238,22 @@ static inline Vec1d nmul_add(Vec1d const & a, Vec1d const & b, Vec1d const & c) 
     return c - a * b;
 }
 
+
+/*****************************************************************************
+*
+*          Horizontal Boolean functions
+*
+*****************************************************************************/
+
+// horizontal_and. Returns true if all bits are 1
+static inline bool horizontal_and (Vec1db const & a) {
+    return a;
+}
+
+// horizontal_or. Returns true if at least one bit is 1
+static inline bool horizontal_or (Vec1db const & a) {
+    return a;
+}
+
+
 #endif //VECTORF64_H

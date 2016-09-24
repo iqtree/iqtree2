@@ -116,12 +116,12 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk) {
     
     if (sse == LK_EIGEN) {
         switch (aln->num_states) {
-        case 4:
-            computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchNewSIMD<Vec1d, NORM_LH, 4>;
-            computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervNewSIMD<Vec1d, NORM_LH, 4>;
-            computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodNewSIMD<Vec1d, NORM_LH, 4>;
-            computeLikelihoodFromBufferPointer = &PhyloTree::computeLikelihoodFromBufferNewSIMD<Vec1d, NORM_LH, 4>;
-            break;
+//        case 4:
+//            computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchNewSIMD<Vec1d, NORM_LH, 4>;
+//            computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervNewSIMD<Vec1d, NORM_LH, 4>;
+//            computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodNewSIMD<Vec1d, NORM_LH, 4>;
+//            computeLikelihoodFromBufferPointer = &PhyloTree::computeLikelihoodFromBufferNewSIMD<Vec1d, NORM_LH, 4>;
+//            break;
         default:
             computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchEigen;
             computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervEigen;
