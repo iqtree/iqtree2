@@ -280,8 +280,10 @@ void PhyloTree::computePartialLikelihoodSIMD(PhyloNeighbor *dad_branch, PhyloNod
                         else
                             child_lh = partial_lh_leaf + block*aln->STATE_UNKNOWN;
                         double *this_vec_tip = vec_tip+i;
-                        for (c = 0; c < block; c++)
-                            this_vec_tip[c*VectorClass::size()] = child_lh[c];
+                        for (c = 0; c < block; c++) {
+                            *this_vec_tip = child_lh[c];
+                            this_vec_tip += VectorClass::size();
+                        }
                     }
                     VectorClass *vtip = (VectorClass*)vec_tip;
                     for (c = 0; c < block; c++) {
@@ -418,8 +420,10 @@ void PhyloTree::computePartialLikelihoodSIMD(PhyloNeighbor *dad_branch, PhyloNod
                 double *this_vec_left = vec_left+x;
                 double *this_vec_right = vec_right+x;
                 for (i = 0; i < block; i++) {
-                    this_vec_left[i*VectorClass::size()] = tip_left[i];
-                    this_vec_right[i*VectorClass::size()] = tip_right[i];
+                    *this_vec_left = tip_left[i];
+                    *this_vec_right = tip_right[i];
+                    this_vec_left += VectorClass::size();
+                    this_vec_right += VectorClass::size();
                 }
             }
 
@@ -484,8 +488,10 @@ void PhyloTree::computePartialLikelihoodSIMD(PhyloNeighbor *dad_branch, PhyloNod
                     tip = partial_lh_left + block*aln->STATE_UNKNOWN;
                 }
                 double *this_vec_left = vec_left+x;
-                for (i = 0; i < block; i++)
-                    this_vec_left[i*VectorClass::size()] = tip[i];
+                for (i = 0; i < block; i++) {
+                    *this_vec_left = tip[i];
+                    this_vec_left += VectorClass::size();
+                }
             }
 
             double *eright_ptr = eright;
@@ -749,8 +755,10 @@ void PhyloTree::computeLikelihoodDervSIMD(PhyloNeighbor *dad_branch, PhyloNode *
                     else
                         this_tip_partial_lh = tip_partial_lh + tip_block*aln->STATE_UNKNOWN;
                     double *this_vec_tip = vec_tip+i;
-                    for (c = 0; c < tip_block; c++)
-                        this_vec_tip[c*VectorClass::size()] = this_tip_partial_lh[c];
+                    for (c = 0; c < tip_block; c++) {
+                        *this_vec_tip = this_tip_partial_lh[c];
+                        this_vec_tip += VectorClass::size();
+                    }
 
                 }
                 for (c = 0; c < ncat_mix; c++) {
@@ -1089,8 +1097,10 @@ double PhyloTree::computeLikelihoodBranchSIMD(PhyloNeighbor *dad_branch, PhyloNo
                     lh_tip = partial_lh_node + block*aln->STATE_UNKNOWN;
 
                 double *this_vec_tip = vec_tip+i;
-                for (c = 0; c < block; c++)
-                    this_vec_tip[c*VectorClass::size()] = lh_tip[c];
+                for (c = 0; c < block; c++) {
+                    *this_vec_tip = lh_tip[c];
+                    this_vec_tip += VectorClass::size();
+                }
 
             }
 

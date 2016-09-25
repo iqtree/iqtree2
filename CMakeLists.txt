@@ -234,7 +234,7 @@ elseif (ICC)
 	endif()
 endif()
 
-SET(SSE_FLAGS "")
+SET(SSE_FLAGS "-D__SSE3")
 if (VCC)
 	set(SSE_FLAGS "/arch:SSE2 -D__SSE3__")
 elseif (GCC OR CLANG)
@@ -247,34 +247,54 @@ elseif (ICC)
 	endif()
 endif()
 
+SET(FMA_FLAGS "-D__AVX")
+if (VCC) 
+	set(FMA_FLAGS "${FMA_FLAGS} /arch:AVX2")
+elseif (CLANG)
+	set(FMA_FLAGS "${FMA_FLAGS} -mavx -mfma")
+elseif (GCC)
+	set(FMA_FLAGS "${FMA_FLAGS} -mavx -fabi-version=0 -mfma")
+elseif (ICC) 
+	if (WIN32)
+		 set(FMA_FLAGS "${FMA_FLAGS} /arch:AVX /Qfma")
+	else()
+		 set(FMA_FLAGS "${FMA_FLAGS} -mavx -mfma")
+	endif()
+endif()
+
+SET(AVX512_FLAGS "-D__AVX")
+if (VCC)
+    message("AVX512 not available")
+	#set(AVX512_FLAGS "${AVX512_FLAGS} /arch:AVX2")
+elseif (CLANG)
+	set(AVX512_FLAGS "${AVX512_FLAGS} -mavx512f")
+elseif (GCC)
+	set(AVX512_FLAGS "${AVX512_FLAGS} -mavx512f")
+elseif (ICC) 
+	if (WIN32)
+		 set(AVX512_FLAGS "${AVX512_FLAGS} /arch:MIC-AVX512")
+	else()
+		 set(AVX512_FLAGS "${AVX512_FLAGS} -xMIC-AVX512")
+	endif()
+endif()
+
+
+# further flag to improve performance
+
 if (IQTREE_FLAGS MATCHES "fma") # AVX+FMA instruction set
  	message("Vectorization : AVX+FMA")
 	add_definitions(-D__SSE3 -D__AVX) # define both SSE3 and AVX directive
-	if (VCC)
-		# Visual C++ has no /mfma flag!, FMA is only included in AVX2 
-		set(COMBINED_FLAGS "${COMBINED_FLAGS} /arch:AVX2")
-	elseif (CLANG)
-		set(COMBINED_FLAGS "${COMBINED_FLAGS} -mavx -mfma")
-	elseif (GCC)
-		set(COMBINED_FLAGS "${COMBINED_FLAGS} -mavx -fabi-version=0 -mfma")
-	elseif (ICC) 
-		if (WIN32)
-			 set(COMBINED_FLAGS "${COMBINED_FLAGS} /arch:AVX /Qfma")
-		else()
-			 set(COMBINED_FLAGS "${COMBINED_FLAGS} -mavx -mfma")
-		endif()
-	endif()
-
-	SET(EXE_SUFFIX "${EXE_SUFFIX}-fma")
-
+    set(COMBINED_FLAGS "${COMBINED_FLAGS} ${FMA_FLAGS}")
+	#SET(EXE_SUFFIX "${EXE_SUFFIX}-fma")
 elseif (IQTREE_FLAGS MATCHES "avx") # AVX instruction set
  	message("Vectorization : AVX")
 	add_definitions(-D__SSE3 -D__AVX) # define both SSE3 and AVX directive
 	set(COMBINED_FLAGS "${COMBINED_FLAGS} ${AVX_FLAGS}")
-	SET(EXE_SUFFIX "${EXE_SUFFIX}-avx")
-else() #SSE intruction set
+	#SET(EXE_SUFFIX "${EXE_SUFFIX}-avx")
+elseif (NOT IQTREE_FLAGS MATCHES "nosse") #SSE intruction set
 	message("Vectorization : SSE3")
 	add_definitions(-D__SSE3)
+    set(COMBINED_FLAGS "${COMBINED_FLAGS} ${SSE_FLAGS}")
 endif()
 
 
@@ -360,6 +380,11 @@ add_library(kernelsse phylokernelsse.cpp)
 
 if (NOT BINARY32 AND NOT IQTREE_FLAGS MATCHES "novx")
 add_library(kernelavx phylotreeavx.cpp)
+add_library(kernelfma phylokernelfma.cpp)
+if (IQTREE_FLAGS MATCHES "512")
+    add_library(kernelavx512 phylokernelavx512.cpp)
+    add_definitions(-DINCLUDE_AVX512)
+endif()
 endif()
 
 add_executable(iqtree
@@ -446,6 +471,10 @@ if (NOT IQTREE_FLAGS MATCHES "avx" AND NOT IQTREE_FLAGS MATCHES "fma")
     set_target_properties(kernelsse pll PROPERTIES COMPILE_FLAGS "${SSE_FLAGS}")
 	if (NOT BINARY32 AND NOT IQTREE_FLAGS MATCHES "novx")
 		set_target_properties(kernelavx pllavx PROPERTIES COMPILE_FLAGS "${AVX_FLAGS}")
+		set_target_properties(kernelfma PROPERTIES COMPILE_FLAGS "${FMA_FLAGS}")
+        if (IQTREE_FLAGS MATCHES "512")
+            set_target_properties(kernelavx512 PROPERTIES COMPILE_FLAGS "${AVX512_FLAGS}")
+        endif()
 	endif()
 endif()  
 
@@ -490,7 +519,11 @@ endif()
 if (BINARY32 OR IQTREE_FLAGS MATCHES "novx")
     target_link_libraries(iqtree pll ncl lbfgsb whtest sprng vectorclass model gsl ${PLATFORM_LIB} ${STD_LIB} ${THREAD_LIB})	
 else()
-    target_link_libraries(iqtree pll pllavx ncl lbfgsb whtest sprng vectorclass model kernelsse kernelavx gsl ${PLATFORM_LIB} ${STD_LIB} ${THREAD_LIB})
+    target_link_libraries(iqtree pll pllavx ncl lbfgsb whtest sprng vectorclass model kernelsse kernelavx kernelfma gsl ${PLATFORM_LIB} ${STD_LIB} ${THREAD_LIB})
+    if (IQTREE_FLAGS MATCHES "512")
+        target_link_libraries(iqtree kernelavx512)
+    endif()
+
 endif()
 
 ##################################################################

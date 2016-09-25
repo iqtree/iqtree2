@@ -501,6 +501,10 @@ public:
     void setDotProductAVX() {}
 #else
     void setDotProductAVX();
+    void setDotProductFMA();
+#ifdef INCLUDE_AVX512
+    void setDotProductAVX512();
+#endif
 #endif
 
     void setDotProductSSE();
@@ -1537,6 +1541,10 @@ public:
     virtual void setLikelihoodKernelAVX() {}
 #else
     virtual void setLikelihoodKernelAVX();
+    virtual void setLikelihoodKernelFMA();
+#ifdef INCLUDE_AVX512
+    virtual void setLikelihoodKernelAVX512();
+#endif
 #endif
     virtual void setLikelihoodKernelSSE();
     

@@ -803,7 +803,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.aBayes_test = false;
     params.localbp_replicates = 0;
     params.SSE = LK_EIGEN_SSE;
-    params.lk_no_avx = false;
+    params.lk_no_avx = 0;
     params.lk_safe_scaling = false;
     params.print_site_lh = WSL_NONE;
     params.print_site_prob = WSL_NONE;
@@ -1896,9 +1896,14 @@ void parseArg(int argc, char *argv[], Params &params) {
 				continue;
 			}
 			if (strcmp(argv[cnt], "-noavx") == 0) {
-				params.lk_no_avx = true;
+				params.lk_no_avx = 1;
 				continue;
 			}
+			if (strcmp(argv[cnt], "-nofma") == 0) {
+				params.lk_no_avx = 2;
+				continue;
+			}
+
 			if (strcmp(argv[cnt], "-safe") == 0) {
 				params.lk_safe_scaling = true;
 				continue;

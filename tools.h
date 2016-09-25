@@ -1388,7 +1388,7 @@ public:
     LikelihoodKernel SSE;
 
     /** TRUE to not use AVX even available in CPU, default: FALSE */
-    bool lk_no_avx;
+    int lk_no_avx;
 
     /** TRUE for safe numerical scaling (per category; used for large trees), default: FALSE */
     bool lk_safe_scaling;
