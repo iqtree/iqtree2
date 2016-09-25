@@ -74,7 +74,8 @@ void PhyloTree::computePartialLikelihoodSIMD(PhyloNeighbor *dad_branch, PhyloNod
     size_t i, x;
     size_t block = nstates * ncat_mix;
     size_t tip_block = nstates * model->getNMixtures();
-    size_t scale_size = SAFE_NUMERIC ? nptn * ncat_mix : nptn;
+    size_t max_nptn = get_safe_upper_limit(nptn);
+    size_t scale_size = SAFE_NUMERIC ? max_nptn * ncat_mix : max_nptn;
     
 	double *evec = model->getEigenvectors();
 	double *inv_evec = model->getInverseEigenvectors();
@@ -122,55 +123,111 @@ void PhyloTree::computePartialLikelihoodSIMD(PhyloNeighbor *dad_branch, PhyloNod
     double *echild = echildren;
     double *partial_lh_leaf = partial_lh_leaves;
 
-    FOR_NEIGHBOR_IT(node, dad, it) {
-        double expchild[nstates];
-        PhyloNeighbor *child = (PhyloNeighbor*)*it;
-        // precompute information buffer
-        double *echild_ptr = echild;
-        for (c = 0; c < ncat_mix; c++) {
-            double len_child = site_rate->getRate(c%ncat) * child->length;
-            double *eval_ptr = eval + mix_addr_nstates[c];
-            double *evec_ptr = evec + mix_addr[c];
-            for (i = 0; i < nstates; i++) {
-                expchild[i] = exp(eval_ptr[i]*len_child);
-            }
-            for (x = 0; x < nstates; x++) {
-                for (i = 0; i < nstates; i++) {
-                    echild_ptr[i] = evec_ptr[x*nstates+i] * expchild[i];
+    if (nstates % VectorClass::size() == 0) {
+        // vectorized version
+        VectorClass *expchild = (VectorClass*)aligned_alloc<double>(nstates);
+        FOR_NEIGHBOR_IT(node, dad, it) {
+            PhyloNeighbor *child = (PhyloNeighbor*)*it;
+            VectorClass *echild_ptr = (VectorClass*)echild;
+            // precompute information buffer
+            for (c = 0; c < ncat_mix; c++) {
+                VectorClass len_child = site_rate->getRate(c%ncat) * child->length;
+                double *eval_ptr = eval + mix_addr_nstates[c];
+                double *evec_ptr = evec + mix_addr[c];
+                for (i = 0; i < nstates/VectorClass::size(); i++) {
+                    // eval is not aligned!
+                    expchild[i] = exp(VectorClass().load_a(&eval_ptr[i*VectorClass::size()]) * len_child);
                 }
-                echild_ptr += nstates;
-            }
-        }
-
-        // pre compute information for tip
-        if (child->node->isLeaf()) {
-            vector<int>::iterator it;
-            for (it = aln->seq_states[child->node->id].begin(); it != aln->seq_states[child->node->id].end(); it++) {
-                int state = (*it);
-                double *this_partial_lh_leaf = partial_lh_leaf + state*block;
-                double *echild_ptr = echild;
-                for (c = 0; c < ncat_mix; c++) {
-                    double *this_tip_partial_lh = tip_partial_lh + state*tip_block + mix_addr_nstates[c];
-                    for (x = 0; x < nstates; x++) {
-                        double vchild = 0.0;
-                        for (i = 0; i < nstates; i++) {
-                            vchild += echild_ptr[i] * this_tip_partial_lh[i];
-                        }
-                        this_partial_lh_leaf[x] = vchild;
-                        echild_ptr += nstates;
+                for (x = 0; x < nstates; x++) {
+                    for (i = 0; i < nstates/VectorClass::size(); i++) {
+                        // evec is not be aligned!
+                        echild_ptr[i] = (VectorClass().load_a(&evec_ptr[x*nstates+i*VectorClass::size()]) * expchild[i]);
                     }
-                    this_partial_lh_leaf += nstates;
+                    echild_ptr += nstates/VectorClass::size();
                 }
             }
-            size_t addr = aln->STATE_UNKNOWN * block;
-            for (x = 0; x < block; x++) {
-                partial_lh_leaf[addr+x] = 1.0;
+            // pre compute information for tip
+            if (child->node->isLeaf()) {
+                vector<int>::iterator it;
+
+                for (it = aln->seq_states[child->node->id].begin(); it != aln->seq_states[child->node->id].end(); it++) {
+                    int state = (*it);
+                    double *this_partial_lh_leaf = partial_lh_leaf + state*block;
+                    VectorClass *echild_ptr = (VectorClass*)echild;
+                    for (c = 0; c < ncat_mix; c++) {
+                        VectorClass *this_tip_partial_lh = (VectorClass*)(tip_partial_lh + state*tip_block + mix_addr_nstates[c]);
+                        for (x = 0; x < nstates; x++) {
+                            VectorClass vchild = echild_ptr[0] * this_tip_partial_lh[0];
+                            for (i = 1; i < nstates/VectorClass::size(); i++) {
+                                vchild = mul_add(echild_ptr[i], this_tip_partial_lh[i], vchild);
+                            }
+                            this_partial_lh_leaf[x] = horizontal_add(vchild);
+                            echild_ptr += nstates/VectorClass::size();
+                        }
+                        this_partial_lh_leaf += nstates;
+                    }
+                }
+                size_t addr = aln->STATE_UNKNOWN * block;
+                for (x = 0; x < block; x++) {
+                    partial_lh_leaf[addr+x] = 1.0;
+                }
+                partial_lh_leaf += (aln->STATE_UNKNOWN+1)*block;
             }
-            partial_lh_leaf += (aln->STATE_UNKNOWN+1)*block;
+            echild += block*nstates;
         }
-        echild += block*nstates;
+        aligned_free(expchild);
+    } else {
+        // non-vectorized version
+        double expchild[nstates];
+        FOR_NEIGHBOR_IT(node, dad, it) {
+            PhyloNeighbor *child = (PhyloNeighbor*)*it;
+            // precompute information buffer
+            double *echild_ptr = echild;
+            for (c = 0; c < ncat_mix; c++) {
+                double len_child = site_rate->getRate(c%ncat) * child->length;
+                double *eval_ptr = eval + mix_addr_nstates[c];
+                double *evec_ptr = evec + mix_addr[c];
+                for (i = 0; i < nstates; i++) {
+                    expchild[i] = exp(eval_ptr[i]*len_child);
+                }
+                for (x = 0; x < nstates; x++) {
+                    for (i = 0; i < nstates; i++) {
+                        echild_ptr[i] = evec_ptr[x*nstates+i] * expchild[i];
+                    }
+                    echild_ptr += nstates;
+                }
+            }
+            // pre compute information for tip
+            if (child->node->isLeaf()) {
+                vector<int>::iterator it;
+                for (it = aln->seq_states[child->node->id].begin(); it != aln->seq_states[child->node->id].end(); it++) {
+                    int state = (*it);
+                    double *this_partial_lh_leaf = partial_lh_leaf + state*block;
+                    double *echild_ptr = echild;
+                    for (c = 0; c < ncat_mix; c++) {
+                        double *this_tip_partial_lh = tip_partial_lh + state*tip_block + mix_addr_nstates[c];
+                        for (x = 0; x < nstates; x++) {
+                            double vchild = echild_ptr[0] * this_tip_partial_lh[0];
+                            for (i = 1; i < nstates; i++) {
+                                vchild += echild_ptr[i] * this_tip_partial_lh[i];
+                            }
+                            this_partial_lh_leaf[x] = vchild;
+                            echild_ptr += nstates;
+                        }
+                        this_partial_lh_leaf += nstates;
+                    }
+                }
+                size_t addr = aln->STATE_UNKNOWN * block;
+                for (x = 0; x < block; x++) {
+                    partial_lh_leaf[addr+x] = 1.0;
+                }
+                partial_lh_leaf += (aln->STATE_UNKNOWN+1)*block;
+            }
+            echild += block*nstates;
+        }
     }
-    
+
+
     double sum_scale = 0.0;
 
     double *eleft = echildren, *eright = echildren + block*nstates;
@@ -652,6 +709,8 @@ void PhyloTree::computeLikelihoodDervSIMD(PhyloNeighbor *dad_branch, PhyloNode *
     size_t c, i;
     size_t orig_nptn = aln->size();
     size_t nptn = aln->size()+model_factory->unobserved_ptns.size();
+    size_t maxptn = ((nptn+VectorClass::size()-1)/VectorClass::size())*VectorClass::size();
+    maxptn = max(maxptn, aln->size()+((model_factory->unobserved_ptns.size()+VectorClass::size()-1)/VectorClass::size())*VectorClass::size());
 
     size_t mix_addr_nstates[ncat_mix], mix_addr[ncat_mix];
     size_t denom = (model_factory->fused_mix_rate) ? 1 : ncat;
@@ -667,6 +726,7 @@ void PhyloTree::computeLikelihoodDervSIMD(PhyloNeighbor *dad_branch, PhyloNode *
 	assert(theta_all);
 	if (!theta_computed) {
 		// precompute theta for fast branch length optimization
+        unsigned int scale_all = 0;
 
 	    if (dad->isLeaf()) {
 	    	// special treatment for TIP-INTERNAL NODE case
@@ -674,11 +734,10 @@ void PhyloTree::computeLikelihoodDervSIMD(PhyloNeighbor *dad_branch, PhyloNode *
             double *vec_tip = aligned_alloc<double>(tip_block*VectorClass::size());
 
 #ifdef _OPENMP
-#pragma omp parallel for private(ptn, i, c) schedule(static)
+#pragma omp parallel for private(ptn, i, c) schedule(static) reduction(+: scale_all)
 #endif
 	    	for (ptn = 0; ptn < nptn; ptn+=VectorClass::size()) {
 				VectorClass *partial_lh_dad = (VectorClass*)(dad_branch->partial_lh + ptn*block);
-//                UBYTE *scale_dad = dad_branch->scale_num+ptn*ncat_mix;
 				VectorClass *theta = (VectorClass*)(theta_all + ptn*block);
                 //load tip vector
                 for (i = 0; i < VectorClass::size(); i++) {
@@ -694,24 +753,40 @@ void PhyloTree::computeLikelihoodDervSIMD(PhyloNeighbor *dad_branch, PhyloNode *
                         this_vec_tip[c*VectorClass::size()] = this_tip_partial_lh[c];
 
                 }
-//                UBYTE min_scale = scale_dad[0];
-//                for (c = 1; c < ncat_mix; c++)
-//                    min_scale = min(min_scale, scale_dad[c]);
                 for (c = 0; c < ncat_mix; c++) {
                     VectorClass *lh_tip = (VectorClass*)(vec_tip + mix_addr_nstates[c]*VectorClass::size());
-//                    if (scale_dad[c] == min_scale) {
-                        for (i = 0; i < nstates; i++) {
-                            theta[i] = lh_tip[i] * partial_lh_dad[i];
-                        }
-//                    } else if (scale_dad[c] == min_scale+1) {
-//                        for (i = 0; i < nstates; i++) {
-//                            theta[i] = lh_tip[i] * partial_lh_dad[i] * SCALING_THRESHOLD;
-//                        }
-//                    } else {
-//                        memset(theta, 0, sizeof(double)*nstates);
-//                    }
+                    for (i = 0; i < nstates; i++) {
+                        theta[i] = lh_tip[i] * partial_lh_dad[i];
+                    }
                     partial_lh_dad += nstates;
                     theta += nstates;
+                }
+                if (SAFE_NUMERIC) {
+                    // numerical scaling per category
+                    UBYTE *scale_dad;
+                    UBYTE min_scale;
+                    for (i = 0; i < VectorClass::size(); i++) {
+                        scale_dad = dad_branch->scale_num+(ptn+i)*ncat_mix;
+                        min_scale = scale_dad[0];
+                        for (c = 1; c < ncat_mix; c++)
+                            min_scale = min(min_scale, scale_dad[c]);
+
+                        scale_all += min_scale;
+
+                        for (c = 0; c < ncat_mix; c++) {
+                            if (scale_dad[c] == min_scale+1) {
+                                double *this_theta = &theta_all[ptn*block + c*nstates*VectorClass::size() + i];
+                                for (size_t x = 0; x < nstates; x++) {
+                                    this_theta[x*VectorClass::size()] *= SCALING_THRESHOLD;
+                                }
+                            } else if (scale_dad[c] > min_scale+1) {
+                                double *this_theta = &theta_all[ptn*block + c*nstates*VectorClass::size() + i];
+                                for (size_t x = 0; x < nstates; x++) {
+                                    this_theta[x*VectorClass::size()] = 0.0;
+                                }
+                            }
+                        }
+                    }
                 }
 
 			}
@@ -721,41 +796,85 @@ void PhyloTree::computeLikelihoodDervSIMD(PhyloNeighbor *dad_branch, PhyloNode *
 
 //	    	size_t all_entries = nptn*block;
 #ifdef _OPENMP
-#pragma omp parallel for private(ptn, i, c) schedule(static)
+#pragma omp parallel for private(ptn, i, c) schedule(static) reduction(+: scale_all)
 #endif
 	    	for (ptn = 0; ptn < nptn; ptn+=VectorClass::size()) {
 				VectorClass *theta = (VectorClass*)(theta_all + ptn*block);
 			    VectorClass *partial_lh_node = (VectorClass*)(node_branch->partial_lh + ptn*block);
 			    VectorClass *partial_lh_dad = (VectorClass*)(dad_branch->partial_lh + ptn*block);
+                for (i = 0; i < block; i++)
+                    theta[i] = partial_lh_node[i] * partial_lh_dad[i];
 
-//                size_t ptn_ncat = ptn*ncat_mix; 
-//                UBYTE *scale_dad = dad_branch->scale_num + ptn_ncat;
-//                UBYTE *scale_node = node_branch->scale_num + ptn_ncat;
-//                UBYTE sum_scale[ncat_mix];
-//                UBYTE min_scale = sum_scale[0] = scale_dad[0] + scale_node[0];
-//                for (c = 1; c < ncat_mix; c++) {
-//                    sum_scale[c] = scale_dad[c] + scale_node[c];
-//                    min_scale = min(min_scale, sum_scale[c]);
-//                }
-                for (c = 0; c < ncat_mix; c++) {
-//                    if (sum_scale[c] == min_scale) {
-                        for (i = 0; i < nstates; i++) {
-                            theta[i] = partial_lh_node[i] * partial_lh_dad[i];
+                if (SAFE_NUMERIC) {
+                    // numerical scaling per category
+                    UBYTE min_scale;
+                    UBYTE sum_scale[ncat_mix];
+                    size_t ptn_ncat = ptn*ncat_mix; 
+                    UBYTE *scale_dad = dad_branch->scale_num + ptn_ncat;
+                    UBYTE *scale_node = node_branch->scale_num + ptn_ncat;
+
+                    for (i = 0; i < VectorClass::size(); i++) {
+                        min_scale = sum_scale[0] = scale_dad[0] + scale_node[0];
+                        for (c = 1; c < ncat_mix; c++) {
+                            sum_scale[c] = scale_dad[c] + scale_node[c];
+                            min_scale = min(min_scale, sum_scale[c]);
                         }
-//                    } else if (sum_scale[c] == min_scale+1) {
-//                        for (i = 0; i < nstates; i++) {
-//                            theta[i] = partial_lh_node[i] * partial_lh_dad[i] * SCALING_THRESHOLD;
-//                        }
-//                    } else {
-//                        memset(theta, 0, sizeof(double)*nstates);
-//                    }
-                    theta += nstates;
-                    partial_lh_dad += nstates;
-                    partial_lh_node += nstates;
+                        scale_all += min_scale;
+                        for (c = 0; c < ncat_mix; c++) {
+                            if (sum_scale[c] == min_scale+1) {
+                                double *this_theta = &theta_all[ptn*block + c*nstates*VectorClass::size() + i];
+                                for (size_t x = 0; x < nstates; x++) {
+                                    this_theta[x*VectorClass::size()] *= SCALING_THRESHOLD;
+                                }
+                            } else if (sum_scale[c] > min_scale+1) {
+                                double *this_theta = &theta_all[ptn*block + c*nstates*VectorClass::size() + i];
+                                for (size_t x = 0; x < nstates; x++) {
+                                    this_theta[x*VectorClass::size()] = 0.0;
+                                }
+                            }
+                        }
+                        scale_dad += ncat_mix;
+                        scale_node += ncat_mix;
+                    }
                 }
+
+
+/*
+                if (SAFE_NUMERIC) {
+
+    //                size_t ptn_ncat = ptn*ncat_mix; 
+    //                UBYTE *scale_dad = dad_branch->scale_num + ptn_ncat;
+    //                UBYTE *scale_node = node_branch->scale_num + ptn_ncat;
+    //                UBYTE sum_scale[ncat_mix];
+    //                UBYTE min_scale = sum_scale[0] = scale_dad[0] + scale_node[0];
+    //                for (c = 1; c < ncat_mix; c++) {
+    //                    sum_scale[c] = scale_dad[c] + scale_node[c];
+    //                    min_scale = min(min_scale, sum_scale[c]);
+    //                }
+                    for (c = 0; c < ncat_mix; c++) {
+    //                    if (sum_scale[c] == min_scale) {
+                            for (i = 0; i < nstates; i++) {
+                                theta[i] = partial_lh_node[i] * partial_lh_dad[i];
+                            }
+    //                    } else if (sum_scale[c] == min_scale+1) {
+    //                        for (i = 0; i < nstates; i++) {
+    //                            theta[i] = partial_lh_node[i] * partial_lh_dad[i] * SCALING_THRESHOLD;
+    //                        }
+    //                    } else {
+    //                        memset(theta, 0, sizeof(double)*nstates);
+    //                    }
+                        theta += nstates;
+                        partial_lh_dad += nstates;
+                        partial_lh_node += nstates;
+                    }
+                }
+                */
 			}
 	    }
+        // NO NEED TO copy dummy values!
+
 		theta_computed = true;
+        buffer_scale_all = scale_all*LOG_SCALING_THRESHOLD;
 	}
 
     double *val0 = aligned_alloc<double>(block);
@@ -914,19 +1033,37 @@ double PhyloTree::computeLikelihoodBranchSIMD(PhyloNeighbor *dad_branch, PhyloNo
     	IntVector states_dad = aln->seq_states[dad->id];
     	states_dad.push_back(aln->STATE_UNKNOWN);
     	// precompute information from one tip
-    	for (IntVector::iterator it = states_dad.begin(); it != states_dad.end(); it++) {
-    		double *lh_node = partial_lh_node +(*it)*block;
-    		double *val_tmp = val;
-            double *this_tip_partial_lh = tip_partial_lh + (*it)*tip_block;
-			for (c = 0; c < ncat_mix; c++) {
-                double *lh_tip = this_tip_partial_lh + mix_addr_nstates[c];
-				for (i = 0; i < nstates; i++) {
-					  lh_node[i] = val_tmp[i] * lh_tip[i];
-				}
-				lh_node += nstates;
-				val_tmp += nstates;
-			}
-    	}
+        if (nstates % VectorClass::size() == 0) {
+            // vectorized version
+            for (IntVector::iterator it = states_dad.begin(); it != states_dad.end(); it++) {
+                double *lh_node = partial_lh_node + (*it)*block;
+                double *lh_tip = tip_partial_lh + (*it)*tip_block;
+                double *vc_val_tmp = val;
+                for (c = 0; c < ncat_mix; c++) {
+                    double *this_lh_tip = lh_tip + mix_addr_nstates[c];
+                    for (i = 0; i < nstates; i+=VectorClass::size()) {
+                        (VectorClass().load_a(&vc_val_tmp[i]) * VectorClass().load_a(&this_lh_tip[i])).store_a(&lh_node[i]);
+                    }
+                    lh_node += nstates;
+                    vc_val_tmp += nstates;
+                }
+            }
+        } else {
+            // non-vectorized version
+            for (IntVector::iterator it = states_dad.begin(); it != states_dad.end(); it++) {
+                double *lh_node = partial_lh_node +(*it)*block;
+                double *val_tmp = val;
+                double *this_tip_partial_lh = tip_partial_lh + (*it)*tip_block;
+                for (c = 0; c < ncat_mix; c++) {
+                    double *lh_tip = this_tip_partial_lh + mix_addr_nstates[c];
+                    for (i = 0; i < nstates; i++) {
+                          lh_node[i] = val_tmp[i] * lh_tip[i];
+                    }
+                    lh_node += nstates;
+                    val_tmp += nstates;
+                }
+            }
+        }
 
         double *vec_tip = aligned_alloc<double>(block*VectorClass::size());
 
@@ -956,48 +1093,70 @@ double PhyloTree::computeLikelihoodBranchSIMD(PhyloNeighbor *dad_branch, PhyloNo
                     this_vec_tip[c*VectorClass::size()] = lh_tip[c];
 
             }
-            UBYTE *scale_dad;
+
+            VectorClass vc_min_scale = 0.0;
+
             if (SAFE_NUMERIC) {
-                // determine the min scaling
-                scale_dad = dad_branch->scale_num + ptn*ncat_mix;
-                UBYTE min_scale = scale_dad[0];
-                for (c = 1; c < ncat_mix; c++) 
-                    min_scale = min(min_scale, scale_dad[c]);
+                // numerical scaling per category
+                UBYTE *scale_dad;
+                UBYTE min_scale;
+                for (i = 0; i < VectorClass::size(); i++) {
+                    scale_dad = dad_branch->scale_num+(ptn+i)*ncat_mix;
+                    min_scale = scale_dad[0];
+                    for (c = 1; c < ncat_mix; c++)
+                        min_scale = min(min_scale, scale_dad[c]);
+
+                    vc_min_scale.insert(i, min_scale);
+
+                    for (c = 0; c < ncat_mix; c++) {
+                        if (scale_dad[c] == min_scale+1) {
+                            double *this_tip = &vec_tip[c*nstates*VectorClass::size() + i];
+                            for (size_t x = 0; x < nstates; x++) {
+                                this_tip[x*VectorClass::size()] *= SCALING_THRESHOLD;
+                            }
+                        } else if (scale_dad[c] > min_scale+1) {
+                            double *this_tip = &vec_tip[c*nstates*VectorClass::size() + i];
+                            for (size_t x = 0; x < nstates; x++) {
+                                this_tip[x*VectorClass::size()] = 0.0;
+                            }
+                        }
+                    }
+                }
+                vc_min_scale *= LOG_SCALING_THRESHOLD;
             }
 
             for (c = 0; c < ncat_mix; c++) {
-//                if (scale_dad[c] <= min_scale+1) {
-                    // only compute for least scale category
-                    *lh_cat = (lh_node[0] * partial_lh_dad[0]);
-                    for (i = 1; i < nstates; i++) {
-                        *lh_cat = mul_add(lh_node[i], partial_lh_dad[i], *lh_cat);
-                    }
-//                    if (scale_dad[c] != min_scale)
-//                        *lh_cat *= SCALING_THRESHOLD;
-                    lh_ptn += *lh_cat;
-//                }
+                *lh_cat = (lh_node[0] * partial_lh_dad[0]);
+                for (i = 1; i < nstates; i++) {
+                    *lh_cat = mul_add(lh_node[i], partial_lh_dad[i], *lh_cat);
+                }
+                lh_ptn += *lh_cat;
                 lh_node += nstates;
                 partial_lh_dad += nstates;
                 lh_cat++;
             }
-//			assert(lh_ptn > -1e-10);
+
 			if (ptn < orig_nptn) {
-				//lh_ptn = log(abs(lh_ptn)) + LOG_SCALING_THRESHOLD*min_scale;
-                lh_ptn = log(abs(lh_ptn));
+				lh_ptn = log(abs(lh_ptn)) + vc_min_scale;
 				lh_ptn.store_a(&_pattern_lh[ptn]);
 				vc_tree_lh = mul_add(lh_ptn, VectorClass().load_a(&ptn_freq[ptn]), vc_tree_lh);
+                // TODO: case that ASC overlap
 			} else {
                 // bugfix 2016-01-21, prob_const can be rescaled
-//                if (min_scale >= 1)
-//                    lh_ptn *= SCALING_THRESHOLD;
-//				_pattern_lh[ptn] = lh_ptn;
-				vc_prob_const += lh_ptn;
+                if (horizontal_or(vc_min_scale != 0.0)) {
+                    // some entries are rescaled
+                    for (i = 0; i < VectorClass::size(); i++)
+                        if (vc_min_scale[i] != 0.0)
+                            lh_ptn.insert(i, lh_ptn[i] * SCALING_THRESHOLD);
+                }
+                vc_prob_const += lh_ptn;
 			}
 		}
         aligned_free(vec_tip);
 		aligned_free(partial_lh_node);
     } else {
     	// both dad and node are internal nodes
+
 #ifdef _OPENMP
 #pragma omp parallel for reduction(+: tree_lh, prob_const) private(ptn, i, c) schedule(static)
 #endif
@@ -1008,59 +1167,78 @@ double PhyloTree::computeLikelihoodBranchSIMD(PhyloNeighbor *dad_branch, PhyloNo
             VectorClass *partial_lh_dad = (VectorClass*)(dad_branch->partial_lh + ptn*block);
             VectorClass *partial_lh_node = (VectorClass*)(node_branch->partial_lh + ptn*block);
             double *val_tmp = val;
-//            UBYTE *scale_dad = dad_branch->scale_num + ptn*ncat_mix;
-//            UBYTE *scale_node = node_branch->scale_num + ptn*ncat_mix;
-//            UBYTE sum_scale[ncat_mix*VectorClass::size()];
-//            UBYTE min_scale[VectorClass::size()];
-//            VectorClass vc_min_scale;
-//
-//            for (i = 0; i < VectorClass::size(); i++) {
-//                min_scale[i] = sum_scale[i] = scale_dad[i] + scale_node[i];
-//                for (c = 1; c < ncat_mix; c++) {
-//                    sum_scale[c*VectorClass::size()+i] = scale_dad[c*VectorClass::size()+i] + scale_node[c*VectorClass::size()+i];
-//                    if (min_scale[i] > sum_scale[c*VectorClass::size()+i])
-//                        min_scale[i] = sum_scale[c*VectorClass::size()+i];
-//                }
-//            }
-            for (c = 0; c < ncat_mix; c++) {
-                VectorClass value = val_tmp[0] * partial_lh_node[0] * partial_lh_dad[0];
-                for (i = 1; i < nstates; i++) {
-                    value =  mul_add(val_tmp[i] * partial_lh_node[i], partial_lh_dad[i], value);
-                }
-                *lh_cat = value;
-                lh_ptn += value;
-                /*
-                // TODO: scaling not working yet
-                for (i = 0; i < VectorClass::size(); i++)
-                    if (sum_scale[c*VectorClass::size()+i] == min_scale[i]) {
-                        lh_cat[i] = value[i];
-                        lh_ptn += value;
-                    } else if (sum_scale[c*VectorClass::size()+i] == min_scale[i]+1) {
-                        // only compute for least scale category
-                        value *= VectorClass(SCALING_THRESHOLD);
-                        *lh_cat = value;
-                        lh_ptn += value;
+
+            VectorClass vc_min_scale = 0.0;
+
+            if (SAFE_NUMERIC) {
+
+                for (c = 0; c < ncat_mix; c++) {
+                    VectorClass value = val_tmp[0] * partial_lh_node[0] * partial_lh_dad[0];
+                    for (i = 1; i < nstates; i++) {
+                        value =  mul_add(val_tmp[i] * partial_lh_node[i], partial_lh_dad[i], value);
                     }
-                */
-                partial_lh_node += nstates;
-                partial_lh_dad += nstates;
-                val_tmp += nstates;
-                lh_cat ++;
+                    lh_cat[c] = value;
+                    partial_lh_node += nstates;
+                    partial_lh_dad += nstates;
+                    val_tmp += nstates;
+                }
+
+                UBYTE *scale_dad = dad_branch->scale_num + ptn*ncat_mix;
+                UBYTE *scale_node = node_branch->scale_num + ptn*ncat_mix;
+                UBYTE sum_scale[ncat_mix];
+                UBYTE min_scale;
+
+                for (i = 0; i < VectorClass::size(); i++) {
+                    min_scale = sum_scale[0] = scale_dad[0] + scale_node[0];
+                    for (c = 1; c < ncat_mix; c++) {
+                        sum_scale[c] = scale_dad[c] + scale_node[c];
+                        min_scale = min(min_scale, sum_scale[c]);
+                    }
+                    vc_min_scale.insert(i, min_scale);
+                    double *this_lh_cat = &_pattern_lh_cat[ptn*ncat_mix + i];
+                    for (c = 0; c < ncat_mix; c++) {
+                        if (sum_scale[c] == min_scale+1) {
+                            this_lh_cat[c*VectorClass::size()] *= SCALING_THRESHOLD;
+                        } else if (sum_scale[c] > min_scale+1) {
+                            // reset if category is scaled a lot
+                            this_lh_cat[c*VectorClass::size()] = 0.0;
+                        }
+                    }
+                    scale_dad += ncat_mix;
+                    scale_node += ncat_mix;
+                }
+                for (c = 0; c < ncat_mix; c++)
+                    lh_ptn += lh_cat[c];
+                vc_min_scale *= LOG_SCALING_THRESHOLD;
+            } else {
+                // normal scaling
+                for (c = 0; c < ncat_mix; c++) {
+                    VectorClass value = val_tmp[0] * partial_lh_node[0] * partial_lh_dad[0];
+                    for (i = 1; i < nstates; i++) {
+                        value =  mul_add(val_tmp[i] * partial_lh_node[i], partial_lh_dad[i], value);
+                    }
+                    lh_cat[c] = value;
+                    lh_ptn += value;
+                    partial_lh_node += nstates;
+                    partial_lh_dad += nstates;
+                    val_tmp += nstates;
+                }
             }
 
-//			assert(lh_ptn > 0.0);
-            if (ptn < orig_nptn) {
-//				lh_ptn = log(abs(lh_ptn)) + LOG_SCALING_THRESHOLD*vc_min_scale;
-                lh_ptn = log(abs(lh_ptn));
+			if (ptn < orig_nptn) {
+				lh_ptn = log(abs(lh_ptn)) + vc_min_scale;
 				lh_ptn.store_a(&_pattern_lh[ptn]);
 				vc_tree_lh = mul_add(lh_ptn, VectorClass().load_a(&ptn_freq[ptn]), vc_tree_lh);
+                // TODO: case that ASC overlap
 			} else {
                 // bugfix 2016-01-21, prob_const can be rescaled
-                // TODO
-//                if (min_scale >= 1)
-//                    lh_ptn *= SCALING_THRESHOLD;
-//				_pattern_lh[ptn] = lh_ptn;
-				vc_prob_const += lh_ptn;
+                if (horizontal_or(vc_min_scale != 0.0)) {
+                    // some entries are rescaled
+                    for (i = 0; i < VectorClass::size(); i++)
+                        if (vc_min_scale[i] != 0.0)
+                            lh_ptn.insert(i, lh_ptn[i] * SCALING_THRESHOLD);
+                }
+                vc_prob_const += lh_ptn;
 			}
 		}
     }
@@ -1181,7 +1359,7 @@ double PhyloTree::computeLikelihoodFromBufferSIMD()
         }
     }
 
-    tree_lh += horizontal_add(vc_tree_lh);
+    tree_lh += horizontal_add(vc_tree_lh) + buffer_scale_all;
 
     if (!SAFE_NUMERIC && (isnan(tree_lh) || isinf(tree_lh)))
         outError("Numerical underflow (lh-from-buffer). Run again with the safe likelihood kernel via `-safe` option");

@@ -251,7 +251,7 @@ void PhyloTree::computeLikelihoodDerv(PhyloNeighbor *dad_branch, PhyloNode *dad,
 double PhyloTree::computeLikelihoodFromBuffer() {
 	assert(current_it && current_it_back);
 
-	if (computeLikelihoodFromBufferPointer)
+	if (computeLikelihoodFromBufferPointer && optimize_by_newton)
 		return (this->*computeLikelihoodFromBufferPointer)();
 	else
 		return (this->*computeLikelihoodBranchPointer)(current_it, (PhyloNode*)current_it_back->node);

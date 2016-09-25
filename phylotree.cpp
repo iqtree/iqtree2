@@ -1018,11 +1018,11 @@ size_t PhyloTree::getPartialLhBytes() {
 }
 
 size_t PhyloTree::getScaleNumBytes() {
-	return (aln->size()+aln->num_states) * sizeof(UBYTE) * site_rate->getNRate() * ((model_factory->fused_mix_rate)? 1 : model->getNMixtures());
+	return get_safe_upper_limit(aln->size()+aln->num_states) * sizeof(UBYTE) * site_rate->getNRate() * ((model_factory->fused_mix_rate)? 1 : model->getNMixtures());
 }
 
 UBYTE *PhyloTree::newScaleNum() {
-    return aligned_alloc<UBYTE>((aln->size()+aln->num_states)* site_rate->getNRate() * ((model_factory->fused_mix_rate)? 1 : model->getNMixtures()));
+    return aligned_alloc<UBYTE>(getScaleNumBytes()/sizeof(UBYTE));
 }
 
 Node *findFirstFarLeaf(Node *node, Node *dad = NULL) {

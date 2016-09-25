@@ -804,6 +804,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.localbp_replicates = 0;
     params.SSE = LK_EIGEN_SSE;
     params.lk_no_avx = false;
+    params.lk_safe_scaling = false;
     params.print_site_lh = WSL_NONE;
     params.print_site_prob = WSL_NONE;
     params.print_site_state_freq = WSF_NONE;
@@ -1898,6 +1899,11 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.lk_no_avx = true;
 				continue;
 			}
+			if (strcmp(argv[cnt], "-safe") == 0) {
+				params.lk_safe_scaling = true;
+				continue;
+			}
+
 			if (strcmp(argv[cnt], "-f") == 0) {
 				cnt++;
 				if (cnt >= argc)
