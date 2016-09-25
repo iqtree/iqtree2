@@ -1,11 +1,10 @@
 /*
 
     Abstract class for 64-bit floating point numbers
-    Based on vectorclass (VCL)
+    Based on vectorclass (VCL), mainly for templating with double
 
     @author: minh
     @date:   2016-09-24
-    
 
 
 */
@@ -15,7 +14,76 @@
 
 
 //typedef int64_t Vec1db;
-typedef bool Vec1db;
+//typedef bool Vec1db;
+
+
+/*****************************************************************************
+*
+*          Vec1db: Vector of 1 Booleans for use with Vec1d
+*
+*****************************************************************************/
+
+class Vec1db {
+public:
+    bool xmm; // Double vector
+    // Default constructor:
+    Vec1db() {
+    }
+    // Constructor to broadcast scalar value:
+    Vec1db(bool b) {
+        xmm = b;
+    }
+    // Assignment operator to broadcast scalar value:
+    Vec1db & operator = (bool b) {
+        *this = Vec1db(b);
+        return *this;
+    }
+private: // Prevent constructing from int, etc.
+    Vec1db(int b);
+    Vec1db & operator = (int x);
+public:
+    // Member function to change a single element in vector
+    // Note: This function is inefficient. Use load function if changing more than one element
+    Vec1db const & insert(uint32_t index, bool value) {
+        xmm = value;
+        return *this;
+    }
+    // Member function extract a single element from vector
+    bool extract(uint32_t index) const {
+        return xmm;
+    }
+    // Extract a single element. Operator [] can only read an element, not write.
+    bool operator [] (uint32_t index) const {
+        return extract(index);
+    }
+    static int size() {
+        return 1;
+    }
+};
+
+
+/*****************************************************************************
+*
+*          Operators for Vec1db
+*
+*****************************************************************************/
+
+// vector operator & : bitwise and
+static inline Vec1db operator & (Vec1db const & a, Vec1db const & b) {
+    return Vec1db(a.xmm && b.xmm);
+}
+static inline Vec1db operator && (Vec1db const & a, Vec1db const & b) {
+    return Vec1db(a.xmm && b.xmm);
+}
+
+// vector operator &= : bitwise and
+static inline Vec1db & operator &= (Vec1db & a, Vec1db const & b) {
+    a = a & b;
+    return a;
+}
+
+
+
 
 /*****************************************************************************
 *
@@ -51,6 +119,22 @@ public:
     // Member function to store into array, aligned by 8
     void store_a(double * p) const {
         *p = xmm;
+    }
+
+    // Member function to change a single element in vector
+    // Note: This function is inefficient. Use load function if changing more than one element
+    Vec1d const & insert(uint32_t index, double value) {
+        xmm = value;
+        return *this;
+    };
+    // Member function extract a single element from vector
+    double extract(uint32_t index) const {
+        return xmm;
+    }
+    // Extract a single element. Use store function if extracting more than one element.
+    // Operator [] can only read an element, not write.
+    double operator [] (uint32_t index) const {
+        return extract(index);
     }
 
     static int size() {
@@ -209,6 +293,17 @@ static inline double horizontal_add (Vec1d const & a) {
     return a.xmm;
 }
 
+// function max: a > b ? a : b
+static inline Vec1d max(Vec1d const & a, Vec1d const & b) {
+    return max(a.xmm,b.xmm);
+}
+
+// function min: a < b ? a : b
+static inline Vec1d min(Vec1d const & a, Vec1d const & b) {
+    return min(a.xmm,b.xmm);
+}
+
+
 // function abs: absolute value
 // Removes sign bit, even for -0.0f, -INF and -NAN
 static inline Vec1d abs(Vec1d const & a) {
@@ -247,13 +342,19 @@ static inline Vec1d nmul_add(Vec1d const & a, Vec1d const & b, Vec1d const & c) 
 
 // horizontal_and. Returns true if all bits are 1
 static inline bool horizontal_and (Vec1db const & a) {
-    return a;
+    return a.xmm;
 }
 
 // horizontal_or. Returns true if at least one bit is 1
 static inline bool horizontal_or (Vec1db const & a) {
-    return a;
+    return a.xmm;
 }
+
+// instances of exp_d template
+static inline Vec1d exp(Vec1d const & x) {
+    return Vec1d(exp(x.xmm));
+}
+
 
 
 #endif //VECTORF64_H

@@ -110,7 +110,7 @@ if (CMAKE_COMPILER_IS_GNUCXX)
 	message("Compiler      : GNU Compiler (gcc)")
 	set(GCC "TRUE")
 #	set(COMBINED_FLAGS "-Wall -Wno-unused-function -Wno-sign-compare -pedantic -D_GNU_SOURCE -fms-extensions -Wno-deprecated")
-#	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++98")
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 	set(CMAKE_CXX_FLAGS_RELEASE "-O3 -g")
 	set(CMAKE_C_FLAGS_RELEASE "-O3 -g")
     # require at least gcc 4.6
@@ -121,6 +121,7 @@ elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 	message("Compiler      : Clang")
 	set(CLANG "TRUE")
 #	set(COMBINED_FLAGS "-Wall -Wno-unused-function -Wno-sign-compare -pedantic -D_GNU_SOURCE -Wno-nested-anon-types")
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 	set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 	set(CMAKE_C_FLAGS_RELEASE "-O3")	
 elseif (CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
@@ -355,8 +356,10 @@ add_subdirectory(gsl)
 # the main executable
 ##################################################################
 
+add_library(kernelsse phylokernelsse.cpp)
+
 if (NOT BINARY32 AND NOT IQTREE_FLAGS MATCHES "novx")
-add_library(avxkernel phylotreeavx.cpp)
+add_library(kernelavx phylotreeavx.cpp)
 endif()
 
 add_executable(iqtree
@@ -439,9 +442,10 @@ else(ZLIB_FOUND)
 endif(ZLIB_FOUND)
 
 if (NOT IQTREE_FLAGS MATCHES "avx" AND NOT IQTREE_FLAGS MATCHES "fma")
-	set_target_properties(iqtree pll ncl lbfgsb whtest sprng vectorclass model PROPERTIES COMPILE_FLAGS "${SSE_FLAGS}")
+	#set_target_properties(iqtree pll ncl lbfgsb whtest sprng vectorclass model PROPERTIES COMPILE_FLAGS "${SSE_FLAGS}")
+    set_target_properties(kernelsse pll PROPERTIES COMPILE_FLAGS "${SSE_FLAGS}")
 	if (NOT BINARY32 AND NOT IQTREE_FLAGS MATCHES "novx")
-		set_target_properties(avxkernel pllavx PROPERTIES COMPILE_FLAGS "${AVX_FLAGS}")
+		set_target_properties(kernelavx pllavx PROPERTIES COMPILE_FLAGS "${AVX_FLAGS}")
 	endif()
 endif()  
 
@@ -486,7 +490,7 @@ endif()
 if (BINARY32 OR IQTREE_FLAGS MATCHES "novx")
     target_link_libraries(iqtree pll ncl lbfgsb whtest sprng vectorclass model gsl ${PLATFORM_LIB} ${STD_LIB} ${THREAD_LIB})	
 else()
-    target_link_libraries(iqtree pll pllavx ncl lbfgsb whtest sprng vectorclass model avxkernel gsl ${PLATFORM_LIB} ${STD_LIB} ${THREAD_LIB})	
+    target_link_libraries(iqtree pll pllavx ncl lbfgsb whtest sprng vectorclass model kernelsse kernelavx gsl ${PLATFORM_LIB} ${STD_LIB} ${THREAD_LIB})
 endif()
 
 ##################################################################

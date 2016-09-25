@@ -65,7 +65,7 @@
 #include "timeutil.h"
 //#include <unistd.h>
 #include <stdlib.h>
-#include "vectorclass/vectorclass.h"
+#include "vectorclass/instrset.h"
 
 #ifdef _OPENMP
 	#include <omp.h>

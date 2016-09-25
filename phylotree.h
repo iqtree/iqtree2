@@ -486,7 +486,7 @@ public:
     /****************************************************************************
             Dot product
      ****************************************************************************/
-    template <class Numeric, class VectorClass, const int VCSIZE>
+    template <class Numeric, class VectorClass>
     Numeric dotProductSIMD(Numeric *x, Numeric *y, int size);
 
     typedef BootValType (PhyloTree::*DotProductType)(BootValType *x, BootValType *y, int size);
@@ -495,11 +495,16 @@ public:
     typedef double (PhyloTree::*DotProductDoubleType)(double *x, double *y, int size);
     DotProductDoubleType dotProductDouble;
 
+    double dotProductDoubleCall(double *x, double *y, int size);
+
 #if defined(BINARY32) || defined(__NOAVX__)
     void setDotProductAVX() {}
 #else
     void setDotProductAVX();
 #endif
+
+    void setDotProductSSE();
+
     /**
             this function return the parsimony or likelihood score of the tree. Default is
             to compute the parsimony score. Override this function if you define a new
@@ -579,6 +584,8 @@ public:
 #else
     virtual void setParsimonyKernelAVX();
 #endif
+
+    virtual void setParsimonyKernelSSE();
 
     /****************************************************************************
             likelihood function
@@ -663,15 +670,15 @@ public:
 
 
     //template <const int nstates>
-    void computePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
-    
+//    void computePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
+
     void computeSitemodelPartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
 
-    template <class VectorClass, const int VCSIZE, const int nstates>
-    void computePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
+//    template <class VectorClass, const int VCSIZE, const int nstates>
+//    void computePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
 
     template <class VectorClass, const bool SAFE_NUMERIC, const int nstates>
-    void computePartialLikelihoodNewSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
+    void computePartialLikelihoodSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
 
     template <class VectorClass, const bool SAFE_NUMERIC>
     void computePartialLikelihoodSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
@@ -710,15 +717,15 @@ public:
 //    inline double computeLikelihoodBranchFast(PhyloNeighbor *dad_branch, PhyloNode *dad);
 
     //template <const int nstates>
-    double computeLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloNode *dad);
+//    double computeLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloNode *dad);
 
     double computeSitemodelLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloNode *dad);
 
-    template <class VectorClass, const int VCSIZE, const int nstates>
-    double computeLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad);
+//    template <class VectorClass, const int VCSIZE, const int nstates>
+//    double computeLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad);
 
     template <class VectorClass, const bool SAFE_NUMERIC, const int nstates>
-    double computeLikelihoodBranchNewSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad);
+    double computeLikelihoodBranchSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad);
 
     template <class VectorClass, const bool SAFE_NUMERIC>
     double computeLikelihoodBranchSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad);
@@ -749,11 +756,11 @@ public:
     typedef double (PhyloTree::*ComputeLikelihoodFromBufferType)();
     ComputeLikelihoodFromBufferType computeLikelihoodFromBufferPointer;
 
-    template <class VectorClass, const int VCSIZE, const int nstates>
-    double computeLikelihoodFromBufferEigenSIMD();
+//    template <class VectorClass, const int VCSIZE, const int nstates>
+//    double computeLikelihoodFromBufferEigenSIMD();
 
     template <class VectorClass, const bool SAFE_NUMERIC, const int nstates>
-    double computeLikelihoodFromBufferNewSIMD();
+    double computeLikelihoodFromBufferSIMD();
 
     template <class VectorClass, const bool SAFE_NUMERIC>
     double computeLikelihoodFromBufferSIMD();
@@ -1003,15 +1010,15 @@ public:
      ****************************************************************************/
 
     //template <const int nstates>
-    void computeLikelihoodDervEigen(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
+//    void computeLikelihoodDervEigen(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
 
     void computeSitemodelLikelihoodDervEigen(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
 
-    template <class VectorClass, const int VCSIZE, const int nstates>
-    void computeLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
+//    template <class VectorClass, const int VCSIZE, const int nstates>
+//    void computeLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
 
     template <class VectorClass, const bool SAFE_NUMERIC, const int nstates>
-    void computeLikelihoodDervNewSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
+    void computeLikelihoodDervSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
 
     template <class VectorClass, const bool SAFE_NUMERIC>
     void computeLikelihoodDervSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
@@ -1531,6 +1538,8 @@ public:
 #else
     virtual void setLikelihoodKernelAVX();
 #endif
+    virtual void setLikelihoodKernelSSE();
+    
     /****************************************************************************
             Public variables
      ****************************************************************************/

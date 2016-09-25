@@ -10,10 +10,12 @@
 #define PHYLOKERNELSAFE_H_
 
 #include "phylotree.h"
-#include "vectorclass/vectorclass.h"
-#include "vectorclass/vectormath_exp.h"
+//#include "vectorclass/vectorclass.h"
+//#include "vectorclass/vectormath_exp.h"
 #include "superalignment.h"
 
+
+#ifdef __SSE__
 inline Vec2d horizontal_add(Vec2d x[2]) {
 #if  INSTRSET >= 3  // SSE3
     return _mm_hadd_pd(x[0],x[1]);
@@ -22,7 +24,7 @@ inline Vec2d horizontal_add(Vec2d x[2]) {
     Vec2d help1 = _mm_shuffle_pd(x[0], x[1], _MM_SHUFFLE2(1,1));
     return _mm_add_pd(help0, help1);
 #else
-#error "You must compile with SSE3 enabled!"
+#error "You must compile with SSE2 enabled!"
 #endif
 }
 
@@ -31,6 +33,8 @@ inline double horizontal_max(Vec2d const &a) {
     a.store(x);
     return max(x[0],x[1]);
 }
+
+#endif
 
 #ifdef __AVX__
 

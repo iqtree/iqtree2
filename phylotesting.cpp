@@ -35,7 +35,7 @@
 
 #include "phyloanalysis.h"
 #include "gsl/mygsl.h"
-#include "vectorclass/vectorclass.h"
+//#include "vectorclass/vectorclass.h"
 
 
 /******* Binary model set ******/
@@ -2380,14 +2380,15 @@ void performAUTest(Params &params, PhyloTree *tree, double *pattern_lhs, vector<
                     for (ptn = 0; ptn < nptn; ptn++)
                         tree_lh += pattern_lh[ptn] * boot_sample_dbl[ptn];
                 } else {
-#ifdef BINARY32
-                    tree_lh = tree->dotProductSIMD<double, Vec2d, 2>(pattern_lh, boot_sample_dbl, nptn);
-#else
-                    if (instruction_set >= 7)
-                        tree_lh = tree->dotProductSIMD<double, Vec4d, 4>(pattern_lh, boot_sample_dbl, nptn);
-                    else
-                        tree_lh = tree->dotProductSIMD<double, Vec2d, 2>(pattern_lh, boot_sample_dbl, nptn);
-#endif
+                    tree_lh = tree->dotProductDoubleCall(pattern_lh, boot_sample_dbl, nptn);
+//#ifdef BINARY32
+//                    tree_lh = tree->dotProductSIMD<double, Vec2d>(pattern_lh, boot_sample_dbl, nptn);
+//#else
+//                    if (instruction_set >= 7)
+//                        tree_lh = tree->dotProductSIMD<double, Vec4d>(pattern_lh, boot_sample_dbl, nptn);
+//                    else
+//                        tree_lh = tree->dotProductSIMD<double, Vec2d>(pattern_lh, boot_sample_dbl, nptn);
+//#endif
                 }
                 // rescale lh
                 tree_lh /= r[k];

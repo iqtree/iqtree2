@@ -89,6 +89,7 @@ void PhyloTree::init() {
     subTreeDistComputed = false;
     dist_matrix = NULL;
     var_matrix = NULL;
+    params = NULL;
     setLikelihoodKernel(LK_EIGEN_SSE);  // FOR TUNG: you forgot to initialize this variable!
     save_all_trees = 0;
     nodeBranchDists = NULL;
@@ -1125,14 +1126,18 @@ double PhyloTree::computePatternLhCat(SiteLoglType wsl) {
 
     double score;
 
+    score = computeLikelihoodBranch(current_it, (PhyloNode*)current_it_back->node);
+    /*
     if (getModel()->isSiteSpecificModel()) {
-        score = computeSitemodelLikelihoodBranchEigen(current_it, (PhyloNode*)current_it_back->node);
+        score = computeLikelihoodBranch(current_it, (PhyloNode*)current_it_back->node);
     } else if (!getModel()->isMixture())
-        score = computeLikelihoodBranchEigen(current_it, (PhyloNode*)current_it_back->node);
+        score = computeLikelihoodBranch(current_it, (PhyloNode*)current_it_back->node);
     else if (getModelFactory()->fused_mix_rate)
-        score = computeLikelihoodBranchEigen(current_it, (PhyloNode*)current_it_back->node);
+        score = computeLikelihoodBranch(current_it, (PhyloNode*)current_it_back->node);
     else {
-        score = computeLikelihoodBranchEigen(current_it, (PhyloNode*)current_it_back->node);
+        score = computeLikelihoodBranch(current_it, (PhyloNode*)current_it_back->node);
+    */
+    if (!getModel()->isSiteSpecificModel() && getModel()->isMixture() && !getModelFactory()->fused_mix_rate) {
         if (wsl == WSL_MIXTURE || wsl == WSL_RATECAT) {
             double *lh_cat = _pattern_lh_cat;
             double *lh_res = _pattern_lh_cat;
