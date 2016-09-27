@@ -219,7 +219,7 @@ endif()
 # configure SSE/AVX/FMA instructions
 ##################################################################
 
-SET(AVX_FLAGS "-D__AVX")
+SET(AVX_FLAGS "-D__SSE3 -D__AVX")
 if (VCC) 
 	set(AVX_FLAGS "${AVX_FLAGS} /arch:AVX")
 elseif (CLANG)
@@ -247,7 +247,7 @@ elseif (ICC)
 	endif()
 endif()
 
-SET(FMA_FLAGS "-D__AVX")
+SET(FMA_FLAGS "-D__SSE3 -D__AVX")
 if (VCC) 
 	set(FMA_FLAGS "${FMA_FLAGS} /arch:AVX2")
 elseif (CLANG)
@@ -262,7 +262,7 @@ elseif (ICC)
 	endif()
 endif()
 
-SET(AVX512_FLAGS "-D__AVX")
+SET(AVX512_FLAGS "-D__SSE3 -D__AVX")
 if (VCC)
     message("AVX512 not available")
 	#set(AVX512_FLAGS "${AVX512_FLAGS} /arch:AVX2")
@@ -293,8 +293,8 @@ elseif (IQTREE_FLAGS MATCHES "avx") # AVX instruction set
 	#SET(EXE_SUFFIX "${EXE_SUFFIX}-avx")
 elseif (NOT IQTREE_FLAGS MATCHES "nosse") #SSE intruction set
 	message("Vectorization : SSE3")
-	add_definitions(-D__SSE3)
-    set(COMBINED_FLAGS "${COMBINED_FLAGS} ${SSE_FLAGS}")
+	#add_definitions(-D__SSE3)
+    #set(COMBINED_FLAGS "${COMBINED_FLAGS} ${SSE_FLAGS}")
 endif()
 
 
@@ -467,7 +467,9 @@ else(ZLIB_FOUND)
 endif(ZLIB_FOUND)
 
 if (NOT IQTREE_FLAGS MATCHES "avx" AND NOT IQTREE_FLAGS MATCHES "fma")
-	#set_target_properties(iqtree pll ncl lbfgsb whtest sprng vectorclass model PROPERTIES COMPILE_FLAGS "${SSE_FLAGS}")
+    if (NOT IQTREE_FLAGS MATCHES "nosse")
+        set_target_properties(iqtree ncl lbfgsb whtest sprng vectorclass model PROPERTIES COMPILE_FLAGS "${SSE_FLAGS}")
+    endif()
     set_target_properties(kernelsse pll PROPERTIES COMPILE_FLAGS "${SSE_FLAGS}")
 	if (NOT BINARY32 AND NOT IQTREE_FLAGS MATCHES "novx")
 		set_target_properties(kernelavx pllavx PROPERTIES COMPILE_FLAGS "${AVX_FLAGS}")
@@ -535,7 +537,7 @@ set_target_properties(iqtree PROPERTIES OUTPUT_NAME "iqtree${EXE_SUFFIX}")
 if (CMAKE_BUILD_TYPE STREQUAL "Release" AND (GCC OR CLANG)) # strip is not necessary for MSVC
 	if (WIN32)
 		ADD_CUSTOM_COMMAND(TARGET iqtree POST_BUILD COMMAND strip $<TARGET_FILE:iqtree>)
-	else()
+	elif (NOT APPLE)
 		ADD_CUSTOM_COMMAND(TARGET iqtree POST_BUILD COMMAND ${CMAKE_STRIP} $<TARGET_FILE:iqtree>)
 	endif()
 endif()

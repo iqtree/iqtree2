@@ -84,10 +84,10 @@ void PhyloTree::setLikelihoodKernelSSE() {
             computeLikelihoodFromBufferPointer = &PhyloTree::computeLikelihoodFromBufferSIMD<Vec2d, SAFE_LH, 20>;
             break;
         default:
-            computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchSIMD<Vec2d, SAFE_LH>;
-            computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervSIMD<Vec2d, SAFE_LH>;
-            computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodSIMD<Vec2d, SAFE_LH>;
-            computeLikelihoodFromBufferPointer = &PhyloTree::computeLikelihoodFromBufferSIMD<Vec2d, SAFE_LH>;
+            computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchGenericSIMD<Vec2d, SAFE_LH>;
+            computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervGenericSIMD<Vec2d, SAFE_LH>;
+            computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodGenericSIMD<Vec2d, SAFE_LH>;
+            computeLikelihoodFromBufferPointer = &PhyloTree::computeLikelihoodFromBufferGenericSIMD<Vec2d, SAFE_LH>;
             break;
         }
         return;
@@ -113,10 +113,10 @@ void PhyloTree::setLikelihoodKernelSSE() {
         computeLikelihoodFromBufferPointer = &PhyloTree::computeLikelihoodFromBufferSIMD<Vec2d, NORM_LH, 20>;
 		break;
 	default:
-        computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchSIMD<Vec2d, NORM_LH>;
-        computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervSIMD<Vec2d, NORM_LH>;
-        computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodSIMD<Vec2d, NORM_LH>;
-        computeLikelihoodFromBufferPointer = &PhyloTree::computeLikelihoodFromBufferSIMD<Vec2d, NORM_LH>;
+        computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchGenericSIMD<Vec2d, NORM_LH>;
+        computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervGenericSIMD<Vec2d, NORM_LH>;
+        computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodGenericSIMD<Vec2d, NORM_LH>;
+        computeLikelihoodFromBufferPointer = &PhyloTree::computeLikelihoodFromBufferGenericSIMD<Vec2d, NORM_LH>;
 		break;
 	}
 }

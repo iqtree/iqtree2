@@ -15,13 +15,7 @@
 #   define PHYLOKERNELNEW_H_
 #endif
 
-
 #include "phylotree.h"
-//#include "vectorclass/vectorclass.h"
-//#include "vectorclass/vectormath_exp.h"
-//#include "vectorf64.h"
-
-
 
 /*******************************************************
  *
@@ -31,11 +25,11 @@
 
 
 #ifdef KERNEL_FIX_STATES
-template <class VectorClass, const bool SAFE_NUMERIC, const int nstates>
+template <class VectorClass, const bool SAFE_NUMERIC, const int nstates, const bool FMA>
 void PhyloTree::computePartialLikelihoodSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad)
 #else
-template <class VectorClass, const bool SAFE_NUMERIC>
-void PhyloTree::computePartialLikelihoodSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad)
+template <class VectorClass, const bool SAFE_NUMERIC, const bool FMA>
+void PhyloTree::computePartialLikelihoodGenericSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad)
 #endif
 {
 
@@ -679,11 +673,11 @@ void PhyloTree::computePartialLikelihoodSIMD(PhyloNeighbor *dad_branch, PhyloNod
 
 
 #ifdef KERNEL_FIX_STATES
-template <class VectorClass, const bool SAFE_NUMERIC, const int nstates>
+template <class VectorClass, const bool SAFE_NUMERIC, const int nstates, const bool FMA>
 void PhyloTree::computeLikelihoodDervSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf)
 #else
-template <class VectorClass, const bool SAFE_NUMERIC>
-void PhyloTree::computeLikelihoodDervSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf)
+template <class VectorClass, const bool SAFE_NUMERIC, const bool FMA>
+void PhyloTree::computeLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf)
 #endif
 {
     PhyloNode *node = (PhyloNode*) dad_branch->node;
@@ -973,11 +967,11 @@ void PhyloTree::computeLikelihoodDervSIMD(PhyloNeighbor *dad_branch, PhyloNode *
 }
 
 #ifdef KERNEL_FIX_STATES
-template <class VectorClass, const bool SAFE_NUMERIC, const int nstates>
+template <class VectorClass, const bool SAFE_NUMERIC, const int nstates, const bool FMA>
 double PhyloTree::computeLikelihoodBranchSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad)
 #else
-template <class VectorClass, const bool SAFE_NUMERIC>
-double PhyloTree::computeLikelihoodBranchSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad)
+template <class VectorClass, const bool SAFE_NUMERIC, const bool FMA>
+double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad)
 #endif
 {
     PhyloNode *node = (PhyloNode*) dad_branch->node;
@@ -1287,11 +1281,11 @@ double PhyloTree::computeLikelihoodBranchSIMD(PhyloNeighbor *dad_branch, PhyloNo
 }
 
 #ifdef KERNEL_FIX_STATES
-template <class VectorClass, const bool SAFE_NUMERIC, const int nstates>
+template <class VectorClass, const bool SAFE_NUMERIC, const int nstates, const bool FMA>
 double PhyloTree::computeLikelihoodFromBufferSIMD()
 #else
-template <class VectorClass, const bool SAFE_NUMERIC>
-double PhyloTree::computeLikelihoodFromBufferSIMD()
+template <class VectorClass, const bool SAFE_NUMERIC, const bool FMA>
+double PhyloTree::computeLikelihoodFromBufferGenericSIMD()
 #endif
 {
 
