@@ -19,223 +19,379 @@
 
 /*******************************************************
  *
- * NEW! highly-vectorized likelihood functions.
+ * Helper function for vectors and matrix multiplication
  *
  ******************************************************/
 
-// some optimized helper functions
+/**
+    dotProduct of two vectors A, B
+    X = A.B = A[0]*B[0] + ... + A[N-1]*B[N-1]
+    template FMA = true to allow FMA instruction, false otherwise
+    @param N number of elements
+    @param A first vector of size N
+    @param B second vector of size N
+    @param[out] X dot-product of A and B
+*/
 #ifdef KERNEL_FIX_STATES
-template <class VectorClass, const int nstates, const bool FMA>
-inline void multiplyPartial(double *eright_ptr, VectorClass *partial_lh_right, VectorClass &res)
+template <class VectorClass, class Numeric, const size_t N, const bool FMA>
+inline void dotProductVec(Numeric *A, VectorClass *B, VectorClass &X)
 #else
-template <class VectorClass, const bool FMA>
-inline void multiplyPartial(double *eright_ptr, VectorClass *partial_lh_right, VectorClass &res, size_t nstates)
+template <class VectorClass, class Numeric, const bool FMA>
+inline void dotProductVec(Numeric *A, VectorClass *B, VectorClass &X, size_t N)
 #endif
 {
     size_t i, j;
-    if (nstates % 4 == 0) {
-        VectorClass vright[4];
+    if (N % 4 == 0) {
+        VectorClass V[4];
         for (j = 0; j < 4; j++)
-            vright[j] = eright_ptr[j] * partial_lh_right[j];
-        for (i = 4; i < nstates; i+=4) {
+            V[j] = A[j] * B[j];
+        for (i = 4; i < N; i+=4) {
             for (j = 0; j < 4; j++)
-                vright[j] = mul_add(eright_ptr[i+j], partial_lh_right[i+j], vright[j]);
+                V[j] = mul_add(A[i+j], B[i+j], V[j]);
         }
-        res = (vright[0]+vright[1]) + (vright[2]+vright[3]);
-    } else if (nstates % 2 == 0) {
-        VectorClass vright[2];
+        X = (V[0]+V[1]) + (V[2]+V[3]);
+    } else if (N % 2 == 0) {
+        VectorClass V[2];
         for (j = 0; j < 2; j++)
-            vright[j] = eright_ptr[j] * partial_lh_right[j];
-        for (i = 2; i < nstates; i+=2) {
+            V[j] = A[j] * B[j];
+        for (i = 2; i < N; i+=2) {
             for (j = 0; j < 2; j++)
-                vright[j] = mul_add(eright_ptr[i+j], partial_lh_right[i+j], vright[j]);
+                V[j] = mul_add(A[i+j], B[i+j], V[j]);
         }
-        res = (vright[0]+vright[1]);
+        X = (V[0]+V[1]);
     } else {
         // odd number of states
-        VectorClass vright[2];
+        VectorClass V[2];
         for (j = 0; j < 2; j++)
-            vright[j] = eright_ptr[j] * partial_lh_right[j];
-        for (i = 2; i < nstates-1; i+=2) {
+            V[j] = A[j] * B[j];
+        for (i = 2; i < N-1; i+=2) {
             for (j = 0; j < 2; j++)
-                vright[j] = mul_add(eright_ptr[i+j], partial_lh_right[i+j], vright[j]);
+                V[j] = mul_add(A[i+j], B[i+j], V[j]);
         }
-        res = mul_add(eright_ptr[nstates-1], partial_lh_right[nstates-1], vright[0]+vright[1]);
+        X = mul_add(A[N-1], B[N-1], V[0]+V[1]);
     }
 }
 
+/**
+    Dual dotProduct of four vectors A, B, C, D to compute X:
+    X = (A.B) * (C.D), where
+    A.B = A[0]*B[0] + ... + A[N-1]*B[N-1]
+    C.D = C[0]*D[0] + ... + C[N-1]*D[N-1]
+    template FMA = true to allow FMA instruction, false otherwise
+    @param N number of elements
+    @param A first vector of size N
+    @param B second vector of size N
+    @param C third vector of size N
+    @param D fourth vector of size N
+    @param[out] X = (A.B) * (C.D)
+*/
 #ifdef KERNEL_FIX_STATES
-template <class VectorClass, const int nstates, const bool FMA>
-inline void multiplyPartialBoth(double *eleft_ptr, VectorClass *partial_lh_left, double *eright_ptr, VectorClass *partial_lh_right, VectorClass &res)
+template <class VectorClass, class Numeric, const size_t N, const bool FMA>
+inline void dotProductDualVec(Numeric *A, VectorClass *B, Numeric *C, VectorClass *D, VectorClass &X)
 #else
-template <class VectorClass, const bool FMA>
-inline void multiplyPartialBoth(double *eleft_ptr, VectorClass *partial_lh_left, double *eright_ptr, VectorClass *partial_lh_right, VectorClass &res, size_t nstates)
+template <class VectorClass, class Numeric, const bool FMA>
+inline void dotProductDualVec(Numeric *A, VectorClass *B, Numeric *C, VectorClass *D, VectorClass &X, size_t N)
 #endif
 {
     size_t i, j;
-    if (nstates % 4 == 0) {
-        VectorClass vleft[4], vright[4];
+    if (N % 4 == 0) {
+        VectorClass AB[4], CD[4];
         for (j = 0; j < 4; j++) {
-            vleft[j] = eleft_ptr[j] * partial_lh_left[j];
-            vright[j] = eright_ptr[j] * partial_lh_right[j];
+            AB[j] = A[j] * B[j];
+            CD[j] = C[j] * D[j];
         }
-        for (i = 4; i < nstates; i+=4) {
+        for (i = 4; i < N; i+=4) {
 
             for (j = 0; j < 4; j++) {
-                vleft[j] = mul_add(eleft_ptr[i+j],  partial_lh_left[i+j],  vleft[j]);
-                vright[j] = mul_add(eright_ptr[i+j], partial_lh_right[i+j], vright[j]);
+                AB[j] = mul_add(A[i+j],  B[i+j],  AB[j]);
+                CD[j] = mul_add(C[i+j], D[i+j], CD[j]);
             }
         }
-        res = ((vleft[0]+vleft[1])+(vleft[2]+vleft[3])) * ((vright[0]+vright[1])+vright[2]+vright[3]);
-    } else if (nstates % 2 == 0) {
-        VectorClass vleft[2], vright[2];
+        X = ((AB[0]+AB[1])+(AB[2]+AB[3])) * ((CD[0]+CD[1])+CD[2]+CD[3]);
+    } else if (N % 2 == 0) {
+        VectorClass AB[2], CD[2];
         for (j = 0; j < 2; j++) {
-            vleft[j] = eleft_ptr[j] * partial_lh_left[j];
-            vright[j] = eright_ptr[j] * partial_lh_right[j];
+            AB[j] = A[j] * B[j];
+            CD[j] = C[j] * D[j];
         }
-        for (i = 2; i < nstates; i+=2) {
+        for (i = 2; i < N; i+=2) {
             for (j = 0; j < 2; j++) {
-                vleft[j] = mul_add(eleft_ptr[i+j],  partial_lh_left[i+j],  vleft[j]);
-                vright[j] = mul_add(eright_ptr[i+j], partial_lh_right[i+j], vright[j]);
+                AB[j] = mul_add(A[i+j],  B[i+j],  AB[j]);
+                CD[j] = mul_add(C[i+j], D[i+j], CD[j]);
             }
         }
-        res = ((vleft[0]+vleft[1])) * ((vright[0]+vright[1]));
+        X = ((AB[0]+AB[1])) * ((CD[0]+CD[1]));
     } else {
         // odd states
-        VectorClass vleft[2], vright[2];
+        VectorClass AB[2], CD[2];
         for (j = 0; j < 2; j++) {
-            vleft[j] = eleft_ptr[j] * partial_lh_left[j];
-            vright[j] = eright_ptr[j] * partial_lh_right[j];
+            AB[j] = A[j] * B[j];
+            CD[j] = C[j] * D[j];
         }
-        for (i = 2; i < nstates-1; i+=2) {
+        for (i = 2; i < N-1; i+=2) {
             for (j = 0; j < 2; j++) {
-                vleft[j] = mul_add(eleft_ptr[i+j],  partial_lh_left[i+j],  vleft[j]);
-                vright[j] = mul_add(eright_ptr[i+j], partial_lh_right[i+j], vright[j]);
+                AB[j] = mul_add(A[i+j],  B[i+j],  AB[j]);
+                CD[j] = mul_add(C[i+j], D[i+j], CD[j]);
             }
         }
-        vleft[0] = mul_add(eleft_ptr[nstates-1], partial_lh_left[nstates-1], vleft[0]+vleft[1]);
-        vright[0] = mul_add(eright_ptr[nstates-1], partial_lh_right[nstates-1], vright[0]+vright[1]);
-        res = vleft[0] * vright[0];
+        AB[0] = mul_add(A[N-1], B[N-1], AB[0]+AB[1]);
+        CD[0] = mul_add(C[N-1], D[N-1], CD[0]+CD[1]);
+        X = AB[0] * CD[0];
     }
 }
 
+/**
+    compute product of a vector A and a matrix M, resulting in a vector X:
+    X[i] = A[0]*M[i,0] + ... + A[N-1]*M[i,N-1], for all i = 0,...,N-1
+    @param N number of elements
+    @param A input vector of size N
+    @param M input matrix of size N*N
+    @param[out] X output vector of size N
+*/
 // quick unrolling version of multiplying partial_lh with inv_eigenvector
 #ifdef KERNEL_FIX_STATES
-template <class VectorClass, const int nstates, const bool FMA>
-inline void multiplyEigen(VectorClass *partial_lh_tmp, double *inv_evec_ptr, VectorClass *partial_lh, VectorClass &lh_max)
+template <class VectorClass, class Numeric, const size_t N, const bool FMA>
+inline void productVecMat(VectorClass *A, Numeric *M, VectorClass *X)
 #else
-template <class VectorClass, const bool FMA>
-inline void multiplyEigen(VectorClass *partial_lh_tmp, double *inv_evec_ptr, VectorClass *partial_lh, VectorClass &lh_max, size_t nstates)
+template <class VectorClass, class Numeric, const bool FMA>
+inline void productVecMat(VectorClass *A, Numeric *M, VectorClass *X, size_t N)
 #endif
 {
     size_t i, j, x;
 
-    if (nstates % 4 == 0) {
-        for (i = 0; i < nstates; i++) {
+    if (N % 4 == 0) {
+        for (i = 0; i < N; i++) {
             // manual unrolling
-            VectorClass res[4];
+            VectorClass V[4];
             for (j = 0; j < 4; j++)
-                res[j] = partial_lh_tmp[j] * inv_evec_ptr[j];
+                V[j] = A[j] * M[j];
 
-            for (x = 4; x < nstates; x+=4) {
+            for (x = 4; x < N; x+=4) {
                 for (j = 0; j < 4; j++)
-                    res[j] = mul_add(partial_lh_tmp[x+j], inv_evec_ptr[x+j], res[j]);
+                    V[j] = mul_add(A[x+j], M[x+j], V[j]);
             }
-            partial_lh[i] = (res[0]+res[1])+(res[2]+res[3]);
-            inv_evec_ptr += nstates;
-            lh_max = max(lh_max, abs(partial_lh[i]));
+            X[i] = (V[0]+V[1])+(V[2]+V[3]);
+            M += N;
         }
-    } else if (nstates % 2 == 0){
-        for (i = 0; i < nstates; i++) {
+    } else if (N % 2 == 0){
+        for (i = 0; i < N; i++) {
             // manual unrolling
-            VectorClass res[2];
+            VectorClass V[2];
             for (j = 0; j < 2; j++)
-                res[j] = partial_lh_tmp[j] * inv_evec_ptr[j];
+                V[j] = A[j] * M[j];
 
-            for (x = 2; x < nstates; x+=2) {
+            for (x = 2; x < N; x+=2) {
                 for (j = 0; j < 2; j++)
-                    res[j] = mul_add(partial_lh_tmp[x+j], inv_evec_ptr[x+j], res[j]);
+                    V[j] = mul_add(A[x+j], M[x+j], V[j]);
             }
-            partial_lh[i] = (res[0]+res[1]);
-            inv_evec_ptr += nstates;
-            lh_max = max(lh_max, abs(partial_lh[i]));
+            X[i] = (V[0]+V[1]);
+            M += N;
         }
     } else {
         // odd number of states
-        for (i = 0; i < nstates; i++) {
+        for (i = 0; i < N; i++) {
             // manual unrolling
-            VectorClass res[2];
+            VectorClass V[2];
             for (j = 0; j < 2; j++)
-                res[j] = partial_lh_tmp[j] * inv_evec_ptr[j];
+                V[j] = A[j] * M[j];
 
-            for (x = 2; x < nstates-1; x+=2) {
+            for (x = 2; x < N-1; x+=2) {
                 for (j = 0; j < 2; j++)
-                    res[j] = mul_add(partial_lh_tmp[x+j], inv_evec_ptr[x+j], res[j]);
+                    V[j] = mul_add(A[x+j], M[x+j], V[j]);
             }
-            partial_lh[i] = mul_add(partial_lh_tmp[nstates-1], inv_evec_ptr[nstates-1], res[0]+res[1]);
-            inv_evec_ptr += nstates;
-            lh_max = max(lh_max, abs(partial_lh[i]));
+            X[i] = mul_add(A[N-1], M[N-1], V[0]+V[1]);
+            M += N;
         }
     }
 }
 
+
+/**
+    compute product of a vector A and a matrix M, resulting in a vector X:
+    X[i] = A[0]*M[i,0] + ... + A[N-1]*M[i,N-1], for all i = 0,...,N-1
+    and also return the maximum of absolute values of X
+    @param N number of elements
+    @param A input vector of size N
+    @param M input matrix of size N*N
+    @param[out] X output vector of size N
+    @param[out] Xmax max of |X[i]|
+*/
 // quick unrolling version of multiplying partial_lh with inv_eigenvector
 #ifdef KERNEL_FIX_STATES
-template <class VectorClass, const int nstates, const bool FMA>
-inline void multiplyEigen(VectorClass *partial_lh_tmp, double *inv_evec_ptr, VectorClass *partial_lh)
+template <class VectorClass, class Numeric, const size_t N, const bool FMA>
+inline void productVecMat(VectorClass *A, Numeric *M, VectorClass *X, VectorClass &Xmax)
 #else
-template <class VectorClass, const bool FMA>
-inline void multiplyEigen(VectorClass *partial_lh_tmp, double *inv_evec_ptr, VectorClass *partial_lh, size_t nstates)
+template <class VectorClass, class Numeric, const bool FMA>
+inline void productVecMat(VectorClass *A, Numeric *M, VectorClass *X, VectorClass &Xmax, size_t N)
 #endif
 {
     size_t i, j, x;
 
-    if (nstates % 4 == 0) {
-        for (i = 0; i < nstates; i++) {
+    if (N % 4 == 0) {
+        for (i = 0; i < N; i++) {
             // manual unrolling
-            VectorClass res[4];
+            VectorClass V[4];
             for (j = 0; j < 4; j++)
-                res[j] = partial_lh_tmp[j] * inv_evec_ptr[j];
+                V[j] = A[j] * M[j];
 
-            for (x = 4; x < nstates; x+=4) {
+            for (x = 4; x < N; x+=4) {
                 for (j = 0; j < 4; j++)
-                    res[j] = mul_add(partial_lh_tmp[x+j], inv_evec_ptr[x+j], res[j]);
+                    V[j] = mul_add(A[x+j], M[x+j], V[j]);
             }
-            partial_lh[i] = (res[0]+res[1])+(res[2]+res[3]);
-            inv_evec_ptr += nstates;
+            X[i] = (V[0]+V[1])+(V[2]+V[3]);
+            M += N;
+            Xmax = max(Xmax, abs(X[i]));
         }
-    } else if (nstates % 2 == 0){
-        for (i = 0; i < nstates; i++) {
+    } else if (N % 2 == 0){
+        for (i = 0; i < N; i++) {
             // manual unrolling
-            VectorClass res[2];
+            VectorClass V[2];
             for (j = 0; j < 2; j++)
-                res[j] = partial_lh_tmp[j] * inv_evec_ptr[j];
+                V[j] = A[j] * M[j];
 
-            for (x = 2; x < nstates; x+=2) {
+            for (x = 2; x < N; x+=2) {
                 for (j = 0; j < 2; j++)
-                    res[j] = mul_add(partial_lh_tmp[x+j], inv_evec_ptr[x+j], res[j]);
+                    V[j] = mul_add(A[x+j], M[x+j], V[j]);
             }
-            partial_lh[i] = (res[0]+res[1]);
-            inv_evec_ptr += nstates;
+            X[i] = (V[0]+V[1]);
+            M += N;
+            Xmax = max(Xmax, abs(X[i]));
         }
     } else {
         // odd number of states
-        for (i = 0; i < nstates; i++) {
+        for (i = 0; i < N; i++) {
             // manual unrolling
-            VectorClass res[2];
+            VectorClass V[2];
             for (j = 0; j < 2; j++)
-                res[j] = partial_lh_tmp[j] * inv_evec_ptr[j];
+                V[j] = A[j] * M[j];
 
-            for (x = 2; x < nstates-1; x+=2) {
+            for (x = 2; x < N-1; x+=2) {
                 for (j = 0; j < 2; j++)
-                    res[j] = mul_add(partial_lh_tmp[x+j], inv_evec_ptr[x+j], res[j]);
+                    V[j] = mul_add(A[x+j], M[x+j], V[j]);
             }
-            partial_lh[i] = mul_add(partial_lh_tmp[nstates-1], inv_evec_ptr[nstates-1], res[0]+res[1]);
-            inv_evec_ptr += nstates;
+            X[i] = mul_add(A[N-1], M[N-1], V[0]+V[1]);
+            M += N;
+            Xmax = max(Xmax, abs(X[i]));
         }
     }
 }
 
+/**
+    compute dot-products of 3 vectors A, B, C with a single vector D and returns X, Y, Z:
+    X = X+A.D = A[0]*D[0] + ... + A[N-1]*D[N-1]
+    Y =   B.D = B[0]*D[0] + ... + B[N-1]*D[N-1]
+    Z =   C.D = C[0]*D[0] + ... + C[N-1]*D[N-1]
+    @param N number of elements
+    @param nstates number of states
+    @param A vector of size N
+    @param B vector of size N
+    @param C vector of size N
+    @param D vector of size N
+    @param[in/out] X = X+A.D
+    @param[out] Y = B.D
+    @param[out] Z = C.D
+*/
+#ifdef KERNEL_FIX_STATES
+template <class VectorClass, class Numeric, const size_t nstates, const bool FMA>
+inline void dotProductTriple(Numeric *A, Numeric *B, Numeric *C, VectorClass *D,
+    VectorClass &X, VectorClass &Y, VectorClass &Z, size_t N)
+#else
+template <class VectorClass, class Numeric, const bool FMA>
+inline void dotProductTriple(Numeric *A, Numeric *B, Numeric *C, VectorClass *D,
+    VectorClass &X, VectorClass &Y, VectorClass &Z, size_t N, size_t nstates)
+#endif
+{
+    size_t i, j;
+    if (nstates % 2 == 0) {
+        VectorClass AD[2], BD[2], CD[2];
+        for (j = 0; j < 2; j++) {
+            AD[j] = A[j] * D[j];
+            BD[j] = B[j] * D[j];
+            CD[j] = C[j] * D[j];
+        }
+		for (i = 2; i < N; i+=2) {
+            for (j = 0; j < 2; j++) {
+                AD[j] = mul_add(A[i+j], D[i+j], AD[j]);
+                BD[j] = mul_add(B[i+j], D[i+j], BD[j]);
+                CD[j] = mul_add(C[i+j], D[i+j], CD[j]);
+            }
+		}
+        X += AD[0] + AD[1];
+        Y  = BD[0] + BD[1];
+        Z  = CD[0] + CD[1];
+    } else {
+        // odd states
+        VectorClass AD[2], BD[2], CD[2];
+        for (j = 0; j < 2; j++) {
+            AD[j] = A[j] * D[j];
+            BD[j] = B[j] * D[j];
+            CD[j] = C[j] * D[j];
+        }
+		for (i = 2; i < N-1; i+=2) {
+            for (j = 0; j < 2; j++) {
+                AD[j] = mul_add(A[i+j], D[i+j], AD[j]);
+                BD[j] = mul_add(B[i+j], D[i+j], BD[j]);
+                CD[j] = mul_add(C[i+j], D[i+j], CD[j]);
+            }
+		}
+        X += mul_add(A[N-1], D[N-1], AD[0] + AD[1]);
+        Y  = mul_add(B[N-1], D[N-1], BD[0] + BD[1]);
+        Z  = mul_add(C[N-1], D[N-1], CD[0] + CD[1]);
+    }
+}
+
+
+/**
+    Given three vectors A, B, C, compute X:
+    X = A.B.C = A[0]*B[0]*C[0] + ... + A[N-1]*B[N-1]*C[N-1]
+    @param N number of elements
+    @param A vector of size N
+    @param B vector of size N
+    @param C vector of size N
+    @param[out] X = A.B.C
+*/
+#ifdef KERNEL_FIX_STATES
+template <class VectorClass, class Numeric, const size_t N, const bool FMA>
+inline void dotProduct3Vec(Numeric *A, VectorClass *B, VectorClass *C, VectorClass &X)
+#else
+template <class VectorClass, class Numeric, const bool FMA>
+inline void dotProduct3Vec(Numeric *A, VectorClass *B, VectorClass *C, VectorClass &X, size_t N)
+#endif
+{
+    size_t i, j;
+    if (N % 4 == 0) {
+        VectorClass V[4];
+        for (j = 0; j < 4; j++)
+            V[j] = A[j] * B[j] * C[j];
+        for (i = 4; i < N; i+=4)
+            for (j = 0; j < 4; j++)
+                V[j] = mul_add(A[i+j]*B[i+j], C[i+j], V[j]);
+        X = (V[0]+V[1])+(V[2]+V[3]);
+    } else if (N % 2 == 0) {
+        VectorClass V[2];
+        for (j = 0; j < 2; j++)
+            V[j] = A[j] * B[j] * C[j];
+        for (i = 2; i < N; i+=2)
+            for (j = 0; j < 2; j++)
+                V[j] = mul_add(A[i+j]*B[i+j], C[i+j], V[j]);
+        X = (V[0]+V[1]);
+    } else {
+        // odd states
+        VectorClass V[2];
+        for (j = 0; j < 2; j++)
+            V[j] = A[j] * B[j] * C[j];
+        for (i = 2; i < N-1; i+=2)
+            for (j = 0; j < 2; j++)
+                V[j] = mul_add(A[i+j]*B[i+j], C[i+j], V[j]);
+        X = mul_add(A[N-1]*B[N-1], C[N-1], V[0]+V[1]);
+    }
+}
+
+/*******************************************************
+ *
+ * NEW! highly-vectorized partial likelihood function
+ *
+ ******************************************************/
 
 #ifdef KERNEL_FIX_STATES
 template <class VectorClass, const bool SAFE_NUMERIC, const int nstates, const bool FMA>
@@ -652,24 +808,10 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(PhyloNeighbor *dad_branch, P
 				}
 
 				// compute dot-product with inv_eigenvector
-//				for (i = 0; i < nstates; i++) {
-//					VectorClass res = partial_lh_tmp[0]*inv_evec_ptr[0];
-//                    VectorClass res2 = partial_lh_tmp[1]*inv_evec_ptr[1];
-//                    // TODO odd states
-//                    for (x = 2; x < nstates; x ++) {
-//                        res  = mul_add(partial_lh_tmp[x],   inv_evec_ptr[x],   res);
-//                        x++;
-//                        res2 = mul_add(partial_lh_tmp[x], inv_evec_ptr[x], res2);
-//                    }
-//                    res += res2;
-//                    inv_evec_ptr += nstates;
-//					partial_lh[i] = res;
-//				}
-
 #ifdef KERNEL_FIX_STATES
-                multiplyEigen<VectorClass, nstates, FMA>(partial_lh_tmp, inv_evec_ptr, partial_lh);
+                productVecMat<VectorClass, double, nstates, FMA>(partial_lh_tmp, inv_evec_ptr, partial_lh);
 #else
-                multiplyEigen<VectorClass, FMA> (partial_lh_tmp, inv_evec_ptr, partial_lh, nstates);
+                productVecMat<VectorClass, double, FMA> (partial_lh_tmp, inv_evec_ptr, partial_lh, nstates);
 #endif
 
                 // increase pointer
@@ -732,9 +874,9 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(PhyloNeighbor *dad_branch, P
 				for (x = 0; x < nstates; x++) {
                     VectorClass vright;
 #ifdef KERNEL_FIX_STATES
-                    multiplyPartial<VectorClass, nstates, FMA>(eright_ptr, partial_lh_right, vright);
+                    dotProductVec<VectorClass, double, nstates, FMA>(eright_ptr, partial_lh_right, vright);
 #else
-                    multiplyPartial<VectorClass, FMA>(eright_ptr, partial_lh_right, vright, nstates);
+                    dotProductVec<VectorClass, double, FMA>(eright_ptr, partial_lh_right, vright, nstates);
 #endif
                     eright_ptr += nstates;
 					partial_lh_tmp[x] = vleft[x] * (vright);
@@ -742,9 +884,9 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(PhyloNeighbor *dad_branch, P
 
 				// compute dot-product with inv_eigenvector
 #ifdef KERNEL_FIX_STATES
-                multiplyEigen<VectorClass, nstates, FMA>(partial_lh_tmp, inv_evec_ptr, partial_lh, lh_max);
+                productVecMat<VectorClass, double, nstates, FMA>(partial_lh_tmp, inv_evec_ptr, partial_lh, lh_max);
 #else
-                multiplyEigen<VectorClass, FMA> (partial_lh_tmp, inv_evec_ptr, partial_lh, lh_max, nstates);
+                productVecMat<VectorClass, double, FMA> (partial_lh_tmp, inv_evec_ptr, partial_lh, lh_max, nstates);
 #endif
                 // check if one should scale partial likelihoods
                 if (SAFE_NUMERIC) {
@@ -828,9 +970,9 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(PhyloNeighbor *dad_branch, P
 				// compute real partial likelihood vector
 				for (x = 0; x < nstates; x++) {
 #ifdef KERNEL_FIX_STATES
-                    multiplyPartialBoth<VectorClass, nstates, FMA>(eleft_ptr, partial_lh_left, eright_ptr, partial_lh_right, partial_lh_tmp[x]);
+                    dotProductDualVec<VectorClass, double, nstates, FMA>(eleft_ptr, partial_lh_left, eright_ptr, partial_lh_right, partial_lh_tmp[x]);
 #else
-                    multiplyPartialBoth<VectorClass, FMA>(eleft_ptr, partial_lh_left, eright_ptr, partial_lh_right, partial_lh_tmp[x], nstates);
+                    dotProductDualVec<VectorClass, double, FMA>(eleft_ptr, partial_lh_left, eright_ptr, partial_lh_right, partial_lh_tmp[x], nstates);
 #endif
                     eleft_ptr += nstates;
                     eright_ptr += nstates;
@@ -838,9 +980,9 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(PhyloNeighbor *dad_branch, P
                 
 				// compute dot-product with inv_eigenvector
 #ifdef KERNEL_FIX_STATES
-                multiplyEigen<VectorClass, nstates, FMA>(partial_lh_tmp, inv_evec_ptr, partial_lh, lh_max);
+                productVecMat<VectorClass, double, nstates, FMA>(partial_lh_tmp, inv_evec_ptr, partial_lh, lh_max);
 #else
-                multiplyEigen<VectorClass, FMA> (partial_lh_tmp, inv_evec_ptr, partial_lh, lh_max, nstates);
+                productVecMat<VectorClass, double, FMA> (partial_lh_tmp, inv_evec_ptr, partial_lh, lh_max, nstates);
 #endif
                 // check if one should scale partial likelihoods
                 if (SAFE_NUMERIC) {
@@ -894,55 +1036,11 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(PhyloNeighbor *dad_branch, P
 //    aligned_free(inv_evec_trans);
 }
 
-
-#ifdef KERNEL_FIX_STATES
-template <class VectorClass, const int nstates, const bool FMA>
-inline void multiplyTriple(double *val0, double *val1, double *val2, VectorClass *theta,
-    VectorClass &res_lh_ptn, VectorClass &res_df_ptn, VectorClass &res_ddf_ptn, size_t block)
-#else
-template <class VectorClass, const bool FMA>
-inline void multiplyTriple(double *val0, double *val1, double *val2, VectorClass *theta,
-    VectorClass &res_lh_ptn, VectorClass &res_df_ptn, VectorClass &res_ddf_ptn, size_t block, size_t nstates)
-#endif
-{
-    size_t i, j;
-    if (nstates % 2 == 0) {
-        VectorClass lh_ptn[2], df_ptn[2], ddf_ptn[2];
-        for (j = 0; j < 2; j++) {
-            lh_ptn[j] = val0[j] * theta[j];
-            df_ptn[j] = val1[j] * theta[j];
-            ddf_ptn[j] = val2[j] * theta[j];
-        }
-		for (i = 2; i < block; i+=2) {
-            for (j = 0; j < 2; j++) {
-                lh_ptn[j]  = mul_add(val0[i+j], theta[i+j], lh_ptn[j]);
-                df_ptn[j]  = mul_add(val1[i+j], theta[i+j], df_ptn[j]);
-                ddf_ptn[j] = mul_add(val2[i+j], theta[i+j], ddf_ptn[j]);
-            }
-		}
-        res_lh_ptn += lh_ptn[0] + lh_ptn[1];
-        res_df_ptn  = df_ptn[0] + df_ptn[1];
-        res_ddf_ptn = ddf_ptn[0] + ddf_ptn[1];
-    } else {
-        // odd states
-        VectorClass lh_ptn[2], df_ptn[2], ddf_ptn[2];
-        for (j = 0; j < 2; j++) {
-            lh_ptn[j] = val0[j] * theta[j];
-            df_ptn[j] = val1[j] * theta[j];
-            ddf_ptn[j] = val2[j] * theta[j];
-        }
-		for (i = 2; i < block-1; i+=2) {
-            for (j = 0; j < 2; j++) {
-                lh_ptn[j]  = mul_add(val0[i+j], theta[i+j], lh_ptn[j]);
-                df_ptn[j]  = mul_add(val1[i+j], theta[i+j], df_ptn[j]);
-                ddf_ptn[j] = mul_add(val2[i+j], theta[i+j], ddf_ptn[j]);
-            }
-		}
-        res_lh_ptn += mul_add(val0[block-1], theta[block-1], lh_ptn[0] + lh_ptn[1]);
-        res_df_ptn  = mul_add(val1[block-1], theta[block-1], df_ptn[0] + df_ptn[1]);
-        res_ddf_ptn = mul_add(val2[block-1], theta[block-1], ddf_ptn[0] + ddf_ptn[1]);
-    }
-}
+/*******************************************************
+ *
+ * NEW! highly-vectorized log-likelihood derivative function
+ *
+ ******************************************************/
 
 #ifdef KERNEL_FIX_STATES
 template <class VectorClass, const bool SAFE_NUMERIC, const int nstates, const bool FMA>
@@ -1193,9 +1291,9 @@ void PhyloTree::computeLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, Phyl
 //		}
 
 #ifdef KERNEL_FIX_STATES
-        multiplyTriple<VectorClass, nstates, FMA>(val0, val1, val2, theta, lh_ptn, df_ptn, ddf_ptn, block);
+        dotProductTriple<VectorClass, double, nstates, FMA>(val0, val1, val2, theta, lh_ptn, df_ptn, ddf_ptn, block);
 #else
-        multiplyTriple<VectorClass, FMA>(val0, val1, val2, theta, lh_ptn, df_ptn, ddf_ptn, block, nstates);
+        dotProductTriple<VectorClass, double, FMA>(val0, val1, val2, theta, lh_ptn, df_ptn, ddf_ptn, block, nstates);
 #endif
 
 //        assert(lh_ptn > 0.0);
@@ -1245,6 +1343,15 @@ void PhyloTree::computeLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, Phyl
     aligned_free(val1);
     aligned_free(val0);
 }
+
+
+
+
+/*******************************************************
+ *
+ * NEW! highly-vectorized log-likelihood function
+ *
+ ******************************************************/
 
 #ifdef KERNEL_FIX_STATES
 template <class VectorClass, const bool SAFE_NUMERIC, const int nstates, const bool FMA>
@@ -1410,15 +1517,12 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
             }
 
             for (c = 0; c < ncat_mix; c++) {
-                VectorClass lh = (lh_node[0] * partial_lh_dad[0]);
-                VectorClass lh2 = (lh_node[1] * partial_lh_dad[1]);
-                // TODO odd states
-                for (i = 2; i < nstates; i++) {
-                    lh = mul_add(lh_node[i], partial_lh_dad[i], lh);
-                    i++;
-                    lh2 = mul_add(lh_node[i], partial_lh_dad[i], lh2);
-                }
-                lh_ptn += (*lh_cat = (lh + lh2));
+#ifdef KERNEL_FIX_STATES
+                dotProductVec<VectorClass, VectorClass, nstates, FMA>(lh_node, partial_lh_dad, *lh_cat);
+#else
+                dotProductVec<VectorClass, VectorClass, FMA>(lh_node, partial_lh_dad, *lh_cat, nstates);
+#endif
+                lh_ptn += *lh_cat;
                 lh_node += nstates;
                 partial_lh_dad += nstates;
                 lh_cat++;
@@ -1461,14 +1565,11 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
             if (SAFE_NUMERIC) {
 
                 for (c = 0; c < ncat_mix; c++) {
-                    VectorClass value  = val_tmp[0] * partial_lh_node[0] * partial_lh_dad[0];
-                    VectorClass value2 = val_tmp[1] * partial_lh_node[1] * partial_lh_dad[1];
-                    for (i = 2; i < nstates; i++) {
-                        value =  mul_add(val_tmp[i] * partial_lh_node[i], partial_lh_dad[i], value);
-                        i++;
-                        value2 =  mul_add(val_tmp[i] * partial_lh_node[i], partial_lh_dad[i], value2);
-                    }
-                    lh_cat[c] = (value + value2);
+#ifdef KERNEL_FIX_STATES
+                    dotProduct3Vec<VectorClass, double, nstates, FMA>(val_tmp, partial_lh_node, partial_lh_dad, lh_cat[c]);
+#else
+                    dotProduct3Vec<VectorClass, double, FMA>(val_tmp, partial_lh_node, partial_lh_dad, lh_cat[c], nstates);
+#endif
                     partial_lh_node += nstates;
                     partial_lh_dad += nstates;
                     val_tmp += nstates;
@@ -1504,16 +1605,12 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
             } else {
                 // normal scaling
                 for (c = 0; c < ncat_mix; c++) {
-                    VectorClass value = val_tmp[0] * partial_lh_node[0] * partial_lh_dad[0];
-                    VectorClass value2 = val_tmp[1] * partial_lh_node[1] * partial_lh_dad[1];
-                    // TODO odd stats
-                    for (i = 2; i < nstates; i++) {
-                        value  = mul_add(val_tmp[i] * partial_lh_node[i], partial_lh_dad[i], value);
-                        i++;
-                        value2 = mul_add(val_tmp[i] * partial_lh_node[i], partial_lh_dad[i], value2);
-                    }
-                    value += value2;
-                    lh_ptn += (lh_cat[c] = value);
+#ifdef KERNEL_FIX_STATES
+                    dotProduct3Vec<VectorClass, double, nstates, FMA>(val_tmp, partial_lh_node, partial_lh_dad, lh_cat[c]);
+#else
+                    dotProduct3Vec<VectorClass, double, FMA>(val_tmp, partial_lh_node, partial_lh_dad, lh_cat[c], nstates);
+#endif
+                    lh_ptn += lh_cat[c];
                     partial_lh_node += nstates;
                     partial_lh_dad += nstates;
                     val_tmp += nstates;
@@ -1570,6 +1667,13 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
     aligned_free(val);
     return tree_lh;
 }
+
+
+/*******************************************************
+ *
+ * NEW! highly-vectorized log-likelihood from buffer
+ *
+ ******************************************************/
 
 #ifdef KERNEL_FIX_STATES
 template <class VectorClass, const bool SAFE_NUMERIC, const int nstates, const bool FMA>
