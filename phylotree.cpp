@@ -76,6 +76,7 @@ void PhyloTree::init() {
     //root_state = STATE_UNKNOWN;
     root_state = 126;
     theta_all = NULL;
+    buffer_scale_all = NULL;
     ptn_freq = NULL;
     ptn_invar = NULL;
     subTreeDistComputed = false;
@@ -195,6 +196,9 @@ PhyloTree::~PhyloTree() {
     if (theta_all)
         aligned_free(theta_all);
     theta_all = NULL;
+    if (buffer_scale_all)
+        aligned_free(buffer_scale_all);
+    buffer_scale_all = NULL;
     if (ptn_freq)
         aligned_free(ptn_freq);
     ptn_freq = NULL;
@@ -653,7 +657,6 @@ void PhyloTree::initializeAllPartialLh() {
     //size_t mem_size = ((getAlnNSite() % 2) == 0) ? getAlnNSite() : (getAlnNSite() + 1);
     // extra #numStates for ascertainment bias correction
     size_t mem_size = get_safe_upper_limit(getAlnNPattern() + numStates);
-
     size_t block_size = mem_size * numStates * site_rate->getNRate() * ((model_factory->fused_mix_rate)? 1 : model->getNMixtures());
     // make sure _pattern_lh size is divisible by 4 (e.g., 9->12, 14->16)
     if (!_pattern_lh)
@@ -662,6 +665,8 @@ void PhyloTree::initializeAllPartialLh() {
         _pattern_lh_cat = aligned_alloc<double>(mem_size * site_rate->getNDiscreteRate() * ((model_factory->fused_mix_rate)? 1 : model->getNMixtures()));
     if (!theta_all)
         theta_all = aligned_alloc<double>(block_size);
+    if (!buffer_scale_all)
+        buffer_scale_all = aligned_alloc<double>(mem_size);
     if (!ptn_freq) {
         ptn_freq = aligned_alloc<double>(mem_size);
         ptn_freq_computed = false;
@@ -716,6 +721,8 @@ void PhyloTree::deleteAllPartialLh() {
 		aligned_free(ptn_freq);
 	if (theta_all)
 		aligned_free(theta_all);
+    if (buffer_scale_all)
+        aligned_free(buffer_scale_all);
 
 	if (_pattern_lh_cat)
 		aligned_free(_pattern_lh_cat);
@@ -729,6 +736,7 @@ void PhyloTree::deleteAllPartialLh() {
 	ptn_freq = NULL;
 	ptn_freq_computed = false;
 	theta_all = NULL;
+    buffer_scale_all = NULL;
 	_pattern_lh_cat = NULL;
 	_pattern_lh = NULL;
 

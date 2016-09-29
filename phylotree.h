@@ -1187,7 +1187,7 @@ public:
     double* theta_all;
 
     /** total scaling buffer */
-    double buffer_scale_all;
+    double *buffer_scale_all;
 
 
     /**
