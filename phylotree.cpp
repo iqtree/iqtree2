@@ -70,14 +70,6 @@ void PhyloTree::init() {
     nni_scale_num = NULL;
     central_partial_pars = NULL;
     model_factory = NULL;
-//    tmp_partial_lh1 = NULL;
-//    tmp_partial_lh2 = NULL;
-//    tmp_anscentral_state_prob1 = NULL;
-//    tmp_anscentral_state_prob2 = NULL;
-    //tmp_ptn_rates = NULL;
-    //state_freqs = NULL;
-//    tmp_scale_num1 = NULL;
-//    tmp_scale_num2 = NULL;
     discard_saturated_site = true;
     _pattern_lh = NULL;
     _pattern_lh_cat = NULL;
@@ -192,20 +184,6 @@ PhyloTree::~PhyloTree() {
     if (site_rate)
         delete site_rate;
     site_rate = NULL;
-//    if (tmp_scale_num1)
-//        delete[] tmp_scale_num1;
-//    if (tmp_scale_num2)
-//        delete[] tmp_scale_num2;
-//    if (tmp_partial_lh1)
-//        delete[] tmp_partial_lh1;
-//    if (tmp_partial_lh2)
-//        delete[] tmp_partial_lh2;
-//    if (tmp_anscentral_state_prob1)
-//        delete[] tmp_anscentral_state_prob1;
-//    if (tmp_anscentral_state_prob2)
-//        delete[] tmp_anscentral_state_prob2;
-    //if (tmp_ptn_rates)
-    //	delete [] tmp_ptn_rates;
     if (_pattern_lh_cat)
         aligned_free(_pattern_lh_cat);
     _pattern_lh_cat = NULL;
@@ -673,13 +651,8 @@ void PhyloTree::initializeAllPartialLh() {
     int numStates = model->num_states;
 	// Minh's question: why getAlnNSite() but not getAlnNPattern() ?
     //size_t mem_size = ((getAlnNSite() % 2) == 0) ? getAlnNSite() : (getAlnNSite() + 1);
-    size_t nptn = getAlnNPattern() + numStates; // extra #numStates for ascertainment bias correction
-
-    size_t mem_size;
-    if (instruction_set >= 7)
-    	mem_size = ((nptn +3)/4)*4;
-    else
-    	mem_size = ((nptn % 2) == 0) ? nptn : (nptn + 1);
+    // extra #numStates for ascertainment bias correction
+    size_t mem_size = get_safe_upper_limit(getAlnNPattern() + numStates);
 
     size_t block_size = mem_size * numStates * site_rate->getNRate() * ((model_factory->fused_mix_rate)? 1 : model->getNMixtures());
     // make sure _pattern_lh size is divisible by 4 (e.g., 9->12, 14->16)
@@ -765,26 +738,23 @@ void PhyloTree::deleteAllPartialLh() {
 }
  
 uint64_t PhyloTree::getMemoryRequired(size_t ncategory) {
-	size_t nptn = aln->getNPattern() + aln->num_states; // +num_states for ascertainment bias correction
-	uint64_t block_size;
-	if (instruction_set >= 7)
-		// block size must be divisible by 4
-		block_size = ((nptn+3)/4)*4;
-	else
-		// block size must be divisible by 2
-		block_size = ((nptn % 2) == 0) ? nptn : (nptn + 1);
-    block_size = block_size * aln->num_states;
+    // +num_states for ascertainment bias correction
+	size_t nptn = get_safe_upper_limit(aln->getNPattern() + aln->num_states);
+    uint64_t scale_block_size = nptn;
     if (site_rate)
-    	block_size *= site_rate->getNRate();
+    	scale_block_size *= site_rate->getNRate();
     else
-    	block_size *= ncategory;
+    	scale_block_size *= ncategory;
     if (model && !model_factory->fused_mix_rate)
-    	block_size *= model->getNMixtures();
-    uint64_t mem_size = ((uint64_t) leafNum*4) * block_size *sizeof(double) + 2 + (leafNum) * 4 * nptn * sizeof(UBYTE);
+    	scale_block_size *= model->getNMixtures();
+
+    uint64_t block_size = scale_block_size * aln->num_states;
+
+    uint64_t mem_size = ((uint64_t) leafNum*4) * block_size *sizeof(double) + 2 + (leafNum) * 4 * scale_block_size * sizeof(UBYTE);
     if (params->SSE == LK_EIGEN || params->SSE == LK_EIGEN_SSE) {
-    	mem_size -= ((uint64_t)leafNum) * ((uint64_t)block_size*sizeof(double) + nptn * sizeof(UBYTE));
+    	mem_size -= ((uint64_t)leafNum) * ((uint64_t)block_size*sizeof(double) + scale_block_size * sizeof(UBYTE));
         if (params->lh_mem_save == LM_PER_NODE) {
-            mem_size -= ((uint64_t)leafNum*2 - 4) * ((uint64_t)block_size*sizeof(double) + nptn * sizeof(UBYTE));
+            mem_size -= ((uint64_t)leafNum*2 - 4) * ((uint64_t)block_size*sizeof(double) + scale_block_size * sizeof(UBYTE));
         }
     }
 	uint64_t tip_partial_lh_size;
@@ -801,15 +771,9 @@ uint64_t PhyloTree::getMemoryRequired(size_t ncategory) {
 }
 
 void PhyloTree::getMemoryRequired(uint64_t &partial_lh_entries, uint64_t &scale_num_entries, uint64_t &partial_pars_entries) {
-	size_t nptn = aln->getNPattern() + aln->num_states; // +num_states for ascertainment bias correction
-	uint64_t block_size;
-    size_t scale_size = nptn;
-	if (instruction_set >= 7)
-		// block size must be divisible by 4
-		block_size = ((nptn+3)/4)*4;
-	else
-		// block size must be divisible by 2
-		block_size = ((nptn % 2) == 0) ? nptn : (nptn + 1);
+    // +num_states for ascertainment bias correction
+	uint64_t block_size = get_safe_upper_limit(aln->getNPattern() + aln->num_states);
+    size_t scale_size = block_size;
     block_size = block_size * aln->num_states;
     if (site_rate) {
     	block_size *= site_rate->getNRate();
@@ -844,27 +808,17 @@ void PhyloTree::getMemoryRequired(uint64_t &partial_lh_entries, uint64_t &scale_
 
 void PhyloTree::initializeAllPartialLh(int &index, int &indexlh, PhyloNode *node, PhyloNode *dad) {
     size_t pars_block_size = getBitsBlockSize();
-    size_t nptn = aln->size()+aln->num_states; // +num_states for ascertainment bias correction
+    // +num_states for ascertainment bias correction
+    size_t nptn = get_safe_upper_limit(aln->size()+aln->num_states);
     size_t block_size;
-    if (instruction_set >= 7)
-    	// block size must be divisible by 4
-    	nptn = ((nptn+3)/4)*4;
-	else
-		// block size must be divisible by 2
-		nptn = ((nptn % 2) == 0) ? nptn : (nptn + 1);
-
     size_t scale_block_size = nptn * site_rate->getNRate() * ((model_factory->fused_mix_rate)? 1 : model->getNMixtures());
-//    size_t tip_block_size = nptn * model->num_states;
+    block_size = scale_block_size * model->num_states;
 
-    block_size = nptn * model->num_states * site_rate->getNRate() * ((model_factory->fused_mix_rate)? 1 : model->getNMixtures());
     if (!node) {
         node = (PhyloNode*) root;
         // allocate the big central partial likelihoods memory
         if (!nni_partial_lh) {
             // allocate memory only once!
-//            intptr_t MEM_ALIGNMENT = (instruction_set >= 7) ? 32 : 16;
-//            nni_partial_lh = aligned_alloc<double>(IT_NUM*partial_lh_size+MEM_ALIGNMENT/sizeof(double));
-//            nni_scale_num = aligned_alloc<UBYTE>(IT_NUM*scale_num_size+MEM_ALIGNMENT/sizeof(UBYTE));
             size_t IT_NUM = (params->nni5) ? 6 : 2;
             nni_partial_lh = aligned_alloc<double>(IT_NUM*block_size);
             nni_scale_num = aligned_alloc<UBYTE>(IT_NUM*scale_block_size);
@@ -998,22 +952,17 @@ void PhyloTree::initializeAllPartialLh(int &index, int &indexlh, PhyloNode *node
 }
 
 double *PhyloTree::newPartialLh() {
-    double *ret = aligned_alloc<double>((aln->size()+aln->num_states+3) * aln->num_states * site_rate->getNRate() *
+    size_t nptn = get_safe_upper_limit(aln->size()+aln->num_states);
+
+    double *ret = aligned_alloc<double>(nptn * aln->num_states * site_rate->getNRate() *
                              ((model_factory->fused_mix_rate)? 1 : model->getNMixtures()));
     return ret;
 }
 
 size_t PhyloTree::getPartialLhBytes() {
-    size_t nptn = aln->size()+aln->num_states; // +num_states for ascertainment bias correction
-    size_t block_size;
-    if (instruction_set >= 7)
-    	// block size must be divisible by 4
-    	block_size = ((nptn+3)/4)*4;
-	else
-		// block size must be divisible by 2
-		block_size = ((nptn % 2) == 0) ? nptn : (nptn + 1);
-
-    block_size = block_size * model->num_states * site_rate->getNRate() * ((model_factory->fused_mix_rate)? 1 : model->getNMixtures());
+    // +num_states for ascertainment bias correction
+    size_t block_size = get_safe_upper_limit(aln->size()+aln->num_states);
+    block_size *= model->num_states * site_rate->getNRate() * ((model_factory->fused_mix_rate)? 1 : model->getNMixtures());
 
 	return block_size * sizeof(double);
 }

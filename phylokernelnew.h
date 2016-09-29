@@ -24,6 +24,67 @@
  ******************************************************/
 
 /**
+    sum of elments of a vector:
+    X = A[0] + ... + A[N-1]
+    template FMA = true to allow FMA instruction, false otherwise
+    @param N number of elements
+    @param A vector of size N
+    @param[out] X sum of elements of A
+*/
+#ifdef KERNEL_FIX_STATES
+template <class VectorClass, const size_t nstates, const bool append>
+inline void sumVec(VectorClass *A, VectorClass &X, size_t N)
+#else
+template <class VectorClass, const bool append>
+inline void sumVec(VectorClass *A, VectorClass &X, size_t N)
+#endif
+{
+    size_t i;
+    if (N % 4 == 0) {
+        VectorClass V[4];
+        V[0] = A[0];
+        V[1] = A[1];
+        V[2] = A[2];
+        V[3] = A[3];
+        for (i = 4; i < N; i+=4) {
+            V[0] += A[i];
+            V[1] += A[i+1];
+            V[2] += A[i+2];
+            V[2] += A[i+3];
+        }
+        if (append)
+            X += (V[0] + V[1]) + (V[2] + V[3]);
+        else
+            X = (V[0] + V[1]) + (V[2] + V[3]);
+    } else if (N % 2 == 0) {
+        VectorClass V[2];
+        V[0] = A[0];
+        V[1] = A[1];
+        for (i = 2; i < N; i+=2) {
+            V[0] += A[i];
+            V[1] += A[i+1];
+        }
+        if (append)
+            X += V[0] + V[1];
+        else
+            X = V[0] + V[1];
+    } else {
+        // odd N
+        VectorClass V[2];
+        V[0] = A[0];
+        V[1] = A[1];
+        for (i = 2; i < N-1; i+=2) {
+            V[0] += A[i];
+            V[1] += A[i+1];
+        }
+        if (append)
+            X += A[N-1] + V[0] + V[1];
+        else
+            X = A[N-1] + V[0] + V[1];
+    }
+}
+
+/**
     dotProduct of two vectors A, B
     X = A.B = A[0]*B[0] + ... + A[N-1]*B[N-1]
     template FMA = true to allow FMA instruction, false otherwise
@@ -278,7 +339,7 @@ inline void productVecMat(VectorClass *A, Numeric *M, VectorClass *X, VectorClas
 
 /**
     compute dot-products of 3 vectors A, B, C with a single vector D and returns X, Y, Z:
-    X = X+A.D = A[0]*D[0] + ... + A[N-1]*D[N-1]
+    X =   A.D = A[0]*D[0] + ... + A[N-1]*D[N-1]
     Y =   B.D = B[0]*D[0] + ... + B[N-1]*D[N-1]
     Z =   C.D = C[0]*D[0] + ... + C[N-1]*D[N-1]
     @param N number of elements
@@ -287,7 +348,7 @@ inline void productVecMat(VectorClass *A, Numeric *M, VectorClass *X, VectorClas
     @param B vector of size N
     @param C vector of size N
     @param D vector of size N
-    @param[in/out] X = X+A.D
+    @param[in/out] X = A.D
     @param[out] Y = B.D
     @param[out] Z = C.D
 */
@@ -316,7 +377,7 @@ inline void dotProductTriple(Numeric *A, Numeric *B, Numeric *C, VectorClass *D,
                 CD[j] = mul_add(C[i+j], D[i+j], CD[j]);
             }
 		}
-        X += AD[0] + AD[1];
+        X  = AD[0] + AD[1];
         Y  = BD[0] + BD[1];
         Z  = CD[0] + CD[1];
     } else {
@@ -334,7 +395,7 @@ inline void dotProductTriple(Numeric *A, Numeric *B, Numeric *C, VectorClass *D,
                 CD[j] = mul_add(C[i+j], D[i+j], CD[j]);
             }
 		}
-        X += mul_add(A[N-1], D[N-1], AD[0] + AD[1]);
+        X  = mul_add(A[N-1], D[N-1], AD[0] + AD[1]);
         Y  = mul_add(B[N-1], D[N-1], BD[0] + BD[1]);
         Z  = mul_add(C[N-1], D[N-1], CD[0] + CD[1]);
     }
@@ -1101,6 +1162,7 @@ void PhyloTree::computeLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, Phyl
 	    if (dad->isLeaf()) {
 	    	// special treatment for TIP-INTERNAL NODE case
 
+            // TODO not thread-safe
             double *vec_tip = aligned_alloc<double>(tip_block*VectorClass::size());
 
 #ifdef _OPENMP
@@ -1209,38 +1271,6 @@ void PhyloTree::computeLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, Phyl
                         scale_node += ncat_mix;
                     }
                 }
-
-
-/*
-                if (SAFE_NUMERIC) {
-
-    //                size_t ptn_ncat = ptn*ncat_mix; 
-    //                UBYTE *scale_dad = dad_branch->scale_num + ptn_ncat;
-    //                UBYTE *scale_node = node_branch->scale_num + ptn_ncat;
-    //                UBYTE sum_scale[ncat_mix];
-    //                UBYTE min_scale = sum_scale[0] = scale_dad[0] + scale_node[0];
-    //                for (c = 1; c < ncat_mix; c++) {
-    //                    sum_scale[c] = scale_dad[c] + scale_node[c];
-    //                    min_scale = min(min_scale, sum_scale[c]);
-    //                }
-                    for (c = 0; c < ncat_mix; c++) {
-    //                    if (sum_scale[c] == min_scale) {
-                            for (i = 0; i < nstates; i++) {
-                                theta[i] = partial_lh_node[i] * partial_lh_dad[i];
-                            }
-    //                    } else if (sum_scale[c] == min_scale+1) {
-    //                        for (i = 0; i < nstates; i++) {
-    //                            theta[i] = partial_lh_node[i] * partial_lh_dad[i] * SCALING_THRESHOLD;
-    //                        }
-    //                    } else {
-    //                        memset(theta, 0, sizeof(double)*nstates);
-    //                    }
-                        theta += nstates;
-                        partial_lh_dad += nstates;
-                        partial_lh_node += nstates;
-                    }
-                }
-                */
 			}
 	    }
         // NO NEED TO copy dummy values!
@@ -1278,28 +1308,19 @@ void PhyloTree::computeLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, Phyl
 #endif
     for (ptn = 0; ptn < nptn; ptn+=VectorClass::size()) {
 		VectorClass lh_ptn;
-        lh_ptn.load_a(&ptn_invar[ptn]);
+        //lh_ptn.load_a(&ptn_invar[ptn]);
 		VectorClass *theta = (VectorClass*)(theta_all + ptn*block);
         VectorClass df_ptn, ddf_ptn;
-//        lh_ptn = mul_add(val0[0], theta[0], lh_ptn);
-//        VectorClass df_ptn = val1[0] * theta[0];
-//        VectorClass ddf_ptn = val2[0] * theta[0];
-//		for (i = 1; i < block; i++) {
-//			lh_ptn  = mul_add(val0[i], theta[i], lh_ptn);
-//			df_ptn  = mul_add(val1[i], theta[i], df_ptn);
-//			ddf_ptn = mul_add(val2[i], theta[i], ddf_ptn);
-//		}
 
 #ifdef KERNEL_FIX_STATES
         dotProductTriple<VectorClass, double, nstates, FMA>(val0, val1, val2, theta, lh_ptn, df_ptn, ddf_ptn, block);
 #else
         dotProductTriple<VectorClass, double, FMA>(val0, val1, val2, theta, lh_ptn, df_ptn, ddf_ptn, block, nstates);
 #endif
-
-//        assert(lh_ptn > 0.0);
-        lh_ptn = abs(lh_ptn);
+        lh_ptn = abs(lh_ptn + VectorClass().load_a(&ptn_invar[ptn]));
         
         if (ptn < orig_nptn) {
+            // TODO ASC overlap
             lh_ptn = 1.0 / lh_ptn;
 			VectorClass df_frac = df_ptn * lh_ptn;
 			VectorClass ddf_frac = ddf_ptn * lh_ptn;
@@ -1560,7 +1581,7 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
             VectorClass *partial_lh_node = (VectorClass*)(node_branch->partial_lh + ptn*block);
             double *val_tmp = val;
 
-            VectorClass vc_min_scale = 0.0;
+            VectorClass vc_min_scale(0.0);
 
             if (SAFE_NUMERIC) {
 
@@ -1599,8 +1620,7 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
                     scale_dad += ncat_mix;
                     scale_node += ncat_mix;
                 }
-                for (c = 0; c < ncat_mix; c++)
-                    lh_ptn += lh_cat[c];
+                sumVec<VectorClass, true>(lh_cat, lh_ptn, ncat_mix);
                 vc_min_scale *= LOG_SCALING_THRESHOLD;
             } else {
                 // normal scaling
@@ -1618,7 +1638,10 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
             }
 
 			if (ptn < orig_nptn) {
-				lh_ptn = log(abs(lh_ptn)) + vc_min_scale;
+                if (SAFE_NUMERIC)
+                    lh_ptn = log(abs(lh_ptn)) + vc_min_scale;
+                else
+                    lh_ptn = log(abs(lh_ptn));
 				lh_ptn.store_a(&_pattern_lh[ptn]);
 				vc_tree_lh = mul_add(lh_ptn, VectorClass().load_a(&ptn_freq[ptn]), vc_tree_lh);
                 // TODO: case that ASC overlap
@@ -1737,14 +1760,12 @@ double PhyloTree::computeLikelihoodFromBufferGenericSIMD()
 #endif
     for (ptn = 0; ptn < nptn; ptn+=VectorClass::size()) {
 		VectorClass lh_ptn;
-        lh_ptn.load_a(&ptn_invar[ptn]);
 		VectorClass *theta = (VectorClass*)(theta_all + ptn*block);
-		for (i = 0; i < block; i++) {
-			lh_ptn  = mul_add(val0[i], theta[i], lh_ptn);
-		}
+        dotProductVec<VectorClass, double, FMA>(val0, theta, lh_ptn, block);
+        lh_ptn += VectorClass().load_a(&ptn_invar[ptn]);
 
-//        assert(lh_ptn > 0.0);
         if (ptn < orig_nptn) {
+            // TODO safe likelihood
             //lh_ptn = log(abs(lh_ptn)) + LOG_SCALING_THRESHOLD*min_scale;
             lh_ptn = log(abs(lh_ptn));
             lh_ptn.store_a(&_pattern_lh[ptn]);

@@ -2381,14 +2381,6 @@ void performAUTest(Params &params, PhyloTree *tree, double *pattern_lhs, vector<
                         tree_lh += pattern_lh[ptn] * boot_sample_dbl[ptn];
                 } else {
                     tree_lh = tree->dotProductDoubleCall(pattern_lh, boot_sample_dbl, nptn);
-//#ifdef BINARY32
-//                    tree_lh = tree->dotProductSIMD<double, Vec2d>(pattern_lh, boot_sample_dbl, nptn);
-//#else
-//                    if (instruction_set >= 7)
-//                        tree_lh = tree->dotProductSIMD<double, Vec4d>(pattern_lh, boot_sample_dbl, nptn);
-//                    else
-//                        tree_lh = tree->dotProductSIMD<double, Vec2d>(pattern_lh, boot_sample_dbl, nptn);
-//#endif
                 }
                 // rescale lh
                 tree_lh /= r[k];

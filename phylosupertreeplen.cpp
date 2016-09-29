@@ -1793,15 +1793,13 @@ void PhyloSuperTreePlen::initializeAllPartialLh() {
 	for (partid = 0; partid < ntrees; partid++) {
 		part = part_order[partid];
         it = begin() + part;
-		size_t nptn = (*it)->getAlnNPattern() + (*it)->aln->num_states; // extra #numStates for ascertainment bias correction
-		scale_block_size[part] = nptn * (*it)->getRate()->getNRate() *
+        // extra #numStates for ascertainment bias correction
+		mem_size[part] = get_safe_upper_limit((*it)->getAlnNPattern() + (*it)->aln->num_states);
+        size_t mem_cat_size = mem_size[part] * (*it)->getRate()->getNRate() *
 				(((*it)->model_factory->fused_mix_rate)? 1 : (*it)->getModel()->getNMixtures());
-		if (instruction_set >= 7)
-			mem_size[part] = ((nptn +3)/4)*4;
-		else
-			mem_size[part] = ((nptn % 2) == 0) ? nptn : (nptn + 1);
-		block_size[part] = mem_size[part] * (*it)->aln->num_states * (*it)->getRate()->getNRate() *
-				(((*it)->model_factory->fused_mix_rate)? 1 : (*it)->getModel()->getNMixtures());
+
+		block_size[part] = mem_cat_size * (*it)->aln->num_states;
+		scale_block_size[part] = mem_cat_size;
 
 		lh_cat_size[part] = mem_size[part] * (*it)->getRate()->getNDiscreteRate() *
 				(((*it)->model_factory->fused_mix_rate)? 1 : (*it)->getModel()->getNMixtures());
