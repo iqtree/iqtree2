@@ -1903,6 +1903,32 @@ void PhyloSuperTreePlen::initializeAllPartialLh() {
         tip_partial_lh_size = ((tip_partial_lh_size+3)/4)*4;
         lh_addr += tip_partial_lh_size;
     }
+
+    // 2016-09-29: redirect partial_lh when root does not occur in partition tree
+    SuperNeighbor *root_nei = (SuperNeighbor*)root->neighbors[0];
+    for (it = begin(), part = 0; it != end(); it++, part++) {
+        if (root_nei->link_neighbors[part])
+            continue;
+        NodeVector nodes;
+        (*it)->getInternalNodes(nodes);
+        for (NodeVector::iterator nit = nodes.begin(); nit != nodes.end(); nit++) {
+            bool has_partial_lh = false;
+            FOR_NEIGHBOR_IT(*nit, NULL, neiit)
+                if ( ((PhyloNeighbor*)(*neiit)->node->findNeighbor(*nit))->partial_lh) {
+                    has_partial_lh = true;
+                    break;
+                }
+            if (has_partial_lh)
+                continue;
+            // add partial_lh
+            PhyloNeighbor *back_nei = (PhyloNeighbor*)(*nit)->neighbors[0]->node->findNeighbor(*nit);
+            back_nei->partial_lh = lh_addr;
+            back_nei->scale_num = scale_addr;
+            lh_addr = lh_addr + block_size[part];
+            scale_addr = scale_addr + scale_block_size[part];
+        }
+    }
+
 }
 
 void PhyloSuperTreePlen::initializeAllPartialLh(double* &lh_addr, UBYTE* &scale_addr, UINT* &pars_addr, PhyloNode *node, PhyloNode *dad) {

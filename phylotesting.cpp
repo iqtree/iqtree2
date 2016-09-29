@@ -267,7 +267,7 @@ void printSiteLhCategory(const char*filename, PhyloTree *tree, SiteLoglType wsl)
 	double *pattern_lh, *pattern_lh_cat;
 	int i;
 	pattern_lh = new double[tree->getAlnNPattern()];
-	pattern_lh_cat = new double[tree->getAlnNPattern()*ncat];
+	pattern_lh_cat = new double[((size_t)tree->getAlnNPattern())*ncat];
 	tree->computePatternLikelihood(pattern_lh, NULL, pattern_lh_cat, wsl);
 
     
@@ -357,7 +357,7 @@ void printSiteProbCategory(const char*filename, PhyloTree *tree, SiteLoglType ws
         }
     }
 	size_t cat, ncat = tree->getNumLhCat(wsl);
-    double *ptn_prob_cat = new double[tree->getAlnNPattern()*ncat];
+    double *ptn_prob_cat = new double[((size_t)tree->getAlnNPattern())*ncat];
 	tree->computePatternProbabilityCategory(ptn_prob_cat, wsl);
     
 	try {
@@ -415,7 +415,7 @@ void printSiteStateFreq(const char*filename, PhyloTree *tree, double *state_freq
     if (state_freqs) {
     	ptn_state_freq = state_freqs;
     } else {
-    	ptn_state_freq = new double[tree->getAlnNPattern() * nstates];
+    	ptn_state_freq = new double[((size_t)tree->getAlnNPattern()) * nstates];
         tree->computePatternStateFreq(ptn_state_freq);
     }
 
