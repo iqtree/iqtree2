@@ -503,15 +503,6 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(PhyloNeighbor *dad_branch, P
     
 	double *evec = model->getEigenvectors();
 	double *inv_evec = model->getInverseEigenvectors();
-//    double *inv_evec_trans = aligned_alloc<double>(tip_block * nstates);
-    // transpose inv_evec
-//    for (c = 0; c < model->getNMixtures(); c++) {
-//        double *inv_evec_ptr = inv_evec + nstates*nstates*c;
-//        double *inv_evec_trans_ptr = inv_evec_trans + nstates*nstates*c;
-//        for (i = 0; i < nstates; i++)
-//            for (x = 0; x < nstates; x++)
-//                inv_evec_trans_ptr[i*nstates+x] = inv_evec_ptr[x*nstates+i];
-//    }
 	assert(inv_evec && evec);
 	double *eval = model->getEigenvalues();
 
@@ -549,16 +540,29 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(PhyloNeighbor *dad_branch, P
     }
 
     // precompute buffer to save times
-    double *echildren = aligned_alloc<double>(block*nstates*(node->degree()-1));
+    double *buffer_partial_lh_ptr = buffer_partial_lh;
+    double *echildren;
+
+    if (node->degree() == 3) {
+        echildren = buffer_partial_lh_ptr;
+        buffer_partial_lh_ptr += get_safe_upper_limit(block*nstates*(node->degree()-1));
+    } else {
+        echildren = aligned_alloc<double>(block*nstates*(node->degree()-1));
+    }
     double *partial_lh_leaves = NULL;
-    if (num_leaves > 0)
-        partial_lh_leaves = aligned_alloc<double>((aln->STATE_UNKNOWN+1)*block*num_leaves);
+    if (num_leaves > 0) {
+        if (num_leaves <= 2) {
+            partial_lh_leaves = buffer_partial_lh_ptr;
+            buffer_partial_lh_ptr += get_safe_upper_limit((aln->STATE_UNKNOWN+1)*block*num_leaves);
+        } else
+            partial_lh_leaves = aligned_alloc<double>((aln->STATE_UNKNOWN+1)*block*num_leaves);
+    }
     double *echild = echildren;
     double *partial_lh_leaf = partial_lh_leaves;
 
     if (nstates % VectorClass::size() == 0) {
         // vectorized version
-        VectorClass *expchild = (VectorClass*)aligned_alloc<double>(nstates);
+        VectorClass *expchild = (VectorClass*)buffer_partial_lh_ptr;
         FOR_NEIGHBOR_IT(node, dad, it) {
             PhyloNeighbor *child = (PhyloNeighbor*)*it;
             VectorClass *echild_ptr = (VectorClass*)echild;
@@ -608,7 +612,7 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(PhyloNeighbor *dad_branch, P
             }
             echild += block*nstates;
         }
-        aligned_free(expchild);
+//        aligned_free(expchild);
     } else {
         // non-vectorized version
         double expchild[nstates];
@@ -677,12 +681,16 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(PhyloNeighbor *dad_branch, P
     if (node->degree() > 3) {
         /*--------------------- multifurcating node ------------------*/
 
-        double *partial_lh_all_dbl = aligned_alloc<double>(block*VectorClass::size()*2);
-        double *vec_tip = partial_lh_all_dbl + block*VectorClass::size();
-
         // now for-loop computing partial_lh over all site-patterns
 #ifdef _OPENMP
-#pragma omp parallel for private(ptn, c, x, i) schedule(static)
+#pragma omp parallel private(ptn, c, x, i)
+        {
+        double *partial_lh_all_dbl = buffer_partial_lh_ptr + block*VectorClass::size()*2*omp_get_thread_num();
+        double *vec_tip = partial_lh_all_dbl + block*VectorClass::size();
+#pragma omp for schedule(static)
+#else
+        double *partial_lh_all_dbl = buffer_partial_lh_ptr;
+        double *vec_tip = partial_lh_all_dbl + block*VectorClass::size();
 #endif
         for (ptn = 0; ptn < nptn; ptn+=VectorClass::size()) {
             VectorClass *partial_lh_all = (VectorClass*)partial_lh_all_dbl;
@@ -811,8 +819,11 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(PhyloNeighbor *dad_branch, P
             }
 
         } // for ptn
-//        dad_branch->lh_scale_factor += sum_scale;               
-        aligned_free(partial_lh_all_dbl);
+//        dad_branch->lh_scale_factor += sum_scale;
+#ifdef _OPENMP
+        }
+#endif
+//        aligned_free(partial_lh_all_dbl);
 
         // end multifurcating treatment
     } else if (left->node->isLeaf() && right->node->isLeaf()) {
@@ -821,15 +832,20 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(PhyloNeighbor *dad_branch, P
 
         double *partial_lh_left = partial_lh_leaves;
         double *partial_lh_right = partial_lh_leaves + (aln->STATE_UNKNOWN+1)*block;
-        // TODO: this is not thread-safe
-        double *vec_left = aligned_alloc<double>(block*VectorClass::size()*2 + nstates*VectorClass::size());
-        double *vec_right = vec_left + block*VectorClass::size();
-        double *partial_lh_dbl = vec_right + block*VectorClass::size();
 
 		// scale number must be ZERO
 	    memset(dad_branch->scale_num, 0, scale_size * sizeof(UBYTE));
 #ifdef _OPENMP
-#pragma omp parallel for private(ptn, c, x, i) schedule(static)
+#pragma omp parallel private(ptn, c, x, i)
+        {
+        double *vec_left = buffer_partial_lh_ptr + (block*2 + nstates)*VectorClass::size()*omp_get_thread_num();
+        double *vec_right = vec_left + block*VectorClass::size();
+        double *partial_lh_dbl = vec_right + block*VectorClass::size();
+#pragma omp for schedule(static)
+#else
+        double *vec_left = buffer_partial_lh_ptr;
+        double *vec_right = vec_left + block*VectorClass::size();
+        double *partial_lh_dbl = vec_right + block*VectorClass::size();
 #endif
 		for (ptn = 0; ptn < nptn; ptn+=VectorClass::size()) {
 			VectorClass* partial_lh_tmp = (VectorClass*)partial_lh_dbl;
@@ -880,9 +896,12 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(PhyloNeighbor *dad_branch, P
                 vright += nstates;
                 partial_lh += nstates;
 			}
-		}
+		} // FOR LOOP
 
-        aligned_free(vec_left);
+#ifdef _OPENMP
+        }
+#endif
+//        aligned_free(vec_left);
 
 	} else if (left->node->isLeaf() && !right->node->isLeaf()) {
 
@@ -891,16 +910,18 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(PhyloNeighbor *dad_branch, P
 		// only take scale_num from the right subtree
 		memcpy(dad_branch->scale_num, right->scale_num, scale_size * sizeof(UBYTE));
 
-
         double *partial_lh_left = partial_lh_leaves;
-
-        // TODO: this is not thread-safe
-        double *vec_left = aligned_alloc<double>(block*VectorClass::size() + nstates*VectorClass::size());
-        double *partial_lh_dbl = vec_left + block*VectorClass::size();
 
 
 #ifdef _OPENMP
-#pragma omp parallel for private(ptn, c, x, i) schedule(static)
+#pragma omp parallel private(ptn, c, x, i)
+        {
+        double *vec_left = buffer_partial_lh_ptr + (block+nstates)*VectorClass::size()*omp_get_thread_num();
+        double *partial_lh_dbl = vec_left + block*VectorClass::size();
+#pragma omp for schedule(static)
+#else
+        double *vec_left = buffer_partial_lh_ptr;
+        double *partial_lh_dbl = vec_left + block*VectorClass::size();
 #endif
 		for (ptn = 0; ptn < nptn; ptn+=VectorClass::size()) {
 			VectorClass *partial_lh_tmp = (VectorClass*)partial_lh_dbl;
@@ -986,17 +1007,24 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(PhyloNeighbor *dad_branch, P
             }
 
 		} // big for loop over ptn
-        aligned_free(vec_left);
+#ifdef _OPENMP
+        }
+#endif
+//        aligned_free(vec_left);
 //		dad_branch->lh_scale_factor += sum_scale;
 //		delete [] partial_lh_left;
 
 	} else {
 
         /*--------------------- INTERNAL-INTERNAL NODE case ------------------*/
-        double *partial_lh_dbl = aligned_alloc<double>(nstates*VectorClass::size());
 
 #ifdef _OPENMP
-#pragma omp parallel for private(ptn, c, x, i) schedule(static)
+#pragma omp parallel private(ptn, c, x, i)
+    {
+        double *partial_lh_dbl = buffer_partial_lh_ptr + nstates*VectorClass::size()*omp_get_thread_num();
+#pragma omp for schedule(static)
+#else
+        double *partial_lh_dbl = buffer_partial_lh_ptr;
 #endif
 		for (ptn = 0; ptn < nptn; ptn+=VectorClass::size()) {
 			VectorClass *partial_lh_tmp = (VectorClass*)partial_lh_dbl;
@@ -1085,15 +1113,19 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(PhyloNeighbor *dad_branch, P
             }
 
 		} // big for loop over ptn
+#ifdef _OPENMP
+    }
+#endif
 //		dad_branch->lh_scale_factor += sum_scale;
 
-        aligned_free(partial_lh_dbl);
+//        aligned_free(partial_lh_dbl);
 
 	}
 
-    if (partial_lh_leaves)
+    if (num_leaves > 2)
         aligned_free(partial_lh_leaves);
-    aligned_free(echildren);
+    if (node->degree() > 3)
+        aligned_free(echildren);
 //    aligned_free(inv_evec_trans);
 }
 
@@ -1160,11 +1192,13 @@ void PhyloTree::computeLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, Phyl
 	    if (dad->isLeaf()) {
 	    	// special treatment for TIP-INTERNAL NODE case
 
-            // TODO not thread-safe
-            double *vec_tip = aligned_alloc<double>(tip_block*VectorClass::size());
-
 #ifdef _OPENMP
-#pragma omp parallel for private(ptn, i, c) schedule(static) reduction(+: scale_all)
+#pragma omp parallel private(ptn, i, c) schedule(static)
+        {
+            double *vec_tip = buffer_partial_lh + tip_block*VectorClass::size()*omp_get_thread_num();
+#pragma omp for schedule(static) reduction(+: scale_all)
+#else
+            double *vec_tip = buffer_partial_lh;
 #endif
 	    	for (ptn = 0; ptn < nptn; ptn+=VectorClass::size()) {
 				VectorClass *partial_lh_dad = (VectorClass*)(dad_branch->partial_lh + ptn*block);
@@ -1228,8 +1262,11 @@ void PhyloTree::computeLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, Phyl
                     *buf *= LOG_SCALING_THRESHOLD;
                 }
 
-			}
-            aligned_free(vec_tip);
+			} // FOR PTN LOOP
+#ifdef _OPENMP
+        }
+#endif
+//            aligned_free(vec_tip);
 	    } else {
 	    	// both dad and node are internal nodes
 
@@ -1291,9 +1328,9 @@ void PhyloTree::computeLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, Phyl
 		theta_computed = true;
 	}
 
-    double *val0 = aligned_alloc<double>(block);
-    double *val1 = aligned_alloc<double>(block);
-    double *val2 = aligned_alloc<double>(block);
+    double *val0 = buffer_partial_lh;
+    double *val1 = val0 + get_safe_upper_limit(block);
+    double *val2 = val1 + get_safe_upper_limit(block);
 
 
     if (nstates % VectorClass::size() == 0) {
@@ -1401,9 +1438,9 @@ void PhyloTree::computeLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, Phyl
     }
 
 
-    aligned_free(val2);
-    aligned_free(val1);
-    aligned_free(val0);
+//    aligned_free(val2);
+//    aligned_free(val1);
+//    aligned_free(val0);
 }
 
 
@@ -1461,7 +1498,10 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
     double *eval = model->getEigenvalues();
     assert(eval);
 
-    double *val = aligned_alloc<double>(block);
+//    double *val = aligned_alloc<double>(block);
+    double *val = buffer_partial_lh;
+    double *buffer_partial_lh_ptr = buffer_partial_lh + get_safe_upper_limit(block);
+
     if (nstates % VectorClass::size() == 0) {
         size_t loop_size = nstates / VectorClass::size();
         for (c = 0; c < ncat_mix; c++) {
@@ -1497,7 +1537,10 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
 
     if (dad->isLeaf()) {
     	// special treatment for TIP-INTERNAL NODE case
-    	double *partial_lh_node = aligned_alloc<double>((aln->STATE_UNKNOWN+1)*block);
+//    	double *partial_lh_node = aligned_alloc<double>((aln->STATE_UNKNOWN+1)*block);
+        double *partial_lh_node = buffer_partial_lh_ptr;
+        buffer_partial_lh_ptr += get_safe_upper_limit((aln->STATE_UNKNOWN+1)*block);
+
     	IntVector states_dad = aln->seq_states[dad->id];
     	states_dad.push_back(aln->STATE_UNKNOWN);
     	// precompute information from one tip
@@ -1533,11 +1576,14 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
             }
         }
 
-        double *vec_tip = aligned_alloc<double>(block*VectorClass::size());
-
     	// now do the real computation
 #ifdef _OPENMP
 #pragma omp parallel for reduction(+: tree_lh, prob_const) private(ptn, i, c) schedule(static)
+    {
+        double *vec_tip = buffer_partial_lh_ptr + block*VectorClass::size()*omp_get_thread_num();
+#pragma omp parallel for reduction(+: tree_lh, prob_const) private(ptn, i, c) schedule(static)
+#else
+        double *vec_tip = buffer_partial_lh_ptr;
 #endif
     	for (ptn = 0; ptn < nptn; ptn+=VectorClass::size()) {
 			VectorClass lh_ptn;
@@ -1629,8 +1675,8 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
                 vc_prob_const += lh_ptn;
 			}
 		}
-        aligned_free(vec_tip);
-		aligned_free(partial_lh_node);
+//        aligned_free(vec_tip);
+//		aligned_free(partial_lh_node);
     } else {
     	// both dad and node are internal nodes
 
@@ -1753,7 +1799,7 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
 		assert(!isnan(tree_lh) && !isinf(tree_lh));
     }
 
-    aligned_free(val);
+//    aligned_free(val);
     return tree_lh;
 }
 
@@ -1803,7 +1849,8 @@ double PhyloTree::computeLikelihoodFromBufferGenericSIMD()
     double *eval = model->getEigenvalues();
     assert(eval);
 
-    double *val0 = aligned_alloc<double>(block);
+//    double *val0 = aligned_alloc<double>(block);
+    double *val0 = buffer_partial_lh;
 
     if (nstates % VectorClass::size() == 0) {
         VectorClass *vc_val0 = (VectorClass*)val0;
@@ -1890,7 +1937,7 @@ double PhyloTree::computeLikelihoodFromBufferGenericSIMD()
 		assert(!isnan(tree_lh) && !isinf(tree_lh));
     }
 
-    aligned_free(val0);
+//    aligned_free(val0);
     return tree_lh;
 }
 

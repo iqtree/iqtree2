@@ -77,6 +77,7 @@ void PhyloTree::init() {
     root_state = 126;
     theta_all = NULL;
     buffer_scale_all = NULL;
+    buffer_partial_lh = NULL;
     ptn_freq = NULL;
     ptn_invar = NULL;
     subTreeDistComputed = false;
@@ -199,6 +200,9 @@ PhyloTree::~PhyloTree() {
     if (buffer_scale_all)
         aligned_free(buffer_scale_all);
     buffer_scale_all = NULL;
+    if (buffer_partial_lh)
+        aligned_free(buffer_partial_lh);
+    buffer_partial_lh = NULL;
     if (ptn_freq)
         aligned_free(ptn_freq);
     ptn_freq = NULL;
@@ -650,6 +654,16 @@ int PhyloTree::computeParsimony() {
  likelihood function
  ****************************************************************************/
 
+size_t PhyloTree::getBufferPartialLhSize() {
+    const size_t VECTOR_SIZE = 8; // TODO, adjusted
+    size_t ncat_mix = site_rate->getNRate() * ((model_factory->fused_mix_rate)? 1 : model->getNMixtures());
+    size_t block = model->num_states * ncat_mix;
+    size_t buffer_size = get_safe_upper_limit(block * model->num_states * 2);
+    buffer_size += get_safe_upper_limit(block * 2 * (aln->STATE_UNKNOWN+1));
+    buffer_size += (block*2+model->num_states)*VECTOR_SIZE*params->num_threads;
+    return buffer_size;
+}
+
 void PhyloTree::initializeAllPartialLh() {
     int index, indexlh;
     int numStates = model->num_states;
@@ -667,6 +681,9 @@ void PhyloTree::initializeAllPartialLh() {
         theta_all = aligned_alloc<double>(block_size);
     if (!buffer_scale_all)
         buffer_scale_all = aligned_alloc<double>(mem_size);
+    if (!buffer_partial_lh) {
+        buffer_partial_lh = aligned_alloc<double>(getBufferPartialLhSize());
+    }
     if (!ptn_freq) {
         ptn_freq = aligned_alloc<double>(mem_size);
         ptn_freq_computed = false;
@@ -723,7 +740,8 @@ void PhyloTree::deleteAllPartialLh() {
 		aligned_free(theta_all);
     if (buffer_scale_all)
         aligned_free(buffer_scale_all);
-
+    if (buffer_partial_lh)
+        aligned_free(buffer_partial_lh);
 	if (_pattern_lh_cat)
 		aligned_free(_pattern_lh_cat);
 	if (_pattern_lh)
@@ -737,6 +755,7 @@ void PhyloTree::deleteAllPartialLh() {
 	ptn_freq_computed = false;
 	theta_all = NULL;
     buffer_scale_all = NULL;
+    buffer_partial_lh = NULL;
 	_pattern_lh_cat = NULL;
 	_pattern_lh = NULL;
 

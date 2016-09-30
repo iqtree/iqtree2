@@ -595,6 +595,8 @@ public:
             likelihood function
      ****************************************************************************/
 
+    size_t getBufferPartialLhSize();
+
     /**
             initialize partial_lh vector of all PhyloNeighbors, allocating central_partial_lh
      */
@@ -1189,6 +1191,8 @@ public:
     /** total scaling buffer */
     double *buffer_scale_all;
 
+    /** buffer used when computing partial_lh, to avoid repeated mem allocation */
+    double *buffer_partial_lh;
 
     /**
      * frequencies of alignment patterns, used as buffer for likelihood computation
