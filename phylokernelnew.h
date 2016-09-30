@@ -1294,21 +1294,50 @@ void PhyloTree::computeLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, Phyl
     double *val0 = aligned_alloc<double>(block);
     double *val1 = aligned_alloc<double>(block);
     double *val2 = aligned_alloc<double>(block);
-	for (c = 0; c < ncat_mix; c++) {
-        size_t m = c/denom;
-        double *eval_ptr = eval + mix_addr_nstates[c];
-        size_t mycat = c%ncat;
-        double prop = site_rate->getProp(mycat) * model->getMixtureWeight(m);
-        size_t addr = c*nstates;
-		for (i = 0; i < nstates; i++) {
-			double cof = eval_ptr[i]*site_rate->getRate(mycat);
-			double val = exp(cof*dad_branch->length) * prop;
-			double val1_ = cof*val;
-			val0[addr+i] = val;
-			val1[addr+i] = val1_;
-			val2[addr+i] = cof*val1_;
-		}
-	}
+
+
+    if (nstates % VectorClass::size() == 0) {
+        VectorClass *vc_val0 = (VectorClass*)val0;
+        VectorClass *vc_val1 = (VectorClass*)val1;
+        VectorClass *vc_val2 = (VectorClass*)val2;
+
+        double len = dad_branch->length;
+        size_t loop_size = nstates/VectorClass::size();
+        for (c = 0; c < ncat_mix; c++) {
+            size_t m = c/denom;
+            VectorClass *eval_ptr = (VectorClass*)(eval + mix_addr_nstates[c]);
+            size_t mycat = c%ncat;
+            double prop = site_rate->getProp(mycat) * model->getMixtureWeight(m);
+            double myrate = site_rate->getRate(mycat);
+            for (i = 0; i < loop_size; i++) {
+                VectorClass cof = eval_ptr[i] * myrate;
+                VectorClass val = exp(cof*len) * prop;
+                VectorClass val1_ = cof*val;
+                vc_val0[i] = val;
+                vc_val1[i] = val1_;
+                vc_val2[i] = cof*val1_;
+            }
+            vc_val0 += loop_size;
+            vc_val1 += loop_size;
+            vc_val2 += loop_size;
+        }
+    } else {
+        for (c = 0; c < ncat_mix; c++) {
+            size_t m = c/denom;
+            double *eval_ptr = eval + mix_addr_nstates[c];
+            size_t mycat = c%ncat;
+            double prop = site_rate->getProp(mycat) * model->getMixtureWeight(m);
+            size_t addr = c*nstates;
+            for (i = 0; i < nstates; i++) {
+                double cof = eval_ptr[i]*site_rate->getRate(mycat);
+                double val = exp(cof*dad_branch->length) * prop;
+                double val1_ = cof*val;
+                val0[addr+i] = val;
+                val1[addr+i] = val1_;
+                val2[addr+i] = cof*val1_;
+            }
+        }
+    }
 
 
     VectorClass my_df = 0.0, my_ddf = 0.0, vc_prob_const = 0.0, vc_df_const = 0.0, vc_ddf_const = 0.0;
@@ -1433,18 +1462,34 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
     assert(eval);
 
     double *val = aligned_alloc<double>(block);
-	for (c = 0; c < ncat_mix; c++) {
-        size_t mycat = c%ncat;
-        size_t m = c/denom;
-        mix_addr_nstates[c] = m*nstates;
-        mix_addr[c] = mix_addr_nstates[c]*nstates;
-        double *eval_ptr = eval + mix_addr_nstates[c];
-		double len = site_rate->getRate(mycat)*dad_branch->length;
-		double prop = site_rate->getProp(mycat) * model->getMixtureWeight(m);
-        double *this_val = val + c*nstates;
-		for (i = 0; i < nstates; i++)
-			this_val[i] = exp(eval_ptr[i]*len) * prop;
-	}
+    if (nstates % VectorClass::size() == 0) {
+        size_t loop_size = nstates / VectorClass::size();
+        for (c = 0; c < ncat_mix; c++) {
+            size_t mycat = c%ncat;
+            size_t m = c/denom;
+            mix_addr_nstates[c] = m*nstates;
+            mix_addr[c] = mix_addr_nstates[c]*nstates;
+            VectorClass *eval_ptr = (VectorClass*)(eval + mix_addr_nstates[c]);
+            double len = site_rate->getRate(mycat)*dad_branch->length;
+            double prop = site_rate->getProp(mycat) * model->getMixtureWeight(m);
+            VectorClass *this_val = (VectorClass*)(val + c*nstates);
+            for (i = 0; i < loop_size; i++)
+                this_val[i] = exp(eval_ptr[i]*len) * prop;
+        }
+    } else {
+        for (c = 0; c < ncat_mix; c++) {
+            size_t mycat = c%ncat;
+            size_t m = c/denom;
+            mix_addr_nstates[c] = m*nstates;
+            mix_addr[c] = mix_addr_nstates[c]*nstates;
+            double *eval_ptr = eval + mix_addr_nstates[c];
+            double len = site_rate->getRate(mycat)*dad_branch->length;
+            double prop = site_rate->getProp(mycat) * model->getMixtureWeight(m);
+            double *this_val = val + c*nstates;
+            for (i = 0; i < nstates; i++)
+                this_val[i] = exp(eval_ptr[i]*len) * prop;
+        }
+    }
 
 	double prob_const = 0.0;
     VectorClass vc_prob_const = 0.0;
@@ -1759,18 +1804,35 @@ double PhyloTree::computeLikelihoodFromBufferGenericSIMD()
     assert(eval);
 
     double *val0 = aligned_alloc<double>(block);
-	for (c = 0; c < ncat_mix; c++) {
-        size_t m = c/denom;
-        double *eval_ptr = eval + mix_addr_nstates[c];
-        size_t mycat = c%ncat;
-        double prop = site_rate->getProp(mycat) * model->getMixtureWeight(m);
-        size_t addr = c*nstates;
-		for (i = 0; i < nstates; i++) {
-			double cof = eval_ptr[i]*site_rate->getRate(mycat);
-			double val = exp(cof*current_it->length) * prop;
-			val0[addr+i] = val;
-		}
-	}
+
+    if (nstates % VectorClass::size() == 0) {
+        VectorClass *vc_val0 = (VectorClass*)val0;
+        size_t loop_size = nstates / VectorClass::size();
+        for (c = 0; c < ncat_mix; c++) {
+            size_t m = c/denom;
+            VectorClass *eval_ptr = (VectorClass*)(eval + mix_addr_nstates[c]);
+            size_t mycat = c%ncat;
+            double prop = site_rate->getProp(mycat) * model->getMixtureWeight(m);
+            double len = site_rate->getRate(mycat) * current_it->length;
+            for (i = 0; i < loop_size; i++) {
+                vc_val0[i] = exp(eval_ptr[i] * len) * prop;
+            }
+            vc_val0 += loop_size;
+        }
+    } else {
+        for (c = 0; c < ncat_mix; c++) {
+            size_t m = c/denom;
+            double *eval_ptr = eval + mix_addr_nstates[c];
+            size_t mycat = c%ncat;
+            double prop = site_rate->getProp(mycat) * model->getMixtureWeight(m);
+            size_t addr = c*nstates;
+            for (i = 0; i < nstates; i++) {
+                double cof = eval_ptr[i]*site_rate->getRate(mycat);
+                double val = exp(cof*current_it->length) * prop;
+                val0[addr+i] = val;
+            }
+        }
+    }
 
 
     VectorClass vc_prob_const = 0.0;
