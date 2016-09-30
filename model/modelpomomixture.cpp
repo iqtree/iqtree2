@@ -176,3 +176,11 @@ void ModelPoMoMixture::report(ostream &out) {
     reportRate(out, *phylo_tree);
     phylo_tree->setRate(saved_rate);
 }
+
+bool ModelPoMoMixture::isUnstableParameters() {
+    if (ModelPoMo::isUnstableParameters())
+        return true;
+    if (ModelMixture::isUnstableParameters())
+        return true;
+    return false;
+}

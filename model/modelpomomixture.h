@@ -66,6 +66,11 @@ public:
 	*/
 	virtual double targetFunk(double x[]);
 
+    /**
+     * @return TRUE if parameters are at the boundary that may cause
+     * numerical unstability
+     */
+    virtual bool isUnstableParameters();
 
 	/**
 	 * setup the bounds for joint optimization with BFGS

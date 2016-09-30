@@ -667,12 +667,12 @@ void Alignment::extractDataBlock(NxsCharactersBlock *data_block) {
 	determine if the pattern is constant. update the is_const variable.
 */
 void Alignment::computeConst(Pattern &pat) {
-
-    // TODO For Dominik: this does not work yet properly with PoMo
-    
-    pat.is_const = false;
-    pat.is_informative = false;
-
+    bool is_const = true;
+    // For PoMo there is hardly any constant site
+    if (seq_type == SEQ_POMO)
+        is_const = false;
+    bool is_invariant = false;
+    bool is_informative = false;
     // critical fix: const_char was set wrongly to num_states in some data type (binary, codon),
     // causing wrong log-likelihood computation for +I or +I+G model
     if (STATE_UNKNOWN == num_states)
@@ -710,26 +710,21 @@ void Alignment::computeConst(Pattern &pat) {
     }
 
     // at least 2 states, each appearing at least twice
-    if (count >= 2) pat.is_informative = true;
-    delete [] num_app;
+    is_informative = (count >= 2);
 
-    count = state_app.count();
-    if (count == 0) {
-    	return;
-    }
-    if (count == num_states) {
-    	// all-gap pattern
-    	pat.is_const = true;
-    	pat.const_char = num_states;
-    	return;
-    }
-    if (count == 1) {
-    	for (j = 0; j < num_states; j++)
-    		if (state_app.test(j)) {
-    			pat.is_const = true;
-    			pat.const_char = j;
-    			return;
-    		}
+    // compute is_const
+    is_const = is_const && (pat.num_chars <= 1); 
+    if (is_const) {
+        if (pat.num_chars == 0) // all-gap pattern
+            pat.const_char = num_states;
+        else {
+            // pat.num_chars is 1
+            for (j = 0; j < num_states; j++)
+                if (num_app[j]) {
+                    pat.const_char = j;
+                    break;
+                }
+        }
     }
 
     delete [] num_app;
@@ -3135,7 +3130,7 @@ void Alignment::countConstSite() {
     num_informative_sites = 0;
     int num_invariant_sites = 0;
     for (iterator it = begin(); it != end(); it++) {
-        if ((*it).is_const)
+        if ((*it).isConst()) 
             num_const_sites += (*it).frequency;
         if (it->isInformative())
             num_informative_sites += it->frequency;

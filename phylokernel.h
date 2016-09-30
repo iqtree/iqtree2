@@ -1386,10 +1386,10 @@ void PhyloTree::computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, Phylo
                         }
                     }
                 }
-            }
     		break;
-    	default:
-            for (pat = aln->ordered_pattern.begin(), site = 0; pat != aln->ordered_pattern.end(); pat++) {
+            default:
+            for (int patid = start_pos; patid != end_pos; patid++) {
+                Alignment::iterator pat = aln->ordered_pattern.begin()+ patid;
             	int state = pat->at(leafid);
                 int freq = pat->frequency;
                 if (aln->seq_type == SEQ_POMO && state >= nstates && state < aln->STATE_UNKNOWN) {
@@ -1415,13 +1415,13 @@ void PhyloTree::computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, Phylo
                     state = real_state;
                     assert(state < nstates);
                 }                
-                if (state < nstates) {
+                if (state < (*alnit)->num_states) {
                     for (int j = 0; j < freq; j++, site++) {
                         if (site == NUM_BITS) {
                             x += nstates*VCSIZE;
                             site = 0;
                         }
-                    } else if (state == (*alnit)->STATE_UNKNOWN) {
+                        else if (state == (*alnit)->STATE_UNKNOWN) {
                         for (int j = 0; j < freq; j++, site++) {
                             if (site == NUM_BITS) {
                                 x += nstates*VCSIZE;
@@ -1432,11 +1432,13 @@ void PhyloTree::computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, Phylo
                             for (int i = 0; i < (*alnit)->num_states; i++)
                                 p[i*VCSIZE] |= bit1;
                         }
-                    } else {
-                        assert(0);
+                        } else {
+                            assert(0);
+                        }
                     }
                 }
-                break;
+            } // FOR loop
+            break; // of switch
             } // end of switch
             start_pos = end_pos;
         } // of end FOR LOOP

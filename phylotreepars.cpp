@@ -106,35 +106,32 @@ void PhyloTree::computePartialParsimonyFast(PhyloNeighbor *dad_branch, PhyloNode
                         }
                     }
                 }
-            }
-            assert(site == aln->num_informative_sites);
-            // add dummy states
-            if (site < max_sites)
-            	dad_branch->partial_pars[(site/UINT_BITS)*20] |= ~((1<<(site%UINT_BITS)) - 1);
-//            for (; site < max_sites; site++) {
-//                dad_branch->partial_pars[(site/UINT_BITS)*20] |= (1 << (site%UINT_BITS));
-//            }
-    		break;
-    	default:
-//            for (ptn = 0, site = 0; ptn < nptn; ptn++) {
-            for (pat = aln->ordered_pattern.begin(), site = 0; pat != aln->ordered_pattern.end(); pat++) {
-//                if (!aln->at(ptn).is_informative)
-//                    continue;
-            	int state = pat->at(leafid);
-                int freq = pat->frequency;
-                if (aln->seq_type == SEQ_POMO && state >= nstates && state < aln->STATE_UNKNOWN) {
-                    state = aln->convertPomoState(state);
-                }                
-                if (state < nstates) {
-                    for (int j = 0; j < freq; j++, site++) {
-                        dad_branch->partial_pars[(site/UINT_BITS)*nstates+state] |= (1 << (site % UINT_BITS));
+                //assert(site == aln->num_informative_sites);
+                // add dummy states
+                //if (site < max_sites)
+                //    dad_branch->partial_pars[(site/UINT_BITS)*20] |= ~((1<<(site%UINT_BITS)) - 1);
+                break;
+            default:
+                for (int patid = start_pos; patid != end_pos; patid++) {
+                    Alignment::iterator pat = aln->ordered_pattern.begin()+ patid;
+                    int state = pat->at(leafid);
+                    int freq = pat->frequency;
+                    if (aln->seq_type == SEQ_POMO && state >= (*alnit)->num_states && state < (*alnit)->STATE_UNKNOWN) {
+                        state = (*alnit)->convertPomoState(state);
                     }
-                } else if (state == aln->STATE_UNKNOWN) {
-                    for (int j = 0; j < freq; j++, site++) {
-                        UINT *p = dad_branch->partial_pars+((site/UINT_BITS)*nstates);
-                        UINT bit1 = (1 << (site%UINT_BITS));
-                        for (int i = 0; i < nstates; i++)
-                                p[i] |= bit1;
+                     if (state < (*alnit)->num_states) {
+                        for (int j = 0; j < freq; j++, site++) {
+                            dad_branch->partial_pars[(site/UINT_BITS)*nstates+state] |= (1 << (site % UINT_BITS));
+                        }
+                    } else if (state == (*alnit)->STATE_UNKNOWN) {
+                        for (int j = 0; j < freq; j++, site++) {
+                            UINT *p = dad_branch->partial_pars+((site/UINT_BITS)*nstates);
+                            UINT bit1 = (1 << (site%UINT_BITS));
+                            for (int i = 0; i < (*alnit)->num_states; i++)
+                                    p[i] |= bit1;
+                        }
+                    } else {
+                        assert(0);
                     }
                 }
                 break;
