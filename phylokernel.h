@@ -1399,9 +1399,22 @@ void PhyloTree::computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, Phylo
                     int id2 = (aln->pomo_states[state] >> 16) & 3;
                     int value1 = (aln->pomo_states[state] >> 2) & 16383;
                     int value2 = aln->pomo_states[state] >> 18;
-                    int N = aln->virtual_pop_size;
-                    value1 = value1*N/(value1+value2);
+                    double weight1 = ((double)value1)/(value1+value2);
+//                    int N = aln->virtual_pop_size;
+//                    int M = value1 + value2;
+
+                    // 2016-09-30: resolving polymorphic states to fixed states
+
+                    // value1 = value1*N/(value1+value2);
                     int real_state;
+
+                    if (weight1 < 1.0/4)
+                        real_state = id2;
+                    else if (weight1 > 3.0/4)
+                        real_state = id1;
+                    else
+                        real_state = (*alnit)->STATE_UNKNOWN;
+                    /*
                     if (value1 == 0) 
                         real_state = id2;
                     else if (value1 >= N)
@@ -1412,30 +1425,32 @@ void PhyloTree::computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, Phylo
                         else j = id1 + id2;
                         real_state = 4 + j*(N-2) + j + value1 - 1;
                     }
+                    */
                     state = real_state;
-                    assert(state < nstates);
-                }                
+                    assert(state < 4 || state == (*alnit)->STATE_UNKNOWN);
+//                    assert(state < nstates);
+                }
                 if (state < (*alnit)->num_states) {
                     for (int j = 0; j < freq; j++, site++) {
                         if (site == NUM_BITS) {
                             x += nstates*VCSIZE;
                             site = 0;
                         }
-                        else if (state == (*alnit)->STATE_UNKNOWN) {
-                        for (int j = 0; j < freq; j++, site++) {
-                            if (site == NUM_BITS) {
-                                x += nstates*VCSIZE;
-                                site = 0;
-                            }
-                            UINT bit1 = (1 << (site%UINT_BITS));
-                            UINT *p = x+(site/UINT_BITS);
-                            for (int i = 0; i < (*alnit)->num_states; i++)
-                                p[i*VCSIZE] |= bit1;
-                        }
-                        } else {
-                            assert(0);
-                        }
+                        x[state*VCSIZE + site/UINT_BITS] |= (1 << (site % UINT_BITS));
                     }
+                } else if (state == (*alnit)->STATE_UNKNOWN) {
+                    for (int j = 0; j < freq; j++, site++) {
+                        if (site == NUM_BITS) {
+                            x += nstates*VCSIZE;
+                            site = 0;
+                        }
+                        UINT bit1 = (1 << (site%UINT_BITS));
+                        UINT *p = x+(site/UINT_BITS);
+                        for (int i = 0; i < (*alnit)->num_states; i++)
+                            p[i*VCSIZE] |= bit1;
+                    }
+                } else {
+                    assert(0);
                 }
             } // FOR loop
             break; // of switch

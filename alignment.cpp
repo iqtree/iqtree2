@@ -668,9 +668,6 @@ void Alignment::extractDataBlock(NxsCharactersBlock *data_block) {
 */
 void Alignment::computeConst(Pattern &pat) {
     bool is_const = true;
-    // For PoMo there is hardly any constant site
-    if (seq_type == SEQ_POMO)
-        is_const = false;
     bool is_invariant = false;
     bool is_informative = false;
     // critical fix: const_char was set wrongly to num_states in some data type (binary, codon),
@@ -732,6 +729,15 @@ void Alignment::computeConst(Pattern &pat) {
     // compute is_invariant
     is_invariant = (state_app.count() >= 1);
     assert(is_invariant >= is_const);
+
+
+    if (seq_type == SEQ_POMO) {
+        // For PoMo most sites are informative (ambiguous map from data to state space)
+        is_informative = true;
+        // For PoMo there is hardly any constant site
+        is_const = false;
+        is_invariant = false;
+    }
 
     pat.flag = 0;
     if (is_const) pat.flag |= PAT_CONST;
