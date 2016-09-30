@@ -241,6 +241,59 @@ void printSiteLh(const char*filename, PhyloTree *tree, double *ptn_lh,
 		delete[] pattern_lh;
 }
 
+void printPartitionLh(const char*filename, PhyloTree *tree, double *ptn_lh,
+		bool append, const char *linename) {
+
+    assert(tree->isSuperTree());
+    PhyloSuperTree *stree = (PhyloSuperTree*)tree;
+	int i;
+	double *pattern_lh;
+	if (!ptn_lh) {
+		pattern_lh = new double[tree->getAlnNPattern()];
+		tree->computePatternLikelihood(pattern_lh);
+	} else
+		pattern_lh = ptn_lh;
+
+    double partition_lh[stree->size()];
+    int part;
+    double *pattern_lh_ptr = pattern_lh;
+    for (part = 0; part < stree->size(); part++) {
+        size_t nptn = stree->at(part)->getAlnNPattern();
+        partition_lh[part] = 0.0;
+        for (i = 0; i < nptn; i++)
+            partition_lh[part] += pattern_lh_ptr[i] * stree->at(part)->ptn_freq[i];
+        pattern_lh_ptr += nptn;
+    }
+
+	try {
+		ofstream out;
+		out.exceptions(ios::failbit | ios::badbit);
+		if (append) {
+			out.open(filename, ios::out | ios::app);
+		} else {
+			out.open(filename);
+			out << 1 << " " << stree->size() << endl;
+		}
+		if (!linename)
+			out << "Part_Lh   ";
+		else {
+			out.width(10);
+			out << left << linename;
+		}
+		for (i = 0; i < stree->size(); i++)
+			out << " " << partition_lh[i];
+		out << endl;
+		out.close();
+		if (!append)
+			cout << "Partition log-likelihoods printed to " << filename << endl;
+	} catch (ios::failure) {
+		outError(ERR_WRITE_OUTPUT, filename);
+	}
+
+	if (!ptn_lh)
+		delete[] pattern_lh;
+}
+
 void printSiteLhCategory(const char*filename, PhyloTree *tree, SiteLoglType wsl) {
 
     if (tree->isSuperTree()) {
@@ -267,7 +320,7 @@ void printSiteLhCategory(const char*filename, PhyloTree *tree, SiteLoglType wsl)
 	double *pattern_lh, *pattern_lh_cat;
 	int i;
 	pattern_lh = new double[tree->getAlnNPattern()];
-	pattern_lh_cat = new double[tree->getAlnNPattern()*ncat];
+	pattern_lh_cat = new double[((size_t)tree->getAlnNPattern())*ncat];
 	tree->computePatternLikelihood(pattern_lh, NULL, pattern_lh_cat, wsl);
 
     
@@ -471,7 +524,7 @@ void printSiteProbCategory(const char*filename, PhyloTree *tree, SiteLoglType ws
         }
     }
 	size_t cat, ncat = tree->getNumLhCat(wsl);
-    double *ptn_prob_cat = new double[tree->getAlnNPattern()*ncat];
+    double *ptn_prob_cat = new double[((size_t)tree->getAlnNPattern())*ncat];
 	tree->computePatternProbabilityCategory(ptn_prob_cat, wsl);
     
 	try {
@@ -529,7 +582,7 @@ void printSiteStateFreq(const char*filename, PhyloTree *tree, double *state_freq
     if (state_freqs) {
     	ptn_state_freq = state_freqs;
     } else {
-    	ptn_state_freq = new double[tree->getAlnNPattern() * nstates];
+    	ptn_state_freq = new double[((size_t)tree->getAlnNPattern()) * nstates];
         tree->computePatternStateFreq(ptn_state_freq);
     }
 
@@ -2612,6 +2665,18 @@ void evaluateTrees(Params &params, IQTree *tree, vector<TreeInfo> &info, IntVect
 		site_lh_out.close();
 	}
 
+    if (params.print_partition_lh && !tree->isSuperTree()) {
+        outWarning("-wpl does not work with non-partition model");
+        params.print_partition_lh = false;
+    }
+	string part_lh_file = params.out_prefix;
+	part_lh_file += ".partlh";
+	if (params.print_partition_lh) {
+		ofstream part_lh_out(part_lh_file.c_str());
+		part_lh_out << ntrees << " " << ((PhyloSuperTree*)tree)->size() << endl;
+		part_lh_out.close();
+	}
+
 	double time_start = getRealTime();
 
 	int *boot_samples = NULL;
@@ -2727,6 +2792,10 @@ void evaluateTrees(Params &params, IQTree *tree, vector<TreeInfo> &info, IntVect
 		if (params.print_site_lh) {
 			string tree_name = "Tree" + convertIntToString(tree_index+1);
 			printSiteLh(site_lh_file.c_str(), tree, pattern_lh, true, tree_name.c_str());
+		}
+		if (params.print_partition_lh) {
+			string tree_name = "Tree" + convertIntToString(tree_index+1);
+			printPartitionLh(part_lh_file.c_str(), tree, pattern_lh, true, tree_name.c_str());
 		}
 		info[tid].logl = tree->getCurScore();
 

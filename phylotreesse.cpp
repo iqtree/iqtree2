@@ -523,6 +523,9 @@ void PhyloTree::computePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNo
                 break;
             }
         }
+        if (!done) {
+            printTree(cout, WT_BR_LEN + WT_NEWLINE);
+        }
         assert(done && "partial_lh is not re-oriented");
     }
 

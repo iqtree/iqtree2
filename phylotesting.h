@@ -83,6 +83,17 @@ void printSiteLh(const char*filename, PhyloTree *tree, double *ptn_lh = NULL,
 		bool append = false, const char *linename = NULL);
 
 /**
+ * print partition log likelihoods to a file
+ * @param filename output file name
+ * @param tree phylogenetic tree
+ * @param ptn_lh pattern log-likelihoods, will be computed if NULL
+ * @param append TRUE to append to existing file, FALSE otherwise
+ * @param linename name of the line, default "Site_Lh" if NULL
+ */
+void printPartitionLh(const char*filename, PhyloTree *tree, double *ptn_lh = NULL,
+		bool append = false, const char *linename = NULL);
+
+/**
  * print site log likelihoods per category to a file
  * @param filename output file name
  * @param tree phylogenetic tree
