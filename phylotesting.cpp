@@ -241,6 +241,59 @@ void printSiteLh(const char*filename, PhyloTree *tree, double *ptn_lh,
 		delete[] pattern_lh;
 }
 
+void printPartitionLh(const char*filename, PhyloTree *tree, double *ptn_lh,
+		bool append, const char *linename) {
+
+    assert(tree->isSuperTree());
+    PhyloSuperTree *stree = (PhyloSuperTree*)tree;
+	int i;
+	double *pattern_lh;
+	if (!ptn_lh) {
+		pattern_lh = new double[tree->getAlnNPattern()];
+		tree->computePatternLikelihood(pattern_lh);
+	} else
+		pattern_lh = ptn_lh;
+
+    double partition_lh[stree->size()];
+    int part;
+    double *pattern_lh_ptr = pattern_lh;
+    for (part = 0; part < stree->size(); part++) {
+        size_t nptn = stree->at(part)->getAlnNPattern();
+        partition_lh[part] = 0.0;
+        for (i = 0; i < nptn; i++)
+            partition_lh[part] += pattern_lh_ptr[i] * stree->at(part)->ptn_freq[i];
+        pattern_lh_ptr += nptn;
+    }
+
+	try {
+		ofstream out;
+		out.exceptions(ios::failbit | ios::badbit);
+		if (append) {
+			out.open(filename, ios::out | ios::app);
+		} else {
+			out.open(filename);
+			out << 1 << " " << stree->size() << endl;
+		}
+		if (!linename)
+			out << "Part_Lh   ";
+		else {
+			out.width(10);
+			out << left << linename;
+		}
+		for (i = 0; i < stree->size(); i++)
+			out << " " << partition_lh[i];
+		out << endl;
+		out.close();
+		if (!append)
+			cout << "Partition log-likelihoods printed to " << filename << endl;
+	} catch (ios::failure) {
+		outError(ERR_WRITE_OUTPUT, filename);
+	}
+
+	if (!ptn_lh)
+		delete[] pattern_lh;
+}
+
 void printSiteLhCategory(const char*filename, PhyloTree *tree, SiteLoglType wsl) {
 
     if (tree->isSuperTree()) {
@@ -267,7 +320,7 @@ void printSiteLhCategory(const char*filename, PhyloTree *tree, SiteLoglType wsl)
 	double *pattern_lh, *pattern_lh_cat;
 	int i;
 	pattern_lh = new double[tree->getAlnNPattern()];
-	pattern_lh_cat = new double[tree->getAlnNPattern()*ncat];
+	pattern_lh_cat = new double[((size_t)tree->getAlnNPattern())*ncat];
 	tree->computePatternLikelihood(pattern_lh, NULL, pattern_lh_cat, wsl);
 
     
@@ -321,7 +374,7 @@ void printSiteLhCategory(const char*filename, PhyloTree *tree, SiteLoglType wsl)
             cout << "Log-likelihood of constant sites: " << endl;
             double const_prob = 0.0;
             for (i = 0; i < tree->aln->getNPattern(); i++)
-                if (tree->aln->at(i).is_const) {
+                if (tree->aln->at(i).isConst()) {
                     Pattern pat = tree->aln->at(i);
                     for (Pattern::iterator it = pat.begin(); it != pat.end(); it++)
                         cout << tree->aln->convertStateBackStr(*it);
@@ -357,7 +410,7 @@ void printSiteProbCategory(const char*filename, PhyloTree *tree, SiteLoglType ws
         }
     }
 	size_t cat, ncat = tree->getNumLhCat(wsl);
-    double *ptn_prob_cat = new double[tree->getAlnNPattern()*ncat];
+    double *ptn_prob_cat = new double[((size_t)tree->getAlnNPattern())*ncat];
 	tree->computePatternProbabilityCategory(ptn_prob_cat, wsl);
     
 	try {
@@ -415,7 +468,7 @@ void printSiteStateFreq(const char*filename, PhyloTree *tree, double *state_freq
     if (state_freqs) {
     	ptn_state_freq = state_freqs;
     } else {
-    	ptn_state_freq = new double[tree->getAlnNPattern() * nstates];
+    	ptn_state_freq = new double[((size_t)tree->getAlnNPattern()) * nstates];
         tree->computePatternStateFreq(ptn_state_freq);
     }
 
@@ -657,7 +710,7 @@ int getModelList(Params &params, Alignment *aln, StrVector &models, bool separat
 //		for (i = 0; i < noptions; i++)
 //			test_options[i] = test_options_codon[i];
 //	} else 
-    if (aln->frac_const_sites == 0.0) {
+    if (aln->frac_invariant_sites == 0.0) {
         // morphological or SNP data: activate +ASC
         if (with_new) {
             if (with_asc)
@@ -684,6 +737,12 @@ int getModelList(Params &params, Alignment *aln, StrVector &models, bool separat
             test_options = test_options_asc;
         } else
             test_options = test_options_default;
+        if (aln->frac_const_sites == 0.0) {
+            // deactivate +I
+            for (j = 0; j < noptions; j++)
+                if (strstr(rate_options[j], "+I"))
+                    test_options[j] = false;
+        }
     }
     
 
@@ -1415,7 +1474,7 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
             // normal model
             if (model_names[model].find("+ASC") != string::npos) {
                 model_fac->unobserved_ptns = in_tree->aln->getUnobservedConstPatterns();
-                if (model_fac->unobserved_ptns.size() < tree->aln->getNumNonstopCodons() || in_tree->aln->frac_const_sites > 0.0) {
+                if (model_fac->unobserved_ptns.size() < tree->aln->getNumNonstopCodons() || in_tree->aln->frac_invariant_sites > 0.0) {
                     cout.width(3);
                     cout << right << model+1 << "  ";
                     cout.width(13);
@@ -1424,8 +1483,6 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
                     continue;
                 }
                 tree->aln->buildSeqStates(true);
-                if (model_fac->unobserved_ptns.size() < tree->aln->getNumNonstopCodons())
-                    outError("Invalid use of +ASC because constant patterns are observed in the alignment");
             } else {
                 model_fac->unobserved_ptns = "";
                 tree->aln->buildSeqStates(false);
@@ -1558,6 +1615,13 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
                 // set checkpoint
                 iqtree->setCheckpoint(in_tree->getCheckpoint());
                 iqtree->num_precision = in_tree->num_precision;
+
+                // clear all checkpointed information
+                Checkpoint *newCheckpoint = new Checkpoint;
+                iqtree->getCheckpoint()->getSubCheckpoint(newCheckpoint, "iqtree");
+                iqtree->getCheckpoint()->clear();
+                iqtree->getCheckpoint()->insert(newCheckpoint->begin(), newCheckpoint->end());
+                delete newCheckpoint;
                 
                 cout << endl << "===> Testing model " << model+1 << ": " << params.model_name << endl;
                 runTreeReconstruction(params, original_model, *iqtree, model_info);
@@ -1569,7 +1633,7 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
                 tree = iqtree;
 
                 // clear all checkpointed information
-                Checkpoint *newCheckpoint = new Checkpoint;
+                newCheckpoint = new Checkpoint;
                 tree->getCheckpoint()->getSubCheckpoint(newCheckpoint, "iqtree");
                 tree->getCheckpoint()->clear();
                 tree->getCheckpoint()->insert(newCheckpoint->begin(), newCheckpoint->end());
@@ -2466,7 +2530,7 @@ void evaluateTrees(Params &params, IQTree *tree, vector<TreeInfo> &info, IntVect
 	cout << endl;
 	//MTreeSet trees(params.treeset_file, params.is_rooted, params.tree_burnin, params.tree_max_count);
 	cout << "Reading trees in " << params.treeset_file << " ..." << endl;
-	int ntrees = countDistinctTrees(params.treeset_file, params.is_rooted, tree, distinct_ids, params.distinct_trees);
+	size_t ntrees = countDistinctTrees(params.treeset_file, params.is_rooted, tree, distinct_ids, params.distinct_trees);
 	if (ntrees < distinct_ids.size()) {
 		cout << "WARNING: " << distinct_ids.size() << " trees detected but only " << ntrees << " distinct trees will be evaluated" << endl;
 	} else {
@@ -2496,10 +2560,22 @@ void evaluateTrees(Params &params, IQTree *tree, vector<TreeInfo> &info, IntVect
 		site_lh_out.close();
 	}
 
+    if (params.print_partition_lh && !tree->isSuperTree()) {
+        outWarning("-wpl does not work with non-partition model");
+        params.print_partition_lh = false;
+    }
+	string part_lh_file = params.out_prefix;
+	part_lh_file += ".partlh";
+	if (params.print_partition_lh) {
+		ofstream part_lh_out(part_lh_file.c_str());
+		part_lh_out << ntrees << " " << ((PhyloSuperTree*)tree)->size() << endl;
+		part_lh_out.close();
+	}
+
 	double time_start = getRealTime();
 
 	int *boot_samples = NULL;
-	int boot;
+	size_t boot;
 	//double *saved_tree_lhs = NULL;
 	double *tree_lhs = NULL; // RELL score matrix of size #trees x #replicates
 	double *pattern_lh = NULL;
@@ -2507,8 +2583,8 @@ void evaluateTrees(Params &params, IQTree *tree, vector<TreeInfo> &info, IntVect
 	double *orig_tree_lh = NULL; // Original tree log-likelihoods
 	double *max_lh = NULL;
 	double *lhdiff_weights = NULL;
-	int nptn = tree->getAlnNPattern();
-    int maxnptn = get_safe_upper_limit(nptn);
+	size_t nptn = tree->getAlnNPattern();
+    size_t maxnptn = get_safe_upper_limit(nptn);
     
 	if (params.topotest_replicates && ntrees > 1) {
 		size_t mem_size = (size_t)params.topotest_replicates*nptn*sizeof(int) +
@@ -2522,8 +2598,22 @@ void evaluateTrees(Params &params, IQTree *tree, vector<TreeInfo> &info, IntVect
 		cout << "Creating " << params.topotest_replicates << " bootstrap replicates..." << endl;
 		if (!(boot_samples = new int [params.topotest_replicates*nptn]))
 			outError(ERR_NO_MEMORY);
+#ifdef _OPENMP
+        #pragma omp parallel private(boot) if(nptn > 10000)
+        {
+        int *rstream;
+        init_random(params.ran_seed + omp_get_thread_num(), false, &rstream);
+        #pragma omp for schedule(static)
+#else
+        int *rstream = randstream;
+#endif
 		for (boot = 0; boot < params.topotest_replicates; boot++)
-			tree->aln->createBootstrapAlignment(boot_samples + (boot*nptn), params.bootstrap_spec);
+			tree->aln->createBootstrapAlignment(boot_samples + (boot*nptn), params.bootstrap_spec, rstream);
+#ifdef _OPENMP
+        finish_random(rstream);
+        }
+#endif
+        cout << "done" << endl;
 		//if (!(saved_tree_lhs = new double [ntrees * params.topotest_replicates]))
 		//	outError(ERR_NO_MEMORY);
 		if (!(tree_lhs = new double [ntrees * params.topotest_replicates]))
@@ -2598,6 +2688,10 @@ void evaluateTrees(Params &params, IQTree *tree, vector<TreeInfo> &info, IntVect
 			string tree_name = "Tree" + convertIntToString(tree_index+1);
 			printSiteLh(site_lh_file.c_str(), tree, pattern_lh, true, tree_name.c_str());
 		}
+		if (params.print_partition_lh) {
+			string tree_name = "Tree" + convertIntToString(tree_index+1);
+			printPartitionLh(part_lh_file.c_str(), tree, pattern_lh, true, tree_name.c_str());
+		}
 		info[tid].logl = tree->getCurScore();
 
 		if (!params.topotest_replicates || ntrees <= 1) {
@@ -2610,7 +2704,7 @@ void evaluateTrees(Params &params, IQTree *tree, vector<TreeInfo> &info, IntVect
 		for (boot = 0; boot < params.topotest_replicates; boot++) {
 			double lh = 0.0;
 			int *this_boot_sample = boot_samples + (boot*nptn);
-			for (int ptn = 0; ptn < nptn; ptn++)
+			for (size_t ptn = 0; ptn < nptn; ptn++)
 				lh += pattern_lh[ptn] * this_boot_sample[ptn];
 			tree_lhs_offset[boot] = lh;
 		}
@@ -2691,9 +2785,9 @@ void evaluateTrees(Params &params, IQTree *tree, vector<TreeInfo> &info, IntVect
 		}
 
 		double orig_max_lh = orig_tree_lh[0];
-		int orig_max_id = 0;
+		size_t orig_max_id = 0;
 		double orig_2ndmax_lh = -DBL_MAX;
-		int orig_2ndmax_id = -1;
+		size_t orig_2ndmax_id = -1;
 		// find the max tree ID
 		for (tid = 1; tid < ntrees; tid++)
 			if (orig_max_lh < orig_tree_lh[tid]) {
@@ -2714,7 +2808,7 @@ void evaluateTrees(Params &params, IQTree *tree, vector<TreeInfo> &info, IntVect
 			// SH compute original deviation from max_lh
 			info[tid].kh_pvalue = 0.0;
 			info[tid].sh_pvalue = 0.0;
-			int max_id = (tid != orig_max_id) ? orig_max_id : orig_2ndmax_id;
+			size_t max_id = (tid != orig_max_id) ? orig_max_id : orig_2ndmax_id;
 			double orig_diff = orig_tree_lh[max_id] - orig_tree_lh[tid] - avg_lh[tid];
 			double *max_kh = tree_lhs + (max_id * params.topotest_replicates);
 			for (boot = 0; boot < params.topotest_replicates; boot++) {
@@ -2750,7 +2844,7 @@ void evaluateTrees(Params &params, IQTree *tree, vector<TreeInfo> &info, IntVect
 				info[tid].wkh_pvalue = 0.0;
 				info[tid].wsh_pvalue = 0.0;
 				double worig_diff = -DBL_MAX;
-				int max_id = -1;
+				size_t max_id = -1;
 				for (tid2 = 0; tid2 < ntrees; tid2++)
 					if (tid2 != tid) {
 						double wdiff = (orig_tree_lh[tid2] - orig_tree_lh[tid])*lhdiff_weights[tid*ntrees+tid2];

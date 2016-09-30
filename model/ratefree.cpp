@@ -543,7 +543,7 @@ double RateFree::optimizeWithEM() {
 
         new_pinvar = 1.0 - new_pinvar;
 
-        if (new_pinvar != 0.0) {
+        if (new_pinvar > 1e-4 && getPInvar() != 0.0) {
             converged = converged && (fabs(getPInvar()-new_pinvar) < 1e-4);
             setPInvar(new_pinvar);
 //            setOptimizePInvar(false);
@@ -564,7 +564,7 @@ double RateFree::optimizeWithEM() {
             tree->setModel(subst_model);
             subst_model->setTree(tree);
             model_fac->model = subst_model;
-            if (subst_model->isMixture())
+            if (subst_model->isMixture() || subst_model->isSiteSpecificModel())
                 tree->setLikelihoodKernel(phylo_tree->sse);
 
                         

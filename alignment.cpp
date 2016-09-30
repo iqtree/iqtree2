@@ -56,6 +56,7 @@ Alignment::Alignment()
 {
     num_states = 0;
     frac_const_sites = 0.0;
+    frac_invariant_sites = 0.0;
 //    codon_table = NULL;
     genetic_code = NULL;
 //    non_stop_codon = NULL;
@@ -375,6 +376,7 @@ void Alignment::checkGappySeq(bool force_error) {
 Alignment::Alignment(char *filename, char *sequence_type, InputType &intype) : vector<Pattern>() {
     num_states = 0;
     frac_const_sites = 0.0;
+    frac_invariant_sites = 0.0;
 //    codon_table = NULL;
     genetic_code = NULL;
 //    non_stop_codon = NULL;
@@ -684,8 +686,8 @@ void Alignment::computeConst(Pattern &pat) {
     	state_app[j] = 1;
 
     // number of appearance for each state, to compute is_informative
-    int *num_app = new int[num_states];
-    memset(num_app, 0, num_states*sizeof(int));
+    size_t *num_app = new size_t[num_states];
+    memset(num_app, 0, num_states*sizeof(size_t));
 
     for (Pattern::iterator i = pat.begin(); i != pat.end(); i++) {
     	StateBitset this_app;
@@ -693,21 +695,20 @@ void Alignment::computeConst(Pattern &pat) {
     	state_app &= this_app;
         if (*i < num_states) {
             num_app[(int)(*i)]++;
-            continue;
+        } else if (*i != STATE_UNKNOWN) {
+            // ambiguous characters
+            is_const = false;
         }
-        if (*i == STATE_UNKNOWN) continue;
-        for (j = 0; j < num_states; j++)
-            if (this_app[j])
-                num_app[j]++;
     }
-    int count = 0;
-    pat.num_chars = 0;
+    int count = 0; // number of states with >= 2 appearances
+    pat.num_chars = 0; // number of states with >= 1 appearance
     for (j = 0; j < num_states; j++) if (num_app[j]) {
         pat.num_chars++;
         if (num_app[j] >= 2) {
             count++;
         }
     }
+
     // at least 2 states, each appearing at least twice
     if (count >= 2) pat.is_informative = true;
     delete [] num_app;
@@ -730,6 +731,17 @@ void Alignment::computeConst(Pattern &pat) {
     			return;
     		}
     }
+
+    delete [] num_app;
+
+    // compute is_invariant
+    is_invariant = (state_app.count() >= 1);
+    assert(is_invariant >= is_const);
+
+    pat.flag = 0;
+    if (is_const) pat.flag |= PAT_CONST;
+    if (is_invariant) pat.flag |= PAT_INVARIANT;
+    if (is_informative) pat.flag |= PAT_INFORMATIVE;
 }
 
 
@@ -801,13 +813,13 @@ void Alignment::orderPatternByNumChars() {
     UINT sum = 0;
     memset(pars_lower_bound, 0, (maxi+1)*sizeof(UINT));
     for (ptn = 0; ptn < nptn; ptn++) {
-        num_chars[ptn] =  -at(ptn).num_chars + (!at(ptn).is_informative)*1024;
+        num_chars[ptn] =  -at(ptn).num_chars + (!at(ptn).isInformative())*1024;
         ptn_order[ptn] = ptn;
     }
     quicksort(num_chars, 0, nptn-1, ptn_order);
     ordered_pattern.clear();
     for (ptn = 0, site = 0, i = 0; ptn < nptn; ptn++) {
-        if (!at(ptn_order[ptn]).is_informative)
+        if (!at(ptn_order[ptn]).isInformative())
             break;
         ordered_pattern.push_back(at(ptn_order[ptn]));
         int freq = ordered_pattern.back().frequency;
@@ -841,6 +853,7 @@ void Alignment::orderPatternByNumChars() {
     }
     delete [] ptn_order;
     delete [] num_chars;
+//    cout << ordered_pattern.size() << " ordered_pattern" << endl;
 }
 
 void Alignment::ungroupSitePattern()
@@ -2391,7 +2404,7 @@ int Alignment::buildRetainingSites(const char *aln_site_list, IntVector &kept_si
     }
     if (exclude_const_sites) {
         for (j = 0; j < kept_sites.size(); j++)
-        	if (at(site_pattern[j]).is_const)
+        	if (at(site_pattern[j]).isInvariant())
         		kept_sites[j] = 0;
 
     }
@@ -2499,10 +2512,12 @@ void Alignment::extractSubAlignment(Alignment *aln, IntVector &seq_id, int min_t
     site_pattern.resize(aln->getNSite(), -1);
     clear();
     pattern_index.clear();
-    int site = 0;
+    int site = 0, removed_sites = 0;
     VerboseMode save_mode = verbose_mode;
     verbose_mode = min(verbose_mode, VB_MIN); // to avoid printing gappy sites in addPattern
-    for (iterator pit = aln->begin(); pit != aln->end(); pit++) {
+//    for (iterator pit = aln->begin(); pit != aln->end(); pit++) {
+    for (site = 0; site < aln->getNSite(); site++) {
+        iterator pit = aln->begin() + (aln->getPatternID(site)); 
         Pattern pat;
         int true_char = 0;
         for (it = seq_id.begin(); it != seq_id.end(); it++) {
@@ -2510,12 +2525,14 @@ void Alignment::extractSubAlignment(Alignment *aln, IntVector &seq_id, int min_t
             if (ch != STATE_UNKNOWN) true_char++;
             pat.push_back(ch);
         }
-        if (true_char < min_true_char) continue;
-        addPattern(pat, site, (*pit).frequency);
-        for (int i = 0; i < (*pit).frequency; i++)
-            site_pattern[site++] = size()-1;
+        if (true_char < min_true_char)
+            removed_sites++;
+        else
+            addPattern(pat, site-removed_sites);
+//        for (int i = 0; i < (*pit).frequency; i++)
+//            site_pattern[site++] = size()-1;
     }
-    site_pattern.resize(site);
+    site_pattern.resize(aln->getNSite() - removed_sites);
     verbose_mode = save_mode;
     countConstSite();
     buildSeqStates();
@@ -3116,13 +3133,17 @@ void Alignment::copyAlignment(Alignment *aln) {
 void Alignment::countConstSite() {
     int num_const_sites = 0;
     num_informative_sites = 0;
+    int num_invariant_sites = 0;
     for (iterator it = begin(); it != end(); it++) {
         if ((*it).is_const)
             num_const_sites += (*it).frequency;
-        if (it->is_informative)
+        if (it->isInformative())
             num_informative_sites += it->frequency;
+        if (it->isInvariant())
+            num_invariant_sites += it->frequency;
     }
     frac_const_sites = ((double)num_const_sites) / getNSite();
+    frac_invariant_sites = ((double)num_invariant_sites) / getNSite();
 }
 
 string Alignment::getUnobservedConstPatterns() {

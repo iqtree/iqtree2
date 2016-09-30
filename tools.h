@@ -676,6 +676,9 @@ public:
     /* type of starting tree */
     START_TREE_TYPE start_tree;
 
+    /** name of constraint tree file in NEWICK format */
+    char *constraint_tree_file;
+
     /**
             prefix of the output file, default is the same as input file
      */
@@ -1382,6 +1385,9 @@ public:
             WSL_MIXTURE_RATECAT: print site log-likelihood per mixture class per rate category
      */
     SiteLoglType print_site_lh;
+
+    /** TRUE to print partition log-likelihood, default: FALSE */
+    bool print_partition_lh;
 
     /**
         control printing posterior probability of each site belonging to a rate/mixture categories

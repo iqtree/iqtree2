@@ -54,6 +54,18 @@ public:
 	*/
     virtual ~Pattern();
 
+    inline bool isConst() {
+        return (flag & PAT_CONST) != 0;
+    }
+
+    inline bool isInvariant() {
+        return (flag & PAT_INVARIANT) != 0;
+    }
+
+    inline bool isInformative() {
+        return (flag & PAT_INFORMATIVE) != 0;
+    }
+
 	/**
 		frequency appearance of the pattern
 	*/
@@ -63,10 +75,12 @@ public:
 		true if this is a constant pattern
 		2015-03-04: is_const will also be true for pattern like "AA-A--AAA"
 	*/
-	bool is_const;
+//	bool is_const;
     
     /** true if pattern is informative, false otherwise */
-    bool is_informative;
+//    bool is_informative;
+
+    int flag;
 
 	/** 2015-03-04: if is_const is true, this will store the const character for the pattern */
 	char const_char;

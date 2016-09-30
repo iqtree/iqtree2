@@ -23,12 +23,13 @@
 #include "superalignment.h"
 #include "phylosupertree.h"
 
-SuperAlignment::SuperAlignment()
- : Alignment() {}
+SuperAlignment::SuperAlignment() : Alignment() {
+    max_num_states = 0;
+}
 
-SuperAlignment::SuperAlignment(PhyloSuperTree *super_tree)
- : Alignment()
+SuperAlignment::SuperAlignment(PhyloSuperTree *super_tree) : Alignment()
 {
+    max_num_states = 0;
 	// first build taxa_index and partitions
 	int site, seq, nsite = super_tree->size();
 	PhyloSuperTree::iterator it;
@@ -602,4 +603,51 @@ Alignment *SuperAlignment::concatenateAlignments(IntVector &ids) {
     aln->buildSeqStates();
 
 	return aln;
+}
+
+void SuperAlignment::countConstSite() {
+    num_informative_sites = 0;
+    max_num_states = 0;
+    frac_const_sites = 0;
+    frac_invariant_sites = 0;
+    size_t nsites = 0;
+    for (vector<Alignment*>::iterator it = partitions.begin(); it != partitions.end(); it++) {
+        (*it)->countConstSite();
+        num_informative_sites += (*it)->num_informative_sites;
+        if ((*it)->num_states > max_num_states)
+            max_num_states = (*it)->num_states;
+        nsites += (*it)->getNSite();
+        frac_const_sites += (*it)->frac_const_sites * (*it)->getNSite();
+        frac_invariant_sites += (*it)->frac_invariant_sites * (*it)->getNSite();
+    }
+    frac_const_sites /= nsites;
+    frac_invariant_sites /= nsites;
+}
+
+void SuperAlignment::orderPatternByNumChars() {
+    const int UINT_BITS = sizeof(UINT)*8;
+    int maxi = (num_informative_sites+UINT_BITS-1)/UINT_BITS;
+    pars_lower_bound = new UINT[maxi+1];
+    memset(pars_lower_bound, 0, (maxi+1)*sizeof(UINT));
+    int part, nseq = getNSeq(), npart = partitions.size();
+    
+    // compute ordered_pattern
+    ordered_pattern.clear();
+    UINT sum_scores[npart];
+    for (part  = 0; part != partitions.size(); part++) {
+        partitions[part]->orderPatternByNumChars();
+        // partial_partition
+        for (vector<Pattern>::iterator pit = partitions[part]->ordered_pattern.begin(); pit != partitions[part]->ordered_pattern.end(); pit++) {
+            Pattern pattern(*pit);
+            pattern.resize(nseq); // maximal unknown states
+            for (int j = 0; j < nseq; j++)
+                if (taxa_index[j][part] >= 0)
+                    pattern[j] = (*pit)[taxa_index[j][part]];
+                else
+                    pattern[j] = partitions[part]->STATE_UNKNOWN;
+            ordered_pattern.push_back(pattern);
+        }
+        sum_scores[part] = partitions[part]->pars_lower_bound[0];
+    }
+    // TODO compute pars_lower_bound (lower bound of pars score for remaining patterns)
 }

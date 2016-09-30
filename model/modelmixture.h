@@ -151,6 +151,11 @@ public:
 	virtual double optimizeParameters(double gradient_epsilon);
 
 	/**
+	 * @return TRUE if parameters are at the boundary that may cause numerical unstability
+	 */
+	virtual bool isUnstableParameters();
+
+	/**
 		decompose the rate matrix into eigenvalues and eigenvectors
 	*/
 	virtual void decomposeRateMatrix();

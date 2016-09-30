@@ -16,8 +16,9 @@ Pattern::Pattern()
         : vector<StateType>()
 {
     frequency = 0;
-    is_const = false;
-    is_informative = false;
+//    is_const = false;
+//    is_informative = false;
+    flag = 0;
     const_char = 255;
     num_chars = 0;
 }
@@ -26,8 +27,9 @@ Pattern::Pattern(const Pattern &pat)
         : vector<StateType>(pat)
 {
     frequency = pat.frequency;
-    is_const = pat.is_const;
-    is_informative = pat.is_informative;
+//    is_const = pat.is_const;
+//    is_informative = pat.is_informative;
+    flag = pat.flag;
     const_char = pat.const_char;
     num_chars = pat.num_chars;
 }

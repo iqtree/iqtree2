@@ -1,7 +1,7 @@
 IQ-TREE
--------
+=======
 
-Efficient phylogenetic software by maximum likelihood
+Efficient and versatile phylogenomic software by maximum likelihood <http://www.iqtree.org>
 
 Please see our github wiki for more information: <https://github.com/Cibiv/IQ-TREE/wiki>
 

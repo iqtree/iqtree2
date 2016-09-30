@@ -11,6 +11,7 @@
 #include "phylotree.h"
 #include "vectorclass/vectorclass.h"
 #include "vectorclass/vectormath_exp.h"
+#include "superalignment.h"
 
 inline Vec2d horizontal_add(Vec2d x[2]) {
 #if  INSTRSET >= 3  // SSE3
@@ -1274,8 +1275,8 @@ void PhyloTree::computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, Phylo
     if (dad_branch->partial_lh_computed & 2)
         return;
     Node *node = dad_branch->node;
-    int nstates = aln->num_states;
-    int site;
+    int nstates = aln->getMaxNumStates();
+    int site = 0;
     const int VCSIZE = VectorClass::size();
     const int NUM_BITS = VectorClass::size() * UINT_BITS;
 
@@ -1283,97 +1284,106 @@ void PhyloTree::computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, Phylo
 
     if (node->isLeaf() && dad) {
         // external node
+        vector<Alignment*> *partitions = NULL;
+        if (aln->isSuperAlignment())
+            partitions = &((SuperAlignment*)aln)->partitions;
+        else {
+            partitions = new vector<Alignment*>;
+            partitions->push_back(aln);
+        }
         if (aln->ordered_pattern.empty())
             aln->orderPatternByNumChars();
         int leafid = node->id;
         int pars_size = getBitsBlockSize();
         memset(dad_branch->partial_pars, 0, pars_size*sizeof(UINT));
-//        int ptn;
-//        int nptn = aln->size();
     	int ambi_aa[] = {2, 3, 5, 6, 9, 10}; // {4+8, 32+64, 512+1024};
-//        int max_sites = ((aln->num_informative_sites+UINT_BITS-1)/UINT_BITS)*UINT_BITS;
-//        UINT *x = dad_branch->partial_pars - (nstates*VCSIZE);
         UINT *x = dad_branch->partial_pars;
-        Alignment::iterator pat;
-    	switch (aln->seq_type) {
-    	case SEQ_DNA:
-            for (pat = aln->ordered_pattern.begin(), site = 0; pat != aln->ordered_pattern.end(); pat++) {
-            	int state = pat->at(leafid);
-                int freq = pat->frequency;
-                if (state < 4) {
-                    for (int j = 0; j < freq; j++, site++) {
-                        if (site == NUM_BITS) {
-                            x += 4*VCSIZE;
-                            site = 0;
+        int start_pos = 0;
+
+        for (vector<Alignment*>::iterator alnit = partitions->begin(); alnit != partitions->end(); alnit++) {
+            int end_pos = start_pos + (*alnit)->ordered_pattern.size();
+            switch ((*alnit)->seq_type) {
+            case SEQ_DNA:
+                for (int patid = start_pos; patid != end_pos; patid++) {
+                    Alignment::iterator pat = aln->ordered_pattern.begin()+ patid;
+                    int state = pat->at(leafid);
+                    int freq = pat->frequency;
+                    if (state < 4) {
+                        for (int j = 0; j < freq; j++, site++) {
+                            if (site == NUM_BITS) {
+                                x += nstates*VCSIZE;
+                                site = 0;
+                            }
+                            x[state*VCSIZE + site/UINT_BITS] |= (1 << (site % UINT_BITS));
                         }
-                        x[state*VCSIZE + site/UINT_BITS] |= (1 << (site % UINT_BITS));
-                    }
-                } else if (state == aln->STATE_UNKNOWN) {
-                    for (int j = 0; j < freq; j++, site++) {
-                        if (site == NUM_BITS) {
-                            x += 4*VCSIZE;
-                            site = 0;
+                    } else if (state == (*alnit)->STATE_UNKNOWN) {
+                        for (int j = 0; j < freq; j++, site++) {
+                            if (site == NUM_BITS) {
+                                x += nstates*VCSIZE;
+                                site = 0;
+                            }
+                            UINT bit1 = (1 << (site%UINT_BITS));
+                            UINT *p = x+(site/UINT_BITS);
+                            p[0] |= bit1;
+                            p[VCSIZE] |= bit1;
+                            p[2*VCSIZE] |= bit1;
+                            p[3*VCSIZE] |= bit1;
                         }
-                        UINT bit1 = (1 << (site%UINT_BITS));
-                        UINT *p = x+(site/UINT_BITS);
-                        p[0] |= bit1;
-                        p[VCSIZE] |= bit1;
-                        p[2*VCSIZE] |= bit1;
-                        p[3*VCSIZE] |= bit1;
-                    }
-                } else {
-                	state -= 3;
-                    for (int j = 0; j < freq; j++, site++) {
-                        if (site == NUM_BITS) {
-                            x += 4*VCSIZE;
-                            site = 0;
+                    } else {
+                        state -= 3;
+                        for (int j = 0; j < freq; j++, site++) {
+                            if (site == NUM_BITS) {
+                                x += nstates*VCSIZE;
+                                site = 0;
+                            }
+                            UINT *p = x + ((site/UINT_BITS));
+                            
+                            UINT bit1 = (1 << (site%UINT_BITS));
+                            for (int i = 0; i < 4; i++)
+                                if (state & (1<<i))
+                                    p[i*VCSIZE] |= bit1;
                         }
-                        UINT *p = x + ((site/UINT_BITS));
-                        
-                        UINT bit1 = (1 << (site%UINT_BITS));
-                        for (int i = 0; i < 4; i++)
-                            if (state & (1<<i))
-                                p[i*VCSIZE] |= bit1;
                     }
                 }
-            }
-    		break;
-    	case SEQ_PROTEIN:
-            for (pat = aln->ordered_pattern.begin(), site = 0; pat != aln->ordered_pattern.end(); pat++) {
-            	int state = pat->at(leafid);
-                int freq = pat->frequency;
-                if (state < 20) {
-                    for (int j = 0; j < freq; j++, site++) {
-                        if (site == NUM_BITS) {
-                            x += 20*VCSIZE;
-                            site = 0;
+                break;
+            case SEQ_PROTEIN:
+                for (int patid = start_pos; patid != end_pos; patid++) {
+                    Alignment::iterator pat = aln->ordered_pattern.begin()+ patid;
+                    int state = pat->at(leafid);
+                    int freq = pat->frequency;
+                    if (state < 20) {
+                        for (int j = 0; j < freq; j++, site++) {
+                            if (site == NUM_BITS) {
+                                x += nstates*VCSIZE;
+                                site = 0;
+                            }
+                            x[state*VCSIZE + site/UINT_BITS] |= (1 << (site % UINT_BITS));
                         }
-                        x[state*VCSIZE + site/UINT_BITS] |= (1 << (site % UINT_BITS));
-                    }
-                } else if (state == aln->STATE_UNKNOWN) {
-                    for (int j = 0; j < freq; j++, site++) {
-                        if (site == NUM_BITS) {
-                            x += 20*VCSIZE;
-                            site = 0;
+                    } else if (state == (*alnit)->STATE_UNKNOWN) {
+                        for (int j = 0; j < freq; j++, site++) {
+                            if (site == NUM_BITS) {
+                                x += nstates*VCSIZE;
+                                site = 0;
+                            }
+                            UINT bit1 = (1 << (site%UINT_BITS));
+                            UINT *p = x+(site/UINT_BITS);
+                            for (int i = 0; i < 20; i++)
+                                p[i*VCSIZE] |= bit1;
                         }
-                        UINT bit1 = (1 << (site%UINT_BITS));
-                        UINT *p = x+(site/UINT_BITS);
-                        for (int i = 0; i < 20; i++)
-                            p[i*VCSIZE] |= bit1;
-                    }
-                } else {
-                	assert(state < 23);
-            		state = (state-20)*2;
-                    for (int j = 0; j < freq; j++, site++) {
-                        if (site == NUM_BITS) {
-                            x += 20*VCSIZE;
-                            site = 0;
-                        }
-                        UINT *p = x + ((site/UINT_BITS));
-                        UINT bit1 = (1 << (site%UINT_BITS));
+                    } else {
+                        assert(state < 23);
+                        state = (state-20)*2;
+                        for (int j = 0; j < freq; j++, site++) {
+                            if (site == NUM_BITS) {
+                                x += nstates*VCSIZE;
+                                site = 0;
+                            }
+                            UINT *p = x + ((site/UINT_BITS));
+                            UINT bit1 = (1 << (site%UINT_BITS));
 
-                        p[ambi_aa[state]*VCSIZE] |= bit1;
-                        p[ambi_aa[state+1]*VCSIZE] |= bit1;
+                            p[ambi_aa[state]*VCSIZE] |= bit1;
+                            p[ambi_aa[state+1]*VCSIZE] |= bit1;
+                        }
                     }
                 }
             }
@@ -1411,25 +1421,28 @@ void PhyloTree::computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, Phylo
                             x += nstates*VCSIZE;
                             site = 0;
                         }
-                        x[state*VCSIZE + site/UINT_BITS] |= (1 << (site % UINT_BITS));
-                    }
-                } else if (state == aln->STATE_UNKNOWN) {
-                    for (int j = 0; j < freq; j++, site++) {
-                        if (site == NUM_BITS) {
-                            x += nstates*VCSIZE;
-                            site = 0;
+                    } else if (state == (*alnit)->STATE_UNKNOWN) {
+                        for (int j = 0; j < freq; j++, site++) {
+                            if (site == NUM_BITS) {
+                                x += nstates*VCSIZE;
+                                site = 0;
+                            }
+                            UINT bit1 = (1 << (site%UINT_BITS));
+                            UINT *p = x+(site/UINT_BITS);
+                            for (int i = 0; i < (*alnit)->num_states; i++)
+                                p[i*VCSIZE] |= bit1;
                         }
-                        UINT bit1 = (1 << (site%UINT_BITS));
-                        UINT *p = x+(site/UINT_BITS);
-                        for (int i = 0; i < nstates; i++)
-                            p[i*VCSIZE] |= bit1;
+                    } else {
+                        assert(0);
                     }
-                } else {
-                	assert(0);
                 }
-            }
-    		break;
-    	}
+                break;
+            } // end of switch
+            start_pos = end_pos;
+        } // of end FOR LOOP
+
+        assert(start_pos == aln->ordered_pattern.size());
+//        assert(site == aln->num_informative_sites % NUM_BITS);
         // add dummy states
         if (site > 0 && site < NUM_BITS) {
             x += site/UINT_BITS;
@@ -1438,6 +1451,8 @@ void PhyloTree::computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, Phylo
             int max_sites = ((site+UINT_BITS-1)/UINT_BITS);
             memset(x, 255, (VCSIZE - max_sites)*sizeof(UINT));
         }
+        if (!aln->isSuperAlignment())
+            delete partitions;
     } else {
         // internal node
         assert(node->degree() == 3); // it works only for strictly bifurcating tree
@@ -1460,7 +1475,7 @@ void PhyloTree::computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, Phylo
             #pragma omp parallel for private (site) reduction(+: score) if(nsites>200)
             #endif
 			for (site = 0; site<nsites; site++) {
-                size_t offset = 4*VCSIZE*site;
+                size_t offset = entry_size*site;
                 VectorClass *x = (VectorClass*)(left->partial_pars + offset);
                 VectorClass *y = (VectorClass*)(right->partial_pars + offset);
                 VectorClass *z = (VectorClass*)(dad_branch->partial_pars + offset);
@@ -1531,7 +1546,7 @@ int PhyloTree::computeParsimonyBranchFastSIMD(PhyloNeighbor *dad_branch, PhyloNo
     if ((node_branch->partial_lh_computed & 2) == 0)
         computePartialParsimonyFastSIMD<VectorClass>(node_branch, node);
     int site;
-    int nstates = aln->num_states;
+    int nstates = aln->getMaxNumStates();
 
 //    VectorClass score = 0;
 //    VectorClass w;
