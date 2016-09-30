@@ -17,6 +17,10 @@
 
 #include "phylotree.h"
 
+#ifdef _OPENMP
+#include <omp.h>
+#endif
+
 /*******************************************************
  *
  * Helper function for vectors and matrix multiplication
@@ -1193,10 +1197,10 @@ void PhyloTree::computeLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, Phyl
 	    	// special treatment for TIP-INTERNAL NODE case
 
 #ifdef _OPENMP
-#pragma omp parallel private(ptn, i, c) schedule(static)
+#pragma omp parallel private(ptn, i, c)
         {
             double *vec_tip = buffer_partial_lh + tip_block*VectorClass::size()*omp_get_thread_num();
-#pragma omp for schedule(static) reduction(+: scale_all)
+#pragma omp for schedule(static)
 #else
             double *vec_tip = buffer_partial_lh;
 #endif
@@ -1272,7 +1276,7 @@ void PhyloTree::computeLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, Phyl
 
 //	    	size_t all_entries = nptn*block;
 #ifdef _OPENMP
-#pragma omp parallel for private(ptn, i, c) schedule(static) reduction(+: scale_all)
+#pragma omp parallel for private(ptn, i, c) schedule(static)
 #endif
 	    	for (ptn = 0; ptn < nptn; ptn+=VectorClass::size()) {
 				VectorClass *theta = (VectorClass*)(theta_all + ptn*block);
@@ -1377,12 +1381,17 @@ void PhyloTree::computeLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, Phyl
     }
 
 
-    VectorClass my_df = 0.0, my_ddf = 0.0, vc_prob_const = 0.0, vc_df_const = 0.0, vc_ddf_const = 0.0;
-    double prob_const = 0.0, df_const = 0.0, ddf_const = 0.0;
+    VectorClass all_df = 0.0, all_ddf = 0.0, all_prob_const = 0.0, all_df_const = 0.0, all_ddf_const = 0.0;
 //    double tree_lh = node_branch->lh_scale_factor + dad_branch->lh_scale_factor;
 
 #ifdef _OPENMP
-#pragma omp parallel for reduction(+: my_df, my_ddf, prob_const, df_const, ddf_const) private(ptn, i) schedule(static)
+#pragma omp parallel private(ptn, i)
+    {
+#endif
+        VectorClass my_df(0.0), my_ddf(0.0), vc_prob_const(0.0), vc_df_const(0.0), vc_ddf_const(0.0);
+
+#ifdef _OPENMP
+#pragma omp for schedule(static) nowait
 #endif
     for (ptn = 0; ptn < nptn; ptn+=VectorClass::size()) {
 		VectorClass lh_ptn;
@@ -1407,7 +1416,6 @@ void PhyloTree::computeLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, Phyl
 			VectorClass tmp1 = df_frac * freq;
 			VectorClass tmp2 = ddf_frac * freq;
 			my_df += tmp1;
-//			my_ddf += tmp2 - tmp1 * df_frac;
             my_ddf += nmul_add(tmp1, df_frac, tmp2);
 		} else {
 			// ascertainment bias correction
@@ -1416,11 +1424,30 @@ void PhyloTree::computeLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, Phyl
 			vc_ddf_const += ddf_ptn;
 		}
     }
-	df = horizontal_add(my_df);
-	ddf = horizontal_add(my_ddf);
-    prob_const = horizontal_add(vc_prob_const);
-    df_const = horizontal_add(vc_df_const);
-    ddf_const = horizontal_add(vc_ddf_const);
+#ifdef _OPENMP
+#pragma omp critical
+        {
+            all_df += my_df;
+            all_ddf += my_ddf;
+            if (orig_nptn < nptn) {
+                all_prob_const += vc_prob_const;
+                all_df_const += vc_df_const;
+                all_ddf_const += vc_ddf_const;
+            }
+        }
+    }
+#else
+    all_df = my_df;
+    all_ddf = my_ddf;
+    if (orig_nptn < nptn) {
+        all_prob_const = vc_prob_const;
+        all_df_const = vc_df_const;
+        all_ddf_const = vc_ddf_const;
+    }
+#endif
+
+	df = horizontal_add(all_df);
+	ddf = horizontal_add(all_ddf);
 
     if (!SAFE_NUMERIC && (isnan(df) || isinf(df)))
         outError("Numerical underflow (lh-derivative). Run again with the safe likelihood kernel via `-safe` option");
@@ -1428,6 +1455,10 @@ void PhyloTree::computeLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, Phyl
     assert(!isnan(df) && !isinf(df) && "Numerical underflow for lh-derivative");
 
 	if (orig_nptn < nptn) {
+        double prob_const = 0.0, df_const = 0.0, ddf_const = 0.0;
+        prob_const = horizontal_add(all_prob_const);
+        df_const = horizontal_add(all_df_const);
+        ddf_const = horizontal_add(all_ddf_const);
     	// ascertainment bias correction
     	prob_const = 1.0 - prob_const;
     	double df_frac = df_const / prob_const;
@@ -1478,7 +1509,6 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
         computePartialLikelihood(node_branch, node);
 //    double tree_lh = node_branch->lh_scale_factor + dad_branch->lh_scale_factor;
     double tree_lh = 0.0;
-    VectorClass vc_tree_lh = 0.0;
 #ifndef KERNEL_FIX_STATES
     size_t nstates = aln->num_states;
 #endif
@@ -1531,8 +1561,8 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
         }
     }
 
-	double prob_const = 0.0;
-    VectorClass vc_prob_const = 0.0;
+    VectorClass all_tree_lh(0.0);
+    VectorClass all_prob_const(0.0);
 	memset(_pattern_lh_cat, 0, sizeof(double)*nptn*ncat_mix);
 
     if (dad->isLeaf()) {
@@ -1578,12 +1608,14 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
 
     	// now do the real computation
 #ifdef _OPENMP
-#pragma omp parallel for reduction(+: tree_lh, prob_const) private(ptn, i, c) schedule(static)
+#pragma omp parallel private(ptn, i, c)
     {
         double *vec_tip = buffer_partial_lh_ptr + block*VectorClass::size()*omp_get_thread_num();
-#pragma omp parallel for reduction(+: tree_lh, prob_const) private(ptn, i, c) schedule(static)
+        VectorClass vc_tree_lh(0.0), vc_prob_const(0.0);
+#pragma omp for schedule(static) nowait
 #else
         double *vec_tip = buffer_partial_lh_ptr;
+        VectorClass vc_tree_lh(0.0), vc_prob_const(0.0);
 #endif
     	for (ptn = 0; ptn < nptn; ptn+=VectorClass::size()) {
 			VectorClass lh_ptn;
@@ -1674,14 +1706,31 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
                 }
                 vc_prob_const += lh_ptn;
 			}
-		}
+		} // FOR PTN
+#ifdef _OPENMP
+#pragma omp critical
+        {
+            all_tree_lh += vc_tree_lh;
+            all_prob_const += vc_prob_const;
+        }
+    }
+#else
+        all_tree_lh = vc_tree_lh;
+        all_prob_const = vc_prob_const;
+#endif
 //        aligned_free(vec_tip);
 //		aligned_free(partial_lh_node);
     } else {
     	// both dad and node are internal nodes
 
 #ifdef _OPENMP
-#pragma omp parallel for reduction(+: tree_lh, prob_const) private(ptn, i, c) schedule(static)
+#pragma omp parallel private(ptn, i, c)
+    {
+#endif
+        VectorClass vc_tree_lh(0.0), vc_prob_const(0.0);
+
+#ifdef _OPENMP
+#pragma omp for schedule(static)
 #endif
     	for (ptn = 0; ptn < nptn; ptn+=VectorClass::size()) {
 			VectorClass lh_ptn;
@@ -1767,10 +1816,22 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
                 }
                 vc_prob_const += lh_ptn;
 			}
-		}
+		} // FOR LOOP
+#ifdef _OPENMP
+#pragma omp critical
+        {
+            all_tree_lh += vc_tree_lh;
+            all_prob_const += vc_prob_const;
+        }
     }
+#else
+    all_tree_lh = vc_tree_lh;
+    all_prob_const = vc_prob_const;
+#endif
 
-    tree_lh += horizontal_add(vc_tree_lh);
+    } // else
+
+    tree_lh += horizontal_add(all_tree_lh);
 
     if (!SAFE_NUMERIC && (isnan(tree_lh) || isinf(tree_lh)))
         outError("Numerical underflow (lh-branch). Run again with the safe likelihood kernel via `-safe` option");
@@ -1779,7 +1840,7 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
 
     if (orig_nptn < nptn) {
     	// ascertainment bias correction
-        prob_const = horizontal_add(vc_prob_const);
+        double prob_const = horizontal_add(all_prob_const);
         if (prob_const >= 1.0 || prob_const < 0.0) {
             printTree(cout, WT_TAXON_ID + WT_BR_LEN + WT_NEWLINE);
             model->writeInfo(cout);
@@ -1822,8 +1883,6 @@ double PhyloTree::computeLikelihoodFromBufferGenericSIMD()
 	assert(theta_all && theta_computed);
 
 //	double tree_lh = current_it->lh_scale_factor + current_it_back->lh_scale_factor;
-    double tree_lh = 0.0;
-    VectorClass vc_tree_lh = 0.0;
 
 #ifndef KERNEL_FIX_STATES
     size_t nstates = aln->num_states;
@@ -1882,12 +1941,17 @@ double PhyloTree::computeLikelihoodFromBufferGenericSIMD()
     }
 
 
-    VectorClass vc_prob_const = 0.0;
-    double prob_const = 0.0;
 //    double tree_lh = node_branch->lh_scale_factor + dad_branch->lh_scale_factor;
 
+    VectorClass all_tree_lh(0.0), all_prob_const(0.0);
+
 #ifdef _OPENMP
-#pragma omp parallel for reduction(+: my_df, my_ddf, prob_const, df_const, ddf_const) private(ptn, i) schedule(static)
+#pragma omp parallel private(ptn, i)
+    {
+#endif
+        VectorClass vc_tree_lh(0.0), vc_prob_const(0.0);
+#ifdef _OPENMP
+#pragma omp for schedule(static) nowait
 #endif
     for (ptn = 0; ptn < nptn; ptn+=VectorClass::size()) {
 		VectorClass lh_ptn;
@@ -1907,8 +1971,19 @@ double PhyloTree::computeLikelihoodFromBufferGenericSIMD()
             vc_prob_const += lh_ptn;
         }
     }
+#ifdef _OPENMP
+#pragma omp critical
+        {
+            all_tree_lh += vc_tree_lh;
+            all_prob_const += vc_prob_const;
+        }
+    }
+#else
+    all_tree_lh = vc_tree_lh;
+    all_prob_const = vc_prob_const;
+#endif
 
-    tree_lh += horizontal_add(vc_tree_lh);
+    double tree_lh = horizontal_add(all_tree_lh);
 
     if (!SAFE_NUMERIC && (isnan(tree_lh) || isinf(tree_lh)))
         outError("Numerical underflow (lh-from-buffer). Run again with the safe likelihood kernel via `-safe` option");
@@ -1917,7 +1992,7 @@ double PhyloTree::computeLikelihoodFromBufferGenericSIMD()
 
     if (orig_nptn < nptn) {
     	// ascertainment bias correction
-        prob_const = horizontal_add(vc_prob_const);
+        double prob_const = horizontal_add(all_prob_const);
         if (prob_const >= 1.0 || prob_const < 0.0) {
             printTree(cout, WT_TAXON_ID + WT_BR_LEN + WT_NEWLINE);
             model->writeInfo(cout);
