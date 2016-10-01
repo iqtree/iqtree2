@@ -478,7 +478,10 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(PhyloNeighbor *dad_branch, P
 #ifndef KERNEL_FIX_STATES
     size_t nstates = aln->num_states;
 #endif
-    size_t nptn = aln->size()+model_factory->unobserved_ptns.size();
+    size_t orig_nptn = aln->size();
+    size_t max_orig_nptn = ((orig_nptn+VectorClass::size()-1)/VectorClass::size())*VectorClass::size();
+    size_t nptn = max_orig_nptn+model_factory->unobserved_ptns.size();
+    size_t max_nptn = ((nptn+VectorClass::size()-1)/VectorClass::size())*VectorClass::size();
 
     if (!tip_partial_lh_computed)
         computeTipPartialLikelihood();
@@ -489,7 +492,6 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(PhyloNeighbor *dad_branch, P
 	}
     
     size_t ptn, c;
-    size_t orig_ntn = aln->size();
     size_t ncat = site_rate->getNRate();
     size_t ncat_mix = (model_factory->fused_mix_rate) ? ncat : ncat*model->getNMixtures();
     size_t mix_addr_nstates[ncat_mix], mix_addr[ncat_mix];
@@ -502,7 +504,6 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(PhyloNeighbor *dad_branch, P
     size_t i, x;
     size_t block = nstates * ncat_mix;
     size_t tip_block = nstates * model->getNMixtures();
-    size_t max_nptn = get_safe_upper_limit(nptn);
     size_t scale_size = SAFE_NUMERIC ? max_nptn * ncat_mix : max_nptn;
     
 	double *evec = model->getEigenvectors();
@@ -718,10 +719,12 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(PhyloNeighbor *dad_branch, P
                     // load data for tip
                     for (i = 0; i < VectorClass::size(); i++) {
                         double *child_lh;
-                        if (ptn+i < orig_ntn)
+                        if (ptn+i < orig_nptn)
                             child_lh = partial_lh_leaf + block*(aln->at(ptn+i))[child->node->id];
+                        else if (ptn+i < max_orig_nptn)
+                            child_lh = partial_lh_leaf + block*aln->STATE_UNKNOWN;
                         else if (ptn+i < nptn)
-                            child_lh = partial_lh_leaf + block*model_factory->unobserved_ptns[ptn+i-orig_ntn];
+                            child_lh = partial_lh_leaf + block*model_factory->unobserved_ptns[ptn+i-max_orig_nptn];
                         else
                             child_lh = partial_lh_leaf + block*aln->STATE_UNKNOWN;
                         double *this_vec_tip = vec_tip+i;
@@ -860,12 +863,15 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(PhyloNeighbor *dad_branch, P
             // load data for tip
             for (x = 0; x < VectorClass::size(); x++) {
                 double *tip_left, *tip_right;
-                if (ptn+x < orig_ntn) {
+                if (ptn+x < orig_nptn) {
                     tip_left  = partial_lh_left  + block * (aln->at(ptn+x))[left->node->id];
                     tip_right = partial_lh_right + block * (aln->at(ptn+x))[right->node->id];
+                } else if (ptn+x < max_orig_nptn) {
+                    tip_left  = partial_lh_left  + block * aln->STATE_UNKNOWN;
+                    tip_right = partial_lh_right + block * aln->STATE_UNKNOWN;
                 } else if (ptn+x < nptn) {
-                    tip_left  = partial_lh_left  + block * model_factory->unobserved_ptns[ptn+x-orig_ntn];
-                    tip_right = partial_lh_right + block * model_factory->unobserved_ptns[ptn+x-orig_ntn];
+                    tip_left  = partial_lh_left  + block * model_factory->unobserved_ptns[ptn+x-max_orig_nptn];
+                    tip_right = partial_lh_right + block * model_factory->unobserved_ptns[ptn+x-max_orig_nptn];
                 } else {
                     tip_left  = partial_lh_left  + block * aln->STATE_UNKNOWN;
                     tip_right = partial_lh_right + block * aln->STATE_UNKNOWN;
@@ -936,10 +942,12 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(PhyloNeighbor *dad_branch, P
             // load data for tip
             for (x = 0; x < VectorClass::size(); x++) {
                 double *tip;
-                if (ptn+x < orig_ntn) {
+                if (ptn+x < orig_nptn) {
                     tip = partial_lh_left + block*(aln->at(ptn+x))[left->node->id];
+                } else if (ptn+x < max_orig_nptn) {
+                    tip = partial_lh_left + block*aln->STATE_UNKNOWN;
                 } else if (ptn+x < nptn) {
-                    tip = partial_lh_left + block*model_factory->unobserved_ptns[ptn+x-orig_ntn];
+                    tip = partial_lh_left + block*model_factory->unobserved_ptns[ptn+x-max_orig_nptn];
                 } else {
                     tip = partial_lh_left + block*aln->STATE_UNKNOWN;
                 }
@@ -1175,9 +1183,11 @@ void PhyloTree::computeLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, Phyl
     size_t ptn; // for big data size > 4GB memory required
     size_t c, i;
     size_t orig_nptn = aln->size();
-    size_t nptn = aln->size()+model_factory->unobserved_ptns.size();
-    size_t maxptn = ((nptn+VectorClass::size()-1)/VectorClass::size())*VectorClass::size();
-    maxptn = max(maxptn, aln->size()+((model_factory->unobserved_ptns.size()+VectorClass::size()-1)/VectorClass::size())*VectorClass::size());
+    size_t max_orig_nptn = ((orig_nptn+VectorClass::size()-1)/VectorClass::size())*VectorClass::size();
+    size_t nptn = max_orig_nptn+model_factory->unobserved_ptns.size();
+    bool isASC = model_factory->unobserved_ptns.size() > 0;
+//    size_t maxptn = ((nptn+VectorClass::size()-1)/VectorClass::size())*VectorClass::size();
+//    maxptn = max(maxptn, aln->size()+((model_factory->unobserved_ptns.size()+VectorClass::size()-1)/VectorClass::size())*VectorClass::size());
 
     size_t mix_addr_nstates[ncat_mix], mix_addr[ncat_mix];
     size_t denom = (model_factory->fused_mix_rate) ? 1 : ncat;
@@ -1212,8 +1222,10 @@ void PhyloTree::computeLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, Phyl
                     double *this_tip_partial_lh;
                     if (ptn+i < orig_nptn)
                         this_tip_partial_lh = tip_partial_lh + tip_block*(aln->at(ptn+i))[dad->id];
+                    else if (ptn+i < max_orig_nptn)
+                        this_tip_partial_lh = tip_partial_lh + tip_block*aln->STATE_UNKNOWN;
                     else if (ptn+i < nptn)
-                        this_tip_partial_lh = tip_partial_lh + tip_block*model_factory->unobserved_ptns[ptn+i-orig_nptn];
+                        this_tip_partial_lh = tip_partial_lh + tip_block*model_factory->unobserved_ptns[ptn+i-max_orig_nptn];
                     else
                         this_tip_partial_lh = tip_partial_lh + tip_block*aln->STATE_UNKNOWN;
                     double *this_vec_tip = vec_tip+i;
@@ -1407,7 +1419,6 @@ void PhyloTree::computeLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, Phyl
         lh_ptn = abs(lh_ptn + VectorClass().load_a(&ptn_invar[ptn]));
         
         if (ptn < orig_nptn) {
-            // TODO ASC overlap
             lh_ptn = 1.0 / lh_ptn;
 			VectorClass df_frac = df_ptn * lh_ptn;
 			VectorClass ddf_frac = ddf_ptn * lh_ptn;
@@ -1419,6 +1430,12 @@ void PhyloTree::computeLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, Phyl
             my_ddf += nmul_add(tmp1, df_frac, tmp2);
 		} else {
 			// ascertainment bias correction
+            if (ptn+VectorClass::size() > nptn) {
+                // cutoff the last entries if going beyond
+                lh_ptn.cutoff(nptn-ptn);
+                df_ptn.cutoff(nptn-ptn);
+                ddf_ptn.cutoff(nptn-ptn);
+            }
 			vc_prob_const += lh_ptn;
 			vc_df_const += df_ptn;
 			vc_ddf_const += ddf_ptn;
@@ -1429,7 +1446,7 @@ void PhyloTree::computeLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, Phyl
         {
             all_df += my_df;
             all_ddf += my_ddf;
-            if (orig_nptn < nptn) {
+            if (isASC) {
                 all_prob_const += vc_prob_const;
                 all_df_const += vc_df_const;
                 all_ddf_const += vc_ddf_const;
@@ -1439,7 +1456,7 @@ void PhyloTree::computeLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, Phyl
 #else
     all_df = my_df;
     all_ddf = my_ddf;
-    if (orig_nptn < nptn) {
+    if (isASC) {
         all_prob_const = vc_prob_const;
         all_df_const = vc_df_const;
         all_ddf_const = vc_ddf_const;
@@ -1454,7 +1471,7 @@ void PhyloTree::computeLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, Phyl
 
     assert(!isnan(df) && !isinf(df) && "Numerical underflow for lh-derivative");
 
-	if (orig_nptn < nptn) {
+	if (isASC) {
         double prob_const = 0.0, df_const = 0.0, ddf_const = 0.0;
         prob_const = horizontal_add(all_prob_const);
         df_const = horizontal_add(all_df_const);
@@ -1520,7 +1537,9 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
     size_t ptn; // for big data size > 4GB memory required
     size_t c, i;
     size_t orig_nptn = aln->size();
-    size_t nptn = aln->size()+model_factory->unobserved_ptns.size();
+    size_t max_orig_nptn = ((orig_nptn+VectorClass::size()-1)/VectorClass::size())*VectorClass::size();
+    size_t nptn = max_orig_nptn+model_factory->unobserved_ptns.size();
+    bool isASC = model_factory->unobserved_ptns.size() > 0;
 
     size_t mix_addr_nstates[ncat_mix], mix_addr[ncat_mix];
     size_t denom = (model_factory->fused_mix_rate) ? 1 : ncat;
@@ -1611,11 +1630,14 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
 #pragma omp parallel private(ptn, i, c)
     {
         double *vec_tip = buffer_partial_lh_ptr + block*VectorClass::size()*omp_get_thread_num();
+#endif
+
         VectorClass vc_tree_lh(0.0), vc_prob_const(0.0);
+
+#ifdef _OPENMP
 #pragma omp for schedule(static) nowait
 #else
         double *vec_tip = buffer_partial_lh_ptr;
-        VectorClass vc_tree_lh(0.0), vc_prob_const(0.0);
 #endif
     	for (ptn = 0; ptn < nptn; ptn+=VectorClass::size()) {
 			VectorClass lh_ptn;
@@ -1629,8 +1651,10 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
                 double *lh_tip;
                 if (ptn+i < orig_nptn)
                     lh_tip = partial_lh_node + block*(aln->at(ptn+i))[dad->id];
+                else if (ptn+i < max_orig_nptn)
+                    lh_tip = partial_lh_node + block*aln->STATE_UNKNOWN;
                 else if (ptn+i < nptn)
-                    lh_tip = partial_lh_node + block*model_factory->unobserved_ptns[ptn+i-orig_nptn];
+                    lh_tip = partial_lh_node + block*model_factory->unobserved_ptns[ptn+i-max_orig_nptn];
                 else
                     lh_tip = partial_lh_node + block*aln->STATE_UNKNOWN;
 
@@ -1671,13 +1695,12 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
                         }
                     }
                 }
-                vc_min_scale *= LOG_SCALING_THRESHOLD;
             } else {
                 for (i = 0; i < VectorClass::size(); i++) {
                     vc_min_scale_ptr[i] = dad_branch->scale_num[ptn+i];
                 }
-                vc_min_scale *= LOG_SCALING_THRESHOLD;
             }
+            vc_min_scale *= LOG_SCALING_THRESHOLD;
 
             for (c = 0; c < ncat_mix; c++) {
 #ifdef KERNEL_FIX_STATES
@@ -1690,19 +1713,24 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
                 partial_lh_dad += nstates;
                 lh_cat++;
             }
-
+            lh_ptn = abs(lh_ptn);
 			if (ptn < orig_nptn) {
-                lh_ptn = log(abs(lh_ptn)) + vc_min_scale;
+                lh_ptn = log(lh_ptn) + vc_min_scale;
 				lh_ptn.store_a(&_pattern_lh[ptn]);
 				vc_tree_lh = mul_add(lh_ptn, VectorClass().load_a(&ptn_freq[ptn]), vc_tree_lh);
-                // TODO: case that ASC overlap
 			} else {
+                // ascertainment bias correction
+                if (ptn+VectorClass::size() > nptn) {
+                    // cutoff the last entries if going beyond
+                    lh_ptn.cutoff(nptn-ptn);
+                }
                 // bugfix 2016-01-21, prob_const can be rescaled
                 if (horizontal_or(vc_min_scale != 0.0)) {
                     // some entries are rescaled
+                    double *lh_ptn_dbl = (double*)&lh_ptn;
                     for (i = 0; i < VectorClass::size(); i++)
-                        if (vc_min_scale[i] != 0.0)
-                            lh_ptn.insert(i, lh_ptn[i] * SCALING_THRESHOLD);
+                        if (vc_min_scale_ptr[i] != 0.0)
+                            lh_ptn_dbl[i] *= SCALING_THRESHOLD;
                 }
                 vc_prob_const += lh_ptn;
 			}
@@ -1730,7 +1758,7 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
         VectorClass vc_tree_lh(0.0), vc_prob_const(0.0);
 
 #ifdef _OPENMP
-#pragma omp for schedule(static)
+#pragma omp for schedule(static) nowait
 #endif
     	for (ptn = 0; ptn < nptn; ptn+=VectorClass::size()) {
 			VectorClass lh_ptn;
@@ -1781,7 +1809,6 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
                     scale_node += ncat_mix;
                 }
                 sumVec<VectorClass, true>(lh_cat, lh_ptn, ncat_mix);
-                vc_min_scale *= LOG_SCALING_THRESHOLD;
             } else {
                 // normal scaling
                 for (c = 0; c < ncat_mix; c++) {
@@ -1798,21 +1825,27 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
                 for (i = 0; i < VectorClass::size(); i++) {
                     vc_min_scale_ptr[i] = dad_branch->scale_num[ptn+i] + node_branch->scale_num[ptn+i];
                 }
-                vc_min_scale *= LOG_SCALING_THRESHOLD;
             }
+            vc_min_scale *= LOG_SCALING_THRESHOLD;
+            lh_ptn = abs(lh_ptn);
 
 			if (ptn < orig_nptn) {
-                lh_ptn = log(abs(lh_ptn)) + vc_min_scale;
+                lh_ptn = log(lh_ptn) + vc_min_scale;
 				lh_ptn.store_a(&_pattern_lh[ptn]);
 				vc_tree_lh = mul_add(lh_ptn, VectorClass().load_a(&ptn_freq[ptn]), vc_tree_lh);
-                // TODO: case that ASC overlap
 			} else {
+                // ascertainment bias correction
+                if (ptn+VectorClass::size() > nptn) {
+                    // cutoff the last entries if going beyond
+                    lh_ptn.cutoff(nptn-ptn);
+                }
                 // bugfix 2016-01-21, prob_const can be rescaled
                 if (horizontal_or(vc_min_scale != 0.0)) {
                     // some entries are rescaled
+                    double *lh_ptn_dbl = (double*)&lh_ptn;
                     for (i = 0; i < VectorClass::size(); i++)
-                        if (vc_min_scale[i] != 0.0)
-                            lh_ptn.insert(i, lh_ptn[i] * SCALING_THRESHOLD);
+                        if (vc_min_scale_ptr[i] != 0.0)
+                            lh_ptn_dbl[i] *= SCALING_THRESHOLD;
                 }
                 vc_prob_const += lh_ptn;
 			}
@@ -1838,7 +1871,7 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
 
     assert(!isnan(tree_lh) && !isinf(tree_lh) && "Numerical underflow for lh-branch");
 
-    if (orig_nptn < nptn) {
+    if (isASC) {
     	// ascertainment bias correction
         double prob_const = horizontal_add(all_prob_const);
         if (prob_const >= 1.0 || prob_const < 0.0) {
@@ -1854,8 +1887,9 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
 //            _pattern_lh_cat[ptn] *= inv_const;
         
     	prob_const = log(1.0 - prob_const);
-    	for (ptn = 0; ptn < orig_nptn; ptn++)
-    		_pattern_lh[ptn] -= prob_const;
+    	for (ptn = 0; ptn < orig_nptn; ptn+=VectorClass::size())
+            (VectorClass().load_a(&_pattern_lh[ptn])-prob_const).store_a(&_pattern_lh[ptn]);
+//    		_pattern_lh[ptn] -= prob_const;
     	tree_lh -= aln->getNSite()*prob_const;
 		assert(!isnan(tree_lh) && !isinf(tree_lh));
     }
@@ -1895,7 +1929,9 @@ double PhyloTree::computeLikelihoodFromBufferGenericSIMD()
     size_t ptn; // for big data size > 4GB memory required
     size_t c, i;
     size_t orig_nptn = aln->size();
-    size_t nptn = aln->size()+model_factory->unobserved_ptns.size();
+    size_t max_orig_nptn = ((orig_nptn+VectorClass::size()-1)/VectorClass::size())*VectorClass::size();
+    size_t nptn = max_orig_nptn+model_factory->unobserved_ptns.size();
+    bool isASC = model_factory->unobserved_ptns.size() > 0;
 
     size_t mix_addr_nstates[ncat_mix], mix_addr[ncat_mix];
     size_t denom = (model_factory->fused_mix_rate) ? 1 : ncat;
@@ -1968,6 +2004,11 @@ double PhyloTree::computeLikelihoodFromBufferGenericSIMD()
 //                if (min_scale >= 1)
 //                    lh_ptn *= SCALING_THRESHOLD;
 //				_pattern_lh[ptn] = lh_ptn;
+			// ascertainment bias correction
+            if (ptn+VectorClass::size() > nptn) {
+                // cutoff the last entries if going beyond
+                lh_ptn.cutoff(nptn-ptn);
+            }
             vc_prob_const += lh_ptn;
         }
     }
@@ -1990,7 +2031,7 @@ double PhyloTree::computeLikelihoodFromBufferGenericSIMD()
 
     assert(!isnan(tree_lh) && !isinf(tree_lh) && "Numerical underflow for lh-from-buffer");
 
-    if (orig_nptn < nptn) {
+    if (isASC) {
     	// ascertainment bias correction
         double prob_const = horizontal_add(all_prob_const);
         if (prob_const >= 1.0 || prob_const < 0.0) {
@@ -2006,8 +2047,9 @@ double PhyloTree::computeLikelihoodFromBufferGenericSIMD()
 //            _pattern_lh_cat[ptn] *= inv_const;
         
     	prob_const = log(1.0 - prob_const);
-    	for (ptn = 0; ptn < orig_nptn; ptn++)
-    		_pattern_lh[ptn] -= prob_const;
+    	for (ptn = 0; ptn < orig_nptn; ptn+=VectorClass::size())
+            (VectorClass().load_a(&_pattern_lh[ptn])-prob_const).store_a(&_pattern_lh[ptn]);
+//    		_pattern_lh[ptn] -= prob_const;
     	tree_lh -= aln->getNSite()*prob_const;
 		assert(!isnan(tree_lh) && !isinf(tree_lh));
     }

@@ -112,6 +112,16 @@ public:
         xmm = *p;
         return *this;
     }
+    // Partial load. Load n elements and set the rest to 0
+    Vec1d & load_partial(int n, double const * p) {
+        switch (n) {
+        case 1:
+            xmm = *p; break;
+        default:
+            xmm = 0.0;
+        }
+        return *this;
+    }
     // Member function to store into array (unaligned)
     void store(double * p) const {
         *p = xmm;
@@ -119,6 +129,13 @@ public:
     // Member function to store into array, aligned by 8
     void store_a(double * p) const {
         *p = xmm;
+    }
+
+    // cut off vector to n elements. The last 4-n elements are set to zero
+    Vec1d & cutoff(int n) {
+        if (n == 0)
+            xmm = 0.0;
+        return *this;
     }
 
     // Member function to change a single element in vector

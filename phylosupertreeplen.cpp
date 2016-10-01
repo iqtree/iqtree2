@@ -1805,7 +1805,7 @@ void PhyloSuperTreePlen::initializeAllPartialLh() {
 		part = part_order[partid];
         it = begin() + part;
         // extra #numStates for ascertainment bias correction
-		mem_size[part] = get_safe_upper_limit((*it)->getAlnNPattern() + (*it)->aln->num_states);
+		mem_size[part] = get_safe_upper_limit((*it)->getAlnNPattern()) + get_safe_upper_limit((*it)->aln->num_states);
         size_t mem_cat_size = mem_size[part] * (*it)->getRate()->getNRate() *
 				(((*it)->model_factory->fused_mix_rate)? 1 : (*it)->getModel()->getNMixtures());
 

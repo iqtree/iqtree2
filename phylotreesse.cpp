@@ -339,7 +339,7 @@ void PhyloTree::computePtnFreq() {
 	if (ptn_freq_computed) return;
 	ptn_freq_computed = true;
 	size_t nptn = aln->getNPattern();
-	size_t maxptn = get_safe_upper_limit(nptn+model_factory->unobserved_ptns.size());
+	size_t maxptn = get_safe_upper_limit(nptn)+get_safe_upper_limit(model_factory->unobserved_ptns.size());
 	int ptn;
 	for (ptn = 0; ptn < nptn; ptn++)
 		ptn_freq[ptn] = (*aln)[ptn].frequency;
@@ -349,7 +349,7 @@ void PhyloTree::computePtnFreq() {
 
 void PhyloTree::computePtnInvar() {
 	size_t nptn = aln->getNPattern(), ptn;
-	size_t maxptn = get_safe_upper_limit(nptn+model_factory->unobserved_ptns.size());
+	size_t maxptn = get_safe_upper_limit(nptn)+get_safe_upper_limit(model_factory->unobserved_ptns.size());
 	int nstates = aln->num_states;
 
     double *state_freq = aligned_alloc<double>(nstates);
@@ -364,13 +364,13 @@ void PhyloTree::computePtnInvar() {
 				ptn_invar[ptn] = p_invar * state_freq[(int) (*aln)[ptn].const_char];
 			}
 		}
-		// ascertmain bias correction
-		for (ptn = 0; ptn < model_factory->unobserved_ptns.size(); ptn++)
-			ptn_invar[nptn+ptn] = p_invar * state_freq[(int)model_factory->unobserved_ptns[ptn]];
-
+//		// ascertmain bias correction
+//		for (ptn = 0; ptn < model_factory->unobserved_ptns.size(); ptn++)
+//			ptn_invar[nptn+ptn] = p_invar * state_freq[(int)model_factory->unobserved_ptns[ptn]];
+//
 		// dummy values
-		for (ptn = nptn+model_factory->unobserved_ptns.size(); ptn < maxptn; ptn++)
-			ptn_invar[ptn] = ptn_invar[ptn-1];
+		for (ptn = nptn; ptn < maxptn; ptn++)
+			ptn_invar[ptn] = p_invar;
 	}
 	aligned_free(state_freq);
 }
