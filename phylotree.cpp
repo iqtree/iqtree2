@@ -1335,11 +1335,9 @@ void PhyloTree::computePatternLikelihood(double *ptn_lh, double *cur_logl, doubl
         } else {
             // normal scaling
             for (ptn = 0; ptn < nptn; ptn++) {
-                if (nei2_scale[ptn] > 0) {
-                    double scale = nei2_scale[ptn] * LOG_SCALING_THRESHOLD;
-                    for (i = 0; i < ncat; i++)
-                        out_lh_cat[i] = log(lh_cat[i]) + scale;
-                }
+                double scale = nei2_scale[ptn] * LOG_SCALING_THRESHOLD;
+                for (i = 0; i < ncat; i++)
+                    out_lh_cat[i] = log(lh_cat[i]) + scale;
                 lh_cat += ncat;
                 out_lh_cat += ncat;
             }
@@ -1364,11 +1362,9 @@ void PhyloTree::computePatternLikelihood(double *ptn_lh, double *cur_logl, doubl
         } else {
             // normal scaling
             for (ptn = 0; ptn < nptn; ptn++) {
-                if (nei1_scale[ptn] + nei2_scale[ptn] > 0) {
-                    double scale = (nei1_scale[ptn] + nei2_scale[ptn]) * LOG_SCALING_THRESHOLD;
-                    for (i = 0; i < ncat; i++)
-                        out_lh_cat[i] = log(lh_cat[i]) + scale;
-                }
+                double scale = (nei1_scale[ptn] + nei2_scale[ptn]) * LOG_SCALING_THRESHOLD;
+                for (i = 0; i < ncat; i++)
+                    out_lh_cat[i] = log(lh_cat[i]) + scale;
                 lh_cat += ncat;
                 out_lh_cat += ncat;
             }
