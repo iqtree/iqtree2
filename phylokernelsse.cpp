@@ -38,6 +38,7 @@ void PhyloTree::setDotProductSSE() {
 }
 
 void PhyloTree::setLikelihoodKernelSSE() {
+    vector_size = 2;
     setParsimonyKernelSSE();
     if (model_factory && model_factory->model->isSiteSpecificModel()) {
         switch (aln->num_states) {

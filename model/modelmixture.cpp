@@ -1480,6 +1480,7 @@ double ModelMixture::optimizeWithEM(double gradient_epsilon) {
     
     tree->copyPhyloTree(phylo_tree);
     tree->optimize_by_newton = phylo_tree->optimize_by_newton;
+    tree->setParams(phylo_tree->params);
     tree->setLikelihoodKernel(phylo_tree->sse);
     // initialize model
     ModelFactory *model_fac = new ModelFactory();

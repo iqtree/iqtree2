@@ -58,6 +58,7 @@ void PhyloTree::setParsimonyKernel(LikelihoodKernel lk) {
 void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk) {
 
 	sse = lk;
+    vector_size = 1;
 
     //--- parsimony kernel ---
     setParsimonyKernel(lk);
@@ -112,7 +113,7 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk) {
         computeLikelihoodDervPointer = &PhyloTree::computeSitemodelLikelihoodDervEigen;
         computePartialLikelihoodPointer = &PhyloTree::computeSitemodelPartialLikelihoodEigen;
         computeLikelihoodFromBufferPointer = &PhyloTree::computeSitemodelLikelihoodFromBufferEigen;
-        return;        
+        return;
     }
 
     //--- naive (no SIMD) kernel ---

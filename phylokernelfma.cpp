@@ -32,6 +32,7 @@ void PhyloTree::setDotProductFMA() {
 }
 
 void PhyloTree::setLikelihoodKernelFMA() {
+    vector_size = 4;
 //    setParsimonyKernelAVX();
     if (model_factory && model_factory->model->isSiteSpecificModel()) {
         switch (aln->num_states) {

@@ -105,6 +105,7 @@ void PhyloTree::init() {
     current_scaling = 1.0;
     is_opt_scaling = false;
     num_partial_lh_computations = 0;
+    vector_size = 0;
 }
 
 PhyloTree::PhyloTree(Alignment *aln) : MTree(), CheckpointFactory() {
@@ -1093,6 +1094,31 @@ int PhyloTree::getNumLhCat(SiteLoglType wsl) {
     }
 }
 
+void PhyloTree::transformPatternLhCat() {
+    if (vector_size == 1 || model->isSiteSpecificModel())
+        return;
+
+    size_t nptn = ((aln->size()+vector_size-1)/vector_size)*vector_size;
+//    size_t nstates = aln->num_states;
+    size_t ncat = site_rate->getNRate();
+    if (!model_factory->fused_mix_rate) ncat *= model->getNMixtures();
+
+    double *mem = aligned_alloc<double>(nptn*ncat);
+    memcpy(mem, _pattern_lh_cat, nptn*ncat*sizeof(double));
+    double *memptr = mem;
+
+    size_t ptn, cat, i;
+    for (ptn = 0; ptn < nptn; ptn+=vector_size) {
+        double *lh_cat_ptr = &_pattern_lh_cat[ptn*ncat];
+        for (cat = 0; cat < ncat; cat++) {
+            for (i = 0; i < vector_size; i++)
+                lh_cat_ptr[i*ncat+cat] = memptr[i];
+            memptr += vector_size;
+        }
+    }
+    aligned_free(mem);
+}
+
 double PhyloTree::computePatternLhCat(SiteLoglType wsl) {
     if (!current_it) {
         Node *leaf = findFirstFarLeaf(root);
@@ -1103,6 +1129,8 @@ double PhyloTree::computePatternLhCat(SiteLoglType wsl) {
     double score;
 
     score = computeLikelihoodBranch(current_it, (PhyloNode*)current_it_back->node);
+    // TODO: SIMD aware
+    transformPatternLhCat();
     /*
     if (getModel()->isSiteSpecificModel()) {
         score = computeLikelihoodBranch(current_it, (PhyloNode*)current_it_back->node);
@@ -1245,7 +1273,11 @@ void PhyloTree::computePatternLikelihood(double *ptn_lh, double *cur_logl, doubl
     } else {
         memmove(ptn_lh, _pattern_lh, nptn * sizeof(double));
     }
-    if (ptn_lh_cat) {
+
+    if (!ptn_lh_cat)
+        return;
+
+    if (ptn_lh_cat && model->isSiteSpecificModel()) {
     	int offset = 0;
     	if (sum_scaling == 0.0) {
     		int nptncat = nptn * ncat;
@@ -1272,7 +1304,77 @@ void PhyloTree::computePatternLikelihood(double *ptn_lh, double *cur_logl, doubl
 					ptn_lh_cat[offset] = log(_pattern_lh_cat[offset]) + scale;
 			}
     	}
+        return;
     }
+
+    // New kernel
+    int ptn;
+    PhyloNeighbor *nei1 = current_it;
+    PhyloNeighbor *nei2 = current_it_back;
+    if (!nei1->node->isLeaf() && nei2->node->isLeaf()) {
+        // exchange
+        PhyloNeighbor *tmp = nei1;
+        nei1 = nei2;
+        nei2 = tmp;
+    }
+    if (nei1->node->isLeaf()) {
+        // external branch
+        double *lh_cat = _pattern_lh_cat;
+        double *out_lh_cat = ptn_lh_cat;
+        UBYTE *nei2_scale = nei2->scale_num;
+        if (params->lk_safe_scaling) {
+            // per-category scaling
+            for (ptn = 0; ptn < nptn; ptn++) {
+                for (i = 0; i < ncat; i++) {
+                    out_lh_cat[i] = log(lh_cat[i]) + nei2_scale[i] * LOG_SCALING_THRESHOLD;
+                }
+                lh_cat += ncat;
+                out_lh_cat += ncat;
+                nei2_scale += ncat;
+            }
+        } else {
+            // normal scaling
+            for (ptn = 0; ptn < nptn; ptn++) {
+                if (nei2_scale[ptn] > 0) {
+                    double scale = nei2_scale[ptn] * LOG_SCALING_THRESHOLD;
+                    for (i = 0; i < ncat; i++)
+                        out_lh_cat[i] = log(lh_cat[i]) + scale;
+                }
+                lh_cat += ncat;
+                out_lh_cat += ncat;
+            }
+        }
+    } else {
+        // internal branch
+        double *lh_cat = _pattern_lh_cat;
+        double *out_lh_cat = ptn_lh_cat;
+        UBYTE *nei1_scale = nei1->scale_num;
+        UBYTE *nei2_scale = nei2->scale_num;
+        if (params->lk_safe_scaling) {
+            // per-category scaling
+            for (ptn = 0; ptn < nptn; ptn++) {
+                for (i = 0; i < ncat; i++) {
+                    out_lh_cat[i] = log(lh_cat[i]) + (nei1_scale[i]+nei2_scale[i]) * LOG_SCALING_THRESHOLD;
+                }
+                lh_cat += ncat;
+                out_lh_cat += ncat;
+                nei1_scale += ncat;
+                nei2_scale += ncat;
+            }
+        } else {
+            // normal scaling
+            for (ptn = 0; ptn < nptn; ptn++) {
+                if (nei1_scale[ptn] + nei2_scale[ptn] > 0) {
+                    double scale = (nei1_scale[ptn] + nei2_scale[ptn]) * LOG_SCALING_THRESHOLD;
+                    for (i = 0; i < ncat; i++)
+                        out_lh_cat[i] = log(lh_cat[i]) + scale;
+                }
+                lh_cat += ncat;
+                out_lh_cat += ncat;
+            }
+        }
+    }
+
 //    if (cur_logl) {
 //        double check_score = 0.0;
 //        for (int i = 0; i < nptn; i++) {

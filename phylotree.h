@@ -657,6 +657,12 @@ public:
 
     bool ptn_freq_computed;
 
+    /** vector size used by SIMD kernel */
+    size_t vector_size;
+
+    /** transform _pattern_lh_cat from "interleaved" to "sequential", due to vector_size > 1 */
+    void transformPatternLhCat();
+
     /****************************************************************************
             computing partial (conditional) likelihood of subtrees
      ****************************************************************************/

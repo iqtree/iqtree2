@@ -37,6 +37,7 @@ void PhyloTree::setDotProductAVX() {
 }
 
 void PhyloTree::setLikelihoodKernelAVX() {
+    vector_size = 4;
     setParsimonyKernelAVX();
     if (model_factory && model_factory->model->isSiteSpecificModel()) {
         switch (aln->num_states) {
