@@ -109,10 +109,10 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk) {
 
     //--- naive kernel for site-specific model ---
     if (model_factory && model_factory->model->isSiteSpecificModel()) {
-        computeLikelihoodBranchPointer = &PhyloTree::computeSitemodelLikelihoodBranchEigen;
-        computeLikelihoodDervPointer = &PhyloTree::computeSitemodelLikelihoodDervEigen;
-        computePartialLikelihoodPointer = &PhyloTree::computeSitemodelPartialLikelihoodEigen;
-        computeLikelihoodFromBufferPointer = &PhyloTree::computeSitemodelLikelihoodFromBufferEigen;
+        computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchGenericSIMD<Vec1d, NORM_LH, false, true>;
+        computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervGenericSIMD<Vec1d, NORM_LH, false, true>;
+        computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodGenericSIMD<Vec1d, NORM_LH, false, true>;
+        computeLikelihoodFromBufferPointer = &PhyloTree::computeLikelihoodFromBufferGenericSIMD<Vec1d, NORM_LH, false, true>;
         return;
     }
 
@@ -179,88 +179,103 @@ void PhyloTree::computeTipPartialLikelihood() {
 	computePtnInvar();
 
     if (getModel()->isSiteSpecificModel()) {
-        ModelSet *models = (ModelSet*)model;
+//        ModelSet *models = (ModelSet*)model;
         size_t nptn = aln->getNPattern(), max_nptn = get_safe_upper_limit(nptn), tip_block_size = max_nptn * aln->num_states;
         int nstates = aln->num_states;
         int nseq = aln->getNSeq();
+        assert(vector_size > 0);
 #ifdef _OPENMP
         #pragma omp parallel for schedule(static)
 #endif
         for (int nodeid = 0; nodeid < nseq; nodeid++) {
-            int i, x;
+            int i, x, v;
             double *partial_lh = tip_partial_lh + tip_block_size*nodeid;
             size_t ptn;
-            for (ptn = 0; ptn < nptn; ptn++, partial_lh += nstates) {
-                int state = aln->at(ptn)[nodeid];
-//                double *partial_lh = node_partial_lh + ptn*nstates;
-                double *inv_evec = models->at(ptn)->getInverseEigenvectors();
+            for (ptn = 0; ptn < nptn; ptn+=vector_size, partial_lh += nstates*vector_size) {
+//                int state[vector_size];
+//                for (v = 0; v < vector_size; v++) {
+//                    if (ptn+v < nptn)
+//                        state[v] = aln->at(ptn+v)[nodeid];
+//                    else
+//                        state[v] = aln->STATE_UNKNOWN;
+//                }
 
-                if (state < nstates) {
-                    for (i = 0; i < nstates; i++)
-                        partial_lh[i] = inv_evec[i*nstates+state];
-                } else if (state == aln->STATE_UNKNOWN) {
-                    // special treatment for unknown char
-                    for (i = 0; i < nstates; i++) {
-                        double lh_unknown = 0.0;
-                        double *this_inv_evec = inv_evec + i*nstates;
-                        for (x = 0; x < nstates; x++)
-                            lh_unknown += this_inv_evec[x];
-                        partial_lh[i] = lh_unknown;
-                    }
-                } else {
-                    double lh_ambiguous;
-                    // ambiguous characters
-                    int ambi_aa[] = {
-                        4+8, // B = N or D
-                        32+64, // Z = Q or E
-                        512+1024 // U = I or L
-                        };
-                    switch (aln->seq_type) {
-                    case SEQ_DNA:
-                        {
-                            int cstate = state-nstates+1;
-                            for (i = 0; i < nstates; i++) {
-                                lh_ambiguous = 0.0;
-                                for (x = 0; x < nstates; x++)
-                                    if ((cstate) & (1 << x))
-                                        lh_ambiguous += inv_evec[i*nstates+x];
-                                partial_lh[i] = lh_ambiguous;
-                            }
+                double *inv_evec = &model->getInverseEigenvectors()[ptn*nstates*nstates];
+                for (v = 0; v < vector_size; v++) {
+                    int state = aln->STATE_UNKNOWN;
+                    if (ptn+v < nptn)
+                        state = aln->at(ptn+v)[nodeid];
+    //                double *partial_lh = node_partial_lh + ptn*nstates;
+//                    double *inv_evec = models->at(ptn)->getInverseEigenvectors();
+
+                    if (state < nstates) {
+                        for (i = 0; i < nstates; i++)
+                            partial_lh[i*vector_size+v] = inv_evec[(i*nstates+state)*vector_size+v];
+                    } else if (state == aln->STATE_UNKNOWN) {
+                        // special treatment for unknown char
+                        for (i = 0; i < nstates; i++) {
+                            double lh_unknown = 0.0;
+//                            double *this_inv_evec = inv_evec + i*nstates;
+                            for (x = 0; x < nstates; x++)
+                                lh_unknown += inv_evec[(i*nstates+x)*vector_size+v];
+                            partial_lh[i*vector_size+v] = lh_unknown;
                         }
-                        break;
-                    case SEQ_PROTEIN:
-                        //map[(unsigned char)'B'] = 4+8+19; // N or D
-                        //map[(unsigned char)'Z'] = 32+64+19; // Q or E
-                        {
-                            int cstate = state-nstates;
-                            for (i = 0; i < nstates; i++) {
-                                lh_ambiguous = 0.0;
-                                for (x = 0; x < 11; x++)
-                                    if (ambi_aa[cstate] & (1 << x))
-                                        lh_ambiguous += inv_evec[i*nstates+x];
-                                partial_lh[i] = lh_ambiguous;
+                    } else {
+                        double lh_ambiguous;
+                        // ambiguous characters
+                        int ambi_aa[] = {
+                            4+8, // B = N or D
+                            32+64, // Z = Q or E
+                            512+1024 // U = I or L
+                            };
+                        switch (aln->seq_type) {
+                        case SEQ_DNA:
+                            {
+                                int cstate = state-nstates+1;
+                                for (i = 0; i < nstates; i++) {
+                                    lh_ambiguous = 0.0;
+                                    for (x = 0; x < nstates; x++)
+                                        if ((cstate) & (1 << x))
+                                            lh_ambiguous += inv_evec[(i*nstates+x)*vector_size+v];
+                                    partial_lh[i*vector_size+v] = lh_ambiguous;
+                                }
                             }
+                            break;
+                        case SEQ_PROTEIN:
+                            //map[(unsigned char)'B'] = 4+8+19; // N or D
+                            //map[(unsigned char)'Z'] = 32+64+19; // Q or E
+                            {
+                                int cstate = state-nstates;
+                                for (i = 0; i < nstates; i++) {
+                                    lh_ambiguous = 0.0;
+                                    for (x = 0; x < 11; x++)
+                                        if (ambi_aa[cstate] & (1 << x))
+                                            lh_ambiguous += inv_evec[(i*nstates+x)*vector_size+v];
+                                    partial_lh[i*vector_size+v] = lh_ambiguous;
+                                }
+                            }
+                            break;
+                        default:
+                            assert(0);
+                            break;
                         }
-                        break;
-                    default:
-                        assert(0);
-                        break;
                     }
-                }
-                // sanity check
-//                bool all_zero = true;
-//                for (i = 0; i < nstates; i++)
-//                    if (partial_lh[i] != 0) {
-//                        all_zero = false;
-//                        break;
-//                    }
-//                assert(!all_zero && "some tip_partial_lh are all zeros");
-                
-            }
+                    // sanity check
+    //                bool all_zero = true;
+    //                for (i = 0; i < nstates; i++)
+    //                    if (partial_lh[i] != 0) {
+    //                        all_zero = false;
+    //                        break;
+    //                    }
+    //                assert(!all_zero && "some tip_partial_lh are all zeros");
+                    
+                } // FOR v
+            } // FOR ptn
+            // NO Need to copy dummy anymore
             // dummy values
-            for (ptn = nptn; ptn < max_nptn; ptn++, partial_lh += nstates)
-                memcpy(partial_lh, partial_lh-nstates, nstates*sizeof(double));
-        }
+//            for (ptn = nptn; ptn < max_nptn; ptn++, partial_lh += nstates)
+//                memcpy(partial_lh, partial_lh-nstates, nstates*sizeof(double));
+        } // FOR nodeid
         return;
     }
     

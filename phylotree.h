@@ -689,10 +689,10 @@ public:
 //    template <class VectorClass, const int VCSIZE, const int nstates>
 //    void computePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
 
-    template <class VectorClass, const bool SAFE_NUMERIC, const int nstates, const bool FMA = false>
+    template <class VectorClass, const bool SAFE_NUMERIC, const int nstates, const bool FMA = false, const bool SITE_MODEL = false>
     void computePartialLikelihoodSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
 
-    template <class VectorClass, const bool SAFE_NUMERIC, const bool FMA = false>
+    template <class VectorClass, const bool SAFE_NUMERIC, const bool FMA = false, const bool SITE_MODEL = false>
     void computePartialLikelihoodGenericSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
 
     /*
@@ -736,10 +736,10 @@ public:
 //    template <class VectorClass, const int VCSIZE, const int nstates>
 //    double computeLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad);
 
-    template <class VectorClass, const bool SAFE_NUMERIC, const int nstates, const bool FMA = false>
+    template <class VectorClass, const bool SAFE_NUMERIC, const int nstates, const bool FMA = false, const bool SITE_MODEL = false>
     double computeLikelihoodBranchSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad);
 
-    template <class VectorClass, const bool SAFE_NUMERIC, const bool FMA = false>
+    template <class VectorClass, const bool SAFE_NUMERIC, const bool FMA = false, const bool SITE_MODEL = false>
     double computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad);
 
     /*
@@ -771,10 +771,10 @@ public:
 //    template <class VectorClass, const int VCSIZE, const int nstates>
 //    double computeLikelihoodFromBufferEigenSIMD();
 
-    template <class VectorClass, const bool SAFE_NUMERIC, const int nstates, const bool FMA = false>
+    template <class VectorClass, const bool SAFE_NUMERIC, const int nstates, const bool FMA = false, const bool SITE_MODEL = false>
     double computeLikelihoodFromBufferSIMD();
 
-    template <class VectorClass, const bool SAFE_NUMERIC, const bool FMA = false>
+    template <class VectorClass, const bool SAFE_NUMERIC, const bool FMA = false, const bool SITE_MODEL = false>
     double computeLikelihoodFromBufferGenericSIMD();
 
     /*
@@ -1029,10 +1029,10 @@ public:
 //    template <class VectorClass, const int VCSIZE, const int nstates>
 //    void computeLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
 
-    template <class VectorClass, const bool SAFE_NUMERIC, const int nstates, const bool FMA = false>
+    template <class VectorClass, const bool SAFE_NUMERIC, const int nstates, const bool FMA = false, const bool SITE_MODEL = false>
     void computeLikelihoodDervSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
 
-    template <class VectorClass, const bool SAFE_NUMERIC, const bool FMA = false>
+    template <class VectorClass, const bool SAFE_NUMERIC, const bool FMA = false, const bool SITE_MODEL = false>
     void computeLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
 
     /*

@@ -996,7 +996,7 @@ size_t PhyloTree::getPartialLhBytes() {
 }
 
 size_t PhyloTree::getScaleNumBytes() {
-	return get_safe_upper_limit(aln->size())+get_safe_upper_limit(aln->num_states) * sizeof(UBYTE) * site_rate->getNRate() * ((model_factory->fused_mix_rate)? 1 : model->getNMixtures());
+	return (get_safe_upper_limit(aln->size())+get_safe_upper_limit(aln->num_states)) * sizeof(UBYTE) * site_rate->getNRate() * ((model_factory->fused_mix_rate)? 1 : model->getNMixtures());
 }
 
 UBYTE *PhyloTree::newScaleNum() {
@@ -1095,7 +1095,7 @@ int PhyloTree::getNumLhCat(SiteLoglType wsl) {
 }
 
 void PhyloTree::transformPatternLhCat() {
-    if (vector_size == 1 || model->isSiteSpecificModel())
+    if (vector_size == 1)
         return;
 
     size_t nptn = ((aln->size()+vector_size-1)/vector_size)*vector_size;
@@ -1277,6 +1277,7 @@ void PhyloTree::computePatternLikelihood(double *ptn_lh, double *cur_logl, doubl
     if (!ptn_lh_cat)
         return;
 
+    /*
     if (ptn_lh_cat && model->isSiteSpecificModel()) {
     	int offset = 0;
     	if (sum_scaling == 0.0) {
@@ -1306,7 +1307,8 @@ void PhyloTree::computePatternLikelihood(double *ptn_lh, double *cur_logl, doubl
     	}
         return;
     }
-
+    */
+    
     // New kernel
     int ptn;
     PhyloNeighbor *nei1 = current_it;

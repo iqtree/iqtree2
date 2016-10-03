@@ -452,6 +452,48 @@ inline void dotProduct3Vec(Numeric *A, VectorClass *B, VectorClass *C, VectorCla
     }
 }
 
+#ifdef KERNEL_FIX_STATES
+template <class VectorClass, const bool SAFE_NUMERIC, const size_t nstates>
+inline void scaleLikelihood(VectorClass &lh_max, double *invar, double *dad_partial_lh, UBYTE *dad_scale_num,
+    size_t ncat_mix)
+#else
+template <class VectorClass, const bool SAFE_NUMERIC>
+inline void scaleLikelihood(VectorClass &lh_max, double *invar, double *dad_partial_lh, UBYTE *dad_scale_num,
+    size_t ncat_mix, size_t nstates)
+#endif
+{
+    if (SAFE_NUMERIC) {
+        size_t x, i;
+        auto underflown = ((lh_max < SCALING_THRESHOLD) & (lh_max != 0.0) & (VectorClass().load_a(invar) == 0.0));
+        if (horizontal_or(underflown)) { // at least one site has numerical underflown
+            for (x = 0; x < VectorClass::size(); x++)
+            if (underflown[x]) {
+                // BQM 2016-05-03: only scale for non-constant sites
+                // now do the likelihood scaling
+                double *partial_lh = &dad_partial_lh[x];
+                for (i = 0; i < nstates; i++)
+                    partial_lh[i*VectorClass::size()] *= SCALING_THRESHOLD_INVER;
+                dad_scale_num[x*ncat_mix] += 1;
+            }
+        }
+    } else {
+        size_t x, i;
+        auto underflown = (lh_max < SCALING_THRESHOLD) & (lh_max != 0.0) & (VectorClass().load_a(invar) == 0.0);
+        if (horizontal_or(underflown)) { // at least one site has numerical underflown
+            size_t block = ncat_mix * nstates;
+            for (x = 0; x < VectorClass::size(); x++)
+            if (underflown[x]) {
+                double *partial_lh = &dad_partial_lh[x];
+                // now do the likelihood scaling
+                for (i = 0; i < block; i++) {
+                    partial_lh[i*VectorClass::size()] *= SCALING_THRESHOLD_INVER;
+                }
+                dad_scale_num[x] += 1;
+            }
+        }
+    }
+}
+
 /*******************************************************
  *
  * NEW! highly-vectorized partial likelihood function
@@ -459,10 +501,10 @@ inline void dotProduct3Vec(Numeric *A, VectorClass *B, VectorClass *C, VectorCla
  ******************************************************/
 
 #ifdef KERNEL_FIX_STATES
-template <class VectorClass, const bool SAFE_NUMERIC, const int nstates, const bool FMA>
+template <class VectorClass, const bool SAFE_NUMERIC, const int nstates, const bool FMA, const bool SITE_MODEL>
 void PhyloTree::computePartialLikelihoodSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad)
 #else
-template <class VectorClass, const bool SAFE_NUMERIC, const bool FMA>
+template <class VectorClass, const bool SAFE_NUMERIC, const bool FMA, const bool SITE_MODEL>
 void PhyloTree::computePartialLikelihoodGenericSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad)
 #endif
 {
@@ -504,6 +546,7 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(PhyloNeighbor *dad_branch, P
     size_t i, x;
     size_t block = nstates * ncat_mix;
     size_t tip_block = nstates * model->getNMixtures();
+    size_t tip_mem_size = get_safe_upper_limit(orig_nptn) * nstates;
     size_t scale_size = SAFE_NUMERIC ? max_nptn * ncat_mix : max_nptn;
     
 	double *evec = model->getEigenvectors();
@@ -546,7 +589,10 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(PhyloNeighbor *dad_branch, P
 
     // precompute buffer to save times
     double *buffer_partial_lh_ptr = buffer_partial_lh;
-    double *echildren;
+    double *echildren = NULL;
+    double *partial_lh_leaves = NULL;
+
+    if (!SITE_MODEL) {
 
     if (node->degree() == 3) {
         echildren = buffer_partial_lh_ptr;
@@ -554,7 +600,6 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(PhyloNeighbor *dad_branch, P
     } else {
         echildren = aligned_alloc<double>(block*nstates*(node->degree()-1));
     }
-    double *partial_lh_leaves = NULL;
     if (num_leaves > 0) {
         if (num_leaves <= 2) {
             partial_lh_leaves = buffer_partial_lh_ptr;
@@ -668,7 +713,7 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(PhyloNeighbor *dad_branch, P
             echild += block*nstates;
         }
     }
-
+    } // IF SITE_MODEL
 
 //    double sum_scale = 0.0;
 
@@ -837,8 +882,8 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(PhyloNeighbor *dad_branch, P
 
         /*--------------------- TIP-TIP (cherry) case ------------------*/
 
-        double *partial_lh_left = partial_lh_leaves;
-        double *partial_lh_right = partial_lh_leaves + (aln->STATE_UNKNOWN+1)*block;
+        double *partial_lh_left = SITE_MODEL ? &tip_partial_lh[left->node->id * tip_mem_size] : partial_lh_leaves;
+        double *partial_lh_right = SITE_MODEL ? &tip_partial_lh[right->node->id * tip_mem_size] : partial_lh_leaves + (aln->STATE_UNKNOWN+1)*block;
 
 		// scale number must be ZERO
 	    memset(dad_branch->scale_num, 0, scale_size * sizeof(UBYTE));
@@ -846,66 +891,102 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(PhyloNeighbor *dad_branch, P
 #pragma omp parallel private(ptn, c, x, i)
         {
         double *vec_left = buffer_partial_lh_ptr + (block*2 + nstates)*VectorClass::size()*omp_get_thread_num();
-        double *vec_right = vec_left + block*VectorClass::size();
-        double *partial_lh_dbl = vec_right + block*VectorClass::size();
-#pragma omp for schedule(static)
 #else
         double *vec_left = buffer_partial_lh_ptr;
-        double *vec_right = vec_left + block*VectorClass::size();
-        double *partial_lh_dbl = vec_right + block*VectorClass::size();
+#endif
+
+        double *vec_right =  SITE_MODEL ? &vec_left[nstates*VectorClass::size()] : &vec_left[block*VectorClass::size()];
+        VectorClass *partial_lh_tmp = SITE_MODEL ? (VectorClass*)vec_right+nstates : (VectorClass*)vec_right+block;
+
+#ifdef _OPENMP
+#pragma omp for schedule(static)
 #endif
 		for (ptn = 0; ptn < nptn; ptn+=VectorClass::size()) {
-			VectorClass* partial_lh_tmp = (VectorClass*)partial_lh_dbl;
 			VectorClass *partial_lh = (VectorClass*)(dad_branch->partial_lh + ptn*block);
-            VectorClass *vleft = (VectorClass*)vec_left;
-            VectorClass *vright = (VectorClass*)vec_right;
 
-            // load data for tip
-            for (x = 0; x < VectorClass::size(); x++) {
-                double *tip_left, *tip_right;
-                if (ptn+x < orig_nptn) {
-                    tip_left  = partial_lh_left  + block * (aln->at(ptn+x))[left->node->id];
-                    tip_right = partial_lh_right + block * (aln->at(ptn+x))[right->node->id];
-                } else if (ptn+x < max_orig_nptn) {
-                    tip_left  = partial_lh_left  + block * aln->STATE_UNKNOWN;
-                    tip_right = partial_lh_right + block * aln->STATE_UNKNOWN;
-                } else if (ptn+x < nptn) {
-                    tip_left  = partial_lh_left  + block * model_factory->unobserved_ptns[ptn+x-max_orig_nptn];
-                    tip_right = partial_lh_right + block * model_factory->unobserved_ptns[ptn+x-max_orig_nptn];
-                } else {
-                    tip_left  = partial_lh_left  + block * aln->STATE_UNKNOWN;
-                    tip_right = partial_lh_right + block * aln->STATE_UNKNOWN;
-                }
-                double *this_vec_left = vec_left+x;
-                double *this_vec_right = vec_right+x;
-                for (i = 0; i < block; i++) {
-                    *this_vec_left = tip_left[i];
-                    *this_vec_right = tip_right[i];
-                    this_vec_left += VectorClass::size();
-                    this_vec_right += VectorClass::size();
-                }
-            }
+            if (SITE_MODEL) {
+                VectorClass* expleft = (VectorClass*) vec_left;
+                VectorClass* expright = (VectorClass*) vec_right;
+                VectorClass *vleft = (VectorClass*) &partial_lh_left[ptn*nstates];
+                VectorClass *vright = (VectorClass*) &partial_lh_right[ptn*nstates];
+                VectorClass *eval_ptr = (VectorClass*) &eval[ptn*nstates];
+                VectorClass *evec_ptr = (VectorClass*) &evec[ptn*nstates*nstates];
+                VectorClass *inv_evec_ptr = (VectorClass*) &inv_evec[ptn*nstates*nstates];
+                for (c = 0; c < ncat; c++) {
+                    double len_left = site_rate->getRate(c) * left->length;
+                    double len_right = site_rate->getRate(c) * right->length;
+                    for (i = 0; i < nstates; i++) {
+                        expleft[i] = exp(eval_ptr[i]*len_left) * vleft[i];
+                        expright[i] = exp(eval_ptr[i]*len_right) * vright[i];
 
-
-			for (c = 0; c < ncat_mix; c++) {
-                double *inv_evec_ptr = inv_evec + mix_addr[c];
-				// compute real partial likelihood vector
-				for (x = 0; x < nstates; x++) {
-					partial_lh_tmp[x] = vleft[x] * vright[x];
-				}
-
-				// compute dot-product with inv_eigenvector
+                    }
+                    // compute real partial likelihood vector
+                    for (x = 0; x < nstates; x++) {
+                        VectorClass *this_evec = evec_ptr + x*nstates;
 #ifdef KERNEL_FIX_STATES
-                productVecMat<VectorClass, double, nstates, FMA>(partial_lh_tmp, inv_evec_ptr, partial_lh);
+                        dotProductDualVec<VectorClass, VectorClass, nstates, FMA>(this_evec, expleft, this_evec, expright, partial_lh_tmp[x]);
 #else
-                productVecMat<VectorClass, double, FMA> (partial_lh_tmp, inv_evec_ptr, partial_lh, nstates);
+                        dotProductDualVec<VectorClass, VectorClass, FMA>(this_evec, expleft, this_evec, expright, partial_lh_tmp[x], nstates);
+#endif
+                    }
+                    // compute dot-product with inv_eigenvector
+#ifdef KERNEL_FIX_STATES
+                    productVecMat<VectorClass, VectorClass, nstates, FMA>(partial_lh_tmp, inv_evec_ptr, partial_lh);
+#else
+                    productVecMat<VectorClass, VectorClass, FMA> (partial_lh_tmp, inv_evec_ptr, partial_lh, nstates);
+#endif
+                    partial_lh += nstates;
+                } // FOR category
+            } else {
+                VectorClass *vleft = (VectorClass*)vec_left;
+                VectorClass *vright = (VectorClass*)vec_right;
+                // load data for tip
+                for (x = 0; x < VectorClass::size(); x++) {
+                    double *tip_left, *tip_right;
+                    if (ptn+x < orig_nptn) {
+                        tip_left  = partial_lh_left  + block * (aln->at(ptn+x))[left->node->id];
+                        tip_right = partial_lh_right + block * (aln->at(ptn+x))[right->node->id];
+                    } else if (ptn+x < max_orig_nptn) {
+                        tip_left  = partial_lh_left  + block * aln->STATE_UNKNOWN;
+                        tip_right = partial_lh_right + block * aln->STATE_UNKNOWN;
+                    } else if (ptn+x < nptn) {
+                        tip_left  = partial_lh_left  + block * model_factory->unobserved_ptns[ptn+x-max_orig_nptn];
+                        tip_right = partial_lh_right + block * model_factory->unobserved_ptns[ptn+x-max_orig_nptn];
+                    } else {
+                        tip_left  = partial_lh_left  + block * aln->STATE_UNKNOWN;
+                        tip_right = partial_lh_right + block * aln->STATE_UNKNOWN;
+                    }
+                    double *this_vec_left = vec_left+x;
+                    double *this_vec_right = vec_right+x;
+                    for (i = 0; i < block; i++) {
+                        *this_vec_left = tip_left[i];
+                        *this_vec_right = tip_right[i];
+                        this_vec_left += VectorClass::size();
+                        this_vec_right += VectorClass::size();
+                    }
+                }
+
+
+                for (c = 0; c < ncat_mix; c++) {
+                    double *inv_evec_ptr = inv_evec + mix_addr[c];
+                    // compute real partial likelihood vector
+                    for (x = 0; x < nstates; x++) {
+                        partial_lh_tmp[x] = vleft[x] * vright[x];
+                    }
+
+                    // compute dot-product with inv_eigenvector
+#ifdef KERNEL_FIX_STATES
+                    productVecMat<VectorClass, double, nstates, FMA>(partial_lh_tmp, inv_evec_ptr, partial_lh);
+#else
+                    productVecMat<VectorClass, double, FMA> (partial_lh_tmp, inv_evec_ptr, partial_lh, nstates);
 #endif
 
-                // increase pointer
-                vleft += nstates;
-                vright += nstates;
-                partial_lh += nstates;
-			}
+                    // increase pointer
+                    vleft += nstates;
+                    vright += nstates;
+                    partial_lh += nstates;
+                } // FOR category
+            } // IF SITE_MODEL
 		} // FOR LOOP
 
 #ifdef _OPENMP
@@ -920,87 +1001,141 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(PhyloNeighbor *dad_branch, P
 		// only take scale_num from the right subtree
 		memcpy(dad_branch->scale_num, right->scale_num, scale_size * sizeof(UBYTE));
 
-        double *partial_lh_left = partial_lh_leaves;
+        double *partial_lh_left = SITE_MODEL ? &tip_partial_lh[left->node->id * tip_mem_size] : partial_lh_leaves;
 
 
 #ifdef _OPENMP
 #pragma omp parallel private(ptn, c, x, i)
         {
-        double *vec_left = buffer_partial_lh_ptr + (block+nstates)*VectorClass::size()*omp_get_thread_num();
-        double *partial_lh_dbl = vec_left + block*VectorClass::size();
-#pragma omp for schedule(static)
+        double *vec_left = buffer_partial_lh_ptr + (2*block+nstates)*VectorClass::size()*omp_get_thread_num();
 #else
         double *vec_left = buffer_partial_lh_ptr;
-        double *partial_lh_dbl = vec_left + block*VectorClass::size();
+#endif
+
+        VectorClass *partial_lh_tmp = SITE_MODEL ? (VectorClass*)vec_left+2*nstates : (VectorClass*)vec_left+block;
+
+#ifdef _OPENMP
+#pragma omp for schedule(static)
 #endif
 		for (ptn = 0; ptn < nptn; ptn+=VectorClass::size()) {
-			VectorClass *partial_lh_tmp = (VectorClass*)partial_lh_dbl;
 			VectorClass *partial_lh = (VectorClass*)(dad_branch->partial_lh + ptn*block);
 			VectorClass *partial_lh_right = (VectorClass*)(right->partial_lh + ptn*block);
-            memset(partial_lh, 0, sizeof(VectorClass)*block);
-            VectorClass *vleft = (VectorClass*)vec_left;
-            // load data for tip
-            for (x = 0; x < VectorClass::size(); x++) {
-                double *tip;
-                if (ptn+x < orig_nptn) {
-                    tip = partial_lh_left + block*(aln->at(ptn+x))[left->node->id];
-                } else if (ptn+x < max_orig_nptn) {
-                    tip = partial_lh_left + block*aln->STATE_UNKNOWN;
-                } else if (ptn+x < nptn) {
-                    tip = partial_lh_left + block*model_factory->unobserved_ptns[ptn+x-max_orig_nptn];
-                } else {
-                    tip = partial_lh_left + block*aln->STATE_UNKNOWN;
-                }
-                double *this_vec_left = vec_left+x;
-                for (i = 0; i < block; i++) {
-                    *this_vec_left = tip[i];
-                    this_vec_left += VectorClass::size();
-                }
-            }
-
-            double *eright_ptr = eright;
+//            memset(partial_lh, 0, sizeof(VectorClass)*block);
             VectorClass lh_max = 0.0;
-			for (c = 0; c < ncat_mix; c++) {
-                if (SAFE_NUMERIC)
-                    lh_max = 0.0;
-                double *inv_evec_ptr = inv_evec + mix_addr[c];
-				// compute real partial likelihood vector
-				for (x = 0; x < nstates; x++) {
-                    VectorClass vright;
-#ifdef KERNEL_FIX_STATES
-                    dotProductVec<VectorClass, double, nstates, FMA>(eright_ptr, partial_lh_right, vright);
-#else
-                    dotProductVec<VectorClass, double, FMA>(eright_ptr, partial_lh_right, vright, nstates);
-#endif
-                    eright_ptr += nstates;
-					partial_lh_tmp[x] = vleft[x] * (vright);
-				}
 
-				// compute dot-product with inv_eigenvector
+            if (SITE_MODEL) {
+                // TODO
+                VectorClass *expleft = (VectorClass*)vec_left;
+                VectorClass *expright = expleft+nstates;
+                VectorClass *vleft = (VectorClass*)&partial_lh_left[ptn*nstates];
+                VectorClass *eval_ptr = (VectorClass*) &eval[ptn*nstates];
+                VectorClass *evec_ptr = (VectorClass*) &evec[ptn*nstates*nstates];
+                VectorClass *inv_evec_ptr = (VectorClass*) &inv_evec[ptn*nstates*nstates];
+                for (c = 0; c < ncat; c++) {
+                    double len_left = site_rate->getRate(c) * left->length;
+                    double len_right = site_rate->getRate(c) * right->length;
+                    for (i = 0; i < nstates; i++) {
+                        expleft[i] = exp(eval_ptr[i]*len_left) * vleft[i];
+                        expright[i] = exp(eval_ptr[i]*len_right) * partial_lh_right[i];
+                    }
+                    // compute real partial likelihood vector
+                    for (x = 0; x < nstates; x++) {
+                        VectorClass *this_evec = evec_ptr + x*nstates;
 #ifdef KERNEL_FIX_STATES
-                productVecMat<VectorClass, double, nstates, FMA>(partial_lh_tmp, inv_evec_ptr, partial_lh, lh_max);
+                        dotProductDualVec<VectorClass, VectorClass, nstates, FMA>(this_evec, expleft, this_evec, expright, partial_lh_tmp[x]);
 #else
-                productVecMat<VectorClass, double, FMA> (partial_lh_tmp, inv_evec_ptr, partial_lh, lh_max, nstates);
+                        dotProductDualVec<VectorClass, VectorClass, FMA>(this_evec, expleft, this_evec, expright, partial_lh_tmp[x], nstates);
 #endif
-                // check if one should scale partial likelihoods
-                if (SAFE_NUMERIC) {
-                    auto underflown = ((lh_max < SCALING_THRESHOLD) & (lh_max != 0.0) & (VectorClass().load_a(&ptn_invar[ptn]) == 0.0));
-                    if (horizontal_or(underflown)) { // at least one site has numerical underflown
-                        for (x = 0; x < VectorClass::size(); x++)
-                        if (underflown[x]) {
-                            // BQM 2016-05-03: only scale for non-constant sites
-                            // now do the likelihood scaling
-                            double *partial_lh = dad_branch->partial_lh + (ptn*block + c*nstates*VectorClass::size() + x);
-                            for (i = 0; i < nstates; i++)
-                                partial_lh[i*VectorClass::size()] *= SCALING_THRESHOLD_INVER;
-                            dad_branch->scale_num[(ptn+x)*ncat_mix+c] += 1;
+                    }
+                    // compute dot-product with inv_eigenvector
+#ifdef KERNEL_FIX_STATES
+                    productVecMat<VectorClass, VectorClass, nstates, FMA>(partial_lh_tmp, inv_evec_ptr, partial_lh, lh_max);
+#else
+                    productVecMat<VectorClass, VectorClass, FMA> (partial_lh_tmp, inv_evec_ptr, partial_lh, lh_max, nstates);
+#endif
+                    // check if one should scale partial likelihoods
+                    if (SAFE_NUMERIC) {
+                        auto underflown = ((lh_max < SCALING_THRESHOLD) & (lh_max != 0.0) & (VectorClass().load_a(&ptn_invar[ptn]) == 0.0));
+                        if (horizontal_or(underflown)) { // at least one site has numerical underflown
+                            for (x = 0; x < VectorClass::size(); x++)
+                            if (underflown[x]) {
+                                // BQM 2016-05-03: only scale for non-constant sites
+                                // now do the likelihood scaling
+                                double *partial_lh = dad_branch->partial_lh + (ptn*block + c*nstates*VectorClass::size() + x);
+                                for (i = 0; i < nstates; i++)
+                                    partial_lh[i*VectorClass::size()] *= SCALING_THRESHOLD_INVER;
+                                dad_branch->scale_num[(ptn+x)*ncat_mix+c] += 1;
+                            }
                         }
                     }
+                    partial_lh_right += nstates;
+                    partial_lh += nstates;
+                } // FOR category
+
+            } else {
+                VectorClass *vleft = (VectorClass*)vec_left;
+                // load data for tip
+                for (x = 0; x < VectorClass::size(); x++) {
+                    double *tip;
+                    if (ptn+x < orig_nptn) {
+                        tip = partial_lh_left + block*(aln->at(ptn+x))[left->node->id];
+                    } else if (ptn+x < max_orig_nptn) {
+                        tip = partial_lh_left + block*aln->STATE_UNKNOWN;
+                    } else if (ptn+x < nptn) {
+                        tip = partial_lh_left + block*model_factory->unobserved_ptns[ptn+x-max_orig_nptn];
+                    } else {
+                        tip = partial_lh_left + block*aln->STATE_UNKNOWN;
+                    }
+                    double *this_vec_left = vec_left+x;
+                    for (i = 0; i < block; i++) {
+                        *this_vec_left = tip[i];
+                        this_vec_left += VectorClass::size();
+                    }
                 }
-                vleft += nstates;
-                partial_lh_right += nstates;
-                partial_lh += nstates;
-			}
+
+                double *eright_ptr = eright;
+                for (c = 0; c < ncat_mix; c++) {
+                    if (SAFE_NUMERIC)
+                        lh_max = 0.0;
+                    double *inv_evec_ptr = inv_evec + mix_addr[c];
+                    // compute real partial likelihood vector
+                    for (x = 0; x < nstates; x++) {
+                        VectorClass vright;
+    #ifdef KERNEL_FIX_STATES
+                        dotProductVec<VectorClass, double, nstates, FMA>(eright_ptr, partial_lh_right, vright);
+    #else
+                        dotProductVec<VectorClass, double, FMA>(eright_ptr, partial_lh_right, vright, nstates);
+    #endif
+                        eright_ptr += nstates;
+                        partial_lh_tmp[x] = vleft[x] * (vright);
+                    }
+
+                    // compute dot-product with inv_eigenvector
+    #ifdef KERNEL_FIX_STATES
+                    productVecMat<VectorClass, double, nstates, FMA>(partial_lh_tmp, inv_evec_ptr, partial_lh, lh_max);
+    #else
+                    productVecMat<VectorClass, double, FMA> (partial_lh_tmp, inv_evec_ptr, partial_lh, lh_max, nstates);
+    #endif
+                    // check if one should scale partial likelihoods
+                    if (SAFE_NUMERIC) {
+                        auto underflown = ((lh_max < SCALING_THRESHOLD) & (lh_max != 0.0) & (VectorClass().load_a(&ptn_invar[ptn]) == 0.0));
+                        if (horizontal_or(underflown)) { // at least one site has numerical underflown
+                            for (x = 0; x < VectorClass::size(); x++)
+                            if (underflown[x]) {
+                                // BQM 2016-05-03: only scale for non-constant sites
+                                // now do the likelihood scaling
+                                double *partial_lh = dad_branch->partial_lh + (ptn*block + c*nstates*VectorClass::size() + x);
+                                for (i = 0; i < nstates; i++)
+                                    partial_lh[i*VectorClass::size()] *= SCALING_THRESHOLD_INVER;
+                                dad_branch->scale_num[(ptn+x)*ncat_mix+c] += 1;
+                            }
+                        }
+                    }
+                    vleft += nstates;
+                    partial_lh_right += nstates;
+                    partial_lh += nstates;
+                } // FOR category
+            } // IF SITE_MODEL
 
             if (!SAFE_NUMERIC) {
                 auto underflown = (lh_max < SCALING_THRESHOLD) & (lh_max != 0.0) & (VectorClass().load_a(&ptn_invar[ptn]) == 0.0);
@@ -1033,17 +1168,18 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(PhyloNeighbor *dad_branch, P
 #ifdef _OPENMP
 #pragma omp parallel private(ptn, c, x, i)
     {
-        double *partial_lh_dbl = buffer_partial_lh_ptr + nstates*VectorClass::size()*omp_get_thread_num();
+        VectorClass *partial_lh_tmp = (VectorClass*)buffer_partial_lh_ptr + (2*block+nstates)*omp_get_thread_num();
 #pragma omp for schedule(static)
 #else
-        double *partial_lh_dbl = buffer_partial_lh_ptr;
+        VectorClass *partial_lh_tmp = (VectorClass*)buffer_partial_lh_ptr;
 #endif
 		for (ptn = 0; ptn < nptn; ptn+=VectorClass::size()) {
-			VectorClass *partial_lh_tmp = (VectorClass*)partial_lh_dbl;
 			VectorClass *partial_lh = (VectorClass*)(dad_branch->partial_lh + ptn*block);
 			VectorClass *partial_lh_left = (VectorClass*)(left->partial_lh + ptn*block);
 			VectorClass *partial_lh_right = (VectorClass*)(right->partial_lh + ptn*block);
+            VectorClass lh_max = 0.0;
             UBYTE *scale_dad, *scale_left, *scale_right;
+
             if (SAFE_NUMERIC) {
                 size_t addr = ptn*ncat_mix;
                 scale_dad = dad_branch->scale_num + addr;
@@ -1059,32 +1195,65 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(PhyloNeighbor *dad_branch, P
 
             double *eleft_ptr = eleft;
             double *eright_ptr = eright;
+            VectorClass *expleft, *expright, *eval_ptr, *evec_ptr, *inv_evec_ptr;
+            if (SITE_MODEL) {
+                expleft = partial_lh_tmp + nstates;
+                expright = expleft + nstates;
+                eval_ptr = (VectorClass*) &eval[ptn*nstates];
+                evec_ptr = (VectorClass*) &evec[ptn*nstates*nstates];
+                inv_evec_ptr = (VectorClass*) &inv_evec[ptn*nstates*nstates];
+            }
 
-            VectorClass lh_max = 0.0;
 			for (c = 0; c < ncat_mix; c++) {
                 if (SAFE_NUMERIC) {
                     lh_max = 0.0;
                     for (x = 0; x < VectorClass::size(); x++)
                         scale_dad[x*ncat_mix] = scale_left[x*ncat_mix] + scale_right[x*ncat_mix];
                 }
-                double *inv_evec_ptr = inv_evec + mix_addr[c];
-				// compute real partial likelihood vector
-				for (x = 0; x < nstates; x++) {
+
+                if (SITE_MODEL) {
+                    // site-specific model
+                    double len_left = site_rate->getRate(c) * left->length;
+                    double len_right = site_rate->getRate(c) * right->length;
+                    for (i = 0; i < nstates; i++) {
+                        expleft[i] = exp(eval_ptr[i]*len_left) * partial_lh_left[i];
+                        expright[i] = exp(eval_ptr[i]*len_right) * partial_lh_right[i];
+                    }
+                    for (x = 0; x < nstates; x++) {
+                        VectorClass *this_evec = evec_ptr + x*nstates;
 #ifdef KERNEL_FIX_STATES
-                    dotProductDualVec<VectorClass, double, nstates, FMA>(eleft_ptr, partial_lh_left, eright_ptr, partial_lh_right, partial_lh_tmp[x]);
+                        dotProductDualVec<VectorClass, VectorClass, nstates, FMA>(this_evec, expleft, this_evec, expright, partial_lh_tmp[x]);
 #else
-                    dotProductDualVec<VectorClass, double, FMA>(eleft_ptr, partial_lh_left, eright_ptr, partial_lh_right, partial_lh_tmp[x], nstates);
+                        dotProductDualVec<VectorClass, VectorClass, FMA>(this_evec, expleft, this_evec, expright, partial_lh_tmp[x], nstates);
 #endif
-                    eleft_ptr += nstates;
-                    eright_ptr += nstates;
-				}
-                
-				// compute dot-product with inv_eigenvector
+                    }
 #ifdef KERNEL_FIX_STATES
-                productVecMat<VectorClass, double, nstates, FMA>(partial_lh_tmp, inv_evec_ptr, partial_lh, lh_max);
+                    productVecMat<VectorClass, VectorClass, nstates, FMA>(partial_lh_tmp, inv_evec_ptr, partial_lh, lh_max);
 #else
-                productVecMat<VectorClass, double, FMA> (partial_lh_tmp, inv_evec_ptr, partial_lh, lh_max, nstates);
+                    productVecMat<VectorClass, VectorClass, FMA> (partial_lh_tmp, inv_evec_ptr, partial_lh, lh_max, nstates);
 #endif
+                } else {
+                    // normal model
+                    double *inv_evec_ptr = inv_evec + mix_addr[c];
+                    // compute real partial likelihood vector
+                    for (x = 0; x < nstates; x++) {
+#ifdef KERNEL_FIX_STATES
+                        dotProductDualVec<VectorClass, double, nstates, FMA>(eleft_ptr, partial_lh_left, eright_ptr, partial_lh_right, partial_lh_tmp[x]);
+#else
+                        dotProductDualVec<VectorClass, double, FMA>(eleft_ptr, partial_lh_left, eright_ptr, partial_lh_right, partial_lh_tmp[x], nstates);
+#endif
+                        eleft_ptr += nstates;
+                        eright_ptr += nstates;
+                    }
+                    
+                    // compute dot-product with inv_eigenvector
+#ifdef KERNEL_FIX_STATES
+                    productVecMat<VectorClass, double, nstates, FMA>(partial_lh_tmp, inv_evec_ptr, partial_lh, lh_max);
+#else
+                    productVecMat<VectorClass, double, FMA> (partial_lh_tmp, inv_evec_ptr, partial_lh, lh_max, nstates);
+#endif
+                }
+
                 // check if one should scale partial likelihoods
                 if (SAFE_NUMERIC) {
                     auto underflown = ((lh_max < SCALING_THRESHOLD) & (lh_max != 0.0) & (VectorClass().load_a(&ptn_invar[ptn]) == 0.0));
@@ -1148,10 +1317,10 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(PhyloNeighbor *dad_branch, P
  ******************************************************/
 
 #ifdef KERNEL_FIX_STATES
-template <class VectorClass, const bool SAFE_NUMERIC, const int nstates, const bool FMA>
+template <class VectorClass, const bool SAFE_NUMERIC, const int nstates, const bool FMA, const bool SITE_MODEL>
 void PhyloTree::computeLikelihoodDervSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf)
 #else
-template <class VectorClass, const bool SAFE_NUMERIC, const bool FMA>
+template <class VectorClass, const bool SAFE_NUMERIC, const bool FMA, const bool SITE_MODEL>
 void PhyloTree::computeLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf)
 #endif
 {
@@ -1205,7 +1374,7 @@ void PhyloTree::computeLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, Phyl
 		// precompute theta for fast branch length optimization
 	    if (dad->isLeaf()) {
 	    	// special treatment for TIP-INTERNAL NODE case
-
+            double *tip_partial_lh_node = &tip_partial_lh[dad->id * max_orig_nptn*nstates];
 #ifdef _OPENMP
 #pragma omp parallel private(ptn, i, c)
         {
@@ -1218,6 +1387,7 @@ void PhyloTree::computeLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, Phyl
 				VectorClass *partial_lh_dad = (VectorClass*)(dad_branch->partial_lh + ptn*block);
 				VectorClass *theta = (VectorClass*)(theta_all + ptn*block);
                 //load tip vector
+                if (!SITE_MODEL)
                 for (i = 0; i < VectorClass::size(); i++) {
                     double *this_tip_partial_lh;
                     if (ptn+i < orig_nptn)
@@ -1235,8 +1405,12 @@ void PhyloTree::computeLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, Phyl
                     }
 
                 }
+                VectorClass *lh_tip;
+                if (SITE_MODEL)
+                    lh_tip = (VectorClass*)&tip_partial_lh_node[ptn*nstates];
                 for (c = 0; c < ncat_mix; c++) {
-                    VectorClass *lh_tip = (VectorClass*)(vec_tip + mix_addr_nstates[c]*VectorClass::size());
+                    if (!SITE_MODEL)
+                        lh_tip = (VectorClass*)(vec_tip + mix_addr_nstates[c]*VectorClass::size());
                     for (i = 0; i < nstates; i++) {
                         theta[i] = lh_tip[i] * partial_lh_dad[i];
                     }
@@ -1269,14 +1443,13 @@ void PhyloTree::computeLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, Phyl
                             }
                         }
                     }
-                    VectorClass *buf = (VectorClass*)(buffer_scale_all+ptn);
-                    *buf *= LOG_SCALING_THRESHOLD;
                 } else {
+                    // normal scaling
                     for (i = 0; i < VectorClass::size(); i++)
                         buffer_scale_all[ptn+i] = dad_branch->scale_num[ptn+i];
-                    VectorClass *buf = (VectorClass*)(buffer_scale_all+ptn);
-                    *buf *= LOG_SCALING_THRESHOLD;
                 }
+                VectorClass *buf = (VectorClass*)(buffer_scale_all+ptn);
+                *buf *= LOG_SCALING_THRESHOLD;
 
 			} // FOR PTN LOOP
 #ifdef _OPENMP
@@ -1284,7 +1457,7 @@ void PhyloTree::computeLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, Phyl
 #endif
 //            aligned_free(vec_tip);
 	    } else {
-	    	// both dad and node are internal nodes
+	    	//------- both dad and node are internal nodes  --------//
 
 //	    	size_t all_entries = nptn*block;
 #ifdef _OPENMP
@@ -1329,14 +1502,12 @@ void PhyloTree::computeLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, Phyl
                         scale_dad += ncat_mix;
                         scale_node += ncat_mix;
                     }
-                    VectorClass *buf = (VectorClass*)(buffer_scale_all+ptn);
-                    *buf *= LOG_SCALING_THRESHOLD;
                 } else {
                     for (i = 0; i < VectorClass::size(); i++)
                         buffer_scale_all[ptn+i] = dad_branch->scale_num[ptn+i] + node_branch->scale_num[ptn+i];
-                    VectorClass *buf = (VectorClass*)(buffer_scale_all+ptn);
-                    *buf *= LOG_SCALING_THRESHOLD;
                 }
+                VectorClass *buf = (VectorClass*)(buffer_scale_all+ptn);
+                *buf *= LOG_SCALING_THRESHOLD;
 			}
 	    }
         // NO NEED TO copy dummy values!
@@ -1344,54 +1515,58 @@ void PhyloTree::computeLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, Phyl
 		theta_computed = true;
 	}
 
-    double *val0 = buffer_partial_lh;
-    double *val1 = val0 + get_safe_upper_limit(block);
-    double *val2 = val1 + get_safe_upper_limit(block);
+    double *val0 = NULL;
+    double *val1 = NULL;
+    double *val2 = NULL;
 
 
-    if (nstates % VectorClass::size() == 0) {
-        VectorClass *vc_val0 = (VectorClass*)val0;
-        VectorClass *vc_val1 = (VectorClass*)val1;
-        VectorClass *vc_val2 = (VectorClass*)val2;
+    if (!SITE_MODEL) {
+        val0 = buffer_partial_lh;
+        val1 = val0 + get_safe_upper_limit(block);
+        val2 = val1 + get_safe_upper_limit(block);
+        if (nstates % VectorClass::size() == 0) {
+            VectorClass *vc_val0 = (VectorClass*)val0;
+            VectorClass *vc_val1 = (VectorClass*)val1;
+            VectorClass *vc_val2 = (VectorClass*)val2;
 
-        double len = dad_branch->length;
-        size_t loop_size = nstates/VectorClass::size();
-        for (c = 0; c < ncat_mix; c++) {
-            size_t m = c/denom;
-            VectorClass *eval_ptr = (VectorClass*)(eval + mix_addr_nstates[c]);
-            size_t mycat = c%ncat;
-            double prop = site_rate->getProp(mycat) * model->getMixtureWeight(m);
-            double myrate = site_rate->getRate(mycat);
-            for (i = 0; i < loop_size; i++) {
-                VectorClass cof = eval_ptr[i] * myrate;
-                VectorClass val = exp(cof*len) * prop;
-                VectorClass val1_ = cof*val;
-                vc_val0[i] = val;
-                vc_val1[i] = val1_;
-                vc_val2[i] = cof*val1_;
+            double len = dad_branch->length;
+            size_t loop_size = nstates/VectorClass::size();
+            for (c = 0; c < ncat_mix; c++) {
+                size_t m = c/denom;
+                VectorClass *eval_ptr = (VectorClass*)(eval + mix_addr_nstates[c]);
+                size_t mycat = c%ncat;
+                double prop = site_rate->getProp(mycat) * model->getMixtureWeight(m);
+                double myrate = site_rate->getRate(mycat);
+                for (i = 0; i < loop_size; i++) {
+                    VectorClass cof = eval_ptr[i] * myrate;
+                    VectorClass val = exp(cof*len) * prop;
+                    VectorClass val1_ = cof*val;
+                    vc_val0[i] = val;
+                    vc_val1[i] = val1_;
+                    vc_val2[i] = cof*val1_;
+                }
+                vc_val0 += loop_size;
+                vc_val1 += loop_size;
+                vc_val2 += loop_size;
             }
-            vc_val0 += loop_size;
-            vc_val1 += loop_size;
-            vc_val2 += loop_size;
-        }
-    } else {
-        for (c = 0; c < ncat_mix; c++) {
-            size_t m = c/denom;
-            double *eval_ptr = eval + mix_addr_nstates[c];
-            size_t mycat = c%ncat;
-            double prop = site_rate->getProp(mycat) * model->getMixtureWeight(m);
-            size_t addr = c*nstates;
-            for (i = 0; i < nstates; i++) {
-                double cof = eval_ptr[i]*site_rate->getRate(mycat);
-                double val = exp(cof*dad_branch->length) * prop;
-                double val1_ = cof*val;
-                val0[addr+i] = val;
-                val1[addr+i] = val1_;
-                val2[addr+i] = cof*val1_;
+        } else {
+            for (c = 0; c < ncat_mix; c++) {
+                size_t m = c/denom;
+                double *eval_ptr = eval + mix_addr_nstates[c];
+                size_t mycat = c%ncat;
+                double prop = site_rate->getProp(mycat) * model->getMixtureWeight(m);
+                size_t addr = c*nstates;
+                for (i = 0; i < nstates; i++) {
+                    double cof = eval_ptr[i]*site_rate->getRate(mycat);
+                    double val = exp(cof*dad_branch->length) * prop;
+                    double val1_ = cof*val;
+                    val0[addr+i] = val;
+                    val1[addr+i] = val1_;
+                    val2[addr+i] = cof*val1_;
+                }
             }
         }
     }
-
 
     VectorClass all_df = 0.0, all_ddf = 0.0, all_prob_const = 0.0, all_df_const = 0.0, all_ddf_const = 0.0;
 //    double tree_lh = node_branch->lh_scale_factor + dad_branch->lh_scale_factor;
@@ -1411,11 +1586,34 @@ void PhyloTree::computeLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, Phyl
 		VectorClass *theta = (VectorClass*)(theta_all + ptn*block);
         VectorClass df_ptn, ddf_ptn;
 
-#ifdef KERNEL_FIX_STATES
-        dotProductTriple<VectorClass, double, nstates, FMA>(val0, val1, val2, theta, lh_ptn, df_ptn, ddf_ptn, block);
-#else
-        dotProductTriple<VectorClass, double, FMA>(val0, val1, val2, theta, lh_ptn, df_ptn, ddf_ptn, block, nstates);
-#endif
+        if (SITE_MODEL) {
+            VectorClass* eval_ptr = (VectorClass*) &eval[ptn*nstates];
+            lh_ptn = 0.0; df_ptn = 0.0; ddf_ptn = 0.0;
+            for (c = 0; c < ncat; c++) {
+                VectorClass lh_cat(0.0), df_cat(0.0), ddf_cat(0.0);
+                // TODO optimize this loop
+                for (i = 0; i < nstates; i++) {
+                    VectorClass cof = eval_ptr[i] * site_rate->getRate(c);
+                    VectorClass val = exp(cof*dad_branch->length)*theta[i];
+                    VectorClass val1 = cof*val;
+                    lh_cat += val;
+                    df_cat += val1;
+                    ddf_cat = mul_add(cof, val1, ddf_cat);
+                }
+                double prop = site_rate->getProp(c);
+                lh_ptn = mul_add(prop, lh_cat, lh_ptn);
+                df_ptn = mul_add(prop, df_cat, df_ptn);
+                ddf_ptn = mul_add(prop, ddf_cat, ddf_ptn);
+                theta += nstates;
+
+            }
+        } else {
+    #ifdef KERNEL_FIX_STATES
+            dotProductTriple<VectorClass, double, nstates, FMA>(val0, val1, val2, theta, lh_ptn, df_ptn, ddf_ptn, block);
+    #else
+            dotProductTriple<VectorClass, double, FMA>(val0, val1, val2, theta, lh_ptn, df_ptn, ddf_ptn, block, nstates);
+    #endif
+        }
         lh_ptn = abs(lh_ptn + VectorClass().load_a(&ptn_invar[ptn]));
         
         if (ptn < orig_nptn) {
@@ -1501,10 +1699,10 @@ void PhyloTree::computeLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, Phyl
  ******************************************************/
 
 #ifdef KERNEL_FIX_STATES
-template <class VectorClass, const bool SAFE_NUMERIC, const int nstates, const bool FMA>
+template <class VectorClass, const bool SAFE_NUMERIC, const int nstates, const bool FMA, const bool SITE_MODEL>
 double PhyloTree::computeLikelihoodBranchSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad)
 #else
-template <class VectorClass, const bool SAFE_NUMERIC, const bool FMA>
+template <class VectorClass, const bool SAFE_NUMERIC, const bool FMA, const bool SITE_MODEL>
 double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad)
 #endif
 {
@@ -1534,6 +1732,7 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
 
     size_t block = ncat_mix * nstates;
     size_t tip_block = nstates * model->getNMixtures();
+    size_t tip_mem_size = get_safe_upper_limit(aln->size()) * nstates;
     size_t ptn; // for big data size > 4GB memory required
     size_t c, i;
     size_t orig_nptn = aln->size();
@@ -1548,35 +1747,38 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
     assert(eval);
 
 //    double *val = aligned_alloc<double>(block);
-    double *val = buffer_partial_lh;
-    double *buffer_partial_lh_ptr = buffer_partial_lh + get_safe_upper_limit(block);
-
-    if (nstates % VectorClass::size() == 0) {
-        size_t loop_size = nstates / VectorClass::size();
-        for (c = 0; c < ncat_mix; c++) {
-            size_t mycat = c%ncat;
-            size_t m = c/denom;
-            mix_addr_nstates[c] = m*nstates;
-            mix_addr[c] = mix_addr_nstates[c]*nstates;
-            VectorClass *eval_ptr = (VectorClass*)(eval + mix_addr_nstates[c]);
-            double len = site_rate->getRate(mycat)*dad_branch->length;
-            double prop = site_rate->getProp(mycat) * model->getMixtureWeight(m);
-            VectorClass *this_val = (VectorClass*)(val + c*nstates);
-            for (i = 0; i < loop_size; i++)
-                this_val[i] = exp(eval_ptr[i]*len) * prop;
-        }
-    } else {
-        for (c = 0; c < ncat_mix; c++) {
-            size_t mycat = c%ncat;
-            size_t m = c/denom;
-            mix_addr_nstates[c] = m*nstates;
-            mix_addr[c] = mix_addr_nstates[c]*nstates;
-            double *eval_ptr = eval + mix_addr_nstates[c];
-            double len = site_rate->getRate(mycat)*dad_branch->length;
-            double prop = site_rate->getProp(mycat) * model->getMixtureWeight(m);
-            double *this_val = val + c*nstates;
-            for (i = 0; i < nstates; i++)
-                this_val[i] = exp(eval_ptr[i]*len) * prop;
+    double *val = NULL;
+    double *buffer_partial_lh_ptr = buffer_partial_lh;
+    if (!SITE_MODEL) {
+        val = buffer_partial_lh;
+        buffer_partial_lh_ptr += get_safe_upper_limit(block);
+        if (nstates % VectorClass::size() == 0) {
+            size_t loop_size = nstates / VectorClass::size();
+            for (c = 0; c < ncat_mix; c++) {
+                size_t mycat = c%ncat;
+                size_t m = c/denom;
+                mix_addr_nstates[c] = m*nstates;
+                mix_addr[c] = mix_addr_nstates[c]*nstates;
+                VectorClass *eval_ptr = (VectorClass*)(eval + mix_addr_nstates[c]);
+                double len = site_rate->getRate(mycat)*dad_branch->length;
+                double prop = site_rate->getProp(mycat) * model->getMixtureWeight(m);
+                VectorClass *this_val = (VectorClass*)(val + c*nstates);
+                for (i = 0; i < loop_size; i++)
+                    this_val[i] = exp(eval_ptr[i]*len) * prop;
+            }
+        } else {
+            for (c = 0; c < ncat_mix; c++) {
+                size_t mycat = c%ncat;
+                size_t m = c/denom;
+                mix_addr_nstates[c] = m*nstates;
+                mix_addr[c] = mix_addr_nstates[c]*nstates;
+                double *eval_ptr = eval + mix_addr_nstates[c];
+                double len = site_rate->getRate(mycat)*dad_branch->length;
+                double prop = site_rate->getProp(mycat) * model->getMixtureWeight(m);
+                double *this_val = val + c*nstates;
+                for (i = 0; i < nstates; i++)
+                    this_val[i] = exp(eval_ptr[i]*len) * prop;
+            }
         }
     }
 
@@ -1587,9 +1789,10 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
     if (dad->isLeaf()) {
     	// special treatment for TIP-INTERNAL NODE case
 //    	double *partial_lh_node = aligned_alloc<double>((aln->STATE_UNKNOWN+1)*block);
-        double *partial_lh_node = buffer_partial_lh_ptr;
+        double *partial_lh_node = SITE_MODEL ? &tip_partial_lh[dad->id * tip_mem_size] : buffer_partial_lh_ptr;
         buffer_partial_lh_ptr += get_safe_upper_limit((aln->STATE_UNKNOWN+1)*block);
 
+        if (!SITE_MODEL) {
     	IntVector states_dad = aln->seq_states[dad->id];
     	states_dad.push_back(aln->STATE_UNKNOWN);
     	// precompute information from one tip
@@ -1624,29 +1827,31 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
                 }
             }
         }
+        }
 
     	// now do the real computation
 #ifdef _OPENMP
 #pragma omp parallel private(ptn, i, c)
     {
         double *vec_tip = buffer_partial_lh_ptr + block*VectorClass::size()*omp_get_thread_num();
+#else
+        double *vec_tip = buffer_partial_lh_ptr;
 #endif
 
         VectorClass vc_tree_lh(0.0), vc_prob_const(0.0);
 
 #ifdef _OPENMP
 #pragma omp for schedule(static) nowait
-#else
-        double *vec_tip = buffer_partial_lh_ptr;
 #endif
     	for (ptn = 0; ptn < nptn; ptn+=VectorClass::size()) {
 			VectorClass lh_ptn;
             lh_ptn.load_a(&ptn_invar[ptn]);
             VectorClass *lh_cat = (VectorClass*)(_pattern_lh_cat + ptn*ncat_mix);
             VectorClass *partial_lh_dad = (VectorClass*)(dad_branch->partial_lh + ptn*block);
-            VectorClass *lh_node = (VectorClass*)vec_tip;
+            VectorClass *lh_node = SITE_MODEL ? (VectorClass*)&partial_lh_node[ptn*nstates] : (VectorClass*)vec_tip;
 
             //load tip vector
+            if (!SITE_MODEL)
             for (i = 0; i < VectorClass::size(); i++) {
                 double *lh_tip;
                 if (ptn+i < orig_nptn)
@@ -1670,6 +1875,7 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
             double* vc_min_scale_ptr = (double*)&vc_min_scale;
 
             if (SAFE_NUMERIC) {
+                // TODO not work with SITE_MODEL
                 // numerical scaling per category
                 UBYTE *scale_dad;
                 UBYTE min_scale;
@@ -1702,16 +1908,32 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
             }
             vc_min_scale *= LOG_SCALING_THRESHOLD;
 
-            for (c = 0; c < ncat_mix; c++) {
-#ifdef KERNEL_FIX_STATES
-                dotProductVec<VectorClass, VectorClass, nstates, FMA>(lh_node, partial_lh_dad, *lh_cat);
-#else
-                dotProductVec<VectorClass, VectorClass, FMA>(lh_node, partial_lh_dad, *lh_cat, nstates);
-#endif
-                lh_ptn += *lh_cat;
-                lh_node += nstates;
-                partial_lh_dad += nstates;
-                lh_cat++;
+            if (SITE_MODEL) {
+                // site-specific model
+                VectorClass* eval_ptr = (VectorClass*) &eval[ptn*nstates];
+                for (c = 0; c < ncat; c++) {
+                    double len = site_rate->getRate(c) * dad_branch->length;
+                    double prop = site_rate->getProp(c);
+                    for (i = 0; i < nstates; i++)
+                        *lh_cat = mul_add(exp(eval_ptr[i]*len)*lh_node[i], partial_lh_dad[i], *lh_cat);
+                    lh_ptn += (*lh_cat *= prop);
+                    partial_lh_dad += nstates;
+                    lh_cat++;
+
+                }
+            } else {
+                //normal model
+                for (c = 0; c < ncat_mix; c++) {
+    #ifdef KERNEL_FIX_STATES
+                    dotProductVec<VectorClass, VectorClass, nstates, FMA>(lh_node, partial_lh_dad, *lh_cat);
+    #else
+                    dotProductVec<VectorClass, VectorClass, FMA>(lh_node, partial_lh_dad, *lh_cat, nstates);
+    #endif
+                    lh_ptn += *lh_cat;
+                    lh_node += nstates;
+                    partial_lh_dad += nstates;
+                    lh_cat++;
+                }
             }
             lh_ptn = abs(lh_ptn);
 			if (ptn < orig_nptn) {
@@ -1749,7 +1971,8 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
 //        aligned_free(vec_tip);
 //		aligned_free(partial_lh_node);
     } else {
-    	// both dad and node are internal nodes
+
+    	//-------- both dad and node are internal nodes -----------/
 
 #ifdef _OPENMP
 #pragma omp parallel private(ptn, i, c)
@@ -1772,7 +1995,7 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
             double* vc_min_scale_ptr = (double*)&vc_min_scale;
 
             if (SAFE_NUMERIC) {
-
+                // TODO not working with SITE_MODEL
                 for (c = 0; c < ncat_mix; c++) {
 #ifdef KERNEL_FIX_STATES
                     dotProduct3Vec<VectorClass, double, nstates, FMA>(val_tmp, partial_lh_node, partial_lh_dad, lh_cat[c]);
@@ -1811,16 +2034,32 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
                 sumVec<VectorClass, true>(lh_cat, lh_ptn, ncat_mix);
             } else {
                 // normal scaling
-                for (c = 0; c < ncat_mix; c++) {
-#ifdef KERNEL_FIX_STATES
-                    dotProduct3Vec<VectorClass, double, nstates, FMA>(val_tmp, partial_lh_node, partial_lh_dad, lh_cat[c]);
-#else
-                    dotProduct3Vec<VectorClass, double, FMA>(val_tmp, partial_lh_node, partial_lh_dad, lh_cat[c], nstates);
-#endif
-                    lh_ptn += lh_cat[c];
-                    partial_lh_node += nstates;
-                    partial_lh_dad += nstates;
-                    val_tmp += nstates;
+
+                if (SITE_MODEL) {
+                    // site-specific model
+                    VectorClass* eval_ptr = (VectorClass*) &eval[ptn*nstates];
+                    for (c = 0; c < ncat; c++) {
+                        double len = site_rate->getRate(c) * dad_branch->length;
+                        double prop = site_rate->getProp(c);
+                        for (i = 0; i < nstates; i++)
+                            *lh_cat = mul_add(exp(eval_ptr[i]*len)*partial_lh_node[i], partial_lh_dad[i], *lh_cat);
+                        lh_ptn += (*lh_cat *= prop);
+                        partial_lh_node += nstates;
+                        partial_lh_dad += nstates;
+                        lh_cat++;
+                    }
+                } else {
+                    for (c = 0; c < ncat_mix; c++) {
+    #ifdef KERNEL_FIX_STATES
+                        dotProduct3Vec<VectorClass, double, nstates, FMA>(val_tmp, partial_lh_node, partial_lh_dad, lh_cat[c]);
+    #else
+                        dotProduct3Vec<VectorClass, double, FMA>(val_tmp, partial_lh_node, partial_lh_dad, lh_cat[c], nstates);
+    #endif
+                        lh_ptn += lh_cat[c];
+                        partial_lh_node += nstates;
+                        partial_lh_dad += nstates;
+                        val_tmp += nstates;
+                    }
                 }
                 for (i = 0; i < VectorClass::size(); i++) {
                     vc_min_scale_ptr[i] = dad_branch->scale_num[ptn+i] + node_branch->scale_num[ptn+i];
@@ -1906,10 +2145,10 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
  ******************************************************/
 
 #ifdef KERNEL_FIX_STATES
-template <class VectorClass, const bool SAFE_NUMERIC, const int nstates, const bool FMA>
+template <class VectorClass, const bool SAFE_NUMERIC, const int nstates, const bool FMA, const bool SITE_MODEL>
 double PhyloTree::computeLikelihoodFromBufferSIMD()
 #else
-template <class VectorClass, const bool SAFE_NUMERIC, const bool FMA>
+template <class VectorClass, const bool SAFE_NUMERIC, const bool FMA, const bool SITE_MODEL>
 double PhyloTree::computeLikelihoodFromBufferGenericSIMD()
 #endif
 {
@@ -1945,44 +2184,46 @@ double PhyloTree::computeLikelihoodFromBufferGenericSIMD()
     assert(eval);
 
 //    double *val0 = aligned_alloc<double>(block);
-    double *val0 = buffer_partial_lh;
+    double *val0 = NULL;
 
-    if (nstates % VectorClass::size() == 0) {
-        VectorClass *vc_val0 = (VectorClass*)val0;
-        size_t loop_size = nstates / VectorClass::size();
-        for (c = 0; c < ncat_mix; c++) {
-            size_t m = c/denom;
-            VectorClass *eval_ptr = (VectorClass*)(eval + mix_addr_nstates[c]);
-            size_t mycat = c%ncat;
-            double prop = site_rate->getProp(mycat) * model->getMixtureWeight(m);
-            double len = site_rate->getRate(mycat) * current_it->length;
-            for (i = 0; i < loop_size; i++) {
-                vc_val0[i] = exp(eval_ptr[i] * len) * prop;
+    if (!SITE_MODEL) {
+        val0 = buffer_partial_lh;
+        if (nstates % VectorClass::size() == 0) {
+            VectorClass *vc_val0 = (VectorClass*)val0;
+            size_t loop_size = nstates / VectorClass::size();
+            for (c = 0; c < ncat_mix; c++) {
+                size_t m = c/denom;
+                VectorClass *eval_ptr = (VectorClass*)(eval + mix_addr_nstates[c]);
+                size_t mycat = c%ncat;
+                double prop = site_rate->getProp(mycat) * model->getMixtureWeight(m);
+                double len = site_rate->getRate(mycat) * current_it->length;
+                for (i = 0; i < loop_size; i++) {
+                    vc_val0[i] = exp(eval_ptr[i] * len) * prop;
+                }
+                vc_val0 += loop_size;
             }
-            vc_val0 += loop_size;
-        }
-    } else {
-        for (c = 0; c < ncat_mix; c++) {
-            size_t m = c/denom;
-            double *eval_ptr = eval + mix_addr_nstates[c];
-            size_t mycat = c%ncat;
-            double prop = site_rate->getProp(mycat) * model->getMixtureWeight(m);
-            size_t addr = c*nstates;
-            for (i = 0; i < nstates; i++) {
-                double cof = eval_ptr[i]*site_rate->getRate(mycat);
-                double val = exp(cof*current_it->length) * prop;
-                val0[addr+i] = val;
+        } else {
+            for (c = 0; c < ncat_mix; c++) {
+                size_t m = c/denom;
+                double *eval_ptr = eval + mix_addr_nstates[c];
+                size_t mycat = c%ncat;
+                double prop = site_rate->getProp(mycat) * model->getMixtureWeight(m);
+                size_t addr = c*nstates;
+                for (i = 0; i < nstates; i++) {
+                    double cof = eval_ptr[i]*site_rate->getRate(mycat);
+                    double val = exp(cof*current_it->length) * prop;
+                    val0[addr+i] = val;
+                }
             }
         }
     }
-
 
 //    double tree_lh = node_branch->lh_scale_factor + dad_branch->lh_scale_factor;
 
     VectorClass all_tree_lh(0.0), all_prob_const(0.0);
 
 #ifdef _OPENMP
-#pragma omp parallel private(ptn, i)
+#pragma omp parallel private(ptn, i, c)
     {
 #endif
         VectorClass vc_tree_lh(0.0), vc_prob_const(0.0);
@@ -1992,8 +2233,22 @@ double PhyloTree::computeLikelihoodFromBufferGenericSIMD()
     for (ptn = 0; ptn < nptn; ptn+=VectorClass::size()) {
 		VectorClass lh_ptn;
 		VectorClass *theta = (VectorClass*)(theta_all + ptn*block);
-        dotProductVec<VectorClass, double, FMA>(val0, theta, lh_ptn, block);
-        lh_ptn += VectorClass().load_a(&ptn_invar[ptn]);
+        if (SITE_MODEL) {
+            VectorClass *eval_ptr = (VectorClass*)&eval[ptn*nstates];
+            lh_ptn.load_a(&ptn_invar[ptn]);
+            for (c = 0; c < ncat; c++) {
+                VectorClass lh_cat(0.0);
+                double len = site_rate->getRate(c)*current_it->length;
+                for (i = 0; i < nstates; i++) {
+                    lh_cat = mul_add(exp(eval_ptr[i]*len), theta[i], lh_cat);
+                }
+                lh_ptn = mul_add(lh_cat, site_rate->getProp(c), lh_ptn);
+                theta += nstates;
+            }
+        } else {
+            dotProductVec<VectorClass, double, FMA>(val0, theta, lh_ptn, block);
+            lh_ptn += VectorClass().load_a(&ptn_invar[ptn]);
+        }
 
         if (ptn < orig_nptn) {
             lh_ptn = log(abs(lh_ptn)) + VectorClass().load_a(&buffer_scale_all[ptn]);
