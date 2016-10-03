@@ -452,6 +452,55 @@ inline void dotProduct3Vec(Numeric *A, VectorClass *B, VectorClass *C, VectorCla
     }
 }
 
+
+/**
+    given three vectors A, B, C and a numeric coefficient D, compute X:
+    X = exp(A[0]*D)*B[0]*C[0] + ... exp(A[N-1]*D)*B[N-1]*C[N-1]
+    @param N number of elements
+    @param A vector of size N
+    @param B vector of size N
+    @param C vector of size N
+    @param D coefficient for A
+    @param[out] X = exp(A[0]*D)*B[0]*C[0] + ... exp(A[N-1]*D)*B[N-1]*C[N-1]
+*/
+#ifdef KERNEL_FIX_STATES
+template <class VectorClass, class Numeric, const size_t N, const bool FMA>
+inline void dotProductExp(VectorClass *A, VectorClass *B, VectorClass *C, Numeric D, VectorClass &X)
+#else
+template <class VectorClass, class Numeric, const bool FMA>
+inline void dotProductExp(VectorClass *A, VectorClass *B, VectorClass *C, Numeric D, VectorClass &X, size_t N)
+#endif
+{
+    size_t i;
+    X = exp(A[0]*D)*B[0]*C[0];
+    for (i = 1; i < N; i++)
+        X = mul_add(exp(A[i]*D), B[i]*C[i], X);
+}
+
+
+/**
+    given two vectors A, B and a numeric coefficient D, compute X:
+    X = exp(A[0]*D)*B[0] + ... exp(A[N-1]*D)*B[N-1]
+    @param N number of elements
+    @param A vector of size N
+    @param B vector of size N
+    @param D coefficient for A
+    @param[out] X = exp(A[0]*D)*B[0] + ... exp(A[N-1]*D)*B[N-1]
+*/
+#ifdef KERNEL_FIX_STATES
+template <class VectorClass, class Numeric, const size_t N, const bool FMA>
+inline void dotProductExp(VectorClass *A, VectorClass *B, Numeric D, VectorClass &X)
+#else
+template <class VectorClass, class Numeric, const bool FMA>
+inline void dotProductExp(VectorClass *A, VectorClass *B, Numeric D, VectorClass &X, size_t N)
+#endif
+{
+    size_t i;
+    X = exp(A[0]*D)*B[0];
+    for (i = 1; i < N; i++)
+        X = mul_add(exp(A[i]*D), B[i], X);
+}
+
 #ifdef KERNEL_FIX_STATES
 template <class VectorClass, const bool SAFE_NUMERIC, const size_t nstates>
 inline void scaleLikelihood(VectorClass &lh_max, double *invar, double *dad_partial_lh, UBYTE *dad_scale_num,
@@ -1024,7 +1073,6 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(PhyloNeighbor *dad_branch, P
             VectorClass lh_max = 0.0;
 
             if (SITE_MODEL) {
-                // TODO
                 VectorClass *expleft = (VectorClass*)vec_left;
                 VectorClass *expright = expleft+nstates;
                 VectorClass *vleft = (VectorClass*)&partial_lh_left[ptn*nstates];
@@ -1568,6 +1616,8 @@ void PhyloTree::computeLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, Phyl
         }
     }
 
+    double dad_length = dad_branch->length;
+
     VectorClass all_df = 0.0, all_ddf = 0.0, all_prob_const = 0.0, all_df_const = 0.0, all_ddf_const = 0.0;
 //    double tree_lh = node_branch->lh_scale_factor + dad_branch->lh_scale_factor;
 
@@ -1591,10 +1641,10 @@ void PhyloTree::computeLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, Phyl
             lh_ptn = 0.0; df_ptn = 0.0; ddf_ptn = 0.0;
             for (c = 0; c < ncat; c++) {
                 VectorClass lh_cat(0.0), df_cat(0.0), ddf_cat(0.0);
-                // TODO optimize this loop
+                double cat_rate = site_rate->getRate(c);
                 for (i = 0; i < nstates; i++) {
-                    VectorClass cof = eval_ptr[i] * site_rate->getRate(c);
-                    VectorClass val = exp(cof*dad_branch->length)*theta[i];
+                    VectorClass cof = eval_ptr[i] * cat_rate;
+                    VectorClass val = exp(cof*dad_length)*theta[i];
                     VectorClass val1 = cof*val;
                     lh_cat += val;
                     df_cat += val1;
@@ -1749,7 +1799,11 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
 //    double *val = aligned_alloc<double>(block);
     double *val = NULL;
     double *buffer_partial_lh_ptr = buffer_partial_lh;
-    if (!SITE_MODEL) {
+    double cat_length[ncat];
+    if (SITE_MODEL) {
+        for (c = 0; c < ncat; c++)
+            cat_length[c] = site_rate->getRate(c) * dad_branch->length;
+    } else {
         val = buffer_partial_lh;
         buffer_partial_lh_ptr += get_safe_upper_limit(block);
         if (nstates % VectorClass::size() == 0) {
@@ -1912,10 +1966,14 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
                 // site-specific model
                 VectorClass* eval_ptr = (VectorClass*) &eval[ptn*nstates];
                 for (c = 0; c < ncat; c++) {
-                    double len = site_rate->getRate(c) * dad_branch->length;
                     double prop = site_rate->getProp(c);
-                    for (i = 0; i < nstates; i++)
-                        *lh_cat = mul_add(exp(eval_ptr[i]*len)*lh_node[i], partial_lh_dad[i], *lh_cat);
+#ifdef KERNEL_FIX_STATES
+                    dotProductExp<VectorClass, double, nstates, FMA>(eval_ptr, lh_node, partial_lh_dad, cat_length[c], *lh_cat);
+#else
+                    dotProductExp<VectorClass, double, FMA>(eval_ptr, lh_node, partial_lh_dad, cat_length[c], *lh_cat, nstates);
+#endif
+//                    for (i = 0; i < nstates; i++)
+//                        *lh_cat = mul_add(exp(eval_ptr[i]*cat_length[c]), lh_node[i] * partial_lh_dad[i], *lh_cat);
                     lh_ptn += (*lh_cat *= prop);
                     partial_lh_dad += nstates;
                     lh_cat++;
@@ -1924,11 +1982,11 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
             } else {
                 //normal model
                 for (c = 0; c < ncat_mix; c++) {
-    #ifdef KERNEL_FIX_STATES
+#ifdef KERNEL_FIX_STATES
                     dotProductVec<VectorClass, VectorClass, nstates, FMA>(lh_node, partial_lh_dad, *lh_cat);
-    #else
+#else
                     dotProductVec<VectorClass, VectorClass, FMA>(lh_node, partial_lh_dad, *lh_cat, nstates);
-    #endif
+#endif
                     lh_ptn += *lh_cat;
                     lh_node += nstates;
                     partial_lh_dad += nstates;
@@ -2039,10 +2097,14 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
                     // site-specific model
                     VectorClass* eval_ptr = (VectorClass*) &eval[ptn*nstates];
                     for (c = 0; c < ncat; c++) {
-                        double len = site_rate->getRate(c) * dad_branch->length;
                         double prop = site_rate->getProp(c);
-                        for (i = 0; i < nstates; i++)
-                            *lh_cat = mul_add(exp(eval_ptr[i]*len)*partial_lh_node[i], partial_lh_dad[i], *lh_cat);
+#ifdef KERNEL_FIX_STATES
+                        dotProductExp<VectorClass, double, nstates, FMA>(eval_ptr, partial_lh_node, partial_lh_dad, cat_length[c], *lh_cat);
+#else
+                        dotProductExp<VectorClass, double, FMA>(eval_ptr, partial_lh_node, partial_lh_dad, cat_length[c], *lh_cat, nstates);
+#endif
+//                        for (i = 0; i < nstates; i++)
+//                            *lh_cat = mul_add(exp(eval_ptr[i]*cat_length[c]), partial_lh_node[i]*partial_lh_dad[i], *lh_cat);
                         lh_ptn += (*lh_cat *= prop);
                         partial_lh_node += nstates;
                         partial_lh_dad += nstates;
@@ -2185,8 +2247,12 @@ double PhyloTree::computeLikelihoodFromBufferGenericSIMD()
 
 //    double *val0 = aligned_alloc<double>(block);
     double *val0 = NULL;
+    double cat_length[ncat];
 
-    if (!SITE_MODEL) {
+    if (SITE_MODEL) {
+        for (c = 0; c < ncat; c++)
+            cat_length[c] = site_rate->getRate(c) * current_it->length;
+    } else {
         val0 = buffer_partial_lh;
         if (nstates % VectorClass::size() == 0) {
             VectorClass *vc_val0 = (VectorClass*)val0;
@@ -2237,11 +2303,15 @@ double PhyloTree::computeLikelihoodFromBufferGenericSIMD()
             VectorClass *eval_ptr = (VectorClass*)&eval[ptn*nstates];
             lh_ptn.load_a(&ptn_invar[ptn]);
             for (c = 0; c < ncat; c++) {
-                VectorClass lh_cat(0.0);
-                double len = site_rate->getRate(c)*current_it->length;
-                for (i = 0; i < nstates; i++) {
-                    lh_cat = mul_add(exp(eval_ptr[i]*len), theta[i], lh_cat);
-                }
+                VectorClass lh_cat;
+#ifdef KERNEL_FIX_STATES
+                dotProductExp<VectorClass, double, nstates, FMA>(eval_ptr, theta, cat_length[c], lh_cat);
+#else
+                dotProductExp<VectorClass, double, FMA>(eval_ptr, theta, cat_length[c], lh_cat, nstates);
+#endif
+//                for (i = 0; i < nstates; i++) {
+//                    lh_cat = mul_add(exp(eval_ptr[i]*cat_length[c]), theta[i], lh_cat);
+//                }
                 lh_ptn = mul_add(lh_cat, site_rate->getProp(c), lh_ptn);
                 theta += nstates;
             }
