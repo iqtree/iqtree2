@@ -61,10 +61,10 @@ inline void _my_assert(const char* expression, const char *func, const char* fil
 
 #define USE_HASH_MAP
 
-#ifdef __GNUC__
+#if defined(__GNUC__) && !defined(GCC_VERSION)
 #define GCC_VERSION (__GNUC__ * 10000 + __GNUC_MINOR__ * 100 + __GNUC_PATCHLEVEL__)
-#else
-#define GCC_VERSION 0
+//#else
+//#define GCC_VERSION 0
 #endif
 
 // for MSVC

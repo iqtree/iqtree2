@@ -21,6 +21,8 @@
 #include <omp.h>
 #endif
 
+using namespace std;
+
 /*******************************************************
  *
  * Helper function for vectors and matrix multiplication
@@ -776,8 +778,15 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(PhyloNeighbor *dad_branch, P
         eleft = eright;
         eright = etmp;
 	}
-    
+
+    double len_left[ncat], len_right[ncat];
+    for (c = 0; c < ncat; c++) {
+        len_left[c] = site_rate->getRate(c) * left->length;
+        len_right[c] = site_rate->getRate(c) * right->length;
+    }
+
     if (node->degree() > 3) {
+        // TODO SITE_MODEL
         /*--------------------- multifurcating node ------------------*/
 
         // now for-loop computing partial_lh over all site-patterns
@@ -962,11 +971,9 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(PhyloNeighbor *dad_branch, P
                 VectorClass *evec_ptr = (VectorClass*) &evec[ptn*nstates*nstates];
                 VectorClass *inv_evec_ptr = (VectorClass*) &inv_evec[ptn*nstates*nstates];
                 for (c = 0; c < ncat; c++) {
-                    double len_left = site_rate->getRate(c) * left->length;
-                    double len_right = site_rate->getRate(c) * right->length;
                     for (i = 0; i < nstates; i++) {
-                        expleft[i] = exp(eval_ptr[i]*len_left) * vleft[i];
-                        expright[i] = exp(eval_ptr[i]*len_right) * vright[i];
+                        expleft[i] = exp(eval_ptr[i]*len_left[c]) * vleft[i];
+                        expright[i] = exp(eval_ptr[i]*len_right[c]) * vright[i];
 
                     }
                     // compute real partial likelihood vector
@@ -1080,11 +1087,9 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(PhyloNeighbor *dad_branch, P
                 VectorClass *evec_ptr = (VectorClass*) &evec[ptn*nstates*nstates];
                 VectorClass *inv_evec_ptr = (VectorClass*) &inv_evec[ptn*nstates*nstates];
                 for (c = 0; c < ncat; c++) {
-                    double len_left = site_rate->getRate(c) * left->length;
-                    double len_right = site_rate->getRate(c) * right->length;
                     for (i = 0; i < nstates; i++) {
-                        expleft[i] = exp(eval_ptr[i]*len_left) * vleft[i];
-                        expright[i] = exp(eval_ptr[i]*len_right) * partial_lh_right[i];
+                        expleft[i] = exp(eval_ptr[i]*len_left[c]) * vleft[i];
+                        expright[i] = exp(eval_ptr[i]*len_right[c]) * partial_lh_right[i];
                     }
                     // compute real partial likelihood vector
                     for (x = 0; x < nstates; x++) {
@@ -1261,11 +1266,9 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(PhyloNeighbor *dad_branch, P
 
                 if (SITE_MODEL) {
                     // site-specific model
-                    double len_left = site_rate->getRate(c) * left->length;
-                    double len_right = site_rate->getRate(c) * right->length;
                     for (i = 0; i < nstates; i++) {
-                        expleft[i] = exp(eval_ptr[i]*len_left) * partial_lh_left[i];
-                        expright[i] = exp(eval_ptr[i]*len_right) * partial_lh_right[i];
+                        expleft[i] = exp(eval_ptr[i]*len_left[c]) * partial_lh_left[i];
+                        expright[i] = exp(eval_ptr[i]*len_right[c]) * partial_lh_right[i];
                     }
                     for (x = 0; x < nstates; x++) {
                         VectorClass *this_evec = evec_ptr + x*nstates;
@@ -1566,9 +1569,16 @@ void PhyloTree::computeLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, Phyl
     double *val0 = NULL;
     double *val1 = NULL;
     double *val2 = NULL;
+    double cat_rate[ncat];
+    double cat_prop[ncat];
 
 
-    if (!SITE_MODEL) {
+    if (SITE_MODEL) {
+        for (c = 0; c < ncat; c++) {
+            cat_rate[c] = site_rate->getRate(c);
+            cat_prop[c] = site_rate->getProp(c);
+        }
+    } else {
         val0 = buffer_partial_lh;
         val1 = val0 + get_safe_upper_limit(block);
         val2 = val1 + get_safe_upper_limit(block);
@@ -1641,19 +1651,17 @@ void PhyloTree::computeLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, Phyl
             lh_ptn = 0.0; df_ptn = 0.0; ddf_ptn = 0.0;
             for (c = 0; c < ncat; c++) {
                 VectorClass lh_cat(0.0), df_cat(0.0), ddf_cat(0.0);
-                double cat_rate = site_rate->getRate(c);
                 for (i = 0; i < nstates; i++) {
-                    VectorClass cof = eval_ptr[i] * cat_rate;
+                    VectorClass cof = eval_ptr[i] * cat_rate[c];
                     VectorClass val = exp(cof*dad_length)*theta[i];
                     VectorClass val1 = cof*val;
                     lh_cat += val;
                     df_cat += val1;
                     ddf_cat = mul_add(cof, val1, ddf_cat);
                 }
-                double prop = site_rate->getProp(c);
-                lh_ptn = mul_add(prop, lh_cat, lh_ptn);
-                df_ptn = mul_add(prop, df_cat, df_ptn);
-                ddf_ptn = mul_add(prop, ddf_cat, ddf_ptn);
+                lh_ptn = mul_add(cat_prop[c], lh_cat, lh_ptn);
+                df_ptn = mul_add(cat_prop[c], df_cat, df_ptn);
+                ddf_ptn = mul_add(cat_prop[c], ddf_cat, ddf_ptn);
                 theta += nstates;
 
             }
@@ -1714,10 +1722,10 @@ void PhyloTree::computeLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, Phyl
 	df = horizontal_add(all_df);
 	ddf = horizontal_add(all_ddf);
 
-    if (!SAFE_NUMERIC && (isnan(df) || isinf(df)))
+    if (!SAFE_NUMERIC && (std::isnan(df) || std::isinf(df)))
         outError("Numerical underflow (lh-derivative). Run again with the safe likelihood kernel via `-safe` option");
 
-    assert(!isnan(df) && !isinf(df) && "Numerical underflow for lh-derivative");
+    assert(!std::isnan(df) && !std::isinf(df) && "Numerical underflow for lh-derivative");
 
 	if (isASC) {
         double prob_const = 0.0, df_const = 0.0, ddf_const = 0.0;
@@ -1800,9 +1808,12 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
     double *val = NULL;
     double *buffer_partial_lh_ptr = buffer_partial_lh;
     double cat_length[ncat];
+    double cat_prop[ncat];
     if (SITE_MODEL) {
-        for (c = 0; c < ncat; c++)
+        for (c = 0; c < ncat; c++) {
             cat_length[c] = site_rate->getRate(c) * dad_branch->length;
+            cat_prop[c] = site_rate->getProp(c);
+        }
     } else {
         val = buffer_partial_lh;
         buffer_partial_lh_ptr += get_safe_upper_limit(block);
@@ -1966,7 +1977,6 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
                 // site-specific model
                 VectorClass* eval_ptr = (VectorClass*) &eval[ptn*nstates];
                 for (c = 0; c < ncat; c++) {
-                    double prop = site_rate->getProp(c);
 #ifdef KERNEL_FIX_STATES
                     dotProductExp<VectorClass, double, nstates, FMA>(eval_ptr, lh_node, partial_lh_dad, cat_length[c], *lh_cat);
 #else
@@ -1974,7 +1984,7 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
 #endif
 //                    for (i = 0; i < nstates; i++)
 //                        *lh_cat = mul_add(exp(eval_ptr[i]*cat_length[c]), lh_node[i] * partial_lh_dad[i], *lh_cat);
-                    lh_ptn += (*lh_cat *= prop);
+                    lh_ptn += (*lh_cat *= cat_prop[c]);
                     partial_lh_dad += nstates;
                     lh_cat++;
 
@@ -2097,7 +2107,6 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
                     // site-specific model
                     VectorClass* eval_ptr = (VectorClass*) &eval[ptn*nstates];
                     for (c = 0; c < ncat; c++) {
-                        double prop = site_rate->getProp(c);
 #ifdef KERNEL_FIX_STATES
                         dotProductExp<VectorClass, double, nstates, FMA>(eval_ptr, partial_lh_node, partial_lh_dad, cat_length[c], *lh_cat);
 #else
@@ -2105,7 +2114,7 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
 #endif
 //                        for (i = 0; i < nstates; i++)
 //                            *lh_cat = mul_add(exp(eval_ptr[i]*cat_length[c]), partial_lh_node[i]*partial_lh_dad[i], *lh_cat);
-                        lh_ptn += (*lh_cat *= prop);
+                        lh_ptn += (*lh_cat *= cat_prop[c]);
                         partial_lh_node += nstates;
                         partial_lh_dad += nstates;
                         lh_cat++;
@@ -2167,10 +2176,10 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
 
     tree_lh += horizontal_add(all_tree_lh);
 
-    if (!SAFE_NUMERIC && (isnan(tree_lh) || isinf(tree_lh)))
+    if (!SAFE_NUMERIC && (std::isnan(tree_lh) || std::isinf(tree_lh)))
         outError("Numerical underflow (lh-branch). Run again with the safe likelihood kernel via `-safe` option");
 
-    assert(!isnan(tree_lh) && !isinf(tree_lh) && "Numerical underflow for lh-branch");
+    assert(!std::isnan(tree_lh) && !std::isinf(tree_lh) && "Numerical underflow for lh-branch");
 
     if (isASC) {
     	// ascertainment bias correction
@@ -2192,7 +2201,7 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
             (VectorClass().load_a(&_pattern_lh[ptn])-prob_const).store_a(&_pattern_lh[ptn]);
 //    		_pattern_lh[ptn] -= prob_const;
     	tree_lh -= aln->getNSite()*prob_const;
-		assert(!isnan(tree_lh) && !isinf(tree_lh));
+		assert(!std::isnan(tree_lh) && !std::isinf(tree_lh));
     }
 
 //    aligned_free(val);
@@ -2248,10 +2257,13 @@ double PhyloTree::computeLikelihoodFromBufferGenericSIMD()
 //    double *val0 = aligned_alloc<double>(block);
     double *val0 = NULL;
     double cat_length[ncat];
+    double cat_prop[ncat];
 
     if (SITE_MODEL) {
-        for (c = 0; c < ncat; c++)
+        for (c = 0; c < ncat; c++) {
             cat_length[c] = site_rate->getRate(c) * current_it->length;
+            cat_prop[c] = site_rate->getProp(c);
+        }
     } else {
         val0 = buffer_partial_lh;
         if (nstates % VectorClass::size() == 0) {
@@ -2312,7 +2324,7 @@ double PhyloTree::computeLikelihoodFromBufferGenericSIMD()
 //                for (i = 0; i < nstates; i++) {
 //                    lh_cat = mul_add(exp(eval_ptr[i]*cat_length[c]), theta[i], lh_cat);
 //                }
-                lh_ptn = mul_add(lh_cat, site_rate->getProp(c), lh_ptn);
+                lh_ptn = mul_add(lh_cat, cat_prop[c], lh_ptn);
                 theta += nstates;
             }
         } else {
@@ -2351,10 +2363,10 @@ double PhyloTree::computeLikelihoodFromBufferGenericSIMD()
 
     double tree_lh = horizontal_add(all_tree_lh);
 
-    if (!SAFE_NUMERIC && (isnan(tree_lh) || isinf(tree_lh)))
+    if (!SAFE_NUMERIC && (std::isnan(tree_lh) || std::isinf(tree_lh)))
         outError("Numerical underflow (lh-from-buffer). Run again with the safe likelihood kernel via `-safe` option");
 
-    assert(!isnan(tree_lh) && !isinf(tree_lh) && "Numerical underflow for lh-from-buffer");
+    assert(!std::isnan(tree_lh) && !std::isinf(tree_lh) && "Numerical underflow for lh-from-buffer");
 
     if (isASC) {
     	// ascertainment bias correction
@@ -2376,7 +2388,7 @@ double PhyloTree::computeLikelihoodFromBufferGenericSIMD()
             (VectorClass().load_a(&_pattern_lh[ptn])-prob_const).store_a(&_pattern_lh[ptn]);
 //    		_pattern_lh[ptn] -= prob_const;
     	tree_lh -= aln->getNSite()*prob_const;
-		assert(!isnan(tree_lh) && !isinf(tree_lh));
+		assert(!std::isnan(tree_lh) && !std::isinf(tree_lh));
     }
 
 //    aligned_free(val0);

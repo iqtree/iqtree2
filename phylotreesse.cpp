@@ -26,7 +26,7 @@
 //#include "phylokernel.h"
 //#include "phylokernelmixture.h"
 //#include "phylokernelmixrate.h"
-#include "phylokernelsitemodel.h"
+//#include "phylokernelsitemodel.h"
 
 #include "model/modelgtr.h"
 #include "model/modelset.h"

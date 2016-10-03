@@ -12,7 +12,7 @@
 //#include "phylokernelsafe.h"
 //#include "phylokernelmixture.h"
 //#include "phylokernelmixrate.h"
-#include "phylokernelsitemodel.h"
+//#include "phylokernelsitemodel.h"
 
 #include "phylokernelnew.h"
 #define KERNEL_FIX_STATES

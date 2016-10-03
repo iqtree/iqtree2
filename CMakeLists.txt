@@ -264,17 +264,17 @@ endif()
 
 SET(AVX512_FLAGS "-D__SSE3 -D__AVX")
 if (VCC)
-    message("AVX512 not available")
-	#set(AVX512_FLAGS "${AVX512_FLAGS} /arch:AVX2")
+    message("AVX512 not available in Visual C++")
+	#set(AVX512_FLAGS "${AVX512_FLAGS} /arch:AVX512")
 elseif (CLANG)
-	set(AVX512_FLAGS "${AVX512_FLAGS} -mavx512f")
+	set(AVX512_FLAGS "${AVX512_FLAGS} -mavx512f -mfma")
 elseif (GCC)
-	set(AVX512_FLAGS "${AVX512_FLAGS} -mavx512f")
+	set(AVX512_FLAGS "${AVX512_FLAGS} -mavx512f -mfma")
 elseif (ICC) 
 	if (WIN32)
-		 set(AVX512_FLAGS "${AVX512_FLAGS} /arch:MIC-AVX512")
+		 set(AVX512_FLAGS "${AVX512_FLAGS} /arch:MIC-AVX512 /Qfma")
 	else()
-		 set(AVX512_FLAGS "${AVX512_FLAGS} -xMIC-AVX512")
+		 set(AVX512_FLAGS "${AVX512_FLAGS} -xMIC-AVX512 -mfma")
 	endif()
 endif()
 
@@ -424,7 +424,7 @@ phylosupertree.cpp
 phylotree.cpp
 phylotreesse.cpp
 phylotreepars.cpp
-phylokernelsitemodel.cpp
+#phylokernelsitemodel.cpp
 #phylotreeavx.cpp
 pruning.cpp
 quartet.cpp

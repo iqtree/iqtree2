@@ -1,8 +1,8 @@
 /****************************  vectori256.h   *******************************
 * Author:        Agner Fog
 * Date created:  2012-05-30
-* Last modified: 2015-11-08
-* Version:       1.19
+* Last modified: 2016-04-26
+* Version:       1.22
 * Project:       vector classes
 * Description:
 * Header file defining integer vector classes as interface to intrinsic 
@@ -36,7 +36,7 @@
 *
 * For detailed instructions, see VectorClass.pdf
 *
-* (c) Copyright 2012 - 2015 GNU General Public License http://www.gnu.org/licenses
+* (c) Copyright 2012 - 2016 GNU General Public License http://www.gnu.org/licenses
 *****************************************************************************/
 
 // check combination of header files
@@ -58,6 +58,9 @@
 
 #include "vectori128.h"
 
+#ifdef VCL_NAMESPACE
+namespace VCL_NAMESPACE {
+#endif
 
 /*****************************************************************************
 *
@@ -334,7 +337,7 @@ public:
             *this = Vec32c(Vec16c().load_partial(n, p), 0);
         }
         else if (n < 32) {
-            *this = Vec32c(Vec16c().load(p), Vec16c().load_partial(n-16, (char*)p+16));
+            *this = Vec32c(Vec16c().load(p), Vec16c().load_partial(n-16, (char const*)p+16));
         }
         else {
             load(p);
@@ -1104,7 +1107,7 @@ public:
             *this = Vec16s(Vec8s().load_partial(n, p), 0);
         }
         else if (n < 16) {
-            *this = Vec16s(Vec8s().load(p), Vec8s().load_partial(n-8, (int16_t*)p+8));
+            *this = Vec16s(Vec8s().load(p), Vec8s().load_partial(n-8, (int16_t const*)p+8));
         }
         else {
             load(p);
@@ -1829,7 +1832,7 @@ public:
             *this = Vec8i(Vec4i().load_partial(n, p), 0);
         }
         else if (n < 8) {
-            *this = Vec8i(Vec4i().load(p), Vec4i().load_partial(n-4, (int32_t*)p+4));
+            *this = Vec8i(Vec4i().load(p), Vec4i().load_partial(n-4, (int32_t const*)p+4));
         }
         else {
             load(p);
@@ -2495,7 +2498,7 @@ public:
     }
     // Constructor to broadcast the same value into all elements:
     Vec4q(int64_t i) {
-#if defined (_MSC_VER) && ! defined (__x86_64__) && ! defined(__INTEL_COMPILER)
+#if defined (_MSC_VER) && _MSC_VER < 1900 && ! defined (__x86_64__) && ! defined(__INTEL_COMPILER)
         // MS compiler cannot use _mm256_set1_epi64x in 32 bit mode, and  
         // cannot put 64-bit values into xmm register without using
         // mmx registers, and it makes no emms
@@ -2511,7 +2514,7 @@ public:
     }
     // Constructor to build from all elements:
     Vec4q(int64_t i0, int64_t i1, int64_t i2, int64_t i3) {
-#if defined (_MSC_VER) && ! defined (__x86_64__) && ! defined(__INTEL_COMPILER)
+#if defined (_MSC_VER) && _MSC_VER < 1900 && ! defined (__x86_64__) && ! defined(__INTEL_COMPILER)
         // MS compiler cannot put 64-bit values into xmm register without using
         // mmx registers, and it makes no emms
         union {
@@ -2560,7 +2563,7 @@ public:
             *this = Vec4q(Vec2q().load_partial(n, p), 0);
         }
         else if (n < 4) {
-            *this = Vec4q(Vec2q().load(p), Vec2q().load_partial(n-2, (int64_t*)p+2));
+            *this = Vec4q(Vec2q().load(p), Vec2q().load_partial(n-2, (int64_t const*)p+2));
         }
         else {
             load(p);
@@ -3688,7 +3691,7 @@ static inline Vec32c permute32c(Vec32c const & a) {
         && i8 ==((i0+8 )&31) && i9 ==((i0+9 )&31) && i10==((i0+10)&31) && i11==((i0+11)&31) && i12==((i0+12)&31) && i13==((i0+13)&31) && i14==((i0+14)&31) && i15==((i0+15)&31)
         && i16==((i0+16)&31) && i17==((i0+17)&31) && i18==((i0+18)&31) && i19==((i0+19)&31) && i20==((i0+20)&31) && i21==((i0+21)&31) && i22==((i0+22)&31) && i23==((i0+23)&31)
         && i24==((i0+24)&31) && i25==((i0+25)&31) && i26==((i0+26)&31) && i27==((i0+27)&31) && i28==((i0+28)&31) && i29==((i0+29)&31) && i30==((i0+30)&31) && i31==((i0+31)&31)) {
-        __m256i t1 = _mm256_permute4x64_epi64(a, 0x4E);
+        t1 = _mm256_permute4x64_epi64(a, 0x4E);
         return _mm256_alignr_epi8(a, t1, i0 & 15);
     }
 
@@ -4581,7 +4584,7 @@ static inline Vec8i lookup(Vec8i const & index, void const * table) {
     }
     if (n <= 16) {
         Vec8i table1 = Vec8i().load(table);
-        Vec8i table2 = Vec8i().load((int32_t*)table + 8);
+        Vec8i table2 = Vec8i().load((int32_t const*)table + 8);
         Vec8i y1 = lookup8(index, table1);
         Vec8i y2 = lookup8(index, table2);
         Vec8ib s = index > 7;
@@ -5508,5 +5511,8 @@ static inline Vec4qb to_Vec4qb(uint8_t x);
 
 #endif  // INSTRSET < 9 || MAX_VECTOR_SIZE < 512
 
+#ifdef VCL_NAMESPACE
+}
+#endif
 
 #endif // VECTORI256_H
