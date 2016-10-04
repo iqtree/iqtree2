@@ -648,8 +648,8 @@ void ModelLieMarkov::computeTransMatrix(double time, double *trans_matrix) {
         Matrix4cd res = cevectors * ceval_exp.asDiagonal() * cinv_evectors;
         for (i = 0; i < 4; i++) {
             for (int j = 0; j < 4; j++) {
-                trans_matrix[i*4+j] = res(i, j).real();
-                assert(fabs(res(i,j).imag()) < 1e-6);
+                trans_matrix[i*4+j] = res(j, i).real();
+                assert(fabs(res(j,i).imag()) < 1e-6);
             }
             assert(fabs(trans_matrix[i*4]+trans_matrix[i*4+1]+trans_matrix[i*4+2]+trans_matrix[i*4+3]-1.0) < 1e-4);
         }        
