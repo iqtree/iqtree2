@@ -94,7 +94,13 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk) {
 
     //--- SIMD kernel ---
     if (sse == LK_EIGEN_SSE && instruction_set >= 2) {
-        if (has_fma) {
+#ifdef INCLUDE_AVX512
+    	if (instruction_set >= 9) {
+    		setLikelihoodKernelAVX512();
+    		return;
+    	}
+#endif
+    	if (has_fma) {
             // CPU supports AVX and FMA
             setLikelihoodKernelFMA();
         } else if (instruction_set >= 7) {
@@ -180,7 +186,7 @@ void PhyloTree::computeTipPartialLikelihood() {
 
     if (getModel()->isSiteSpecificModel()) {
 //        ModelSet *models = (ModelSet*)model;
-        size_t nptn = aln->getNPattern(), max_nptn = get_safe_upper_limit(nptn), tip_block_size = max_nptn * aln->num_states;
+        size_t nptn = aln->getNPattern(), max_nptn = ((nptn+vector_size-1)/vector_size)*vector_size, tip_block_size = max_nptn * aln->num_states;
         int nstates = aln->num_states;
         int nseq = aln->getNSeq();
         assert(vector_size > 0);

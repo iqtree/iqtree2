@@ -61,6 +61,10 @@ const int SPR_DEPTH = 2;
 //using namespace Eigen;
 
 inline size_t get_safe_upper_limit(size_t cur_limit) {
+	if (instruction_set >= 9)
+		// AVX-512
+		return ((cur_limit+7)/8)*8;
+	else
 	if (instruction_set >= 7)
 		// AVX
 		return ((cur_limit+3)/4)*4;
@@ -70,6 +74,10 @@ inline size_t get_safe_upper_limit(size_t cur_limit) {
 }
 
 inline size_t get_safe_upper_limit_float(size_t cur_limit) {
+	if (instruction_set >= 9)
+		// AVX
+		return ((cur_limit+15)/16)*16;
+	else
 	if (instruction_set >= 7)
 		// AVX
 		return ((cur_limit+7)/8)*8;
@@ -92,7 +100,7 @@ inline size_t get_safe_upper_limit_float(size_t cur_limit) {
 
 template< class T>
 inline T *aligned_alloc(size_t size) {
-	size_t MEM_ALIGNMENT = (instruction_set >= 7) ? 32 : 16;
+	size_t MEM_ALIGNMENT = (instruction_set >= 9) ? 64 : ((instruction_set >= 7) ? 32 : 16);
     void *mem;
 
 #if defined WIN32 || defined _WIN32 || defined __WIN32__
