@@ -1997,57 +1997,85 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
             VectorClass *partial_lh_dad = (VectorClass*)(dad_branch->partial_lh + ptn*block);
             VectorClass *lh_node = SITE_MODEL ? (VectorClass*)&partial_lh_node[ptn*nstates] : (VectorClass*)vec_tip;
 
-            //load tip vector
-            if (!SITE_MODEL)
-            for (i = 0; i < VectorClass::size(); i++) {
-                double *lh_tip;
-                if (ptn+i < orig_nptn)
-                    lh_tip = partial_lh_node + block*(aln->at(ptn+i))[dad->id];
-                else if (ptn+i < max_orig_nptn)
-                    lh_tip = partial_lh_node + block*aln->STATE_UNKNOWN;
-                else if (ptn+i < nptn)
-                    lh_tip = partial_lh_node + block*model_factory->unobserved_ptns[ptn+i-max_orig_nptn];
-                else
-                    lh_tip = partial_lh_node + block*aln->STATE_UNKNOWN;
+            if (SITE_MODEL) {
+                // site-specific model
+                VectorClass* eval_ptr = (VectorClass*) &eval[ptn*nstates];
+                for (c = 0; c < ncat; c++) {
+#ifdef KERNEL_FIX_STATES
+                    dotProductExp<VectorClass, double, nstates, FMA>(eval_ptr, lh_node, partial_lh_dad, cat_length[c], lh_cat[c]);
+#else
+                    dotProductExp<VectorClass, double, FMA>(eval_ptr, lh_node, partial_lh_dad, cat_length[c], lh_cat[c], nstates);
+#endif
+                    if (SAFE_NUMERIC)
+                        lh_cat[c] *= cat_prop[c];
+                    else
+                        lh_ptn += (lh_cat[c] *= cat_prop[c]);
 
-                double *this_vec_tip = vec_tip+i;
-                for (c = 0; c < block; c++) {
-                    *this_vec_tip = lh_tip[c];
-                    this_vec_tip += VectorClass::size();
+                    partial_lh_dad += nstates;
                 }
+            } else { // normal model
+                //load tip vector
+                for (i = 0; i < VectorClass::size(); i++) {
+                    double *lh_tip;
+                    if (ptn+i < orig_nptn)
+                        lh_tip = partial_lh_node + block*(aln->at(ptn+i))[dad->id];
+                    else if (ptn+i < max_orig_nptn)
+                        lh_tip = partial_lh_node + block*aln->STATE_UNKNOWN;
+                    else if (ptn+i < nptn)
+                        lh_tip = partial_lh_node + block*model_factory->unobserved_ptns[ptn+i-max_orig_nptn];
+                    else
+                        lh_tip = partial_lh_node + block*aln->STATE_UNKNOWN;
 
-            }
+                    double *this_vec_tip = vec_tip+i;
+                    for (c = 0; c < block; c++) {
+                        *this_vec_tip = lh_tip[c];
+                        this_vec_tip += VectorClass::size();
+                    }
 
+                }
+                // compute likelihood per category
+                for (c = 0; c < ncat_mix; c++) {
+#ifdef KERNEL_FIX_STATES
+                    dotProductVec<VectorClass, VectorClass, nstates, FMA>(lh_node, partial_lh_dad, lh_cat[c]);
+#else
+                    dotProductVec<VectorClass, VectorClass, FMA>(lh_node, partial_lh_dad, lh_cat[c], nstates);
+#endif
+                    if (!SAFE_NUMERIC)
+                        lh_ptn += lh_cat[c];
+                    lh_node += nstates;
+                    partial_lh_dad += nstates;
+                }
+            } // if SITE_MODEL
+
+            // compute scaling factor per pattern
             VectorClass vc_min_scale(0.0);
             double* vc_min_scale_ptr = (double*)&vc_min_scale;
-
             if (SAFE_NUMERIC) {
-                // TODO not work with SITE_MODEL
                 // numerical scaling per category
-                UBYTE *scale_dad;
+                UBYTE *scale_dad = dad_branch->scale_num + ptn*ncat_mix;
                 UBYTE min_scale;
                 for (i = 0; i < VectorClass::size(); i++) {
-                    scale_dad = dad_branch->scale_num+(ptn+i)*ncat_mix;
+//                    scale_dad = dad_branch->scale_num+(ptn+i)*ncat_mix;
                     min_scale = scale_dad[0];
                     for (c = 1; c < ncat_mix; c++)
                         min_scale = min(min_scale, scale_dad[c]);
 
                     vc_min_scale_ptr[i] = min_scale;
 
+                    double *this_lh_cat = &_pattern_lh_cat[ptn*ncat_mix + i];
                     for (c = 0; c < ncat_mix; c++) {
+                        // rescale lh_cat if neccessary
                         if (scale_dad[c] == min_scale+1) {
-                            double *this_tip = &vec_tip[c*nstates*VectorClass::size() + i];
-                            for (size_t x = 0; x < nstates; x++) {
-                                this_tip[x*VectorClass::size()] *= SCALING_THRESHOLD;
-                            }
+                            this_lh_cat[c*VectorClass::size()] *= SCALING_THRESHOLD;
                         } else if (scale_dad[c] > min_scale+1) {
-                            double *this_tip = &vec_tip[c*nstates*VectorClass::size() + i];
-                            for (size_t x = 0; x < nstates; x++) {
-                                this_tip[x*VectorClass::size()] = 0.0;
-                            }
+                            this_lh_cat[c*VectorClass::size()] = 0.0;
                         }
                     }
+                    scale_dad += ncat_mix;
                 }
+                // now take the sum of (rescaled) lh_cat
+                sumVec<VectorClass, true>(lh_cat, lh_ptn, ncat_mix);
+
             } else {
                 for (i = 0; i < VectorClass::size(); i++) {
                     vc_min_scale_ptr[i] = dad_branch->scale_num[ptn+i];
@@ -2055,36 +2083,6 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
             }
             vc_min_scale *= LOG_SCALING_THRESHOLD;
 
-            if (SITE_MODEL) {
-                // site-specific model
-                VectorClass* eval_ptr = (VectorClass*) &eval[ptn*nstates];
-                for (c = 0; c < ncat; c++) {
-#ifdef KERNEL_FIX_STATES
-                    dotProductExp<VectorClass, double, nstates, FMA>(eval_ptr, lh_node, partial_lh_dad, cat_length[c], *lh_cat);
-#else
-                    dotProductExp<VectorClass, double, FMA>(eval_ptr, lh_node, partial_lh_dad, cat_length[c], *lh_cat, nstates);
-#endif
-//                    for (i = 0; i < nstates; i++)
-//                        *lh_cat = mul_add(exp(eval_ptr[i]*cat_length[c]), lh_node[i] * partial_lh_dad[i], *lh_cat);
-                    lh_ptn += (*lh_cat *= cat_prop[c]);
-                    partial_lh_dad += nstates;
-                    lh_cat++;
-
-                }
-            } else {
-                //normal model
-                for (c = 0; c < ncat_mix; c++) {
-#ifdef KERNEL_FIX_STATES
-                    dotProductVec<VectorClass, VectorClass, nstates, FMA>(lh_node, partial_lh_dad, *lh_cat);
-#else
-                    dotProductVec<VectorClass, VectorClass, FMA>(lh_node, partial_lh_dad, *lh_cat, nstates);
-#endif
-                    lh_ptn += *lh_cat;
-                    lh_node += nstates;
-                    partial_lh_dad += nstates;
-                    lh_cat++;
-                }
-            }
             lh_ptn = abs(lh_ptn);
 			if (ptn < orig_nptn) {
                 lh_ptn = log(lh_ptn) + vc_min_scale;
@@ -2122,6 +2120,7 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
 //		aligned_free(partial_lh_node);
     } else {
 
+        assert(0 && "Don't compute tree log-likelihood from internal branch!");
     	//-------- both dad and node are internal nodes -----------/
 
 #ifdef _OPENMP
@@ -2139,24 +2138,44 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
             VectorClass *lh_cat = (VectorClass*)(_pattern_lh_cat + ptn*ncat_mix);
             VectorClass *partial_lh_dad = (VectorClass*)(dad_branch->partial_lh + ptn*block);
             VectorClass *partial_lh_node = (VectorClass*)(node_branch->partial_lh + ptn*block);
-            double *val_tmp = val;
 
-            VectorClass vc_min_scale(0.0);
-            double* vc_min_scale_ptr = (double*)&vc_min_scale;
-
-            if (SAFE_NUMERIC) {
-                // TODO not working with SITE_MODEL
+            // compute likelihood per category
+            if (SITE_MODEL) {
+                VectorClass* eval_ptr = (VectorClass*) &eval[ptn*nstates];
+                for (c = 0; c < ncat; c++) {
+#ifdef KERNEL_FIX_STATES
+                    dotProductExp<VectorClass, double, nstates, FMA>(eval_ptr, partial_lh_node, partial_lh_dad, cat_length[c], lh_cat[c]);
+#else
+                    dotProductExp<VectorClass, double, FMA>(eval_ptr, partial_lh_node, partial_lh_dad, cat_length[c], lh_cat[c], nstates);
+#endif
+                    if (SAFE_NUMERIC)
+                        lh_cat[c] *= cat_prop[c];
+                    else
+                        lh_ptn += (lh_cat[c] *= cat_prop[c]);
+                    partial_lh_node += nstates;
+                    partial_lh_dad += nstates;
+                }
+            } else {
+                double *val_tmp = val;
                 for (c = 0; c < ncat_mix; c++) {
 #ifdef KERNEL_FIX_STATES
                     dotProduct3Vec<VectorClass, double, nstates, FMA>(val_tmp, partial_lh_node, partial_lh_dad, lh_cat[c]);
 #else
                     dotProduct3Vec<VectorClass, double, FMA>(val_tmp, partial_lh_node, partial_lh_dad, lh_cat[c], nstates);
 #endif
+                    if (!SAFE_NUMERIC)
+                        lh_ptn += lh_cat[c];
                     partial_lh_node += nstates;
                     partial_lh_dad += nstates;
                     val_tmp += nstates;
                 }
+            } // if SITE MODEL
 
+
+            // compute the scaling factor per pattern
+            VectorClass vc_min_scale(0.0);
+            double* vc_min_scale_ptr = (double*)&vc_min_scale;
+            if (SAFE_NUMERIC) {
                 UBYTE *scale_dad = dad_branch->scale_num + ptn*ncat_mix;
                 UBYTE *scale_node = node_branch->scale_num + ptn*ncat_mix;
                 UBYTE sum_scale[ncat_mix];
@@ -2183,42 +2202,12 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
                 }
                 sumVec<VectorClass, true>(lh_cat, lh_ptn, ncat_mix);
             } else {
-                // normal scaling
-
-                if (SITE_MODEL) {
-                    // site-specific model
-                    VectorClass* eval_ptr = (VectorClass*) &eval[ptn*nstates];
-                    for (c = 0; c < ncat; c++) {
-#ifdef KERNEL_FIX_STATES
-                        dotProductExp<VectorClass, double, nstates, FMA>(eval_ptr, partial_lh_node, partial_lh_dad, cat_length[c], *lh_cat);
-#else
-                        dotProductExp<VectorClass, double, FMA>(eval_ptr, partial_lh_node, partial_lh_dad, cat_length[c], *lh_cat, nstates);
-#endif
-//                        for (i = 0; i < nstates; i++)
-//                            *lh_cat = mul_add(exp(eval_ptr[i]*cat_length[c]), partial_lh_node[i]*partial_lh_dad[i], *lh_cat);
-                        lh_ptn += (*lh_cat *= cat_prop[c]);
-                        partial_lh_node += nstates;
-                        partial_lh_dad += nstates;
-                        lh_cat++;
-                    }
-                } else {
-                    for (c = 0; c < ncat_mix; c++) {
-    #ifdef KERNEL_FIX_STATES
-                        dotProduct3Vec<VectorClass, double, nstates, FMA>(val_tmp, partial_lh_node, partial_lh_dad, lh_cat[c]);
-    #else
-                        dotProduct3Vec<VectorClass, double, FMA>(val_tmp, partial_lh_node, partial_lh_dad, lh_cat[c], nstates);
-    #endif
-                        lh_ptn += lh_cat[c];
-                        partial_lh_node += nstates;
-                        partial_lh_dad += nstates;
-                        val_tmp += nstates;
-                    }
-                }
                 for (i = 0; i < VectorClass::size(); i++) {
                     vc_min_scale_ptr[i] = dad_branch->scale_num[ptn+i] + node_branch->scale_num[ptn+i];
                 }
-            }
+            } // if SAFE_NUMERIC
             vc_min_scale *= LOG_SCALING_THRESHOLD;
+
             lh_ptn = abs(lh_ptn);
 
 			if (ptn < orig_nptn) {

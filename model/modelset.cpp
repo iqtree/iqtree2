@@ -87,8 +87,9 @@ int ModelSet::getNDim()
 
 void ModelSet::writeInfo(ostream& out)
 {
-	assert(size());
-	if (verbose_mode >= VB_MED) {
+    if (empty())
+        return;
+	if (verbose_mode >= VB_DEBUG) {
 		int i = 1;
 		for (iterator it = begin(); it != end(); it++, i++) {
 			out << "Partition " << i << ":" << endl;

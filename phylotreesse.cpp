@@ -19,9 +19,13 @@
  ***************************************************************************/
 #include "phylotree.h"
 #include "vectorclass/instrset.h"
+
+#if INSTRSET < 2
 #include "phylokernelnew.h"
 #define KERNEL_FIX_STATES
 #include "phylokernelnew.h"
+#include "vectorf64.h"
+#endif
 
 //#include "phylokernel.h"
 //#include "phylokernelmixture.h"
@@ -30,7 +34,6 @@
 
 #include "model/modelgtr.h"
 #include "model/modelset.h"
-#include "vectorf64.h"
 
 /* BQM: to ignore all-gapp subtree at an alignment site */
 //#define IGNORE_GAP_LH
@@ -72,6 +75,8 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk) {
     } else if (instruction_set >= 2) {
         setDotProductSSE();
 	} else {
+
+#if INSTRSET < 2
 #ifdef BOOT_VAL_FLOAT
         // TODO naive dot-product for float
         assert(0 && "Not supported, contact developer");
@@ -80,15 +85,24 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk) {
 		dotProduct = &PhyloTree::dotProductSIMD<double, Vec1d>;
 #endif
         dotProductDouble = &PhyloTree::dotProductSIMD<double, Vec1d>;
+#endif
 	}
 
     //--- naive likelihood kernel, no alignment specified yet ---
     if (!aln) {
+#if INSTRSET < 2
         computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchGenericSIMD<Vec1d, SAFE_LH>;
         computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervGenericSIMD<Vec1d, SAFE_LH>;
         computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodGenericSIMD<Vec1d, SAFE_LH>;
         computeLikelihoodFromBufferPointer = &PhyloTree::computeLikelihoodFromBufferGenericSIMD<Vec1d, SAFE_LH>;
         sse = LK_EIGEN;
+#else
+        computeLikelihoodBranchPointer = NULL;
+        computeLikelihoodDervPointer = NULL;
+        computePartialLikelihoodPointer = NULL;
+        computeLikelihoodFromBufferPointer = NULL;
+        sse = LK_EIGEN;
+#endif
         return;
     }
 
@@ -113,6 +127,7 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk) {
         return;
     }
 
+#if INSTRSET < 2
     //--- naive kernel for site-specific model ---
     if (model_factory && model_factory->model->isSiteSpecificModel()) {
         computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchGenericSIMD<Vec1d, NORM_LH, false, true>;
@@ -127,6 +142,12 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk) {
     computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervGenericSIMD<Vec1d, SAFE_LH>;
     computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodGenericSIMD<Vec1d, SAFE_LH>;
     computeLikelihoodFromBufferPointer = &PhyloTree::computeLikelihoodFromBufferGenericSIMD<Vec1d, SAFE_LH>;
+#else
+    computeLikelihoodBranchPointer = NULL;
+    computeLikelihoodDervPointer = NULL;
+    computePartialLikelihoodPointer = NULL;
+    computeLikelihoodFromBufferPointer = NULL;
+#endif
 }
 
 void PhyloTree::changeLikelihoodKernel(LikelihoodKernel lk) {
