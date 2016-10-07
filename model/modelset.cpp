@@ -28,6 +28,8 @@ ModelSet::ModelSet(const char *model_name, PhyloTree *tree) : ModelGTR(tree)
 
 void ModelSet::computeTransMatrix(double time, double* trans_matrix)
 {
+    // TODO not working with vectorization
+    assert(0);
 	for (iterator it = begin(); it != end(); it++) {
 		(*it)->computeTransMatrix(time, trans_matrix);
 		trans_matrix += (num_states * num_states);
@@ -36,6 +38,8 @@ void ModelSet::computeTransMatrix(double time, double* trans_matrix)
 
 void ModelSet::computeTransMatrixFreq(double time, double* trans_matrix)
 {
+    // TODO not working with vectorization
+    assert(0);
 	for (iterator it = begin(); it != end(); it++) {
 		(*it)->computeTransMatrixFreq(time, trans_matrix);
 		trans_matrix += (num_states * num_states);
@@ -44,6 +48,8 @@ void ModelSet::computeTransMatrixFreq(double time, double* trans_matrix)
 
 void ModelSet::computeTransDerv(double time, double* trans_matrix, double* trans_derv1, double* trans_derv2)
 {
+    // TODO not working with vectorization
+    assert(0);
 	for (iterator it = begin(); it != end(); it++) {
 		(*it)->computeTransDerv(time, trans_matrix, trans_derv1, trans_derv2);
 		trans_matrix += (num_states * num_states);
@@ -54,6 +60,8 @@ void ModelSet::computeTransDerv(double time, double* trans_matrix, double* trans
 
 void ModelSet::computeTransDervFreq(double time, double rate_val, double* trans_matrix, double* trans_derv1, double* trans_derv2)
 {
+    // TODO not working with vectorization
+    assert(0);
 	for (iterator it = begin(); it != end(); it++) {
 		(*it)->computeTransDervFreq(time, rate_val, trans_matrix, trans_derv1, trans_derv2);
 		trans_matrix += (num_states * num_states);
@@ -71,12 +79,50 @@ int ModelSet::getPtnModelID(int ptn)
 
 
 double ModelSet::computeTrans(double time, int model_id, int state1, int state2) {
-	return at(model_id)->computeTrans(time, state1, state2);
+    if (phylo_tree->vector_size == 1)
+        return at(model_id)->computeTrans(time, state1, state2);
+	// temporary fix problem with vectorized eigenvectors
+	int i;
+    int vsize = phylo_tree->vector_size;
+    int states_vsize = num_states*vsize;
+    int model_vec_id = model_id % vsize;
+    int start_ptn = model_id - model_vec_id;
+    double *evec = &eigenvectors[start_ptn*num_states*num_states + model_vec_id + state1*num_states*vsize];
+    double *inv_evec = &inv_eigenvectors[start_ptn*num_states*num_states + model_vec_id + state2*vsize];
+    double *eval = &eigenvalues[start_ptn*num_states + model_vec_id];
+	double trans_prob = 0.0;
+	for (i = 0; i < states_vsize; i+=vsize) {
+        double val = eval[i];
+		double trans = evec[i] * inv_evec[i*num_states] * exp(time * val);
+		trans_prob += trans;
+	}
+	return trans_prob;
 }
 
 double ModelSet::computeTrans(double time, int model_id, int state1, int state2, double &derv1, double &derv2) {
-	return at(model_id)->computeTrans(time, state1, state2, derv1, derv2);
-	
+    if (phylo_tree->vector_size == 1)
+        return at(model_id)->computeTrans(time, state1, state2, derv1, derv2);
+
+	// temporary fix problem with vectorized eigenvectors
+	int i;
+    int vsize = phylo_tree->vector_size;
+    int states_vsize = num_states*vsize;
+    int model_vec_id = model_id % vsize;
+    int start_ptn = model_id - model_vec_id;
+    double *evec = &eigenvectors[start_ptn*num_states*num_states + model_vec_id + state1*num_states*vsize];
+    double *inv_evec = &inv_eigenvectors[start_ptn*num_states*num_states + model_vec_id + state2*vsize];
+    double *eval = &eigenvalues[start_ptn*num_states + model_vec_id];
+	double trans_prob = 0.0;
+	derv1 = derv2 = 0.0;
+	for (i = 0; i < states_vsize; i+=vsize) {
+        double val = eval[i];
+		double trans = evec[i] * inv_evec[i*num_states] * exp(time * val);
+		double trans2 = trans * val;
+		trans_prob += trans;
+		derv1 += trans2;
+		derv2 += trans2 * val;
+	}
+	return trans_prob;
 }
 
 int ModelSet::getNDim()
