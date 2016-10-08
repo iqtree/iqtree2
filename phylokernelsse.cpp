@@ -40,6 +40,31 @@ void PhyloTree::setDotProductSSE() {
 void PhyloTree::setLikelihoodKernelSSE() {
     vector_size = 2;
     setParsimonyKernelSSE();
+
+    if (model_factory && model_factory->model->isSiteSpecificModel() && (params->lk_safe_scaling || leafNum >= params->numseq_safe_scaling)) {
+        switch (aln->num_states) {
+        case 4:
+            computeLikelihoodBranchPointer     = &PhyloTree::computeLikelihoodBranchSIMD    <Vec2d, SAFE_LH, 4, false, true>;
+            computeLikelihoodDervPointer       = &PhyloTree::computeLikelihoodDervSIMD      <Vec2d, SAFE_LH, 4, false, true>;
+            computePartialLikelihoodPointer    =  &PhyloTree::computePartialLikelihoodSIMD  <Vec2d, SAFE_LH, 4, false, true>;
+            computeLikelihoodFromBufferPointer = &PhyloTree::computeLikelihoodFromBufferSIMD<Vec2d, SAFE_LH, 4, false, true>;
+            break;
+        case 20:
+            computeLikelihoodBranchPointer     = &PhyloTree::computeLikelihoodBranchSIMD    <Vec2d, SAFE_LH, 20, false, true>;
+            computeLikelihoodDervPointer       = &PhyloTree::computeLikelihoodDervSIMD      <Vec2d, SAFE_LH, 20, false, true>;
+            computePartialLikelihoodPointer    = &PhyloTree::computePartialLikelihoodSIMD   <Vec2d, SAFE_LH, 20, false, true>;
+            computeLikelihoodFromBufferPointer = &PhyloTree::computeLikelihoodFromBufferSIMD<Vec2d, SAFE_LH, 20, false, true>;
+            break;
+        default:
+            computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchGenericSIMD        <Vec2d, SAFE_LH, false, true>;
+            computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervGenericSIMD            <Vec2d, SAFE_LH, false, true>;
+            computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodGenericSIMD      <Vec2d, SAFE_LH, false, true>;
+            computeLikelihoodFromBufferPointer = &PhyloTree::computeLikelihoodFromBufferGenericSIMD<Vec2d, SAFE_LH, false, true>;
+            break;
+        }
+        return;
+    }
+
     if (model_factory && model_factory->model->isSiteSpecificModel()) {
         switch (aln->num_states) {
         case 4:
@@ -64,7 +89,7 @@ void PhyloTree::setLikelihoodKernelSSE() {
         return;
     }
 
-    if (params->lk_safe_scaling) {
+    if (params->lk_safe_scaling || leafNum >= params->numseq_safe_scaling) {
 	switch(aln->num_states) {
         case 2:
             computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchSIMD<Vec2d, SAFE_LH, 2>;

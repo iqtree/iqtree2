@@ -1393,6 +1393,9 @@ public:
     /** TRUE for safe numerical scaling (per category; used for large trees), default: FALSE */
     bool lk_safe_scaling;
 
+    /** minimum number of sequences to always use safe scaling, default: 2000 */
+    int numseq_safe_scaling;
+
     /**
      	 	WSL_NONE: do not print anything
             WSL_SITE: print site log-likelihood

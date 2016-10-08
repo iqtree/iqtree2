@@ -1324,7 +1324,7 @@ void PhyloTree::computePatternLikelihood(double *ptn_lh, double *cur_logl, doubl
         double *lh_cat = _pattern_lh_cat;
         double *out_lh_cat = ptn_lh_cat;
         UBYTE *nei2_scale = nei2->scale_num;
-        if (params->lk_safe_scaling) {
+        if (params->lk_safe_scaling || leafNum >= params->numseq_safe_scaling) {
             // per-category scaling
             for (ptn = 0; ptn < nptn; ptn++) {
                 for (i = 0; i < ncat; i++) {
@@ -1350,7 +1350,7 @@ void PhyloTree::computePatternLikelihood(double *ptn_lh, double *cur_logl, doubl
         double *out_lh_cat = ptn_lh_cat;
         UBYTE *nei1_scale = nei1->scale_num;
         UBYTE *nei2_scale = nei2->scale_num;
-        if (params->lk_safe_scaling) {
+        if (params->lk_safe_scaling || leafNum >= params->numseq_safe_scaling) {
             // per-category scaling
             for (ptn = 0; ptn < nptn; ptn++) {
                 for (i = 0; i < ncat; i++) {

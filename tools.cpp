@@ -805,6 +805,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.SSE = LK_EIGEN_SSE;
     params.lk_no_avx = 0;
     params.lk_safe_scaling = false;
+    params.numseq_safe_scaling = 2000;
     params.print_site_lh = WSL_NONE;
     params.print_partition_lh = false;
     params.print_site_prob = WSL_NONE;
@@ -1909,6 +1910,17 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.lk_safe_scaling = true;
 				continue;
 			}
+
+			if (strcmp(argv[cnt], "-safe-seq") == 0) {
+				cnt++;
+				if (cnt >= argc)
+                    throw "-safe-seq <number of sequences>";
+				params.numseq_safe_scaling = convert_int(argv[cnt]);
+                if (params.numseq_safe_scaling < 10)
+                    throw "Too small -safe-seq";
+				continue;
+			}
+
 
 			if (strcmp(argv[cnt], "-f") == 0) {
 				cnt++;
@@ -3238,6 +3250,7 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -v, -vv, -vvv        Verbose mode, printing more messages to screen" << endl
             << "  -quiet               Silent mode, suppress printing to screen (stdout)" << endl
             << "  -keep-ident          Keep identical sequences (default: remove & finally add)" << endl
+            << "  -safe                Safe likelihood kernel to avoid numerical underflow" << endl
             << endl << "CHECKPOINTING TO RESUME STOPPED RUN:" << endl
             << "  -redo                Redo analysis even for successful runs (default: resume)" << endl
             << "  -cptime <seconds>    Minimum checkpoint time interval (default: 20)" << endl

@@ -46,7 +46,8 @@ inline void sumVec(VectorClass *A, VectorClass &X, size_t N)
 #endif
 {
     size_t i;
-    if (N % 4 == 0) {
+    switch (N % 4) {
+    case 0: {
         VectorClass V[4];
         V[0] = A[0];
         V[1] = A[1];
@@ -62,7 +63,10 @@ inline void sumVec(VectorClass *A, VectorClass &X, size_t N)
             X += (V[0] + V[1]) + (V[2] + V[3]);
         else
             X = (V[0] + V[1]) + (V[2] + V[3]);
-    } else if (N % 2 == 0) {
+        break;
+    }
+
+    case 2: {
         VectorClass V[2];
         V[0] = A[0];
         V[1] = A[1];
@@ -74,9 +78,12 @@ inline void sumVec(VectorClass *A, VectorClass &X, size_t N)
             X += V[0] + V[1];
         else
             X = V[0] + V[1];
-    } else {
-        // odd N
+        break;
+    }
+
+    default: {
         VectorClass V[2];
+        // odd N
         V[0] = A[0];
         V[1] = A[1];
         for (i = 2; i < N-1; i+=2) {
@@ -87,6 +94,8 @@ inline void sumVec(VectorClass *A, VectorClass &X, size_t N)
             X += A[N-1] + V[0] + V[1];
         else
             X = A[N-1] + V[0] + V[1];
+        break;
+    }
     }
 }
 
@@ -108,7 +117,8 @@ inline void dotProductVec(Numeric *A, VectorClass *B, VectorClass &X, size_t N)
 #endif
 {
     size_t i, j;
-    if (N % 4 == 0) {
+    switch (N % 4) {
+    case 0: {
         VectorClass V[4];
         for (j = 0; j < 4; j++)
             V[j] = A[j] * B[j];
@@ -117,7 +127,10 @@ inline void dotProductVec(Numeric *A, VectorClass *B, VectorClass &X, size_t N)
                 V[j] = mul_add(A[i+j], B[i+j], V[j]);
         }
         X = (V[0]+V[1]) + (V[2]+V[3]);
-    } else if (N % 2 == 0) {
+        break;
+    }
+
+    case 2: {
         VectorClass V[2];
         for (j = 0; j < 2; j++)
             V[j] = A[j] * B[j];
@@ -126,7 +139,10 @@ inline void dotProductVec(Numeric *A, VectorClass *B, VectorClass &X, size_t N)
                 V[j] = mul_add(A[i+j], B[i+j], V[j]);
         }
         X = (V[0]+V[1]);
-    } else {
+        break;
+    }
+
+    default: {
         // odd number of states
         VectorClass V[2];
         for (j = 0; j < 2; j++)
@@ -136,6 +152,8 @@ inline void dotProductVec(Numeric *A, VectorClass *B, VectorClass &X, size_t N)
                 V[j] = mul_add(A[i+j], B[i+j], V[j]);
         }
         X = mul_add(A[N-1], B[N-1], V[0]+V[1]);
+        break;
+    }
     }
 }
 
@@ -161,7 +179,8 @@ inline void dotProductDualVec(Numeric *A, VectorClass *B, Numeric *C, VectorClas
 #endif
 {
     size_t i, j;
-    if (N % 4 == 0) {
+    switch (N % 4) {
+    case 0: {
         VectorClass AB[4], CD[4];
         for (j = 0; j < 4; j++) {
             AB[j] = A[j] * B[j];
@@ -175,7 +194,10 @@ inline void dotProductDualVec(Numeric *A, VectorClass *B, Numeric *C, VectorClas
             }
         }
         X = ((AB[0]+AB[1])+(AB[2]+AB[3])) * ((CD[0]+CD[1])+CD[2]+CD[3]);
-    } else if (N % 2 == 0) {
+        break;
+    }
+
+    case 2: {
         VectorClass AB[2], CD[2];
         for (j = 0; j < 2; j++) {
             AB[j] = A[j] * B[j];
@@ -188,7 +210,10 @@ inline void dotProductDualVec(Numeric *A, VectorClass *B, Numeric *C, VectorClas
             }
         }
         X = ((AB[0]+AB[1])) * ((CD[0]+CD[1]));
-    } else {
+        break;
+    }
+
+    default: {
         // odd states
         VectorClass AB[2], CD[2];
         for (j = 0; j < 2; j++) {
@@ -204,6 +229,8 @@ inline void dotProductDualVec(Numeric *A, VectorClass *B, Numeric *C, VectorClas
         AB[0] = mul_add(A[N-1], B[N-1], AB[0]+AB[1]);
         CD[0] = mul_add(C[N-1], D[N-1], CD[0]+CD[1]);
         X = AB[0] * CD[0];
+        break;
+    }
     }
 }
 
@@ -226,7 +253,8 @@ inline void productVecMat(VectorClass *A, Numeric *M, VectorClass *X, size_t N)
 {
     size_t i, j, x;
 
-    if (N % 4 == 0) {
+    switch (N % 4) {
+    case 0:
         for (i = 0; i < N; i++) {
             // manual unrolling
             VectorClass V[4];
@@ -240,7 +268,9 @@ inline void productVecMat(VectorClass *A, Numeric *M, VectorClass *X, size_t N)
             X[i] = (V[0]+V[1])+(V[2]+V[3]);
             M += N;
         }
-    } else if (N % 2 == 0){
+        break;
+
+    case 2:
         for (i = 0; i < N; i++) {
             // manual unrolling
             VectorClass V[2];
@@ -254,7 +284,8 @@ inline void productVecMat(VectorClass *A, Numeric *M, VectorClass *X, size_t N)
             X[i] = (V[0]+V[1]);
             M += N;
         }
-    } else {
+        break;
+    default:
         // odd number of states
         for (i = 0; i < N; i++) {
             // manual unrolling
@@ -269,6 +300,7 @@ inline void productVecMat(VectorClass *A, Numeric *M, VectorClass *X, size_t N)
             X[i] = mul_add(A[N-1], M[N-1], V[0]+V[1]);
             M += N;
         }
+        break;
     }
 }
 
@@ -294,7 +326,8 @@ inline void productVecMat(VectorClass *A, Numeric *M, VectorClass *X, VectorClas
 {
     size_t i, j, x;
 
-    if (N % 4 == 0) {
+    switch (N % 4) {
+    case 0:
         for (i = 0; i < N; i++) {
             // manual unrolling
             VectorClass V[4];
@@ -309,7 +342,9 @@ inline void productVecMat(VectorClass *A, Numeric *M, VectorClass *X, VectorClas
             M += N;
             Xmax = max(Xmax, abs(X[i]));
         }
-    } else if (N % 2 == 0){
+        break;
+
+    case 2:
         for (i = 0; i < N; i++) {
             // manual unrolling
             VectorClass V[2];
@@ -324,7 +359,9 @@ inline void productVecMat(VectorClass *A, Numeric *M, VectorClass *X, VectorClas
             M += N;
             Xmax = max(Xmax, abs(X[i]));
         }
-    } else {
+        break;
+
+    default:
         // odd number of states
         for (i = 0; i < N; i++) {
             // manual unrolling
@@ -340,6 +377,7 @@ inline void productVecMat(VectorClass *A, Numeric *M, VectorClass *X, VectorClas
             M += N;
             Xmax = max(Xmax, abs(X[i]));
         }
+        break;
     }
 }
 
@@ -426,7 +464,8 @@ inline void dotProduct3Vec(Numeric *A, VectorClass *B, VectorClass *C, VectorCla
 #endif
 {
     size_t i, j;
-    if (N % 4 == 0) {
+    switch (N % 4) {
+    case 0: {
         VectorClass V[4];
         for (j = 0; j < 4; j++)
             V[j] = A[j] * B[j] * C[j];
@@ -434,7 +473,10 @@ inline void dotProduct3Vec(Numeric *A, VectorClass *B, VectorClass *C, VectorCla
             for (j = 0; j < 4; j++)
                 V[j] = mul_add(A[i+j]*B[i+j], C[i+j], V[j]);
         X = (V[0]+V[1])+(V[2]+V[3]);
-    } else if (N % 2 == 0) {
+        break;
+    }
+
+    case 2: {
         VectorClass V[2];
         for (j = 0; j < 2; j++)
             V[j] = A[j] * B[j] * C[j];
@@ -442,7 +484,10 @@ inline void dotProduct3Vec(Numeric *A, VectorClass *B, VectorClass *C, VectorCla
             for (j = 0; j < 2; j++)
                 V[j] = mul_add(A[i+j]*B[i+j], C[i+j], V[j]);
         X = (V[0]+V[1]);
-    } else {
+        break;
+    }
+
+    default: {
         // odd states
         VectorClass V[2];
         for (j = 0; j < 2; j++)
@@ -451,6 +496,8 @@ inline void dotProduct3Vec(Numeric *A, VectorClass *B, VectorClass *C, VectorCla
             for (j = 0; j < 2; j++)
                 V[j] = mul_add(A[i+j]*B[i+j], C[i+j], V[j]);
         X = mul_add(A[N-1]*B[N-1], C[N-1], V[0]+V[1]);
+        break;
+    }
     }
 }
 
@@ -2120,7 +2167,7 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
 //		aligned_free(partial_lh_node);
     } else {
 
-        assert(0 && "Don't compute tree log-likelihood from internal branch!");
+//        assert(0 && "Don't compute tree log-likelihood from internal branch!");
     	//-------- both dad and node are internal nodes -----------/
 
 #ifdef _OPENMP

@@ -35,7 +35,7 @@ void PhyloTree::setLikelihoodKernelFMA() {
     vector_size = 4;
 //    setParsimonyKernelAVX();
 
-    if (model_factory && model_factory->model->isSiteSpecificModel() && params->lk_safe_scaling) {
+    if (model_factory && model_factory->model->isSiteSpecificModel() && (params->lk_safe_scaling || leafNum >= params->numseq_safe_scaling)) {
     	// safe site-specific model
         switch (aln->num_states) {
         case 4:
@@ -84,7 +84,7 @@ void PhyloTree::setLikelihoodKernelFMA() {
         return;
     }
 
-    if (params->lk_safe_scaling) {
+    if (params->lk_safe_scaling || leafNum >= params->numseq_safe_scaling) {
 	switch(aln->num_states) {
         case 2:
             computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchSIMD<Vec4d, SAFE_LH, 2, true>;
