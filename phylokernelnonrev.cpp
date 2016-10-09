@@ -199,7 +199,8 @@ void PhyloTree::computeNonrevPartialLikelihood(PhyloNeighbor *dad_branch, PhyloN
             double lh_max = partial_lh_all[0];
             for (i = 1; i < block; i++)
                 lh_max = max(lh_max, partial_lh_all[i]);
-                
+
+            assert(lh_max > 0.0);
             // check if one should scale partial likelihoods
             if (lh_max == 0.0) {
                 // for very shitty data
@@ -208,12 +209,12 @@ void PhyloTree::computeNonrevPartialLikelihood(PhyloNeighbor *dad_branch, PhyloN
                 sum_scale += LOG_SCALING_THRESHOLD* 4 * ptn_freq[ptn];
                 //sum_scale += log(lh_max) * ptn_freq[ptn];
                 dad_branch->scale_num[ptn] += 4;
-                int nsite = aln->getNSite();
-                for (i = 0, x = 0; i < nsite && x < ptn_freq[ptn]; i++)
-                    if (aln->getPatternID(i) == ptn) {
-                        outWarning((string)"Numerical underflow for site " + convertIntToString(i+1));
-                        x++;
-                    }
+//                int nsite = aln->getNSite();
+//                for (i = 0, x = 0; i < nsite && x < ptn_freq[ptn]; i++)
+//                    if (aln->getPatternID(i) == ptn) {
+//                        outWarning((string)"Numerical underflow for site " + convertIntToString(i+1));
+//                        x++;
+//                    }
             } else if (lh_max < SCALING_THRESHOLD) {
                 // now do the likelihood scaling
                 for (i = 0; i < block; i++) {
@@ -306,6 +307,7 @@ void PhyloTree::computeNonrevPartialLikelihood(PhyloNeighbor *dad_branch, PhyloN
                 vleft += nstates;
                 partial_lh_right += nstates;
 			}
+            assert(lh_max > 0.0);
             // check if one should scale partial likelihoods
             if (lh_max == 0.0) {
                 // for very shitty data
@@ -314,12 +316,12 @@ void PhyloTree::computeNonrevPartialLikelihood(PhyloNeighbor *dad_branch, PhyloN
                 sum_scale += LOG_SCALING_THRESHOLD* 4 * ptn_freq[ptn];
                 //sum_scale += log(lh_max) * ptn_freq[ptn];
                 dad_branch->scale_num[ptn] += 4;
-                int nsite = aln->getNSite();
-                for (i = 0, x = 0; i < nsite && x < ptn_freq[ptn]; i++)
-                    if (aln->getPatternID(i) == ptn) {
-                        outWarning((string)"Numerical underflow for site " + convertIntToString(i+1));
-                        x++;
-                    }
+//                int nsite = aln->getNSite();
+//                for (i = 0, x = 0; i < nsite && x < ptn_freq[ptn]; i++)
+//                    if (aln->getPatternID(i) == ptn) {
+//                        outWarning((string)"Numerical underflow for site " + convertIntToString(i+1));
+//                        x++;
+//                    }
             } else if (lh_max < SCALING_THRESHOLD) {
                 // now do the likelihood scaling
                 for (i = 0; i < block; i++) {
@@ -368,7 +370,8 @@ void PhyloTree::computeNonrevPartialLikelihood(PhyloNeighbor *dad_branch, PhyloN
                 partial_lh_right += nstates;
             }
 
-            // check if one should scale partial likelihoods            
+            assert(lh_max > 0.0);
+            // check if one should scale partial likelihoods
             if (lh_max == 0.0) {
                 // for very shitty data
                 for (c = 0; c < ncat; c++)
@@ -376,12 +379,12 @@ void PhyloTree::computeNonrevPartialLikelihood(PhyloNeighbor *dad_branch, PhyloN
                 sum_scale += LOG_SCALING_THRESHOLD* 4 * ptn_freq[ptn];
                 //sum_scale += log(lh_max) * ptn_freq[ptn];
                 dad_branch->scale_num[ptn] += 4;
-                int nsite = aln->getNSite();
-                for (i = 0, x = 0; i < nsite && x < ptn_freq[ptn]; i++)
-                    if (aln->getPatternID(i) == ptn) {
-                        outWarning((string)"Numerical underflow for site " + convertIntToString(i+1));
-                        x++;
-                    }
+//                int nsite = aln->getNSite();
+//                for (i = 0, x = 0; i < nsite && x < ptn_freq[ptn]; i++)
+//                    if (aln->getPatternID(i) == ptn) {
+//                        outWarning((string)"Numerical underflow for site " + convertIntToString(i+1));
+//                        x++;
+//                    }
             } else if (lh_max < SCALING_THRESHOLD) {
                 // now do the likelihood scaling
                 for (i = 0; i < block; i++) {
@@ -700,12 +703,12 @@ double PhyloTree::computeNonrevLikelihoodBranch(PhyloNeighbor *dad_branch, Phylo
 			double *lh_node = partial_lh_node + state_dad*block;
 			for (c = 0; c < ncat; c++) {
 				for (i = 0; i < nstates; i++) {
-					*lh_cat += lh_node[i] * partial_lh_dad[i];
+					lh_cat[c] += lh_node[i] * partial_lh_dad[i];
 				}
 				lh_node += nstates;
 				partial_lh_dad += nstates;
-				lh_ptn += *lh_cat;
-				lh_cat++;
+				lh_ptn += lh_cat[c];
+//				lh_cat++;
 			}
 			assert(lh_ptn > 0.0);
 			if (ptn < orig_nptn) {

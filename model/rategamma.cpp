@@ -21,7 +21,7 @@
  ***************************************************************************/
 #include "phylotree.h"
 #include "rategamma.h"
-#include <math.h>
+#include <cmath>
 
 
 

@@ -31,7 +31,7 @@
 
 //#include <sys/time.h>
 //#include <time.h>
-#include <math.h>
+#include <cmath>
 #include "ncl/ncl.h"
 
 #include "tools.h"

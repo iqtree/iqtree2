@@ -19,7 +19,7 @@
  ***************************************************************************/
 #include "eigendecomposition.h"
 #include "optimization.h"
-#include <math.h>
+#include <cmath>
 #include <string.h>
 #include <iostream>
 #include <stdlib.h>

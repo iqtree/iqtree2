@@ -19,6 +19,8 @@
  */
 #ifdef USE_EIGEN3
 #include <Eigen/Dense>
+#include <unsupported/Eigen/MatrixFunctions>
+using namespace Eigen;
 #endif
 #include "modelliemarkov.h"
 #include <float.h>
@@ -637,8 +639,8 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
 }
 
 void ModelLieMarkov::computeTransMatrix(double time, double *trans_matrix) {
-    if (phylo_tree->params->matrix_exp_technique == MET_EIGEN3LIB_DECOMPOSITION) {
 #ifdef USE_EIGEN3
+    if (phylo_tree->params->matrix_exp_technique == MET_EIGEN3LIB_DECOMPOSITION) {
         int i;
         Vector4cd ceval_exp;
         for (i = 0; i < 4; i++)
@@ -648,14 +650,35 @@ void ModelLieMarkov::computeTransMatrix(double time, double *trans_matrix) {
         Matrix4cd res = cevectors * ceval_exp.asDiagonal() * cinv_evectors;
         for (i = 0; i < 4; i++) {
             for (int j = 0; j < 4; j++) {
-                trans_matrix[i*4+j] = res(i, j).real();
-                assert(fabs(res(i,j).imag()) < 1e-6);
+                trans_matrix[i*4+j] = res(j, i).real();
+                assert(fabs(res(j,i).imag()) < 1e-6);
+                assert(trans_matrix[i*4+j] >= -0.000001);
+                assert(trans_matrix[i*4+j] <=  1.000001);
+                if (trans_matrix[i*4+j] < 0)
+                    trans_matrix[i*4+j] = 0.0;
+                if (trans_matrix[i*4+j] > 1)
+                    trans_matrix[i*4+j] = 1.0;
             }
             assert(fabs(trans_matrix[i*4]+trans_matrix[i*4+1]+trans_matrix[i*4+2]+trans_matrix[i*4+3]-1.0) < 1e-4);
         }        
-#endif
-    } else {
+    } else if (phylo_tree->params->matrix_exp_technique == MET_SCALING_SQUARING) {
+        Matrix4d A = Map<Matrix4d>(rate_matrix);
+        A = (A.transpose() * time).exp();
+        Map<Matrix4d> P(trans_matrix);
+        P = A.transpose();
+
+        int i, j;
+        for (i = 0; i < 4; i++) {
+            double sum = 0.0;
+            for (j = 0; j < 4; j++)
+                sum += (trans_matrix[i*4+j]);
+            assert(fabs(sum-1.0) < 1e-4);
+        }
+    } else
         ModelNonRev::computeTransMatrix(time, trans_matrix);
-    }
+
+#else
+    ModelNonRev::computeTransMatrix(time, trans_matrix);
+#endif
 }
 

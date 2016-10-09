@@ -30,13 +30,13 @@
 #include <fstream>
 #include <stdio.h>
 #include <stdlib.h>
-#include <math.h>
+#include <cmath>
 #include <stdint.h>
 
 //#include <sys/time.h>
 //#include <time.h>
 #include <sys/stat.h>
-#include <math.h>
+//#include <math.h>
 #include "ncl/ncl.h"
 #include "msetsblock.h"
 
