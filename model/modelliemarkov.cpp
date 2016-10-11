@@ -394,6 +394,7 @@ using namespace Eigen;
 
 void ModelLieMarkov::decomposeRateMatrixEigen3lib() {
 #ifdef USE_EIGEN3
+  nondiagonalizable = false; // until proven otherwise
     Matrix4d mat(rate_matrix);
     mat.transpose();
     EigenSolver<Matrix4d> eigensolver(mat);
@@ -402,8 +403,14 @@ void ModelLieMarkov::decomposeRateMatrixEigen3lib() {
     eval = eigensolver.eigenvalues();
     Map<Matrix4cd,Aligned> evec(cevec);
     evec = eigensolver.eigenvectors();
+    if (abs(evec.determinant())<1e-12) {
+      // limit of 1e-12 is something of a guess
+      nondiagonalizable = true; // will use scaled squaring instead of eigendecomposition for matrix exponentiation
+      return;
+    }
     Map<Matrix4cd,Aligned> inv_evec(cinv_evec);
     inv_evec = evec.inverse();
+//    cout << "det(evecs): " << setprecision(25) << evec.determinant() << endl;
 //    int i, j;
 //    for (i = 0; i < 4; i++) {
 //        ceval[i] = eval(i);
@@ -640,7 +647,22 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
 
 void ModelLieMarkov::computeTransMatrix(double time, double *trans_matrix) {
 #ifdef USE_EIGEN3
-    if (phylo_tree->params->matrix_exp_technique == MET_EIGEN3LIB_DECOMPOSITION) {
+  MatrixExpTechnique technique = phylo_tree->params->matrix_exp_technique;
+  if (technique == MET_SCALING_SQUARING || (technique == MET_EIGEN3LIB_DECOMPOSITION && nondiagonalizable)) {
+        Matrix4d A = Map<Matrix4d>(rate_matrix);
+        A = (A.transpose() * time).exp();
+        Map<Matrix4d> P(trans_matrix);
+        P = A.transpose();
+
+        int i, j;
+        for (i = 0; i < 4; i++) {
+            double sum = 0.0;
+            for (j = 0; j < 4; j++)
+                sum += (trans_matrix[i*4+j]);
+            assert(fabs(sum-1.0) < 1e-4);
+        }
+    } else if (technique == MET_EIGEN3LIB_DECOMPOSITION) {
+    // and nondiagonalizable == false, else we used scaled squaring
         int i;
         Vector4cd ceval_exp;
         for (i = 0; i < 4; i++)
@@ -661,19 +683,6 @@ void ModelLieMarkov::computeTransMatrix(double time, double *trans_matrix) {
             }
             assert(fabs(trans_matrix[i*4]+trans_matrix[i*4+1]+trans_matrix[i*4+2]+trans_matrix[i*4+3]-1.0) < 1e-4);
         }        
-    } else if (phylo_tree->params->matrix_exp_technique == MET_SCALING_SQUARING) {
-        Matrix4d A = Map<Matrix4d>(rate_matrix);
-        A = (A.transpose() * time).exp();
-        Map<Matrix4d> P(trans_matrix);
-        P = A.transpose();
-
-        int i, j;
-        for (i = 0; i < 4; i++) {
-            double sum = 0.0;
-            for (j = 0; j < 4; j++)
-                sum += (trans_matrix[i*4+j]);
-            assert(fabs(sum-1.0) < 1e-4);
-        }
     } else
         ModelNonRev::computeTransMatrix(time, trans_matrix);
 
