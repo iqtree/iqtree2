@@ -37,7 +37,8 @@ ModelPoMoMixture::ModelPoMoMixture(const char *model_name,
 
     // initialize mixture
     prop = aligned_alloc<double>(num_rate_cats);
-    
+
+    // creating mixture components
     for (m = 0; m < num_rate_cats; m++) {
         ModelGTR* model = new ModelGTR(tree);
         model->init(FREQ_USER_DEFINED);
@@ -45,8 +46,11 @@ ModelPoMoMixture::ModelPoMoMixture(const char *model_name,
         push_back(model);
         prop[m] = ratehet->getProp(m);
     }
+
+    // allocate memory for mixture components so that they are continuous in RAM
     initMem();
 
+    // TODO: why calling this init here
     ModelGTR::init(FREQ_USER_DEFINED);
     
 }

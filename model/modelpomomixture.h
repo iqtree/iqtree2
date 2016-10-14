@@ -103,7 +103,7 @@ public:
 
 
     /**
-        rate heterogeneity among sites 
+        rate heterogeneity among sites, TODO: redesign this as separate
     */
     RateHeterogeneity *ratehet;
 
