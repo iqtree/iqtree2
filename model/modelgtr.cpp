@@ -136,7 +136,7 @@ void ModelGTR::getNameParamsFreq(ostream &retname) {
 		retname << "+FQ";
 }
 
-void ModelGTR::init(StateFreqType type) {
+void ModelGTR::init_state_freq(StateFreqType type) {
 	//if (type == FREQ_UNKNOWN) return;
 	int i;
 	freq_type = type;
@@ -174,10 +174,13 @@ void ModelGTR::init(StateFreqType type) {
 		break;
 	default: break;
 	}
+}
+
+void ModelGTR::init(StateFreqType type) {
+        init_state_freq(type);
 	decomposeRateMatrix();
 	if (verbose_mode >= VB_MAX)
 		writeInfo(cout);
-
 }
 
 void ModelGTR::writeInfo(ostream &out) {

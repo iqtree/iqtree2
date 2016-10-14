@@ -45,7 +45,7 @@ public:
 	virtual void computeTransMatrix(double time, double *trans_matrix);
 
 protected:
-	const double **basis;
+	double **basis;
 	int symmetry; // RY->0, WS->1, MK->2
 	int model_num; // 0->1.1, etc to 36->12.12
 	virtual void setRates();

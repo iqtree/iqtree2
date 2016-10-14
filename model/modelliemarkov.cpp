@@ -36,6 +36,18 @@ using namespace Eigen;
  */
 
 /*
+ * Enum of the Lie-Markov basis matrices. D, E1 and E2 are the
+ * ones which affect base frequencies and so get treated differently
+ * when params.freq_type is not FREQ_ESTIMATE, so they are given the 
+ * highest numbers.
+ */
+
+enum BASIS_MATRIX_TYPE {BM_A=0, BM_A2, BM_B, 
+                        BM_C, BM_D1, BM_F1, 
+                        BM_F2, BM_G1, BM_G2,
+			BM_D, BM_E1, BM_E2};
+
+/*
  * Basis matrices as displayed are columns sum to zero convention.
  * For RY pairing, columns/rows are in order A, G, C, T
  * For WS pairing, columns/rows are in order A, T, C, G
@@ -46,6 +58,15 @@ using namespace Eigen;
  *
  * From table 1 of Woodhams et al Syst Biol 64 p638-650 (2015) DOI:10.1093/sysbio/syv021
  */
+
+/* A:
+ * +3 +1 +1 +1
+ * +1 +3 +1 +1
+ * +1 +1 +3 +1
+ * +1 +1 +1 +3
+ */
+const static double A[] = {+1,+1,+1,+1,+1,+1,+1,+1,+1,+1,+1,+1};
+
 /* A2:
  *  0 +2 -1 -1
  * +2  0 -1 -1
@@ -80,21 +101,28 @@ const static double D1[] = {+1, 0, 0,+1, 0, 0, 0, 0,-1, 0, 0,-1};
  * - - - -
  * - - - -
  */
-const static double D[]  = {+1,-1,-1,+1,-1,-1,+1,+1,-1,+1,+1,-1};
+const static double  D[] = {+1,-1,-1,+1,-1,-1,+1,+1,-1,+1,+1,-1};
+const static double mD[] = {-1,+1,+1,-1,+1,+1,-1,-1,+1,-1,-1,+1}; // -D
 /* E1:
  * + + + +
  * - - - -
  * 0 0 0 0
  * 0 0 0 0
  */
-const static double E1[] = {-1, 0, 0,+1, 0, 0,+1,-1, 0,+1,-1, 0};
+const static double  E1[] = {-1, 0, 0,+1, 0, 0,+1,-1, 0,+1,-1, 0};
+const static double mE1[] = {+1, 0, 0,-1, 0, 0,-1,+1, 0,-1,+1, 0}; // -E1
+const static double tE1[] = {-2, 0, 0,+2, 0, 0,+2,-2, 0,+2,-2, 0}; // 2 E1
+
 /* E2:
  * 0 0 0 0
  * 0 0 0 0
  * + + + +
  * - - - -
  */
-const static double E2[] = { 0,+1,-1, 0,+1,-1, 0, 0,-1, 0, 0,+1};
+const static double  E2[] = { 0,+1,-1, 0,+1,-1, 0, 0,-1, 0, 0,+1};
+const static double mE2[] = { 0,-1,+1, 0,-1,+1, 0, 0,+1, 0, 0,-1}; // -E2
+const static double tE2[] = { 0,+2,-2, 0,+2,-2, 0, 0,-2, 0, 0,+2}; // 2 E2
+
 /* F1:
  * + + - -
  * - - + +
@@ -124,47 +152,59 @@ const static double G1[] = {+1,-1,-1,-1,+1,+1, 0, 0, 0, 0, 0, 0};
  */
 const static double G2[] = { 0, 0, 0, 0, 0, 0,+1,+1,-1,-1,-1,+1};
 
-// Lengths of these arrays stored in MODEL_PARAMS
-const static double *BASIS_11[]   = {};
-const static double *BASIS_22B[]  = {A2};
-const static double *BASIS_33A[]  = {A2,B };
-const static double *BASIS_33B[]  = {A2,C };
-const static double *BASIS_33C[]  = {A2,D1};
-const static double *BASIS_34[]   = {A2,D };
-const static double *BASIS_44A[]  = {D, E1,E2};
-const static double *BASIS_44B[]  = {A2,D, D1};
-const static double *BASIS_45A[]  = {A2,B, D };
-const static double *BASIS_45B[]  = {A2,C, D };
-const static double *BASIS_56A[]  = {A2,B, C, D1};
-const static double *BASIS_56B[]  = {A2,D, E1,E2};
-const static double *BASIS_57A[]  = {A2,B, E1,E2};
-const static double *BASIS_57B[]  = {A2,B, F1,F2};
-const static double *BASIS_57C[]  = {A2,B, G1,G2};
-const static double *BASIS_511A[] = {A2,D1,E1,E2};
-const static double *BASIS_511B[] = {A2,D1,F1,F2};
-const static double *BASIS_511C[] = {A2,D1,G1,G2};
-const static double *BASIS_516[]  = {A2,D, G1,G2};
-const static double *BASIS_66[]   = {A2,B, C, D, D1};
-const static double *BASIS_67A[]  = {A2,B, D, E1,E2};
-const static double *BASIS_67B[]  = {A2,C, D, E1,E2};
-const static double *BASIS_68A[]  = {A2,D, D1,E1,E2};
-const static double *BASIS_68B[]  = {A2,D, D1,G1,G2};
-const static double *BASIS_617A[] = {A2,B, D, G1,G2};
-const static double *BASIS_617B[] = {A2,C, D, G1,G2};
-const static double *BASIS_88[]   = {A2,D, D1,E1,E2,F1,F2};
-const static double *BASIS_810A[] = {A2,B, C, D, D1,E1,E2};
-const static double *BASIS_810B[] = {A2,B, C, D, D1,G1,G2};
-const static double *BASIS_816[]  = {A2,D, D1,E1,E2,G1,G2};
-const static double *BASIS_817[]  = {A2,B, D, E1,E2,G1,G2};
-const static double *BASIS_818[]  = {A2,B, D, E1,E2,F1,F2};
-const static double *BASIS_920A[] = {A2,B, C, D1,E1,E2,F1,F2};
-const static double *BASIS_920B[] = {A2,B, C, D1,F1,F2,G1,G2};
-const static double *BASIS_1012[] = {A2,B, C, D, D1,E1,E2,F1,F2};
-const static double *BASIS_1034[] = {A2,B, C, D, D1,E1,E2,G1,G2};
-const static double *BASIS_1212[] = {A2,B, C, D, D1,E1,E2,F1,F2,G1,G2};
+// same order as BASIS_MATRIX_TYPE enum.
+const static double *LM_BASIS_MATRICES[] = {A,A2,B,C,D1,F1,F2,G1,G2,D,E1,E2};
+
+/*
+// never found a use for this. 
+enum LM_MODEL = {LM11, LM22b, LM33a, LM33b, LM33c, LM34, LM44a, LM44b,
+                 LM45a, LM45b, LM56a, LM56b, LM57a, LM57b, LM57c, 
+                 LM511a, LM511b, LM511c, LM516, LM66, LM67a, LM57b,
+		 LM68a, LM68b, LM617a, LM617b, LM88, LM810a, LM810b,
+		 LM816, LM817, LM818, LM920a, LM920b, LM1012, LM1034, LM1212};
+*/
+
+// Lengths of these arrays (minus one) stored in MODEL_PARAMS
+const static BASIS_MATRIX_TYPE BASIS_11[]   = {BM_A};
+const static BASIS_MATRIX_TYPE BASIS_22B[]  = {BM_A,BM_A2};
+const static BASIS_MATRIX_TYPE BASIS_33A[]  = {BM_A,BM_A2,BM_B };
+const static BASIS_MATRIX_TYPE BASIS_33B[]  = {BM_A,BM_A2,BM_C };
+const static BASIS_MATRIX_TYPE BASIS_33C[]  = {BM_A,BM_A2,BM_D1};
+const static BASIS_MATRIX_TYPE BASIS_34[]   = {BM_A,BM_A2,BM_D };
+const static BASIS_MATRIX_TYPE BASIS_44A[]  = {BM_A,BM_D, BM_E1,BM_E2};
+const static BASIS_MATRIX_TYPE BASIS_44B[]  = {BM_A,BM_A2,BM_D, BM_D1};
+const static BASIS_MATRIX_TYPE BASIS_45A[]  = {BM_A,BM_A2,BM_B, BM_D };
+const static BASIS_MATRIX_TYPE BASIS_45B[]  = {BM_A,BM_A2,BM_C, BM_D };
+const static BASIS_MATRIX_TYPE BASIS_56A[]  = {BM_A,BM_A2,BM_B, BM_C, BM_D1};
+const static BASIS_MATRIX_TYPE BASIS_56B[]  = {BM_A,BM_A2,BM_D, BM_E1,BM_E2};
+const static BASIS_MATRIX_TYPE BASIS_57A[]  = {BM_A,BM_A2,BM_B, BM_E1,BM_E2};
+const static BASIS_MATRIX_TYPE BASIS_57B[]  = {BM_A,BM_A2,BM_B, BM_F1,BM_F2};
+const static BASIS_MATRIX_TYPE BASIS_57C[]  = {BM_A,BM_A2,BM_B, BM_G1,BM_G2};
+const static BASIS_MATRIX_TYPE BASIS_511A[] = {BM_A,BM_A2,BM_D1,BM_E1,BM_E2};
+const static BASIS_MATRIX_TYPE BASIS_511B[] = {BM_A,BM_A2,BM_D1,BM_F1,BM_F2};
+const static BASIS_MATRIX_TYPE BASIS_511C[] = {BM_A,BM_A2,BM_D1,BM_G1,BM_G2};
+const static BASIS_MATRIX_TYPE BASIS_516[]  = {BM_A,BM_A2,BM_D, BM_G1,BM_G2};
+const static BASIS_MATRIX_TYPE BASIS_66[]   = {BM_A,BM_A2,BM_B, BM_C, BM_D, BM_D1};
+const static BASIS_MATRIX_TYPE BASIS_67A[]  = {BM_A,BM_A2,BM_B, BM_D, BM_E1,BM_E2};
+const static BASIS_MATRIX_TYPE BASIS_67B[]  = {BM_A,BM_A2,BM_C, BM_D, BM_E1,BM_E2};
+const static BASIS_MATRIX_TYPE BASIS_68A[]  = {BM_A,BM_A2,BM_D, BM_D1,BM_E1,BM_E2};
+const static BASIS_MATRIX_TYPE BASIS_68B[]  = {BM_A,BM_A2,BM_D, BM_D1,BM_G1,BM_G2};
+const static BASIS_MATRIX_TYPE BASIS_617A[] = {BM_A,BM_A2,BM_B, BM_D, BM_G1,BM_G2};
+const static BASIS_MATRIX_TYPE BASIS_617B[] = {BM_A,BM_A2,BM_C, BM_D, BM_G1,BM_G2};
+const static BASIS_MATRIX_TYPE BASIS_88[]   = {BM_A,BM_A2,BM_D, BM_D1,BM_E1,BM_E2,BM_F1,BM_F2};
+const static BASIS_MATRIX_TYPE BASIS_810A[] = {BM_A,BM_A2,BM_B, BM_C, BM_D, BM_D1,BM_E1,BM_E2};
+const static BASIS_MATRIX_TYPE BASIS_810B[] = {BM_A,BM_A2,BM_B, BM_C, BM_D, BM_D1,BM_G1,BM_G2};
+const static BASIS_MATRIX_TYPE BASIS_816[]  = {BM_A,BM_A2,BM_D, BM_D1,BM_E1,BM_E2,BM_G1,BM_G2};
+const static BASIS_MATRIX_TYPE BASIS_817[]  = {BM_A,BM_A2,BM_B, BM_D, BM_E1,BM_E2,BM_G1,BM_G2};
+const static BASIS_MATRIX_TYPE BASIS_818[]  = {BM_A,BM_A2,BM_B, BM_D, BM_E1,BM_E2,BM_F1,BM_F2};
+const static BASIS_MATRIX_TYPE BASIS_920A[] = {BM_A,BM_A2,BM_B, BM_C, BM_D1,BM_E1,BM_E2,BM_F1,BM_F2};
+const static BASIS_MATRIX_TYPE BASIS_920B[] = {BM_A,BM_A2,BM_B, BM_C, BM_D1,BM_F1,BM_F2,BM_G1,BM_G2};
+const static BASIS_MATRIX_TYPE BASIS_1012[] = {BM_A,BM_A2,BM_B, BM_C, BM_D, BM_D1,BM_E1,BM_E2,BM_F1,BM_F2};
+const static BASIS_MATRIX_TYPE BASIS_1034[] = {BM_A,BM_A2,BM_B, BM_C, BM_D, BM_D1,BM_E1,BM_E2,BM_G1,BM_G2};
+const static BASIS_MATRIX_TYPE BASIS_1212[] = {BM_A,BM_A2,BM_B, BM_C, BM_D, BM_D1,BM_E1,BM_E2,BM_F1,BM_F2,BM_G1,BM_G2};
 
 const static int NUM_LM_MODELS = 37;
-const static double **BASES[] = 
+const static BASIS_MATRIX_TYPE *BASES[] = 
             {BASIS_11,  BASIS_22B, BASIS_33A, BASIS_33B, BASIS_33C,
 	     BASIS_34,  BASIS_44A, BASIS_44B, BASIS_45A, BASIS_45B,
 	     BASIS_56A, BASIS_56B, BASIS_57A, BASIS_57B, BASIS_57C,
@@ -236,8 +276,15 @@ void ModelLieMarkov::init(const char *model_name, string model_params, StateFreq
         abort();
     }
     freq_type = FREQ_ESTIMATE;
-    basis = BASES[model_num];
     num_params = MODEL_PARAMS[model_num];
+    basis = new double*[num_params+1];
+    //const BASIS_MATRIX_TYPE *dummy1 = BASES[model_num];
+    for (int i=0;i<=num_params;i++) {
+      basis[i] = (double *)LM_BASIS_MATRICES[BASES[model_num][i]];
+      //BASIS_MATRIX_TYPE dummy2 = dummy1[i];
+      //basis[i] = (double *)LM_BASIS_MATRICES[dummy2];
+    }
+
     if (model_parameters)
         delete[] model_parameters;
     model_parameters = new double [num_params];
@@ -356,7 +403,8 @@ void ModelLieMarkov::setRates() {
         // COMMENT: is this abs() or fabs()? abs is for int type, whereas fabs for double 
         max_abs = (fabs(model_parameters[param])>max_abs ? fabs(model_parameters[param]) : max_abs);
         for (int rate=0; rate<NUM_RATES; rate++) 
-            rates[rate] += model_parameters[param]*basis[param][SYMMETRY_PERM[symmetry][rate]];
+            rates[rate] += model_parameters[param]*basis[param+1][SYMMETRY_PERM[symmetry][rate]];
+        // basis[0] is 'A' matrix which doesn't get a parameter.
     }
     double min_unnorm = DBL_MAX;
     for (int rate=0; rate<NUM_RATES; rate++) 
