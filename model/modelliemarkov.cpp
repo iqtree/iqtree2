@@ -277,13 +277,7 @@ void ModelLieMarkov::init(const char *model_name, string model_params, StateFreq
     }
     freq_type = FREQ_ESTIMATE;
     num_params = MODEL_PARAMS[model_num];
-    basis = new double*[num_params+1];
-    //const BASIS_MATRIX_TYPE *dummy1 = BASES[model_num];
-    for (int i=0;i<=num_params;i++) {
-      basis[i] = (double *)LM_BASIS_MATRICES[BASES[model_num][i]];
-      //BASIS_MATRIX_TYPE dummy2 = dummy1[i];
-      //basis[i] = (double *)LM_BASIS_MATRICES[dummy2];
-    }
+    setBasis();
 
     if (model_parameters)
         delete[] model_parameters;
@@ -393,25 +387,44 @@ void ModelLieMarkov::setBounds(double *lower_bound, double *upper_bound, bool *b
 	}
 }
 
+/**
+ * Uses 
+ */
+
+void ModelLieMarkov::setBasis() {
+  basis = new double*[num_params+1];
+  for (int i=0;i<=num_params;i++) {
+    const double* unpermuted_rates = LM_BASIS_MATRICES[BASES[model_num][i]];
+    double* permuted_rates = new double[NUM_RATES];
+    for (int rate=0; rate<NUM_RATES; rate++) {
+      permuted_rates[rate] = unpermuted_rates[SYMMETRY_PERM[symmetry][rate]];
+    }
+    basis[i] = permuted_rates;
+  }
+}
+
 /*
  * Set rates from model_parameters
  */
 void ModelLieMarkov::setRates() {
-    memset(rates, 0, NUM_RATES*sizeof(double));
+    memset(rates, 0, NUM_RATES*sizeof(double));  // rates = 0
+    double* aprime = basis[0]; // the only basis matrix with all offdiagonals non-negative, and trace non-zero
     double max_abs = 0;
     for (int param=0; param<num_params; param++) {
         // COMMENT: is this abs() or fabs()? abs is for int type, whereas fabs for double 
         max_abs = (fabs(model_parameters[param])>max_abs ? fabs(model_parameters[param]) : max_abs);
         for (int rate=0; rate<NUM_RATES; rate++) 
-            rates[rate] += model_parameters[param]*basis[param+1][SYMMETRY_PERM[symmetry][rate]];
+            rates[rate] += model_parameters[param]*basis[param+1][rate];
         // basis[0] is 'A' matrix which doesn't get a parameter.
     }
     double min_unnorm = DBL_MAX;
-    for (int rate=0; rate<NUM_RATES; rate++) 
-        min_unnorm = (rates[rate]<min_unnorm ? rates[rate] : min_unnorm);
+    for (int rate=0; rate<NUM_RATES; rate++) {
+        double ratio = rates[rate]/aprime[rate]; 
+        min_unnorm = (ratio<min_unnorm ? ratio : min_unnorm);
+    }
     double norm = (max_abs==0 ? 0 : -max_abs/min_unnorm);
     for (int rate=0; rate<NUM_RATES; rate++) 
-        rates[rate]=1+norm*rates[rate];
+        rates[rate]=aprime[rate]+norm*rates[rate];
     if (verbose_mode >= VB_DEBUG) {
       cout << "LM setRates params = (";
       for (int param=0; param<num_params; param++) 

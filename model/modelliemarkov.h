@@ -48,6 +48,7 @@ protected:
 	double **basis;
 	int symmetry; // RY->0, WS->1, MK->2
 	int model_num; // 0->1.1, etc to 36->12.12
+	void setBasis();
 	virtual void setRates();
 	bool nondiagonalizable; // will be set true for nondiagonalizable rate matrices, then will use scaled squaring method for matrix exponentiation.
 
