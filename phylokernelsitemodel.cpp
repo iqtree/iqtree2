@@ -590,7 +590,7 @@ double PhyloTree::computeSitemodelLikelihoodBranchEigen(PhyloNeighbor *dad_branc
     size_t nptn = aln->size();
 
 
-	memset(_pattern_lh_cat, 0, nptn*ncat*sizeof(double));
+	memset(_pattern_lh_cat, 0, sizeof(double)*nptn*ncat);
     ModelSet *models = (ModelSet*)model;
 
     if (dad->isLeaf()) {
@@ -610,7 +610,7 @@ double PhyloTree::computeSitemodelLikelihoodBranchEigen(PhyloNeighbor *dad_branc
                 double len = site_rate->getRate(c)*dad_branch->length;
                 double prop = site_rate->getProp(c);
 				for (i = 0; i < nstates; i++) {
-					*lh_cat +=  exp(eval[i]*len) * partial_lh_node[i] * partial_lh_dad[i];
+					*lh_cat +=  (exp(eval[i]*len) * partial_lh_node[i] * partial_lh_dad[i]);
 				}
                 *lh_cat *= prop;
 				lh_ptn += *lh_cat;
@@ -640,7 +640,7 @@ double PhyloTree::computeSitemodelLikelihoodBranchEigen(PhyloNeighbor *dad_branc
                 double len = site_rate->getRate(c)*dad_branch->length;
                 double prop = site_rate->getProp(c);
 				for (i = 0; i < nstates; i++) {
-					*lh_cat +=  exp(eval[i]*len) * partial_lh_node[i] * partial_lh_dad[i];
+					*lh_cat +=  (exp(eval[i]*len) * partial_lh_node[i] * partial_lh_dad[i]);
 				}
                 *lh_cat *= prop;
 				lh_ptn += *lh_cat;

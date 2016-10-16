@@ -177,6 +177,7 @@ double RateGammaInvar::optimizeParameters(double gradient_epsilon) {
     } else {
         string errMsg = "Unknown optimization algorithm: " + optimize_alg;
         outError(errMsg.c_str());
+        return 0.0;
     }
 }
 

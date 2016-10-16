@@ -14,7 +14,9 @@
 #include "modelmorphology.h"
 #include "modelset.h"
 #include "modelmixture.h"
-#include "phylokernelmixture.h"
+//#include "phylokernelmixture.h"
+
+using namespace std;
 
 const string builtin_mixmodels_definition =
 "#nexus\n\
@@ -1441,7 +1443,7 @@ double ModelMixture::optimizeWeights() {
             // check for convergence
             converged = converged && (fabs(prop[c]-new_prop[c]) < 1e-4);
             ratio_prop[c] = new_prop[c] / prop[c];
-            if (isnan(ratio_prop[c])) {
+            if (std::isnan(ratio_prop[c])) {
                 cerr << "BUG: " << new_prop[c] << " " << prop[c] << " " << ratio_prop[c] << endl;
             }
             prop[c] = new_prop[c];
@@ -1480,6 +1482,7 @@ double ModelMixture::optimizeWithEM(double gradient_epsilon) {
     
     tree->copyPhyloTree(phylo_tree);
     tree->optimize_by_newton = phylo_tree->optimize_by_newton;
+    tree->setParams(phylo_tree->params);
     tree->setLikelihoodKernel(phylo_tree->sse);
     // initialize model
     ModelFactory *model_fac = new ModelFactory();

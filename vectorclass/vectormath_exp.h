@@ -1,8 +1,8 @@
 /****************************  vectormath_exp.h   ******************************
 * Author:        Agner Fog
 * Date created:  2014-04-18
-* Last modified: 2015-02-10
-* Version:       1.16
+* Last modified: 2016-04-26
+* Version:       1.22
 * Project:       vector classes
 * Description:
 * Header file containing inline vector functions of logarithms, exponential 
@@ -25,7 +25,7 @@
 *
 * For detailed instructions, see vectormath_common.h and VectorClass.pdf
 *
-* (c) Copyright 2014 GNU General Public License http://www.gnu.org/licenses
+* (c) Copyright 2014-2016 GNU General Public License http://www.gnu.org/licenses
 ******************************************************************************/
 
 #ifndef VECTORMATH_EXP_H
@@ -33,6 +33,9 @@
 
 #include "vectormath_common.h"  
 
+#ifdef VCL_NAMESPACE
+namespace VCL_NAMESPACE {
+#endif
 
 /******************************************************************************
 *                 Exponential functions
@@ -1329,7 +1332,7 @@ static inline VTYPE pow_template_d(VTYPE const & x0, VTYPE const & y) {
     z = select(xfinite, z, select(y == 0., VTYPE(1.), select(y < 0., VTYPE(0.), infinite_vec<VTYPE>() | ( VTYPE(reinterpret_d(yodd)) & x0))));
     z = select(is_nan(x0), select(is_nan(y), x0 | y, x0), select(is_nan(y), y, z));
     return z;
-}; 
+}
 
 
 //This template is in vectorf128.h to prevent implicit conversion of float y to int when float version is not defined:
@@ -1615,7 +1618,7 @@ public:
         // but we can check a even anyway at no cost to be sure)
         if (a == 0) return 1.f;
         if ((b | ~a) & 1) y = abs(y);
-        y = ::pow(y, float(double(a)/double(b)));
+        y = pow(y, float(double(a)/double(b)));
         if (a & b & 1) y = sign_combine(y, x);          // apply sign if a and b both odd
         if ((a ^ b) >= 0) y = select(x == 0.f, 0.f, y); // zero allowed for positive a and b
         return y;
@@ -1624,7 +1627,7 @@ public:
         Vec2d y = x;
         if (a == 0) return 1.;
         if ((b | ~a) & 1) y = abs(y);
-        y = ::pow(y, double((long double)a/(long double)b));
+        y = pow(y, double((long double)a/(long double)b));
         if (a & b & 1) y = sign_combine(y, x);
         if ((a ^ b) >= 0) y = select(x == 0., 0., y);
         return y;
@@ -1634,7 +1637,7 @@ public:
         Vec8f y = x;
         if (a == 0) return 1.f;
         if ((b | ~a) & 1) y = abs(y);
-        y = ::pow(y, float(double(a)/double(b)));
+        y = pow(y, float(double(a)/double(b)));
         if (a & b & 1) y = sign_combine(y, x);
         if ((a ^ b) >= 0) y = select(x == 0.f, 0.f, y);
         return y;
@@ -1643,7 +1646,7 @@ public:
         Vec4d y = x;
         if (a == 0) return 1.;
         if ((b | ~a) & 1) y = abs(y);
-        y = ::pow(y, double((long double)a/(long double)b));
+        y = pow(y, double((long double)a/(long double)b));
         if (a & b & 1) y = sign_combine(y, x);
         if ((a ^ b) >= 0) y = select(x == 0., 0., y);
         return y;
@@ -1654,7 +1657,7 @@ public:
         Vec16f y = x;
         if (a == 0) return 1.f;
         if ((b | ~a) & 1) y = abs(y);
-        y = ::pow(y, float(double(a)/double(b)));
+        y = pow(y, float(double(a)/double(b)));
         if (a & b & 1) y = sign_combine(y, x);
         if ((a ^ b) >= 0) y = select(x == 0.f, 0.f, y);
         return y;
@@ -1663,7 +1666,7 @@ public:
         Vec8d y = x;
         if (a == 0) return 1.;
         if ((b | ~a) & 1) y = abs(y);
-        y = ::pow(y, double((long double)a/(long double)b));
+        y = pow(y, double((long double)a/(long double)b));
         if (a & b & 1) y = sign_combine(y, x);
         if ((a ^ b) >= 0) y = select(x == 0., 0., y);
         return y;
@@ -1991,5 +1994,9 @@ static inline Vec8q nan_code(Vec8d const & x) {
 }
 
 #endif // MAX_VECTOR_SIZE >= 512
+
+#ifdef VCL_NAMESPACE
+}
+#endif
 
 #endif  // VECTORMATH_EXP_H

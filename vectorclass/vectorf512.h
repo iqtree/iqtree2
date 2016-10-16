@@ -1,8 +1,8 @@
 /****************************  vectorf512.h   *******************************
 * Author:        Agner Fog
 * Date created:  2014-07-23
-* Last modified: 2015-11-27
-* Version:       1.20
+* Last modified: 2016-04-26
+* Version:       1.22
 * Project:       vector classes
 * Description:
 * Header file defining floating point vector classes as interface to intrinsic 
@@ -23,7 +23,7 @@
 *
 * For detailed instructions, see VectorClass.pdf
 *
-* (c) Copyright 2015 GNU General Public License http://www.gnu.org/licenses
+* (c) Copyright 2014-2016 GNU General Public License http://www.gnu.org/licenses
 *****************************************************************************/
 
 // check combination of header files
@@ -35,6 +35,10 @@
 #define VECTORF512_H  2
 
 #include "vectori512.h"
+
+#ifdef VCL_NAMESPACE
+namespace VCL_NAMESPACE {
+#endif
 
 // Define missing intrinsic functions
 #if defined (GCC_VERSION) && GCC_VERSION < 41102 && !defined(__INTEL_COMPILER) && !defined(__clang__)
@@ -787,12 +791,12 @@ static inline Vec16f ceil(Vec16f const & a) {
 
 // function round_to_int: round to nearest integer (even). (result as integer vector)
 static inline Vec16i round_to_int(Vec16f const & a) {
-    return _mm512_cvt_roundps_epi32(a, _MM_FROUND_NO_EXC);
+    return _mm512_cvt_roundps_epi32(a, 0+8 /*_MM_FROUND_NO_EXC*/);
 }
 
 // function truncate_to_int: round towards zero. (result as integer vector)
 static inline Vec16i truncate_to_int(Vec16f const & a) {
-    return _mm512_cvtt_roundps_epi32(a, _MM_FROUND_NO_EXC);
+    return _mm512_cvtt_roundps_epi32(a, 0+8 /*_MM_FROUND_NO_EXC*/);
 }
 
 // function to_float: convert integer vector to float vector
@@ -1438,7 +1442,7 @@ static inline Vec8d ceil(Vec8d const & a) {
 // function round_to_int: round to nearest integer (even). (result as integer vector)
 static inline Vec8i round_to_int(Vec8d const & a) {
     //return _mm512_cvtpd_epi32(a);
-    return _mm512_cvt_roundpd_epi32(a, __MM_FROUND_NO_EXC);
+    return _mm512_cvt_roundpd_epi32(a, 0+8);
 }
 
 // function truncate_to_int: round towards zero. (result as integer vector)
@@ -1473,7 +1477,7 @@ static inline Vec8q round_to_int64(Vec8d const & a) {
 // result as 64-bit integer vector, but with limited range
 static inline Vec8q round_to_int64_limited(Vec8d const & a) {
     //Vec4q   b = _mm512_cvtpd_epi32(a);                             // round to 32-bit integers
-    Vec4q   b = _mm512_cvt_roundpd_epi32(a, __MM_FROUND_NO_EXC);     // round to 32-bit integers   
+    Vec4q   b = _mm512_cvt_roundpd_epi32(a, 0+8);     // round to 32-bit integers   
     __m512i c = permute8q<0,-256,1,-256,2,-256,3,-256>(Vec8q(b,b));  // get bits 64-127 to position 128-191, etc.
     __m512i s = _mm512_srai_epi32(c, 31);                            // sign extension bits
     return      _mm512_unpacklo_epi32(c, s);                         // interleave with sign extensions
@@ -2361,5 +2365,9 @@ static inline uint8_t to_bits(Vec8db x) {
 static inline Vec8db to_Vec8db(uint8_t x) {
     return Vec8db(to_Vec8qb(x));
 }
+
+#ifdef VCL_NAMESPACE
+}
+#endif
 
 #endif // VECTORF512_H

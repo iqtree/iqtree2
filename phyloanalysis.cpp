@@ -629,6 +629,11 @@ void printOutfilesInfo(Params &params, string &original_model, IQTree &tree) {
 		cout << "  Site probability per rate/mix: " << params.out_prefix << ".siteprob"
 				<< endl;
 
+    if (params.print_ancestral_sequence) {
+        cout << "  Ancestral state probabilities: " << params.out_prefix << ".ancestralprob" << endl;
+        cout << "  Ancestral sequences:           " << params.out_prefix << ".ancestralseq" << endl;
+    }
+
 	if (params.write_intermediate_trees)
 		cout << "  All intermediate trees:        " << params.out_prefix << ".treels"
 				<< endl;
@@ -1538,6 +1543,10 @@ void printMiscInfo(Params &params, IQTree &iqtree, double *pattern_lh) {
         printSiteProbCategory(((string)params.out_prefix + ".siteprob").c_str(), &iqtree, params.print_site_prob);
 	}
     
+    if (params.print_ancestral_sequence) {
+        printAncestralSequences(params.out_prefix, &iqtree, params.print_ancestral_sequence);
+    }
+    
     if (params.print_site_state_freq != WSF_NONE) {
 		string site_freq_file = params.out_prefix;
 		site_freq_file += ".sitesf";
@@ -2152,7 +2161,7 @@ void searchGAMMAInvarByRestarting(IQTree &iqtree) {
 	if (Params::getInstance().randomAlpha) {
 		while (initAlphas.size() < 10) {
 			double initAlpha = random_double();
-			initAlphas.push_back(initAlpha + MIN_GAMMA_SHAPE*2);
+			initAlphas.push_back(initAlpha + iqtree.params->min_gamma_shape*2);
 		}
 	} else {
 		initAlphas.assign(values, values+10);

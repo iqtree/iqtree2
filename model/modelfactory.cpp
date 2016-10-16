@@ -338,6 +338,8 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 		delete [] rates;
 		delete [] state_freq;
 
+        models->joinEigenMemory();
+
         // delete information of the old alignment
 //        tree->aln->ordered_pattern.clear();
 //        tree->deleteAllPartialLh();

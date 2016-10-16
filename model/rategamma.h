@@ -22,12 +22,6 @@
 
 #include "rateheterogeneity.h"
 
-const double MIN_GAMMA_RATE = 1e-6;
-// change from 0.01 to 0.02 as 0.01 causes numerical problems
-const double MIN_GAMMA_SHAPE = 0.02;
-const double MAX_GAMMA_SHAPE = 1000.0;
-const double TOL_GAMMA_SHAPE = 0.001;
-
 const int GAMMA_CUT_MEDIAN = 1; // 2 discrete Gamma approximations (mean or median) of Yang 1994
 const int GAMMA_CUT_MEAN   = 2;
 

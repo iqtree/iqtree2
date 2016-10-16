@@ -115,6 +115,14 @@ void printSiteProbCategory(const char*filename, PhyloTree *tree, SiteLoglType ws
 void printSiteStateFreq(const char*filename, PhyloTree *tree, double *state_freqs = NULL);
 
 /**
+    print ancestral sequences
+    @param filename output file name
+    @param tree phylogenetic tree
+    @param ast either AST_MARGINAL or AST_JOINT
+*/
+void printAncestralSequences(const char*filename, PhyloTree *tree, AncestralSeqType ast);
+
+/**
  * Evaluate user-trees with possibility of tree topology tests
  * @param params program parameters
  * @param tree current tree

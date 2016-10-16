@@ -51,6 +51,8 @@
 
 extern int instruction_set;
 
+#define SAFE_LH   true  // safe likelihood scaling to avoid numerical underflow for ultra large trees
+#define NORM_LH  false // normal likelihood scaling
 
 const double TOL_BRANCH_LEN = 0.000001; // NEVER TOUCH THIS CONSTANT AGAIN PLEASE!
 const double TOL_LIKELIHOOD = 0.001; // NEVER TOUCH THIS CONSTANT AGAIN PLEASE!
@@ -70,6 +72,10 @@ const int SPR_DEPTH = 2;
 //using namespace Eigen;
 
 inline size_t get_safe_upper_limit(size_t cur_limit) {
+	if (instruction_set >= 9)
+		// AVX-512
+		return ((cur_limit+7)/8)*8;
+	else
 	if (instruction_set >= 7)
 		// AVX
 		return ((cur_limit+3)/4)*4;
@@ -79,6 +85,10 @@ inline size_t get_safe_upper_limit(size_t cur_limit) {
 }
 
 inline size_t get_safe_upper_limit_float(size_t cur_limit) {
+	if (instruction_set >= 9)
+		// AVX
+		return ((cur_limit+15)/16)*16;
+	else
 	if (instruction_set >= 7)
 		// AVX
 		return ((cur_limit+7)/8)*8;
@@ -101,7 +111,7 @@ inline size_t get_safe_upper_limit_float(size_t cur_limit) {
 
 template< class T>
 inline T *aligned_alloc(size_t size) {
-	size_t MEM_ALIGNMENT = (instruction_set >= 7) ? 32 : 16;
+	size_t MEM_ALIGNMENT = (instruction_set >= 9) ? 64 : ((instruction_set >= 7) ? 32 : 16);
     void *mem;
 
 #if defined WIN32 || defined _WIN32 || defined __WIN32__
@@ -497,7 +507,7 @@ public:
     /****************************************************************************
             Dot product
      ****************************************************************************/
-    template <class Numeric, class VectorClass, const int VCSIZE>
+    template <class Numeric, class VectorClass>
     Numeric dotProductSIMD(Numeric *x, Numeric *y, int size);
 
     typedef BootValType (PhyloTree::*DotProductType)(BootValType *x, BootValType *y, int size);
@@ -506,11 +516,20 @@ public:
     typedef double (PhyloTree::*DotProductDoubleType)(double *x, double *y, int size);
     DotProductDoubleType dotProductDouble;
 
+    double dotProductDoubleCall(double *x, double *y, int size);
+
 #if defined(BINARY32) || defined(__NOAVX__)
     void setDotProductAVX() {}
 #else
     void setDotProductAVX();
+    void setDotProductFMA();
+#ifdef INCLUDE_AVX512
+    void setDotProductAVX512();
 #endif
+#endif
+
+    void setDotProductSSE();
+
     /**
             this function return the parsimony or likelihood score of the tree. Default is
             to compute the parsimony score. Override this function if you define a new
@@ -591,9 +610,13 @@ public:
     virtual void setParsimonyKernelAVX();
 #endif
 
+    virtual void setParsimonyKernelSSE();
+
     /****************************************************************************
             likelihood function
      ****************************************************************************/
+
+    size_t getBufferPartialLhSize();
 
     /**
             initialize partial_lh vector of all PhyloNeighbors, allocating central_partial_lh
@@ -655,6 +678,12 @@ public:
 
     bool ptn_freq_computed;
 
+    /** vector size used by SIMD kernel */
+    size_t vector_size;
+
+    /** transform _pattern_lh_cat from "interleaved" to "sequential", due to vector_size > 1 */
+    void transformPatternLhCat();
+
     /****************************************************************************
             computing partial (conditional) likelihood of subtrees
      ****************************************************************************/
@@ -674,24 +703,26 @@ public:
 
 
     //template <const int nstates>
-    void computePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
-    
-    //template <const int nstates>
-    void computeMixturePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
-
-    //template <const int nstates>
-    void computeMixratePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
+//    void computePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
 
     void computeSitemodelPartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
 
-    template <class VectorClass, const int VCSIZE, const int nstates>
-    void computePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
+//    template <class VectorClass, const int VCSIZE, const int nstates>
+//    void computePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
 
+    template <class VectorClass, const bool SAFE_NUMERIC, const int nstates, const bool FMA = false, const bool SITE_MODEL = false>
+    void computePartialLikelihoodSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
+
+    template <class VectorClass, const bool SAFE_NUMERIC, const bool FMA = false, const bool SITE_MODEL = false>
+    void computePartialLikelihoodGenericSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
+
+    /*
     template <class VectorClass, const int VCSIZE, const int nstates>
     void computeMixratePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
 
     template <class VectorClass, const int VCSIZE, const int nstates>
     void computeMixturePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
+    */
 
     template <class VectorClass, const int VCSIZE, const int nstates>
     void computeSitemodelPartialLikelihoodEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
@@ -719,24 +750,26 @@ public:
 //    inline double computeLikelihoodBranchFast(PhyloNeighbor *dad_branch, PhyloNode *dad);
 
     //template <const int nstates>
-    double computeLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloNode *dad);
-
-    //template <const int nstates>
-    double computeMixtureLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloNode *dad);
-
-    //template <const int nstates>
-    double computeMixrateLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloNode *dad);
+//    double computeLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloNode *dad);
 
     double computeSitemodelLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloNode *dad);
 
-    template <class VectorClass, const int VCSIZE, const int nstates>
-    double computeLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad);
+//    template <class VectorClass, const int VCSIZE, const int nstates>
+//    double computeLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad);
 
+    template <class VectorClass, const bool SAFE_NUMERIC, const int nstates, const bool FMA = false, const bool SITE_MODEL = false>
+    double computeLikelihoodBranchSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad);
+
+    template <class VectorClass, const bool SAFE_NUMERIC, const bool FMA = false, const bool SITE_MODEL = false>
+    double computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad);
+
+    /*
     template <class VectorClass, const int VCSIZE, const int nstates>
     double computeMixrateLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad);
 
     template <class VectorClass, const int VCSIZE, const int nstates>
     double computeMixtureLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad);
+    */
 
     template <class VectorClass, const int VCSIZE, const int nstates>
     double computeSitemodelLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad);
@@ -756,14 +789,22 @@ public:
     typedef double (PhyloTree::*ComputeLikelihoodFromBufferType)();
     ComputeLikelihoodFromBufferType computeLikelihoodFromBufferPointer;
 
-    template <class VectorClass, const int VCSIZE, const int nstates>
-    double computeLikelihoodFromBufferEigenSIMD();
+//    template <class VectorClass, const int VCSIZE, const int nstates>
+//    double computeLikelihoodFromBufferEigenSIMD();
 
+    template <class VectorClass, const bool SAFE_NUMERIC, const int nstates, const bool FMA = false, const bool SITE_MODEL = false>
+    double computeLikelihoodFromBufferSIMD();
+
+    template <class VectorClass, const bool SAFE_NUMERIC, const bool FMA = false, const bool SITE_MODEL = false>
+    double computeLikelihoodFromBufferGenericSIMD();
+
+    /*
     template <class VectorClass, const int VCSIZE, const int nstates>
     double computeMixrateLikelihoodFromBufferEigenSIMD();
 
     template <class VectorClass, const int VCSIZE, const int nstates>
     double computeMixtureLikelihoodFromBufferEigenSIMD();
+    */
 
     template <class VectorClass, const int VCSIZE, const int nstates>
     double computeSitemodelLikelihoodFromBufferEigenSIMD();
@@ -811,6 +852,43 @@ public:
             should be pre-allocated with size of num_patterns * num_states
     */
     void computePatternStateFreq(double *ptn_state_freq);
+
+    /****************************************************************************
+            ancestral sequence reconstruction
+     ****************************************************************************/
+
+    /**
+        compute ancestral sequence probability for an internal node by marginal reconstruction
+        (Yang, Kumar and Nei 1995)
+        @param dad_branch branch leading to an internal node where to obtain ancestral sequence
+        @param dad dad of the target internal node
+        @param[out] ptn_ancestral_prob pattern ancestral probability vector of dad_branch->node
+    */
+    void computeMarginalAncestralProbability(PhyloNeighbor *dad_branch, PhyloNode *dad, double *ptn_ancestral_prob);
+
+    /**
+     	 compute the joint ancestral states at a pattern (Pupko et al. 2000)
+     */
+    void computeJointAncestralSequences(int *ancestral_seqs);
+
+    /**
+     * compute max ancestral likelihood according to
+     *  step 1-3 of the dynamic programming algorithm of Pupko et al. 2000, MBE 17:890-896
+     *  @param dad_branch branch leading to an internal node where to obtain ancestral sequence
+     *  @param dad dad of the target internal node
+     *  @param[out] C array storing all information about max ancestral states
+     */
+    void computeAncestralLikelihood(PhyloNeighbor *dad_branch, PhyloNode *dad, int *C);
+
+    /**
+     * compute max ancestral states according to
+     *  step 4-5 of the dynamic programming algorithm of Pupko et al. 2000, MBE 17:890-896
+     *  @param dad_branch branch leading to an internal node where to obtain ancestral sequence
+     *  @param dad dad of the target internal node
+     *  @param C array storing all information about max ancestral states
+     *  @param[out] ancestral_seqs array of size nptn*nnode for ancestral sequences at all internal nodes
+     */
+    void computeAncestralState(PhyloNeighbor *dad_branch, PhyloNode *dad, int *C, int *ancestral_seqs);
 
     /**
             compute pattern likelihoods only if the accumulated scaling factor is non-zero.
@@ -969,24 +1047,26 @@ public:
      ****************************************************************************/
 
     //template <const int nstates>
-    void computeLikelihoodDervEigen(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
-
-    //template <const int nstates>
-    void computeMixtureLikelihoodDervEigen(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
-
-    //template <const int nstates>
-    void computeMixrateLikelihoodDervEigen(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
+//    void computeLikelihoodDervEigen(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
 
     void computeSitemodelLikelihoodDervEigen(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
 
-    template <class VectorClass, const int VCSIZE, const int nstates>
-    void computeLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
+//    template <class VectorClass, const int VCSIZE, const int nstates>
+//    void computeLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
 
+    template <class VectorClass, const bool SAFE_NUMERIC, const int nstates, const bool FMA = false, const bool SITE_MODEL = false>
+    void computeLikelihoodDervSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
+
+    template <class VectorClass, const bool SAFE_NUMERIC, const bool FMA = false, const bool SITE_MODEL = false>
+    void computeLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
+
+    /*
     template <class VectorClass, const int VCSIZE, const int nstates>
     void computeMixrateLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
 
     template <class VectorClass, const int VCSIZE, const int nstates>
     void computeMixtureLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
+    */
 
     template <class VectorClass, const int VCSIZE, const int nstates>
     void computeSitemodelLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
@@ -1139,6 +1219,11 @@ public:
      */
     double* theta_all;
 
+    /** total scaling buffer */
+    double *buffer_scale_all;
+
+    /** buffer used when computing partial_lh, to avoid repeated mem allocation */
+    double *buffer_partial_lh;
 
     /**
      * frequencies of alignment patterns, used as buffer for likelihood computation
@@ -1499,7 +1584,13 @@ public:
     virtual void setLikelihoodKernelAVX() {}
 #else
     virtual void setLikelihoodKernelAVX();
+    virtual void setLikelihoodKernelFMA();
+#ifdef INCLUDE_AVX512
+    virtual void setLikelihoodKernelAVX512();
 #endif
+#endif
+    virtual void setLikelihoodKernelSSE();
+    
     /****************************************************************************
             Public variables
      ****************************************************************************/
@@ -1707,10 +1798,9 @@ protected:
     double *_pattern_lh;
 
     /**
-            internal pattern likelihoods per category, always stored after calling computeLikelihood()
-            or related functions. Note that scaling factors are not incorporated here.
-            If you want to get real pattern likelihoods, please use computePatternLikelihood()
-     */
+            internal pattern likelihoods per category, 
+            only stored after calling non-SSE computeLikelihood for efficiency purpose
+    */
     double *_pattern_lh_cat;
 
     /**

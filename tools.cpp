@@ -781,6 +781,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.num_rate_cats = 4;
     params.max_rate_cats = 10;
     params.gamma_shape = -1.0;
+    params.min_gamma_shape = MIN_GAMMA_SHAPE;
     params.gamma_median = false;
     params.p_invar_sites = -1.0;
     params.optimize_model_rate_joint = false;
@@ -806,13 +807,17 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.aBayes_test = false;
     params.localbp_replicates = 0;
     params.SSE = LK_EIGEN_SSE;
-    params.lk_no_avx = false;
+    params.lk_no_avx = 0;
+    params.lk_safe_scaling = false;
+    params.numseq_safe_scaling = 2000;
     params.print_site_lh = WSL_NONE;
     params.print_partition_lh = false;
     params.print_site_prob = WSL_NONE;
     params.print_site_state_freq = WSF_NONE;
     params.print_site_rate = false;
     params.print_trees_site_posterior = 0;
+    params.print_ancestral_sequence = AST_NONE;
+    params.min_ancestral_prob = 0.95;
     params.print_tree_lh = false;
     params.lambda = 1;
     params.speed_conf = 1.0;
@@ -1876,7 +1881,9 @@ void parseArg(int argc, char *argv[], Params &params) {
 			}
 			if (strcmp(argv[cnt], "-lmd") == 0) {
 				cnt++;
-				params.lambda = convert_double(argv[cnt]);
+				if (cnt >= argc)
+					throw "Use -lmd <lambda>";
+                params.lambda = convert_double(argv[cnt]);
 				if (params.lambda > 1.0)
 					throw "Lambda must be in (0,1]";
 				continue;
@@ -1899,9 +1906,30 @@ void parseArg(int argc, char *argv[], Params &params) {
 				continue;
 			}
 			if (strcmp(argv[cnt], "-noavx") == 0) {
-				params.lk_no_avx = true;
+				params.lk_no_avx = 1;
 				continue;
 			}
+			if (strcmp(argv[cnt], "-nofma") == 0) {
+				params.lk_no_avx = 2;
+				continue;
+			}
+
+			if (strcmp(argv[cnt], "-safe") == 0) {
+				params.lk_safe_scaling = true;
+				continue;
+			}
+
+			if (strcmp(argv[cnt], "-safe-seq") == 0) {
+				cnt++;
+				if (cnt >= argc)
+                    throw "-safe-seq <number of sequences>";
+				params.numseq_safe_scaling = convert_int(argv[cnt]);
+                if (params.numseq_safe_scaling < 10)
+                    throw "Too small -safe-seq";
+				continue;
+			}
+
+
 			if (strcmp(argv[cnt], "-f") == 0) {
 				cnt++;
 				if (cnt >= argc)
@@ -1982,10 +2010,21 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (cnt >= argc)
 					throw "Use -a <gamma_shape>";
 				params.gamma_shape = convert_double(argv[cnt]);
-//				if (params.gamma_shape < 0)
-//					throw "Wrong number of gamma shape parameter (alpha)";
+				if (params.gamma_shape <= 0)
+					throw "Wrong gamma shape parameter (alpha)";
 				continue;
 			}
+
+			if (strcmp(argv[cnt], "-amin") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -amin <min_gamma_shape>";
+				params.min_gamma_shape = convert_double(argv[cnt]);
+				if (params.min_gamma_shape <= 0)
+					throw "Wrong minimum gamma shape parameter (alpha)";
+				continue;
+			}
+
 			if (strcmp(argv[cnt], "-gmean") == 0) {
 				params.gamma_median = false;
 				continue;
@@ -2228,6 +2267,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 			}
 			if (strcmp(argv[cnt], "-alrt") == 0) {
 				cnt++;
+				if (cnt >= argc)
+					throw "Use -alrt <#replicates | 0>";
                 int reps = convert_int(argv[cnt]);
                 if (reps == 0)
                     params.aLRT_test = true;
@@ -2244,6 +2285,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 			}
 			if (strcmp(argv[cnt], "-lbp") == 0) {
 				cnt++;
+				if (cnt >= argc)
+					throw "Use -lbp <#replicates>";
 				params.localbp_replicates = convert_int(argv[cnt]);
 				if (params.localbp_replicates < 1000
 						&& params.localbp_replicates != 0)
@@ -2288,6 +2331,28 @@ void parseArg(int argc, char *argv[], Params &params) {
 				continue;
 			}
 
+			if (strcmp(argv[cnt], "-asr") == 0) {
+				params.print_ancestral_sequence = AST_MARGINAL;
+                params.ignore_identical_seqs = false;
+				continue;
+			}
+
+			if (strcmp(argv[cnt], "-asr-min") == 0) {
+                cnt++;
+				if (cnt >= argc)
+					throw "Use -asr-min <probability>";
+                
+                params.min_ancestral_prob = convert_double(argv[cnt]);
+                if (params.min_ancestral_prob < 0.5 || params.min_ancestral_prob > 1)
+                    throw "Minimum ancestral probability [-asr-min] must be between 0.5 and 1.0";
+                continue;
+            }
+
+			if (strcmp(argv[cnt], "-asr-joint") == 0) {
+				params.print_ancestral_sequence = AST_JOINT;
+                params.ignore_identical_seqs = false;
+				continue;
+			}
 
 			if (strcmp(argv[cnt], "-wsr") == 0) {
 				params.print_site_rate = true;
@@ -2788,7 +2853,11 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (params.stop_condition != SC_BOOTSTRAP_CORRELATION)
 					params.stop_condition = SC_UNSUCCESS_ITERATION;
 				cnt++;
+				if (cnt >= argc)
+					throw "Use -numstop <#iterations>";
 				params.unsuccess_iteration = convert_int(argv[cnt]);
+                if (params.unsuccess_iteration <= 0)
+                    throw "-numstop iterations must be positive";
 				continue;
 			}
 			if (strcmp(argv[cnt], "-lsbran") == 0) {
@@ -3237,6 +3306,7 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -v, -vv, -vvv        Verbose mode, printing more messages to screen" << endl
             << "  -quiet               Silent mode, suppress printing to screen (stdout)" << endl
             << "  -keep-ident          Keep identical sequences (default: remove & finally add)" << endl
+            << "  -safe                Safe likelihood kernel to avoid numerical underflow" << endl
             << endl << "CHECKPOINTING TO RESUME STOPPED RUN:" << endl
             << "  -redo                Redo analysis even for successful runs (default: resume)" << endl
             << "  -cptime <seconds>    Minimum checkpoint time interval (default: 20)" << endl
@@ -3336,6 +3406,7 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "                       Invar, Gamma, Invar+Gamma, or FreeRate model where 'n' is" << endl
             << "                       number of categories (default: n=4)" << endl
             << "  -a <Gamma_shape>     Gamma shape parameter for site rates (default: estimate)" << endl
+            << "  -amin <min_shape>    Min Gamma shape parameter for site rates (default: 0.02)" << endl
             << "  -gmedian             Median approximation for +G site rates (default: mean)" << endl
             << "  --opt-gamma-inv      More thorough estimation for +I+G model parameters" << endl
             << "  -i <p_invar>         Proportion of invariable sites (default: estimate)" << endl
@@ -3386,6 +3457,12 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -zb <#replicates>    Performing BP,KH,SH,ELW tests for trees passed via -z" << endl
             << "  -zw                  Also performing weighted-KH and weighted-SH tests" << endl
             << "  -au                  Also performing approximately unbiased (AU) test" << endl
+            << endl << "ANCESTRAL SEQUENCE RECONSTRUCTION:" << endl
+            << "  -asr                 Compute ancestral states by marginal reconstruction" << endl
+            << "  -asr-min <prob>      Min probability to assign ancestral sequence (default: 0.95)" << endl
+//            << "  -wja                 Write ancestral sequences by joint reconstruction" << endl
+
+
             << endl;
 
 			cout << "GENERATING RANDOM TREES:" << endl;

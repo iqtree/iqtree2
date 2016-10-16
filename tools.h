@@ -65,10 +65,10 @@ inline void _my_assert(const char* expression, const char *func, const char* fil
 
 #define USE_HASH_MAP
 
-#ifdef __GNUC__
+#if defined(__GNUC__) && !defined(GCC_VERSION)
 #define GCC_VERSION (__GNUC__ * 10000 + __GNUC_MINOR__ * 100 + __GNUC_PATCHLEVEL__)
-#else
-#define GCC_VERSION 0
+//#else
+//#define GCC_VERSION 0
 #endif
 
 // for MSVC
@@ -430,6 +430,10 @@ enum SiteFreqType {
     WSF_NONE, WSF_POSTERIOR_MEAN, WSF_POSTERIOR_MAX
 };
 
+enum AncestralSeqType {
+    AST_NONE, AST_MARGINAL, AST_JOINT
+};
+
 const int BRLEN_OPTIMIZE = 0; // optimize branch lengths
 const int BRLEN_FIX      = 1; // fix branch lengths
 const int BRLEN_SCALE    = 2; // scale branch lengths
@@ -437,6 +441,14 @@ const int BRLEN_SCALE    = 2; // scale branch lengths
 const int OUT_LOG       = 1; // .log file written or not
 const int OUT_TREEFILE  = 2; // .treefile file written or not
 const int OUT_IQTREE    = 4; // .iqtree file written or not
+
+
+const double MIN_GAMMA_RATE = 1e-6;
+// change from 0.01 to 0.02 as 0.01 causes numerical problems
+const double MIN_GAMMA_SHAPE = 0.02;
+const double MAX_GAMMA_SHAPE = 1000.0;
+const double TOL_GAMMA_SHAPE = 0.001;
+
 
 /** maximum number of newton-raphson steps for NNI branch evaluation */
 extern int NNI_MAX_NR_STEP;
@@ -1273,6 +1285,11 @@ public:
     double gamma_shape;
 
     /**
+            minimum shape parameter (alpha) of the Gamma distribution for site rates
+     */
+    double min_gamma_shape;
+
+    /**
             TRUE to use median rate for discrete categories, FALSE to use mean rate instead
      */
     bool gamma_median;
@@ -1422,7 +1439,13 @@ public:
     LikelihoodKernel SSE;
 
     /** TRUE to not use AVX even available in CPU, default: FALSE */
-    bool lk_no_avx;
+    int lk_no_avx;
+
+    /** TRUE for safe numerical scaling (per category; used for large trees), default: FALSE */
+    bool lk_safe_scaling;
+
+    /** minimum number of sequences to always use safe scaling, default: 2000 */
+    int numseq_safe_scaling;
 
     /**
      	 	WSL_NONE: do not print anything
@@ -1430,6 +1453,7 @@ public:
             WSL_RATECAT: print site log-likelihood per rate category
             WSL_MIXTURE: print site log-likelihood per mixture class
             WSL_MIXTURE_RATECAT: print site log-likelihood per mixture class per rate category
+            WSL_STATE: print site log-likelihood per state
      */
     SiteLoglType print_site_lh;
 
@@ -1444,6 +1468,16 @@ public:
         WSL_MIXTURE_RATECAT: print site probability per mixture class per rate category
     */
     SiteLoglType print_site_prob;
+
+    /**
+        AST_NONE: do not print ancestral sequences (default)
+        AST_MARGINAL: print ancestral sequences by marginal reconstruction
+        AST_JOINT: print ancestral sequences by joint reconstruction
+    */
+    AncestralSeqType print_ancestral_sequence;
+
+    /** minimum probability to assign an ancestral state */
+    double min_ancestral_prob;
 
     /**
         0: print nothing

@@ -1,16 +1,20 @@
 /**************************  instrset_detect.cpp   ****************************
 | Author:        Agner Fog
 | Date created:  2012-05-30
-| Last modified: 2014-07-23
-| Version:       1.14
+* Last modified: 2016-04-26
+* Version:       1.22
 | Project:       vector classes
 | Description:
 | Functions for checking which instruction sets are supported.
 |
-| (c) Copyright 2012 - 2014 GNU General Public License http://www.gnu.org/licenses
+| (c) Copyright 2012-2016 GNU General Public License http://www.gnu.org/licenses
 \*****************************************************************************/
 
 #include "instrset.h"
+
+#ifdef VCL_NAMESPACE
+namespace VCL_NAMESPACE {
+#endif
 
 // Define interface to cpuid instruction.
 // input:  eax = functionnumber, ecx = 0
@@ -151,3 +155,7 @@ bool hasXOP(void) {
     cpuid(abcd, 0x80000001);                               // call cpuid function 0x80000001
     return ((abcd[2] & (1 << 11)) != 0);                   // ecx bit 11 indicates XOP
 }
+
+#ifdef VCL_NAMESPACE
+}
+#endif

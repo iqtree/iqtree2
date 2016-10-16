@@ -1,8 +1,8 @@
 /****************************  vectori128.h   *******************************
 * Author:        Agner Fog
 * Date created:  2012-05-30
-* Last modified: 2015-11-07
-* Version:       1.19
+* Last modified: 2016-04-26
+* Version:       1.22
 * Project:       vector classes
 * Description:
 * Header file defining integer vector classes as interface to intrinsic 
@@ -39,7 +39,7 @@
 *
 * For detailed instructions, see VectorClass.pdf
 *
-* (c) Copyright 2012 - 2015 GNU General Public License http://www.gnu.org/licenses
+* (c) Copyright 2012 - 2016 GNU General Public License http://www.gnu.org/licenses
 *****************************************************************************/
 #ifndef VECTORI128_H
 #define VECTORI128_H
@@ -50,7 +50,9 @@
 #error Please compile for the SSE2 instruction set or higher
 #endif
 
-
+#ifdef VCL_NAMESPACE
+namespace VCL_NAMESPACE {
+#endif
 
 /*****************************************************************************
 *
@@ -344,7 +346,7 @@ public:
         else {
             // worst case. read 1 byte at a time and suffer store forwarding penalty
             char x[16];
-            for (int i = 0; i < n; i++) x[i] = ((char *)p)[i];
+            for (int i = 0; i < n; i++) x[i] = ((char const *)p)[i];
             load(x);
         }
         cutoff(n);
@@ -526,6 +528,22 @@ static inline Vec16cb andnot (Vec16cb const & a, Vec16cb const & b) {
     return Vec16cb(andnot(Vec128b(a), Vec128b(b)));
 }
 
+// Horizontal Boolean functions for Vec16cb
+
+// horizontal_and. Returns true if all elements are true
+static inline bool horizontal_and(Vec16cb const & a) {
+    return _mm_movemask_epi8(a) == 0xFFFF;
+}
+
+// horizontal_or. Returns true if at least one element is true
+static inline bool horizontal_or(Vec16cb const & a) {
+#if INSTRSET >= 5   // SSE4.1 supported. Use PTEST
+    return !_mm_testz_si128(a, a);
+#else
+    return _mm_movemask_epi8(a) != 0;
+#endif
+} 
+
 
 /*****************************************************************************
 *
@@ -643,7 +661,7 @@ static inline Vec16cb operator == (Vec16c const & a, Vec16c const & b) {
 // vector operator != : returns true for elements for which a != b
 static inline Vec16cb operator != (Vec16c const & a, Vec16c const & b) {
 #ifdef __XOP__  // AMD XOP instruction set
-    return _mm_comneq_epi8(a,b);
+    return (Vec16cb)_mm_comneq_epi8(a,b);
 #else  // SSE2 instruction set
     return Vec16cb(Vec16c(~(a == b)));
 #endif
@@ -662,7 +680,7 @@ static inline Vec16cb operator < (Vec16c const & a, Vec16c const & b) {
 // vector operator >= : returns true for elements for which a >= b (signed)
 static inline Vec16cb operator >= (Vec16c const & a, Vec16c const & b) {
 #ifdef __XOP__  // AMD XOP instruction set
-    return _mm_comge_epi8(a,b);
+    return (Vec16cb)_mm_comge_epi8(a,b);
 #else  // SSE2 instruction set
     return Vec16cb(Vec16c(~(b > a)));
 #endif
@@ -947,9 +965,9 @@ static inline Vec16uc & operator >>= (Vec16uc & a, int b) {
 // vector operator >= : returns true for elements for which a >= b (unsigned)
 static inline Vec16cb operator >= (Vec16uc const & a, Vec16uc const & b) {
 #ifdef __XOP__  // AMD XOP instruction set
-    return _mm_comge_epu8(a,b);
+    return (Vec16cb)_mm_comge_epu8(a,b);
 #else  // SSE2 instruction set
-    return _mm_cmpeq_epi8(_mm_max_epu8(a,b),a); // a == max(a,b)
+    return (Vec16cb)_mm_cmpeq_epi8(_mm_max_epu8(a,b),a); // a == max(a,b)
 #endif
 }
 
@@ -961,7 +979,7 @@ static inline Vec16cb operator <= (Vec16uc const & a, Vec16uc const & b) {
 // vector operator > : returns true for elements for which a > b (unsigned)
 static inline Vec16cb operator > (Vec16uc const & a, Vec16uc const & b) {
 #ifdef __XOP__  // AMD XOP instruction set
-    return _mm_comgt_epu8(a,b);
+    return (Vec16cb)_mm_comgt_epu8(a,b);
 #else  // SSE2 instruction set
     return Vec16cb(Vec16c(~(b >= a)));
 #endif
@@ -1123,7 +1141,7 @@ public:
         else {
             // worst case. read 1 byte at a time and suffer store forwarding penalty
             int16_t x[8];
-            for (int i = 0; i < n; i++) x[i] = ((int16_t *)p)[i];
+            for (int i = 0; i < n; i++) x[i] = ((int16_t const *)p)[i];
             load(x);
         }
         cutoff(n);
@@ -1328,6 +1346,22 @@ static inline Vec8sb andnot (Vec8sb const & a, Vec8sb const & b) {
     return Vec8sb(andnot(Vec128b(a), Vec128b(b)));
 }
 
+// Horizontal Boolean functions for Vec8sb
+
+// horizontal_and. Returns true if all elements are true
+static inline bool horizontal_and(Vec8sb const & a) {
+    return _mm_movemask_epi8(a) == 0xFFFF;
+}
+
+// horizontal_or. Returns true if at least one element is true
+static inline bool horizontal_or(Vec8sb const & a) {
+#if INSTRSET >= 5   // SSE4.1 supported. Use PTEST
+    return !_mm_testz_si128(a, a);
+#else
+    return _mm_movemask_epi8(a) != 0;
+#endif
+}
+
 
 /*****************************************************************************
 *
@@ -1433,7 +1467,7 @@ static inline Vec8sb operator == (Vec8s const & a, Vec8s const & b) {
 // vector operator != : returns true for elements for which a != b
 static inline Vec8sb operator != (Vec8s const & a, Vec8s const & b) {
 #ifdef __XOP__  // AMD XOP instruction set
-    return _mm_comneq_epi16(a,b);
+    return (Vec8sb)_mm_comneq_epi16(a,b);
 #else  // SSE2 instruction set
     return Vec8sb (~(a == b));
 #endif
@@ -1452,7 +1486,7 @@ static inline Vec8sb operator < (Vec8s const & a, Vec8s const & b) {
 // vector operator >= : returns true for elements for which a >= b (signed)
 static inline Vec8sb operator >= (Vec8s const & a, Vec8s const & b) {
 #ifdef __XOP__  // AMD XOP instruction set
-    return _mm_comge_epi16(a,b);
+    return (Vec8sb)_mm_comge_epi16(a,b);
 #else  // SSE2 instruction set
     return Vec8sb (~(b > a));
 #endif
@@ -1753,7 +1787,7 @@ static inline Vec8s operator <= (Vec8us const & a, Vec8us const & b) {
 // vector operator > : returns true for elements for which a > b (unsigned)
 static inline Vec8s operator > (Vec8us const & a, Vec8us const & b) {
 #ifdef __XOP__  // AMD XOP instruction set
-    return _mm_comgt_epu16(a,b);
+    return (Vec8s)_mm_comgt_epu16(a,b);
 #else  // SSE2 instruction set
     return Vec8s (~(b >= a));
 #endif
@@ -1947,12 +1981,12 @@ public:
         case 0:
             *this = 0;  break;
         case 1:
-            xmm = _mm_cvtsi32_si128(*(int32_t*)p);  break;
+            xmm = _mm_cvtsi32_si128(*(int32_t const*)p);  break;
         case 2:
             // intrinsic for movq is missing!
-            xmm = _mm_setr_epi32(((int32_t*)p)[0], ((int32_t*)p)[1], 0, 0);  break;
+            xmm = _mm_setr_epi32(((int32_t const*)p)[0], ((int32_t const*)p)[1], 0, 0);  break;
         case 3:
-            xmm = _mm_setr_epi32(((int32_t*)p)[0], ((int32_t*)p)[1], ((int32_t*)p)[2], 0);  break;
+            xmm = _mm_setr_epi32(((int32_t const*)p)[0], ((int32_t const*)p)[1], ((int32_t const*)p)[2], 0);  break;
         case 4:
             load(p);  break;
         default: 
@@ -2122,6 +2156,22 @@ static inline Vec4ib andnot (Vec4ib const & a, Vec4ib const & b) {
     return Vec4ib(andnot(Vec128b(a), Vec128b(b)));
 }
 
+// Horizontal Boolean functions for Vec4ib
+
+// horizontal_and. Returns true if all elements are true
+static inline bool horizontal_and(Vec4ib const & a) {
+    return _mm_movemask_epi8(a) == 0xFFFF;
+}
+
+// horizontal_or. Returns true if at least one element is true
+static inline bool horizontal_or(Vec4ib const & a) {
+#if INSTRSET >= 5   // SSE4.1 supported. Use PTEST
+    return !_mm_testz_si128(a, a);
+#else
+    return _mm_movemask_epi8(a) != 0;
+#endif
+}
+
 
 /*****************************************************************************
 *
@@ -2237,7 +2287,7 @@ static inline Vec4ib operator == (Vec4i const & a, Vec4i const & b) {
 // vector operator != : returns true for elements for which a != b
 static inline Vec4ib operator != (Vec4i const & a, Vec4i const & b) {
 #ifdef __XOP__  // AMD XOP instruction set
-    return _mm_comneq_epi32(a,b);
+    return (Vec4ib)_mm_comneq_epi32(a,b);
 #else  // SSE2 instruction set
     return Vec4ib(Vec4i (~(a == b)));
 #endif
@@ -2256,7 +2306,7 @@ static inline Vec4ib operator < (Vec4i const & a, Vec4i const & b) {
 // vector operator >= : returns true for elements for which a >= b (signed)
 static inline Vec4ib operator >= (Vec4i const & a, Vec4i const & b) {
 #ifdef __XOP__  // AMD XOP instruction set
-    return _mm_comge_epi32(a,b);
+    return (Vec4ib)_mm_comge_epi32(a,b);
 #else  // SSE2 instruction set
     return Vec4ib(Vec4i (~(b > a)));
 #endif
@@ -2556,12 +2606,12 @@ static inline Vec4ui operator << (Vec4ui const & a, int32_t b) {
 // vector operator > : returns true for elements for which a > b (unsigned)
 static inline Vec4ib operator > (Vec4ui const & a, Vec4ui const & b) {
 #ifdef __XOP__  // AMD XOP instruction set
-    return _mm_comgt_epu32(a,b);
+    return (Vec4ib)_mm_comgt_epu32(a,b);
 #else  // SSE2 instruction set
     __m128i signbit = _mm_set1_epi32(0x80000000);
     __m128i a1      = _mm_xor_si128(a,signbit);
     __m128i b1      = _mm_xor_si128(b,signbit);
-    return _mm_cmpgt_epi32(a1,b1);                         // signed compare
+    return (Vec4ib)_mm_cmpgt_epi32(a1,b1);                         // signed compare
 #endif
 }
 
@@ -2573,10 +2623,10 @@ static inline Vec4ib operator < (Vec4ui const & a, Vec4ui const & b) {
 // vector operator >= : returns true for elements for which a >= b (unsigned)
 static inline Vec4ib operator >= (Vec4ui const & a, Vec4ui const & b) {
 #ifdef __XOP__  // AMD XOP instruction set
-    return _mm_comge_epu32(a,b);
+    return (Vec4ib)_mm_comge_epu32(a,b);
 #elif INSTRSET >= 5   // SSE4.1
     __m128i max_ab = _mm_max_epu32(a,b);                   // max(a,b), unsigned
-    return _mm_cmpeq_epi32(a,max_ab);                      // a == max(a,b)
+    return (Vec4ib)_mm_cmpeq_epi32(a,max_ab);                      // a == max(a,b)
 #else  // SSE2 instruction set
     return Vec4ib(Vec4i (~(b > a)));
 #endif
@@ -2706,7 +2756,7 @@ public:
     }
     // Constructor to broadcast the same value into all elements:
     Vec2q(int64_t i) {
-#if defined (_MSC_VER) && ! defined(__INTEL_COMPILER)
+#if defined (_MSC_VER) && _MSC_VER < 1900 && ! defined(__INTEL_COMPILER)
         // MS compiler has no _mm_set1_epi64x in 32 bit mode
 #if defined(__x86_64__)                                    // 64 bit mode
 #if _MSC_VER < 1700
@@ -2733,12 +2783,12 @@ public:
 
 #endif  // __x86_64__
 #else   // Other compilers
-        xmm = _mm_set1_epi64x(i);   // emmintrin.h
+        xmm = _mm_set1_epi64x(i);
 #endif
     }
     // Constructor to build from all elements:
     Vec2q(int64_t i0, int64_t i1) {
-#if defined (_MSC_VER) && ! defined(__INTEL_COMPILER)
+#if defined (_MSC_VER)  && _MSC_VER < 1900 && ! defined(__INTEL_COMPILER)
         // MS compiler has no _mm_set_epi64x in 32 bit mode
 #if defined(__x86_64__)                                    // 64 bit mode
 #if _MSC_VER < 1700
@@ -2791,7 +2841,7 @@ public:
             *this = 0;  break;
         case 1:
             // intrinsic for movq is missing!
-            *this = Vec2q(*(int64_t*)p, 0);  break;
+            *this = Vec2q(*(int64_t const*)p, 0);  break;
         case 2:
             load(p);  break;
         default: 
@@ -2974,6 +3024,22 @@ static inline Vec2qb andnot (Vec2qb const & a, Vec2qb const & b) {
     return Vec2qb(andnot(Vec128b(a), Vec128b(b)));
 }
 
+// Horizontal Boolean functions for Vec2qb
+
+// horizontal_and. Returns true if all elements are true
+static inline bool horizontal_and(Vec2qb const & a) {
+    return _mm_movemask_epi8(a) == 0xFFFF;
+}
+
+// horizontal_or. Returns true if at least one element is true
+static inline bool horizontal_or(Vec2qb const & a) {
+#if INSTRSET >= 5   // SSE4.1 supported. Use PTEST
+    return !_mm_testz_si128(a, a);
+#else
+    return _mm_movemask_epi8(a) != 0;
+#endif
+} 
+
 
 /*****************************************************************************
 *
@@ -3115,7 +3181,7 @@ static inline Vec2qb operator == (Vec2q const & a, Vec2q const & b) {
 // vector operator != : returns true for elements for which a != b
 static inline Vec2qb operator != (Vec2q const & a, Vec2q const & b) {
 #ifdef __XOP__  // AMD XOP instruction set
-    return Vec2q(_mm_comneq_epi64(a,b));
+    return Vec2qb(_mm_comneq_epi64(a,b));
 #else  // SSE2 instruction set
     return Vec2qb(Vec2q(~(a == b)));
 #endif
@@ -3148,7 +3214,7 @@ static inline Vec2qb operator > (Vec2q const & a, Vec2q const & b) {
 // vector operator >= : returns true for elements for which a >= b (signed)
 static inline Vec2qb operator >= (Vec2q const & a, Vec2q const & b) {
 #ifdef __XOP__  // AMD XOP instruction set
-    return Vec2q(_mm_comge_epi64(a,b));
+    return Vec2qb(_mm_comge_epi64(a,b));
 #else  // SSE2 instruction set
     return Vec2qb(Vec2q(~(a < b)));
 #endif
@@ -3275,12 +3341,12 @@ static inline Vec2q abs_saturated(Vec2q const & a) {
 // Use negative count to rotate right
 static inline Vec2q rotate_left(Vec2q const & a, int b) {
 #ifdef __XOP__  // AMD XOP instruction set
-    return _mm_rot_epi64(a,Vec2q(b));
+    return (Vec2q)_mm_rot_epi64(a,Vec2q(b));
 #else  // SSE2 instruction set
     __m128i left  = _mm_sll_epi64(a,_mm_cvtsi32_si128(b & 0x3F));      // a << b 
     __m128i right = _mm_srl_epi64(a,_mm_cvtsi32_si128((64-b) & 0x3F)); // a >> (64 - b)
     __m128i rot   = _mm_or_si128(left,right);                          // or
-    return  rot;
+    return  (Vec2q)rot;
 #endif
 }
 
@@ -3386,7 +3452,7 @@ static inline Vec2uq operator << (Vec2uq const & a, int32_t b) {
 // vector operator > : returns true for elements for which a > b (unsigned)
 static inline Vec2qb operator > (Vec2uq const & a, Vec2uq const & b) {
 #if defined ( __XOP__ ) // AMD XOP instruction set
-    return Vec2q(_mm_comgt_epu64(a,b));
+    return Vec2qb(_mm_comgt_epu64(a,b));
 #elif INSTRSET >= 6 // SSE4.2
     __m128i sign64 = constant4i<0,(int32_t)0x80000000,0,(int32_t)0x80000000>();
     __m128i aflip  = _mm_xor_si128(a, sign64);
@@ -3415,7 +3481,7 @@ static inline Vec2qb operator < (Vec2uq const & a, Vec2uq const & b) {
 // vector operator >= : returns true for elements for which a >= b (unsigned)
 static inline Vec2qb operator >= (Vec2uq const & a, Vec2uq const & b) {
 #ifdef __XOP__  // AMD XOP instruction set
-    return Vec2q(_mm_comge_epu64(a,b));
+    return Vec2qb(_mm_comge_epu64(a,b));
 #else  // SSE2 instruction set
     return  Vec2qb(Vec2q(~(b > a)));
 #endif
@@ -5374,7 +5440,7 @@ public:
         sign       = _mm_set1_epi32(sgn);
     }
     void set(int32_t d) {                                  // Set or change divisor, calculate parameters
-        const int32_t d1 = abs(d);
+        const int32_t d1 = ::abs(d);
         int32_t sh, m;
         if (d1 > 1) {
             sh = bit_scan_reverse(d1-1);                   // shift count = ceil(log2(d1))-1 = (bit_scan_reverse(d1-1)+1)-1
@@ -5471,7 +5537,7 @@ public:
         sign       = _mm_set1_epi32(sgn);
     }
     void set(int16_t d) {                                  // Set or change divisor, calculate parameters
-        const int32_t d1 = abs(d);
+        const int32_t d1 = ::abs(d);
         int32_t sh, m;
         if (d1 > 1) {
             sh = bit_scan_reverse(d1-1);                   // shift count = ceil(log2(d1))-1 = (bit_scan_reverse(d1-1)+1)-1
@@ -6147,5 +6213,9 @@ static inline uint8_t to_bits(Vec2qb x);
 static inline Vec2qb to_Vec2qb(uint8_t x);
 
 #endif  // INSTRSET < 9 || MAX_VECTOR_SIZE < 512
+
+#ifdef VCL_NAMESPACE
+}
+#endif
 
 #endif // VECTORI128_H

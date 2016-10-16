@@ -343,6 +343,8 @@ void PhyloSuperTreePlen::deleteAllPartialLh() {
 		(*it)->_pattern_lh = NULL;
 		(*it)->_pattern_lh_cat = NULL;
 		(*it)->theta_all = NULL;
+        (*it)->buffer_scale_all = NULL;
+        (*it)->buffer_partial_lh = NULL;
 		(*it)->ptn_freq = NULL;
 		(*it)->ptn_freq_computed = false;
 		(*it)->ptn_invar = NULL;
@@ -362,6 +364,8 @@ PhyloSuperTreePlen::~PhyloSuperTreePlen()
 		(*it)->_pattern_lh = NULL;
 		(*it)->_pattern_lh_cat = NULL;
 		(*it)->theta_all = NULL;
+        (*it)->buffer_scale_all = NULL;
+        (*it)->buffer_partial_lh = NULL;
 		(*it)->ptn_freq = NULL;
 		(*it)->ptn_freq_computed = false;
 		(*it)->ptn_invar = NULL;
@@ -1783,10 +1787,17 @@ void PhyloSuperTreePlen::initializeAllPartialLh() {
 	block_size.resize(ntrees);
 	scale_block_size.resize(ntrees);
 
-	vector<uint64_t> mem_size, lh_cat_size;
+	vector<uint64_t> mem_size, lh_cat_size, buffer_size;
 	mem_size.resize(ntrees);
 	lh_cat_size.resize(ntrees);
-	uint64_t total_mem_size = 0, total_block_size = 0, total_lh_cat_size = 0;
+    buffer_size.resize(ntrees);
+
+	uint64_t
+        total_mem_size = 0,
+        total_block_size = 0,
+        total_scale_block_size = 0,
+        total_lh_cat_size = 0,
+        total_buffer_size = 0;
 
 	if (part_order.empty())
 		computePartitionOrder();
@@ -1794,20 +1805,21 @@ void PhyloSuperTreePlen::initializeAllPartialLh() {
 	for (partid = 0; partid < ntrees; partid++) {
 		part = part_order[partid];
         it = begin() + part;
-		size_t nptn = (*it)->getAlnNPattern() + (*it)->aln->num_states; // extra #numStates for ascertainment bias correction
-		if (instruction_set >= 7)
-			mem_size[part] = ((nptn +3)/4)*4;
-		else
-			mem_size[part] = ((nptn % 2) == 0) ? nptn : (nptn + 1);
-		scale_block_size[part] = nptn;
-		block_size[part] = mem_size[part] * (*it)->aln->num_states * (*it)->getRate()->getNRate() *
+        // extra #numStates for ascertainment bias correction
+		mem_size[part] = get_safe_upper_limit((*it)->getAlnNPattern()) + get_safe_upper_limit((*it)->aln->num_states);
+        size_t mem_cat_size = mem_size[part] * (*it)->getRate()->getNRate() *
 				(((*it)->model_factory->fused_mix_rate)? 1 : (*it)->getModel()->getNMixtures());
+
+		block_size[part] = mem_cat_size * (*it)->aln->num_states;
+		scale_block_size[part] = mem_cat_size;
 
 		lh_cat_size[part] = mem_size[part] * (*it)->getRate()->getNDiscreteRate() *
 				(((*it)->model_factory->fused_mix_rate)? 1 : (*it)->getModel()->getNMixtures());
 		total_mem_size += mem_size[part];
 		total_block_size += block_size[part];
+        total_scale_block_size += scale_block_size[part];
 		total_lh_cat_size += lh_cat_size[part];
+        total_buffer_size += (buffer_size[part] = (*it)->getBufferPartialLhSize());
 	}
 
     if (!_pattern_lh)
@@ -1818,7 +1830,13 @@ void PhyloSuperTreePlen::initializeAllPartialLh() {
     at(part_order[0])->_pattern_lh_cat = _pattern_lh_cat;
     if (!theta_all)
         theta_all = aligned_alloc<double>(total_block_size);
+    if (!buffer_scale_all)
+        buffer_scale_all = aligned_alloc<double>(total_mem_size);
+    if (!buffer_partial_lh)
+        buffer_partial_lh = aligned_alloc<double>(total_buffer_size);
     at(part_order[0])->theta_all = theta_all;
+    at(part_order[0])->buffer_scale_all = buffer_scale_all;
+    at(part_order[0])->buffer_partial_lh = buffer_partial_lh;
     if (!ptn_freq) {
         ptn_freq = aligned_alloc<double>(total_mem_size);
         ptn_freq_computed = false;
@@ -1836,7 +1854,7 @@ void PhyloSuperTreePlen::initializeAllPartialLh() {
     at(part_order[0])->nni_partial_lh = nni_partial_lh;
     
     if (!nni_scale_num) {
-        nni_scale_num = aligned_alloc<UBYTE>(IT_NUM*total_mem_size);
+        nni_scale_num = aligned_alloc<UBYTE>(IT_NUM*total_scale_block_size);
     }
     at(part_order[0])->nni_scale_num = nni_scale_num;
 
@@ -1847,11 +1865,13 @@ void PhyloSuperTreePlen::initializeAllPartialLh() {
 		(*it)->_pattern_lh = (*prev_it)->_pattern_lh + mem_size[part];
 		(*it)->_pattern_lh_cat = (*prev_it)->_pattern_lh_cat + lh_cat_size[part];
 		(*it)->theta_all = (*prev_it)->theta_all + block_size[part];
+        (*it)->buffer_scale_all = (*prev_it)->buffer_scale_all + mem_size[part];
+        (*it)->buffer_partial_lh = (*prev_it)->buffer_partial_lh + buffer_size[part];
 		(*it)->ptn_freq = (*prev_it)->ptn_freq + mem_size[part];
 		(*it)->ptn_freq_computed = false;
 		(*it)->ptn_invar = (*prev_it)->ptn_invar + mem_size[part];
         (*it)->nni_partial_lh = (*prev_it)->nni_partial_lh + IT_NUM*block_size[part];
-        (*it)->nni_scale_num = (*prev_it)->nni_scale_num + IT_NUM*mem_size[part];
+        (*it)->nni_scale_num = (*prev_it)->nni_scale_num + IT_NUM*scale_block_size[part];
 	}
 
 	// compute total memory for all partitions

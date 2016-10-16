@@ -24,7 +24,7 @@
 *
 * For detailed instructions, see vectormath_common.h and VectorClass.pdf
 *
-* (c) Copyright 2015 GNU General Public License http://www.gnu.org/licenses
+* (c) Copyright 2014-2016 GNU General Public License http://www.gnu.org/licenses
 ******************************************************************************/
 
 #ifndef VECTORMATH_HYP_H
@@ -32,6 +32,9 @@
 
 #include "vectormath_exp.h"  
 
+#ifdef VCL_NAMESPACE
+namespace VCL_NAMESPACE {
+#endif
 
 /******************************************************************************
 *                 Hyperbolic functions
@@ -732,5 +735,9 @@ static inline Vec16f atanh(Vec16f const & x) {
     return atanh_f<Vec16f, Vec16fb>(x);
 }
 #endif // MAX_VECTOR_SIZE >= 512
+
+#ifdef VCL_NAMESPACE
+}
+#endif
 
 #endif

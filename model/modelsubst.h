@@ -76,6 +76,12 @@ public:
 	 */
 	virtual int getNMixtures() { return 1; }
 
+ 	/**
+	 * @param cat mixture class
+	 * @return weight of a mixture model component
+	 */
+	virtual double getMixtureWeight(int cat) { return 1.0; }
+
 	/**
 		@return the number of rate entries, equal to the number of elements
 			in the upper-diagonal of the rate matrix (since model is reversible)

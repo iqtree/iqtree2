@@ -65,7 +65,7 @@
 #include "timeutil.h"
 //#include <unistd.h>
 #include <stdlib.h>
-#include "vectorclass/vectorclass.h"
+#include "vectorclass/instrset.h"
 
 #include "MPIHelper.h"
 #ifdef _IQTREE_MPI
@@ -2388,10 +2388,15 @@ int main(int argc, char *argv[]) {
 	time(&start_time);
 	cout << "Time:    " << ctime(&start_time);
 
-	if (Params::getInstance().lk_no_avx)
+	if (Params::getInstance().lk_no_avx == 1)
 		instruction_set = min(instruction_set, 6);
 
 	cout << "Kernel:  ";
+
+    if (Params::getInstance().lk_safe_scaling) {
+        cout << "Safe ";
+    }
+
 	if (Params::getInstance().pll) {
 #ifdef __AVX__
 		cout << "PLL-AVX";
@@ -2399,10 +2404,13 @@ int main(int argc, char *argv[]) {
 		cout << "PLL-SSE3";
 #endif
 	} else {
+        bool has_fma = (has_fma3 || has_fma4) && (instruction_set >= 7) && Params::getInstance().lk_no_avx != 2;
 		switch (Params::getInstance().SSE) {
 		case LK_EIGEN: cout << "No SSE"; break;
 		case LK_EIGEN_SSE:
-			if (instruction_set >= 7) {
+            if (has_fma) {
+                cout << "AVX+FMA";
+            } else if (instruction_set >= 7) {
 				cout << "AVX";
 			} else {
 				cout << "SSE3";

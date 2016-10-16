@@ -21,7 +21,7 @@ template <class VectorClass, const int VCSIZE, const int nstates>
 void PhyloTree::computeMixturePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad) {
     if (dad_branch->node->degree() > 3) {
         // TODO: SIMD version for multifurcating node
-        computeMixturePartialLikelihoodEigen(dad_branch, dad);
+        computePartialLikelihoodEigen(dad_branch, dad);
         return;
     }
 
