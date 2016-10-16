@@ -1433,6 +1433,9 @@ public:
      */
     SiteLoglType print_site_lh;
 
+    /** TRUE to print partition log-likelihood, default: FALSE */
+    bool print_partition_lh;
+
     /**
         control printing posterior probability of each site belonging to a rate/mixture categories
         same meaning as print_site_lh, but results are printed to .siteprob file

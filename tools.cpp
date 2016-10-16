@@ -808,6 +808,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.SSE = LK_EIGEN_SSE;
     params.lk_no_avx = false;
     params.print_site_lh = WSL_NONE;
+    params.print_partition_lh = false;
     params.print_site_prob = WSL_NONE;
     params.print_site_state_freq = WSF_NONE;
     params.print_site_rate = false;
@@ -2253,6 +2254,12 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.print_site_lh = WSL_SITE;
 				continue;
 			}
+
+			if (strcmp(argv[cnt], "-wpl") == 0) {
+				params.print_partition_lh = true;
+				continue;
+			}
+
 			if (strcmp(argv[cnt], "-wslg") == 0 || strcmp(argv[cnt], "-wslr") == 0) {
 				params.print_site_lh = WSL_RATECAT;
 				continue;
@@ -3404,6 +3411,7 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -wspr                Write site probabilities per rate category" << endl
             << "  -wspm                Write site probabilities per mixture class" << endl
             << "  -wspmr               Write site probabilities per mixture+rate class" << endl
+			<< "  -wpl                 Write partition log-likelihoods to .partlh file" << endl
             << "  -fconst f1,...,fN    Add constant patterns into alignment (N=#nstates)" << endl
             << "  -me <epsilon>        Logl epsilon for model parameter optimization (default 0.01)" << endl
             << "  --no-outfiles        Suppress printing output files" << endl;
