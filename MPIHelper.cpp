@@ -143,10 +143,10 @@ void MPIHelper::receiveTrees(bool fromAll, int maxNumTrees, TreeCollection &tree
     }
 #ifdef _IQTREE_MPI
     int flag = 0;
-    int minNumTrees = 0;
+//    int minNumTrees = 0;
     bool nodes[getNumProcesses()];
-    if (fromAll)
-        minNumTrees = getNumProcesses() - 1;
+//    if (fromAll)
+//        minNumTrees = getNumProcesses() - 1;
     for (int i = 0; i < getNumProcesses(); i++)
         nodes[i] = false;
     nodes[getProcessID()] = true;
@@ -178,11 +178,11 @@ void MPIHelper::receiveTrees(bool fromAll, int maxNumTrees, TreeCollection &tree
             }
             if (fromAll && !nodes[status.MPI_SOURCE]) {
                 nodes[status.MPI_SOURCE] = true;
-                minNumTrees--;
+//                minNumTrees--;
             }
             delete [] recvBuffer;
         }
-    } while (minNumTrees > 0 || flag);
+    } while (flag);
     numTreeReceived += trees.getNumTrees();
 #endif
 }

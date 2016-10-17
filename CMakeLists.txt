@@ -570,8 +570,11 @@ endif()
 target_link_libraries(iqtree pll ncl lbfgsb whtest sprng vectorclass model gsl ${PLATFORM_LIB} ${STD_LIB} ${THREAD_LIB})
 
 # MPI libraries
-if (IQTREE_FLAGS MATCHES "mpi" AND NOT CMAKE_CXX_COMPILER MATCHES "mpi")
-    target_link_libraries(iqtree ${MPI_CXX_LIBRARIES} mympi)
+if (IQTREE_FLAGS MATCHES "mpi")
+    target_link_libraries(iqtree mympi)
+    if (NOT CMAKE_CXX_COMPILER MATCHES "mpi")
+        target_link_libraries(iqtree ${MPI_CXX_LIBRARIES})
+    endif()
 endif()
 
 # SSE, AVX etc. libraries

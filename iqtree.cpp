@@ -2204,7 +2204,7 @@ double IQTree::doTreeSearch() {
             candidateTrees.computeSplitOccurences(Params::getInstance().stableSplitThreshold);
 
 #ifdef _IQTREE_MPI
-        int maxNumTrees = (MPIHelper::getInstance().getNumProcesses() - 1) * 2;
+        int maxNumTrees = (MPIHelper::getInstance().getNumProcesses() - 1) * 4;
         if (MPIHelper::getInstance().isMaster()) {
             // master: receive tree from WORKERS
             bool candidateset_changed = MPI_CollectTrees(false, maxNumTrees, true);
@@ -2392,7 +2392,7 @@ bool IQTree::MPI_CollectTrees(bool allTrees, int maxNumTrees, bool updateStopRul
         cout << commTime << " seconds" << endl;
     }
     if (commTime > 1.0) {
-        cout << "WARNING: Communication time is too slow. Please increase your eager buffer in your MPI library!" << endl;
+        cout << "WARNING: Communication time (" << commTime << " sec) is too slow. Please increase MP_BUFFER_MEM and MP_EAGER_LIMIT" << endl;
     }
 
 //    PhyloTree phyloTree;
