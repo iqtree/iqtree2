@@ -68,84 +68,11 @@ if (CMAKE_BUILD_TYPE STREQUAL "Release")
 	message("Builde mode   : Release")
 endif()
 
+if (CMAKE_GENERATOR MATCHES "Xcode")
+    set(CMAKE_XCODE_ATTRIBUTE_DEBUG_INFORMATION_FORMAT "dwarf-with-dsym")
+endif()
+
 include_directories("${PROJECT_SOURCE_DIR}")
-
-##################################################################
-# Setup source code files for compilation
-##################################################################
-if (NOT BINARY32 AND NOT IQTREE_FLAGS MATCHES "novx")
-    add_library(avxkernel phylotreeavx.cpp)
-endif()
-
-if (IQTREE_FLAGS MATCHES "mpi")
-	add_library(mpi TreeCollection.cpp ObjectStream.cpp)
-endif()
-
-add_executable(iqtree
-alignment.cpp
-alignmentpairwise.cpp
-circularnetwork.cpp
-eigendecomposition.cpp
-greedy.cpp
-gss.cpp
-#guidedbootstrap.cpp
-gurobiwrapper.cpp
-gzstream.cpp
-hashsplitset.cpp
-iqtree.cpp
-maalignment.cpp
-matree.cpp
-mexttree.cpp
-mpdablock.cpp
-msetsblock.cpp
-msplitsblock.cpp
-modelsblock.cpp
-mtree.cpp
-mtreeset.cpp
-ncbitree.cpp
-ngs.cpp
-node.cpp
-optimization.cpp
-parsmultistate.cpp
-pattern.cpp
-pda.cpp
-pdnetwork.cpp
-pdtree.cpp
-pdtreeset.cpp
-phyloanalysis.cpp
-phylonode.cpp
-phylosupertree.cpp
-phylotree.cpp
-phylotreesse.cpp
-phylotreepars.cpp
-phylokernelsitemodel.cpp
-#phylotreeavx.cpp
-pruning.cpp
-quartet.cpp
-split.cpp
-splitgraph.cpp
-splitset.cpp
-stoprule.cpp
-superalignment.cpp
-superalignmentpairwise.cpp
-supernode.cpp
-tinatree.cpp
-tools.cpp
-whtest_wrapper.cpp
-lpwrapper.c
-pllnni.cpp
-phylosupertreeplen.cpp
-phylotesting.cpp
-ecopd.cpp
-ecopdmtreeset.cpp
-graph.cpp
-candidateset.cpp
-checkpoint.cpp
-upperbounds.cpp
-constrainttree.cpp
-MPIHelper.cpp
-)
-
 
 ##################################################################
 # Detect target platforms
@@ -243,21 +170,16 @@ endif()
 
 if (IQTREE_FLAGS MATCHES "mpi")
     add_definitions(-D_IQTREE_MPI)
-    if (IQTREE_FLAGS MATCHES "debug")
-        add_definitions(-D_MPI_DEBUG)
-        message("Debug information enabled")
-    endif()
     if (NOT CMAKE_CXX_COMPILER MATCHES "mpi")
         # if not using the MPI compiler wrapper, set own options manually 
         find_package(MPI REQUIRED)
-        set(CMAKE_CXX_COMPILE_FLAGS ${CMAKE_CXX_COMPILE_FLAGS} ${MPI_CXX_COMPILE_FLAGS})
-        set(CMAKE_C_COMPILE_FLAGS ${CMAKE_C_COMPILE_FLAGS} ${MPI_C_COMPILE_FLAGS})
-        set(CMAKE_CXX_LINK_FLAGS ${CMAKE_CXX_LINK_FLAGS} ${MPI_CXX_LINK_FLAGS})
-        set(CMAKE_C_LINK_FLAGS ${CMAKE_C_LINK_FLAGS} ${MPI_C_LINK_FLAGS})
+        set(CMAKE_CXX_COMPILE_FLAGS "${CMAKE_CXX_COMPILE_FLAGS} ${MPI_CXX_COMPILE_FLAGS}")
+        set(CMAKE_C_COMPILE_FLAGS "${CMAKE_C_COMPILE_FLAGS} ${MPI_C_COMPILE_FLAGS}")
+        set(CMAKE_CXX_LINK_FLAGS "${CMAKE_CXX_LINK_FLAGS} ${MPI_CXX_LINK_FLAGS}")
+        set(CMAKE_C_LINK_FLAGS "${CMAKE_C_LINK_FLAGS} ${MPI_C_LINK_FLAGS}")
         include_directories(${MPI_C_INCLUDE_PATH})
         include_directories(${MPI_CXX_INCLUDE_PATH})
-        target_link_libraries(iqtree ${MPI_CXX_LIBRARIES})
-    endif() 
+    endif()
 endif()
 
 
@@ -335,8 +257,8 @@ endif()
 # configure SSE/AVX/FMA instructions
 ##################################################################
 
-SET(AVX_FLAGS "-D__AVX")
-if (VCC)
+SET(AVX_FLAGS "-D__SSE3 -D__AVX")
+if (VCC) 
 	set(AVX_FLAGS "${AVX_FLAGS} /arch:AVX")
 elseif (CLANG)
 	set(AVX_FLAGS "${AVX_FLAGS} -mavx")
@@ -363,22 +285,18 @@ elseif (ICC)
 	endif()
 endif()
 
-if (IQTREE_FLAGS MATCHES "fma") # AVX+FMA instruction set
- 	message("Vectorization : AVX+FMA")
-	add_definitions(-D__SSE3 -D__AVX) # define both SSE3 and AVX directive
-	if (VCC)
-		# Visual C++ has no /mfma flag!, FMA is only included in AVX2
-		set(COMBINED_FLAGS "${COMBINED_FLAGS} /arch:AVX2")
-	elseif (CLANG)
-		set(COMBINED_FLAGS "${COMBINED_FLAGS} -mavx -mfma")
-	elseif (GCC)
-		set(COMBINED_FLAGS "${COMBINED_FLAGS} -mavx -fabi-version=0 -mfma")
-	elseif (ICC)
-		if (WIN32)
-			 set(COMBINED_FLAGS "${COMBINED_FLAGS} /arch:AVX /Qfma")
-		else()
-			 set(COMBINED_FLAGS "${COMBINED_FLAGS} -mavx -mfma")
-		endif()
+SET(FMA_FLAGS "-D__SSE3 -D__AVX")
+if (VCC) 
+	set(FMA_FLAGS "${FMA_FLAGS} /arch:AVX2")
+elseif (CLANG)
+	set(FMA_FLAGS "${FMA_FLAGS} -mavx -mfma")
+elseif (GCC)
+	set(FMA_FLAGS "${FMA_FLAGS} -mavx -fabi-version=0 -mfma")
+elseif (ICC) 
+	if (WIN32)
+		 set(FMA_FLAGS "${FMA_FLAGS} /arch:AVX /Qfma")
+	else()
+		 set(FMA_FLAGS "${FMA_FLAGS} -mavx -mfma")
 	endif()
 endif()
 
@@ -497,6 +415,90 @@ endif(EIGEN3_FOUND)
 add_subdirectory(model)
 add_subdirectory(gsl)
 
+##################################################################
+# the main executable
+##################################################################
+
+add_library(kernelsse phylokernelsse.cpp)
+
+if (NOT BINARY32 AND NOT IQTREE_FLAGS MATCHES "novx")
+add_library(kernelavx phylotreeavx.cpp)
+add_library(kernelfma phylokernelfma.cpp)
+if (IQTREE_FLAGS MATCHES "512")
+    add_library(kernelavx512 phylokernelavx512.cpp)
+    add_definitions(-DINCLUDE_AVX512)
+endif()
+endif()
+
+if (IQTREE_FLAGS MATCHES "mpi")
+	add_library(mympi TreeCollection.cpp ObjectStream.cpp)
+endif()
+
+add_executable(iqtree
+alignment.cpp
+alignmentpairwise.cpp
+circularnetwork.cpp
+eigendecomposition.cpp
+greedy.cpp
+gss.cpp
+#guidedbootstrap.cpp
+gurobiwrapper.cpp
+gzstream.cpp
+hashsplitset.cpp
+iqtree.cpp
+maalignment.cpp
+matree.cpp
+mexttree.cpp
+mpdablock.cpp
+msetsblock.cpp
+msplitsblock.cpp
+modelsblock.cpp
+mtree.cpp
+mtreeset.cpp
+ncbitree.cpp
+ngs.cpp
+node.cpp
+optimization.cpp
+parsmultistate.cpp
+pattern.cpp
+pda.cpp
+pdnetwork.cpp
+pdtree.cpp
+pdtreeset.cpp
+phyloanalysis.cpp
+phylonode.cpp
+phylosupertree.cpp
+phylotree.cpp
+phylotreesse.cpp
+phylotreepars.cpp
+#phylokernelsitemodel.cpp
+#phylotreeavx.cpp
+pruning.cpp
+quartet.cpp
+split.cpp
+splitgraph.cpp
+splitset.cpp
+stoprule.cpp
+superalignment.cpp
+superalignmentpairwise.cpp
+supernode.cpp
+tinatree.cpp
+tools.cpp
+whtest_wrapper.cpp
+lpwrapper.c
+pllnni.cpp
+phylosupertreeplen.cpp
+phylotesting.cpp
+ecopd.cpp
+ecopdmtreeset.cpp
+graph.cpp
+candidateset.cpp
+checkpoint.cpp
+constrainttree.cpp
+upperbounds.cpp
+MPIHelper.cpp
+)
+
 if (NOT IQTREE_FLAGS MATCHES "nozlib")
     find_package(ZLIB)
 endif()
@@ -564,15 +566,20 @@ if (IQTREE_FLAGS MATCHES "omp")
 	endif()
 endif()
 
-set (MYMPI_LIB "")
-if (IQTREE_FLAGS MATCHES "mpi")
-    set (MYMPI_LIB "mpi")
+# basic linking librararies
+target_link_libraries(iqtree pll ncl lbfgsb whtest sprng vectorclass model gsl ${PLATFORM_LIB} ${STD_LIB} ${THREAD_LIB})
+
+# MPI libraries
+if (IQTREE_FLAGS MATCHES "mpi" AND NOT CMAKE_CXX_COMPILER MATCHES "mpi")
+    target_link_libraries(iqtree ${MPI_CXX_LIBRARIES} mympi)
 endif()
 
-if (BINARY32 OR IQTREE_FLAGS MATCHES "novx")
-    target_link_libraries(iqtree pll ncl lbfgsb whtest sprng vectorclass model gsl ${PLATFORM_LIB} ${STD_LIB} ${THREAD_LIB} ${MYMPI_LIB})
-else()
-    target_link_libraries(iqtree pll pllavx ncl lbfgsb whtest sprng vectorclass model avxkernel gsl ${PLATFORM_LIB} ${STD_LIB} ${THREAD_LIB} ${MYMPI_LIB})
+# SSE, AVX etc. libraries
+if (NOT BINARY32 AND NOT IQTREE_FLAGS MATCHES "novx")
+    target_link_libraries(iqtree pllavx kernelsse kernelavx kernelfma)
+    if (IQTREE_FLAGS MATCHES "512")
+        target_link_libraries(iqtree kernelavx512)
+    endif()
 endif()
 
 # setup the executable name

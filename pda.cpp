@@ -2359,13 +2359,16 @@ int main(int argc, char *argv[]) {
 
 	cout << "Host:    " << hostname << " (";
 	switch (instruction_set) {
-		case 3: cout << "SSE3, "; break;
-		case 4: cout << "SSSE3, "; break;
-		case 5: cout << "SSE4.1, "; break;
-		case 6: cout << "SSE4.2, "; break;
-		case 7: cout << "AVX, "; break;
-		case 8: cout << "AVX2, "; break;
-		default: cout << "AVX512F, "; break;
+	case 0: cout << "80386, "; break;
+	case 1: cout << "SSE, "; break;
+	case 2: cout << "SSE2, "; break;
+	case 3: cout << "SSE3, "; break;
+	case 4: cout << "SSSE3, "; break;
+	case 5: cout << "SSE4.1, "; break;
+	case 6: cout << "SSE4.2, "; break;
+	case 7: cout << "AVX, "; break;
+	case 8: cout << "AVX2, "; break;
+	default: cout << "AVX512, "; break;
 	}
 	if (has_fma3) cout << "FMA3, ";
 	if (has_fma4) cout << "FMA4, ";
