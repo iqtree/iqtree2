@@ -172,7 +172,7 @@ const static BASIS_MATRIX_TYPE BASIS_33B[]  = {BM_A,BM_A2,BM_C };
 const static BASIS_MATRIX_TYPE BASIS_33C[]  = {BM_A,BM_A2,BM_D1};
 const static BASIS_MATRIX_TYPE BASIS_34[]   = {BM_A,BM_A2,BM_D };
 const static BASIS_MATRIX_TYPE BASIS_44A[]  = {BM_A,BM_D, BM_E1,BM_E2};
-const static BASIS_MATRIX_TYPE BASIS_44B[]  = {BM_A,BM_A2,BM_D, BM_D1};
+const static BASIS_MATRIX_TYPE BASIS_44B[]  = {BM_A,BM_A2,BM_D1,BM_D };
 const static BASIS_MATRIX_TYPE BASIS_45A[]  = {BM_A,BM_A2,BM_B, BM_D };
 const static BASIS_MATRIX_TYPE BASIS_45B[]  = {BM_A,BM_A2,BM_C, BM_D };
 const static BASIS_MATRIX_TYPE BASIS_56A[]  = {BM_A,BM_A2,BM_B, BM_C, BM_D1};
@@ -235,6 +235,50 @@ const static bool TIME_REVERSIBLE[] =
 	      false,false,false,false,false,
 	      false,false};
 /*
+ * Base frequency Degrees of Freedom, by model. This is the number
+ * of matrices out of D, E1, E2 in the model. 
+ * BDF=0 => equilibrium base frequencies are pi_A=pi_G=pi_C=pi_T = 1/4
+ * BDF=1 => eqbm freqs pi_A=pi_G, pi_C=pi_T (for RY pairing)
+ * BDF=2 => eqbm freqs pi_A+pi_G = pi_C+pi_T = 1/2
+ * BDF=3 => arbitrary eqbm freqs
+ */
+
+const static int BDF[] = 
+  {0,0,0,0,0, // 1.1,   2.2b,  3.3a,  3.3b,  3.3c
+   1,3,1,1,1, // 3.4,   4.4a,  4.4b,  4.5a,  4.5b
+   0,3,2,0,0, // 5.6a,  5.6b,  5.7a,  5.7b,  5.7c
+   2,0,0,1,1, // 5.11a, 5.11b, 5.11c, 5.16,  6.6
+   3,3,3,1,1, // 6.7a,  6.7b,  6.8a,  6.8b,  6.17a
+   1,3,3,1,3, // 6.17b, 8.8,   8.10a, 8.10b, 8.16
+   3,3,2,0,3, // 8.17,  8.18,  9.20a, 9.20b, 10.12
+   3,3};      // 10.34, 12.12
+/*
+ * For the TRANSFORM_* arrays:
+ * Each shows how to modify a basis matrix to enforce a fixed base
+ * frequency vector. The base frequency vector is encoded as
+ * tauRY = pi_A+pi_G-pi_C-pi_T
+ * tauAG = pi_A-pi_G
+ * tauCT = pi_C-pi_T
+ * (or for WS symmetry think of them as tauWS, tauAT, tauCG, and
+ * for MK symmetry think of them as tauMK, tauAC, tauGT)
+ * then transformed basis matrix X = tauRY*TRANSFORM_X[0]+tauAG*TRANSFORM_X[1]+tauCT*TRANSFORM_X[2]
+ */
+const static double *TRANSFORM_A[]  = {D,    tE1,  tE2};
+const static double *TRANSFORM_A2[] = {D,     E1,   E2};
+const static double *TRANSFORM_B[]  = {NULL, mE2,  mE1};
+const static double *TRANSFORM_C[]  = {NULL,  E2,  mE1};
+const static double *TRANSFORM_D1[] = {NULL,  E1,  mE2};
+const static double *TRANSFORM_F1[] = {mE1,  NULL, NULL};
+const static double *TRANSFORM_F2[] = {mE2,  NULL, NULL};
+const static double *TRANSFORM_G1[] = {NULL,  mD,  NULL};
+const static double *TRANSFORM_G2[] = {NULL, NULL,  mD};
+
+const static double **BASIS_TRANSFORM[] = {
+  TRANSFORM_A,  TRANSFORM_A2, TRANSFORM_B, 
+  TRANSFORM_C,  TRANSFORM_D1, TRANSFORM_F1, 
+  TRANSFORM_F2, TRANSFORM_G1, TRANSFORM_G2};
+
+/*
  * symmetry 3 (empty string) is only for models with full symmetry
  * (RY, WS, MK models are isomorphic). FULL_SYMMETRY identifies
  * these models (1.1, 3.3a, 4.4a, 6.7a, 9.20b, 12.12).
@@ -276,8 +320,7 @@ void ModelLieMarkov::init(const char *model_name, string model_params, StateFreq
         abort();
     }
     freq_type = FREQ_ESTIMATE;
-    num_params = MODEL_PARAMS[model_num];
-    setBasis();
+    setBasis(); // sets basis and num_params
 
     if (model_parameters)
         delete[] model_parameters;
@@ -388,19 +431,94 @@ void ModelLieMarkov::setBounds(double *lower_bound, double *upper_bound, bool *b
 }
 
 /**
- * Uses 
+ * Uses model_num, symmetry to populate 'basis' array.
+ * TO DO: use state_freq and freq_type to alter basis for predetermined
+ * base frequencies (if freq_type not FREQ_ESTIMATE).
+ */
+/*
+ * tau[0] = pi_R-pi_Y = pi_A+pi_G-pi_C-pi_T (for RY pairing)
+ *          (or pi_W-pi_S for WS pairing, or pi_M-pi_K for MK pairing)
+ * tau[1] = pi_A-pi_G (RY pairing), pi_A-pi_T (WS pairing), pi_A-pi_C (MK pairing)
+ * tau[2] = pi_C-pi_T (RY pairing), pi_C-pi_G (WS pairing), pi_G-pi_T (MK pairing)
  */
 
 void ModelLieMarkov::setBasis() {
-  basis = new double*[num_params+1];
-  for (int i=0;i<=num_params;i++) {
-    const double* unpermuted_rates = LM_BASIS_MATRICES[BASES[model_num][i]];
-    double* permuted_rates = new double[NUM_RATES];
-    for (int rate=0; rate<NUM_RATES; rate++) {
-      permuted_rates[rate] = unpermuted_rates[SYMMETRY_PERM[symmetry][rate]];
-    }
+  if (getFreqType() == FREQ_EMPIRICAL || 
+      getFreqType() == FREQ_USER_DEFINED || 
+      getFreqType() == FREQ_EQUAL) {
+    double tau[] = {0,0,0};
+    // There are no free parameters for base frequencies:
+    num_params = MODEL_PARAMS[model_num]-BDF[model_num];
+    int bdf = (getFreqType()==FREQ_EQUAL) ? 0 : BDF[model_num];
+    // This populates field state_freq. (TODO: this call might be redundant - check)
+    init_state_freq(getFreqType());
+    // state_freq is in order {pi_A, pi_C, pi_G, pi_T}
+    // tau[0]
+    if (bdf==1 || bdf==3) {
+      switch (symmetry) {
+      case 0: // RY
+      case 3: // full symmetry
+	tau[0] = state_freq[0]+state_freq[2]-state_freq[1]-state_freq[3];
+	break;
+      case 1: // WS
+	tau[0] = state_freq[0]+state_freq[3]-state_freq[1]-state_freq[2];
+	break;
+      case 2: // MK
+	tau[0] = state_freq[0]+state_freq[1]-state_freq[2]-state_freq[3];
+	break;
+      default: outError("Can't happen");
+      } // switch
+    } // if bdf (else tau[0] == 0) 
+    if (bdf==2 || bdf==3) {
+      switch (symmetry) {
+      case 0: // RY
+      case 3: // full symmetry
+	tau[1] = state_freq[0]-state_freq[2];
+	tau[2] = state_freq[1]-state_freq[3];
+	break;
+      case 1: // WS
+	tau[1] = state_freq[0]-state_freq[3];
+	tau[2] = state_freq[1]-state_freq[2];
+	break;
+      case 2: // MK
+	tau[1] = state_freq[0]-state_freq[1];
+	tau[2] = state_freq[2]-state_freq[3];
+	break;
+      default: outError("Can't happen");
+      } // switch
+    } // else tau[1]==tau[2]==0
+    basis = new double*[num_params+1];
+    for (int i=0;i<=num_params;i++) {
+      int basisIndex = BASES[model_num][i];
+      double* unpermuted_rates = new double[NUM_RATES];
+      memcpy(unpermuted_rates, LM_BASIS_MATRICES[basisIndex], NUM_RATES* sizeof(double));
+      for (int tauIndex=0; tauIndex<3; tauIndex++) {
+	const double* transformationMatrix = BASIS_TRANSFORM[basisIndex][tauIndex];
+	if (tau[tauIndex]!=0 && transformationMatrix != NULL) {
+	  for (int rate=0; rate<NUM_RATES; rate++) {
+	    unpermuted_rates[rate] = unpermuted_rates[rate]+tau[tauIndex]*transformationMatrix[rate];
+	  } // for rate
+	} // if tau && !=NULL
+      } // for tauIndex
+      double* permuted_rates = new double[NUM_RATES];
+      for (int rate=0; rate<NUM_RATES; rate++) {
+	permuted_rates[rate] = unpermuted_rates[SYMMETRY_PERM[symmetry][rate]];
+      }
+      basis[i] = permuted_rates;
+    } // for i
+  } else {
+      assert(getFreqType() == FREQ_ESTIMATE); // only other legal possibility
+    num_params = MODEL_PARAMS[model_num];
+    basis = new double*[num_params+1];
+    for (int i=0;i<=num_params;i++) {
+      const double* unpermuted_rates = LM_BASIS_MATRICES[BASES[model_num][i]];
+      double* permuted_rates = new double[NUM_RATES];
+      for (int rate=0; rate<NUM_RATES; rate++) {
+	permuted_rates[rate] = unpermuted_rates[SYMMETRY_PERM[symmetry][rate]];
+      } // for rate
     basis[i] = permuted_rates;
-  }
+    } // for i
+  } // if getFreqType() ... else ...
 }
 
 /*
