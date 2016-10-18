@@ -2713,7 +2713,7 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
 		// remove identical sequences
         if (params.ignore_identical_seqs) {
             tree->removeIdenticalSeqs(params);
-            if (tree->removed_seqs.size() > 0) {
+            if (tree->removed_seqs.size() > 0 && MPIHelper::getInstance().isMaster()) {
                 string filename = (string)params.out_prefix + ".uniqueseq.phy";
                 if (tree->isSuperTree())
                     ((SuperAlignment*)tree->aln)->printCombinedAlignment(filename.c_str());

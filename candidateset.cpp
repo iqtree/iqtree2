@@ -103,6 +103,10 @@ vector<string> CandidateSet::getBestTreeStrings(int numTree) {
 vector<string> CandidateSet::getBestTreeStringsForProcess(int numTree) {
     int numProc = MPIHelper::getInstance().getNumProcesses();
     int procID = MPIHelper::getInstance().getProcessID();
+
+    if (numTree < numProc)
+        numTree = numProc; // BUG FIX: make sure that each process gets at least 1 tree
+
     vector<string> alltrees = getBestTreeStrings(numTree);
     if (numProc == 1) return alltrees;
     

@@ -143,15 +143,16 @@ void MPIHelper::receiveTrees(bool fromAll, int maxNumTrees, TreeCollection &tree
     }
 #ifdef _IQTREE_MPI
     int flag = 0;
-//    int minNumTrees = 0;
+    int minNumTrees = 0;
     bool nodes[getNumProcesses()];
-//    if (fromAll)
-//        minNumTrees = getNumProcesses() - 1;
+    if (fromAll)
+        minNumTrees = getNumProcesses() - 1;
     for (int i = 0; i < getNumProcesses(); i++)
         nodes[i] = false;
     nodes[getProcessID()] = true;
     // Process all pending messages
     MPI_Status status;
+    size_t totalMsgSize = 0;
     do {
         char* recvBuffer;
         int numBytes;
@@ -161,6 +162,7 @@ void MPIHelper::receiveTrees(bool fromAll, int maxNumTrees, TreeCollection &tree
         if (flag) {
             //cout << "Getting messages from node " << status.MPI_SOURCE << endl;
             MPI_Get_count(&status, MPI_CHAR, &numBytes);
+            totalMsgSize += numBytes;
             recvBuffer = new char[numBytes];
             MPI_Recv(recvBuffer, numBytes, MPI_CHAR, status.MPI_SOURCE, status.MPI_TAG, MPI_COMM_WORLD, &status);
             ObjectStream os(recvBuffer, numBytes);
@@ -178,12 +180,15 @@ void MPIHelper::receiveTrees(bool fromAll, int maxNumTrees, TreeCollection &tree
             }
             if (fromAll && !nodes[status.MPI_SOURCE]) {
                 nodes[status.MPI_SOURCE] = true;
-//                minNumTrees--;
+                minNumTrees--;
             }
             delete [] recvBuffer;
         }
-    } while (flag);
+    } while (minNumTrees > 0 || flag);
     numTreeReceived += trees.getNumTrees();
+    if (trees.getNumTrees() > 0) {
+        cout << "Proc " << getProcessID() << ": " << trees.getNumTrees() << " trees received from other processes (" << totalMsgSize << " bytes)" << endl;
+    }
 #endif
 }
 

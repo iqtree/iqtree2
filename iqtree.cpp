@@ -731,12 +731,13 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
     candidateTrees.getAllTrees(trees, scores, WT_TAXON_ID + WT_BR_LEN + WT_BR_LEN_SHORT);
     // Send all trees to other processes
     MPIHelper::getInstance().distributeTrees(trees, scores, TREE_TAG);
-    MPI_Barrier(MPI_COMM_WORLD);
 
     // Get trees from other nodes
-    cout << "Getting trees from other processes ... " << endl;
-    int maxNumTrees = (nParTrees + 1) * (MPIHelper::getInstance().getNumProcesses() - 1);
+    cout << "Getting initial trees from other processes ... " << endl;
+    int maxNumTrees = (nParTrees + 2) * (MPIHelper::getInstance().getNumProcesses() - 1);
     MPI_CollectTrees(true, maxNumTrees, false);
+
+    MPI_Barrier(MPI_COMM_WORLD);
 #endif
 
     vector<string> bestInitTrees; // Set of best initial trees for doing NNIs
@@ -756,11 +757,25 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
         addTreeToCandidateSet(treeString, curScore, true, MPIHelper::getInstance().getProcessID());
         if (Params::getInstance().writeDistImdTrees)
             intermediateTrees.update(treeString, curScore);
-#ifdef _IQTREE_MPI
-        MPIHelper::getInstance().distributeTree(getTreeString(), curScore, TREE_TAG);
-        MPI_CollectTrees(false, maxNumTrees, true);
-#endif
+//#ifdef _IQTREE_MPI
+//        MPIHelper::getInstance().distributeTree(getTreeString(), curScore, TREE_TAG);
+//        MPI_CollectTrees(false, maxNumTrees, true);
+//#endif
     }
+
+#ifdef _IQTREE_MPI
+    // FIX BUG: send candidateTrees instead of intermediateTrees
+    candidateTrees.getAllTrees(trees, scores, WT_TAXON_ID + WT_BR_LEN + WT_BR_LEN_SHORT);
+    // Send all trees to other processes
+    MPIHelper::getInstance().distributeTrees(trees, scores, TREE_TAG);
+
+    // Get trees from other nodes
+    cout << "Getting top candidate trees from other processes ... " << endl;
+    MPI_CollectTrees(true, maxNumTrees, true);
+    MPI_Barrier(MPI_COMM_WORLD);
+#endif
+
+
 // #ifdef _IQTREE_MPI
 //     // Send trees
 //     MPIHelper::getInstance().distributeTrees(nniTrees, nniScores, TREE_TAG);
@@ -2094,6 +2109,10 @@ double IQTree::doTreeSearch() {
     treesPerProc = params->numInitTrees - candidateTrees.size();
 #endif
 
+    // Make sure to get at least 1 tree
+    if (treesPerProc < 1)
+        treesPerProc = 1;
+
     /* Initialize candidate tree set */
     if (!getCheckpoint()->getBool("finishedCandidateSet")) {
         initCandidateTreeSet(treesPerProc, params->numNNITrees);
@@ -2204,7 +2223,7 @@ double IQTree::doTreeSearch() {
             candidateTrees.computeSplitOccurences(Params::getInstance().stableSplitThreshold);
 
 #ifdef _IQTREE_MPI
-        int maxNumTrees = (MPIHelper::getInstance().getNumProcesses() - 1) * 4;
+        int maxNumTrees = (MPIHelper::getInstance().getNumProcesses() - 1) * 2;
         if (MPIHelper::getInstance().isMaster()) {
             // master: receive tree from WORKERS
             bool candidateset_changed = MPI_CollectTrees(false, maxNumTrees, true);
