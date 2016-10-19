@@ -670,6 +670,26 @@ public:
     int addTreeToCandidateSet(string treeString, double score, bool updateStopRule, int sourceProcID);
 
     /**
+        MPI: synchronize candidate trees between all processes
+        @param nTrees number of trees to broadcast
+        @param updateStopRule true to update stopping rule, false otherwise
+    */
+    void syncCandidateTrees(int nTrees, bool updateStopRule);
+
+    /**
+        MPI: synchronize tree of current iteration with master
+        will update candidateset_changed
+        @param curTree current tree
+
+    */
+    void syncCurrentTree();
+
+    /**
+        MPI: Master sends stop message to all workers
+    */
+    void sendStopMessage();
+
+    /**
      *  Generate the initial parsimony/random trees, called by initCandidateTreeSet
      *  @param nParTrees number of parsimony/random trees to generate
      */
@@ -802,6 +822,10 @@ protected:
     void saveNNITrees(PhyloNode *node = NULL, PhyloNode *dad = NULL);
 
     int duplication_counter;
+
+    // MPI: vector of size = num processes, true if master should send candidate set to worker
+    BoolVector candidateset_changed;
+
 
     /**
             number of IQPNNI iterations

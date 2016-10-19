@@ -108,6 +108,10 @@ public:
         StopRule::curIteration = curIteration;
     }
 
+    void shouldStop() {
+        should_stop = true;
+    }
+
 private:
 
     /**
@@ -156,6 +160,9 @@ private:
 
     /** starting real time of the program */
     double start_real_time;
+
+    /** TRUE to override stop condition */
+    bool should_stop;
 
 	/* FOLLOWING CODES ARE FROM IQPNNI version 3 */	
 

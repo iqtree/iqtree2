@@ -50,6 +50,11 @@ public:
     */
     static MPIHelper &getInstance();
 
+    /**
+        destructor
+    */
+    ~MPIHelper();
+
     int getNumProcesses() const {
         return numProcesses;
     }
@@ -73,6 +78,9 @@ public:
     void setProcessID(int processID) {
         MPIHelper::processID = processID;
     }
+
+    /** @return true if got any message from another process */
+    bool gotMessage();
 
     /**
      *  Receive trees that sent to the current process
@@ -105,7 +113,7 @@ public:
      *   @param scores vector containing scores of the trees with same order as in treeStrings
      *   @param tag used to classified the message
      */
-    void distributeTrees(vector<string> treeStrings, vector<double> scores, int tag = TREE_TAG);
+    void distributeTrees(vector<string> &treeStrings, vector<double> &scores, int tag = TREE_TAG);
 
     /**
     *   Similar to distributeTrees but only 1 tree is sent
@@ -122,7 +130,7 @@ public:
      *   @param scores vector containing scores of the trees with same order as in treeStrings
      *   @param tag used to classified the message
      */
-    void sendTrees(int dest, vector<string> treeStrings, vector<double> scores, int tag);
+    void sendTrees(int dest, vector<string> &treeStrings, vector<double> &scores, int tag);
 
     /**
      *   Send one tree to a dest process
@@ -132,6 +140,36 @@ public:
      *   @param tag used to classified the message
      */
     void sendTree(int dest, string treeString, double score, int tag);
+
+    /**
+     *   Blocking Send and then receive trees with a dest process
+     *   @param dest MPI rank of destination process
+     *   @param[in,out] treeString NEWICK tree string
+     *   @param[in,out] score its score
+     *   @param tag used to classified the message
+     *   return the message tag
+     */
+    int sendRecvTrees(int dest, vector<string> &treeStrings, vector<double> &scores, int tag);
+
+    /**
+     *   Blocking receive and then send trees with a dest process
+     *   @param dest MPI rank of destination process
+     *   @param[in,out] treeString NEWICK tree string
+     *   @param[in,out] score its score
+     *   @param tag used to classified the message
+     *   return the message tag
+     */
+    int recvSendTrees(vector<string> &treeStrings, vector<double> &scores, vector<bool> &should_send, int tag);
+
+    /**
+        gather trees from workers to master
+    */
+    void gatherTrees(TreeCollection &trees);
+
+    /**
+        broadcase trees from master to works
+    */
+    void broadcastTrees(TreeCollection &trees);
 
     /**
      *  Send a message to other process, e.g. STOP_TAG

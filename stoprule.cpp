@@ -35,6 +35,7 @@ StopRule::StopRule() : CheckpointFactory()
 	start_real_time = -1.0;
 	max_run_time = -1.0;
 	curIteration = 0;
+    should_stop = false;
 }
 
 void StopRule::initialize(Params &params) {
@@ -102,6 +103,8 @@ void StopRule::restoreCheckpoint() {
 //}
 
 bool StopRule::meetStopCondition(int cur_iteration, double cur_correlation) {
+    if (should_stop)
+        return true;
 	switch (stop_condition) {
 		case SC_FIXED_ITERATION:
 			return cur_iteration >= min_iteration;

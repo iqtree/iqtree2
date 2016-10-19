@@ -19,13 +19,13 @@ public:
     /**
      *  Constructor
      */
-    TreeCollection(CandidateSet& candidateTrees);
-
     TreeCollection() {};
 
     TreeCollection(vector<string>& trees, vector<double>& scores, vector<int> &sourceProcID);
 
     void addTrees(TreeCollection &trees);
+
+    void addTrees(CandidateSet& candidateTrees);
 
 
     /*
