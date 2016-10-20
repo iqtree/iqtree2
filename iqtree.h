@@ -136,6 +136,8 @@ public:
      */
     void printResultTree(ostream &out);
 
+    void printBestCandidateTree();
+
     /**
      * print phylolib tree to a file.
      * @param suffix suffix string for the tree file
@@ -826,6 +828,8 @@ protected:
     // MPI: vector of size = num processes, true if master should send candidate set to worker
     BoolVector candidateset_changed;
 
+    // true if best candidate tree is changed
+    bool bestcandidate_changed;
 
     /**
             number of IQPNNI iterations

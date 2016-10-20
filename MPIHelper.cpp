@@ -253,6 +253,7 @@ void MPIHelper::broadcastTrees(TreeCollection &trees) {
         trees = os->getTreeCollection();
     }
     delete os;
+    delete [] recvBuffer;
 
     double endTime = getRealTime();
     cout << trees.getNumTrees() << " trees broadcasted to workers in " << endTime - beginTime << " seconds" << endl;

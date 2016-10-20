@@ -611,7 +611,9 @@ int IQTree::addTreeToCandidateSet(string treeString, double score, bool updateSt
             } else {
                 cout << "UPDATE BEST LOG-LIKELIHOOD: " << score << endl;
             }
-            printResultTree();
+            bestcandidate_changed = true;
+            // COMMENT OUT: not safe with MPI version
+//            printResultTree();
         }
 
         curScore = score;
@@ -2121,6 +2123,8 @@ double IQTree::doTreeSearch() {
     /* Initialize candidate tree set */
     if (!getCheckpoint()->getBool("finishedCandidateSet")) {
         initCandidateTreeSet(treesPerProc, params->numNNITrees);
+        // write best tree to disk
+        printBestCandidateTree();
         saveCheckpoint();
         getCheckpoint()->putBool("finishedCandidateSet", true);
         getCheckpoint()->dump(true);
@@ -2169,6 +2173,7 @@ double IQTree::doTreeSearch() {
 
     // tracking of worker candidate set is changed from master candidate set
     candidateset_changed.resize(MPIHelper::getInstance().getNumProcesses(), false);
+    bestcandidate_changed = false;
 
     /*==============================================================================================================
 	                                       MAIN LOOP OF THE IQ-TREE ALGORITHM
@@ -2331,6 +2336,11 @@ double IQTree::doTreeSearch() {
 
         saveCheckpoint();
         checkpoint->dump();
+
+        if (bestcandidate_changed) {
+            printBestCandidateTree();
+            bestcandidate_changed = false;
+        }
 
         //if (params->partition_type)
         // 	((PhyloSuperTreePlen*)this)->printNNIcasesNUM();
@@ -3482,17 +3492,28 @@ void IQTree::printResultTree(string suffix) {
         tree_file_name = processTreeFile.str();
     }
     if (suffix.compare("") != 0) {
-        string iter_tree_name = tree_file_name + "." + suffix;
-        printTree(iter_tree_name.c_str(), WT_BR_LEN | WT_BR_LEN_FIXED_WIDTH | WT_SORT_TAXA | WT_NEWLINE);
-    } else {
-        printTree(tree_file_name.c_str(), WT_BR_LEN | WT_BR_LEN_FIXED_WIDTH | WT_SORT_TAXA | WT_NEWLINE);
+        tree_file_name += "." + suffix;
     }
-    //printTree(tree_file_name.c_str(), WT_BR_LEN | WT_BR_LEN_FIXED_WIDTH);
+    printTree(tree_file_name.c_str(), WT_BR_LEN | WT_BR_LEN_FIXED_WIDTH | WT_SORT_TAXA | WT_NEWLINE);
+    if (verbose_mode >= VB_MED)
+        cout << "Best tree printed to " << tree_file_name << endl;
 }
 
 void IQTree::printResultTree(ostream &out) {
     setRootNode(params->root);
     printTree(out, WT_BR_LEN | WT_BR_LEN_FIXED_WIDTH | WT_SORT_TAXA | WT_NEWLINE);
+}
+
+void IQTree::printBestCandidateTree() {
+    if (MPIHelper::getInstance().isWorker())
+        return;
+    string tree_file_name = params->out_prefix;
+    tree_file_name += ".treefile";
+    readTreeString(candidateTrees.getBestTreeStrings(1)[0]);
+    setRootNode(params->root);
+    printTree(tree_file_name.c_str(), WT_BR_LEN | WT_BR_LEN_FIXED_WIDTH | WT_SORT_TAXA | WT_NEWLINE);
+    if (verbose_mode >= VB_MED)
+        cout << "Best tree printed to " << tree_file_name << endl;
 }
 
 
