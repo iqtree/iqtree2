@@ -93,41 +93,49 @@ void IQTree::setCheckpoint(Checkpoint *checkpoint) {
     candidateTrees.setCheckpoint(checkpoint);
 }
 
-void IQTree::saveCheckpoint() {
-    stop_rule.saveCheckpoint();
-    candidateTrees.saveCheckpoint();
-    
-    if (boot_samples.size() > 0 && !boot_trees.front().empty()) {
-        checkpoint->startStruct("UFBoot");
-//        CKP_SAVE(max_candidate_trees);
-        CKP_SAVE(logl_cutoff);
-        // save boot_samples and boot_trees
-        int id = 0;
+void IQTree::saveUFBoot(Checkpoint *checkpoint) {
+    checkpoint->startStruct("UFBoot");
+    if (MPIHelper::getInstance().isWorker()) {
+        CKP_SAVE(sample_start);
+        CKP_SAVE(sample_end);
         checkpoint->startList(boot_samples.size());
+        checkpoint->setListElement(sample_start-1);
         // TODO: save boot_trees_brlen
-        for (vector<BootValType* >::iterator it = boot_samples.begin(); it != boot_samples.end(); it++, id++) {
+        for (int id = sample_start; id != sample_end; id++) {
             checkpoint->addListElement();
             stringstream ss;
             ss.precision(10);
             ss << boot_counts[id] << " " << boot_logl[id] << " " << boot_orig_logl[id] << " " << boot_trees[id];
             checkpoint->put("", ss.str());
-//            string &bt = boot_trees[id];
-//            CKP_SAVE(bt);
-//            double bl = boot_logl[id];
-//            CKP_SAVE(bl);
-//            double bol=boot_orig_logl[id];
-//            CKP_SAVE(bol);
-//            int bc = boot_counts[id];
-//            CKP_SAVE(bc);
         }
         checkpoint->endList();
+    } else {
+        CKP_SAVE(logl_cutoff);
         CKP_SAVE(boot_consense_logl);
         int boot_splits_size = boot_splits.size();
         CKP_SAVE(boot_splits_size);
-        checkpoint->endStruct();
+        checkpoint->startList(boot_samples.size());
+        // TODO: save boot_trees_brlen
+        for (int id = 0; id != boot_samples.size(); id++) {
+            checkpoint->addListElement();
+            stringstream ss;
+            ss.precision(10);
+            ss << boot_counts[id] << " " << boot_logl[id] << " " << boot_orig_logl[id] << " " << boot_trees[id];
+            checkpoint->put("", ss.str());
+        }
+        checkpoint->endList();
+    }
+    checkpoint->endStruct();
+}
 
+void IQTree::saveCheckpoint() {
+    stop_rule.saveCheckpoint();
+    candidateTrees.saveCheckpoint();
+    
+    if (boot_samples.size() > 0 && !boot_trees.front().empty()) {
+        saveUFBoot(checkpoint);
         // boot_splits
-        id = 0;
+        int id = 0;
         for (vector<SplitGraph*>::iterator sit = boot_splits.begin(); sit != boot_splits.end(); sit++, id++) {
             checkpoint->startStruct("UFBootSplit" + convertIntToString(id));
             (*sit)->saveCheckpoint();
@@ -136,6 +144,27 @@ void IQTree::saveCheckpoint() {
     }
     
     PhyloTree::saveCheckpoint();
+}
+
+void IQTree::restoreUFBoot(Checkpoint *checkpoint) {
+    checkpoint->startStruct("UFBoot");
+    // save boot_samples and boot_trees
+    int id;
+    checkpoint->startList(params->gbo_replicates);
+    int sample_start, sample_end;
+    CKP_RESTORE(sample_start);
+    CKP_RESTORE(sample_end);
+    checkpoint->setListElement(sample_start-1);
+    for (id = sample_start; id != sample_end; id++) {
+        checkpoint->addListElement();
+        string str;
+        checkpoint->getString("", str);
+        assert(!str.empty());
+        stringstream ss(str);
+        ss >> boot_counts[id] >> boot_logl[id] >> boot_orig_logl[id] >> boot_trees[id];
+    }
+    checkpoint->endList();
+    checkpoint->endStruct();
 }
 
 void IQTree::restoreCheckpoint() {
@@ -160,18 +189,6 @@ void IQTree::restoreCheckpoint() {
             checkpoint->getString("", str);
             stringstream ss(str);
             ss >> boot_counts[id] >> boot_logl[id] >> boot_orig_logl[id] >> boot_trees[id];
-//            string bt;
-//            CKP_RESTORE(bt);
-//            boot_trees[id] = bt;
-//            double bl;
-//            CKP_RESTORE(bl);
-//            boot_logl[id] = bl;
-//            double bol;
-//            CKP_RESTORE(bol);
-//            boot_orig_logl[id] = bol;
-//            int bc;
-//            CKP_RESTORE(bc);
-//            boot_counts[id] = bc;
         }
         checkpoint->endList();
         CKP_RESTORE(boot_consense_logl);
@@ -309,6 +326,20 @@ void IQTree::initSettings(Params &params) {
         cout << "Generating " << params.gbo_replicates << " samples for ultrafast bootstrap (seed: " << params.ran_seed << ")..." << endl;
         // allocate memory for boot_samples
         boot_samples.resize(params.gbo_replicates);
+        sample_start = 0;
+        sample_end = boot_samples.size();
+
+        // compute the sample_start and sample_end
+        if (MPIHelper::getInstance().getNumProcesses() > 1) {
+            int num_samples = boot_samples.size() / MPIHelper::getInstance().getNumProcesses();
+            if (boot_samples.size() % MPIHelper::getInstance().getNumProcesses() != 0)
+                num_samples++;
+            sample_start = MPIHelper::getInstance().getProcessID() * num_samples;
+            sample_end = sample_start + num_samples;
+            if (sample_end > boot_samples.size())
+                sample_end = boot_samples.size();
+        }
+
         size_t orig_nptn = getAlnNPattern();
 #ifdef BOOT_VAL_FLOAT
         size_t nptn = get_safe_upper_limit_float(orig_nptn);
@@ -2185,8 +2216,8 @@ double IQTree::doTreeSearch() {
     }
 
     // count threshold for computing bootstrap correlation
-    int ufboot_count = (stop_rule.getCurIt()/(params->step_iterations/2)+1)*(params->step_iterations/2);
-    int ufboot_count_check = (stop_rule.getCurIt()/(params->step_iterations)+1)*(params->step_iterations);
+    int ufboot_count, ufboot_count_check;
+    stop_rule.getUFBootCountCheck(ufboot_count, ufboot_count_check);
 
     while (!stop_rule.meetStopCondition(stop_rule.getCurIt(), cur_correlation)) {
 
@@ -2300,13 +2331,13 @@ double IQTree::doTreeSearch() {
          *---------------------------------------*/
          
         // workers send bootstrap trees, TODO: blocking communication
-        if (params->stop_condition == SC_BOOTSTRAP_CORRELATION && MPIHelper::getInstance().isWorker())
-            collectBootTrees();
-        
+//        if (params->stop_condition == SC_BOOTSTRAP_CORRELATION && MPIHelper::getInstance().isWorker())
+//            collectBootTrees();
+
         // MASTER receives bootstrap trees and perform stop convergence test 
         if ((stop_rule.getCurIt()) >= ufboot_count &&
             params->stop_condition == SC_BOOTSTRAP_CORRELATION && MPIHelper::getInstance().isMaster()) {
-            collectBootTrees();
+//            collectBootTrees();
             ufboot_count += params->step_iterations/2;
             // compute split support every half step
             SplitGraph *sg = new SplitGraph;
@@ -2315,7 +2346,7 @@ double IQTree::doTreeSearch() {
             sg->setCheckpoint(checkpoint);
             boot_splits.push_back(sg);
             cout << "Log-likelihood cutoff on original alignment: " << logl_cutoff << endl;
-            MPIHelper::getInstance().sendMsg(LOGL_CUTOFF_TAG, convertDoubleToString(logl_cutoff));
+//            MPIHelper::getInstance().sendMsg(LOGL_CUTOFF_TAG, convertDoubleToString(logl_cutoff));
 
             // check convergence every full step
             if (stop_rule.getCurIt() >= ufboot_count_check) {
@@ -3142,7 +3173,7 @@ void IQTree::saveCurrentTree(double cur_logl) {
         #ifdef _OPENMP
         #pragma omp parallel for
         #endif
-        for (int sample = 0; sample < nsamples; sample++) {
+        for (int sample = sample_start; sample < sample_end; sample++) {
             double rell = 0.0;
 
             {
@@ -3656,16 +3687,16 @@ void IQTree::syncCurrentTree() {
         return;
 #ifdef _IQTREE_MPI
     //------ BLOCKING COMMUNICATION ------//
-    Checkpoint *ckp = new Checkpoint;
+    Checkpoint *checkpoint = new Checkpoint;
     string tree;
     double score;
 
     if (MPIHelper::getInstance().isMaster()) {
         // master: receive tree from WORKERS
-        int worker = MPIHelper::getInstance().recvCheckpoint(ckp);
+        int worker = MPIHelper::getInstance().recvCheckpoint(checkpoint);
         MPIHelper::getInstance().increaseTreeReceived();
-        CHECKPOINT_RESTORE(ckp, tree);
-        CHECKPOINT_RESTORE(ckp, score);
+        CKP_RESTORE(tree);
+        CKP_RESTORE(score);
         int pos = addTreeToCandidateSet(tree, score, true, worker);
         if (pos >= 0 && pos < params->popSize) {
             // candidate set is changed, update for other workers
@@ -3674,41 +3705,52 @@ void IQTree::syncCurrentTree() {
                     candidateset_changed[w] = true;
         }
 
+        if (boot_samples.size() > 0) {
+            restoreUFBoot(checkpoint);
+        }
+
         // send candidate trees to worker
-        ckp->clear();
+        checkpoint->clear();
+        if (boot_samples.size() > 0)
+            CKP_SAVE(logl_cutoff);
         if (candidateset_changed[worker]) {
             CandidateSet cset = candidateTrees.getBestCandidateTrees(Params::getInstance().popSize);
-            cset.setCheckpoint(ckp);
+            cset.setCheckpoint(checkpoint);
             cset.saveCheckpoint();
             candidateset_changed[worker] = false;
             MPIHelper::getInstance().increaseTreeSent(Params::getInstance().popSize);
         }
-        MPIHelper::getInstance().sendCheckpoint(ckp, worker);
+        MPIHelper::getInstance().sendCheckpoint(checkpoint, worker);
     } else {
         // worker: always send tree to MASTER
         tree = getTreeString();
         score = curScore;
-        CHECKPOINT_SAVE(ckp, tree);
-        CHECKPOINT_SAVE(ckp, score);
-        MPIHelper::getInstance().sendCheckpoint(ckp, PROC_MASTER);
+        CKP_SAVE(tree);
+        CKP_SAVE(score);
+        if (boot_samples.size() > 0) {
+            saveUFBoot(checkpoint);
+        }
+        MPIHelper::getInstance().sendCheckpoint(checkpoint, PROC_MASTER);
         MPIHelper::getInstance().increaseTreeSent();
 
         // now receive the candidate set
-        MPIHelper::getInstance().recvCheckpoint(ckp, PROC_MASTER);
-        if (ckp->getBool("stop")) {
+        MPIHelper::getInstance().recvCheckpoint(checkpoint, PROC_MASTER);
+        if (checkpoint->getBool("stop")) {
             cout << "Worker gets STOP message!" << endl;
             stop_rule.shouldStop();
         } else {
             CandidateSet cset;
-            cset.setCheckpoint(ckp);
+            cset.setCheckpoint(checkpoint);
             cset.restoreCheckpoint();
             for (CandidateSet::iterator it = cset.begin(); it != cset.end(); it++)
                 addTreeToCandidateSet(it->second.tree, it->second.score, false, MPIHelper::getInstance().getProcessID());
             MPIHelper::getInstance().increaseTreeReceived(cset.size());
+            if (boot_samples.size() > 0)
+                CKP_RESTORE(logl_cutoff);
         }
     }
 
-    delete ckp;
+    delete checkpoint;
 
 #endif
 }
@@ -3718,10 +3760,10 @@ void IQTree::sendStopMessage() {
         return;
 #ifdef _IQTREE_MPI
 
-    Checkpoint *ckp = new Checkpoint;
-    ckp->putBool("stop", true);
+    Checkpoint *checkpoint = new Checkpoint;
+    checkpoint->putBool("stop", true);
     stringstream ss;
-    ckp->dump(ss);
+    checkpoint->dump(ss);
     string str = ss.str();
     string tree;
     double score;
@@ -3734,17 +3776,17 @@ void IQTree::sendStopMessage() {
         for (int w = 1; w < MPIHelper::getInstance().getNumProcesses(); w++) {
 //            string buf;
 //            int worker = MPIHelper::getInstance().recvString(buf);
-            ckp->clear();
-            int worker = MPIHelper::getInstance().recvCheckpoint(ckp);
+            checkpoint->clear();
+            int worker = MPIHelper::getInstance().recvCheckpoint(checkpoint);
             MPIHelper::getInstance().increaseTreeReceived();
-            CHECKPOINT_RESTORE(ckp, tree);
-            CHECKPOINT_RESTORE(ckp, score);
+            CKP_RESTORE(tree);
+            CKP_RESTORE(score);
             addTreeToCandidateSet(tree, score, true, worker);
             MPIHelper::getInstance().sendString(str, worker, TREE_TAG);
         }
     }
 
-    delete ckp;
+    delete checkpoint;
 
     MPI_Barrier(MPI_COMM_WORLD);
 #endif

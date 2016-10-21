@@ -28,10 +28,6 @@ using namespace std;
 #define CKP_ARRAY_RESTORE(num, arr) checkpoint->getArray(#arr, num, arr)
 #define CKP_VECTOR_RESTORE(arr) checkpoint->getVector(#arr, arr)
 
-#define CHECKPOINT_SAVE(checkpoint, var) checkpoint->put(#var, var)
-
-#define CHECKPOINT_RESTORE(checkpoint, var) checkpoint->get(#var, var)
-
 /** checkpoint stream */
 class CkpStream : public stringstream {
 public:
@@ -324,7 +320,13 @@ public:
         @param nelem number of elements
     */
     void startList(int nelem);
-    
+
+    /**
+        set the starting list element, should only be called right after startList
+        @param id element ID
+    */
+    void setListElement(int id);
+
     /** 
         add an element to the current list
     */

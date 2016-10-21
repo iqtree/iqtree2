@@ -19,6 +19,7 @@
  ***************************************************************************/
 #include "stoprule.h"
 #include "timeutil.h"
+#include "MPIHelper.h"
 
 StopRule::StopRule() : CheckpointFactory()
 {
@@ -48,6 +49,14 @@ void StopRule::initialize(Params &params) {
 	step_iteration = params.step_iterations;
 	start_real_time = getRealTime();
 	max_run_time = params.maxtime * 60; // maxtime is in minutes
+}
+
+void StopRule::getUFBootCountCheck(int &ufboot_count, int &ufboot_count_check) {
+    int step = step_iteration;
+    while (step*2 < MPIHelper::getInstance().getNumProcesses())
+        step *= 2;
+    ufboot_count = (curIteration/(step/2)+1)*(step/2);
+    ufboot_count_check = (curIteration/step+1)*step;
 }
 
 StopRule::~StopRule()

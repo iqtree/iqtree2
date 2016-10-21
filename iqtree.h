@@ -112,6 +112,19 @@ public:
     */
     virtual void restoreCheckpoint();
 
+    /**
+        save UFBoot_trees.
+        For MPI workers only save from sample_start to sample_end
+        @param checkpoint Checkpoint object
+    */
+    void saveUFBoot(Checkpoint *checkpoint);
+
+    /**
+
+        restore UFBoot_trees from sample_start to sample_end (MPI)
+        @param checkpoint Checkpoint object
+    */
+    void restoreUFBoot(Checkpoint *checkpoint);
 
     /**
      * setup all necessary parameters  (declared as virtual needed for phylosupertree)
@@ -752,6 +765,12 @@ public:
 
     /** vector of bootstrap alignments generated */
     vector<BootValType* > boot_samples;
+
+    /** starting sample for UFBoot, used for MPI */
+    int sample_start;
+
+    /** end sample for UFBoot, used for MPI */
+    int sample_end;
 
     /** newick string of corresponding bootstrap trees */
     StrVector boot_trees;

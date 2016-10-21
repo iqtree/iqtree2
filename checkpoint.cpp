@@ -231,6 +231,13 @@ void Checkpoint::startList(int nelem) {
         list_element_precision.push_back(0);
 }
 
+void Checkpoint::setListElement(int id) {
+    list_element.back() = id;
+    stringstream ss;
+    ss << setw(list_element_precision.back()) << setfill('0') << list_element.back();
+    struct_name += ss.str() + ".";
+}
+
 void Checkpoint::addListElement() {
     list_element.back()++;
     if (list_element.back() > 0) {

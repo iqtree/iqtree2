@@ -42,6 +42,8 @@ public:
 	*/
     ~StopRule();
 
+    void getUFBootCountCheck(int &ufboot_count, int &ufboot_count_check);
+
     /**
         save object into the checkpoint
     */
