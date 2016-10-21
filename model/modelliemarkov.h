@@ -12,7 +12,7 @@
 
 class ModelLieMarkov: public ModelNonRev {
 public:
-        ModelLieMarkov(string model_name, PhyloTree *tree, string model_params, bool count_rates = false);
+        ModelLieMarkov(string model_name, PhyloTree *tree, string model_params, StateFreqType freq_type, bool count_rates = false);
         virtual ~ModelLieMarkov();
 
 	/**

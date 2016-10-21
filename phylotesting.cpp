@@ -1343,7 +1343,7 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 		subst_model = new ModelBIN("JC2", "", FREQ_UNKNOWN, "", in_tree);
 	else if (seq_type == SEQ_DNA)
         if (params.model_set && strcmp(params.model_set, "liemarkov") == 0)
-            subst_model = new ModelLieMarkov("LM1.1", in_tree, "");
+	    subst_model = new ModelLieMarkov("LM1.1", in_tree, "", FREQ_ESTIMATE);
         else
             subst_model = new ModelDNA("JC", "", FREQ_UNKNOWN, "", in_tree);
 	else if (seq_type == SEQ_PROTEIN)

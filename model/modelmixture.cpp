@@ -1014,7 +1014,7 @@ ModelSubst* createModel(string model_str, ModelsBlock *models_block, StateFreqTy
 //		((ModelGTR*)model)->init(freq_type);
 //	} else
 	if (ModelNonRev::validModelName(model_str)) {
-		model = ModelNonRev::getModelByName(model_str, tree, model_params, count_rates);
+	        model = ModelNonRev::getModelByName(model_str, tree, model_params, freq_type, count_rates);
 //		((ModelNonRev*)model)->init(freq_type);
 	} else if (tree->aln->seq_type == SEQ_BINARY) {
 		model = new ModelBIN(model_str.c_str(), model_params, freq_type, freq_params, tree, count_rates);

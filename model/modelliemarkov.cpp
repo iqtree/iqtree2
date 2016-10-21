@@ -164,44 +164,45 @@ enum LM_MODEL = {LM11, LM22b, LM33a, LM33b, LM33c, LM34, LM44a, LM44b,
 		 LM816, LM817, LM818, LM920a, LM920b, LM1012, LM1034, LM1212};
 */
 
-// Lengths of these arrays (minus one) stored in MODEL_PARAMS
+// Lengths of these arrays (minus one) stored in MODEL_PARAMS. Note BM_D, BM_E1, BM_E2 must be at end
+// (as these are treated differently in setBasis() for some freq_type values) (spacing emphasises this split)
 const static BASIS_MATRIX_TYPE BASIS_11[]   = {BM_A};
 const static BASIS_MATRIX_TYPE BASIS_22B[]  = {BM_A,BM_A2};
 const static BASIS_MATRIX_TYPE BASIS_33A[]  = {BM_A,BM_A2,BM_B };
 const static BASIS_MATRIX_TYPE BASIS_33B[]  = {BM_A,BM_A2,BM_C };
 const static BASIS_MATRIX_TYPE BASIS_33C[]  = {BM_A,BM_A2,BM_D1};
-const static BASIS_MATRIX_TYPE BASIS_34[]   = {BM_A,BM_A2,BM_D };
-const static BASIS_MATRIX_TYPE BASIS_44A[]  = {BM_A,BM_D, BM_E1,BM_E2};
-const static BASIS_MATRIX_TYPE BASIS_44B[]  = {BM_A,BM_A2,BM_D1,BM_D };
-const static BASIS_MATRIX_TYPE BASIS_45A[]  = {BM_A,BM_A2,BM_B, BM_D };
-const static BASIS_MATRIX_TYPE BASIS_45B[]  = {BM_A,BM_A2,BM_C, BM_D };
+const static BASIS_MATRIX_TYPE BASIS_34[]   = {BM_A,BM_A2,                                          BM_D};
+const static BASIS_MATRIX_TYPE BASIS_44A[]  = {BM_A,                                                BM_D,BM_E1,BM_E2};
+const static BASIS_MATRIX_TYPE BASIS_44B[]  = {BM_A,BM_A2,BM_D1,                                    BM_D};
+const static BASIS_MATRIX_TYPE BASIS_45A[]  = {BM_A,BM_A2,BM_B,                                     BM_D};
+const static BASIS_MATRIX_TYPE BASIS_45B[]  = {BM_A,BM_A2,BM_C,                                     BM_D};
 const static BASIS_MATRIX_TYPE BASIS_56A[]  = {BM_A,BM_A2,BM_B, BM_C, BM_D1};
-const static BASIS_MATRIX_TYPE BASIS_56B[]  = {BM_A,BM_A2,BM_D, BM_E1,BM_E2};
-const static BASIS_MATRIX_TYPE BASIS_57A[]  = {BM_A,BM_A2,BM_B, BM_E1,BM_E2};
+const static BASIS_MATRIX_TYPE BASIS_56B[]  = {BM_A,BM_A2,                                          BM_D,BM_E1,BM_E2};
+const static BASIS_MATRIX_TYPE BASIS_57A[]  = {BM_A,BM_A2,BM_B,                                          BM_E1,BM_E2};
 const static BASIS_MATRIX_TYPE BASIS_57B[]  = {BM_A,BM_A2,BM_B, BM_F1,BM_F2};
 const static BASIS_MATRIX_TYPE BASIS_57C[]  = {BM_A,BM_A2,BM_B, BM_G1,BM_G2};
-const static BASIS_MATRIX_TYPE BASIS_511A[] = {BM_A,BM_A2,BM_D1,BM_E1,BM_E2};
+const static BASIS_MATRIX_TYPE BASIS_511A[] = {BM_A,BM_A2,BM_D1,                                         BM_E1,BM_E2};
 const static BASIS_MATRIX_TYPE BASIS_511B[] = {BM_A,BM_A2,BM_D1,BM_F1,BM_F2};
 const static BASIS_MATRIX_TYPE BASIS_511C[] = {BM_A,BM_A2,BM_D1,BM_G1,BM_G2};
-const static BASIS_MATRIX_TYPE BASIS_516[]  = {BM_A,BM_A2,BM_D, BM_G1,BM_G2};
-const static BASIS_MATRIX_TYPE BASIS_66[]   = {BM_A,BM_A2,BM_B, BM_C, BM_D, BM_D1};
-const static BASIS_MATRIX_TYPE BASIS_67A[]  = {BM_A,BM_A2,BM_B, BM_D, BM_E1,BM_E2};
-const static BASIS_MATRIX_TYPE BASIS_67B[]  = {BM_A,BM_A2,BM_C, BM_D, BM_E1,BM_E2};
-const static BASIS_MATRIX_TYPE BASIS_68A[]  = {BM_A,BM_A2,BM_D, BM_D1,BM_E1,BM_E2};
-const static BASIS_MATRIX_TYPE BASIS_68B[]  = {BM_A,BM_A2,BM_D, BM_D1,BM_G1,BM_G2};
-const static BASIS_MATRIX_TYPE BASIS_617A[] = {BM_A,BM_A2,BM_B, BM_D, BM_G1,BM_G2};
-const static BASIS_MATRIX_TYPE BASIS_617B[] = {BM_A,BM_A2,BM_C, BM_D, BM_G1,BM_G2};
-const static BASIS_MATRIX_TYPE BASIS_88[]   = {BM_A,BM_A2,BM_D, BM_D1,BM_E1,BM_E2,BM_F1,BM_F2};
-const static BASIS_MATRIX_TYPE BASIS_810A[] = {BM_A,BM_A2,BM_B, BM_C, BM_D, BM_D1,BM_E1,BM_E2};
-const static BASIS_MATRIX_TYPE BASIS_810B[] = {BM_A,BM_A2,BM_B, BM_C, BM_D, BM_D1,BM_G1,BM_G2};
-const static BASIS_MATRIX_TYPE BASIS_816[]  = {BM_A,BM_A2,BM_D, BM_D1,BM_E1,BM_E2,BM_G1,BM_G2};
-const static BASIS_MATRIX_TYPE BASIS_817[]  = {BM_A,BM_A2,BM_B, BM_D, BM_E1,BM_E2,BM_G1,BM_G2};
-const static BASIS_MATRIX_TYPE BASIS_818[]  = {BM_A,BM_A2,BM_B, BM_D, BM_E1,BM_E2,BM_F1,BM_F2};
-const static BASIS_MATRIX_TYPE BASIS_920A[] = {BM_A,BM_A2,BM_B, BM_C, BM_D1,BM_E1,BM_E2,BM_F1,BM_F2};
+const static BASIS_MATRIX_TYPE BASIS_516[]  = {BM_A,BM_A2,BM_G1,BM_G2,                              BM_D};
+const static BASIS_MATRIX_TYPE BASIS_66[]   = {BM_A,BM_A2,BM_B, BM_C, BM_D1,                        BM_D};
+const static BASIS_MATRIX_TYPE BASIS_67A[]  = {BM_A,BM_A2,BM_B,                                     BM_D,BM_E1,BM_E2};
+const static BASIS_MATRIX_TYPE BASIS_67B[]  = {BM_A,BM_A2,BM_C,                                     BM_D,BM_E1,BM_E2};
+const static BASIS_MATRIX_TYPE BASIS_68A[]  = {BM_A,BM_A2,BM_D1,                                    BM_D,BM_E1,BM_E2};
+const static BASIS_MATRIX_TYPE BASIS_68B[]  = {BM_A,BM_A2,BM_D1,BM_G1,BM_G2,                        BM_D};
+const static BASIS_MATRIX_TYPE BASIS_617A[] = {BM_A,BM_A2,BM_B, BM_G1,BM_G2,                        BM_D};
+const static BASIS_MATRIX_TYPE BASIS_617B[] = {BM_A,BM_A2,BM_C, BM_G1,BM_G2,                        BM_D};
+const static BASIS_MATRIX_TYPE BASIS_88[]   = {BM_A,BM_A2,BM_D1,BM_F1,BM_F2,                        BM_D,BM_E1,BM_E2};
+const static BASIS_MATRIX_TYPE BASIS_810A[] = {BM_A,BM_A2,BM_B, BM_C, BM_D1,                        BM_D,BM_E1,BM_E2};
+const static BASIS_MATRIX_TYPE BASIS_810B[] = {BM_A,BM_A2,BM_B, BM_C, BM_D1,BM_G1,BM_G2,            BM_D};
+const static BASIS_MATRIX_TYPE BASIS_816[]  = {BM_A,BM_A2,BM_D1,BM_G1,BM_G2,                        BM_D,BM_E1,BM_E2};
+const static BASIS_MATRIX_TYPE BASIS_817[]  = {BM_A,BM_A2,BM_B, BM_G1,BM_G2,                        BM_D,BM_E1,BM_E2};
+const static BASIS_MATRIX_TYPE BASIS_818[]  = {BM_A,BM_A2,BM_B, BM_F1,BM_F2,                        BM_D,BM_E1,BM_E2};
+const static BASIS_MATRIX_TYPE BASIS_920A[] = {BM_A,BM_A2,BM_B, BM_C, BM_D1,BM_F1,BM_F2,                 BM_E1,BM_E2};
 const static BASIS_MATRIX_TYPE BASIS_920B[] = {BM_A,BM_A2,BM_B, BM_C, BM_D1,BM_F1,BM_F2,BM_G1,BM_G2};
-const static BASIS_MATRIX_TYPE BASIS_1012[] = {BM_A,BM_A2,BM_B, BM_C, BM_D, BM_D1,BM_E1,BM_E2,BM_F1,BM_F2};
-const static BASIS_MATRIX_TYPE BASIS_1034[] = {BM_A,BM_A2,BM_B, BM_C, BM_D, BM_D1,BM_E1,BM_E2,BM_G1,BM_G2};
-const static BASIS_MATRIX_TYPE BASIS_1212[] = {BM_A,BM_A2,BM_B, BM_C, BM_D, BM_D1,BM_E1,BM_E2,BM_F1,BM_F2,BM_G1,BM_G2};
+const static BASIS_MATRIX_TYPE BASIS_1012[] = {BM_A,BM_A2,BM_B, BM_C, BM_D1,BM_F1,BM_F2,            BM_D,BM_E1,BM_E2};
+const static BASIS_MATRIX_TYPE BASIS_1034[] = {BM_A,BM_A2,BM_B, BM_C, BM_D1,BM_G1,BM_G2,            BM_D,BM_E1,BM_E2};
+const static BASIS_MATRIX_TYPE BASIS_1212[] = {BM_A,BM_A2,BM_B, BM_C, BM_D1,BM_F1,BM_F2,BM_G1,BM_G2,BM_D,BM_E1,BM_E2};
 
 const static int NUM_LM_MODELS = 37;
 const static BASIS_MATRIX_TYPE *BASES[] = 
@@ -264,7 +265,7 @@ const static int BDF[] =
  * then transformed basis matrix X = tauRY*TRANSFORM_X[0]+tauAG*TRANSFORM_X[1]+tauCT*TRANSFORM_X[2]
  */
 const static double *TRANSFORM_A[]  = {D,    tE1,  tE2};
-const static double *TRANSFORM_A2[] = {D,     E1,   E2};
+const static double *TRANSFORM_A2[] = {mD,    E1,   E2};
 const static double *TRANSFORM_B[]  = {NULL, mE2,  mE1};
 const static double *TRANSFORM_C[]  = {NULL,  E2,  mE1};
 const static double *TRANSFORM_D1[] = {NULL,  E1,  mE2};
@@ -285,41 +286,50 @@ const static double **BASIS_TRANSFORM[] = {
  * (this is cosmetic - names of these models don't have RY, WS or MK appended.)
  */
 const static string SYMMETRY[] = {"RY","WS","MK",""};
+/* 
+ * The definitions of tau (piToTau(), below) determine the unpermuted
+ * base orderings for each symmetry. For RY, order = (A,G,C,T); for
+ * WS order is (A,T,C,G). For MK, (A,C,G,T). Then the unpermuted
+ * rates need to be permuted to the (A,C,G,T) order native to iqtree.
+ */
+
 const static int SYMMETRY_PERM[][12] = 
-                   {{1,0,2,6,7,8,3,4,5,9,11,10},
-		    {7,6,8,4,3,5,1,0,2,11,10,9},
-		    {0,1,2,3,4,5,6,7,8,9,10,11},
-		    {0,1,2,3,4,5,6,7,8,9,10,11}};
+                   {{1,0,2,6,7,8,3,4,5,9,11,10}, // RY
+		    {1,2,0,6,8,7,9,11,10,3,4,5}, // WS
+		    {0,1,2,3,4,5,6,7,8,9,10,11}, // MK
+		    {1,0,2,6,7,8,3,4,5,9,11,10}}; // sym=3 uses RY permutation
 const static bool FULL_SYMMETRY[] = 
-             {true, false,true, false,false,
-	      false,true, false,false,false,
-	      false,false,false,false,false,
-	      false,false,false,false,false,
-	      true, false,false,false,false,
-	      false,false,false,false,false,
-	      false,false,false,true, false,
-	      false,true};
+             {true, false,true, false,false, // 1.1,   2.2b,  3.3a,  3.3b,  3.3c
+	      false,true, false,false,false, // 3.4,   4.4a,  4.4b,  4.5a,  4.5b
+	      false,false,false,false,false, // 5.6a,  5.6b,  5.7a,  5.7b,  5.7c
+	      false,false,false,false,false, // 5.11a, 5.11b, 5.11c, 5.16,  6.6
+	      true, false,false,false,false, // 6.7a,  6.7b,  6.8a,  6.8b,  6.17a 
+	      false,false,false,false,false, // 6.17b, 8.8,   8.10a, 8.10b, 8.16
+	      false,false,false,true, false, // 8.17,  8.18,  9.20a, 9.20b, 10.12
+	      false,true};                   // 10.34, 12.12
 const static int NUM_RATES = 12;
 
 const double MIN_LIE_WEIGHT = -0.9999;
 const double MAX_LIE_WEIGHT =  0.9999;
 
-ModelLieMarkov::ModelLieMarkov(string model_name, PhyloTree *tree, string model_params, bool count_rates)
+ModelLieMarkov::ModelLieMarkov(string model_name, PhyloTree *tree, string model_params, StateFreqType freq_type, bool count_rates)
 	: ModelNonRev(tree) {
-    init(model_name.c_str(), model_params, FREQ_ESTIMATE, "");
+    init(model_name.c_str(), model_params, freq_type, "");
 }
 
 void ModelLieMarkov::init(const char *model_name, string model_params, StateFreqType freq, string freq_params)
 {
     assert(NUM_RATES==getNumRateEntries());
     parseModelName(model_name,&model_num,&symmetry);
+    name = "LM"+MODEL_NAMES[model_num]+SYMMETRY[symmetry];
+    full_name = "Lie Markov model "+MODEL_NAMES[model_num]+SYMMETRY[symmetry]+" (non reversible)";
     if (model_num<0) {
         // should never happen - model_name should have been accepted 
         // by validModelName before constructor was called.
         cerr << "Bad model name in ModelLieMarkov constructor" << endl;
         abort();
     }
-    freq_type = FREQ_ESTIMATE;
+    freq_type = freq;
     setBasis(); // sets basis and num_params
 
     if (model_parameters)
@@ -352,8 +362,6 @@ void ModelLieMarkov::init(const char *model_name, string model_params, StateFreq
         }
         setRates();
     }
-    name = "LM"+MODEL_NAMES[model_num]+SYMMETRY[symmetry];
-    full_name = "Lie Markov model "+MODEL_NAMES[model_num]+SYMMETRY[symmetry]+" (non reversible)";
     ModelNonRev::init(freq_type);
 }
 
@@ -430,63 +438,118 @@ void ModelLieMarkov::setBounds(double *lower_bound, double *upper_bound, bool *b
 	}
 }
 
-/**
- * Uses model_num, symmetry to populate 'basis' array.
- * TO DO: use state_freq and freq_type to alter basis for predetermined
- * base frequencies (if freq_type not FREQ_ESTIMATE).
- */
+
 /*
  * tau[0] = pi_R-pi_Y = pi_A+pi_G-pi_C-pi_T (for RY pairing)
  *          (or pi_W-pi_S for WS pairing, or pi_M-pi_K for MK pairing)
  * tau[1] = pi_A-pi_G (RY pairing), pi_A-pi_T (WS pairing), pi_A-pi_C (MK pairing)
  * tau[2] = pi_C-pi_T (RY pairing), pi_C-pi_G (WS pairing), pi_G-pi_T (MK pairing)
  */
+// Writes into a length 3 tau vector calculated from a given pi, for given pairing/symmetry
+static void piToTau(double* pi, double* tau, int sym) {
+  switch (sym) {
+  case 0: // RY
+  case 3: // full symmetry
+    tau[0] = pi[0]+pi[2]-pi[1]-pi[3];
+    tau[1] = pi[0]-pi[2];
+    tau[2] = pi[1]-pi[3];
+    break;
+  case 1: // WS
+    tau[0] = pi[0]+pi[3]-pi[1]-pi[2];
+    tau[1] = pi[0]-pi[3];
+    tau[2] = pi[1]-pi[2];
+    break;
+  case 2: // MK
+    tau[0] = pi[0]+pi[1]-pi[2]-pi[3];
+    tau[1] = pi[0]-pi[1];
+    tau[2] = pi[2]-pi[3];
+    break;
+  default: outError("Can't happen");
+  } // switch
+}
+
+// Writes into a length 4 pi vector calculated from given tau, for given pairing/symmetry.
+static void tauToPi(double* tau, double* pi, int sym) {
+  switch (sym) {
+  case 0: // RY
+  case 3: // Full symmetry
+    // tau[0] = A+G-C-T, tau[1]=A-G, tau[2]=C-T
+    pi[0] = 0.25 + 0.25*tau[0] + 0.5*tau[1]; // pi_A
+    pi[1] = 0.25 - 0.25*tau[0] + 0.5*tau[2]; // pi_C
+    pi[2] = 0.25 + 0.25*tau[0] - 0.5*tau[1]; // pi_G
+    pi[3] = 0.25 - 0.25*tau[0] - 0.5*tau[2]; // pi_T
+    break;
+  case 1: // WS
+    // tau[0] = A+T-C-G, tau[1]=A-T, tau[2]=C-G
+    pi[0] = 0.25 + 0.25*tau[0] + 0.5*tau[1]; // pi_A
+    pi[1] = 0.25 - 0.25*tau[0] + 0.5*tau[2]; // pi_C
+    pi[2] = 0.25 - 0.25*tau[0] - 0.5*tau[2]; // pi_G
+    pi[3] = 0.25 + 0.25*tau[0] - 0.5*tau[1]; // pi_T
+    break;
+  case 2: // MK
+    // tau[0] = A+C-G-T, tau[1]=A-C, tau[2]=G-T
+    pi[0] = 0.25 + 0.25*tau[0] + 0.5*tau[1]; // pi_A
+    pi[1] = 0.25 + 0.25*tau[0] - 0.5*tau[1]; // pi_C
+    pi[2] = 0.25 - 0.25*tau[0] + 0.5*tau[2]; // pi_G
+    pi[3] = 0.25 - 0.25*tau[0] - 0.5*tau[2]; // pi_T
+    break;
+    default: outError("Can't happen");
+  }
+}
+
+/**
+ * Uses model_num, symmetry to populate 'basis' array.
+ */
 
 void ModelLieMarkov::setBasis() {
   if (getFreqType() == FREQ_EMPIRICAL || 
       getFreqType() == FREQ_USER_DEFINED || 
       getFreqType() == FREQ_EQUAL) {
-    double tau[] = {0,0,0};
+    int bdf = BDF[model_num];
     // There are no free parameters for base frequencies:
-    num_params = MODEL_PARAMS[model_num]-BDF[model_num];
-    int bdf = (getFreqType()==FREQ_EQUAL) ? 0 : BDF[model_num];
+    num_params = MODEL_PARAMS[model_num]-bdf;
     // This populates field state_freq. (TODO: this call might be redundant - check)
+    if (bdf>0 && getFreqType() == FREQ_EQUAL) {
+      outWarning("You have demanded equal base frequencies (-f q) for a Lie-Markov\nmodel which can produce unequal base frequencies. It is better to just\nselect a Lie-Markov model which can only produce equal base frequencies.\nThese models are 1.1, 2.2b, 3.3a, 3.3b, 3.3c, 5.6a, 5.7b, 5.7c, 5.11b, 5.11c, 9.20b.");
+      bdf = 0; // need bdf=0 basis matrices.
+    }
+
     init_state_freq(getFreqType());
     // state_freq is in order {pi_A, pi_C, pi_G, pi_T}
-    // tau[0]
-    if (bdf==1 || bdf==3) {
-      switch (symmetry) {
-      case 0: // RY
-      case 3: // full symmetry
-	tau[0] = state_freq[0]+state_freq[2]-state_freq[1]-state_freq[3];
-	break;
-      case 1: // WS
-	tau[0] = state_freq[0]+state_freq[3]-state_freq[1]-state_freq[2];
-	break;
-      case 2: // MK
-	tau[0] = state_freq[0]+state_freq[1]-state_freq[2]-state_freq[3];
-	break;
-      default: outError("Can't happen");
-      } // switch
-    } // if bdf (else tau[0] == 0) 
-    if (bdf==2 || bdf==3) {
-      switch (symmetry) {
-      case 0: // RY
-      case 3: // full symmetry
-	tau[1] = state_freq[0]-state_freq[2];
-	tau[2] = state_freq[1]-state_freq[3];
-	break;
-      case 1: // WS
-	tau[1] = state_freq[0]-state_freq[3];
-	tau[2] = state_freq[1]-state_freq[2];
-	break;
-      case 2: // MK
-	tau[1] = state_freq[0]-state_freq[1];
-	tau[2] = state_freq[2]-state_freq[3];
-	break;
-      default: outError("Can't happen");
-      } // switch
-    } // else tau[1]==tau[2]==0
+    double* tau = new double[3];
+    piToTau(state_freq,tau,symmetry);
+    
+    // Now zero tau entries which BDF forces to be zero, and print warnings
+    bool canMatchFreq = true;
+    switch (bdf) {
+    case 0:
+      canMatchFreq = (fabs(tau[0])<0.001 && fabs(tau[1])<0.001 || fabs(tau[2])<0.001);
+      tau[0] = 0; tau[1] = 0; tau[2] = 0;
+      break;
+    case 1:
+      canMatchFreq = (fabs(tau[1])<0.001 || fabs(tau[2])<0.001);
+      tau[1] = 0; tau[2] = 0;
+      break;
+    case 2:
+      canMatchFreq = (fabs(tau[0])<0.001);
+      tau[0] = 0;
+      break;
+    case 3:
+      break;
+    default: outError("Can't happen");
+    } // switch
+    if (!canMatchFreq) {
+      // MDW to Minh: I suspect there is a better way, please recode if there is.
+      double* eqbm = new double[4];
+      tauToPi(tau,eqbm,symmetry);
+      char* buffer = new char[200];
+      snprintf(buffer,200,"Model %s cannot achieve requested equilibrium base frequencies\n(%5.3f,%5.3f,%5.3f,%5.3f).\nInstead it will use equilibrium base frequencies (%5.3f,%5.3f,%5.3f,%5.3f).\n",
+	       name.c_str(),state_freq[0],state_freq[1],state_freq[2],state_freq[3],eqbm[0],eqbm[1],eqbm[2],eqbm[3]);
+      outWarning(buffer);
+      delete[] eqbm;
+      delete[] buffer;
+    }
+
     basis = new double*[num_params+1];
     for (int i=0;i<=num_params;i++) {
       int basisIndex = BASES[model_num][i];
@@ -506,6 +569,7 @@ void ModelLieMarkov::setBasis() {
       }
       basis[i] = permuted_rates;
     } // for i
+    delete[] tau;
   } else {
       assert(getFreqType() == FREQ_ESTIMATE); // only other legal possibility
     num_params = MODEL_PARAMS[model_num];
@@ -520,6 +584,7 @@ void ModelLieMarkov::setBasis() {
     } // for i
   } // if getFreqType() ... else ...
 }
+
 
 /*
  * Set rates from model_parameters
@@ -582,8 +647,8 @@ void ModelLieMarkov::decomposeRateMatrixEigen3lib() {
     eval = eigensolver.eigenvalues();
     Map<Matrix4cd,Aligned> evec(cevec);
     evec = eigensolver.eigenvectors();
-    if (abs(evec.determinant())<1e-12) {
-      // limit of 1e-12 is something of a guess
+    if (abs(evec.determinant())<1e-10) {
+      // limit of 1e-10 is something of a guess. 1e-12 was too restrictive.
       nondiagonalizable = true; // will use scaled squaring instead of eigendecomposition for matrix exponentiation
       return;
     }
@@ -849,6 +914,9 @@ void ModelLieMarkov::computeTransMatrix(double time, double *trans_matrix) {
         Matrix4cd cevectors(cevec);
         Matrix4cd cinv_evectors(cinv_evec);
         Matrix4cd res = cevectors * ceval_exp.asDiagonal() * cinv_evectors;
+	// if assertions fail, it may be due to cevec having near-zero
+	// determinant, and a fix could be to relax the test for
+	// nondiagonalizable in ModelLieMarkov::decomposeRateMatrixEigen3lib()
         for (i = 0; i < 4; i++) {
             for (int j = 0; j < 4; j++) {
                 trans_matrix[i*4+j] = res(j, i).real();
