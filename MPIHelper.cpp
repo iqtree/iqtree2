@@ -446,7 +446,8 @@ int MPIHelper::cleanUpMessages() {
 
 #ifdef _IQTREE_MPI
 void MPIHelper::sendString(string &str, int dest, int tag) {
-    MPI_Send(str.c_str(), str.length()+1, MPI_CHAR, dest, tag, MPI_COMM_WORLD);
+    char *buf = (char*)str.c_str();
+    MPI_Send(buf, str.length()+1, MPI_CHAR, dest, tag, MPI_COMM_WORLD);
 }
 
 void MPIHelper::sendCheckpoint(Checkpoint *ckp, int dest) {
@@ -532,7 +533,8 @@ void MPIHelper::gatherCheckpoint(Checkpoint *ckp) {
         recvBuffer = new char[totalCount+1];
         memset(recvBuffer, 0, totalCount+1);
     }
-    MPI_Gatherv(str.c_str(), msgCount, MPI_CHAR, recvBuffer, msgCounts, displ, MPI_CHAR, PROC_MASTER, MPI_COMM_WORLD);
+    char *buf = (char*)str.c_str();
+    MPI_Gatherv(buf, msgCount, MPI_CHAR, recvBuffer, msgCounts, displ, MPI_CHAR, PROC_MASTER, MPI_COMM_WORLD);
 
     if (isMaster()) {
         // now decode the buffer

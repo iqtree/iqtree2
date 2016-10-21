@@ -191,6 +191,8 @@ public:
         @param dest destination process
         @param tag message tag
     */
+
+#ifdef _IQTREE_MPI
     void sendString(string &str, int dest, int tag);
 
     /** wrapper for MPI_Recv a string
@@ -226,6 +228,7 @@ public:
         @param ckp Checkpoint object
     */
     void gatherCheckpoint(Checkpoint *ckp);
+#endif
 
     void increaseTreeSent(int inc = 1) {
         numTreeSent += inc;
