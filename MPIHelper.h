@@ -186,6 +186,55 @@ public:
      */
     bool checkMsg(int tag, string &msg);
 
+    /** wrapper for MPI_Send a string
+        @param str string to send
+        @param dest destination process
+        @param tag message tag
+    */
+    void sendString(string &str, int dest, int tag);
+
+    /** wrapper for MPI_Recv a string
+        @param[out] str string received
+        @param src source process
+        @param tag message tag
+        @return the source process that sent the message
+    */
+    int recvString(string &str, int src = MPI_ANY_SOURCE, int tag = MPI_ANY_TAG);
+
+    /** wrapper for MPI_Send an entire Checkpoint object
+        @param ckp Checkpoint object to send
+        @param dest destination process
+    */
+    void sendCheckpoint(Checkpoint *ckp, int dest);
+
+    /** wrapper for MPI_Recv an entire Checkpoint object
+        @param[out] ckp Checkpoint object received
+        @param src source process
+        @param tag message tag
+        @return the source process that sent the message
+    */
+    int recvCheckpoint(Checkpoint *ckp, int src = MPI_ANY_SOURCE);
+
+    /**
+        wrapper for MPI_Bcast to broadcast checkpoint from Master to all Workers
+        @param ckp Checkpoint object
+    */
+    void broadcastCheckpoint(Checkpoint *ckp);
+
+    /**
+        wrapper for MPI_Gather to gather all checkpoints into Master
+        @param ckp Checkpoint object
+    */
+    void gatherCheckpoint(Checkpoint *ckp);
+
+    void increaseTreeSent(int inc = 1) {
+        numTreeSent += inc;
+    }
+
+    void increaseTreeReceived(int inc = 1) {
+        numTreeReceived += inc;
+    }
+
 private:
     /**
     *  Remove the buffers for finished messages

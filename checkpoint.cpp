@@ -30,6 +30,47 @@ Checkpoint::~Checkpoint() {
 void Checkpoint::setFileName(string filename) {
 	this->filename = filename;
 }
+
+
+void Checkpoint::load(istream &in) {
+    string line;
+    string struct_name;
+    size_t pos;
+    int listid = 0;
+    while (!in.eof()) {
+        getline(in, line);
+        pos = line.find('#');
+        if (pos != string::npos)
+            line.erase(pos);
+        line.erase(line.find_last_not_of("\n\r\t")+1);
+//            trimString(line);
+        if (line.empty()) continue;
+        if (line[0] != ' ') {
+            struct_name = "";
+        }
+//            trimString(line);
+        line.erase(0, line.find_first_not_of(" \n\r\t"));
+        if (line.empty()) continue;
+        pos = line.find(": ");
+        if (pos != string::npos) {
+            // mapping
+            (*this)[struct_name + line.substr(0, pos)] = line.substr(pos+2);
+        } else if (line[line.length()-1] == ':') {
+            // start a new struct
+            line.erase(line.length()-1);
+            trimString(line);
+            struct_name = line + '.';
+            listid = 0;
+            continue;
+        } else {
+            // collection
+            (*this)[struct_name + convertIntToString(listid)] = line;
+            listid++;
+        }
+    }
+}
+
+
 void Checkpoint::load() {
 	assert(filename != "");
     if (!fileExists(filename)) return;
@@ -47,41 +88,8 @@ void Checkpoint::load() {
         }
         if (line != header)
         	throw ("Invalid checkpoint file " + filename);
-        string struct_name;
-        size_t pos;
-        int listid = 0;
-        while (!in.eof()) {
-        	getline(in, line);
-            pos = line.find('#');
-            if (pos != string::npos)
-                line.erase(pos);
-            line.erase(line.find_last_not_of("\n\r\t")+1);
-//            trimString(line);
-            if (line.empty()) continue;
-            if (line[0] != ' ') {
-                struct_name = "";
-            }
-//            trimString(line);
-            line.erase(0, line.find_first_not_of(" \n\r\t"));
-            if (line.empty()) continue;
-        	pos = line.find(": ");
-        	if (pos != string::npos) {
-                // mapping
-                (*this)[struct_name + line.substr(0, pos)] = line.substr(pos+2);
-            } else if (line[line.length()-1] == ':') {
-                // start a new struct
-                line.erase(line.length()-1);
-                trimString(line);
-                struct_name = line + '.';
-                listid = 0;
-                continue;
-            } else {
-                // collection
-                (*this)[struct_name + convertIntToString(listid)] = line;
-                listid++;
-//        		throw "':' is expected between key and value";
-            }
-        }
+        // call load from the stream
+        load(in);
         in.clear();
         // set the failbit again
         in.exceptions(ios::failbit | ios::badbit);
@@ -111,6 +119,23 @@ void Checkpoint::setDumpInterval(double interval) {
     dump_interval = interval;
 }
 
+void Checkpoint::dump(ostream &out) {
+    string struct_name;
+    size_t pos;
+    int listid = 0;
+    for (iterator i = begin(); i != end(); i++) {
+        if ((pos = i->first.find('.')) != string::npos) {
+            if (struct_name != i->first.substr(0, pos)) {
+                struct_name = i->first.substr(0, pos);
+                out << struct_name << ':' << endl;
+                listid = 0;
+            }
+            // check if key is a collection
+            out << ' ' << i->first.substr(pos+1) << ": " << i->second << endl;
+        } else
+            out << i->first << ": " << i->second << endl;
+    }
+}
 
 void Checkpoint::dump(bool force) {
     if (filename == "")
@@ -128,21 +153,8 @@ void Checkpoint::dump(bool force) {
             out = new ofstream(filename.c_str()); 
         out->exceptions(ios::failbit | ios::badbit);
         *out << header << endl;
-        string struct_name;
-        size_t pos;
-        int listid = 0;
-        for (iterator i = begin(); i != end(); i++) {
-            if ((pos = i->first.find('.')) != string::npos) {
-                if (struct_name != i->first.substr(0, pos)) {
-                    struct_name = i->first.substr(0, pos);
-                    *out << struct_name << ":" << endl;
-                    listid = 0;
-                }
-                // check if key is a collection
-                *out << "  " << i->first.substr(pos+1) << ": " << i->second << endl;
-            } else
-                *out << i->first << ": " << i->second << endl;
-        }
+        // call dump stream
+        dump(*out);
         if (compression)
             ((ogzstream*)out)->close();
         else

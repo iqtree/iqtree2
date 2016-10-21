@@ -444,6 +444,109 @@ int MPIHelper::cleanUpMessages() {
 #endif
 }
 
+#ifdef _IQTREE_MPI
+void MPIHelper::sendString(string &str, int dest, int tag) {
+    MPI_Send(str.c_str(), str.length()+1, MPI_CHAR, dest, tag, MPI_COMM_WORLD);
+}
+
+void MPIHelper::sendCheckpoint(Checkpoint *ckp, int dest) {
+    stringstream ss;
+    ckp->dump(ss);
+    string str = ss.str();
+    sendString(str, dest, TREE_TAG);
+}
+
+
+int MPIHelper::recvString(string &str, int src, int tag) {
+    MPI_Status status;
+    MPI_Probe(src, tag, MPI_COMM_WORLD, &status);
+    int msgCount;
+    MPI_Get_count(&status, MPI_CHAR, &msgCount);
+    // receive the message
+    char *recvBuffer = new char[msgCount];
+    MPI_Recv(recvBuffer, msgCount, MPI_CHAR, status.MPI_SOURCE, status.MPI_TAG, MPI_COMM_WORLD, &status);
+    str = recvBuffer;
+    delete [] recvBuffer;
+    return status.MPI_SOURCE;
+}
+
+int MPIHelper::recvCheckpoint(Checkpoint *ckp, int src) {
+    string str;
+    int proc = recvString(str, src, TREE_TAG);
+    stringstream ss(str);
+    ckp->load(ss);
+    return proc;
+}
+
+void MPIHelper::broadcastCheckpoint(Checkpoint *ckp) {
+    int msgCount = 0;
+    stringstream ss;
+    string str;
+    if (isMaster()) {
+        ckp->dump(ss);
+        str = ss.str();
+        msgCount = str.length()+1;
+    }
+
+    // broadcast the count for workers
+    MPI_Bcast(&msgCount, 1, MPI_INT, PROC_MASTER, MPI_COMM_WORLD);
+
+    char *recvBuffer = new char[msgCount];
+    if (isMaster())
+        memcpy(recvBuffer, str.c_str(), msgCount);
+
+    // broadcast trees to workers
+    MPI_Bcast(recvBuffer, msgCount, MPI_CHAR, PROC_MASTER, MPI_COMM_WORLD);
+
+    if (isWorker()) {
+        ss.clear();
+        ss.str(recvBuffer);
+        ckp->load(ss);
+    }
+    delete [] recvBuffer;
+}
+
+void MPIHelper::gatherCheckpoint(Checkpoint *ckp) {
+    stringstream ss;
+    ckp->dump(ss);
+    string str = ss.str();
+    int msgCount = str.length();
+
+    // first send the counts to MASTER
+    int *msgCounts = NULL, *displ = NULL;
+    char *recvBuffer = NULL;
+    int totalCount = 0;
+
+    if (isMaster()) {
+        msgCounts = new int[getNumProcesses()];
+        displ = new int[getNumProcesses()];
+    }
+    MPI_Gather(&msgCount, 1, MPI_INT, msgCounts, 1, MPI_INT, PROC_MASTER, MPI_COMM_WORLD);
+
+    // now real contents to MASTER
+    if (isMaster()) {
+        for (int i = 0; i < getNumProcesses(); i++) {
+            displ[i] = totalCount;
+            totalCount += msgCounts[i];
+        }
+        recvBuffer = new char[totalCount+1];
+        memset(recvBuffer, 0, totalCount+1);
+    }
+    MPI_Gatherv(str.c_str(), msgCount, MPI_CHAR, recvBuffer, msgCounts, displ, MPI_CHAR, PROC_MASTER, MPI_COMM_WORLD);
+
+    if (isMaster()) {
+        // now decode the buffer
+        ss.clear();
+        ss.str(recvBuffer);
+        ckp->load(ss);
+
+        delete [] recvBuffer;
+        delete [] displ;
+        delete [] msgCounts;
+    }
+}
+
+#endif
 
 MPIHelper::~MPIHelper() {
 //    cleanUpMessages();

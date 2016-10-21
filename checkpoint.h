@@ -28,6 +28,10 @@ using namespace std;
 #define CKP_ARRAY_RESTORE(num, arr) checkpoint->getArray(#arr, num, arr)
 #define CKP_VECTOR_RESTORE(arr) checkpoint->getVector(#arr, arr)
 
+#define CHECKPOINT_SAVE(checkpoint, var) checkpoint->put(#var, var)
+
+#define CHECKPOINT_RESTORE(checkpoint, var) checkpoint->get(#var, var)
+
 /** checkpoint stream */
 class CkpStream : public stringstream {
 public:
@@ -77,9 +81,21 @@ public:
     void setHeader(string header);
 
 	/**
+	 * load checkpoint information from an input stram
+     * @param in input stream
+	 */
+	void load(istream &in);
+
+	/**
 	 * load checkpoint information from file
 	 */
 	void load();
+
+	/**
+	 * dump checkpoint information into an output stream
+     * @param out output stream
+	 */
+	void dump(ostream &out);
 
 	/**
 	 * dump checkpoint information into file
