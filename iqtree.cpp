@@ -2209,10 +2209,13 @@ double IQTree::doTreeSearch() {
     /*==============================================================================================================
 	                                       MAIN LOOP OF THE IQ-TREE ALGORITHM
 	 *=============================================================================================================*/
+
+    bool optimization_looped = false;
     if (!stop_rule.meetStopCondition(stop_rule.getCurIt(), cur_correlation)) {
         cout << "--------------------------------------------------------------------" << endl;
         cout << "|               OPTIMIZING CANDIDATE TREE SET                      |" << endl;
         cout << "--------------------------------------------------------------------" << endl;
+        optimization_looped = true;
     }
 
     // count threshold for computing bootstrap correlation
@@ -2378,7 +2381,8 @@ double IQTree::doTreeSearch() {
 
     }
 
-    sendStopMessage();
+    if (optimization_looped)
+        sendStopMessage();
 
     readTreeString(candidateTrees.getBestTreeStrings()[0]);
 
