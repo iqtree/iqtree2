@@ -611,6 +611,9 @@ void IQTree::createInitTrees(int nParTrees) {
         #pragma omp parallel
         {
             PhyloTree tree;
+            if (params->constraint_tree_file) {
+                tree.constraintTree.initConstraint(params->constraint_tree_file, aln->getSeqNames());
+            }
             tree.setParams(params);
             tree.setParsimonyKernel(params->SSE);
             #pragma omp for
