@@ -7,6 +7,7 @@
 
 #include "phylotree.h"
 #include "ratefree.h"
+#include "rateinvar.h"
 
 #include "model/modelfactory.h"
 #include "model/modelmixture.h"
@@ -209,7 +210,7 @@ double RateFree::optimizeParameters(double gradient_epsilon) {
 		cout << "Optimizing " << name << " model parameters by " << optimize_alg << " algorithm..." << endl;
 
     // TODO: turn off EM algorithm for +ASC model
-    if (optimize_alg.find("EM") != string::npos && phylo_tree->getModelFactory()->unobserved_ptns.empty())
+    if ((optimize_alg.find("EM") != string::npos && phylo_tree->getModelFactory()->unobserved_ptns.empty()) || getPInvar() <= MIN_PINVAR)
         return optimizeWithEM();
 
 	//if (freq_type == FREQ_ESTIMATE) scaleStateFreq(false);

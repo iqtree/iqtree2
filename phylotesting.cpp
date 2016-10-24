@@ -1361,20 +1361,19 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 
 	RateHeterogeneity ** rate_class = new RateHeterogeneity*[4];
 	rate_class[0] = new RateHeterogeneity();
-	rate_class[1] = new RateInvar(-1, NULL);
-	rate_class[2] = new RateGamma(params.num_rate_cats, params.gamma_shape, params.gamma_median, NULL);
-	rate_class[3] = new RateGammaInvar(params.num_rate_cats, params.gamma_shape, params.gamma_median, -1, params.optimize_alg_gammai, NULL, false);
+	rate_class[1] = new RateInvar(params.p_invar_sites, in_tree);
+	rate_class[2] = new RateGamma(params.num_rate_cats, params.gamma_shape, params.gamma_median, in_tree);
+	rate_class[3] = new RateGammaInvar(params.num_rate_cats, params.gamma_shape, params.gamma_median, -1, params.optimize_alg_gammai, in_tree, false);
     
     RateFree ** rate_class_free = new RateFree*[params.max_rate_cats-1];
     
     for (model = 0; model < params.max_rate_cats-1; model++)
-        rate_class_free[model] = new RateFree(model+2, params.gamma_shape, "", false, params.optimize_alg, NULL);
+        rate_class_free[model] = new RateFree(model+2, params.gamma_shape, "", false, params.optimize_alg, in_tree);
 
     RateFreeInvar ** rate_class_freeinvar = new RateFreeInvar*[params.max_rate_cats-1];
     
     for (model = 0; model < params.max_rate_cats-1; model++) {
-        rate_class_freeinvar[model] = new RateFreeInvar(model+2, params.gamma_shape, "", false, in_tree->aln->frac_const_sites/2.0, params.optimize_alg, NULL);
-        rate_class_freeinvar[model]->setFixPInvar(false);
+        rate_class_freeinvar[model] = new RateFreeInvar(model+2, params.gamma_shape, "", false, params.p_invar_sites, params.optimize_alg, in_tree);
     }
         
         
