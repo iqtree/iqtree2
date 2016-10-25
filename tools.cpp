@@ -909,7 +909,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.site_freq_file = NULL;
     params.tree_freq_file = NULL;
 #ifdef _OPENMP
-    params.num_threads = 0;
+    params.num_threads = -1;
 #else
     params.num_threads = 1;
 #endif
@@ -3008,10 +3008,14 @@ void parseArg(int argc, char *argv[], Params &params) {
 			if (strcmp(argv[cnt], "-omp") == 0 || strcmp(argv[cnt], "-nt") == 0) {
 				cnt++;
 				if (cnt >= argc)
-				throw "Use -nt <num_threads>";
-				params.num_threads = convert_int(argv[cnt]);
-				if (params.num_threads < 1)
-					throw "At least 1 thread please";
+				throw "Use -nt <num_threads|AUTO>";
+                if (strcmp(argv[cnt], "AUTO") == 0)
+                    params.num_threads = 0;
+                else {
+                    params.num_threads = convert_int(argv[cnt]);
+                    if (params.num_threads < 1)
+                        throw "At least 1 thread please";
+                }
 				continue;
 			}
 //			if (strcmp(argv[cnt], "-rootstate") == 0) {

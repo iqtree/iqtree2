@@ -869,7 +869,7 @@ void IQTree::initializePLL(Params &params) {
     pllAttr.saveMemory = PLL_FALSE;
     pllAttr.useRecom = PLL_FALSE;
     pllAttr.randomNumberSeed = params.ran_seed;
-    pllAttr.numberOfThreads = params.num_threads; /* This only affects the pthreads version */
+    pllAttr.numberOfThreads = max(params.num_threads, 1); /* This only affects the pthreads version */
     if (pllInst != NULL) {
         pllDestroyInstance(pllInst);
     }
@@ -3796,5 +3796,68 @@ void IQTree::sendStopMessage() {
     delete checkpoint;
 
     MPI_Barrier(MPI_COMM_WORLD);
+#endif
+}
+
+
+int IQTree::testNumThreads() {
+#ifndef _OPENMP
+    return 1;
+#else
+	int max_procs = countPhysicalCPUCores();
+    cout << "Testing multi-threading efficiency up to " << max_procs << " CPU cores" << endl;
+    DoubleVector runTimes;
+    int bestProc = 0;
+    double saved_curScore = curScore;
+    bool optimize_params = false;
+    Checkpoint *ckp = new Checkpoint;
+    Checkpoint *saved_checkpoint = getCheckpoint();
+
+    for (int proc = 1; proc <= max_procs; proc++) {
+        omp_set_num_threads(proc);
+        setLikelihoodKernel(sse, proc);
+
+        initializeAllPartialLh();
+        DoubleVector lenvec;
+        saveBranchLengths(lenvec);
+        double beginTime = getRealTime();
+        double logl = optimizeAllBranches();
+        double runTime = getRealTime() - beginTime;
+
+        // too fast, then turn on optimizing model parameters
+        if (runTime < 1.0 && proc == 1)
+            optimize_params = true;
+        if (optimize_params) {
+            getModelFactory()->setCheckpoint(ckp);
+            getModelFactory()->saveCheckpoint();
+            logl = getModelFactory()->optimizeParameters(params->fixed_branch_length, false, 1.0);
+            runTime = getRealTime() - beginTime;
+            getModelFactory()->restoreCheckpoint();
+            getModelFactory()->setCheckpoint(saved_checkpoint);
+        }
+        restoreBranchLengths(lenvec);
+        clearAllPartialLH();
+        curScore = saved_curScore;
+        deleteAllPartialLh();
+
+        double speedup = 1.0;
+        if (proc > 1)
+            speedup = runTimes[0] / runTime;
+        cout << proc << " thread, " << runTime << " sec, " << speedup << " speedup, logl: " << logl << endl;
+        runTimes.push_back(runTime);
+
+        // break if too bad speedup ( < 50% efficiency) or worse run time
+        if (speedup*2 <= proc || runTime > runTimes[bestProc])
+            break;
+
+        // update best threads
+        if (runTime < runTimes[bestProc])
+            bestProc = proc-1;
+
+    }
+    cout << "Best number of threads: " << bestProc+1 << endl;
+    setLikelihoodKernel(sse, bestProc+1);
+    delete ckp;
+    return bestProc+1;
 #endif
 }

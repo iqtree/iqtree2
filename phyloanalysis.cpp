@@ -1815,12 +1815,23 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
         }
 #endif
         int max_procs = countPhysicalCPUCores();
-        if (mem_size * max_procs > total_mem * params.num_threads) {
+        if (mem_size * max_procs > total_mem * params.num_threads && params.num_threads > 0) {
             outWarning("Memory required per CPU-core (" + convertDoubleToString((double)mem_size/params.num_threads/1024/1024/1024)+
             " GB) is higher than your computer RAM per CPU-core ("+convertIntToString(total_mem/max_procs/1024/1024/1024)+
             " GB), thus multiple runs may exceed RAM!");
         }
     }
+
+
+#ifdef _OPENMP
+    if (iqtree.num_threads <= 0) {
+        int bestThreads = iqtree.testNumThreads();
+        iqtree.setLikelihoodKernel(iqtree.sse, bestThreads);
+        omp_set_num_threads(bestThreads);
+        params.num_threads = bestThreads;
+    }
+#endif
+
 
     iqtree.initializeAllPartialLh();
 	double initEpsilon = params.min_iterations == 0 ? params.modelEps : (params.modelEps*10);
@@ -1842,6 +1853,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
     // Optimize model parameters and branch lengths using ML for the initial tree
 	string initTree;
 	iqtree.clearAllPartialLH();
+
     iqtree.getModelFactory()->restoreCheckpoint();
     if (iqtree.getCheckpoint()->getBool("finishedModelInit")) {
         // model optimization already done: ignore this step

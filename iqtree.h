@@ -610,6 +610,11 @@ public:
     */
    void pllConvertUFBootData2IQTree();
 
+    /**
+        test the best number of threads
+    */
+    int testNumThreads();
+
 protected:
     /**
     *  Splits corresponding to random NNIs

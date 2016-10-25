@@ -2427,13 +2427,15 @@ int main(int argc, char *argv[]) {
 	}
 
 #ifdef _OPENMP
-	if (Params::getInstance().num_threads == 0) {
+	if (Params::getInstance().num_threads < 0) {
 		cout << endl << endl;
-		outError("Please specify the number of cores to use (-nt option)!");
+		outError("Please specify number of cores via -nt option. Use '-nt AUTO' to automatically determine the best number of cores");
 	}
-	if (Params::getInstance().num_threads) omp_set_num_threads(Params::getInstance().num_threads);
+	if (Params::getInstance().num_threads >= 1) {
+        omp_set_num_threads(Params::getInstance().num_threads);
+        Params::getInstance().num_threads = omp_get_max_threads();
+    }
 //	int max_threads = omp_get_max_threads();
-	Params::getInstance().num_threads = omp_get_max_threads();
 	int max_procs = countPhysicalCPUCores();
 	cout << " - " << Params::getInstance().num_threads  << " threads (" << max_procs << " CPU cores detected)";
 	if (Params::getInstance().num_threads  > max_procs) {
