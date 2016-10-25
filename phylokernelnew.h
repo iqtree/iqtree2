@@ -807,17 +807,22 @@ template<class VectorClass>
 inline void computeBounds(int threads, size_t elements, vector<size_t> &limits) {
     limits.reserve(threads+1);
     elements = ((elements+VectorClass::size()-1)/VectorClass::size())*VectorClass::size();
-    size_t block_size = elements/threads;
-    if (elements % threads != 0) block_size++;
-    // padding to the vector size
-    block_size = ((block_size+VectorClass::size()-1)/VectorClass::size())*VectorClass::size();
-
+    size_t rest_elem = elements;
     limits.push_back(0);
-    size_t last = block_size;
-    while (last < elements) {
-        limits.push_back(last);
+    size_t last = 0;
+    for (int rest_thread = threads; rest_thread > 1; rest_thread--) {
+        size_t block_size = rest_elem/rest_thread;
+        if (rest_elem % rest_thread != 0) block_size++;
+        // padding to the vector size
+        block_size = ((block_size+VectorClass::size()-1)/VectorClass::size())*VectorClass::size();
+
         last += block_size;
+        if (last >= elements)
+            break;
+        limits.push_back(last);
+        rest_elem -= block_size;
     }
+
     limits.push_back(elements);
     assert(limits.size() == threads+1);
 }
@@ -849,32 +854,27 @@ void PhyloTree::computeTraversalInfo(PhyloNode *node, PhyloNode *dad, bool compu
 
     int num = traversal_info.size();
 
+    int nthreads = params->num_threads;
+
 
     if (!model->isSiteSpecificModel()) {
-    #ifdef _OPENMP
-    #pragma omp parallel
-        {
-            VectorClass *buffer_tmp = (VectorClass*)buffer + aln->num_states*omp_get_thread_num();
-    #pragma omp for schedule(static)
-    #else
-            VectorClass *buffer_tmp = (VectorClass*)buffer;
-    #endif
-        for (int i = 0; i < num; i++) {
-    #ifdef KERNEL_FIX_STATES
-            computePartialInfo<VectorClass, nstates>(traversal_info[i], buffer_tmp);
-    #else
-            computePartialInfo<VectorClass>(traversal_info[i], buffer_tmp);
-    #endif
+        #ifdef _OPENMP
+        #pragma omp parallel for schedule(static) if (num>=2)
+        #endif
+        for (int thread_id = 0; thread_id < nthreads; thread_id++) {
+            VectorClass *buffer_tmp = (VectorClass*)buffer + aln->num_states*thread_id;
+            for (int i = thread_id; i < num; i+=nthreads) {
+            #ifdef KERNEL_FIX_STATES
+                computePartialInfo<VectorClass, nstates>(traversal_info[i], buffer_tmp);
+            #else
+                computePartialInfo<VectorClass>(traversal_info[i], buffer_tmp);
+            #endif
+            }
         }
-
-    #ifdef _OPENMP
-        }
-    #endif
     }
 
     if (compute_partial_lh) {
         vector<size_t> limits;
-        size_t nthreads = params->num_threads;
         size_t orig_nptn = ((aln->size()+VectorClass::size()-1)/VectorClass::size())*VectorClass::size();
         size_t nptn = ((orig_nptn+model_factory->unobserved_ptns.size()+VectorClass::size()-1)/VectorClass::size())*VectorClass::size();
         computeBounds<VectorClass>(nthreads, nptn, limits);
@@ -882,9 +882,9 @@ void PhyloTree::computeTraversalInfo(PhyloNode *node, PhyloNode *dad, bool compu
         #ifdef _OPENMP
         #pragma omp parallel for schedule(static)
         #endif
-        for (size_t th = 0; th < nthreads; th++) {
+        for (int thread_id = 0; thread_id < nthreads; thread_id++) {
             for (vector<TraversalInfo>::iterator it = traversal_info.begin(); it != traversal_info.end(); it++)
-                computePartialLikelihood(*it, limits[th], limits[th+1], th);
+                computePartialLikelihood(*it, limits[thread_id], limits[thread_id+1], thread_id);
         }
         traversal_info.clear();
     }
