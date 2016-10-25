@@ -300,7 +300,7 @@ elseif (ICC)
 	if (WIN32)
 		 set(FMA_FLAGS "${FMA_FLAGS} /arch:AVX /Qfma")
 	else()
-		 set(FMA_FLAGS "${FMA_FLAGS} -mavx -mfma")
+		 set(FMA_FLAGS "${FMA_FLAGS} -march=core-avx2")
 	endif()
 endif()
 
