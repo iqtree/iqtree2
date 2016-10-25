@@ -1360,7 +1360,7 @@ void initializeParams(Params &params, IQTree &iqtree, vector<ModelInfo> &model_i
         fmodel.precision(4);
         fmodel << fixed;
 
-        params.model_name = testModel(params, &iqtree, model_info, fmodel, models_block, "", true);
+        params.model_name = testModel(params, &iqtree, model_info, fmodel, models_block, params.num_threads, "", true);
         fmodel.close();
         params.startCPUTime = start_cpu_time;
         params.start_real_time = start_real_time;
@@ -2552,7 +2552,7 @@ void computeSiteFrequencyModel(Params &params, Alignment *alignment) {
     delete models_block;
     tree->setModel(tree->getModelFactory()->model);
     tree->setRate(tree->getModelFactory()->site_rate);
-    tree->setLikelihoodKernel(params.SSE);
+    tree->setLikelihoodKernel(params.SSE, params.num_threads);
 
     if (!tree->getModel()->isMixture())
         outError("No mixture model was specified!");

@@ -703,6 +703,9 @@ public:
     /** vector size used by SIMD kernel */
     size_t vector_size;
 
+    /** number of threads used for likelihood kernel */
+    int num_threads;
+
     /** transform _pattern_lh_cat from "interleaved" to "sequential", due to vector_size > 1 */
     void transformPatternLhCat();
 
@@ -1634,7 +1637,7 @@ public:
 
     virtual void changeLikelihoodKernel(LikelihoodKernel lk);
 
-    virtual void setLikelihoodKernel(LikelihoodKernel lk);
+    virtual void setLikelihoodKernel(LikelihoodKernel lk, int num_threads);
 
 #if defined(BINARY32) || defined(__NOAVX__)
     virtual void setLikelihoodKernelAVX() {}

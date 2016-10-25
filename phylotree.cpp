@@ -94,7 +94,7 @@ void PhyloTree::init() {
     dist_matrix = NULL;
     var_matrix = NULL;
     params = NULL;
-    setLikelihoodKernel(LK_EIGEN_SSE);  // FOR TUNG: you forgot to initialize this variable!
+    setLikelihoodKernel(LK_EIGEN_SSE, 1);  // FOR TUNG: you forgot to initialize this variable!
     save_all_trees = 0;
     nodeBranchDists = NULL;
     // FOR: upper bounds
@@ -483,7 +483,7 @@ void PhyloTree::setModel(ModelSubst *amodel) {
 void PhyloTree::setModelFactory(ModelFactory *model_fac) {
     model_factory = model_fac;
     if (model_factory && (model_factory->model->isMixture() || model_factory->model->isSiteSpecificModel()))
-    	setLikelihoodKernel(sse);
+    	setLikelihoodKernel(sse, num_threads);
 }
 
 void PhyloTree::setRate(RateHeterogeneity *rate) {

@@ -843,7 +843,7 @@ void PhyloTree::computeTraversalInfo(PhyloNode *node, PhyloNode *dad, bool compu
     // reserve beginning of buffer_partial_lh for other purpose
     size_t ncat_mix = (model_factory->fused_mix_rate) ? site_rate->getNRate() : site_rate->getNRate()*model->getNMixtures();
     size_t block = aln->num_states * ncat_mix;
-    double *buffer = buffer_partial_lh + block*VectorClass::size()*params->num_threads + get_safe_upper_limit(block)*(aln->STATE_UNKNOWN+2);
+    double *buffer = buffer_partial_lh + block*VectorClass::size()*num_threads + get_safe_upper_limit(block)*(aln->STATE_UNKNOWN+2);
 
     computeTraversalInfo((PhyloNeighbor*)dad->findNeighbor(node), dad, buffer);
     computeTraversalInfo((PhyloNeighbor*)node->findNeighbor(dad), node, buffer);
@@ -852,37 +852,40 @@ void PhyloTree::computeTraversalInfo(PhyloNode *node, PhyloNode *dad, bool compu
     if (traversal_info.empty())
         return;
 
-    int num = traversal_info.size();
-
-    int nthreads = params->num_threads;
-
-
     if (!model->isSiteSpecificModel()) {
-        #ifdef _OPENMP
-        #pragma omp parallel for schedule(static) if (num>=2)
-        #endif
-        for (int thread_id = 0; thread_id < nthreads; thread_id++) {
-            VectorClass *buffer_tmp = (VectorClass*)buffer + aln->num_states*thread_id;
-            for (int i = thread_id; i < num; i+=nthreads) {
+
+        int num_info = traversal_info.size();
+
+#ifdef _OPENMP
+#pragma omp parallel if (num_info>=2) num_threads(num_threads)
+        {
+            VectorClass *buffer_tmp = (VectorClass*)buffer + aln->num_states*omp_get_thread_num();
+#pragma omp for schedule(static)
+#else
+            VectorClass *buffer_tmp = (VectorClass*)buffer;
+#endif
+            for (int i = 0; i < num_info; i++) {
             #ifdef KERNEL_FIX_STATES
                 computePartialInfo<VectorClass, nstates>(traversal_info[i], buffer_tmp);
             #else
                 computePartialInfo<VectorClass>(traversal_info[i], buffer_tmp);
             #endif
             }
+#ifdef _OPENMP
         }
+#endif
     }
 
     if (compute_partial_lh) {
         vector<size_t> limits;
         size_t orig_nptn = ((aln->size()+VectorClass::size()-1)/VectorClass::size())*VectorClass::size();
         size_t nptn = ((orig_nptn+model_factory->unobserved_ptns.size()+VectorClass::size()-1)/VectorClass::size())*VectorClass::size();
-        computeBounds<VectorClass>(nthreads, nptn, limits);
+        computeBounds<VectorClass>(num_threads, nptn, limits);
 
         #ifdef _OPENMP
-        #pragma omp parallel for schedule(static)
+        #pragma omp parallel for schedule(static, 1) num_threads(num_threads)
         #endif
-        for (int thread_id = 0; thread_id < nthreads; thread_id++) {
+        for (int thread_id = 0; thread_id < num_threads; thread_id++) {
             for (vector<TraversalInfo>::iterator it = traversal_info.begin(); it != traversal_info.end(); it++)
                 computePartialLikelihood(*it, limits[thread_id], limits[thread_id+1], thread_id);
         }
@@ -962,7 +965,7 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(TraversalInfo &info, size_t 
 	}
 
     // precomputed buffer to save times
-    double *buffer_partial_lh_ptr = buffer_partial_lh + (getBufferPartialLhSize() - (2*block+nstates)*VectorClass::size()*params->num_threads);
+    double *buffer_partial_lh_ptr = buffer_partial_lh + (getBufferPartialLhSize() - (2*block+nstates)*VectorClass::size()*num_threads);
     double *echildren = NULL;
     double *partial_lh_leaves = NULL;
 
@@ -1822,8 +1825,7 @@ void PhyloTree::computeLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, Phyl
 
     double *buffer_partial_lh_ptr = buffer_partial_lh;
     vector<size_t> limits;
-    int nthreads = params->num_threads;
-    computeBounds<VectorClass>(nthreads, nptn, limits);
+    computeBounds<VectorClass>(num_threads, nptn, limits);
 
 	assert(theta_all);
 
@@ -1893,9 +1895,9 @@ void PhyloTree::computeLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, Phyl
 //    double tree_lh = node_branch->lh_scale_factor + dad_branch->lh_scale_factor;
 
 #ifdef _OPENMP
-#pragma omp parallel for schedule(static) private(ptn, i, c)
+#pragma omp parallel for schedule(static, 1) private(ptn, i, c) num_threads(num_threads)
 #endif
-    for (int thread_id = 0; thread_id < nthreads; thread_id++) {
+    for (int thread_id = 0; thread_id < num_threads; thread_id++) {
         VectorClass my_df(0.0), my_ddf(0.0), vc_prob_const(0.0), vc_df_const(0.0), vc_ddf_const(0.0);
         size_t ptn_lower = limits[thread_id];
         size_t ptn_upper = limits[thread_id+1];
@@ -2118,8 +2120,7 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
 	memset(_pattern_lh_cat, 0, sizeof(double)*nptn*ncat_mix);
 
     vector<size_t> limits;
-    int nthreads = params->num_threads;
-    computeBounds<VectorClass>(nthreads, nptn, limits);
+    computeBounds<VectorClass>(num_threads, nptn, limits);
 
     if (dad->isLeaf()) {
     	// special treatment for TIP-INTERNAL NODE case
@@ -2171,9 +2172,9 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
 
     	// now do the real computation
 #ifdef _OPENMP
-#pragma omp parallel for private(ptn, i, c) schedule(static)
+#pragma omp parallel for private(ptn, i, c) schedule(static, 1) num_threads(num_threads)
 #endif
-        for (int thread_id = 0; thread_id < nthreads; thread_id++) {
+        for (int thread_id = 0; thread_id < num_threads; thread_id++) {
 
             VectorClass vc_tree_lh(0.0), vc_prob_const(0.0);
 
@@ -2317,9 +2318,9 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
     	//-------- both dad and node are internal nodes -----------/
 
 #ifdef _OPENMP
-#pragma omp parallel for private(ptn, i, c) schedule(static)
+#pragma omp parallel for private(ptn, i, c) schedule(static, 1) num_threads(num_threads)
 #endif
-        for (int thread_id = 0; thread_id < nthreads; thread_id++) {
+        for (int thread_id = 0; thread_id < num_threads; thread_id++) {
 
             size_t ptn_lower = limits[thread_id];
             size_t ptn_upper = limits[thread_id+1];
@@ -2565,7 +2566,7 @@ double PhyloTree::computeLikelihoodFromBufferGenericSIMD()
     VectorClass all_tree_lh(0.0), all_prob_const(0.0);
 
 #ifdef _OPENMP
-#pragma omp parallel private(ptn, i, c)
+#pragma omp parallel private(ptn, i, c) num_threads(num_threads)
     {
 #endif
         VectorClass vc_tree_lh(0.0), vc_prob_const(0.0);

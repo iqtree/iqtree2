@@ -58,10 +58,11 @@ void PhyloTree::setParsimonyKernel(LikelihoodKernel lk) {
     assert(0);
 }
 
-void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk) {
+void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk, int num_threads) {
 
 	sse = lk;
     vector_size = 1;
+    this->num_threads = num_threads;
 
     //--- parsimony kernel ---
     setParsimonyKernel(lk);
@@ -152,7 +153,7 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk) {
 
 void PhyloTree::changeLikelihoodKernel(LikelihoodKernel lk) {
 	if (sse == lk) return;
-    setLikelihoodKernel(lk);
+    setLikelihoodKernel(lk, num_threads);
 }
 
 /*******************************************************

@@ -214,7 +214,7 @@ void IQTree::initSettings(Params &params) {
 
     searchinfo.nni_type = params.nni_type;
     optimize_by_newton = params.optimize_by_newton;
-    setLikelihoodKernel(params.SSE);
+    setLikelihoodKernel(params.SSE, params.num_threads);
     candidateTrees.init(this->aln, 200);
     intermediateTrees.init(this->aln, 200000);
 

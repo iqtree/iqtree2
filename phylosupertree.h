@@ -96,7 +96,7 @@ public:
 	 */
 	virtual void initSettings(Params& params);
 
-    virtual void setLikelihoodKernel(LikelihoodKernel lk);
+    virtual void setLikelihoodKernel(LikelihoodKernel lk, int num_threads);
 
     virtual void changeLikelihoodKernel(LikelihoodKernel lk);
 

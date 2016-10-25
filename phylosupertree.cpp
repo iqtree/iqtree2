@@ -551,8 +551,9 @@ PhyloSuperTree::PhyloSuperTree(Params &params) :  IQTree() {
     
 #ifdef _OPENMP
     if (params.num_threads > size()) {
-        outWarning("More threads (" + convertIntToString(params.num_threads) + ") than number of partitions (" + convertIntToString(size()) + ") might not be necessary.");
-        outWarning("You are recommended to rerun with '-nt " + convertIntToString(size()) + "' and see if this is faster");
+        cout << "Info: multi-threading strategy over alignment sites" << endl;
+    } else {
+        cout << "Info: multi-threading strategy over partitions" << endl;
     }
 #endif
 	cout << endl;
@@ -568,18 +569,19 @@ void PhyloSuperTree::setParams(Params* params) {
 
 void PhyloSuperTree::initSettings(Params &params) {
 	IQTree::initSettings(params);
+    num_threads = (size() >= params.num_threads) ? params.num_threads : 1;
 	for (iterator it = begin(); it != end(); it++) {
 		(*it)->params = &params;
-		(*it)->setLikelihoodKernel(params.SSE);
+		(*it)->setLikelihoodKernel(params.SSE, (size() >= params.num_threads) ? 1 : params.num_threads);
 		(*it)->optimize_by_newton = params.optimize_by_newton;
 	}
 
 }
 
-void PhyloSuperTree::setLikelihoodKernel(LikelihoodKernel lk) {
-    PhyloTree::setLikelihoodKernel(lk);
+void PhyloSuperTree::setLikelihoodKernel(LikelihoodKernel lk, int num_threads) {
+    PhyloTree::setLikelihoodKernel(lk, (size() >= num_threads) ? num_threads : 1);
     for (iterator it = begin(); it != end(); it++)
-        (*it)->setLikelihoodKernel(lk);    
+        (*it)->setLikelihoodKernel(lk, (size() >= num_threads) ? 1 : num_threads);
 }
 
 void PhyloSuperTree::changeLikelihoodKernel(LikelihoodKernel lk) {
@@ -967,7 +969,7 @@ double PhyloSuperTree::computeLikelihood(double *pattern_lh) {
 	} else {
         if (part_order.empty()) computePartitionOrder();
 		#ifdef _OPENMP
-		#pragma omp parallel for reduction(+: tree_lh) schedule(dynamic) if(ntrees >= params->num_threads)
+		#pragma omp parallel for reduction(+: tree_lh) schedule(dynamic) if(num_threads > 1)
 		#endif
 		for (int j = 0; j < ntrees; j++) {
             int i = part_order[j];
@@ -1028,7 +1030,7 @@ double PhyloSuperTree::optimizeAllBranches(int my_iterations, double tolerance, 
 	int ntrees = size();
     if (part_order.empty()) computePartitionOrder();
 	#ifdef _OPENMP
-	#pragma omp parallel for reduction(+: tree_lh) schedule(dynamic) if(ntrees >= params->num_threads)
+	#pragma omp parallel for reduction(+: tree_lh) schedule(dynamic) if(num_threads > 1)
 	#endif
 	for (int j = 0; j < ntrees; j++) {
         int i = part_order[j];
@@ -1151,7 +1153,7 @@ NNIMove PhyloSuperTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NN
 
     if (part_order.empty()) computePartitionOrder();
 	#ifdef _OPENMP
-	#pragma omp parallel for reduction(+: nni_score1, nni_score2, local_totalNNIs, local_evalNNIs) private(part) schedule(dynamic) if(ntrees >= params->num_threads)
+	#pragma omp parallel for reduction(+: nni_score1, nni_score2, local_totalNNIs, local_evalNNIs) private(part) schedule(dynamic) if(num_threads>1)
 	#endif
 	for (int treeid = 0; treeid < ntrees; treeid++) {
         part = part_order_by_nptn[treeid];

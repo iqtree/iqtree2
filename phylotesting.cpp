@@ -1148,7 +1148,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInf
         stringstream this_fmodel;
 		// do the computation
 //#ifdef _OPENMP
-		string model = testModel(params, this_tree, part_model_info, this_fmodel, models_block, in_tree->part_info[i].name);
+		string model = testModel(params, this_tree, part_model_info, this_fmodel, models_block, 1, in_tree->part_info[i].name);
 //#else
 //		string model = testModel(params, this_tree, part_model_info, fmodel, in_tree->part_info[i].name);
 //#endif
@@ -1294,7 +1294,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInf
                     tree->setCheckpoint(new Checkpoint());
                 }
 //#ifdef _OPENMP
-                model = testModel(params, tree, part_model_info, this_fmodel, models_block, set_name);
+                model = testModel(params, tree, part_model_info, this_fmodel, models_block, 1, set_name);
 //#else
 //                model = testModel(params, tree, part_model_info, fmodel, set_name);
 //#endif
@@ -1420,7 +1420,7 @@ bool isMixtureModel(ModelsBlock *models_block, string &model_str) {
 }
 
 string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_info, ostream &fmodel, ModelsBlock *models_block,
-    string set_name, bool print_mem_usage) 
+    int num_threads, string set_name, bool print_mem_usage)
 {
 	SeqType seq_type = in_tree->aln->seq_type;
 	if (in_tree->isSuperTree())
@@ -1469,7 +1469,7 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 	}
 
 	in_tree->optimize_by_newton = params.optimize_by_newton;
-	in_tree->setLikelihoodKernel(params.SSE);
+	in_tree->setLikelihoodKernel(params.SSE, num_threads);
 
 //    int num_rate_classes = 3 + params.max_rate_cats;
 
@@ -1581,7 +1581,7 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
             }
         } else {
             // kernel might be changed if mixture model was tested
-            in_tree->setLikelihoodKernel(params.SSE);
+            in_tree->setLikelihoodKernel(params.SSE, num_threads);
             // normal model
             if (model_names[model].find("+ASC") != string::npos) {
                 model_fac->unobserved_ptns = in_tree->aln->getUnobservedConstPatterns();
