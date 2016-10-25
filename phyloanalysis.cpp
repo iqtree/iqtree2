@@ -1772,12 +1772,14 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
     delete models_block;
 
     // UpperBounds analysis. Here, to analyse the initial tree without any tree search or optimization
+    /*
     if (params.upper_bound) {
     	iqtree.setCurScore(iqtree.computeLikelihood());
     	cout<<iqtree.getCurScore()<<endl;
     	UpperBounds(&params, iqtree.aln, &iqtree);
     	exit(0);
 	}
+    */
 
     // degree of freedom
     cout << endl;

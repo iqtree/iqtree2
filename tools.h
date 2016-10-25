@@ -77,13 +77,18 @@ inline void _my_assert(const char* expression, const char *func, const char* fil
 #endif
 
 #if defined(USE_HASH_MAP)
+    #include <unordered_map>
+    #include <unordered_set>
+/*
 	#if defined(_MSC_VER)
 		#include <unordered_map>
 		#include <unordered_set>
     #elif defined(__clang__)
-		#include <tr1/unordered_map>
-		#include <tr1/unordered_set>
-		using namespace std::tr1;    
+//		#include <tr1/unordered_map>
+//		#include <tr1/unordered_set>
+//		using namespace std::tr1;    
+		#include <unordered_map>
+		#include <unordered_set>
 	#elif !defined(__GNUC__)
 		#include <hash_map>
 		#include <hash_set>
@@ -99,6 +104,7 @@ inline void _my_assert(const char* expression, const char *func, const char* fil
 		#include <tr1/unordered_set>
 		using namespace std::tr1;
 	#endif
+*/
 #else
 	#include <map>
 	#include <set>

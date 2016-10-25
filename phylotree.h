@@ -317,6 +317,28 @@ struct SeqQuartetInfo {
 // END definitions for likelihood mapping (HAS)
 // ********************************************
 
+
+// ********************************************
+// BEGIN traversal information
+// ********************************************
+
+class TraversalInfo {
+public:
+    PhyloNeighbor *dad_branch;
+    PhyloNode *dad;
+    double *echildren;
+    double *partial_lh_leaves;
+
+    TraversalInfo(PhyloNeighbor *dad_branch, PhyloNode *dad) {
+        this->dad = dad;
+        this->dad_branch = dad_branch;
+    }
+};
+
+// ********************************************
+// END traversal information
+// ********************************************
+
 /**
 Phylogenetic Tree class
 
@@ -692,29 +714,53 @@ public:
     void computePtnInvar();
     void computePtnFreq();
 
+
+    /**
+        compute traversal_info of a subtree
+    */
+    void computeTraversalInfo(PhyloNeighbor *dad_branch, PhyloNode *dad, double* &buffer);
+
+
+    /**
+        compute traversal_info of both subtrees
+    */
+    template<class VectorClass, const int nstates>
+    void computeTraversalInfo(PhyloNode *node, PhyloNode *dad, bool compute_partial_lh);
+    template<class VectorClass>
+    void computeTraversalInfo(PhyloNode *node, PhyloNode *dad, bool compute_partial_lh);
+
+    /**
+        precompute info for models
+    */
+    template<class VectorClass, const int nstates>
+    void computePartialInfo(TraversalInfo &info, VectorClass* buffer);
+    template<class VectorClass>
+    void computePartialInfo(TraversalInfo &info, VectorClass* buffer);
+
+
     /**
             compute the partial likelihood at a subtree
             @param dad_branch the branch leading to the subtree
             @param dad its dad, used to direct the tranversal
      */
-    virtual void computePartialLikelihood(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
-    typedef void (PhyloTree::*ComputePartialLikelihoodType)(PhyloNeighbor *, PhyloNode *);
+    virtual void computePartialLikelihood(TraversalInfo &info, size_t ptn_left, size_t ptn_right, int thread_id);
+    typedef void (PhyloTree::*ComputePartialLikelihoodType)(TraversalInfo &info, size_t ptn_left, size_t ptn_right, int thread_id);
     ComputePartialLikelihoodType computePartialLikelihoodPointer;
 
 
     //template <const int nstates>
 //    void computePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
 
-    void computeSitemodelPartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
+//    void computeSitemodelPartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
 
 //    template <class VectorClass, const int VCSIZE, const int nstates>
 //    void computePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
 
     template <class VectorClass, const bool SAFE_NUMERIC, const int nstates, const bool FMA = false, const bool SITE_MODEL = false>
-    void computePartialLikelihoodSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
+    void computePartialLikelihoodSIMD(TraversalInfo &info, size_t ptn_left, size_t ptn_right, int thread_id);
 
     template <class VectorClass, const bool SAFE_NUMERIC, const bool FMA = false, const bool SITE_MODEL = false>
-    void computePartialLikelihoodGenericSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
+    void computePartialLikelihoodGenericSIMD(TraversalInfo &info, size_t ptn_left, size_t ptn_right, int thread_id);
 
     /*
     template <class VectorClass, const int VCSIZE, const int nstates>
@@ -722,10 +768,10 @@ public:
 
     template <class VectorClass, const int VCSIZE, const int nstates>
     void computeMixturePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
-    */
 
     template <class VectorClass, const int VCSIZE, const int nstates>
     void computeSitemodelPartialLikelihoodEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
+    */
 
     /****************************************************************************
             computing likelihood on a branch
@@ -752,7 +798,7 @@ public:
     //template <const int nstates>
 //    double computeLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloNode *dad);
 
-    double computeSitemodelLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloNode *dad);
+//    double computeSitemodelLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloNode *dad);
 
 //    template <class VectorClass, const int VCSIZE, const int nstates>
 //    double computeLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad);
@@ -769,10 +815,10 @@ public:
 
     template <class VectorClass, const int VCSIZE, const int nstates>
     double computeMixtureLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad);
-    */
 
     template <class VectorClass, const int VCSIZE, const int nstates>
     double computeSitemodelLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad);
+    */
 
     /****************************************************************************
             computing likelihood on a branch using buffer
@@ -804,12 +850,12 @@ public:
 
     template <class VectorClass, const int VCSIZE, const int nstates>
     double computeMixtureLikelihoodFromBufferEigenSIMD();
-    */
 
     template <class VectorClass, const int VCSIZE, const int nstates>
     double computeSitemodelLikelihoodFromBufferEigenSIMD();
 
     double computeSitemodelLikelihoodFromBufferEigen();
+    */
 
     /**
             compute tree likelihood when a branch length collapses to zero
@@ -1049,10 +1095,17 @@ public:
     //template <const int nstates>
 //    void computeLikelihoodDervEigen(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
 
-    void computeSitemodelLikelihoodDervEigen(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
+//    void computeSitemodelLikelihoodDervEigen(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
 
 //    template <class VectorClass, const int VCSIZE, const int nstates>
 //    void computeLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
+
+    template <class VectorClass, const bool SAFE_NUMERIC, const int nstates, const bool FMA = false, const bool SITE_MODEL = false>
+    void computeLikelihoodBufferSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, size_t ptn_lower, size_t ptn_upper, int thread_id);
+
+    template <class VectorClass, const bool SAFE_NUMERIC, const bool FMA = false, const bool SITE_MODEL = false>
+    void computeLikelihoodBufferGenericSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, size_t ptn_lower, size_t ptn_upper, int thread_id);
+
 
     template <class VectorClass, const bool SAFE_NUMERIC, const int nstates, const bool FMA = false, const bool SITE_MODEL = false>
     void computeLikelihoodDervSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
@@ -1066,10 +1119,10 @@ public:
 
     template <class VectorClass, const int VCSIZE, const int nstates>
     void computeMixtureLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
-    */
 
     template <class VectorClass, const int VCSIZE, const int nstates>
     void computeSitemodelLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
+    */
 
     /**
             compute tree likelihood and derivatives on a branch. used to optimize branch length
@@ -1236,6 +1289,9 @@ public:
      * for other pattern: zero
      */
     double *ptn_invar;
+
+    vector<TraversalInfo> traversal_info;
+
 
     /****************************************************************************
             Nearest Neighbor Interchange by maximum likelihood

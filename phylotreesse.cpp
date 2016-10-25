@@ -161,8 +161,8 @@ void PhyloTree::changeLikelihoodKernel(LikelihoodKernel lk) {
  *
  ******************************************************/
 
-void PhyloTree::computePartialLikelihood(PhyloNeighbor *dad_branch, PhyloNode *dad) {
-	(this->*computePartialLikelihoodPointer)(dad_branch, dad);
+void PhyloTree::computePartialLikelihood(TraversalInfo &info, size_t ptn_left, size_t ptn_right, int thread_id) {
+	(this->*computePartialLikelihoodPointer)(info, ptn_left, ptn_right, thread_id);
 }
 
 double PhyloTree::computeLikelihoodBranch(PhyloNeighbor *dad_branch, PhyloNode *dad) {
@@ -1250,10 +1250,12 @@ void PhyloTree::computeMarginalAncestralProbability(PhyloNeighbor *dad_branch, P
         initializeAllPartialLh();
     assert(!node->isLeaf());
 
-    if ((dad_branch->partial_lh_computed & 1) == 0)
-        computePartialLikelihood(dad_branch, dad);
-    if ((node_branch->partial_lh_computed & 1) == 0)
-        computePartialLikelihood(node_branch, node);
+    // TODO: not working yet
+
+//    if ((dad_branch->partial_lh_computed & 1) == 0)
+//        computePartialLikelihood(dad_branch, dad);
+//    if ((node_branch->partial_lh_computed & 1) == 0)
+//        computePartialLikelihood(node_branch, node);
     size_t nstates = aln->num_states;
     const size_t nstatesqr=nstates*nstates;
     size_t ncat = site_rate->getNRate();

@@ -518,6 +518,7 @@ void PhyloTree::clearAllPartialLH(bool make_null) {
     current_it = current_it_back = NULL;
 }
 
+/*
 void PhyloTree::computeAllPartialLh(PhyloNode *node, PhyloNode *dad) {
 	if (!node) node = (PhyloNode*)root;
 	FOR_NEIGHBOR_IT(node, dad, it) {
@@ -529,6 +530,7 @@ void PhyloTree::computeAllPartialLh(PhyloNode *node, PhyloNode *dad) {
 		computeAllPartialLh((PhyloNode*)(*it)->node, node);
 	}
 }
+*/
 
 string PhyloTree::getModelName() {
 	string name = model->getName();
@@ -685,8 +687,8 @@ size_t PhyloTree::getBufferPartialLhSize() {
     const size_t VECTOR_SIZE = 8; // TODO, adjusted
     size_t ncat_mix = site_rate->getNRate() * ((model_factory->fused_mix_rate)? 1 : model->getNMixtures());
     size_t block = model->num_states * ncat_mix;
-    size_t buffer_size = get_safe_upper_limit(block * model->num_states * 2);
-    buffer_size += get_safe_upper_limit(block * 2 * (aln->STATE_UNKNOWN+1));
+    size_t buffer_size = get_safe_upper_limit(block * model->num_states * 2 * aln->getNSeq());
+    buffer_size += get_safe_upper_limit(block * (aln->getNSeq()+1) * (aln->STATE_UNKNOWN+1));
     buffer_size += (block*2+model->num_states)*VECTOR_SIZE*params->num_threads;
     return buffer_size;
 }
@@ -2126,10 +2128,11 @@ double PhyloTree::computeBayesianBranchLength(PhyloNeighbor *dad_branch, PhyloNo
      if (node->isLeaf() || dad->isLeaf()) {
      return -1.0;
      }*/
-    if ((dad_branch->partial_lh_computed & 1) == 0)
-        computePartialLikelihood(dad_branch, dad);
-    if ((node_branch->partial_lh_computed & 1) == 0)
-        computePartialLikelihood(node_branch, node);
+     // TODO
+//    if ((dad_branch->partial_lh_computed & 1) == 0)
+//        computePartialLikelihood(dad_branch, dad);
+//    if ((node_branch->partial_lh_computed & 1) == 0)
+//        computePartialLikelihood(node_branch, node);
     // now combine likelihood at the branch
     int nstates = aln->num_states;
     int numCat = site_rate->getNRate();
@@ -3085,13 +3088,15 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
     size_t partial_lh_size = getPartialLhBytes()/sizeof(double);
     size_t scale_num_size = getScaleNumBytes()/sizeof(UBYTE);
 
+
     // Upper Bounds ---------------
+    /*
     if(params->upper_bound_NNI){
     	totalNNIub += 2;
     	NNIMove resMove;
     	resMove = getBestNNIForBranUB(node1,node2,this);
-    	/* if UB is smaller than the current likelihood, then we don't recompute the likelihood of the swapped topology.
-    	 * Otherwise, follow the normal procedure: evaluate NNIs and compute the likelihood.*/
+    	// if UB is smaller than the current likelihood, then we don't recompute the likelihood of the swapped topology.
+        // Otherwise, follow the normal procedure: evaluate NNIs and compute the likelihood.
 
     	// here, we skip NNI is its UB n times worse than the curLikelihood
     	if( resMove.newloglh < (1+params->upper_bound_frac)*this->curScore){
@@ -3099,7 +3104,8 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
     		return resMove;
     	}
     }
-
+    */
+    
     //-----------------------------
 
 	NeighborVec::iterator it;
@@ -4641,3 +4647,5 @@ void PhyloTree::generateRandomTree(TreeGenType tree_type) {
     ext_tree.printTree(str);
     PhyloTree::readTreeStringSeqName(str.str());
 }
+
+
