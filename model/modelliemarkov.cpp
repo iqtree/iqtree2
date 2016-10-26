@@ -312,9 +312,9 @@ const static int NUM_RATES = 12;
 const double MIN_LIE_WEIGHT = -0.9999;
 const double MAX_LIE_WEIGHT =  0.9999;
 
-ModelLieMarkov::ModelLieMarkov(string model_name, PhyloTree *tree, string model_params, StateFreqType freq_type, bool count_rates)
+ModelLieMarkov::ModelLieMarkov(string model_name, PhyloTree *tree, string model_params, StateFreqType freq_type, string freq_params, bool count_rates)
 	: ModelNonRev(tree) {
-    init(model_name.c_str(), model_params, freq_type, "");
+        init(model_name.c_str(), model_params, freq_type, freq_params);
 }
 
 void ModelLieMarkov::init(const char *model_name, string model_params, StateFreqType freq, string freq_params)
@@ -330,6 +330,9 @@ void ModelLieMarkov::init(const char *model_name, string model_params, StateFreq
         abort();
     }
     freq_type = freq;
+    if (freq_params != "") {
+	readStateFreq(freq_params);
+    }
     setBasis(); // sets basis and num_params
 
     if (model_parameters)

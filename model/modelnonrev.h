@@ -38,7 +38,7 @@ public:
     /**
      * Return a model of type given by model_name. (Will be some subclass of ModelNonRev.)
      */
-    static ModelNonRev* getModelByName(string model_name, PhyloTree *tree, string model_params, StateFreqType freq_type, bool count_rates);
+    static ModelNonRev* getModelByName(string model_name, PhyloTree *tree, string model_params, StateFreqType freq_type, string freq_params, bool count_rates);
 
     /**
      * true if model_name is the name of some known non-reversible model
