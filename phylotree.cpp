@@ -993,7 +993,13 @@ void PhyloTree::initializeAllPartialLh(int &index, int &indexlh, PhyloNode *node
                 indexlh++;
             }
         }
-        
+
+        // zero memory to allocate contiguous chunk of memory
+//        if (nei->partial_lh)
+//            memset(nei->partial_lh, 0, block_size*sizeof(double));
+//        if (nei2->partial_lh)
+//            memset(nei2->partial_lh, 0, block_size*sizeof(double));
+
 //        if (model->isSiteSpecificModel() && (sse == LK_EIGEN || sse == LK_EIGEN_SSE)) {
 //            // allocate tip memory for this model
 //            if (node->isLeaf()) {

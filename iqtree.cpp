@@ -3805,49 +3805,69 @@ int IQTree::testNumThreads() {
     return 1;
 #else
 	int max_procs = countPhysicalCPUCores();
-    cout << "Testing multi-threading efficiency up to " << max_procs << " CPU cores" << endl;
+    cout << "Measuring multi-threading efficiency up to " << max_procs << " CPU cores" << endl;
     DoubleVector runTimes;
     int bestProc = 0;
     double saved_curScore = curScore;
-    bool optimize_params = false;
-    Checkpoint *ckp = new Checkpoint;
-    Checkpoint *saved_checkpoint = getCheckpoint();
+    int num_iter = 2;
+
+    // generate different trees
+    int tree;
+    double min_time = 10.0; // minimum time in seconds
+    StrVector trees;
+    trees.push_back(getTreeString());
+
+
+    omp_set_num_threads(1);
+    setLikelihoodKernel(sse, 1);
+    initializeAllPartialLh();
+
+    // add random tres
+    for (tree = 1; tree < 20; tree++) {
+        doRandomNNIs();
+        trees.push_back(getTreeString());
+        readTreeString(trees[0]);
+    }
 
     for (int proc = 1; proc <= max_procs; proc++) {
+
         omp_set_num_threads(proc);
         setLikelihoodKernel(sse, proc);
-
-        initializeAllPartialLh();
-        DoubleVector lenvec;
-        saveBranchLengths(lenvec);
-        double beginTime = getRealTime();
-        double logl = optimizeAllBranches();
-        double runTime = getRealTime() - beginTime;
-
-        // too fast, then turn on optimizing model parameters
-        if (runTime < 1.0 && proc == 1)
-            optimize_params = true;
-        if (optimize_params) {
-            getModelFactory()->setCheckpoint(ckp);
-            getModelFactory()->saveCheckpoint();
-            logl = getModelFactory()->optimizeParameters(params->fixed_branch_length, false, 1.0);
-            runTime = getRealTime() - beginTime;
-            getModelFactory()->restoreCheckpoint();
-            getModelFactory()->setCheckpoint(saved_checkpoint);
-        }
-        restoreBranchLengths(lenvec);
-        clearAllPartialLH();
-        curScore = saved_curScore;
         deleteAllPartialLh();
+        initializeAllPartialLh();
 
-        double speedup = 1.0;
-        if (proc > 1)
-            speedup = runTimes[0] / runTime;
-        cout << proc << " thread, " << runTime << " sec, " << speedup << " speedup, logl: " << logl << endl;
+        double beginTime = getRealTime();
+        double runTime, logl;
+
+        for (tree = 0; tree < trees.size(); tree++) {
+            readTreeString(trees[tree]);
+            logl = optimizeAllBranches(num_iter);
+            runTime = getRealTime() - beginTime;
+
+            // too fast, increase number of iterations
+            if (runTime*trees.size()*2 < min_time && proc == 1 && tree == 0) {
+                int new_num_iter = 10;
+                cout << "Increase to " << new_num_iter << " rounds for branch lengths" << endl;
+                logl = optimizeAllBranches(new_num_iter - num_iter);
+                num_iter = new_num_iter;
+                runTime = getRealTime() - beginTime;
+            }
+
+            if (runTime > min_time && proc == 1) {
+                // too slow, cut the number of trees
+                trees.erase(trees.begin()+tree+1, trees.end());
+            }
+            curScore = saved_curScore;
+        }
+
         runTimes.push_back(runTime);
+        double speedup = runTimes[0] / runTime;
 
-        // break if too bad speedup ( < 50% efficiency) or worse run time
-        if (speedup*2 <= proc || runTime > runTimes[bestProc])
+        cout << "Threads: " << proc << " / Time: " << runTime << " sec / Speedup: " << speedup
+            << " / Efficiency: " << (int)round(speedup*100/proc) << "% / LogL: " << (int)logl << endl;
+
+        // break if too bad efficiency ( < 50%) or no better than 2.5% of the best run time
+        if (speedup*2 <= proc || (runTime > runTimes[bestProc]*0.975 && proc>1))
             break;
 
         // update best threads
@@ -3855,9 +3875,13 @@ int IQTree::testNumThreads() {
             bestProc = proc-1;
 
     }
-    cout << "Best number of threads: " << bestProc+1 << endl;
+
+    deleteAllPartialLh();
+    readTreeString(trees[0]);
+
+    cout << "BEST NUMBER OF THREADS: " << bestProc+1 << endl << endl;
     setLikelihoodKernel(sse, bestProc+1);
-    delete ckp;
+
     return bestProc+1;
 #endif
 }
