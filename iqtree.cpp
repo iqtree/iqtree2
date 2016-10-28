@@ -688,7 +688,7 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
 #endif
 
     int processID = MPIHelper::getInstance().getProcessID();
-    unsigned long curNumTrees = candidateTrees.size();
+//    unsigned long curNumTrees = candidateTrees.size();
     for (int treeNr = 1; treeNr <= nParTrees; treeNr++) {
         int parRandSeed = Params::getInstance().ran_seed + processID * nParTrees + treeNr;
         string curParsTree;
@@ -3166,7 +3166,7 @@ void IQTree::saveCurrentTree(double cur_logl) {
         // online bootstrap
 //        int ptn;
 //        int updated = 0;
-        int nsamples = boot_samples.size();
+//        int nsamples = boot_samples.size();
         ostringstream ostr;
         string tree_str, tree_str_brlen;
         setRootNode(params->root);

@@ -852,7 +852,7 @@ double ModelFactory::optimizeParameters(int fixed_len, bool write_info,
 	assert(model);
 	assert(site_rate);
 
-    double defaultEpsilon = logl_epsilon;
+//    double defaultEpsilon = logl_epsilon;
 
 	double begin_time = getRealTime();
 	double cur_lh;

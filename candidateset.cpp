@@ -467,7 +467,7 @@ void CandidateSet::reportStableSplits() {
         return;
     }
 
-    int numMaxSupport = 0;
+//    int numMaxSupport = 0;
     for (SplitIntMap::iterator it = candSplits.begin(); it != candSplits.end(); it++) {
         if (it->second == candSplits.getNumTree() && it->first->countTaxa() > 1) {
             cout << it->first->getWeight() << " / " << candSplits.getNumTree() << endl;

@@ -130,6 +130,8 @@ int MPIHelper::sendRecvTrees(int dest, vector<string> &treeStrings, vector<doubl
     cout << "INFO: " << endTime - beginTime << " seconds for " << __func__ << endl;
 
     return status.MPI_TAG;
+#else
+    return tag;
 #endif
 }
 
@@ -181,6 +183,8 @@ int MPIHelper::recvSendTrees(vector<string> &treeStrings, vector<double> &scores
         cout << "WARNING: " << endTime - beginTime << " seconds for " << __func__ << endl;
 
     return dest;
+#else
+    return 0;
 #endif
 }
 
@@ -274,6 +278,8 @@ bool MPIHelper::gotMessage() {
         return true;
     else
         return false;
+#else
+    return false;
 #endif
 }
 

@@ -1421,7 +1421,8 @@ void pruneTaxa(Params &params, IQTree &iqtree, double *pattern_lh, NodeVector &p
 		iqtree.clearAllPartialLH();
 		iqtree.setCurScore(iqtree.optimizeAllBranches());
 		//cout << "Log-likelihood	after reoptimizing model parameters: " << tree.curScore << endl;
-		pair<int, int> nniInfo = iqtree.optimizeNNI();
+//		pair<int, int> nniInfo = iqtree.optimizeNNI();
+        iqtree.optimizeNNI();
 		cout << "Log-likelihood after optimizing partial tree: "
 				<< iqtree.getCurScore() << endl;
 	}
