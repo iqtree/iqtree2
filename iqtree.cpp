@@ -668,6 +668,8 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
     StrVector pars_trees;
     if (params->start_tree == STT_PARSIMONY && nParTrees >= 1) {
         pars_trees.resize(nParTrees);
+        if (aln->ordered_pattern.empty())
+            aln->orderPatternByNumChars();
         #pragma omp parallel
         {
             PhyloTree tree;
@@ -676,7 +678,7 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
             }
             tree.setParams(params);
             tree.setParsimonyKernel(params->SSE);
-            #pragma omp for
+            #pragma omp for schedule(dynamic)
             for (int i = 0; i < nParTrees; i++) {
                 tree.computeParsimonyTree(NULL, aln);
                 pars_trees[i] = tree.getTreeString();
