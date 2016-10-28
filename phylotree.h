@@ -542,6 +542,7 @@ public:
 
 #if defined(BINARY32) || defined(__NOAVX__)
     void setDotProductAVX() {}
+    void setDotProductFMA() {}
 #else
     void setDotProductAVX();
     void setDotProductFMA();
@@ -1641,6 +1642,7 @@ public:
 
 #if defined(BINARY32) || defined(__NOAVX__)
     virtual void setLikelihoodKernelAVX() {}
+    virtual void setLikelihoodKernelFMA() {}
 #else
     virtual void setLikelihoodKernelAVX();
     virtual void setLikelihoodKernelFMA();

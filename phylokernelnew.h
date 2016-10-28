@@ -857,7 +857,7 @@ void PhyloTree::computeTraversalInfo(PhyloNode *node, PhyloNode *dad, bool compu
         int num_info = traversal_info.size();
 
 #ifdef _OPENMP
-#pragma omp parallel if (num_info>=2) num_threads(num_threads)
+#pragma omp parallel if (num_info >= 3) num_threads(num_threads)
         {
             VectorClass *buffer_tmp = (VectorClass*)buffer + aln->num_states*omp_get_thread_num();
 #pragma omp for schedule(static)
@@ -1219,7 +1219,7 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(TraversalInfo &info, size_t 
         double *partial_lh_right = SITE_MODEL ? &tip_partial_lh[right->node->id * tip_mem_size] : partial_lh_leaves + (aln->STATE_UNKNOWN+1)*block;
 
 		// scale number must be ZERO
-	    memset(dad_branch->scale_num + ptn_lower, 0, scale_size * sizeof(UBYTE));
+	    memset(dad_branch->scale_num + (SAFE_NUMERIC ? ptn_lower*ncat_mix : ptn_lower), 0, scale_size * sizeof(UBYTE));
         double *vec_left = buffer_partial_lh_ptr + (block*2 + nstates)*VectorClass::size()*thread_id;
 
         double *vec_right =  SITE_MODEL ? &vec_left[nstates*VectorClass::size()] : &vec_left[block*VectorClass::size()];
@@ -1317,7 +1317,10 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(TraversalInfo &info, size_t 
         /*--------------------- TIP-INTERNAL NODE case ------------------*/
 
 		// only take scale_num from the right subtree
-		memcpy(dad_branch->scale_num + ptn_lower, right->scale_num + ptn_lower, scale_size * sizeof(UBYTE));
+		memcpy(
+            dad_branch->scale_num + (SAFE_NUMERIC ? ptn_lower*ncat_mix : ptn_lower),
+            right->scale_num + (SAFE_NUMERIC ? ptn_lower*ncat_mix : ptn_lower),
+            scale_size * sizeof(UBYTE));
 
         double *partial_lh_left = SITE_MODEL ? &tip_partial_lh[left->node->id * tip_mem_size] : partial_lh_leaves;
 
@@ -2117,7 +2120,6 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
 
     VectorClass all_tree_lh(0.0);
     VectorClass all_prob_const(0.0);
-	memset(_pattern_lh_cat, 0, sizeof(double)*nptn*ncat_mix);
 
     vector<size_t> limits;
     computeBounds<VectorClass>(num_threads, nptn, limits);
@@ -2180,6 +2182,9 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
 
             size_t ptn_lower = limits[thread_id];
             size_t ptn_upper = limits[thread_id+1];
+
+            // reset memory for _pattern_lh_cat
+            memset(_pattern_lh_cat + ptn_lower*ncat_mix, 0, sizeof(double)*(ptn_upper-ptn_lower)*ncat_mix);
 
             // first compute partial_lh
             for (vector<TraversalInfo>::iterator it = traversal_info.begin(); it != traversal_info.end(); it++)
@@ -2326,6 +2331,9 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
             size_t ptn_upper = limits[thread_id+1];
 
             VectorClass vc_tree_lh(0.0), vc_prob_const(0.0);
+
+            // reset memory for _pattern_lh_cat
+            memset(_pattern_lh_cat + ptn_lower*ncat_mix, 0, sizeof(double)*(ptn_upper-ptn_lower)*ncat_mix);
 
             // first compute partial_lh
             for (vector<TraversalInfo>::iterator it = traversal_info.begin(); it != traversal_info.end(); it++)

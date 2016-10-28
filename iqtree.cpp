@@ -3809,31 +3809,18 @@ int IQTree::testNumThreads() {
     DoubleVector runTimes;
     int bestProc = 0;
     double saved_curScore = curScore;
-    int num_iter = 2;
+    int num_iter = 1;
 
     // generate different trees
     int tree;
-    double min_time = 10.0; // minimum time in seconds
+    double min_time = max_procs; // minimum time in seconds
     StrVector trees;
     trees.push_back(getTreeString());
-
-
-    omp_set_num_threads(1);
-    setLikelihoodKernel(sse, 1);
-    initializeAllPartialLh();
-
-    // add random tres
-    for (tree = 1; tree < 20; tree++) {
-        doRandomNNIs();
-        trees.push_back(getTreeString());
-        readTreeString(trees[0]);
-    }
 
     for (int proc = 1; proc <= max_procs; proc++) {
 
         omp_set_num_threads(proc);
         setLikelihoodKernel(sse, proc);
-        deleteAllPartialLh();
         initializeAllPartialLh();
 
         double beginTime = getRealTime();
@@ -3845,7 +3832,7 @@ int IQTree::testNumThreads() {
             runTime = getRealTime() - beginTime;
 
             // too fast, increase number of iterations
-            if (runTime*trees.size()*2 < min_time && proc == 1 && tree == 0) {
+            if (runTime*10 < min_time && proc == 1 && tree == 0) {
                 int new_num_iter = 10;
                 cout << "Increase to " << new_num_iter << " rounds for branch lengths" << endl;
                 logl = optimizeAllBranches(new_num_iter - num_iter);
@@ -3853,12 +3840,20 @@ int IQTree::testNumThreads() {
                 runTime = getRealTime() - beginTime;
             }
 
-            if (runTime > min_time && proc == 1) {
-                // too slow, cut the number of trees
-                trees.erase(trees.begin()+tree+1, trees.end());
+            // considering at least 2 trees
+            if ((runTime < min_time && proc == 1) || trees.size() == 1) {
+                // time not reached, add more tree
+                readTreeString(trees[0]);
+                doRandomNNIs();
+                trees.push_back(getTreeString());
             }
             curScore = saved_curScore;
         }
+
+        if (proc == 1)
+            cout << trees.size() << " trees examined" << endl;
+
+        deleteAllPartialLh();
 
         runTimes.push_back(runTime);
         double speedup = runTimes[0] / runTime;
@@ -3866,17 +3861,16 @@ int IQTree::testNumThreads() {
         cout << "Threads: " << proc << " / Time: " << runTime << " sec / Speedup: " << speedup
             << " / Efficiency: " << (int)round(speedup*100/proc) << "% / LogL: " << (int)logl << endl;
 
-        // break if too bad efficiency ( < 50%) or no better than 2.5% of the best run time
-        if (speedup*2 <= proc || (runTime > runTimes[bestProc]*0.975 && proc>1))
+        // break if too bad efficiency ( < 50%) or worse than than 10% of the best run time
+        if (speedup*2 <= proc || (runTime > runTimes[bestProc]*1.1 && proc>1))
             break;
 
-        // update best threads
-        if (runTime < runTimes[bestProc])
+        // update best threads if sufficient
+        if (runTime <= runTimes[bestProc]*0.95)
             bestProc = proc-1;
 
     }
 
-    deleteAllPartialLh();
     readTreeString(trees[0]);
 
     cout << "BEST NUMBER OF THREADS: " << bestProc+1 << endl << endl;
