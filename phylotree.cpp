@@ -731,14 +731,11 @@ void PhyloTree::initializeAllPartialLh() {
     	cout << "Wall-clock time for initializeAllPartialLh: " << getRealTime() - wall_start_time << " sec" << endl;
     }
     assert(index == (nodeNum - 1) * 2);
-    if (sse == LK_EIGEN || sse == LK_EIGEN_SSE) {
-        if (params->lh_mem_save == LM_PER_NODE) {
-            assert(indexlh == nodeNum-leafNum);
-        } else {
-            assert(indexlh == (nodeNum-1)*2-leafNum);
-        }
-    } else
-    	assert(indexlh == (nodeNum-1)*2);
+    if (params->lh_mem_save == LM_PER_NODE) {
+        assert(indexlh == nodeNum-leafNum);
+    } else {
+        assert(indexlh == (nodeNum-1)*2-leafNum);
+    }
     clearAllPartialLH();
 
 }
@@ -806,12 +803,11 @@ uint64_t PhyloTree::getMemoryRequired(size_t ncategory) {
 
     uint64_t block_size = scale_block_size * aln->num_states;
 
-    uint64_t mem_size = ((uint64_t) leafNum*4) * block_size *sizeof(double) + 2 + (leafNum) * 4 * scale_block_size * sizeof(UBYTE);
-    if (params->SSE == LK_EIGEN || params->SSE == LK_EIGEN_SSE) {
-    	mem_size -= ((uint64_t)leafNum) * ((uint64_t)block_size*sizeof(double) + scale_block_size * sizeof(UBYTE));
-        if (params->lh_mem_save == LM_PER_NODE) {
-            mem_size -= ((uint64_t)leafNum*2 - 4) * ((uint64_t)block_size*sizeof(double) + scale_block_size * sizeof(UBYTE));
-        }
+    uint64_t mem_size = ((uint64_t) leafNum*3) * block_size *sizeof(double) + 2 + (leafNum) * 3 * scale_block_size * sizeof(UBYTE);
+
+    if (params->lh_mem_save == LM_PER_NODE) {
+        // also count MEM for nni_partial_lh
+        mem_size -= ((uint64_t)leafNum*2 - 4) * ((uint64_t)block_size*sizeof(double) + scale_block_size * sizeof(UBYTE));
     }
 	uint64_t tip_partial_lh_size;
     if (model)
@@ -841,22 +837,16 @@ void PhyloTree::getMemoryRequired(uint64_t &partial_lh_entries, uint64_t &scale_
     }
 
 	uint64_t tip_partial_lh_size = aln->num_states * (aln->STATE_UNKNOWN+1) * model->getNMixtures();
-    if (sse == LK_EIGEN || sse == LK_EIGEN_SSE) {
-        if (params->lh_mem_save == LM_PER_NODE)
-            partial_lh_entries = ((uint64_t)leafNum - 2) * (uint64_t) block_size + 4 + tip_partial_lh_size;
-        else
-            partial_lh_entries = ((uint64_t)leafNum * 3 - 6) * (uint64_t) block_size + 4 + tip_partial_lh_size;
-    } else
-    	partial_lh_entries = ((uint64_t)leafNum * 4 - 6) * (uint64_t) block_size + 4 + tip_partial_lh_size;
+    if (params->lh_mem_save == LM_PER_NODE)
+        partial_lh_entries = ((uint64_t)leafNum - 2) * (uint64_t) block_size + 4 + tip_partial_lh_size;
+    else
+        partial_lh_entries = ((uint64_t)leafNum * 3 - 6) * (uint64_t) block_size + 4 + tip_partial_lh_size;
 
 
-	if (sse == LK_EIGEN || sse == LK_EIGEN_SSE) {
-        if (params->lh_mem_save == LM_PER_NODE)
-            scale_num_entries = (leafNum - 2) * scale_size;
-        else
-            scale_num_entries = (leafNum*3 - 4) * scale_size;
-	} else
-		scale_num_entries = (leafNum*4 - 4) * scale_size;
+    if (params->lh_mem_save == LM_PER_NODE)
+        scale_num_entries = (leafNum - 2) * scale_size;
+    else
+        scale_num_entries = (leafNum*3 - 4) * scale_size;
 
     size_t pars_block_size = getBitsBlockSize();
     partial_pars_entries = (leafNum - 1) * 4 * pars_block_size;
@@ -883,15 +873,13 @@ void PhyloTree::initializeAllPartialLh(int &index, int &indexlh, PhyloNode *node
 
         if (!central_partial_lh) {
         	uint64_t tip_partial_lh_size = aln->num_states * (aln->STATE_UNKNOWN+1) * model->getNMixtures();
-            if (model->isSiteSpecificModel() && (sse == LK_EIGEN || sse == LK_EIGEN_SSE))
+            if (model->isSiteSpecificModel())
                 tip_partial_lh_size = get_safe_upper_limit(aln->size()) * model->num_states * leafNum;
             uint64_t mem_size = ((uint64_t)leafNum * 4 - 6) * (uint64_t) block_size + 2 + tip_partial_lh_size;
-            if (sse == LK_EIGEN || sse == LK_EIGEN_SSE) {
-                if (params->lh_mem_save == LM_PER_NODE) {
-                    mem_size -= ((uint64_t)leafNum * 3 - 4) * (uint64_t)block_size;
-                } else {
-                    mem_size -= (uint64_t)leafNum * (uint64_t)block_size;
-                }
+            if (params->lh_mem_save == LM_PER_NODE) {
+                mem_size -= ((uint64_t)leafNum * 3 - 4) * (uint64_t)block_size;
+            } else {
+                mem_size -= (uint64_t)leafNum * (uint64_t)block_size;
             }
             if (verbose_mode >= VB_MED)
                 cout << "Allocating " << mem_size * sizeof(double) << " bytes for partial likelihood vectors" << endl;
@@ -905,23 +893,18 @@ void PhyloTree::initializeAllPartialLh(int &index, int &indexlh, PhyloNode *node
         }
 
         // now always assign tip_partial_lh
-        if (sse == LK_EIGEN || sse == LK_EIGEN_SSE) {
-            if (params->lh_mem_save == LM_PER_NODE) {
-                tip_partial_lh = central_partial_lh + ((nodeNum - leafNum)*block_size);
-            } else {
-                tip_partial_lh = central_partial_lh + (((nodeNum - 1)*2-leafNum)*block_size);
-            }
-        } else
-            tip_partial_lh = central_partial_lh + (((nodeNum - 1)*2)*block_size);
+        if (params->lh_mem_save == LM_PER_NODE) {
+            tip_partial_lh = central_partial_lh + ((nodeNum - leafNum)*block_size);
+        } else {
+            tip_partial_lh = central_partial_lh + (((nodeNum - 1)*2-leafNum)*block_size);
+        }
 
         if (!central_scale_num) {
         	uint64_t mem_size = (leafNum - 1) * 4 * scale_block_size;
-        	if (sse == LK_EIGEN || sse == LK_EIGEN_SSE) {
-                if (params->lh_mem_save == LM_PER_NODE) {
-                    mem_size -= ((uint64_t)leafNum*3 - 2) * (uint64_t) scale_block_size;
-                } else {
-                    mem_size -= (uint64_t)leafNum * (uint64_t) scale_block_size;
-                }
+            if (params->lh_mem_save == LM_PER_NODE) {
+                mem_size -= ((uint64_t)leafNum*3 - 2) * (uint64_t) scale_block_size;
+            } else {
+                mem_size -= (uint64_t)leafNum * (uint64_t) scale_block_size;
             }
             if (verbose_mode >= VB_MED)
                 cout << "Allocating " << mem_size * sizeof(UBYTE) << " bytes for scale num vectors" << endl;
@@ -962,7 +945,7 @@ void PhyloTree::initializeAllPartialLh(int &index, int &indexlh, PhyloNode *node
         assert(index < nodeNum * 2 - 1);
         
         // now initialize partial_lh and scale_num
-        if (params->lh_mem_save == LM_PER_NODE && (sse == LK_EIGEN || sse == LK_EIGEN_SSE)) {
+        if (params->lh_mem_save == LM_PER_NODE) {
             if (!node->isLeaf()) { // only allocate memory to internal node
                 nei->partial_lh = NULL; // do not allocate memory for tip, use tip_partial_lh instead
                 nei->scale_num = NULL;
@@ -976,7 +959,7 @@ void PhyloTree::initializeAllPartialLh(int &index, int &indexlh, PhyloNode *node
                 nei2->partial_lh = NULL;
             }
         } else {
-            if (nei->node->isLeaf() && (sse == LK_EIGEN || sse == LK_EIGEN_SSE)) {
+            if (nei->node->isLeaf()) {
                 nei->partial_lh = NULL; // do not allocate memory for tip, use tip_partial_lh instead
                 nei->scale_num = NULL;
             } else {
@@ -984,7 +967,7 @@ void PhyloTree::initializeAllPartialLh(int &index, int &indexlh, PhyloNode *node
                 nei->partial_lh = central_partial_lh + (indexlh * block_size);
                 indexlh++;
             }
-            if (nei2->node->isLeaf() && (sse == LK_EIGEN || sse == LK_EIGEN_SSE)) {
+            if (nei2->node->isLeaf()) {
                 nei2->partial_lh = NULL; // do not allocate memory for tip, use tip_partial_lh instead
                 nei2->scale_num = NULL;
             } else {
@@ -2996,7 +2979,7 @@ void PhyloTree::doNNI(NNIMove &move, bool clearLH) {
     PhyloNeighbor *node21_it = (PhyloNeighbor*) node2->findNeighbor(node1); // return neighbor of node2 which points to node 1
 
     // reorient partial_lh before swap
-    if (params->lh_mem_save == LM_PER_NODE && !isSuperTree() && (sse == LK_EIGEN || sse == LK_EIGEN_SSE)) {
+    if (params->lh_mem_save == LM_PER_NODE && !isSuperTree()) {
         node12_it->reorientPartialLh(node1);
         node21_it->reorientPartialLh(node2);
     }

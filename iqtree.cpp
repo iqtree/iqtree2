@@ -547,11 +547,6 @@ void IQTree::computeInitialTree(string &dist_file, LikelihoodKernel kernel) {
         	fixed_number = wrapperFixNegativeBranch(false);
         params->numInitTrees = 1;
         params->numNNITrees = 1;
-        // change to old kernel if tree is multifurcating
-//		if ((params->SSE == LK_EIGEN || params->SSE == LK_EIGEN_SSE) && !isBifurcating()) {
-//			cout << "NOTE: Changing to old kernel as input tree is multifurcating" << endl;
-//			params->SSE = LK_SSE;
-//		}
 		if (params->pll)
 			pllReadNewick(getTreeString());
     } else if (CKP_RESTORE(initTree)) {

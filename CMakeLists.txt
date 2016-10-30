@@ -444,67 +444,64 @@ if (IQTREE_FLAGS MATCHES "mpi")
 endif()
 
 add_executable(iqtree
-alignment.cpp
-alignmentpairwise.cpp
-circularnetwork.cpp
-eigendecomposition.cpp
-greedy.cpp
-gss.cpp
-#guidedbootstrap.cpp
-gurobiwrapper.cpp
-gzstream.cpp
-hashsplitset.cpp
-iqtree.cpp
-maalignment.cpp
-matree.cpp
-mexttree.cpp
-mpdablock.cpp
-msetsblock.cpp
-msplitsblock.cpp
-modelsblock.cpp
-mtree.cpp
-mtreeset.cpp
-ncbitree.cpp
-ngs.cpp
-node.cpp
-optimization.cpp
-parsmultistate.cpp
-pattern.cpp
+alignment.cpp alignment.h
+alignmentpairwise.cpp alignmentpairwise.h
+circularnetwork.cpp circularnetwork.h
+eigendecomposition.cpp eigendecomposition.h
+greedy.cpp greedy.h
+gss.cpp gss.h
+gurobiwrapper.cpp gurobiwrapper.h
+gzstream.cpp gzstream.h
+hashsplitset.cpp hashsplitset.h
+iqtree.cpp iqtree.h
+maalignment.cpp maalignment.h
+matree.cpp matree.h
+mexttree.cpp mexttree.h
+mpdablock.cpp mpdablock.h
+msetsblock.cpp msetsblock.h
+msplitsblock.cpp msplitsblock.h
+modelsblock.cpp modelsblock.h
+mtree.cpp mtree.h
+mtreeset.cpp mtreeset.h
+ncbitree.cpp ncbitree.h
+ngs.cpp ngs.h
+node.cpp node.h
+optimization.cpp optimization.h
+parsmultistate.cpp parsmultistate.h
+pattern.cpp pattern.h
 pda.cpp
-pdnetwork.cpp
-pdtree.cpp
-pdtreeset.cpp
-phyloanalysis.cpp
-phylonode.cpp
-phylosupertree.cpp
-phylotree.cpp
+pdnetwork.cpp pdnetwork.h
+pdtree.cpp pdtree.h
+pdtreeset.cpp pdtreeset.h
+phyloanalysis.cpp phyloanalysis.h
+phylonode.cpp phylonode.h
+phylosupertree.cpp phylosupertree.h
+phylotree.cpp phylotree.h
 phylotreesse.cpp
 phylotreepars.cpp
-#phylokernelsitemodel.cpp
-#phylotreeavx.cpp
-pruning.cpp
+pruning.cpp pruning.h
 quartet.cpp
-split.cpp
-splitgraph.cpp
-splitset.cpp
-stoprule.cpp
-superalignment.cpp
-superalignmentpairwise.cpp
-supernode.cpp
-tinatree.cpp
-tools.cpp
-whtest_wrapper.cpp
-lpwrapper.c
-pllnni.cpp
-phylosupertreeplen.cpp
-phylotesting.cpp
-ecopd.cpp
-ecopdmtreeset.cpp
-graph.cpp
-candidateset.cpp
-checkpoint.cpp
-constrainttree.cpp
-MPIHelper.cpp
+split.cpp split.h
+splitgraph.cpp splitgraph.h
+splitset.cpp splitset.h
+stoprule.cpp stoprule.h
+superalignment.cpp superalignment.h
+superalignmentpairwise.cpp superalignmentpairwise.h
+supernode.cpp supernode.h
+tinatree.cpp tinatree.h
+tools.cpp tools.h
+whtest_wrapper.cpp whtest_wrapper.h
+lpwrapper.c lpwrapper.h
+pllnni.cpp pllnni.h
+phylosupertreeplen.cpp phylosupertreeplen.h
+phylotesting.cpp phylotesting.h
+ecopd.cpp ecopd.h
+ecopdmtreeset.cpp ecopdmtreeset.h
+graph.cpp graph.h
+candidateset.cpp candidateset.h
+checkpoint.cpp checkpoint.h
+constrainttree.cpp constrainttree.h
+MPIHelper.cpp MPIHelper.h
 )
 
 if (NOT IQTREE_FLAGS MATCHES "nozlib")

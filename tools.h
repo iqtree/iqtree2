@@ -425,7 +425,7 @@ enum LikelihoodKernel {
 };
 
 enum LhMemSave {
-	LM_DETECT, LM_ALL_BRANCH, LM_PER_NODE
+	LM_PER_NODE, LM_MEM_SAVE
 };
 
 enum SiteLoglType {

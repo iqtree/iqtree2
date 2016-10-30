@@ -2621,10 +2621,6 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.lh_mem_save = LM_PER_NODE;
 				continue;
 			}
-			if (strcmp(argv[cnt], "-nolhmemsave") == 0) {
-				params.lh_mem_save = LM_ALL_BRANCH;
-				continue;
-			}
 //			if (strcmp(argv[cnt], "-storetrees") == 0) {
 //				params.store_candidate_trees = true;
 //				continue;
