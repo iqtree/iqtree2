@@ -901,7 +901,7 @@ void PhyloTree::computeTraversalInfo(PhyloNode *node, PhyloNode *dad, bool compu
             for (auto it = traversal_info.begin(); it != traversal_info.end(); it++) {
                 cout << "  " << it->dad->id << "->" << it->dad_branch->node->id;
                 if (params->lh_mem_save == LM_MEM_SAVE) {
-                    cout << " (" << mem_slots.findNei(it->dad_branch) << ")";
+                    cout << " (" << mem_slots.findNei(it->dad_branch) - mem_slots.begin() << ")";
                 }
             }
             cout << endl;

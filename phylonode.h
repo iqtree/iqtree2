@@ -102,6 +102,10 @@ public:
 	return partial_lh_computed;
 	}
 
+    int getSize() {
+        return size;
+    }
+
 private:
 
     /**

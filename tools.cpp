@@ -2620,7 +2620,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 			if (strcmp(argv[cnt], "-mem") == 0) {
 				cnt++;
 				if (cnt >= argc)
-                    throw "Use -mem mem_in_GB";
+                    throw "Use -mem max_mem_size";
 				params.lh_mem_save = LM_MEM_SAVE;
                 int end_pos;
                 double mem = convert_double(argv[cnt], end_pos);
@@ -2634,7 +2634,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                     params.max_mem_size = mem * 0.01;
                     if (params.max_mem_size > 1)
                         throw "-mem percentage must be between 0 and 100";
-                } else {
+                } else if (params.max_mem_size != 0.0) {
                     throw "Use suffix 'G' for GB";
                 }
 				continue;

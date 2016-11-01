@@ -44,6 +44,7 @@
 #include "pll/pll.h"
 #include "checkpoint.h"
 #include "constrainttree.h"
+#include "memslot.h"
 
 #define BOOT_VAL_FLOAT
 #define BootValType float
@@ -333,60 +334,6 @@ public:
         this->dad = dad;
         this->dad_branch = dad_branch;
     }
-};
-
-class MemSlot {
-public:
-    int status; // status of this slot
-    PhyloNeighbor *nei; // neighbor assigned to this slot
-    double *partial_lh; // partial_lh assigned to this slot
-    UBYTE *scale_num; // scale_num assigned to this slot
-};
-
-class MemSlotVector : public vector<MemSlot> {
-public:
-
-    /** initialize with a specified number of slots */
-    void init(PhyloTree *tree, int num_slot);
-
-    /** 
-        lock the memory assigned to nei
-        @param nei neighbor to lock
-        @return TRUE if successfully locked, FALSE otherwise 
-    */
-    bool lock(PhyloNeighbor *nei);
-
-    /** unlock the memory assigned to nei */
-    void unlock(PhyloNeighbor *nei);
-
-    /** test if the memory assigned to nei is locked or not */
-    bool locked(PhyloNeighbor *nei);
-
-    /** allocate free or unlocked memory to nei */
-    int allocate(PhyloNeighbor *nei);
-
-    /** update neighbor */
-    void update(PhyloNeighbor *nei);
-
-    /** find ID the a neighbor */
-    int findNei(PhyloNeighbor *nei);
-
-    /** add neighbor into a specified iterator */
-    void addNei(PhyloNeighbor *nei, iterator it);
-
-    /** reset everything */
-    void reset();
-
-    /** clean up all neighbors where partial_lh_computed = 0 */
-    void cleanup();
-
-    /** take over neighbor from another one */
-    void takeover(PhyloNeighbor *nei, PhyloNeighbor *taken_nei);
-
-protected:
-
-    unordered_map<PhyloNeighbor*, int> nei_id_map;
-
 };
 
 // ********************************************

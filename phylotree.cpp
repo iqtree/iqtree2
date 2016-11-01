@@ -95,6 +95,7 @@ void PhyloTree::init() {
     var_matrix = NULL;
     params = NULL;
     setLikelihoodKernel(LK_EIGEN_SSE, 1);  // FOR TUNG: you forgot to initialize this variable!
+    max_lh_slots = 0;
     save_all_trees = 0;
     nodeBranchDists = NULL;
     // FOR: upper bounds
@@ -805,19 +806,53 @@ uint64_t PhyloTree::getMemoryRequired(size_t ncategory) {
 
     uint64_t block_size = scale_block_size * aln->num_states;
 
-    // also count MEM for nni_partial_lh
-    uint64_t mem_size = ((uint64_t) leafNum+4) * block_size *sizeof(double) + 2 + (leafNum+4) * scale_block_size * sizeof(UBYTE);
-
-	uint64_t tip_partial_lh_size;
+    uint64_t mem_size;
+    // memory to tip_partial_lh
     if (model)
-        tip_partial_lh_size = aln->num_states * (aln->STATE_UNKNOWN+1) * model->getNMixtures() * sizeof(double);
+        mem_size = aln->num_states * (aln->STATE_UNKNOWN+1) * model->getNMixtures() * sizeof(double);
     else
-        tip_partial_lh_size = aln->num_states * (aln->STATE_UNKNOWN+1) * sizeof(double);
-    mem_size += tip_partial_lh_size;
+        mem_size = aln->num_states * (aln->STATE_UNKNOWN+1) * sizeof(double);
+
+    // memory for UFBoot
     if (params->gbo_replicates)
         mem_size += params->gbo_replicates*nptn*sizeof(BootValType);
+
+    // memory for model
     if (model)
     	mem_size += model->getMemoryRequired();
+
+    uint64_t lh_scale_size = block_size * sizeof(double) + scale_block_size * sizeof(UBYTE);
+
+    max_lh_slots = leafNum-2;
+
+    if (params->lh_mem_save == LM_MEM_SAVE) {
+        size_t min_lh_slots = log2(leafNum)+2;
+        if (params->max_mem_size == 0.0) {
+            max_lh_slots = min_lh_slots;
+        } else if (params->max_mem_size <= 1) {
+            max_lh_slots = floor(params->max_mem_size*(leafNum-2));
+        } else {
+            uint64_t rest_mem = params->max_mem_size - mem_size;
+            max_lh_slots = rest_mem / lh_scale_size; // 6 for nni_partial_lh
+            if (max_lh_slots > 6)
+                max_lh_slots -= 6;
+            else
+                max_lh_slots = 0;
+
+            // RAM over requirement, reset to LM_PER_NODE
+            if (max_lh_slots > leafNum-2)
+                max_lh_slots = leafNum-2;
+        }
+        if (max_lh_slots < min_lh_slots) {
+            cout << "WARNING: Too low -mem, automatically increased to " << (mem_size + (min_lh_slots+6)*lh_scale_size)/1048576.0 << " MB" << endl;
+            max_lh_slots = min_lh_slots;
+        }
+    }
+
+    // also count MEM for nni_partial_lh
+    mem_size += (max_lh_slots+6) * lh_scale_size;
+
+
     return mem_size;
 }
 
@@ -869,22 +904,9 @@ void PhyloTree::initializeAllPartialLh(int &index, int &indexlh, PhyloNode *node
             if (model->isSiteSpecificModel())
                 tip_partial_lh_size = get_safe_upper_limit(aln->size()) * model->num_states * leafNum;
 
-            max_lh_slots = leafNum-2;
-            if (params->lh_mem_save == LM_MEM_SAVE) {
-                if (params->max_mem_size <= 1)
-                    max_lh_slots = floor(params->max_mem_size*(leafNum-2));
-                else
-                    max_lh_slots = params->max_mem_size / sizeof(double) / block_size - IT_NUM;
-                if (max_lh_slots > leafNum-2)
-                    max_lh_slots = leafNum-2;
-                size_t min_lh_slots = log2(leafNum)+2;
-                if (max_lh_slots == 0)
-                    max_lh_slots = min_lh_slots;
-                if (max_lh_slots < min_lh_slots) {
-                    outError("The specified -mem is too low, increase to at least (GB): ",
-                    convertInt64ToString(block_size*(min_lh_slots+IT_NUM)*sizeof(double)/1073741824.0));
-                }
-            }
+            if (max_lh_slots == 0)
+                getMemoryRequired();
+
             uint64_t mem_size = (uint64_t)max_lh_slots * block_size + 4 + tip_partial_lh_size;
 
             if (verbose_mode >= VB_MED)
@@ -2329,7 +2351,7 @@ void PhyloTree::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool clear
     double ferror, optx;
     assert(current_len >= 0.0);
     theta_computed = false;
-    mem_slots.cleanup();
+//    mem_slots.cleanup();
     if (optimize_by_newton) {
     	// Newton-Raphson method
     	optx = minimizeNewton(params->min_branch_length, current_len, params->max_branch_length, params->min_branch_length, negative_lh, maxNRStep);
@@ -4665,171 +4687,3 @@ void PhyloTree::sortNeighborBySubtreeSize(PhyloNode *node, PhyloNode *dad) {
             }
 }
 
-
-
-/*******************************************************
- *
- * Helper function for memory saving technique
- *
- ******************************************************/
-
-const int MEM_LOCKED = 1;
-
-void MemSlotVector::init(PhyloTree *tree, int num_slot) {
-    if (Params::getInstance().lh_mem_save != LM_MEM_SAVE)
-        return;
-    resize(num_slot);
-    size_t lh_size = tree->getPartialLhSize();
-    size_t scale_size = tree->getScaleNumSize();
-    for (iterator it = begin(); it != end(); it++) {
-        it->status = 0;
-        it->nei = NULL;
-        it->partial_lh = tree->central_partial_lh + lh_size*(it-begin());
-        it->scale_num = tree->central_scale_num + scale_size*(it-begin());
-    }
-    nei_id_map.clear();
-}
-
-void MemSlotVector::reset() {
-    if (Params::getInstance().lh_mem_save != LM_MEM_SAVE)
-        return;
-    for (iterator it = begin(); it != end(); it++) {
-        it->status = 0;
-        it->nei = NULL;
-    }
-    nei_id_map.clear();
-}
-
-
-int MemSlotVector::findNei(PhyloNeighbor *nei) {
-    auto it = nei_id_map.find(nei);
-    assert(it != nei_id_map.end());
-//    assert(at(it->second).nei == nei);
-    return it->second;
-}
-
-void MemSlotVector::addNei(PhyloNeighbor *nei, iterator it) {
-
-    if (nei->partial_lh) {
-        int id = findNei(nei);
-
-    }
-    nei->partial_lh = it->partial_lh;
-    nei->scale_num = it->scale_num;
-    it->nei = nei;
-    nei_id_map[nei] = it - begin();
-}
-
-bool MemSlotVector::lock(PhyloNeighbor *nei) {
-    if (Params::getInstance().lh_mem_save != LM_MEM_SAVE)
-        return false;
-    if (nei->node->isLeaf())
-        return false;
-    int id = findNei(nei);
-    assert((at(id).status & MEM_LOCKED) == 0);
-    at(id).status |= MEM_LOCKED;
-    return true;
-}
-
-void MemSlotVector::unlock(PhyloNeighbor *nei) {
-    if (Params::getInstance().lh_mem_save != LM_MEM_SAVE)
-        return;
-    if (nei->node->isLeaf())
-        return;
-    int id = findNei(nei);
-    assert((at(id).status & MEM_LOCKED) != 0);
-    at(id).status &= ~MEM_LOCKED;
-}
-
-bool MemSlotVector::locked(PhyloNeighbor *nei) {
-    if (Params::getInstance().lh_mem_save != LM_MEM_SAVE)
-        return false;
-    if (nei->node->isLeaf())
-        return false;
-    int id = findNei(nei);
-
-    if ((at(id).status & MEM_LOCKED) == 0)
-        return false;
-    else
-        return true;
-}
-
-int MemSlotVector::allocate(PhyloNeighbor *nei) {
-    if (Params::getInstance().lh_mem_save != LM_MEM_SAVE)
-        return -1;
-
-    // first find a free slot
-    iterator it;
-    for (it = begin(); it != end(); it++) {
-        if (it->nei == NULL) {
-            addNei(nei, it);
-            return it-begin();
-        }
-    }
-
-    // no free slot found, find an unlocked slot
-    for (it = begin(); it != end(); it++) {
-        if ((it->status & MEM_LOCKED) == 0) {
-            // clear mem assigned to it->nei
-            it->nei->clearPartialLh();
-//            nei_id_map.erase(it->nei);
-
-            // assign mem to nei
-            addNei(nei, it);
-            return it-begin();
-        }
-    }
-
-    assert(0 && "No free/unlocked mem slot found!");
-    return -1;
-}
-
-void MemSlotVector::update(PhyloNeighbor *nei) {
-    if (Params::getInstance().lh_mem_save != LM_MEM_SAVE)
-        return;
-
-    int id = findNei(nei);
-    iterator it = begin()+id;
-
-    if (it->nei != nei) {
-        // clear mem assigned to it->nei
-        it->nei->clearPartialLh();
-
-        // assign mem to nei
-        addNei(nei, it);
-    }
-}
-
-
-void MemSlotVector::cleanup() {
-    if (Params::getInstance().lh_mem_save != LM_MEM_SAVE)
-        return;
-    unordered_map<PhyloNeighbor*, int> new_map;
-    for (unordered_map<PhyloNeighbor*, int>::iterator it = nei_id_map.begin(); it != nei_id_map.end(); it++)
-        if (it->first != at(it->second).nei) {
-            it->first->partial_lh_computed &= ~1; // clear bit
-            it->first->partial_lh = NULL;
-            it->first->scale_num = NULL;
-        } else {
-            new_map[it->first] = it->second;
-        }
-    nei_id_map = new_map;
-    assert(nei_id_map.size() == size());
-}
-
-void MemSlotVector::takeover(PhyloNeighbor *nei, PhyloNeighbor *taken_nei) {
-    assert(taken_nei->partial_lh);
-    nei->partial_lh = taken_nei->partial_lh;
-    nei->scale_num = taken_nei->scale_num;
-    taken_nei->partial_lh = NULL;
-    taken_nei->scale_num = NULL;
-    taken_nei->partial_lh_computed &= ~1; // clear bit
-    if (Params::getInstance().lh_mem_save != LM_MEM_SAVE)
-        return;
-    int id = findNei(taken_nei);
-    nei_id_map.erase(nei_id_map.find(taken_nei));
-    nei_id_map[nei] = id;
-    if (at(id).nei == taken_nei) {
-        at(id).nei = nei;
-    }
-}
