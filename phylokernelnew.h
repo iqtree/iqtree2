@@ -27,13 +27,6 @@ using namespace std;
 
 /*******************************************************
  *
- * Helper function to pre-compute traversal information
- * and buffer to transition matrix
- *
- ******************************************************/
-
-/*******************************************************
- *
  * Helper function for vectors and matrix multiplication
  *
  ******************************************************/
@@ -610,18 +603,23 @@ inline void scaleLikelihood(VectorClass &lh_max, double *invar, double *dad_part
  ******************************************************/
 
 #ifndef KERNEL_FIX_STATES
-inline void PhyloTree::computeTraversalInfo(PhyloNeighbor *dad_branch, PhyloNode *dad, double* &buffer) {
+inline bool PhyloTree::computeTraversalInfo(PhyloNeighbor *dad_branch, PhyloNode *dad, double* &buffer) {
 
     size_t nstates = aln->num_states;
     PhyloNode *node = (PhyloNode*)dad_branch->node;
-    if ((dad_branch->partial_lh_computed & 1) || node->isLeaf())
-        return;
+
+    if ((dad_branch->partial_lh_computed & 1) || node->isLeaf()) {
+        return mem_slots.lock(dad_branch);
+    }
 
 
     size_t num_leaves = 0;
+    bool locked[node->degree()];
+    memset(locked, 0, node->degree());
+
     // recursive
-    FOR_NEIGHBOR_IT(node, dad, it) {
-        computeTraversalInfo((PhyloNeighbor*)(*it), node, buffer);
+    FOR_NEIGHBOR_DECLARE(node, dad, it) {
+        locked[it - node->neighbors.begin()] = computeTraversalInfo((PhyloNeighbor*)(*it), node, buffer);
         if ((*it)->node->isLeaf())
             num_leaves++;
     }
@@ -631,22 +629,34 @@ inline void PhyloTree::computeTraversalInfo(PhyloNeighbor *dad_branch, PhyloNode
     TraversalInfo info(dad_branch, dad);
     info.echildren = info.partial_lh_leaves = NULL;
 
-    if (params->lh_mem_save == LM_PER_NODE && !dad_branch->partial_lh) {
+    if (!dad_branch->partial_lh) {
         // re-orient partial_lh
-        bool done = false;
         FOR_NEIGHBOR_IT(node, dad, it2) {
             PhyloNeighbor *backnei = ((PhyloNeighbor*)(*it2)->node->findNeighbor(node));
             if (backnei->partial_lh) {
-                dad_branch->partial_lh = backnei->partial_lh;
-                dad_branch->scale_num = backnei->scale_num;
-                backnei->partial_lh = NULL;
-                backnei->scale_num = NULL;
-                backnei->partial_lh_computed &= ~1; // clear bit
-                done = true;
+                mem_slots.takeover(dad_branch, backnei);
                 break;
             }
         }
-        assert(done && "partial_lh is not re-oriented");
+        if (params->lh_mem_save == LM_PER_NODE)
+            assert(dad_branch->partial_lh && "partial_lh is not re-oriented");
+    }
+
+    if (!dad_branch->partial_lh || mem_slots.locked(dad_branch)) {
+        // still no free entry found, memory saving technique
+        int slot_id = mem_slots.allocate(dad_branch);
+        if (verbose_mode >= VB_MED) {
+            node->name = convertIntToString(slot_id);
+//            cout << "Node " << node->id << " assigned slot " << slot_id << endl;
+        }
+    } else
+        mem_slots.update(dad_branch);
+
+    if (params->lh_mem_save == LM_MEM_SAVE) {
+        FOR_NEIGHBOR(node, dad, it) {
+            if (!(*it)->node->isLeaf() && locked[it-node->neighbors.begin()])
+                mem_slots.unlock((PhyloNeighbor*)*it);
+        }
     }
 
     if (!model->isSiteSpecificModel()) {
@@ -661,6 +671,7 @@ inline void PhyloTree::computeTraversalInfo(PhyloNeighbor *dad_branch, PhyloNode
     }
 
     traversal_info.push_back(info);
+    return mem_slots.lock(dad_branch);
 }
 #endif
 
@@ -845,9 +856,38 @@ void PhyloTree::computeTraversalInfo(PhyloNode *node, PhyloNode *dad, bool compu
     size_t block = aln->num_states * ncat_mix;
     double *buffer = buffer_partial_lh + block*VectorClass::size()*num_threads + get_safe_upper_limit(block)*(aln->STATE_UNKNOWN+2);
 
-    computeTraversalInfo((PhyloNeighbor*)dad->findNeighbor(node), dad, buffer);
-    computeTraversalInfo((PhyloNeighbor*)node->findNeighbor(dad), node, buffer);
+    // sort subtrees for mem save technique
+    if (params->lh_mem_save == LM_MEM_SAVE) {
+        sortNeighborBySubtreeSize(node, dad);
+        sortNeighborBySubtreeSize(dad, node);
+        PhyloNeighbor *dad_branch = (PhyloNeighbor*)dad->findNeighbor(node);
+        PhyloNeighbor *node_branch = (PhyloNeighbor*)node->findNeighbor(dad);
+        if (dad_branch->size < node_branch->size) {
+            // swap node and dad due to tree size
+            PhyloNode *tmp = node;
+            node = dad;
+            dad = tmp;
+        }
 
+    }
+
+    PhyloNeighbor *dad_branch = (PhyloNeighbor*)dad->findNeighbor(node);
+    PhyloNeighbor *node_branch = (PhyloNeighbor*)node->findNeighbor(dad);
+    bool dad_locked = computeTraversalInfo(dad_branch, dad, buffer);
+    bool node_locked = computeTraversalInfo(node_branch, node, buffer);
+    if (params->lh_mem_save == LM_MEM_SAVE) {
+        if (dad_locked)
+            mem_slots.unlock(dad_branch);
+        if (node_locked)
+            mem_slots.unlock(node_branch);
+    }
+
+//    if (verbose_mode >= VB_MED && traversal_info.size() > 0) {
+//        Node *saved = root;
+//        root = dad;
+//        drawTree(cout);
+//        root = saved;
+//    }
 
     if (traversal_info.empty())
         return;
@@ -855,6 +895,17 @@ void PhyloTree::computeTraversalInfo(PhyloNode *node, PhyloNode *dad, bool compu
     if (!model->isSiteSpecificModel()) {
 
         int num_info = traversal_info.size();
+
+        if (verbose_mode >= VB_MAX) {
+            cout << "traversal order:";
+            for (auto it = traversal_info.begin(); it != traversal_info.end(); it++) {
+                cout << "  " << it->dad->id << "->" << it->dad_branch->node->id;
+                if (params->lh_mem_save == LM_MEM_SAVE) {
+                    cout << " (" << mem_slots.findNei(it->dad_branch) << ")";
+                }
+            }
+            cout << endl;
+        }
 
 #ifdef _OPENMP
 #pragma omp parallel if (num_info >= 3) num_threads(num_threads)
@@ -961,7 +1012,10 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(TraversalInfo &info, size_t 
 	// internal node
 	PhyloNeighbor *left = NULL, *right = NULL; // left & right are two neighbors leading to 2 subtrees
 	FOR_NEIGHBOR_IT(node, dad, it) {
-		if (!left) left = (PhyloNeighbor*)(*it); else right = (PhyloNeighbor*)(*it);
+        PhyloNeighbor *nei = (PhyloNeighbor*)(*it);
+        // make sure that the partial_lh of children are different!
+        assert(dad_branch->partial_lh != nei->partial_lh);
+		if (!left) left = nei; else right = nei;
 	}
 
     // precomputed buffer to save times

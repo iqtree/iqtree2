@@ -38,7 +38,6 @@ void PhyloNeighbor::reorientPartialLh(Node *dad) {
     assert(done && "partial_lh is not re-oriented");
 }
 
-
 void PhyloNode::clearReversePartialLh(PhyloNode *dad) {
 //	PhyloNeighbor *node_nei = (PhyloNeighbor*)findNeighbor(dad);
 //	assert(node_nei);
@@ -94,3 +93,17 @@ void PhyloNode::init() {
 void PhyloNode::addNeighbor(Node *node, double length, int id) {
 	neighbors.push_back(new PhyloNeighbor(node, length, id));
 }
+
+
+int PhyloNode::computeSize(Node *dad) {
+    PhyloNeighbor *nei = (PhyloNeighbor*)dad->findNeighbor(this);
+    if (nei->size > 0)
+        return nei->size;
+    FOR_NEIGHBOR_IT(this, dad, it) {
+        if (((PhyloNeighbor*)*it)->size == 0)
+            ((PhyloNode*)(*it)->node)->computeSize(this);
+        nei->size += ((PhyloNeighbor*)*it)->size;
+    }
+    return nei->size;
+}
+

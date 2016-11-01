@@ -1415,7 +1415,8 @@ void PhyloTree::computeAncestralLikelihood(PhyloNeighbor *dad_branch, PhyloNode 
             computeAncestralLikelihood((PhyloNeighbor*)(*it), node, C);
         }
     }
-    
+
+    // TODO mem save
     if (params->lh_mem_save == LM_PER_NODE && !dad_branch->partial_lh) {
         // re-orient partial_lh
         bool done = false;

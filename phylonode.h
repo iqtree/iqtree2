@@ -26,6 +26,7 @@ class PhyloNeighbor : public Neighbor {
     friend class PhyloTree;
     friend class IQTree;
     friend class PhyloSuperTree;
+    friend class MemSlotVector;
 
 public:
     friend class TinaTree;
@@ -42,6 +43,7 @@ public:
         partial_lh_computed = 0;
         lh_scale_factor = 0.0;
         partial_pars = NULL;
+        size = 0;
     }
 
     /**
@@ -56,6 +58,7 @@ public:
         partial_lh_computed = 0;
         lh_scale_factor = 0.0;
         partial_pars = NULL;
+        size = 0;
     }
 
     /**
@@ -126,6 +129,9 @@ private:
      */
     UINT *partial_pars;
 
+    /** size of subtree below this neighbor in terms of number of taxa */
+    int size;
+
 };
 
 /**
@@ -188,6 +194,13 @@ public:
     void clearReversePartialLh(PhyloNode *dad);
 
     void computeReversePartialLh(PhyloNode *dad);
+
+    /** 
+        compute the size (#taxa) of the subtree rooted at this node
+        using buffered 'size' attribute if computed beforehand
+        @param dad dad of this node
+    */
+    int computeSize(Node *dad);
 
 };
 

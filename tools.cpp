@@ -2617,8 +2617,26 @@ void parseArg(int argc, char *argv[], Params &params) {
 //				params.store_candidate_trees = false;
 //				continue;
 //			}
-			if (strcmp(argv[cnt], "-lhmemsave") == 0) {
-				params.lh_mem_save = LM_PER_NODE;
+			if (strcmp(argv[cnt], "-mem") == 0) {
+				cnt++;
+				if (cnt >= argc)
+                    throw "Use -mem mem_in_GB";
+				params.lh_mem_save = LM_MEM_SAVE;
+                int end_pos;
+                double mem = convert_double(argv[cnt], end_pos);
+                if (mem < 0)
+                    throw "-mem must be non-negative";
+                if (argv[cnt][end_pos] == 'G') {
+                    params.max_mem_size = mem * 1073741824.0;
+                } else if (argv[cnt][end_pos] == 'M') {
+                    params.max_mem_size = mem * 1048576.0;
+                } else if (argv[cnt][end_pos] == '%'){
+                    params.max_mem_size = mem * 0.01;
+                    if (params.max_mem_size > 1)
+                        throw "-mem percentage must be between 0 and 100";
+                } else {
+                    throw "Use suffix 'G' for GB";
+                }
 				continue;
 			}
 //			if (strcmp(argv[cnt], "-storetrees") == 0) {

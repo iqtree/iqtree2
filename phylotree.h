@@ -335,6 +335,60 @@ public:
     }
 };
 
+class MemSlot {
+public:
+    int status; // status of this slot
+    PhyloNeighbor *nei; // neighbor assigned to this slot
+    double *partial_lh; // partial_lh assigned to this slot
+    UBYTE *scale_num; // scale_num assigned to this slot
+};
+
+class MemSlotVector : public vector<MemSlot> {
+public:
+
+    /** initialize with a specified number of slots */
+    void init(PhyloTree *tree, int num_slot);
+
+    /** 
+        lock the memory assigned to nei
+        @param nei neighbor to lock
+        @return TRUE if successfully locked, FALSE otherwise 
+    */
+    bool lock(PhyloNeighbor *nei);
+
+    /** unlock the memory assigned to nei */
+    void unlock(PhyloNeighbor *nei);
+
+    /** test if the memory assigned to nei is locked or not */
+    bool locked(PhyloNeighbor *nei);
+
+    /** allocate free or unlocked memory to nei */
+    int allocate(PhyloNeighbor *nei);
+
+    /** update neighbor */
+    void update(PhyloNeighbor *nei);
+
+    /** find ID the a neighbor */
+    int findNei(PhyloNeighbor *nei);
+
+    /** add neighbor into a specified iterator */
+    void addNei(PhyloNeighbor *nei, iterator it);
+
+    /** reset everything */
+    void reset();
+
+    /** clean up all neighbors where partial_lh_computed = 0 */
+    void cleanup();
+
+    /** take over neighbor from another one */
+    void takeover(PhyloNeighbor *nei, PhyloNeighbor *taken_nei);
+
+protected:
+
+    unordered_map<PhyloNeighbor*, int> nei_id_map;
+
+};
+
 // ********************************************
 // END traversal information
 // ********************************************
@@ -353,6 +407,8 @@ class PhyloTree : public MTree, public Optimization, public CheckpointFactory {
 	friend class RateKategory;
     friend class ModelMixture;
     friend class RateFree;
+    friend class MemSlotVector;
+    friend class ModelFactory;
 
 public:
     /**
@@ -683,6 +739,7 @@ public:
 
     /** get the number of bytes occupied by partial_lh */
     size_t getPartialLhBytes();
+    size_t getPartialLhSize();
 
     /**
             allocate memory for a scale num vector
@@ -691,6 +748,7 @@ public:
 
     /** get the number of bytes occupied by scale_num */
     size_t getScaleNumBytes();
+    size_t getScaleNumSize();
 
     /**
      * this stores partial_lh for each state at the leaves of the tree because they are the same between leaves
@@ -707,22 +765,16 @@ public:
     /** number of threads used for likelihood kernel */
     int num_threads;
 
-    /** transform _pattern_lh_cat from "interleaved" to "sequential", due to vector_size > 1 */
-    void transformPatternLhCat();
 
     /****************************************************************************
-            computing partial (conditional) likelihood of subtrees
+            helper functions for computing tree traversal
      ****************************************************************************/
-
-    void computeTipPartialLikelihood();
-    void computePtnInvar();
-    void computePtnFreq();
 
 
     /**
         compute traversal_info of a subtree
     */
-    void computeTraversalInfo(PhyloNeighbor *dad_branch, PhyloNode *dad, double* &buffer);
+    inline bool computeTraversalInfo(PhyloNeighbor *dad_branch, PhyloNode *dad, double* &buffer);
 
 
     /**
@@ -740,6 +792,24 @@ public:
     void computePartialInfo(TraversalInfo &info, VectorClass* buffer);
     template<class VectorClass>
     void computePartialInfo(TraversalInfo &info, VectorClass* buffer);
+
+    /** 
+        sort neighbor in descending order of subtree size (number of leaves within subree)
+        @param node the starting node, NULL to start from the root
+        @param dad dad of the node, used to direct the search
+    */
+    void sortNeighborBySubtreeSize(PhyloNode *node, PhyloNode *dad);
+
+    /****************************************************************************
+            computing partial (conditional) likelihood of subtrees
+     ****************************************************************************/
+
+    /** transform _pattern_lh_cat from "interleaved" to "sequential", due to vector_size > 1 */
+    void transformPatternLhCat();
+
+    void computeTipPartialLikelihood();
+    void computePtnInvar();
+    void computePtnFreq();
 
 
     /**
@@ -1926,6 +1996,14 @@ protected:
             The variable partial_pars in PhyloNeighbor will be assigned to a region inside this variable.
      */
     UINT *central_partial_pars;
+
+    //----------- memory saving technique ------//
+
+    /** maximum number of partial_lh_slots */
+    size_t max_lh_slots;
+
+    /** mapping from */
+    MemSlotVector mem_slots;
 
     /**
             TRUE to discard saturated for Meyer & von Haeseler (2003) model

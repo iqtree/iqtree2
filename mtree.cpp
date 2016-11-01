@@ -2304,30 +2304,6 @@ Node *MTree::findFarthestLeaf(Node *node, Node *dad) {
     return res;
 }
 
-//void MTree::sortNeighborBySubtreeSize(Node *node, Node *dad) {
-//    if (dad && node->isLeaf()) {
-//        node->height = 0.0;
-//        return;
-//    }
-//    
-//    node->height = 0.0;
-//    FOR_NEIGHBOR_DECLARE(node, dad, it) {
-//        sortNeighborBySubtreeSize((*it)->node, node);
-//        if (node->height < (*it)->node->height+1)
-//            node->height = (*it)->node->height+1;
-//    }
-//    
-//    // sort neighbors in ascending order of tree height
-//    FOR_NEIGHBOR(node, dad, it)
-//        for (NeighborVec::iterator it2 = it+1; it2 != node->neighbors.end(); it2++)
-//            if ((*it)->node != dad && (*it)->node->height > (*it2)->node->height) {
-//                Neighbor *nei;
-//                nei = *it;
-//                *it = *it2;
-//                *it2 = nei;
-//            }
-//}
-
 void MTree::getPreOrderBranches(NodeVector &nodes, NodeVector &nodes2, Node *node, Node *dad) {
     if (dad) {
         nodes.push_back(node);

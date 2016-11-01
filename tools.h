@@ -77,18 +77,23 @@ inline void _my_assert(const char* expression, const char *func, const char* fil
 #endif
 
 #if defined(USE_HASH_MAP)
-    #include <unordered_map>
-    #include <unordered_set>
-/*
+//    #include <unordered_map>
+//    #include <unordered_set>
+
 	#if defined(_MSC_VER)
 		#include <unordered_map>
 		#include <unordered_set>
     #elif defined(__clang__)
-//		#include <tr1/unordered_map>
-//		#include <tr1/unordered_set>
-//		using namespace std::tr1;    
-		#include <unordered_map>
-		#include <unordered_set>
+        // libc++ detected:     _LIBCPP_VERSION
+        // libstdc++ detected:  __GLIBCXX__
+        #if __has_include(<unordered_map>) // defines _LIBCPP_VERSION
+            #include <unordered_map>
+            #include <unordered_set>
+        #else
+            #include <tr1/unordered_map>
+            #include <tr1/unordered_set>
+            using namespace std::tr1;    
+        #endif
 	#elif !defined(__GNUC__)
 		#include <hash_map>
 		#include <hash_set>
@@ -104,7 +109,7 @@ inline void _my_assert(const char* expression, const char *func, const char* fil
 		#include <tr1/unordered_set>
 		using namespace std::tr1;
 	#endif
-*/
+
 #else
 	#include <map>
 	#include <set>
@@ -1819,6 +1824,9 @@ public:
 	 * 1: only store 1 partial likelihood vector per node */
 	LhMemSave lh_mem_save;
 
+    /** maximum size of memory allowed to use */
+    double max_mem_size;
+
 	/* TRUE to print .splits file in star-dot format */
 	bool print_splits_file;
     
@@ -2075,7 +2083,7 @@ int64_t convert_int64(const char *str) throw (string);
         @param end_pos end position
         @return the number
  */
-int64_t convert_int64(const char *str, int64_t &end_pos) throw (string);
+int64_t convert_int64(const char *str, int &end_pos) throw (string);
 
 /**
         convert string to double, with error checking
