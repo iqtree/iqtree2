@@ -322,7 +322,7 @@ public:
      * compute the memory size required for storing partial likelihood vectors
      * @return memory size required in bytes
      */
-    virtual uint64_t getMemoryRequired(size_t ncategory = 1);
+    virtual uint64_t getMemoryRequired(size_t ncategory = 1, bool full_mem = false);
 
     /**
      * count the number of super branches that map to no branches in gene trees

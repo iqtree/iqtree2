@@ -1775,7 +1775,7 @@ public:
      * compute the memory size required for storing partial likelihood vectors
      * @return memory size required in bytes
      */
-    virtual uint64_t getMemoryRequired(size_t ncategory = 1);
+    virtual uint64_t getMemoryRequired(size_t ncategory = 1, bool full_mem = false);
 
     void getMemoryRequired(uint64_t &partial_lh_entries, uint64_t &scale_num_entries, uint64_t &partial_pars_entries);
 
@@ -1949,7 +1949,7 @@ protected:
     //----------- memory saving technique ------//
 
     /** maximum number of partial_lh_slots */
-    size_t max_lh_slots;
+    int64_t max_lh_slots;
 
     /** mapping from */
     MemSlotVector mem_slots;

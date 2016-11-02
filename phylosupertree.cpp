@@ -1447,12 +1447,12 @@ PhyloTree *PhyloSuperTree::extractSubtree(IntVector &ids) {
 	return tree;
 }
 
-uint64_t PhyloSuperTree::getMemoryRequired(size_t ncategory) {
+uint64_t PhyloSuperTree::getMemoryRequired(size_t ncategory, bool full_mem) {
 //	uint64_t mem_size = PhyloTree::getMemoryRequired(ncategory);
 	// supertree does not need any memory for likelihood vectors!
 	uint64_t mem_size = 0;
 	for (iterator it = begin(); it != end(); it++)
-		mem_size += (*it)->getMemoryRequired(ncategory);
+		mem_size += (*it)->getMemoryRequired(ncategory, full_mem);
 	return mem_size;
 }
 

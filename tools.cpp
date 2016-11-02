@@ -2634,8 +2634,10 @@ void parseArg(int argc, char *argv[], Params &params) {
                     params.max_mem_size = mem * 0.01;
                     if (params.max_mem_size > 1)
                         throw "-mem percentage must be between 0 and 100";
-                } else if (params.max_mem_size != 0.0) {
-                    throw "Use suffix 'G' for GB";
+                } else {
+                    if (mem > 1)
+                        throw "Invalid -mem option. Example: -mem 200M, -mem 10G";
+                    params.max_mem_size = mem;
                 }
 				continue;
 			}
@@ -3328,6 +3330,7 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -quiet               Silent mode, suppress printing to screen (stdout)" << endl
             << "  -keep-ident          Keep identical sequences (default: remove & finally add)" << endl
             << "  -safe                Safe likelihood kernel to avoid numerical underflow" << endl
+            << "  -mem RAM             Maximal RAM usage for memory saving mode" << endl
             << endl << "CHECKPOINTING TO RESUME STOPPED RUN:" << endl
             << "  -redo                Redo analysis even for successful runs (default: resume)" << endl
             << "  -cptime <seconds>    Minimum checkpoint time interval (default: 20)" << endl

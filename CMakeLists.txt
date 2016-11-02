@@ -50,7 +50,7 @@ add_definitions(-DIQ_TREE)
 # The version number.
 set (iqtree_VERSION_MAJOR 1)
 set (iqtree_VERSION_MINOR 5)
-set (iqtree_VERSION_PATCH "0a")
+set (iqtree_VERSION_PATCH "0-mpi")
 
 set(BUILD_SHARED_LIBS OFF)
 
@@ -126,9 +126,9 @@ if (CMAKE_COMPILER_IS_GNUCXX)
 #	set(COMBINED_FLAGS "-Wall -Wno-unused-function -Wno-sign-compare -pedantic -D_GNU_SOURCE -fms-extensions -Wno-deprecated")
 	set(CMAKE_CXX_FLAGS_RELEASE "-O3 -g")
 	set(CMAKE_C_FLAGS_RELEASE "-O3 -g")
-    # require at least gcc 4.6
-    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 4.6)
-        message(FATAL_ERROR "GCC version must be at least 4.6!")
+    # require at least gcc 4.8
+    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 4.8)
+        message(FATAL_ERROR "GCC version must be at least 4.8!")
     endif()
     if (WIN32)
         # disable AVX on Windows due to memory alignment

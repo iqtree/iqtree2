@@ -33,6 +33,8 @@
 #include "MPIHelper.h"
 #include "model/modelmixture.h"
 
+const int LH_MIN_CONST = 1;
+
 //const static int BINARY_SCALE = floor(log2(1/SCALING_THRESHOLD));
 //const static double LOG_BINARY_SCALE = -(log(2) * BINARY_SCALE);
 
@@ -720,20 +722,10 @@ void PhyloTree::initializeAllPartialLh() {
     }
     if (!ptn_invar)
         ptn_invar = aligned_alloc<double>(mem_size);
-    bool benchmark_mem = (!central_partial_lh && verbose_mode >= VB_MED);
-    if (benchmark_mem) {
-    	cout << "Measuring run time for allocating " << getMemoryRequired() << " bytes RAM" << endl;
-    }
-    double cpu_start_time = getCPUTime();
-    double wall_start_time = getRealTime();
     initializeAllPartialLh(index, indexlh);
     if (params->lh_mem_save == LM_MEM_SAVE)
         mem_slots.init(this, max_lh_slots);
         
-    if (benchmark_mem) {
-    	cout << "CPU time for initializeAllPartialLh: " << getCPUTime() - cpu_start_time << " sec" << endl;
-    	cout << "Wall-clock time for initializeAllPartialLh: " << getRealTime() - wall_start_time << " sec" << endl;
-    }
     assert(index == (nodeNum - 1) * 2);
     if (params->lh_mem_save == LM_PER_NODE) {
         assert(indexlh == nodeNum-leafNum);
@@ -793,10 +785,10 @@ void PhyloTree::deleteAllPartialLh() {
     clearAllPartialLH();
 }
  
-uint64_t PhyloTree::getMemoryRequired(size_t ncategory) {
+uint64_t PhyloTree::getMemoryRequired(size_t ncategory, bool full_mem) {
     // +num_states for ascertainment bias correction
-	size_t nptn = get_safe_upper_limit(aln->getNPattern()) + get_safe_upper_limit(aln->num_states);
-    uint64_t scale_block_size = nptn;
+	int64_t nptn = get_safe_upper_limit(aln->getNPattern()) + get_safe_upper_limit(aln->num_states);
+    int64_t scale_block_size = nptn;
     if (site_rate)
     	scale_block_size *= site_rate->getNRate();
     else
@@ -804,9 +796,9 @@ uint64_t PhyloTree::getMemoryRequired(size_t ncategory) {
     if (model && !model_factory->fused_mix_rate)
     	scale_block_size *= model->getNMixtures();
 
-    uint64_t block_size = scale_block_size * aln->num_states;
+    int64_t block_size = scale_block_size * aln->num_states;
 
-    uint64_t mem_size;
+    int64_t mem_size;
     // memory to tip_partial_lh
     if (model)
         mem_size = aln->num_states * (aln->STATE_UNKNOWN+1) * model->getNMixtures() * sizeof(double);
@@ -821,24 +813,21 @@ uint64_t PhyloTree::getMemoryRequired(size_t ncategory) {
     if (model)
     	mem_size += model->getMemoryRequired();
 
-    uint64_t lh_scale_size = block_size * sizeof(double) + scale_block_size * sizeof(UBYTE);
+    int64_t lh_scale_size = block_size * sizeof(double) + scale_block_size * sizeof(UBYTE);
 
     max_lh_slots = leafNum-2;
 
-    if (params->lh_mem_save == LM_MEM_SAVE) {
-        size_t min_lh_slots = log2(leafNum)+2;
+    if (!full_mem && params->lh_mem_save == LM_MEM_SAVE) {
+        int64_t min_lh_slots = log2(leafNum)+LH_MIN_CONST;
         if (params->max_mem_size == 0.0) {
             max_lh_slots = min_lh_slots;
         } else if (params->max_mem_size <= 1) {
             max_lh_slots = floor(params->max_mem_size*(leafNum-2));
         } else {
-            uint64_t rest_mem = params->max_mem_size - mem_size;
-            max_lh_slots = rest_mem / lh_scale_size;
+            int64_t rest_mem = params->max_mem_size - mem_size;
+            
             // include 2 blocks for nni_partial_lh
-            if (max_lh_slots > 2)
-                max_lh_slots -= 2;
-            else
-                max_lh_slots = 0;
+            max_lh_slots = rest_mem / lh_scale_size - 2;
 
             // RAM over requirement, reset to LM_PER_NODE
             if (max_lh_slots > leafNum-2)

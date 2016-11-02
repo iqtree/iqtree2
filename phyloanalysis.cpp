@@ -1791,26 +1791,48 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
     }
 
     if (!params.pll) {
-        uint64_t mem_size = iqtree.getMemoryRequired();
         uint64_t total_mem = getMemorySize();
+        if (params.lh_mem_save == LM_MEM_SAVE && params.max_mem_size > total_mem)
+            params.max_mem_size = total_mem;
+
+        uint64_t mem_required = iqtree.getMemoryRequired();
+
+        if (mem_required >= total_mem*0.9) {
+            // switch to memory saving mode
+            if (params.lh_mem_save != LM_MEM_SAVE) {
+                params.max_mem_size = (total_mem*0.9)/mem_required;
+                params.lh_mem_save = LM_MEM_SAVE;
+                mem_required = iqtree.getMemoryRequired();
+                cout << "NOTE: Switching to memory saving mode using " << (mem_required / 1073741824.0) << " GB ("
+                    <<  (mem_required*100/total_mem) << "% of normal mode)" << endl;
+                cout << "NOTE: Use -mem option if you want to restrict RAM usage further" << endl;
+            }
+            if (mem_required >= total_mem) {
+                params.lh_mem_save = LM_MEM_SAVE;
+                params.max_mem_size = 0.0;
+                mem_required = iqtree.getMemoryRequired();
+            }
+            if (mem_required >= total_mem) {
+                cerr << "ERROR: Your RAM is below minimum requirement of " << (mem_required / 1073741824.0) << " GB RAM" << endl;
+                outError("Memory saving mode cannot work, switch to another computer!!!");
+            }
+        }
+
 //#if defined __APPLE__ || defined __MACH__
-        cout << "NOTE: " << (mem_size / 1024) / 1024 << " MB RAM is required!" << endl;
+        cout << "NOTE: " << (mem_required / 1048576) << " MB RAM (" << (mem_required / 1073741824) << " GB) is required!" << endl;
 //#else
 //        cout << "NOTE: " << ((double) mem_size / 1000.0) / 1000 << " MB RAM is required!" << endl;
 //#endif
-        if (mem_size >= total_mem) {
-            outError("Memory required exceeds your computer RAM size!");
-        }
 		if (params.memCheck)
 			exit(0);
 #ifdef BINARY32
-        if (mem_size >= 2000000000) {
+        if (mem_required >= 2000000000) {
             outError("Memory required exceeds 2GB limit of 32-bit executable");
         }
 #endif
         int max_procs = countPhysicalCPUCores();
-        if (mem_size * max_procs > total_mem * params.num_threads && params.num_threads > 0) {
-            outWarning("Memory required per CPU-core (" + convertDoubleToString((double)mem_size/params.num_threads/1024/1024/1024)+
+        if (mem_required * max_procs > total_mem * params.num_threads && params.num_threads > 0) {
+            outWarning("Memory required per CPU-core (" + convertDoubleToString((double)mem_required/params.num_threads/1024/1024/1024)+
             " GB) is higher than your computer RAM per CPU-core ("+convertIntToString(total_mem/max_procs/1024/1024/1024)+
             " GB), thus multiple runs may exceed RAM!");
         }
