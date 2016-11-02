@@ -988,6 +988,8 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 			//evalNNIs++;
 			//part_info[part].evalNNIs++;
 
+            int mem_id = 0;
+
 			// one branch optimization ------------------------------------------------------------------
 			for(id = 0; id < 2; id++){
 				/*
@@ -1003,8 +1005,11 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 
 				// Create a new PhyloNeighbor, with new partial lhs, scale number and set the branch id as before
 				*sub_saved_it[part*6 + id] = new PhyloNeighbor(nei_link, saved_nei[id]->link_neighbors[part]->length);
-				((PhyloNeighbor*) (*sub_saved_it[part*6 + id]))->partial_lh = nni_partial_lh + (id*total_block_size + lh_addr);
-				((PhyloNeighbor*) (*sub_saved_it[part*6 + id]))->scale_num = nni_scale_num + (id*total_scale_block_size + scale_addr);
+                if (saved_nei[id]->link_neighbors[part]->partial_lh) {
+                    ((PhyloNeighbor*) (*sub_saved_it[part*6 + id]))->partial_lh = nni_partial_lh + (mem_id*total_block_size + lh_addr);
+                    ((PhyloNeighbor*) (*sub_saved_it[part*6 + id]))->scale_num = nni_scale_num + (mem_id*total_scale_block_size + scale_addr);
+                    mem_id++;
+                }
 				(*sub_saved_it[part*6 + id])->id = saved_nei[id]->link_neighbors[part]->id;
 
 				// update link_neighbor[part]: for New SuperNeighbor we set the corresponding new PhyloNeighbor on partition part
@@ -1018,8 +1023,11 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 					node_link = ((SuperNeighbor*)(*node_nei_it[id-2]))->link_neighbors[part]->node;
 					sub_saved_it[part*6 + id] = node_link->findNeighborIt(nei_link);
 					*sub_saved_it[part*6 + id] = new PhyloNeighbor(nei_link, saved_nei[id]->link_neighbors[part]->length);
-					((PhyloNeighbor*) (*sub_saved_it[part*6 + id]))->partial_lh = nni_partial_lh + (id*total_block_size + lh_addr);
-					((PhyloNeighbor*) (*sub_saved_it[part*6 + id]))->scale_num = nni_scale_num + (id*total_scale_block_size + scale_addr);
+                    if (saved_nei[id]->link_neighbors[part]->partial_lh) {
+                        ((PhyloNeighbor*) (*sub_saved_it[part*6 + id]))->partial_lh = nni_partial_lh + (mem_id*total_block_size + lh_addr);
+                        ((PhyloNeighbor*) (*sub_saved_it[part*6 + id]))->scale_num = nni_scale_num + (mem_id*total_scale_block_size + scale_addr);
+                        mem_id++;
+                    }
 					(*sub_saved_it[part*6 + id])->id = saved_nei[id]->link_neighbors[part]->id;
 
 					// update link_neighbor[part]
@@ -1027,8 +1035,11 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 				}
 			}
 
+            assert(mem_id == 2);
+
 		} else if(is_nni[part]==NNI_ONE_EPSILON){
 
+            int mem_id = 0;
 			// Make sure to update all the necessary link_neighbors and take care of branch lengths
 			// (increase/decrease by central branch where necessary).
 
@@ -1062,8 +1073,11 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 					sub_saved_branch[6*part + id] = nei->link_neighbors[part]->length;
 
 					*sub_saved_it[part*6 + id] = new PhyloNeighbor(nei_link, nei->link_neighbors[part]->length);
-					((PhyloNeighbor*) (*sub_saved_it[part*6 + id]))->partial_lh = nni_partial_lh + (id*total_block_size + lh_addr);
-					((PhyloNeighbor*) (*sub_saved_it[part*6 + id]))->scale_num = nni_scale_num + (id*total_scale_block_size + scale_addr);
+                    if (nei->link_neighbors[part]->partial_lh) {
+                        ((PhyloNeighbor*) (*sub_saved_it[part*6 + id]))->partial_lh = nni_partial_lh + (mem_id*total_block_size + lh_addr);
+                        ((PhyloNeighbor*) (*sub_saved_it[part*6 + id]))->scale_num = nni_scale_num + (mem_id*total_scale_block_size + scale_addr);
+                        mem_id++;
+                    }
 					(*sub_saved_it[part*6 + id])->id = nei->link_neighbors[part]->id;
 
 					// If nni5 we update the link neighbors already here, otherwise
@@ -1077,6 +1091,7 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 					id_eps[part] = id;
 				}
 			}
+            assert(mem_id == 1);
 		}else if(is_nni[part]==NNI_THREE_EPSILON && params->nni5){
 			// you fill out link neighbors vector for newly allocated SuperNeighbors
 			for(id = 2; id < 6; id++){
@@ -1163,6 +1178,10 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 			if(is_nni[part]==NNI_NO_EPSILON){
 				//cout<<part<<"- NO_EPS: do NNI swap"<<endl;
 				//allNNIcases_computed[0] += 1;
+
+                // reorient partial_lh before swap
+                reorientPartialLh((PhyloNeighbor*)node1_link[part]->findNeighbor(node2_link[part]), node1_link[part]);
+                reorientPartialLh((PhyloNeighbor*)node2_link[part]->findNeighbor(node1_link[part]), node2_link[part]);
 
 				// Do NNI swap on partition
 				node1_link[part]->updateNeighbor(node1_link_it[part], node2_link_nei[part]);
@@ -1455,6 +1474,11 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 		for(part = 0; part < ntrees; part++){
 
 			if(is_nni[part]==NNI_NO_EPSILON){
+
+                // reorient partial_lh before swap
+                reorientPartialLh((PhyloNeighbor*)node1_link[part]->findNeighbor(node2_link[part]), node1_link[part]);
+                reorientPartialLh((PhyloNeighbor*)node2_link[part]->findNeighbor(node1_link[part]), node2_link[part]);
+
 				node1_link[part]->updateNeighbor(node1_link_it[part], node1_link_nei[part]);
 				node1_link_nei[part]->node->updateNeighbor(node2_link[part], node1_link[part]);
 				node2_link[part]->updateNeighbor(node2_link_it[part], node2_link_nei[part]);
@@ -1847,7 +1871,8 @@ void PhyloSuperTreePlen::initializeAllPartialLh() {
         ptn_invar = aligned_alloc<double>(total_mem_size);
     at(part_order[0])->ptn_invar = ptn_invar;
 
-    size_t IT_NUM = (params->nni5) ? 6 : 2;
+//    size_t IT_NUM = (params->nni5) ? 6 : 2;
+    size_t IT_NUM = 2;
     if (!nni_partial_lh) {
         nni_partial_lh = aligned_alloc<double>(IT_NUM*total_block_size);
     }

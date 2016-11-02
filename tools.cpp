@@ -2693,11 +2693,13 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.stop_condition = SC_REAL_TIME;
 				continue;
 			}
-			if (strcmp(argv[cnt], "-numpars") == 0) {
+			if (strcmp(argv[cnt], "-numpars") == 0 || strcmp(argv[cnt], "-ninit") == 0) {
 				cnt++;
 				if (cnt >= argc)
-					throw "Use -numpars <number_of_parsimony_trees>";
+					throw "Use -ninit <number_of_parsimony_trees>";
 				params.numInitTrees = convert_int(argv[cnt]);
+                if (params.numInitTrees < 0)
+                    throw "-ninit must be non-negative";
 				if (params.numInitTrees < params.numNNITrees)
 					params.numNNITrees = params.numInitTrees;
 				continue;
@@ -2740,10 +2742,10 @@ void parseArg(int argc, char *argv[], Params &params) {
                 continue;
             }
 
-			if (strcmp(argv[cnt], "-toppars") == 0) {
+			if (strcmp(argv[cnt], "-toppars") == 0 || strcmp(argv[cnt], "-ntop") == 0) {
 				cnt++;
 				if (cnt >= argc)
-					throw "Use -toppars <number_of_top_parsimony_trees>";
+					throw "Use -ntop <number_of_top_parsimony_trees>";
 				params.numNNITrees = convert_int(argv[cnt]);
 				continue;
 			}
@@ -2805,10 +2807,10 @@ void parseArg(int argc, char *argv[], Params &params) {
 				continue;
 			}
 			if (strcmp(argv[cnt], "-popsize") == 0
-					|| strcmp(argv[cnt], "-numcand") == 0) {
+					|| strcmp(argv[cnt], "-numcand") == 0 || strcmp(argv[cnt], "-nbest") == 0) {
 				cnt++;
 				if (cnt >= argc)
-					throw "Use -numcand <number_of_candidate_trees>";
+					throw "Use -nbest <number_of_candidate_trees>";
 				params.popSize = convert_int(argv[cnt]);
 				assert(params.popSize < params.numInitTrees);
 				continue;
@@ -2863,15 +2865,16 @@ void parseArg(int argc, char *argv[], Params &params) {
 //            	params.autostop = true;
 				continue;
 			}
-			if (strcmp(argv[cnt], "-stop_cond") == 0 || strcmp(argv[cnt], "-numstop") == 0) {
+			if (strcmp(argv[cnt], "-stop_cond") == 0 || strcmp(argv[cnt], "-numstop") == 0
+                 || strcmp(argv[cnt], "-nstop") == 0) {
 				if (params.stop_condition != SC_BOOTSTRAP_CORRELATION)
 					params.stop_condition = SC_UNSUCCESS_ITERATION;
 				cnt++;
 				if (cnt >= argc)
-					throw "Use -numstop <#iterations>";
+					throw "Use -nstop <#iterations>";
 				params.unsuccess_iteration = convert_int(argv[cnt]);
                 if (params.unsuccess_iteration <= 0)
-                    throw "-numstop iterations must be positive";
+                    throw "-nstop iterations must be positive";
 				continue;
 			}
 			if (strcmp(argv[cnt], "-lsbran") == 0) {
@@ -3334,14 +3337,14 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -wql                 Print quartet log-likelihoods to .quartetlh file" << endl
             << endl << "NEW STOCHASTIC TREE SEARCH ALGORITHM:" << endl
 //            << "  -pll                 Use phylogenetic likelihood library (PLL) (default: off)" << endl
-            << "  -numpars <number>    Number of initial parsimony trees (default: 100)" << endl
-            << "  -toppars <number>    Number of best parsimony trees (default: 20)" << endl
-            << "  -sprrad <number>     Radius for parsimony SPR search (default: 6)" << endl
-            << "  -numcand <number>    Size of the candidate tree set (defaut: 5)" << endl
-            << "  -pers <proportion>   Perturbation strength for randomized NNI (default: 0.5)" << endl
-            << "  -allnni              Perform more thorough NNI search (default: off)" << endl
-            << "  -numstop <number>    Number of unsuccessful iterations to stop (default: 100)" << endl
+            << "  -ninit <number>      Number of initial parsimony trees (default: 100)" << endl
+            << "  -ntop <number>       Number of top initial trees (default: 20)" << endl
+            << "  -nbest <number>      Number of best trees retained during search (defaut: 5)" << endl
             << "  -n <#iterations>     Fix number of iterations to <#iterations> (default: auto)" << endl
+            << "  -nstop <number>      Number of unsuccessful iterations to stop (default: 100)" << endl
+            << "  -pers <proportion>   Perturbation strength for randomized NNI (default: 0.5)" << endl
+            << "  -sprrad <number>     Radius for parsimony SPR search (default: 6)" << endl
+            << "  -allnni              Perform more thorough NNI search (default: off)" << endl
             << "  -g <constraint_tree> (Multifurcating) topological constraint tree file" << endl
 //            << "  -iqp                 Use the IQP tree perturbation (default: randomized NNI)" << endl
 //            << "  -iqpnni              Switch back to the old IQPNNI tree search algorithm" << endl

@@ -833,9 +833,10 @@ uint64_t PhyloTree::getMemoryRequired(size_t ncategory) {
             max_lh_slots = floor(params->max_mem_size*(leafNum-2));
         } else {
             uint64_t rest_mem = params->max_mem_size - mem_size;
-            max_lh_slots = rest_mem / lh_scale_size; // 6 for nni_partial_lh
-            if (max_lh_slots > 6)
-                max_lh_slots -= 6;
+            max_lh_slots = rest_mem / lh_scale_size;
+            // include 2 blocks for nni_partial_lh
+            if (max_lh_slots > 2)
+                max_lh_slots -= 2;
             else
                 max_lh_slots = 0;
 
@@ -844,13 +845,13 @@ uint64_t PhyloTree::getMemoryRequired(size_t ncategory) {
                 max_lh_slots = leafNum-2;
         }
         if (max_lh_slots < min_lh_slots) {
-            cout << "WARNING: Too low -mem, automatically increased to " << (mem_size + (min_lh_slots+6)*lh_scale_size)/1048576.0 << " MB" << endl;
+            cout << "WARNING: Too low -mem, automatically increased to " << (mem_size + (min_lh_slots+2)*lh_scale_size)/1048576.0 << " MB" << endl;
             max_lh_slots = min_lh_slots;
         }
     }
 
     // also count MEM for nni_partial_lh
-    mem_size += (max_lh_slots+6) * lh_scale_size;
+    mem_size += (max_lh_slots+2) * lh_scale_size;
 
 
     return mem_size;
@@ -891,7 +892,8 @@ void PhyloTree::initializeAllPartialLh(int &index, int &indexlh, PhyloNode *node
     if (!node) {
         node = (PhyloNode*) root;
         // allocate the big central partial likelihoods memory
-        size_t IT_NUM = (params->nni5) ? 6 : 2;
+//        size_t IT_NUM = (params->nni5) ? 6 : 2;
+        size_t IT_NUM = 2;
         if (!nni_partial_lh) {
             // allocate memory only once!
             nni_partial_lh = aligned_alloc<double>(IT_NUM*block_size);
@@ -3000,9 +3002,9 @@ void PhyloTree::doNNI(NNIMove &move, bool clearLH) {
     PhyloNeighbor *node21_it = (PhyloNeighbor*) node2->findNeighbor(node1); // return neighbor of node2 which points to node 1
 
     // reorient partial_lh before swap
-    if (params->lh_mem_save == LM_PER_NODE && !isSuperTree()) {
-        node12_it->reorientPartialLh(node1);
-        node21_it->reorientPartialLh(node2);
+    if (!isSuperTree()) {
+        reorientPartialLh(node12_it, node1);
+        reorientPartialLh(node21_it, node2);
     }
     
     // do the NNI swap
@@ -3032,6 +3034,7 @@ void PhyloTree::doNNI(NNIMove &move, bool clearLH) {
         // clear partial likelihood vector
         nei12->clearPartialLh();
         nei21->clearPartialLh();
+        nei12->size = nei21->size = 0;
 
         node2->clearReversePartialLh(node1);
         node1->clearReversePartialLh(node2);
@@ -3136,14 +3139,20 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
 	assert(id == IT_NUM);
 
 	Neighbor *saved_nei[6];
+    int mem_id = 0;
 	// save Neighbor and allocate new Neighbor pointer
 	for (id = 0; id < IT_NUM; id++) {
 		saved_nei[id] = (*saved_it[id]);
 		*saved_it[id] = new PhyloNeighbor(saved_nei[id]->node, saved_nei[id]->length);
-		((PhyloNeighbor*) (*saved_it[id]))->partial_lh = nni_partial_lh + id*partial_lh_size;
-		((PhyloNeighbor*) (*saved_it[id]))->scale_num = nni_scale_num + id*scale_num_size;
+        if (((PhyloNeighbor*)saved_nei[id])->partial_lh) {
+            ((PhyloNeighbor*) (*saved_it[id]))->partial_lh = nni_partial_lh + mem_id*partial_lh_size;
+            ((PhyloNeighbor*) (*saved_it[id]))->scale_num = nni_scale_num + mem_id*scale_num_size;
+            mem_id++;
+            mem_slots.addSpecialNei((PhyloNeighbor*)*saved_it[id]);
+        }
 //		((PhyloNeighbor*) (*saved_it[id]))->scale_num = newScaleNum();
 	}
+    assert(mem_id == 2);
 
 	// get the Neighbor again since it is replaced for saving purpose
 	PhyloNeighbor* node12_it = (PhyloNeighbor*) node1->findNeighbor(node2);
@@ -3197,11 +3206,23 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
         Neighbor *node1_nei = *node1_it;
         Neighbor *node2_nei = *node2_it;
 
+        // reorient partial_lh before swap
+        if (!isSuperTree()) {
+            reorientPartialLh(node12_it, node1);
+            reorientPartialLh(node21_it, node2);
+        }
+
         node1->updateNeighbor(node1_it, node2_nei);
         node2_nei->node->updateNeighbor(node2, node1);
 
         node2->updateNeighbor(node2_it, node1_nei);
         node1_nei->node->updateNeighbor(node1, node2);
+
+        if (params->lh_mem_save == LM_MEM_SAVE) {
+            // reset subtree size to change traversal order
+            for (id = 0; id < IT_NUM; id++)
+                ((PhyloNeighbor*)*saved_it[id])->size = 0;
+        }
 
 		// clear partial likelihood vector
 		node12_it->clearPartialLh();
@@ -3238,6 +3259,8 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
 			node12_it->clearPartialLh();
 		}
 		double score = computeLikelihoodFromBuffer();
+        if (verbose_mode >= VB_DEBUG)
+            cout << "NNI " << node1->id << " - " << node2->id << ": " << score << endl;
 		nniMoves[cnt].newloglh = score;
 		// compute the pattern likelihoods if wanted
 		if (nniMoves[cnt].ptnlh)
@@ -3246,6 +3269,13 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
 		if (save_all_trees == 2) {
 			saveCurrentTree(score); // BQM: for new bootstrap
 		}
+
+        // reorient partial_lh before swap
+        if (!isSuperTree()) {
+            reorientPartialLh(node12_it, node1);
+            reorientPartialLh(node21_it, node2);
+        }
+
         // else, swap back, also recover the branch lengths
 		node1->updateNeighbor(node1_it, node1_nei);
 		node1_nei->node->updateNeighbor(node2, node1);
@@ -3259,12 +3289,21 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
 	 for (id = IT_NUM-1; id >= 0; id--) {
 //		 aligned_free(((PhyloNeighbor*) *saved_it[id])->scale_num);
 		 //delete[] ((PhyloNeighbor*) *saved_it[id])->partial_lh;
+//         if (((PhyloNeighbor*)saved_nei[id])->partial_lh) {
+//            if (saved_nei[id]->node == node1)
+//                mem_slots.restore(node21_it, (PhyloNeighbor*)saved_nei[id]);
+//            else
+//                mem_slots.restore(node12_it, (PhyloNeighbor*)saved_nei[id]);
+//         }
 		 if (*saved_it[id] == current_it) current_it = (PhyloNeighbor*) saved_nei[id];
 		 if (*saved_it[id] == current_it_back) current_it_back = (PhyloNeighbor*) saved_nei[id];
 
 		 delete (*saved_it[id]);
 		 (*saved_it[id]) = saved_nei[id];
 	 }
+
+    mem_slots.eraseSpecialNei();
+
 //	 aligned_free(new_partial_lh);
 
 	 // restore the length of 4 branches around node1, node2
@@ -4658,6 +4697,7 @@ void PhyloTree::generateRandomTree(TreeGenType tree_type) {
     PhyloTree::readTreeStringSeqName(str.str());
 }
 
+/*
 void PhyloTree::sortNeighborBySubtreeSize(PhyloNode *node, PhyloNode *dad) {
 
     // already sorted, return
@@ -4685,5 +4725,21 @@ void PhyloTree::sortNeighborBySubtreeSize(PhyloNode *node, PhyloNode *dad) {
                 *it = *it2;
                 *it2 = nei;
             }
+}
+*/
+
+void PhyloTree::reorientPartialLh(PhyloNeighbor* dad_branch, Node *dad) {
+    if (dad_branch->partial_lh)
+        return;
+    Node * node = dad_branch->node;
+    FOR_NEIGHBOR_IT(node, dad, it) {
+        PhyloNeighbor *backnei = (PhyloNeighbor*)(*it)->node->findNeighbor(node);
+        if (backnei->partial_lh) {
+            mem_slots.takeover(dad_branch, backnei);
+            break;
+        }
+    }
+    if (params->lh_mem_save == LM_PER_NODE)
+        assert(dad_branch->partial_lh && "partial_lh is not re-oriented");
 }
 

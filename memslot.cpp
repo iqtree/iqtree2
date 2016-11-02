@@ -23,10 +23,12 @@
 #include "memslot.h"
 
 const int MEM_LOCKED = 1;
+const int MEM_SPECIAL = 2;
 
 void MemSlotVector::init(PhyloTree *tree, int num_slot) {
     if (Params::getInstance().lh_mem_save != LM_MEM_SAVE)
         return;
+    reserve(num_slot+2);
     resize(num_slot);
     size_t lh_size = tree->getPartialLhSize();
     size_t scale_size = tree->getScaleNumSize();
@@ -53,19 +55,39 @@ MemSlotVector::iterator MemSlotVector::findNei(PhyloNeighbor *nei) {
     auto it = nei_id_map.find(nei);
     assert(it != nei_id_map.end());
 //    assert(at(it->second).nei == nei);
-    return it->second;
-}
-
-void MemSlotVector::assignNei(iterator it, PhyloNeighbor* nei) {
-    it->nei = nei;
+    return begin()+it->second;
 }
 
 void MemSlotVector::addNei(PhyloNeighbor *nei, iterator it) {
+//    assert((it->status & MEM_SPECIAL) == 0);
     nei->partial_lh = it->partial_lh;
     nei->scale_num = it->scale_num;
-    assignNei(it, nei);
-    nei_id_map[nei] = it;
+    it->nei = nei;
+    nei_id_map[nei] = it-begin();
 }
+
+
+void MemSlotVector::addSpecialNei(PhyloNeighbor *nei) {
+    if (Params::getInstance().lh_mem_save != LM_MEM_SAVE)
+        return;
+    MemSlot ms;
+    ms.status = MEM_SPECIAL + MEM_LOCKED;
+    ms.nei = nei;
+    ms.partial_lh = nei->partial_lh;
+    ms.scale_num = nei->scale_num;
+    push_back(ms);
+    nei_id_map[nei] = size()-1;
+}
+
+void MemSlotVector::eraseSpecialNei() {
+    if (Params::getInstance().lh_mem_save != LM_MEM_SAVE)
+        return;
+    while (back().status & MEM_SPECIAL) {
+        nei_id_map.erase(back().nei);
+        pop_back();
+    }
+}
+
 
 bool MemSlotVector::lock(PhyloNeighbor *nei) {
     if (Params::getInstance().lh_mem_save != LM_MEM_SAVE)
@@ -73,6 +95,8 @@ bool MemSlotVector::lock(PhyloNeighbor *nei) {
     if (nei->node->isLeaf())
         return false;
     iterator id = findNei(nei);
+    if (id->status & MEM_SPECIAL)
+        return false;
     assert((id->status & MEM_LOCKED) == 0);
     id->status |= MEM_LOCKED;
     return true;
@@ -84,6 +108,8 @@ void MemSlotVector::unlock(PhyloNeighbor *nei) {
     if (nei->node->isLeaf())
         return;
     iterator id = findNei(nei);
+    if (id->status & MEM_SPECIAL)
+        return;
     assert((id->status & MEM_LOCKED) != 0);
     id->status &= ~MEM_LOCKED;
 }
@@ -94,6 +120,9 @@ bool MemSlotVector::locked(PhyloNeighbor *nei) {
     if (nei->node->isLeaf())
         return false;
     iterator id = findNei(nei);
+
+    if (id->status & MEM_SPECIAL)
+        return false;
 
     if ((id->status & MEM_LOCKED) == 0)
         return false;
@@ -106,7 +135,7 @@ int MemSlotVector::allocate(PhyloNeighbor *nei) {
         return -1;
 
     // first find a free slot
-    if (free_count < size()) {
+    if (free_count < size() && (at(free_count).status & MEM_SPECIAL) == 0) {
         iterator it = begin() + free_count;
         assert(it->nei == NULL);
         addNei(nei, it);
@@ -120,7 +149,7 @@ int MemSlotVector::allocate(PhyloNeighbor *nei) {
 
     // no free slot found, find an unlocked slot with minimal size
     for (iterator it = begin(); it != end(); it++)
-        if ((it->status & MEM_LOCKED) == 0 && min_size > it->nei->size) {
+        if ((it->status & MEM_LOCKED) == 0 && (it->status & MEM_SPECIAL) == 0 && min_size > it->nei->size) {
             best = it;
             min_size = it->nei->size;
             // 2 is the minimum size
@@ -128,7 +157,8 @@ int MemSlotVector::allocate(PhyloNeighbor *nei) {
                 break;
         }
 
-    assert(best != end() && "No free/unlocked mem slot found!");
+    if (best == end())
+        return -1;
 
     // clear mem assigned to it->nei
     best->nei->clearPartialLh();
@@ -144,6 +174,8 @@ void MemSlotVector::update(PhyloNeighbor *nei) {
         return;
 
     iterator it = findNei(nei);
+//    if (it->status & MEM_SPECIAL)
+//        return;
     if (it->nei != nei) {
         // clear mem assigned to it->nei
         it->nei->clearPartialLh();
@@ -153,7 +185,7 @@ void MemSlotVector::update(PhyloNeighbor *nei) {
     }
 }
 
-
+/*
 void MemSlotVector::cleanup() {
     if (Params::getInstance().lh_mem_save != LM_MEM_SAVE)
         return;
@@ -169,6 +201,7 @@ void MemSlotVector::cleanup() {
     nei_id_map = new_map;
     assert(nei_id_map.size() == size());
 }
+*/
 
 void MemSlotVector::takeover(PhyloNeighbor *nei, PhyloNeighbor *taken_nei) {
     assert(taken_nei->partial_lh);
@@ -180,9 +213,42 @@ void MemSlotVector::takeover(PhyloNeighbor *nei, PhyloNeighbor *taken_nei) {
     if (Params::getInstance().lh_mem_save != LM_MEM_SAVE)
         return;
     iterator id = findNei(taken_nei);
+//    if (id->status & MEM_SPECIAL)
+//        return;
     nei_id_map.erase(nei_id_map.find(taken_nei));
-    nei_id_map[nei] = id;
+    nei_id_map[nei] = id - begin();
     if (id->nei == taken_nei) {
-        assignNei(id, nei);
+        id->nei = nei;
     }
+}
+
+void MemSlotVector::replace(PhyloNeighbor *new_nei, PhyloNeighbor *old_nei) {
+    if (Params::getInstance().lh_mem_save != LM_MEM_SAVE)
+        return;
+    iterator it = findNei(old_nei);
+    assert(it->partial_lh == old_nei->partial_lh);
+    it->saved_nei = it->nei;
+    it->nei = new_nei;
+    it->partial_lh = new_nei->partial_lh;
+    it->scale_num = new_nei->scale_num;
+    it->status = MEM_LOCKED + MEM_SPECIAL;
+    nei_id_map[new_nei] = it-begin();
+//    nei_id_map.erase(old_nei);
+    cout << "slot " << distance(begin(), it) << " replaced" << endl;
+}
+
+void MemSlotVector::restore(PhyloNeighbor *new_nei, PhyloNeighbor *old_nei) {
+    if (Params::getInstance().lh_mem_save != LM_MEM_SAVE)
+        return;
+    iterator it = findNei(new_nei);
+    assert(it->nei == new_nei);
+    assert(nei_id_map[old_nei] == it-begin());
+    it->nei = it->saved_nei;
+    it->saved_nei = NULL;
+    it->partial_lh = old_nei->partial_lh;
+    it->scale_num = old_nei->scale_num;
+    it->status = 0;
+    nei_id_map.erase(new_nei);
+//    nei_id_map[old_nei] = it;
+    cout << "slot " << distance(begin(), it) << " restored" << endl;
 }

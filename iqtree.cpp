@@ -682,6 +682,8 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
     }
 #endif
 
+    int init_size = candidateTrees.size();
+
     int processID = MPIHelper::getInstance().getProcessID();
 //    unsigned long curNumTrees = candidateTrees.size();
     for (int treeNr = 1; treeNr <= nParTrees; treeNr++) {
@@ -725,25 +727,30 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
         }
     }
 
-
-    double parsTime = getRealTime() - startTime;
-    cout << parsTime << " second" << endl;
+    if (nParTrees > 0)
+        cout << getRealTime() - startTime << " second" << endl;
 
     /****************************************************************************************
                           Compute logl of all initial trees
     *****************************************************************************************/
 
-    cout << "Computing log-likelihood of " << candidateTrees.size() << " initial trees ... ";
-    startTime = getRealTime();
-
     vector<string> initTreeStrings = candidateTrees.getBestTreeStrings();
     candidateTrees.clear();
+
+    if (init_size < initTreeStrings.size())
+        cout << "Computing log-likelihood of " << initTreeStrings.size() - init_size << " initial trees ... ";
+    startTime = getRealTime();
 
     for (vector<string>::iterator it = initTreeStrings.begin(); it != initTreeStrings.end(); ++it) {
         string treeString;
         double score;
         readTreeString(*it);
-        treeString = optimizeBranches(2);
+        if (it-initTreeStrings.begin() >= init_size)
+            treeString = optimizeBranches(2);
+        else {
+            computeLogL();
+            treeString = getTreeString();
+        }
         score = getCurScore();
         candidateTrees.update(treeString,score);
     }
@@ -751,7 +758,8 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
     if (Params::getInstance().writeDistImdTrees)
         intermediateTrees.initTrees(candidateTrees);
 
-    cout << getRealTime() - startTime << " seconds" << endl;
+    if (init_size < initTreeStrings.size())
+        cout << getRealTime() - startTime << " seconds" << endl;
 
     if (nParTrees > 0) {
         cout << "Current best score: " << candidateTrees.getBestScore() << endl;
@@ -2142,13 +2150,15 @@ double IQTree::doTreeSearch() {
     if (params->numInitTrees % MPIHelper::getInstance().getNumProcesses() != 0) {
         treesPerProc++;
     }
+    if (treesPerProc < 0)
+        treesPerProc = 0;
     // Master node does one tree less because it already created the BIONJ tree
 //    if (MPIHelper::getInstance().isMaster()) {
 //        treesPerProc--;
 //    }
 
     // Make sure to get at least 1 tree
-    if (treesPerProc < 1)
+    if (treesPerProc < 1 && params->numInitTrees > candidateTrees.size())
         treesPerProc = 1;
 
     /* Initialize candidate tree set */

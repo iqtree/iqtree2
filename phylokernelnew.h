@@ -617,46 +617,82 @@ inline bool PhyloTree::computeTraversalInfo(PhyloNeighbor *dad_branch, PhyloNode
     bool locked[node->degree()];
     memset(locked, 0, node->degree());
 
+    // sort neighbor in desceding size order
+    NeighborVec neivec = node->neighbors;
+    NeighborVec::iterator it, i2;
+    for (it = neivec.begin(); it != neivec.end(); it++)
+        for (i2 = it+1; i2 != neivec.end(); i2++)
+            if (((PhyloNeighbor*)*it)->size < ((PhyloNeighbor*)*i2)->size) {
+                Neighbor *nei = *it;
+                *it = *i2;
+                *i2 = nei;
+            }
+
+
     // recursive
-    FOR_NEIGHBOR_DECLARE(node, dad, it) {
-        locked[it - node->neighbors.begin()] = computeTraversalInfo((PhyloNeighbor*)(*it), node, buffer);
-        if ((*it)->node->isLeaf())
-            num_leaves++;
-    }
+    for (it = neivec.begin(); it != neivec.end(); it++)
+        if ((*it)->node != dad) {
+            locked[it - neivec.begin()] = computeTraversalInfo((PhyloNeighbor*)(*it), node, buffer);
+            if ((*it)->node->isLeaf())
+                num_leaves++;
+        }
     dad_branch->partial_lh_computed |= 1;
 
     // prepare information for this branch
     TraversalInfo info(dad_branch, dad);
     info.echildren = info.partial_lh_leaves = NULL;
 
-    if (!dad_branch->partial_lh) {
-        // re-orient partial_lh
-        FOR_NEIGHBOR_IT(node, dad, it2) {
-            PhyloNeighbor *backnei = ((PhyloNeighbor*)(*it2)->node->findNeighbor(node));
-            if (backnei->partial_lh) {
-                mem_slots.takeover(dad_branch, backnei);
-                break;
-            }
-        }
-        if (params->lh_mem_save == LM_PER_NODE)
-            assert(dad_branch->partial_lh && "partial_lh is not re-oriented");
-    }
+    // re-orient partial_lh
+    reorientPartialLh(dad_branch, dad);
 
     if (!dad_branch->partial_lh || mem_slots.locked(dad_branch)) {
         // still no free entry found, memory saving technique
         int slot_id = mem_slots.allocate(dad_branch);
-        if (verbose_mode >= VB_MED) {
-            node->name = convertIntToString(slot_id);
-//            cout << "Node " << node->id << " assigned slot " << slot_id << endl;
+        if (slot_id < 0) {
+            cout << "traversal order:";
+            for (auto it = traversal_info.begin(); it != traversal_info.end(); it++) {
+                it->dad_branch->node->name = convertIntToString(it->dad_branch->size);
+                cout << "  ";
+                if (it->dad->isLeaf())
+                    cout << it->dad->name;
+                else
+                    cout << it->dad->id;
+                cout << "->";
+                if (it->dad_branch->node->isLeaf())
+                    cout << it->dad_branch->node->name;
+                else
+                    cout << it->dad_branch->node->id;
+                if (params->lh_mem_save == LM_MEM_SAVE) {
+                    if (it->dad_branch->partial_lh_computed)
+                        cout << " [";
+                    else
+                        cout << " (";
+                    cout << mem_slots.findNei(it->dad_branch) - mem_slots.begin();
+                    if (it->dad_branch->partial_lh_computed)
+                        cout << "]";
+                    else
+                        cout << ")";
+                }
+            }
+            cout << endl;
+            drawTree(cout);
+            assert(0 && "No free/unlocked mem slot found!");
         }
     } else
         mem_slots.update(dad_branch);
 
-    if (params->lh_mem_save == LM_MEM_SAVE) {
-        FOR_NEIGHBOR(node, dad, it) {
-            if (!(*it)->node->isLeaf() && locked[it-node->neighbors.begin()])
-                mem_slots.unlock((PhyloNeighbor*)*it);
+        if (verbose_mode >= VB_MED && params->lh_mem_save == LM_MEM_SAVE) {
+            int slot_id = mem_slots.findNei(dad_branch) - mem_slots.begin();
+            node->name = convertIntToString(slot_id);
+            cout << "Branch " << dad->id << "-" << node->id << " assigned slot " << slot_id << endl;
         }
+
+    if (params->lh_mem_save == LM_MEM_SAVE) {
+        for (it = neivec.begin(); it != neivec.end(); it++)
+            if ((*it)->node != dad) {
+                if (!(*it)->node->isLeaf() && locked[it-neivec.begin()])
+                    mem_slots.unlock((PhyloNeighbor*)*it);
+            }
     }
 
     if (!model->isSiteSpecificModel()) {
@@ -858,11 +894,13 @@ void PhyloTree::computeTraversalInfo(PhyloNode *node, PhyloNode *dad, bool compu
 
     // sort subtrees for mem save technique
     if (params->lh_mem_save == LM_MEM_SAVE) {
-        sortNeighborBySubtreeSize(node, dad);
-        sortNeighborBySubtreeSize(dad, node);
-        PhyloNeighbor *dad_branch = (PhyloNeighbor*)dad->findNeighbor(node);
-        PhyloNeighbor *node_branch = (PhyloNeighbor*)node->findNeighbor(dad);
-        if (dad_branch->size < node_branch->size) {
+//        sortNeighborBySubtreeSize(node, dad);
+//        sortNeighborBySubtreeSize(dad, node);
+        int node_size = node->computeSize(dad);
+        int dad_size = dad->computeSize(node);
+//        PhyloNeighbor *dad_branch = (PhyloNeighbor*)dad->findNeighbor(node);
+//        PhyloNeighbor *node_branch = (PhyloNeighbor*)node->findNeighbor(dad);
+        if (node_size < dad_size) {
             // swap node and dad due to tree size
             PhyloNode *tmp = node;
             node = dad;
@@ -882,12 +920,12 @@ void PhyloTree::computeTraversalInfo(PhyloNode *node, PhyloNode *dad, bool compu
             mem_slots.unlock(node_branch);
     }
 
-//    if (verbose_mode >= VB_MED && traversal_info.size() > 0) {
-//        Node *saved = root;
-//        root = dad;
-//        drawTree(cout);
-//        root = saved;
-//    }
+    if (verbose_mode >= VB_MAX && traversal_info.size() > 0) {
+        Node *saved = root;
+        root = dad;
+        drawTree(cout);
+        root = saved;
+    }
 
     if (traversal_info.empty())
         return;
@@ -896,12 +934,29 @@ void PhyloTree::computeTraversalInfo(PhyloNode *node, PhyloNode *dad, bool compu
 
         int num_info = traversal_info.size();
 
-        if (verbose_mode >= VB_MAX) {
+        if (verbose_mode >= VB_MED) {
             cout << "traversal order:";
             for (auto it = traversal_info.begin(); it != traversal_info.end(); it++) {
-                cout << "  " << it->dad->id << "->" << it->dad_branch->node->id;
+                cout << "  ";
+                if (it->dad->isLeaf())
+                    cout << it->dad->name;
+                else
+                    cout << it->dad->id;
+                cout << "->";
+                if (it->dad_branch->node->isLeaf())
+                    cout << it->dad_branch->node->name;
+                else
+                    cout << it->dad_branch->node->id;
                 if (params->lh_mem_save == LM_MEM_SAVE) {
-                    cout << " (" << mem_slots.findNei(it->dad_branch) - mem_slots.begin() << ")";
+                    if (it->dad_branch->partial_lh_computed)
+                        cout << " [";
+                    else
+                        cout << " (";
+                    cout << mem_slots.findNei(it->dad_branch) - mem_slots.begin();
+                    if (it->dad_branch->partial_lh_computed)
+                        cout << "]";
+                    else
+                        cout << ")";
                 }
             }
             cout << endl;

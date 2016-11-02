@@ -34,6 +34,8 @@ struct MemSlot {
     PhyloNeighbor *nei; // neighbor assigned to this slot
     double *partial_lh; // partial_lh assigned to this slot
     UBYTE *scale_num; // scale_num assigned to this slot
+
+    PhyloNeighbor *saved_nei;
 };
 
 /**
@@ -67,9 +69,6 @@ public:
     /** find ID the a neighbor */
     iterator findNei(PhyloNeighbor *nei);
 
-    /** assign neighbor to an iterator and update size index */
-    void assignNei(iterator it, PhyloNeighbor* nei);
-
     /** add neighbor into a specified iterator */
     void addNei(PhyloNeighbor *nei, iterator it);
 
@@ -82,10 +81,26 @@ public:
     /** take over neighbor from another one */
     void takeover(PhyloNeighbor *nei, PhyloNeighbor *taken_nei);
 
+    /** add special neihbor e.g. for NNI */
+    void addSpecialNei(PhyloNeighbor *nei);
+
+    /** erase special neihbor e.g. for NNI */
+    void eraseSpecialNei();
+
+    /** replace a neighbor, used for NNI */
+    void replace(PhyloNeighbor *new_nei, PhyloNeighbor *old_nei);
+
+    /** restore neighbor, after calling replace */
+    void restore(PhyloNeighbor *new_nei, PhyloNeighbor *old_nei);
+
 protected:
 
-    /** map from neighbor to slot ID for fast lookup */
-    unordered_map<PhyloNeighbor*, iterator> nei_id_map;
+
+    /** 
+        map from neighbor to slot ID for fast lookup
+        IMPORTANT: mapping to ID instead of (unsafe) iterator
+    */
+    unordered_map<PhyloNeighbor*, int> nei_id_map;
 
     /** counter of free slot ID */
     int free_count;

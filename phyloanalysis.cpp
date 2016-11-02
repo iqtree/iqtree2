@@ -1905,7 +1905,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 //    if ( params.start_tree != STT_BIONJ && ((params.snni && !params.iqp) || params.min_iterations == 0)) {
 //        params.compute_ml_dist = false;
 //    }
-    if (params.min_iterations <= 1 && params.start_tree != STT_BIONJ)
+    if ((params.min_iterations <= 1 || params.numInitTrees <= 1) && params.start_tree != STT_BIONJ)
         params.compute_ml_dist = false;
     
     if ((params.user_file || params.start_tree == STT_RANDOM_TREE) && params.snni && !params.iqp) {
@@ -2022,7 +2022,8 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
             string tree;
             Params::getInstance().fixStableSplits = false;
             Params::getInstance().tabu = false;
-            iqtree.doNNISearch();
+            // why doing NNI search here?
+//            iqtree.doNNISearch();
             tree = iqtree.optimizeModelParameters(true);
             iqtree.addTreeToCandidateSet(tree, iqtree.getCurScore(), false, MPIHelper::getInstance().getProcessID());
             iqtree.getCheckpoint()->putBool("finishedModelFinal", true);

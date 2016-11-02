@@ -1944,6 +1944,8 @@ protected:
      */
     UINT *central_partial_pars;
 
+    void reorientPartialLh(PhyloNeighbor* dad_branch, Node *dad);
+
     //----------- memory saving technique ------//
 
     /** maximum number of partial_lh_slots */
