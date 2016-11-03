@@ -658,7 +658,10 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
         cout.flush();
     }
     double startTime = getRealTime();
-
+    int numDupPars = 0;
+    bool orig_rooted = rooted;
+    rooted = false;
+    
 #ifdef _OPENMP
     StrVector pars_trees;
     if (params->start_tree == STT_PARSIMONY && nParTrees >= 1) {
@@ -717,12 +720,14 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
         } else if (params->start_tree == STT_PARSIMONY) {
             /********* Create parsimony tree using IQ-TREE *********/
 #ifdef _OPENMP
-            if (params->start_tree == STT_PARSIMONY)
-                curParsTree = pars_trees[treeNr-1];
-            else
-                curParsTree = generateParsimonyTree(parRandSeed);
+            curParsTree = pars_trees[treeNr-1];
 #else
+            rooted = false;
             curParsTree = generateParsimonyTree(parRandSeed);
+            if (orig_rooted) {
+                convertToRooted();
+                curParsTree = getTreeString();
+            }
 #endif
         }
         

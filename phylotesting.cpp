@@ -1685,7 +1685,7 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
             model_fac->site_rate = tree->getRate();
             tree->setModelFactory(model_fac);
             // kernel might be changed if mixture model or lie markov model was tested
-            in_tree->setLikelihoodKernel(params.SSE);
+            in_tree->setLikelihoodKernel(params.SSE, num_threads);
         }
         
         tree->clearAllPartialLH();

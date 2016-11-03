@@ -13,6 +13,7 @@ test_scripts/iqtree_test
 tags
 test_scripts/iqtree_test_cmds.txt
 pllrepo/
+build/
 /Default-clang
 .idea/
 .idea/codeStyleSettings.xml

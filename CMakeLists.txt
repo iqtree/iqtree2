@@ -139,7 +139,8 @@ elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 	message("Compiler      : Clang")
 	set(CLANG "TRUE")
 #	set(COMBINED_FLAGS "-Wall -Wno-unused-function -Wno-sign-compare -pedantic -D_GNU_SOURCE -Wno-nested-anon-types")
-    if (APPLE AND NOT CMAKE_BUILD_TYPE MATCHES "Debug")
+    #if (APPLE AND NOT CMAKE_BUILD_TYPE MATCHES "Debug")
+    if (APPLE)
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
         set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -stdlib=libc++")
     endif()
@@ -479,6 +480,7 @@ phylosupertree.cpp phylosupertree.h
 phylotree.cpp phylotree.h
 phylotreesse.cpp phylokernelnew.h
 phylotreepars.cpp
+phylokernelnonrev.cpp 
 pruning.cpp pruning.h
 quartet.cpp
 split.cpp split.h

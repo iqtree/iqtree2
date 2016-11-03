@@ -441,9 +441,17 @@ enum SiteFreqType {
     WSF_NONE, WSF_POSTERIOR_MEAN, WSF_POSTERIOR_MAX
 };
 
+enum MatrixExpTechnique { 
+    MET_SCALING_SQUARING, 
+    MET_EIGEN3LIB_DECOMPOSITION,
+    MET_EIGEN_DECOMPOSITION, 
+    MET_LIE_MARKOV_DECOMPOSITION
+};
+
 enum AncestralSeqType {
     AST_NONE, AST_MARGINAL, AST_JOINT
 };
+
 
 const int BRLEN_OPTIMIZE = 0; // optimize branch lengths
 const int BRLEN_FIX      = 1; // fix branch lengths

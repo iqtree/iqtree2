@@ -777,6 +777,8 @@ public:
 //    template <class VectorClass, const int VCSIZE, const int nstates>
 //    void computePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
 
+    void computeNonrevPartialLikelihood(TraversalInfo &info, size_t ptn_left, size_t ptn_right, int thread_id);
+
     template <class VectorClass, const bool SAFE_NUMERIC, const int nstates, const bool FMA = false, const bool SITE_MODEL = false>
     void computePartialLikelihoodSIMD(TraversalInfo &info, size_t ptn_left, size_t ptn_right, int thread_id);
 
@@ -823,6 +825,8 @@ public:
 
 //    template <class VectorClass, const int VCSIZE, const int nstates>
 //    double computeLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad);
+
+    double computeNonrevLikelihoodBranch(PhyloNeighbor *dad_branch, PhyloNode *dad);
 
     template <class VectorClass, const bool SAFE_NUMERIC, const int nstates, const bool FMA = false, const bool SITE_MODEL = false>
     double computeLikelihoodBranchSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad);
@@ -1122,6 +1126,8 @@ public:
 
 //    template <class VectorClass, const int VCSIZE, const int nstates>
 //    void computeLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
+
+    void computeNonrevLikelihoodDerv(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
 
     template <class VectorClass, const bool SAFE_NUMERIC, const int nstates, const bool FMA = false, const bool SITE_MODEL = false>
     void computeLikelihoodBufferSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, size_t ptn_lower, size_t ptn_upper, int thread_id);

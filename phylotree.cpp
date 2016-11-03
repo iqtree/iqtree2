@@ -497,7 +497,8 @@ void PhyloTree::setModel(ModelSubst *amodel) {
 
 void PhyloTree::setModelFactory(ModelFactory *model_fac) {
     model_factory = model_fac;
-    if (model_factory && (model_factory->model->isMixture() || model_factory->model->isSiteSpecificModel()))
+    if (model_factory && (model_factory->model->isMixture() || model_factory->model->isSiteSpecificModel()
+        || !model_factory->model->isReversible()))
     	setLikelihoodKernel(sse, num_threads);
 }
 
@@ -2938,16 +2939,27 @@ int PhyloTree::fixNegativeBranch(bool force, Node *node, Node *dad) {
 
 void PhyloTree::doOneRandomNNI(Branch branch) {
 	assert(isInnerBranch(branch.first, branch.second));
+
+    if (((PhyloNeighbor*)branch.first->findNeighbor(branch.second))->direction == TOWARD_ROOT) {
+        // swap node1 and node2 if the direction is not right, only for nonreversible models
+        Node *tmp = branch.first;
+        branch.first = branch.second;
+        branch.second = tmp;
+    }
+
     NNIMove nni;
     nni.node1 = (PhyloNode*) branch.first;
     nni.node2 = (PhyloNode*) branch.second;
-	FOR_NEIGHBOR_IT(branch.first, branch.second, node1NeiIt) {
+	FOR_NEIGHBOR_IT(branch.first, branch.second, node1NeiIt)
+    if (((PhyloNeighbor*)*node1NeiIt)->direction != TOWARD_ROOT)
+    {
 		nni.node1Nei_it = node1NeiIt;
 		break;
 	}
     int randInt = random_int(branch.second->neighbors.size()-1);
     int cnt = 0;
 	FOR_NEIGHBOR_IT(branch.second, branch.first, node2NeiIt) {
+        // if this loop, is it sure that direction is away from root because node1->node2 is away from root
 		if (cnt == randInt) {
 			nni.node2Nei_it = node2NeiIt;
 			break;
@@ -2955,6 +2967,9 @@ void PhyloTree::doOneRandomNNI(Branch branch) {
 			cnt++;
 		}
 	}
+	assert(*nni.node1Nei_it != NULL && *nni.node2Nei_it != NULL);
+    assert(((PhyloNeighbor*)*nni.node1Nei_it)->direction != TOWARD_ROOT && ((PhyloNeighbor*)*nni.node2Nei_it)->direction != TOWARD_ROOT);
+
     if (constraintTree.isCompatible(nni))
         doNNI(nni, true);
 }
@@ -2962,24 +2977,35 @@ void PhyloTree::doOneRandomNNI(Branch branch) {
     
 NNIMove PhyloTree::getRandomNNI(Branch &branch) {
     assert(isInnerBranch(branch.first, branch.second));
+    // for rooted tree
+    if (((PhyloNeighbor*)branch.first->findNeighbor(branch.second))->direction == TOWARD_ROOT) {
+        // swap node1 and node2 if the direction is not right, only for nonreversible models
+        Node *tmp = branch.first;
+        branch.first = branch.second;
+        branch.second = tmp;
+    }
     NNIMove nni;
     nni.node1 = (PhyloNode*) branch.first;
     nni.node2 = (PhyloNode*) branch.second;
 
-    FOR_NEIGHBOR_IT(branch.first, branch.second, node1NeiIt) {
+    FOR_NEIGHBOR_IT(branch.first, branch.second, node1NeiIt)
+        if (((PhyloNeighbor*)*node1NeiIt)->direction != TOWARD_ROOT) {
             nni.node1Nei_it = node1NeiIt;
             break;
         }
     int randInt = random_int(branch.second->neighbors.size()-1);
     int cnt = 0;
     FOR_NEIGHBOR_IT(branch.second, branch.first, node2NeiIt) {
-            if (cnt == randInt) {
-                nni.node2Nei_it = node2NeiIt;
-                break;
-            } else {
-                cnt++;
-            }
+        // if this loop, is it sure that direction is away from root because node1->node2 is away from root
+        if (cnt == randInt) {
+            nni.node2Nei_it = node2NeiIt;
+            break;
+        } else {
+            cnt++;
         }
+    }
+	assert(*nni.node1Nei_it != NULL && *nni.node2Nei_it != NULL);
+    assert(((PhyloNeighbor*)*nni.node1Nei_it)->direction != TOWARD_ROOT && ((PhyloNeighbor*)*nni.node2Nei_it)->direction != TOWARD_ROOT);
     nni.newloglh = 0.0;
     return nni;
 }
@@ -3160,6 +3186,8 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
 	for (id = 0; id < IT_NUM; id++) {
 		saved_nei[id] = (*saved_it[id]);
 		*saved_it[id] = new PhyloNeighbor(saved_nei[id]->node, saved_nei[id]->length);
+        ((PhyloNeighbor*)*saved_it[id])->direction = ((PhyloNeighbor*)saved_nei[id])->direction;
+
         if (((PhyloNeighbor*)saved_nei[id])->partial_lh) {
             ((PhyloNeighbor*) (*saved_it[id]))->partial_lh = nni_partial_lh + mem_id*partial_lh_size;
             ((PhyloNeighbor*) (*saved_it[id]))->scale_num = nni_scale_num + mem_id*scale_num_size;
@@ -4717,6 +4745,23 @@ void PhyloTree::generateRandomTree(TreeGenType tree_type) {
     PhyloTree::readTreeStringSeqName(str.str());
 }
 
+void PhyloTree::computeBranchDirection(PhyloNode *node, PhyloNode *dad) {
+	if (!node) {
+		node = (PhyloNode*)root;
+	}
+	if (dad)
+		((PhyloNeighbor*)node->findNeighbor(dad))->direction = TOWARD_ROOT;
+	FOR_NEIGHBOR_IT(node, dad, it) {
+		// do not update if direction was already computed
+		assert(((PhyloNeighbor*)*it)->direction != TOWARD_ROOT);
+		if (((PhyloNeighbor*)*it)->direction != UNDEFINED_DIRECTION)
+			continue;
+		// otherwise undefined.
+		((PhyloNeighbor*)*it)->direction = AWAYFROM_ROOT;
+		computeBranchDirection((PhyloNode*)(*it)->node, node);
+	}
+}
+
 /*
 void PhyloTree::sortNeighborBySubtreeSize(PhyloNode *node, PhyloNode *dad) {
 
@@ -4747,6 +4792,33 @@ void PhyloTree::sortNeighborBySubtreeSize(PhyloNode *node, PhyloNode *dad) {
             }
 }
 */
+
+void PhyloTree::convertToRooted() {
+    assert(leafNum == aln->getNSeq());
+    string name;
+    if (params->root)
+        name = params->root;
+    else
+        name = aln->getSeqName(0);
+    Node *node = findNodeName(name);
+    if (!node)
+        outError("Cannot find leaf with name " + name);
+    assert(node->isLeaf());
+    Node *dad = node->neighbors[0]->node;
+    rooted = true;
+    root = newNode(leafNum, ROOT_NAME);
+    Node *root_int = newNode();
+    root->addNeighbor(root_int, 0.0);
+    root_int->addNeighbor(root, 0.0);
+    leafNum++;
+    double newlen = node->neighbors[0]->length/2.0;
+    node->updateNeighbor(dad, root_int, newlen);
+    root_int->addNeighbor(node, newlen);
+    dad->updateNeighbor(node, root_int, newlen);
+    root_int->addNeighbor(dad, newlen);
+    initializeTree();
+    computeBranchDirection();
+}
 
 void PhyloTree::reorientPartialLh(PhyloNeighbor* dad_branch, Node *dad) {
     if (dad_branch->partial_lh)
