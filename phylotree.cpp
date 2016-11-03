@@ -334,11 +334,14 @@ void PhyloTree::setAlignment(Alignment *alignment) {
             node->id = seq;
         }
     }
+    if (err) {
+        printTree(cout, WT_NEWLINE);
+        outError("Tree taxa and alignment sequence do not match (see above)");
+    }
     if (rooted) {
         assert(root->name == ROOT_NAME);
         root->id = nseq;
     }
-    if (err) outError("Tree taxa and alignment sequence do not match (see above)");
     StrVector taxname;
     getTaxaName(taxname);
     for (StrVector::iterator it = taxname.begin(); it != taxname.end(); it++)
@@ -1134,9 +1137,12 @@ double PhyloTree::computePatternLhCat(SiteLoglType wsl) {
 //    } else 
     if (getModel()->isSiteSpecificModel()) {
         return computeSitemodelLikelihoodBranchEigen(current_it, (PhyloNode*)current_it_back->node);
-    } else if (!getModel()->isMixture())
-        return computeLikelihoodBranchEigen(current_it, (PhyloNode*)current_it_back->node);
-    else if (getModelFactory()->fused_mix_rate)
+    } else if (!getModel()->isMixture()) {
+        if (getModel()->isReversible())
+            return computeLikelihoodBranchEigen(current_it, (PhyloNode*)current_it_back->node);
+        else
+            return computeNonrevLikelihoodBranch(current_it, (PhyloNode*)current_it_back->node);
+    } else if (getModelFactory()->fused_mix_rate)
         return computeMixrateLikelihoodBranchEigen(current_it, (PhyloNode*)current_it_back->node);
     else {
         double score = computeMixtureLikelihoodBranchEigen(current_it, (PhyloNode*)current_it_back->node);
@@ -2828,14 +2834,17 @@ void PhyloTree::doOneRandomNNI(Node *node1, Node *node2) {
         node1 = node2;
         node2 = tmp;
     }
-    Neighbor *node1Nei = NULL;
-    Neighbor *node2Nei = NULL;
+    NNIMove nni;
+    nni.node1 = (PhyloNode*)node1;
+    nni.node2 = (PhyloNode*)node2;
+//    Neighbor *node1Nei = NULL;
+//    Neighbor *node2Nei = NULL;
     // randomly choose one neighbor from node1 and one neighbor from node2
     bool chooseNext = false;
 	FOR_NEIGHBOR_IT(node1, node2, it)
     if (((PhyloNeighbor*)*it)->direction != TOWARD_ROOT)
     {
-        node1Nei = (*it); // for the first neighbor, no need to choose randomly
+        nni.node1Nei_it = it; // for the first neighbor, no need to choose randomly
         break;
 	}
 	chooseNext = false;
@@ -2853,8 +2862,16 @@ void PhyloTree::doOneRandomNNI(Node *node1, Node *node2) {
 			chooseNext = true;
 		}
 	}
-	assert(node1Nei != NULL && node2Nei != NULL);
-    assert(((PhyloNeighbor*)node1Nei)->direction != TOWARD_ROOT && ((PhyloNeighbor*)node2Nei)->direction != TOWARD_ROOT);
+	assert(*nni.node1Nei_it != NULL && *nni.node2Nei_it != NULL);
+    assert(((PhyloNeighbor*)*nni.node1Nei_it)->direction != TOWARD_ROOT && ((PhyloNeighbor*)*nni.node2Nei_it)->direction != TOWARD_ROOT);
+
+//    NeighborVec::iterator node1NeiIt = node1->findNeighborIt(node1Nei->node);
+//    NeighborVec::iterator node2NeiIt = node2->findNeighborIt(node2Nei->node);
+//    assert(node1NeiIt != node1->neighbors.end());
+//    assert(node1NeiIt != node2->neighbors.end());
+    
+    if (!constraintTree.isCompatible(nni))
+        return;
 
     Neighbor *node1Nei = *nni.node1Nei_it;
     Neighbor *node2Nei = *nni.node2Nei_it;
