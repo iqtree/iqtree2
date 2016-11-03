@@ -152,12 +152,12 @@ void PhyloTree::restoreCheckpoint() {
     checkpoint->startStruct("PhyloTree");
     StrVector leafNames;
     if (CKP_VECTOR_RESTORE(leafNames)) {
-        if (leafNames.size() != leafNum)
+        if (leafNames.size() +(int)rooted != leafNum)
             outError("Alignment mismatched from checkpoint!");
 
         StrVector taxname;
         getTaxaName(taxname);
-        for (int i = 0; i < taxname.size(); i++)
+        for (int i = 0; i < leafNames.size(); i++)
             if (taxname[i] != leafNames[i])
                 outError("Sequence name " + taxname[i] + " mismatched from checkpoint");
     }    
@@ -261,7 +261,7 @@ void PhyloTree::readTree(const char *infile, bool &is_rooted) {
 }
 
 void PhyloTree::readTree(istream &in, bool &is_rooted) {
-	MTree::readTree(in, rooted);
+	MTree::readTree(in, is_rooted);
     // 2015-10-14: has to reset this pointer when read in
     current_it = current_it_back = NULL;
 	// remove taxa if necessary
@@ -292,9 +292,13 @@ void PhyloTree::assignLeafNames(Node *node, Node *dad) {
     if (!node)
         node = root;
     if (node->isLeaf()) {
-        node->id = atoi(node->name.c_str());
+        if (rooted && node == root) {
+            assert(node->id == leafNum-1);
+        } else {
+            node->id = atoi(node->name.c_str());
+            node->name = aln->getSeqName(node->id);
+        }
         assert(node->id >= 0 && node->id < leafNum);
-        node->name = aln->getSeqName(node->id);
     }
     FOR_NEIGHBOR_IT(node, dad, it)assignLeafNames((*it)->node, node);
 }
@@ -344,10 +348,14 @@ void PhyloTree::setAlignment(Alignment *alignment) {
         printTree(cout, WT_NEWLINE);
         outError("Tree taxa and alignment sequence do not match (see above)");
     }
+    if (rooted) {
+        assert(root->name == ROOT_NAME);
+        root->id = nseq;
+    }
     StrVector taxname;
     getTaxaName(taxname);
     for (StrVector::iterator it = taxname.begin(); it != taxname.end(); it++)
-    	if (alignment->getSeqID(*it) < 0) {
+    	if ((*it) != ROOT_NAME && alignment->getSeqID(*it) < 0) {
     		outError((string)"Tree taxon " + (*it) + " does not appear in the alignment", false);
     		err = true;
     	}
@@ -356,12 +364,16 @@ void PhyloTree::setAlignment(Alignment *alignment) {
 
 void PhyloTree::setRootNode(const char *my_root) {
     string root_name;
-    if (my_root)
+    if (rooted)
+        root_name = ROOT_NAME;
+    else if (my_root)
         root_name = my_root;
     else
         root_name = aln->getSeqName(0);
     root = findNodeName(root_name);
     assert(root);
+    if (rooted)
+        computeBranchDirection();
 }
 
 //void PhyloTree::setParams(Params* params) {
@@ -2333,11 +2345,16 @@ void PhyloTree::computeFuncDerv(double value, double &df, double &ddf) {
 }
 
 void PhyloTree::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool clearLH, int maxNRStep) {
+
+    if (rooted && (node1 == root || node2 == root))
+        return; // does not optimize virtual branch from root
+        
     double negative_lh;
     current_it = (PhyloNeighbor*) node1->findNeighbor(node2);
     assert(current_it);
     current_it_back = (PhyloNeighbor*) node2->findNeighbor(node1);
     assert(current_it_back);
+
     double current_len = current_it->length;
     double ferror, optx;
     assert(current_len >= 0.0);
@@ -2509,8 +2526,10 @@ double PhyloTree::optimizeAllBranches(int my_iterations, double tolerance, int m
         	//clearAllPartialLH();
 //        	readTreeString(string_brlen);
         	new_tree_lh = computeLikelihood();
-            if (fabs(new_tree_lh-tree_lh) > 1.0)
+            if (fabs(new_tree_lh-tree_lh) > 1.0) {
                 cout << "new_tree_lh: " << new_tree_lh << "   tree_lh: " << tree_lh << endl;
+                printTree(cout);
+            }
         	assert(fabs(new_tree_lh-tree_lh) < 1.0);
         	return new_tree_lh;
         }
@@ -2820,6 +2839,7 @@ void PhyloTree::computeBioNJ(Params &params, Alignment *alignment, string &dist_
 //    if (root)
 //        freeNode();
     readTreeFile(bionj_file.c_str());
+    
 
     if (non_empty_tree) {
         initializeAllPartialLh();
@@ -2877,7 +2897,7 @@ int PhyloTree::fixNegativeBranch(bool force, Node *node, Node *dad) {
         (*it)->node->findNeighbor(node)->length = (*it)->length;
         fixed++;
     }
-    if ((*it)->length <= 0.0) {
+    if ((*it)->length <= 0.0 && (!rooted || node != root)) {
         (*it)->length = params->min_branch_length;
         (*it)->node->findNeighbor(node)->length = (*it)->length;
     }
@@ -3085,6 +3105,13 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
 
 	assert(!node1->isLeaf() && !node2->isLeaf());
     assert(node1->degree() == 3 && node2->degree() == 3);
+    
+    if (((PhyloNeighbor*)node1->findNeighbor(node2))->direction == TOWARD_ROOT) {
+        // swap node1 and node2 if the direction is not right, only for nonreversible models
+        PhyloNode *tmp = node1;
+        node1 = node2;
+        node2 = tmp;
+    }
 
 	int IT_NUM = (params->nni5) ? 6 : 2;
     size_t partial_lh_size = getPartialLhBytes()/sizeof(double);
@@ -3168,7 +3195,10 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
     		if (!node2->findNeighbor((*nniMoves[cnt].node2Nei_it)->node)) outError(__func__);
     	}
     } else {
-        FOR_NEIGHBOR_IT(node1, node2, node1_it) {
+        cnt = 0;
+        FOR_NEIGHBOR_IT(node1, node2, node1_it) 
+        if (((PhyloNeighbor*)*node1_it)->direction != TOWARD_ROOT)
+        {
 			cnt = 0;
 			FOR_NEIGHBOR_IT(node2, node1, node2_it) {
 				//   Initialize the 2 NNI moves
@@ -3178,6 +3208,7 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
 			}
 			break;
         }
+        assert(cnt == 2);
     }
 
     // Initialize node1 and node2 in nniMoves
@@ -4521,7 +4552,7 @@ int PhyloTree::restoreStableClade(Alignment *original_aln, NodeVector &pruned_ta
     nodeNum = leafNum;
     initializeTree();
     setAlignment(original_aln);
-    root = findNodeName(aln->getSeqName(0));
+    setRootNode(params->root);
     //if (verbose_mode >= VB_MED) drawTree(cout);
 
     return 0;

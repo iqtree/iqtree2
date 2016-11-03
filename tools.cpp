@@ -940,6 +940,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.checkpoint_dump_interval = 20;
     params.force_unfinished = false;
     params.suppress_output_flags = 0;
+    params.matrix_exp_technique = MET_SCALING_SQUARING;
 
 
 	if (params.nni5) {
@@ -3170,7 +3171,24 @@ void parseArg(int argc, char *argv[], Params &params) {
 				continue;
 			}
 
-
+            
+            if (strcmp(argv[cnt], "--scaling-squaring") == 0) {
+                params.matrix_exp_technique = MET_SCALING_SQUARING;
+                continue;
+            }
+            if (strcmp(argv[cnt], "--eigenlib") == 0) {
+                params.matrix_exp_technique = MET_EIGEN3LIB_DECOMPOSITION;
+                continue;
+            }
+            if (strcmp(argv[cnt], "--eigen") == 0) {
+                params.matrix_exp_technique = MET_EIGEN_DECOMPOSITION;
+                continue;
+            }
+            if (strcmp(argv[cnt], "--lie-markov") == 0) {
+                params.matrix_exp_technique = MET_LIE_MARKOV_DECOMPOSITION;
+                continue;
+            }
+            
 			if (argv[cnt][0] == '-') {
                 string err = "Invalid \"";
                 err += argv[cnt];
@@ -3415,20 +3433,36 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "                       MG1KTS, MG1KTV, MG2K" << endl
             << " Semi-empirical codon: XX_YY where XX is empirical and YY is mechanistic model" << endl
             << "       Morphology/SNP: MK (default), ORDERED" << endl
+            << "       Lie Markov DNA: Add prefix LM and an optional suffix RY, WS or MK to:" << endl
+            << "                       1.1,  2.2b, 3.3a, 3.3b,  3.3c," << endl
+	        << "                       3.4,  4.4a, 4.4b, 4.5a,  4.5b," << endl
+	        << "                       5.6a, 5.6b, 5.7a, 5.7b,  5.7c," << endl
+	        << "                       5.11a,5.11b,5.11c,5.16,  6.6," << endl
+	        << "                       6.7a, 6.7b, 6.8a, 6.8b,  6.17a," << endl
+	        << "                       6.17b,8.8,  8.10a,8.10b, 8.16," << endl
+	        << "                       8.17, 8.18, 9.20a,9.20b,10.12," << endl
+	        << "                       10.34,12.12" << endl
+            << "       Non-reversible: UNREST (most general unrestricted model)" << endl
             << "            Otherwise: Name of file containing user-model parameters" << endl
             << "                       (rate parameters and state frequencies)" << endl
-            << "  -m <model_name>+F or +FO or +FU or +FQ (default: auto)" << endl
-            << "                       counted, optimized, user-defined, equal state frequency" << endl
-            << "  -m <model_name>+F1x4 or +F3x4" << endl
-            << "                       Codon frequencies" << endl
-            << "  -m <model_name>+ASC  Ascertainment bias correction for morphological/SNP data" << endl
-            << "  -m \"MIX{m1,...mK}\"   Mixture model with K components" << endl
-            << "  -m \"FMIX{f1,...fK}\"  Frequency mixture model with K components" << endl
+            << endl << "STATE FREQUENCY:" << endl
+            << "  Append one of the following +F... to -m <model_name>" << endl
+            << "  +F                   Empirically counted frequencies from alignment" << endl
+            << "  +FO (letter-O)       Optimized frequencies by maximum-likelihood" << endl
+            << "  +FQ                  Equal frequencies" << endl
+            << "  +FU                  Amino-acid frequencies by the given protein matrix" << endl
+            << "  +F1x4 (codon model)  Equal NT frequencies over three codon positions" << endl 
+            << "  +F3x4 (codon model)  Unequal NT frequencies over three codon positions" << endl
+            << endl << "MIXTURE MODEL:" << endl
+            << "  -m \"MIX{model1,...,modelK}\"   Mixture model with K components" << endl
+            << "  -m \"FMIX{freq1,...freqK}\"     Frequency mixture model with K components" << endl
             << "  -mwopt               Turn on optimizing mixture weights (default: none)" << endl
             << endl << "RATE HETEROGENEITY AMONG SITES:" << endl
-            << "  -m <model_name>+I or +G[n] or +I+G[n] or +R[n]" << endl
-            << "                       Invar, Gamma, Invar+Gamma, or FreeRate model where 'n' is" << endl
-            << "                       number of categories (default: n=4)" << endl
+            << "  -m modelname+I       A proportion of invariable sites" << endl
+            << "  -m modelname+G[n]    Discrete Gamma model with n categories (default n=4)" << endl
+            << "  -m modelname+I+G[n]  Invariable sites plus Gamma model with n categories" << endl
+            << "  -m modelname+R[n]    FreeRate model with n categories (default n=4)" << endl
+            << "  -m modelname+I+R[n]  Invariable sites plus FreeRate model with n categories" << endl
             << "  -a <Gamma_shape>     Gamma shape parameter for site rates (default: estimate)" << endl
             << "  -amin <min_shape>    Min Gamma shape parameter for site rates (default: 0.02)" << endl
             << "  -gmedian             Median approximation for +G site rates (default: mean)" << endl
@@ -3437,6 +3471,8 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -wsr                 Write site rates to .rate file" << endl
             << "  -mh                  Computing site-specific rates to .mhrate file using" << endl
             << "                       Meyer & von Haeseler (2003) method" << endl
+            << endl << "ASCERTAINMENT BIAS CORRECTION:" << endl
+            << "  -m modelname+ASC     Correction for absence of invariant sites in alignment" << endl
             << endl << "SITE-SPECIFIC FREQUENCY MODEL:" << endl 
             << "  -ft <tree_file>      Input tree to infer site frequency model" << endl
             << "  -fs <in_freq_file>   Input site frequency model file" << endl
@@ -3515,7 +3551,8 @@ void usage_iqtree(char* argv[], bool full_command) {
 			<< "  -wpl                 Write partition log-likelihoods to .partlh file" << endl
             << "  -fconst f1,...,fN    Add constant patterns into alignment (N=#nstates)" << endl
             << "  -me <epsilon>        Logl epsilon for model parameter optimization (default 0.01)" << endl
-            << "  --no-outfiles        Suppress printing output files" << endl;
+            << "  --no-outfiles        Suppress printing output files" << endl
+            << "  --eigenlib           Use Eigen3 library" << endl;
 //            << "  -d <file>            Reading genetic distances from file (default: JC)" << endl
 //			<< "  -d <outfile>         Calculate the distance matrix inferred from tree" << endl
 //			<< "  -stats <outfile>     Output some statistics about branch lengths" << endl

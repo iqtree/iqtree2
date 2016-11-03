@@ -602,7 +602,10 @@ void ModelFactory::restoreCheckpoint() {
 }
 
 int ModelFactory::getNParameters() {
-	int df = model->getNDim() + model->getNDimFreq() + site_rate->getNDim() + site_rate->phylo_tree->branchNum;
+	int df = model->getNDim() + model->getNDimFreq() + site_rate->getNDim();
+    
+    if (!site_rate->getTree()->params->fixed_branch_length)
+        df += site_rate->phylo_tree->branchNum - (int)site_rate->phylo_tree->rooted;
 	return df;
 }
 
@@ -624,7 +627,7 @@ double ModelFactory::optimizeParametersOnly(double gradient_epsilon) {
 	double logl;
 	/* Optimize substitution and heterogeneity rates independently */
 	if (!joint_optimize) {
-		double model_lh = model->optimizeParameters(gradient_epsilon);
+		double model_lh = model->optimizeParameters(model->isReversible() ? gradient_epsilon : gradient_epsilon/10.0);
 		double rate_lh = site_rate->optimizeParameters(gradient_epsilon);
 		if (rate_lh == 0.0)
 			logl = model_lh;

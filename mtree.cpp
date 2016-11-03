@@ -2285,6 +2285,8 @@ void MTree::initializeSplitMap(Split *resp, Node *node, Node *dad) {
 }
 
 Node *MTree::findFarthestLeaf(Node *node, Node *dad) {
+    if (rooted) // special treatment for rooted tree
+        return root;
     if (!node) 
         node = root;
     

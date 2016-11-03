@@ -17,6 +17,11 @@
 typedef unsigned short UBYTE;
 
 /**
+ * direction of a Neighbor from the root, for rooted tree only
+ */
+enum RootDirection {UNDEFINED_DIRECTION, TOWARD_ROOT, AWAYFROM_ROOT};
+
+/**
 A neighbor in a phylogenetic tree
 
     @author BUI Quang Minh, Steffen Klaere, Arndt von Haeseler <minh.bui@univie.ac.at>

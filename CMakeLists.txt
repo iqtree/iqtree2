@@ -419,7 +419,7 @@ add_subdirectory(vectorclass)
 LIST(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}")
 find_package(Eigen3)
 if(EIGEN3_FOUND)
-  include_directories(${EIGEN3_INCLUDE_DIR})
+  add_definitions("-I${EIGEN3_INCLUDE_DIR} -DUSE_EIGEN3")
 endif(EIGEN3_FOUND)
 add_subdirectory(model)
 add_subdirectory(gsl)
@@ -600,7 +600,7 @@ endif()
 set_target_properties(iqtree PROPERTIES OUTPUT_NAME "iqtree${EXE_SUFFIX}")
 
 # strip the release build
-if (CMAKE_BUILD_TYPE STREQUAL "Release" AND (GCC OR CLANG)) # strip is not necessary for MSVC
+if (CMAKE_BUILD_TYPE STREQUAL "Release" AND (GCC OR CLANG) AND NOT APPLE) # strip is not necessary for MSVC
 	if (WIN32)
 		ADD_CUSTOM_COMMAND(TARGET iqtree POST_BUILD COMMAND strip $<TARGET_FILE:iqtree>)
 	elseif (NOT APPLE)

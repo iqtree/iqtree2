@@ -31,6 +31,7 @@
 #include "model/modelcodon.h"
 #include "model/modelmorphology.h"
 #include "model/modelmixture.h"
+#include "model/modelliemarkov.h"
 #include "timeutil.h"
 
 #include "phyloanalysis.h"
@@ -61,6 +62,16 @@ const char* dna_model_names_rax[] ={"GTR"};
 /* DNA model supported by MrBayes */
 const char *dna_model_names_mrbayes[] = {"JC", "F81", "K80", "HKY", "SYM", "GTR"};
 
+const char *dna_model_names_lie_markov[] = {
+          "LM1.1",  "LM2.2b", "LM3.3a", "LM3.3b",  "LM3.3c",
+	      "LM3.4",  "LM4.4a", "LM4.4b", "LM4.5a",  "LM4.5b",
+	      "LM5.6a", "LM5.6b", "LM5.7a", "LM5.7b",  "LM5.7c",
+	      "LM5.11a", "LM5.11b", "LM5.11c", "LM5.16",  "LM6.6",
+	      "LM6.7a", "LM6.7b", "LM6.8a", "LM6.8b",  "LM6.17a",
+	      "LM6.17b","LM8.8",  "LM8.10a","LM8.10b", "LM8.16",
+	      "LM8.17", "LM8.18", "LM9.20a","LM9.20b","LM10.12",
+	     "LM10.34", "LM12.12"
+};
 
 /****** Protein model set ******/
 const char* aa_model_names[] = { "Dayhoff", "mtMAM", "JTT", "WAG",
@@ -721,6 +732,8 @@ int getModelList(Params &params, Alignment *aln, StrVector &models, bool separat
 			copyCString(dna_model_names_rax, sizeof(dna_model_names_rax) / sizeof(char*), model_names);
 		} else if (strcmp(params.model_set, "mrbayes") == 0) {
 			copyCString(dna_model_names_mrbayes, sizeof(dna_model_names_mrbayes) / sizeof(char*), model_names);
+		} else if (strcmp(params.model_set, "liemarkov") == 0) {
+			copyCString(dna_model_names_lie_markov, sizeof(dna_model_names_lie_markov) / sizeof(char*), model_names);
 		} else {
 			convert_string_vec(params.model_set, model_names);
 		}
@@ -1495,7 +1508,10 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 	if (seq_type == SEQ_BINARY)
 		subst_model = new ModelBIN("JC2", "", FREQ_UNKNOWN, "", in_tree);
 	else if (seq_type == SEQ_DNA)
-		subst_model = new ModelDNA("JC", "", FREQ_UNKNOWN, "", in_tree);
+        if (params.model_set && strcmp(params.model_set, "liemarkov") == 0)
+	        subst_model = new ModelLieMarkov("LM1.1", in_tree, "", FREQ_ESTIMATE, "");
+        else
+            subst_model = new ModelDNA("JC", "", FREQ_UNKNOWN, "", in_tree);
 	else if (seq_type == SEQ_PROTEIN)
 		subst_model = new ModelProtein("WAG", "", FREQ_UNKNOWN, "", in_tree);
 	else if (seq_type == SEQ_MORPH)
@@ -1668,6 +1684,8 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
             model_fac->model = subst_model;
             model_fac->site_rate = tree->getRate();
             tree->setModelFactory(model_fac);
+            // kernel might be changed if mixture model or lie markov model was tested
+            in_tree->setLikelihoodKernel(params.SSE);
         }
         
         tree->clearAllPartialLH();
@@ -2057,7 +2075,7 @@ int countDistinctTrees(const char *filename, bool rooted, IQTree *tree, IntVecto
 				tree->freeNode();
 				tree->readTree(in, rooted);
 				tree->setAlignment(tree->aln);
-				tree->setRootNode((char*)tree->aln->getSeqName(0).c_str());
+				tree->setRootNode(tree->params->root);
 				StringIntMap::iterator it = treels.end();
 				ostringstream ostr;
 				tree->printTree(ostr, WT_TAXON_ID | WT_SORT_TAXA);

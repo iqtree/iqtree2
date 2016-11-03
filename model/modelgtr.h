@@ -59,6 +59,12 @@ public:
 	void init(StateFreqType freq_type);
 
 	/**
+	   initializes ModelSubst::freq_type array according to freq_type
+           (can be FREQ_USER_DEFINED, FREQ_EQUAL, FREQ_EMPIRICAL, or FREQ_ESTIMATE)
+	 */
+	void init_state_freq(StateFreqType freq_type);
+
+	/**
 		this function is served for ModelDNA and ModelProtein
 		@param model_name name of the model
 		@param freq_type state frequency type, can be FREQ_USER_DEFINED, FREQ_EQUAL, FREQ_EMPIRICAL, or FREQ_ESTIMATE

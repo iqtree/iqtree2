@@ -676,6 +676,8 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
             #pragma omp for schedule(dynamic)
             for (int i = 0; i < nParTrees; i++) {
                 tree.computeParsimonyTree(NULL, aln);
+                if (orig_rooted)
+                    convertToRooted();
                 pars_trees[i] = tree.getTreeString();
             }
         }
@@ -699,12 +701,18 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
 					pllInst->start->back, PLL_FALSE, PLL_TRUE, PLL_FALSE,
 					PLL_FALSE, PLL_FALSE, PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
 			curParsTree = string(pllInst->tree_string);
+            rooted = false;
 			PhyloTree::readTreeStringSeqName(curParsTree);
 			wrapperFixNegativeBranch(true);
+            if (orig_rooted)
+                convertToRooted();
 			curParsTree = getTreeString();
         } else if (params->start_tree == STT_RANDOM_TREE) {
             generateRandomTree(YULE_HARDING);
             wrapperFixNegativeBranch(true);
+            rooted = false;
+            if (orig_rooted)
+                convertToRooted();
 			curParsTree = getTreeString();
         } else if (params->start_tree == STT_PARSIMONY) {
             /********* Create parsimony tree using IQ-TREE *********/

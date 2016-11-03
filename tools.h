@@ -32,7 +32,7 @@
 #include <fstream>
 #include <stdio.h>
 #include <stdlib.h>
-#include <math.h>
+#include <cmath>
 #include <stdint.h>
 #include <string.h>
 #include <sstream>
@@ -40,7 +40,7 @@
 //#include <sys/time.h>
 //#include <time.h>
 #include <sys/stat.h>
-#include <math.h>
+//#include <math.h>
 #include "ncl/ncl.h"
 #include "msetsblock.h"
 
@@ -1868,6 +1868,13 @@ public:
      * OUT_IQTREE
      */
     int suppress_output_flags;
+
+    /** matrix exponentiation technique for nonreversible models, either 
+        MET_SCALING_SQUARING 
+        MET_EIGEN_DECOMPOSITION 
+        MET_LIE_MARKOV_DECOMPOSITION
+    */
+    MatrixExpTechnique matrix_exp_technique;
 
 };
 

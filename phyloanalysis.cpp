@@ -247,9 +247,10 @@ void reportModel(ofstream &out, Alignment *aln, ModelSubst *m) {
 	if (m->isSiteSpecificModel())
 		out << "(site specific frequencies)" << endl << endl;
 	else {
-		if (!m->isReversible())
-			out << "(inferred from Q matrix)" << endl;
-		else
+        // 2016-11-03: commented out as this is not correct anymore
+//		if (!m->isReversible())
+//			out << "(inferred from Q matrix)" << endl;
+//		else
 			switch (m->getFreqType()) {
 			case FREQ_EMPIRICAL:
 				out << "(empirical counts from alignment)" << endl;
@@ -268,7 +269,7 @@ void reportModel(ofstream &out, Alignment *aln, ModelSubst *m) {
 			}
 		out << endl;
 
-		if (m->getFreqType() != FREQ_USER_DEFINED && m->getFreqType() != FREQ_EQUAL) {
+		if ((m->getFreqType() != FREQ_USER_DEFINED || aln->seq_type == SEQ_DNA) && m->getFreqType() != FREQ_EQUAL) {
 			double *state_freqs = new double[m->num_states];
 			m->getStateFrequency(state_freqs);
             int ncols=(aln->seq_type == SEQ_CODON) ? 4 : 1;
@@ -470,7 +471,10 @@ void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh, 
 
 			//<< "Total tree length: " << tree.treeLength() << endl << endl
 	tree.sortTaxa();
-    out << "NOTE: Tree is UNROOTED although outgroup taxon '" << tree.root->name << "' is drawn at root" << endl;
+    if (tree.rooted)
+        out << "NOTE: Tree is ROOTED at virtual root '" << tree.root->name << "'" << endl;
+    else
+        out << "NOTE: Tree is UNROOTED although outgroup taxon '" << tree.root->name << "' is drawn at root" << endl;
 
     if (tree.isSuperTree() && params.partition_type == 0)
         out	<< "NOTE: Branch lengths are weighted average over all partitions" << endl
@@ -929,13 +933,7 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 						it != stree->end(); it++, part++) {
 					out << "FOR PARTITION " << stree->part_info[part].name
 							<< ":" << endl << endl;
-					string root_name;
-					if (params.root)
-						root_name = params.root;
-					else
-						root_name = (*it)->aln->getSeqName(0);
-					(*it)->root = (*it)->findNodeName(root_name);
-					assert((*it)->root);
+                    (*it)->setRootNode(params.root);
 //					reportTree(out, params, *(*it), (*it)->computeLikelihood(), (*it)->computeLogLVariance(), false);
 					reportTree(out, params, *(*it), stree->part_info[part].cur_score, 0.0, false);
 				}
@@ -1255,7 +1253,8 @@ void printAnalysisInfo(int model_df, IQTree& iqtree, Params& params) {
 	    cout << "NNI assessed on: " << ((params.nni5) ? "5 branches" : "1 branch") << endl;
 	}
 	cout << "Phylogenetic likelihood library: " << (params.pll ? "Yes" : "No") << endl;
-    cout << "Branch length optimization method: "
+    if (!params.fixed_branch_length)
+        cout << "Branch length optimization method: "
             << ((iqtree.optimize_by_newton) ? "Newton" : "Brent") << endl;
     cout << "Number of Newton-Raphson steps in NNI evaluation and branch length optimization: " << NNI_MAX_NR_STEP
             << " / " << PLL_NEWZPERCYCLE << endl;
@@ -2067,8 +2066,10 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 		iqtree.inputModelPLL2IQTree();
 
 	/* root the tree at the first sequence */
-	iqtree.root = iqtree.findLeafName(iqtree.aln->getSeqName(0));
-	assert(iqtree.root);
+    // BQM: WHY SETTING THIS ROOT NODE????
+//	iqtree.root = iqtree.findLeafName(iqtree.aln->getSeqName(0));
+//	assert(iqtree.root);
+    iqtree.setRootNode(params.root);
 
 
 	if (!params.pll) {

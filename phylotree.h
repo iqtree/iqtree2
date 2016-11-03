@@ -878,6 +878,8 @@ public:
     double computeSitemodelLikelihoodFromBufferEigen();
     */
 
+    double computeNonrevLikelihoodFromBuffer();
+
     /**
             compute tree likelihood when a branch length collapses to zero
             @param dad_branch the branch leading to the subtree
@@ -1818,6 +1820,16 @@ public:
     void computeSeqIdentityAlongTree();
 
     double *getPatternLhCatPointer() { return _pattern_lh_cat; }
+    
+    /**
+     * for rooted tree update direction for all branches
+     */
+    void computeBranchDirection(PhyloNode *node = NULL, PhyloNode *dad = NULL);
+
+    /**
+        convert from unrooted to rooted tree
+    */
+    void convertToRooted();
 
 
 protected:
