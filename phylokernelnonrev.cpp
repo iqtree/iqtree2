@@ -28,7 +28,7 @@ void PhyloTree::computeNonrevPartialLikelihood(TraversalInfo &info, size_t ptn_l
     assert(dad_branch->direction != UNDEFINED_DIRECTION);
 
     size_t nstates = aln->num_states;
-    size_t nptn = aln->size()+model_factory->unobserved_ptns.size();
+//    size_t nptn = aln->size()+model_factory->unobserved_ptns.size();
 
 	if (node->isLeaf()) {
 //	    dad_branch->lh_scale_factor = 0.0;
@@ -43,7 +43,7 @@ void PhyloTree::computeNonrevPartialLikelihood(TraversalInfo &info, size_t ptn_l
     size_t ptn, c;
     size_t orig_ntn = aln->size();
     size_t ncat = site_rate->getNRate();
-    const size_t nstatesqr=nstates*nstates;
+//    const size_t nstatesqr=nstates*nstates;
     size_t i, x;
     size_t block = nstates * ncat;
 
@@ -78,62 +78,14 @@ void PhyloTree::computeNonrevPartialLikelihood(TraversalInfo &info, size_t ptn_l
 //    }
 
     // precompute buffer to save times
-    double *echildren = new double[block*nstates*(node->degree()-1)];
-    double *partial_lh_leaves = new double[(aln->STATE_UNKNOWN+1)*block*(node->degree()-1)];
-    double *echild = echildren;
-    double *partial_lh_leaf = partial_lh_leaves;
+//    double *echildren = new double[block*nstates*(node->degree()-1)];
+//    double *partial_lh_leaves = new double[(aln->STATE_UNKNOWN+1)*block*(node->degree()-1)];
+//    double *echild = echildren;
+//    double *partial_lh_leaf = partial_lh_leaves;
 
-    // TODO: Move this to computePartialInfo()!
+    double *echildren = info.echildren;
+    double *partial_lh_leaves = info.partial_lh_leaves;
 
-    FOR_NEIGHBOR_IT(node, dad, it) {
-        PhyloNeighbor *child = (PhyloNeighbor*)*it;
-        // precompute information buffer
-        if (child->direction == TOWARD_ROOT) {
-            // tranpose probability matrix
-            double mat[nstatesqr];
-            for (c = 0; c < ncat; c++) {
-                double len_child = site_rate->getRate(c) * child->length;
-                model_factory->computeTransMatrix(len_child, mat);
-                double *echild_ptr = &echild[c*nstatesqr];
-                for (i = 0; i < nstates; i++)
-                    for (x = 0; x < nstates; x++)
-                        echild_ptr[i*nstates+x] = mat[x*nstates+i];
-            }
-        } else {
-            for (c = 0; c < ncat; c++) {
-                double len_child = site_rate->getRate(c) * child->length;
-                model_factory->computeTransMatrix(len_child, &echild[c*nstatesqr]);
-            }
-        }
-
-        // pre compute information for tip
-        if (child->node == root) {
-            model->getStateFrequency(partial_lh_leaf);
-            for (c = 1; c < ncat; c++)
-                memcpy(partial_lh_leaf+c*nstates, partial_lh_leaf, nstates*sizeof(double));
-            partial_lh_leaf += (aln->STATE_UNKNOWN+1)*block;
-        } else if (child->node->isLeaf()) {
-            vector<int>::iterator it;
-            for (it = aln->seq_states[child->node->id].begin(); it != aln->seq_states[child->node->id].end(); it++) {
-                double *this_tip_partial_lh = &tip_partial_lh[(*it)*nstates];
-                for (x = 0; x < block; x++) {
-                    double vchild = 0.0;
-                    for (i = 0; i < nstates; i++) {
-                        vchild += echild[x*nstates+i] * this_tip_partial_lh[i];
-                    }
-                    partial_lh_leaf[(*it)*block+x] = vchild;
-                }
-            }
-            for (x = 0; x < block; x++) {
-                size_t addr = aln->STATE_UNKNOWN * block;
-                partial_lh_leaf[addr+x] = 1.0;
-            }
-            partial_lh_leaf += (aln->STATE_UNKNOWN+1)*block;
-        }
-        echild += block*nstates;
-    }
-    
-    
 //    double sum_scale = 0.0;
 
         
@@ -162,7 +114,7 @@ void PhyloTree::computeNonrevPartialLikelihood(TraversalInfo &info, size_t ptn_l
                 partial_lh_all[i] = 1.0;
             dad_branch->scale_num[ptn] = 0;
                 
-            partial_lh_leaf = partial_lh_leaves;
+            double *partial_lh_leaf = partial_lh_leaves;
             double *echild = echildren;
 
             FOR_NEIGHBOR_IT(node, dad, it) {
@@ -410,8 +362,8 @@ void PhyloTree::computeNonrevPartialLikelihood(TraversalInfo &info, size_t ptn_l
 
 	}
 
-    delete [] partial_lh_leaves;
-    delete [] echildren;
+//    delete [] partial_lh_leaves;
+//    delete [] echildren;
 }
 
 //template <const int nstates>
@@ -511,7 +463,6 @@ void PhyloTree::computeNonrevLikelihoodDerv(PhyloNeighbor *dad_branch, PhyloNode
             }
         }
 
-        // TODO traversal!
     	// now do the real computation
 #ifdef _OPENMP
 #pragma omp parallel for reduction(+: my_df, my_ddf, prob_const, df_const, ddf_const) private(ptn, i, c) schedule(static,1) num_threads(num_threads)
@@ -566,10 +517,9 @@ void PhyloTree::computeNonrevLikelihoodDerv(PhyloNeighbor *dad_branch, PhyloNode
 		delete [] partial_lh_node;
     } else {
 
-        // TODO traversal
     	// both dad and node are internal nodes
 #ifdef _OPENMP
-#pragma omp parallel for reduction(+: my_df, my_ddf, prob_const, df_const, ddf_const) private(ptn, i, c) schedule(static,1) num_threads(num_threads)
+#pragma omp parallel for reduction(+: my_df, my_ddf, prob_const, df_const, ddf_const) private(ptn, i, c, x) schedule(static,1) num_threads(num_threads)
 #endif
         for (int thread_id = 0; thread_id < num_threads; thread_id++) {
             size_t ptn_lower = limits[thread_id];
@@ -695,7 +645,6 @@ double PhyloTree::computeNonrevLikelihoodBranch(PhyloNeighbor *dad_branch, Phylo
 	}
 
 	double prob_const = 0.0;
-	memset(_pattern_lh_cat, 0, nptn*ncat*sizeof(double));
 
     if (dad->isLeaf()) {
     	// special treatment for TIP-INTERNAL NODE case
@@ -728,7 +677,6 @@ double PhyloTree::computeNonrevLikelihoodBranch(PhyloNeighbor *dad_branch, Phylo
             }
         }
 
-        // TODO traversal
     	// now do the real computation
 #ifdef _OPENMP
 #pragma omp parallel for reduction(+: tree_lh, prob_const) private(ptn, i, c) schedule(static,1) num_threads(num_threads)
@@ -739,6 +687,9 @@ double PhyloTree::computeNonrevLikelihoodBranch(PhyloNeighbor *dad_branch, Phylo
             // first compute partial_lh
             for (vector<TraversalInfo>::iterator it = traversal_info.begin(); it != traversal_info.end(); it++)
                 computePartialLikelihood(*it, ptn_lower, ptn_upper, thread_id);
+
+            // reset memory for _pattern_lh_cat
+            memset(_pattern_lh_cat+ptn_lower*ncat, 0, (ptn_upper-ptn_lower)*ncat*sizeof(double));
 
             for (ptn = ptn_lower; ptn < ptn_upper; ptn++) {
                 double lh_ptn = ptn_invar[ptn];
@@ -761,7 +712,7 @@ double PhyloTree::computeNonrevLikelihoodBranch(PhyloNeighbor *dad_branch, Phylo
                 }
                 assert(lh_ptn > 0.0);
                 if (ptn < orig_nptn) {
-                    lh_ptn = log(fabs(lh_ptn));
+                    lh_ptn = log(fabs(lh_ptn)) + dad_branch->scale_num[ptn] * LOG_SCALING_THRESHOLD;
                     _pattern_lh[ptn] = lh_ptn;
                     tree_lh += lh_ptn * ptn_freq[ptn];
                 } else {
@@ -776,10 +727,9 @@ double PhyloTree::computeNonrevLikelihoodBranch(PhyloNeighbor *dad_branch, Phylo
 		delete [] partial_lh_node;
     } else {
 
-        // TODO traversal
     	// both dad and node are internal nodes
 #ifdef _OPENMP
-#pragma omp parallel for reduction(+: tree_lh, prob_const) private(ptn, i, c) schedule(static,1) num_threads(num_threads)
+#pragma omp parallel for reduction(+: tree_lh, prob_const) private(ptn, i, c, x) schedule(static,1) num_threads(num_threads)
 #endif
         for (int thread_id = 0; thread_id < num_threads; thread_id++) {
             size_t ptn_lower = limits[thread_id];
@@ -787,6 +737,9 @@ double PhyloTree::computeNonrevLikelihoodBranch(PhyloNeighbor *dad_branch, Phylo
             // first compute partial_lh
             for (vector<TraversalInfo>::iterator it = traversal_info.begin(); it != traversal_info.end(); it++)
                 computePartialLikelihood(*it, ptn_lower, ptn_upper, thread_id);
+
+            // reset memory for _pattern_lh_cat
+            memset(_pattern_lh_cat+ptn_lower*ncat, 0, (ptn_upper-ptn_lower)*ncat*sizeof(double));
 
             for (ptn = ptn_lower; ptn < ptn_upper; ptn++) {
                 double lh_ptn = ptn_invar[ptn];
@@ -810,7 +763,7 @@ double PhyloTree::computeNonrevLikelihoodBranch(PhyloNeighbor *dad_branch, Phylo
 
                 assert(lh_ptn > 0.0);
                 if (ptn < orig_nptn) {
-                    lh_ptn = log(fabs(lh_ptn));
+                    lh_ptn = log(fabs(lh_ptn)) + (dad_branch->scale_num[ptn] + node_branch->scale_num[ptn])*LOG_SCALING_THRESHOLD;
                     _pattern_lh[ptn] = lh_ptn;
                     tree_lh += lh_ptn * ptn_freq[ptn];
                 } else {

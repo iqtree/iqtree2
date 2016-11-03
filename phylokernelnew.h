@@ -743,6 +743,62 @@ void PhyloTree::computePartialInfo(TraversalInfo &info, VectorClass* buffer) {
     double *echild = info.echildren;
     double *partial_lh_leaf = info.partial_lh_leaves;
 
+    //----------- Non-reversible model --------------
+
+    if (!model->isReversible()) {
+        size_t nstatesqr = nstates*nstates;
+        // non-reversible model
+        FOR_NEIGHBOR_IT(node, dad, it) {
+            PhyloNeighbor *child = (PhyloNeighbor*)*it;
+            // precompute information buffer
+            if (child->direction == TOWARD_ROOT) {
+                // tranpose probability matrix
+                double mat[nstatesqr];
+                for (c = 0; c < ncat; c++) {
+                    double len_child = site_rate->getRate(c) * child->length;
+                    model_factory->computeTransMatrix(len_child, mat);
+                    double *echild_ptr = &echild[c*nstatesqr];
+                    for (i = 0; i < nstates; i++)
+                        for (x = 0; x < nstates; x++)
+                            echild_ptr[i*nstates+x] = mat[x*nstates+i];
+                }
+            } else {
+                for (c = 0; c < ncat; c++) {
+                    double len_child = site_rate->getRate(c) * child->length;
+                    model_factory->computeTransMatrix(len_child, &echild[c*nstatesqr]);
+                }
+            }
+
+            // pre compute information for tip
+            if (child->node == root) {
+                model->getStateFrequency(partial_lh_leaf);
+                for (c = 1; c < ncat; c++)
+                    memcpy(partial_lh_leaf+c*nstates, partial_lh_leaf, nstates*sizeof(double));
+                partial_lh_leaf += (aln->STATE_UNKNOWN+1)*block;
+            } else if (child->node->isLeaf()) {
+                vector<int>::iterator it;
+                for (it = aln->seq_states[child->node->id].begin(); it != aln->seq_states[child->node->id].end(); it++) {
+                    double *this_tip_partial_lh = &tip_partial_lh[(*it)*nstates];
+                    for (x = 0; x < block; x++) {
+                        double vchild = 0.0;
+                        for (i = 0; i < nstates; i++) {
+                            vchild += echild[x*nstates+i] * this_tip_partial_lh[i];
+                        }
+                        partial_lh_leaf[(*it)*block+x] = vchild;
+                    }
+                }
+                for (x = 0; x < block; x++) {
+                    size_t addr = aln->STATE_UNKNOWN * block;
+                    partial_lh_leaf[addr+x] = 1.0;
+                }
+                partial_lh_leaf += (aln->STATE_UNKNOWN+1)*block;
+            }
+            echild += block*nstates;
+        }
+        return;
+    } // END non-reversible model
+
+    //----------- Reversible model --------------
     if (nstates % VectorClass::size() == 0) {
         // vectorized version
         VectorClass *expchild = (VectorClass*)buffer;
