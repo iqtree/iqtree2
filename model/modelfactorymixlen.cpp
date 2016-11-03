@@ -19,7 +19,7 @@ ModelFactoryMixlen::ModelFactoryMixlen(Params &params, PhyloTree *tree, ModelsBl
         outError("#mixture categories and #mixture branch lengths do not match");
 }
 
-double ModelFactoryMixlen::optimizeParameters(bool fixed_len, bool write_info, double logl_epsilon, double gradient_epsilon) {
+double ModelFactoryMixlen::optimizeParameters(int fixed_len, bool write_info, double logl_epsilon, double gradient_epsilon) {
 
 	PhyloTreeMixlen *tree = (PhyloTreeMixlen*)site_rate->getTree();
 	assert(tree);

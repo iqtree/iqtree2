@@ -229,13 +229,14 @@ double PartitionModelPlen::optimizeGeneRate(double gradient_epsilon)
     double score = 0.0;
     double nsites = tree->getAlnNSite();
 
-    DoubleVector brlen;
+    vector<DoubleVector> brlen;
     brlen.resize(tree->branchNum);
     tree->getBranchLengths(brlen);
     double max_brlen = 0.0;
     for (i = 0; i < brlen.size(); i++)
-        if (brlen[i] > max_brlen)
-            max_brlen = brlen[i];
+        for (int j = 0; j < brlen[i].size(); j++)
+        if (brlen[i][j] > max_brlen)
+            max_brlen = brlen[i][j];
 
     if (tree->part_order.empty()) tree->computePartitionOrder();
 

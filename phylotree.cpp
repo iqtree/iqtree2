@@ -3088,16 +3088,6 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
         node2->updateNeighbor(node2_it, node1_nei);
         node1_nei->node->updateNeighbor(node1, node2);
 
-        // check if NNI obeys constraint tree
-        bool ok_constraint = true;
-        if (!constraintTree.empty()) {
-            StrVector taxset1, taxset2;
-            getUnorderedTaxaName(taxset1, node1, node2);
-            getUnorderedTaxaName(taxset2, node2, node1);
-            if (!constraintTree.isCompatible(taxset1, taxset2))
-                ok_constraint = false;
-        }
-        if (ok_constraint) {
         for (int step = 0; step < params->nni5_num_eval; step++) {
 
 
