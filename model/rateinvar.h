@@ -121,7 +121,7 @@ public:
 	*/
 	virtual void writeParameters(ostream &out);
 
-	bool isFixPInvar() const {
+	virtual bool isFixPInvar() const {
 		return fix_p_invar;
 	}
 

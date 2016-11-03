@@ -32,6 +32,7 @@
 #include "model/rateheterogeneity.h"
 #include "pll/pll.h"
 #include "checkpoint.h"
+#include "constrainttree.h"
 
 #define BOOT_VAL_FLOAT
 #define BootValType float
@@ -998,6 +999,9 @@ public:
             Stepwise addition (greedy) by maximum parsimony
      ****************************************************************************/
 
+    /** constraint tree used to guide tree search */
+    ConstraintTree constraintTree;
+
     /**
             FAST VERSION: used internally by computeParsimonyTree() to find the best target branch to add into the tree
             @param added_node node to add
@@ -1647,6 +1651,7 @@ public:
         convert from unrooted to rooted tree
     */
     void convertToRooted();
+
 
 protected:
 

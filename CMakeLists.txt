@@ -44,8 +44,8 @@ project(iqtree)
 add_definitions(-DIQ_TREE)
 # The version number.
 set (iqtree_VERSION_MAJOR 1)
-set (iqtree_VERSION_MINOR 4)
-set (iqtree_VERSION_PATCH "4-beta") 
+set (iqtree_VERSION_MINOR 5)
+set (iqtree_VERSION_PATCH "0a")
 
 set(BUILD_SHARED_LIBS OFF)
 
@@ -170,7 +170,7 @@ if(CMAKE_SIZEOF_VOID_P EQUAL 4 OR IQTREE_FLAGS MATCHES "m32")
 	if (CMAKE_GENERATOR MATCHES "Win64")
 		error("Both 32-bit and 64-bit mode cannot be specified")
 	endif()
-	SET(EXE_SUFFIX "${EXE_SUFFIX}32")
+	#SET(EXE_SUFFIX "${EXE_SUFFIX}32")
 	if (GCC OR CLANG) 
 		set(COMBINED_FLAGS "${COMBINED_FLAGS} -m32")
   	endif()
@@ -420,6 +420,7 @@ ecopdmtreeset.cpp
 graph.cpp
 candidateset.cpp
 checkpoint.cpp
+constrainttree.cpp
 upperbounds.cpp
 )
 
@@ -498,7 +499,7 @@ set_target_properties(iqtree PROPERTIES OUTPUT_NAME "iqtree${EXE_SUFFIX}")
 if (CMAKE_BUILD_TYPE STREQUAL "Release" AND (GCC OR CLANG) AND NOT APPLE) # strip is not necessary for MSVC
 	if (WIN32)
 		ADD_CUSTOM_COMMAND(TARGET iqtree POST_BUILD COMMAND strip $<TARGET_FILE:iqtree>)
-	else()
+	elseif (NOT APPLE)
 		ADD_CUSTOM_COMMAND(TARGET iqtree POST_BUILD COMMAND ${CMAKE_STRIP} $<TARGET_FILE:iqtree>)
 	endif()
 endif()
@@ -581,17 +582,11 @@ if (${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
 endif()
 
 if (BINARY32) 
-    set (PROJECT_NAME_SUFFIX "${EXE_SUFFIX}")
-else()
-    set (PROJECT_NAME_SUFFIX "${EXE_SUFFIX}")
+    set (SYSTEM_NAME "${SYSTEM_NAME}32")
 endif()
 
-#if (NOT IQTREE_FLAGS MATCHES "omp" AND NOT IQTREE_FLAGS MATCHES "avx" AND NOT IQTREE_FLAGS MATCHES "fma")  
-#	set (PROJECT_NAME_SUFFIX "${PROJECT_NAME_SUFFIX}-sse") 
-#endif()
-
 set(CPACK_PACKAGE_FILE_NAME 
-	"${CMAKE_PROJECT_NAME}${PROJECT_NAME_SUFFIX}-${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSION_MINOR}.${CPACK_PACKAGE_VERSION_PATCH}-${SYSTEM_NAME}")
+	"${CMAKE_PROJECT_NAME}${EXE_SUFFIX}-${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSION_MINOR}.${CPACK_PACKAGE_VERSION_PATCH}-${SYSTEM_NAME}")
 
 set(CPACK_STRIP_FILES TRUE)
 

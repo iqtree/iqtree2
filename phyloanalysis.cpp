@@ -622,6 +622,10 @@ void printOutfilesInfo(Params &params, string &original_model, IQTree &tree) {
 		cout << "  Site log-likelihoods:          " << params.out_prefix << ".sitelh"
 				<< endl;
 
+	if (params.print_partition_lh)
+		cout << "  Partition log-likelihoods:     " << params.out_prefix << ".partlh"
+				<< endl;
+
 	if (params.print_site_prob)
 		cout << "  Site probability per rate/mix: " << params.out_prefix << ".siteprob"
 				<< endl;
@@ -644,9 +648,6 @@ void printOutfilesInfo(Params &params, string &original_model, IQTree &tree) {
 
 		if (params.print_tree_lh) {
 		cout << "  Tree log-likelihoods:          " << params.out_prefix << ".treelh" << endl;
-		}
-		if (params.print_site_lh) {
-		cout << "  Site log-likelihoods:          " << params.out_prefix << ".sitelh" << endl;
 		}
 	}
     	if (params.lmap_num_quartets >= 0) {
@@ -1511,6 +1512,15 @@ void printMiscInfo(Params &params, IQTree &iqtree, double *pattern_lh) {
 			printSiteLhCategory(site_lh_file.c_str(), &iqtree, params.print_site_lh);
 	}
 
+    if (params.print_partition_lh && !iqtree.isSuperTree()) {
+        outWarning("-wpl does not work with non-partition model");
+        params.print_partition_lh = false;
+    }
+	if (params.print_partition_lh && !params.pll) {
+        string part_lh_file = (string)params.out_prefix + ".partlh";
+        printPartitionLh(part_lh_file.c_str(), &iqtree, pattern_lh);
+	}
+
 	if (params.print_site_prob && !params.pll) {
         printSiteProbCategory(((string)params.out_prefix + ".siteprob").c_str(), &iqtree, params.print_site_prob);
 	}
@@ -1875,6 +1885,10 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
     if ((params.user_file || params.start_tree == STT_RANDOM_TREE) && params.snni && !params.iqp) {
         params.compute_ml_dist = false;
     }
+    
+    if (params.constraint_tree_file)
+        params.compute_ml_dist = false;
+
 //    if ( params.user_file && params.min_iterations == 0) {
 //        params.compute_ml_dist = false;
 //    }
@@ -2653,6 +2667,16 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
 		alignment->concatenateAlignment(&aln);
 	}
 
+    if (params.constraint_tree_file) {
+        cout << "Reading constraint tree " << params.constraint_tree_file << "..." << endl;
+        tree->constraintTree.initConstraint(params.constraint_tree_file, alignment->getSeqNames());
+        if (params.start_tree == STT_PLL_PARSIMONY)
+            params.start_tree = STT_PARSIMONY;
+        else if (params.start_tree == STT_BIONJ)
+            outError("Constraint tree does not work with -t BIONJ");
+            
+    }
+
     if (params.compute_seq_identity_along_tree) {
         if (!params.user_file)
             outError("Please supply a user tree file!");
@@ -2692,6 +2716,14 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
 		// remove identical sequences
         if (params.ignore_identical_seqs) {
             tree->removeIdenticalSeqs(params);
+            if (tree->removed_seqs.size() > 0) {
+                string filename = (string)params.out_prefix + ".uniqueseq.phy";
+                if (tree->isSuperTree())
+                    ((SuperAlignment*)tree->aln)->printCombinedAlignment(filename.c_str());
+                else
+                    tree->aln->printPhylip(filename.c_str());
+                cout << endl << "For your convenience alignment with unique sequences printed to " << filename << endl;
+            }
         }
         alignment = NULL; // from now on use tree->aln instead
 

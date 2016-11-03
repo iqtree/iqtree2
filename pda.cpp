@@ -227,7 +227,7 @@ void printCopyright(ostream &out) {
 #endif
 
 #ifdef IQ_TREE
-	out << endl << "Copyright (c) 2011-2015 Nguyen Lam Tung, Olga Chernomor, Arndt von Haeseler and Bui Quang Minh." << endl << endl;
+	out << endl << "Copyright (c) 2011-2016 Nguyen Lam Tung, Olga Chernomor, Arndt von Haeseler and Bui Quang Minh." << endl << endl;
 #else
 	out << endl << "Copyright (c) 2006-2014 Olga Chernomor, Arndt von Haeseler and Bui Quang Minh." << endl << endl;
 #endif
@@ -1848,6 +1848,9 @@ extern "C" void funcAbort(int signal_number)
 		case SIGFPE:  cerr << "ERRONEOUS NUMERIC"; break;
 		case SIGILL:  cerr << "ILLEGAL INSTRUCTION"; break;
 		case SIGSEGV: cerr << "SEGMENTATION FAULT"; break;
+#if !defined WIN32 && !defined _WIN32 && !defined __WIN32__
+		case SIGBUS: cerr << "BUS ERROR"; break;
+#endif
 	}
     cerr << endl;
 	cerr << "*** For bug report please send to developers:" << endl << "***    Log file: " << _log_file;
@@ -2269,6 +2272,9 @@ int main(int argc, char *argv[])
 	signal(SIGFPE, &funcAbort);
 	signal(SIGILL, &funcAbort);
 	signal(SIGSEGV, &funcAbort);
+#if !defined WIN32 && !defined _WIN32 && !defined __WIN32__
+	signal(SIGBUS, &funcAbort);
+#endif
 	printCopyright(cout);
 	/*
 	double x=1e-100;

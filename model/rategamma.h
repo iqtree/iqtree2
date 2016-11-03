@@ -182,7 +182,7 @@ public:
 	*/
 	virtual void writeParameters(ostream &out);
 
-	bool isFixGammaShape() const {
+	virtual bool isFixGammaShape() const {
 		return fix_gamma_shape;
 	}
 

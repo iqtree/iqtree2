@@ -146,7 +146,11 @@ public:
 	*/
 	virtual void setPInvar(double pinv) { }
 
-    /**
+	virtual bool isFixPInvar() const {
+		return true;
+	}
+
+	/**
         set whether to fix p_invar
     */
 	virtual void setFixPInvar(bool fixPInvar) {}
@@ -169,7 +173,11 @@ public:
 	*/	
 	virtual void setGammaShape(double gs) {}
 
-    /**
+	virtual bool isFixGammaShape() const {
+		return true;
+	}
+
+	/**
         set whether to fix gamma shape
     */
 	virtual void setFixGammaShape(bool fixGammaShape) {}

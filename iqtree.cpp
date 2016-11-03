@@ -522,7 +522,11 @@ void IQTree::computeInitialTree(string &dist_file, LikelihoodKernel kernel) {
         readTreeString(initTree);
         cout << endl << "CHECKPOINT: Initial tree restored" << endl;
     } else {
-        switch (params->start_tree) {
+        START_TREE_TYPE start_tree = params->start_tree;
+        // only own parsimony kernel supports constraint tree
+        if (!constraintTree.empty())
+            start_tree = STT_PARSIMONY;
+        switch (start_tree) {
         case STT_PARSIMONY:
             // Create parsimony tree using IQ-Tree kernel
             if (kernel == LK_EIGEN_SSE)
@@ -569,6 +573,9 @@ void IQTree::computeInitialTree(string &dist_file, LikelihoodKernel kernel) {
         checkpoint->dump(true);
     }
 
+    if (!constraintTree.isCompatible(this))
+        outError("Initial tree is not compatible with constraint tree");
+
     if (fixed_number) {
         cout << "WARNING: " << fixed_number << " undefined/negative branch lengths are initialized with parsimony" << endl;
     }
@@ -604,12 +611,17 @@ void IQTree::createInitTrees(int nParTrees) {
     StrVector pars_trees;
     if (params->start_tree == STT_PARSIMONY && nParTrees >= 1) {
         pars_trees.resize(nParTrees);
+        if (aln->ordered_pattern.empty())
+            aln->orderPatternByNumChars();
         #pragma omp parallel
         {
             PhyloTree tree;
+            if (params->constraint_tree_file) {
+                tree.constraintTree.initConstraint(params->constraint_tree_file, aln->getSeqNames());
+            }
             tree.setParams(params);
             tree.setParsimonyKernel(params->SSE);
-            #pragma omp for
+            #pragma omp for schedule(dynamic)
             for (int i = 0; i < nParTrees; i++) {
                 tree.computeParsimonyTree(NULL, aln);
                 if (orig_rooted)
