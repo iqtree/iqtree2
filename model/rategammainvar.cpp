@@ -105,14 +105,16 @@ bool RateGammaInvar::getVariables(double *variables) {
 	int gid = RateGamma::getNDim();
 	bool changed = RateGamma::getVariables(variables);
 	changed |= RateInvar::getVariables(variables+gid);
+    if (changed) {
+        // need to compute rates again if p_inv or Gamma shape changes!
+        RateGamma::computeRates();
+    }
     return changed;
 }
 
 double RateGammaInvar::targetFunk(double x[]) {
 	assert(phylo_tree);
 	getVariables(x);
-	// need to compute rates again if p_inv or Gamma shape changes!
-	RateGamma::computeRates();
 	phylo_tree->clearAllPartialLH();
 	return -phylo_tree->computeLikelihood();
 }

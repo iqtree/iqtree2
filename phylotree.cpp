@@ -1224,7 +1224,7 @@ void PhyloTree::computePatternStateFreq(double *ptn_state_freq) {
     size_t ptn, nptn = getAlnNPattern(), m, nmixture = getModel()->getNMixtures();
     double *ptn_freq = ptn_state_freq;
     size_t state, nstates = aln->num_states;
-    ModelMixture *models = (ModelMixture*)model;
+//    ModelMixture *models = (ModelMixture*)model;
     
     if (params->print_site_state_freq == WSF_POSTERIOR_MEAN) {
         cout << "Computing posterior mean site frequencies...." << endl;
@@ -1245,7 +1245,7 @@ void PhyloTree::computePatternStateFreq(double *ptn_state_freq) {
             for (state = 0; state < nstates; state++) {
                 double freq = 0;
                 for (m = 0; m < nmixture; m++)
-                    freq += models->at(m)->state_freq[state] * lh_cat[m];
+                    freq += model->getMixtureClass(m)->state_freq[state] * lh_cat[m];
                 ptn_freq[state] = freq;
             }
             
@@ -1266,7 +1266,7 @@ void PhyloTree::computePatternStateFreq(double *ptn_state_freq) {
                 }
             
             // now compute state frequencies
-            memcpy(ptn_freq, models->at(max_comp)->state_freq, nstates*sizeof(double));
+            memcpy(ptn_freq, model->getMixtureClass(max_comp)->state_freq, nstates*sizeof(double));
             
             // increase the pointers
             lh_cat += nmixture;
@@ -2526,6 +2526,9 @@ double PhyloTree::optimizeAllBranches(int my_iterations, double tolerance, int m
 
         	//clearAllPartialLH();
 //        	readTreeString(string_brlen);
+            double max_delta_lh = 1.0;
+            // Increase max delta with PoMo because log likelihood is very much lower.
+            if (aln->seq_type == SEQ_POMO) max_delta_lh = 3.0;
         	new_tree_lh = computeLikelihood();
             if (fabs(new_tree_lh-tree_lh) > 1.0) {
                 cout << "new_tree_lh: " << new_tree_lh << "   tree_lh: " << tree_lh << endl;
@@ -2881,6 +2884,11 @@ int PhyloTree::fixNegativeBranch(bool force, Node *node, Node *dad) {
         int pars_score = computeParsimonyBranch((PhyloNeighbor*) (*it), (PhyloNode*) node, &branch_subst);
         // first compute the observed parsimony distance
         double branch_length = (branch_subst > 0) ? ((double) branch_subst / getAlnNSite()) : (1.0 / getAlnNSite());
+
+        // Branch lengths under PoMo are #events, which is ~N^2 * #substitutions
+        if (aln->seq_type == SEQ_POMO)
+            branch_length *= aln->virtual_pop_size * aln->virtual_pop_size;
+
         // now correct Juke-Cantor formula
         double z = (double) aln->num_states / (aln->num_states - 1);
         double x = 1.0 - (z * branch_length);

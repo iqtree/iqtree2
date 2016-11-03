@@ -345,7 +345,11 @@ const int SW_AVG_PRESENT = 4; // take the split weight average over all trees th
         input type, tree or splits graph
  */
 enum InputType {
-    IN_NEWICK, IN_NEXUS, IN_FASTA, IN_PHYLIP, IN_CLUSTAL, IN_MSF, IN_OTHER
+    IN_NEWICK, IN_NEXUS, IN_FASTA, IN_PHYLIP, IN_COUNTS, IN_CLUSTAL, IN_MSF, IN_OTHER
+};
+
+enum SamplingType {
+    SAMPLING_WEIGHTED, SAMPLING_SAMPLED
 };
 
 /**
@@ -1827,6 +1831,15 @@ public:
 	/** true to count all distinct trees visited during tree search */
 	bool count_trees;
 
+    /// True if PoMo is run; otherwise false.
+    bool pomo;
+
+    /// True if sampled input method is used (-st CR..); otherwise false.
+    bool pomo_random_sampling;
+
+	/// Virtual population size for PoMo model.
+	int pomo_pop_size;
+
 	/* -1 (auto-detect): will be set to 0 if there is enough memory, 1 otherwise
 	 * 0: store all partial likelihood vectors
 	 * 1: only store 1 partial likelihood vector per node */
@@ -1985,11 +1998,6 @@ void outWarning(string warn);
  */
 double randomLen(Params &params);
 
-/**
-        convert string to int, with error checking
-        @param str original string
-        @return the integer
- */
 /**
         Compute the logarithm of the factorial of an integer number
         @param num: the number
@@ -2221,6 +2229,7 @@ void parseArg(int argc, char *argv[], Params &params);
                 IN_NEXUS if in nexus format,
                 IN_FASTA if in fasta format,
                 IN_PHYLIP if in phylip format,
+		IN_COUNTSFILE if in counts format (PoMo),
                 IN_OTHER if file format unknown.
  */
 InputType detectInputFile(char *input_file);

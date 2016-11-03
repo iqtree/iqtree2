@@ -922,6 +922,10 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.print_partition_info = false;
 	params.print_conaln = false;
 	params.count_trees = false;
+    params.pomo = false;
+    params.pomo_random_sampling = false;
+	// params.pomo_counts_file_flag = false;
+	params.pomo_pop_size = 9;
 	params.print_branch_lengths = false;
 	params.lh_mem_save = LM_PER_NODE; // auto detect
 	params.start_tree = STT_PLL_PARSIMONY;
@@ -1631,10 +1635,25 @@ void parseArg(int argc, char *argv[], Params &params) {
 			if (strcmp(argv[cnt], "-st") == 0) {
 				cnt++;
 				if (cnt >= argc)
-					throw "Use -st BIN or -st DNA or -st AA or -st CODON or -st MORPH";
-				params.sequence_type = argv[cnt];
+					throw "Use -st BIN or -st DNA or -st AA or -st CODON or -st MORPH or -st CRXX or -st CFxx.";
+                string arg = argv[cnt];
+                params.sequence_type = argv[cnt];
+                // if (arg.substr(0,2) == "CR") params.pomo_random_sampling = true;
+                // if (arg.substr(0,2) == "CF" || arg.substr(0,2) == "CR") {
+                //     outWarning("Setting the sampling method and population size with this flag is deprecated.");
+                //     outWarning("Please use the model string instead (see `iqtree --help`).");
+                //     if (arg.length() > 2) {
+                //         int ps = convert_int(arg.substr(2).c_str());
+                //         params.pomo_pop_size = ps;
+                //         if (((ps != 10) && (ps != 2) && (ps % 2 == 0)) || (ps < 2) || (ps > 19)) {
+                //             std::cout << "Please give a correct PoMo sequence type parameter; e.g., `-st CF09`." << std::endl;
+                //             outError("Custom virtual population size of PoMo not 2, 10 or any other odd number between 3 and 19.");   
+                //         }
+                //     }
+                // }
 				continue;
 			}
+            
 			if (strcmp(argv[cnt], "-starttree") == 0) {
 				cnt++;
 				if (cnt >= argc)
@@ -3457,6 +3476,40 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -m \"MIX{model1,...,modelK}\"   Mixture model with K components" << endl
             << "  -m \"FMIX{freq1,...freqK}\"     Frequency mixture model with K components" << endl
             << "  -mwopt               Turn on optimizing mixture weights (default: none)" << endl
+            << endl
+
+            << "POLYMORPHISM AWARE MODELS (PoMo):"                                                   << endl
+            << "PoMo uses counts files (please refer to the manual)."                                << endl
+            << "  -m <sm>+<pm>         Default: `HKY+rP`."                                           << endl
+            << "                 <sm>: Substitution model."                                          << endl
+            << "                  DNA: HKY (default), JC, F81, K2P, K3P, K81uf, TN/TrN, TNef,"       << endl
+            << "                       TIM, TIMef, TVM, TVMef, SYM, GTR, or a 6-digit model"         << endl
+            << "                       specification (e.g., 010010 = HKY)."                          << endl
+            << "                 <pm>: PoMo model."                                                  << endl
+            << "                       - rP (default; reversible PoMo with tree inference)."         << endl
+            // << "                       - nrP (non-reversible PoMo; tree has to be given separately;" << endl
+            // << "                         not implemented yet)."                                      << endl
+            << "  -m <model>+<ft>      Frequency type (optional; default: +F, counted)."             << endl
+            << "                       F or +FO or +FU or +FQ."                                      << endl
+            << "                       Counted, optimized, user-defined, equal state frequency."     << endl
+            << "                       This overwrites the specifications of the DNA model."         << endl
+            << "  -m <model>+N<ps>     Set virtual population size to `ps` (optional; default: 9)."  << endl
+            << "                       3 <= ps <= 19; ps has to be an odd number or 2 or 10."        << endl
+            << "  -m <model>+[W|S]     Specify sampling method (optional; default: W)."              << endl
+            << "                       W: Weighted sampling method (partial likelihoods at the tip"  << endl
+            << "                          of the tree are set to the probabilities of leading to the"<< endl
+            << "                          observed data)."                                           << endl
+            << "                       S: Sampled sampling method (determine PoMo states by randomly"<< endl
+            << "                          drawing N bases per site from the data)."                  << endl
+            << "  The full default model string is: `-m HKY+rP+N9+W+F."                              << endl
+            << "  Another example: `-m GTR+rP+N15+S."                                                << endl
+            << "  You can use mixture models like so: -m \"MIX{JC+rP,HKY+rP}+N11\"."                 << endl
+            << "  A mixture model with equal state frequency: -m \"MIX{JC,HKY}+FQ\"."                << endl
+            << "  Until now, only DNA models work with PoMo."                                        << endl
+            << "  Model testing and rate heterogeneity do not work with PoMo yet."                   << endl
+            << "  Example of a standard run (for more examples please see the manual):"              << endl
+            << "    iqtree -s counts_file.cf"                                                        << endl
+
             << endl << "RATE HETEROGENEITY AMONG SITES:" << endl
             << "  -m modelname+I       A proportion of invariable sites" << endl
             << "  -m modelname+G[n]    Discrete Gamma model with n categories (default n=4)" << endl
@@ -3570,8 +3623,9 @@ void usage_iqtree(char* argv[], bool full_command) {
 
 void quickStartGuide() {
     printCopyright(cout);
+    cout << "---" << endl;
     cout << "Minimal command-line examples (replace 'iqtree ...' with actual path to executable):" << endl << endl
-        << "1. Reconstruct maximum-likelihood tree from a sequence alignment (example.phy)" << endl
+         << "1. Reconstruct maximum-likelihood tree from a sequence alignment (example.phy)" << endl
          << "   with the best-fit substitution model automatically selected:" << endl
          << "     iqtree -s example.phy -m TEST" << endl << endl
          << "2. Reconstruct ML tree and assess branch supports with ultrafast bootstrap" << endl
@@ -3587,6 +3641,17 @@ void quickStartGuide() {
 #ifdef _OPENMP
          << "6. Use 4 CPU cores to speed up computation: add '-nt 4' option" << endl << endl
 #endif
+         << "---" << endl
+         << "PoMo command-line examples:" << endl
+         << "1. Standard tree inference (HKY model and empirical nucleotide frequencies):" << endl
+         << "     iqtree -s counts_file.cf" << endl << endl
+         << "2. Set virtual population size to 15:" << endl
+         << "     iqtree -s counts_file.cf -m HKY+rP+N15" << endl << endl
+         << "3. Use GTR model and estimate allele frequencies during maximization of likelihood:" << endl
+         << "     iqtree -s counts_file.cf -m GTR+rP+FO" << endl << endl
+         << "4. Use the sampled input method and N=9 (advanced setting; see manual or publication):" << endl
+         << "     iqtree -s counts_file.cf -m HKY+rP+N9+S" << endl << endl
+         << "---" << endl
          << "To show all available options: run 'iqtree -h'" << endl << endl
          << "Have a look at the tutorial and manual for more information:" << endl
          << "     http://www.iqtree.org" << endl << endl;
@@ -3596,7 +3661,7 @@ void quickStartGuide() {
 InputType detectInputFile(char *input_file) {
 
     try {
-        ifstream in;
+        igzstream in;
         in.exceptions(ios::failbit | ios::badbit);
         in.open(input_file);
 
@@ -3612,7 +3677,9 @@ InputType detectInputFile(char *input_file) {
             case '(': return IN_NEWICK;
             case '[': return IN_NEWICK;
             case '>': return IN_FASTA;
-            case 'C': if (ch2 == 'L') return IN_CLUSTAL; else return IN_OTHER;
+            case 'C': if (ch2 == 'L') return IN_CLUSTAL;
+                      else if (ch2 == 'O') return IN_COUNTS;
+                      else return IN_OTHER;
             case '!': if (ch2 == '!') return IN_MSF; else return IN_OTHER;
             default:
                 if (isdigit(ch)) return IN_PHYLIP;
@@ -4014,7 +4081,6 @@ double computePValueChiSquare(double x, int df) /* x: obtained chi-square value,
     } else
         return (s);
 }
-
 
 void trimString(string &str) {
     str.erase(0, str.find_first_not_of(" \n\r\t"));

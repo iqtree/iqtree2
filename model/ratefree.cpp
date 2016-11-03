@@ -560,7 +560,7 @@ double RateFree::optimizeWithEM() {
             tree->copyPhyloTree(phylo_tree);
             ModelGTR *subst_model;
             if (phylo_tree->getModel()->isMixture() && phylo_tree->getModelFactory()->fused_mix_rate)
-                subst_model = ((ModelMixture*)phylo_tree->getModel())->at(c);
+                subst_model = (ModelGTR*)phylo_tree->getModel()->getMixtureClass(c);
             else
                 subst_model = (ModelGTR*)phylo_tree->getModel();
             tree->setModel(subst_model);

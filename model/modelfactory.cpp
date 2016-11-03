@@ -28,6 +28,7 @@
 #include "modelbin.h"
 #include "modelcodon.h"
 #include "modelmorphology.h"
+#include "modelpomo.h"
 #include "modelset.h"
 #include "modelmixture.h"
 #include "ratemeyerhaeseler.h"
@@ -93,7 +94,7 @@ size_t findCloseBracket(string &str, size_t start_pos) {
 		if (str[pos] == '}') {
 			if (counter == 0) return pos; else counter--;
 		}
-	}
+    }
 	return string::npos;
 }
 
@@ -114,8 +115,10 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 		else if (tree->aln->seq_type == SEQ_BINARY) model_str = "GTR2";
 		else if (tree->aln->seq_type == SEQ_CODON) model_str = "GY";
 		else if (tree->aln->seq_type == SEQ_MORPH) model_str = "MK";
+        else if (tree->aln->seq_type == SEQ_POMO) model_str = "HKY+rP";
 		else model_str = "JC";
-		outWarning("Default model "+model_str + " may be under-fitting. Use option '-m TEST' to determine the best-fit model.");
+        if (tree->aln->seq_type != SEQ_POMO)
+            outWarning("Default model "+model_str + " may be under-fitting. Use option '-m TEST' to determine the best-fit model.");
 	}
 
 	/********* preprocessing model string ****************/
@@ -155,11 +158,96 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 				outError("Model name has wrong bracket notation '{...}'");
 			rate_str = model_str.substr(pos+1);
 			model_str = model_str.substr(0, pos+1);
-		} else {
-			rate_str = model_str.substr(spec_pos);
-			model_str = model_str.substr(0, spec_pos);
-		}
-	}
+        } else {
+            rate_str = model_str.substr(spec_pos);
+            model_str = model_str.substr(0, spec_pos);
+        }
+        // Check for PoMo and set model_str and rate_str
+        // accordingly.
+        string::size_type pos_rev_pomo = rate_str.find("+rP");
+        string::size_type pos_nonrev_pomo = rate_str.find("+nrP");
+        if (pos_nonrev_pomo != string::npos)
+            outError("Non reversible PoMo not supported yet.");
+
+        // Throw error if sequence type is PoMo but +rP is not given.
+        // This makes the model string cleaner and compareable.
+        if ((pos_rev_pomo == string::npos) &&
+            (tree->aln->seq_type == SEQ_POMO))
+            outError("Provided alignment is used by PoMo but model string does not contain, e.g., \"+rP\".");
+        
+        if (pos_rev_pomo != string::npos) {
+            // Remove +NXX and +W or +S.
+            size_t n_pos_start = rate_str.find("+N");
+            size_t n_pos_end   = rate_str.find_first_of("+", n_pos_start+1);
+            if (n_pos_start != string::npos) {
+                if (n_pos_end != string::npos)
+                    rate_str = rate_str.substr(0, n_pos_start)
+                        + rate_str.substr(n_pos_end);
+                else
+                    rate_str = rate_str.substr(0, n_pos_start);
+            }
+            
+            size_t w_pos = rate_str.find("+W");
+            if (w_pos != string::npos) {
+                rate_str = rate_str.substr(0, w_pos)
+                    + rate_str.substr(w_pos+2);
+            }
+            size_t s_pos = rate_str.find("+S");
+            if ( s_pos != string::npos) {
+                rate_str = rate_str.substr(0, s_pos)
+                    + rate_str.substr(s_pos+2);
+            }
+            // Update pos_rev_pomo in case something has been removed
+            // before "+rP".
+            string::size_type pos_rev_pomo = rate_str.find("+rP");
+
+            // Move +rP and PoMo params to model string.
+            if (rate_str[pos_rev_pomo+3] == '{') {
+                string::size_type close_bracket = rate_str.find("}");
+                if (close_bracket == string::npos)
+                    outError("No closing bracket in PoMo parameters.");
+                else {
+                    string pomo_params = rate_str.substr(pos_rev_pomo+3,close_bracket-pos_rev_pomo-3+1);
+                    // cout << pomo_params << endl;
+                    model_str = model_str + "+rP" + pomo_params;
+                    rate_str = rate_str.substr(0, pos_rev_pomo) + rate_str.substr(close_bracket+1);
+                }
+            }
+            else {
+                model_str = model_str + "+rP";
+                rate_str = rate_str.substr(0, pos_rev_pomo) + rate_str.substr(pos_rev_pomo + 3);
+            }
+        }
+    }
+    // cout << model_str << "  " << rate_str << endl;
+
+    string::size_type pos_rev_pomo = rate_str.find("+rP");
+    // for rate heterogeneity of PoMo model
+    string pomo_rate_str = "";
+
+    if (pos_rev_pomo != string::npos || tree->aln->seq_type == SEQ_POMO) {
+        // Check that only supported flags are given.
+        if (rate_str.find("+ASC") != string::npos)
+            outError("Ascertainment bias correction with PoMo not yet supported.");
+        if ((rate_str.find("+I") != string::npos) ||
+            (rate_str.find("+R") != string::npos))
+            outError("Rate heterogeneity with PoMo not yet supported.");
+        
+        size_t start_pos;
+        if ((start_pos = rate_str.find("+G")) != string::npos) {
+            // move +G from rate string to model string
+            size_t end_pos = rate_str.find_first_of("+*", start_pos+1);
+            if (end_pos == string::npos) {
+                pomo_rate_str = rate_str.substr(start_pos, rate_str.length() - start_pos);
+                rate_str = rate_str.substr(0, start_pos);
+            } else {
+                pomo_rate_str = rate_str.substr(start_pos, end_pos - start_pos);
+                rate_str = rate_str.substr(0, start_pos) + rate_str.substr(end_pos);
+            }
+        }
+
+    }
+
 
 //	nxsmodel = models_block->findModel(model_str);
 //	if (nxsmodel && nxsmodel->description.find("MIX") != string::npos) {
@@ -177,7 +265,8 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 		case SEQ_PROTEIN: freq_type = FREQ_USER_DEFINED; break; // default for protein: frequencies of the empirical AA matrix
 		case SEQ_MORPH: freq_type = FREQ_EQUAL; break;
 		case SEQ_CODON: freq_type = FREQ_UNKNOWN; break;
-		default: freq_type = FREQ_EMPIRICAL; break; // default for DNA and others: counted frequencies from alignment
+            break;
+		default: freq_type = FREQ_EMPIRICAL; break; // default for DNA, PoMo and others: counted frequencies from alignment
 		}
 	}
 
@@ -299,9 +388,8 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 //			string model_desc;
 //			NxsModel *nxsmodel = models_block->findModel(model_str);
 //			if (nxsmodel) model_desc = nxsmodel->description;
-			model = createModel(model_str, models_block, freq_type, freq_params, tree);
+			model = createModel(model_str, models_block, freq_type, freq_params, tree, false, pomo_rate_str);
 		}
-
 //		fused_mix_rate &= model->isMixture() && site_rate->getNRate() > 1;
 	} else {
 		// site-specific model
@@ -556,14 +644,15 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 			outError("Model is not a mixture model");
 		if (model->getNMixtures() != site_rate->getNRate())
 			outError("Mixture model and site rate model do not have the same number of categories");
-		ModelMixture *mmodel = (ModelMixture*)model;
+//		ModelMixture *mmodel = (ModelMixture*)model;
 		// reset mixture model
-		mmodel->fix_prop = true;
-		for (ModelMixture::iterator it = mmodel->begin(); it != mmodel->end(); it++) {
-			(*it)->total_num_subst = 1.0;
-			mmodel->prop[it-mmodel->begin()] = 1.0;
+		model->setFixMixtureWeight(true);
+        int mix, nmix = model->getNMixtures();
+		for (mix = 0; mix < nmix; mix++) {
+			((ModelGTR*)model->getMixtureClass(mix))->total_num_subst = 1.0;
+			model->setMixtureWeight(mix, 1.0);
 		}
-		mmodel->decomposeRateMatrix();
+		model->decomposeRateMatrix();
 	}
 
 	tree->discardSaturatedSite(params.discard_saturated_site);
@@ -869,6 +958,11 @@ double ModelFactory::optimizeParameters(int fixed_len, bool write_info,
     tree->setCurScore(cur_lh);
 	if (write_info)
 		cout << "1. Initial log-likelihood: " << cur_lh << endl;
+        if (verbose_mode >= VB_MAX) {
+            tree->printTree(cout);
+            cout << endl;
+        }
+    }
 
 	// For UpperBounds -----------
 	//cout<<"MLCheck = "<<tree->mlCheck <<endl;

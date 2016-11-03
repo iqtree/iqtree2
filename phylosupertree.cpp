@@ -817,7 +817,9 @@ void PhyloSuperTree::mapTrees() {
 	if (verbose_mode >= VB_DEBUG)
 		drawTree(cout,  WT_BR_SCALE | WT_INT_NODE | WT_TAXON_ID | WT_NEWLINE | WT_BR_ID);
 	for (iterator it = begin(); it != end(); it++, part++) {
-		string taxa_set = aln->getPattern(part);
+		string taxa_set;
+        Pattern taxa_pat = aln->getPattern(part);
+        taxa_set.insert(taxa_set.begin(), taxa_pat.begin(), taxa_pat.end());
 		(*it)->copyTree(this, taxa_set);
         if ((*it)->getModel()) {
 			(*it)->initializeAllPartialLh();
@@ -1436,7 +1438,9 @@ PhyloTree *PhyloSuperTree::extractSubtree(IntVector &ids) {
 		int id = ids[i];
 		if (id < 0 || id >= size())
 			outError("Internal error ", __func__);
-		string taxa_set = aln->getPattern(id);
+		string taxa_set;
+        Pattern taxa_pat = aln->getPattern(id);
+        taxa_set.insert(taxa_set.begin(), taxa_pat.begin(), taxa_pat.end());
 		if (i == 0) union_taxa = taxa_set; else {
 			for (int j = 0; j < union_taxa.length(); j++)
 				if (taxa_set[j] == 1) union_taxa[j] = 1;

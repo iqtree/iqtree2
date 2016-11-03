@@ -40,6 +40,7 @@ All DNA models are managed here
 */
 class ModelDNA : public ModelGTR
 {
+    friend class ModelPoMo;
 public:
 	/**
 		constructor

@@ -15,7 +15,7 @@
 #include <sstream>
 #include "model/rategamma.h"
 #include "gsl/mygsl.h"
-
+#include "gzstream.h"
 
 using namespace std;
 
@@ -88,8 +88,8 @@ int Alignment::getMaxSeqNameLength() {
     return len;
 }
 
-/** 
-   probability that the observed chi-square exceeds chi2 even if model is correct 
+/**
+   probability that the observed chi-square exceeds chi2 even if model is correct
    @param deg degree of freedom
    @param chi2 chi-square value
    @return p-value
@@ -133,21 +133,29 @@ void Alignment::checkSeqName() {
         }
     }
     if (!ok) outError("Please rename sequences listed above!");
-    
+
     double *state_freq = new double[num_states];
 //    double *freq_per_sequence = new double[num_states*getNSeq()];
     double *freq_per_sequence = new double[num_states];
     unsigned *count_per_seq = new unsigned[num_states*getNSeq()];
     computeStateFreq(state_freq);
+    bool do_comp_test = true;
+    for (int stateno = 0; stateno < num_states; stateno++)
+        if (state_freq[stateno] <= 0)
+            do_comp_test = false;
 //    computeStateFreqPerSequence(freq_per_sequence);
     countStatePerSequence(count_per_seq);
-    
+
     /*if (verbose_mode >= VB_MIN)*/ {
+        cout << "NOTE: The composition test for PoMo only tests the proportion of fixed states!" << endl;
         int max_len = getMaxSeqNameLength()+1;
-//        cout << "  ID  ";
-//        cout <<  "  Sequence";
+        // cout << "  ID  ";
+        // cout <<  "  Sequence";
         cout.width(max_len+14);
-        cout << right << "Gap/Ambiguity" << "  Composition  p-value"<< endl;
+        cout << right << "Gap/Ambiguity";
+        if (do_comp_test) 
+            cout << "  Composition  p-value";
+        cout << endl;
         int num_problem_seq = 0;
         int total_gaps = 0;
         cout.precision(2);
@@ -170,26 +178,63 @@ void Alignment::checkSeqName() {
 			}
 //            cout << "\t" << seq_states[i].size();
 
-            double chi2 = 0.0;
-            unsigned sum_count = 0;
-            for (j = 0; j < num_states; j++)
-                sum_count += count_per_seq[i*num_states+j];
-            double sum_inv = 1.0/sum_count;
-            for (j = 0; j < num_states; j++)
-                freq_per_sequence[j] = count_per_seq[i*num_states+j]*sum_inv;
-            for (j = 0; j < num_states; j++)
-                chi2 += (state_freq[j] - freq_per_sequence[j]) * (state_freq[j] - freq_per_sequence[j]) / state_freq[j];
-            
-//            chi2 *= getNSite();
-            chi2 *= sum_count;
-            double pvalue = chi2prob(num_states-1, chi2);
-            if (pvalue < 0.05) {
-                cout << "    failed ";
-                num_failed++;
-            } else
-                cout << "    passed ";
-            cout.width(9);
-            cout << right << pvalue*100 << "%";
+            if (do_comp_test) {
+                double chi2 = 0.0;
+                unsigned sum_count = 0;
+                if (seq_type == SEQ_POMO) {
+                    // FIXME: Number of nucleotides hardcoded here.
+                    int nnuc = 4;
+                    // Have to normalize allele frequencies.
+                    double state_freq_norm[nnuc];
+                    double sum_freq = 0.0;
+                    for (j = 0; j < nnuc; j++) {
+                        sum_freq += state_freq[j];
+                        state_freq_norm[j] = state_freq[j];
+                    }
+                    for (j = 0; j < nnuc; j++) {
+                        state_freq_norm[j] /= sum_freq;
+                    }
+                    
+                    for (j = 0; j < nnuc; j++)
+                        sum_count += count_per_seq[i*num_states+j];
+                    double sum_inv = 1.0/sum_count;
+                    for (j = 0; j < nnuc; j++)
+                        freq_per_sequence[j] = count_per_seq[i*num_states+j]*sum_inv;
+                    for (j = 0; j < nnuc; j++)
+                        chi2 += (state_freq_norm[j] - freq_per_sequence[j]) * (state_freq_norm[j] - freq_per_sequence[j]) / state_freq_norm[j];
+
+                    // chi2 *= getNSite();
+                    chi2 *= sum_count;
+                    double pvalue = chi2prob(nnuc-1, chi2);
+                    if (pvalue < 0.05) {
+                        cout << "    failed ";
+                        num_failed++;
+                    } else
+                        cout << "    passed ";
+                    cout.width(9);
+                    cout << right << pvalue*100 << "%";
+                }
+                else {
+                    for (j = 0; j < num_states; j++)
+                        sum_count += count_per_seq[i*num_states+j];
+                    double sum_inv = 1.0/sum_count;
+                    for (j = 0; j < num_states; j++)
+                        freq_per_sequence[j] = count_per_seq[i*num_states+j]*sum_inv;
+                    for (j = 0; j < num_states; j++)
+                        chi2 += (state_freq[j] - freq_per_sequence[j]) * (state_freq[j] - freq_per_sequence[j]) / state_freq[j];
+
+                    // chi2 *= getNSite();
+                    chi2 *= sum_count;
+                    double pvalue = chi2prob(num_states-1, chi2);
+                    if (pvalue < 0.05) {
+                        cout << "    failed ";
+                        num_failed++;
+                    } else
+                        cout << "    passed ";
+                    cout.width(9);
+                    cout << right << pvalue*100 << "%";
+                }
+            }
 //            cout << "  " << chi2;
 			cout << endl;
         }
@@ -199,7 +244,9 @@ void Alignment::checkSeqName() {
         cout << left << " TOTAL  ";
         cout.width(6);
         cout << right << ((double)total_gaps/getNSite())/getNSeq()*100 << "% ";
-        cout << " " << num_failed << " sequences failed composition chi2 test (p-value<5%; df=" << num_states-1 << ")" << endl;
+        if (do_comp_test)
+            cout << " " << num_failed << " sequences failed composition chi2 test (p-value<5%; df=" << num_states-1 << ")";
+        cout << endl;
         cout.precision(3);
     }
     delete [] count_per_seq;
@@ -224,7 +271,7 @@ int Alignment::checkIdenticalSeq()
 				}
 			if (equal_seq) {
 				if (first)
-					cerr << "WARNING: Identical sequences " << getSeqName(seq1); 
+					cerr << "WARNING: Identical sequences " << getSeqName(seq1);
 				cerr << ", " << getSeqName(seq2);
 				num_identical++;
 				checked[seq2] = 1;
@@ -353,6 +400,9 @@ Alignment::Alignment(char *filename, char *sequence_type, InputType &intype) : v
                 readPhylipSequential(filename, sequence_type);
             else
                 readPhylip(filename, sequence_type);
+        } else if (intype == IN_COUNTS) {
+            cout << "Counts format (PoMo) detected" << endl;
+            readCountsFormat(filename, sequence_type);
         } else if (intype == IN_CLUSTAL) {
             cout << "Clustal format detected" << endl;
             readClustal(filename, sequence_type);
@@ -450,7 +500,7 @@ int Alignment::readNexus(char *filename) {
     MyToken token(nexus.inf);
     nexus.Execute(token);
 
-	if (data_block->GetNTax() && char_block->GetNTax()) { 
+	if (data_block->GetNTax() && char_block->GetNTax()) {
 		outError("I am confused since both DATA and CHARACTERS blocks were specified");
 		return 0;
 	}
@@ -474,6 +524,11 @@ void Alignment::computeUnknownState() {
     switch (seq_type) {
     case SEQ_DNA: STATE_UNKNOWN = 18; break;
     case SEQ_PROTEIN: STATE_UNKNOWN = 23; break;
+    case SEQ_POMO: {
+        if (pomo_sampling_type == SAMPLING_SAMPLED) STATE_UNKNOWN = num_states;
+        else STATE_UNKNOWN = 0xffffffff;
+        break;
+    }
     default: STATE_UNKNOWN = num_states; break;
     }
 }
@@ -583,9 +638,9 @@ void Alignment::extractDataBlock(NxsCharactersBlock *data_block) {
         for (seq = 0; seq < nseq; seq++) {
             int nstate = data_block->GetNumStates(seq, site);
             if (nstate == 0)
-                pat += STATE_UNKNOWN;
+                pat.push_back(STATE_UNKNOWN);
             else if (nstate == 1) {
-                pat += char_to_state[(int)data_block->GetState(seq, site, 0)];
+                pat.push_back(char_to_state[(int)data_block->GetState(seq, site, 0)]);
             } else {
                 assert(data_type != NxsCharactersBlock::dna || data_type != NxsCharactersBlock::rna || data_type != NxsCharactersBlock::nucleotide);
                 char pat_ch = 0;
@@ -593,7 +648,7 @@ void Alignment::extractDataBlock(NxsCharactersBlock *data_block) {
                     pat_ch |= (1 << char_to_state[(int)data_block->GetState(seq, site, state)]);
                 }
                 pat_ch += 3;
-                pat += pat_ch;
+                pat.push_back(pat_ch);
             }
         }
         num_gaps_only += addPattern(pat, site);
@@ -635,7 +690,7 @@ void Alignment::computeConst(Pattern &pat) {
     	StateBitset this_app;
     	getAppearance(*i, this_app);
     	state_app &= this_app;
-        if (*i < num_states) { 
+        if (*i < num_states) {
             num_app[(int)(*i)]++;
         } else if (*i != STATE_UNKNOWN) {
             // ambiguous characters
@@ -674,6 +729,15 @@ void Alignment::computeConst(Pattern &pat) {
     // compute is_invariant
     is_invariant = (state_app.count() >= 1);
     assert(is_invariant >= is_const);
+
+
+    if (seq_type == SEQ_POMO) {
+        // For PoMo most sites are informative (ambiguous map from data to state space)
+        is_informative = true;
+        // For PoMo there is hardly any constant site
+        is_const = false;
+        is_invariant = false;
+    }
 
     pat.flag = 0;
     if (is_const) pat.flag |= PAT_CONST;
@@ -773,13 +837,13 @@ void Alignment::orderPatternByNumChars() {
     sum += pars_lower_bound[i];
     // now transform lower_bound
 //    assert(i == maxi-1);
-    
+
     for (int j = 0; j <= i; j++) {
         UINT newsum = sum - pars_lower_bound[j];
         pars_lower_bound[j] = sum;
         sum = newsum;
     }
-    
+
     if (verbose_mode >= VB_MAX) {
 //        for (ptn = 0; ptn < nptn; ptn++)
 //            cout << at(ptn_order[ptn]).num_chars << " ";
@@ -816,7 +880,7 @@ void Alignment::regroupSitePattern(int groups, IntVector& site_group)
 	int count = 0;
 	for (int g = 0; g < groups; g++) {
 		pattern_index.clear();
-		for (int i = 0; i < site_group.size(); i++) 
+		for (int i = 0; i < site_group.size(); i++)
 		if (site_group[i] == g) {
 			count++;
 			Pattern pat = stored_pat[stored_site_pattern[i]];
@@ -910,7 +974,7 @@ void Alignment::buildStateMap(char *map, SeqType seq_type) {
         map[(unsigned char)'J'] = 22; // I or L
         map[(unsigned char)'*'] = STATE_UNKNOWN; // stop codon
         map[(unsigned char)'U'] = STATE_UNKNOWN; // 21st amino acid
-        
+
         return;
     case SEQ_MULTISTATE:
         for (int i = 0; i <= STATE_UNKNOWN; i++)
@@ -1017,12 +1081,13 @@ char Alignment::convertState(char state, SeqType seq_type) {
     }
 }
 
+// TODO: state should int
 char Alignment::convertState(char state) {
 	return convertState(state, seq_type);
 }
 
 
-
+// TODO: state should int
 char Alignment::convertStateBack(char state) {
     if (state == STATE_UNKNOWN) return '-';
     if (state == STATE_INVALID) return '?';
@@ -1095,6 +1160,8 @@ char Alignment::convertStateBack(char state) {
 
 string Alignment::convertStateBackStr(char state) {
 	string str;
+    if (seq_type == SEQ_POMO)
+        return string("POMO")+convertIntToString(state);
 	if (seq_type != SEQ_CODON) {
 		str = convertStateBack(state);
 	} else {
@@ -1271,6 +1338,9 @@ int Alignment::buildPattern(StrVector &sequences, char *sequence_type, int nseq,
         if (num_states < 2 || num_states > 32) throw "Invalid number of states.";
         cout << "Alignment most likely contains " << num_states << "-state morphological data" << endl;
         break;
+    case SEQ_POMO:
+        throw "Counts Format pattern is built in Alignment::readCountsFormat().";
+        break;
     default:
         if (!sequence_type)
             throw "Unknown sequence type.";
@@ -1303,7 +1373,7 @@ int Alignment::buildPattern(StrVector &sequences, char *sequence_type, int nseq,
             cout << "Multi-state data with " << num_states << " alphabets" << endl;
             user_seq_type = SEQ_MULTISTATE;
         } else if (strncmp(sequence_type, "CODON", 5) == 0) {
-            if (seq_type != SEQ_DNA) 
+            if (seq_type != SEQ_DNA)
 				outWarning("You want to use codon models but the sequences were not detected as DNA");
             seq_type = user_seq_type = SEQ_CODON;
         	initCodon(&sequence_type[5]);
@@ -1550,9 +1620,17 @@ int Alignment::readFasta(char *filename, char *sequence_type) {
 
     StrVector sequences;
     ostringstream err_str;
-    ifstream in;
+    igzstream in;
+    // ifstream in;
     int line_num = 1;
     string line;
+
+    // PoMo with Fasta files is not supported yet.
+    // if (sequence_type) {
+    //     string st (sequence_type);
+    //     if (st.substr(0,2) != "CF")
+    //         throw "PoMo does not support reading fasta files yet, please use a Counts File.";
+    // }
 
     // set the failbit and badbit
     in.exceptions(ios::failbit | ios::badbit);
@@ -1594,7 +1672,7 @@ int Alignment::readFasta(char *filename, char *sequence_type) {
     StrVector new_seq_names, remain_seq_names;
     new_seq_names.resize(seq_names.size());
     remain_seq_names = seq_names;
-    
+
     for (step = 0; step < 4; step++) {
         bool duplicated = false;
         for (i = 0; i < seq_names.size(); i++) {
@@ -1654,7 +1732,7 @@ int Alignment::readClustal(char *filename, char *sequence_type) {
     for (line_num = 2; !in.eof(); line_num++) {
         getline(in, line);
         trimString(line);
-        if (line == "") { 
+        if (line == "") {
             seq_count = 0;
             continue;
         }
@@ -1673,7 +1751,7 @@ int Alignment::readClustal(char *filename, char *sequence_type) {
         } else if (seq_name != seq_names[seq_count]) {
             throw "Line " + convertIntToString(line_num) + ": Sequence name " + seq_name + " does not match previously declared " +seq_names[seq_count];
         }
-        
+
         line = line.substr(pos+1);
         trimString(line);
         pos = line.find_first_of(" \t");
@@ -1721,20 +1799,20 @@ int Alignment::readMSF(char *filename, char *sequence_type) {
 
     int seq_len = 0, seq_count = 0;
     bool seq_started = false;
-    
+
     for (line_num = 2; !in.eof(); line_num++) {
         getline(in, line);
         trimString(line);
-        if (line == "") { 
+        if (line == "") {
             continue;
         }
         size_t pos;
-        
+
         if (line.substr(0, 2) == "//") {
             seq_started = true;
             continue;
         }
-        
+
         if (line.substr(0,5) == "Name:") {
             if (seq_started)
                 throw "Line " + convertIntToString(line_num) + ": Cannot declare sequence name here";
@@ -1754,7 +1832,7 @@ int Alignment::readMSF(char *filename, char *sequence_type) {
             pos = line.find_first_of(" \t");
             if (pos == string::npos)
                 throw "Line " + convertIntToString(line_num) + ": No whitespace found after sequence length";
-            
+
             int len;
             line = line.substr(0, pos);
             try {
@@ -1770,21 +1848,21 @@ int Alignment::readMSF(char *filename, char *sequence_type) {
                 throw "Line " + convertIntToString(line_num) + ": Sequence length " + convertIntToString(len) + " is different from previously defined " + convertIntToString(seq_len);
             continue;
         }
-        
+
         if (!seq_started) continue;
 
         if (seq_names.empty())
             throw "No sequence name declared in header";
-        
+
         if (isdigit(line[0])) continue;
         pos = line.find_first_of(" \t");
-        if (pos == string::npos) 
+        if (pos == string::npos)
             throw "Line " + convertIntToString(line_num) + ": whitespace not found between sequence name and content - " + line;
-        
+
         string seq_name = line.substr(0, pos);
         if (seq_name != seq_names[seq_count])
             throw "Line " + convertIntToString(line_num) + ": Sequence name " + seq_name + " does not match previously declared " +seq_names[seq_count];
-        
+
         line = line.substr(pos+1);
         // read sequence contents
         for (string::iterator it = line.begin(); it != line.end(); it++) {
@@ -1810,6 +1888,450 @@ int Alignment::readMSF(char *filename, char *sequence_type) {
 
 }
 
+// TODO: Use outWarning to print warnings.
+int Alignment::readCountsFormat(char* filename, char* sequence_type) {
+    int npop = 0;                // Number of populations.
+    int nsites = 0;              // Number of sites.
+    int N = 9;                   // Virtual population size; defaults
+                                 // to 9.  If `-st CFXX` is given, it
+                                 // will be set to XX below.
+    int nnuc = 4;                // Number of nucleotides (base states).
+    ostringstream err_str;
+    igzstream in;
+
+    // Variables to stream the data.
+    string line;
+    string field;
+    string val_str;             // String of counts value.
+    int value;                  // Actual int value.
+    int line_num = 0;           // Line number counter.
+    int field_num;              // Field number counter.
+    int site_count = 0;         // Site / base counter.
+    // Delimiters
+//    char const field_delim = '\t';
+    char const value_delim = ',';
+
+    // Vector of nucleotide base counts in order A, C, G, T.
+    IntVector values;
+    // Sampled vector of nucleotide base counts (N individuals are
+    // sampled out of =values=).
+    IntVector sampled_values;
+    // Iterator to loop over bases.
+    IntVector::iterator i;
+
+    // Variables to convert sampled_values to a state in the pattern.
+    int sum;
+    int count;
+    int id1, id2;
+    int r_int;
+    // Index of polymorphism type; ranges from 0 to 5: [AC], [AG],
+    // [AT], [CG], [CT], [GT].
+    int j;
+    // String with states.  Each character represents an integer state
+    // value ranging from 0 to 4+(4 choose 2)*(N-1)-1.  E.g., 0 to 57
+    // if N is 10.
+    Pattern pattern;
+    // The state a population is in at a specific site.
+    // 0 ... 3 = fixed A,C,G,T
+    // 4 + j*(N-2)+j ... 4 + (j+1)*(N-2)+j = polymorphism of type j
+    // E.g., 4 = [1A,9C]; 5 = [2A,8C]; 12 = [9A,1C]; 13 = [1A,9G]
+    int state;
+
+    // Strings to check counts-file identification line.
+    string ftype, npop_str, nsites_str;
+
+    bool everything_ok = true;
+    int fails = 0;
+
+    // Access model_name in global parameters; needed to get N and
+    // sampling type.
+    Params params = Params::getInstance();
+    // TODO: Do not temper with params; use another way to set PoMo
+    // flag.
+    params.pomo = true;
+
+    // Initialize sampling type.
+    pomo_sampling_type = SAMPLING_WEIGHTED;
+
+    // Check for custom virtual population size or sampling type.
+    size_t n_pos_start = params.model_name.find("+N");
+    size_t n_pos_end   = params.model_name.find_first_of("+", n_pos_start+1);
+    if (n_pos_start != string::npos) {
+        int length;
+        if (n_pos_end != string::npos)
+            length = n_pos_end - n_pos_start - 2;
+        else
+            length = params.model_name.length() - n_pos_start - 2;
+        N = convert_int(params.model_name.substr(n_pos_start+2,length).c_str());
+        if (((N != 10) && (N != 2) && (N % 2 == 0)) || (N < 2) || (N > 19))
+            outError("Custom virtual population size of PoMo not 2, 10 or any other odd number between 3 and 19.");   
+    }
+    // TODO: probably remove virtual_pop_size and use N only.
+    virtual_pop_size = N;
+    if (params.model_name.find("+W") != string::npos &&
+        params.model_name.find("+S") != string::npos)
+        outError("Multiple sampling methods specified.");
+    size_t w_pos = params.model_name.find("+W");
+    if (w_pos != string::npos)
+        pomo_sampling_type = SAMPLING_WEIGHTED;
+    size_t s_pos = params.model_name.find("+S");
+    if (s_pos != string::npos)
+        pomo_sampling_type = SAMPLING_SAMPLED;
+
+    // Print error if sequence type is given (not supported anymore).
+    if (sequence_type) {
+        cout << "Counts files are auto detected." << endl;
+        cout << "PoMo does not support -st flag." << endl;
+        cout << "Please use model string to specifcy virtual population size and sampling method." << endl;
+        outError("Abort.");
+    }
+        
+    // if (sequence_type) {
+    //     string st (sequence_type);
+    //     if (st.substr(0,2) == "CR")
+    //         pomo_random_sampling = true;
+    //     else if (st.substr(0,2) == "CF")
+    //         pomo_random_sampling = false;
+    //     else
+    //         throw "Counts File detected but sequence type (-st) is neither 'CF' nor 'CR'.";
+    //     string virt_pop_size_str = st.substr(2);
+    //     if (virt_pop_size_str != "") {
+    //         int virt_pop_size = atoi(virt_pop_size_str.c_str());
+    //         N = virt_pop_size;
+    //     }
+    // }
+
+    // Set the number of states.  If nnuc=4:
+    // 4 + (4 choose 2)*(N-1) = 58.
+    num_states = nnuc + nnuc*(nnuc-1)/2*(N-1);
+    seq_type = SEQ_POMO;
+
+    // Set UNKNOWN_STATE.  This state is set if no information is in
+    // the alignment.  If we use partial likelihood we do not know the
+    // number of different patterns in the alignment yet and hence,
+    // cannot set the variable STATE_UNKNOWN yet (see
+    // `state_unknown_buffer`).
+    computeUnknownState();
+
+    // Use a buffer for STATE_UNKNOWN.  I.e., if an unknown state is
+    // encountered, the pattern is added to this buffer.  Only after
+    // all sites have been read in, the patterns from this temporal
+    // buffer are added to the normal alignment because then, the
+    // value of STATE_UNKNOWN is known.
+    vector<Pattern> su_buffer;
+    // The site numbers of the patterns that include unknown states.
+    IntVector su_site_counts;
+    int su_number = 0;
+    
+    // BQM: not neccessary, su_site_count will be equal to su_site_counts.size()
+    //    int su_site_count = 0;
+    bool includes_state_unknown = false;
+
+    // Variables to calculate mean number of samples per population.
+    // If N is way above the average number of samples, PoMo has been
+    // ovserved to be unstable and a big warning is printed.
+    int n_samples_sum = 0;
+    int n_sites_sum = 0;
+    // Average number of samples.
+    double n_samples_bar = 0;
+    
+    // Open counts file.
+    // Set the failbit and badbit.
+    in.exceptions(ios::failbit | ios::badbit);
+    in.open(filename);
+    // Remove the failbit.
+    in.exceptions(ios::badbit);
+
+    // Skip comments.
+    do {
+        getline(in, line);
+        line_num++;
+    }
+    while (line[0] == '#');
+
+    // Read in npop and nsites;
+    istringstream ss1(line);
+    // Read and check counts file headerline.
+    if (!(ss1 >> ftype >> npop_str >> npop >> nsites_str >> nsites)) {
+        err_str << "Counts-File identification line could not be read.";
+        throw err_str.str();
+    }
+    if ((ftype.compare("COUNTSFILE") ||
+         npop_str.compare("NPOP") ||
+         nsites_str.compare("NSITES")) != 0) {
+        err_str << "Counts-File identification line could not be read.";
+        throw err_str.str();
+    }
+    cout << endl;
+    cout << "----------------------------------------------------------------------" << endl;
+    cout << "Number of populations:     " << npop << endl;
+    cout << "Number of sites:           " << nsites << endl;
+
+    if (nsites > 0)
+        site_pattern.resize(nsites);
+    else {
+        err_str << "Number of sites is 0.";
+        throw err_str.str();
+    }
+
+    // Skip comments.
+    do {
+        getline(in, line);
+        line_num++;
+    }
+    while (line[0] == '#');
+
+    // Headerline.
+    istringstream ss2(line);
+    
+    for (field_num = 0; (ss2 >> field); field_num++) {
+        if (field_num == 0) {
+            if ((field.compare("Chrom") != 0) && (field.compare("CHROM") != 0)) {
+                err_str << "Unrecognized header field " << field << ".";
+                throw err_str.str();
+            }
+        }
+        else if (field_num == 1) {
+            if ((field.compare("Pos") != 0) && (field.compare("POS") != 0)) {
+                err_str << "Unrecognized header field " << field << ".";
+                throw err_str.str();
+            }
+        }
+        else {
+            //Read in sequence names.
+            seq_names.push_back(field);
+        }
+    }
+    if ((int) seq_names.size() != npop) {
+                err_str << "Number of populations in headerline doesn't match NPOP.";
+                throw err_str.str();
+    }
+
+    // Data.
+    // Loop over sites.
+    for ( ; getline(in, line); ) {
+        line_num++;
+    	field_num = 0;
+        pattern.clear();
+        everything_ok = true;
+        includes_state_unknown = false;
+        istringstream fieldstream(line);
+        // Loop over populations / individuals.
+        for ( ; (fieldstream >> field); ) {
+            // Skip Chrom and Pos columns.
+            if ( (field_num == 0) || (field_num == 1)) {
+                field_num++;
+                continue;
+            }
+            // Clear value vectors.
+            values.clear();
+            sampled_values.clear();
+            sampled_values.resize(nnuc,0);
+            istringstream valuestream(field);
+            // Loop over bases within one population.
+            for (; getline(valuestream, val_str, value_delim);) {
+            	try {
+            		value = convert_int(val_str.c_str());
+            	} catch(string &str) {
+            		err_str << "Could not read value " << val_str << " on line " << line_num << ".";
+            		throw err_str.str();
+            	}
+            	values.push_back(value);
+            }
+            if (values.size() != nnuc) {
+                err_str << "Number of bases does not match on line " << line_num << ".";
+                throw err_str.str();
+            }
+
+            // Read in the data.
+            sum = 0;
+            count = 0;
+            id1 = -1;
+            id2 = -1;
+            // Sum over elements and count non-zero elements.
+            for(i = values.begin(); i != values.end(); ++i) {
+                // `i` is an iterator object that points to some
+                // element of `value`.
+            	if (*i != 0) {
+                    // `i - values.begin()` ranges from 0 to 3 and
+                    // determines the nucleotide or allele type.
+            		if (id1 == -1) id1 = i - values.begin();
+            		else id2 = i - values.begin();
+            		count++;
+                	sum += *i;
+            	}
+            }
+            // Determine state (cf. above).
+            if (count == 1) {
+                n_samples_sum += values[id1];
+                n_sites_sum++;
+                if (pomo_sampling_type == SAMPLING_SAMPLED) {
+                    // Fixed state, state ID is just id1.
+                    state = id1;
+                } else {
+                    if (values[id1] >= 16384) {
+                        cout << "WARNING: Pattern on line " <<
+                            line_num << " exceeds count limit of 16384." << endl;
+                        everything_ok = false;
+                    }
+                    uint32_t pomo_state = (id1 | (values[id1]) << 2);
+                    IntIntMap::iterator pit = pomo_states_index.find(pomo_state);
+                    if (pit == pomo_states_index.end()) { // not found
+                        state = pomo_states_index[pomo_state] = pomo_states.size();
+                        pomo_states.push_back(pomo_state);
+                    } else {
+                        state = pit->second;
+                    }
+                    state += num_states; // make the state larger than num_states
+                }
+            }
+            else if (count == 0) {
+                state = STATE_UNKNOWN;
+                su_number++;
+                includes_state_unknown = true;
+            }
+            else if (count > 2) {
+                if (verbose_mode >= VB_MAX) {
+                    std::cout << "WARNING: More than two bases are present on line ";
+                    std::cout << line_num << "." << std::endl;
+                }
+                everything_ok = false;
+            	// err_str << "More than 2 bases are present on line " << line_num << ".";
+            	// throw err_str.str();
+            }
+            else if (count == 2) {
+                n_samples_sum += values[id1];
+                n_samples_sum += values[id2];
+                n_sites_sum++;
+                if (pomo_sampling_type == SAMPLING_SAMPLED) {
+                     // Binomial sampling.  2 bases are present.
+                    for(int k = 0; k < N; k++) {
+                        r_int = random_int(sum);
+                        if (r_int < values[id1]) sampled_values[id1]++;
+                        else sampled_values[id2]++;
+                    }
+                    if (sampled_values[id1] == 0) state = id2;
+                    else if (sampled_values[id2] == 0) state = id1;
+                    else {
+                        if (id1 == 0) j = id2 - 1;
+                        else j = id1 + id2;
+                        state = nnuc + j*(N-2) + j + sampled_values[id1] - 1;
+                    }
+                } else {
+                    /* BQM 2015-07: store both states now */
+                    if (values[id1] >= 16384 || values[id2] >= 16384)
+                        // Cannot add sites where more than 16384
+                        // individuals have the same base within one
+                        // population.
+                        everything_ok = false;
+                    uint32_t pomo_state = (id1 | (values[id1]) << 2) | ((id2 | (values[id2]<<2))<<16);
+                    IntIntMap::iterator pit = pomo_states_index.find(pomo_state);
+                    if (pit == pomo_states_index.end()) { // not found
+                        state = pomo_states_index[pomo_state] = pomo_states.size();
+                        pomo_states.push_back(pomo_state);
+                    } else {
+                        state = pit->second;
+                    }
+                    state += num_states; // make the state larger than num_states
+                }
+            }
+            else {
+                err_str << "Unexpected error on line number " << line_num << ".";
+                throw err_str.str();
+            }
+
+            // Now we have the state to build a pattern ;-).
+            pattern.push_back(state);
+        }
+        if ((int) pattern.size() != npop) {
+            err_str << "Number of species does not match on line " << line_num << ".";
+            throw err_str.str();
+        }
+        // Pattern has been built and is now added to the vector of
+        // patterns.
+        if (everything_ok == true) {
+            if (includes_state_unknown) {
+//                su_site_count++;
+                if (pomo_sampling_type == SAMPLING_WEIGHTED) {
+                    su_buffer.push_back(pattern);
+                    su_site_counts.push_back(site_count);
+                }
+                // Add pattern if we use random sampling because then,
+                // STATE_UNKNOWN = num_states is well defined already at
+                // this stage.
+                else
+                    addPattern(pattern, site_count);
+                    
+                // BQM: it is neccessary to always increase site_count 
+                site_count++;
+            }
+            else {
+                addPattern(pattern, site_count);
+                site_count++;
+            }
+        }
+        else {
+            fails++;
+            if (verbose_mode >= VB_MAX) {
+                cout << "WARNING: Pattern on line " <<
+                    line_num << " was not added." << endl;
+            }
+        }
+    }
+
+    if (site_count + fails != nsites) {
+        err_str << "Number of sites does not match NSITES.";
+        throw err_str.str();
+    }
+
+    if (pomo_sampling_type == SAMPLING_WEIGHTED) {
+        // Now we can correctly set STATE_UNKNOWN.
+        STATE_UNKNOWN = pomo_states.size() + num_states;
+
+        // Process sites that include an unknown state.
+        for (vector<Pattern>::iterator pat_it = su_buffer.begin();
+             pat_it != su_buffer.end(); pat_it++) {
+            for (Pattern::iterator sp_it = pat_it->begin(); sp_it != pat_it->end(); sp_it++)
+                if (*sp_it == 0xffffffff) *sp_it = STATE_UNKNOWN;
+        }
+
+        for (unsigned int i = 0; i < su_buffer.size(); i++)
+                addPattern(su_buffer[i], su_site_counts[i]);        
+    }
+
+    cout << "---" << endl;
+    cout << "Normal sites:              " << site_count - su_site_counts.size() << endl;
+    cout << "Sites with unknown states: " << su_site_counts.size() << endl;
+    cout << "Total sites read:          " << site_count << endl;
+    cout << "Fails:                     " << fails << endl;
+    if (pomo_sampling_type == SAMPLING_WEIGHTED) {
+        cout << "---" << endl;
+        cout << "Compound states:           " << pomo_states.size() << endl;
+    }
+    cout << "----------------------------------------------------------------------" << endl << endl;
+
+    // Check if N is not too large.
+    n_samples_bar = n_samples_sum / (double) n_sites_sum;
+    cout << "The average number of samples is " << n_samples_bar << endl;
+    if ((pomo_sampling_type == SAMPLING_WEIGHTED) &&
+        (n_samples_bar * 3.0 <= N)) {
+        cout << "----------------------------------------------------------------------" << endl;
+        cout << "WARNING: The virtual population size N is much larger ";
+        cout << "than the average number of samples." << endl;
+        cout << "WARNING: This setting together with the /weighted/ sampling method ";
+        cout << "might be numerically unstable." << endl << endl;
+        cout << "----------------------------------------------------------------------" << endl;
+    }
+
+    site_pattern.resize(site_count);
+
+    in.clear();
+    // set the failbit again
+    in.exceptions(ios::failbit | ios::badbit);
+    in.close();
+
+    return 1;
+}
 
 bool Alignment::getSiteFromResidue(int seq_id, int &residue_left, int &residue_right) {
     int i, j;
@@ -2302,6 +2824,13 @@ void Alignment::createBootstrapAlignment(Alignment *aln, IntVector* pattern_freq
     site_pattern.resize(nsite, -1);
     clear();
     pattern_index.clear();
+    
+    // 2016-07-05: copy variables for PoMo
+    pomo_states = aln->pomo_states;
+    pomo_states_index = aln->pomo_states_index;
+    pomo_sampling_type = aln->pomo_sampling_type;
+    virtual_pop_size = aln->virtual_pop_size;
+    
     VerboseMode save_mode = verbose_mode;
     verbose_mode = min(verbose_mode, VB_MIN); // to avoid printing gappy sites in addPattern
     if (pattern_freq) {
@@ -2623,7 +3152,7 @@ string Alignment::getUnobservedConstPatterns() {
 	for (char state = 0; state < num_states; state++) 
     if (!isStopCodon(state))
     {
-		string pat;
+		Pattern pat;
 		pat.resize(getNSeq(), state);
 		if (pattern_index.find(pat) == pattern_index.end()) {
 			// constant pattern is unobserved
@@ -2636,7 +3165,7 @@ string Alignment::getUnobservedConstPatterns() {
 int Alignment::countProperChar(int seq_id) {
     int num_proper_chars = 0;
     for (iterator it = begin(); it != end(); it++) {
-        if ((*it)[seq_id] >= 0 && (*it)[seq_id] < num_states) num_proper_chars+=(*it).frequency;
+        if ((*it)[seq_id] < num_states + pomo_states.size()) num_proper_chars+=(*it).frequency;
     }
     return num_proper_chars;
 }
@@ -2663,13 +3192,16 @@ Alignment::~Alignment()
 
 double Alignment::computeObsDist(int seq1, int seq2) {
     int diff_pos = 0, total_pos = 0;
-    for (iterator it = begin(); it != end(); it++)
-        if  ((*it)[seq1] < num_states && (*it)[seq2] < num_states) {
+    for (iterator it = begin(); it != end(); it++) {
+        int state1 = convertPomoState((*it)[seq1]);
+        int state2 = convertPomoState((*it)[seq2]);
+        if  (state1 < num_states && state2 < num_states) {
             //if ((*it)[seq1] != STATE_UNKNOWN && (*it)[seq2] != STATE_UNKNOWN) {
             total_pos += (*it).frequency;
             if ((*it)[seq1] != (*it)[seq2] )
                 diff_pos += (*it).frequency;
         }
+    }
     if (!total_pos) {
         if (verbose_mode >= VB_MED)
             outWarning("No overlapping characters between " + getSeqName(seq1) + " and " + getSeqName(seq2));
@@ -2732,7 +3264,7 @@ void Alignment::printDist(const char *file_name, double *dist_mat) {
 }
 
 double Alignment::readDist(istream &in, double *dist_mat) {
-    double longest_dist = 0.0;    
+    double longest_dist = 0.0;
     int nseqs;
     in >> nseqs;
     if (nseqs != getNSeq())
@@ -2761,7 +3293,7 @@ double Alignment::readDist(istream &in, double *dist_mat) {
             if (tmp_dist_mat[pos - 1] > longest_dist)
                 longest_dist = tmp_dist_mat[pos - 1];
         }
-        //cout << endl;        
+        //cout << endl;
     }
     //cout << "Internal distance matrix: " << endl;
     // Now initialize the internal distance matrix, in which the sequence order is the same
@@ -2783,7 +3315,7 @@ double Alignment::readDist(istream &in, double *dist_mat) {
         }
         //cout << endl;
     }
-            
+
     // check for symmetric matrix
     for (seq1 = 0; seq1 < nseqs-1; seq1++) {
         if (dist_mat[seq1*nseqs+seq1] != 0.0)
@@ -2792,7 +3324,7 @@ double Alignment::readDist(istream &in, double *dist_mat) {
             if (dist_mat[seq1*nseqs+seq2] != dist_mat[seq2*nseqs+seq1])
                 throw "Distance between " + getSeqName(seq1) + " and " + getSeqName(seq2) + " is not symmetric";
     }
-    
+
     /*
     string dist_file = params.out_prefix;
     dist_file += ".userdist";
@@ -2829,25 +3361,25 @@ void Alignment::computeStateFreq (double *state_freq, size_t num_unknown_states)
     double *new_freq = new double[num_states];
     unsigned *state_count = new unsigned[STATE_UNKNOWN+1];
     double *new_state_freq = new double[num_states];
-    
-    
+
+
     memset(state_count, 0, sizeof(unsigned)*(STATE_UNKNOWN+1));
     state_count[(int)STATE_UNKNOWN] = num_unknown_states;
-    
+
     for (i = 0; i <= STATE_UNKNOWN; i++)
         getAppearance(i, &states_app[i*num_states]);
-        
+
     for (iterator it = begin(); it != end(); it++)
         for (Pattern::iterator it2 = it->begin(); it2 != it->end(); it2++)
-            state_count[(int)*it2] += it->frequency;
-            
+            state_count[convertPomoState((int)*it2)] += it->frequency;
+
     for (i = 0; i < num_states; i++)
         state_freq[i] = 1.0/num_states;
-        
+
     const int NUM_TIME = 8;
     for (int k = 0; k < NUM_TIME; k++) {
         memset(new_state_freq, 0, sizeof(double)*num_states);
-        
+
         for (i = 0; i <= STATE_UNKNOWN; i++) {
             if (state_count[i] == 0) continue;
             double sum_freq = 0.0;
@@ -2860,7 +3392,7 @@ void Alignment::computeStateFreq (double *state_freq, size_t num_unknown_states)
                 new_state_freq[j] += new_freq[j]*sum_freq*state_count[i];
             }
         }
-        
+
         double sum_freq = 0.0;
         for (j = 0; j < num_states; j++)
             sum_freq += new_state_freq[j];
@@ -2868,21 +3400,77 @@ void Alignment::computeStateFreq (double *state_freq, size_t num_unknown_states)
         for (j = 0; j < num_states; j++)
             state_freq[j] = new_state_freq[j]*sum_freq;
     }
-    
+
 	convfreq(state_freq);
 
     if (verbose_mode >= VB_MED) {
         cout << "Empirical state frequencies: ";
+        cout << setprecision(10);
         for (i = 0; i < num_states; i++)
             cout << state_freq[i] << " ";
         cout << endl;
     }
-    
+
     delete [] new_state_freq;
     delete [] state_count;
     delete [] new_freq;
     delete [] states_app;
 }
+
+int Alignment::convertPomoState(int state) {
+    if (seq_type != SEQ_POMO) return state;
+    if (state < num_states) return state;
+    if (state == STATE_UNKNOWN) return state;
+    state -= num_states;
+    if (pomo_states.size() <= 0)
+        outError("Alignment file is too short.");
+    if (state >= pomo_states.size()) {
+        cout << "state:              " << state << endl;
+        cout << "pomo_states.size(): " << pomo_states.size() << endl;
+    }
+    assert(state < pomo_states.size());
+    int id1 = pomo_states[state] & 3;
+    int id2 = (pomo_states[state] >> 16) & 3;
+    int value1 = (pomo_states[state] >> 2) & 16383;
+    int value2 = pomo_states[state] >> 18;
+    int N = virtual_pop_size;
+    // Mon Jun 13 13:24:55 CEST 2016.  Make this a little bit more
+    // stochastic.  This is important if the sample size is small..
+    int M = value1 + value2;
+    double stoch = (double) rand() / RAND_MAX - 0.5;
+    stoch /= 2.0;
+    int pick = (int)round(((double) value1*N/M) + stoch);
+    // int pick = (int)round(((double) value1*N/M));
+    int real_state;
+    if (pick <= 0) 
+        real_state = id2;
+    else if (pick >= N)
+        real_state = id1;
+    else {
+        int j;
+        if (id1 == 0) j = id2 - 1;
+        else j = id1 + id2;
+        real_state = 3 + j*(N-1) + pick;
+    }
+    state = real_state;
+    assert(state < num_states);
+    return state;
+}
+
+void Alignment::computeAbsoluteStateFreq(unsigned int *abs_state_freq) {
+    memset(abs_state_freq, 0, num_states * sizeof(unsigned int));
+
+    if (seq_type == SEQ_POMO) {
+        for (iterator it = begin(); it != end(); it++)
+            for (Pattern::iterator it2 = it->begin(); it2 != it->end(); it2++)
+                abs_state_freq[convertPomoState((int)*it2)] += it->frequency;
+    } else {
+        for (iterator it = begin(); it != end(); it++)
+            for (Pattern::iterator it2 = it->begin(); it2 != it->end(); it2++)
+                abs_state_freq[(int)*it2] += it->frequency;
+    }
+}
+
 
 void Alignment::countStatePerSequence (unsigned *count_per_sequence) {
     int i;
@@ -2890,8 +3478,9 @@ void Alignment::countStatePerSequence (unsigned *count_per_sequence) {
     memset(count_per_sequence, 0, sizeof(unsigned)*num_states*nseqs);
     for (iterator it = begin(); it != end(); it++)
         for (i = 0; i != nseqs; i++) {
-            if (it->at(i) < num_states) {
-                count_per_sequence[i*num_states + it->at(i)] += it->frequency;
+            int state = convertPomoState(it->at(i));
+            if (state < num_states) {
+                count_per_sequence[i*num_states + state] += it->frequency;
             }
         }
 }
@@ -2903,13 +3492,13 @@ void Alignment::computeStateFreqPerSequence (double *freq_per_sequence) {
     double *new_freq = new double[num_states];
     unsigned *state_count = new unsigned[(STATE_UNKNOWN+1)*nseqs];
     double *new_state_freq = new double[num_states];
-    
-    
+
+
     memset(state_count, 0, sizeof(unsigned)*(STATE_UNKNOWN+1)*nseqs);
-    
+
     for (i = 0; i <= STATE_UNKNOWN; i++)
         getAppearance(i, &states_app[i*num_states]);
-        
+
     for (iterator it = begin(); it != end(); it++)
         for (i = 0; i != nseqs; i++) {
             state_count[i*(STATE_UNKNOWN+1) + it->at(i)] += it->frequency;
@@ -2917,7 +3506,7 @@ void Alignment::computeStateFreqPerSequence (double *freq_per_sequence) {
     double equal_freq = 1.0/num_states;
     for (i = 0; i < num_states*nseqs; i++)
         freq_per_sequence[i] = equal_freq;
-        
+
     const int NUM_TIME = 8;
     for (int k = 0; k < NUM_TIME; k++) {
         for (int seq = 0; seq < nseqs; seq++) {
@@ -2935,16 +3524,16 @@ void Alignment::computeStateFreqPerSequence (double *freq_per_sequence) {
                     new_state_freq[j] += new_freq[j]*sum_freq*state_count[seq*(STATE_UNKNOWN+1)+i];
                 }
             }
-            
+
             double sum_freq = 0.0;
             for (j = 0; j < num_states; j++)
                 sum_freq += new_state_freq[j];
             sum_freq = 1.0/sum_freq;
             for (j = 0; j < num_states; j++)
                 state_freq[j] = new_state_freq[j]*sum_freq;
-         }   
+         }
     }
-    
+
 //	convfreq(state_freq);
 //
 //    if (verbose_mode >= VB_MED) {
@@ -2953,7 +3542,7 @@ void Alignment::computeStateFreqPerSequence (double *freq_per_sequence) {
 //            cout << state_freq[i] << " ";
 //        cout << endl;
 //    }
-    
+
     delete [] new_state_freq;
     delete [] state_count;
     delete [] new_freq;
@@ -3026,10 +3615,10 @@ void Alignment::computeStateFreqPerSequence (double *freq_per_sequence) {
 //	delete [] newSiteAppArr_;
 //	delete [] siteAppArr_;
 //	delete [] timeAppArr_;
-//	
+//
 //}
 
-void Alignment::getAppearance(char state, double *state_app) {
+void Alignment::getAppearance(StateType state, double *state_app) {
     int i;
     if (state == STATE_UNKNOWN) {
         for (i = 0; i < num_states; i++)
@@ -3060,11 +3649,19 @@ void Alignment::getAppearance(char state, double *state_app) {
 				state_app[i] = 1.0;
 			}
 		break;
+    case SEQ_POMO:
+//        state -= num_states;
+//        assert(state < pomo_states.size());
+//        // count the number of nucleotides
+//        state_app[pomo_states[state] & 3] = 1.0;
+//        state_app[(pomo_states[state] >> 16) & 3] = 1.0;
+        state_app[convertPomoState(state)] = 1.0;
+        break;
 	default: assert(0); break;
 	}
 }
 
-void Alignment::getAppearance(char state, StateBitset &state_app) {
+void Alignment::getAppearance(StateType state, StateBitset &state_app) {
 
 	int i;
     if (state == STATE_UNKNOWN) {
@@ -3095,6 +3692,14 @@ void Alignment::getAppearance(char state, StateBitset &state_app) {
 				state_app[i] = 1;
 			}
 		break;
+    case SEQ_POMO:
+//        state -= num_states;
+//        assert(state < pomo_states.size());
+//        // count the number of nucleotides
+//        state_app[pomo_states[state] & 3] = 1;
+//        state_app[(pomo_states[state] >> 16) & 3] = 1;
+        state_app[convertPomoState(state)] = 1;
+        break;
 	default: assert(0); break;
 	}
 }
@@ -3174,7 +3779,7 @@ void Alignment::computeCodonFreq(StateFreqType freq, double *state_freq, double 
 				cout << endl;
 			}
 		}
-        
+
         double sum_stop=0.0;
         double sum = 0.0;
 		for (i = 0; i < num_states; i++) {
@@ -3193,7 +3798,7 @@ void Alignment::computeCodonFreq(StateFreqType freq, double *state_freq, double 
 		for (i = 0; i < num_states; i++)
                 sum += state_freq[i];
         assert(fabs(sum-1.0)<1e-5);
-        
+
 //		double sum = 0;
 //		for (i = 0; i < num_states; i++)
 //			if (isStopCodon(i)) {
@@ -3206,7 +3811,7 @@ void Alignment::computeCodonFreq(StateFreqType freq, double *state_freq, double 
 //			}
 //		for (i = 0; i < num_states; i++)
 //			state_freq[i] /= sum;
-            
+
         // now recompute ntfreq based on state_freq
 //        memset(ntfreq, 0, 12*sizeof(double));
 //        for (i = 0; i < num_states; i++)
@@ -3338,7 +3943,10 @@ void Alignment::convfreq(double *stateFrqArr) {
 	for (i = 0; i < num_states; i++)
 	{
 		freq = stateFrqArr[i];
-		if (freq < MIN_FREQUENCY) {
+        // Do not check for a minimum frequency with PoMo because very
+        // low frequencies are expected for polymorphic sites.
+		if ((freq < MIN_FREQUENCY) &&
+            (seq_type != SEQ_POMO)) {
 			stateFrqArr[i] = MIN_FREQUENCY;
 			if (!isStopCodon(i))
 				cout << "WARNING: " << convertStateBackStr(i) << " is not present in alignment that may cause numerical problems" << endl;

@@ -982,13 +982,39 @@ const double MIN_MIXTURE_PROP = 0.001;
 //const double MAX_MIXTURE_RATE = 100.0;
 
 ModelSubst* createModel(string model_str, ModelsBlock *models_block, StateFreqType freq_type, string freq_params,
-		PhyloTree* tree, bool count_rates)
+		PhyloTree* tree, bool count_rates, string pomo_rate_str)
 {
 	ModelSubst *model = NULL;
 	//cout << "Numstates: " << tree->aln->num_states << endl;
 	string model_params;
-	NxsModel *nxsmodel = models_block->findModel(model_str);
+    NxsModel *nxsmodel = models_block->findModel(model_str);
 	if (nxsmodel) model_params = nxsmodel->description;
+
+
+
+    // Check for PoMo.
+    bool is_pomo = false;
+    bool is_rev_pomo = true;
+    size_t pos_rev_pomo = model_str.find("+rP");
+    size_t pos_nonrev_pomo = model_str.find("+nrP");
+    string pomo_params;
+    if (pos_rev_pomo != string::npos) {
+        is_pomo = true;
+        is_rev_pomo = true;
+        if (model_str.length() > pos_rev_pomo+3 && model_str[pos_rev_pomo+3] == '{') {
+            size_t pos_close_brack = model_str.find('}', pos_rev_pomo);
+            if (pos_close_brack == string::npos)
+                outError("Closing bracket for PoMo parameter not found");
+            pomo_params = model_str.substr(pos_rev_pomo+4, pos_close_brack-pos_rev_pomo-4);
+        }
+        model_str = model_str.substr(0, pos_rev_pomo);
+    }
+    if (pos_nonrev_pomo != string::npos) {
+        is_pomo = true;
+        is_rev_pomo = false;
+        model_str = model_str.substr(0, pos_nonrev_pomo);
+    }
+
 	size_t pos = model_str.find(OPEN_BRACKET);
 	if (pos != string::npos) {
 		if (model_str.rfind(CLOSE_BRACKET) != model_str.length()-1)
@@ -1005,9 +1031,17 @@ ModelSubst* createModel(string model_str, ModelsBlock *models_block, StateFreqTy
 	{
 		model = new ModelSubst(tree->aln->num_states);
 	} else */
-//	if ((model_str == "GTR" && tree->aln->seq_type == SEQ_DNA) ||
-//		(model_str == "GTR2" && tree->aln->seq_type == SEQ_BINARY) ||
-//		(model_str == "GTR20" && tree->aln->seq_type == SEQ_PROTEIN)) {
+    if ((is_pomo == true) ||
+        (tree->aln->seq_type == SEQ_POMO)) {
+        if (pomo_rate_str == "")
+            model = new ModelPoMo(model_str.c_str(), model_params, freq_type, freq_params, tree, is_rev_pomo, pomo_params);
+        else
+            model = new ModelPoMoMixture(model_str.c_str(), model_params, freq_type, freq_params, tree, is_rev_pomo, pomo_params, pomo_rate_str);
+        if (model->isMixture())
+            cout << "PoMo mixture model for Gamma rate heterogeneity." << endl;
+//	else if ((model_str == "GTR" && tree->aln->seq_type == SEQ_DNA) ||
+//             (model_str == "GTR2" && tree->aln->seq_type == SEQ_BINARY) ||
+//             (model_str == "GTR20" && tree->aln->seq_type == SEQ_PROTEIN)) {
 //		model = new ModelGTR(tree, count_rates);
 //		if (freq_params != "")
 //			((ModelGTR*)model)->readStateFreq(freq_params);
@@ -1246,6 +1280,17 @@ void ModelMixture::initMixture(string orig_model_name, string model_name, string
 	fix_prop |= (nmixtures == 1);
 	// use central eigen etc. stufffs
 
+	decomposeRateMatrix();
+
+    delete nxs_freq_optimize;
+    delete nxs_freq_empirical;
+
+}
+
+void ModelMixture::initMem() {
+
+	int nmixtures = size();
+
 	if (eigenvalues) aligned_free(eigenvalues);
 	if (eigenvectors) aligned_free(eigenvectors);
 	if (inv_eigenvectors) aligned_free(inv_eigenvectors);
@@ -1258,7 +1303,7 @@ void ModelMixture::initMixture(string orig_model_name, string model_name, string
 //	eigen_coeff = aligned_alloc<double>(ncoeff*nmixtures);
 
 	// assigning memory for individual models
-	m = 0;
+	int m = 0;
 	for (iterator it = begin(); it != end(); it++, m++) {
         // first copy memory for eigen stuffs
         memcpy(&eigenvalues[m*num_states], (*it)->eigenvalues, num_states*sizeof(double));
@@ -1277,11 +1322,7 @@ void ModelMixture::initMixture(string orig_model_name, string model_name, string
 		(*it)->inv_eigenvectors = &inv_eigenvectors[m*num_states*num_states];
 //		(*it)->eigen_coeff = &eigen_coeff[m*ncoeff];
 	}
-	decomposeRateMatrix();
-    
-    delete nxs_freq_optimize;
-    delete nxs_freq_empirical;
-    
+
 }
 
 ModelMixture::~ModelMixture() {

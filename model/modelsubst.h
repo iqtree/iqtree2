@@ -71,6 +71,13 @@ public:
 	 */
 	virtual bool isMixture() { return false; }
 
+    /** 
+     * Confer to modelpomo.h.
+     * 
+     * @return TRUE if PoMo is being used, FALSE otherise.
+     */
+    virtual bool isPolymorphismAware() { return false; }
+
 	/**
 	 * @return the number of mixture model components
 	 */
@@ -81,6 +88,30 @@ public:
 	 * @return weight of a mixture model component
 	 */
 	virtual double getMixtureWeight(int cat) { return 1.0; }
+
+	/**
+	 * @param cat mixture class
+	 * @return weight of a mixture model component
+	 */
+	virtual double getMixtureWeight(int cat) { return 1.0; }
+
+	/**
+	 * @param cat mixture class
+	 * @return weight of a mixture model component
+	 */
+	virtual void setMixtureWeight(int cat, double weight) {}
+
+	/**
+	 * @param cat mixture class
+	 * @return weight of a mixture model component
+	 */
+	virtual void setFixMixtureWeight(bool fix_prop) {}
+
+	/**
+	 * @param cat mixture class ID
+	 * @return corresponding mixture model component
+	 */
+    virtual ModelSubst* getMixtureClass(int cat) { return NULL; }
 
 	/**
 		@return the number of rate entries, equal to the number of elements
@@ -250,6 +281,12 @@ public:
 		@param out output stream
 	*/
 	virtual void writeInfo(ostream &out) {}
+
+	/**
+		report model
+		@param out output stream
+	*/
+    virtual void report(ostream &out) {}
 
 	virtual double *getEigenvalues() const {
 		return NULL;
