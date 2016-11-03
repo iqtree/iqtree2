@@ -244,9 +244,10 @@ void reportModel(ofstream &out, Alignment *aln, ModelSubst *m) {
 	if (m->isSiteSpecificModel())
 		out << "(site specific frequencies)" << endl << endl;
 	else {
-		if (!m->isReversible())
-			out << "(inferred from Q matrix)" << endl;
-		else
+        // 2016-11-03: commented out as this is not correct anymore
+//		if (!m->isReversible())
+//			out << "(inferred from Q matrix)" << endl;
+//		else
 			switch (m->getFreqType()) {
 			case FREQ_EMPIRICAL:
 				out << "(empirical counts from alignment)" << endl;
@@ -265,7 +266,7 @@ void reportModel(ofstream &out, Alignment *aln, ModelSubst *m) {
 			}
 		out << endl;
 
-		if (m->getFreqType() != FREQ_USER_DEFINED && m->getFreqType() != FREQ_EQUAL) {
+		if ((m->getFreqType() != FREQ_USER_DEFINED || aln->seq_type == SEQ_DNA) && m->getFreqType() != FREQ_EQUAL) {
 			double *state_freqs = new double[m->num_states];
 			m->getStateFrequency(state_freqs);
             int ncols=(aln->seq_type == SEQ_CODON) ? 4 : 1;

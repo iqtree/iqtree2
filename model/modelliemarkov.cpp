@@ -505,6 +505,9 @@ static void tauToPi(double* tau, double* pi, int sym) {
  */
 
 void ModelLieMarkov::setBasis() {
+  if (getFreqType() == FREQ_UNKNOWN)
+    freq_type = FREQ_ESTIMATE;
+
   if (getFreqType() == FREQ_EMPIRICAL || 
       getFreqType() == FREQ_USER_DEFINED || 
       getFreqType() == FREQ_EQUAL) {
@@ -526,7 +529,7 @@ void ModelLieMarkov::setBasis() {
     bool canMatchFreq = true;
     switch (bdf) {
     case 0:
-      canMatchFreq = (fabs(tau[0])<0.001 && fabs(tau[1])<0.001 || fabs(tau[2])<0.001);
+      canMatchFreq = ((fabs(tau[0])<0.001 && fabs(tau[1])<0.001) || fabs(tau[2])<0.001);
       tau[0] = 0; tau[1] = 0; tau[2] = 0;
       break;
     case 1:
