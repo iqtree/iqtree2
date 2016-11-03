@@ -215,6 +215,22 @@ public:
 	 */
 	void buildPattern();
 
+    /**
+            count the fraction of constant sites in the alignment, update the variable frac_const_sites
+     */
+    virtual void countConstSite();
+
+    /**
+     * 	@return number of states, if it is a partition model, return max num_states across all partitions
+     */
+    virtual int getMaxNumStates() {
+    	return max_num_states;
+    }
+
+    /** order pattern by number of character states and return in ptn_order
+    */
+    virtual void orderPatternByNumChars();
+
 	/**
 		actual partition alignments
 	*/
@@ -224,6 +240,9 @@ public:
 		matrix represents the index of taxon i in partition j, -1 if the taxon is not present
 	*/
 	vector<IntVector> taxa_index;
+
+	/** maximum number of states across all partitions */
+	int max_num_states;
 
 	/**
 	 * concatenate subset of alignments

@@ -619,6 +619,10 @@ void printOutfilesInfo(Params &params, string &original_model, IQTree &tree) {
 		cout << "  Site log-likelihoods:          " << params.out_prefix << ".sitelh"
 				<< endl;
 
+	if (params.print_partition_lh)
+		cout << "  Partition log-likelihoods:     " << params.out_prefix << ".partlh"
+				<< endl;
+
 	if (params.print_site_prob)
 		cout << "  Site probability per rate/mix: " << params.out_prefix << ".siteprob"
 				<< endl;
@@ -641,9 +645,6 @@ void printOutfilesInfo(Params &params, string &original_model, IQTree &tree) {
 
 		if (params.print_tree_lh) {
 		cout << "  Tree log-likelihoods:          " << params.out_prefix << ".treelh" << endl;
-		}
-		if (params.print_site_lh) {
-		cout << "  Site log-likelihoods:          " << params.out_prefix << ".sitelh" << endl;
 		}
 	}
     	if (params.lmap_num_quartets >= 0) {
@@ -1511,6 +1512,15 @@ void printMiscInfo(Params &params, IQTree &iqtree, double *pattern_lh) {
 			printSiteLh(site_lh_file.c_str(), &iqtree, pattern_lh);
 		else
 			printSiteLhCategory(site_lh_file.c_str(), &iqtree, params.print_site_lh);
+	}
+
+    if (params.print_partition_lh && !iqtree.isSuperTree()) {
+        outWarning("-wpl does not work with non-partition model");
+        params.print_partition_lh = false;
+    }
+	if (params.print_partition_lh && !params.pll) {
+        string part_lh_file = (string)params.out_prefix + ".partlh";
+        printPartitionLh(part_lh_file.c_str(), &iqtree, pattern_lh);
 	}
 
 	if (params.print_site_prob && !params.pll) {
@@ -2742,6 +2752,14 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
 		// remove identical sequences
         if (params.ignore_identical_seqs) {
             tree->removeIdenticalSeqs(params);
+            if (tree->removed_seqs.size() > 0) {
+                string filename = (string)params.out_prefix + ".uniqueseq.phy";
+                if (tree->isSuperTree())
+                    ((SuperAlignment*)tree->aln)->printCombinedAlignment(filename.c_str());
+                else
+                    tree->aln->printPhylip(filename.c_str());
+                cout << endl << "For your convenience alignment with unique sequences printed to " << filename << endl;
+            }
         }
         alignment = NULL; // from now on use tree->aln instead
 
