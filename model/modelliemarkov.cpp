@@ -506,7 +506,14 @@ static void tauToPi(double* tau, double* pi, int sym) {
 
 void ModelLieMarkov::setBasis() {
   if (getFreqType() == FREQ_UNKNOWN)
-    freq_type = FREQ_ESTIMATE;
+    switch (BDF[model_num]) {
+    case 0:
+        freq_type = FREQ_EQUAL;
+        break;
+    default:
+        freq_type = FREQ_ESTIMATE;
+        break;
+    }
 
   if (getFreqType() == FREQ_EMPIRICAL || 
       getFreqType() == FREQ_USER_DEFINED || 
