@@ -14,7 +14,9 @@
 #include "modelmorphology.h"
 #include "modelset.h"
 #include "modelmixture.h"
+#include "modelpomo.h"
 //#include "phylokernelmixture.h"
+#include "modelpomomixture.h"
 
 using namespace std;
 
@@ -1049,7 +1051,7 @@ ModelSubst* createModel(string model_str, ModelsBlock *models_block, StateFreqTy
 //			((ModelGTR*)model)->readRates(model_params);
 //		((ModelGTR*)model)->init(freq_type);
 //	} else
-	if (ModelNonRev::validModelName(model_str)) {
+	} else if (ModelNonRev::validModelName(model_str)) {
 	        model = ModelNonRev::getModelByName(model_str, tree, model_params, freq_type, freq_params, count_rates);
 //		((ModelNonRev*)model)->init(freq_type);
 	} else if (tree->aln->seq_type == SEQ_BINARY) {

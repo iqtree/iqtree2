@@ -4,7 +4,8 @@
 #include <assert.h>
 #include <string.h>
 
-ModelPoMo::ModelPoMo() {
+ModelPoMo::ModelPoMo(PhyloTree *tree) : ModelGTR(tree, false) {
+}
 
 ModelPoMo::ModelPoMo(const char *model_name,
                      string model_params,
@@ -170,7 +171,294 @@ void ModelPoMo::init(const char *model_name,
 }
 
 ModelPoMo::~ModelPoMo() {
+    delete [] rate_matrix;
+//  delete [] freq_fixed_states;
+    delete dna_model;
+    delete [] freq_fixed_states_emp;
+    // delete [] fixed_model_params_ratio;
+    }
 
+double ModelPoMo::computeSumFreqFixedStates() {
+    int i;
+    double norm_fixed = 0.0;
+    for (i = 0; i < 4; i++)
+        norm_fixed += freq_fixed_states[i];
+    return norm_fixed;
+}
+
+// Give back the harmonic number of n-1 (also needed for Watterson
+// theta).
+double harmonic(int n) {
+    double harmonic = 0.0;
+    for (int i = 1; i < n; i++)
+        harmonic += 1.0/(double)i;
+    return harmonic;
+}
+
+void ModelPoMo::setInitialMutCoeff() {
+    // Mutation probabilities point to the rates of the DNA model.
+    mutation_prob = dna_model->rates;
+    // for (int i = 0; i < 6; i++) mutation_prob[i] = POMO_INIT_RATE;
+    // double m_init = 0;
+    // double theta_p = level_of_polymorphism;
+    // double lambda_fixed_sum = computeSumFreqFixedStates();
+    double lambda_poly_sum_no_mu = computeSumFreqPolyStatesNoMut();
+    // // cout << "DEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUG" << endl;
+    // // cout << theta_p << endl;
+    // // cout << lambda_fixed_sum << endl;
+    // // cout << lambda_poly_sum_no_mu << endl;
+
+    if (!fixed_level_of_polymorphism && lambda_poly_sum_no_mu <= 0) {
+        outWarning("We strongly discourage to use PoMo on data without polymorphisms.");
+        outWarning("Set initial rates to predefined values.");
+        for (int i = 0; i < 6; i++) mutation_prob[i] = POMO_INIT_RATE;
+        return;
+    }
+
+    normalizeMutationProbs();
+    // m_init = theta_p * lambda_fixed_sum / (lambda_poly_sum_no_mu * (1.0 - theta_p));
+    // if (m_init < POMO_MIN_RATE || m_init > POMO_MAX_RATE)
+    //     outError("Initial rate not within boundaries.  Please check data.");
+    // // cout << "DEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUG" << endl;
+    // // cout << m_init << endl;
+    // // Honor fixed rate specifications.
+    // double sum = 0;
+    // int n_mu = 6;
+    // for (int i = 0; i < n_mu; i++) sum += mutation_prob[i];
+    // for (int i = 0; i < n_mu; i++) {
+    //     double new_mut_prob = m_init*mutation_prob[i]*n_mu/sum;
+    //     mutation_prob[i] = new_mut_prob;
+    // }
+}
+
+double ModelPoMo::computeSumFreqPolyStatesNoMut() {
+    double norm_polymorphic = 0.0;
+    int i, j;
+    for (i = 0; i < 4; i++) {
+        for (j = 0; j < i; j++)
+            norm_polymorphic +=
+                2 * freq_fixed_states[i] * freq_fixed_states[j];
+    }
+    // Changed Dom Tue Sep 29 13:13:21 CEST 2015
+    // norm_polymorphic *= N * harmonic;
+    norm_polymorphic *= harmonic(N);
+    return norm_polymorphic;
+}
+
+double ModelPoMo::computeSumFreqPolyStates() {
+    double norm_polymorphic = 0.0;
+    int i, j;
+    for (i = 0; i < 4; i++) {
+        for (j = 0; j < i; j++)
+            norm_polymorphic +=
+                2 * freq_fixed_states[i] * freq_fixed_states[j] * mutCoeff(i, j);
+    }
+    // Changed Dom Tue Sep 29 13:13:21 CEST 2015
+    // norm_polymorphic *= N * harmonic;
+    norm_polymorphic *= harmonic(N);
+    return norm_polymorphic;
+}
+
+double ModelPoMo::computeNormConst() {
+    double norm_fixed = computeSumFreqFixedStates();
+    double norm_polymorphic = computeSumFreqPolyStates();
+    return 1.0/(norm_fixed + norm_polymorphic);
+}
+
+void ModelPoMo::computeStateFreq () {
+    double norm = computeNormConst();
+    int state;
+
+    for (state = 0; state < num_states; state++) {
+        if (isFixed(state))
+            state_freq[state] = freq_fixed_states[state]*norm;
+        else {
+            int k, X, Y;
+            decomposeState(state, k, X, Y);
+            // Changed Dom Tue Sep 29 13:14:06 CEST 2015
+            // state_freq[state] =
+            //     norm * freq_fixed_states[X] * freq_fixed_states[Y] *
+            //     mutCoeff(X, Y)*N*N / (k*(N-k));
+            state_freq[state] =
+                norm * freq_fixed_states[X] * freq_fixed_states[Y] *
+                mutCoeff(X, Y)*N / (k*(N-k));
+        }
+    }
+}
+
+void ModelPoMo::updatePoMoStatesAndRateMatrix () {
+    // Activate this if frequencies of fixed states sum up to 1.0.
+    // updateFreqFixedState();
+    computeStateFreq();
+
+    // Compute and normalzie the rate matrix such that on average one
+    // event happens per delta_t = 1.0.  This seems to be stable.
+    int i, j;
+    double tot_sum = 0.0;
+    for (i = 0; i < num_states; i++) {
+        double row_sum = 0.0;
+        // Loop over columns in row state1 (transition to state2).
+        for (j = 0; j < num_states; j++)
+            if (i != j) {
+                row_sum +=
+                    (rate_matrix[i*num_states+j] =
+                     computeProbBoundaryMutation(i, j));
+            }
+        tot_sum += state_freq[i]*row_sum;
+        rate_matrix[i*num_states+i] = -(row_sum);
+    }
+    for (int i = 0; i < num_states; i++) {
+        for (int j = 0; j < num_states; j++) {
+            rate_matrix[i*num_states+j] /= tot_sum;
+        }
+    }
+}
+
+void ModelPoMo::decomposeState(int state, int &i, int &nt1, int &nt2) {
+    if (state < 4) {
+        // Fixed A, C, G or T
+        i = N;
+        nt1 = state;
+        nt2 = -1; // -1 for unknown nt
+    } else if (state < 4+(N-1)) {
+        // (iA,N-iC)
+        i = state-3;
+        nt1 = 0; // A
+        nt2 = 1; // C
+    } else if (state < 4+2*(N-1)) {
+        // (iA,N-iG)
+        i = state-3-(N-1);
+        nt1 = 0; // A
+        nt2 = 2; // G
+    } else if (state < 4+3*(N-1)) {
+        // (iA,N-iT)
+        i = state-3-2*(N-1);
+        nt1 = 0; // A
+        nt2 = 3; // T
+    } else if (state < 4+4*(N-1)) {
+        // (iC,N-iG)
+        i = state-3-3*(N-1);
+        nt1 = 1; // C
+        nt2 = 2; // G
+    } else if (state < 4+5*(N-1)) {
+        // (iC,N-iT)
+        i = state-3-4*(N-1);
+        nt1 = 1; // C
+        nt2 = 3; // T
+    } else if (state < 4+6*(N-1)) {
+        // (iG,N-iT)
+        i = state-3-5*(N-1);
+        nt1 = 2; // G
+        nt2 = 3; // T
+    } else {
+        outError("State exceeds limit");
+    }
+}
+
+bool ModelPoMo::isFixed(int state) {
+    return (state < 4);
+}
+
+bool ModelPoMo::isPolymorphic(int state) {
+    return (!isFixed(state));
+}
+
+double ModelPoMo::mutCoeff(int nt1, int nt2) {
+    assert(nt1!=nt2 && nt1<4 && nt2<4);
+    if (nt2 < nt1) {
+        int tmp=nt1;
+        nt1=nt2;
+        nt2=tmp;
+    }
+    if (nt1==0) return mutation_prob[nt2-1];
+    if (nt1==1) return mutation_prob[nt2+1];
+    if (nt1==2) return mutation_prob[5];
+    assert(0);
+}
+
+double ModelPoMo::computeProbBoundaryMutation(int state1, int state2) {
+    // The transition rate to the same state will be calculated by
+    // (row_sum = 0).
+    assert(state1 != state2);
+
+    // Both states are decomposed into the abundance of the first
+    // allele as well as the nucleotide of the first and the second
+    // allele.
+    int i1=0, i2=0, nt1=-1, nt2=-1, nt3=-1, nt4=-1;
+    decomposeState(state1, i1, nt1, nt2);
+    decomposeState(state2, i2, nt3, nt4);
+
+    // Either the first nucleotides match or the first of state 1 with
+    // the second of state 2 or the first of state 2 with the second
+    // of state 1.  Additionally, we have to consider fixed states as
+    // special cases.
+    if (nt1 == nt3 && (nt2==nt4 || nt2==-1 || nt4 == -1)) {
+        assert(i1 != i2); // because state1 != state2
+        if (i1+1==i2)
+            // e.g.: 2A8C -> 3A7C or 9A1C -> 10A
+            // Changed Dom Tue Sep 29 13:31:02 CEST 2015
+            // return double(i1*(N-i1)) / double(N*N);
+            return double(i1*(N-i1)) / double(N);
+        else if (i1-1 == i2)
+            // e.g.: 3A7C -> 2A8C or 10A -> 9A1C
+            if (nt2 == -1)
+                // e.g. 10A -> 9A1C
+                // return mutCoeff(nt1,nt4) * state_freq[nt4];
+                return mutCoeff(nt1,nt4) * freq_fixed_states[nt4];
+            else
+                // e.g. 9A1C -> 8A2C
+                // Changed Dom Tue Sep 29 13:30:43 CEST 2015
+                // return double(i1*(N-i1)) / double(N*N);
+                return double(i1*(N-i1)) / double(N);
+        else
+            return 0.0;
+    } else if (nt1 == nt4 && nt2 == -1 && i2 == 1)  {
+        // e.g.: 10G -> 1A9G
+        //return mutCoeff(nt1,nt3) * state_freq[nt3];
+        return mutCoeff(nt1,nt3) * freq_fixed_states[nt3];
+    } else if (nt2 == nt3  && i1 == 1 && nt4 == -1) {
+        // E.g.: 1A9G -> 10G
+        // Changed Dom Tue Sep 29 13:30:25 CEST 2015
+        // return double(i1*(N-i1)) / double(N*N);
+        return double(i1*(N-i1)) / double(N);
+    } else
+        // 0 for all other transitions
+        return 0.0;
+}
+
+int ModelPoMo::getNDim() {
+    if (fixed_level_of_polymorphism)
+        return dna_model->getNDim();
+    else
+        return dna_model->getNDim()+1;
+}
+
+int ModelPoMo::getNDimFreq() {
+    return dna_model->getNDimFreq();
+}
+
+void ModelPoMo::setBounds(double *lower_bound,
+                          double *upper_bound,
+                          bool *bound_check) {
+    int i, ndim = getNDim();
+    if (verbose_mode >= VB_MAX)
+        cout << "Set new bounds." << endl;
+
+    // Mutation rates.
+    for (i = 1; i <= ndim; i++) {
+        lower_bound[i] = POMO_MIN_RATE;
+        upper_bound[i] = POMO_MAX_RATE;
+        bound_check[i] = false;
+    }
+
+    // Frequencies of fixed states.
+    if (freq_type == FREQ_ESTIMATE) {
+        for (i = ndim-nnuc+2; i <= ndim; i++) {
+            lower_bound[i] = POMO_MIN_REL_FREQ * freq_fixed_states[i-ndim+nnuc-2];
+            upper_bound[i] = POMO_MAX_REL_FREQ * freq_fixed_states[i-ndim+nnuc-2];
+            bound_check[i] = false;
+        }
+    }
 }
 
 void ModelPoMo::normalizeMutationProbs() {

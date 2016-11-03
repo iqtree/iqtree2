@@ -29,6 +29,7 @@
 
 #include "tools.h"
 #include "timeutil.h"
+#include "gzstream.h"
 #include "MPIHelper.h"
 
 VerboseMode verbose_mode;

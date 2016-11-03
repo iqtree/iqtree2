@@ -93,12 +93,6 @@ public:
 	 * @param cat mixture class
 	 * @return weight of a mixture model component
 	 */
-	virtual double getMixtureWeight(int cat) { return 1.0; }
-
-	/**
-	 * @param cat mixture class
-	 * @return weight of a mixture model component
-	 */
 	virtual void setMixtureWeight(int cat, double weight) {}
 
 	/**

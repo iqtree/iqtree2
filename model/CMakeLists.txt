@@ -22,4 +22,6 @@ modelmorphology.cpp
 modelmixture.cpp
 modelunrest.cpp
 modelliemarkov.cpp
+modelpomo.cpp
+modelpomomixture.cpp
 )

@@ -1791,9 +1791,6 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
     /********************** Create an initial tree **********************/
     iqtree.computeInitialTree(dist_file, params.SSE);
 
-    if (!iqtree.isBifurcating())
-        outError("Tree search does not work with initial multifurcating tree. Please specify `-n 0` to avoid this.");
-
    	iqtree.setRootNode(params.root);
 
     /*************** SET UP PARAMETERS and model testing ****************/
@@ -1963,6 +1960,12 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
         iqtree.printResultTree();
         iqtree.intermediateTrees.update(iqtree.getTreeString(), iqtree.getCurScore());
     }
+
+    if (params.min_iterations > 0) {
+        if (!iqtree.isBifurcating())
+            outError("Tree search does not work with initial multifurcating tree. Please specify `-n 0` to avoid this.");
+    }
+
 
     // Compute maximum likelihood distance
     // ML distance is only needed for IQP
