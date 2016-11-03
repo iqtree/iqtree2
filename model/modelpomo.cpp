@@ -8,11 +8,10 @@
 #include "modelpomo.h"
 
 ModelPoMo::ModelPoMo() {
-	// TODO Auto-generated constructor stub
 
 }
 
 ModelPoMo::~ModelPoMo() {
-	// TODO Auto-generated destructor stub
+
 }
 

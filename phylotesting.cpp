@@ -35,7 +35,7 @@
 
 #include "phyloanalysis.h"
 #include "gsl/mygsl.h"
-#include "vectorclass/vectorclass.h"
+//#include "vectorclass/vectorclass.h"
 
 
 /******* Binary model set ******/
@@ -392,6 +392,120 @@ void printSiteLhCategory(const char*filename, PhyloTree *tree, SiteLoglType wsl)
 
 }
 
+void printAncestralSequences(const char *out_prefix, PhyloTree *tree, AncestralSeqType ast) {
+
+    int i, j, nsites = tree->getAlnNSite(), nstates = tree->aln->num_states, nptn = tree->getAlnNPattern();
+
+    int *joint_ancestral = NULL;
+    
+    if (tree->params->print_ancestral_sequence == AST_JOINT) {
+        joint_ancestral = new int[nptn*tree->leafNum];    
+        tree->computeJointAncestralSequences(joint_ancestral);
+    }
+
+    string filename = (string)out_prefix + ".ancestralprob";
+    string filenameseq = (string)out_prefix + ".ancestralseq";
+
+    try {
+		ofstream out;
+		out.exceptions(ios::failbit | ios::badbit);
+		out.open(filename.c_str());
+
+		ofstream outseq;
+		outseq.exceptions(ios::failbit | ios::badbit);
+		outseq.open(filenameseq.c_str());
+
+        NodeVector nodes;
+        tree->getInternalNodes(nodes);
+		IntVector pattern_index;
+		tree->aln->getSitePatternIndex(pattern_index);
+
+        double *marginal_ancestral_prob = new double[nptn * tree->getModel()->num_states];
+        int *marginal_ancestral_seq = new int[nptn];
+
+        out << "Node\tSite\tMargin";
+        for (i = 0; i < nstates; i++)
+            out << "\tp_" << tree->aln->convertStateBackStr(i);
+        out << endl;
+        
+        if (tree->params->print_ancestral_sequence == AST_JOINT)
+            outseq << 2*(tree->nodeNum-tree->leafNum) << " " << nsites << endl;
+        else
+            outseq << (tree->nodeNum-tree->leafNum) << " " << nsites << endl;
+        
+        int name_width = max(tree->aln->getMaxSeqNameLength(),6)+10;
+
+        for (NodeVector::iterator it = nodes.begin(); it != nodes.end(); it++) {
+            PhyloNode *node = (PhyloNode*)(*it);
+            PhyloNode *dad = (PhyloNode*)node->neighbors[0]->node;
+            tree->computeMarginalAncestralProbability((PhyloNeighbor*)dad->findNeighbor(node), dad, marginal_ancestral_prob);
+            
+            int *joint_ancestral_node = joint_ancestral + (node->id - tree->leafNum)*nptn;
+            
+            // compute state with highest probability
+            for (i = 0; i < nptn; i++) {
+                double *prob = marginal_ancestral_prob + (i*nstates);
+                int state_best = 0;
+                for (j = 1; j < nstates; j++)
+                    if (prob[j] > prob[state_best])
+                        state_best = j;
+                //if (fabs(prob[state_best]-flat_prob) < 1e-5)
+                if (prob[state_best] < tree->params->min_ancestral_prob)
+                    state_best = STATE_INVALID;
+                marginal_ancestral_seq[i] = state_best;
+            }
+            
+            // set node name if neccessary
+            if (node->name.empty() || !isalpha(node->name[0])) {
+                node->name = "Node" + convertIntToString(node->id-tree->leafNum+1);
+            }
+            
+            // print ancestral state probabilities
+            for (i = 0; i < nsites; i++) {
+                int ptn = pattern_index[i];
+                out << node->name << "\t" << i+1 << "\t";
+                if (tree->params->print_ancestral_sequence == AST_JOINT)
+                    out << tree->aln->convertStateBackStr(joint_ancestral_node[ptn]) << "\t";
+                out << tree->aln->convertStateBackStr(marginal_ancestral_seq[ptn]);
+                for (j = 0; j < nstates; j++) {
+                    out << "\t" << marginal_ancestral_prob[ptn*nstates+j];
+                }
+                out << endl;
+            }
+            
+            // print ancestral sequences
+            outseq.width(name_width);
+            outseq << left << (node->name+"_marginal") << " ";
+            for (i = 0; i < nsites; i++) 
+                outseq << tree->aln->convertStateBackStr(marginal_ancestral_seq[pattern_index[i]]);
+            outseq << endl;
+            
+            if (tree->params->print_ancestral_sequence == AST_JOINT) {
+                outseq.width(name_width);
+                outseq << left << (node->name+"_joint") << " ";
+                for (i = 0; i < nsites; i++) 
+                    outseq << tree->aln->convertStateBackStr(joint_ancestral_node[pattern_index[i]]);
+                outseq << endl;
+            }
+        }
+
+        delete[] marginal_ancestral_seq;
+        delete[] marginal_ancestral_prob;
+        
+		out.close();
+        outseq.close();
+		cout << "Ancestral state probabilities printed to " << filename << endl;
+		cout << "Ancestral sequences printed to " << filenameseq << endl;
+        
+	} catch (ios::failure) {
+		outError(ERR_WRITE_OUTPUT, filename);
+	}
+    
+    if (joint_ancestral)
+        delete[] joint_ancestral;
+
+}
+
 void printSiteProbCategory(const char*filename, PhyloTree *tree, SiteLoglType wsl) {
 
     if (wsl == WSL_NONE || wsl == WSL_SITE)
@@ -703,8 +817,8 @@ int getModelList(Params &params, Alignment *aln, StrVector &models, bool separat
         }
     }
 
-    bool with_new = params.model_name.find("NEW") != string::npos;
-    bool with_asc = params.model_name.find("ASC") != string::npos;
+	bool with_new = params.model_name.find("NEW") != string::npos;
+	bool with_asc = params.model_name.find("ASC") != string::npos;
 
 //	if (seq_type == SEQ_CODON) {
 //		for (i = 0; i < noptions; i++)
@@ -1034,7 +1148,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInf
         stringstream this_fmodel;
 		// do the computation
 //#ifdef _OPENMP
-		string model = testModel(params, this_tree, part_model_info, this_fmodel, models_block, in_tree->part_info[i].name);
+		string model = testModel(params, this_tree, part_model_info, this_fmodel, models_block, 1, in_tree->part_info[i].name);
 //#else
 //		string model = testModel(params, this_tree, part_model_info, fmodel, in_tree->part_info[i].name);
 //#endif
@@ -1180,7 +1294,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInf
                     tree->setCheckpoint(new Checkpoint());
                 }
 //#ifdef _OPENMP
-                model = testModel(params, tree, part_model_info, this_fmodel, models_block, set_name);
+                model = testModel(params, tree, part_model_info, this_fmodel, models_block, 1, set_name);
 //#else
 //                model = testModel(params, tree, part_model_info, fmodel, set_name);
 //#endif
@@ -1306,7 +1420,7 @@ bool isMixtureModel(ModelsBlock *models_block, string &model_str) {
 }
 
 string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_info, ostream &fmodel, ModelsBlock *models_block,
-    string set_name, bool print_mem_usage) 
+    int num_threads, string set_name, bool print_mem_usage)
 {
 	SeqType seq_type = in_tree->aln->seq_type;
 	if (in_tree->isSuperTree())
@@ -1355,7 +1469,7 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 	}
 
 	in_tree->optimize_by_newton = params.optimize_by_newton;
-	in_tree->setLikelihoodKernel(params.SSE);
+	in_tree->setLikelihoodKernel(params.SSE, num_threads);
 
 //    int num_rate_classes = 3 + params.max_rate_cats;
 
@@ -1467,7 +1581,7 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
             }
         } else {
             // kernel might be changed if mixture model was tested
-            in_tree->setLikelihoodKernel(params.SSE);
+            in_tree->setLikelihoodKernel(params.SSE, num_threads);
             // normal model
             if (model_names[model].find("+ASC") != string::npos) {
                 model_fac->unobserved_ptns = in_tree->aln->getUnobservedConstPatterns();
@@ -2318,14 +2432,7 @@ void performAUTest(Params &params, PhyloTree *tree, double *pattern_lhs, vector<
                     for (ptn = 0; ptn < nptn; ptn++)
                         tree_lh += pattern_lh[ptn] * boot_sample_dbl[ptn];
                 } else {
-#ifdef BINARY32
-                    tree_lh = tree->dotProductSIMD<double, Vec2d, 2>(pattern_lh, boot_sample_dbl, nptn);
-#else
-                    if (instruction_set >= 7)
-                        tree_lh = tree->dotProductSIMD<double, Vec4d, 4>(pattern_lh, boot_sample_dbl, nptn);
-                    else
-                        tree_lh = tree->dotProductSIMD<double, Vec2d, 2>(pattern_lh, boot_sample_dbl, nptn);
-#endif
+                    tree_lh = tree->dotProductDoubleCall(pattern_lh, boot_sample_dbl, nptn);
                 }
                 // rescale lh
                 tree_lh /= r[k];
@@ -2651,13 +2758,6 @@ void evaluateTrees(Params &params, IQTree *tree, vector<TreeInfo> &info, IntVect
         tree->setRootNode(params.root);
 		if (tree->isSuperTree())
 			((PhyloSuperTree*) tree)->mapTrees();
-//		if ((tree->sse == LK_EIGEN || tree->sse == LK_EIGEN_SSE) && !tree->isBifurcating()) {
-//			cout << "NOTE: Changing to old kernel as user tree is multifurcating" << endl;
-//			if (tree->sse == LK_EIGEN)
-//				tree->changeLikelihoodKernel(LK_NORMAL);
-//			else
-//				tree->changeLikelihoodKernel(LK_SSE);
-//		}
 
 		tree->initializeAllPartialLh();
 		tree->fixNegativeBranch(false);

@@ -1,8 +1,8 @@
 /*************************  dispatch_example.cpp   ****************************
 | Author:        Agner Fog
 | Date created:  2012-05-30
-| Last modified: 2014-07-23
-| Version:       1.14
+* Last modified: 2016-04-26
+* Version:       1.22
 | Project:       vector classes
 | Description:
 | Example of CPU dispatching.
@@ -17,7 +17,7 @@
 | g++ -O3 -msse2 -otest instrset_detect.cpp d2.o d5.o d7.o d8.o d9.o
 | ./test
 |
-| (c) Copyright 2012 - 2014 GNU General Public License http://www.gnu.org/licenses
+| (c) Copyright 2012-2016 GNU General Public License http://www.gnu.org/licenses
 \*****************************************************************************/
 
 #include <stdio.h>
@@ -25,6 +25,9 @@
 #define MAX_VECTOR_SIZE 512
 #include "vectorclass.h"
 
+#ifdef VCL_NAMESPACE
+namespace VCL_NAMESPACE {
+#endif
 
 // define function type (change this to fit your purpose. Should not contain vector types)
 typedef float MyFuncType(float*);
@@ -97,3 +100,6 @@ int main(int argc, char* argv[])
 
 #endif  // INSTRSET == 2
 
+#ifdef VCL_NAMESPACE
+}
+#endif

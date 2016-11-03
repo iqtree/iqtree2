@@ -42,6 +42,8 @@ public:
 	*/
     ~StopRule();
 
+    void getUFBootCountCheck(int &ufboot_count, int &ufboot_count_check);
+
     /**
         save object into the checkpoint
     */
@@ -77,9 +79,17 @@ public:
 		@return TRUE if stop condition is met, FALSE otherwise
 	*/
 	bool meetStopCondition(int cur_iteration, double cur_correlation);
+
+    /**
+        return TRUE if cur_correlation is high enough
+        @param cur_correlation correlation coefficient
+    */
+    bool meetCorrelation(double cur_correlation) {
+        return cur_correlation >= min_correlation;
+    }
 	
 	/** get the remaining time to converge, in seconds */
-	double getRemainingTime(int cur_iteration, double cur_correlation);
+	double getRemainingTime(int cur_iteration);
 
 	/**
 		@return the number of iterations required to stop the search
@@ -98,6 +108,10 @@ public:
 
     void setCurIt(int curIteration) {
         StopRule::curIteration = curIteration;
+    }
+
+    void shouldStop() {
+        should_stop = true;
     }
 
 private:
@@ -148,6 +162,9 @@ private:
 
     /** starting real time of the program */
     double start_real_time;
+
+    /** TRUE to override stop condition */
+    bool should_stop;
 
 	/* FOLLOWING CODES ARE FROM IQPNNI version 3 */	
 

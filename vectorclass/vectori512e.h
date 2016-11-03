@@ -1,8 +1,8 @@
 /****************************  vectori512e.h   *******************************
 * Author:        Agner Fog
 * Date created:  2014-07-23
-* Last modified: 2014-10-16
-* Version:       1.16
+* Last modified: 2016-04-26
+* Version:       1.22
 * Project:       vector classes
 * Description:
 * Header file defining integer vector classes as interface to intrinsic 
@@ -25,7 +25,7 @@
 *
 * For detailed instructions, see VectorClass.pdf
 *
-* (c) Copyright 2014 GNU General Public License http://www.gnu.org/licenses
+* (c) Copyright 2014 - 2016 GNU General Public License http://www.gnu.org/licenses
 *****************************************************************************/
 
 // check combination of header files
@@ -36,6 +36,9 @@
 #else
 #define VECTORI512_H  1
 
+#ifdef VCL_NAMESPACE
+namespace VCL_NAMESPACE {
+#endif
 
 /*****************************************************************************
 *
@@ -87,13 +90,13 @@ public:
     // Member function to load from array (unaligned)
     Vec512b & load(void const * p) {
         z0 = Vec8i().load(p);
-        z1 = Vec8i().load((int32_t*)p+8);
+        z1 = Vec8i().load((int32_t const*)p+8);
         return *this;
     }
     // Member function to load from array, aligned by 64
     Vec512b & load_a(void const * p) {
         z0 = Vec8i().load_a(p);
-        z1 = Vec8i().load_a((int32_t*)p+8);
+        z1 = Vec8i().load_a((int32_t const*)p+8);
         return *this;
     }
     // Member function to store into array (unaligned)
@@ -729,7 +732,7 @@ public:
         }
         else {
             z0 = Vec8i().load(p);
-            z1 = Vec8i().load_partial(n - 8, (int32_t *)p + 8);
+            z1 = Vec8i().load_partial(n - 8, (int32_t const*)p + 8);
         }
         return *this;
     }
@@ -1250,13 +1253,13 @@ public:
     // Member function to load from array (unaligned)
     Vec8q & load(void const * p) {
         z0 = Vec4q().load(p);
-        z1 = Vec4q().load((int64_t*)p+4);
+        z1 = Vec4q().load((int64_t const*)p+4);
         return *this;
     }
     // Member function to load from array, aligned by 64
     Vec8q & load_a(void const * p) {
         z0 = Vec4q().load_a(p);
-        z1 = Vec4q().load_a((int64_t*)p+4);
+        z1 = Vec4q().load_a((int64_t const*)p+4);
         return *this;
     }
     // Partial load. Load n elements and set the rest to 0
@@ -1267,7 +1270,7 @@ public:
         }
         else {
             z0 = Vec4q().load(p);
-            z1 = Vec4q().load_partial(n - 4, (int64_t *)p + 4);
+            z1 = Vec4q().load_partial(n - 4, (int64_t const*)p + 4);
         }
         return *this;
     }
@@ -2541,5 +2544,9 @@ static inline uint8_t to_bits(Vec8b const & a) {
 static inline Vec8qb to_Vec8qb(uint8_t x) {
     return Vec8q(to_Vec4qb(x), to_Vec4qb(x>>4));
 }
+
+#ifdef VCL_NAMESPACE
+}
+#endif
 
 #endif // VECTORI512_H

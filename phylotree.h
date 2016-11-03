@@ -1,14 +1,24 @@
-//
-// C++ Interface: phylotree
-//
-// Description:
-//
-//
-// Author: BUI Quang Minh, Steffen Klaere, Arndt von Haeseler <minh.bui@univie.ac.at>, (C) 2008
-//
-// Copyright: See COPYING file that comes with this distribution
-//
-//
+/***************************************************************************
+ *   Copyright (C) 2009-2015 by                                            *
+ *   BUI Quang Minh <minh.bui@univie.ac.at>                                *
+ *   Lam-Tung Nguyen <nltung@gmail.com>                                    *
+ *                                                                         *
+ *                                                                         *
+ *   This program is free software; you can redistribute it and/or modify  *
+ *   it under the terms of the GNU General Public License as published by  *
+ *   the Free Software Foundation; either version 2 of the License, or     *
+ *   (at your option) any later version.                                   *
+ *                                                                         *
+ *   This program is distributed in the hope that it will be useful,       *
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ *   GNU General Public License for more details.                          *
+ *                                                                         *
+ *   You should have received a copy of the GNU General Public License     *
+ *   along with this program; if not, write to the                         *
+ *   Free Software Foundation, Inc.,                                       *
+ *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ ***************************************************************************/
 
 #ifndef PHYLOTREE_H
 #define PHYLOTREE_H
@@ -30,9 +40,11 @@
 #include "phylonode.h"
 #include "optimization.h"
 #include "model/rateheterogeneity.h"
+#include "candidateset.h"
 #include "pll/pll.h"
 #include "checkpoint.h"
 #include "constrainttree.h"
+#include "memslot.h"
 
 #define BOOT_VAL_FLOAT
 #define BootValType float
@@ -40,6 +52,8 @@
 
 extern int instruction_set;
 
+#define SAFE_LH   true  // safe likelihood scaling to avoid numerical underflow for ultra large trees
+#define NORM_LH  false // normal likelihood scaling
 
 const double TOL_BRANCH_LEN = 0.000001; // NEVER TOUCH THIS CONSTANT AGAIN PLEASE!
 const double TOL_LIKELIHOOD = 0.001; // NEVER TOUCH THIS CONSTANT AGAIN PLEASE!
@@ -59,6 +73,10 @@ const int SPR_DEPTH = 2;
 //using namespace Eigen;
 
 inline size_t get_safe_upper_limit(size_t cur_limit) {
+	if (instruction_set >= 9)
+		// AVX-512
+		return ((cur_limit+7)/8)*8;
+	else
 	if (instruction_set >= 7)
 		// AVX
 		return ((cur_limit+3)/4)*4;
@@ -68,6 +86,10 @@ inline size_t get_safe_upper_limit(size_t cur_limit) {
 }
 
 inline size_t get_safe_upper_limit_float(size_t cur_limit) {
+	if (instruction_set >= 9)
+		// AVX
+		return ((cur_limit+15)/16)*16;
+	else
 	if (instruction_set >= 7)
 		// AVX
 		return ((cur_limit+7)/8)*8;
@@ -90,7 +112,7 @@ inline size_t get_safe_upper_limit_float(size_t cur_limit) {
 
 template< class T>
 inline T *aligned_alloc(size_t size) {
-	size_t MEM_ALIGNMENT = (instruction_set >= 7) ? 32 : 16;
+	size_t MEM_ALIGNMENT = (instruction_set >= 9) ? 64 : ((instruction_set >= 7) ? 32 : 16);
     void *mem;
 
 #if defined WIN32 || defined _WIN32 || defined __WIN32__
@@ -150,6 +172,30 @@ typedef std::map< int, PhyloNode* > IntPhyloNodeMap;
 #define MappedVecDyn(NSTATES) Map<Matrix<double, Dynamic, NSTATES> >
 
 const int MAX_SPR_MOVES = 20;
+
+struct NNIMove {
+
+    // Two nodes representing the central branch
+    PhyloNode *node1, *node2;
+
+    // Roots of the two subtree that are swapped
+    NeighborVec::iterator node1Nei_it, node2Nei_it;
+
+    // log-likelihood of the tree after applying the NNI
+    double newloglh;
+
+    int swap_id;
+
+    // new branch lengths of 5 branches corresponding to the NNI
+    double newLen[5];
+
+    // pattern likelihoods
+    double *ptnlh;
+
+    bool operator<(const NNIMove & rhs) const {
+        return newloglh > rhs.newloglh;
+    }
+};
 
 /**
         an SPR move.
@@ -300,6 +346,28 @@ struct SeqQuartetInfo {
 // END definitions for likelihood mapping (HAS)
 // ********************************************
 
+
+// ********************************************
+// BEGIN traversal information
+// ********************************************
+
+class TraversalInfo {
+public:
+    PhyloNeighbor *dad_branch;
+    PhyloNode *dad;
+    double *echildren;
+    double *partial_lh_leaves;
+
+    TraversalInfo(PhyloNeighbor *dad_branch, PhyloNode *dad) {
+        this->dad = dad;
+        this->dad_branch = dad_branch;
+    }
+};
+
+// ********************************************
+// END traversal information
+// ********************************************
+
 /**
 Phylogenetic Tree class
 
@@ -330,6 +398,12 @@ public:
      * @param alignment
      */
     PhyloTree(Alignment *aln);
+
+    /**
+     *  Create a phylotree from the tree string and assign alignment.
+     *  Taxa IDs are numbered according to their orders in the alignment.
+     */
+    PhyloTree(string& treeString, Alignment *aln, bool isRooted);
 
     void init();
 
@@ -504,7 +578,7 @@ public:
     /****************************************************************************
             Dot product
      ****************************************************************************/
-    template <class Numeric, class VectorClass, const int VCSIZE>
+    template <class Numeric, class VectorClass>
     Numeric dotProductSIMD(Numeric *x, Numeric *y, int size);
 
     typedef BootValType (PhyloTree::*DotProductType)(BootValType *x, BootValType *y, int size);
@@ -513,11 +587,21 @@ public:
     typedef double (PhyloTree::*DotProductDoubleType)(double *x, double *y, int size);
     DotProductDoubleType dotProductDouble;
 
+    double dotProductDoubleCall(double *x, double *y, int size);
+
 #if defined(BINARY32) || defined(__NOAVX__)
     void setDotProductAVX() {}
+    void setDotProductFMA() {}
 #else
     void setDotProductAVX();
+    void setDotProductFMA();
+#ifdef INCLUDE_AVX512
+    void setDotProductAVX512();
 #endif
+#endif
+
+    void setDotProductSSE();
+
     /**
             this function return the parsimony or likelihood score of the tree. Default is
             to compute the parsimony score. Override this function if you define a new
@@ -598,9 +682,13 @@ public:
     virtual void setParsimonyKernelAVX();
 #endif
 
+    virtual void setParsimonyKernelSSE();
+
     /****************************************************************************
             likelihood function
      ****************************************************************************/
+
+    size_t getBufferPartialLhSize();
 
     /**
             initialize partial_lh vector of all PhyloNeighbors, allocating central_partial_lh
@@ -644,6 +732,7 @@ public:
 
     /** get the number of bytes occupied by partial_lh */
     size_t getPartialLhBytes();
+    size_t getPartialLhSize();
 
     /**
             allocate memory for a scale num vector
@@ -652,6 +741,7 @@ public:
 
     /** get the number of bytes occupied by scale_num */
     size_t getScaleNumBytes();
+    size_t getScaleNumSize();
 
     /**
      * this stores partial_lh for each state at the leaves of the tree because they are the same between leaves
@@ -662,38 +752,84 @@ public:
 
     bool ptn_freq_computed;
 
+    /** vector size used by SIMD kernel */
+    size_t vector_size;
+
+    /** number of threads used for likelihood kernel */
+    int num_threads;
+
+
+    /****************************************************************************
+            helper functions for computing tree traversal
+     ****************************************************************************/
+
+
+    /**
+        compute traversal_info of a subtree
+    */
+    inline bool computeTraversalInfo(PhyloNeighbor *dad_branch, PhyloNode *dad, double* &buffer);
+
+
+    /**
+        compute traversal_info of both subtrees
+    */
+    template<class VectorClass, const int nstates>
+    void computeTraversalInfo(PhyloNode *node, PhyloNode *dad, bool compute_partial_lh);
+    template<class VectorClass>
+    void computeTraversalInfo(PhyloNode *node, PhyloNode *dad, bool compute_partial_lh);
+
+    /**
+        precompute info for models
+    */
+    template<class VectorClass, const int nstates>
+    void computePartialInfo(TraversalInfo &info, VectorClass* buffer);
+    template<class VectorClass>
+    void computePartialInfo(TraversalInfo &info, VectorClass* buffer);
+
+    /** 
+        sort neighbor in descending order of subtree size (number of leaves within subree)
+        @param node the starting node, NULL to start from the root
+        @param dad dad of the node, used to direct the search
+    */
+    void sortNeighborBySubtreeSize(PhyloNode *node, PhyloNode *dad);
+
     /****************************************************************************
             computing partial (conditional) likelihood of subtrees
      ****************************************************************************/
 
+    /** transform _pattern_lh_cat from "interleaved" to "sequential", due to vector_size > 1 */
+    void transformPatternLhCat();
+
     void computeTipPartialLikelihood();
     void computePtnInvar();
     void computePtnFreq();
+
 
     /**
             compute the partial likelihood at a subtree
             @param dad_branch the branch leading to the subtree
             @param dad its dad, used to direct the tranversal
      */
-    virtual void computePartialLikelihood(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
-    typedef void (PhyloTree::*ComputePartialLikelihoodType)(PhyloNeighbor *, PhyloNode *);
+    virtual void computePartialLikelihood(TraversalInfo &info, size_t ptn_left, size_t ptn_right, int thread_id);
+    typedef void (PhyloTree::*ComputePartialLikelihoodType)(TraversalInfo &info, size_t ptn_left, size_t ptn_right, int thread_id);
     ComputePartialLikelihoodType computePartialLikelihoodPointer;
 
 
     //template <const int nstates>
-    void computePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
-    
-    //template <const int nstates>
-    void computeMixturePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
+//    void computePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
 
-    //template <const int nstates>
-    void computeMixratePartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
+//    void computeSitemodelPartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
 
-    void computeSitemodelPartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
+//    template <class VectorClass, const int VCSIZE, const int nstates>
+//    void computePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
 
-    template <class VectorClass, const int VCSIZE, const int nstates>
-    void computePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
+    template <class VectorClass, const bool SAFE_NUMERIC, const int nstates, const bool FMA = false, const bool SITE_MODEL = false>
+    void computePartialLikelihoodSIMD(TraversalInfo &info, size_t ptn_left, size_t ptn_right, int thread_id);
 
+    template <class VectorClass, const bool SAFE_NUMERIC, const bool FMA = false, const bool SITE_MODEL = false>
+    void computePartialLikelihoodGenericSIMD(TraversalInfo &info, size_t ptn_left, size_t ptn_right, int thread_id);
+
+    /*
     template <class VectorClass, const int VCSIZE, const int nstates>
     void computeMixratePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
 
@@ -702,6 +838,7 @@ public:
 
     template <class VectorClass, const int VCSIZE, const int nstates>
     void computeSitemodelPartialLikelihoodEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad = NULL);
+    */
 
     /****************************************************************************
             computing likelihood on a branch
@@ -726,19 +863,20 @@ public:
 //    inline double computeLikelihoodBranchFast(PhyloNeighbor *dad_branch, PhyloNode *dad);
 
     //template <const int nstates>
-    double computeLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloNode *dad);
+//    double computeLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloNode *dad);
 
-    //template <const int nstates>
-    double computeMixtureLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloNode *dad);
+//    double computeSitemodelLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloNode *dad);
 
-    //template <const int nstates>
-    double computeMixrateLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloNode *dad);
+//    template <class VectorClass, const int VCSIZE, const int nstates>
+//    double computeLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad);
 
-    double computeSitemodelLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloNode *dad);
+    template <class VectorClass, const bool SAFE_NUMERIC, const int nstates, const bool FMA = false, const bool SITE_MODEL = false>
+    double computeLikelihoodBranchSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad);
 
-    template <class VectorClass, const int VCSIZE, const int nstates>
-    double computeLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad);
+    template <class VectorClass, const bool SAFE_NUMERIC, const bool FMA = false, const bool SITE_MODEL = false>
+    double computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad);
 
+    /*
     template <class VectorClass, const int VCSIZE, const int nstates>
     double computeMixrateLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad);
 
@@ -747,6 +885,7 @@ public:
 
     template <class VectorClass, const int VCSIZE, const int nstates>
     double computeSitemodelLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad);
+    */
 
     /****************************************************************************
             computing likelihood on a branch using buffer
@@ -763,9 +902,16 @@ public:
     typedef double (PhyloTree::*ComputeLikelihoodFromBufferType)();
     ComputeLikelihoodFromBufferType computeLikelihoodFromBufferPointer;
 
-    template <class VectorClass, const int VCSIZE, const int nstates>
-    double computeLikelihoodFromBufferEigenSIMD();
+//    template <class VectorClass, const int VCSIZE, const int nstates>
+//    double computeLikelihoodFromBufferEigenSIMD();
 
+    template <class VectorClass, const bool SAFE_NUMERIC, const int nstates, const bool FMA = false, const bool SITE_MODEL = false>
+    double computeLikelihoodFromBufferSIMD();
+
+    template <class VectorClass, const bool SAFE_NUMERIC, const bool FMA = false, const bool SITE_MODEL = false>
+    double computeLikelihoodFromBufferGenericSIMD();
+
+    /*
     template <class VectorClass, const int VCSIZE, const int nstates>
     double computeMixrateLikelihoodFromBufferEigenSIMD();
 
@@ -776,6 +922,7 @@ public:
     double computeSitemodelLikelihoodFromBufferEigenSIMD();
 
     double computeSitemodelLikelihoodFromBufferEigen();
+    */
 
     /**
             compute tree likelihood when a branch length collapses to zero
@@ -818,6 +965,43 @@ public:
             should be pre-allocated with size of num_patterns * num_states
     */
     void computePatternStateFreq(double *ptn_state_freq);
+
+    /****************************************************************************
+            ancestral sequence reconstruction
+     ****************************************************************************/
+
+    /**
+        compute ancestral sequence probability for an internal node by marginal reconstruction
+        (Yang, Kumar and Nei 1995)
+        @param dad_branch branch leading to an internal node where to obtain ancestral sequence
+        @param dad dad of the target internal node
+        @param[out] ptn_ancestral_prob pattern ancestral probability vector of dad_branch->node
+    */
+    void computeMarginalAncestralProbability(PhyloNeighbor *dad_branch, PhyloNode *dad, double *ptn_ancestral_prob);
+
+    /**
+     	 compute the joint ancestral states at a pattern (Pupko et al. 2000)
+     */
+    void computeJointAncestralSequences(int *ancestral_seqs);
+
+    /**
+     * compute max ancestral likelihood according to
+     *  step 1-3 of the dynamic programming algorithm of Pupko et al. 2000, MBE 17:890-896
+     *  @param dad_branch branch leading to an internal node where to obtain ancestral sequence
+     *  @param dad dad of the target internal node
+     *  @param[out] C array storing all information about max ancestral states
+     */
+    void computeAncestralLikelihood(PhyloNeighbor *dad_branch, PhyloNode *dad, int *C);
+
+    /**
+     * compute max ancestral states according to
+     *  step 4-5 of the dynamic programming algorithm of Pupko et al. 2000, MBE 17:890-896
+     *  @param dad_branch branch leading to an internal node where to obtain ancestral sequence
+     *  @param dad dad of the target internal node
+     *  @param C array storing all information about max ancestral states
+     *  @param[out] ancestral_seqs array of size nptn*nnode for ancestral sequences at all internal nodes
+     */
+    void computeAncestralState(PhyloNeighbor *dad_branch, PhyloNode *dad, int *C, int *ancestral_seqs);
 
     /**
             compute pattern likelihoods only if the accumulated scaling factor is non-zero.
@@ -936,11 +1120,13 @@ public:
             @param tree_string tree string to read from
      */
     void readTreeFile(const string &file_name);
-
-    /**
+    
+    /*
             refactored 2015-12-22: Taxon IDs instead of Taxon names to save space!
      * Return the tree string contining taxon IDs and branch lengths
      * @return
+     * @param format (WT_TAXON_ID, WT_BR_LEN, ...)
+     * @return the tree string with the specified format
      */
     virtual string getTreeString();
 
@@ -961,8 +1147,10 @@ public:
 
     /**
      *  Return the sorted topology without branch length, used to compare tree topology
+     *  @param
+     *      printBranchLength true/false
      */
-    string getTopology();
+    string getTopologyString(bool printBranchLength);
 
 
     bool checkEqualScalingFactor(double &sum_scaling, PhyloNode *node = NULL, PhyloNode *dad = NULL);
@@ -972,19 +1160,27 @@ public:
      ****************************************************************************/
 
     //template <const int nstates>
-    void computeLikelihoodDervEigen(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
+//    void computeLikelihoodDervEigen(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
 
-    //template <const int nstates>
-    void computeMixtureLikelihoodDervEigen(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
+//    void computeSitemodelLikelihoodDervEigen(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
 
-    //template <const int nstates>
-    void computeMixrateLikelihoodDervEigen(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
+//    template <class VectorClass, const int VCSIZE, const int nstates>
+//    void computeLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
 
-    void computeSitemodelLikelihoodDervEigen(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
+    template <class VectorClass, const bool SAFE_NUMERIC, const int nstates, const bool FMA = false, const bool SITE_MODEL = false>
+    void computeLikelihoodBufferSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, size_t ptn_lower, size_t ptn_upper, int thread_id);
 
-    template <class VectorClass, const int VCSIZE, const int nstates>
-    void computeLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
+    template <class VectorClass, const bool SAFE_NUMERIC, const bool FMA = false, const bool SITE_MODEL = false>
+    void computeLikelihoodBufferGenericSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, size_t ptn_lower, size_t ptn_upper, int thread_id);
 
+
+    template <class VectorClass, const bool SAFE_NUMERIC, const int nstates, const bool FMA = false, const bool SITE_MODEL = false>
+    void computeLikelihoodDervSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
+
+    template <class VectorClass, const bool SAFE_NUMERIC, const bool FMA = false, const bool SITE_MODEL = false>
+    void computeLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
+
+    /*
     template <class VectorClass, const int VCSIZE, const int nstates>
     void computeMixrateLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
 
@@ -993,6 +1189,7 @@ public:
 
     template <class VectorClass, const int VCSIZE, const int nstates>
     void computeSitemodelLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
+    */
 
     /**
             compute tree likelihood and derivatives on a branch. used to optimize branch length
@@ -1142,6 +1339,11 @@ public:
      */
     double* theta_all;
 
+    /** total scaling buffer */
+    double *buffer_scale_all;
+
+    /** buffer used when computing partial_lh, to avoid repeated mem allocation */
+    double *buffer_partial_lh;
 
     /**
      * frequencies of alignment patterns, used as buffer for likelihood computation
@@ -1154,6 +1356,9 @@ public:
      * for other pattern: zero
      */
     double *ptn_invar;
+
+    vector<TraversalInfo> traversal_info;
+
 
     /****************************************************************************
             Nearest Neighbor Interchange by maximum likelihood
@@ -1170,7 +1375,7 @@ public:
             search by a nearest neigbor interchange
             @return the likelihood of the tree
      */
-    double optimizeNNI();
+    //double optimizeNNI();
 
     /**
             search by a nearest neigbor interchange
@@ -1204,12 +1409,20 @@ public:
     virtual void doNNI(NNIMove &move, bool clearLH = true);
 
     /**
+     * [DEPRECATED]
      * Randomly choose perform an NNI, out of the two defined by branch node1-node2.
      * This function also clear the corresponding partial likelihood vectors
-     * @param node1 one node of the branch
-     * @param node2 one node of the branch
+     *
+     * @param branch on which a random NNI is done
      */
-    void doOneRandomNNI(Node *node1, Node *node2);
+    void doOneRandomNNI(Branch branch);
+
+    /**
+    *   Get a random NNI from an internal branch, checking for consistency with constraintTree
+    *   @param branch the internal branch
+    *   @return an NNIMove, node1 and node2 are set to NULL if not consistent with constraintTree
+    */
+    NNIMove getRandomNNI(Branch& branch);
 
 
     /**
@@ -1488,13 +1701,20 @@ public:
 
     virtual void changeLikelihoodKernel(LikelihoodKernel lk);
 
-    virtual void setLikelihoodKernel(LikelihoodKernel lk);
+    virtual void setLikelihoodKernel(LikelihoodKernel lk, int num_threads);
 
 #if defined(BINARY32) || defined(__NOAVX__)
     virtual void setLikelihoodKernelAVX() {}
+    virtual void setLikelihoodKernelFMA() {}
 #else
     virtual void setLikelihoodKernelAVX();
+    virtual void setLikelihoodKernelFMA();
+#ifdef INCLUDE_AVX512
+    virtual void setLikelihoodKernelAVX512();
 #endif
+#endif
+    virtual void setLikelihoodKernelSSE();
+    
     /****************************************************************************
             Public variables
      ****************************************************************************/
@@ -1563,11 +1783,6 @@ public:
 
 	double minStateFreq;
 
-    /*
-     * 		Store the all the parameters for the program
-     */
-    Params* params;
-
     /** sequence names that were removed */
 	StrVector removed_seqs;
 
@@ -1606,7 +1821,7 @@ public:
      * compute the memory size required for storing partial likelihood vectors
      * @return memory size required in bytes
      */
-    virtual uint64_t getMemoryRequired(size_t ncategory = 1);
+    virtual uint64_t getMemoryRequired(size_t ncategory = 1, bool full_mem = false);
 
     void getMemoryRequired(uint64_t &partial_lh_entries, uint64_t &scale_num_entries, uint64_t &partial_pars_entries);
 
@@ -1625,10 +1840,7 @@ public:
 
     void approxAllBranches(PhyloNode *node = NULL, PhyloNode *dad = NULL);
 
-    /** set pointer of params variable */
-	virtual void setParams(Params* params);
-
-	double getCurScore() {
+    double getCurScore() {
 		return curScore;
 	}
 
@@ -1646,7 +1858,6 @@ public:
 		    curScore = -DBL_MAX;
         if (model)
             initializeAllPartialLh();
-//		clearAllPartialLH();
 	}
 
     void computeSeqIdentityAlongTree(Split &resp, Node *node = NULL, Node *dad = NULL);
@@ -1661,11 +1872,6 @@ protected:
      *  Instance of the phylogenetic likelihood library. This is basically the tree data strucutre in RAxML
      */
     pllInstance *pllInst;
-
-    /**
-     *  Whether the partial likelihood vectors have been computed for PLL
-     */
-//    bool lhComputed;
 
     /**
      *	PLL data structure for alignment
@@ -1688,7 +1894,7 @@ protected:
     bool subTreeDistComputed;
 
     /**
-     * Map data structure to store distance between subtree.
+     * Map data structure to store distance Candidate trees between subtree.
      * The key is a string which is constructed by concatenating IDs of
      * the 2 nodes, e.g. 15-16
      */
@@ -1716,10 +1922,9 @@ protected:
     double *_pattern_lh;
 
     /**
-            internal pattern likelihoods per category, always stored after calling computeLikelihood()
-            or related functions. Note that scaling factors are not incorporated here.
-            If you want to get real pattern likelihoods, please use computePatternLikelihood()
-     */
+            internal pattern likelihoods per category, 
+            only stored after calling non-SSE computeLikelihood for efficiency purpose
+    */
     double *_pattern_lh_cat;
 
     /**
@@ -1785,6 +1990,16 @@ protected:
      */
     UINT *central_partial_pars;
 
+    void reorientPartialLh(PhyloNeighbor* dad_branch, Node *dad);
+
+    //----------- memory saving technique ------//
+
+    /** maximum number of partial_lh_slots */
+    int64_t max_lh_slots;
+
+    /** mapping from */
+    MemSlotVector mem_slots;
+
     /**
             TRUE to discard saturated for Meyer & von Haeseler (2003) model
      */
@@ -1837,7 +2052,7 @@ protected:
      * Current score of the tree;
      */
     double curScore;
-    
+
     /** current best parsimony score */
     UINT best_pars_score;
 

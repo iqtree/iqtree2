@@ -86,6 +86,12 @@ public:
 	 */
 	virtual int getNMixtures() {return size(); }
 
+ 	/**
+	 * @param cat mixture class
+	 * @return weight of a mixture model component
+	 */
+	virtual double getMixtureWeight(int cat) { return prop[cat]; }
+
 	/**
 		@return the number of dimensions
 	*/

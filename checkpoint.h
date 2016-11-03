@@ -77,9 +77,21 @@ public:
     void setHeader(string header);
 
 	/**
+	 * load checkpoint information from an input stram
+     * @param in input stream
+	 */
+	void load(istream &in);
+
+	/**
 	 * load checkpoint information from file
 	 */
 	void load();
+
+	/**
+	 * dump checkpoint information into an output stream
+     * @param out output stream
+	 */
+	void dump(ostream &out);
 
 	/**
 	 * dump checkpoint information into file
@@ -308,7 +320,13 @@ public:
         @param nelem number of elements
     */
     void startList(int nelem);
-    
+
+    /**
+        set the starting list element, should only be called right after startList
+        @param id element ID
+    */
+    void setListElement(int id);
+
     /** 
         add an element to the current list
     */

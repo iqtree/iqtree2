@@ -8,6 +8,4 @@ charset phyb3rd = 4572-5753;
 charset set5_8S = 5754-5913;
 charset its2 = 5914-6177;
 charset gbss13rd = 6178-6951;
-
-
 end;

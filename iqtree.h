@@ -1,6 +1,8 @@
 /***************************************************************************
- *   Copyright (C) 2009 by BUI Quang Minh   *
- *   minh.bui@univie.ac.at   *
+ *   Copyright (C) 2009-2015 by                                            *
+ *   BUI Quang Minh <minh.bui@univie.ac.at>                                *
+ *   Lam-Tung Nguyen <nltung@gmail.com>                                    *
+ *                                                                         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -74,9 +76,7 @@ inline int int_branch_cmp(const IntBranchInfo a, const IntBranchInfo b) {
 typedef multiset<RepLeaf*, nodeheightcmp> RepresentLeafSet;
 
 /**
-Important Quartet Puzzling
-
-        @author BUI Quang Minh <minh.bui@univie.ac.at>
+    Main class for tree search
  */
 class IQTree : public PhyloTree {
 public:
@@ -112,6 +112,19 @@ public:
     */
     virtual void restoreCheckpoint();
 
+    /**
+        save UFBoot_trees.
+        For MPI workers only save from sample_start to sample_end
+        @param checkpoint Checkpoint object
+    */
+    void saveUFBoot(Checkpoint *checkpoint);
+
+    /**
+
+        restore UFBoot_trees from sample_start to sample_end (MPI)
+        @param checkpoint Checkpoint object
+    */
+    void restoreUFBoot(Checkpoint *checkpoint);
 
     /**
      * setup all necessary parameters  (declared as virtual needed for phylosupertree)
@@ -135,6 +148,8 @@ public:
             @param out (OUT) output stream
      */
     void printResultTree(ostream &out);
+
+    void printBestCandidateTree();
 
     /**
      * print phylolib tree to a file.
@@ -207,18 +222,40 @@ public:
     void doIQP();
 
     /**
-     *  @brief remove all branches mapped to splits in \a split
-     *  @param nodes1 node vector containing one end of the branches
-     *  @param nodes2 node vector containing the other end of the branches
-     *  @return number of branches removed
+     *  @brief get non-tabu branches from a set of branches
+     *
+     *  @param
+     *  	allBranches[IN] the inital branches
+     *  @param
+     *  	initTabuSplits[IN] the tabu splits
+     *  @param
+     *		nonTabuBranches[OUT] non-tabu branches from \a allBranches
+     *	@param[OUT]
+     *		tabuBranches branches that are tabu
      */
-    int removeBranches(NodeVector& nodes1, NodeVector& nodes2, SplitGraph& splits);
+    void getNonTabuBranches(Branches& allBranches, SplitGraph& tabuSplits, Branches& nonTabuBranches, Branches* tabuBranches = NULL);
+
+    /**
+     * @brief remove all branches corresponding to nnis
+     * @param nodes1 node vector containing one end of the branches
+     * @param nodes2 node vector containing the other end of the branches
+     * @param nnis
+     * @return
+     */
+    int removeNNIBranches(NodeVector& nodes1, NodeVector& nodes2, unordered_map<string, NNIMove> nnis);
 
     /**
      * 		Perform a series of random NNI moves
-     * 		@param numNNI number of random NNIs
+     * 		@return the perturbed newick string
      */
-    void doRandomNNIs(int numNNI);
+    string doRandomNNIs(bool storeTabu = false);
+
+    /**
+     *  Do a random NNI on splits that are shared among all the candidate trees.
+     *  @return the perturbed newick string
+     */
+    string perturbStableSplits(double supportValue);
+
 
     /**
      *   input model parameters from IQ-TREE to PLL
@@ -271,6 +308,9 @@ public:
      */
     double swapTaxa(PhyloNode *node1, PhyloNode *node2);
 
+    /** collect boostrap trees from workers to master */
+    void collectBootTrees();
+
     /**
             perform tree search
             @return best likelihood found
@@ -288,13 +328,14 @@ public:
     /**
      *  Wrapper function to compute tree log-likelihood.
      *  This function with call either PLL or IQ-TREE to compute tree log-likelihood
+     *  @return current score of tree
      */
-    void computeLogL();
+    double computeLogL();
 
     /**
-     *	Print numBestScore found so far, starting from the highest
+     *	Print scores of tree used for generating offsprings
      */
-    void printBestScores(int numBestScore);
+    void printBestScores();
 
     /****************************************************************************
             Fast Nearest Neighbor Interchange by maximum likelihood
@@ -302,13 +343,79 @@ public:
 
 
     /**
-            This implement the fastNNI algorithm proposed in PHYML paper
-            TUNG: this is a virtual function, so it will be called automatically by optimizeNNIBranches()
-            @return best likelihood found
-            @param skipped (OUT) 1 if current iteration is skipped, otherwise 0
-            @param nni_count (OUT) the number of single NNI moves proceeded so far
+     *  Optimize current tree using NNI
+     *
+     *  @return
+     *      <number of NNI steps, number of NNIs> done
      */
-    double optimizeNNI(int &nni_count, int &nni_steps);
+    pair<int, int> optimizeNNI(bool speedNNI = true);
+
+    /**
+     *  Return the current best score found
+     */
+    double getBestScore();
+
+    /**
+     * @brief Generate a list of internal branches on which NNI moves will be evaluated
+     * @param
+     *      nonNNIBranches [OUT] Branches on which NNI evaluation will be skipped
+     * @param
+     *      tabuSplits [IN] A list of splits that are considered tabu
+     * @param
+     *      candidateSplitHash [IN] Lists that appear on the best 20 candidate trees
+     * @param
+     *      dad [IN] for navigation
+     * @param
+     *      node[IN] for navigation
+     * @return A list of branches for evaluating NNIs
+     */
+    void getNNIBranches(SplitIntMap &tabuSplits, SplitIntMap &candidateSplitHash, Branches &nonNNIBranches, Branches &outBranches, Node *dad = NULL, Node *node = NULL);
+
+    /**
+     *  Return internal branches that appear in \a candidateSplitHash
+     *  and has support value >= \a supportValue.
+     *  @param
+     *      candidateSplitHash [IN]   A set of splits with the number of occurences.
+     *  @param
+     *      supportValue [IN]  Only consider split whose support value is higher than this number
+     *  @param
+     *      dad [IN] for navigation
+     *  @param
+     *      node[IN] for navigation
+     *  @return
+     *      A list of branches fufilling the aforementioned conditions.
+     */
+    void getStableBranches(SplitIntMap &candSplits, double supportValue, Branches &outBranches, Node *dad = NULL, Node *node = NULL);
+
+
+    /**
+     *
+     *  Determine whether to evaluate NNI moves on the branch corresponding to the current split
+     *
+     *  @param curSplit [IN] the split that correspond to the current branch
+     *  @param tabuSplits [IN] tabu splits
+     *  @param candSplits [IN] splits contained in all candidate trees
+     *  @param nonNNIBranches [OUT] branches that are not inserted to nniBranches are store here
+     *  @param nniBranches [OUT] if the split is neither stable nor tabu it is inserted in this list
+     */
+    bool shouldEvaluate(Split* curSplit, SplitIntMap &tabuSplits, SplitIntMap &candSplits);
+
+
+    /**
+     *  @brief Only select NNI branches that are 2 branches away from the previously
+     *  appied NNIs
+     *  @param
+     *      appliedNNIs List of previously applied NNIs
+     *  @return
+     *      List of branches to be evaluated
+     */
+    void filterNNIBranches(vector<NNIMove> &appliedNNIs, Branches &outBranches);
+
+    
+    /**
+     * @brief get branches that correspond to the splits in \a nniSplits
+     */
+    void getSplitBranches(Branches &branches, SplitIntMap &splits, Node *dad = NULL, Node *node = NULL);
 
     /**
      * 		Do fastNNI using PLL
@@ -320,30 +427,29 @@ public:
 
     /**
      * 		@brief Perform NNI search on the current tree topology
+     * 		@return <number_of_NNIs, number_of_NNI_steps>
      * 		This function will automatically use the selected kernel (either PLL or IQ-TREE)
-     *
-     * 		@param nniCount (OUT) number of NNIs applied
-     * 		@param nniSteps (OUT) number of NNI steps done
-     * 		@return the new NEWICK string
      */
-    string doNNISearch(int &nniCount, int &nniSteps);
+    pair<int, int> doNNISearch();
 
     /**
-            @brief evaluate all NNIs and store them in possilbleNNIMoves list
+            @brief evaluate all NNIs
             @param  node    evaluate all NNIs of the subtree rooted at node
             @param  dad     a neighbor of \p node which does not belong to the subtree
                             being considered (used for traverse direction)
 
      */
-    void evalNNIs(PhyloNode *node = NULL, PhyloNode *dad = NULL);
+    //void evalNNIs(PhyloNode *node = NULL, PhyloNode *dad = NULL);
 
     /**
-     * @brief Evaluate all NNIs on branch defined by \a nodes1 and \a nodes2
+     * @brief Evaluate all NNIs on branch defined by \a branches
      *
-     * @param[in] nodes1 contains one ends of the branches for NNI evaluation
-     * @param[in] nodes2 contains the other ends of the branches for NNI evaluation
+     * @param nniBranches [IN] branches the branches on which NNIs will be evaluated
+     * @return list positive NNIs
      */
-    void evalNNIs(NodeVector &nodes1, NodeVector &nodes2);
+    void evaluateNNIs(Branches &nniBranches, vector<NNIMove> &outNNIMoves);
+
+    double optimizeNNIBranches(Branches &nniBranches);
 
     /**
             search all positive NNI move on the current tree and save them
@@ -352,11 +458,11 @@ public:
     void evalNNIsSort(bool approx_nni);
 
     /**
-            apply nni2apply NNIs from the non-conflicting NNI list
-            @param nni2apply number of NNIs to apply from the list
+            apply  NNIs from the non-conflicting NNI list
+            @param compatibleNNIs vector of all compatible NNIs
             @param changeBran whether or not the computed branch lengths should be applied
      */
-    virtual void doNNIs(int nni2apply, bool changeBran = true);
+    virtual void doNNIs(vector<NNIMove> &compatibleNNIs, bool changeBran = true);
 
     /**
      *  Restore the old 5 branch lengths stored in the NNI move.
@@ -365,43 +471,18 @@ public:
      */
     //void restoreNNIBranches(NNIMove nnimove);
 
+
     /**
-            generate non conflicting NNI moves.
-            moves are saved in vec_nonconf_nni
+     *  @brief get a list of compatible NNIs from a list of NNIs
+     *  @param nniMoves [IN] list of NNIs
+     *  @return list of compatible NNIs
      */
-    void genNonconfNNIs();
+    void getCompatibleNNIs(vector<NNIMove> &nniMoves, vector<NNIMove> &compatibleNNIs);
 
     /**
             add a NNI move to the list of possible NNI moves;
      */
-    void addPositiveNNIMove(NNIMove myMove);
-
-    /**
-     * 	Save all the current branch lengths
-     */
-//    void saveBranches(PhyloNode *node = NULL, PhyloNode *dad = NULL);
-
-    /**
-     * 	 Restore the branch lengths from the saved values
-     */
-//    virtual void restoreAllBrans(PhyloNode *node = NULL, PhyloNode *dad = NULL);
-
-    /**
-     * Get the branch length of the branch node1-node2
-     * @param node1
-     * @param node2
-     * @return the branch length
-     */
-//    double getBranLen(PhyloNode *node1, PhyloNode *node2);
-
-
-    /**
-            Described in PhyML paper: apply change to branch that does not
-            correspond to a swap with the following formula l = l + lamda(la - l)
-            @param node1 the first node of the branch
-            @param node2 the second node of the branch
-     */
-//    void changeBranLen(PhyloNode *node1, PhyloNode *node2, double branLen);
+    void addPositiveNNIMove(NNIMove &myMove);
 
     /**
      * Estimate the 95% quantile of the distribution of N (see paper for more d
@@ -482,6 +563,7 @@ public:
      */
     vector<int> vecNumNNI;
 
+
     /**
      * Do memory allocation and initialize parameter for UFBoot to run with PLL
      */
@@ -528,7 +610,17 @@ public:
     */
    void pllConvertUFBootData2IQTree();
 
+    /**
+        test the best number of threads
+    */
+    int testNumThreads();
+
 protected:
+    /**
+    *  Splits corresponding to random NNIs
+    */
+    SplitIntMap initTabuSplits;
+
     /**
             criterion to assess important quartet
      */
@@ -541,35 +633,9 @@ protected:
     NodeVector taxaSet;
 
     /**
-     * confidence value for number of NNIs found in one iteration
-     */
-    int nni_count_est;
-
-    /**
-     * confidence value for likelihood improvement made by one NNI
-     */
-    double nni_delta_est;
-
-
-    /**
      *  Vector contains approximated improvement pro NNI at each iterations
      */
     vector<double> vecImpProNNI;
-
-    /**
-        List of positive NNI for the current tree;
-     */
-    vector<NNIMove> plusNNIs;
-
-    /**
-        List of non-conflicting NNIs for the current tree;
-     */
-    vector<NNIMove> nonConfNNIs;
-
-    /**
-     *  NNIs that have been applied in the previous step
-     */
-    vector<NNIMove> appliedNNIs;
 
     /**
         Optimal branch lengths
@@ -582,17 +648,7 @@ protected:
      *  @param[out] nodes2 the other ends of the branches
      *  @param[in] nnis NNIs that have been previously applied
      */
-    void getBranchesForNNI(NodeVector& nodes1, NodeVector& nodes2, vector<NNIMove>& nnis);
-
-    /**
-     *  Use fastNNI heuristic
-     */
-    bool fastNNI;
-
-    /**
-            Original branch lengths
-     */
-//    mapString2Double orgBrans;
+    void generateNNIBranches(NodeVector& nodes1, NodeVector& nodes2, unordered_map<string, NNIMove>& nnis);
 
     int k_delete, k_delete_min, k_delete_max, k_delete_stay;
 
@@ -602,6 +658,56 @@ protected:
     int k_represent;
 
 public:
+
+    /**
+     *  Candidate tree set (the current best N (default N = 5)
+     *  NNI-optimal trees
+     */
+    CandidateSet candidateTrees;
+
+    /**
+     *  Set of all intermediate trees (initial trees, tree generated by NNI steps,
+     *  NNI-optimal trees)
+     */
+    CandidateSet intermediateTrees;
+
+
+    /**
+     *  Update the candidate set with a new NNI-optimal tree. The maximum size of the candidate set
+     *  is fixed to the initial setting. Thus, if the size exceed the maximum number of trees, the worse
+     *  tree will be removed.
+     *
+     *  @param treeString
+     *      the new tree
+     *  @param score
+     *      the score of the new tree
+     *  @param updateStopRule
+     *      Whether or not to update the stop rule
+     *  @return relative position of the new tree to the current best.
+     *      -1 if duplicated
+     *      -2 if the candidate set is not updated
+     */
+    int addTreeToCandidateSet(string treeString, double score, bool updateStopRule, int sourceProcID);
+
+    /**
+        MPI: synchronize candidate trees between all processes
+        @param nTrees number of trees to broadcast
+        @param updateStopRule true to update stopping rule, false otherwise
+    */
+    void syncCandidateTrees(int nTrees, bool updateStopRule);
+
+    /**
+        MPI: synchronize tree of current iteration with master
+        will update candidateset_changed
+        @param curTree current tree
+
+    */
+    void syncCurrentTree();
+
+    /**
+        MPI: Master sends stop message to all workers
+    */
+    void sendStopMessage();
 
     /**
      *  Generate the initial parsimony/random trees, called by initCandidateTreeSet
@@ -615,7 +721,6 @@ public:
      *  @param nNNITrees number of NNI locally optimal trees to generate
      */
     void initCandidateTreeSet(int nParTrees, int nNNITrees);
-
 
     /**
      * Generate the initial tree (usually used for model parameter estimation)
@@ -636,9 +741,6 @@ public:
      *  variable storing the current best tree topology
      */
     topol* pllBestTree;
-
-    CandidateSet candidateTrees;
-
 
     /****** following variables are for ultra-fast bootstrap *******/
 
@@ -668,6 +770,12 @@ public:
 
     /** vector of bootstrap alignments generated */
     vector<BootValType* > boot_samples;
+
+    /** starting sample for UFBoot, used for MPI */
+    int sample_start;
+
+    /** end sample for UFBoot, used for MPI */
+    int sample_end;
 
     /** newick string of corresponding bootstrap trees */
     StrVector boot_trees;
@@ -715,7 +823,6 @@ protected:
      */
     vector<NNIInfo> nni_info;
 
-
     bool estimate_nni_cutoff;
 
     double nni_cutoff;
@@ -727,11 +834,12 @@ protected:
     ofstream outNNI;
 protected:
 
-    bool print_tree_lh;
+    //bool print_tree_lh;
 
-    int write_intermediate_trees;
+    //int write_intermediate_trees;
 
     ofstream out_treels, out_treelh, out_sitelh, out_treebetter;
+    string treels_name, out_lh_file, site_lh_file;
 
     void estimateNNICutoff(Params* params);
 
@@ -740,6 +848,12 @@ protected:
     void saveNNITrees(PhyloNode *node = NULL, PhyloNode *dad = NULL);
 
     int duplication_counter;
+
+    // MPI: vector of size = num processes, true if master should send candidate set to worker
+    BoolVector candidateset_changed;
+
+    // true if best candidate tree is changed
+    bool bestcandidate_changed;
 
     /**
             number of IQPNNI iterations
@@ -843,9 +957,56 @@ protected:
 
     void estDeltaMin();
 
+    void convertNNI2Splits(SplitIntMap &nniSplits, int numNNIs, vector<NNIMove> &compatibleNNIs);
+
+    string generateParsimonyTree(int randomSeed);
+
+#ifdef _IQTREE_MPI
+    /**
+     *  Receive trees from other processes and add them to the candidate set
+     *
+     *  @param allTrees
+     *      If true, wait for tree from every node
+     *      If false, only collect trees that have been sent
+     *  @param maxNumTrees
+     *      Only received up to maxNumTrees to prevent the function to block because it can constantly receive
+     *      new trees
+     *  @param updateStopRule
+     *      To update the stop rule or not
+     */
+    bool MPI_CollectTrees(bool allTrees, int maxNumTrees, bool updateStopRule);
+#endif
+
+    double doTreePerturbation();
+
+    void estimateLoglCutoffBS();
+
+    //void estimateNNICutoff(Params &params);
+
+public:
+    /**
+     *  Return best tree string from the candidate set
+     *
+     *  @param numTrees
+     *      Number of best trees to return
+     *  @return
+     *      A string vector of trees
+     */
+    vector<string> getBestTrees(int numTrees = 0);
+
+    /**
+     *  Print the iteration number and the tree score
+     */
+    void printIterationInfo(int sourceProcID);
+
+    /**
+     *  Return branches that are 2 branches away from the branches, on which NNIs were applied
+     *  in the previous NNI steps.
+     *  @param
+     *      previousNNIBranches[IN] a set of branches on which NNIs were performed in the previous NNI step.
+     *  @return
+     *      a set of branches, on which NNIs should be evaluated for the current NNI steps
+     */
+    Branches getReducedListOfNNIBranches(Branches &previousNNIBranches);
 };
-
-void estimateNNICutoff(Params &params);
-
-
 #endif

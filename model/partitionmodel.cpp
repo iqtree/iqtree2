@@ -137,7 +137,7 @@ double PartitionModel::optimizeLinkedAlpha(bool write_info, double gradient_epsi
 	double negative_lh;
 	double current_shape = linked_alpha;
 	double ferror, optx;
-	optx = minimizeOneDimen(MIN_GAMMA_SHAPE, current_shape, MAX_GAMMA_SHAPE, max(gradient_epsilon, TOL_GAMMA_SHAPE), &negative_lh, &ferror);
+	optx = minimizeOneDimen(site_rate->getTree()->params->min_gamma_shape, current_shape, MAX_GAMMA_SHAPE, max(gradient_epsilon, TOL_GAMMA_SHAPE), &negative_lh, &ferror);
     if (write_info)
         cout << "Linked alpha across partitions: " << linked_alpha << endl;
 	return site_rate->getTree()->computeLikelihood();
@@ -151,7 +151,7 @@ double PartitionModel::optimizeParameters(int fixed_len, bool write_info, double
 
     if (tree->part_order.empty()) tree->computePartitionOrder();
 	#ifdef _OPENMP
-	#pragma omp parallel for reduction(+: tree_lh) schedule(dynamic) if(ntrees >= tree->params->num_threads)
+	#pragma omp parallel for reduction(+: tree_lh) schedule(dynamic) if(tree->num_threads > 1)
 	#endif
     for (int i = 0; i < ntrees; i++) {
         int part = tree->part_order[i];
@@ -183,7 +183,7 @@ double PartitionModel::optimizeParametersGammaInvar(int fixed_len, bool write_in
 
     if (tree->part_order.empty()) tree->computePartitionOrder();
 	#ifdef _OPENMP
-	#pragma omp parallel for reduction(+: tree_lh) schedule(dynamic) if(ntrees >= tree->params->num_threads)
+	#pragma omp parallel for reduction(+: tree_lh) schedule(dynamic) if(tree->num_threads > 1)
 	#endif
     for (int i = 0; i < ntrees; i++) {
         int part = tree->part_order[i];

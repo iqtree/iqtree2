@@ -1,8 +1,8 @@
 /****************************  vectorf256.h   *******************************
 * Author:        Agner Fog
 * Date created:  2012-05-30
-* Last modified: 2015-11-27
-* Version:       1.20
+* Last modified: 2016-04-26
+* Version:       1.22
 * Project:       vector classes
 * Description:
 * Header file defining 256-bit floating point vector classes as interface
@@ -27,7 +27,7 @@
 *
 * For detailed instructions, see VectorClass.pdf
 *
-* (c) Copyright 2012 - 2015 GNU General Public License http://www.gnu.org/licenses
+* (c) Copyright 2012 - 2016 GNU General Public License http://www.gnu.org/licenses
 *****************************************************************************/
 
 // check combination of header files
@@ -44,7 +44,9 @@
 
 #include "vectorf128.h"  // Define 128-bit vectors
 
-
+#ifdef VCL_NAMESPACE
+namespace VCL_NAMESPACE {
+#endif
 
 /*****************************************************************************
 *
@@ -3162,5 +3164,9 @@ static inline uint8_t to_bits(Vec4db const & x) {
 static inline Vec4db to_Vec4db(uint8_t x) {
     return Vec4db(to_Vec4qb(x));
 }
+
+#ifdef VCL_NAMESPACE
+}
+#endif
 
 #endif // VECTORF256_H

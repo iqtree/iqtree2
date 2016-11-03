@@ -20,7 +20,6 @@
 #include "ncl/ncl.h"
 #include "tools.h"
 #include "pdtree.h"
-#include "msetsblock.h"
 #include "myreader.h"
 
 /*********************************************
@@ -163,7 +162,7 @@ void PDTree::readParams(Params &params) {
 	// now convert the weights
 	LeafMapName lsn;
 	buildLeafMapName(lsn);
-	tax_weight.resize(ntaxa, 0);
+	tax_weight.resize((unsigned long) ntaxa, 0);
 	for (int i = 0; i < tax_name.size(); i++) {
 		LeafMapName::iterator nameit = lsn.find(tax_name[i]);
 		if (nameit == lsn.end())
@@ -224,7 +223,7 @@ void PDTree::computePD(Params &params, vector<PDTaxaSet> &taxa_set, PDRelatedMea
 
 	//sets->Report(cout);
 
-	taxa_set.resize(sets->getNSets());
+	taxa_set.resize((unsigned long) sets->getNSets());
 
 	vector<PDTaxaSet>::iterator it_ts;
 	TaxaSetNameVector::iterator i;

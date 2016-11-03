@@ -544,6 +544,14 @@ void ModelCodon::computeRateAttributes() {
     }
     
     if (verbose_mode >= VB_MAX) {
+
+        // make cost matrix fulfill triangular inequality
+        for (int k = 0; k < 20; k++)
+            for (i = 0; i < 20; i++)
+                for (j = 0; j < 20; j++)
+                    if (aa_cost_change[i*20+j] > aa_cost_change[i*20+k] + aa_cost_change[k*20+j])
+                        aa_cost_change[i*20+j] = aa_cost_change[i*20+k] + aa_cost_change[k*20+j];
+
         cout << "cost matrix by number of nt changes for TNT use" << endl;
         cout << "smatrix =1 (aa_nt_changes)";
         for (i = 0; i < 19; i++)

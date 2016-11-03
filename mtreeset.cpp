@@ -112,6 +112,7 @@ void MTreeSet::init(StrVector &treels, bool &is_rooted) {
 	//for (i = 0; i < trees_id.size(); i++) ok_trees[trees_id[i]] = 1;
 
 	for (StrVector::iterator it = treels.begin(); it != treels.end(); it++)
+    if (!it->empty())
 	{
 		count++;
 		MTree *tree = newTree();

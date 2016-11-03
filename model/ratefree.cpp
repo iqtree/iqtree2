@@ -460,7 +460,8 @@ double RateFree::optimizeWithEM() {
     PhyloTree *tree = new PhyloTree;
     tree->copyPhyloTree(phylo_tree);
     tree->optimize_by_newton = phylo_tree->optimize_by_newton;
-    tree->setLikelihoodKernel(phylo_tree->sse);
+    tree->setParams(phylo_tree->params);
+    tree->setLikelihoodKernel(phylo_tree->sse, phylo_tree->num_threads);
     // initialize model
     ModelFactory *model_fac = new ModelFactory();
     model_fac->joint_optimize = phylo_tree->params->optimize_model_rate_joint;
@@ -566,7 +567,7 @@ double RateFree::optimizeWithEM() {
             subst_model->setTree(tree);
             model_fac->model = subst_model;
             if (subst_model->isMixture() || subst_model->isSiteSpecificModel())
-                tree->setLikelihoodKernel(phylo_tree->sse);
+                tree->setLikelihoodKernel(phylo_tree->sse, phylo_tree->num_threads);
 
                         
             // initialize likelihood

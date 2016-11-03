@@ -338,6 +338,8 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 		delete [] rates;
 		delete [] state_freq;
 
+        models->joinEigenMemory();
+
         // delete information of the old alignment
 //        tree->aln->ordered_pattern.clear();
 //        tree->deleteAllPartialLh();
@@ -850,7 +852,7 @@ double ModelFactory::optimizeParameters(int fixed_len, bool write_info,
 	assert(model);
 	assert(site_rate);
 
-    double defaultEpsilon = logl_epsilon;
+//    double defaultEpsilon = logl_epsilon;
 
 	double begin_time = getRealTime();
 	double cur_lh;
@@ -862,7 +864,7 @@ double ModelFactory::optimizeParameters(int fixed_len, bool write_info,
     // no optimization of branch length in the first round
     cur_lh = tree->computeLikelihood();
     tree->setCurScore(cur_lh);
-	if (verbose_mode >= VB_MED || write_info) 
+	if (write_info)
 		cout << "1. Initial log-likelihood: " << cur_lh << endl;
 
 	// For UpperBounds -----------
@@ -905,7 +907,7 @@ double ModelFactory::optimizeParameters(int fixed_len, bool write_info,
 		}
 		if (new_lh > cur_lh + logl_epsilon) {
 			cur_lh = new_lh;
-			if (verbose_mode >= VB_MED || write_info)
+			if (write_info)
 				cout << i << ". Current log-likelihood: " << cur_lh << endl;
 		} else {
 			site_rate->classifyRates(new_lh);

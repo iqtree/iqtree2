@@ -313,12 +313,13 @@ public:
             @param move the single NNI
      */
     virtual void doNNI(NNIMove &move, bool clearLH = true);
-    /**
-            apply nni2apply NNIs from the non-conflicting NNI list
-            @param nni2apply number of NNIs to apply from the list
+
+	/**
+            apply  NNIs from the non-conflicting NNI list
+            @param compatibleNNIs vector of all compatible NNIs
             @param changeBran whether or not the computed branch lengths should be applied
      */
-    virtual void doNNIs(int nni2apply, bool changeBran = true);
+    virtual void doNNIs(vector<NNIMove> &compatibleNNIs, bool changeBran = true);
 
     /**
      *   Apply 5 new branch lengths stored in the NNI move
