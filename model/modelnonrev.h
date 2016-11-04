@@ -21,7 +21,7 @@
 #define MODELNONREV_H
 
 #include "phylotree.h"
-#include "modelgtr.h"
+#include "modelmarkov.h"
 #include <complex>
 
 /**
@@ -29,7 +29,7 @@ The general non-reversible model
 
 	@author BUI Quang Minh <minh.bui@univie.ac.at>
 */
-class ModelNonRev : public ModelGTR
+class ModelNonRev : public ModelMarkov
 {
 public:
     ModelNonRev(PhyloTree *tree);

@@ -4,7 +4,7 @@
 #include <assert.h>
 #include <string.h>
 
-ModelPoMo::ModelPoMo(PhyloTree *tree) : ModelGTR(tree, false) {
+ModelPoMo::ModelPoMo(PhyloTree *tree) : ModelMarkov(tree, false) {
 }
 
 ModelPoMo::ModelPoMo(const char *model_name,
@@ -15,7 +15,7 @@ ModelPoMo::ModelPoMo(const char *model_name,
                      bool is_reversible,
                      string pomo_params)
     // Do not count rates; does not make sense for PoMo.
-    : ModelGTR(tree, false) {
+    : ModelMarkov(tree, false) {
     init(model_name, model_params, freq_type, freq_params, is_reversible, pomo_params);
 }
 
@@ -875,7 +875,7 @@ void ModelPoMo::saveCheckpoint() {
     CKP_ARRAY_SAVE(n_rates, dna_model->rates);
     CKP_ARRAY_SAVE(nnuc, dna_model->state_freq);
     checkpoint->endStruct();
-    ModelGTR::saveCheckpoint();
+    ModelMarkov::saveCheckpoint();
 }
 
 void ModelPoMo::restoreCheckpoint() {
@@ -888,7 +888,7 @@ void ModelPoMo::restoreCheckpoint() {
     // Second, update states and rate matrix.
     updatePoMoStatesAndRateMatrix();
     // Third, restore ModelGTR.
-    ModelGTR::restoreCheckpoint();
+    ModelMarkov::restoreCheckpoint();
     decomposeRateMatrix();
     if (phylo_tree)
         phylo_tree->clearAllPartialLH();

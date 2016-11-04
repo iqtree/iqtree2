@@ -20,14 +20,14 @@
 #ifndef MODELPROTEIN_H
 #define MODELPROTEIN_H
 
-#include "modelgtr.h"
+#include "modelmarkov.h"
 
 /**
 Substitution models for protein sequences
 
 	@author BUI Quang Minh <minh.bui@univie.ac.at>
 */
-class ModelProtein : public ModelGTR
+class ModelProtein : public ModelMarkov
 {
 public:
 	/**

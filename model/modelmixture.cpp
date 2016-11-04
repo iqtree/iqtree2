@@ -5,7 +5,7 @@
  *      Author: minh
  */
 
-#include "modelgtr.h"
+#include "modelmarkov.h"
 #include "modelnonrev.h"
 #include "modeldna.h"
 #include "modelprotein.h"
@@ -1075,7 +1075,7 @@ ModelSubst* createModel(string model_str, ModelsBlock *models_block, StateFreqTy
 	constructor
 	@param tree associated tree for the model
 */
-ModelMixture::ModelMixture(PhyloTree *tree, bool count_rates) : ModelGTR(tree, count_rates) {
+ModelMixture::ModelMixture(PhyloTree *tree, bool count_rates) : ModelMarkov(tree, count_rates) {
 	prop = NULL;
 	fix_prop = true;
 	optimizing_submodels = false;
@@ -1083,7 +1083,7 @@ ModelMixture::ModelMixture(PhyloTree *tree, bool count_rates) : ModelGTR(tree, c
 
 ModelMixture::ModelMixture(string orig_model_name, string model_name, string model_list, ModelsBlock *models_block,
 		StateFreqType freq, string freq_params, PhyloTree *tree, bool optimize_weights, bool count_rates)
-	: ModelGTR(tree, count_rates)
+	: ModelMarkov(tree, count_rates)
 {
 	prop = NULL;
 	fix_prop = true;
@@ -1162,11 +1162,11 @@ void ModelMixture::initMixture(string orig_model_name, string model_name, string
         for (m = 0; m < freq_weights.size(); m++)
             if (freq_vec[m] == nxs_freq_empirical || freq_vec[m] == nxs_freq_optimize) 
                 freq_weights[m] = sum_weights/freq_weights.size();
-		ModelGTR::init(FREQ_USER_DEFINED);
+		ModelMarkov::init(FREQ_USER_DEFINED);
 	} else {
 		if (freq_params != "")
 			readStateFreq(freq_params);
-		ModelGTR::init(freq);
+		ModelMarkov::init(freq);
 	}
 
 	DoubleVector weights;
@@ -1198,15 +1198,15 @@ void ModelMixture::initMixture(string orig_model_name, string model_name, string
 			this_name = this_name.substr(0, pos_rate);
 		}
 		cur_pos = pos+1;
-		ModelGTR* model;
+		ModelMarkov* model;
 		if (freq == FREQ_MIXTURE) {
 			for(int f = 0; f != freq_vec.size(); f++) {
                 if (freq_vec[f] == nxs_freq_empirical)
-					model = (ModelGTR*)createModel(this_name, models_block, FREQ_EMPIRICAL, "", tree, count_rates);
+					model = (ModelMarkov*)createModel(this_name, models_block, FREQ_EMPIRICAL, "", tree, count_rates);
                 else if (freq_vec[f] == nxs_freq_optimize)
-					model = (ModelGTR*)createModel(this_name, models_block, FREQ_ESTIMATE, "", tree, count_rates);
+					model = (ModelMarkov*)createModel(this_name, models_block, FREQ_ESTIMATE, "", tree, count_rates);
 				else
-					model = (ModelGTR*)createModel(this_name, models_block, FREQ_USER_DEFINED, freq_vec[f]->description, tree, count_rates);
+					model = (ModelMarkov*)createModel(this_name, models_block, FREQ_USER_DEFINED, freq_vec[f]->description, tree, count_rates);
 				model->total_num_subst = rate * freq_rates[f];
 				push_back(model);
 				weights.push_back(weight * freq_weights[f]);
@@ -1228,7 +1228,7 @@ void ModelMixture::initMixture(string orig_model_name, string model_name, string
 				full_name += model->name;
 			}
 		} else {
-			model = (ModelGTR*)createModel(this_name, models_block, freq, freq_params, tree, count_rates);
+			model = (ModelMarkov*)createModel(this_name, models_block, freq, freq_params, tree, count_rates);
 			model->total_num_subst = rate;
 			push_back(model);
 			weights.push_back(weight);
@@ -1358,11 +1358,11 @@ void ModelMixture::saveCheckpoint() {
     }
     checkpoint->endStruct();
 
-    ModelGTR::saveCheckpoint();
+    ModelMarkov::saveCheckpoint();
 }
 
 void ModelMixture::restoreCheckpoint() {
-    ModelGTR::restoreCheckpoint();
+    ModelMarkov::restoreCheckpoint();
 
     checkpoint->startStruct("ModelMixture");
 //    CKP_RESTORE(fix_prop);
@@ -1591,7 +1591,7 @@ double ModelMixture::optimizeWithEM(double gradient_epsilon) {
         // now optimize model one by one
         for (c = 0; c < nmix; c++) if (at(c)->getNDim() > 0) {
             tree->copyPhyloTree(phylo_tree);
-            ModelGTR *subst_model;
+            ModelMarkov *subst_model;
             subst_model = at(c);
             tree->setModel(subst_model);
             subst_model->setTree(tree);

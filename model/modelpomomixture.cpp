@@ -17,7 +17,7 @@ ModelPoMoMixture::ModelPoMoMixture(const char *model_name,
                      bool is_reversible,
                      string pomo_params, string pomo_rate_str)
 	:  
-        ModelGTR(tree),
+        ModelMarkov(tree),
         ModelPoMo(model_name, model_params, freq_type, freq_params, tree, is_reversible, pomo_params),
         ModelMixture(tree)
     
@@ -40,7 +40,7 @@ ModelPoMoMixture::ModelPoMoMixture(const char *model_name,
 
     // creating mixture components
     for (m = 0; m < num_rate_cats; m++) {
-        ModelGTR* model = new ModelGTR(tree);
+        ModelMarkov* model = new ModelMarkov(tree);
         model->init(FREQ_USER_DEFINED);
 //        model->total_num_subst = ratehet->getRate(m);
         push_back(model);
@@ -51,7 +51,7 @@ ModelPoMoMixture::ModelPoMoMixture(const char *model_name,
     initMem();
 
     // TODO: why calling this init here
-    ModelGTR::init(FREQ_USER_DEFINED);
+    ModelMarkov::init(FREQ_USER_DEFINED);
     
 }
 

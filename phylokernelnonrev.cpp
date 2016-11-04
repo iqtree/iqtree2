@@ -580,7 +580,7 @@ void PhyloTree::computeNonrevLikelihoodDerv(PhyloNeighbor *dad_branch, PhyloNode
 
 	df = my_df;
 	ddf = my_ddf;
-    assert(!isnan(df) && !isinf(df));
+    assert(!std::isnan(df) && !std::isinf(df));
 
 	if (orig_nptn < nptn) {
     	// ascertainment bias correction
@@ -777,13 +777,13 @@ double PhyloTree::computeNonrevLikelihoodBranch(PhyloNeighbor *dad_branch, Phylo
         } // FOR thread_id
     }
 
-    if (isnan(tree_lh) || isinf(tree_lh)) {
+    if (std::isnan(tree_lh) || std::isinf(tree_lh)) {
         cout << "WARNING: Numerical underflow caused by alignment sites";
         i = aln->getNSite();
         int j;
         for (j = 0, c = 0; j < i; j++) {
             ptn = aln->getPatternID(j);
-            if (isnan(_pattern_lh[ptn]) || isinf(_pattern_lh[ptn])) {
+            if (std::isnan(_pattern_lh[ptn]) || std::isinf(_pattern_lh[ptn])) {
                 cout << " " << j+1;
                 c++;
                 if (c >= 10) {
@@ -796,7 +796,7 @@ double PhyloTree::computeNonrevLikelihoodBranch(PhyloNeighbor *dad_branch, Phylo
 //        tree_lh = current_it->lh_scale_factor + current_it_back->lh_scale_factor;
         tree_lh = 0.0;
         for (ptn = 0; ptn < orig_nptn; ptn++) {
-            if (isnan(_pattern_lh[ptn]) || isinf(_pattern_lh[ptn])) {
+            if (std::isnan(_pattern_lh[ptn]) || std::isinf(_pattern_lh[ptn])) {
                 _pattern_lh[ptn] = LOG_SCALING_THRESHOLD*4; // log(2^(-1024))
             }
             tree_lh += _pattern_lh[ptn] * ptn_freq[ptn];
@@ -821,10 +821,10 @@ double PhyloTree::computeNonrevLikelihoodBranch(PhyloNeighbor *dad_branch, Phylo
     	for (ptn = 0; ptn < orig_nptn; ptn++)
     		_pattern_lh[ptn] -= prob_const;
     	tree_lh -= aln->getNSite()*prob_const;
-		assert(!isnan(tree_lh) && !isinf(tree_lh));
+		assert(!std::isnan(tree_lh) && !std::isinf(tree_lh));
     }
 
-	assert(!isnan(tree_lh) && !isinf(tree_lh));
+	assert(!std::isnan(tree_lh) && !std::isinf(tree_lh));
 
     delete [] trans_mat;
     return tree_lh;

@@ -31,7 +31,7 @@
 #include "alignment.h"
 #include "superalignment.h"
 #include "iqtree.h"
-#include "model/modelgtr.h"
+#include "model/modelmarkov.h"
 #include "model/modeldna.h"
 #include "model/modelpomo.h"
 #include "myreader.h"
@@ -330,7 +330,7 @@ void reportModel(ofstream &out, PhyloTree &tree) {
 		i = 0;
         int nmix = mmodel->getNMixtures();
 		for (i = 0; i < nmix; i++) {
-            ModelGTR *m = (ModelGTR*)mmodel->getMixtureClass(i);
+            ModelMarkov *m = (ModelMarkov*)mmodel->getMixtureClass(i);
 			out.width(4);
 			out << right << i+1 << "  ";
 			out.width(12);
@@ -2272,8 +2272,8 @@ void searchGAMMAInvarByRestarting(IQTree &iqtree) {
 		cout << "Testing alpha: " << initAlphas[i] << endl;
         // Initialize model parameters
         iqtree.restoreBranchLengths(lenvec);
-        ((ModelGTR*) iqtree.getModel())->setRateMatrix(rates);
-        ((ModelGTR*) iqtree.getModel())->setStateFrequency(state_freqs);
+        ((ModelMarkov*) iqtree.getModel())->setRateMatrix(rates);
+        ((ModelMarkov*) iqtree.getModel())->setStateFrequency(state_freqs);
         iqtree.getModel()->decomposeRateMatrix();
         site_rates->setGammaShape(initAlphas[i]);
 		site_rates->setPInvar(initPInvar);
@@ -2299,8 +2299,8 @@ void searchGAMMAInvarByRestarting(IQTree &iqtree) {
 	site_rates->setFixGammaShape(false);
 	site_rates->setPInvar(bestPInvar);
 	site_rates->setFixPInvar(false);
-    ((ModelGTR*) iqtree.getModel())->setRateMatrix(bestRates);
-    ((ModelGTR*) iqtree.getModel())->setStateFrequency(bestStateFreqs);
+    ((ModelMarkov*) iqtree.getModel())->setRateMatrix(bestRates);
+    ((ModelMarkov*) iqtree.getModel())->setStateFrequency(bestStateFreqs);
 	iqtree.restoreBranchLengths(bestLens);
     iqtree.getModel()->decomposeRateMatrix();
 	iqtree.clearAllPartialLH();

@@ -20,7 +20,7 @@
 #include "modelbin.h"
 
 ModelBIN::ModelBIN(const char *model_name, string model_params, StateFreqType freq, string freq_params, PhyloTree *tree, bool count_rates)
-: ModelGTR(tree, count_rates)
+: ModelMarkov(tree, count_rates)
 {
 	init(model_name, model_params, freq, freq_params);
 }
@@ -39,6 +39,6 @@ void ModelBIN::init(const char *model_name, string model_params, StateFreqType f
 		readParameters(model_name);
 	}
 	if (freq == FREQ_UNKNOWN || def_freq == FREQ_EQUAL) freq = def_freq;
-	ModelGTR::init(freq);
+	ModelMarkov::init(freq);
 }
 

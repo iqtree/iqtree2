@@ -21,7 +21,7 @@
 #include "modelfactory.h"
 #include "rategamma.h"
 #include "rategammainvar.h"
-#include "modelgtr.h"
+#include "modelmarkov.h"
 #include "modelnonrev.h"
 #include "modeldna.h"
 #include "modelprotein.h"
@@ -407,13 +407,13 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 		double *state_freq = new double[model->num_states];
 		double *rates = new double[model->getNumRateEntries()];
 		for (i = 0; i < tree->aln->site_state_freq.size(); i++) {
-			ModelGTR *modeli;
+			ModelMarkov *modeli;
 			if (i == 0) {
-				modeli = (ModelGTR*)createModel(model_str, models_block, (params.freq_type != FREQ_UNKNOWN) ? params.freq_type : FREQ_EMPIRICAL, "", tree, true);
+				modeli = (ModelMarkov*)createModel(model_str, models_block, (params.freq_type != FREQ_UNKNOWN) ? params.freq_type : FREQ_EMPIRICAL, "", tree, true);
 				modeli->getStateFrequency(state_freq);
 				modeli->getRateMatrix(rates);
 			} else {
-				modeli = (ModelGTR*)createModel(model_str, models_block, FREQ_EQUAL, "", tree, false);
+				modeli = (ModelMarkov*)createModel(model_str, models_block, FREQ_EQUAL, "", tree, false);
 				modeli->setStateFrequency(state_freq);
 				modeli->setRateMatrix(rates);
 			}
@@ -649,7 +649,7 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 		model->setFixMixtureWeight(true);
         int mix, nmix = model->getNMixtures();
 		for (mix = 0; mix < nmix; mix++) {
-			((ModelGTR*)model->getMixtureClass(mix))->total_num_subst = 1.0;
+			((ModelMarkov*)model->getMixtureClass(mix))->total_num_subst = 1.0;
 			model->setMixtureWeight(mix, 1.0);
 		}
 		model->decomposeRateMatrix();
@@ -702,7 +702,7 @@ double ModelFactory::initGTRGammaIParameters(RateHeterogeneity *rate, ModelSubst
                                            double initPInvar, double *initRates, double *initStateFreqs)  {
 
     RateHeterogeneity* rateGammaInvar = rate;
-    ModelGTR* modelGTR = (ModelGTR*)(model);
+    ModelMarkov* modelGTR = (ModelMarkov*)(model);
     modelGTR->setRateMatrix(initRates);
     modelGTR->setStateFrequency(initStateFreqs);
     rateGammaInvar->setGammaShape(initAlpha);
@@ -885,8 +885,8 @@ double ModelFactory::optimizeParametersGammaInvar(int fixed_len, bool write_info
 
     site_rate->setGammaShape(bestAlpha);
     site_rate->setPInvar(bestPInvar);
-	((ModelGTR*) tree->getModel())->setRateMatrix(bestRates);
-	((ModelGTR*) tree->getModel())->setStateFrequency(bestStateFreqs);
+	((ModelMarkov*) tree->getModel())->setRateMatrix(bestRates);
+	((ModelMarkov*) tree->getModel())->setStateFrequency(bestStateFreqs);
 	tree->restoreBranchLengths(bestLens);
 	tree->getModel()->decomposeRateMatrix();
 
@@ -920,8 +920,8 @@ vector<double> ModelFactory::optimizeGammaInvWithInitValue(int fixed_len, double
                                                  double *state_freqs, double initPInv, double initAlpha,
                                                  DoubleVector &lenvec) {
     tree->restoreBranchLengths(lenvec);
-    ((ModelGTR*) tree->getModel())->setRateMatrix(rates);
-    ((ModelGTR*) tree->getModel())->setStateFrequency(state_freqs);
+    ((ModelMarkov*) tree->getModel())->setRateMatrix(rates);
+    ((ModelMarkov*) tree->getModel())->setStateFrequency(state_freqs);
     tree->getModel()->decomposeRateMatrix();
     site_rates->setPInvar(initPInv);
     site_rates->setGammaShape(initAlpha);

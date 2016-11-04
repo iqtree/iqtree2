@@ -10,7 +10,7 @@
 
 #include "phylotree.h"
 #include "modelsubst.h"
-#include "modelgtr.h"
+#include "modelmarkov.h"
 #include "modelsblock.h"
 
 
@@ -35,7 +35,7 @@ ModelSubst *createModel(string model_str, ModelsBlock *models_block, StateFreqTy
 /**
  * mixture model
  */
-class ModelMixture: virtual public ModelGTR, public vector<ModelGTR*> {
+class ModelMixture: virtual public ModelMarkov, public vector<ModelMarkov*> {
 public:
     
 	/**
@@ -192,7 +192,7 @@ public:
      * @return memory size required in bytes
      */
     virtual uint64_t getMemoryRequired() {
-    	uint64_t mem = ModelGTR::getMemoryRequired();
+    	uint64_t mem = ModelMarkov::getMemoryRequired();
     	for (iterator it = begin(); it != end(); it++)
     		mem += (*it)->getMemoryRequired();
     	return mem;

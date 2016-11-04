@@ -647,8 +647,6 @@ void ModelLieMarkov::decomposeRateMatrix() {
     }
 }
 
-using namespace Eigen;
-
 void ModelLieMarkov::decomposeRateMatrixEigen3lib() {
 #ifdef USE_EIGEN3
   nondiagonalizable = false; // until proven otherwise

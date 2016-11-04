@@ -20,7 +20,7 @@
 #ifndef MODELDNA_H
 #define MODELDNA_H
 
-#include "modelgtr.h"
+#include "modelmarkov.h"
 #include <string>
 
 /**
@@ -38,7 +38,7 @@ All DNA models are managed here
 
 	@author BUI Quang Minh <minh.bui@univie.ac.at>
 */
-class ModelDNA : public ModelGTR
+class ModelDNA : public ModelMarkov
 {
     friend class ModelPoMo;
 public:

@@ -11,7 +11,7 @@ const double POMO_MAX_RATE =  1e-2;
 const double POMO_MIN_REL_FREQ = 0.5;
 const double POMO_MAX_REL_FREQ = 2.0;
 
-class ModelPoMo : virtual public ModelGTR
+class ModelPoMo : virtual public ModelMarkov
 {
  public:
     /**
@@ -45,7 +45,7 @@ class ModelPoMo : virtual public ModelGTR
     // Tell the compiler we want both the init functions (resolve
     // warning from clang about PoMo hiding the overloaded init
     // function).
-    using ModelGTR::init;
+    using ModelMarkov::init;
     /**
      * Initialize the PoMo model. Run by constructor.
      *

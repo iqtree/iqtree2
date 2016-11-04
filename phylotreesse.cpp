@@ -32,7 +32,7 @@
 //#include "phylokernelmixrate.h"
 //#include "phylokernelsitemodel.h"
 
-#include "model/modelgtr.h"
+#include "model/modelmarkov.h"
 #include "model/modelset.h"
 
 /* BQM: to ignore all-gapp subtree at an alignment site */

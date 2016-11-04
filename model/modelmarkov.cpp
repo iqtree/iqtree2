@@ -17,14 +17,14 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-#include "modelgtr.h"
+#include "modelmarkov.h"
 #include <stdlib.h>
 #include <string.h>
 
 //const double MIN_FREQ_RATIO = MIN_FREQUENCY;
 //const double MAX_FREQ_RATIO = 1.0/MIN_FREQUENCY;
 
-ModelGTR::ModelGTR(PhyloTree *tree, bool count_rates)
+ModelMarkov::ModelMarkov(PhyloTree *tree, bool count_rates)
  : ModelSubst(tree->aln->num_states), EigenDecomposition()
 {
     half_matrix = true;
@@ -63,24 +63,24 @@ ModelGTR::ModelGTR(PhyloTree *tree, bool count_rates)
 	num_params = getNumRateEntries() - 1;
 }
 
-void ModelGTR::saveCheckpoint() {
+void ModelMarkov::saveCheckpoint() {
     checkpoint->startStruct("ModelGTR");
     checkpoint->endStruct();
     ModelSubst::saveCheckpoint();
 }
 
-void ModelGTR::restoreCheckpoint() {
+void ModelMarkov::restoreCheckpoint() {
     ModelSubst::restoreCheckpoint();
     checkpoint->startStruct("ModelGTR");
     checkpoint->endStruct();
 }
 
 
-void ModelGTR::setTree(PhyloTree *tree) {
+void ModelMarkov::setTree(PhyloTree *tree) {
 	phylo_tree = tree;
 }
 
-string ModelGTR::getName() {
+string ModelMarkov::getName() {
 	if (getFreqType() == FREQ_EMPIRICAL)
 		return name + "+F";
 	else if (getFreqType() == FREQ_CODON_1x4)
@@ -97,7 +97,7 @@ string ModelGTR::getName() {
         return name;
 }
 
-string ModelGTR::getNameParams() {
+string ModelMarkov::getNameParams() {
 
 	ostringstream retname;
 	retname << name;
@@ -113,7 +113,7 @@ string ModelGTR::getNameParams() {
     return retname.str();    
 }
     
-void ModelGTR::getNameParamsFreq(ostream &retname) {
+void ModelMarkov::getNameParamsFreq(ostream &retname) {
 	if (getFreqType() == FREQ_EMPIRICAL || (getFreqType() == FREQ_USER_DEFINED && phylo_tree->aln->seq_type == SEQ_DNA)) {
 		retname << "+F";
         retname << "{" << state_freq[0];
@@ -136,7 +136,7 @@ void ModelGTR::getNameParamsFreq(ostream &retname) {
 		retname << "+FQ";
 }
 
-void ModelGTR::init_state_freq(StateFreqType type) {
+void ModelMarkov::init_state_freq(StateFreqType type) {
 	//if (type == FREQ_UNKNOWN) return;
 	int i;
 	freq_type = type;
@@ -176,14 +176,14 @@ void ModelGTR::init_state_freq(StateFreqType type) {
 	}
 }
 
-void ModelGTR::init(StateFreqType type) {
+void ModelMarkov::init(StateFreqType type) {
         init_state_freq(type);
 	decomposeRateMatrix();
 	if (verbose_mode >= VB_MAX)
 		writeInfo(cout);
 }
 
-void ModelGTR::writeInfo(ostream &out) {
+void ModelMarkov::writeInfo(ostream &out) {
 	if (num_states == 4) {
 		out << "Rate parameters:";
 		//out.precision(3);
@@ -224,7 +224,7 @@ void ModelGTR::writeInfo(ostream &out) {
 	//out.unsetf(ios::fixed);
 }
 
-void ModelGTR::computeTransMatrix(double time, double *trans_matrix) {
+void ModelMarkov::computeTransMatrix(double time, double *trans_matrix) {
 	/* compute P(t) */
 	double evol_time = time / total_num_subst;
 	double *exptime = new double[num_states];
@@ -260,7 +260,7 @@ void ModelGTR::computeTransMatrix(double time, double *trans_matrix) {
 	delete [] exptime;
 }
 
-void ModelGTR::computeTransMatrixFreq(double time, double* trans_matrix)
+void ModelMarkov::computeTransMatrixFreq(double time, double* trans_matrix)
 {
 	computeTransMatrix(time, trans_matrix);
 	for (int state1 = 0; state1 < num_states; state1++) {
@@ -270,7 +270,7 @@ void ModelGTR::computeTransMatrixFreq(double time, double* trans_matrix)
 	}
 }
 
-double ModelGTR::computeTrans(double time, int state1, int state2) {
+double ModelMarkov::computeTrans(double time, int state1, int state2) {
 	double evol_time = time / total_num_subst;
 	int i;
 
@@ -282,7 +282,7 @@ double ModelGTR::computeTrans(double time, int state1, int state2) {
 	return trans_prob;
 }
 
-double ModelGTR::computeTrans(double time, int state1, int state2, double &derv1, double &derv2) {
+double ModelMarkov::computeTrans(double time, int state1, int state2, double &derv1, double &derv2) {
 	double evol_time = time / total_num_subst;
 	int i;
 
@@ -300,7 +300,7 @@ double ModelGTR::computeTrans(double time, int state1, int state2, double &derv1
 }
 
 
-void ModelGTR::computeTransDerv(double time, double *trans_matrix, 
+void ModelMarkov::computeTransDerv(double time, double *trans_matrix, 
 	double *trans_derv1, double *trans_derv2) 
 {
 	/* compute P(t) */
@@ -339,7 +339,7 @@ void ModelGTR::computeTransDerv(double time, double *trans_matrix,
 	delete [] exptime;
 }
 
-void ModelGTR::computeTransDervFreq(double time, double rate_val, double* trans_matrix, double* trans_derv1, double* trans_derv2)
+void ModelMarkov::computeTransDervFreq(double time, double rate_val, double* trans_matrix, double* trans_derv1, double* trans_derv2)
 {
 	int nstates = num_states;
 	double rate_sqr = rate_val*rate_val;
@@ -357,18 +357,18 @@ void ModelGTR::computeTransDervFreq(double time, double rate_val, double* trans_
 }
 
 
-void ModelGTR::getRateMatrix(double *rate_mat) {
+void ModelMarkov::getRateMatrix(double *rate_mat) {
 	int nrate = getNumRateEntries();
 	memcpy(rate_mat, rates, nrate * sizeof(double));
 }
 
-void ModelGTR::setRateMatrix(double* rate_mat)
+void ModelMarkov::setRateMatrix(double* rate_mat)
 {
 	int nrate = getNumRateEntries();
 	memcpy(rates, rate_mat, nrate * sizeof(double));
 }
 
-void ModelGTR::getStateFrequency(double *freq) {
+void ModelMarkov::getStateFrequency(double *freq) {
 	assert(state_freq);
 	assert(freq_type != FREQ_UNKNOWN);
 	memcpy(freq, state_freq, sizeof(double) * num_states);
@@ -380,13 +380,13 @@ void ModelGTR::getStateFrequency(double *freq) {
     for (i = 0; i < num_states; i++) freq[i] *= sum;
 }
 
-void ModelGTR::setStateFrequency(double* freq)
+void ModelMarkov::setStateFrequency(double* freq)
 {
 	assert(state_freq);
 	memcpy(state_freq, freq, sizeof(double) * num_states);
 }
 
-void ModelGTR::getQMatrix(double *q_mat) {
+void ModelMarkov::getQMatrix(double *q_mat) {
 	double **rate_matrix = (double**) new double[num_states];
 	int i, j, k = 0;
 
@@ -411,7 +411,7 @@ void ModelGTR::getQMatrix(double *q_mat) {
 
 }
 
-int ModelGTR::getNDim() { 
+int ModelMarkov::getNDim() { 
 	assert(freq_type != FREQ_UNKNOWN);
 	int ndim = num_params;
 	if (freq_type == FREQ_ESTIMATE) 
@@ -419,7 +419,7 @@ int ModelGTR::getNDim() {
 	return ndim;
 }
 
-int ModelGTR::getNDimFreq() { 
+int ModelMarkov::getNDimFreq() { 
 	if (freq_type == FREQ_EMPIRICAL) 
         return num_states-1;
 	else if (freq_type == FREQ_CODON_1x4) 
@@ -430,7 +430,7 @@ int ModelGTR::getNDimFreq() {
     return 0;
 }
 
-void ModelGTR::scaleStateFreq(bool sum_one) {
+void ModelMarkov::scaleStateFreq(bool sum_one) {
 	int i;
 	if (sum_one) {
 		// make the frequencies sum to 1
@@ -446,7 +446,7 @@ void ModelGTR::scaleStateFreq(bool sum_one) {
 	}
 }
 
-void ModelGTR::setVariables(double *variables) {
+void ModelMarkov::setVariables(double *variables) {
 	int nrate = getNDim();
 	if (freq_type == FREQ_ESTIMATE) nrate -= (num_states-1);
 	if (nrate > 0)
@@ -468,7 +468,7 @@ void ModelGTR::setVariables(double *variables) {
 	}
 }
 
-bool ModelGTR::getVariables(double *variables) {
+bool ModelMarkov::getVariables(double *variables) {
 	int nrate = getNDim();
 	int i;
 	bool changed = false;
@@ -509,7 +509,7 @@ bool ModelGTR::getVariables(double *variables) {
 	return changed;
 }
 
-double ModelGTR::targetFunk(double x[]) {
+double ModelMarkov::targetFunk(double x[]) {
 	bool changed = getVariables(x);
 	if (state_freq[num_states-1] < 1e-4) return 1.0e+12;
 	if (changed) {
@@ -520,7 +520,7 @@ double ModelGTR::targetFunk(double x[]) {
 	return -phylo_tree->computeLikelihood();
 }
 
-bool ModelGTR::isUnstableParameters() {
+bool ModelMarkov::isUnstableParameters() {
 	int nrates = getNumRateEntries();
 	int i;
     // NOTE: zero rates are not consider unstable anymore
@@ -533,7 +533,7 @@ bool ModelGTR::isUnstableParameters() {
 	return false;
 }
 
-void ModelGTR::setBounds(double *lower_bound, double *upper_bound, bool *bound_check) {
+void ModelMarkov::setBounds(double *lower_bound, double *upper_bound, bool *bound_check) {
 	int i, ndim = getNDim();
 
 	for (i = 1; i <= ndim; i++) {
@@ -555,7 +555,7 @@ void ModelGTR::setBounds(double *lower_bound, double *upper_bound, bool *bound_c
 	}
 }
 
-double ModelGTR::optimizeParameters(double gradient_epsilon) {
+double ModelMarkov::optimizeParameters(double gradient_epsilon) {
 	int ndim = getNDim();
 	
 	// return if nothing to be optimized
@@ -607,7 +607,7 @@ double ModelGTR::optimizeParameters(double gradient_epsilon) {
 
 
 
-void ModelGTR::decomposeRateMatrix(){
+void ModelMarkov::decomposeRateMatrix(){
 	int i, j, k = 0;
 
 	if (num_params == -1) {
@@ -723,7 +723,7 @@ void ModelGTR::decomposeRateMatrix(){
 
 } 
 
-void ModelGTR::readRates(istream &in) throw(const char*, string) {
+void ModelMarkov::readRates(istream &in) throw(const char*, string) {
 	int nrates = getNumRateEntries();
 	string str;
 	in >> str;
@@ -747,7 +747,7 @@ void ModelGTR::readRates(istream &in) throw(const char*, string) {
 	}
 }
 
-void ModelGTR::readRates(string str) throw(const char*) {
+void ModelMarkov::readRates(string str) throw(const char*) {
 	int nrates = getNumRateEntries();
 	int end_pos = 0;
 	cout << __func__ << " " << str << endl;
@@ -776,7 +776,7 @@ void ModelGTR::readRates(string str) throw(const char*) {
 
 }
 
-void ModelGTR::readStateFreq(istream &in) throw(const char*) {
+void ModelMarkov::readStateFreq(istream &in) throw(const char*) {
 	int i;
 	for (i = 0; i < num_states; i++) {
 		if (!(in >> state_freq[i])) 
@@ -790,7 +790,7 @@ void ModelGTR::readStateFreq(istream &in) throw(const char*) {
 		throw "State frequencies do not sum up to 1.0";
 }
 
-void ModelGTR::readStateFreq(string str) throw(const char*) {
+void ModelMarkov::readStateFreq(string str) throw(const char*) {
 	int i;
 	int end_pos = 0;
 	for (i = 0; i < num_states; i++) {
@@ -812,7 +812,7 @@ void ModelGTR::readStateFreq(string str) throw(const char*) {
 		outError("State frequencies do not sum up to 1.0 in ", str);
 }
 
-void ModelGTR::readParameters(const char *file_name) { 
+void ModelMarkov::readParameters(const char *file_name) { 
 	try {
 		ifstream in(file_name);
 		if (in.fail()) {
@@ -831,11 +831,11 @@ void ModelGTR::readParameters(const char *file_name) {
 }
 
 
-ModelGTR::~ModelGTR() {
+ModelMarkov::~ModelMarkov() {
 	freeMem();
 }
 
-void ModelGTR::freeMem()
+void ModelMarkov::freeMem()
 {
 //	int i;
 	//delete eigen_coeff_derv2;
@@ -859,17 +859,17 @@ void ModelGTR::freeMem()
 //    return eigen_coeff;
 //}
 //
-double *ModelGTR::getEigenvalues() const
+double *ModelMarkov::getEigenvalues() const
 {
     return eigenvalues;
 }
 
-double *ModelGTR::getEigenvectors() const
+double *ModelMarkov::getEigenvectors() const
 {
     return eigenvectors;
 }
 
-double* ModelGTR::getInverseEigenvectors() const {
+double* ModelMarkov::getInverseEigenvectors() const {
 	return inv_eigenvectors;
 }
 
@@ -878,12 +878,12 @@ double* ModelGTR::getInverseEigenvectors() const {
 //    eigen_coeff = eigenCoeff;
 //}
 
-void ModelGTR::setEigenvalues(double *eigenvalues)
+void ModelMarkov::setEigenvalues(double *eigenvalues)
 {
     this->eigenvalues = eigenvalues;
 }
 
-void ModelGTR::setEigenvectors(double *eigenvectors)
+void ModelMarkov::setEigenvectors(double *eigenvectors)
 {
     this->eigenvectors = eigenvectors;
 }

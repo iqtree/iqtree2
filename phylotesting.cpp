@@ -16,7 +16,7 @@
 #include "phylosupertree.h"
 #include "phylotesting.h"
 
-#include "model/modelgtr.h"
+#include "model/modelmarkov.h"
 #include "model/modeldna.h"
 #include "myreader.h"
 #include "model/rateheterogeneity.h"
@@ -1504,7 +1504,7 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
     }
         
         
-	ModelGTR *subst_model = NULL;
+	ModelMarkov *subst_model = NULL;
 	if (seq_type == SEQ_BINARY)
 		subst_model = new ModelBIN("JC2", "", FREQ_UNKNOWN, "", in_tree);
 	else if (seq_type == SEQ_DNA)

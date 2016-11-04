@@ -20,13 +20,13 @@
 #ifndef MODELSET_H
 #define MODELSET_H
 
-#include "modelgtr.h"
+#include "modelmarkov.h"
 
 /**
  * a set of substitution models, used eg for site-specific state frequency model or 
  * partition model with joint branch lengths
  */
-class ModelSet : public ModelGTR, public vector<ModelGTR*>
+class ModelSet : public ModelMarkov, public vector<ModelMarkov*>
 {
 
 public:
@@ -160,7 +160,7 @@ public:
      * @return memory size required in bytes
      */
     virtual uint64_t getMemoryRequired() {
-    	uint64_t mem = ModelGTR::getMemoryRequired();
+    	uint64_t mem = ModelMarkov::getMemoryRequired();
     	for (iterator it = begin(); it != end(); it++)
     		mem += (*it)->getMemoryRequired();
     	return mem;

@@ -20,12 +20,12 @@
 #include "modeldna.h"
 
 ModelDNA::ModelDNA(PhyloTree *tree, bool count_rates)
-: ModelGTR(tree, count_rates)
+: ModelMarkov(tree, count_rates)
 {
 }
 
 ModelDNA::ModelDNA(const char *model_name, string model_params, StateFreqType freq, string freq_params, PhyloTree *tree, bool count_rates)
-: ModelGTR(tree, count_rates)
+: ModelMarkov(tree, count_rates)
 {
 	init(model_name, model_params, freq, freq_params);
 }
@@ -185,18 +185,18 @@ void ModelDNA::init(const char *model_name, string model_params, StateFreqType f
 	}
 
 	if (freq == FREQ_UNKNOWN ||  def_freq == FREQ_EQUAL) freq = def_freq;
-	ModelGTR::init(freq);
+	ModelMarkov::init(freq);
 }
 
 void ModelDNA::saveCheckpoint() {
     checkpoint->startStruct("ModelDNA");
     CKP_ARRAY_SAVE(6, rates);
     checkpoint->endStruct();
-    ModelGTR::saveCheckpoint();
+    ModelMarkov::saveCheckpoint();
 }
 
 void ModelDNA::restoreCheckpoint() {
-    ModelGTR::restoreCheckpoint();
+    ModelMarkov::restoreCheckpoint();
     checkpoint->startStruct("ModelDNA");
     CKP_ARRAY_RESTORE(6, rates);
     checkpoint->endStruct();

@@ -20,14 +20,14 @@
 #ifndef MODELBIN_H
 #define MODELBIN_H
 
-#include "modelgtr.h"
+#include "modelmarkov.h"
 
 /**
 Model for Binary data
 
 	@author BUI Quang Minh <minh.bui@univie.ac.at>
 */
-class ModelBIN : public ModelGTR
+class ModelBIN : public ModelMarkov
 {
 public:
 	/**

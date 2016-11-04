@@ -1,5 +1,5 @@
 add_library(model
-modelgtr.cpp
+modelmarkov.cpp
 modelbin.cpp
 modeldna.cpp
 modelfactory.cpp

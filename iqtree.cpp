@@ -24,7 +24,7 @@
 #include "phylosupertreeplen.h"
 #include "mexttree.h"
 #include "timeutil.h"
-#include "model/modelgtr.h"
+#include "model/modelmarkov.h"
 #include "model/rategamma.h"
 #include <numeric>
 #include "tools.h"
@@ -1716,10 +1716,10 @@ void IQTree::inputModelPLL2IQTree() {
     // TODO add support for partitioned model
     getRate()->setGammaShape(pllPartitions->partitionData[0]->alpha);
     if (aln->num_states == 4) {
-        ((ModelGTR*) getModel())->setRateMatrix(pllPartitions->partitionData[0]->substRates);
+        ((ModelMarkov*) getModel())->setRateMatrix(pllPartitions->partitionData[0]->substRates);
         getModel()->decomposeRateMatrix();
     }
-    ((ModelGTR*) getModel())->setStateFrequency(pllPartitions->partitionData[0]->empiricalFrequencies);
+    ((ModelMarkov*) getModel())->setStateFrequency(pllPartitions->partitionData[0]->empiricalFrequencies);
 }
 
 void IQTree::inputModelIQTree2PLL() {

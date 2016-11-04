@@ -23,7 +23,7 @@
 //#include "whtest/eigen.h"
 
 ModelNonRev::ModelNonRev(PhyloTree *tree)
-        : ModelGTR(tree, false)
+        : ModelMarkov(tree, false)
 {
 	// model_parameters must be initialized by subclass
 //    ModelGTR::freeMem();
@@ -60,7 +60,7 @@ ModelNonRev::~ModelNonRev() {
 }
 
 void ModelNonRev::freeMem() {
-    ModelGTR::freeMem();
+    ModelMarkov::freeMem();
     aligned_free(cinv_evec);
     aligned_free(cevec);
     aligned_free(ceval);

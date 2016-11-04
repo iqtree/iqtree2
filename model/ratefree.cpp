@@ -558,11 +558,11 @@ double RateFree::optimizeWithEM() {
         double sum = 0.0;
         for (c = 0; c < nmix; c++) {
             tree->copyPhyloTree(phylo_tree);
-            ModelGTR *subst_model;
+            ModelMarkov *subst_model;
             if (phylo_tree->getModel()->isMixture() && phylo_tree->getModelFactory()->fused_mix_rate)
-                subst_model = (ModelGTR*)phylo_tree->getModel()->getMixtureClass(c);
+                subst_model = (ModelMarkov*)phylo_tree->getModel()->getMixtureClass(c);
             else
-                subst_model = (ModelGTR*)phylo_tree->getModel();
+                subst_model = (ModelMarkov*)phylo_tree->getModel();
             tree->setModel(subst_model);
             subst_model->setTree(tree);
             model_fac->model = subst_model;

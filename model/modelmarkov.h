@@ -38,7 +38,7 @@ This works for all kind of data, not only DNA
 
 	@author BUI Quang Minh <minh.bui@univie.ac.at>
 */
-class ModelGTR : public ModelSubst, public EigenDecomposition
+class ModelMarkov : public ModelSubst, public EigenDecomposition
 {
 	
 	friend class ModelSet;
@@ -50,7 +50,7 @@ public:
 		constructor
 		@param tree associated tree for the model
 	*/
-    ModelGTR(PhyloTree *tree, bool count_rates = true);
+    ModelMarkov(PhyloTree *tree, bool count_rates = true);
 
 	/**
 		init the model and decompose the rate matrix. This function should always be called
@@ -75,7 +75,7 @@ public:
 	/**
 		destructor
 	*/
-    virtual ~ModelGTR();
+    virtual ~ModelMarkov();
 
     /** 
         save object into the checkpoint
