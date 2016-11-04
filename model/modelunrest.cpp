@@ -7,12 +7,12 @@
 
 #include "modelunrest.h"
 
-ModelUnrest::ModelUnrest(PhyloTree *tree, string model_params, bool count_rates)
-	: ModelNonRev(tree)
+ModelUnrest::ModelUnrest(PhyloTree *tree, string model_params)
+	: ModelMarkov(tree, false)
 {
 	num_params = getNumRateEntries() - 1;
-	model_parameters = new double [num_params];
-	for (int i=0; i< num_params; i++) model_parameters[i] = 1;
+//	model_parameters = new double [num_params];
+//	for (int i=0; i< num_params; i++) model_parameters[i] = 1;
 	this->setRates();
 	/*
 	 * I'm not sure how to correctly handle count_rates, so for now I'm just
@@ -20,16 +20,16 @@ ModelUnrest::ModelUnrest(PhyloTree *tree, string model_params, bool count_rates)
 	 * Whatever happens should leave model_parameters[] and rates[]
 	 * consistent with each other.
 	 */
-	if (count_rates)
-		cerr << "WARNING: count_rates=TRUE not implemented in ModelUnrest constructor -- ignored" << endl;
-		/* phylo_tree->aln->computeEmpiricalRateNonRev(rates); */
+//	if (count_rates)
+//		cerr << "WARNING: count_rates=TRUE not implemented in ModelUnrest constructor -- ignored" << endl;
+//		/* phylo_tree->aln->computeEmpiricalRateNonRev(rates); */
 	if (model_params != "") {
 		cerr << "WARNING: Supplying model params to constructor not yet properly implemented -- ignored" << endl;
 		// TODO: parse model_params into model_parameters, then call setRates().
 	}
     name = "UNREST";
     full_name = "Unrestricted model (non-reversible)";
-    ModelNonRev::init(FREQ_ESTIMATE);
+    ModelMarkov::init(FREQ_ESTIMATE);
 }
 
 /* static */ bool ModelUnrest::validModelName(string model_name) {
@@ -52,6 +52,6 @@ void ModelUnrest::setBounds(double *lower_bound, double *upper_bound, bool *boun
 void ModelUnrest::setRates() {
 	// For UNREST, parameters are simply the off-diagonal rate matrix entries
 	// (except [4,3] = rates[11], which is constrained to be 1)
-	memcpy(rates, model_parameters, num_params*sizeof(double));
-	rates[num_params]=1;
+//	memcpy(rates, model_parameters, num_params*sizeof(double));
+//	rates[num_params]=1;
 }

@@ -8,11 +8,11 @@
 #ifndef MODELLIEMARKOV_H_
 #define MODELLIEMARKOV_H_
 
-#include "modelnonrev.h"
+#include "modelmarkov.h"
 
-class ModelLieMarkov: public ModelNonRev {
+class ModelLieMarkov: public ModelMarkov {
 public:
-        ModelLieMarkov(string model_name, PhyloTree *tree, string model_params, StateFreqType freq_type, string freq_params, bool count_rates = false);
+        ModelLieMarkov(string model_name, PhyloTree *tree, string model_params, StateFreqType freq_type, string freq_params);
         virtual ~ModelLieMarkov();
 
 	/**

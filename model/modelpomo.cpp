@@ -4,7 +4,7 @@
 #include <assert.h>
 #include <string.h>
 
-ModelPoMo::ModelPoMo(PhyloTree *tree) : ModelMarkov(tree, false) {
+ModelPoMo::ModelPoMo(PhyloTree *tree) : ModelMarkov(tree) {
 }
 
 ModelPoMo::ModelPoMo(const char *model_name,
@@ -15,7 +15,7 @@ ModelPoMo::ModelPoMo(const char *model_name,
                      bool is_reversible,
                      string pomo_params)
     // Do not count rates; does not make sense for PoMo.
-    : ModelMarkov(tree, false) {
+    : ModelMarkov(tree) {
     init(model_name, model_params, freq_type, freq_params, is_reversible, pomo_params);
 }
 

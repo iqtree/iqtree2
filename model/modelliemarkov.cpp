@@ -312,8 +312,8 @@ const static int NUM_RATES = 12;
 const double MIN_LIE_WEIGHT = -0.9999;
 const double MAX_LIE_WEIGHT =  0.9999;
 
-ModelLieMarkov::ModelLieMarkov(string model_name, PhyloTree *tree, string model_params, StateFreqType freq_type, string freq_params, bool count_rates)
-	: ModelNonRev(tree) {
+ModelLieMarkov::ModelLieMarkov(string model_name, PhyloTree *tree, string model_params, StateFreqType freq_type, string freq_params)
+	: ModelMarkov(tree, false) {
         init(model_name.c_str(), model_params, freq_type, freq_params);
 }
 
@@ -365,11 +365,11 @@ void ModelLieMarkov::init(const char *model_name, string model_params, StateFreq
         }
         setRates();
     }
-    ModelNonRev::init(freq_type);
+    ModelMarkov::init(freq_type);
 }
 
 ModelLieMarkov::~ModelLieMarkov() {
-  // Do nothing, for now. model_parameters is reclaimed in ~ModelNonRev
+  // Do nothing, for now. model_parameters is reclaimed in ~ModelMarkov
 }
 
 
@@ -633,7 +633,7 @@ void ModelLieMarkov::setRates() {
 }
 
 void ModelLieMarkov::decomposeRateMatrix() {
-    ModelNonRev::decomposeRateMatrix();
+    ModelMarkov::decomposeRateMatrix();
     if (phylo_tree->params->matrix_exp_technique == MET_SCALING_SQUARING) 
         return;
     if (phylo_tree->params->matrix_exp_technique == MET_EIGEN3LIB_DECOMPOSITION) {
@@ -942,10 +942,10 @@ void ModelLieMarkov::computeTransMatrix(double time, double *trans_matrix) {
             assert(fabs(trans_matrix[i*4]+trans_matrix[i*4+1]+trans_matrix[i*4+2]+trans_matrix[i*4+3]-1.0) < 1e-4);
         }        
     } else
-        ModelNonRev::computeTransMatrix(time, trans_matrix);
+        ModelMarkov::computeTransMatrix(time, trans_matrix);
 
 #else
-    ModelNonRev::computeTransMatrix(time, trans_matrix);
+    ModelMarkov::computeTransMatrix(time, trans_matrix);
 #endif
 }
 

@@ -23,7 +23,7 @@
 */
 
 #include "ngs.h"
-#include "model/modelnonrev.h"
+#include "model/modelmarkov.h"
 //#include "modeltest_wrapper.h"
 
 /****************************************************************************
@@ -838,7 +838,7 @@ void reportNGSAnalysis(const char *file_name, Params &params, NGSAlignment &aln,
      * define a bool isSymmetric() method, which is true for time reversible models and
      * not true for nonTR models. ! ModelGTR has 'half_matrix' member, which should do the job.
      */
-    if (ModelNonRev::validModelName(tree.getModel()->name)) {
+    if (ModelMarkov::validModelName(tree.getModel()->name)) {
         for (i = 0, k=0; i < aln.num_states; i++)
             for (j = 0; j < aln.num_states; j++)
                 if (i != j)

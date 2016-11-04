@@ -8,7 +8,7 @@
 #include "modelmorphology.h"
 
 ModelMorphology::ModelMorphology(const char *model_name, string model_params, StateFreqType freq, string freq_params, PhyloTree *tree)
-: ModelMarkov(tree, false)
+: ModelMarkov(tree)
 {
 	init(model_name, model_params, freq, freq_params);
 }

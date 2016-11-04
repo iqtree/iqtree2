@@ -19,13 +19,13 @@
  ***************************************************************************/
 #include "modeldna.h"
 
-ModelDNA::ModelDNA(PhyloTree *tree, bool count_rates)
-: ModelMarkov(tree, count_rates)
+ModelDNA::ModelDNA(PhyloTree *tree)
+: ModelMarkov(tree)
 {
 }
 
-ModelDNA::ModelDNA(const char *model_name, string model_params, StateFreqType freq, string freq_params, PhyloTree *tree, bool count_rates)
-: ModelMarkov(tree, count_rates)
+ModelDNA::ModelDNA(const char *model_name, string model_params, StateFreqType freq, string freq_params, PhyloTree *tree)
+: ModelMarkov(tree)
 {
 	init(model_name, model_params, freq, freq_params);
 }

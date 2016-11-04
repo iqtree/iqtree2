@@ -17,15 +17,15 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-#ifndef GTRMODEL_H
-#define GTRMODEL_H
+#ifndef MODELMARKOV_H
+#define MODELMARKOV_H
 
-#define EIGEN
 #include "phylotree.h"
 #include "modelsubst.h"
 #include "optimization.h"
 #include "alignment.h"
 #include "eigendecomposition.h"
+#include <complex>
 
 const double MIN_RATE = 1e-4;
 const double TOL_RATE = 1e-4;
@@ -33,8 +33,8 @@ const double MAX_RATE = 100;
 
 
 /**
-General Time Reversible (GTR) model of substitution.
-This works for all kind of data, not only DNA
+General Markov model of substitution (reversible or non-reversible)
+This works for all kind of data
 
 	@author BUI Quang Minh <minh.bui@univie.ac.at>
 */
@@ -49,8 +49,21 @@ public:
 	/**
 		constructor
 		@param tree associated tree for the model
+        @param reversible TRUE (default) for reversible model, FALSE for non-reversible
 	*/
-    ModelMarkov(PhyloTree *tree, bool count_rates = true);
+    ModelMarkov(PhyloTree *tree, bool reversible = true);
+
+	/**
+		@return TRUE if model is time-reversible, FALSE otherwise
+	*/
+	virtual bool isReversible() { return is_reversible; };
+
+    /**
+        set the reversibility of the model
+        @param reversible TRUE to make model reversible, FALSE otherwise
+    */
+    virtual void setReversible(bool reversible);
+
 
 	/**
 		init the model and decompose the rate matrix. This function should always be called
@@ -102,6 +115,12 @@ public:
         @param retname output stream
     */
     void getNameParamsFreq(ostream &retname);
+
+	/**
+		@return the number of rate entries, equal to the number of non-diagonal elements
+			of the rate matrix (since model is NOT reversible)
+	*/
+	virtual int getNumRateEntries();
 
 	/**
 		set the associated tree
@@ -320,6 +339,22 @@ public:
     /** default TRUE: store only upper half of the rate matrix */
     bool half_matrix;
 
+    /****************************************************/
+    /*      NON-REVERSIBLE STUFFS                       */
+    /****************************************************/
+
+    /**
+     * Return a model of type given by model_name. (Will be some subclass of ModelMarkov.)
+     */
+    static ModelMarkov* getModelByName(string model_name, PhyloTree *tree, string model_params, StateFreqType freq_type, string freq_params);
+
+    /**
+     * true if model_name is the name of some known non-reversible model
+     */
+    static bool validModelName(string model_name);
+
+
+
 protected:
 
 	/**
@@ -337,7 +372,20 @@ protected:
 	*/
 	virtual bool getVariables(double *variables);
 
+
+	/**
+	 * Called from getVariables to update the rate matrix for the new
+	 * model parameters.
+	 */
+	virtual void setRates();
+
+    /**
+        free all allocated memory
+    */
 	virtual void freeMem();
+
+    /** TRUE if model is reversible */
+    bool is_reversible;
 
 	/**
 		phylogenetic tree associated
@@ -377,6 +425,48 @@ protected:
 
 	/** state with highest frequency, used when optimizing state frequencies +FO */
 	int highest_freq_state;
+
+    /****************************************************/
+    /*      NON-REVERSIBLE STUFFS                       */
+    /****************************************************/
+
+	/**
+		compute the transition probability matrix using (complex) eigenvalues
+		@param time time between two events
+		@param trans_matrix (OUT) the transition matrix between all pairs of states.
+			Assume trans_matrix has size of num_states * num_states.
+	*/
+	void computeTransMatrixEigen(double time, double *trans_matrix);
+
+	/**
+	    Model parameters - cached so we know when they change, and thus when
+	    recalculations are needed.
+
+	 */
+	double *model_parameters;
+
+	/** true to fix parameters, otherwise false */
+	bool fixed_parameters;
+
+	/**
+		unrestricted Q matrix. Note that Q is normalized to 1 and has row sums of 0.
+		no state frequencies are involved here since Q is a general matrix.
+	*/
+	double *rate_matrix;
+
+	/** imaginary part of eigenvalues */
+	double *eigenvalues_imag;
+	
+	/**
+		temporary working space
+	*/
+	double *temp_space;
+    
+    /**
+        complex eigenvalues and eigenvectors, pointing to the same pointer 
+        to the previous double *eigenvalues and double *eigenvectors
+    */
+    std::complex<double> *ceval, *cevec, *cinv_evec;
 
 };
 

@@ -226,7 +226,7 @@ GGG";
 
 
 ModelCodon::ModelCodon(const char *model_name, string model_params, StateFreqType freq, string freq_params,
-		PhyloTree *tree, bool count_rates) : ModelMarkov(tree, count_rates)
+		PhyloTree *tree) : ModelMarkov(tree)
 {
     half_matrix = false;
     omega = kappa = kappa2 = 1.0;

@@ -46,7 +46,7 @@ public:
 		constructor
 		@param tree associated tree for the model
 	*/
-    ModelDNA(PhyloTree *tree, bool count_rates = true);
+    ModelDNA(PhyloTree *tree);
 
 	/**
 		constructor
@@ -54,7 +54,7 @@ public:
 		@param freq state frequency type
 		@param tree associated phylogenetic tree
 	*/
-    ModelDNA(const char *model_name, string model_params, StateFreqType freq, string freq_params, PhyloTree *tree, bool count_rates = true);
+    ModelDNA(const char *model_name, string model_params, StateFreqType freq, string freq_params, PhyloTree *tree);
 
 	/**
 		initialization, called automatically by the constructor, no need to call it

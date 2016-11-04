@@ -1517,7 +1517,7 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 	else if (seq_type == SEQ_MORPH)
 		subst_model = new ModelMorphology("MK", "", FREQ_UNKNOWN, "", in_tree);
 	else if (seq_type == SEQ_CODON)
-		subst_model = new ModelCodon("GY", "", FREQ_UNKNOWN, "", in_tree, false);
+		subst_model = new ModelCodon("GY", "", FREQ_UNKNOWN, "", in_tree);
     else if (seq_type == SEQ_POMO)
         // Exit gracefully.
         outError("Model selection with PoMo not yet supported.");

@@ -22,7 +22,6 @@
 #include "rategamma.h"
 #include "rategammainvar.h"
 #include "modelmarkov.h"
-#include "modelnonrev.h"
 #include "modeldna.h"
 #include "modelprotein.h"
 #include "modelbin.h"
@@ -388,7 +387,7 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 //			string model_desc;
 //			NxsModel *nxsmodel = models_block->findModel(model_str);
 //			if (nxsmodel) model_desc = nxsmodel->description;
-			model = createModel(model_str, models_block, freq_type, freq_params, tree, false, pomo_rate_str);
+			model = createModel(model_str, models_block, freq_type, freq_params, tree, pomo_rate_str);
 		}
 //		fused_mix_rate &= model->isMixture() && site_rate->getNRate() > 1;
 	} else {
@@ -409,11 +408,11 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 		for (i = 0; i < tree->aln->site_state_freq.size(); i++) {
 			ModelMarkov *modeli;
 			if (i == 0) {
-				modeli = (ModelMarkov*)createModel(model_str, models_block, (params.freq_type != FREQ_UNKNOWN) ? params.freq_type : FREQ_EMPIRICAL, "", tree, true);
+				modeli = (ModelMarkov*)createModel(model_str, models_block, (params.freq_type != FREQ_UNKNOWN) ? params.freq_type : FREQ_EMPIRICAL, "", tree);
 				modeli->getStateFrequency(state_freq);
 				modeli->getRateMatrix(rates);
 			} else {
-				modeli = (ModelMarkov*)createModel(model_str, models_block, FREQ_EQUAL, "", tree, false);
+				modeli = (ModelMarkov*)createModel(model_str, models_block, FREQ_EQUAL, "", tree);
 				modeli->setStateFrequency(state_freq);
 				modeli->setRateMatrix(rates);
 			}

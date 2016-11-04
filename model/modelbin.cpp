@@ -19,8 +19,8 @@
  ***************************************************************************/
 #include "modelbin.h"
 
-ModelBIN::ModelBIN(const char *model_name, string model_params, StateFreqType freq, string freq_params, PhyloTree *tree, bool count_rates)
-: ModelMarkov(tree, count_rates)
+ModelBIN::ModelBIN(const char *model_name, string model_params, StateFreqType freq, string freq_params, PhyloTree *tree)
+: ModelMarkov(tree)
 {
 	init(model_name, model_params, freq, freq_params);
 }
