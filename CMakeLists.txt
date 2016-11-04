@@ -50,7 +50,7 @@ add_definitions(-DIQ_TREE)
 # The version number.
 set (iqtree_VERSION_MAJOR 1)
 set (iqtree_VERSION_MINOR 5)
-set (iqtree_VERSION_PATCH "0-heterotachy") 
+set (iqtree_VERSION_PATCH "1-heterotachy")
 
 set(BUILD_SHARED_LIBS OFF)
 
@@ -470,20 +470,18 @@ optimization.cpp optimization.h
 parsmultistate.cpp parsmultistate.h
 pattern.cpp pattern.h
 pda.cpp
-pdnetwork.cpp
-pdtree.cpp
-pdtreeset.cpp
-phyloanalysis.cpp
-phylonode.cpp
-phylonodemixlen.cpp
-phylosupertree.cpp
-phylotree.cpp
-phylotreesse.cpp
+pdnetwork.cpp pdnetwork.h
+pdtree.cpp pdtree.h
+pdtreeset.cpp pdtreeset.h
+phyloanalysis.cpp phyloanalysis.h
+phylonode.cpp phylonode.h
+phylonodemixlen.cpp phylonodemixlen.h
+phylosupertree.cpp phylosupertree.h
+phylotree.cpp phylotree.h
+phylotreesse.cpp phylokernelnew.h
 phylotreepars.cpp
-phylokernelsitemodel.cpp
-#phylotreeavx.cpp
-phylotreemixlen.cpp
-pruning.cpp
+phylotreemixlen.cpp phylotreemixlen.h
+pruning.cpp pruning.h
 quartet.cpp
 split.cpp split.h
 splitgraph.cpp splitgraph.h

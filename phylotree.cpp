@@ -3151,8 +3151,13 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
             *saved_it[id] = new PhyloNeighborMixlen(saved_nei[id]->node, ((PhyloNeighborMixlen*)saved_nei[id])->lengths);
         else
             *saved_it[id] = new PhyloNeighbor(saved_nei[id]->node, saved_nei[id]->length);
-		((PhyloNeighbor*) (*saved_it[id]))->partial_lh = nni_partial_lh + id*partial_lh_size;
-		((PhyloNeighbor*) (*saved_it[id]))->scale_num = nni_scale_num + id*scale_num_size;
+
+        if (((PhyloNeighbor*)saved_nei[id])->partial_lh) {
+            ((PhyloNeighbor*) (*saved_it[id]))->partial_lh = nni_partial_lh + mem_id*partial_lh_size;
+            ((PhyloNeighbor*) (*saved_it[id]))->scale_num = nni_scale_num + mem_id*scale_num_size;
+            mem_id++;
+            mem_slots.addSpecialNei((PhyloNeighbor*)*saved_it[id]);
+        }
 //		((PhyloNeighbor*) (*saved_it[id]))->scale_num = newScaleNum();
 	}
     assert(mem_id == 2);
@@ -3221,6 +3226,12 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
         node2->updateNeighbor(node2_it, node1_nei);
         node1_nei->node->updateNeighbor(node1, node2);
 
+        if (params->lh_mem_save == LM_MEM_SAVE) {
+            // reset subtree size to change traversal order
+            for (id = 0; id < IT_NUM; id++)
+                ((PhyloNeighbor*)*saved_it[id])->size = 0;
+        }
+        
         for (int step = 0; step < params->nni5_num_eval; step++) {
 
 

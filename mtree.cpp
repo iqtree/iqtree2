@@ -426,9 +426,12 @@ struct IntStringCmp
 typedef set<IntString*, IntStringCmp> IntStringSet;
 
 void MTree::printBranchLength(ostream &out, int brtype, bool print_slash, Neighbor *length_nei) {
+    int prec = 10;
 	double length = length_nei->length;
     if (brtype & WT_BR_SCALE) length *= len_scale;
+    if (brtype & WT_BR_LEN_SHORT) prec = 6;
     if (brtype & WT_BR_LEN_ROUNDING) length = round(length);
+    out.precision(prec);
     if (brtype & WT_BR_LEN) {
         if (brtype & WT_BR_LEN_FIXED_WIDTH)
             out << ":" << fixed << length;
@@ -454,7 +457,6 @@ int MTree::printTree(ostream &out, int brtype, Node *node, Node *dad)
             out << node->name;
 
         if (brtype & WT_BR_LEN) {
-            int prec = 10;
         	out.setf( std::ios::fixed, std:: ios::floatfield ); // some sofware does handle number format like '1.234e-6'
 //            out.precision(10); // increase precision to avoid zero branch (like in RAxML)
             printBranchLength(out, brtype, false, node->neighbors[0]);
@@ -1051,6 +1053,19 @@ void MTree::getBranches(NodeVector &nodes, NodeVector &nodes2, Node *node, Node 
             nodes2.push_back(node);
         }
         getBranches(nodes, nodes2, (*it)->node, node);
+    }
+}
+
+void MTree::getInnerBranches(Branches& branches, Node *node, Node *dad) {
+    if (!node) node = root;
+    FOR_NEIGHBOR_IT(node, dad, it) {
+    	if (isInnerBranch((*it)->node, node)) {
+            Branch branch;
+            branch.first = node;
+            branch.second = (*it)->node;
+            branches.insert(pair<int, Branch>(pairInteger(branch.first->id, branch.second->id), branch));
+    	}
+    	getInnerBranches(branches, (*it)->node, node);
     }
 }
 

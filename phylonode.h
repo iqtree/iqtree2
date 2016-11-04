@@ -27,6 +27,7 @@ class PhyloNeighbor : public Neighbor {
     friend class IQTree;
     friend class PhyloSuperTree;
     friend class PhyloTreeMixlen;
+    friend class MemSlotVector;
 
 public:
     friend class TinaTree;

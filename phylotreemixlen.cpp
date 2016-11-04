@@ -104,7 +104,7 @@ void PhyloTreeMixlen::initializeMixlen(double tolerance) {
             model_factory->site_rate = relative_rate;
             if (getModel()->isMixture()) {
                 model_factory->fused_mix_rate = true;
-                setLikelihoodKernel(sse);
+                setLikelihoodKernel(sse, num_threads);
             }
 
             // optimize rate model
@@ -119,7 +119,7 @@ void PhyloTreeMixlen::initializeMixlen(double tolerance) {
             model_factory->site_rate = saved_rate;
             model_factory->fused_mix_rate = saved_fused_mix_rate;
             if (getModel()->isMixture()) {
-                setLikelihoodKernel(sse);
+                setLikelihoodKernel(sse, num_threads);
                 ModelMixture *mm = (ModelMixture*)getModel();
                 double pinvar = site_rate->getPInvar();
                 if (!mm->fix_prop)
@@ -149,14 +149,9 @@ void PhyloTreeMixlen::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool
 
     // first compute _pattern_lh_cat
     double tree_lh;
-    if (!getModel()->isMixture())
-        tree_lh = computeLikelihoodBranchEigen(current_it, node1); 
-    else if (getModelFactory()->fused_mix_rate) {
-        outError("Heterotachy with fused mixture not supported");
-        tree_lh = computeMixrateLikelihoodBranchEigen(current_it, node1); 
-    } else {
-        tree_lh = computeMixtureLikelihoodBranchEigen(current_it, node1); 
-    }
+//    tree_lh = computeLikelihoodBranch(current_it, node1);
+    tree_lh = computePatternLhCat(WSL_MIXTURE);
+
 //    cout << "Init LnL = " << tree_lh << endl;
 
     // E-step
@@ -263,6 +258,8 @@ void PhyloTreeMixlen::printBranchLength(ostream &out, int brtype, bool print_sla
     }
 }
 
+//------ TODO: this function is not vector-aware!
+
 void PhyloTreeMixlen::computeFuncDerv(double value, double &df, double &ddf) {
     current_it->setLength(cur_mixture, value);
     current_it_back->setLength(cur_mixture, value);
@@ -283,8 +280,8 @@ void PhyloTreeMixlen::computeFuncDerv(double value, double &df, double &ddf) {
     	node_branch = tmp_nei;
     }
     
-    assert(dad_branch->partial_lh_computed & 1);
-    assert(node_branch->partial_lh_computed & 1);
+    assert((dad_branch->partial_lh_computed & 1) || node->isLeaf());
+    assert((node_branch->partial_lh_computed & 1) || dad->isLeaf());
 //    if ((dad_branch->partial_lh_computed & 1) == 0)
 //        computePartialLikelihood(dad_branch, dad);
 //    if ((node_branch->partial_lh_computed & 1) == 0)

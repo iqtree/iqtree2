@@ -187,7 +187,7 @@ struct NNIMove {
     int swap_id;
 
     // new branch lengths of 5 branches corresponding to the NNI
-    double newLen[5];
+    DoubleVector newLen[5];
 
     // pattern likelihoods
     double *ptnlh;
@@ -250,33 +250,6 @@ struct SwapNNIParam {
     double *nni1_ptnlh;
     double *nni2_ptnlh;
 };
-
-struct NNIMove {
-    // Two nodes representing the central branch
-    PhyloNode *node1, *node2;
-    // Roots of the two subtree that are swapped
-    NeighborVec::iterator node1Nei_it, node2Nei_it;
-
-    // log-likelihood of the tree after applying the NNI
-    double newloglh;
-
-    int swap_id;
-
-    // old branch lengths of 5 branches before doing NNI
-    //double oldLen[5];
-
-    // new branch lengths of 5 branches corresponding to the NNI
-    DoubleVector newLen[5];
-
-    // pattern likelihoods
-    double *ptnlh;
-
-    bool operator<(const NNIMove & rhs) const {
-        return newloglh > rhs.newloglh;
-        //return delta > rhs.delta;
-    }
-};
-
 
 
 struct LeafFreq {
@@ -384,6 +357,8 @@ class PhyloTree : public MTree, public Optimization, public CheckpointFactory {
     friend class RateFree;
     friend class PhyloTreeMixlen;
     friend class ModelFactoryMixlen;
+    friend class MemSlotVector;
+    friend class ModelFactory;
 
 public:
     /**

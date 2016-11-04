@@ -756,6 +756,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.manuel_analytic_approx = false;
     params.leastSquareNNI = false;
     params.ls_var_type = OLS;
+    params.maxCandidates = 20;
     params.popSize = 5;
     params.p_delete = -1;
     params.min_iterations = -1;
@@ -894,8 +895,12 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.unsuccess_iteration = 100;
     params.speednni = true; // turn on reduced hill-climbing NNI by default now
     params.numInitTrees = 100;
-    params.maxCandidates = 100;
-    params.fix_stable_splits = false;
+    params.fixStableSplits = false;
+    params.stableSplitThreshold = 0.9;
+    params.five_plus_five = false;
+    params.memCheck = false;
+    params.tabu = false;
+    params.adaptPertubation = false;
     params.numSupportTrees = 20;
 //    params.sprDist = 20;
     params.sprDist = 6;
