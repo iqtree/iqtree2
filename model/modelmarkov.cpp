@@ -277,35 +277,33 @@ void ModelMarkov::writeInfo(ostream &out) {
 		out << endl;
 	} else if (!is_reversible) {
         // non-reversible
-        int i, j, k;
+        int i;
         out << "Model parameters: ";
         if (num_params>0) out << model_parameters[0];
         for (i=1; i < num_params; i++) out << "," << model_parameters[i];
         out << endl;
 
         if (num_states != 4) return;
-        out << "Rate parameters:" << endl;
-        for (i = 0, k = 0; i < num_states; i++) {
-            switch (i) {
-            case 0:
-                out << "A";
-                break;
-            case 1:
-                out << "C";
-                break;
-            case 2:
-                out << "G";
-                break;
-            case 3:
-                out << "T";
-                break;
-            }
-            for (j = 0; j < num_states; j++)
-                if (j != i)
-                    out << '\t' << rates[k++];
-                else out << '\t' << "-";
-            out << endl;
-        }
+		out << "Substitution rates:" << endl;
+		out << "  A-C: " << rates[0];
+		out << "  A-G: " << rates[1];
+		out << "  A-T: " << rates[2];
+        out << "  C-A: " << rates[3];
+		out << "  C-G: " << rates[4];
+		out << "  C-T: " << rates[5] << endl;
+        out << "  G-A: " << rates[6];
+        out << "  G-C: " << rates[7];
+		out << "  G-T: " << rates[8];
+        out << "  T-A: " << rates[9];
+        out << "  T-C: " << rates[10];
+        out << "  T-G: " << rates[11];
+		out << endl;
+		out << "Base frequencies: ";
+		out << "  A: " << state_freq[0];
+		out << "  C: " << state_freq[1];
+		out << "  G: " << state_freq[2];
+		out << "  T: " << state_freq[3];
+		out << endl;
     }
 }
 

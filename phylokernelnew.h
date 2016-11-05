@@ -758,9 +758,11 @@ void PhyloTree::computePartialInfo(TraversalInfo &info, VectorClass* buffer) {
                     double len_child = site_rate->getRate(c) * child->length;
                     model_factory->computeTransMatrix(len_child, mat);
                     double *echild_ptr = &echild[c*nstatesqr];
-                    for (i = 0; i < nstates; i++)
+                    for (i = 0; i < nstates; i++) {
                         for (x = 0; x < nstates; x++)
-                            echild_ptr[i*nstates+x] = mat[x*nstates+i];
+                            echild_ptr[x] = mat[x*nstates+i];
+                        echild_ptr += nstates;
+                    }
                 }
             } else {
                 for (c = 0; c < ncat; c++) {
@@ -770,7 +772,7 @@ void PhyloTree::computePartialInfo(TraversalInfo &info, VectorClass* buffer) {
             }
 
             // pre compute information for tip
-            if (child->node == root) {
+            if (child->node->name == ROOT_NAME) {
                 model->getStateFrequency(partial_lh_leaf);
                 for (c = 1; c < ncat; c++)
                     memcpy(partial_lh_leaf+c*nstates, partial_lh_leaf, nstates*sizeof(double));
@@ -787,11 +789,11 @@ void PhyloTree::computePartialInfo(TraversalInfo &info, VectorClass* buffer) {
                         partial_lh_leaf[(*it)*block+x] = vchild;
                     }
                 }
+                partial_lh_leaf += aln->STATE_UNKNOWN * block;
                 for (x = 0; x < block; x++) {
-                    size_t addr = aln->STATE_UNKNOWN * block;
-                    partial_lh_leaf[addr+x] = 1.0;
+                    partial_lh_leaf[x] = 1.0;
                 }
-                partial_lh_leaf += (aln->STATE_UNKNOWN+1)*block;
+                partial_lh_leaf += block;
             }
             echild += block*nstates;
         }
@@ -942,16 +944,20 @@ void PhyloTree::computeTraversalInfo(PhyloNode *node, PhyloNode *dad, bool compu
         computeTipPartialLikelihood();
 
     traversal_info.clear();
-
+#ifndef KERNEL_FIX_STATES
+    size_t nstates = aln->num_states;
+#endif
     // reserve beginning of buffer_partial_lh for other purpose
     size_t ncat_mix = (model_factory->fused_mix_rate) ? site_rate->getNRate() : site_rate->getNRate()*model->getNMixtures();
     size_t block = aln->num_states * ncat_mix;
     double *buffer = buffer_partial_lh + block*VectorClass::size()*num_threads + get_safe_upper_limit(block)*(aln->STATE_UNKNOWN+2);
 
     // more buffer for non-reversible models
-    if (!model->isReversible())
+    if (!model->isReversible()) {
+        buffer += get_safe_upper_limit(3*block*nstates);
         buffer += get_safe_upper_limit(block)*(aln->STATE_UNKNOWN+1)*2;
         buffer += block*2*VectorClass::size()*num_threads;
+    }
 
     // sort subtrees for mem save technique
     if (params->lh_mem_save == LM_MEM_SAVE) {

@@ -147,7 +147,8 @@ void Alignment::checkSeqName() {
     countStatePerSequence(count_per_seq);
 
     /*if (verbose_mode >= VB_MIN)*/ {
-        cout << "NOTE: The composition test for PoMo only tests the proportion of fixed states!" << endl;
+        if (seq_type == SEQ_POMO)
+            cout << "NOTE: The composition test for PoMo only tests the proportion of fixed states!" << endl;
         int max_len = getMaxSeqNameLength()+1;
         // cout << "  ID  ";
         // cout <<  "  Sequence";

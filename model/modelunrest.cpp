@@ -11,18 +11,9 @@ ModelUnrest::ModelUnrest(PhyloTree *tree, string model_params)
 	: ModelMarkov(tree, false)
 {
 	num_params = getNumRateEntries() - 1;
-//	model_parameters = new double [num_params];
-//	for (int i=0; i< num_params; i++) model_parameters[i] = 1;
-	this->setRates();
-	/*
-	 * I'm not sure how to correctly handle count_rates, so for now I'm just
-	 * avoiding the problem. Actual IQTree programmers can fix this.
-	 * Whatever happens should leave model_parameters[] and rates[]
-	 * consistent with each other.
-	 */
-//	if (count_rates)
-//		cerr << "WARNING: count_rates=TRUE not implemented in ModelUnrest constructor -- ignored" << endl;
-//		/* phylo_tree->aln->computeEmpiricalRateNonRev(rates); */
+	model_parameters = new double [num_params];
+	for (int i=0; i< num_params; i++) model_parameters[i] = 1;
+	setRates();
 	if (model_params != "") {
 		cerr << "WARNING: Supplying model params to constructor not yet properly implemented -- ignored" << endl;
 		// TODO: parse model_params into model_parameters, then call setRates().
@@ -52,6 +43,6 @@ void ModelUnrest::setBounds(double *lower_bound, double *upper_bound, bool *boun
 void ModelUnrest::setRates() {
 	// For UNREST, parameters are simply the off-diagonal rate matrix entries
 	// (except [4,3] = rates[11], which is constrained to be 1)
-//	memcpy(rates, model_parameters, num_params*sizeof(double));
-//	rates[num_params]=1;
+	memcpy(rates, model_parameters, num_params*sizeof(double));
+	rates[num_params]=1;
 }
