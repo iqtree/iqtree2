@@ -575,7 +575,7 @@ void ModelLieMarkov::setBasis() {
 	    } // if tau && !=NULL
       } // for tauIndex
 
-      double permuted_rates[NUM_RATES];
+      double* permuted_rates = new double[NUM_RATES];
       for (int rate=0; rate<NUM_RATES; rate++) {
         permuted_rates[rate] = unpermuted_rates[SYMMETRY_PERM[symmetry][rate]];
       }
@@ -587,7 +587,7 @@ void ModelLieMarkov::setBasis() {
       basis = new double*[num_params+1];
       for (int i=0;i<=num_params;i++) {
         const double* unpermuted_rates = LM_BASIS_MATRICES[BASES[model_num][i]];
-        double permuted_rates[NUM_RATES];
+        double* permuted_rates = new double[NUM_RATES];
         for (int rate=0; rate<NUM_RATES; rate++) {
 	      permuted_rates[rate] = unpermuted_rates[SYMMETRY_PERM[symmetry][rate]];
         } // for rate
