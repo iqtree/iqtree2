@@ -480,7 +480,7 @@ phylosupertree.cpp phylosupertree.h
 phylotree.cpp phylotree.h
 phylotreesse.cpp phylokernelnew.h
 phylotreepars.cpp
-phylokernelnonrev.cpp 
+phylokernelnonrev.cpp phylokernelnonrev.h
 pruning.cpp pruning.h
 quartet.cpp
 split.cpp split.h

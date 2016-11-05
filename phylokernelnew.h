@@ -948,6 +948,11 @@ void PhyloTree::computeTraversalInfo(PhyloNode *node, PhyloNode *dad, bool compu
     size_t block = aln->num_states * ncat_mix;
     double *buffer = buffer_partial_lh + block*VectorClass::size()*num_threads + get_safe_upper_limit(block)*(aln->STATE_UNKNOWN+2);
 
+    // more buffer for non-reversible models
+    if (!model->isReversible())
+        buffer += get_safe_upper_limit(block)*(aln->STATE_UNKNOWN+1)*2;
+        buffer += block*2*VectorClass::size()*num_threads;
+
     // sort subtrees for mem save technique
     if (params->lh_mem_save == LM_MEM_SAVE) {
 //        sortNeighborBySubtreeSize(node, dad);

@@ -706,6 +706,10 @@ size_t PhyloTree::getBufferPartialLhSize() {
     size_t buffer_size = get_safe_upper_limit(block * model->num_states * 2 * aln->getNSeq());
     buffer_size += get_safe_upper_limit(block * (aln->getNSeq()+1) * (aln->STATE_UNKNOWN+1));
     buffer_size += (block*2+model->num_states)*VECTOR_SIZE*num_threads;
+    if (!model->isReversible()) {
+        buffer_size += get_safe_upper_limit(block)*(aln->STATE_UNKNOWN+1)*2;
+        buffer_size += block*2*VECTOR_SIZE*num_threads;
+    }
     return buffer_size;
 }
 

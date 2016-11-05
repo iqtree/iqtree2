@@ -337,8 +337,8 @@ void EigenDecomposition::eigensystem_nonrev(
 	double **evec_new = (double**)new double[num_state];
 	double **inv_evec_new = (double**)new double[num_state];
 	int *ordr = new int[num_state + 1];
-	int i, j, k, error, new_num, inew, jnew;
-	double zero;
+	int i, j, error, new_num, inew, jnew;
+//	double zero;
 
 
 	for (i=0; i < num_state; i++)

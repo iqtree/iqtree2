@@ -15,8 +15,10 @@
 //#include "phylokernelsitemodel.h"
 
 #include "phylokernelnew.h"
+#include "phylokernelnonrev.h"
 #define KERNEL_FIX_STATES
 #include "phylokernelnew.h"
+#include "phylokernelnonrev.h"
 
 
 #if !defined ( __SSE2__ ) && !defined ( __x86_64__ )
@@ -87,6 +89,24 @@ void PhyloTree::setLikelihoodKernelSSE() {
             break;
         }
         return;
+    }
+
+    if (model_factory && !model_factory->model->isReversible()) {
+        // if nonreversible model
+        switch (aln->num_states) {
+        case 4:
+            computeLikelihoodBranchPointer = &PhyloTree::computeNonrevLikelihoodBranchSIMD<Vec2d, 4>;
+            computeLikelihoodDervPointer = &PhyloTree::computeNonrevLikelihoodDervSIMD<Vec2d, 4>;
+            computePartialLikelihoodPointer = &PhyloTree::computeNonrevPartialLikelihoodSIMD<Vec2d, 4>;
+            break;
+        default:
+            computeLikelihoodBranchPointer = &PhyloTree::computeNonrevLikelihoodBranchGenericSIMD<Vec2d>;
+            computeLikelihoodDervPointer = &PhyloTree::computeNonrevLikelihoodDervGenericSIMD<Vec2d>;
+            computePartialLikelihoodPointer = &PhyloTree::computeNonrevPartialLikelihoodGenericSIMD<Vec2d>;
+            break;
+        }
+        computeLikelihoodFromBufferPointer = NULL;
+        return;        
     }
 
     if (params->lk_safe_scaling || leafNum >= params->numseq_safe_scaling) {

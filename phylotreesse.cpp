@@ -106,15 +106,14 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk, int num_threads) {
 #endif
         return;
     }
-    if (model_factory && !model_factory->model->isReversible()) {
-        // if nonreversible model
-        computeLikelihoodBranchPointer = &PhyloTree::computeNonrevLikelihoodBranch;
-        computeLikelihoodDervPointer = &PhyloTree::computeNonrevLikelihoodDerv;
-//        computeLikelihoodDervPointer = NULL;
-        computePartialLikelihoodPointer = &PhyloTree::computeNonrevPartialLikelihood;
-        computeLikelihoodFromBufferPointer = NULL;
-        return;        
-    }    
+//    if (model_factory && !model_factory->model->isReversible()) {
+//        // if nonreversible model
+//        computeLikelihoodBranchPointer = &PhyloTree::computeNonrevLikelihoodBranch;
+//        computeLikelihoodDervPointer = &PhyloTree::computeNonrevLikelihoodDerv;
+//        computePartialLikelihoodPointer = &PhyloTree::computeNonrevPartialLikelihood;
+//        computeLikelihoodFromBufferPointer = NULL;
+//        return;        
+//    }    
 
     //--- SIMD kernel ---
     if (sse == LK_EIGEN_SSE && instruction_set >= 2) {
