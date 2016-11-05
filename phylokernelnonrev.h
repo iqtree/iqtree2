@@ -765,7 +765,7 @@ double PhyloTree::computeNonrevLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_br
                 computePartialLikelihood(*it, ptn_lower, ptn_upper, thread_id);
 
             // reset memory for _pattern_lh_cat
-            memset(_pattern_lh_cat+ptn_lower*ncat, 0, (ptn_upper-ptn_lower)*ncat*sizeof(double));
+//            memset(_pattern_lh_cat+ptn_lower*ncat, 0, (ptn_upper-ptn_lower)*ncat*sizeof(double));
 
             double *vec_tip = buffer_partial_lh_ptr + block*VectorClass::size()*thread_id;
 
@@ -819,7 +819,7 @@ double PhyloTree::computeNonrevLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_br
                 lh_ptn = abs(lh_ptn);
 //                assert(horizontal_and(lh_ptn > 0));
                 if (ptn < orig_nptn) {
-                    lh_ptn = log(lh_ptn) + vc_min_scale * LOG_SCALING_THRESHOLD;
+                    lh_ptn = log(lh_ptn) + vc_min_scale;
                     lh_ptn.store_a(&_pattern_lh[ptn]);
                     vc_tree_lh = mul_add(lh_ptn, VectorClass().load_a(&ptn_freq[ptn]), vc_tree_lh);
 //                } else {
