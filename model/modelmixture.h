@@ -115,7 +115,8 @@ public:
 
 	/**
 		compute the state frequency vector
-        @param mixture (optional) class for mixture model
+        @param mixture (optional) class for mixture model. 
+            -1 to get weighted sum of class state frequency vector
 		@param state_freq (OUT) state frequency vector. Assume state_freq has size of num_states
 	*/
 	virtual void getStateFrequency(double *state_freq, int mixture = 0);

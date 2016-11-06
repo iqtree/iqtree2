@@ -597,8 +597,11 @@ void PhyloTree::computePtnInvar() {
 	size_t maxptn = get_safe_upper_limit(nptn)+get_safe_upper_limit(model_factory->unobserved_ptns.size());
 	int nstates = aln->num_states;
 
-    double *state_freq = aligned_alloc<double>(nstates);
-    model->getStateFrequency(state_freq);
+    double state_freq[nstates];
+
+    // -1 for mixture model
+    model->getStateFrequency(state_freq, -1);
+
 	memset(ptn_invar, 0, maxptn*sizeof(double));
 	double p_invar = site_rate->getPInvar();
 	if (p_invar != 0.0) {
@@ -617,7 +620,7 @@ void PhyloTree::computePtnInvar() {
 		for (ptn = nptn; ptn < maxptn; ptn++)
 			ptn_invar[ptn] = p_invar;
 	}
-	aligned_free(state_freq);
+//	aligned_free(state_freq);
 }
 
 /*******************************************************

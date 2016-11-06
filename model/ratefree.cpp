@@ -547,6 +547,8 @@ double RateFree::optimizeWithEM() {
 
         if (new_pinvar > 1e-4 && getPInvar() != 0.0) {
             converged = converged && (fabs(getPInvar()-new_pinvar) < 1e-4);
+            if (isFixPInvar())
+                outError("Fixed given p-invar is not supported");
             setPInvar(new_pinvar);
 //            setOptimizePInvar(false);
             phylo_tree->computePtnInvar();

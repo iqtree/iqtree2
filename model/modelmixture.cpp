@@ -1400,7 +1400,21 @@ void ModelMixture::restoreCheckpoint() {
 
 void ModelMixture::getStateFrequency(double *state_freq, int mixture) {
     assert(mixture < getNMixtures());
-    at(mixture)->getStateFrequency(state_freq);
+    if (mixture >= 0) {
+        at(mixture)->getStateFrequency(state_freq);
+        return;
+    }
+    // special case: return weighted sum of state_freq across classes
+    // for mixture model, take the weighted sum of frequency vectors
+    double state_freq_class[num_states];
+    int mix = getNMixtures();
+    memset(state_freq, 0, sizeof(double)*num_states);
+    for (int i = 0; i < mix; i++) {
+        at(i)->getStateFrequency(state_freq_class);
+        double weight = getMixtureWeight(i);
+        for (int j = 0; j < num_states; j++)
+            state_freq[j] += weight*state_freq_class[j];
+    }
 }
 
 void ModelMixture::computeTransMatrix(double time, double *trans_matrix, int mixture) {
@@ -1497,7 +1511,8 @@ double ModelMixture::optimizeWeights() {
         memset(new_prop, 0, nmix*sizeof(double));
         for (ptn = 0; ptn < nptn; ptn++) {
             double *this_lk_cat = phylo_tree->_pattern_lh_cat + ptn*nmix;
-            double lk_ptn = phylo_tree->ptn_invar[ptn];
+//            double lk_ptn = phylo_tree->ptn_invar[ptn];
+            double lk_ptn = 0.0;
             for (c = 0; c < nmix; c++) {
                 lk_ptn += this_lk_cat[c];
             }
@@ -1508,7 +1523,7 @@ double ModelMixture::optimizeWeights() {
             }
         } 
         bool converged = true;
-        double new_pinvar = 0.0;    
+//        double new_pinvar = 0.0;    
         for (c = 0; c < nmix; c++) {
             new_prop[c] /= phylo_tree->getAlnNSite();
             // Make sure that probabilities do not get zero
@@ -1520,8 +1535,9 @@ double ModelMixture::optimizeWeights() {
                 cerr << "BUG: " << new_prop[c] << " " << prop[c] << " " << ratio_prop[c] << endl;
             }
             prop[c] = new_prop[c];
-            new_pinvar += prop[c];
+//            new_pinvar += prop[c];
         }
+        /*
         new_pinvar = 1.0 - new_pinvar;
         if (new_pinvar != 0.0) {
             converged = converged && (fabs(phylo_tree->getRate()->getPInvar()-new_pinvar) < 1e-4);
@@ -1530,6 +1546,7 @@ double ModelMixture::optimizeWeights() {
             phylo_tree->computePtnInvar();
             
         }
+        */
         if (converged) break;
 
     }
@@ -1584,7 +1601,8 @@ double ModelMixture::optimizeWithEM(double gradient_epsilon) {
         // decoupled weights (prop) from _pattern_lh_cat to obtain L_ci and compute pattern likelihood L_i
         for (ptn = 0; ptn < nptn; ptn++) {
             double *this_lk_cat = phylo_tree->_pattern_lh_cat + ptn*nmix;
-            double lk_ptn = phylo_tree->ptn_invar[ptn];
+//            double lk_ptn = phylo_tree->ptn_invar[ptn];
+            double lk_ptn = 0.0;
             for (c = 0; c < nmix; c++) {
                 lk_ptn += this_lk_cat[c];
             }
@@ -1603,15 +1621,16 @@ double ModelMixture::optimizeWithEM(double gradient_epsilon) {
         bool converged = !fix_prop;
         
         if (!fix_prop) {
-            double new_pinvar = 0.0;
+//            double new_pinvar = 0.0;
             for (c = 0; c < nmix; c++) {
                 new_prop[c] = new_prop[c] / phylo_tree->getAlnNSite();
                 if (new_prop[c] < 1e-10) new_prop[c] = 1e-10;
                 // check for convergence
                 converged = converged && (fabs(prop[c]-new_prop[c]) < 1e-4);
                 prop[c] = new_prop[c];
-                new_pinvar += prop[c];
+//                new_pinvar += prop[c];
             }
+            /*
             new_pinvar = 1.0 - new_pinvar;
             if (new_pinvar != 0.0) {
                 converged = converged && (fabs(phylo_tree->getRate()->getPInvar()-new_pinvar) < 1e-4);
@@ -1619,6 +1638,7 @@ double ModelMixture::optimizeWithEM(double gradient_epsilon) {
                 phylo_tree->getRate()->setOptimizePInvar(false);
                 phylo_tree->computePtnInvar();
             }
+            */
         }
         
         // now optimize model one by one
