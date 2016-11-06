@@ -1280,6 +1280,25 @@ void ModelMixture::initMixture(string orig_model_name, string model_name, string
 	fix_prop |= (nmixtures == 1);
 	// use central eigen etc. stufffs
 
+    // check reversibility
+    bool rev = front()->isReversible();
+    bool err = false;
+    for (i = 1; i < nmixtures; i++) {
+        if (at(i)->isReversible() != rev) {
+            cerr << "ERROR: Model " << at(i)->name << " has different reversible property" << endl;
+            err = true;
+        }
+    }
+
+    if (err)
+        outError("Model reversibility is not consistent");
+    if (rev != isReversible())
+        setReversible(rev);
+
+    // forgot to call this after refactoring
+    if (isReversible())
+        initMem();
+
 	decomposeRateMatrix();
 
     delete nxs_freq_optimize;
@@ -1356,11 +1375,11 @@ void ModelMixture::saveCheckpoint() {
     }
     checkpoint->endStruct();
 
-    ModelMarkov::saveCheckpoint();
+//    ModelMarkov::saveCheckpoint();
 }
 
 void ModelMixture::restoreCheckpoint() {
-    ModelMarkov::restoreCheckpoint();
+//    ModelMarkov::restoreCheckpoint();
 
     checkpoint->startStruct("ModelMixture");
 //    CKP_RESTORE(fix_prop);
@@ -1377,6 +1396,22 @@ void ModelMixture::restoreCheckpoint() {
     decomposeRateMatrix();
     if (phylo_tree)
         phylo_tree->clearAllPartialLH();
+}
+
+void ModelMixture::getStateFrequency(double *state_freq, int mixture) {
+    assert(mixture < getNMixtures());
+    at(mixture)->getStateFrequency(state_freq);
+}
+
+void ModelMixture::computeTransMatrix(double time, double *trans_matrix, int mixture) {
+    assert(mixture < getNMixtures());
+    at(mixture)->computeTransMatrix(time, trans_matrix);
+}
+
+void ModelMixture::computeTransDerv(double time, double *trans_matrix,
+    double *trans_derv1, double *trans_derv2, int mixture) {
+    assert(mixture < getNMixtures());
+    at(mixture)->computeTransDerv(time, trans_matrix, trans_derv1, trans_derv2);
 }
 
 int ModelMixture::getNDim() {

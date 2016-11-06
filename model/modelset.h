@@ -46,43 +46,24 @@ public:
 	/**
 		compute the transition probability matrix.
 		@param time time between two events
-		@param trans_matrix (OUT) the transition matrix between all pairs of states. 
+        @param mixture (optional) class for mixture model
+		@param trans_matrix (OUT) the transition matrix between all pairs of states.
 			Assume trans_matrix has size of num_states * num_states.
 	*/
-	virtual void computeTransMatrix(double time, double *trans_matrix);
-
-	
-	/**
-	 * wrapper for computing transition matrix times state frequency vector
-	 * @param time time between two events
-	 * @param trans_matrix (OUT) the transition matrix between all pairs of states.
-	 * 	Assume trans_matrix has size of num_states * num_states.
-	 */
-	virtual void computeTransMatrixFreq(double time, double *trans_matrix);
+	virtual void computeTransMatrix(double time, double *trans_matrix, int mixture = 0);
 
 	
 	/**
 		compute the transition probability matrix.and the derivative 1 and 2
 		@param time time between two events
-		@param trans_matrix (OUT) the transition matrix between all pairs of states. 
+        @param mixture (optional) class for mixture model
+		@param trans_matrix (OUT) the transition matrix between all pairs of states.
 			Assume trans_matrix has size of num_states * num_states.
 		@param trans_derv1 (OUT) the 1st derivative matrix between all pairs of states. 
 		@param trans_derv2 (OUT) the 2nd derivative matrix between all pairs of states. 
 	*/
 	virtual void computeTransDerv(double time, double *trans_matrix, 
-		double *trans_derv1, double *trans_derv2);
-
-	/**
-		compute the transition probability matrix.and the derivative 1 and 2 times state frequency vector
-		@param time time between two events
-		@param trans_matrix (OUT) the transition matrix between all pairs of states. 
-			Assume trans_matrix has size of num_states * num_states.
-		@param trans_derv1 (OUT) the 1st derivative matrix between all pairs of states. 
-		@param trans_derv2 (OUT) the 2nd derivative matrix between all pairs of states. 
-	*/
-	virtual void computeTransDervFreq(double time, double rate_val, double *trans_matrix, 
-		double *trans_derv1, double *trans_derv2);
-
+		double *trans_derv1, double *trans_derv2, int mixture = 0);
 
 	/**
 		To AVOID 'hides overloaded virtual functions

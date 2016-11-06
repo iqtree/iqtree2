@@ -898,7 +898,7 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
     
 }
 
-void ModelLieMarkov::computeTransMatrix(double time, double *trans_matrix) {
+void ModelLieMarkov::computeTransMatrix(double time, double *trans_matrix, int mixture) {
 #ifdef USE_EIGEN3
   MatrixExpTechnique technique = phylo_tree->params->matrix_exp_technique;
   if (technique == MET_SCALING_SQUARING || (technique == MET_EIGEN3LIB_DECOMPOSITION && nondiagonalizable)) {

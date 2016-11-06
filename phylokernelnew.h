@@ -754,9 +754,9 @@ void PhyloTree::computePartialInfo(TraversalInfo &info, VectorClass* buffer) {
             if (child->direction == TOWARD_ROOT) {
                 // tranpose probability matrix
                 double mat[nstatesqr];
-                for (c = 0; c < ncat; c++) {
-                    double len_child = site_rate->getRate(c) * child->length;
-                    model_factory->computeTransMatrix(len_child, mat);
+                for (c = 0; c < ncat_mix; c++) {
+                    double len_child = site_rate->getRate(c%ncat) * child->length;
+                    model_factory->computeTransMatrix(len_child, mat, c/denom);
                     double *echild_ptr = &echild[c*nstatesqr];
                     for (i = 0; i < nstates; i++) {
                         for (x = 0; x < nstates; x++)
@@ -765,17 +765,19 @@ void PhyloTree::computePartialInfo(TraversalInfo &info, VectorClass* buffer) {
                     }
                 }
             } else {
-                for (c = 0; c < ncat; c++) {
-                    double len_child = site_rate->getRate(c) * child->length;
-                    model_factory->computeTransMatrix(len_child, &echild[c*nstatesqr]);
+                for (c = 0; c < ncat_mix; c++) {
+                    double len_child = site_rate->getRate(c%ncat) * child->length;
+                    model_factory->computeTransMatrix(len_child, &echild[c*nstatesqr], c/denom);
                 }
             }
 
             // pre compute information for tip
             if (child->node->name == ROOT_NAME) {
-                model->getStateFrequency(partial_lh_leaf);
-                for (c = 1; c < ncat; c++)
-                    memcpy(partial_lh_leaf+c*nstates, partial_lh_leaf, nstates*sizeof(double));
+                for (c = 0; c < ncat_mix; c++) {
+                    size_t m = c/denom;
+                    model->getStateFrequency(partial_lh_leaf + c*nstates, m);
+//                    memcpy(partial_lh_leaf+c*nstates, partial_lh_leaf, nstates*sizeof(double));
+                }
                 partial_lh_leaf += (aln->STATE_UNKNOWN+1)*block;
             } else if (child->node->isLeaf()) {
                 vector<int>::iterator it;
@@ -1001,7 +1003,7 @@ void PhyloTree::computeTraversalInfo(PhyloNode *node, PhyloNode *dad, bool compu
 
         int num_info = traversal_info.size();
 
-        if (verbose_mode >= VB_MED) {
+        if (verbose_mode >= VB_MAX) {
             cout << "traversal order:";
             for (auto it = traversal_info.begin(); it != traversal_info.end(); it++) {
                 cout << "  ";

@@ -123,18 +123,11 @@ public:
 		compute the transition probability matrix. One should override this function when defining new model.
 		The default is the Juke-Cantor model, valid for all kind of data (DNA, AA, Codon, etc)
 		@param time time between two events
+        @param mixture (optional) class for mixture model
 		@param trans_matrix (OUT) the transition matrix between all pairs of states. 
 			Assume trans_matrix has size of num_states * num_states.
 	*/
-	virtual void computeTransMatrix(double time, double *trans_matrix);
-
-	/**
-	 * wrapper for computing transition matrix times state frequency vector
-	 * @param time time between two events
-	 * @param trans_matrix (OUT) the transition matrix between all pairs of states.
-	 * 	Assume trans_matrix has size of num_states * num_states.
-	 */
-	virtual void computeTransMatrixFreq(double time, double *trans_matrix);
+	virtual void computeTransMatrix(double time, double *trans_matrix, int mixture = 0);
 
 	/**
 		compute the transition probability between two states. 
@@ -209,9 +202,10 @@ public:
 	/**
 		compute the state frequency vector. One should override this function when defining new model.
 		The default is equal state sequency, valid for all kind of data.
+        @param mixture (optional) class for mixture model
 		@param state_freq (OUT) state frequency vector. Assume state_freq has size of num_states
 	*/
-	virtual void getStateFrequency(double *state_freq);
+	virtual void getStateFrequency(double *state_freq, int mixture = 0);
 
 	/**
 		get frequency type
@@ -232,25 +226,14 @@ public:
 	/**
 		compute the transition probability matrix.and the derivative 1 and 2
 		@param time time between two events
-		@param trans_matrix (OUT) the transition matrix between all pairs of states. 
+        @param mixture (optional) class for mixture model
+		@param trans_matrix (OUT) the transition matrix between all pairs of states.
 			Assume trans_matrix has size of num_states * num_states.
 		@param trans_derv1 (OUT) the 1st derivative matrix between all pairs of states. 
 		@param trans_derv2 (OUT) the 2nd derivative matrix between all pairs of states. 
 	*/
 	virtual void computeTransDerv(double time, double *trans_matrix, 
-		double *trans_derv1, double *trans_derv2);
-
-	/**
-		compute the transition probability matrix.and the derivative 1 and 2 times state frequency vector
-		@param time time between two events
-		@param trans_matrix (OUT) the transition matrix between all pairs of states. 
-			Assume trans_matrix has size of num_states * num_states.
-		@param trans_derv1 (OUT) the 1st derivative matrix between all pairs of states. 
-		@param trans_derv2 (OUT) the 2nd derivative matrix between all pairs of states. 
-	*/
-	virtual void computeTransDervFreq(double time, double rate_val, double *trans_matrix, 
-		double *trans_derv1, double *trans_derv2);
-
+		double *trans_derv1, double *trans_derv2, int mixture = 0);
 
 	/**
 		decompose the rate matrix into eigenvalues and eigenvectors

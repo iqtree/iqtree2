@@ -307,7 +307,7 @@ void ModelMarkov::writeInfo(ostream &out) {
     }
 }
 
-void ModelMarkov::computeTransMatrix(double time, double *trans_matrix) {
+void ModelMarkov::computeTransMatrix(double time, double *trans_matrix, int mixture) {
 
     if (!is_reversible) {
         if (phylo_tree->params->matrix_exp_technique == MET_EIGEN_DECOMPOSITION) {
@@ -361,16 +361,6 @@ void ModelMarkov::computeTransMatrix(double time, double *trans_matrix) {
 	delete [] exptime;
 }
 
-void ModelMarkov::computeTransMatrixFreq(double time, double* trans_matrix)
-{
-	computeTransMatrix(time, trans_matrix);
-	for (int state1 = 0; state1 < num_states; state1++) {
-		double *trans_mat_state = trans_matrix + (state1 * num_states);
-		for (int state2 = 0; state2 < num_states; state2++)
-			trans_mat_state[state2] *= state_freq[state1];
-	}
-}
-
 double ModelMarkov::computeTrans(double time, int state1, int state2) {
 
     if (is_reversible) {
@@ -410,7 +400,7 @@ double ModelMarkov::computeTrans(double time, int state1, int state2, double &de
 
 
 void ModelMarkov::computeTransDerv(double time, double *trans_matrix, 
-	double *trans_derv1, double *trans_derv2) 
+	double *trans_derv1, double *trans_derv2, int mixture)
 {
 	int i, j, k;
 
@@ -469,24 +459,6 @@ void ModelMarkov::computeTransDerv(double time, double *trans_matrix,
 	delete [] exptime;
 }
 
-void ModelMarkov::computeTransDervFreq(double time, double rate_val, double* trans_matrix, double* trans_derv1, double* trans_derv2)
-{
-	int nstates = num_states;
-	double rate_sqr = rate_val*rate_val;
-	computeTransDerv(time * rate_val, trans_matrix, trans_derv1, trans_derv2);
-	for (int state1 = 0; state1 < nstates; state1++) {
-		double *trans_mat_state = trans_matrix + (state1 * nstates);
-		double *trans_derv1_state = trans_derv1 + (state1 * nstates);
-		double *trans_derv2_state = trans_derv2 + (state1 * nstates);
-		for (int state2 = 0; state2 < nstates; state2++) {
-			trans_mat_state[state2] *= state_freq[state1];
-			trans_derv1_state[state2] *= (state_freq[state1] * rate_val);
-			trans_derv2_state[state2] *= (state_freq[state1] * rate_sqr);
-		}
-	}
-}
-
-
 void ModelMarkov::getRateMatrix(double *rate_mat) {
 	int nrate = getNumRateEntries();
 	memcpy(rate_mat, rates, nrate * sizeof(double));
@@ -498,7 +470,7 @@ void ModelMarkov::setRateMatrix(double* rate_mat)
 	memcpy(rates, rate_mat, nrate * sizeof(double));
 }
 
-void ModelMarkov::getStateFrequency(double *freq) {
+void ModelMarkov::getStateFrequency(double *freq, int mixture) {
 	assert(state_freq);
 	assert(freq_type != FREQ_UNKNOWN);
 	memcpy(freq, state_freq, sizeof(double) * num_states);

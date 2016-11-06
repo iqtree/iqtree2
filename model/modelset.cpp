@@ -26,44 +26,22 @@ ModelSet::ModelSet(const char *model_name, PhyloTree *tree) : ModelMarkov(tree)
 	full_name += "+site-specific state-frequency model (unpublished)";
 }
 
-void ModelSet::computeTransMatrix(double time, double* trans_matrix)
+void ModelSet::computeTransMatrix(double time, double* trans_matrix, int mixture)
 {
     // TODO not working with vectorization
     assert(0);
 	for (iterator it = begin(); it != end(); it++) {
-		(*it)->computeTransMatrix(time, trans_matrix);
+		(*it)->computeTransMatrix(time, trans_matrix, mixture);
 		trans_matrix += (num_states * num_states);
 	}
 }
 
-void ModelSet::computeTransMatrixFreq(double time, double* trans_matrix)
+void ModelSet::computeTransDerv(double time, double* trans_matrix, double* trans_derv1, double* trans_derv2, int mixture)
 {
     // TODO not working with vectorization
     assert(0);
 	for (iterator it = begin(); it != end(); it++) {
-		(*it)->computeTransMatrixFreq(time, trans_matrix);
-		trans_matrix += (num_states * num_states);
-	}
-}
-
-void ModelSet::computeTransDerv(double time, double* trans_matrix, double* trans_derv1, double* trans_derv2)
-{
-    // TODO not working with vectorization
-    assert(0);
-	for (iterator it = begin(); it != end(); it++) {
-		(*it)->computeTransDerv(time, trans_matrix, trans_derv1, trans_derv2);
-		trans_matrix += (num_states * num_states);
-		trans_derv1 += (num_states * num_states);
-		trans_derv2 += (num_states * num_states);
-	}
-}
-
-void ModelSet::computeTransDervFreq(double time, double rate_val, double* trans_matrix, double* trans_derv1, double* trans_derv2)
-{
-    // TODO not working with vectorization
-    assert(0);
-	for (iterator it = begin(); it != end(); it++) {
-		(*it)->computeTransDervFreq(time, rate_val, trans_matrix, trans_derv1, trans_derv2);
+		(*it)->computeTransDerv(time, trans_matrix, trans_derv1, trans_derv2, mixture);
 		trans_matrix += (num_states * num_states);
 		trans_derv1 += (num_states * num_states);
 		trans_derv2 += (num_states * num_states);
