@@ -811,6 +811,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.lk_no_avx = 0;
     params.lk_safe_scaling = false;
     params.numseq_safe_scaling = 2000;
+    params.kernel_nonrev = false;
     params.print_site_lh = WSL_NONE;
     params.print_partition_lh = false;
     params.print_site_prob = WSL_NONE;
@@ -1953,6 +1954,10 @@ void parseArg(int argc, char *argv[], Params &params) {
 				continue;
 			}
 
+            if (strcmp(argv[cnt], "--kernel-nonrev") == 0) {
+                params.kernel_nonrev = true;
+                continue;
+            }
 
 			if (strcmp(argv[cnt], "-f") == 0) {
 				cnt++;

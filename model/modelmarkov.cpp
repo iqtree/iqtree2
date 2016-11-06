@@ -328,7 +328,7 @@ void ModelMarkov::computeTransMatrix(double time, double *trans_matrix, int mixt
 
 	/* compute P(t) */
 	double evol_time = time / total_num_subst;
-	double *exptime = new double[num_states];
+	double exptime[num_states];
 	int i, j, k;
 
 	for (i = 0; i < num_states; i++)
@@ -358,7 +358,7 @@ void ModelMarkov::computeTransMatrix(double time, double *trans_matrix, int mixt
 			sum += trans_row[j];
 		trans_row[i] = 1.0 - sum; // update diagonal entry
 	}
-	delete [] exptime;
+//	delete [] exptime;
 }
 
 double ModelMarkov::computeTrans(double time, int state1, int state2) {
@@ -427,7 +427,7 @@ void ModelMarkov::computeTransDerv(double time, double *trans_matrix,
     }
 
 	double evol_time = time / total_num_subst;
-	double *exptime = new double[num_states];
+	double exptime[num_states];
 
 	for (i = 0; i < num_states; i++)
 		exptime[i] = exp(evol_time * eigenvalues[i]);
@@ -456,7 +456,7 @@ void ModelMarkov::computeTransDerv(double time, double *trans_matrix,
 			}
 		}
 	}
-	delete [] exptime;
+//	delete [] exptime;
 }
 
 void ModelMarkov::getRateMatrix(double *rate_mat) {

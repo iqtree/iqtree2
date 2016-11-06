@@ -498,7 +498,7 @@ void PhyloTree::setModel(ModelSubst *amodel) {
 void PhyloTree::setModelFactory(ModelFactory *model_fac) {
     model_factory = model_fac;
     if (model_factory && (model_factory->model->isMixture() || model_factory->model->isSiteSpecificModel()
-        || !model_factory->model->isReversible()))
+        || !model_factory->model->isReversible() || params->kernel_nonrev))
     	setLikelihoodKernel(sse, num_threads);
 }
 
@@ -706,7 +706,7 @@ size_t PhyloTree::getBufferPartialLhSize() {
     size_t buffer_size = get_safe_upper_limit(block * model->num_states * 2 * aln->getNSeq());
     buffer_size += get_safe_upper_limit(block * (aln->getNSeq()+1) * (aln->STATE_UNKNOWN+1));
     buffer_size += (block*2+model->num_states)*VECTOR_SIZE*num_threads;
-    if (!model->isReversible()) {
+    if (!model->isReversible() || params->kernel_nonrev) {
         buffer_size += get_safe_upper_limit(block)*(aln->STATE_UNKNOWN+1)*2;
         buffer_size += block*2*VECTOR_SIZE*num_threads;
         buffer_size += 3*block*model->num_states;

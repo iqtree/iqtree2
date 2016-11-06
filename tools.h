@@ -1470,6 +1470,9 @@ public:
     /** minimum number of sequences to always use safe scaling, default: 2000 */
     int numseq_safe_scaling;
 
+    /** TRUE to force using non-reversible likelihood kernel */
+    bool kernel_nonrev;
+
     /**
      	 	WSL_NONE: do not print anything
             WSL_SITE: print site log-likelihood

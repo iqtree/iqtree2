@@ -745,7 +745,7 @@ void PhyloTree::computePartialInfo(TraversalInfo &info, VectorClass* buffer) {
 
     //----------- Non-reversible model --------------
 
-    if (!model->isReversible()) {
+    if (!model->isReversible() || params->kernel_nonrev) {
         size_t nstatesqr = nstates*nstates;
         // non-reversible model
         FOR_NEIGHBOR_IT(node, dad, it) {
@@ -772,23 +772,25 @@ void PhyloTree::computePartialInfo(TraversalInfo &info, VectorClass* buffer) {
             }
 
             // pre compute information for tip
-            if (child->node->name == ROOT_NAME) {
+            if (isRootLeaf(child->node)) {
                 for (c = 0; c < ncat_mix; c++) {
                     size_t m = c/denom;
                     model->getStateFrequency(partial_lh_leaf + c*nstates, m);
-//                    memcpy(partial_lh_leaf+c*nstates, partial_lh_leaf, nstates*sizeof(double));
                 }
                 partial_lh_leaf += (aln->STATE_UNKNOWN+1)*block;
             } else if (child->node->isLeaf()) {
                 vector<int>::iterator it;
                 for (it = aln->seq_states[child->node->id].begin(); it != aln->seq_states[child->node->id].end(); it++) {
                     double *this_tip_partial_lh = &tip_partial_lh[(*it)*nstates];
+                    double *this_partial_lh_leaf = &partial_lh_leaf[(*it)*block];
+                    double *echild_ptr = echild;
                     for (x = 0; x < block; x++) {
                         double vchild = 0.0;
                         for (i = 0; i < nstates; i++) {
-                            vchild += echild[x*nstates+i] * this_tip_partial_lh[i];
+                            vchild += echild_ptr[i] * this_tip_partial_lh[i];
                         }
-                        partial_lh_leaf[(*it)*block+x] = vchild;
+                        echild_ptr += nstates;
+                        this_partial_lh_leaf[x] = vchild;
                     }
                 }
                 partial_lh_leaf += aln->STATE_UNKNOWN * block;
@@ -955,7 +957,7 @@ void PhyloTree::computeTraversalInfo(PhyloNode *node, PhyloNode *dad, bool compu
     double *buffer = buffer_partial_lh + block*VectorClass::size()*num_threads + get_safe_upper_limit(block)*(aln->STATE_UNKNOWN+2);
 
     // more buffer for non-reversible models
-    if (!model->isReversible()) {
+    if (!model->isReversible() || params->kernel_nonrev) {
         buffer += get_safe_upper_limit(3*block*nstates);
         buffer += get_safe_upper_limit(block)*(aln->STATE_UNKNOWN+1)*2;
         buffer += block*2*VectorClass::size()*num_threads;

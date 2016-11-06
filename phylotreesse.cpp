@@ -324,7 +324,7 @@ void PhyloTree::computeTipPartialLikelihood() {
         512+1024 // U = I or L
     };
 
-    if (!getModel()->isReversible()) {
+    if (!getModel()->isReversible() || params->kernel_nonrev) {
         // nonreversible model
         memset(tip_partial_lh, 0, (aln->STATE_UNKNOWN)*nstates*sizeof(double));
         for (state = 0; state < nstates; state++) {

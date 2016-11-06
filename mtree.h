@@ -128,6 +128,11 @@ public:
      */
     virtual ~MTree();
 
+    /** return TRUE if tree is rooted and node is equal root */
+    inline bool isRootLeaf(Node *node) {
+        return (rooted && node == root);
+    }
+
     /**
             allocate a new node. Override this if you have an inherited Node class.
             @param node_id node ID
