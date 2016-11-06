@@ -487,6 +487,21 @@ void PhyloTree::computeNonrevLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch
             this_trans_derv1[i] *= prop_rate;
             this_trans_derv2[i] *= prop_rate_2;
         }
+        if (!rooted) {
+            // for unrooted tree, multiply with state_freq
+            double state_freq[nstates];
+            model->getStateFrequency(state_freq, m);
+            for (i = 0; i < nstates; i++) {
+                for (size_t x = 0; x < nstates; x++) {
+                    this_trans_mat[x] *= state_freq[i];
+                    this_trans_derv1[x] *= state_freq[i];
+                    this_trans_derv2[x] *= state_freq[i];
+                }
+                this_trans_mat += nstates;
+                this_trans_derv1 += nstates;
+                this_trans_derv2 += nstates;
+            }
+        }
 	}
 
     VectorClass all_df(0.0), all_ddf(0.0);

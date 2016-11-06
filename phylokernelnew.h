@@ -780,17 +780,34 @@ void PhyloTree::computePartialInfo(TraversalInfo &info, VectorClass* buffer) {
                 partial_lh_leaf += (aln->STATE_UNKNOWN+1)*block;
             } else if (child->node->isLeaf()) {
                 vector<int>::iterator it;
-                for (it = aln->seq_states[child->node->id].begin(); it != aln->seq_states[child->node->id].end(); it++) {
-                    double *this_tip_partial_lh = &tip_partial_lh[(*it)*nstates];
-                    double *this_partial_lh_leaf = &partial_lh_leaf[(*it)*block];
-                    double *echild_ptr = echild;
-                    for (x = 0; x < block; x++) {
-                        double vchild = 0.0;
-                        for (i = 0; i < nstates; i++) {
-                            vchild += echild_ptr[i] * this_tip_partial_lh[i];
+                if (nstates % VectorClass::size() == 0) {
+                    // vectorized version
+                    for (it = aln->seq_states[child->node->id].begin(); it != aln->seq_states[child->node->id].end(); it++) {
+                        VectorClass *this_tip_partial_lh = (VectorClass*)&tip_partial_lh[(*it)*nstates];
+                        double *this_partial_lh_leaf = &partial_lh_leaf[(*it)*block];
+                        VectorClass *echild_ptr = (VectorClass*)echild;
+                        for (x = 0; x < block; x++) {
+                            VectorClass vchild = echild_ptr[0] * this_tip_partial_lh[0];
+                            for (i = 1; i < nstates/VectorClass::size(); i++)
+                                vchild += echild_ptr[i] * this_tip_partial_lh[i];
+                            echild_ptr += nstates/VectorClass::size();
+                            this_partial_lh_leaf[x] = horizontal_add(vchild);
                         }
-                        echild_ptr += nstates;
-                        this_partial_lh_leaf[x] = vchild;
+                    }
+                } else {
+                    // non-vectorized version
+                    for (it = aln->seq_states[child->node->id].begin(); it != aln->seq_states[child->node->id].end(); it++) {
+                        double *this_tip_partial_lh = &tip_partial_lh[(*it)*nstates];
+                        double *this_partial_lh_leaf = &partial_lh_leaf[(*it)*block];
+                        double *echild_ptr = echild;
+                        for (x = 0; x < block; x++) {
+                            double vchild = 0.0;
+                            for (i = 0; i < nstates; i++) {
+                                vchild += echild_ptr[i] * this_tip_partial_lh[i];
+                            }
+                            echild_ptr += nstates;
+                            this_partial_lh_leaf[x] = vchild;
+                        }
                     }
                 }
                 partial_lh_leaf += aln->STATE_UNKNOWN * block;
