@@ -2683,8 +2683,8 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
             int num_mixlen = -1;
             if (params.model_name.length() > pos+2) {
                 num_mixlen = convert_int(params.model_name.substr(pos+2).c_str(), end_pos);
-                if (num_mixlen < 2)
-                    outError("Heterotachy model [+H] must have at least 2 categories");
+                if (num_mixlen < 1)
+                    outError("Heterotachy model [+H] must have at least 1 class");
             } else {
                 end_pos = 0;
             }

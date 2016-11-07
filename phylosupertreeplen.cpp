@@ -594,7 +594,7 @@ void PhyloSuperTreePlen::computeFuncDerv(double value, double &df_ret, double &d
                     assert(0);
 					outError("shit!!   ",__func__);
 				}
-				at(part)->computeLikelihoodDerv(nei2_part,(PhyloNode*)nei1_part->node, df_aux, ddf_aux);
+				at(part)->computeLikelihoodDerv(nei2_part,(PhyloNode*)nei1_part->node, &df_aux, &ddf_aux);
 				df += part_info[part].part_rate*df_aux;
 				ddf += part_info[part].part_rate*part_info[part].part_rate*ddf_aux;
 			}

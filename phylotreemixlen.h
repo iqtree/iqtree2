@@ -101,6 +101,17 @@ public:
      */
     virtual double optimizeAllBranches(int my_iterations = 100, double tolerance = TOL_LIKELIHOOD, int maxNRStep = 100);
 
+	/**
+		This function calculate f(value), first derivative f'(value) and 2nd derivative f''(value).
+		used by Newton raphson method to minimize the function.
+		Please always override this function to adapt to likelihood or parsimony score.
+		The default is for function f(x) = x^2.
+		@param value x-value of the function
+		@param df (OUT) first derivative
+		@param ddf (OUT) second derivative
+	*/
+//	virtual void computeFuncDervMulti(double *value, double *df, double *ddf);
+
     /**
             Inherited from Optimization class.
             This function calculate f(value), first derivative f'(value) and 2nd derivative f''(value).
@@ -110,7 +121,28 @@ public:
             @param ddf (OUT) second derivative
             @return negative of likelihood (for minimization)
      */
-    virtual void computeFuncDerv(double value, double &df, double &ddf);
+//    virtual void computeFuncDerv(double value, double &df, double &ddf);
+
+	/**
+		return the number of dimensions
+	*/
+	virtual int getNDim();
+
+
+	/**
+		the target function which needs to be optimized
+		@param x the input vector x
+		@return the function value at x
+	*/
+	virtual double targetFunk(double x[]);
+
+	/**
+		the approximated derivative function
+		@param x the input vector x
+		@param dfx the derivative at x
+		@return the function value at x
+	*/
+	virtual double derivativeFunk(double x[], double dfx[]);
 
     /** number of mixture categories */
     int mixlen;

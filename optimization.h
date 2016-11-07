@@ -12,6 +12,8 @@
 #ifndef OPTIMIZATION_H
 #define OPTIMIZATION_H
 
+#include <iostream>
+
 /**
 Optimization class, implement some methods like Brent, Newton-Raphson (for 1 variable function), BFGS (for multi-dimensional function)
 
@@ -65,7 +67,6 @@ public:
 	*/
 	virtual void computeFuncDerv(double value, double &df, double &ddf) {
 		df = 2.0*value; ddf = 2.0;
-//		return value*value+1.0;
 	}
 
 	/**
@@ -84,6 +85,36 @@ public:
 	double minimizeNewton(double xmin, double xguess, double xmax, double tolerance, double &d2l, int maxNRStep = 100);
 
 	double minimizeNewtonSafeMode(double xmin, double xguess, double xmax, double tolerance, double &f);
+
+	/*****************************************************
+		MULTI dimensional optimization with Newton Raphson
+		only applicable if 1st and 2nd derivatives are easy to compute
+	*****************************************************/
+
+	/**
+		This function calculate f(value), first derivative f'(value) and 2nd derivative f''(value).
+		used by Newton raphson method to minimize the function.
+		Please always override this function to adapt to likelihood or parsimony score.
+		The default is for function f(x) = x^2.
+		@param value x-value of the function
+		@param df (OUT) first derivative
+		@param ddf (OUT) second derivative
+	*/
+	virtual void computeFuncDervMulti(double *value, double *df, double *ddf) {
+        std::cerr << "Please override computeFuncDervMulti" << std::endl;
+	}
+
+	/**
+		Newton-Raphson method to minimize computeFuncDervMulti()
+		@return the x-value that minimize the function
+		@param xmin lower bound
+		@param xmax upper bound
+		@param xguess[in/out] first guess
+		@param tolerance tolerance of x-value to stop the iterations
+        @param N number of variables
+		@param maxNRStep max number of NR steps
+	*/
+	void minimizeNewtonMulti(double *xmin, double *xguess, double *xmax, double tolerance, int N, int maxNRStep = 100);
 
 
 //	double rtsafe(double x1, double xguess, double x2, double xacc, double &f);

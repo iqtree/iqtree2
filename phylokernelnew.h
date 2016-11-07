@@ -384,6 +384,61 @@ inline void productVecMat(VectorClass *A, Numeric *M, VectorClass *X, VectorClas
 }
 
 /**
+    compute dot-products of 2 vectors A, B with a single vector D and returns X, Y:
+    X +=   A.D = A[0]*D[0] + ... + A[N-1]*D[N-1]
+    Y +=   B.D = B[0]*D[0] + ... + B[N-1]*D[N-1]
+    @param N number of elements
+    @param nstates number of states
+    @param A vector of size N
+    @param B vector of size N
+    @param D vector of size N
+    @param[in/out] X += A.D
+    @param[in/out] Y += B.D
+*/
+#ifdef KERNEL_FIX_STATES
+template <class VectorClass, class Numeric, const size_t N, const bool FMA>
+inline void dotProductPairAdd(Numeric *A, Numeric *B, VectorClass *D,
+    VectorClass &X, VectorClass &Y)
+#else
+template <class VectorClass, class Numeric, const bool FMA>
+inline void dotProductPairAdd(Numeric *A, Numeric *B, VectorClass *D,
+    VectorClass &X, VectorClass &Y, size_t N)
+#endif
+{
+    size_t i, j;
+    if (N % 2 == 0) {
+        VectorClass AD[2], BD[2];
+        for (j = 0; j < 2; j++) {
+            AD[j] = A[j] * D[j];
+            BD[j] = B[j] * D[j];
+        }
+		for (i = 2; i < N; i+=2) {
+            for (j = 0; j < 2; j++) {
+                AD[j] = mul_add(A[i+j], D[i+j], AD[j]);
+                BD[j] = mul_add(B[i+j], D[i+j], BD[j]);
+            }
+		}
+        X += AD[0] + AD[1];
+        Y += BD[0] + BD[1];
+    } else {
+        // odd states
+        VectorClass AD[2], BD[2];
+        for (j = 0; j < 2; j++) {
+            AD[j] = A[j] * D[j];
+            BD[j] = B[j] * D[j];
+        }
+		for (i = 2; i < N-1; i+=2) {
+            for (j = 0; j < 2; j++) {
+                AD[j] = mul_add(A[i+j], D[i+j], AD[j]);
+                BD[j] = mul_add(B[i+j], D[i+j], BD[j]);
+            }
+		}
+        X += mul_add(A[N-1], D[N-1], AD[0] + AD[1]);
+        Y += mul_add(B[N-1], D[N-1], BD[0] + BD[1]);
+    }
+}
+
+/**
     compute dot-products of 3 vectors A, B, C with a single vector D and returns X, Y, Z:
     X =   A.D = A[0]*D[0] + ... + A[N-1]*D[N-1]
     Y =   B.D = B[0]*D[0] + ... + B[N-1]*D[N-1]
@@ -1741,6 +1796,10 @@ void PhyloTree::computeLikelihoodBufferGenericSIMD(PhyloNeighbor *dad_branch, Ph
 
     // reserve 3*block for computeLikelihoodDerv
     double *buffer_partial_lh_ptr = buffer_partial_lh + 3*get_safe_upper_limit(block);
+    if (isMixlen()) {
+        size_t nmix = getMixlen();
+        buffer_partial_lh_ptr += nmix*VectorClass::size();
+    }
 
     // first compute partial_lh
     for (vector<TraversalInfo>::iterator it = traversal_info.begin(); it != traversal_info.end(); it++)
@@ -1877,10 +1936,10 @@ void PhyloTree::computeLikelihoodBufferGenericSIMD(PhyloNeighbor *dad_branch, Ph
 
 #ifdef KERNEL_FIX_STATES
 template <class VectorClass, const bool SAFE_NUMERIC, const int nstates, const bool FMA, const bool SITE_MODEL>
-void PhyloTree::computeLikelihoodDervSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf)
+void PhyloTree::computeLikelihoodDervSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, double *df, double *ddf)
 #else
 template <class VectorClass, const bool SAFE_NUMERIC, const bool FMA, const bool SITE_MODEL>
-void PhyloTree::computeLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf)
+void PhyloTree::computeLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, double *df, double *ddf)
 #endif
 {
     PhyloNode *node = (PhyloNode*) dad_branch->node;
@@ -1925,10 +1984,11 @@ void PhyloTree::computeLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, Phyl
 
 
 
-    size_t mix_addr_nstates[ncat_mix], mix_addr[ncat_mix];
+    size_t mix_addr_nstates[ncat_mix], mix_addr[ncat_mix], mix_id[ncat_mix];
     size_t denom = (model_factory->fused_mix_rate) ? 1 : ncat;
     for (c = 0; c < ncat_mix; c++) {
         size_t m = c/denom;
+        mix_id[c] = m;
         mix_addr_nstates[c] = m*nstates;
         mix_addr[c] = mix_addr_nstates[c]*nstates;
     }
@@ -1958,6 +2018,7 @@ void PhyloTree::computeLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, Phyl
         val0 = buffer_partial_lh_ptr;
         val1 = val0 + get_safe_upper_limit(block);
         val2 = val1 + get_safe_upper_limit(block);
+        buffer_partial_lh_ptr += 3*get_safe_upper_limit(block);
         if (nstates % VectorClass::size() == 0) {
             VectorClass *vc_val0 = (VectorClass*)val0;
             VectorClass *vc_val1 = (VectorClass*)val1;
@@ -2006,6 +2067,16 @@ void PhyloTree::computeLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, Phyl
     double dad_length = dad_branch->length;
 
     VectorClass all_df = 0.0, all_ddf = 0.0, all_prob_const = 0.0, all_df_const = 0.0, all_ddf_const = 0.0;
+    VectorClass *all_dfvec = NULL;
+
+    size_t nmixlen = getMixlen();
+
+    if (isMixlen()) {
+        all_dfvec = (VectorClass*)buffer_partial_lh_ptr;
+        buffer_partial_lh_ptr += (nmixlen)*VectorClass::size();
+        for (i = 0; i < nmixlen; i++) all_dfvec[i] = 0.0;
+    }
+
 //    double tree_lh = node_branch->lh_scale_factor + dad_branch->lh_scale_factor;
 
 #ifdef _OPENMP
@@ -2022,103 +2093,174 @@ void PhyloTree::computeLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, Phyl
         #else
             computeLikelihoodBufferGenericSIMD<VectorClass, SAFE_NUMERIC, FMA, SITE_MODEL>(dad_branch, dad, ptn_lower, ptn_upper, thread_id);
         #endif
-        
-        for (ptn = ptn_lower; ptn < ptn_upper; ptn+=VectorClass::size()) {
+
+        if (isMixlen()) {
+            // mixed branch length model
             VectorClass lh_ptn;
-            //lh_ptn.load_a(&ptn_invar[ptn]);
-            VectorClass *theta = (VectorClass*)(theta_all + ptn*block);
-            VectorClass df_ptn, ddf_ptn;
+            // TODO: not thread safe
+            VectorClass *df_ptn = (VectorClass*)buffer_partial_lh_ptr;
+            VectorClass *my_df = df_ptn + nmixlen;
+            for (i = 0; i < nmixlen; i++) my_df[i] = 0.0;
 
-            if (SITE_MODEL) {
-                VectorClass* eval_ptr = (VectorClass*) &eval[ptn*nstates];
-                lh_ptn = 0.0; df_ptn = 0.0; ddf_ptn = 0.0;
-                for (c = 0; c < ncat; c++) {
-                    VectorClass lh_cat(0.0), df_cat(0.0), ddf_cat(0.0);
-                    for (i = 0; i < nstates; i++) {
-                        VectorClass cof = eval_ptr[i] * cat_rate[c];
-                        VectorClass val = exp(cof*dad_length)*theta[i];
-                        VectorClass val1 = cof*val;
-                        lh_cat += val;
-                        df_cat += val1;
-                        ddf_cat = mul_add(cof, val1, ddf_cat);
-                    }
-                    lh_ptn = mul_add(cat_prop[c], lh_cat, lh_ptn);
-                    df_ptn = mul_add(cat_prop[c], df_cat, df_ptn);
-                    ddf_ptn = mul_add(cat_prop[c], ddf_cat, ddf_ptn);
+            for (ptn = ptn_lower; ptn < ptn_upper; ptn+=VectorClass::size()) {
+                for (i = 0; i < nmixlen; i++) df_ptn[i] = 0.0;
+//                lh_ptn.load_a(&ptn_invar[ptn]);
+                lh_ptn = 0.0;
+                VectorClass *theta = (VectorClass*)(theta_all + ptn*block);
+                double *val0_ptr = val0;
+                double *val1_ptr = val1;
+                for (c = 0; c < ncat_mix; c++) {
+                    i = mix_id[c];
+                #ifdef KERNEL_FIX_STATES
+                    dotProductPairAdd<VectorClass, double, nstates, FMA>(val0_ptr, val1_ptr, theta, lh_ptn, df_ptn[i]);
+                #else
+                    dotProductPairAdd<VectorClass, double, FMA>(val0_ptr, val1_ptr, theta, lh_ptn, df_ptn[i], nstates);
+                #endif
+                    val0_ptr += nstates;
+                    val1_ptr += nstates;
                     theta += nstates;
+                }
+                lh_ptn = abs(lh_ptn + VectorClass().load_a(&ptn_invar[ptn]));
 
+                if (ptn < orig_nptn) {
+                    VectorClass freq;
+                    freq.load_a(&ptn_freq[ptn]);
+                    VectorClass inv_lh_ptn = freq / lh_ptn;
+
+                    for (i = 0; i < nmixlen; i++) {
+                        my_df[i] = mul_add(df_ptn[i], inv_lh_ptn, my_df[i]);
+                    }
+                    lh_ptn = log(lh_ptn) + VectorClass().load_a(&buffer_scale_all[ptn]);
+                    my_ddf = mul_add(lh_ptn, freq, my_ddf);
+                } else {
+                    assert(0 && "TODO +ASC not supported");
                 }
-            } else {
-        #ifdef KERNEL_FIX_STATES
-                dotProductTriple<VectorClass, double, nstates, FMA>(val0, val1, val2, theta, lh_ptn, df_ptn, ddf_ptn, block);
-        #else
-                dotProductTriple<VectorClass, double, FMA>(val0, val1, val2, theta, lh_ptn, df_ptn, ddf_ptn, block, nstates);
+            } // FOR ptn
+
+        #ifdef _OPENMP
+        #pragma omp critical
         #endif
+            {
+                for (i = 0; i < nmixlen; i++)
+                    all_dfvec[i] += my_df[i];
+                all_ddf += my_ddf;
+//                if (isASC) {
+//                    all_prob_const += vc_prob_const;
+//                    all_df_const += vc_df_const;
+//                    all_ddf_const += vc_ddf_const;
+//                }
             }
-            lh_ptn = abs(lh_ptn + VectorClass().load_a(&ptn_invar[ptn]));
-            
-            if (ptn < orig_nptn) {
-                lh_ptn = 1.0 / lh_ptn;
-                VectorClass df_frac = df_ptn * lh_ptn;
-                VectorClass ddf_frac = ddf_ptn * lh_ptn;
-                VectorClass freq;
-                freq.load_a(&ptn_freq[ptn]);
-                VectorClass tmp1 = df_frac * freq;
-                VectorClass tmp2 = ddf_frac * freq;
-                my_df += tmp1;
-                my_ddf += nmul_add(tmp1, df_frac, tmp2);
-            } else {
-                // ascertainment bias correction
-                if (ptn+VectorClass::size() > nptn) {
-                    // cutoff the last entries if going beyond
-                    lh_ptn.cutoff(nptn-ptn);
-                    df_ptn.cutoff(nptn-ptn);
-                    ddf_ptn.cutoff(nptn-ptn);
+
+        } else {
+            // normal joint branch length model
+            for (ptn = ptn_lower; ptn < ptn_upper; ptn+=VectorClass::size()) {
+                VectorClass lh_ptn;
+                //lh_ptn.load_a(&ptn_invar[ptn]);
+                VectorClass *theta = (VectorClass*)(theta_all + ptn*block);
+                VectorClass df_ptn, ddf_ptn;
+
+                if (SITE_MODEL) {
+                    VectorClass* eval_ptr = (VectorClass*) &eval[ptn*nstates];
+                    lh_ptn = 0.0; df_ptn = 0.0; ddf_ptn = 0.0;
+                    for (c = 0; c < ncat; c++) {
+                        VectorClass lh_cat(0.0), df_cat(0.0), ddf_cat(0.0);
+                        for (i = 0; i < nstates; i++) {
+                            VectorClass cof = eval_ptr[i] * cat_rate[c];
+                            VectorClass val = exp(cof*dad_length)*theta[i];
+                            VectorClass val1 = cof*val;
+                            lh_cat += val;
+                            df_cat += val1;
+                            ddf_cat = mul_add(cof, val1, ddf_cat);
+                        }
+                        lh_ptn = mul_add(cat_prop[c], lh_cat, lh_ptn);
+                        df_ptn = mul_add(cat_prop[c], df_cat, df_ptn);
+                        ddf_ptn = mul_add(cat_prop[c], ddf_cat, ddf_ptn);
+                        theta += nstates;
+
+                    }
+                } else {
+            #ifdef KERNEL_FIX_STATES
+                    dotProductTriple<VectorClass, double, nstates, FMA>(val0, val1, val2, theta, lh_ptn, df_ptn, ddf_ptn, block);
+            #else
+                    dotProductTriple<VectorClass, double, FMA>(val0, val1, val2, theta, lh_ptn, df_ptn, ddf_ptn, block, nstates);
+            #endif
                 }
-                vc_prob_const += lh_ptn;
-                vc_df_const += df_ptn;
-                vc_ddf_const += ddf_ptn;
+                lh_ptn = abs(lh_ptn + VectorClass().load_a(&ptn_invar[ptn]));
+                
+                if (ptn < orig_nptn) {
+                    lh_ptn = 1.0 / lh_ptn;
+                    VectorClass df_frac = df_ptn * lh_ptn;
+                    VectorClass ddf_frac = ddf_ptn * lh_ptn;
+                    VectorClass freq;
+                    freq.load_a(&ptn_freq[ptn]);
+                    VectorClass tmp1 = df_frac * freq;
+                    VectorClass tmp2 = ddf_frac * freq;
+                    my_df += tmp1;
+                    my_ddf += nmul_add(tmp1, df_frac, tmp2);
+                } else {
+                    // ascertainment bias correction
+                    if (ptn+VectorClass::size() > nptn) {
+                        // cutoff the last entries if going beyond
+                        lh_ptn.cutoff(nptn-ptn);
+                        df_ptn.cutoff(nptn-ptn);
+                        ddf_ptn.cutoff(nptn-ptn);
+                    }
+                    vc_prob_const += lh_ptn;
+                    vc_df_const += df_ptn;
+                    vc_ddf_const += ddf_ptn;
+                }
+            } // FOR ptn
+        #ifdef _OPENMP
+        #pragma omp critical
+        #endif
+            {
+                all_df += my_df;
+                all_ddf += my_ddf;
+                if (isASC) {
+                    all_prob_const += vc_prob_const;
+                    all_df_const += vc_df_const;
+                    all_ddf_const += vc_ddf_const;
+                }
             }
-        } // FOR ptn
-    #ifdef _OPENMP
-    #pragma omp critical
-    #endif
-        {
-            all_df += my_df;
-            all_ddf += my_ddf;
-            if (isASC) {
-                all_prob_const += vc_prob_const;
-                all_df_const += vc_df_const;
-                all_ddf_const += vc_ddf_const;
-            }
-        }
+        } // else
     } // FOR thread
 
     // mark buffer as computed
     theta_computed = true;
 
-	df = horizontal_add(all_df);
-	ddf = horizontal_add(all_ddf);
+    if (isMixlen()) {
+        // mixed branch length model
+        for (i = 0; i < nmixlen; i++) {
+            df[i] = horizontal_add(all_dfvec[i]);
+            assert(!std::isnan(df[i]) && !std::isinf(df[i]) && "Numerical underflow for lh-derivative");
+        }
+        // NOTE: ddf now store log-likelihood instead!
+        *ddf = horizontal_add(all_ddf);
+        return;
+    }
 
-    if (!SAFE_NUMERIC && (std::isnan(df) || std::isinf(df)))
+    // normal joint branch length model
+    *df = horizontal_add(all_df);
+    *ddf = horizontal_add(all_ddf);
+
+    if (!SAFE_NUMERIC && (std::isnan(*df) || std::isinf(*df)))
         outError("Numerical underflow (lh-derivative). Run again with the safe likelihood kernel via `-safe` option");
 
-    assert(!std::isnan(df) && !std::isinf(df) && "Numerical underflow for lh-derivative");
+    assert(!std::isnan(*df) && !std::isinf(*df) && "Numerical underflow for lh-derivative");
 
-	if (isASC) {
+    if (isASC) {
         double prob_const = 0.0, df_const = 0.0, ddf_const = 0.0;
         prob_const = horizontal_add(all_prob_const);
         df_const = horizontal_add(all_df_const);
         ddf_const = horizontal_add(all_ddf_const);
-    	// ascertainment bias correction
-    	prob_const = 1.0 - prob_const;
-    	double df_frac = df_const / prob_const;
-    	double ddf_frac = ddf_const / prob_const;
-    	int nsites = aln->getNSite();
-    	df += nsites * df_frac;
-    	ddf += nsites *(ddf_frac + df_frac*df_frac);
+        // ascertainment bias correction
+        prob_const = 1.0 - prob_const;
+        double df_frac = df_const / prob_const;
+        double ddf_frac = ddf_const / prob_const;
+        int nsites = aln->getNSite();
+        *df += nsites * df_frac;
+        *ddf += nsites *(ddf_frac + df_frac*df_frac);
     }
-
 }
 
 

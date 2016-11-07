@@ -2339,7 +2339,7 @@ void PhyloTree::computeFuncDerv(double value, double &df, double &ddf) {
     current_it_back->length = value;
 //    double lh;
 //	lh = -computeLikelihoodDerv(current_it, (PhyloNode*) current_it_back->node, df, ddf);
-    computeLikelihoodDerv(current_it, (PhyloNode*) current_it_back->node, df, ddf);
+    computeLikelihoodDerv(current_it, (PhyloNode*) current_it_back->node, &df, &ddf);
 
 	df = -df;
     ddf = -ddf;

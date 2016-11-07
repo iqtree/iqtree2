@@ -472,6 +472,117 @@ double Optimization::minimizeNewton(double x1, double xguess, double x2, double 
 }
 
 /*****************************************************
+	Multi dimensional optimization with Newton Raphson
+	only applicable if 1st and 2nd derivatives are easy to compute
+*****************************************************/
+
+int matinv (double x[], int n, int m, double space[]);
+
+void Optimization::minimizeNewtonMulti(double *x1, double *xguess, double *x2, double xacc, int N, int maxNRStep)
+{
+	int i, step;
+    int N_2 = N*N;
+	double df[N_2], dx[N], dxold[N], f[N], space[N];
+	double temp, xh[N], xl[N], rts[N], rts_old[N];
+
+    for (i = 0; i < N; i++) {
+        rts[i] = xguess[i];
+        if (rts[i] < x1[i]) rts[i] = x1[i];
+        if (rts[i] > x2[i]) rts[i] = x2[i];
+    }
+    computeFuncDervMulti(rts, f, df);
+//    double score = targetFunk(rts-1);
+//    cout << "Newton step 0: " << score << endl;
+
+    bool stop = true;
+
+    for (i = 0; i < N; i++) {
+        if (!(fabs(f[i]) < xacc))
+            stop = false;
+        if (f[i] < 0.0) {
+            xl[i] = rts[i];
+            xh[i] = x2[i];
+        } else {
+            xh[i] = rts[i];
+            xl[i] = x1[i];
+        }
+        dx[i] = dxold[i] = fabs(xh[i]-xl[i]);
+    }
+
+    if (stop) {
+        memcpy(xguess, rts, sizeof(double)*N);
+        return;
+    }
+
+	for (step = 1; step <= maxNRStep; step++) {
+		memcpy(rts_old, rts, sizeof(double)*N);
+        stop = true;
+
+        // first compute inverse of hessian matrix
+        matinv(df, N, N, space);
+        // now take the product
+        for (i = 0; i < N; i++) {
+            space[i] = 0.0;
+            for (int k = 0; k < N; k++) {
+                space[i] += df[i*N+k] * f[k];
+            }
+        }
+
+        for (i = 0; i < N; i++) {
+            if (rts[i]-space[i] < xl[i] || rts[i]-space[i] > xh[i]) // out of bound
+            {
+                dxold[i]=dx[i];
+                dx[i]=0.5*(xh[i]-xl[i]);
+                rts[i]=xl[i]+dx[i];
+//                if (xl[i] != rts[i]) stop = false;
+            } else {
+                dxold[i] = dx[i];
+                dx[i] = space[i];
+                temp=rts[i];
+                rts[i] -= dx[i];
+//                if (temp != rts[i]) stop = false;
+            }
+            if (fabs(dx[i]) >= xacc && (step != maxNRStep)) {
+                stop = false;
+            } else {
+                rts[i] = rts_old[i];
+            }
+        }
+        if (stop) {
+            break;
+        }
+        computeFuncDervMulti(rts, f, df);
+
+//        double score = targetFunk(rts-1);
+//        cout << "Newton step " << step << ": " << score << endl;
+//        for (i = 0; i < N; i++) cout << "  " << rts[i];
+//        cout << endl;
+
+        stop = true;
+        for (i = 0; i < N; i++) {
+            if (!(fabs(f[i]) < xacc)) {
+                stop = false;
+            }
+            if (f[i] < 0.0)
+                xl[i] = rts[i];
+            else
+                xh[i] = rts[i];
+        }
+        if (stop)
+            break;
+	}
+
+    // copy returned x-value
+    memcpy(xguess, rts, sizeof(double)*N);
+
+    if (stop)
+        return;
+
+    cout << "Maximum number of iterations exceeded in minimizeNewtonMulti" << endl;
+}
+
+
+/*****************************************************
 	Multi dimensional optimization with BFGS method
 *****************************************************/
 

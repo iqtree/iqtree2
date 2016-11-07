@@ -142,6 +142,34 @@ void PhyloTreeMixlen::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool
     current_it_back = (PhyloNeighbor*) node2->findNeighbor(node1);
     assert(current_it_back);
 
+    int i;
+
+    theta_computed = false;
+
+    // BFGS method to simultaneously optimize all lengths per branch
+    // It is often better than the true Newton method (Numerical Recipes in C++, chap. 10.7)
+    double variables[mixlen+1];
+    double upper_bound[mixlen+1];
+    double lower_bound[mixlen+1];
+    bool bound_check[mixlen+1];
+    for (i = 0; i < mixlen; i++) {
+        lower_bound[i+1] = params->min_branch_length;
+        variables[i+1] = current_it->getLength(i);
+        upper_bound[i+1] = params->max_branch_length;
+        bound_check[i+1] = false;
+    }
+
+    double score = -minimizeMultiDimen(variables, mixlen, lower_bound, upper_bound, bound_check, params->min_branch_length);
+    for (i = 0; i < mixlen; i++) {
+        current_it->setLength(i, variables[i+1]);
+        current_it_back->setLength(i, variables[i+1]);
+    }
+    if (verbose_mode >= VB_DEBUG) {
+        cout << "Mixlen-LnL: " << score << endl;
+    }
+
+    /*
+        DEPRECATED EM algorithm
     size_t ptn, c;
     size_t nptn = aln->getNPattern();
     size_t nmix = model->getNMixtures();
@@ -196,6 +224,7 @@ void PhyloTreeMixlen::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool
     // reset ptn_freq
     ptn_freq_computed = false;
     computePtnFreq();
+    */
 
     if (clearLH) {
         node1->clearReversePartialLh(node2);
@@ -204,6 +233,58 @@ void PhyloTreeMixlen::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool
 
 }
 
+/**
+    return the number of dimensions
+*/
+int PhyloTreeMixlen::getNDim() { return mixlen; }
+
+
+/**
+    the target function which needs to be optimized
+    @param x the input vector x
+    @return the function value at x
+*/
+double PhyloTreeMixlen::targetFunk(double x[]) {
+    int i;
+    for (i = 0; i < mixlen; i++) {
+        current_it->setLength(i, x[i+1]);
+        current_it_back->setLength(i, x[i+1]);
+    }
+    return -computeLikelihoodBranch(current_it, (PhyloNode*)current_it_back->node);
+}
+
+double PhyloTreeMixlen::derivativeFunk(double x[], double dfx[]) {
+    int i;
+    for (i = 0; i < mixlen; i++) {
+        current_it->setLength(i, x[i+1]);
+        current_it_back->setLength(i, x[i+1]);
+    }
+    double df[mixlen], logl;
+    computeLikelihoodDerv(current_it, (PhyloNode*)current_it_back->node, df, &logl);
+    for (i = 0; i < mixlen; i++)
+        df[i] = -df[i];
+    memcpy(dfx+1, df, sizeof(double)*mixlen);
+    return -logl;
+}
+
+//--- DEPRECATED ----
+/*
+void PhyloTreeMixlen::computeFuncDervMulti(double *value, double *df, double *ddf) {
+    int i;
+    for (i = 0; i < mixlen; i++) {
+        current_it->setLength(i, value[i]);
+        current_it_back->setLength(i, value[i]);
+    }
+    computeLikelihoodDerv(current_it, (PhyloNode*)current_it_back->node, df, ddf);
+
+    for (i = 0; i < mixlen; i++) {
+        df[i] = -df[i];
+    }
+    int mixlen2 = mixlen * mixlen;
+    for (i = 0; i < mixlen2; i++)
+        ddf[i] = -ddf[i];
+}
+*/
 
 double PhyloTreeMixlen::optimizeAllBranches(int my_iterations, double tolerance, int maxNRStep) {
 
@@ -258,8 +339,10 @@ void PhyloTreeMixlen::printBranchLength(ostream &out, int brtype, bool print_sla
     }
 }
 
-//------ TODO: this function is not vector-aware!
 
+//------ DEPRECATED
+
+/*
 void PhyloTreeMixlen::computeFuncDerv(double value, double &df, double &ddf) {
     current_it->setLength(cur_mixture, value);
     current_it_back->setLength(cur_mixture, value);
@@ -422,3 +505,4 @@ void PhyloTreeMixlen::computeFuncDerv(double value, double &df, double &ddf) {
 
 //    return lh;
 }
+*/
