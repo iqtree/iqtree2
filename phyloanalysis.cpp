@@ -2674,11 +2674,14 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
 
 
         // allocate heterotachy tree if neccessary
-        
         int pos = params.model_name.find("+H");
+        if (params.model_name.find("*H") != string::npos)
+            pos = params.model_name.find("*H");
+
         if (params.num_mixlen > 1) {
             tree = new PhyloTreeMixlen(alignment, params.num_mixlen);
         } else if (pos != string::npos) {
+            /*
             int end_pos;
             int num_mixlen = -1;
             if (params.model_name.length() > pos+2) {
@@ -2710,7 +2713,8 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
                 if (num_mixlen != count_mix)
                     outError("Number of mixture categories in MIX{...} and +H do not match");
             }
-            tree = new PhyloTreeMixlen(alignment, num_mixlen);
+            */
+            tree = new PhyloTreeMixlen(alignment, 0);
         } else
             tree = new IQTree(alignment);
 	}

@@ -17,6 +17,7 @@ ratemeyerhaeseler.cpp
 ratekategory.cpp
 ratefree.cpp
 ratefreeinvar.cpp
+rateheterotachy.cpp
 modelcodon.cpp
 modelmorphology.cpp
 modelmixture.cpp

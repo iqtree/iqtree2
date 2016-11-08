@@ -355,6 +355,7 @@ class PhyloTree : public MTree, public Optimization, public CheckpointFactory {
 	friend class RateKategory;
     friend class ModelMixture;
     friend class RateFree;
+    friend class RateHeterotachy;
     friend class PhyloTreeMixlen;
     friend class ModelFactoryMixlen;
     friend class MemSlotVector;

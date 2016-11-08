@@ -1497,16 +1497,20 @@ double ModelMixture::optimizeWithEM(double gradient_epsilon) {
     model_fac->site_rate = site_rate;
     tree->model_factory = model_fac;
     tree->setParams(phylo_tree->params);
-    double score;
+    double prev_score = -DBL_MAX, score;
         
-    // int num_steps = (getNDim()+1)*3;
-    int num_steps = 100000; //SC
+     int num_steps = (getNDim()+1)*3;
+//    int num_steps = 100000; //SC
 
     // EM algorithm loop described in Wang, Li, Susko, and Roger (2008)
     for (int step = 0; step < num_steps; step++) {
         // first compute _pattern_lh_cat
         score = phylo_tree->computePatternLhCat(WSL_MIXTURE);
-        
+
+        if (score < prev_score + gradient_epsilon)
+            break;
+        prev_score = score;
+
         memset(new_prop, 0, nmix*sizeof(double));
                 
         // E-step
@@ -1607,12 +1611,17 @@ double ModelMixture::optimizeParameters(double gradient_epsilon) {
 	optimizing_submodels = false;
 	if (getNDim() == 0) return score;
 	// now rescale Q matrices to have proper interpretation of branch lengths
+
 	double sum;
 	int i, ncategory = size();
-	for (i = 0, sum = 0.0; i < ncategory; i++)
+    bool all_prop_one = true;
+	for (i = 0, sum = 0.0; i < ncategory; i++) {
 		sum += prop[i]*at(i)->total_num_subst;
+        if (prop[i] != 1.0)
+            all_prop_one = false;
+    }
 //    sum += phylo_tree->getRate()->getPInvar();
-    if (fabs(sum-1.0) > 1e-6) {
+    if (fabs(sum-1.0) > 1e-6 && !all_prop_one) {
         for (i = 0; i < ncategory; i++)
             at(i)->total_num_subst /= sum;
         decomposeRateMatrix();

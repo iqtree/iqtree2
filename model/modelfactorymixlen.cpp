@@ -13,10 +13,14 @@
 
 ModelFactoryMixlen::ModelFactoryMixlen(Params &params, PhyloTree *tree, ModelsBlock *models_block) :   
     ModelFactory(params, tree, models_block) {
-    if (!model->isMixture())
-        outError("Model is not mixture");
-    if (((PhyloTreeMixlen*)tree)->mixlen != model->getNMixtures())
-        outError("#mixture categories and #mixture branch lengths do not match");
+    if (!tree->isMixlen()) {
+        cerr << "ERROR: Please add '-mixlen " << site_rate->getNRate() << "' option into the command line" << endl;
+        outError("Sorry for the inconvience, please rerun IQ-TREE with option above");
+    }
+    if (tree->getMixlen() != site_rate->getNRate()) {
+        ((PhyloTreeMixlen*)tree)->setMixlen(site_rate->getNRate());
+//        outError("#heterotachy classes and #mixture branch lengths do not match");
+    }
 }
 
 double ModelFactoryMixlen::optimizeParameters(int fixed_len, bool write_info, double logl_epsilon, double gradient_epsilon) {

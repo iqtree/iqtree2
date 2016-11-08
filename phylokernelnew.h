@@ -784,11 +784,11 @@ void PhyloTree::computePartialInfo(TraversalInfo &info, VectorClass* buffer) {
     size_t ncat_mix = (model_factory->fused_mix_rate) ? ncat : ncat*model->getNMixtures();
     size_t block = nstates * ncat_mix;
     size_t tip_block = nstates * model->getNMixtures();
-    size_t mix_id[ncat_mix], mix_addr_nstates[ncat_mix], mix_addr[ncat_mix];
+    size_t cat_id[ncat_mix], mix_addr_nstates[ncat_mix], mix_addr[ncat_mix];
     size_t denom = (model_factory->fused_mix_rate) ? 1 : ncat;
     for (c = 0; c < ncat_mix; c++) {
         size_t m = c/denom;
-        mix_id[c] = m;
+        cat_id[c] = c%ncat;
         mix_addr_nstates[c] = m*nstates;
         mix_addr[c] = mix_addr_nstates[c]*nstates;
     }
@@ -807,7 +807,7 @@ void PhyloTree::computePartialInfo(TraversalInfo &info, VectorClass* buffer) {
             VectorClass *echild_ptr = (VectorClass*)echild;
             // precompute information buffer
             for (c = 0; c < ncat_mix; c++) {
-                VectorClass len_child = site_rate->getRate(c%ncat) * child->getLength(mix_id[c]);
+                VectorClass len_child = site_rate->getRate(cat_id[c]) * child->getLength(cat_id[c]);
                 double *eval_ptr = eval + mix_addr_nstates[c];
                 double *evec_ptr = evec + mix_addr[c];
                 for (i = 0; i < nstates/VectorClass::size(); i++) {
@@ -860,7 +860,7 @@ void PhyloTree::computePartialInfo(TraversalInfo &info, VectorClass* buffer) {
             // precompute information buffer
             double *echild_ptr = echild;
             for (c = 0; c < ncat_mix; c++) {
-                double len_child = site_rate->getRate(c%ncat) * child->getLength(mix_id[c]);
+                double len_child = site_rate->getRate(cat_id[c]) * child->getLength(cat_id[c]);
                 double *eval_ptr = eval + mix_addr_nstates[c];
                 double *evec_ptr = evec + mix_addr[c];
                 for (i = 0; i < nstates; i++) {
@@ -1984,11 +1984,11 @@ void PhyloTree::computeLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, Phyl
 
 
 
-    size_t mix_addr_nstates[ncat_mix], mix_addr[ncat_mix], mix_id[ncat_mix];
+    size_t mix_addr_nstates[ncat_mix], mix_addr[ncat_mix], cat_id[ncat_mix];
     size_t denom = (model_factory->fused_mix_rate) ? 1 : ncat;
     for (c = 0; c < ncat_mix; c++) {
         size_t m = c/denom;
-        mix_id[c] = m;
+        cat_id[c] = c%ncat;
         mix_addr_nstates[c] = m*nstates;
         mix_addr[c] = mix_addr_nstates[c]*nstates;
     }
@@ -2027,9 +2027,9 @@ void PhyloTree::computeLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, Phyl
             size_t loop_size = nstates/VectorClass::size();
             for (c = 0; c < ncat_mix; c++) {
                 size_t m = c/denom;
-                double len = dad_branch->getLength(m);
-                VectorClass *eval_ptr = (VectorClass*)(eval + mix_addr_nstates[c]);
                 size_t mycat = c%ncat;
+                double len = dad_branch->getLength(mycat);
+                VectorClass *eval_ptr = (VectorClass*)(eval + mix_addr_nstates[c]);
                 double prop = site_rate->getProp(mycat) * model->getMixtureWeight(m);
                 double myrate = site_rate->getRate(mycat);
                 for (i = 0; i < loop_size; i++) {
@@ -2051,7 +2051,7 @@ void PhyloTree::computeLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, Phyl
                 size_t mycat = c%ncat;
                 double prop = site_rate->getProp(mycat) * model->getMixtureWeight(m);
                 size_t addr = c*nstates;
-                double len = dad_branch->getLength(m);
+                double len = dad_branch->getLength(mycat);
                 for (i = 0; i < nstates; i++) {
                     double cof = eval_ptr[i]*site_rate->getRate(mycat);
                     double val = exp(cof*len) * prop;
@@ -2070,8 +2070,8 @@ void PhyloTree::computeLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, Phyl
     VectorClass *all_dfvec = NULL;
 
     size_t nmixlen = getMixlen();
-
     if (isMixlen()) {
+        assert(nmixlen == ncat);
         all_dfvec = (VectorClass*)buffer_partial_lh_ptr;
         buffer_partial_lh_ptr += (nmixlen)*VectorClass::size();
         for (i = 0; i < nmixlen; i++) all_dfvec[i] = 0.0;
@@ -2110,7 +2110,7 @@ void PhyloTree::computeLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, Phyl
                 double *val0_ptr = val0;
                 double *val1_ptr = val1;
                 for (c = 0; c < ncat_mix; c++) {
-                    i = mix_id[c];
+                    i = cat_id[c];
                 #ifdef KERNEL_FIX_STATES
                     dotProductPairAdd<VectorClass, double, nstates, FMA>(val0_ptr, val1_ptr, theta, lh_ptn, df_ptn[i]);
                 #else
@@ -2349,7 +2349,7 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
                 mix_addr_nstates[c] = m*nstates;
                 mix_addr[c] = mix_addr_nstates[c]*nstates;
                 VectorClass *eval_ptr = (VectorClass*)(eval + mix_addr_nstates[c]);
-                double len = site_rate->getRate(mycat)*dad_branch->getLength(m);
+                double len = site_rate->getRate(mycat)*dad_branch->getLength(mycat);
                 double prop = site_rate->getProp(mycat) * model->getMixtureWeight(m);
                 VectorClass *this_val = (VectorClass*)(val + c*nstates);
                 for (i = 0; i < loop_size; i++)
@@ -2362,7 +2362,7 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
                 mix_addr_nstates[c] = m*nstates;
                 mix_addr[c] = mix_addr_nstates[c]*nstates;
                 double *eval_ptr = eval + mix_addr_nstates[c];
-                double len = site_rate->getRate(mycat)*dad_branch->getLength(m);
+                double len = site_rate->getRate(mycat)*dad_branch->getLength(mycat);
                 double prop = site_rate->getProp(mycat) * model->getMixtureWeight(m);
                 double *this_val = val + c*nstates;
                 for (i = 0; i < nstates; i++)
@@ -2800,7 +2800,7 @@ double PhyloTree::computeLikelihoodFromBufferGenericSIMD()
                 VectorClass *eval_ptr = (VectorClass*)(eval + mix_addr_nstates[c]);
                 size_t mycat = c%ncat;
                 double prop = site_rate->getProp(mycat) * model->getMixtureWeight(m);
-                double len = site_rate->getRate(mycat) * current_it->getLength(m);
+                double len = site_rate->getRate(mycat) * current_it->getLength(mycat);
                 for (i = 0; i < loop_size; i++) {
                     vc_val0[i] = exp(eval_ptr[i] * len) * prop;
                 }
@@ -2815,7 +2815,7 @@ double PhyloTree::computeLikelihoodFromBufferGenericSIMD()
                 size_t addr = c*nstates;
                 for (i = 0; i < nstates; i++) {
                     double cof = eval_ptr[i]*site_rate->getRate(mycat);
-                    double val = exp(cof*current_it->getLength(m)) * prop;
+                    double val = exp(cof*current_it->getLength(mycat)) * prop;
                     val0[addr+i] = val;
                 }
             }

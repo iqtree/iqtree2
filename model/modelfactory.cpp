@@ -35,6 +35,7 @@
 #include "ratekategory.h"
 #include "ratefree.h"
 #include "ratefreeinvar.h"
+#include "rateheterotachy.h"
 #include "ngs.h"
 #include <string>
 #include "timeutil.h"
@@ -394,40 +395,54 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
         posG = posG2;
         fused_mix_rate = true;
     }
-//	if (posG == string::npos) {
-//		posG = rate_str.find("*G");
-//		if (posG != string::npos)
-//			fused_mix_rate = true;
-//	}
+
 	string::size_type posR = rate_str.find("+R"); // FreeRate model
 	string::size_type posR2 = rate_str.find("*R"); // FreeRate model
+
+    if (posG != string::npos && (posR != string::npos || posR2 != string::npos)) {
+        outWarning("Both Gamma and FreeRate models were specified, continue with FreeRate model");
+        posG = string::npos;
+        fused_mix_rate = false;
+    }
+
     if (posR != string::npos && posR2 != string::npos) {
         cout << "NOTE: both +R and *R were specified, continue with " 
             << ((posR < posR2)? rate_str.substr(posR,2) : rate_str.substr(posR2,2)) << endl;
     }
+
     if (posR2 != string::npos && posR2 < posR) {
         posR = posR2;
         fused_mix_rate = true;
     }
-    
-//	if (posR == string::npos) {
-//		posR = rate_str.find("*R");
-//		if (posR != string::npos)
-//			fused_mix_rate = true;
-//	}
-	if (posG != string::npos && posR != string::npos) {
-        if (posG == posG2 && posR != posR2) {
-            outWarning("Both Gamma and FreeRate models were specified, continue with Gamma model because *G has higher priority than +R");
-            posR = string::npos;
-        } else {
-            outWarning("Both Gamma and FreeRate models were specified, continue with FreeRate model");
-            posG = string::npos;
-        }
+
+	string::size_type posH = rate_str.find("+H"); // heterotachy model
+	string::size_type posH2 = rate_str.find("*H"); // heterotachy model
+
+    if (posG != string::npos && (posH != string::npos || posH2 != string::npos)) {
+        outWarning("Both Gamma and heterotachy models were specified, continue with heterotachy model");
+        posG = string::npos;
+        fused_mix_rate = false;
     }
+
+    if (posR != string::npos && (posH != string::npos || posH2 != string::npos)) {
+        outWarning("Both FreeRate and heterotachy models were specified, continue with heterotachy model");
+        posR = string::npos;
+        fused_mix_rate = false;
+    }
+
+    if (posH != string::npos && posH2 != string::npos) {
+        cout << "NOTE: both +H and *H were specified, continue with "
+            << ((posH < posH2)? rate_str.substr(posH,2) : rate_str.substr(posH2,2)) << endl;
+    }
+    if (posH2 != string::npos && posH2 < posH) {
+        posH = posH2;
+        fused_mix_rate = true;
+    }
+
 	string::size_type posX;
 	/* create site-rate heterogeneity */
 	int num_rate_cats = params.num_rate_cats;
-	if (fused_mix_rate) num_rate_cats = model->getNMixtures();
+	if (fused_mix_rate && model->isMixture()) num_rate_cats = model->getNMixtures();
 	double gamma_shape = params.gamma_shape;
 	double p_invar_sites = params.p_invar_sites;
 	string freerate_params = "";
@@ -479,9 +494,33 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 		} else if (rate_str.length() > posR+2+end_pos && rate_str[posR+2+end_pos] != '+')
 			outError("Wrong model name ", rate_str);
 	}
+
+	string heterotachy_params = "";
+	if (posH != string::npos) {
+		// Heterotachy model
+		int end_pos = 0;
+		if (rate_str.length() > posH+2 && isdigit(rate_str[posH+2])) {
+			num_rate_cats = convert_int(rate_str.substr(posH+2).c_str(), end_pos);
+				if (num_rate_cats < 1) outError("Wrong number of rate categories");
+        } else {
+            if (!model->isMixture() || !fused_mix_rate)
+                outError("Please specify number of heterotachy classes (e.g., +H2)");
+        }
+		if (rate_str.length() > posH+2+end_pos && rate_str[posH+2+end_pos] == OPEN_BRACKET) {
+			close_bracket = rate_str.find(CLOSE_BRACKET, posH);
+			if (close_bracket == string::npos)
+				outError("Close bracket not found in ", rate_str);
+			heterotachy_params = rate_str.substr(posH+3+end_pos, close_bracket-posH-3-end_pos).c_str();
+		} else if (rate_str.length() > posH+2+end_pos && rate_str[posH+2+end_pos] != '+')
+			outError("Wrong model name ", rate_str);
+	}
+
+
 	if (rate_str.find('+') != string::npos || rate_str.find('*') != string::npos) {
 		//string rate_str = model_str.substr(pos);
-		if (posI != string::npos && posG != string::npos) {
+        if (posH != string::npos) {
+			site_rate = new RateHeterotachy(num_rate_cats, heterotachy_params, !fused_mix_rate, tree);
+		} else if (posI != string::npos && posG != string::npos) {
 			site_rate = new RateGammaInvar(num_rate_cats, gamma_shape, params.gamma_median,
 					p_invar_sites, params.optimize_alg_gammai, tree, false);
 		} else if (posI != string::npos && posR != string::npos) {
@@ -552,8 +591,14 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 	} 	
 
 	if (fused_mix_rate) {
-		if (!model->isMixture())
-			outError("Model is not a mixture model");
+		if (!model->isMixture()) {
+			cout << endl << "NOTE: Using mixture model with unlinked " << model_str << " parameters" << endl;
+            string model_list = model_str;
+            delete model;
+            for (int i = 1; i < site_rate->getNRate(); i++)
+                model_list += "," + model_str;
+            model = new ModelMixture(params.model_name, model_str, model_list, models_block, freq_type, freq_params, tree, optimize_mixmodel_weight);
+        }
 		if (model->getNMixtures() != site_rate->getNRate())
 			outError("Mixture model and site rate model do not have the same number of categories");
 		ModelMixture *mmodel = (ModelMixture*)model;

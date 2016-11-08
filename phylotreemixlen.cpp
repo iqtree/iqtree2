@@ -18,7 +18,7 @@ PhyloTreeMixlen::PhyloTreeMixlen() : IQTree() {
 }
 
 PhyloTreeMixlen::PhyloTreeMixlen(Alignment *aln, int mixlen) : IQTree(aln) {
-	cout << "Initializing heterotachy model with " << mixlen << " mixture branch lengths" << endl;
+	cout << "Initializing heterotachy mixture branch lengths" << endl;
     cur_mixture = -1;
     relative_rate = NULL;
     setMixlen(mixlen);
@@ -46,24 +46,46 @@ void PhyloTreeMixlen::initializeMixBranches(PhyloNode *node, PhyloNode *dad) {
     if (!node) {
         node = (PhyloNode*)root;
         // exit if already initialized
-        if (!((PhyloNeighborMixlen*)root->neighbors[0])->lengths.empty())
-            return;
+//        if (!((PhyloNeighborMixlen*)root->neighbors[0])->lengths.empty())
+//            return;
     }
     int i;
     FOR_NEIGHBOR_IT(node, dad, it) {
         // assign length of left branch
         PhyloNeighborMixlen *nei = (PhyloNeighborMixlen*)(*it);
-        nei->lengths.resize(mixlen, nei->length);
-        assert(nei->length >= 0);
-        for (i = 0; i < mixlen; i++)
-            nei->lengths[i] = max(params->min_branch_length, nei->length * relative_rate->getRate(i));
+        PhyloNeighborMixlen *back_nei = (PhyloNeighborMixlen*)((*it)->node->findNeighbor(node));
+        if (nei->lengths.empty()) {
+            // no branch lengths, initialize with relative rates
+            assert(nei->length >= 0);
+            nei->lengths.resize(mixlen, nei->length);
+            back_nei->lengths.resize(mixlen, back_nei->length);
+            for (i = 0; i < mixlen; i++) {
+                nei->lengths[i] = back_nei->lengths[i] = max(params->min_branch_length, nei->length * relative_rate->getRate(i));
+            }
+        } else if (nei->lengths.size() > mixlen) {
+            // too many lengths, cut down
+            nei->lengths.resize(mixlen);
+            back_nei->lengths.resize(mixlen);
+        } else {
+            // too few lengths, add more
+            int cur = nei->lengths.size();
+            nei->lengths.resize(mixlen, nei->length);
+            back_nei->lengths.resize(mixlen, back_nei->length);
+            double avglen = 0.0;
+            for (i = 0; i < cur; i++)
+                avglen += nei->lengths[i];
+            avglen /= cur;
+            for (i = cur; i < mixlen; i++) {
+                nei->lengths[i] = back_nei->lengths[i] = max(params->min_branch_length, avglen * relative_rate->getRate(i));
+            }
+        }
 
-        // assign length of right branch
-        nei = (PhyloNeighborMixlen*)((*it)->node->findNeighbor(node));
-        nei->lengths.resize(mixlen, nei->length);
-        for (i = 0; i < mixlen; i++)
-            nei->lengths[i] = max(params->min_branch_length, nei->length * relative_rate->getRate(i));
-            
+        double mean_len = 0.0;
+        for (int i = 0; i < mixlen; i++)
+            mean_len += nei->lengths[i];
+        mean_len /= mixlen;
+        nei->length = back_nei->length = mean_len;
+
         // recursive call
         initializeMixBranches((PhyloNode*)(*it)->node, node);
     }
@@ -86,54 +108,53 @@ void PhyloTreeMixlen::assignMeanMixBranches(Node *node, Node *dad) {
 }
 
 void PhyloTreeMixlen::initializeMixlen(double tolerance) {
-    if (((PhyloNeighborMixlen*)root->neighbors[0])->lengths.empty()) {
-        // initialize mixture branch lengths if empty
+    // initialize mixture branch lengths if empty
 
-        if (!relative_rate) {
-            RateHeterogeneity *saved_rate = getRate();
-            bool saved_fused_mix_rate = model_factory->fused_mix_rate;
+    if (!relative_rate) {
+//        RateHeterogeneity *saved_rate = getRate();
+//        bool saved_fused_mix_rate = model_factory->fused_mix_rate;
 
-            // create new rate model
-            // random alpha
-//            relative_rate = new RateGamma(mixlen, 0.0, params->gamma_median, this);
-            relative_rate = new RateFree(mixlen, params->gamma_shape, "", true, params->optimize_alg, this);
-            relative_rate->setTree(this);
-            
-            // setup new rate model
-            setRate(relative_rate);
-            model_factory->site_rate = relative_rate;
-            if (getModel()->isMixture()) {
-                model_factory->fused_mix_rate = true;
-                setLikelihoodKernel(sse, num_threads);
-            }
-
-            // optimize rate model
-            double tree_lh = relative_rate->optimizeParameters(tolerance);
-            // 2016-07-22: BUGFIX should rescale rates
-            relative_rate->rescaleRates();
-            cout << "tree_lh = " << tree_lh << endl;
-            if (verbose_mode >= VB_MED)
-                relative_rate->writeInfo(cout);
-            // restore rate model
-            setRate(saved_rate);
-            model_factory->site_rate = saved_rate;
-            model_factory->fused_mix_rate = saved_fused_mix_rate;
-            if (getModel()->isMixture()) {
-                setLikelihoodKernel(sse, num_threads);
-                ModelMixture *mm = (ModelMixture*)getModel();
-                double pinvar = site_rate->getPInvar();
-                if (!mm->fix_prop)
-                    for (int i = 0; i < mm->getNMixtures(); i++)
-                        mm->prop[i] = relative_rate->getProp(i)*(1.0-pinvar);
-            }
-            
-        }
+        // create new rate model
+        // random alpha
+        relative_rate = new RateGamma(mixlen, 0.0, params->gamma_median, this);
+        /*
+        relative_rate = new RateFree(mixlen, params->gamma_shape, "", true, params->optimize_alg, this);
+        relative_rate->setTree(this);
         
-        // assign branch length from rate model
-        initializeMixBranches();
-        clearAllPartialLH();
-    }
+        // setup new rate model
+        setRate(relative_rate);
+        model_factory->site_rate = relative_rate;
+        if (getModel()->isMixture()) {
+            model_factory->fused_mix_rate = true;
+            setLikelihoodKernel(sse, num_threads);
+        }
 
+        // optimize rate model
+        double tree_lh = relative_rate->optimizeParameters(tolerance);
+        // 2016-07-22: BUGFIX should rescale rates
+        relative_rate->rescaleRates();
+        cout << "tree_lh = " << tree_lh << endl;
+        if (verbose_mode >= VB_MED)
+            relative_rate->writeInfo(cout);
+        // restore rate model
+        setRate(saved_rate);
+        model_factory->site_rate = saved_rate;
+        model_factory->fused_mix_rate = saved_fused_mix_rate;
+        if (getModel()->isMixture()) {
+            setLikelihoodKernel(sse, num_threads);
+            ModelMixture *mm = (ModelMixture*)getModel();
+            double pinvar = site_rate->getPInvar();
+            if (!mm->fix_prop)
+                for (int i = 0; i < mm->getNMixtures(); i++)
+                    mm->prop[i] = relative_rate->getProp(i)*(1.0-pinvar);
+        }
+        */
+        
+    }
+    
+    // assign branch length from rate model
+    initializeMixBranches();
+    clearAllPartialLH();
 }
 
 void PhyloTreeMixlen::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool clearLH, int maxNRStep) {
@@ -250,7 +271,9 @@ double PhyloTreeMixlen::targetFunk(double x[]) {
         current_it->setLength(i, x[i+1]);
         current_it_back->setLength(i, x[i+1]);
     }
-    return -computeLikelihoodBranch(current_it, (PhyloNode*)current_it_back->node);
+
+//    return -computeLikelihoodBranch(current_it, (PhyloNode*)current_it_back->node);
+    return -computeLikelihoodFromBuffer();
 }
 
 double PhyloTreeMixlen::derivativeFunk(double x[], double dfx[]) {
