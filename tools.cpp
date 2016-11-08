@@ -3212,7 +3212,10 @@ void parseArg(int argc, char *argv[], Params &params) {
     
     if (params.do_au_test && params.topotest_replicates == 0)
         outError("For AU test please please specify number of bootstrap replicates via -zb option");
-    
+
+    if (params.lh_mem_save == LM_MEM_SAVE && params.partition_file)
+        outError("-mem option does not work with partition models yet");
+
     if (!params.out_prefix) {
     	if (params.eco_dag_file)
     		params.out_prefix = params.eco_dag_file;
@@ -3481,9 +3484,9 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -zb <#replicates>    Performing BP,KH,SH,ELW tests for trees passed via -z" << endl
             << "  -zw                  Also performing weighted-KH and weighted-SH tests" << endl
             << "  -au                  Also performing approximately unbiased (AU) test" << endl
-            << endl << "ANCESTRAL SEQUENCE RECONSTRUCTION:" << endl
-            << "  -asr                 Compute ancestral states by marginal reconstruction" << endl
-            << "  -asr-min <prob>      Min probability to assign ancestral sequence (default: 0.95)" << endl
+//            << endl << "ANCESTRAL SEQUENCE RECONSTRUCTION:" << endl
+//            << "  -asr                 Compute ancestral states by marginal reconstruction" << endl
+//            << "  -asr-min <prob>      Min probability to assign ancestral sequence (default: 0.95)" << endl
 //            << "  -wja                 Write ancestral sequences by joint reconstruction" << endl
 
 
