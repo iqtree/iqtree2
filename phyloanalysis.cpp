@@ -1798,10 +1798,10 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 
         uint64_t mem_required = iqtree.getMemoryRequired();
 
-        if (mem_required >= total_mem*0.9) {
+        if (mem_required >= total_mem*0.95 && !iqtree.isSuperTree()) {
             // switch to memory saving mode
             if (params.lh_mem_save != LM_MEM_SAVE) {
-                params.max_mem_size = (total_mem*0.9)/mem_required;
+                params.max_mem_size = (total_mem*0.95)/mem_required;
                 params.lh_mem_save = LM_MEM_SAVE;
                 mem_required = iqtree.getMemoryRequired();
                 cout << "NOTE: Switching to memory saving mode using " << (mem_required / 1073741824.0) << " GB ("
@@ -1813,10 +1813,10 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
                 params.max_mem_size = 0.0;
                 mem_required = iqtree.getMemoryRequired();
             }
-            if (mem_required >= total_mem) {
-                cerr << "ERROR: Your RAM is below minimum requirement of " << (mem_required / 1073741824.0) << " GB RAM" << endl;
-                outError("Memory saving mode cannot work, switch to another computer!!!");
-            }
+        }
+        if (mem_required >= total_mem) {
+            cerr << "ERROR: Your RAM is below minimum requirement of " << (mem_required / 1073741824.0) << " GB RAM" << endl;
+            outError("Memory saving mode cannot work, switch to another computer!!!");
         }
 
 //#if defined __APPLE__ || defined __MACH__
