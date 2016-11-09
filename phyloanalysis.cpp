@@ -51,6 +51,7 @@
 #include "whtest_wrapper.h"
 #include "model/partitionmodel.h"
 #include "model/modelmixture.h"
+#include "model/modelfactorymixlen.h"
 //#include "guidedbootstrap.h"
 #include "model/modelset.h"
 #include "timeutil.h"
@@ -437,6 +438,14 @@ void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh, 
 	out << "Total tree length (sum of branch lengths): " << totalLen << endl;
 	double totalLenInternal = tree.treeLengthInternal(epsilon);
 	out << "Sum of internal branch lengths: " << totalLenInternal << " (" << totalLenInternal*100.0 / totalLen << "% of tree length)" << endl;
+    if (tree.isMixlen()) {
+        DoubleVector lenvec;
+        tree.treeLengths(lenvec);
+        out << "Class tree lengths: ";
+        for (int i = 0; i < lenvec.size(); i++)
+            out << " " << lenvec[i];
+        out << endl;
+    }
 //	out << "Sum of internal branch lengths divided by total tree length: "
 //			<< totalLenInternal / totalLen << endl;
 	out << endl;
@@ -476,6 +485,8 @@ void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh, 
     if (tree.isSuperTree() && params.partition_type == 0)
         out	<< "NOTE: Branch lengths are weighted average over all partitions" << endl
             << "      (weighted by the number of sites in the partitions)" << endl;
+    if (tree.isMixlen())
+        out << "NOTE: Branch lengths are weighted average over heterotachy classes" << endl;
 
     bool is_codon = tree.aln->seq_type == SEQ_CODON;
     if (tree.isSuperTree()) {
@@ -519,7 +530,10 @@ void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh, 
 	//tree.setExtendedFigChar();
 	tree.drawTree(out, WT_BR_SCALE, epsilon);
         
-    out << "Tree in newick format:" << endl << endl;
+    out << "Tree in newick format:";
+    if (tree.isMixlen())
+        out << " (class branch lengths are separated by '/')";
+    out << endl << endl;
 
 	tree.printTree(out, WT_BR_LEN | WT_BR_LEN_FIXED_WIDTH | WT_SORT_TAXA);
 
@@ -1881,6 +1895,9 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
         cout << "CHECKPOINT: Model parameters restored, LogL: " << iqtree.getCurScore() << endl;
     } else {
         initTree = iqtree.optimizeModelParameters(true, initEpsilon);
+        if (iqtree.isMixlen())
+            ((ModelFactoryMixlen*)iqtree.getModelFactory())->sortClassesByTreeLength();
+
         iqtree.saveCheckpoint();
         iqtree.getModelFactory()->saveCheckpoint();
         iqtree.getCheckpoint()->putBool("finishedModelInit", true);

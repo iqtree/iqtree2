@@ -19,6 +19,7 @@ class PhyloTree;
 */
 class RateHeterotachy: public RateHeterogeneity {
 
+    friend class ModelFactoryMixlen;
 
 public:
 	/**
@@ -27,7 +28,7 @@ public:
         @param sorted_rates TRUE to sort the rate in increasing order
 		@param tree associated phylogenetic tree
 	*/
-    RateHeterotachy(int ncat, string params, bool sorted_rates, PhyloTree *tree);
+    RateHeterotachy(int ncat, string params, PhyloTree *tree);
 
 	/**
 		destructor
@@ -81,6 +82,13 @@ public:
 	virtual double getProp(int category) { return prop[category]; }
 
 	/**
+		set the proportion of a specified category.
+		@param category category ID from 0 to #category-1
+		@return the proportion of the specified category
+	*/
+	virtual void setProp(int category, double value) { prop[category] = value; }
+
+	/**
 		optimize parameters. Default is to optimize gamma shape
 		@return the best likelihood
 	*/
@@ -125,7 +133,7 @@ protected:
     double *prop;
 
 	/** TRUE to fix parameters */
-	bool fix_params;
+	int fix_params;
 
     /** true to sort rate in increasing order, false otherwise */
     bool sorted_rates;

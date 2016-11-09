@@ -885,3 +885,7 @@ void ModelGTR::setEigenvectors(double *eigenvectors)
     this->eigenvectors = eigenvectors;
 }
 
+void ModelGTR::setInverseEigenvectors(double *inv_eigenvectors)
+{
+    this->inv_eigenvectors = inv_eigenvectors;
+}

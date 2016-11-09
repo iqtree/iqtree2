@@ -1409,8 +1409,9 @@ double ModelMixture::optimizeWeights() {
     double *ratio_prop = aligned_alloc<double>(nmix);
 
     // EM algorithm loop described in Wang, Li, Susko, and Roger (2008)
+    int max_step = nmix*2;
 
-    for (int step = 0; step < 100000; step++) {
+    for (int step = 0; step < max_step; step++) {
         // E-step
 
         if (step > 0) {

@@ -10,6 +10,7 @@
 #include "phylonodemixlen.h"
 #include "model/modelmixture.h"
 #include "model/ratefree.h"
+#include "MPIHelper.h"
 
 PhyloTreeMixlen::PhyloTreeMixlen() : IQTree() {
 	mixlen = 1;
@@ -39,6 +40,17 @@ Node* PhyloTreeMixlen::newNode(int node_id, int node_name) {
 
 void PhyloTreeMixlen::setMixlen(int mixlen) {
 	this->mixlen = mixlen;
+}
+
+void PhyloTreeMixlen::treeLengths(DoubleVector &lenvec, Node *node, Node *dad) {
+    if (lenvec.empty())
+        lenvec.resize(mixlen, 0.0);
+    if (!node) node = root;
+    FOR_NEIGHBOR_IT(node, dad, it) {
+        treeLengths(lenvec, (*it)->node, node);
+        for (int i = 0; i < mixlen; i++)
+            lenvec[i] += (*it)->getLength(i);
+    }
 }
 
 
@@ -82,8 +94,8 @@ void PhyloTreeMixlen::initializeMixBranches(PhyloNode *node, PhyloNode *dad) {
 
         double mean_len = 0.0;
         for (int i = 0; i < mixlen; i++)
-            mean_len += nei->lengths[i];
-        mean_len /= mixlen;
+            mean_len += nei->lengths[i] * site_rate->getProp(i);
+//        mean_len /= mixlen;
         nei->length = back_nei->length = mean_len;
 
         // recursive call
@@ -97,8 +109,8 @@ void PhyloTreeMixlen::assignMeanMixBranches(Node *node, Node *dad) {
         PhyloNeighborMixlen *nei = (PhyloNeighborMixlen*)(*it);
         double mean_len = 0.0;
         for (int i = 0; i < nei->lengths.size(); i++)
-            mean_len += nei->lengths[i];
-        mean_len /= nei->lengths.size();
+            mean_len += nei->lengths[i] * site_rate->getProp(i);
+//        mean_len /= nei->lengths.size();
         nei->length = mean_len;
         
         nei = (PhyloNeighborMixlen*)(*it)->node->findNeighbor(node);
@@ -362,6 +374,36 @@ void PhyloTreeMixlen::printBranchLength(ostream &out, int brtype, bool print_sla
     }
 }
 
+void PhyloTreeMixlen::printResultTree(string suffix) {
+    if (MPIHelper::getInstance().isWorker()) {
+        return;
+    }
+    if (params->suppress_output_flags & OUT_TREEFILE)
+        return;
+    setRootNode(params->root);
+    string tree_file_name = params->out_prefix;
+    tree_file_name += ".treefile";
+    if (suffix.compare("") != 0) {
+        tree_file_name += "." + suffix;
+    }
+
+    try {
+        ofstream out;
+        out.exceptions(ios::failbit | ios::badbit);
+        out.open(tree_file_name.c_str());
+        for (cur_mixture = 0; cur_mixture < mixlen; cur_mixture++) {
+            //out << "[Heterotachy class " << cur_mixture+1 << "]" << endl;
+            printTree(out, WT_BR_LEN | WT_BR_LEN_FIXED_WIDTH | WT_SORT_TAXA | WT_NEWLINE);
+        }
+        cur_mixture = -1;
+        out.close();
+    } catch (ios::failure) {
+        outError(ERR_WRITE_OUTPUT, tree_file_name);
+    }
+
+    if (verbose_mode >= VB_MED)
+        cout << "Best tree printed to " << tree_file_name << endl;
+}
 
 //------ DEPRECATED
 

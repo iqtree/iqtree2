@@ -101,6 +101,13 @@ public:
 	virtual double getRate(int category) { return rates[category]; }
 
 	/**
+		set the rate of a specified category.
+		@param category category ID from 0 to #category-1
+		@param value the rate of the specified category
+	*/
+	virtual void setRate(int category, double value) { rates[category] = value; }
+
+	/**
 		get the proportion of sites under a specified category.
 		@param category category ID from 0 to #category-1
 		@return the proportion of the specified category

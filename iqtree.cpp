@@ -2776,7 +2776,7 @@ pair<int, int> IQTree::optimizeNNI(bool speedNNI) {
     }
 
     if (numSteps == MAXSTEPS) {
-        cout << "WARNING: NNI search needs unusual large number of steps (" << numInnerBranches << ") to converge!" << endl;
+        cout << "WARNING: NNI search needs unusual large number of steps (" << numSteps << ") to converge!" << endl;
     }
     return make_pair(numSteps, totalNNIApplied);
 }

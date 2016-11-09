@@ -1798,7 +1798,7 @@ void PhyloTree::computeLikelihoodBufferGenericSIMD(PhyloNeighbor *dad_branch, Ph
     double *buffer_partial_lh_ptr = buffer_partial_lh + 3*get_safe_upper_limit(block);
     if (isMixlen()) {
         size_t nmix = getMixlen();
-        buffer_partial_lh_ptr += nmix*VectorClass::size();
+        buffer_partial_lh_ptr += nmix*VectorClass::size() + 2*nmix*VectorClass::size()*num_threads;
     }
 
     // first compute partial_lh
@@ -2097,8 +2097,7 @@ void PhyloTree::computeLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, Phyl
         if (isMixlen()) {
             // mixed branch length model
             VectorClass lh_ptn;
-            // TODO: not thread safe
-            VectorClass *df_ptn = (VectorClass*)buffer_partial_lh_ptr;
+            VectorClass *df_ptn = ((VectorClass*)buffer_partial_lh_ptr) + 2*nmixlen*thread_id;
             VectorClass *my_df = df_ptn + nmixlen;
             for (i = 0; i < nmixlen; i++) my_df[i] = 0.0;
 

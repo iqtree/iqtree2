@@ -92,6 +92,12 @@ public:
 	 */
 	virtual double getMixtureWeight(int cat) { return prop[cat]; }
 
+ 	/**
+	 * @param cat mixture class
+	 * @param value weight of a mixture model component to set
+	 */
+	virtual void setMixtureWeight(int cat, double value) { prop[cat] = value; }
+
 	/**
 		@return the number of dimensions
 	*/

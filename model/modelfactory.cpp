@@ -519,7 +519,7 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 	if (rate_str.find('+') != string::npos || rate_str.find('*') != string::npos) {
 		//string rate_str = model_str.substr(pos);
         if (posH != string::npos) {
-			site_rate = new RateHeterotachy(num_rate_cats, heterotachy_params, !fused_mix_rate, tree);
+			site_rate = new RateHeterotachy(num_rate_cats, heterotachy_params, tree);
 		} else if (posI != string::npos && posG != string::npos) {
 			site_rate = new RateGammaInvar(num_rate_cats, gamma_shape, params.gamma_median,
 					p_invar_sites, params.optimize_alg_gammai, tree, false);
@@ -601,14 +601,16 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
         }
 		if (model->getNMixtures() != site_rate->getNRate())
 			outError("Mixture model and site rate model do not have the same number of categories");
-		ModelMixture *mmodel = (ModelMixture*)model;
-		// reset mixture model
-		mmodel->fix_prop = true;
-		for (ModelMixture::iterator it = mmodel->begin(); it != mmodel->end(); it++) {
-			(*it)->total_num_subst = 1.0;
-			mmodel->prop[it-mmodel->begin()] = 1.0;
-		}
-		mmodel->decomposeRateMatrix();
+        if (!tree->isMixlen()) {
+            ModelMixture *mmodel = (ModelMixture*)model;
+            // reset mixture model
+            mmodel->fix_prop = true;
+            for (ModelMixture::iterator it = mmodel->begin(); it != mmodel->end(); it++) {
+                (*it)->total_num_subst = 1.0;
+                mmodel->prop[it-mmodel->begin()] = 1.0;
+            }
+            mmodel->decomposeRateMatrix();
+        }
 	}
 
 	tree->discardSaturatedSite(params.discard_saturated_site);

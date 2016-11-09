@@ -141,7 +141,7 @@ public:
             print tree to .treefile
             @param params program parameters, field root is taken
      */
-    void printResultTree(string suffix = "");
+    virtual void printResultTree(string suffix = "");
     /**
             print tree to out
             @param params program parameters, field root is taken

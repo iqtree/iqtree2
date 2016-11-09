@@ -330,6 +330,13 @@ public:
     double treeLength(Node *node = NULL, Node *dad = NULL);
 
     /**
+            @param[out] lenvec tree lengths for each class in mixlen model
+            @param node the starting node, NULL to start from the root
+            @param dad dad of the node, used to direct the search
+     */
+    virtual void treeLengths(DoubleVector &lenvec, Node *node = NULL, Node *dad = NULL) {}
+
+    /**
             @return sum length of all internal branches
             @param node the starting node, NULL to start from the root
             @param dad dad of the node, used to direct the search

@@ -114,11 +114,25 @@ public:
 	virtual double getRate(int category) { return 1.0; }
 
 	/**
+		set the rate of a specified category.
+		@param category category ID from 0 to #category-1
+		@param value the rate of the specified category
+	*/
+	virtual void setRate(int category, double value) { }
+
+	/**
 		get the proportion of a specified category. Default returns 1.0 since it is homogeneous model
 		@param category category ID from 0 to #category-1
 		@return the proportion of the specified category
 	*/
 	virtual double getProp(int category) { return 1.0; }
+
+	/**
+		set the proportion of a specified category.
+		@param category category ID from 0 to #category-1
+		@return the proportion of the specified category
+	*/
+	virtual void setProp(int category, double value) {}
 
 	/**
 		get the rate of a specified site-pattern. Default returns 1.0 since it is homogeneous model

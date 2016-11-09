@@ -64,6 +64,13 @@ public:
     void setMixlen(int mixlen);
 
     /**
+            @param[out] lenvec tree lengths for each class in mixlen model
+            @param node the starting node, NULL to start from the root
+            @param dad dad of the node, used to direct the search
+     */
+    virtual void treeLengths(DoubleVector &lenvec, Node *node = NULL, Node *dad = NULL);
+
+    /**
      * assign branch length as mean over all branch lengths of categories
      */
     void assignMeanMixBranches(Node *node = NULL, Node *dad = NULL);
@@ -74,6 +81,12 @@ public:
      *  @param length_nei target Neighbor to print
      */
     virtual void printBranchLength(ostream &out, int brtype, bool print_slash, Neighbor *length_nei);
+
+    /**
+            print tree to .treefile
+            @param params program parameters, field root is taken
+     */
+    virtual void printResultTree(string suffix = "");
 
     /**
         initialize mixture branch lengths

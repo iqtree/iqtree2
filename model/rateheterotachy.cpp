@@ -9,11 +9,11 @@
 #include "phylotree.h"
 #include "rateheterotachy.h"
 
-RateHeterotachy::RateHeterotachy(int ncat, string params, bool sorted_rates, PhyloTree *tree) : RateHeterogeneity() {
+RateHeterotachy::RateHeterotachy(int ncat, string params, PhyloTree *tree) : RateHeterogeneity() {
     phylo_tree = tree;
     prop = NULL;
-    fix_params = false;
-    this->sorted_rates = sorted_rates;
+    fix_params = 0;
+//    this->sorted_rates = sorted_rates;
     setNCategory(ncat);
 
 	if (params.empty()) return;
@@ -30,7 +30,7 @@ RateHeterotachy::RateHeterotachy(int ncat, string params, bool sorted_rates, Phy
 		}
 		if (fabs(sum_prop-1.0) > 1e-5)
 			outError("Sum of category proportions not equal to 1");
-		fix_params = true;
+		fix_params = 1;
 	} catch (string &str) {
 		outError(str);
 	}
@@ -102,10 +102,18 @@ string RateHeterotachy::getNameParams() {
 }
 
 void RateHeterotachy::writeInfo(ostream &out) {
-	out << "Heterotachy weights: ";
-	for (int i = 0; i < ncategory; i++)
-		out << " " << prop[i];
-	out << endl;
+    if (fix_params != 2) {
+        out << "Mixture weights: ";
+        for (int i = 0; i < ncategory; i++)
+            out << " " << prop[i];
+        out << endl;
+    }
+    DoubleVector lenvec;
+    phylo_tree->treeLengths(lenvec);
+    cout << "Heterotachy tree lengths: ";
+    for (int j = 0; j < lenvec.size(); j++)
+        cout << " " << lenvec[j];
+    cout << endl;
 }
 
 void RateHeterotachy::writeParameters(ostream &out) {
@@ -128,6 +136,76 @@ double RateHeterotachy::optimizeParameters(double gradient_epsilon) {
 
 double RateHeterotachy::optimizeWithEM() {
 
+    // first compute _pattern_lh_cat
+    phylo_tree->computePatternLhCat(WSL_RATECAT);
+    size_t ptn, c;
+    size_t nptn = phylo_tree->aln->getNPattern();
+    size_t nmix = ncategory;
+    
+    double *new_prop = aligned_alloc<double>(nmix);
+    double *ratio_prop = aligned_alloc<double>(nmix);
+
+    // EM algorithm loop described in Wang, Li, Susko, and Roger (2008)
+    int max_step = nmix*2;
+
+    for (int step = 0; step < max_step; step++) {
+        // E-step
+
+        if (step > 0) {
+            // convert _pattern_lh_cat taking into account new weights
+            for (ptn = 0; ptn < nptn; ptn++) {
+                double *this_lk_cat = phylo_tree->_pattern_lh_cat + ptn*nmix;
+                for (c = 0; c < nmix; c++) {
+                    this_lk_cat[c] *= ratio_prop[c];
+                }
+            } 
+        }
+        memset(new_prop, 0, nmix*sizeof(double));
+        for (ptn = 0; ptn < nptn; ptn++) {
+            double *this_lk_cat = phylo_tree->_pattern_lh_cat + ptn*nmix;
+            double lk_ptn = phylo_tree->ptn_invar[ptn];
+            for (c = 0; c < nmix; c++) {
+                lk_ptn += this_lk_cat[c];
+            }
+            assert(lk_ptn != 0.0);
+            lk_ptn = phylo_tree->ptn_freq[ptn] / lk_ptn;
+            for (c = 0; c < nmix; c++) {
+                new_prop[c] += this_lk_cat[c] * lk_ptn;
+            }
+        } 
+        bool converged = true;
+        double new_pinvar = 0.0;    
+        for (c = 0; c < nmix; c++) {
+            new_prop[c] /= phylo_tree->getAlnNSite();
+            // Make sure that probabilities do not get zero
+            if (new_prop[c] < 1e-10) new_prop[c] = 1e-10;
+            // check for convergence
+            converged = converged && (fabs(prop[c]-new_prop[c]) < 1e-4);
+            ratio_prop[c] = new_prop[c] / prop[c];
+            if (std::isnan(ratio_prop[c])) {
+                cerr << "BUG: " << new_prop[c] << " " << prop[c] << " " << ratio_prop[c] << endl;
+            }
+            prop[c] = new_prop[c];
+            new_pinvar += prop[c];
+        }
+        new_pinvar = 1.0 - new_pinvar;
+        if (new_pinvar != 0.0) {
+            converged = converged && (fabs(phylo_tree->getRate()->getPInvar()-new_pinvar) < 1e-4);
+            phylo_tree->getRate()->setPInvar(new_pinvar);
+            phylo_tree->getRate()->setOptimizePInvar(false);
+            phylo_tree->computePtnInvar();
+            
+        }
+        if (converged) break;
+
+    }
+    
+    aligned_free(ratio_prop);
+    aligned_free(new_prop);
+//    aligned_free(lk_ptn);
+    return phylo_tree->computeLikelihood();
+
+/*
     size_t ptn, c;
     size_t nptn = phylo_tree->aln->getNPattern();
     size_t nmix = ncategory;
@@ -204,5 +282,5 @@ double RateHeterotachy::optimizeWithEM() {
     }
 
     return phylo_tree->computeLikelihood();
-
+*/
 }

@@ -302,6 +302,8 @@ public:
 
 	void setEigenvectors(double *eigenvectors);
 
+	void setInverseEigenvectors(double *inv_eigenvectors);
+
     /**
      * compute the memory size for the model, can be large for site-specific models
      * @return memory size required in bytes
