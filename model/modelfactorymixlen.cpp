@@ -25,19 +25,20 @@ ModelFactoryMixlen::ModelFactoryMixlen(Params &params, PhyloTree *tree, ModelsBl
     }
     if (fused_mix_rate) {
         // fix the rate of heterotachy
-        RateHeterotachy *hrate = (RateHeterotachy*)site_rate;
+//        RateHeterotachy *hrate = (RateHeterotachy*)site_rate;
         ModelMixture *mmodel = (ModelMixture*)model;
-        if (hrate->fix_params == 1) {
+        if (site_rate->getFixParams() == 1) {
             // swap the weights between model and site_rate
-            for (int i = 0; i < hrate->getNRate(); i++) {
-                mmodel->setMixtureWeight(i, hrate->getProp(i));
-                hrate->setProp(i, 1.0);
+            for (int i = 0; i < site_rate->getNRate(); i++) {
+                mmodel->setMixtureWeight(i, site_rate->getProp(i));
+                site_rate->setProp(i, 1.0);
             }
         } else {
             // fix the weight of heterotachy model to 1
-            hrate->fix_params = 2;
-            for (int i = 0; i < hrate->getNRate(); i++)
-                hrate->setProp(i, 1.0);
+            site_rate->setFixParams(2);
+            double fix_prop = (1.0-site_rate->getPInvar());
+            for (int i = 0; i < site_rate->getNRate(); i++)
+                site_rate->setProp(i, fix_prop);
         }
     }
 }

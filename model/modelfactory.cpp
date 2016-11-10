@@ -36,6 +36,7 @@
 #include "ratefree.h"
 #include "ratefreeinvar.h"
 #include "rateheterotachy.h"
+#include "rateheterotachyinvar.h"
 #include "ngs.h"
 #include <string>
 #include "timeutil.h"
@@ -455,7 +456,7 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 			p_invar_sites = convert_double(rate_str.substr(posI+3, close_bracket-posI-3).c_str());
 			if (p_invar_sites < 0 || p_invar_sites >= 1)
 				outError("p_invar must be in [0,1)");
-		} else if (rate_str.length() > posI+2 && rate_str[posI+2] != '+')
+		} else if (rate_str.length() > posI+2 && rate_str[posI+2] != '+' && rate_str[posI+2] != '*')
 			outError("Wrong model name ", rate_str);
 	}
 	if (posG != string::npos) {
@@ -518,7 +519,9 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 
 	if (rate_str.find('+') != string::npos || rate_str.find('*') != string::npos) {
 		//string rate_str = model_str.substr(pos);
-        if (posH != string::npos) {
+        if (posI != string::npos && posH != string::npos) {
+			site_rate = new RateHeterotachyInvar(num_rate_cats, heterotachy_params, p_invar_sites, tree);
+        } else if (posH != string::npos) {
 			site_rate = new RateHeterotachy(num_rate_cats, heterotachy_params, tree);
 		} else if (posI != string::npos && posG != string::npos) {
 			site_rate = new RateGammaInvar(num_rate_cats, gamma_shape, params.gamma_median,

@@ -103,7 +103,7 @@ string RateHeterotachy::getNameParams() {
 
 void RateHeterotachy::writeInfo(ostream &out) {
     if (fix_params != 2) {
-        out << "Mixture weights: ";
+        out << "Heterotachy weights: ";
         for (int i = 0; i < ncategory; i++)
             out << " " << prop[i];
         out << endl;

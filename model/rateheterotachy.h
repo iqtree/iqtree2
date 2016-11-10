@@ -17,7 +17,7 @@ class PhyloTree;
 /**
     rate-heterotachy model, allowing for mixed branch lengths
 */
-class RateHeterotachy: public RateHeterogeneity {
+class RateHeterotachy: virtual public RateHeterogeneity {
 
     friend class ModelFactoryMixlen;
 
@@ -51,6 +51,18 @@ public:
 	 */
 	virtual string getNameParams();
 
+
+    /**
+        fix parameters, so that no optimization done
+        @param mode some input mode
+    */
+    virtual int getFixParams() { return fix_params; }
+
+    /**
+        fix parameters, so that no optimization done
+        @param mode some input mode
+    */
+    virtual void setFixParams(int mode) { fix_params = mode; }
 
 	/**
 		return the number of dimensions

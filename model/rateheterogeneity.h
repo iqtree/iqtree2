@@ -202,6 +202,18 @@ public:
     virtual int isGammaRate() { return 0; }
 
     /**
+        fix parameters, so that no optimization done
+        @param mode some input mode
+    */
+    virtual int getFixParams() { return 0; }
+
+    /**
+        fix parameters, so that no optimization done
+        @param mode some input mode
+    */
+    virtual void setFixParams(int mode) {}
+
+    /**
      *  check whether +I+G is used
      */
     virtual bool isGammai() const {
