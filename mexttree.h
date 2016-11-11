@@ -127,24 +127,6 @@ public:
 	void collapseZeroBranches(Node *node = NULL, Node *dad = NULL);
 
 /********************************************************
-	BOOTSTRAP
-********************************************************/
-
-	/**
-		create support value for each internal node to the weight of split in the split graph
-		@param node the starting node, NULL to start from the root
-		@param dad dad of the node, used to direct the search
-		@param sg split graph
-		@param hash_ss hash split set
-		@param taxname vector of taxa names
-		@param trees set of trees
-	*/
-	void createBootstrapSupport(vector<string> &taxname, MTreeSet &trees, SplitGraph &sg, SplitIntMap &hash_ss, char *tag,
-		Node *node = NULL, Node *dad = NULL);
-
-	void reportDisagreedTrees(vector<string> &taxname, MTreeSet &trees, Split &mysplit);
-
-/********************************************************
 	CLUSTER for each branch, useful for likelihood mapping analysis
 ********************************************************/
 

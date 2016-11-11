@@ -34,6 +34,7 @@ const char ROOT_NAME[] = "_root";
 const char BRANCH_LENGTH_SEPARATOR = '/';
 
 class SplitGraph;
+class MTreeSet;
 
 /**
 General-purposed tree
@@ -309,6 +310,13 @@ public:
      */
     void parseFile(istream &infile, char &ch, Node* &root, DoubleVector &branch_len);
 
+    /**
+        parse the string containing branch length(s)
+        by default, this will parse just one length
+        @param lenstr string containing branch length(s)
+        @param[out] branch_len output branch length(s)
+    */
+    virtual void parseBranchLength(string &lenstr, DoubleVector &branch_len);
 
     /**
             initialize tree, set node structure
@@ -549,6 +557,13 @@ public:
      */
     void assignLeafID(Node *node = NULL, Node *dad = NULL);
 
+    /**
+            assign the leaf name with its ID
+            @param node the starting node, NULL to start from the root
+            @param dad dad of the node, used to direct the search
+
+     */
+    void assignLeafNameByID(Node *node = NULL, Node *dad = NULL);
 
     /********************************************************
             CONVERT TREE INTO SPLIT SYSTEM
@@ -779,6 +794,25 @@ public:
         this->params = params;
     };
 
+    /********************************************************
+        BOOTSTRAP
+    ********************************************************/
+
+	/**
+		create support value for each internal node to the weight of split in the split graph
+		@param node the starting node, NULL to start from the root
+		@param dad dad of the node, used to direct the search
+		@param sg split graph
+		@param hash_ss hash split set
+		@param taxname vector of taxa names
+		@param trees set of trees
+	*/
+	void createBootstrapSupport(vector<string> &taxname, MTreeSet &trees, SplitGraph &sg, SplitIntMap &hash_ss, char *tag,
+		Node *node = NULL, Node *dad = NULL);
+
+	void reportDisagreedTrees(vector<string> &taxname, MTreeSet &trees, Split &mysplit);
+
+
 protected:
     /**
      * 		Hash stable mapping a split into branch.
@@ -795,6 +829,10 @@ protected:
      */
     int in_column;
 
+    /**
+        the comments in [ ... ] just read in
+    */
+    string in_comment;
 
     /**
      * special character for drawing tree figure

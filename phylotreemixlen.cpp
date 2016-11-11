@@ -336,41 +336,52 @@ void PhyloTreeMixlen::printBranchLength(ostream &out, int brtype, bool print_sla
     if (((PhyloNeighborMixlen*)length_nei)->lengths.empty())
         return PhyloTree::printBranchLength(out, brtype, print_slash, length_nei);
 
+    if ((brtype & (WT_BR_LEN+WT_BR_SCALE)) == 0)
+        return;
+
     PhyloNeighborMixlen *nei = (PhyloNeighborMixlen*) length_nei;
-    if (brtype & WT_BR_LEN) 
+
+    if (cur_mixture == -1) {
+        // print mixture branch lengths
+        out << "[";
+        for (int i = 0; i < mixlen; i++) {
+            if (i > 0) out << BRANCH_LENGTH_SEPARATOR;
+            double length = nei->lengths[i];
+            if (brtype & WT_BR_SCALE) length *= len_scale;
+            if (brtype & WT_BR_LEN_ROUNDING) length = round(length);
+            if (brtype & WT_BR_LEN) {
+                if (brtype & WT_BR_LEN_FIXED_WIDTH)
+                    out << fixed << length;
+                else
+                    out << length;
+            } else if (brtype & WT_BR_CLADE) {
+                out << length;
+            }
+        }
+        out << "]";
+    }
+
+    if (brtype & WT_BR_LEN)
         out << ":";
     else if ((brtype & WT_BR_CLADE) && print_slash)
         out << "/";
         
+    double length = nei->length;
+
     if (cur_mixture >= 0) {
         // print branch length of a mixture component only!
-        double length = nei->lengths[cur_mixture];
-        if (brtype & WT_BR_SCALE) length *= len_scale;
-        if (brtype & WT_BR_LEN_ROUNDING) length = round(length);
-        if (brtype & WT_BR_LEN) {
-            if (brtype & WT_BR_LEN_FIXED_WIDTH)
-                out << fixed << length;
-            else
-                out << length;
-        } else if (brtype & WT_BR_CLADE) {
-            out << length;
-        }
-        return;
+        length = nei->lengths[cur_mixture];
     }
-        
-    for (int i = 0; i < mixlen; i++) {
-        if (i > 0) out << BRANCH_LENGTH_SEPARATOR;
-        double length = nei->lengths[i];
-        if (brtype & WT_BR_SCALE) length *= len_scale;
-        if (brtype & WT_BR_LEN_ROUNDING) length = round(length);
-        if (brtype & WT_BR_LEN) {
-            if (brtype & WT_BR_LEN_FIXED_WIDTH)
-                out << fixed << length;
-            else
-                out << length;
-        } else if (brtype & WT_BR_CLADE) {
+
+    if (brtype & WT_BR_SCALE) length *= len_scale;
+    if (brtype & WT_BR_LEN_ROUNDING) length = round(length);
+    if (brtype & WT_BR_LEN) {
+        if (brtype & WT_BR_LEN_FIXED_WIDTH)
+            out << fixed << length;
+        else
             out << length;
-        }
+    } else if (brtype & WT_BR_CLADE) {
+        out << length;
     }
 }
 
@@ -391,6 +402,8 @@ void PhyloTreeMixlen::printResultTree(string suffix) {
         ofstream out;
         out.exceptions(ios::failbit | ios::badbit);
         out.open(tree_file_name.c_str());
+        cur_mixture = -1;
+        printTree(out, WT_BR_LEN | WT_BR_LEN_FIXED_WIDTH | WT_SORT_TAXA | WT_NEWLINE);
         for (cur_mixture = 0; cur_mixture < mixlen; cur_mixture++) {
             //out << "[Heterotachy class " << cur_mixture+1 << "]" << endl;
             printTree(out, WT_BR_LEN | WT_BR_LEN_FIXED_WIDTH | WT_SORT_TAXA | WT_NEWLINE);

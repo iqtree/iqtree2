@@ -469,68 +469,6 @@ void MExtTree::setLeavesName(NodeVector &myleaves) {
 }
 
 
-void MExtTree::reportDisagreedTrees(vector<string> &taxname, MTreeSet &trees, Split &mysplit) {
-	for (MTreeSet::iterator it = trees.begin(); it != trees.end(); it++) {
-		MTree *tree = (*it);
-		SplitGraph sg;
-		tree->convertSplits(taxname, sg);
-		if (!sg.containSplit(mysplit)) {
-			tree->printTree(cout, 0); // don't print branch lengths
-			cout << endl;
-		}
-	}
-}
-
-
-void MExtTree::createBootstrapSupport(vector<string> &taxname, MTreeSet &trees, SplitGraph &sg, SplitIntMap &hash_ss, 
-    char *tag, Node *node, Node *dad) {
-	if (!node) node = root;	
-	FOR_NEIGHBOR_IT(node, dad, it) {
-		if (!node->isLeaf() && !(*it)->node->isLeaf()) {
-			vector<int> taxa;
-			getTaxaID(taxa, (*it)->node, node);
-			Split mysplit(leafNum, 0.0, taxa);
-			if (mysplit.shouldInvert())
-				mysplit.invert();
-			//mysplit.report(cout);
-			//SplitIntMap::iterator ass_it = hash_ss.find(&mysplit);
-			Split *sp = hash_ss.findSplit(&mysplit);
-			// if found smt
-			if (sp != NULL) {
-				//Split *sp = ass_it->first;
-				/*char tmp[100];
-				if ((*it)->node->name.empty()) {
-					sprintf(tmp, "%d", round(sp->getWeight()));
-				} else
-					sprintf(tmp, "/%d", round(sp->getWeight()));*/
-				stringstream tmp;
-				if ((*it)->node->name.empty())
-				  tmp << sp->getWeight();
-				else
-				  tmp << "/" << sp->getWeight();
-                  
-                // assign tag
-                if (tag && (strcmp(tag, "ALL")==0 || (*it)->node->name == tag))
-                    tmp << sp->getName();                
-				(*it)->node->name.append(tmp.str());
-			} else {
-				if (!(*it)->node->name.empty()) (*it)->node->name.append("/");
-				(*it)->node->name.append("0");
-				if (verbose_mode >= VB_MED) {
-					cout << "split not found:" << endl;
-					mysplit.report(cout);
-				}
-			} 
-			/* new stuff: report trees that do not contain the split */
-			if (strncmp((*it)->node->name.c_str(), "INFO", 4) == 0) {
-				cout << "Reporting trees not containing the split " << (*it)->node->name << endl;
-				reportDisagreedTrees(taxname, trees, mysplit);
-			}
-		}
-		createBootstrapSupport(taxname, trees, sg, hash_ss, tag, (*it)->node, node);
-	}	
-}
-
 void MExtTree::createCluster(NodeVector &taxa, matrix(int) &clusters, Node *node, Node *dad) {
 	if (node == NULL) node = root;
 	FOR_NEIGHBOR_IT(node, dad, it) {

@@ -75,6 +75,15 @@ public:
      */
     void assignMeanMixBranches(Node *node = NULL, Node *dad = NULL);
 
+
+    /**
+        parse the string containing branch length(s)
+        by default, this will parse just one length
+        @param lenstr string containing branch length(s)
+        @param[out] branch_len output branch length(s)
+    */
+//    virtual void parseBranchLength(string &lenstr, DoubleVector &branch_len);
+
     /**
      *  internal function called by printTree to print branch length
      *  @param out output stream

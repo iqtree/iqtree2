@@ -24,6 +24,7 @@
 //#include <mtree.h>
 #include "splitgraph.h"
 #include "tools.h"
+#include "mtreeset.h"
 using namespace std;
 
 /*********************************************
@@ -661,6 +662,7 @@ void MTree::readTree(istream &in, bool &is_rooted)
 {
     in_line = 1;
     in_column = 1;
+    in_comment = "";
     try {
         char ch;
         ch = readNextChar(in);
@@ -737,6 +739,34 @@ void MTree::initializeTree(Node *node, Node* dad)
         branchNum++;
         initializeTree((*it)->node, node);
     }
+}
+
+void MTree::parseBranchLength(string &lenstr, DoubleVector &branch_len) {
+//    branch_len.push_back(convert_double(lenstr.c_str()));
+    double len = convert_double(lenstr.c_str());
+    if (in_comment.empty()) {
+        branch_len.push_back(len);
+        return;
+    }
+    convert_double_vec(in_comment.c_str(), branch_len, BRANCH_LENGTH_SEPARATOR);
+//    char* str = (char*)in_comment.c_str() + 1;
+//    int pos;
+//    for (int i = 1; str[0] == 'L'; i++) {
+//        str++;
+//        int id = convert_int(str, pos);
+//        if (id != i)
+//            throw "Wrong ID in " + string(str);
+//        if (str[pos] != '=')
+//            throw "= is expected in " + string(str);
+//        str += pos+1;
+//        double val = convert_double(str, pos);
+//        branch_len.push_back(val);
+//        if (str[pos] == ',') {
+//            str += pos+1;
+//            continue;
+//        } else
+//            break;
+//    }
 }
 
 
@@ -821,7 +851,10 @@ void MTree::parseFile(istream &infile, char &ch, Node* &root, DoubleVector &bran
         return;
     if (ch == ':')
     {
+        string saved_comment = in_comment;
         ch = readNextChar(infile);
+        if (in_comment.empty())
+            in_comment = saved_comment;
         seqlen = 0;
         seqname = "";
         while (!is_newick_token(ch) && !controlchar(ch) && !infile.eof() && seqlen < maxlen)
@@ -837,9 +870,12 @@ void MTree::parseFile(istream &infile, char &ch, Node* &root, DoubleVector &bran
         if (seqlen == maxlen || infile.eof())
             throw "branch length format error.";
 //        seqname[seqlen] = 0;
-        convert_double_vec(seqname.c_str(), branch_len, BRANCH_LENGTH_SEPARATOR);
+        parseBranchLength(seqname, branch_len);
+//        convert_double_vec(seqname.c_str(), branch_len, BRANCH_LENGTH_SEPARATOR);
     }
 }
+
+
 
 /**
 	check tree is bifurcating tree (every leaf with level 1 or 3)
@@ -1430,10 +1466,13 @@ char MTree::readNextChar(istream &in, char current_ch) {
             in_column = 1;
         }
     }
+    in_comment = "";
     // ignore comment
     while (ch=='[' && !in.eof()) {
         while (ch!=']' && !in.eof()) {
             in.get(ch);
+            if (ch != ']')
+                in_comment += ch;
             in_column++;
             if (ch == 10) {
                 in_line++;
@@ -1837,6 +1876,17 @@ void MTree::assignLeafID(Node *node, Node *dad) {
     assignLeafID((*it)->node, node);
 }
 
+void MTree::assignLeafNameByID(Node *node, Node *dad) {
+    if (!node) node = root;
+    if (node->isLeaf()) {
+//        node->id = atoi(node->name.c_str());
+//        assert(node->id >= 0 && node->id < leafNum);
+        node->name = convertIntToString(node->id);
+    }
+    FOR_NEIGHBOR_IT(node, dad, it)
+        assignLeafNameByID((*it)->node, node);
+}
+
 void MTree::getTaxa(Split &taxa, Node *node, Node *dad) {
 	if (!node) node = root;
 	if (node->isLeaf()) {
@@ -2106,6 +2156,68 @@ void MTree::computeRFDist(istream &in, IntVector &dist) {
 //	cout << ntrees << " trees read" << endl;
 
 
+}
+
+void MTree::reportDisagreedTrees(vector<string> &taxname, MTreeSet &trees, Split &mysplit) {
+	for (MTreeSet::iterator it = trees.begin(); it != trees.end(); it++) {
+		MTree *tree = (*it);
+		SplitGraph sg;
+		tree->convertSplits(taxname, sg);
+		if (!sg.containSplit(mysplit)) {
+			tree->printTree(cout, 0); // don't print branch lengths
+			cout << endl;
+		}
+	}
+}
+
+
+void MTree::createBootstrapSupport(vector<string> &taxname, MTreeSet &trees, SplitGraph &sg, SplitIntMap &hash_ss,
+    char *tag, Node *node, Node *dad) {
+	if (!node) node = root;	
+	FOR_NEIGHBOR_IT(node, dad, it) {
+		if (!node->isLeaf() && !(*it)->node->isLeaf()) {
+			vector<int> taxa;
+			getTaxaID(taxa, (*it)->node, node);
+			Split mysplit(leafNum, 0.0, taxa);
+			if (mysplit.shouldInvert())
+				mysplit.invert();
+			//mysplit.report(cout);
+			//SplitIntMap::iterator ass_it = hash_ss.find(&mysplit);
+			Split *sp = hash_ss.findSplit(&mysplit);
+			// if found smt
+			if (sp != NULL) {
+				//Split *sp = ass_it->first;
+				/*char tmp[100];
+				if ((*it)->node->name.empty()) {
+					sprintf(tmp, "%d", round(sp->getWeight()));
+				} else
+					sprintf(tmp, "/%d", round(sp->getWeight()));*/
+				stringstream tmp;
+				if ((*it)->node->name.empty())
+				  tmp << sp->getWeight();
+				else
+				  tmp << "/" << sp->getWeight();
+                  
+                // assign tag
+                if (tag && (strcmp(tag, "ALL")==0 || (*it)->node->name == tag))
+                    tmp << sp->getName();                
+				(*it)->node->name.append(tmp.str());
+			} else {
+				if (!(*it)->node->name.empty()) (*it)->node->name.append("/");
+				(*it)->node->name.append("0");
+				if (verbose_mode >= VB_MED) {
+					cout << "split not found:" << endl;
+					mysplit.report(cout);
+				}
+			} 
+			/* new stuff: report trees that do not contain the split */
+			if (strncmp((*it)->node->name.c_str(), "INFO", 4) == 0) {
+				cout << "Reporting trees not containing the split " << (*it)->node->name << endl;
+				reportDisagreedTrees(taxname, trees, mysplit);
+			}
+		}
+		createBootstrapSupport(taxname, trees, sg, hash_ss, tag, (*it)->node, node);
+	}	
 }
 
 void MTree::insertTaxa(StrVector &new_taxa, StrVector &existing_taxa) {

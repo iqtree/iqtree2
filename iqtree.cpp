@@ -3344,22 +3344,23 @@ void IQTree::summarizeBootstrap(Params &params, MTreeSet &trees) {
     //	printSplitSet(sg, hash_ss);
     //sg.report(cout);
     cout << "Creating bootstrap support values..." << endl;
-    stringstream tree_stream;
-    printTree(tree_stream, WT_TAXON_ID | WT_BR_LEN);
-    MExtTree mytree;
-    mytree.readTree(tree_stream, rooted);
-    mytree.assignLeafID();
-    mytree.createBootstrapSupport(taxname, trees, sg, hash_ss, NULL);
+//    stringstream tree_stream;
+//    printTree(tree_stream, WT_TAXON_ID | WT_BR_LEN);
+//    MExtTree mytree;
+//    mytree.readTree(tree_stream, rooted);
+//    mytree.assignLeafID();
+    assignLeafNameByID();
+    createBootstrapSupport(taxname, trees, sg, hash_ss, NULL);
 
     // now write resulting tree with supports
-    tree_stream.seekp(0, ios::beg);
-    mytree.printTree(tree_stream);
-
-    // now read resulting tree
-    tree_stream.seekg(0, ios::beg);
-    freeNode();
-    // RARE BUG FIX: to avoid cases that identical seqs were removed and leaf name happens to be IDs
-    MTree::readTree(tree_stream, rooted);
+//    tree_stream.seekp(0, ios::beg);
+//    mytree.printTree(tree_stream);
+//
+//    // now read resulting tree
+//    tree_stream.seekg(0, ios::beg);
+//    freeNode();
+//    // RARE BUG FIX: to avoid cases that identical seqs were removed and leaf name happens to be IDs
+//    MTree::readTree(tree_stream, rooted);
 
     assignLeafNames();
     if (isSuperTree()) {
