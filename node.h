@@ -126,8 +126,10 @@ public:
         the default is just to return a single branch length
         @return branch length for class c
     */
-    virtual void getLength(DoubleVector &vec) { 
-        vec.resize(1, length);
+    virtual void getLength(DoubleVector &vec) {
+        vec.resize(1);
+        vec[0] = length;
+//        vec.resize(1, length);
     }
 
     /**

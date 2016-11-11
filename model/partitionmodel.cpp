@@ -172,6 +172,8 @@ double PartitionModel::optimizeParameters(int fixed_len, bool write_info, double
     if (tree->params->link_alpha) {
         tree_lh = optimizeLinkedAlpha(write_info, gradient_epsilon);
     }
+	if (verbose_mode >= VB_MED || write_info)
+		cout << "Optimal log-likelihood: " << tree_lh << endl;
     return tree_lh;
 }
 
@@ -204,6 +206,8 @@ double PartitionModel::optimizeParametersGammaInvar(int fixed_len, bool write_in
     if (tree->params->link_alpha) {
         tree_lh = optimizeLinkedAlpha(write_info, gradient_epsilon);
     }
+	if (verbose_mode >= VB_MED || write_info)
+		cout << "Optimal log-likelihood: " << tree_lh << endl;
     return tree_lh;
 }
 
