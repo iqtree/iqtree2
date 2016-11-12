@@ -29,7 +29,7 @@
 #include "splitset.h"
 //#include "candidateset.h"
 
-const char ROOT_NAME[] = "_root";
+const char ROOT_NAME[] = "__root__"; // special name that does not occur elsewhere in the tree
 
 const char BRANCH_LENGTH_SEPARATOR = '/';
 
@@ -130,6 +130,11 @@ public:
             destructor
      */
     virtual ~MTree();
+
+    /** return TRUE if tree is rooted and node is equal root */
+    inline bool isRootLeaf(Node *node) {
+        return (rooted && node == root);
+    }
 
     /**
             allocate a new node. Override this if you have an inherited Node class.

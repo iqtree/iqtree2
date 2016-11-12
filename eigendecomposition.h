@@ -57,13 +57,15 @@ public:
 
 	/**
 		EigenSystem for general non-symmetric matrix without state frequencies
-		@param rate_params rate parameters (not the rate matrix)
-		@param eval (OUT) eigenvalues
+		@param rate_matrix rate matrix
+		@param eval (OUT) real part of eigenvalues
+		@param eval_imag (OUT) imaginary part of eigenvalues
 		@param evec (OUT) eigenvectors
 		@param inv_evec (OUT) inverse matrix of eigenvectors
 		@param num_state (IN) number of states
 	*/
-    void eigensystem(double **rate_params, double *eval, double **evec, double **inv_evec, int num_state);
+    void eigensystem_nonrev(double *rate_matrix, double *state_freq, double *eval, double *eval_imag,
+    		double *evec, double *inv_evec, int num_state);
 
 
 	/** TRUE to normalize rate matrix to 1.0 subst per unit time */
@@ -86,7 +88,7 @@ protected:
 		@param state_freq state frequencies
 		@param num_state number of states
 	*/
-	void computeRateMatrix(double **rate_matrix, double *state_freq, int num_state);
+	virtual void computeRateMatrix(double **rate_matrix, double *state_freq, int num_state);
 
 	/**
 		Eliminate zero entries in the rate matrix. 

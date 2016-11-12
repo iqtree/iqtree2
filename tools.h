@@ -32,7 +32,7 @@
 #include <fstream>
 #include <stdio.h>
 #include <stdlib.h>
-#include <math.h>
+#include <cmath>
 #include <stdint.h>
 #include <string.h>
 #include <sstream>
@@ -40,7 +40,7 @@
 //#include <sys/time.h>
 //#include <time.h>
 #include <sys/stat.h>
-#include <math.h>
+//#include <math.h>
 #include "ncl/ncl.h"
 #include "msetsblock.h"
 
@@ -345,7 +345,11 @@ const int SW_AVG_PRESENT = 4; // take the split weight average over all trees th
         input type, tree or splits graph
  */
 enum InputType {
-    IN_NEWICK, IN_NEXUS, IN_FASTA, IN_PHYLIP, IN_CLUSTAL, IN_MSF, IN_OTHER
+    IN_NEWICK, IN_NEXUS, IN_FASTA, IN_PHYLIP, IN_COUNTS, IN_CLUSTAL, IN_MSF, IN_OTHER
+};
+
+enum SamplingType {
+    SAMPLING_WEIGHTED, SAMPLING_SAMPLED
 };
 
 /**
@@ -441,9 +445,17 @@ enum SiteFreqType {
     WSF_NONE, WSF_POSTERIOR_MEAN, WSF_POSTERIOR_MAX
 };
 
+enum MatrixExpTechnique { 
+    MET_SCALING_SQUARING, 
+    MET_EIGEN3LIB_DECOMPOSITION,
+    MET_EIGEN_DECOMPOSITION, 
+    MET_LIE_MARKOV_DECOMPOSITION
+};
+
 enum AncestralSeqType {
     AST_NONE, AST_MARGINAL, AST_JOINT
 };
+
 
 const int BRLEN_OPTIMIZE = 0; // optimize branch lengths
 const int BRLEN_FIX      = 1; // fix branch lengths
@@ -1469,6 +1481,9 @@ public:
     /** minimum number of sequences to always use safe scaling, default: 2000 */
     int numseq_safe_scaling;
 
+    /** TRUE to force using non-reversible likelihood kernel */
+    bool kernel_nonrev;
+
     /**
      	 	WSL_NONE: do not print anything
             WSL_SITE: print site log-likelihood
@@ -1830,6 +1845,15 @@ public:
 	/** true to count all distinct trees visited during tree search */
 	bool count_trees;
 
+    /// True if PoMo is run; otherwise false.
+    bool pomo;
+
+    /// True if sampled input method is used (-st CR..); otherwise false.
+    bool pomo_random_sampling;
+
+	/// Virtual population size for PoMo model.
+	int pomo_pop_size;
+
 	/* -1 (auto-detect): will be set to 0 if there is enough memory, 1 otherwise
 	 * 0: store all partial likelihood vectors
 	 * 1: only store 1 partial likelihood vector per node */
@@ -1879,6 +1903,13 @@ public:
      * OUT_IQTREE
      */
     int suppress_output_flags;
+
+    /** matrix exponentiation technique for nonreversible models, either 
+        MET_SCALING_SQUARING 
+        MET_EIGEN_DECOMPOSITION 
+        MET_LIE_MARKOV_DECOMPOSITION
+    */
+    MatrixExpTechnique matrix_exp_technique;
 
 };
 
@@ -1981,11 +2012,6 @@ void outWarning(string warn);
  */
 double randomLen(Params &params);
 
-/**
-        convert string to int, with error checking
-        @param str original string
-        @return the integer
- */
 /**
         Compute the logarithm of the factorial of an integer number
         @param num: the number
@@ -2217,6 +2243,7 @@ void parseArg(int argc, char *argv[], Params &params);
                 IN_NEXUS if in nexus format,
                 IN_FASTA if in fasta format,
                 IN_PHYLIP if in phylip format,
+		IN_COUNTSFILE if in counts format (PoMo),
                 IN_OTHER if file format unknown.
  */
 InputType detectInputFile(char *input_file);

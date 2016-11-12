@@ -20,7 +20,14 @@
 
 // IMPORTANT: refactor STATE_UNKNOWN
 //const char STATE_UNKNOWN = 126;
-const char STATE_INVALID = 127;
+
+/* PoMo: STATE_INVALID is not handled in PoMo.  Set STATE_INVALID to
+   127 to remove warning about comparison to char in alignment.cpp.
+   This is important if the maximum N will be increased above 21
+   because then the state space is larger than 127 and we have to
+   think about something else. */
+/* const unsigned char STATE_INVALID = 255; */
+const unsigned char STATE_INVALID = 127;
 const int NUM_CHAR = 256;
 const double MIN_FREQUENCY          = 0.0001;
 const double MIN_FREQUENCY_DIFF     = 0.00001;
@@ -28,18 +35,28 @@ const double MIN_FREQUENCY_DIFF     = 0.00001;
 typedef bitset<NUM_CHAR> StateBitset;
 
 enum SeqType {
-    SEQ_DNA, SEQ_PROTEIN, SEQ_BINARY, SEQ_MORPH, SEQ_MULTISTATE, SEQ_CODON, SEQ_UNKNOWN
+    SEQ_DNA, SEQ_PROTEIN, SEQ_BINARY, SEQ_MORPH, SEQ_MULTISTATE, SEQ_CODON, SEQ_POMO, SEQ_UNKNOWN
 };
 
 
 #ifdef USE_HASH_MAP
+struct hashPattern {
+	size_t operator()(const vector<StateType> &sp) const {
+		size_t sum = 0;
+		for (Pattern::const_iterator it = sp.begin(); it != sp.end(); it++)
+			sum = (*it) + (sum << 6) + (sum << 16) - sum;
+		return sum;
+	}
+};
 typedef unordered_map<string, int> StringIntMap;
 typedef unordered_map<string, double> StringDoubleHashMap;
-typedef unordered_map<string, int> PatternIntMap;
+typedef unordered_map<vector<StateType>, int, hashPattern> PatternIntMap;
+typedef unordered_map<uint32_t, uint32_t> IntIntMap;
 #else
 typedef map<string, int> StringIntMap;
 typedef map<string, double> StringDoubleHashMap;
-typedef map<string, int> PatternIntMap;
+typedef map<vector<StateType>, int> PatternIntMap;
+typedef map<uint32_t, uint32_t> IntIntMap;
 #endif
 
 /**
@@ -133,6 +150,18 @@ public:
             @return 1 on success, 0 on failure
      */
     int readFasta(char *filename, char *sequence_type);
+
+    /** 
+     * Read the alignment in counts format (PoMo).
+     *
+     * TODO: Allow noninformative sites (where no base is present).
+     * 
+     * @param filename file name
+     * @param sequence_type sequence type (i.e., "CF10")
+     *
+     * @return 1 on success, 0 on failure
+     */
+    int readCountsFormat(char *filename, char *sequence_type);
 
     /**
             read the alignment in CLUSTAL format
@@ -523,6 +552,18 @@ public:
      */
     virtual void computeStateFreq(double *state_freq, size_t num_unknown_states = 0);
 
+    int convertPomoState(int state);
+
+    /** 
+     * Compute the absolute frequencies of the different states.
+     * Helpful for models with many states (e.g., PoMo) to check the
+     * abundancy of states in the data.
+     * 
+     * @param abs_state_freq (OUT) assumed to be at least of size
+     * num_states.
+     */
+    void computeAbsoluteStateFreq(unsigned int *abs_state_freq);
+    
     /**
             compute empirical state frequencies for each sequence 
             @param freq_per_sequence (OUT) state frequencies for each sequence, of size num_states*num_freq
@@ -587,7 +628,7 @@ public:
     /** either SEQ_BINARY, SEQ_DNA, SEQ_PROTEIN, SEQ_MORPH, or SEQ_CODON */
     SeqType seq_type;
 
-    char STATE_UNKNOWN;
+    StateType STATE_UNKNOWN;
 
     /**
             number of states
@@ -624,6 +665,23 @@ public:
 	 */
 	char *genetic_code;
 
+	/**
+	 * Virtual population size for PoMo model
+	 */
+	int virtual_pop_size;
+
+    /// The sampling type (defaults to SAMPLING_WEIGHTED).
+    SamplingType pomo_sampling_type;
+
+    /** BQM: 2015-07-06, 
+        for PoMo data: map from state ID to pair of base1 and base2 
+        represented in the high 16-bit and the low 16-bit of uint32_t
+        for base1, bit0-1 is used to encode the base (A,G,C,T) and the remaining 14 bits store the count
+        same interpretation for base2
+    */
+    vector<uint32_t> pomo_states;
+    IntIntMap pomo_states_index; // indexing, to quickly find if a PoMo-2-state is already present
+
     vector<vector<int> > seq_states; // state set for each sequence in the alignment
 
     /* for site-specific state frequency model with Huaichun, Edward, Andrew */
@@ -650,7 +708,6 @@ public:
      * @param add_unobs_const TRUE to add all unobserved constant states (for +ASC model)
      */
     void buildSeqStates(bool add_unobs_const = false);
-
 
     /** Added by MA
             Compute the probability of this alignment according to the multinomial distribution with parameters determined by the reference alignment
@@ -686,9 +743,9 @@ public:
             @param state the state index
             @param state_app (OUT) state appearance
      */
-    void getAppearance(char state, double *state_app);
+    void getAppearance(StateType state, double *state_app);
 
-    void getAppearance(char state, StateBitset &state_app);
+    void getAppearance(StateType state, StateBitset &state_app);
 
 	/**
 	 * read site specific state frequency vectors from a file to create corresponding model

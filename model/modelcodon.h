@@ -8,7 +8,7 @@
 #ifndef MODELCODON_H_
 #define MODELCODON_H_
 
-#include "modelgtr.h"
+#include "modelmarkov.h"
 
 /** CF_TARGET_NT: frequency of target nucleotide is multiplied with the rate entry (Muse and Gaut 1994)
     CF_TARGET_CODON: frequency of target codon is multiplied with the rate entry (Goldman Yang 1994)
@@ -33,7 +33,7 @@ const int CA_TRANSITION_3NT   = 2048; // codon substitution involve the 3rd NT w
 /**
  * Codon substitution models
  */
-class ModelCodon: public ModelGTR {
+class ModelCodon: public ModelMarkov {
 public:
 	/**
 		constructor
@@ -42,7 +42,7 @@ public:
 		@param tree associated phylogenetic tree
 	*/
 	ModelCodon(const char *model_name, string model_params, StateFreqType freq, string freq_params,
-    		PhyloTree *tree, bool count_rates = true);
+    		PhyloTree *tree);
 
 	/**
 	 * destructor

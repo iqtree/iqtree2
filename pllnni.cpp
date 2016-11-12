@@ -22,7 +22,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <math.h>
+#include <cmath>
 #include <assert.h>
 
 #define GLOBAL_VARIABLES_DEFINITION
@@ -659,7 +659,8 @@ void countDistinctTrees(pllInstance* pllInst, partitionList *pllPartitions) {
 	mtree.rooted = false;
 	mtree.aln = globalAlignment;
 	mtree.readTreeString(string(pllInst->tree_string));
-    mtree.root = mtree.findNodeName(globalAlignment->getSeqName(0));
+//    mtree.root = mtree.findNodeName(globalAlignment->getSeqName(0));
+    mtree.setRootNode(mtree.params->root);
 	ostringstream ostr;
 	mtree.printTree(ostr, WT_TAXON_ID | WT_SORT_TAXA);
 	string tree_str = ostr.str();

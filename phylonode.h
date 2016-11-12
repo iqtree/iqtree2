@@ -17,6 +17,11 @@
 typedef unsigned short UBYTE;
 
 /**
+ * direction of a Neighbor from the root, for rooted tree only
+ */
+enum RootDirection {UNDEFINED_DIRECTION, TOWARD_ROOT, AWAYFROM_ROOT};
+
+/**
 A neighbor in a phylogenetic tree
 
     @author BUI Quang Minh, Steffen Klaere, Arndt von Haeseler <minh.bui@univie.ac.at>
@@ -44,6 +49,7 @@ public:
         partial_lh_computed = 0;
         lh_scale_factor = 0.0;
         partial_pars = NULL;
+        direction = UNDEFINED_DIRECTION;
         size = 0;
     }
 
@@ -59,6 +65,7 @@ public:
         partial_lh_computed = 0;
         lh_scale_factor = 0.0;
         partial_pars = NULL;
+        direction = UNDEFINED_DIRECTION;
         size = 0;
     }
 
@@ -104,6 +111,14 @@ public:
 	return partial_lh_computed;
 	}
 
+	/**
+	 * true if this Neighbor is directed towards the root
+	 */
+	bool isTowardsRoot() {
+		assert(direction != UNDEFINED_DIRECTION);
+		return (direction == TOWARD_ROOT);
+	}
+
     int getSize() {
         return size;
     }
@@ -134,6 +149,11 @@ private:
         vector containing the partial parsimony scores
      */
     UINT *partial_pars;
+
+    /**
+     * direction of the Neighbor in a rooted tree
+     */
+    RootDirection direction;
 
     /** size of subtree below this neighbor in terms of number of taxa */
     int size;

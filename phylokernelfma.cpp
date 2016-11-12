@@ -15,8 +15,10 @@
 //#include "phylokernelsitemodel.h"
 
 #include "phylokernelnew.h"
+#include "phylokernelnonrev.h"
 #define KERNEL_FIX_STATES
 #include "phylokernelnew.h"
+#include "phylokernelnonrev.h"
 
 #if !defined(__AVX2__) && !defined(__FMA__)
 #error "You must compile this file with AVX2 or FMA enabled!"
@@ -82,6 +84,24 @@ void PhyloTree::setLikelihoodKernelFMA() {
             break;
         }
         return;
+    }
+
+    if ((model_factory && !model_factory->model->isReversible()) || params->kernel_nonrev) {
+        // if nonreversible model
+        switch (aln->num_states) {
+        case 4:
+            computeLikelihoodBranchPointer = &PhyloTree::computeNonrevLikelihoodBranchSIMD<Vec4d, 4, true>;
+            computeLikelihoodDervPointer = &PhyloTree::computeNonrevLikelihoodDervSIMD<Vec4d, 4, true>;
+            computePartialLikelihoodPointer = &PhyloTree::computeNonrevPartialLikelihoodSIMD<Vec4d, 4, true>;
+            break;
+        default:
+            computeLikelihoodBranchPointer = &PhyloTree::computeNonrevLikelihoodBranchGenericSIMD<Vec4d>;
+            computeLikelihoodDervPointer = &PhyloTree::computeNonrevLikelihoodDervGenericSIMD<Vec4d>;
+            computePartialLikelihoodPointer = &PhyloTree::computeNonrevPartialLikelihoodGenericSIMD<Vec4d>;
+            break;
+        }
+        computeLikelihoodFromBufferPointer = NULL;
+        return;        
     }
 
     if (params->lk_safe_scaling || leafNum >= params->numseq_safe_scaling) {

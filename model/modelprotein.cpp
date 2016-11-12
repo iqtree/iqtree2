@@ -3112,8 +3112,8 @@ void get_Dayhoff(double **q, double *f) {
 } /* dayhoff data */
 
 
-ModelProtein::ModelProtein(const char *model_name, string model_params, StateFreqType freq, string freq_params, PhyloTree *tree, bool count_rates)
- : ModelGTR(tree, count_rates)
+ModelProtein::ModelProtein(const char *model_name, string model_params, StateFreqType freq, string freq_params, PhyloTree *tree)
+ : ModelMarkov(tree)
 {
 	init(model_name, model_params, freq, freq_params);
 }
@@ -3229,7 +3229,7 @@ void ModelProtein::init(const char *model_name, string model_params, StateFreqTy
 
 	//assert(freq != FREQ_ESTIMATE);
 	if (freq == FREQ_UNKNOWN) freq = FREQ_USER_DEFINED;
-	ModelGTR::init(freq);
+	ModelMarkov::init(freq);
 }
 
 void ModelProtein::saveCheckpoint() {
@@ -3238,11 +3238,11 @@ void ModelProtein::saveCheckpoint() {
         CKP_ARRAY_SAVE(getNumRateEntries(), rates);
         checkpoint->endStruct();
     }
-    ModelGTR::saveCheckpoint();
+    ModelMarkov::saveCheckpoint();
 }
 
 void ModelProtein::restoreCheckpoint() {
-    ModelGTR::restoreCheckpoint();
+    ModelMarkov::restoreCheckpoint();
 
     if (num_params > 0) {
         checkpoint->startStruct("ModelProtein");

@@ -21,13 +21,13 @@
 #include "modelfactory.h"
 #include "rategamma.h"
 #include "rategammainvar.h"
-#include "modelgtr.h"
-#include "modelnonrev.h"
+#include "modelmarkov.h"
 #include "modeldna.h"
 #include "modelprotein.h"
 #include "modelbin.h"
 #include "modelcodon.h"
 #include "modelmorphology.h"
+#include "modelpomo.h"
 #include "modelset.h"
 #include "modelmixture.h"
 #include "ratemeyerhaeseler.h"
@@ -95,7 +95,7 @@ size_t findCloseBracket(string &str, size_t start_pos) {
 		if (str[pos] == '}') {
 			if (counter == 0) return pos; else counter--;
 		}
-	}
+    }
 	return string::npos;
 }
 
@@ -116,8 +116,10 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 		else if (tree->aln->seq_type == SEQ_BINARY) model_str = "GTR2";
 		else if (tree->aln->seq_type == SEQ_CODON) model_str = "GY";
 		else if (tree->aln->seq_type == SEQ_MORPH) model_str = "MK";
+        else if (tree->aln->seq_type == SEQ_POMO) model_str = "HKY+rP";
 		else model_str = "JC";
-		outWarning("Default model "+model_str + " may be under-fitting. Use option '-m TEST' to determine the best-fit model.");
+        if (tree->aln->seq_type != SEQ_POMO)
+            outWarning("Default model "+model_str + " may be under-fitting. Use option '-m TEST' to determine the best-fit model.");
 	}
 
 	/********* preprocessing model string ****************/
@@ -157,11 +159,96 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 				outError("Model name has wrong bracket notation '{...}'");
 			rate_str = model_str.substr(pos+1);
 			model_str = model_str.substr(0, pos+1);
-		} else {
-			rate_str = model_str.substr(spec_pos);
-			model_str = model_str.substr(0, spec_pos);
-		}
-	}
+        } else {
+            rate_str = model_str.substr(spec_pos);
+            model_str = model_str.substr(0, spec_pos);
+        }
+        // Check for PoMo and set model_str and rate_str
+        // accordingly.
+        string::size_type pos_rev_pomo = rate_str.find("+rP");
+        string::size_type pos_nonrev_pomo = rate_str.find("+nrP");
+        if (pos_nonrev_pomo != string::npos)
+            outError("Non reversible PoMo not supported yet.");
+
+        // Throw error if sequence type is PoMo but +rP is not given.
+        // This makes the model string cleaner and compareable.
+        if ((pos_rev_pomo == string::npos) &&
+            (tree->aln->seq_type == SEQ_POMO))
+            outError("Provided alignment is used by PoMo but model string does not contain, e.g., \"+rP\".");
+        
+        if (pos_rev_pomo != string::npos) {
+            // Remove +NXX and +W or +S.
+            size_t n_pos_start = rate_str.find("+N");
+            size_t n_pos_end   = rate_str.find_first_of("+", n_pos_start+1);
+            if (n_pos_start != string::npos) {
+                if (n_pos_end != string::npos)
+                    rate_str = rate_str.substr(0, n_pos_start)
+                        + rate_str.substr(n_pos_end);
+                else
+                    rate_str = rate_str.substr(0, n_pos_start);
+            }
+            
+            size_t w_pos = rate_str.find("+W");
+            if (w_pos != string::npos) {
+                rate_str = rate_str.substr(0, w_pos)
+                    + rate_str.substr(w_pos+2);
+            }
+            size_t s_pos = rate_str.find("+S");
+            if ( s_pos != string::npos) {
+                rate_str = rate_str.substr(0, s_pos)
+                    + rate_str.substr(s_pos+2);
+            }
+            // Update pos_rev_pomo in case something has been removed
+            // before "+rP".
+            string::size_type pos_rev_pomo = rate_str.find("+rP");
+
+            // Move +rP and PoMo params to model string.
+            if (rate_str[pos_rev_pomo+3] == '{') {
+                string::size_type close_bracket = rate_str.find("}");
+                if (close_bracket == string::npos)
+                    outError("No closing bracket in PoMo parameters.");
+                else {
+                    string pomo_params = rate_str.substr(pos_rev_pomo+3,close_bracket-pos_rev_pomo-3+1);
+                    // cout << pomo_params << endl;
+                    model_str = model_str + "+rP" + pomo_params;
+                    rate_str = rate_str.substr(0, pos_rev_pomo) + rate_str.substr(close_bracket+1);
+                }
+            }
+            else {
+                model_str = model_str + "+rP";
+                rate_str = rate_str.substr(0, pos_rev_pomo) + rate_str.substr(pos_rev_pomo + 3);
+            }
+        }
+    }
+    // cout << model_str << "  " << rate_str << endl;
+
+    string::size_type pos_rev_pomo = rate_str.find("+rP");
+    // for rate heterogeneity of PoMo model
+    string pomo_rate_str = "";
+
+    if (pos_rev_pomo != string::npos || tree->aln->seq_type == SEQ_POMO) {
+        // Check that only supported flags are given.
+        if (rate_str.find("+ASC") != string::npos)
+            outError("Ascertainment bias correction with PoMo not yet supported.");
+        if ((rate_str.find("+I") != string::npos) ||
+            (rate_str.find("+R") != string::npos))
+            outError("Rate heterogeneity with PoMo not yet supported.");
+        
+        size_t start_pos;
+        if ((start_pos = rate_str.find("+G")) != string::npos) {
+            // move +G from rate string to model string
+            size_t end_pos = rate_str.find_first_of("+*", start_pos+1);
+            if (end_pos == string::npos) {
+                pomo_rate_str = rate_str.substr(start_pos, rate_str.length() - start_pos);
+                rate_str = rate_str.substr(0, start_pos);
+            } else {
+                pomo_rate_str = rate_str.substr(start_pos, end_pos - start_pos);
+                rate_str = rate_str.substr(0, start_pos) + rate_str.substr(end_pos);
+            }
+        }
+
+    }
+
 
 //	nxsmodel = models_block->findModel(model_str);
 //	if (nxsmodel && nxsmodel->description.find("MIX") != string::npos) {
@@ -179,7 +266,8 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 		case SEQ_PROTEIN: freq_type = FREQ_USER_DEFINED; break; // default for protein: frequencies of the empirical AA matrix
 		case SEQ_MORPH: freq_type = FREQ_EQUAL; break;
 		case SEQ_CODON: freq_type = FREQ_UNKNOWN; break;
-		default: freq_type = FREQ_EMPIRICAL; break; // default for DNA and others: counted frequencies from alignment
+            break;
+		default: freq_type = FREQ_EMPIRICAL; break; // default for DNA, PoMo and others: counted frequencies from alignment
 		}
 	}
 
@@ -301,9 +389,8 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 //			string model_desc;
 //			NxsModel *nxsmodel = models_block->findModel(model_str);
 //			if (nxsmodel) model_desc = nxsmodel->description;
-			model = createModel(model_str, models_block, freq_type, freq_params, tree);
+			model = createModel(model_str, models_block, freq_type, freq_params, tree, pomo_rate_str);
 		}
-
 //		fused_mix_rate &= model->isMixture() && site_rate->getNRate() > 1;
 	} else {
 		// site-specific model
@@ -321,13 +408,13 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 		double *state_freq = new double[model->num_states];
 		double *rates = new double[model->getNumRateEntries()];
 		for (i = 0; i < tree->aln->site_state_freq.size(); i++) {
-			ModelGTR *modeli;
+			ModelMarkov *modeli;
 			if (i == 0) {
-				modeli = (ModelGTR*)createModel(model_str, models_block, (params.freq_type != FREQ_UNKNOWN) ? params.freq_type : FREQ_EMPIRICAL, "", tree, true);
+				modeli = (ModelMarkov*)createModel(model_str, models_block, (params.freq_type != FREQ_UNKNOWN) ? params.freq_type : FREQ_EMPIRICAL, "", tree);
 				modeli->getStateFrequency(state_freq);
 				modeli->getRateMatrix(rates);
 			} else {
-				modeli = (ModelGTR*)createModel(model_str, models_block, FREQ_EQUAL, "", tree, false);
+				modeli = (ModelMarkov*)createModel(model_str, models_block, FREQ_EQUAL, "", tree);
 				modeli->setStateFrequency(state_freq);
 				modeli->setRateMatrix(rates);
 			}
@@ -652,7 +739,10 @@ void ModelFactory::restoreCheckpoint() {
 }
 
 int ModelFactory::getNParameters() {
-	int df = model->getNDim() + model->getNDimFreq() + site_rate->getNDim() + site_rate->phylo_tree->branchNum;
+	int df = model->getNDim() + model->getNDimFreq() + site_rate->getNDim();
+    
+    if (!site_rate->getTree()->params->fixed_branch_length)
+        df += site_rate->phylo_tree->branchNum - (int)site_rate->phylo_tree->rooted;
 	return df;
 }
 
@@ -660,7 +750,7 @@ double ModelFactory::initGTRGammaIParameters(RateHeterogeneity *rate, ModelSubst
                                            double initPInvar, double *initRates, double *initStateFreqs)  {
 
     RateHeterogeneity* rateGammaInvar = rate;
-    ModelGTR* modelGTR = (ModelGTR*)(model);
+    ModelMarkov* modelGTR = (ModelMarkov*)(model);
     modelGTR->setRateMatrix(initRates);
     modelGTR->setStateFrequency(initStateFreqs);
     rateGammaInvar->setGammaShape(initAlpha);
@@ -674,7 +764,7 @@ double ModelFactory::optimizeParametersOnly(double gradient_epsilon) {
 	double logl;
 	/* Optimize substitution and heterogeneity rates independently */
 	if (!joint_optimize) {
-		double model_lh = model->optimizeParameters(gradient_epsilon);
+		double model_lh = model->optimizeParameters(model->isReversible() ? gradient_epsilon : gradient_epsilon/10.0);
 		double rate_lh = site_rate->optimizeParameters(gradient_epsilon);
 		if (rate_lh == 0.0)
 			logl = model_lh;
@@ -736,7 +826,8 @@ double ModelFactory::optimizeAllParameters(double gradient_epsilon) {
 }
 
 double ModelFactory::optimizeParametersGammaInvar(int fixed_len, bool write_info, double logl_epsilon, double gradient_epsilon) {
-    if (!site_rate->isGammai() || site_rate->isFixPInvar() || site_rate->isFixGammaShape())
+    if (!site_rate->isGammai() || site_rate->isFixPInvar() || site_rate->isFixGammaShape()
+        || model->isMixture())
         return optimizeParameters(fixed_len, write_info, logl_epsilon, gradient_epsilon);
         
 	double begin_time = getRealTime();
@@ -843,8 +934,8 @@ double ModelFactory::optimizeParametersGammaInvar(int fixed_len, bool write_info
 
     site_rate->setGammaShape(bestAlpha);
     site_rate->setPInvar(bestPInvar);
-	((ModelGTR*) tree->getModel())->setRateMatrix(bestRates);
-	((ModelGTR*) tree->getModel())->setStateFrequency(bestStateFreqs);
+	((ModelMarkov*) tree->getModel())->setRateMatrix(bestRates);
+	((ModelMarkov*) tree->getModel())->setStateFrequency(bestStateFreqs);
 	tree->restoreBranchLengths(bestLens);
 	tree->getModel()->decomposeRateMatrix();
 
@@ -878,8 +969,8 @@ vector<double> ModelFactory::optimizeGammaInvWithInitValue(int fixed_len, double
                                                  double *state_freqs, double initPInv, double initAlpha,
                                                  DoubleVector &lenvec) {
     tree->restoreBranchLengths(lenvec);
-    ((ModelGTR*) tree->getModel())->setRateMatrix(rates);
-    ((ModelGTR*) tree->getModel())->setStateFrequency(state_freqs);
+    ((ModelMarkov*) tree->getModel())->setRateMatrix(rates);
+    ((ModelMarkov*) tree->getModel())->setStateFrequency(state_freqs);
     tree->getModel()->decomposeRateMatrix();
     site_rates->setPInvar(initPInv);
     site_rates->setGammaShape(initAlpha);
@@ -914,8 +1005,13 @@ double ModelFactory::optimizeParameters(int fixed_len, bool write_info,
     // no optimization of branch length in the first round
     cur_lh = tree->computeLikelihood();
     tree->setCurScore(cur_lh);
-	if (write_info)
+	if (verbose_mode >= VB_MED || write_info) {
 		cout << "1. Initial log-likelihood: " << cur_lh << endl;
+        if (verbose_mode >= VB_MAX) {
+            tree->printTree(cout);
+            cout << endl;
+        }
+    }
 
 	// For UpperBounds -----------
 	//cout<<"MLCheck = "<<tree->mlCheck <<endl;
@@ -1044,9 +1140,9 @@ double ModelFactory::computeTrans(double time, int state1, int state2, double &d
 	return model->computeTrans(time, state1, state2, derv1, derv2);
 }
 
-void ModelFactory::computeTransMatrix(double time, double *trans_matrix) {
+void ModelFactory::computeTransMatrix(double time, double *trans_matrix, int mixture) {
 	if (!store_trans_matrix || !is_storing || model->isSiteSpecificModel()) {
-		model->computeTransMatrix(time, trans_matrix);
+		model->computeTransMatrix(time, trans_matrix, mixture);
 		return;
 	}
 	int mat_size = model->num_states * model->num_states;
@@ -1055,7 +1151,7 @@ void ModelFactory::computeTransMatrix(double time, double *trans_matrix) {
 		// allocate memory for 3 matricies
 		double *trans_entry = new double[mat_size * 3];
 		trans_entry[mat_size] = trans_entry[mat_size+1] = 0.0;
-		model->computeTransMatrix(time, trans_entry);
+		model->computeTransMatrix(time, trans_entry, mixture);
 		ass_it = insert(value_type(round(time * 1e6), trans_entry)).first;
 	} else {
 		//if (verbose_mode >= VB_MAX) 
@@ -1065,24 +1161,10 @@ void ModelFactory::computeTransMatrix(double time, double *trans_matrix) {
 	memcpy(trans_matrix, ass_it->second, mat_size * sizeof(double));
 }
 
-void ModelFactory::computeTransMatrixFreq(double time, double *state_freq, double *trans_matrix) {
-	if (model->isSiteSpecificModel()) {
-		model->computeTransMatrixFreq(time, trans_matrix);
-		return;
-	}
-	int nstates = model->num_states;
-	computeTransMatrix(time, trans_matrix);
-	for (int state1 = 0; state1 < nstates; state1++) {
-		double *trans_mat_state = trans_matrix + (state1 * nstates);
-		for (int state2 = 0; state2 < nstates; state2++)
-			trans_mat_state[state2] *= state_freq[state1];
-	}
-}
-
 void ModelFactory::computeTransDerv(double time, double *trans_matrix, 
-	double *trans_derv1, double *trans_derv2) {
+	double *trans_derv1, double *trans_derv2, int mixture) {
 	if (!store_trans_matrix || !is_storing || model->isSiteSpecificModel()) {
-		model->computeTransDerv(time, trans_matrix, trans_derv1, trans_derv2);
+		model->computeTransDerv(time, trans_matrix, trans_derv1, trans_derv2, mixture);
 		return;
 	}
 	int mat_size = model->num_states * model->num_states;
@@ -1091,37 +1173,15 @@ void ModelFactory::computeTransDerv(double time, double *trans_matrix,
 		// allocate memory for 3 matricies
 		double *trans_entry = new double[mat_size * 3];
 		trans_entry[mat_size] = trans_entry[mat_size+1] = 0.0;
-		model->computeTransDerv(time, trans_entry, trans_entry+mat_size, trans_entry+(mat_size*2));
+		model->computeTransDerv(time, trans_entry, trans_entry+mat_size, trans_entry+(mat_size*2), mixture);
 		ass_it = insert(value_type(round(time * 1e6), trans_entry)).first;
 	} else if (ass_it->second[mat_size] == 0.0 && ass_it->second[mat_size+1] == 0.0) {
 		double *trans_entry = ass_it->second;
-		model->computeTransDerv(time, trans_entry, trans_entry+mat_size, trans_entry+(mat_size*2));
+		model->computeTransDerv(time, trans_entry, trans_entry+mat_size, trans_entry+(mat_size*2), mixture);
 	}
 	memcpy(trans_matrix, ass_it->second, mat_size * sizeof(double));
 	memcpy(trans_derv1, ass_it->second + mat_size, mat_size * sizeof(double));
 	memcpy(trans_derv2, ass_it->second + (mat_size*2), mat_size * sizeof(double));
-}
-
-void ModelFactory::computeTransDervFreq(double time, double rate_val, double *state_freq, double *trans_matrix, 
-		double *trans_derv1, double *trans_derv2) 
-{
-	if (model->isSiteSpecificModel()) {
-		model->computeTransDervFreq(time, rate_val, trans_matrix, trans_derv1, trans_derv2);
-		return;
-	}
-	int nstates = model->num_states;	
-	double rate_sqr = rate_val*rate_val;
-	computeTransDerv(time * rate_val, trans_matrix, trans_derv1, trans_derv2);
-	for (int state1 = 0; state1 < nstates; state1++) {
-		double *trans_mat_state = trans_matrix + (state1 * nstates);
-		double *trans_derv1_state = trans_derv1 + (state1 * nstates);
-		double *trans_derv2_state = trans_derv2 + (state1 * nstates);
-		for (int state2 = 0; state2 < nstates; state2++) {
-			trans_mat_state[state2] *= state_freq[state1];
-			trans_derv1_state[state2] *= (state_freq[state1] * rate_val);
-			trans_derv2_state[state2] *= (state_freq[state1] * rate_sqr);
-		}
-	}
 }
 
 ModelFactory::~ModelFactory()

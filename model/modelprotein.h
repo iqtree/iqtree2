@@ -20,14 +20,14 @@
 #ifndef MODELPROTEIN_H
 #define MODELPROTEIN_H
 
-#include "modelgtr.h"
+#include "modelmarkov.h"
 
 /**
 Substitution models for protein sequences
 
 	@author BUI Quang Minh <minh.bui@univie.ac.at>
 */
-class ModelProtein : public ModelGTR
+class ModelProtein : public ModelMarkov
 {
 public:
 	/**
@@ -36,7 +36,7 @@ public:
 		@param freq state frequency type
 		@param tree associated phylogenetic tree
 	*/
-    ModelProtein(const char *model_name, string model_params, StateFreqType freq, string freq_params, PhyloTree *tree, bool count_rates = true);
+    ModelProtein(const char *model_name, string model_params, StateFreqType freq, string freq_params, PhyloTree *tree);
 
 	/**
 		initialization, called automatically by the constructor, no need to call it

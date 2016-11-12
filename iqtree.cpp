@@ -24,7 +24,7 @@
 #include "phylosupertreeplen.h"
 #include "mexttree.h"
 #include "timeutil.h"
-#include "model/modelgtr.h"
+#include "model/modelmarkov.h"
 #include "model/rategamma.h"
 #include "phylotreemixlen.h"
 #include "model/modelfactorymixlen.h"
@@ -660,7 +660,10 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
         cout.flush();
     }
     double startTime = getRealTime();
-
+    int numDupPars = 0;
+    bool orig_rooted = rooted;
+    rooted = false;
+    
 #ifdef _OPENMP
     StrVector pars_trees;
     if (params->start_tree == STT_PARSIMONY && nParTrees >= 1) {
@@ -678,6 +681,8 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
             #pragma omp for schedule(dynamic)
             for (int i = 0; i < nParTrees; i++) {
                 tree.computeParsimonyTree(NULL, aln);
+                if (orig_rooted)
+                    convertToRooted();
                 pars_trees[i] = tree.getTreeString();
             }
         }
@@ -701,22 +706,30 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
 					pllInst->start->back, PLL_FALSE, PLL_TRUE, PLL_FALSE,
 					PLL_FALSE, PLL_FALSE, PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
 			curParsTree = string(pllInst->tree_string);
+            rooted = false;
 			PhyloTree::readTreeStringSeqName(curParsTree);
 			wrapperFixNegativeBranch(true);
+            if (orig_rooted)
+                convertToRooted();
 			curParsTree = getTreeString();
         } else if (params->start_tree == STT_RANDOM_TREE) {
             generateRandomTree(YULE_HARDING);
             wrapperFixNegativeBranch(true);
+            rooted = false;
+            if (orig_rooted)
+                convertToRooted();
 			curParsTree = getTreeString();
         } else if (params->start_tree == STT_PARSIMONY) {
             /********* Create parsimony tree using IQ-TREE *********/
 #ifdef _OPENMP
-            if (params->start_tree == STT_PARSIMONY)
-                curParsTree = pars_trees[treeNr-1];
-            else
-                curParsTree = generateParsimonyTree(parRandSeed);
+            curParsTree = pars_trees[treeNr-1];
 #else
+            rooted = false;
             curParsTree = generateParsimonyTree(parRandSeed);
+            if (orig_rooted) {
+                convertToRooted();
+                curParsTree = getTreeString();
+            }
 #endif
         }
         
@@ -1729,10 +1742,10 @@ void IQTree::inputModelPLL2IQTree() {
     // TODO add support for partitioned model
     getRate()->setGammaShape(pllPartitions->partitionData[0]->alpha);
     if (aln->num_states == 4) {
-        ((ModelGTR*) getModel())->setRateMatrix(pllPartitions->partitionData[0]->substRates);
+        ((ModelMarkov*) getModel())->setRateMatrix(pllPartitions->partitionData[0]->substRates);
         getModel()->decomposeRateMatrix();
     }
-    ((ModelGTR*) getModel())->setStateFrequency(pllPartitions->partitionData[0]->empiricalFrequencies);
+    ((ModelMarkov*) getModel())->setStateFrequency(pllPartitions->partitionData[0]->empiricalFrequencies);
 }
 
 void IQTree::inputModelIQTree2PLL() {

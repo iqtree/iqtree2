@@ -44,8 +44,8 @@ AlignmentPairwise::AlignmentPairwise(PhyloTree *atree, int seq1, int seq2) : Ali
         memset(pair_freq, 0, sizeof(double)*total_size);
         int i = 0;
         for (Alignment::iterator it = tree->aln->begin(); it != tree->aln->end(); it++, i++) {
-            int state1 = (*it)[seq_id1];
-            int state2 = (*it)[seq_id2];
+            int state1 = tree->aln->convertPomoState((*it)[seq_id1]);
+            int state2 = tree->aln->convertPomoState((*it)[seq_id2]);
             addPattern(state1, state2, it->frequency, tree->getRate()->getPtnCat(i));
             /*
             	if (state1 < num_states && state2 < num_states)
@@ -57,8 +57,8 @@ AlignmentPairwise::AlignmentPairwise(PhyloTree *atree, int seq1, int seq2) : Ali
     pair_freq = new double[num_states * num_states];
     memset(pair_freq, 0, sizeof(double) * num_states * num_states);
     for (Alignment::iterator it = tree->aln->begin(); it != tree->aln->end(); it++) {
-        int state1 = (*it)[seq_id1];
-        int state2 = (*it)[seq_id2];
+        int state1 = tree->aln->convertPomoState((*it)[seq_id1]);
+        int state2 = tree->aln->convertPomoState((*it)[seq_id2]);
         addPattern(state1, state2, it->frequency);
         /*		if (state1 < num_states && state2 < num_states)
         			pair_freq[state1 * num_states + state2] += it->frequency;*/
@@ -270,8 +270,8 @@ void AlignmentPairwise::computeFuncDerv(double value, double &df, double &ddf) {
             sum_derv2[i] += trans_derv2[i] * rate_sqr;
         }
     }
-    for (i = 0; i < trans_size; i++) 
-        if (pair_freq[i] > Params::getInstance().min_branch_length && sum_trans[i] > 0) {
+    for (i = 0; i < trans_size; i++)
+        if (pair_freq[i] > Params::getInstance().min_branch_length && sum_trans[i] > 0.0) {
 //            lh -= pair_freq[i] * log(sum_trans[i]);
             double d1 = sum_derv1[i] / sum_trans[i];
             df -= pair_freq[i] * d1;

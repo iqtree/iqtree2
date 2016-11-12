@@ -226,7 +226,7 @@ GGG";
 
 
 ModelCodon::ModelCodon(const char *model_name, string model_params, StateFreqType freq, string freq_params,
-		PhyloTree *tree, bool count_rates) : ModelGTR(tree, count_rates)
+		PhyloTree *tree) : ModelMarkov(tree)
 {
     half_matrix = false;
     omega = kappa = kappa2 = 1.0;
@@ -276,11 +276,11 @@ void ModelCodon::saveCheckpoint() {
 //    int codon_freq_style = this->codon_freq_style;
 //    CKP_SAVE(codon_freq_style);
     checkpoint->endStruct();
-    ModelGTR::saveCheckpoint();
+    ModelMarkov::saveCheckpoint();
 }
 
 void ModelCodon::restoreCheckpoint() {
-    ModelGTR::restoreCheckpoint();
+    ModelMarkov::restoreCheckpoint();
     checkpoint->startStruct("ModelCodon");
 //    CKP_ARRAY_RESTORE(12, ntfreq);
     CKP_RESTORE(omega);
@@ -410,7 +410,7 @@ void ModelCodon::init(const char *model_name, string model_params, StateFreqType
 		//ntfreq = new double[12];
 		phylo_tree->aln->computeCodonFreq(freq, state_freq, ntfreq);
 	}
-	ModelGTR::init(freq);
+	ModelMarkov::init(freq);
 }
 
 StateFreqType ModelCodon::initMG94(bool fix_kappa, StateFreqType freq, CodonKappaStyle kappa_style) {
@@ -683,7 +683,7 @@ void ModelCodon::readCodonModel(string &str, bool reset_params) {
 
 void ModelCodon::decomposeRateMatrix() {
     computeCodonRateMatrix();
-    ModelGTR::decomposeRateMatrix();
+    ModelMarkov::decomposeRateMatrix();
 }
 
 void ModelCodon::computeCodonRateMatrix() {

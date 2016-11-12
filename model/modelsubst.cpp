@@ -56,7 +56,7 @@ void ModelSubst::restoreCheckpoint() {
 }
 
 // here the simplest Juke-Cantor model is implemented, valid for all kind of data (DNA, AA,...)
-void ModelSubst::computeTransMatrix(double time, double *trans_matrix) {
+void ModelSubst::computeTransMatrix(double time, double *trans_matrix, int mixture) {
 	double non_diagonal = (1.0 - exp(-time*num_states/(num_states - 1))) / num_states;
 	double diagonal = 1.0 - non_diagonal * (num_states - 1);
 	int nstates_sqr = num_states * num_states;
@@ -66,17 +66,6 @@ void ModelSubst::computeTransMatrix(double time, double *trans_matrix) {
 			trans_matrix[i] = diagonal; 
 		else 
 			trans_matrix[i] = non_diagonal;
-}
-
-void ModelSubst::computeTransMatrixFreq(double time, double* trans_matrix)
-{
-	computeTransMatrix(time, trans_matrix);
-	for (int state1 = 0; state1 < num_states; state1++) {
-		double *trans_mat_state = trans_matrix + (state1 * num_states);
-		for (int state2 = 0; state2 < num_states; state2++)
-			trans_mat_state[state2] /= num_states;
-	}
-	
 }
 
 
@@ -128,14 +117,14 @@ void ModelSubst::getQMatrix(double *q_mat) {
 			if (i == j) q_mat[k] = -1.0; else q_mat[k] = 1.0/3;
 }
 
-void ModelSubst::getStateFrequency(double *state_freq) {
+void ModelSubst::getStateFrequency(double *state_freq, int mixture) {
 	double freq = 1.0 / num_states;
 	for (int i = 0; i < num_states; i++)
 		state_freq[i] = freq;
 }
 
 void ModelSubst::computeTransDerv(double time, double *trans_matrix, 
-		double *trans_derv1, double *trans_derv2)
+		double *trans_derv1, double *trans_derv2, int mixture)
 {
 	double expf = exp(-time*num_states/(num_states - 1));
 	double non_diag = (1.0 - expf) / num_states;
@@ -181,24 +170,6 @@ void ModelSubst::computeTransDerv(double time, double *trans_matrix,
 		}
 		cout.precision(10);
 	}*/
-
-}
-
-void ModelSubst::computeTransDervFreq(double time, double rate_val, double* trans_matrix, double* trans_derv1, double* trans_derv2)
-{
-	int nstates = num_states;
-	double rate_sqr = rate_val*rate_val;
-	computeTransDerv(time * rate_val, trans_matrix, trans_derv1, trans_derv2);
-	for (int state1 = 0; state1 < nstates; state1++) {
-		double *trans_mat_state = trans_matrix + (state1 * nstates);
-		double *trans_derv1_state = trans_derv1 + (state1 * nstates);
-		double *trans_derv2_state = trans_derv2 + (state1 * nstates);
-		for (int state2 = 0; state2 < nstates; state2++) {
-			trans_mat_state[state2] /= num_states;
-			trans_derv1_state[state2] *= (rate_val/num_states);
-			trans_derv2_state[state2] *= (rate_sqr/num_states);
-		}
-	}
 
 }
 

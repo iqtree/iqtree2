@@ -998,7 +998,7 @@ double PhyloTree::computeLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, Ph
 #endif
 		tree_lh += horizontal_add(lh_final);
         if (isnan(tree_lh) || isinf(tree_lh)) {
-            cout << "WARNING: Numerical underflow caused by alignment sites";
+            cout << "WARNING: Numerical underflow caused by alignment sites there";
             i = aln->getNSite();
             for (j = 0; j < i; j++) {
                 ptn = aln->getPatternID(j);
@@ -1014,6 +1014,10 @@ double PhyloTree::computeLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, Ph
             	tree_lh += _pattern_lh[ptn] * ptn_freq[ptn];
             }
             cout << endl;
+            if (verbose_mode >= VB_MED) {
+                printTree(cout);
+                cout << endl;
+            }
 //            cout << "WARNING: Tree log-likelihood is set to " << tree_lh << endl;
         }
 
@@ -1294,7 +1298,7 @@ double PhyloTree::computeLikelihoodFromBufferEigenSIMD() {
 #endif
 	tree_lh += horizontal_add(lh_final);
     if (isnan(tree_lh) || isinf(tree_lh)) {
-        cout << "WARNING: Numerical underflow caused by alignment sites";
+        cout << "WARNING: Numerical underflow caused by alignment sites here";
         i = aln->getNSite();
         for (j = 0, c = 0; j < i; j++) {
             ptn = aln->getPatternID(j);
@@ -1573,36 +1577,74 @@ void PhyloTree::computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, Phylo
                         }
                     }
                 }
-                break;
+    		break;
             default:
-                for (int patid = start_pos; patid != end_pos; patid++) {
-                    Alignment::iterator pat = aln->ordered_pattern.begin()+ patid;
-                    int state = pat->at(leafid);
-                    int freq = pat->frequency;
-                    if (state < (*alnit)->num_states) {
-                        for (int j = 0; j < freq; j++, site++) {
-                            if (site == NUM_BITS) {
-                                x += nstates*VCSIZE;
-                                site = 0;
-                            }
-                            x[state*VCSIZE + site/UINT_BITS] |= (1 << (site % UINT_BITS));
-                        }
-                    } else if (state == (*alnit)->STATE_UNKNOWN) {
-                        for (int j = 0; j < freq; j++, site++) {
-                            if (site == NUM_BITS) {
-                                x += nstates*VCSIZE;
-                                site = 0;
-                            }
-                            UINT bit1 = (1 << (site%UINT_BITS));
-                            UINT *p = x+(site/UINT_BITS);
-                            for (int i = 0; i < (*alnit)->num_states; i++)
-                                p[i*VCSIZE] |= bit1;
-                        }
-                    } else {
-                        assert(0);
+            for (int patid = start_pos; patid != end_pos; patid++) {
+                Alignment::iterator pat = aln->ordered_pattern.begin()+ patid;
+            	int state = pat->at(leafid);
+                int freq = pat->frequency;
+                if (aln->seq_type == SEQ_POMO && state >= nstates && state < aln->STATE_UNKNOWN) {
+                    state -= nstates;
+                    assert(state < aln->pomo_states.size());
+                    int id1 = aln->pomo_states[state] & 3;
+                    int id2 = (aln->pomo_states[state] >> 16) & 3;
+                    int value1 = (aln->pomo_states[state] >> 2) & 16383;
+                    int value2 = aln->pomo_states[state] >> 18;
+                    double weight1 = ((double)value1)/(value1+value2);
+//                    int N = aln->virtual_pop_size;
+//                    int M = value1 + value2;
+
+                    // 2016-09-30: resolving polymorphic states to fixed states
+
+                    // value1 = value1*N/(value1+value2);
+                    int real_state;
+
+                    if (weight1 < 1.0/4)
+                        real_state = id2;
+                    else if (weight1 > 3.0/4)
+                        real_state = id1;
+                    else
+                        real_state = (*alnit)->STATE_UNKNOWN;
+                    /*
+                    if (value1 == 0) 
+                        real_state = id2;
+                    else if (value1 >= N)
+                        real_state = id1;
+                    else {
+                        int j;
+                        if (id1 == 0) j = id2 - 1;
+                        else j = id1 + id2;
+                        real_state = 4 + j*(N-2) + j + value1 - 1;
                     }
+                    */
+                    state = real_state;
+                    assert(state < 4 || state == (*alnit)->STATE_UNKNOWN);
+//                    assert(state < nstates);
                 }
-                break;
+                if (state < (*alnit)->num_states) {
+                    for (int j = 0; j < freq; j++, site++) {
+                        if (site == NUM_BITS) {
+                            x += nstates*VCSIZE;
+                            site = 0;
+                        }
+                        x[state*VCSIZE + site/UINT_BITS] |= (1 << (site % UINT_BITS));
+                    }
+                } else if (state == (*alnit)->STATE_UNKNOWN) {
+                    for (int j = 0; j < freq; j++, site++) {
+                        if (site == NUM_BITS) {
+                            x += nstates*VCSIZE;
+                            site = 0;
+                        }
+                        UINT bit1 = (1 << (site%UINT_BITS));
+                        UINT *p = x+(site/UINT_BITS);
+                        for (int i = 0; i < (*alnit)->num_states; i++)
+                            p[i*VCSIZE] |= bit1;
+                    }
+                } else {
+                    assert(0);
+                }
+            } // FOR loop
+            break; // of switch
             } // end of switch
             start_pos = end_pos;
         } // of end FOR LOOP

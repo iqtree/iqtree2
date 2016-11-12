@@ -27,7 +27,7 @@
 #include "alignment.h"
 #include "superalignment.h"
 #include "iqtree.h"
-#include "model/modelgtr.h"
+#include "model/modelmarkov.h"
 #include "model/modeldna.h"
 #include "myreader.h"
 #include "model/rateheterogeneity.h"
@@ -90,7 +90,8 @@ void readPatternLogLL(Alignment* aln, char *fileName, vector<double*> &logLLs, D
                     logLL[patIndex] = _logllVec[i];
                 else
                     if ( logLL[patIndex] != _logllVec[i] )
-                        outError("Conflicting between the likelihoods reported for pattern", aln->at(i));
+//                        outError("Conflicting between the likelihoods reported for pattern", aln->at(i));
+                        outError("Conflicting between the likelihoods reported for pattern ", convertIntToString(i));
             }
             logLLs.push_back(logLL);
             trees_logl.push_back(logl);

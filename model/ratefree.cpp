@@ -547,6 +547,8 @@ double RateFree::optimizeWithEM() {
 
         if (new_pinvar > 1e-4 && getPInvar() != 0.0) {
             converged = converged && (fabs(getPInvar()-new_pinvar) < 1e-4);
+            if (isFixPInvar())
+                outError("Fixed given p-invar is not supported");
             setPInvar(new_pinvar);
 //            setOptimizePInvar(false);
             phylo_tree->computePtnInvar();
@@ -558,11 +560,11 @@ double RateFree::optimizeWithEM() {
         double sum = 0.0;
         for (c = 0; c < nmix; c++) {
             tree->copyPhyloTree(phylo_tree);
-            ModelGTR *subst_model;
+            ModelMarkov *subst_model;
             if (phylo_tree->getModel()->isMixture() && phylo_tree->getModelFactory()->fused_mix_rate)
-                subst_model = ((ModelMixture*)phylo_tree->getModel())->at(c);
+                subst_model = (ModelMarkov*)phylo_tree->getModel()->getMixtureClass(c);
             else
-                subst_model = (ModelGTR*)phylo_tree->getModel();
+                subst_model = (ModelMarkov*)phylo_tree->getModel();
             tree->setModel(subst_model);
             subst_model->setTree(tree);
             model_fac->model = subst_model;

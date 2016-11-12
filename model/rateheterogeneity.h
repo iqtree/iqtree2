@@ -44,6 +44,7 @@ class for among-site rate heterogeneity, the default is homogeneous (equal) rate
 class RateHeterogeneity : public Optimization, public CheckpointFactory
 {
 	friend class ModelFactory;
+	friend class ModelPoMoMixture;
 
 public:
 	/**
@@ -173,7 +174,7 @@ public:
 		Set whether or not to optimize p_invar
 		@param opt TRUE to optimize p_invar, FALSE otherwise
 	*/
-	virtual void setOptimizePInvar(bool opt) { }
+//	virtual void setOptimizePInvar(bool opt) { }
 
 	/**
 		get the Gamma shape. Default returns 0.0 since it is homogeneous model

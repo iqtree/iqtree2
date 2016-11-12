@@ -154,12 +154,12 @@ void PhyloTree::restoreCheckpoint() {
     checkpoint->startStruct("PhyloTree");
     StrVector leafNames;
     if (CKP_VECTOR_RESTORE(leafNames)) {
-        if (leafNames.size() != leafNum)
+        if (leafNames.size() +(int)rooted != leafNum)
             outError("Alignment mismatched from checkpoint!");
 
         StrVector taxname;
         getTaxaName(taxname);
-        for (int i = 0; i < taxname.size(); i++)
+        for (int i = 0; i < leafNames.size(); i++)
             if (taxname[i] != leafNames[i])
                 outError("Sequence name " + taxname[i] + " mismatched from checkpoint");
     }    
@@ -263,7 +263,7 @@ void PhyloTree::readTree(const char *infile, bool &is_rooted) {
 }
 
 void PhyloTree::readTree(istream &in, bool &is_rooted) {
-	MTree::readTree(in, rooted);
+	MTree::readTree(in, is_rooted);
     // 2015-10-14: has to reset this pointer when read in
     current_it = current_it_back = NULL;
 	// remove taxa if necessary
@@ -294,9 +294,13 @@ void PhyloTree::assignLeafNames(Node *node, Node *dad) {
     if (!node)
         node = root;
     if (node->isLeaf()) {
-        node->id = atoi(node->name.c_str());
+        if (rooted && node == root) {
+            assert(node->id == leafNum-1);
+        } else {
+            node->id = atoi(node->name.c_str());
+            node->name = aln->getSeqName(node->id);
+        }
         assert(node->id >= 0 && node->id < leafNum);
-        node->name = aln->getSeqName(node->id);
     }
     FOR_NEIGHBOR_IT(node, dad, it)assignLeafNames((*it)->node, node);
 }
@@ -356,10 +360,14 @@ void PhyloTree::setAlignment(Alignment *alignment) {
         printTree(cout, WT_NEWLINE);
         outError("Tree taxa and alignment sequence do not match (see above)");
     }
+    if (rooted) {
+        assert(root->name == ROOT_NAME);
+        root->id = nseq;
+    }
     StrVector taxname;
     getTaxaName(taxname);
     for (StrVector::iterator it = taxname.begin(); it != taxname.end(); it++)
-    	if (alignment->getSeqID(*it) < 0) {
+    	if ((*it) != ROOT_NAME && alignment->getSeqID(*it) < 0) {
     		outError((string)"Tree taxon " + (*it) + " does not appear in the alignment", false);
     		err = true;
     	}
@@ -368,12 +376,16 @@ void PhyloTree::setAlignment(Alignment *alignment) {
 
 void PhyloTree::setRootNode(const char *my_root) {
     string root_name;
-    if (my_root)
+    if (rooted)
+        root_name = ROOT_NAME;
+    else if (my_root)
         root_name = my_root;
     else
         root_name = aln->getSeqName(0);
     root = findNodeName(root_name);
     assert(root);
+    if (rooted)
+        computeBranchDirection();
 }
 
 //void PhyloTree::setParams(Params* params) {
@@ -499,7 +511,8 @@ void PhyloTree::setModel(ModelSubst *amodel) {
 
 void PhyloTree::setModelFactory(ModelFactory *model_fac) {
     model_factory = model_fac;
-    if (model_factory && (model_factory->model->isMixture() || model_factory->model->isSiteSpecificModel()))
+    if (model_factory && (model_factory->model->isMixture() || model_factory->model->isSiteSpecificModel()
+        || !model_factory->model->isReversible() || params->kernel_nonrev))
     	setLikelihoodKernel(sse, num_threads);
 }
 
@@ -708,6 +721,11 @@ size_t PhyloTree::getBufferPartialLhSize() {
     size_t buffer_size = get_safe_upper_limit(block * model->num_states * 2 * aln->getNSeq());
     buffer_size += get_safe_upper_limit(block * (aln->getNSeq()+1) * (aln->STATE_UNKNOWN+1));
     buffer_size += (block*2+model->num_states)*VECTOR_SIZE*num_threads;
+    if (!model->isReversible() || params->kernel_nonrev) {
+        buffer_size += get_safe_upper_limit(block)*(aln->STATE_UNKNOWN+1)*2;
+        buffer_size += block*2*VECTOR_SIZE*num_threads;
+        buffer_size += 3*block*model->num_states;
+    }
     return buffer_size;
 }
 
@@ -1226,7 +1244,7 @@ void PhyloTree::computePatternStateFreq(double *ptn_state_freq) {
     size_t ptn, nptn = getAlnNPattern(), m, nmixture = getModel()->getNMixtures();
     double *ptn_freq = ptn_state_freq;
     size_t state, nstates = aln->num_states;
-    ModelMixture *models = (ModelMixture*)model;
+//    ModelMixture *models = (ModelMixture*)model;
     
     if (params->print_site_state_freq == WSF_POSTERIOR_MEAN) {
         cout << "Computing posterior mean site frequencies...." << endl;
@@ -1247,7 +1265,7 @@ void PhyloTree::computePatternStateFreq(double *ptn_state_freq) {
             for (state = 0; state < nstates; state++) {
                 double freq = 0;
                 for (m = 0; m < nmixture; m++)
-                    freq += models->at(m)->state_freq[state] * lh_cat[m];
+                    freq += model->getMixtureClass(m)->state_freq[state] * lh_cat[m];
                 ptn_freq[state] = freq;
             }
             
@@ -1268,7 +1286,7 @@ void PhyloTree::computePatternStateFreq(double *ptn_state_freq) {
                 }
             
             // now compute state frequencies
-            memcpy(ptn_freq, models->at(max_comp)->state_freq, nstates*sizeof(double));
+            memcpy(ptn_freq, model->getMixtureClass(max_comp)->state_freq, nstates*sizeof(double));
             
             // increase the pointers
             lh_cat += nmixture;
@@ -2348,11 +2366,16 @@ void PhyloTree::computeFuncDerv(double value, double &df, double &ddf) {
 }
 
 void PhyloTree::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool clearLH, int maxNRStep) {
+
+    if (rooted && (node1 == root || node2 == root))
+        return; // does not optimize virtual branch from root
+        
     double negative_lh;
     current_it = (PhyloNeighbor*) node1->findNeighbor(node2);
     assert(current_it);
     current_it_back = (PhyloNeighbor*) node2->findNeighbor(node1);
     assert(current_it_back);
+
     double current_len = current_it->length;
     double ferror, optx;
     assert(current_len >= 0.0);
@@ -2523,10 +2546,17 @@ double PhyloTree::optimizeAllBranches(int my_iterations, double tolerance, int m
 
         	//clearAllPartialLH();
 //        	readTreeString(string_brlen);
+            double max_delta_lh = 1.0;
+            // Increase max delta with PoMo because log likelihood is very much lower.
+            if (aln->seq_type == SEQ_POMO) max_delta_lh = 3.0;
         	new_tree_lh = computeLikelihood();
-            if (fabs(new_tree_lh-tree_lh) > 1.0)
+            if (fabs(new_tree_lh-tree_lh) > max_delta_lh) {
+                printTree(cout);
+                cout << endl;
                 cout << "new_tree_lh: " << new_tree_lh << "   tree_lh: " << tree_lh << endl;
-        	assert(fabs(new_tree_lh-tree_lh) < 1.0);
+                printTree(cout);
+            }
+        	assert(fabs(new_tree_lh-tree_lh) < max_delta_lh);
         	return new_tree_lh;
         }
 
@@ -2835,6 +2865,7 @@ void PhyloTree::computeBioNJ(Params &params, Alignment *alignment, string &dist_
 //    if (root)
 //        freeNode();
     readTreeFile(bionj_file.c_str());
+    
 
     if (non_empty_tree) {
         initializeAllPartialLh();
@@ -2875,6 +2906,11 @@ int PhyloTree::fixNegativeBranch(bool force, Node *node, Node *dad) {
         int pars_score = computeParsimonyBranch((PhyloNeighbor*) (*it), (PhyloNode*) node, &branch_subst);
         // first compute the observed parsimony distance
         double branch_length = (branch_subst > 0) ? ((double) branch_subst / getAlnNSite()) : (1.0 / getAlnNSite());
+
+        // Branch lengths under PoMo are #events, which is ~N^2 * #substitutions
+        if (aln->seq_type == SEQ_POMO)
+            branch_length *= aln->virtual_pop_size * aln->virtual_pop_size;
+
         // now correct Juke-Cantor formula
         double z = (double) aln->num_states / (aln->num_states - 1);
         double x = 1.0 - (z * branch_length);
@@ -2892,7 +2928,7 @@ int PhyloTree::fixNegativeBranch(bool force, Node *node, Node *dad) {
         (*it)->node->findNeighbor(node)->length = (*it)->length;
         fixed++;
     }
-    if ((*it)->length <= 0.0) {
+    if ((*it)->length <= 0.0 && (!rooted || node != root)) {
         (*it)->length = params->min_branch_length;
         (*it)->node->findNeighbor(node)->length = (*it)->length;
     }
@@ -2933,16 +2969,27 @@ int PhyloTree::fixNegativeBranch(bool force, Node *node, Node *dad) {
 
 void PhyloTree::doOneRandomNNI(Branch branch) {
 	assert(isInnerBranch(branch.first, branch.second));
+
+    if (((PhyloNeighbor*)branch.first->findNeighbor(branch.second))->direction == TOWARD_ROOT) {
+        // swap node1 and node2 if the direction is not right, only for nonreversible models
+        Node *tmp = branch.first;
+        branch.first = branch.second;
+        branch.second = tmp;
+    }
+
     NNIMove nni;
     nni.node1 = (PhyloNode*) branch.first;
     nni.node2 = (PhyloNode*) branch.second;
-	FOR_NEIGHBOR_IT(branch.first, branch.second, node1NeiIt) {
+	FOR_NEIGHBOR_IT(branch.first, branch.second, node1NeiIt)
+    if (((PhyloNeighbor*)*node1NeiIt)->direction != TOWARD_ROOT)
+    {
 		nni.node1Nei_it = node1NeiIt;
 		break;
 	}
     int randInt = random_int(branch.second->neighbors.size()-1);
     int cnt = 0;
 	FOR_NEIGHBOR_IT(branch.second, branch.first, node2NeiIt) {
+        // if this loop, is it sure that direction is away from root because node1->node2 is away from root
 		if (cnt == randInt) {
 			nni.node2Nei_it = node2NeiIt;
 			break;
@@ -2950,6 +2997,9 @@ void PhyloTree::doOneRandomNNI(Branch branch) {
 			cnt++;
 		}
 	}
+	assert(*nni.node1Nei_it != NULL && *nni.node2Nei_it != NULL);
+    assert(((PhyloNeighbor*)*nni.node1Nei_it)->direction != TOWARD_ROOT && ((PhyloNeighbor*)*nni.node2Nei_it)->direction != TOWARD_ROOT);
+
     if (constraintTree.isCompatible(nni))
         doNNI(nni, true);
 }
@@ -2957,24 +3007,35 @@ void PhyloTree::doOneRandomNNI(Branch branch) {
     
 NNIMove PhyloTree::getRandomNNI(Branch &branch) {
     assert(isInnerBranch(branch.first, branch.second));
+    // for rooted tree
+    if (((PhyloNeighbor*)branch.first->findNeighbor(branch.second))->direction == TOWARD_ROOT) {
+        // swap node1 and node2 if the direction is not right, only for nonreversible models
+        Node *tmp = branch.first;
+        branch.first = branch.second;
+        branch.second = tmp;
+    }
     NNIMove nni;
     nni.node1 = (PhyloNode*) branch.first;
     nni.node2 = (PhyloNode*) branch.second;
 
-    FOR_NEIGHBOR_IT(branch.first, branch.second, node1NeiIt) {
+    FOR_NEIGHBOR_IT(branch.first, branch.second, node1NeiIt)
+        if (((PhyloNeighbor*)*node1NeiIt)->direction != TOWARD_ROOT) {
             nni.node1Nei_it = node1NeiIt;
             break;
         }
     int randInt = random_int(branch.second->neighbors.size()-1);
     int cnt = 0;
     FOR_NEIGHBOR_IT(branch.second, branch.first, node2NeiIt) {
-            if (cnt == randInt) {
-                nni.node2Nei_it = node2NeiIt;
-                break;
-            } else {
-                cnt++;
-            }
+        // if this loop, is it sure that direction is away from root because node1->node2 is away from root
+        if (cnt == randInt) {
+            nni.node2Nei_it = node2NeiIt;
+            break;
+        } else {
+            cnt++;
         }
+    }
+	assert(*nni.node1Nei_it != NULL && *nni.node2Nei_it != NULL);
+    assert(((PhyloNeighbor*)*nni.node1Nei_it)->direction != TOWARD_ROOT && ((PhyloNeighbor*)*nni.node2Nei_it)->direction != TOWARD_ROOT);
     nni.newloglh = 0.0;
     return nni;
 }
@@ -3100,6 +3161,13 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
 
 	assert(!node1->isLeaf() && !node2->isLeaf());
     assert(node1->degree() == 3 && node2->degree() == 3);
+    
+    if (((PhyloNeighbor*)node1->findNeighbor(node2))->direction == TOWARD_ROOT) {
+        // swap node1 and node2 if the direction is not right, only for nonreversible models
+        PhyloNode *tmp = node1;
+        node1 = node2;
+        node2 = tmp;
+    }
 
 	int IT_NUM = (params->nni5) ? 6 : 2;
     size_t partial_lh_size = getPartialLhBytes()/sizeof(double);
@@ -3187,7 +3255,10 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
     		if (!node2->findNeighbor((*nniMoves[cnt].node2Nei_it)->node)) outError(__func__);
     	}
     } else {
-        FOR_NEIGHBOR_IT(node1, node2, node1_it) {
+        cnt = 0;
+        FOR_NEIGHBOR_IT(node1, node2, node1_it) 
+        if (((PhyloNeighbor*)*node1_it)->direction != TOWARD_ROOT)
+        {
 			cnt = 0;
 			FOR_NEIGHBOR_IT(node2, node1, node2_it) {
 				//   Initialize the 2 NNI moves
@@ -3197,6 +3268,7 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
 			}
 			break;
         }
+        assert(cnt == 2);
     }
 
     // Initialize node1 and node2 in nniMoves
@@ -4547,7 +4619,7 @@ int PhyloTree::restoreStableClade(Alignment *original_aln, NodeVector &pruned_ta
     nodeNum = leafNum;
     initializeTree();
     setAlignment(original_aln);
-    root = findNodeName(aln->getSeqName(0));
+    setRootNode(params->root);
     //if (verbose_mode >= VB_MED) drawTree(cout);
 
     return 0;
@@ -4712,6 +4784,23 @@ void PhyloTree::generateRandomTree(TreeGenType tree_type) {
     PhyloTree::readTreeStringSeqName(str.str());
 }
 
+void PhyloTree::computeBranchDirection(PhyloNode *node, PhyloNode *dad) {
+	if (!node) {
+		node = (PhyloNode*)root;
+	}
+	if (dad)
+		((PhyloNeighbor*)node->findNeighbor(dad))->direction = TOWARD_ROOT;
+	FOR_NEIGHBOR_IT(node, dad, it) {
+		// do not update if direction was already computed
+		assert(((PhyloNeighbor*)*it)->direction != TOWARD_ROOT);
+		if (((PhyloNeighbor*)*it)->direction != UNDEFINED_DIRECTION)
+			continue;
+		// otherwise undefined.
+		((PhyloNeighbor*)*it)->direction = AWAYFROM_ROOT;
+		computeBranchDirection((PhyloNode*)(*it)->node, node);
+	}
+}
+
 /*
 void PhyloTree::sortNeighborBySubtreeSize(PhyloNode *node, PhyloNode *dad) {
 
@@ -4742,6 +4831,33 @@ void PhyloTree::sortNeighborBySubtreeSize(PhyloNode *node, PhyloNode *dad) {
             }
 }
 */
+
+void PhyloTree::convertToRooted() {
+    assert(leafNum == aln->getNSeq());
+    string name;
+    if (params->root)
+        name = params->root;
+    else
+        name = aln->getSeqName(0);
+    Node *node = findNodeName(name);
+    if (!node)
+        outError("Cannot find leaf with name " + name);
+    assert(node->isLeaf());
+    Node *dad = node->neighbors[0]->node;
+    rooted = true;
+    root = newNode(leafNum, ROOT_NAME);
+    Node *root_int = newNode();
+    root->addNeighbor(root_int, 0.0);
+    root_int->addNeighbor(root, 0.0);
+    leafNum++;
+    double newlen = node->neighbors[0]->length/2.0;
+    node->updateNeighbor(dad, root_int, newlen);
+    root_int->addNeighbor(node, newlen);
+    dad->updateNeighbor(node, root_int, newlen);
+    root_int->addNeighbor(dad, newlen);
+    initializeTree();
+    computeBranchDirection();
+}
 
 void PhyloTree::reorientPartialLh(PhyloNeighbor* dad_branch, Node *dad) {
     if (dad_branch->partial_lh)

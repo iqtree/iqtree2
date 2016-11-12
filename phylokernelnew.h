@@ -799,6 +799,85 @@ void PhyloTree::computePartialInfo(TraversalInfo &info, VectorClass* buffer) {
     double *echild = info.echildren;
     double *partial_lh_leaf = info.partial_lh_leaves;
 
+    //----------- Non-reversible model --------------
+
+    if (!model->isReversible() || params->kernel_nonrev) {
+        size_t nstatesqr = nstates*nstates;
+        // non-reversible model
+        FOR_NEIGHBOR_IT(node, dad, it) {
+            PhyloNeighbor *child = (PhyloNeighbor*)*it;
+            // precompute information buffer
+            if (child->direction == TOWARD_ROOT) {
+                // tranpose probability matrix
+                double mat[nstatesqr];
+                for (c = 0; c < ncat_mix; c++) {
+                    double len_child = site_rate->getRate(c%ncat) * child->length;
+                    model_factory->computeTransMatrix(len_child, mat, c/denom);
+                    double *echild_ptr = &echild[c*nstatesqr];
+                    for (i = 0; i < nstates; i++) {
+                        for (x = 0; x < nstates; x++)
+                            echild_ptr[x] = mat[x*nstates+i];
+                        echild_ptr += nstates;
+                    }
+                }
+            } else {
+                for (c = 0; c < ncat_mix; c++) {
+                    double len_child = site_rate->getRate(c%ncat) * child->length;
+                    model_factory->computeTransMatrix(len_child, &echild[c*nstatesqr], c/denom);
+                }
+            }
+
+            // pre compute information for tip
+            if (isRootLeaf(child->node)) {
+                for (c = 0; c < ncat_mix; c++) {
+                    size_t m = c/denom;
+                    model->getStateFrequency(partial_lh_leaf + c*nstates, m);
+                }
+                partial_lh_leaf += (aln->STATE_UNKNOWN+1)*block;
+            } else if (child->node->isLeaf()) {
+                vector<int>::iterator it;
+                if (nstates % VectorClass::size() == 0) {
+                    // vectorized version
+                    for (it = aln->seq_states[child->node->id].begin(); it != aln->seq_states[child->node->id].end(); it++) {
+                        VectorClass *this_tip_partial_lh = (VectorClass*)&tip_partial_lh[(*it)*nstates];
+                        double *this_partial_lh_leaf = &partial_lh_leaf[(*it)*block];
+                        VectorClass *echild_ptr = (VectorClass*)echild;
+                        for (x = 0; x < block; x++) {
+                            VectorClass vchild = echild_ptr[0] * this_tip_partial_lh[0];
+                            for (i = 1; i < nstates/VectorClass::size(); i++)
+                                vchild += echild_ptr[i] * this_tip_partial_lh[i];
+                            echild_ptr += nstates/VectorClass::size();
+                            this_partial_lh_leaf[x] = horizontal_add(vchild);
+                        }
+                    }
+                } else {
+                    // non-vectorized version
+                    for (it = aln->seq_states[child->node->id].begin(); it != aln->seq_states[child->node->id].end(); it++) {
+                        double *this_tip_partial_lh = &tip_partial_lh[(*it)*nstates];
+                        double *this_partial_lh_leaf = &partial_lh_leaf[(*it)*block];
+                        double *echild_ptr = echild;
+                        for (x = 0; x < block; x++) {
+                            double vchild = 0.0;
+                            for (i = 0; i < nstates; i++) {
+                                vchild += echild_ptr[i] * this_tip_partial_lh[i];
+                            }
+                            echild_ptr += nstates;
+                            this_partial_lh_leaf[x] = vchild;
+                        }
+                    }
+                }
+                partial_lh_leaf += aln->STATE_UNKNOWN * block;
+                for (x = 0; x < block; x++) {
+                    partial_lh_leaf[x] = 1.0;
+                }
+                partial_lh_leaf += block;
+            }
+            echild += block*nstates;
+        }
+        return;
+    } // END non-reversible model
+
+    //----------- Reversible model --------------
     if (nstates % VectorClass::size() == 0) {
         // vectorized version
         VectorClass *expchild = (VectorClass*)buffer;
@@ -942,11 +1021,20 @@ void PhyloTree::computeTraversalInfo(PhyloNode *node, PhyloNode *dad, bool compu
         computeTipPartialLikelihood();
 
     traversal_info.clear();
-
+#ifndef KERNEL_FIX_STATES
+    size_t nstates = aln->num_states;
+#endif
     // reserve beginning of buffer_partial_lh for other purpose
     size_t ncat_mix = (model_factory->fused_mix_rate) ? site_rate->getNRate() : site_rate->getNRate()*model->getNMixtures();
     size_t block = aln->num_states * ncat_mix;
     double *buffer = buffer_partial_lh + block*VectorClass::size()*num_threads + get_safe_upper_limit(block)*(aln->STATE_UNKNOWN+2);
+
+    // more buffer for non-reversible models
+    if (!model->isReversible() || params->kernel_nonrev) {
+        buffer += get_safe_upper_limit(3*block*nstates);
+        buffer += get_safe_upper_limit(block)*(aln->STATE_UNKNOWN+1)*2;
+        buffer += block*2*VectorClass::size()*num_threads;
+    }
 
     // sort subtrees for mem save technique
     if (params->lh_mem_save == LM_MEM_SAVE) {
@@ -990,7 +1078,7 @@ void PhyloTree::computeTraversalInfo(PhyloNode *node, PhyloNode *dad, bool compu
 
         int num_info = traversal_info.size();
 
-        if (verbose_mode >= VB_MED) {
+        if (verbose_mode >= VB_MAX) {
             cout << "traversal order:";
             for (auto it = traversal_info.begin(); it != traversal_info.end(); it++) {
                 cout << "  ";
