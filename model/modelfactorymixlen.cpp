@@ -27,6 +27,8 @@ ModelFactoryMixlen::ModelFactoryMixlen(Params &params, PhyloTree *tree, ModelsBl
         // fix the rate of heterotachy
 //        RateHeterotachy *hrate = (RateHeterotachy*)site_rate;
 //        ModelMixture *mmodel = (ModelMixture*)model;
+
+        /*
         if (site_rate->getFixParams() == 1) {
             // swap the weights between model and site_rate
             for (int i = 0; i < site_rate->getNRate(); i++) {
@@ -40,6 +42,7 @@ ModelFactoryMixlen::ModelFactoryMixlen(Params &params, PhyloTree *tree, ModelsBl
             for (int i = 0; i < site_rate->getNRate(); i++)
                 site_rate->setProp(i, fix_prop);
         }
+        */
     }
 }
 

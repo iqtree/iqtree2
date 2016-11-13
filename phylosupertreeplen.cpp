@@ -134,7 +134,8 @@ double PartitionModelPlen::optimizeParameters(int fixed_len, bool write_info, do
     	for (int partid = 0; partid < ntrees; partid++) {
             int part = tree->part_order[partid];
     		// Subtree model parameters optimization
-        	tree->part_info[part].cur_score = tree->at(part)->getModelFactory()->optimizeParametersOnly(gradient_epsilon/min(min(i,ntrees),10));
+        	tree->part_info[part].cur_score = tree->at(part)->getModelFactory()->optimizeParametersOnly(i+1,
+                gradient_epsilon/min(min(i,ntrees),10), tree->part_info[part].cur_score);
             if (tree->part_info[part].cur_score == 0.0)
                 tree->part_info[part].cur_score = tree->at(part)->computeLikelihood();
         	cur_lh += tree->part_info[part].cur_score;

@@ -201,9 +201,10 @@ public:
 
 	/**
 	 * optimize model and site_rate parameters
-	 * @param gradient_epsilon
+	 * @param gradient_epsilon to control stop
+     * @param cur_logl current log-likelihood
 	 */
-	double optimizeParametersOnly(double gradient_epsilon);
+	double optimizeParametersOnly(int num_steps, double gradient_epsilon, double cur_logl);
 
 	/************* FOLLOWING FUNCTIONS SERVE FOR JOINT OPTIMIZATION OF MODEL AND RATE PARAMETERS *******/
 

@@ -13,7 +13,7 @@ RateHeterotachy::RateHeterotachy(int ncat, string params, PhyloTree *tree) : Rat
     phylo_tree = tree;
     prop = NULL;
     fix_params = 0;
-//    this->sorted_rates = sorted_rates;
+    optimize_steps = 0;
     setNCategory(ncat);
 
 	if (params.empty()) return;
@@ -47,6 +47,8 @@ RateHeterotachy::~RateHeterotachy() {
 
 void RateHeterotachy::setNCategory(int ncat) {
     ncategory = ncat;
+    if (optimize_steps == 0)
+        optimize_steps = ncat*2;
     // initialize with gamma rates
 	if (prop) delete [] prop;
 	prop  = new double[ncategory];
@@ -103,17 +105,17 @@ string RateHeterotachy::getNameParams() {
 
 void RateHeterotachy::writeInfo(ostream &out) {
     if (fix_params != 2) {
-        out << "Heterotachy weights: ";
+        out << "Heterotachy weights:     ";
         for (int i = 0; i < ncategory; i++)
             out << " " << prop[i];
         out << endl;
     }
     DoubleVector lenvec;
     phylo_tree->treeLengths(lenvec);
-    cout << "Heterotachy tree lengths: ";
+    out << "Heterotachy tree lengths:";
     for (int j = 0; j < lenvec.size(); j++)
-        cout << " " << lenvec[j];
-    cout << endl;
+        out << " " << lenvec[j];
+    out << endl;
 }
 
 void RateHeterotachy::writeParameters(ostream &out) {
@@ -146,9 +148,8 @@ double RateHeterotachy::optimizeWithEM() {
     double *ratio_prop = aligned_alloc<double>(nmix);
 
     // EM algorithm loop described in Wang, Li, Susko, and Roger (2008)
-    int max_step = nmix*2;
 
-    for (int step = 0; step < max_step; step++) {
+    for (int step = 0; step < optimize_steps; step++) {
         // E-step
 
         if (step > 0) {
@@ -190,11 +191,12 @@ double RateHeterotachy::optimizeWithEM() {
         }
         new_pinvar = 1.0 - new_pinvar;
         if (new_pinvar != 0.0) {
-            converged = converged && (fabs(phylo_tree->getRate()->getPInvar()-new_pinvar) < 1e-4);
+            converged = converged && (fabs(getPInvar()-new_pinvar) < 1e-4);
             // TODO fix p_pinvar
-            phylo_tree->getRate()->setPInvar(new_pinvar);
+            setPInvar(new_pinvar);
 //            phylo_tree->getRate()->setOptimizePInvar(false);
             phylo_tree->computePtnInvar();
+            phylo_tree->clearAllPartialLH();
             
         }
         if (converged) break;

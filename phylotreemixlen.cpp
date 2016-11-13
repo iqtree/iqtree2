@@ -123,21 +123,21 @@ void PhyloTreeMixlen::initializeMixlen(double tolerance) {
     // initialize mixture branch lengths if empty
 
     if (!relative_rate) {
-//        RateHeterogeneity *saved_rate = getRate();
-//        bool saved_fused_mix_rate = model_factory->fused_mix_rate;
+        RateHeterogeneity *saved_rate = getRate();
+        bool saved_fused_mix_rate = model_factory->fused_mix_rate;
 
         // create new rate model
         // random alpha
-        relative_rate = new RateGamma(mixlen, 0.0, params->gamma_median, this);
-        /*
-        relative_rate = new RateFree(mixlen, params->gamma_shape, "", true, params->optimize_alg, this);
+        relative_rate = new RateGamma(mixlen, params->gamma_shape, params->gamma_median, this);
+
+//        relative_rate = new RateFree(mixlen, params->gamma_shape, "", true, params->optimize_alg, this);
         relative_rate->setTree(this);
         
         // setup new rate model
         setRate(relative_rate);
         model_factory->site_rate = relative_rate;
         if (getModel()->isMixture()) {
-            model_factory->fused_mix_rate = true;
+//            model_factory->fused_mix_rate = true;
             setLikelihoodKernel(sse, num_threads);
         }
 
@@ -145,7 +145,7 @@ void PhyloTreeMixlen::initializeMixlen(double tolerance) {
         double tree_lh = relative_rate->optimizeParameters(tolerance);
         // 2016-07-22: BUGFIX should rescale rates
         relative_rate->rescaleRates();
-        cout << "tree_lh = " << tree_lh << endl;
+        cout << "tree_lh = " << tree_lh << " gamma_shape = " << relative_rate->getGammaShape() <<  endl;
         if (verbose_mode >= VB_MED)
             relative_rate->writeInfo(cout);
         // restore rate model
@@ -154,13 +154,13 @@ void PhyloTreeMixlen::initializeMixlen(double tolerance) {
         model_factory->fused_mix_rate = saved_fused_mix_rate;
         if (getModel()->isMixture()) {
             setLikelihoodKernel(sse, num_threads);
-            ModelMixture *mm = (ModelMixture*)getModel();
-            double pinvar = site_rate->getPInvar();
-            if (!mm->fix_prop)
-                for (int i = 0; i < mm->getNMixtures(); i++)
-                    mm->prop[i] = relative_rate->getProp(i)*(1.0-pinvar);
+//            ModelMixture *mm = (ModelMixture*)getModel();
+//            double pinvar = site_rate->getPInvar();
+//            if (!mm->fix_prop)
+//                for (int i = 0; i < mm->getNMixtures(); i++)
+//                    mm->prop[i] = relative_rate->getProp(i)*(1.0-pinvar);
         }
-        */
+
         
     }
     

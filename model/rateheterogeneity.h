@@ -233,6 +233,12 @@ public:
 	 */
 	virtual void setBounds(double *lower_bound, double *upper_bound, bool *bound_check) {}
 
+    /** 
+        set number of optimization steps
+        @param opt_steps number of optimization steps
+    */
+    virtual void setOptimizeSteps(int optimize_steps) { }
+
 	/**
 		optimize parameters. Default does nothing
 		@return the best likelihood 

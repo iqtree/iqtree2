@@ -691,8 +691,7 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
         }
 		if (model->getNMixtures() != site_rate->getNRate())
 			outError("Mixture model and site rate model do not have the same number of categories");
-        if (!tree->isMixlen()) {
-    //		ModelMixture *mmodel = (ModelMixture*)model;
+//        if (!tree->isMixlen()) {
             // reset mixture model
             model->setFixMixtureWeight(true);
             int mix, nmix = model->getNMixtures();
@@ -701,7 +700,7 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
                 model->setMixtureWeight(mix, 1.0);
             }
             model->decomposeRateMatrix();
-        }
+//        }
 	}
 
 	tree->discardSaturatedSite(params.discard_saturated_site);
@@ -761,16 +760,32 @@ double ModelFactory::initGTRGammaIParameters(RateHeterogeneity *rate, ModelSubst
     return site_rate->phylo_tree->computeLikelihood();
 }
 
-double ModelFactory::optimizeParametersOnly(double gradient_epsilon) {
+double ModelFactory::optimizeParametersOnly(int num_steps, double gradient_epsilon, double cur_logl) {
 	double logl;
 	/* Optimize substitution and heterogeneity rates independently */
 	if (!joint_optimize) {
-		double model_lh = model->optimizeParameters(model->isReversible() ? gradient_epsilon : gradient_epsilon/10.0);
-		double rate_lh = site_rate->optimizeParameters(gradient_epsilon);
-		if (rate_lh == 0.0)
-			logl = model_lh;
-		else
-			logl = rate_lh;
+        // more steps for fused mix rate model
+        int steps;
+        if (fused_mix_rate) {
+            model->setOptimizeSteps(1);
+            site_rate->setOptimizeSteps(1);
+            steps = max((model->getNMixtures()+model->getNDim())*2, num_steps*2);
+        } else {
+            steps = 1;
+        }
+        double prev_logl = cur_logl;
+        for (int step = 0; step < steps; step++) {
+            double model_lh = model->optimizeParameters(model->isReversible() ? gradient_epsilon : gradient_epsilon/10.0);
+            double rate_lh = site_rate->optimizeParameters(gradient_epsilon);
+
+            if (rate_lh == 0.0)
+                logl = model_lh;
+            else
+                logl = rate_lh;
+            if (logl <= prev_logl + gradient_epsilon*0.1 || model->getNDim() == 0 || site_rate->getNDim() == 0)
+                break;
+            prev_logl = logl;
+        }
 	} else {
 		/* Optimize substitution and heterogeneity rates jointly using BFGS */
 		logl = optimizeAllParameters(gradient_epsilon);
@@ -1034,8 +1049,10 @@ double ModelFactory::optimizeParameters(int fixed_len, bool write_info,
         else if (fixed_len == BRLEN_SCALE) {
             double scaling = 1.0;
             new_lh = tree->optimizeTreeLengthScaling(MIN_BRLEN_SCALE, scaling, MAX_BRLEN_SCALE, gradient_epsilon);
-        }
-        new_lh = optimizeParametersOnly(gradient_epsilon);
+        } else
+            new_lh = cur_lh;
+
+        new_lh = optimizeParametersOnly(i, gradient_epsilon, new_lh);
 
 		if (new_lh == 0.0) {
             if (fixed_len == BRLEN_OPTIMIZE)

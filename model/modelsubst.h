@@ -246,6 +246,13 @@ public:
 	*/
 	virtual void decomposeRateMatrix() {}
 
+
+    /** 
+        set number of optimization steps
+        @param opt_steps number of optimization steps
+    */
+    virtual void setOptimizeSteps(int optimize_steps) { }
+
 	/**
 		optimize model parameters. One should override this function when defining new model.
 		The default does nothing since it is a Juke-Cantor type model, hence no parameters involved.

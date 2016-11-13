@@ -181,6 +181,12 @@ public:
     double optimizeWithEM(double gradient_epsilon);
 
 
+    /** 
+        set number of optimization steps
+        @param opt_steps number of optimization steps
+    */
+    virtual void setOptimizeSteps(int optimize_steps) { this->optimize_steps = optimize_steps; }
+
 	/**
 		optimize model parameters
 		@return the best likelihood
@@ -253,6 +259,9 @@ public:
 protected:
 
 	bool optimizing_submodels;
+
+    /** number of optimization steps, default: ncategory*2 */
+    int optimize_steps;    
 
 	/**
 		this function is served for the multi-dimension optimization. It should pack the model parameters

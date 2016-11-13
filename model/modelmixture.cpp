@@ -1086,6 +1086,7 @@ ModelMixture::ModelMixture(string orig_model_name, string model_name, string mod
 	prop = NULL;
 	fix_prop = true;
 	optimizing_submodels = false;
+    optimize_steps = 0;
 	initMixture(orig_model_name, model_name, model_list, models_block, freq, freq_params, tree, optimize_weights);
 }
 
@@ -1275,6 +1276,9 @@ void ModelMixture::initMixture(string orig_model_name, string model_name, string
 		sum += prop[i]*at(i)->total_num_subst;
 	for (i = 0; i < nmixtures; i++)
 		at(i)->total_num_subst /= sum;
+
+    if (optimize_steps == 0)
+        optimize_steps = (getNDim()+1)*2;
 
 	if (optimize_weights) fix_prop = false;
 	fix_prop |= (nmixtures == 1);
@@ -1496,9 +1500,8 @@ double ModelMixture::optimizeWeights() {
     double *ratio_prop = aligned_alloc<double>(nmix);
 
     // EM algorithm loop described in Wang, Li, Susko, and Roger (2008)
-    int max_step = nmix*2;
 
-    for (int step = 0; step < max_step; step++) {
+    for (int step = 0; step < optimize_steps; step++) {
         // E-step
 
         if (step > 0) {
@@ -1590,11 +1593,10 @@ double ModelMixture::optimizeWithEM(double gradient_epsilon) {
     tree->setParams(phylo_tree->params);
     double prev_score = -DBL_MAX, score;
         
-     int num_steps = (getNDim()+1)*3;
 //    int num_steps = 100000; //SC
 
     // EM algorithm loop described in Wang, Li, Susko, and Roger (2008)
-    for (int step = 0; step < num_steps; step++) {
+    for (int step = 0; step < optimize_steps; step++) {
         // first compute _pattern_lh_cat
         score = phylo_tree->computePatternLhCat(WSL_MIXTURE);
 
@@ -1832,6 +1834,13 @@ void ModelMixture::writeInfo(ostream &out) {
 		at(i)->writeInfo(out);
 	}
 //	if (fix_prop) return;
+    bool all_prop_one = true;
+	for (i = 0; i < size(); i++) {
+        if (prop[i] != 1.0)
+            all_prop_one = false;
+    }
+    if (all_prop_one) return;
+
 	cout << "Mixture weights:";
 	for (i = 0; i < size(); i++)
 		cout << " " << prop[i];

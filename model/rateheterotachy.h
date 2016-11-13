@@ -100,6 +100,13 @@ public:
 	*/
 	virtual void setProp(int category, double value) { prop[category] = value; }
 
+
+    /** 
+        set number of optimization steps
+        @param opt_steps number of optimization steps
+    */
+    virtual void setOptimizeSteps(int optimize_steps) { this->optimize_steps = optimize_steps; }
+
 	/**
 		optimize parameters. Default is to optimize gamma shape
 		@return the best likelihood
@@ -130,7 +137,6 @@ public:
     */
 	virtual void setNCategory(int ncat);
 
-
 protected:
 
 	/**
@@ -147,9 +153,8 @@ protected:
 	/** TRUE to fix parameters */
 	int fix_params;
 
-    /** true to sort rate in increasing order, false otherwise */
-    bool sorted_rates;
-
+    /** number of optimization steps, default: ncategory*2 */
+    int optimize_steps;
 
 };
 
