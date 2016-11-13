@@ -1028,7 +1028,218 @@ void ModelMarkov::setEigenvectors(double *eigenvectors)
     this->eigenvectors = eigenvectors;
 }
 
-void ModelGTR::setInverseEigenvectors(double *inv_eigenvectors)
+void ModelMarkov::setInverseEigenvectors(double *inv_eigenvectors)
 {
     this->inv_eigenvectors = inv_eigenvectors;
+}
+
+/****************************************************/
+/*      NON-REVERSIBLE STUFFS                       */
+/****************************************************/
+
+
+void ModelMarkov::setRates() {
+	// I don't know the proper C++ way to handle this: got error if I didn't define something here.
+	assert(0 && "setRates should only be called on subclass of ModelMarkov");
+}
+
+/* static */ ModelMarkov* ModelMarkov::getModelByName(string model_name, PhyloTree *tree, string model_params, StateFreqType freq_type, string freq_params) {
+	if (ModelUnrest::validModelName(model_name)) {
+		return (new ModelUnrest(tree, model_params));
+	} else if (ModelLieMarkov::validModelName(model_name)) {
+	        return (new ModelLieMarkov(model_name, tree, model_params, freq_type, freq_params));
+	} else {
+		cerr << "Unrecognized model name " << model_name << endl;
+		return (NULL);
+	}
+}
+
+/* static */ bool ModelMarkov::validModelName(string model_name) {
+	return ModelUnrest::validModelName(model_name) 
+	  || ModelLieMarkov::validModelName(model_name);
+}
+
+
+
+void ModelMarkov::computeTransMatrixEigen(double time, double *trans_matrix) {
+	/* compute P(t) */
+	double evol_time = time / total_num_subst;
+    int nstates_2 = num_states*num_states;
+	double *exptime = new double[nstates_2];
+	int i, j, k;
+
+    memset(exptime, 0, sizeof(double)*nstates_2);
+	for (i = 0; i < num_states; i++)
+        if (eigenvalues_imag[i] == 0.0) {
+            exptime[i*num_states+i] = exp(evol_time * eigenvalues[i]);
+        } else {
+            assert(i < num_states-1 && eigenvalues_imag[i+1] != 0.0 && eigenvalues_imag[i] > 0.0);
+            complex<double> exp_eval(eigenvalues[i] * evol_time, eigenvalues_imag[i] * evol_time);
+            exp_eval = exp(exp_eval);
+            exptime[i*num_states+i] = exp_eval.real();
+            exptime[i*num_states+i+1] = exp_eval.imag();
+            i++;
+            exptime[i*num_states+i] = exp_eval.real();
+            exptime[i*num_states+i-1] = -exp_eval.imag();
+        }
+
+
+    // compute V * exp(L t)
+    for (i = 0; i < num_states; i++)
+        for (j = 0; j < num_states; j++) {
+            double val = 0;
+            for (k = 0; k < num_states; k++)
+                val += eigenvectors[i*num_states+k] * exptime[k*num_states+j];
+            trans_matrix[i*num_states+j] = val;
+        }
+
+    memcpy(exptime, trans_matrix, sizeof(double)*nstates_2);
+
+    // then compute V * exp(L t) * V^{-1}
+    for (i = 0; i < num_states; i++) {
+        double row_sum = 0.0;
+        for (j = 0; j < num_states; j++) {
+            double val = 0;
+            for (k = 0; k < num_states; k++)
+                val += exptime[i*num_states+k] * inv_eigenvectors[k*num_states+j];
+            // make sure that trans_matrix are non-negative
+            assert(val >= -0.001);
+            val = fabs(val);
+            trans_matrix[i*num_states+j] = val;
+            row_sum += val;
+        }
+        assert(fabs(row_sum-1.0) < 1e-4);
+    }
+
+    delete [] exptime;
+}
+
+
+/****************************************************/
+/*      HELPER FUNCTIONS                            */
+/****************************************************/
+
+/* BQM: Ziheng Yang code which fixed old matinv function */
+int matinv (double x[], int n, int m, double space[])
+{
+    /* x[n*m]  ... m>=n
+       space[n].  This puts the fabs(|x|) into space[0].  Check and calculate |x|.
+       Det may have the wrong sign.  Check and fix.
+    */
+    int i,j,k;
+    int *irow=(int*) space;
+    double ee=1e-100, t,t1,xmax, det=1;
+
+    for (i=0; i<n; i++) irow[i]=i;
+
+    for (i=0; i<n; i++)  {
+        xmax = fabs(x[i*m+i]);
+        for (j=i+1; j<n; j++)
+            if (xmax<fabs(x[j*m+i]))
+            {
+                xmax = fabs(x[j*m+i]);
+                irow[i]=j;
+            }
+        det *= x[irow[i]*m+i];
+        if (xmax < ee)   {
+            cout << endl << "xmax = " << xmax << " close to zero at " << i+1 << "!\t" << endl;
+            exit(-1);
+        }
+        if (irow[i] != i) {
+            for (j=0; j < m; j++) {
+                t = x[i*m+j];
+                x[i*m+j] = x[irow[i]*m+j];
+                x[irow[i]*m+j] = t;
+            }
+        }
+        t = 1./x[i*m+i];
+        for (j=0; j < n; j++) {
+            if (j == i) continue;
+            t1 = t*x[j*m+i];
+            for (k=0; k<m; k++)  x[j*m+k] -= t1*x[i*m+k];
+            x[j*m+i] = -t1;
+        }
+        for (j=0; j < m; j++)   x[i*m+j] *= t;
+        x[i*m+i] = t;
+    }                            /* for(i) */
+    for (i=n-1; i>=0; i--) {
+        if (irow[i] == i) continue;
+        for (j=0; j < n; j++)  {
+            t = x[j*m+i];
+            x[j*m+i] = x[j*m + irow[i]];
+            x[j*m + irow[i]] = t;
+        }
+    }
+    space[0]=det;
+    return(0);
+}
+
+int computeStateFreqFromQMatrix (double Q[], double pi[], int n, double space[])
+{
+    /* from rate matrix Q[] to pi, the stationary frequencies:
+       Q' * pi = 0     pi * 1 = 1
+       space[] is of size n*(n+1).
+    */
+    int i,j;
+    double *T = space;      /* T[n*(n+1)]  */
+
+    for (i=0;i<n+1;i++) T[i]=1;
+    for (i=1;i<n;i++) {
+        for (j=0;j<n;j++)
+            T[i*(n+1)+j] =  Q[j*n+i];     /* transpose */
+        T[i*(n+1)+n] = 0.;
+    }
+    matinv(T, n, n+1, pi);
+    for (i=0;i<n;i++)
+        pi[i] = T[i*(n+1)+n];
+    return (0);
+}
+/* End of Ziheng Yang code */
+
+int matby (double a[], double b[], double c[], int n,int m,int k)
+/* a[n*m], b[m*k], c[n*k]  ......  c = a*b
+*/
+{
+    int i,j,i1;
+    double t;
+    for (i = 0; i < n; i++)
+        for (j = 0; j < k; j++) {
+            for (i1=0,t=0; i1<m; i1++) t+=a[i*m+i1]*b[i1*k+j];
+            c[i*k+j] = t;
+        }
+    return (0);
+}
+
+int matexp (double Q[], double t, int n, int TimeSquare, double space[])
+{
+    /* This calculates the matrix exponential P(t) = exp(t*Q).
+       Input: Q[] has the rate matrix, and t is the time or branch length.
+              TimeSquare is the number of times the matrix is squared and should
+              be from 5 to 31.
+       Output: Q[] has the transition probability matrix, that is P(Qt).
+       space[n*n]: required working space.
+          P(t) = (I + Qt/m + (Qt/m)^2/2)^m, with m = 2^TimeSquare.
+       T[it=0] is the current matrix, and T[it=1] is the squared result matrix,
+       used to avoid copying matrices.
+       Use an even TimeSquare to avoid one round of matrix copying.
+    */
+    int it, i;
+    double *T[2];
+
+    if (TimeSquare<2 || TimeSquare>31) cout << "TimeSquare not good" << endl;
+    T[0]=Q;
+    T[1]=space;
+    for (i=0; i<n*n; i++)  T[0][i] = ldexp( Q[i]*t, -TimeSquare );
+
+    matby (T[0], T[0], T[1], n, n, n);
+    for (i=0; i<n*n; i++)  T[0][i] += T[1][i]/2;
+    for (i=0; i<n; i++)  T[0][i*n+i] ++;
+
+    for (i=0,it=0; i<TimeSquare; i++) {
+        it = !it;
+        matby (T[1-it], T[1-it], T[it], n, n, n);
+    }
+    if (it==1)
+        for (i=0;i<n*n;i++) Q[i]=T[1][i];
+    return(0);
 }

@@ -49,7 +49,7 @@ public:
 		@param category category ID from 0 to #category-1
 		@return the rate of the specified category
 	*/
-	virtual double getRate(int category) { return RateHeterotachy::getRate(category); }
+	virtual double getRate(int category) { return RateInvar::getRate(category); }
 
 	/**
 	 * @return model name with parameters in form of e.g. GTR{a,b,c,d,e,f}

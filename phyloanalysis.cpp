@@ -32,7 +32,7 @@
 #include "superalignment.h"
 #include "iqtree.h"
 #include "phylotreemixlen.h"
-#include "model/modelgtr.h"
+#include "model/modelmarkov.h"
 #include "model/modeldna.h"
 #include "model/modelpomo.h"
 #include "myreader.h"
@@ -469,7 +469,20 @@ void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh, 
     else out << "Total tree length (sum of branch lengths): " << totalLen << endl;
 
 	double totalLenInternal = tree.treeLengthInternal(epsilon);
-	out << "Sum of internal branch lengths: " << totalLenInternal << " (" << totalLenInternal*100.0 / totalLen << "% of tree length)" << endl;
+    double totalLenInternalP = totalLenInternal*100.0 / totalLen;
+    if (tree.aln->seq_type == SEQ_POMO) {
+        out << "Sum of internal branch lengths" << endl;
+        out << "- measured in mutations and frequency shifts per site: " << totalLenInternal << " (" << totalLenInternalP << "% of tree length)" << endl;
+        out << "- measured in substitutions per site: " << totalLenInternal << " (" << totalLenInternalP << "% of tree length)" << endl;
+        out << endl;
+    }
+    else {
+        out << "Sum of internal branch lengths: " << totalLenInternal << " (" << totalLenInternalP << "% of tree length)" << endl;
+        //	out << "Sum of internal branch lengths divided by total tree length: "
+        //			<< totalLenInternal / totalLen << endl;
+        out << endl;
+    }
+
     if (tree.isMixlen()) {
         DoubleVector lenvec;
         tree.treeLengths(lenvec);
@@ -478,9 +491,7 @@ void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh, 
             out << " " << lenvec[i];
         out << endl;
     }
-//	out << "Sum of internal branch lengths divided by total tree length: "
-//			<< totalLenInternal / totalLen << endl;
-	out << endl;
+
 	//out << "ZERO BRANCH EPSILON = " << epsilon << endl;
 	int zero_internal_branches = tree.countZeroInternalBranches(NULL, NULL, epsilon);
 	if (zero_internal_branches > 0) {
@@ -567,8 +578,11 @@ void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh, 
         
     out << "Tree in newick format:";
     if (tree.isMixlen())
-        out << " (class branch lengths are separated by '/')";
+        out << " (class branch lengths are given in [...] and separated by '/' )";
     out << endl << endl;
+
+    if (tree.aln->seq_type == SEQ_POMO)
+        out << "Tree in newick format (measured in mutations and frequency shifts):" << endl;
 
 	tree.printTree(out, WT_BR_LEN | WT_BR_LEN_FIXED_WIDTH | WT_SORT_TAXA);
 

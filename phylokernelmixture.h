@@ -504,7 +504,7 @@ void PhyloTree::computeMixtureLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch,
 		for (m = 0; m < nmixture; m++) {
             // length for heterotachy model
             VectorClass vc_len = dad_branch->getLength(m);
-			VectorClass vc_prop = VectorClass(site_rate->getProp(c) * ((ModelMixture*)model)->prop[m]);
+			VectorClass vc_prop = VectorClass(site_rate->getProp(c) * model->getMixtureWeight(m));
 			for (i = 0; i < nstates/VCSIZE; i++) {
 				VectorClass cof = VectorClass().load_a(&eval[m*nstates+i*VCSIZE]) * vc_rate;
 				VectorClass val = exp(cof*vc_len) * vc_prop;
@@ -765,7 +765,7 @@ double PhyloTree::computeMixtureLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_bra
 		for (m = 0; m < nmixture; m++) {
             double len = site_rate->getRate(c)*dad_branch->getLength(m);
             VectorClass vc_len(len);
-			VectorClass vc_prop = VectorClass(site_rate->getProp(c) * ((ModelMixture*)model)->prop[m]);
+			VectorClass vc_prop = VectorClass(site_rate->getProp(c) * model->getMixtureWeight(m));
 			for (i = 0; i < nstates/VCSIZE; i++) {
 				// eval is not aligned!
 				vc_val[(m*ncat+c)*nstates/VCSIZE+i] = exp(VectorClass().load_a(&eval[m*nstates+i*VCSIZE]) * vc_len) * vc_prop;
@@ -1079,7 +1079,7 @@ double PhyloTree::computeMixtureLikelihoodFromBufferEigenSIMD() {
 		VectorClass vc_rate = site_rate->getRate(c);
 		for (m = 0; m < nmixture; m++) {
             VectorClass vc_len = current_it->getLength(m);
-			VectorClass vc_prop = site_rate->getProp(c)*((ModelMixture*)model)->prop[m];
+			VectorClass vc_prop = site_rate->getProp(c)*model->getMixtureWeight(m);
 			for (i = 0; i < nstates/VCSIZE; i++) {
 				VectorClass cof = VectorClass().load_a(&eval[m*nstates+i*VCSIZE]) * vc_rate;
 				VectorClass val = exp(cof*vc_len) * vc_prop;

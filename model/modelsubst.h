@@ -108,6 +108,12 @@ public:
     virtual ModelSubst* getMixtureClass(int cat) { return NULL; }
 
 	/**
+	 * @param cat mixture class ID
+	 * @param m mixture model class to set
+	 */
+    virtual void setMixtureClass(int cat, ModelSubst* m) { }
+
+	/**
 		@return the number of rate entries, equal to the number of elements
 			in the upper-diagonal of the rate matrix (since model is reversible)
 	*/

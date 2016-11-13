@@ -1049,7 +1049,7 @@ void pllResizeUFBootData(){
 * 2014.4.23: REPLACE getBranchLength(tr, pr, perGene, p) BY pllGetBranchLength(tr, p, pr->numberOfPartitions)
 * BECAUSE OF LIB NEW DECLARATION: pllGetBranchLength (pllInstance *tr, nodeptr p, int partition_id);
 */
-static char *pllTree2StringREC(char *treestr, pllInstance *tr, partitionList *pr, nodeptr p, pllBoolean  printBranchLengths, pllBoolean  printNames,
+char *pllTree2StringREC(char *treestr, pllInstance *tr, partitionList *pr, nodeptr p, pllBoolean  printBranchLengths, pllBoolean  printNames,
 		pllBoolean  printLikelihood, pllBoolean  rellTree, pllBoolean  finalPrint, int perGene, pllBoolean  branchLabelSupport, pllBoolean  printSHSupport)
 {
 	char * result = treestr; // DTH: added this var to be able to remove the '\n' at the end

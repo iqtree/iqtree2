@@ -481,6 +481,7 @@ phylosupertree.cpp phylosupertree.h
 phylotree.cpp phylotree.h
 phylotreesse.cpp phylokernelnew.h
 phylotreepars.cpp
+phylokernelnonrev.cpp phylokernelnonrev.h
 phylotreemixlen.cpp phylotreemixlen.h
 pruning.cpp pruning.h
 quartet.cpp

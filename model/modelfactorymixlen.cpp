@@ -9,7 +9,7 @@
 #include "timeutil.h"
 #include "tools.h"
 #include "model/modelfactorymixlen.h"
-#include "model/modelgtr.h"
+#include "model/modelmarkov.h"
 #include "model/modelmixture.h"
 #include "rateheterotachy.h"
 
@@ -26,11 +26,11 @@ ModelFactoryMixlen::ModelFactoryMixlen(Params &params, PhyloTree *tree, ModelsBl
     if (fused_mix_rate) {
         // fix the rate of heterotachy
 //        RateHeterotachy *hrate = (RateHeterotachy*)site_rate;
-        ModelMixture *mmodel = (ModelMixture*)model;
+//        ModelMixture *mmodel = (ModelMixture*)model;
         if (site_rate->getFixParams() == 1) {
             // swap the weights between model and site_rate
             for (int i = 0; i < site_rate->getNRate(); i++) {
-                mmodel->setMixtureWeight(i, site_rate->getProp(i));
+                model->setMixtureWeight(i, site_rate->getProp(i));
                 site_rate->setProp(i, 1.0);
             }
         } else {
@@ -102,25 +102,26 @@ void ModelFactoryMixlen::sortClassesByTreeLength() {
         // reorder mixture models
         if (fused_mix_rate) {
             assert(model->getNMixtures() == site_rate->getNRate());
-            ModelMixture *mixmodel = (ModelMixture*)model;
-            ModelGTR *models[model->getNMixtures()];
-            for (j = 0; j < model->getNMixtures(); j++)
-                models[j] = mixmodel->at(index[j]);
-            for (j = 0; j < model->getNMixtures(); j++)
-                mixmodel->at(j) = models[j];
+//            ModelMixture *mixmodel = (ModelMixture*)model;
+            int nmix = model->getNMixtures();
+            ModelSubst *models[nmix];
+            for (j = 0; j < nmix; j++)
+                models[j] = model->getMixtureClass(index[j]);
+            for (j = 0; j < nmix; j++)
+                model->setMixtureClass(j, models[j]);
 
             for (j = 0; j < site_rate->getNRate(); j++)
-                prop[j] = mixmodel->getMixtureWeight(index[j]);
+                prop[j] = model->getMixtureWeight(index[j]);
             for (j = 0; j < site_rate->getNRate(); j++)
-                mixmodel->setMixtureWeight(j, prop[j]);
+                model->setMixtureWeight(j, prop[j]);
 
             // assigning memory for individual models
             int m = 0;
             int num_states = model->num_states;
-            for (ModelMixture::iterator it = mixmodel->begin(); it != mixmodel->end(); it++, m++) {
-                (*it)->setEigenvalues(&model->getEigenvalues()[m*num_states]);
-                (*it)->setEigenvectors(&model->getEigenvectors()[m*num_states*num_states]);
-                (*it)->setInverseEigenvectors(&model->getInverseEigenvectors()[m*num_states*num_states]);
+            for (m = 0; m < nmix; m++) {
+                ((ModelMarkov*)model->getMixtureClass(m))->setEigenvalues(&model->getEigenvalues()[m*num_states]);
+                ((ModelMarkov*)model->getMixtureClass(m))->setEigenvectors(&model->getEigenvectors()[m*num_states*num_states]);
+                ((ModelMarkov*)model->getMixtureClass(m))->setInverseEigenvectors(&model->getInverseEigenvectors()[m*num_states*num_states]);
             }
             model->decomposeRateMatrix();
 

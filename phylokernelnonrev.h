@@ -421,10 +421,10 @@ void PhyloTree::computeNonrevPartialLikelihoodGenericSIMD(TraversalInfo &info, s
 
 #ifdef KERNEL_FIX_STATES
 template <class VectorClass, const int nstates, const bool FMA>
-void PhyloTree::computeNonrevLikelihoodDervSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf) {
+void PhyloTree::computeNonrevLikelihoodDervSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, double *df, double *ddf) {
 #else
 template <class VectorClass, const bool FMA>
-void PhyloTree::computeNonrevLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf) {
+void PhyloTree::computeNonrevLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, double *df, double *ddf) {
 #endif
 
 //    assert(rooted);
@@ -736,9 +736,9 @@ void PhyloTree::computeNonrevLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch
         } // FOR thread
     }
 
-	df = horizontal_add(all_df);
-	ddf = horizontal_add(all_ddf);
-    assert(!std::isnan(df) && !std::isinf(df) && "Numerical underflow for non-rev lh-derivative");
+	*df = horizontal_add(all_df);
+	*ddf = horizontal_add(all_ddf);
+    assert(!std::isnan(*df) && !std::isinf(*df) && "Numerical underflow for non-rev lh-derivative");
 
 	if (isASC) {
         double prob_const = 0.0, df_const = 0.0, ddf_const = 0.0;
@@ -750,8 +750,8 @@ void PhyloTree::computeNonrevLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch
     	double df_frac = df_const / prob_const;
     	double ddf_frac = ddf_const / prob_const;
     	int nsites = aln->getNSite();
-    	df += nsites * df_frac;
-    	ddf += nsites *(ddf_frac + df_frac*df_frac);
+    	*df += nsites * df_frac;
+    	*ddf += nsites *(ddf_frac + df_frac*df_frac);
     }
 }
 

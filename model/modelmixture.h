@@ -95,12 +95,6 @@ public:
 	 */
 	virtual double getMixtureWeight(int cat) { return prop[cat]; }
 
- 	/**
-	 * @param cat mixture class
-	 * @param value weight of a mixture model component to set
-	 */
-	virtual void setMixtureWeight(int cat, double value) { prop[cat] = value; }
-
 	/**
 	 * @param cat mixture class
 	 * @return weight of a mixture model component
@@ -118,6 +112,12 @@ public:
 	 * @return corresponding mixture model component
 	 */
     virtual ModelSubst* getMixtureClass(int cat) { return at(cat); }
+
+	/**
+	 * @param cat mixture class ID
+	 * @param m mixture model class to set
+	 */
+    virtual void setMixtureClass(int cat, ModelSubst* m) { at(cat) = (ModelMarkov*)m; }
 
 	/**
 		compute the state frequency vector

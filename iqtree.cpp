@@ -660,7 +660,7 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
         cout.flush();
     }
     double startTime = getRealTime();
-    int numDupPars = 0;
+//    int numDupPars = 0;
     bool orig_rooted = rooted;
     rooted = false;
     
@@ -2644,7 +2644,7 @@ pair<int, int> IQTree::optimizeNNI(bool speedNNI) {
     unsigned int totalNNIApplied = 0;
     unsigned int numSteps = 0;
     const int MAXSTEPS = leafNum;
-    unsigned int numInnerBranches = leafNum - 3;
+//    unsigned int numInnerBranches = leafNum - 3;
     double curBestScore = candidateTrees.getBestScore();
 
     Branches nniBranches;

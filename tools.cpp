@@ -3571,6 +3571,9 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -mh                  Computing site-specific rates to .mhrate file using" << endl
             << "                       Meyer & von Haeseler (2003) method" << endl
 
+            << endl << "ASCERTAINMENT BIAS CORRECTION:" << endl
+            << "  -m modelname+ASC     Correction for absence of invariant sites in alignment" << endl
+
             << endl << "SINGLE TOPOLOGY HETEROTACHY MODEL:" << endl
             << " -m <model_name>+H[k]  Heterotachy model mixed branch lengths with k classes" << endl
             << " -m \"MIX{m1,...mK}+H\"" << endl

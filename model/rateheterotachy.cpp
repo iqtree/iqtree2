@@ -191,8 +191,9 @@ double RateHeterotachy::optimizeWithEM() {
         new_pinvar = 1.0 - new_pinvar;
         if (new_pinvar != 0.0) {
             converged = converged && (fabs(phylo_tree->getRate()->getPInvar()-new_pinvar) < 1e-4);
+            // TODO fix p_pinvar
             phylo_tree->getRate()->setPInvar(new_pinvar);
-            phylo_tree->getRate()->setOptimizePInvar(false);
+//            phylo_tree->getRate()->setOptimizePInvar(false);
             phylo_tree->computePtnInvar();
             
         }

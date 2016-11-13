@@ -367,7 +367,7 @@ void PhyloTree::computeNonrevPartialLikelihood(TraversalInfo &info, size_t ptn_l
 }
 
 //template <const int nstates>
-void PhyloTree::computeNonrevLikelihoodDerv(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf) {
+void PhyloTree::computeNonrevLikelihoodDerv(PhyloNeighbor *dad_branch, PhyloNode *dad, double *df, double *ddf) {
 
     assert(rooted);
 
@@ -578,9 +578,9 @@ void PhyloTree::computeNonrevLikelihoodDerv(PhyloNeighbor *dad_branch, PhyloNode
         } // FOR thread
     }
 
-	df = my_df;
-	ddf = my_ddf;
-    assert(!std::isnan(df) && !std::isinf(df));
+	*df = my_df;
+	*ddf = my_ddf;
+    assert(!std::isnan(*df) && !std::isinf(*df));
 
 	if (orig_nptn < nptn) {
     	// ascertainment bias correction
@@ -588,8 +588,8 @@ void PhyloTree::computeNonrevLikelihoodDerv(PhyloNeighbor *dad_branch, PhyloNode
     	double df_frac = df_const / prob_const;
     	double ddf_frac = ddf_const / prob_const;
     	int nsites = aln->getNSite();
-    	df += nsites * df_frac;
-    	ddf += nsites *(ddf_frac + df_frac*df_frac);
+    	*df += nsites * df_frac;
+    	*ddf += nsites *(ddf_frac + df_frac*df_frac);
     }
 
     delete [] trans_mat;
