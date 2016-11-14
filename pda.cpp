@@ -1784,6 +1784,7 @@ public:
     void init(streambuf *fout_buf) {
         this->fout_buf = fout_buf;
         cerr_buf = cerr.rdbuf();
+        cerr.rdbuf(this);
     }
     
     ~errstreambuf() {
