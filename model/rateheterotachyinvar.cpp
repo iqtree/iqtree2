@@ -30,6 +30,11 @@ void RateHeterotachyInvar::restoreCheckpoint() {
     checkpoint->endStruct();
 }
 
+double RateHeterotachyInvar::getRate(int category) {
+    return 1.0;
+    return 1.0 / (1.0 - p_invar);
+}
+
 void RateHeterotachyInvar::setNCategory(int ncat) {
 	RateHeterotachy::setNCategory(ncat);
 	name = "+I" + name;

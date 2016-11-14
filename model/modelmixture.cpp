@@ -1413,9 +1413,13 @@ void ModelMixture::getStateFrequency(double *state_freq, int mixture) {
     double state_freq_class[num_states];
     int mix = getNMixtures();
     memset(state_freq, 0, sizeof(double)*num_states);
+    bool fused = isFused();
     for (int i = 0; i < mix; i++) {
         at(i)->getStateFrequency(state_freq_class);
         double weight = getMixtureWeight(i);
+        // fused model, take the weight from site_rate
+        if (fused)
+            weight = (phylo_tree->getRate()->getProp(i));
         for (int j = 0; j < num_states; j++)
             state_freq[j] += weight*state_freq_class[j];
     }
@@ -1516,8 +1520,8 @@ double ModelMixture::optimizeWeights() {
         memset(new_prop, 0, nmix*sizeof(double));
         for (ptn = 0; ptn < nptn; ptn++) {
             double *this_lk_cat = phylo_tree->_pattern_lh_cat + ptn*nmix;
-//            double lk_ptn = phylo_tree->ptn_invar[ptn];
-            double lk_ptn = 0.0;
+            double lk_ptn = phylo_tree->ptn_invar[ptn];
+//            double lk_ptn = 0.0;
             for (c = 0; c < nmix; c++) {
                 lk_ptn += this_lk_cat[c];
             }
@@ -1610,8 +1614,8 @@ double ModelMixture::optimizeWithEM(double gradient_epsilon) {
         // decoupled weights (prop) from _pattern_lh_cat to obtain L_ci and compute pattern likelihood L_i
         for (ptn = 0; ptn < nptn; ptn++) {
             double *this_lk_cat = phylo_tree->_pattern_lh_cat + ptn*nmix;
-//            double lk_ptn = phylo_tree->ptn_invar[ptn];
-            double lk_ptn = 0.0;
+            double lk_ptn = phylo_tree->ptn_invar[ptn];
+//            double lk_ptn = 0.0;
             for (c = 0; c < nmix; c++) {
                 lk_ptn += this_lk_cat[c];
             }
@@ -1689,6 +1693,14 @@ double ModelMixture::optimizeWithEM(double gradient_epsilon) {
     return score;
 }
 
+bool ModelMixture::isFused() {
+	for (int i = 0; i < size(); i++) {
+        if (prop[i] != 1.0)
+            return false;
+    }
+    return true;
+}
+
 double ModelMixture::optimizeParameters(double gradient_epsilon) {
 	optimizing_submodels = true;
     
@@ -1710,14 +1722,11 @@ double ModelMixture::optimizeParameters(double gradient_epsilon) {
 
 	double sum;
 	int i, ncategory = size();
-    bool all_prop_one = true;
 	for (i = 0, sum = 0.0; i < ncategory; i++) {
 		sum += prop[i]*at(i)->total_num_subst;
-        if (prop[i] != 1.0)
-            all_prop_one = false;
     }
 //    sum += phylo_tree->getRate()->getPInvar();
-    if (fabs(sum-1.0) > 1e-6 && !all_prop_one) {
+    if (fabs(sum-1.0) > 1e-6 && !isFused()) {
         for (i = 0; i < ncategory; i++)
             at(i)->total_num_subst /= sum;
         decomposeRateMatrix();
@@ -1834,12 +1843,7 @@ void ModelMixture::writeInfo(ostream &out) {
 		at(i)->writeInfo(out);
 	}
 //	if (fix_prop) return;
-    bool all_prop_one = true;
-	for (i = 0; i < size(); i++) {
-        if (prop[i] != 1.0)
-            all_prop_one = false;
-    }
-    if (all_prop_one) return;
+    if (isFused()) return;
 
 	cout << "Mixture weights:";
 	for (i = 0; i < size(); i++)

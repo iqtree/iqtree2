@@ -187,6 +187,9 @@ public:
     */
     virtual void setOptimizeSteps(int optimize_steps) { this->optimize_steps = optimize_steps; }
 
+    /** @return true if model is fused with site_rate */
+    bool isFused();
+
 	/**
 		optimize model parameters
 		@return the best likelihood
