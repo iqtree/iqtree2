@@ -39,14 +39,15 @@ using namespace std;
     @param A vector of size N
     @param[out] X sum of elements of A
 */
-#ifdef KERNEL_FIX_STATES
-template <class VectorClass, const size_t nstates, const bool append>
-inline void sumVec(VectorClass *A, VectorClass &X, size_t N)
-#else
+#ifndef KERNEL_FIX_STATES
 template <class VectorClass, const bool append>
 inline void sumVec(VectorClass *A, VectorClass &X, size_t N)
-#endif
 {
+    if (N == 1) {
+        X = A[0];
+        return;
+    }
+
     size_t i;
     switch (N % 4) {
     case 0: {
@@ -100,6 +101,7 @@ inline void sumVec(VectorClass *A, VectorClass &X, size_t N)
     }
     }
 }
+#endif
 
 /**
     dotProduct of two vectors A, B
@@ -934,7 +936,7 @@ void PhyloTree::computeTraversalInfo(PhyloNode *node, PhyloNode *dad, bool compu
 
         int num_info = traversal_info.size();
 
-        if (verbose_mode >= VB_MED) {
+        if (verbose_mode >= VB_MAX) {
             cout << "traversal order:";
             for (auto it = traversal_info.begin(); it != traversal_info.end(); it++) {
                 cout << "  ";

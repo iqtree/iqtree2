@@ -458,6 +458,12 @@ double RateFree::optimizeWithEM() {
 //    double *lk_ptn = aligned_alloc<double>(nptn);
     double *new_prop = aligned_alloc<double>(nmix);
     PhyloTree *tree = new PhyloTree;
+
+    // attach memory to save space
+//    tree->central_partial_lh = phylo_tree->central_partial_lh;
+//    tree->central_scale_num = phylo_tree->central_scale_num;
+//    tree->central_partial_pars = phylo_tree->central_partial_pars;
+
     tree->copyPhyloTree(phylo_tree);
     tree->optimize_by_newton = phylo_tree->optimize_by_newton;
     tree->setParams(phylo_tree->params);
@@ -593,6 +599,11 @@ double RateFree::optimizeWithEM() {
         if (converged) break;
     }
     
+    // deattach memory
+//    tree->central_partial_lh = NULL;
+//    tree->central_scale_num = NULL;
+//    tree->central_partial_pars = NULL;
+
     delete tree;
     aligned_free(new_prop);
     return phylo_tree->computeLikelihood();
