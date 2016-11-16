@@ -1785,6 +1785,7 @@ public:
         this->fout_buf = fout_buf;
         cerr_buf = cerr.rdbuf();
         cerr.rdbuf(this);
+        new_line = true;
     }
     
     ~errstreambuf() {
@@ -1794,11 +1795,25 @@ public:
 protected:
 	streambuf *cerr_buf;
 	streambuf *fout_buf;
+    bool new_line;
     
     virtual int overflow( int c = EOF) {
-        if (cerr_buf->sputc(c) == EOF) return EOF;
-        if ((Params::getInstance().suppress_output_flags & OUT_LOG))
+        if (new_line)
+            cerr_buf->sputn("ERROR: ", 7);
+        if (cerr_buf->sputc(c) == EOF) {
+            new_line = false;
+            if (c == '\n') new_line = true;
+            return EOF;
+        }
+        if ((Params::getInstance().suppress_output_flags & OUT_LOG)) {
+            new_line = false;
+            if (c == '\n') new_line = true;
             return c;
+        }
+        if (new_line)
+            fout_buf->sputn("ERROR: ", 7);
+        new_line = false;
+        if (c == '\n') new_line = true;
         if (fout_buf->sputc(c) == EOF) return EOF;
         return c;
     }
