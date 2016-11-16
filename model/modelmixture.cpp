@@ -1419,7 +1419,7 @@ void ModelMixture::getStateFrequency(double *state_freq, int mixture) {
         double weight = getMixtureWeight(i);
         // fused model, take the weight from site_rate
         if (fused)
-            weight = (phylo_tree->getRate()->getProp(i));
+            weight = phylo_tree->getRate()->getProp(i) / (1.0 - phylo_tree->getRate()->getPInvar());
         for (int j = 0; j < num_states; j++)
             state_freq[j] += weight*state_freq_class[j];
     }
