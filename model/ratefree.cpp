@@ -605,6 +605,11 @@ double RateFree::optimizeWithEM() {
     if (sorted_rates)
         quicksort(rates, 0, ncategory-1, prop);
     
+    // deattach memory
+//    tree->central_partial_lh = NULL;
+//    tree->central_scale_num = NULL;
+//    tree->central_partial_pars = NULL;
+
     delete tree;
     aligned_free(new_prop);
     return phylo_tree->computeLikelihood();
