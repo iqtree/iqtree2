@@ -84,7 +84,11 @@ public:
         @param c class index
         @return branch length for class c
     */
-    virtual void setLength(int c, double len) { 
+    virtual void setLength(int c, double len) {
+        if (lengths.empty()) {
+            length = len;
+            return;
+        }
         assert(c < lengths.size());
         lengths[c] = len;
     }

@@ -1050,18 +1050,18 @@ double Optimization::L_BFGS_B(int n, double* x, double* l, double* u, double pgt
 	for (i=0; i<n; i++)
 		nbd[i] = 2;
 
-	double factr = 1e+10; // control the convergence of the "L-BFGS-B" method.
+	double factr = 1e+9; // control the convergence of the "L-BFGS-B" method.
 	// Convergence occurs when the reduction in the object is within this factor
 	// of the machine tolerance.
 	// Default is 1e7, that is a tolerance of about 1e-8
 
 //	double pgtol = 0;   // helps control the convergence of the "L-BFGS-B" method.
-    pgtol = 0.0;
+//    pgtol = 0.0;
 	// It is a tolerance on the projected gradient in the current search direction.
 	// Default is zero, when the check is suppressed
 
 	int trace = 0;      // non-negative integer.
-    if (verbose_mode >= VB_MED)
+    if (verbose_mode >= VB_MAX)
         trace = 1;
 	// If positive, tracing information on the progress of the optimization is produced.
 	// Higher values may produce more tracing information.

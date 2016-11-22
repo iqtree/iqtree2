@@ -2889,6 +2889,11 @@ int PhyloTree::setNegativeBranch(bool force, double newlen, Node *node, Node *da
     return fixed;
 }
 
+void PhyloTree::fixOneNegativeBranch(double branch_length, Neighbor *dad_branch, Node *dad) {
+    dad_branch->length = branch_length;
+    // set the backward branch length
+    dad_branch->node->findNeighbor(dad)->length = branch_length;
+}
 
 int PhyloTree::fixNegativeBranch(bool force, Node *node, Node *dad) {
 
@@ -2921,11 +2926,9 @@ int PhyloTree::fixNegativeBranch(bool force, Node *node, Node *dad) {
 //        	cout << "Negative branch length " << (*it)->length << " was set to ";
         //(*it)->length = fixed_length;
         //(*it)->length = random_double()+0.1;
-        (*it)->length = branch_length;
+        fixOneNegativeBranch(branch_length, (*it), node);
         if (verbose_mode >= VB_DEBUG)
-        cout << (*it)->length << " parsimony = " << pars_score << endl;
-        // set the backward branch length
-        (*it)->node->findNeighbor(node)->length = (*it)->length;
+            cout << branch_length << " parsimony = " << pars_score << endl;
         fixed++;
     }
     if ((*it)->length <= 0.0 && (!rooted || node != root)) {
@@ -2967,6 +2970,7 @@ int PhyloTree::fixNegativeBranch(bool force, Node *node, Node *dad) {
  Nearest Neighbor Interchange by maximum likelihood
  ****************************************************************************/
 
+/*
 void PhyloTree::doOneRandomNNI(Branch branch) {
 	assert(isInnerBranch(branch.first, branch.second));
 
@@ -3003,7 +3007,7 @@ void PhyloTree::doOneRandomNNI(Branch branch) {
     if (constraintTree.isCompatible(nni))
         doNNI(nni, true);
 }
-
+*/
     
 NNIMove PhyloTree::getRandomNNI(Branch &branch) {
     assert(isInnerBranch(branch.first, branch.second));

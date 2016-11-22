@@ -1359,11 +1359,12 @@ public:
      ****************************************************************************/
 
     /**
+            Deprecated
             search by a nearest neigbor interchange, then optimize branch lengths. Do it
             until tree does not improve
             @return the likelihood of the tree
      */
-    double optimizeNNIBranches();
+//    double optimizeNNIBranches();
 
     /**
             search by a nearest neigbor interchange
@@ -1378,11 +1379,11 @@ public:
             @param dad dad of the node, used to direct the search
             @return the likelihood of the tree
      */
-    double optimizeNNI(double cur_score, PhyloNode *node = NULL, PhyloNode *dad = NULL
-            /*,ostream *out = NULL, int brtype = 0, ostream *out_lh = NULL, ostream *site_lh = NULL,
-    StringIntMap *treels = NULL, vector<double*> *treels_ptnlh = NULL, DoubleVector *treels_logl = NULL,
-    int *max_trees = NULL, double *logl_cutoff = NULL*/
-            );
+//    double optimizeNNI(double cur_score, PhyloNode *node = NULL, PhyloNode *dad = NULL
+//            /*,ostream *out = NULL, int brtype = 0, ostream *out_lh = NULL, ostream *site_lh = NULL,
+//    StringIntMap *treels = NULL, vector<double*> *treels_ptnlh = NULL, DoubleVector *treels_logl = NULL,
+//    int *max_trees = NULL, double *logl_cutoff = NULL*/
+//            );
 
 
     /**
@@ -1409,7 +1410,7 @@ public:
      *
      * @param branch on which a random NNI is done
      */
-    void doOneRandomNNI(Branch branch);
+//    void doOneRandomNNI(Branch branch);
 
     /**
     *   Get a random NNI from an internal branch, checking for consistency with constraintTree
@@ -1517,6 +1518,15 @@ public:
             @param dist_file distance matrix file
      */
     void computeBioNJ(Params &params, Alignment *alignment, string &dist_file);
+
+    /**
+        called by fixNegativeBranch to fix one branch
+        @param branch_length new branch length
+        @param dad_branch dad branch
+        @param dad dad node
+    */
+    virtual void fixOneNegativeBranch(double branch_length, Neighbor *dad_branch, Node *dad);
+
     /**
             Neighbor-joining/parsimony tree might contain negative branch length. This
             function will fix this.

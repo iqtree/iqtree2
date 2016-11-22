@@ -51,12 +51,17 @@ public:
     /**
         @return true if this is a tree with mixture branch lengths, default: false
     */
-    virtual bool isMixlen() { return true; }
+    virtual bool isMixlen() { return !initializing_mixlen; }
 
     /**
         @return number of mixture branch lengths, default: 1
     */
-    virtual int getMixlen() { return mixlen; }
+    virtual int getMixlen() {
+        if (initializing_mixlen)
+            return 1;
+        else
+            return mixlen;
+    }
 
     /**
         set number of mixture branch lengths
@@ -104,6 +109,14 @@ public:
 
     /** initialize parameters if necessary */
     void initializeMixlen(double tolerance);
+
+    /**
+        called by fixNegativeBranch to fix one branch
+        @param branch_length new branch length
+        @param dad_branch dad branch
+        @param dad dad node
+    */
+    virtual void fixOneNegativeBranch(double branch_length, Neighbor *dad_branch, Node *dad);
 
     /**
      * IMPORTANT: semantic change: this function does not return score anymore, for efficiency purpose
@@ -166,6 +179,15 @@ public:
 	*/
 	virtual double derivativeFunk(double x[], double dfx[]);
 
+
+    /**
+     *  Optimize current tree using NNI
+     *
+     *  @return
+     *      <number of NNI steps, number of NNIs> done
+     */
+    virtual pair<int, int> optimizeNNI(bool speedNNI = true);
+
     /** number of mixture categories */
     int mixlen;
 
@@ -175,7 +197,10 @@ public:
 protected:
     
     /** relative rate, used to initialize branch lengths */
-    RateHeterogeneity *relative_rate;
+    DoubleVector relative_treelen;
+
+    /** true if during intialization phase */
+    bool initializing_mixlen;
 
 };
 

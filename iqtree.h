@@ -348,7 +348,7 @@ public:
      *  @return
      *      <number of NNI steps, number of NNIs> done
      */
-    pair<int, int> optimizeNNI(bool speedNNI = true);
+    virtual pair<int, int> optimizeNNI(bool speedNNI = true);
 
     /**
      *  Return the current best score found

@@ -1938,12 +1938,13 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
     } else {
         initTree = iqtree.optimizeModelParameters(true, initEpsilon);
         if (iqtree.isMixlen())
-            ((ModelFactoryMixlen*)iqtree.getModelFactory())->sortClassesByTreeLength();
+            initTree = ((ModelFactoryMixlen*)iqtree.getModelFactory())->sortClassesByTreeLength();
 
         iqtree.saveCheckpoint();
         iqtree.getModelFactory()->saveCheckpoint();
         iqtree.getCheckpoint()->putBool("finishedModelInit", true);
         iqtree.getCheckpoint()->dump();
+//        cout << "initTree: " << initTree << endl;
     }
 
     if (params.lmap_num_quartets >= 0) {
@@ -2026,6 +2027,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
                     initTree = iqtree.optimizeBranches();
                 }
                 cout << "Log-likelihood of BIONJ tree: " << iqtree.getCurScore() << endl;
+//                cout << "BIONJ tree: " << iqtree.getTreeString() << endl;
                 iqtree.candidateTrees.update(initTree, iqtree.getCurScore());
             }
         }

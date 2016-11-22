@@ -58,7 +58,7 @@ double ModelFactoryMixlen::optimizeParameters(int fixed_len, bool write_info, do
     return score;
 }
 
-void ModelFactoryMixlen::sortClassesByTreeLength() {
+string ModelFactoryMixlen::sortClassesByTreeLength() {
 
 	PhyloTreeMixlen *tree = (PhyloTreeMixlen*)site_rate->getTree();
 
@@ -138,12 +138,15 @@ void ModelFactoryMixlen::sortClassesByTreeLength() {
     }
 
     // update relative_rate
+    /*
     double sum = 0.0;
     for (j = 0; j < tree->mixlen; j++)
-        sum = treelen[j];
+        sum += treelen[j];
     sum = tree->mixlen/sum;
     for (j = 0; j < tree->mixlen; j++)
         tree->relative_rate->setRate(j, treelen[j]*sum);
+    */
+    return tree->getTreeString();
 }
 
 int ModelFactoryMixlen::getNParameters() {

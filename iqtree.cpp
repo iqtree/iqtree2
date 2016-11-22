@@ -736,8 +736,19 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
         int pos = addTreeToCandidateSet(curParsTree, -DBL_MAX, false, MPIHelper::getInstance().getProcessID());
         // if a duplicated tree is generated, then randomize the tree
         if (pos == -1) {
-            readTreeString(curParsTree);
-            string randTree = doRandomNNIs();
+//            readTreeString(curParsTree);
+//            doRandomNNIs();
+            generateRandomTree(YULE_HARDING);
+            wrapperFixNegativeBranch(true);
+            rooted = false;
+            if (orig_rooted)
+                convertToRooted();
+            string randTree = getTreeString();
+//            if (isMixlen()) {
+//                randTree = optimizeBranches(1);
+//            } else {
+//                curScore = -DBL_MAX;
+//            }
             addTreeToCandidateSet(randTree, -DBL_MAX, false, MPIHelper::getInstance().getProcessID());
         }
     }
@@ -810,11 +821,16 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
     cout << endl;
     cout << "Do NNI search on " << bestInitTrees.size() << " best initial trees" << endl;
     stop_rule.setCurIt(0);
-    candidateTrees.clear();
-    candidateTrees.setMaxSize(Params::getInstance().numSupportTrees);
+    if (candidateTrees.size() > Params::getInstance().numSupportTrees)
+        candidateTrees.clear();// TODO why clear here???
 
-    for (vector<string>::iterator it = bestInitTrees.begin(); it != bestInitTrees.end(); it++) {
+    candidateTrees.setMaxSize(Params::getInstance().numSupportTrees);
+    vector<string>::iterator it;
+
+    for (it = bestInitTrees.begin(); it != bestInitTrees.end(); it++) {
         readTreeString(*it);
+//        optimizeBranches();
+//        cout << "curScore: " << curScore << "  Tree before NNI: " << getTreeString() << endl;
         doNNISearch();
         string treeString = getTreeString();
         addTreeToCandidateSet(treeString, curScore, true, MPIHelper::getInstance().getProcessID());
@@ -827,26 +843,21 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
     }
 
     // TODO turning this
-    /*
     if (isMixlen()) {
         cout << "Optimizing branch lengths for top " << min((int)candidateTrees.size(), params->popSize) << " candidate trees... " << endl;
 
         startTime = getRealTime();
-        initParsimonyTrees = candidateTrees.getBestCandidateTrees(params->popSize);
-        int treenr;
-        for (rit = initParsimonyTrees.rbegin(), treenr=1; rit != initParsimonyTrees.rend(); rit++,treenr++) {
+        bestInitTrees = candidateTrees.getBestTreeStrings(params->popSize);
+        for (it = bestInitTrees.begin(); it != bestInitTrees.end(); it++) {
             string tree;
-            readTreeString(rit->second.tree);
+            readTreeString(*it);
             tree = optimizeBranches();
-            cout << "Tree " << treenr << " / LogL: " << getCurScore() << endl;
+//            cout << "Tree after brlen opt: " << tree << endl;
+            cout << "Tree " << distance(bestInitTrees.begin(), it)+1 << " / LogL: " << getCurScore() << endl;
             candidateTrees.update(tree, getCurScore());
-            saveCheckpoint();
-            checkpoint->dump();
         }
-        
         cout << getRealTime() - startTime << " seconds" << endl;
     }
-    */
 
     //---- BLOCKING COMMUNICATION
     syncCandidateTrees(Params::getInstance().numSupportTrees, true);
@@ -1609,6 +1620,8 @@ string IQTree::doRandomNNIs(bool storeTabu) {
         numRandomNNI = numNonStableBranches;
     } else {
         numRandomNNI = floor((leafNum - 3) * Params::getInstance().initPS);
+        if (leafNum >= 4 && numRandomNNI == 0)
+            numRandomNNI = 1;
     }
 
     initTabuSplits.clear();
@@ -2646,6 +2659,9 @@ pair<int, int> IQTree::optimizeNNI(bool speedNNI) {
     const int MAXSTEPS = leafNum;
 //    unsigned int numInnerBranches = leafNum - 3;
     double curBestScore = candidateTrees.getBestScore();
+
+//    if (isMixlen())
+//        optimizeBranches();
 
     Branches nniBranches;
     Branches nonNNIBranches;

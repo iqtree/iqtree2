@@ -32,8 +32,9 @@ public:
 
     /**
         sort classes in ascending order of tree lengths
+        @return tree string with sorted branch lengths
     */
-    void sortClassesByTreeLength();
+    string sortClassesByTreeLength();
 
 
     /**
