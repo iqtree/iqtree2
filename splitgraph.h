@@ -319,7 +319,7 @@ public:
 		@return TRUE if the distance matrix presents for circular splits graph
 		@param mat distance matrix
 	*/
-	bool checkCircular(matrix(double) &mat);
+	bool checkCircular(mmatrix(double) &mat);
 
 	/**
 		get the ID of the taxon around the circle in a circular splits graph
@@ -369,14 +369,14 @@ public:
 		calculate the distance matrix
 		@param dist (OUT) distance matrix
 	*/
-	void calcDistance(matrix(double) &dist);
+	void calcDistance(mmatrix(double) &dist);
 
 	/**
 		calculate the distance matrix, based on the taxa_order
 		@param dist (OUT) distance matrix
 		@param taxa_order an order of taxa
 	*/
-	void calcDistance(matrix(double) &dist, vector<int> &taxa_order);
+	void calcDistance(mmatrix(double) &dist, vector<int> &taxa_order);
 
 	/**
 	 * remove all trivial splits

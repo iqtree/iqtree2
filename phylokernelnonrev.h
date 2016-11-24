@@ -603,9 +603,9 @@ void PhyloTree::computeNonrevLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch
                 VectorClass *lh_derv1 = (VectorClass*)vec_tip + block;
                 VectorClass *lh_derv2 = (VectorClass*)lh_derv1 + block;
 #ifdef KERNEL_FIX_STATES
-                dotProductTriple<VectorClass, VectorClass, nstates, FMA>(lh_node, lh_derv1, lh_derv2, partial_lh_dad, lh_ptn, df_ptn, ddf_ptn, block);
+                dotProductTriple<VectorClass, VectorClass, nstates, FMA, false>(lh_node, lh_derv1, lh_derv2, partial_lh_dad, lh_ptn, df_ptn, ddf_ptn, block);
 #else
-                dotProductTriple<VectorClass, VectorClass, FMA>(lh_node, lh_derv1, lh_derv2, partial_lh_dad, lh_ptn, df_ptn, ddf_ptn, block, nstates);
+                dotProductTriple<VectorClass, VectorClass, FMA, false>(lh_node, lh_derv1, lh_derv2, partial_lh_dad, lh_ptn, df_ptn, ddf_ptn, block, nstates);
 #endif
                 lh_ptn = (lh_ptn + VectorClass().load_a(&ptn_invar[ptn]));
 
@@ -678,9 +678,9 @@ void PhyloTree::computeNonrevLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch
                         VectorClass lh_derv1;
                         VectorClass lh_derv2;
 #ifdef KERNEL_FIX_STATES
-                        dotProductTriple<VectorClass, double, nstates, FMA>(trans_mat_tmp, trans_derv1_tmp, trans_derv2_tmp, partial_lh_node, lh_state, lh_derv1, lh_derv2, nstates);
+                        dotProductTriple<VectorClass, double, nstates, FMA, false>(trans_mat_tmp, trans_derv1_tmp, trans_derv2_tmp, partial_lh_node, lh_state, lh_derv1, lh_derv2, nstates);
 #else
-                        dotProductTriple<VectorClass, double, FMA>(trans_mat_tmp, trans_derv1_tmp, trans_derv2_tmp, partial_lh_node, lh_state, lh_derv1, lh_derv2, nstates, nstates);
+                        dotProductTriple<VectorClass, double, FMA, false>(trans_mat_tmp, trans_derv1_tmp, trans_derv2_tmp, partial_lh_node, lh_state, lh_derv1, lh_derv2, nstates, nstates);
 #endif
                         lh_ptn = mul_add(partial_lh_dad[i], lh_state, lh_ptn);
                         df_ptn = mul_add(partial_lh_dad[i], lh_derv1, df_ptn);

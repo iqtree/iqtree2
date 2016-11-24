@@ -97,7 +97,7 @@ public:
 		Please always override this function to adapt to likelihood or parsimony score.
 		The default is for function f(x) = x^2.
 		@param value x-value of the function
-		@param df (OUT) first derivative
+		@param df (OUT) first derivative, with df[N] being function value!
 		@param ddf (OUT) second derivative
 	*/
 	virtual void computeFuncDervMulti(double *value, double *df, double *ddf) {
@@ -106,15 +106,15 @@ public:
 
 	/**
 		Newton-Raphson method to minimize computeFuncDervMulti()
-		@return the x-value that minimize the function
 		@param xmin lower bound
 		@param xmax upper bound
 		@param xguess[in/out] first guess
 		@param tolerance tolerance of x-value to stop the iterations
         @param N number of variables
 		@param maxNRStep max number of NR steps
+        @return function value at optimum
 	*/
-	void minimizeNewtonMulti(double *xmin, double *xguess, double *xmax, double tolerance, int N, int maxNRStep = 100);
+	double minimizeNewtonMulti(double *xmin, double *xguess, double *xmax, double tolerance, int N, int maxNRStep = 100);
 
 
 //	double rtsafe(double x1, double xguess, double x2, double xacc, double &f);
@@ -155,7 +155,7 @@ public:
 		@return the minimum function value obtained
 	*/
 	double minimizeMultiDimen(double guess[], int ndim, double lower[], double upper[],
-		bool bound_check[], double gtol);
+		bool bound_check[], double gtol, double *hessian = NULL);
 
 	/*****************************************************
 		NEW 2015-08-19: Multi dimensional optimization with L-BFGS-B method
@@ -207,7 +207,7 @@ private:
 
 	double dbrent(double ax, double bx, double cx, double tol, double *xmin);
 
-	void dfpmin(double p[], int n, double lower[], double upper[], double gtol, int *iter, double *fret);
+	void dfpmin(double p[], int n, double lower[], double upper[], double gtol, int *iter, double *fret, double *hessian);
 
 	void lnsrch(int n, double xold[], double fold, double g[], double p[], double x[],
 		double *f, double stpmax, int *check, double lower[], double upper[]);

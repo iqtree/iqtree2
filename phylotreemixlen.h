@@ -10,14 +10,17 @@
 #define __iqtree__phylotreemixlen__
 
 #include <stdio.h>
+#include "cppoptlib/meta.h"
+#include "cppoptlib/boundedproblem.h"
 #include "iqtree.h"
+
 
 
 /**
     Phylogenetic tree with mixture of branch lengths
     Started within joint project with Stephen Crotty
 */
-class PhyloTreeMixlen : public IQTree {
+class PhyloTreeMixlen : public IQTree, public cppoptlib::BoundedProblem<double> {
 
     friend class ModelFactoryMixlen;
 
@@ -47,6 +50,8 @@ public:
             @return a new node
      */
     virtual Node* newNode(int node_id, int node_name);
+
+    virtual void initializeModel(Params &params, ModelsBlock *models_block);
 
     /**
         @return true if this is a tree with mixture branch lengths, default: false
@@ -145,7 +150,7 @@ public:
 		@param df (OUT) first derivative
 		@param ddf (OUT) second derivative
 	*/
-//	virtual void computeFuncDervMulti(double *value, double *df, double *ddf);
+	virtual void computeFuncDervMulti(double *value, double *df, double *ddf);
 
     /**
             Inherited from Optimization class.
@@ -193,6 +198,37 @@ public:
 
     /** current category, for optimizing branch length */
     int cur_mixture;
+
+
+/*************** Using cppoptlib for branch length optimization ***********/
+
+//    using typename BoundedProblem<double>::TVector;
+//    using typename BoundedProblem<double>::THessian;
+
+    /**
+    * @brief returns objective value in x
+    * @details [long description]
+    *
+    * @param x [description]
+    * @return [description]
+    */
+    double value(const TVector &x);
+
+    /**
+    * @brief returns gradient in x as reference parameter
+    * @details should be overwritten by symbolic gradient
+    *
+    * @param grad [description]
+    */
+    void gradient(const TVector &x, TVector &grad);
+
+    /**
+    * @brief This computes the hessian
+    * @details should be overwritten by symbolic hessian, if solver relies on hessian
+    */
+    void hessian(const TVector &x, THessian &hessian);
+
+
 
 protected:
     

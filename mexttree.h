@@ -137,7 +137,7 @@ public:
 		@param node the starting node, NULL to start from the root
 		@param dad dad of the node, used to direct the search
 	*/
-	void createCluster(NodeVector &taxa, matrix(int) &clusters, Node *node = NULL, Node *dad = NULL);
+	void createCluster(NodeVector &taxa, mmatrix(int) &clusters, Node *node = NULL, Node *dad = NULL);
 
 	/**
 		create CLUSTER for each branch, useful for likelihood mapping analysis

@@ -132,7 +132,7 @@ public:
 		@param pd_set set of optimal PD sets
 		@param delta (OUT) PD gain matrix
 	*/
-	void calcPDGain(vector<SplitSet> &pd_set, matrix(double) &delta);
+	void calcPDGain(vector<SplitSet> &pd_set, mmatrix(double) &delta);
 
 	/**
 		compute the PD score of a given taxa set with name in taxa_name, result is written to id_set.weight. 

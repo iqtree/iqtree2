@@ -135,7 +135,7 @@ public:
 
     void initializePLL(Params &params);
 
-    void initializeModel(Params &params, ModelsBlock *models_block);
+    virtual void initializeModel(Params &params, ModelsBlock *models_block);
 
     /**
             print tree to .treefile

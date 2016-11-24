@@ -478,11 +478,11 @@ double Optimization::minimizeNewton(double x1, double xguess, double x2, double 
 
 int matinv (double x[], int n, int m, double space[]);
 
-void Optimization::minimizeNewtonMulti(double *x1, double *xguess, double *x2, double xacc, int N, int maxNRStep)
+double Optimization::minimizeNewtonMulti(double *x1, double *xguess, double *x2, double xacc, int N, int maxNRStep)
 {
 	int i, step;
     int N_2 = N*N;
-	double df[N_2], dx[N], dxold[N], f[N], space[N];
+	double df[N_2], dx[N], dxold[N], f[N+1], space[N];
 	double temp, xh[N], xl[N], rts[N], rts_old[N];
 
     for (i = 0; i < N; i++) {
@@ -491,6 +491,7 @@ void Optimization::minimizeNewtonMulti(double *x1, double *xguess, double *x2, d
         if (rts[i] > x2[i]) rts[i] = x2[i];
     }
     computeFuncDervMulti(rts, f, df);
+    double score = f[N];
 //    double score = targetFunk(rts-1);
 //    cout << "Newton step 0: " << score << endl;
 
@@ -499,24 +500,25 @@ void Optimization::minimizeNewtonMulti(double *x1, double *xguess, double *x2, d
     for (i = 0; i < N; i++) {
         if (!(fabs(f[i]) < xacc))
             stop = false;
-        if (f[i] < 0.0) {
-            xl[i] = rts[i];
-            xh[i] = x2[i];
-        } else {
-            xh[i] = rts[i];
-            xl[i] = x1[i];
-        }
+        xl[i] = x1[i];
+        xh[i] = x2[i];
+//        if (f[i] < 0.0) {
+//            xl[i] = rts[i];
+//            xh[i] = x2[i];
+//        } else {
+//            xh[i] = rts[i];
+//            xl[i] = x1[i];
+//        }
         dx[i] = dxold[i] = fabs(xh[i]-xl[i]);
     }
 
     if (stop) {
         memcpy(xguess, rts, sizeof(double)*N);
-        return;
+        return score;
     }
 
 	for (step = 1; step <= maxNRStep; step++) {
 		memcpy(rts_old, rts, sizeof(double)*N);
-        stop = true;
 
         // first compute inverse of hessian matrix
         matinv(df, N, N, space);
@@ -528,30 +530,41 @@ void Optimization::minimizeNewtonMulti(double *x1, double *xguess, double *x2, d
             }
         }
 
-        for (i = 0; i < N; i++) {
-            if (rts[i]-space[i] < xl[i] || rts[i]-space[i] > xh[i]) // out of bound
-            {
-                dxold[i]=dx[i];
-                dx[i]=0.5*(xh[i]-xl[i]);
-                rts[i]=xl[i]+dx[i];
-//                if (xl[i] != rts[i]) stop = false;
-            } else {
-                dxold[i] = dx[i];
-                dx[i] = space[i];
-                temp=rts[i];
-                rts[i] -= dx[i];
-//                if (temp != rts[i]) stop = false;
+        do {
+            stop = true;
+            for (i = 0; i < N; i++) {
+                if (rts[i]-space[i] < xl[i] || rts[i]-space[i] > xh[i]) // out of bound
+                {
+                    dxold[i]=dx[i];
+                    dx[i]=0.5*(xh[i]-xl[i]);
+                    rts[i]=xl[i]+dx[i];
+    //                if (xl[i] != rts[i]) stop = false;
+                } else {
+                    dxold[i] = dx[i];
+                    dx[i] = space[i];
+                    temp=rts[i];
+                    rts[i] -= dx[i];
+    //                if (temp != rts[i]) stop = false;
+                }
+                if (fabs(dx[i]) >= xacc && (step != maxNRStep)) {
+                    stop = false;
+                } else {
+                    rts[i] = rts_old[i];
+                }
             }
-            if (fabs(dx[i]) >= xacc && (step != maxNRStep)) {
-                stop = false;
-            } else {
-                rts[i] = rts_old[i];
-            }
-        }
+            double new_score = targetFunk(rts-1);
+            if (new_score <= score) break;
+            // score increased, reduce step size by half
+            memcpy(rts, rts_old, sizeof(double)*N);
+            for (i = 0; i < N; i++)
+                space[i] *= 0.5;
+        } while (!stop);
+        
         if (stop) {
             break;
         }
         computeFuncDervMulti(rts, f, df);
+        score = f[N];
 
 //        double score = targetFunk(rts-1);
 //        cout << "Newton step " << step << ": " << score << endl;
@@ -563,10 +576,10 @@ void Optimization::minimizeNewtonMulti(double *x1, double *xguess, double *x2, d
             if (!(fabs(f[i]) < xacc)) {
                 stop = false;
             }
-            if (f[i] < 0.0)
-                xl[i] = rts[i];
-            else
-                xh[i] = rts[i];
+//            if (f[i] < 0.0)
+//                xl[i] = rts[i];
+//            else
+//                xh[i] = rts[i];
         }
         if (stop)
             break;
@@ -576,9 +589,10 @@ void Optimization::minimizeNewtonMulti(double *x1, double *xguess, double *x2, d
     memcpy(xguess, rts, sizeof(double)*N);
 
     if (stop)
-        return;
+        return score;
 
     cout << "Maximum number of iterations exceeded in minimizeNewtonMulti" << endl;
+    return score;
 }
 
 
@@ -588,9 +602,9 @@ void Optimization::minimizeNewtonMulti(double *x1, double *xguess, double *x2, d
 
 #define ALF 1.0e-4
 #define TOLX 1.0e-7
-static double maxarg1,maxarg2;
-#define FMAX(a,b) (maxarg1=(a),maxarg2=(b),(maxarg1) > (maxarg2) ?\
-        (maxarg1) : (maxarg2))
+//static double maxarg1,maxarg2;
+//#define FMAX(a,b) (maxarg1=(a),maxarg2=(b),(maxarg1) > (maxarg2) ?\
+//        (maxarg1) : (maxarg2))
 
 void Optimization::lnsrch(int n, double xold[], double fold, double g[], double p[], double x[],
                    double *f, double stpmax, int *check, double lower[], double upper[]) {
@@ -607,26 +621,31 @@ void Optimization::lnsrch(int n, double xold[], double fold, double g[], double 
 		slope += g[i]*p[i];
 	test=0.0;
 	for (i=1;i<=n;i++) {
-		temp=fabs(p[i])/FMAX(fabs(xold[i]),1.0);
+		temp=fabs(p[i])/max(fabs(xold[i]),1.0);
 		if (temp > test) test=temp;
 	}
 	alamin=TOLX/test;
 	alam=1.0;
-	/*
-	int rep = 0;
-	do {
-		for (i=1;i<=n;i++) x[i]=xold[i]+alam*p[i];
-		if (!checkRange(x))
-			alam *= 0.5;
-		else
-			break;
-		rep++;
-	} while (rep < 10);
-	*/
 	bool first_time = true;
 	for (;;) {
-		for (i=1;i<=n;i++) x[i]=xold[i]+alam*p[i];
-		fixBound(x, lower, upper, n);
+        for (; alam >= alamin;) {
+            bool out_of_bound = false;
+            for (i=1;i<=n;i++) {
+                x[i]=xold[i]+alam*p[i];
+                if (x[i] < lower[i] || x[i] > upper[i]) {
+                    out_of_bound = true;
+                    break;
+                }
+            }
+            if (out_of_bound)
+                alam *= 0.5;
+            else
+                break;
+        }
+
+        for (i=1;i<=n;i++) x[i]=xold[i]+alam*p[i];
+
+//		fixBound(x, lower, upper, n);
 		//checkRange(x);
 		*f=targetFunk(x);
 		if (alam < alamin) {
@@ -657,7 +676,7 @@ void Optimization::lnsrch(int n, double xold[], double fold, double g[], double 
 		alam2=alam;
 		f2 = *f;
 		fold2=fold;
-		alam=FMAX(tmplam,0.1*alam);
+		alam=max(tmplam,0.1*alam);
 		first_time = false;
 	}
 }
@@ -668,14 +687,14 @@ void Optimization::lnsrch(int n, double xold[], double fold, double g[], double 
 const int MAX_ITER = 3;
 extern double random_double(int *rstream);
 
-double Optimization::minimizeMultiDimen(double guess[], int ndim, double lower[], double upper[], bool bound_check[], double gtol) {
+double Optimization::minimizeMultiDimen(double guess[], int ndim, double lower[], double upper[], bool bound_check[], double gtol, double *hessian) {
 	int i, iter;
 	double fret, minf = 10000000.0;
 	double *minx = new double [ndim+1];
 	int count = 0;
 	bool restart;
 	do {
-		dfpmin(guess, ndim, lower, upper, gtol, &iter, &fret);
+		dfpmin(guess, ndim, lower, upper, gtol, &iter, &fret, hessian);
 		if (fret < minf) {
  			minf = fret;
 			for (i = 1; i <= ndim; i++)
@@ -719,8 +738,9 @@ double Optimization::minimizeMultiDimen(double guess[], int ndim, double lower[]
 
 
 #define ITMAX 200
-static double sqrarg;
-#define SQR(a) ((sqrarg=(a)) == 0.0 ? 0.0 : sqrarg*sqrarg)
+//static double sqrarg;
+//#define SQR(a) ((sqrarg=(a)) == 0.0 ? 0.0 : sqrarg*sqrarg)
+#define SQR(a) ((a)*(a))
 #define EPS 3.0e-8
 #define TOLX (4*EPS)
 #define STPMX 100.0
@@ -731,7 +751,7 @@ free_vector(dg,1,n);
 
 
 
-void Optimization::dfpmin(double p[], int n, double lower[], double upper[], double gtol, int *iter, double *fret) {
+void Optimization::dfpmin(double p[], int n, double lower[], double upper[], double gtol, int *iter, double *fret, double *hessian) {
 	int check,i,its,j;
 	double den,fac,fad,fae,fp,stpmax,sum=0.0,sumdg,sumxi,temp,test;
 	double *dg,*g,*hdg,**hessin,*pnew,*xi;
@@ -749,10 +769,15 @@ void Optimization::dfpmin(double p[], int n, double lower[], double upper[], dou
 		xi[i] = -g[i];
 		sum += p[i]*p[i];
 	}
+    if (hessian) {
+        for (i=1; i<=n; i++)
+            for (j=1; j<=n; j++)
+                hessin[i][j] = hessian[(i-1)*n+j-1];
+    }
 	//checkBound(p, xi, lower, upper, n);
 	//checkDirection(p, xi);
 
-	stpmax=STPMX*FMAX(sqrt(sum),(double)n);
+	stpmax=STPMX*max(sqrt(sum),(double)n);
 	for (its=1;its<=ITMAX;its++) {
 		*iter=its;
 		lnsrch(n,p,fp,g,xi,pnew,fret,stpmax,&check, lower, upper);
@@ -763,7 +788,7 @@ void Optimization::dfpmin(double p[], int n, double lower[], double upper[], dou
 		}
 		test=0.0;
 		for (i=1;i<=n;i++) {
-			temp=fabs(xi[i])/FMAX(fabs(p[i]),1.0);
+			temp=fabs(xi[i])/max(fabs(p[i]),1.0);
 			if (temp > test) test=temp;
 		}
 		if (test < TOLX) {
@@ -773,9 +798,9 @@ void Optimization::dfpmin(double p[], int n, double lower[], double upper[], dou
 		for (i=1;i<=n;i++) dg[i]=g[i];
 		derivativeFunk(p,g);
 		test=0.0;
-		den=FMAX(fabs(*fret),1.0); // fix bug found by Tung, as also suggested by NR author
+		den=max(fabs(*fret),1.0); // fix bug found by Tung, as also suggested by NR author
 		for (i=1;i<=n;i++) {
-			temp=fabs(g[i])*FMAX(fabs(p[i]),1.0)/den;
+			temp=fabs(g[i])*max(fabs(p[i]),1.0)/den;
 			if (temp > test) test=temp;
 		}
 		if (test < gtol) {
@@ -1043,14 +1068,14 @@ double Optimization::L_BFGS_B(int n, double* x, double* l, double* u, double pgt
 	int grcount;
 	char msg[100];
 
-	int m = 5;          // number of BFGS updates retained in the "L-BFGS-B" method. It defaults to 5.
+	int m = 10;          // number of BFGS updates retained in the "L-BFGS-B" method. It defaults to 5.
 
 	int *nbd;           // 0: unbounded; 1: lower bounded; 2: both lower & upper; 3: upper bounded
 	nbd = new int[n];
 	for (i=0; i<n; i++)
 		nbd[i] = 2;
 
-	double factr = 1e+9; // control the convergence of the "L-BFGS-B" method.
+	double factr = 1e+7; // control the convergence of the "L-BFGS-B" method.
 	// Convergence occurs when the reduction in the object is within this factor
 	// of the machine tolerance.
 	// Default is 1e7, that is a tolerance of about 1e-8
@@ -1077,6 +1102,10 @@ double Optimization::L_BFGS_B(int n, double* x, double* l, double* u, double pgt
 	lbfgsb(n, m, x, l, u, nbd, &Fmin, &fail,
 			factr, pgtol, &fncount, &grcount, maxit, msg, trace, nREPORT);
 //#endif
+
+    if (fail == 51 || fail == 52) {
+        cerr << msg << endl;
+    }
 
 	delete[] nbd;
     

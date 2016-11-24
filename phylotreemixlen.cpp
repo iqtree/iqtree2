@@ -8,18 +8,22 @@
 
 #include "phylotreemixlen.h"
 #include "phylonodemixlen.h"
+#include "model/modelfactorymixlen.h"
 #include "model/modelmixture.h"
 #include "model/ratefree.h"
 #include "MPIHelper.h"
+#include "cppoptlib/solver/newtondescentsolver.h"
+#include "cppoptlib/solver/lbfgsbsolver.h"
 
-PhyloTreeMixlen::PhyloTreeMixlen() : IQTree() {
+
+PhyloTreeMixlen::PhyloTreeMixlen() : IQTree(), cppoptlib::BoundedProblem<double>() {
 	mixlen = 1;
     cur_mixture = -1;
 //    relative_treelen = NULL;
     initializing_mixlen = false;
 }
 
-PhyloTreeMixlen::PhyloTreeMixlen(Alignment *aln, int mixlen) : IQTree(aln) {
+PhyloTreeMixlen::PhyloTreeMixlen(Alignment *aln, int mixlen) : IQTree(aln), cppoptlib::BoundedProblem<double>(mixlen) {
 	cout << "Initializing heterotachy mixture branch lengths" << endl;
     cur_mixture = -1;
 //    relative_treelen = NULL;
@@ -42,6 +46,17 @@ Node* PhyloTreeMixlen::newNode(int node_id, int node_name) {
 
 void PhyloTreeMixlen::setMixlen(int mixlen) {
 	this->mixlen = mixlen;
+}
+
+void PhyloTreeMixlen::initializeModel(Params &params, ModelsBlock *models_block) {
+    try {
+        if (!getModelFactory()) {
+            setModelFactory(new ModelFactoryMixlen(params, this, models_block));
+        }
+    } catch (string & str) {
+        outError(str);
+    }
+    IQTree::initializeModel(params, models_block);
 }
 
 void PhyloTreeMixlen::treeLengths(DoubleVector &lenvec, Node *node, Node *dad) {
@@ -167,9 +182,10 @@ void PhyloTreeMixlen::initializeMixlen(double tolerance) {
             relative_rate->writeInfo(cout);
 
         // make the rates more distinct
-        if (mixlen > 1 && relative_rate->getRate(0) / relative_rate->getRate(mixlen-1) > 0.8) {
-            relative_rate->setRate(0, relative_rate->getRate(0)*0.9);
-            relative_rate->setRate(mixlen-1, relative_rate->getRate(mixlen-1)*1.1);
+        if (mixlen > 1 && relative_rate->getRate(0) / relative_rate->getRate(mixlen-1) > 0.9) {
+            cout << "Making the rates more distinct..." << endl;
+            relative_rate->setRate(0, relative_rate->getRate(0)*0.95);
+            relative_rate->setRate(mixlen-1, relative_rate->getRate(mixlen-1)*1.05);
         }
 
         double treelen = treeLength();
@@ -248,6 +264,50 @@ void PhyloTreeMixlen::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool
 
     theta_computed = false;
 
+#if 0
+    //----- using cppoptlib ------//
+
+    TVector lower_bound(mixlen), upper_bound(mixlen), variables(mixlen);
+
+//    variables.resize(mixlen);
+    for (i = 0; i < mixlen; i++) {
+        lower_bound[i] = params->min_branch_length;
+        variables[i] = current_it->getLength(i);
+        upper_bound[i] = params->max_branch_length;
+    }
+
+    setBoxConstraint(lower_bound, upper_bound);
+
+    cppoptlib::NewtonDescentSolver<PhyloTreeMixlen> solver;
+//    cppoptlib::LbfgsbSolver<PhyloTreeMixlen> solver;
+    solver.minimize(*this, variables);
+    for (i = 0; i < mixlen; i++) {
+        current_it->setLength(i, variables[i]);
+        current_it_back->setLength(i, variables[i]);
+    }
+#endif
+
+#if 0
+    //----- Newton-Raphson -----//
+    double lower_bound[mixlen];
+    double upper_bound[mixlen];
+    double variables[mixlen];
+    for (i = 0; i < mixlen; i++) {
+        lower_bound[i] = params->min_branch_length;
+        variables[i] = current_it->getLength(i);
+        upper_bound[i] = params->max_branch_length;
+    }
+
+    double score = minimizeNewtonMulti(lower_bound, variables, upper_bound, params->min_branch_length, mixlen);
+    for (i = 0; i < mixlen; i++) {
+        current_it->setLength(i, variables[i]);
+        current_it_back->setLength(i, variables[i]);
+    }
+
+#endif
+
+#if 1
+
     // BFGS method to simultaneously optimize all lengths per branch
     // It is often better than the true Newton method (Numerical Recipes in C++, chap. 10.7)
     double variables[mixlen+1];
@@ -261,8 +321,14 @@ void PhyloTreeMixlen::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool
         bound_check[i+1] = false;
     }
 
-//    double score = -minimizeMultiDimen(variables, mixlen, lower_bound, upper_bound, bound_check, params->min_branch_length);
-    double score = -L_BFGS_B(mixlen, variables+1, lower_bound+1, upper_bound+1, params->min_branch_length);
+    double grad[mixlen+1], hessian[mixlen*mixlen];
+    computeFuncDervMulti(variables+1, grad, hessian);
+    double score;
+    if (params->optimize_alg.find("BFGS-B") != string::npos)
+        score = -L_BFGS_B(mixlen, variables+1, lower_bound+1, upper_bound+1, params->min_branch_length);
+    else
+        score = -minimizeMultiDimen(variables, mixlen, lower_bound, upper_bound, bound_check, params->min_branch_length, hessian);
+
     for (i = 0; i < mixlen; i++) {
         current_it->setLength(i, variables[i+1]);
         current_it_back->setLength(i, variables[i+1]);
@@ -270,6 +336,7 @@ void PhyloTreeMixlen::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool
     if (verbose_mode >= VB_DEBUG) {
         cout << "Mixlen-LnL: " << score << endl;
     }
+#endif
 
     /*
         DEPRECATED EM algorithm
@@ -339,7 +406,9 @@ void PhyloTreeMixlen::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool
 /**
     return the number of dimensions
 */
-int PhyloTreeMixlen::getNDim() { return mixlen; }
+int PhyloTreeMixlen::getNDim() {
+    return mixlen;
+}
 
 
 /**
@@ -354,26 +423,31 @@ double PhyloTreeMixlen::targetFunk(double x[]) {
         current_it_back->setLength(i, x[i+1]);
     }
 
-//    return -computeLikelihoodBranch(current_it, (PhyloNode*)current_it_back->node);
-    return -computeLikelihoodFromBuffer();
+    if (theta_computed)
+        return -computeLikelihoodFromBuffer();
+    else
+        return -computeLikelihoodBranch(current_it, (PhyloNode*)current_it_back->node);
 }
 
 double PhyloTreeMixlen::derivativeFunk(double x[], double dfx[]) {
     int i;
+//    cout.precision(10);
+//    cout << "x: ";
     for (i = 0; i < mixlen; i++) {
+        ASSERT(!std::isnan(x[i+1]));
         current_it->setLength(i, x[i+1]);
         current_it_back->setLength(i, x[i+1]);
+//        cout << " " << x[i+1];
     }
-    double df[mixlen], logl;
-    computeLikelihoodDerv(current_it, (PhyloNode*)current_it_back->node, df, &logl);
+//    cout << endl;
+    double df[mixlen+1], ddf[mixlen*mixlen];
+    computeLikelihoodDerv(current_it, (PhyloNode*)current_it_back->node, df, ddf);
     for (i = 0; i < mixlen; i++)
         df[i] = -df[i];
     memcpy(dfx+1, df, sizeof(double)*mixlen);
-    return -logl;
+    return -df[mixlen];
 }
 
-//--- DEPRECATED ----
-/*
 void PhyloTreeMixlen::computeFuncDervMulti(double *value, double *df, double *ddf) {
     int i;
     for (i = 0; i < mixlen; i++) {
@@ -382,14 +456,14 @@ void PhyloTreeMixlen::computeFuncDervMulti(double *value, double *df, double *dd
     }
     computeLikelihoodDerv(current_it, (PhyloNode*)current_it_back->node, df, ddf);
 
-    for (i = 0; i < mixlen; i++) {
+    // last element of df is the tree log-ikelihood
+    for (i = 0; i <= mixlen; i++) {
         df[i] = -df[i];
     }
     int mixlen2 = mixlen * mixlen;
     for (i = 0; i < mixlen2; i++)
         ddf[i] = -ddf[i];
 }
-*/
 
 double PhyloTreeMixlen::optimizeAllBranches(int my_iterations, double tolerance, int maxNRStep) {
 
@@ -518,6 +592,41 @@ void PhyloTreeMixlen::printResultTree(string suffix) {
 
     if (verbose_mode >= VB_MED)
         cout << "Best tree printed to " << tree_file_name << endl;
+}
+
+
+/*************** Using cppoptlib for branch length optimization ***********/
+
+double PhyloTreeMixlen::value(const TVector &x) {
+    double xx[mixlen+1];
+    for (int i = 0; i < mixlen; i++)
+        xx[i+1] = x(i);
+    return targetFunk(xx);
+}
+
+void PhyloTreeMixlen::gradient(const TVector &x, TVector &grad) {
+    int i;
+    double xx[mixlen];
+    for (i = 0; i < mixlen; i++)
+        xx[i] = x(i);
+    double df[mixlen+1], ddf[mixlen*mixlen];
+    computeFuncDervMulti(xx, df, ddf);
+    for (i = 0; i < mixlen; i++)
+        grad(i) = df[i];
+}
+
+void PhyloTreeMixlen::hessian(const TVector &x, THessian &hessian) {
+    int i, j;
+    double xx[mixlen];
+    for (i = 0; i < mixlen; i++)
+        xx[i] = x(i);
+    int mixlen2 = mixlen*mixlen;
+    double df[mixlen+1], ddf[mixlen2];
+    computeFuncDervMulti(xx, df, ddf);
+
+    for (i = 0; i < mixlen; i++)
+        for (j = 0; j < mixlen; j++)
+            hessian(i, j) = ddf[i*mixlen+j];
 }
 
 //------ DEPRECATED

@@ -726,6 +726,10 @@ size_t PhyloTree::getBufferPartialLhSize() {
         buffer_size += block*2*VECTOR_SIZE*num_threads;
         buffer_size += 3*block*model->num_states;
     }
+    if (isMixlen()) {
+        size_t nmix = getMixlen();
+        buffer_size += nmix*(nmix+1)*VECTOR_SIZE + (nmix+3)*nmix*VECTOR_SIZE*num_threads;
+    }
     return buffer_size;
 }
 

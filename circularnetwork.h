@@ -164,7 +164,7 @@ protected:
 		@param max_b (OUT) max budget matrix between taxa
 		@param taxa_order circular order		
 	*/
-	void calcMaxBudget(int budget, matrix(int) &max_b, vector<int> &taxa_order);
+	void calcMaxBudget(int budget, mmatrix(int) &max_b, vector<int> &taxa_order);
 
 	/**
 		construct optimal PD set from computed information for budget constraint (ROOTED case)
@@ -177,9 +177,9 @@ protected:
 		@param max_b max budget matrix between taxa
 		@param root the root
 	*/
-	void constructPDBudget(int budget, bool find_all, matrix(double) &table, 
-		matrix(double) &dist,SplitSet &taxa_set, 
-		vector<int> &taxa_order, matrix(int) &max_b, int root);
+	void constructPDBudget(int budget, bool find_all, mmatrix(double) &table, 
+		mmatrix(double) &dist,SplitSet &taxa_set, 
+		vector<int> &taxa_order, mmatrix(int) &max_b, int root);
 
 
 	/**
@@ -195,8 +195,8 @@ protected:
 		@param root the root
 	*/
 	void constructPDBudget(int budget, int max_v, Split *pd_set, 
-		matrix(double) &table, matrix(double) &dist, SplitSet &taxa_set, 
-		vector<int> &taxa_order, matrix(int) &max_b, int root);
+		mmatrix(double) &table, mmatrix(double) &dist, SplitSet &taxa_set, 
+		vector<int> &taxa_order, mmatrix(int) &max_b, int root);
 
 	/**
 		compute the PD information table with budget
@@ -208,8 +208,8 @@ protected:
 		@param max_b max budget matrix between taxa
 		@param root index of the root taxon
 	*/
-	void computePDBudgetInfo(Params &params, matrix(double) &table, matrix(int) &id, 
-		matrix(double) &dist, vector<int> &taxa_order, matrix(int) &max_b, int root);
+	void computePDBudgetInfo(Params &params, mmatrix(double) &table, mmatrix(int) &id, 
+		mmatrix(double) &dist, vector<int> &taxa_order, mmatrix(int) &max_b, int root);
 
 	/**
 		compute the PD score with budget
@@ -220,8 +220,8 @@ protected:
 		@param max_b max budget matrix between taxa
 		@param root index of the root taxon
 	*/
-	double computePDBudgetScore(int budget, matrix(double) &table,
-		matrix(double) &dist, vector<int> &taxa_order, matrix(int) &max_b, int root);
+	double computePDBudgetScore(int budget, mmatrix(double) &table,
+		mmatrix(double) &dist, vector<int> &taxa_order, mmatrix(int) &max_b, int root);
 
 
 };
@@ -230,7 +230,7 @@ protected:
 	display the matrix into out
 */
 template <class T>
-ostream &operator<<(ostream &out, matrix(T) &mat) {
+ostream &operator<<(ostream &out, mmatrix(T) &mat) {
 	unsigned int i, j;
 	for (i = 0; i < mat.size(); i++) {
 		for (j = 0; j < mat[i].size(); j++) {

@@ -237,7 +237,7 @@ typedef vector<string> StrVector;
 /**
         matrix of double number
  */
-#define matrix(T) vector< vector<T> >
+#define mmatrix(T) vector< vector<T> >
 
 /**
         matrix of double
@@ -255,7 +255,7 @@ public:
         void setZero();
 };
  */
-typedef matrix(double) DoubleMatrix;
+typedef mmatrix(double) DoubleMatrix;
 
 typedef unsigned int UINT;
 

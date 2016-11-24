@@ -604,7 +604,7 @@ void runPDTree(Params &params)
 }
 
 void checkSplitDistance(ostream &out, PDNetwork &sg) {
-	matrix(double) dist;
+	mmatrix(double) dist;
 	sg.calcDistance(dist);
 	int ntaxa = sg.getNTaxa();
 	int i, j;
@@ -1048,13 +1048,13 @@ void summarizeSplit(Params &params, PDNetwork &sg, vector<SplitSet> &pd_set, PDR
 	}
 }
 
-void printGainMatrix(char *filename, matrix(double) &delta_gain, int start_k) {
+void printGainMatrix(char *filename, mmatrix(double) &delta_gain, int start_k) {
 	try {
 		ofstream out;
 		out.exceptions(ios::failbit | ios::badbit);
 		out.open(filename);
 		int k = start_k;
-		for (matrix(double)::iterator it = delta_gain.begin(); it != delta_gain.end(); it++, k++) {
+		for (mmatrix(double)::iterator it = delta_gain.begin(); it != delta_gain.end(); it++, k++) {
 			out << k;
 			for (int i = 0; i < (*it).size(); i++)
 				out << "  " << (*it)[i];
@@ -1183,7 +1183,7 @@ void runPDSplit(Params &params) {
 	summarizeSplit(params, sg, pd_set, pd_more, true);
 
 	if (params.calc_pdgain) {
-		matrix(double) delta_gain;
+		mmatrix(double) delta_gain;
 		sg.calcPDGain(pd_set, delta_gain);
 		string filename = params.out_prefix;
 		filename += ".pdgain";
@@ -1220,7 +1220,7 @@ void calcTreeCluster(Params &params) {
 //	StrVector taxa_order;
 	//readTaxaOrder(params.taxa_order_file, taxa_order);
 	NodeVector taxa;
-	matrix(int) clusters;
+	mmatrix(int) clusters;
 	clusters.reserve(tree.leafNum - 3);
 	tree.getTaxa(taxa);
 	sort(taxa.begin(), taxa.end(), nodenamecmp);
@@ -1231,7 +1231,7 @@ void calcTreeCluster(Params &params) {
 	treename += ".clu-id";
 	tree.printTree(treename.c_str());
 
-	for (matrix(int)::iterator it = clusters.begin(); it != clusters.end(); it++, cnt++) {
+	for (mmatrix(int)::iterator it = clusters.begin(); it != clusters.end(); it++, cnt++) {
 		ostringstream filename;
 		filename << params.out_prefix << "." << cnt << ".clu";
 		ofstream out(filename.str().c_str());

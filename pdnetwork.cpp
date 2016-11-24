@@ -679,7 +679,7 @@ double PDNetwork::localSearchPD(int subsize, Split &taxa_set, vector<int> &taxa_
 }
 
 
-void PDNetwork::calcPDGain(vector<SplitSet> &pd_set, matrix(double) &delta) {
+void PDNetwork::calcPDGain(vector<SplitSet> &pd_set, mmatrix(double) &delta) {
 	vector<SplitSet>::iterator it;
 	int ntaxa = pd_set.front().front()->getNTaxa();
 	delta.resize(pd_set.size());

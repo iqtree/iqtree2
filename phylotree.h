@@ -161,6 +161,7 @@ inline void aligned_free(void *mem) {
 typedef std::map< string, double > StringDoubleMap;
 typedef std::map< int, PhyloNode* > IntPhyloNodeMap;
 
+/*
 #define MappedMat(NSTATES) Map<Matrix<double, NSTATES, NSTATES> >
 #define MappedArr2D(NSTATES) Map<Array<double, NSTATES, NSTATES> >
 #define MappedRowVec(NSTATES) Map<Matrix<double, 1, NSTATES> >
@@ -170,6 +171,7 @@ typedef std::map< int, PhyloNode* > IntPhyloNodeMap;
 #define MappedRowArr2DDyn Map<Array<double, Dynamic, Dynamic, RowMajor> >
 #define MappedArrDyn Map<Array<double, Dynamic, 1> >
 #define MappedVecDyn(NSTATES) Map<Matrix<double, Dynamic, NSTATES> >
+*/
 
 const int MAX_SPR_MOVES = 20;
 

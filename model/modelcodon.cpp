@@ -10,7 +10,7 @@
 
 
 const double MIN_OMEGA_KAPPA = 0.001;
-const double MAX_OMEGA_KAPPA = 50.0;
+const double MAX_OMEGA_KAPPA = 100.0;
 
 /* Empirical codon model restricted (Kosiol et al. 2007), source: http://www.ebi.ac.uk/goldman/ECM/ */
 string model_ECMrest1 =
@@ -977,9 +977,9 @@ double ModelCodon::optimizeParameters(double gradient_epsilon) {
 	// by BFGS algorithm
 	setVariables(variables);
 	setBounds(lower_bound, upper_bound, bound_check);
-//    if (phylo_tree->params->optimize_alg.find("BFGS-B") == string::npos)
-//        score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound, bound_check, max(gradient_epsilon, TOL_RATE));
-//    else
+    if (phylo_tree->params->optimize_alg.find("BFGS-B") == string::npos)
+        score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound, bound_check, max(gradient_epsilon, TOL_RATE));
+    else
         score = -L_BFGS_B(ndim, variables+1, lower_bound+1, upper_bound+1, max(gradient_epsilon, TOL_RATE));
 
 	bool changed = getVariables(variables);

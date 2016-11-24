@@ -84,7 +84,9 @@ public:
 		@param category category ID from 0 to #category-1
 		@return the rate of the specified category
 	*/
-	virtual double getRate(int category) { return 1.0; }
+	virtual double getRate(int category) {
+        return 1.0;
+    }
 
 	/**
 		get the proportion of sites under a specified category.

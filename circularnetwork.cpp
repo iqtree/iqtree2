@@ -78,7 +78,7 @@ void CircularNetwork::findPD(Params &params, vector<SplitSet> &taxa_set,
 	display the matrix into out (another version)
 */
 template <class T>
-void reportMyMat(ostream &out, matrix(T) &mat) {
+void reportMyMat(ostream &out, mmatrix(T) &mat) {
 	unsigned int i, j;
 	for (i = 0; i < mat.size(); i++) {
 		for (j = 0; j < mat[i].size(); j++) {
@@ -305,7 +305,7 @@ void CircularNetwork::constructPD(int sub_size, int max_v, int pd_limit, Split *
 	CIRCULAR NETWORKS WITH BUDGET CONSTRAINT
 ********************************************************/
 
-void CircularNetwork::calcMaxBudget(int budget, matrix(int) &max_b, vector<int> &taxa_order) {
+void CircularNetwork::calcMaxBudget(int budget, mmatrix(int) &max_b, vector<int> &taxa_order) {
 	int ntaxa = getNTaxa();
 	int u, v;
 	max_b.resize(ntaxa-1);
@@ -327,9 +327,9 @@ void CircularNetwork::calcMaxBudget(int budget, matrix(int) &max_b, vector<int> 
 
 
 
-void CircularNetwork::constructPDBudget(int budget, bool find_all, matrix(double) &table,
-	matrix(double) &dist, SplitSet &taxa_set, vector<int> &taxa_order, 
-	matrix(int) &max_b, int root) {
+void CircularNetwork::constructPDBudget(int budget, bool find_all, mmatrix(double) &table,
+	mmatrix(double) &dist, SplitSet &taxa_set, vector<int> &taxa_order, 
+	mmatrix(int) &max_b, int root) {
 
 	int ntaxa = getNTaxa();
 	// now trace back to get the maximum pd_k
@@ -416,8 +416,8 @@ void CircularNetwork::constructPDBudget(int budget, bool find_all, matrix(double
 
 
 void CircularNetwork::constructPDBudget(int budget, int max_v, Split *pd_set, 
-	matrix(double) &table, matrix(double) &dist, SplitSet &taxa_set, 
-	vector<int> &taxa_order, matrix(int) &max_b, int root) {
+	mmatrix(double) &table, mmatrix(double) &dist, SplitSet &taxa_set, 
+	vector<int> &taxa_order, mmatrix(int) &max_b, int root) {
 
 	int b = budget;
 
@@ -461,8 +461,8 @@ void CircularNetwork::constructPDBudget(int budget, int max_v, Split *pd_set,
 	taxa_set.push_back(pd_set);
 }
 
-void CircularNetwork::computePDBudgetInfo(Params &params, matrix(double) &table, matrix(int) &id, 
-	matrix(double) &dist, vector<int> &taxa_order, matrix(int) &max_b, int root)
+void CircularNetwork::computePDBudgetInfo(Params &params, mmatrix(double) &table, mmatrix(int) &id, 
+	mmatrix(double) &dist, vector<int> &taxa_order, mmatrix(int) &max_b, int root)
 {
 	int ntaxa = getNTaxa();
 
@@ -521,8 +521,8 @@ void CircularNetwork::computePDBudgetInfo(Params &params, matrix(double) &table,
 }
 
 
-double CircularNetwork::computePDBudgetScore(int budget, matrix(double) &table,
-	matrix(double) &dist, vector<int> &taxa_order, matrix(int) &max_b, int root) {
+double CircularNetwork::computePDBudgetScore(int budget, mmatrix(double) &table,
+	mmatrix(double) &dist, vector<int> &taxa_order, mmatrix(int) &max_b, int root) {
 
 	int ntaxa = getNTaxa();
 	double max_pd = INT_MIN;
@@ -552,16 +552,16 @@ void CircularNetwork::findCircularRootedPDBudget(Params &params, vector<SplitSet
 	// rotate the position of root to 0 in the taxa_order
 	rotateTaxaOrder(origin_order, taxa_order, root);
 
-	matrix(double) dist;
+	mmatrix(double) dist;
 	// calculate the distance matrix
 	calcDistance(dist, taxa_order);
 
-	matrix(int) max_b;
+	mmatrix(int) max_b;
 	// calculate maximum required budget from u to v
 	calcMaxBudget(params.budget, max_b, taxa_order);
 
-	matrix(double) table;
-	matrix(int) id;
+	mmatrix(double) table;
+	mmatrix(int) id;
 
 	// compute table and id information
 	computePDBudgetInfo(params, table, id, dist, taxa_order, max_b, 0);
@@ -583,7 +583,7 @@ void CircularNetwork::findCircularPDBudget(Params &params, vector<SplitSet> &tax
 	int ntaxa = getNTaxa();
 	int b;
 
-	matrix(double) dist;
+	mmatrix(double) dist;
 	// calculate the distance matrix
 	calcDistance(dist, taxa_order);
 
@@ -592,12 +592,12 @@ void CircularNetwork::findCircularPDBudget(Params &params, vector<SplitSet> &tax
 	}
 
 
-	matrix(int) max_b;
+	mmatrix(int) max_b;
 	// calculate maximum required budget from u to v
 	calcMaxBudget(params.budget, max_b, taxa_order);
 
-	matrix(double) table;
-	matrix(int) id;
+	mmatrix(double) table;
+	mmatrix(int) id;
 
 	int root;
 

@@ -431,7 +431,7 @@ void SplitGraph::calcDistance(char *filename) {
 	ofstream out(filename);
 	if (!out.is_open())
 		outError(ERR_WRITE_OUTPUT, filename);
-	matrix(double) dist;
+	mmatrix(double) dist;
 	int i, j;	
 	calcDistance(dist);
 
@@ -450,14 +450,14 @@ void SplitGraph::calcDistance(char *filename) {
 	out.close();
 }
 
-void SplitGraph::calcDistance(matrix(double) &dist) {
+void SplitGraph::calcDistance(mmatrix(double) &dist) {
 	int ntaxa = getNTaxa();
 	iterator it;
 	vector<int> vi, vj;
 	vector<int>::iterator i, j;
 
 	dist.resize(ntaxa);
-	for (matrix(double)::iterator di = dist.begin(); di != dist.end(); di++)
+	for (mmatrix(double)::iterator di = dist.begin(); di != dist.end(); di++)
 		(*di).resize(ntaxa, 0);
 
 	for (it = begin(); it != end(); it++) {
@@ -472,11 +472,11 @@ void SplitGraph::calcDistance(matrix(double) &dist) {
 }
 
 
-void SplitGraph::calcDistance(matrix(double) &dist, vector<int> &taxa_order) {
+void SplitGraph::calcDistance(mmatrix(double) &dist, vector<int> &taxa_order) {
 	int ntaxa = getNTaxa();
 	int i, j;
 
-	matrix(double) my_dist;
+	mmatrix(double) my_dist;
 	calcDistance(my_dist);
 	dist.resize(ntaxa);
 	for (i = 0; i < ntaxa; i++) {
@@ -486,7 +486,7 @@ void SplitGraph::calcDistance(matrix(double) &dist, vector<int> &taxa_order) {
 	}
 }
 
-bool SplitGraph::checkCircular(matrix(double) &dist) {
+bool SplitGraph::checkCircular(mmatrix(double) &dist) {
 	return true;
 	int ntaxa = getNTaxa();
 	Split taxa_set(ntaxa, 0.0);

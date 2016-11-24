@@ -26,8 +26,8 @@
 #include "timeutil.h"
 #include "model/modelmarkov.h"
 #include "model/rategamma.h"
-#include "phylotreemixlen.h"
-#include "model/modelfactorymixlen.h"
+//#include "phylotreemixlen.h"
+//#include "model/modelfactorymixlen.h"
 #include <numeric>
 #include "tools.h"
 #include "MPIHelper.h"
@@ -976,8 +976,6 @@ void IQTree::initializeModel(Params &params, ModelsBlock *models_block) {
                     setModelFactory(new PartitionModelPlen(params, (PhyloSuperTreePlen*) this, models_block));
                 } else
                     setModelFactory(new PartitionModel(params, (PhyloSuperTree*) this, models_block));
-            } else if (isMixlen()) {
-                setModelFactory(new ModelFactoryMixlen(params, this, models_block));            
             } else {
                 setModelFactory(new ModelFactory(params, this, models_block));
             }

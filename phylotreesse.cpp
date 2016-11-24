@@ -188,7 +188,7 @@ double PhyloTree::computeLikelihoodFromBuffer() {
 	assert(current_it && current_it_back);
 
     // TODO: buffer stuff for mixlen model
-	if (computeLikelihoodFromBufferPointer && optimize_by_newton && !isMixlen())
+	if (computeLikelihoodFromBufferPointer && optimize_by_newton)
 		return (this->*computeLikelihoodFromBufferPointer)();
 	else
 		return (this->*computeLikelihoodBranchPointer)(current_it, (PhyloNode*)current_it_back->node);
