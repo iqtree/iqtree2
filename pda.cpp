@@ -2349,10 +2349,10 @@ int main(int argc, char *argv[]) {
 #endif
 	if (instruction_set < 3) outError("Your CPU does not support SSE3!");
 	bool has_fma3 = (instruction_set >= 7) && hasFMA3();
-	bool has_fma4 = (instruction_set >= 7) && hasFMA4();
+//	bool has_fma4 = (instruction_set >= 7) && hasFMA4();
 
 #ifdef __FMA__
-	bool has_fma =  has_fma3 || has_fma4;
+	bool has_fma =  has_fma3;
 	if (!has_fma) {
 		outError("Your CPU does not support FMA instruction, quiting now...");
 	}
@@ -2372,7 +2372,7 @@ int main(int argc, char *argv[]) {
 	default: cout << "AVX512, "; break;
 	}
 	if (has_fma3) cout << "FMA3, ";
-	if (has_fma4) cout << "FMA4, ";
+//	if (has_fma4) cout << "FMA4, ";
 //#if defined __APPLE__ || defined __MACH__
 	cout << (int)(((getMemorySize()/1024.0)/1024)/1024) << " GB RAM)" << endl;
 //#else
@@ -2408,7 +2408,7 @@ int main(int argc, char *argv[]) {
 		cout << "PLL-SSE3";
 #endif
 	} else {
-        bool has_fma = (has_fma3 || has_fma4) && (instruction_set >= 7) && Params::getInstance().lk_no_avx != 2;
+        bool has_fma = (has_fma3) && (instruction_set >= 7) && Params::getInstance().lk_no_avx != 2;
 		switch (Params::getInstance().SSE) {
 		case LK_EIGEN: cout << "No SSE"; break;
 		case LK_EIGEN_SSE:
