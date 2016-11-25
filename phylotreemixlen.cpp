@@ -12,18 +12,28 @@
 #include "model/modelmixture.h"
 #include "model/ratefree.h"
 #include "MPIHelper.h"
+
+#ifdef USE_CPPOPTLIB
 #include "cppoptlib/solver/newtondescentsolver.h"
 #include "cppoptlib/solver/lbfgsbsolver.h"
+#endif
 
-
-PhyloTreeMixlen::PhyloTreeMixlen() : IQTree(), cppoptlib::BoundedProblem<double>() {
+PhyloTreeMixlen::PhyloTreeMixlen() : IQTree()
+#ifdef USE_CPPOPTLIB
+, cppoptlib::BoundedProblem<double>()
+#endif
+{
 	mixlen = 1;
     cur_mixture = -1;
 //    relative_treelen = NULL;
     initializing_mixlen = false;
 }
 
-PhyloTreeMixlen::PhyloTreeMixlen(Alignment *aln, int mixlen) : IQTree(aln), cppoptlib::BoundedProblem<double>(mixlen) {
+PhyloTreeMixlen::PhyloTreeMixlen(Alignment *aln, int mixlen) : IQTree(aln)
+#ifdef USE_CPPOPTLIB
+, cppoptlib::BoundedProblem<double>(mixlen)
+#endif
+{
 	cout << "Initializing heterotachy mixture branch lengths" << endl;
     cur_mixture = -1;
 //    relative_treelen = NULL;
@@ -264,79 +274,80 @@ void PhyloTreeMixlen::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool
 
     theta_computed = false;
 
-#if 0
-    //----- using cppoptlib ------//
+#ifdef USE_CPPOPTLIB
+    if (params->optimize_alg.find("cppopt") != string::npos) {
+        //----- using cppoptlib ------//
 
-    TVector lower_bound(mixlen), upper_bound(mixlen), variables(mixlen);
+        TVector lower_bound(mixlen), upper_bound(mixlen), variables(mixlen);
 
-//    variables.resize(mixlen);
-    for (i = 0; i < mixlen; i++) {
-        lower_bound[i] = params->min_branch_length;
-        variables[i] = current_it->getLength(i);
-        upper_bound[i] = params->max_branch_length;
-    }
+    //    variables.resize(mixlen);
+        for (i = 0; i < mixlen; i++) {
+            lower_bound[i] = params->min_branch_length;
+            variables[i] = current_it->getLength(i);
+            upper_bound[i] = params->max_branch_length;
+        }
 
-    setBoxConstraint(lower_bound, upper_bound);
+        setBoxConstraint(lower_bound, upper_bound);
 
-    cppoptlib::NewtonDescentSolver<PhyloTreeMixlen> solver;
-//    cppoptlib::LbfgsbSolver<PhyloTreeMixlen> solver;
-    solver.minimize(*this, variables);
-    for (i = 0; i < mixlen; i++) {
-        current_it->setLength(i, variables[i]);
-        current_it_back->setLength(i, variables[i]);
-    }
+        cppoptlib::NewtonDescentSolver<PhyloTreeMixlen> solver;
+    //    cppoptlib::LbfgsbSolver<PhyloTreeMixlen> solver;
+        solver.minimize(*this, variables);
+        for (i = 0; i < mixlen; i++) {
+            current_it->setLength(i, variables[i]);
+            current_it_back->setLength(i, variables[i]);
+        }
+    } else
 #endif
 
-#if 0
-    //----- Newton-Raphson -----//
-    double lower_bound[mixlen];
-    double upper_bound[mixlen];
-    double variables[mixlen];
-    for (i = 0; i < mixlen; i++) {
-        lower_bound[i] = params->min_branch_length;
-        variables[i] = current_it->getLength(i);
-        upper_bound[i] = params->max_branch_length;
+    if (params->optimize_alg.find("newton") != string::npos) {
+
+        //----- Newton-Raphson -----//
+        double lower_bound[mixlen];
+        double upper_bound[mixlen];
+        double variables[mixlen];
+        for (i = 0; i < mixlen; i++) {
+            lower_bound[i] = params->min_branch_length;
+            variables[i] = current_it->getLength(i);
+            upper_bound[i] = params->max_branch_length;
+        }
+
+        double score = minimizeNewtonMulti(lower_bound, variables, upper_bound, params->min_branch_length, mixlen);
+        for (i = 0; i < mixlen; i++) {
+            current_it->setLength(i, variables[i]);
+            current_it_back->setLength(i, variables[i]);
+        }
+    } else {
+
+        // BFGS method to simultaneously optimize all lengths per branch
+        // It is often better than the true Newton method (Numerical Recipes in C++, chap. 10.7)
+        double variables[mixlen+1];
+        double upper_bound[mixlen+1];
+        double lower_bound[mixlen+1];
+        bool bound_check[mixlen+1];
+        for (i = 0; i < mixlen; i++) {
+            lower_bound[i+1] = params->min_branch_length;
+            variables[i+1] = current_it->getLength(i);
+            upper_bound[i+1] = params->max_branch_length;
+            bound_check[i+1] = false;
+        }
+
+        double grad[mixlen+1], hessian[mixlen*mixlen];
+        computeFuncDervMulti(variables+1, grad, hessian);
+        double score;
+        if (params->optimize_alg.find("BFGS-B") != string::npos)
+            score = -L_BFGS_B(mixlen, variables+1, lower_bound+1, upper_bound+1, params->min_branch_length);
+        else
+            score = -minimizeMultiDimen(variables, mixlen, lower_bound, upper_bound, bound_check, params->min_branch_length, hessian);
+
+        for (i = 0; i < mixlen; i++) {
+            current_it->setLength(i, variables[i+1]);
+            current_it_back->setLength(i, variables[i+1]);
+        }
+        if (verbose_mode >= VB_DEBUG) {
+            cout << "Mixlen-LnL: " << score << endl;
+        }
+
     }
-
-    double score = minimizeNewtonMulti(lower_bound, variables, upper_bound, params->min_branch_length, mixlen);
-    for (i = 0; i < mixlen; i++) {
-        current_it->setLength(i, variables[i]);
-        current_it_back->setLength(i, variables[i]);
-    }
-
-#endif
-
-#if 1
-
-    // BFGS method to simultaneously optimize all lengths per branch
-    // It is often better than the true Newton method (Numerical Recipes in C++, chap. 10.7)
-    double variables[mixlen+1];
-    double upper_bound[mixlen+1];
-    double lower_bound[mixlen+1];
-    bool bound_check[mixlen+1];
-    for (i = 0; i < mixlen; i++) {
-        lower_bound[i+1] = params->min_branch_length;
-        variables[i+1] = current_it->getLength(i);
-        upper_bound[i+1] = params->max_branch_length;
-        bound_check[i+1] = false;
-    }
-
-    double grad[mixlen+1], hessian[mixlen*mixlen];
-    computeFuncDervMulti(variables+1, grad, hessian);
-    double score;
-    if (params->optimize_alg.find("BFGS-B") != string::npos)
-        score = -L_BFGS_B(mixlen, variables+1, lower_bound+1, upper_bound+1, params->min_branch_length);
-    else
-        score = -minimizeMultiDimen(variables, mixlen, lower_bound, upper_bound, bound_check, params->min_branch_length, hessian);
-
-    for (i = 0; i < mixlen; i++) {
-        current_it->setLength(i, variables[i+1]);
-        current_it_back->setLength(i, variables[i+1]);
-    }
-    if (verbose_mode >= VB_DEBUG) {
-        cout << "Mixlen-LnL: " << score << endl;
-    }
-#endif
 
     /*
         DEPRECATED EM algorithm
@@ -597,6 +608,7 @@ void PhyloTreeMixlen::printResultTree(string suffix) {
 
 /*************** Using cppoptlib for branch length optimization ***********/
 
+#ifdef USE_CPPOPTLIB
 double PhyloTreeMixlen::value(const TVector &x) {
     double xx[mixlen+1];
     for (int i = 0; i < mixlen; i++)
@@ -628,6 +640,7 @@ void PhyloTreeMixlen::hessian(const TVector &x, THessian &hessian) {
         for (j = 0; j < mixlen; j++)
             hessian(i, j) = ddf[i*mixlen+j];
 }
+#endif
 
 //------ DEPRECATED
 

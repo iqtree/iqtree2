@@ -10,8 +10,10 @@
 #define __iqtree__phylotreemixlen__
 
 #include <stdio.h>
+#ifdef USE_CPPOPTLIB
 #include "cppoptlib/meta.h"
 #include "cppoptlib/boundedproblem.h"
+#endif
 #include "iqtree.h"
 
 
@@ -20,7 +22,12 @@
     Phylogenetic tree with mixture of branch lengths
     Started within joint project with Stephen Crotty
 */
-class PhyloTreeMixlen : public IQTree, public cppoptlib::BoundedProblem<double> {
+#ifdef USE_CPPOPTLIB
+class PhyloTreeMixlen : public IQTree, public cppoptlib::BoundedProblem<double>
+#else
+class PhyloTreeMixlen : public IQTree
+#endif
+{
 
     friend class ModelFactoryMixlen;
 
@@ -202,6 +209,8 @@ public:
 
 /*************** Using cppoptlib for branch length optimization ***********/
 
+#ifdef USE_CPPOPTLIB
+
 //    using typename BoundedProblem<double>::TVector;
 //    using typename BoundedProblem<double>::THessian;
 
@@ -228,7 +237,7 @@ public:
     */
     void hessian(const TVector &x, THessian &hessian);
 
-
+#endif
 
 protected:
     

@@ -530,22 +530,25 @@ double Optimization::minimizeNewtonMulti(double *x1, double *xguess, double *x2,
             }
         }
 
+         // identify alpha to be not out of bound
+        double alpha;
+        for (alpha = 1.0; alpha > xacc; alpha *= 0.5) {
+            bool ok_bound = true;
+            for (i = 0; i < N; i++)
+                if (rts[i]-alpha*space[i] < xl[i] || rts[i]-alpha*space[i] > xh[i]) {
+                    ok_bound = false;
+                    break;
+                }
+            if (ok_bound) break;
+        }
+
         do {
             stop = true;
             for (i = 0; i < N; i++) {
-                if (rts[i]-space[i] < xl[i] || rts[i]-space[i] > xh[i]) // out of bound
-                {
-                    dxold[i]=dx[i];
-                    dx[i]=0.5*(xh[i]-xl[i]);
-                    rts[i]=xl[i]+dx[i];
-    //                if (xl[i] != rts[i]) stop = false;
-                } else {
-                    dxold[i] = dx[i];
-                    dx[i] = space[i];
-                    temp=rts[i];
-                    rts[i] -= dx[i];
-    //                if (temp != rts[i]) stop = false;
-                }
+                dxold[i] = dx[i];
+                dx[i] = alpha*space[i];
+                temp=rts[i];
+                rts[i] -= dx[i];
                 if (fabs(dx[i]) >= xacc && (step != maxNRStep)) {
                     stop = false;
                 } else {
@@ -556,8 +559,7 @@ double Optimization::minimizeNewtonMulti(double *x1, double *xguess, double *x2,
             if (new_score <= score) break;
             // score increased, reduce step size by half
             memcpy(rts, rts_old, sizeof(double)*N);
-            for (i = 0; i < N; i++)
-                space[i] *= 0.5;
+            alpha *= 0.5;
         } while (!stop);
         
         if (stop) {
