@@ -22,14 +22,14 @@
 
 
 
-#if (defined(__GNUC__) || defined(__clang__)) && !defined(WIN32) && !defined(__CYGWIN__)
-#include <execinfo.h>
-#include <cxxabi.h>
-#endif
-
 #include "tools.h"
 #include "timeutil.h"
 #include "MPIHelper.h"
+
+#if defined(Backtrace_FOUND)
+#include <execinfo.h>
+#include <cxxabi.h>
+#endif
 
 VerboseMode verbose_mode;
 
@@ -4032,7 +4032,7 @@ int countPhysicalCPUCores() {
 
 /** Print a demangled stack backtrace of the caller function to FILE* out. */
 
-#if  defined(WIN32) || defined(__CYGWIN__) 
+#if  !defined(Backtrace_FOUND)
 
 // donothing for WIN32
 void print_stacktrace(ostream &out, unsigned int max_frames) {}
@@ -4163,7 +4163,7 @@ void print_stacktrace(ostream &out, unsigned int max_frames)
 
 }
 
-#endif // WIN32
+#endif // Backtrace_FOUND
 
 bool memcmpcpy(void * destination, const void * source, size_t num) {
     bool diff = (memcmp(destination, source, num) != 0);
