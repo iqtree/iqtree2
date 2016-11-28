@@ -3250,6 +3250,9 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -rcluster <percent>  Percentage of partition pairs (relaxed clustering alg.)" << endl
             << "  -mset program        Restrict search to models supported by other programs" << endl
             << "                       (i.e., raxml, phyml or mrbayes)" << endl
+            << "  -mset <lm-subset>    Restrict search to a subset of the Lie-Markov models" << endl
+            << "                       Options for lm-subset are:" << endl
+            << "                       liemarkov, liemarkovry, liemarkovws, liemarkovmk, strandsymmetric" << endl
             << "  -mset m1,...,mk      Restrict search to models in a comma-separated list" << endl
             << "                       (e.g. -mset WAG,LG,JTT)" << endl            
             << "  -msub source         Restrict search to AA models designed for specific sources" << endl
@@ -3283,7 +3286,7 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "                       MG1KTS, MG1KTV, MG2K" << endl
             << " Semi-empirical codon: XX_YY where XX is empirical and YY is mechanistic model" << endl
             << "       Morphology/SNP: MK (default), ORDERED" << endl
-            << "       Lie Markov DNA: Add prefix LM and an optional suffix RY, WS or MK to:" << endl
+            << "       Lie Markov DNA: One of the following, optionally prefixed by RY, WS or MK:" << endl
             << "                       1.1,  2.2b, 3.3a, 3.3b,  3.3c," << endl
 	        << "                       3.4,  4.4a, 4.4b, 4.5a,  4.5b," << endl
 	        << "                       5.6a, 5.6b, 5.7a, 5.7b,  5.7c," << endl
@@ -3292,7 +3295,8 @@ void usage_iqtree(char* argv[], bool full_command) {
 	        << "                       6.17b,8.8,  8.10a,8.10b, 8.16," << endl
 	        << "                       8.17, 8.18, 9.20a,9.20b,10.12," << endl
 	        << "                       10.34,12.12" << endl
-            << "       Non-reversible: UNREST (most general unrestricted model)" << endl
+            << "       Non-reversible: STRSYM (strand symmetric model, synonymous with WS6.6)" << endl
+            << "       Non-reversible: UNREST (most general unrestricted model, functionally equivalent to 12.12)" << endl
             << "            Otherwise: Name of file containing user-model parameters" << endl
             << "                       (rate parameters and state frequencies)" << endl
             << endl << "STATE FREQUENCY:" << endl

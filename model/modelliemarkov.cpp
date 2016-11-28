@@ -204,7 +204,9 @@ const static BASIS_MATRIX_TYPE BASIS_1012[] = {BM_A,BM_A2,BM_B, BM_C, BM_D1,BM_F
 const static BASIS_MATRIX_TYPE BASIS_1034[] = {BM_A,BM_A2,BM_B, BM_C, BM_D1,BM_G1,BM_G2,            BM_D,BM_E1,BM_E2};
 const static BASIS_MATRIX_TYPE BASIS_1212[] = {BM_A,BM_A2,BM_B, BM_C, BM_D1,BM_F1,BM_F2,BM_G1,BM_G2,BM_D,BM_E1,BM_E2};
 
-const static int NUM_LM_MODELS = 37;
+const static int NUM_LM_MODELS = 38;
+// Note: really just 37 models, 38th is to provide "StrSym" as an alias for WS6.6
+const static int STR_SYM_INDEX = 37; // entry 37 in BASES, MODEL_NAMES etc is strand symmetric model.
 const static BASIS_MATRIX_TYPE *BASES[] = 
             {BASIS_11,  BASIS_22B, BASIS_33A, BASIS_33B, BASIS_33C,
 	     BASIS_34,  BASIS_44A, BASIS_44B, BASIS_45A, BASIS_45B,
@@ -213,7 +215,7 @@ const static BASIS_MATRIX_TYPE *BASES[] =
 	     BASIS_67A, BASIS_67B, BASIS_68A, BASIS_68B, BASIS_617A,
 	     BASIS_617B,BASIS_88,  BASIS_810A,BASIS_810B,BASIS_816,
 	     BASIS_817, BASIS_818, BASIS_920A,BASIS_920B,BASIS_1012,
-	     BASIS_1034,BASIS_1212};
+	     BASIS_1034,BASIS_1212,BASIS_66};
 const static string MODEL_NAMES[] = 
             { "1.1",  "2.2b", "3.3a", "3.3b",  "3.3c",
 	      "3.4",  "4.4a", "4.4b", "4.5a",  "4.5b",
@@ -222,10 +224,10 @@ const static string MODEL_NAMES[] =
 	      "6.7a", "6.7b", "6.8a", "6.8b",  "6.17a",
 	      "6.17b","8.8",  "8.10a","8.10b", "8.16",
 	      "8.17", "8.18", "9.20a","9.20b","10.12",
-	     "10.34","12.12"};
+	      "10.34","12.12","strsym"};
 const static int MODEL_PARAMS[] = 
              {0,1,2,2,2,2,3,3,3,3,4,4,4,4,4,4,4,4,4,
-              5,5,5,5,5,5,5,7,7,7,7,7,7,8,8,9,9,11};
+              5,5,5,5,5,5,5,7,7,7,7,7,7,8,8,9,9,11,5};
 const static bool TIME_REVERSIBLE[] = 
              {true, true, true, false,true,
 	      true, true, true, false,false,
@@ -234,7 +236,7 @@ const static bool TIME_REVERSIBLE[] =
 	      false,false,false,false,false,
 	      false,false,false,false,false,
 	      false,false,false,false,false,
-	      false,false};
+	      false,false,false};
 /*
  * Base frequency Degrees of Freedom, by model. This is the number
  * of matrices out of D, E1, E2 in the model. 
@@ -252,7 +254,7 @@ const static int BDF[] =
    3,3,3,1,1, // 6.7a,  6.7b,  6.8a,  6.8b,  6.17a
    1,3,3,1,3, // 6.17b, 8.8,   8.10a, 8.10b, 8.16
    3,3,2,0,3, // 8.17,  8.18,  9.20a, 9.20b, 10.12
-   3,3};      // 10.34, 12.12
+   3,3,1};    // 10.34, 12.12, strsym
 /*
  * For the TRANSFORM_* arrays:
  * Each shows how to modify a basis matrix to enforce a fixed base
@@ -306,7 +308,7 @@ const static bool FULL_SYMMETRY[] =
 	      true, false,false,false,false, // 6.7a,  6.7b,  6.8a,  6.8b,  6.17a 
 	      false,false,false,false,false, // 6.17b, 8.8,   8.10a, 8.10b, 8.16
 	      false,false,false,true, false, // 8.17,  8.18,  9.20a, 9.20b, 10.12
-	      false,true};                   // 10.34, 12.12
+	      false,true, false};            // 10.34, 12.12, StrSym
 const static int NUM_RATES = 12;
 
 const double MIN_LIE_WEIGHT = -0.9999;
@@ -321,13 +323,20 @@ void ModelLieMarkov::init(const char *model_name, string model_params, StateFreq
 {
     assert(NUM_RATES==getNumRateEntries());
     parseModelName(model_name,&model_num,&symmetry);
-    name = "LM"+MODEL_NAMES[model_num]+SYMMETRY[symmetry];
-    full_name = "Lie Markov model "+MODEL_NAMES[model_num]+SYMMETRY[symmetry]+" (non reversible)";
     if (model_num<0) {
         // should never happen - model_name should have been accepted 
         // by validModelName before constructor was called.
         cerr << "Bad model name in ModelLieMarkov constructor" << endl;
         abort();
+    }
+    // Special case for strand symmetric model.
+    if (model_num == STR_SYM_INDEX) {
+      name = "StrSym"; // Can't use MODEL_NAMES[STR_SYM_INDEX] as this is all lowercase, as it must be for parseModelName to work.
+      full_name = "Strand Symmetric model (alias WS6.6) (non reversible)";
+    } else {
+      name = SYMMETRY[symmetry]+MODEL_NAMES[model_num];
+      full_name = "Lie Markov model "+SYMMETRY[symmetry]+MODEL_NAMES[model_num]
+	+ (TIME_REVERSIBLE[model_num] ? "" : " (non reversible)");
     }
     freq_type = freq;
     if (freq_params != "") {
@@ -379,50 +388,58 @@ ModelLieMarkov::~ModelLieMarkov() {
     return (model_num!=-1);
 }
 
-
 /*
- * Model names are like LM3.3a or LM6.6WS.
- * All start with LM. They may end with RY, WS, MK or nothing.
- * In between, the name must be on the list MODEL_NAMES
+ * Model names are like 3.3a or WS6.6.
+ * The model name is something in the list MODEL_NAMES, optionally
+ * prefixed by "RY", "WS" or "MK" to set the distinguished pair. 
+ * If the model has full symmetry, prefix is irrelevant and is ignored.
+ * If the model does not have full symmetry and has no prefix, "RY"
+ * pair is assumed.
  *
  * Returns number of entry on MODEL_NAMES in model_num (-1 if not found),
- * and symmetry is 0 for RY, 1 for WS, 2 for MK.
- * (If no RY, WS or MK at end of name, assume RY.)
+ * and symmetry is 0 for RY, 1 for WS, 2 for MK, 3 for full symmetry.
+ *
+ * SPECIAL CASE: "StrSym" (case insensitive) is a synonym for WS6.6 
+ * (strand symmetric). A minor misfeature is that RY, WS and MK will
+ * be accepted as prefixes to StrSym (e.g. "ryStrsym" is an alias for StrSym) 
  */
 
+
 /* static */ void ModelLieMarkov::parseModelName(string model_name, int* model_num, int* symmetry) {
-    *model_num = -1; // not found yet
     int len = model_name.length();
     string base_name;
-    if (model_name.find("LM")==0) {
-        // found "LM" at start of model name
-        if (model_name.find("RY")==len-2) {
-	    // found "RY" at end
-	    *symmetry = 0;
-            base_name = model_name.substr(2,len-4);
-        } else if (model_name.find("WS")==len-2) {
-	    // found "WS" at end
-            *symmetry = 1;
-            base_name = model_name.substr(2,len-4);
-        } else if (model_name.find("MK")==len-2) {
-	    // found "MK" at end
-            *symmetry = 2;
-            base_name = model_name.substr(2,len-4);
-	} else {
-	    // did not find RY, WS or MK, assume RY symmetry
-  	    *symmetry = 0;
-            base_name = model_name.substr(2,len-2);
-	}
-	// search for basename in MODEL_NAMES
-	for (int i=0; i<NUM_LM_MODELS; i++) {
-	    if (MODEL_NAMES[i].compare(base_name)==0) {
-	        *model_num = i;
-	        break;
-	    }
-	}
-        // set full symmetry if have a fully symmetric model
-        if (*model_num>=0 && FULL_SYMMETRY[*model_num]) *symmetry = 3;
+    string name_lower = model_name;
+    for (string::iterator it = name_lower.begin(); it != name_lower.end(); it++)
+	(*it) = tolower(*it);
+    if (name_lower.find("ry")==0) {
+      // found "RY" at start of model name
+      *symmetry = 0;
+      base_name = name_lower.substr(2,len-2);
+    } else if (name_lower.find("ws")==0) {
+      // found "WS" at start of model name
+      *symmetry = 1;
+      base_name = name_lower.substr(2,len-2);
+    } else if (name_lower.find("mk")==0) {
+      // found "MK" at start of model name
+      *symmetry = 2;
+      base_name = name_lower.substr(2,len-2);
+    } else { 
+      // Found no prefix
+      *symmetry = 0;
+      base_name = name_lower;
+    } 
+    // search for basename in MODEL_NAMES
+    *model_num = -1; // not found yet
+    for (int i=0; i<NUM_LM_MODELS; i++) {
+      if (MODEL_NAMES[i].compare(base_name)==0) {
+	*model_num = i;
+	break;
+      }
     }
+    // Special case: strand symmetric model has WS symmetry
+    if (*model_num == STR_SYM_INDEX) *symmetry = 1;
+    // set full symmetry if have a fully symmetric model
+    if (*model_num>=0 && FULL_SYMMETRY[*model_num]) *symmetry = 3;
     return;
 }
 
@@ -729,7 +746,7 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
     // following code is from Christina
     
     
-    if (name.substr(0,5) == "LM1.1" || name.substr(0,6) == "LM4.4a" || name.substr(0,6) == "LM5.6b") {
+    if (name.substr(0,3) == "1.1" || name.substr(0,4) == "4.4a" || name.substr(2,4) == "5.6b") {
 
         /******** eigenvalues *********/
         //Eigenvalues = {0, -4*a, -4*a, -4*a}
@@ -760,7 +777,7 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
         //v3 = {1, 1, 1, 0}}
         cinv_evec[3] = 1; cinv_evec[7] = 1; cinv_evec[11] = 1; cinv_evec[15] = 0;
         
-    } else if (name.substr(0,6) == "LM2.2b" || name.substr(0,5) == "LM3.4" || name.substr(0,6) == "LM5.16") {
+    } else if (name.substr(2,4) == "2.2b" || name.substr(2,3) == "3.4" || name.substr(2,4) == "5.16") {
         //5.16, 3.4, 2.2b, 1.1
 
         /******** eigenvalues *********/

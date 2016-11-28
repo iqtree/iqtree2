@@ -62,16 +62,45 @@ const char* dna_model_names_rax[] ={"GTR"};
 /* DNA model supported by MrBayes */
 const char *dna_model_names_mrbayes[] = {"JC", "F81", "K80", "HKY", "SYM", "GTR"};
 
-const char *dna_model_names_lie_markov[] = {
-          "LM1.1",  "LM2.2b", "LM3.3a", "LM3.3b",  "LM3.3c",
-	      "LM3.4",  "LM4.4a", "LM4.4b", "LM4.5a",  "LM4.5b",
-	      "LM5.6a", "LM5.6b", "LM5.7a", "LM5.7b",  "LM5.7c",
-	      "LM5.11a", "LM5.11b", "LM5.11c", "LM5.16",  "LM6.6",
-	      "LM6.7a", "LM6.7b", "LM6.8a", "LM6.8b",  "LM6.17a",
-	      "LM6.17b","LM8.8",  "LM8.10a","LM8.10b", "LM8.16",
-	      "LM8.17", "LM8.18", "LM9.20a","LM9.20b","LM10.12",
-	     "LM10.34", "LM12.12"
+// Lie-Markov models without an RY, WS or MK prefix
+const char *dna_model_names_lie_markov_fullsym[] = 
+    {"1.1", "3.3a", "4.4a", "6.7a", "9.20b", "12.12"};
+// Lie-Markov models with RY symmetry/distinguished pairing
+const char *dna_model_names_lie_markov_ry[] = {
+          "RY2.2b",  "RY3.3b", "RY3.3c",  "RY3.4",   "RY4.4b", 
+          "RY4.5a",  "RY4.5b", "RY5.6a",  "RY5.6b",  "RY5.7a",
+          "RY5.7b",  "RY5.7c", "RY5.11a", "RY5.11b", "RY5.11c", 
+          "RY5.16",  "RY6.6",  "RY6.7b",  "RY6.8a",  "RY6.8b",  
+          "RY6.17a", "RY6.17b","RY8.8",   "RY8.10a", "RY8.10b", 
+          "RY8.16",  "RY8.17", "RY8.18",  "RY9.20a", "RY10.12",
+	  "RY10.34"
 };
+// Lie-Markov models with WS symmetry/distinguished pairing
+const char *dna_model_names_lie_markov_ws[] = {
+          "WS2.2b",  "WS3.3b", "WS3.3c",  "WS3.4",   "WS4.4b", 
+          "WS4.5a",  "WS4.5b", "WS5.6a",  "WS5.6b",  "WS5.7a",
+          "WS5.7b",  "WS5.7c", "WS5.11a", "WS5.11b", "WS5.11c", 
+          "WS5.16",  "WS6.6",  "WS6.7b",  "WS6.8a",  "WS6.8b",  
+          "WS6.17a", "WS6.17b","WS8.8",   "WS8.10a", "WS8.10b", 
+          "WS8.16",  "WS8.17", "WS8.18",  "WS9.20a", "WS10.12",
+	  "WS10.34"
+};
+// Lie-Markov models with MK symmetry/distinguished pairing
+const char *dna_model_names_lie_markov_mk[] = {
+          "MK2.2b",  "MK3.3b", "MK3.3c",  "MK3.4",   "MK4.4b", 
+          "MK4.5a",  "MK4.5b", "MK5.6a",  "MK5.6b",  "MK5.7a",
+          "MK5.7b",  "MK5.7c", "MK5.11a", "MK5.11b", "MK5.11c", 
+          "MK5.16",  "MK6.6",  "MK6.7b",  "MK6.8a",  "MK6.8b",  
+          "MK6.17a", "MK6.17b","MK8.8",   "MK8.10a", "MK8.10b", 
+          "MK8.16",  "MK8.17", "MK8.18",  "MK9.20a", "MK10.12",
+	  "MK10.34"
+};
+// Lie-Markov models which are strand symmetric
+const char *dna_model_names_lie_markov_strsym[] = {
+          "1.1",    "WS2.2b", "3.3a",   "WS3.3b", "WS3.3c", "WS3.4",   
+          "WS4.4b", "WS4.5a", "WS4.5b", "WS5.6a", "WS6.6"
+};
+
 
 /****** Protein model set ******/
 const char* aa_model_names[] = { "Dayhoff", "mtMAM", "JTT", "WAG",
@@ -123,6 +152,19 @@ void copyCString(const char **cvec, int n, StrVector &strvec, bool touppercase =
             std::transform(strvec[i].begin(), strvec[i].end(), strvec[i].begin(), ::toupper);
     }
 }
+
+/**
+ * append from cvec to strvec
+ */
+void appendCString(const char **cvec, int n, StrVector &strvec, bool touppercase = false) {
+        strvec.reserve(strvec.size()+n);
+	for (int i = 0; i < n; i++) {
+	    strvec.push_back(cvec[i]);
+            if (touppercase)
+	      std::transform(strvec.back().begin(), strvec.back().end(), strvec.back().begin(), ::toupper);
+        }
+}
+
 
 int getSeqType(const char *model_name, SeqType &seq_type) {
     bool empirical_model = false;
@@ -619,7 +661,21 @@ int getModelList(Params &params, Alignment *aln, StrVector &models, bool separat
 		} else if (strcmp(params.model_set, "mrbayes") == 0) {
 			copyCString(dna_model_names_mrbayes, sizeof(dna_model_names_mrbayes) / sizeof(char*), model_names);
 		} else if (strcmp(params.model_set, "liemarkov") == 0) {
-			copyCString(dna_model_names_lie_markov, sizeof(dna_model_names_lie_markov) / sizeof(char*), model_names);
+			copyCString(dna_model_names_lie_markov_fullsym, sizeof(dna_model_names_lie_markov_fullsym) / sizeof(char*), model_names);
+			appendCString(dna_model_names_lie_markov_ry, sizeof(dna_model_names_lie_markov_ry) / sizeof(char*), model_names);
+			appendCString(dna_model_names_lie_markov_ws, sizeof(dna_model_names_lie_markov_ws) / sizeof(char*), model_names);
+			appendCString(dna_model_names_lie_markov_mk, sizeof(dna_model_names_lie_markov_mk) / sizeof(char*), model_names);
+		} else if (strcmp(params.model_set, "liemarkovry") == 0) {
+			copyCString(dna_model_names_lie_markov_fullsym, sizeof(dna_model_names_lie_markov_fullsym) / sizeof(char*), model_names);
+			appendCString(dna_model_names_lie_markov_ry, sizeof(dna_model_names_lie_markov_ry) / sizeof(char*), model_names);
+		} else if (strcmp(params.model_set, "liemarkovws") == 0) {
+			copyCString(dna_model_names_lie_markov_fullsym, sizeof(dna_model_names_lie_markov_fullsym) / sizeof(char*), model_names);
+			appendCString(dna_model_names_lie_markov_ws, sizeof(dna_model_names_lie_markov_ws) / sizeof(char*), model_names);
+		} else if (strcmp(params.model_set, "liemarkovmk") == 0) {
+			copyCString(dna_model_names_lie_markov_fullsym, sizeof(dna_model_names_lie_markov_fullsym) / sizeof(char*), model_names);
+			appendCString(dna_model_names_lie_markov_mk, sizeof(dna_model_names_lie_markov_mk) / sizeof(char*), model_names);
+		} else if (strcmp(params.model_set, "strandsymmetric") == 0) {
+			copyCString(dna_model_names_lie_markov_strsym, sizeof(dna_model_names_lie_markov_strsym) / sizeof(char*), model_names);
 		} else {
 			convert_string_vec(params.model_set, model_names);
 		}
@@ -1394,8 +1450,9 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 	if (seq_type == SEQ_BINARY)
 		subst_model = new ModelBIN("JC2", "", FREQ_UNKNOWN, "", in_tree);
 	else if (seq_type == SEQ_DNA)
-        if (params.model_set && strcmp(params.model_set, "liemarkov") == 0)
-	        subst_model = new ModelLieMarkov("LM1.1", in_tree, "", FREQ_ESTIMATE, "");
+	  // "liemarkov", "liemarkovry", "liemarkovws", "liemarkovmk", "strandsymmetric"
+	  if (params.model_set && (strncmp(params.model_set, "liemarkov", 9) == 0 || strcmp(params.model_set,"strandsymmetric")==0))
+	        subst_model = new ModelLieMarkov("1.1", in_tree, "", FREQ_ESTIMATE, "");
         else
             subst_model = new ModelDNA("JC", "", FREQ_UNKNOWN, "", in_tree);
 	else if (seq_type == SEQ_PROTEIN)
