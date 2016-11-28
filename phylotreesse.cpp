@@ -67,7 +67,7 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk, int num_threads) {
     //--- parsimony kernel ---
     setParsimonyKernel(lk);
 
-    bool has_fma = (hasFMA3() || hasFMA4()) && (instruction_set >= 7) && (Params::getInstance().lk_no_avx != 2);
+    bool has_fma = (hasFMA3()) && (instruction_set >= 7) && (Params::getInstance().lk_no_avx != 2);
     //--- dot-product kernel ---
     if (has_fma) {
 		setDotProductFMA();
