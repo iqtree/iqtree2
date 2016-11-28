@@ -229,7 +229,7 @@ endif()
 # change the executable name if compiled for OpenMP parallel version
 ##################################################################
 if (IQTREE_FLAGS MATCHES "omp")
-	message("OpenMP      : Yes")
+	message("OpenMP        : Yes")
 	SET(EXE_SUFFIX "${EXE_SUFFIX}-omp")
 	add_definitions(-D_USE_PTHREADS)
 	if (MSVC)
@@ -252,15 +252,15 @@ if (IQTREE_FLAGS MATCHES "omp")
   		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp=libomp")
   	endif()
 else()
-	message("OpenMP      : NONE")
+	message("OpenMP        : NONE")
 endif()
 
 
 if (IQTREE_FLAGS MATCHES "mpi")
-	message("MPI      : Yes")
+	message("MPI           : Yes")
 	SET(EXE_SUFFIX "${EXE_SUFFIX}-mpi")
 else()
-	message("MPI      : NONE")
+	message("MPI           : NONE")
 endif()
 
 ##################################################################
@@ -340,7 +340,7 @@ elseif (IQTREE_FLAGS MATCHES "avx") # AVX instruction set
 	set(COMBINED_FLAGS "${COMBINED_FLAGS} ${AVX_FLAGS}")
 	#SET(EXE_SUFFIX "${EXE_SUFFIX}-avx")
 elseif (NOT IQTREE_FLAGS MATCHES "nosse") #SSE intruction set
-	message("Vectorization : SSE3")
+	message("Vectorization : SSE3/AVX/AVX2")
 	#add_definitions(-D__SSE3)
     #set(COMBINED_FLAGS "${COMBINED_FLAGS} ${SSE_FLAGS}")
 endif()
@@ -356,18 +356,18 @@ set(CMAKE_CXX_FLAGS_PROFILE "${CMAKE_CXX_FLAGS} -fno-inline-functions -fno-inlin
 set(CMAKE_C_FLAGS_PROFILE "${CMAKE_C_FLAGS} -fno-inline-functions -fno-inline-functions-called-once -fno-optimize-sibling-calls -O2 -fno-omit-frame-pointer -g")
 
 if (CMAKE_BUILD_TYPE STREQUAL "Release")
-	message("C flags    : ${CMAKE_C_FLAGS} ${CMAKE_C_FLAGS_RELEASE}")
-	message("CXX flags  : ${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_RELEASE}")
+	message("C flags       : ${CMAKE_C_FLAGS} ${CMAKE_C_FLAGS_RELEASE}")
+	message("CXX flags     : ${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_RELEASE}")
 endif()
 
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
-	message("C flags    : ${CMAKE_C_FLAGS} ${CMAKE_C_FLAGS_DEBUG}")
-	message("CXX flags  : ${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_DEBUG}")
+	message("C flags       : ${CMAKE_C_FLAGS} ${CMAKE_C_FLAGS_DEBUG}")
+	message("CXX flags     : ${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_DEBUG}")
 endif()
 
 if (CMAKE_BUILD_TYPE STREQUAL "Profile")
-	message("C flags    : ${CMAKE_C_FLAGS_PROFILE} ")
-	message("CXX flags  : ${CMAKE_CXX_FLAGS_PROFILE} ")
+	message("C flags       : ${CMAKE_C_FLAGS_PROFILE} ")
+	message("CXX flags     : ${CMAKE_CXX_FLAGS_PROFILE} ")
 endif()
 
 
