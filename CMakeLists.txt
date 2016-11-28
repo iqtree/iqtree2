@@ -1,6 +1,6 @@
 ##################################################################
 # IQ-TREE cmake build definition
-# Copyright (c) 2012-2015 Bui Quang Minh, Lam Tung Nguyen
+# Copyright (c) 2012-2015 Bui Quang Minh, Lam-Tung Nguyen
 ##################################################################
 
 # Windows example usages:
@@ -18,12 +18,17 @@
 # cmake -DIQTREE_FLAGS="m32" <source_dir>      (32-bit sequential version)
 # cmake -DIQTREE_FLAGS="m32 omp" <source_dir>  (32-bit OpenMP version)
 #
-
+# To compile with CLANG on Linux:
+# export CC=/usr/bin/clang
+# export CXX=/usr/bin/clang++
+# Best practices for setting up CMAKE for diffrent compiler can be found here:
+# http://stackoverflow.com/questions/7031126/switching-between-gcc-and-clang-llvm-using-cmake
+#
 # Mac OSX example usages:
 #------------------------
 # cmake -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ <source_dir>							(sequential version)
 #
-# To build OpenMP version one needs to download Clang version 3.7 or later (as of November 2015) 
+# To build OpenMP version one needs to download Clang version 3.7 or later (as of November 2015)
 # Then assuming clang3.7 and clang++3.7 are the newly built compilers, then:
 # cmake -DCMAKE_C_COMPILER=clang3.7 -DCMAKE_CXX_COMPILER=clang++3.7 -DIQTREE_FLAGS="omp" <source_dir>		(OpenMP version)
 #
@@ -45,22 +50,29 @@ add_definitions(-DIQ_TREE)
 # The version number.
 set (iqtree_VERSION_MAJOR 1)
 set (iqtree_VERSION_MINOR 5)
-set (iqtree_VERSION_PATCH "0a")
+set (iqtree_VERSION_PATCH "2-pomo")
 
 set(BUILD_SHARED_LIBS OFF)
 
+if (CMAKE_C_COMPILER MATCHES "mpi")
+    set(IQTREE_FLAGS "${IQTREE_FLAGS} mpi")
+endif()
+
 message("IQ-TREE flags : ${IQTREE_FLAGS}")
 
-if (NOT CMAKE_BUILD_TYPE) 
+if (NOT CMAKE_BUILD_TYPE)
 	set(CMAKE_BUILD_TYPE "Release")
 endif()
 
-if (CMAKE_BUILD_TYPE STREQUAL "Release") 
+if (CMAKE_BUILD_TYPE STREQUAL "Release")
 	message("Builde mode   : Release")
 endif()
 
-include_directories("${PROJECT_SOURCE_DIR}")
+if (CMAKE_GENERATOR MATCHES "Xcode")
+    set(CMAKE_XCODE_ATTRIBUTE_DEBUG_INFORMATION_FORMAT "dwarf-with-dsym")
+endif()
 
+include_directories("${PROJECT_SOURCE_DIR}")
 
 ##################################################################
 # Detect target platforms
@@ -73,18 +85,18 @@ if (WIN32)
     endif()
     SET(CMAKE_FIND_LIBRARY_SUFFIXES .lib .a ${CMAKE_FIND_LIBRARY_SUFFIXES})
     add_definitions(-DWIN32)
-elseif (APPLE) 
+elseif (APPLE)
 	message("Target OS     : Mac OS X")
 	# to be compatible back to Mac OS X 10.6
-	if (IQTREE_FLAGS MATCHES "oldmac") 
-		add_definitions("-mmacosx-version-min=10.5") 
+	if (IQTREE_FLAGS MATCHES "oldmac")
+		add_definitions("-mmacosx-version-min=10.5")
 		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -mmacosx-version-min=10.5")
 	else()
-		add_definitions("-mmacosx-version-min=10.6") 
+		add_definitions("-mmacosx-version-min=10.6")
 		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -mmacosx-version-min=10.6")
 	endif()
     SET(CMAKE_FIND_LIBRARY_SUFFIXES .a ${CMAKE_FIND_LIBRARY_SUFFIXES})
-elseif (UNIX) 
+elseif (UNIX)
 	message("Target OS     : Unix")
 	# build as static binary to run on most machines
     if (NOT IQTREE_FLAGS MATCHES "static")
@@ -105,38 +117,48 @@ set(GCC "FALSE")   #  GNU compiler
 set(CLANG "FALSE") # Clang compiler
 set(ICC "FALSE")   # Intel compiler
 set(VCC "FALSE")   # MS Visual C Compiler, note that it is different from MSVC variable
+# using C++11 standard
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 
-if (CMAKE_COMPILER_IS_GNUCXX) 	
+if (CMAKE_COMPILER_IS_GNUCXX)
 	message("Compiler      : GNU Compiler (gcc)")
 	set(GCC "TRUE")
 #	set(COMBINED_FLAGS "-Wall -Wno-unused-function -Wno-sign-compare -pedantic -D_GNU_SOURCE -fms-extensions -Wno-deprecated")
-#	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++98")
 	set(CMAKE_CXX_FLAGS_RELEASE "-O3 -g")
 	set(CMAKE_C_FLAGS_RELEASE "-O3 -g")
-    # require at least gcc 4.6
-    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 4.6)
-        message(FATAL_ERROR "GCC version must be at least 4.6!")
+    # require at least gcc 4.8
+    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 4.8)
+        message(FATAL_ERROR "GCC version must be at least 4.8!")
+    endif()
+    if (WIN32)
+        # disable AVX on Windows due to memory alignment
+        set(IQTREE_FLAGS "${IQTREE_FLAGS} novx")
+        message("WARNING: AVX is disabled on Windows as GCC does not properly suport memory alignment")
     endif()
 elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 	message("Compiler      : Clang")
 	set(CLANG "TRUE")
 #	set(COMBINED_FLAGS "-Wall -Wno-unused-function -Wno-sign-compare -pedantic -D_GNU_SOURCE -Wno-nested-anon-types")
+    #if (APPLE AND NOT CMAKE_BUILD_TYPE MATCHES "Debug")
+    #    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
+    #    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -stdlib=libc++")
+    #endif()
 	set(CMAKE_CXX_FLAGS_RELEASE "-O3")
-	set(CMAKE_C_FLAGS_RELEASE "-O3")	
+	set(CMAKE_C_FLAGS_RELEASE "-O3")
 elseif (CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
 	set(VCC "TRUE")
 	message("Compiler      : MS Visual C++ Compiler")
 elseif (CMAKE_CXX_COMPILER_ID MATCHES "Intel")
 	message("Compiler      : Intel C++ Compiler (icc)")
 	set(ICC "TRUE")
-	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /Qstd=c99")
+    #set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /Qstd=c99")
 else()
 	message("Compiler      : Unknown and untested yet")
 endif()
 
 set(EXE_SUFFIX "")
 
-if (MSVC) 
+if (MSVC)
 	# MS Visual Studio environment
 	message("Exporting MS Visual Studio projects...")
 	add_definitions(/MP) # enable multi-processor compilation
@@ -145,11 +167,29 @@ if (MSVC)
 		if (VCC)
 			add_definitions(/O2)
 		elseif (ICC)
+            #add_definitions(/O3)
 			add_definitions(/O3)
 		endif()
 	endif()
 endif()
 
+##################################################################
+# configure MPI compilation
+##################################################################
+
+if (IQTREE_FLAGS MATCHES "mpi")
+    add_definitions(-D_IQTREE_MPI)
+    if (NOT CMAKE_CXX_COMPILER MATCHES "mpi")
+        # if not using the MPI compiler wrapper, set own options manually 
+        find_package(MPI REQUIRED)
+        set(CMAKE_CXX_COMPILE_FLAGS "${CMAKE_CXX_COMPILE_FLAGS} ${MPI_CXX_COMPILE_FLAGS}")
+        set(CMAKE_C_COMPILE_FLAGS "${CMAKE_C_COMPILE_FLAGS} ${MPI_C_COMPILE_FLAGS}")
+        set(CMAKE_CXX_LINK_FLAGS "${CMAKE_CXX_LINK_FLAGS} ${MPI_CXX_LINK_FLAGS}")
+        set(CMAKE_C_LINK_FLAGS "${CMAKE_C_LINK_FLAGS} ${MPI_C_LINK_FLAGS}")
+        include_directories(${MPI_C_INCLUDE_PATH})
+        include_directories(${MPI_CXX_INCLUDE_PATH})
+    endif()
+endif()
 
 
 ##################################################################
@@ -179,7 +219,7 @@ else()
 	message("Target binary : 64-bit")
 endif()
 
-if(IQTREE_FLAGS MATCHES "novx") 
+if(IQTREE_FLAGS MATCHES "novx")
     add_definitions(-D__NOAVX__)
 endif()
 
@@ -188,44 +228,52 @@ endif()
 # change the executable name if compiled for OpenMP parallel version
 ##################################################################
 if (IQTREE_FLAGS MATCHES "omp")
-	message("Parallel      : OpenMP/PThreads")
-	SET(EXE_SUFFIX "${EXE_SUFFIX}-omp")	
+	message("OpenMP        : Yes")
+	SET(EXE_SUFFIX "${EXE_SUFFIX}-omp")
 	add_definitions(-D_USE_PTHREADS)
-	if (MSVC) 
+	if (MSVC)
 		add_definitions(/MT)
 	endif()
-	
-	if (VCC) 
+
+	if (VCC)
   		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /openmp")
-  		include_directories("${PROJECT_SOURCE_DIR}/pll") # for PThreads headers 
+  		include_directories("${PROJECT_SOURCE_DIR}/pll") # for PThreads headers
 	elseif (ICC)
   		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Qopenmp")
   		if (WIN32)
   			include_directories("${PROJECT_SOURCE_DIR}/pll") # for PThreads headers
-  		endif() 
+  		endif()
   	elseif (GCC)
 		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pthread")
-  		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp")
-  	elseif (CLANG) 
+  		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp -pthread")
+  	elseif (CLANG)
 		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pthread")
   		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp=libomp")
   	endif()
 else()
-	message("Parallel      : None")
+	message("OpenMP        : NONE")
+endif()
+
+
+if (IQTREE_FLAGS MATCHES "mpi")
+	message("MPI           : Yes")
+	SET(EXE_SUFFIX "${EXE_SUFFIX}-mpi")
+else()
+	message("MPI           : NONE")
 endif()
 
 ##################################################################
 # configure SSE/AVX/FMA instructions
 ##################################################################
 
-SET(AVX_FLAGS "-D__AVX")
+SET(AVX_FLAGS "-D__SSE3 -D__AVX")
 if (VCC) 
 	set(AVX_FLAGS "${AVX_FLAGS} /arch:AVX")
 elseif (CLANG)
 	set(AVX_FLAGS "${AVX_FLAGS} -mavx")
 elseif (GCC)
 	set(AVX_FLAGS "${AVX_FLAGS} -mavx -fabi-version=0")
-elseif (ICC) 
+elseif (ICC)
 	if (WIN32)
 		 set(AVX_FLAGS "${AVX_FLAGS} /arch:AVX")
 	else()
@@ -233,47 +281,67 @@ elseif (ICC)
 	endif()
 endif()
 
-SET(SSE_FLAGS "")
+SET(SSE_FLAGS "-D__SSE3")
 if (VCC)
-	set(SSE_FLAGS "/arch:SSE2 -D__SSE3__")
+	set(SSE_FLAGS "${SSE_FLAGS} /arch:SSE2 -D__SSE3__")
 elseif (GCC OR CLANG)
-	set(SSE_FLAGS "-msse3")
+	set(SSE_FLAGS "${SSE_FLAGS} -msse3")
 elseif (ICC)
 	if (WIN32)
-		set(SSE_FLAGS "/arch:SSE3")
+		set(SSE_FLAGS "${SSE_FLAGS} /arch:SSE3")
 	else()
-		set(SSE_FLAGS "-msse3")
+		set(SSE_FLAGS "${SSE_FLAGS} -msse3")
 	endif()
 endif()
+
+SET(FMA_FLAGS "-D__SSE3 -D__AVX")
+if (VCC) 
+	set(FMA_FLAGS "${FMA_FLAGS} /arch:AVX2")
+elseif (CLANG)
+	set(FMA_FLAGS "${FMA_FLAGS} -mavx -mfma")
+elseif (GCC)
+	set(FMA_FLAGS "${FMA_FLAGS} -mavx -fabi-version=0 -mfma")
+elseif (ICC) 
+	if (WIN32)
+		 set(FMA_FLAGS "${FMA_FLAGS} /arch:AVX /Qfma")
+	else()
+		 set(FMA_FLAGS "${FMA_FLAGS} -march=core-avx2")
+	endif()
+endif()
+
+SET(AVX512_FLAGS "-D__SSE3 -D__AVX")
+if (VCC)
+    message("AVX512 not available in Visual C++")
+	#set(AVX512_FLAGS "${AVX512_FLAGS} /arch:AVX512")
+elseif (CLANG)
+	set(AVX512_FLAGS "${AVX512_FLAGS} -mavx512f -mfma")
+elseif (GCC)
+	set(AVX512_FLAGS "${AVX512_FLAGS} -mavx512f -mfma")
+elseif (ICC) 
+	if (WIN32)
+		 set(AVX512_FLAGS "${AVX512_FLAGS} /arch:MIC-AVX512 /Qfma")
+	else()
+		 set(AVX512_FLAGS "${AVX512_FLAGS} -xMIC-AVX512 -mfma")
+	endif()
+endif()
+
+
+# further flag to improve performance
 
 if (IQTREE_FLAGS MATCHES "fma") # AVX+FMA instruction set
  	message("Vectorization : AVX+FMA")
 	add_definitions(-D__SSE3 -D__AVX) # define both SSE3 and AVX directive
-	if (VCC)
-		# Visual C++ has no /mfma flag!, FMA is only included in AVX2 
-		set(COMBINED_FLAGS "${COMBINED_FLAGS} /arch:AVX2")
-	elseif (CLANG)
-		set(COMBINED_FLAGS "${COMBINED_FLAGS} -mavx -mfma")
-	elseif (GCC)
-		set(COMBINED_FLAGS "${COMBINED_FLAGS} -mavx -fabi-version=0 -mfma")
-	elseif (ICC) 
-		if (WIN32)
-			 set(COMBINED_FLAGS "${COMBINED_FLAGS} /arch:AVX /Qfma")
-		else()
-			 set(COMBINED_FLAGS "${COMBINED_FLAGS} -mavx -mfma")
-		endif()
-	endif()
-
-	SET(EXE_SUFFIX "${EXE_SUFFIX}-fma")
-
+    set(COMBINED_FLAGS "${COMBINED_FLAGS} ${FMA_FLAGS}")
+	#SET(EXE_SUFFIX "${EXE_SUFFIX}-fma")
 elseif (IQTREE_FLAGS MATCHES "avx") # AVX instruction set
  	message("Vectorization : AVX")
 	add_definitions(-D__SSE3 -D__AVX) # define both SSE3 and AVX directive
 	set(COMBINED_FLAGS "${COMBINED_FLAGS} ${AVX_FLAGS}")
-	SET(EXE_SUFFIX "${EXE_SUFFIX}-avx")
-else() #SSE intruction set
-	message("Vectorization : SSE3")
-	add_definitions(-D__SSE3)
+	#SET(EXE_SUFFIX "${EXE_SUFFIX}-avx")
+elseif (NOT IQTREE_FLAGS MATCHES "nosse") #SSE intruction set
+	message("Vectorization : SSE3/AVX/AVX2")
+	#add_definitions(-D__SSE3)
+    #set(COMBINED_FLAGS "${COMBINED_FLAGS} ${SSE_FLAGS}")
 endif()
 
 
@@ -283,21 +351,26 @@ endif()
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${COMBINED_FLAGS}")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${COMBINED_FLAGS}")
+set(CMAKE_CXX_FLAGS_PROFILE "${CMAKE_CXX_FLAGS} -fno-inline-functions -fno-inline-functions-called-once -fno-optimize-sibling-calls -fno-default-inline -fno-inline -O2 -fno-omit-frame-pointer -g")
+set(CMAKE_C_FLAGS_PROFILE "${CMAKE_C_FLAGS} -fno-inline-functions -fno-inline-functions-called-once -fno-optimize-sibling-calls -O2 -fno-omit-frame-pointer -g")
 
 if (CMAKE_BUILD_TYPE STREQUAL "Release")
-	message("C flags    : ${CMAKE_C_FLAGS} ${CMAKE_C_FLAGS_RELEASE}") 
-	message("CXX flags  : ${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_RELEASE}") 
+	message("C flags       : ${CMAKE_C_FLAGS} ${CMAKE_C_FLAGS_RELEASE}")
+	message("CXX flags     : ${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_RELEASE}")
 endif()
 
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
-	message("C flags    : ${CMAKE_C_FLAGS} ${CMAKE_C_FLAGS_DEBUG}") 
-	message("CXX flags  : ${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_DEBUG}") 
+	message("C flags       : ${CMAKE_C_FLAGS} ${CMAKE_C_FLAGS_DEBUG}")
+	message("CXX flags     : ${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_DEBUG}")
 endif()
 
-set(CMAKE_CXX_FLAGS_PROFILE "-fno-inline-functions -fno-inline-functions-called-once -fno-optimize-sibling-calls -fno-default-inline -fno-inline -O0 -fno-omit-frame-pointer -pg")
-set(CMAKE_C_FLAGS_PROFILE "-fno-inline-functions -fno-inline-functions-called-once -fno-optimize-sibling-calls -O0 -fno-omit-frame-pointer -pg")
+if (CMAKE_BUILD_TYPE STREQUAL "Profile")
+	message("C flags       : ${CMAKE_C_FLAGS_PROFILE} ")
+	message("CXX flags     : ${CMAKE_CXX_FLAGS_PROFILE} ")
+endif()
 
-if (GCC) 
+
+if (GCC)
 	set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g -fno-inline-functions -fno-inline-functions-called-once -fno-default-inline -fno-inline")
 	set(CMAKE_C_FLAGS_DEBUG "-O0 -g -fno-inline-functions -fno-inline-functions-called-once -fno-default-inline -fno-inline")
 	set(CMAKE_CXX_FLAGS_MEM "-g -O1")
@@ -334,7 +407,7 @@ include_directories("${PROJECT_BINARY_DIR}")
 
 
 ##################################################################
-# subdirectories containing necessary libraries for the build 
+# subdirectories containing necessary libraries for the build
 ##################################################################
 add_subdirectory(pll)
 add_subdirectory(ncl)
@@ -355,73 +428,82 @@ add_subdirectory(gsl)
 # the main executable
 ##################################################################
 
+add_library(kernelsse phylokernelsse.cpp)
+
 if (NOT BINARY32 AND NOT IQTREE_FLAGS MATCHES "novx")
-add_library(avxkernel phylotreeavx.cpp)
+add_library(kernelavx phylotreeavx.cpp)
+add_library(kernelfma phylokernelfma.cpp)
+if (IQTREE_FLAGS MATCHES "512")
+    add_library(kernelavx512 phylokernelavx512.cpp)
+    add_definitions(-DINCLUDE_AVX512)
+endif()
+endif()
+
+if (IQTREE_FLAGS MATCHES "mpi")
+	add_library(mympi TreeCollection.cpp ObjectStream.cpp)
 endif()
 
 add_executable(iqtree
-alignment.cpp
-alignmentpairwise.cpp
-circularnetwork.cpp
-eigendecomposition.cpp
-greedy.cpp
-gss.cpp
-#guidedbootstrap.cpp
-gurobiwrapper.cpp
-gzstream.cpp
-hashsplitset.cpp
-iqtree.cpp
-maalignment.cpp
-matree.cpp
-mexttree.cpp
-mpdablock.cpp
-msetsblock.cpp
-msplitsblock.cpp
-modelsblock.cpp
-mtree.cpp
-mtreeset.cpp
-ncbitree.cpp
-ngs.cpp
-node.cpp
-optimization.cpp
-parsmultistate.cpp
-pattern.cpp
+alignment.cpp alignment.h
+alignmentpairwise.cpp alignmentpairwise.h
+circularnetwork.cpp circularnetwork.h
+eigendecomposition.cpp eigendecomposition.h
+greedy.cpp greedy.h
+gss.cpp gss.h
+gurobiwrapper.cpp gurobiwrapper.h
+gzstream.cpp gzstream.h
+hashsplitset.cpp hashsplitset.h
+iqtree.cpp iqtree.h
+maalignment.cpp maalignment.h
+matree.cpp matree.h
+mexttree.cpp mexttree.h
+mpdablock.cpp mpdablock.h
+msetsblock.cpp msetsblock.h
+msplitsblock.cpp msplitsblock.h
+modelsblock.cpp modelsblock.h
+mtree.cpp mtree.h
+mtreeset.cpp mtreeset.h
+ncbitree.cpp ncbitree.h
+ngs.cpp ngs.h
+node.cpp node.h
+optimization.cpp optimization.h
+parsmultistate.cpp parsmultistate.h
+pattern.cpp pattern.h
 pda.cpp
-pdnetwork.cpp
-pdtree.cpp
-pdtreeset.cpp
-phyloanalysis.cpp
-phylonode.cpp
-phylosupertree.cpp
-phylotree.cpp
-phylotreesse.cpp
+pdnetwork.cpp pdnetwork.h
+pdtree.cpp pdtree.h
+pdtreeset.cpp pdtreeset.h
+phyloanalysis.cpp phyloanalysis.h
+phylonode.cpp phylonode.h
+phylosupertree.cpp phylosupertree.h
+phylotree.cpp phylotree.h
+phylotreesse.cpp phylokernelnew.h
 phylotreepars.cpp
-phylokernelsitemodel.cpp
-phylokernelnonrev.cpp
-#phylotreeavx.cpp
-pruning.cpp
+phylokernelnonrev.cpp phylokernelnonrev.h
+pruning.cpp pruning.h
 quartet.cpp
-split.cpp
-splitgraph.cpp
-splitset.cpp
-stoprule.cpp
-superalignment.cpp
-superalignmentpairwise.cpp
-supernode.cpp
-tinatree.cpp
-tools.cpp
-whtest_wrapper.cpp
-lpwrapper.c
-pllnni.cpp
-phylosupertreeplen.cpp
-phylotesting.cpp
-ecopd.cpp
-ecopdmtreeset.cpp
-graph.cpp
-candidateset.cpp
-checkpoint.cpp
-constrainttree.cpp
-upperbounds.cpp
+split.cpp split.h
+splitgraph.cpp splitgraph.h
+splitset.cpp splitset.h
+stoprule.cpp stoprule.h
+superalignment.cpp superalignment.h
+superalignmentpairwise.cpp superalignmentpairwise.h
+supernode.cpp supernode.h
+tinatree.cpp tinatree.h
+tools.cpp tools.h
+whtest_wrapper.cpp whtest_wrapper.h
+lpwrapper.c lpwrapper.h
+pllnni.cpp pllnni.h
+phylosupertreeplen.cpp phylosupertreeplen.h
+phylotesting.cpp phylotesting.h
+ecopd.cpp ecopd.h
+ecopdmtreeset.cpp ecopdmtreeset.h
+graph.cpp graph.h
+candidateset.cpp candidateset.h
+checkpoint.cpp checkpoint.h
+constrainttree.cpp constrainttree.h
+MPIHelper.cpp MPIHelper.h
+memslot.cpp memslot.h
 )
 
 if (NOT IQTREE_FLAGS MATCHES "nozlib")
@@ -440,18 +522,25 @@ else(ZLIB_FOUND)
 endif(ZLIB_FOUND)
 
 if (NOT IQTREE_FLAGS MATCHES "avx" AND NOT IQTREE_FLAGS MATCHES "fma")
-	set_target_properties(iqtree pll ncl lbfgsb whtest sprng vectorclass model PROPERTIES COMPILE_FLAGS "${SSE_FLAGS}")
+    if (NOT IQTREE_FLAGS MATCHES "nosse")
+        set_target_properties(iqtree ncl lbfgsb whtest sprng vectorclass model PROPERTIES COMPILE_FLAGS "${SSE_FLAGS}")
+    endif()
+    set_target_properties(kernelsse pll PROPERTIES COMPILE_FLAGS "${SSE_FLAGS}")
 	if (NOT BINARY32 AND NOT IQTREE_FLAGS MATCHES "novx")
-		set_target_properties(avxkernel pllavx PROPERTIES COMPILE_FLAGS "${AVX_FLAGS}")
+		set_target_properties(kernelavx pllavx PROPERTIES COMPILE_FLAGS "${AVX_FLAGS}")
+		set_target_properties(kernelfma PROPERTIES COMPILE_FLAGS "${FMA_FLAGS}")
+        if (IQTREE_FLAGS MATCHES "512")
+            set_target_properties(kernelavx512 PROPERTIES COMPILE_FLAGS "${AVX512_FLAGS}")
+        endif()
 	endif()
-endif()  
+endif()
 
 ##################################################################
 # setup linking flags
 ##################################################################
 
 # link special lib for WIN32
-if (WIN32) 
+if (WIN32)
 	set(PLATFORM_LIB "ws2_32")
 else()
 	set(PLATFORM_LIB "m")
@@ -462,10 +551,10 @@ if(CLANG AND WIN32 AND IQTREE_FLAGS MATCHES "static")
 endif()
 
 set(THREAD_LIB "")
-if (IQTREE_FLAGS MATCHES "omp") 
+if (IQTREE_FLAGS MATCHES "omp")
 	link_directories(${PROJECT_SOURCE_DIR}/lib)
 	if (MSVC)
-		if (BINARY32) 
+		if (BINARY32)
             set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /LIBPATH:${PROJECT_SOURCE_DIR}/lib32")
 			set(THREAD_LIB "pthreadVC2")
 		else()
@@ -473,9 +562,9 @@ if (IQTREE_FLAGS MATCHES "omp")
 			set(THREAD_LIB "pthreadVC2")
 		endif()
 	elseif(CLANG AND APPLE)
-		set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -L${PROJECT_SOURCE_DIR}/libmac")
+		set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -L${PROJECT_SOURCE_DIR}/libmac -fopenmp=libomp")
 	elseif(CLANG AND WIN32)
-        if (BINARY32) 
+        if (BINARY32)
             set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -L${PROJECT_SOURCE_DIR}/lib32 libiomp5md.dll")
         else()
             set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -L${PROJECT_SOURCE_DIR}/lib libiomp5md.dll")
@@ -484,14 +573,30 @@ if (IQTREE_FLAGS MATCHES "omp")
 	endif()
 endif()
 
-if (BINARY32 OR IQTREE_FLAGS MATCHES "novx")
-    target_link_libraries(iqtree pll ncl lbfgsb whtest sprng vectorclass model gsl ${PLATFORM_LIB} ${STD_LIB} ${THREAD_LIB})	
-else()
-    target_link_libraries(iqtree pll pllavx ncl lbfgsb whtest sprng vectorclass model avxkernel gsl ${PLATFORM_LIB} ${STD_LIB} ${THREAD_LIB})	
+# basic linking librararies
+target_link_libraries(iqtree pll ncl lbfgsb whtest sprng vectorclass model gsl ${PLATFORM_LIB} ${STD_LIB} ${THREAD_LIB})
+
+if (NOT IQTREE_FLAGS MATCHES "nosse")
+    target_link_libraries(iqtree kernelsse)
 endif()
 
-##################################################################
-# setup the executable name 
+# MPI libraries
+if (IQTREE_FLAGS MATCHES "mpi")
+    target_link_libraries(iqtree mympi)
+    if (NOT CMAKE_CXX_COMPILER MATCHES "mpi")
+        target_link_libraries(iqtree ${MPI_CXX_LIBRARIES})
+    endif()
+endif()
+
+# SSE, AVX etc. libraries
+if (NOT BINARY32 AND NOT IQTREE_FLAGS MATCHES "novx")
+    target_link_libraries(iqtree pllavx kernelavx kernelfma)
+    if (IQTREE_FLAGS MATCHES "512")
+        target_link_libraries(iqtree kernelavx512)
+    endif()
+endif()
+
+# setup the executable name
 ##################################################################
 set_target_properties(iqtree PROPERTIES OUTPUT_NAME "iqtree${EXE_SUFFIX}")
 
@@ -511,11 +616,11 @@ else()
 endif()
 
 if (WIN32)
-	if (MSVC) 
+	if (MSVC)
 		ADD_CUSTOM_COMMAND(TARGET iqtree POST_BUILD COMMAND copy "Release\\iqtree${EXE_SUFFIX}.exe" "Release\\iqtree${EXE_SUFFIX}-click.exe")
 	else()
 		ADD_CUSTOM_COMMAND(TARGET iqtree POST_BUILD COMMAND copy "iqtree${EXE_SUFFIX}.exe" "iqtree${EXE_SUFFIX}-click.exe")
-	endif()	
+	endif()
 endif()
 
 ##############################################################
@@ -525,6 +630,7 @@ install (TARGETS iqtree DESTINATION bin)
 install (FILES "${PROJECT_SOURCE_DIR}/example/models.nex" DESTINATION .)
 install (FILES "${PROJECT_SOURCE_DIR}/example/example.phy" DESTINATION .)
 install (FILES "${PROJECT_SOURCE_DIR}/example/example.nex" DESTINATION .)
+install (FILES "${PROJECT_SOURCE_DIR}/example/example.cf" DESTINATION .)
 
 if (WIN32)
 	install (FILES "${BINARY_DIR}/iqtree${EXE_SUFFIX}-click.exe" DESTINATION bin)
@@ -554,7 +660,7 @@ endif()
 # build a CPack driven installer package
 ##############################################################
 include (InstallRequiredSystemLibraries)
-set (CPACK_RESOURCE_FILE_LICENSE  
+set (CPACK_RESOURCE_FILE_LICENSE
      "${CMAKE_CURRENT_SOURCE_DIR}/License.txt")
 set (CPACK_PACKAGE_VERSION_MAJOR "${iqtree_VERSION_MAJOR}")
 set (CPACK_PACKAGE_VERSION_MINOR "${iqtree_VERSION_MINOR}")
@@ -574,9 +680,9 @@ set(CPACK_SOURCE_IGNORE_FILES
 
 set (SYSTEM_NAME "${CMAKE_SYSTEM_NAME}")
 if (${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
-	if (IQTREE_FLAGS MATCHES "oldmac") 
+	if (IQTREE_FLAGS MATCHES "oldmac")
 		set (SYSTEM_NAME "MacOS10.5")
-	else() 
+	else()
 		set (SYSTEM_NAME "MacOSX")
 	endif()
 endif()

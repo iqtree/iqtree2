@@ -1,6 +1,8 @@
 /***************************************************************************
- *   Copyright (C) 2006 by BUI Quang Minh, Steffen Klaere, Arndt von Haeseler   *
- *   minh.bui@univie.ac.at   *
+ *   Copyright (C) 2009-2015 by                                            *
+ *   BUI Quang Minh <minh.bui@univie.ac.at>                                *
+ *   Lam-Tung Nguyen <nltung@gmail.com>                                    *
+ *                                                                         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -32,6 +34,8 @@
 #include <stdlib.h>
 #include <cmath>
 #include <stdint.h>
+#include <string.h>
+#include <sstream>
 
 //#include <sys/time.h>
 //#include <time.h>
@@ -61,10 +65,10 @@ inline void _my_assert(const char* expression, const char *func, const char* fil
 
 #define USE_HASH_MAP
 
-#ifdef __GNUC__
+#if defined(__GNUC__) && !defined(GCC_VERSION)
 #define GCC_VERSION (__GNUC__ * 10000 + __GNUC_MINOR__ * 100 + __GNUC_PATCHLEVEL__)
-#else
-#define GCC_VERSION 0
+//#else
+//#define GCC_VERSION 0
 #endif
 
 // for MSVC
@@ -73,13 +77,23 @@ inline void _my_assert(const char* expression, const char *func, const char* fil
 #endif
 
 #if defined(USE_HASH_MAP)
+//    #include <unordered_map>
+//    #include <unordered_set>
+
 	#if defined(_MSC_VER)
 		#include <unordered_map>
 		#include <unordered_set>
     #elif defined(__clang__)
-		#include <tr1/unordered_map>
-		#include <tr1/unordered_set>
-		using namespace std::tr1;    
+        // libc++ detected:     _LIBCPP_VERSION
+        // libstdc++ detected:  __GLIBCXX__
+        #if __has_include(<unordered_map>) // defines _LIBCPP_VERSION
+            #include <unordered_map>
+            #include <unordered_set>
+        #else
+            #include <tr1/unordered_map>
+            #include <tr1/unordered_set>
+            using namespace std::tr1;    
+        #endif
 	#elif !defined(__GNUC__)
 		#include <hash_map>
 		#include <hash_set>
@@ -95,6 +109,7 @@ inline void _my_assert(const char* expression, const char *func, const char* fil
 		#include <tr1/unordered_set>
 		using namespace std::tr1;
 	#endif
+
 #else
 	#include <map>
 	#include <set>
@@ -222,7 +237,7 @@ typedef vector<string> StrVector;
 /**
         matrix of double number
  */
-#define matrix(T) vector<vector<T> >
+#define matrix(T) vector< vector<T> >
 
 /**
         matrix of double
@@ -287,6 +302,7 @@ const int WT_NEWLINE = 128;
 const int WT_BR_LEN_FIXED_WIDTH = 256;
 const int WT_BR_ID = 512;
 const int WT_BR_LEN_ROUNDING = 1024;
+const int WT_BR_LEN_SHORT = 2048; // store only 6 digits after the comma for branch lengths
 const int TRUE = 1;
 const int FALSE = 0;
 
@@ -329,7 +345,11 @@ const int SW_AVG_PRESENT = 4; // take the split weight average over all trees th
         input type, tree or splits graph
  */
 enum InputType {
-    IN_NEWICK, IN_NEXUS, IN_FASTA, IN_PHYLIP, IN_CLUSTAL, IN_MSF, IN_OTHER
+    IN_NEWICK, IN_NEXUS, IN_FASTA, IN_PHYLIP, IN_COUNTS, IN_CLUSTAL, IN_MSF, IN_OTHER
+};
+
+enum SamplingType {
+    SAMPLING_WEIGHTED, SAMPLING_SAMPLED
 };
 
 /**
@@ -414,7 +434,7 @@ enum LikelihoodKernel {
 };
 
 enum LhMemSave {
-	LM_DETECT, LM_ALL_BRANCH, LM_PER_NODE
+	LM_PER_NODE, LM_MEM_SAVE
 };
 
 enum SiteLoglType {
@@ -432,6 +452,10 @@ enum MatrixExpTechnique {
     MET_LIE_MARKOV_DECOMPOSITION
 };
 
+enum AncestralSeqType {
+    AST_NONE, AST_MARGINAL, AST_JOINT
+};
+
 
 const int BRLEN_OPTIMIZE = 0; // optimize branch lengths
 const int BRLEN_FIX      = 1; // fix branch lengths
@@ -440,6 +464,14 @@ const int BRLEN_SCALE    = 2; // scale branch lengths
 const int OUT_LOG       = 1; // .log file written or not
 const int OUT_TREEFILE  = 2; // .treefile file written or not
 const int OUT_IQTREE    = 4; // .iqtree file written or not
+
+
+const double MIN_GAMMA_RATE = 1e-6;
+// change from 0.01 to 0.02 as 0.01 causes numerical problems
+const double MIN_GAMMA_SHAPE = 0.02;
+const double MAX_GAMMA_SHAPE = 1000.0;
+const double TOL_GAMMA_SHAPE = 0.001;
+
 
 /** maximum number of newton-raphson steps for NNI branch evaluation */
 extern int NNI_MAX_NR_STEP;
@@ -462,6 +494,32 @@ private:
     //Params (Params const&) {}; // Disable copy constructor
     //void operator=(Params const&) {}; // Disable assignment
 public:
+
+    /**
+    *  Fast and accurate optimiation for alpha and p_invar
+    */
+    bool fai;
+
+    /**
+     *  Option to check memory consumption only
+     */
+    bool memCheck;
+
+    /**
+     *  The support threshold for stable splits (Default = 0.9)
+     */
+    double stableSplitThreshold;
+
+    /**
+     *  Option for adaptive perturbation.
+     *  Branches that are shared among all candidate trees will be perturbed
+     */
+    bool adaptPertubation;
+
+	/**
+	 *  Option to do mutlipe start for estimating alpha and p_invar
+	 */
+	bool testAlpha;
 
     /**
      *  Restart the optimization of alpha and pinvar from different starting
@@ -499,17 +557,30 @@ public:
     bool exh_ai;
 
 	/**
-	 *  User file contains the alpha and invar parameters
+	 *  Text file contain all pairs of alpha and p_invar to
+	 *  evaluate.
+	 *  TODO Remove this option and implement the exhaustive search
+	 *  directly into IQ-TREE
 	 */
 	char* alpha_invar_file;
 
 	/**
-	 * Turn on feature to identify stable splits and fix them during tree search
+	 *  Enable tabu search for NNI
 	 */
-	bool fix_stable_splits;
+	bool tabu;
+
+    /**
+	 *  Use (5+5)-ES strategy
+	 */
+	bool five_plus_five;
 
 	/**
-	 *  Number of distinct locally optimal trees
+	 * Turn on feature to identify stable splits and fix them during tree search
+	 */
+	bool fixStableSplits;
+
+	/**
+	 *  Number of best trees used to compute stable splits
 	 */
 	int numSupportTrees;
 
@@ -531,11 +602,14 @@ public:
 
 	/**
 	 *  Number of best trees in the candidate set used to generate perturbed trees
+	 *  In term of evolutionary algorithm, this is the population size
 	 */
 	int popSize;
 
 	/**
 	 *  Maximum number of trees stored in the candidate tree set
+	 *  This is just a technical constraint to ensure that the candidate tree set
+	 *  does not have to store a lot of trees
 	 */
 	int maxCandidates;
 
@@ -544,10 +618,6 @@ public:
 	 */
 	bool speednni;
 
-	/**
-	 *  use reduction technique to constraint tree space
-	 */
-	bool reduction;
 
 	/**
 	 *  portion of NNI used for perturbing the tree
@@ -557,7 +627,7 @@ public:
 	/**
 	 *  logl epsilon for model parameter optimization
 	 */
-	double modeps;
+	double modelEps;
 
 	/**
 	 *  New search heuristics (DEFAULT: ON)
@@ -1238,6 +1308,11 @@ public:
     double gamma_shape;
 
     /**
+            minimum shape parameter (alpha) of the Gamma distribution for site rates
+     */
+    double min_gamma_shape;
+
+    /**
             TRUE to use median rate for discrete categories, FALSE to use mean rate instead
      */
     bool gamma_median;
@@ -1310,15 +1385,23 @@ public:
     char *bootstrap_spec;
 
     /**
-            1 if output all intermediate trees from every IQPNNI iteration
+            1 if output all intermediate trees (initial trees, NNI-optimal trees and trees after each NNI step)
             2 if output all intermediate trees + 1-NNI-away trees
      */
     int write_intermediate_trees;
 
     /**
-     *  Write out all candidate trees (the locally optimal trees)
+     *  Write all distinct intermediate trees and there likelihoods
+     *  Note: intermediate trees are trees that have been visited by the search. These include trees created by
+     *  NNI-steps within each NNI iteration.
      */
-    int write_local_optimal_trees;
+    bool writeDistImdTrees;
+
+    /**
+     *  Write trees obtained at the end of each NNI search
+     */
+    bool write_candidate_trees;
+
 
     /**
         TRUE to avoid duplicated trees while writing intermediate trees
@@ -1379,7 +1462,16 @@ public:
     LikelihoodKernel SSE;
 
     /** TRUE to not use AVX even available in CPU, default: FALSE */
-    bool lk_no_avx;
+    int lk_no_avx;
+
+    /** TRUE for safe numerical scaling (per category; used for large trees), default: FALSE */
+    bool lk_safe_scaling;
+
+    /** minimum number of sequences to always use safe scaling, default: 2000 */
+    int numseq_safe_scaling;
+
+    /** TRUE to force using non-reversible likelihood kernel */
+    bool kernel_nonrev;
 
     /**
      	 	WSL_NONE: do not print anything
@@ -1387,6 +1479,7 @@ public:
             WSL_RATECAT: print site log-likelihood per rate category
             WSL_MIXTURE: print site log-likelihood per mixture class
             WSL_MIXTURE_RATECAT: print site log-likelihood per mixture class per rate category
+            WSL_STATE: print site log-likelihood per state
      */
     SiteLoglType print_site_lh;
 
@@ -1401,6 +1494,16 @@ public:
         WSL_MIXTURE_RATECAT: print site probability per mixture class per rate category
     */
     SiteLoglType print_site_prob;
+
+    /**
+        AST_NONE: do not print ancestral sequences (default)
+        AST_MARGINAL: print ancestral sequences by marginal reconstruction
+        AST_JOINT: print ancestral sequences by joint reconstruction
+    */
+    AncestralSeqType print_ancestral_sequence;
+
+    /** minimum probability to assign an ancestral state */
+    double min_ancestral_prob;
 
     /**
         0: print nothing
@@ -1731,10 +1834,22 @@ public:
 	/** true to count all distinct trees visited during tree search */
 	bool count_trees;
 
+    /// True if PoMo is run; otherwise false.
+    bool pomo;
+
+    /// True if sampled input method is used (-st CR..); otherwise false.
+    bool pomo_random_sampling;
+
+	/// Virtual population size for PoMo model.
+	int pomo_pop_size;
+
 	/* -1 (auto-detect): will be set to 0 if there is enough memory, 1 otherwise
 	 * 0: store all partial likelihood vectors
 	 * 1: only store 1 partial likelihood vector per node */
 	LhMemSave lh_mem_save;
+
+    /** maximum size of memory allowed to use */
+    double max_mem_size;
 
 	/* TRUE to print .splits file in star-dot format */
 	bool print_splits_file;
@@ -1747,7 +1862,6 @@ public:
 
     /** frequencies of const patterns to be inserted into alignment */
     char *freq_const_patterns;
-
     /** BQM 2015-02-25: true to NOT rescale Gamma+Invar rates by (1-p_invar) */
     bool no_rescale_gamma_invar;
 
@@ -1888,11 +2002,6 @@ void outWarning(string warn);
 double randomLen(Params &params);
 
 /**
-        convert string to int, with error checking
-        @param str original string
-        @return the integer
- */
-/**
         Compute the logarithm of the factorial of an integer number
         @param num: the number
         @return logarithm of (num! = 1*2*...*num)
@@ -2000,7 +2109,7 @@ int64_t convert_int64(const char *str) throw (string);
         @param end_pos end position
         @return the number
  */
-int64_t convert_int64(const char *str, int64_t &end_pos) throw (string);
+int64_t convert_int64(const char *str, int &end_pos) throw (string);
 
 /**
         convert string to double, with error checking
@@ -2123,6 +2232,7 @@ void parseArg(int argc, char *argv[], Params &params);
                 IN_NEXUS if in nexus format,
                 IN_FASTA if in fasta format,
                 IN_PHYLIP if in phylip format,
+		IN_COUNTSFILE if in counts format (PoMo),
                 IN_OTHER if file format unknown.
  */
 InputType detectInputFile(char *input_file);
@@ -2420,5 +2530,30 @@ inline uint32_t popcount_lauradoux(unsigned *buf, int n) {
  * @return TRUE of memory are different, FALSE if identical
  */
 bool memcmpcpy(void * destination, const void * source, size_t num);
+
+/**
+ *  Generating a unique integer from a pair of 2 integer
+ *  This method is called cantor pairing function (see wikepedia).
+ *  @param int1 the first integer
+ *  @param int2 the second integer
+ *  @return the encoding of the 2 integer
+ */
+int pairInteger(int int1, int int2);
+
+template <typename T>
+string NumberToString ( T Number )
+{
+    ostringstream ss;
+    ss << Number;
+    return ss.str();
+}
+
+template <typename T>
+T StringToNumber ( const string &Text )
+{
+    istringstream ss(Text);
+    T result;
+    return ss >> result ? result : 0;
+}
 
 #endif

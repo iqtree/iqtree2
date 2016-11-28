@@ -25,7 +25,8 @@
 #include <stdlib.h>
 #include "tools.h"
 
-const double ZERO = 0.000001;
+//const double ZERO = 0.000001;
+const double ZERO = 0.00000;
 using namespace std;
 
 EigenDecomposition::EigenDecomposition()
@@ -288,15 +289,22 @@ void EigenDecomposition::eigensystem_sym(double **rate_params, double *state_fre
 	if (error > 1e-4) {
 		cout.precision(5);
 		cout << "\nWARNING: Eigensystem doesn't satisfy eigenvalue equation! (gap=" << error << ")" << endl;
-		assert(error < 1e-2);
+        
 //		cout << "Rate matrix R: " << endl;
 //		for (i = 0; i < num_state; i++) {
 //			for (j = 0; j < num_state; j++) cout << rate_params[i][j] << " ";
 //			cout << endl;
 //		}
 		cout << "State frequencies (might be un-normalized): " << endl;
-		for (i = 0; i < num_state; i++) cout << state_freq[i] << " ";
+        double sum = 0.0;
+        cout.precision(7);
+		for (i = 0; i < num_state; i++) {
+            cout << state_freq[i] << " ";
+            sum += state_freq[i];
+        }
 		cout << endl;
+        cout << "sum = " << sum << endl;
+		assert(error < 1e-2);
 	}
 
 	for (i=num_state-1; i>= 0; i--)
@@ -329,8 +337,8 @@ void EigenDecomposition::eigensystem_nonrev(
 	double **evec_new = (double**)new double[num_state];
 	double **inv_evec_new = (double**)new double[num_state];
 	int *ordr = new int[num_state + 1];
-	int i, j, k, error, new_num, inew, jnew;
-	double zero;
+	int i, j, error, new_num, inew, jnew;
+//	double zero;
 
 
 	for (i=0; i < num_state; i++)

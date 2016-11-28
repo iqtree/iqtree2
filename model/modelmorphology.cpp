@@ -8,7 +8,7 @@
 #include "modelmorphology.h"
 
 ModelMorphology::ModelMorphology(const char *model_name, string model_params, StateFreqType freq, string freq_params, PhyloTree *tree)
-: ModelGTR(tree, false)
+: ModelMarkov(tree)
 {
 	init(model_name, model_params, freq, freq_params);
 }
@@ -31,7 +31,7 @@ void ModelMorphology::init(const char *model_name, string model_params, StateFre
 	} else {
 		outError("Unknown morphological model name");
 	}
-	ModelGTR::init(freq);
+	ModelMarkov::init(freq);
 }
 
 ModelMorphology::~ModelMorphology() {

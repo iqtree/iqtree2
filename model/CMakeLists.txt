@@ -1,25 +1,26 @@
 add_library(model
-modelgtr.cpp
-modelbin.cpp
-modeldna.cpp
-modelfactory.cpp
-modelnonrev.cpp
-modelprotein.cpp
-modelset.cpp
-modelsubst.cpp
-partitionmodel.cpp
-rategamma.cpp
-rategammainvar.cpp
-rateheterogeneity.cpp
-rateinvar.cpp
-ratemeyerdiscrete.cpp
-ratemeyerhaeseler.cpp
-ratekategory.cpp
-ratefree.cpp
-ratefreeinvar.cpp
-modelcodon.cpp
-modelmorphology.cpp
-modelmixture.cpp
-modelunrest.cpp
-modelliemarkov.cpp
+modelmarkov.cpp modelmarkov.h
+modelbin.cpp modelbin.h
+modeldna.cpp modeldna.h
+modelfactory.cpp modelfactory.h
+modelprotein.cpp modelprotein.h
+modelset.cpp modelset.h
+modelsubst.cpp modelsubst.h
+partitionmodel.cpp partitionmodel.h
+rategamma.cpp rategamma.h
+rategammainvar.cpp rategammainvar.h
+rateheterogeneity.cpp rateheterogeneity.h
+rateinvar.cpp rateinvar.h
+ratemeyerdiscrete.cpp ratemeyerdiscrete.h
+ratemeyerhaeseler.cpp ratemeyerhaeseler.h
+ratekategory.cpp ratekategory.h
+ratefree.cpp ratefree.h
+ratefreeinvar.cpp ratefreeinvar.h
+modelcodon.cpp modelcodon.h
+modelmorphology.cpp modelmorphology.h
+modelmixture.cpp modelmixture.h
+modelunrest.cpp modelunrest.h
+modelliemarkov.cpp modelliemarkov.h
+modelpomo.cpp modelpomo.h
+modelpomomixture.cpp modelpomomixture.h
 )

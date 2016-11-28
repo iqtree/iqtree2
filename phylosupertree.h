@@ -96,7 +96,7 @@ public:
 	 */
 	virtual void initSettings(Params& params);
 
-    virtual void setLikelihoodKernel(LikelihoodKernel lk);
+    virtual void setLikelihoodKernel(LikelihoodKernel lk, int num_threads);
 
     virtual void changeLikelihoodKernel(LikelihoodKernel lk);
 
@@ -265,6 +265,7 @@ public:
     virtual void changeNNIBrans(NNIMove nnimove);
 
     /**
+        OBSOLETE!
      * 	 Restore the branch lengths from the saved values
 	 * @param node the current node of the post-order tree traversal
 	 * @param dad the dad of that node used to direct the traversal
@@ -321,7 +322,7 @@ public:
      * compute the memory size required for storing partial likelihood vectors
      * @return memory size required in bytes
      */
-    virtual uint64_t getMemoryRequired(size_t ncategory = 1);
+    virtual uint64_t getMemoryRequired(size_t ncategory = 1, bool full_mem = false);
 
     /**
      * count the number of super branches that map to no branches in gene trees

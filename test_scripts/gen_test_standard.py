@@ -2,9 +2,9 @@
 '''
 Created on Jan. 26, 2015
 
-@author: tung
+@author: Tung Nguyen <nltung@gmail.com>
 '''
-import sys, os, time, multiprocessing, optparse 
+import sys, os, time, multiprocessing, optparse
 import subprocess, logging, datetime
 
 def parse_config(config_file):
@@ -22,15 +22,15 @@ def parse_config(config_file):
       readSingleAln = True
       continue
     if line == 'END_SINGLE_ALN':
-      readSingleAln = False 
+      readSingleAln = False
       continue
     if readSingleAln:
-      singleAln.append(line) 
+      singleAln.append(line)
     if line == 'START_PARTITION_ALN':
       readPartAln = True
       continue
     if line == 'END_PARTITION_ALN':
-      readPartAln = False 
+      readPartAln = False
       continue
     if readPartAln:
       partitionAln.append(line.split())
@@ -51,13 +51,15 @@ def parse_config(config_file):
     if genericOpt:
       genericOpts.append(line)
   return (singleAln, partitionAln, genericOpts, partOpts)
-      
+
 
 if __name__ == '__main__':
   usage = "USAGE: %prog [options]"
   parser = optparse.OptionParser(usage=usage)
   parser.add_option('-b','--binary', dest="iqtree_bin", help='Path to your IQ-TREE binary')
   parser.add_option('-c','--config', dest="config_file", help='Path to test configuration file')
+  parser.add_option('-o', '--output', dest="outFile", help='Output file for test cases')
+  parser.add_option('-f', '--flags', dest="flags", help='Additional flags for IQ-TREE')
   (options, args) = parser.parse_args()
   if not options.iqtree_bin or not options.config_file:
     parser.print_help()
@@ -67,26 +69,28 @@ if __name__ == '__main__':
   # Generate test commands for single model
   for aln in singleAln:
     for opt in genericOpts:
-      cmd = '-s ' + aln + ' ' + opt
-      testCmds.append(cmd)
+      cmd = '-s ' + aln + ' -redo ' + opt
+      if options.flags:
+        cmd = cmd + ' ' + options.flags
+        testCmds.append(cmd)
   # Generate test commands for partition model
   for aln in partitionAln:
     for opt in genericOpts:
       for partOpt in partOpts:
-        cmd = '-s ' + aln[0] + ' ' + opt + ' ' + partOpt + ' ' + aln[1]
+        cmd = '-s ' + aln[0] + ' -redo ' + opt + ' ' + partOpt + ' ' + aln[1]
+        if options.flags:
+            cmd = cmd + ' ' + options.flags
         testCmds.append(cmd)
+
   testNr = 1
   jobs = []
   for cmd in testCmds:
     testIDRel = os.path.basename(options.iqtree_bin) + "_TEST_" + str(testNr)
-    testCMD = testIDRel + " " + options.iqtree_bin + " -pre " + testIDRel + " " + cmd
-    testNr = testNr + 1 
+    testCMD = testIDRel + " " + os.path.abspath(options.iqtree_bin) + " -pre " + testIDRel + " " + cmd
+    testNr = testNr + 1
     jobs.append(testCMD)
 #  print "\n".join(jobs)
-  outfile = open(os.path.basename(options.iqtree_bin) + '_test_standard_cmds.txt', "wb")
+  outfile = open(options.outFile, "wb")
   for job in jobs:
     print >> outfile, job
   outfile.close()
-
-
-

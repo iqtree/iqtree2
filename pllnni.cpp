@@ -1,3 +1,24 @@
+/***************************************************************************
+ *   Copyright (C) 2014 by                                            *
+ *   Lam-Tung Nguyen <nltung@gmail.com>                                    *
+ *                                                                         *
+ *                                                                         *
+ *   This program is free software; you can redistribute it and/or modify  *
+ *   it under the terms of the GNU General Public License as published by  *
+ *   the Free Software Foundation; either version 2 of the License, or     *
+ *   (at your option) any later version.                                   *
+ *                                                                         *
+ *   This program is distributed in the hope that it will be useful,       *
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ *   GNU General Public License for more details.                          *
+ *                                                                         *
+ *   You should have received a copy of the GNU General Public License     *
+ *   along with this program; if not, write to the                         *
+ *   Free Software Foundation, Inc.,                                       *
+ *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ ***************************************************************************/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -21,7 +42,7 @@ extern VerboseMode verbose_mode;
 int NNI_MAX_NR_STEP = 10;
 
 /* program options */
-extern Params *globalParam;
+extern Params *globalParams;
 extern Alignment *globalAlignment;
 
 /**
@@ -244,8 +265,8 @@ set<int> getAffectedNodes(pllInstance* tr, nodeptr p) {
 
 void pllEvalAllNNIs(pllInstance *tr, partitionList *pr, SearchInfo &searchinfo) {
     /* DTH: mimic IQTREE::optimizeNNI 's first call to IQTREE::saveCurrentTree */
-    if((globalParam->online_bootstrap == PLL_TRUE) &&
-            (globalParam->gbo_replicates > 0)){
+    if((globalParams->online_bootstrap == PLL_TRUE) &&
+            (globalParams->gbo_replicates > 0)){
         tr->fastScaling = PLL_FALSE;
         pllEvaluateLikelihood(tr, pr, tr->start, PLL_FALSE, PLL_TRUE);
         pllSaveCurrentTree(tr, pr, tr->start);
@@ -294,7 +315,7 @@ double pllDoNNISearch(pllInstance* tr, partitionList *pr, SearchInfo &searchinfo
 	/* evaluate NNIs */
 	pllEvalAllNNIs(tr, pr, searchinfo);
 
-	if (searchinfo.speednni) {
+	if (globalParams->speednni) {
 		searchinfo.aBranches.clear();
 	}
 
@@ -322,7 +343,7 @@ double pllDoNNISearch(pllInstance* tr, partitionList *pr, SearchInfo &searchinfo
 		for (vector<pllNNIMove>::iterator it = selectedNNIs.begin(); it != selectedNNIs.end(); it++) {
 			/* do the topological change */
 			doOneNNI(tr, pr, (*it).p, (*it).nniType, TOPO_ONLY);
-			if (searchinfo.speednni) {
+			if (globalParams->speednni) {
 				vector<string> aBranches = getAffectedBranches(tr, (*it).p);
 				searchinfo.aBranches.insert(aBranches.begin(), aBranches.end());
 			}
@@ -338,7 +359,7 @@ double pllDoNNISearch(pllInstance* tr, partitionList *pr, SearchInfo &searchinfo
 		if (selectedNNIs.size() != 0) {
 			//pllEvaluateLikelihood(tr, pr, tr->start, PLL_FALSE, PLL_FALSE);
 			pllOptimizeBranchLengths(tr, pr, 1);
-			if (globalParam->count_trees) {
+			if (globalParams->count_trees) {
 	            countDistinctTrees(tr, pr);
 			}
 			int numNNI = selectedNNIs.size();
@@ -504,7 +525,7 @@ double doOneNNI(pllInstance *tr, partitionList *pr, nodeptr p, int swap, NNI_Typ
     }
     // Optimize the central branch
     pllOptimizeOneBranch(tr, pr, p);
-    if((globalParam->online_bootstrap == PLL_TRUE) && (globalParam->gbo_replicates > 0)){
+    if((globalParams->online_bootstrap == PLL_TRUE) && (globalParams->gbo_replicates > 0)){
         tr->fastScaling = PLL_FALSE;
         pllEvaluateLikelihood(tr, pr, p, PLL_FALSE, PLL_TRUE); // DTH: modified the last arg
         pllSaveCurrentTree(tr, pr, p);
@@ -571,8 +592,8 @@ double doOneNNI(pllInstance *tr, partitionList *pr, nodeptr p, int swap, NNI_Typ
         else
             pllUpdatePartials(tr, pr, r, PLL_FALSE);
         pllOptimizeOneBranch(tr, pr, r);
-        if((globalParam->online_bootstrap == PLL_TRUE) &&
-                        (globalParam->gbo_replicates > 0)){
+        if((globalParams->online_bootstrap == PLL_TRUE) &&
+                        (globalParams->gbo_replicates > 0)){
             tr->fastScaling = PLL_FALSE;
             pllEvaluateLikelihood(tr, pr, r, PLL_FALSE, PLL_TRUE); // DTH: modified the last arg
             pllSaveCurrentTree(tr, pr, r);
@@ -675,7 +696,7 @@ int evalNNIForBran(pllInstance* tr, partitionList *pr, nodeptr p, SearchInfo &se
 
 	/* do an NNI move of type 1 */
 	double lh1 = doOneNNI(tr, pr, p, 0, searchinfo.nni_type, &searchinfo);
-	if (globalParam->count_trees)
+	if (globalParams->count_trees)
 		countDistinctTrees(tr, pr);
 	pllNNIMove nni1;
 	nni1.p = p;
@@ -710,7 +731,7 @@ int evalNNIForBran(pllInstance* tr, partitionList *pr, nodeptr p, SearchInfo &se
 
 	/* do an NNI move of type 2 */
 	double lh2 = doOneNNI(tr, pr, p, 1, searchinfo.nni_type, &searchinfo);
-	if (globalParam->count_trees)
+	if (globalParams->count_trees)
 		countDistinctTrees(tr, pr);
 
 	// Create the nniMove struct to store this move
@@ -790,7 +811,7 @@ bool isAffectedBranch(nodeptr p, SearchInfo &searchinfo) {
 
 void evalNNIForSubtree(pllInstance* tr, partitionList *pr, nodeptr p, SearchInfo &searchinfo) {
 	if (!isTip(p->number, tr->mxtips) && !isTip(p->back->number, tr->mxtips)) {
-		if (searchinfo.speednni && searchinfo.curNumNNISteps != 1) {
+		if (globalParams->speednni && searchinfo.curNumNNISteps != 1) {
 			if (isAffectedBranch(p, searchinfo)) {
 				evalNNIForBran(tr, pr, p, searchinfo);
 			}
@@ -907,14 +928,14 @@ void pllSaveCurrentTree(pllInstance* tr, partitionList *pr, nodeptr p){
         // online bootstrap
         int nptn = pllUFBootDataPtr->n_patterns;
         int updated = 0;
-        int nsamples = globalParam->gbo_replicates;
+        int nsamples = globalParams->gbo_replicates;
         for (int sample = 0; sample < nsamples; sample++) {
             double rell = 0.0;
             for (int ptn = 0; ptn < nptn; ptn++)
                 rell += pattern_lh[ptn] * pllUFBootDataPtr->boot_samples[sample][ptn];
 
-            if (rell > pllUFBootDataPtr->boot_logl[sample] + globalParam->ufboot_epsilon ||
-                (rell > pllUFBootDataPtr->boot_logl[sample] - globalParam->ufboot_epsilon &&
+            if (rell > pllUFBootDataPtr->boot_logl[sample] + globalParams->ufboot_epsilon ||
+                (rell > pllUFBootDataPtr->boot_logl[sample] - globalParams->ufboot_epsilon &&
                     random_double() <= 1.0/(pllUFBootDataPtr->boot_counts[sample]+1))) {
 //                if (!globalParam->store_candidate_trees)
                 {
@@ -929,7 +950,7 @@ void pllSaveCurrentTree(pllInstance* tr, partitionList *pr, nodeptr p){
                     }
                 }
                 if (rell <= pllUFBootDataPtr->boot_logl[sample] +
-                        globalParam->ufboot_epsilon) {
+                        globalParams->ufboot_epsilon) {
                     pllUFBootDataPtr->boot_counts[sample]++;
                 } else {
                     pllUFBootDataPtr->boot_counts[sample] = 1;

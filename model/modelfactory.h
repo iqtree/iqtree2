@@ -96,19 +96,11 @@ public:
 		Wrapper for computing the transition probability matrix from the model. It use ModelFactory
 		that stores matrix computed before for effiency purpose.
 		@param time time between two events
-		@param trans_matrix (OUT) the transition matrix between all pairs of states. 
+        @param mixture (optional) class for mixture model
+		@param trans_matrix (OUT) the transition matrix between all pairs of states.
 			Assume trans_matrix has size of num_states * num_states.
 	*/
-	void computeTransMatrix(double time, double *trans_matrix);
-
-	/**
-	 * wrapper for computing transition matrix times state frequency vector
-	 * @param time time between two events
-	 * @param state_freq state frequency vector
-	 * @param trans_matrix (OUT) the transition matrix between all pairs of states.
-	 * 	Assume trans_matrix has size of num_states * num_states.
-	 */
-	void computeTransMatrixFreq(double time, double *state_freq, double *trans_matrix);
+	void computeTransMatrix(double time, double *trans_matrix, int mixture = 0);
 
 	/**
 		Wrapper for computing the transition probability between two states.
@@ -132,16 +124,14 @@ public:
 		Wrapper for computing the transition probability matrix and the derivative 1 and 2 from the model.
 		It use ModelFactory that stores matrix computed before for effiency purpose.
 		@param time time between two events
+        @param mixture (optional) class for mixture model
 		@param trans_matrix (OUT) the transition matrix between all pairs of states. 
 			Assume trans_matrix has size of num_states * num_states.
 		@param trans_derv1 (OUT) the 1st derivative matrix between all pairs of states. 
 		@param trans_derv2 (OUT) the 2nd derivative matrix between all pairs of states. 
 	*/
 	void computeTransDerv(double time, double *trans_matrix, 
-		double *trans_derv1, double *trans_derv2);
-
-	void computeTransDervFreq(double time, double rate_val, double *state_freq, double *trans_matrix, 
-		double *trans_derv1, double *trans_derv2);
+		double *trans_derv1, double *trans_derv2, int mixture = 0);
 
 	/**
 		 destructor

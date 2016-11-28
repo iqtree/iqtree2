@@ -8,5 +8,12 @@ pll/Makefile
 pll/cmake_install.cmake
 pll/libpll.a
 pll_test/
+test_scripts/iqtree_release
+test_scripts/iqtree_test
+tags
+test_scripts/iqtree_test_cmds.txt
+pllrepo/
 build/
 /Default-clang
+.idea/
+.idea/codeStyleSettings.xml

@@ -8,11 +8,11 @@
 #ifndef MODELLIEMARKOV_H_
 #define MODELLIEMARKOV_H_
 
-#include "modelnonrev.h"
+#include "modelmarkov.h"
 
-class ModelLieMarkov: public ModelNonRev {
+class ModelLieMarkov: public ModelMarkov {
 public:
-        ModelLieMarkov(string model_name, PhyloTree *tree, string model_params, StateFreqType freq_type, string freq_params, bool count_rates = false);
+        ModelLieMarkov(string model_name, PhyloTree *tree, string model_params, StateFreqType freq_type, string freq_params);
         virtual ~ModelLieMarkov();
 
 	/**
@@ -39,10 +39,11 @@ public:
 	/**
 		compute the transition probability matrix.
 		@param time time between two events
+        @param mixture (optional) class for mixture model
 		@param trans_matrix (OUT) the transition matrix between all pairs of states.
 			Assume trans_matrix has size of num_states * num_states.
 	*/
-	virtual void computeTransMatrix(double time, double *trans_matrix);
+	virtual void computeTransMatrix(double time, double *trans_matrix, int mixture = 0);
 
 protected:
 	double **basis;

@@ -19,6 +19,7 @@
  ***************************************************************************/
 #include "stoprule.h"
 #include "timeutil.h"
+#include "MPIHelper.h"
 
 StopRule::StopRule() : CheckpointFactory()
 {
@@ -35,6 +36,7 @@ StopRule::StopRule() : CheckpointFactory()
 	start_real_time = -1.0;
 	max_run_time = -1.0;
 	curIteration = 0;
+    should_stop = false;
 }
 
 void StopRule::initialize(Params &params) {
@@ -47,6 +49,14 @@ void StopRule::initialize(Params &params) {
 	step_iteration = params.step_iterations;
 	start_real_time = getRealTime();
 	max_run_time = params.maxtime * 60; // maxtime is in minutes
+}
+
+void StopRule::getUFBootCountCheck(int &ufboot_count, int &ufboot_count_check) {
+    int step = step_iteration;
+    while (step*2 < MPIHelper::getInstance().getNumProcesses())
+        step *= 2;
+    ufboot_count = (curIteration/(step/2)+1)*(step/2);
+    ufboot_count_check = (curIteration/step+1)*step;
 }
 
 StopRule::~StopRule()
@@ -96,32 +106,34 @@ void StopRule::restoreCheckpoint() {
 //		return ((cur_iteration+step_iteration-1)/step_iteration)*step_iteration;
 //	case SC_REAL_TIME:
 ////		return ((max_run_time - realtime_secs)/max_run_time);
-//		assert(0); // TODO
+//		assert(0);
 //		return 0;
 //	}
 //}
 
 bool StopRule::meetStopCondition(int cur_iteration, double cur_correlation) {
+    if (should_stop)
+        return true;
 	switch (stop_condition) {
-	case SC_FIXED_ITERATION:
-		return cur_iteration > min_iteration;
-	case SC_WEIBULL:
-		if (predicted_iteration == 0)
-			return cur_iteration > min_iteration;
-		else
-			return cur_iteration > predicted_iteration;
-	case SC_UNSUCCESS_ITERATION:
-		return cur_iteration >= getLastImprovedIteration() + unsuccess_iteration;
-	case SC_BOOTSTRAP_CORRELATION:
-		return ((cur_correlation >= min_correlation) && (cur_iteration >= getLastImprovedIteration() + unsuccess_iteration))
-				|| cur_iteration > max_iteration;
-	case SC_REAL_TIME:
-		return (getRealTime() - start_real_time >= max_run_time);
+		case SC_FIXED_ITERATION:
+			return cur_iteration >= min_iteration;
+		case SC_WEIBULL:
+			if (predicted_iteration == 0)
+				return cur_iteration > min_iteration;
+			else
+				return cur_iteration > predicted_iteration;
+		case SC_UNSUCCESS_ITERATION:
+			return cur_iteration > getLastImprovedIteration() + unsuccess_iteration;
+		case SC_BOOTSTRAP_CORRELATION:
+			return ((cur_correlation >= min_correlation) && (cur_iteration > getLastImprovedIteration() + unsuccess_iteration))
+				   || cur_iteration > max_iteration;
+		case SC_REAL_TIME:
+			return (getRealTime() - start_real_time >= max_run_time);
 	}
 	return false;
 }
 
-double StopRule::getRemainingTime(int cur_iteration, double cur_correlation) {
+double StopRule::getRemainingTime(int cur_iteration) {
 	double realtime_secs = getRealTime() - start_real_time;
 	int niterations;
 	switch (stop_condition) {

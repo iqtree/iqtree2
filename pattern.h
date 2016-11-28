@@ -14,6 +14,8 @@
 
 #include <iostream>
 #include <string>
+#include <vector>
+#include <stdint.h>
 
 using namespace std;
 
@@ -21,11 +23,13 @@ const int PAT_CONST       = 1; // const site pattern, e.g. AAAAAA, CC-C-CCCC
 const int PAT_INVARIANT   = 2; // invariant site pattern, including const patterns and e.g., GS--G-GGG (S = G/C)
 const int PAT_INFORMATIVE = 4; // parsimony informative sites
 
+typedef uint32_t StateType;
+
 /**
 	Site-patterns in a multiple sequence alignment
 	@author BUI Quang Minh, Steffen Klaere, Arndt von Haeseler <minh.bui@univie.ac.at>
 */
-class Pattern : public string
+class Pattern : public vector<StateType>
 {
 public:
 	/** 

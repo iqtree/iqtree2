@@ -19,33 +19,15 @@ void PhyloNeighbor::clearForwardPartialLh(Node *dad) {
 			((PhyloNeighbor*)*it)->clearForwardPartialLh(node);
 }
 
-void PhyloNeighbor::reorientPartialLh(Node *dad) {
-    if (partial_lh)
-        return;
-    bool done = false;
-    FOR_NEIGHBOR_IT(node, dad, it) {
-        PhyloNeighbor *backnei = (PhyloNeighbor*)(*it)->node->findNeighbor(node);
-        if (backnei->partial_lh) {
-            partial_lh = backnei->partial_lh;
-            scale_num = backnei->scale_num;
-            backnei->partial_lh = NULL;
-            backnei->scale_num = NULL;
-            backnei->partial_lh_computed &= ~1; // clear bit
-            done = true;
-            break;
-        }
-    }
-    assert(done && "partial_lh is not re-oriented");
-}
-
-
 void PhyloNode::clearReversePartialLh(PhyloNode *dad) {
 //	PhyloNeighbor *node_nei = (PhyloNeighbor*)findNeighbor(dad);
 //	assert(node_nei);
 //	node_nei->partial_lh_computed = 0;
 	for (NeighborVec::iterator it = neighbors.begin(); it != neighbors.end(); it ++)
 		if ((*it)->node != dad) {
-			((PhyloNeighbor*)(*it)->node->findNeighbor(this))->partial_lh_computed = 0;
+            PhyloNeighbor *nei = (PhyloNeighbor*)(*it)->node->findNeighbor(this);
+			nei->partial_lh_computed = 0;
+            nei->size = 0;
 			((PhyloNode*)(*it)->node)->clearReversePartialLh(this);
 		}
 }
@@ -55,9 +37,16 @@ void PhyloNode::clearAllPartialLh(bool make_null, PhyloNode *dad) {
 	node_nei->partial_lh_computed = 0;
 	if (make_null) node_nei->partial_lh = NULL;
 
+
+    if (Params::getInstance().lh_mem_save == LM_MEM_SAVE)
+        node_nei->size = 0;
+
 	node_nei = (PhyloNeighbor*)dad->findNeighbor(this);
 	node_nei->partial_lh_computed = 0;
 	if (make_null) node_nei->partial_lh = NULL;
+
+    if (Params::getInstance().lh_mem_save == LM_MEM_SAVE)
+        node_nei->size = 0;
 
 	for (NeighborVec::iterator it = neighbors.begin(); it != neighbors.end(); it ++)
 		if ((*it)->node != dad)
@@ -94,3 +83,21 @@ void PhyloNode::init() {
 void PhyloNode::addNeighbor(Node *node, double length, int id) {
 	neighbors.push_back(new PhyloNeighbor(node, length, id));
 }
+
+
+int PhyloNode::computeSize(Node *dad) {
+    PhyloNeighbor *nei = (PhyloNeighbor*)dad->findNeighbor(this);
+    if (nei->size > 0)
+        return nei->size;
+
+    if (isLeaf()) {
+        nei->size = 1;
+        return nei->size;
+    }
+    nei->size = 0;
+    FOR_NEIGHBOR_IT(this, dad, it) {
+        nei->size += ((PhyloNode*)(*it)->node)->computeSize(this);
+    }
+    return nei->size;
+}
+

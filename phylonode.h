@@ -14,7 +14,7 @@
 
 #include "node.h"
 
-typedef short int UBYTE;
+typedef unsigned short UBYTE;
 
 /**
  * direction of a Neighbor from the root, for rooted tree only
@@ -31,6 +31,7 @@ class PhyloNeighbor : public Neighbor {
     friend class PhyloTree;
     friend class IQTree;
     friend class PhyloSuperTree;
+    friend class MemSlotVector;
 
 public:
     friend class TinaTree;
@@ -48,6 +49,7 @@ public:
         lh_scale_factor = 0.0;
         partial_pars = NULL;
         direction = UNDEFINED_DIRECTION;
+        size = 0;
     }
 
     /**
@@ -63,6 +65,7 @@ public:
         lh_scale_factor = 0.0;
         partial_pars = NULL;
         direction = UNDEFINED_DIRECTION;
+        size = 0;
     }
 
     /**
@@ -86,10 +89,11 @@ public:
     void clearForwardPartialLh(Node *dad);
 
     /**
+        DEPRECATED, moved to PhyloTree
         if partial_lh is NULL, reorient partial_lh (LM_PER_NODE technique)
         @param dad dad of this neighbor
     */
-    void reorientPartialLh(Node *dad);
+//    void reorientPartialLh(Node *dad);
 
 	/**
 	* For Upper Bounds analysis: get partial likelihood and lh scale factor
@@ -113,6 +117,10 @@ public:
 		assert(direction != UNDEFINED_DIRECTION);
 		return (direction == TOWARD_ROOT);
 	}
+
+    int getSize() {
+        return size;
+    }
 
 private:
 
@@ -145,6 +153,10 @@ private:
      * direction of the Neighbor in a rooted tree
      */
     RootDirection direction;
+
+    /** size of subtree below this neighbor in terms of number of taxa */
+    int size;
+
 };
 
 /**
@@ -207,6 +219,13 @@ public:
     void clearReversePartialLh(PhyloNode *dad);
 
     void computeReversePartialLh(PhyloNode *dad);
+
+    /** 
+        compute the size (#taxa) of the subtree rooted at this node
+        using buffered 'size' attribute if computed beforehand
+        @param dad dad of this node
+    */
+    int computeSize(Node *dad);
 
 };
 

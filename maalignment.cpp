@@ -72,7 +72,8 @@ void MaAlignment::readLogLL(char *fileName)
 			logLL[patIndex] = _logllVec[i];
 		else
 			if ( logLL[patIndex] != _logllVec[i] )
-				outError("Conflicting between the likelihoods reported for pattern", (*this)[i]);
+//				outError("Conflicting between the likelihoods reported for pattern", (*this)[i]);
+                outError("Conflicting between the likelihoods reported for pattern");
 	}
 //	int npat = getNPattern();
 //	cout << "Number of patterns: " << npat << endl;

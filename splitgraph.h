@@ -383,7 +383,7 @@ public:
 	 * @return number of trivial splits removed
 	*/
 	int removeTrivialSplits();
-
+    
 protected:
 
 	/**

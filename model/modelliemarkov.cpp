@@ -314,8 +314,8 @@ const static int NUM_RATES = 12;
 const double MIN_LIE_WEIGHT = -0.9999;
 const double MAX_LIE_WEIGHT =  0.9999;
 
-ModelLieMarkov::ModelLieMarkov(string model_name, PhyloTree *tree, string model_params, StateFreqType freq_type, string freq_params, bool count_rates)
-	: ModelNonRev(tree) {
+ModelLieMarkov::ModelLieMarkov(string model_name, PhyloTree *tree, string model_params, StateFreqType freq_type, string freq_params)
+	: ModelMarkov(tree, false) {
         init(model_name.c_str(), model_params, freq_type, freq_params);
 }
 
@@ -374,11 +374,11 @@ void ModelLieMarkov::init(const char *model_name, string model_params, StateFreq
         }
         setRates();
     }
-    ModelNonRev::init(freq_type);
+    ModelMarkov::init(freq_type);
 }
 
 ModelLieMarkov::~ModelLieMarkov() {
-  // Do nothing, for now. model_parameters is reclaimed in ~ModelNonRev
+  // Do nothing, for now. model_parameters is reclaimed in ~ModelMarkov
 }
 
 
@@ -546,7 +546,7 @@ void ModelLieMarkov::setBasis() {
 
     init_state_freq(getFreqType());
     // state_freq is in order {pi_A, pi_C, pi_G, pi_T}
-    double* tau = new double[3];
+    double tau[3];
     piToTau(state_freq,tau,symmetry);
     
     // Now zero tau entries which BDF forces to be zero, and print warnings
@@ -570,48 +570,46 @@ void ModelLieMarkov::setBasis() {
     } // switch
     if (!canMatchFreq) {
       // MDW to Minh: I suspect there is a better way, please recode if there is.
-      double* eqbm = new double[4];
+      double eqbm[4];
       tauToPi(tau,eqbm,symmetry);
-      char* buffer = new char[200];
+      char buffer[200];
       snprintf(buffer,200,"Model %s cannot achieve requested equilibrium base frequencies\n(%5.3f,%5.3f,%5.3f,%5.3f).\nInstead it will use equilibrium base frequencies (%5.3f,%5.3f,%5.3f,%5.3f).\n",
 	       name.c_str(),state_freq[0],state_freq[1],state_freq[2],state_freq[3],eqbm[0],eqbm[1],eqbm[2],eqbm[3]);
       outWarning(buffer);
-      delete[] eqbm;
-      delete[] buffer;
     }
 
     basis = new double*[num_params+1];
     for (int i=0;i<=num_params;i++) {
       int basisIndex = BASES[model_num][i];
-      double* unpermuted_rates = new double[NUM_RATES];
+      double unpermuted_rates[NUM_RATES];
       memcpy(unpermuted_rates, LM_BASIS_MATRICES[basisIndex], NUM_RATES* sizeof(double));
       for (int tauIndex=0; tauIndex<3; tauIndex++) {
-	const double* transformationMatrix = BASIS_TRANSFORM[basisIndex][tauIndex];
-	if (tau[tauIndex]!=0 && transformationMatrix != NULL) {
-	  for (int rate=0; rate<NUM_RATES; rate++) {
-	    unpermuted_rates[rate] = unpermuted_rates[rate]+tau[tauIndex]*transformationMatrix[rate];
-	  } // for rate
-	} // if tau && !=NULL
+        const double* transformationMatrix = BASIS_TRANSFORM[basisIndex][tauIndex];
+	    if (tau[tauIndex]!=0 && transformationMatrix != NULL) {
+          for (int rate=0; rate<NUM_RATES; rate++) {
+	        unpermuted_rates[rate] = unpermuted_rates[rate]+tau[tauIndex]*transformationMatrix[rate];
+	      } // for rate
+	    } // if tau && !=NULL
       } // for tauIndex
+
       double* permuted_rates = new double[NUM_RATES];
       for (int rate=0; rate<NUM_RATES; rate++) {
-	permuted_rates[rate] = unpermuted_rates[SYMMETRY_PERM[symmetry][rate]];
+        permuted_rates[rate] = unpermuted_rates[SYMMETRY_PERM[symmetry][rate]];
       }
       basis[i] = permuted_rates;
     } // for i
-    delete[] tau;
   } else {
       assert(getFreqType() == FREQ_ESTIMATE); // only other legal possibility
-    num_params = MODEL_PARAMS[model_num];
-    basis = new double*[num_params+1];
-    for (int i=0;i<=num_params;i++) {
-      const double* unpermuted_rates = LM_BASIS_MATRICES[BASES[model_num][i]];
-      double* permuted_rates = new double[NUM_RATES];
-      for (int rate=0; rate<NUM_RATES; rate++) {
-	permuted_rates[rate] = unpermuted_rates[SYMMETRY_PERM[symmetry][rate]];
-      } // for rate
-    basis[i] = permuted_rates;
-    } // for i
+      num_params = MODEL_PARAMS[model_num];
+      basis = new double*[num_params+1];
+      for (int i=0;i<=num_params;i++) {
+        const double* unpermuted_rates = LM_BASIS_MATRICES[BASES[model_num][i]];
+        double* permuted_rates = new double[NUM_RATES];
+        for (int rate=0; rate<NUM_RATES; rate++) {
+	      permuted_rates[rate] = unpermuted_rates[SYMMETRY_PERM[symmetry][rate]];
+        } // for rate
+        basis[i] = permuted_rates;
+      } // for i
   } // if getFreqType() ... else ...
 }
 
@@ -650,7 +648,7 @@ void ModelLieMarkov::setRates() {
 }
 
 void ModelLieMarkov::decomposeRateMatrix() {
-    ModelNonRev::decomposeRateMatrix();
+    ModelMarkov::decomposeRateMatrix();
     if (phylo_tree->params->matrix_exp_technique == MET_SCALING_SQUARING) 
         return;
     if (phylo_tree->params->matrix_exp_technique == MET_EIGEN3LIB_DECOMPOSITION) {
@@ -663,8 +661,6 @@ void ModelLieMarkov::decomposeRateMatrix() {
         return;
     }
 }
-
-using namespace Eigen;
 
 void ModelLieMarkov::decomposeRateMatrixEigen3lib() {
 #ifdef USE_EIGEN3
@@ -919,7 +915,7 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
     
 }
 
-void ModelLieMarkov::computeTransMatrix(double time, double *trans_matrix) {
+void ModelLieMarkov::computeTransMatrix(double time, double *trans_matrix, int mixture) {
 #ifdef USE_EIGEN3
   MatrixExpTechnique technique = phylo_tree->params->matrix_exp_technique;
   if (technique == MET_SCALING_SQUARING || (technique == MET_EIGEN3LIB_DECOMPOSITION && nondiagonalizable)) {
@@ -961,10 +957,10 @@ void ModelLieMarkov::computeTransMatrix(double time, double *trans_matrix) {
             assert(fabs(trans_matrix[i*4]+trans_matrix[i*4+1]+trans_matrix[i*4+2]+trans_matrix[i*4+3]-1.0) < 1e-4);
         }        
     } else
-        ModelNonRev::computeTransMatrix(time, trans_matrix);
+        ModelMarkov::computeTransMatrix(time, trans_matrix);
 
 #else
-    ModelNonRev::computeTransMatrix(time, trans_matrix);
+    ModelMarkov::computeTransMatrix(time, trans_matrix);
 #endif
 }
 

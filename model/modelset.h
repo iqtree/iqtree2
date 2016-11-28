@@ -20,13 +20,13 @@
 #ifndef MODELSET_H
 #define MODELSET_H
 
-#include "modelgtr.h"
+#include "modelmarkov.h"
 
 /**
  * a set of substitution models, used eg for site-specific state frequency model or 
  * partition model with joint branch lengths
  */
-class ModelSet : public ModelGTR, public vector<ModelGTR*>
+class ModelSet : public ModelMarkov, public vector<ModelMarkov*>
 {
 
 public:
@@ -46,43 +46,24 @@ public:
 	/**
 		compute the transition probability matrix.
 		@param time time between two events
-		@param trans_matrix (OUT) the transition matrix between all pairs of states. 
+        @param mixture (optional) class for mixture model
+		@param trans_matrix (OUT) the transition matrix between all pairs of states.
 			Assume trans_matrix has size of num_states * num_states.
 	*/
-	virtual void computeTransMatrix(double time, double *trans_matrix);
-
-	
-	/**
-	 * wrapper for computing transition matrix times state frequency vector
-	 * @param time time between two events
-	 * @param trans_matrix (OUT) the transition matrix between all pairs of states.
-	 * 	Assume trans_matrix has size of num_states * num_states.
-	 */
-	virtual void computeTransMatrixFreq(double time, double *trans_matrix);
+	virtual void computeTransMatrix(double time, double *trans_matrix, int mixture = 0);
 
 	
 	/**
 		compute the transition probability matrix.and the derivative 1 and 2
 		@param time time between two events
-		@param trans_matrix (OUT) the transition matrix between all pairs of states. 
+        @param mixture (optional) class for mixture model
+		@param trans_matrix (OUT) the transition matrix between all pairs of states.
 			Assume trans_matrix has size of num_states * num_states.
 		@param trans_derv1 (OUT) the 1st derivative matrix between all pairs of states. 
 		@param trans_derv2 (OUT) the 2nd derivative matrix between all pairs of states. 
 	*/
 	virtual void computeTransDerv(double time, double *trans_matrix, 
-		double *trans_derv1, double *trans_derv2);
-
-	/**
-		compute the transition probability matrix.and the derivative 1 and 2 times state frequency vector
-		@param time time between two events
-		@param trans_matrix (OUT) the transition matrix between all pairs of states. 
-			Assume trans_matrix has size of num_states * num_states.
-		@param trans_derv1 (OUT) the 1st derivative matrix between all pairs of states. 
-		@param trans_derv2 (OUT) the 2nd derivative matrix between all pairs of states. 
-	*/
-	virtual void computeTransDervFreq(double time, double rate_val, double *trans_matrix, 
-		double *trans_derv1, double *trans_derv2);
-
+		double *trans_derv1, double *trans_derv2, int mixture = 0);
 
 	/**
 		To AVOID 'hides overloaded virtual functions
@@ -160,7 +141,7 @@ public:
      * @return memory size required in bytes
      */
     virtual uint64_t getMemoryRequired() {
-    	uint64_t mem = ModelGTR::getMemoryRequired();
+    	uint64_t mem = ModelMarkov::getMemoryRequired();
     	for (iterator it = begin(); it != end(); it++)
     		mem += (*it)->getMemoryRequired();
     	return mem;
@@ -168,7 +149,12 @@ public:
 
 	/** map from pattern ID to model ID */
 	IntVector pattern_model_map;
-	
+
+    /**
+        join memory for eigen into one chunk
+    */
+    void joinEigenMemory();
+
 protected:
 	
 	

@@ -703,7 +703,7 @@ void Optimization::dfpmin(double p[], int n, double lower[], double upper[], dou
 		//checkDirection(p, xi);
 		//if (*iter > 200) cout << "iteration=" << *iter << endl;
 	}
-	// BQM: TODO disable this message!
+	// BQM: disable this message!
 	//nrerror("too many iterations in dfpmin");
 	FREEALL
 }
@@ -945,6 +945,7 @@ double Optimization::L_BFGS_B(int n, double* x, double* l, double* u, double pgt
 	// Default is 1e7, that is a tolerance of about 1e-8
 
 //	double pgtol = 0;   // helps control the convergence of the "L-BFGS-B" method.
+    pgtol = 0.0;
 	// It is a tolerance on the projected gradient in the current search direction.
 	// Default is zero, when the check is suppressed
 

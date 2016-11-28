@@ -10,7 +10,7 @@
 
 #include "phylotree.h"
 #include "modelsubst.h"
-#include "modelgtr.h"
+#include "modelmarkov.h"
 #include "modelsblock.h"
 
 
@@ -29,14 +29,15 @@ extern const string builtin_mixmodels_definition;
  * @return substitution model created
  */
 ModelSubst *createModel(string model_str, ModelsBlock *models_block, StateFreqType freq_type, string freq_params,
-		PhyloTree *tree, bool count_rates = true);
+		PhyloTree *tree, string pomo_rate_str = "");
 
 
 /**
  * mixture model
  */
-class ModelMixture: public ModelGTR, public vector<ModelGTR*> {
+class ModelMixture: virtual public ModelMarkov, public vector<ModelMarkov*> {
 public:
+    
 	/**
 		constructor
 		@param model_name model name, e.g., JC, HKY.
@@ -44,16 +45,18 @@ public:
 		@param tree associated phylogenetic tree
 	*/
     ModelMixture(string orig_model_name, string model_name, string model_list, ModelsBlock *models_block,
-    		StateFreqType freq, string freq_params, PhyloTree *tree, bool optimize_weights, bool count_rates = true);
+    		StateFreqType freq, string freq_params, PhyloTree *tree, bool optimize_weights);
 
     void initMixture(string orig_model_name, string model_name, string model_list, ModelsBlock *models_block,
-    		StateFreqType freq, string freq_params, PhyloTree *tree, bool optimize_weights, bool count_rates = true);
+    		StateFreqType freq, string freq_params, PhyloTree *tree, bool optimize_weights);
+
+    void initMem();
 
     /**
 		constructor
 		@param tree associated tree for the model
 	*/
-    ModelMixture(PhyloTree *tree, bool count_rates = true);
+    ModelMixture(PhyloTree *tree);
 
 
     virtual ~ModelMixture();
@@ -85,6 +88,61 @@ public:
 	 * @return the number of mixture model components
 	 */
 	virtual int getNMixtures() {return size(); }
+
+ 	/**
+	 * @param cat mixture class
+	 * @return weight of a mixture model component
+	 */
+	virtual double getMixtureWeight(int cat) { return prop[cat]; }
+
+	/**
+	 * @param cat mixture class
+	 * @return weight of a mixture model component
+	 */
+	virtual void setMixtureWeight(int cat, double weight) { prop[cat] = weight; }
+
+	/**
+	 * @param cat mixture class
+	 * @return weight of a mixture model component
+	 */
+	virtual void setFixMixtureWeight(bool fix_prop) { this->fix_prop = fix_prop; }
+
+	/**
+	 * @param cat mixture class ID
+	 * @return corresponding mixture model component
+	 */
+    virtual ModelSubst* getMixtureClass(int cat) { return at(cat); }
+
+	/**
+		compute the state frequency vector
+        @param mixture (optional) class for mixture model. 
+            -1 to get weighted sum of class state frequency vector
+		@param state_freq (OUT) state frequency vector. Assume state_freq has size of num_states
+	*/
+	virtual void getStateFrequency(double *state_freq, int mixture = 0);
+
+	/**
+		compute the transition probability matrix. One should override this function when defining new model.
+		The default is the Juke-Cantor model, valid for all kind of data (DNA, AA, Codon, etc)
+		@param time time between two events
+        @param mixture (optional) class for mixture model
+		@param trans_matrix (OUT) the transition matrix between all pairs of states. 
+			Assume trans_matrix has size of num_states * num_states.
+	*/
+	virtual void computeTransMatrix(double time, double *trans_matrix, int mixture = 0);
+
+
+	/**
+		compute the transition probability matrix.and the derivative 1 and 2
+		@param time time between two events
+        @param mixture (optional) class for mixture model
+		@param trans_matrix (OUT) the transition matrix between all pairs of states.
+			Assume trans_matrix has size of num_states * num_states.
+		@param trans_derv1 (OUT) the 1st derivative matrix between all pairs of states. 
+		@param trans_derv2 (OUT) the 2nd derivative matrix between all pairs of states. 
+	*/
+	virtual void computeTransDerv(double time, double *trans_matrix, 
+		double *trans_derv1, double *trans_derv2, int mixture = 0);
 
 	/**
 		@return the number of dimensions
@@ -165,7 +223,7 @@ public:
      * @return memory size required in bytes
      */
     virtual uint64_t getMemoryRequired() {
-    	uint64_t mem = ModelGTR::getMemoryRequired();
+    	uint64_t mem = ModelMarkov::getMemoryRequired();
     	for (iterator it = begin(); it != end(); it++)
     		mem += (*it)->getMemoryRequired();
     	return mem;

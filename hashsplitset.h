@@ -122,7 +122,24 @@ public:
 	 * @param use_index TRUE to map to index of splits in sg, FALSE to map to split weights
 	*/
 	void buildMap(SplitGraph &sg, bool use_index = true);
-	
+
+	int getNumTree() {
+		return numTree;
+	}
+
+	void setNumTree(int maxValue) {
+		this->numTree = maxValue;
+	}
+
+private:
+
+	/**
+	 *  The maximum weight value. If the splits are generated from n trees and splits of every tree
+	 *  all have weight = 1, then maxValue = n
+	 *  This variable is used to determine whether a split appear on all input trees.
+	 */
+	int numTree;
+
 };
 
 #endif

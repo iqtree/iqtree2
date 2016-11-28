@@ -31,14 +31,14 @@ RateGamma::RateGamma(int ncat, double shape, bool median, PhyloTree *tree) : Rat
 	phylo_tree = tree;
 	cut_median = median;
 	//gamma_shape = MAX_GAMMA_SHAPE-1.0;
-	gamma_shape = max(MIN_GAMMA_SHAPE, fabs(shape));
+	gamma_shape = max(tree->params->min_gamma_shape, fabs(shape));
 	fix_gamma_shape = false;
 	rates = NULL;
 	if (shape > 0.0) {
 //		gamma_shape = shape;
 		fix_gamma_shape = true;
 	} else if (shape == 0.0) {
-		gamma_shape = max(MIN_GAMMA_SHAPE, random_double() * 10.0);
+		gamma_shape = max(tree->params->min_gamma_shape, random_double() * 10.0);
 		cout << "Randomize initial gamma shape (alpha): " << gamma_shape << endl;
 	}
 	setNCategory(ncat);
@@ -183,14 +183,13 @@ double RateGamma::computeFunction(double shape) {
 
 double RateGamma::targetFunk(double x[]) {
 	getVariables(x);
-	computeRates();
 	phylo_tree->clearAllPartialLH();
 	return -phylo_tree->computeLikelihood();
 }
 
 void RateGamma::setBounds(double *lower_bound, double *upper_bound, bool *bound_check) {
 	if (getNDim() == 0) return;
-	lower_bound[1] = MIN_GAMMA_SHAPE;
+	lower_bound[1] = phylo_tree->params->min_gamma_shape;
 	upper_bound[1] = MAX_GAMMA_SHAPE;
 	bound_check[1] = false;
 }
@@ -204,6 +203,8 @@ bool RateGamma::getVariables(double *variables) {
 	if (getNDim() == 0) return false;
     bool changed = (gamma_shape != variables[1]);
 	gamma_shape = variables[1];
+    if (changed)
+        computeRates();
     return changed;
 }
 
@@ -233,7 +234,7 @@ double RateGamma::optimizeParameters(double gradient_epsilon) {
 	double negative_lh;
 	double current_shape = gamma_shape;
 	double ferror, optx;
-	optx = minimizeOneDimen(MIN_GAMMA_SHAPE, current_shape, MAX_GAMMA_SHAPE, max(gradient_epsilon, TOL_GAMMA_SHAPE), &negative_lh, &ferror);
+	optx = minimizeOneDimen(phylo_tree->params->min_gamma_shape, current_shape, MAX_GAMMA_SHAPE, max(gradient_epsilon, TOL_GAMMA_SHAPE), &negative_lh, &ferror);
 //	gamma_shape = optx;
 //	computeRates();
 //	phylo_tree->clearAllPartialLH();

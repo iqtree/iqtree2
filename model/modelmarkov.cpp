@@ -17,70 +17,143 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-#include "modelgtr.h"
+#include "modelmarkov.h"
 #include <stdlib.h>
 #include <string.h>
+#include "modelliemarkov.h"
+#include "modelunrest.h"
+
+
+/** number of squaring for scaling-squaring technique */
+const int TimeSquare = 10;
+
+//----- declaration of some helper functions -----/
+int matexp (double Q[], double t, int n, int TimeSquare, double space[]);
+int computeStateFreqFromQMatrix (double Q[], double pi[], int n, double space[]);
+
 
 //const double MIN_FREQ_RATIO = MIN_FREQUENCY;
 //const double MAX_FREQ_RATIO = 1.0/MIN_FREQUENCY;
 
-ModelGTR::ModelGTR(PhyloTree *tree, bool count_rates)
+ModelMarkov::ModelMarkov(PhyloTree *tree, bool reversible)
  : ModelSubst(tree->aln->num_states), EigenDecomposition()
 {
+    phylo_tree = tree;
+    rates = NULL;
+
+    // variables for reversible model
+    eigenvalues = eigenvectors = inv_eigenvectors = NULL;
+    highest_freq_state = num_states-1;
+    freq_type = FREQ_UNKNOWN;
     half_matrix = true;
-	int i;
-	int nrate = getNumRateEntries();
-//	int ncoeff = num_states*num_states*num_states;
-	
-	highest_freq_state = num_states-1;
-	name = "GTR";
-	full_name = "GTR (Tavare, 1986)";
-	phylo_tree = tree;
-	
-	rates = new double[nrate];
-	memset(rates, 0, sizeof(double) * nrate);
+    highest_freq_state = num_states-1;
 
-	freq_type = FREQ_UNKNOWN;
-	
-	eigenvalues = aligned_alloc<double>(num_states);
+    // variables for non-reversible model
+    fixed_parameters = false;
+    model_parameters = NULL;
+    rate_matrix = NULL;
+    temp_space = NULL;
+    eigenvalues_imag = NULL;
+    ceval = cevec = cinv_evec = NULL;
 
-	eigenvectors = aligned_alloc<double>(num_states*num_states);
-//	for (i = 0; i < num_states; i++)
-//		eigenvectors[i] = new double[num_states];
-
-	inv_eigenvectors = aligned_alloc<double>(num_states*num_states);
-//	for (i = 0; i < num_states; i++)
-//		inv_eigenvectors[i] = new double[num_states];
-		
-//	eigen_coeff = aligned_alloc<double>(ncoeff);
-
-//	if (count_rates) 
-//		computeEmpiricalRate();
-//	else
-		for (i=0; i < nrate; i++) rates[i] = 1.0;
-	//eigen_coeff_derv1 = new double[ncoeff];
-	//eigen_coeff_derv2 = new double[ncoeff];
-	num_params = getNumRateEntries() - 1;
+    if (reversible) {
+        name = "Rev";
+        full_name = "General reversible model";
+    } else {
+        name = "NonRev";
+        full_name = "General non-reversible model";
+    }
+    setReversible(reversible);
 }
 
-void ModelGTR::saveCheckpoint() {
-    checkpoint->startStruct("ModelGTR");
-    checkpoint->endStruct();
+void ModelMarkov::setReversible(bool reversible) {
+    is_reversible = reversible;
+
+    if (reversible) {
+        // setup reversible model
+        int i;
+        int nrate = getNumRateEntries();
+
+        if (rates)
+            delete [] rates;
+        rates = new double[nrate];
+        for (i=0; i < nrate; i++)
+            rates[i] = 1.0;
+
+        if (!eigenvalues)
+            eigenvalues = aligned_alloc<double>(num_states);
+        if (!eigenvectors)
+            eigenvectors = aligned_alloc<double>(num_states*num_states);
+        if (!inv_eigenvectors)
+            inv_eigenvectors = aligned_alloc<double>(num_states*num_states);
+
+        num_params = nrate - 1;
+
+    } else {
+        // setup non-reversible model
+        ignore_state_freq = true;
+
+        int num_rates = getNumRateEntries();
+        
+        // reallocate the mem spaces
+        if (rates)
+            delete [] rates;
+        rates = new double [num_rates];
+        memset(rates, 0, sizeof(double) * (num_rates));
+
+        if (!rate_matrix)
+            rate_matrix = aligned_alloc<double>(num_states*num_states);
+        if (!temp_space)
+            temp_space =  aligned_alloc<double>(num_states*num_states);
+        if (!eigenvalues_imag)
+            eigenvalues_imag = aligned_alloc<double>(num_states);
+
+        if (!ceval)
+            ceval = aligned_alloc<complex<double> >(num_states);
+        if (!cevec)
+            cevec = aligned_alloc<complex<double> >(num_states*num_states);
+        if (!cinv_evec)
+            cinv_evec = aligned_alloc<complex<double> >(num_states*num_states);
+        
+        if (!phylo_tree->rooted) {
+            cout << "Converting unrooted to rooted tree..." << endl;
+            phylo_tree->convertToRooted();
+        }
+    }
+}
+
+int ModelMarkov::getNumRateEntries() {
+    if (is_reversible)
+        return num_states*(num_states-1) / 2;
+    else
+        return num_states*(num_states-1);
+}
+
+void ModelMarkov::saveCheckpoint() {
+    if (!is_reversible) {
+        checkpoint->startStruct("ModelMarkov");
+        CKP_ARRAY_SAVE(num_params, model_parameters);
+        checkpoint->endStruct();
+    }
     ModelSubst::saveCheckpoint();
 }
 
-void ModelGTR::restoreCheckpoint() {
+void ModelMarkov::restoreCheckpoint() {
     ModelSubst::restoreCheckpoint();
-    checkpoint->startStruct("ModelGTR");
-    checkpoint->endStruct();
+    if (!is_reversible) {
+        checkpoint->startStruct("ModelMarkov");
+        CKP_ARRAY_RESTORE(num_params, model_parameters);
+        checkpoint->endStruct();
+        setRates();
+    }
 }
 
 
-void ModelGTR::setTree(PhyloTree *tree) {
+void ModelMarkov::setTree(PhyloTree *tree) {
 	phylo_tree = tree;
 }
 
-string ModelGTR::getName() {
+string ModelMarkov::getName() {
 	if (getFreqType() == FREQ_EMPIRICAL)
 		return name + "+F";
 	else if (getFreqType() == FREQ_CODON_1x4)
@@ -97,7 +170,7 @@ string ModelGTR::getName() {
         return name;
 }
 
-string ModelGTR::getNameParams() {
+string ModelMarkov::getNameParams() {
 
 	ostringstream retname;
 	retname << name;
@@ -113,7 +186,7 @@ string ModelGTR::getNameParams() {
     return retname.str();    
 }
     
-void ModelGTR::getNameParamsFreq(ostream &retname) {
+void ModelMarkov::getNameParamsFreq(ostream &retname) {
 	if (getFreqType() == FREQ_EMPIRICAL || (getFreqType() == FREQ_USER_DEFINED && phylo_tree->aln->seq_type == SEQ_DNA)) {
 		retname << "+F";
         retname << "{" << state_freq[0];
@@ -136,7 +209,7 @@ void ModelGTR::getNameParamsFreq(ostream &retname) {
 		retname << "+FQ";
 }
 
-void ModelGTR::init_state_freq(StateFreqType type) {
+void ModelMarkov::init_state_freq(StateFreqType type) {
 	//if (type == FREQ_UNKNOWN) return;
 	int i;
 	freq_type = type;
@@ -163,7 +236,7 @@ void ModelGTR::init_state_freq(StateFreqType type) {
 			double ntfreq[12];
 			phylo_tree->aln->computeCodonFreq(freq_type, state_freq, ntfreq);
 //			phylo_tree->aln->computeCodonFreq(state_freq);
-		} else
+		} else if (phylo_tree->aln->seq_type != SEQ_POMO)
 			phylo_tree->aln->computeStateFreq(state_freq);
 		for (i = 0; i < num_states; i++)
 			if (state_freq[i] > state_freq[highest_freq_state])
@@ -176,15 +249,15 @@ void ModelGTR::init_state_freq(StateFreqType type) {
 	}
 }
 
-void ModelGTR::init(StateFreqType type) {
+void ModelMarkov::init(StateFreqType type) {
         init_state_freq(type);
 	decomposeRateMatrix();
 	if (verbose_mode >= VB_MAX)
 		writeInfo(cout);
 }
 
-void ModelGTR::writeInfo(ostream &out) {
-	if (num_states == 4) {
+void ModelMarkov::writeInfo(ostream &out) {
+	if (is_reversible && num_states == 4) {
 		out << "Rate parameters:";
 		//out.precision(3);
 		//out << fixed;
@@ -202,32 +275,60 @@ void ModelGTR::writeInfo(ostream &out) {
 		out << "  G: " << state_freq[2];
 		out << "  T: " << state_freq[3];
 		out << endl;
-	}
-//	if (verbose_mode >= VB_DEBUG) {
-//		int i, j;
-//		out.precision(6);
-//		out << "eigenvalues: " << endl;
-//		for (i = 0; i < num_states; i++) out << " " << eigenvalues[i];
-//		out << endl << "eigenvectors: " << endl;
-//		for (i = 0; i < num_states; i++)  {
-//			for (j = 0; j < num_states; j++)
-//				out << " " << eigenvectors[i*num_states+j];
-//			out << endl;
-//		}
-//		out << endl << "inv_eigenvectors: " << endl;
-//		for (i = 0; i < num_states; i++)  {
-//			for (j = 0; j < num_states; j++)
-//				out << " " << inv_eigenvectors[i*num_states+j];
-//			out << endl;
-//		}
-//	}
-	//out.unsetf(ios::fixed);
+	} else if (!is_reversible) {
+        // non-reversible
+        int i;
+        out << "Model parameters: ";
+        if (num_params>0) out << model_parameters[0];
+        for (i=1; i < num_params; i++) out << "," << model_parameters[i];
+        out << endl;
+
+        if (num_states != 4) return;
+		out << "Substitution rates:" << endl;
+		out << "  A-C: " << rates[0];
+		out << "  A-G: " << rates[1];
+		out << "  A-T: " << rates[2];
+        out << "  C-A: " << rates[3];
+		out << "  C-G: " << rates[4];
+		out << "  C-T: " << rates[5] << endl;
+        out << "  G-A: " << rates[6];
+        out << "  G-C: " << rates[7];
+		out << "  G-T: " << rates[8];
+        out << "  T-A: " << rates[9];
+        out << "  T-C: " << rates[10];
+        out << "  T-G: " << rates[11];
+		out << endl;
+		out << "Base frequencies: ";
+		out << "  A: " << state_freq[0];
+		out << "  C: " << state_freq[1];
+		out << "  G: " << state_freq[2];
+		out << "  T: " << state_freq[3];
+		out << endl;
+    }
 }
 
-void ModelGTR::computeTransMatrix(double time, double *trans_matrix) {
+void ModelMarkov::computeTransMatrix(double time, double *trans_matrix, int mixture) {
+
+    if (!is_reversible) {
+        if (phylo_tree->params->matrix_exp_technique == MET_EIGEN_DECOMPOSITION) {
+            computeTransMatrixEigen(time, trans_matrix);
+        } else {
+            // scaling and squaring technique
+            int statesqr = num_states*num_states;
+            memcpy(trans_matrix, rate_matrix, statesqr*sizeof(double));
+            matexp(trans_matrix, time, num_states, TimeSquare, temp_space);
+        }
+        return;
+        // 2016-04-05: 2nd version
+    //    for (int i = 0; i < statesqr; i++) 
+    //        trans_matrix[i] *= time;
+    //    double space[NCODE*NCODE*3] = {0};
+    //    matexp2(trans_matrix, num_states, 7, 5, space);
+    }
+
 	/* compute P(t) */
 	double evol_time = time / total_num_subst;
-	double *exptime = new double[num_states];
+	double exptime[num_states];
 	int i, j, k;
 
 	for (i = 0; i < num_states; i++)
@@ -257,32 +358,30 @@ void ModelGTR::computeTransMatrix(double time, double *trans_matrix) {
 			sum += trans_row[j];
 		trans_row[i] = 1.0 - sum; // update diagonal entry
 	}
-	delete [] exptime;
+//	delete [] exptime;
 }
 
-void ModelGTR::computeTransMatrixFreq(double time, double* trans_matrix)
-{
-	computeTransMatrix(time, trans_matrix);
-	for (int state1 = 0; state1 < num_states; state1++) {
-		double *trans_mat_state = trans_matrix + (state1 * num_states);
-		for (int state2 = 0; state2 < num_states; state2++)
-			trans_mat_state[state2] *= state_freq[state1];
-	}
+double ModelMarkov::computeTrans(double time, int state1, int state2) {
+
+    if (is_reversible) {
+        double evol_time = time / total_num_subst;
+        int i;
+        double trans_prob = 0.0;
+        for (i = 0; i < num_states; i++) {
+            trans_prob += eigenvectors[state1*num_states+i] * inv_eigenvectors[i*num_states+state2] * exp(evol_time * eigenvalues[i]);
+        }
+        return trans_prob;
+    } else {
+        // non-reversible
+//        double *trans_matrix = new double[num_states*num_states];
+        computeTransMatrix(time, temp_space);
+        double trans = temp_space[state1*num_states+state2];
+//        delete [] trans_matrix;
+        return trans;
+    }
 }
 
-double ModelGTR::computeTrans(double time, int state1, int state2) {
-	double evol_time = time / total_num_subst;
-	int i;
-
-//	double *coeff_entry = eigen_coeff + ((state1*num_states+state2)*num_states);
-	double trans_prob = 0.0;
-	for (i = 0; i < num_states; i++) {
-		trans_prob += eigenvectors[state1*num_states+i] * inv_eigenvectors[i*num_states+state2] * exp(evol_time * eigenvalues[i]);
-	}
-	return trans_prob;
-}
-
-double ModelGTR::computeTrans(double time, int state1, int state2, double &derv1, double &derv2) {
+double ModelMarkov::computeTrans(double time, int state1, int state2, double &derv1, double &derv2) {
 	double evol_time = time / total_num_subst;
 	int i;
 
@@ -300,14 +399,35 @@ double ModelGTR::computeTrans(double time, int state1, int state2, double &derv1
 }
 
 
-void ModelGTR::computeTransDerv(double time, double *trans_matrix, 
-	double *trans_derv1, double *trans_derv2) 
+void ModelMarkov::computeTransDerv(double time, double *trans_matrix, 
+	double *trans_derv1, double *trans_derv2, int mixture)
 {
-	/* compute P(t) */
+	int i, j, k;
+
+    if (!is_reversible) {
+        computeTransMatrix(time, trans_matrix);
+        // First derivative = Q * e^(Qt)
+        for (i = 0; i < num_states; i++)
+            for (j = 0; j < num_states; j++) {
+                double val = 0.0;
+                for (k = 0; k < num_states; k++)
+                    val += rate_matrix[i*num_states+k] * trans_matrix[k*num_states+j];
+                trans_derv1[i*num_states+j] = val;
+            }
+            
+        // Second derivative = Q * Q * e^(Qt)
+        for (i = 0; i < num_states; i++)
+            for (j = 0; j < num_states; j++) {
+                double val = 0.0;
+                for (k = 0; k < num_states; k++)
+                    val += rate_matrix[i*num_states+k] * trans_derv1[k*num_states+j];
+                trans_derv2[i*num_states+j] = val;
+            }
+        return;
+    }
 
 	double evol_time = time / total_num_subst;
-	double *exptime = new double[num_states];
-	int i, j, k;
+	double exptime[num_states];
 
 	for (i = 0; i < num_states; i++)
 		exptime[i] = exp(evol_time * eigenvalues[i]);
@@ -336,39 +456,21 @@ void ModelGTR::computeTransDerv(double time, double *trans_matrix,
 			}
 		}
 	}
-	delete [] exptime;
+//	delete [] exptime;
 }
 
-void ModelGTR::computeTransDervFreq(double time, double rate_val, double* trans_matrix, double* trans_derv1, double* trans_derv2)
-{
-	int nstates = num_states;
-	double rate_sqr = rate_val*rate_val;
-	computeTransDerv(time * rate_val, trans_matrix, trans_derv1, trans_derv2);
-	for (int state1 = 0; state1 < nstates; state1++) {
-		double *trans_mat_state = trans_matrix + (state1 * nstates);
-		double *trans_derv1_state = trans_derv1 + (state1 * nstates);
-		double *trans_derv2_state = trans_derv2 + (state1 * nstates);
-		for (int state2 = 0; state2 < nstates; state2++) {
-			trans_mat_state[state2] *= state_freq[state1];
-			trans_derv1_state[state2] *= (state_freq[state1] * rate_val);
-			trans_derv2_state[state2] *= (state_freq[state1] * rate_sqr);
-		}
-	}
-}
-
-
-void ModelGTR::getRateMatrix(double *rate_mat) {
+void ModelMarkov::getRateMatrix(double *rate_mat) {
 	int nrate = getNumRateEntries();
 	memcpy(rate_mat, rates, nrate * sizeof(double));
 }
 
-void ModelGTR::setRateMatrix(double* rate_mat)
+void ModelMarkov::setRateMatrix(double* rate_mat)
 {
 	int nrate = getNumRateEntries();
 	memcpy(rates, rate_mat, nrate * sizeof(double));
 }
 
-void ModelGTR::getStateFrequency(double *freq) {
+void ModelMarkov::getStateFrequency(double *freq, int mixture) {
 	assert(state_freq);
 	assert(freq_type != FREQ_UNKNOWN);
 	memcpy(freq, state_freq, sizeof(double) * num_states);
@@ -380,13 +482,20 @@ void ModelGTR::getStateFrequency(double *freq) {
     for (i = 0; i < num_states; i++) freq[i] *= sum;
 }
 
-void ModelGTR::setStateFrequency(double* freq)
+void ModelMarkov::setStateFrequency(double* freq)
 {
 	assert(state_freq);
 	memcpy(state_freq, freq, sizeof(double) * num_states);
 }
 
-void ModelGTR::getQMatrix(double *q_mat) {
+void ModelMarkov::getQMatrix(double *q_mat) {
+
+    if (!is_reversible) {
+        // non-reversible model
+        memmove(q_mat, rate_matrix, num_states*num_states*sizeof(double));
+        return;
+    }
+
 	double **rate_matrix = (double**) new double[num_states];
 	int i, j, k = 0;
 
@@ -411,15 +520,21 @@ void ModelGTR::getQMatrix(double *q_mat) {
 
 }
 
-int ModelGTR::getNDim() { 
+int ModelMarkov::getNDim() { 
 	assert(freq_type != FREQ_UNKNOWN);
+	if (fixed_parameters)
+		return 0;
+    if (!is_reversible)
+        return (num_params);
+
+    // reversible model
 	int ndim = num_params;
 	if (freq_type == FREQ_ESTIMATE) 
 		ndim += num_states-1;
 	return ndim;
 }
 
-int ModelGTR::getNDimFreq() { 
+int ModelMarkov::getNDimFreq() { 
 	if (freq_type == FREQ_EMPIRICAL) 
         return num_states-1;
 	else if (freq_type == FREQ_CODON_1x4) 
@@ -430,7 +545,7 @@ int ModelGTR::getNDimFreq() {
     return 0;
 }
 
-void ModelGTR::scaleStateFreq(bool sum_one) {
+void ModelMarkov::scaleStateFreq(bool sum_one) {
 	int i;
 	if (sum_one) {
 		// make the frequencies sum to 1
@@ -446,8 +561,16 @@ void ModelGTR::scaleStateFreq(bool sum_one) {
 	}
 }
 
-void ModelGTR::setVariables(double *variables) {
+void ModelMarkov::setVariables(double *variables) {
 	int nrate = getNDim();
+
+    // non-reversible case
+    if (!is_reversible) {
+        if (nrate > 0)
+            memcpy(variables+1, model_parameters, nrate*sizeof(double));
+        return;
+    }
+
 	if (freq_type == FREQ_ESTIMATE) nrate -= (num_states-1);
 	if (nrate > 0)
 		memcpy(variables+1, rates, nrate*sizeof(double));
@@ -455,23 +578,25 @@ void ModelGTR::setVariables(double *variables) {
         // 2015-09-07: relax the sum of state_freq to be 1, this will be done at the end of optimization
 		int ndim = getNDim();
 		memcpy(variables+(ndim-num_states+2), state_freq, (num_states-1)*sizeof(double));
-        
-//		int i, j;
-//		for (i = 0, j = 1; i < num_states; i++)
-//			if (i != highest_freq_state) {
-//				variables[nrate+j] = state_freq[i] / state_freq[highest_freq_state];
-//				j++;
-//			}
-		//scaleStateFreq(false);
-//		memcpy(variables+nrate+1, state_freq, (num_states-1)*sizeof(double));
-		//scaleStateFreq(true);
-	}
+    }
 }
 
-bool ModelGTR::getVariables(double *variables) {
+bool ModelMarkov::getVariables(double *variables) {
 	int nrate = getNDim();
 	int i;
 	bool changed = false;
+
+    // non-reversible case
+    if (!is_reversible) {
+        for (i = 0; i < nrate && !changed; i++)
+            changed = (model_parameters[i] != variables[i+1]);
+        if (changed) {
+            memcpy(model_parameters, variables+1, nrate * sizeof(double));
+            setRates();
+        }
+        return changed;
+    }
+
 	if (freq_type == FREQ_ESTIMATE) nrate -= (num_states-1);
 	if (nrate > 0) {
 		for (i = 0; i < nrate; i++)
@@ -509,18 +634,27 @@ bool ModelGTR::getVariables(double *variables) {
 	return changed;
 }
 
-double ModelGTR::targetFunk(double x[]) {
+double ModelMarkov::targetFunk(double x[]) {
 	bool changed = getVariables(x);
-	if (state_freq[num_states-1] < 1e-4) return 1.0e+12;
+
+    if (is_reversible && state_freq[num_states-1] < 1e-4) return 1.0e+12;
+
 	if (changed) {
 		decomposeRateMatrix();
 		assert(phylo_tree);
 		phylo_tree->clearAllPartialLH();
 	}
+
+    // avoid numerical issue if state_freq is too small
+    for (int i = 0; i < num_states; i++)
+        if (state_freq[i] < 1e-4)
+            return 1.0e+12;
+
 	return -phylo_tree->computeLikelihood();
+
 }
 
-bool ModelGTR::isUnstableParameters() {
+bool ModelMarkov::isUnstableParameters() {
 	int nrates = getNumRateEntries();
 	int i;
     // NOTE: zero rates are not consider unstable anymore
@@ -533,7 +667,10 @@ bool ModelGTR::isUnstableParameters() {
 	return false;
 }
 
-void ModelGTR::setBounds(double *lower_bound, double *upper_bound, bool *bound_check) {
+void ModelMarkov::setBounds(double *lower_bound, double *upper_bound, bool *bound_check) {
+
+    assert(is_reversible && "setBounds should only be called on subclass of ModelMarkov");
+
 	int i, ndim = getNDim();
 
 	for (i = 1; i <= ndim; i++) {
@@ -555,7 +692,7 @@ void ModelGTR::setBounds(double *lower_bound, double *upper_bound, bool *bound_c
 	}
 }
 
-double ModelGTR::optimizeParameters(double gradient_epsilon) {
+double ModelMarkov::optimizeParameters(double gradient_epsilon) {
 	int ndim = getNDim();
 	
 	// return if nothing to be optimized
@@ -579,7 +716,6 @@ double ModelGTR::optimizeParameters(double gradient_epsilon) {
 	// by BFGS algorithm
 	setVariables(variables);
 	setBounds(lower_bound, upper_bound, bound_check);
-	//packData(variables, lower_bound, upper_bound, bound_check);
 //    if (phylo_tree->params->optimize_alg.find("BFGS-B") == string::npos)
         score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound, bound_check, max(gradient_epsilon, TOL_RATE));
 //    else
@@ -587,7 +723,7 @@ double ModelGTR::optimizeParameters(double gradient_epsilon) {
 
 	bool changed = getVariables(variables);
     // BQM 2015-09-07: normalize state_freq
-	if (freq_type == FREQ_ESTIMATE) { 
+	if (is_reversible && freq_type == FREQ_ESTIMATE) {
         scaleStateFreq(true);
         changed = true;
     }
@@ -605,12 +741,49 @@ double ModelGTR::optimizeParameters(double gradient_epsilon) {
 	return score;
 }
 
-
-
-void ModelGTR::decomposeRateMatrix(){
+void ModelMarkov::decomposeRateMatrix(){
 	int i, j, k = 0;
 
-	if (num_params == -1) {
+    if (!is_reversible) {
+        double sum;
+        //double m[num_states];
+        double *space = new double[num_states*(num_states+1)];
+
+        for (i = 0; i < num_states; i++)
+            state_freq[i] = 1.0/num_states;
+
+        for (i = 0, k = 0; i < num_states; i++) {
+            rate_matrix[i*num_states+i] = 0.0;
+            double row_sum = 0.0;
+            for (j = 0; j < num_states; j++)
+                if (j != i) {
+                    row_sum += (rate_matrix[i*num_states+j] = rates[k++]);
+                }
+            rate_matrix[i*num_states+i] = -row_sum;
+        }
+        computeStateFreqFromQMatrix(rate_matrix, state_freq, num_states, space);
+
+
+        for (i = 0, sum = 0.0; i < num_states; i++) {
+            sum -= rate_matrix[i*num_states+i] * state_freq[i]; /* exp. rate */
+        }
+
+        if (sum == 0.0) throw "Empty Q matrix";
+
+        double delta = total_num_subst / sum; /* 0.01 subst. per unit time */
+
+        for (i = 0; i < num_states; i++) {
+            for (j = 0; j < num_states; j++) {
+                rate_matrix[i*num_states+j] *= delta;
+            }
+        }
+        delete [] space;
+
+        if (phylo_tree->params->matrix_exp_technique == MET_EIGEN_DECOMPOSITION) {
+            eigensystem_nonrev(rate_matrix, state_freq, eigenvalues, eigenvalues_imag, eigenvectors, inv_eigenvectors, num_states);
+        }
+    } else if (num_params == -1) {
+        // reversible model
 		// manual compute eigenvalues/vectors for F81-style model
 		eigenvalues[0] = 0.0;
 		double mu = 0.0;
@@ -656,6 +829,8 @@ void ModelGTR::decomposeRateMatrix(){
 		}
 		delete [] q;
 	} else {
+
+        // general reversible model
 		double **rate_matrix = new double*[num_states];
 
 		for (i = 0; i < num_states; i++)
@@ -675,24 +850,6 @@ void ModelGTR::decomposeRateMatrix(){
                 memcpy(rate_matrix[i], &rates[i*num_states], num_states*sizeof(double));
                 rate_matrix[i][i] = 0.0;
             }
-//            IntVector codonid;
-//            codonid.reserve(num_states);
-//            int baseid[] = {3,1,0,2};
-//            for (i=0; i<4; i++)
-//                for (j=0; j<4; j++)
-//                    for (k=0; k<4; k++)
-//                        codonid.push_back(baseid[i]*16+baseid[j]*4+baseid[k]);
-//            cout.precision(4);
-//            cout << "rate_matrix=" << endl;
-//            for (i = 0; i < num_states; i++) {
-//                for (j = 0; j < num_states; j++)
-//                    cout << " " << rate_matrix[codonid[i]][codonid[j]];
-//                cout << endl;
-//            }
-//            cout << "state_freq=";
-//            for (i = 0; i < num_states; i++)
-//                cout << " " << state_freq[codonid[i]];
-//            cout << endl;
         }
 		/* eigensystem of 1 PAM rate matrix */
 		eigensystem_sym(rate_matrix, state_freq, eigenvalues, eigenvectors, inv_eigenvectors, num_states);
@@ -701,29 +858,9 @@ void ModelGTR::decomposeRateMatrix(){
 			delete [] rate_matrix[i];
 		delete [] rate_matrix;
 	}
-//	for (i = 0; i < num_states; i++)
-//		for (j = 0; j < num_states; j++) {
-//			int offset = (i*num_states+j)*num_states;
-//			double sum = 0.0;
-//			for (k = 0; k < num_states; k++) {
-//				eigen_coeff[offset+k] = eigenvectors[i*num_states+k] * inv_eigenvectors[k*num_states+j];
-//				sum += eigen_coeff[offset+k];
-//				//eigen_coeff_derv1[offset+k] = eigen_coeff[offset+k] * eigenvalues[k];
-//				//eigen_coeff_derv2[offset+k] = eigen_coeff_derv1[offset+k] * eigenvalues[k];
-//			}
-//			if (i == j) {
-//				if (fabs(sum-1.0) > 1e-6) {
-//					cout << "sum = " << sum << endl;
-//					assert(0);
-//				}
-//			}
-//			else assert(fabs(sum) < 1e-6);
-//		}
-//
+}
 
-} 
-
-void ModelGTR::readRates(istream &in) throw(const char*, string) {
+void ModelMarkov::readRates(istream &in) throw(const char*, string) {
 	int nrates = getNumRateEntries();
 	string str;
 	in >> str;
@@ -747,7 +884,7 @@ void ModelGTR::readRates(istream &in) throw(const char*, string) {
 	}
 }
 
-void ModelGTR::readRates(string str) throw(const char*) {
+void ModelMarkov::readRates(string str) throw(const char*) {
 	int nrates = getNumRateEntries();
 	int end_pos = 0;
 	cout << __func__ << " " << str << endl;
@@ -776,7 +913,7 @@ void ModelGTR::readRates(string str) throw(const char*) {
 
 }
 
-void ModelGTR::readStateFreq(istream &in) throw(const char*) {
+void ModelMarkov::readStateFreq(istream &in) throw(const char*) {
 	int i;
 	for (i = 0; i < num_states; i++) {
 		if (!(in >> state_freq[i])) 
@@ -790,7 +927,7 @@ void ModelGTR::readStateFreq(istream &in) throw(const char*) {
 		throw "State frequencies do not sum up to 1.0";
 }
 
-void ModelGTR::readStateFreq(string str) throw(const char*) {
+void ModelMarkov::readStateFreq(string str) throw(const char*) {
 	int i;
 	int end_pos = 0;
 	for (i = 0; i < num_states; i++) {
@@ -812,7 +949,7 @@ void ModelGTR::readStateFreq(string str) throw(const char*) {
 		outError("State frequencies do not sum up to 1.0 in ", str);
 }
 
-void ModelGTR::readParameters(const char *file_name) { 
+void ModelMarkov::readParameters(const char *file_name) { 
 	try {
 		ifstream in(file_name);
 		if (in.fail()) {
@@ -831,45 +968,48 @@ void ModelGTR::readParameters(const char *file_name) {
 }
 
 
-ModelGTR::~ModelGTR() {
+ModelMarkov::~ModelMarkov() {
 	freeMem();
 }
 
-void ModelGTR::freeMem()
+void ModelMarkov::freeMem()
 {
-//	int i;
-	//delete eigen_coeff_derv2;
-	//delete eigen_coeff_derv1;
-//	aligned_free(eigen_coeff);
-
-//	for (i = num_states-1; i>=0; i--)
-//		delete [] inv_eigenvectors[i];
-	aligned_free(inv_eigenvectors);
-//	for (i = num_states-1; i>=0; i--)
-//		delete [] eigenvectors[i];
-	aligned_free(eigenvectors);
-
-	aligned_free(eigenvalues);
+    if (inv_eigenvectors)
+        aligned_free(inv_eigenvectors);
+    if (eigenvectors)
+        aligned_free(eigenvectors);
+    if (eigenvalues)
+        aligned_free(eigenvalues);
 
 	if (rates) delete [] rates;
+
+    if (cinv_evec)
+        aligned_free(cinv_evec);
+    if (cevec)
+        aligned_free(cevec);
+    if (ceval)
+        aligned_free(ceval);
+    if (eigenvalues_imag)
+        aligned_free(eigenvalues_imag);
+    if (temp_space)
+        aligned_free(temp_space);
+    if (rate_matrix)
+        aligned_free(rate_matrix);
+    if (model_parameters)
+        delete [] model_parameters;
 }
 
-//double *ModelGTR::getEigenCoeff() const
-//{
-//    return eigen_coeff;
-//}
-//
-double *ModelGTR::getEigenvalues() const
+double *ModelMarkov::getEigenvalues() const
 {
     return eigenvalues;
 }
 
-double *ModelGTR::getEigenvectors() const
+double *ModelMarkov::getEigenvectors() const
 {
     return eigenvectors;
 }
 
-double* ModelGTR::getInverseEigenvectors() const {
+double* ModelMarkov::getInverseEigenvectors() const {
 	return inv_eigenvectors;
 }
 
@@ -878,13 +1018,225 @@ double* ModelGTR::getInverseEigenvectors() const {
 //    eigen_coeff = eigenCoeff;
 //}
 
-void ModelGTR::setEigenvalues(double *eigenvalues)
+void ModelMarkov::setEigenvalues(double *eigenvalues)
 {
     this->eigenvalues = eigenvalues;
 }
 
-void ModelGTR::setEigenvectors(double *eigenvectors)
+void ModelMarkov::setEigenvectors(double *eigenvectors)
 {
     this->eigenvectors = eigenvectors;
 }
 
+/****************************************************/
+/*      NON-REVERSIBLE STUFFS                       */
+/****************************************************/
+
+
+void ModelMarkov::setRates() {
+	// I don't know the proper C++ way to handle this: got error if I didn't define something here.
+	assert(0 && "setRates should only be called on subclass of ModelMarkov");
+}
+
+/* static */ ModelMarkov* ModelMarkov::getModelByName(string model_name, PhyloTree *tree, string model_params, StateFreqType freq_type, string freq_params) {
+	if (ModelUnrest::validModelName(model_name)) {
+		return (new ModelUnrest(tree, model_params));
+	} else if (ModelLieMarkov::validModelName(model_name)) {
+	        return (new ModelLieMarkov(model_name, tree, model_params, freq_type, freq_params));
+	} else {
+		cerr << "Unrecognized model name " << model_name << endl;
+		return (NULL);
+	}
+}
+
+/* static */ bool ModelMarkov::validModelName(string model_name) {
+	return ModelUnrest::validModelName(model_name) 
+	  || ModelLieMarkov::validModelName(model_name);
+}
+
+
+
+void ModelMarkov::computeTransMatrixEigen(double time, double *trans_matrix) {
+	/* compute P(t) */
+	double evol_time = time / total_num_subst;
+    int nstates_2 = num_states*num_states;
+	double *exptime = new double[nstates_2];
+	int i, j, k;
+
+    memset(exptime, 0, sizeof(double)*nstates_2);
+	for (i = 0; i < num_states; i++)
+        if (eigenvalues_imag[i] == 0.0) {
+            exptime[i*num_states+i] = exp(evol_time * eigenvalues[i]);
+        } else {
+            assert(i < num_states-1 && eigenvalues_imag[i+1] != 0.0 && eigenvalues_imag[i] > 0.0);
+            complex<double> exp_eval(eigenvalues[i] * evol_time, eigenvalues_imag[i] * evol_time);
+            exp_eval = exp(exp_eval);
+            exptime[i*num_states+i] = exp_eval.real();
+            exptime[i*num_states+i+1] = exp_eval.imag();
+            i++;
+            exptime[i*num_states+i] = exp_eval.real();
+            exptime[i*num_states+i-1] = -exp_eval.imag();
+        }
+
+
+    // compute V * exp(L t)
+    for (i = 0; i < num_states; i++)
+        for (j = 0; j < num_states; j++) {
+            double val = 0;
+            for (k = 0; k < num_states; k++)
+                val += eigenvectors[i*num_states+k] * exptime[k*num_states+j];
+            trans_matrix[i*num_states+j] = val;
+        }
+
+    memcpy(exptime, trans_matrix, sizeof(double)*nstates_2);
+
+    // then compute V * exp(L t) * V^{-1}
+    for (i = 0; i < num_states; i++) {
+        double row_sum = 0.0;
+        for (j = 0; j < num_states; j++) {
+            double val = 0;
+            for (k = 0; k < num_states; k++)
+                val += exptime[i*num_states+k] * inv_eigenvectors[k*num_states+j];
+            // make sure that trans_matrix are non-negative
+            assert(val >= -0.001);
+            val = fabs(val);
+            trans_matrix[i*num_states+j] = val;
+            row_sum += val;
+        }
+        assert(fabs(row_sum-1.0) < 1e-4);
+    }
+
+    delete [] exptime;
+}
+
+
+/****************************************************/
+/*      HELPER FUNCTIONS                            */
+/****************************************************/
+
+/* BQM: Ziheng Yang code which fixed old matinv function */
+int matinv (double x[], int n, int m, double space[])
+{
+    /* x[n*m]  ... m>=n
+       space[n].  This puts the fabs(|x|) into space[0].  Check and calculate |x|.
+       Det may have the wrong sign.  Check and fix.
+    */
+    int i,j,k;
+    int *irow=(int*) space;
+    double ee=1e-100, t,t1,xmax, det=1;
+
+    for (i=0; i<n; i++) irow[i]=i;
+
+    for (i=0; i<n; i++)  {
+        xmax = fabs(x[i*m+i]);
+        for (j=i+1; j<n; j++)
+            if (xmax<fabs(x[j*m+i]))
+            {
+                xmax = fabs(x[j*m+i]);
+                irow[i]=j;
+            }
+        det *= x[irow[i]*m+i];
+        if (xmax < ee)   {
+            cout << endl << "xmax = " << xmax << " close to zero at " << i+1 << "!\t" << endl;
+            exit(-1);
+        }
+        if (irow[i] != i) {
+            for (j=0; j < m; j++) {
+                t = x[i*m+j];
+                x[i*m+j] = x[irow[i]*m+j];
+                x[irow[i]*m+j] = t;
+            }
+        }
+        t = 1./x[i*m+i];
+        for (j=0; j < n; j++) {
+            if (j == i) continue;
+            t1 = t*x[j*m+i];
+            for (k=0; k<m; k++)  x[j*m+k] -= t1*x[i*m+k];
+            x[j*m+i] = -t1;
+        }
+        for (j=0; j < m; j++)   x[i*m+j] *= t;
+        x[i*m+i] = t;
+    }                            /* for(i) */
+    for (i=n-1; i>=0; i--) {
+        if (irow[i] == i) continue;
+        for (j=0; j < n; j++)  {
+            t = x[j*m+i];
+            x[j*m+i] = x[j*m + irow[i]];
+            x[j*m + irow[i]] = t;
+        }
+    }
+    space[0]=det;
+    return(0);
+}
+
+int computeStateFreqFromQMatrix (double Q[], double pi[], int n, double space[])
+{
+    /* from rate matrix Q[] to pi, the stationary frequencies:
+       Q' * pi = 0     pi * 1 = 1
+       space[] is of size n*(n+1).
+    */
+    int i,j;
+    double *T = space;      /* T[n*(n+1)]  */
+
+    for (i=0;i<n+1;i++) T[i]=1;
+    for (i=1;i<n;i++) {
+        for (j=0;j<n;j++)
+            T[i*(n+1)+j] =  Q[j*n+i];     /* transpose */
+        T[i*(n+1)+n] = 0.;
+    }
+    matinv(T, n, n+1, pi);
+    for (i=0;i<n;i++)
+        pi[i] = T[i*(n+1)+n];
+    return (0);
+}
+/* End of Ziheng Yang code */
+
+int matby (double a[], double b[], double c[], int n,int m,int k)
+/* a[n*m], b[m*k], c[n*k]  ......  c = a*b
+*/
+{
+    int i,j,i1;
+    double t;
+    for (i = 0; i < n; i++)
+        for (j = 0; j < k; j++) {
+            for (i1=0,t=0; i1<m; i1++) t+=a[i*m+i1]*b[i1*k+j];
+            c[i*k+j] = t;
+        }
+    return (0);
+}
+
+int matexp (double Q[], double t, int n, int TimeSquare, double space[])
+{
+    /* This calculates the matrix exponential P(t) = exp(t*Q).
+       Input: Q[] has the rate matrix, and t is the time or branch length.
+              TimeSquare is the number of times the matrix is squared and should
+              be from 5 to 31.
+       Output: Q[] has the transition probability matrix, that is P(Qt).
+       space[n*n]: required working space.
+
+          P(t) = (I + Qt/m + (Qt/m)^2/2)^m, with m = 2^TimeSquare.
+
+       T[it=0] is the current matrix, and T[it=1] is the squared result matrix,
+       used to avoid copying matrices.
+       Use an even TimeSquare to avoid one round of matrix copying.
+    */
+    int it, i;
+    double *T[2];
+
+    if (TimeSquare<2 || TimeSquare>31) cout << "TimeSquare not good" << endl;
+    T[0]=Q;
+    T[1]=space;
+    for (i=0; i<n*n; i++)  T[0][i] = ldexp( Q[i]*t, -TimeSquare );
+
+    matby (T[0], T[0], T[1], n, n, n);
+    for (i=0; i<n*n; i++)  T[0][i] += T[1][i]/2;
+    for (i=0; i<n; i++)  T[0][i*n+i] ++;
+
+    for (i=0,it=0; i<TimeSquare; i++) {
+        it = !it;
+        matby (T[1-it], T[1-it], T[it], n, n, n);
+    }
+    if (it==1)
+        for (i=0;i<n*n;i++) Q[i]=T[1][i];
+    return(0);
+}

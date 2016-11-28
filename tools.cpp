@@ -1,6 +1,8 @@
 /***************************************************************************
- *   Copyright (C) 2006 by BUI Quang Minh, Steffen Klaere, Arndt von Haeseler   *
- *   minh.bui@univie.ac.at   *
+ *   Copyright (C) 2009-2015 by                                            *
+ *   BUI Quang Minh <minh.bui@univie.ac.at>                                *
+ *   Lam-Tung Nguyen <nltung@gmail.com>                                    *
+ *                                                                         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -27,6 +29,8 @@
 
 #include "tools.h"
 #include "timeutil.h"
+#include "gzstream.h"
+#include "MPIHelper.h"
 
 VerboseMode verbose_mode;
 
@@ -751,7 +755,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.manuel_analytic_approx = false;
     params.leastSquareNNI = false;
     params.ls_var_type = OLS;
-    params.maxCandidates = 1000;
+    params.maxCandidates = 20;
     params.popSize = 5;
     params.p_delete = -1;
     params.min_iterations = -1;
@@ -778,6 +782,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.num_rate_cats = 4;
     params.max_rate_cats = 10;
     params.gamma_shape = -1.0;
+    params.min_gamma_shape = MIN_GAMMA_SHAPE;
     params.gamma_median = false;
     params.p_invar_sites = -1.0;
     params.optimize_model_rate_joint = false;
@@ -791,6 +796,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.iqp = false;
     params.write_intermediate_trees = 0;
 //    params.avoid_duplicated_trees = false;
+    params.writeDistImdTrees = false;
     params.rf_dist_mode = 0;
     params.mvh_site_rate = false;
     params.rate_mh_type = true;
@@ -802,13 +808,18 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.aBayes_test = false;
     params.localbp_replicates = 0;
     params.SSE = LK_EIGEN_SSE;
-    params.lk_no_avx = false;
+    params.lk_no_avx = 0;
+    params.lk_safe_scaling = false;
+    params.numseq_safe_scaling = 2000;
+    params.kernel_nonrev = false;
     params.print_site_lh = WSL_NONE;
     params.print_partition_lh = false;
     params.print_site_prob = WSL_NONE;
     params.print_site_state_freq = WSF_NONE;
     params.print_site_rate = false;
     params.print_trees_site_posterior = 0;
+    params.print_ancestral_sequence = AST_NONE;
+    params.min_ancestral_prob = 0.95;
     params.print_tree_lh = false;
     params.lambda = 1;
     params.speed_conf = 1.0;
@@ -873,7 +884,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 #else
     params.pll = false;
 #endif
-    params.modeps = 0.01;
+    params.modelEps = 0.01;
     params.parbran = false;
     params.binary_aln_file = NULL;
     params.maxtime = 1000000;
@@ -883,9 +894,13 @@ void parseArg(int argc, char *argv[], Params &params) {
 //    params.autostop = true; // turn on auto stopping rule by default now
     params.unsuccess_iteration = 100;
     params.speednni = true; // turn on reduced hill-climbing NNI by default now
-    params.reduction = false;
     params.numInitTrees = 100;
-    params.fix_stable_splits = false;
+    params.fixStableSplits = false;
+    params.stableSplitThreshold = 0.9;
+    params.five_plus_five = false;
+    params.memCheck = false;
+    params.tabu = false;
+    params.adaptPertubation = false;
     params.numSupportTrees = 20;
 //    params.sprDist = 20;
     params.sprDist = 6;
@@ -896,7 +911,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.site_freq_file = NULL;
     params.tree_freq_file = NULL;
 #ifdef _OPENMP
-    params.num_threads = 0;
+    params.num_threads = -1;
 #else
     params.num_threads = 1;
 #endif
@@ -909,13 +924,17 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.print_partition_info = false;
 	params.print_conaln = false;
 	params.count_trees = false;
+    params.pomo = false;
+    params.pomo_random_sampling = false;
+	// params.pomo_counts_file_flag = false;
+	params.pomo_pop_size = 9;
 	params.print_branch_lengths = false;
 	params.lh_mem_save = LM_PER_NODE; // auto detect
 	params.start_tree = STT_PLL_PARSIMONY;
 	params.print_splits_file = false;
     params.ignore_identical_seqs = true;
     params.write_init_tree = false;
-    params.write_local_optimal_trees = false;
+    params.write_candidate_trees = false;
     params.freq_const_patterns = NULL;
     params.no_rescale_gamma_invar = false;
     params.compute_seq_identity_along_tree = false;
@@ -927,8 +946,11 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.checkpoint_dump_interval = 20;
     params.force_unfinished = false;
     params.suppress_output_flags = 0;
+#ifdef USE_EIGEN3
+    params.matrix_exp_technique = MET_EIGEN3LIB_DECOMPOSITION;
+#else
     params.matrix_exp_technique = MET_SCALING_SQUARING;
-
+#endif
 
 	if (params.nni5) {
 	    params.nni_type = NNI5;
@@ -1618,10 +1640,25 @@ void parseArg(int argc, char *argv[], Params &params) {
 			if (strcmp(argv[cnt], "-st") == 0) {
 				cnt++;
 				if (cnt >= argc)
-					throw "Use -st BIN or -st DNA or -st AA or -st CODON or -st MORPH";
-				params.sequence_type = argv[cnt];
+					throw "Use -st BIN or -st DNA or -st AA or -st CODON or -st MORPH or -st CRXX or -st CFxx.";
+                string arg = argv[cnt];
+                params.sequence_type = argv[cnt];
+                // if (arg.substr(0,2) == "CR") params.pomo_random_sampling = true;
+                // if (arg.substr(0,2) == "CF" || arg.substr(0,2) == "CR") {
+                //     outWarning("Setting the sampling method and population size with this flag is deprecated.");
+                //     outWarning("Please use the model string instead (see `iqtree --help`).");
+                //     if (arg.length() > 2) {
+                //         int ps = convert_int(arg.substr(2).c_str());
+                //         params.pomo_pop_size = ps;
+                //         if (((ps != 10) && (ps != 2) && (ps % 2 == 0)) || (ps < 2) || (ps > 19)) {
+                //             std::cout << "Please give a correct PoMo sequence type parameter; e.g., `-st CF09`." << std::endl;
+                //             outError("Custom virtual population size of PoMo not 2, 10 or any other odd number between 3 and 19.");   
+                //         }
+                //     }
+                // }
 				continue;
 			}
+            
 			if (strcmp(argv[cnt], "-starttree") == 0) {
 				cnt++;
 				if (cnt >= argc)
@@ -1869,7 +1906,9 @@ void parseArg(int argc, char *argv[], Params &params) {
 			}
 			if (strcmp(argv[cnt], "-lmd") == 0) {
 				cnt++;
-				params.lambda = convert_double(argv[cnt]);
+				if (cnt >= argc)
+					throw "Use -lmd <lambda>";
+                params.lambda = convert_double(argv[cnt]);
 				if (params.lambda > 1.0)
 					throw "Lambda must be in (0,1]";
 				continue;
@@ -1892,9 +1931,34 @@ void parseArg(int argc, char *argv[], Params &params) {
 				continue;
 			}
 			if (strcmp(argv[cnt], "-noavx") == 0) {
-				params.lk_no_avx = true;
+				params.lk_no_avx = 1;
 				continue;
 			}
+			if (strcmp(argv[cnt], "-nofma") == 0) {
+				params.lk_no_avx = 2;
+				continue;
+			}
+
+			if (strcmp(argv[cnt], "-safe") == 0) {
+				params.lk_safe_scaling = true;
+				continue;
+			}
+
+			if (strcmp(argv[cnt], "-safe-seq") == 0) {
+				cnt++;
+				if (cnt >= argc)
+                    throw "-safe-seq <number of sequences>";
+				params.numseq_safe_scaling = convert_int(argv[cnt]);
+                if (params.numseq_safe_scaling < 10)
+                    throw "Too small -safe-seq";
+				continue;
+			}
+
+            if (strcmp(argv[cnt], "--kernel-nonrev") == 0) {
+                params.kernel_nonrev = true;
+                continue;
+            }
+
 			if (strcmp(argv[cnt], "-f") == 0) {
 				cnt++;
 				if (cnt >= argc)
@@ -1975,10 +2039,21 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (cnt >= argc)
 					throw "Use -a <gamma_shape>";
 				params.gamma_shape = convert_double(argv[cnt]);
-//				if (params.gamma_shape < 0)
-//					throw "Wrong number of gamma shape parameter (alpha)";
+				if (params.gamma_shape <= 0)
+					throw "Wrong gamma shape parameter (alpha)";
 				continue;
 			}
+
+			if (strcmp(argv[cnt], "-amin") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -amin <min_gamma_shape>";
+				params.min_gamma_shape = convert_double(argv[cnt]);
+				if (params.min_gamma_shape <= 0)
+					throw "Wrong minimum gamma shape parameter (alpha)";
+				continue;
+			}
+
 			if (strcmp(argv[cnt], "-gmean") == 0) {
 				params.gamma_median = false;
 				continue;
@@ -2136,15 +2211,27 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.iqp = true;
 				continue;
 			}
-			if (strcmp(argv[cnt], "-wlt") == 0) {
-				// write all candidate trees
-				params.write_local_optimal_trees = true;
+			if (strcmp(argv[cnt], "-wct") == 0) {
+				params.write_candidate_trees = true;
 				continue;
 			}
+
 			if (strcmp(argv[cnt], "-wt") == 0) {
 				params.write_intermediate_trees = 1;
 				continue;
 			}
+
+            if (strcmp(argv[cnt], "-wdt") == 0) {
+                params.writeDistImdTrees = true;
+                continue;
+            }
+
+            if (strcmp(argv[cnt], "-wtc") == 0) {
+                params.write_intermediate_trees = 1;
+                params.print_tree_lh = true;
+                continue;
+            }
+
 			if (strcmp(argv[cnt], "-wt2") == 0) {
 				params.write_intermediate_trees = 2;
 //				params.avoid_duplicated_trees = true;
@@ -2209,6 +2296,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 			}
 			if (strcmp(argv[cnt], "-alrt") == 0) {
 				cnt++;
+				if (cnt >= argc)
+					throw "Use -alrt <#replicates | 0>";
                 int reps = convert_int(argv[cnt]);
                 if (reps == 0)
                     params.aLRT_test = true;
@@ -2225,6 +2314,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 			}
 			if (strcmp(argv[cnt], "-lbp") == 0) {
 				cnt++;
+				if (cnt >= argc)
+					throw "Use -lbp <#replicates>";
 				params.localbp_replicates = convert_int(argv[cnt]);
 				if (params.localbp_replicates < 1000
 						&& params.localbp_replicates != 0)
@@ -2269,6 +2360,28 @@ void parseArg(int argc, char *argv[], Params &params) {
 				continue;
 			}
 
+			if (strcmp(argv[cnt], "-asr") == 0) {
+				params.print_ancestral_sequence = AST_MARGINAL;
+                params.ignore_identical_seqs = false;
+				continue;
+			}
+
+			if (strcmp(argv[cnt], "-asr-min") == 0) {
+                cnt++;
+				if (cnt >= argc)
+					throw "Use -asr-min <probability>";
+                
+                params.min_ancestral_prob = convert_double(argv[cnt]);
+                if (params.min_ancestral_prob < 0.5 || params.min_ancestral_prob > 1)
+                    throw "Minimum ancestral probability [-asr-min] must be between 0.5 and 1.0";
+                continue;
+            }
+
+			if (strcmp(argv[cnt], "-asr-joint") == 0) {
+				params.print_ancestral_sequence = AST_JOINT;
+                params.ignore_identical_seqs = false;
+				continue;
+			}
 
 			if (strcmp(argv[cnt], "-wsr") == 0) {
 				params.print_site_rate = true;
@@ -2533,12 +2646,28 @@ void parseArg(int argc, char *argv[], Params &params) {
 //				params.store_candidate_trees = false;
 //				continue;
 //			}
-			if (strcmp(argv[cnt], "-lhmemsave") == 0) {
-				params.lh_mem_save = LM_PER_NODE;
-				continue;
-			}
-			if (strcmp(argv[cnt], "-nolhmemsave") == 0) {
-				params.lh_mem_save = LM_ALL_BRANCH;
+			if (strcmp(argv[cnt], "-mem") == 0) {
+				cnt++;
+				if (cnt >= argc)
+                    throw "Use -mem max_mem_size";
+				params.lh_mem_save = LM_MEM_SAVE;
+                int end_pos;
+                double mem = convert_double(argv[cnt], end_pos);
+                if (mem < 0)
+                    throw "-mem must be non-negative";
+                if (argv[cnt][end_pos] == 'G') {
+                    params.max_mem_size = mem * 1073741824.0;
+                } else if (argv[cnt][end_pos] == 'M') {
+                    params.max_mem_size = mem * 1048576.0;
+                } else if (argv[cnt][end_pos] == '%'){
+                    params.max_mem_size = mem * 0.01;
+                    if (params.max_mem_size > 1)
+                        throw "-mem percentage must be between 0 and 100";
+                } else {
+                    if (mem > 1)
+                        throw "Invalid -mem option. Example: -mem 200M, -mem 10G";
+                    params.max_mem_size = mem;
+                }
 				continue;
 			}
 //			if (strcmp(argv[cnt], "-storetrees") == 0) {
@@ -2595,30 +2724,66 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.stop_condition = SC_REAL_TIME;
 				continue;
 			}
-			if (strcmp(argv[cnt], "-numpars") == 0) {
+			if (strcmp(argv[cnt], "-numpars") == 0 || strcmp(argv[cnt], "-ninit") == 0) {
 				cnt++;
 				if (cnt >= argc)
-					throw "Use -numpars <number_of_parsimony_trees>";
+					throw "Use -ninit <number_of_parsimony_trees>";
 				params.numInitTrees = convert_int(argv[cnt]);
+                if (params.numInitTrees < 0)
+                    throw "-ninit must be non-negative";
 				if (params.numInitTrees < params.numNNITrees)
 					params.numNNITrees = params.numInitTrees;
 				continue;
 			}
 			if (strcmp(argv[cnt], "-fss") == 0) {
-				params.fix_stable_splits = true;
+				params.fixStableSplits = true;
+//				params.five_plus_five = true;
 				continue;
 			}
-			if (strcmp(argv[cnt], "-toppars") == 0) {
+            if (strcmp(argv[cnt], "--stable-thres") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use --stable-thres <support_value_threshold>";
+                params.stableSplitThreshold = convert_double(argv[cnt]);
+                continue;
+            }
+			if (strcmp(argv[cnt], "-ff") == 0) {
+				params.five_plus_five = true;
+				continue;
+			}
+
+			if (strcmp(argv[cnt], "-tabu") == 0) {
+                params.fixStableSplits = true;
+				params.tabu = true;
+                params.maxCandidates = params.numSupportTrees;
+				continue;
+			}
+
+            if (strcmp(argv[cnt], "--adt-pert") == 0) {
+                if (params.tabu == true) {
+                    outError("option -tabu and --adt-pert cannot be combined");
+                }
+                params.adaptPertubation = true;
+                params.stableSplitThreshold = 1.0;
+                continue;
+            }
+
+            if (strcmp(argv[cnt], "-memcheck") == 0) {
+                params.memCheck = true;
+                continue;
+            }
+
+			if (strcmp(argv[cnt], "-toppars") == 0 || strcmp(argv[cnt], "-ntop") == 0) {
 				cnt++;
 				if (cnt >= argc)
-					throw "Use -toppars <number_of_top_parsimony_trees>";
+					throw "Use -ntop <number_of_top_parsimony_trees>";
 				params.numNNITrees = convert_int(argv[cnt]);
 				continue;
 			}
-			if (strcmp(argv[cnt], "-nsp") == 0) {
+			if (strcmp(argv[cnt], "--num-sup-trees") == 0) {
 				cnt++;
 				if (cnt >= argc)
-					throw "Use -nsp <number_of_support_trees>";
+					throw "Use --num-sup-trees <number_of_support_trees>";
 				params.numSupportTrees = convert_int(argv[cnt]);
 				continue;
 			}
@@ -2673,10 +2838,10 @@ void parseArg(int argc, char *argv[], Params &params) {
 				continue;
 			}
 			if (strcmp(argv[cnt], "-popsize") == 0
-					|| strcmp(argv[cnt], "-numcand") == 0) {
+					|| strcmp(argv[cnt], "-numcand") == 0 || strcmp(argv[cnt], "-nbest") == 0) {
 				cnt++;
 				if (cnt >= argc)
-					throw "Use -numcand <number_of_candidate_trees>";
+					throw "Use -nbest <number_of_candidate_trees>";
 				params.popSize = convert_int(argv[cnt]);
 				assert(params.popSize < params.numInitTrees);
 				continue;
@@ -2698,10 +2863,10 @@ void parseArg(int argc, char *argv[], Params &params) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -me <model_epsilon>";
-				params.modeps = convert_double(argv[cnt]);
-				if (params.modeps <= 0.0)
+				params.modelEps = convert_double(argv[cnt]);
+				if (params.modelEps <= 0.0)
 					throw "Model epsilon must be positive";
-				if (params.modeps > 0.1)
+				if (params.modelEps > 0.1)
 					throw "Model epsilon must not be larger than 0.1";
 				continue;
 			}
@@ -2713,10 +2878,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.speednni = false;
 				continue;
 			}
-			if (strcmp(argv[cnt], "-reduction") == 0) {
-				params.reduction = true;
-				continue;
-			}
+            
 			if (strcmp(argv[cnt], "-snni") == 0) {
 				params.snni = true;
 				// dont need to turn this on here
@@ -2729,17 +2891,21 @@ void parseArg(int argc, char *argv[], Params &params) {
 			if (strcmp(argv[cnt], "-iqpnni") == 0) {
 				params.snni = false;
 				params.start_tree = STT_BIONJ;
-				params.reduction = false;
 				params.numNNITrees = 1;
 //            continue; } if (strcmp(argv[cnt], "-auto") == 0) {
 //            	params.autostop = true;
 				continue;
 			}
-			if (strcmp(argv[cnt], "-stop_cond") == 0 || strcmp(argv[cnt], "-numstop") == 0) {
+			if (strcmp(argv[cnt], "-stop_cond") == 0 || strcmp(argv[cnt], "-numstop") == 0
+                 || strcmp(argv[cnt], "-nstop") == 0) {
 				if (params.stop_condition != SC_BOOTSTRAP_CORRELATION)
 					params.stop_condition = SC_UNSUCCESS_ITERATION;
 				cnt++;
+				if (cnt >= argc)
+					throw "Use -nstop <#iterations>";
 				params.unsuccess_iteration = convert_int(argv[cnt]);
+                if (params.unsuccess_iteration <= 0)
+                    throw "-nstop iterations must be positive";
 				continue;
 			}
 			if (strcmp(argv[cnt], "-lsbran") == 0) {
@@ -2890,10 +3056,14 @@ void parseArg(int argc, char *argv[], Params &params) {
 			if (strcmp(argv[cnt], "-omp") == 0 || strcmp(argv[cnt], "-nt") == 0) {
 				cnt++;
 				if (cnt >= argc)
-				throw "Use -nt <num_threads>";
-				params.num_threads = convert_int(argv[cnt]);
-				if (params.num_threads < 1)
-					throw "At least 1 thread please";
+				throw "Use -nt <num_threads|AUTO>";
+                if (strcmp(argv[cnt], "AUTO") == 0)
+                    params.num_threads = 0;
+                else {
+                    params.num_threads = convert_int(argv[cnt]);
+                    if (params.num_threads < 1)
+                        throw "At least 1 thread please";
+                }
 				continue;
 			}
 //			if (strcmp(argv[cnt], "-rootstate") == 0) {
@@ -3088,7 +3258,10 @@ void parseArg(int argc, char *argv[], Params &params) {
     
     if (params.do_au_test && params.topotest_replicates == 0)
         outError("For AU test please please specify number of bootstrap replicates via -zb option");
-    
+
+    if (params.lh_mem_save == LM_MEM_SAVE && params.partition_file)
+        outError("-mem option does not work with partition models yet");
+
     if (!params.out_prefix) {
     	if (params.eco_dag_file)
     		params.out_prefix = params.eco_dag_file;
@@ -3103,6 +3276,12 @@ void parseArg(int argc, char *argv[], Params &params) {
         else
             params.out_prefix = params.user_file;
     }
+//    if (MPIHelper::getInstance().isWorker()) {
+    // BUG: setting out_prefix this way cause access to stack, which is cleaned up after returning from this function
+//        string newPrefix = string(params.out_prefix) + "."  + NumberToString(MPIHelper::getInstance().getProcessID()) ;
+//        params.out_prefix = (char *) newPrefix.c_str();
+//    }
+
 }
 
 extern void printCopyright(ostream &out);
@@ -3199,6 +3378,8 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -v, -vv, -vvv        Verbose mode, printing more messages to screen" << endl
             << "  -quiet               Silent mode, suppress printing to screen (stdout)" << endl
             << "  -keep-ident          Keep identical sequences (default: remove & finally add)" << endl
+            << "  -safe                Safe likelihood kernel to avoid numerical underflow" << endl
+            << "  -mem RAM             Maximal RAM usage for memory saving mode" << endl
             << endl << "CHECKPOINTING TO RESUME STOPPED RUN:" << endl
             << "  -redo                Redo analysis even for successful runs (default: resume)" << endl
             << "  -cptime <seconds>    Minimum checkpoint time interval (default: 20)" << endl
@@ -3208,14 +3389,14 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -wql                 Print quartet log-likelihoods to .quartetlh file" << endl
             << endl << "NEW STOCHASTIC TREE SEARCH ALGORITHM:" << endl
 //            << "  -pll                 Use phylogenetic likelihood library (PLL) (default: off)" << endl
-            << "  -numpars <number>    Number of initial parsimony trees (default: 100)" << endl
-            << "  -toppars <number>    Number of best parsimony trees (default: 20)" << endl
-            << "  -sprrad <number>     Radius for parsimony SPR search (default: 6)" << endl
-            << "  -numcand <number>    Size of the candidate tree set (defaut: 5)" << endl
-            << "  -pers <proportion>   Perturbation strength for randomized NNI (default: 0.5)" << endl
-            << "  -allnni              Perform more thorough NNI search (default: off)" << endl
-            << "  -numstop <number>    Number of unsuccessful iterations to stop (default: 100)" << endl
+            << "  -ninit <number>      Number of initial parsimony trees (default: 100)" << endl
+            << "  -ntop <number>       Number of top initial trees (default: 20)" << endl
+            << "  -nbest <number>      Number of best trees retained during search (defaut: 5)" << endl
             << "  -n <#iterations>     Fix number of iterations to <#iterations> (default: auto)" << endl
+            << "  -nstop <number>      Number of unsuccessful iterations to stop (default: 100)" << endl
+            << "  -pers <proportion>   Perturbation strength for randomized NNI (default: 0.5)" << endl
+            << "  -sprrad <number>     Radius for parsimony SPR search (default: 6)" << endl
+            << "  -allnni              Perform more thorough NNI search (default: off)" << endl
             << "  -g <constraint_tree> (Multifurcating) topological constraint tree file" << endl
 //            << "  -iqp                 Use the IQP tree perturbation (default: randomized NNI)" << endl
 //            << "  -iqpnni              Switch back to the old IQPNNI tree search algorithm" << endl
@@ -3311,6 +3492,40 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -m \"MIX{model1,...,modelK}\"   Mixture model with K components" << endl
             << "  -m \"FMIX{freq1,...freqK}\"     Frequency mixture model with K components" << endl
             << "  -mwopt               Turn on optimizing mixture weights (default: none)" << endl
+            << endl
+
+            << "POLYMORPHISM AWARE MODELS (PoMo):"                                                   << endl
+            << "PoMo uses counts files (please refer to the manual)."                                << endl
+            << "  -m <sm>+<pm>         Default: `HKY+rP`."                                           << endl
+            << "                 <sm>: Substitution model."                                          << endl
+            << "                  DNA: HKY (default), JC, F81, K2P, K3P, K81uf, TN/TrN, TNef,"       << endl
+            << "                       TIM, TIMef, TVM, TVMef, SYM, GTR, or a 6-digit model"         << endl
+            << "                       specification (e.g., 010010 = HKY)."                          << endl
+            << "                 <pm>: PoMo model."                                                  << endl
+            << "                       - rP (default; reversible PoMo with tree inference)."         << endl
+            // << "                       - nrP (non-reversible PoMo; tree has to be given separately;" << endl
+            // << "                         not implemented yet)."                                      << endl
+            << "  -m <model>+<ft>      Frequency type (optional; default: +F, counted)."             << endl
+            << "                       F or +FO or +FU or +FQ."                                      << endl
+            << "                       Counted, optimized, user-defined, equal state frequency."     << endl
+            << "                       This overwrites the specifications of the DNA model."         << endl
+            << "  -m <model>+N<ps>     Set virtual population size to `ps` (optional; default: 9)."  << endl
+            << "                       3 <= ps <= 19; ps has to be an odd number or 2 or 10."        << endl
+            << "  -m <model>+[W|S]     Specify sampling method (optional; default: W)."              << endl
+            << "                       W: Weighted sampling method (partial likelihoods at the tip"  << endl
+            << "                          of the tree are set to the probabilities of leading to the"<< endl
+            << "                          observed data)."                                           << endl
+            << "                       S: Sampled sampling method (determine PoMo states by randomly"<< endl
+            << "                          drawing N bases per site from the data)."                  << endl
+            << "  The full default model string is: `-m HKY+rP+N9+W+F."                              << endl
+            << "  Another example: `-m GTR+rP+N15+S."                                                << endl
+            << "  You can use mixture models like so: -m \"MIX{JC+rP,HKY+rP}+N11\"."                 << endl
+            << "  A mixture model with equal state frequency: -m \"MIX{JC,HKY}+FQ\"."                << endl
+            << "  Until now, only DNA models work with PoMo."                                        << endl
+            << "  Model testing and rate heterogeneity do not work with PoMo yet."                   << endl
+            << "  Example of a standard run (for more examples please see the manual):"              << endl
+            << "    iqtree -s counts_file.cf"                                                        << endl
+
             << endl << "RATE HETEROGENEITY AMONG SITES:" << endl
             << "  -m modelname+I       A proportion of invariable sites" << endl
             << "  -m modelname+G[n]    Discrete Gamma model with n categories (default n=4)" << endl
@@ -3318,6 +3533,7 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -m modelname+R[n]    FreeRate model with n categories (default n=4)" << endl
             << "  -m modelname+I+R[n]  Invariable sites plus FreeRate model with n categories" << endl
             << "  -a <Gamma_shape>     Gamma shape parameter for site rates (default: estimate)" << endl
+            << "  -amin <min_shape>    Min Gamma shape parameter for site rates (default: 0.02)" << endl
             << "  -gmedian             Median approximation for +G site rates (default: mean)" << endl
             << "  --opt-gamma-inv      More thorough estimation for +I+G model parameters" << endl
             << "  -i <p_invar>         Proportion of invariable sites (default: estimate)" << endl
@@ -3370,6 +3586,12 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -zb <#replicates>    Performing BP,KH,SH,ELW tests for trees passed via -z" << endl
             << "  -zw                  Also performing weighted-KH and weighted-SH tests" << endl
             << "  -au                  Also performing approximately unbiased (AU) test" << endl
+//            << endl << "ANCESTRAL SEQUENCE RECONSTRUCTION:" << endl
+//            << "  -asr                 Compute ancestral states by marginal reconstruction" << endl
+//            << "  -asr-min <prob>      Min probability to assign ancestral sequence (default: 0.95)" << endl
+//            << "  -wja                 Write ancestral sequences by joint reconstruction" << endl
+
+
             << endl;
 
 			cout << "GENERATING RANDOM TREES:" << endl;
@@ -3417,8 +3639,9 @@ void usage_iqtree(char* argv[], bool full_command) {
 
 void quickStartGuide() {
     printCopyright(cout);
+    cout << "---" << endl;
     cout << "Minimal command-line examples (replace 'iqtree ...' with actual path to executable):" << endl << endl
-        << "1. Reconstruct maximum-likelihood tree from a sequence alignment (example.phy)" << endl
+         << "1. Reconstruct maximum-likelihood tree from a sequence alignment (example.phy)" << endl
          << "   with the best-fit substitution model automatically selected:" << endl
          << "     iqtree -s example.phy -m TEST" << endl << endl
          << "2. Reconstruct ML tree and assess branch supports with ultrafast bootstrap" << endl
@@ -3434,6 +3657,17 @@ void quickStartGuide() {
 #ifdef _OPENMP
          << "6. Use 4 CPU cores to speed up computation: add '-nt 4' option" << endl << endl
 #endif
+         << "---" << endl
+         << "PoMo command-line examples:" << endl
+         << "1. Standard tree inference (HKY model and empirical nucleotide frequencies):" << endl
+         << "     iqtree -s counts_file.cf" << endl << endl
+         << "2. Set virtual population size to 15:" << endl
+         << "     iqtree -s counts_file.cf -m HKY+rP+N15" << endl << endl
+         << "3. Use GTR model and estimate allele frequencies during maximization of likelihood:" << endl
+         << "     iqtree -s counts_file.cf -m GTR+rP+FO" << endl << endl
+         << "4. Use the sampled input method and N=9 (advanced setting; see manual or publication):" << endl
+         << "     iqtree -s counts_file.cf -m HKY+rP+N9+S" << endl << endl
+         << "---" << endl
          << "To show all available options: run 'iqtree -h'" << endl << endl
          << "Have a look at the tutorial and manual for more information:" << endl
          << "     http://www.iqtree.org" << endl << endl;
@@ -3443,7 +3677,7 @@ void quickStartGuide() {
 InputType detectInputFile(char *input_file) {
 
     try {
-        ifstream in;
+        igzstream in;
         in.exceptions(ios::failbit | ios::badbit);
         in.open(input_file);
 
@@ -3459,7 +3693,9 @@ InputType detectInputFile(char *input_file) {
             case '(': return IN_NEWICK;
             case '[': return IN_NEWICK;
             case '>': return IN_FASTA;
-            case 'C': if (ch2 == 'L') return IN_CLUSTAL; else return IN_OTHER;
+            case 'C': if (ch2 == 'L') return IN_CLUSTAL;
+                      else if (ch2 == 'O') return IN_COUNTS;
+                      else return IN_OTHER;
             case '!': if (ch2 == '!') return IN_MSF; else return IN_OTHER;
             default:
                 if (isdigit(ch)) return IN_PHYLIP;
@@ -3723,10 +3959,12 @@ int random_int(int n, int *rstream) {
     return (int) floor(random_double(rstream) * n);
 } /* randominteger */
 
-//int randint(int a, int b) {
-//	return a + (RAND_MAX * rand() + rand()) % (b + 1 - a);
-//}
-//
+/* returns a random integer in the range [a; b] */
+int random_int(int a, int b) {
+	assert(b > a);
+	//return a + (RAND_MAX * rand() + rand()) % (b + 1 - a);
+	return a + random_int(b - a);
+}
 
 double random_double(int *rstream) {
 #ifndef FIXEDINTRAND
@@ -3860,11 +4098,12 @@ double computePValueChiSquare(double x, int df) /* x: obtained chi-square value,
         return (s);
 }
 
-
 void trimString(string &str) {
     str.erase(0, str.find_first_not_of(" \n\r\t"));
     str.erase(str.find_last_not_of(" \n\r\t")+1);
 }
+
+
 
 Params& Params::getInstance() {
     static Params instance;
@@ -4046,4 +4285,13 @@ bool memcmpcpy(void * destination, const void * source, size_t num) {
     bool diff = (memcmp(destination, source, num) != 0);
     memcpy(destination, source, num);
     return diff;
+}
+
+// Pairing function: see https://en.wikipedia.org/wiki/Pairing_function
+int pairInteger(int int1, int int2) {
+    if (int1 <= int2) {
+        return ((int1 + int2)*(int1 + int2 + 1)/2 + int2);
+    } else {
+        return ((int1 + int2)*(int1 + int2 + 1)/2 + int1);
+    }
 }

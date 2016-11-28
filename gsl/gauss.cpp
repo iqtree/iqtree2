@@ -47,6 +47,18 @@
 //#include <gsl/gsl_cdf.h>
 #define GSL_DBL_EPSILON        2.2204460492503131e-16
 
+#ifndef M_2_SQRTPI
+#define M_2_SQRTPI  1.12837916709551257389615890312154517   /* 2/sqrt(pi)     */
+#endif
+
+#ifndef M_SQRT2
+#define M_SQRT2     1.41421356237309504880168872420969808   /* sqrt(2)        */
+#endif
+
+#ifndef M_SQRT1_2
+#define M_SQRT1_2   0.707106781186547524400844362104849039  /* 1/sqrt(2)      */
+#endif
+
 #ifndef M_1_SQRT2PI
 #define M_1_SQRT2PI (M_2_SQRTPI * M_SQRT1_2 / 2.0)
 #endif

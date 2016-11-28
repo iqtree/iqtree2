@@ -142,7 +142,7 @@ public:
 		Set whether or not to optimize p_invar
 		@param opt TRUE to optimize p_invar, FALSE otherwise
 	*/
-	virtual void setOptimizePInvar(bool opt) { optimize_p_invar = opt; }
+//	virtual void setOptimizePInvar(bool opt) { optimize_p_invar = opt; }
 
 	/**
 		proportion of invariable sites
@@ -157,7 +157,7 @@ public:
     /**
         TRUE to optimize p_invar (if not fixed), FALSE otherwise (e.g. in case of mixture model)
     */
-    bool optimize_p_invar;
+//    bool optimize_p_invar;
 
 protected:
 

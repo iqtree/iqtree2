@@ -8,8 +8,22 @@
  */
 
 #include "phylotree.h"
-#include "vectorclass/vectorclass.h"
+//#include "vectorclass/vectorclass.h"
 #include "phylosupertree.h"
+
+#if defined (__GNUC__) || defined(__clang__)
+#define vml_popcnt __builtin_popcount
+#else
+// taken from vectorclass library
+static inline uint32_t vml_popcnt (uint32_t a) {	
+    // popcnt instruction not available
+    uint32_t b = a - ((a >> 1) & 0x55555555);
+    uint32_t c = (b & 0x33333333) + ((b >> 2) & 0x33333333);
+    uint32_t d = (c + (c >> 4)) & 0x0F0F0F0F;
+    uint32_t e = d * 0x01010101;
+    return   e >> 24;
+}
+#endif
 
 /***********************************************************/
 /****** optimized version of parsimony kernel **************/
@@ -116,7 +130,10 @@ void PhyloTree::computePartialParsimonyFast(PhyloNeighbor *dad_branch, PhyloNode
                     Alignment::iterator pat = aln->ordered_pattern.begin()+ patid;
                     int state = pat->at(leafid);
                     int freq = pat->frequency;
-                    if (state < (*alnit)->num_states) {
+                    if (aln->seq_type == SEQ_POMO && state >= (*alnit)->num_states && state < (*alnit)->STATE_UNKNOWN) {
+                        state = (*alnit)->convertPomoState(state);
+                    }
+                     if (state < (*alnit)->num_states) {
                         for (int j = 0; j < freq; j++, site++) {
                             dad_branch->partial_pars[(site/UINT_BITS)*nstates+state] |= (1 << (site % UINT_BITS));
                         }
@@ -174,7 +191,7 @@ void PhyloTree::computePartialParsimonyFast(PhyloNeighbor *dad_branch, PhyloNode
 				z[3] = x[3] & y[3];
 				w = z[0] | z[1] | z[2] | z[3];
 				w = ~w;
-				score += vml_popcnt(w);
+				score += __builtin_popcount(w);
 				z[0] |= w & (x[0] | y[0]);
 				z[1] |= w & (x[1] | y[1]);
 				z[2] |= w & (x[2] | y[2]);
