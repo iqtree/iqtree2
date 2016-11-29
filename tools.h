@@ -1723,6 +1723,8 @@ public:
 	/** true to print all UFBoot trees to a file */
 	int print_ufboot_trees;
 
+    int contree_rfdist;
+
     /****** variables for NNI cutoff heuristics ******/
 
     /**

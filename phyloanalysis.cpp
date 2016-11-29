@@ -961,9 +961,7 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 			string con_file = params.out_prefix;
 			con_file += ".contree";
 
-            IntVector rfdist;
-            tree.computeRFDist(con_file.c_str(), rfdist);
-            out << endl << "Robinson-Foulds distance between ML tree and consensus tree: " << rfdist[0] << endl;
+            out << endl << "Robinson-Foulds distance between ML tree and consensus tree: " << params.contree_rfdist << endl;
             
             out << endl << "Branches with bootstrap support >"
 					<< floor(params.split_threshold * 1000) / 10 << "% are kept";
@@ -2773,6 +2771,11 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
 			string current_tree = tree->getTreeString();
 			splitsfile = params.out_prefix;
 			splitsfile += ".contree";
+
+            IntVector rfdist;
+            tree->computeRFDist(splitsfile.c_str(), rfdist);
+            params.contree_rfdist = rfdist[0];
+
 			tree->readTreeFile(splitsfile);
 
 			tree->initializeAllPartialLh();
