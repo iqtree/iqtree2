@@ -3170,6 +3170,10 @@ void parseArg(int argc, char *argv[], Params &params) {
 				continue;
 			}
 
+			if (strcmp(argv[cnt], "--no-uniqueseq") == 0) {
+				params.suppress_output_flags |= OUT_UNIQUESEQ;
+				continue;
+			}
 
 			if (argv[cnt][0] == '-') {
                 string err = "Invalid \"";

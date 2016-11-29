@@ -1016,6 +1016,7 @@ void mergePartitions(PhyloSuperTree* super_tree, vector<IntVector> &gene_sets, S
 		part_info.push_back(info);
 		Alignment *aln = super_aln->concatenateAlignments(*it);
 		PhyloTree *tree = super_tree->extractSubtree(*it);
+        tree->setParams(super_tree->params);
 		tree->setAlignment(aln);
 		tree_vec.push_back(tree);
 	}
@@ -1028,6 +1029,7 @@ void mergePartitions(PhyloSuperTree* super_tree, vector<IntVector> &gene_sets, S
 
 	delete super_tree->aln;
 	super_tree->aln = new SuperAlignment(super_tree);
+    super_tree->setAlignment(super_tree->aln);
 }
 
 void printModelFile(ostream &fmodel, Params &params, PhyloTree *tree, ModelInfo &info, string &set_name) {
@@ -1400,7 +1402,8 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInf
     
     delete [] distID;
     delete [] dist;
-	mergePartitions(in_tree, gene_sets, model_names);
+    if (gene_sets.size() < in_tree->size())
+        mergePartitions(in_tree, gene_sets, model_names);
 	in_tree->printBestPartition((string(params.out_prefix) + ".best_scheme.nex").c_str());
 	in_tree->printBestPartitionRaxml((string(params.out_prefix) + ".best_scheme").c_str());
 }

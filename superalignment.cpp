@@ -33,6 +33,16 @@ SuperAlignment::SuperAlignment(PhyloSuperTree *super_tree) : Alignment()
 	// first build taxa_index and partitions
 	int site, seq, nsite = super_tree->size();
 	PhyloSuperTree::iterator it;
+
+    // BUG FIX 2016-11-29: when merging partitions with -m TESTMERGE, sequence order is changed
+    // get the taxa names from existing tree
+    if (super_tree->root) {
+        super_tree->getTaxaName(seq_names);
+        taxa_index.resize(seq_names.size());
+        for (auto i = taxa_index.begin(); i != taxa_index.end(); i++)
+            i->resize(nsite, -1);
+    }
+        
 	for (site = 0, it = super_tree->begin(); it != super_tree->end(); it++, site++) {
 		partitions.push_back((*it)->aln);
 		int nseq = (*it)->aln->getNSeq();
