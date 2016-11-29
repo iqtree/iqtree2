@@ -372,9 +372,7 @@ void MPIHelper::receiveTrees(bool fromAll, int maxNumTrees, TreeCollection &tree
             MPI_Recv(recvBuffer, numBytes, MPI_CHAR, status.MPI_SOURCE, status.MPI_TAG, MPI_COMM_WORLD, &status);
             ObjectStream os(recvBuffer, numBytes);
             if (status.MPI_TAG == STOP_TAG) {
-                stringstream stopMsg;
-                stopMsg << os.getObjectData();
-                cout << stopMsg << endl;
+                cout <<  os.getObjectData() << endl;
                 MPI_Finalize();
                 exit(0);
             }
