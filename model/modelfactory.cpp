@@ -686,7 +686,7 @@ double ModelFactory::optimizeAllParameters(double gradient_epsilon) {
 }
 
 double ModelFactory::optimizeParametersGammaInvar(int fixed_len, bool write_info, double logl_epsilon, double gradient_epsilon) {
-    if (!site_rate->isGammai() || site_rate->isFixPInvar() || site_rate->isFixGammaShape())
+    if (!site_rate->isGammai() || site_rate->isFixPInvar() || site_rate->isFixGammaShape() || site_rate->getTree()->aln->frac_const_sites == 0.0)
         return optimizeParameters(fixed_len, write_info, logl_epsilon, gradient_epsilon);
         
 	double begin_time = getRealTime();
