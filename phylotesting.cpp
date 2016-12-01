@@ -1770,6 +1770,8 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
                     tree->fixNegativeBranch(true);
                     tree->clearAllPartialLH();
                 }
+                if (verbose_mode >= VB_MED)
+                    cout << "Optimizing model " << info.name << endl;
                 info.logl = tree->getModelFactory()->optimizeParameters(false, false, TOL_LIKELIHOOD_MODELTEST, TOL_GRADIENT_MODELTEST);
                 info.tree_len = tree->treeLength();
                 if (prev_model_id >= 0) {
