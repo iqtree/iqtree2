@@ -344,6 +344,17 @@ void ModelLieMarkov::init(const char *model_name, string model_params, StateFreq
     }
     setBasis(); // sets basis and num_params
 
+    /*
+     * Check validity of freq_type. (After setBasis because that sets bdf,
+     * if needed could move before setBasis with minor changes)
+     */
+    if (!validFreqType()) {
+      throw("Can't use base frequency type "
+	    +freqTypeString(freq_type)
+	    +" with Lie-Markov model "
+            +name);
+    }
+
     if (model_parameters)
         delete[] model_parameters;
     model_parameters = new double [num_params];
@@ -381,6 +392,60 @@ ModelLieMarkov::~ModelLieMarkov() {
   // Do nothing, for now. model_parameters is reclaimed in ~ModelMarkov
 }
 
+/*
+ * Return 'true' if freq type is compatible with this Lie-Markov model.
+ * NOTE: Any freq_type exept FREQ_USER_DEFINED, FREQ_EMPIRICAL or
+ * FREQ_ESTIMATE is at best redundant, and worst incompatible.
+ * The above three are really the only freq types which should be used
+ * with an LM model.
+ * Actually, the +F1123s are valid with a BDF=3 LM model, but
+ * I haven't coded for this possibility so reject it. Could be fixed.
+ * 
+ * Also for FREQ_USER_DEFINED and FREQ_EMPIRICAL, for LM models with 
+ * BDF<3, compatibility depends on the given base freqs. There
+ * is code elsewhere which prints a warning if incompatible base freqs
+ * (and actual model base freqs will be 'close to' the requested freqs.)
+ */
+bool  ModelLieMarkov::validFreqType() {
+  int bdf=BDF[model_num];
+  switch(getFreqType()) {
+    case FREQ_USER_DEFINED:
+    case FREQ_EMPIRICAL:
+    case FREQ_ESTIMATE:
+        return true;
+    case FREQ_UNKNOWN:
+    case FREQ_CODON_1x4:
+    case FREQ_CODON_3x4:
+    case FREQ_CODON_3x4C:
+    case FREQ_MIXTURE:
+    case FREQ_DNA_1112:
+    case FREQ_DNA_1121:
+    case FREQ_DNA_1211:
+    case FREQ_DNA_2111:
+    case FREQ_DNA_1123:
+    case FREQ_DNA_1213:
+    case FREQ_DNA_1231:
+    case FREQ_DNA_2113:
+    case FREQ_DNA_2131:
+    case FREQ_DNA_2311:
+        return false;
+    case FREQ_EQUAL:
+        return (bdf==0);
+    case FREQ_DNA_RY:   return("+FRY");
+        return (bdf==2 && symmetry==0);
+    case FREQ_DNA_WS:   return("+FWS");
+        return (bdf==2 && symmetry==1);
+    case FREQ_DNA_MK:   return("+FMK");
+        return (bdf==2 && symmetry==2);
+    case FREQ_DNA_1122: return("+F1122");
+        return (bdf==1 && symmetry==2);
+    case FREQ_DNA_1212: return("+F1212");
+        return (bdf==1 && symmetry==0);
+    case FREQ_DNA_1221: return("+F1221");
+        return (bdf==1 && symmetry==1);
+    default: throw("Unrecoginzed freq_type in validFreqType - can't happen");
+    }
+}
 
 /* static */ bool ModelLieMarkov::validModelName(string model_name) {
     int model_num, symmetry;

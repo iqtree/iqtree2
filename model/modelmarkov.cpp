@@ -154,6 +154,11 @@ void ModelMarkov::setTree(PhyloTree *tree) {
 }
 
 string ModelMarkov::getName() {
+  // MDW note to Minh for code review: I don't really understand what getName()
+  // is used for. I've tried to keep the old behaviour while adding
+  // the new freq_types, but give this change extra attention please.
+    return name+freqTypeString(getFreqType());
+  /*
 	if (getFreqType() == FREQ_EMPIRICAL)
 		return name + "+F";
 	else if (getFreqType() == FREQ_CODON_1x4)
@@ -168,6 +173,7 @@ string ModelMarkov::getName() {
 		return name + "+FQ";
     else
         return name;
+  */
 }
 
 string ModelMarkov::getNameParams() {
@@ -187,66 +193,83 @@ string ModelMarkov::getNameParams() {
 }
     
 void ModelMarkov::getNameParamsFreq(ostream &retname) {
-	if (getFreqType() == FREQ_EMPIRICAL || (getFreqType() == FREQ_USER_DEFINED && phylo_tree->aln->seq_type == SEQ_DNA)) {
-		retname << "+F";
+    retname << freqTypeString(freq_type); // "+F..." but without {frequencies}
+    if (phylo_tree->aln->seq_type == SEQ_DNA && 
+        freq_type != FREQ_UNKNOWN &&
+	freq_type != FREQ_EQUAL &&
+        freq_type != FREQ_MIXTURE) {
+      // Add "{<frequencies>}"
         retname << "{" << state_freq[0];
         for (int i = 1; i < num_states; i++)
             retname << "," << state_freq[i];
         retname << "}";
-	} else if (getFreqType() == FREQ_CODON_1x4)
-		retname << "+F1X4";
-	else if (getFreqType() == FREQ_CODON_3x4)
-		retname << "+F3X4";
-	else if (getFreqType() == FREQ_CODON_3x4C)
-		name += "+F3X4C";
-	else if (getFreqType() == FREQ_ESTIMATE) {
-		retname << "+FO";
+    }
+  /*
+    if (getFreqType() == FREQ_EMPIRICAL || (getFreqType() == FREQ_USER_DEFINED && phylo_tree->aln->seq_type == SEQ_DNA)) {
+        retname << "+F";
+        retname << "{" << state_freq[0];
+        for (int i = 1; i < num_states; i++)
+            retname << "," << state_freq[i];
+        retname << "}";
+    } else if (getFreqType() == FREQ_CODON_1x4)
+        retname << "+F1X4";
+    else if (getFreqType() == FREQ_CODON_3x4)
+        retname << "+F3X4";
+    else if (getFreqType() == FREQ_CODON_3x4C)
+        name += "+F3X4C";
+    else if (getFreqType() == FREQ_ESTIMATE) {
+        retname << "+FO";
         retname << "{" << state_freq[0];
         for (int i = 1; i < num_states; i++)
             retname << "," << state_freq[i];
         retname << "}";
     } else if (getFreqType() == FREQ_EQUAL && phylo_tree->aln->seq_type != SEQ_DNA)
-		retname << "+FQ";
+        retname << "+FQ";
+  */
 }
 
 void ModelMarkov::init_state_freq(StateFreqType type) {
-	//if (type == FREQ_UNKNOWN) return;
-	int i;
-	freq_type = type;
-	assert(freq_type != FREQ_UNKNOWN);
-	switch (freq_type) {
-	case FREQ_EQUAL:
-		if (phylo_tree->aln->seq_type == SEQ_CODON) {
-			int nscodon = phylo_tree->aln->getNumNonstopCodons();
-            double freq_codon = (1.0-(num_states-nscodon)*MIN_FREQUENCY)/(nscodon);
-			for (i = 0; i < num_states; i++)
-				if (phylo_tree->aln->isStopCodon(i))
-					state_freq[i] = MIN_FREQUENCY;
-				else
-					state_freq[i] = freq_codon;
-		} else {
+    //if (type == FREQ_UNKNOWN) return;
+    int i;
+    freq_type = type;
+    assert(freq_type != FREQ_UNKNOWN);
+    switch (freq_type) {
+    case FREQ_EQUAL:
+        if (phylo_tree->aln->seq_type == SEQ_CODON) {
+             int nscodon = phylo_tree->aln->getNumNonstopCodons();
+             double freq_codon = (1.0-(num_states-nscodon)*MIN_FREQUENCY)/(nscodon);
+             for (i = 0; i < num_states; i++)
+                 if (phylo_tree->aln->isStopCodon(i))
+                     state_freq[i] = MIN_FREQUENCY;
+                 else
+                     state_freq[i] = freq_codon;
+        } else {
             double freq_state = 1.0/num_states;
-			for (i = 0; i < num_states; i++)
-				state_freq[i] = freq_state;
-		}
-		break;	
-	case FREQ_ESTIMATE:
-	case FREQ_EMPIRICAL:
-		if (phylo_tree->aln->seq_type == SEQ_CODON) {
-			double ntfreq[12];
-			phylo_tree->aln->computeCodonFreq(freq_type, state_freq, ntfreq);
-//			phylo_tree->aln->computeCodonFreq(state_freq);
-		} else if (phylo_tree->aln->seq_type != SEQ_POMO)
-			phylo_tree->aln->computeStateFreq(state_freq);
-		for (i = 0; i < num_states; i++)
-			if (state_freq[i] > state_freq[highest_freq_state])
-				highest_freq_state = i;
-		break;
-	case FREQ_USER_DEFINED:
-		if (state_freq[0] == 0.0) outError("State frequencies not specified");
-		break;
-	default: break;
-	}
+            for (i = 0; i < num_states; i++)
+                state_freq[i] = freq_state;
+        }
+        break;  
+    case FREQ_ESTIMATE:
+    case FREQ_EMPIRICAL:
+        if (phylo_tree->aln->seq_type == SEQ_CODON) {
+            double ntfreq[12];
+            phylo_tree->aln->computeCodonFreq(freq_type, state_freq, ntfreq);
+//                      phylo_tree->aln->computeCodonFreq(state_freq);
+        } else if (phylo_tree->aln->seq_type != SEQ_POMO)
+            phylo_tree->aln->computeStateFreq(state_freq);
+        for (i = 0; i < num_states; i++)
+            if (state_freq[i] > state_freq[highest_freq_state])
+                highest_freq_state = i;
+        break;
+    case FREQ_USER_DEFINED:
+        if (state_freq[0] == 0.0) outError("State frequencies not specified");
+        break;
+    default: break;
+    }
+    if (phylo_tree->aln->seq_type == SEQ_DNA) {
+        // For complex DNA freq_types, adjust state_freq to conform to that freq_type.
+        forceFreqsConform(state_freq, freq_type);
+    }
 }
 
 void ModelMarkov::init(StateFreqType type) {
@@ -542,7 +565,10 @@ int ModelMarkov::getNDimFreq() {
 	else if (freq_type == FREQ_CODON_3x4 || freq_type == FREQ_CODON_3x4C) 
         return 9;
     
-    return 0;
+	if (phylo_tree->aln->seq_type == SEQ_DNA) {
+            return nFreqParams(freq_type);
+	}
+	return 0;
 }
 
 void ModelMarkov::scaleStateFreq(bool sum_one) {
@@ -668,28 +694,18 @@ bool ModelMarkov::isUnstableParameters() {
 }
 
 void ModelMarkov::setBounds(double *lower_bound, double *upper_bound, bool *bound_check) {
-
     assert(is_reversible && "setBounds should only be called on subclass of ModelMarkov");
 
-	int i, ndim = getNDim();
+    int i, ndim = getNDim();
 
-	for (i = 1; i <= ndim; i++) {
-		//cout << variables[i] << endl;
-		lower_bound[i] = MIN_RATE;
-		upper_bound[i] = MAX_RATE;
-		bound_check[i] = false;
-	}
+    for (i = 1; i <= ndim; i++) {
+	//cout << variables[i] << endl;
+	lower_bound[i] = MIN_RATE;
+	upper_bound[i] = MAX_RATE;
+	bound_check[i] = false;
+    }
 
-	if (freq_type == FREQ_ESTIMATE) {
-		for (i = ndim-num_states+2; i <= ndim; i++) {
-//            lower_bound[i] = MIN_FREQUENCY/state_freq[highest_freq_state];
-//			upper_bound[i] = state_freq[highest_freq_state]/MIN_FREQUENCY;
-            lower_bound[i]  = MIN_FREQUENCY;
-//            upper_bound[i] = 100.0;
-            upper_bound[i] = 1.0;
-            bound_check[i] = false;
-        }
-	}
+    setBoundsForFreqType(&lower_bound[num_params+1],&upper_bound[num_params+1],&bound_check[num_params+1],MIN_FREQUENCY,freq_type);
 }
 
 double ModelMarkov::optimizeParameters(double gradient_epsilon) {

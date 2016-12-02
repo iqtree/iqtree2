@@ -31,6 +31,7 @@
 #include "timeutil.h"
 #include "gzstream.h"
 #include "MPIHelper.h"
+#include "alignment.h"
 
 VerboseMode verbose_mode;
 
@@ -1962,7 +1963,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 			if (strcmp(argv[cnt], "-f") == 0) {
 				cnt++;
 				if (cnt >= argc)
-					throw "Use -f <c | o | u | q>";
+				        throw "Use -f <c | o | u | q | ry | ws | mk | <digits>>";
 				if (strcmp(argv[cnt], "q") == 0 || strcmp(argv[cnt], "EQ") == 0)
 					params.freq_type = FREQ_EQUAL;
 				else if (strcmp(argv[cnt], "c") == 0
@@ -1974,8 +1975,18 @@ void parseArg(int argc, char *argv[], Params &params) {
 				else if (strcmp(argv[cnt], "u") == 0
 						|| strcmp(argv[cnt], "UD") == 0)
 					params.freq_type = FREQ_USER_DEFINED;
+				else if (strcmp(argv[cnt], "ry") == 0
+						|| strcmp(argv[cnt], "RY") == 0)
+					params.freq_type = FREQ_DNA_RY;
+				else if (strcmp(argv[cnt], "ws") == 0
+						|| strcmp(argv[cnt], "WS") == 0)
+					params.freq_type = FREQ_DNA_WS;
+				else if (strcmp(argv[cnt], "mk") == 0
+						|| strcmp(argv[cnt], "MK") == 0)
+					params.freq_type = FREQ_DNA_MK;
 				else
-					throw "Use -f <c | o | u | q>";
+				        // throws error message if can't parse
+				        params.freq_type = parseStateFreqDigits(argv[cnt]);
 				continue;
 			}
 			if (strcmp(argv[cnt], "-fs") == 0) {
@@ -3469,13 +3480,13 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "       Morphology/SNP: MK (default), ORDERED" << endl
             << "       Lie Markov DNA: One of the following, optionally prefixed by RY, WS or MK:" << endl
             << "                       1.1,  2.2b, 3.3a, 3.3b,  3.3c," << endl
-	        << "                       3.4,  4.4a, 4.4b, 4.5a,  4.5b," << endl
-	        << "                       5.6a, 5.6b, 5.7a, 5.7b,  5.7c," << endl
-	        << "                       5.11a,5.11b,5.11c,5.16,  6.6," << endl
-	        << "                       6.7a, 6.7b, 6.8a, 6.8b,  6.17a," << endl
-	        << "                       6.17b,8.8,  8.10a,8.10b, 8.16," << endl
-	        << "                       8.17, 8.18, 9.20a,9.20b,10.12," << endl
-	        << "                       10.34,12.12" << endl
+            << "                       3.4,  4.4a, 4.4b, 4.5a,  4.5b," << endl
+            << "                       5.6a, 5.6b, 5.7a, 5.7b,  5.7c," << endl
+            << "                       5.11a,5.11b,5.11c,5.16,  6.6," << endl
+            << "                       6.7a, 6.7b, 6.8a, 6.8b,  6.17a," << endl
+            << "                       6.17b,8.8,  8.10a,8.10b, 8.16," << endl
+            << "                       8.17, 8.18, 9.20a,9.20b,10.12," << endl
+            << "                       10.34,12.12" << endl
             << "       Non-reversible: STRSYM (strand symmetric model, synonymous with WS6.6)" << endl
             << "       Non-reversible: UNREST (most general unrestricted model, functionally equivalent to 12.12)" << endl
             << "            Otherwise: Name of file containing user-model parameters" << endl
@@ -3485,6 +3496,11 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  +F                   Empirically counted frequencies from alignment" << endl
             << "  +FO (letter-O)       Optimized frequencies by maximum-likelihood" << endl
             << "  +FQ                  Equal frequencies" << endl
+            << "  +FRY, +FWS, +FMK     For DNA models only, +FRY is freq(A+G)=1/2=freq(C+T)," << endl
+            << "                       +FWS is freq(A+T)=1/2=freq(C+G), +FMK is freq(A+C)=1/2=freq(G+T)." << endl
+            << "  +F####               where # are digits - for DNA models only, for basis in ACGT order," << endl        
+            << "                       digits indicate which frequencies are constrained to be the same." << endl
+            << "                       E.g. +F1221 means freq(A)=freq(T), freq(C)=freq(G)." << endl
             << "  +FU                  Amino-acid frequencies by the given protein matrix" << endl
             << "  +F1x4 (codon model)  Equal NT frequencies over three codon positions" << endl 
             << "  +F3x4 (codon model)  Unequal NT frequencies over three codon positions" << endl
@@ -4293,5 +4309,509 @@ int pairInteger(int int1, int int2) {
         return ((int1 + int2)*(int1 + int2 + 1)/2 + int2);
     } else {
         return ((int1 + int2)*(int1 + int2 + 1)/2 + int1);
+    }
+}
+
+/*
+ * Given a string of 4 digits, return a StateFreqType according to
+ * equality constraints expressed by those digits.
+ * E.g. "1233" constrains pi_G=pi_T (ACGT order, 3rd and 4th equal)
+ * which results in FREQ_DNA_2311. "5288" would give the same result.
+ */
+
+StateFreqType parseStateFreqDigits(string digits) {
+    bool good = true;
+    if (digits.length()!=4) {
+        good = false;
+    } else {
+        // Convert digits to canonical form, first occuring digit becomes 1 etc.
+        int digit_order[] = {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1};
+        int first_found = 0;
+        for (int i=0; i<4; i++) {
+            int digit = digits[i]-'0';
+            if (digit<0 || digit>9) {
+	good = false; // found a non-digit
+	break;
+            }
+            if (digit_order[digit]==-1) {
+	// haven't seen this digit before
+	digit_order[digit]=++first_found;
+            }
+            // rewrite digit in canonical form
+            digits[i] = '0'+digit_order[digit];
+        }
+        // e.g. if digits was "5288", digit_order will end up as {-1,-1,2,-1,-1,1,-1,-1,3,-1}
+    }
+    if (!good) throw "Use -f <c | o | u | q | ry | ws | mk | <digit><digit><digit><digit>>";
+    StateFreqType freq_type = FREQ_UNKNOWN;
+    // Now just exhaustively list all canonical digit possibilities
+    if (digits.compare("1111")==0) {
+        freq_type = FREQ_EQUAL;
+    } else if (digits.compare("1112")==0) {
+        freq_type = FREQ_DNA_1112;
+    } else if (digits.compare("1121")==0) {
+        freq_type = FREQ_DNA_1121;
+    } else if (digits.compare("1211")==0) {
+        freq_type = FREQ_DNA_1211;
+    } else if (digits.compare("1222")==0) {
+        freq_type = FREQ_DNA_2111;
+    } else if (digits.compare("1122")==0) {
+        freq_type = FREQ_DNA_1122;
+    } else if (digits.compare("1212")==0) {
+        freq_type = FREQ_DNA_1212;
+    } else if (digits.compare("1221")==0) {
+        freq_type = FREQ_DNA_1221;
+    } else if (digits.compare("1123")==0) {
+        freq_type = FREQ_DNA_1123;
+    } else if (digits.compare("1213")==0) {
+        freq_type = FREQ_DNA_1213;
+    } else if (digits.compare("1231")==0) {
+        freq_type = FREQ_DNA_1231;
+    } else if (digits.compare("1223")==0) {
+        freq_type = FREQ_DNA_2113;
+    } else if (digits.compare("1232")==0) {
+        freq_type = FREQ_DNA_2131;
+    } else if (digits.compare("1233")==0) {
+        freq_type = FREQ_DNA_2311;
+    } else if (digits.compare("1234")==0) {
+        freq_type = FREQ_ESTIMATE;
+    } else
+        throw ("Unrecognized canonical digits - Can't happen"); // paranoia is good.
+    return freq_type;
+}
+
+/*
+ * For freq_type, return a "+F" string specifying that freq_type.
+ * Note not all freq_types accomodated.
+ * Inverse of this occurs in ModelFactory::ModelFactory, 
+ * where +F... suffixes on model names get parsed.
+ */
+string freqTypeString(StateFreqType freq_type) {
+    switch(freq_type) {
+    case FREQ_UNKNOWN:    return("");
+    case FREQ_USER_DEFINED: return("+FU");
+    case FREQ_EQUAL:      return("+FQ");
+    case FREQ_EMPIRICAL:  return("+F");
+    case FREQ_ESTIMATE:   return("+FO");
+    case FREQ_CODON_1x4:  return("+F1X4");
+    case FREQ_CODON_3x4:  return("+F3X4");
+    case FREQ_CODON_3x4C: return("+F3X4C");
+    case FREQ_MIXTURE:  return(""); // no idea what to do here - MDW
+    case FREQ_DNA_RY:   return("+FRY");
+    case FREQ_DNA_WS:   return("+FWS");
+    case FREQ_DNA_MK:   return("+FMK");
+    case FREQ_DNA_1112: return("+F1112");
+    case FREQ_DNA_1121: return("+F1121");
+    case FREQ_DNA_1211: return("+F1211");
+    case FREQ_DNA_2111: return("+F2111");
+    case FREQ_DNA_1122: return("+F1122");
+    case FREQ_DNA_1212: return("+F1212");
+    case FREQ_DNA_1221: return("+F1221");
+    case FREQ_DNA_1123: return("+F1123");
+    case FREQ_DNA_1213: return("+F1213");
+    case FREQ_DNA_1231: return("+F1231");
+    case FREQ_DNA_2113: return("+F2113");
+    case FREQ_DNA_2131: return("+F2131");
+    case FREQ_DNA_2311: return("+F2311");
+    default: throw("Unrecoginzed freq_type in freqTypeString - can't happen");
+    }
+}
+
+/*
+ * All params in range [0,1] 
+ * returns true if base frequencies have changed as a result of this call
+ */
+
+bool freqsFromParams(double *freq_vec, double *params, StateFreqType freq_type) {
+    double pA, pC, pG, pT; // base freqs
+    switch (freq_type) {
+    case FREQ_EQUAL:
+        pA=pC=pG=pT=0.25;
+	break;
+    case FREQ_USER_DEFINED:
+    case FREQ_EMPIRICAL:
+        pA=freq_vec[0]; // i.e. freq_vec will not be changed
+        pC=freq_vec[1];
+        pG=freq_vec[2];
+        pT=freq_vec[3];
+        break;
+    case FREQ_ESTIMATE: // Minh: in code review, please pay extra attention to ensure my treadment of FREQ_ESTIMATE is equivalent to old treatment.
+        pA=params[0];
+        pC=params[1];
+        pG=params[2];
+        pT=1-pA-pC-pG;
+        break;
+    case FREQ_DNA_RY:
+        pA = params[0]/2;
+        pG = 0.5-pA;
+        pC = params[1]/2;
+        pT = 0.5-pC;
+        break;
+    case FREQ_DNA_WS:
+        pA = params[0]/2;
+        pT = 0.5-pA;
+        pC = params[1]/2;
+        pG = 0.5-pC;
+        break;
+    case FREQ_DNA_MK:
+        pA = params[0]/2;
+        pC = 0.5-pA;
+        pG = params[1]/2;
+        pT = 0.5-pG;
+        break;
+    case FREQ_DNA_1112:
+        pA = pC = pG = params[0]/3;
+        pT = 1-3*pA;
+        break;
+    case FREQ_DNA_1121:
+        pA = pC = pT = params[0]/3;
+        pG = 1-3*pA;
+        break;
+    case FREQ_DNA_1211:
+        pA = pG = pT = params[0]/3;
+        pC = 1-3*pA;
+        break;
+    case FREQ_DNA_2111:
+        pC = pG = pT = params[0]/3;
+        pA = 1-3*pC;
+        break;
+    case FREQ_DNA_1122:
+        pA = params[0]/2;
+        pC = pA;
+        pG = 0.5-pA;
+        pT = pG;
+        break;
+    case FREQ_DNA_1212:
+        pA = params[0]/2;
+        pG = pA;
+        pC = 0.5-pA;
+        pT = pC;
+        break;
+    case FREQ_DNA_1221:
+        pA = params[0]/2;
+        pT = pA;
+        pC = 0.5-pA;
+        pG = pC;
+        break;
+    case FREQ_DNA_1123:
+        pA = params[0]/2;
+        pC = pA;
+        pG = params[1]*(1-2*pA);
+        pT = 1-pG-2*pA;
+        break;
+    case FREQ_DNA_1213:
+        pA = params[0]/2;
+        pG = pA;
+        pC = params[1]*(1-2*pA);
+        pT = 1-pC-2*pA;
+        break;
+    case FREQ_DNA_1231:
+        pA = params[0]/2;
+        pT = pA;
+        pC = params[1]*(1-2*pA);
+        pG = 1-pC-2*pA;
+        break;
+    case FREQ_DNA_2113:
+        pC = params[0]/2;
+        pG = pC;
+        pA = params[1]*(1-2*pC);
+        pT = 1-pA-2*pC;
+        break;
+    case FREQ_DNA_2131:
+        pC = params[0]/2;
+        pT = pC;
+        pA = params[1]*(1-2*pC);
+        pG = 1-pA-2*pC;
+        break;
+    case FREQ_DNA_2311:
+        pG = params[0]/2;
+        pT = pG;
+        pA = params[1]*(1-2*pG);
+        pC = 1-pA-2*pG;
+        break;
+    default:
+        throw("Unrecognized freq_type in freqsFromParams - can't happen");
+    }
+    bool changed = freq_vec[0]!=pA || freq_vec[1]!=pC || freq_vec[2]!=pG || freq_vec[3]!=pT;
+    if (changed) {
+        freq_vec[0]=pA;
+        freq_vec[1]=pC;
+        freq_vec[2]=pG;
+        freq_vec[3]=pT;
+    }
+    return(changed);
+}
+
+/*
+ * For given freq_type, derives frequency parameters from freq_vec
+ * All parameters are in range [0,1] (assuming freq_vec is valid)
+ */
+
+void paramsFromFreqs(double *params, double *freq_vec, StateFreqType freq_type) {
+    double pA = freq_vec[0]; // These just improve code readability
+    double pC = freq_vec[1];
+    double pG = freq_vec[2];
+    double pT = freq_vec[3];
+    switch (freq_type) {
+    case FREQ_EQUAL:
+    case FREQ_USER_DEFINED:
+    case FREQ_EMPIRICAL:
+        break; // freq_vec never changes
+    case FREQ_ESTIMATE:
+        params[0]=pA;
+        params[1]=pC;
+        params[2]=pG;
+        break;
+    case FREQ_DNA_RY:
+        params[0]=2*pA;
+        params[1]=2*pC;
+        break;
+    case FREQ_DNA_WS:
+        params[0]=2*pA;
+        params[1]=2*pC;
+        break;
+    case FREQ_DNA_MK:
+        params[0]=2*pA;
+        params[1]=2*pG;
+        break;
+    case FREQ_DNA_1112:
+        params[0]=3*pA;
+        break;
+    case FREQ_DNA_1121:
+        params[0]=3*pA;
+        break;
+    case FREQ_DNA_1211:
+        params[0]=3*pA;
+        break;
+    case FREQ_DNA_2111:
+        params[0]=3*pC;
+        break;
+    case FREQ_DNA_1122:
+        params[0]=2*pA;
+        break;
+    case FREQ_DNA_1212:
+        params[0]=2*pA;
+        break;
+    case FREQ_DNA_1221:
+        params[0]=2*pA;
+        break;
+    case FREQ_DNA_1123:
+        params[0]=2*pA;
+        params[1]=pG/(1-params[0]);
+        break;
+    case FREQ_DNA_1213:
+        params[0]=2*pA;
+        params[1]=pC/(1-params[0]);
+        break;
+    case FREQ_DNA_1231:
+        params[0]=2*pA;
+        params[1]=pC/(1-params[0]);
+        break;
+    case FREQ_DNA_2113:
+        params[0]=2*pC;
+        params[1]=pA/(1-params[0]);
+        break;
+    case FREQ_DNA_2131:
+        params[0]=2*pC;
+        params[1]=pA/(1-params[0]);
+        break;
+    case FREQ_DNA_2311:
+        params[0]=2*pG;
+        params[1]=pA/(1-params[0]);
+        break;
+    default:
+        throw("Unrecognized freq_type in paramsFromFreqs - can't happen");
+    }
+}
+
+/* 
+ * Given a DNA freq_type and a base frequency vector, alter the
+ * base freq vector to conform with the constraints of freq_type
+ */
+void forceFreqsConform(double *base_freq, StateFreqType freq_type) {
+    double pA = base_freq[0]; // These just improve code readability
+    double pC = base_freq[1];
+    double pG = base_freq[2];
+    double pT = base_freq[3];
+    double diff;
+    switch (freq_type) {
+    case FREQ_EQUAL:
+        base_freq[0] = base_freq[1] = base_freq[2] = base_freq[3] = 0.25;
+        break;
+    case FREQ_USER_DEFINED:
+    case FREQ_EMPIRICAL:
+    case FREQ_ESTIMATE:
+        break; // any base_freq is legal
+    case FREQ_DNA_RY:
+        diff = (pA+pG-pC-pT)/2;
+        base_freq[0] = pA-diff;
+        base_freq[1] = pC+diff;
+        base_freq[2] = pG-diff;
+        base_freq[3] = pT+diff;
+        break;
+    case FREQ_DNA_WS:
+        diff = (pA+pT-pC-pG)/2;
+        base_freq[0] = pA-diff;
+        base_freq[1] = pC+diff;
+        base_freq[2] = pG+diff;
+        base_freq[3] = pT-diff;
+        break;
+    case FREQ_DNA_MK:
+        diff = (pA+pC-pG-pT)/2;
+        base_freq[0] = pA-diff;
+        base_freq[1] = pC-diff;
+        base_freq[2] = pG+diff;
+        base_freq[3] = pT+diff;
+        break;
+    case FREQ_DNA_1112:
+        base_freq[0]=base_freq[1]=base_freq[2]=(pA+pC+pG)/3;
+        break;
+    case FREQ_DNA_1121:
+        base_freq[0]=base_freq[1]=base_freq[3]=(pA+pC+pT)/3;
+        break;
+    case FREQ_DNA_1211:
+        base_freq[0]=base_freq[2]=base_freq[3]=(pA+pG+pT)/3;
+        break;
+    case FREQ_DNA_2111:
+        base_freq[1]=base_freq[2]=base_freq[3]=(pC+pG+pT)/3;
+        break;
+    case FREQ_DNA_1122:
+        base_freq[0]=base_freq[1]=(pA+pC)/2;
+        base_freq[2]=base_freq[3]=(pG+pT)/2;
+        break;
+    case FREQ_DNA_1212:
+        base_freq[0]=base_freq[2]=(pA+pG)/2;
+        base_freq[1]=base_freq[3]=(pC+pT)/2;
+        break;
+    case FREQ_DNA_1221:
+        base_freq[0]=base_freq[3]=(pA+pT)/2;
+        base_freq[1]=base_freq[2]=(pC+pG)/2;
+        break;
+    case FREQ_DNA_1123:
+        base_freq[0]=base_freq[1]=(pA+pC)/2;
+        break;
+    case FREQ_DNA_1213:
+        base_freq[0]=base_freq[2]=(pA+pG)/2;
+        break;
+    case FREQ_DNA_1231:
+        base_freq[0]=base_freq[3]=(pA+pT)/2;
+        break;
+    case FREQ_DNA_2113:
+        base_freq[1]=base_freq[2]=(pC+pG)/2;
+        break;
+    case FREQ_DNA_2131:
+        base_freq[1]=base_freq[3]=(pC+pT)/2;
+        break;
+    case FREQ_DNA_2311:
+        base_freq[2]=base_freq[3]=(pG+pT)/2;
+        break;
+    default:
+        throw("Unrecognized freq_type in forceFreqsConform - can't happen");
+    }
+}
+
+/*
+ * For given freq_type, how many parameters are needed to
+ * determine frequenc vector?
+ * Currently, this is for DNA StateFreqTypes only.
+ */
+
+int nFreqParams(StateFreqType freq_type) {
+    switch (freq_type) {
+    case FREQ_EQUAL:
+    case FREQ_USER_DEFINED:
+    case FREQ_EMPIRICAL:
+        return(0);
+    case FREQ_DNA_1112:
+    case FREQ_DNA_1121:
+    case FREQ_DNA_1211:
+    case FREQ_DNA_2111:
+    case FREQ_DNA_1122:
+    case FREQ_DNA_1212:
+    case FREQ_DNA_1221:
+        return(1);
+    case FREQ_DNA_RY:
+    case FREQ_DNA_WS:
+    case FREQ_DNA_MK:
+    case FREQ_DNA_1123:
+    case FREQ_DNA_1213:
+    case FREQ_DNA_1231:
+    case FREQ_DNA_2113:
+    case FREQ_DNA_2131:
+    case FREQ_DNA_2311:
+        return(2);   
+    case FREQ_ESTIMATE:
+        return(3);  
+    default:
+        throw("Unrecognized freq_type in freqsFromParams - can't happen");
+    }
+}
+
+/*
+ * For freq_type, and given every base must have frequency >= min_freq, set upper
+ * and lower bounds for parameters.
+ */
+ void setBoundsForFreqType(double *lower_bound, 
+                           double *upper_bound, 
+                           bool *bound_check, 
+                           double min_freq, 
+                           StateFreqType freq_type) {
+    // Sanity check: if min_freq==0, lower_bound=0 and upper_bound=1 
+    // (except FREQ_ESTIMATE, which follows legacy code way of doing things.)
+    switch (freq_type) {
+    case FREQ_EQUAL:
+    case FREQ_USER_DEFINED:
+    case FREQ_EMPIRICAL:
+        break; // There are no frequency determining parameters
+    case FREQ_DNA_1112:
+    case FREQ_DNA_1121:
+    case FREQ_DNA_1211:
+    case FREQ_DNA_2111:
+        // one frequency determining parameter
+        lower_bound[0] = 3*min_freq;
+        upper_bound[0] = 1-min_freq;
+        bound_check[0] = true;
+        break;
+    case FREQ_DNA_1122:
+    case FREQ_DNA_1212:
+    case FREQ_DNA_1221:
+        // one frequency determining parameter
+        lower_bound[0] = 2*min_freq;
+        upper_bound[0] = 1-2*min_freq;
+        bound_check[0] = true;
+        break;
+    case FREQ_DNA_RY:
+    case FREQ_DNA_WS:
+    case FREQ_DNA_MK:
+        // two frequency determining parameters
+        lower_bound[0] = lower_bound[1] = 2*min_freq;
+        upper_bound[0] = upper_bound[1] = 1-2*min_freq;
+        bound_check[0] = bound_check[1] = true;
+	break;
+    case FREQ_DNA_1123:
+    case FREQ_DNA_1213:
+    case FREQ_DNA_1231:
+    case FREQ_DNA_2113:
+    case FREQ_DNA_2131:
+    case FREQ_DNA_2311:
+        // two frequency determining parameters
+        lower_bound[0] = 2*min_freq;
+        upper_bound[0] = 1-2*min_freq;
+	lower_bound[1] = min_freq/(1-2*min_freq);
+        upper_bound[1] = (1-3*min_freq)/(1-2*min_freq);
+        bound_check[0] = bound_check[1] = true;
+	break;
+        /* NOTE:
+	 * upper_bound[1] and lower_bound[1] are not perfect. Some in-bounds parameters
+         * will give base freqs for '2' or '3' base below minimum. This is
+         * the best that can be done without passing min_freq to freqsFromParams
+         */
+    case FREQ_ESTIMATE:
+        lower_bound[0] = lower_bound[1] = lower_bound[2] = min_freq;
+        upper_bound[0] = upper_bound[1] = upper_bound[2] = 1;
+        bound_check[0] = bound_check[1] = bound_check[2] = false;
+        break;
+    default:
+        throw("Unrecognized freq_type in setBoundsForFreqType - can't happen");
     }
 }

@@ -382,7 +382,16 @@ enum TestType {
 enum StateFreqType {
     FREQ_UNKNOWN, FREQ_USER_DEFINED, FREQ_EQUAL, FREQ_EMPIRICAL, FREQ_ESTIMATE,
     FREQ_CODON_1x4, FREQ_CODON_3x4, FREQ_CODON_3x4C, // special frequency for codon model
-    FREQ_MIXTURE // mixture-frequency model
+    FREQ_MIXTURE, // mixture-frequency model
+    // FREQ_DNA_RY has pi_A+pi_G = 0.5 = pi_C+pi_T. Similarly WS pairs (AT)(CG),
+    // MK pairs (AC)(GT) in same way.
+    FREQ_DNA_RY, FREQ_DNA_WS, FREQ_DNA_MK,
+    // in following, digits indicate which frequencies must equal each other
+    // (in ACGT order), e.g. 2131 means pi_C=pi_T (pi_A, pi_G unconstrained)
+    FREQ_DNA_1112, FREQ_DNA_1121, FREQ_DNA_1211, FREQ_DNA_2111,
+    FREQ_DNA_1122, FREQ_DNA_1212, FREQ_DNA_1221, 
+    FREQ_DNA_1123, FREQ_DNA_1213, FREQ_DNA_1231, 
+    FREQ_DNA_2113, FREQ_DNA_2131, FREQ_DNA_2311, 
 };
 
 /**
@@ -2539,6 +2548,57 @@ bool memcmpcpy(void * destination, const void * source, size_t num);
  *  @return the encoding of the 2 integer
  */
 int pairInteger(int int1, int int2);
+
+/*
+ * Given a string of 4 digits, return a StateFreqType according to
+ * equality constraints expressed by those digits.
+ * E.g. "1233" constrains pi_G=pi_T (ACGT order, 3rd and 4th equal)
+ * which results in FREQ_DNA_2311. "5288" would give the same result.
+ */
+StateFreqType parseStateFreqDigits(string digits);
+
+/*
+ * For freq_type, return a "+F" string specifying that freq_type.
+ * Note not all freq_types accomodated.
+ * Inverse of this occurs in ModelFactory::ModelFactory, 
+ * where +F... suffixes on model names get parsed.
+ */
+string freqTypeString(StateFreqType freq_type);
+
+/*
+ * All params in range [0,1] 
+ * returns true if base frequencies have changed as a result of this call
+ */
+bool freqsFromParams(double *freq_vec, double *params, StateFreqType freq_type);
+
+/*
+ * For given freq_type, derives frequency parameters from freq_vec
+ * All parameters are in range [0,1] (assuming freq_vec is valid)
+ */
+void paramsFromFreqs(double *params, double *freq_vec, StateFreqType freq_type);
+
+/* 
+ * Given a DNA freq_type and a base frequency vector, alter the
+ * base freq vector to conform with the constraints of freq_type
+ */
+void forceFreqsConform(double *base_freq, StateFreqType freq_type);
+
+/*
+ * For given freq_type, how many parameters are needed to
+ * determine frequenc vector?
+ * Currently, this is for DNA StateFreqTypes only.
+ */
+ int nFreqParams(StateFreqType freq_type);
+
+/*
+ * For freq_type, and given every base must have frequency >= min_freq, set upper
+ * and lower bounds for parameters.
+ */
+ void setBoundsForFreqType(double *lower_bound, 
+                           double *upper_bound, 
+                           bool *bound_check, 
+                           double min_freq, 
+                           StateFreqType freq_type);
 
 template <typename T>
 string NumberToString ( T Number )

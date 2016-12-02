@@ -62,6 +62,6 @@ protected:
 	const static int NUM_RATES;
 	const static int NUM_LM_MODELS;
 	*/
+        bool validFreqType();
 };
-
 #endif /* MODELLIEMARKOV_H_ */
