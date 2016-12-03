@@ -1339,7 +1339,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInf
 					cout.width(11);
 					cout << score << " " << set_name;
                     if (num_model >= 10) {
-                        double remain_time = max(total_num_model-num_model, 0LL)*(getRealTime()-start_time)/num_model;
+                        double remain_time = max(total_num_model-num_model, (int64_t)0)*(getRealTime()-start_time)/num_model;
                         cout << "\t" << convert_time(getRealTime()-start_time) << " (" 
                             << convert_time(remain_time) << " left)";
                     }
