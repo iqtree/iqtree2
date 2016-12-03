@@ -1826,8 +1826,8 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
         }
 #endif
         int max_procs = countPhysicalCPUCores();
-        if (mem_required * max_procs > total_mem * params.num_threads && params.num_threads > 0) {
-            outWarning("Memory required per CPU-core (" + convertDoubleToString((double)mem_required/params.num_threads/1024/1024/1024)+
+        if (mem_required * max_procs > total_mem * iqtree.num_threads && iqtree.num_threads > 0) {
+            outWarning("Memory required per CPU-core (" + convertDoubleToString((double)mem_required/iqtree.num_threads/1024/1024/1024)+
             " GB) is higher than your computer RAM per CPU-core ("+convertIntToString(total_mem/max_procs/1024/1024/1024)+
             " GB), thus multiple runs may exceed RAM!");
         }
@@ -1837,7 +1837,6 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 #ifdef _OPENMP
     if (iqtree.num_threads <= 0) {
         int bestThreads = iqtree.testNumThreads();
-        iqtree.setLikelihoodKernel(iqtree.sse, bestThreads);
         omp_set_num_threads(bestThreads);
         params.num_threads = bestThreads;
     }
@@ -2592,6 +2591,13 @@ void computeSiteFrequencyModel(Params &params, Alignment *alignment) {
 #ifdef BINARY32
     if (mem_size >= 2000000000) {
         outError("Memory required exceeds 2GB limit of 32-bit executable");
+    }
+#endif
+
+#ifdef _OPENMP
+    if (tree->num_threads <= 0) {
+        int bestThreads = tree->testNumThreads();
+        omp_set_num_threads(bestThreads);
     }
 #endif
 

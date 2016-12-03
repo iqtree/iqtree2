@@ -1085,7 +1085,7 @@ void printModelFile(ostream &fmodel, Params &params, PhyloTree *tree, ModelInfo 
  * @param model_info (IN/OUT) all model information
  * @return total number of parameters
  */
-void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInfo> &model_info, ostream &fmodel, ModelsBlock *models_block ) {
+void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInfo> &model_info, ostream &fmodel, ModelsBlock *models_block, int num_threads) {
 //    params.print_partition_info = true;
 //    params.print_conaln = true;
 	int i = 0;
@@ -1096,15 +1096,25 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInf
 	double lhsum = 0.0;
 	int dfsum = 0;
 	int ssize = in_tree->getAlnNSite();
-	int num_model = 0;
-    int total_num_model = in_tree->size();
+	int64_t num_model = 0;
+    int64_t total_num_model = in_tree->size();
 	if (params.model_name.find("LINK") != string::npos || params.model_name.find("MERGE") != string::npos) {
         double p = params.partfinder_rcluster/100.0;
         total_num_model += round(in_tree->size()*(in_tree->size()-1)*p/2);
         for (i = in_tree->size()-2; i > 0; i--)
             total_num_model += max(round(i*p), 1.0);
     }
-    
+
+
+#ifdef _OPENMP
+    if (num_threads <= 0) {
+        // partition selection scales well with many cores
+        num_threads = min((int64_t)countPhysicalCPUCores(), total_num_model);
+        omp_set_num_threads(num_threads);
+        cout << "NUMBER OF THREADS FOR PARTITION FINDING: " << num_threads << endl;
+    }
+#endif
+
     double start_time = getRealTime();
     
 	cout << "Selecting individual models for " << in_tree->size() << " charsets using " << criterionName(params.model_test_criterion) << "..." << endl;
@@ -1126,7 +1136,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInf
         dist[i] = -((double)this_aln->getNSeq())*this_aln->getNPattern()*this_aln->num_states;
     }
     
-    if (params.num_threads > 1) 
+    if (num_threads > 1)
     {
         quicksort(dist, 0, in_tree->size()-1, distID);
         if (verbose_mode >= VB_MED) {
@@ -1247,7 +1257,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInf
             this_aln = in_tree->at(distID[i] & ((1<<16)-1))->aln;
             dist[i] -= ((double)this_aln->getNSeq())*this_aln->getNPattern()*this_aln->num_states;
         }
-        if (params.num_threads > 1 && num_pairs >= 1)
+        if (num_threads > 1 && num_pairs >= 1)
             quicksort(dist, 0, num_pairs-1, distID);
 
 #ifdef _OPENMP
@@ -1329,7 +1339,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInf
 					cout.width(11);
 					cout << score << " " << set_name;
                     if (num_model >= 10) {
-                        double remain_time = max(total_num_model-num_model, 0)*(getRealTime()-start_time)/num_model;
+                        double remain_time = max(total_num_model-num_model, 0LL)*(getRealTime()-start_time)/num_model;
                         cout << "\t" << convert_time(getRealTime()-start_time) << " (" 
                             << convert_time(remain_time) << " left)";
                     }
@@ -1453,14 +1463,13 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 #endif
     }
 
-
 	string best_model = "";
 	/* first check the model file */
 
 	if (in_tree->isSuperTree()) {
 		// select model for each partition
 		PhyloSuperTree *stree = (PhyloSuperTree*)in_tree;
-		testPartitionModel(params, stree, model_info, fmodel, models_block);
+		testPartitionModel(params, stree, model_info, fmodel, models_block, num_threads);
 //        stree->linkTrees();
         stree->mapTrees();
 		string res_models = "";
@@ -1674,6 +1683,13 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
         }
         
         tree->clearAllPartialLH();
+
+#ifdef _OPENMP
+    if (num_threads <= 0) {
+        num_threads = tree->testNumThreads();
+        omp_set_num_threads(num_threads);
+    }
+#endif
 
 
 		// optimize model parameters
