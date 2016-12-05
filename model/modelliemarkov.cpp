@@ -329,6 +329,7 @@ void ModelLieMarkov::init(const char *model_name, string model_params, StateFreq
         cerr << "Bad model name in ModelLieMarkov constructor" << endl;
         abort();
     }
+
     // Special case for strand symmetric model.
     if (model_num == STR_SYM_INDEX) {
       name = "StrSym"; // Can't use MODEL_NAMES[STR_SYM_INDEX] as this is all lowercase, as it must be for parseModelName to work.
@@ -344,34 +345,12 @@ void ModelLieMarkov::init(const char *model_name, string model_params, StateFreq
     }
     setBasis(); // sets basis and num_params
 
-    /*
-     * Check validity of freq_type. (After setBasis because that sets bdf,
-     * if needed could move before setBasis with minor changes)
-     */
-    if (!validFreqType()) {
-      throw("Can't use base frequency type "
-	    +freqTypeString(freq_type)
-	    +" with Lie-Markov model "
-            +name);
-    }
-
     if (model_parameters)
         delete[] model_parameters;
     model_parameters = new double [num_params];
     memset(model_parameters, 0, sizeof(double)*num_params);
     this->setRates();
-	/*
-	 * I'm not sure how to correctly handle count_rates, so for now I'm just
-	 * avoiding the problem. Actual IQTree programmers can fix this.
-	 * Whatever happens should leave model_parameters[] and rates[]
-	 * consistent with each other.
-	 */
-     // Minh's answer: count_rates is not used anymore. This behaviour is correct!
-//    if (count_rates)
-//        cerr << "WARNING: count_rates=TRUE not implemented in ModelLieMarkov constructor -- ignored" << endl;
-	/* phylo_tree->aln->computeEmpiricalRateNonRev(rates); */
     if (model_params != "") {
-//        cerr << "WARNING: Supplying model params to constructor not yet properly implemented -- ignored" << endl;
         DoubleVector vec;
         convert_double_vec(model_params.c_str(), vec);
         if (vec.size() != num_params) 
@@ -405,6 +384,8 @@ ModelLieMarkov::~ModelLieMarkov() {
  * BDF<3, compatibility depends on the given base freqs. There
  * is code elsewhere which prints a warning if incompatible base freqs
  * (and actual model base freqs will be 'close to' the requested freqs.)
+ *
+ * (update - this code is now unused, but left in for possible future use.)
  */
 bool  ModelLieMarkov::validFreqType() {
   int bdf=BDF[model_num];
@@ -587,27 +568,32 @@ static void tauToPi(double* tau, double* pi, int sym) {
  */
 
 void ModelLieMarkov::setBasis() {
-  if (getFreqType() == FREQ_UNKNOWN)
-    switch (BDF[model_num]) {
-    case 0:
-        freq_type = FREQ_EQUAL;
-        break;
-    default:
-        freq_type = FREQ_ESTIMATE;
-        break;
-    }
+  // if not otherwise specified, use FREQ_ESTIMATE.
+  if (getFreqType() == FREQ_UNKNOWN) freq_type = FREQ_ESTIMATE;
+
+  /* 
+   * Note I've chosen to be picky here, and reject almost all <model>+F
+   * frequency constraints. With some effort, I could be less picky:
+   * validFreqType() can detect when the +F... is redundant rather than
+   * contradictory. In some cases, a submodel could be used, e.g.
+   * RY5.6b+FQ is RY2.2b.  
+   */
+
+  if (getFreqType() != FREQ_EMPIRICAL && 
+      getFreqType() != FREQ_USER_DEFINED && 
+      getFreqType() != FREQ_ESTIMATE) {
+      // Note to Minh: this is formatted horribly - one hugely long line - if you know how to tidily output 
+      // multiline throw, please fix.
+      throw("Lie-Markov models can only have base frequencies specified as\nempirical (-f c, <model>+FC or default), user defined (<model>+F{<freqs>})\nor estimated/optimized (-f o, <model>+FO).\nEach Lie-Markov model has its own base frequency constraints (corresponding\nto one of +FQ, +F1122,+F1212, +F1221, +FRY, +FWS, +FMK or unconstrained).\nImposing extra constraints is either redundant, makes the model no longer\nLie-Markov, or makes it a lower dimensioned Lie-Markov model.\n");
+      //throw("Invalid base frequency constraints for a Lie-Markov model");
+  }
 
   if (getFreqType() == FREQ_EMPIRICAL || 
-      getFreqType() == FREQ_USER_DEFINED || 
-      getFreqType() == FREQ_EQUAL) {
+      getFreqType() == FREQ_USER_DEFINED) {
     int bdf = BDF[model_num];
     // There are no free parameters for base frequencies:
     num_params = MODEL_PARAMS[model_num]-bdf;
     // This populates field state_freq. (TODO: this call might be redundant - check)
-    if (bdf>0 && getFreqType() == FREQ_EQUAL) {
-      outWarning("You have demanded equal base frequencies (-f q) for a Lie-Markov\nmodel which can produce unequal base frequencies. It is better to just\nselect a Lie-Markov model which can only produce equal base frequencies.\nThese models are 1.1, 2.2b, 3.3a, 3.3b, 3.3c, 5.6a, 5.7b, 5.7c, 5.11b, 5.11c, 9.20b.");
-      bdf = 0; // need bdf=0 basis matrices.
-    }
 
     init_state_freq(getFreqType());
     // state_freq is in order {pi_A, pi_C, pi_G, pi_T}
