@@ -1010,7 +1010,7 @@ void PhyloTree::computeTraversalInfo(PhyloNode *node, PhyloNode *dad, bool compu
             mem_slots.unlock(node_branch);
     }
 
-    if (verbose_mode >= VB_MAX && traversal_info.size() > 0) {
+    if (verbose_mode >= VB_DEBUG && traversal_info.size() > 0) {
         Node *saved = root;
         root = dad;
         drawTree(cout);
@@ -1024,7 +1024,7 @@ void PhyloTree::computeTraversalInfo(PhyloNode *node, PhyloNode *dad, bool compu
 
         int num_info = traversal_info.size();
 
-        if (verbose_mode >= VB_MAX) {
+        if (verbose_mode >= VB_DEBUG) {
             cout << "traversal order:";
             for (auto it = traversal_info.begin(); it != traversal_info.end(); it++) {
                 cout << "  ";
@@ -2163,6 +2163,19 @@ void PhyloTree::computeLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, Phyl
                     df_ptn.cutoff(nptn-ptn);
                     ddf_ptn.cutoff(nptn-ptn);
                 }
+                if (horizontal_or(VectorClass().load_a(&buffer_scale_all[ptn]) != 0.0)) {
+                    // some entries are rescaled
+                    double *lh_ptn_dbl = (double*)&lh_ptn;
+                    double *df_ptn_dbl = (double*)&df_ptn;
+                    double *ddf_ptn_dbl = (double*)&ddf_ptn;
+                    for (i = 0; i < VectorClass::size(); i++)
+                        if (buffer_scale_all[ptn+i] != 0.0) {
+                            lh_ptn_dbl[i] *= SCALING_THRESHOLD;
+                            df_ptn_dbl[i] *= SCALING_THRESHOLD;
+                            ddf_ptn_dbl[i] *= SCALING_THRESHOLD;
+                        }
+                }
+
                 vc_prob_const += lh_ptn;
                 vc_df_const += df_ptn;
                 vc_ddf_const += ddf_ptn;
@@ -2191,8 +2204,6 @@ void PhyloTree::computeLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, Phyl
     if (!SAFE_NUMERIC && (std::isnan(df) || std::isinf(df)))
         outError("Numerical underflow (lh-derivative). Run again with the safe likelihood kernel via `-safe` option");
 
-    assert(!std::isnan(df) && !std::isinf(df) && "Numerical underflow for lh-derivative");
-
 	if (isASC) {
         double prob_const = 0.0, df_const = 0.0, ddf_const = 0.0;
         prob_const = horizontal_add(all_prob_const);
@@ -2207,6 +2218,10 @@ void PhyloTree::computeLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, Phyl
     	ddf += nsites *(ddf_frac + df_frac*df_frac);
     }
 
+    if (std::isnan(df) || std::isinf(df)) {
+        cerr << "WARNING: Numerical underflow for lh-derivative" << endl;
+        df = ddf = 0.0;
+    }
 }
 
 
@@ -2814,6 +2829,13 @@ double PhyloTree::computeLikelihoodFromBufferGenericSIMD()
             if (ptn+VectorClass::size() > nptn) {
                 // cutoff the last entries if going beyond
                 lh_ptn.cutoff(nptn-ptn);
+            }
+            if (horizontal_or(VectorClass().load_a(&buffer_scale_all[ptn]) != 0.0)) {
+                // some entries are rescaled
+                double *lh_ptn_dbl = (double*)&lh_ptn;
+                for (i = 0; i < VectorClass::size(); i++)
+                    if (buffer_scale_all[ptn+i] != 0.0)
+                        lh_ptn_dbl[i] *= SCALING_THRESHOLD;
             }
             vc_prob_const += lh_ptn;
         }

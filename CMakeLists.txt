@@ -139,10 +139,10 @@ elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 	message("Compiler      : Clang")
 	set(CLANG "TRUE")
 #	set(COMBINED_FLAGS "-Wall -Wno-unused-function -Wno-sign-compare -pedantic -D_GNU_SOURCE -Wno-nested-anon-types")
-    #if (APPLE AND NOT CMAKE_BUILD_TYPE MATCHES "Debug")
-    #    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
-    #    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -stdlib=libc++")
-    #endif()
+    if (APPLE)
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
+        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -stdlib=libc++")
+    endif()
 	set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 	set(CMAKE_C_FLAGS_RELEASE "-O3")
 elseif (CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
@@ -390,6 +390,7 @@ check_function_exists (gettimeofday HAVE_GETTIMEOFDAY)
 check_function_exists (getrusage HAVE_GETRUSAGE)
 check_function_exists (GlobalMemoryStatusEx HAVE_GLOBALMEMORYSTATUSEX)
 check_function_exists (strndup HAVE_STRNDUP)
+find_package(Backtrace)
 
 # configure a header file to pass some of the CMake settings
 # to the source code
@@ -505,6 +506,11 @@ constrainttree.cpp constrainttree.h
 MPIHelper.cpp MPIHelper.h
 memslot.cpp memslot.h
 )
+
+if(Backtrace_FOUND)
+  include_directories(${Backtrace_INCLUDE_DIR})
+  target_link_libraries(iqtree ${Backtrace_LIBRARY})
+endif(Backtrace_FOUND)
 
 if (NOT IQTREE_FLAGS MATCHES "nozlib")
     find_package(ZLIB)

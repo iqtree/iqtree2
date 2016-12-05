@@ -1002,10 +1002,8 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 			string con_file = params.out_prefix;
 			con_file += ".contree";
 
-            IntVector rfdist;
-            tree.computeRFDist(con_file.c_str(), rfdist);
-            out << endl << "Robinson-Foulds distance between ML tree and consensus tree: " << rfdist[0] << endl;
-
+            out << endl << "Robinson-Foulds distance between ML tree and consensus tree: " << params.contree_rfdist << endl;
+            
             out << endl << "Branches with bootstrap support >"
 					<< floor(params.split_threshold * 1000) / 10 << "% are kept";
 			if (params.split_threshold == 0.0)
@@ -1870,8 +1868,8 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
         }
 #endif
         int max_procs = countPhysicalCPUCores();
-        if (mem_required * max_procs > total_mem * params.num_threads && params.num_threads > 0) {
-            outWarning("Memory required per CPU-core (" + convertDoubleToString((double)mem_required/params.num_threads/1024/1024/1024)+
+        if (mem_required * max_procs > total_mem * iqtree.num_threads && iqtree.num_threads > 0) {
+            outWarning("Memory required per CPU-core (" + convertDoubleToString((double)mem_required/iqtree.num_threads/1024/1024/1024)+
             " GB) is higher than your computer RAM per CPU-core ("+convertIntToString(total_mem/max_procs/1024/1024/1024)+
             " GB), thus multiple runs may exceed RAM!");
         }
@@ -1881,7 +1879,6 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 #ifdef _OPENMP
     if (iqtree.num_threads <= 0) {
         int bestThreads = iqtree.testNumThreads();
-        iqtree.setLikelihoodKernel(iqtree.sse, bestThreads);
         omp_set_num_threads(bestThreads);
         params.num_threads = bestThreads;
     }
@@ -2647,6 +2644,13 @@ void computeSiteFrequencyModel(Params &params, Alignment *alignment) {
     }
 #endif
 
+#ifdef _OPENMP
+    if (tree->num_threads <= 0) {
+        int bestThreads = tree->testNumThreads();
+        omp_set_num_threads(bestThreads);
+    }
+#endif
+
     tree->initializeAllPartialLh();
     tree->getModelFactory()->optimizeParameters(params.fixed_branch_length, true, params.modelEps);
 
@@ -2802,7 +2806,7 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
 		// remove identical sequences
         if (params.ignore_identical_seqs) {
             tree->removeIdenticalSeqs(params);
-            if (tree->removed_seqs.size() > 0 && MPIHelper::getInstance().isMaster()) {
+            if (tree->removed_seqs.size() > 0 && MPIHelper::getInstance().isMaster() && (params.suppress_output_flags & OUT_UNIQUESEQ) == 0) {
                 string filename = (string)params.out_prefix + ".uniqueseq.phy";
                 if (tree->isSuperTree())
                     ((SuperAlignment*)tree->aln)->printCombinedAlignment(filename.c_str());
@@ -2831,6 +2835,11 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
 			string current_tree = tree->getTreeString();
 			splitsfile = params.out_prefix;
 			splitsfile += ".contree";
+
+            IntVector rfdist;
+            tree->computeRFDist(splitsfile.c_str(), rfdist);
+            params.contree_rfdist = rfdist[0];
+
 			tree->readTreeFile(splitsfile);
 
 			tree->initializeAllPartialLh();
