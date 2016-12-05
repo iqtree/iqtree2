@@ -214,7 +214,10 @@ void IQTree::initSettings(Params &params) {
 
     searchinfo.nni_type = params.nni_type;
     optimize_by_newton = params.optimize_by_newton;
-    setLikelihoodKernel(params.SSE, params.num_threads);
+    if (num_threads > 0)
+        setLikelihoodKernel(params.SSE, num_threads);
+    else
+        setLikelihoodKernel(params.SSE, params.num_threads);
     candidateTrees.init(this->aln, 200);
     intermediateTrees.init(this->aln, 200000);
 
@@ -3820,7 +3823,7 @@ void IQTree::sendStopMessage() {
 }
 
 
-int IQTree::testNumThreads() {
+int PhyloTree::testNumThreads() {
 #ifndef _OPENMP
     return 1;
 #else
@@ -3863,8 +3866,10 @@ int IQTree::testNumThreads() {
             // considering at least 2 trees
             if ((runTime < min_time && proc == 1) || trees.size() == 1) {
                 // time not reached, add more tree
-                readTreeString(trees[0]);
-                doRandomNNIs();
+//                readTreeString(trees[0]);
+//                doRandomNNIs();
+                generateRandomTree(YULE_HARDING);
+                wrapperFixNegativeBranch(true);
                 trees.push_back(getTreeString());
             }
             curScore = saved_curScore;

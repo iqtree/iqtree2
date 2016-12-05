@@ -22,15 +22,15 @@
 
 
 
-#if (defined(__GNUC__) || defined(__clang__)) && !defined(WIN32) && !defined(__CYGWIN__)
-#include <execinfo.h>
-#include <cxxabi.h>
-#endif
-
 #include "tools.h"
 #include "timeutil.h"
 #include "gzstream.h"
 #include "MPIHelper.h"
+
+#if defined(Backtrace_FOUND)
+#include <execinfo.h>
+#include <cxxabi.h>
+#endif
 
 VerboseMode verbose_mode;
 
@@ -867,6 +867,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.step_iterations = 100;
 //    params.store_candidate_trees = false;
 	params.print_ufboot_trees = 0;
+    params.contree_rfdist = -1;
     //const double INF_NNI_CUTOFF = -1000000.0;
     params.nni_cutoff = -1000000.0;
     params.estimate_nni_cutoff = false;
@@ -4118,6 +4119,7 @@ int countPhysicalCPUCores() {
 #else
     logicalcpucount = sysconf( _SC_NPROCESSORS_ONLN );
 #endif
+    if (logicalcpucount < 1) logicalcpucount = 1;
     return logicalcpucount;
     
     if (logicalcpucount % 2 != 0)
@@ -4136,6 +4138,7 @@ int countPhysicalCPUCores() {
     } else {
         physicalcpucount = logicalcpucount;
     }
+    if (physicalcpucount < 1) physicalcpucount = 1;
     return physicalcpucount;
 }
 
@@ -4144,7 +4147,7 @@ int countPhysicalCPUCores() {
 
 /** Print a demangled stack backtrace of the caller function to FILE* out. */
 
-#if  defined(WIN32) || defined(__CYGWIN__) 
+#if  !defined(Backtrace_FOUND)
 
 // donothing for WIN32
 void print_stacktrace(ostream &out, unsigned int max_frames) {}
@@ -4275,7 +4278,7 @@ void print_stacktrace(ostream &out, unsigned int max_frames)
 
 }
 
-#endif // WIN32
+#endif // Backtrace_FOUND
 
 bool memcmpcpy(void * destination, const void * source, size_t num) {
     bool diff = (memcmp(destination, source, num) != 0);

@@ -22,10 +22,13 @@
 RateInvar::RateInvar(double p_invar_sites, PhyloTree *tree)
  : RateHeterogeneity()
 {
-	if (tree)
-		p_invar = max(tree->aln->frac_const_sites/2.0, MIN_PINVAR);
+	if (tree) {
+        if (tree->aln->frac_const_sites == 0.0)
+            p_invar = 0.0;
+        else
+            p_invar = max(tree->aln->frac_const_sites/2.0, MIN_PINVAR);
 //		p_invar = MIN_PINVAR;
-	else
+	} else
 		p_invar = MIN_PINVAR;
 	fix_p_invar = false;
 //    optimize_p_invar = true;

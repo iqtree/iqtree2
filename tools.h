@@ -464,6 +464,7 @@ const int BRLEN_SCALE    = 2; // scale branch lengths
 const int OUT_LOG       = 1; // .log file written or not
 const int OUT_TREEFILE  = 2; // .treefile file written or not
 const int OUT_IQTREE    = 4; // .iqtree file written or not
+const int OUT_UNIQUESEQ = 8; // .uniqueseq file written or not
 
 
 const double MIN_GAMMA_RATE = 1e-6;
@@ -1736,6 +1737,8 @@ public:
 
 	/** true to print all UFBoot trees to a file */
 	int print_ufboot_trees;
+
+    int contree_rfdist;
 
     /****** variables for NNI cutoff heuristics ******/
 

@@ -390,6 +390,7 @@ check_function_exists (gettimeofday HAVE_GETTIMEOFDAY)
 check_function_exists (getrusage HAVE_GETRUSAGE)
 check_function_exists (GlobalMemoryStatusEx HAVE_GLOBALMEMORYSTATUSEX)
 check_function_exists (strndup HAVE_STRNDUP)
+find_package(Backtrace)
 
 # configure a header file to pass some of the CMake settings
 # to the source code
@@ -505,6 +506,11 @@ constrainttree.cpp constrainttree.h
 MPIHelper.cpp MPIHelper.h
 memslot.cpp memslot.h
 )
+
+if(Backtrace_FOUND)
+  include_directories(${Backtrace_INCLUDE_DIR})
+  target_link_libraries(iqtree ${Backtrace_LIBRARY})
+endif(Backtrace_FOUND)
 
 if (NOT IQTREE_FLAGS MATCHES "nozlib")
     find_package(ZLIB)

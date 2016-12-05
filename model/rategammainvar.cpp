@@ -138,7 +138,7 @@ double RateGammaInvar::optimizeParameters(double gradient_epsilon) {
 
 	if (optimize_alg.find("EM_RR") != string::npos) {
         return randomRestartOptimization(gradient_epsilon);
-    } else if (optimize_alg.find("Brent") != string::npos || getPInvar() <= MIN_PINVAR || isFixPInvar() || isFixGammaShape()) {
+    } else if (optimize_alg.find("Brent") != string::npos || phylo_tree->aln->frac_const_sites == 0.0 || isFixPInvar() || isFixGammaShape()) {
 		double lh = phylo_tree->computeLikelihood();
 		cur_optimize = 0;
 		double gamma_lh = RateGamma::optimizeParameters(gradient_epsilon);
