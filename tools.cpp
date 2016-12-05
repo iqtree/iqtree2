@@ -24,13 +24,17 @@
 
 #include "tools.h"
 #include "timeutil.h"
-#include "gzstream.h"
 #include "MPIHelper.h"
 
 #if defined(Backtrace_FOUND)
 #include <execinfo.h>
 #include <cxxabi.h>
 #endif
+
+#include "tools.h"
+#include "timeutil.h"
+#include "gzstream.h"
+#include "MPIHelper.h"
 
 VerboseMode verbose_mode;
 
@@ -3218,6 +3222,11 @@ void parseArg(int argc, char *argv[], Params &params) {
                 continue;
             }
             
+			if (strcmp(argv[cnt], "--no-uniqueseq") == 0) {
+				params.suppress_output_flags |= OUT_UNIQUESEQ;
+				continue;
+			}
+
 			if (argv[cnt][0] == '-') {
                 string err = "Invalid \"";
                 err += argv[cnt];
