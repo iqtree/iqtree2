@@ -38,6 +38,7 @@ void fixBound(double x[], double lower[], double upper[], int n);
 					psum[n]=sum;}
 
 
+/*
 #define IA 16807
 #define IM 2147483647
 #define AM (1.0/IM)
@@ -84,7 +85,7 @@ double ran1(long *idum) {
 #undef NDIV
 #undef EPS
 #undef RNMX
-
+*/
 
 long idum = 123456;
 double tt;
@@ -456,7 +457,7 @@ double Optimization::minimizeNewton(double x1, double xguess, double x2, double 
 		}
 		if (f < 0.0)
 			xl=rts;
-		else
+		else if (f > 0.0)
 			xh=rts;
 	}
 	nrerror("Maximum number of iterations exceeded in minimizeNewton");
@@ -477,9 +478,9 @@ double Optimization::minimizeNewton(double x1, double xguess, double x2, double 
 
 #define ALF 1.0e-4
 #define TOLX 1.0e-7
-static double maxarg1,maxarg2;
-#define FMAX(a,b) (maxarg1=(a),maxarg2=(b),(maxarg1) > (maxarg2) ?\
-        (maxarg1) : (maxarg2))
+//static double maxarg1,maxarg2;
+//#define FMAX(a,b) (maxarg1=(a),maxarg2=(b),(maxarg1) > (maxarg2) ?\
+//        (maxarg1) : (maxarg2))
 
 void Optimization::lnsrch(int n, double xold[], double fold, double g[], double p[], double x[],
                    double *f, double stpmax, int *check, double lower[], double upper[]) {
@@ -496,7 +497,7 @@ void Optimization::lnsrch(int n, double xold[], double fold, double g[], double 
 		slope += g[i]*p[i];
 	test=0.0;
 	for (i=1;i<=n;i++) {
-		temp=fabs(p[i])/FMAX(fabs(xold[i]),1.0);
+		temp=fabs(p[i])/max(fabs(xold[i]),1.0);
 		if (temp > test) test=temp;
 	}
 	alamin=TOLX/test;
@@ -546,7 +547,7 @@ void Optimization::lnsrch(int n, double xold[], double fold, double g[], double 
 		alam2=alam;
 		f2 = *f;
 		fold2=fold;
-		alam=FMAX(tmplam,0.1*alam);
+		alam=max(tmplam,0.1*alam);
 		first_time = false;
 	}
 }
@@ -608,8 +609,8 @@ double Optimization::minimizeMultiDimen(double guess[], int ndim, double lower[]
 
 
 #define ITMAX 200
-static double sqrarg;
-#define SQR(a) ((sqrarg=(a)) == 0.0 ? 0.0 : sqrarg*sqrarg)
+//static double sqrarg;
+#define SQR(a) ((a)*(a))
 #define EPS 3.0e-8
 #define TOLX (4*EPS)
 #define STPMX 100.0
@@ -641,7 +642,7 @@ void Optimization::dfpmin(double p[], int n, double lower[], double upper[], dou
 	//checkBound(p, xi, lower, upper, n);
 	//checkDirection(p, xi);
 
-	stpmax=STPMX*FMAX(sqrt(sum),(double)n);
+	stpmax=STPMX*max(sqrt(sum),(double)n);
 	for (its=1;its<=ITMAX;its++) {
 		*iter=its;
 		lnsrch(n,p,fp,g,xi,pnew,fret,stpmax,&check, lower, upper);
@@ -652,7 +653,7 @@ void Optimization::dfpmin(double p[], int n, double lower[], double upper[], dou
 		}
 		test=0.0;
 		for (i=1;i<=n;i++) {
-			temp=fabs(xi[i])/FMAX(fabs(p[i]),1.0);
+			temp=fabs(xi[i])/max(fabs(p[i]),1.0);
 			if (temp > test) test=temp;
 		}
 		if (test < TOLX) {
@@ -662,9 +663,9 @@ void Optimization::dfpmin(double p[], int n, double lower[], double upper[], dou
 		for (i=1;i<=n;i++) dg[i]=g[i];
 		derivativeFunk(p,g);
 		test=0.0;
-		den=FMAX(fabs(*fret),1.0); // fix bug found by Tung, as also suggested by NR author
+		den=max(fabs(*fret),1.0); // fix bug found by Tung, as also suggested by NR author
 		for (i=1;i<=n;i++) {
-			temp=fabs(g[i])*FMAX(fabs(p[i]),1.0)/den;
+			temp=fabs(g[i])*max(fabs(p[i]),1.0)/den;
 			if (temp > test) test=temp;
 		}
 		if (test < gtol) {
