@@ -38,6 +38,7 @@ void fixBound(double x[], double lower[], double upper[], int n);
 					psum[n]=sum;}
 
 
+/*
 #define IA 16807
 #define IM 2147483647
 #define AM (1.0/IM)
@@ -84,7 +85,7 @@ double ran1(long *idum) {
 #undef NDIV
 #undef EPS
 #undef RNMX
-
+*/
 
 long idum = 123456;
 double tt;
@@ -456,7 +457,7 @@ double Optimization::minimizeNewton(double x1, double xguess, double x2, double 
 		}
 		if (f < 0.0)
 			xl=rts;
-		else
+		else if (f > 0.0)
 			xh=rts;
 	}
 	nrerror("Maximum number of iterations exceeded in minimizeNewton");
@@ -740,8 +741,6 @@ double Optimization::minimizeMultiDimen(double guess[], int ndim, double lower[]
 
 
 #define ITMAX 200
-//static double sqrarg;
-//#define SQR(a) ((sqrarg=(a)) == 0.0 ? 0.0 : sqrarg*sqrarg)
 #define SQR(a) ((a)*(a))
 #define EPS 3.0e-8
 #define TOLX (4*EPS)

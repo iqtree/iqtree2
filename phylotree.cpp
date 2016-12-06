@@ -99,6 +99,8 @@ void PhyloTree::init() {
     var_matrix = NULL;
     params = NULL;
     setLikelihoodKernel(LK_EIGEN_SSE, 1);  // FOR TUNG: you forgot to initialize this variable!
+    sse = LK_EIGEN_SSE;
+    num_threads = 0;
     max_lh_slots = 0;
     save_all_trees = 0;
     nodeBranchDists = NULL;

@@ -1555,6 +1555,12 @@ public:
     */
     void generateRandomTree(TreeGenType tree_type);
 
+
+    /**
+        test the best number of threads
+    */
+    int testNumThreads();
+
     /****************************************************************************
             Subtree Pruning and Regrafting by maximum likelihood
             NOTE: NOT DONE YET
