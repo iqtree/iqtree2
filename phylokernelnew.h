@@ -2357,19 +2357,19 @@ void PhyloTree::computeLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, Phyl
                     vc_ddf_const += ddf_ptn;
                 }
             } // FOR ptn
-        } // else isMixlen()
-    #ifdef _OPENMP
-    #pragma omp critical
-    #endif
-        {
-            all_df += my_df;
-            all_ddf += my_ddf;
-            if (isASC) {
-                all_prob_const += vc_prob_const;
-                all_df_const += vc_df_const;
-                all_ddf_const += vc_ddf_const;
+        #ifdef _OPENMP
+        #pragma omp critical
+        #endif
+            {
+                all_df += my_df;
+                all_ddf += my_ddf;
+                if (isASC) {
+                    all_prob_const += vc_prob_const;
+                    all_df_const += vc_df_const;
+                    all_ddf_const += vc_ddf_const;
+                }
             }
-        } // else
+        } // else isMixlen()
     } // FOR thread
 
     // mark buffer as computed

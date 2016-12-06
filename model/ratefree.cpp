@@ -24,7 +24,7 @@ const double MIN_FREE_RATE_PROP = 0.001;
 const double MAX_FREE_RATE_PROP = 1000;
 
 RateFree::RateFree(int ncat, double start_alpha, string params, bool sorted_rates, string opt_alg, PhyloTree *tree) : RateGamma(ncat, start_alpha, false, tree) {
-	fix_params = false;
+	fix_params = 0;
 	prop = NULL;
     this->sorted_rates = sorted_rates;
     optimizing_params = 0;
@@ -35,21 +35,31 @@ RateFree::RateFree(int ncat, double start_alpha, string params, bool sorted_rate
 	DoubleVector params_vec;
 	try {
 		convert_double_vec(params.c_str(), params_vec);
-		if (params_vec.size() != ncategory*2)
-			outError("Number of parameters for FreeRate model must be twice number of categories");
 		int i;
 		double sum, sum_prop;
-		for (i = 0, sum = 0.0, sum_prop = 0.0; i < ncategory; i++) {
-			prop[i] = params_vec[i*2];
-			rates[i] = params_vec[i*2+1];
-			sum += prop[i]*rates[i];
-			sum_prop += prop[i];
-		}
+        if (params_vec.size() == ncategory) {
+            // only inputing prop
+            for (i = 0, sum_prop = 0.0; i < ncategory; i++) {
+                prop[i] = params_vec[i];
+                rates[i] = 1.0;
+                sum_prop += prop[i];
+            }
+            fix_params = 1;
+        } else {
+            if (params_vec.size() != ncategory*2)
+                outError("Number of parameters for FreeRate model must be twice number of categories");
+            for (i = 0, sum = 0.0, sum_prop = 0.0; i < ncategory; i++) {
+                prop[i] = params_vec[i*2];
+                rates[i] = params_vec[i*2+1];
+                sum += prop[i]*rates[i];
+                sum_prop += prop[i];
+            }
+            for (i = 0; i < ncategory; i++)
+                rates[i] /= sum;
+            fix_params = 2;
+        }
 		if (fabs(sum_prop-1.0) > 1e-5)
 			outError("Sum of category proportions not equal to 1");
-		for (i = 0; i < ncategory; i++)
-			rates[i] /= sum;
-		fix_params = true;
 	} catch (string &str) {
 		outError(str);
 	}
@@ -175,7 +185,9 @@ double RateFree::rescaleRates() {
 }
 
 int RateFree::getNDim() { 
-    if (fix_params) return 0;
+    if (fix_params == 2) return 0;
+    if (fix_params == 1) // only fix prop
+        return (ncategory-1);
     if (optimizing_params == 0) return (2*ncategory-2); 
     if (optimizing_params == 1) // rates
         return ncategory-1;
@@ -211,7 +223,8 @@ double RateFree::optimizeParameters(double gradient_epsilon) {
 
     // TODO: turn off EM algorithm for +ASC model
     if ((optimize_alg.find("EM") != string::npos && phylo_tree->getModelFactory()->unobserved_ptns.empty()) || getPInvar() <= MIN_PINVAR)
-        return optimizeWithEM();
+        if (fix_params == 0)
+            return optimizeWithEM();
 
 	//if (freq_type == FREQ_ESTIMATE) scaleStateFreq(false);
 
@@ -224,6 +237,8 @@ double RateFree::optimizeParameters(double gradient_epsilon) {
 //    score = optimizeWeights();
 
     int left = 1, right = 2;
+    if (fix_params == 1) // fix proportions
+        right = 1;
     if (optimize_alg.find("1-BFGS") != string::npos) {
         left = 0; 
         right = 0;
@@ -518,7 +533,7 @@ double RateFree::optimizeWithEM() {
             
         } 
         
-        // M-step, update weights according to (*)        
+        // M-step, update weights according to (*)
         int maxpropid = 0;
         double new_pinvar = 0.0;    
         for (c = 0; c < nmix; c++) {
@@ -537,7 +552,7 @@ double RateFree::optimizeWithEM() {
         }
         // break if some probabilities too small
         if (zero_prop) break;
-        
+
         bool converged = true;
         double sum_prop = 0.0;
         for (c = 0; c < nmix; c++) {

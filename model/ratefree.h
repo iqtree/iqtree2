@@ -135,8 +135,8 @@ protected:
 	 */
 	double *prop;
 
-	/** TRUE to fix parameters */
-	bool fix_params;
+	/** 1 to fix weights, 2 to fix both weights and rates */
+	int fix_params;
     
     /** true to sort rate in increasing order, false otherwise */
     bool sorted_rates;
