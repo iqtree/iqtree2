@@ -210,7 +210,7 @@ double RateFree::optimizeParameters(double gradient_epsilon) {
 		cout << "Optimizing " << name << " model parameters by " << optimize_alg << " algorithm..." << endl;
 
     // TODO: turn off EM algorithm for +ASC model
-    if ((optimize_alg.find("EM") != string::npos && phylo_tree->getModelFactory()->unobserved_ptns.empty()) || getPInvar() <= MIN_PINVAR)
+    if ((optimize_alg.find("EM") != string::npos && phylo_tree->getModelFactory()->unobserved_ptns.empty()))
         return optimizeWithEM();
 
 	//if (freq_type == FREQ_ESTIMATE) scaleStateFreq(false);
