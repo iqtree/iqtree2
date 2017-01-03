@@ -2409,8 +2409,12 @@ void runStandardBootstrap(Params &params, string &original_model, Alignment *ali
 			}
 		} else
 			boot_tree = new IQTree(bootstrap_alignment);
-		if (params.print_bootaln && MPIHelper::getInstance().isMaster())
-			bootstrap_alignment->printPhylip(bootaln_name.c_str(), true);
+		if (params.print_bootaln && MPIHelper::getInstance().isMaster()) {
+            if (bootstrap_alignment->isSuperAlignment())
+                ((SuperAlignment*)bootstrap_alignment)->printCombinedAlignment(bootaln_name.c_str(), true);
+            else
+                bootstrap_alignment->printPhylip(bootaln_name.c_str(), true);
+        }
 
         // set checkpoint
         boot_tree->setCheckpoint(tree->getCheckpoint());
