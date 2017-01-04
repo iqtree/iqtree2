@@ -322,7 +322,9 @@ ModelLieMarkov::ModelLieMarkov(string model_name, PhyloTree *tree, string model_
 void ModelLieMarkov::init(const char *model_name, string model_params, StateFreqType freq, string freq_params)
 {
     assert(NUM_RATES==getNumRateEntries());
-    parseModelName(model_name,&model_num,&symmetry);
+    StateFreqType expected_freq_type; // returned by getLieMarkovModelInfo but not used here
+    getLieMarkovModelInfo((string)model_name, name, full_name, model_num, symmetry, expected_freq_type);
+
     if (model_num<0) {
         // should never happen - model_name should have been accepted 
         // by validModelName before constructor was called.
@@ -330,19 +332,6 @@ void ModelLieMarkov::init(const char *model_name, string model_params, StateFreq
         abort();
     }
 
-    // Special case for strand symmetric model.
-    if (model_num == STR_SYM_INDEX) {
-      name = "StrSym"; // Can't use MODEL_NAMES[STR_SYM_INDEX] as this is all lowercase, as it must be for parseModelName to work.
-      full_name = "Strand Symmetric model (alias WS6.6) (non reversible)";
-    } else {
-      name = SYMMETRY[symmetry]+MODEL_NAMES[model_num];
-      full_name = "Lie Markov model "+SYMMETRY[symmetry]+MODEL_NAMES[model_num]
-	+ (TIME_REVERSIBLE[model_num] ? "" : " (non reversible)");
-    }
-    freq_type = freq;
-    if (freq_params != "") {
-	readStateFreq(freq_params);
-    }
     setBasis(); // sets basis and num_params
 
     if (model_parameters)
@@ -366,6 +355,78 @@ void ModelLieMarkov::init(const char *model_name, string model_params, StateFreq
     }
     ModelMarkov::init(freq_type);
 }
+
+/*static*/ void ModelLieMarkov::getLieMarkovModelInfo(string model_name, string &name, string &full_name, int &model_num, int &symmetry, StateFreqType &def_freq) {
+    parseModelName(model_name,&model_num,&symmetry);
+    // Special case, just because it is confusing
+    if (model_name == "2.2a" || model_name == "RY2.2a" ||
+        model_name == "WS2.2a" || model_name == "MK2.2a") {
+      cerr << "Model 2.2a does not exist, do you mean 2.2b?\n";
+    }
+    if (model_num<0) {
+        // model not found
+	name = "";
+        full_name = "";
+	model_num = -1;
+	symmetry = -1;
+	def_freq = FREQ_UNKNOWN;
+	return;
+    }
+
+    // name and full_name:
+    // Special case for strand symmetric model.
+    if (model_num == STR_SYM_INDEX) {
+      name = "StrSym"; // Can't use MODEL_NAMES[STR_SYM_INDEX] as this is all lowercase, as it must be for parseModelName to work.
+      full_name = "Strand Symmetric model (alias WS6.6) (non reversible)";
+    } else {
+      name = SYMMETRY[symmetry]+MODEL_NAMES[model_num];
+      full_name = "Lie Markov model "+SYMMETRY[symmetry]+MODEL_NAMES[model_num]
+	+ (TIME_REVERSIBLE[model_num] ? "" : " (non reversible)");
+    }
+
+    // def_freq
+    int bdf = BDF[model_num];
+    if (bdf==0) {
+      def_freq=FREQ_EQUAL;
+    } else if (bdf==1) {
+      switch(symmetry) {
+      case 0:
+	def_freq=FREQ_DNA_1212;
+	break;
+      case 1:
+	def_freq=FREQ_DNA_1221;
+	break;
+      case 2:
+	def_freq=FREQ_DNA_1122;
+	break;
+      case 3:
+      default:
+	cerr << "Can't happen" << endl;
+        abort();
+      }
+    } else if (bdf==2) {
+      switch(symmetry) {
+      case 0:
+	def_freq=FREQ_DNA_RY;
+	break;
+      case 1:
+	def_freq=FREQ_DNA_WS;
+	break;
+      case 2:
+	def_freq=FREQ_DNA_MK;
+	break;
+      case 3:
+      default:
+	cerr << "Can't happen" << endl;
+        abort();
+      }
+    } else if (bdf==3) {
+      def_freq=FREQ_ESTIMATE;
+    }
+
+    return;
+}
+
 
 ModelLieMarkov::~ModelLieMarkov() {
   // Do nothing, for now. model_parameters is reclaimed in ~ModelMarkov
