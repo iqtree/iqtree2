@@ -692,8 +692,8 @@ size_t PhyloTree::getBufferPartialLhSize() {
     const size_t VECTOR_SIZE = 8; // TODO, adjusted
     size_t ncat_mix = site_rate->getNRate() * ((model_factory->fused_mix_rate)? 1 : model->getNMixtures());
     size_t block = model->num_states * ncat_mix;
-    size_t buffer_size = get_safe_upper_limit(block * model->num_states * 2 * aln->getNSeq());
-    buffer_size += get_safe_upper_limit(block * (aln->getNSeq()+1) * (aln->STATE_UNKNOWN+1));
+    size_t buffer_size = get_safe_upper_limit(block * model->num_states * 2) * aln->getNSeq();
+    buffer_size += get_safe_upper_limit(block *(aln->STATE_UNKNOWN+1)) * (aln->getNSeq()+1);
     buffer_size += (block*2+model->num_states)*VECTOR_SIZE*num_threads;
     return buffer_size;
 }
