@@ -2024,7 +2024,7 @@ void PhyloTree::computeLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, Phyl
         #endif
         
         for (ptn = ptn_lower; ptn < ptn_upper; ptn+=VectorClass::size()) {
-            VectorClass lh_ptn;
+            VectorClass lh_ptn(0.0);
             //lh_ptn.load_a(&ptn_invar[ptn]);
             VectorClass *theta = (VectorClass*)(theta_all + ptn*block);
             VectorClass df_ptn, ddf_ptn;
@@ -2055,7 +2055,8 @@ void PhyloTree::computeLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, Phyl
                 dotProductTriple<VectorClass, double, FMA>(val0, val1, val2, theta, lh_ptn, df_ptn, ddf_ptn, block, nstates);
         #endif
             }
-            lh_ptn = abs(lh_ptn + VectorClass().load_a(&ptn_invar[ptn]));
+            // Sum later to avoid underflow of invariant sites
+            lh_ptn = abs(lh_ptn) + VectorClass().load_a(&ptn_invar[ptn]);
             
             if (ptn < orig_nptn) {
                 lh_ptn = 1.0 / lh_ptn;
@@ -2319,8 +2320,8 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
             double *vec_tip = buffer_partial_lh_ptr + block*VectorClass::size()*thread_id;
 
             for (ptn = ptn_lower; ptn < ptn_upper; ptn+=VectorClass::size()) {
-                VectorClass lh_ptn;
-                lh_ptn.load_a(&ptn_invar[ptn]);
+                VectorClass lh_ptn(0.0);
+//                lh_ptn.load_a(&ptn_invar[ptn]);
                 VectorClass *lh_cat = (VectorClass*)(_pattern_lh_cat + ptn*ncat_mix);
                 VectorClass *partial_lh_dad = (VectorClass*)(dad_branch->partial_lh + ptn*block);
                 VectorClass *lh_node = SITE_MODEL ? (VectorClass*)&partial_lh_node[ptn*nstates] : (VectorClass*)vec_tip;
@@ -2411,7 +2412,8 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
                 }
                 vc_min_scale *= LOG_SCALING_THRESHOLD;
 
-                lh_ptn = abs(lh_ptn);
+                // Sum later to avoid underflow of invariant sites
+                lh_ptn = abs(lh_ptn) + VectorClass().load_a(&ptn_invar[ptn]);
                 if (ptn < orig_nptn) {
                     lh_ptn = log(lh_ptn) + vc_min_scale;
                     lh_ptn.store_a(&_pattern_lh[ptn]);
@@ -2466,8 +2468,8 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
                 computePartialLikelihood(*it, ptn_lower, ptn_upper, thread_id);
 
             for (ptn = ptn_lower; ptn < ptn_upper; ptn+=VectorClass::size()) {
-                VectorClass lh_ptn;
-                lh_ptn.load_a(&ptn_invar[ptn]);
+                VectorClass lh_ptn(0.0);
+//                lh_ptn.load_a(&ptn_invar[ptn]);
                 VectorClass *lh_cat = (VectorClass*)(_pattern_lh_cat + ptn*ncat_mix);
                 VectorClass *partial_lh_dad = (VectorClass*)(dad_branch->partial_lh + ptn*block);
                 VectorClass *partial_lh_node = (VectorClass*)(node_branch->partial_lh + ptn*block);
@@ -2541,7 +2543,8 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
                 } // if SAFE_NUMERIC
                 vc_min_scale *= LOG_SCALING_THRESHOLD;
 
-                lh_ptn = abs(lh_ptn);
+                // Sum later to avoid underflow of invariant sites
+                lh_ptn = abs(lh_ptn) + VectorClass().load_a(&ptn_invar[ptn]);
 
                 if (ptn < orig_nptn) {
                     lh_ptn = log(lh_ptn) + vc_min_scale;
@@ -2708,11 +2711,11 @@ double PhyloTree::computeLikelihoodFromBufferGenericSIMD()
 #pragma omp for schedule(static) nowait
 #endif
     for (ptn = 0; ptn < nptn; ptn+=VectorClass::size()) {
-		VectorClass lh_ptn;
+		VectorClass lh_ptn(0.0);
 		VectorClass *theta = (VectorClass*)(theta_all + ptn*block);
         if (SITE_MODEL) {
             VectorClass *eval_ptr = (VectorClass*)&eval[ptn*nstates];
-            lh_ptn.load_a(&ptn_invar[ptn]);
+//            lh_ptn.load_a(&ptn_invar[ptn]);
             for (c = 0; c < ncat; c++) {
                 VectorClass lh_cat;
 #ifdef KERNEL_FIX_STATES
@@ -2725,8 +2728,10 @@ double PhyloTree::computeLikelihoodFromBufferGenericSIMD()
             }
         } else {
             dotProductVec<VectorClass, double, FMA>(val0, theta, lh_ptn, block);
-            lh_ptn += VectorClass().load_a(&ptn_invar[ptn]);
         }
+
+        // Sum later to avoid underflow of invariant sites
+        lh_ptn = abs(lh_ptn) + VectorClass().load_a(&ptn_invar[ptn]);
 
         if (ptn < orig_nptn) {
             lh_ptn = log(abs(lh_ptn)) + VectorClass().load_a(&buffer_scale_all[ptn]);
