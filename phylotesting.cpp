@@ -1688,21 +1688,8 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
             // initialize tree
             // initialize model
             subst_model->setTree(tree);
-            StateFreqType freq_type = FREQ_UNKNOWN;
-            if (model_names[model].find("+F1X4") != string::npos)
-                freq_type = FREQ_CODON_1x4;
-            else if (model_names[model].find("+F3X4C") != string::npos)
-                freq_type = FREQ_CODON_3x4C;
-            else if (model_names[model].find("+F3X4") != string::npos)
-                freq_type = FREQ_CODON_3x4;
-            else if (model_names[model].find("+FQ") != string::npos)
-                freq_type = FREQ_EQUAL;
-            else if (model_names[model].find("+FO") != string::npos)
-                freq_type = FREQ_ESTIMATE;
-            else if (model_names[model].find("+FU") != string::npos)
-                freq_type = FREQ_USER_DEFINED;
-            else if (model_names[model].find("+F") != string::npos)
-                freq_type = FREQ_EMPIRICAL;
+	    // parse any "+F..." part of model name
+            StateFreqType freq_type = parseStateFreqFromPlusF(model_names[model]);
                 
             subst_model->init(model_names[model].substr(0, model_names[model].find('+')).c_str(), "", freq_type, "");
             tree->params = &params;

@@ -177,9 +177,11 @@ void ModelDNA::init(const char *model_name, string model_params, StateFreqType f
 		setRateType(rate_type.c_str());
 	} else {
 		//cout << "User-specified model "<< model_name << endl;
-		if (setRateType(model_name))
-			def_freq = FREQ_ESTIMATE;
-		else {
+	        if (setRateType(model_name)) {
+		    // model was six digits (e.g. 010010 for K2P/HKY)
+		    name = model_name;
+		    full_name = "Time reversible ("+name+")";
+		} else {
 			readParameters(model_name);
 			//name += " (user-defined)";
 		}

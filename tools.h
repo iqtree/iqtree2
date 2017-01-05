@@ -2553,6 +2553,13 @@ bool memcmpcpy(void * destination, const void * source, size_t num);
 int pairInteger(int int1, int int2);
 
 /*
+ * Given a model name, look in it for "+F..." and 
+ * determine the StateFreqType. Returns FREQ_UNKNOWN if
+ * unable to find a good +F... specifier
+ */
+StateFreqType parseStateFreqFromPlusF(string model_name);
+
+/*
  * Given a string of 4 digits, return a StateFreqType according to
  * equality constraints expressed by those digits.
  * E.g. "1233" constrains pi_G=pi_T (ACGT order, 3rd and 4th equal)
