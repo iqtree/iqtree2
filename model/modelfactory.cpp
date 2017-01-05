@@ -746,7 +746,11 @@ double ModelFactory::optimizeParametersGammaInvar(int fixed_len, bool write_info
                 bestPInvar = estResults[0];
                 bestLens.clear();
                 tree->saveBranchLengths(bestLens);
-                *best_ckp = *saved_ckp;
+                model->setCheckpoint(best_ckp);
+                model->saveCheckpoint();
+                model->setCheckpoint(saved_ckp);
+//                *best_ckp = *saved_ckp;
+
 //                tree->getModel()->getRateMatrix(bestRates);
 //                tree->getModel()->getStateFrequency(bestStateFreqs);
                 if (estResults[0] < initPInv) {
@@ -790,7 +794,11 @@ double ModelFactory::optimizeParametersGammaInvar(int fixed_len, bool write_info
                 bestPInvar = estResults[0];
                 bestLens.clear();
                 tree->saveBranchLengths(bestLens);
-                *best_ckp = *saved_ckp;
+                model->setCheckpoint(best_ckp);
+                model->saveCheckpoint();
+                model->setCheckpoint(saved_ckp);
+//                *best_ckp = *saved_ckp;
+
 //                tree->getModel()->getRateMatrix(bestRates);
 //                tree->getModel()->getStateFrequency(bestStateFreqs);
             }
@@ -809,12 +817,12 @@ double ModelFactory::optimizeParametersGammaInvar(int fixed_len, bool write_info
 
 	tree->clearAllPartialLH();
 	tree->setCurScore(tree->computeLikelihood());
-    assert(fabs(tree->getCurScore() - bestLogl) < 1.0);
-    if (write_info) {    
+    if (write_info) {
         cout << endl;
         cout << "Best p_inv: " << bestPInvar << " / best gamma shape: " << bestAlpha << " / ";
         cout << "Logl: " << tree->getCurScore() << endl;
     }
+    assert(fabs(tree->getCurScore() - bestLogl) < 1.0);
 
 //	delete [] rates;
 //	delete [] state_freqs;
