@@ -4326,11 +4326,11 @@ int pairInteger(int int1, int int2) {
 
 /*
  * Given a model name, look in it for "+F..." and 
- * determine the StateFreqType. Returns FREQ_UNKNOWN if
+ * determine the StateFreqType. Returns FREQ_EMPIRICAL if
  * unable to find a good +F... specifier
  */
 StateFreqType parseStateFreqFromPlusF(string model_name) {
-    StateFreqType freq_type = FREQ_UNKNOWN;
+    StateFreqType freq_type = FREQ_EMPIRICAL;
     if (model_name.find("+F1X4") != string::npos)
         freq_type = FREQ_CODON_1x4;
     else if (model_name.find("+F3X4C") != string::npos)
@@ -4358,7 +4358,7 @@ StateFreqType parseStateFreqFromPlusF(string model_name) {
                 freq_type = parseStateFreqDigits(model_name.substr(plusFPos,4));
             } catch (...) {
                 // +F exists, but can't parse it as anything else
-                freq_type = FREQ_EMPIRICAL;
+                // In this case, just return default (FREQ_EMPIRICAL)
             }
         }
     }
