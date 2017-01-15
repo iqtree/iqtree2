@@ -3221,6 +3221,9 @@ void parseArg(int argc, char *argv[], Params &params) {
     if (params.lh_mem_save == LM_MEM_SAVE && params.partition_file)
         outError("-mem option does not work with partition models yet");
 
+    if (params.gbo_replicates && params.num_bootstrap_samples)
+        outError("UFBoot (-bb) and standard bootstrap (-b) must not be specified together");
+
     if (!params.out_prefix) {
     	if (params.eco_dag_file)
     		params.out_prefix = params.eco_dag_file;
