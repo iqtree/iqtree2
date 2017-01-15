@@ -1546,7 +1546,7 @@ void printMiscInfo(Params &params, IQTree &iqtree, double *pattern_lh) {
         printAncestralSequences(params.out_prefix, &iqtree, params.print_ancestral_sequence);
     }
     
-    if (params.print_site_state_freq != WSF_NONE) {
+    if (params.print_site_state_freq != WSF_NONE && !params.site_freq_file && !params.tree_freq_file) {
 		string site_freq_file = params.out_prefix;
 		site_freq_file += ".sitesf";
         printSiteStateFreq(site_freq_file.c_str(), &iqtree);
