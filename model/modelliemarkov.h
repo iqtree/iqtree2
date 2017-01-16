@@ -25,6 +25,11 @@ public:
 
 	static string getModelInfo(string model_name, string &full_name, StateFreqType &def_freq);
 
+	// overrides ModelMarkov::getNDimFreq()
+	int getNDimFreq();
+
+	bool isTimeReversible();
+
 	static bool validModelName(string model_name);
 	void setBounds(double *lower_bound, double *upper_bound, bool *bound_check);
 	
@@ -57,6 +62,15 @@ protected:
 	bool nondiagonalizable; // will be set true for nondiagonalizable rate matrices, then will use scaled squaring method for matrix exponentiation.
 
 	static void parseModelName(string model_name, int* model_num, int* symmetry);
+	/*
+         * Overrides ModelMarkov::getName().
+	 * Avoids appending +FO to name, as this is implied by how LM models 
+	 * work.
+         * Minh: you might chose to remove this override, if you like "+FO"
+	 * to be on LM model names.
+         */
+	string getName();
+
 	/*
 	const static double ***BASES;
 	const static int *MODEL_PARAMS;

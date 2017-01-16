@@ -489,6 +489,27 @@ bool  ModelLieMarkov::validFreqType() {
     }
 }
 
+/*
+ * Overrides ModelMarkov::getNDimFreq().
+ * The degrees of freedom in base frequencies are already accounted
+ * for in num_param, so no more should be added.
+ */
+
+int ModelLieMarkov::getNDimFreq() { 
+	return 0;
+}
+
+/*
+ * Some LM models are time reversible. Currently this is used in 
+ * ModelFactory::getNParameters() to adjust the degrees of freedom
+ * by one. Should the code ever be changed such that TR LM models
+ * are given an unrooted tree and optimized by TR methods,
+ * ModelFactory::getNParameters() may need changing.
+ */
+bool ModelLieMarkov::isTimeReversible() {
+    return(TIME_REVERSIBLE[model_num]);
+}
+
 /* static */ bool ModelLieMarkov::validModelName(string model_name) {
     int model_num, symmetry;
     parseModelName(model_name,&model_num,&symmetry);
@@ -548,6 +569,28 @@ bool  ModelLieMarkov::validFreqType() {
     // set full symmetry if have a fully symmetric model
     if (*model_num>=0 && FULL_SYMMETRY[*model_num]) *symmetry = 3;
     return;
+}
+
+/*
+ * Overrides ModelMarkov::getName().
+ * Avoids appending +FO to name, as this is implied by how LM models 
+ * work.
+ * Minh: you might chose to remove this override, if you like "+FO"
+ * to be on LM model names.
+ */
+
+string ModelLieMarkov::getName() {
+    switch(getFreqType()) {
+    case FREQ_ESTIMATE:
+        return name;
+    case FREQ_EMPIRICAL:
+        return name+"+F";
+    case FREQ_USER_DEFINED:
+        return name+"+FU";
+    default:
+       	cerr << "Bad freq_type for a Lie-Markov model. Can't happen" << endl;
+        abort();
+    }
 }
 
 /*
