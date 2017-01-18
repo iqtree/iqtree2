@@ -2881,7 +2881,8 @@ void evaluateTrees(Params &params, IQTree *tree, vector<TreeInfo> &info, IntVect
 			continue;
 		}
 		tree->freeNode();
-		tree->readTree(in, params.is_rooted);
+        bool rooted = tree->rooted;
+		tree->readTree(in, rooted);
 		tree->setAlignment(tree->aln);
         tree->setRootNode(params.root);
 		if (tree->isSuperTree())
