@@ -574,7 +574,7 @@ double RateFree::optimizeWithEM() {
             tree->setModel(subst_model);
             subst_model->setTree(tree);
             model_fac->model = subst_model;
-            if (subst_model->isMixture() || subst_model->isSiteSpecificModel())
+            if (subst_model->isMixture() || subst_model->isSiteSpecificModel() || !subst_model->isReversible())
                 tree->setLikelihoodKernel(phylo_tree->sse, phylo_tree->num_threads);
 
                         
