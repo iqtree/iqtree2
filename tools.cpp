@@ -4325,6 +4325,47 @@ int pairInteger(int int1, int int2) {
 }
 
 /*
+ * Given a model name, look in it for "+F..." and 
+ * determine the StateFreqType. Returns FREQ_EMPIRICAL if
+ * unable to find a good +F... specifier
+ */
+StateFreqType parseStateFreqFromPlusF(string model_name) {
+    StateFreqType freq_type = FREQ_EMPIRICAL;
+    if (model_name.find("+F1X4") != string::npos)
+        freq_type = FREQ_CODON_1x4;
+    else if (model_name.find("+F3X4C") != string::npos)
+        freq_type = FREQ_CODON_3x4C;
+    else if (model_name.find("+F3X4") != string::npos)
+        freq_type = FREQ_CODON_3x4;
+    else if (model_name.find("+FQ") != string::npos)
+        freq_type = FREQ_EQUAL;
+    else if (model_name.find("+FO") != string::npos)
+        freq_type = FREQ_ESTIMATE;
+    else if (model_name.find("+FU") != string::npos)
+        freq_type = FREQ_USER_DEFINED;
+    else if (model_name.find("+FRY") != string::npos)
+        freq_type = FREQ_DNA_RY;
+    else if (model_name.find("+FWS") != string::npos)
+        freq_type = FREQ_DNA_WS;
+    else if (model_name.find("+FMK") != string::npos)
+        freq_type = FREQ_DNA_MK;
+    else {
+        // Now look for +F#### where #s are digits
+        std::size_t plusFPos = model_name.find("+F");
+        if (plusFPos != string::npos) {
+            try {
+                // throws if string is not 4 digits
+                freq_type = parseStateFreqDigits(model_name.substr(plusFPos,4));
+            } catch (...) {
+                // +F exists, but can't parse it as anything else
+                // In this case, just return default (FREQ_EMPIRICAL)
+            }
+        }
+    }
+    return(freq_type);
+}
+
+/*
  * Given a string of 4 digits, return a StateFreqType according to
  * equality constraints expressed by those digits.
  * E.g. "1233" constrains pi_G=pi_T (ACGT order, 3rd and 4th equal)

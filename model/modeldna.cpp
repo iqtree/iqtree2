@@ -18,6 +18,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 #include "modeldna.h"
+#include "modelliemarkov.h"
 
 ModelDNA::ModelDNA(PhyloTree *tree)
 : ModelMarkov(tree)
@@ -163,15 +164,24 @@ void ModelDNA::init(const char *model_name, string model_params, StateFreqType f
 	assert(num_states == 4); // make sure that you create model for DNA
 	StateFreqType def_freq = FREQ_UNKNOWN;
 	string rate_type;
+	// First try: the time reversible models
 	name = getDNAModelInfo((string)model_name, full_name, rate_type, def_freq);
+	if (name == "") {
+	    // Second try: Lie Markov models. (Note, we're still missing UNREST 
+	    // model. 12.12 is equivalent, but user may not realize that.)
+	    int model_num, symmetry; // returned by getLieMarkovModelInfo, but not used here
+	    ModelLieMarkov::getLieMarkovModelInfo((string)model_name, name, full_name, model_num, symmetry, def_freq);
+	}
 
 	if (name != "") {
 		setRateType(rate_type.c_str());
 	} else {
 		//cout << "User-specified model "<< model_name << endl;
-		if (setRateType(model_name))
-			def_freq = FREQ_ESTIMATE;
-		else {
+	        if (setRateType(model_name)) {
+		    // model was six digits (e.g. 010010 for K2P/HKY)
+		    name = model_name;
+		    full_name = "Time reversible ("+name+")";
+		} else {
 			readParameters(model_name);
 			//name += " (user-defined)";
 		}

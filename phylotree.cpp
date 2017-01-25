@@ -2882,7 +2882,7 @@ int PhyloTree::fixNegativeBranch(bool force, Node *node, Node *dad) {
     if (!node) {
         node = root;
         // 2015-11-30: if not bifurcating, initialize unknown branch lengths with 0.1
-        if (!isBifurcating())
+        if (!isBifurcating() || rooted)
             return setNegativeBranch(force, 0.1, root, NULL);
     }
     int fixed = 0;

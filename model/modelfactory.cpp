@@ -22,6 +22,7 @@
 #include "rategamma.h"
 #include "rategammainvar.h"
 #include "modelmarkov.h"
+#include "modelliemarkov.h"
 #include "modeldna.h"
 #include "modelprotein.h"
 #include "modelbin.h"
@@ -716,9 +717,19 @@ void ModelFactory::restoreCheckpoint() {
 int ModelFactory::getNParameters() {
 	int df = model->getNDim() + model->getNDimFreq() + site_rate->getNDim();
     
-    if (!site_rate->getTree()->params->fixed_branch_length)
+    if (!site_rate->getTree()->params->fixed_branch_length) {
         df += site_rate->phylo_tree->branchNum - (int)site_rate->phylo_tree->rooted;
-	return df;
+	// If model is Lie-Markov, and is in fact time reversible, one of the
+	// degrees of freedom is illusary. (Of the two edges coming from the 
+	// root, only sum of their lenghts affects likelihood.)
+	// So correct for this. Without this correction, K2P and RY2.2b
+	// would not be synonymous, for example.
+	string className(typeid(*model).name());
+	if (className.find("ModelLieMarkov")!=string::npos &&
+	          ((ModelLieMarkov*)model)->isTimeReversible())
+	    df--;
+    }
+    return df;
 }
 
 double ModelFactory::initGTRGammaIParameters(RateHeterogeneity *rate, ModelSubst *model, double initAlpha,

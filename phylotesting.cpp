@@ -790,6 +790,8 @@ int getModelList(Params &params, Alignment *aln, StrVector &models, bool separat
 			appendCString(dna_model_names_lie_markov_mk, sizeof(dna_model_names_lie_markov_mk) / sizeof(char*), model_names);
 		} else if (strcmp(params.model_set, "strandsymmetric") == 0) {
 			copyCString(dna_model_names_lie_markov_strsym, sizeof(dna_model_names_lie_markov_strsym) / sizeof(char*), model_names);
+			// IMPORTANT NOTE: If you add any more -mset names for sets of Lie Markov models,
+			// you also need to change getPrototypeModel function.
 		} else {
 			convert_string_vec(params.model_set, model_names);
 		}
@@ -1501,6 +1503,64 @@ bool isMixtureModel(ModelsBlock *models_block, string &model_str) {
     return false;
 }
 
+/*
+ * Helper function for testModels.
+ * Uses seq_type to return a model of the required class, which can then
+ * be used by a ModelFactory to produce more such objects.
+ * Gets a little complex in the case of DNA models, as 
+ * Lie-Markov models are their own class distinct form time reversible models.
+ */
+
+ModelMarkov* getPrototypeModel(SeqType seq_type, PhyloTree* tree, char *model_set) {
+    ModelMarkov *subst_model = NULL;
+    switch (seq_type) {
+    case SEQ_BINARY:
+        subst_model = new ModelBIN("JC2", "", FREQ_UNKNOWN, "", tree);
+	break;
+    case SEQ_PROTEIN:
+        subst_model = new ModelProtein("WAG", "", FREQ_UNKNOWN, "", tree);
+	break;
+    case SEQ_MORPH:
+        subst_model = new ModelMorphology("MK", "", FREQ_UNKNOWN, "", tree);
+	break;
+    case SEQ_CODON:
+        subst_model = new ModelCodon("GY", "", FREQ_UNKNOWN, "", tree);
+	break;
+    case SEQ_POMO:
+        // Exit gracefully.
+        outError("Model selection with PoMo not yet supported.");
+	break;
+    case SEQ_DNA:
+	// This is the complicated case. Need to return either a ModelDNA, or a
+	// ModelLieMarkov
+        if (model_set && (strncmp(model_set, "liemarkov", 9) == 0 || strcmp(model_set,"strandsymmetric")==0)) {
+            // "liemarkov", "liemarkovry", "liemarkovws", "liemarkovmk", "strandsymmetric"
+            subst_model = new ModelLieMarkov("1.1", tree, "", FREQ_ESTIMATE, "");
+        } else {
+	    StrVector model_names;
+	    convert_string_vec(model_set, model_names);
+	    bool foundLM = false;
+	    bool foundTR = false;
+	    for (StrVector::iterator it = model_names.begin() ; it != model_names.end(); ++it) {
+		bool valid = ModelLieMarkov::validModelName(*it);
+		foundLM = foundLM || valid;
+		foundTR = foundTR || !valid;
+	    }
+	    if (foundLM && foundTR) {
+		outError("Currently we can't model test both Lie-Markov and non-Lie-Markov models\nat the same time. (You may have misspelled the name of a Lie-Markov model.");
+	    } else if (foundLM) {
+		subst_model = new ModelLieMarkov("1.1", tree, "", FREQ_ESTIMATE, "");
+	    } else {
+		subst_model = new ModelDNA("JC", "", FREQ_UNKNOWN, "", tree);
+	    }
+	}
+	break;
+    default:
+	outError("Unrecognized seq_type, can't happen");
+    }
+    return(subst_model);
+}
+
 string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_info, ostream &fmodel, ModelsBlock *models_block,
     int num_threads, string set_name, bool print_mem_usage)
 {
@@ -1572,25 +1632,8 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
     }
         
         
-	ModelMarkov *subst_model = NULL;
-	if (seq_type == SEQ_BINARY)
-		subst_model = new ModelBIN("JC2", "", FREQ_UNKNOWN, "", in_tree);
-	else if (seq_type == SEQ_DNA)
-	  // "liemarkov", "liemarkovry", "liemarkovws", "liemarkovmk", "strandsymmetric"
-	  if (params.model_set && (strncmp(params.model_set, "liemarkov", 9) == 0 || strcmp(params.model_set,"strandsymmetric")==0))
-	        subst_model = new ModelLieMarkov("1.1", in_tree, "", FREQ_ESTIMATE, "");
-        else
-            subst_model = new ModelDNA("JC", "", FREQ_UNKNOWN, "", in_tree);
-	else if (seq_type == SEQ_PROTEIN)
-		subst_model = new ModelProtein("WAG", "", FREQ_UNKNOWN, "", in_tree);
-	else if (seq_type == SEQ_MORPH)
-		subst_model = new ModelMorphology("MK", "", FREQ_UNKNOWN, "", in_tree);
-	else if (seq_type == SEQ_CODON)
-		subst_model = new ModelCodon("GY", "", FREQ_UNKNOWN, "", in_tree);
-    else if (seq_type == SEQ_POMO)
-        // Exit gracefully.
-        outError("Model selection with PoMo not yet supported.");
-	assert(subst_model);
+    ModelMarkov *subst_model;
+    subst_model = getPrototypeModel(seq_type, in_tree, params.model_set);
 
 	ModelFactory *model_fac = new ModelFactory();
 	model_fac->joint_optimize = params.optimize_model_rate_joint;
@@ -1688,21 +1731,8 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
             // initialize tree
             // initialize model
             subst_model->setTree(tree);
-            StateFreqType freq_type = FREQ_UNKNOWN;
-            if (model_names[model].find("+F1X4") != string::npos)
-                freq_type = FREQ_CODON_1x4;
-            else if (model_names[model].find("+F3X4C") != string::npos)
-                freq_type = FREQ_CODON_3x4C;
-            else if (model_names[model].find("+F3X4") != string::npos)
-                freq_type = FREQ_CODON_3x4;
-            else if (model_names[model].find("+FQ") != string::npos)
-                freq_type = FREQ_EQUAL;
-            else if (model_names[model].find("+FO") != string::npos)
-                freq_type = FREQ_ESTIMATE;
-            else if (model_names[model].find("+FU") != string::npos)
-                freq_type = FREQ_USER_DEFINED;
-            else if (model_names[model].find("+F") != string::npos)
-                freq_type = FREQ_EMPIRICAL;
+	    // parse any "+F..." part of model name
+            StateFreqType freq_type = parseStateFreqFromPlusF(model_names[model]);
                 
             subst_model->init(model_names[model].substr(0, model_names[model].find('+')).c_str(), "", freq_type, "");
             tree->params = &params;
@@ -2851,7 +2881,8 @@ void evaluateTrees(Params &params, IQTree *tree, vector<TreeInfo> &info, IntVect
 			continue;
 		}
 		tree->freeNode();
-		tree->readTree(in, params.is_rooted);
+        bool rooted = tree->rooted;
+		tree->readTree(in, rooted);
 		tree->setAlignment(tree->aln);
         tree->setRootNode(params.root);
 		if (tree->isSuperTree())
