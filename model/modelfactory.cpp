@@ -731,7 +731,7 @@ int ModelFactory::getNParameters() {
     }
     return df;
 }
-
+/*
 double ModelFactory::initGTRGammaIParameters(RateHeterogeneity *rate, ModelSubst *model, double initAlpha,
                                            double initPInvar, double *initRates, double *initStateFreqs)  {
 
@@ -745,7 +745,7 @@ double ModelFactory::initGTRGammaIParameters(RateHeterogeneity *rate, ModelSubst
     site_rate->phylo_tree->clearAllPartialLH();
     return site_rate->phylo_tree->computeLikelihood();
 }
-
+*/
 double ModelFactory::optimizeParametersOnly(double gradient_epsilon) {
 	double logl;
 	/* Optimize substitution and heterogeneity rates independently */
@@ -826,16 +826,20 @@ double ModelFactory::optimizeParametersGammaInvar(int fixed_len, bool write_info
 	DoubleVector bestLens;
 	tree->saveBranchLengths(initBranLens);
     bestLens = initBranLens;
-	int numRateEntries = tree->getModel()->getNumRateEntries();
-	double *rates = new double[numRateEntries];
-	double *bestRates = new double[numRateEntries];
-	tree->getModel()->getRateMatrix(rates);
-	int numStates = tree->aln->num_states;
-	double *state_freqs = new double[numStates];
-	tree->getModel()->getStateFrequency(state_freqs);
+//	int numRateEntries = tree->getModel()->getNumRateEntries();
+    Checkpoint *model_ckp = new Checkpoint;
+    Checkpoint *best_ckp = new Checkpoint;
+    Checkpoint *saved_ckp = model->getCheckpoint();
+    *model_ckp = *saved_ckp;
+//	double *rates = new double[numRateEntries];
+//	double *bestRates = new double[numRateEntries];
+//	tree->getModel()->getRateMatrix(rates);
+//	int numStates = tree->aln->num_states;
+//	double *state_freqs = new double[numStates];
+//	tree->getModel()->getStateFrequency(state_freqs);
 
 	/* Best estimates found */
-	double *bestStateFreqs =  new double[numStates];
+//	double *bestStateFreqs =  new double[numStates];
 	double bestLogl = -DBL_MAX;
 	double bestAlpha = 0.0;
 	double bestPInvar = 0.0;
@@ -853,8 +857,8 @@ double ModelFactory::optimizeParametersGammaInvar(int fixed_len, bool write_info
                 cout << "Testing with init. pinv = " << initPInv << " / init. alpha = "  << initAlpha << endl;
             }
 
-            vector<double> estResults = optimizeGammaInvWithInitValue(fixed_len, logl_epsilon, gradient_epsilon, tree, site_rate, rates, state_freqs,
-                                                                   initPInv, initAlpha, initBranLens);
+            vector<double> estResults = optimizeGammaInvWithInitValue(fixed_len, logl_epsilon, gradient_epsilon,
+                                                                   initPInv, initAlpha, initBranLens, model_ckp);
 
 
             if (write_info) {
@@ -868,8 +872,13 @@ double ModelFactory::optimizeParametersGammaInvar(int fixed_len, bool write_info
                 bestPInvar = estResults[0];
                 bestLens.clear();
                 tree->saveBranchLengths(bestLens);
-                tree->getModel()->getRateMatrix(bestRates);
-                tree->getModel()->getStateFrequency(bestStateFreqs);
+                model->setCheckpoint(best_ckp);
+                model->saveCheckpoint();
+                model->setCheckpoint(saved_ckp);
+//                *best_ckp = *saved_ckp;
+
+//                tree->getModel()->getRateMatrix(bestRates);
+//                tree->getModel()->getStateFrequency(bestStateFreqs);
                 if (estResults[0] < initPInv) {
                     initPInv = estResults[0] - testInterval;
                     if (initPInv < 0.0)
@@ -893,11 +902,11 @@ double ModelFactory::optimizeParametersGammaInvar(int fixed_len, bool write_info
             }
             vector<double> estResults; // vector of p_inv, alpha and logl
             if (Params::getInstance().opt_gammai_keep_bran)
-                estResults = optimizeGammaInvWithInitValue(fixed_len, logl_epsilon, gradient_epsilon, tree, site_rate, rates, state_freqs,
-                                                                          initPInv, initAlpha, bestLens);
+                estResults = optimizeGammaInvWithInitValue(fixed_len, logl_epsilon, gradient_epsilon,
+                                                                          initPInv, initAlpha, bestLens, model_ckp);
             else
-                estResults = optimizeGammaInvWithInitValue(fixed_len, logl_epsilon, gradient_epsilon, tree, site_rate, rates, state_freqs,
-                                                                      initPInv, initAlpha, initBranLens);
+                estResults = optimizeGammaInvWithInitValue(fixed_len, logl_epsilon, gradient_epsilon,
+                                                                      initPInv, initAlpha, initBranLens, model_ckp);
             if (write_info) {
                 cout << "Est. p_inv: " << estResults[0] << " / Est. gamma shape: " << estResults[1]
                 << " / Logl: " << estResults[2] << endl;
@@ -911,8 +920,13 @@ double ModelFactory::optimizeParametersGammaInvar(int fixed_len, bool write_info
                 bestPInvar = estResults[0];
                 bestLens.clear();
                 tree->saveBranchLengths(bestLens);
-                tree->getModel()->getRateMatrix(bestRates);
-                tree->getModel()->getStateFrequency(bestStateFreqs);
+                model->setCheckpoint(best_ckp);
+                model->saveCheckpoint();
+                model->setCheckpoint(saved_ckp);
+//                *best_ckp = *saved_ckp;
+
+//                tree->getModel()->getRateMatrix(bestRates);
+//                tree->getModel()->getStateFrequency(bestStateFreqs);
             }
         }
     }
@@ -922,22 +936,25 @@ double ModelFactory::optimizeParametersGammaInvar(int fixed_len, bool write_info
 	((ModelMarkov*) tree->getModel())->setRateMatrix(bestRates);
 	((ModelMarkov*) tree->getModel())->setStateFrequency(bestStateFreqs);
 	tree->restoreBranchLengths(bestLens);
-	tree->getModel()->decomposeRateMatrix();
+//	tree->getModel()->decomposeRateMatrix();
 
 	tree->clearAllPartialLH();
 	tree->setCurScore(tree->computeLikelihood());
-    assert(fabs(tree->getCurScore() - bestLogl) < 1.0);
-    if (write_info) {    
+    if (write_info) {
         cout << endl;
         cout << "Best p_inv: " << bestPInvar << " / best gamma shape: " << bestAlpha << " / ";
         cout << "Logl: " << tree->getCurScore() << endl;
     }
+    assert(fabs(tree->getCurScore() - bestLogl) < 1.0);
 
-	delete [] rates;
-	delete [] state_freqs;
-	delete [] bestRates;
-	delete [] bestStateFreqs;
-    
+//	delete [] rates;
+//	delete [] state_freqs;
+//	delete [] bestRates;
+//	delete [] bestStateFreqs;
+
+    delete model_ckp;
+    delete best_ckp;
+
 	double elapsed_secs = getRealTime() - begin_time;
 	if (write_info)
 		cout << "Parameters optimization took " << elapsed_secs << " sec" << endl;
@@ -950,9 +967,9 @@ double ModelFactory::optimizeParametersGammaInvar(int fixed_len, bool write_info
 }
 
 vector<double> ModelFactory::optimizeGammaInvWithInitValue(int fixed_len, double logl_epsilon, double gradient_epsilon,
-                                                 PhyloTree *tree, RateHeterogeneity *site_rates, double *rates,
-                                                 double *state_freqs, double initPInv, double initAlpha,
-                                                 DoubleVector &lenvec) {
+                                                 double initPInv, double initAlpha,
+                                                 DoubleVector &lenvec, Checkpoint *model_ckp) {
+    PhyloTree *tree = site_rate->getTree();
     tree->restoreBranchLengths(lenvec);
     ((ModelMarkov*) tree->getModel())->setRateMatrix(rates);
     ((ModelMarkov*) tree->getModel())->setStateFrequency(state_freqs);
@@ -963,8 +980,8 @@ vector<double> ModelFactory::optimizeGammaInvWithInitValue(int fixed_len, double
     optimizeParameters(fixed_len, false, logl_epsilon, gradient_epsilon);
 
     vector<double> estResults;
-    double estPInv = tree->getRate()->getPInvar();
-    double estAlpha = tree->getRate()->getGammaShape();
+    double estPInv = site_rate->getPInvar();
+    double estAlpha = site_rate->getGammaShape();
     double logl = tree->getCurScore();
     estResults.push_back(estPInv);
     estResults.push_back(estAlpha);

@@ -1588,7 +1588,7 @@ void printMiscInfo(Params &params, IQTree &iqtree, double *pattern_lh) {
         printAncestralSequences(params.out_prefix, &iqtree, params.print_ancestral_sequence);
     }
     
-    if (params.print_site_state_freq != WSF_NONE) {
+    if (params.print_site_state_freq != WSF_NONE && !params.site_freq_file && !params.tree_freq_file) {
 		string site_freq_file = params.out_prefix;
 		site_freq_file += ".sitesf";
         printSiteStateFreq(site_freq_file.c_str(), &iqtree);
@@ -2313,17 +2313,20 @@ void searchGAMMAInvarByRestarting(IQTree &iqtree) {
 // Test alpha fom 0.1 to 15 and p_invar from 0.1 to 0.99, stepsize = 0.01
 void exhaustiveSearchGAMMAInvar(Params &params, IQTree &iqtree) {
 	double alphaMin = 0.01;
-	double alphaMax = 2.00;
+	double alphaMax = 10.00;
 	double p_invarMin = 0.01;
 	double p_invarMax = 1.00;
+//	double p_invarMax = iqtree.aln->frac_const_sites;
 	double stepSize = 0.01;
 	int numAlpha = (int) floor((alphaMax - alphaMin)/stepSize);
 	int numInvar = (int) floor((p_invarMax - p_invarMin)/stepSize);
 
-	cout << "EVALUATING COMBINATIONS OF " << numAlpha << " ALPHAS AND " << numInvar << " P_INVARS ... " << endl;
+	cout << "EVALUATING " << numAlpha*numInvar << " COMBINATIONS OF " << " alpha=" << alphaMin << ".." << alphaMax
+         << " AND " << " p-invar=" << p_invarMin << ".." << p_invarMax
+         << " (epsilon: " << params.modelEps << ")" << endl;
 
-	vector<string> results;
-	results.reserve((unsigned long) (numAlpha * numInvar));
+//	vector<string> results;
+//	results.reserve((unsigned long) (numAlpha * numInvar));
 	DoubleVector lenvec;
 	iqtree.saveBranchLengths(lenvec);
 
@@ -2331,28 +2334,31 @@ void exhaustiveSearchGAMMAInvar(Params &params, IQTree &iqtree) {
 	site_rates->setFixPInvar(true);
 	site_rates->setFixGammaShape(true);
 
-    for (double alpha = alphaMin; alpha < alphaMax; alpha = alpha + stepSize) {
-        for (double p_invar = p_invarMin; p_invar < p_invarMax; p_invar = p_invar + stepSize) {
-            site_rates->setGammaShape(alpha);
-            site_rates->setPInvar(p_invar);
-            iqtree.clearAllPartialLH();
-            double lh = iqtree.getModelFactory()->optimizeParameters(params.fixed_branch_length, false, 0.001);
-            stringstream ss;
-            ss << fixed << setprecision(2) << alpha << " " << p_invar << " " << lh << " " << iqtree.treeLength();
-            //cout << ss.str() << endl;
-            results.push_back(ss.str());
-            iqtree.restoreBranchLengths(lenvec);
-        }
-    }
 	string aiResultsFileName = string(params.out_prefix) + ".ai_results";
 	ofstream aiFileResults;
 	aiFileResults.open(aiResultsFileName.c_str());
 	aiFileResults << fixed;
 	aiFileResults.precision(4);
 	aiFileResults << "alpha p_invar logl tree_len\n";
-	for (vector<string>::iterator it = results.begin(); it != results.end(); it++) {
-				aiFileResults << (*it) << endl;
-			}
+
+    for (double alpha = alphaMin; alpha < alphaMax; alpha = alpha + stepSize) {
+        cout << "alpha = " << alpha << endl;
+        for (double p_invar = p_invarMin; p_invar < p_invarMax; p_invar = p_invar + stepSize) {
+            site_rates->setGammaShape(alpha);
+            site_rates->setPInvar(p_invar);
+            iqtree.clearAllPartialLH();
+            double lh = iqtree.getModelFactory()->optimizeParameters(params.fixed_branch_length, false, params.modelEps);
+//            stringstream ss;
+//            ss << fixed << setprecision(2) << alpha << " " << p_invar << " " << lh << " " << iqtree.treeLength();
+            aiFileResults << alpha << " " << p_invar << " " << lh << " " << iqtree.treeLength() << endl;
+            //cout << ss.str() << endl;
+//            results.push_back(ss.str());
+            iqtree.restoreBranchLengths(lenvec);
+        }
+    }
+//	for (vector<string>::iterator it = results.begin(); it != results.end(); it++) {
+//				aiFileResults << (*it) << endl;
+//			}
 	aiFileResults.close();
 	cout << "Results were written to: " << aiResultsFileName << endl;
 	cout << "Wall clock time used: " << getRealTime() - params.start_real_time << endl;
@@ -2459,8 +2465,12 @@ void runStandardBootstrap(Params &params, string &original_model, Alignment *ali
 			}
 		} else
 			boot_tree = new IQTree(bootstrap_alignment);
-		if (params.print_bootaln && MPIHelper::getInstance().isMaster())
-			bootstrap_alignment->printPhylip(bootaln_name.c_str(), true);
+		if (params.print_bootaln && MPIHelper::getInstance().isMaster()) {
+            if (bootstrap_alignment->isSuperAlignment())
+                ((SuperAlignment*)bootstrap_alignment)->printCombinedAlignment(bootaln_name.c_str(), true);
+            else
+                bootstrap_alignment->printPhylip(bootaln_name.c_str(), true);
+        }
 
         // set checkpoint
         boot_tree->setCheckpoint(tree->getCheckpoint());

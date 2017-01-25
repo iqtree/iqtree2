@@ -238,7 +238,7 @@ void PhyloTree::computeTipPartialLikelihood() {
 
                 double *inv_evec = &model->getInverseEigenvectors()[ptn*nstates*nstates];
                 for (v = 0; v < vector_size; v++) {
-                    int state = aln->STATE_UNKNOWN;
+                    int state = 0;
                     if (ptn+v < nptn)
                         state = aln->at(ptn+v)[nodeid];
     //                double *partial_lh = node_partial_lh + ptn*nstates;
@@ -596,6 +596,13 @@ void PhyloTree::computePtnInvar() {
 	size_t nptn = aln->getNPattern(), ptn;
 	size_t maxptn = get_safe_upper_limit(nptn)+get_safe_upper_limit(model_factory->unobserved_ptns.size());
 	int nstates = aln->num_states;
+    int x;
+    // ambiguous characters
+    int ambi_aa[] = {
+        4+8, // B = N or D
+        32+64, // Z = Q or E
+        512+1024 // U = I or L
+    };
 
     double state_freq[nstates];
 
@@ -606,11 +613,31 @@ void PhyloTree::computePtnInvar() {
 	double p_invar = site_rate->getPInvar();
 	if (p_invar != 0.0) {
 		for (ptn = 0; ptn < nptn; ptn++) {
-			if ((*aln)[ptn].const_char == nstates)
+            if ((*aln)[ptn].const_char > aln->STATE_UNKNOWN)
+                continue;
+
+			if ((*aln)[ptn].const_char == aln->STATE_UNKNOWN) {
 				ptn_invar[ptn] = p_invar;
-			else if ((*aln)[ptn].const_char < nstates) {
+			} else if ((*aln)[ptn].const_char < nstates) {
 				ptn_invar[ptn] = p_invar * state_freq[(int) (*aln)[ptn].const_char];
-			}
+			} else if (aln->seq_type == SEQ_DNA) {
+                // 2016-12-21: handling ambiguous state
+                ptn_invar[ptn] = 0.0;
+                int cstate = (*aln)[ptn].const_char-nstates+1;
+                for (x = 0; x < nstates; x++) {
+                    if ((cstate) & (1 << x))
+                        ptn_invar[ptn] += state_freq[x];
+                }
+                ptn_invar[ptn] *= p_invar;
+            } else if (aln->seq_type == SEQ_PROTEIN) {
+                ptn_invar[ptn] = 0.0;
+                int cstate = (*aln)[ptn].const_char-nstates;
+                assert(cstate <= 2);
+                for (x = 0; x < 11; x++)
+                    if (ambi_aa[cstate] & (1 << x))
+                        ptn_invar[ptn] += state_freq[x];
+                ptn_invar[ptn] *= p_invar;
+            } else ASSERT(0);
 		}
 //		// ascertmain bias correction
 //		for (ptn = 0; ptn < model_factory->unobserved_ptns.size(); ptn++)
