@@ -247,9 +247,8 @@ protected:
 	*/
 	virtual bool getVariables(double *variables);
 
-    vector<double> optimizeGammaInvWithInitValue(int fixed_len, double logl_epsilon, double gradient_epsilon, PhyloTree *tree,
-                                       RateHeterogeneity *site_rates, double *rates, double *state_freqs,
-                                       double initPInv, double initAlpha, DoubleVector &lenvec);
+    vector<double> optimizeGammaInvWithInitValue(int fixed_len, double logl_epsilon, double gradient_epsilon,
+                                       double initPInv, double initAlpha, DoubleVector &lenvec, Checkpoint *model_ckp);
 };
 
 #endif
