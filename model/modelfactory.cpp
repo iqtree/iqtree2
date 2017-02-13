@@ -933,8 +933,11 @@ double ModelFactory::optimizeParametersGammaInvar(int fixed_len, bool write_info
 
     site_rate->setGammaShape(bestAlpha);
     site_rate->setPInvar(bestPInvar);
-	((ModelMarkov*) tree->getModel())->setRateMatrix(bestRates);
-	((ModelMarkov*) tree->getModel())->setStateFrequency(bestStateFreqs);
+    model->setCheckpoint(best_ckp);
+    model->restoreCheckpoint();
+    model->setCheckpoint(saved_ckp);
+//	((ModelMarkov*) tree->getModel())->setRateMatrix(bestRates);
+//	((ModelMarkov*) tree->getModel())->setStateFrequency(bestStateFreqs);
 	tree->restoreBranchLengths(bestLens);
 //	tree->getModel()->decomposeRateMatrix();
 
@@ -971,11 +974,15 @@ vector<double> ModelFactory::optimizeGammaInvWithInitValue(int fixed_len, double
                                                  DoubleVector &lenvec, Checkpoint *model_ckp) {
     PhyloTree *tree = site_rate->getTree();
     tree->restoreBranchLengths(lenvec);
-    ((ModelMarkov*) tree->getModel())->setRateMatrix(rates);
-    ((ModelMarkov*) tree->getModel())->setStateFrequency(state_freqs);
-    tree->getModel()->decomposeRateMatrix();
-    site_rates->setPInvar(initPInv);
-    site_rates->setGammaShape(initAlpha);
+    Checkpoint *saved_ckp = model->getCheckpoint();
+    model->setCheckpoint(model_ckp);
+    model->restoreCheckpoint();
+    model->setCheckpoint(saved_ckp);
+//    ((ModelMarkov*) tree->getModel())->setRateMatrix(rates);
+//    ((ModelMarkov*) tree->getModel())->setStateFrequency(state_freqs);
+//    tree->getModel()->decomposeRateMatrix();
+    site_rate->setPInvar(initPInv);
+    site_rate->setGammaShape(initAlpha);
     tree->clearAllPartialLH();
     optimizeParameters(fixed_len, false, logl_epsilon, gradient_epsilon);
 
