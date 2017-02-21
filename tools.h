@@ -1807,6 +1807,9 @@ public:
 	 */
 	bool print_bootaln;
 
+    /** TRUE to print bootstrapped site frequency for e.g. PMSF */
+    bool print_boot_site_freq;
+
 	/** true to print sub alignments of super alignment, default: false */
 	bool print_subaln;
 

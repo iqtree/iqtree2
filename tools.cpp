@@ -919,6 +919,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.model_test_sample_size = 0;
     params.root_state = NULL;
     params.print_bootaln = false;
+    params.print_boot_site_freq = false;
 	params.print_subaln = false;
 	params.print_partition_info = false;
 	params.print_conaln = false;
@@ -2373,6 +2374,10 @@ void parseArg(int argc, char *argv[], Params &params) {
 			}
 			if (strcmp(argv[cnt], "-wba") == 0) {
 				params.print_bootaln = true;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-wbsf") == 0) {
+				params.print_boot_site_freq = true;
 				continue;
 			}
 			if (strcmp(argv[cnt], "-wsa") == 0) {

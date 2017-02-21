@@ -115,6 +115,13 @@ void printSiteProbCategory(const char*filename, PhyloTree *tree, SiteLoglType ws
 void printSiteStateFreq(const char*filename, PhyloTree *tree, double *state_freqs = NULL);
 
 /**
+ * print site state frequency vectors (for Huaichun)
+ * @param filename output file name
+ * @param aln alignment
+*/
+void printSiteStateFreq(const char* filename, Alignment *aln);
+
+/**
     print ancestral sequences
     @param filename output file name
     @param tree phylogenetic tree
