@@ -935,30 +935,30 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
 		// {{1, 1, 1, 1}, {-1, 1, -1, 1}, {0, -1, 0, 1}, {-1, 0, 1, 0}}
 
 		//v0 = {1, 1, 1, 1}
-		cevec[0] = cevec[4] = cevec[8] = cevec[12] = 1.0;
+		cevec[0] = cevec[1] = cevec[2] = cevec[3] = 1.0;
 		//v1 = {-1, 1, -1, 1}
-		cevec[1] = -1.0;
+		cevec[4] = -1.0;
 		cevec[5] =  1.0;
-		cevec[9] =  -1.0;
-		cevec[13] =  1.0;
+		cevec[6] =  -1.0;
+		cevec[7] =  1.0;
 		//v2 ={0, -1, 0, 1}
-		cevec[2] =  0.0;
-		cevec[6] =-1.0;
+		cevec[8] =  0.0;
+		cevec[9] =-1.0;
 		cevec[10] = 0.0;
-		cevec[14] = 1.0;
-		//v3 = {-1, 0, 1, 0}
-		cevec[3] = -1.0;
-		cevec[7]  = 0.0;
 		cevec[11] = 1.0;
+		//v3 = {-1, 0, 1, 0}
+		cevec[12] = -1.0;
+		cevec[13]  = 0.0;
+		cevec[14] = 1.0;
 		cevec[15] = 0.0;
 
 		/*INVERSES*/
 
-		cinv_evec[0] = cinv_evec[1] = cinv_evec[5] = cinv_evec[2] = cinv_evec[3] = cinv_evec[7] = 0.25;
-		cinv_evec[4] = cinv_evec[6] = -0.25;
-		cinv_evec[8] = cinv_evec[11] = cinv_evec[10] = cinv_evec[15] = 0.;
-		cinv_evec[12] = cinv_evec[9] = -0.5;
-		cinv_evec[14] = cinv_evec[11] = 0.5;
+		cinv_evec[0] = cinv_evec[4] = cinv_evec[5] = cinv_evec[8] = cinv_evec[12] = cinv_evec[13] = 0.25;
+		cinv_evec[1] = cinv_evec[9] = -0.25;
+		cinv_evec[2] = cinv_evec[10] = cinv_evec[15] = 0.;
+		cinv_evec[3] = cinv_evec[6] = -0.5;
+		cinv_evec[11] = cinv_evec[14] = 0.5;
 
     }  else if (name.find("3.3a") != string::npos) {
         /*cout << "The raw parameters are: a = " << a << ",   a2 = " << a2 << "  b = " << b << endl;
@@ -1772,17 +1772,8 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
 	for (j = 0; j < num_states; j++) {
 		for (i = 0, zero = 0.0; i < num_states; i++) {
 
-			/*if (i ==0 and j == 2) {
-				complex <double> suma = (0., 0.);
-					/*cout << "Los vectores escalares son" << endl;
-					for (int k = 0; k < num_states; k++) { cout << rate_matrix[i*num_states+k] << "  *  "  << cevec[k*num_states+j] << "   =   " << rate_matrix[i*num_states+k] * cevec[k*num_states+j] << endl;
-						suma += rate_matrix[i*num_states+k] * cevec[k*num_states+j];}
-					cout << "La suma de ellos es " << suma << endl;
-					cout << "Y lo del final es " << ceval[j] << "  *   " << cevec[i*num_states+j] << "   =  " << ceval[j] * cevec[i*num_states+j] << endl;
-				}*/
-
-			for (int k = 0; k < num_states; k++) 
-                zero += rate_matrix[i*num_states+k] * cevec[k*num_states+j];
+			for (int k = 0; k < num_states; k++)
+                zero += rate_matrix[k*num_states+i] * cevec[k*num_states+j];
 			zero -= ceval[j] * cevec[i*num_states+j];
 			if (abs(zero) > 1.0e-5) {
                 cout << "too large error[" << i << "," << j << "]: " << zero << endl;
@@ -1865,7 +1856,7 @@ void ModelLieMarkov::computeTransMatrix(double time, double *trans_matrix, int m
                 sum += (trans_matrix[i*4+j]);
             assert(fabs(sum-1.0) < 1e-4);
         }
-    } else if (technique == MET_EIGEN3LIB_DECOMPOSITION) {
+    } else if (technique == MET_EIGEN3LIB_DECOMPOSITION || technique == MET_LIE_MARKOV_DECOMPOSITION) {
     // and nondiagonalizable == false, else we used scaled squaring
         int i;
         Vector4cd ceval_exp;

@@ -335,11 +335,13 @@ void ModelMarkov::computeTransMatrix(double time, double *trans_matrix, int mixt
     if (!is_reversible) {
         if (phylo_tree->params->matrix_exp_technique == MET_EIGEN_DECOMPOSITION) {
             computeTransMatrixEigen(time, trans_matrix);
-        } else {
+        } else if (phylo_tree->params->matrix_exp_technique == MET_SCALING_SQUARING) {
             // scaling and squaring technique
             int statesqr = num_states*num_states;
             memcpy(trans_matrix, rate_matrix, statesqr*sizeof(double));
             matexp(trans_matrix, time, num_states, TimeSquare, temp_space);
+        } else {
+            assert(0 && "this line should not be reached");
         }
         return;
         // 2016-04-05: 2nd version
