@@ -138,6 +138,7 @@ void MTree::copyTree(MTree *tree) {
     stringstream ss;
     tree->printTree(ss);
     readTree(ss, tree->rooted);
+    rooted = tree->rooted;
 }
 
 void MTree::copyTree(MTree *tree, string &taxa_set) {

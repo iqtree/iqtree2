@@ -18,6 +18,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 #include "modeldna.h"
+#include "modelliemarkov.h"
 
 ModelDNA::ModelDNA(PhyloTree *tree)
 : ModelMarkov(tree)
@@ -163,15 +164,24 @@ void ModelDNA::init(const char *model_name, string model_params, StateFreqType f
 	assert(num_states == 4); // make sure that you create model for DNA
 	StateFreqType def_freq = FREQ_UNKNOWN;
 	string rate_type;
+	// First try: the time reversible models
 	name = getDNAModelInfo((string)model_name, full_name, rate_type, def_freq);
+	if (name == "") {
+	    // Second try: Lie Markov models. (Note, we're still missing UNREST 
+	    // model. 12.12 is equivalent, but user may not realize that.)
+	    int model_num, symmetry; // returned by getLieMarkovModelInfo, but not used here
+	    ModelLieMarkov::getLieMarkovModelInfo((string)model_name, name, full_name, model_num, symmetry, def_freq);
+	}
 
 	if (name != "") {
 		setRateType(rate_type.c_str());
 	} else {
 		//cout << "User-specified model "<< model_name << endl;
-		if (setRateType(model_name))
-			def_freq = FREQ_ESTIMATE;
-		else {
+	        if (setRateType(model_name)) {
+		    // model was six digits (e.g. 010010 for K2P/HKY)
+		    name = model_name;
+		    full_name = "Time reversible ("+name+")";
+		} else {
 			readParameters(model_name);
 			//name += " (user-defined)";
 		}
@@ -347,10 +357,8 @@ bool ModelDNA::setRateType(const char *rate_str) {
 
 int ModelDNA::getNDim() {
 	assert(freq_type != FREQ_UNKNOWN);
-	int ndim = num_params; 
-	if (freq_type == FREQ_ESTIMATE) 
-		ndim += num_states-1;
-	return ndim;
+	// possible TO-DO: cache nFreqParams(freq_type) to avoid repeat calls.
+        return (num_params+nFreqParams(freq_type));
 }
 
 void ModelDNA::writeParameters(ostream &out) {
@@ -369,68 +377,68 @@ void ModelDNA::writeParameters(ostream &out) {
 	}
 }
 
-
+/*
+ * getVariables *writes* the variables (i.e. model parameters).
+ * Returns true if any variables have changed, false if not.
+ */
 bool ModelDNA::getVariables(double *variables) {
-	int i;
+    int i;
     bool changed = false;
-	if (num_params > 0) {
-		int num_all = param_spec.length();
-		if (verbose_mode >= VB_MAX) {
-			for (i = 1; i <= num_params; i++)
-				cout << "  estimated variables[" << i << "] = " << variables[i] << endl;
-		}
-		for (i = 0; i < num_all; i++)
-			if (!param_fixed[param_spec[i]]) {
+    if (num_params > 0) {
+        int num_all = param_spec.length();
+        if (verbose_mode >= VB_MAX) {
+            for (i = 1; i <= num_params; i++)
+                cout << "  estimated variables[" << i << "] = " << variables[i] << endl;
+        }
+        for (i = 0; i < num_all; i++)
+            if (!param_fixed[param_spec[i]]) {
                 changed |= (rates[i] != variables[(int)param_spec[i]]);
-				rates[i] = variables[(int)param_spec[i]];
-			}
-	}
-	if (freq_type == FREQ_ESTIMATE) {
-        // 2015-09-07: relax the sum of state_freq to be 1, this will be done at the end of optimization
-		int ndim = getNDim();
-		changed |= memcmpcpy(state_freq, variables+(ndim-num_states+2), (num_states-1)*sizeof(double));
-//		double sum = 0;
-//		for (i = 0; i < num_states-1; i++) 
-//			sum += state_freq[i];
-//		state_freq[num_states-1] = 1.0 - sum;
+                            rates[i]  = variables[(int)param_spec[i]];
+             }
+   
+    }
+    changed |= freqsFromParams(state_freq,variables+num_params+1,freq_type);
+    return changed;
+//              double sum = 0;
+//              for (i = 0; i < num_states-1; i++) 
+//                      sum += state_freq[i];
+//              state_freq[num_states-1] = 1.0 - sum;
 
         // BUG FIX 2015.08.28
 //        int nrate = getNDim();
 //        if (freq_type == FREQ_ESTIMATE) nrate -= (num_states-1);
-//		double sum = 1.0;
-//		int i, j;
-//		for (i = 1; i < num_states; i++)
-//			sum += variables[nrate+i];
-//		for (i = 0, j = 1; i < num_states; i++)
-//			if (i != highest_freq_state) {
-//				state_freq[i] = variables[nrate+j] / sum;
-//				j++;
-//			}
-//		state_freq[highest_freq_state] = 1.0/sum;
-	}
-    return changed;
+//              double sum = 1.0;
+//              int i, j;
+//              for (i = 1; i < num_states; i++)
+//                      sum += variables[nrate+i];
+//              for (i = 0, j = 1; i < num_states; i++)
+//                      if (i != highest_freq_state) {
+//                              state_freq[i] = variables[nrate+j] / sum;
+//                              j++;
+//                      }
+//              state_freq[highest_freq_state] = 1.0/sum;
 }
 
+/*
+ * setVariables *reads* the variables (i.e. model parameters).
+ */
 void ModelDNA::setVariables(double *variables) {
-	if (num_params > 0) {
-		int num_all = param_spec.length();
-		for (int i = 0; i < num_all; i++)
-			if (!param_fixed[param_spec[i]])
-				variables[(int)param_spec[i]] = rates[i];
-	}
-	if (freq_type == FREQ_ESTIMATE) {
-        // 2015-09-07: relax the sum of state_freq to be 1, this will be done at the end of optimization
-		int ndim = getNDim();
-		memcpy(variables+(ndim-num_states+2), state_freq, (num_states-1)*sizeof(double));
+    if (num_params > 0) {
+        int num_all = param_spec.length();
+        for (int i = 0; i < num_all; i++)
+            if (!param_fixed[param_spec[i]])
+                variables[(int)param_spec[i]] = rates[i];
+    }
+    // and copy parameters for base frequencies
+    paramsFromFreqs(variables+num_params+1, state_freq, freq_type);
 
         // BUG FIX 2015.08.28
 //        int nrate = getNDim();
 //        if (freq_type == FREQ_ESTIMATE) nrate -= (num_states-1);
-//		int i, j;
-//		for (i = 0, j = 1; i < num_states; i++)
-//			if (i != highest_freq_state) {
-//				variables[nrate+j] = state_freq[i] / state_freq[highest_freq_state];
-//				j++;
-//			}
-	}
+//              int i, j;
+//              for (i = 0, j = 1; i < num_states; i++)
+//                      if (i != highest_freq_state) {
+//                              variables[nrate+j] = state_freq[i] / state_freq[highest_freq_state];
+//                              j++;
+//                      }
 }

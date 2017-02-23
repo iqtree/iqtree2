@@ -311,18 +311,20 @@ void IQTree::initSettings(Params &params) {
 //        max_candidate_trees = aln->getNSeq() * params.step_iterations;
     setRootNode(params.root);
 
-    string bootaln_name = params.out_prefix;
-    bootaln_name += ".bootaln";
-    if (params.print_bootaln) {
-        ofstream bootalnout;
-    	bootalnout.open(bootaln_name.c_str());
-    	bootalnout.close();
-    }
     size_t i;
 
     if (params.online_bootstrap && params.gbo_replicates > 0) {
         if (aln->getNSeq() < 4)
             outError("It makes no sense to perform bootstrap with less than 4 sequences.");
+
+        string bootaln_name = params.out_prefix;
+        bootaln_name += ".bootaln";
+        if (params.print_bootaln) {
+            ofstream bootalnout;
+            bootalnout.open(bootaln_name.c_str());
+            bootalnout.close();
+        }
+
         // 2015-12-17: initialize random stream for creating bootstrap samples
         // mainly so that checkpointing does not need to save bootstrap samples
         int *saved_randstream = randstream;

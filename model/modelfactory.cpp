@@ -22,6 +22,7 @@
 #include "rategamma.h"
 #include "rategammainvar.h"
 #include "modelmarkov.h"
+#include "modelliemarkov.h"
 #include "modeldna.h"
 #include "modelprotein.h"
 #include "modelbin.h"
@@ -323,53 +324,77 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
         if (freq_str.length() > 2 && freq_str[2] == OPEN_BRACKET) {
             if (freq_type == FREQ_MIXTURE)
                 outError("Mixture frequency with user-defined frequency is not allowed");
-			close_bracket = freq_str.find(CLOSE_BRACKET);
-			if (close_bracket == string::npos)
-				outError("Close bracket not found in ", freq_str);
-			if (close_bracket != freq_str.length()-1)
-				outError("Wrong close bracket position ", freq_str);
-			freq_type = FREQ_USER_DEFINED;
-			freq_params = freq_str.substr(3, close_bracket-3);
-		} else if (freq_str == "+FC" || freq_str == "+Fc" || freq_str == "+F") {
+            close_bracket = freq_str.find(CLOSE_BRACKET);
+            if (close_bracket == string::npos)
+                outError("Close bracket not found in ", freq_str);
+            if (close_bracket != freq_str.length()-1)
+                outError("Wrong close bracket position ", freq_str);
+            freq_type = FREQ_USER_DEFINED;
+            freq_params = freq_str.substr(3, close_bracket-3);
+        } else if (freq_str == "+FC" || freq_str == "+Fc" || freq_str == "+F") {
             if (freq_type == FREQ_MIXTURE) {
                 freq_params = "empirical," + freq_params;
                 optimize_mixmodel_weight = true;
             } else
                 freq_type = FREQ_EMPIRICAL;
-		} else if (freq_str == "+FU" || freq_str == "+Fu") {
+	} else if (freq_str == "+FU" || freq_str == "+Fu") {
             if (freq_type == FREQ_MIXTURE)
                 outError("Mixture frequency with user-defined frequency is not allowed");
             else
                 freq_type = FREQ_USER_DEFINED;
-		} else if (freq_str == "+FQ" || freq_str == "+Fq") {
+        } else if (freq_str == "+FQ" || freq_str == "+Fq") {
             if (freq_type == FREQ_MIXTURE)
                 outError("Mixture frequency with equal frequency is not allowed");
             else
-                freq_type = FREQ_EQUAL;
-		} else if (freq_str == "+FO" || freq_str == "+Fo") {
+            freq_type = FREQ_EQUAL;
+        } else if (freq_str == "+FO" || freq_str == "+Fo") {
             if (freq_type == FREQ_MIXTURE) {
                 freq_params = "optimize," + freq_params;
                 optimize_mixmodel_weight = true;                
             } else
                 freq_type = FREQ_ESTIMATE;
-		} else if (freq_str == "+F1x4" || freq_str == "+F1X4") {
+	} else if (freq_str == "+F1x4" || freq_str == "+F1X4") {
             if (freq_type == FREQ_MIXTURE)
                 outError("Mixture frequency with " + freq_str + " is not allowed");
             else
                 freq_type = FREQ_CODON_1x4;
-		} else if (freq_str == "+F3x4" || freq_str == "+F3X4") {
+        } else if (freq_str == "+F3x4" || freq_str == "+F3X4") {
             if (freq_type == FREQ_MIXTURE)
                 outError("Mixture frequency with " + freq_str + " is not allowed");
             else
                 freq_type = FREQ_CODON_3x4;
-		} else if (freq_str == "+F3x4C" || freq_str == "+F3x4c" || freq_str == "+F3X4C" || freq_str == "+F3X4c") {
+        } else if (freq_str == "+F3x4C" || freq_str == "+F3x4c" || freq_str == "+F3X4C" || freq_str == "+F3X4c") {
             if (freq_type == FREQ_MIXTURE)
                 outError("Mixture frequency with " + freq_str + " is not allowed");
             else
                 freq_type = FREQ_CODON_3x4C;
-		} else outError("Unknown state frequency type ",freq_str);
-//		model_str = model_str.substr(0, posfreq);
+        } else if (freq_str == "+FRY") {
+	    // MDW to Minh: I don't know how these should interact with FREQ_MIXTURE,
+	    // so as nearly everything else treats it as an error, I do too.
+            if (freq_type == FREQ_MIXTURE)
+                outError("Mixture frequency with " + freq_str + " is not allowed");
+            else
+                freq_type = FREQ_DNA_RY;
+        } else if (freq_str == "+FWS") {
+            if (freq_type == FREQ_MIXTURE)
+                outError("Mixture frequency with " + freq_str + " is not allowed");
+            else
+                freq_type = FREQ_DNA_WS;
+        } else if (freq_str == "+FMK") {
+            if (freq_type == FREQ_MIXTURE)
+                outError("Mixture frequency with " + freq_str + " is not allowed");
+            else
+                freq_type = FREQ_DNA_MK;
+        } else {
+            // might be "+F####" where # are digits
+	    try {
+	        freq_type = parseStateFreqDigits(freq_str.substr(2)); // throws an error if not in +F#### format
+	    } catch (...) {
+	        outError("Unknown state frequency type ",freq_str);
+	    }
 	}
+//          model_str = model_str.substr(0, posfreq);
+        }
 
 	/******************** initialize model ****************************/
 
@@ -741,11 +766,21 @@ void ModelFactory::restoreCheckpoint() {
 int ModelFactory::getNParameters() {
 	int df = model->getNDim() + model->getNDimFreq() + site_rate->getNDim();
     
-    if (!site_rate->getTree()->params->fixed_branch_length)
+    if (!site_rate->getTree()->params->fixed_branch_length) {
         df += site_rate->phylo_tree->branchNum - (int)site_rate->phylo_tree->rooted;
-	return df;
+	// If model is Lie-Markov, and is in fact time reversible, one of the
+	// degrees of freedom is illusary. (Of the two edges coming from the 
+	// root, only sum of their lenghts affects likelihood.)
+	// So correct for this. Without this correction, K2P and RY2.2b
+	// would not be synonymous, for example.
+	string className(typeid(*model).name());
+	if (className.find("ModelLieMarkov")!=string::npos &&
+	          ((ModelLieMarkov*)model)->isTimeReversible())
+	    df--;
+    }
+    return df;
 }
-
+/*
 double ModelFactory::initGTRGammaIParameters(RateHeterogeneity *rate, ModelSubst *model, double initAlpha,
                                            double initPInvar, double *initRates, double *initStateFreqs)  {
 
@@ -856,16 +891,20 @@ double ModelFactory::optimizeParametersGammaInvar(int fixed_len, bool write_info
 	DoubleVector bestLens;
 	tree->saveBranchLengths(initBranLens);
     bestLens = initBranLens;
-	int numRateEntries = tree->getModel()->getNumRateEntries();
-	double *rates = new double[numRateEntries];
-	double *bestRates = new double[numRateEntries];
-	tree->getModel()->getRateMatrix(rates);
-	int numStates = tree->aln->num_states;
-	double *state_freqs = new double[numStates];
-	tree->getModel()->getStateFrequency(state_freqs);
+//	int numRateEntries = tree->getModel()->getNumRateEntries();
+    Checkpoint *model_ckp = new Checkpoint;
+    Checkpoint *best_ckp = new Checkpoint;
+    Checkpoint *saved_ckp = model->getCheckpoint();
+    *model_ckp = *saved_ckp;
+//	double *rates = new double[numRateEntries];
+//	double *bestRates = new double[numRateEntries];
+//	tree->getModel()->getRateMatrix(rates);
+//	int numStates = tree->aln->num_states;
+//	double *state_freqs = new double[numStates];
+//	tree->getModel()->getStateFrequency(state_freqs);
 
 	/* Best estimates found */
-	double *bestStateFreqs =  new double[numStates];
+//	double *bestStateFreqs =  new double[numStates];
 	double bestLogl = -DBL_MAX;
 	double bestAlpha = 0.0;
 	double bestPInvar = 0.0;
@@ -883,8 +922,8 @@ double ModelFactory::optimizeParametersGammaInvar(int fixed_len, bool write_info
                 cout << "Testing with init. pinv = " << initPInv << " / init. alpha = "  << initAlpha << endl;
             }
 
-            vector<double> estResults = optimizeGammaInvWithInitValue(fixed_len, logl_epsilon, gradient_epsilon, tree, site_rate, rates, state_freqs,
-                                                                   initPInv, initAlpha, initBranLens);
+            vector<double> estResults = optimizeGammaInvWithInitValue(fixed_len, logl_epsilon, gradient_epsilon,
+                                                                   initPInv, initAlpha, initBranLens, model_ckp);
 
 
             if (write_info) {
@@ -898,8 +937,13 @@ double ModelFactory::optimizeParametersGammaInvar(int fixed_len, bool write_info
                 bestPInvar = estResults[0];
                 bestLens.clear();
                 tree->saveBranchLengths(bestLens);
-                tree->getModel()->getRateMatrix(bestRates);
-                tree->getModel()->getStateFrequency(bestStateFreqs);
+                model->setCheckpoint(best_ckp);
+                model->saveCheckpoint();
+                model->setCheckpoint(saved_ckp);
+//                *best_ckp = *saved_ckp;
+
+//                tree->getModel()->getRateMatrix(bestRates);
+//                tree->getModel()->getStateFrequency(bestStateFreqs);
                 if (estResults[0] < initPInv) {
                     initPInv = estResults[0] - testInterval;
                     if (initPInv < 0.0)
@@ -923,11 +967,11 @@ double ModelFactory::optimizeParametersGammaInvar(int fixed_len, bool write_info
             }
             vector<double> estResults; // vector of p_inv, alpha and logl
             if (Params::getInstance().opt_gammai_keep_bran)
-                estResults = optimizeGammaInvWithInitValue(fixed_len, logl_epsilon, gradient_epsilon, tree, site_rate, rates, state_freqs,
-                                                                          initPInv, initAlpha, bestLens);
+                estResults = optimizeGammaInvWithInitValue(fixed_len, logl_epsilon, gradient_epsilon,
+                                                                          initPInv, initAlpha, bestLens, model_ckp);
             else
-                estResults = optimizeGammaInvWithInitValue(fixed_len, logl_epsilon, gradient_epsilon, tree, site_rate, rates, state_freqs,
-                                                                      initPInv, initAlpha, initBranLens);
+                estResults = optimizeGammaInvWithInitValue(fixed_len, logl_epsilon, gradient_epsilon,
+                                                                      initPInv, initAlpha, initBranLens, model_ckp);
             if (write_info) {
                 cout << "Est. p_inv: " << estResults[0] << " / Est. gamma shape: " << estResults[1]
                 << " / Logl: " << estResults[2] << endl;
@@ -941,33 +985,44 @@ double ModelFactory::optimizeParametersGammaInvar(int fixed_len, bool write_info
                 bestPInvar = estResults[0];
                 bestLens.clear();
                 tree->saveBranchLengths(bestLens);
-                tree->getModel()->getRateMatrix(bestRates);
-                tree->getModel()->getStateFrequency(bestStateFreqs);
+                model->setCheckpoint(best_ckp);
+                model->saveCheckpoint();
+                model->setCheckpoint(saved_ckp);
+//                *best_ckp = *saved_ckp;
+
+//                tree->getModel()->getRateMatrix(bestRates);
+//                tree->getModel()->getStateFrequency(bestStateFreqs);
             }
         }
     }
 
     site_rate->setGammaShape(bestAlpha);
     site_rate->setPInvar(bestPInvar);
-	((ModelMarkov*) tree->getModel())->setRateMatrix(bestRates);
-	((ModelMarkov*) tree->getModel())->setStateFrequency(bestStateFreqs);
+    model->setCheckpoint(best_ckp);
+    model->restoreCheckpoint();
+    model->setCheckpoint(saved_ckp);
+//	((ModelMarkov*) tree->getModel())->setRateMatrix(bestRates);
+//	((ModelMarkov*) tree->getModel())->setStateFrequency(bestStateFreqs);
 	tree->restoreBranchLengths(bestLens);
-	tree->getModel()->decomposeRateMatrix();
+//	tree->getModel()->decomposeRateMatrix();
 
 	tree->clearAllPartialLH();
 	tree->setCurScore(tree->computeLikelihood());
-    assert(fabs(tree->getCurScore() - bestLogl) < 1.0);
-    if (write_info) {    
+    if (write_info) {
         cout << endl;
         cout << "Best p_inv: " << bestPInvar << " / best gamma shape: " << bestAlpha << " / ";
         cout << "Logl: " << tree->getCurScore() << endl;
     }
+    assert(fabs(tree->getCurScore() - bestLogl) < 1.0);
 
-	delete [] rates;
-	delete [] state_freqs;
-	delete [] bestRates;
-	delete [] bestStateFreqs;
-    
+//	delete [] rates;
+//	delete [] state_freqs;
+//	delete [] bestRates;
+//	delete [] bestStateFreqs;
+
+    delete model_ckp;
+    delete best_ckp;
+
 	double elapsed_secs = getRealTime() - begin_time;
 	if (write_info)
 		cout << "Parameters optimization took " << elapsed_secs << " sec" << endl;
@@ -980,21 +1035,25 @@ double ModelFactory::optimizeParametersGammaInvar(int fixed_len, bool write_info
 }
 
 vector<double> ModelFactory::optimizeGammaInvWithInitValue(int fixed_len, double logl_epsilon, double gradient_epsilon,
-                                                 PhyloTree *tree, RateHeterogeneity *site_rates, double *rates,
-                                                 double *state_freqs, double initPInv, double initAlpha,
-                                                 DoubleVector &lenvec) {
+                                                 double initPInv, double initAlpha,
+                                                 DoubleVector &lenvec, Checkpoint *model_ckp) {
+    PhyloTree *tree = site_rate->getTree();
     tree->restoreBranchLengths(lenvec);
-    ((ModelMarkov*) tree->getModel())->setRateMatrix(rates);
-    ((ModelMarkov*) tree->getModel())->setStateFrequency(state_freqs);
-    tree->getModel()->decomposeRateMatrix();
-    site_rates->setPInvar(initPInv);
-    site_rates->setGammaShape(initAlpha);
+    Checkpoint *saved_ckp = model->getCheckpoint();
+    model->setCheckpoint(model_ckp);
+    model->restoreCheckpoint();
+    model->setCheckpoint(saved_ckp);
+//    ((ModelMarkov*) tree->getModel())->setRateMatrix(rates);
+//    ((ModelMarkov*) tree->getModel())->setStateFrequency(state_freqs);
+//    tree->getModel()->decomposeRateMatrix();
+    site_rate->setPInvar(initPInv);
+    site_rate->setGammaShape(initAlpha);
     tree->clearAllPartialLH();
     optimizeParameters(fixed_len, false, logl_epsilon, gradient_epsilon);
 
     vector<double> estResults;
-    double estPInv = tree->getRate()->getPInvar();
-    double estAlpha = tree->getRate()->getGammaShape();
+    double estPInv = site_rate->getPInvar();
+    double estAlpha = site_rate->getGammaShape();
     double logl = tree->getCurScore();
     estResults.push_back(estPInv);
     estResults.push_back(estAlpha);

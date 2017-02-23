@@ -21,6 +21,14 @@ public:
 		@param freq_type state frequency type, can be FREQ_USER_DEFINED, FREQ_EQUAL, FREQ_EMPIRICAL, or FREQ_ESTIMATE
 	*/
 	virtual void init(const char *model_name, string model_params, StateFreqType freq, string freq_params);
+	static void getLieMarkovModelInfo(string model_name, string &name, string &full_name, int &model_num, int &symmetry, StateFreqType &def_freq);
+
+	static string getModelInfo(string model_name, string &full_name, StateFreqType &def_freq);
+
+	// overrides ModelMarkov::getNDimFreq()
+	int getNDimFreq();
+
+	bool isTimeReversible();
 
 	static bool validModelName(string model_name);
 	void setBounds(double *lower_bound, double *upper_bound, bool *bound_check);
@@ -55,6 +63,15 @@ protected:
 
 	static void parseModelName(string model_name, int* model_num, int* symmetry);
 	/*
+         * Overrides ModelMarkov::getName().
+	 * Avoids appending +FO to name, as this is implied by how LM models 
+	 * work.
+         * Minh: you might chose to remove this override, if you like "+FO"
+	 * to be on LM model names.
+         */
+	string getName();
+
+	/*
 	const static double ***BASES;
 	const static int *MODEL_PARAMS;
 	const static string *SYMMETRY;
@@ -62,6 +79,6 @@ protected:
 	const static int NUM_RATES;
 	const static int NUM_LM_MODELS;
 	*/
+        bool validFreqType();
 };
-
 #endif /* MODELLIEMARKOV_H_ */
