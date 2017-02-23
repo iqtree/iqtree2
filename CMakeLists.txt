@@ -50,7 +50,7 @@ add_definitions(-DIQ_TREE)
 # The version number.
 set (iqtree_VERSION_MAJOR 1)
 set (iqtree_VERSION_MINOR 5)
-set (iqtree_VERSION_PATCH "2-heterotachy")
+set (iqtree_VERSION_PATCH "3-hemo")
 
 set(BUILD_SHARED_LIBS OFF)
 

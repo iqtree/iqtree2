@@ -794,6 +794,7 @@ double ModelFactory::initGTRGammaIParameters(RateHeterogeneity *rate, ModelSubst
     site_rate->phylo_tree->clearAllPartialLH();
     return site_rate->phylo_tree->computeLikelihood();
 }
+*/
 
 double ModelFactory::optimizeParametersOnly(int num_steps, double gradient_epsilon, double cur_logl) {
 	double logl;

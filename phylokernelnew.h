@@ -2238,7 +2238,7 @@ void PhyloTree::computeLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, Phyl
                     val2_ptr += nstates;
                     theta += nstates;
                 }
-                lh_ptn = abs(lh_ptn + VectorClass().load_a(&ptn_invar[ptn]));
+                lh_ptn = abs(lh_ptn) + VectorClass().load_a(&ptn_invar[ptn]);
 //                ASSERT(horizontal_and(lh_ptn > 0.0));
 
                 if (ptn < orig_nptn) {
@@ -2319,7 +2319,7 @@ void PhyloTree::computeLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, Phyl
                     dotProductTriple<VectorClass, double, FMA, false>(val0, val1, val2, theta, lh_ptn, df_ptn, ddf_ptn, block, nstates);
             #endif
                 }
-                lh_ptn = abs(lh_ptn + VectorClass().load_a(&ptn_invar[ptn]));
+                lh_ptn = abs(lh_ptn) + VectorClass().load_a(&ptn_invar[ptn]);
 
                 if (ptn < orig_nptn) {
                     lh_ptn = 1.0 / lh_ptn;
