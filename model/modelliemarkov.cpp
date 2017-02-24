@@ -902,27 +902,27 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
     	//Eigenvalues = {0, -4*a, -4*a, -4*a}
 		ceval[0] = 0.0; ceval[1] = ceval[2] = ceval[3] = -4.0*a;
 		//v0 = {1, 1, 1, 1}
-		cevec[0] = cevec[4] = cevec[8] = cevec[12] = 1.0;
+		cevec[0] = cevec[1] = cevec[2] = cevec[3] = 1.0;
 		//v1 = {-1, 0, 0, 1}
-		cevec[1] = -1.0;
+		cevec[4] = -1.0;
 		cevec[5] = 0.0;
-		cevec[9] = 0.0;
-		cevec[13]= 1.0;
+		cevec[6] = 0.0;
+		cevec[7]= 1.0;
 		//v2 = {-1, 0, 1, 0}
-		cevec[2] =  -1.0;
-		cevec[6] =  0.0;
+		cevec[8] =  -1.0;
+		cevec[9] =  0.0;
 		cevec[10] =  1.0;
-		cevec[14] = 0.0;
-		//v3 = {-1, 1, 0, 0}
-		cevec[3] = -1.0;
-		cevec[7] =  1.0;
 		cevec[11] = 0.0;
+		//v3 = {-1, 1, 0, 0}
+		cevec[12] = -1.0;
+		cevec[13] =  1.0;
+		cevec[14] = 0.0;
 		cevec[15] =  0.0;
 
 		/*Inverses*/
-		cinv_evec[4] = cinv_evec[8] = cinv_evec[12] = cinv_evec[5] = cinv_evec[9] = cinv_evec[6] = cinv_evec[14] = cinv_evec[11] = cinv_evec[15] = -0.25;
-		cinv_evec[0] = cinv_evec[1] = cinv_evec[2] = cinv_evec[3] = 0.25;
-		cinv_evec[13] = cinv_evec[10] = cinv_evec[7] = 0.75;
+		cinv_evec[1] = cinv_evec[2] = cinv_evec[3] = cinv_evec[5] = cinv_evec[6] = cinv_evec[9] = cinv_evec[11] = cinv_evec[14] = cinv_evec[15] = -0.25;
+		cinv_evec[0] = cinv_evec[4] = cinv_evec[8] = cinv_evec[12] = 0.25;
+		cinv_evec[7] = cinv_evec[10] = cinv_evec[13] = 0.75;
 
     } else if (name.find("2.2b") != string::npos) {
         /******** eigenvalues *********/
@@ -958,7 +958,7 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
 		cinv_evec[1] = cinv_evec[9] = -0.25;
 		cinv_evec[2] = cinv_evec[10] = cinv_evec[15] = 0.;
 		cinv_evec[3] = cinv_evec[6] = -0.5;
-		cinv_evec[11] = cinv_evec[14] = 0.5;
+		cinv_evec[14] = cinv_evec[11] = 0.5;
 
     }  else if (name.find("3.3a") != string::npos) {
         /*cout << "The raw parameters are: a = " << a << ",   a2 = " << a2 << "  b = " << b << endl;
@@ -979,26 +979,26 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
 		// {{1, 1, 1, 1}, {-1, 1, -1, 1}, {-1, -1, 1, 1}, {1, -1, -1, 1}}
 
 		//v0 = {1, 1, 1, 1}
-		cevec[0] = cevec[4] = cevec[8] = cevec[12] = 1.0;
+		cevec[0] = cevec[1] = cevec[2] = cevec[3] = 1.0;
 		//v1 = {-1, 1, -1, 1}
-		cevec[1] =  -1.0;
+		cevec[4] =  -1.0;
 		cevec[5] = 1.0;
-		cevec[9] = -1.0;
-		cevec[13] = 1.0;
+		cevec[6] = -1.0;
+		cevec[7] = 1.0;
 		//v2 ={-1, -1, 1, 1}
-		cevec[2] = -1.0;
-		cevec[6]  = -1.0;
+		cevec[8] = -1.0;
+		cevec[9]  = -1.0;
 		cevec[10] = 1.0;
-		cevec[14] = 1.0;
+		cevec[11] = 1.0;
 		//v3 = {1, -1, -1, 1}
-		cevec[3] = 1.0;
-		cevec[7] = -1.0;
-		cevec[11] = -1.0;
+		cevec[12] = 1.0;
+		cevec[13] = -1.0;
+		cevec[14] = -1.0;
 		cevec[15] = 1.0;
 
 		/******** INVERSE *********/
-		cinv_evec[0] =cinv_evec[12] =cinv_evec[1] =cinv_evec[5] =cinv_evec[2] =cinv_evec[10] =cinv_evec[3] =cinv_evec[7] =cinv_evec[11] =cinv_evec[15] = 0.25;
-		cinv_evec[4] =cinv_evec[8] =cinv_evec[9] =cinv_evec[13] =cinv_evec[6] =cinv_evec[14] = -0.25;
+		cinv_evec[0] =cinv_evec[3] =cinv_evec[4] =cinv_evec[5] =cinv_evec[8] =cinv_evec[10] =cinv_evec[12] =cinv_evec[13] =cinv_evec[14] =cinv_evec[15] = 0.25;
+		cinv_evec[1] =cinv_evec[2] =cinv_evec[6] =cinv_evec[7] =cinv_evec[9] =cinv_evec[11] = -0.25;
 
      }else if (name.find("3.3b") != string::npos) {
 
@@ -1017,27 +1017,27 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
 		// {{1, 1, 1, 1}, {-1, 1, -1, 1}, {I, -1, -I, 1}, {-I, -1, I, 1}}
 
 		//v0 = {1, 1, 1, 1}
-		cevec[0] = cevec[4] = cevec[8] = cevec[12] = 1.0;
+		cevec[0] = cevec[1] = cevec[2] = cevec[3] = 1.0;
 		//v1 = {-1, 1, -1, 1}
-		cevec[1] = -1.0;
+		cevec[4] = -1.0;
 		cevec[5] = 1.0;
-		cevec[9] = -1.0;
-		cevec[13] = 1.0;
-		//v2 ={I, -1, -I, 1}
-		cevec[2] = complex<double> (0., 1.);
 		cevec[6] = -1.0;
+		cevec[7] = 1.0;
+		//v2 ={I, -1, -I, 1}
+		cevec[8] = complex<double> (0., 1.);
+		cevec[9] = -1.0;
 		cevec[10] = complex<double> (0., -1.);
-		cevec[14] = 1.0;
+		cevec[11] = 1.0;
 		//v3 = {-I, -1, I, 1}
-		cevec[3] = complex<double> (0., -1.);
-		cevec[7] = -1.0;
-		cevec[11] = complex<double> (0., 1.);
+		cevec[12] = complex<double> (0., -1.);
+		cevec[13] = -1.0;
+		cevec[14] = complex<double> (0., 1.);
 		cevec[15] = 1.0;
 		/******** INVERSE *********/
-		cinv_evec[0] =cinv_evec[1] =cinv_evec[5] =cinv_evec[2] =cinv_evec[3] =cinv_evec[7] =cinv_evec[11] =cinv_evec[15] = 0.25;
-		cinv_evec[4] =cinv_evec[9] =cinv_evec[13] =cinv_evec[6] = -0.25;
-		cinv_evec[8] =cinv_evec[14] =complex<double> (0., -0.25);
-		cinv_evec[12] =cinv_evec[10] = complex<double> (0., 0.25);
+		cinv_evec[0] =cinv_evec[4] =cinv_evec[5] =cinv_evec[8] =cinv_evec[12] =cinv_evec[13] =cinv_evec[14] =cinv_evec[15] = 0.25;
+		cinv_evec[1] =cinv_evec[6] =cinv_evec[7] =cinv_evec[9] = -0.25;
+		cinv_evec[2] =cinv_evec[11] =complex<double> (0., -0.25);
+		cinv_evec[3] =cinv_evec[10] = complex<double> (0., 0.25);
 
      } else if (name.find("3.3c") != string::npos) {
 		a = -(rate_matrix[0] + rate_matrix[5])/6. ;
@@ -1051,30 +1051,30 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
 		// {{1, 1, 1, 1}, {-((a - a2 - d)/(a - a2 + d)), 1, -((a - a2 - d)/(a - a2 + d)), 1}, {0, -1, 0, 1}, {-1, 0, 1, 0}}
 
 		//v0 = {1, 1, 1, 1}
-		cevec[0] = cevec[4] = cevec[8] = cevec[12] = 1.0;
+		cevec[0] = cevec[1] = cevec[2] = cevec[3] = 1.0;
 		//v1 = {-((a - a2 - d)/(a - a2 + d)), 1, -((a - a2 - d)/(a - a2 + d)), 1}
-		cevec[1]  = -1.;
+		cevec[4]  = -1.;
 		cevec[5]  = 1.;
-		cevec[9]  = -1.;
-		cevec[13]  = 1.;
+		cevec[6]  = -1.;
+		cevec[7]  = 1.;
 		//v2 ={0, -1, 0, 1}
-		cevec[2] =0.0;
-		cevec[6] =  -1.0;
+		cevec[8] =0.0;
+		cevec[9] =  -1.0;
 		cevec[10] = 0.0;
-		cevec[14] =  1.0;
+		cevec[11] =  1.0;
 		//v3 = {-1, 0, 1, 0}}
-		cevec[3] =  -1.0;
-		cevec[7] =  0.0;
-		cevec[11] = 1.0;
+		cevec[12] =  -1.0;
+		cevec[13] =  0.0;
+		cevec[14] = 1.0;
 		cevec[15] =  0.0;
 
 		 /*INVERSE*/
 
-		cinv_evec[0] =cinv_evec[1] =cinv_evec[5] =cinv_evec[2] =cinv_evec[3] =cinv_evec[7] = 0.25;
-		cinv_evec[4] =cinv_evec[6] = -0.25;
-		cinv_evec[8] =cinv_evec[13] =cinv_evec[10] =cinv_evec[15] = 0.;
-		cinv_evec[12] =cinv_evec[9] = -0.5;
-		cinv_evec[14] =cinv_evec[11] = 0.5;
+		cinv_evec[0] =cinv_evec[4] =cinv_evec[5] =cinv_evec[8] =cinv_evec[12] =cinv_evec[13] = 0.25;
+		cinv_evec[1] =cinv_evec[9] = -0.25;
+		cinv_evec[2] =cinv_evec[7] =cinv_evec[10] =cinv_evec[15] = 0.;
+		cinv_evec[3] =cinv_evec[6] = -0.5;
+		cinv_evec[11] =cinv_evec[14] = 0.5;
 
      } else if (name.find("3.4") != string::npos) {
 		a = -(rate_matrix[0] + rate_matrix[5])/6. ;
@@ -1088,29 +1088,29 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
 		// {{1, 1, 1, 1}, {-((a - a2 - d)/(a - a2 + d)), 1, -((a - a2 - d)/(a - a2 + d)), 1}, {0, -1, 0, 1}, {-1, 0, 1, 0}}
 
 		//v0 = {1, 1, 1, 1}
-		cevec[0] = cevec[4] = cevec[8] = cevec[12] = 1.0;
+		cevec[0] = cevec[1] = cevec[2] = cevec[3] = 1.0;
 		//v1
-		cevec[1] = -((a - a2 - d)/(a - a2 + d));
+		cevec[4] = -((a - a2 - d)/(a - a2 + d));
 		cevec[5] = 1.0;
-		cevec[9] = cevec[1];
-		cevec[13] = 1.0;
+		cevec[6] = cevec[4];
+		cevec[7] = 1.0;
 		//v2
-		cevec[2] = 0.0;
-		cevec[6] = -1.0;
+		cevec[8] = 0.0;
+		cevec[9] = -1.0;
 		cevec[10] = 0.0;
-		cevec[14] = 1.0;
-		//v3
-		cevec[3] = -1.0;
-		cevec[7] = 0.0;
 		cevec[11] = 1.0;
+		//v3
+		cevec[12] = -1.0;
+		cevec[13] = 0.0;
+		cevec[14] = 1.0;
 		cevec[15] = 0.0;
         /*INVERSE*/
-        cinv_evec[0] =cinv_evec[5] =cinv_evec[2] =cinv_evec[7] = 0.25 + 0.25*d/(a-a2);
-        cinv_evec[4] =cinv_evec[6] = -cinv_evec[0];
-        cinv_evec[1] =cinv_evec[3] = -cinv_evec[0] + 0.5;
-        cinv_evec[11] =cinv_evec[14] = 0.5;
-        cinv_evec[12] =cinv_evec[9] = -0.5;
-        cinv_evec[8] =cinv_evec[13] =cinv_evec[10] =cinv_evec[15] = 0.;
+        cinv_evec[0] =cinv_evec[5] =cinv_evec[8] =cinv_evec[13] = 0.25 + 0.25*d/(a-a2);
+        cinv_evec[1] =cinv_evec[9] = -cinv_evec[0];
+        cinv_evec[4] =cinv_evec[12] = -cinv_evec[0] + 0.5;
+        cinv_evec[14] =cinv_evec[11] = 0.5;
+        cinv_evec[3] =cinv_evec[6] = -0.5;
+        cinv_evec[2] =cinv_evec[7] =cinv_evec[10] =cinv_evec[15] = 0.;
 
     } else if (name.find("4.4a") != string::npos) {
 		e1 = (rate_matrix[0] - rate_matrix[10])*0.5;
@@ -1126,38 +1126,38 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
 		// {-((a - d + e2)/(a + d + e1)), 1, 0, 0}}
 
 		//v0
-		cevec[0] = cevec[4] = cevec[8] = cevec[12] = 1.0;
+		cevec[0] = cevec[1] = cevec[2] = cevec[3] = 1.0;
 		//v1
 		double deno = 1./(a+d+e1);
-		cevec[1] = (-a + d + e2)*deno;
+		cevec[4] = (-a + d + e2)*deno;
 		cevec[5] = 0.0;
-		cevec[9] = 0.0;
-		cevec[13] = 1.0;
-		//v2
-		cevec[2] = -(a + d - e1)*deno;
 		cevec[6] = 0.0;
-		cevec[10] = 1.0;
-		cevec[14] = 0.0;
-		//v3 =
-		cevec[3] = -(a - d + e2)*deno;
 		cevec[7] = 1.0;
+		//v2
+		cevec[8] = -(a + d - e1)*deno;
+		cevec[9] = 0.0;
+		cevec[10] = 1.0;
 		cevec[11] = 0.0;
+		//v3 =
+		cevec[12] = -(a - d + e2)*deno;
+		cevec[13] = 1.0;
+		cevec[14] = 0.0;
 		cevec[15] = 0.0;
 		/******** INVERSE *********/
 
 		deno = 0.25/a; double auxd = d*deno; double auxe1 = e1*deno; double auxe2 = e2*deno;
 
 		cinv_evec[0] = 0.25 + auxd + auxe1;
-		cinv_evec[4] = cinv_evec[8] = cinv_evec[12] = -cinv_evec[0];
-		cinv_evec[1] =  0.25 - auxd +auxe2;
-		cinv_evec[5] = cinv_evec[9] = -cinv_evec[1];
-		cinv_evec[13] = cinv_evec[9] + 1.;
-		cinv_evec[2] = 0.25 + auxd - auxe1;
-		cinv_evec[6] = cinv_evec[14] = -cinv_evec[2] ;
-		cinv_evec[10] = cinv_evec[6] + 1.;
-		cinv_evec[3] = 0.25 - auxd - auxe2;
-		cinv_evec[11] = cinv_evec[15] = -cinv_evec[3];
-		cinv_evec[7] = cinv_evec[11] + 1.;
+		cinv_evec[1] = cinv_evec[2] = cinv_evec[3] = -cinv_evec[0];
+		cinv_evec[4] =  0.25 - auxd +auxe2;
+		cinv_evec[5] = cinv_evec[6] = -cinv_evec[4];
+		cinv_evec[7] = cinv_evec[6] + 1.;
+		cinv_evec[8] = 0.25 + auxd - auxe1;
+		cinv_evec[9] = cinv_evec[11] = -cinv_evec[8] ;
+		cinv_evec[10] = cinv_evec[9] + 1.;
+		cinv_evec[12] = 0.25 - auxd - auxe2;
+		cinv_evec[14] = cinv_evec[15] = -cinv_evec[12];
+		cinv_evec[13] = cinv_evec[14] + 1.;
 
     } else if (name.find("4.4b") != string::npos) {
 		d = (rate_matrix[4] - rate_matrix[3])/2.;
@@ -1173,31 +1173,31 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
 		// {0, -1, 0, 1}, {-1, 0, 1, 0}}
 
 		//v0
-		cevec[0] = cevec[4] = cevec[8] = cevec[12] = 1.0;
+		cevec[0] = cevec[1] = cevec[2] = cevec[3] = 1.0;
 		//v1
-		cevec[1] = (-a + a2 + d)/(a - a2 + d);
+		cevec[4] = (-a + a2 + d)/(a - a2 + d);
 		cevec[5] = 1.0;
-		cevec[9] = cevec[1];
-		cevec[13] = 1.0;
+		cevec[6] = cevec[4];
+		cevec[7] = 1.0;
 		//v2
-		cevec[2] = 0.0;
-		cevec[6] = -1.0;
+		cevec[8] = 0.0;
+		cevec[9] = -1.0;
 		cevec[10] = 0.0;
-		cevec[14] = 1.0;
-		//v3 =
-		cevec[3] = -1.0;
-		cevec[7] = 0.0;
 		cevec[11] = 1.0;
+		//v3 =
+		cevec[12] = -1.0;
+		cevec[13] = 0.0;
+		cevec[14] = 1.0;
 		cevec[15] = 0.0;
 		/*INVERSE*/
 		cinv_evec[0] = 0.25 + 0.25*d/(a-a2);
-		cinv_evec[2] = cinv_evec[5] = cinv_evec[7] = cinv_evec[0];
-		cinv_evec[4] = cinv_evec[6] = -cinv_evec[0];
-		cinv_evec[8] = cinv_evec[10] = cinv_evec[13] = cinv_evec[15] = 0.;
-		cinv_evec[12] = cinv_evec[9] = -0.5;
-		cinv_evec[14] = cinv_evec[11] = 0.5;
-		cinv_evec[1] = -cinv_evec[0] + 0.5;
-		cinv_evec[3] = cinv_evec[1];
+		cinv_evec[8] = cinv_evec[5] = cinv_evec[13] = cinv_evec[0];
+		cinv_evec[1] = cinv_evec[9] = -cinv_evec[0];
+		cinv_evec[2] = cinv_evec[10] = cinv_evec[7] = cinv_evec[15] = 0.;
+		cinv_evec[3] = cinv_evec[6] = -0.5;
+		cinv_evec[11] = cinv_evec[14] = 0.5;
+		cinv_evec[4] = -cinv_evec[0] + 0.5;
+		cinv_evec[12] = cinv_evec[4];
 
     } else if (name.find("4.5a") != string::npos) {
 
@@ -1215,29 +1215,29 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
 		// {-1, -1, 1, 1}, {1, -1, -1, 1}}
 
 		//v0
-		cevec[0] = cevec[4] = cevec[8] = cevec[12] = 1.0;
+		cevec[0] = cevec[1] = cevec[2] = cevec[3] = 1.0;
 		//v1
-		cevec[1] = -((a - a2 - d)/(a - a2 + d));
+		cevec[4] = -((a - a2 - d)/(a - a2 + d));
 		cevec[5] = 1.0;
-		cevec[9] = cevec[1];
-		cevec[13] = 1.0;
+		cevec[6] = cevec[4];
+		cevec[7] = 1.0;
 		//v2
-		cevec[2] = -1.0;
-		cevec[6] = -1.0;
+		cevec[8] = -1.0;
+		cevec[9] = -1.0;
 		cevec[10] = 1.0;
-		cevec[14] = 1.0;
+		cevec[11] = 1.0;
 		//v3 =
-		cevec[3] = 1.0;
-		cevec[7] = -1.0;
-		cevec[11] = -1.0;
+		cevec[12] = 1.0;
+		cevec[13] = -1.0;
+		cevec[14] = -1.0;
 		cevec[15] = 1.0;
 		 /*INVERSE */
 		double auxd = 0.25*d/(a-a2);
-		cinv_evec[0] = cinv_evec[2] = cinv_evec[5] = cinv_evec[7] = 0.25 + auxd;
-		cinv_evec[8] = cinv_evec[14] = cinv_evec[9] = cinv_evec[13] = -0.25;
-		cinv_evec[12] = cinv_evec[10] = cinv_evec[11] = cinv_evec[15] = 0.25;
-		cinv_evec[4] = cinv_evec[6] = -cinv_evec[0];
-		cinv_evec[1] = cinv_evec[3] = 0.25 - auxd;
+		cinv_evec[0] = cinv_evec[8] = cinv_evec[5] = cinv_evec[13] = 0.25 + auxd;
+		cinv_evec[2] = cinv_evec[11] = cinv_evec[6] = cinv_evec[7] = -0.25;
+		cinv_evec[3] = cinv_evec[10] = cinv_evec[14] = cinv_evec[15] = 0.25;
+		cinv_evec[1] = cinv_evec[9] = -cinv_evec[0];
+		cinv_evec[4] = cinv_evec[12] = 0.25 - auxd;
 
      } else if (name.find("4.5b") != string::npos) {
 		d = (rate_matrix[0] - rate_matrix[5])/2.;
@@ -1253,31 +1253,31 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
 		// {I, -1, -I, 1}, {-I, -1, I, 1}}
 
 		//v0
-		cevec[0] = cevec[4] = cevec[8] = cevec[12] = 1.0;
+		cevec[0] = cevec[1] = cevec[2] = cevec[3] = 1.0;
 		//v1
-		cevec[1] = -((a - a2 - d)/(a - a2 + d));
+		cevec[4] = -((a - a2 - d)/(a - a2 + d));
 		cevec[5] = 1.0;
-		cevec[9] = cevec[1];
-		cevec[13] = 1.0;
+		cevec[6] = cevec[4];
+		cevec[7] = 1.0;
 		//v2
-		cevec[2] = complex<double> (0., 1.);
-		cevec[6] = -1.0;
+		cevec[8] = complex<double> (0., 1.);
+		cevec[9] = -1.0;
 		cevec[10] = complex<double> (0., -1.);
-		cevec[14] = 1.0;
+		cevec[11] = 1.0;
 		//v3 =
-		cevec[3] = complex<double> (0., -1.);
-		cevec[7] = -1.0;
-		cevec[11] = complex<double> (0., 1.);
+		cevec[12] = complex<double> (0., -1.);
+		cevec[13] = -1.0;
+		cevec[14] = complex<double> (0., 1.);
 		cevec[15] = 1.0;
 		/*INVERSE*/
 		double auxd = 0.25*d/(a-a2);
-		cinv_evec[0] =cinv_evec[2] =cinv_evec[5] =cinv_evec[7] = 0.25 + auxd;
-		cinv_evec[4] =cinv_evec[6] =-cinv_evec[0];
-		cinv_evec[1] =cinv_evec[3] = 0.25 - auxd;
-		cinv_evec[10] =cinv_evec[12] = complex<double> (0, 0.25);
-		cinv_evec[8] =cinv_evec[14] = complex<double> (0, -0.25);
-		cinv_evec[9] =cinv_evec[13] = -0.25;
-		cinv_evec[11] =cinv_evec[15] = 0.25;
+		cinv_evec[0] =cinv_evec[8] =cinv_evec[5] =cinv_evec[13] = 0.25 + auxd;
+		cinv_evec[1] =cinv_evec[9] =-cinv_evec[0];
+		cinv_evec[4] =cinv_evec[12] = 0.25 - auxd;
+		cinv_evec[10] =cinv_evec[3] = complex<double> (0, 0.25);
+		cinv_evec[2] =cinv_evec[11] = complex<double> (0, -0.25);
+		cinv_evec[6] =cinv_evec[7] = -0.25;
+		cinv_evec[14] =cinv_evec[15] = 0.25;
 
     } else if (name.find("5.6a") != string::npos) {
     	d1 = (rate_matrix[5] - rate_matrix[0])*0.5;
@@ -1300,12 +1300,12 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
 		// v2 and v3 are long
 
 		//v0
-		cevec[0] = cevec[4] = cevec[8] = cevec[12] = 1.0;
+		cevec[0] = cevec[1] = cevec[2] = cevec[3] = 1.0;
 		//v1
-		cevec[1] = -1.;
+		cevec[4] = -1.;
 		cevec[5] = 1.0;
-		cevec[9] = -1.0;
-		cevec[13] = 1.0;
+		cevec[6] = -1.0;
+		cevec[7] = 1.0;
 		//v2 we need some auxiliar variables
 		double aux56anum1 = 6.* a *a2 + 3.* a2*a2 + DISC;
 		double aux56anum2 = 2.* a + 4. *a2;
@@ -1314,17 +1314,17 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
 
 		complex<double> aux56adeno2 = (3.*a2*a2 + DISC - 4.*d1*a2 -2.*a*(-3.*a2 + d1), 0.);
 		complex<double> deno56a1 = aux56adeno1 + RDISC * aux56adeno2;
-		cevec[2] = num56a1/deno56a1;
-		cevec[6] = -1.0;
-		cevec[10] = -cevec[2];
-		cevec[14] = 1.0;
+		cevec[8] = num56a1/deno56a1;
+		cevec[9] = -1.0;
+		cevec[10] = -cevec[8];
+		cevec[11] = 1.0;
 		//v3 =
 
 		complex<double> num56a2 = -(b-c)*(aux56anum1 + RDISC* aux56anum2);
 		complex<double> deno56a2 = aux56adeno1 - RDISC * aux56adeno2;
-		cevec[3] =  num56a2/deno56a2;
-		cevec[7] = -1.0;
-		cevec[11] = -cevec[3];
+		cevec[12] =  num56a2/deno56a2;
+		cevec[13] = -1.0;
+		cevec[14] = -cevec[12];
 		cevec[15] = 1.0;
 		/******** left eigenvectors *********/
 		//{{(a + d + e1)/(a - d - e2), (a - d + e2)/(a - d - e2), (a + d - e1)/(a - d - e2), 1},
@@ -1332,23 +1332,23 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
 
 		//v0
 		cinv_evec[0] = (a + d + e1);
-		cinv_evec[1] = (a - d + e2);
-		cinv_evec[2] = (a + d - e1);
-		cinv_evec[3] = 1.0;
+		cinv_evec[4] = (a - d + e2);
+		cinv_evec[8] = (a + d - e1);
+		cinv_evec[12] = 1.0;
 		//v1
-		cinv_evec[4] = -1.0;
+		cinv_evec[1] = -1.0;
 		cinv_evec[5] = 0.0;
-		cinv_evec[6] = 0.0;
-		cinv_evec[7] = 1.0;
-		//v2
-		cinv_evec[8] = -1.0;
 		cinv_evec[9] = 0.0;
-		cinv_evec[10] = 1.0;
-		cinv_evec[11] = 0.0;
-		//v3
-		cinv_evec[12] = -1.0;
 		cinv_evec[13] = 1.0;
+		//v2
+		cinv_evec[2] = -1.0;
+		cinv_evec[6] = 0.0;
+		cinv_evec[10] = 1.0;
 		cinv_evec[14] = 0.0;
+		//v3
+		cinv_evec[3] = -1.0;
+		cinv_evec[7] = 1.0;
+		cinv_evec[11] = 0.0;
 		cinv_evec[15] = 0.0;
 	} else if (name.find("5.6b") != string::npos) {
         e1 = (rate_matrix[0] - rate_matrix[10])*0.5;
@@ -1367,39 +1367,39 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
         // {-((2 a + a2 - e1 + e2)/(2 a + a2 + e1 + e2)), (2 e1)/(2 a + a2 + e1 + e2), 1, 0}}
 
         //v0
-        cevec[0] = cevec[4] = cevec[8] = cevec[12] = 1.0;
+        cevec[0] = cevec[1] = cevec[2] = cevec[3] = 1.0;
         //v1
-        cevec[1] = -((a - a2 - d)/(a - a2 + d));
+        cevec[4] = -((a - a2 - d)/(a - a2 + d));
         cevec[5] = 1.0;
-        cevec[9] = cevec[1];
-        cevec[13] = 1.0;
+        cevec[6] = cevec[4];
+        cevec[7] = 1.0;
         //v2;   we declare an auxiliar denominator in order to reuse it
         double deno56b = (2.0* a + a2 + e1 + e2);
-        cevec[2] = (2.0* e2)/deno56b;
-        cevec[6] = -1.0 + cevec[2];
+        cevec[8] = (2.0* e2)/deno56b;
+        cevec[9] = -1.0 + cevec[8];
         cevec[10] = 0.0;
-        cevec[14] = 1.0;
-        //v3
-        cevec[7] = (2.0* e1)/deno56b;
-        cevec[3] = -1.0+cevec[7];
         cevec[11] = 1.0;
+        //v3
+        cevec[13] = (2.0* e1)/deno56b;
+        cevec[12] = -1.0+cevec[13];
+        cevec[14] = 1.0;
         cevec[15] = 0.0;
         /*INVERSE*/
 		double deno = 0.5/(2.*a + a2); double auxe1 = e1*deno; double auxe2 = e2*deno; double auxd = d*0.25/(a-a2);
-		cinv_evec[4] = cinv_evec[6] = -0.25 - auxd;
-		cinv_evec[5] = cinv_evec[7] = - cinv_evec[4];
-		cinv_evec[8] =  -auxe1;
-		cinv_evec[10] = - cinv_evec[8];
-		cinv_evec[9] = -0.5 - auxe2;
-		cinv_evec[11] = -cinv_evec[9];
-		cinv_evec[12] =  -0.5 -auxe1;
-		cinv_evec[14] = - cinv_evec[12];
-		cinv_evec[13] = -auxe2;
-		cinv_evec[15] = -cinv_evec[13];
+		cinv_evec[1] = cinv_evec[9] = -0.25 - auxd;
+		cinv_evec[5] = cinv_evec[13] = - cinv_evec[1];
+		cinv_evec[2] =  -auxe1;
+		cinv_evec[10] = - cinv_evec[2];
+		cinv_evec[6] = -0.5 - auxe2;
+		cinv_evec[14] = -cinv_evec[6];
+		cinv_evec[3] =  -0.5 -auxe1;
+		cinv_evec[11] = - cinv_evec[3];
+		cinv_evec[7] = -auxe2;
+		cinv_evec[15] = -cinv_evec[7];
 		cinv_evec[0] = 0.25 + auxe1 + auxd;
-		cinv_evec[1] = 0.25 + auxe2 -auxd;
-		cinv_evec[2] = 0.25 - auxe1 + auxd;
-		cinv_evec[3] = 0.25 - auxe2 - auxd;
+		cinv_evec[4] = 0.25 + auxe2 -auxd;
+		cinv_evec[8] = 0.25 - auxe1 + auxd;
+		cinv_evec[12] = 0.25 - auxe2 - auxd;
     }
 
      else if (name.find("5.7a") != string::npos) {
@@ -1420,34 +1420,34 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
 		//{1, -((2 a + a2 + b + e1 - e2)/(2 a + a2 + b - e1 + e2)), -((2 a + a2 + b + e1 - e2)/(2 a + a2 + b - e1 + e2)), 1}}
 
 		//v0
-		cevec[0] = cevec[4] = cevec[8] = cevec[12] = 1.0;
+		cevec[0] = cevec[1] = cevec[2] = cevec[3] = 1.0;
 		//v1
-		cevec[1] = -1.0;
+		cevec[4] = -1.0;
 		cevec[5] = 1.0;
-		cevec[9] = -1.0;
-		cevec[13] = 1.0;
+		cevec[6] = -1.0;
+		cevec[7] = 1.0;
 		//v2
-		cevec[2] = -((2.0*a + a2 - b - e1 - e2)/(2.0*a + a2 - b + e1 + e2));
-		cevec[6] = cevec[2];
+		cevec[8] = -((2.0*a + a2 - b - e1 - e2)/(2.0*a + a2 - b + e1 + e2));
+		cevec[9] = cevec[8];
 		cevec[10] = 1.0;
-		cevec[14] = 1.0;
+		cevec[11] = 1.0;
 		//v3
-		cevec[3] = 1.0;
-		cevec[7] = -((2.0*a + a2 + b + e1 - e2)/(2.0* a + a2 + b - e1 + e2));
-		cevec[11] = cevec[7];
+		cevec[12] = 1.0;
+		cevec[13] = -((2.0*a + a2 + b + e1 - e2)/(2.0* a + a2 + b - e1 + e2));
+		cevec[14] = cevec[13];
 		cevec[15] = 1.0;
 		/******** INVERSE ****** There is a sum zero property ***/
 		double auxs = 0.25*(e1 + e2)/(2.*a + a2 - b); double auxr = 0.25*(-e1 + e2)/(2.*a + a2 + b);
-		cinv_evec[8] = cinv_evec[9] =-0.25 - auxs;
-		cinv_evec[10] = cinv_evec[11] = - cinv_evec[8];
-		cinv_evec[12] = cinv_evec[15] = 0.25 + auxr;
-		cinv_evec[13] = cinv_evec[14] =-cinv_evec[12];
+		cinv_evec[2] = cinv_evec[6] =-0.25 - auxs;
+		cinv_evec[10] = cinv_evec[14] = - cinv_evec[2];
+		cinv_evec[3] = cinv_evec[15] = 0.25 + auxr;
+		cinv_evec[7] = cinv_evec[11] =-cinv_evec[3];
 		cinv_evec[0] = 0.25 + auxs - auxr;
-		cinv_evec[1] = 0.25 + auxs + auxr;
-		cinv_evec[2] = 0.5 - cinv_evec[0];
-		cinv_evec[3] = 0.5 - cinv_evec[1];
-		cinv_evec[4] = cinv_evec[6] = -0.25;
-		cinv_evec[5] = cinv_evec[7] = 0.25;
+		cinv_evec[4] = 0.25 + auxs + auxr;
+		cinv_evec[8] = 0.5 - cinv_evec[0];
+		cinv_evec[12] = 0.5 - cinv_evec[4];
+		cinv_evec[1] = cinv_evec[9] = -0.25;
+		cinv_evec[5] = cinv_evec[13] = 0.25;
      } else if (name.find("5.7b") != string::npos) {
 		f1 = (rate_matrix[0] - rate_matrix[10])*0.5;
 		f2 = (rate_matrix[15] - rate_matrix[5])*0.5;
@@ -1466,36 +1466,36 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
 		// {-((-3 a2 - b + f1 - f2)/(3 a2 + b + f1 - f2)), -((3 a2 + b - f1 + f2)/(3 a2 + b + f1 - f2)), -1, 1}}
 
 		//v0
-		cevec[0] = cevec[4] = cevec[8] = cevec[12] = 1.0;
+		cevec[0] = cevec[1] = cevec[2] = cevec[3] = 1.0;
 		//v1
-		cevec[1] = -1.0;
+		cevec[4] = -1.0;
 		cevec[5] = 1.0;
-		cevec[9] = -1.0;
-		cevec[13] = 1.0;
+		cevec[6] = -1.0;
+		cevec[7] = 1.0;
 		//v2 we declare two denominators (we do not save too much, but this
 		//information may be generalizable later). The numerator also can be grouped.
 		double deno57br1 = 1./ (3.0*a2 - b - f1 - f2);
 		double deno57br2 = 1./(3.0*a2 + b + f1 - f2);
-		cevec[2] = -1.0;
-		cevec[6] = -(3.0*a2 - b + f1 + f2)*deno57br1;
-		cevec[10] = -cevec[6];
-		cevec[14] = 1.0;
+		cevec[8] = -1.0;
+		cevec[9] = -(3.0*a2 - b + f1 + f2)*deno57br1;
+		cevec[10] = -cevec[9];
+		cevec[11] = 1.0;
 		//v3
-		cevec[3] = -(-3.0*a2 - b + f1 - f2)*deno57br2;
-		cevec[7] = -cevec[3];
-		cevec[11] = -1.0;
+		cevec[12] = -(-3.0*a2 - b + f1 - f2)*deno57br2;
+		cevec[13] = -cevec[12];
+		cevec[14] = -1.0;
 		cevec[15] = 1.0;
         /*INVERSE : They satisfy a sumzero property*/
 
-        cinv_evec[0] =cinv_evec[1] =cinv_evec[2] =cinv_evec[3] = 0.25;
-        cinv_evec[8] =cinv_evec[9] = -0.25 + 0.25*(f1 + f2)/(3.*a2 - b);
-        cinv_evec[10] =cinv_evec[11] = - cinv_evec[8];
-        cinv_evec[12] =cinv_evec[15] = 0.25 + 0.25*(f1 - f2)/(3.*a2 + b);
-        cinv_evec[14] =cinv_evec[13] = -cinv_evec[12];
-        cinv_evec[4] = -cinv_evec[0]-cinv_evec[8]-cinv_evec[12];
-        cinv_evec[5] = -cinv_evec[1]-cinv_evec[9] - cinv_evec[13];
-        cinv_evec[6] = -cinv_evec[4] - 0.5;
-        cinv_evec[7] = -cinv_evec[5] +0.5;
+        cinv_evec[0] =cinv_evec[4] =cinv_evec[8] =cinv_evec[12] = 0.25;
+        cinv_evec[2] =cinv_evec[6] = -0.25 + 0.25*(f1 + f2)/(3.*a2 - b);
+        cinv_evec[10] =cinv_evec[14] = - cinv_evec[2];
+        cinv_evec[3] =cinv_evec[15] = 0.25 + 0.25*(f1 - f2)/(3.*a2 + b);
+        cinv_evec[11] =cinv_evec[7] = -cinv_evec[3];
+        cinv_evec[1] = -cinv_evec[0]-cinv_evec[2]-cinv_evec[3];
+        cinv_evec[5] = -cinv_evec[4]-cinv_evec[6] - cinv_evec[7];
+        cinv_evec[9] = -cinv_evec[1] - 0.5;
+        cinv_evec[13] = -cinv_evec[5] +0.5;
 
 	} else if (name.find("5.7c") != string::npos) {
 		g1 = (rate_matrix[0] - rate_matrix[10])*0.5;
@@ -1517,42 +1517,42 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
 		// {1, -1, -1, 1}}
 
 		//v0
-		cevec[0] = cevec[4] = cevec[8] = cevec[12] = 1.0;
+		cevec[0] = cevec[1] = cevec[2] = cevec[3] = 1.0;
 		//v1 We declare some auxiliar variables so that calculation is easier. Recall 5.7a
 		double aux57b1 = 9.0*a2*a2 - b*b;
 		double aux57b2 = 6.0*a2*g1 + 2.0 * b * g2;
 		double aux57b3 = 6.0*a2*g2 + 2.0 * b * g1;
 		double deno57bl = 1./(aux57b1 + aux57b3);
 
-		cevec[1] = -(aux57b1 + aux57b2 )* deno57bl;
+		cevec[4] = -(aux57b1 + aux57b2 )* deno57bl;
 		cevec[5] = -(-aux57b1 + aux57b3)* deno57bl;
-		cevec[9] = -(aux57b1 - aux57b2)* deno57bl;
-		cevec[13] = 1.0;
+		cevec[6] = -(aux57b1 - aux57b2)* deno57bl;
+		cevec[7] = 1.0;
 		//v2
-		cevec[2] = -1.0;
-		cevec[6] = -1.0;
+		cevec[8] = -1.0;
+		cevec[9] = -1.0;
 		cevec[10] = 1.0;
-		cevec[14] = 1.0;
+		cevec[11] = 1.0;
 		//v3
-		cevec[3] = 1.0;
-		cevec[7] = -1.0;
-		cevec[11] = -1.0;
+		cevec[12] = 1.0;
+		cevec[13] = -1.0;
+		cevec[14] = -1.0;
 		cevec[15] = 1.0;
         /*INVERSE*/
-        cinv_evec[0] =cinv_evec[1] =cinv_evec[2] =cinv_evec[3] = 0.25;
+        cinv_evec[0] =cinv_evec[4] =cinv_evec[8] =cinv_evec[12] = 0.25;
 
-        cinv_evec[8] = -0.25 + 0.25*(g1 + g2)/(3.*a2 - b);
-        cinv_evec[9] =-0.5 - cinv_evec[8];
-        cinv_evec[10] =-cinv_evec[9];
-        cinv_evec[11] = -cinv_evec[8];
+        cinv_evec[2] = -0.25 + 0.25*(g1 + g2)/(3.*a2 - b);
+        cinv_evec[6] =-0.5 - cinv_evec[2];
+        cinv_evec[10] =-cinv_evec[6];
+        cinv_evec[14] = -cinv_evec[2];
 
-        cinv_evec[12] = 0.25 - 0.25*(g1 - g2)/(3.*a2 + b);
-        cinv_evec[13] =-cinv_evec[12];
-        cinv_evec[14] =cinv_evec[12] - 0.5;
-        cinv_evec[15] = - cinv_evec[14];
+        cinv_evec[3] = 0.25 - 0.25*(g1 - g2)/(3.*a2 + b);
+        cinv_evec[7] =-cinv_evec[3];
+        cinv_evec[11] =cinv_evec[3] - 0.5;
+        cinv_evec[15] = - cinv_evec[11];
 
-        cinv_evec[4] = cinv_evec[6] = -cinv_evec[0]-cinv_evec[8]-cinv_evec[12];
-        cinv_evec[5] = cinv_evec[7] = -cinv_evec[4];
+        cinv_evec[1] = cinv_evec[9] = -cinv_evec[0]-cinv_evec[2]-cinv_evec[3];
+        cinv_evec[5] = cinv_evec[13] = -cinv_evec[1];
 
 	} else if (name.find("5.11a") != string::npos) {
 
@@ -1575,36 +1575,36 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
 		//{-((2 a + a2 + d1 - e1)/e1), 1, -((-2 a - a2 - d1 - e1)/e1), 1}}
 
 		//v0
-		cevec[0] = cevec[4] = cevec[8] = cevec[12] = 1.0;
+		cevec[0] = cevec[1] = cevec[2] = cevec[3] = 1.0;
 		//v1
-		cevec[1] = -1.0;
+		cevec[4] = -1.0;
 		cevec[5] = 1.0;
-		cevec[9] = -1.0;
-		cevec[13] = 1.0;
+		cevec[6] = -1.0;
+		cevec[7] = 1.0;
 		//v2
 		double deno511a = 2.* a + a2 - d1 + e2;
-		cevec[2] = e2/deno511a;
-		cevec[6] =-1. + 2.*cevec[2];
-		cevec[10] = cevec[2];
-		cevec[14] = 1.0;
+		cevec[8] = e2/deno511a;
+		cevec[9] =-1. + 2.*cevec[8];
+		cevec[10] = cevec[8];
+		cevec[11] = 1.0;
 		//v3
 		double aux511a = 2.* a + a2 + d1;
-		cevec[3] = 1.- aux511a/e1;
-		cevec[7] = 1.0;
-		cevec[11] = -cevec[3] +2.;
+		cevec[12] = 1.- aux511a/e1;
+		cevec[13] = 1.0;
+		cevec[14] = -cevec[12] +2.;
 		cevec[15] = 1.0;
 		/*INVERSE*/
-		cinv_evec[8] =cinv_evec[10] = 0.;
-		cinv_evec[5] =cinv_evec[7] = 0.25;
-		cinv_evec[4] =cinv_evec[6] = -0.25;
-		cinv_evec[12] =-0.5*e1/(2.*a + a2 +d1);
-		cinv_evec[0] = 0.25 -cinv_evec[12];
-		cinv_evec[1] = 0.25 + 0.5*e2/(2.*a + a2 - d1);
-		cinv_evec[9] = -cinv_evec[1] - 0.25;
-		cinv_evec[2] = -cinv_evec[0] + 0.5;
-		cinv_evec[3] = -cinv_evec[1] + 0.5;
-		cinv_evec[14] = -cinv_evec[12];
-		cinv_evec[11] = -cinv_evec[9];
+		cinv_evec[2] =cinv_evec[10] = 0.;
+		cinv_evec[5] =cinv_evec[13] = 0.25;
+		cinv_evec[1] =cinv_evec[9] = -0.25;
+		cinv_evec[3] =-0.5*e1/(2.*a + a2 +d1);
+		cinv_evec[0] = 0.25 -cinv_evec[3];
+		cinv_evec[4] = 0.25 + 0.5*e2/(2.*a + a2 - d1);
+		cinv_evec[6] = -cinv_evec[4] - 0.25;
+		cinv_evec[8] = -cinv_evec[0] + 0.5;
+		cinv_evec[12] = -cinv_evec[4] + 0.5;
+		cinv_evec[11] = -cinv_evec[3];
+		cinv_evec[14] = -cinv_evec[6];
 	} else if (name.find("5.11b") != string::npos) {
 		f2 = (rate_matrix[1] - rate_matrix[3])*0.5;
 		f1 = (rate_matrix[6] - rate_matrix[4])*0.5;
@@ -1624,36 +1624,36 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
 		// {-((-3 a2 - d1 + f1)/f1), 1, -((3 a2 + d1 + f1)/f1), 1}}
 
 		//v0
-		cevec[0] = cevec[4] = cevec[8] = cevec[12] = 1.0;
+		cevec[0] = cevec[1] = cevec[2] = cevec[3] = 1.0;
 		//v1
-		cevec[1] = -1.0;
+		cevec[4] = -1.0;
 		cevec[5] = 1.0;
-		cevec[9] = -1.0;
-		cevec[13] = 1.0;
-		//v2
-		cevec[2] = f2/(3.* a2 - d1 - f2);
-		cevec[6] = -(1. + 2.* f2/(3.* a2 - d1 - f2));
-		cevec[10] = cevec[2];
-		cevec[14] = 1.0;
-		//v3
-		cevec[3] = (3.0*a2 + d1)/f1 -1.;
+		cevec[6] = -1.0;
 		cevec[7] = 1.0;
-		cevec[11] = -cevec[3]-2.;
+		//v2
+		cevec[8] = f2/(3.* a2 - d1 - f2);
+		cevec[9] = -(1. + 2.* f2/(3.* a2 - d1 - f2));
+		cevec[10] = cevec[8];
+		cevec[11] = 1.0;
+		//v3
+		cevec[12] = (3.0*a2 + d1)/f1 -1.;
+		cevec[13] = 1.0;
+		cevec[14] = -cevec[12]-2.;
 		cevec[15] = 1.0;
 		/*INVERSE*/
-		cinv_evec[0] =cinv_evec[1] =cinv_evec[2] =cinv_evec[3] = 0.25;
-		cinv_evec[8] =cinv_evec[13] =cinv_evec[10] =cinv_evec[15] = 0.0;
+		cinv_evec[0] =cinv_evec[4] =cinv_evec[8] =cinv_evec[12] = 0.25;
+		cinv_evec[2] =cinv_evec[7] =cinv_evec[10] =cinv_evec[15] = 0.0;
 		double auxf2 = 0.5*f2/(3.*a2 -d1);
 
-		cinv_evec[12] = 0.5*f1/(3.*a2 + d1);
-		cinv_evec[4] = - cinv_evec[12] - 0.25;
-		cinv_evec[14] =-cinv_evec[12];
-		cinv_evec[6] =cinv_evec[12] - 0.25;
+		cinv_evec[3] = 0.5*f1/(3.*a2 + d1);
+		cinv_evec[1] = - cinv_evec[3] - 0.25;
+		cinv_evec[11] =-cinv_evec[3];
+		cinv_evec[9] =cinv_evec[3] - 0.25;
 
 		cinv_evec[5] = 0.25 - auxf2;
-		cinv_evec[9] = -0.5 + auxf2;
-		cinv_evec[7] = 0.25 + auxf2;
-		cinv_evec[11] = 0.5 - auxf2;
+		cinv_evec[6] = -0.5 + auxf2;
+		cinv_evec[13] = 0.25 + auxf2;
+		cinv_evec[14] = 0.5 - auxf2;
 	} else if (name.find("5.11c") != string::npos) {
 		g1 = (rate_matrix[0] - rate_matrix[10])*0.5;
 		g2 = (rate_matrix[15] - rate_matrix[5])*0.5;
@@ -1674,36 +1674,36 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
 		 //0, -1, 0, 1},
 		 //{-1, 0, 1, 0}}
 		//v0
-		cevec[0] = cevec[4] = cevec[8] = cevec[12] = 1.0;
+		cevec[0] = cevec[1] = cevec[2] = cevec[3] = 1.0;
 		//v1
 		double auxdeno1 = 3.*a2 + d1;
 		double auxnum1 = auxdeno1 - 2.*d1;
 		double auxdeno2 = auxnum1 + 2.*g2;
 		double deno = 1./(auxdeno1 * auxdeno2);
-		cevec[1] = -auxnum1*(auxdeno1 + 2.*g1)*deno;
+		cevec[4] = -auxnum1*(auxdeno1 + 2.*g1)*deno;
 		cevec[5] = -(-auxnum1 + 2.*g2)/auxdeno2;
-		cevec[9] = (-auxdeno1 + 2.*g1)*auxnum1*deno;
-		cevec[13] = 1.0;
+		cevec[6] = (-auxdeno1 + 2.*g1)*auxnum1*deno;
+		cevec[7] = 1.0;
 		//v2
-		cevec[2] = 0.0;
-		cevec[6] = -1.0;
+		cevec[8] = 0.0;
+		cevec[9] = -1.0;
 		cevec[10] = 0.0;
-		cevec[14] = 1.0;
-		//v3
-		cevec[3] = -1.0;
-		cevec[7] = 0.0;
 		cevec[11] = 1.0;
+		//v3
+		cevec[12] = -1.0;
+		cevec[13] = 0.0;
+		cevec[14] = 1.0;
 		cevec[15] = 0.0;
 		/*INVERSE*/
-		cinv_evec[0] =cinv_evec[1] =cinv_evec[2] =cinv_evec[3] = 0.25;
-		cinv_evec[8] =cinv_evec[10] = 0.5*g2 /(3.*a2 - d1);
-		cinv_evec[13] =cinv_evec[15] = -0.5*g1 /(3.*a2 + d1);
-		cinv_evec[4] = cinv_evec[6] = -0.25 - cinv_evec[8];
-		cinv_evec[12] = -0.5 -cinv_evec[13];
-		cinv_evec[14] = 0.5 - cinv_evec[13];
-		cinv_evec[5] = cinv_evec[7] = 0.25 + cinv_evec[8];
-		cinv_evec[9] = -0.5 -cinv_evec[8];
-		cinv_evec[11] = 0.5 - cinv_evec[8];
+		cinv_evec[0] =cinv_evec[4] =cinv_evec[8] =cinv_evec[12] = 0.25;
+		cinv_evec[2] =cinv_evec[10] = 0.5*g2 /(3.*a2 - d1);
+		cinv_evec[7] =cinv_evec[15] = -0.5*g1 /(3.*a2 + d1);
+		cinv_evec[1] = cinv_evec[9] = -0.25 - cinv_evec[2];
+		cinv_evec[3] = -0.5 -cinv_evec[7];
+		cinv_evec[11] = 0.5 - cinv_evec[7];
+		cinv_evec[5] = cinv_evec[13] = 0.25 + cinv_evec[2];
+		cinv_evec[6] = -0.5 -cinv_evec[2];
+		cinv_evec[14] = 0.5 - cinv_evec[2];
 
 	} else if (name.find("5.16") != string::npos) {
 		g1 = (rate_matrix[0] - rate_matrix[10])*0.5;
@@ -1726,40 +1726,40 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
 		// {-1, 0, 1, 0}}
 
 		//v0
-		cevec[0] = cevec[4] = cevec[8] = cevec[12] = 1.0;
+		cevec[0] = cevec[1] = cevec[2] = cevec[3] = 1.0;
 		//v1
 		double aux516r1 = 3.*a2*(a -a2);
 		double aux516r2 = 2.*g1*(a -a2);
 		double aux516r3 = 2.*g2*(a -a2);
 		double aux513r4 = 3.*a2*d;
 		double deno516r = aux516r1 + aux513r4 + aux516r3;
-		cevec[1] = -(aux516r1 - aux513r4 + aux516r2)/deno516r;
+		cevec[4] = -(aux516r1 - aux513r4 + aux516r2)/deno516r;
 		cevec[5] = (aux516r1 + aux513r4  - aux516r3)/deno516r;
-		cevec[9] = -(aux516r1 - aux513r4 - aux516r2)/deno516r;
-		cevec[13] = 1.0;
+		cevec[6] = -(aux516r1 - aux513r4 - aux516r2)/deno516r;
+		cevec[7] = 1.0;
 		//v2
-		cevec[2] = 0.0;
-		cevec[6] = -1.0;
+		cevec[8] = 0.0;
+		cevec[9] = -1.0;
 		cevec[10] = 0.0;
-		cevec[14] = 1.0;
-		//v3
-		cevec[3] = -1.0;
-		cevec[7] = 0.0;
 		cevec[11] = 1.0;
+		//v3
+		cevec[12] = -1.0;
+		cevec[13] = 0.0;
+		cevec[14] = 1.0;
 		cevec[15] = 0.0;
 
 		/***INVERSE***/
 		double auxg1 = g1/(6.*a2); double auxg2 = g2/(6.*a2);
-		cinv_evec[0] =cinv_evec[2] = 0.25 + 0.25*d/(a-a2);
-		cinv_evec[1] =cinv_evec[3] = 0.5 - cinv_evec[0];
-		cinv_evec[8] =cinv_evec[10] =auxg2;
-		cinv_evec[9] = -0.5 - auxg2;
-		cinv_evec[11] = 0.5 - auxg2;
-		cinv_evec[12] = -0.5 + auxg1;
-		cinv_evec[14] = 0.5 + auxg1;
-		cinv_evec[13] =cinv_evec[15] = - auxg1;
-		cinv_evec[4] =cinv_evec[6] = -cinv_evec[0] -cinv_evec[8];
-		cinv_evec[7] =cinv_evec[5] =-cinv_evec[4];
+		cinv_evec[0] =cinv_evec[8] = 0.25 + 0.25*d/(a-a2);
+		cinv_evec[4] =cinv_evec[12] = 0.5 - cinv_evec[0];
+		cinv_evec[2] =cinv_evec[10] =auxg2;
+		cinv_evec[6] = -0.5 - auxg2;
+		cinv_evec[14] = 0.5 - auxg2;
+		cinv_evec[3] = -0.5 + auxg1;
+		cinv_evec[11] = 0.5 + auxg1;
+		cinv_evec[7] =cinv_evec[15] = - auxg1;
+		cinv_evec[1] =cinv_evec[9] = -cinv_evec[0] -cinv_evec[2];
+		cinv_evec[13] =cinv_evec[5] =-cinv_evec[1];
 
 	    }
 	else {
@@ -1772,8 +1772,17 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
 	for (j = 0; j < num_states; j++) {
 		for (i = 0, zero = 0.0; i < num_states; i++) {
 
+			/*if (i ==0 and j == 2) {
+				complex <double> suma = (0., 0.);
+					/*cout << "Los vectores escalares son" << endl;
+					for (int k = 0; k < num_states; k++) { cout << rate_matrix[i*num_states+k] << "  *  "  << cevec[k*num_states+j] << "   =   " << rate_matrix[i*num_states+k] * cevec[k*num_states+j] << endl;
+						suma += rate_matrix[i*num_states+k] * cevec[k*num_states+j];}
+					cout << "La suma de ellos es " << suma << endl;
+					cout << "Y lo del final es " << ceval[j] << "  *   " << cevec[i*num_states+j] << "   =  " << ceval[j] * cevec[i*num_states+j] << endl;
+				}*/
+
 			for (int k = 0; k < num_states; k++)
-                zero += rate_matrix[k*num_states+i] * cevec[k*num_states+j];
+                zero += rate_matrix[i*num_states+k] * cevec[k*num_states+j];
 			zero -= ceval[j] * cevec[i*num_states+j];
 			if (abs(zero) > 1.0e-5) {
                 cout << "too large error[" << i << "," << j << "]: " << zero << endl;
@@ -1856,7 +1865,7 @@ void ModelLieMarkov::computeTransMatrix(double time, double *trans_matrix, int m
                 sum += (trans_matrix[i*4+j]);
             assert(fabs(sum-1.0) < 1e-4);
         }
-    } else if (technique == MET_EIGEN3LIB_DECOMPOSITION || technique == MET_LIE_MARKOV_DECOMPOSITION) {
+    } else if (technique == MET_EIGEN3LIB_DECOMPOSITION) {
     // and nondiagonalizable == false, else we used scaled squaring
         int i;
         Vector4cd ceval_exp;
