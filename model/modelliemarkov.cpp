@@ -1763,7 +1763,7 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
 
 	    }
 	else {
-    	cout << "No deberíamos llegar hasta aquí." << endl;
+    	cout << "This line shoul not appear." << endl;
     }
 
 	/* check eigenvalue equation */
@@ -1771,19 +1771,9 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
     int error = 0;
 	for (j = 0; j < num_states; j++) {
 		for (i = 0, zero = 0.0; i < num_states; i++) {
-
-			/*if (i ==0 and j == 2) {
-				complex <double> suma = (0., 0.);
-					/*cout << "Los vectores escalares son" << endl;
-					for (int k = 0; k < num_states; k++) { cout << rate_matrix[i*num_states+k] << "  *  "  << cevec[k*num_states+j] << "   =   " << rate_matrix[i*num_states+k] * cevec[k*num_states+j] << endl;
-						suma += rate_matrix[i*num_states+k] * cevec[k*num_states+j];}
-					cout << "La suma de ellos es " << suma << endl;
-					cout << "Y lo del final es " << ceval[j] << "  *   " << cevec[i*num_states+j] << "   =  " << ceval[j] * cevec[i*num_states+j] << endl;
-				}*/
-
 			for (int k = 0; k < num_states; k++)
-                zero += rate_matrix[i*num_states+k] * cevec[k*num_states+j];
-			zero -= ceval[j] * cevec[i*num_states+j];
+                zero += rate_matrix[i*num_states+k] * cevec[j*num_states+k];
+			zero -= ceval[j] * cevec[j*num_states+i];
 			if (abs(zero) > 1.0e-5) {
                 cout << "too large error[" << i << "," << j << "]: " << zero << endl;
 				error = 1;
