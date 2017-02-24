@@ -725,6 +725,11 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
                 model->setMixtureWeight(mix, 1.0);
             }
             model->decomposeRateMatrix();
+//        } else {
+//            site_rate->setFixParams(1);
+//            int c, ncat = site_rate->getNRate();
+//            for (c = 0; c < ncat; c++)
+//                site_rate->setProp(c, 1.0);
 //        }
 	}
 

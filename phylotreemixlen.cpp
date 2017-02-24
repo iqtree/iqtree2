@@ -286,7 +286,7 @@ void PhyloTreeMixlen::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool
     theta_computed = false;
 
 #ifdef USE_CPPOPTLIB
-    if (params->optimize_alg.find("cppopt") != string::npos) {
+    if (params->optimize_alg_mixlen.find("cppopt") != string::npos) {
         //----- using cppoptlib ------//
 
         TVector lower_bound(mixlen), upper_bound(mixlen), variables(mixlen);
@@ -310,7 +310,7 @@ void PhyloTreeMixlen::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool
     } else
 #endif
 
-    if (params->optimize_alg.find("newton") != string::npos) {
+    if (params->optimize_alg_mixlen.find("newton") != string::npos) {
 
         //----- Newton-Raphson -----//
         double lower_bound[mixlen];
@@ -327,7 +327,7 @@ void PhyloTreeMixlen::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool
             current_it->setLength(i, variables[i]);
             current_it_back->setLength(i, variables[i]);
         }
-    } else {
+    } else if (params->optimize_alg_mixlen.find("BFGS") != string::npos) {
 
         // BFGS method to simultaneously optimize all lengths per branch
         // It is often better than the true Newton method (Numerical Recipes in C++, chap. 10.7)
@@ -358,65 +358,69 @@ void PhyloTreeMixlen::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool
             cout << "Mixlen-LnL: " << score << endl;
         }
 
+    } else {
+
+        // EM algorithm
+        size_t ptn, c;
+        size_t nptn = aln->getNPattern();
+        size_t nmix = site_rate->getNRate();
+        assert(nmix == mixlen);
+
+        // first compute _pattern_lh_cat
+        double tree_lh = -DBL_MAX;
+
+        for (int EM_step = 0; EM_step < 1; EM_step++) {
+
+            double new_tree_lh = computePatternLhCat(WSL_RATECAT);
+            ASSERT(new_tree_lh+0.1 > tree_lh);
+            if (new_tree_lh-params->min_branch_length < tree_lh)
+                break;
+            tree_lh = new_tree_lh;
+
+            // E-step
+            // decoupled weights (prop) from _pattern_lh_cat to obtain L_ci and compute pattern likelihood L_i
+            for (ptn = 0; ptn < nptn; ptn++) {
+                double *this_lk_cat = _pattern_lh_cat + ptn*nmix;
+                double lk_ptn = ptn_invar[ptn];
+                for (c = 0; c < nmix; c++) {
+                    lk_ptn += this_lk_cat[c];
+                }
+                assert(lk_ptn != 0.0);
+                lk_ptn = ptn_freq[ptn] / lk_ptn;
+                // transform _pattern_lh_cat into posterior probabilities of each category
+                for (c = 0; c < nmix; c++) {
+                    this_lk_cat[c] *= lk_ptn;
+                }
+                
+            } 
+         
+            double negative_lh;
+            double optx;
+            theta_computed = false;
+            computePtnFreq();
+            
+            for (cur_mixture = 0; cur_mixture < mixlen; cur_mixture++) {
+
+                double *this_lk_cat = _pattern_lh_cat+cur_mixture;
+                for (ptn = 0; ptn < nptn; ptn++)
+                    ptn_freq[ptn] = this_lk_cat[ptn*nmix];
+                
+                double current_len = current_it->getLength(cur_mixture);
+                assert(current_len >= 0.0);
+                // Newton-Raphson method
+                optx = minimizeNewton(params->min_branch_length, current_len, params->max_branch_length, params->min_branch_length, negative_lh, maxNRStep);
+
+                current_it->setLength(cur_mixture, optx);
+                current_it_back->setLength(cur_mixture, optx);
+            
+            }
+            
+            cur_mixture = -1;
+            // reset ptn_freq
+            ptn_freq_computed = false;
+            computePtnFreq();
+        } // for EM_step
     }
-
-    /*
-        DEPRECATED EM algorithm
-    size_t ptn, c;
-    size_t nptn = aln->getNPattern();
-    size_t nmix = model->getNMixtures();
-    assert(nmix == mixlen);
-
-    // first compute _pattern_lh_cat
-    double tree_lh;
-//    tree_lh = computeLikelihoodBranch(current_it, node1);
-    tree_lh = computePatternLhCat(WSL_MIXTURE);
-
-//    cout << "Init LnL = " << tree_lh << endl;
-
-    // E-step
-    // decoupled weights (prop) from _pattern_lh_cat to obtain L_ci and compute pattern likelihood L_i
-    for (ptn = 0; ptn < nptn; ptn++) {
-        double *this_lk_cat = _pattern_lh_cat + ptn*nmix;
-        double lk_ptn = ptn_invar[ptn];
-        for (c = 0; c < nmix; c++) {
-            lk_ptn += this_lk_cat[c];
-        }
-        assert(lk_ptn != 0.0);
-        lk_ptn = ptn_freq[ptn] / lk_ptn;
-        // transform _pattern_lh_cat into posterior probabilities of each category
-        for (c = 0; c < nmix; c++) {
-            this_lk_cat[c] *= lk_ptn;
-        }
-        
-    } 
- 
-    double negative_lh;
-    double optx;
-    theta_computed = false;
-    computePtnFreq();
-    
-    for (cur_mixture = 0; cur_mixture < mixlen; cur_mixture++) {
-
-        double *this_lk_cat = _pattern_lh_cat+cur_mixture;
-        for (ptn = 0; ptn < nptn; ptn++)
-            ptn_freq[ptn] = this_lk_cat[ptn*nmix];
-        
-        double current_len = current_it->getLength(cur_mixture);
-        assert(current_len >= 0.0);
-        // Newton-Raphson method
-        optx = minimizeNewton(params->min_branch_length, current_len, params->max_branch_length, params->min_branch_length, negative_lh, maxNRStep);
-
-        current_it->setLength(cur_mixture, optx);
-        current_it_back->setLength(cur_mixture, optx);
-    
-    }
-    
-    cur_mixture = -1;
-    // reset ptn_freq
-    ptn_freq_computed = false;
-    computePtnFreq();
-    */
 
     if (clearLH) {
         node1->clearReversePartialLh(node2);
@@ -653,12 +657,21 @@ void PhyloTreeMixlen::hessian(const TVector &x, THessian &hessian) {
 }
 #endif
 
-//------ DEPRECATED
-
-/*
+// defining log-likelihood derivative function for EM algorithm
 void PhyloTreeMixlen::computeFuncDerv(double value, double &df, double &ddf) {
+
+    if (cur_mixture < 0)
+        return PhyloTree::computeFuncDerv(value, df, ddf);
+
     current_it->setLength(cur_mixture, value);
     current_it_back->setLength(cur_mixture, value);
+
+    (this->*computeLikelihoodDervMixlenPointer)(current_it, (PhyloNode*) current_it_back->node, df, ddf);
+
+	df = -df;
+    ddf = -ddf;
+    return;
+
 
     PhyloNeighbor* dad_branch = current_it;
     PhyloNode *dad = (PhyloNode*) current_it_back->node;
@@ -748,7 +761,7 @@ void PhyloTreeMixlen::computeFuncDerv(double value, double &df, double &ddf) {
         for (i = 0; i < nstates; i++) {
             double cof = eval[cur_mixture*nstates+i]*site_rate->getRate(c);
             // length for heterotachy model
-            double val = exp(cof*dad_branch->getLength(cur_mixture)) * prop * ((ModelMixture*)model)->prop[cur_mixture];
+            double val = exp(cof*dad_branch->getLength(cur_mixture)) * prop * model->getMixtureWeight(cur_mixture);
             double val1_ = cof*val;
             val0[(c)*nstates+i] = val;
             val1[(c)*nstates+i] = val1_;
@@ -818,4 +831,4 @@ void PhyloTreeMixlen::computeFuncDerv(double value, double &df, double &ddf) {
 
 //    return lh;
 }
-*/
+

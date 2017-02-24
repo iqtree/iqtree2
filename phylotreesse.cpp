@@ -94,12 +94,14 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk, int num_threads) {
 #if INSTRSET < 2
         computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchGenericSIMD<Vec1d, SAFE_LH>;
         computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervGenericSIMD<Vec1d, SAFE_LH>;
+        computeLikelihoodDervMixlenPointer = NULL;
         computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodGenericSIMD<Vec1d, SAFE_LH>;
         computeLikelihoodFromBufferPointer = &PhyloTree::computeLikelihoodFromBufferGenericSIMD<Vec1d, SAFE_LH>;
         sse = LK_EIGEN;
 #else
         computeLikelihoodBranchPointer = NULL;
         computeLikelihoodDervPointer = NULL;
+        computeLikelihoodDervMixlenPointer = NULL;
         computePartialLikelihoodPointer = NULL;
         computeLikelihoodFromBufferPointer = NULL;
         sse = LK_EIGEN;
@@ -149,11 +151,13 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk, int num_threads) {
     //--- naive (no SIMD) kernel ---
     computeLikelihoodBranchPointer = &PhyloTree::computeLikelihoodBranchGenericSIMD<Vec1d, SAFE_LH>;
     computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervGenericSIMD<Vec1d, SAFE_LH>;
+    computeLikelihoodDervMixlenPointer = NULL;
     computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodGenericSIMD<Vec1d, SAFE_LH>;
     computeLikelihoodFromBufferPointer = &PhyloTree::computeLikelihoodFromBufferGenericSIMD<Vec1d, SAFE_LH>;
 #else
     computeLikelihoodBranchPointer = NULL;
     computeLikelihoodDervPointer = NULL;
+    computeLikelihoodDervMixlenPointer = NULL;
     computePartialLikelihoodPointer = NULL;
     computeLikelihoodFromBufferPointer = NULL;
 #endif

@@ -48,7 +48,7 @@ RateHeterotachy::~RateHeterotachy() {
 void RateHeterotachy::setNCategory(int ncat) {
     ncategory = ncat;
     if (optimize_steps == 0)
-        optimize_steps = ncat*2;
+        optimize_steps = ncat*100;
     // initialize with gamma rates
 	if (prop) delete [] prop;
 	prop  = new double[ncategory];

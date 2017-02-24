@@ -168,7 +168,7 @@ public:
             @param ddf (OUT) second derivative
             @return negative of likelihood (for minimization)
      */
-//    virtual void computeFuncDerv(double value, double &df, double &ddf);
+    virtual void computeFuncDerv(double value, double &df, double &ddf);
 
 	/**
 		return the number of dimensions
@@ -191,6 +191,8 @@ public:
 	*/
 	virtual double derivativeFunk(double x[], double dfx[]);
 
+    /** For Mixlen stuffs */
+    virtual int getCurMixture() { return cur_mixture; }
 
     /**
      *  Optimize current tree using NNI

@@ -1176,6 +1176,16 @@ public:
     template <class VectorClass, const bool SAFE_NUMERIC, const bool FMA = false, const bool SITE_MODEL = false>
     void computeLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, double *df, double *ddf);
 
+    /** For Mixlen stuffs */
+    virtual int getCurMixture() { return 0; }
+
+    template <class VectorClass, const bool SAFE_NUMERIC, const int nstates, const bool FMA = false, const bool SITE_MODEL = false>
+    void computeLikelihoodDervMixlenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
+
+    template <class VectorClass, const bool SAFE_NUMERIC, const bool FMA = false, const bool SITE_MODEL = false>
+    void computeLikelihoodDervMixlenGenericSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
+
+
     /*
     template <class VectorClass, const int VCSIZE, const int nstates>
     void computeMixrateLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf);
@@ -1199,6 +1209,9 @@ public:
 
     typedef void (PhyloTree::*ComputeLikelihoodDervType)(PhyloNeighbor *, PhyloNode *, double *, double *);
     ComputeLikelihoodDervType computeLikelihoodDervPointer;
+
+    typedef void (PhyloTree::*ComputeLikelihoodDervMixlenType)(PhyloNeighbor *, PhyloNode *, double &, double &);
+    ComputeLikelihoodDervMixlenType computeLikelihoodDervMixlenPointer;
 
     /****************************************************************************
             Stepwise addition (greedy) by maximum parsimony

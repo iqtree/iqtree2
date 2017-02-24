@@ -3084,4 +3084,220 @@ double PhyloTree::computeLikelihoodFromBufferGenericSIMD()
 }
 
 
+#ifdef KERNEL_FIX_STATES
+template <class VectorClass, const bool SAFE_NUMERIC, const int nstates, const bool FMA, const bool SITE_MODEL>
+void PhyloTree::computeLikelihoodDervMixlenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf)
+#else
+template <class VectorClass, const bool SAFE_NUMERIC, const bool FMA, const bool SITE_MODEL>
+void PhyloTree::computeLikelihoodDervMixlenGenericSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, double &df, double &ddf)
+#endif
+{
+    PhyloNode *node = (PhyloNode*) dad_branch->node;
+    PhyloNeighbor *node_branch = (PhyloNeighbor*) node->findNeighbor(dad);
+    if (!central_partial_lh)
+        initializeAllPartialLh();
+    if (node->isLeaf()) {
+    	PhyloNode *tmp_node = dad;
+    	dad = node;
+    	node = tmp_node;
+    	PhyloNeighbor *tmp_nei = dad_branch;
+    	dad_branch = node_branch;
+    	node_branch = tmp_nei;
+    }
+
+#ifdef KERNEL_FIX_STATES
+    computeTraversalInfo<VectorClass, nstates>(node, dad, false);
+#else
+    computeTraversalInfo<VectorClass>(node, dad, false);
+#endif
+
+//
+//    if ((dad_branch->partial_lh_computed & 1) == 0)
+//        computePartialLikelihood(dad_branch, dad);
+//    if ((node_branch->partial_lh_computed & 1) == 0)
+//        computePartialLikelihood(node_branch, node);
+
+#ifndef KERNEL_FIX_STATES
+    size_t nstates = aln->num_states;
+#endif
+    size_t ncat = site_rate->getNRate();
+    size_t ncat_mix = (model_factory->fused_mix_rate) ? ncat : ncat*model->getNMixtures();
+    size_t nmix = (model_factory->fused_mix_rate) ? 1 : model->getNMixtures();
+
+    size_t block = ncat_mix * nstates;
+//    size_t tip_block = nstates * model->getNMixtures();
+    size_t ptn; // for big data size > 4GB memory required
+    size_t c, i;
+    size_t orig_nptn = aln->size();
+    size_t max_orig_nptn = ((orig_nptn+VectorClass::size()-1)/VectorClass::size())*VectorClass::size();
+    size_t nptn = max_orig_nptn+model_factory->unobserved_ptns.size();
+    bool isASC = model_factory->unobserved_ptns.size() > 0;
+
+
+
+    size_t mix_addr_nstates[ncat_mix], mix_addr[ncat_mix], cat_id[ncat_mix];
+    size_t denom = (model_factory->fused_mix_rate) ? 1 : ncat;
+    for (c = 0; c < ncat_mix; c++) {
+        size_t m = c/denom;
+        cat_id[c] = c%ncat;
+        mix_addr_nstates[c] = m*nstates;
+        mix_addr[c] = mix_addr_nstates[c]*nstates;
+    }
+
+    double *eval = model->getEigenvalues();
+    ASSERT(eval);
+
+    double *buffer_partial_lh_ptr = buffer_partial_lh;
+    vector<size_t> limits;
+    computeBounds<VectorClass>(num_threads, nptn, limits);
+
+	ASSERT(theta_all);
+
+    double *val0 = NULL;
+    double *val1 = NULL;
+    double *val2 = NULL;
+    double cat_rate[ncat];
+    double cat_prop[ncat];
+
+    int cur_mixlen = getCurMixture();
+
+
+    if (SITE_MODEL) {
+        for (c = 0; c < ncat; c++) {
+            cat_rate[c] = site_rate->getRate(c);
+            cat_prop[c] = site_rate->getProp(c);
+        }
+    } else {
+        val0 = buffer_partial_lh_ptr;
+        val1 = val0 + get_safe_upper_limit(block);
+        val2 = val1 + get_safe_upper_limit(block);
+        buffer_partial_lh_ptr += 3*get_safe_upper_limit(block);
+        double len = dad_branch->getLength(cur_mixlen);
+        for (c = 0; c < nmix; c++) {
+            size_t cur_mix = (model_factory->fused_mix_rate) ? cur_mixlen : c;
+            double *eval_ptr = eval+cur_mix*nstates;
+            double prop = model->getMixtureWeight(cur_mix);
+            size_t addr = c*nstates;
+            for (i = 0; i < nstates; i++) {
+                double cof = eval_ptr[i];
+                double val = exp(cof*len) * prop;
+                double val1_ = cof*val;
+                val0[addr+i] = val;
+                val1[addr+i] = val1_;
+                val2[addr+i] = cof*val1_;
+            }
+        }
+    }
+
+//    double dad_length = dad_branch->length;
+
+    VectorClass all_df(0.0), all_ddf(0.0), all_prob_const(0.0), all_df_const(0.0), all_ddf_const(0.0);
+
+//    size_t nmixlen = getMixlen(), nmixlen2 = nmixlen*nmixlen;
+//    ASSERT(nmixlen == ncat);
+
+//    double tree_lh = node_branch->lh_scale_factor + dad_branch->lh_scale_factor;
+
+#ifdef _OPENMP
+#pragma omp parallel for schedule(static, 1) private(ptn, i, c) num_threads(num_threads)
+#endif
+    for (int thread_id = 0; thread_id < num_threads; thread_id++) {
+        VectorClass my_df(0.0), my_ddf(0.0), vc_prob_const(0.0), vc_df_const(0.0), vc_ddf_const(0.0);
+        size_t ptn_lower = limits[thread_id];
+        size_t ptn_upper = limits[thread_id+1];
+
+        if (!theta_computed)
+        #ifdef KERNEL_FIX_STATES
+            computeLikelihoodBufferSIMD<VectorClass, SAFE_NUMERIC, nstates, FMA, SITE_MODEL>(dad_branch, dad, ptn_lower, ptn_upper, thread_id);
+        #else
+            computeLikelihoodBufferGenericSIMD<VectorClass, SAFE_NUMERIC, FMA, SITE_MODEL>(dad_branch, dad, ptn_lower, ptn_upper, thread_id);
+        #endif
+
+        // mixed branch length model
+        VectorClass lh_ptn;
+        VectorClass df_ptn, ddf_ptn;
+
+        for (ptn = ptn_lower; ptn < ptn_upper; ptn+=VectorClass::size()) {
+            lh_ptn = df_ptn = ddf_ptn = 0.0;
+            VectorClass *theta = ((VectorClass*)(theta_all + ptn*block)) + cur_mixlen*nstates*nmix;
+            double *val0_ptr = val0;
+            double *val1_ptr = val1;
+            double *val2_ptr = val2;
+            for (c = 0; c < nmix; c++) {
+            #ifdef KERNEL_FIX_STATES
+                dotProductTriple<VectorClass, double, nstates, FMA, true>(val0_ptr, val1_ptr, val2_ptr, theta, lh_ptn, df_ptn, ddf_ptn, nstates);
+            #else
+                dotProductTriple<VectorClass, double, FMA, true>(val0_ptr, val1_ptr, val2_ptr, theta, lh_ptn, df_ptn, ddf_ptn,nstates, nstates);
+            #endif
+                val0_ptr += nstates;
+                val1_ptr += nstates;
+                val2_ptr += nstates;
+                theta += nstates;
+            }
+            lh_ptn = abs(lh_ptn) + VectorClass().load_a(&ptn_invar[ptn]);
+//                ASSERT(horizontal_and(lh_ptn > 0.0));
+
+            if (ptn < orig_nptn) {
+                VectorClass freq;
+                freq.load_a(&ptn_freq[ptn]);
+                VectorClass inv_lh_ptn = 1.0 / lh_ptn;
+
+                // compute gradient (my_df)
+                df_ptn *= inv_lh_ptn;
+                ddf_ptn *= inv_lh_ptn;
+                my_df = mul_add(df_ptn, freq, my_df);
+                my_ddf += nmul_add(df_ptn, df_ptn, ddf_ptn) * freq;
+            } else {
+                vc_prob_const += lh_ptn;
+                vc_df_const += df_ptn;
+                vc_ddf_const += ddf_ptn;
+            }
+        } // FOR ptn
+
+    #ifdef _OPENMP
+    #pragma omp critical
+    #endif
+        {
+            all_df += my_df;
+            all_ddf += my_ddf;
+            if (isASC) {
+                all_prob_const += vc_prob_const;
+                all_df_const += vc_df_const;
+                all_ddf_const += vc_ddf_const;
+            }
+        }
+
+    } // FOR thread
+
+    // mark buffer as computed
+    theta_computed = true;
+
+    df = horizontal_add(all_df);
+    ddf = horizontal_add(all_ddf);
+
+    if (!SAFE_NUMERIC && (std::isnan(df) || std::isinf(df)))
+        outError("Numerical underflow (lh-derivative-mixlen). Run again with the safe likelihood kernel via `-safe` option");
+
+	if (isASC) {
+        double prob_const = 0.0, df_const = 0.0, ddf_const = 0.0;
+        prob_const = 1.0/(1.0 - horizontal_add(all_prob_const));
+        df_const = horizontal_add(all_df_const);
+        ddf_const = horizontal_add(all_ddf_const);
+        // ascertainment bias correction
+        df_const *= prob_const;
+        ddf_const *= prob_const;
+        double nsites = aln->getNSite();
+        df += nsites * df_const;
+        ddf += nsites * (ddf_const + df_const*df_const);
+    }
+
+    if (std::isnan(df) || std::isinf(df)) {
+        cerr << "WARNING: Numerical underflow for lh-derivative-mixlen" << endl;
+        df = ddf = 0.0;
+    }
+}
+
+
+
+
 #endif //PHYLOKERNELNEW_H_

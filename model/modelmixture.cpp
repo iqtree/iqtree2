@@ -1278,7 +1278,7 @@ void ModelMixture::initMixture(string orig_model_name, string model_name, string
 		at(i)->total_num_subst /= sum;
 
     if (optimize_steps == 0)
-        optimize_steps = (getNDim()+1)*2;
+        optimize_steps = (getNDim()+1)*100;
 
 	if (optimize_weights) fix_prop = false;
 	fix_prop |= (nmixtures == 1);
@@ -1632,8 +1632,28 @@ double ModelMixture::optimizeWithEM(double gradient_epsilon) {
         // M-step, update weights according to (*)        
         
         bool converged = !fix_prop;
-        
-        if (!fix_prop) {
+
+        if (tree->isMixlen() && isFused() && !phylo_tree->getRate()->getFixParams()) {
+            // update the weights for rate model
+            converged = true;
+            double new_pinvar = 0.0;
+            for (c = 0; c < nmix; c++) {
+                new_prop[c] = new_prop[c] / phylo_tree->getAlnNSite();
+                if (new_prop[c] < 1e-10) new_prop[c] = 1e-10;
+                // check for convergence
+                converged = converged && (fabs(phylo_tree->getRate()->getProp(c) - new_prop[c]) < 1e-4);
+                phylo_tree->getRate()->setProp(c, new_prop[c]);
+                new_pinvar += prop[c];
+            }
+            new_pinvar = 1.0 - new_pinvar;
+            if (new_pinvar != 0.0) {
+                converged = converged && (fabs(phylo_tree->getRate()->getPInvar()-new_pinvar) < 1e-4);
+                phylo_tree->getRate()->setPInvar(new_pinvar);
+//                phylo_tree->getRate()->setOptimizePInvar(false);
+                phylo_tree->computePtnInvar();
+            }
+
+        } else if (!fix_prop) {
 //            double new_pinvar = 0.0;
             for (c = 0; c < nmix; c++) {
                 new_prop[c] = new_prop[c] / phylo_tree->getAlnNSite();

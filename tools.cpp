@@ -795,6 +795,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.optimize_model_rate_joint = false;
     params.optimize_by_newton = true;
     params.optimize_alg = "2-BFGS,EM";
+    params.optimize_alg_mixlen = "EM";
     params.optimize_alg_gammai = "EM";
     params.fixed_branch_length = false;
     params.min_branch_length = 0.0; // this is now adjusted later based on alignment length
@@ -1072,6 +1073,13 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (cnt >= argc)
 					throw "Use -opt_alg <1-BFGS|2-BFGS|EM>";
 				params.optimize_alg = argv[cnt];
+				continue;
+			}
+			if (strcmp(argv[cnt], "-optlen") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -optlen <BFGS|EM>";
+				params.optimize_alg_mixlen = argv[cnt];
 				continue;
 			}
             if (strcmp(argv[cnt], "-optalg_gammai") == 0) {
