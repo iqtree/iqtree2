@@ -631,24 +631,24 @@ void Optimization::lnsrch(int n, double xold[], double fold, double g[], double 
 	alam=1.0;
 	bool first_time = true;
 	for (;;) {
-        for (; alam >= alamin;) {
-            bool out_of_bound = false;
-            for (i=1;i<=n;i++) {
-                x[i]=xold[i]+alam*p[i];
-                if (x[i] < lower[i] || x[i] > upper[i]) {
-                    out_of_bound = true;
-                    break;
-                }
-            }
-            if (out_of_bound)
-                alam *= 0.5;
-            else
-                break;
-        }
+//        for (; alam >= alamin;) {
+//            bool out_of_bound = false;
+//            for (i=1;i<=n;i++) {
+//                x[i]=xold[i]+alam*p[i];
+//                if (x[i] < lower[i] || x[i] > upper[i]) {
+//                    out_of_bound = true;
+//                    break;
+//                }
+//            }
+//            if (out_of_bound)
+//                alam *= 0.5;
+//            else
+//                break;
+//        }
 
         for (i=1;i<=n;i++) x[i]=xold[i]+alam*p[i];
 
-//		fixBound(x, lower, upper, n);
+		fixBound(x, lower, upper, n);
 		//checkRange(x);
 		*f=targetFunk(x);
 		if (alam < alamin) {

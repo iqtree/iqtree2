@@ -187,9 +187,9 @@ void PhyloTreeMixlen::initializeMixlen(double tolerance) {
         }
 
         // optimize rate model
-//        double tree_lh = relative_rate->optimizeParameters(tolerance);
+        double tree_lh = relative_rate->optimizeParameters(tolerance);
 
-        model_factory->optimizeParameters(params->fixed_branch_length, false, tolerance);
+//        model_factory->optimizeParameters(params->fixed_branch_length, false, tolerance);
 
 //        optimizeModelParameters();
 
@@ -232,24 +232,27 @@ void PhyloTreeMixlen::initializeMixlen(double tolerance) {
                 site_rate->setProp(i, relative_rate->getProp(i)*(1.0-pinvar));
                 
         delete relative_rate;
+        clearAllPartialLH();
     }
-    
-    // assign branch length from rate model
-    DoubleVector saved_treelen = relative_treelen;
-    DoubleVector lenvec;
-    treeLengths(lenvec);
-    for (i = 0; i < mixlen; i++) {
-        relative_treelen[i] = relative_treelen[i] / lenvec[i];
+
+    if (((PhyloNeighborMixlen*)root->neighbors[0])->lengths.size() != mixlen) {
+        // assign branch length from rate model
+        DoubleVector saved_treelen = relative_treelen;
+        DoubleVector lenvec;
+        treeLengths(lenvec);
+        for (i = 0; i < mixlen; i++) {
+            relative_treelen[i] = relative_treelen[i] / lenvec[i];
+        }
+        if (verbose_mode >= VB_MED) {
+            cout << "relative_ratio:";
+            for (i = 0; i < mixlen; i++)
+                cout << " " << relative_treelen[i];
+            cout << endl;
+        }
+        initializeMixBranches();
+        clearAllPartialLH();
+        relative_treelen = saved_treelen;
     }
-    if (verbose_mode >= VB_MED) {
-        cout << "relative_ratio:";
-        for (i = 0; i < mixlen; i++)
-            cout << " " << relative_treelen[i];
-        cout << endl;
-    }
-    initializeMixBranches();
-    clearAllPartialLH();
-    relative_treelen = saved_treelen;
 
     initializing_mixlen = false;
 
@@ -369,10 +372,12 @@ void PhyloTreeMixlen::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool
         // first compute _pattern_lh_cat
         double tree_lh = -DBL_MAX;
 
-        for (int EM_step = 0; EM_step < 1; EM_step++) {
+        // 2 steps are empirically determined to be best!
+        for (int EM_step = 0; EM_step < 2; EM_step++) {
 
             double new_tree_lh = computePatternLhCat(WSL_RATECAT);
-            ASSERT(new_tree_lh+0.1 > tree_lh);
+            if (new_tree_lh+1.0 < tree_lh)
+                cout << "WARN: at EM step " << EM_step << " new_tree_lh " << new_tree_lh << " worse than tree_lh " << tree_lh << endl;
             if (new_tree_lh-params->min_branch_length < tree_lh)
                 break;
             tree_lh = new_tree_lh;

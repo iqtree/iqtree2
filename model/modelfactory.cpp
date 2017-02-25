@@ -807,7 +807,7 @@ double ModelFactory::optimizeParametersOnly(int num_steps, double gradient_epsil
 	if (!joint_optimize) {
         // more steps for fused mix rate model
         int steps;
-        if (fused_mix_rate && model->getNDim() > 0 && site_rate->getNDim() > 0) {
+        if (false && fused_mix_rate && model->getNDim() > 0 && site_rate->getNDim() > 0) {
             model->setOptimizeSteps(1);
             site_rate->setOptimizeSteps(1);
             steps = max(model->getNDim()+site_rate->getNDim(), num_steps) * 3;

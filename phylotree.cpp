@@ -3315,8 +3315,10 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
             for (id = 0; id < IT_NUM; id++)
                 ((PhyloNeighbor*)*saved_it[id])->size = 0;
         }
-        
-        for (int step = 0; step < params->nni5_num_eval; step++) {
+
+        int nni5_num_eval = max(params->nni5_num_eval, getMixlen());
+
+        for (int step = 0; step < nni5_num_eval; step++) {
 
 
 		// clear partial likelihood vector

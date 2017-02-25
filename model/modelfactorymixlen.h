@@ -28,7 +28,7 @@ public:
 		@return the best likelihood 
 	*/
 	virtual double optimizeParameters(int fixed_len = BRLEN_OPTIMIZE, bool write_info = true,
-                                      double logl_epsilon = 0.1, double gradient_epsilon = 0.001);
+                                      double logl_epsilon = 0.1, double gradient_epsilon = 0.0001);
 
     /**
         sort classes in ascending order of tree lengths

@@ -1598,9 +1598,10 @@ double ModelMixture::optimizeWithEM(double gradient_epsilon) {
     double prev_score = -DBL_MAX, score;
         
 //    int num_steps = 100000; //SC
+    int step;
 
     // EM algorithm loop described in Wang, Li, Susko, and Roger (2008)
-    for (int step = 0; step < optimize_steps; step++) {
+    for (step = 0; step < optimize_steps; step++) {
         // first compute _pattern_lh_cat
         score = phylo_tree->computePatternLhCat(WSL_MIXTURE);
 
@@ -1633,7 +1634,7 @@ double ModelMixture::optimizeWithEM(double gradient_epsilon) {
         
         bool converged = !fix_prop;
 
-        if (tree->isMixlen() && isFused() && !phylo_tree->getRate()->getFixParams()) {
+        if (phylo_tree->isMixlen() && isFused() && !phylo_tree->getRate()->getFixParams()) {
             // update the weights for rate model
             converged = true;
             double new_pinvar = 0.0;
@@ -1643,10 +1644,10 @@ double ModelMixture::optimizeWithEM(double gradient_epsilon) {
                 // check for convergence
                 converged = converged && (fabs(phylo_tree->getRate()->getProp(c) - new_prop[c]) < 1e-4);
                 phylo_tree->getRate()->setProp(c, new_prop[c]);
-                new_pinvar += prop[c];
+                new_pinvar += new_prop[c];
             }
-            new_pinvar = 1.0 - new_pinvar;
-            if (new_pinvar != 0.0) {
+            new_pinvar = fabs(1.0 - new_pinvar);
+            if (new_pinvar > 1e-6) {
                 converged = converged && (fabs(phylo_tree->getRate()->getPInvar()-new_pinvar) < 1e-4);
                 phylo_tree->getRate()->setPInvar(new_pinvar);
 //                phylo_tree->getRate()->setOptimizePInvar(false);

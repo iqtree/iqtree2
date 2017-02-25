@@ -189,8 +189,8 @@ double RateHeterotachy::optimizeWithEM() {
             prop[c] = new_prop[c];
             new_pinvar += prop[c];
         }
-        new_pinvar = 1.0 - new_pinvar;
-        if (new_pinvar != 0.0) {
+        new_pinvar = fabs(1.0 - new_pinvar);
+        if (new_pinvar > 1e-6) {
             converged = converged && (fabs(getPInvar()-new_pinvar) < 1e-4);
             // TODO fix p_pinvar
             setPInvar(new_pinvar);
