@@ -1454,6 +1454,8 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
 		a = (-rate_matrix[0] + f1)/3.;
 		a2 = (rate_matrix[2] - a + f1)*0.5;
 		b = rate_matrix[1] - a + a2 -f2;
+
+		 cout << "These are the parameters  a  = " << a << " a2 =  " << a2 << "   b = " << b << "  f1 =  " << f1 << "  f2 = " << f2 << endl;
 		/******** eigenvalues *********/
 
 		//Eigenvalues = {0, -4 (a - a2), -2 (2 a + a2 - b), -2 (2 a + a2 + b)}
@@ -1476,6 +1478,7 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
 		//information may be generalizable later). The numerator also can be grouped.
 		double deno57br1 = 1./ (3.0*a2 - b - f1 - f2);
 		double deno57br2 = 1./(3.0*a2 + b + f1 - f2);
+		cout << "This are the denominators: "<< (3.0*a2 - b - f1 - f2) << " with inverse  " << deno57br1 << "  and  " << (3.0*a2 + b + f1 - f2) << "  with inverse    "  << deno57br2  << endl;
 		cevec[8] = -1.0;
 		cevec[9] = -(3.0*a2 - b + f1 + f2)*deno57br1;
 		cevec[10] = -cevec[9];
@@ -1503,7 +1506,6 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
 		a = (-rate_matrix[0] + g1)/3.;
 		a2 = (rate_matrix[2] - a - g1)*0.5;
 		b = rate_matrix[1] - a + a2 + g1;
-		/******** eigenvalues ******** ATENTION: SIMMETRY WITH LAST MODEL */
 		//Eigenvalues = {0, -4 (a - a2), -2 (2 a + a2 - b), -2 (2 a + a2 + b)}
 		ceval[0] = 0.0; ceval[1] = -4.0*(a - a2); ceval[2] = -2.0*(2.0*a + a2 - b); ceval[3] = ceval[2] - 4.0*b;
 
@@ -1763,7 +1765,7 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
 
 	    }
 	else {
-    	cout << "This line shoul not appear." << endl;
+    	cout << "This line should not appear." << endl;
     }
 
 	/* check eigenvalue equation */
