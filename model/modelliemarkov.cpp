@@ -1204,40 +1204,47 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
 		d = (rate_matrix[0] - rate_matrix[5])/2.;
 		a = -(rate_matrix[0] - d)/3.;
 		a2 = (rate_matrix[2] - a - d)/2.;
-		b = rate_matrix[1] - a + a2 + d;
 
-		/******** eigenvalues *********/
-		//Eigenvalues = {0, -4 (a - a2), -2 (2 a + a2 - b), -2 (2 a + a2 + b)}
-		ceval[0] = 0.0; ceval[1] = -4.0*(a-a2); ceval[2] =-2.0*(2.0*a + a2 - b); ceval[3] = ceval[2]- 4.0*b;
+        if (a - a2 + d == 0.0) {
+            // call numerical method if denominator == 0
+            nondiagonalizable = true;
+        } else {
+            nondiagonalizable = false;
+            b = rate_matrix[1] - a + a2 + d;
 
-		/******** right eigenvectors *********/
-		// {{1, 1, 1, 1}, {-((a - a2 - d)/(a - a2 + d)), 1, -((a - a2 - d)/(a - a2 + d)), 1},
-		// {-1, -1, 1, 1}, {1, -1, -1, 1}}
+            /******** eigenvalues *********/
+            //Eigenvalues = {0, -4 (a - a2), -2 (2 a + a2 - b), -2 (2 a + a2 + b)}
+            ceval[0] = 0.0; ceval[1] = -4.0*(a-a2); ceval[2] =-2.0*(2.0*a + a2 - b); ceval[3] = ceval[2]- 4.0*b;
 
-		//v0
-		cevec[0] = cevec[1] = cevec[2] = cevec[3] = 1.0;
-		//v1
-		cevec[4] = -((a - a2 - d)/(a - a2 + d));
-		cevec[5] = 1.0;
-		cevec[6] = cevec[4];
-		cevec[7] = 1.0;
-		//v2
-		cevec[8] = -1.0;
-		cevec[9] = -1.0;
-		cevec[10] = 1.0;
-		cevec[11] = 1.0;
-		//v3 =
-		cevec[12] = 1.0;
-		cevec[13] = -1.0;
-		cevec[14] = -1.0;
-		cevec[15] = 1.0;
-		 /*INVERSE */
-		double auxd = 0.25*d/(a-a2);
-		cinv_evec[0] = cinv_evec[8] = cinv_evec[5] = cinv_evec[13] = 0.25 + auxd;
-		cinv_evec[2] = cinv_evec[11] = cinv_evec[6] = cinv_evec[7] = -0.25;
-		cinv_evec[3] = cinv_evec[10] = cinv_evec[14] = cinv_evec[15] = 0.25;
-		cinv_evec[1] = cinv_evec[9] = -cinv_evec[0];
-		cinv_evec[4] = cinv_evec[12] = 0.25 - auxd;
+            /******** right eigenvectors *********/
+            // {{1, 1, 1, 1}, {-((a - a2 - d)/(a - a2 + d)), 1, -((a - a2 - d)/(a - a2 + d)), 1},
+            // {-1, -1, 1, 1}, {1, -1, -1, 1}}
+
+            //v0
+            cevec[0] = cevec[1] = cevec[2] = cevec[3] = 1.0;
+            //v1
+            cevec[4] = -((a - a2 - d)/(a - a2 + d));
+            cevec[5] = 1.0;
+            cevec[6] = cevec[4];
+            cevec[7] = 1.0;
+            //v2
+            cevec[8] = -1.0;
+            cevec[9] = -1.0;
+            cevec[10] = 1.0;
+            cevec[11] = 1.0;
+            //v3 =
+            cevec[12] = 1.0;
+            cevec[13] = -1.0;
+            cevec[14] = -1.0;
+            cevec[15] = 1.0;
+             /*INVERSE */
+            double auxd = 0.25*d/(a-a2);
+            cinv_evec[0] = cinv_evec[8] = cinv_evec[5] = cinv_evec[13] = 0.25 + auxd;
+            cinv_evec[2] = cinv_evec[11] = cinv_evec[6] = cinv_evec[7] = -0.25;
+            cinv_evec[3] = cinv_evec[10] = cinv_evec[14] = cinv_evec[15] = 0.25;
+            cinv_evec[1] = cinv_evec[9] = -cinv_evec[0];
+            cinv_evec[4] = cinv_evec[12] = 0.25 - auxd;
+        }
 
      } else if (name.find("4.5b") != string::npos) {
 		d = (rate_matrix[0] - rate_matrix[5])/2.;
@@ -1857,7 +1864,7 @@ void ModelLieMarkov::computeTransMatrix(double time, double *trans_matrix, int m
                 sum += (trans_matrix[i*4+j]);
             assert(fabs(sum-1.0) < 1e-4);
         }
-    } else if (technique == MET_EIGEN3LIB_DECOMPOSITION) {
+    } else if (technique == MET_EIGEN3LIB_DECOMPOSITION || technique == MET_LIE_MARKOV_DECOMPOSITION) {
     // and nondiagonalizable == false, else we used scaled squaring
         int i;
         Vector4cd ceval_exp;
