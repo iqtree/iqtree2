@@ -635,7 +635,7 @@ void PhyloTree::initializeAllPartialPars(int &index, PhyloNode *node, PhyloNode 
         node = (PhyloNode*) root;
         // allocate the big central partial pars memory
         if (!central_partial_pars) {
-            int memsize = (aln->getNSeq() - 1) * 4 * pars_block_size;
+            int memsize = (aln->getNSeq()) * 4 * pars_block_size;
             if (verbose_mode >= VB_MED)
                 cout << "Allocating " << memsize * sizeof(UINT) << " bytes for partial parsimony vectors" << endl;
             central_partial_pars = aligned_alloc<UINT>(memsize);
@@ -2882,7 +2882,7 @@ int PhyloTree::fixNegativeBranch(bool force, Node *node, Node *dad) {
     if (!node) {
         node = root;
         // 2015-11-30: if not bifurcating, initialize unknown branch lengths with 0.1
-        if (!isBifurcating() || rooted)
+        if (!isBifurcating())
             return setNegativeBranch(force, 0.1, root, NULL);
     }
     int fixed = 0;
