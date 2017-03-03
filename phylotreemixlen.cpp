@@ -809,7 +809,7 @@ void PhyloTreeMixlen::computeFuncDerv(double value, double &df, double &ddf) {
     }
 	df = my_df;
 	ddf = my_ddf;
-    if (isnan(df) || isinf(df)) {
+    if (std::isnan(df) || std::isinf(df)) {
         df = 0.0;
         ddf = 0.0;
 //        outWarning("Numerical instability (some site-likelihood = 0)");
