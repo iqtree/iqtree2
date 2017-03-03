@@ -565,7 +565,7 @@ int ModelMarkov::getNDimFreq() {
 	else if (freq_type == FREQ_CODON_3x4 || freq_type == FREQ_CODON_3x4C) 
         return 9;
     
-	if (phylo_tree->aln->seq_type == SEQ_DNA) {
+	if (phylo_tree->aln->seq_type == SEQ_DNA && freq_type != FREQ_ESTIMATE) {
             return nFreqParams(freq_type);
 	}
 	return 0;
