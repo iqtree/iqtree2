@@ -574,7 +574,7 @@ void printOutfilesInfo(Params &params, string &original_model, IQTree &tree) {
 			<< endl;
 	if (params.compute_ml_tree) {
         if (!(params.suppress_output_flags & OUT_TREEFILE)) {
-            if (original_model.find("ONLY") == string::npos)
+            if (original_model.find("ONLY") == string::npos && original_model.substr(0,3) != "MFP")
                 cout << "  Maximum-likelihood tree:       " << params.out_prefix << ".treefile" << endl;
             else
                 cout << "  Tree used for model selection: " << params.out_prefix << ".treefile" << endl;
@@ -596,7 +596,7 @@ void printOutfilesInfo(Params &params, string &original_model, IQTree &tree) {
 		cout << "  Concatenated alignment:        " << params.out_prefix
 					<< ".conaln" << endl;
 	}
-	if (original_model.find("TEST") != string::npos && tree.isSuperTree()) {
+	if ((original_model.find("TEST") != string::npos || original_model.substr(0,2) == "MF") && tree.isSuperTree()) {
 		cout << "  Best partitioning scheme:      " << params.out_prefix << ".best_scheme.nex" << endl;
 		bool raxml_format_printed = true;
 
@@ -717,7 +717,7 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 		if (params.user_file)
 			out << "User tree file name: " << params.user_file << endl;
 		out << "Type of analysis: ";
-        if (original_model.find("TEST") != string::npos && original_model.find("ONLY") != string::npos) {
+        if ((original_model.find("TEST") != string::npos && original_model.find("ONLY") != string::npos) || (original_model.substr(0,2) == "MF" && original_model.substr(0,3) != "MFP")) {
             out << "model selection";
         } else {
             if (params.compute_ml_tree)
@@ -889,7 +889,7 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 				<< endl;
 */
 		if (params.compute_ml_tree) {
-			if (original_model.find("ONLY") != string::npos) {
+			if (original_model.find("ONLY") != string::npos || (original_model.substr(0,2) == "MF" && original_model.substr(0,3) != "MFP")) {
 				out << "TREE USED FOR MODEL SELECTION" << endl
 					<< "-----------------------------" << endl << endl;
             } else if (params.min_iterations == 0) {
@@ -1313,9 +1313,9 @@ void computeInitialDist(Params &params, IQTree &iqtree, string &dist_file) {
 
 void initializeParams(Params &params, IQTree &iqtree, vector<ModelInfo> &model_info, ModelsBlock *models_block) {
 //    iqtree.setCurScore(-DBL_MAX);
-    bool test_only = params.model_name.find("ONLY") != string::npos;
+    bool test_only = (params.model_name.find("ONLY") != string::npos) || (params.model_name.substr(0,2) == "MF" && params.model_name.substr(0,3) != "MFP");
     /* initialize substitution model */
-    if (params.model_name.substr(0, 4) == "TEST") {
+    if (params.model_name.substr(0, 4) == "TEST" || params.model_name.substr(0, 2) == "MF") {
         if (MPIHelper::getInstance().getNumProcesses() > 1)
             outError("Please use only 1 MPI process! We are currently working on the MPI parallelization of model selection.");
     	// TODO: check if necessary
@@ -2459,7 +2459,7 @@ void runStandardBootstrap(Params &params, string &original_model, Alignment *ali
 			outError(ERR_WRITE_OUTPUT, boottrees_name);
 		}
 		// fix bug: set the model for original tree after testing
-		if (original_model.substr(0,4) == "TEST" && tree->isSuperTree()) {
+		if ((original_model.substr(0,4) == "TEST" || original_model.substr(0,2) == "MF") && tree->isSuperTree()) {
 			PhyloSuperTree *stree = ((PhyloSuperTree*)tree);
 			stree->part_info =  ((PhyloSuperTree*)boot_tree)->part_info;
 //			for (int i = 0; i < ((PhyloSuperTree*)tree)->part_info.size(); i++)

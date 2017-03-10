@@ -3229,7 +3229,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     if (params.gbo_replicates && params.num_bootstrap_samples)
         outError("UFBoot (-bb) and standard bootstrap (-b) must not be specified together");
 
-    if (params.model_name.find("ONLY") != string::npos && (params.gbo_replicates || params.num_bootstrap_samples))
+    if ((params.model_name.find("ONLY") != string::npos || (params.model_name.substr(0,2) == "MF" && params.model_name.substr(0,3) != "MFP")) && (params.gbo_replicates || params.num_bootstrap_samples))
         outError("Model selection only cannot be combined with bootstrap analysis");
 
 

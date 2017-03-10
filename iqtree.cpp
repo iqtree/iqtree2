@@ -457,7 +457,7 @@ void IQTree::createPLLPartition(Params &params, ostream &pllPartitionFileHandle)
                 if ((*it)->aln->seq_type == SEQ_DNA) {
                     pllPartitionFileHandle << "DNA";
                 } else if ((*it)->aln->seq_type == SEQ_PROTEIN) {
-                    if (siqtree->part_info[i-1].model_name != "" && siqtree->part_info[i-1].model_name.substr(0, 4) != "TEST") {
+                    if (siqtree->part_info[i-1].model_name != "" && siqtree->part_info[i-1].model_name.substr(0, 4) != "TEST" && siqtree->part_info[i-1].model_name.substr(0, 2) != "MF") {
                         string modelStr = siqtree->part_info[i - 1].model_name.
                                 substr(0, siqtree->part_info[i - 1].model_name.find_first_of("+{"));
                         if (modelStr == "LG4")
@@ -517,7 +517,7 @@ void IQTree::createPLLPartition(Params &params, ostream &pllPartitionFileHandle)
         if (aln->seq_type == SEQ_DNA) {
             model = "DNA";
         } else if (aln->seq_type == SEQ_PROTEIN) {
-        	if (params.pll && params.model_name != "" && params.model_name.substr(0, 4) != "TEST") {
+        	if (params.pll && params.model_name != "" && params.model_name.substr(0, 4) != "TEST" && params.model_name.substr(0, 2) != "MF") {
         		model = params.model_name.substr(0, params.model_name.find_first_of("+{"));
         	} else {
         		model = "WAG";

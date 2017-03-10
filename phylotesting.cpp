@@ -844,7 +844,7 @@ int getModelList(Params &params, Alignment *aln, StrVector &models, bool separat
         }
     }
 
-	bool with_new = params.model_name.find("NEW") != string::npos;
+	bool with_new = (params.model_name.find("NEW") != string::npos || params.model_name.substr(0,2) == "MF");
 	bool with_asc = params.model_name.find("ASC") != string::npos;
 
 //	if (seq_type == SEQ_CODON) {
