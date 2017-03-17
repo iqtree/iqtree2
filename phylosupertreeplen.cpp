@@ -1033,9 +1033,9 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 					// update link_neighbor[part]
 					((SuperNeighbor*)*saved_it[id])->link_neighbors[part] = (PhyloNeighbor*)*sub_saved_it[part*6 + id];
 				}
+                assert(mem_id == 2);
 			}
 
-            assert(mem_id == 2);
 
 		} else if(is_nni[part]==NNI_ONE_EPSILON){
 

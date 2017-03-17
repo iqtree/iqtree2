@@ -3129,6 +3129,11 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
 	}
 	assert(id == IT_NUM);
 
+    if (!params->nni5 && !isSuperTree()) {
+        reorientPartialLh((PhyloNeighbor*)node1->findNeighbor(node2), node1);
+        reorientPartialLh((PhyloNeighbor*)node2->findNeighbor(node1), node2);
+    }
+
 	Neighbor *saved_nei[6];
     int mem_id = 0;
 	// save Neighbor and allocate new Neighbor pointer
@@ -3143,7 +3148,8 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
         }
 //		((PhyloNeighbor*) (*saved_it[id]))->scale_num = newScaleNum();
 	}
-    assert(mem_id == 2);
+    if (params->nni5)
+        assert(mem_id == 2);
 
 	// get the Neighbor again since it is replaced for saving purpose
 	PhyloNeighbor* node12_it = (PhyloNeighbor*) node1->findNeighbor(node2);
