@@ -295,6 +295,7 @@ void SuperAlignment::createBootstrapAlignment(Alignment *aln, IntVector* pattern
 		partitions.push_back(boot_aln);
 	}
 	taxa_index = super_aln->taxa_index;
+    countConstSite();
 }
 
 void SuperAlignment::createBootstrapAlignment(IntVector &pattern_freq, const char *spec) {
