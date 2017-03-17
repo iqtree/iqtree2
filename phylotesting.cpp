@@ -661,7 +661,7 @@ bool checkModelFile(ifstream &in, bool is_partitioned, vector<ModelInfo> &infos)
         outWarning(".model file was produced from a previous version of IQ-TREE");
 		return false;
     }
-	getline(in, str);
+	safeGetline(in, str);
 	while (!in.eof()) {
 		in >> str;
 		if (in.eof())
@@ -673,7 +673,7 @@ bool checkModelFile(ifstream &in, bool is_partitioned, vector<ModelInfo> &infos)
 		}
 		info.name = str;
 		in >> info.df >> info.logl >> info.tree_len;
-		getline(in, str);
+		safeGetline(in, str);
         info.tree = "";
         if (*str.rbegin() == ';') {
             size_t pos = str.rfind('\t');

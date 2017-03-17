@@ -1441,7 +1441,7 @@ int Alignment::readPhylip(char *filename, char *sequence_type) {
     num_states = 0;
 
     for (; !in.eof(); line_num++) {
-        getline(in, line);
+        safeGetline(in, line);
         line = line.substr(0, line.find_first_of("\n\r"));
         if (line == "") continue;
 
@@ -1525,7 +1525,7 @@ int Alignment::readPhylipSequential(char *filename, char *sequence_type) {
     num_states = 0;
 
     for (; !in.eof(); line_num++) {
-        getline(in, line);
+        safeGetline(in, line);
         line = line.substr(0, line.find_first_of("\n\r"));
         if (line == "") continue;
 
@@ -1593,7 +1593,7 @@ int Alignment::readFasta(char *filename, char *sequence_type) {
     in.exceptions(ios::badbit);
 
     for (; !in.eof(); line_num++) {
-        getline(in, line);
+        safeGetline(in, line);
         if (line == "") continue;
 
         //cout << line << endl;
@@ -1677,14 +1677,14 @@ int Alignment::readClustal(char *filename, char *sequence_type) {
     in.open(filename);
     // remove the failbit
     in.exceptions(ios::badbit);
-    getline(in, line);
+    safeGetline(in, line);
     if (line.substr(0, 7) != "CLUSTAL") {
         throw "ClustalW file does not start with 'CLUSTAL'";
     }
 
     int seq_count = 0;
     for (line_num = 2; !in.eof(); line_num++) {
-        getline(in, line);
+        safeGetline(in, line);
         trimString(line);
         if (line == "") { 
             seq_count = 0;
@@ -1725,6 +1725,10 @@ int Alignment::readClustal(char *filename, char *sequence_type) {
     // set the failbit again
     in.exceptions(ios::failbit | ios::badbit);
     in.close();
+
+    if (sequences.empty())
+        throw "No sequences found. Please check input (e.g. newline character)";
+
     return buildPattern(sequences, sequence_type, seq_names.size(), sequences.front().length());
 
 
@@ -1746,7 +1750,7 @@ int Alignment::readMSF(char *filename, char *sequence_type) {
     in.open(filename);
     // remove the failbit
     in.exceptions(ios::badbit);
-    getline(in, line);
+    safeGetline(in, line);
     if (line.find("MULTIPLE_ALIGNMENT") == string::npos) {
         throw "MSF file must start with header line MULTIPLE_ALIGNMENT";
     }
@@ -1755,7 +1759,7 @@ int Alignment::readMSF(char *filename, char *sequence_type) {
     bool seq_started = false;
     
     for (line_num = 2; !in.eof(); line_num++) {
-        getline(in, line);
+        safeGetline(in, line);
         trimString(line);
         if (line == "") { 
             continue;
