@@ -1716,6 +1716,7 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
         num_threads = tree->testNumThreads();
         omp_set_num_threads(num_threads);
     }
+    warnNumThreads();
 #endif
 
 

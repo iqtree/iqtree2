@@ -1509,6 +1509,11 @@ public:
     */
     int testNumThreads();
 
+    /**
+        print warning about too many threads for short alignments
+    */
+    void warnNumThreads();
+
     /****************************************************************************
             Subtree Pruning and Regrafting by maximum likelihood
             NOTE: NOT DONE YET

@@ -1840,6 +1840,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
         omp_set_num_threads(bestThreads);
         params.num_threads = bestThreads;
     }
+    warnNumThreads();
 #endif
 
 
@@ -2617,6 +2618,7 @@ void computeSiteFrequencyModel(Params &params, Alignment *alignment) {
         int bestThreads = tree->testNumThreads();
         omp_set_num_threads(bestThreads);
     }
+    warnNumThreads();
 #endif
 
     tree->initializeAllPartialLh();
