@@ -2395,7 +2395,7 @@ void runStandardBootstrap(Params &params, string &original_model, Alignment *ali
     int bootSample = 0;
     if (tree->getCheckpoint()->get("bootSample", bootSample)) {
         cout << "CHECKPOINT: " << bootSample << " bootstrap analyses restored" << endl;
-    } else {
+    } else if (MPIHelper::getInstance().isMaster()) {
         // first empty the boottrees file
         try {
             ofstream tree_out;
@@ -2470,6 +2470,14 @@ void runStandardBootstrap(Params &params, string &original_model, Alignment *ali
                 ((SuperAlignment*)bootstrap_alignment)->printCombinedAlignment(bootaln_name.c_str(), true);
             else
                 bootstrap_alignment->printPhylip(bootaln_name.c_str(), true);
+        }
+
+		if (params.print_boot_site_freq && MPIHelper::getInstance().isMaster()) {
+            printSiteStateFreq((((string)params.out_prefix)+"."+convertIntToString(sample)+".bootsitefreq").c_str(), bootstrap_alignment);
+            if (bootstrap_alignment->isSuperAlignment())
+                ((SuperAlignment*)bootstrap_alignment)->printCombinedAlignment((((string)params.out_prefix)+"."+convertIntToString(sample)+".bootaln").c_str());
+            else
+                bootstrap_alignment->printPhylip((((string)params.out_prefix)+"."+convertIntToString(sample)+".bootaln").c_str());
         }
 
         // set checkpoint
