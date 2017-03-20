@@ -673,8 +673,8 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
         #pragma omp parallel
         {
             PhyloTree tree;
-            if (params->constraint_tree_file) {
-                tree.constraintTree.initConstraint(params->constraint_tree_file, aln->getSeqNames());
+            if (!constraintTree.empty()) {
+                tree.constraintTree.readConstraint(constraintTree);
             }
             tree.setParams(params);
             tree.setParsimonyKernel(params->SSE);

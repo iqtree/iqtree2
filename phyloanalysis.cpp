@@ -2431,6 +2431,10 @@ void runStandardBootstrap(Params &params, string &original_model, Alignment *ali
                 bootstrap_alignment->printPhylip((((string)params.out_prefix)+"."+convertIntToString(sample)+".bootaln").c_str());
         }
 
+        if (!tree->constraintTree.empty()) {
+            boot_tree->constraintTree.readConstraint(tree->constraintTree);
+        }
+
         // set checkpoint
         boot_tree->setCheckpoint(tree->getCheckpoint());
         boot_tree->num_precision = tree->num_precision;
@@ -2719,12 +2723,13 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
 
     if (params.constraint_tree_file) {
         cout << "Reading constraint tree " << params.constraint_tree_file << "..." << endl;
-        tree->constraintTree.initConstraint(params.constraint_tree_file, alignment->getSeqNames());
+        tree->constraintTree.readConstraint(params.constraint_tree_file, alignment->getSeqNames());
         if (params.start_tree == STT_PLL_PARSIMONY)
             params.start_tree = STT_PARSIMONY;
         else if (params.start_tree == STT_BIONJ)
             outError("Constraint tree does not work with -t BIONJ");
-            
+        if (params.num_bootstrap_samples || params.gbo_replicates)
+            cout << "INFO: Constraint tree will be applied to ML tree and all bootstrap trees." << endl;
     }
 
     if (params.compute_seq_identity_along_tree) {
