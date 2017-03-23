@@ -721,7 +721,7 @@ public:
     /**
         compute traversal_info of a subtree
     */
-    inline bool computeTraversalInfo(PhyloNeighbor *dad_branch, PhyloNode *dad, double* &buffer);
+    bool computeTraversalInfo(PhyloNeighbor *dad_branch, PhyloNode *dad, double* &buffer);
 
 
     /**

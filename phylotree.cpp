@@ -4740,3 +4740,113 @@ void PhyloTree::reorientPartialLh(PhyloNeighbor* dad_branch, Node *dad) {
         assert(dad_branch->partial_lh && "partial_lh is not re-oriented");
 }
 
+/****************************************************************************
+        helper functions for computing tree traversal
+ ****************************************************************************/
+
+bool PhyloTree::computeTraversalInfo(PhyloNeighbor *dad_branch, PhyloNode *dad, double* &buffer) {
+
+    size_t nstates = aln->num_states;
+    PhyloNode *node = (PhyloNode*)dad_branch->node;
+
+    if ((dad_branch->partial_lh_computed & 1) || node->isLeaf()) {
+        return mem_slots.lock(dad_branch);
+    }
+
+
+    size_t num_leaves = 0;
+    bool locked[node->degree()];
+    memset(locked, 0, node->degree());
+
+    // sort neighbor in desceding size order
+    NeighborVec neivec = node->neighbors;
+    NeighborVec::iterator it, i2;
+    for (it = neivec.begin(); it != neivec.end(); it++)
+        for (i2 = it+1; i2 != neivec.end(); i2++)
+            if (((PhyloNeighbor*)*it)->size < ((PhyloNeighbor*)*i2)->size) {
+                Neighbor *nei = *it;
+                *it = *i2;
+                *i2 = nei;
+            }
+
+
+    // recursive
+    for (it = neivec.begin(); it != neivec.end(); it++)
+        if ((*it)->node != dad) {
+            locked[it - neivec.begin()] = computeTraversalInfo((PhyloNeighbor*)(*it), node, buffer);
+            if ((*it)->node->isLeaf())
+                num_leaves++;
+        }
+    dad_branch->partial_lh_computed |= 1;
+
+    // prepare information for this branch
+    TraversalInfo info(dad_branch, dad);
+    info.echildren = info.partial_lh_leaves = NULL;
+
+    // re-orient partial_lh
+    reorientPartialLh(dad_branch, dad);
+
+    if (!dad_branch->partial_lh || mem_slots.locked(dad_branch)) {
+        // still no free entry found, memory saving technique
+        int slot_id = mem_slots.allocate(dad_branch);
+        if (slot_id < 0) {
+            cout << "traversal order:";
+            for (auto it = traversal_info.begin(); it != traversal_info.end(); it++) {
+                it->dad_branch->node->name = convertIntToString(it->dad_branch->size);
+                cout << "  ";
+                if (it->dad->isLeaf())
+                    cout << it->dad->name;
+                else
+                    cout << it->dad->id;
+                cout << "->";
+                if (it->dad_branch->node->isLeaf())
+                    cout << it->dad_branch->node->name;
+                else
+                    cout << it->dad_branch->node->id;
+                if (params->lh_mem_save == LM_MEM_SAVE) {
+                    if (it->dad_branch->partial_lh_computed)
+                        cout << " [";
+                    else
+                        cout << " (";
+                    cout << mem_slots.findNei(it->dad_branch) - mem_slots.begin();
+                    if (it->dad_branch->partial_lh_computed)
+                        cout << "]";
+                    else
+                        cout << ")";
+                }
+            }
+            cout << endl;
+            drawTree(cout);
+            assert(0 && "No free/unlocked mem slot found!");
+        }
+    } else
+        mem_slots.update(dad_branch);
+
+        if (verbose_mode >= VB_MED && params->lh_mem_save == LM_MEM_SAVE) {
+            int slot_id = mem_slots.findNei(dad_branch) - mem_slots.begin();
+            node->name = convertIntToString(slot_id);
+            cout << "Branch " << dad->id << "-" << node->id << " assigned slot " << slot_id << endl;
+        }
+
+    if (params->lh_mem_save == LM_MEM_SAVE) {
+        for (it = neivec.begin(); it != neivec.end(); it++)
+            if ((*it)->node != dad) {
+                if (!(*it)->node->isLeaf() && locked[it-neivec.begin()])
+                    mem_slots.unlock((PhyloNeighbor*)*it);
+            }
+    }
+
+    if (!model->isSiteSpecificModel()) {
+        //------- normal model -----
+        info.echildren = buffer;
+        size_t block = nstates * ((model_factory->fused_mix_rate) ? site_rate->getNRate() : site_rate->getNRate()*model->getNMixtures());
+        buffer += get_safe_upper_limit(block*nstates*(node->degree()-1));
+        if (num_leaves) {
+            info.partial_lh_leaves = buffer;
+            buffer += get_safe_upper_limit((aln->STATE_UNKNOWN+1)*block*num_leaves);
+        }
+    }
+
+    traversal_info.push_back(info);
+    return mem_slots.lock(dad_branch);
+}

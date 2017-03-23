@@ -87,13 +87,13 @@ if (WIN32)
     add_definitions(-DWIN32)
 elseif (APPLE)
 	message("Target OS     : Mac OS X")
-	# to be compatible back to Mac OS X 10.6
+	# to be compatible back to Mac OS X 10.7
 	if (IQTREE_FLAGS MATCHES "oldmac")
 		add_definitions("-mmacosx-version-min=10.5")
 		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -mmacosx-version-min=10.5")
 	else()
-		add_definitions("-mmacosx-version-min=10.6")
-		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -mmacosx-version-min=10.6")
+		add_definitions("-mmacosx-version-min=10.7")
+		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -mmacosx-version-min=10.7")
 	endif()
     SET(CMAKE_FIND_LIBRARY_SUFFIXES .a ${CMAKE_FIND_LIBRARY_SUFFIXES})
 elseif (UNIX)
@@ -698,7 +698,7 @@ endif()
 set(CPACK_PACKAGE_FILE_NAME 
 	"${CMAKE_PROJECT_NAME}${EXE_SUFFIX}-${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSION_MINOR}.${CPACK_PACKAGE_VERSION_PATCH}-${SYSTEM_NAME}")
 
-set(CPACK_STRIP_FILES TRUE)
+#set(CPACK_STRIP_FILES TRUE)
 
 include (CPack)
 
