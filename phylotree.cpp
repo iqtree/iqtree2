@@ -96,8 +96,7 @@ void PhyloTree::init() {
     dist_matrix = NULL;
     var_matrix = NULL;
     params = NULL;
-    setLikelihoodKernel(LK_EIGEN_SSE, 1);  // FOR TUNG: you forgot to initialize this variable!
-    sse = LK_EIGEN_SSE;
+    setLikelihoodKernel(LK_SSE2, 1);  // FOR TUNG: you forgot to initialize this variable!
     num_threads = 0;
     max_lh_slots = 0;
     save_all_trees = 0;
@@ -1437,7 +1436,7 @@ void PhyloTree::computePatternProbabilityCategory(double *ptn_prob_cat, SiteLogl
 }
 
 int PhyloTree::computePatternCategories(IntVector *pattern_ncat) {
-    if (sse != LK_EIGEN) {
+    if (sse != LK_386) {
         // compute _pattern_lh_cat
         computePatternLhCat(WSL_MIXTURE_RATECAT);
     }

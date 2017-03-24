@@ -410,7 +410,7 @@ NGSTree::NGSTree(Params &params, NGSAlignment *alignment) {
     model_factory = NULL;
     optimize_by_newton = params.optimize_by_newton;
     //tree.sse = params.SSE;
-    setLikelihoodKernel(LK_EIGEN, params.num_threads);
+    setLikelihoodKernel(LK_386, params.num_threads);
 }
 
 double NGSTree::computeLikelihood(double *pattern_lh) {

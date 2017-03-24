@@ -839,8 +839,11 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.aLRT_test = false;
     params.aBayes_test = false;
     params.localbp_replicates = 0;
-    params.SSE = LK_EIGEN_SSE;
-    params.lk_no_avx = 0;
+#ifdef INCLUDE_AVX512
+    params.SSE = LK_AVX512;
+#else
+    params.SSE = LK_AVX_FMA;
+#endif
     params.lk_safe_scaling = false;
     params.numseq_safe_scaling = 2000;
     params.print_site_lh = WSL_NONE;
@@ -1923,29 +1926,23 @@ void parseArg(int argc, char *argv[], Params &params) {
 					throw "Lambda must be in (0,1]";
 				continue;
 			}
-//			if (strcmp(argv[cnt], "-nosse") == 0) {
-//				params.SSE = LK_NORMAL;
-//				continue;
-//			}
-//			if (strcmp(argv[cnt], "-slowsse") == 0) {
-//				params.SSE = LK_SSE;
-//				continue;
-//			}
-			if (strcmp(argv[cnt], "-fastlk") == 0) {
-				params.SSE = LK_EIGEN;
-				continue;
-			}
-			if (strcmp(argv[cnt], "-fastsse") == 0
-					|| strcmp(argv[cnt], "-fasttipsse") == 0) {
-				params.SSE = LK_EIGEN_SSE;
-				continue;
-			}
-			if (strcmp(argv[cnt], "-noavx") == 0) {
-				params.lk_no_avx = 1;
-				continue;
-			}
-			if (strcmp(argv[cnt], "-nofma") == 0) {
-				params.lk_no_avx = 2;
+
+            if (strcmp(argv[cnt], "-lk") == 0) {
+				cnt++;
+				if (cnt >= argc)
+                    throw "-lk x86|SSE|AVX|FMA|AVX512";
+                if (strcmp(argv[cnt], "x86") == 0)
+                    params.SSE = LK_386;
+                else if (strcmp(argv[cnt], "SSE") == 0)
+                    params.SSE = LK_SSE2;
+                else if (strcmp(argv[cnt], "AVX") == 0)
+                    params.SSE = LK_AVX;
+                else if (strcmp(argv[cnt], "FMA") == 0)
+                    params.SSE = LK_AVX_FMA;
+                else if (strcmp(argv[cnt], "AVX512") == 0)
+                    params.SSE = LK_AVX512;
+                else
+                    throw "Incorrect -lk likelihood kernel option";
 				continue;
 			}
 

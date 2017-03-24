@@ -425,8 +425,20 @@ struct NNIInfo {
     int iqpnni_iteration;
 };
 
+/*
+    0           = 80386 instruction set
+    1  or above = SSE (XMM) supported by CPU (not testing for O.S. support)
+    2  or above = SSE2
+    3  or above = SSE3
+    4  or above = Supplementary SSE3 (SSSE3)
+    5  or above = SSE4.1
+    6  or above = SSE4.2
+    7  or above = AVX supported by CPU and operating system
+    8  or above = AVX2
+    9  or above = AVX512F
+*/
 enum LikelihoodKernel {
-	LK_EIGEN, LK_EIGEN_SSE
+	LK_386, LK_SSE, LK_SSE2, LK_SSE3, LK_SSSE3, LK_SSE41, LK_SSE42, LK_AVX, LK_AVX_FMA, LK_AVX512
 };
 
 enum LhMemSave {
@@ -1449,9 +1461,6 @@ public:
             SSE Option
      */
     LikelihoodKernel SSE;
-
-    /** TRUE to not use AVX even available in CPU, default: FALSE */
-    int lk_no_avx;
 
     /** TRUE for safe numerical scaling (per category; used for large trees), default: FALSE */
     bool lk_safe_scaling;

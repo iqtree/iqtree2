@@ -2476,7 +2476,7 @@ void performAUTest(Params &params, PhyloTree *tree, double *pattern_lhs, vector<
             for (tid = 0; tid < ntrees; tid++) {
                 double *pattern_lh = pattern_lhs + (tid*maxnptn);
                 double tree_lh;
-                if (params.SSE == LK_EIGEN) {
+                if (params.SSE == LK_386) {
                     tree_lh = 0.0;
                     for (ptn = 0; ptn < nptn; ptn++)
                         tree_lh += pattern_lh[ptn] * boot_sample_dbl[ptn];

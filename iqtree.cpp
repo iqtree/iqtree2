@@ -565,12 +565,7 @@ void IQTree::computeInitialTree(string &dist_file, LikelihoodKernel kernel) {
         switch (start_tree) {
         case STT_PARSIMONY:
             // Create parsimony tree using IQ-Tree kernel
-            if (kernel == LK_EIGEN_SSE)
-                cout << "Creating fast SIMD initial parsimony tree by random order stepwise addition..." << endl;
-            else if (kernel == LK_EIGEN)
-                cout << "Creating fast initial parsimony tree by random order stepwise addition..." << endl;
-            else
-                cout << "Creating initial parsimony tree by random order stepwise addition..." << endl;
+            cout << "Creating fast initial parsimony tree by random order stepwise addition..." << endl;
 //            aln->orderPatternByNumChars();
             start = getRealTime();
             score = computeParsimonyTree(params->out_prefix, aln);
