@@ -64,6 +64,19 @@ void reportReferences(Params &params, ofstream &out, string &original_model) {
 		<< "maximum likelihood phylogenies. Mol. Biol. Evol., 32:268-274." << endl
         << "http://dx.doi.org/10.1093/molbev/msu300" << endl << endl;
 
+    if (original_model.substr(0,4) == "TEST" || original_model.substr(0, 2) == "MF")
+    out << "Since you used model selection please also cite: " << endl << endl
+        << "Subha Kalyaanamoorthy, Bui Quang Minh, Thomas KF Wong, Arndt von Haeseler,"
+        << "and Lars S Jermiin (2017) ModelFinder: A fast model-selection method that"
+        << "greatly improves the accuracy of phylogenetic estimates. Nature Methods, in press." << endl << endl;
+
+    if (params.site_freq_file || params.tree_freq_file)
+    out << "Since you used site-specific frequency model please also cite: " << endl << endl
+        << "Huai-Chun Wang, Edward Susko, Bui Quang Minh, and Andrew J. Roger (2017)"
+        << "Modeling site heterogeneity with posterior mean site frequency profiles"
+        << "accelerates accurate phylogenomic estimation. Submitted" << endl << endl;
+
+
 	if (params.gbo_replicates)
 	out << "Since you used ultrafast bootstrap (UFBoot) please also cite: " << endl << endl
 		<< "Bui Quang Minh, Minh Anh Thi Nguyen, and Arndt von Haeseler (2013) Ultrafast" << endl
@@ -73,7 +86,7 @@ void reportReferences(Params &params, ofstream &out, string &original_model) {
     if (params.partition_file) 
     out << "Since you used partition models please also cite:" << endl << endl
         << "Olga Chernomor, Arndt von Haeseler, and Bui Quang Minh (2016) Terrace aware data" << endl
-        << "structure for phylogenomic inference from supermatrices. Syst. Biol., in press." << endl
+        << "structure for phylogenomic inference from supermatrices. Syst. Biol., 65:997-1008." << endl
         << "http://dx.doi.org/10.1093/sysbio/syw037" << endl << endl;
 
 }
