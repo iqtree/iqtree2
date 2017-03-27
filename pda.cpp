@@ -2348,7 +2348,7 @@ int main(int argc, char *argv[]) {
 
 	instruction_set = instrset_detect();
 #if defined(BINARY32) || defined(__NOAVX__)
-    instruction_set = min(instruction_set, LK_SSE42);
+    instruction_set = min(instruction_set, (int)LK_SSE42);
 #endif
 	if (instruction_set < LK_SSE2) outError("Your CPU does not support SSE2!");
 	bool has_fma3 = (instruction_set >= LK_AVX) && hasFMA3();
