@@ -3263,7 +3263,6 @@ void parseArg(int argc, char *argv[], Params &params) {
         outError("Model selection only cannot be combined with bootstrap analysis");
 
 
-
     if (!params.out_prefix) {
     	if (params.eco_dag_file)
     		params.out_prefix = params.eco_dag_file;

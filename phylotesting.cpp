@@ -1760,6 +1760,15 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 		} else {
             if (params.model_test_and_tree) {
                 string original_model = params.model_name;
+                // BQM 2017-03-29: disable bootstrap
+                int orig_num_bootstrap_samples = params.num_bootstrap_samples;
+                int orig_gbo_replicates = params.gbo_replicates;
+                params.num_bootstrap_samples = 0;
+                params.gbo_replicates = 0;
+                STOP_CONDITION orig_stop_condition = params.stop_condition;
+                if (params.stop_condition == SC_BOOTSTRAP_CORRELATION)
+                    params.stop_condition = SC_UNSUCCESS_ITERATION;
+
                 params.model_name = model_names[model];
                 char *orig_user_tree = params.user_file;
                 string new_user_tree = (string)params.out_prefix+".treefile";
@@ -1786,8 +1795,14 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
                 info.logl = iqtree->computeLikelihood();
                 info.tree_len = iqtree->treeLength();
 //                info.tree = iqtree->getTreeString();
+
+                // restore original parameters
                 params.model_name = original_model;
                 params.user_file = orig_user_tree;
+                // 2017-03-29: restore bootstrap replicates
+                params.num_bootstrap_samples = orig_num_bootstrap_samples;
+                params.gbo_replicates = orig_gbo_replicates;
+                params.stop_condition = orig_stop_condition;
                 tree = iqtree;
 
                 // clear all checkpointed information

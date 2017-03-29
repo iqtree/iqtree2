@@ -380,7 +380,6 @@ if(CLANG AND IQTREE_FLAGS MATCHES "static")
 endif()
 
 if (IQTREE_FLAGS MATCHES "libcxx")
-    set(STD_LIB "c++abi")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
 endif()
 
@@ -609,10 +608,15 @@ if (IQTREE_FLAGS MATCHES "omp")
         endif()
 #        set(THREAD_LIB "ompstatic")
 	endif()
+
+    if (CLANG AND BINARY32)
+        set (ATOMIC_LIB "atomic")
+    endif()
+
 endif()
 
 # basic linking librararies
-target_link_libraries(iqtree pll ncl lbfgsb whtest sprng vectorclass model gsl ${PLATFORM_LIB} ${STD_LIB} ${THREAD_LIB})
+target_link_libraries(iqtree pll ncl lbfgsb whtest sprng vectorclass model gsl ${PLATFORM_LIB} ${STD_LIB} ${THREAD_LIB} ${ATOMIC_LIB})
 
 if (NOT IQTREE_FLAGS MATCHES "nosse")
     target_link_libraries(iqtree kernelsse)
