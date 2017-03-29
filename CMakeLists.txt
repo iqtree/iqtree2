@@ -124,8 +124,9 @@ if (CMAKE_COMPILER_IS_GNUCXX)
 	message("Compiler      : GNU Compiler (gcc)")
 	set(GCC "TRUE")
 #	set(COMBINED_FLAGS "-Wall -Wno-unused-function -Wno-sign-compare -pedantic -D_GNU_SOURCE -fms-extensions -Wno-deprecated")
-	set(CMAKE_CXX_FLAGS_RELEASE "-O3 -g")
-	set(CMAKE_C_FLAGS_RELEASE "-O3 -g")
+	set(CMAKE_CXX_FLAGS_RELEASE "-O3 -g -ffunction-sections -fdata-sections -fno-rtti")
+	set(CMAKE_C_FLAGS_RELEASE "-O3 -g -ffunction-sections -fdata-sections")
+    set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} -Wl,--gc-sections")
     # require at least gcc 4.8
     if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 4.8)
         message(FATAL_ERROR "GCC version must be at least 4.8!")
@@ -139,12 +140,18 @@ elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 	message("Compiler      : Clang")
 	set(CLANG "TRUE")
 #	set(COMBINED_FLAGS "-Wall -Wno-unused-function -Wno-sign-compare -pedantic -D_GNU_SOURCE -Wno-nested-anon-types")
-    if (APPLE AND NOT CMAKE_BUILD_TYPE MATCHES "Debug")
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
-        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -stdlib=libc++")
+    set(CMAKE_CXX_FLAGS_RELEASE "-O3 -fno-rtti -ffunction-sections -fdata-sections")
+    set(CMAKE_C_FLAGS_RELEASE "-O3 -ffunction-sections -fdata-sections")
+    if (APPLE)
+        set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} -Wl,-dead_strip")
+    else()
+        set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} -Wl,--gc-sections")
     endif()
-	set(CMAKE_CXX_FLAGS_RELEASE "-O3")
-	set(CMAKE_C_FLAGS_RELEASE "-O3")
+
+    # use libc++ per default in MacOS
+    if (APPLE AND CMAKE_BUILD_TYPE MATCHES "Release")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
+    endif()
 
     #remove -rdynamic for Clang under Linux
     if (UNIX AND IQTREE_FLAGS MATCHES "static")
@@ -176,6 +183,11 @@ if (MSVC)
 			add_definitions(/O3)
 		endif()
 	endif()
+endif()
+
+# enable link time optimization
+if (IQTREE_FLAGS MATCHES "lto")
+    set(COMBINED_FLAGS "${COMBINED_FLAGS} -flto")
 endif()
 
 ##################################################################
@@ -344,7 +356,11 @@ elseif (IQTREE_FLAGS MATCHES "avx") # AVX instruction set
 	set(COMBINED_FLAGS "${COMBINED_FLAGS} ${AVX_FLAGS}")
 	#SET(EXE_SUFFIX "${EXE_SUFFIX}-avx")
 elseif (NOT IQTREE_FLAGS MATCHES "nosse") #SSE intruction set
-	message("Vectorization : SSE3/AVX/AVX2")
+    if (IQTREE_FLAGS MATCHES "512")
+        message("Vectorization : SSE3/AVX/AVX2/AVX-512")
+    else()
+        message("Vectorization : SSE3/AVX/AVX2")
+    endif()
 	#add_definitions(-D__SSE3)
     #set(COMBINED_FLAGS "${COMBINED_FLAGS} ${SSE_FLAGS}")
 endif()
@@ -358,6 +374,16 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${COMBINED_FLAGS}")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${COMBINED_FLAGS}")
 set(CMAKE_CXX_FLAGS_PROFILE "${CMAKE_CXX_FLAGS} -fno-inline-functions -fno-inline-functions-called-once -fno-optimize-sibling-calls -fno-default-inline -fno-inline -O2 -fno-omit-frame-pointer -g")
 set(CMAKE_C_FLAGS_PROFILE "${CMAKE_C_FLAGS} -fno-inline-functions -fno-inline-functions-called-once -fno-optimize-sibling-calls -O2 -fno-omit-frame-pointer -g")
+
+if(CLANG AND IQTREE_FLAGS MATCHES "static")
+    set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -pthread -Wl,--allow-multiple-definition")
+endif()
+
+if (IQTREE_FLAGS MATCHES "libcxx")
+    set(STD_LIB "c++abi")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
+endif()
+
 
 if (CMAKE_BUILD_TYPE STREQUAL "Release")
 	message("C flags       : ${CMAKE_C_FLAGS} ${CMAKE_C_FLAGS_RELEASE}")
@@ -373,6 +399,8 @@ if (CMAKE_BUILD_TYPE STREQUAL "Profile")
 	message("C flags       : ${CMAKE_C_FLAGS_PROFILE} ")
 	message("CXX flags     : ${CMAKE_CXX_FLAGS_PROFILE} ")
 endif()
+
+message("LINKER flags  : ${CMAKE_EXE_LINKER_FLAGS} ${CMAKE_EXE_LINKER_FLAGS_RELEASE}")
 
 
 if (GCC)
@@ -556,8 +584,8 @@ else()
 	set(PLATFORM_LIB "m")
 endif()
 
-if(CLANG AND WIN32 AND IQTREE_FLAGS MATCHES "static")
-    set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -pthread -Wl,--allow-multiple-definition")
+if (IQTREE_FLAGS MATCHES "libcxx")
+    set(STD_LIB "c++abi")
 endif()
 
 set(THREAD_LIB "")

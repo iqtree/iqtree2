@@ -245,8 +245,7 @@ public:
         else
             key = struct_name + key;
         CkpStream ss;
-        if (typeid(T) == typeid(double))
-            ss.precision(10);
+        ss.precision(10);
         ss << value;
         (*this)[key] = ss.str();
     }
@@ -270,8 +269,7 @@ public:
         else
             key = struct_name + key;
         CkpStream ss;
-        if (typeid(T) == typeid(double))
-            ss.precision(10);
+        ss.precision(10);
         for (int i = 0; i < num; i++) {
             if (i > 0) ss << ", ";
             ss << value[i];
@@ -292,8 +290,7 @@ public:
         else
             key = struct_name + key;
         CkpStream ss;
-        if (typeid(T) == typeid(double))
-            ss.precision(10);
+        ss.precision(10);
         for (int i = 0; i < value.size(); i++) {
             if (i > 0) ss << ", ";
             ss << value[i];
