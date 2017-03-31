@@ -769,21 +769,20 @@ double ModelFactory::optimizeParametersGammaInvar(int fixed_len, bool write_info
         }
     } else {
         // Now perform testing different initial p_inv values
+        if (write_info)
+            cout << "Thoroughly optimizing +I+G parameters from 10 start values..." << endl;
         while (initPInv <= frac_const) {
-            if (write_info) {
-                cout << endl;
-                cout << "Testing with init. pinv = " << initPInv << " / init. alpha = "  << initAlpha << endl;
-            }
             vector<double> estResults; // vector of p_inv, alpha and logl
             if (Params::getInstance().opt_gammai_keep_bran)
                 estResults = optimizeGammaInvWithInitValue(fixed_len, logl_epsilon, gradient_epsilon,
-                                                                          initPInv, initAlpha, bestLens, model_ckp);
+                    initPInv, initAlpha, bestLens, model_ckp);
             else
                 estResults = optimizeGammaInvWithInitValue(fixed_len, logl_epsilon, gradient_epsilon,
-                                                                      initPInv, initAlpha, initBranLens, model_ckp);
+                    initPInv, initAlpha, initBranLens, model_ckp);
             if (write_info) {
-                cout << "Est. p_inv: " << estResults[0] << " / Est. gamma shape: " << estResults[1]
-                << " / Logl: " << estResults[2] << endl;
+                cout << "Init pinv, alpha: " << initPInv << ", "  << initAlpha
+                     << " / Estimate: " << estResults[0] << ", " << estResults[1]
+                     << " / LogL: " << estResults[2] << endl;
             }
 
             initPInv = initPInv + testInterval;
@@ -818,9 +817,8 @@ double ModelFactory::optimizeParametersGammaInvar(int fixed_len, bool write_info
 	tree->clearAllPartialLH();
 	tree->setCurScore(tree->computeLikelihood());
     if (write_info) {
-        cout << endl;
-        cout << "Best p_inv: " << bestPInvar << " / best gamma shape: " << bestAlpha << " / ";
-        cout << "Logl: " << tree->getCurScore() << endl;
+        cout << "Optimal pinv,alpha: " << bestPInvar << ", " << bestAlpha << " / ";
+        cout << "LogL: " << tree->getCurScore() << endl << endl;
     }
     assert(fabs(tree->getCurScore() - bestLogl) < 1.0);
 
