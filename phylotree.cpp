@@ -4584,10 +4584,11 @@ void PhyloTree::printTransMatrices(Node *node, Node *dad) {
 void PhyloTree::removeIdenticalSeqs(Params &params) {
 	// commented out because it also works for SuperAlignment now!
 	Alignment *new_aln;
+    // 2017-03-31: always keep two identical sequences no matter if -bb or not, to avoid conflict between 2 subsequent runs
 	if (params.root)
-		new_aln = aln->removeIdenticalSeq((string)params.root, params.gbo_replicates > 0, removed_seqs, twin_seqs);
+		new_aln = aln->removeIdenticalSeq((string)params.root, true, removed_seqs, twin_seqs);
 	else
-		new_aln = aln->removeIdenticalSeq("", params.gbo_replicates > 0, removed_seqs, twin_seqs);
+		new_aln = aln->removeIdenticalSeq("", true, removed_seqs, twin_seqs);
 	if (removed_seqs.size() > 0) {
 		cout << "NOTE: " << removed_seqs.size() << " identical sequences (see below) will be ignored for subsequent analysis" << endl;
         for (int i = 0; i < removed_seqs.size(); i++) {
