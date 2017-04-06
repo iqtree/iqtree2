@@ -2838,8 +2838,10 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
 			cout << endl << "Computing bootstrap consensus tree..." << endl;
 			string splitsfile = params.out_prefix;
 			splitsfile += ".splits.nex";
-			computeConsensusTree(splitsfile.c_str(), 0, 1e6, params.split_threshold,
-					params.split_weight_threshold, NULL, params.out_prefix, NULL, &params);
+            double weight_threshold = (params.split_threshold<1) ? params.split_threshold : (params.gbo_replicates-1.0)/params.gbo_replicates;
+            weight_threshold *= 100.0;
+			computeConsensusTree(splitsfile.c_str(), 0, 1e6, -1,
+					weight_threshold, NULL, params.out_prefix, NULL, &params);
 			// now optimize branch lengths of the consensus tree
 			string current_tree = tree->getTreeString();
 			splitsfile = params.out_prefix;
@@ -3073,8 +3075,18 @@ void computeConsensusTree(const char *input_trees, int burnin, int max_count,
 		params->split_weight_summary = SW_COUNT; // count number of splits
 		sg.init(*params);
 		params->user_file = user_file;
-		for (SplitGraph::iterator it = sg.begin(); it != sg.end(); it++)
-			hash_ss.insertSplit((*it), (*it)->getWeight());
+		for (SplitGraph::iterator it = sg.begin(); it != sg.end();)
+            if ((*it)->getWeight() > weight_threshold) {
+                hash_ss.insertSplit((*it), (*it)->getWeight());
+                it++;
+            } else {
+                // delete the split
+                if (it != sg.end()-1) {
+                    *(*it) = (*sg.back());
+                }
+                delete sg.back();
+                sg.pop_back();
+            }
 		/*		StrVector sgtaxname;
 		 sg.getTaxaName(sgtaxname);
 		 i = 0;
