@@ -2156,7 +2156,7 @@ void collapseLowBranchSupport(char *user_file, char *split_threshold_str) {
     bool isrooted = false;
     tree.readTree(user_file, isrooted);
     tree.collapseLowBranchSupport(minsup);
-    tree.collapseZeroBranches();
+    tree.collapseZeroBranches(NULL, NULL, -1.0);
     if (verbose_mode >= VB_MED)
         tree.drawTree(cout);
     string outfile = (string)user_file + ".collapsed";
