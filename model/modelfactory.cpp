@@ -114,6 +114,8 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 		else if (tree->aln->seq_type == SEQ_BINARY) model_str = "GTR2";
 		else if (tree->aln->seq_type == SEQ_CODON) model_str = "GY";
 		else if (tree->aln->seq_type == SEQ_MORPH) model_str = "MK";
+        // TODO DS: Remove reversibility flag.  The reversibility is
+        // determined by the underlying substitution model.
         else if (tree->aln->seq_type == SEQ_POMO) model_str = "HKY+rP";
 		else model_str = "JC";
         if (tree->aln->seq_type != SEQ_POMO)
@@ -161,8 +163,9 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
             rate_str = model_str.substr(spec_pos);
             model_str = model_str.substr(0, spec_pos);
         }
-        // Check for PoMo and set model_str and rate_str
-        // accordingly.
+        // Check for PoMo and set model_str and rate_str accordingly.
+        // TODO DS: Remove reversibility flag.  The reversibility is
+        // determined by the underlying substitution model.
         string::size_type pos_rev_pomo = rate_str.find("+rP");
         string::size_type pos_nonrev_pomo = rate_str.find("+nrP");
         if (pos_nonrev_pomo != string::npos)
@@ -170,9 +173,13 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 
         // Throw error if sequence type is PoMo but +rP is not given.
         // This makes the model string cleaner and compareable.
+
+        // TODO DS: Remove reversibility flag.  The reversibility is
+        // determined by the underlying substitution model.
         if ((pos_rev_pomo == string::npos) &&
             (tree->aln->seq_type == SEQ_POMO))
-            outError("Provided alignment is used by PoMo but model string does not contain, e.g., \"+rP\".");
+            // TODO DS: BUG. The following model string ends up here: "MIX{HKY+rP,JC+rP}".
+            outError("Provided alignment is exclusively used by PoMo but model string does not contain, e.g., \"+rP\".");
         
         if (pos_rev_pomo != string::npos) {
             // Remove +NXX and +W or +S.
@@ -196,6 +203,9 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
                 rate_str = rate_str.substr(0, s_pos)
                     + rate_str.substr(s_pos+2);
             }
+            // TODO DS: Remove reversibility flag.  The reversibility is
+            // determined by the underlying substitution model.
+            
             // Update pos_rev_pomo in case something has been removed
             // before "+rP".
             string::size_type pos_rev_pomo = rate_str.find("+rP");

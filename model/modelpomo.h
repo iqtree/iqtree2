@@ -62,6 +62,47 @@ class ModelPoMo : virtual public ModelMarkov
                       bool is_reversible,
                       string pomo_params);
 
+    /**
+     *  \brief Initialize underlying substitution model.
+     *
+     *  Only DNA substitution models can be used at the moment.
+     *
+     */
+    void init_substitution_model(const char *model_name,
+                                 string model_params,
+                                 StateFreqType freq_type,
+                                 string freq_params,
+                                 string pomo_params);
+
+    /**
+     *  \brief Initialize sampling type.
+     *
+     *  Weighted (standard) or sampled.
+     *
+     */
+    void init_sampling_type();
+    
+    /**
+     *  \brief Initialize state frequencies.
+     *
+     *  Use the machinery of the underlying substitution model.
+     *
+     */
+    void init_freq();
+
+    /**
+     *  \brief Check if parameters are optimized or not.
+     *
+     *  The parameters of PoMo are the ones from the underlying
+     *  substitution model plus the amount of polymorphism, theta.  So
+     *  far, it is only possible to either infer or fix all
+     *  parameters.  For example, fixing theta only requires
+     *  constrained maximization of the likelihood.
+     *
+     */
+    void init_fixed_parameters(string model_params,
+                               string pomo_params);
+    
     /* /\** */
     /*  *  Deprecated!  Unreversible.  Initialize rate_matrix and */
     /*  *  state_freq. */
