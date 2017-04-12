@@ -136,6 +136,16 @@ void ModelSet::decomposeRateMatrix()
 	size_t vsize = phylo_tree->vector_size;
 	size_t states2 = num_states*num_states;
 	size_t ptn, i, x;
+
+    size_t max_size = get_safe_upper_limit(size());
+
+    // copy dummy values
+    for (size_t m = size(); m < max_size; m++) {
+        memcpy(&eigenvalues[m*num_states], &eigenvalues[(m-1)*num_states], sizeof(double)*num_states);
+        memcpy(&eigenvectors[m*states2], &eigenvectors[(m-1)*states2], sizeof(double)*states2);
+        memcpy(&inv_eigenvectors[m*states2], &inv_eigenvectors[(m-1)*states2], sizeof(double)*states2);
+    }
+
     double new_eval[num_states*vsize];
     double new_evec[states2*vsize];
     double new_inv_evec[states2*vsize];

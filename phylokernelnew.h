@@ -566,7 +566,7 @@ inline void scaleLikelihood(VectorClass &lh_max, double *invar, double *dad_part
 {
     if (SAFE_NUMERIC) {
         size_t x, i;
-        auto underflown = ((lh_max < SCALING_THRESHOLD) & (lh_max != 0.0) & (VectorClass().load_a(invar) == 0.0));
+        auto underflown = ((lh_max < SCALING_THRESHOLD) & (VectorClass().load_a(invar) == 0.0));
         if (horizontal_or(underflown)) { // at least one site has numerical underflown
             for (x = 0; x < VectorClass::size(); x++)
             if (underflown[x]) {
@@ -580,7 +580,7 @@ inline void scaleLikelihood(VectorClass &lh_max, double *invar, double *dad_part
         }
     } else {
         size_t x, i;
-        auto underflown = (lh_max < SCALING_THRESHOLD) & (lh_max != 0.0) & (VectorClass().load_a(invar) == 0.0);
+        auto underflown = (lh_max < SCALING_THRESHOLD) & (VectorClass().load_a(invar) == 0.0);
         if (horizontal_or(underflown)) { // at least one site has numerical underflown
             size_t block = ncat_mix * nstates;
             for (x = 0; x < VectorClass::size(); x++)
@@ -603,116 +603,6 @@ inline void scaleLikelihood(VectorClass &lh_max, double *invar, double *dad_part
  * and buffer to transition matrix
  *
  ******************************************************/
-
-#ifndef KERNEL_FIX_STATES
-inline bool PhyloTree::computeTraversalInfo(PhyloNeighbor *dad_branch, PhyloNode *dad, double* &buffer) {
-
-    size_t nstates = aln->num_states;
-    PhyloNode *node = (PhyloNode*)dad_branch->node;
-
-    if ((dad_branch->partial_lh_computed & 1) || node->isLeaf()) {
-        return mem_slots.lock(dad_branch);
-    }
-
-
-    size_t num_leaves = 0;
-    bool locked[node->degree()];
-    memset(locked, 0, node->degree());
-
-    // sort neighbor in desceding size order
-    NeighborVec neivec = node->neighbors;
-    NeighborVec::iterator it, i2;
-    for (it = neivec.begin(); it != neivec.end(); it++)
-        for (i2 = it+1; i2 != neivec.end(); i2++)
-            if (((PhyloNeighbor*)*it)->size < ((PhyloNeighbor*)*i2)->size) {
-                Neighbor *nei = *it;
-                *it = *i2;
-                *i2 = nei;
-            }
-
-
-    // recursive
-    for (it = neivec.begin(); it != neivec.end(); it++)
-        if ((*it)->node != dad) {
-            locked[it - neivec.begin()] = computeTraversalInfo((PhyloNeighbor*)(*it), node, buffer);
-            if ((*it)->node->isLeaf())
-                num_leaves++;
-        }
-    dad_branch->partial_lh_computed |= 1;
-
-    // prepare information for this branch
-    TraversalInfo info(dad_branch, dad);
-    info.echildren = info.partial_lh_leaves = NULL;
-
-    // re-orient partial_lh
-    reorientPartialLh(dad_branch, dad);
-
-    if (!dad_branch->partial_lh || mem_slots.locked(dad_branch)) {
-        // still no free entry found, memory saving technique
-        int slot_id = mem_slots.allocate(dad_branch);
-        if (slot_id < 0) {
-            cout << "traversal order:";
-            for (auto it = traversal_info.begin(); it != traversal_info.end(); it++) {
-                it->dad_branch->node->name = convertIntToString(it->dad_branch->size);
-                cout << "  ";
-                if (it->dad->isLeaf())
-                    cout << it->dad->name;
-                else
-                    cout << it->dad->id;
-                cout << "->";
-                if (it->dad_branch->node->isLeaf())
-                    cout << it->dad_branch->node->name;
-                else
-                    cout << it->dad_branch->node->id;
-                if (params->lh_mem_save == LM_MEM_SAVE) {
-                    if (it->dad_branch->partial_lh_computed)
-                        cout << " [";
-                    else
-                        cout << " (";
-                    cout << mem_slots.findNei(it->dad_branch) - mem_slots.begin();
-                    if (it->dad_branch->partial_lh_computed)
-                        cout << "]";
-                    else
-                        cout << ")";
-                }
-            }
-            cout << endl;
-            drawTree(cout);
-            assert(0 && "No free/unlocked mem slot found!");
-        }
-    } else
-        mem_slots.update(dad_branch);
-
-        if (verbose_mode >= VB_MED && params->lh_mem_save == LM_MEM_SAVE) {
-            int slot_id = mem_slots.findNei(dad_branch) - mem_slots.begin();
-            node->name = convertIntToString(slot_id);
-            cout << "Branch " << dad->id << "-" << node->id << " assigned slot " << slot_id << endl;
-        }
-
-    if (params->lh_mem_save == LM_MEM_SAVE) {
-        for (it = neivec.begin(); it != neivec.end(); it++)
-            if ((*it)->node != dad) {
-                if (!(*it)->node->isLeaf() && locked[it-neivec.begin()])
-                    mem_slots.unlock((PhyloNeighbor*)*it);
-            }
-    }
-
-    if (!model->isSiteSpecificModel()) {
-        //------- normal model -----
-        info.echildren = buffer;
-        size_t block = nstates * ((model_factory->fused_mix_rate) ? site_rate->getNRate() : site_rate->getNRate()*model->getNMixtures());
-        buffer += get_safe_upper_limit(block*nstates*(node->degree()-1));
-        if (num_leaves) {
-            info.partial_lh_leaves = buffer;
-            buffer += get_safe_upper_limit((aln->STATE_UNKNOWN+1)*block*num_leaves);
-        }
-    }
-
-    traversal_info.push_back(info);
-    return mem_slots.lock(dad_branch);
-}
-#endif
-
 
 
 #ifdef KERNEL_FIX_STATES
@@ -1010,7 +900,7 @@ void PhyloTree::computeTraversalInfo(PhyloNode *node, PhyloNode *dad, bool compu
             mem_slots.unlock(node_branch);
     }
 
-    if (verbose_mode >= VB_MAX && traversal_info.size() > 0) {
+    if (verbose_mode >= VB_DEBUG && traversal_info.size() > 0) {
         Node *saved = root;
         root = dad;
         drawTree(cout);
@@ -1024,7 +914,7 @@ void PhyloTree::computeTraversalInfo(PhyloNode *node, PhyloNode *dad, bool compu
 
         int num_info = traversal_info.size();
 
-        if (verbose_mode >= VB_MAX) {
+        if (verbose_mode >= VB_DEBUG) {
             cout << "traversal order:";
             for (auto it = traversal_info.begin(); it != traversal_info.end(); it++) {
                 cout << "  ";
@@ -1222,13 +1112,19 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(TraversalInfo &info, size_t 
             } else
                 memset(&dad_branch->scale_num[ptn], 0, sizeof(UBYTE)*VectorClass::size());
 
-            if (SITE_MODEL) {
-                VectorClass *expchild = partial_lh_all + block;
-                VectorClass *eval_ptr = (VectorClass*) &eval[ptn*nstates];
-                VectorClass *evec_ptr = (VectorClass*) &evec[ptn*states_square];
-                double *len_child = len_children;
-                VectorClass vchild;
-                FOR_NEIGHBOR_IT(node, dad, it) {
+            // SITE_MODEL variables
+            VectorClass *expchild = partial_lh_all + block;
+            VectorClass *eval_ptr = (VectorClass*) &eval[ptn*nstates];
+            VectorClass *evec_ptr = (VectorClass*) &evec[ptn*states_square];
+            double *len_child = len_children;
+            VectorClass vchild;
+
+            // normal model
+            double *partial_lh_leaf = partial_lh_leaves;
+            double *echild = echildren;
+
+            FOR_NEIGHBOR_IT(node, dad, it) {
+                if (SITE_MODEL) {
                     PhyloNeighbor *child = (PhyloNeighbor*)*it;
                     UBYTE *scale_child = SAFE_NUMERIC ? child->scale_num + ptn*ncat_mix : NULL;
                     VectorClass *partial_lh = partial_lh_all;
@@ -1280,14 +1176,8 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(TraversalInfo &info, size_t 
                         }
                     } // if
                     len_child += ncat;
-                } // FOR_NEIGHBOR
-
-            } else {
-                // non site specific model
-                double *partial_lh_leaf = partial_lh_leaves;
-                double *echild = echildren;
-
-                FOR_NEIGHBOR_IT(node, dad, it) {
+                } else {
+                    // non site specific model
                     PhyloNeighbor *child = (PhyloNeighbor*)*it;
                     UBYTE *scale_child = SAFE_NUMERIC ? child->scale_num + ptn*ncat_mix : NULL;
                     if (child->node->isLeaf()) {
@@ -1345,9 +1235,52 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(TraversalInfo &info, size_t 
                         }
                     } // if
                     echild += block*nstates;
-                } // FOR_NEIGHBOR
-            } // if SITE_MODEL
-            
+                } // if SITE_MODEL
+
+                /***** now do likelihood rescaling ******/
+                if (SAFE_NUMERIC) {
+                    VectorClass *partial_lh_tmp = partial_lh_all;
+                    for (c = 0; c < ncat_mix; c++) {
+                        VectorClass lh_max = 0.0;
+                        for (x = 0; x < nstates; x++)
+                            lh_max = max(lh_max,abs(partial_lh_tmp[x]));
+                        // check if one should scale partial likelihoods
+                        auto underflown = ((lh_max < SCALING_THRESHOLD) & (VectorClass().load_a(&ptn_invar[ptn]) == 0.0));
+                        if (horizontal_or(underflown)) { // at least one site has numerical underflown
+                            for (x = 0; x < VectorClass::size(); x++)
+                            if (underflown[x]) {
+                                // BQM 2016-05-03: only scale for non-constant sites
+                                // now do the likelihood scaling
+                                double *partial_lh = (double*)partial_lh_tmp + (x);
+                                for (i = 0; i < nstates; i++)
+                                    partial_lh[i*VectorClass::size()] *= SCALING_THRESHOLD_INVER;
+                                dad_branch->scale_num[(ptn+x)*ncat_mix+c] += 1;
+                            }
+                        }
+                        partial_lh_tmp += nstates;
+                    }
+                } else {
+                    // not -safe numeric
+                    VectorClass lh_max = 0.0;
+                    for (x = 0; x < block; x++)
+                        lh_max = max(lh_max,abs(partial_lh_all[x]));
+                    auto underflown = (lh_max < SCALING_THRESHOLD) & (VectorClass().load_a(&ptn_invar[ptn]) == 0.0);
+                    if (horizontal_or(underflown)) { // at least one site has numerical underflown
+                        for (x = 0; x < VectorClass::size(); x++)
+                        if (underflown[x]) {
+                            double *partial_lh = (double*)partial_lh_all + (x);
+                            // now do the likelihood scaling
+                            for (i = 0; i < block; i++) {
+                                partial_lh[i*VectorClass::size()] *= SCALING_THRESHOLD_INVER;
+                            }
+    //                        sum_scale += LOG_SCALING_THRESHOLD * ptn_freq[ptn+x];
+                            dad_branch->scale_num[ptn+x] += 1;
+                        }
+                    }
+                } // if-else
+
+            } // FOR_NEIGHBOR
+
         
             // compute dot-product with inv_eigenvector
             VectorClass *partial_lh_tmp = partial_lh_all;
@@ -1355,8 +1288,6 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(TraversalInfo &info, size_t 
             VectorClass lh_max = 0.0;
             double *inv_evec_ptr = SITE_MODEL ? &inv_evec[ptn*states_square] : NULL;
             for (c = 0; c < ncat_mix; c++) {
-                if (SAFE_NUMERIC)
-                    lh_max = 0.0;
                 if (SITE_MODEL) {
                     // compute dot-product with inv_eigenvector
 #ifdef KERNEL_FIX_STATES
@@ -1372,39 +1303,8 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(TraversalInfo &info, size_t 
                     productVecMat<VectorClass, double, FMA> (partial_lh_tmp, inv_evec_ptr, partial_lh, lh_max, nstates);
 #endif
                 }
-                // check if one should scale partial likelihoods
-                if (SAFE_NUMERIC) {
-                    auto underflown = ((lh_max < SCALING_THRESHOLD) & (lh_max != 0.0) & (VectorClass().load_a(&ptn_invar[ptn]) == 0.0));
-                    if (horizontal_or(underflown)) { // at least one site has numerical underflown
-                        for (x = 0; x < VectorClass::size(); x++)
-                        if (underflown[x]) {
-                            // BQM 2016-05-03: only scale for non-constant sites
-                            // now do the likelihood scaling
-                            double *partial_lh = dad_branch->partial_lh + (ptn*block + c*nstates*VectorClass::size() + x);
-                            for (i = 0; i < nstates; i++)
-                                partial_lh[i*VectorClass::size()] *= SCALING_THRESHOLD_INVER;
-                            dad_branch->scale_num[(ptn+x)*ncat_mix+c] += 1;
-                        }
-                    }
-                }
                 partial_lh += nstates;
                 partial_lh_tmp += nstates;
-            }
-
-            if (!SAFE_NUMERIC) {
-                auto underflown = (lh_max < SCALING_THRESHOLD) & (lh_max != 0.0) & (VectorClass().load_a(&ptn_invar[ptn]) == 0.0);
-                if (horizontal_or(underflown)) { // at least one site has numerical underflown
-                    for (x = 0; x < VectorClass::size(); x++)
-                    if (underflown[x]) {
-                        double *partial_lh = dad_branch->partial_lh + (ptn*block + x);
-                        // now do the likelihood scaling
-                        for (i = 0; i < block; i++) {
-                            partial_lh[i*VectorClass::size()] *= SCALING_THRESHOLD_INVER;
-                        }
-//                        sum_scale += LOG_SCALING_THRESHOLD * ptn_freq[ptn+x];
-                        dad_branch->scale_num[ptn+x] += 1;
-                    }
-                }
             }
 
         } // for ptn
@@ -1562,7 +1462,7 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(TraversalInfo &info, size_t 
 #endif
                     // check if one should scale partial likelihoods
                     if (SAFE_NUMERIC) {
-                        auto underflown = ((lh_max < SCALING_THRESHOLD) & (lh_max != 0.0) & (VectorClass().load_a(&ptn_invar[ptn]) == 0.0));
+                        auto underflown = ((lh_max < SCALING_THRESHOLD) & (VectorClass().load_a(&ptn_invar[ptn]) == 0.0));
                         if (horizontal_or(underflown)) { // at least one site has numerical underflown
                             for (x = 0; x < VectorClass::size(); x++)
                             if (underflown[x]) {
@@ -1625,7 +1525,7 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(TraversalInfo &info, size_t 
     #endif
                     // check if one should scale partial likelihoods
                     if (SAFE_NUMERIC) {
-                        auto underflown = ((lh_max < SCALING_THRESHOLD) & (lh_max != 0.0) & (VectorClass().load_a(&ptn_invar[ptn]) == 0.0));
+                        auto underflown = ((lh_max < SCALING_THRESHOLD) & (VectorClass().load_a(&ptn_invar[ptn]) == 0.0));
                         if (horizontal_or(underflown)) { // at least one site has numerical underflown
                             for (x = 0; x < VectorClass::size(); x++)
                             if (underflown[x]) {
@@ -1645,7 +1545,7 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(TraversalInfo &info, size_t 
             } // IF SITE_MODEL
 
             if (!SAFE_NUMERIC) {
-                auto underflown = (lh_max < SCALING_THRESHOLD) & (lh_max != 0.0) & (VectorClass().load_a(&ptn_invar[ptn]) == 0.0);
+                auto underflown = (lh_max < SCALING_THRESHOLD) & (VectorClass().load_a(&ptn_invar[ptn]) == 0.0);
                 if (horizontal_or(underflown)) { // at least one site has numerical underflown
                     for (x = 0; x < VectorClass::size(); x++)
                     if (underflown[x]) {
@@ -1748,7 +1648,7 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(TraversalInfo &info, size_t 
 
                 // check if one should scale partial likelihoods
                 if (SAFE_NUMERIC) {
-                    auto underflown = ((lh_max < SCALING_THRESHOLD) & (lh_max != 0.0) & (VectorClass().load_a(&ptn_invar[ptn]) == 0.0));
+                    auto underflown = ((lh_max < SCALING_THRESHOLD) & (VectorClass().load_a(&ptn_invar[ptn]) == 0.0));
                     if (horizontal_or(underflown))
                         for (x = 0; x < VectorClass::size(); x++)
                         if (underflown[x]) {
@@ -1770,7 +1670,7 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(TraversalInfo &info, size_t 
 
             if (!SAFE_NUMERIC) {
                 // check if one should scale partial likelihoods
-                auto underflown = (lh_max < SCALING_THRESHOLD) & (lh_max != 0.0) & (VectorClass().load_a(&ptn_invar[ptn]) == 0.0);
+                auto underflown = (lh_max < SCALING_THRESHOLD) & (VectorClass().load_a(&ptn_invar[ptn]) == 0.0);
                 if (horizontal_or(underflown)) { // at least one site has numerical underflown
                     for (x = 0; x < VectorClass::size(); x++)
                     if (underflown[x]) {
@@ -2112,7 +2012,7 @@ void PhyloTree::computeLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, Phyl
         #endif
         
         for (ptn = ptn_lower; ptn < ptn_upper; ptn+=VectorClass::size()) {
-            VectorClass lh_ptn;
+            VectorClass lh_ptn(0.0);
             //lh_ptn.load_a(&ptn_invar[ptn]);
             VectorClass *theta = (VectorClass*)(theta_all + ptn*block);
             VectorClass df_ptn, ddf_ptn;
@@ -2143,7 +2043,8 @@ void PhyloTree::computeLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, Phyl
                 dotProductTriple<VectorClass, double, FMA>(val0, val1, val2, theta, lh_ptn, df_ptn, ddf_ptn, block, nstates);
         #endif
             }
-            lh_ptn = abs(lh_ptn + VectorClass().load_a(&ptn_invar[ptn]));
+            // Sum later to avoid underflow of invariant sites
+            lh_ptn = abs(lh_ptn) + VectorClass().load_a(&ptn_invar[ptn]);
             
             if (ptn < orig_nptn) {
                 lh_ptn = 1.0 / lh_ptn;
@@ -2163,6 +2064,19 @@ void PhyloTree::computeLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, Phyl
                     df_ptn.cutoff(nptn-ptn);
                     ddf_ptn.cutoff(nptn-ptn);
                 }
+                if (horizontal_or(VectorClass().load_a(&buffer_scale_all[ptn]) != 0.0)) {
+                    // some entries are rescaled
+                    double *lh_ptn_dbl = (double*)&lh_ptn;
+                    double *df_ptn_dbl = (double*)&df_ptn;
+                    double *ddf_ptn_dbl = (double*)&ddf_ptn;
+                    for (i = 0; i < VectorClass::size(); i++)
+                        if (buffer_scale_all[ptn+i] != 0.0) {
+                            lh_ptn_dbl[i] *= SCALING_THRESHOLD;
+                            df_ptn_dbl[i] *= SCALING_THRESHOLD;
+                            ddf_ptn_dbl[i] *= SCALING_THRESHOLD;
+                        }
+                }
+
                 vc_prob_const += lh_ptn;
                 vc_df_const += df_ptn;
                 vc_ddf_const += ddf_ptn;
@@ -2191,8 +2105,6 @@ void PhyloTree::computeLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, Phyl
     if (!SAFE_NUMERIC && (std::isnan(df) || std::isinf(df)))
         outError("Numerical underflow (lh-derivative). Run again with the safe likelihood kernel via `-safe` option");
 
-    assert(!std::isnan(df) && !std::isinf(df) && "Numerical underflow for lh-derivative");
-
 	if (isASC) {
         double prob_const = 0.0, df_const = 0.0, ddf_const = 0.0;
         prob_const = horizontal_add(all_prob_const);
@@ -2207,6 +2119,10 @@ void PhyloTree::computeLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, Phyl
     	ddf += nsites *(ddf_frac + df_frac*df_frac);
     }
 
+    if (std::isnan(df) || std::isinf(df)) {
+        cerr << "WARNING: Numerical underflow for lh-derivative" << endl;
+        df = ddf = 0.0;
+    }
 }
 
 
@@ -2392,8 +2308,8 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
             double *vec_tip = buffer_partial_lh_ptr + block*VectorClass::size()*thread_id;
 
             for (ptn = ptn_lower; ptn < ptn_upper; ptn+=VectorClass::size()) {
-                VectorClass lh_ptn;
-                lh_ptn.load_a(&ptn_invar[ptn]);
+                VectorClass lh_ptn(0.0);
+//                lh_ptn.load_a(&ptn_invar[ptn]);
                 VectorClass *lh_cat = (VectorClass*)(_pattern_lh_cat + ptn*ncat_mix);
                 VectorClass *partial_lh_dad = (VectorClass*)(dad_branch->partial_lh + ptn*block);
                 VectorClass *lh_node = SITE_MODEL ? (VectorClass*)&partial_lh_node[ptn*nstates] : (VectorClass*)vec_tip;
@@ -2484,7 +2400,8 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
                 }
                 vc_min_scale *= LOG_SCALING_THRESHOLD;
 
-                lh_ptn = abs(lh_ptn);
+                // Sum later to avoid underflow of invariant sites
+                lh_ptn = abs(lh_ptn) + VectorClass().load_a(&ptn_invar[ptn]);
                 if (ptn < orig_nptn) {
                     lh_ptn = log(lh_ptn) + vc_min_scale;
                     lh_ptn.store_a(&_pattern_lh[ptn]);
@@ -2539,8 +2456,8 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
                 computePartialLikelihood(*it, ptn_lower, ptn_upper, thread_id);
 
             for (ptn = ptn_lower; ptn < ptn_upper; ptn+=VectorClass::size()) {
-                VectorClass lh_ptn;
-                lh_ptn.load_a(&ptn_invar[ptn]);
+                VectorClass lh_ptn(0.0);
+//                lh_ptn.load_a(&ptn_invar[ptn]);
                 VectorClass *lh_cat = (VectorClass*)(_pattern_lh_cat + ptn*ncat_mix);
                 VectorClass *partial_lh_dad = (VectorClass*)(dad_branch->partial_lh + ptn*block);
                 VectorClass *partial_lh_node = (VectorClass*)(node_branch->partial_lh + ptn*block);
@@ -2614,7 +2531,8 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
                 } // if SAFE_NUMERIC
                 vc_min_scale *= LOG_SCALING_THRESHOLD;
 
-                lh_ptn = abs(lh_ptn);
+                // Sum later to avoid underflow of invariant sites
+                lh_ptn = abs(lh_ptn) + VectorClass().load_a(&ptn_invar[ptn]);
 
                 if (ptn < orig_nptn) {
                     lh_ptn = log(lh_ptn) + vc_min_scale;
@@ -2781,11 +2699,11 @@ double PhyloTree::computeLikelihoodFromBufferGenericSIMD()
 #pragma omp for schedule(static) nowait
 #endif
     for (ptn = 0; ptn < nptn; ptn+=VectorClass::size()) {
-		VectorClass lh_ptn;
+		VectorClass lh_ptn(0.0);
 		VectorClass *theta = (VectorClass*)(theta_all + ptn*block);
         if (SITE_MODEL) {
             VectorClass *eval_ptr = (VectorClass*)&eval[ptn*nstates];
-            lh_ptn.load_a(&ptn_invar[ptn]);
+//            lh_ptn.load_a(&ptn_invar[ptn]);
             for (c = 0; c < ncat; c++) {
                 VectorClass lh_cat;
 #ifdef KERNEL_FIX_STATES
@@ -2798,8 +2716,10 @@ double PhyloTree::computeLikelihoodFromBufferGenericSIMD()
             }
         } else {
             dotProductVec<VectorClass, double, FMA>(val0, theta, lh_ptn, block);
-            lh_ptn += VectorClass().load_a(&ptn_invar[ptn]);
         }
+
+        // Sum later to avoid underflow of invariant sites
+        lh_ptn = abs(lh_ptn) + VectorClass().load_a(&ptn_invar[ptn]);
 
         if (ptn < orig_nptn) {
             lh_ptn = log(abs(lh_ptn)) + VectorClass().load_a(&buffer_scale_all[ptn]);
@@ -2814,6 +2734,13 @@ double PhyloTree::computeLikelihoodFromBufferGenericSIMD()
             if (ptn+VectorClass::size() > nptn) {
                 // cutoff the last entries if going beyond
                 lh_ptn.cutoff(nptn-ptn);
+            }
+            if (horizontal_or(VectorClass().load_a(&buffer_scale_all[ptn]) != 0.0)) {
+                // some entries are rescaled
+                double *lh_ptn_dbl = (double*)&lh_ptn;
+                for (i = 0; i < VectorClass::size(); i++)
+                    if (buffer_scale_all[ptn+i] != 0.0)
+                        lh_ptn_dbl[i] *= SCALING_THRESHOLD;
             }
             vc_prob_const += lh_ptn;
         }

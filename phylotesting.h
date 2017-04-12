@@ -69,7 +69,7 @@ bool checkModelFile(string model_file, bool is_partitioned, vector<ModelInfo> &i
  @return name of best-fit-model
  */
 string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_info, ostream &fmodel,
-		ModelsBlock *models_block, int num_threads, string set_name = "", bool print_mem_usage = false);
+		ModelsBlock *models_block, int num_threads, string set_name = "", bool print_mem_usage = false, string in_model_name = "");
 
 /**
  * print site log likelihoods to a fileExists
@@ -113,6 +113,13 @@ void printSiteProbCategory(const char*filename, PhyloTree *tree, SiteLoglType ws
  * @param tree phylogenetic tree
 */
 void printSiteStateFreq(const char*filename, PhyloTree *tree, double *state_freqs = NULL);
+
+/**
+ * print site state frequency vectors (for Huaichun)
+ * @param filename output file name
+ * @param aln alignment
+*/
+void printSiteStateFreq(const char* filename, Alignment *aln);
 
 /**
     print ancestral sequences

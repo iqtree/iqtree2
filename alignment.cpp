@@ -311,7 +311,9 @@ Alignment *Alignment::removeIdenticalSeq(string not_remove, bool keep_two, StrVe
 					removed_seqs.push_back(getSeqName(seq2));
 					target_seqs.push_back(getSeqName(seq1));
 					removed[seq2] = true;
-				}
+				} else {
+                    cout << "NOTE: " << getSeqName(seq2) << " is identical to " << getSeqName(seq1) << " but kept for subsequent analysis" << endl;
+                }
 				checked[seq2] = 1;
 				first_ident_seq = false;
 			}
@@ -427,7 +429,8 @@ Alignment::Alignment(char *filename, char *sequence_type, InputType &intype) : v
     countConstSite();
 
     cout << "Alignment has " << getNSeq() << " sequences with " << getNSite() <<
-         " columns and " << getNPattern() << " patterns (" << num_informative_sites << " informative sites)" << endl;
+         " columns and " << getNPattern() << " patterns (" << num_informative_sites << " informative sites, " <<
+         (int)(frac_const_sites*getNSite()) << " constant sites)" << endl;
     buildSeqStates();
     checkSeqName();
     // OBSOLETE: identical sequences are handled later
@@ -673,10 +676,11 @@ void Alignment::computeConst(Pattern &pat) {
     bool is_informative = false;
     // critical fix: const_char was set wrongly to num_states in some data type (binary, codon),
     // causing wrong log-likelihood computation for +I or +I+G model
-    if (STATE_UNKNOWN == num_states)
-    	pat.const_char = STATE_UNKNOWN+1;
-    else
-    	pat.const_char = STATE_UNKNOWN;
+    pat.const_char = STATE_UNKNOWN+1;
+//    if (STATE_UNKNOWN == num_states)
+//    	pat.const_char = STATE_UNKNOWN+1;
+//    else
+//    	pat.const_char = STATE_UNKNOWN;
     StateBitset state_app;
     state_app.reset();
     int j;
@@ -684,7 +688,7 @@ void Alignment::computeConst(Pattern &pat) {
     	state_app[j] = 1;
 
     // number of appearance for each state, to compute is_informative
-    size_t *num_app = new size_t[num_states];
+    size_t num_app[num_states];
     memset(num_app, 0, num_states*sizeof(size_t));
 
     for (Pattern::iterator i = pat.begin(); i != pat.end(); i++) {
@@ -693,10 +697,11 @@ void Alignment::computeConst(Pattern &pat) {
     	state_app &= this_app;
         if (*i < num_states) {
             num_app[(int)(*i)]++;
-        } else if (*i != STATE_UNKNOWN) {
-            // ambiguous characters
-            is_const = false;
         }
+//        else if (*i != STATE_UNKNOWN) {
+//            // ambiguous characters
+//            is_const = false;
+//        }
     }
     int count = 0; // number of states with >= 2 appearances
     pat.num_chars = 0; // number of states with >= 1 appearance
@@ -711,6 +716,7 @@ void Alignment::computeConst(Pattern &pat) {
     is_informative = (count >= 2);
 
     // compute is_const
+    /*
     is_const = is_const && (pat.num_chars <= 1); 
     if (is_const) {
         if (pat.num_chars == 0) // all-gap pattern
@@ -724,8 +730,36 @@ void Alignment::computeConst(Pattern &pat) {
                 }
         }
     }
+    */
+    is_const = (state_app.count() >= 1);
+    if (is_const) {
+        if (state_app.count() == num_states) {
+            pat.const_char = STATE_UNKNOWN;
+        } else if (state_app.count() == 1) {
+            for (j = 0; j < num_states; j++)
+                if (state_app[j]) {
+                    pat.const_char = j;
+                    break;
+                }
+        } else if (seq_type == SEQ_DNA) {
+            pat.const_char = num_states-1;
+            for (j = 0; j < num_states; j++)
+                if (state_app[j])
+                    pat.const_char += (1<<j);
+        } else if (seq_type == SEQ_PROTEIN) {
+            if (state_app[2] && state_app[3]) //4+8, // B = N or D
+                pat.const_char = num_states;
+            else if (state_app[5] && state_app[6]) //32+64, // Z = Q or E
+                pat.const_char = num_states+1;
+            else if (state_app[9] && state_app[10]) // 512+1024 // U = I or L
+                pat.const_char = num_states+2;
+            else ASSERT(0);
+        } else {
+            ASSERT(0);
+        }
+    }
 
-    delete [] num_app;
+//    delete [] num_app;
 
     // compute is_invariant
     is_invariant = (state_app.count() >= 1);
@@ -1480,7 +1514,7 @@ int Alignment::readPhylip(char *filename, char *sequence_type) {
     num_states = 0;
 
     for (; !in.eof(); line_num++) {
-        getline(in, line);
+        safeGetline(in, line);
         line = line.substr(0, line.find_first_of("\n\r"));
         if (line == "") continue;
 
@@ -1564,7 +1598,7 @@ int Alignment::readPhylipSequential(char *filename, char *sequence_type) {
     num_states = 0;
 
     for (; !in.eof(); line_num++) {
-        getline(in, line);
+        safeGetline(in, line);
         line = line.substr(0, line.find_first_of("\n\r"));
         if (line == "") continue;
 
@@ -1640,7 +1674,7 @@ int Alignment::readFasta(char *filename, char *sequence_type) {
     in.exceptions(ios::badbit);
 
     for (; !in.eof(); line_num++) {
-        getline(in, line);
+        safeGetline(in, line);
         if (line == "") continue;
 
         //cout << line << endl;
@@ -1724,14 +1758,14 @@ int Alignment::readClustal(char *filename, char *sequence_type) {
     in.open(filename);
     // remove the failbit
     in.exceptions(ios::badbit);
-    getline(in, line);
+    safeGetline(in, line);
     if (line.substr(0, 7) != "CLUSTAL") {
         throw "ClustalW file does not start with 'CLUSTAL'";
     }
 
     int seq_count = 0;
     for (line_num = 2; !in.eof(); line_num++) {
-        getline(in, line);
+        safeGetline(in, line);
         trimString(line);
         if (line == "") {
             seq_count = 0;
@@ -1772,6 +1806,10 @@ int Alignment::readClustal(char *filename, char *sequence_type) {
     // set the failbit again
     in.exceptions(ios::failbit | ios::badbit);
     in.close();
+
+    if (sequences.empty())
+        throw "No sequences found. Please check input (e.g. newline character)";
+
     return buildPattern(sequences, sequence_type, seq_names.size(), sequences.front().length());
 
 
@@ -1793,7 +1831,7 @@ int Alignment::readMSF(char *filename, char *sequence_type) {
     in.open(filename);
     // remove the failbit
     in.exceptions(ios::badbit);
-    getline(in, line);
+    safeGetline(in, line);
     if (line.find("MULTIPLE_ALIGNMENT") == string::npos) {
         throw "MSF file must start with header line MULTIPLE_ALIGNMENT";
     }
@@ -1802,7 +1840,7 @@ int Alignment::readMSF(char *filename, char *sequence_type) {
     bool seq_started = false;
 
     for (line_num = 2; !in.eof(); line_num++) {
-        getline(in, line);
+        safeGetline(in, line);
         trimString(line);
         if (line == "") {
             continue;

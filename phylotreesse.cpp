@@ -42,16 +42,16 @@
 
 void PhyloTree::setParsimonyKernel(LikelihoodKernel lk) {
     // set parsimony kernel
-    if (lk == LK_EIGEN || instruction_set < 2) {
+    if (lk < LK_SSE2) {
         computeParsimonyBranchPointer = &PhyloTree::computeParsimonyBranchFast;
         computePartialParsimonyPointer = &PhyloTree::computePartialParsimonyFast;
     	return;
     }
-    if (instruction_set >= 7) {
+    if (lk >= LK_AVX) {
         setParsimonyKernelAVX();
         return;
     }
-    if (instruction_set >= 2) {
+    if (lk >= LK_SSE2) {
         setParsimonyKernelSSE();
         return;
     }
@@ -67,13 +67,17 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk, int num_threads) {
     //--- parsimony kernel ---
     setParsimonyKernel(lk);
 
-    bool has_fma = (hasFMA3()) && (instruction_set >= 7) && (Params::getInstance().lk_no_avx != 2);
     //--- dot-product kernel ---
-    if (has_fma) {
+#ifdef INCLUDE_AVX512
+    if (lk >= LK_AVX512) {
+		setDotProductAVX512();
+    } else
+#endif
+    if (lk >= LK_AVX_FMA) {
 		setDotProductFMA();
-	} else if (instruction_set >= 7) {
+	} else if (lk >= LK_AVX) {
 		setDotProductAVX();
-    } else if (instruction_set >= 2) {
+    } else if (lk >= LK_SSE2) {
         setDotProductSSE();
 	} else {
 
@@ -96,13 +100,13 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk, int num_threads) {
         computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervGenericSIMD<Vec1d, SAFE_LH>;
         computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodGenericSIMD<Vec1d, SAFE_LH>;
         computeLikelihoodFromBufferPointer = &PhyloTree::computeLikelihoodFromBufferGenericSIMD<Vec1d, SAFE_LH>;
-        sse = LK_EIGEN;
+        sse = LK_386;
 #else
         computeLikelihoodBranchPointer = NULL;
         computeLikelihoodDervPointer = NULL;
         computePartialLikelihoodPointer = NULL;
         computeLikelihoodFromBufferPointer = NULL;
-        sse = LK_EIGEN;
+        sse = LK_386;
 #endif
         return;
     }
@@ -116,17 +120,17 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk, int num_threads) {
 //    }    
 
     //--- SIMD kernel ---
-    if (sse == LK_EIGEN_SSE && instruction_set >= 2) {
+    if (lk >= LK_SSE2) {
 #ifdef INCLUDE_AVX512
-    	if (instruction_set >= 9) {
+    	if (lk >= LK_AVX512) {
     		setLikelihoodKernelAVX512();
     		return;
     	}
 #endif
-    	if (has_fma) {
+    	if (lk >= LK_AVX_FMA) {
             // CPU supports AVX and FMA
             setLikelihoodKernelFMA();
-        } else if (instruction_set >= 7) {
+        } else if (lk >= LK_AVX) {
             // CPU supports AVX
             setLikelihoodKernelAVX();
         } else {
@@ -238,7 +242,7 @@ void PhyloTree::computeTipPartialLikelihood() {
 
                 double *inv_evec = &model->getInverseEigenvectors()[ptn*nstates*nstates];
                 for (v = 0; v < vector_size; v++) {
-                    int state = aln->STATE_UNKNOWN;
+                    int state = 0;
                     if (ptn+v < nptn)
                         state = aln->at(ptn+v)[nodeid];
     //                double *partial_lh = node_partial_lh + ptn*nstates;
@@ -596,6 +600,13 @@ void PhyloTree::computePtnInvar() {
 	size_t nptn = aln->getNPattern(), ptn;
 	size_t maxptn = get_safe_upper_limit(nptn)+get_safe_upper_limit(model_factory->unobserved_ptns.size());
 	int nstates = aln->num_states;
+    int x;
+    // ambiguous characters
+    int ambi_aa[] = {
+        4+8, // B = N or D
+        32+64, // Z = Q or E
+        512+1024 // U = I or L
+    };
 
     double state_freq[nstates];
 
@@ -606,11 +617,31 @@ void PhyloTree::computePtnInvar() {
 	double p_invar = site_rate->getPInvar();
 	if (p_invar != 0.0) {
 		for (ptn = 0; ptn < nptn; ptn++) {
-			if ((*aln)[ptn].const_char == nstates)
+            if ((*aln)[ptn].const_char > aln->STATE_UNKNOWN)
+                continue;
+
+			if ((*aln)[ptn].const_char == aln->STATE_UNKNOWN) {
 				ptn_invar[ptn] = p_invar;
-			else if ((*aln)[ptn].const_char < nstates) {
+			} else if ((*aln)[ptn].const_char < nstates) {
 				ptn_invar[ptn] = p_invar * state_freq[(int) (*aln)[ptn].const_char];
-			}
+			} else if (aln->seq_type == SEQ_DNA) {
+                // 2016-12-21: handling ambiguous state
+                ptn_invar[ptn] = 0.0;
+                int cstate = (*aln)[ptn].const_char-nstates+1;
+                for (x = 0; x < nstates; x++) {
+                    if ((cstate) & (1 << x))
+                        ptn_invar[ptn] += state_freq[x];
+                }
+                ptn_invar[ptn] *= p_invar;
+            } else if (aln->seq_type == SEQ_PROTEIN) {
+                ptn_invar[ptn] = 0.0;
+                int cstate = (*aln)[ptn].const_char-nstates;
+                assert(cstate <= 2);
+                for (x = 0; x < 11; x++)
+                    if (ambi_aa[cstate] & (1 << x))
+                        ptn_invar[ptn] += state_freq[x];
+                ptn_invar[ptn] *= p_invar;
+            } else ASSERT(0);
 		}
 //		// ascertmain bias correction
 //		for (ptn = 0; ptn < model_factory->unobserved_ptns.size(); ptn++)

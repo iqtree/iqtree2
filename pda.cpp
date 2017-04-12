@@ -235,7 +235,8 @@ void printCopyright(ostream &out) {
 #endif
 
 #ifdef IQ_TREE
-	out << endl << "Copyright (c) 2011-2016 Nguyen Lam Tung, Olga Chernomor, Arndt von Haeseler and Bui Quang Minh." << endl << endl;
+	out << endl << "Copyright (c) 2011-2017 by Bui Quang Minh, Nguyen Lam Tung,"
+        << endl << "Olga Chernomor, Heiko Schmidt, and Arndt von Haeseler." << endl << endl;
 #else
 	out << endl << "Copyright (c) 2006-2014 Olga Chernomor, Arndt von Haeseler and Bui Quang Minh." << endl << endl;
 #endif
@@ -2155,7 +2156,7 @@ void collapseLowBranchSupport(char *user_file, char *split_threshold_str) {
     bool isrooted = false;
     tree.readTree(user_file, isrooted);
     tree.collapseLowBranchSupport(minsup);
-    tree.collapseZeroBranches();
+    tree.collapseZeroBranches(NULL, NULL, -1.0);
     if (verbose_mode >= VB_MED)
         tree.drawTree(cout);
     string outfile = (string)user_file + ".collapsed";
@@ -2180,22 +2181,24 @@ int main(){
 }
 */
 
-/*
-Instruction set ID reported by vectorclass::instrset_detect
-0           = 80386 instruction set
-1  or above = SSE (XMM) supported by CPU (not testing for O.S. support)
-2  or above = SSE2
-3  or above = SSE3
-4  or above = Supplementary SSE3 (SSSE3)
-5  or above = SSE4.1
-6  or above = SSE4.2
-7  or above = AVX supported by CPU and operating system
-8  or above = AVX2
-9  or above = AVX512F
-*/
-int instruction_set;
 
 int main(int argc, char *argv[]) {
+
+    /*
+    Instruction set ID reported by vectorclass::instrset_detect
+    0           = 80386 instruction set
+    1  or above = SSE (XMM) supported by CPU (not testing for O.S. support)
+    2  or above = SSE2
+    3  or above = SSE3
+    4  or above = Supplementary SSE3 (SSSE3)
+    5  or above = SSE4.1
+    6  or above = SSE4.2
+    7  or above = AVX supported by CPU and operating system
+    8  or above = AVX2
+    9  or above = AVX512F
+    */
+    int instruction_set;
+
 #ifdef _IQTREE_MPI
 	double time_initial, time_current;
 	int n_tasks, task_id;
@@ -2345,11 +2348,10 @@ int main(int argc, char *argv[]) {
 
 	instruction_set = instrset_detect();
 #if defined(BINARY32) || defined(__NOAVX__)
-    instruction_set = min(instruction_set, 6);
+    instruction_set = min(instruction_set, (int)LK_SSE42);
 #endif
-	if (instruction_set < 3) outError("Your CPU does not support SSE3!");
-	bool has_fma3 = (instruction_set >= 7) && hasFMA3();
-//	bool has_fma4 = (instruction_set >= 7) && hasFMA4();
+	if (instruction_set < LK_SSE2) outError("Your CPU does not support SSE2!");
+	bool has_fma3 = (instruction_set >= LK_AVX) && hasFMA3();
 
 #ifdef __FMA__
 	bool has_fma =  has_fma3;
@@ -2360,7 +2362,7 @@ int main(int argc, char *argv[]) {
 
 	cout << "Host:    " << hostname << " (";
 	switch (instruction_set) {
-	case 0: cout << "80386, "; break;
+	case 0: cout << "x86, "; break;
 	case 1: cout << "SSE, "; break;
 	case 2: cout << "SSE2, "; break;
 	case 3: cout << "SSE3, "; break;
@@ -2392,8 +2394,11 @@ int main(int argc, char *argv[]) {
 	time(&start_time);
 	cout << "Time:    " << ctime(&start_time);
 
-	if (Params::getInstance().lk_no_avx == 1)
-		instruction_set = min(instruction_set, 6);
+    // increase instruction set level with FMA
+    if (has_fma3 && instruction_set < LK_AVX_FMA)
+        instruction_set = LK_AVX_FMA;
+
+    Params::getInstance().SSE = min(Params::getInstance().SSE, (LikelihoodKernel)instruction_set);
 
 	cout << "Kernel:  ";
 
@@ -2408,23 +2413,16 @@ int main(int argc, char *argv[]) {
 		cout << "PLL-SSE3";
 #endif
 	} else {
-        bool has_fma = (has_fma3) && (instruction_set >= 7) && Params::getInstance().lk_no_avx != 2;
-		switch (Params::getInstance().SSE) {
-		case LK_EIGEN: cout << "No SSE"; break;
-		case LK_EIGEN_SSE:
-            if (has_fma) {
-                cout << "AVX+FMA";
-            } else if (instruction_set >= 7) {
-				cout << "AVX";
-			} else {
-				cout << "SSE3";
-			}
-
-#ifdef __FMA__
-			cout << "+FMA";
-#endif
-			break;
-		}
+        if (Params::getInstance().SSE >= LK_AVX512)
+            cout << "AVX-512";
+        else if (Params::getInstance().SSE >= LK_AVX_FMA) {
+            cout << "AVX+FMA";
+        } else if (Params::getInstance().SSE >= LK_AVX) {
+            cout << "AVX";
+        } else if (Params::getInstance().SSE >= LK_SSE2) {
+            cout << "SSE2";
+        } else
+            cout << "x86";
 	}
 
 #ifdef _OPENMP
@@ -2438,7 +2436,12 @@ int main(int argc, char *argv[]) {
     }
 //	int max_threads = omp_get_max_threads();
 	int max_procs = countPhysicalCPUCores();
-	cout << " - " << Params::getInstance().num_threads  << " threads (" << max_procs << " CPU cores detected)";
+	cout << " - ";
+    if (Params::getInstance().num_threads > 0)
+        cout << Params::getInstance().num_threads  << " threads";
+    else
+        cout << "auto-detect threads";
+    cout << " (" << max_procs << " CPU cores detected)";
 	if (Params::getInstance().num_threads  > max_procs) {
 		cout << endl;
 		outError("You have specified more threads than CPU cores available");

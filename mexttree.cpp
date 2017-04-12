@@ -72,16 +72,16 @@ void MExtTree::setZeroInternalBranches(int num_zero_len) {
 	}
 }
 
-void MExtTree::collapseZeroBranches(Node *node, Node *dad) {
+void MExtTree::collapseZeroBranches(Node *node, Node *dad, double threshold) {
 	if (!node) node = root;
 	FOR_NEIGHBOR_DECLARE(node, dad, it) {
-		collapseZeroBranches((*it)->node, node);
+		collapseZeroBranches((*it)->node, node, threshold);
 	}
 	NeighborVec nei_vec;
 	nei_vec.insert(nei_vec.begin(), node->neighbors.begin(), node->neighbors.end());
 	for (it = nei_vec.begin(); it != nei_vec.end(); it++) 
 	if ((*it)->node != dad) {
-		if ((*it)->length == 0.0) { // delete the child node
+		if ((*it)->length <= threshold) { // delete the child node
 			Node *child = (*it)->node;
 			bool first = true;
 			FOR_NEIGHBOR_IT(child, node, it2) {
@@ -581,8 +581,8 @@ void MExtTree::collapseLowBranchSupport(DoubleVector &minsup, Node *node, Node *
         for (int i = 0; i < vec.size(); i++)
             if (vec[i] < minsup[i]) {
                 // support smaller than threshold, mark this branch for deletion
-                dad->findNeighbor(node)->length = 0.0;
-                node->findNeighbor(dad)->length = 0.0;
+                dad->findNeighbor(node)->length = -1.0;
+                node->findNeighbor(dad)->length = -1.0;
                 break;
             }
     }

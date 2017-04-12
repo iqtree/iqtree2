@@ -214,7 +214,10 @@ void IQTree::initSettings(Params &params) {
 
     searchinfo.nni_type = params.nni_type;
     optimize_by_newton = params.optimize_by_newton;
-    setLikelihoodKernel(params.SSE, params.num_threads);
+    if (num_threads > 0)
+        setLikelihoodKernel(params.SSE, num_threads);
+    else
+        setLikelihoodKernel(params.SSE, params.num_threads);
     candidateTrees.init(this->aln, 200);
     intermediateTrees.init(this->aln, 200000);
 
@@ -306,18 +309,20 @@ void IQTree::initSettings(Params &params) {
 //        max_candidate_trees = aln->getNSeq() * params.step_iterations;
     setRootNode(params.root);
 
-    string bootaln_name = params.out_prefix;
-    bootaln_name += ".bootaln";
-    if (params.print_bootaln) {
-        ofstream bootalnout;
-    	bootalnout.open(bootaln_name.c_str());
-    	bootalnout.close();
-    }
     size_t i;
 
     if (params.online_bootstrap && params.gbo_replicates > 0) {
         if (aln->getNSeq() < 4)
             outError("It makes no sense to perform bootstrap with less than 4 sequences.");
+
+        string bootaln_name = params.out_prefix;
+        bootaln_name += ".bootaln";
+        if (params.print_bootaln) {
+            ofstream bootalnout;
+            bootalnout.open(bootaln_name.c_str());
+            bootalnout.close();
+        }
+
         // 2015-12-17: initialize random stream for creating bootstrap samples
         // mainly so that checkpointing does not need to save bootstrap samples
         int *saved_randstream = randstream;
@@ -452,7 +457,7 @@ void IQTree::createPLLPartition(Params &params, ostream &pllPartitionFileHandle)
                 if ((*it)->aln->seq_type == SEQ_DNA) {
                     pllPartitionFileHandle << "DNA";
                 } else if ((*it)->aln->seq_type == SEQ_PROTEIN) {
-                    if (siqtree->part_info[i-1].model_name != "" && siqtree->part_info[i-1].model_name.substr(0, 4) != "TEST") {
+                    if (siqtree->part_info[i-1].model_name != "" && siqtree->part_info[i-1].model_name.substr(0, 4) != "TEST" && siqtree->part_info[i-1].model_name.substr(0, 2) != "MF") {
                         string modelStr = siqtree->part_info[i - 1].model_name.
                                 substr(0, siqtree->part_info[i - 1].model_name.find_first_of("+{"));
                         if (modelStr == "LG4")
@@ -512,7 +517,7 @@ void IQTree::createPLLPartition(Params &params, ostream &pllPartitionFileHandle)
         if (aln->seq_type == SEQ_DNA) {
             model = "DNA";
         } else if (aln->seq_type == SEQ_PROTEIN) {
-        	if (params.pll && params.model_name != "" && params.model_name.substr(0, 4) != "TEST") {
+        	if (params.pll && params.model_name != "" && params.model_name.substr(0, 4) != "TEST" && params.model_name.substr(0, 2) != "MF") {
         		model = params.model_name.substr(0, params.model_name.find_first_of("+{"));
         	} else {
         		model = "WAG";
@@ -560,12 +565,7 @@ void IQTree::computeInitialTree(string &dist_file, LikelihoodKernel kernel) {
         switch (start_tree) {
         case STT_PARSIMONY:
             // Create parsimony tree using IQ-Tree kernel
-            if (kernel == LK_EIGEN_SSE)
-                cout << "Creating fast SIMD initial parsimony tree by random order stepwise addition..." << endl;
-            else if (kernel == LK_EIGEN)
-                cout << "Creating fast initial parsimony tree by random order stepwise addition..." << endl;
-            else
-                cout << "Creating initial parsimony tree by random order stepwise addition..." << endl;
+            cout << "Creating fast initial parsimony tree by random order stepwise addition..." << endl;
 //            aln->orderPatternByNumChars();
             start = getRealTime();
             score = computeParsimonyTree(params->out_prefix, aln);
@@ -671,8 +671,8 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
         #pragma omp parallel
         {
             PhyloTree tree;
-            if (params->constraint_tree_file) {
-                tree.constraintTree.initConstraint(params->constraint_tree_file, aln->getSeqNames());
+            if (!constraintTree.empty()) {
+                tree.constraintTree.readConstraint(constraintTree);
             }
             tree.setParams(params);
             tree.setParsimonyKernel(params->SSE);
@@ -3819,8 +3819,17 @@ void IQTree::sendStopMessage() {
 #endif
 }
 
+void PhyloTree::warnNumThreads() {
+    if (num_threads <= 1)
+        return;
+    size_t nptn = getAlnNPattern();
+    if (nptn < num_threads*vector_size)
+        outError("Too many threads for short alignments, please reduce number of threads or use -nt AUTO to determine it.");
+    if (nptn < num_threads*100)
+        outWarning("Number of threads seems too high for short alignments. Use -nt AUTO to determine best number of threads.");
+}
 
-int IQTree::testNumThreads() {
+int PhyloTree::testNumThreads() {
 #ifndef _OPENMP
     return 1;
 #else
@@ -3863,8 +3872,10 @@ int IQTree::testNumThreads() {
             // considering at least 2 trees
             if ((runTime < min_time && proc == 1) || trees.size() == 1) {
                 // time not reached, add more tree
-                readTreeString(trees[0]);
-                doRandomNNIs();
+//                readTreeString(trees[0]);
+//                doRandomNNIs();
+                generateRandomTree(YULE_HARDING);
+                wrapperFixNegativeBranch(true);
                 trees.push_back(getTreeString());
             }
             curScore = saved_curScore;

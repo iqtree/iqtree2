@@ -622,6 +622,33 @@ void printSiteStateFreq(const char*filename, PhyloTree *tree, double *state_freq
         delete [] ptn_state_freq;
 }
 
+void printSiteStateFreq(const char* filename, Alignment *aln) {
+    if (aln->site_state_freq.empty())
+        return;
+    int i, j, nsites = aln->getNSite(), nstates = aln->num_states;
+	try {
+		ofstream out;
+		out.exceptions(ios::failbit | ios::badbit);
+		out.open(filename);
+		IntVector pattern_index;
+		aln->getSitePatternIndex(pattern_index);
+		for (i = 0; i < nsites; i++) {
+			out.width(6);
+			out << left << i+1 << " ";
+            double *state_freq = aln->site_state_freq[pattern_index[i]];
+			for (j = 0; j < nstates; j++) {
+				out.width(15);
+				out << state_freq[j] << " ";
+			}
+			out << endl;
+		}
+		out.close();
+		cout << "Site state frequency vectors printed to " << filename << endl;
+	} catch (ios::failure) {
+		outError(ERR_WRITE_OUTPUT, filename);
+	}
+}
+
 bool checkModelFile(ifstream &in, bool is_partitioned, vector<ModelInfo> &infos) {
 	if (!in.is_open()) return false;
 	in.exceptions(ios::badbit);
@@ -645,7 +672,7 @@ bool checkModelFile(ifstream &in, bool is_partitioned, vector<ModelInfo> &infos)
         outWarning(".model file was produced from a previous version of IQ-TREE");
 		return false;
     }
-	getline(in, str);
+	safeGetline(in, str);
 	while (!in.eof()) {
 		in >> str;
 		if (in.eof())
@@ -657,7 +684,7 @@ bool checkModelFile(ifstream &in, bool is_partitioned, vector<ModelInfo> &infos)
 		}
 		info.name = str;
 		in >> info.df >> info.logl >> info.tree_len;
-		getline(in, str);
+		safeGetline(in, str);
         info.tree = "";
         if (*str.rbegin() == ';') {
             size_t pos = str.rfind('\t');
@@ -830,7 +857,7 @@ int getModelList(Params &params, Alignment *aln, StrVector &models, bool separat
         }
     }
 
-	bool with_new = params.model_name.find("NEW") != string::npos;
+	bool with_new = (params.model_name.find("NEW") != string::npos || params.model_name.substr(0,2) == "MF" || params.model_name.empty());
 	bool with_asc = params.model_name.find("ASC") != string::npos;
 
 //	if (seq_type == SEQ_CODON) {
@@ -1029,6 +1056,7 @@ void mergePartitions(PhyloSuperTree* super_tree, vector<IntVector> &gene_sets, S
 		part_info.push_back(info);
 		Alignment *aln = super_aln->concatenateAlignments(*it);
 		PhyloTree *tree = super_tree->extractSubtree(*it);
+        tree->setParams(super_tree->params);
 		tree->setAlignment(aln);
 		tree_vec.push_back(tree);
 	}
@@ -1041,6 +1069,7 @@ void mergePartitions(PhyloSuperTree* super_tree, vector<IntVector> &gene_sets, S
 
 	delete super_tree->aln;
 	super_tree->aln = new SuperAlignment(super_tree);
+    super_tree->setAlignment(super_tree->aln);
 }
 
 void printModelFile(ostream &fmodel, Params &params, PhyloTree *tree, ModelInfo &info, string &set_name) {
@@ -1096,7 +1125,7 @@ void printModelFile(ostream &fmodel, Params &params, PhyloTree *tree, ModelInfo 
  * @param model_info (IN/OUT) all model information
  * @return total number of parameters
  */
-void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInfo> &model_info, ostream &fmodel, ModelsBlock *models_block ) {
+void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInfo> &model_info, ostream &fmodel, ModelsBlock *models_block, int num_threads) {
 //    params.print_partition_info = true;
 //    params.print_conaln = true;
 	int i = 0;
@@ -1107,15 +1136,25 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInf
 	double lhsum = 0.0;
 	int dfsum = 0;
 	int ssize = in_tree->getAlnNSite();
-	int num_model = 0;
-    int total_num_model = in_tree->size();
+	int64_t num_model = 0;
+    int64_t total_num_model = in_tree->size();
 	if (params.model_name.find("LINK") != string::npos || params.model_name.find("MERGE") != string::npos) {
         double p = params.partfinder_rcluster/100.0;
         total_num_model += round(in_tree->size()*(in_tree->size()-1)*p/2);
         for (i = in_tree->size()-2; i > 0; i--)
             total_num_model += max(round(i*p), 1.0);
     }
-    
+
+
+#ifdef _OPENMP
+    if (num_threads <= 0) {
+        // partition selection scales well with many cores
+        num_threads = min((int64_t)countPhysicalCPUCores(), total_num_model);
+        omp_set_num_threads(num_threads);
+        cout << "NUMBER OF THREADS FOR PARTITION FINDING: " << num_threads << endl;
+    }
+#endif
+
     double start_time = getRealTime();
     
 	cout << "Selecting individual models for " << in_tree->size() << " charsets using " << criterionName(params.model_test_criterion) << "..." << endl;
@@ -1137,7 +1176,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInf
         dist[i] = -((double)this_aln->getNSeq())*this_aln->getNPattern()*this_aln->num_states;
     }
     
-    if (params.num_threads > 1) 
+    if (num_threads > 1)
     {
         quicksort(dist, 0, in_tree->size()-1, distID);
         if (verbose_mode >= VB_MED) {
@@ -1160,11 +1199,10 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInf
 		extractModelInfo(in_tree->part_info[i].name, model_info, part_model_info);
         stringstream this_fmodel;
 		// do the computation
-//#ifdef _OPENMP
-		string model = testModel(params, this_tree, part_model_info, this_fmodel, models_block, 1, in_tree->part_info[i].name);
-//#else
-//		string model = testModel(params, this_tree, part_model_info, fmodel, in_tree->part_info[i].name);
-//#endif
+        string part_model_name;
+        if (params.model_name.empty())
+            part_model_name = in_tree->part_info[i].model_name;
+		string model = testModel(params, this_tree, part_model_info, this_fmodel, models_block, 1, in_tree->part_info[i].name, false, part_model_name);
 		double score = computeInformationScore(part_model_info[0].logl,part_model_info[0].df,
 				this_tree->getAlnNSite(),params.model_test_criterion);
 		in_tree->part_info[i].model_name = model;
@@ -1258,7 +1296,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInf
             this_aln = in_tree->at(distID[i] & ((1<<16)-1))->aln;
             dist[i] -= ((double)this_aln->getNSeq())*this_aln->getNPattern()*this_aln->num_states;
         }
-        if (params.num_threads > 1 && num_pairs >= 1)
+        if (num_threads > 1 && num_pairs >= 1)
             quicksort(dist, 0, num_pairs-1, distID);
 
 #ifdef _OPENMP
@@ -1306,11 +1344,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInf
                 if (params.model_test_and_tree) {
                     tree->setCheckpoint(new Checkpoint());
                 }
-//#ifdef _OPENMP
                 model = testModel(params, tree, part_model_info, this_fmodel, models_block, 1, set_name);
-//#else
-//                model = testModel(params, tree, part_model_info, fmodel, set_name);
-//#endif
                 logl = part_model_info[0].logl;
                 df = part_model_info[0].df;
                 treelen = part_model_info[0].tree_len;
@@ -1340,7 +1374,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInf
 					cout.width(11);
 					cout << score << " " << set_name;
                     if (num_model >= 10) {
-                        double remain_time = max(total_num_model-num_model, 0)*(getRealTime()-start_time)/num_model;
+                        double remain_time = max(total_num_model-num_model, (int64_t)0)*(getRealTime()-start_time)/num_model;
                         cout << "\t" << convert_time(getRealTime()-start_time) << " (" 
                             << convert_time(remain_time) << " left)";
                     }
@@ -1413,7 +1447,8 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInf
     
     delete [] distID;
     delete [] dist;
-	mergePartitions(in_tree, gene_sets, model_names);
+    if (gene_sets.size() < in_tree->size())
+        mergePartitions(in_tree, gene_sets, model_names);
 	in_tree->printBestPartition((string(params.out_prefix) + ".best_scheme.nex").c_str());
 	in_tree->printBestPartitionRaxml((string(params.out_prefix) + ".best_scheme").c_str());
 }
@@ -1433,7 +1468,7 @@ bool isMixtureModel(ModelsBlock *models_block, string &model_str) {
 }
 
 string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_info, ostream &fmodel, ModelsBlock *models_block,
-    int num_threads, string set_name, bool print_mem_usage)
+    int num_threads, string set_name, bool print_mem_usage, string in_model_name)
 {
 	SeqType seq_type = in_tree->aln->seq_type;
 	if (in_tree->isSuperTree())
@@ -1446,13 +1481,18 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 	sitelh_file += ".sitelh";
 	in_tree->params = &params;
 	StrVector model_names;
-	int max_cats = getModelList(params, in_tree->aln, model_names, params.model_test_separate_rate);
+	int max_cats;
+    if (in_model_name.empty())
+        max_cats = getModelList(params, in_tree->aln, model_names, params.model_test_separate_rate);
+    else {
+        max_cats = params.max_rate_cats;
+        model_names.push_back(in_model_name);
+    }
 	int model;
 
     if (print_mem_usage) {
         uint64_t mem_size = in_tree->getMemoryRequired(max_cats);
-        cout << "NOTE: MODEL SELECTION REQUIRES " << (mem_size / 1024) / 1024
-                << " MB MEMORY!" << endl;
+        cout << "NOTE: ModelFinder requires " << (mem_size / 1024) / 1024 << " MB RAM!" << endl;
         if (mem_size >= getMemorySize()) {
             outError("Memory required exceeds your computer RAM size!");
         }
@@ -1463,14 +1503,13 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 #endif
     }
 
-
 	string best_model = "";
 	/* first check the model file */
 
 	if (in_tree->isSuperTree()) {
 		// select model for each partition
 		PhyloSuperTree *stree = (PhyloSuperTree*)in_tree;
-		testPartitionModel(params, stree, model_info, fmodel, models_block);
+		testPartitionModel(params, stree, model_info, fmodel, models_block, num_threads);
 //        stree->linkTrees();
         stree->mapTrees();
 		string res_models = "";
@@ -1530,7 +1569,7 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 	if (params.model_test_sample_size)
 		ssize = params.model_test_sample_size;
 	if (set_name == "") {
-		cout << "Testing " << model_names.size() << " "
+		cout << "ModelFinder will test " << model_names.size() << " "
 			<< ((seq_type == SEQ_BINARY) ? "binary" : ((seq_type == SEQ_DNA) ? "DNA" :
 				((seq_type == SEQ_PROTEIN) ? "protein": ((seq_type == SEQ_CODON) ? "codon": "morphological"))))
 			<< " models (sample size: " << ssize << ") ..." << endl;
@@ -1692,6 +1731,14 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
         
         tree->clearAllPartialLH();
 
+#ifdef _OPENMP
+    if (num_threads <= 0) {
+        num_threads = tree->testNumThreads();
+        omp_set_num_threads(num_threads);
+    }
+    tree->warnNumThreads();
+#endif
+
 
 		// optimize model parameters
 		ModelInfo info;        
@@ -1733,6 +1780,15 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 		} else {
             if (params.model_test_and_tree) {
                 string original_model = params.model_name;
+                // BQM 2017-03-29: disable bootstrap
+                int orig_num_bootstrap_samples = params.num_bootstrap_samples;
+                int orig_gbo_replicates = params.gbo_replicates;
+                params.num_bootstrap_samples = 0;
+                params.gbo_replicates = 0;
+                STOP_CONDITION orig_stop_condition = params.stop_condition;
+                if (params.stop_condition == SC_BOOTSTRAP_CORRELATION)
+                    params.stop_condition = SC_UNSUCCESS_ITERATION;
+
                 params.model_name = model_names[model];
                 char *orig_user_tree = params.user_file;
                 string new_user_tree = (string)params.out_prefix+".treefile";
@@ -1759,8 +1815,14 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
                 info.logl = iqtree->computeLikelihood();
                 info.tree_len = iqtree->treeLength();
 //                info.tree = iqtree->getTreeString();
+
+                // restore original parameters
                 params.model_name = original_model;
                 params.user_file = orig_user_tree;
+                // 2017-03-29: restore bootstrap replicates
+                params.num_bootstrap_samples = orig_num_bootstrap_samples;
+                params.gbo_replicates = orig_gbo_replicates;
+                params.stop_condition = orig_stop_condition;
                 tree = iqtree;
 
                 // clear all checkpointed information
@@ -1787,6 +1849,8 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
                     tree->fixNegativeBranch(true);
                     tree->clearAllPartialLH();
                 }
+                if (verbose_mode >= VB_MED)
+                    cout << "Optimizing model " << info.name << endl;
                 info.logl = tree->getModelFactory()->optimizeParameters(false, false, TOL_LIKELIHOOD_MODELTEST, TOL_GRADIENT_MODELTEST);
                 info.tree_len = tree->treeLength();
                 if (prev_model_id >= 0) {
@@ -2447,7 +2511,7 @@ void performAUTest(Params &params, PhyloTree *tree, double *pattern_lhs, vector<
             for (tid = 0; tid < ntrees; tid++) {
                 double *pattern_lh = pattern_lhs + (tid*maxnptn);
                 double tree_lh;
-                if (params.SSE == LK_EIGEN) {
+                if (params.SSE == LK_386) {
                     tree_lh = 0.0;
                     for (ptn = 0; ptn < nptn; ptn++)
                         tree_lh += pattern_lh[ptn] * boot_sample_dbl[ptn];

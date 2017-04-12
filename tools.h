@@ -429,8 +429,20 @@ struct NNIInfo {
     int iqpnni_iteration;
 };
 
+/*
+    0           = 80386 instruction set
+    1  or above = SSE (XMM) supported by CPU (not testing for O.S. support)
+    2  or above = SSE2
+    3  or above = SSE3
+    4  or above = Supplementary SSE3 (SSSE3)
+    5  or above = SSE4.1
+    6  or above = SSE4.2
+    7  or above = AVX supported by CPU and operating system
+    8  or above = AVX2
+    9  or above = AVX512F
+*/
 enum LikelihoodKernel {
-	LK_EIGEN, LK_EIGEN_SSE
+	LK_386, LK_SSE, LK_SSE2, LK_SSE3, LK_SSSE3, LK_SSE41, LK_SSE42, LK_AVX, LK_AVX_FMA, LK_AVX512
 };
 
 enum LhMemSave {
@@ -464,6 +476,7 @@ const int BRLEN_SCALE    = 2; // scale branch lengths
 const int OUT_LOG       = 1; // .log file written or not
 const int OUT_TREEFILE  = 2; // .treefile file written or not
 const int OUT_IQTREE    = 4; // .iqtree file written or not
+const int OUT_UNIQUESEQ = 8; // .uniqueseq file written or not
 
 
 const double MIN_GAMMA_RATE = 1e-6;
@@ -1461,9 +1474,6 @@ public:
      */
     LikelihoodKernel SSE;
 
-    /** TRUE to not use AVX even available in CPU, default: FALSE */
-    int lk_no_avx;
-
     /** TRUE for safe numerical scaling (per category; used for large trees), default: FALSE */
     bool lk_safe_scaling;
 
@@ -1737,6 +1747,8 @@ public:
 	/** true to print all UFBoot trees to a file */
 	int print_ufboot_trees;
 
+    int contree_rfdist;
+
     /****** variables for NNI cutoff heuristics ******/
 
     /**
@@ -1818,6 +1830,9 @@ public:
 	 * TRUE to print bootstrap alignments, default: false
 	 */
 	bool print_bootaln;
+
+    /** TRUE to print bootstrapped site frequency for e.g. PMSF */
+    bool print_boot_site_freq;
 
 	/** true to print sub alignments of super alignment, default: false */
 	bool print_subaln;
@@ -1988,6 +2003,9 @@ void outError(const char *error, string msg, bool quit = true);
 void outWarning(const char *warn);
 void outWarning(string warn);
 
+
+/** safe version of std::getline to deal with files from different platforms */ 
+std::istream& safeGetline(std::istream& is, std::string& t);
 
 /*--------------------------------------------------------------*/
 /*--------------------------------------------------------------*/
