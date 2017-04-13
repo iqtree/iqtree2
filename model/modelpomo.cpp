@@ -81,11 +81,12 @@ void ModelPoMo::init_freq()
     // Get the fixed state frequencies from the data.
     estimateEmpiricalFixedStateFreqs(freq_fixed_states_emp);
 
-    // ModelGTR.freq_type is not set correctly.  Set it here
-    // explicitely.  Needed for some verbose output functions.
-    this->freq_type = dna_model->freq_type;
+    // Get frequency type from substitution model.
+    freq_type = dna_model->freq_type;
 
-    switch (this->freq_type) {
+    // TODO DS: This should be changed such that the frequencies sum
+    // to 1.0.
+    switch (freq_type) {
     case FREQ_EQUAL:            // '+FQ'
     case FREQ_ESTIMATE:         // '+FO'
         for (int i = 0; i < 4; i++) freq_fixed_states[i] = 1.0;
@@ -112,56 +113,46 @@ void ModelPoMo::init_fixed_parameters(string model_params,
                                       string pomo_params)
 {
     // TODO DS: Enable constrained maximization of likelihood and
-    // fixed level of polymorphisms.
-    if (model_params.length() > 0) {
-        if (pomo_params.length() > 0) {
-                fixed_model_params = true;   
-                // Optimize level of polymorphism.  Only if level of
-                // polymorphism is set, no parameters are optimized.
-                dna_model->param_fixed.front() = false;
-            }
-        else {
-            cout << "Model parameters are fixed, but level of polymorphism is not." << endl;
-            cout << "This is not yet supported." << endl;
-            cout << "Either fix all parameters, e.g., with \"-m HKY{2.0}+rP{0.0025}\" or none." << endl;
-            outError("Abort.");            
-        }
+    // fixed level of polymorphisms.  So far either all parameters are
+    // fixed or none.  If separate treatment is possible, this
+    // function may be split into two functions: (1) initialization of
+    // parameters of underlying substitution model, (2) initizliation
+    // of level of polymorphism.
+
+    fixed_model_params = false;
+    fixed_level_of_polymorphism = false;
+    if (model_params.length() > 0)
+        fixed_model_params = true;
+    if (pomo_params.length() > 0)
+        fixed_level_of_polymorphism = true;
+
+    if (fixed_model_params != fixed_level_of_polymorphism) {
+        cout << "Either fix all parameters, e.g., with \"-m HKY{2.0}+rP{0.0025}\" or none." << endl;
+        outError("Abort.");
     }
-    else {
-        fixed_model_params = false;
-        // Optimize all parameters (because also polymorphism is optimized).
+
+    if (!fixed_model_params) {
+        // TODO DS: In case the fixation of parameters can be
+        // separated, the first element should not be set here because
+        // it is the level of polymorphism.
         for (vector<bool>::iterator p_fixed = dna_model->param_fixed.begin();
              p_fixed != dna_model->param_fixed.end(); p_fixed++)
             *p_fixed = false;
     }
 
-    // Set the initial mutation rates to a sensible value.  If this
-    // step is omitted initialization of mutation rates is improper.
-    level_of_polymorphism = estimateEmpiricalWattersonTheta();
-
-    fixed_level_of_polymorphism = false;
-
-    if (pomo_params.length() > 0) {
-        if (!fixed_model_params) {
-            cout << "Model parameters are not fixed, but level of polymorphism is." << endl;
-            cout << "This is not yet supported." << endl;
-            outError("Abort.");
-        }
+    if (fixed_level_of_polymorphism) {
         cout << setprecision(5);
         if (pomo_params == "EMP") {
             cout << "Level of polymorphism will be fixed to the estimate from the data: ";
             cout << level_of_polymorphism << "." << endl;
             // No need to set the level of polymorphism here because
-            // initialization does this anyways.
+            // of initialization.
         }
         else {
             cout << "Level of polymorphism will be fixed to the value given by the user: ";
             level_of_polymorphism = convert_double(pomo_params.c_str());
             cout << level_of_polymorphism << "." << endl;
         }
-        fixed_level_of_polymorphism = true;
-        // Level of polymorphism is fixed, so do not optimize any
-        // parameters.
         dna_model->param_fixed.front() = true;
     }
 }
@@ -173,7 +164,7 @@ void ModelPoMo::init(const char *model_name,
                      string freq_params,
                      bool is_reversible,
                      string pomo_params) {
-    // Check num_states (set in Alignment::readCountsFormat()).
+    // Initialize model constants.
     N = phylo_tree->aln->virtual_pop_size;
     nnuc = 4;
     n_connections = nnuc * (nnuc-1) / 2;
@@ -184,6 +175,7 @@ void ModelPoMo::init(const char *model_name,
     // determined by the underlying substitution model.
     if (is_reversible != true) throw "Non-reversible PoMo not supported yet.";
 
+    // Main initialization of model and parameters.
     init_substitution_model(model_name,
                             model_params,
                             freq_type,
@@ -191,13 +183,11 @@ void ModelPoMo::init(const char *model_name,
                             pomo_params);
     init_sampling_type();
     init_freq();
-    // Create PoMo rate matrix.
     rate_matrix = new double[num_states*num_states];
-
+    // Initialize mutation rate to avoid numerical problems.
+    level_of_polymorphism = estimateEmpiricalWattersonTheta();
     init_fixed_parameters(model_params, pomo_params);
-
     setInitialMutCoeff();
-
     updatePoMoStatesAndRateMatrix();
     decomposeRateMatrix();
 
