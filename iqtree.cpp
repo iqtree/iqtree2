@@ -411,6 +411,19 @@ void IQTree::initSettings(Params &params) {
         // restore randstream
         finish_random();
         randstream = saved_randstream;
+
+		// Diep: initialize data members to be used in the Refinement Step
+		on_refine_btree = false;
+		saved_aln_on_refine_btree = NULL;
+		if(params.ufboot2corr){
+			boot_samples_int.resize(params.gbo_replicates);
+			for (size_t i = 0; i < params.gbo_replicates; i++) {
+				boot_samples_int[i].resize(nptn, 0);
+    			for (size_t j = 0; j < orig_nptn; j++)
+    				boot_samples_int[i][j] = boot_samples[i][j];
+	       	}
+		}
+
     }
 
     if (params.root_state) {
@@ -2391,6 +2404,8 @@ double IQTree::doTreeSearch() {
 
     }
 
+    if(params->ufboot2corr) refineBootTrees();
+
     if (optimization_looped)
         sendStopMessage();
 
@@ -2425,6 +2440,197 @@ double IQTree::doTreeSearch() {
     return candidateTrees.getBestScore();
 
 }
+
+
+void IQTree::refineBootTrees(){
+	on_refine_btree = true;
+	int num_boot_rep = params->gbo_replicates;
+	params->gbo_replicates = 0;
+	save_all_trees = 0;
+
+	NNI_Type saved_nni_type = params->nni_type;
+	if(params->u2c_nni5 == false){
+		params->nni5 = false;
+		params->nni_type = NNI1;
+	}else{
+		params->nni5 = true;
+		params->nni_type = NNI5;
+	}
+
+	string saved_tree = getTreeString();
+	saved_aln_on_refine_btree = aln;
+//	int saved_params_opt_num = params->num_param_iterations;
+//	params->num_param_iterations = params->ufboot2_param_rounds;
+
+	int nptn = getAlnNPattern();
+	string tree;
+	Alignment * bootstrap_aln;
+
+//	string btree_before_file = params->out_prefix;
+//	btree_before_file += ".btree.before";
+//	ofstream outb(btree_before_file.c_str());
+//	string btree_after_file = params->out_prefix;
+//	btree_after_file += ".btree.after";
+//	ofstream outa(btree_after_file.c_str());
+	string binfo_file = params->out_prefix;
+	binfo_file += ".binfo";
+	ofstream out(binfo_file.c_str()); // before_score	after_score		step
+
+	string test_file = params->out_prefix;
+	test_file += ".test";
+	ofstream test(test_file.c_str());
+
+	string btree1_file = params->out_prefix;
+	btree1_file += ".boottrees1";
+	ofstream btree1(btree1_file.c_str());
+
+	string btree2_file = params->out_prefix;
+	btree2_file += ".boottrees2";
+	ofstream btree2(btree2_file.c_str());
+
+//	ofstream f1("orig_aln.phy");
+
+//	string btree_file = params->out_prefix;
+//	btree_file += ".sampletree";
+
+	for(int sample = 0; sample < num_boot_rep; sample++){
+        if ((sample+1) % 100 == 0)
+            cout << sample+1 << " replicates done" << endl;
+//		VerboseMode saved_mode = verbose_mode;
+//		verbose_mode = VB_QUIET;
+		out << sample << "\t" << boot_logl[sample] << "\t";
+		bootstrap_aln = new Alignment;
+		bootstrap_aln->buildFromPatternFreq(*saved_aln_on_refine_btree, boot_samples_int[sample]);
+		ptn_freq_computed = false; // $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+//		int nsites_test = 0;
+//		int nptn_test = 0;
+//		test << sample << ": " ;
+//		for(int i = 0; i < boot_samples_int[sample].size(); i++){
+//			test << boot_samples_int[sample][i] << ",";
+//			nsites_test += boot_samples_int[sample][i];
+//			if(boot_samples_int[sample][i] > 0) nptn_test++;
+//		}
+//		test << " ### " << nsites_test << ", " << nptn_test << endl;
+
+//		bootstrap_aln->createBootstrapAlignment(aln, &boot_samples_int[sample]);
+//		saved_aln_on_opt_btree->printPhylip(f1);
+//		ofstream f2("boot_aln.phy");
+//		bootstrap_aln->printPhylip(f2);
+//		f2.close();
+//		exit(0);
+
+//		bootstrap_aln = new Alignment("boot_aln.phy", "DNA", params->intype);
+
+		tree = boot_trees[sample];
+
+
+
+		// Read the bootstrap tree
+		stringstream str(tree);
+		freeNode();
+		readTree(str, rooted);
+		NodeVector taxai;
+		getTaxa(taxai);
+		for (NodeVector::iterator taxit = taxai.begin(); taxit != taxai.end(); taxit++){
+			(*taxit)->id = atoi((*taxit)->name.c_str());
+		}
+		NodeVector taxa;
+		// change the taxa name from ID to real name
+		getOrderedTaxa(taxa);
+		for (int j = 0; j < taxa.size(); j++)
+			taxa[j]->name = saved_aln_on_refine_btree->getSeqName(taxa[j]->id);
+
+
+		setAlignment(bootstrap_aln);
+		setRootNode(params->root);
+		cout << "BEFORE$$" << endl;
+		if (isSuperTree()){
+			((PhyloSuperTree*) this)->mapTrees();
+			wrapperFixNegativeBranch(true);
+		}
+		else{
+			initializeAllPartialLh();
+			clearAllPartialLH();
+			wrapperFixNegativeBranch(false);
+		}
+
+		cout << "AFTER$$" << endl;
+
+//		if(params->ufboot2_param_rounds > 0)
+//			optimizeModelParameters(true); // This is time-consuming
+
+		printTree(btree1, WT_SORT_TAXA);
+		btree1 << endl;
+
+        computeLogL();
+		out << curScore << "\t";
+
+//        if(sample == num_boot_rep - 1){
+//        	double * sample_ptn_logl = new double[nptn];
+//       		double test_logl = 0.0;
+//        	computePatternLikelihood(sample_ptn_logl, &test_logl);
+//			ofstream ptnlogl_file("ptnlogl_obt.txt");
+//			for(int po = 0, pb = 0; po < nptn; po++)
+//				if(boot_samples_int[sample][po] == 0) ptnlogl_file << "NaN" << endl;
+//				else{
+//					ptnlogl_file << sample_ptn_logl[pb] << endl;
+//					pb++;
+//				}
+//			ptnlogl_file.close();
+//
+//        	delete [] sample_ptn_logl;
+//        }
+
+
+//		int count, step;
+//		doNNISearch(count, step); // HILL-CLIMBING
+		pair<int, int> nniInfos; // <num_NNIs, num_steps>
+        nniInfos = doNNISearch();
+		computeLogL();
+		out << curScore << "\t" << nniInfos.second << endl;
+
+		stringstream ostr;
+		printTree(ostr, WT_TAXON_ID | WT_SORT_TAXA);
+		tree = ostr.str();
+		boot_trees[sample] = tree;
+		boot_logl[sample] = curScore;
+//		verbose_mode = saved_mode;
+
+		printTree(btree2, WT_SORT_TAXA);
+		btree2 << endl;
+	}
+	delete aln;
+
+//		out << -boot_logl[sample] << endl; // to examine score after refinement
+
+//	outb.close();
+//	outa.close();
+	out.close();
+	test.close();
+	btree1.close();
+	btree2.close();
+
+	// Recover the last status of IQTREE
+	ptn_freq_computed = false;
+	params->gbo_replicates = num_boot_rep;
+	setAlignment(saved_aln_on_refine_btree);
+	readTreeString(saved_tree);
+
+	if(params->u2c_nni5 == false){
+		params->nni_type = saved_nni_type;
+		if(params->nni_type == NNI5)
+			params->nni5 = true;
+	}
+//	params->num_param_iterations = saved_params_opt_num;
+
+	initializeAllPartialLh();
+	clearAllPartialLH();
+	curScore = optimizeAllBranches();
+
+	save_all_trees = 2;
+	on_refine_btree = false;
+}
+
 
 void IQTree::printIterationInfo(int sourceProcID) {
     double realtime_remaining = stop_rule.getRemainingTime(stop_rule.getCurIt());

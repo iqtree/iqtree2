@@ -979,6 +979,9 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.force_unfinished = false;
     params.suppress_output_flags = 0;
 
+	// Diep: for UFBoot2-Corr
+	params.ufboot2corr = false;
+	params.u2c_nni5 = false;
 
 	if (params.nni5) {
 	    params.nni_type = NNI5;
@@ -2633,6 +2636,15 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.min_correlation = convert_double(argv[cnt]);
 				continue;
 			}
+			if (strcmp(argv[cnt], "-correct") == 0) {
+				params.ufboot2corr = true;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-u2c_nni5") == 0) {
+				params.u2c_nni5 = true;
+				continue;
+			}
+
 			if (strcmp(argv[cnt], "-nstep") == 0) {
 				cnt++;
 				if (cnt >= argc)
@@ -3262,6 +3274,10 @@ void parseArg(int argc, char *argv[], Params &params) {
     if ((params.model_name.find("ONLY") != string::npos || (params.model_name.substr(0,2) == "MF" && params.model_name.substr(0,3) != "MFP")) && (params.gbo_replicates || params.num_bootstrap_samples))
         outError("ModelFinder only cannot be combined with bootstrap analysis");
 
+	// Diep:
+	if(params.ufboot2corr == true){
+		if(params.gbo_replicates <= 0) params.ufboot2corr = false;
+	}
 
     if (!params.out_prefix) {
     	if (params.eco_dag_file)
