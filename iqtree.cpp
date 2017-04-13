@@ -2459,72 +2459,25 @@ void IQTree::refineBootTrees(){
 
 	string saved_tree = getTreeString();
 	saved_aln_on_refine_btree = aln;
-//	int saved_params_opt_num = params->num_param_iterations;
-//	params->num_param_iterations = params->ufboot2_param_rounds;
 
 	int nptn = getAlnNPattern();
 	string tree;
 	Alignment * bootstrap_aln;
 
-//	string btree_before_file = params->out_prefix;
-//	btree_before_file += ".btree.before";
-//	ofstream outb(btree_before_file.c_str());
-//	string btree_after_file = params->out_prefix;
-//	btree_after_file += ".btree.after";
-//	ofstream outa(btree_after_file.c_str());
-	string binfo_file = params->out_prefix;
-	binfo_file += ".binfo";
-	ofstream out(binfo_file.c_str()); // before_score	after_score		step
-
-	string test_file = params->out_prefix;
-	test_file += ".test";
-	ofstream test(test_file.c_str());
-
-	string btree1_file = params->out_prefix;
-	btree1_file += ".boottrees1";
-	ofstream btree1(btree1_file.c_str());
-
-	string btree2_file = params->out_prefix;
-	btree2_file += ".boottrees2";
-	ofstream btree2(btree2_file.c_str());
-
-//	ofstream f1("orig_aln.phy");
-
-//	string btree_file = params->out_prefix;
-//	btree_file += ".sampletree";
-
 	for(int sample = 0; sample < num_boot_rep; sample++){
         if ((sample+1) % 100 == 0)
             cout << sample+1 << " replicates done" << endl;
-//		VerboseMode saved_mode = verbose_mode;
-//		verbose_mode = VB_QUIET;
-		out << sample << "\t" << boot_logl[sample] << "\t";
-		bootstrap_aln = new Alignment;
+
+        if (aln->isSuperAlignment())
+            bootstrap_aln = new SuperAlignment;
+        else
+            bootstrap_aln = new Alignment;
+
 		bootstrap_aln->buildFromPatternFreq(*saved_aln_on_refine_btree, boot_samples_int[sample]);
-		ptn_freq_computed = false; // $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
-//		int nsites_test = 0;
-//		int nptn_test = 0;
-//		test << sample << ": " ;
-//		for(int i = 0; i < boot_samples_int[sample].size(); i++){
-//			test << boot_samples_int[sample][i] << ",";
-//			nsites_test += boot_samples_int[sample][i];
-//			if(boot_samples_int[sample][i] > 0) nptn_test++;
-//		}
-//		test << " ### " << nsites_test << ", " << nptn_test << endl;
 
-//		bootstrap_aln->createBootstrapAlignment(aln, &boot_samples_int[sample]);
-//		saved_aln_on_opt_btree->printPhylip(f1);
-//		ofstream f2("boot_aln.phy");
-//		bootstrap_aln->printPhylip(f2);
-//		f2.close();
-//		exit(0);
-
-//		bootstrap_aln = new Alignment("boot_aln.phy", "DNA", params->intype);
+		ptn_freq_computed = false;
 
 		tree = boot_trees[sample];
-
-
-
 		// Read the bootstrap tree
 		stringstream str(tree);
 		freeNode();
@@ -2556,59 +2509,16 @@ void IQTree::refineBootTrees(){
 
 		cout << "AFTER$$" << endl;
 
-//		if(params->ufboot2_param_rounds > 0)
-//			optimizeModelParameters(true); // This is time-consuming
-
-		printTree(btree1, WT_SORT_TAXA);
-		btree1 << endl;
-
-        computeLogL();
-		out << curScore << "\t";
-
-//        if(sample == num_boot_rep - 1){
-//        	double * sample_ptn_logl = new double[nptn];
-//       		double test_logl = 0.0;
-//        	computePatternLikelihood(sample_ptn_logl, &test_logl);
-//			ofstream ptnlogl_file("ptnlogl_obt.txt");
-//			for(int po = 0, pb = 0; po < nptn; po++)
-//				if(boot_samples_int[sample][po] == 0) ptnlogl_file << "NaN" << endl;
-//				else{
-//					ptnlogl_file << sample_ptn_logl[pb] << endl;
-//					pb++;
-//				}
-//			ptnlogl_file.close();
-//
-//        	delete [] sample_ptn_logl;
-//        }
-
-
-//		int count, step;
-//		doNNISearch(count, step); // HILL-CLIMBING
 		pair<int, int> nniInfos; // <num_NNIs, num_steps>
         nniInfos = doNNISearch();
-		computeLogL();
-		out << curScore << "\t" << nniInfos.second << endl;
 
 		stringstream ostr;
 		printTree(ostr, WT_TAXON_ID | WT_SORT_TAXA);
 		tree = ostr.str();
 		boot_trees[sample] = tree;
 		boot_logl[sample] = curScore;
-//		verbose_mode = saved_mode;
-
-		printTree(btree2, WT_SORT_TAXA);
-		btree2 << endl;
 	}
 	delete aln;
-
-//		out << -boot_logl[sample] << endl; // to examine score after refinement
-
-//	outb.close();
-//	outa.close();
-	out.close();
-	test.close();
-	btree1.close();
-	btree2.close();
 
 	// Recover the last status of IQTREE
 	ptn_freq_computed = false;
@@ -2621,7 +2531,6 @@ void IQTree::refineBootTrees(){
 		if(params->nni_type == NNI5)
 			params->nni5 = true;
 	}
-//	params->num_param_iterations = saved_params_opt_num;
 
 	initializeAllPartialLh();
 	clearAllPartialLH();
@@ -2796,12 +2705,15 @@ pair<int, int> IQTree::doNNISearch() {
         if (params->print_trees_site_posterior)
             computePatternCategories();
     }
-    // Better tree or score is found
-    if (getCurScore() > curBestScore + params->modelEps) {
-        // Re-optimize model parameters (the sNNI algorithm)
-        optimizeModelParameters(false, params->modelEps * 10);
-        getModelFactory()->saveCheckpoint();
-    }
+
+    if(!on_refine_btree){ // Diep add (IF in Refinement Step, do not optimize model parameters)
+		// Better tree or score is found
+		if (getCurScore() > curBestScore + params->modelEps) {
+			// Re-optimize model parameters (the sNNI algorithm)
+			optimizeModelParameters(false, params->modelEps * 10);
+			getModelFactory()->saveCheckpoint();
+		}
+	}
     MPIHelper::getInstance().setNumNNISearch(MPIHelper::getInstance().getNumNNISearch() + 1);
 
     return nniInfos;

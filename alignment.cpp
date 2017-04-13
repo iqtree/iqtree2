@@ -2576,16 +2576,6 @@ void Alignment::buildFromPatternFreq(Alignment & aln, IntVector new_pattern_freq
 			for (int j = 0; j < new_pattern_freqs[p]; j++)
 				site_pattern[site++] = size()-1;
     	}
-//    	for(int i = 0; i < new_pattern_freqs[p]; i++){
-//    		Pattern pat = *it;
-//    		if(pat != *it){
-//				cout << "*it: " << *it << endl;
-//				cout << "pat: " << pat << endl << endl;
-//    			outError("pat != *it");
-//    		}
-//    		addPattern(pat, site, 1);
-//    		site++;
-//    	}
     }
     if (!aln.site_state_freq.empty()) {
         site_model = site_pattern;
