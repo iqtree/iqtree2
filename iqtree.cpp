@@ -2464,6 +2464,9 @@ void IQTree::refineBootTrees(){
 	string tree;
 	Alignment * bootstrap_aln;
 
+	int *saved_randstream = randstream;
+	init_random(params->ran_seed);
+
 	for(int sample = 0; sample < num_boot_rep; sample++){
         if ((sample+1) % 100 == 0)
             cout << sample+1 << " replicates done" << endl;
@@ -2473,8 +2476,17 @@ void IQTree::refineBootTrees(){
         else
             bootstrap_aln = new Alignment;
 
-		bootstrap_aln->buildFromPatternFreq(*saved_aln_on_refine_btree, boot_samples_int[sample]);
+//		bootstrap_aln->buildFromPatternFreq(*saved_aln_on_refine_btree, boot_samples_int[sample]);
+//		IntVector this_sample;
+//		bootstrap_aln->createBootstrapAlignment(saved_aln_on_refine_btree, &this_sample, params->bootstrap_spec);
+//		bool same_freq = true;
+//		for(int k = 0; k < boot_samples_int[sample].size(); k++)
+//			if(boot_samples_int[sample][k] != this_sample[k]){
+//				same_freq = false;
+//				assert(0 && "Not identical");
+//			}
 
+		bootstrap_aln->createBootstrapAlignment(saved_aln_on_refine_btree, NULL, params->bootstrap_spec);
 		ptn_freq_computed = false;
 
 		tree = boot_trees[sample];
@@ -2496,7 +2508,7 @@ void IQTree::refineBootTrees(){
 
 		setAlignment(bootstrap_aln);
 		setRootNode(params->root);
-		cout << "BEFORE$$" << endl;
+
 		if (isSuperTree()){
 			((PhyloSuperTree*) this)->mapTrees();
 			wrapperFixNegativeBranch(true);
@@ -2507,7 +2519,6 @@ void IQTree::refineBootTrees(){
 			wrapperFixNegativeBranch(false);
 		}
 
-		cout << "AFTER$$" << endl;
 
 		pair<int, int> nniInfos; // <num_NNIs, num_steps>
         nniInfos = doNNISearch();
@@ -2519,6 +2530,10 @@ void IQTree::refineBootTrees(){
 		boot_logl[sample] = curScore;
 	}
 	delete aln;
+
+	// restore randstream
+	finish_random();
+	randstream = saved_randstream;
 
 	// Recover the last status of IQTREE
 	ptn_freq_computed = false;
