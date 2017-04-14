@@ -549,7 +549,7 @@ double PhyloSuperTreePlen::computeLikelihoodFromBuffer() {
 	double score = 0.0;
 	int part, ntrees = size();
 	for (part = 0; part < ntrees; part++) {
-		assert(part_info[part].cur_score != 0.0);
+//		assert(part_info[part].cur_score != 0.0);
 		score += part_info[part].cur_score;
 	}
 	return score;
