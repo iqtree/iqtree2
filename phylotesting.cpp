@@ -1559,7 +1559,8 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 		subst_model = new ModelCodon("GY", "", FREQ_UNKNOWN, "", in_tree);
     else if (seq_type == SEQ_POMO)
         // Exit gracefully.
-        outError("Model selection with PoMo not yet supported.");
+        cout << "ERROR: Automatic model selection with PoMo not yet supported." << endl;
+        outError("Please provide a substitution model with, e.g., \"-m HKY+rP\".");
 	assert(subst_model);
 
 	ModelFactory *model_fac = new ModelFactory();

@@ -32,6 +32,13 @@ void ModelPoMo::init_substitution_model(const char *model_name,
 
     // Trick ModelDNA constructor by setting the number of states to 4 (DNA).
     phylo_tree->aln->num_states = 4;
+
+    // TODO Minh: Thu Apr 13 15:04:55 BST 2017.  Added by Dominik to
+    // also support Lie-Markov models.  please check if this is OK.
+    // string model_str = model_name;
+    // if (ModelMarkov::validModelName(model_str))
+    //     dna_model = ModelMarkov::getModelByName(model_str, phylo_tree, model_params, freq_type, freq_params);
+    // else
     dna_model = new ModelDNA(model_name, model_params, freq_type, freq_params, phylo_tree);
     // Reset the number of states.
     phylo_tree->aln->num_states = num_states;
@@ -84,19 +91,27 @@ void ModelPoMo::init_freq()
     // Get frequency type from substitution model.
     freq_type = dna_model->freq_type;
 
-    // TODO DS: This should be changed such that the frequencies sum
-    // to 1.0.
+    // Handle frequency type.  This cannot be done by the underlying
+    // substitution model because interpretation of polymorphic states
+    // is undefined.
     switch (freq_type) {
-    case FREQ_EQUAL:            // '+FQ'
-    case FREQ_ESTIMATE:         // '+FO'
-        for (int i = 0; i < 4; i++) freq_fixed_states[i] = 1.0;
-        break;
-    case FREQ_EMPIRICAL:        // '+F'
+    case FREQ_EQUAL:
+        // '+FQ'.
         for (int i = 0; i < 4; i++)
-            freq_fixed_states[i] = freq_fixed_states_emp[i] / freq_fixed_states_emp[nnuc-1];
+            freq_fixed_states[i] = 1.0/ (double)nnuc;
         break;
-    case FREQ_USER_DEFINED:     // '+FU'
-        // ModelDNA should have set them already.
+    case FREQ_ESTIMATE:
+        // '+FO'.  Start estimation at empirical frequencies.
+        for (int i = 0; i < 4; i++)
+            freq_fixed_states[i] = freq_fixed_states_emp[i];
+        break;
+    case FREQ_EMPIRICAL:
+        // '+F'.
+        for (int i = 0; i < 4; i++)
+            freq_fixed_states[i] = freq_fixed_states_emp[i];
+        break;
+    case FREQ_USER_DEFINED:
+        // '+FU'. ModelDNA should have set them already.
         if (freq_fixed_states[0] == 0.0)
             outError("State frequencies not specified");
         break;
@@ -169,6 +184,7 @@ void ModelPoMo::init(const char *model_name,
     nnuc = 4;
     n_connections = nnuc * (nnuc-1) / 2;
     eps = 1e-6;
+    // Check if number of states of PoMo match the provided data.
     assert(num_states == (nnuc + (nnuc*(nnuc-1)/2 * (N-1))) );
 
     // TODO DS: Remove reversibility flag.  The reversibility is
@@ -184,7 +200,6 @@ void ModelPoMo::init(const char *model_name,
     init_sampling_type();
     init_freq();
     rate_matrix = new double[num_states*num_states];
-    // Initialize mutation rate to avoid numerical problems.
     level_of_polymorphism = estimateEmpiricalWattersonTheta();
     init_fixed_parameters(model_params, pomo_params);
     setInitialMutCoeff();
@@ -211,14 +226,14 @@ double ModelPoMo::computeSumFreqFixedStates() {
     double norm_fixed = 0.0;
     for (i = 0; i < 4; i++)
         norm_fixed += freq_fixed_states[i];
+    assert(norm_fixed == 1.0);
     return norm_fixed;
 }
 
-// Give back the harmonic number of n-1 (also needed for Watterson
-// theta).
+// Give back the harmonic number of n.
 double harmonic(int n) {
     double harmonic = 0.0;
-    for (int i = 1; i < n; i++)
+    for (int i = 1; i <= n; i++)
         harmonic += 1.0/(double)i;
     return harmonic;
 }
@@ -231,7 +246,7 @@ void ModelPoMo::setInitialMutCoeff() {
     // double theta_p = level_of_polymorphism;
     // double lambda_fixed_sum = computeSumFreqFixedStates();
     double lambda_poly_sum_no_mu = computeSumFreqPolyStatesNoMut();
-    // // cout << "DEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUG" << endl;
+    // // cout << "DEBUG" << endl;
     // // cout << theta_p << endl;
     // // cout << lambda_fixed_sum << endl;
     // // cout << lambda_poly_sum_no_mu << endl;
@@ -247,7 +262,7 @@ void ModelPoMo::setInitialMutCoeff() {
     // m_init = theta_p * lambda_fixed_sum / (lambda_poly_sum_no_mu * (1.0 - theta_p));
     // if (m_init < POMO_MIN_RATE || m_init > POMO_MAX_RATE)
     //     outError("Initial rate not within boundaries.  Please check data.");
-    // // cout << "DEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUG" << endl;
+    // // cout << "DEBUG" << endl;
     // // cout << m_init << endl;
     // // Honor fixed rate specifications.
     // double sum = 0;
@@ -267,23 +282,19 @@ double ModelPoMo::computeSumFreqPolyStatesNoMut() {
             norm_polymorphic +=
                 2 * freq_fixed_states[i] * freq_fixed_states[j];
     }
-    // Changed Dom Tue Sep 29 13:13:21 CEST 2015
-    // norm_polymorphic *= N * harmonic;
-    norm_polymorphic *= harmonic(N);
+    norm_polymorphic *= harmonic(N-1);
     return norm_polymorphic;
 }
 
 double ModelPoMo::computeSumFreqPolyStates() {
     double norm_polymorphic = 0.0;
     int i, j;
-    for (i = 0; i < 4; i++) {
+    for (i = 0; i < nnuc; i++) {
         for (j = 0; j < i; j++)
             norm_polymorphic +=
                 2 * freq_fixed_states[i] * freq_fixed_states[j] * mutCoeff(i, j);
     }
-    // Changed Dom Tue Sep 29 13:13:21 CEST 2015
-    // norm_polymorphic *= N * harmonic;
-    norm_polymorphic *= harmonic(N);
+    norm_polymorphic *= harmonic(N-1);
     return norm_polymorphic;
 }
 
@@ -293,6 +304,7 @@ double ModelPoMo::computeNormConst() {
     return 1.0/(norm_fixed + norm_polymorphic);
 }
 
+// TODO DS: Add non-reversible stuff.
 void ModelPoMo::computeStateFreq () {
     double norm = computeNormConst();
     int state;
@@ -303,10 +315,6 @@ void ModelPoMo::computeStateFreq () {
         else {
             int k, X, Y;
             decomposeState(state, k, X, Y);
-            // Changed Dom Tue Sep 29 13:14:06 CEST 2015
-            // state_freq[state] =
-            //     norm * freq_fixed_states[X] * freq_fixed_states[Y] *
-            //     mutCoeff(X, Y)*N*N / (k*(N-k));
             state_freq[state] =
                 norm * freq_fixed_states[X] * freq_fixed_states[Y] *
                 mutCoeff(X, Y)*N / (k*(N-k));
@@ -406,7 +414,7 @@ double ModelPoMo::mutCoeff(int nt1, int nt2) {
 
 double ModelPoMo::computeProbBoundaryMutation(int state1, int state2) {
     // The transition rate to the same state will be calculated by
-    // (row_sum = 0).
+    // setting the row sum to 0.
     assert(state1 != state2);
 
     // Both states are decomposed into the abundance of the first
@@ -494,8 +502,6 @@ void ModelPoMo::normalizeMutationProbs() {
 
     // Normalize the mutation probability so that they resemble the
     // given level of polymorphism.
-    // if (!fixed_level_of_polymorphism)
-    //     outError ("Please only run this function when level of polymorphism is fixed.");
     computeStateFreq();
     double theta_p = level_of_polymorphism;
     double sum_pol = computeSumFreqPolyStates();
@@ -740,7 +746,7 @@ ModelPoMo::estimateEmpiricalWattersonTheta()
                 else {
                     // Have to use Watterson Theta because sample size may be different.
                     sum_pol += it->frequency;
-                    sum_theta_w += (double) it->frequency / harmonic(j1 + j2);
+                    sum_theta_w += (double) it->frequency / harmonic(j1 + j2 - 1);
                 }
             }
         }
@@ -754,8 +760,8 @@ ModelPoMo::estimateEmpiricalWattersonTheta()
         // cout << sum_theta_w << endl;
 
         // Wed Jul 6 15:03:06 CEST 2016; I think Watterson's theta is
-        // without * harmonic(N).
-        // theta_p = sum_theta_w * harmonic(N);
+        // without * harmonic(N-1).
+        // theta_p = sum_theta_w * harmonic(N-1);
         theta_p = sum_theta_w;
     }
     // Output vector if verbose mode.
@@ -802,13 +808,9 @@ void ModelPoMo::report(ostream &out) {
     out << "--------------------" << endl;
 
     if (freq_type == FREQ_ESTIMATE) {
-        double sum = 0.0;
-        for (int i = 0; i < nnuc; i++) {
-            sum += freq_fixed_states[i];
-        }
         out << "Frequencies of fixed states (in the order A, C, G T):" << endl;
         for (int i = 0; i < nnuc; i++)
-            out << freq_fixed_states[i]/sum << " ";
+            out << freq_fixed_states[i] << " ";
         out << endl;
     }
     report_rates(out);
@@ -819,7 +821,7 @@ void ModelPoMo::report(ostream &out) {
     // Thu Aug 18 22:00:49 CEST 2016; I realized that prop_poly is
     // already the Watterson's theta, so the following calculation was
     // wrong!
-    // double watterson_theta = prop_poly / harmonic(N);
+    // double watterson_theta = prop_poly / harmonic(N-1);
     double emp_watterson_theta = estimateEmpiricalWattersonTheta();
     out << setprecision(8);
     // out << "Estimated sum of fixed states:" << endl;

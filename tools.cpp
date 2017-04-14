@@ -3535,24 +3535,23 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -m \"FMIX{f1,...fK}\"  Frequency mixture model with K components" << endl
             << "  -mwopt               Turn on optimizing mixture weights (default: auto)" << endl
             << endl
+            // TODO DS: Improve this.
             << "POLYMORPHISM AWARE MODELS (PoMo):"                                                   << endl
             << "PoMo uses counts files (please refer to the manual)."                                << endl
-            << "  -m <sm>+<pm>         Default: `HKY+rP`."                                           << endl
+            << "  -m <sm>+<pm>"                                                                      << endl
             << "                 <sm>: Substitution model."                                          << endl
             << "                  DNA: HKY (default), JC, F81, K2P, K3P, K81uf, TN/TrN, TNef,"       << endl
             << "                       TIM, TIMef, TVM, TVMef, SYM, GTR, or a 6-digit model"         << endl
             << "                       specification (e.g., 010010 = HKY)."                          << endl
             << "                 <pm>: PoMo model."                                                  << endl
             << "                       - rP (default; reversible PoMo with tree inference)."         << endl
-            // << "                       - nrP (non-reversible PoMo; tree has to be given separately;" << endl
-            // << "                         not implemented yet)."                                      << endl
             << "  -m <model>+<ft>      Frequency type (optional; default: +F, counted)."             << endl
             << "                       F or +FO or +FU or +FQ."                                      << endl
             << "                       Counted, optimized, user-defined, equal state frequency."     << endl
             << "                       This overwrites the specifications of the DNA model."         << endl
             << "  -m <model>+N<ps>     Set virtual population size to `ps` (optional; default: 9)."  << endl
             << "                       3 <= ps <= 19; ps has to be an odd number or 2 or 10."        << endl
-            << "  -m <model>+[W|S]     Specify sampling method (optional; default: W)."              << endl
+            << "  -m <model>+[W|S]     Specify sampling method (default: W)."                        << endl
             << "                       W: Weighted sampling method (partial likelihoods at the tip"  << endl
             << "                          of the tree are set to the probabilities of leading to the"<< endl
             << "                          observed data)."                                           << endl
