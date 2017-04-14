@@ -6,6 +6,8 @@
 const double POMO_MIN_RATE =  5e-5;
 const double POMO_INIT_RATE = 1e-3;
 const double POMO_MAX_RATE =  1e-2;
+const double POMO_MIN_THETA =  1e-4;
+const double POMO_MAX_THETA =  1e-1;
 /* The actual boundaries will be set, e.g., to
    #freq_fixed_states[i]*POMO_MIN_REL_FREQ. */
 const double POMO_MIN_REL_FREQ = 0.5;
@@ -157,7 +159,7 @@ class ModelPoMo : virtual public ModelMarkov
     /*  * Set the substitution rate parameters by a specification.  From */
     /*  * ModelDNA::setRateType(). */
     /*  * */
-    /*  * Sets the array #mutation_prob and the vector #param_fixed. */
+    /*  * Sets the array #mutation_rates and the vector #param_fixed. */
     /*  *  */
     /*  * @param rate_spec a string of six letters describing how rates are related */
     /*  * @return TRUE if successful, FALSE otherwise */
@@ -244,10 +246,10 @@ class ModelPoMo : virtual public ModelMarkov
 
     /**
      * Normalize the mutation probabilities such that the given level of
-     * polymorphism is honored (level_of_polymorphism).
+     * polymorphism is honored (theta).
      *
      */
-    void normalizeMutationProbs();
+    void normalizeMutationRates();
 
     /**
         save object into the checkpoint
@@ -272,8 +274,8 @@ class ModelPoMo : virtual public ModelMarkov
     virtual void computeRateMatrix(double **rate_matrix, double *state_freq, int num_state);
 
     /** 
-     * Scale the mutation rates by SCALE.  I.e., new_mutation_prob[i]
-     * = scale*old_mutation_prob[i].
+     * Scale the mutation rates by SCALE.  I.e., new_mutation_rates[i]
+     * = scale*old_mutation_rates[i].
      * 
      * @param scale (IN).
      */ 
@@ -307,7 +309,7 @@ class ModelPoMo : virtual public ModelMarkov
     /**
      * Mutation probabilities, 6 entries for reversible model.
      */
-    double *mutation_prob;
+    double *mutation_rates;
 
     /**
      * 4 unnormalized stationary frequencies of fixed states.
@@ -465,7 +467,7 @@ class ModelPoMo : virtual public ModelMarkov
 
     /// True if the level of polymorphism has been fixed (either to a
     /// user given value or to the empirically observed one).
-    bool fixed_level_of_polymorphism;
+    bool fixed_theta;
 
     /**
      * level of polymorphism.  Will be set by init() and is
@@ -473,7 +475,7 @@ class ModelPoMo : virtual public ModelMarkov
      * be done because PoMo had trouble to estimate this (especially,
      * when N was large).
      */
-    double level_of_polymorphism;
+    double theta;
 
     /// True if the model parameters are fixed (e.g., if the
     /// transition to transversion ratio is set in the HKY model).
