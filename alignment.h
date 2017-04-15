@@ -670,8 +670,8 @@ public:
 	 */
 	int virtual_pop_size;
 
-    /// The sampling type (defaults to SAMPLING_WEIGHTED).
-    SamplingType pomo_sampling_type;
+    /// The sampling method (defaults to SAMPLING_WEIGHTED).
+    SamplingType pomo_sampling_method;
 
     /** BQM: 2015-07-06, 
         for PoMo data: map from state ID to pair of base1 and base2 
