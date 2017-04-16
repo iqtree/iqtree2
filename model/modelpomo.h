@@ -481,9 +481,15 @@ class ModelPoMo : virtual public ModelMarkov
     /// Eventual todo: do not hardcode this.
     int nnuc;
 
-    /// True if the level of polymorphism has been fixed (either to a
-    /// user given value or to the empirically observed one).
+    /// True if heterozygosity has been fixed.
     bool fixed_theta;
+    
+    /// True if heterozygosity has been fixed by user.
+    bool fixed_theta_usr;
+
+    /// True if heterozygosity has been fixed to empirical estimate
+    /// from data.
+    bool fixed_theta_emp;
 
     /**
      * level of polymorphism.  Will be set by init() and is

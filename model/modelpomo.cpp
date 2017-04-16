@@ -120,34 +120,18 @@ void ModelPoMo::init_fixed_parameters(string model_params,
     // parameters of underlying mutation model, (2) initizliation
     // of level of polymorphism.
     fixed_model_params = false;
+    fixed_theta_emp = false;
+    fixed_theta_usr = false;
     fixed_theta = false;
     if (model_params.length() > 0)
         fixed_model_params = true;
-    if (pomo_params.length() > 0)
-        fixed_theta = true;
-
-    if (fixed_model_params != fixed_theta) {
-        cout << "Either fix all parameters, e.g., with \"-m HKY{2.0}+rP{0.0025}\" or none." << endl;
-        outError("Abort.");
-    }
-
-    // Should be set by underlying Markov model anyways.
-    // if (!fixed_model_params) {
-    //     // In case the fixation of parameters can be separated,
-    //     // the first element should not be set here because it is
-    //     // the level of polymorphism.
-    //     for (vector<bool>::iterator p_fixed = dna_model->param_fixed.begin();
-    //          p_fixed != dna_model->param_fixed.end(); p_fixed++)
-    //         *p_fixed = false;
-    // }
-
-    // TODO DS: Continue here.  This can be improved (move to the if
-    // clause above).
-    if (fixed_theta) {
+    if (pomo_params.length() > 0) {
         cout << setprecision(5);
+        fixed_theta = true;
         if (pomo_params == "EMP") {
             cout << "Level of polymorphism is fixed to the estimate from the data: ";
             cout << theta << "." << endl;
+            fixed_theta_emp = true;
             // No need to set the level of polymorphism here because
             // of initialization.
         }
@@ -155,11 +139,8 @@ void ModelPoMo::init_fixed_parameters(string model_params,
             cout << "Level of polymorphism is fixed to the value given by the user: ";
             theta = convert_double(pomo_params.c_str());
             cout << theta << "." << endl;
+            fixed_theta_usr = true;
         }
-        // TODO DS: Is this needed?  It is better to save the level of
-        // polymorphism not with the dna model class but in the PoMo
-        // class.
-        // dna_model->param_fixed.front() = true;
     }
 }
 
@@ -206,12 +187,10 @@ void ModelPoMo::init(const char *model_name,
 
 ModelPoMo::~ModelPoMo() {
     delete [] rate_matrix;
-//  delete [] freq_boundary_states;
     delete dna_model;
     delete [] freq_boundary_states_emp;
-    // delete [] fixed_model_params_ratio;
     delete [] mutation_rates;
-    }
+}
 
 double ModelPoMo::computeSumFreqBoundaryStates() {
     int i;
@@ -231,19 +210,10 @@ double harmonic(int n) {
 void ModelPoMo::setInitialMutCoeff() {
     // Mutation rates point to the rates of the DNA model.
     mutation_rates = new double[n_connections];
-    // TODO DS: Mutation rates will be set by normalizeMutationRates().
-    // for (int i = 0; i < n_connections; i++)
-    //     mutation_rates[i] = dna_model->rates[i];
-    // for (int i = 0; i < 6; i++) mutation_rates[i] = POMO_INIT_RATE;
-    // double m_init = 0;
-    // double theta_p = theta;
-    // double lambda_boundary_sum = computeSumFreqBoundaryStates();
-    double lambda_poly_sum_no_mu = computeSumFreqPolyStatesNoMut();
-    // // cout << "DEBUG" << endl;
-    // // cout << theta_p << endl;
-    // // cout << lambda_boundary_sum << endl;
-    // // cout << lambda_poly_sum_no_mu << endl;
 
+    // TODO DS: Check if this works.
+    // Check if polymorphism data is available.
+    double lambda_poly_sum_no_mu = computeSumFreqPolyStatesNoMut();
     if (!fixed_theta && lambda_poly_sum_no_mu <= 0) {
         // TODO DS: Obsolete because mutation rates are scaled
         // according to theta.  What needs to be done is setting a
@@ -253,19 +223,6 @@ void ModelPoMo::setInitialMutCoeff() {
     }
 
     normalizeMutationRates();
-    // m_init = theta_p * lambda_boundary_sum / (lambda_poly_sum_no_mu * (1.0 - theta_p));
-    // if (m_init < POMO_MIN_RATE || m_init > POMO_MAX_RATE)
-    //     outError("Initial rate not within boundaries.  Please check data.");
-    // // cout << "DEBUG" << endl;
-    // // cout << m_init << endl;
-    // // Honor fixed rate specifications.
-    // double sum = 0;
-    // int n_mu = 6;
-    // for (int i = 0; i < n_mu; i++) sum += mutation_rates[i];
-    // for (int i = 0; i < n_mu; i++) {
-    //     double new_mut_prob = m_init*mutation_rates[i]*n_mu/sum;
-    //     mutation_rates[i] = new_mut_prob;
-    // }
 }
 
 double ModelPoMo::computeSumFreqPolyStatesNoMut() {
@@ -471,29 +428,6 @@ int ModelPoMo::getNDimFreq() {
 void ModelPoMo::setBounds(double *lower_bound,
                           double *upper_bound,
                           bool *bound_check) {
-    // int i, ndim = getNDim();
-    // if (verbose_mode >= VB_MAX)
-    //     cout << "Set new bounds." << endl;
-
-    // // Number of inferred mutation rates of underlying
-    // // mutation model.
-    // int n_rates = dna_model->num_params;    
-    // for (int i = 1; i <= n_rates; i++) {
-    //     lower_bound[i] = POMO_MIN_RATE;
-    //     upper_bound[i] = POMO_MAX_RATE;
-    //     bound_check[i] = false;
-    // }
-
-    // // Frequencies of boundary states.
-    // if (freq_type == FREQ_ESTIMATE) {
-    //     for (int i = n_rates+1; i <= n_rates+1+nnuc-1; i++) {
-    //         lower_bound[i] = POMO_MIN_REL_FREQ * freq_boundary_states[i-n_rates-1];
-    //         upper_bound[i] = POMO_MAX_REL_FREQ * freq_boundary_states[i-n_rates-1];
-    //         bound_check[i] = false;
-    //     }
-    // }
-
-    // Does not work because boundaries are too high.
     // Set boundaries of underlying mutation model.
     dna_model->setBounds(lower_bound, upper_bound, bound_check);
     
@@ -515,25 +449,22 @@ void ModelPoMo::normalizeMutationRates() {
     // Normalize the mutation probability so that they resemble the
     // given level of polymorphism.
     computeStateFreq();
-    double sum_pol = computeSumFreqPolyStates();
-    double sum_fix = computeSumFreqBoundaryStates();
-    double m_norm  = sum_pol * (1.0 - theta) / (sum_fix * theta);
+    double poly = computeSumFreqPolyStates();
+    double theta_bm = poly/harmonic(N-1);
+
+    // See Eq. (12.14) in my thesis.
+
+    // TODO DS: Why do I need this correction?  I do know that
+    // sampling with replacement gives better results (in the thesis I
+    // use sampling without replacement).
+    double test = (double) (N-1) / double (N+1);
+    double m_norm = theta / (theta_bm * (test - harmonic(N-1) * theta));
 
     if (verbose_mode >= VB_MAX)
         cout << "Normalization constant of mutation rates: " << m_norm << endl;
 
     for (int i = 0; i < n_connections; i++)
-        mutation_rates[i] /= m_norm;
-
-    // TODO DS: Remove if everything works fine.
-    // for (int i = 0; i < n_connections; i++) {
-    //     mutation_rates[i] /= m_norm;
-    //     if (mutation_rates[i] <= POMO_MIN_RATE) {
-    //         outWarning("Mutation rate below boundary after normalization.");
-    //     }
-    //     if (mutation_rates[i] >= POMO_MAX_RATE)
-    //         outWarning("Mutation rate above boundary after normalization.");
-    // }
+        mutation_rates[i] *= m_norm;
     
     // // Recompute stationary frequency vector with updated mutation
     // rates.
@@ -548,37 +479,8 @@ void ModelPoMo::scaleMutationRatesAndUpdateRateMatrix(double scale) {
 }
 
 bool ModelPoMo::getVariables(double *variables) {
-    // A drawback: IQ-TREE looks at the values at the boundaries a
-    // lot.  E.g., if HKY{3.0} is specified, the mutation_rates[0] will
-    // be set to 0.01=BOUNDARY_MAX a lot, but then, e.g.,
-    // mutation_rates[1] will be set to 3*0.01 which is outside the
-    // boundaries.  How should this be handled?
-
-    // int i;
-    // Use a zero indexed array (variables starts at one).
-    // double *vars = variables+1;
-
     bool changed = false;
     changed = dna_model->getVariables(variables);
-
-    // for (i = 0; i < num_all; i++) {
-    //     if (!dna_model->param_fixed[dna_model->param_spec[i]]) {
-    //         changed |= (mutation_rates[i] != vars[(int)dna_model->param_spec[i]]);
-    //         mutation_rates[i] = vars[(int)dna_model->param_spec[i]];
-    //     }
-    // }
-
-    // int ndim = getNDim();
-    // if (freq_type == FREQ_ESTIMATE) {
-    //     changed |= memcmpcpy(freq_boundary_states, vars+(ndim-nnuc+1), (nnuc-1)*sizeof(double));
-    //     if (verbose_mode >= VB_MAX) {
-    //         for (i = 0; i < nnuc-1; i++) {
-    //             cout << setprecision(8);
-    //             cout << "  Estimated boundary frequencies[" << i << "] = ";
-    //             cout << vars[ndim-nnuc+1+i] << endl;
-    //         }
-    //     }
-    // }
 
     if (!fixed_theta) {
         int ndim = getNDim();
@@ -598,17 +500,6 @@ void ModelPoMo::setVariables(double *variables) {
         int ndim = getNDim();
         variables[ndim] = theta;
     }
-    // // Use a zero indexed array (variables starts at one).
-    // double * vars = variables+1;
-    // int num_all = dna_model->param_spec.length();
-    // for (int i = 0; i < num_all; i++)
-    //     if (!dna_model->param_fixed[dna_model->param_spec[i]])
-    //         vars[(int)dna_model->param_spec[i]] = mutation_rates[i];
-
-    // if (freq_type == FREQ_ESTIMATE) {
-    //     int ndim = getNDim();
-    //     memcpy(vars+(ndim-nnuc+1), freq_boundary_states, (nnuc-1)*sizeof(double));
-    // }
 }
 
 void ModelPoMo::writeInfo(ostream &out) {
@@ -750,6 +641,10 @@ ModelPoMo::estimateEmpiricalWattersonTheta()
         for (int i = 0; i < nnuc; i++) sum_fix += abs_state_freq[i];
         for (int i = nnuc; i < num_states; i++) sum_pol += abs_state_freq[i];
         theta_p = (double) sum_pol / (double) (sum_fix + sum_pol);
+        // TODO DS: This is wrong because Watterson's estimator is
+        // expected to decrease when sampling step is performed.  Some
+        // sequences will be taken more often and necessarily,
+        // polymorphism is lost.
     } else {
         for (Alignment::iterator it = phylo_tree->aln->begin();
              it != phylo_tree->aln->end(); it++) {
@@ -761,9 +656,7 @@ ModelPoMo::estimateEmpiricalWattersonTheta()
                     continue;
                 state -= num_states;
                 assert((unsigned int)state < phylo_tree->aln->pomo_states.size());
-                // Decode the id and counts.
-                // int id1 = phylo_tree->aln->pomo_states[state] & 3;
-                // int id2 = (phylo_tree->aln->pomo_states[state] >> 16) & 3;
+                // Decode counts.
                 int j1 = (phylo_tree->aln->pomo_states[state] >> 2) & 16383;
                 int j2 = (phylo_tree->aln->pomo_states[state] >> 18);
                 if (j2 == 0) sum_fix += it->frequency;
@@ -777,15 +670,6 @@ ModelPoMo::estimateEmpiricalWattersonTheta()
         // Calculate Watterson Theta per site.
         double theta_w_temp = sum_theta_w;
         sum_theta_w = theta_w_temp / (double) (sum_fix + sum_pol);
-        // // DEBUG.
-        // cout << setprecision(8);
-        // cout << "DEBUG ==========: " << endl;
-        // cout << "Estimated Watterson's Theta: ";
-        // cout << sum_theta_w << endl;
-
-        // Wed Jul 6 15:03:06 CEST 2016; I think Watterson's theta is
-        // without * harmonic(N-1).
-        // theta_p = sum_theta_w * harmonic(N-1);
         theta_p = sum_theta_w;
     }
     // Output vector if verbose mode.
@@ -828,28 +712,16 @@ void ModelPoMo::report(ostream &out) {
     }
     report_rates(out);
 
-    double poly = computeSumFreqPolyStates();
-    double boundary = computeSumFreqBoundaryStates();
-    double prop_poly = poly / (poly + boundary);
-    // Thu Aug 18 22:00:49 CEST 2016; I realized that prop_poly is
-    // already the Watterson's theta, so the following calculation was
-    // wrong!
-    // double watterson_theta = prop_poly / harmonic(N-1);
-    double emp_watterson_theta = estimateEmpiricalWattersonTheta();
     out << setprecision(8);
-    // out << "Estimated sum of boundary states:" << endl;
-    // out << boundary << endl;
-    // out << "Estimated sum of polymorphic states" << endl;
-    // out << poly << endl;
-
-    // Thu Aug 18 22:01:35 CEST 2016; see about ten lines above.
+    
     if (!fixed_theta)
-        out << "Watterson's theta: " << prop_poly << endl;
-
-    // out << "(Estimated) proportion of polymorphic states:" << endl;
-    // out << prop_poly << endl;
-    // out << "Watterson Theta: " << watterson_theta << endl;
-
+        out << "Estimated heterozygosity: ";
+    else if (fixed_theta_emp)
+        out << "Empirical heterozygosity: ";
+    else if (fixed_theta_usr)
+        out << "User-defined heterozygosity: ";
+    out << theta << endl;
+    
     out << endl;
     out << "Empirical quantities" << endl;
     out << "--------------------" << endl;
@@ -859,6 +731,7 @@ void ModelPoMo::report(ostream &out) {
         out << freq_boundary_states_emp[i] << " ";
     out << endl;
 
+    double emp_watterson_theta = estimateEmpiricalWattersonTheta();
     out << "Watterson's Theta: " << emp_watterson_theta << endl;
     out << endl;
     // out << "(Estimated) frequencies of boundary states:" << endl;
