@@ -42,16 +42,16 @@
 
 void PhyloTree::setParsimonyKernel(LikelihoodKernel lk) {
     // set parsimony kernel
-    if (lk == LK_EIGEN || instruction_set < 2) {
+    if (lk < LK_SSE2) {
         computeParsimonyBranchPointer = &PhyloTree::computeParsimonyBranchFast;
         computePartialParsimonyPointer = &PhyloTree::computePartialParsimonyFast;
     	return;
     }
-    if (instruction_set >= 7) {
+    if (lk >= LK_AVX) {
         setParsimonyKernelAVX();
         return;
     }
-    if (instruction_set >= 2) {
+    if (lk >= LK_SSE2) {
         setParsimonyKernelSSE();
         return;
     }
@@ -67,13 +67,17 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk, int num_threads) {
     //--- parsimony kernel ---
     setParsimonyKernel(lk);
 
-    bool has_fma = (hasFMA3()) && (instruction_set >= 7) && (Params::getInstance().lk_no_avx != 2);
     //--- dot-product kernel ---
-    if (has_fma) {
+#ifdef INCLUDE_AVX512
+    if (lk >= LK_AVX512) {
+		setDotProductAVX512();
+    } else
+#endif
+    if (lk >= LK_AVX_FMA) {
 		setDotProductFMA();
-	} else if (instruction_set >= 7) {
+	} else if (lk >= LK_AVX) {
 		setDotProductAVX();
-    } else if (instruction_set >= 2) {
+    } else if (lk >= LK_SSE2) {
         setDotProductSSE();
 	} else {
 
@@ -96,13 +100,13 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk, int num_threads) {
         computeLikelihoodDervPointer = &PhyloTree::computeLikelihoodDervGenericSIMD<Vec1d, SAFE_LH>;
         computePartialLikelihoodPointer = &PhyloTree::computePartialLikelihoodGenericSIMD<Vec1d, SAFE_LH>;
         computeLikelihoodFromBufferPointer = &PhyloTree::computeLikelihoodFromBufferGenericSIMD<Vec1d, SAFE_LH>;
-        sse = LK_EIGEN;
+        sse = LK_386;
 #else
         computeLikelihoodBranchPointer = NULL;
         computeLikelihoodDervPointer = NULL;
         computePartialLikelihoodPointer = NULL;
         computeLikelihoodFromBufferPointer = NULL;
-        sse = LK_EIGEN;
+        sse = LK_386;
 #endif
         return;
     }
@@ -116,17 +120,17 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk, int num_threads) {
 //    }    
 
     //--- SIMD kernel ---
-    if (sse == LK_EIGEN_SSE && instruction_set >= 2) {
+    if (lk >= LK_SSE2) {
 #ifdef INCLUDE_AVX512
-    	if (instruction_set >= 9) {
+    	if (lk >= LK_AVX512) {
     		setLikelihoodKernelAVX512();
     		return;
     	}
 #endif
-    	if (has_fma) {
+    	if (lk >= LK_AVX_FMA) {
             // CPU supports AVX and FMA
             setLikelihoodKernelFMA();
-        } else if (instruction_set >= 7) {
+        } else if (lk >= LK_AVX) {
             // CPU supports AVX
             setLikelihoodKernelAVX();
         } else {

@@ -200,7 +200,9 @@ Alignment *SuperAlignment::removeIdenticalSeq(string not_remove, bool keep_two, 
 					removed_seqs.push_back(getSeqName(seq2));
 					target_seqs.push_back(getSeqName(seq1));
 					removed[seq2] = true;
-				}
+				} else {
+                    cout << "NOTE: " << getSeqName(seq2) << " is identical to " << getSeqName(seq1) << " but kept for subsequent analysis" << endl;
+                }
 				checked[seq2] = 1;
 				first_ident_seq = false;
 			}
@@ -271,7 +273,7 @@ void SuperAlignment::getSitePatternIndex(IntVector &pattern_index) {
 }
 
 void SuperAlignment::getPatternFreq(IntVector &pattern_freq) {
-	if (!isSuperAlignment()) outError("Internal error: ", __func__);
+	ASSERT(isSuperAlignment());
 	int offset = 0;
 	if (!pattern_freq.empty()) pattern_freq.resize(0);
 	for (vector<Alignment*>::iterator it = partitions.begin(); it != partitions.end(); it++) {
@@ -283,22 +285,78 @@ void SuperAlignment::getPatternFreq(IntVector &pattern_freq) {
 }
 
 void SuperAlignment::createBootstrapAlignment(Alignment *aln, IntVector* pattern_freq, const char *spec) {
-	if (!aln->isSuperAlignment()) outError("Internal error: ", __func__);
-	if (pattern_freq) outError("Unsupported yet.", __func__);
-	if (spec) outError("Unsupported yet.", __func__);
+	ASSERT(aln->isSuperAlignment());
 	Alignment::copyAlignment(aln);
 	SuperAlignment *super_aln = (SuperAlignment*) aln;
-	if (!partitions.empty()) outError("Internal error: ", __func__);
-	for (vector<Alignment*>::iterator it = super_aln->partitions.begin(); it != super_aln->partitions.end(); it++) {
-		Alignment *boot_aln = new Alignment;
-		boot_aln->createBootstrapAlignment(*it);
-		partitions.push_back(boot_aln);
-	}
+	ASSERT(partitions.empty());
+
+	if (spec && strncmp(spec, "GENE", 4) == 0) {
+		// resampling whole genes
+        partitions.resize(super_aln->partitions.size(), NULL);
+        int i, ptn;
+        for (i = 0; i < super_aln->partitions.size(); i++) {
+			int part = random_int(super_aln->partitions.size());
+            if (!partitions[part]) {
+                // allocate the partition
+                partitions[part] = new Alignment;
+                if (strncmp(spec,"GENESITE",8) == 0) {
+                    partitions[part]->createBootstrapAlignment(super_aln->partitions[part]);
+                } else
+                    partitions[part]->copyAlignment(super_aln->partitions[part]);
+            } else {
+                Alignment *newaln;
+                if (strncmp(spec,"GENESITE",8) == 0) {
+                    Alignment *newaln = new Alignment;
+                    newaln->createBootstrapAlignment(super_aln->partitions[part]);
+                } else
+                     newaln = super_aln->partitions[part];
+
+                for (ptn = 0; ptn < super_aln->partitions[part]->size(); ptn++)
+                    partitions[part]->at(ptn).frequency += newaln->at(ptn).frequency;
+                if (strncmp(spec,"GENESITE",8) == 0)
+                    delete newaln;
+            }
+        }
+
+        // fulfill genes that are missing
+        for (i = 0; i < partitions.size(); i++)
+            if (!partitions[i]) {
+                partitions[i] = new Alignment;
+                partitions[i]->copyAlignment(super_aln->partitions[i]);
+                // reset all frequency
+                for (ptn = 0; ptn < partitions[i]->size(); ptn++)
+                    partitions[i]->at(ptn).frequency = 0;
+            }
+
+        // fill up pattern_freq vector
+        if (pattern_freq) {
+            pattern_freq->resize(0);
+            for (i = 0; i < partitions.size(); i++)
+                for (ptn = 0; ptn < partitions[i]->size(); ptn++)
+                    pattern_freq->push_back(partitions[i]->at(ptn).frequency);
+        }
+    } else if (!spec) {
+		// resampling sites within genes
+        for (vector<Alignment*>::iterator it = super_aln->partitions.begin(); it != super_aln->partitions.end(); it++) {
+            Alignment *boot_aln = new Alignment;
+            if (pattern_freq) {
+                IntVector part_pattern_freq;
+                boot_aln->createBootstrapAlignment(*it, &part_pattern_freq);
+                pattern_freq->insert(pattern_freq->end(), part_pattern_freq.begin(), part_pattern_freq.end());
+            } else {
+                boot_aln->createBootstrapAlignment(*it);
+            }
+            partitions.push_back(boot_aln);
+        }
+    } else {
+        outError("Wrong -bspec, either -bspec GENE or -bspec GENESITE");
+    }
 	taxa_index = super_aln->taxa_index;
+    countConstSite();
 }
 
 void SuperAlignment::createBootstrapAlignment(IntVector &pattern_freq, const char *spec) {
-	if (!isSuperAlignment()) outError("Internal error: ", __func__);
+	ASSERT(isSuperAlignment());
 	int nptn = 0;
 	for (vector<Alignment*>::iterator it = partitions.begin(); it != partitions.end(); it++) {
 		nptn += (*it)->getNPattern();
@@ -309,39 +367,11 @@ void SuperAlignment::createBootstrapAlignment(IntVector &pattern_freq, const cha
 	pattern_freq.insert(pattern_freq.end(), internal_freq, internal_freq + nptn);
 	delete [] internal_freq;
 
-/*	if (spec && strncmp(spec, "GENE", 4) != 0) outError("Unsupported yet.", __func__);
-
-	int offset = 0;
-	if (!pattern_freq.empty()) pattern_freq.resize(0);
-
-	if (spec && strncmp(spec, "GENE", 4) == 0) {
-		// resampling whole genes
-		int nptn = 0;
-		IntVector part_pos;
-		for (vector<Alignment*>::iterator it = partitions.begin(); it != partitions.end(); it++) {
-			part_pos.push_back(nptn);
-			nptn += (*it)->getNPattern();
-		}
-		pattern_freq.resize(nptn, 0);
-		for (int i = 0; i < partitions.size(); i++) {
-			int part = random_int(partitions.size());
-			for (int j = 0; j < partitions[part]->getNPattern(); j++)
-				pattern_freq[j + part_pos[part]] += partitions[part]->at(j).frequency;
-		}
-	} else {
-		// resampling sites within genes
-		for (vector<Alignment*>::iterator it = partitions.begin(); it != partitions.end(); it++) {
-			IntVector freq;
-			(*it)->createBootstrapAlignment(freq);
-			pattern_freq.insert(pattern_freq.end(), freq.begin(), freq.end());
-			offset += freq.size();
-		}
-	}*/
 }
 
 
 void SuperAlignment::createBootstrapAlignment(int *pattern_freq, const char *spec, int *rstream) {
-	if (!isSuperAlignment()) outError("Internal error: ", __func__);
+	ASSERT(isSuperAlignment());
 //	if (spec && strncmp(spec, "GENE", 4) != 0) outError("Unsupported yet. ", __func__);
 
 	if (spec && strncmp(spec, "GENE", 4) == 0) {
@@ -385,7 +415,7 @@ void SuperAlignment::createBootstrapAlignment(int *pattern_freq, const char *spe
  * shuffle alignment by randomizing the order of sites
  */
 void SuperAlignment::shuffleAlignment() {
-	if (!isSuperAlignment()) outError("Internal error: ", __func__);
+	ASSERT(isSuperAlignment());
 	for (vector<Alignment*>::iterator it = partitions.begin(); it != partitions.end(); it++) {
 		(*it)->shuffleAlignment();
 	}
@@ -551,8 +581,7 @@ Alignment *SuperAlignment::concatenateAlignments(IntVector &ids) {
 	SeqType sub_type = SEQ_UNKNOWN;
 	for (i = 0; i < ids.size(); i++) {
 		int id = ids[i];
-		if (id < 0 || id >= partitions.size())
-			outError("Internal error ", __func__);
+		ASSERT(id >= 0 && id < partitions.size());
 		if (nstates == 0) nstates = partitions[id]->num_states;
 		if (sub_type == SEQ_UNKNOWN) sub_type = partitions[id]->seq_type;
 		if (sub_type != partitions[id]->seq_type)

@@ -38,7 +38,7 @@ void Checkpoint::load(istream &in) {
     size_t pos;
     int listid = 0;
     while (!in.eof()) {
-        getline(in, line);
+        safeGetline(in, line);
         pos = line.find('#');
         if (pos != string::npos)
             line.erase(pos);
@@ -82,7 +82,7 @@ void Checkpoint::load() {
         // remove the failbit
         in.exceptions(ios::badbit);
         string line;
-        if (!getline(in, line)) {
+        if (!safeGetline(in, line)) {
             in.close();
             return;
         }

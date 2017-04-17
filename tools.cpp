@@ -164,6 +164,39 @@ double randomLen(Params &params) {
     return len;
 }
 
+std::istream& safeGetline(std::istream& is, std::string& t)
+{
+    t.clear();
+
+    // The characters in the stream are read one-by-one using a std::streambuf.
+    // That is faster than reading them one-by-one using the std::istream.
+    // Code that uses streambuf this way must be guarded by a sentry object.
+    // The sentry object performs various tasks,
+    // such as thread synchronization and updating the stream state.
+
+    std::istream::sentry se(is, true);
+    std::streambuf* sb = is.rdbuf();
+
+    for(;;) {
+        int c = sb->sbumpc();
+        switch (c) {
+        case '\n':
+            return is;
+        case '\r':
+            if(sb->sgetc() == '\n')
+                sb->sbumpc();
+            return is;
+        case EOF:
+            // Also handle the case when the last line has no line ending
+            if(t.empty())
+                is.setstate(std::ios::eofbit);
+            return is;
+        default:
+            t += (char)c;
+        }
+    }
+}
+
 //From Tung
 
 string convertIntToString(int number) {
@@ -812,8 +845,11 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.aLRT_test = false;
     params.aBayes_test = false;
     params.localbp_replicates = 0;
-    params.SSE = LK_EIGEN_SSE;
-    params.lk_no_avx = 0;
+#ifdef INCLUDE_AVX512
+    params.SSE = LK_AVX512;
+#else
+    params.SSE = LK_AVX_FMA;
+#endif
     params.lk_safe_scaling = false;
     params.numseq_safe_scaling = 2000;
     params.kernel_nonrev = false;
@@ -926,6 +962,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.model_test_sample_size = 0;
     params.root_state = NULL;
     params.print_bootaln = false;
+    params.print_boot_site_freq = false;
 	params.print_subaln = false;
 	params.print_partition_info = false;
 	params.print_conaln = false;
@@ -1919,29 +1956,23 @@ void parseArg(int argc, char *argv[], Params &params) {
 					throw "Lambda must be in (0,1]";
 				continue;
 			}
-//			if (strcmp(argv[cnt], "-nosse") == 0) {
-//				params.SSE = LK_NORMAL;
-//				continue;
-//			}
-//			if (strcmp(argv[cnt], "-slowsse") == 0) {
-//				params.SSE = LK_SSE;
-//				continue;
-//			}
-			if (strcmp(argv[cnt], "-fastlk") == 0) {
-				params.SSE = LK_EIGEN;
-				continue;
-			}
-			if (strcmp(argv[cnt], "-fastsse") == 0
-					|| strcmp(argv[cnt], "-fasttipsse") == 0) {
-				params.SSE = LK_EIGEN_SSE;
-				continue;
-			}
-			if (strcmp(argv[cnt], "-noavx") == 0) {
-				params.lk_no_avx = 1;
-				continue;
-			}
-			if (strcmp(argv[cnt], "-nofma") == 0) {
-				params.lk_no_avx = 2;
+
+            if (strcmp(argv[cnt], "-lk") == 0) {
+				cnt++;
+				if (cnt >= argc)
+                    throw "-lk x86|SSE|AVX|FMA|AVX512";
+                if (strcmp(argv[cnt], "x86") == 0)
+                    params.SSE = LK_386;
+                else if (strcmp(argv[cnt], "SSE") == 0)
+                    params.SSE = LK_SSE2;
+                else if (strcmp(argv[cnt], "AVX") == 0)
+                    params.SSE = LK_AVX;
+                else if (strcmp(argv[cnt], "FMA") == 0)
+                    params.SSE = LK_AVX_FMA;
+                else if (strcmp(argv[cnt], "AVX512") == 0)
+                    params.SSE = LK_AVX512;
+                else
+                    throw "Incorrect -lk likelihood kernel option";
 				continue;
 			}
 
@@ -2417,6 +2448,10 @@ void parseArg(int argc, char *argv[], Params &params) {
 			}
 			if (strcmp(argv[cnt], "-wba") == 0) {
 				params.print_bootaln = true;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-wbsf") == 0) {
+				params.print_boot_site_freq = true;
 				continue;
 			}
 			if (strcmp(argv[cnt], "-wsa") == 0) {
@@ -3286,9 +3321,8 @@ void parseArg(int argc, char *argv[], Params &params) {
     if (params.gbo_replicates && params.num_bootstrap_samples)
         outError("UFBoot (-bb) and standard bootstrap (-b) must not be specified together");
 
-    if (params.model_name.find("ONLY") != string::npos && (params.gbo_replicates || params.num_bootstrap_samples))
-        outError("Model selection only cannot be combined with bootstrap analysis");
-
+    if ((params.model_name.find("ONLY") != string::npos || (params.model_name.substr(0,2) == "MF" && params.model_name.substr(0,3) != "MFP")) && (params.gbo_replicates || params.num_bootstrap_samples))
+        outError("ModelFinder only cannot be combined with bootstrap analysis");
 
 
     if (!params.out_prefix) {
@@ -3389,7 +3423,7 @@ void usage_iqtree(char* argv[], bool full_command) {
     printCopyright(cout);
     cout << "Usage: " << argv[0] << " -s <alignment> [OPTIONS]" << endl << endl;
     cout << "GENERAL OPTIONS:" << endl
-            << "  -? or -h             Printing this help dialog" << endl
+            << "  -? or -h             Print this help dialog" << endl
             << "  -s <alignment>       Input alignment in PHYLIP/FASTA/NEXUS/CLUSTAL/MSF format" << endl
             << "  -st <data_type>      BIN, DNA, AA, NT2AA, CODON, MORPH (default: auto-detect)" << endl
             << "  -q <partition_file>  Edge-linked partition model (file in NEXUS/RAxML format)" << endl
@@ -3399,13 +3433,13 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "                       Starting tree (default: 99 parsimony tree and BIONJ)" << endl
             << "  -te <user_tree_file> Like -t but fixing user tree (no tree search performed)" << endl
             << "  -o <outgroup_taxon>  Outgroup taxon name for writing .treefile" << endl
-            << "  -pre <PREFIX>        Using <PREFIX> for output files (default: aln/partition)" << endl
+            << "  -pre <PREFIX>        Prefix for all output files (default: aln/partition)" << endl
 #ifdef _OPENMP
             << "  -nt <#cpu_cores>     Number of cores/threads to use (REQUIRED)" << endl
 #endif
             << "  -seed <number>       Random seed number, normally used for debugging purpose" << endl
             << "  -v, -vv, -vvv        Verbose mode, printing more messages to screen" << endl
-            << "  -quiet               Silent mode, suppress printing to screen (stdout)" << endl
+            << "  -quiet               Quiet mode, suppress printing to screen (stdout)" << endl
             << "  -keep-ident          Keep identical sequences (default: remove & finally add)" << endl
             << "  -safe                Safe likelihood kernel to avoid numerical underflow" << endl
             << "  -mem RAM             Maximal RAM usage for memory saving mode" << endl
@@ -3421,7 +3455,7 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -ninit <number>      Number of initial parsimony trees (default: 100)" << endl
             << "  -ntop <number>       Number of top initial trees (default: 20)" << endl
             << "  -nbest <number>      Number of best trees retained during search (defaut: 5)" << endl
-            << "  -n <#iterations>     Fix number of iterations to <#iterations> (default: auto)" << endl
+            << "  -n <#iterations>     Fix number of iterations to stop (default: auto)" << endl
             << "  -nstop <number>      Number of unsuccessful iterations to stop (default: 100)" << endl
             << "  -pers <proportion>   Perturbation strength for randomized NNI (default: 0.5)" << endl
             << "  -sprrad <number>     Radius for parsimony SPR search (default: 6)" << endl
@@ -3448,15 +3482,15 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -alrt 0              Parametric aLRT test (Anisimova and Gascuel 2006)" << endl
             << "  -abayes              approximate Bayes test (Anisimova et al. 2011)" << endl
             << "  -lbp <#replicates>   Fast local bootstrap probabilities" << endl
-            << endl << "AUTOMATIC MODEL SELECTION:" << endl
+            << endl << "MODEL-FINDER:" << endl
             << "  -m TESTONLY          Standard model selection (like jModelTest, ProtTest)" << endl
-            << "  -m TEST              Like -m TESTONLY but followed by tree reconstruction" << endl
-            << "  -m TESTNEWONLY       Extended model selection incl. FreeRate (+R) heterogeneity" << endl
-            << "  -m TESTNEW           Like -m TESTNEWONLY but followed by tree reconstruction" << endl
-            << "  -m TESTMERGEONLY     Select best-fit partition scheme (like PartitionFinder)" << endl
-            << "  -m TESTMERGE         Like -m TESTMERGEONLY but followed by tree reconstruction" << endl
-            << "  -m TESTNEWMERGEONLY  Like -m TESTMERGEONLY but includes FreeRate heterogeneity" << endl
-            << "  -m TESTNEWMERGE      Like -m TESTNEWMERGEONLY followed by tree reconstruction" << endl
+            << "  -m TEST              Standard model selection followed by tree inference" << endl
+            << "  -m MF                Extended model selection with FreeRate heterogeneity" << endl
+            << "  -m MFP               Extended model selection followed by tree inference" << endl
+            << "  -m TESTMERGEONLY     Find best partition scheme (like PartitionFinder)" << endl
+            << "  -m TESTMERGE         Find best partition scheme followed by tree inference" << endl
+            << "  -m MF+MERGE          Find best partition scheme incl. FreeRate heterogeneity" << endl
+            << "  -m MFP+MERGE         Like -m MF+MERGE followed by tree inference" << endl
             << "  -rcluster <percent>  Percentage of partition pairs (relaxed clustering alg.)" << endl
             << "  -mset program        Restrict search to models supported by other programs" << endl
             << "                       (i.e., raxml, phyml or mrbayes)" << endl
@@ -3465,18 +3499,18 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "                       liemarkov, liemarkovry, liemarkovws, liemarkovmk, strandsymmetric" << endl
             << "  -mset m1,...,mk      Restrict search to models in a comma-separated list" << endl
             << "                       (e.g. -mset WAG,LG,JTT)" << endl            
-            << "  -msub source         Restrict search to AA models designed for specific sources" << endl
-            << "                       (i.e., nuclear, mitochondrial, chloroplast or viral)" << endl            
+            << "  -msub source         Restrict search to AA models for specific sources" << endl
+            << "                       (nuclear, mitochondrial, chloroplast or viral)" << endl
             << "  -mfreq f1,...,fk     Restrict search to using a list of state frequencies" << endl
-            << "                       (default protein: -mfreq FU,F; codon: -mfreq ,F1x4,F3x4,F)" << endl            
-            << "  -mrate r1,...,rk     Restrict search to using a list of rate-across-sites models" << endl
-            << "                       (e.g. -mrate E,I,G,I+G,R)" << endl
+            << "                       (default AA: -mfreq FU,F; codon: -mfreq ,F1x4,F3x4,F)" << endl
+            << "  -mrate r1,...,rk     Restrict search to a list of rate-across-sites models" << endl
+            << "                       (e.g. -mrate E,I,G,I+G,R is used for -m MF)" << endl
             << "  -cmin <kmin>         Min #categories for FreeRate model [+R] (default: 2)" << endl
             << "  -cmax <kmax>         Max #categories for FreeRate model [+R] (default: 10)" << endl
-            << "  –merit AIC|AICc|BIC  Optimality criterion to use (default: all)" << endl
+            << "  -merit AIC|AICc|BIC  Optimality criterion to use (default: all)" << endl
 //            << "  -msep                Perform model selection and then rate selection" << endl
-            << "  -mtree               Performing full tree search for each model considered" << endl
-            << "  -mredo               Ignoring model results computed earlier (default: no)" << endl
+            << "  -mtree               Perform full tree search for each model considered" << endl
+            << "  -mredo               Ignore model results computed earlier (default: reuse)" << endl
             << "  -madd mx1,...,mxk    List of mixture models to also consider" << endl
             << "  -mdef <nexus_file>   A model definition NEXUS file (see Manual)" << endl
 
@@ -3488,8 +3522,7 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "              Protein: LG (default), Poisson, cpREV, mtREV, Dayhoff, mtMAM," << endl
             << "                       JTT, WAG, mtART, mtZOA, VT, rtREV, DCMut, PMB, HIVb," << endl
             << "                       HIVw, JTTDCMut, FLU, Blosum62, GTR20" << endl
-            << "      Protein mixture: C10,...,C60, EX2, EX3, EHO, UL2, UL3, EX_EHO, LG4M, LG4X," << endl
-            << "                       JTTCF4G" << endl
+            << "      Protein mixture: C10,...,C60, EX2, EX3, EHO, UL2, UL3, EX_EHO, LG4M, LG4X" << endl
             << "               Binary: JC2 (default), GTR2" << endl
             << "      Empirical codon: KOSI07, SCHN05" << endl 
             << "    Mechanistic codon: GY (default), MG, MGK, GY0K, GY1KTS, GY1KTV, GY2K," << endl
@@ -3579,7 +3612,7 @@ void usage_iqtree(char* argv[], bool full_command) {
             << endl << "SITE-SPECIFIC FREQUENCY MODEL:" << endl 
             << "  -ft <tree_file>      Input tree to infer site frequency model" << endl
             << "  -fs <in_freq_file>   Input site frequency model file" << endl
-            << "  -fmax                Posterior maximum instead of posterior mean approximation" << endl
+            << "  -fmax                Posterior maximum instead of mean approximation" << endl
             //<< "  -wsf                 Write site frequency model to .sitefreq file" << endl
             //<< "  -c <#categories>     Number of Gamma rate categories (default: 4)" << endl
 //            << endl << "TEST OF MODEL HOMOGENEITY:" << endl
@@ -3689,7 +3722,7 @@ void quickStartGuide() {
          << "     iqtree -s example.phy -sp example.nex -m TESTMERGE" << endl << endl
          << "5. Perform model selection only: use '-m TESTONLY' or '-m TESTMERGEONLY'" << endl << endl
 #ifdef _OPENMP
-         << "6. Use 4 CPU cores to speed up computation: add '-nt 4' option" << endl << endl
+         << "7. Use 4 CPU cores to speed up computation: add '-nt 4' option" << endl << endl
 #endif
          << "---" << endl
          << "PoMo command-line examples:" << endl

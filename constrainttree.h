@@ -26,11 +26,22 @@ public:
     ConstraintTree();
 
     /**
+        internal function to initialize splits from tree structure
+    */
+    void initFromTree();
+
+    /**
             initialize constraint tree
             @param constraint_file the name of the constraint tree file
             @param fulltaxname the full list of all taxa names
      */
-    void initConstraint(const char *constraint_file, StrVector &fulltaxname);
+    void readConstraint(const char *constraint_file, StrVector &fulltaxname);
+
+    /**
+        initialize from another constraint tree
+        @param src source constraint tree
+    */
+    void readConstraint(MTree &src_tree);
 
     /** 
         check if a "partial" split defined by two taxa name sets is compatible with the constraint tree.

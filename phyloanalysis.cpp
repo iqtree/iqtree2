@@ -67,21 +67,29 @@ void reportReferences(Params &params, ofstream &out, string &original_model) {
     }
 
 	out << "To cite IQ-TREE please use:" << endl << endl
-		<< "Lam-Tung Nguyen, Heiko A. Schmidt, Arndt von Haeseler, and Bui Quang Minh (2015)" << endl
-		<< "IQ-TREE: A fast and effective stochastic algorithm for estimating" << endl
-		<< "maximum likelihood phylogenies. Mol. Biol. Evol., 32:268-274." << endl
+		<< "Lam-Tung Nguyen, Heiko A. Schmidt, Arndt von Haeseler, and Bui Quang Minh" << endl
+		<< "(2015) IQ-TREE: A fast and effective stochastic algorithm for estimating" << endl
+		<< "maximum likelihood phylogenies. Mol Biol Evol, 32:268-274." << endl
         << "http://dx.doi.org/10.1093/molbev/msu300" << endl << endl;
+
+    if (params.site_freq_file || params.tree_freq_file)
+    out << "Since you used site-specific frequency model please also cite: " << endl << endl
+        << "Huai-Chun Wang, Edward Susko, Bui Quang Minh, and Andrew J. Roger (2017)" << endl
+        << "Modeling site heterogeneity with posterior mean site frequency profiles" << endl
+        << "accelerates accurate phylogenomic estimation. Submitted." << endl << endl;
+
 
 	if (params.gbo_replicates)
 	out << "Since you used ultrafast bootstrap (UFBoot) please also cite: " << endl << endl
-		<< "Bui Quang Minh, Minh Anh Thi Nguyen, and Arndt von Haeseler (2013) Ultrafast" << endl
-		<< "approximation for phylogenetic bootstrap. Mol. Biol. Evol., 30:1188-1195." << endl
+		<< "Bui Quang Minh, Minh Anh Thi Nguyen, and Arndt von Haeseler (2013)" << endl
+		<< "Ultrafast approximation for phylogenetic bootstrap. Mol Biol Evol, 30:1188-95." << endl
         << "http://dx.doi.org/10.1093/molbev/mst024" << endl << endl;
 
     if (params.partition_file)
     out << "Since you used partition models please also cite:" << endl << endl
-        << "Olga Chernomor, Arndt von Haeseler, and Bui Quang Minh (2016) Terrace aware data" << endl
-        << "structure for phylogenomic inference from supermatrices. Syst. Biol., in press." << endl
+        << "Olga Chernomor, Arndt von Haeseler, and Bui Quang Minh (2016)" << endl
+        << "Terrace aware data structure for phylogenomic inference from" << endl
+        << "supermatrices. Syst Biol, 65:997-1008." << endl
         << "http://dx.doi.org/10.1093/sysbio/syw037" << endl << endl;
 
 }
@@ -620,10 +628,10 @@ void printOutfilesInfo(Params &params, string &original_model, IQTree &tree) {
 			<< endl;
 	if (params.compute_ml_tree) {
         if (!(params.suppress_output_flags & OUT_TREEFILE)) {
-            if (original_model.find("ONLY") == string::npos)
-                cout << "  Maximum-likelihood tree:       " << params.out_prefix << ".treefile" << endl;
+            if (original_model.find("ONLY") != string::npos || (original_model.substr(0,2)=="MF" && original_model.substr(0,3)!="MFP"))
+                cout << "  Tree used for ModelFinder:     " << params.out_prefix << ".treefile" << endl;
             else
-                cout << "  Tree used for model selection: " << params.out_prefix << ".treefile" << endl;
+                cout << "  Maximum-likelihood tree:       " << params.out_prefix << ".treefile" << endl;
         }
 //		if (params.snni && params.write_local_optimal_trees) {
 //			cout << "  Locally optimal trees (" << tree.candidateTrees.getNumLocalOptTrees() << "):    " << params.out_prefix << ".suboptimal_trees" << endl;
@@ -642,7 +650,7 @@ void printOutfilesInfo(Params &params, string &original_model, IQTree &tree) {
 		cout << "  Concatenated alignment:        " << params.out_prefix
 					<< ".conaln" << endl;
 	}
-	if (original_model.find("TEST") != string::npos && tree.isSuperTree()) {
+	if ((original_model.find("TEST") != string::npos || original_model.substr(0,2) == "MF") && tree.isSuperTree()) {
 		cout << "  Best partitioning scheme:      " << params.out_prefix << ".best_scheme.nex" << endl;
 		bool raxml_format_printed = true;
 
@@ -763,20 +771,22 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 		if (params.user_file)
 			out << "User tree file name: " << params.user_file << endl;
 		out << "Type of analysis: ";
-        if (original_model.find("TEST") != string::npos && original_model.find("ONLY") != string::npos) {
-            out << "model selection";
-        } else {
+        bool modelfinder = original_model.substr(0,4)=="TEST" || original_model.substr(0,2) == "MF" || original_model.empty();
+        if (modelfinder)
+            out << "ModelFinder";
+        if (params.compute_ml_tree) {
+            if (modelfinder)
+                out << " + ";
+            out << "tree reconstruction";
+        }
+        if (params.num_bootstrap_samples > 0) {
             if (params.compute_ml_tree)
-                out << "tree reconstruction";
-            if (params.num_bootstrap_samples > 0) {
-                if (params.compute_ml_tree)
-                    out << " + ";
-                out << "non-parametric bootstrap (" << params.num_bootstrap_samples
-                        << " replicates)";
-            }
-            if (params.gbo_replicates > 0) {
-                out << " + ultrafast bootstrap (" << params.gbo_replicates << " replicates)";
-            }
+                out << " + ";
+            out << "non-parametric bootstrap (" << params.num_bootstrap_samples
+                    << " replicates)";
+        }
+        if (params.gbo_replicates > 0) {
+            out << " + ultrafast bootstrap (" << params.gbo_replicates << " replicates)";
         }
 		out << endl;
 		out << "Random seed number: " << params.ran_seed << endl << endl;
@@ -832,7 +842,7 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 		out << fixed;
 
 		if (!model_info.empty()) {
-			out << "MODEL SELECTION" << endl << "---------------" << endl << endl;
+			out << "ModelFinder" << endl << "-----------" << endl << endl;
 			if (tree.isSuperTree())
 				pruneModelInfo(model_info, (PhyloSuperTree*)&tree);
 			reportModelSelection(out, params, model_info, tree.isSuperTree());
@@ -936,9 +946,9 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 				<< endl;
 */
 		if (params.compute_ml_tree) {
-			if (original_model.find("ONLY") != string::npos) {
-				out << "TREE USED FOR MODEL SELECTION" << endl
-					<< "-----------------------------" << endl << endl;
+			if (original_model.find("ONLY") != string::npos || (original_model.substr(0,2) == "MF" && original_model.substr(0,3) != "MFP")) {
+				out << "TREE USED FOR ModelFinder" << endl
+					<< "-------------------------" << endl << endl;
             } else if (params.min_iterations == 0) {
                 if (params.user_file)
                     out << "USER TREE" << endl
@@ -1355,16 +1365,29 @@ void computeInitialDist(Params &params, IQTree &iqtree, string &dist_file) {
 
 void initializeParams(Params &params, IQTree &iqtree, vector<ModelInfo> &model_info, ModelsBlock *models_block) {
 //    iqtree.setCurScore(-DBL_MAX);
-    bool test_only = params.model_name.find("ONLY") != string::npos;
+    bool test_only = (params.model_name.find("ONLY") != string::npos) || (params.model_name.substr(0,2) == "MF" && params.model_name.substr(0,3) != "MFP");
+
+    bool empty_model_found = params.model_name.empty() && !iqtree.isSuperTree();
+
+    if (params.model_name.empty() && iqtree.isSuperTree()) {
+        // check whether any partition has empty model_name
+        PhyloSuperTree *stree = (PhyloSuperTree*)&iqtree;
+        for (auto i = stree->part_info.begin(); i != stree->part_info.end(); i++)
+            if (i->model_name.empty()) {
+                empty_model_found = true;
+                break;
+            }
+    }
+
     /* initialize substitution model */
-    if (params.model_name.substr(0, 4) == "TEST") {
+    if (empty_model_found || params.model_name.substr(0, 4) == "TEST" || params.model_name.substr(0, 2) == "MF") {
         if (MPIHelper::getInstance().getNumProcesses() > 1)
             outError("Please use only 1 MPI process! We are currently working on the MPI parallelization of model selection.");
     	// TODO: check if necessary
 //        if (iqtree.isSuperTree())
 //            ((PhyloSuperTree*) &iqtree)->mapTrees();
-        double start_cpu_time = getCPUTime();
-        double start_real_time = getRealTime();
+        double cpu_time = getCPUTime();
+        double real_time = getRealTime();
         ofstream fmodel;
         string fmodel_str = ((string)params.out_prefix + ".model");
 
@@ -1373,9 +1396,11 @@ void initializeParams(Params &params, IQTree &iqtree, vector<ModelInfo> &model_i
             ok_model_file = checkModelFile(fmodel_str, iqtree.isSuperTree(), model_info);
         }
 
+        cout << endl;
+
         ok_model_file &= model_info.size() > 0;
         if (ok_model_file) {
-            cout << "Reusing information from model file " << fmodel_str << endl;
+            cout << "NOTE: Reusing information from model file " << fmodel_str << endl;
             fmodel.open(fmodel_str.c_str(), ios::app);
             if (!fmodel.is_open())
                 outError("cannot append to file ", fmodel_str);
@@ -1402,9 +1427,15 @@ void initializeParams(Params &params, IQTree &iqtree, vector<ModelInfo> &model_i
 
         params.model_name = testModel(params, &iqtree, model_info, fmodel, models_block, params.num_threads, "", true);
         fmodel.close();
-        params.startCPUTime = start_cpu_time;
-        params.start_real_time = start_real_time;
-        cout << "CPU time for model selection: " << getCPUTime() - start_cpu_time << " seconds." << endl;
+        params.startCPUTime = cpu_time;
+        params.start_real_time = real_time;
+        cpu_time = getCPUTime() - cpu_time;
+        real_time = getRealTime() - real_time;
+        cout << endl;
+        cout << "All model information printed to " << params.out_prefix << ".model" << endl;
+        cout << "CPU time for ModelFinder: " << cpu_time << " seconds (" << convert_time(cpu_time) << ")" << endl;
+        cout << "Wall-clock time for ModelFinder: " << real_time << " seconds (" << convert_time(real_time) << ")" << endl;
+
 //        alignment = iqtree.aln;
         if (test_only) {
             params.min_iterations = 0;
@@ -1882,6 +1913,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
         omp_set_num_threads(bestThreads);
         params.num_threads = bestThreads;
     }
+    iqtree.warnNumThreads();
 #endif
 
 
@@ -2395,7 +2427,7 @@ void runStandardBootstrap(Params &params, string &original_model, Alignment *ali
     int bootSample = 0;
     if (tree->getCheckpoint()->get("bootSample", bootSample)) {
         cout << "CHECKPOINT: " << bootSample << " bootstrap analyses restored" << endl;
-    } else {
+    } else if (MPIHelper::getInstance().isMaster()) {
         // first empty the boottrees file
         try {
             ofstream tree_out;
@@ -2472,6 +2504,18 @@ void runStandardBootstrap(Params &params, string &original_model, Alignment *ali
                 bootstrap_alignment->printPhylip(bootaln_name.c_str(), true);
         }
 
+		if (params.print_boot_site_freq && MPIHelper::getInstance().isMaster()) {
+            printSiteStateFreq((((string)params.out_prefix)+"."+convertIntToString(sample)+".bootsitefreq").c_str(), bootstrap_alignment);
+            if (bootstrap_alignment->isSuperAlignment())
+                ((SuperAlignment*)bootstrap_alignment)->printCombinedAlignment((((string)params.out_prefix)+"."+convertIntToString(sample)+".bootaln").c_str());
+            else
+                bootstrap_alignment->printPhylip((((string)params.out_prefix)+"."+convertIntToString(sample)+".bootaln").c_str());
+        }
+
+        if (!tree->constraintTree.empty()) {
+            boot_tree->constraintTree.readConstraint(tree->constraintTree);
+        }
+
         // set checkpoint
         boot_tree->setCheckpoint(tree->getCheckpoint());
         boot_tree->num_precision = tree->num_precision;
@@ -2501,7 +2545,7 @@ void runStandardBootstrap(Params &params, string &original_model, Alignment *ali
 			outError(ERR_WRITE_OUTPUT, boottrees_name);
 		}
 		// fix bug: set the model for original tree after testing
-		if (original_model.substr(0,4) == "TEST" && tree->isSuperTree()) {
+		if ((original_model.substr(0,4) == "TEST" || original_model.substr(0,2) == "MF") && tree->isSuperTree()) {
 			PhyloSuperTree *stree = ((PhyloSuperTree*)tree);
 			stree->part_info =  ((PhyloSuperTree*)boot_tree)->part_info;
 //			for (int i = 0; i < ((PhyloSuperTree*)tree)->part_info.size(); i++)
@@ -2659,6 +2703,7 @@ void computeSiteFrequencyModel(Params &params, Alignment *alignment) {
         int bestThreads = tree->testNumThreads();
         omp_set_num_threads(bestThreads);
     }
+    tree->warnNumThreads();
 #endif
 
     tree->initializeAllPartialLh();
@@ -2767,12 +2812,13 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
 
     if (params.constraint_tree_file) {
         cout << "Reading constraint tree " << params.constraint_tree_file << "..." << endl;
-        tree->constraintTree.initConstraint(params.constraint_tree_file, alignment->getSeqNames());
+        tree->constraintTree.readConstraint(params.constraint_tree_file, alignment->getSeqNames());
         if (params.start_tree == STT_PLL_PARSIMONY)
             params.start_tree = STT_PARSIMONY;
         else if (params.start_tree == STT_BIONJ)
             outError("Constraint tree does not work with -t BIONJ");
-            
+        if (params.num_bootstrap_samples || params.gbo_replicates)
+            cout << "INFO: Constraint tree will be applied to ML tree and all bootstrap trees." << endl;
     }
 
     if (params.compute_seq_identity_along_tree) {
@@ -2839,8 +2885,10 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
 			cout << endl << "Computing bootstrap consensus tree..." << endl;
 			string splitsfile = params.out_prefix;
 			splitsfile += ".splits.nex";
-			computeConsensusTree(splitsfile.c_str(), 0, 1e6, params.split_threshold,
-					params.split_weight_threshold, NULL, params.out_prefix, NULL, &params);
+            double weight_threshold = (params.split_threshold<1) ? params.split_threshold : (params.gbo_replicates-1.0)/params.gbo_replicates;
+            weight_threshold *= 100.0;
+			computeConsensusTree(splitsfile.c_str(), 0, 1e6, -1,
+					weight_threshold, NULL, params.out_prefix, NULL, &params);
 			// now optimize branch lengths of the consensus tree
 			string current_tree = tree->getTreeString();
 			splitsfile = params.out_prefix;
@@ -3074,8 +3122,18 @@ void computeConsensusTree(const char *input_trees, int burnin, int max_count,
 		params->split_weight_summary = SW_COUNT; // count number of splits
 		sg.init(*params);
 		params->user_file = user_file;
-		for (SplitGraph::iterator it = sg.begin(); it != sg.end(); it++)
-			hash_ss.insertSplit((*it), (*it)->getWeight());
+		for (SplitGraph::iterator it = sg.begin(); it != sg.end();)
+            if ((*it)->getWeight() > weight_threshold) {
+                hash_ss.insertSplit((*it), (*it)->getWeight());
+                it++;
+            } else {
+                // delete the split
+                if (it != sg.end()-1) {
+                    *(*it) = (*sg.back());
+                }
+                delete sg.back();
+                sg.pop_back();
+            }
 		/*		StrVector sgtaxname;
 		 sg.getTaxaName(sgtaxname);
 		 i = 0;
