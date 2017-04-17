@@ -3128,7 +3128,7 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
 	}
 	assert(id == IT_NUM);
 
-    if (!params->nni5 && !isSuperTree()) {
+    if (!params->nni5) {
         reorientPartialLh((PhyloNeighbor*)node1->findNeighbor(node2), node1);
         reorientPartialLh((PhyloNeighbor*)node2->findNeighbor(node1), node2);
     }
@@ -3203,10 +3203,8 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
         Neighbor *node2_nei = *node2_it;
 
         // reorient partial_lh before swap
-        if (!isSuperTree()) {
-            reorientPartialLh(node12_it, node1);
-            reorientPartialLh(node21_it, node2);
-        }
+        reorientPartialLh(node12_it, node1);
+        reorientPartialLh(node21_it, node2);
 
         node1->updateNeighbor(node1_it, node2_nei);
         node2_nei->node->updateNeighbor(node2, node1);
@@ -3267,10 +3265,8 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
 		}
 
         // reorient partial_lh before swap
-        if (!isSuperTree()) {
-            reorientPartialLh(node12_it, node1);
-            reorientPartialLh(node21_it, node2);
-        }
+        reorientPartialLh(node12_it, node1);
+        reorientPartialLh(node21_it, node2);
 
         // else, swap back, also recover the branch lengths
 		node1->updateNeighbor(node1_it, node1_nei);
@@ -4726,6 +4722,7 @@ void PhyloTree::sortNeighborBySubtreeSize(PhyloNode *node, PhyloNode *dad) {
 */
 
 void PhyloTree::reorientPartialLh(PhyloNeighbor* dad_branch, Node *dad) {
+    ASSERT(!isSuperTree());
     if (dad_branch->partial_lh)
         return;
     Node * node = dad_branch->node;

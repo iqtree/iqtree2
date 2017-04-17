@@ -2014,6 +2014,11 @@ void PhyloTree::computeLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, Phyl
 	df = horizontal_add(all_df);
 	ddf = horizontal_add(all_ddf);
 
+    if (std::isnan(df) || std::isinf(df)) {
+        getModel()->writeInfo(cout);
+        getRate()->writeInfo(cout);
+    }
+
     if (!SAFE_NUMERIC && (std::isnan(df) || std::isinf(df)))
         outError("Numerical underflow (lh-derivative). Run again with the safe likelihood kernel via `-safe` option");
 

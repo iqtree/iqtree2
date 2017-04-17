@@ -2911,15 +2911,20 @@ void Alignment::computeStateFreq (double *state_freq, size_t num_unknown_states)
     
     for (i = 0; i <= STATE_UNKNOWN; i++)
         getAppearance(i, &states_app[i*num_states]);
-        
-    for (iterator it = begin(); it != end(); it++)
+
+    size_t aln_len = 0;
+
+    for (iterator it = begin(); it != end(); it++) {
+        aln_len += it->frequency;
         for (Pattern::iterator it2 = it->begin(); it2 != it->end(); it2++)
             state_count[(int)*it2] += it->frequency;
+    }
             
     for (i = 0; i < num_states; i++)
         state_freq[i] = 1.0/num_states;
         
     const int NUM_TIME = 8;
+    if (aln_len > 0)
     for (int k = 0; k < NUM_TIME; k++) {
         memset(new_state_freq, 0, sizeof(double)*num_states);
         
