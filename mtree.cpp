@@ -645,7 +645,7 @@ void MTree::readTree(const char *infile, bool &is_rooted) {
 
     if (verbose_mode >= VB_MED)
         cout << "Tree contains " << leafNum - is_rooted <<
-             " taxa and " << nodeNum-1-is_rooted << " branches" << endl;
+             " taxa and " << nodeNum-1-is_rooted << " branches" << (is_rooted ? " (rooted)" : "") << endl;
 }
 
 /*

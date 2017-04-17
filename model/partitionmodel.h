@@ -75,7 +75,7 @@ public:
 		@return the best likelihood 
 	*/
 	virtual double optimizeParameters(int fixed_len = BRLEN_OPTIMIZE, bool write_info = true,
-                                      double logl_epsilon = 0.1, double gradient_epsilon = 0.001);
+                                      double logl_epsilon = 0.1, double gradient_epsilon = 0.0001);
 
 	/**
 	 *  optimize model parameters and tree branch lengths for the +I+G model
@@ -83,7 +83,7 @@ public:
 	 * 	@param fixed_len TRUE to fix branch lengths, default is false
 	 *	@return the best likelihood
 	 */
-	virtual double optimizeParametersGammaInvar(int fixed_len = BRLEN_OPTIMIZE, bool write_info = true, double logl_epsilon = 0.1, double gradient_epsilon = 0.001);
+	virtual double optimizeParametersGammaInvar(int fixed_len = BRLEN_OPTIMIZE, bool write_info = true, double logl_epsilon = 0.1, double gradient_epsilon = 0.0001);
 
 	/**
 	 * @return TRUE if parameters are at the boundary that may cause numerical unstability

@@ -124,7 +124,7 @@ public:
 
 	void setZeroInternalBranches(int num_zero_len);
 
-	void collapseZeroBranches(Node *node = NULL, Node *dad = NULL);
+	void collapseZeroBranches(Node *node = NULL, Node *dad = NULL, double threshold = 0.0);
 
 /********************************************************
 	CLUSTER for each branch, useful for likelihood mapping analysis

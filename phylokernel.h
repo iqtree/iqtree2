@@ -1473,7 +1473,16 @@ void PhyloTree::computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, Phylo
 
     dad_branch->partial_lh_computed |= 2;
 
-    if (node->isLeaf() && dad) {
+    if (node->name == ROOT_NAME) {
+        assert(dad);
+        // special treatment for root node
+        if (aln->ordered_pattern.empty())
+            aln->orderPatternByNumChars();
+        int pars_size = getBitsBlockSize();
+        memset(dad_branch->partial_pars, 255, pars_size*sizeof(UINT));
+        size_t nsites = (aln->num_informative_sites+NUM_BITS-1)/NUM_BITS;
+        dad_branch->partial_pars[nstates*VCSIZE*nsites] = 0;
+    } else if (node->isLeaf() && dad) {
         // external node
         vector<Alignment*> *partitions = NULL;
         if (aln->isSuperAlignment())
@@ -1667,14 +1676,14 @@ void PhyloTree::computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, Phylo
         PhyloNeighbor *left = NULL, *right = NULL; // left & right are two neighbors leading to 2 subtrees
         FOR_NEIGHBOR_IT(node, dad, it) {
             PhyloNeighbor* pit = (PhyloNeighbor*) (*it);
-            if ((*it)->node->name != ROOT_NAME && (pit->partial_lh_computed & 2) == 0) {
+            if ((pit->partial_lh_computed & 2) == 0) {
                 computePartialParsimonyFastSIMD<VectorClass>(pit, (PhyloNode*) node);
             }
             if (!left) left = pit; else right = pit;
         }
 //        VectorClass score = 0;
         UINT score = 0;
-        int nsites = (aln->num_informative_sites+NUM_BITS-1)/NUM_BITS;
+        size_t nsites = (aln->num_informative_sites+NUM_BITS-1)/NUM_BITS;
         int entry_size = nstates * VCSIZE;
         
         switch (nstates) {

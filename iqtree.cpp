@@ -459,7 +459,7 @@ void IQTree::createPLLPartition(Params &params, ostream &pllPartitionFileHandle)
                 if ((*it)->aln->seq_type == SEQ_DNA) {
                     pllPartitionFileHandle << "DNA";
                 } else if ((*it)->aln->seq_type == SEQ_PROTEIN) {
-                    if (siqtree->part_info[i-1].model_name != "" && siqtree->part_info[i-1].model_name.substr(0, 4) != "TEST") {
+                    if (siqtree->part_info[i-1].model_name != "" && siqtree->part_info[i-1].model_name.substr(0, 4) != "TEST" && siqtree->part_info[i-1].model_name.substr(0, 2) != "MF") {
                         string modelStr = siqtree->part_info[i - 1].model_name.
                                 substr(0, siqtree->part_info[i - 1].model_name.find_first_of("+{"));
                         if (modelStr == "LG4")
@@ -519,7 +519,7 @@ void IQTree::createPLLPartition(Params &params, ostream &pllPartitionFileHandle)
         if (aln->seq_type == SEQ_DNA) {
             model = "DNA";
         } else if (aln->seq_type == SEQ_PROTEIN) {
-        	if (params.pll && params.model_name != "" && params.model_name.substr(0, 4) != "TEST") {
+        	if (params.pll && params.model_name != "" && params.model_name.substr(0, 4) != "TEST" && params.model_name.substr(0, 2) != "MF") {
         		model = params.model_name.substr(0, params.model_name.find_first_of("+{"));
         	} else {
         		model = "WAG";
@@ -567,12 +567,7 @@ void IQTree::computeInitialTree(string &dist_file, LikelihoodKernel kernel) {
         switch (start_tree) {
         case STT_PARSIMONY:
             // Create parsimony tree using IQ-Tree kernel
-            if (kernel == LK_EIGEN_SSE)
-                cout << "Creating fast SIMD initial parsimony tree by random order stepwise addition..." << endl;
-            else if (kernel == LK_EIGEN)
-                cout << "Creating fast initial parsimony tree by random order stepwise addition..." << endl;
-            else
-                cout << "Creating initial parsimony tree by random order stepwise addition..." << endl;
+            cout << "Creating fast initial parsimony tree by random order stepwise addition..." << endl;
 //            aln->orderPatternByNumChars();
             start = getRealTime();
             score = computeParsimonyTree(params->out_prefix, aln);
@@ -678,8 +673,8 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
         #pragma omp parallel
         {
             PhyloTree tree;
-            if (params->constraint_tree_file) {
-                tree.constraintTree.initConstraint(params->constraint_tree_file, aln->getSeqNames());
+            if (!constraintTree.empty()) {
+                tree.constraintTree.readConstraint(constraintTree);
             }
             tree.setParams(params);
             tree.setParsimonyKernel(params->SSE);
@@ -3865,6 +3860,15 @@ void IQTree::sendStopMessage() {
 #endif
 }
 
+void PhyloTree::warnNumThreads() {
+    if (num_threads <= 1)
+        return;
+    size_t nptn = getAlnNPattern();
+    if (nptn < num_threads*vector_size)
+        outError("Too many threads for short alignments, please reduce number of threads or use -nt AUTO to determine it.");
+    if (nptn < num_threads*100)
+        outWarning("Number of threads seems too high for short alignments. Use -nt AUTO to determine best number of threads.");
+}
 
 int PhyloTree::testNumThreads() {
 #ifndef _OPENMP

@@ -98,8 +98,7 @@ void PhyloTree::init() {
     dist_matrix = NULL;
     var_matrix = NULL;
     params = NULL;
-    setLikelihoodKernel(LK_EIGEN_SSE, 1);  // FOR TUNG: you forgot to initialize this variable!
-    sse = LK_EIGEN_SSE;
+    setLikelihoodKernel(LK_SSE2, 1);  // FOR TUNG: you forgot to initialize this variable!
     num_threads = 0;
     max_lh_slots = 0;
     save_all_trees = 0;
@@ -650,7 +649,7 @@ void PhyloTree::initializeAllPartialPars(int &index, PhyloNode *node, PhyloNode 
         node = (PhyloNode*) root;
         // allocate the big central partial pars memory
         if (!central_partial_pars) {
-            int memsize = (aln->getNSeq() - 1) * 4 * pars_block_size;
+            int memsize = (aln->getNSeq()) * 4 * pars_block_size;
             if (verbose_mode >= VB_MED)
                 cout << "Allocating " << memsize * sizeof(UINT) << " bytes for partial parsimony vectors" << endl;
             central_partial_pars = aligned_alloc<UINT>(memsize);
@@ -1474,7 +1473,7 @@ void PhyloTree::computePatternProbabilityCategory(double *ptn_prob_cat, SiteLogl
 }
 
 int PhyloTree::computePatternCategories(IntVector *pattern_ncat) {
-    if (sse != LK_EIGEN) {
+    if (sse != LK_386) {
         // compute _pattern_lh_cat
         computePatternLhCat(WSL_MIXTURE_RATECAT);
     }
@@ -2906,7 +2905,7 @@ int PhyloTree::fixNegativeBranch(bool force, Node *node, Node *dad) {
     if (!node) {
         node = root;
         // 2015-11-30: if not bifurcating, initialize unknown branch lengths with 0.1
-        if (!isBifurcating() || rooted)
+        if (!isBifurcating())
             return setNegativeBranch(force, 0.1, root, NULL);
     }
     int fixed = 0;
@@ -3220,6 +3219,11 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
 	}
 	assert(id == IT_NUM);
 
+    if (!params->nni5) {
+        reorientPartialLh((PhyloNeighbor*)node1->findNeighbor(node2), node1);
+        reorientPartialLh((PhyloNeighbor*)node2->findNeighbor(node1), node2);
+    }
+
 	Neighbor *saved_nei[6];
     int mem_id = 0;
 	// save Neighbor and allocate new Neighbor pointer
@@ -3240,7 +3244,8 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
         }
 //		((PhyloNeighbor*) (*saved_it[id]))->scale_num = newScaleNum();
 	}
-    assert(mem_id == 2);
+    if (params->nni5)
+        assert(mem_id == 2);
 
 	// get the Neighbor again since it is replaced for saving purpose
 	PhyloNeighbor* node12_it = (PhyloNeighbor*) node1->findNeighbor(node2);
@@ -3299,10 +3304,8 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
         Neighbor *node2_nei = *node2_it;
 
         // reorient partial_lh before swap
-        if (!isSuperTree()) {
-            reorientPartialLh(node12_it, node1);
-            reorientPartialLh(node21_it, node2);
-        }
+        reorientPartialLh(node12_it, node1);
+        reorientPartialLh(node21_it, node2);
 
         node1->updateNeighbor(node1_it, node2_nei);
         node2_nei->node->updateNeighbor(node2, node1);
@@ -3372,10 +3375,8 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
 		}
 
         // reorient partial_lh before swap
-        if (!isSuperTree()) {
-            reorientPartialLh(node12_it, node1);
-            reorientPartialLh(node21_it, node2);
-        }
+        reorientPartialLh(node12_it, node1);
+        reorientPartialLh(node21_it, node2);
 
         // else, swap back, also recover the branch lengths
 		node1->updateNeighbor(node1_it, node1_nei);
@@ -4689,10 +4690,11 @@ void PhyloTree::printTransMatrices(Node *node, Node *dad) {
 void PhyloTree::removeIdenticalSeqs(Params &params) {
 	// commented out because it also works for SuperAlignment now!
 	Alignment *new_aln;
+    // 2017-03-31: always keep two identical sequences no matter if -bb or not, to avoid conflict between 2 subsequent runs
 	if (params.root)
-		new_aln = aln->removeIdenticalSeq((string)params.root, params.gbo_replicates > 0, removed_seqs, twin_seqs);
+		new_aln = aln->removeIdenticalSeq((string)params.root, true, removed_seqs, twin_seqs);
 	else
-		new_aln = aln->removeIdenticalSeq("", params.gbo_replicates > 0, removed_seqs, twin_seqs);
+		new_aln = aln->removeIdenticalSeq("", true, removed_seqs, twin_seqs);
 	if (removed_seqs.size() > 0) {
 		cout << "NOTE: " << removed_seqs.size() << " identical sequences (see below) will be ignored for subsequent analysis" << endl;
         for (int i = 0; i < removed_seqs.size(); i++) {
@@ -4874,6 +4876,7 @@ void PhyloTree::convertToRooted() {
 }
 
 void PhyloTree::reorientPartialLh(PhyloNeighbor* dad_branch, Node *dad) {
+    ASSERT(!isSuperTree());
     if (dad_branch->partial_lh)
         return;
     Node * node = dad_branch->node;
@@ -4888,3 +4891,113 @@ void PhyloTree::reorientPartialLh(PhyloNeighbor* dad_branch, Node *dad) {
         assert(dad_branch->partial_lh && "partial_lh is not re-oriented");
 }
 
+/****************************************************************************
+        helper functions for computing tree traversal
+ ****************************************************************************/
+
+bool PhyloTree::computeTraversalInfo(PhyloNeighbor *dad_branch, PhyloNode *dad, double* &buffer) {
+
+    size_t nstates = aln->num_states;
+    PhyloNode *node = (PhyloNode*)dad_branch->node;
+
+    if ((dad_branch->partial_lh_computed & 1) || node->isLeaf()) {
+        return mem_slots.lock(dad_branch);
+    }
+
+
+    size_t num_leaves = 0;
+    bool locked[node->degree()];
+    memset(locked, 0, node->degree());
+
+    // sort neighbor in desceding size order
+    NeighborVec neivec = node->neighbors;
+    NeighborVec::iterator it, i2;
+    for (it = neivec.begin(); it != neivec.end(); it++)
+        for (i2 = it+1; i2 != neivec.end(); i2++)
+            if (((PhyloNeighbor*)*it)->size < ((PhyloNeighbor*)*i2)->size) {
+                Neighbor *nei = *it;
+                *it = *i2;
+                *i2 = nei;
+            }
+
+
+    // recursive
+    for (it = neivec.begin(); it != neivec.end(); it++)
+        if ((*it)->node != dad) {
+            locked[it - neivec.begin()] = computeTraversalInfo((PhyloNeighbor*)(*it), node, buffer);
+            if ((*it)->node->isLeaf())
+                num_leaves++;
+        }
+    dad_branch->partial_lh_computed |= 1;
+
+    // prepare information for this branch
+    TraversalInfo info(dad_branch, dad);
+    info.echildren = info.partial_lh_leaves = NULL;
+
+    // re-orient partial_lh
+    reorientPartialLh(dad_branch, dad);
+
+    if (!dad_branch->partial_lh || mem_slots.locked(dad_branch)) {
+        // still no free entry found, memory saving technique
+        int slot_id = mem_slots.allocate(dad_branch);
+        if (slot_id < 0) {
+            cout << "traversal order:";
+            for (auto it = traversal_info.begin(); it != traversal_info.end(); it++) {
+                it->dad_branch->node->name = convertIntToString(it->dad_branch->size);
+                cout << "  ";
+                if (it->dad->isLeaf())
+                    cout << it->dad->name;
+                else
+                    cout << it->dad->id;
+                cout << "->";
+                if (it->dad_branch->node->isLeaf())
+                    cout << it->dad_branch->node->name;
+                else
+                    cout << it->dad_branch->node->id;
+                if (params->lh_mem_save == LM_MEM_SAVE) {
+                    if (it->dad_branch->partial_lh_computed)
+                        cout << " [";
+                    else
+                        cout << " (";
+                    cout << mem_slots.findNei(it->dad_branch) - mem_slots.begin();
+                    if (it->dad_branch->partial_lh_computed)
+                        cout << "]";
+                    else
+                        cout << ")";
+                }
+            }
+            cout << endl;
+            drawTree(cout);
+            assert(0 && "No free/unlocked mem slot found!");
+        }
+    } else
+        mem_slots.update(dad_branch);
+
+        if (verbose_mode >= VB_MED && params->lh_mem_save == LM_MEM_SAVE) {
+            int slot_id = mem_slots.findNei(dad_branch) - mem_slots.begin();
+            node->name = convertIntToString(slot_id);
+            cout << "Branch " << dad->id << "-" << node->id << " assigned slot " << slot_id << endl;
+        }
+
+    if (params->lh_mem_save == LM_MEM_SAVE) {
+        for (it = neivec.begin(); it != neivec.end(); it++)
+            if ((*it)->node != dad) {
+                if (!(*it)->node->isLeaf() && locked[it-neivec.begin()])
+                    mem_slots.unlock((PhyloNeighbor*)*it);
+            }
+    }
+
+    if (!model->isSiteSpecificModel()) {
+        //------- normal model -----
+        info.echildren = buffer;
+        size_t block = nstates * ((model_factory->fused_mix_rate) ? site_rate->getNRate() : site_rate->getNRate()*model->getNMixtures());
+        buffer += get_safe_upper_limit(block*nstates*(node->degree()-1));
+        if (num_leaves) {
+            info.partial_lh_leaves = buffer;
+            buffer += get_safe_upper_limit((aln->STATE_UNKNOWN+1)*block*num_leaves);
+        }
+    }
+
+    traversal_info.push_back(info);
+    return mem_slots.lock(dad_branch);
+}

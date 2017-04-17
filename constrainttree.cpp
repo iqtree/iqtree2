@@ -15,12 +15,37 @@
 ConstraintTree::ConstraintTree() : MTree(), SplitIntMap() {
 }
 
-void ConstraintTree::initConstraint(const char *constraint_file, StrVector &fulltaxname) {
+void ConstraintTree::readConstraint(const char *constraint_file, StrVector &fulltaxname) {
     bool is_rooted = false;
     MTree::init(constraint_file, is_rooted);
+    initFromTree();
+
+    // check that constraint tree has a subset of taxa
+
+    StrVector taxname;
+    StrVector::iterator it;
+    getTaxaName(taxname);
+
+    StringIntMap fulltax_index;
+    for (it = fulltaxname.begin(); it != fulltaxname.end(); it++)
+        fulltax_index[(*it)] = it - fulltaxname.begin();
+
+    bool err = false;
+        
+    for(it = taxname.begin(); it != taxname.end(); it++)
+        if (fulltax_index.find(*it) == fulltax_index.end()) {
+            cerr << "ERROR: Taxon " << (*it) << " in constraint tree does not appear in full tree" << endl;
+            err = true;
+        }
+    if (err) {
+        outError("Bad constraint tree (see above)");
+    }
+}
+
+void ConstraintTree::initFromTree() {
     if (leafNum <= 3)
         outError("Constraint tree must contain at least 4 taxa");
-    if (is_rooted)
+    if (rooted)
         outError("Rooted constraint tree not accepted");
 
 	// collapse any internal node of degree 2
@@ -60,22 +85,11 @@ void ConstraintTree::initConstraint(const char *constraint_file, StrVector &full
         insertSplit(new Split(**sit), 1);
     }
     
-    // check that constraint tree has a subset of taxa
-    StringIntMap fulltax_index;
-    for (it = fulltaxname.begin(); it != fulltaxname.end(); it++)
-        fulltax_index[(*it)] = it - fulltaxname.begin();
+}
 
-    bool err = false;
-        
-    for(it = taxname.begin(); it != taxname.end(); it++)
-        if (fulltax_index.find(*it) == fulltax_index.end()) {
-            cerr << "ERROR: Taxon " << (*it) << " in constraint tree does not appear in full tree" << endl;
-            err = true;
-        }
-    if (err) {
-        outError("Bad constraint tree (see above)");
-    }
-    
+void ConstraintTree::readConstraint(MTree &src_tree) {
+    copyTree(&src_tree);
+    initFromTree();
 }
 
 

@@ -50,7 +50,7 @@
 #define BootValType float
 //#define BootValType double
 
-extern int instruction_set;
+//extern int instruction_set;
 
 #define SAFE_LH   true  // safe likelihood scaling to avoid numerical underflow for ultra large trees
 #define NORM_LH  false // normal likelihood scaling
@@ -73,11 +73,11 @@ const int SPR_DEPTH = 2;
 //using namespace Eigen;
 
 inline size_t get_safe_upper_limit(size_t cur_limit) {
-	if (instruction_set >= 9)
+	if (Params::getInstance().SSE >= LK_AVX512)
 		// AVX-512
 		return ((cur_limit+7)/8)*8;
 	else
-	if (instruction_set >= 7)
+	if (Params::getInstance().SSE >= LK_AVX)
 		// AVX
 		return ((cur_limit+3)/4)*4;
 	else
@@ -86,11 +86,11 @@ inline size_t get_safe_upper_limit(size_t cur_limit) {
 }
 
 inline size_t get_safe_upper_limit_float(size_t cur_limit) {
-	if (instruction_set >= 9)
-		// AVX
+	if (Params::getInstance().SSE >= LK_AVX512)
+		// AVX-512
 		return ((cur_limit+15)/16)*16;
 	else
-	if (instruction_set >= 7)
+	if (Params::getInstance().SSE >= LK_AVX)
 		// AVX
 		return ((cur_limit+7)/8)*8;
 	else
@@ -98,21 +98,9 @@ inline size_t get_safe_upper_limit_float(size_t cur_limit) {
 		return ((cur_limit+3)/4)*4;
 }
 
-//inline double *aligned_alloc_double(size_t size) {
-//	size_t MEM_ALIGNMENT = (instruction_set >= 7) ? 32 : 16;
-//
-//#if defined WIN32 || defined _WIN32 || defined __WIN32__
-//	return (double*)_aligned_malloc(size*sizeof(double), MEM_ALIGNMENT);
-//#else
-//	void *res;
-//	posix_memalign(&res, MEM_ALIGNMENT, size*sizeof(double));
-//	return (double*)res;
-//#endif
-//}
-
 template< class T>
 inline T *aligned_alloc(size_t size) {
-	size_t MEM_ALIGNMENT = (instruction_set >= 9) ? 64 : ((instruction_set >= 7) ? 32 : 16);
+	size_t MEM_ALIGNMENT = (Params::getInstance().SSE >= LK_AVX512) ? 64 : ((Params::getInstance().SSE >= LK_AVX) ? 32 : 16);
     void *mem;
 
 #if defined WIN32 || defined _WIN32 || defined __WIN32__
@@ -745,7 +733,7 @@ public:
     /**
         compute traversal_info of a subtree
     */
-    inline bool computeTraversalInfo(PhyloNeighbor *dad_branch, PhyloNode *dad, double* &buffer);
+    bool computeTraversalInfo(PhyloNeighbor *dad_branch, PhyloNode *dad, double* &buffer);
 
 
     /**
@@ -1574,6 +1562,11 @@ public:
     */
     int testNumThreads();
 
+    /**
+        print warning about too many threads for short alignments
+    */
+    void warnNumThreads();
+
     /****************************************************************************
             Subtree Pruning and Regrafting by maximum likelihood
             NOTE: NOT DONE YET
@@ -2025,7 +2018,7 @@ protected:
      */
     UINT *central_partial_pars;
 
-    void reorientPartialLh(PhyloNeighbor* dad_branch, Node *dad);
+    virtual void reorientPartialLh(PhyloNeighbor* dad_branch, Node *dad);
 
     //----------- memory saving technique ------//
 

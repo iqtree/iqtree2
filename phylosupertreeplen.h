@@ -132,7 +132,7 @@ public:
 		@return the best likelihood 
 	*/
 	virtual double optimizeParameters(int fixed_len = BRLEN_OPTIMIZE, bool write_info = true,
-                                      double logl_epsilon = 0.1, double gradient_epsilon = 0.001);
+                                      double logl_epsilon = 0.1, double gradient_epsilon = 0.0001);
 
 
 	/**
@@ -141,7 +141,7 @@ public:
 	 * 	@param fixed_len TRUE to fix branch lengths, default is false
 	 *	@return the best likelihood
 	 */
-	virtual double optimizeParametersGammaInvar(int fixed_len = BRLEN_OPTIMIZE, bool write_info = true, double logl_epsilon = 0.1, double gradient_epsilon = 0.001);
+	virtual double optimizeParametersGammaInvar(int fixed_len = BRLEN_OPTIMIZE, bool write_info = true, double logl_epsilon = 0.1, double gradient_epsilon = 0.0001);
 
 	double optimizeGeneRate(double tol);
 
@@ -388,6 +388,8 @@ public:
             @return The number of branches that have no/negative length
      */
     virtual int fixNegativeBranch(bool force = false, Node *node = NULL, Node *dad = NULL);
+
+    virtual void reorientPartialLh(PhyloNeighbor* dad_branch, Node *dad);
 
 protected:
 	vector<uint64_t> partial_lh_entries, scale_num_entries, partial_pars_entries, block_size, scale_block_size;
