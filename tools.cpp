@@ -2636,7 +2636,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.min_correlation = convert_double(argv[cnt]);
 				continue;
 			}
-			if (strcmp(argv[cnt], "-correct") == 0) {
+			if (strcmp(argv[cnt], "-brefine") == 0) {
 				params.ufboot2corr = true;
 				continue;
 			}
@@ -3277,6 +3277,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 	// Diep:
 	if(params.ufboot2corr == true){
 		if(params.gbo_replicates <= 0) params.ufboot2corr = false;
+		else params.stop_condition = SC_UNSUCCESS_ITERATION;
 	}
 
     if (!params.out_prefix) {

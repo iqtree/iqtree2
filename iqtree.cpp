@@ -2461,6 +2461,7 @@ void IQTree::refineBootTrees(){
 	saved_aln_on_refine_btree = aln;
 
 	int nptn = getAlnNPattern();
+
 	string tree;
 	Alignment * bootstrap_aln;
 
@@ -2477,16 +2478,16 @@ void IQTree::refineBootTrees(){
             bootstrap_aln = new Alignment;
 
 //		bootstrap_aln->buildFromPatternFreq(*saved_aln_on_refine_btree, boot_samples_int[sample]);
-//		IntVector this_sample;
-//		bootstrap_aln->createBootstrapAlignment(saved_aln_on_refine_btree, &this_sample, params->bootstrap_spec);
-//		bool same_freq = true;
-//		for(int k = 0; k < boot_samples_int[sample].size(); k++)
-//			if(boot_samples_int[sample][k] != this_sample[k]){
-//				same_freq = false;
-//				assert(0 && "Not identical");
-//			}
+		IntVector this_sample;
+		bootstrap_aln->createBootstrapAlignment(saved_aln_on_refine_btree, &this_sample, params->bootstrap_spec);
 
-		bootstrap_aln->createBootstrapAlignment(saved_aln_on_refine_btree, NULL, params->bootstrap_spec);
+		for(int k = 0; k < nptn; k++){
+			if(boot_samples_int[sample][k] != this_sample[k]){
+				assert(0 && "Not identical");
+			}
+		}
+
+//		bootstrap_aln->createBootstrapAlignment(saved_aln_on_refine_btree, NULL, params->bootstrap_spec);
 		ptn_freq_computed = false;
 
 		tree = boot_trees[sample];
