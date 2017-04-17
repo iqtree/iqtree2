@@ -452,14 +452,21 @@ void ModelPoMo::normalizeMutationRates() {
     double poly = computeSumFreqPolyStates();
     double theta_bm = poly/harmonic(N-1);
 
-    // See Eq. (12.14) in my thesis.
-
-    // TODO DS: Why do I need this correction?  I do know that
-    // sampling with replacement gives better results (in the thesis I
-    // use sampling without replacement).
-    double test = (double) (N-1) / double (N+1);
-    double m_norm = theta / (theta_bm * (test - harmonic(N-1) * theta));
-
+    // Mon Apr 17 10:21:09 BST 2017.  See Eq. (12.14) in my
+    // (Dominik's) thesis but sampling with replacement from boundary
+    // mutation equilibrium.  The correction factor is exactly the
+    // difference between sampling with and without replacement.
+    // Without replacement, the correction factor is 1.0 and the
+    // heterozygosity values are very far off if N is low.  Even with
+    // the correction, the estimated heterozygosity is still too high
+    // when N is low.  A correct calculation of the heterozygosity
+    // requires a rethinking of the sampling step together with a
+    // correction of htereozygosity for low N.
+    double correction = (double) (N-1) / double (N);
+    // Interestingly, a correction factor of (N-1)/(N+1) gives very
+    // good results but I cannot derive it and do not know why.
+    double m_norm = theta / (theta_bm * (correction - harmonic(N-1) * theta));
+    
     if (verbose_mode >= VB_MAX)
         cout << "Normalization constant of mutation rates: " << m_norm << endl;
 
