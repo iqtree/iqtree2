@@ -59,13 +59,24 @@
 
 
 void reportReferences(Params &params, ofstream &out, string &original_model) {
+    bool modelfinder_only = false;
+    if (original_model.substr(0,4) == "TEST" || original_model.substr(0, 2) == "MF" || original_model.empty()) {
+        out << "To cite ModelFinder please use: " << endl << endl
+            << "Subha Kalyaanamoorthy, Bui Quang Minh, Thomas KF Wong, Arndt von Haeseler," << endl
+            << "and Lars S Jermiin (2017) ModelFinder: Fast model selection for" << endl
+            << "accurate phylogenetic estimates. Nature Methods, in press." << endl << endl;
+        if (original_model.find("ONLY") != string::npos || (original_model.substr(0,2)=="MF" && original_model.substr(0,3)!="MFP"))
+            modelfinder_only = true;
+    }
     if (params.pomo) {
         out << "For polymorphism-aware models please cite:" << endl << endl
             << "Dominik Schrempf, Bui Quang Minh, Nicola De Maio, Arndt von Haeseler, and Carolin Kosiol" << endl
             << "(2016) Reversible polymorphism-aware phylogenetic models and their application to" << endl
-            << "tree inference. J. Theor. Biol., in press." << endl << endl;
+            << "tree inference. J. Theor. Biol., 407:362–370." << endl
+            << "http://dx.doi.org/10.1016/j.jtbi.2016.07.042" << endl << endl;
     }
 
+    if (!modelfinder_only)
 	out << "To cite IQ-TREE please use:" << endl << endl
 		<< "Lam-Tung Nguyen, Heiko A. Schmidt, Arndt von Haeseler, and Bui Quang Minh" << endl
 		<< "(2015) IQ-TREE: A fast and effective stochastic algorithm for estimating" << endl

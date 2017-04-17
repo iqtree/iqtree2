@@ -3493,7 +3493,7 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -m MFP+MERGE         Like -m MF+MERGE followed by tree inference" << endl
             << "  -rcluster <percent>  Percentage of partition pairs (relaxed clustering alg.)" << endl
             << "  -mset program        Restrict search to models supported by other programs" << endl
-            << "                       (i.e., raxml, phyml or mrbayes)" << endl
+            << "                       (raxml, phyml or mrbayes)" << endl
             << "  -mset <lm-subset>    Restrict search to a subset of the Lie-Markov models" << endl
             << "                       Options for lm-subset are:" << endl
             << "                       liemarkov, liemarkovry, liemarkovws, liemarkovmk, strandsymmetric" << endl
@@ -3686,7 +3686,7 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -wspmr               Write site probabilities per mixture+rate class" << endl
 			<< "  -wpl                 Write partition log-likelihoods to .partlh file" << endl
             << "  -fconst f1,...,fN    Add constant patterns into alignment (N=#nstates)" << endl
-            << "  -me <epsilon>        Logl epsilon for model parameter optimization (default 0.01)" << endl
+            << "  -me <epsilon>        LogL epsilon for parameter estimation (default 0.01)" << endl
             << "  --no-outfiles        Suppress printing output files" << endl
             << "  --eigenlib           Use Eigen3 library" << endl;
 //            << "  -d <file>            Reading genetic distances from file (default: JC)" << endl
@@ -3706,21 +3706,23 @@ void usage_iqtree(char* argv[], bool full_command) {
 
 void quickStartGuide() {
     printCopyright(cout);
-    cout << "---" << endl;
-    cout << "Minimal command-line examples (replace 'iqtree ...' with actual path to executable):" << endl << endl
-         << "1. Reconstruct maximum-likelihood tree from a sequence alignment (example.phy)" << endl
-         << "   with the best-fit substitution model automatically selected:" << endl
-         << "     iqtree -s example.phy -m TEST" << endl << endl
-         << "2. Reconstruct ML tree and assess branch supports with ultrafast bootstrap" << endl
-         << "   and SH-aLRT test (1000 replicates):" << endl
-         << "     iqtree -s example.phy -m TEST -alrt 1000 -bb 1000" << endl << endl
-         << "3. Perform partitioned analysis with partition definition file (example.nex)" << endl
-         << "   in Nexus or RAxML format using edge-linked model and gene-specific rates:" << endl
-         << "     iqtree -s example.phy -spp example.nex -m TEST" << endl << endl
-         << "   (for edge-unlinked model replace '-spp' with '-sp' option)" << endl << endl
-         << "4. Merge partitions to reduce model complexity:" << endl
-         << "     iqtree -s example.phy -sp example.nex -m TESTMERGE" << endl << endl
-         << "5. Perform model selection only: use '-m TESTONLY' or '-m TESTMERGEONLY'" << endl << endl
+    cout << "Command-line examples (replace 'iqtree ...' by actual path to executable):" << endl << endl
+         << "1. Infer maximum-likelihood tree from a sequence alignment (example.phy)" << endl
+         << "   with the best-fit model automatically selected by ModelFinder:" << endl
+         << "     iqtree -s example.phy" << endl << endl
+         << "2. Perform ModelFinder without subsequent tree inference:" << endl
+         << "     iqtree -s example.phy -m MF" << endl
+         << "   (use '-m TEST' to resemble jModelTest/ProtTest)" << endl << endl
+         << "3. Combine ModelFinder, tree search, ultrafast bootstrap and SH-aLRT test:" << endl
+         << "     iqtree -s example.phy -alrt 1000 -bb 1000" << endl << endl
+         << "4. Perform edge-linked proportional partition model (example.nex):" << endl
+         << "     iqtree -s example.phy -spp example.nex" << endl
+         << "   (replace '-spp' by '-sp' for edge-unlinked model)" << endl << endl
+         << "5. Find best partition scheme by possibly merging partitions:" << endl
+         << "     iqtree -s example.phy -sp example.nex -m MF+MERGE" << endl
+         << "   (use '-m TESTMERGEONLY' to resemble PartitionFinder)" << endl << endl
+         << "6. Find best partition scheme followed by tree inference and bootstrap:" << endl
+         << "     iqtree -s example.phy -spp example.nex -m MFP+MERGE -bb 1000" << endl << endl
 #ifdef _OPENMP
          << "7. Use 4 CPU cores to speed up computation: add '-nt 4' option" << endl << endl
 #endif
