@@ -816,14 +816,14 @@ double ModelFactory::optimizeParametersOnly(int num_steps, double gradient_epsil
         }
         double prev_logl = cur_logl;
         for (int step = 0; step < steps; step++) {
-            double model_lh = model->optimizeParameters(model->isReversible() ? gradient_epsilon : gradient_epsilon*0.1);
+            double model_lh = model->optimizeParameters(gradient_epsilon);
             double rate_lh = site_rate->optimizeParameters(gradient_epsilon);
 
             if (rate_lh == 0.0)
                 logl = model_lh;
             else
                 logl = rate_lh;
-            if (logl <= prev_logl + gradient_epsilon*0.1)
+            if (logl <= prev_logl + gradient_epsilon)
                 break;
             prev_logl = logl;
         }
