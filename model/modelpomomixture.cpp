@@ -112,12 +112,12 @@ void ModelPoMoMixture::writeInfo(ostream &out) {
 void ModelPoMoMixture::decomposeRateMatrix() {
     // propagate eigenvalues and eigenvectors
     int m, nmix = getNMixtures(), num_states_2 = num_states*num_states;
-    double saved_mutation_prob[n_connections]; 
-    memcpy(saved_mutation_prob, mutation_prob, sizeof(double)*n_connections);
+    double saved_mutation_rates[n_connections]; 
+    memcpy(saved_mutation_rates, mutation_rates, sizeof(double)*n_connections);
 
     // trick: reverse loop to retain eigenvalues and eigenvectors of the 0th mixture class 
     for (m = nmix-1; m >= 0; m--) {
-        // rescale mutation_prob
+        // rescale mutation_rates
         scaleMutationRatesAndUpdateRateMatrix(ratehet->getRate(m));
         ModelPoMo::decomposeRateMatrix();
         // copy eigenvalues and eigenvectors
@@ -126,8 +126,8 @@ void ModelPoMoMixture::decomposeRateMatrix() {
             memcpy(eigenvectors+m*num_states_2, eigenvectors, sizeof(double)*num_states_2);
             memcpy(inv_eigenvectors+m*num_states_2, inv_eigenvectors, sizeof(double)*num_states_2);
         }
-        // restore mutation_prob
-        memcpy(mutation_prob, saved_mutation_prob, sizeof(double)*n_connections);
+        // restore mutation_rates
+        memcpy(mutation_rates, saved_mutation_rates, sizeof(double)*n_connections);
     }
     updatePoMoStatesAndRateMatrix();
 }

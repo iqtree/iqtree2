@@ -3,13 +3,25 @@
 
 #include "modeldna.h"
 
-const double POMO_MIN_RATE =  5e-5;
-const double POMO_INIT_RATE = 1e-3;
-const double POMO_MAX_RATE =  1e-2;
-/* The actual boundaries will be set, e.g., to
-   #freq_fixed_states[i]*POMO_MIN_REL_FREQ. */
-const double POMO_MIN_REL_FREQ = 0.5;
-const double POMO_MAX_REL_FREQ = 2.0;
+/* TODO DS: Code documentation!  Put documentation here; remove
+   unnecessary documentation from the cpp file. */
+
+/* TODO DS: PoMo mutation rate boundaries.  This may not be necessary
+   because rates are bounded by underlying Markov model*/
+/* const double POMO_MIN_RATE =  5e-5; */
+/* const double POMO_INIT_RATE = 1e-3; */
+/* const double POMO_MAX_RATE =  1e-1; */
+
+/* Boundaries for level of polymorphism. */
+const double POMO_MIN_THETA =  1e-4;
+const double POMO_MAX_THETA =  1e-1;
+
+/* TODO DS: Boundaries for boundary frequencies.  This may not be
+   necessary because those are set by the underlying Markov model.
+   The actual boundaries will be set, e.g., to
+   freq_boundary_states[i]*POMO_MIN_REL_FREQ. */
+/* const double POMO_MIN_REL_FREQ = 0.5; */
+/* const double POMO_MAX_REL_FREQ = 2.0; */
 
 class ModelPoMo : virtual public ModelMarkov
 {
@@ -62,6 +74,53 @@ class ModelPoMo : virtual public ModelMarkov
                       bool is_reversible,
                       string pomo_params);
 
+    /**
+     *  \brief Initialize underlying mutation model.
+     *
+     * PoMo is built on top of any Markov mutation model which is
+     * of class ModelMarkov in IQ-TREE and is denominated "underlying"
+     * Markov model or "underlying" mutation model.  The idea is
+     * to the machinery of the underlying Markov model and only
+     * introduce an additional layer that adds polymorphic states and
+     * one parameter, namely the level of polymorphism which is
+     * denoted "theta" in the code.
+     *
+     */
+    void init_mutation_model(const char *model_name,
+                             string model_params,
+                             StateFreqType freq_type,
+                             string freq_params,
+                             string pomo_params);
+
+    /**
+     *  \brief Initialize sampling type.
+     *
+     *  Weighted (standard) or sampled.
+     *
+     */
+    void init_sampling_method();
+    
+    /**
+     *  \brief Initialize state frequencies.
+     *
+     *  Use the machinery of the underlying mutation model.
+     *
+     */
+    void init_boundary_frequencies();
+
+    /**
+     *  \brief Check if parameters are optimized or not.
+     *
+     *  The parameters of PoMo are the ones from the underlying
+     *  mutation model plus the amount of polymorphism, theta.  So
+     *  far, it is only possible to either infer or fix all
+     *  parameters.  For example, fixing theta only requires
+     *  constrained maximization of the likelihood.
+     *
+     */
+    void init_fixed_parameters(string model_params,
+                               string pomo_params);
+    
     /* /\** */
     /*  *  Deprecated!  Unreversible.  Initialize rate_matrix and */
     /*  *  state_freq. */
@@ -113,10 +172,10 @@ class ModelPoMo : virtual public ModelMarkov
     virtual bool isPolymorphismAware() { return true; };
 
     /* /\**  */
-    /*  * Set the substitution rate parameters by a specification.  From */
+    /*  * Set the mutation rate parameters by a specification.  From */
     /*  * ModelDNA::setRateType(). */
     /*  * */
-    /*  * Sets the array #mutation_prob and the vector #param_fixed. */
+    /*  * Sets the array #mutation_rates and the vector #param_fixed. */
     /*  *  */
     /*  * @param rate_spec a string of six letters describing how rates are related */
     /*  * @return TRUE if successful, FALSE otherwise */
@@ -169,15 +228,15 @@ class ModelPoMo : virtual public ModelMarkov
     /* void readMutationRates(string str); */
 
     /**
-     * Estimate the empirical (relative) fixed state frequencies.  The
+     * Estimate the empirical (relative) boundary state frequencies.  The
      * number of A, C, G, and T in the data is summed up and the
      * relative proportion of all bases is calculated.  The empirical
-     * fixed state frequencies are set to these relative proportions.
+     * boundary state frequencies are set to these relative proportions.
      *
-     * @param freq_fixed_states (OUT) The estimated fixed frequencies,
+     * @param freq_boundary_states (OUT) The estimated boundary frequencies,
      * size num_states.
      */
-    void estimateEmpiricalFixedStateFreqs(double * freq_fixed_states);
+    void estimateEmpiricalBoundaryStateFreqs(double * freq_boundary_states);
 
     /**
      * Estimate the empirical (relative) sum of polymorhic states.
@@ -203,10 +262,10 @@ class ModelPoMo : virtual public ModelMarkov
 
     /**
      * Normalize the mutation probabilities such that the given level of
-     * polymorphism is honored (level_of_polymorphism).
+     * polymorphism is honored (theta).
      *
      */
-    void normalizeMutationProbs();
+    void normalizeMutationRates();
 
     /**
         save object into the checkpoint
@@ -223,7 +282,7 @@ class ModelPoMo : virtual public ModelMarkov
     ModelDNA *dna_model;
 
     /**
-        compute the rate matrix and then normalize it such that the total number of substitutions is 1.
+        compute the rate matrix and then normalize it such that the total number of mutations is 1.
         @param rate_matrix (OUT).  It is filled with rate matrix entries
         @param state_freq state frequencies
         @param num_state number of states
@@ -231,8 +290,8 @@ class ModelPoMo : virtual public ModelMarkov
     virtual void computeRateMatrix(double **rate_matrix, double *state_freq, int num_state);
 
     /** 
-     * Scale the mutation rates by SCALE.  I.e., new_mutation_prob[i]
-     * = scale*old_mutation_prob[i].
+     * Scale the mutation rates by SCALE.  I.e., new_mutation_rates[i]
+     * = scale*old_mutation_rates[i].
      * 
      * @param scale (IN).
      */ 
@@ -266,17 +325,17 @@ class ModelPoMo : virtual public ModelMarkov
     /**
      * Mutation probabilities, 6 entries for reversible model.
      */
-    double *mutation_prob;
+    double *mutation_rates;
 
     /**
-     * 4 unnormalized stationary frequencies of fixed states.
+     * 4 unnormalized stationary frequencies of boundary states.
      */
-    double *freq_fixed_states;
+    double *freq_boundary_states;
 
     /**
      * Normalized empirical stationary frequencies.
      */
-    double *freq_fixed_states_emp;
+    double *freq_boundary_states_emp;
 
     /**
      * The rate matrix of the PoMo model.
@@ -336,7 +395,7 @@ class ModelPoMo : virtual public ModelMarkov
      */
     double computeProbBoundaryMutation(int state1, int state2);
 
-    bool isFixed(int state);
+    bool isBoundary(int state);
 
     bool isPolymorphic(int state);
 
@@ -360,11 +419,11 @@ class ModelPoMo : virtual public ModelMarkov
     void setInitialMutCoeff();
 
     /**
-     * Compute the sum of the frequencies of the fixed states.
+     * Compute the sum of the frequencies of the boundary states.
      *
      * @return
      */
-    double computeSumFreqFixedStates();
+    double computeSumFreqBoundaryStates();
 
     /**
      * Compute part of normalization constant of polymorphic states.
@@ -393,11 +452,11 @@ class ModelPoMo : virtual public ModelMarkov
     double computeNormConst();
 
     /**
-     * Set the fixed frequency of T such that all fixed frequencies
+     * Set the boundary frequency of T such that all boundary frequencies
      * sum up to one.  This is done, so that they can be compared to
      * the frequencies of the GTR model.
      */
-    void updateFreqFixedState ();
+    void updateFreqBoundaryState ();
 
     /**
      * Precision and treshold value for mathematical computations and
@@ -422,9 +481,15 @@ class ModelPoMo : virtual public ModelMarkov
     /// Eventual todo: do not hardcode this.
     int nnuc;
 
-    /// True if the level of polymorphism has been fixed (either to a
-    /// user given value or to the empirically observed one).
-    bool fixed_level_of_polymorphism;
+    /// True if heterozygosity has been fixed.
+    bool fixed_theta;
+    
+    /// True if heterozygosity has been fixed by user.
+    bool fixed_theta_usr;
+
+    /// True if heterozygosity has been fixed to empirical estimate
+    /// from data.
+    bool fixed_theta_emp;
 
     /**
      * level of polymorphism.  Will be set by init() and is
@@ -432,7 +497,7 @@ class ModelPoMo : virtual public ModelMarkov
      * be done because PoMo had trouble to estimate this (especially,
      * when N was large).
      */
-    double level_of_polymorphism;
+    double theta;
 
     /// True if the model parameters are fixed (e.g., if the
     /// transition to transversion ratio is set in the HKY model).
@@ -451,7 +516,7 @@ class ModelPoMo : virtual public ModelMarkov
 
     /// Random binomial sampling or weighted; specified when alignment
     /// is created already (Alignment::readCountsFormat()).
-    SamplingType sampling_type;
+    SamplingType sampling_method;
 };
 
 #endif /* _MODELPOMO_H_ */
