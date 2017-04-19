@@ -79,8 +79,8 @@ ModelsBlock *readModelsDefinition(Params &params) {
 	return models_block;
 }
 
-ModelFactory::ModelFactory() : CheckpointFactory() { 
-	model = NULL; 
+ModelFactory::ModelFactory() : CheckpointFactory() {
+	model = NULL;
 	site_rate = NULL;
 	store_trans_matrix = false;
 	is_storing = false;
@@ -117,9 +117,7 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 		else if (tree->aln->seq_type == SEQ_BINARY) model_str = "GTR2";
 		else if (tree->aln->seq_type == SEQ_CODON) model_str = "GY";
 		else if (tree->aln->seq_type == SEQ_MORPH) model_str = "MK";
-        // TODO DS: Remove reversibility flag.  The reversibility is
-        // determined by the underlying substitution model.
-        else if (tree->aln->seq_type == SEQ_POMO) model_str = "HKY+rP";
+        else if (tree->aln->seq_type == SEQ_POMO) model_str = "HKY+P";
 		else model_str = "JC";
         if (tree->aln->seq_type != SEQ_POMO)
             outWarning("Default model "+model_str + " may be under-fitting. Use option '-m TEST' to determine the best-fit model.");
@@ -138,25 +136,36 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
         new_model_str += sub_model_str;
         if (next_mix_pos != string::npos)
             new_model_str += model_str[next_mix_pos];
-        else 
+        else
             break;
         mix_pos = next_mix_pos;
     }
     if (new_model_str != model_str)
         cout << "Model " << model_str << " is alias for " << new_model_str << endl;
     model_str = new_model_str;
-    
+
 //	nxsmodel = models_block->findModel(model_str);
 //	if (nxsmodel && nxsmodel->description.find_first_of("+*") != string::npos) {
 //		cout << "Model " << model_str << " is alias for " << nxsmodel->description << endl;
 //		model_str = nxsmodel->description;
 //	}
 
-	// decompose model string into model_str and rate_str string
+    // Throw error if sequence type is PoMo but +P is not given.
+    // This makes the model string cleaner and compareable.
+    bool is_pomo = false;
+    string::size_type pos_pomo = model_str.find("+P");
+    if ((pos_pomo != string::npos))
+        is_pomo = true;
+
+    if ((pos_pomo == string::npos) &&
+        (tree->aln->seq_type == SEQ_POMO))
+        outError("Provided alignment is exclusively used by PoMo but model string does not contain, e.g., \"+P\".");
+    
+    // Decompose model string into model_str and rate_str string.
 	size_t spec_pos = model_str.find_first_of("{+*");
 	if (spec_pos != string::npos) {
 		if (model_str[spec_pos] == '{') {
-			// scan for the corresponding '}'
+			// Scan for the corresponding '}'.
 			size_t pos = findCloseBracket(model_str, spec_pos);
 			if (pos == string::npos)
 				outError("Model name has wrong bracket notation '{...}'");
@@ -166,100 +175,86 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
             rate_str = model_str.substr(spec_pos);
             model_str = model_str.substr(0, spec_pos);
         }
-        // Check for PoMo and set model_str and rate_str accordingly.
-        // TODO DS: Remove reversibility flag.  The reversibility is
-        // determined by the underlying substitution model.
-        string::size_type pos_rev_pomo = rate_str.find("+rP");
-        string::size_type pos_nonrev_pomo = rate_str.find("+nrP");
-        if (pos_nonrev_pomo != string::npos)
-            outError("Non reversible PoMo not supported yet.");
 
-        // Throw error if sequence type is PoMo but +rP is not given.
-        // This makes the model string cleaner and compareable.
+        // Remove +NXX and +W or +S because those flags are handled when reading in the data.
+        size_t n_pos_start = rate_str.find("+N");
+        size_t n_pos_end   = rate_str.find_first_of("+", n_pos_start+1);
+        if (n_pos_start != string::npos) {
+            if (!is_pomo)
+                outError("Virtual population size can only be set with PoMo.");
+            if (n_pos_end != string::npos)
+                rate_str = rate_str.substr(0, n_pos_start)
+                    + rate_str.substr(n_pos_end);
+            else
+                rate_str = rate_str.substr(0, n_pos_start);
+        }
 
-        // TODO DS: Remove reversibility flag.  The reversibility is
-        // determined by the underlying substitution model.
-        if ((pos_rev_pomo == string::npos) &&
-            (tree->aln->seq_type == SEQ_POMO))
-            // TODO DS: BUG. The following model string ends up here: "MIX{HKY+rP,JC+rP}".
-            outError("Provided alignment is exclusively used by PoMo but model string does not contain, e.g., \"+rP\".");
-        
-        if (pos_rev_pomo != string::npos) {
-            // Remove +NXX and +W or +S.
-            size_t n_pos_start = rate_str.find("+N");
-            size_t n_pos_end   = rate_str.find_first_of("+", n_pos_start+1);
-            if (n_pos_start != string::npos) {
-                if (n_pos_end != string::npos)
-                    rate_str = rate_str.substr(0, n_pos_start)
-                        + rate_str.substr(n_pos_end);
-                else
-                    rate_str = rate_str.substr(0, n_pos_start);
-            }
-            
-            size_t w_pos = rate_str.find("+W");
-            if (w_pos != string::npos) {
-                rate_str = rate_str.substr(0, w_pos)
-                    + rate_str.substr(w_pos+2);
-            }
-            size_t s_pos = rate_str.find("+S");
-            if ( s_pos != string::npos) {
-                rate_str = rate_str.substr(0, s_pos)
-                    + rate_str.substr(s_pos+2);
-            }
-            // TODO DS: Remove reversibility flag.  The reversibility is
-            // determined by the underlying substitution model.
-            
-            // Update pos_rev_pomo in case something has been removed
-            // before "+rP".
-            string::size_type pos_rev_pomo = rate_str.find("+rP");
+        size_t w_pos = rate_str.find("+W");
+        if (w_pos != string::npos) {
+            if (!is_pomo)
+                outError("Weighted sampling can only be used with PoMo.");
+            rate_str = rate_str.substr(0, w_pos)
+                + rate_str.substr(w_pos+2);
+        }
+        size_t s_pos = rate_str.find("+S");
+        if ( s_pos != string::npos) {
+            if (!is_pomo)
+                outError("Binomial sampling can only be used with PoMo.");
+            rate_str = rate_str.substr(0, s_pos)
+                + rate_str.substr(s_pos+2);
+        }
 
-            // Move +rP and PoMo params to model string.
-            if (rate_str[pos_rev_pomo+3] == '{') {
+        // If no mixture model, etc. is used, the PoMo flag ends up in
+        // rate string.  In this case, model_str and rate_str have to
+        // be set accordingly.
+        pos_pomo = rate_str.find("+P");
+        if (pos_pomo != string::npos) {
+            // Move +P and PoMo params to model string.
+            if (rate_str[pos_pomo+2] == '{') {
                 string::size_type close_bracket = rate_str.find("}");
                 if (close_bracket == string::npos)
                     outError("No closing bracket in PoMo parameters.");
                 else {
-                    string pomo_params = rate_str.substr(pos_rev_pomo+3,close_bracket-pos_rev_pomo-3+1);
-                    // cout << pomo_params << endl;
-                    model_str = model_str + "+rP" + pomo_params;
-                    rate_str = rate_str.substr(0, pos_rev_pomo) + rate_str.substr(close_bracket+1);
+                    string pomo_params = rate_str.substr(pos_pomo+2,close_bracket-pos_pomo-2+1);
+                    model_str = model_str + "+P" + pomo_params;
+                    rate_str = rate_str.substr(0, pos_pomo) + rate_str.substr(close_bracket+1);
                 }
             }
             else {
-                model_str = model_str + "+rP";
-                rate_str = rate_str.substr(0, pos_rev_pomo) + rate_str.substr(pos_rev_pomo + 3);
+                model_str = model_str + "+P";
+                rate_str = rate_str.substr(0, pos_pomo) + rate_str.substr(pos_pomo + 2);
             }
         }
     }
-    // cout << model_str << "  " << rate_str << endl;
 
-    string::size_type pos_rev_pomo = rate_str.find("+rP");
-    // for rate heterogeneity of PoMo model
-    string pomo_rate_str = "";
-
-    if (pos_rev_pomo != string::npos || tree->aln->seq_type == SEQ_POMO) {
-        // Check that only supported flags are given.
+    // In case of PoMo, check that only supported flags are given.
+    if (is_pomo) {
         if (rate_str.find("+ASC") != string::npos)
             outError("Ascertainment bias correction with PoMo not yet supported.");
         if ((rate_str.find("+I") != string::npos) ||
             (rate_str.find("+R") != string::npos))
-            outError("Rate heterogeneity with PoMo not yet supported.");
-        
-        size_t start_pos;
-        if ((start_pos = rate_str.find("+G")) != string::npos) {
-            // move +G from rate string to model string
-            size_t end_pos = rate_str.find_first_of("+*", start_pos+1);
-            if (end_pos == string::npos) {
-                pomo_rate_str = rate_str.substr(start_pos, rate_str.length() - start_pos);
-                rate_str = rate_str.substr(0, start_pos);
+            outError("Rate heterogeneity with PoMo not yet supported.");        
+    }
+    
+    // In case of PoMo, check for rate heterogeneity and set
+    // pomo_rate_str (this has to be done because rate heterogeneity
+    // is, in effect, a mixture model with PoMo and cannot be handled
+    // with the standard method).
+    string pomo_rate_str = "";
+    if (is_pomo) {
+        size_t pomo_rate_start_pos;
+        if ((pomo_rate_start_pos = rate_str.find("+G")) != string::npos) {
+            size_t pomo_rate_end_pos = rate_str.find_first_of("+*", pomo_rate_start_pos+1);
+            if (pomo_rate_end_pos == string::npos) {
+                pomo_rate_str = rate_str.substr(pomo_rate_start_pos, rate_str.length() - pomo_rate_start_pos);
+                rate_str = rate_str.substr(0, pomo_rate_start_pos);
             } else {
-                pomo_rate_str = rate_str.substr(start_pos, end_pos - start_pos);
-                rate_str = rate_str.substr(0, start_pos) + rate_str.substr(end_pos);
+                pomo_rate_str = rate_str.substr(pomo_rate_start_pos, pomo_rate_end_pos - pomo_rate_start_pos);
+                rate_str = rate_str.substr(0, pomo_rate_start_pos) + rate_str.substr(pomo_rate_end_pos);
             }
         }
-
     }
-
+    // TODO DS: Continue here.
 
 //	nxsmodel = models_block->findModel(model_str);
 //	if (nxsmodel && nxsmodel->description.find("MIX") != string::npos) {
@@ -290,7 +285,7 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
     if (posfreq != string::npos) {
 		string freq_str;
 		size_t last_pos = rate_str.find_first_of("+*", posfreq+1);
-        
+
 		if (last_pos == string::npos) {
 			freq_str = rate_str.substr(posfreq);
 			rate_str = rate_str.substr(0, posfreq);
@@ -298,7 +293,7 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 			freq_str = rate_str.substr(posfreq, last_pos-posfreq);
 			rate_str = rate_str.substr(0, posfreq) + rate_str.substr(last_pos);
 		}
-        
+
         if (freq_str[5] != OPEN_BRACKET)
             outError("Mixture-frequency must start with +FMIX{");
         close_bracket = freq_str.find(CLOSE_BRACKET);
@@ -317,7 +312,7 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
         posfreq = rate_str.find("+Fo");
     else
         posfreq = rate_str.find("+F");
-        
+
     bool optimize_mixmodel_weight = params.optimize_mixmodel_weight;
 
 	if (posfreq != string::npos) {
@@ -360,7 +355,7 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
         } else if (freq_str == "+FO" || freq_str == "+Fo") {
             if (freq_type == FREQ_MIXTURE) {
                 freq_params = "optimize," + freq_params;
-                optimize_mixmodel_weight = true;                
+                optimize_mixmodel_weight = true;
             } else
                 freq_type = FREQ_ESTIMATE;
 	} else if (freq_str == "+F1x4" || freq_str == "+F1X4") {
@@ -468,7 +463,7 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 //        tree->aln->ordered_pattern.clear();
 //        tree->deleteAllPartialLh();
 	}
-    
+
 //	if (model->isMixture())
 //		cout << "Mixture model with " << model->getNMixtures() << " components!" << endl;
 
@@ -492,11 +487,11 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 //                        pat_str += tree->aln->convertStateBackStr(*it);
 //                    cerr << pat_str << " is invariant site pattern" << endl;
 //                }
-            if (!params.partition_file) {                
+            if (!params.partition_file) {
                 string varsites_file = ((string)params.out_prefix + ".varsites.phy");
                 tree->aln->printPhylip(varsites_file.c_str(), false, NULL, false, true);
                 cerr << "For your convenience alignment with variable sites printed to " << varsites_file << endl;
-            } 
+            }
             outError("Invalid use of +ASC because of " + convertIntToString(tree->aln->frac_invariant_sites*tree->aln->getNSite()) +
                 " invariant sites in the alignment");
         }
@@ -511,7 +506,7 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 	string::size_type posG = rate_str.find("+G");
 	string::size_type posG2 = rate_str.find("*G");
     if (posG != string::npos && posG2 != string::npos) {
-        cout << "NOTE: both +G and *G were specified, continue with " 
+        cout << "NOTE: both +G and *G were specified, continue with "
             << ((posG < posG2)? rate_str.substr(posG,2) : rate_str.substr(posG2,2)) << endl;
     }
     if (posG2 != string::npos && posG2 < posG) {
@@ -529,7 +524,7 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
     }
 
     if (posR != string::npos && posR2 != string::npos) {
-        cout << "NOTE: both +R and *R were specified, continue with " 
+        cout << "NOTE: both +R and *R were specified, continue with "
             << ((posR < posR2)? rate_str.substr(posR,2) : rate_str.substr(posR2,2)) << endl;
     }
 
@@ -664,7 +659,7 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 //				if (num_rate_cats < 0) outError("Wrong number of rate categories");
 //			} else num_rate_cats = -1;
 //			if (num_rate_cats >= 0)
-//				site_rate = new RateMeyerDiscrete(num_rate_cats, params.mcat_type, 
+//				site_rate = new RateMeyerDiscrete(num_rate_cats, params.mcat_type,
 //					params.rate_file, tree, params.rate_mh_type);
 //			else
 //				site_rate = new RateMeyerHaeseler(params.rate_file, tree, params.rate_mh_type);
@@ -677,7 +672,7 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 //				if (num_rate_cats < 0) outError("Wrong number of rate categories");
 //			} else num_rate_cats = -1;
 //			if (num_rate_cats >= 0)
-//				site_rate = new RateMeyerDiscrete(num_rate_cats, params.mcat_type, 
+//				site_rate = new RateMeyerDiscrete(num_rate_cats, params.mcat_type,
 //					params.rate_file, tree, params.rate_mh_type);
 //			else
 //				site_rate = new RateMeyerHaeseler(params.rate_file, tree, params.rate_mh_type);
@@ -713,7 +708,7 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 	} else {
 		site_rate = new RateHeterogeneity();
 		site_rate->setTree(tree);
-	} 	
+	}
 
 	if (fused_mix_rate) {
 		if (!model->isMixture()) {
@@ -780,11 +775,11 @@ void ModelFactory::restoreCheckpoint() {
 
 int ModelFactory::getNParameters() {
 	int df = model->getNDim() + model->getNDimFreq() + site_rate->getNDim();
-    
+
     if (!site_rate->getTree()->params->fixed_branch_length) {
         df += site_rate->phylo_tree->branchNum - (int)site_rate->phylo_tree->rooted;
 	// If model is Lie-Markov, and is in fact time reversible, one of the
-	// degrees of freedom is illusary. (Of the two edges coming from the 
+	// degrees of freedom is illusary. (Of the two edges coming from the
 	// root, only sum of their lenghts affects likelihood.)
 	// So correct for this. Without this correction, K2P and RY2.2b
 	// would not be synonymous, for example.
@@ -895,9 +890,9 @@ double ModelFactory::optimizeAllParameters(double gradient_epsilon) {
 double ModelFactory::optimizeParametersGammaInvar(int fixed_len, bool write_info, double logl_epsilon, double gradient_epsilon) {
     if (!site_rate->isGammai() || site_rate->isFixPInvar() || site_rate->isFixGammaShape() || site_rate->getTree()->aln->frac_const_sites == 0.0 || model->isMixture())
         return optimizeParameters(fixed_len, write_info, logl_epsilon, gradient_epsilon);
-        
+
 	double begin_time = getRealTime();
-        
+
     PhyloTree *tree = site_rate->getTree();
 	double frac_const = tree->aln->frac_const_sites;
     tree->setCurScore(tree->computeLikelihood());
@@ -1026,7 +1021,7 @@ double ModelFactory::optimizeParametersGammaInvar(int fixed_len, bool write_info
     // ((ModelGTR*) tree->getModel())->setRateMatrix(bestRates);
     // ((ModelGTR*) tree->getModel())->setStateFrequency(bestStateFreqs);
     // --
-    
+
 	tree->restoreBranchLengths(bestLens);
     // tree->getModel()->decomposeRateMatrix();
 
@@ -1049,10 +1044,10 @@ double ModelFactory::optimizeParametersGammaInvar(int fixed_len, bool write_info
 	double elapsed_secs = getRealTime() - begin_time;
 	if (write_info)
 		cout << "Parameters optimization took " << elapsed_secs << " sec" << endl;
-    
+
     // updating global variable is not safe!
 //	Params::getInstance().testAlpha = false;
-    
+
     // 2016-03-14: this was missing!
     return tree->getCurScore();
 }
@@ -1176,7 +1171,7 @@ double ModelFactory::optimizeParameters(int fixed_len, bool write_info,
 	}
 
 	// normalize rates s.t. branch lengths are #subst per site
-//    if (Params::getInstance().optimize_alg_gammai != "EM") 
+//    if (Params::getInstance().optimize_alg_gammai != "EM")
     {
         double mean_rate = site_rate->rescaleRates();
         if (mean_rate != 1.0) {
@@ -1186,9 +1181,9 @@ double ModelFactory::optimizeParameters(int fixed_len, bool write_info,
             tree->clearAllPartialLH();
         }
     }
-    
 
-    
+
+
 	if (verbose_mode >= VB_MED || write_info)
 		cout << "Optimal log-likelihood: " << cur_lh << endl;
 
@@ -1262,14 +1257,14 @@ void ModelFactory::computeTransMatrix(double time, double *trans_matrix, int mix
 		model->computeTransMatrix(time, trans_entry, mixture);
 		ass_it = insert(value_type(round(time * 1e6), trans_entry)).first;
 	} else {
-		//if (verbose_mode >= VB_MAX) 
+		//if (verbose_mode >= VB_MAX)
 			//cout << "ModelFactory bingo" << endl;
-	} 
-	
+	}
+
 	memcpy(trans_matrix, ass_it->second, mat_size * sizeof(double));
 }
 
-void ModelFactory::computeTransDerv(double time, double *trans_matrix, 
+void ModelFactory::computeTransDerv(double time, double *trans_matrix,
 	double *trans_derv1, double *trans_derv2, int mixture) {
 	if (!store_trans_matrix || !is_storing || model->isSiteSpecificModel()) {
 		model->computeTransDerv(time, trans_matrix, trans_derv1, trans_derv2, mixture);
@@ -1324,5 +1319,3 @@ bool ModelFactory::getVariables(double *variables) {
 	changed |= site_rate->getVariables(variables + model->getNDim());
     return changed;
 }
-
-

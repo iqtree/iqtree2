@@ -991,31 +991,19 @@ ModelSubst* createModel(string model_str, ModelsBlock *models_block, StateFreqTy
     NxsModel *nxsmodel = models_block->findModel(model_str);
 	if (nxsmodel) model_params = nxsmodel->description;
 
-
-
     // Check for PoMo.
     bool is_pomo = false;
-    // TODO DS: Remove reversibility flag.  The reversibility of PoMo
-    // is determined by the underlying substitution model.
-    bool is_rev_pomo = true;
-    size_t pos_rev_pomo = model_str.find("+rP");
-    size_t pos_nonrev_pomo = model_str.find("+nrP");
+    size_t pos_pomo = model_str.find("+P");
     string pomo_params;
-    if (pos_rev_pomo != string::npos) {
+    if (pos_pomo != string::npos) {
         is_pomo = true;
-        is_rev_pomo = true;
-        if (model_str.length() > pos_rev_pomo+3 && model_str[pos_rev_pomo+3] == '{') {
-            size_t pos_close_brack = model_str.find('}', pos_rev_pomo);
+        if (model_str.length() > pos_pomo+2 && model_str[pos_pomo+2] == '{') {
+            size_t pos_close_brack = model_str.find('}', pos_pomo);
             if (pos_close_brack == string::npos)
                 outError("Closing bracket for PoMo parameter not found");
-            pomo_params = model_str.substr(pos_rev_pomo+4, pos_close_brack-pos_rev_pomo-4);
+            pomo_params = model_str.substr(pos_pomo+3, pos_close_brack-pos_pomo-3);
         }
-        model_str = model_str.substr(0, pos_rev_pomo);
-    }
-    if (pos_nonrev_pomo != string::npos) {
-        is_pomo = true;
-        is_rev_pomo = false;
-        model_str = model_str.substr(0, pos_nonrev_pomo);
+        model_str = model_str.substr(0, pos_pomo);
     }
 
 	size_t pos = model_str.find(OPEN_BRACKET);
@@ -1037,9 +1025,9 @@ ModelSubst* createModel(string model_str, ModelsBlock *models_block, StateFreqTy
     if ((is_pomo == true) ||
         (tree->aln->seq_type == SEQ_POMO)) {
         if (pomo_rate_str == "")
-            model = new ModelPoMo(model_str.c_str(), model_params, freq_type, freq_params, tree, is_rev_pomo, pomo_params);
+            model = new ModelPoMo(model_str.c_str(), model_params, freq_type, freq_params, tree, pomo_params);
         else
-            model = new ModelPoMoMixture(model_str.c_str(), model_params, freq_type, freq_params, tree, is_rev_pomo, pomo_params, pomo_rate_str);
+            model = new ModelPoMoMixture(model_str.c_str(), model_params, freq_type, freq_params, tree, pomo_params, pomo_rate_str);
         if (model->isMixture())
             cout << "PoMo mixture model for Gamma rate heterogeneity." << endl;
 //	else if ((model_str == "GTR" && tree->aln->seq_type == SEQ_DNA) ||

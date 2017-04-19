@@ -3614,7 +3614,7 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "                       TIM, TIMef, TVM, TVMef, SYM, GTR, or a 6-digit model"         << endl
             << "                       specification (e.g., 010010 = HKY)."                          << endl
             << "                 <pm>: PoMo model."                                                  << endl
-            << "                       - rP (default; reversible PoMo with tree inference)."         << endl
+            << "                       - P (default; PoMo with tree inference)."                     << endl
             << "  -m <model>+<ft>      Frequency type (optional; default: +F, counted)."             << endl
             << "                       F or +FO or +FU or +FQ."                                      << endl
             << "                       Counted, optimized, user-defined, equal state frequency."     << endl
@@ -3627,10 +3627,11 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "                          observed data)."                                           << endl
             << "                       S: Sampled sampling method (determine PoMo states by randomly"<< endl
             << "                          drawing N bases per site from the data)."                  << endl
-            << "  The full default model string is: `-m HKY+rP+N9+W+F."                              << endl
-            << "  Another example: `-m GTR+rP+N15+S."                                                << endl
-            << "  You can use mixture models like so: -m \"MIX{JC+rP,HKY+rP}+N11\"."                 << endl
-            << "  A mixture model with equal state frequency: -m \"MIX{JC,HKY}+FQ\"."                << endl
+            << "  The full default model string is: `-m HKY+P+N9+W+F."                               << endl
+            << "  Another example: `-m GTR+P+N15+S."                                                 << endl
+            << "  Please refer to the manual for more complicated model strings such as"             << endl
+            << "      mixture models: -m \"MIX{JC+P,HKY+P}+N11\" or"                                 << endl
+            << "      a mixture model with equal state frequency: -m \"MIX{JC+P,HKY+P}+FQ\"."        << endl
             << "  Until now, only DNA models work with PoMo."                                        << endl
             << "  Model testing and rate heterogeneity do not work with PoMo yet."                   << endl
             << "  Example of a standard run (for more examples please see the manual):"              << endl
@@ -3778,14 +3779,17 @@ void quickStartGuide() {
 #endif
          << "---" << endl
          << "PoMo command-line examples:" << endl
+        // TODO DS: BUG.  This does not work at the moment (model finder).
          << "1. Standard tree inference (HKY model and empirical nucleotide frequencies):" << endl
          << "     iqtree -s counts_file.cf" << endl << endl
          << "2. Set virtual population size to 15:" << endl
-         << "     iqtree -s counts_file.cf -m HKY+rP+N15" << endl << endl
+         << "     iqtree -s counts_file.cf -m HKY+P+N15" << endl << endl
          << "3. Use GTR model and estimate allele frequencies during maximization of likelihood:" << endl
-         << "     iqtree -s counts_file.cf -m GTR+rP+FO" << endl << endl
+         << "     iqtree -s counts_file.cf -m GTR+P+FO" << endl << endl
          << "4. Use the sampled input method and N=9 (advanced setting; see manual or publication):" << endl
-         << "     iqtree -s counts_file.cf -m HKY+rP+N9+S" << endl << endl
+         << "     iqtree -s counts_file.cf -m HKY+P+N9+S" << endl << endl
+         << "5. Polymorphism-aware mixture model with N=5 and weighted sampling:" << endl
+         << "     iqtree -s counts_file.cf -m \"MIX{HKY+P{EMP},JC+P}+N5+W\"" << endl << endl
          << "---" << endl
          << "To show all available options: run 'iqtree -h'" << endl << endl
          << "Have a look at the tutorial and manual for more information:" << endl

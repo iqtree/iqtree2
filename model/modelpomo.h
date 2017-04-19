@@ -41,13 +41,12 @@ class ModelPoMo : virtual public ModelMarkov
      * @param freq_type
      * @param freq_params
      * @param tree Associated tree for the model.
-     * @param is_reversible True if the reversible model should be used.
      * @param pomo_params parameters for PoMo
      *
      * @return
      */
     ModelPoMo(const char *model_name, string model_params, StateFreqType freq_type, string freq_params,
-        PhyloTree *tree, bool is_reversible, string pomo_params);
+              PhyloTree *tree, string pomo_params);
 
     ModelPoMo(PhyloTree *tree);
 
@@ -65,13 +64,11 @@ class ModelPoMo : virtual public ModelMarkov
      * @param model_params
      * @param freq_type
      * @param freq_params
-     * @param is_reversible True if the reversible model should be used.
      */
     virtual void init(const char *model_name,
                       string model_params,
                       StateFreqType freq_type,
                       string freq_params,
-                      bool is_reversible,
                       string pomo_params);
 
     /**

@@ -2001,7 +2001,17 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
             length = n_pos_end - n_pos_start - 2;
         else
             length = params.model_name.length() - n_pos_start - 2;
-        N = convert_int(params.model_name.substr(n_pos_start+2,length).c_str());
+        try {
+            N = convert_int(params.model_name.substr(n_pos_start+2,length).c_str());
+        }
+        catch (string str) {
+            cout << "The model string is faulty." << endl;
+            cout << "The virtual population size N is not clear when reading in data." << endl;
+            cout << "Use, e.g., \"+N7\"." << endl;
+            cout << "For each run, N can only be set once." << endl;
+            outError(str);
+        }
+            
         if (((N != 10) && (N != 2) && (N % 2 == 0)) || (N < 2) || (N > 19))
             outError("Custom virtual population size of PoMo not 2, 10 or any other odd number between 3 and 19.");   
     }

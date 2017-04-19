@@ -32,7 +32,6 @@ public:
                      StateFreqType freq_type,
                      string freq_params,
                      PhyloTree *tree,
-                     bool is_reversible,
                      string pomo_params,
                      string pomo_rate_str);
 

@@ -14,11 +14,10 @@ ModelPoMoMixture::ModelPoMoMixture(const char *model_name,
                      StateFreqType freq_type,
                      string freq_params,
                      PhyloTree *tree,
-                     bool is_reversible,
                      string pomo_params, string pomo_rate_str)
 	:  
         ModelMarkov(tree),
-        ModelPoMo(model_name, model_params, freq_type, freq_params, tree, is_reversible, pomo_params),
+        ModelPoMo(model_name, model_params, freq_type, freq_params, tree, pomo_params),
         ModelMixture(tree)
     
 {

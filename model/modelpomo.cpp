@@ -12,10 +12,9 @@ ModelPoMo::ModelPoMo(const char *model_name,
                      StateFreqType freq_type,
                      string freq_params,
                      PhyloTree *tree,
-                     bool is_reversible,
                      string pomo_params)
     : ModelMarkov(tree) {
-    init(model_name, model_params, freq_type, freq_params, is_reversible, pomo_params);
+    init(model_name, model_params, freq_type, freq_params, pomo_params);
 }
 
 void ModelPoMo::init_mutation_model(const char *model_name,
@@ -35,11 +34,10 @@ void ModelPoMo::init_mutation_model(const char *model_name,
     // Reset the number of states.
     phylo_tree->aln->num_states = num_states;
 
-    // TODO DS: Remove rP flag.
     this->name = dna_model->name;
     if (model_params.length() > 0)
         this->name += "{" + model_params + "}";
-    this->name += "+rP";
+    this->name += "+P";
     if (pomo_params.length() > 0)
         this->name += "{" + pomo_params + "}";
     this->name += "+N" + convertIntToString(N);
@@ -60,8 +58,7 @@ void ModelPoMo::init_sampling_method()
     else outError("Sampling type is not supported.");
 
     this->full_name =
-        "Reversible PoMo with N=" +
-        convertIntToString(N) + " and " +
+        "PoMo with N=" + convertIntToString(N) + " and " +
         dna_model->full_name + " mutation model; " +
         "Sampling method: " + sampling_method_str + "; " +
         convertIntToString(num_states) + " states in total.";
@@ -149,7 +146,6 @@ void ModelPoMo::init(const char *model_name,
                      string model_params,
                      StateFreqType freq_type,
                      string freq_params,
-                     bool is_reversible,
                      string pomo_params) {
     // Initialize model constants.
     N = phylo_tree->aln->virtual_pop_size;
@@ -158,10 +154,6 @@ void ModelPoMo::init(const char *model_name,
     eps = 1e-6;
     // Check if number of states of PoMo match the provided data.
     assert(num_states == (nnuc + (nnuc*(nnuc-1)/2 * (N-1))) );
-
-    // TODO DS: Remove reversibility flag.  The reversibility is
-    // determined by the underlying mutation model.
-    if (is_reversible != true) throw "Non-reversible PoMo not supported yet.";
 
     // Main initialization of model and parameters.
     init_mutation_model(model_name,
