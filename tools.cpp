@@ -3293,8 +3293,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 			}
 
             // -- Mon Apr 17 21:18:23 BST 2017
-            // TODO Minh: Check merge.
-            // From PoMo:
+            // DONE Minh: merged correctly.
             if (strcmp(argv[cnt], "--scaling-squaring") == 0) {
                 params.matrix_exp_technique = MET_SCALING_SQUARING;
                 continue;
@@ -3311,7 +3310,6 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.matrix_exp_technique = MET_LIE_MARKOV_DECOMPOSITION;
                 continue;
             }            
-            // From master:
 			if (strcmp(argv[cnt], "--no-uniqueseq") == 0) {
 				params.suppress_output_flags |= OUT_UNIQUESEQ;
 				continue;

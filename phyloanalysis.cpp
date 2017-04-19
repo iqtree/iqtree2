@@ -1049,12 +1049,7 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 			con_file += ".contree";
 
             // -- Mon Apr 17 21:14:53 BST 2017
-            // TODO Minh: Check merge.
-            // From PoMo:
-            // IntVector rfdist;
-            // tree.computeRFDist(con_file.c_str(), rfdist);
-            // out << endl << "Robinson-Foulds distance between ML tree and consensus tree: " << rfdist[0] << endl;
-            // From master:
+            // DONE Minh: merged correctly
             out << endl << "Robinson-Foulds distance between ML tree and consensus tree: " << params.contree_rfdist << endl;
             // --
             
