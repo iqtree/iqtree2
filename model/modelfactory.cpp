@@ -1010,11 +1010,7 @@ double ModelFactory::optimizeParametersGammaInvar(int fixed_len, bool write_info
     site_rate->setPInvar(bestPInvar);
 
     // -- Mon Apr 17 21:12:14 BST 2017
-    // TODO Minh: Check merge.
-    // From PoMo:
-	// ((ModelMarkov*) tree->getModel())->setRateMatrix(bestRates);
-	// ((ModelMarkov*) tree->getModel())->setStateFrequency(bestStateFreqs);
-    // From master:
+    // DONE Minh, merged correctly
     model->setCheckpoint(best_ckp);
     model->restoreCheckpoint();
     model->setCheckpoint(saved_ckp);
@@ -1059,14 +1055,7 @@ vector<double> ModelFactory::optimizeGammaInvWithInitValue(int fixed_len, double
     tree->restoreBranchLengths(lenvec);
 
     // -- Mon Apr 17 21:12:24 BST 2017
-    // TODO Minh: Check merge.
-    // From PoMo:
-    // ((ModelMarkov*) tree->getModel())->setRateMatrix(rates);
-    // ((ModelMarkov*) tree->getModel())->setStateFrequency(state_freqs);
-    // tree->getModel()->decomposeRateMatrix();
-    // site_rates->setPInvar(initPInv);
-    // site_rates->setGammaShape(initAlpha);
-    // From master:
+    // DONE Minh: merged correctly
     Checkpoint *saved_ckp = model->getCheckpoint();
     model->setCheckpoint(model_ckp);
     model->restoreCheckpoint();
