@@ -103,7 +103,7 @@ void outError(const char *error, bool quit) {
 	if (error == ERR_NO_MEMORY) {
         print_stacktrace(cerr);
 	}
-	cerr << "ERROR: " << error << endl;
+	cerr << error << endl;
     if (quit)
     	exit(2);
 }
