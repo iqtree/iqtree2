@@ -424,7 +424,7 @@ public:
             Assing taxa ids according to their position in the alignment
             @param alignment associated alignment
      */
-    void setAlignment(Alignment *alignment);
+    virtual void setAlignment(Alignment *alignment);
 
     /** set the root by name */
     void setRootNode(const char *my_root);

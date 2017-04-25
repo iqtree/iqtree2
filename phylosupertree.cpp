@@ -49,6 +49,14 @@ PhyloSuperTree::PhyloSuperTree(SuperAlignment *alignment, PhyloSuperTree *super_
 	aln = alignment;
 }
 
+void PhyloSuperTree::setSuperAlignment(Alignment *alignment) {
+    PhyloTree::setAlignment(alignment);
+
+    SuperAlignment *saln = (SuperAlignment*)aln;
+    for (int i = 0; i < size(); i++)
+        at(i)->setAlignment(saln->partitions.at(i));
+}
+
 void PhyloSuperTree::setCheckpoint(Checkpoint *checkpoint) {
 	IQTree::setCheckpoint(checkpoint);
 	for (iterator it = begin(); it != end(); it++)

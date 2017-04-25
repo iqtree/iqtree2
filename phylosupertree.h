@@ -67,6 +67,13 @@ public:
     */
     virtual void restoreCheckpoint();
 
+    /**
+            Set the alignment, important to compute parsimony or likelihood score
+            Assing taxa ids according to their position in the alignment
+            @param alignment associated alignment
+     */
+    virtual void setSuperAlignment(Alignment *alignment);
+
     /** read partition model file */
     void readPartition(Params &params);
 

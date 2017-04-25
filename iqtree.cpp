@@ -2505,6 +2505,7 @@ void IQTree::refineBootTrees(){
 		((PhyloSuperTree *)this)->at(0)->getModelFactory()->site_rate->writeInfo(binfo);
 	}
 
+    PhyloSuperTree *stree = (isSuperTree()) ? (PhyloSuperTree*)this : NULL;
 
 	for(int sample = 0; sample < num_boot_rep; sample++){
         if ((sample+1) % 100 == 0)
@@ -2519,6 +2520,11 @@ void IQTree::refineBootTrees(){
 		IntVector this_sample;
 		bootstrap_aln->createBootstrapAlignment(saved_aln_on_refine_btree, &this_sample, params->bootstrap_spec);
 
+        if (isSuperTree())
+            stree->setSuperAlignment(bootstrap_aln);
+        else
+            setAlignment(bootstrap_aln);
+
 		for(int k = 0; k < nptn; k++){
 			if(boot_samples_int[sample][k] != this_sample[k]){
 				assert(0 && "Not identical");
@@ -2527,25 +2533,21 @@ void IQTree::refineBootTrees(){
 
 //		bootstrap_aln->createBootstrapAlignment(saved_aln_on_refine_btree, NULL, params->bootstrap_spec);
 		ptn_freq_computed = false;
+        computePtnFreq();
+        if (isSuperTree()) {
+            for (auto it = stree->begin(); it != stree->end(); it++) {
+                (*it)->ptn_freq_computed = false;
+                (*it)->computePtnFreq();
+            }
+        }
+
 
 		tree = boot_trees[sample];
 		// Read the bootstrap tree
-		stringstream str(tree);
-		freeNode();
-		readTree(str, rooted);
-		NodeVector taxai;
-		getTaxa(taxai);
-		for (NodeVector::iterator taxit = taxai.begin(); taxit != taxai.end(); taxit++){
-			(*taxit)->id = atoi((*taxit)->name.c_str());
-		}
-		NodeVector taxa;
-		// change the taxa name from ID to real name
-		getOrderedTaxa(taxa);
-		for (int j = 0; j < taxa.size(); j++)
-			taxa[j]->name = saved_aln_on_refine_btree->getSeqName(taxa[j]->id);
+//        cout << tree << endl;
 
+        readTreeString(tree);
 
-		setAlignment(bootstrap_aln);
 
 		if(!isSuperTree())
 			aln->printPhylip(refine_aln, true);
@@ -2555,14 +2557,21 @@ void IQTree::refineBootTrees(){
 		setRootNode(params->root);
 
 		if (isSuperTree()){
-			((PhyloSuperTree*) this)->mapTrees();
 			wrapperFixNegativeBranch(true);
+			((PhyloSuperTree*) this)->mapTrees();
 		}
 		else{
 			initializeAllPartialLh();
 			clearAllPartialLH();
 			wrapperFixNegativeBranch(false);
 		}
+
+
+//        printTree(cout);
+//        cout << endl;
+        optimizeBranches();
+//        printTree(cout);
+//        cout << endl;
 
 		curScore = computeLogL();
 		binfo << sample << "\t" << curScore;
@@ -2578,7 +2587,7 @@ void IQTree::refineBootTrees(){
 		stringstream ostr;
 		printTree(ostr, WT_TAXON_ID | WT_SORT_TAXA);
 		tree = ostr.str();
-		boot_trees[sample] = tree;
+		boot_trees[sample] = getTreeString();
 		boot_logl[sample] = curScore;
 
 		printTree(btreea, WT_NEWLINE | WT_SORT_TAXA);
@@ -2597,10 +2606,24 @@ void IQTree::refineBootTrees(){
 	randstream = saved_randstream;
 
 	// Recover the last status of IQTREE
-	ptn_freq_computed = false;
+
 	params->gbo_replicates = num_boot_rep;
-	setAlignment(saved_aln_on_refine_btree);
+
+    if (isSuperTree())
+        stree->setSuperAlignment(saved_aln_on_refine_btree);
+    else
+        setAlignment(saved_aln_on_refine_btree);
+
 	readTreeString(saved_tree);
+
+	ptn_freq_computed = false;
+    computePtnFreq();
+    if (isSuperTree()) {
+        for (auto it = stree->begin(); it != stree->end(); it++) {
+            (*it)->ptn_freq_computed = false;
+            (*it)->computePtnFreq();
+        }
+    }
 
 	if(params->u2c_nni5 == false){
 		params->nni_type = saved_nni_type;
