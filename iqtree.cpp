@@ -392,7 +392,10 @@ void IQTree::initSettings(Params &params) {
     			bootstrap_alignment->createBootstrapAlignment(aln, &this_sample, params.bootstrap_spec);
     			for (size_t j = 0; j < orig_nptn; j++)
     				boot_samples[i][j] = this_sample[j];
-				bootstrap_alignment->printPhylip(bootaln_name.c_str(), true);
+    			if(!isSuperTree())
+    				bootstrap_alignment->printPhylip(bootaln_name.c_str(), true);
+    			else
+    				((SuperAlignment *) bootstrap_alignment)->printCombinedAlignment(bootaln_name.c_str(), true);
 				delete bootstrap_alignment;
         	} else {
     			IntVector this_sample;
@@ -2461,6 +2464,7 @@ void IQTree::refineBootTrees(){
 	saved_aln_on_refine_btree = aln;
 
 	int nptn = getAlnNPattern();
+	cout << "npn = " << nptn << endl;
 
 	string tree;
 	Alignment * bootstrap_aln;
@@ -2468,11 +2472,45 @@ void IQTree::refineBootTrees(){
 	int *saved_randstream = randstream;
 	init_random(params->ran_seed);
 
+    string file_name = params->out_prefix;
+    file_name += ".binfo";
+	ofstream binfo(file_name.c_str());
+
+	file_name = params->out_prefix;
+	file_name += ".btree.pre";
+	ofstream btreep(file_name.c_str(), ios::app);
+
+	file_name = params->out_prefix;
+	file_name += ".btree.aft";
+	ofstream btreea(file_name.c_str(), ios::app);
+
+	file_name = params->out_prefix;
+	file_name += ".btree.pre.brlen";
+	ofstream btreep_brlen(file_name.c_str(), ios::app);
+
+	file_name = params->out_prefix;
+	file_name += ".btree.aft.brlen";
+	ofstream btreea_brlen(file_name.c_str(), ios::app);
+
+	file_name = params->out_prefix;
+	file_name += ".refine.aln";
+	ofstream refine_aln(file_name.c_str(), ios::app);
+
+
+	if(!isSuperTree()){
+		getModelFactory()->model->writeInfo(binfo);
+		getModelFactory()->site_rate->writeInfo(binfo);
+	}else{
+		((PhyloSuperTree *)this)->at(0)->getModelFactory()->model->writeInfo(binfo);
+		((PhyloSuperTree *)this)->at(0)->getModelFactory()->site_rate->writeInfo(binfo);
+	}
+
+
 	for(int sample = 0; sample < num_boot_rep; sample++){
         if ((sample+1) % 100 == 0)
             cout << sample+1 << " replicates done" << endl;
 
-        if (aln->isSuperAlignment())
+        if (saved_aln_on_refine_btree->isSuperAlignment())
             bootstrap_aln = new SuperAlignment;
         else
             bootstrap_aln = new Alignment;
@@ -2508,6 +2546,12 @@ void IQTree::refineBootTrees(){
 
 
 		setAlignment(bootstrap_aln);
+
+		if(!isSuperTree())
+			aln->printPhylip(refine_aln, true);
+		else
+			((SuperAlignment *) aln)->printCombinedAlignment(refine_aln, true);
+
 		setRootNode(params->root);
 
 		if (isSuperTree()){
@@ -2520,17 +2564,33 @@ void IQTree::refineBootTrees(){
 			wrapperFixNegativeBranch(false);
 		}
 
+		curScore = computeLogL();
+		binfo << sample << "\t" << curScore;
+
+		printTree(btreep, WT_NEWLINE | WT_SORT_TAXA);
+		printTree(btreep_brlen, WT_NEWLINE | WT_SORT_TAXA | WT_BR_LEN);
 
 		pair<int, int> nniInfos; // <num_NNIs, num_steps>
         nniInfos = doNNISearch();
+        curScore = computeLogL();
+        binfo << "\t" << curScore << endl;
 
 		stringstream ostr;
 		printTree(ostr, WT_TAXON_ID | WT_SORT_TAXA);
 		tree = ostr.str();
 		boot_trees[sample] = tree;
 		boot_logl[sample] = curScore;
+
+		printTree(btreea, WT_NEWLINE | WT_SORT_TAXA);
+		printTree(btreea_brlen, WT_NEWLINE | WT_SORT_TAXA | WT_BR_LEN);
+		delete aln;
 	}
-	delete aln;
+
+	binfo.close();
+	btreep.close();
+	btreea.close();
+
+//	delete aln;
 
 	// restore randstream
 	finish_random();
@@ -2751,6 +2811,7 @@ pair<int, int> IQTree::optimizeNNI(bool speedNNI) {
         tabuSplits = initTabuSplits;
     }
 
+    double originalScore = curScore;
     for (numSteps = 1; numSteps <= MAXSTEPS; numSteps++) {
 
 //        cout << "numSteps = " << numSteps << endl;
@@ -2862,6 +2923,10 @@ pair<int, int> IQTree::optimizeNNI(bool speedNNI) {
             totalNNIApplied += appliedNNIs.size();
         }
 
+        if(curScore < oldScore - params->loglh_epsilon){
+        	cout << "$$$$$$$$: " << curScore << "\t" << oldScore << "\t" << curScore - oldScore << endl;
+
+        }
 
         if (curScore - oldScore <  params->loglh_epsilon)
             break;
@@ -2885,6 +2950,11 @@ pair<int, int> IQTree::optimizeNNI(bool speedNNI) {
 
     if (numSteps == MAXSTEPS) {
         cout << "WARNING: NNI search needs unusual large number of steps (" << numInnerBranches << ") to converge!" << endl;
+    }
+
+    if(curScore < originalScore - params->loglh_epsilon){
+    	cout << "AAAAAAAAAAAAAAAAAAA: " << curScore << "\t" << originalScore << "\t" << curScore - originalScore << endl;
+
     }
     return make_pair(numSteps, totalNNIApplied);
 }
