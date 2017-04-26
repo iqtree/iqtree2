@@ -144,20 +144,22 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
         cout << "Model " << model_str << " is alias for " << new_model_str << endl;
     model_str = new_model_str;
 
-//	nxsmodel = models_block->findModel(model_str);
-//	if (nxsmodel && nxsmodel->description.find_first_of("+*") != string::npos) {
-//		cout << "Model " << model_str << " is alias for " << nxsmodel->description << endl;
-//		model_str = nxsmodel->description;
-//	}
+    //	nxsmodel = models_block->findModel(model_str);
+    //	if (nxsmodel && nxsmodel->description.find_first_of("+*") != string::npos) {
+    //		cout << "Model " << model_str << " is alias for " << nxsmodel->description << endl;
+    //		model_str = nxsmodel->description;
+    //	}
 
-    // Throw error if sequence type is PoMo but +P is not given.
-    // This makes the model string cleaner and compareable.
-    bool is_pomo = false;
-    string::size_type pos_pomo = model_str.find("+P");
-    if ((pos_pomo != string::npos))
-        is_pomo = true;
+    // Detect PoMo and throw error if sequence type is PoMo but +P is
+    // not given.  This makes the model string cleaner and
+    // compareable.
+    bool pomo = false;
+    string pomo_theta = "";
+    string::size_type p_pos = model_str.find("+P");
+    if ((p_pos != string::npos))
+        pomo = true;
 
-    if ((pos_pomo == string::npos) &&
+    if ((p_pos == string::npos) &&
         (tree->aln->seq_type == SEQ_POMO))
         outError("Provided alignment is exclusively used by PoMo but model string does not contain, e.g., \"+P\".");
     
@@ -175,60 +177,57 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
             rate_str = model_str.substr(spec_pos);
             model_str = model_str.substr(0, spec_pos);
         }
+    }
 
-        // Remove +NXX and +W or +S because those flags are handled when reading in the data.
-        size_t n_pos_start = rate_str.find("+N");
-        size_t n_pos_end   = rate_str.find_first_of("+", n_pos_start+1);
-        if (n_pos_start != string::npos) {
-            if (!is_pomo)
-                outError("Virtual population size can only be set with PoMo.");
-            if (n_pos_end != string::npos)
-                rate_str = rate_str.substr(0, n_pos_start)
-                    + rate_str.substr(n_pos_end);
-            else
-                rate_str = rate_str.substr(0, n_pos_start);
-        }
-
-        size_t w_pos = rate_str.find("+W");
-        if (w_pos != string::npos) {
-            if (!is_pomo)
-                outError("Weighted sampling can only be used with PoMo.");
-            rate_str = rate_str.substr(0, w_pos)
-                + rate_str.substr(w_pos+2);
-        }
-        size_t s_pos = rate_str.find("+S");
-        if ( s_pos != string::npos) {
-            if (!is_pomo)
-                outError("Binomial sampling can only be used with PoMo.");
-            rate_str = rate_str.substr(0, s_pos)
-                + rate_str.substr(s_pos+2);
-        }
-
-        // If no mixture model, etc. is used, the PoMo flag ends up in
-        // rate string.  In this case, model_str and rate_str have to
-        // be set accordingly.
-        pos_pomo = rate_str.find("+P");
-        if (pos_pomo != string::npos) {
-            // Move +P and PoMo params to model string.
-            if (rate_str[pos_pomo+2] == '{') {
-                string::size_type close_bracket = rate_str.find("}");
-                if (close_bracket == string::npos)
-                    outError("No closing bracket in PoMo parameters.");
-                else {
-                    string pomo_params = rate_str.substr(pos_pomo+2,close_bracket-pos_pomo-2+1);
-                    model_str = model_str + "+P" + pomo_params;
-                    rate_str = rate_str.substr(0, pos_pomo) + rate_str.substr(close_bracket+1);
-                }
-            }
+    // PoMo; remove +P, +NXX and +W or +S because those flags are
+    // handled when reading in the data.  Set PoMo parameters
+    // (level of polymorphism or theta).
+    p_pos = rate_str.find("+P");
+    if (p_pos != string::npos) {
+        // Set level of polymorphism.
+        if (rate_str[p_pos+2] == '{') {
+            string::size_type close_bracket = rate_str.find("}");
+            if (close_bracket == string::npos)
+                outError("No closing bracket in PoMo parameters.");
             else {
-                model_str = model_str + "+P";
-                rate_str = rate_str.substr(0, pos_pomo) + rate_str.substr(pos_pomo + 2);
+                pomo_theta = rate_str.substr(p_pos+3,close_bracket-p_pos-3);
+                rate_str = rate_str.substr(0, p_pos) + rate_str.substr(close_bracket+1);
             }
         }
+        else
+            rate_str = rate_str.substr(0, p_pos) + rate_str.substr(p_pos + 2);
+    }
+            
+    size_t n_pos_start = rate_str.find("+N");
+    size_t n_pos_end   = rate_str.find_first_of("+", n_pos_start+1);
+    if (n_pos_start != string::npos) {
+        if (!pomo)
+            outError("Virtual population size can only be set with PoMo.");
+        if (n_pos_end != string::npos)
+            rate_str = rate_str.substr(0, n_pos_start)
+                + rate_str.substr(n_pos_end);
+        else
+            rate_str = rate_str.substr(0, n_pos_start);
+    }
+
+    size_t w_pos = rate_str.find("+W");
+    if (w_pos != string::npos) {
+        if (!pomo)
+            outError("Weighted sampling can only be used with PoMo.");
+        rate_str = rate_str.substr(0, w_pos)
+            + rate_str.substr(w_pos+2);
+    }
+
+    size_t s_pos = rate_str.find("+S");
+    if ( s_pos != string::npos) {
+        if (!pomo)
+            outError("Binomial sampling can only be used with PoMo.");
+        rate_str = rate_str.substr(0, s_pos)
+            + rate_str.substr(s_pos+2);
     }
 
     // In case of PoMo, check that only supported flags are given.
-    if (is_pomo) {
+    if (pomo) {
         if (rate_str.find("+ASC") != string::npos)
             outError("Ascertainment bias correction with PoMo not yet supported.");
         if ((rate_str.find("+I") != string::npos) ||
@@ -236,31 +235,11 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
             outError("Rate heterogeneity with PoMo not yet supported.");        
     }
     
-    // In case of PoMo, check for rate heterogeneity and set
-    // pomo_rate_str (this has to be done because rate heterogeneity
-    // is, in effect, a mixture model with PoMo and cannot be handled
-    // with the standard method).
-    string pomo_rate_str = "";
-    if (is_pomo) {
-        size_t pomo_rate_start_pos;
-        if ((pomo_rate_start_pos = rate_str.find("+G")) != string::npos) {
-            size_t pomo_rate_end_pos = rate_str.find_first_of("+*", pomo_rate_start_pos+1);
-            if (pomo_rate_end_pos == string::npos) {
-                pomo_rate_str = rate_str.substr(pomo_rate_start_pos, rate_str.length() - pomo_rate_start_pos);
-                rate_str = rate_str.substr(0, pomo_rate_start_pos);
-            } else {
-                pomo_rate_str = rate_str.substr(pomo_rate_start_pos, pomo_rate_end_pos - pomo_rate_start_pos);
-                rate_str = rate_str.substr(0, pomo_rate_start_pos) + rate_str.substr(pomo_rate_end_pos);
-            }
-        }
-    }
-    // TODO DS: Continue here.
-
-//	nxsmodel = models_block->findModel(model_str);
-//	if (nxsmodel && nxsmodel->description.find("MIX") != string::npos) {
-//		cout << "Model " << model_str << " is alias for " << nxsmodel->description << endl;
-//		model_str = nxsmodel->description;
-//	}
+    //	nxsmodel = models_block->findModel(model_str);
+    //	if (nxsmodel && nxsmodel->description.find("MIX") != string::npos) {
+    //		cout << "Model " << model_str << " is alias for " << nxsmodel->description << endl;
+    //		model_str = nxsmodel->description;
+    //	}
 
 	/******************** initialize state frequency ****************************/
 
@@ -416,10 +395,38 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 			}
 			model = new ModelMixture(params.model_name, model_str, model_list, models_block, freq_type, freq_params, tree, optimize_mixmodel_weight);
 		} else {
-//			string model_desc;
-//			NxsModel *nxsmodel = models_block->findModel(model_str);
-//			if (nxsmodel) model_desc = nxsmodel->description;
-			model = createModel(model_str, models_block, freq_type, freq_params, tree, pomo_rate_str);
+            //			string model_desc;
+            //			NxsModel *nxsmodel = models_block->findModel(model_str);
+            //			if (nxsmodel) model_desc = nxsmodel->description;
+
+            // In case of PoMo, check for rate heterogeneity and set
+            // pomo_rate_str (this has to be done because rate heterogeneity
+            // is, in effect, a mixture model with PoMo and cannot be handled
+            // with the standard method).
+
+            // TODO: I am not sure if this is necessary.  I think that there
+            // is a confusion between flags that are applied system-wide and
+            // which affect the whole run (like +P, +N, +S, +W) and flags that
+            // apply to the specific model only (like +G4).
+
+            // Wed Apr 26 15:38:03 BST 2017.  It may be cleaner to move this
+            // whereever the model is created.
+
+            string pomo_rate_str = "";
+            if (pomo) {
+                size_t pomo_rate_start_pos;
+                if ((pomo_rate_start_pos = rate_str.find("+G")) != string::npos) {
+                    size_t pomo_rate_end_pos = rate_str.find_first_of("+*", pomo_rate_start_pos+1);
+                    if (pomo_rate_end_pos == string::npos) {
+                        pomo_rate_str = rate_str.substr(pomo_rate_start_pos, rate_str.length() - pomo_rate_start_pos);
+                        rate_str = rate_str.substr(0, pomo_rate_start_pos);
+                    } else {
+                        pomo_rate_str = rate_str.substr(pomo_rate_start_pos, pomo_rate_end_pos - pomo_rate_start_pos);
+                        rate_str = rate_str.substr(0, pomo_rate_start_pos) + rate_str.substr(pomo_rate_end_pos);
+                    }
+                }
+            }
+			model = createModel(model_str, models_block, freq_type, freq_params, tree, pomo, pomo_theta, pomo_rate_str);
 		}
 //		fused_mix_rate &= model->isMixture() && site_rate->getNRate() > 1;
 	} else {

@@ -29,7 +29,7 @@ extern const string builtin_mixmodels_definition;
  * @return substitution model created
  */
 ModelSubst *createModel(string model_str, ModelsBlock *models_block, StateFreqType freq_type, string freq_params,
-		PhyloTree *tree, string pomo_rate_str = "");
+                        PhyloTree *tree, bool pomo = false, string pomo_theta = "", string pomo_rate_str = "");
 
 
 /**

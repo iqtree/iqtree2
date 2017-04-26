@@ -41,12 +41,12 @@ class ModelPoMo : virtual public ModelMarkov
      * @param freq_type
      * @param freq_params
      * @param tree Associated tree for the model.
-     * @param pomo_params parameters for PoMo
+     * @param pomo_theta parameters for PoMo
      *
      * @return
      */
     ModelPoMo(const char *model_name, string model_params, StateFreqType freq_type, string freq_params,
-              PhyloTree *tree, string pomo_params);
+              PhyloTree *tree, string pomo_theta);
 
     ModelPoMo(PhyloTree *tree);
 
@@ -69,7 +69,7 @@ class ModelPoMo : virtual public ModelMarkov
                       string model_params,
                       StateFreqType freq_type,
                       string freq_params,
-                      string pomo_params);
+                      string pomo_theta);
 
     /**
      *  \brief Initialize underlying mutation model.
@@ -87,7 +87,7 @@ class ModelPoMo : virtual public ModelMarkov
                              string model_params,
                              StateFreqType freq_type,
                              string freq_params,
-                             string pomo_params);
+                             string pomo_theta);
 
     /**
      *  \brief Initialize sampling type.
@@ -116,7 +116,7 @@ class ModelPoMo : virtual public ModelMarkov
      *
      */
     void init_fixed_parameters(string model_params,
-                               string pomo_params);
+                               string pomo_theta);
     
     /* /\** */
     /*  *  Deprecated!  Unreversible.  Initialize rate_matrix and */

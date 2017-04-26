@@ -12,16 +12,16 @@ ModelPoMo::ModelPoMo(const char *model_name,
                      StateFreqType freq_type,
                      string freq_params,
                      PhyloTree *tree,
-                     string pomo_params)
+                     string pomo_theta)
     : ModelMarkov(tree) {
-    init(model_name, model_params, freq_type, freq_params, pomo_params);
+    init(model_name, model_params, freq_type, freq_params, pomo_theta);
 }
 
 void ModelPoMo::init_mutation_model(const char *model_name,
                                         string model_params,
                                         StateFreqType freq_type,
                                         string freq_params,
-                                        string pomo_params)
+                                        string pomo_theta)
 {
     // TODO DS: Add support for general Markov models.
     // Trick ModelDNA constructor by setting the number of states to 4 (DNA).
@@ -38,8 +38,8 @@ void ModelPoMo::init_mutation_model(const char *model_name,
     if (model_params.length() > 0)
         this->name += "{" + model_params + "}";
     this->name += "+P";
-    if (pomo_params.length() > 0)
-        this->name += "{" + pomo_params + "}";
+    if (pomo_theta.length() > 0)
+        this->name += "{" + pomo_theta + "}";
     this->name += "+N" + convertIntToString(N);
 }
 
@@ -108,7 +108,7 @@ void ModelPoMo::init_boundary_frequencies()
 }
 
 void ModelPoMo::init_fixed_parameters(string model_params,
-                                      string pomo_params)
+                                      string pomo_theta)
 {
     // TODO DS: Enable constrained maximization of likelihood and
     // fixed level of polymorphisms.  So far either all parameters are
@@ -122,10 +122,10 @@ void ModelPoMo::init_fixed_parameters(string model_params,
     fixed_theta = false;
     if (model_params.length() > 0)
         fixed_model_params = true;
-    if (pomo_params.length() > 0) {
+    if (pomo_theta.length() > 0) {
         cout << setprecision(5);
         fixed_theta = true;
-        if (pomo_params == "EMP") {
+        if (pomo_theta == "EMP") {
             cout << "Level of polymorphism is fixed to the estimate from the data: ";
             cout << theta << "." << endl;
             fixed_theta_emp = true;
@@ -134,7 +134,7 @@ void ModelPoMo::init_fixed_parameters(string model_params,
         }
         else {
             cout << "Level of polymorphism is fixed to the value given by the user: ";
-            theta = convert_double(pomo_params.c_str());
+            theta = convert_double(pomo_theta.c_str());
             cout << theta << "." << endl;
             fixed_theta_usr = true;
         }
@@ -146,7 +146,7 @@ void ModelPoMo::init(const char *model_name,
                      string model_params,
                      StateFreqType freq_type,
                      string freq_params,
-                     string pomo_params) {
+                     string pomo_theta) {
     // Initialize model constants.
     N = phylo_tree->aln->virtual_pop_size;
     nnuc = 4;
@@ -160,11 +160,11 @@ void ModelPoMo::init(const char *model_name,
                         model_params,
                         freq_type,
                         freq_params,
-                        pomo_params);
+                        pomo_theta);
     init_sampling_method();
     init_boundary_frequencies();
     theta = estimateEmpiricalWattersonTheta();
-    init_fixed_parameters(model_params, pomo_params);
+    init_fixed_parameters(model_params, pomo_theta);
     setInitialMutCoeff();
     rate_matrix = new double[num_states*num_states];
     updatePoMoStatesAndRateMatrix();

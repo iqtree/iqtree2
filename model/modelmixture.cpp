@@ -983,28 +983,13 @@ const double MIN_MIXTURE_PROP = 0.001;
 //const double MAX_MIXTURE_RATE = 100.0;
 
 ModelSubst* createModel(string model_str, ModelsBlock *models_block, StateFreqType freq_type, string freq_params,
-		PhyloTree* tree, string pomo_rate_str)
+                        PhyloTree* tree, bool pomo, string pomo_theta, string pomo_rate_str)
 {
 	ModelSubst *model = NULL;
 	//cout << "Numstates: " << tree->aln->num_states << endl;
 	string model_params;
     NxsModel *nxsmodel = models_block->findModel(model_str);
 	if (nxsmodel) model_params = nxsmodel->description;
-
-    // Check for PoMo.
-    bool is_pomo = false;
-    size_t pos_pomo = model_str.find("+P");
-    string pomo_params;
-    if (pos_pomo != string::npos) {
-        is_pomo = true;
-        if (model_str.length() > pos_pomo+2 && model_str[pos_pomo+2] == '{') {
-            size_t pos_close_brack = model_str.find('}', pos_pomo);
-            if (pos_close_brack == string::npos)
-                outError("Closing bracket for PoMo parameter not found");
-            pomo_params = model_str.substr(pos_pomo+3, pos_close_brack-pos_pomo-3);
-        }
-        model_str = model_str.substr(0, pos_pomo);
-    }
 
 	size_t pos = model_str.find(OPEN_BRACKET);
 	if (pos != string::npos) {
@@ -1022,12 +1007,11 @@ ModelSubst* createModel(string model_str, ModelsBlock *models_block, StateFreqTy
 	{
 		model = new ModelSubst(tree->aln->num_states);
 	} else */
-    if ((is_pomo == true) ||
-        (tree->aln->seq_type == SEQ_POMO)) {
+    if ((pomo) || (tree->aln->seq_type == SEQ_POMO)) {
         if (pomo_rate_str == "")
-            model = new ModelPoMo(model_str.c_str(), model_params, freq_type, freq_params, tree, pomo_params);
+            model = new ModelPoMo(model_str.c_str(), model_params, freq_type, freq_params, tree, pomo_theta);
         else
-            model = new ModelPoMoMixture(model_str.c_str(), model_params, freq_type, freq_params, tree, pomo_params, pomo_rate_str);
+            model = new ModelPoMoMixture(model_str.c_str(), model_params, freq_type, freq_params, tree, pomo_theta, pomo_rate_str);
         if (model->isMixture())
             cout << "PoMo mixture model for Gamma rate heterogeneity." << endl;
 //	else if ((model_str == "GTR" && tree->aln->seq_type == SEQ_DNA) ||
@@ -1083,7 +1067,9 @@ ModelMixture::ModelMixture(string orig_model_name, string model_name, string mod
 void ModelMixture::initMixture(string orig_model_name, string model_name, string model_list, ModelsBlock *models_block,
 		StateFreqType freq, string freq_params, PhyloTree *tree, bool optimize_weights)
 {
-//	const int MAX_MODELS = 64;
+    // TODO: PoMo model is not handled correctly yet!
+    
+    //	const int MAX_MODELS = 64;
 	size_t cur_pos;
 	int m;
 
