@@ -1549,7 +1549,7 @@ ModelMarkov* getPrototypeModel(SeqType seq_type, PhyloTree* tree, char *model_se
         subst_model = new ModelCodon("GY", "", FREQ_UNKNOWN, "", tree);
 	break;
     case SEQ_POMO:
-        // Exit gracefully.
+        // TODO DS: Implement model finder.
         cout << "ERROR: Automatic model selection with PoMo not yet supported." << endl;
         outError("Please provide a substitution model with, e.g., \"-m HKY+P\".");
 	break;

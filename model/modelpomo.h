@@ -12,9 +12,16 @@
 /* const double POMO_INIT_RATE = 1e-3; */
 /* const double POMO_MAX_RATE =  1e-1; */
 
+/* TODO DS: The theta boundaries strongly affect numerical stability.
+   I set them so that errors are very seldom but there may be data
+   that requires different boundaries.  Maybe they should be set
+   variable, depending on data or user input. */
 /* Boundaries for level of polymorphism. */
-const double POMO_MIN_THETA =  1e-4;
-const double POMO_MAX_THETA =  1e-1;
+const double POMO_MIN_THETA =  8e-4;
+const double POMO_MAX_THETA =  8e-2;
+/* Not so stringent values. */
+/* const double POMO_MIN_THETA =  1e-4; */
+/* const double POMO_MAX_THETA =  1e-1; */
 
 /* TODO DS: Boundaries for boundary frequencies.  This may not be
    necessary because those are set by the underlying Markov model.
@@ -22,6 +29,9 @@ const double POMO_MAX_THETA =  1e-1;
    freq_boundary_states[i]*POMO_MIN_REL_FREQ. */
 /* const double POMO_MIN_REL_FREQ = 0.5; */
 /* const double POMO_MAX_REL_FREQ = 2.0; */
+
+const double POMO_MIN_BOUNDARY_FREQ = 0.05;
+const double POMO_MAX_BOUNDARY_FREQ = 0.95;
 
 class ModelPoMo : virtual public ModelMarkov
 {
@@ -224,6 +234,18 @@ class ModelPoMo : virtual public ModelMarkov
     /*  *\/ */
     /* void readMutationRates(string str); */
 
+    /**
+     *  \brief Normalize boundary frequencies so that they sum to 1.0.
+     *
+     */
+    void normalize_boundary_freqs(double * bfs);
+
+    /**
+     *  \brief Check if boundary frequencies are within bounds.
+     *
+     */
+    void check_boundary_freqs(double * bfs);
+    
     /**
      * Estimate the empirical (relative) boundary state frequencies.  The
      * number of A, C, G, and T in the data is summed up and the

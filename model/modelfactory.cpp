@@ -162,7 +162,7 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
     if ((p_pos == string::npos) &&
         (tree->aln->seq_type == SEQ_POMO))
         outError("Provided alignment is exclusively used by PoMo but model string does not contain, e.g., \"+P\".");
-    
+
     // Decompose model string into model_str and rate_str string.
 	size_t spec_pos = model_str.find_first_of("{+*");
 	if (spec_pos != string::npos) {
@@ -179,25 +179,9 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
         }
     }
 
-    // PoMo; remove +P, +NXX and +W or +S because those flags are
-    // handled when reading in the data.  Set PoMo parameters
-    // (level of polymorphism or theta).
-    p_pos = rate_str.find("+P");
-    if (p_pos != string::npos) {
-        // Set level of polymorphism.
-        if (rate_str[p_pos+2] == '{') {
-            string::size_type close_bracket = rate_str.find("}");
-            if (close_bracket == string::npos)
-                outError("No closing bracket in PoMo parameters.");
-            else {
-                pomo_theta = rate_str.substr(p_pos+3,close_bracket-p_pos-3);
-                rate_str = rate_str.substr(0, p_pos) + rate_str.substr(close_bracket+1);
-            }
-        }
-        else
-            rate_str = rate_str.substr(0, p_pos) + rate_str.substr(p_pos + 2);
-    }
-            
+    // PoMo; +NXX and +W or +S because those flags are handled when
+    // reading in the data.  Set PoMo parameters (level of
+    // polymorphism or theta).
     size_t n_pos_start = rate_str.find("+N");
     size_t n_pos_end   = rate_str.find_first_of("+", n_pos_start+1);
     if (n_pos_start != string::npos) {
@@ -229,12 +213,19 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
     // In case of PoMo, check that only supported flags are given.
     if (pomo) {
         if (rate_str.find("+ASC") != string::npos)
-            outError("Ascertainment bias correction with PoMo not yet supported.");
-        if ((rate_str.find("+I") != string::npos) ||
-            (rate_str.find("+R") != string::npos))
-            outError("Rate heterogeneity with PoMo not yet supported.");        
+            // TODO DS: This is an important feature, because then,
+            // PoMo can be applied to SNP data only.
+            outError("PoMo does not yet support ascertainment bias correction (+ASC).");
+        if (rate_str.find("+I") != string::npos)
+            outError("PoMo does not yet support invariable sites (+I).");
+        if (rate_str.find("+R") != string::npos)
+            outError("PoMo does not yet support free rate models (+R).");
+        if (rate_str.find("+FMIX") != string::npos)
+            outError("PoMo does not yet support frequency mixture models (+FMIX).");
+        if (rate_str.find("+H") != string::npos)
+            outError("PoMo does not yet support heterotachy models (+H).");
     }
-    
+
     //	nxsmodel = models_block->findModel(model_str);
     //	if (nxsmodel && nxsmodel->description.find("MIX") != string::npos) {
     //		cout << "Model " << model_str << " is alias for " << nxsmodel->description << endl;
@@ -393,24 +384,35 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 				model_list = model_str.substr(4, model_str.length()-5);
 				model_str = model_str.substr(0, 3);
 			}
+            // PoMo.  If it is a mixture model, the +P{} and +GXX have
+            // to be specified within the mixture model string and are
+            // interpreted during mixture model creation.
 			model = new ModelMixture(params.model_name, model_str, model_list, models_block, freq_type, freq_params, tree, optimize_mixmodel_weight);
 		} else {
             //			string model_desc;
             //			NxsModel *nxsmodel = models_block->findModel(model_str);
             //			if (nxsmodel) model_desc = nxsmodel->description;
 
-            // In case of PoMo, check for rate heterogeneity and set
-            // pomo_rate_str (this has to be done because rate heterogeneity
-            // is, in effect, a mixture model with PoMo and cannot be handled
-            // with the standard method).
-
-            // TODO: I am not sure if this is necessary.  I think that there
-            // is a confusion between flags that are applied system-wide and
-            // which affect the whole run (like +P, +N, +S, +W) and flags that
-            // apply to the specific model only (like +G4).
-
-            // Wed Apr 26 15:38:03 BST 2017.  It may be cleaner to move this
-            // whereever the model is created.
+            // PoMo.  If there is no mixture model, remove +P flag and
+            // set possible theta.  For mixture models, theta can be
+            // set separately for each model, hence, the +P{} flag has
+            // to be inside the mixture model definition.  Also, the
+            // rate heterogeneity can be set separately and, hence,
+            // has to be handled here.
+            p_pos = rate_str.find("+P");
+            if (p_pos != string::npos) {
+                if (rate_str[p_pos+2] == '{') {
+                    string::size_type close_bracket = rate_str.find("}");
+                    if (close_bracket == string::npos)
+                        outError("No closing bracket in PoMo parameters.");
+                    else {
+                        pomo_theta = rate_str.substr(p_pos+3,close_bracket-p_pos-3);
+                        rate_str = rate_str.substr(0, p_pos) + rate_str.substr(close_bracket+1);
+                    }
+                }
+                else
+                    rate_str = rate_str.substr(0, p_pos) + rate_str.substr(p_pos + 2);
+            }
 
             string pomo_rate_str = "";
             if (pomo) {
@@ -426,6 +428,8 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
                     }
                 }
             }
+
+            // Now, everything is prepared to create the model.
 			model = createModel(model_str, models_block, freq_type, freq_params, tree, pomo, pomo_theta, pomo_rate_str);
 		}
 //		fused_mix_rate &= model->isMixture() && site_rate->getNRate() > 1;

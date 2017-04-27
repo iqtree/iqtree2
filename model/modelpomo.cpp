@@ -30,7 +30,20 @@ void ModelPoMo::init_mutation_model(const char *model_name,
     // if (ModelMarkov::validModelName(model_str))
     //     dna_model = ModelMarkov::getModelByName(model_str, phylo_tree, model_params, freq_type, freq_params);
     // else
-    dna_model = new ModelDNA(model_name, model_params, freq_type, freq_params, phylo_tree);
+
+    // This would be ideal but the try and catch statement does not
+    // work yet.  I guess, for the moment, the user has to find out
+    // what went wrong during DNA model initialization.
+    try {
+        cout << "Initialize PoMo DNA mutation model." << endl;
+        dna_model = new ModelDNA(model_name, model_params, freq_type, freq_params, phylo_tree);
+    }
+    catch (string str) {
+        cout << "Error during initialization of the underlying mutation model of PoMo." << endl;
+        cout << "PoMo only works with DNA models at the moment." << endl;
+        outError(str);
+    }
+        
     // Reset the number of states.
     phylo_tree->aln->num_states = num_states;
 
@@ -551,6 +564,43 @@ bool ModelPoMo::isUnstableParameters() {
     return false;
 }
 
+void ModelPoMo::normalize_boundary_freqs(double * bfs) {
+    // Normalize frequencies so that they sum to 1.0.
+    double sum = 0.0;
+    for (int i = 0; i < nnuc; i++)
+        sum += bfs[i];
+    for (int i = 0; i < nnuc; i++)
+        bfs[i] /= sum;
+    if (verbose_mode >= VB_MAX) {
+        std::cout << "The empirical frequencies of the boundary states are:" << std::endl;
+        for (int i = 0; i < nnuc; i++)
+            std::cout << bfs[i] << " ";
+        std::cout << std::endl;
+    }
+    check_boundary_freqs(bfs);
+}
+
+void ModelPoMo::check_boundary_freqs(double * bfs) {
+    // Check if boundary frequencies are within bounds.
+    bool change = false;
+    for (int i = 0; i < nnuc; i++) {
+        if (bfs[i] < POMO_MIN_BOUNDARY_FREQ) {
+            bfs[i] = POMO_MIN_BOUNDARY_FREQ;
+            cout << "WARNING: A boundary state has very low frequency." << endl;
+            cout << "WARNING: Frequency set to." << POMO_MIN_BOUNDARY_FREQ;
+            change = true;
+        }
+        if (bfs[i] > POMO_MAX_BOUNDARY_FREQ) {
+            bfs[i] = POMO_MAX_BOUNDARY_FREQ;
+            cout << "WARNING: A boundary state has very high frequency." << endl;
+            cout << "WARNING: Frequency set to." << POMO_MAX_BOUNDARY_FREQ;
+            change = true;
+        }
+    }
+    if (change)
+        normalize_boundary_freqs(bfs);
+}
+
 void
 ModelPoMo::estimateEmpiricalBoundaryStateFreqs(double * freq_boundary_states)
 {
@@ -611,17 +661,12 @@ ModelPoMo::estimateEmpiricalBoundaryStateFreqs(double * freq_boundary_states)
             }
         }
     }
-    // Normalize frequencies so that they sum to 1.0.
-    double sum = 0.0;
-    for (int i = 0; i < nnuc; i++)
-        sum += freq_boundary_states[i];
-    for (int i = 0; i < nnuc; i++)
-        freq_boundary_states[i] /= sum;
+    normalize_boundary_freqs(freq_boundary_states);
     if (verbose_mode >= VB_MAX) {
-        std::cout << "The empirical frequencies of the boundary states are:" << std::endl;
-        for (int i = 0; i < nnuc; i++)
-            std::cout << freq_boundary_states[i] << " ";
-        std::cout << std::endl;
+        cout << "Empirical boundary state frequencies: ";
+        for (int i = 0; i< nnuc; i++)
+            cout << freq_boundary_states[i] << " ";
+        cout << endl;
     }
 }
 
