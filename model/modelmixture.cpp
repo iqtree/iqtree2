@@ -983,7 +983,7 @@ const double MIN_MIXTURE_PROP = 0.001;
 //const double MAX_MIXTURE_RATE = 100.0;
 
 ModelSubst* createModel(string model_str, ModelsBlock *models_block, StateFreqType freq_type, string freq_params,
-                        PhyloTree* tree, bool pomo, string pomo_theta, string pomo_rate_str)
+                        PhyloTree* tree)
 {
 	ModelSubst *model = NULL;
 	//cout << "Numstates: " << tree->aln->num_states << endl;
@@ -991,13 +991,52 @@ ModelSubst* createModel(string model_str, ModelsBlock *models_block, StateFreqTy
     NxsModel *nxsmodel = models_block->findModel(model_str);
 	if (nxsmodel) model_params = nxsmodel->description;
 
+    // PoMo.
+    bool pomo = false;
+    string pomo_rate_str = "";
+    string pomo_theta = "";
+    string::size_type p_pos = model_str.find("+P");
+    if ((p_pos != string::npos))
+        pomo = true;
+
+    if (pomo) {
+        if (model_str[p_pos+2] == '{') {
+            string::size_type close_bracket = model_str.find("}", p_pos);
+            if (close_bracket == string::npos) {
+                cout << "Model string: " << model_str << endl;
+                outError("No closing bracket in PoMo parameters.");
+            }
+            else {
+                pomo_theta = model_str.substr(p_pos+3,close_bracket-p_pos-3);
+                model_str = model_str.substr(0, p_pos) + model_str.substr(close_bracket+1);
+            }
+        }
+        else {
+            model_str = model_str.substr(0, p_pos) + model_str.substr(p_pos + 2);
+        }
+
+        size_t pomo_rate_start_pos;
+        if ((pomo_rate_start_pos = model_str.find("+G")) != string::npos) {
+            size_t pomo_rate_end_pos = model_str.find_first_of("+*", pomo_rate_start_pos+1);
+            if (pomo_rate_end_pos == string::npos) {
+                pomo_rate_str = model_str.substr(pomo_rate_start_pos, model_str.length() - pomo_rate_start_pos);
+                model_str = model_str.substr(0, pomo_rate_start_pos);
+            } else {
+                pomo_rate_str = model_str.substr(pomo_rate_start_pos, pomo_rate_end_pos - pomo_rate_start_pos);
+                model_str = model_str.substr(0, pomo_rate_start_pos) + model_str.substr(pomo_rate_end_pos);
+            }
+        }
+    }
+
+    // Now that PoMo stuff has been removed, check for model parameters.
 	size_t pos = model_str.find(OPEN_BRACKET);
-	if (pos != string::npos) {
+    if (pos != string::npos) {
 		if (model_str.rfind(CLOSE_BRACKET) != model_str.length()-1)
 			outError("Close bracket not found at the end of ", model_str);
 		model_params = model_str.substr(pos+1, model_str.length()-pos-2);
 		model_str = model_str.substr(0, pos);
-	}
+    }
+
 	/*
 	if ((model_str == "JC" && tree->aln->seq_type == SEQ_DNA) ||
 		(model_str == "POISSON" && tree->aln->seq_type == SEQ_PROTEIN) ||
@@ -1007,6 +1046,7 @@ ModelSubst* createModel(string model_str, ModelsBlock *models_block, StateFreqTy
 	{
 		model = new ModelSubst(tree->aln->num_states);
 	} else */
+
     if ((pomo) || (tree->aln->seq_type == SEQ_POMO)) {
         if (pomo_rate_str == "")
             model = new ModelPoMo(model_str.c_str(), model_params, freq_type, freq_params, tree, pomo_theta);
@@ -1067,13 +1107,11 @@ ModelMixture::ModelMixture(string orig_model_name, string model_name, string mod
 void ModelMixture::initMixture(string orig_model_name, string model_name, string model_list, ModelsBlock *models_block,
 		StateFreqType freq, string freq_params, PhyloTree *tree, bool optimize_weights)
 {
-    // TODO: PoMo model is not handled correctly yet!
-    
     //	const int MAX_MODELS = 64;
 	size_t cur_pos;
 	int m;
 
-    NxsModel *nxs_freq_empirical = new NxsModel("empirical"); 
+    NxsModel *nxs_freq_empirical = new NxsModel("empirical");
     NxsModel *nxs_freq_optimize = new NxsModel("optimize");
 
     int num_pre_freq = 0;
@@ -1132,10 +1170,10 @@ void ModelMixture::initMixture(string orig_model_name, string model_name, string
 		}
         double sum_weights = 0.0;
         for (m = 0; m < freq_weights.size(); m++)
-            if (freq_vec[m] != nxs_freq_empirical && freq_vec[m] != nxs_freq_optimize) 
+            if (freq_vec[m] != nxs_freq_empirical && freq_vec[m] != nxs_freq_optimize)
                 sum_weights += freq_weights[m];
         for (m = 0; m < freq_weights.size(); m++)
-            if (freq_vec[m] == nxs_freq_empirical || freq_vec[m] == nxs_freq_optimize) 
+            if (freq_vec[m] == nxs_freq_empirical || freq_vec[m] == nxs_freq_optimize)
                 freq_weights[m] = sum_weights/freq_weights.size();
 		ModelMarkov::init(FREQ_USER_DEFINED);
 	} else {
@@ -1245,7 +1283,7 @@ void ModelMixture::initMixture(string orig_model_name, string model_name, string
 //        cout << "NOTE: Mixture weights do not sum up to 1, rescale weights by " << sum << endl;
         for (i = 0; i < nmixtures; i++)
              prop[i] *= sum;
-    }     
+    }
 
 	// rescale total_num_subst such that the global rate is 1
 	for (i = 0, sum = 0.0; i < nmixtures; i++)
@@ -1475,7 +1513,7 @@ double ModelMixture::optimizeWeights() {
     size_t ptn, c;
     size_t nptn = phylo_tree->aln->getNPattern();
     size_t nmix = getNMixtures();
-    
+
     double *new_prop = aligned_alloc<double>(nmix);
     double *ratio_prop = aligned_alloc<double>(nmix);
 
@@ -1491,7 +1529,7 @@ double ModelMixture::optimizeWeights() {
                 for (c = 0; c < nmix; c++) {
                     this_lk_cat[c] *= ratio_prop[c];
                 }
-            } 
+            }
         }
         memset(new_prop, 0, nmix*sizeof(double));
         for (ptn = 0; ptn < nptn; ptn++) {
@@ -1506,9 +1544,9 @@ double ModelMixture::optimizeWeights() {
             for (c = 0; c < nmix; c++) {
                 new_prop[c] += this_lk_cat[c] * lk_ptn;
             }
-        } 
+        }
         bool converged = true;
-//        double new_pinvar = 0.0;    
+//        double new_pinvar = 0.0;
         for (c = 0; c < nmix; c++) {
             new_prop[c] /= phylo_tree->getAlnNSite();
             // Make sure that probabilities do not get zero
@@ -1529,13 +1567,13 @@ double ModelMixture::optimizeWeights() {
             phylo_tree->getRate()->setPInvar(new_pinvar);
             phylo_tree->getRate()->setOptimizePInvar(false);
             phylo_tree->computePtnInvar();
-            
+
         }
         */
         if (converged) break;
 
     }
-    
+
     aligned_free(ratio_prop);
     aligned_free(new_prop);
 //    aligned_free(lk_ptn);
@@ -1546,15 +1584,15 @@ double ModelMixture::optimizeWithEM(double gradient_epsilon) {
     size_t ptn, c;
     size_t nptn = phylo_tree->aln->getNPattern();
     size_t nmix = size();
-    
+
     double *new_prop = aligned_alloc<double>(nmix);
     PhyloTree *tree = new PhyloTree;
-    
+
     // attach memory to save space
     tree->central_partial_lh = phylo_tree->central_partial_lh;
     tree->central_scale_num = phylo_tree->central_scale_num;
     tree->central_partial_pars = phylo_tree->central_partial_pars;
-    
+
     tree->copyPhyloTree(phylo_tree);
     tree->optimize_by_newton = phylo_tree->optimize_by_newton;
     tree->setParams(phylo_tree->params);
@@ -1564,15 +1602,15 @@ double ModelMixture::optimizeWithEM(double gradient_epsilon) {
     model_fac->joint_optimize = phylo_tree->params->optimize_model_rate_joint;
 //    model_fac->unobserved_ptns = phylo_tree->getModelFactory()->unobserved_ptns;
 
-    RateHeterogeneity *site_rate = new RateHeterogeneity; 
+    RateHeterogeneity *site_rate = new RateHeterogeneity;
     tree->setRate(site_rate);
     site_rate->setTree(tree);
-            
+
     model_fac->site_rate = site_rate;
     tree->model_factory = model_fac;
     tree->setParams(phylo_tree->params);
     double prev_score = -DBL_MAX, score;
-        
+
 //    int num_steps = 100000; //SC
     int step;
 
@@ -1586,7 +1624,7 @@ double ModelMixture::optimizeWithEM(double gradient_epsilon) {
         prev_score = score;
 
         memset(new_prop, 0, nmix*sizeof(double));
-                
+
         // E-step
         // decoupled weights (prop) from _pattern_lh_cat to obtain L_ci and compute pattern likelihood L_i
         for (ptn = 0; ptn < nptn; ptn++) {
@@ -1598,16 +1636,16 @@ double ModelMixture::optimizeWithEM(double gradient_epsilon) {
             }
             assert(lk_ptn != 0.0);
             lk_ptn = phylo_tree->ptn_freq[ptn] / lk_ptn;
-            
+
             // transform _pattern_lh_cat into posterior probabilities of each category
             for (c = 0; c < nmix; c++) {
                 this_lk_cat[c] *= lk_ptn;
                 new_prop[c] += this_lk_cat[c];
             }
-        } 
-        
-        // M-step, update weights according to (*)        
-        
+        }
+
+        // M-step, update weights according to (*)
+
         bool converged = !fix_prop;
 
         if (phylo_tree->isMixlen() && isFused() && !phylo_tree->getRate()->getFixParams()) {
@@ -1650,7 +1688,7 @@ double ModelMixture::optimizeWithEM(double gradient_epsilon) {
             }
             */
         }
-        
+
         // now optimize model one by one
         for (c = 0; c < nmix; c++) if (at(c)->getNDim() > 0) {
             tree->copyPhyloTreeMixlen(phylo_tree, c);
@@ -1659,7 +1697,7 @@ double ModelMixture::optimizeWithEM(double gradient_epsilon) {
             tree->setModel(subst_model);
             subst_model->setTree(tree);
             model_fac->model = subst_model;
-                        
+
             // initialize likelihood
             tree->initializeAllPartialLh();
             // copy posterior probability into ptn_freq
@@ -1671,18 +1709,18 @@ double ModelMixture::optimizeWithEM(double gradient_epsilon) {
             // reset subst model
             tree->setModel(NULL);
             subst_model->setTree(phylo_tree);
-            
+
         }
-        
+
         phylo_tree->clearAllPartialLH();
         if (converged) break;
     }
-    
+
     // deattach memory
     tree->central_partial_lh = NULL;
     tree->central_scale_num = NULL;
     tree->central_partial_pars = NULL;
-    
+
     delete tree;
     aligned_free(new_prop);
     score = phylo_tree->computeLikelihood();
@@ -1700,18 +1738,18 @@ bool ModelMixture::isFused() {
 
 double ModelMixture::optimizeParameters(double gradient_epsilon) {
 	optimizing_submodels = true;
-    
+
     int dim = getNDim();
     double score = 0.0;
-    
+
     if (!phylo_tree->getModelFactory()->unobserved_ptns.empty())
         outError("Mixture model +ASC is not supported yet. Contact author if needed.");
-    
+
     if (dim > 0)
         score = optimizeWithEM(gradient_epsilon);
     else if (!fix_prop)
         score = optimizeWeights();
-    
+
 //	double score = ModelGTR::optimizeParameters(gradient_epsilon);
 	optimizing_submodels = false;
 	if (getNDim() == 0) return score;
@@ -1803,8 +1841,8 @@ bool ModelMixture::getVariables(double *variables) {
 //		prop[i] = variables[dim+i+1] / sum;
 //	}
 //	prop[ncategory-1] = 1.0 / sum;
-    
-    
+
+
 //	for (i = 0, sum = 0.0; i < ncategory; i++)
 //		sum += prop[i]*at(i)->total_num_subst;
 //	for (i = 0; i < ncategory; i++)

@@ -123,12 +123,6 @@ void ModelPoMo::init_boundary_frequencies()
 void ModelPoMo::init_fixed_parameters(string model_params,
                                       string pomo_theta)
 {
-    // TODO DS: Enable constrained maximization of likelihood and
-    // fixed level of polymorphisms.  So far either all parameters are
-    // fixed or none.  If separate treatment is possible, this
-    // function may be split into two functions: (1) initialization of
-    // parameters of underlying mutation model, (2) initizliation
-    // of level of polymorphism.
     fixed_model_params = false;
     fixed_theta_emp = false;
     fixed_theta_usr = false;
@@ -279,9 +273,6 @@ void ModelPoMo::computeStateFreq () {
 }
 
 void ModelPoMo::updatePoMoStatesAndRateMatrix () {
-    // TODO DS: Check this. This comment is obsolete.
-    // Activate this if frequencies of boundary states sum up to 1.0.
-    // updateFreqBoundaryState();
     computeStateFreq();
 
     // Compute and normalzie the rate matrix such that on average one

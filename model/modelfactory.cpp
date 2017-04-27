@@ -154,7 +154,6 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
     // not given.  This makes the model string cleaner and
     // compareable.
     bool pomo = false;
-    string pomo_theta = "";
     string::size_type p_pos = model_str.find("+P");
     if ((p_pos != string::npos))
         pomo = true;
@@ -226,6 +225,47 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
             outError("PoMo does not yet support heterotachy models (+H).");
     }
 
+    // PoMo.  The +P{} and +GXX flags are interpreted during model
+    // creation.  This is necessary for compatibility with mixture
+    // models.  If there is no mixture model, move +P{} and +GXX flags
+    // to model string.  For mixture models, theta can be set
+    // separately for each model and the +P{} and +GXX flags should
+    // already be inside the model definition.
+    if (model_str.substr(0, 3) != "MIX" && pomo) {
+        p_pos = rate_str.find("+P");
+        if (p_pos != string::npos) {
+            if (rate_str[p_pos+2] == '{') {
+                string::size_type close_bracket = rate_str.find("}");
+                if (close_bracket == string::npos)
+                    outError("No closing bracket in PoMo parameters.");
+                else {
+                    string pomo_theta = rate_str.substr(p_pos+3,close_bracket-p_pos-3);
+                    rate_str = rate_str.substr(0, p_pos) + rate_str.substr(close_bracket+1);
+                    model_str += "+P{" + pomo_theta + "}";
+                }
+            }
+            else {
+                rate_str = rate_str.substr(0, p_pos) + rate_str.substr(p_pos + 2);
+                model_str += "+P";
+            }
+        }
+
+        size_t pomo_rate_start_pos;
+        if ((pomo_rate_start_pos = rate_str.find("+G")) != string::npos) {
+            string pomo_rate_str = "";
+            size_t pomo_rate_end_pos = rate_str.find_first_of("+*", pomo_rate_start_pos+1);
+            if (pomo_rate_end_pos == string::npos) {
+                pomo_rate_str = rate_str.substr(pomo_rate_start_pos, rate_str.length() - pomo_rate_start_pos);
+                rate_str = rate_str.substr(0, pomo_rate_start_pos);
+                model_str += pomo_rate_str;
+            } else {
+                pomo_rate_str = rate_str.substr(pomo_rate_start_pos, pomo_rate_end_pos - pomo_rate_start_pos);
+                rate_str = rate_str.substr(0, pomo_rate_start_pos) + rate_str.substr(pomo_rate_end_pos);
+                model_str += pomo_rate_str;
+            }
+        }
+    }
+    
     //	nxsmodel = models_block->findModel(model_str);
     //	if (nxsmodel && nxsmodel->description.find("MIX") != string::npos) {
     //		cout << "Model " << model_str << " is alias for " << nxsmodel->description << endl;
@@ -384,53 +424,12 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 				model_list = model_str.substr(4, model_str.length()-5);
 				model_str = model_str.substr(0, 3);
 			}
-            // PoMo.  If it is a mixture model, the +P{} and +GXX have
-            // to be specified within the mixture model string and are
-            // interpreted during mixture model creation.
 			model = new ModelMixture(params.model_name, model_str, model_list, models_block, freq_type, freq_params, tree, optimize_mixmodel_weight);
 		} else {
             //			string model_desc;
             //			NxsModel *nxsmodel = models_block->findModel(model_str);
             //			if (nxsmodel) model_desc = nxsmodel->description;
-
-            // PoMo.  If there is no mixture model, remove +P flag and
-            // set possible theta.  For mixture models, theta can be
-            // set separately for each model, hence, the +P{} flag has
-            // to be inside the mixture model definition.  Also, the
-            // rate heterogeneity can be set separately and, hence,
-            // has to be handled here.
-            p_pos = rate_str.find("+P");
-            if (p_pos != string::npos) {
-                if (rate_str[p_pos+2] == '{') {
-                    string::size_type close_bracket = rate_str.find("}");
-                    if (close_bracket == string::npos)
-                        outError("No closing bracket in PoMo parameters.");
-                    else {
-                        pomo_theta = rate_str.substr(p_pos+3,close_bracket-p_pos-3);
-                        rate_str = rate_str.substr(0, p_pos) + rate_str.substr(close_bracket+1);
-                    }
-                }
-                else
-                    rate_str = rate_str.substr(0, p_pos) + rate_str.substr(p_pos + 2);
-            }
-
-            string pomo_rate_str = "";
-            if (pomo) {
-                size_t pomo_rate_start_pos;
-                if ((pomo_rate_start_pos = rate_str.find("+G")) != string::npos) {
-                    size_t pomo_rate_end_pos = rate_str.find_first_of("+*", pomo_rate_start_pos+1);
-                    if (pomo_rate_end_pos == string::npos) {
-                        pomo_rate_str = rate_str.substr(pomo_rate_start_pos, rate_str.length() - pomo_rate_start_pos);
-                        rate_str = rate_str.substr(0, pomo_rate_start_pos);
-                    } else {
-                        pomo_rate_str = rate_str.substr(pomo_rate_start_pos, pomo_rate_end_pos - pomo_rate_start_pos);
-                        rate_str = rate_str.substr(0, pomo_rate_start_pos) + rate_str.substr(pomo_rate_end_pos);
-                    }
-                }
-            }
-
-            // Now, everything is prepared to create the model.
-			model = createModel(model_str, models_block, freq_type, freq_params, tree, pomo, pomo_theta, pomo_rate_str);
+			model = createModel(model_str, models_block, freq_type, freq_params, tree);
 		}
 //		fused_mix_rate &= model->isMixture() && site_rate->getNRate() > 1;
 	} else {
