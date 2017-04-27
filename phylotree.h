@@ -440,7 +440,7 @@ public:
             set the model factory
             @param model_fac model factory
      */
-    void setModelFactory(ModelFactory *model_fac);
+    virtual void setModelFactory(ModelFactory *model_fac);
 
     /**
             set rate heterogeneity, important to compute the likelihood

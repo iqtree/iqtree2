@@ -488,6 +488,13 @@ void PhyloTree::setModelFactory(ModelFactory *model_fac) {
     model_factory = model_fac;
     if (model_factory && (model_factory->model->isMixture() || model_factory->model->isSiteSpecificModel()))
     	setLikelihoodKernel(sse, num_threads);
+    if (model_fac) {
+        model = model_factory->model;
+        site_rate = model_factory->site_rate;
+    } else {
+        model = NULL;
+        site_rate = NULL;
+    }
 }
 
 void PhyloTree::setRate(RateHeterogeneity *rate) {

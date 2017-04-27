@@ -2445,6 +2445,7 @@ double IQTree::doTreeSearch() {
 }
 
 
+/*
 void IQTree::refineBootTrees(){
 	on_refine_btree = true;
 	int num_boot_rep = params->gbo_replicates;
@@ -2637,6 +2638,94 @@ void IQTree::refineBootTrees(){
 
 	save_all_trees = 2;
 	on_refine_btree = false;
+}
+*/
+
+/**********************************************************
+ * STANDARD NON-PARAMETRIC BOOTSTRAP
+ ***********************************************************/
+void IQTree::refineBootTrees() {
+
+	int *saved_randstream = randstream;
+	init_random(params->ran_seed);
+
+    params->gbo_replicates = 0;
+
+    cout << "Refining ufboot trees..." << endl;
+
+	// do bootstrap analysis
+	for (int sample = 0; sample < boot_trees.size(); sample++) {
+        // create bootstrap alignment
+		Alignment* bootstrap_alignment;
+		if (aln->isSuperAlignment())
+			bootstrap_alignment = new SuperAlignment;
+		else
+			bootstrap_alignment = new Alignment;
+		bootstrap_alignment->createBootstrapAlignment(aln, NULL, params->bootstrap_spec);
+
+        // create bootstrap tree
+		IQTree *boot_tree;
+		if (aln->isSuperAlignment()){
+			if(params->partition_type){
+				boot_tree = new PhyloSuperTreePlen((SuperAlignment*) bootstrap_alignment, (PhyloSuperTree*) this);
+			} else {
+				boot_tree = new PhyloSuperTree((SuperAlignment*) bootstrap_alignment, (PhyloSuperTree*) this);
+			}
+		} else
+			boot_tree = new IQTree(bootstrap_alignment);
+
+        boot_tree->on_refine_btree = true;
+
+        // initialize constraint tree
+        if (!constraintTree.empty()) {
+            boot_tree->constraintTree.readConstraint(constraintTree);
+        }
+
+        // copy model
+        boot_tree->setModelFactory(getModelFactory());
+
+
+        // set likelihood kernel
+        boot_tree->setParams(params);
+        boot_tree->setLikelihoodKernel(sse, num_threads);
+
+        // load the current ufboot tree
+        boot_tree->readTreeStringSeqName(boot_trees_brlen[sample]);
+
+        // TODO: get boot_trees_brlen, to save computation here!
+//        boot_tree->wrapperFixNegativeBranch(true);
+//        boot_tree->optimizeBranches();
+
+        boot_tree->doNNISearch();
+
+		stringstream ostr;
+		boot_tree->printTree(ostr, WT_TAXON_ID | WT_SORT_TAXA);
+		boot_trees[sample] = ostr.str();
+		boot_logl[sample] = boot_tree->curScore;
+        boot_tree->printTree(ostr, WT_BR_LEN);
+        boot_trees_brlen[sample] = ostr.str();
+
+
+        // delete memory
+        boot_tree->setModelFactory(NULL);
+
+		bootstrap_alignment = boot_tree->aln;
+		delete boot_tree;
+		// fix bug: bootstrap_alignment might be changed
+		delete bootstrap_alignment;
+
+        if ((sample+1) % 100 == 0)
+            cout << sample+1 << " ufboot trees refined" << endl;
+
+	}
+
+    // restore randstream
+    finish_random();
+    randstream = saved_randstream;
+
+    // restore
+    params->gbo_replicates = boot_trees.size();
+
 }
 
 

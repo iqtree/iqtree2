@@ -23,6 +23,7 @@
 #include "msetsblock.h"
 #include "myreader.h"
 #include "phylotesting.h"
+#include "model/partitionmodel.h"
 
 PhyloSuperTree::PhyloSuperTree()
  : IQTree()
@@ -47,6 +48,20 @@ PhyloSuperTree::PhyloSuperTree(SuperAlignment *alignment, PhyloSuperTree *super_
 	}
 
 	aln = alignment;
+}
+
+void PhyloSuperTree::setModelFactory(ModelFactory *model_fac) {
+    PhyloTree::setModelFactory(model_fac);
+    if (model_fac) {
+        PhyloSuperTree *tree = (PhyloSuperTree*)model_fac->site_rate->phylo_tree;
+        for (int part = 0; part != size(); part++) {
+            at(part)->setModelFactory(tree->at(part)->getModelFactory());
+        }
+    } else {
+        for (int part = 0; part != size(); part++) {
+            at(part)->setModelFactory(NULL);
+        }
+    }
 }
 
 void PhyloSuperTree::setSuperAlignment(Alignment *alignment) {

@@ -2638,6 +2638,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 			}
 			if (strcmp(argv[cnt], "-brefine") == 0) {
 				params.ufboot2corr = true;
+                // print ufboot trees with branch lengths
+				params.print_ufboot_trees = 2;
 				continue;
 			}
 			if (strcmp(argv[cnt], "-u2c_nni5") == 0) {
