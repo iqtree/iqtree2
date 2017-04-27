@@ -2651,6 +2651,15 @@ void IQTree::refineBootTrees() {
 
     params->gbo_replicates = 0;
 
+	NNI_Type saved_nni_type = params->nni_type;
+	if(params->u2c_nni5 == false){
+		params->nni5 = false;
+		params->nni_type = NNI1;
+	}else{
+		params->nni5 = true;
+		params->nni_type = NNI5;
+	}
+
     cout << "Refining ufboot trees..." << endl;
 
 	// do bootstrap analysis
@@ -2675,6 +2684,7 @@ void IQTree::refineBootTrees() {
 			boot_tree = new IQTree(bootstrap_alignment);
 
         boot_tree->on_refine_btree = true;
+        boot_tree->save_all_trees = 0;
 
         // initialize constraint tree
         if (!constraintTree.empty()) {
@@ -2708,11 +2718,13 @@ void IQTree::refineBootTrees() {
 
         // delete memory
         boot_tree->setModelFactory(NULL);
+        boot_tree->save_all_trees = 2;
 
 		bootstrap_alignment = boot_tree->aln;
 		delete boot_tree;
 		// fix bug: bootstrap_alignment might be changed
 		delete bootstrap_alignment;
+
 
         if ((sample+1) % 100 == 0)
             cout << sample+1 << " ufboot trees refined" << endl;
@@ -2725,6 +2737,11 @@ void IQTree::refineBootTrees() {
 
     // restore
     params->gbo_replicates = boot_trees.size();
+	if(params->u2c_nni5 == false){
+		params->nni_type = saved_nni_type;
+		if(params->nni_type == NNI5)
+			params->nni5 = true;
+	}
 
 }
 
