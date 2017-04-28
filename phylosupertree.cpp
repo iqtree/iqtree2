@@ -1101,7 +1101,11 @@ void PhyloSuperTree::initPartitionInfo() {
 				part_info[part].nniMoves[0].ptnlh = new double [nptn];
 			if (!part_info[part].nniMoves[1].ptnlh)
 				part_info[part].nniMoves[1].ptnlh = new double [nptn];
-		}
+		} else {
+            part_info[part].cur_ptnlh = NULL;
+            part_info[part].nniMoves[0].ptnlh = NULL;
+            part_info[part].nniMoves[1].ptnlh = NULL;
+        }
 	}
 }
 

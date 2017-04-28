@@ -117,7 +117,7 @@ void TinaTree::initializeAllPartialLh(int &index, int &indexlh, PhyloNode *node,
         // allocate the big central partial likelihoods memory
 
         if (!central_partial_pars) {
-            if (verbose_mode >= VB_MED)
+            if (verbose_mode >= VB_MAX)
                 cout << "Allocating " << (leafNum - 1)*4 * pars_block_size * sizeof (UINT) << " bytes for partial parsimony vectors" << endl;
             central_partial_pars = new UINT[(leafNum-1)*4*pars_block_size];
             if (!central_partial_pars)

@@ -629,7 +629,7 @@ void PhyloTree::initializeAllPartialPars(int &index, PhyloNode *node, PhyloNode 
         // allocate the big central partial pars memory
         if (!central_partial_pars) {
             int memsize = (aln->getNSeq() - 1) * 4 * pars_block_size;
-            if (verbose_mode >= VB_MED)
+            if (verbose_mode >= VB_MAX)
                 cout << "Allocating " << memsize * sizeof(UINT) << " bytes for partial parsimony vectors" << endl;
             central_partial_pars = aligned_alloc<UINT>(memsize);
             if (!central_partial_pars)
@@ -908,7 +908,7 @@ void PhyloTree::initializeAllPartialLh(int &index, int &indexlh, PhyloNode *node
 
             uint64_t mem_size = (uint64_t)max_lh_slots * block_size + 4 + tip_partial_lh_size;
 
-            if (verbose_mode >= VB_MED)
+            if (verbose_mode >= VB_MAX)
                 cout << "Allocating " << mem_size * sizeof(double) << " bytes for partial likelihood vectors" << endl;
             try {
             	central_partial_lh = aligned_alloc<double>(mem_size);
@@ -929,7 +929,7 @@ void PhyloTree::initializeAllPartialLh(int &index, int &indexlh, PhyloNode *node
         if (!central_scale_num) {
         	uint64_t mem_size = max_lh_slots * scale_block_size;
 
-            if (verbose_mode >= VB_MED)
+            if (verbose_mode >= VB_MAX)
                 cout << "Allocating " << mem_size * sizeof(UBYTE) << " bytes for scale num vectors" << endl;
             try {
             	central_scale_num = aligned_alloc<UBYTE>(mem_size);
@@ -941,7 +941,7 @@ void PhyloTree::initializeAllPartialLh(int &index, int &indexlh, PhyloNode *node
         }
 
         if (!central_partial_pars) {
-            if (verbose_mode >= VB_MED)
+            if (verbose_mode >= VB_MAX)
                 cout << "Allocating " << (leafNum - 1) * 4 * pars_block_size * sizeof(UINT)
                         << " bytes for partial parsimony vectors" << endl;
             try {

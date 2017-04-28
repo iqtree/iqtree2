@@ -2660,7 +2660,9 @@ void IQTree::refineBootTrees() {
 		params->nni_type = NNI5;
 	}
 
-    cout << "Refining ufboot trees..." << endl;
+    cout << "Refining ufboot trees with NNI..." << endl;
+
+    int refined_trees = 0;
 
 	// do bootstrap analysis
 	for (int sample = 0; sample < boot_trees.size(); sample++) {
@@ -2702,16 +2704,24 @@ void IQTree::refineBootTrees() {
         // load the current ufboot tree
         boot_tree->readTreeStringSeqName(boot_trees_brlen[sample]);
 
-        // TODO: get boot_trees_brlen, to save computation here!
-//        boot_tree->wrapperFixNegativeBranch(true);
-//        boot_tree->optimizeBranches();
+        // REMARK: branch lengths were estimated from original alignments
+        // for bootstrap_alignment, they still thus need to be reoptimized a bit
+        boot_tree->optimizeBranches(2);
 
-        boot_tree->doNNISearch();
+
+        auto num_nnis = boot_tree->doNNISearch();
+        if (num_nnis.second != 0)
+            refined_trees++;
+
+        if (verbose_mode >= VB_MED) {
+            cout << "UFBoot tree " << sample+1 << ": " << boot_logl[sample] << " -> " << boot_tree->getCurScore() << endl;
+        }
 
 		stringstream ostr;
 		boot_tree->printTree(ostr, WT_TAXON_ID | WT_SORT_TAXA);
 		boot_trees[sample] = ostr.str();
 		boot_logl[sample] = boot_tree->curScore;
+        ostr.seekg(0, ios::beg);
         boot_tree->printTree(ostr, WT_BR_LEN);
         boot_trees_brlen[sample] = ostr.str();
 
@@ -2727,9 +2737,11 @@ void IQTree::refineBootTrees() {
 
 
         if ((sample+1) % 100 == 0)
-            cout << sample+1 << " ufboot trees refined" << endl;
+            cout << sample+1 << " samples done" << endl;
 
 	}
+
+    cout << "Total " << refined_trees << " ufboot trees refined" << endl;
 
     // restore randstream
     finish_random();
