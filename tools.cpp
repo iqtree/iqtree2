@@ -799,7 +799,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.popSize = 5;
     params.p_delete = -1;
     params.min_iterations = -1;
-    params.max_iterations = 1;
+    params.max_iterations = 1000;
     params.num_param_iterations = 100;
     params.stop_condition = SC_UNSUCCESS_ITERATION;
     params.stop_confidence = 0.95;

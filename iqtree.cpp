@@ -244,7 +244,7 @@ void IQTree::initSettings(Params &params) {
 		params.numInitTrees = 1;
     }
     if (params.gbo_replicates)
-        params.max_iterations = max(params.max_iterations, max(params.min_iterations, 1000));
+        params.max_iterations = max(params.max_iterations, max(params.min_iterations, params.step_iterations));
 
     k_represent = params.k_representative;
 
