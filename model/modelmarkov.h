@@ -252,7 +252,8 @@ public:
 	virtual int getNDim();
 
 	/**
-		@return the number of dimensions corresponding to state frequencies
+		@return the number of dimensions corresponding to state frequencies, which is 
+            not counted in getNDim(). This serves e.g. for computing AIC, BIC score
 	*/
 	virtual int getNDimFreq();
 	

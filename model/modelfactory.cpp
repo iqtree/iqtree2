@@ -371,6 +371,7 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
         } else if (freq_str == "+FRY") {
 	    // MDW to Minh: I don't know how these should interact with FREQ_MIXTURE,
 	    // so as nearly everything else treats it as an error, I do too.
+        // BQM answer: that's fine
             if (freq_type == FREQ_MIXTURE)
                 outError("Mixture frequency with " + freq_str + " is not allowed");
             else
@@ -387,12 +388,12 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
                 freq_type = FREQ_DNA_MK;
         } else {
             // might be "+F####" where # are digits
-	    try {
-	        freq_type = parseStateFreqDigits(freq_str.substr(2)); // throws an error if not in +F#### format
-	    } catch (...) {
-	        outError("Unknown state frequency type ",freq_str);
-	    }
-	}
+            try {
+                freq_type = parseStateFreqDigits(freq_str.substr(2)); // throws an error if not in +F#### format
+            } catch (...) {
+                outError("Unknown state frequency type ",freq_str);
+            }
+        }
 //          model_str = model_str.substr(0, posfreq);
         }
 
@@ -778,10 +779,15 @@ int ModelFactory::getNParameters() {
 	// root, only sum of their lenghts affects likelihood.)
 	// So correct for this. Without this correction, K2P and RY2.2b
 	// would not be synonymous, for example.
-	string className(typeid(*model).name());
-	if (className.find("ModelLieMarkov")!=string::npos &&
-	          ((ModelLieMarkov*)model)->isTimeReversible())
-	    df--;
+
+//	string className(typeid(*model).name());
+//	if (className.find("ModelLieMarkov")!=string::npos && model->isReversible())
+//	    df--;
+
+        // BQM 2017-04-28, alternatively, check if there is a virtual_root and model is reversible
+        if (site_rate->phylo_tree->rooted && model->isReversible())
+            df--;
+
     }
     return df;
 }

@@ -2625,7 +2625,7 @@ void forceFreqsConform(double *base_freq, StateFreqType freq_type);
 /*
  * For given freq_type, how many parameters are needed to
  * determine frequenc vector?
- * Currently, this is for DNA StateFreqTypes only.
+ * BQM 2017-04-28: works for DNA and other data types
  */
  int nFreqParams(StateFreqType freq_type);
 

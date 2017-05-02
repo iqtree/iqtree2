@@ -4422,7 +4422,11 @@ int pairInteger(int int1, int int2) {
  * unable to find a good +F... specifier
  */
 StateFreqType parseStateFreqFromPlusF(string model_name) {
-    StateFreqType freq_type = FREQ_EMPIRICAL;
+//    StateFreqType freq_type = FREQ_EMPIRICAL;
+
+    // BQM 2017-05-02: change back to FREQ_UNKNOWN to resemble old behavior
+    StateFreqType freq_type = FREQ_UNKNOWN;
+    size_t plusFPos;
     if (model_name.find("+F1X4") != string::npos)
         freq_type = FREQ_CODON_1x4;
     else if (model_name.find("+F3X4C") != string::npos)
@@ -4441,17 +4445,16 @@ StateFreqType parseStateFreqFromPlusF(string model_name) {
         freq_type = FREQ_DNA_WS;
     else if (model_name.find("+FMK") != string::npos)
         freq_type = FREQ_DNA_MK;
-    else {
+    else if ((plusFPos = model_name.find("+F")) != string::npos) {
+        freq_type = FREQ_EMPIRICAL;
         // Now look for +F#### where #s are digits
-        std::size_t plusFPos = model_name.find("+F");
-        if (plusFPos != string::npos) {
-            try {
-                // throws if string is not 4 digits
-                freq_type = parseStateFreqDigits(model_name.substr(plusFPos,4));
-            } catch (...) {
-                // +F exists, but can't parse it as anything else
-                // In this case, just return default (FREQ_EMPIRICAL)
-            }
+        if (model_name.length() > plusFPos+2 && isdigit(model_name[plusFPos+2]))
+        try {
+            // throws if string is not 4 digits
+            freq_type = parseStateFreqDigits(model_name.substr(plusFPos+2,4));
+        } catch (const char *str) {
+            // +F exists, but can't parse it as anything else
+            outError(str);
         }
     }
     return(freq_type);
@@ -4568,23 +4571,24 @@ string freqTypeString(StateFreqType freq_type) {
  */
 
 bool freqsFromParams(double *freq_vec, double *params, StateFreqType freq_type) {
+
+    // BQM 2017-05-02: Note that only freq for A, C, G are free parameters and stored
+    // in params, whereas freq_T is not free and should be handled properly
+
     double pA, pC, pG, pT; // base freqs
     switch (freq_type) {
     case FREQ_EQUAL:
-        pA=pC=pG=pT=0.25;
-	break;
     case FREQ_USER_DEFINED:
     case FREQ_EMPIRICAL:
-        pA=freq_vec[0]; // i.e. freq_vec will not be changed
-        pC=freq_vec[1];
-        pG=freq_vec[2];
-        pT=freq_vec[3];
-        break;
-    case FREQ_ESTIMATE: // Minh: in code review, please pay extra attention to ensure my treadment of FREQ_ESTIMATE is equivalent to old treatment.
+        return false;
+    case FREQ_ESTIMATE:
+    // Minh: in code review, please pay extra attention to ensure my treadment of FREQ_ESTIMATE is equivalent to old treatment.
+    // BQM: DONE!
         pA=params[0];
         pC=params[1];
         pG=params[2];
-        pT=1-pA-pC-pG;
+        //pT=1-pA-pC-pG;
+        pT=freq_vec[3];
         break;
     case FREQ_DNA_RY:
         pA = params[0]/2;
@@ -4677,6 +4681,10 @@ bool freqsFromParams(double *freq_vec, double *params, StateFreqType freq_type) 
     default:
         throw("Unrecognized freq_type in freqsFromParams - can't happen");
     }
+
+    // To MDW, 2017-05-02: please make sure that frequencies are positive!
+    // Otherwise, numerical issues will occur.
+
     bool changed = freq_vec[0]!=pA || freq_vec[1]!=pC || freq_vec[2]!=pG || freq_vec[3]!=pT;
     if (changed) {
         freq_vec[0]=pA;
@@ -4696,7 +4704,7 @@ void paramsFromFreqs(double *params, double *freq_vec, StateFreqType freq_type) 
     double pA = freq_vec[0]; // These just improve code readability
     double pC = freq_vec[1];
     double pG = freq_vec[2];
-    double pT = freq_vec[3];
+//    double pT = freq_vec[3]; // pT is not used below
     switch (freq_type) {
     case FREQ_EQUAL:
     case FREQ_USER_DEFINED:
@@ -4781,8 +4789,9 @@ void forceFreqsConform(double *base_freq, StateFreqType freq_type) {
     double diff;
     switch (freq_type) {
     case FREQ_EQUAL:
-        base_freq[0] = base_freq[1] = base_freq[2] = base_freq[3] = 0.25;
-        break;
+        // this was already handled, thus not necessary to check here 
+//        base_freq[0] = base_freq[1] = base_freq[2] = base_freq[3] = 0.25;
+//        break;
     case FREQ_USER_DEFINED:
     case FREQ_EMPIRICAL:
     case FREQ_ESTIMATE:
@@ -4863,10 +4872,6 @@ void forceFreqsConform(double *base_freq, StateFreqType freq_type) {
 
 int nFreqParams(StateFreqType freq_type) {
     switch (freq_type) {
-    case FREQ_EQUAL:
-    case FREQ_USER_DEFINED:
-    case FREQ_EMPIRICAL:
-        return(0);
     case FREQ_DNA_1112:
     case FREQ_DNA_1121:
     case FREQ_DNA_1211:
@@ -4885,10 +4890,8 @@ int nFreqParams(StateFreqType freq_type) {
     case FREQ_DNA_2131:
     case FREQ_DNA_2311:
         return(2);   
-    case FREQ_ESTIMATE:
-        return(3);  
     default:
-        throw("Unrecognized freq_type in freqsFromParams - can't happen");
+        return 0; // BQM: don't care about other cases
     }
 }
 

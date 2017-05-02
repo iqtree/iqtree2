@@ -321,6 +321,8 @@ ModelLieMarkov::ModelLieMarkov(string model_name, PhyloTree *tree, string model_
 
 void ModelLieMarkov::init(const char *model_name, string model_params, StateFreqType freq, string freq_params)
 {
+    // TODO: why is freq_params not handled here?
+
     assert(NUM_RATES==getNumRateEntries());
     StateFreqType expected_freq_type; // returned by getLieMarkovModelInfo but not used here
     getLieMarkovModelInfo((string)model_name, name, full_name, model_num, symmetry, expected_freq_type);
@@ -495,9 +497,9 @@ bool  ModelLieMarkov::validFreqType() {
  * for in num_param, so no more should be added.
  */
 
-int ModelLieMarkov::getNDimFreq() { 
-	return 0;
-}
+//int ModelLieMarkov::getNDimFreq() { 
+//	return 0;
+//}
 
 /*
  * Some LM models are time reversible. Currently this is used in 
@@ -506,7 +508,8 @@ int ModelLieMarkov::getNDimFreq() {
  * are given an unrooted tree and optimized by TR methods,
  * ModelFactory::getNParameters() may need changing.
  */
-bool ModelLieMarkov::isTimeReversible() {
+bool ModelLieMarkov::isReversible() {
+    ASSERT(is_reversible == TIME_REVERSIBLE[model_num]);
     return(TIME_REVERSIBLE[model_num]);
 }
 
@@ -672,6 +675,10 @@ static void tauToPi(double* tau, double* pi, int sym) {
  */
 
 void ModelLieMarkov::setBasis() {
+
+  // BQM 2017-05-02: set reversibility
+  is_reversible = TIME_REVERSIBLE[model_num];
+
   // if not otherwise specified, use FREQ_ESTIMATE.
   if (getFreqType() == FREQ_UNKNOWN) freq_type = FREQ_ESTIMATE;
 

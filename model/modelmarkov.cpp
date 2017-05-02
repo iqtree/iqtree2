@@ -194,10 +194,19 @@ string ModelMarkov::getNameParams() {
     
 void ModelMarkov::getNameParamsFreq(ostream &retname) {
     retname << freqTypeString(freq_type); // "+F..." but without {frequencies}
-    if (phylo_tree->aln->seq_type == SEQ_DNA && 
+
+    /* BQM 2017-05-02: this condition is confusing, and does not allow non-DNA data
+    if (phylo_tree->aln->seq_type == SEQ_DNA &&
         freq_type != FREQ_UNKNOWN &&
 	freq_type != FREQ_EQUAL &&
-        freq_type != FREQ_MIXTURE) {
+        freq_type != FREQ_MIXTURE)
+    */
+
+    if (freq_type == FREQ_EMPIRICAL ||
+        (getFreqType() == FREQ_USER_DEFINED && phylo_tree->aln->seq_type == SEQ_DNA) ||
+        freq_type == FREQ_ESTIMATE ||
+        freq_type >= FREQ_DNA_RY)
+    {
       // Add "{<frequencies>}"
         retname << "{" << state_freq[0];
         for (int i = 1; i < num_states; i++)
@@ -267,6 +276,10 @@ void ModelMarkov::init_state_freq(StateFreqType type) {
     default: break;
     }
     if (phylo_tree->aln->seq_type == SEQ_DNA) {
+        // BQM 2017-05-02: first, empirically count state_freq from alignment
+        if (freq_type >= FREQ_DNA_RY)
+            phylo_tree->aln->computeStateFreq(state_freq);
+
         // For complex DNA freq_types, adjust state_freq to conform to that freq_type.
         forceFreqsConform(state_freq, freq_type);
     }
@@ -558,16 +571,21 @@ int ModelMarkov::getNDim() {
 }
 
 int ModelMarkov::getNDimFreq() { 
-	if (freq_type == FREQ_EMPIRICAL) 
+
+    // BQM, 2017-05-02: getNDimFreq should return degree of freedom, which is not included in getNDim()
+    // That's why 0 is returned for FREQ_ESTIMATE, num_states-1 for FREQ_EMPIRICAL
+
+	if (freq_type == FREQ_EMPIRICAL)
         return num_states-1;
 	else if (freq_type == FREQ_CODON_1x4) 
         return 3;
 	else if (freq_type == FREQ_CODON_3x4 || freq_type == FREQ_CODON_3x4C) 
         return 9;
-    
-	if (phylo_tree->aln->seq_type == SEQ_DNA && freq_type != FREQ_ESTIMATE) {
-            return nFreqParams(freq_type);
-	}
+
+    // commented out due to reason above
+//	if (phylo_tree->aln->seq_type == SEQ_DNA) {
+//            return nFreqParams(freq_type);
+//	}
 	return 0;
 }
 
@@ -705,7 +723,19 @@ void ModelMarkov::setBounds(double *lower_bound, double *upper_bound, bool *boun
 	bound_check[i] = false;
     }
 
-    setBoundsForFreqType(&lower_bound[num_params+1],&upper_bound[num_params+1],&bound_check[num_params+1],MIN_FREQUENCY,freq_type);
+	if (freq_type == FREQ_ESTIMATE) {
+		for (i = ndim-num_states+2; i <= ndim; i++) {
+//            lower_bound[i] = MIN_FREQUENCY/state_freq[highest_freq_state];
+//			upper_bound[i] = state_freq[highest_freq_state]/MIN_FREQUENCY;
+            lower_bound[i]  = MIN_FREQUENCY;
+//            upper_bound[i] = 100.0;
+            upper_bound[i] = 1.0;
+            bound_check[i] = false;
+        }
+	} else if (phylo_tree->aln->seq_type == SEQ_DNA) {
+        setBoundsForFreqType(&lower_bound[num_params+1], &upper_bound[num_params+1],
+            &bound_check[num_params+1], MIN_FREQUENCY, freq_type);
+    }
 }
 
 double ModelMarkov::optimizeParameters(double gradient_epsilon) {

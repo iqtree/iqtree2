@@ -358,7 +358,14 @@ bool ModelDNA::setRateType(const char *rate_str) {
 int ModelDNA::getNDim() {
 	assert(freq_type != FREQ_UNKNOWN);
 	// possible TO-DO: cache nFreqParams(freq_type) to avoid repeat calls.
-        return (num_params+nFreqParams(freq_type));
+//        return (num_params+nFreqParams(freq_type));
+
+	int ndim = num_params;
+	if (freq_type == FREQ_ESTIMATE) 
+		ndim += num_states-1;
+    else
+        ndim += nFreqParams(freq_type);
+	return ndim;
 }
 
 void ModelDNA::writeParameters(ostream &out) {
@@ -397,8 +404,16 @@ bool ModelDNA::getVariables(double *variables) {
              }
    
     }
-    changed |= freqsFromParams(state_freq,variables+num_params+1,freq_type);
+	if (freq_type == FREQ_ESTIMATE) {
+        // 2015-09-07: relax the sum of state_freq to be 1, this will be done at the end of optimization
+		int ndim = getNDim();
+		changed |= memcmpcpy(state_freq, variables+(ndim-num_states+2), (num_states-1)*sizeof(double));
+    } else {
+        // BQM: for special DNA freq stuffs from MDW
+        changed |= freqsFromParams(state_freq,variables+num_params+1,freq_type);
+    }
     return changed;
+
 //              double sum = 0;
 //              for (i = 0; i < num_states-1; i++) 
 //                      sum += state_freq[i];
@@ -430,7 +445,14 @@ void ModelDNA::setVariables(double *variables) {
                 variables[(int)param_spec[i]] = rates[i];
     }
     // and copy parameters for base frequencies
-    paramsFromFreqs(variables+num_params+1, state_freq, freq_type);
+
+	if (freq_type == FREQ_ESTIMATE) {
+        // 2015-09-07: relax the sum of state_freq to be 1, this will be done at the end of optimization
+		int ndim = getNDim();
+		memcpy(variables+(ndim-num_states+2), state_freq, (num_states-1)*sizeof(double));
+    } else {
+        paramsFromFreqs(variables+num_params+1, state_freq, freq_type);
+    }
 
         // BUG FIX 2015.08.28
 //        int nrate = getNDim();
