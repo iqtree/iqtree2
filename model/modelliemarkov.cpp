@@ -323,6 +323,7 @@ void ModelLieMarkov::init(const char *model_name, string model_params, StateFreq
 {
     // TODO: why is freq_params not handled here?
 
+	nondiagonalizable = false;
     assert(NUM_RATES==getNumRateEntries());
     StateFreqType expected_freq_type; // returned by getLieMarkovModelInfo but not used here
     getLieMarkovModelInfo((string)model_name, name, full_name, model_num, symmetry, expected_freq_type);
