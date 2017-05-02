@@ -61,6 +61,13 @@
 
 
 void reportReferences(Params &params, ofstream &out, string &original_model) {
+    if (params.pomo) {
+        out << "For polymorphism-aware models please cite:" << endl << endl
+            << "Dominik Schrempf, Bui Quang Minh, Nicola De Maio, Arndt von Haeseler, and Carolin Kosiol" << endl
+            << "(2016) Reversible polymorphism-aware phylogenetic models and their application to" << endl
+            << "tree inference. J. Theor. Biol., in press." << endl << endl;
+    }
+
     bool modelfinder_only = false;
     if (original_model.substr(0,4) == "TEST" || original_model.substr(0, 2) == "MF" || original_model.empty()) {
         out << "To cite ModelFinder please use: " << endl << endl
@@ -1041,7 +1048,10 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 			string con_file = params.out_prefix;
 			con_file += ".contree";
 
+            // -- Mon Apr 17 21:14:53 BST 2017
+            // DONE Minh: merged correctly
             out << endl << "Robinson-Foulds distance between ML tree and consensus tree: " << params.contree_rfdist << endl;
+            // --
             
             out << endl << "Branches with bootstrap support >"
 					<< floor(params.split_threshold * 1000) / 10 << "% are kept";

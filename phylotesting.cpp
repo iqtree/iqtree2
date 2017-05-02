@@ -1550,7 +1550,8 @@ ModelMarkov* getPrototypeModel(SeqType seq_type, PhyloTree* tree, char *model_se
 	break;
     case SEQ_POMO:
         // Exit gracefully.
-        outError("Model selection with PoMo not yet supported.");
+        cout << "ERROR: Automatic model selection with PoMo not yet supported." << endl;
+        outError("Please provide a substitution model with, e.g., \"-m HKY+rP\".");
 	break;
     case SEQ_DNA:
 	// This is the complicated case. Need to return either a ModelDNA, or a
@@ -1661,6 +1662,7 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
     }
         
         
+
     ModelMarkov *subst_model;
     subst_model = getPrototypeModel(seq_type, in_tree, params.model_set);
 

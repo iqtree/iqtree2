@@ -117,6 +117,8 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 		else if (tree->aln->seq_type == SEQ_BINARY) model_str = "GTR2";
 		else if (tree->aln->seq_type == SEQ_CODON) model_str = "GY";
 		else if (tree->aln->seq_type == SEQ_MORPH) model_str = "MK";
+        // TODO DS: Remove reversibility flag.  The reversibility is
+        // determined by the underlying substitution model.
         else if (tree->aln->seq_type == SEQ_POMO) model_str = "HKY+rP";
 		else model_str = "JC";
         if (tree->aln->seq_type != SEQ_POMO)
@@ -164,8 +166,9 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
             rate_str = model_str.substr(spec_pos);
             model_str = model_str.substr(0, spec_pos);
         }
-        // Check for PoMo and set model_str and rate_str
-        // accordingly.
+        // Check for PoMo and set model_str and rate_str accordingly.
+        // TODO DS: Remove reversibility flag.  The reversibility is
+        // determined by the underlying substitution model.
         string::size_type pos_rev_pomo = rate_str.find("+rP");
         string::size_type pos_nonrev_pomo = rate_str.find("+nrP");
         if (pos_nonrev_pomo != string::npos)
@@ -173,9 +176,13 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 
         // Throw error if sequence type is PoMo but +rP is not given.
         // This makes the model string cleaner and compareable.
+
+        // TODO DS: Remove reversibility flag.  The reversibility is
+        // determined by the underlying substitution model.
         if ((pos_rev_pomo == string::npos) &&
             (tree->aln->seq_type == SEQ_POMO))
-            outError("Provided alignment is used by PoMo but model string does not contain, e.g., \"+rP\".");
+            // TODO DS: BUG. The following model string ends up here: "MIX{HKY+rP,JC+rP}".
+            outError("Provided alignment is exclusively used by PoMo but model string does not contain, e.g., \"+rP\".");
         
         if (pos_rev_pomo != string::npos) {
             // Remove +NXX and +W or +S.
@@ -199,6 +206,9 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
                 rate_str = rate_str.substr(0, s_pos)
                     + rate_str.substr(s_pos+2);
             }
+            // TODO DS: Remove reversibility flag.  The reversibility is
+            // determined by the underlying substitution model.
+            
             // Update pos_rev_pomo in case something has been removed
             // before "+rP".
             string::size_type pos_rev_pomo = rate_str.find("+rP");
@@ -1009,13 +1019,15 @@ double ModelFactory::optimizeParametersGammaInvar(int fixed_len, bool write_info
 
     site_rate->setGammaShape(bestAlpha);
     site_rate->setPInvar(bestPInvar);
+
+    // -- Mon Apr 17 21:12:14 BST 2017
+    // DONE Minh, merged correctly
     model->setCheckpoint(best_ckp);
     model->restoreCheckpoint();
     model->setCheckpoint(saved_ckp);
-//	((ModelMarkov*) tree->getModel())->setRateMatrix(bestRates);
-//	((ModelMarkov*) tree->getModel())->setStateFrequency(bestStateFreqs);
+
 	tree->restoreBranchLengths(bestLens);
-//	tree->getModel()->decomposeRateMatrix();
+    // tree->getModel()->decomposeRateMatrix();
 
 	tree->clearAllPartialLH();
 	tree->setCurScore(tree->computeLikelihood());
@@ -1049,15 +1061,17 @@ vector<double> ModelFactory::optimizeGammaInvWithInitValue(int fixed_len, double
                                                  DoubleVector &lenvec, Checkpoint *model_ckp) {
     PhyloTree *tree = site_rate->getTree();
     tree->restoreBranchLengths(lenvec);
+
+    // -- Mon Apr 17 21:12:24 BST 2017
+    // DONE Minh: merged correctly
     Checkpoint *saved_ckp = model->getCheckpoint();
     model->setCheckpoint(model_ckp);
     model->restoreCheckpoint();
     model->setCheckpoint(saved_ckp);
-//    ((ModelMarkov*) tree->getModel())->setRateMatrix(rates);
-//    ((ModelMarkov*) tree->getModel())->setStateFrequency(state_freqs);
-//    tree->getModel()->decomposeRateMatrix();
     site_rate->setPInvar(initPInv);
     site_rate->setGammaShape(initAlpha);
+    // --
+
     tree->clearAllPartialLH();
     optimizeParameters(fixed_len, false, logl_epsilon, gradient_epsilon);
 

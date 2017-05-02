@@ -995,6 +995,8 @@ ModelSubst* createModel(string model_str, ModelsBlock *models_block, StateFreqTy
 
     // Check for PoMo.
     bool is_pomo = false;
+    // TODO DS: Remove reversibility flag.  The reversibility of PoMo
+    // is determined by the underlying substitution model.
     bool is_rev_pomo = true;
     size_t pos_rev_pomo = model_str.find("+rP");
     size_t pos_nonrev_pomo = model_str.find("+nrP");
