@@ -153,11 +153,60 @@ void ModelMarkov::setTree(PhyloTree *tree) {
 	phylo_tree = tree;
 }
 
+/*
+ * For freq_type, return a "+F" string specifying that freq_type.
+ * Note not all freq_types accomodated.
+ * Inverse of this occurs in ModelFactory::ModelFactory, 
+ * where +F... suffixes on model names get parsed.
+ */
+string freqTypeString(StateFreqType freq_type, SeqType seq_type, bool full_str) {
+    switch(freq_type) {
+    case FREQ_UNKNOWN:    return("");
+    case FREQ_USER_DEFINED:
+        if (seq_type == SEQ_PROTEIN)
+            return "";
+        else
+            return "+FU";
+    case FREQ_EQUAL:
+        if (seq_type == SEQ_DNA && !full_str)
+            return "";
+        else
+            return "+FQ";
+    case FREQ_EMPIRICAL:  return "+F";
+    case FREQ_ESTIMATE:
+        if (seq_type == SEQ_DNA && !full_str)
+            return "";
+        else
+            return "+FO";
+    case FREQ_CODON_1x4:  return("+F1X4");
+    case FREQ_CODON_3x4:  return("+F3X4");
+    case FREQ_CODON_3x4C: return("+F3X4C");
+    case FREQ_MIXTURE:  return(""); // no idea what to do here - MDW
+    case FREQ_DNA_RY:   return("+FRY");
+    case FREQ_DNA_WS:   return("+FWS");
+    case FREQ_DNA_MK:   return("+FMK");
+    case FREQ_DNA_1112: return("+F1112");
+    case FREQ_DNA_1121: return("+F1121");
+    case FREQ_DNA_1211: return("+F1211");
+    case FREQ_DNA_2111: return("+F2111");
+    case FREQ_DNA_1122: return("+F1122");
+    case FREQ_DNA_1212: return("+F1212");
+    case FREQ_DNA_1221: return("+F1221");
+    case FREQ_DNA_1123: return("+F1123");
+    case FREQ_DNA_1213: return("+F1213");
+    case FREQ_DNA_1231: return("+F1231");
+    case FREQ_DNA_2113: return("+F2113");
+    case FREQ_DNA_2131: return("+F2131");
+    case FREQ_DNA_2311: return("+F2311");
+    default: throw("Unrecoginzed freq_type in freqTypeString - can't happen");
+    }
+}
+
 string ModelMarkov::getName() {
   // MDW note to Minh for code review: I don't really understand what getName()
   // is used for. I've tried to keep the old behaviour while adding
   // the new freq_types, but give this change extra attention please.
-    return name+freqTypeString(getFreqType());
+    return name+freqTypeString(getFreqType(), phylo_tree->aln->seq_type, false);
   /*
 	if (getFreqType() == FREQ_EMPIRICAL)
 		return name + "+F";
@@ -193,48 +242,16 @@ string ModelMarkov::getNameParams() {
 }
     
 void ModelMarkov::getNameParamsFreq(ostream &retname) {
-    retname << freqTypeString(freq_type); // "+F..." but without {frequencies}
+     // "+F..." but without {frequencies}
+    retname << freqTypeString(freq_type, phylo_tree->aln->seq_type, true);
 
-    /* BQM 2017-05-02: this condition is confusing, and does not allow non-DNA data
-    if (phylo_tree->aln->seq_type == SEQ_DNA &&
-        freq_type != FREQ_UNKNOWN &&
-	freq_type != FREQ_EQUAL &&
-        freq_type != FREQ_MIXTURE)
-    */
-
-    if (freq_type == FREQ_EMPIRICAL ||
-        (getFreqType() == FREQ_USER_DEFINED && phylo_tree->aln->seq_type == SEQ_DNA) ||
-        freq_type == FREQ_ESTIMATE ||
-        freq_type >= FREQ_DNA_RY)
-    {
-      // Add "{<frequencies>}"
+    if (freq_type == FREQ_EMPIRICAL || freq_type == FREQ_ESTIMATE ||
+        (freq_type == FREQ_USER_DEFINED && phylo_tree->aln->seq_type == SEQ_DNA)) {
         retname << "{" << state_freq[0];
         for (int i = 1; i < num_states; i++)
             retname << "," << state_freq[i];
         retname << "}";
     }
-  /*
-    if (getFreqType() == FREQ_EMPIRICAL || (getFreqType() == FREQ_USER_DEFINED && phylo_tree->aln->seq_type == SEQ_DNA)) {
-        retname << "+F";
-        retname << "{" << state_freq[0];
-        for (int i = 1; i < num_states; i++)
-            retname << "," << state_freq[i];
-        retname << "}";
-    } else if (getFreqType() == FREQ_CODON_1x4)
-        retname << "+F1X4";
-    else if (getFreqType() == FREQ_CODON_3x4)
-        retname << "+F3X4";
-    else if (getFreqType() == FREQ_CODON_3x4C)
-        name += "+F3X4C";
-    else if (getFreqType() == FREQ_ESTIMATE) {
-        retname << "+FO";
-        retname << "{" << state_freq[0];
-        for (int i = 1; i < num_states; i++)
-            retname << "," << state_freq[i];
-        retname << "}";
-    } else if (getFreqType() == FREQ_EQUAL && phylo_tree->aln->seq_type != SEQ_DNA)
-        retname << "+FQ";
-  */
 }
 
 void ModelMarkov::init_state_freq(StateFreqType type) {

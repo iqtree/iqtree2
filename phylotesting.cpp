@@ -1559,23 +1559,25 @@ ModelMarkov* getPrototypeModel(SeqType seq_type, PhyloTree* tree, char *model_se
             // "liemarkov", "liemarkovry", "liemarkovws", "liemarkovmk", "strandsymmetric"
             subst_model = new ModelLieMarkov("1.1", tree, "", FREQ_ESTIMATE, "");
         } else {
-	    StrVector model_names;
-	    convert_string_vec(model_set, model_names);
-	    bool foundLM = false;
-	    bool foundTR = false;
-	    for (StrVector::iterator it = model_names.begin() ; it != model_names.end(); ++it) {
-		bool valid = ModelLieMarkov::validModelName(*it);
-		foundLM = foundLM || valid;
-		foundTR = foundTR || !valid;
-	    }
-	    if (foundLM && foundTR) {
-		outError("Currently we can't model test both Lie-Markov and non-Lie-Markov models\nat the same time. (You may have misspelled the name of a Lie-Markov model.");
-	    } else if (foundLM) {
-		subst_model = new ModelLieMarkov("1.1", tree, "", FREQ_ESTIMATE, "");
-	    } else {
-		subst_model = new ModelDNA("JC", "", FREQ_UNKNOWN, "", tree);
-	    }
-	}
+            StrVector model_names;
+            bool foundLM = false;
+            bool foundTR = false;
+            if (model_set) {
+                convert_string_vec(model_set, model_names);
+                for (StrVector::iterator it = model_names.begin() ; it != model_names.end(); ++it) {
+                    bool valid = ModelLieMarkov::validModelName(*it);
+                    foundLM = foundLM || valid;
+                    foundTR = foundTR || !valid;
+                }
+            }
+            if (foundLM && foundTR) {
+                outError("Currently we can't model test both Lie-Markov and non-Lie-Markov models\nat the same time. (You may have misspelled the name of a Lie-Markov model.");
+            } else if (foundLM) {
+                subst_model = new ModelLieMarkov("1.1", tree, "", FREQ_ESTIMATE, "");
+            } else {
+                subst_model = new ModelDNA("JC", "", FREQ_UNKNOWN, "", tree);
+            }
+        }
 	break;
     default:
 	outError("Unrecognized seq_type, can't happen");

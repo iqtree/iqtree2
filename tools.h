@@ -2597,14 +2597,6 @@ StateFreqType parseStateFreqFromPlusF(string model_name);
 StateFreqType parseStateFreqDigits(string digits);
 
 /*
- * For freq_type, return a "+F" string specifying that freq_type.
- * Note not all freq_types accomodated.
- * Inverse of this occurs in ModelFactory::ModelFactory, 
- * where +F... suffixes on model names get parsed.
- */
-string freqTypeString(StateFreqType freq_type);
-
-/*
  * All params in range [0,1] 
  * returns true if base frequencies have changed as a result of this call
  */
