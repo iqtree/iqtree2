@@ -534,6 +534,7 @@ splitset.cpp splitset.h
 stoprule.cpp stoprule.h
 superalignment.cpp superalignment.h
 superalignmentpairwise.cpp superalignmentpairwise.h
+superalignmentpairwiseplen.cpp superalignmentpairwiseplen.h
 supernode.cpp supernode.h
 tinatree.cpp tinatree.h
 tools.cpp tools.h

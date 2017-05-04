@@ -22,6 +22,7 @@
 #include "iqtree.h"
 #include "phylosupertree.h"
 #include "phylosupertreeplen.h"
+#include "model/partitionmodelplen.h"
 #include "mexttree.h"
 #include "timeutil.h"
 #include "model/modelmarkov.h"
