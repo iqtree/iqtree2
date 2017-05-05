@@ -646,13 +646,16 @@ Alignment *SuperAlignment::concatenateAlignments(IntVector &ids) {
 
 void SuperAlignment::countConstSite() {
     num_informative_sites = 0;
+    num_variant_sites = 0;
     max_num_states = 0;
     frac_const_sites = 0;
     frac_invariant_sites = 0;
+    num_parsimony_sites = 0;
     size_t nsites = 0;
     for (vector<Alignment*>::iterator it = partitions.begin(); it != partitions.end(); it++) {
         (*it)->countConstSite();
         num_informative_sites += (*it)->num_informative_sites;
+        num_variant_sites += (*it)->num_variant_sites;
         if ((*it)->num_states > max_num_states)
             max_num_states = (*it)->num_states;
         nsites += (*it)->getNSite();
@@ -663,9 +666,14 @@ void SuperAlignment::countConstSite() {
     frac_invariant_sites /= nsites;
 }
 
-void SuperAlignment::orderPatternByNumChars() {
+void SuperAlignment::orderPatternByNumChars(int pat_type) {
     const int UINT_BITS = sizeof(UINT)*8;
-    int maxi = (num_informative_sites+UINT_BITS-1)/UINT_BITS;
+    if (pat_type == PAT_INFORMATIVE)
+        num_parsimony_sites = num_informative_sites;
+    else
+        num_parsimony_sites = num_variant_sites;
+
+    int maxi = (num_parsimony_sites+UINT_BITS-1)/UINT_BITS;
     pars_lower_bound = new UINT[maxi+1];
     memset(pars_lower_bound, 0, (maxi+1)*sizeof(UINT));
     int part, nseq = getNSeq(), npart = partitions.size();
@@ -674,7 +682,7 @@ void SuperAlignment::orderPatternByNumChars() {
     ordered_pattern.clear();
     UINT sum_scores[npart];
     for (part  = 0; part != partitions.size(); part++) {
-        partitions[part]->orderPatternByNumChars();
+        partitions[part]->orderPatternByNumChars(pat_type);
         // partial_partition
         for (vector<Pattern>::iterator pit = partitions[part]->ordered_pattern.begin(); pit != partitions[part]->ordered_pattern.end(); pit++) {
             Pattern pattern(*pit);

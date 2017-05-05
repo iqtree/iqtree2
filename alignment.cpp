@@ -428,9 +428,11 @@ Alignment::Alignment(char *filename, char *sequence_type, InputType &intype) : v
 
     countConstSite();
 
-    cout << "Alignment has " << getNSeq() << " sequences with " << getNSite() <<
-         " columns and " << getNPattern() << " patterns (" << num_informative_sites << " informative sites, " <<
-         (int)(frac_const_sites*getNSite()) << " constant sites)" << endl;
+    cout << "Alignment has " << getNSeq() << " sequences with " << getNSite()
+         << " columns, " << getNPattern() << " distinct patterns" << endl
+         << num_informative_sites << " parsimony-informative, "
+         << num_variant_sites-num_informative_sites << " singleton sites, "
+         << (int)(frac_const_sites*getNSite()) << " constant sites" << endl;
     buildSeqStates();
     checkSeqName();
     // OBSOLETE: identical sequences are handled later
@@ -838,25 +840,35 @@ void Alignment::addConstPatterns(char *freq_const_patterns) {
     buildSeqStates();
 }
 
-void Alignment::orderPatternByNumChars() {
+void Alignment::orderPatternByNumChars(int pat_type) {
     int nptn = getNPattern();
     int ptn, site, i = 0;
     int *num_chars = new int[nptn];
     int *ptn_order = new int[nptn];
     const int UINT_BITS = sizeof(UINT)*8;
-    int maxi = (num_informative_sites+UINT_BITS-1)/UINT_BITS;
+    if (pat_type == PAT_INFORMATIVE)
+        num_parsimony_sites = num_informative_sites;
+    else
+        num_parsimony_sites = num_variant_sites;
+        
+    int maxi = (num_parsimony_sites+UINT_BITS-1)/UINT_BITS;
     pars_lower_bound = new UINT[maxi+1];
     UINT sum = 0;
     memset(pars_lower_bound, 0, (maxi+1)*sizeof(UINT));
     for (ptn = 0; ptn < nptn; ptn++) {
-        num_chars[ptn] =  -at(ptn).num_chars + (!at(ptn).isInformative())*1024;
+        num_chars[ptn] =  -at(ptn).num_chars + (at(ptn).isInvariant())*1024;
         ptn_order[ptn] = ptn;
     }
     quicksort(num_chars, 0, nptn-1, ptn_order);
     ordered_pattern.clear();
     for (ptn = 0, site = 0, i = 0; ptn < nptn; ptn++) {
-        if (!at(ptn_order[ptn]).isInformative())
-            break;
+        if (pat_type == PAT_INFORMATIVE) {
+            if (!at(ptn_order[ptn]).isInformative())
+                break;
+        } else {
+            if (at(ptn_order[ptn]).isInvariant())
+                break;
+        }
         ordered_pattern.push_back(at(ptn_order[ptn]));
         int freq = ordered_pattern.back().frequency;
         UINT num = ordered_pattern.back().num_chars - 1;
@@ -3173,7 +3185,9 @@ void Alignment::copyAlignment(Alignment *aln) {
 void Alignment::countConstSite() {
     int num_const_sites = 0;
     num_informative_sites = 0;
+    num_variant_sites = 0;
     int num_invariant_sites = 0;
+    num_parsimony_sites = 0;
     for (iterator it = begin(); it != end(); it++) {
         if ((*it).isConst()) 
             num_const_sites += (*it).frequency;
@@ -3181,6 +3195,8 @@ void Alignment::countConstSite() {
             num_informative_sites += it->frequency;
         if (it->isInvariant())
             num_invariant_sites += it->frequency;
+        else
+            num_variant_sites += it->frequency;
     }
     frac_const_sites = ((double)num_const_sites) / getNSite();
     frac_invariant_sites = ((double)num_invariant_sites) / getNSite();

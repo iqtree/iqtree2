@@ -191,8 +191,9 @@ public:
     UINT *pars_lower_bound;
 
     /** order pattern by number of character states and return in ptn_order
+        @param pat_type either PAT_INFORMATIVE or 0
     */
-    virtual void orderPatternByNumChars();
+    virtual void orderPatternByNumChars(int pat_type);
 
     /**
      * un-group site-patterns, i.e., making #sites = #patterns and pattern frequency = 1 for all patterns
@@ -645,9 +646,15 @@ public:
      */
     double frac_invariant_sites;
 
-    /** number of informative sites */
+    /** number of parsimony informative sites */
     int num_informative_sites;
-    
+
+    /** number of variant sites */
+    int num_variant_sites;
+
+    /** number of sites used for parsimony computation, can be informative or variant */
+    int num_parsimony_sites;
+
 	/**
 	 *  map from 64 codon to non-stop codon index
 	 */

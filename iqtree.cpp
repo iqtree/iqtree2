@@ -543,6 +543,9 @@ void IQTree::computeInitialTree(string &dist_file, LikelihoodKernel kernel) {
     int fixed_number = 0;
     setParsimonyKernel(kernel);
 
+    if (aln->ordered_pattern.empty())
+        aln->orderPatternByNumChars(PAT_VARIANT);
+
     if (params->user_file) {
         // start the search with user-defined tree
         cout << "Reading input tree file " << params->user_file << " ..." << endl;
@@ -573,7 +576,7 @@ void IQTree::computeInitialTree(string &dist_file, LikelihoodKernel kernel) {
             start = getRealTime();
             score = computeParsimonyTree(params->out_prefix, aln);
             cout << getRealTime() - start << " seconds, parsimony score: " << score
-                << " (based on " << aln->num_informative_sites << " informative sites)"<< endl;
+                << " (based on " << aln->num_parsimony_sites << " sites)"<< endl;
             wrapperFixNegativeBranch(false);
 
             break;
@@ -664,13 +667,14 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
 //    int numDupPars = 0;
     bool orig_rooted = rooted;
     rooted = false;
-    
+
+    if (aln->ordered_pattern.empty())
+        aln->orderPatternByNumChars(PAT_VARIANT);
+
 #ifdef _OPENMP
     StrVector pars_trees;
     if (params->start_tree == STT_PARSIMONY && nParTrees >= 1) {
         pars_trees.resize(nParTrees);
-        if (aln->ordered_pattern.empty())
-            aln->orderPatternByNumChars();
         #pragma omp parallel
         {
             PhyloTree tree;

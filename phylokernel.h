@@ -1476,11 +1476,12 @@ void PhyloTree::computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, Phylo
     if (node->name == ROOT_NAME) {
         assert(dad);
         // special treatment for root node
-        if (aln->ordered_pattern.empty())
-            aln->orderPatternByNumChars();
+//        if (aln->ordered_pattern.empty())
+//            aln->orderPatternByNumChars();
+        ASSERT(!aln->ordered_pattern.empty());
         int pars_size = getBitsBlockSize();
         memset(dad_branch->partial_pars, 255, pars_size*sizeof(UINT));
-        size_t nsites = (aln->num_informative_sites+NUM_BITS-1)/NUM_BITS;
+        size_t nsites = (aln->num_parsimony_sites+NUM_BITS-1)/NUM_BITS;
         dad_branch->partial_pars[nstates*VCSIZE*nsites] = 0;
     } else if (node->isLeaf() && dad) {
         // external node
@@ -1491,8 +1492,9 @@ void PhyloTree::computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, Phylo
             partitions = new vector<Alignment*>;
             partitions->push_back(aln);
         }
-        if (aln->ordered_pattern.empty())
-            aln->orderPatternByNumChars();
+//        if (aln->ordered_pattern.empty())
+//            aln->orderPatternByNumChars();
+        ASSERT(!aln->ordered_pattern.empty());
         int leafid = node->id;
         int pars_size = getBitsBlockSize();
         memset(dad_branch->partial_pars, 0, pars_size*sizeof(UINT));
@@ -1659,7 +1661,7 @@ void PhyloTree::computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, Phylo
         } // of end FOR LOOP
 
         assert(start_pos == aln->ordered_pattern.size());
-//        assert(site == aln->num_informative_sites % NUM_BITS);
+//        assert(site == aln->num_parsimony_sites % NUM_BITS);
         // add dummy states
         if (site > 0 && site < NUM_BITS) {
             x += site/UINT_BITS;
@@ -1683,7 +1685,7 @@ void PhyloTree::computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, Phylo
         }
 //        VectorClass score = 0;
         UINT score = 0;
-        size_t nsites = (aln->num_informative_sites+NUM_BITS-1)/NUM_BITS;
+        size_t nsites = (aln->num_parsimony_sites+NUM_BITS-1)/NUM_BITS;
         int entry_size = nstates * VCSIZE;
         
         switch (nstates) {
@@ -1769,7 +1771,7 @@ int PhyloTree::computeParsimonyBranchFastSIMD(PhyloNeighbor *dad_branch, PhyloNo
 //    VectorClass w;
 
     const int NUM_BITS = VectorClass::size() * UINT_BITS;
-    int nsites = (aln->num_informative_sites + NUM_BITS - 1)/NUM_BITS;
+    int nsites = (aln->num_parsimony_sites + NUM_BITS - 1)/NUM_BITS;
     int entry_size = nstates * VectorClass::size();
     
     int scoreid = nsites*entry_size;

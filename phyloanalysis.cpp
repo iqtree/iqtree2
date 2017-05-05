@@ -128,11 +128,15 @@ void reportAlignment(ofstream &out, Alignment &alignment, int nremoved_seqs) {
 	}
 	out << " sites" << endl << "Number of constant sites: "
 		<< round(alignment.frac_const_sites * alignment.getNSite())
-		<< " (= " << alignment.frac_const_sites * 100 << "% of all sites)"
-           << endl << "Number of invariant (constant or ambiguous constant) sites: "
-			<< round(alignment.frac_invariant_sites * alignment.getNSite())
-			<< " (= " << alignment.frac_invariant_sites * 100 << "% of all sites)"
-			<< endl << "Number of distinct site patterns: " << alignment.size() << endl
+		<< " (= " << alignment.frac_const_sites * 100 << "% of all sites)" << endl
+
+        << "Number of invariant (constant or ambiguous constant) sites: "
+        << round(alignment.frac_invariant_sites * alignment.getNSite())
+        << " (= " << alignment.frac_invariant_sites * 100 << "% of all sites)" << endl
+
+        << "Number of parsimony informative sites: " << alignment.num_informative_sites << endl
+
+        << "Number of distinct site patterns: " << alignment.size() << endl
 		<< endl;
 }
 

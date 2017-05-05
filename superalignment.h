@@ -229,7 +229,7 @@ public:
 
     /** order pattern by number of character states and return in ptn_order
     */
-    virtual void orderPatternByNumChars();
+    virtual void orderPatternByNumChars(int pat_type);
 
 	/**
 		actual partition alignments

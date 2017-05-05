@@ -522,7 +522,7 @@ phylonode.cpp phylonode.h
 phylonodemixlen.cpp phylonodemixlen.h
 phylosupertree.cpp phylosupertree.h
 phylotree.cpp phylotree.h
-phylotreesse.cpp phylokernelnew.h
+phylotreesse.cpp phylokernel.h phylokernelnew.h
 phylotreepars.cpp
 phylokernelnonrev.cpp phylokernelnonrev.h
 phylotreemixlen.cpp phylotreemixlen.h

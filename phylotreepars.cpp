@@ -50,10 +50,11 @@ void PhyloTree::computePartialParsimonyFast(PhyloNeighbor *dad_branch, PhyloNode
         // external node
         int leafid = node->id;
         memset(dad_branch->partial_pars, 0, getBitsBlockSize()*sizeof(UINT));
-        int max_sites = ((aln->num_informative_sites+UINT_BITS-1)/UINT_BITS)*UINT_BITS;
+        int max_sites = ((aln->num_parsimony_sites+UINT_BITS-1)/UINT_BITS)*UINT_BITS;
         int ambi_aa[] = {2, 3, 5, 6, 9, 10}; // {4+8, 32+64, 512+1024};
-        if (aln->ordered_pattern.empty())
-            aln->orderPatternByNumChars();
+//        if (aln->ordered_pattern.empty())
+//            aln->orderPatternByNumChars();
+        ASSERT(!aln->ordered_pattern.empty());
         int start_pos = 0;
         for (vector<Alignment*>::iterator alnit = partitions->begin(); alnit != partitions->end(); alnit++) {
             int end_pos = start_pos + (*alnit)->ordered_pattern.size();
@@ -154,7 +155,7 @@ void PhyloTree::computePartialParsimonyFast(PhyloNeighbor *dad_branch, PhyloNode
             start_pos = end_pos;
         } // FOR LOOP
 
-        assert(site == aln->num_informative_sites);
+        assert(site == aln->num_parsimony_sites);
         // add dummy states
         if (site < max_sites)
             dad_branch->partial_pars[(site/UINT_BITS)*nstates] |= ~((1<<(site%UINT_BITS)) - 1);
@@ -171,7 +172,7 @@ void PhyloTree::computePartialParsimonyFast(PhyloNeighbor *dad_branch, PhyloNode
         }
 //        UINT score = left->partial_pars[0] + right->partial_pars[0];
         UINT score = 0;
-        int nsites = aln->num_informative_sites;
+        int nsites = aln->num_parsimony_sites;
         nsites = (nsites+UINT_BITS-1)/UINT_BITS;
 
         switch (nstates) {
@@ -242,10 +243,10 @@ int PhyloTree::computeParsimonyBranchFast(PhyloNeighbor *dad_branch, PhyloNode *
     if ((node_branch->partial_lh_computed & 2) == 0)
         computePartialParsimonyFast(node_branch, node);
     int site;
-    int nsites = (aln->num_informative_sites + UINT_BITS-1) / UINT_BITS;
+    int nsites = (aln->num_parsimony_sites + UINT_BITS-1) / UINT_BITS;
     int nstates = aln->getMaxNumStates();
 
-    int scoreid = ((aln->num_informative_sites+UINT_BITS-1)/UINT_BITS)*nstates;
+    int scoreid = ((aln->num_parsimony_sites+UINT_BITS-1)/UINT_BITS)*nstates;
     UINT sum_end_node = (dad_branch->partial_pars[scoreid] + node_branch->partial_pars[scoreid]);
     UINT score = sum_end_node;
 
