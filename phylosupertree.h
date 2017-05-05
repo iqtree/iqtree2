@@ -67,6 +67,19 @@ public:
     */
     virtual void restoreCheckpoint();
 
+    /**
+            set the model factory
+            @param model_fac model factory
+     */
+    virtual void setModelFactory(ModelFactory *model_fac);
+
+    /**
+            Set the alignment, important to compute parsimony or likelihood score
+            Assing taxa ids according to their position in the alignment
+            @param alignment associated alignment
+     */
+    virtual void setSuperAlignment(Alignment *alignment);
+
     /** read partition model file */
     void readPartition(Params &params);
 

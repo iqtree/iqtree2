@@ -395,7 +395,10 @@ void IQTree::initSettings(Params &params) {
     			bootstrap_alignment->createBootstrapAlignment(aln, &this_sample, params.bootstrap_spec);
     			for (size_t j = 0; j < orig_nptn; j++)
     				boot_samples[i][j] = this_sample[j];
-				bootstrap_alignment->printPhylip(bootaln_name.c_str(), true);
+    			if(!isSuperTree())
+    				bootstrap_alignment->printPhylip(bootaln_name.c_str(), true);
+    			else
+    				((SuperAlignment *) bootstrap_alignment)->printCombinedAlignment(bootaln_name.c_str(), true);
 				delete bootstrap_alignment;
         	} else {
     			IntVector this_sample;
@@ -414,6 +417,19 @@ void IQTree::initSettings(Params &params) {
         // restore randstream
         finish_random();
         randstream = saved_randstream;
+
+		// Diep: initialize data members to be used in the Refinement Step
+		on_refine_btree = false;
+		saved_aln_on_refine_btree = NULL;
+		if(params.ufboot2corr){
+			boot_samples_int.resize(params.gbo_replicates);
+			for (size_t i = 0; i < params.gbo_replicates; i++) {
+				boot_samples_int[i].resize(nptn, 0);
+    			for (size_t j = 0; j < orig_nptn; j++)
+    				boot_samples_int[i][j] = boot_samples[i][j];
+	       	}
+		}
+
     }
 
     if (params.root_state) {
@@ -2447,6 +2463,8 @@ double IQTree::doTreeSearch() {
 
     }
 
+    if(params->ufboot2corr) refineBootTrees();
+
     if (optimization_looped)
         sendStopMessage();
 
@@ -2481,6 +2499,320 @@ double IQTree::doTreeSearch() {
     return candidateTrees.getBestScore();
 
 }
+
+
+/*
+void IQTree::refineBootTrees(){
+	on_refine_btree = true;
+	int num_boot_rep = params->gbo_replicates;
+	params->gbo_replicates = 0;
+	save_all_trees = 0;
+
+	NNI_Type saved_nni_type = params->nni_type;
+	if(params->u2c_nni5 == false){
+		params->nni5 = false;
+		params->nni_type = NNI1;
+	}else{
+		params->nni5 = true;
+		params->nni_type = NNI5;
+	}
+
+	string saved_tree = getTreeString();
+	saved_aln_on_refine_btree = aln;
+
+	int nptn = getAlnNPattern();
+	cout << "npn = " << nptn << endl;
+
+	string tree;
+	Alignment * bootstrap_aln;
+
+	int *saved_randstream = randstream;
+	init_random(params->ran_seed);
+
+    string file_name = params->out_prefix;
+    file_name += ".binfo";
+	ofstream binfo(file_name.c_str());
+
+	file_name = params->out_prefix;
+	file_name += ".btree.pre";
+	ofstream btreep(file_name.c_str(), ios::app);
+
+	file_name = params->out_prefix;
+	file_name += ".btree.aft";
+	ofstream btreea(file_name.c_str(), ios::app);
+
+	file_name = params->out_prefix;
+	file_name += ".btree.pre.brlen";
+	ofstream btreep_brlen(file_name.c_str(), ios::app);
+
+	file_name = params->out_prefix;
+	file_name += ".btree.aft.brlen";
+	ofstream btreea_brlen(file_name.c_str(), ios::app);
+
+	file_name = params->out_prefix;
+	file_name += ".refine.aln";
+	ofstream refine_aln(file_name.c_str(), ios::app);
+
+
+	if(!isSuperTree()){
+		getModelFactory()->model->writeInfo(binfo);
+		getModelFactory()->site_rate->writeInfo(binfo);
+	}else{
+		((PhyloSuperTree *)this)->at(0)->getModelFactory()->model->writeInfo(binfo);
+		((PhyloSuperTree *)this)->at(0)->getModelFactory()->site_rate->writeInfo(binfo);
+	}
+
+    PhyloSuperTree *stree = (isSuperTree()) ? (PhyloSuperTree*)this : NULL;
+
+	for(int sample = 0; sample < num_boot_rep; sample++){
+        if ((sample+1) % 100 == 0)
+            cout << sample+1 << " replicates done" << endl;
+
+        if (saved_aln_on_refine_btree->isSuperAlignment())
+            bootstrap_aln = new SuperAlignment;
+        else
+            bootstrap_aln = new Alignment;
+
+//		bootstrap_aln->buildFromPatternFreq(*saved_aln_on_refine_btree, boot_samples_int[sample]);
+		IntVector this_sample;
+		bootstrap_aln->createBootstrapAlignment(saved_aln_on_refine_btree, &this_sample, params->bootstrap_spec);
+
+        if (isSuperTree())
+            stree->setSuperAlignment(bootstrap_aln);
+        else
+            setAlignment(bootstrap_aln);
+
+		for(int k = 0; k < nptn; k++){
+			if(boot_samples_int[sample][k] != this_sample[k]){
+				assert(0 && "Not identical");
+			}
+		}
+
+//		bootstrap_aln->createBootstrapAlignment(saved_aln_on_refine_btree, NULL, params->bootstrap_spec);
+		ptn_freq_computed = false;
+        computePtnFreq();
+        if (isSuperTree()) {
+            for (auto it = stree->begin(); it != stree->end(); it++) {
+                (*it)->ptn_freq_computed = false;
+                (*it)->computePtnFreq();
+            }
+        }
+
+
+		tree = boot_trees[sample];
+		// Read the bootstrap tree
+//        cout << tree << endl;
+
+        readTreeString(tree);
+
+
+		if(!isSuperTree())
+			aln->printPhylip(refine_aln, true);
+		else
+			((SuperAlignment *) aln)->printCombinedAlignment(refine_aln, true);
+
+		setRootNode(params->root);
+
+		if (isSuperTree()){
+			wrapperFixNegativeBranch(true);
+			((PhyloSuperTree*) this)->mapTrees();
+		}
+		else{
+			initializeAllPartialLh();
+			clearAllPartialLH();
+			wrapperFixNegativeBranch(false);
+		}
+
+
+//        printTree(cout);
+//        cout << endl;
+        optimizeBranches();
+//        printTree(cout);
+//        cout << endl;
+
+		curScore = computeLogL();
+		binfo << sample << "\t" << curScore;
+
+		printTree(btreep, WT_NEWLINE | WT_SORT_TAXA);
+		printTree(btreep_brlen, WT_NEWLINE | WT_SORT_TAXA | WT_BR_LEN);
+
+		pair<int, int> nniInfos; // <num_NNIs, num_steps>
+        nniInfos = doNNISearch();
+        curScore = computeLogL();
+        binfo << "\t" << curScore << endl;
+
+		stringstream ostr;
+		printTree(ostr, WT_TAXON_ID | WT_SORT_TAXA);
+		tree = ostr.str();
+		boot_trees[sample] = getTreeString();
+		boot_logl[sample] = curScore;
+
+		printTree(btreea, WT_NEWLINE | WT_SORT_TAXA);
+		printTree(btreea_brlen, WT_NEWLINE | WT_SORT_TAXA | WT_BR_LEN);
+		delete aln;
+	}
+
+	binfo.close();
+	btreep.close();
+	btreea.close();
+
+//	delete aln;
+
+	// restore randstream
+	finish_random();
+	randstream = saved_randstream;
+
+	// Recover the last status of IQTREE
+
+	params->gbo_replicates = num_boot_rep;
+
+    if (isSuperTree())
+        stree->setSuperAlignment(saved_aln_on_refine_btree);
+    else
+        setAlignment(saved_aln_on_refine_btree);
+
+	readTreeString(saved_tree);
+
+	ptn_freq_computed = false;
+    computePtnFreq();
+    if (isSuperTree()) {
+        for (auto it = stree->begin(); it != stree->end(); it++) {
+            (*it)->ptn_freq_computed = false;
+            (*it)->computePtnFreq();
+        }
+    }
+
+	if(params->u2c_nni5 == false){
+		params->nni_type = saved_nni_type;
+		if(params->nni_type == NNI5)
+			params->nni5 = true;
+	}
+
+	initializeAllPartialLh();
+	clearAllPartialLH();
+	curScore = optimizeAllBranches();
+
+	save_all_trees = 2;
+	on_refine_btree = false;
+}
+*/
+
+/**********************************************************
+ * STANDARD NON-PARAMETRIC BOOTSTRAP
+ ***********************************************************/
+void IQTree::refineBootTrees() {
+
+	int *saved_randstream = randstream;
+	init_random(params->ran_seed);
+
+    params->gbo_replicates = 0;
+
+	NNI_Type saved_nni_type = params->nni_type;
+	if(params->u2c_nni5 == false){
+		params->nni5 = false;
+		params->nni_type = NNI1;
+	}else{
+		params->nni5 = true;
+		params->nni_type = NNI5;
+	}
+
+    cout << "Refining ufboot trees with NNI..." << endl;
+
+    int refined_trees = 0;
+
+	// do bootstrap analysis
+	for (int sample = 0; sample < boot_trees.size(); sample++) {
+        // create bootstrap alignment
+		Alignment* bootstrap_alignment;
+		if (aln->isSuperAlignment())
+			bootstrap_alignment = new SuperAlignment;
+		else
+			bootstrap_alignment = new Alignment;
+		bootstrap_alignment->createBootstrapAlignment(aln, NULL, params->bootstrap_spec);
+
+        // create bootstrap tree
+		IQTree *boot_tree;
+		if (aln->isSuperAlignment()){
+			if(params->partition_type){
+				boot_tree = new PhyloSuperTreePlen((SuperAlignment*) bootstrap_alignment, (PhyloSuperTree*) this);
+			} else {
+				boot_tree = new PhyloSuperTree((SuperAlignment*) bootstrap_alignment, (PhyloSuperTree*) this);
+			}
+		} else
+			boot_tree = new IQTree(bootstrap_alignment);
+
+        boot_tree->on_refine_btree = true;
+        boot_tree->save_all_trees = 0;
+
+        // initialize constraint tree
+        if (!constraintTree.empty()) {
+            boot_tree->constraintTree.readConstraint(constraintTree);
+        }
+
+        // copy model
+        boot_tree->setModelFactory(getModelFactory());
+
+
+        // set likelihood kernel
+        boot_tree->setParams(params);
+        boot_tree->setLikelihoodKernel(sse, num_threads);
+
+        // load the current ufboot tree
+        boot_tree->readTreeStringSeqName(boot_trees_brlen[sample]);
+
+        // REMARK: branch lengths were estimated from original alignments
+        // for bootstrap_alignment, they still thus need to be reoptimized a bit
+        boot_tree->optimizeBranches(2);
+
+
+        auto num_nnis = boot_tree->doNNISearch();
+        if (num_nnis.second != 0)
+            refined_trees++;
+
+        if (verbose_mode >= VB_MED) {
+            cout << "UFBoot tree " << sample+1 << ": " << boot_logl[sample] << " -> " << boot_tree->getCurScore() << endl;
+        }
+
+		stringstream ostr;
+		boot_tree->printTree(ostr, WT_TAXON_ID | WT_SORT_TAXA);
+		boot_trees[sample] = ostr.str();
+		boot_logl[sample] = boot_tree->curScore;
+        ostr.seekg(0, ios::beg);
+        boot_tree->printTree(ostr, WT_BR_LEN);
+        boot_trees_brlen[sample] = ostr.str();
+
+
+        // delete memory
+        boot_tree->setModelFactory(NULL);
+        boot_tree->save_all_trees = 2;
+
+		bootstrap_alignment = boot_tree->aln;
+		delete boot_tree;
+		// fix bug: bootstrap_alignment might be changed
+		delete bootstrap_alignment;
+
+
+        if ((sample+1) % 100 == 0)
+            cout << sample+1 << " samples done" << endl;
+
+	}
+
+    cout << "Total " << refined_trees << " ufboot trees refined" << endl;
+
+    // restore randstream
+    finish_random();
+    randstream = saved_randstream;
+
+    // restore
+    params->gbo_replicates = boot_trees.size();
+	if(params->u2c_nni5 == false){
+		params->nni_type = saved_nni_type;
+		if(params->nni_type == NNI5)
+			params->nni5 = true;
+	}
+
+}
+
 
 void IQTree::printIterationInfo(int sourceProcID) {
     double realtime_remaining = stop_rule.getRemainingTime(stop_rule.getCurIt());
@@ -2646,12 +2978,15 @@ pair<int, int> IQTree::doNNISearch() {
         if (params->print_trees_site_posterior)
             computePatternCategories();
     }
-    // Better tree or score is found
-    if (getCurScore() > curBestScore + params->modelEps) {
-        // Re-optimize model parameters (the sNNI algorithm)
-        optimizeModelParameters(false, params->modelEps * 10);
-        getModelFactory()->saveCheckpoint();
-    }
+
+    if(!on_refine_btree){ // Diep add (IF in Refinement Step, do not optimize model parameters)
+		// Better tree or score is found
+		if (getCurScore() > curBestScore + params->modelEps) {
+			// Re-optimize model parameters (the sNNI algorithm)
+			optimizeModelParameters(false, params->modelEps * 10);
+			getModelFactory()->saveCheckpoint();
+		}
+	}
     MPIHelper::getInstance().setNumNNISearch(MPIHelper::getInstance().getNumNNISearch() + 1);
 
     return nniInfos;
@@ -2676,6 +3011,7 @@ pair<int, int> IQTree::optimizeNNI(bool speedNNI) {
         tabuSplits = initTabuSplits;
     }
 
+    double originalScore = curScore;
     for (numSteps = 1; numSteps <= MAXSTEPS; numSteps++) {
 
 //        cout << "numSteps = " << numSteps << endl;
@@ -2787,6 +3123,10 @@ pair<int, int> IQTree::optimizeNNI(bool speedNNI) {
             totalNNIApplied += appliedNNIs.size();
         }
 
+        if(curScore < oldScore - params->loglh_epsilon){
+        	cout << "$$$$$$$$: " << curScore << "\t" << oldScore << "\t" << curScore - oldScore << endl;
+
+        }
 
         if (curScore - oldScore <  params->loglh_epsilon)
             break;
@@ -2810,6 +3150,11 @@ pair<int, int> IQTree::optimizeNNI(bool speedNNI) {
 
     if (numSteps == MAXSTEPS) {
         cout << "WARNING: NNI search needs unusual large number of steps (" << numSteps << ") to converge!" << endl;
+    }
+
+    if(curScore < originalScore - params->loglh_epsilon){
+    	cout << "AAAAAAAAAAAAAAAAAAA: " << curScore << "\t" << originalScore << "\t" << curScore - originalScore << endl;
+
     }
     return make_pair(numSteps, totalNNIApplied);
 }

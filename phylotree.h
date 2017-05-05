@@ -438,7 +438,7 @@ public:
             Assing taxa ids according to their position in the alignment
             @param alignment associated alignment
      */
-    void setAlignment(Alignment *alignment);
+    virtual void setAlignment(Alignment *alignment);
 
     /** set the root by name */
     void setRootNode(const char *my_root);
@@ -454,7 +454,7 @@ public:
             set the model factory
             @param model_fac model factory
      */
-    void setModelFactory(ModelFactory *model_fac);
+    virtual void setModelFactory(ModelFactory *model_fac);
 
     /**
             set rate heterogeneity, important to compute the likelihood

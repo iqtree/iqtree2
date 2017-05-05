@@ -295,26 +295,33 @@ void SuperAlignment::createBootstrapAlignment(Alignment *aln, IntVector* pattern
         partitions.resize(super_aln->partitions.size(), NULL);
         int i, ptn;
         for (i = 0; i < super_aln->partitions.size(); i++) {
+
+            // get a random gene
 			int part = random_int(super_aln->partitions.size());
+
+            // ptn_freq stores pattern frequency of bootstrap aln
+
+            IntVector ptn_freq;
+            if (strncmp(spec,"GENESITE",8) == 0) {
+                // resample sites of this gene
+                super_aln->partitions[part]->createBootstrapAlignment(ptn_freq);
+                ASSERT(ptn_freq.size() == super_aln->partitions[part]->size());
+            } else {
+                // copy ptn_freq from this gene
+                for (ptn = 0; ptn < super_aln->partitions[part]->size(); ptn++)
+                    ptn_freq.push_back(super_aln->partitions[part]->at(ptn).frequency);
+            }
+
             if (!partitions[part]) {
                 // allocate the partition
                 partitions[part] = new Alignment;
-                if (strncmp(spec,"GENESITE",8) == 0) {
-                    partitions[part]->createBootstrapAlignment(super_aln->partitions[part]);
-                } else
-                    partitions[part]->copyAlignment(super_aln->partitions[part]);
-            } else {
-                Alignment *newaln;
-                if (strncmp(spec,"GENESITE",8) == 0) {
-                    Alignment *newaln = new Alignment;
-                    newaln->createBootstrapAlignment(super_aln->partitions[part]);
-                } else
-                     newaln = super_aln->partitions[part];
-
+                partitions[part]->copyAlignment(super_aln->partitions[part]);
                 for (ptn = 0; ptn < super_aln->partitions[part]->size(); ptn++)
-                    partitions[part]->at(ptn).frequency += newaln->at(ptn).frequency;
-                if (strncmp(spec,"GENESITE",8) == 0)
-                    delete newaln;
+                    partitions[part]->at(ptn).frequency = ptn_freq[ptn];
+            } else {
+                // increase frequency if already existed
+                for (ptn = 0; ptn < super_aln->partitions[part]->size(); ptn++)
+                    partitions[part]->at(ptn).frequency += ptn_freq[ptn];
             }
         }
 

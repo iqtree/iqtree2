@@ -840,6 +840,7 @@ protected:
 
     virtual void saveCurrentTree(double logl); // save current tree
 
+
     void saveNNITrees(PhyloNode *node = NULL, PhyloNode *dad = NULL);
 
     int duplication_counter;
@@ -1003,5 +1004,12 @@ public:
      *      a set of branches, on which NNIs should be evaluated for the current NNI steps
      */
     Branches getReducedListOfNNIBranches(Branches &previousNNIBranches);
+
+
+	// Diep added for UFBoot2-Corr
+    void refineBootTrees();
+    bool on_refine_btree;
+    Alignment* saved_aln_on_refine_btree;
+	vector<IntVector> boot_samples_int;
 };
 #endif

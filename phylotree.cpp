@@ -515,6 +515,13 @@ void PhyloTree::setModelFactory(ModelFactory *model_fac) {
     if (model_factory && (model_factory->model->isMixture() || model_factory->model->isSiteSpecificModel()
         || !model_factory->model->isReversible() || params->kernel_nonrev))
     	setLikelihoodKernel(sse, num_threads);
+    if (model_fac) {
+        model = model_factory->model;
+        site_rate = model_factory->site_rate;
+    } else {
+        model = NULL;
+        site_rate = NULL;
+    }
 }
 
 void PhyloTree::setRate(RateHeterogeneity *rate) {
@@ -938,7 +945,7 @@ void PhyloTree::initializeAllPartialLh(int &index, int &indexlh, PhyloNode *node
 
             uint64_t mem_size = (uint64_t)max_lh_slots * block_size + 4 + tip_partial_lh_size;
 
-            if (verbose_mode >= VB_MED)
+            if (verbose_mode >= VB_MAX)
                 cout << "Allocating " << mem_size * sizeof(double) << " bytes for partial likelihood vectors" << endl;
             try {
             	central_partial_lh = aligned_alloc<double>(mem_size);
@@ -959,7 +966,7 @@ void PhyloTree::initializeAllPartialLh(int &index, int &indexlh, PhyloNode *node
         if (!central_scale_num) {
         	uint64_t mem_size = max_lh_slots * scale_block_size;
 
-            if (verbose_mode >= VB_MED)
+            if (verbose_mode >= VB_MAX)
                 cout << "Allocating " << mem_size * sizeof(UBYTE) << " bytes for scale num vectors" << endl;
             try {
             	central_scale_num = aligned_alloc<UBYTE>(mem_size);
@@ -971,7 +978,7 @@ void PhyloTree::initializeAllPartialLh(int &index, int &indexlh, PhyloNode *node
         }
 
         if (!central_partial_pars) {
-            if (verbose_mode >= VB_MED)
+            if (verbose_mode >= VB_MAX)
                 cout << "Allocating " << (leafNum - 1) * 4 * pars_block_size * sizeof(UINT)
                         << " bytes for partial parsimony vectors" << endl;
             try {

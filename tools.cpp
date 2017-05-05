@@ -2688,6 +2688,17 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.min_correlation = convert_double(argv[cnt]);
 				continue;
 			}
+			if (strcmp(argv[cnt], "-brefine") == 0) {
+				params.ufboot2corr = true;
+                // print ufboot trees with branch lengths
+				params.print_ufboot_trees = 2;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-u2c_nni5") == 0) {
+				params.u2c_nni5 = true;
+				continue;
+			}
+
 			if (strcmp(argv[cnt], "-nstep") == 0) {
 				cnt++;
 				if (cnt >= argc)
@@ -3367,6 +3378,11 @@ void parseArg(int argc, char *argv[], Params &params) {
     if ((params.model_name.find("ONLY") != string::npos || (params.model_name.substr(0,2) == "MF" && params.model_name.substr(0,3) != "MFP")) && (params.gbo_replicates || params.num_bootstrap_samples))
         outError("ModelFinder only cannot be combined with bootstrap analysis");
 
+	// Diep:
+	if(params.ufboot2corr == true){
+		if(params.gbo_replicates <= 0) params.ufboot2corr = false;
+		else params.stop_condition = SC_UNSUCCESS_ITERATION;
+	}
 
     if (!params.out_prefix) {
     	if (params.eco_dag_file)

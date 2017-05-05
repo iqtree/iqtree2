@@ -435,6 +435,14 @@ public:
      */
     virtual void createBootstrapAlignment(int *pattern_freq, const char *spec = NULL, int *rstream = NULL);
 
+	/**
+			Diep: This is for UFBoot2-Corr
+			Initialize "this" alignment as a bootstrap alignment
+			@param aln: the reference to the original alignment
+			@new_pattern_freqs: the frequencies of patterns to be present in bootstrap aln
+	 */
+	void buildFromPatternFreq(Alignment & aln, IntVector new_pattern_freqs);
+
     /**
             create a gap masked alignment from an input alignment. Gap patterns of masked_aln 
                     will be superimposed into aln to create the current alignment object.

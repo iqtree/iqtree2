@@ -3093,6 +3093,43 @@ void Alignment::createBootstrapAlignment(int *pattern_freq, const char *spec, in
 	}
 }
 
+
+void Alignment::buildFromPatternFreq(Alignment & aln, IntVector new_pattern_freqs){
+	int nsite = aln.getNSite();
+    seq_names.insert(seq_names.begin(), aln.seq_names.begin(), aln.seq_names.end());
+    num_states = aln.num_states;
+    seq_type = aln.seq_type;
+
+    genetic_code = aln.genetic_code;
+    STATE_UNKNOWN = aln.STATE_UNKNOWN;
+    site_pattern.resize(nsite, -1);
+
+    clear();
+    pattern_index.clear();
+
+    int site = 0;
+    std::vector<Pattern>::iterator it;
+    int p;
+
+    for(it = aln.begin(), p = 0; it != aln.end(); ++it, ++p) {
+    	if(new_pattern_freqs[p] > 0){
+	    	Pattern pat = *it;
+			addPattern(pat, site, new_pattern_freqs[p]);
+			for (int j = 0; j < new_pattern_freqs[p]; j++)
+				site_pattern[site++] = size()-1;
+    	}
+    }
+    if (!aln.site_state_freq.empty()) {
+        site_model = site_pattern;
+        assert(site_state_freq.size() == getNPattern());
+    }
+
+    countConstSite();
+    buildSeqStates();
+//    checkSeqName();
+}
+
+
 void Alignment::createGapMaskedAlignment(Alignment *masked_aln, Alignment *aln) {
     if (masked_aln->getNSeq() != aln->getNSeq()) outError("Different number of sequences in masked alignment");
     if (masked_aln->getNSite() != aln->getNSite()) outError("Different number of sites in masked alignment");
