@@ -109,7 +109,7 @@ void outError(const char *error, bool quit) {
 	if (error == ERR_NO_MEMORY) {
         print_stacktrace(cerr);
 	}
-	cerr << "ERROR: " << error << endl;
+	cerr << error << endl;
     if (quit)
     	exit(2);
 }
@@ -955,11 +955,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.bootlh_partitions = NULL;
     params.site_freq_file = NULL;
     params.tree_freq_file = NULL;
-#ifdef _OPENMP
-    params.num_threads = -1;
-#else
     params.num_threads = 1;
-#endif
     params.model_test_criterion = MTC_BIC;
 //    params.model_test_stop_rule = MTC_ALL;
     params.model_test_sample_size = 0;

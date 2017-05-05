@@ -83,6 +83,7 @@ void IQTree::init() {
 
     if (Params::getInstance().write_intermediate_trees)
         out_treels.open(treels_name.c_str());
+    on_refine_btree = false;
 
 }
 
@@ -684,9 +685,6 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
     bool orig_rooted = rooted;
     rooted = false;
 
-    if (aln->ordered_pattern.empty())
-        aln->orderPatternByNumChars(PAT_VARIANT);
-
 #ifdef _OPENMP
     StrVector pars_trees;
     if (params->start_tree == STT_PARSIMONY && nParTrees >= 1) {
@@ -757,9 +755,9 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
         int pos = addTreeToCandidateSet(curParsTree, -DBL_MAX, false, MPIHelper::getInstance().getProcessID());
         // if a duplicated tree is generated, then randomize the tree
         if (pos == -1) {
-//            readTreeString(curParsTree);
-//            doRandomNNIs();
-            generateRandomTree(YULE_HARDING);
+            readTreeString(curParsTree);
+            doRandomNNIs();
+//            generateRandomTree(YULE_HARDING);
             wrapperFixNegativeBranch(true);
             rooted = false;
             if (orig_rooted)

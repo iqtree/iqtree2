@@ -9,7 +9,7 @@ add_library(pllavx
 	avxLikelihood.c)
 endif()
 
-if (IQTREE_FLAGS MATCHES "omp")
+if (NOT IQTREE_FLAGS MATCHES "single")
 add_library(pll 
   alignment.c
   bipartitionList.c

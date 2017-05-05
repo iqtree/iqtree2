@@ -204,7 +204,7 @@ inline void separator(ostream &out, int type = 0) {
 
 void printCopyright(ostream &out) {
 #ifdef IQ_TREE
- 	out << "IQ-TREE PoMo";
+ 	out << "IQ-TREE";
     #ifdef _IQTREE_MPI
     out << " MPI";
     #endif
@@ -2441,10 +2441,6 @@ int main(int argc, char *argv[]) {
 	}
 
 #ifdef _OPENMP
-	if (Params::getInstance().num_threads < 0) {
-		cout << endl << endl;
-		outError("Please specify number of cores via -nt option. Use '-nt AUTO' to automatically determine the best number of cores");
-	}
 	if (Params::getInstance().num_threads >= 1) {
         omp_set_num_threads(Params::getInstance().num_threads);
         Params::getInstance().num_threads = omp_get_max_threads();
@@ -2467,13 +2463,22 @@ int main(int argc, char *argv[]) {
 		cout << endl << endl;
 		outError("Number of threads must be 1 for sequential version.");
 	}
-    int num_procs = countPhysicalCPUCores();
+#endif
+
+
 #ifndef _IQTREE_MPI
-    if (num_procs > 1) {
-        cout << endl << endl << "NOTE: Consider using the multicore version because your CPU has " << num_procs << " cores!";
+    int num_procs = countPhysicalCPUCores();
+#ifdef _OPENMP
+    if (num_procs > 1 && Params::getInstance().num_threads == 1) {
+        cout << endl << endl << "HINT: Use -nt option to specify number of threads because your CPU has " << num_procs << " cores!";
+        cout << endl << "HINT: -nt AUTO will automatically determine the best number of threads to use.";
     }
+#else
+    if (num_procs > 1)
+        cout << endl << endl << "NOTE: Consider using the multicore version because your CPU has " << num_procs << " cores!";
 #endif
 #endif
+
 	//cout << "sizeof(int)=" << sizeof(int) << endl;
 	cout << endl << endl;
 

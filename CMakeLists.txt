@@ -14,9 +14,9 @@
 # Linux example usages:
 #----------------------
 # cmake <source_dir>						   (sequential version)
-# cmake -DIQTREE_FLAGS="omp" <source_dir>      (OpenMP version)
-# cmake -DIQTREE_FLAGS="m32" <source_dir>      (32-bit sequential version)
-# cmake -DIQTREE_FLAGS="m32 omp" <source_dir>  (32-bit OpenMP version)
+# cmake <source_dir>      (OpenMP version)
+# cmake -DIQTREE_FLAGS="m32-single" <source_dir>      (32-bit sequential version)
+# cmake -DIQTREE_FLAGS="m32" <source_dir>  (32-bit OpenMP version)
 #
 # To compile with CLANG on Linux:
 # export CC=/usr/bin/clang
@@ -26,18 +26,19 @@
 #
 # Mac OSX example usages:
 #------------------------
-# cmake -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ <source_dir>							(sequential version)
 #
 # To build OpenMP version one needs to download Clang version 3.7 or later (as of November 2015)
 # Then assuming clang3.7 and clang++3.7 are the newly built compilers, then:
-# cmake -DCMAKE_C_COMPILER=clang3.7 -DCMAKE_CXX_COMPILER=clang++3.7 -DIQTREE_FLAGS="omp" <source_dir>		(OpenMP version)
+# cmake -DCMAKE_C_COMPILER=clang3.7 -DCMAKE_CXX_COMPILER=clang++3.7 <source_dir>   (OpenMP version)
+#
+# cmake -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DIQTREE_FLAGS=single <source_dir>   (sequential version)
 #
 
 
-# Compile OpenMP version: cmake -DIQTREE_FLAGS=omp ....
+# Compile OpenMP version: cmake ....
 # Compile 32-bit version: cmake -DIQTREE_FLAGS=m32 ....
 # Compile static version: cmake -DIQTREE_FLAGS=static ....
-# Compile static OpenMP version: cmake -DIQTREE_FLAGS="omp static" ....
+# Compile static OpenMP version: cmake -DIQTREE_FLAGS="static" ....
 
 #NOTE: Static linking with clang windows: make a symlink libgcc_eh.a to libgcc.a (administrator required)
 # C:\TDM-GCC-64\lib\gcc\x86_64-w64-mingw32\5.1.0>mklink libgcc_eh.a libgcc.a
@@ -49,8 +50,8 @@ project(iqtree)
 add_definitions(-DIQ_TREE)
 # The version number.
 set (iqtree_VERSION_MAJOR 1)
-set (iqtree_VERSION_MINOR 5)
-set (iqtree_VERSION_PATCH "5-pomo")
+set (iqtree_VERSION_MINOR 6)
+set (iqtree_VERSION_PATCH "beta")
 
 set(BUILD_SHARED_LIBS OFF)
 
@@ -253,9 +254,9 @@ endif()
 # configure OpenMP/PThreads compilation
 # change the executable name if compiled for OpenMP parallel version
 ##################################################################
-if (IQTREE_FLAGS MATCHES "omp")
+if (NOT IQTREE_FLAGS MATCHES "single")
 	message("OpenMP        : Yes")
-	SET(EXE_SUFFIX "${EXE_SUFFIX}-omp")
+	#SET(EXE_SUFFIX "${EXE_SUFFIX}-omp")
 	add_definitions(-D_USE_PTHREADS)
 	if (MSVC)
 		add_definitions(/MT)
@@ -603,7 +604,7 @@ if (IQTREE_FLAGS MATCHES "libcxx")
 endif()
 
 set(THREAD_LIB "")
-if (IQTREE_FLAGS MATCHES "omp")
+if (NOT IQTREE_FLAGS MATCHES "single")
 	link_directories(${PROJECT_SOURCE_DIR}/lib)
 	if (MSVC)
 		if (BINARY32)
@@ -691,7 +692,7 @@ install (FILES "${PROJECT_SOURCE_DIR}/example/example.cf" DESTINATION .)
 
 if (WIN32)
 	install (FILES "${BINARY_DIR}/iqtree${EXE_SUFFIX}-click.exe" DESTINATION bin)
-	if (EXE_SUFFIX MATCHES "omp" AND MSVC)
+	if (NOT IQTREE_FLAGS MATCHES "single" AND MSVC)
         if (BINARY32)
             install(FILES  "${PROJECT_SOURCE_DIR}/lib32/pthreadVC2.dll" DESTINATION bin)
             install(FILES  "${PROJECT_SOURCE_DIR}/lib32/libiomp5md.dll" DESTINATION bin)
@@ -703,7 +704,7 @@ if (WIN32)
 #		install(FILES  "${PROJECT_SOURCE_DIR}/lib/pthreadGC2_64.dll" DESTINATION bin)
 	endif()
 
-	if (EXE_SUFFIX MATCHES "omp" AND CLANG)
+	if (NOT IQTREE_FLAGS MATCHES "single" AND CLANG)
         if (BINARY32)
             install(FILES  "${PROJECT_SOURCE_DIR}/lib32/libiomp5md.dll" DESTINATION bin)
         else()
