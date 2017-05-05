@@ -657,7 +657,7 @@ void PhyloTree::initializeAllPartialPars(int &index, PhyloNode *node, PhyloNode 
         // allocate the big central partial pars memory
         if (!central_partial_pars) {
             int memsize = (aln->getNSeq()) * 4 * pars_block_size;
-            if (verbose_mode >= VB_MED)
+            if (verbose_mode >= VB_MAX)
                 cout << "Allocating " << memsize * sizeof(UINT) << " bytes for partial parsimony vectors" << endl;
             central_partial_pars = aligned_alloc<UINT>(memsize);
             if (!central_partial_pars)
