@@ -849,14 +849,15 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
 
     // TODO turning this
     if (isMixlen()) {
-        cout << "Optimizing branch lengths for top " << min((int)candidateTrees.size(), params->popSize) << " candidate trees... " << endl;
+        cout << "Optimizing model parameters for top " << min((int)candidateTrees.size(), params->popSize) << " candidate trees... " << endl;
 
         startTime = getRealTime();
         bestInitTrees = candidateTrees.getBestTreeStrings(params->popSize);
         for (it = bestInitTrees.begin(); it != bestInitTrees.end(); it++) {
             string tree;
             readTreeString(*it);
-            tree = optimizeBranches();
+            //tree = optimizeBranches();
+            tree = optimizeModelParameters();
 //            cout << "Tree after brlen opt: " << tree << endl;
             cout << "Tree " << distance(bestInitTrees.begin(), it)+1 << " / LogL: " << getCurScore() << endl;
             candidateTrees.update(tree, getCurScore());
