@@ -5,7 +5,7 @@
  *      Author: minh
  */
 
-#include "phylotree.h"
+#include "tree/phylotree.h"
 #include "ratefree.h"
 #include "rateinvar.h"
 

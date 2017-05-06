@@ -20,7 +20,7 @@
 #ifndef PARTITIONMODEL_H
 #define PARTITIONMODEL_H
 
-#include "phylosupertree.h"
+#include "tree/phylosupertree.h"
 #include "modelfactory.h"
 
 /**

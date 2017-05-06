@@ -21,7 +21,7 @@
 #define ALIGNMENTPAIRWISE_H
 
 #include "optimization.h"
-#include "phylotree.h"
+#include "tree/phylotree.h"
 
 /**
 Pairwise alignment

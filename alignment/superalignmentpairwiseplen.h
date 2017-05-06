@@ -9,7 +9,7 @@
 #ifndef iqtree_superalignmentpairwiseplen_h
 #define iqtree_superalignmentpairwiseplen_h
 
-#include "phylosupertreeplen.h"
+#include "tree/phylosupertreeplen.h"
 #include "superalignmentpairwise.h"
 
 

@@ -19,9 +19,9 @@
  ***************************************************************************/
 
 #include <stdarg.h>
-#include "phylotree.h"
+#include "tree/phylotree.h"
 #include "superalignment.h"
-#include "phylosupertree.h"
+#include "tree/phylosupertree.h"
 
 SuperAlignment::SuperAlignment() : Alignment() {
     max_num_states = 0;

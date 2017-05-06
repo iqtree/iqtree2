@@ -11,9 +11,9 @@
 #include <config.h>
 #endif
 #include <iqtree_config.h>
-#include "phylotree.h"
-#include "iqtree.h"
-#include "phylosupertree.h"
+#include "tree/phylotree.h"
+#include "tree/iqtree.h"
+#include "tree/phylosupertree.h"
 #include "phylotesting.h"
 
 #include "model/modelmarkov.h"

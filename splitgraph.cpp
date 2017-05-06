@@ -22,11 +22,11 @@
 #include <fstream>
 #include <cctype>
 #include <algorithm>
-#include "node.h"
+#include "tree/node.h"
 #include "ncl/ncl.h"
 #include "myreader.h"
-#include "mtree.h"
-#include "mtreeset.h"
+#include "tree/mtree.h"
+#include "tree/mtreeset.h"
 
 
 bool compareSplit(Split* sp1, Split* sp2) {

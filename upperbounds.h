@@ -11,10 +11,10 @@
 /**
 	main function to carry out Upper Bounds analysis
 */
-#include "iqtree.h"
-#include "mexttree.h"
+#include "tree/iqtree.h"
+#include "tree/mexttree.h"
 #include "alignment/alignment.h"
-#include "phylotree.h"
+#include "tree/phylotree.h"
 
 class PhyloTree;
 class IQTree;

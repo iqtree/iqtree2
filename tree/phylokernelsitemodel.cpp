@@ -8,7 +8,7 @@
 
 
 
-#include "phylotree.h"
+#include "tree/phylotree.h"
 #include "model/modelset.h"
 
 void PhyloTree::computeSitemodelPartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNode *dad) {

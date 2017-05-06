@@ -28,9 +28,9 @@
 #include "msplitsblock.h"
 #include "mpdablock.h"
 #include "msetsblock.h"
-#include "node.h"
+#include "tree/node.h"
 #include "splitset.h"
-#include "mtree.h"
+#include "tree/mtree.h"
 #include "checkpoint.h"
 
 class MTreeSet;

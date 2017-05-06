@@ -9,8 +9,8 @@
 #include "ecopd.h"
 #include "split.h"
 #include "pdnetwork.h"
-#include "mtreeset.h"
-#include "ecopdmtreeset.h"
+#include "tree/mtreeset.h"
+#include "tree/ecopdmtreeset.h"
 #include "graph.h"
 
 

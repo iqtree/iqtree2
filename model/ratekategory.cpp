@@ -17,7 +17,7 @@
 */
 
 
-#include "phylotree.h"
+#include "tree/phylotree.h"
 #include "ratekategory.h"
 
 RateKategory::RateKategory(int ncat, PhyloTree *tree)

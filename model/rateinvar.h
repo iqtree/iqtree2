@@ -20,7 +20,7 @@
 #ifndef RATEINVAR_H
 #define RATEINVAR_H
 
-#include "phylotree.h"
+#include "tree/phylotree.h"
 #include "rateheterogeneity.h"
 
 const double MIN_PINVAR = 1e-6;

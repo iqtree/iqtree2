@@ -31,7 +31,7 @@
 #include <sys/resource.h>
 #endif
 
-#include "phylotree.h"
+#include "tree/phylotree.h"
 #include "pllnni.h"
 #include "alignment/alignment.h"
 

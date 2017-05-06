@@ -6,7 +6,7 @@
 //
 //
 
-#include "phylotree.h"
+#include "tree/phylotree.h"
 #include "rateheterotachy.h"
 
 RateHeterotachy::RateHeterotachy(int ncat, string params, PhyloTree *tree) : RateHeterogeneity() {

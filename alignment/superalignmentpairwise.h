@@ -22,7 +22,7 @@
 
 #include "alignmentpairwise.h"
 #include "superalignment.h"
-#include "phylosupertree.h"
+#include "tree/phylosupertree.h"
 
 /**
 	@author BUI Quang Minh <minh.bui@univie.ac.at>

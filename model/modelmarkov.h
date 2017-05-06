@@ -20,7 +20,7 @@
 #ifndef MODELMARKOV_H
 #define MODELMARKOV_H
 
-#include "phylotree.h"
+#include "tree/phylotree.h"
 #include "modelsubst.h"
 #include "optimization.h"
 #include "alignment/alignment.h"

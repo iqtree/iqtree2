@@ -6,7 +6,7 @@
  *  Email: nltung@gmail.com
  */
 
-#include "iqtree.h"
+#include "tree/iqtree.h"
 #include "candidateset.h"
 #include "MPIHelper.h"
 

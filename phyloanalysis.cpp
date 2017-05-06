@@ -24,14 +24,14 @@
 #include <config.h>
 #endif
 #include <iqtree_config.h>
-#include "phylotree.h"
-#include "phylosupertree.h"
-#include "phylosupertreeplen.h"
+#include "tree/phylotree.h"
+#include "tree/phylosupertree.h"
+#include "tree/phylosupertreeplen.h"
 #include "phyloanalysis.h"
 #include "alignment/alignment.h"
 #include "alignment/superalignment.h"
-#include "iqtree.h"
-#include "phylotreemixlen.h"
+#include "tree/iqtree.h"
+#include "tree/phylotreemixlen.h"
 #include "model/modelmarkov.h"
 #include "model/modeldna.h"
 #include "model/modelpomo.h"
@@ -46,8 +46,8 @@
 #include "model/modelcodon.h"
 #include "stoprule.h"
 
-#include "mtreeset.h"
-#include "mexttree.h"
+#include "tree/mtreeset.h"
+#include "tree/mexttree.h"
 #include "model/ratemeyerhaeseler.h"
 #include "whtest_wrapper.h"
 #include "model/partitionmodel.h"

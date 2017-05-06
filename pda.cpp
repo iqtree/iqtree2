@@ -34,7 +34,7 @@
 
 //#include "Eigen/Core"
 #include <stdio.h>
-#include "phylotree.h"
+#include "tree/phylotree.h"
 #include <signal.h>
 #include <cstdio>
 #include <streambuf>
@@ -46,21 +46,21 @@
 //#include "naivegreedy.h"
 #include "splitgraph.h"
 #include "circularnetwork.h"
-#include "mtreeset.h"
-#include "mexttree.h"
+#include "tree/mtreeset.h"
+#include "tree/mexttree.h"
 #include "ncl/ncl.h"
 #include "msetsblock.h"
 #include "myreader.h"
 #include "phyloanalysis.h"
-#include "matree.h"
+#include "tree/matree.h"
 #include "ngs.h"
 #include "parsmultistate.h"
 #include "gss.h"
 #include "alignment/maalignment.h" //added by MA
-#include "ncbitree.h"
+#include "tree/ncbitree.h"
 #include "ecopd.h"
 #include "upperbounds.h"
-#include "ecopdmtreeset.h"
+#include "tree/ecopdmtreeset.h"
 #include "gurobiwrapper.h"
 #include "timeutil.h"
 //#include <unistd.h>

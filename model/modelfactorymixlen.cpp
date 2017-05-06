@@ -5,7 +5,7 @@
  *      Author: minh
  */
 
-#include "phylotreemixlen.h"
+#include "tree/phylotreemixlen.h"
 #include "timeutil.h"
 #include "tools.h"
 #include "model/modelfactorymixlen.h"

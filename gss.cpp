@@ -25,7 +25,7 @@
 #include "gss.h"
 #include "lpwrapper.h"
 #include "gurobiwrapper.h"
-#include "mtreeset.h"
+#include "tree/mtreeset.h"
 
 
 GSSNetwork::GSSNetwork(Params &params) : PDNetwork(params) {

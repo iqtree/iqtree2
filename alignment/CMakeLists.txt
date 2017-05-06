@@ -1,4 +1,6 @@
 add_library(alignment
+pattern.cpp
+pattern.h
 alignment.cpp
 alignment.h
 alignmentpairwise.cpp

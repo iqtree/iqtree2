@@ -19,7 +19,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "phylotree.h"
+#include "tree/phylotree.h"
 #include "memslot.h"
 
 const int MEM_LOCKED = 1;

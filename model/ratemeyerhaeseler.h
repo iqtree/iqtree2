@@ -22,7 +22,7 @@
 
 #include "rateheterogeneity.h"
 #include "tools.h"
-#include "iqtree.h"
+#include "tree/iqtree.h"
 
 
 /**

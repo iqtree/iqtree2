@@ -21,7 +21,7 @@
 #ifndef WHTEST_WRAPPER_H
 #define WHTEST_WRAPPER_H
 
-#include "iqtree.h"
+#include "tree/iqtree.h"
 
 int WHTest(Params &params, IQTree &tree);
 

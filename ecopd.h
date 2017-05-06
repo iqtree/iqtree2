@@ -8,9 +8,9 @@
 #ifndef ECOPD_H
 #define ECOPD_H
 
-#include "mtree.h"
-#include "mtreeset.h"
-#include "ecopdmtreeset.h"
+#include "tree/mtree.h"
+#include "tree/mtreeset.h"
+#include "tree/ecopdmtreeset.h"
 #include "pdnetwork.h"
 
 /* ===============================================================================

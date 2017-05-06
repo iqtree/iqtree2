@@ -18,8 +18,8 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "phylotree.h"
-#include "tinatree.h"
+#include "tree/phylotree.h"
+#include "tree/tinatree.h"
 #include "parsmultistate.h"
 #include "alignment/alignment.h"
 

@@ -9,7 +9,7 @@
 #ifndef iqtree_partitionmodelplen_h
 #define iqtree_partitionmodelplen_h
 
-#include "phylosupertreeplen.h"
+#include "tree/phylosupertreeplen.h"
 #include "model/partitionmodel.h"
 
 class PartitionModelPlen : public PartitionModel

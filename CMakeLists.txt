@@ -472,18 +472,19 @@ add_definitions("-I${EIGEN3_INCLUDE_DIR} -DUSE_EIGEN3")
 add_subdirectory(model)
 add_subdirectory(gsl)
 add_subdirectory(alignment)
+add_subdirectory(tree)
 
 ##################################################################
 # the main executable
 ##################################################################
 
-add_library(kernelsse phylokernelsse.cpp)
+add_library(kernelsse tree/phylokernelsse.cpp)
 
 if (NOT BINARY32 AND NOT IQTREE_FLAGS MATCHES "novx")
-add_library(kernelavx phylotreeavx.cpp)
-add_library(kernelfma phylokernelfma.cpp)
+add_library(kernelavx tree/phylotreeavx.cpp)
+add_library(kernelfma tree/phylokernelfma.cpp)
 if (IQTREE_FLAGS MATCHES "512")
-    add_library(kernelavx512 phylokernelavx512.cpp)
+    add_library(kernelavx512 tree/phylokernelavx512.cpp)
     add_definitions(-DINCLUDE_AVX512)
 endif()
 endif()
@@ -500,54 +501,30 @@ gss.cpp gss.h
 gurobiwrapper.cpp gurobiwrapper.h
 gzstream.cpp gzstream.h
 hashsplitset.cpp hashsplitset.h
-iqtree.cpp iqtree.h
-matree.cpp matree.h
-mexttree.cpp mexttree.h
 mpdablock.cpp mpdablock.h
 msetsblock.cpp msetsblock.h
 msplitsblock.cpp msplitsblock.h
 modelsblock.cpp modelsblock.h
-mtree.cpp mtree.h
-mtreeset.cpp mtreeset.h
-ncbitree.cpp ncbitree.h
 ngs.cpp ngs.h
-node.cpp node.h
 optimization.cpp optimization.h
 parsmultistate.cpp parsmultistate.h
-pattern.cpp pattern.h
 pda.cpp
 pdnetwork.cpp pdnetwork.h
-pdtree.cpp pdtree.h
-pdtreeset.cpp pdtreeset.h
 phyloanalysis.cpp phyloanalysis.h
-phylonode.cpp phylonode.h
-phylonodemixlen.cpp phylonodemixlen.h
-phylosupertree.cpp phylosupertree.h
-phylotree.cpp phylotree.h
-phylotreesse.cpp phylokernel.h phylokernelnew.h
-phylotreepars.cpp
-phylokernelnonrev.cpp phylokernelnonrev.h
-phylotreemixlen.cpp phylotreemixlen.h
 pruning.cpp pruning.h
-quartet.cpp
 split.cpp split.h
 splitgraph.cpp splitgraph.h
 splitset.cpp splitset.h
 stoprule.cpp stoprule.h
-supernode.cpp supernode.h
-tinatree.cpp tinatree.h
 tools.cpp tools.h
 whtest_wrapper.cpp whtest_wrapper.h
 lpwrapper.c lpwrapper.h
 pllnni.cpp pllnni.h
-phylosupertreeplen.cpp phylosupertreeplen.h
 phylotesting.cpp phylotesting.h
 ecopd.cpp ecopd.h
-ecopdmtreeset.cpp ecopdmtreeset.h
 graph.cpp graph.h
 candidateset.cpp candidateset.h
 checkpoint.cpp checkpoint.h
-constrainttree.cpp constrainttree.h
 MPIHelper.cpp MPIHelper.h
 memslot.cpp memslot.h
 )
@@ -574,7 +551,7 @@ endif(ZLIB_FOUND)
 
 if (NOT IQTREE_FLAGS MATCHES "avx" AND NOT IQTREE_FLAGS MATCHES "fma")
     if (NOT IQTREE_FLAGS MATCHES "nosse")
-        set_target_properties(iqtree ncl lbfgsb whtest sprng vectorclass model alignment PROPERTIES COMPILE_FLAGS "${SSE_FLAGS}")
+        set_target_properties(iqtree ncl lbfgsb whtest sprng vectorclass model alignment tree PROPERTIES COMPILE_FLAGS "${SSE_FLAGS}")
     endif()
     set_target_properties(kernelsse pll PROPERTIES COMPILE_FLAGS "${SSE_FLAGS}")
 	if (NOT BINARY32 AND NOT IQTREE_FLAGS MATCHES "novx")
@@ -630,7 +607,7 @@ if (NOT IQTREE_FLAGS MATCHES "single")
 endif()
 
 # basic linking librararies
-target_link_libraries(iqtree pll ncl lbfgsb whtest sprng vectorclass model gsl alignment ${PLATFORM_LIB} ${STD_LIB} ${THREAD_LIB} ${ATOMIC_LIB})
+target_link_libraries(iqtree pll ncl lbfgsb whtest sprng vectorclass model gsl alignment tree ${PLATFORM_LIB} ${STD_LIB} ${THREAD_LIB} ${ATOMIC_LIB})
 
 if (NOT IQTREE_FLAGS MATCHES "nosse")
     target_link_libraries(iqtree kernelsse)
