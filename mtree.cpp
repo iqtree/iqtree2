@@ -678,6 +678,8 @@ void MTree::readTree(istream &in, bool &is_rooted)
         Node *node;
         parseFile(in, ch, node, branch_len);
         if (is_rooted || !branch_len.empty()) {
+            if (branch_len.empty())
+                branch_len.push_back(-1.0);
             if (branch_len[0] == -1.0) branch_len[0] = 0.0;
             if (branch_len[0] < 0.0)
                 throw ERR_NEG_BRANCH;

@@ -510,8 +510,10 @@ bool  ModelLieMarkov::validFreqType() {
  * ModelFactory::getNParameters() may need changing.
  */
 bool ModelLieMarkov::isReversible() {
-    ASSERT(is_reversible == TIME_REVERSIBLE[model_num]);
-    return(TIME_REVERSIBLE[model_num]);
+    // TODO: crash when setting reversible to true
+//    ASSERT(is_reversible == TIME_REVERSIBLE[model_num]);
+//    return(TIME_REVERSIBLE[model_num]);
+    return false;
 }
 
 /* static */ bool ModelLieMarkov::validModelName(string model_name) {
@@ -678,7 +680,9 @@ static void tauToPi(double* tau, double* pi, int sym) {
 void ModelLieMarkov::setBasis() {
 
   // BQM 2017-05-02: set reversibility
-  is_reversible = TIME_REVERSIBLE[model_num];
+  // TODO: crash when setting reversible to true
+  //setReversible(TIME_REVERSIBLE[model_num]);
+  setReversible(false);
 
   // if not otherwise specified, use FREQ_ESTIMATE.
   if (getFreqType() == FREQ_UNKNOWN) freq_type = FREQ_ESTIMATE;
