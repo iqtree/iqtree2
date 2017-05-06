@@ -356,7 +356,7 @@ void RateMeyerHaeseler::optimizeRates() {
 }
 
 double RateMeyerHaeseler::optimizeParameters(double epsilon) {
-	assert(phylo_tree);
+	ASSERT(phylo_tree);
 	double tree_lh = phylo_tree->computeLikelihood();
 
 	DoubleVector prev_rates;

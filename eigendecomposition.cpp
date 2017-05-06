@@ -224,7 +224,7 @@ void EigenDecomposition::eigensystem_sym(double **rate_params, double *state_fre
 		eval[i] = (forg[i] > ZERO) ? eval_new[inew--] : 0;
 		//eval[i] = (forg[i] > ZERO) ? eval_new[inew++] : 0;
 
-	assert(inew == -1);
+	ASSERT(inew == -1);
 	// calculate the actual eigenvectors of Q and its inverse matrix
 	//for (i = 0, inew = 0; i < num_state; i++)
 	for (i = num_state-1,inew = new_num-1; i >= 0; i--)
@@ -304,7 +304,7 @@ void EigenDecomposition::eigensystem_sym(double **rate_params, double *state_fre
         }
 		cout << endl;
         cout << "sum = " << sum << endl;
-		assert(error < 1e-2);
+		ASSERT(error < 1e-2);
 	}
 
 	for (i=num_state-1; i>= 0; i--)
@@ -387,7 +387,7 @@ void EigenDecomposition::eigensystem_nonrev(
     // check that complex eigenvalues are conjugated
     for (i = 0; i < new_num; i++)
         if (evali[i] != 0.0) {
-            assert(i < new_num-1 && evali[i+1] != 0.0);
+            ASSERT(i < new_num-1 && evali[i+1] != 0.0);
             i++;
         }
 

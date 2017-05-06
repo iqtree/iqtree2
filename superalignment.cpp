@@ -90,7 +90,7 @@ void SuperAlignment::buildPattern() {
 
 
 void SuperAlignment::linkSubAlignment(int part) {
-	assert(taxa_index.size() == getNSeq());
+	ASSERT(taxa_index.size() == getNSeq());
 	int nseq = getNSeq(), seq;
 	vector<bool> checked;
 	checked.resize(partitions[part]->getNSeq(), false);
@@ -108,18 +108,18 @@ void SuperAlignment::linkSubAlignment(int part) {
 	}
 	// sanity check that all seqnames in partition must be present in superalignment
 	for (seq = 0; seq < checked.size(); seq++) {
-		assert(checked[seq]);
+		ASSERT(checked[seq]);
 	}
 }
 
 void SuperAlignment::extractSubAlignment(Alignment *aln, IntVector &seq_id, int min_true_char, int min_taxa, IntVector *kept_partitions) {
-	assert(aln->isSuperAlignment());
+	ASSERT(aln->isSuperAlignment());
 	SuperAlignment *saln = (SuperAlignment*)aln;
 
     int i;
     IntVector::iterator it;
     for (it = seq_id.begin(); it != seq_id.end(); it++) {
-        assert(*it >= 0 && *it < aln->getNSeq());
+        ASSERT(*it >= 0 && *it < aln->getNSeq());
         seq_names.push_back(aln->getSeqName(*it));
     }
 
@@ -547,7 +547,7 @@ void SuperAlignment::printSubAlignments(Params &params, vector<PartitionInfo> &p
 	vector<Alignment*>::iterator pit;
 	string filename;
 	int part;
-	assert(part_info.size() == partitions.size());
+	ASSERT(part_info.size() == partitions.size());
 	for (pit = partitions.begin(), part = 0; pit != partitions.end(); pit++, part++) {
 		if (params.aln_output)
 			filename = params.aln_output;
@@ -636,7 +636,7 @@ Alignment *SuperAlignment::concatenateAlignments(IntVector &ids) {
     				}
     				pat.push_back(ch);
     			}
-    		assert(part_seq == partitions[id]->getNSeq());
+    		ASSERT(part_seq == partitions[id]->getNSeq());
     		aln->addPattern(pat, site, (*it).frequency);
     		// IMPORTANT BUG FIX FOLLOW
     		int ptnindex = aln->pattern_index[pat];

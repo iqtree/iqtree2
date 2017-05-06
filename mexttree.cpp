@@ -52,7 +52,7 @@ void MExtTree::generateRandomTree(TreeGenType tree_type, Params &params, bool bi
 	if (!alignment) return;
 	NodeVector taxa;
 	getTaxa(taxa);
-	assert(taxa.size() == params.sub_size);
+	ASSERT(taxa.size() == params.sub_size);
 	for (NodeVector::iterator it = taxa.begin(); it != taxa.end(); it++)
 		(*it)->name = alignment->getSeqName((*it)->id);
 }
@@ -390,7 +390,7 @@ void MExtTree::generateConstrainedYuleHarding(Params &params, MTree* constraint_
     for (it = taxnames.begin(); it != taxnames.end(); it++)
         if (namemap.find(*it) == namemap.end())
             names.push_back(*it);
-    assert(names.size() == taxnames.size());
+    ASSERT(names.size() == taxnames.size());
     my_random_shuffle(names.begin()+leafNum, names.end());
 
 	// additionally add a leaf

@@ -104,7 +104,7 @@ public:
 		@return cost of a taxon
 	*/
 	double getCost(int tax_id) {
-		assert(tax_id < (int) costs.size());
+		ASSERT(tax_id < (int) costs.size());
 		return costs[tax_id];
 	}
 

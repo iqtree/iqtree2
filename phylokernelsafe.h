@@ -81,7 +81,7 @@ template <class VectorClass, const int VCSIZE, const int nstates>
 void PhyloTree::computePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad) {
 
     // don't recompute the likelihood
-	assert(dad);
+	ASSERT(dad);
     if (dad_branch->partial_lh_computed & 1)
         return;
     dad_branch->partial_lh_computed |= 1;
@@ -105,8 +105,8 @@ void PhyloTree::computePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_branch, Phy
 
     size_t ncat = site_rate->getNRate();
     size_t ncat_mix = (model_factory->fused_mix_rate) ? ncat : ncat*model->getNMixtures();
-    assert(nstates == aln->num_states && nstates >= VCSIZE && VCSIZE == VectorClass().size());
-    assert(model->isReversible()); // only works with reversible model!
+    ASSERT(nstates == aln->num_states && nstates >= VCSIZE && VCSIZE == VectorClass().size());
+    ASSERT(model->isReversible()); // only works with reversible model!
     const size_t nstatesqr=nstates*nstates;
     size_t i, x, j;
     size_t block = nstates * ncat_mix;
@@ -149,13 +149,13 @@ void PhyloTree::computePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_branch, Phy
                 break;
             }
         }
-        assert(done && "partial_lh is not re-oriented");
+        ASSERT(done && "partial_lh is not re-oriented");
     }
 
 	double *evec = model->getEigenvectors();
 	double *inv_evec = model->getInverseEigenvectors();
 
-	assert(inv_evec && evec);
+	ASSERT(inv_evec && evec);
 //	for (i = 0; i < tip_block; i++) {
 //		for (x = 0; x < nstates/VCSIZE; x++)
 //			// inv_evec is not aligned!
@@ -597,7 +597,7 @@ void PhyloTree::computeLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch, PhyloN
     size_t denom = (model_factory->fused_mix_rate) ? 1 : ncat;
 
     double *eval = model->getEigenvalues();
-    assert(eval);
+    ASSERT(eval);
 
 	VectorClass *vc_val0 = (VectorClass*)aligned_alloc<double>(block);
 	VectorClass *vc_val1 = (VectorClass*)aligned_alloc<double>(block);
@@ -621,7 +621,7 @@ void PhyloTree::computeLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch, PhyloN
 		}
 	}
 
-	assert(theta_all);
+	ASSERT(theta_all);
 	if (!theta_computed) {
 		theta_computed = true;
         double scale_all = 0.0;
@@ -774,7 +774,7 @@ void PhyloTree::computeLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch, PhyloN
 	df = horizontal_add(df_final);
 	ddf = horizontal_add(ddf_final);
     
-    assert(!isnan(df) && !isinf(df) && "Numerical underflow for SIMD lh-derivative");
+    ASSERT(!isnan(df) && !isinf(df) && "Numerical underflow for SIMD lh-derivative");
 
 //	assert(isnormal(tree_lh));
 	if (orig_nptn < nptn) {
@@ -838,7 +838,7 @@ void PhyloTree::computeLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch, PhyloN
 			ddf_const = horizontal_add(ddf_final)+ddf_ptn[0]+ddf_ptn[1]+ddf_ptn[2];
 			break;
 		default:
-			assert(0);
+			ASSERT(0);
 			break;
 		}
     	prob_const = 1.0 - prob_const;
@@ -848,7 +848,7 @@ void PhyloTree::computeLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch, PhyloN
     	df += nsites * df_frac;
     	ddf += nsites *(ddf_frac + df_frac*df_frac);
 	}
-    assert(!isnan(df));
+    ASSERT(!isnan(df));
     aligned_free(vc_val2);
     aligned_free(vc_val1);
     aligned_free(vc_val0);
@@ -888,7 +888,7 @@ double PhyloTree::computeLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, Ph
     size_t maxptn = ((nptn+VCSIZE-1)/VCSIZE)*VCSIZE;
     maxptn = max(maxptn, aln->size()+((model_factory->unobserved_ptns.size()+VCSIZE-1)/VCSIZE)*VCSIZE);
     double *eval = model->getEigenvalues();
-    assert(eval);
+    ASSERT(eval);
 
     VectorClass *vc_val = (VectorClass*)aligned_alloc<double>(block);
 
@@ -1007,7 +1007,7 @@ double PhyloTree::computeLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, Ph
 #endif
 		tree_lh += horizontal_add(lh_final);
 
-        assert(!isnan(tree_lh) & !isinf(tree_lh) && "Numerical underflow for SIMD lh-branch");
+        ASSERT(!isnan(tree_lh) & !isinf(tree_lh) && "Numerical underflow for SIMD lh-branch");
 
         // ascertainment bias correction
 		if (orig_nptn < nptn) {
@@ -1054,7 +1054,7 @@ double PhyloTree::computeLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, Ph
 			case 1: prob_const = horizontal_add(lh_final)+lh_ptn[0]; break;
 			case 2: prob_const = horizontal_add(lh_final)+lh_ptn[0]+lh_ptn[1]; break;
 			case 3: prob_const = horizontal_add(lh_final)+lh_ptn[0]+lh_ptn[1]+lh_ptn[2]; break;
-			default: assert(0); break;
+			default: ASSERT(0); break;
 			}
 		}
 		aligned_free(ptn_states_dad);
@@ -1136,7 +1136,7 @@ double PhyloTree::computeLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, Ph
 #endif
 
 		tree_lh += horizontal_add(lh_final);
-		assert(!isnan(tree_lh) && !isinf(tree_lh));
+		ASSERT(!isnan(tree_lh) && !isinf(tree_lh));
 
 		if (orig_nptn < nptn) {
 			// ascertainment bias correction
@@ -1208,14 +1208,14 @@ double PhyloTree::computeLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_branch, Ph
 			case 1: prob_const = horizontal_add(lh_final)+lh_ptn[0]; break;
 			case 2: prob_const = horizontal_add(lh_final)+lh_ptn[0]+lh_ptn[1]; break;
 			case 3: prob_const = horizontal_add(lh_final)+lh_ptn[0]+lh_ptn[1]+lh_ptn[2]; break;
-			default: assert(0); break;
+			default: ASSERT(0); break;
 			}
 		}
     }
 
 	if (orig_nptn < nptn) {
     	// ascertainment bias correction
-        assert(prob_const < 1.0 && prob_const >= 0.0);
+        ASSERT(prob_const < 1.0 && prob_const >= 0.0);
     	prob_const = log(1.0 - prob_const);
     	for (ptn = 0; ptn < orig_nptn; ptn++)
     		_pattern_lh[ptn] -= prob_const;
@@ -1230,7 +1230,7 @@ template <class VectorClass, const int VCSIZE, const int nstates>
 double PhyloTree::computeLikelihoodFromBufferEigenSIMD() {
 
 
-	assert(theta_all && theta_computed);
+	ASSERT(theta_all && theta_computed);
 
 	double tree_lh = current_it->lh_scale_factor + current_it_back->lh_scale_factor;
 
@@ -1245,7 +1245,7 @@ double PhyloTree::computeLikelihoodFromBufferEigenSIMD() {
     size_t nptn = aln->size()+model_factory->unobserved_ptns.size();
 //    size_t maxptn = ((nptn+VCSIZE-1)/VCSIZE)*VCSIZE;
     double *eval = model->getEigenvalues();
-    assert(eval);
+    ASSERT(eval);
 
 	VectorClass *vc_val0 = (VectorClass*)aligned_alloc<double>(block);
 
@@ -1311,7 +1311,7 @@ double PhyloTree::computeLikelihoodFromBufferEigenSIMD() {
 #endif
 	tree_lh += horizontal_add(lh_final) + buffer_scale_all;
 
-    assert(!isnan(tree_lh) && !isinf(tree_lh) && "Numerical underflow for SIMD lh-FromBuffer");
+    ASSERT(!isnan(tree_lh) && !isinf(tree_lh) && "Numerical underflow for SIMD lh-FromBuffer");
 
 	if (orig_nptn < nptn) {
 		// ascertaiment bias correction
@@ -1557,7 +1557,7 @@ void PhyloTree::computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, Phylo
                                 p[i*VCSIZE] |= bit1;
                         }
                     } else {
-                        assert(state < 23);
+                        ASSERT(state < 23);
                         state = (state-20)*2;
                         for (int j = 0; j < freq; j++, site++) {
                             if (site == NUM_BITS) {
@@ -1598,7 +1598,7 @@ void PhyloTree::computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, Phylo
                                 p[i*VCSIZE] |= bit1;
                         }
                     } else {
-                        assert(0);
+                        ASSERT(0);
                     }
                 }
                 break;
@@ -1606,7 +1606,7 @@ void PhyloTree::computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, Phylo
             start_pos = end_pos;
         } // of end FOR LOOP
 
-        assert(start_pos == aln->ordered_pattern.size());
+        ASSERT(start_pos == aln->ordered_pattern.size());
 //        assert(site == aln->num_informative_sites % NUM_BITS);
         // add dummy states
         if (site > 0 && site < NUM_BITS) {
@@ -1620,7 +1620,7 @@ void PhyloTree::computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, Phylo
             delete partitions;
     } else {
         // internal node
-        assert(node->degree() == 3); // it works only for strictly bifurcating tree
+        ASSERT(node->degree() == 3); // it works only for strictly bifurcating tree
         PhyloNeighbor *left = NULL, *right = NULL; // left & right are two neighbors leading to 2 subtrees
         FOR_NEIGHBOR_IT(node, dad, it) {
             PhyloNeighbor* pit = (PhyloNeighbor*) (*it);
@@ -1703,7 +1703,7 @@ template<class VectorClass>
 int PhyloTree::computeParsimonyBranchFastSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst) {
     PhyloNode *node = (PhyloNode*) dad_branch->node;
     PhyloNeighbor *node_branch = (PhyloNeighbor*) node->findNeighbor(dad);
-    assert(node_branch);
+    ASSERT(node_branch);
     if (!central_partial_pars)
         initializeAllPartialPars();
     if ((dad_branch->partial_lh_computed & 2) == 0)

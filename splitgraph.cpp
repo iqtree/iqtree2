@@ -192,7 +192,7 @@ void SplitGraph::restoreCheckpoint() {
     for (int split = 0; split < nsplits; split++) {
         checkpoint->addListElement();
         string str;
-        assert(checkpoint->getString("", str));
+        ASSERT(checkpoint->getString("", str));
         stringstream ss(str);
         double weight;
         ss >> weight;
@@ -399,7 +399,7 @@ void SplitGraph::generateTaxaSet(char *filename, int size, int overlap, int time
 	ofstream out(filename);
 	if (!out.is_open())
 		outError(ERR_WRITE_OUTPUT, filename);
-	assert(overlap <= size);
+	ASSERT(overlap <= size);
 	int total = 2*size - overlap;
 	int ntaxa = getNTaxa();
 	for (int cnt = 0; cnt < times; cnt++) {

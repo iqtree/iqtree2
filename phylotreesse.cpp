@@ -55,7 +55,7 @@ void PhyloTree::setParsimonyKernel(LikelihoodKernel lk) {
         setParsimonyKernelSSE();
         return;
     }
-    assert(0);
+    ASSERT(0);
 }
 
 void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk, int num_threads) {
@@ -84,7 +84,7 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk, int num_threads) {
 #if INSTRSET < 2
 #ifdef BOOT_VAL_FLOAT
         // TODO naive dot-product for float
-        assert(0 && "Not supported, contact developer");
+        ASSERT(0 && "Not supported, contact developer");
 //		dotProduct = &PhyloTree::dotProductSIMD<float, Vec1f>;
 #else
 		dotProduct = &PhyloTree::dotProductSIMD<double, Vec1d>;
@@ -193,7 +193,7 @@ void PhyloTree::computeLikelihoodDerv(PhyloNeighbor *dad_branch, PhyloNode *dad,
 
 
 double PhyloTree::computeLikelihoodFromBuffer() {
-	assert(current_it && current_it_back);
+	ASSERT(current_it && current_it_back);
 
     // TODO: buffer stuff for mixlen model
 	if (computeLikelihoodFromBufferPointer && optimize_by_newton)
@@ -228,7 +228,7 @@ void PhyloTree::computeTipPartialLikelihood() {
         size_t nptn = aln->getNPattern(), max_nptn = ((nptn+vector_size-1)/vector_size)*vector_size, tip_block_size = max_nptn * aln->num_states;
         int nstates = aln->num_states;
         int nseq = aln->getNSeq();
-        assert(vector_size > 0);
+        ASSERT(vector_size > 0);
 #ifdef _OPENMP
         #pragma omp parallel for schedule(static)
 #endif
@@ -301,7 +301,7 @@ void PhyloTree::computeTipPartialLikelihood() {
                             }
                             break;
                         default:
-                            assert(0);
+                            ASSERT(0);
                             break;
                         }
                     }
@@ -325,7 +325,7 @@ void PhyloTree::computeTipPartialLikelihood() {
     }
     
 	int i, state, nstates = aln->num_states;
-	assert(tip_partial_lh);
+	ASSERT(tip_partial_lh);
 	// ambiguous characters
 	int ambi_aa[] = {
         4+8, // B = N or D
@@ -373,7 +373,7 @@ void PhyloTree::computeTipPartialLikelihood() {
     
     int m, x, nmixtures = model->getNMixtures();
 	double *all_inv_evec = model->getInverseEigenvectors();
-	assert(all_inv_evec);
+	ASSERT(all_inv_evec);
 
 
 	for (state = 0; state < nstates; state++) {
@@ -481,7 +481,7 @@ void PhyloTree::computeTipPartialLikelihood() {
                                 // body.
                                 int real_state = nnuc - 1 + k*(N-1) + 1;
                                 for (i = 1; i < N; i++, real_state++) {
-                                    assert(real_state < nstates);
+                                    ASSERT(real_state < nstates);
                                     real_partial_lh[real_state] =
                                         std::pow((double)i/(double)N,j);
                                     sum_lh += real_partial_lh[real_state];
@@ -495,7 +495,7 @@ void PhyloTree::computeTipPartialLikelihood() {
                                 else k = s_id1 + s_id2;
                                 int real_state = nnuc - 1 + k*(N-1) + 1;
                                 for (i = 1; i < N; i++, real_state++) {
-                                    assert(real_state < nstates);
+                                    ASSERT(real_state < nstates);
                                     real_partial_lh[real_state] =
                                         std::pow((double)(N-i)/(double)N,j);
                                     sum_lh += real_partial_lh[real_state];
@@ -534,7 +534,7 @@ void PhyloTree::computeTipPartialLikelihood() {
 
                     double sum_lh = 0.0;
                     for (i = 1; i < N; i++, real_state++) {
-                        assert(real_state < nstates);
+                        ASSERT(real_state < nstates);
                         real_partial_lh[real_state] = exp(res + j*logv[i] + (M-j) * logv[N-i]);
                         sum_lh += real_partial_lh[real_state];
                     }
@@ -641,7 +641,7 @@ void PhyloTree::computePtnInvar() {
             } else if (aln->seq_type == SEQ_PROTEIN) {
                 ptn_invar[ptn] = 0.0;
                 int cstate = (*aln)[ptn].const_char-nstates;
-                assert(cstate <= 2);
+                ASSERT(cstate <= 2);
                 for (x = 0; x < 11; x++)
                     if (ambi_aa[cstate] & (1 << x))
                         ptn_invar[ptn] += state_freq[x];
@@ -1491,7 +1491,7 @@ void PhyloTree::computeMarginalAncestralProbability(PhyloNeighbor *dad_branch, P
     PhyloNeighbor *node_branch = (PhyloNeighbor*) node->findNeighbor(dad);
     if (!central_partial_lh)
         initializeAllPartialLh();
-    assert(!node->isLeaf());
+    ASSERT(!node->isLeaf());
 
     // TODO: not working yet
 
@@ -1512,7 +1512,7 @@ void PhyloTree::computeMarginalAncestralProbability(PhyloNeighbor *dad_branch, P
     double *eval = model->getEigenvalues();
     double *evec = model->getEigenvectors();
     double *inv_evec = model->getInverseEigenvectors();
-    assert(eval);
+    ASSERT(eval);
 
     double echild[block*nstates];
 
@@ -1630,7 +1630,7 @@ void PhyloTree::computeMarginalAncestralProbability(PhyloNeighbor *dad_branch, P
 void PhyloTree::computeJointAncestralSequences(int *ancestral_seqs) {
 
     // step 1-3 of the dynamic programming algorithm of Pupko et al. 2000, MBE 17:890-896
-    assert(root->isLeaf());
+    ASSERT(root->isLeaf());
     int *C = new int[(size_t)getAlnNPattern()*model->num_states*leafNum];
     computeAncestralLikelihood((PhyloNeighbor*)root->neighbors[0], NULL, C);
     
@@ -1674,7 +1674,7 @@ void PhyloTree::computeAncestralLikelihood(PhyloNeighbor *dad_branch, PhyloNode 
                 break;
             }
         }
-        assert(done && "partial_lh is not re-oriented");
+        ASSERT(done && "partial_lh is not re-oriented");
     }
     
     size_t nptn = aln->getNPattern();

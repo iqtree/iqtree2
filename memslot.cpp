@@ -53,7 +53,7 @@ void MemSlotVector::reset() {
 
 MemSlotVector::iterator MemSlotVector::findNei(PhyloNeighbor *nei) {
     auto it = nei_id_map.find(nei);
-    assert(it != nei_id_map.end());
+    ASSERT(it != nei_id_map.end());
 //    assert(at(it->second).nei == nei);
     return begin()+it->second;
 }
@@ -97,7 +97,7 @@ bool MemSlotVector::lock(PhyloNeighbor *nei) {
     iterator id = findNei(nei);
     if (id->status & MEM_SPECIAL)
         return false;
-    assert((id->status & MEM_LOCKED) == 0);
+    ASSERT((id->status & MEM_LOCKED) == 0);
     id->status |= MEM_LOCKED;
     return true;
 }
@@ -110,7 +110,7 @@ void MemSlotVector::unlock(PhyloNeighbor *nei) {
     iterator id = findNei(nei);
     if (id->status & MEM_SPECIAL)
         return;
-    assert((id->status & MEM_LOCKED) != 0);
+    ASSERT((id->status & MEM_LOCKED) != 0);
     id->status &= ~MEM_LOCKED;
 }
 
@@ -137,7 +137,7 @@ int MemSlotVector::allocate(PhyloNeighbor *nei) {
     // first find a free slot
     if (free_count < size() && (at(free_count).status & MEM_SPECIAL) == 0) {
         iterator it = begin() + free_count;
-        assert(it->nei == NULL);
+        ASSERT(it->nei == NULL);
         addNei(nei, it);
         free_count++;
         return it-begin();
@@ -204,7 +204,7 @@ void MemSlotVector::cleanup() {
 */
 
 void MemSlotVector::takeover(PhyloNeighbor *nei, PhyloNeighbor *taken_nei) {
-    assert(taken_nei->partial_lh);
+    ASSERT(taken_nei->partial_lh);
     nei->partial_lh = taken_nei->partial_lh;
     nei->scale_num = taken_nei->scale_num;
     taken_nei->partial_lh = NULL;
@@ -226,7 +226,7 @@ void MemSlotVector::replace(PhyloNeighbor *new_nei, PhyloNeighbor *old_nei) {
     if (Params::getInstance().lh_mem_save != LM_MEM_SAVE)
         return;
     iterator it = findNei(old_nei);
-    assert(it->partial_lh == old_nei->partial_lh);
+    ASSERT(it->partial_lh == old_nei->partial_lh);
     it->saved_nei = it->nei;
     it->nei = new_nei;
     it->partial_lh = new_nei->partial_lh;
@@ -241,8 +241,8 @@ void MemSlotVector::restore(PhyloNeighbor *new_nei, PhyloNeighbor *old_nei) {
     if (Params::getInstance().lh_mem_save != LM_MEM_SAVE)
         return;
     iterator it = findNei(new_nei);
-    assert(it->nei == new_nei);
-    assert(nei_id_map[old_nei] == it-begin());
+    ASSERT(it->nei == new_nei);
+    ASSERT(nei_id_map[old_nei] == it-begin());
     it->nei = it->saved_nei;
     it->saved_nei = NULL;
     it->partial_lh = old_nei->partial_lh;

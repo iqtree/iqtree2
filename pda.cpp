@@ -724,7 +724,7 @@ void printNexusSets(const char *filename, PDNetwork &sg, vector<SplitSet> &pd_se
 
 
 void computeTaxaFrequency(SplitSet &taxa_set, DoubleVector &freq) {
-	assert(taxa_set.size());
+	ASSERT(taxa_set.size());
 	int ntaxa = taxa_set[0]->getNTaxa();
 	int i;
 
@@ -1216,7 +1216,7 @@ void readTaxaOrder(char *taxa_order_file, StrVector &taxa_order) {
 }
 
 void calcTreeCluster(Params &params) {
-	assert(params.taxa_order_file);
+	ASSERT(params.taxa_order_file);
 	MExtTree tree(params.user_file, params.is_rooted);
 //	StrVector taxa_order;
 	//readTaxaOrder(params.taxa_order_file, taxa_order);
@@ -1415,7 +1415,7 @@ void computeRFDistExtended(const char *trees1, const char *trees2, const char *f
     	}
 
 		in.close();
-		assert(ntrees * ntrees2 == rfdist.size());
+		ASSERT(ntrees * ntrees2 == rfdist.size());
 		rfdist_raw = new int[rfdist.size()];
 		copy(rfdist.begin(), rfdist.end(), rfdist_raw);
 

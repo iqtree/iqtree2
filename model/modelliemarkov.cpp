@@ -324,7 +324,7 @@ void ModelLieMarkov::init(const char *model_name, string model_params, StateFreq
     // TODO: why is freq_params not handled here?
 
 	nondiagonalizable = false;
-    assert(NUM_RATES==getNumRateEntries());
+    ASSERT(NUM_RATES==getNumRateEntries());
     StateFreqType expected_freq_type; // returned by getLieMarkovModelInfo but not used here
     getLieMarkovModelInfo((string)model_name, name, full_name, model_num, symmetry, expected_freq_type);
 
@@ -766,7 +766,7 @@ void ModelLieMarkov::setBasis() {
       basis[i] = permuted_rates;
     } // for i
   } else {
-      assert(getFreqType() == FREQ_ESTIMATE); // only other legal possibility
+      ASSERT(getFreqType() == FREQ_ESTIMATE); // only other legal possibility
       num_params = MODEL_PARAMS[model_num];
       basis = new double*[num_params+1];
       for (int i=0;i<=num_params;i++) {
@@ -835,7 +835,7 @@ void ModelLieMarkov::decomposeRateMatrixEigen3lib() {
     Matrix4d mat(rate_matrix);
     mat.transpose();
     EigenSolver<Matrix4d> eigensolver(mat);
-    assert (eigensolver.info() == Eigen::Success);
+    ASSERT (eigensolver.info() == Eigen::Success);
     Map<Vector4cd,Aligned> eval(ceval);
     eval = eigensolver.eigenvalues();
     Map<Matrix4cd,Aligned> evec(cevec);
@@ -870,7 +870,7 @@ void ModelLieMarkov::decomposeRateMatrixEigen3lib() {
     Matrix4cd check = inv_evec * mat * evec - eval_diag;
     for (int i = 0; i < 4; i++)
         for (int j = 0; j < 4; j++)
-            assert(abs(check(i,j)) < 1e-4);
+            ASSERT(abs(check(i,j)) < 1e-4);
 #else
     outError("Please install Eigen3 library for this option ", __func__);
 #endif
@@ -1879,7 +1879,7 @@ void ModelLieMarkov::computeTransMatrix(double time, double *trans_matrix, int m
             double sum = 0.0;
             for (j = 0; j < 4; j++)
                 sum += (trans_matrix[i*4+j]);
-            assert(fabs(sum-1.0) < 1e-4);
+            ASSERT(fabs(sum-1.0) < 1e-4);
         }
     } else if (technique == MET_EIGEN3LIB_DECOMPOSITION || technique == MET_LIE_MARKOV_DECOMPOSITION) {
     // and nondiagonalizable == false, else we used scaled squaring
@@ -1897,30 +1897,30 @@ void ModelLieMarkov::computeTransMatrix(double time, double *trans_matrix, int m
 			for (i = 0; i < 4; i++) {
 				for (int j = 0; j < 4; j++) {
 					trans_matrix[i*4+j] = res(j, i).real();
-					assert(fabs(res(j,i).imag()) < 1e-6);
-					assert(trans_matrix[i*4+j] >= -0.000001);
-					assert(trans_matrix[i*4+j] <=  1.000001);
+					ASSERT(fabs(res(j,i).imag()) < 1e-6);
+					ASSERT(trans_matrix[i*4+j] >= -0.000001);
+					ASSERT(trans_matrix[i*4+j] <=  1.000001);
 					if (trans_matrix[i*4+j] < 0)
 						trans_matrix[i*4+j] = 0.0;
 					if (trans_matrix[i*4+j] > 1)
 						trans_matrix[i*4+j] = 1.0;
 				}
 
-				assert(fabs(trans_matrix[i*4]+trans_matrix[i*4+1]+trans_matrix[i*4+2]+trans_matrix[i*4+3]-1.0) < 1e-4);
+				ASSERT(fabs(trans_matrix[i*4]+trans_matrix[i*4+1]+trans_matrix[i*4+2]+trans_matrix[i*4+3]-1.0) < 1e-4);
 			}
         } else {
         	for (i = 0; i < 4; i++) {
 				for (int j = 0; j < 4; j++) {
 					trans_matrix[i*4+j] = res(i,j).real();
-					assert(fabs(res(j,i).imag()) < 1e-6);
-					assert(trans_matrix[i*4+j] >= -0.000001);
-					assert(trans_matrix[i*4+j] <=  1.000001);
+					ASSERT(fabs(res(j,i).imag()) < 1e-6);
+					ASSERT(trans_matrix[i*4+j] >= -0.000001);
+					ASSERT(trans_matrix[i*4+j] <=  1.000001);
 					if (trans_matrix[i*4+j] < 0)
 						trans_matrix[i*4+j] = 0.0;
 					if (trans_matrix[i*4+j] > 1)
 						trans_matrix[i*4+j] = 1.0;
 				}
-				assert(fabs(trans_matrix[i*4]+trans_matrix[i*4+1]+trans_matrix[i*4+2]+trans_matrix[i*4+3]-1.0) < 1e-4);
+				ASSERT(fabs(trans_matrix[i*4]+trans_matrix[i*4+1]+trans_matrix[i*4+2]+trans_matrix[i*4+3]-1.0) < 1e-4);
 			}
         }
 

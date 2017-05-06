@@ -52,7 +52,7 @@ public:
     virtual double getLength(int c) { 
         if (lengths.empty())
             return length; 
-        assert(c < lengths.size());
+        ASSERT(c < lengths.size());
         return lengths[c];
     }
 
@@ -72,7 +72,7 @@ public:
         @param start_pos starting position in vec to copy to
     */
     virtual void getLength(DoubleVector &vec, int start_pos) { 
-        assert(start_pos+lengths.size() <= vec.size());
+        ASSERT(start_pos+lengths.size() <= vec.size());
         for (int i = 0; i < lengths.size(); i++)
             vec[start_pos+i] = lengths[i];
     }
@@ -89,7 +89,7 @@ public:
             length = len;
             return;
         }
-        assert(c < lengths.size());
+        ASSERT(c < lengths.size());
         lengths[c] = len;
     }
 
@@ -120,7 +120,7 @@ public:
         @param start_pos starting position in vec to copy from
     */
     virtual void setLength(DoubleVector &vec, int start_pos, int num_elem) { 
-        assert(start_pos+num_elem <= vec.size());
+        ASSERT(start_pos+num_elem <= vec.size());
         lengths.clear();
         lengths.insert(lengths.begin(), vec.begin()+start_pos, vec.begin()+start_pos+num_elem);
     }

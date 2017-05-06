@@ -95,7 +95,7 @@ void PhyloTreeMixlen::initializeMixBranches(PhyloNode *node, PhyloNode *dad) {
         PhyloNeighborMixlen *back_nei = (PhyloNeighborMixlen*)((*it)->node->findNeighbor(node));
         if (nei->lengths.empty()) {
             // no branch lengths, initialize with relative rates
-            assert(nei->length >= 0);
+            ASSERT(nei->length >= 0);
             nei->lengths.resize(mixlen, nei->length);
             back_nei->lengths.resize(mixlen, back_nei->length);
             for (i = 0; i < mixlen; i++) {
@@ -280,9 +280,9 @@ void PhyloTreeMixlen::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool
         return PhyloTree::optimizeOneBranch(node1, node2, clearLH, maxNRStep);
 
     current_it = (PhyloNeighbor*) node1->findNeighbor(node2);
-    assert(current_it);
+    ASSERT(current_it);
     current_it_back = (PhyloNeighbor*) node2->findNeighbor(node1);
-    assert(current_it_back);
+    ASSERT(current_it_back);
 
     int i;
 
@@ -367,7 +367,7 @@ void PhyloTreeMixlen::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool
         size_t ptn, c;
         size_t nptn = aln->getNPattern();
         size_t nmix = site_rate->getNRate();
-        assert(nmix == mixlen);
+        ASSERT(nmix == mixlen);
 
         // first compute _pattern_lh_cat
         double tree_lh = -DBL_MAX;
@@ -390,7 +390,7 @@ void PhyloTreeMixlen::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool
                 for (c = 0; c < nmix; c++) {
                     lk_ptn += this_lk_cat[c];
                 }
-                assert(lk_ptn != 0.0);
+                ASSERT(lk_ptn != 0.0);
                 lk_ptn = ptn_freq[ptn] / lk_ptn;
                 // transform _pattern_lh_cat into posterior probabilities of each category
                 for (c = 0; c < nmix; c++) {
@@ -411,7 +411,7 @@ void PhyloTreeMixlen::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool
                     ptn_freq[ptn] = this_lk_cat[ptn*nmix];
                 
                 double current_len = current_it->getLength(cur_mixture);
-                assert(current_len >= 0.0);
+                ASSERT(current_len >= 0.0);
                 // Newton-Raphson method
                 optx = minimizeNewton(params->min_branch_length, current_len, params->max_branch_length, params->min_branch_length, negative_lh, maxNRStep);
 
@@ -694,8 +694,8 @@ void PhyloTreeMixlen::computeFuncDerv(double value, double &df, double &ddf) {
     	node_branch = tmp_nei;
     }
     
-    assert((dad_branch->partial_lh_computed & 1) || node->isLeaf());
-    assert((node_branch->partial_lh_computed & 1) || dad->isLeaf());
+    ASSERT((dad_branch->partial_lh_computed & 1) || node->isLeaf());
+    ASSERT((node_branch->partial_lh_computed & 1) || dad->isLeaf());
 //    if ((dad_branch->partial_lh_computed & 1) == 0)
 //        computePartialLikelihood(dad_branch, dad);
 //    if ((node_branch->partial_lh_computed & 1) == 0)
@@ -713,9 +713,9 @@ void PhyloTreeMixlen::computeFuncDerv(double value, double &df, double &ddf) {
     size_t nptn = aln->size()+model_factory->unobserved_ptns.size();
     size_t maxptn = get_safe_upper_limit(nptn);
     double *eval = model->getEigenvalues();
-    assert(eval);
+    ASSERT(eval);
 
-	assert(theta_all);
+	ASSERT(theta_all);
 	if (!theta_computed) {
 		// precompute theta for fast branch length optimization
 

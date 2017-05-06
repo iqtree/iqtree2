@@ -111,7 +111,7 @@ void MTree::assignIDs(vector<string>& taxaNames) {
             err = true;
             outError(str, false);
         } else {
-            assert(node->isLeaf());
+            ASSERT(node->isLeaf());
             node->id = seq;
         }
     }
@@ -696,7 +696,7 @@ void MTree::readTree(istream &in, bool &is_rooted)
             }
         }
         // make sure that root is a leaf
-        assert(root->isLeaf());
+        ASSERT(root->isLeaf());
 
         if (in.eof() || ch != ';')
             throw "Tree file must be ended with a semi-colon ';'";
@@ -970,7 +970,7 @@ void MTree::getTaxa(NodeVector &taxa, Node *node, Node *dad) {
 }
 
 void MTree::getAllNodesInSubtree(Node *node, Node *dad, NodeVector &nodeList) {
-    assert(node);
+    ASSERT(node);
     nodeList.push_back(node);
     if (node->isLeaf()) {
         return;
@@ -1111,7 +1111,7 @@ void MTree::getInnerBranches(Branches& branches, Node *node, Node *dad) {
 void MTree::getBranchLengths(vector<DoubleVector> &len, Node *node, Node *dad) {
     if (!node) {
         node = root;
-        assert(len.size() == branchNum);
+        ASSERT(len.size() == branchNum);
     }
     //for (NeighborVec::iterator it = node->neighbors.begin(); it != node->neighbors.end(); it++)
     //if ((*it)->node != dad)	{
@@ -1124,7 +1124,7 @@ void MTree::getBranchLengths(vector<DoubleVector> &len, Node *node, Node *dad) {
 void MTree::setBranchLengths(vector<DoubleVector> &len, Node *node, Node *dad) {
     if (!node) {
         node = root;
-        assert(len.size() == branchNum);
+        ASSERT(len.size() == branchNum);
     }
     //for (NeighborVec::iterator it = node->neighbors.begin(); it != node->neighbors.end(); it++)
     //if ((*it)->node != dad)	{
@@ -1214,7 +1214,7 @@ Split* MTree::_getSplit(Node* node1, Node* node2) {
 
 void MTree::convertSplits(SplitGraph &sg, Split *resp, NodeVector *nodes, Node *node, Node *dad) {
     if (!node) node = root;
-    assert(resp->getNTaxa() == leafNum);
+    ASSERT(resp->getNTaxa() == leafNum);
     bool has_child = false;
     FOR_NEIGHBOR_IT(node, dad, it) {
         //vector<int> taxa;
@@ -1304,14 +1304,14 @@ void MTree::convertToTree(SplitGraph &sg) {
         //(*it)->report(cout);
         taxid = (*it)->trivial();
         if (taxid < 0) break;
-        assert(leaves[taxid] == NULL);
+        ASSERT(leaves[taxid] == NULL);
         leaves[taxid] = newNode(taxid, sg.getTaxa()->GetTaxonLabel(taxid).c_str());
         leaves[taxid]->addNeighbor(NULL, (*it)->getWeight());
         cladetaxa[taxid] = (*it);
     }
     // now fill in all missing taxa with zero terminal branch
     for (taxid = 0; taxid < leafNum; taxid++)
-        assert(leaves[taxid]);
+        ASSERT(leaves[taxid]);
 
     // now add non-trivial splits, cotinue with the interrupted iterator
     for (/*it = sg.begin()*/; it != sg.end(); it++) {
@@ -1331,14 +1331,14 @@ void MTree::convertToTree(SplitGraph &sg) {
                 cladetaxa[taxid] = cladetaxa.back();
                 cladetaxa.pop_back();
             } else taxid++;
-        assert(count == mysp->countTaxa());
+        ASSERT(count == mysp->countTaxa());
         cladetaxa.push_back(mysp);
         leaves.push_back(newnode);
 
         newnode->addNeighbor(NULL, mysp->getWeight());
         nodeNum++;
     }
-    assert(leaves.size() >= 3);
+    ASSERT(leaves.size() >= 3);
     Node *newnode = newNode(nodeNum);
     for (taxid = 0; taxid < leaves.size(); taxid++) {
         double len = leaves[taxid]->updateNeighbor(NULL, newnode);
@@ -1714,7 +1714,7 @@ void MTree::drawTree2(ostream &out, int brtype, double brscale, IntVector &subtr
 }
 
 bool MTree::equalTopology(MTree *tree) {
-	assert(root->isLeaf());
+	ASSERT(root->isLeaf());
 	Node *root2 = tree->findLeafName(root->name);
 	if (!root2) return false;
 	ostringstream ostr, ostr2;
@@ -1873,7 +1873,7 @@ void MTree::assignLeafID(Node *node, Node *dad) {
     if (!node) node = root;
     if (node->isLeaf()) {
         node->id = atoi(node->name.c_str());
-        assert(node->id >= 0 && node->id < leafNum);
+        ASSERT(node->id >= 0 && node->id < leafNum);
     }
     FOR_NEIGHBOR_IT(node, dad, it)
     assignLeafID((*it)->node, node);
@@ -1906,7 +1906,7 @@ void MTree::extractQuadSubtrees(vector<Split*> &subtrees, Node *node, Node *dad)
 		extractQuadSubtrees(subtrees, (*it)->node, node);
 		if ((*it)->node->isLeaf()) continue;
 		// internal branch
-		assert(node->degree() == 3 && (*it)->node->degree() == 3);
+		ASSERT(node->degree() == 3 && (*it)->node->degree() == 3);
 		int cnt = 0;
 		Node *child = (*it)->node;
 		FOR_NEIGHBOR_DECLARE(child, node, it2) {
@@ -1921,7 +1921,7 @@ void MTree::extractQuadSubtrees(vector<Split*> &subtrees, Node *node, Node *dad)
 			subtrees.push_back(sp);
 			cnt += sp->countTaxa();
 		}
-		assert(cnt == leafNum);
+		ASSERT(cnt == leafNum);
 	}
 }
 
@@ -1981,7 +1981,7 @@ void MTree::assignBranchSupport(istream &in) {
 				string name = (string)mysg.getTaxa()->GetTaxonLabel(taxid);
 				tree.findLeafName(name)->id = smallid++;
 			}
-		assert(taxname.size() == tree.leafNum);
+		ASSERT(taxname.size() == tree.leafNum);
 
 		SplitGraph sg;
 		//NodeVector nodes;
@@ -2108,7 +2108,7 @@ void MTree::computeRFDist(istream &in, IntVector &dist) {
 				string name = (string)mysg.getTaxa()->GetTaxonLabel(taxid);
 				tree.findLeafName(name)->id = smallid++;
 			}
-		assert(taxname.size() == tree.leafNum);
+		ASSERT(taxname.size() == tree.leafNum);
 
 		SplitGraph sg;
 		//NodeVector nodes;
@@ -2235,7 +2235,7 @@ void MTree::insertTaxa(StrVector &new_taxa, StrVector &existing_taxa) {
 
 	for (int i = 0; i < new_taxa.size(); i++) {
 		Node *old_taxon = findLeafName(existing_taxa[id[i]]);
-		assert(old_taxon);
+		ASSERT(old_taxon);
 		double len = old_taxon->neighbors[0]->length;
 		Node *old_node = old_taxon->neighbors[0]->node;
 		Node *new_taxon = newNode(leafNum+i, new_taxa[id[i]].c_str());
@@ -2324,7 +2324,7 @@ void MTree::removeTaxa(StrVector &taxa_names) {
 
 	NodeVector taxa;
 	getTaxa(taxa);
-	assert(taxa.size() > 0);
+	ASSERT(taxa.size() > 0);
 	// reassign taxon IDs
 	int id = 0;
 	for (NodeVector::iterator nit = taxa.begin(); nit != taxa.end(); nit++, id++)

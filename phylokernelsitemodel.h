@@ -25,7 +25,7 @@ void PhyloTree::computeSitemodelPartialLikelihoodEigenSIMD(PhyloNeighbor *dad_br
     }
 
     // don't recompute the likelihood
-	assert(dad);
+	ASSERT(dad);
     if (dad_branch->partial_lh_computed & 1)
         return;
     dad_branch->partial_lh_computed |= 1;
@@ -37,7 +37,7 @@ void PhyloTree::computeSitemodelPartialLikelihoodEigenSIMD(PhyloNeighbor *dad_br
     size_t i, x, j;
     size_t block = nstates * ncat;
     ModelSet *models = (ModelSet*) model;
-    assert(models->size() == nptn);
+    ASSERT(models->size() == nptn);
 
 
 	if (node->isLeaf()) {
@@ -78,7 +78,7 @@ void PhyloTree::computeSitemodelPartialLikelihoodEigenSIMD(PhyloNeighbor *dad_br
                 break;
             }
         }
-        assert(done && "partial_lh is not re-oriented");
+        ASSERT(done && "partial_lh is not re-oriented");
     }
 
 
@@ -90,7 +90,7 @@ void PhyloTree::computeSitemodelPartialLikelihoodEigenSIMD(PhyloNeighbor *dad_br
 		right = tmp;
 	}
     
-    assert(node->degree() == 3); // does not work with multifurcating tree yet
+    ASSERT(node->degree() == 3); // does not work with multifurcating tree yet
     
     if (left->node->isLeaf() && right->node->isLeaf()) {
 
@@ -399,7 +399,7 @@ void PhyloTree::computeSitemodelLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branc
     size_t nptn = aln->size();
     size_t maxptn = ((nptn+VCSIZE-1)/VCSIZE)*VCSIZE;
 
-	assert(theta_all);
+	ASSERT(theta_all);
 	if (!theta_computed) {
 		// precompute theta for fast branch length optimization
 
@@ -716,7 +716,7 @@ double PhyloTree::computeSitemodelLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_b
         }
     }
 
-	assert(!isnan(tree_lh_final) && !isinf(tree_lh_final));
+	ASSERT(!isnan(tree_lh_final) && !isinf(tree_lh_final));
     
     aligned_free(cat_prop);
     aligned_free(cat_length);
@@ -727,7 +727,7 @@ double PhyloTree::computeSitemodelLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_b
 
 template <class VectorClass, const int VCSIZE, const int nstates>
 double PhyloTree::computeSitemodelLikelihoodFromBufferEigenSIMD() {
-	assert(theta_all && theta_computed);
+	ASSERT(theta_all && theta_computed);
 
 //    size_t nstates = aln->num_states;
     size_t ncat = site_rate->getNRate();

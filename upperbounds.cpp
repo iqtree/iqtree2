@@ -405,7 +405,7 @@ MTree* generateRandomYH_UB(Params &params, PhyloTree *tree){
 
 	NodeVector taxa;
 	treeR->getTaxa(taxa);
-	assert(taxa.size() == size);
+	ASSERT(taxa.size() == size);
 	for (NodeVector::iterator it = taxa.begin(); it != taxa.end(); it++)
 		(*it)->name = tree->aln->getSeqName((*it)->id);
 
@@ -557,7 +557,7 @@ void extendingTree(MTree *tree, Params* params){
 
 	//cout<<"leafNum = "<<tree->leafNum-1<<" < random = "<<randomNodeID<<" < nodeNum = "<<tree->nodeNum-1<<endl;
 
-	assert(randomNodeID < tree->nodeNum && randomNodeID > tree->leafNum-1);
+	ASSERT(randomNodeID < tree->nodeNum && randomNodeID > tree->leafNum-1);
 
 	// Choose random neighbor
 	int randomNeiID = rand() % 2;
@@ -717,7 +717,7 @@ NNIMove getBestNNIForBranUB(PhyloNode *node1, PhyloNode *node2, PhyloTree *tree)
     	L[2] += log(score[2])*ptnFreq[i];
     	L[3] += log(score[3])*ptnFreq[i];
 
-        assert(isnormal(L[0] + L[1] + L[2] + L[3]));
+        ASSERT(isnormal(L[0] + L[1] + L[2] + L[3]));
 
     }
 
@@ -893,7 +893,7 @@ void sumFraction(PhyloNode *node1, PhyloNode *node2, PhyloTree *tree){
 			}
 		}
 
-        assert(isnormal(score[0] + score[1] + score[2]));
+        ASSERT(isnormal(score[0] + score[1] + score[2]));
 
 		cout<<"BranchLEN |"<< nei1->length
 			<<"| FRACTION of ai (sum over matching pairs) |"<<score[0]/score[2]

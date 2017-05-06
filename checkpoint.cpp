@@ -72,7 +72,7 @@ void Checkpoint::load(istream &in) {
 
 
 void Checkpoint::load() {
-	assert(filename != "");
+	ASSERT(filename != "");
     if (!fileExists(filename)) return;
     try {
         igzstream in;
@@ -242,7 +242,7 @@ void Checkpoint::addListElement() {
     list_element.back()++;
     if (list_element.back() > 0) {
         size_t pos = struct_name.find_last_of('.', struct_name.length()-2);
-        assert(pos != string::npos);
+        ASSERT(pos != string::npos);
         struct_name.erase(pos+1);
     }
     stringstream ss;
@@ -252,11 +252,11 @@ void Checkpoint::addListElement() {
 }
 
 void Checkpoint::endList() {
-    assert(!list_element.empty());
+    ASSERT(!list_element.empty());
 
     if (list_element.back() >= 0) {
         size_t pos = struct_name.find_last_of('.', struct_name.length()-2);
-        assert(pos != string::npos);
+        ASSERT(pos != string::npos);
         struct_name.erase(pos+1);
     }
 

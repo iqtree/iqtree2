@@ -125,7 +125,7 @@ double PartitionModelPlen::optimizeParameters(int fixed_len, bool write_info, do
             writeInfo(cout);
             tree->printTree(cout, WT_BR_LEN+WT_NEWLINE);
         }
-        assert(cur_lh > tree_lh - 1.0 && "individual model opt reduces LnL");
+        ASSERT(cur_lh > tree_lh - 1.0 && "individual model opt reduces LnL");
         
         tree->clearAllPartialLH();
         // Optimizing gene rate
@@ -135,7 +135,7 @@ double PartitionModelPlen::optimizeParameters(int fixed_len, bool write_info, do
                 cout << "LnL after optimizing partition-specific rates: " << cur_lh << endl;
                 writeInfo(cout);
             }
-            assert(cur_lh > tree_lh - 1.0 && "partition rate opt reduces LnL");
+            ASSERT(cur_lh > tree_lh - 1.0 && "partition rate opt reduces LnL");
         }
         
         // Optimizing branch lengths
@@ -143,12 +143,12 @@ double PartitionModelPlen::optimizeParameters(int fixed_len, bool write_info, do
         
         if (fixed_len == BRLEN_OPTIMIZE){
             double new_lh = tree->optimizeAllBranches(my_iter, logl_epsilon);
-            assert(new_lh > cur_lh - 1.0);
+            ASSERT(new_lh > cur_lh - 1.0);
             cur_lh = new_lh;
         } else if (fixed_len == BRLEN_SCALE) {
             double scaling = 1.0;
             double new_lh = tree->optimizeTreeLengthScaling(MIN_BRLEN_SCALE, scaling, MAX_BRLEN_SCALE, gradient_epsilon);
-            assert(new_lh > cur_lh - 1.0);
+            ASSERT(new_lh > cur_lh - 1.0);
             cur_lh = new_lh;
         }
         cout<<"Current log-likelihood at step "<<i<<": "<<cur_lh<<endl;
@@ -157,7 +157,7 @@ double PartitionModelPlen::optimizeParameters(int fixed_len, bool write_info, do
             break;
         }
         // make sure that the new logl is not so bad compared with previous logl
-        assert(cur_lh > tree_lh - 1.0 && "branch length opt reduces LnL");
+        ASSERT(cur_lh > tree_lh - 1.0 && "branch length opt reduces LnL");
         tree_lh = cur_lh;
     }
     //    cout <<"OPTIMIZE MODEL has finished"<< endl;

@@ -163,8 +163,8 @@ void MaTree::comparedTo (MTreeSet &trees, DoubleMatrix &brLenMatrix, IntVector &
 
 void MaTree::convertSplitIntMap(SplitIntMap &sim, Split *resp, const int taxonID, Node *node, Node *dad) {
     if (!node) node = root;
-    assert(resp->getNTaxa() == leafNum);
-    assert (taxonID >= 0 && taxonID < leafNum);
+    ASSERT(resp->getNTaxa() == leafNum);
+    ASSERT (taxonID >= 0 && taxonID < leafNum);
     bool has_child = false;
     FOR_NEIGHBOR_IT(node, dad, it) {
         //vector<int> taxa;

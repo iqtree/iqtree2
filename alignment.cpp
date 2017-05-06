@@ -9,6 +9,7 @@
 // Copyright: See COPYING file that comes with this distribution
 //
 //
+#include "tools.h"
 #include "alignment.h"
 #include "myreader.h"
 #include <numeric>
@@ -66,7 +67,7 @@ Alignment::Alignment()
 }
 
 string &Alignment::getSeqName(int i) {
-    assert(i >= 0 && i < (int)seq_names.size());
+    ASSERT(i >= 0 && i < (int)seq_names.size());
     return seq_names[i];
 }
 
@@ -335,7 +336,7 @@ Alignment *Alignment::removeIdenticalSeq(string not_remove, bool keep_two, StrVe
 
 
 bool Alignment::isGapOnlySeq(int seq_id) {
-    assert(seq_id < getNSeq());
+    ASSERT(seq_id < getNSeq());
     for (iterator it = begin(); it != end(); it++)
         if ((*it)[seq_id] != STATE_UNKNOWN) {
             return false;
@@ -445,13 +446,13 @@ Alignment::Alignment(char *filename, char *sequence_type, InputType &intype) : v
 
 bool Alignment::isStopCodon(int state) {
 	if (seq_type != SEQ_CODON || state >= num_states) return false;
-	assert(genetic_code);
+	ASSERT(genetic_code);
 	return (genetic_code[state] == '*');
 }
 
 int Alignment::getNumNonstopCodons() {
     if (seq_type != SEQ_CODON) return num_states;
-	assert(genetic_code);
+	ASSERT(genetic_code);
 	int c = 0;
 	for (char *ch = genetic_code; *ch != 0; ch++)
 		if (*ch != '*') c++;
@@ -648,7 +649,7 @@ void Alignment::extractDataBlock(NxsCharactersBlock *data_block) {
             else if (nstate == 1) {
                 pat.push_back(char_to_state[(int)data_block->GetState(seq, site, 0)]);
             } else {
-                assert(data_type != NxsCharactersBlock::dna || data_type != NxsCharactersBlock::rna || data_type != NxsCharactersBlock::nucleotide);
+                ASSERT(data_type != NxsCharactersBlock::dna || data_type != NxsCharactersBlock::rna || data_type != NxsCharactersBlock::nucleotide);
                 char pat_ch = 0;
                 for (int state = 0; state < nstate; state++) {
                     pat_ch |= (1 << char_to_state[(int)data_block->GetState(seq, site, state)]);
@@ -765,7 +766,7 @@ void Alignment::computeConst(Pattern &pat) {
 
     // compute is_invariant
     is_invariant = (state_app.count() >= 1);
-    assert(is_invariant >= is_const);
+    ASSERT(is_invariant >= is_const);
 
 
     if (seq_type == SEQ_POMO) {
@@ -934,11 +935,11 @@ void Alignment::regroupSitePattern(int groups, IntVector& site_group)
 			addPattern(pat, i);
 		}
 	}
-	assert(count == stored_site_pattern.size());
+	ASSERT(count == stored_site_pattern.size());
 	count = 0;
 	for (iterator it = begin(); it != end(); it++)
 		count += it->frequency;
-	assert(count == getNSite());
+	ASSERT(count == getNSite());
 	pattern_index.clear();
 	//printPhylip("/dev/stdout");
 }
@@ -979,7 +980,7 @@ SeqType Alignment::detectSequenceType(StrVector &sequences) {
 
 void Alignment::buildStateMap(char *map, SeqType seq_type) {
     memset(map, STATE_INVALID, NUM_CHAR);
-    assert(STATE_UNKNOWN < 126);
+    ASSERT(STATE_UNKNOWN < 126);
     map[(unsigned char)'?'] = STATE_UNKNOWN;
     map[(unsigned char)'-'] = STATE_UNKNOWN;
     map[(unsigned char)'~'] = STATE_UNKNOWN;
@@ -1264,7 +1265,7 @@ void Alignment::initCodon(char *gene_code_id) {
 	} else {
 		genetic_code = genetic_code1;
 	}
-	assert(strlen(genetic_code) == 64);
+	ASSERT(strlen(genetic_code) == 64);
 
 //	int codon;
 	/*
@@ -2547,7 +2548,7 @@ void Alignment::printFasta(const char *file_name, bool append, const char *aln_s
 void Alignment::extractSubAlignment(Alignment *aln, IntVector &seq_id, int min_true_char, int min_taxa, IntVector *kept_partitions) {
     IntVector::iterator it;
     for (it = seq_id.begin(); it != seq_id.end(); it++) {
-        assert(*it >= 0 && *it < aln->getNSeq());
+        ASSERT(*it >= 0 && *it < aln->getNSeq());
         seq_names.push_back(aln->getSeqName(*it));
     }
     num_states = aln->num_states;
@@ -2588,7 +2589,7 @@ void Alignment::extractSubAlignment(Alignment *aln, IntVector &seq_id, int min_t
     verbose_mode = save_mode;
     countConstSite();
     buildSeqStates();
-    assert(size() <= aln->size());
+    ASSERT(size() <= aln->size());
     if (kept_partitions)
         kept_partitions->push_back(0);
 }
@@ -2610,7 +2611,7 @@ void Alignment::extractPatterns(Alignment *aln, IntVector &ptn_id) {
     VerboseMode save_mode = verbose_mode;
     verbose_mode = min(verbose_mode, VB_MIN); // to avoid printing gappy sites in addPattern
     for (i = 0; i != ptn_id.size(); i++) {
-        assert(ptn_id[i] >= 0 && ptn_id[i] < aln->getNPattern());
+        ASSERT(ptn_id[i] >= 0 && ptn_id[i] < aln->getNPattern());
         Pattern pat = aln->at(ptn_id[i]);
         addPattern(pat, site, aln->at(ptn_id[i]).frequency);
         for (int j = 0; j < aln->at(ptn_id[i]).frequency; j++)
@@ -2620,12 +2621,12 @@ void Alignment::extractPatterns(Alignment *aln, IntVector &ptn_id) {
     verbose_mode = save_mode;
     countConstSite();
     buildSeqStates();
-    assert(size() <= aln->size());
+    ASSERT(size() <= aln->size());
 }
 
 void Alignment::extractPatternFreqs(Alignment *aln, IntVector &ptn_freq) {
     int i;
-    assert(ptn_freq.size() <= aln->getNPattern());
+    ASSERT(ptn_freq.size() <= aln->getNPattern());
     for (i = 0; i < aln->getNSeq(); i++) {
         seq_names.push_back(aln->getSeqName(i));
     }
@@ -2641,7 +2642,7 @@ void Alignment::extractPatternFreqs(Alignment *aln, IntVector &ptn_freq) {
     verbose_mode = min(verbose_mode, VB_MIN); // to avoid printing gappy sites in addPattern
     for (i = 0; i != ptn_freq.size(); i++)
         if (ptn_freq[i]) {
-            assert(ptn_freq[i] > 0);
+            ASSERT(ptn_freq[i] > 0);
             Pattern pat = aln->at(i);
             addPattern(pat, site, ptn_freq[i]);
             for (int j = 0; j < ptn_freq[i]; j++)
@@ -2651,7 +2652,7 @@ void Alignment::extractPatternFreqs(Alignment *aln, IntVector &ptn_freq) {
     verbose_mode = save_mode;
     countConstSite();
     buildSeqStates();
-    assert(size() <= aln->size());
+    ASSERT(size() <= aln->size());
 }
 
 void Alignment::extractSites(Alignment *aln, IntVector &site_id) {
@@ -2678,7 +2679,7 @@ void Alignment::extractSites(Alignment *aln, IntVector &site_id) {
     // sanity check
     for (iterator it = begin(); it != end(); it++)
     	if (it->at(0) == -1)
-    		assert(0);
+    		ASSERT(0);
 
     //cout << getNSite() << " positions were extracted" << endl;
     //cout << __func__ << " " << num_states << endl;
@@ -2774,7 +2775,7 @@ void Alignment::convertToCodonOrAA(Alignment *aln, char *gene_code_id, bool nt2a
     // sanity check
     for (iterator it = begin(); it != end(); it++)
     	if (it->at(0) == -1)
-    		assert(0);
+    		ASSERT(0);
     
 }
 
@@ -2983,7 +2984,7 @@ void Alignment::createBootstrapAlignment(Alignment *aln, IntVector* pattern_freq
     }
     if (!aln->site_state_freq.empty()) {
         site_model = site_pattern;
-        assert(site_state_freq.size() == getNPattern());
+        ASSERT(site_state_freq.size() == getNPattern());
     }
     verbose_mode = save_mode;
     countConstSite();
@@ -3029,7 +3030,7 @@ void Alignment::createBootstrapAlignment(int *pattern_freq, const char *spec, in
             int sum = 0;
             for (ptn = 0; ptn < nptn; ptn++)
                 sum += pattern_freq[ptn];
-            assert(sum == nsite);
+            ASSERT(sum == nsite);
             delete [] prob;
         }
     } else if (strncmp(spec, "GENESITE,", 9) == 0) {
@@ -3121,7 +3122,7 @@ void Alignment::buildFromPatternFreq(Alignment & aln, IntVector new_pattern_freq
     }
     if (!aln.site_state_freq.empty()) {
         site_model = site_pattern;
-        assert(site_state_freq.size() == getNPattern());
+        ASSERT(site_state_freq.size() == getNPattern());
     }
 
     countConstSite();
@@ -3525,7 +3526,7 @@ int Alignment::convertPomoState(int state) {
         cout << "state:              " << state << endl;
         cout << "pomo_states.size(): " << pomo_states.size() << endl;
     }
-    assert(state < pomo_states.size());
+    ASSERT(state < pomo_states.size());
     int id1 = pomo_states[state] & 3;
     int id2 = (pomo_states[state] >> 16) & 3;
     int value1 = (pomo_states[state] >> 2) & 16383;
@@ -3550,7 +3551,7 @@ int Alignment::convertPomoState(int state) {
         real_state = 3 + j*(N-1) + pick;
     }
     state = real_state;
-    assert(state < num_states);
+    ASSERT(state < num_states);
     return state;
 }
 
@@ -3739,7 +3740,7 @@ void Alignment::getAppearance(StateType state, double *state_app) {
 			}
 		break;
 	case SEQ_PROTEIN:
-		assert(state<23);
+		ASSERT(state<23);
 		state -= 20;
 		for (i = 0; i < 11; i++)
 			if (ambi_aa[(int)state] & (1<<i)) {
@@ -3754,7 +3755,7 @@ void Alignment::getAppearance(StateType state, double *state_app) {
 //        state_app[(pomo_states[state] >> 16) & 3] = 1.0;
         state_app[convertPomoState(state)] = 1.0;
         break;
-	default: assert(0); break;
+	default: ASSERT(0); break;
 	}
 }
 
@@ -3797,7 +3798,7 @@ void Alignment::getAppearance(StateType state, StateBitset &state_app) {
 //        state_app[(pomo_states[state] >> 16) & 3] = 1;
         state_app[convertPomoState(state)] = 1;
         break;
-	default: assert(0); break;
+	default: ASSERT(0); break;
 	}
 }
 
@@ -3848,7 +3849,7 @@ void Alignment::computeCodonFreq(StateFreqType freq, double *state_freq, double 
         sum = 0.0;
 		for (i = 0; i < num_states; i++)
                 sum += state_freq[i];
-        assert(fabs(sum-1.0)<1e-5);
+        ASSERT(fabs(sum-1.0)<1e-5);
 	} else if (freq == FREQ_CODON_3x4) {
 		// F3x4 frequency model
 		memset(ntfreq, 0, sizeof(double)*12);
@@ -3894,7 +3895,7 @@ void Alignment::computeCodonFreq(StateFreqType freq, double *state_freq, double 
         sum = 0.0;
 		for (i = 0; i < num_states; i++)
                 sum += state_freq[i];
-        assert(fabs(sum-1.0)<1e-5);
+        ASSERT(fabs(sum-1.0)<1e-5);
 
 //		double sum = 0;
 //		for (i = 0; i < num_states; i++)
@@ -3956,7 +3957,7 @@ void Alignment::computeCodonFreq(StateFreqType freq, double *state_freq, double 
 
 void Alignment::computeDivergenceMatrix(double *rates) {
     int i, j, k;
-    assert(rates);
+    ASSERT(rates);
     int nseqs = getNSeq();
     unsigned *pair_rates = new unsigned[num_states*num_states];
     memset(pair_rates, 0, sizeof(unsigned)*num_states*num_states);
@@ -4118,7 +4119,7 @@ void Alignment::multinomialProb(Alignment refAlign, double &prob)
     //should we check for compatibility of sequence's names and sequence's order in THIS alignment and in the objectAlign??
     //check alignment length
     int nsite = getNSite();
-    assert(nsite == refAlign.getNSite());
+    ASSERT(nsite == refAlign.getNSite());
     double sumFac = 0;
     double sumProb = 0;
     double fac = logFac(nsite);
@@ -4147,7 +4148,7 @@ void Alignment::multinomialProb (DoubleVector logLL, double &prob)
 
     int patNum = getNPattern();
 
-    assert(logLL.size() == patNum);
+    ASSERT(logLL.size() == patNum);
 
     int alignLen = getNSite();
     //resize the expectedNorFre vector
@@ -4276,7 +4277,7 @@ double Alignment::multinomialProb (IntVector &pattern_freq)
     //cout << "Number of patterns: " << patNum << ", sum of expected sites: " << sum << endl;
     //return expectedNorFre;
     //compute the probability of having expectedNorFre given the observed pattern frequencies of THIS alignment
-    assert(size() == pattern_freq.size());
+    ASSERT(size() == pattern_freq.size());
     int patNum = getNPattern();
     int alignLen = getNSite();
     double sumFac = 0;

@@ -342,7 +342,7 @@ void printPatternLh(const char *ofile, IQTree *tree, bool compression) {
         for (StringIntMap::iterator it = tree->treels.begin(); it != tree->treels.end(); it++)
         {
             int id = it->second;
-            assert(id < tree->treels_ptnlh.size());
+            ASSERT(id < tree->treels_ptnlh.size());
             //out->write((char*)tree->treels_ptnlh[id], sizeof(double)*tree->aln->size());
             out->precision(10);
             (*out) << -tree->treels_logl[id];

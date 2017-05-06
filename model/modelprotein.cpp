@@ -3120,7 +3120,7 @@ ModelProtein::ModelProtein(const char *model_name, string model_params, StateFre
 
 
 void ModelProtein::init(const char *model_name, string model_params, StateFreqType freq, string freq_params) {
-	assert(num_states == 20);
+	ASSERT(num_states == 20);
 	name = model_name;
 	//string model_str;
 	//bool user_model = false;
@@ -3267,7 +3267,7 @@ void ModelProtein::readRates(istream &in) throw(const char*, string) {
 		if (id >= nrates) {
 			cout << row << " " << col << endl;
 		}
-		assert(id < nrates && id >= 0); // make sure that the conversion is correct
+		ASSERT(id < nrates && id >= 0); // make sure that the conversion is correct
 		if (!(in >> rates[id]))
 			throw name+string(": Rate entries could not be read");
 		if (rates[id] < 0.0)

@@ -66,12 +66,12 @@ void PDTreeSet::init(Params &params) {
 }
 
 bool PDTreeSet::isRootedTrees() {
-	assert(size() > 0);
+	ASSERT(size() > 0);
 	return front()->rooted;
 }
 
 int PDTreeSet::getNTaxa() {
-	assert(size() > 0);
+	ASSERT(size() > 0);
 	return front()->leafNum;
 }
 

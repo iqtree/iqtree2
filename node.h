@@ -139,7 +139,7 @@ public:
         @param start_pos starting position in vec to copy to
     */
     virtual void getLength(DoubleVector &vec, int start_pos) { 
-        assert(start_pos < vec.size());
+        ASSERT(start_pos < vec.size());
         vec[start_pos] = length;
     }
 
@@ -157,7 +157,7 @@ public:
         @return branch length for class c
     */
     virtual void setLength(DoubleVector &vec) { 
-        assert(vec.size() == 1);
+        ASSERT(vec.size() == 1);
         length = vec[0];
     }
 
@@ -176,8 +176,8 @@ public:
         @param start_pos starting position in vec to copy from
     */
     virtual void setLength(DoubleVector &vec, int start_pos, int num_elem) { 
-        assert(start_pos < vec.size());
-        assert(num_elem == 1);
+        ASSERT(start_pos < vec.size());
+        ASSERT(num_elem == 1);
         length = vec[start_pos];
     }
 

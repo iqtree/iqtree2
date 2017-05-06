@@ -113,7 +113,7 @@ double PhyloSuperTreePlen::computeDist(int seq1, int seq2, double initial_dist, 
 }
 
 void PhyloSuperTreePlen::mapTrees() {
-	assert(root);
+	ASSERT(root);
 	int part = 0;
     // this is important: rescale branch length of codon partitions to be compatible with other partitions.
     // since for codon models, branch lengths = # nucleotide subst per codon site!
@@ -228,7 +228,7 @@ double PhyloSuperTreePlen::computeFunction(double value) {
 
 	SuperNeighbor *nei1 = (SuperNeighbor*)current_it_back->node->findNeighbor(current_it->node);
 	SuperNeighbor *nei2 = (SuperNeighbor*)current_it->node->findNeighbor(current_it_back->node);
-	assert(nei1 && nei2);
+	ASSERT(nei1 && nei2);
 
     if (part_order.empty()) computePartitionOrder();
     #ifdef _OPENMP
@@ -286,7 +286,7 @@ void PhyloSuperTreePlen::computeFuncDerv(double value, double &df_ret, double &d
 
 	SuperNeighbor *nei1 = (SuperNeighbor*)current_it_back->node->findNeighbor(current_it->node);
 	SuperNeighbor *nei2 = (SuperNeighbor*)current_it->node->findNeighbor(current_it_back->node);
-	assert(nei1 && nei2);
+	ASSERT(nei1 && nei2);
 
     if (part_order.empty()) computePartitionOrder();
     #ifdef _OPENMP
@@ -306,7 +306,7 @@ void PhyloSuperTreePlen::computeFuncDerv(double value, double &df_ret, double &d
 				if(nei1_part->length<-1e-4){
 					cout<<"lambda = "<<lambda<<endl;
 					cout<<"NEGATIVE BRANCH len = "<<nei1_part->length<<endl<<" rate = "<<part_info[part].part_rate<<endl;
-                    assert(0);
+                    ASSERT(0);
 					outError("shit!!   ",__func__);
 				}
 				at(part)->computeLikelihoodDerv(nei2_part,(PhyloNode*)nei1_part->node, &df_aux, &ddf_aux);
@@ -324,7 +324,7 @@ void PhyloSuperTreePlen::computeFuncDerv(double value, double &df_ret, double &d
 
 NNIMove PhyloSuperTreePlen::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove *nniMoves)
 {
-	assert(node1->degree() == 3 && node2->degree() == 3);
+	ASSERT(node1->degree() == 3 && node2->degree() == 3);
 
 	double backupScore = curScore;
 
@@ -753,7 +753,7 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 					// update link_neighbor[part]
 					((SuperNeighbor*)*saved_it[id])->link_neighbors[part] = (PhyloNeighbor*)*sub_saved_it[part*6 + id];
 				}
-                assert(mem_id == 2);
+                ASSERT(mem_id == 2);
 			}
 
 
@@ -769,7 +769,7 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 			// Change the length of branch, (node1,node2) WAS linked to (-=)
 			nei1_new->link_neighbors[part]->length -= old_brlen * part_info[part].part_rate;
 			nei2_new->link_neighbors[part]->length -= old_brlen * part_info[part].part_rate;
-			assert(nei1_new->link_neighbors[part]->length >= 0.0);
+			ASSERT(nei1_new->link_neighbors[part]->length >= 0.0);
 
 			// Allocate three new PhyloNeighbors.
 			// For nni1 only one of it will be actually used and which one depends on the NNI.
@@ -811,7 +811,7 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 					id_eps[part] = id;
 				}
 			}
-            assert(mem_id == 1);
+            ASSERT(mem_id == 1);
 		}else if(is_nni[part]==NNI_THREE_EPSILON && params->nni5){
 			// you fill out link neighbors vector for newly allocated SuperNeighbors
 			for(id = 2; id < 6; id++){
@@ -925,7 +925,7 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 				// In the end restore one branch (valid for both nni1 and nni5).
 
 				linkBranch(part, nei1_new, nei2_new);
-				assert(nei1_new->link_neighbors[part]);
+				ASSERT(nei1_new->link_neighbors[part]);
 
 				// Save the branch length
 				if(cnt == 0)
@@ -971,13 +971,13 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 				 * Decrease a' (done before). Increase b' or c' depending on the NNI. Restore three branches.*/
 
 				linkBranch(part, nei1_new, nei2_new);
-				assert(nei1_new->link_neighbors[part]);
+				ASSERT(nei1_new->link_neighbors[part]);
 
 				//cout<<"nei1_new->link_nei["<<part<<"]->node->id"<<nei1_new->link_neighbors[part]->node->id<<endl;
 				//cout<<"nei2_new->link_nei["<<part<<"]->node->id"<<nei2_new->link_neighbors[part]->node->id<<endl;
 
-				assert(nei1_new->link_neighbors[part]->node->findNeighbor(nei2_new->link_neighbors[part]->node));
-				assert(nei2_new->link_neighbors[part]->node->findNeighbor(nei1_new->link_neighbors[part]->node));
+				ASSERT(nei1_new->link_neighbors[part]->node->findNeighbor(nei2_new->link_neighbors[part]->node));
+				ASSERT(nei2_new->link_neighbors[part]->node->findNeighbor(nei1_new->link_neighbors[part]->node));
 
 				// nni1:
 				// - you need to update only one link_neighbor with new PhyloNeighbor
@@ -1000,7 +1000,7 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 						}
 					} else {
 						// nei1_new should be updated
-						assert(node1->isNeighbor(neighbor_nodes[id-2]));
+						ASSERT(node1->isNeighbor(neighbor_nodes[id-2]));
 						if(((SuperNeighbor*)node1->findNeighbor(neighbor_nodes[id-2]))->link_neighbors[part]){
 							//cout<<"node1: "<<"id = "<<id<<"; node_id = "<<((SuperNeighbor*)(node1->findNeighbor(neighbor_nodes[id-2])))->link_neighbors[part]->node->id<<";"<<endl;
 							if(((SuperNeighbor*)node1->findNeighbor(neighbor_nodes[id-2]))->link_neighbors[part]->node
@@ -1027,8 +1027,8 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 				//cout<<"nei1_new->link_nei["<<part<<"]->node->id"<<nei1_new->link_neighbors[part]->node->id<<endl;
 				//cout<<"nei2_new->link_nei["<<part<<"]->node->id"<<nei2_new->link_neighbors[part]->node->id<<endl;
 
-				assert(nei1_new->link_neighbors[part]->node->findNeighbor(nei2_new->link_neighbors[part]->node));
-				assert(nei2_new->link_neighbors[part]->node->findNeighbor(nei1_new->link_neighbors[part]->node));
+				ASSERT(nei1_new->link_neighbors[part]->node->findNeighbor(nei2_new->link_neighbors[part]->node));
+				ASSERT(nei2_new->link_neighbors[part]->node->findNeighbor(nei1_new->link_neighbors[part]->node));
 
 				// Increase the branch to which the central is relinked.
 				nei1_new->link_neighbors[part]->length += old_brlen * part_info[part].part_rate;
@@ -1222,8 +1222,8 @@ double PhyloSuperTreePlen::swapNNIBranch(double cur_score, PhyloNode *node1, Phy
 
 				// Relink back
 				linkBranch(part, nei1_new, nei2_new);
-				assert(nei1_new->link_neighbors[part]->node == saved_nei[0]->link_neighbors[part]->node);
-				assert(nei2_new->link_neighbors[part]->node == saved_nei[1]->link_neighbors[part]->node);
+				ASSERT(nei1_new->link_neighbors[part]->node == saved_nei[0]->link_neighbors[part]->node);
+				ASSERT(nei2_new->link_neighbors[part]->node == saved_nei[1]->link_neighbors[part]->node);
 
 				// Restore three branches
 				for(id=2; id<6; id++){
@@ -1661,7 +1661,7 @@ void PhyloSuperTreePlen::initializeAllPartialLh() {
 	clearAllPartialLH(true);
 
 	initializeAllPartialLh(lh_addr, scale_addr, pars_addr);
-    assert((lh_addr - central_partial_lh) < total_partial_lh_entries*sizeof(double) && lh_addr > central_partial_lh);
+    ASSERT((lh_addr - central_partial_lh) < total_partial_lh_entries*sizeof(double) && lh_addr > central_partial_lh);
     tip_partial_lh = NULL;
     for (it = begin(), part = 0; it != end(); it++, part++) {
         (*it)->tip_partial_lh = lh_addr;
@@ -1758,7 +1758,7 @@ void PhyloSuperTreePlen::initializeAllPartialLh(double* &lh_addr, UBYTE* &scale_
 
 void PhyloSuperTreePlen::initializeAllPartialLh(int &index, int &indexlh, PhyloNode *node, PhyloNode *dad) {
 	// this function should not be used, assertion raised if accidentally called
-	assert(0);
+	ASSERT(0);
 }
 
 void PhyloSuperTreePlen::reorientPartialLh(PhyloNeighbor* dad_branch, Node *dad) {

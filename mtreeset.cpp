@@ -141,12 +141,12 @@ void MTreeSet::init(vector<string> &trees, vector<string> &taxonNames, bool &is_
 		stringstream ss(*it);
 		tree->readTree(ss, is_rooted);
 	    int nseq = taxonNames.size();
-	    assert(tree->getNumTaxa() == nseq);
+	    ASSERT(tree->getNumTaxa() == nseq);
 	    for (int seq = 0; seq < nseq; seq++) {
 	        string seq_name = taxonNames[seq];
 	        Node *node = tree->findLeafName(seq_name);
-	        assert(node);
-	        assert(node->isLeaf());
+	        ASSERT(node);
+	        ASSERT(node->isLeaf());
 	        node->id = seq;
 	    }
 		push_back(tree);
@@ -328,8 +328,8 @@ void MTreeSet::convertSplits(SplitGraph &sg, double split_threshold, int weighti
 		//SplitIntMap::iterator ass_it = hash_ss.find(*it);
 		int freq_value;
 		Split *sp = hash_ss.findSplit(*it, freq_value);
-		assert(sp != NULL);
-		assert(*sp == *(*it));
+		ASSERT(sp != NULL);
+		ASSERT(*sp == *(*it));
 		//Split *sp = ass_it->first;
 		if (freq_value <= threshold) {
 			if (verbose_mode == VB_DEBUG) {

@@ -63,7 +63,7 @@ TreeCollection ObjectStream::getTreeCollection() {
     size_t numTrees = doubleDataSize / sizeof(double);
     vector<string> treeStrings;
     deserializeStrings(objectData + sizeof(size_t) * 3, stringDataSize, treeStrings);
-    assert(treeStrings.size() == numTrees);
+    ASSERT(treeStrings.size() == numTrees);
 
     double scoreArr[numTrees];
     memcpy(scoreArr, objectData + sizeof(size_t) * 3 + stringDataSize, doubleDataSize);

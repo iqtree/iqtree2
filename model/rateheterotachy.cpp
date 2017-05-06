@@ -168,7 +168,7 @@ double RateHeterotachy::optimizeWithEM() {
             for (c = 0; c < nmix; c++) {
                 lk_ptn += this_lk_cat[c];
             }
-            assert(lk_ptn != 0.0);
+            ASSERT(lk_ptn != 0.0);
             lk_ptn = phylo_tree->ptn_freq[ptn] / lk_ptn;
             for (c = 0; c < nmix; c++) {
                 new_prop[c] += this_lk_cat[c] * lk_ptn;

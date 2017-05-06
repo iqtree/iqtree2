@@ -115,7 +115,7 @@ public:
 	 * true if this Neighbor is directed towards the root
 	 */
 	bool isTowardsRoot() {
-		assert(direction != UNDEFINED_DIRECTION);
+		ASSERT(direction != UNDEFINED_DIRECTION);
 		return (direction == TOWARD_ROOT);
 	}
 

@@ -120,7 +120,7 @@ void RateFree::setNCategory(int ncat) {
 }
 
 void RateFree::setRateAndProp(RateFree *input) {
-    assert(input->ncategory == ncategory-1);
+    ASSERT(input->ncategory == ncategory-1);
     setPInvar(input->getPInvar());
     int k = 0, i;
     // get the category k with largest proportion
@@ -505,10 +505,10 @@ double RateFree::optimizeWithEM() {
             phylo_tree->printTree(cout, WT_BR_LEN+WT_NEWLINE);
             writeInfo(cout);
         }
-        assert(score < 0);
+        ASSERT(score < 0);
         
         if (step > 0)
-            assert(score > old_score-0.1);
+            ASSERT(score > old_score-0.1);
             
         old_score = score;
         
@@ -522,7 +522,7 @@ double RateFree::optimizeWithEM() {
             for (c = 0; c < nmix; c++) {
                 lk_ptn += this_lk_cat[c];
             }
-            assert(lk_ptn != 0.0);
+            ASSERT(lk_ptn != 0.0);
             lk_ptn = phylo_tree->ptn_freq[ptn] / lk_ptn;
             
             // transform _pattern_lh_cat into posterior probabilities of each category
@@ -575,7 +575,7 @@ double RateFree::optimizeWithEM() {
             phylo_tree->computePtnInvar();
         }
         
-        assert(fabs(sum_prop+new_pinvar-1.0) < MIN_PROP);
+        ASSERT(fabs(sum_prop+new_pinvar-1.0) < MIN_PROP);
         
         // now optimize rates one by one
         double sum = 0.0;

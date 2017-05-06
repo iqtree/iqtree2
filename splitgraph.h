@@ -232,7 +232,7 @@ public:
 		@return number of taxa
 	*/
 	int getNTaxa() {
-		assert(size() > 0);
+		ASSERT(size() > 0);
 		return (*begin())->ntaxa;
 	}
 
@@ -327,7 +327,7 @@ public:
 		@return index of taxon on the circle
 	*/
 	int getCircleId(int i) {
-		assert(i >= 0 && i < getNTaxa());
+		ASSERT(i >= 0 && i < getNTaxa());
 		return splits->cycle[i];
 	}
 

@@ -157,7 +157,7 @@ int Node::calDist(Node* partner, Node* dad, int curLen) {
  */
 double Node::longestPath2(Node* &node1, Node* &node2) {
     // step 1: find the farthest leaf from this node (as a leaf)
-    assert(isLeaf());
+    ASSERT(isLeaf());
     node1 = calcHeight();
     // step 2: find the farthest leaf from node1
     node2 = node1->calcHeight();
@@ -173,7 +173,7 @@ Neighbor *Node::findNeighbor(Node *node) {
             if ((*it)->node == node)
                     return (*it);*/
     cout << "ERROR : Could not find neighbors of node " << node->id << endl;
-    assert(0);
+    ASSERT(0);
     return NULL;
 }
 
@@ -188,7 +188,7 @@ NeighborVec::iterator Node::findNeighborIt(Node *node) {
     for (NeighborVec::iterator it = neighbors.begin(); it != neighbors.end(); it++)
         if ((*it)->node == node)
             return it;
-    assert(0);
+    ASSERT(0);
     return neighbors.end();
 }
 
@@ -205,25 +205,25 @@ void Node::addNeighbor(Node *node, DoubleVector &length, int id) {
 }
 
 void Node::updateNeighbor(NeighborVec::iterator nei_it, Neighbor *newnei) {
-    assert(nei_it != neighbors.end());
+    ASSERT(nei_it != neighbors.end());
     *nei_it = newnei;
 }
 
 void Node::updateNeighbor(NeighborVec::iterator nei_it, Neighbor *newnei, double newlen) {
-    assert(nei_it != neighbors.end());
+    ASSERT(nei_it != neighbors.end());
     *nei_it = newnei;
     newnei->length = newlen;
 }
 
 void Node::updateNeighbor(Node *node, Neighbor *newnei) {
     NeighborVec::iterator nei_it = findNeighborIt(node);
-    assert(nei_it != neighbors.end());
+    ASSERT(nei_it != neighbors.end());
     *nei_it = newnei;
 }
 
 void Node::updateNeighbor(Node *node, Neighbor *newnei, double newlen) {
     NeighborVec::iterator nei_it = findNeighborIt(node);
-    assert(nei_it != neighbors.end());
+    ASSERT(nei_it != neighbors.end());
     *nei_it = newnei;
     newnei->length = newlen;
 }

@@ -49,7 +49,7 @@ ModelFactoryMixlen::ModelFactoryMixlen(Params &params, PhyloTree *tree, ModelsBl
 double ModelFactoryMixlen::optimizeParameters(int fixed_len, bool write_info, double logl_epsilon, double gradient_epsilon) {
 
 	PhyloTreeMixlen *tree = (PhyloTreeMixlen*)site_rate->getTree();
-	assert(tree);
+	ASSERT(tree);
     
     tree->initializeMixlen(logl_epsilon);
 
@@ -65,7 +65,7 @@ string ModelFactoryMixlen::sortClassesByTreeLength() {
     // now sort the classes by tree lengths
     DoubleVector brlen;
     tree->saveBranchLengths(brlen);
-    assert(brlen.size() == tree->branchNum * tree->mixlen);
+    ASSERT(brlen.size() == tree->branchNum * tree->mixlen);
 
     // compute tree lengths
     double treelen[tree->mixlen];
@@ -94,7 +94,7 @@ string ModelFactoryMixlen::sortClassesByTreeLength() {
                 sorted_brlen[i*tree->mixlen + j] = brlen[i*tree->mixlen + index[j]];
         tree->restoreBranchLengths(sorted_brlen);
 
-        assert(tree->mixlen == site_rate->getNRate());
+        ASSERT(tree->mixlen == site_rate->getNRate());
         // reoder class weights
         double prop[site_rate->getNRate()];
         for (j = 0; j < site_rate->getNRate(); j++)
@@ -104,7 +104,7 @@ string ModelFactoryMixlen::sortClassesByTreeLength() {
 
         // reorder mixture models
         if (fused_mix_rate) {
-            assert(model->getNMixtures() == site_rate->getNRate());
+            ASSERT(model->getNMixtures() == site_rate->getNRate());
 //            ModelMixture *mixmodel = (ModelMixture*)model;
             int nmix = model->getNMixtures();
             ModelSubst *models[nmix];
@@ -134,7 +134,7 @@ string ModelFactoryMixlen::sortClassesByTreeLength() {
         }
 
         tree->clearAllPartialLH();
-        assert(fabs(score - tree->computeLikelihood()) < 0.1);
+        ASSERT(fabs(score - tree->computeLikelihood()) < 0.1);
     }
 
     // update relative_rate

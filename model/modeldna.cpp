@@ -161,7 +161,7 @@ string getDNAModelInfo(string model_name, string &full_name, string &rate_type, 
 
 void ModelDNA::init(const char *model_name, string model_params, StateFreqType freq, string freq_params)
 {
-	assert(num_states == 4); // make sure that you create model for DNA
+	ASSERT(num_states == 4); // make sure that you create model for DNA
 	StateFreqType def_freq = FREQ_UNKNOWN;
 	string rate_type;
 	// First try: the time reversible models
@@ -327,7 +327,7 @@ bool ModelDNA::setRateType(const char *rate_str) {
 		}
 	}
 
-	assert(param_spec.length() == num_ch);
+	ASSERT(param_spec.length() == num_ch);
 	double *avg_rates = new double[num_params+1];
 	int *num_rates = new int[num_params+1];
 	memset(avg_rates, 0, sizeof(double) * (num_params+1));
@@ -356,7 +356,7 @@ bool ModelDNA::setRateType(const char *rate_str) {
 
 
 int ModelDNA::getNDim() {
-	assert(freq_type != FREQ_UNKNOWN);
+	ASSERT(freq_type != FREQ_UNKNOWN);
 	// possible TO-DO: cache nFreqParams(freq_type) to avoid repeat calls.
 //        return (num_params+nFreqParams(freq_type));
 

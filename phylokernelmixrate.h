@@ -28,7 +28,7 @@ void PhyloTree::computeMixratePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_bran
     }
 
     // don't recompute the likelihood
-	assert(dad);
+	ASSERT(dad);
     if (dad_branch->partial_lh_computed & 1)
         return;
     dad_branch->partial_lh_computed |= 1;
@@ -49,15 +49,15 @@ void PhyloTree::computeMixratePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_bran
     size_t orig_ntn = aln->size();
 
     size_t ncat = site_rate->getNRate();
-    assert(ncat == model->getNMixtures());
-    assert(nstates == aln->num_states && nstates >= VCSIZE && VCSIZE == VectorClass().size());
-    assert(model->isReversible()); // only works with reversible model!
+    ASSERT(ncat == model->getNMixtures());
+    ASSERT(nstates == aln->num_states && nstates >= VCSIZE && VCSIZE == VectorClass().size());
+    ASSERT(model->isReversible()); // only works with reversible model!
     const size_t nstatesqr=nstates*nstates;
     size_t i, x, j;
     size_t block = nstates * ncat;
 
 	// internal node
-	assert(node->degree() == 3); // it works only for strictly bifurcating tree
+	ASSERT(node->degree() == 3); // it works only for strictly bifurcating tree
 	PhyloNeighbor *left = NULL, *right = NULL; // left & right are two neighbors leading to 2 subtrees
 	FOR_NEIGHBOR_IT(node, dad, it) {
 		if (!left) left = (PhyloNeighbor*)(*it); else right = (PhyloNeighbor*)(*it);
@@ -89,14 +89,14 @@ void PhyloTree::computeMixratePartialLikelihoodEigenSIMD(PhyloNeighbor *dad_bran
                 break;
             }
         }
-        assert(done && "partial_lh is not re-oriented");
+        ASSERT(done && "partial_lh is not re-oriented");
     }
 
 	double *evec = model->getEigenvectors();
 	double *inv_evec = model->getInverseEigenvectors();
 
 	VectorClass *vc_inv_evec = aligned_alloc<VectorClass>(ncat*nstates*nstates/VCSIZE);
-	assert(inv_evec && evec);
+	ASSERT(inv_evec && evec);
 	for (c = 0; c < ncat; c++)
 	for (i = 0; i < nstates; i++) {
 		for (x = 0; x < nstates/VCSIZE; x++)
@@ -477,7 +477,7 @@ void PhyloTree::computeMixrateLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch,
     size_t maxptn = ((nptn+VCSIZE-1)/VCSIZE)*VCSIZE;
     maxptn = max(maxptn, aln->size()+((model_factory->unobserved_ptns.size()+VCSIZE-1)/VCSIZE)*VCSIZE);
     double *eval = model->getEigenvalues();
-    assert(eval);
+    ASSERT(eval);
 
 	VectorClass *vc_val0 = (VectorClass*)aligned_alloc<double>(block);
 	VectorClass *vc_val1 = (VectorClass*)aligned_alloc<double>(block);
@@ -497,7 +497,7 @@ void PhyloTree::computeMixrateLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch,
 		}
 	}
 
-	assert(theta_all);
+	ASSERT(theta_all);
 	if (!theta_computed) {
 		theta_computed = true;
 		// precompute theta for fast branch length optimization
@@ -679,7 +679,7 @@ void PhyloTree::computeMixrateLikelihoodDervEigenSIMD(PhyloNeighbor *dad_branch,
 			ddf_const = horizontal_add(ddf_final)+ddf_ptn[0]+ddf_ptn[1]+ddf_ptn[2];
 			break;
 		default:
-			assert(0);
+			ASSERT(0);
 			break;
 		}
     	prob_const = 1.0 - prob_const;
@@ -725,7 +725,7 @@ double PhyloTree::computeMixrateLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_bra
     size_t maxptn = ((nptn+VCSIZE-1)/VCSIZE)*VCSIZE;
     maxptn = max(maxptn, aln->size()+((model_factory->unobserved_ptns.size()+VCSIZE-1)/VCSIZE)*VCSIZE);
     double *eval = model->getEigenvalues();
-    assert(eval);
+    ASSERT(eval);
 
     VectorClass *vc_val = aligned_alloc<VectorClass>(block/VCSIZE);
 
@@ -825,7 +825,7 @@ double PhyloTree::computeMixrateLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_bra
     }
 #endif
 		tree_lh += horizontal_add(lh_final);
-		assert(!isnan(tree_lh) && !isinf(tree_lh));
+		ASSERT(!isnan(tree_lh) && !isinf(tree_lh));
 
 		// ascertainment bias correction
 		if (orig_nptn < nptn) {
@@ -856,7 +856,7 @@ double PhyloTree::computeMixrateLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_bra
 			case 1: prob_const = horizontal_add(lh_final)+lh_ptn[0]; break;
 			case 2: prob_const = horizontal_add(lh_final)+lh_ptn[0]+lh_ptn[1]; break;
 			case 3: prob_const = horizontal_add(lh_final)+lh_ptn[0]+lh_ptn[1]+lh_ptn[2]; break;
-			default: assert(0); break;
+			default: ASSERT(0); break;
 			}
 		}
 //		aligned_free(lh_states_dad);
@@ -917,7 +917,7 @@ double PhyloTree::computeMixrateLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_bra
 #endif
 
 		tree_lh += horizontal_add(lh_final);
-		assert(!isnan(tree_lh) && !isinf(tree_lh));
+		ASSERT(!isnan(tree_lh) && !isinf(tree_lh));
 
 		if (orig_nptn < nptn) {
 			// ascertainment bias correction
@@ -955,7 +955,7 @@ double PhyloTree::computeMixrateLikelihoodBranchEigenSIMD(PhyloNeighbor *dad_bra
 			case 1: prob_const = horizontal_add(lh_final)+lh_ptn[0]; break;
 			case 2: prob_const = horizontal_add(lh_final)+lh_ptn[0]+lh_ptn[1]; break;
 			case 3: prob_const = horizontal_add(lh_final)+lh_ptn[0]+lh_ptn[1]+lh_ptn[2]; break;
-			default: assert(0); break;
+			default: ASSERT(0); break;
 			}
 		}
     }
@@ -976,7 +976,7 @@ template <class VectorClass, const int VCSIZE, const int nstates>
 double PhyloTree::computeMixrateLikelihoodFromBufferEigenSIMD() {
 
 
-	assert(theta_all && theta_computed);
+	ASSERT(theta_all && theta_computed);
 
 	double tree_lh = current_it->lh_scale_factor + current_it_back->lh_scale_factor;
 
@@ -988,7 +988,7 @@ double PhyloTree::computeMixrateLikelihoodFromBufferEigenSIMD() {
     size_t nptn = aln->size()+model_factory->unobserved_ptns.size();
 //    size_t maxptn = ((nptn+VCSIZE-1)/VCSIZE)*VCSIZE;
     double *eval = model->getEigenvalues();
-    assert(eval);
+    ASSERT(eval);
 
 	VectorClass *vc_val0 = (VectorClass*)aligned_alloc<double>(block);
 
@@ -1130,7 +1130,7 @@ double PhyloTree::computeMixrateLikelihoodFromBufferEigenSIMD() {
 			prob_const = horizontal_add(lh_final)+lh_ptn[0]+lh_ptn[1]+lh_ptn[2];
 			break;
 		default:
-			assert(0);
+			ASSERT(0);
 			break;
 		}
     	prob_const = log(1.0 - prob_const);

@@ -51,7 +51,7 @@ NGSAlignment::NGSAlignment(int nstate, string &seq1, string &seq2) {
     ncategory = 1;
     pair_freq = new double[nstate*nstate];
     memset(pair_freq, 0, sizeof(double)*nstate*nstate);
-    assert(seq1.length() == seq2.length());
+    ASSERT(seq1.length() == seq2.length());
     int len = seq1.length();
     int i;
     for (i = 0; i < len; i++) {
@@ -145,7 +145,7 @@ void NGSAlignment::computeSumPairFreq (double *sum_pair_freq) {
 
 void NGSAlignment::computeDivergenceMatrix (double *rates) {
     int i, j, k, cat, id;
-    assert(rates);
+    ASSERT(rates);
     double **pair_rates = (double**) new double[num_states];
     for (i = 0; i < num_states; i++) {
         pair_rates[i] = new double[num_states];
@@ -478,7 +478,7 @@ void NGSRead::init() {
 
 void NGSRead::computePairFreq() {
     int len = scaff.length();
-    assert(len == read.length());
+    ASSERT(len == read.length());
     memset(pair_freq, 0, sizeof(double)*num_states*num_states);
     for (int i = 0; i < len; i++)
         if (scaff[i] < num_states && read[i] < num_states)
@@ -742,7 +742,7 @@ void NGSReadSet::processReadWhileParsing(NGSRead &tempread) {
     }
     tempread.convertStateStr(tempread.scaff, SEQ_DNA);
     tempread.convertStateStr(tempread.read, SEQ_DNA);
-    assert(tempread.scaff.length() == tempread.read.length());
+    ASSERT(tempread.scaff.length() == tempread.read.length());
 
     int nstates = 4 + (!ngs_ignore_gaps);
 

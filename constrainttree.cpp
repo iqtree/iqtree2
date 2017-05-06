@@ -95,7 +95,7 @@ void ConstraintTree::readConstraint(MTree &src_tree) {
 
 bool ConstraintTree::isCompatible(StrVector &tax1, StrVector &tax2) {
 
-    assert(!empty());
+    ASSERT(!empty());
     
     if (tax1.size() <= 1 || tax2.size() <= 1)
         return true;
@@ -146,7 +146,7 @@ bool ConstraintTree::isCompatible(StrVector &tax1, StrVector &tax2) {
         return true;
     } else {
         // partial split
-        assert(tax_count1 + tax_count2 < leafNum);
+        ASSERT(tax_count1 + tax_count2 < leafNum);
         Split taxa_mask(sp1);
         taxa_mask += sp2;
         Split* subsp = sp1.extractSubSplit(taxa_mask);

@@ -823,7 +823,7 @@ void PhyloTree::computeQuartetLikelihoods(vector<QuartetInfo> &lmap_quartet_info
             break;
         }
         // sanity check
-        assert(qid == LMGroups.uniqueQuarts);
+        ASSERT(qid == LMGroups.uniqueQuarts);
     }
     
     // fprintf(stderr,"XXX - #quarts: %d; #groups: %d, A: %d, B:%d, C:%d, D:%d\n", LMGroups.uniqueQuarts, LMGroups.numGroups, sizeA, sizeB, sizeC, sizeD);

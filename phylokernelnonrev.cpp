@@ -19,13 +19,13 @@ void PhyloTree::computeNonrevPartialLikelihood(TraversalInfo &info, size_t ptn_l
     PhyloNode *dad = info.dad;
 
     // don't recompute the likelihood
-	assert(dad);
+	ASSERT(dad);
 //    if (dad_branch->partial_lh_computed & 1)
 //        return;
 //    dad_branch->partial_lh_computed |= 1;
     PhyloNode *node = (PhyloNode*)(dad_branch->node);
 
-    assert(dad_branch->direction != UNDEFINED_DIRECTION);
+    ASSERT(dad_branch->direction != UNDEFINED_DIRECTION);
 
     size_t nstates = aln->num_states;
 //    size_t nptn = aln->size()+model_factory->unobserved_ptns.size();
@@ -38,7 +38,7 @@ void PhyloTree::computeNonrevPartialLikelihood(TraversalInfo &info, size_t ptn_l
 		return;
 	}
     
-    assert(node->degree() >= 3);
+    ASSERT(node->degree() >= 3);
     
     size_t ptn, c;
     size_t orig_ntn = aln->size();
@@ -160,7 +160,7 @@ void PhyloTree::computeNonrevPartialLikelihood(TraversalInfo &info, size_t ptn_l
             for (i = 1; i < block; i++)
                 lh_max = max(lh_max, partial_lh_all[i]);
 
-            assert(lh_max > 0.0);
+            ASSERT(lh_max > 0.0);
             // check if one should scale partial likelihoods
             if (lh_max == 0.0) {
                 // for very shitty data
@@ -267,7 +267,7 @@ void PhyloTree::computeNonrevPartialLikelihood(TraversalInfo &info, size_t ptn_l
                 vleft += nstates;
                 partial_lh_right += nstates;
 			}
-            assert(lh_max > 0.0);
+            ASSERT(lh_max > 0.0);
             // check if one should scale partial likelihoods
             if (lh_max == 0.0) {
                 // for very shitty data
@@ -330,7 +330,7 @@ void PhyloTree::computeNonrevPartialLikelihood(TraversalInfo &info, size_t ptn_l
                 partial_lh_right += nstates;
             }
 
-            assert(lh_max > 0.0);
+            ASSERT(lh_max > 0.0);
             // check if one should scale partial likelihoods
             if (lh_max == 0.0) {
                 // for very shitty data
@@ -369,7 +369,7 @@ void PhyloTree::computeNonrevPartialLikelihood(TraversalInfo &info, size_t ptn_l
 //template <const int nstates>
 void PhyloTree::computeNonrevLikelihoodDerv(PhyloNeighbor *dad_branch, PhyloNode *dad, double *df, double *ddf) {
 
-    assert(rooted);
+    ASSERT(rooted);
 
     PhyloNode *node = (PhyloNode*) dad_branch->node;
     PhyloNeighbor *node_branch = (PhyloNeighbor*) node->findNeighbor(dad);
@@ -427,7 +427,7 @@ void PhyloTree::computeNonrevLikelihoodDerv(PhyloNeighbor *dad_branch, PhyloNode
 
     if (dad->isLeaf()) {
          // make sure that we do not estimate the virtual branch length from the root
-        assert(dad != root);
+        ASSERT(dad != root);
     	// special treatment for TIP-INTERNAL NODE case
     	double *partial_lh_node = new double[(aln->STATE_UNKNOWN+1)*block*3];
         double *partial_lh_derv1 = partial_lh_node + (aln->STATE_UNKNOWN+1)*block; 
@@ -493,7 +493,7 @@ void PhyloTree::computeNonrevLikelihoodDerv(PhyloNeighbor *dad_branch, PhyloNode
                     lh_derv2 += nstates;
                     partial_lh_dad += nstates;
                 }
-                assert(lh_ptn > 0.0);
+                ASSERT(lh_ptn > 0.0);
                 if (ptn < orig_nptn) {
                     double df_frac = df_ptn / lh_ptn;
                     double ddf_frac = ddf_ptn / lh_ptn;
@@ -556,7 +556,7 @@ void PhyloTree::computeNonrevLikelihoodDerv(PhyloNeighbor *dad_branch, PhyloNode
                     partial_lh_dad += nstates;
                 }
 
-                assert(lh_ptn > 0.0);
+                ASSERT(lh_ptn > 0.0);
                 if (ptn < orig_nptn) {
                     double df_frac = df_ptn / lh_ptn;
                     double ddf_frac = ddf_ptn / lh_ptn;
@@ -580,7 +580,7 @@ void PhyloTree::computeNonrevLikelihoodDerv(PhyloNeighbor *dad_branch, PhyloNode
 
 	*df = my_df;
 	*ddf = my_ddf;
-    assert(!std::isnan(*df) && !std::isinf(*df));
+    ASSERT(!std::isnan(*df) && !std::isinf(*df));
 
 	if (orig_nptn < nptn) {
     	// ascertainment bias correction
@@ -598,7 +598,7 @@ void PhyloTree::computeNonrevLikelihoodDerv(PhyloNeighbor *dad_branch, PhyloNode
 //template <const int nstates>
 double PhyloTree::computeNonrevLikelihoodBranch(PhyloNeighbor *dad_branch, PhyloNode *dad) {
 
-    assert(rooted);
+    ASSERT(rooted);
 
     PhyloNode *node = (PhyloNode*) dad_branch->node;
     PhyloNeighbor *node_branch = (PhyloNeighbor*) node->findNeighbor(dad);
@@ -710,7 +710,7 @@ double PhyloTree::computeNonrevLikelihoodBranch(PhyloNeighbor *dad_branch, Phylo
                     lh_ptn += lh_cat[c];
     //				lh_cat++;
                 }
-                assert(lh_ptn > 0.0);
+                ASSERT(lh_ptn > 0.0);
                 if (ptn < orig_nptn) {
                     lh_ptn = log(fabs(lh_ptn)) + dad_branch->scale_num[ptn] * LOG_SCALING_THRESHOLD;
                     _pattern_lh[ptn] = lh_ptn;
@@ -761,7 +761,7 @@ double PhyloTree::computeNonrevLikelihoodBranch(PhyloNeighbor *dad_branch, Phylo
                     lh_cat++;
                 }
 
-                assert(lh_ptn > 0.0);
+                ASSERT(lh_ptn > 0.0);
                 if (ptn < orig_nptn) {
                     lh_ptn = log(fabs(lh_ptn)) + (dad_branch->scale_num[ptn] + node_branch->scale_num[ptn])*LOG_SCALING_THRESHOLD;
                     _pattern_lh[ptn] = lh_ptn;
@@ -809,7 +809,7 @@ double PhyloTree::computeNonrevLikelihoodBranch(PhyloNeighbor *dad_branch, Phylo
             printTree(cout, WT_TAXON_ID + WT_BR_LEN + WT_NEWLINE);
             model->writeInfo(cout);
         }
-        assert(prob_const < 1.0 && prob_const >= 0.0);
+        ASSERT(prob_const < 1.0 && prob_const >= 0.0);
 
         // BQM 2015-10-11: fix this those functions using _pattern_lh_cat
 //        double inv_const = 1.0 / (1.0-prob_const);
@@ -821,10 +821,10 @@ double PhyloTree::computeNonrevLikelihoodBranch(PhyloNeighbor *dad_branch, Phylo
     	for (ptn = 0; ptn < orig_nptn; ptn++)
     		_pattern_lh[ptn] -= prob_const;
     	tree_lh -= aln->getNSite()*prob_const;
-		assert(!std::isnan(tree_lh) && !std::isinf(tree_lh));
+		ASSERT(!std::isnan(tree_lh) && !std::isinf(tree_lh));
     }
 
-	assert(!std::isnan(tree_lh) && !std::isinf(tree_lh));
+	ASSERT(!std::isnan(tree_lh) && !std::isinf(tree_lh));
 
     delete [] trans_mat;
     return tree_lh;

@@ -79,7 +79,7 @@ void PhyloTree::computePartialParsimonyFast(PhyloNeighbor *dad_branch, PhyloNode
                         }
                     } else {
                         state -= 3;
-                        assert(state < 15);
+                        ASSERT(state < 15);
                         for (int j = 0; j < freq; j++, site++) {
                             UINT *p = dad_branch->partial_pars+((site/UINT_BITS)*nstates);
                             UINT bit1 = (1 << (site%UINT_BITS));
@@ -111,7 +111,7 @@ void PhyloTree::computePartialParsimonyFast(PhyloNeighbor *dad_branch, PhyloNode
                                     p[i] |= bit1;
                         }
                     } else {
-                        assert(state < 23);
+                        ASSERT(state < 23);
                         state = (state-20)*2;
                         for (int j = 0; j < freq; j++, site++) {
                             UINT *p = dad_branch->partial_pars+((site/UINT_BITS)*nstates);
@@ -146,7 +146,7 @@ void PhyloTree::computePartialParsimonyFast(PhyloNeighbor *dad_branch, PhyloNode
                                     p[i] |= bit1;
                         }
                     } else {
-                        assert(0);
+                        ASSERT(0);
                     }
                 }
                 break;
@@ -155,13 +155,13 @@ void PhyloTree::computePartialParsimonyFast(PhyloNeighbor *dad_branch, PhyloNode
             start_pos = end_pos;
         } // FOR LOOP
 
-        assert(site == aln->num_parsimony_sites);
+        ASSERT(site == aln->num_parsimony_sites);
         // add dummy states
         if (site < max_sites)
             dad_branch->partial_pars[(site/UINT_BITS)*nstates] |= ~((1<<(site%UINT_BITS)) - 1);
     } else {
         // internal node
-        assert(node->degree() == 3); // it works only for strictly bifurcating tree
+        ASSERT(node->degree() == 3); // it works only for strictly bifurcating tree
         PhyloNeighbor *left = NULL, *right = NULL; // left & right are two neighbors leading to 2 subtrees
         FOR_NEIGHBOR_IT(node, dad, it) {
             PhyloNeighbor* pit = (PhyloNeighbor*) (*it);
@@ -235,7 +235,7 @@ void PhyloTree::computePartialParsimonyFast(PhyloNeighbor *dad_branch, PhyloNode
 int PhyloTree::computeParsimonyBranchFast(PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst) {
     PhyloNode *node = (PhyloNode*) dad_branch->node;
     PhyloNeighbor *node_branch = (PhyloNeighbor*) node->findNeighbor(dad);
-    assert(node_branch);
+    ASSERT(node_branch);
     if (!central_partial_pars)
         initializeAllPartialPars();
     if ((dad_branch->partial_lh_computed & 2) == 0)
@@ -356,7 +356,7 @@ int PhyloTree::computeParsimonyTree(const char *out_prefix, Alignment *alignment
         
         // convert to birfucating tree if needed
         extractBifurcatingSubTree();
-        assert(isBifurcating());
+        ASSERT(isBifurcating());
         
         // assign proper taxon IDs
         NodeVector nodes;
@@ -367,7 +367,7 @@ int PhyloTree::computeParsimonyTree(const char *out_prefix, Alignment *alignment
         pushed.resize(size, 0);
         for (it = nodes.begin(); it != nodes.end(); it++) {
             (*it)->id = aln->getSeqID((*it)->name);
-            assert((*it)->id >= 0);
+            ASSERT((*it)->id >= 0);
             taxon_order.push_back((*it)->id);
             pushed[(*it)->id] = 1;
         }
@@ -379,7 +379,7 @@ int PhyloTree::computeParsimonyTree(const char *out_prefix, Alignment *alignment
                 taxon_order.push_back(i);
                 pushed[i] = 1;
             }
-        assert(taxon_order.size() == constraintTree.leafNum);
+        ASSERT(taxon_order.size() == constraintTree.leafNum);
         for (int i = 0; i < size; i++)
             if (!pushed[i]) {
                 taxon_order.push_back(i);
@@ -464,7 +464,7 @@ int PhyloTree::computeParsimonyTree(const char *out_prefix, Alignment *alignment
 
     aligned_free(tmp_partial_pars);
     
-    assert(index == 4*leafNum-6);
+    ASSERT(index == 4*leafNum-6);
 
     nodeNum = 2 * leafNum - 2;
     initializeTree();

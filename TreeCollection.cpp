@@ -8,7 +8,7 @@
 using namespace std;
 
 TreeCollection::TreeCollection(vector<string>& trees, vector<double>& scores, vector<int> &sourceProcID) {
-    assert(trees.size() == scores.size());
+    ASSERT(trees.size() == scores.size());
     this->treeStrings = trees;
     this->scores = scores;
     this->sourceProcID = sourceProcID;
@@ -17,7 +17,7 @@ TreeCollection::TreeCollection(vector<string>& trees, vector<double>& scores, ve
 }
 
 pair<string, double> TreeCollection::getTree(int i) {
-    assert(treeStrings.size() == scores.size());
+    ASSERT(treeStrings.size() == scores.size());
     return std::make_pair(treeStrings[i], scores[i]);
 }
 
@@ -51,6 +51,6 @@ void TreeCollection::addTrees(CandidateSet &candidateTrees) {
 
 size_t TreeCollection::getNumTrees() {
     size_t numTrees = treeStrings.size();
-    assert(numTrees == scores.size());
+    ASSERT(numTrees == scores.size());
     return numTrees;
 }

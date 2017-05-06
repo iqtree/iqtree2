@@ -27,7 +27,7 @@ ModelBIN::ModelBIN(const char *model_name, string model_params, StateFreqType fr
 
 void ModelBIN::init(const char *model_name, string model_params, StateFreqType freq, string freq_params)
 {
-	assert(num_states == 2); // make sure that you create model for Binary data
+	ASSERT(num_states == 2); // make sure that you create model for Binary data
 	StateFreqType def_freq = FREQ_UNKNOWN;
 	name = model_name;
 	full_name = model_name;

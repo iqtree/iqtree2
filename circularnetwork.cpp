@@ -145,7 +145,7 @@ void rotateTaxaOrder(vector<int> &origin_order, vector<int> &new_order, int root
 	int i, id = ntaxa;
 	for (i = 0; i < ntaxa; i++) 
 		if (origin_order[i] == root) { id = i; break; }
-	assert(id < ntaxa);
+	ASSERT(id < ntaxa);
 	new_order.resize(ntaxa);
 	for (i = 0; i < ntaxa; i++)
 		new_order[i] = origin_order[(i+id) % ntaxa];

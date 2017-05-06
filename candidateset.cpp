@@ -75,7 +75,7 @@ void CandidateSet::restoreCheckpoint() {
 
 
 string CandidateSet::getRandTopTree(int numTopTrees) {
-    assert(!empty());
+    ASSERT(!empty());
     if (empty())
         return "";
     int id = random_int(min(numTopTrees, (int) size()));
@@ -84,7 +84,7 @@ string CandidateSet::getRandTopTree(int numTopTrees) {
             return it->second.tree;
         id--;
     }
-    assert(0);
+    ASSERT(0);
     return "";
 }
 
@@ -196,7 +196,7 @@ void CandidateSet::removeCandidateSplits(string treeString) {
             (*splitIt)->report(cout);
             exit(1);
         } else {
-            assert(sp->getWeight() >= 1);
+            ASSERT(sp->getWeight() >= 1);
             if (sp->getWeight() > 1) {
                 sp->setWeight(value - 1);
             } else {
@@ -209,7 +209,7 @@ void CandidateSet::removeCandidateSplits(string treeString) {
 
 string CandidateSet::getNextCandTree() {
     string tree;
-    assert(!empty());
+    ASSERT(!empty());
     if (parentTrees.empty()) {
         initParentTrees();
     }
@@ -251,7 +251,7 @@ int CandidateSet::update(string newTree, double newScore) {
             insert(CandidateSet::value_type(newScore, candidate));
             topologies[candidate.topology] = newScore;
         }
-        assert(topologies.size() == size());
+        ASSERT(topologies.size() == size());
         return -1;
     }
 
@@ -261,7 +261,7 @@ int CandidateSet::update(string newTree, double newScore) {
     if (size() > maxSize) {
         removeWorstTree();
     }
-    assert(topologies.size() == size());
+    ASSERT(topologies.size() == size());
 
     treePos = distance(candidateTreeIt, end());
 
@@ -324,7 +324,7 @@ string CandidateSet::getTopology(string tree) {
 }
 
 double CandidateSet::getTopologyScore(string topology) {
-    assert(topologies.find(topology) != topologies.end());
+    ASSERT(topologies.find(topology) != topologies.end());
     return topologies[topology];
 }
 
@@ -397,7 +397,7 @@ void CandidateSet::removeCandidateTree(string topology) {
             break;
         }
     }
-    assert(removed);
+    ASSERT(removed);
 }
 
 
@@ -471,7 +471,7 @@ void CandidateSet::reportStableSplits() {
     for (SplitIntMap::iterator it = candSplits.begin(); it != candSplits.end(); it++) {
         if (it->second == candSplits.getNumTree() && it->first->countTaxa() > 1) {
             cout << it->first->getWeight() << " / " << candSplits.getNumTree() << endl;
-            assert(it->first->getWeight() == candSplits.getNumTree());
+            ASSERT(it->first->getWeight() == candSplits.getNumTree());
             it->first->report(cout);
         }
     }

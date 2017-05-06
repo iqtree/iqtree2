@@ -73,7 +73,7 @@ pllNNIMove *getNNIList(pllInstance* tr) {
 	static pllNNIMove* nniList;
 	if (nniList == NULL) {
 		nniList = (pllNNIMove*) malloc(2 * (tr->mxtips - 3) * sizeof(pllNNIMove));
-		assert(nniList != NULL);
+		ASSERT(nniList != NULL);
 	}
 	return nniList;
 }
@@ -82,7 +82,7 @@ pllNNIMove *getNonConflictNNIList(pllInstance* tr) {
 	static pllNNIMove* nonConfNNIList;
 	if (nonConfNNIList == NULL) {
 		nonConfNNIList = (pllNNIMove*) malloc((tr->mxtips - 3) * sizeof(pllNNIMove));
-		assert(nonConfNNIList != NULL);
+		ASSERT(nonConfNNIList != NULL);
 	}
 	return nonConfNNIList;
 }
@@ -102,7 +102,7 @@ double pllDoRandomNNIs(pllInstance *tr, partitionList *pr, int numNNI) {
 		selectedBrans.clear();
 		brans.clear();
 		pllGetAllInBran(tr, brans);
-		assert(brans.size() == numInBrans);
+		ASSERT(brans.size() == numInBrans);
 		while(cnt2 < numNNIinStep && cnt2 < numNNI) {
 			int branIndex = random_int(numInBrans);
 			if (selectedNodes.find(brans[branIndex]->number) == selectedNodes.end() &&
@@ -368,14 +368,14 @@ double pllDoNNISearch(pllInstance* tr, partitionList *pr, SearchInfo &searchinfo
 				if (numNNI == 1) {
 					printf("ERROR: new logl=%10.4f after applying only the best NNI < best NNI logl=%10.4f\n",
 							tr->likelihood, selectedNNIs[0].likelihood);
-					assert(0);
+					ASSERT(0);
 				} else {
 					cout << "Best logl: " << selectedNNIs.back().likelihood << " / " << "NNI step " << searchinfo.curNumNNISteps<< " / Applying " << numNNI << " NNIs give logl: " << tr->likelihood << " (worse than best)";
 					cout << " / Roll back tree ... " << endl;
 			        //restoreTL(rl, tr, 0, pr->perGeneBranchLengths ? pr->numberOfPartitions : 1);
 				    if (!restoreTree(curTree, tr, pr)) {
 				        printf("ERROR: failed to roll back tree \n");
-				        assert(0);
+				        ASSERT(0);
 				    }
 				    // If tree log-likelihood decreases only apply the best NNI
 					numNNI = 1;
@@ -487,19 +487,19 @@ void pllOptimizeOneBranch(pllInstance *tr, partitionList *pr, nodeptr p) {
           if(fabs(tr->likelihood - startLH) > 0.01)
       {
         printf("%f %f\n", startLH, tr->likelihood);
-        assert(0);
+        ASSERT(0);
       }
         }
     #endif
 }
 
 double doOneNNI(pllInstance *tr, partitionList *pr, nodeptr p, int swap, NNI_Type nni_type, SearchInfo *searchinfo) {
-	assert(swap == 0 || swap == 1);
+	ASSERT(swap == 0 || swap == 1);
 	nodeptr q;
 	nodeptr tmp;
 	q = p->back;
-	assert(!isTip(q->number, tr->mxtips));
-	assert(!isTip(p->number, tr->mxtips));
+	ASSERT(!isTip(q->number, tr->mxtips));
+	ASSERT(!isTip(p->number, tr->mxtips));
 	int numBranches = pr->perGeneBranchLengths ? pr->numberOfPartitions : 1;
 
 	if (swap == 1) {
@@ -675,8 +675,8 @@ void countDistinctTrees(pllInstance* pllInst, partitionList *pllPartitions) {
 
 int evalNNIForBran(pllInstance* tr, partitionList *pr, nodeptr p, SearchInfo &searchinfo) {
 	nodeptr q = p->back;
-	assert(!isTip(p->number, tr->mxtips));
-	assert(!isTip(q->number, tr->mxtips));
+	ASSERT(!isTip(p->number, tr->mxtips));
+	ASSERT(!isTip(q->number, tr->mxtips));
 	int numBranches = pr->perGeneBranchLengths ? pr->numberOfPartitions : 1;
 	int numPosNNI = 0;
 	int i;
@@ -1088,7 +1088,7 @@ char *pllTree2StringREC(char *treestr, pllInstance *tr, partitionList *pr, nodep
 			if(( !isTip(p->number, tr->mxtips)) &&
 					( !isTip(p->back->number, tr->mxtips)))
 			{
-				assert(p->bInf != (branchInfo *)NULL);
+				ASSERT(p->bInf != (branchInfo *)NULL);
 				if(rellTree)
 					sprintf(treestr, "%d:%8.20f", p->bInf->support, p->z[0]);
 				if(branchLabelSupport)

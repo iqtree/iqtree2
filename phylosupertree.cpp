@@ -639,7 +639,7 @@ void PhyloSuperTree::readTreeString(const string &tree_string) {
 //		((PhyloSuperTree*) this)->mapTrees();
 //	}
 	if (params->pll) {
-		assert(0);
+		ASSERT(0);
 		pllReadNewick(getTreeString());
 	}
 	resetCurScore();
@@ -651,7 +651,7 @@ void PhyloSuperTree::readTreeString(const string &tree_string) {
  * save branch lengths into a vector
  */
 void PhyloSuperTree::saveBranchLengths(DoubleVector &lenvec, int startid, PhyloNode *node, PhyloNode *dad) {
-    assert(getMixlen() == 1); // supertree and treemixlen not allowed together
+    ASSERT(getMixlen() == 1); // supertree and treemixlen not allowed together
 	int totalBranchNum = branchNum * getMixlen();
 	iterator it;
 	for (it = begin(); it != end(); it++) {
@@ -728,7 +728,7 @@ void PhyloSuperTree::linkBranch(int part, SuperNeighbor *nei, SuperNeighbor *dad
 		if (((SuperNeighbor*)*it)->link_neighbors[part]) {
 			part_vec.push_back(((SuperNeighbor*)*it)->link_neighbors[part]);
 			child_part_vec.push_back(((SuperNeighbor*)(*it)->node->findNeighbor(node))->link_neighbors[part]);
-			assert(child_part_vec.back()->node == child_part_vec.front()->node || child_part_vec.back()->id == child_part_vec.front()->id);
+			ASSERT(child_part_vec.back()->node == child_part_vec.front()->node || child_part_vec.back()->id == child_part_vec.front()->id);
 		}
 	}
 
@@ -741,7 +741,7 @@ void PhyloSuperTree::linkBranch(int part, SuperNeighbor *nei, SuperNeighbor *dad
 	}
 	if (part_vec[0] == child_part_vec[1]) {
 		// ping-pong, out of sub-tree
-		assert(part_vec[1] == child_part_vec[0]);
+		ASSERT(part_vec[1] == child_part_vec[0]);
 		return;
 	}
 	PhyloNode *node_part = (PhyloNode*) child_part_vec[0]->node;
@@ -754,7 +754,7 @@ void PhyloSuperTree::linkBranch(int part, SuperNeighbor *nei, SuperNeighbor *dad
 			}
 		}
 		if (!appear) {
-			assert(!dad_part);
+			ASSERT(!dad_part);
 			dad_part = (PhyloNode*)(*it)->node;
 		}
 	}
@@ -768,7 +768,7 @@ void PhyloSuperTree::linkTree(int part, NodeVector &part_taxa, SuperNode *node, 
 			node = (SuperNode*) root;
 		else
 			node = (SuperNode*)root->neighbors[0]->node;
-		assert(node);
+		ASSERT(node);
 		if (node->isLeaf()) // two-taxa tree
 			dad = (SuperNode*)node->neighbors[0]->node;
 	}
@@ -783,11 +783,11 @@ void PhyloSuperTree::linkTree(int part, NodeVector &part_taxa, SuperNode *node, 
 		dad_nei->link_neighbors[part] = NULL;
 	}
 	if (node->isLeaf()) {
-		assert(dad);
+		ASSERT(dad);
 		PhyloNode *node_part = (PhyloNode*)part_taxa[node->id];
 		if (node_part) {
 			PhyloNode *dad_part = (PhyloNode*)node_part->neighbors[0]->node;
-			assert(node_part->isLeaf());
+			ASSERT(node_part->isLeaf());
 			nei->link_neighbors[part] = (PhyloNeighbor*) node_part->neighbors[0];
 			dad_nei->link_neighbors[part] = (PhyloNeighbor*)dad_part->findNeighbor(node_part);
 		}
@@ -836,7 +836,7 @@ void PhyloSuperTree::printMapInfo() {
 
 
 void PhyloSuperTree::mapTrees() {
-	assert(root);
+	ASSERT(root);
 	int part = 0, i;
 	if (verbose_mode >= VB_DEBUG)
 		drawTree(cout,  WT_BR_SCALE | WT_INT_NODE | WT_TAXON_ID | WT_NEWLINE | WT_BR_ID);
@@ -1027,7 +1027,7 @@ void PhyloSuperTree::computePatternLikelihood(double *pattern_lh, double *cur_lo
             cout << *cur_logl << " " << sum_logl << endl;
 //            outError("Wrong PhyloSuperTree::", __func__);
 		}
-        assert(fabs(sum_logl - *cur_logl) < 0.001);
+        ASSERT(fabs(sum_logl - *cur_logl) < 0.001);
 	}
 }
 
@@ -1124,7 +1124,7 @@ NNIMove PhyloSuperTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NN
     //myMove.newloglh = 0;
 	SuperNeighbor *nei1 = ((SuperNeighbor*)node1->findNeighbor(node2));
 	SuperNeighbor *nei2 = ((SuperNeighbor*)node2->findNeighbor(node1));
-	assert(nei1 && nei2);
+	ASSERT(nei1 && nei2);
 	SuperNeighbor *node1_nei = NULL;
 	SuperNeighbor *node2_nei = NULL;
 	SuperNeighbor *node2_nei_other = NULL;
@@ -1154,12 +1154,12 @@ NNIMove PhyloSuperTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NN
         nni.node2Nei_it = node2_it;
         nni_ok[nniid++] = constraintTree.isCompatible(nni);
     }
-    assert(nniid == 2);
+    ASSERT(nniid == 2);
     myMove.node1 = myMove.node2 = NULL;
     myMove.newloglh = -DBL_MAX;
     // return if both NNIs do not satisfy constraint
     if (!nni_ok[0] && !nni_ok[1]) {
-        assert(!nniMoves);
+        ASSERT(!nniMoves);
         return myMove;
     }
 

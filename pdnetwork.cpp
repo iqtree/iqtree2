@@ -690,7 +690,7 @@ void PDNetwork::calcPDGain(vector<SplitSet> &pd_set, mmatrix(double) &delta) {
 
 
 	for (it = pd_set.begin(), cnt = 0; it != pd_set.end(); it++, cnt++) {
-		assert(!(*it).empty());
+		ASSERT(!(*it).empty());
 		// take only the first split for calculation
 		Split *sp = (*it).front();
 		for (int tax = 0; tax < ntaxa; tax++)
@@ -1021,7 +1021,7 @@ void PDNetwork::computeFeasibleBudget(Params &params, IntVector &ok_budget) {
 	IntVector::iterator it2;
 	for (i = 0, it2 = cost_present.begin(); it2 != cost_present.end(); it2++, i++)
 		if (*it2) unique_cost.push_back(i);
-	assert(unique_cost.size() == num_cost);
+	ASSERT(unique_cost.size() == num_cost);
 
 	ok_budget.resize(params.budget+1, 0);
 	// initialize all entry with corresponding cost
@@ -1151,7 +1151,7 @@ void PDNetwork::findPDArea_LP(Params &params, vector<SplitSet> &areas_set) {
 	if (area_taxa.empty()) {
 		computePD(params, area_taxa, pd_more);
 		if (params.root || params.is_rooted) {
-			assert(!initialset.empty());
+			ASSERT(!initialset.empty());
 			int root_id = initialset[0];
 			for (SplitSet::iterator it = area_taxa.begin(); it != area_taxa.end(); it++)
 				(*it)->addTaxon(root_id);

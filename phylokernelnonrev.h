@@ -38,7 +38,7 @@ void PhyloTree::computeNonrevPartialLikelihoodGenericSIMD(TraversalInfo &info, s
     PhyloNeighbor *dad_branch = info.dad_branch;
     PhyloNode *dad = info.dad;
 
-	assert(dad);
+	ASSERT(dad);
     PhyloNode *node = (PhyloNode*)(dad_branch->node);
 
 //    assert(dad_branch->direction != UNDEFINED_DIRECTION);
@@ -51,7 +51,7 @@ void PhyloTree::computeNonrevPartialLikelihoodGenericSIMD(TraversalInfo &info, s
 		return;
 	}
     
-    assert(node->degree() >= 3);
+    ASSERT(node->degree() >= 3);
     
     size_t ptn, c;
     size_t orig_nptn = aln->size();
@@ -513,7 +513,7 @@ void PhyloTree::computeNonrevLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch
 
     if (dad->isLeaf()) {
          // make sure that we do not estimate the virtual branch length from the root
-        assert(!isRootLeaf(dad));
+        ASSERT(!isRootLeaf(dad));
     	// special treatment for TIP-INTERNAL NODE case
 //    	double *partial_lh_node = new double[(aln->STATE_UNKNOWN+1)*block*3];
         double *partial_lh_node = buffer_partial_lh_ptr;
@@ -738,7 +738,7 @@ void PhyloTree::computeNonrevLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch
 
 	*df = horizontal_add(all_df);
 	*ddf = horizontal_add(all_ddf);
-    assert(!std::isnan(*df) && !std::isinf(*df) && "Numerical underflow for non-rev lh-derivative");
+    ASSERT(!std::isnan(*df) && !std::isinf(*df) && "Numerical underflow for non-rev lh-derivative");
 
 	if (isASC) {
         double prob_const = 0.0, df_const = 0.0, ddf_const = 0.0;
@@ -1007,7 +1007,7 @@ double PhyloTree::computeNonrevLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_br
                 }
                 vc_min_scale *= LOG_SCALING_THRESHOLD;
 //                lh_ptn = abs(lh_ptn);
-                assert(horizontal_and(lh_ptn > 0));
+                ASSERT(horizontal_and(lh_ptn > 0));
                 if (ptn < orig_nptn) {
                     lh_ptn = log(lh_ptn) + vc_min_scale;
                     lh_ptn.store_a(&_pattern_lh[ptn]);
@@ -1045,7 +1045,7 @@ double PhyloTree::computeNonrevLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_br
     if (std::isnan(tree_lh) || std::isinf(tree_lh)) {
         model->writeInfo(cout);
         site_rate->writeInfo(cout);
-        assert(0 && "Numerical underflow for non-rev lh-branch");
+        ASSERT(0 && "Numerical underflow for non-rev lh-branch");
     }
 
     if (isASC) {
@@ -1055,13 +1055,13 @@ double PhyloTree::computeNonrevLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_br
             printTree(cout, WT_TAXON_ID + WT_BR_LEN + WT_NEWLINE);
             model->writeInfo(cout);
         }
-        assert(prob_const < 1.0 && prob_const >= 0.0);
+        ASSERT(prob_const < 1.0 && prob_const >= 0.0);
 
     	prob_const = log(1.0 - prob_const);
     	for (ptn = 0; ptn < orig_nptn; ptn+=VectorClass::size())
             (VectorClass().load_a(&_pattern_lh[ptn])-prob_const).store_a(&_pattern_lh[ptn]);
     	tree_lh -= aln->getNSite()*prob_const;
-		assert(!std::isnan(tree_lh) && !std::isinf(tree_lh));
+		ASSERT(!std::isnan(tree_lh) && !std::isinf(tree_lh));
     }
 
     return tree_lh;

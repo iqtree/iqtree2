@@ -41,22 +41,22 @@ Split *SplitIntMap::findSplit(Split *sp, int &value) {
 
 int SplitIntMap::getValue(Split *sp) {
     int value;
-    assert(findSplit(sp, value));
+    ASSERT(findSplit(sp, value));
     return value;
 }
 
 void SplitIntMap::setValue(Split *sp, int value) {
-    assert(findSplit(sp));
+    ASSERT(findSplit(sp));
     (*this)[sp] = value;
 }
 
 void SplitIntMap::eraseSplit(Split *sp) {
-    assert(findSplit(sp));
+    ASSERT(findSplit(sp));
     erase(sp);
 }
 
 void SplitIntMap::insertSplit(Split *sp, int value) {
-    assert(!findSplit(sp));
+    ASSERT(!findSplit(sp));
     if (verbose_mode >= VB_MAX) sp->report(cout);
     (*this)[sp] = value;
 }

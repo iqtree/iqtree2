@@ -258,7 +258,7 @@ void ModelMarkov::init_state_freq(StateFreqType type) {
     //if (type == FREQ_UNKNOWN) return;
     int i;
     freq_type = type;
-    assert(freq_type != FREQ_UNKNOWN);
+    ASSERT(freq_type != FREQ_UNKNOWN);
     switch (freq_type) {
     case FREQ_EQUAL:
         if (phylo_tree->aln->seq_type == SEQ_CODON) {
@@ -371,7 +371,7 @@ void ModelMarkov::computeTransMatrix(double time, double *trans_matrix, int mixt
             memcpy(trans_matrix, rate_matrix, statesqr*sizeof(double));
             matexp(trans_matrix, time, num_states, TimeSquare, temp_space);
         } else {
-            assert(0 && "this line should not be reached");
+            ASSERT(0 && "this line should not be reached");
         }
         return;
         // 2016-04-05: 2nd version
@@ -526,8 +526,8 @@ void ModelMarkov::setRateMatrix(double* rate_mat)
 }
 
 void ModelMarkov::getStateFrequency(double *freq, int mixture) {
-	assert(state_freq);
-	assert(freq_type != FREQ_UNKNOWN);
+	ASSERT(state_freq);
+	ASSERT(freq_type != FREQ_UNKNOWN);
 	memcpy(freq, state_freq, sizeof(double) * num_states);
     // 2015-09-07: relax the sum of state_freq to be 1, this will be done at the end of optimization
     double sum = 0.0;
@@ -539,7 +539,7 @@ void ModelMarkov::getStateFrequency(double *freq, int mixture) {
 
 void ModelMarkov::setStateFrequency(double* freq)
 {
-	assert(state_freq);
+	ASSERT(state_freq);
 	memcpy(state_freq, freq, sizeof(double) * num_states);
 }
 
@@ -576,7 +576,7 @@ void ModelMarkov::getQMatrix(double *q_mat) {
 }
 
 int ModelMarkov::getNDim() { 
-	assert(freq_type != FREQ_UNKNOWN);
+	ASSERT(freq_type != FREQ_UNKNOWN);
 	if (fixed_parameters)
 		return 0;
     if (!is_reversible)
@@ -618,7 +618,7 @@ void ModelMarkov::scaleStateFreq(bool sum_one) {
 	} else {
 		// make the last frequency equal to 0.1
 		if (state_freq[num_states-1] == 0.1) return;
-		assert(state_freq[num_states-1] > 1.1e-6);
+		ASSERT(state_freq[num_states-1] > 1.1e-6);
 		for (i = 0; i < num_states; i++) 
 			state_freq[i] /= state_freq[num_states-1]*10.0;
 	}
@@ -704,7 +704,7 @@ double ModelMarkov::targetFunk(double x[]) {
 
 	if (changed) {
 		decomposeRateMatrix();
-		assert(phylo_tree);
+		ASSERT(phylo_tree);
 		phylo_tree->clearAllPartialLH();
 	}
 
@@ -731,7 +731,7 @@ bool ModelMarkov::isUnstableParameters() {
 }
 
 void ModelMarkov::setBounds(double *lower_bound, double *upper_bound, bool *bound_check) {
-    assert(is_reversible && "setBounds should only be called on subclass of ModelMarkov");
+    ASSERT(is_reversible && "setBounds should only be called on subclass of ModelMarkov");
 
     int i, ndim = getNDim();
 
@@ -1105,7 +1105,7 @@ void ModelMarkov::setInverseEigenvectors(double *inv_eigenvectors)
 
 void ModelMarkov::setRates() {
 	// I don't know the proper C++ way to handle this: got error if I didn't define something here.
-	assert(0 && "setRates should only be called on subclass of ModelMarkov");
+	ASSERT(0 && "setRates should only be called on subclass of ModelMarkov");
 }
 
 /* static */ ModelMarkov* ModelMarkov::getModelByName(string model_name, PhyloTree *tree, string model_params, StateFreqType freq_type, string freq_params) {
@@ -1138,7 +1138,7 @@ void ModelMarkov::computeTransMatrixEigen(double time, double *trans_matrix) {
         if (eigenvalues_imag[i] == 0.0) {
             exptime[i*num_states+i] = exp(evol_time * eigenvalues[i]);
         } else {
-            assert(i < num_states-1 && eigenvalues_imag[i+1] != 0.0 && eigenvalues_imag[i] > 0.0);
+            ASSERT(i < num_states-1 && eigenvalues_imag[i+1] != 0.0 && eigenvalues_imag[i] > 0.0);
             complex<double> exp_eval(eigenvalues[i] * evol_time, eigenvalues_imag[i] * evol_time);
             exp_eval = exp(exp_eval);
             exptime[i*num_states+i] = exp_eval.real();
@@ -1168,12 +1168,12 @@ void ModelMarkov::computeTransMatrixEigen(double time, double *trans_matrix) {
             for (k = 0; k < num_states; k++)
                 val += exptime[i*num_states+k] * inv_eigenvectors[k*num_states+j];
             // make sure that trans_matrix are non-negative
-            assert(val >= -0.001);
+            ASSERT(val >= -0.001);
             val = fabs(val);
             trans_matrix[i*num_states+j] = val;
             row_sum += val;
         }
-        assert(fabs(row_sum-1.0) < 1e-4);
+        ASSERT(fabs(row_sum-1.0) < 1e-4);
     }
 
     delete [] exptime;

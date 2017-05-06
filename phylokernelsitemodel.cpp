@@ -14,7 +14,7 @@
 void PhyloTree::computeSitemodelPartialLikelihoodEigen(PhyloNeighbor *dad_branch, PhyloNode *dad) {
 
     // don't recompute the likelihood
-	assert(dad);
+	ASSERT(dad);
     if (dad_branch->partial_lh_computed & 1)
         return;
     dad_branch->partial_lh_computed |= 1;
@@ -28,7 +28,7 @@ void PhyloTree::computeSitemodelPartialLikelihoodEigen(PhyloNeighbor *dad_branch
     size_t i, x;
     size_t block = nstates * ncat;
     ModelSet *models = (ModelSet*) model;
-    assert(models->size() == nptn);
+    ASSERT(models->size() == nptn);
 
 
 	if (node->isLeaf()) {
@@ -69,7 +69,7 @@ void PhyloTree::computeSitemodelPartialLikelihoodEigen(PhyloNeighbor *dad_branch
                 break;
             }
         }
-        assert(done && "partial_lh is not re-oriented");
+        ASSERT(done && "partial_lh is not re-oriented");
     }
 
 
@@ -466,7 +466,7 @@ void PhyloTree::computeSitemodelLikelihoodDervEigen(PhyloNeighbor *dad_branch, P
     size_t c, i;
     size_t nptn = aln->size();
 
-	assert(theta_all);
+	ASSERT(theta_all);
 	if (!theta_computed) {
 		// precompute theta for fast branch length optimization
 
@@ -680,14 +680,14 @@ double PhyloTree::computeSitemodelLikelihoodBranchEigen(PhyloNeighbor *dad_branc
         }
     }
 
-	assert(!isnan(tree_lh) && !isinf(tree_lh));
+	ASSERT(!isnan(tree_lh) && !isinf(tree_lh));
 
     return tree_lh;
 }
 
 
 double PhyloTree::computeSitemodelLikelihoodFromBufferEigen() {
-	assert(theta_all && theta_computed);
+	ASSERT(theta_all && theta_computed);
 
     size_t nstates = aln->num_states;
     size_t ncat = site_rate->getNRate();

@@ -52,7 +52,7 @@ ModelsBlock *readModelsDefinition(Params &params) {
 	{
 		// loading internal model definitions
 		stringstream in(builtin_mixmodels_definition);
-        assert(in && "stringstream is OK");
+        ASSERT(in && "stringstream is OK");
 		NxsReader nexus;
 		nexus.Add(models_block);
 	    MyToken token(in);
@@ -62,7 +62,7 @@ ModelsBlock *readModelsDefinition(Params &params) {
 //	    	if ((*it).flag & NM_FREQ) num_freq++; else num_model++;
 //	    cout << num_model << " models and " << num_freq << " frequency vectors loaded" << endl;
 	} catch (...) {
-        assert(0 && "predefined mixture models initialized");
+        ASSERT(0 && "predefined mixture models initialized");
     }
 
 	if (params.model_def_file) {
@@ -1035,7 +1035,7 @@ double ModelFactory::optimizeParametersGammaInvar(int fixed_len, bool write_info
         cout << "Optimal pinv,alpha: " << bestPInvar << ", " << bestAlpha << " / ";
         cout << "LogL: " << tree->getCurScore() << endl << endl;
     }
-    assert(fabs(tree->getCurScore() - bestLogl) < 1.0);
+    ASSERT(fabs(tree->getCurScore() - bestLogl) < 1.0);
 
 //	delete [] rates;
 //	delete [] state_freqs;
@@ -1088,15 +1088,15 @@ vector<double> ModelFactory::optimizeGammaInvWithInitValue(int fixed_len, double
 
 double ModelFactory::optimizeParameters(int fixed_len, bool write_info,
                                         double logl_epsilon, double gradient_epsilon) {
-	assert(model);
-	assert(site_rate);
+	ASSERT(model);
+	ASSERT(site_rate);
 
 //    double defaultEpsilon = logl_epsilon;
 
 	double begin_time = getRealTime();
 	double cur_lh;
 	PhyloTree *tree = site_rate->getTree();
-	assert(tree);
+	ASSERT(tree);
 
 	stopStoringTransMatrix();
     // modified by Thomas Wong on Sept 11, 15

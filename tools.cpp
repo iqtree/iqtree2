@@ -2922,7 +2922,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (cnt >= argc)
 					throw "Use -nbest <number_of_candidate_trees>";
 				params.popSize = convert_int(argv[cnt]);
-				assert(params.popSize < params.numInitTrees);
+				ASSERT(params.popSize < params.numInitTrees);
 				continue;
 			}
 			if (strcmp(argv[cnt], "-beststart") == 0) {
@@ -4101,7 +4101,7 @@ int random_int(int n, int *rstream) {
 
 /* returns a random integer in the range [a; b] */
 int random_int(int a, int b) {
-	assert(b > a);
+	ASSERT(b > a);
 	//return a + (RAND_MAX * rand() + rand()) % (b + 1 - a);
 	return a + random_int(b - a);
 }

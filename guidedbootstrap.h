@@ -60,7 +60,7 @@ namespace std {
 			@param s2 second IntVector
 		*/
 		bool operator()(const IntVector *s1, const IntVector *s2) const {
-			assert(s1->size() == s2->size());
+			ASSERT(s1->size() == s2->size());
 			for (int i = 0; i < s1->size(); i++)
 				if ((*s1)[i] < (*s2)[i]) 
 					return true;

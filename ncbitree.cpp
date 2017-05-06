@@ -46,7 +46,7 @@ void NCBITree::readNCBINames(const char* infile, const char *name_type) {
 }
 
 void NCBITree::readNCBINames(ifstream &in, const char *name_type) {
-    assert(!nodes.empty());
+    ASSERT(!nodes.empty());
     char ch;
     int node_id;
     string node_name, unique_name;

@@ -22,7 +22,7 @@ ModelCodonSemiEmpirical::~ModelCodonSemiEmpirical() {
 void ModelCodonSemiEmpirical::init(const char *model_name, string model_params, StateFreqType freq, string freq_params) {
 	name = full_name = model_name;
 	size_t pos = name.find('+');
-	assert(pos != string::npos);
+	ASSERT(pos != string::npos);
 	if (name.substr(0,3) == "ECM") {
 		ModelCodonEmpirical::init(name.substr(0,pos), "", FREQ_USER_DEFINED, "");
 		ModelCodonParametric::init(name.substr(pos), model_params, freq, freq_params);

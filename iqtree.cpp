@@ -163,7 +163,7 @@ void IQTree::restoreUFBoot(Checkpoint *checkpoint) {
         checkpoint->addListElement();
         string str;
         checkpoint->getString("", str);
-        assert(!str.empty());
+        ASSERT(!str.empty());
         stringstream ss(str);
         ss >> boot_counts[id] >> boot_logl[id] >> boot_orig_logl[id] >> boot_trees[id];
     }
@@ -1070,7 +1070,7 @@ RepresentLeafSet* IQTree::findRepresentLeaves(vector<RepresentLeafSet*> &leaves_
             if (node->neighbors[i]->node != dad) {
                 leaves_it[j++] = findRepresentLeaves(leaves_vec, i, node);
             }
-        assert(j == 2 && leaves_it[0] && leaves_it[1]);
+        ASSERT(j == 2 && leaves_it[0] && leaves_it[1]);
         if (leaves_it[0]->empty() && leaves_it[1]->empty()) {
             cout << "wrong";
         }
@@ -1091,12 +1091,12 @@ RepresentLeafSet* IQTree::findRepresentLeaves(vector<RepresentLeafSet*> &leaves_
                 id = 1;
             else
                 break;
-            assert(id < 2 && id >= 0);
+            ASSERT(id < 2 && id >= 0);
             leaves->insert(new RepLeaf((*lit[id])->leaf, (*lit[id])->height + 1));
             lit[id]++;
         }
     }
-    assert(!leaves->empty());
+    ASSERT(!leaves->empty());
     /*
      if (verbose_mode >= VB_MAX) {
      for (cur_it = leaves->begin(); cur_it != leaves->end(); cur_it++)
@@ -1207,7 +1207,7 @@ void IQTree::deleteLeaves(PhyloNodeVector &del_leaves) {
 }
 
 int IQTree::assessQuartet(Node *leaf0, Node *leaf1, Node *leaf2, Node *del_leaf) {
-    assert(dist_matrix);
+    ASSERT(dist_matrix);
     int nseq = aln->getNSeq();
     //int id0 = leaf0->id, id1 = leaf1->id, id2 = leaf2->id;
     double dist0 = dist_matrix[leaf0->id * nseq + del_leaf->id] + dist_matrix[leaf1->id * nseq + leaf2->id];
@@ -1318,7 +1318,7 @@ void IQTree::assessQuartets(vector<RepresentLeafSet*> &leaves_vec, PhyloNode *cu
     int cnt = 0;
 
     // only work for birfucating tree
-    assert(cur_root->degree() == MAX_DEGREE);
+    ASSERT(cur_root->degree() == MAX_DEGREE);
 
     // find the representative leaf set for three subtrees
 
@@ -1343,9 +1343,9 @@ void IQTree::assessQuartets(vector<RepresentLeafSet*> &leaves_vec, PhyloNode *cu
 }
 
 void IQTree::reinsertLeavesByParsimony(PhyloNodeVector &del_leaves) {
-    assert(0 && "this function is obsolete");
+    ASSERT(0 && "this function is obsolete");
     PhyloNodeVector::iterator it_leaf;
-    assert(root->isLeaf());
+    ASSERT(root->isLeaf());
     for (it_leaf = del_leaves.begin(); it_leaf != del_leaves.end(); it_leaf++) {
         //cout << "Add leaf " << (*it_leaf)->id << " to the tree" << endl;
         initializeAllPartialPars();
@@ -1386,7 +1386,7 @@ void IQTree::reinsertLeaves(PhyloNodeVector &del_leaves) {
     PhyloNodeVector::iterator it_leaf;
 
     //int num_del_leaves = del_leaves.size();
-    assert(root->isLeaf());
+    ASSERT(root->isLeaf());
 
     for (it_leaf = del_leaves.begin(); it_leaf != del_leaves.end(); it_leaf++) {
         if (verbose_mode >= VB_DEBUG)
@@ -1407,7 +1407,7 @@ void IQTree::reinsertLeaves(PhyloNodeVector &del_leaves) {
         findBestBonus(best_bonus, best_nodes, best_dads);
         if (verbose_mode >= VB_DEBUG)
             cout << "Best bonus " << best_bonus << " " << best_nodes[0]->id << " " << best_dads[0]->id << endl;
-        assert(best_nodes.size() == best_dads.size());
+        ASSERT(best_nodes.size() == best_dads.size());
         int node_id = random_int(best_nodes.size());
         if (best_nodes.size() > 1 && verbose_mode >= VB_DEBUG)
             cout << best_nodes.size() << " branches show the same best bonus, branch nr. " << node_id << " is chosen"
@@ -1476,7 +1476,7 @@ void IQTree::getSplitBranches(Branches &branches, SplitIntMap &splits, Node *nod
                 curBranch.second = node;
                 Split* curSplit;
                 Split *sp = (*it)->split;
-                assert(sp != NULL);
+                ASSERT(sp != NULL);
                 curSplit = new Split(*sp);
                 if (curSplit->shouldInvert())
                     curSplit->invert();
@@ -1531,7 +1531,7 @@ void IQTree::getNNIBranches(SplitIntMap &tabuSplits, SplitIntMap &candSplits,Bra
                 if (params->fixStableSplits) {
                     Split *curSplit;
                     Split *sp = (*it)->split;
-                    assert(sp != NULL);
+                    ASSERT(sp != NULL);
                     curSplit = new Split(*sp);
                     if (curSplit->shouldInvert())
                         curSplit->invert();
@@ -1561,7 +1561,7 @@ void IQTree::getStableBranches(SplitIntMap &candSplits, double supportValue, Bra
                 curBranch.second = node;
                 Split *curSplit;
                 Split *sp = (*it)->split;
-                assert(sp != NULL);
+                ASSERT(sp != NULL);
                 curSplit = new Split(*sp);
                 if (curSplit->shouldInvert())
                     curSplit->invert();
@@ -1730,7 +1730,7 @@ double IQTree::inputTree2PLL(string treestring, bool computeLH) {
 }
 
 double* IQTree::getModelRatesFromPLL() {
-    assert(aln->num_states == 4);
+    ASSERT(aln->num_states == 4);
     int numberOfRates = (pllPartitions->partitionData[0]->states * pllPartitions->partitionData[0]->states
             - pllPartitions->partitionData[0]->states) / 2;
     double* rate_params = new double[numberOfRates];
@@ -1995,8 +1995,8 @@ void IQTree::pllBaseSubstitute (char *seq, int dataType)
 }
 
 double IQTree::swapTaxa(PhyloNode *node1, PhyloNode *node2) {
-    assert(node1->isLeaf());
-    assert(node2->isLeaf());
+    ASSERT(node1->isLeaf());
+    ASSERT(node2->isLeaf());
 
     PhyloNeighbor *node1nei = (PhyloNeighbor*) *(node1->neighbors.begin());
     PhyloNeighbor *node2nei = (PhyloNeighbor*) *(node2->neighbors.begin());
@@ -2185,7 +2185,7 @@ void IQTree::collectBootTrees() {
             int source = MPIHelper::getInstance().receiveTrees(trees, BOOT_TREE_TAG);
             if (source > 0) {
                 count++;
-                assert(trees.getNumTrees() == boot_trees.size());
+                ASSERT(trees.getNumTrees() == boot_trees.size());
                 int better_trees = 0;
                 for (int id = 0; id < trees.getNumTrees(); id++)
                     if (trees.getScores()[id] > boot_logl[id]) {
@@ -2242,7 +2242,7 @@ double IQTree::doTreeSearch() {
     } else {
         cout << "CHECKPOINT: Candidate tree set restored, best LogL: " << candidateTrees.getBestScore() << endl;
     }
-    assert(candidateTrees.size() != 0);
+    ASSERT(candidateTrees.size() != 0);
     cout << "Finish initializing candidate tree set (" << candidateTrees.size() << ")" << endl;
 
 
@@ -3106,7 +3106,7 @@ pair<int, int> IQTree::optimizeNNI(bool speedNNI) {
         if (curScore < appliedNNIs.at(0).newloglh - params->loglh_epsilon) {
             //cout << "Tree getting worse: curScore = " << curScore << " / best score = " <<  appliedNNIs.at(0).newloglh << endl;
             // tree cannot be worse if only 1 NNI is applied
-            assert(appliedNNIs.size() != 1);
+            ASSERT(appliedNNIs.size() != 1);
             doNNIs(appliedNNIs);
             restoreBranchLengths(lenvec);
             clearAllPartialLH();
@@ -3116,7 +3116,7 @@ pair<int, int> IQTree::optimizeNNI(bool speedNNI) {
 //            doNNI(appliedNNIs[0]);
             totalNNIApplied++;
             curScore = optimizeAllBranches(1, params->loglh_epsilon, PLL_NEWZPERCYCLE);
-            assert(curScore > appliedNNIs.at(0).newloglh - params->loglh_epsilon);
+            ASSERT(curScore > appliedNNIs.at(0).newloglh - params->loglh_epsilon);
         } else {
             totalNNIApplied += appliedNNIs.size();
         }
@@ -3850,7 +3850,7 @@ void IQTree::pllConvertUFBootData2IQTree(){
 
 double computeCorrelation(IntVector &ix, IntVector &iy) {
 
-    assert(ix.size() == iy.size());
+    ASSERT(ix.size() == iy.size());
     DoubleVector x;
     DoubleVector y;
 

@@ -222,7 +222,7 @@ void reportModelSelection(ofstream &out, Params &params, vector<ModelInfo> &mode
 
 void reportModel(ofstream &out, Alignment *aln, ModelSubst *m) {
 	int i, j, k;
-	assert(aln->num_states == m->num_states);
+	ASSERT(aln->num_states == m->num_states);
     double *rate_mat = new double[m->num_states * m->num_states];
     if (!m->isSiteSpecificModel())
         m->getRateMatrix(rate_mat);
@@ -264,7 +264,7 @@ void reportModel(ofstream &out, Alignment *aln, ModelSubst *m) {
 		out << endl;
 		out.unsetf(ios_base::fixed);
 	} else if (aln->seq_type == SEQ_PROTEIN && m->getNDim() > 20) {
-        assert(m->num_states == 20);
+        ASSERT(m->num_states == 20);
         out << "WARNING: This model has " << m->getNDim() + m->getNDimFreq() << " parameters that may be overfitting. Please use with caution!" << endl << endl;
         double full_mat[400];
         for (i = 0, k = 0; i < m->num_states - 1; i++)
@@ -1491,7 +1491,7 @@ void initializeParams(Params &params, IQTree &iqtree, vector<ModelInfo> &model_i
         params.model_name = "GTR+G";
     }
 
-    assert(iqtree.aln);
+    ASSERT(iqtree.aln);
     if (params.gbo_replicates)
         params.speed_conf = 1.0;
 
@@ -2717,7 +2717,7 @@ void convertAlignment(Params &params, IQTree *iqtree) {
 void computeSiteFrequencyModel(Params &params, Alignment *alignment) {
 
     cout << endl << "===> COMPUTING SITE FREQUENCY MODEL BASED ON TREE FILE " << params.tree_freq_file << endl;
-    assert(params.tree_freq_file);
+    ASSERT(params.tree_freq_file);
     PhyloTree *tree = new PhyloTree(alignment);
     tree->setParams(&params);
     bool myrooted = params.is_rooted;

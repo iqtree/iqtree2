@@ -52,14 +52,18 @@ inline void _my_assert(const char* expression, const char *func, const char* fil
 {
     char *sfile = (char*)strrchr(file, '/');
     if (!sfile) sfile = (char*)file; else sfile++;
-    cerr << "ASSERT failed: " << expression << ", function " << func << ", file " << sfile << ", line " << line << endl;
+    cerr << sfile << ":" << line << ": " << func << ": Assertion `" << expression << "' failed." << endl;
     abort();
 }
  
 #ifdef NDEBUG
 #define ASSERT(EXPRESSION) ((void)0)
 #else
-#define ASSERT(EXPRESSION) ((EXPRESSION) ? (void)0 : _my_assert(#EXPRESSION, __func__, __FILE__, __LINE__))
+    #if defined(__GNUC__) || defined(__clang__)
+        #define ASSERT(EXPRESSION) ((EXPRESSION) ? (void)0 : _my_assert(#EXPRESSION, __PRETTY_FUNCTION__, __FILE__, __LINE__))
+    #else
+        #define ASSERT(EXPRESSION) ((EXPRESSION) ? (void)0 : _my_assert(#EXPRESSION, __func__, __FILE__, __LINE__))
+    #endif
 #endif
 
 
@@ -166,7 +170,7 @@ public:
         // calculate regression line parameters
 
         // make sure slope is not infinite
-        assert(fabs(xx) != 0);
+        ASSERT(fabs(xx) != 0);
 
         m_b = xy / xx;
         m_a = ya - m_b * xa;
@@ -2446,7 +2450,7 @@ void sort_index(T* first, T* last, int *index) {
         index[i] = i;
         arr[i] = *x;
     }
-    assert(last - first == i);
+    ASSERT(last - first == i);
     quicksort_index(arr, index, 0, (last - first) - 1);
     delete [] arr;
 }
@@ -2480,7 +2484,7 @@ void print_stacktrace(ostream &out, unsigned int max_frames = 63);
 */
 template<class T1, class T2>
 void quicksort(T1* arr, int left, int right, T2* arr2 = NULL) {
-      assert(left <= right);
+      ASSERT(left <= right);
       int i = left, j = right;
       T1 pivot = arr[(left + right) / 2];
 

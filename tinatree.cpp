@@ -46,7 +46,7 @@ int TinaTree::computeParsimonyScore(int ptn, int &states, PhyloNode *node, Phylo
         if (node->name == ROOT_NAME) {
             state = aln->STATE_UNKNOWN;
         } else {
-            assert(node->id < aln->getNSeq());
+            ASSERT(node->id < aln->getNSeq());
             state = (*aln)[ptn][node->id];
         }
         if (state == aln->STATE_UNKNOWN) {
@@ -85,7 +85,7 @@ int TinaTree::computeParsimonyScore(int ptn, int &states, PhyloNode *node, Phylo
 
 
 int TinaTree::computeParsimonyScore() {
-    assert(root && root->isLeaf());
+    ASSERT(root && root->isLeaf());
 
     int score = 0;
     for (int ptn = 0; ptn < aln->size(); ptn++)
@@ -107,7 +107,7 @@ int TinaTree::computeParsimonyScore() {
 void TinaTree::initializeAllPartialLh() {
     int index, indexlh;
     initializeAllPartialLh(index, indexlh);
-    assert(index == (nodeNum - 1)*2);
+    ASSERT(index == (nodeNum - 1)*2);
 }
 
 void TinaTree::initializeAllPartialLh(int &index, int &indexlh, PhyloNode *node, PhyloNode *dad) {
@@ -134,7 +134,7 @@ void TinaTree::initializeAllPartialLh(int &index, int &indexlh, PhyloNode *node,
         //assert(!nei->partial_lh);
         nei->partial_pars = central_partial_pars + ((index + 1) * pars_block_size);
         index += 2;
-        assert(index < nodeNum * 2 - 1);
+        ASSERT(index < nodeNum * 2 - 1);
     }
     FOR_NEIGHBOR_IT(node, dad, it)
     initializeAllPartialLh(index, indexlh, (PhyloNode*) (*it)->node, node);

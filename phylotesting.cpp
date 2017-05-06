@@ -297,7 +297,7 @@ void printSiteLh(const char*filename, PhyloTree *tree, double *ptn_lh,
 void printPartitionLh(const char*filename, PhyloTree *tree, double *ptn_lh,
 		bool append, const char *linename) {
 
-    assert(tree->isSuperTree());
+    ASSERT(tree->isSuperTree());
     PhyloSuperTree *stree = (PhyloSuperTree*)tree;
 	int i;
 	double *pattern_lh;
@@ -1363,7 +1363,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInf
         for (int pair = 0; pair < num_pairs; pair++) {
             int part1 = distID[pair] >> 16;
             int part2 = distID[pair] & ((1<<16)-1);
-            assert(part1 != part2);
+            ASSERT(part1 != part2);
             IntVector merged_set;
             merged_set.insert(merged_set.end(), gene_sets[part1].begin(), gene_sets[part1].end());
             merged_set.insert(merged_set.end(), gene_sets[part2].begin(), gene_sets[part2].end());
@@ -1715,7 +1715,7 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
                 case MTC_BIC:
                     best_model = model_info[model_bic].name;
                     break;
-                default: assert(0);
+                default: ASSERT(0);
                 }
             model_names[model] = best_model + model_names[model];
         }
@@ -1841,7 +1841,7 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
             info.name = tree->getModelName();
 		int model_id = -1;
         if (skip_model) {
-            assert(prev_model_id>=0);
+            ASSERT(prev_model_id>=0);
             size_t pos_r = info.name.find("+R");
             size_t prev_pos_r = model_info[prev_model_id].name.find("+R");
             if (pos_r == string::npos || prev_pos_r == string::npos || info.name.substr(0, pos_r) != model_info[prev_model_id].name.substr(0, prev_pos_r))
@@ -1860,7 +1860,7 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
             info.tree = model_info[model_id].tree;
             prev_tree_string = model_info[model_id].tree;
         } else if (skip_model) {
-            assert(prev_model_id >= 0);
+            ASSERT(prev_model_id >= 0);
             if (prev_model_id >= 0) {
             info.logl = model_info[prev_model_id].logl;
             info.tree_len = model_info[prev_model_id].tree_len;
@@ -1954,7 +1954,7 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
                     {
                         if (verbose_mode >= VB_MED)
                             cout << "reoptimizing from previous parameters of +R...." << endl;
-                        assert(ncat >= 3);
+                        ASSERT(ncat >= 3);
                         if (tree->getRate()->getPInvar() != 0.0)                        
                             rate_class_freeinvar[ncat-2]->setRateAndProp(rate_class_freeinvar[ncat-3]);
                         else
@@ -2169,7 +2169,7 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 		best_model = model_info[model_bic].name;
         best_tree = model_info[model_bic].tree;
 		break;
-    default: assert(0);
+    default: ASSERT(0);
 	}
 	sort_index(scores, scores + model_info.size(), model_rank);
 
@@ -2318,7 +2318,7 @@ void doWeightedLeastSquare(int n, double *w, double *a, double *b, double *c, do
     y = (AC*AB - BC*A2) * denom;
     
     se = -denom*(B2+A2+2*AB);
-    assert(se >= 0.0);
+    ASSERT(se >= 0.0);
 }
 
 /**
@@ -2984,7 +2984,7 @@ void evaluateTrees(Params &params, IQTree *tree, vector<TreeInfo> &info, IntVect
 		tid++;
 	}
 
-	assert(tid == ntrees);
+	ASSERT(tid == ntrees);
 
 	if (params.topotest_replicates && ntrees > 1) {
 		double *tree_probs = new double[ntrees];
