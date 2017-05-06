@@ -512,7 +512,6 @@ add_executable(iqtree
 eigendecomposition.cpp eigendecomposition.h
 gzstream.cpp gzstream.h
 optimization.cpp optimization.h
-parsmultistate.cpp parsmultistate.h
 pda.cpp
 phyloanalysis.cpp phyloanalysis.h
 stoprule.cpp stoprule.h
