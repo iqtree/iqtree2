@@ -49,7 +49,7 @@
 #include "tree/mtreeset.h"
 #include "tree/mexttree.h"
 #include "model/ratemeyerhaeseler.h"
-#include "whtest_wrapper.h"
+#include "whtest/whtest_wrapper.h"
 #include "model/partitionmodel.h"
 #include "model/modelmixture.h"
 #include "model/modelfactorymixlen.h"

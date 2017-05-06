@@ -519,7 +519,6 @@ pda.cpp
 phyloanalysis.cpp phyloanalysis.h
 stoprule.cpp stoprule.h
 tools.cpp tools.h
-whtest_wrapper.cpp whtest_wrapper.h
 pllnni.cpp pllnni.h
 phylotesting.cpp phylotesting.h
 candidateset.cpp candidateset.h
