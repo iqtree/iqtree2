@@ -22,7 +22,7 @@
 #include "alignment/superalignmentpairwise.h"
 #include "nclextra/msetsblock.h"
 #include "nclextra/myreader.h"
-#include "phylotesting.h"
+#include "main/phylotesting.h"
 #include "model/partitionmodel.h"
 
 PhyloSuperTree::PhyloSuperTree()

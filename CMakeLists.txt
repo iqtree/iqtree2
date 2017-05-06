@@ -510,9 +510,11 @@ if (IQTREE_FLAGS MATCHES "mpi")
 endif()
 
 add_executable(iqtree
-pda.cpp
-phyloanalysis.cpp phyloanalysis.h
-phylotesting.cpp phylotesting.h
+main/main.cpp
+main/phyloanalysis.cpp
+main/phyloanalysis.h
+main/phylotesting.cpp
+main/phylotesting.h
 )
 
 if(Backtrace_FOUND)
