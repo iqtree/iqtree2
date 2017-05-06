@@ -56,7 +56,7 @@
 //#include "guidedbootstrap.h"
 #include "model/modelset.h"
 #include "utils/timeutil.h"
-#include "upperbounds.h"
+#include "tree/upperbounds.h"
 #include "utils/MPIHelper.h"
 
 

@@ -59,7 +59,7 @@
 #include "alignment/maalignment.h" //added by MA
 #include "tree/ncbitree.h"
 #include "pda/ecopd.h"
-#include "upperbounds.h"
+#include "tree/upperbounds.h"
 #include "tree/ecopdmtreeset.h"
 #include "pda/gurobiwrapper.h"
 #include "utils/timeutil.h"

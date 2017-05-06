@@ -4,7 +4,7 @@
 
 #ifndef IQTREE_TREECOLLECTION_H
 #define IQTREE_TREECOLLECTION_H
-#include "candidateset.h"
+#include "tree/candidateset.h"
 
 /**
  *  A container for a set of trees together with their scores

@@ -1,12 +1,14 @@
 add_library(tree
 constrainttree.cpp
 constrainttree.h
+candidateset.cpp candidateset.h
 ecopdmtreeset.cpp
 ecopdmtreeset.h
 iqtree.cpp
 iqtree.h
 matree.cpp
 matree.h
+memslot.cpp memslot.h
 mexttree.cpp
 mexttree.h
 mtree.cpp

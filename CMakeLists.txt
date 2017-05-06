@@ -513,8 +513,6 @@ add_executable(iqtree
 pda.cpp
 phyloanalysis.cpp phyloanalysis.h
 phylotesting.cpp phylotesting.h
-candidateset.cpp candidateset.h
-memslot.cpp memslot.h
 )
 
 if(Backtrace_FOUND)
