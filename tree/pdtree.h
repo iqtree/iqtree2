@@ -21,7 +21,7 @@
 #define PDTREE_H
 
 #include "mtree.h"
-#include "split.h"
+#include "pda/split.h"
 
 
 /**

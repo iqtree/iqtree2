@@ -18,8 +18,8 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 #include "mpdablock.h"
-#include "split.h"
-#include "splitgraph.h"
+#include "pda/split.h"
+#include "pda/splitgraph.h"
 
 MPdaBlock::MPdaBlock(SplitGraph *asgraph)
  : NxsBlock()

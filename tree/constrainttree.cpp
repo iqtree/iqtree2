@@ -10,7 +10,7 @@
 
 #include "phylotree.h"
 #include "constrainttree.h"
-#include "splitgraph.h"
+#include "pda/splitgraph.h"
 
 ConstraintTree::ConstraintTree() : MTree(), SplitIntMap() {
 }

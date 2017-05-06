@@ -36,7 +36,7 @@
 #include <cmath>
 #include "ncl/ncl.h"
 #include "tools.h"
-#include "split.h"
+#include "pda/split.h"
 
 using namespace std;
 

@@ -22,7 +22,7 @@
 //#include <fstream>
 #include <iterator>
 //#include <mtree.h>
-#include "splitgraph.h"
+#include "pda/splitgraph.h"
 #include "tools.h"
 #include "mtreeset.h"
 using namespace std;

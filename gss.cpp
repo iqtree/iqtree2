@@ -23,8 +23,8 @@
 */
 
 #include "gss.h"
-#include "lpwrapper.h"
-#include "gurobiwrapper.h"
+#include "pda/lpwrapper.h"
+#include "pda/gurobiwrapper.h"
 #include "tree/mtreeset.h"
 
 

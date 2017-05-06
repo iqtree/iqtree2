@@ -27,7 +27,7 @@
 
 
 #include "tools.h"
-#include "pdnetwork.h"
+#include "pda/pdnetwork.h"
 
 class GSSNetwork : public PDNetwork {
 public:

@@ -22,11 +22,11 @@
 
 #include "node.h"
 //#include "splitgraph.h"
-#include "split.h"
+#include "pda/split.h"
 #include <iostream>
 #include <sstream>
-#include "hashsplitset.h"
-#include "splitset.h"
+#include "pda/hashsplitset.h"
+#include "pda/splitset.h"
 //#include "candidateset.h"
 
 const char ROOT_NAME[] = "__root__"; // special name that does not occur elsewhere in the tree

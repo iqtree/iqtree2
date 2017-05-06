@@ -21,7 +21,7 @@
 #define MTREESET_H
 
 #include "mtree.h"
-#include "splitgraph.h"
+#include "pda/splitgraph.h"
 #include "alignment/alignment.h"
 
 void readIntVector(const char *file_name, int burnin, int max_count, IntVector &vec);

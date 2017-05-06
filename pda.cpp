@@ -41,11 +41,11 @@
 #include <iostream>
 #include <cstdlib>
 #include <errno.h>
-#include "greedy.h"
-#include "pruning.h"
+#include "pda/greedy.h"
+#include "pda/pruning.h"
 //#include "naivegreedy.h"
-#include "splitgraph.h"
-#include "circularnetwork.h"
+#include "pda/splitgraph.h"
+#include "pda/circularnetwork.h"
 #include "tree/mtreeset.h"
 #include "tree/mexttree.h"
 #include "ncl/ncl.h"
@@ -58,10 +58,10 @@
 #include "gss.h"
 #include "alignment/maalignment.h" //added by MA
 #include "tree/ncbitree.h"
-#include "ecopd.h"
+#include "pda/ecopd.h"
 #include "upperbounds.h"
 #include "tree/ecopdmtreeset.h"
-#include "gurobiwrapper.h"
+#include "pda/gurobiwrapper.h"
 #include "timeutil.h"
 //#include <unistd.h>
 #include <stdlib.h>
