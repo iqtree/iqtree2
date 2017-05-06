@@ -20,7 +20,7 @@
 #ifndef PDTREESET_H
 #define PDTREESET_H
 
-#include "mtreeset.h"
+#include "tree/mtreeset.h"
 #include "pdtree.h"
 
 /**

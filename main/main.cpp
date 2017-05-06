@@ -60,7 +60,7 @@
 #include "tree/ncbitree.h"
 #include "pda/ecopd.h"
 #include "tree/upperbounds.h"
-#include "tree/ecopdmtreeset.h"
+#include "pda/ecopdmtreeset.h"
 #include "pda/gurobiwrapper.h"
 #include "utils/timeutil.h"
 //#include <unistd.h>

@@ -20,7 +20,7 @@
 #ifndef PRUNING_H
 #define PRUNING_H
 
-#include "tree/pdtree.h"
+#include "pdtree.h"
 
 /**
 Implementation of Pruning algorithm with complexity O(n*log(n-k))

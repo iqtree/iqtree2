@@ -1,8 +1,8 @@
 /***************************  vectormath_common.h   ****************************
 * Author:        Agner Fog
 * Date created:  2014-04-18
-* Last modified: 2016-05-02
-* Version:       1.22
+* Last modified: 2016-11-25
+* Version:       1.25
 * Project:       vector classes
 * Description:
 * Header file containing common code for inline version of mathematical functions.
@@ -45,6 +45,7 @@
 #define VM_SQRT2    1.41421356237309504880           // sqrt(2)
 #define VM_LOG2E    1.44269504088896340736           // 1/log(2)
 #define VM_LOG10E   0.434294481903251827651          // 1/log(10)
+#define VM_LOG210   3.321928094887362347808          // log2(10)
 #define VM_LN2      0.693147180559945309417          // log(2)
 #define VM_LN10     2.30258509299404568402           // log(10)
 #define VM_SMALLEST_NORMAL  2.2250738585072014E-308  // smallest normal number, double

@@ -6,7 +6,7 @@
  */
 
 #include "ecopdmtreeset.h"
-#include "mtreeset.h"
+#include "tree/mtreeset.h"
 
 EcoPDmtreeset::EcoPDmtreeset() {
 }

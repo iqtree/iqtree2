@@ -1,8 +1,8 @@
 /****************************  vectorf256.h   *******************************
 * Author:        Agner Fog
 * Date created:  2012-05-30
-* Last modified: 2016-04-26
-* Version:       1.22
+* Last modified: 2017-02-19
+* Version:       1.27
 * Project:       vector classes
 * Description:
 * Header file defining 256-bit floating point vector classes as interface
@@ -27,7 +27,7 @@
 *
 * For detailed instructions, see VectorClass.pdf
 *
-* (c) Copyright 2012 - 2016 GNU General Public License http://www.gnu.org/licenses
+* (c) Copyright 2012-2017 GNU General Public License http://www.gnu.org/licenses
 *****************************************************************************/
 
 // check combination of header files
@@ -932,17 +932,17 @@ static inline Vec8f square(Vec8f const & a) {
 }
 
 // pow(Vec8f, int):
-template <typename TT> static Vec8f pow(Vec8f const & a, TT n);
+template <typename TT> static Vec8f pow(Vec8f const & a, TT const & n);
 
 // Raise floating point numbers to integer power n
 template <>
-inline Vec8f pow<int>(Vec8f const & x0, int n) {
+inline Vec8f pow<int>(Vec8f const & x0, int const & n) {
     return pow_template_i<Vec8f>(x0, n);
 }
 
 // allow conversion from unsigned int
 template <>
-inline Vec8f pow<uint32_t>(Vec8f const & x0, uint32_t n) {
+inline Vec8f pow<uint32_t>(Vec8f const & x0, uint32_t const & n) {
     return pow_template_i<Vec8f>(x0, (int)n);
 }
 
@@ -1038,6 +1038,19 @@ static inline Vec8i truncate_to_int(Vec8f const & a) {
 static inline Vec8f to_float(Vec8i const & a) {
     return _mm256_cvtepi32_ps(a);
 }
+
+// function to_float: convert unsigned integer vector to float vector
+static inline Vec8f to_float(Vec8ui const & a) {
+#ifdef __AVX512VL__
+    return _mm256_cvtepu32_ps(a);
+#else
+    Vec8f b = to_float(Vec8i(a & 0x7FFFFFFF));             // 31 bits
+    Vec8i c = Vec8i(a) >> 31;                              // generate mask from highest bit
+    Vec8f d = Vec8f(2147483648.f) & Vec8f(_mm256_castsi256_ps(c));// mask floating point constant 2^31
+    return b + d;
+#endif
+}
+
 #else // no AVX2
 
 // function round_to_int: round to nearest integer (even). (result as integer vector)
@@ -1054,6 +1067,11 @@ static inline Vec8i truncate_to_int(Vec8f const & a) {
 // function to_float: convert integer vector to float vector
 static inline Vec8f to_float(Vec8i const & a) {
     return Vec8f(_mm_cvtepi32_ps(a.get_low()), _mm_cvtepi32_ps(a.get_high()));
+}
+
+// function to_float: convert unsigned integer vector to float vector
+static inline Vec8f to_float(Vec8ui const & a) {
+    return Vec8f(to_float(a.get_low()), to_float(a.get_high()));
 }
 #endif
 #endif // VECTORI256_H
@@ -1123,12 +1141,34 @@ static inline Vec8f mul_sub_x(Vec8f const & a, Vec8f const & b, Vec8f const & c)
 
 // approximate reciprocal (Faster than 1.f / a. relative accuracy better than 2^-11)
 static inline Vec8f approx_recipr(Vec8f const & a) {
+#if INSTRSET >= 9  // use more accurate version if available. (none of these will raise exceptions on zero)
+#ifdef __AVX512ER__  // AVX512ER: full precision
+    // todo: if future processors have both AVX512ER and AVX512VL: _mm256_rcp28_round_ps(a, _MM_FROUND_NO_EXC);
+    return _mm512_castps512_ps256(_mm512_rcp28_round_ps(_mm512_castps256_ps512(a), _MM_FROUND_NO_EXC));
+#elif defined __AVX512VL__  // AVX512VL: 14 bit precision
+    return _mm256_rcp14_ps(a);
+#else  // AVX512F: 14 bit precision
+    return _mm512_castps512_ps256(_mm512_rcp14_ps(_mm512_castps256_ps512(a)));
+#endif
+#else  // AVX: 11 bit precision
     return _mm256_rcp_ps(a);
+#endif
 }
 
 // approximate reciprocal squareroot (Faster than 1.f / sqrt(a). Relative accuracy better than 2^-11)
 static inline Vec8f approx_rsqrt(Vec8f const & a) {
+#if INSTRSET >= 9  // use more accurate version if available. (none of these will raise exceptions on zero)
+#ifdef __AVX512ER__  // AVX512ER: full precision
+    // todo: if future processors have both AVX512ER and AVX521VL: _mm256_rsqrt28_round_ps(a, _MM_FROUND_NO_EXC);
+    return _mm512_castps512_ps256(_mm512_rsqrt28_round_ps(_mm512_castps256_ps512(a), _MM_FROUND_NO_EXC));
+#elif defined __AVX512VL__  // AVX512VL: 14 bit precision
+    return _mm256_rsqrt14_ps(a);
+#else  // AVX512F: 14 bit precision
+    return _mm512_castps512_ps256(_mm512_rsqrt14_ps(_mm512_castps256_ps512(a)));
+#endif
+#else  // AVX: 11 bit precision
     return _mm256_rsqrt_ps(a);
+#endif
 }
 
 
@@ -1686,17 +1726,17 @@ static inline Vec4d square(Vec4d const & a) {
 }
 
 // pow(Vec4d, int):
-template <typename TT> static Vec4d pow(Vec4d const & a, TT n);
+template <typename TT> static Vec4d pow(Vec4d const & a, TT const & n);
 
 // Raise floating point numbers to integer power n
 template <>
-inline Vec4d pow<int>(Vec4d const & x0, int n) {
+inline Vec4d pow<int>(Vec4d const & x0, int const & n) {
     return pow_template_i<Vec4d>(x0, n);
 }
 
 // allow conversion from unsigned int
 template <>
-inline Vec4d pow<uint32_t>(Vec4d const & x0, uint32_t n) {
+inline Vec4d pow<uint32_t>(Vec4d const & x0, uint32_t const & n) {
     return pow_template_i<Vec4d>(x0, (int)n);
 }
 
@@ -1790,15 +1830,22 @@ static inline Vec4i truncate_to_int(Vec4d const & a) {
 
 // function truncate_to_int64: round towards zero. (inefficient)
 static inline Vec4q truncate_to_int64(Vec4d const & a) {
+#if defined (__AVX512DQ__) && defined (__AVX512VL__)
+    //return _mm256_maskz_cvttpd_epi64( __mmask8(0xFF), a);
+    return _mm256_cvttpd_epi64(a);
+#else
     double aa[4];
     a.store(aa);
     return Vec4q(int64_t(aa[0]), int64_t(aa[1]), int64_t(aa[2]), int64_t(aa[3]));
+#endif
 }
 
 // function truncate_to_int64_limited: round towards zero.
-// result as 64-bit integer vector, but with limited range
+// result as 64-bit integer vector, but with limited range. Deprecated!
 static inline Vec4q truncate_to_int64_limited(Vec4d const & a) {
-#if VECTORI256_H > 1
+#if defined (__AVX512DQ__) && defined (__AVX512VL__)
+    return truncate_to_int64(a);
+#elif VECTORI256_H > 1
     // Note: assume MXCSR control register is set to rounding
     Vec2q   b = _mm256_cvttpd_epi32(a);                    // round to 32-bit integers
     __m256i c = permute4q<0,-256,1,-256>(Vec4q(b,b));      // get bits 64-127 to position 128-191
@@ -1811,13 +1858,19 @@ static inline Vec4q truncate_to_int64_limited(Vec4d const & a) {
 
 // function round_to_int64: round to nearest or even. (inefficient)
 static inline Vec4q round_to_int64(Vec4d const & a) {
+#if defined (__AVX512DQ__) && defined (__AVX512VL__)
+    return _mm256_cvtpd_epi64(a);
+#else
     return truncate_to_int64(round(a));
+#endif
 }
 
 // function round_to_int64_limited: round to nearest integer (even)
-// result as 64-bit integer vector, but with limited range
+// result as 64-bit integer vector, but with limited range. Deprecated!
 static inline Vec4q round_to_int64_limited(Vec4d const & a) {
-#if VECTORI256_H > 1
+#if defined (__AVX512DQ__) && defined (__AVX512VL__)
+    return round_to_int64(a);
+#elif VECTORI256_H > 1
     // Note: assume MXCSR control register is set to rounding
     Vec2q   b = _mm256_cvtpd_epi32(a);                     // round to 32-bit integers
     __m256i c = permute4q<0,-256,1,-256>(Vec4q(b,b));      // get bits 64-127 to position 128-191
@@ -1830,16 +1883,24 @@ static inline Vec4q round_to_int64_limited(Vec4d const & a) {
 
 // function to_double: convert integer vector elements to double vector (inefficient)
 static inline Vec4d to_double(Vec4q const & a) {
-    int64_t aa[4];
-    a.store(aa);
-    return Vec4d(double(aa[0]), double(aa[1]), double(aa[2]), double(aa[3]));
+#if defined (__AVX512DQ__) && defined (__AVX512VL__)
+        return _mm256_maskz_cvtepi64_pd( __mmask16(0xFF), a);
+#else
+        int64_t aa[4];
+        a.store(aa);
+        return Vec4d(double(aa[0]), double(aa[1]), double(aa[2]), double(aa[3]));
+#endif
 }
 
 // function to_double_limited: convert integer vector elements to double vector
-// limited to abs(x) < 2^31
+// limited to abs(x) < 2^31. Deprecated!
 static inline Vec4d to_double_limited(Vec4q const & x) {
+#if defined (__AVX512DQ__) && defined (__AVX512VL__)
+    return to_double(x);
+#else
     Vec8i compressed = permute8i<0,2,4,6,-256,-256,-256,-256>(Vec8i(x));
     return _mm256_cvtepi32_pd(compressed.get_low());  // AVX
+#endif
 }
 
 #endif // VECTORI256_H
@@ -3113,6 +3174,112 @@ static inline Vec4d gather4d(void const * a) {
     return reinterpret_d(gather4q<i0, i1, i2, i3>(a));
 }
 
+/*****************************************************************************
+*
+*          Vector scatter functions
+*
+******************************************************************************
+*
+* These functions write the elements of a vector to arbitrary positions in an
+* array in memory. Each vector element is written to an array position 
+* determined by an index. An element is not written if the corresponding
+* index is out of range.
+* The indexes can be specified as constant template parameters or as an
+* integer vector.
+* 
+* The scatter functions are useful if the data are distributed in a sparce
+* manner into the array. If the array is dense then it is more efficient
+* to permute the data into the right positions and then write the whole
+* permuted vector into the array.
+*
+* Example:
+* Vec8d a(10,11,12,13,14,15,16,17);
+* double b[16] = {0};
+* scatter<0,2,14,10,1,-1,5,9>(a,b); 
+* // Now, b = {10,14,11,0,0,16,0,0,0,17,13,0,0,0,12,0}
+*
+*****************************************************************************/
+
+template <int i0, int i1, int i2, int i3, int i4, int i5, int i6, int i7>
+static inline void scatter(Vec8f const & data, float * array) {
+#if defined (__AVX512VL__)
+    __m256i indx = constant8i<i0,i1,i2,i3,i4,i5,i6,i7>();
+    __mmask16 mask = uint16_t(i0>=0 | (i1>=0)<<1 | (i2>=0)<<2 | (i3>=0)<<3| (i4>=0)<<4| (i5>=0)<<5| (i6>=0)<<6| (i7>=0)<<7);
+    _mm256_mask_i32scatter_ps(array, mask, indx, data, 4);
+#elif defined (__AVX512F__)
+    __m512i indx = _mm512_castsi256_si512(constant8i<i0,i1,i2,i3,i4,i5,i6,i7>());
+    __mmask16 mask = uint16_t(i0>=0 | (i1>=0)<<1 | (i2>=0)<<2 | (i3>=0)<<3| (i4>=0)<<4| (i5>=0)<<5| (i6>=0)<<6| (i7>=0)<<7);
+    _mm512_mask_i32scatter_ps(array, mask, indx, _mm512_castps256_ps512(data), 4);
+#else
+    const int index[8] = {i0,i1,i2,i3,i4,i5,i6,i7};
+    for (int i = 0; i < 8; i++) {
+        if (index[i] >= 0) array[index[i]] = data[i];
+    }
+#endif
+}
+
+template <int i0, int i1, int i2, int i3>
+static inline void scatter(Vec4d const & data, double * array) {
+#if defined (__AVX512VL__)
+    __m128i indx = constant4i<i0,i1,i2,i3>();
+    __mmask16 mask = uint16_t(i0>=0 | (i1>=0)<<1 | (i2>=0)<<2 | (i3>=0)<<3);
+    _mm256_mask_i32scatter_pd(array, mask, indx, data, 8);
+#elif defined (__AVX512F__)
+    __m256i indx = _mm256_castsi128_si256(constant4i<i0,i1,i2,i3>());
+    __mmask16 mask = uint16_t(i0>=0 | (i1>=0)<<1 | (i2>=0)<<2 | (i3>=0)<<3);
+    _mm512_mask_i32scatter_pd(array, mask, indx, _mm512_castpd256_pd512(data), 8);
+#else
+    const int index[4] = {i0,i1,i2,i3};
+    for (int i = 0; i < 4; i++) {
+        if (index[i] >= 0) array[index[i]] = data[i];
+    }
+#endif
+}
+
+static inline void scatter(Vec8i const & index, uint32_t limit, Vec8f const & data, float * array) {
+#if defined (__AVX512VL__)
+    __mmask16 mask = _mm256_cmplt_epu32_mask(index, Vec8ui(limit));
+    _mm256_mask_i32scatter_ps(array, mask, index, data, 4);
+#elif defined (__AVX512F__)
+    // 16 bit mask. upper 8 bits are (0<0) = false
+    __mmask16 mask = _mm512_cmplt_epu32_mask(_mm512_castsi256_si512(index), _mm512_castsi256_si512(Vec8ui(limit)));
+    _mm512_mask_i32scatter_ps(array, mask, _mm512_castsi256_si512(index), _mm512_castps256_ps512(data), 4);
+#else
+    for (int i = 0; i < 8; i++) {
+        if (uint32_t(index[i]) < limit) array[index[i]] = data[i];
+    }
+#endif
+}
+
+static inline void scatter(Vec4q const & index, uint32_t limit, Vec4d const & data, double * array) {
+#if defined (__AVX512VL__)
+    __mmask16 mask = _mm256_cmplt_epu64_mask(index, Vec4uq(uint64_t(limit)));
+    _mm256_mask_i64scatter_pd(array, mask, index, data, 8);
+#elif defined (__AVX512F__)
+    // 16 bit mask. upper 8 bits are (0<0) = false
+    __mmask16 mask = _mm512_cmplt_epu64_mask(_mm512_castsi256_si512(index), _mm512_castsi256_si512(Vec4uq(uint64_t(limit))));
+    _mm512_mask_i64scatter_pd(array, mask, _mm512_castsi256_si512(index), _mm512_castpd256_pd512(data), 8);
+#else
+    for (int i = 0; i < 4; i++) {
+        if (uint64_t(index[i]) < uint64_t(limit)) array[index[i]] = data[i];
+    }
+#endif
+} 
+
+static inline void scatter(Vec4i const & index, uint32_t limit, Vec4d const & data, double * array) {
+#if defined (__AVX512VL__)
+    __mmask16 mask = _mm_cmplt_epu32_mask(index, Vec4ui(limit));
+    _mm256_mask_i32scatter_pd(array, mask, index, data, 8);
+#elif defined (__AVX512F__)
+    // 16 bit mask. upper 12 bits are (0<0) = false
+    __mmask16 mask = _mm512_cmplt_epu32_mask(_mm512_castsi128_si512(index), _mm512_castsi128_si512(Vec4ui(limit)));
+    _mm512_mask_i32scatter_pd(array, mask, _mm256_castsi128_si256(index), _mm512_castpd256_pd512(data), 8);
+#else
+    for (int i = 0; i < 4; i++) {
+        if (uint32_t(index[i]) < limit) array[index[i]] = data[i];
+    }
+#endif
+} 
 
 
 /*****************************************************************************

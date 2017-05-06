@@ -1,8 +1,8 @@
 /****************************  instrset.h   **********************************
 * Author:        Agner Fog
 * Date created:  2012-05-30
-* Last modified: 2016-05-02
-* Version:       1.22
+* Last modified: 2016-11-25
+* Version:       1.25
 * Project:       vector classes
 * Description:
 * Header file for various compiler-specific tasks and other common tasks to 
@@ -14,11 +14,11 @@
 * > defines template class to represent compile-time integer constant
 * > defines template for compile-time error messages
 *
-* (c) Copyright 2012 - 2016 GNU General Public License www.gnu.org/licenses
+* (c) Copyright 2012-2016 GNU General Public License www.gnu.org/licenses
 ******************************************************************************/
 
 #ifndef INSTRSET_H
-#define INSTRSET_H 122
+#define INSTRSET_H 125
 
 // Detect 64 bit mode
 #if (defined(_M_AMD64) || defined(_M_X64) || defined(__amd64) ) && ! defined(__x86_64__)
@@ -28,7 +28,7 @@
 // Find instruction set from compiler macros if INSTRSET not defined
 // Note: Most of these macros are not defined in Microsoft compilers
 #ifndef INSTRSET
-#if defined ( __AVX512F__ ) || defined ( __AVX512__ ) // || defined ( __AVX512ER__ ) 
+#if defined ( __AVX512F__ ) || defined ( __AVX512__ )
 #define INSTRSET 9
 #elif defined ( __AVX2__ )
 #define INSTRSET 8
@@ -162,7 +162,8 @@ namespace VCL_NAMESPACE {
     int  instrset_detect(void);                      // tells which instruction sets are supported
     bool hasFMA3(void);                              // true if FMA3 instructions supported
     bool hasFMA4(void);                              // true if FMA4 instructions supported
-    bool hasXOP(void);                              // true if XOP  instructions supported
+    bool hasXOP(void);                               // true if XOP  instructions supported
+    bool hasAVX512ER(void);                          // true if AVX512ER instructions supported
 #ifdef VCL_NAMESPACE
 }
 #endif

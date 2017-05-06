@@ -8,7 +8,7 @@
 #ifndef ECOPDMTREESET_H_
 #define ECOPDMTREESET_H_
 
-#include "mtreeset.h"
+#include "tree/mtreeset.h"
 
 class EcoPDmtreeset : public MTreeSet
 {

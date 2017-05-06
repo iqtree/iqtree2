@@ -20,7 +20,7 @@
 #ifndef PDTREE_H
 #define PDTREE_H
 
-#include "mtree.h"
+#include "tree/mtree.h"
 #include "pda/split.h"
 
 

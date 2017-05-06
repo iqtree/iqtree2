@@ -1,8 +1,8 @@
 /****************************  vectorf256e.h   *******************************
 * Author:        Agner Fog
 * Date created:  2012-05-30
-* Last modified: 2016-04-26
-* Version:       1.22
+* Last modified: 2017-02-19
+* Version:       1.27
 * Project:       vector classes
 * Description:
 * Header file defining 256-bit floating point vector classes as interface
@@ -16,7 +16,7 @@
 *
 * For detailed instructions, see VectorClass.pdf
 *
-* (c) Copyright 2012 - 2016 GNU General Public License http://www.gnu.org/licenses
+* (c) Copyright 2012-2017 GNU General Public License http://www.gnu.org/licenses
 *****************************************************************************/
 
 // check combination of header files
@@ -868,17 +868,17 @@ static inline Vec8f square(Vec8f const & a) {
 }
 
 // pow(Vec8f, int):
-template <typename TT> static Vec8f pow(Vec8f const & a, TT n);
+template <typename TT> static Vec8f pow(Vec8f const & a, TT const & n);
 
 // Raise floating point numbers to integer power n
 template <>
-inline Vec8f pow<int>(Vec8f const & x0, int n) {
+inline Vec8f pow<int>(Vec8f const & x0, int const & n) {
     return pow_template_i<Vec8f>(x0, n);
 }
 
 // allow conversion from unsigned int
 template <>
-inline Vec8f pow<uint32_t>(Vec8f const & x0, uint32_t n) {
+inline Vec8f pow<uint32_t>(Vec8f const & x0, uint32_t const & n) {
     return pow_template_i<Vec8f>(x0, (int)n);
 }
 
@@ -931,6 +931,12 @@ static inline Vec8i truncate_to_int(Vec8f const & a) {
 static inline Vec8f to_float(Vec8i const & a) {
     return Vec8f(to_float(a.get_low()), to_float(a.get_high()));
 }
+
+// function to_float: convert unsigned integer vector to float vector
+static inline Vec8f to_float(Vec8ui const & a) {
+    return Vec8f(to_float(a.get_low()), to_float(a.get_high()));
+}
+
 #endif // VECTORI256_H 
 
 
@@ -1460,17 +1466,17 @@ static inline Vec4d square(Vec4d const & a) {
 
 // pow(Vec4d, int):
 // Raise floating point numbers to integer power n
-template <typename TT> static Vec4d pow(Vec4d const & a, TT n);
+template <typename TT> static Vec4d pow(Vec4d const & a, TT const & n);
 
 // Raise floating point numbers to integer power n
 template <>
-inline Vec4d pow<int>(Vec4d const & x0, int n) {
+inline Vec4d pow<int>(Vec4d const & x0, int const & n) {
     return pow_template_i<Vec4d>(x0, n);
 }
 
 // allow conversion from unsigned int
 template <>
-inline Vec4d pow<uint32_t>(Vec4d const & x0, uint32_t n) {
+inline Vec4d pow<uint32_t>(Vec4d const & x0, uint32_t const & n) {
     return pow_template_i<Vec4d>(x0, (int)n);
 }
 
@@ -2017,6 +2023,66 @@ static inline Vec4d lookup(Vec4q const & index, double const * table) {
     return Vec4d(table[index2[0]],table[index2[1]],table[index2[2]],table[index2[3]]);
 }
 #endif  // VECTORI256_H
+
+/*****************************************************************************
+*
+*          Vector scatter functions
+*
+******************************************************************************
+*
+* These functions write the elements of a vector to arbitrary positions in an
+* array in memory. Each vector element is written to an array position 
+* determined by an index. An element is not written if the corresponding
+* index is out of range.
+* The indexes can be specified as constant template parameters or as an
+* integer vector.
+* 
+* The scatter functions are useful if the data are distributed in a sparce
+* manner into the array. If the array is dense then it is more efficient
+* to permute the data into the right positions and then write the whole
+* permuted vector into the array.
+*
+* Example:
+* Vec8d a(10,11,12,13,14,15,16,17);
+* double b[16] = {0};
+* scatter<0,2,14,10,1,-1,5,9>(a,b); 
+* // Now, b = {10,14,11,0,0,16,0,0,0,17,13,0,0,0,12,0}
+*
+*****************************************************************************/
+
+template <int i0, int i1, int i2, int i3, int i4, int i5, int i6, int i7>
+static inline void scatter(Vec8f const & data, float * array) {
+    const int index[8] = {i0,i1,i2,i3,i4,i5,i6,i7};
+    for (int i = 0; i < 8; i++) {
+        if (index[i] >= 0) array[index[i]] = data[i];
+    }
+}
+
+template <int i0, int i1, int i2, int i3>
+static inline void scatter(Vec4d const & data, double * array) {
+    const int index[4] = {i0,i1,i2,i3};
+    for (int i = 0; i < 4; i++) {
+        if (index[i] >= 0) array[index[i]] = data[i];
+    }
+}
+
+static inline void scatter(Vec8i const & index, uint32_t limit, Vec8f const & data, float * array) {
+    for (int i = 0; i < 8; i++) {
+        if (uint32_t(index[i]) < limit) array[index[i]] = data[i];
+    }
+}
+
+static inline void scatter(Vec4q const & index, uint32_t limit, Vec4d const & data, double * array) {
+    for (int i = 0; i < 4; i++) {
+        if (uint64_t(index[i]) < uint64_t(limit)) array[index[i]] = data[i];
+    }
+} 
+
+static inline void scatter(Vec4i const & index, uint32_t limit, Vec4d const & data, double * array) {
+    for (int i = 0; i < 4; i++) {
+        if (uint32_t(index[i]) < limit) array[index[i]] = data[i];
+    }
+} 
 
 /*****************************************************************************
 *

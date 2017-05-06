@@ -10,7 +10,7 @@
 #include "split.h"
 #include "pdnetwork.h"
 #include "tree/mtreeset.h"
-#include "tree/ecopdmtreeset.h"
+#include "ecopdmtreeset.h"
 #include "graph.h"
 
 

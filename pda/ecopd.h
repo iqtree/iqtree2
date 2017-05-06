@@ -10,7 +10,7 @@
 
 #include "tree/mtree.h"
 #include "tree/mtreeset.h"
-#include "tree/ecopdmtreeset.h"
+#include "ecopdmtreeset.h"
 #include "pdnetwork.h"
 
 /* ===============================================================================

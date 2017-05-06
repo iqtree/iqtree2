@@ -24,7 +24,7 @@
 #include "phylokernelnew.h"
 #define KERNEL_FIX_STATES
 #include "phylokernelnew.h"
-#include "vectorf64.h"
+#include "vectorclass/vectorf64.h"
 #endif
 
 //#include "phylokernel.h"
