@@ -38,7 +38,7 @@
 #include "ratefreeinvar.h"
 #include "rateheterotachy.h"
 #include "rateheterotachyinvar.h"
-#include "ngs.h"
+//#include "ngs.h"
 #include <string>
 #include "timeutil.h"
 #include "nclextra/myreader.h"

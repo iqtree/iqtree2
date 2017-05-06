@@ -510,9 +510,7 @@ endif()
 
 add_executable(iqtree
 eigendecomposition.cpp eigendecomposition.h
-gss.cpp gss.h
 gzstream.cpp gzstream.h
-ngs.cpp ngs.h
 optimization.cpp optimization.h
 parsmultistate.cpp parsmultistate.h
 pda.cpp
@@ -683,7 +681,7 @@ endif()
 ##############################################################
 include (InstallRequiredSystemLibraries)
 set (CPACK_RESOURCE_FILE_LICENSE
-     "${CMAKE_CURRENT_SOURCE_DIR}/License.txt")
+     "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
 set (CPACK_PACKAGE_VERSION_MAJOR "${iqtree_VERSION_MAJOR}")
 set (CPACK_PACKAGE_VERSION_MINOR "${iqtree_VERSION_MINOR}")
 set (CPACK_PACKAGE_VERSION_PATCH "${iqtree_VERSION_PATCH}")

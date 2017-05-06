@@ -53,9 +53,9 @@
 #include "nclextra/myreader.h"
 #include "phyloanalysis.h"
 #include "tree/matree.h"
-#include "ngs.h"
+//#include "ngs.h"
 #include "parsmultistate.h"
-#include "gss.h"
+//#include "gss.h"
 #include "alignment/maalignment.h" //added by MA
 #include "tree/ncbitree.h"
 #include "pda/ecopd.h"
@@ -2566,10 +2566,10 @@ int main(int argc, char *argv[]) {
 		} else {
 			runPhyloAnalysis(Params::getInstance(), checkpoint);
 		}
-	} else if (Params::getInstance().ngs_file || Params::getInstance().ngs_mapped_reads) {
-		runNGSAnalysis(Params::getInstance());
-	} else if (Params::getInstance().pdtaxa_file && Params::getInstance().gene_scale_factor >=0.0 && Params::getInstance().gene_pvalue_file) {
-		runGSSAnalysis(Params::getInstance());
+//	} else if (Params::getInstance().ngs_file || Params::getInstance().ngs_mapped_reads) {
+//		runNGSAnalysis(Params::getInstance());
+//	} else if (Params::getInstance().pdtaxa_file && Params::getInstance().gene_scale_factor >=0.0 && Params::getInstance().gene_pvalue_file) {
+//		runGSSAnalysis(Params::getInstance());
 	} else if (Params::getInstance().consensus_type != CT_NONE) {
 		MExtTree tree;
 		switch (Params::getInstance().consensus_type) {
