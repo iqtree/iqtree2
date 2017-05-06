@@ -14,3 +14,5 @@ superalignmentpairwise.h
 superalignmentpairwiseplen.cpp
 superalignmentpairwiseplen.h
 )
+
+target_link_libraries(alignment ncl gsl)

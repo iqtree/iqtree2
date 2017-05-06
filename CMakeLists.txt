@@ -451,6 +451,19 @@ include_directories("${PROJECT_BINARY_DIR}")
 #include_directories("${PROJECT_BINARY_DIR}/zlib-1.2.7")
 
 
+if (NOT IQTREE_FLAGS MATCHES "nozlib")
+    find_package(ZLIB)
+endif()
+
+if(ZLIB_FOUND)
+  message ("Using system zlib")
+  include_directories(${ZLIB_INCLUDE_DIRS})
+else(ZLIB_FOUND)
+  message ("Using own zlib-1.2.7")
+  include_directories("${PROJECT_BINARY_DIR}/zlib-1.2.7" "${PROJECT_SOURCE_DIR}/zlib-1.2.7")
+  add_subdirectory(zlib-1.2.7)
+endif(ZLIB_FOUND)
+
 ##################################################################
 # subdirectories containing necessary libraries for the build
 ##################################################################
@@ -534,18 +547,9 @@ if(Backtrace_FOUND)
   target_link_libraries(iqtree ${Backtrace_LIBRARY})
 endif(Backtrace_FOUND)
 
-if (NOT IQTREE_FLAGS MATCHES "nozlib")
-    find_package(ZLIB)
-endif()
-
 if(ZLIB_FOUND)
-  message ("Using system zlib")
-  include_directories(${ZLIB_INCLUDE_DIRS})
   target_link_libraries(iqtree ${ZLIB_LIBRARIES})
 else(ZLIB_FOUND)
-  message ("Using own zlib-1.2.7")
-  include_directories("${PROJECT_BINARY_DIR}/zlib-1.2.7" "${PROJECT_SOURCE_DIR}/zlib-1.2.7")
-  add_subdirectory(zlib-1.2.7)
   target_link_libraries(iqtree zlibstatic)
 endif(ZLIB_FOUND)
 
