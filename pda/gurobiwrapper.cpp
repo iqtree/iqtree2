@@ -21,7 +21,7 @@
 
 #include <string.h>
 #include <sstream>
-#include "tools.h"
+#include "utils/tools.h"
 #include "gurobiwrapper.h"
 
 #define tolerance 0.000001

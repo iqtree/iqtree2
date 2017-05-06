@@ -21,7 +21,7 @@
 #define RATEMEYERHAESELER_H
 
 #include "rateheterogeneity.h"
-#include "tools.h"
+#include "utils/tools.h"
 #include "tree/iqtree.h"
 
 

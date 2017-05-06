@@ -23,11 +23,11 @@
 #ifndef CANDIDATESET_H_
 #define CANDIDATESET_H_
 //#include "phylotree.h"
-#include "tools.h"
+#include "utils/tools.h"
 #include "alignment/alignment.h"
 #include "tree/mtreeset.h"
 #include <stack>
-#include "checkpoint.h"
+#include "utils/checkpoint.h"
 
 
 class IQTree;

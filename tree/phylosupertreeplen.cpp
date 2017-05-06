@@ -9,7 +9,7 @@
 #include "alignment/superalignmentpairwiseplen.h"
 #include "model/partitionmodelplen.h"
 #include <string.h>
-#include "timeutil.h"
+#include "utils/timeutil.h"
 
 
 

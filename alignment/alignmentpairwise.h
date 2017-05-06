@@ -20,7 +20,7 @@
 #ifndef ALIGNMENTPAIRWISE_H
 #define ALIGNMENTPAIRWISE_H
 
-#include "optimization.h"
+#include "utils/optimization.h"
 #include "tree/phylotree.h"
 
 /**

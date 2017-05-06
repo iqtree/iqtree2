@@ -16,7 +16,7 @@
 #include <bitset>
 #include "pattern.h"
 #include "ncl/ncl.h"
-#include "tools.h"
+#include "utils/tools.h"
 
 // IMPORTANT: refactor STATE_UNKNOWN
 //const char STATE_UNKNOWN = 126;

@@ -35,7 +35,7 @@
 //#include <time.h>
 #include <cmath>
 #include "ncl/ncl.h"
-#include "tools.h"
+#include "utils/tools.h"
 #include "pda/split.h"
 
 using namespace std;

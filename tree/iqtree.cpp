@@ -24,15 +24,15 @@
 #include "phylosupertreeplen.h"
 #include "model/partitionmodelplen.h"
 #include "mexttree.h"
-#include "timeutil.h"
+#include "utils/timeutil.h"
 #include "model/modelmarkov.h"
 #include "model/rategamma.h"
 //#include "phylotreemixlen.h"
 //#include "model/modelfactorymixlen.h"
 #include <numeric>
-#include "tools.h"
-#include "MPIHelper.h"
-#include "pllnni.h"
+#include "utils/tools.h"
+#include "utils/MPIHelper.h"
+#include "utils/pllnni.h"
 
 #ifdef _IQTREE_MPI
 #include <mpi.h>

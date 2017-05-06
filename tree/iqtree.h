@@ -28,11 +28,11 @@
 #include <vector>
 #include "phylotree.h"
 #include "phylonode.h"
-#include "stoprule.h"
+#include "utils/stoprule.h"
 #include "mtreeset.h"
 #include "node.h"
 #include "candidateset.h"
-#include "pllnni.h"
+#include "utils/pllnni.h"
 
 typedef std::map< string, double > mapString2Double;
 typedef std::multiset< double, std::less< double > > multiSetDB;

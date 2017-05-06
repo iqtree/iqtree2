@@ -21,7 +21,7 @@
 #define MPDABLOCK_H
 
 #include "ncl/ncl.h"
-#include "tools.h"
+#include "utils/tools.h"
 
 class SplitGraph;
 

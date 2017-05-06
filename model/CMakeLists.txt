@@ -28,3 +28,5 @@ modelpomo.cpp modelpomo.h
 modelpomomixture.cpp modelpomomixture.h
 modelfactorymixlen.cpp modelfactorymixlen.h
 )
+
+target_link_libraries(model utils)

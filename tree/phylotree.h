@@ -38,11 +38,11 @@
 #include "model/modelsubst.h"
 #include "model/modelfactory.h"
 #include "phylonode.h"
-#include "optimization.h"
+#include "utils/optimization.h"
 #include "model/rateheterogeneity.h"
 #include "candidateset.h"
 #include "pll/pll.h"
-#include "checkpoint.h"
+#include "utils/checkpoint.h"
 #include "constrainttree.h"
 #include "memslot.h"
 

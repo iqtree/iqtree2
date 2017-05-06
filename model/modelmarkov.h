@@ -22,9 +22,9 @@
 
 #include "tree/phylotree.h"
 #include "modelsubst.h"
-#include "optimization.h"
+#include "utils/optimization.h"
 #include "alignment/alignment.h"
-#include "eigendecomposition.h"
+#include "utils/eigendecomposition.h"
 #include <complex>
 
 const double MIN_RATE = 1e-4;

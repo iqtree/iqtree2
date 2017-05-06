@@ -11,7 +11,7 @@
 #include "model/modelfactorymixlen.h"
 #include "model/modelmixture.h"
 #include "model/ratefree.h"
-#include "MPIHelper.h"
+#include "utils/MPIHelper.h"
 
 #ifdef USE_CPPOPTLIB
 #include "cppoptlib/solver/newtondescentsolver.h"

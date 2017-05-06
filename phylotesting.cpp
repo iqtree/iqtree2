@@ -32,7 +32,7 @@
 #include "model/modelmorphology.h"
 #include "model/modelmixture.h"
 #include "model/modelliemarkov.h"
-#include "timeutil.h"
+#include "utils/timeutil.h"
 
 #include "phyloanalysis.h"
 #include "gsl/mygsl.h"

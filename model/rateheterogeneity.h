@@ -21,10 +21,10 @@
 #define RATEHETEROGENEITY_H
 
 
-#include "optimization.h"
+#include "utils/optimization.h"
 #include <string>
-#include "tools.h"
-#include "checkpoint.h"
+#include "utils/tools.h"
+#include "utils/checkpoint.h"
 
 using namespace std;
 

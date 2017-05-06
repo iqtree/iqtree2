@@ -31,7 +31,7 @@
 #include "tree/node.h"
 #include "splitset.h"
 #include "tree/mtree.h"
-#include "checkpoint.h"
+#include "utils/checkpoint.h"
 
 class MTreeSet;
 

@@ -8,7 +8,7 @@
 #ifndef PHYLOTESTING_H_
 #define PHYLOTESTING_H_
 
-#include "tools.h"
+#include "utils/tools.h"
 
 class PhyloTree;
 class IQTree;

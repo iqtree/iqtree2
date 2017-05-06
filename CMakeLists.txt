@@ -470,6 +470,7 @@ endif(ZLIB_FOUND)
 add_subdirectory(pll)
 add_subdirectory(ncl)
 add_subdirectory(nclextra)
+add_subdirectory(utils)
 add_subdirectory(pda)
 add_subdirectory(lbfgsb)
 add_subdirectory(whtest)
@@ -509,18 +510,10 @@ if (IQTREE_FLAGS MATCHES "mpi")
 endif()
 
 add_executable(iqtree
-eigendecomposition.cpp eigendecomposition.h
-gzstream.cpp gzstream.h
-optimization.cpp optimization.h
 pda.cpp
 phyloanalysis.cpp phyloanalysis.h
-stoprule.cpp stoprule.h
-tools.cpp tools.h
-pllnni.cpp pllnni.h
 phylotesting.cpp phylotesting.h
 candidateset.cpp candidateset.h
-checkpoint.cpp checkpoint.h
-MPIHelper.cpp MPIHelper.h
 memslot.cpp memslot.h
 )
 
@@ -529,15 +522,10 @@ if(Backtrace_FOUND)
   target_link_libraries(iqtree ${Backtrace_LIBRARY})
 endif(Backtrace_FOUND)
 
-if(ZLIB_FOUND)
-  target_link_libraries(iqtree ${ZLIB_LIBRARIES})
-else(ZLIB_FOUND)
-  target_link_libraries(iqtree zlibstatic)
-endif(ZLIB_FOUND)
 
 if (NOT IQTREE_FLAGS MATCHES "avx" AND NOT IQTREE_FLAGS MATCHES "fma")
     if (NOT IQTREE_FLAGS MATCHES "nosse")
-        set_target_properties(iqtree ncl nclextra pda lbfgsb whtest sprng vectorclass model alignment tree PROPERTIES COMPILE_FLAGS "${SSE_FLAGS}")
+        set_target_properties(iqtree ncl nclextra utils pda lbfgsb whtest sprng vectorclass model alignment tree PROPERTIES COMPILE_FLAGS "${SSE_FLAGS}")
     endif()
     set_target_properties(kernelsse pll PROPERTIES COMPILE_FLAGS "${SSE_FLAGS}")
 	if (NOT BINARY32 AND NOT IQTREE_FLAGS MATCHES "novx")
@@ -593,7 +581,7 @@ if (NOT IQTREE_FLAGS MATCHES "single")
 endif()
 
 # basic linking librararies
-target_link_libraries(iqtree pll ncl nclextra pda lbfgsb whtest sprng vectorclass model gsl alignment tree ${PLATFORM_LIB} ${STD_LIB} ${THREAD_LIB} ${ATOMIC_LIB})
+target_link_libraries(iqtree pll ncl nclextra utils pda lbfgsb whtest sprng vectorclass model gsl alignment tree ${PLATFORM_LIB} ${STD_LIB} ${THREAD_LIB} ${ATOMIC_LIB})
 
 if (NOT IQTREE_FLAGS MATCHES "nosse")
     target_link_libraries(iqtree kernelsse)

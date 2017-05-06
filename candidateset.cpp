@@ -8,7 +8,7 @@
 
 #include "tree/iqtree.h"
 #include "candidateset.h"
-#include "MPIHelper.h"
+#include "utils/MPIHelper.h"
 
 void CandidateSet::init(Alignment *aln, int maxSize) {
     this->aln = aln;

@@ -10,7 +10,7 @@
 //
 //
 #include "modelsubst.h"
-#include "tools.h"
+#include "utils/tools.h"
 
 ModelSubst::ModelSubst(int nstates) : Optimization(), CheckpointFactory()
 {

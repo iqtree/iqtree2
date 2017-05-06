@@ -19,7 +19,7 @@
  ***************************************************************************/
 #include "mtreeset.h"
 #include "alignment/alignment.h"
-#include "gzstream.h"
+#include "utils/gzstream.h"
 
 MTreeSet::MTreeSet()
 {

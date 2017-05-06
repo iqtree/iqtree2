@@ -62,12 +62,12 @@
 #include "upperbounds.h"
 #include "tree/ecopdmtreeset.h"
 #include "pda/gurobiwrapper.h"
-#include "timeutil.h"
+#include "utils/timeutil.h"
 //#include <unistd.h>
 #include <stdlib.h>
 #include "vectorclass/instrset.h"
 
-#include "MPIHelper.h"
+#include "utils/MPIHelper.h"
 #ifdef _IQTREE_MPI
 #include <mpi.h>
 #endif

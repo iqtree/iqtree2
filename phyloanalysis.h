@@ -23,11 +23,11 @@
 #ifndef PHYLOANALYSIS_H
 #define PHYLOANALYSIS_H
 
-#include "tools.h"
+#include "utils/tools.h"
 #include "tree/mexttree.h"
 #include "phylotesting.h"
 #include "upperbounds.h" // Olga: functions for Upper Bounds analysis
-#include "pllnni.h"
+#include "utils/pllnni.h"
 
 class PhyloTree;
 class IQTree;

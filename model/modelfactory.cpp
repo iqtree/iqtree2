@@ -40,7 +40,7 @@
 #include "rateheterotachyinvar.h"
 //#include "ngs.h"
 #include <string>
-#include "timeutil.h"
+#include "utils/timeutil.h"
 #include "nclextra/myreader.h"
 #include <sstream>
 

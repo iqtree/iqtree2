@@ -20,17 +20,17 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 #include "phylotree.h"
-#include "bionj.h"
+#include "utils/bionj.h"
 //#include "rateheterogeneity.h"
 #include "alignment/alignmentpairwise.h"
 #include <algorithm>
 #include <limits>
-#include "timeutil.h"
-#include "pllnni.h"
+#include "utils/timeutil.h"
+#include "utils/pllnni.h"
 #include "phylosupertree.h"
 #include "phylosupertreeplen.h"
 #include "upperbounds.h"
-#include "MPIHelper.h"
+#include "utils/MPIHelper.h"
 #include "model/modelmixture.h"
 #include "phylonodemixlen.h"
 #include "phylotreemixlen.h"

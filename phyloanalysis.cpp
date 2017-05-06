@@ -44,7 +44,7 @@
 #include "model/modelprotein.h"
 #include "model/modelbin.h"
 #include "model/modelcodon.h"
-#include "stoprule.h"
+#include "utils/stoprule.h"
 
 #include "tree/mtreeset.h"
 #include "tree/mexttree.h"
@@ -55,9 +55,9 @@
 #include "model/modelfactorymixlen.h"
 //#include "guidedbootstrap.h"
 #include "model/modelset.h"
-#include "timeutil.h"
+#include "utils/timeutil.h"
 #include "upperbounds.h"
-#include "MPIHelper.h"
+#include "utils/MPIHelper.h"
 
 
 void reportReferences(Params &params, ofstream &out, string &original_model) {

@@ -6,8 +6,8 @@
  */
 
 #include "tree/phylotreemixlen.h"
-#include "timeutil.h"
-#include "tools.h"
+#include "utils/timeutil.h"
+#include "utils/tools.h"
 #include "model/modelfactorymixlen.h"
 #include "model/modelmarkov.h"
 #include "model/modelmixture.h"

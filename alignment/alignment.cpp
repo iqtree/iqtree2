@@ -9,14 +9,14 @@
 // Copyright: See COPYING file that comes with this distribution
 //
 //
-#include "tools.h"
+#include "utils/tools.h"
 #include "alignment.h"
 #include "nclextra/myreader.h"
 #include <numeric>
 #include <sstream>
 #include "model/rategamma.h"
 #include "gsl/mygsl.h"
-#include "gzstream.h"
+#include "utils/gzstream.h"
 
 using namespace std;
 

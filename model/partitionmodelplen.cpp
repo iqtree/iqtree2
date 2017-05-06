@@ -8,7 +8,7 @@
 
 #include <stdio.h>
 #include "partitionmodelplen.h"
-#include "timeutil.h"
+#include "utils/timeutil.h"
 
 /**********************************************************
  * class PartitionModelPlen

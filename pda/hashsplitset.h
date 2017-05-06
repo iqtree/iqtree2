@@ -22,7 +22,7 @@
 #define HASHSPLITSET_H
 
 
-#include "tools.h"
+#include "utils/tools.h"
 #include "split.h"
 
 using namespace std;
