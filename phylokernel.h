@@ -11,7 +11,7 @@
 #include "phylotree.h"
 //#include "vectorclass/vectorclass.h"
 //#include "vectorclass/vectormath_exp.h"
-#include "superalignment.h"
+#include "alignment/superalignment.h"
 
 #ifdef __SSE2__
 inline Vec2d horizontal_add(Vec2d x[2]) {

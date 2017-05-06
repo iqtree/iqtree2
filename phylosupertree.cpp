@@ -18,8 +18,8 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 #include "phylosupertree.h"
-#include "superalignment.h"
-#include "superalignmentpairwise.h"
+#include "alignment/superalignment.h"
+#include "alignment/superalignmentpairwise.h"
 #include "msetsblock.h"
 #include "myreader.h"
 #include "phylotesting.h"

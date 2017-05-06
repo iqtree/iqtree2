@@ -10,7 +10,7 @@
 
 #include "phylosupertree.h"
 #include "model/partitionmodel.h"
-#include "superalignmentpairwise.h"
+#include "alignment/superalignmentpairwise.h"
 
 /**
  * this is to classify the cases which happen on the subtree

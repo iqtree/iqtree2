@@ -6,7 +6,7 @@
  */
 
 #include "phylosupertreeplen.h"
-#include "superalignmentpairwiseplen.h"
+#include "alignment/superalignmentpairwiseplen.h"
 #include "model/partitionmodelplen.h"
 #include <string.h>
 #include "timeutil.h"

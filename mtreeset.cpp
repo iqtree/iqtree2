@@ -18,7 +18,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 #include "mtreeset.h"
-#include "alignment.h"
+#include "alignment/alignment.h"
 #include "gzstream.h"
 
 MTreeSet::MTreeSet()

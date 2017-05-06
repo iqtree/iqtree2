@@ -22,7 +22,7 @@
 
 #include "iqtree.h"
 #include "supernode.h"
-#include "superalignment.h"
+#include "alignment/superalignment.h"
 
 
 /**

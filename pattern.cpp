@@ -10,7 +10,7 @@
 //
 //
 #include "pattern.h"
-#include "alignment.h"
+#include "alignment/alignment.h"
 
 Pattern::Pattern()
         : vector<StateType>()

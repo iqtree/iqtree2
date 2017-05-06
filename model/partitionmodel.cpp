@@ -18,7 +18,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 #include "partitionmodel.h"
-#include "superalignment.h"
+#include "alignment/superalignment.h"
 #include "model/rategamma.h"
 
 PartitionModel::PartitionModel()

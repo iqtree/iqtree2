@@ -33,7 +33,7 @@
 
 #include "phylotree.h"
 #include "pllnni.h"
-#include "alignment.h"
+#include "alignment/alignment.h"
 
 /* program options */
 int nni0;

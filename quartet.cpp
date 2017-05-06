@@ -12,7 +12,7 @@
 #include "phylotree.h"
 #include "phylosupertree.h"
 #include "model/partitionmodel.h"
-#include "alignment.h"
+#include "alignment/alignment.h"
 #if 0 // (HAS-bla)
 #include "tools.h"
 #endif

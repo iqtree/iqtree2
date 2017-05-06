@@ -23,7 +23,7 @@
 #include "phylotree.h"
 #include "modelsubst.h"
 #include "optimization.h"
-#include "alignment.h"
+#include "alignment/alignment.h"
 #include "eigendecomposition.h"
 #include <complex>
 

@@ -24,7 +24,7 @@
 #define CANDIDATESET_H_
 //#include "phylotree.h"
 #include "tools.h"
-#include "alignment.h"
+#include "alignment/alignment.h"
 #include "mtreeset.h"
 #include <stack>
 #include "checkpoint.h"

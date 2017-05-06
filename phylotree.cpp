@@ -22,7 +22,7 @@
 #include "phylotree.h"
 #include "bionj.h"
 //#include "rateheterogeneity.h"
-#include "alignmentpairwise.h"
+#include "alignment/alignmentpairwise.h"
 #include <algorithm>
 #include <limits>
 #include "timeutil.h"

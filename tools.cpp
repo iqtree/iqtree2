@@ -35,7 +35,7 @@
 #include "timeutil.h"
 #include "gzstream.h"
 #include "MPIHelper.h"
-#include "alignment.h"
+#include "alignment/alignment.h"
 
 VerboseMode verbose_mode;
 

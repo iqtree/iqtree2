@@ -21,7 +21,7 @@
 #include "phylotree.h"
 #include "tinatree.h"
 #include "parsmultistate.h"
-#include "alignment.h"
+#include "alignment/alignment.h"
 
 void doParsMultiState(Params &params) {
 	cout << "Here\n";

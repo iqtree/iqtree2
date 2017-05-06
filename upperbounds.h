@@ -13,7 +13,7 @@
 */
 #include "iqtree.h"
 #include "mexttree.h"
-#include "alignment.h"
+#include "alignment/alignment.h"
 #include "phylotree.h"
 
 class PhyloTree;

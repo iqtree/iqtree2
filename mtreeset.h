@@ -22,7 +22,7 @@
 
 #include "mtree.h"
 #include "splitgraph.h"
-#include "alignment.h"
+#include "alignment/alignment.h"
 
 void readIntVector(const char *file_name, int burnin, int max_count, IntVector &vec);
 

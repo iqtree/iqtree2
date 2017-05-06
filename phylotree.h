@@ -34,7 +34,7 @@
 //#define EIGEN_TUNE_FOR_CPU_CACHE_SIZE (8*512*512)
 //#include <Eigen/Core>
 #include "mtree.h"
-#include "alignment.h"
+#include "alignment/alignment.h"
 #include "model/modelsubst.h"
 #include "model/modelfactory.h"
 #include "phylonode.h"

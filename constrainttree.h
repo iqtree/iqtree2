@@ -12,7 +12,7 @@
 #define CONSTRAINTTREE_H
 
 #include "mtree.h"
-#include "alignment.h"
+#include "alignment/alignment.h"
 
 struct NNIMove;
 

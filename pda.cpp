@@ -56,7 +56,7 @@
 #include "ngs.h"
 #include "parsmultistate.h"
 #include "gss.h"
-#include "maalignment.h" //added by MA
+#include "alignment/maalignment.h" //added by MA
 #include "ncbitree.h"
 #include "ecopd.h"
 #include "upperbounds.h"

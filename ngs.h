@@ -22,7 +22,7 @@
 #define NGS_H
 
 #include "phylotree.h"
-#include "alignmentpairwise.h"
+#include "alignment/alignmentpairwise.h"
 #include "model/ratemeyerdiscrete.h"
 
 /*

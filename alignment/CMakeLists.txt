@@ -1,0 +1,14 @@
+add_library(alignment
+alignment.cpp
+alignment.h
+alignmentpairwise.cpp
+alignmentpairwise.h
+maalignment.cpp
+maalignment.h
+superalignment.cpp
+superalignment.h
+superalignmentpairwise.cpp
+superalignmentpairwise.h
+superalignmentpairwiseplen.cpp
+superalignmentpairwiseplen.h
+)

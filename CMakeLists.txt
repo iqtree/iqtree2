@@ -471,6 +471,7 @@ endif()
 add_definitions("-I${EIGEN3_INCLUDE_DIR} -DUSE_EIGEN3")
 add_subdirectory(model)
 add_subdirectory(gsl)
+add_subdirectory(alignment)
 
 ##################################################################
 # the main executable
@@ -492,8 +493,6 @@ if (IQTREE_FLAGS MATCHES "mpi")
 endif()
 
 add_executable(iqtree
-alignment.cpp alignment.h
-alignmentpairwise.cpp alignmentpairwise.h
 circularnetwork.cpp circularnetwork.h
 eigendecomposition.cpp eigendecomposition.h
 greedy.cpp greedy.h
@@ -502,7 +501,6 @@ gurobiwrapper.cpp gurobiwrapper.h
 gzstream.cpp gzstream.h
 hashsplitset.cpp hashsplitset.h
 iqtree.cpp iqtree.h
-maalignment.cpp maalignment.h
 matree.cpp matree.h
 mexttree.cpp mexttree.h
 mpdablock.cpp mpdablock.h
@@ -536,9 +534,6 @@ split.cpp split.h
 splitgraph.cpp splitgraph.h
 splitset.cpp splitset.h
 stoprule.cpp stoprule.h
-superalignment.cpp superalignment.h
-superalignmentpairwise.cpp superalignmentpairwise.h
-superalignmentpairwiseplen.cpp superalignmentpairwiseplen.h
 supernode.cpp supernode.h
 tinatree.cpp tinatree.h
 tools.cpp tools.h
@@ -579,7 +574,7 @@ endif(ZLIB_FOUND)
 
 if (NOT IQTREE_FLAGS MATCHES "avx" AND NOT IQTREE_FLAGS MATCHES "fma")
     if (NOT IQTREE_FLAGS MATCHES "nosse")
-        set_target_properties(iqtree ncl lbfgsb whtest sprng vectorclass model PROPERTIES COMPILE_FLAGS "${SSE_FLAGS}")
+        set_target_properties(iqtree ncl lbfgsb whtest sprng vectorclass model alignment PROPERTIES COMPILE_FLAGS "${SSE_FLAGS}")
     endif()
     set_target_properties(kernelsse pll PROPERTIES COMPILE_FLAGS "${SSE_FLAGS}")
 	if (NOT BINARY32 AND NOT IQTREE_FLAGS MATCHES "novx")
@@ -635,7 +630,7 @@ if (NOT IQTREE_FLAGS MATCHES "single")
 endif()
 
 # basic linking librararies
-target_link_libraries(iqtree pll ncl lbfgsb whtest sprng vectorclass model gsl ${PLATFORM_LIB} ${STD_LIB} ${THREAD_LIB} ${ATOMIC_LIB})
+target_link_libraries(iqtree pll ncl lbfgsb whtest sprng vectorclass model gsl alignment ${PLATFORM_LIB} ${STD_LIB} ${THREAD_LIB} ${ATOMIC_LIB})
 
 if (NOT IQTREE_FLAGS MATCHES "nosse")
     target_link_libraries(iqtree kernelsse)
