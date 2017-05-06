@@ -10,7 +10,7 @@
 
 #include "phylotree.h"
 #include "phylokernelnew.h"
-#include "vectorf64.h"
+#include "vectorclass/vectorf64.h"
 
 
 void PhyloTree::computeNonrevPartialLikelihood(TraversalInfo &info, size_t ptn_lower, size_t ptn_upper, int thread_id) {
