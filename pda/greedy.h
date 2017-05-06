@@ -20,7 +20,7 @@
 #ifndef GREEDY_H
 #define GREEDY_H
 
-#include "tree/pdtree.h"
+#include "pdtree.h"
 
 /**
 Implementation of greedy algorithm with complexity O(n*logk)

@@ -11,6 +11,9 @@ splitset.cpp splitset.h
 lpwrapper.c lpwrapper.h
 ecopd.cpp ecopd.h
 graph.cpp graph.h
+pdtree.cpp pdtree.h
+pdtreeset.cpp pdtreeset.h
+ecopdmtreeset.cpp ecopdmtreeset.h
 )
 
 target_link_libraries(pda nclextra)

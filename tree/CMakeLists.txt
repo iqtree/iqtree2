@@ -2,8 +2,6 @@ add_library(tree
 constrainttree.cpp
 constrainttree.h
 candidateset.cpp candidateset.h
-ecopdmtreeset.cpp
-ecopdmtreeset.h
 iqtree.cpp
 iqtree.h
 matree.cpp
@@ -19,10 +17,6 @@ ncbitree.cpp
 ncbitree.h
 node.cpp
 node.h
-pdtree.cpp
-pdtree.h
-pdtreeset.cpp
-pdtreeset.h
 phylokernel.h
 phylokernelnew.h
 phylokernelnonrev.cpp
