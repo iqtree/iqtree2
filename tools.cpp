@@ -2804,6 +2804,16 @@ void parseArg(int argc, char *argv[], Params &params) {
 					params.numNNITrees = params.numInitTrees;
 				continue;
 			}
+			if (strcmp(argv[cnt], "-fast") == 0) {
+                // fast search option to resemble FastTree
+                if (params.gbo_replicates != 0) {
+                    outError("Ultrafast bootstrap (-bb) does not work with -fast option");
+                }
+                params.numInitTrees = 2;
+				params.min_iterations = 2;
+				params.stop_condition = SC_FIXED_ITERATION;
+                continue;
+            }
 			if (strcmp(argv[cnt], "-fss") == 0) {
 				params.fixStableSplits = true;
 //				params.five_plus_five = true;
@@ -3516,6 +3526,7 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -sprrad <number>     Radius for parsimony SPR search (default: 6)" << endl
             << "  -allnni              Perform more thorough NNI search (default: off)" << endl
             << "  -g <constraint_tree> (Multifurcating) topological constraint tree file" << endl
+            << "  -fast                Fast search to resemble FastTree" << endl
 //            << "  -iqp                 Use the IQP tree perturbation (default: randomized NNI)" << endl
 //            << "  -iqpnni              Switch back to the old IQPNNI tree search algorithm" << endl
             << endl << "ULTRAFAST BOOTSTRAP:" << endl
