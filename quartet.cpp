@@ -1452,7 +1452,8 @@ void PhyloTree::doLikelihoodMapping() {
 
     if (params->print_lmap_quartet_lh) {
         // print quartet file
-        out << "SeqIDs\tlh1\tlh2\tlh3\tweight1\tweight2\tweight3" << endl;
+        out << "SeqIDs\tlh1\tlh2\tlh3\tweight1\tweight2\tweight3\tarea\tcorner" << endl;
+        // HAS - adding area7/corner3 output
         for (qid = 0; qid < params->lmap_num_quartets; qid++) {
             out << "(" << lmap_quartet_info[qid].seqID[0]+1 << ","
                 << lmap_quartet_info[qid].seqID[1]+1 << ","
@@ -1463,7 +1464,9 @@ void PhyloTree::doLikelihoodMapping() {
                 << "\t" << lmap_quartet_info[qid].logl[2]
                 << "\t" << lmap_quartet_info[qid].qweight[0] 
                 << "\t" << lmap_quartet_info[qid].qweight[1] 
-                << "\t" << lmap_quartet_info[qid].qweight[2] << endl;
+                << "\t" << lmap_quartet_info[qid].qweight[2] // HAS - adding area7/corner3 output
+                << "\t" << lmap_quartet_info[qid].area + 1
+                << "\t" << lmap_quartet_info[qid].corner + 1 << endl;
         }
 
 //        PhyloTree::reportLikelihoodMapping(out);
