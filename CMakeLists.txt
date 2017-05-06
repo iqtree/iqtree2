@@ -469,6 +469,7 @@ endif(ZLIB_FOUND)
 ##################################################################
 add_subdirectory(pll)
 add_subdirectory(ncl)
+add_subdirectory(nclextra)
 add_subdirectory(lbfgsb)
 add_subdirectory(whtest)
 add_subdirectory(sprng)
@@ -514,10 +515,6 @@ gss.cpp gss.h
 gurobiwrapper.cpp gurobiwrapper.h
 gzstream.cpp gzstream.h
 hashsplitset.cpp hashsplitset.h
-mpdablock.cpp mpdablock.h
-msetsblock.cpp msetsblock.h
-msplitsblock.cpp msplitsblock.h
-modelsblock.cpp modelsblock.h
 ngs.cpp ngs.h
 optimization.cpp optimization.h
 parsmultistate.cpp parsmultistate.h
@@ -555,7 +552,7 @@ endif(ZLIB_FOUND)
 
 if (NOT IQTREE_FLAGS MATCHES "avx" AND NOT IQTREE_FLAGS MATCHES "fma")
     if (NOT IQTREE_FLAGS MATCHES "nosse")
-        set_target_properties(iqtree ncl lbfgsb whtest sprng vectorclass model alignment tree PROPERTIES COMPILE_FLAGS "${SSE_FLAGS}")
+        set_target_properties(iqtree ncl nclextra lbfgsb whtest sprng vectorclass model alignment tree PROPERTIES COMPILE_FLAGS "${SSE_FLAGS}")
     endif()
     set_target_properties(kernelsse pll PROPERTIES COMPILE_FLAGS "${SSE_FLAGS}")
 	if (NOT BINARY32 AND NOT IQTREE_FLAGS MATCHES "novx")
@@ -611,7 +608,7 @@ if (NOT IQTREE_FLAGS MATCHES "single")
 endif()
 
 # basic linking librararies
-target_link_libraries(iqtree pll ncl lbfgsb whtest sprng vectorclass model gsl alignment tree ${PLATFORM_LIB} ${STD_LIB} ${THREAD_LIB} ${ATOMIC_LIB})
+target_link_libraries(iqtree pll ncl nclextra lbfgsb whtest sprng vectorclass model gsl alignment tree ${PLATFORM_LIB} ${STD_LIB} ${THREAD_LIB} ${ATOMIC_LIB})
 
 if (NOT IQTREE_FLAGS MATCHES "nosse")
     target_link_libraries(iqtree kernelsse)

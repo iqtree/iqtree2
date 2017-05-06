@@ -11,7 +11,7 @@
 //
 #include "tools.h"
 #include "alignment.h"
-#include "myreader.h"
+#include "nclextra/myreader.h"
 #include <numeric>
 #include <sstream>
 #include "model/rategamma.h"

@@ -20,8 +20,8 @@
 #include "tree/mtree.h"
 #include "pdnetwork.h"
 #include "ncl/ncl.h"
-#include "msetsblock.h"
-#include "myreader.h" 
+#include "nclextra/msetsblock.h"
+#include "nclextra/myreader.h" 
 #include "lpwrapper.h"
 #include "gurobiwrapper.h"
 

@@ -25,7 +25,7 @@
 #include <vector>
 #include <string>
 #include "tools.h"
-#include "msplitsblock.h"
+#include "nclextra/msplitsblock.h"
 
 using namespace std;
 

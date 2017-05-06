@@ -23,7 +23,7 @@
 #include "tools.h"
 #include "modelsubst.h"
 #include "rateheterogeneity.h"
-#include "modelsblock.h"
+#include "nclextra/modelsblock.h"
 #include "checkpoint.h"
 #include "alignment/alignment.h"
 

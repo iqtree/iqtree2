@@ -24,7 +24,7 @@
 #include <algorithm>
 #include "tree/node.h"
 #include "ncl/ncl.h"
-#include "myreader.h"
+#include "nclextra/myreader.h"
 #include "tree/mtree.h"
 #include "tree/mtreeset.h"
 

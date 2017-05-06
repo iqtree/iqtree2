@@ -20,7 +20,7 @@
 #include "ncl/ncl.h"
 #include "tools.h"
 #include "pdtree.h"
-#include "myreader.h"
+#include "nclextra/myreader.h"
 
 /*********************************************
 	class PDTree

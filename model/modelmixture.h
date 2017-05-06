@@ -11,7 +11,7 @@
 #include "tree/phylotree.h"
 #include "modelsubst.h"
 #include "modelmarkov.h"
-#include "modelsblock.h"
+#include "nclextra/modelsblock.h"
 
 
 const char OPEN_BRACKET = '{';

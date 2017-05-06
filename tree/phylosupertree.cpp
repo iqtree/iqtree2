@@ -20,8 +20,8 @@
 #include "phylosupertree.h"
 #include "alignment/superalignment.h"
 #include "alignment/superalignmentpairwise.h"
-#include "msetsblock.h"
-#include "myreader.h"
+#include "nclextra/msetsblock.h"
+#include "nclextra/myreader.h"
 #include "phylotesting.h"
 #include "model/partitionmodel.h"
 

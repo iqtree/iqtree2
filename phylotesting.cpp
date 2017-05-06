@@ -18,7 +18,7 @@
 
 #include "model/modelmarkov.h"
 #include "model/modeldna.h"
-#include "myreader.h"
+#include "nclextra/myreader.h"
 #include "model/rateheterogeneity.h"
 #include "model/rategamma.h"
 #include "model/rateinvar.h"

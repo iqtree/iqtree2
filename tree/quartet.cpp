@@ -17,8 +17,8 @@
 #include "tools.h"
 #endif
 #include "ncl/ncl.h"
-#include "msetsblock.h"
-#include "myreader.h"
+#include "nclextra/msetsblock.h"
+#include "nclextra/myreader.h"
 // #include "lmap.c"
 
 #ifdef _OPENMP

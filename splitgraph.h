@@ -25,9 +25,9 @@
 #include <string>
 #include "split.h"
 #include "ncl/ncl.h"
-#include "msplitsblock.h"
-#include "mpdablock.h"
-#include "msetsblock.h"
+#include "nclextra/msplitsblock.h"
+#include "nclextra/mpdablock.h"
+#include "nclextra/msetsblock.h"
 #include "tree/node.h"
 #include "splitset.h"
 #include "tree/mtree.h"

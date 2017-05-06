@@ -42,7 +42,7 @@
 #include <sys/stat.h>
 //#include <math.h>
 #include "ncl/ncl.h"
-#include "msetsblock.h"
+#include "nclextra/msetsblock.h"
 
 #define SPRNG
 #include "sprng/sprng.h"

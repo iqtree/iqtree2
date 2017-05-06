@@ -41,7 +41,7 @@
 #include "ngs.h"
 #include <string>
 #include "timeutil.h"
-#include "myreader.h"
+#include "nclextra/myreader.h"
 #include <sstream>
 
 ModelsBlock *readModelsDefinition(Params &params) {
