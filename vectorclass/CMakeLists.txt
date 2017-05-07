@@ -1,3 +1,9 @@
 add_library(vectorclass
 instrset_detect.cpp
+instrset.h
+vectorclass.h
+vectorf64.h
+vectorf128.h
+vectorf256.h
+vectorf512.h
 )

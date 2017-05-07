@@ -211,6 +211,9 @@ void printCopyright(ostream &out) {
 	#ifdef _OPENMP
 	out << " multicore";
 	#endif
+    #ifdef __AVX512KNL
+    out << " Xeon Phi KNL";
+    #endif
  	out << " version ";
 #else
  	out << "PDA - Phylogenetic Diversity Analyzer version ";

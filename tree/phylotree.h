@@ -561,9 +561,7 @@ public:
 #else
     void setDotProductAVX();
     void setDotProductFMA();
-#ifdef INCLUDE_AVX512
     void setDotProductAVX512();
-#endif
 #endif
 
     void setDotProductSSE();
@@ -1722,14 +1720,12 @@ public:
     virtual void setLikelihoodKernel(LikelihoodKernel lk, int num_threads);
 
 #if defined(BINARY32) || defined(__NOAVX__)
-    virtual void setLikelihoodKernelAVX() {}
-    virtual void setLikelihoodKernelFMA() {}
+    void setLikelihoodKernelAVX() {}
+    void setLikelihoodKernelFMA() {}
 #else
-    virtual void setLikelihoodKernelAVX();
-    virtual void setLikelihoodKernelFMA();
-#ifdef INCLUDE_AVX512
-    virtual void setLikelihoodKernelAVX512();
-#endif
+    void setLikelihoodKernelAVX();
+    void setLikelihoodKernelFMA();
+    void setLikelihoodKernelAVX512();
 #endif
     virtual void setLikelihoodKernelSSE();
     

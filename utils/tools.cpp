@@ -848,7 +848,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.aLRT_test = false;
     params.aBayes_test = false;
     params.localbp_replicates = 0;
-#ifdef INCLUDE_AVX512
+#ifdef __AVX512KNL
     params.SSE = LK_AVX512;
 #else
     params.SSE = LK_AVX_FMA;
@@ -3660,9 +3660,13 @@ void usage_iqtree(char* argv[], bool full_command) {
             << endl << "RATE HETEROGENEITY AMONG SITES:" << endl
             << "  -m modelname+I       A proportion of invariable sites" << endl
             << "  -m modelname+G[n]    Discrete Gamma model with n categories (default n=4)" << endl
+            << "  -m modelname*G[n]    Discrete Gamma model with unlinked model parameters" << endl
             << "  -m modelname+I+G[n]  Invariable sites plus Gamma model with n categories" << endl
             << "  -m modelname+R[n]    FreeRate model with n categories (default n=4)" << endl
+            << "  -m modelname*R[n]    FreeRate model with unlinked model parameters" << endl
             << "  -m modelname+I+R[n]  Invariable sites plus FreeRate model with n categories" << endl
+            << "  -m modelname+Hn      Heterotachy model with n classes" << endl
+            << "  -m modelname*Hn      Heterotachy model with n classes and unlinked parameters" << endl
             << "  -a <Gamma_shape>     Gamma shape parameter for site rates (default: estimate)" << endl
             << "  -amin <min_shape>    Min Gamma shape parameter for site rates (default: 0.02)" << endl
             << "  -gmedian             Median approximation for +G site rates (default: mean)" << endl

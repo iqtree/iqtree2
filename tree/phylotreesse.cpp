@@ -68,7 +68,7 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk, int num_threads) {
     setParsimonyKernel(lk);
 
     //--- dot-product kernel ---
-#ifdef INCLUDE_AVX512
+#ifdef __AVX512KNL
     if (lk >= LK_AVX512) {
 		setDotProductAVX512();
     } else
@@ -123,7 +123,7 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk, int num_threads) {
 
     //--- SIMD kernel ---
     if (lk >= LK_SSE2) {
-#ifdef INCLUDE_AVX512
+#ifdef __AVX512KNL
     	if (lk >= LK_AVX512) {
     		setLikelihoodKernelAVX512();
     		return;
