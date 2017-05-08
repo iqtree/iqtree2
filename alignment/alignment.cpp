@@ -155,7 +155,7 @@ void Alignment::checkSeqName() {
         // cout <<  "  Sequence";
         cout.width(max_len+14);
         cout << right << "Gap/Ambiguity";
-        if (do_comp_test) 
+        if (do_comp_test)
             cout << "  Composition  p-value";
         cout << endl;
         int num_problem_seq = 0;
@@ -196,7 +196,7 @@ void Alignment::checkSeqName() {
                     for (j = 0; j < nnuc; j++) {
                         state_freq_norm[j] /= sum_freq;
                     }
-                    
+
                     for (j = 0; j < nnuc; j++)
                         sum_count += count_per_seq[i*num_states+j];
                     double sum_inv = 1.0/sum_count;
@@ -546,7 +546,7 @@ int getDataBlockMorphStates(NxsCharactersBlock *data_block) {
     int seq, site;
     char ch;
     int nstates = 0;
-    
+
     for (site = 0; site < nsite; site++)
         for (seq = 0; seq < nseq; seq++) {
             int nstate = data_block->GetNumStates(seq, site);
@@ -555,11 +555,11 @@ int getDataBlockMorphStates(NxsCharactersBlock *data_block) {
             if (nstate == 1) {
                 ch = data_block->GetState(seq, site, 0);
                 if (!isalnum(ch)) continue;
-                if (ch >= '0' && ch <= '9') 
+                if (ch >= '0' && ch <= '9')
                     ch = ch - '0' + 1;
-                else if (ch >= 'A' && ch <= 'Z') 
+                else if (ch >= 'A' && ch <= 'Z')
                     ch = ch - 'A' + 11;
-                else 
+                else
                     outError(data_block->GetTaxonLabel(seq) + " has invalid state at site " + convertIntToString(site));
                 if (ch > nstates) nstates = ch;
                 continue;
@@ -569,11 +569,11 @@ int getDataBlockMorphStates(NxsCharactersBlock *data_block) {
                 if (!isalnum(ch)) continue;
                 if (ch >= '0' && ch <= '9') ch = ch - '0' + 1;
                 if (ch >= 'A' && ch <= 'Z') ch = ch - 'A' + 11;
-                if (ch >= '0' && ch <= '9') 
+                if (ch >= '0' && ch <= '9')
                     ch = ch - '0' + 1;
-                else if (ch >= 'A' && ch <= 'Z') 
+                else if (ch >= 'A' && ch <= 'Z')
                     ch = ch - 'A' + 11;
-                else 
+                else
                     outError(data_block->GetTaxonLabel(seq) + " has invalid state at site " + convertIntToString(site));
                 if (ch > nstates) nstates = ch;
             }
@@ -720,7 +720,7 @@ void Alignment::computeConst(Pattern &pat) {
 
     // compute is_const
     /*
-    is_const = is_const && (pat.num_chars <= 1); 
+    is_const = is_const && (pat.num_chars <= 1);
     if (is_const) {
         if (pat.num_chars == 0) // all-gap pattern
             pat.const_char = num_states;
@@ -851,7 +851,7 @@ void Alignment::orderPatternByNumChars(int pat_type) {
         num_parsimony_sites = num_informative_sites;
     else
         num_parsimony_sites = num_variant_sites;
-        
+
     int maxi = (num_parsimony_sites+UINT_BITS-1)/UINT_BITS;
     pars_lower_bound = new UINT[maxi+1];
     UINT sum = 0;
@@ -1490,7 +1490,7 @@ int Alignment::buildPattern(StrVector &sequences, char *sequence_type, int nseq,
             if (state == STATE_INVALID) {
                 if (num_error < 100) {
                     err_str << "Sequence " << seq_names[seq] << " has invalid character " << sequences[seq][site];
-                    if (seq_type == SEQ_CODON) 
+                    if (seq_type == SEQ_CODON)
                         err_str << sequences[seq][site+1] << sequences[seq][site+2];
                     err_str << " at site " << site+1 << endl;
                 } else if (num_error == 100)
@@ -1632,7 +1632,7 @@ int Alignment::readPhylipSequential(char *filename, char *sequence_type) {
         } else { // read sequence contents
             if (seq_id >= nseq)
                 throw "Line " + convertIntToString(line_num) + ": Too many sequences detected";
-                
+
             if (seq_names[seq_id] == "") { // cut out the sequence name
                 string::size_type pos = line.find_first_of(" \t");
                 if (pos == string::npos) pos = 10; //  assume standard phylip
@@ -1652,7 +1652,7 @@ int Alignment::readPhylipSequential(char *filename, char *sequence_type) {
                 throw ("Line " + convertIntToString(line_num) + ": Sequence " + seq_names[seq_id] + " is too long (" + convertIntToString(sequences[seq_id].length()) + ")");
             if (sequences[seq_id].length() == nsite) {
                 seq_id++;
-            }                
+            }
         }
         //sequences.
     }
@@ -2024,9 +2024,9 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
             cout << "For each run, N can only be set once." << endl;
             outError(str);
         }
-            
+
         if (((N != 10) && (N != 2) && (N % 2 == 0)) || (N < 2) || (N > 19))
-            outError("Custom virtual population size of PoMo not 2, 10 or any other odd number between 3 and 19.");   
+            outError("Custom virtual population size of PoMo not 2, 10 or any other odd number between 3 and 19.");
     }
     // TODO: probably remove virtual_pop_size and use N only.
     virtual_pop_size = N;
@@ -2047,7 +2047,7 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
         cout << "Please use model string to specifcy virtual population size and sampling method." << endl;
         outError("Abort.");
     }
-        
+
     // if (sequence_type) {
     //     string st (sequence_type);
     //     if (st.substr(0,2) == "CR")
@@ -2084,7 +2084,7 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
     // The site numbers of the patterns that include unknown states.
     IntVector su_site_counts;
     int su_number = 0;
-    
+
     // BQM: not neccessary, su_site_count will be equal to su_site_counts.size()
     //    int su_site_count = 0;
     bool includes_state_unknown = false;
@@ -2096,7 +2096,7 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
     int n_sites_sum = 0;
     // Average number of samples.
     double n_samples_bar = 0;
-    
+
     // Open counts file.
     // Set the failbit and badbit.
     in.exceptions(ios::failbit | ios::badbit);
@@ -2145,7 +2145,7 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
 
     // Headerline.
     istringstream ss2(line);
-    
+
     for (field_num = 0; (ss2 >> field); field_num++) {
         if (field_num == 0) {
             if ((field.compare("Chrom") != 0) && (field.compare("CHROM") != 0)) {
@@ -2323,8 +2323,8 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
                 // this stage.
                 else
                     addPattern(pattern, site_count);
-                    
-                // BQM: it is neccessary to always increase site_count 
+
+                // BQM: it is neccessary to always increase site_count
                 site_count++;
             }
             else {
@@ -2358,7 +2358,7 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
         }
 
         for (unsigned int i = 0; i < su_buffer.size(); i++)
-                addPattern(su_buffer[i], su_site_counts[i]);        
+                addPattern(su_buffer[i], su_site_counts[i]);
     }
 
     cout << "---" << endl;
@@ -2580,7 +2580,7 @@ void Alignment::extractSubAlignment(Alignment *aln, IntVector &seq_id, int min_t
     verbose_mode = min(verbose_mode, VB_MIN); // to avoid printing gappy sites in addPattern
 //    for (iterator pit = aln->begin(); pit != aln->end(); pit++) {
     for (site = 0; site < aln->getNSite(); site++) {
-        iterator pit = aln->begin() + (aln->getPatternID(site)); 
+        iterator pit = aln->begin() + (aln->getPatternID(site));
         Pattern pat;
         int true_char = 0;
         for (it = seq_id.begin(); it != seq_id.end(); it++) {
@@ -2720,7 +2720,7 @@ void Alignment::convertToCodonOrAA(Alignment *aln, char *gene_code_id, bool nt2a
     if (nt2aa) {
         buildStateMap(AA_to_state, SEQ_PROTEIN);
     }
-    
+
     site_pattern.resize(aln->getNSite()/3, -1);
     clear();
     pattern_index.clear();
@@ -2786,7 +2786,7 @@ void Alignment::convertToCodonOrAA(Alignment *aln, char *gene_code_id, bool nt2a
     for (iterator it = begin(); it != end(); it++)
     	if (it->at(0) == -1)
     		ASSERT(0);
-    
+
 }
 
 void convert_range(const char *str, int &lower, int &upper, int &step_size, char* &endptr) throw (string) {
@@ -2886,26 +2886,26 @@ void Alignment::createBootstrapAlignment(Alignment *aln, IntVector* pattern_freq
     site_pattern.resize(nsite, -1);
     clear();
     pattern_index.clear();
-    
+
     // 2016-07-05: copy variables for PoMo
     pomo_states = aln->pomo_states;
     pomo_states_index = aln->pomo_states_index;
     pomo_sampling_method = aln->pomo_sampling_method;
     virtual_pop_size = aln->virtual_pop_size;
-    
+
     VerboseMode save_mode = verbose_mode;
     verbose_mode = min(verbose_mode, VB_MIN); // to avoid printing gappy sites in addPattern
     if (pattern_freq) {
         pattern_freq->resize(0);
         pattern_freq->resize(aln->getNPattern(), 0);
     }
-    
+
     if (!aln->site_state_freq.empty()) {
         // resampling also the per-site state frequency vector
         if (aln->site_state_freq.size() != aln->getNPattern() || spec)
             outError("Unsupported bootstrap feature, pls contact the developers");
     }
-    
+
 	IntVector site_vec;
     if (!spec) {
 		// standard bootstrap
@@ -3016,7 +3016,7 @@ void Alignment::createBootstrapAlignment(int *pattern_freq, const char *spec, in
     memset(pattern_freq, 0, getNPattern()*sizeof(int));
 	IntVector site_vec;
     if (!spec ||  strncmp(spec, "SCALE=", 6) == 0) {
-    
+
         if (spec) {
             double scale = convert_double(spec+6);
             nsite = (int)round(scale * nsite);
@@ -3237,7 +3237,7 @@ void Alignment::countConstSite() {
     int num_invariant_sites = 0;
     num_parsimony_sites = 0;
     for (iterator it = begin(); it != end(); it++) {
-        if ((*it).isConst()) 
+        if ((*it).isConst())
             num_const_sites += (*it).frequency;
         if (it->isInformative())
             num_informative_sites += it->frequency;
@@ -3252,7 +3252,7 @@ void Alignment::countConstSite() {
 
 string Alignment::getUnobservedConstPatterns() {
 	string ret = "";
-	for (char state = 0; state < num_states; state++) 
+	for (char state = 0; state < num_states; state++)
     if (!isStopCodon(state))
     {
 		Pattern pat;
@@ -3432,9 +3432,9 @@ double Alignment::readDist(istream &in, double *dist_mat) {
     string dist_file = params.out_prefix;
     dist_file += ".userdist";
     printDist(dist_file.c_str(), dist_mat);*/
-    
+
     delete [] tmp_dist_mat;
-    
+
     return longest_dist;
 }
 
@@ -3550,7 +3550,7 @@ int Alignment::convertPomoState(int state) {
     int pick = (int)round(((double) value1*N/M) + stoch);
     // int pick = (int)round(((double) value1*N/M));
     int real_state;
-    if (pick <= 0) 
+    if (pick <= 0)
         real_state = id2;
     else if (pick >= N)
         real_state = id1;
@@ -4311,9 +4311,9 @@ bool Alignment::readSiteStateFreq(const char* site_freq_file)
     for (i = 0; i < getNSite(); i++)
         if (pattern_to_site[getPatternID(i)] == -1)
             pattern_to_site[getPatternID(i)] = i;
-            
+
     bool aln_changed = false;
-    
+
 	try {
 		ifstream in;
 		in.exceptions(ios::failbit | ios::badbit);
@@ -4346,11 +4346,11 @@ bool Alignment::readSiteStateFreq(const char* site_freq_file)
                 if (fabs(sum-1.0) > 1e-3)
                     outWarning("Frequencies of site " + site_spec + " do not sum up to 1 and will be normalized");
                 sum = 1.0/sum;
-                for (i = 0; i < num_states; i++) 
+                for (i = 0; i < num_states; i++)
                     site_freq_entry[i] *= sum;
             }
 			convfreq(site_freq_entry); // regularize frequencies (eg if some freq = 0)
-            
+
             // 2016-02-01: now check for equality of sites with same site-pattern and same freq
             int prev_site = pattern_to_site[getPatternID(site_id[0])];
             if (site_id.size() == 1 && prev_site < site_id[0] && site_model[prev_site] != -1) {
@@ -4368,7 +4368,7 @@ bool Alignment::readSiteStateFreq(const char* site_freq_file)
                 } else
                     aln_changed = true;
             }
-            
+
             if (site_model[site_id[0]] == site_state_freq.size())
                 site_state_freq.push_back(site_freq_entry);
             else
@@ -4379,7 +4379,7 @@ bool Alignment::readSiteStateFreq(const char* site_freq_file)
 			// there are some unspecified sites
 			cout << site_model.size() - specified_sites << " unspecified sites will get default frequencies" << endl;
 			for (i = 0; i < site_model.size(); i++)
-				if (site_model[i] == -1) 
+				if (site_model[i] == -1)
 					site_model[i] = site_state_freq.size();
 			site_state_freq.push_back(NULL);
 		}
@@ -4394,7 +4394,7 @@ bool Alignment::readSiteStateFreq(const char* site_freq_file)
 	} catch(ios::failure) {
 		outError(ERR_READ_INPUT);
 	}
-    
+
     if (aln_changed) {
         cout << "Regrouping alignment sites..." << endl;
         regroupSitePattern(site_state_freq.size(), site_model);

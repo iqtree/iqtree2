@@ -3808,7 +3808,6 @@ void quickStartGuide() {
 #endif
          << "---" << endl
          << "PoMo command-line examples:" << endl
-        // TODO DS: BUG.  This does not work at the moment (model finder).
          << "1. Standard tree inference (HKY model, empirical nucleotide frequencies):" << endl
          << "     iqtree -s counts_file.cf -m HKY+P" << endl << endl
          << "2. Set virtual population size to 15:" << endl

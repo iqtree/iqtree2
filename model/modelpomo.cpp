@@ -43,7 +43,7 @@ void ModelPoMo::init_mutation_model(const char *model_name,
         cout << "PoMo only works with DNA models at the moment." << endl;
         outError(str);
     }
-        
+
     // Reset the number of states.
     phylo_tree->aln->num_states = num_states;
 
@@ -426,7 +426,7 @@ void ModelPoMo::setBounds(double *lower_bound,
                           bool *bound_check) {
     // Set boundaries of underlying mutation model.
     dna_model->setBounds(lower_bound, upper_bound, bound_check);
-    
+
     // Level of polymorphism.
     if (!fixed_theta) {
         int ndim = getNDim();
@@ -437,7 +437,7 @@ void ModelPoMo::setBounds(double *lower_bound,
 }
 
 void ModelPoMo::normalizeMutationRates() {
-    // Get rates from underlying mutation model.    
+    // Get rates from underlying mutation model.
     for (int i = 0; i < n_connections; i++) {
         mutation_rates[i] = dna_model->rates[i];
     }
@@ -462,13 +462,13 @@ void ModelPoMo::normalizeMutationRates() {
     // Interestingly, a correction factor of (N-1)/(N+1) gives very
     // good results but I cannot derive it and do not know why.
     double m_norm = theta / (theta_bm * (correction - harmonic(N-1) * theta));
-    
+
     if (verbose_mode >= VB_MAX)
         cout << "Normalization constant of mutation rates: " << m_norm << endl;
 
     for (int i = 0; i < n_connections; i++)
         mutation_rates[i] *= m_norm;
-    
+
     // // Recompute stationary frequency vector with updated mutation
     // rates.
     computeStateFreq();
@@ -748,7 +748,7 @@ void ModelPoMo::report(ostream &out) {
     report_rates(out);
 
     out << setprecision(8);
-    
+
     if (!fixed_theta)
         out << "Estimated heterozygosity: ";
     else if (fixed_theta_emp)
@@ -756,7 +756,7 @@ void ModelPoMo::report(ostream &out) {
     else if (fixed_theta_usr)
         out << "User-defined heterozygosity: ";
     out << theta << endl;
-    
+
     out << endl;
     out << "Empirical quantities" << endl;
     out << "--------------------" << endl;
