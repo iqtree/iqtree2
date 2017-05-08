@@ -18,7 +18,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "phylotree.h"
+#include "tree/phylotree.h"
 #include "ratemeyerdiscrete.h"
 //#include "kmeans/KMeans.h"
 //#include "modeltest_wrapper.h"
@@ -215,25 +215,25 @@ bool RateMeyerDiscrete::isSiteSpecificRate() {
 
 int RateMeyerDiscrete::getNDiscreteRate() { 
 	if (!is_categorized) return RateMeyerHaeseler::getNDiscreteRate();
-	assert(ncategory > 0);
+	ASSERT(ncategory > 0);
 	return ncategory; 
 }
 
 double RateMeyerDiscrete::getRate(int category) {
 	if (!is_categorized) return RateMeyerHaeseler::getRate(category);
-	assert(category < ncategory); 
+	ASSERT(category < ncategory); 
 	return rates[category]; 
 }
 
 int RateMeyerDiscrete::getPtnCat(int ptn) {
 	if (!is_categorized) return RateMeyerHaeseler::getPtnCat(ptn);
-	assert(ptn_cat);
+	ASSERT(ptn_cat);
 	return ptn_cat[ptn];
 }
 
 double RateMeyerDiscrete::getPtnRate(int ptn) {
 	if (!is_categorized) return RateMeyerHaeseler::getPtnRate(ptn);
-	assert(ptn_cat && rates);
+	ASSERT(ptn_cat && rates);
 	return rates[ptn_cat[ptn]];
 }
 
@@ -431,7 +431,7 @@ void RateMeyerDiscrete::normalizeRates() {
 
 double RateMeyerDiscrete::classifyRatesKMeans() {
 
-	assert(ncategory > 0);
+	ASSERT(ncategory > 0);
 	int nptn = size();
 
 	// clustering the rates with k-means

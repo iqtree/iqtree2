@@ -38,10 +38,10 @@
 #include "ratefreeinvar.h"
 #include "rateheterotachy.h"
 #include "rateheterotachyinvar.h"
-#include "ngs.h"
+//#include "ngs.h"
 #include <string>
-#include "timeutil.h"
-#include "myreader.h"
+#include "utils/timeutil.h"
+#include "nclextra/myreader.h"
 #include <sstream>
 
 ModelsBlock *readModelsDefinition(Params &params) {
@@ -52,7 +52,7 @@ ModelsBlock *readModelsDefinition(Params &params) {
 	{
 		// loading internal model definitions
 		stringstream in(builtin_mixmodels_definition);
-        assert(in && "stringstream is OK");
+        ASSERT(in && "stringstream is OK");
 		NxsReader nexus;
 		nexus.Add(models_block);
 	    MyToken token(in);
@@ -62,7 +62,7 @@ ModelsBlock *readModelsDefinition(Params &params) {
 //	    	if ((*it).flag & NM_FREQ) num_freq++; else num_model++;
 //	    cout << num_model << " models and " << num_freq << " frequency vectors loaded" << endl;
 	} catch (...) {
-        assert(0 && "predefined mixture models initialized");
+        ASSERT(0 && "predefined mixture models initialized");
     }
 
 	if (params.model_def_file) {
@@ -386,6 +386,7 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
         } else if (freq_str == "+FRY") {
 	    // MDW to Minh: I don't know how these should interact with FREQ_MIXTURE,
 	    // so as nearly everything else treats it as an error, I do too.
+        // BQM answer: that's fine
             if (freq_type == FREQ_MIXTURE)
                 outError("Mixture frequency with " + freq_str + " is not allowed");
             else
@@ -402,12 +403,12 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
                 freq_type = FREQ_DNA_MK;
         } else {
             // might be "+F####" where # are digits
-	    try {
-	        freq_type = parseStateFreqDigits(freq_str.substr(2)); // throws an error if not in +F#### format
-	    } catch (...) {
-	        outError("Unknown state frequency type ",freq_str);
-	    }
-	}
+            try {
+                freq_type = parseStateFreqDigits(freq_str.substr(2)); // throws an error if not in +F#### format
+            } catch (...) {
+                outError("Unknown state frequency type ",freq_str);
+            }
+        }
 //          model_str = model_str.substr(0, posfreq);
         }
 
@@ -793,10 +794,15 @@ int ModelFactory::getNParameters() {
 	// root, only sum of their lenghts affects likelihood.)
 	// So correct for this. Without this correction, K2P and RY2.2b
 	// would not be synonymous, for example.
-	string className(typeid(*model).name());
-	if (className.find("ModelLieMarkov")!=string::npos &&
-	          ((ModelLieMarkov*)model)->isTimeReversible())
-	    df--;
+
+//	string className(typeid(*model).name());
+//	if (className.find("ModelLieMarkov")!=string::npos && model->isReversible())
+//	    df--;
+
+        // BQM 2017-04-28, alternatively, check if there is a virtual_root and model is reversible
+        if (site_rate->phylo_tree->rooted && model->isReversible())
+            df--;
+
     }
     return df;
 }
@@ -1037,7 +1043,7 @@ double ModelFactory::optimizeParametersGammaInvar(int fixed_len, bool write_info
         cout << "Optimal pinv,alpha: " << bestPInvar << ", " << bestAlpha << " / ";
         cout << "LogL: " << tree->getCurScore() << endl << endl;
     }
-    assert(fabs(tree->getCurScore() - bestLogl) < 1.0);
+    ASSERT(fabs(tree->getCurScore() - bestLogl) < 1.0);
 
 //	delete [] rates;
 //	delete [] state_freqs;
@@ -1090,15 +1096,15 @@ vector<double> ModelFactory::optimizeGammaInvWithInitValue(int fixed_len, double
 
 double ModelFactory::optimizeParameters(int fixed_len, bool write_info,
                                         double logl_epsilon, double gradient_epsilon) {
-	assert(model);
-	assert(site_rate);
+	ASSERT(model);
+	ASSERT(site_rate);
 
 //    double defaultEpsilon = logl_epsilon;
 
 	double begin_time = getRealTime();
 	double cur_lh;
 	PhyloTree *tree = site_rate->getTree();
-	assert(tree);
+	ASSERT(tree);
 
 	stopStoringTransMatrix();
     // modified by Thomas Wong on Sept 11, 15

@@ -164,7 +164,7 @@ double ModelPoMoMixture::optimizeParameters(double gradient_epsilon) {
         double score_ratehet = ModelPoMo::optimizeParameters(gradient_epsilon);
         ratehet->writeInfo(cout);
         optimizing_ratehet = false;
-        assert(score_ratehet >= score-0.1);
+        ASSERT(score_ratehet >= score-0.1);
         return score_ratehet;
     }
     return score;

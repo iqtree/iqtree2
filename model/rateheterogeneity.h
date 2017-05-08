@@ -21,10 +21,10 @@
 #define RATEHETEROGENEITY_H
 
 
-#include "optimization.h"
+#include "utils/optimization.h"
 #include <string>
-#include "tools.h"
-#include "checkpoint.h"
+#include "utils/tools.h"
+#include "utils/checkpoint.h"
 
 using namespace std;
 
@@ -98,7 +98,7 @@ public:
 	/**
 		set the number of rate categories. The default raises assertion since it is homogeneous model
 	*/
-	virtual void setNCategory(int ncat) { assert(0); }
+	virtual void setNCategory(int ncat) { ASSERT(0); }
 
 	/**
 		get the number of rate categories for site-specific category model

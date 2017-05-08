@@ -251,7 +251,7 @@ void ModelCodonEmpirical::readCodonModel(istream &in) {
 				col = tmp;
 			}
 			int id = col*(2*num_states-col-1)/2 + (row-col-1);
-			assert(id < getNumRateEntries() && id >= 0);
+			ASSERT(id < getNumRateEntries() && id >= 0);
 			rates[id] = q[i][j];
 		}
 	}

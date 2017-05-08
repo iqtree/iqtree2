@@ -153,11 +153,60 @@ void ModelMarkov::setTree(PhyloTree *tree) {
 	phylo_tree = tree;
 }
 
+/*
+ * For freq_type, return a "+F" string specifying that freq_type.
+ * Note not all freq_types accomodated.
+ * Inverse of this occurs in ModelFactory::ModelFactory, 
+ * where +F... suffixes on model names get parsed.
+ */
+string freqTypeString(StateFreqType freq_type, SeqType seq_type, bool full_str) {
+    switch(freq_type) {
+    case FREQ_UNKNOWN:    return("");
+    case FREQ_USER_DEFINED:
+        if (seq_type == SEQ_PROTEIN)
+            return "";
+        else
+            return "+FU";
+    case FREQ_EQUAL:
+        if (seq_type == SEQ_DNA && !full_str)
+            return "";
+        else
+            return "+FQ";
+    case FREQ_EMPIRICAL:  return "+F";
+    case FREQ_ESTIMATE:
+        if (seq_type == SEQ_DNA && !full_str)
+            return "";
+        else
+            return "+FO";
+    case FREQ_CODON_1x4:  return("+F1X4");
+    case FREQ_CODON_3x4:  return("+F3X4");
+    case FREQ_CODON_3x4C: return("+F3X4C");
+    case FREQ_MIXTURE:  return(""); // no idea what to do here - MDW
+    case FREQ_DNA_RY:   return("+FRY");
+    case FREQ_DNA_WS:   return("+FWS");
+    case FREQ_DNA_MK:   return("+FMK");
+    case FREQ_DNA_1112: return("+F1112");
+    case FREQ_DNA_1121: return("+F1121");
+    case FREQ_DNA_1211: return("+F1211");
+    case FREQ_DNA_2111: return("+F2111");
+    case FREQ_DNA_1122: return("+F1122");
+    case FREQ_DNA_1212: return("+F1212");
+    case FREQ_DNA_1221: return("+F1221");
+    case FREQ_DNA_1123: return("+F1123");
+    case FREQ_DNA_1213: return("+F1213");
+    case FREQ_DNA_1231: return("+F1231");
+    case FREQ_DNA_2113: return("+F2113");
+    case FREQ_DNA_2131: return("+F2131");
+    case FREQ_DNA_2311: return("+F2311");
+    default: throw("Unrecoginzed freq_type in freqTypeString - can't happen");
+    }
+}
+
 string ModelMarkov::getName() {
   // MDW note to Minh for code review: I don't really understand what getName()
   // is used for. I've tried to keep the old behaviour while adding
   // the new freq_types, but give this change extra attention please.
-    return name+freqTypeString(getFreqType());
+    return name+freqTypeString(getFreqType(), phylo_tree->aln->seq_type, false);
   /*
 	if (getFreqType() == FREQ_EMPIRICAL)
 		return name + "+F";
@@ -193,46 +242,23 @@ string ModelMarkov::getNameParams() {
 }
     
 void ModelMarkov::getNameParamsFreq(ostream &retname) {
-    retname << freqTypeString(freq_type); // "+F..." but without {frequencies}
-    if (phylo_tree->aln->seq_type == SEQ_DNA && 
-        freq_type != FREQ_UNKNOWN &&
-	freq_type != FREQ_EQUAL &&
-        freq_type != FREQ_MIXTURE) {
-      // Add "{<frequencies>}"
+     // "+F..." but without {frequencies}
+    retname << freqTypeString(freq_type, phylo_tree->aln->seq_type, true);
+
+    if (freq_type == FREQ_EMPIRICAL || freq_type == FREQ_ESTIMATE ||
+        (freq_type == FREQ_USER_DEFINED && phylo_tree->aln->seq_type == SEQ_DNA)) {
         retname << "{" << state_freq[0];
         for (int i = 1; i < num_states; i++)
             retname << "," << state_freq[i];
         retname << "}";
     }
-  /*
-    if (getFreqType() == FREQ_EMPIRICAL || (getFreqType() == FREQ_USER_DEFINED && phylo_tree->aln->seq_type == SEQ_DNA)) {
-        retname << "+F";
-        retname << "{" << state_freq[0];
-        for (int i = 1; i < num_states; i++)
-            retname << "," << state_freq[i];
-        retname << "}";
-    } else if (getFreqType() == FREQ_CODON_1x4)
-        retname << "+F1X4";
-    else if (getFreqType() == FREQ_CODON_3x4)
-        retname << "+F3X4";
-    else if (getFreqType() == FREQ_CODON_3x4C)
-        name += "+F3X4C";
-    else if (getFreqType() == FREQ_ESTIMATE) {
-        retname << "+FO";
-        retname << "{" << state_freq[0];
-        for (int i = 1; i < num_states; i++)
-            retname << "," << state_freq[i];
-        retname << "}";
-    } else if (getFreqType() == FREQ_EQUAL && phylo_tree->aln->seq_type != SEQ_DNA)
-        retname << "+FQ";
-  */
 }
 
 void ModelMarkov::init_state_freq(StateFreqType type) {
     //if (type == FREQ_UNKNOWN) return;
     int i;
     freq_type = type;
-    assert(freq_type != FREQ_UNKNOWN);
+    ASSERT(freq_type != FREQ_UNKNOWN);
     switch (freq_type) {
     case FREQ_EQUAL:
         if (phylo_tree->aln->seq_type == SEQ_CODON) {
@@ -267,6 +293,10 @@ void ModelMarkov::init_state_freq(StateFreqType type) {
     default: break;
     }
     if (phylo_tree->aln->seq_type == SEQ_DNA) {
+        // BQM 2017-05-02: first, empirically count state_freq from alignment
+        if (freq_type >= FREQ_DNA_RY)
+            phylo_tree->aln->computeStateFreq(state_freq);
+
         // For complex DNA freq_types, adjust state_freq to conform to that freq_type.
         forceFreqsConform(state_freq, freq_type);
     }
@@ -335,11 +365,13 @@ void ModelMarkov::computeTransMatrix(double time, double *trans_matrix, int mixt
     if (!is_reversible) {
         if (phylo_tree->params->matrix_exp_technique == MET_EIGEN_DECOMPOSITION) {
             computeTransMatrixEigen(time, trans_matrix);
-        } else {
+        } else if (phylo_tree->params->matrix_exp_technique == MET_SCALING_SQUARING) {
             // scaling and squaring technique
             int statesqr = num_states*num_states;
             memcpy(trans_matrix, rate_matrix, statesqr*sizeof(double));
             matexp(trans_matrix, time, num_states, TimeSquare, temp_space);
+        } else {
+            ASSERT(0 && "this line should not be reached");
         }
         return;
         // 2016-04-05: 2nd version
@@ -494,8 +526,8 @@ void ModelMarkov::setRateMatrix(double* rate_mat)
 }
 
 void ModelMarkov::getStateFrequency(double *freq, int mixture) {
-	assert(state_freq);
-	assert(freq_type != FREQ_UNKNOWN);
+	ASSERT(state_freq);
+	ASSERT(freq_type != FREQ_UNKNOWN);
 	memcpy(freq, state_freq, sizeof(double) * num_states);
     // 2015-09-07: relax the sum of state_freq to be 1, this will be done at the end of optimization
     double sum = 0.0;
@@ -507,7 +539,7 @@ void ModelMarkov::getStateFrequency(double *freq, int mixture) {
 
 void ModelMarkov::setStateFrequency(double* freq)
 {
-	assert(state_freq);
+	ASSERT(state_freq);
 	memcpy(state_freq, freq, sizeof(double) * num_states);
 }
 
@@ -544,7 +576,7 @@ void ModelMarkov::getQMatrix(double *q_mat) {
 }
 
 int ModelMarkov::getNDim() { 
-	assert(freq_type != FREQ_UNKNOWN);
+	ASSERT(freq_type != FREQ_UNKNOWN);
 	if (fixed_parameters)
 		return 0;
     if (!is_reversible)
@@ -558,16 +590,21 @@ int ModelMarkov::getNDim() {
 }
 
 int ModelMarkov::getNDimFreq() { 
-	if (freq_type == FREQ_EMPIRICAL) 
+
+    // BQM, 2017-05-02: getNDimFreq should return degree of freedom, which is not included in getNDim()
+    // That's why 0 is returned for FREQ_ESTIMATE, num_states-1 for FREQ_EMPIRICAL
+
+	if (freq_type == FREQ_EMPIRICAL)
         return num_states-1;
 	else if (freq_type == FREQ_CODON_1x4) 
         return 3;
 	else if (freq_type == FREQ_CODON_3x4 || freq_type == FREQ_CODON_3x4C) 
         return 9;
-    
-	if (phylo_tree->aln->seq_type == SEQ_DNA && freq_type != FREQ_ESTIMATE) {
-            return nFreqParams(freq_type);
-	}
+
+    // commented out due to reason above
+//	if (phylo_tree->aln->seq_type == SEQ_DNA) {
+//            return nFreqParams(freq_type);
+//	}
 	return 0;
 }
 
@@ -581,7 +618,7 @@ void ModelMarkov::scaleStateFreq(bool sum_one) {
 	} else {
 		// make the last frequency equal to 0.1
 		if (state_freq[num_states-1] == 0.1) return;
-		assert(state_freq[num_states-1] > 1.1e-6);
+		ASSERT(state_freq[num_states-1] > 1.1e-6);
 		for (i = 0; i < num_states; i++) 
 			state_freq[i] /= state_freq[num_states-1]*10.0;
 	}
@@ -667,7 +704,7 @@ double ModelMarkov::targetFunk(double x[]) {
 
 	if (changed) {
 		decomposeRateMatrix();
-		assert(phylo_tree);
+		ASSERT(phylo_tree);
 		phylo_tree->clearAllPartialLH();
 	}
 
@@ -694,7 +731,7 @@ bool ModelMarkov::isUnstableParameters() {
 }
 
 void ModelMarkov::setBounds(double *lower_bound, double *upper_bound, bool *bound_check) {
-    assert(is_reversible && "setBounds should only be called on subclass of ModelMarkov");
+    ASSERT(is_reversible && "setBounds should only be called on subclass of ModelMarkov");
 
     int i, ndim = getNDim();
 
@@ -705,7 +742,19 @@ void ModelMarkov::setBounds(double *lower_bound, double *upper_bound, bool *boun
 	bound_check[i] = false;
     }
 
-    setBoundsForFreqType(&lower_bound[num_params+1],&upper_bound[num_params+1],&bound_check[num_params+1],MIN_FREQUENCY,freq_type);
+	if (freq_type == FREQ_ESTIMATE) {
+		for (i = ndim-num_states+2; i <= ndim; i++) {
+//            lower_bound[i] = MIN_FREQUENCY/state_freq[highest_freq_state];
+//			upper_bound[i] = state_freq[highest_freq_state]/MIN_FREQUENCY;
+            lower_bound[i]  = MIN_FREQUENCY;
+//            upper_bound[i] = 100.0;
+            upper_bound[i] = 1.0;
+            bound_check[i] = false;
+        }
+	} else if (phylo_tree->aln->seq_type == SEQ_DNA) {
+        setBoundsForFreqType(&lower_bound[num_params+1], &upper_bound[num_params+1],
+            &bound_check[num_params+1], MIN_FREQUENCY, freq_type);
+    }
 }
 
 double ModelMarkov::optimizeParameters(double gradient_epsilon) {
@@ -1056,7 +1105,7 @@ void ModelMarkov::setInverseEigenvectors(double *inv_eigenvectors)
 
 void ModelMarkov::setRates() {
 	// I don't know the proper C++ way to handle this: got error if I didn't define something here.
-	assert(0 && "setRates should only be called on subclass of ModelMarkov");
+	ASSERT(0 && "setRates should only be called on subclass of ModelMarkov");
 }
 
 /* static */ ModelMarkov* ModelMarkov::getModelByName(string model_name, PhyloTree *tree, string model_params, StateFreqType freq_type, string freq_params) {
@@ -1089,7 +1138,7 @@ void ModelMarkov::computeTransMatrixEigen(double time, double *trans_matrix) {
         if (eigenvalues_imag[i] == 0.0) {
             exptime[i*num_states+i] = exp(evol_time * eigenvalues[i]);
         } else {
-            assert(i < num_states-1 && eigenvalues_imag[i+1] != 0.0 && eigenvalues_imag[i] > 0.0);
+            ASSERT(i < num_states-1 && eigenvalues_imag[i+1] != 0.0 && eigenvalues_imag[i] > 0.0);
             complex<double> exp_eval(eigenvalues[i] * evol_time, eigenvalues_imag[i] * evol_time);
             exp_eval = exp(exp_eval);
             exptime[i*num_states+i] = exp_eval.real();
@@ -1119,12 +1168,12 @@ void ModelMarkov::computeTransMatrixEigen(double time, double *trans_matrix) {
             for (k = 0; k < num_states; k++)
                 val += exptime[i*num_states+k] * inv_eigenvectors[k*num_states+j];
             // make sure that trans_matrix are non-negative
-            assert(val >= -0.001);
+            ASSERT(val >= -0.001);
             val = fabs(val);
             trans_matrix[i*num_states+j] = val;
             row_sum += val;
         }
-        assert(fabs(row_sum-1.0) < 1e-4);
+        ASSERT(fabs(row_sum-1.0) < 1e-4);
     }
 
     delete [] exptime;

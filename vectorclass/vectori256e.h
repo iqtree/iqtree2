@@ -1,8 +1,8 @@
 /****************************  vectori256e.h   *******************************
 * Author:        Agner Fog
 * Date created:  2012-05-30
-* Last modified: 2016-04-26
-* Version:       1.22
+* Last modified: 2017-02-19
+* Version:       1.27
 * Project:       vector classes
 * Description:
 * Header file defining 256-bit integer point vector classes as interface
@@ -25,7 +25,7 @@
 *
 * For detailed instructions, see VectorClass.pdf
 *
-* (c) Copyright 2012 - 2016 GNU General Public License http://www.gnu.org/licenses
+* (c) Copyright 2012-2017 GNU General Public License http://www.gnu.org/licenses
 *****************************************************************************/
 
 // check combination of header files
@@ -225,13 +225,18 @@ static inline Vec256b andnot (Vec256b const & a, Vec256b const & b) {
 *****************************************************************************/
 // Generate a constant vector of 8 integers stored in memory.
 // Can be converted to any integer vector type
-template <int i0, int i1, int i2, int i3, int i4, int i5, int i6, int i7>
+template <int32_t i0, int32_t i1, int32_t i2, int32_t i3, int32_t i4, int32_t i5, int32_t i6, int32_t i7>
 static inline Vec256ie constant8i() {
     static const union {
         int32_t i[8];
         __m128i y[2];
     } u = {{i0,i1,i2,i3,i4,i5,i6,i7}};
     return Vec256ie(u.y[0], u.y[1]);
+}
+
+template <uint32_t i0, uint32_t i1, uint32_t i2, uint32_t i3, uint32_t i4, uint32_t i5, uint32_t i6, uint32_t i7>
+static inline Vec256ie constant8ui() {
+    return constant8i<int32_t(i0), int32_t(i1), int32_t(i2), int32_t(i3), int32_t(i4), int32_t(i5), int32_t(i6), int32_t(i7)>();
 }
 
 
@@ -3887,8 +3892,70 @@ static inline Vec4q gather4q(void const * a) {
     return lookup<imax+1>(Vec4q(i0,i1,i2,i3), a);
 }
 
+/*****************************************************************************
+*
+*          Vector scatter functions
+*
+******************************************************************************
+*
+* These functions write the elements of a vector to arbitrary positions in an
+* array in memory. Each vector element is written to an array position 
+* determined by an index. An element is not written if the corresponding
+* index is out of range.
+* The indexes can be specified as constant template parameters or as an
+* integer vector.
+* 
+* The scatter functions are useful if the data are distributed in a sparce
+* manner into the array. If the array is dense then it is more efficient
+* to permute the data into the right positions and then write the whole
+* permuted vector into the array.
+*
+* Example:
+* Vec8q a(10,11,12,13,14,15,16,17);
+* int64_t b[16] = {0};
+* scatter<0,2,14,10,1,-1,5,9>(a,b); 
+* // Now, b = {10,14,11,0,0,16,0,0,0,17,13,0,0,0,12,0}
+*
+*****************************************************************************/
 
+template <int i0, int i1, int i2, int i3, int i4, int i5, int i6, int i7>
+static inline void scatter(Vec8i const & data, void * array) {
+    int32_t* arr = (int32_t*)array;
+    const int index[8] = {i0,i1,i2,i3,i4,i5,i6,i7};
+    for (int i = 0; i < 8; i++) {
+        if (index[i] >= 0) arr[index[i]] = data[i];
+    }
+}
 
+template <int i0, int i1, int i2, int i3>
+static inline void scatter(Vec4q const & data, void * array) {
+    int64_t* arr = (int64_t*)array;
+    const int index[4] = {i0,i1,i2,i3};
+    for (int i = 0; i < 4; i++) {
+        if (index[i] >= 0) arr[index[i]] = data[i];
+    }
+}
+
+static inline void scatter(Vec8i const & index, uint32_t limit, Vec8i const & data, void * array) {
+    int32_t* arr = (int32_t*)array;
+    for (int i = 0; i < 8; i++) {
+        if (uint32_t(index[i]) < limit) arr[index[i]] = data[i];
+    }
+}
+
+static inline void scatter(Vec4q const & index, uint32_t limit, Vec4q const & data, void * array) {
+    int64_t* arr = (int64_t*)array;
+    for (int i = 0; i < 4; i++) {
+        if (uint64_t(index[i]) < uint64_t(limit)) arr[index[i]] = data[i];
+    }
+} 
+
+static inline void scatter(Vec4i const & index, uint32_t limit, Vec4q const & data, void * array) {
+    int64_t* arr = (int64_t*)array;
+    for (int i = 0; i < 4; i++) {
+        if (uint32_t(index[i]) < limit) arr[index[i]] = data[i];
+    }
+} 
 
 /*****************************************************************************
 *

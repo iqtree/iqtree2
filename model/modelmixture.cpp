@@ -1417,7 +1417,7 @@ void ModelMixture::restoreCheckpoint() {
 }
 
 void ModelMixture::getStateFrequency(double *state_freq, int mixture) {
-    assert(mixture < getNMixtures());
+    ASSERT(mixture < getNMixtures());
     if (mixture >= 0) {
         at(mixture)->getStateFrequency(state_freq);
         return;
@@ -1440,13 +1440,13 @@ void ModelMixture::getStateFrequency(double *state_freq, int mixture) {
 }
 
 void ModelMixture::computeTransMatrix(double time, double *trans_matrix, int mixture) {
-    assert(mixture < getNMixtures());
+    ASSERT(mixture < getNMixtures());
     at(mixture)->computeTransMatrix(time, trans_matrix);
 }
 
 void ModelMixture::computeTransDerv(double time, double *trans_matrix,
     double *trans_derv1, double *trans_derv2, int mixture) {
-    assert(mixture < getNMixtures());
+    ASSERT(mixture < getNMixtures());
     at(mixture)->computeTransDerv(time, trans_matrix, trans_derv1, trans_derv2);
 }
 
@@ -1500,7 +1500,7 @@ double ModelMixture::targetFunk(double x[]) {
 			(*it)->decomposeRateMatrix();
 		dim += ((*it)->getNDim());
 	}
-	assert(phylo_tree);
+	ASSERT(phylo_tree);
 	if (dim > 0) // only clear all partial_lh if changing at least 1 rate matrix
 		phylo_tree->clearAllPartialLH();
 //	if (prop[size()-1] < 0.0) return 1.0e+12;
@@ -1539,7 +1539,7 @@ double ModelMixture::optimizeWeights() {
             for (c = 0; c < nmix; c++) {
                 lk_ptn += this_lk_cat[c];
             }
-            assert(lk_ptn != 0.0);
+            ASSERT(lk_ptn != 0.0);
             lk_ptn = phylo_tree->ptn_freq[ptn] / lk_ptn;
             for (c = 0; c < nmix; c++) {
                 new_prop[c] += this_lk_cat[c] * lk_ptn;
@@ -1634,7 +1634,7 @@ double ModelMixture::optimizeWithEM(double gradient_epsilon) {
             for (c = 0; c < nmix; c++) {
                 lk_ptn += this_lk_cat[c];
             }
-            assert(lk_ptn != 0.0);
+            ASSERT(lk_ptn != 0.0);
             lk_ptn = phylo_tree->ptn_freq[ptn] / lk_ptn;
 
             // transform _pattern_lh_cat into posterior probabilities of each category

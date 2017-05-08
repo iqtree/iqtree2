@@ -7,6 +7,7 @@ modelprotein.cpp modelprotein.h
 modelset.cpp modelset.h
 modelsubst.cpp modelsubst.h
 partitionmodel.cpp partitionmodel.h
+partitionmodelplen.cpp partitionmodelplen.h
 rategamma.cpp rategamma.h
 rategammainvar.cpp rategammainvar.h
 rateheterogeneity.cpp rateheterogeneity.h
@@ -27,3 +28,5 @@ modelpomo.cpp modelpomo.h
 modelpomomixture.cpp modelpomomixture.h
 modelfactorymixlen.cpp modelfactorymixlen.h
 )
+
+target_link_libraries(model utils)

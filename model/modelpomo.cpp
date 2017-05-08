@@ -160,7 +160,7 @@ void ModelPoMo::init(const char *model_name,
     n_connections = nnuc * (nnuc-1) / 2;
     eps = 1e-6;
     // Check if number of states of PoMo match the provided data.
-    assert(num_states == (nnuc + (nnuc*(nnuc-1)/2 * (N-1))) );
+    ASSERT(num_states == (nnuc + (nnuc*(nnuc-1)/2 * (N-1))) );
 
     // Main initialization of model and parameters.
     init_mutation_model(model_name,
@@ -348,7 +348,7 @@ bool ModelPoMo::isPolymorphic(int state) {
 }
 
 double ModelPoMo::mutCoeff(int nt1, int nt2) {
-    assert(nt1!=nt2 && nt1<4 && nt2<4);
+    ASSERT(nt1!=nt2 && nt1<4 && nt2<4);
     if (nt2 < nt1) {
         int tmp=nt1;
         nt1=nt2;
@@ -357,13 +357,13 @@ double ModelPoMo::mutCoeff(int nt1, int nt2) {
     if (nt1==0) return mutation_rates[nt2-1];
     if (nt1==1) return mutation_rates[nt2+1];
     if (nt1==2) return mutation_rates[5];
-    assert(0);
+    ASSERT(0);
 }
 
 double ModelPoMo::computeProbBoundaryMutation(int state1, int state2) {
     // The transition rate to the same state will be calculated by
     // setting the row sum to 0.
-    assert(state1 != state2);
+    ASSERT(state1 != state2);
 
     // Both states are decomposed into the abundance of the first
     // allele as well as the nucleotide of the first and the second
@@ -377,7 +377,7 @@ double ModelPoMo::computeProbBoundaryMutation(int state1, int state2) {
     // of state 1.  Additionally, we have to consider boundary states as
     // special cases.
     if (nt1 == nt3 && (nt2==nt4 || nt2==-1 || nt4 == -1)) {
-        assert(i1 != i2); // because state1 != state2
+        ASSERT(i1 != i2); // because state1 != state2
         if (i1+1==i2)
             // e.g.: 2A8C -> 3A7C or 9A1C -> 10A
             // Changed Dom Tue Sep 29 13:31:02 CEST 2015
@@ -542,7 +542,7 @@ double ModelPoMo::targetFunk(double x[]) {
     // Disable test for low stationary frequency in PoMo.
     // if (state_freq[num_states-1] < 1e-4) return 1.0e+12;
     decomposeRateMatrix();
-    assert(phylo_tree);
+    ASSERT(phylo_tree);
     phylo_tree->clearAllPartialLH();
     return -phylo_tree->computeLikelihood();
 }
@@ -641,7 +641,7 @@ ModelPoMo::estimateEmpiricalBoundaryStateFreqs(double * freq_boundary_states)
                 else if ((unsigned int)state == phylo_tree->aln->STATE_UNKNOWN)
                     continue;
                 state -= num_states;
-                assert((unsigned int)state < phylo_tree->aln->pomo_states.size());
+                ASSERT((unsigned int)state < phylo_tree->aln->pomo_states.size());
                 // Decode the id and counts.
                 int id1 = phylo_tree->aln->pomo_states[state] & 3;
                 int id2 = (phylo_tree->aln->pomo_states[state] >> 16) & 3;
@@ -690,7 +690,7 @@ ModelPoMo::estimateEmpiricalWattersonTheta()
                 else if ((unsigned int)state == phylo_tree->aln->STATE_UNKNOWN)
                     continue;
                 state -= num_states;
-                assert((unsigned int)state < phylo_tree->aln->pomo_states.size());
+                ASSERT((unsigned int)state < phylo_tree->aln->pomo_states.size());
                 // Decode counts.
                 int j1 = (phylo_tree->aln->pomo_states[state] >> 2) & 16383;
                 int j2 = (phylo_tree->aln->pomo_states[state] >> 18);

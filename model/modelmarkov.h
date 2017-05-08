@@ -20,11 +20,11 @@
 #ifndef MODELMARKOV_H
 #define MODELMARKOV_H
 
-#include "phylotree.h"
+#include "tree/phylotree.h"
 #include "modelsubst.h"
-#include "optimization.h"
-#include "alignment.h"
-#include "eigendecomposition.h"
+#include "utils/optimization.h"
+#include "alignment/alignment.h"
+#include "utils/eigendecomposition.h"
 #include <complex>
 
 const double MIN_RATE = 1e-4;
@@ -252,7 +252,8 @@ public:
 	virtual int getNDim();
 
 	/**
-		@return the number of dimensions corresponding to state frequencies
+		@return the number of dimensions corresponding to state frequencies, which is 
+            not counted in getNDim(). This serves e.g. for computing AIC, BIC score
 	*/
 	virtual int getNDimFreq();
 	

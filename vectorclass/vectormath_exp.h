@@ -1,15 +1,19 @@
 /****************************  vectormath_exp.h   ******************************
 * Author:        Agner Fog
 * Date created:  2014-04-18
-* Last modified: 2016-04-26
-* Version:       1.22
+* Last modified: 2016-12-26
+* Version:       1.26
 * Project:       vector classes
 * Description:
 * Header file containing inline vector functions of logarithms, exponential 
 * and power functions:
 * exp         exponential function
+* exp2        exponential function base 2
+* exp10       exponential function base 10
 * exmp1       exponential function minus 1
 * log         natural logarithm
+* log2        logarithm base 2
+* log10       logarithm base 10
 * log1p       natural logarithm of 1+x
 * cbrt        cube root
 * pow         raise vector elements to power
@@ -91,6 +95,9 @@ static inline Vec8f vm_pow2n (Vec8f const & n) {
 #if MAX_VECTOR_SIZE >= 512
 
 static inline Vec8d vm_pow2n (Vec8d const & n) {
+#ifdef __AVX512ER__
+    return _mm512_exp2a23_round_pd(n, _MM_FROUND_NO_EXC); // this is exact only for integral n
+#else
     const double pow2_52 = 4503599627370496.0;   // 2^52
     const double bias = 1023.0;                  // bias in exponent
     Vec8d a = n + (bias + pow2_52);              // put n + bias in least significant bits
@@ -98,9 +105,13 @@ static inline Vec8d vm_pow2n (Vec8d const & n) {
     Vec8q c = b << 52;                           // shift left 52 places to get value into exponent field
     Vec8d d = Vec8d(reinterpret_d(c));           // bit-cast back to double
     return d;
+#endif
 }
 
 static inline Vec16f vm_pow2n (Vec16f const & n) {
+#ifdef __AVX512ER__
+    return _mm512_exp2a23_round_ps(n, _MM_FROUND_NO_EXC);
+#else
     const float pow2_23 =  8388608.0;            // 2^23
     const float bias = 127.0;                    // bias in exponent
     Vec16f a = n + (bias + pow2_23);             // put n + bias in least significant bits
@@ -108,6 +119,7 @@ static inline Vec16f vm_pow2n (Vec16f const & n) {
     Vec16i c = b << 23;                          // shift left 23 places to get into exponent field
     Vec16f d = Vec16f(reinterpret_f(c));         // bit-cast back to float
     return d;
+#endif
 }
 
 #endif // MAX_VECTOR_SIZE >= 512
@@ -441,10 +453,20 @@ static inline VTYPE exp_f(VTYPE const & initial_x) {
         return z;
     }
 }
+#if defined(__AVX512ER__) && MAX_VECTOR_SIZE >= 512
+// forward declarations of fast 512 bit versions
+static Vec16f exp(Vec16f const & x);
+static Vec16f exp2(Vec16f const & x);
+static Vec16f exp10(Vec16f const & x);
+#endif
 
 // instances of exp_f template
 static inline Vec4f exp(Vec4f const & x) {
+#if defined(__AVX512ER__) && MAX_VECTOR_SIZE >= 512 // use faster 512 bit version
+    return _mm512_castps512_ps128(exp(Vec16f(_mm512_castps128_ps512(x))));
+#else
     return exp_f<Vec4f, Vec4fb, 0, 0>(x);
+#endif
 }
 
 static inline Vec4f expm1(Vec4f const & x) {
@@ -452,17 +474,29 @@ static inline Vec4f expm1(Vec4f const & x) {
 }
 
 static inline Vec4f exp2(Vec4f const & x) {
+#if defined(__AVX512ER__) && MAX_VECTOR_SIZE >= 512 // use faster 512 bit version
+    return _mm512_castps512_ps128(exp2(Vec16f(_mm512_castps128_ps512(x))));
+#else
     return exp_f<Vec4f, Vec4fb, 0, 2>(x);
+#endif
 }
 
 static inline Vec4f exp10(Vec4f const & x) {
+#if defined(__AVX512ER__) && MAX_VECTOR_SIZE >= 512 // use faster 512 bit version
+    return _mm512_castps512_ps128(exp10(Vec16f(_mm512_castps128_ps512(x))));
+#else
     return exp_f<Vec4f, Vec4fb, 0, 10>(x);
+#endif
 }
 
 #if MAX_VECTOR_SIZE >= 256
 
 static inline Vec8f exp(Vec8f const & x) {
+#if defined(__AVX512ER__) && MAX_VECTOR_SIZE >= 512 // use faster 512 bit version
+    return _mm512_castps512_ps256(exp(Vec16f(_mm512_castps256_ps512(x))));
+#else
     return exp_f<Vec8f, Vec8fb, 0, 0>(x);
+#endif
 }
 
 static inline Vec8f expm1(Vec8f const & x) {
@@ -470,11 +504,19 @@ static inline Vec8f expm1(Vec8f const & x) {
 }
 
 static inline Vec8f exp2(Vec8f const & x) {
+#if defined(__AVX512ER__) && MAX_VECTOR_SIZE >= 512 // use faster 512 bit version
+    return _mm512_castps512_ps256(exp2(Vec16f(_mm512_castps256_ps512(x))));
+#else
     return exp_f<Vec8f, Vec8fb, 0, 2>(x);
+#endif
 }
 
 static inline Vec8f exp10(Vec8f const & x) {
+#if defined(__AVX512ER__) && MAX_VECTOR_SIZE >= 512 // use faster 512 bit version
+    return _mm512_castps512_ps256(exp10(Vec16f(_mm512_castps256_ps512(x))));
+#else
     return exp_f<Vec8f, Vec8fb, 0, 10>(x);
+#endif
 }
 
 #endif // MAX_VECTOR_SIZE >= 256
@@ -482,19 +524,63 @@ static inline Vec8f exp10(Vec8f const & x) {
 #if MAX_VECTOR_SIZE >= 512
 
 static inline Vec16f exp(Vec16f const & x) {
+#ifdef __AVX512ER__  // AVX512ER instruction set includes fast exponential function
+#ifdef VCL_FASTEXP
+    // very fast, but less precise for large x:
+    return _mm512_exp2a23_round_ps(x*float(VM_LOG2E), _MM_FROUND_NO_EXC);
+#else
+    // best precision, also for large x:
+    const Vec16f log2e = float(VM_LOG2E);
+    const float ln2f_hi = 0.693359375f;
+    const float ln2f_lo = -2.12194440e-4f;
+    Vec16f x1 = x, r, y;
+    r = round(x1*log2e);
+    x1 = nmul_add(r, Vec16f(ln2f_hi), x1);      //  x -= r * ln2f_hi;
+    x1 = nmul_add(r, Vec16f(ln2f_lo), x1);      //  x -= r * ln2f_lo;
+    x1 = x1 * log2e;
+    y = _mm512_exp2a23_round_ps(r, _MM_FROUND_NO_EXC);
+    // y = vm_pow2n(r);
+    return y * _mm512_exp2a23_round_ps(x1, _MM_FROUND_NO_EXC);
+#endif // VCL_FASTEXP
+#else  // no AVX512ER, use above template
     return exp_f<Vec16f, Vec16fb, 0, 0>(x);
-}
+#endif
+} 
 
 static inline Vec16f expm1(Vec16f const & x) {
     return exp_f<Vec16f, Vec16fb, 1, 0>(x);
 }
 
 static inline Vec16f exp2(Vec16f const & x) {
+#ifdef __AVX512ER__
+    return Vec16f(_mm512_exp2a23_round_ps(x, _MM_FROUND_NO_EXC));
+#else
     return exp_f<Vec16f, Vec16fb, 0, 2>(x);
+#endif
 }
 
 static inline Vec16f exp10(Vec16f const & x) {
+#ifdef __AVX512ER__  // AVX512ER instruction set includes fast exponential function
+#ifdef VCL_FASTEXP
+    // very fast, but less precise for large x:
+    return _mm512_exp2a23_round_ps(x*float(VM_LOG210), _MM_FROUND_NO_EXC);
+#else
+    // best precision, also for large x:
+    const float log10_2_hi = 0.301025391f;   // log10(2) in two parts
+    const float log10_2_lo = 4.60503907E-6f;
+    Vec16f x1 = x, r, y;
+    Vec16f log210 = float(VM_LOG210);
+    r = round(x1*log210);
+    x1 = nmul_add(r, Vec16f(log10_2_hi), x1);      //  x -= r * log10_2_hi
+    x1 = nmul_add(r, Vec16f(log10_2_lo), x1);      //  x -= r * log10_2_lo
+    x1 = x1 * log210;
+    // y = vm_pow2n(r);
+    y = _mm512_exp2a23_round_ps(r, _MM_FROUND_NO_EXC);
+    return y * _mm512_exp2a23_round_ps(x1, _MM_FROUND_NO_EXC);
+#endif // VCL_FASTEXP
+#else  // no AVX512ER, use above template
     return exp_f<Vec16f, Vec16fb, 0, 10>(x);
+#endif
 }
 
 #endif // MAX_VECTOR_SIZE >= 512
@@ -584,7 +670,12 @@ union vm_udi {
 };
 
 // extract exponent of a positive number x as a floating point number
+//Note: the AVX512 version return -inf for x=0, the non-AVX versions return a negative number
 static inline Vec4f exponent_f(Vec4f const & x) {
+#ifdef __AVX512VL__                              // AVX512VL
+    // note: this version returns -inf for x=0
+    return _mm_getexp_ps(x);
+#else
     const float pow2_23 =  8388608.0f;           // 2^23
     const float bias = 127.f;                    // bias in exponent
     const vm_ufi upow2_23 = {pow2_23};
@@ -594,9 +685,14 @@ static inline Vec4f exponent_f(Vec4f const & x) {
     Vec4f  d = reinterpret_f(c);                 // bit-cast back to double
     Vec4f  e = d - (pow2_23 + bias);             // subtract magic number and bias
     return e;
+#endif
 }
 
 static inline Vec2d exponent_f(Vec2d const & x) {
+#ifdef __AVX512VL__                              // AVX512VL
+    // note: this version returns -inf for x=0
+    return _mm_getexp_pd(x);
+#else
     const double pow2_52 = 4503599627370496.0;   // 2^52
     const double bias = 1023.0;                  // bias in exponent
     const vm_udi upow2_52 = {pow2_52};
@@ -607,11 +703,16 @@ static inline Vec2d exponent_f(Vec2d const & x) {
     Vec2d  d = reinterpret_d(c);                 // bit-cast back to double
     Vec2d  e = d - (pow2_52 + bias);             // subtract magic number and bias
     return e;
+#endif
 }
 
 #if MAX_VECTOR_SIZE >= 256
 
 static inline Vec8f exponent_f(Vec8f const & x) {
+#ifdef __AVX512VL__                              // AVX512VL
+    // note: this version returns -inf for x=0
+    return _mm256_getexp_ps(x);
+#else
     const float pow2_23 =  8388608.0f;           // 2^23
     const float bias = 127.f;                    // bias in exponent
     const vm_ufi upow2_23 = {pow2_23};
@@ -621,10 +722,14 @@ static inline Vec8f exponent_f(Vec8f const & x) {
     Vec8f  d = reinterpret_f(c);                 // bit-cast back to double
     Vec8f  e = d - (pow2_23 + bias);             // subtract magic number and bias
     return e;
+#endif
 } 
 
 // extract exponent of a positive number x as a floating point number
 static inline Vec4d exponent_f(Vec4d const & x) {
+#ifdef __AVX512VL__                              // AVX512VL
+    return _mm256_getexp_pd(x);
+#else
     const double pow2_52 = 4503599627370496.0;   // 2^52
     const double bias = 1023.0;                  // bias in exponent
     const vm_udi upow2_52 = {pow2_52};
@@ -635,6 +740,7 @@ static inline Vec4d exponent_f(Vec4d const & x) {
     Vec4d  d = reinterpret_d(c);                 // bit-cast back to double
     Vec4d  e = d - (pow2_52 + bias);             // subtract magic number and bias
     return e;
+#endif
 }
 
 #endif // MAX_VECTOR_SIZE >= 256
@@ -643,6 +749,7 @@ static inline Vec4d exponent_f(Vec4d const & x) {
 
 static inline Vec16f exponent_f(Vec16f const & x) {
 #if INSTRSET >= 9                                // AVX512
+    // note: this version returns -inf for x=0
     return _mm512_getexp_ps(x);
 #else
     return Vec16f(exponent_f(x.get_low()), exponent_f(x.get_high()));
@@ -652,6 +759,7 @@ static inline Vec16f exponent_f(Vec16f const & x) {
 // extract exponent of a positive number x as a floating point number
 static inline Vec8d exponent_f(Vec8d const & x) {
 #if INSTRSET >= 9                                // AVX512
+    // note: this returns -inf for x=0
     return _mm512_getexp_pd(x);
 #else
     return Vec8d(exponent_f(x.get_low()), exponent_f(x.get_high()));
@@ -1153,8 +1261,39 @@ static inline Vec16f square_cbrt(Vec16f const & x) {
     return cbrt_f<Vec16f, Vec16ui, Vec16fb, 2> (x);
 }
 
+// Helper function for power function: insert special values of pow(x,y) when x=0:
+// y<0 -> inf, y=0 -> 1, y>0 -> 0, y=nan -> nan
+static inline Vec8d wm_pow_case_x0(Vec8db const & xiszero, Vec8d const & y, Vec8d const & z) {
+#if INSTRSET >= 9
+    const __m512i table = Vec8q(0x85858A00);
+    return _mm512_mask_fixupimm_pd(z, xiszero, y, table, 0);
+#else
+    return select(xiszero, select(y < 0., infinite_vec<Vec8d>(), select(y == 0., Vec8d(1.), Vec8d(0.))), z);
+#endif
+}
+
 #endif // MAX_VECTOR_SIZE >= 512
 
+#if MAX_VECTOR_SIZE >= 256
+
+static inline Vec4d wm_pow_case_x0(Vec4db const & xiszero, Vec4d const & y, Vec4d const & z) {
+//#if defined __AVX512VL__ && defined ?
+//   const __m256i table = Vec4q(0x85858A00);
+//    return _mm256_mask_fixupimm_pd(z, xiszero, y, table, 0);
+//#else
+    return select(xiszero, select(y < 0., infinite_vec<Vec4d>(), select(y == 0., Vec4d(1.), Vec4d(0.))), z);
+//#endif
+}
+#endif
+
+static inline Vec2d wm_pow_case_x0(Vec2db const & xiszero, Vec2d const & y, Vec2d const & z) {
+//#if defined __AVX512VL__ && defined ?
+//    const __m128i table = Vec2q(0x85858A00);
+//    return _mm_mask_fixupimm_pd(z, xiszero, y, table, 0);
+//#else
+    return select(xiszero, select(y < 0., infinite_vec<Vec2d>(), select(y == 0., Vec2d(1.), Vec2d(0.))), z);
+//#endif
+}
 
 // ****************************************************************************
 //                pow template, double precision
@@ -1310,7 +1449,8 @@ static inline VTYPE pow_template_d(VTYPE const & x0, VTYPE const & y) {
     }
 
     // check for x == 0
-    z = select(xzero, select(y < 0., infinite_vec<VTYPE>(), select(y == 0., VTYPE(1.), VTYPE(0.))), z);
+    z = wm_pow_case_x0(xzero, y, z);
+    //z = select(xzero, select(y < 0., infinite_vec<VTYPE>(), select(y == 0., VTYPE(1.), VTYPE(0.))), z);
 
     // check for x < 0. y must be integer
     if (horizontal_or(xnegative)) {
@@ -1322,10 +1462,11 @@ static inline VTYPE pow_template_d(VTYPE const & x0, VTYPE const & y) {
     }
 
     // check for range errors
-    if (horizontal_and(xfinite & yfinite & efinite)) {
+    if (horizontal_and(xfinite & yfinite & (efinite | xzero))) {
         // fast return if no special cases
         return z;
     }
+
     // handle special error cases
     z = select(yfinite & efinite, z, select(x1 == 1., VTYPE(1.), select((x1 > 1.) ^ sign_bit(y), infinite_vec<VTYPE>(), 0.)));
     yodd = ITYPE(reinterpret_i(abs(y) + pow2_52)) << 63; // same as above
@@ -1340,33 +1481,33 @@ static inline VTYPE pow_template_d(VTYPE const & x0, VTYPE const & y) {
 
 // instantiations of pow_template_d:
 template <>
-inline Vec2d pow<Vec2d const &>(Vec2d const & x, Vec2d const & y) {
+inline Vec2d pow<Vec2d>(Vec2d const & x, Vec2d const & y) {
     return pow_template_d<Vec2d, Vec2q, Vec2db>(x, y);
 }
 
 template <>
-inline Vec2d pow<double>(Vec2d const & x, double y) {
+inline Vec2d pow<double>(Vec2d const & x, double const & y) {
     return pow_template_d<Vec2d, Vec2q, Vec2db>(x, y);
 }
 template <>
-inline Vec2d pow<float>(Vec2d const & x, float y) {
+inline Vec2d pow<float>(Vec2d const & x, float const & y) {
     return pow_template_d<Vec2d, Vec2q, Vec2db>(x, (double)y);
 }
 
 #if MAX_VECTOR_SIZE >= 256
 
 template <>
-inline Vec4d pow<Vec4d const &>(Vec4d const & x, Vec4d const & y) {
+inline Vec4d pow<Vec4d>(Vec4d const & x, Vec4d const & y) {
     return pow_template_d<Vec4d, Vec4q, Vec4db>(x, y);
 }
 
 template <>
-inline Vec4d pow<double>(Vec4d const & x, double y) {
+inline Vec4d pow<double>(Vec4d const & x, double const & y) {
     return pow_template_d<Vec4d, Vec4q, Vec4db>(x, y);
 }
 
 template <>
-inline Vec4d pow<float>(Vec4d const & x, float y) {
+inline Vec4d pow<float>(Vec4d const & x, float const & y) {
     return pow_template_d<Vec4d, Vec4q, Vec4db>(x, (double)y);
 }
 
@@ -1375,23 +1516,42 @@ inline Vec4d pow<float>(Vec4d const & x, float y) {
 #if MAX_VECTOR_SIZE >= 512
 
 template <>
-inline Vec8d pow<Vec8d const &>(Vec8d const & x, Vec8d const & y) {
+inline Vec8d pow<Vec8d>(Vec8d const & x, Vec8d const & y) {
     return pow_template_d<Vec8d, Vec8q, Vec8db>(x, y);
 }
 
 template <>
-inline Vec8d pow<double>(Vec8d const & x, double y) {
+inline Vec8d pow<double>(Vec8d const & x, double const & y) {
     return pow_template_d<Vec8d, Vec8q, Vec8db>(x, y);
 }
 
 template <>
-inline Vec8d pow<float>(Vec8d const & x, float y) {
+inline Vec8d pow<float>(Vec8d const & x, float const & y) {
     return pow_template_d<Vec8d, Vec8q, Vec8db>(x, (double)y);
+}
+
+// Helper function for power function: insert special values of pow(x,y) when x=0:
+// y<0 -> inf, y=0 -> 1, y>0 -> 0, y=nan -> nan
+static inline Vec16f wm_pow_case_x0(Vec16fb const & xiszero, Vec16f const & y, Vec16f const & z) {
+#if INSTRSET >= 9
+    const __m512i table = Vec16ui(0x85858A00);
+    return _mm512_mask_fixupimm_ps(z, xiszero, y, table, 0);
+#else
+    return select(xiszero, select(y < 0.f, infinite_vec<Vec16f>(), select(y == 0.f, Vec16f(1.f), Vec16f(0.f))), z);
+#endif
 }
 
 #endif // MAX_VECTOR_SIZE >= 512
 
+#if MAX_VECTOR_SIZE >= 256
+static inline Vec8f wm_pow_case_x0(Vec8fb const & xiszero, Vec8f const & y, Vec8f const & z) {
+    return select(xiszero, select(y < 0.f, infinite_vec<Vec8f>(), select(y == 0.f, Vec8f(1.f), Vec8f(0.f))), z);
+}
+#endif
 
+static inline Vec4f wm_pow_case_x0(Vec4fb const & xiszero, Vec4f const & y, Vec4f const & z) {
+    return select(xiszero, select(y < 0.f, infinite_vec<Vec4f>(), select(y == 0.f, Vec4f(1.f), Vec4f(0.f))), z);
+}
 
 // ****************************************************************************
 //                pow template, single precision
@@ -1514,6 +1674,7 @@ static inline VTYPE pow_template_f(VTYPE const & x0, VTYPE const & y) {
     xfinite   = is_finite(x0);
     yfinite   = is_finite(y);
     efinite   = is_finite(ee);
+
     xzero     = is_zero_or_subnormal(x0);
     xnegative = x0  < 0.f;
 
@@ -1525,7 +1686,8 @@ static inline VTYPE pow_template_f(VTYPE const & x0, VTYPE const & y) {
     }
 
     // check for x == 0
-    z = select(xzero, select(y < 0.f, infinite_vec<VTYPE>(), select(y == 0.f, VTYPE(1.), VTYPE(0.f))), z);
+    z = wm_pow_case_x0(xzero, y, z);
+    //z = select(xzero, select(y < 0.f, infinite_vec<VTYPE>(), select(y == 0.f, VTYPE(1.f), VTYPE(0.f))), z);
 
     // check for x < 0. y must be integer
     if (horizontal_or(xnegative)) {
@@ -1537,10 +1699,11 @@ static inline VTYPE pow_template_f(VTYPE const & x0, VTYPE const & y) {
     }
 
     // check for range errors
-    if (horizontal_and(xfinite & yfinite & efinite)) {
+    if (horizontal_and(xfinite & yfinite & (efinite | xzero))) {
         // fast return if no special cases
         return z;
     }
+
     // handle special error cases
     z = select(yfinite & efinite, z, select(x1 == 1.f, VTYPE(1.f), select((x1 > 1.f) ^ sign_bit(y), infinite_vec<VTYPE>(), 0.f)));
     yodd = ITYPE(reinterpret_i(abs(y) + pow2_23)) << 31; // same as above
@@ -1553,33 +1716,33 @@ static inline VTYPE pow_template_f(VTYPE const & x0, VTYPE const & y) {
 //template <typename TT> static Vec4f pow(Vec4f const & a, TT n);
 
 template <>
-inline Vec4f pow<Vec4f const &>(Vec4f const & x, Vec4f const & y) {
+inline Vec4f pow<Vec4f>(Vec4f const & x, Vec4f const & y) {
     return pow_template_f<Vec4f, Vec4i, Vec4fb>(x, y);
 }
 
 template <>
-inline Vec4f pow<float>(Vec4f const & x, float y) {
+inline Vec4f pow<float>(Vec4f const & x, float const & y) {
     return pow_template_f<Vec4f, Vec4i, Vec4fb>(x, y);
 }
 
 template <>
-inline Vec4f pow<double>(Vec4f const & x, double y) {
+inline Vec4f pow<double>(Vec4f const & x, double const & y) {
     return pow_template_f<Vec4f, Vec4i, Vec4fb>(x, (float)y);
 }
 
 #if MAX_VECTOR_SIZE >= 256
 
 template <>
-inline Vec8f pow<Vec8f const &>(Vec8f const & x, Vec8f const & y) {
+inline Vec8f pow<Vec8f>(Vec8f const & x, Vec8f const & y) {
     return pow_template_f<Vec8f, Vec8i,  Vec8fb>(x, y);
 }
 
 template <>
-inline Vec8f pow<float>(Vec8f const & x, float y) {
+inline Vec8f pow<float>(Vec8f const & x, float const & y) {
     return pow_template_f<Vec8f, Vec8i,  Vec8fb>(x, y);
 }
 template <>
-inline Vec8f pow<double>(Vec8f const & x, double y) {
+inline Vec8f pow<double>(Vec8f const & x, double const & y) {
     return pow_template_f<Vec8f, Vec8i,  Vec8fb>(x, (float)y);
 }
 
@@ -1587,15 +1750,18 @@ inline Vec8f pow<double>(Vec8f const & x, double y) {
 
 #if MAX_VECTOR_SIZE >= 512
 
-inline Vec16f pow(Vec16f const & x, Vec16f const & y) {
+template <>
+inline Vec16f pow<Vec16f>(Vec16f const & x, Vec16f const & y) {
     return pow_template_f<Vec16f, Vec16i,  Vec16fb>(x, y);
 }
 
-inline Vec16f pow(Vec16f const & x, float y) {
+template <>
+inline Vec16f pow<float>(Vec16f const & x, float const & y) {
     return pow_template_f<Vec16f, Vec16i,  Vec16fb>(x, y);
 }
 
-inline Vec16f pow(Vec16f const & x, double y) {
+template <>
+inline Vec16f pow<double>(Vec16f const & x, double const & y) {
     return pow_template_f<Vec16f, Vec16i,  Vec16fb>(x, (float)y);
 }
 
@@ -1672,14 +1838,6 @@ public:
         return y;
     }
 #endif // MAX_VECTOR_SIZE >= 512
-};
-
-// partial specialization for b = 0
-template<int a>
-class Power_rational<a,0> {
-public:
-    template<class VTYPE>
-    VTYPE pow(VTYPE const & x) {return nan_vec<VTYPE>(NAN_LOG);}
 };
 
 // partial specialization for b = 1

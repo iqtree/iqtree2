@@ -1,8 +1,8 @@
 /****************************  vectori256.h   *******************************
 * Author:        Agner Fog
 * Date created:  2012-05-30
-* Last modified: 2016-04-26
-* Version:       1.22
+* Last modified: 2017-02-19
+* Version:       1.27
 * Project:       vector classes
 * Description:
 * Header file defining integer vector classes as interface to intrinsic 
@@ -36,7 +36,7 @@
 *
 * For detailed instructions, see VectorClass.pdf
 *
-* (c) Copyright 2012 - 2016 GNU General Public License http://www.gnu.org/licenses
+* (c) Copyright 2012-2017 GNU General Public License http://www.gnu.org/licenses
 *****************************************************************************/
 
 // check combination of header files
@@ -234,7 +234,7 @@ static inline Vec256b andnot (Vec256b const & a, Vec256b const & b) {
 *****************************************************************************/
 // Generate a constant vector of 8 integers stored in memory.
 // Can be converted to any integer vector type
-template <int i0, int i1, int i2, int i3, int i4, int i5, int i6, int i7>
+template <int32_t i0, int32_t i1, int32_t i2, int32_t i3, int32_t i4, int32_t i5, int32_t i6, int32_t i7>
 static inline __m256i constant8i() {
     static const union {
         int32_t i[8];
@@ -243,6 +243,10 @@ static inline __m256i constant8i() {
     return u.ymm;
 }
 
+template <uint32_t i0, uint32_t i1, uint32_t i2, uint32_t i3, uint32_t i4, uint32_t i5, uint32_t i6, uint32_t i7>
+static inline __m256i constant8ui() {
+    return constant8i<int32_t(i0), int32_t(i1), int32_t(i2), int32_t(i3), int32_t(i4), int32_t(i5), int32_t(i6), int32_t(i7)>();
+}
 
 /*****************************************************************************
 *
@@ -731,7 +735,7 @@ static inline Vec32c if_add (Vec32cb const & f, Vec32c const & a, Vec32c const &
 
 // Horizontal add: Calculates the sum of all vector elements.
 // Overflow will wrap around
-static inline uint32_t horizontal_add (Vec32c const & a) {
+static inline int32_t horizontal_add (Vec32c const & a) {
     __m256i sum1 = _mm256_sad_epu8(a,_mm256_setzero_si256());
     __m256i sum2 = _mm256_shuffle_epi32(sum1,2);
     __m256i sum3 = _mm256_add_epi16(sum1,sum2);
@@ -2265,10 +2269,14 @@ static inline Vec8i abs_saturated(Vec8i const & a) {
 // function rotate_left all elements
 // Use negative count to rotate right
 static inline Vec8i rotate_left(Vec8i const & a, int b) {
+#ifdef __AVX512VL__
+    return _mm256_rolv_epi32(a, _mm256_set1_epi32(b));
+#else
     __m256i left  = _mm256_sll_epi32(a,_mm_cvtsi32_si128(b & 0x1F));      // a << b 
     __m256i right = _mm256_srl_epi32(a,_mm_cvtsi32_si128((32-b) & 0x1F)); // a >> (32 - b)
     __m256i rot   = _mm256_or_si256(left,right);                          // or
     return  rot;
+#endif
 }
 
 
@@ -2810,6 +2818,9 @@ static inline Vec4q & operator -- (Vec4q & a) {
 
 // vector operator * : multiply element by element
 static inline Vec4q operator * (Vec4q const & a, Vec4q const & b) {
+#if defined (__AVX512DQ__) && defined (__AVX512VL__)
+    return _mm256_mullo_epi64(a, b);
+#else
     // instruction does not exist. Split into 32-bit multiplies
     __m256i bswap   = _mm256_shuffle_epi32(b,0xB1);           // swap H<->L
     __m256i prodlh  = _mm256_mullo_epi32(a,bswap);            // 32 bit L*H products
@@ -2819,6 +2830,7 @@ static inline Vec4q operator * (Vec4q const & a, Vec4q const & b) {
     __m256i prodll  = _mm256_mul_epu32(a,b);                  // a0Lb0L,a1Lb1L, 64 bit unsigned products
     __m256i prod    = _mm256_add_epi64(prodll,prodlh3);       // a0Lb0L+(a0Lb0H+a0Hb0L)<<32, a1Lb1L+(a1Lb1H+a1Hb1L)<<32
     return  prod;
+#endif
 }
 
 // vector operator *= : multiply
@@ -3005,10 +3017,14 @@ static inline Vec4q abs_saturated(Vec4q const & a) {
 // function rotate_left all elements
 // Use negative count to rotate right
 static inline Vec4q rotate_left(Vec4q const & a, int b) {
+#ifdef __AVX512VL__
+    return _mm256_rolv_epi64(a, _mm256_set1_epi64x(int64_t(b)));
+#else
     __m256i left  = _mm256_sll_epi64(a,_mm_cvtsi32_si128(b & 0x3F));      // a << b 
     __m256i right = _mm256_srl_epi64(a,_mm_cvtsi32_si128((64-b) & 0x3F)); // a >> (64 - b)
     __m256i rot   = _mm256_or_si256(left, right);                         // or
     return  rot;
+#endif
 }
 
 
@@ -4767,6 +4783,118 @@ static inline Vec4q gather4q(void const * a) {
 
 /*****************************************************************************
 *
+*          Vector scatter functions
+*
+******************************************************************************
+*
+* These functions write the elements of a vector to arbitrary positions in an
+* array in memory. Each vector element is written to an array position 
+* determined by an index. An element is not written if the corresponding
+* index is out of range.
+* The indexes can be specified as constant template parameters or as an
+* integer vector.
+* 
+* The scatter functions are useful if the data are distributed in a sparce
+* manner into the array. If the array is dense then it is more efficient
+* to permute the data into the right positions and then write the whole
+* permuted vector into the array.
+*
+* Example:
+* Vec8q a(10,11,12,13,14,15,16,17);
+* int64_t b[16] = {0};
+* scatter<0,2,14,10,1,-1,5,9>(a,b); 
+* // Now, b = {10,14,11,0,0,16,0,0,0,17,13,0,0,0,12,0}
+*
+*****************************************************************************/
+
+template <int i0, int i1, int i2, int i3, int i4, int i5, int i6, int i7>
+static inline void scatter(Vec8i const & data, void * array) {
+#if defined (__AVX512VL__)
+    __m256i indx = constant8i<i0,i1,i2,i3,i4,i5,i6,i7>();
+    __mmask16 mask = uint16_t(i0>=0 | (i1>=0)<<1 | (i2>=0)<<2 | (i3>=0)<<3| (i4>=0)<<4| (i5>=0)<<5| (i6>=0)<<6| (i7>=0)<<7);
+    _mm256_mask_i32scatter_epi32((int*)array, mask, indx, data, 4);
+#elif defined (__AVX512F__)
+    __m512i indx = _mm512_castsi256_si512(constant8i<i0,i1,i2,i3,i4,i5,i6,i7>());
+    __mmask16 mask = uint16_t(i0>=0 | (i1>=0)<<1 | (i2>=0)<<2 | (i3>=0)<<3| (i4>=0)<<4| (i5>=0)<<5| (i6>=0)<<6| (i7>=0)<<7);
+    _mm512_mask_i32scatter_epi32((int*)array, mask, indx, _mm512_castsi256_si512(data), 4);
+#else
+    int32_t* arr = (int32_t*)array;
+    const int index[8] = {i0,i1,i2,i3,i4,i5,i6,i7};
+    for (int i = 0; i < 8; i++) {
+        if (index[i] >= 0) arr[index[i]] = data[i];
+    }
+#endif
+}
+
+template <int i0, int i1, int i2, int i3>
+static inline void scatter(Vec4q const & data, void * array) {
+#if defined (__AVX512VL__)
+    __m128i indx = constant4i<i0,i1,i2,i3>();
+    __mmask16 mask = uint16_t(i0>=0 | (i1>=0)<<1 | (i2>=0)<<2 | (i3>=0)<<3);
+    _mm256_mask_i32scatter_epi64((long long *)array, mask, indx, data, 8);
+#elif defined (__AVX512F__)
+    __m256i indx = _mm256_castsi128_si256(constant4i<i0,i1,i2,i3>());
+    __mmask16 mask = uint16_t(i0>=0 | (i1>=0)<<1 | (i2>=0)<<2 | (i3>=0)<<3);
+    _mm512_mask_i32scatter_epi64((long long*)array, mask, indx, _mm512_castsi256_si512(data), 8);
+#else
+    int64_t* arr = (int64_t*)array;
+    const int index[4] = {i0,i1,i2,i3};
+    for (int i = 0; i < 4; i++) {
+        if (index[i] >= 0) arr[index[i]] = data[i];
+    }
+#endif
+}
+
+static inline void scatter(Vec8i const & index, uint32_t limit, Vec8i const & data, void * array) {
+#if defined (__AVX512VL__)
+    __mmask16 mask = _mm256_cmplt_epu32_mask(index, Vec8ui(limit));
+    _mm256_mask_i32scatter_epi32((int*)array, mask, index, data, 4);
+#elif defined (__AVX512F__)
+    // 16 bit mask. upper 8 bits are (0<0) = false
+    __mmask16 mask = _mm512_cmplt_epu32_mask(_mm512_castsi256_si512(index), _mm512_castsi256_si512(Vec8ui(limit)));
+    _mm512_mask_i32scatter_epi32((int*)array, mask, _mm512_castsi256_si512(index), _mm512_castsi256_si512(data), 4);
+#else
+    int32_t* arr = (int32_t*)array;
+    for (int i = 0; i < 8; i++) {
+        if (uint32_t(index[i]) < limit) arr[index[i]] = data[i];
+    }
+#endif
+} 
+
+static inline void scatter(Vec4q const & index, uint32_t limit, Vec4q const & data, void * array) {
+#if defined (__AVX512VL__)
+    __mmask16 mask = _mm256_cmplt_epu64_mask(index, Vec4uq(uint64_t(limit)));
+    _mm256_mask_i64scatter_epi64((long long*)array, mask, index, data, 8);
+#elif defined (__AVX512F__)
+    // 16 bit mask. upper 8 bits are (0<0) = false
+    __mmask16 mask = _mm512_cmplt_epu64_mask(_mm512_castsi256_si512(index), _mm512_castsi256_si512(Vec4uq(uint64_t(limit))));
+    _mm512_mask_i64scatter_epi64((long long*)array, mask, _mm512_castsi256_si512(index), _mm512_castsi256_si512(data), 8);
+#else
+    int64_t* arr = (int64_t*)array;
+    for (int i = 0; i < 4; i++) {
+        if (uint64_t(index[i]) < uint64_t(limit)) arr[index[i]] = data[i];
+    }
+#endif
+} 
+
+static inline void scatter(Vec4i const & index, uint32_t limit, Vec4q const & data, void * array) {
+#if defined (__AVX512VL__)
+    __mmask16 mask = _mm_cmplt_epu32_mask(index, Vec4ui(limit));
+    _mm256_mask_i32scatter_epi64((long long*)array, mask, index, data, 8);
+#elif defined (__AVX512F__)
+    // 16 bit mask. upper 8 bits are (0<0) = false
+    __mmask16 mask = _mm512_cmplt_epu32_mask(_mm512_castsi128_si512(index), _mm512_castsi128_si512(Vec4ui(limit)));
+    _mm512_mask_i32scatter_epi64((long long*)array, mask, _mm256_castsi128_si256(index), _mm512_castsi256_si512(data), 8);
+#else
+    int64_t* arr = (int64_t*)array;
+    for (int i = 0; i < 4; i++) {
+        if (uint32_t(index[i]) < limit) arr[index[i]] = data[i];
+    }
+#endif
+} 
+
+/*****************************************************************************
+*
 *          Functions for conversion between integer sizes
 *
 *****************************************************************************/
@@ -4945,8 +5073,8 @@ static inline Vec8i compress (Vec4q const & low, Vec4q const & high) {
 // Function compress : packs two vectors of 64-bit integers into one vector of 32-bit integers
 // Signed, with saturation
 static inline Vec8i compress_saturated (Vec4q const & a, Vec4q const & b) {
-    Vec4q maxval = constant8i<0x7FFFFFFF,0,0x7FFFFFFF,0,0x7FFFFFFF,0,0x7FFFFFFF,0>();
-    Vec4q minval = constant8i<(int)0x80000000,-1,(int)0x80000000,-1,(int)0x80000000,-1,(int)0x80000000,-1>();
+    Vec4q maxval = constant8ui<0x7FFFFFFF,0,0x7FFFFFFF,0,0x7FFFFFFF,0,0x7FFFFFFF,0>();
+    Vec4q minval = constant8ui<0x80000000,0xFFFFFFFF,0x80000000,0xFFFFFFFF,0x80000000,0xFFFFFFFF,0x80000000,0xFFFFFFFF>();
     Vec4q a1  = min(a,maxval);
     Vec4q b1  = min(b,maxval);
     Vec4q a2  = max(a1,minval);

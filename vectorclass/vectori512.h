@@ -1,8 +1,8 @@
 /****************************  vectori512.h   *******************************
 * Author:        Agner Fog
 * Date created:  2014-07-23
-* Last modified: 2016-04-26
-* Version:       1.22
+* Last modified: 2017-02-19
+* Version:       1.27
 * Project:       vector classes
 * Description:
 * Header file defining integer vector classes as interface to intrinsic 
@@ -25,7 +25,7 @@
 *
 * For detailed instructions, see VectorClass.pdf
 *
-* (c) Copyright 2014-2016 GNU General Public License http://www.gnu.org/licenses
+* (c) Copyright 2014-2017 GNU General Public License http://www.gnu.org/licenses
 *****************************************************************************/
 
 // check combination of header files
@@ -387,8 +387,8 @@ public:
     // Default constructor:
     Vec8b () {
     }
-    // Constructor to convert from type __mmask8 used in intrinsics:
-    Vec8b (__mmask8 x) {
+    // Constructor to convert from type __mmask16 used in intrinsics:
+    Vec8b (__mmask16 x) {
         m16 = x;
     }
     // Constructor to build from all elements:
@@ -396,14 +396,14 @@ public:
         m16 = uint16_t(b0 | b1<<1 | b2<<2 | b3<<3 | b4<<4 | b5<<5 | b6<<6 | b7<<7);
     }
     Vec8b (Vec16b const & x) {
-        m16 = __mmask8(x);
+        m16 = __mmask16(x);
     }
     // Constructor to broadcast single value:
     Vec8b(bool b) {
-        m16 = __mmask8(-int8_t(b));
+        m16 = __mmask16(-int8_t(b));
     }
-    // Assignment operator to convert from type __mmask8 used in intrinsics:
-    Vec8b & operator = (__mmask8 x) {
+    // Assignment operator to convert from type __mmask16 used in intrinsics:
+    Vec8b & operator = (__mmask16 x) {
         m16 = x;
         return *this;
     }
@@ -416,12 +416,33 @@ public:
         return Vec4qb(Vec4q(_mm512_castsi512_si256(_mm512_maskz_set1_epi64(__mmask16(m16), -1LL))));
     }
     Vec4qb get_high() const {
-        return Vec8b(__mmask8(m16 >> 4)).get_low();
+        return Vec8b(__mmask16(m16 >> 4)).get_low();
     }
     static int size () {
         return 8;
     }
 };
+
+/*****************************************************************************
+*
+*          Functions for boolean vectors
+*
+*****************************************************************************/
+
+// function andnot: a & ~ b
+static inline Vec8b andnot (Vec8b a, Vec8b b) {
+    return _mm512_kandn(b, a);
+}
+
+// horizontal_and. Returns true if all bits are 1
+static inline bool horizontal_and (Vec8b const & a) {
+    return (uint8_t)(__mmask16)a == 0xFF;
+}
+
+// horizontal_or. Returns true if at least one bit is 1
+static inline bool horizontal_or (Vec8b const & a) {
+    return (uint8_t)(__mmask16)a != 0;
+}
 
 
 /*****************************************************************************
@@ -444,10 +465,14 @@ public:
     }
     // Constructor to convert from type __mmask8 used in intrinsics:
     Vec8qb (__mmask8 x) {
+        m16 = (__mmask16)x;
+    }
+    // Constructor to convert from type __mmask16 used in intrinsics:
+    Vec8qb (__mmask16 x) {
         m16 = x;
     }
-    // Assignment operator to convert from type __mmask8 used in intrinsics:
-    Vec8qb & operator = (__mmask8 x) {
+    // Assignment operator to convert from type __mmask16 used in intrinsics:
+    Vec8qb & operator = (__mmask16 x) {
         m16 = x;
         return *this;
     }
@@ -1263,23 +1288,23 @@ public:
     }
     // Partial load. Load n elements and set the rest to 0
     Vec8q & load_partial(int n, void const * p) {
-        zmm = _mm512_maskz_loadu_epi64(__mmask8((1 << n) - 1), p);
+        zmm = _mm512_maskz_loadu_epi64(__mmask16((1 << n) - 1), p);
         return *this;
     }
     // Partial store. Store n elements
     void store_partial(int n, void * p) const {
-        _mm512_mask_storeu_epi64(p, __mmask8((1 << n) - 1), zmm);
+        _mm512_mask_storeu_epi64(p, __mmask16((1 << n) - 1), zmm);
     }
     // cut off vector to n elements. The last 8-n elements are set to zero
     Vec8q & cutoff(int n) {
-        zmm = _mm512_maskz_mov_epi64(__mmask8((1 << n) - 1), zmm);
+        zmm = _mm512_maskz_mov_epi64(__mmask16((1 << n) - 1), zmm);
         return *this;
     }
     // Member function to change a single element in vector
     // Note: This function is inefficient. Use load function if changing more than one element
     Vec8q const & insert(uint32_t index, int64_t value) {
-        zmm = _mm512_mask_set1_epi64(zmm, __mmask8(1 << index), value);
-        // zmm = _mm512_mask_blend_epi64(__mmask8(1 << index), zmm, _mm512_set1_epi64(value));
+        zmm = _mm512_mask_set1_epi64(zmm, __mmask16(1 << index), value);
+        // zmm = _mm512_mask_blend_epi64(__mmask16(1 << index), zmm, _mm512_set1_epi64(value));
         return *this;
     }
     // Member function extract a single element from vector
@@ -1363,11 +1388,11 @@ static inline Vec8q & operator -- (Vec8q & a) {
 
 // vector operator * : multiply element by element
 static inline Vec8q operator * (Vec8q const & a, Vec8q const & b) {
-#if defined (__INTEL_COMPILER)
+#ifdef __AVX512DQ__
+    return _mm512_mullo_epi64(a, b);
+#elif defined (__INTEL_COMPILER)
     return _mm512_mullox_epi64(a, b);                      // _mm512_mullox_epi64 missing in gcc
 #else
-    // return Vec8q(a.get_low() * b.get_low(), a.get_high() * b.get_high());
-
     // instruction does not exist. Split into 32-bit multiplies
     //__m512i ahigh = _mm512_shuffle_epi32(a, 0xB1);       // swap H<->L
     __m512i ahigh   = _mm512_srli_epi64(a, 32);            // high 32 bits of each a
@@ -1412,17 +1437,17 @@ static inline Vec8q & operator >>= (Vec8q & a, int32_t b) {
 
 // vector operator == : returns true for elements for which a == b
 static inline Vec8qb operator == (Vec8q const & a, Vec8q const & b) {
-    return _mm512_cmpeq_epi64_mask(a, b);
+    return Vec8qb(_mm512_cmpeq_epi64_mask(a, b));
 }
 
 // vector operator != : returns true for elements for which a != b
 static inline Vec8qb operator != (Vec8q const & a, Vec8q const & b) {
-    return _mm512_cmpneq_epi64_mask(a, b);
+    return Vec8qb(_mm512_cmpneq_epi64_mask(a, b));
 }
   
 // vector operator < : returns true for elements for which a < b
 static inline Vec8qb operator < (Vec8q const & a, Vec8q const & b) {
-    return _mm512_cmplt_epi64_mask(a, b);
+    return Vec8qb(_mm512_cmplt_epi64_mask(a, b));
 }
 
 // vector operator > : returns true for elements for which a > b
@@ -1432,7 +1457,7 @@ static inline Vec8qb operator > (Vec8q const & a, Vec8q const & b) {
 
 // vector operator >= : returns true for elements for which a >= b (signed)
 static inline Vec8qb operator >= (Vec8q const & a, Vec8q const & b) {
-    return _mm512_cmpge_epi64_mask(a, b);
+    return Vec8qb(_mm512_cmpge_epi64_mask(a, b));
 }
 
 // vector operator <= : returns true for elements for which a <= b (signed)
@@ -1776,7 +1801,7 @@ static inline Vec8q permute8q(Vec8q const & a) {
     if (mz == 0) return  _mm512_setzero_epi32();
 
     // mask for elements not zeroed
-    const __mmask8  z = __mmask8((i0>=0)<<0 | (i1>=0)<<1 | (i2>=0)<<2 | (i3>=0)<<3 | (i4>=0)<<4 | (i5>=0)<<5 | (i6>=0)<<6 | (i7>=0)<<7);
+    const __mmask16  z = __mmask16((i0>=0)<<0 | (i1>=0)<<1 | (i2>=0)<<2 | (i3>=0)<<3 | (i4>=0)<<4 | (i5>=0)<<5 | (i6>=0)<<6 | (i7>=0)<<7);
     // same with 2 bits for each element
     const __mmask16 zz = __mmask16((i0>=0?3:0) | (i1>=0?0xC:0) | (i2>=0?0x30:0) | (i3>=0?0xC0:0) | (i4>=0?0x300:0) | (i5>=0?0xC00:0) | (i6>=0?0x3000:0) | (i7>=0?0xC000:0));
 
@@ -1960,7 +1985,7 @@ static inline Vec8q blend8q(Vec8q const & a, Vec8q const & b) {
     const bool dozero = ((i0|i1|i2|i3|i4|i5|i6|i7) & 0x80) != 0;
 
     // mask for elements not zeroed
-    const __mmask8 z = __mmask8((i0>=0)<<0 | (i1>=0)<<1 | (i2>=0)<<2 | (i3>=0)<<3 | (i4>=0)<<4 | (i5>=0)<<5 | (i6>=0)<<6 | (i7>=0)<<7);
+    const __mmask16 z = __mmask16((i0>=0)<<0 | (i1>=0)<<1 | (i2>=0)<<2 | (i3>=0)<<3 | (i4>=0)<<4 | (i5>=0)<<5 | (i6>=0)<<6 | (i7>=0)<<7);
 
     // special case: all zero
     if (mz == 0) return  _mm512_setzero_epi32();
@@ -1977,7 +2002,7 @@ static inline Vec8q blend8q(Vec8q const & a, Vec8q const & b) {
 
     // special case: blend without permute
     if (((m1 ^ 0x76543210) & 0x77777777 & mz) == 0) {
-        __mmask8 blendmask = __mmask8((i0&8)>>3 | (i1&8)>>2 | (i2&8)>>1 | (i3&8)>>0 | (i4&8)<<1 | (i5&8)<<2 | (i6&8)<<3 | (i7&8)<<4 );
+        __mmask16 blendmask = __mmask16((i0&8)>>3 | (i1&8)>>2 | (i2&8)>>1 | (i3&8)>>0 | (i4&8)<<1 | (i5&8)<<2 | (i6&8)<<3 | (i7&8)<<4 );
         __m512i t = _mm512_mask_blend_epi64(blendmask, a, b);
         if (dozero) {
             t = _mm512_maskz_mov_epi64(z, t);
@@ -2345,6 +2370,66 @@ static inline Vec8q gather8q(void const * a) {
     return _mm512_i64gather_epi64(Vec8q(i0,i1,i2,i3,i4,i5,i6,i7), (const long long *)a, 8);
 }
 
+/*****************************************************************************
+*
+*          Vector scatter functions
+*
+******************************************************************************
+*
+* These functions write the elements of a vector to arbitrary positions in an
+* array in memory. Each vector element is written to an array position 
+* determined by an index. An element is not written if the corresponding
+* index is out of range.
+* The indexes can be specified as constant template parameters or as an
+* integer vector.
+* 
+* The scatter functions are useful if the data are distributed in a sparce
+* manner into the array. If the array is dense then it is more efficient
+* to permute the data into the right positions and then write the whole
+* permuted vector into the array.
+*
+* Example:
+* Vec8q a(10,11,12,13,14,15,16,17);
+* int64_t b[16] = {0};
+* scatter<0,2,14,10,1,-1,5,9>(a,b); 
+* // Now, b = {10,14,11,0,0,16,0,0,0,17,13,0,0,0,12,0}
+*
+*****************************************************************************/
+
+template <int i0, int i1, int i2, int i3, int i4, int i5, int i6, int i7,
+int i8, int i9, int i10, int i11, int i12, int i13, int i14, int i15>
+    static inline void scatter(Vec16i const & data, void * array) {
+    __m512i indx = constant16i<i0,i1,i2,i3,i4,i5,i6,i7,i8,i9,i10,i11,i12,i13,i14,i15>();
+    Vec16ib mask(i0>=0, i1>=0, i2>=0, i3>=0, i4>=0, i5>=0, i6>=0, i7>=0,
+        i8>=0, i9>=0, i10>=0, i11>=0, i12>=0, i13>=0, i14>=0, i15>=0);
+    _mm512_mask_i32scatter_epi32((int*)array, mask, indx, data, 4);
+}
+
+template <int i0, int i1, int i2, int i3, int i4, int i5, int i6, int i7>
+static inline void scatter(Vec8q const & data, void * array) {
+    __m256i indx = constant8i<i0,i1,i2,i3,i4,i5,i6,i7>();
+    Vec8qb mask(i0>=0, i1>=0, i2>=0, i3>=0, i4>=0, i5>=0, i6>=0, i7>=0);
+    _mm512_mask_i32scatter_epi64((long long *)array, mask, indx, data, 8);
+}
+
+static inline void scatter(Vec16i const & index, uint32_t limit, Vec16i const & data, void * array) {
+    Vec16ib mask = Vec16ui(index) < limit;
+    _mm512_mask_i32scatter_epi32((int*)array, mask, index, data, 4);
+}
+
+static inline void scatter(Vec8q const & index, uint32_t limit, Vec8q const & data, void * array) {
+    Vec8qb mask = Vec8uq(index) < uint64_t(limit);
+    _mm512_mask_i64scatter_epi64((long long *)array, mask, index, data, 8);
+}
+
+static inline void scatter(Vec8i const & index, uint32_t limit, Vec8q const & data, void * array) {
+#if defined (__AVX512VL__)
+    __mmask16 mask = _mm256_cmplt_epu32_mask(index, Vec8ui(limit));
+#else
+    __mmask16 mask = _mm512_cmplt_epu32_mask(_mm512_castsi256_si512(index), _mm512_castsi256_si512(Vec8ui(limit)));
+#endif
+    _mm512_mask_i32scatter_epi64((long long *)array, mask, index, data, 8);
+}
 
 /*****************************************************************************
 *
@@ -2652,7 +2737,7 @@ static inline int horizontal_find_first(Vec16ib const & x) {
 }
 
 static inline int horizontal_find_first(Vec8qb const & x) {
-    uint32_t b = uint8_t(__mmask8(x));
+    uint32_t b = uint8_t(__mmask16(x));
     if (b) {
         return bit_scan_forward(b);
     }
@@ -2742,7 +2827,7 @@ static inline Vec16ib to_Vec16ib(uint16_t x) {
 
 // to_Vec8b: convert integer bitfield to boolean vector
 static inline Vec8qb to_Vec8qb(uint8_t x) {
-    return (__mmask8)x;
+    return (__mmask16)x;
 }
 
 #ifdef VCL_NAMESPACE

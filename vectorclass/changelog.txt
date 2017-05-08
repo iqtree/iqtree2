@@ -1,5 +1,39 @@
-change log for vectorclass.zip
+Change log for vectorclass.zip
 ------------------------------
+
+Projected future version, 2018:
+  * use mask registers for boolean vectors of all sizes with AVX512VL
+  * use C++14
+  * replace long template argument lists by constant arrays
+  
+2017-05-02 version 1.28
+  * Fixed problem with Apple Clang version 6.2 in vectorf128.h
+  * Fixed return type for Vec8sb operator > (Vec8us, Vec8us)  
+  * cpuid function modified in instrset_detect.cpp
+  
+2017-02-19 version 1.27
+  * fixed problem with scatter functions in MS Visual Studio  
+  
+2016-12-21 version 1.26
+  * added constant4ui template
+  * fixed error for complexvec.h with clang  
+  * fixed error in vectormath_exp.h for MAX_VECTOR_SIZE < 512
+
+2016-11-25 version 1.25
+  * scatter functions
+  * new functions to_float for unsigned integer vectors
+  * instrset_detect function can detect AVX512VL, AVX512BW, AVX512DQ
+  * functions hasF16C and hasAVX512ER for detecting instruction set extensions
+  * fix bugs in horizontal_and and pow(0,0) for AVX512
+  * functions improved for AVX512 and AVX512VL: pow, approx_recipr,  
+      approx_rsqrt
+  * functions improved for AVX512DQ: 64 bit multiplication, to_double,
+      32 and 64 bit rotate_left, round_to_int64, truncate_to_int64
+  * functions improved for AVX512ER: approx_recipr, approx_rsqrt,
+      exponential functions
+
+2016-10-31 version 1.24
+  * fix bug in Vec8uq constructor in vectori512e.h
 
 2016-09-27 version 1.23
   * temporary fix of a problem in Clang version 3.9 inserted in vectorf128.h
@@ -31,12 +65,12 @@ change log for vectorclass.zip
   * more special cases in blend4q
   * nan_code functions made static inline
   * template parameter BTYPE renamed to BVTYPE in mathematical functions to avoid clash
-    with macro named BTYPE in winnt.h
+      with macro named BTYPE in winnt.h
   * fixed bug in Vec4db constructor
 
 2014-10-24 version 1.16
-  * workaround for problem in Clang compiler extended to version 3.09 because not fixed yet by Clang
-    (vectorf128.h line 134)
+  * workaround for problem in Clang compiler extended to version 3.09 because not 
+      fixed yet by Clang (vectorf128.h line 134)
   * recognize problem with Apple version of Clang reporting wrong version number
   * remove various minor problems with Clang
   * function pow(vector, int) modified to strengthen type checking and avoid compiler warnings
@@ -49,15 +83,15 @@ change log for vectorclass.zip
   * constructors and = operators to broadcast boolean scalar into boolean vectors
   * various lookup functions improved
   * operators &, |, ^, ~, etc. defined for various boolean vectors to avoid converson
-    to integer vectors
+      to integer vectors
   * nmul_add functions
   * mul_add etc. moved to main header files
   * explicit fused multiply-and-add used in math functions to improve performance 
-    on compilers that don't automatically insert FMA
+      on compilers that don't automatically insert FMA
 
 2014-07-24 version 1.14
   * support for AVX-512f instruction set and 512-bit vectors:
-    Vec16i, Vec16ui, Vec8q, Vec8uq, Vec16f, Vec8d, and corresponding boolean vectors
+      Vec16i, Vec16ui, Vec8q, Vec8uq, Vec16f, Vec8d, and corresponding boolean vectors
   * new define MAX_VECTOR_SIZE, valid values are 128, 256 and 512
   * added hyperbolic functions sinh, cosh, tanh, asinh, acosh, atanh
   * size() member function on all vector classes returns the number of elements
@@ -73,7 +107,8 @@ change log for vectorclass.zip
   * "denormal" renamed to "subnormal" everywhere, in accordance with IEEE 754-2008 standard
 
 2014-04-20 version 1.12
-  * inline implementation of mathematical functions added (vectormath_exp.h vectormath_trig.h vectormath_common.h)
+  * inline implementation of mathematical functions added (vectormath_exp.h vectormath_trig.h
+      vectormath_common.h)
   * vectormath.h renamed to vectormath_lib.h because a new alternative is added
   * gather functions with constant indexes
   * function sign_combine
@@ -97,12 +132,12 @@ change log for vectorclass.zip
 
 2013-10-04 version 1.10
   * clear distinction between boolean vectors and integer vectors for the sake of 
-    compatibility with mask registers in forthcoming AVX512 instruction set
+      compatibility with mask registers in forthcoming AVX512 instruction set
   * added function if_add
   * tentative support for clang version 3.3 with workaround for bugs
   * remove ambiguity for builtin m128i operator == in clang compiler. 
   * problems in clang compiler, bug reports filed at clang
-    (http://llvm.org/bugs/show_bug.cgi?id=17164, 17312)
+      (http://llvm.org/bugs/show_bug.cgi?id=17164, 17312)
   * instrset.h fixes problem with macros named min and max in MS windows.h
   * workaround problem in MS Visual Studio 11.0. Bug report 735861 and 804274
   * minor bug fixes
@@ -115,11 +150,12 @@ change log for vectorclass.zip
   * added file complexvec.h for complex numbers and complex vectors
   * added file quaternion.h for quaternions
   * added function change_sign for floating point vectors
-  * added operators +, -, *, / between floating point vectors and scalars to remove overloading ambiguity
+  * added operators +, -, *, / between floating point vectors and scalars to remove 
+      overloading ambiguity
 
 2012-07-08 version 1.01 beta
   * added file decimal.h with Number <-> string conversion functions: 
-    bin2bcd, bin2ascii, bin2hex_ascii, ascii2bin
+      bin2bcd, bin2ascii, bin2hex_ascii, ascii2bin
   * added andnot function for boolean vectors
   * added functions shift_bytes_up and shift_bytes_down
   * added operators for unsigned integer vector classes: >>=, &, &&, |, ||, ^, ~

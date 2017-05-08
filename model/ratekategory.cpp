@@ -17,7 +17,7 @@
 */
 
 
-#include "phylotree.h"
+#include "tree/phylotree.h"
 #include "ratekategory.h"
 
 RateKategory::RateKategory(int ncat, PhyloTree *tree)
@@ -48,7 +48,7 @@ double RateKategory::targetFunk(double x[])
 {
 	getVariables(x);
 	if (rates[ncategory-1] < 1e-4) return 1.0e+12;
-	assert(phylo_tree);
+	ASSERT(phylo_tree);
 	phylo_tree->clearAllPartialLH();
 	return -phylo_tree->computeLikelihood();
 }

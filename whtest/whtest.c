@@ -24,7 +24,7 @@
 #endif
 
 /*#include <iqtree_config.h>*/
-#include "../timeutil.h"
+#include "utils/timeutil.h"
 
 #include <stdio.h>
 #include <stdlib.h>

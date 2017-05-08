@@ -500,7 +500,7 @@ void ModelCodon::computeRateAttributes() {
             int nt_changes = ((i/16) != (j/16)) + (((i%16)/4) != ((j%16)/4)) + ((i%4) != (j%4));
             int aa1 = strchr(symbols_protein, phylo_tree->aln->genetic_code[i]) - symbols_protein;
             int aa2 = strchr(symbols_protein, phylo_tree->aln->genetic_code[j]) - symbols_protein;
-            assert(aa1 >= 0 && aa1 < 20 && aa2 >= 0 && aa2 < 20);
+            ASSERT(aa1 >= 0 && aa1 < 20 && aa2 >= 0 && aa2 < 20);
             if (nt_changes < aa_cost_change[aa1*20+aa2]) {
                 aa_cost_change[aa1*20+aa2] = aa_cost_change[aa2*20+aa1] = nt_changes;
             }
@@ -650,10 +650,10 @@ void ModelCodon::readCodonModel(istream &in, bool reset_params) {
 //			int id = col*(2*num_states-col-1)/2 + (row-col-1);
             double qentry = q[i*nscodons+j];
             int id = row*num_states+col;
-			assert(id < nrates && id >= 0);
+			ASSERT(id < nrates && id >= 0);
 			empirical_rates[id] = rates[id] = qentry;
             id = col*num_states+row;
-			assert(id < nrates && id >= 0);
+			ASSERT(id < nrates && id >= 0);
 			empirical_rates[id] = rates[id] = qentry;
 		}
 	}
@@ -874,7 +874,7 @@ bool ModelCodon::getVariables(double *variables) {
             changed |= (kappa2 != variables[j]);
             kappa2 = variables[j++];
         }
-        assert(j == num_params+1);
+        ASSERT(j == num_params+1);
     }
 	if (freq_type == FREQ_ESTIMATE) {
         // 2015-09-07: relax the sum of state_freq to be 1, this will be done at the end of optimization
@@ -913,7 +913,7 @@ void ModelCodon::setVariables(double *variables) {
         if (!fix_kappa2)
             variables[j++] = kappa2;
         
-		assert(j == num_params+1);
+		ASSERT(j == num_params+1);
 	}
 	if (freq_type == FREQ_ESTIMATE) {
         // 2015-09-07: relax the sum of state_freq to be 1, this will be done at the end of optimization

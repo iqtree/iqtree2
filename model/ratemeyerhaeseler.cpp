@@ -17,7 +17,7 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-#include "phylotree.h"
+#include "tree/phylotree.h"
 #include "ratemeyerhaeseler.h"
 
 
@@ -356,7 +356,7 @@ void RateMeyerHaeseler::optimizeRates() {
 }
 
 double RateMeyerHaeseler::optimizeParameters(double epsilon) {
-	assert(phylo_tree);
+	ASSERT(phylo_tree);
 	double tree_lh = phylo_tree->computeLikelihood();
 
 	DoubleVector prev_rates;

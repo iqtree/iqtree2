@@ -13,9 +13,9 @@
 #define SUBSTMODEL_H
 
 #include <string>
-#include "tools.h"
-#include "optimization.h"
-#include "checkpoint.h"
+#include "utils/tools.h"
+#include "utils/optimization.h"
+#include "utils/checkpoint.h"
 
 using namespace std;
 

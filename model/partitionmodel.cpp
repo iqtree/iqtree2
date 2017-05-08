@@ -18,7 +18,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 #include "partitionmodel.h"
-#include "superalignment.h"
+#include "alignment/superalignment.h"
 #include "model/rategamma.h"
 
 PartitionModel::PartitionModel()
@@ -49,7 +49,7 @@ PartitionModel::PartitionModel(Params &params, PhyloSuperTree *tree, ModelsBlock
         linked_alpha = params.gamma_shape;
     }
     for (it = tree->begin(), part = 0; it != tree->end(); it++, part++) {
-        assert(!((*it)->getModelFactory()));
+        ASSERT(!((*it)->getModelFactory()));
         params.model_name = tree->part_info[part].model_name;
         if (params.model_name == "") // if empty, take model name from command option
         	params.model_name = model_name;

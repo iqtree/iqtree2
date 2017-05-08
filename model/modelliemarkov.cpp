@@ -321,7 +321,10 @@ ModelLieMarkov::ModelLieMarkov(string model_name, PhyloTree *tree, string model_
 
 void ModelLieMarkov::init(const char *model_name, string model_params, StateFreqType freq, string freq_params)
 {
-    assert(NUM_RATES==getNumRateEntries());
+    // TODO: why is freq_params not handled here?
+
+	nondiagonalizable = false;
+    ASSERT(NUM_RATES==getNumRateEntries());
     StateFreqType expected_freq_type; // returned by getLieMarkovModelInfo but not used here
     getLieMarkovModelInfo((string)model_name, name, full_name, model_num, symmetry, expected_freq_type);
 
@@ -495,9 +498,9 @@ bool  ModelLieMarkov::validFreqType() {
  * for in num_param, so no more should be added.
  */
 
-int ModelLieMarkov::getNDimFreq() { 
-	return 0;
-}
+//int ModelLieMarkov::getNDimFreq() { 
+//	return 0;
+//}
 
 /*
  * Some LM models are time reversible. Currently this is used in 
@@ -506,8 +509,11 @@ int ModelLieMarkov::getNDimFreq() {
  * are given an unrooted tree and optimized by TR methods,
  * ModelFactory::getNParameters() may need changing.
  */
-bool ModelLieMarkov::isTimeReversible() {
-    return(TIME_REVERSIBLE[model_num]);
+bool ModelLieMarkov::isReversible() {
+    // TODO: crash when setting reversible to true
+//    ASSERT(is_reversible == TIME_REVERSIBLE[model_num]);
+//    return(TIME_REVERSIBLE[model_num]);
+    return false;
 }
 
 /* static */ bool ModelLieMarkov::validModelName(string model_name) {
@@ -672,6 +678,12 @@ static void tauToPi(double* tau, double* pi, int sym) {
  */
 
 void ModelLieMarkov::setBasis() {
+
+  // BQM 2017-05-02: set reversibility
+  // TODO: crash when setting reversible to true
+  //setReversible(TIME_REVERSIBLE[model_num]);
+  setReversible(false);
+
   // if not otherwise specified, use FREQ_ESTIMATE.
   if (getFreqType() == FREQ_UNKNOWN) freq_type = FREQ_ESTIMATE;
 
@@ -754,7 +766,7 @@ void ModelLieMarkov::setBasis() {
       basis[i] = permuted_rates;
     } // for i
   } else {
-      assert(getFreqType() == FREQ_ESTIMATE); // only other legal possibility
+      ASSERT(getFreqType() == FREQ_ESTIMATE); // only other legal possibility
       num_params = MODEL_PARAMS[model_num];
       basis = new double*[num_params+1];
       for (int i=0;i<=num_params;i++) {
@@ -823,7 +835,7 @@ void ModelLieMarkov::decomposeRateMatrixEigen3lib() {
     Matrix4d mat(rate_matrix);
     mat.transpose();
     EigenSolver<Matrix4d> eigensolver(mat);
-    assert (eigensolver.info() == Eigen::Success);
+    ASSERT (eigensolver.info() == Eigen::Success);
     Map<Vector4cd,Aligned> eval(ceval);
     eval = eigensolver.eigenvalues();
     Map<Matrix4cd,Aligned> evec(cevec);
@@ -858,7 +870,7 @@ void ModelLieMarkov::decomposeRateMatrixEigen3lib() {
     Matrix4cd check = inv_evec * mat * evec - eval_diag;
     for (int i = 0; i < 4; i++)
         for (int j = 0; j < 4; j++)
-            assert(abs(check(i,j)) < 1e-4);
+            ASSERT(abs(check(i,j)) < 1e-4);
 #else
     outError("Please install Eigen3 library for this option ", __func__);
 #endif
@@ -880,7 +892,7 @@ const static int g2index[] = {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1, 3,-1,-1
 void ModelLieMarkov::decomposeRateMatrixClosedForm() {
     // Lie Markov eigen decomposition with closed formula
     int i, j;
-    double a = 1.0, a2 = 0, b = 0, c = 0, d = 0, d1 = 0, e1 = 0, e2 = 0, f1 = 0, f2 = 0, g1 = 0, g2 = 0;
+    double a = 1., a2 = 0, b = 0, c = 0, d = 0, d1 = 0, e1 = 0, e2 = 0, f1 = 0, f2 = 0, g1 = 0, g2 = 0;
 
     if (a2index[model_num] >= 0) a2 = model_parameters[a2index[model_num]];
     if ( bindex[model_num] >= 0)  b = model_parameters[ bindex[model_num]];
@@ -894,186 +906,969 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
     if (g1index[model_num] >= 0) g1 = model_parameters[g1index[model_num]];
     if (g2index[model_num] >= 0) g2 = model_parameters[g2index[model_num]];
     
-    // following code is from Christina
+    // following code is from Cassius
     
     
-    if (name.substr(0,3) == "1.1" || name.substr(0,4) == "4.4a" || name.substr(2,4) == "5.6b") {
+    if (name.find("1.1") != string::npos) {
+    	a = 1./3.;
+    	//Eigenvalues = {0, -4*a, -4*a, -4*a}
+		ceval[0] = 0.0; ceval[1] = ceval[2] = ceval[3] = -4.0*a;
+		//v0 = {1, 1, 1, 1}
+		cevec[0] = cevec[1] = cevec[2] = cevec[3] = 1.0;
+		//v1 = {-1, 0, 0, 1}
+		cevec[4] = -1.0;
+		cevec[5] = 0.0;
+		cevec[6] = 0.0;
+		cevec[7]= 1.0;
+		//v2 = {-1, 0, 1, 0}
+		cevec[8] =  -1.0;
+		cevec[9] =  0.0;
+		cevec[10] =  1.0;
+		cevec[11] = 0.0;
+		//v3 = {-1, 1, 0, 0}
+		cevec[12] = -1.0;
+		cevec[13] =  1.0;
+		cevec[14] = 0.0;
+		cevec[15] =  0.0;
 
+		/*Inverses*/
+		cinv_evec[1] = cinv_evec[2] = cinv_evec[3] = cinv_evec[5] = cinv_evec[6] = cinv_evec[9] = cinv_evec[11] = cinv_evec[14] = cinv_evec[15] = -0.25;
+		cinv_evec[0] = cinv_evec[4] = cinv_evec[8] = cinv_evec[12] = 0.25;
+		cinv_evec[7] = cinv_evec[10] = cinv_evec[13] = 0.75;
+
+    } else if (name.find("2.2b") != string::npos) {
         /******** eigenvalues *********/
-        //Eigenvalues = {0, -4*a, -4*a, -4*a}
-        ceval[0] = 0.0; ceval[1] = ceval[2] = ceval[3] = -4.0*a;
-        
-        /******** right eigenvectors *********/
-        //v0 = {1, 1, 1, 1}
-        cevec[0] = cevec[4] = cevec[8] = cevec[12] = 1.0;
-        //v1 = {-((a-a2-d)/(a-a2+d)), 1, -((a-a2-d)/(a-a2+d)), 1}
-        cevec[1] = cevec[9] = -((a-a2-d)/(a-a2+d));
-        cevec[5] = cevec[13] = 1.0;
-        //v2 = {(2*e2)/(2*a+a2+e1+e2), -((2*a+a2+e1-e2)/(2*a+a2+e1+e2)), 0, 1}
-        double temp = 1.0/(2*a+a2+e1+e2);
-        cevec[2] = 2*e2*temp; cevec[6] = -(2*a+a2+e1-e2)*temp; cevec[10] = 0.0; cevec[14] = 1.0;
-        //v3 = {-((2*a+a2-e1+e2)/(2*a+a2+e1+e2)), (2*e1)/(2*a+a2+e1+e2), 1, 0}
-        cevec[3] = cevec[6]; cevec[7] = cevec[2]; cevec[11] = 1.0; cevec[15] = 0.0;
-
-        /******** left eigenvectors *********/
-        //v0 = {-((-2*std::pow(a,2.)+a*a2+std::pow(a2,2.)-2*a*d-a2*d-2*a*e1+2*a2*e1)/(2*std::pow(a,2.)-a*a2-std::pow(a2,2.)-2*a*d-a2*d-2*a*e2+2*a2*e2)), -1, 0, -1}
-        cinv_evec[0] = -((-2*std::pow(a,2.)+a*a2+std::pow(a2,2.)-2*a*d-a2*d-2*a*e1+2*a2*e1)/(2*std::pow(a,2.)-a*a2-std::pow(a2,2.)-2*a*d-a2*d-2*a*e2+2*a2*e2));
-        cinv_evec[4] =  -1; cinv_evec[8] = 0; cinv_evec[12] = -1;  
-        //v1 = {-((-2*std::pow(a,2.)+a*a2+std::pow(a2,2.)+2*a*d+a2*d-2*a*e2+2*a2*e2)/(2*std::pow(a,2.)-a*a2-std::pow(a2,2.)-2*a*d-a2*d-2*a*e2+2*a2*e2)), 1, -1, 0}
-        cinv_evec[1] = -((-2*std::pow(a,2.)+a*a2+std::pow(a2,2.)+2*a*d+a2*d-2*a*e2+2*a2*e2)/(2*std::pow(a,2.)-a*a2-std::pow(a2,2.)-2*a*d-a2*d-2*a*e2+2*a2*e2));
-        cinv_evec[5] = 1; cinv_evec[9] = -1; cinv_evec[13] = 0;
-        //v2 = {-((-2*std::pow(a,2.)+a*a2+std::pow(a2,2.)-2*a*d-a2*d+2*a*e1-2*a2*e1)/(2*std::pow(a,2.)-a*a2-std::pow(a2,2.)-2*a*d-a2*d-2*a*e2+2*a2*e2)), -1, 0, 1}
-        cinv_evec[2] = -((-2*std::pow(a,2.)+a*a2+std::pow(a2,2.)-2*a*d-a2*d+2*a*e1-2*a2*e1)/(2*std::pow(a,2.)-a*a2-std::pow(a2,2.)-2*a*d-a2*d-2*a*e2+2*a2*e2));
-        cinv_evec[6] = -1; cinv_evec[10] = 0; cinv_evec[14] = 1;
-        //v3 = {1, 1, 1, 0}}
-        cinv_evec[3] = 1; cinv_evec[7] = 1; cinv_evec[11] = 1; cinv_evec[15] = 0;
-        
-    } else if (name.substr(2,4) == "2.2b" || name.substr(2,3) == "3.4" || name.substr(2,4) == "5.16") {
-        //5.16, 3.4, 2.2b, 1.1
-
-        /******** eigenvalues *********/
-        //Eigenvalues = {0, -4*(a-a2), -2*(2a+a2), -2(2a+a2)}
-        ceval[0] = 0.0; ceval[1] = -4.0*(a-a2); ceval[2] = ceval[3] = -2*(2*a+a2);
+        //Eigenvalues = {0, -4 (a - a2), -2 (2 a + a2), -2 (2 a + a2)}
+    	a = 1./3.;
+        a2 = -rate_matrix[1] + a;
+        ceval[0] = 0.0; ceval[1] = -4.0*(a - a2); ceval[2] = ceval[3] = -2.0*(2.0*a + a2);
+        /*ceval[0] = 0.0; ceval[1] = 0.0; ceval[2] = ceval[3] = 0.0;*/
 
         /******** right eigenvectors *********/
-        //v0 = {1, 1, 1, 1}
-        cevec[0] = cevec[4] = cevec[8] = cevec[12] = 1.0;
-        //v1 = {-((6*(a*a2-std::pow(a2,2.)-a2*d))/(3*a*a2-3*std::pow(a2,2.)+3*a2*d+2*a*g2-2*a2*g2))+(3*a*a2-3*std::pow(a2,2.)-3*a2*d-2*a*g1+2*a2*g1)/(3*a*a2-3*std::pow(a2,2.)+3*a2*d+2*a*g2-2*a2*g2),
-        //  -((-3*a*a2+3*std::pow(a2,2.)-3*a2*d+2*a*g2-2*a2*g2)/(3*a*a2-3*std::pow(a2,2.)+3*a2*d+2*a*g2-2*a2*g2)), 
-        //  -((3*a*a2-3*std::pow(a2,2.)-3*a2*d-2*a*g1+2*a2*g1)/(3*a*a2-3*std::pow(a2,2.)+3*a2*d+2*a*g2-2*a2*g2)), 1}
-        cevec[1] = -((6*(a*a2-std::pow(a2,2.)-a2*d))/(3*a*a2-3*std::pow(a2,2.)+3*a2*d+2*a*g2-2*a2*g2))+(3*a*a2-3*std::pow(a2,2.)-3*a2*d-2*a*g1+2*a2*g1)/(3*a*a2-3*std::pow(a2,2.)+3*a2*d+2*a*g2-2*a2*g2);
-        cevec[5] = -((-3*a*a2+3*std::pow(a2,2.)-3*a2*d+2*a*g2-2*a2*g2)/(3*a*a2-3*std::pow(a2,2.)+3*a2*d+2*a*g2-2*a2*g2));
-        cevec[9] = -((3*a*a2-3*std::pow(a2,2.)-3*a2*d-2*a*g1+2*a2*g1)/(3*a*a2-3*std::pow(a2,2.)+3*a2*d+2*a*g2-2*a2*g2));
-        cevec[13] = 1.0;       
-        //v2 = {0, -1, 0, 1}
-        cevec[2] = cevec[10] = 0.0; cevec[6] = -1.0; cevec[14] = 1.0;
-        //v3 = {-1, 0, 1, 0}
-        cevec[3] = -1.0; cevec[7] = cevec[15] = 0.0; cevec[11] = 1.0;
+		// {{1, 1, 1, 1}, {-1, 1, -1, 1}, {0, -1, 0, 1}, {-1, 0, 1, 0}}
 
-        /******** left eigenvectors *********/
-        //v0 = {-((-a+a2-d)/(a-a2-d)), -1, (2*g2)/(3*a2+g1-g2), -((3*a2-g1-g2)/(3*a2+g1-g2))}
-        double temp = 1.0/(3*a2+g1-g2);
-        cinv_evec[0] = -((-a+a2-d)/(a-a2-d)); cinv_evec[4] = -1.0; cinv_evec[8] = 2*g2*temp; cinv_evec[12] = -(3*a2-g1-g2)*temp;
-        //v1 = {1, 1, -((3*a2+g1+g2)/(3*a2+g1-g2)), -((2*g1)/(3*a2+g1-g2))}
-        cinv_evec[1] = cinv_evec[5] = 1.0; cinv_evec[9] = -(3*a2+g1+g2)*temp; cinv_evec[13] = -(2*g1)*temp;
-        //v2 = {-((-a+a2-d)/(a-a2-d)), -1, 0, 1}
-        cinv_evec[2] = -((-a+a2-d)/(a-a2-d)); cinv_evec[6] = -1.0; cinv_evec[10] = 0.0; cinv_evec[14] = 1.0; 
-        //v3 = {1, 1, 1, 0}
-        cinv_evec[3] = cinv_evec[7] = cinv_evec[11] = 1.0; cinv_evec[15] = 0.0;
-    } else {
-    
-        double p0 = 4*a*a*a-3*a*a2*a2-a2*a2*a2+a*b*b+a2*b*b+a*c*c-a2*c*c-a*d1*d1+a2*d1*d1+2*a*f1*g1+a2*f1*g1-d1*f1*g1+b*f2*g1+c*f2*g1-b*f1*g2+c*f1*g2-2*a*f2*g2-a2*f2*g2-d1*f2*g2;
-        double q0 = 4*a*a*d-4*a*a2*d+a2*a2*d-b*b*d+c*c*d-d*d1*d1-2*a*e1*g1-a2*e1*g1+d1*e1*g1-b*e2*g1-c*e2*g1+b*e1*g2-c*e1*g2+2*a*e2*g2+a2*e2*g2+d1*e1*g2;
-        double r0 = 4*a*a*e1-2*a*a2*e1-2*a2*a2*e1-2*a*d1*e1+2*a2*d1*e1+2*a*b*e2-2*a2*b*e2+2*a*c*e2-2*a2*c*e2+4*a*d*f1+2*a2*d*f1-2*d*d1*f1+2*b*d*f2+2*c*d*f2+2*e2*f1*g2-2*e1*f2*g2;
-        double s0 = 4*a*a*e2-2*a*a2*e2-2*a2*a2*e2+2*a*d1*e2-2*a2*d1*e2+2*a*b*e1-2*a2*b*e1-2*a*c*e1+2*a2*c*e1+4*a*d*f2+2*a2*d*f2+2*d*d1*f2+2*b*d*f1-2*c*d*f1+2*e2*f1*g1-2*e1*f2*g1;
-        
-        // eigenvector for 0 eigenvalue (base frequencies)
-        ceval[0] = 0.0;
-        double inv_p0 = 0.25/p0;
-        double v0[] = {(p0+q0+r0)*inv_p0, (p0+q0-r0)*inv_p0, (p0-q0+s0)*inv_p0, (p0-q0-s0)*inv_p0};
-        for (i = 0; i < 4; i++) {
-            cinv_evec[i] = (state_freq[i] = v0[i]);
+		//v0 = {1, 1, 1, 1}
+		cevec[0] = cevec[1] = cevec[2] = cevec[3] = 1.0;
+		//v1 = {-1, 1, -1, 1}
+		cevec[4] = -1.0;
+		cevec[5] =  1.0;
+		cevec[6] =  -1.0;
+		cevec[7] =  1.0;
+		//v2 ={0, -1, 0, 1}
+		cevec[8] =  0.0;
+		cevec[9] =-1.0;
+		cevec[10] = 0.0;
+		cevec[11] = 1.0;
+		//v3 = {-1, 0, 1, 0}
+		cevec[12] = -1.0;
+		cevec[13]  = 0.0;
+		cevec[14] = 1.0;
+		cevec[15] = 0.0;
+
+		/*INVERSES*/
+
+		cinv_evec[0] = cinv_evec[4] = cinv_evec[5] = cinv_evec[8] = cinv_evec[12] = cinv_evec[13] = 0.25;
+		cinv_evec[1] = cinv_evec[9] = -0.25;
+		cinv_evec[2] = cinv_evec[10] = cinv_evec[15] = 0.;
+		cinv_evec[3] = cinv_evec[6] = -0.5;
+		cinv_evec[14] = cinv_evec[11] = 0.5;
+
+    }  else if (name.find("3.3a") != string::npos) {
+        a = -rate_matrix[0]/3.;
+        a2 = (rate_matrix[2] - a)/2.;
+        b = rate_matrix[1] + a2 - a;
+        /******** eigenvalues *********/
+		//Eigenvalues = {0, -4 (a - a2), -2 (2 a + a2 - b), -2 (2 a + a2 + b)}
+		ceval[0] = 0.0; ceval[1] = -4.0*(a - a2); ceval[2] = -2.0*(2.0*a + a2 - b); ceval[3] = ceval[2] -4.0*b;
+
+		/******** right eigenvectors  *********/
+		// {{1, 1, 1, 1}, {-1, 1, -1, 1}, {-1, -1, 1, 1}, {1, -1, -1, 1}}
+
+		//v0 = {1, 1, 1, 1}
+		cevec[0] = cevec[1] = cevec[2] = cevec[3] = 1.0;
+		//v1 = {-1, 1, -1, 1}
+		cevec[4] =  -1.0;
+		cevec[5] = 1.0;
+		cevec[6] = -1.0;
+		cevec[7] = 1.0;
+		//v2 ={-1, -1, 1, 1}
+		cevec[8] = -1.0;
+		cevec[9]  = -1.0;
+		cevec[10] = 1.0;
+		cevec[11] = 1.0;
+		//v3 = {1, -1, -1, 1}
+		cevec[12] = 1.0;
+		cevec[13] = -1.0;
+		cevec[14] = -1.0;
+		cevec[15] = 1.0;
+
+		/******** INVERSE *********/
+		cinv_evec[0] =cinv_evec[3] =cinv_evec[4] =cinv_evec[5] =cinv_evec[8] =cinv_evec[10] =cinv_evec[12] =cinv_evec[13] =cinv_evec[14] =cinv_evec[15] = 0.25;
+		cinv_evec[1] =cinv_evec[2] =cinv_evec[6] =cinv_evec[7] =cinv_evec[9] =cinv_evec[11] = -0.25;
+
+     }else if (name.find("3.3b") != string::npos) {
+
+    	a = -rate_matrix[0]/3.;
+		a2 = (rate_matrix[2] - a)/2.;
+		c = -rate_matrix[1] - a2 + a;
+
+		/* cout <<"Los parametros son a = " << a << " a2 =  " << a2 << " c = " << c << endl;*/
+
+		/******** eigenvalues *********/
+		//{0, -4 (a - a2), -2 (2 a + a2 - I c), -2 (2 a + a2 + I c)} std::sqrt()
+		ceval[0] = 0.0; ceval[1] = -4.0*(a - a2);
+		ceval[2] = complex<double> (-2.0*(2.0*a + a2), -2.0* c);
+		ceval[3] = complex<double> (-2.0*(2.0*a + a2), 2.0* c);
+		/******** right eigenvectors *********/
+		// {{1, 1, 1, 1}, {-1, 1, -1, 1}, {I, -1, -I, 1}, {-I, -1, I, 1}}
+
+		//v0 = {1, 1, 1, 1}
+		cevec[0] = cevec[1] = cevec[2] = cevec[3] = 1.0;
+		//v1 = {-1, 1, -1, 1}
+		cevec[4] = -1.0;
+		cevec[5] = 1.0;
+		cevec[6] = -1.0;
+		cevec[7] = 1.0;
+		//v2 ={I, -1, -I, 1}
+		cevec[8] = complex<double> (0., 1.);
+		cevec[9] = -1.0;
+		cevec[10] = complex<double> (0., -1.);
+		cevec[11] = 1.0;
+		//v3 = {-I, -1, I, 1}
+		cevec[12] = complex<double> (0., -1.);
+		cevec[13] = -1.0;
+		cevec[14] = complex<double> (0., 1.);
+		cevec[15] = 1.0;
+		/******** INVERSE *********/
+		cinv_evec[0] =cinv_evec[4] =cinv_evec[5] =cinv_evec[8] =cinv_evec[12] =cinv_evec[13] =cinv_evec[14] =cinv_evec[15] = 0.25;
+		cinv_evec[1] =cinv_evec[6] =cinv_evec[7] =cinv_evec[9] = -0.25;
+		cinv_evec[2] =cinv_evec[11] =complex<double> (0., -0.25);
+		cinv_evec[3] =cinv_evec[10] = complex<double> (0., 0.25);
+
+     } else if (name.find("3.3c") != string::npos) {
+		a = -(rate_matrix[0] + rate_matrix[5])/6. ;
+		d1 = -rate_matrix[0] - 3.*a;
+		a2 = -rate_matrix[1] + a;
+		/******** eigenvalues *********/
+		//Eigenvalues = {0, -4 (a - a2), -2 (2 a + a2), -2 (2 a + a2)}
+		ceval[0] = 0.0; ceval[1] = -4.0*(a - a2); ceval[2] = -2.0*(2.0*a + a2 - d1); ceval[3] = -2.0*(2.0*a + a2 + d1);
+
+		/******** right eigenvectors *********/
+		// {{1, 1, 1, 1}, {-((a - a2 - d)/(a - a2 + d)), 1, -((a - a2 - d)/(a - a2 + d)), 1}, {0, -1, 0, 1}, {-1, 0, 1, 0}}
+
+		//v0 = {1, 1, 1, 1}
+		cevec[0] = cevec[1] = cevec[2] = cevec[3] = 1.0;
+		//v1 = {-((a - a2 - d)/(a - a2 + d)), 1, -((a - a2 - d)/(a - a2 + d)), 1}
+		cevec[4]  = -1.;
+		cevec[5]  = 1.;
+		cevec[6]  = -1.;
+		cevec[7]  = 1.;
+		//v2 ={0, -1, 0, 1}
+		cevec[8] =0.0;
+		cevec[9] =  -1.0;
+		cevec[10] = 0.0;
+		cevec[11] =  1.0;
+		//v3 = {-1, 0, 1, 0}}
+		cevec[12] =  -1.0;
+		cevec[13] =  0.0;
+		cevec[14] = 1.0;
+		cevec[15] =  0.0;
+
+		 /*INVERSE*/
+
+		cinv_evec[0] =cinv_evec[4] =cinv_evec[5] =cinv_evec[8] =cinv_evec[12] =cinv_evec[13] = 0.25;
+		cinv_evec[1] =cinv_evec[9] = -0.25;
+		cinv_evec[2] =cinv_evec[7] =cinv_evec[10] =cinv_evec[15] = 0.;
+		cinv_evec[3] =cinv_evec[6] = -0.5;
+		cinv_evec[11] =cinv_evec[14] = 0.5;
+
+     } else if (name.find("3.4") != string::npos) {
+		a = -(rate_matrix[0] + rate_matrix[5])/6. ;
+		d = rate_matrix[0] + 3.*a;
+		a2 = -rate_matrix[1] + a - d;
+		double deno1 = a-a2 + d;
+		double deno2 = a-a2;
+		if (abs(deno1) < 1.0e-7 || abs(deno2) < 1.0e-7) {
+		    // call numerical method if denominator == 0
+		    nondiagonalizable = true;
+		} else {
+			nondiagonalizable = false;
+			/******** eigenvalues *********/
+			//Eigenvalues = {0, -4 (a - a2), -2 (2 a + a2), -2 (2 a + a2)}
+			ceval[0] = 0.0; ceval[1] = -4.0*(a - a2); ceval[2] = ceval[3] = -2.0*(2.0*a + a2);
+
+			/******** right eigenvectors *********/
+			// {{1, 1, 1, 1}, {-((a - a2 - d)/(a - a2 + d)), 1, -((a - a2 - d)/(a - a2 + d)), 1}, {0, -1, 0, 1}, {-1, 0, 1, 0}}
+
+			//v0 = {1, 1, 1, 1}
+			cevec[0] = cevec[1] = cevec[2] = cevec[3] = 1.0;
+			//v1
+			cevec[4] = -(a - a2 - d)/deno1;
+			cevec[5] = 1.0;
+			cevec[6] = cevec[4];
+			cevec[7] = 1.0;
+			//v2
+			cevec[8] = 0.0;
+			cevec[9] = -1.0;
+			cevec[10] = 0.0;
+			cevec[11] = 1.0;
+			//v3
+			cevec[12] = -1.0;
+			cevec[13] = 0.0;
+			cevec[14] = 1.0;
+			cevec[15] = 0.0;
+			/*INVERSE*/
+			cinv_evec[0] =cinv_evec[5] =cinv_evec[8] =cinv_evec[13] = 0.25 + 0.25*d/deno2;
+			cinv_evec[1] =cinv_evec[9] = -cinv_evec[0];
+			cinv_evec[4] =cinv_evec[12] = -cinv_evec[0] + 0.5;
+			cinv_evec[14] =cinv_evec[11] = 0.5;
+			cinv_evec[3] =cinv_evec[6] = -0.5;
+			cinv_evec[2] =cinv_evec[7] =cinv_evec[10] =cinv_evec[15] = 0.;
+		}
+
+    } else if (name.find("4.4a") != string::npos) {
+		e1 = (rate_matrix[0] - rate_matrix[10])*0.5;
+		e2 = (rate_matrix[5] - rate_matrix[15])*0.5;
+		a = (-rate_matrix[0] + rate_matrix[4])*0.25;
+		d = rate_matrix[4] - a - e1;
+		double deno = a+d+e1;
+		double deno2 = 4*a;
+
+		if (abs(deno) < 1.0e-7|| abs(deno2) < 1.0e-7) {
+			// call numerical method if denominator == 0
+			nondiagonalizable = true;
+		} else {
+			nondiagonalizable = false;
+			deno = 1/deno;
+			deno2 = 1/deno2;
+			/******** eigenvalues *********/
+			//Eigenvalues = {0, -4 a, -4 a, -4 a}
+			ceval[0] = 0.0; ceval[1] = ceval[2] = ceval[3] = -4.0*a;
+
+			/******** right eigenvectors *********/
+			// {{1, 1, 1, 1}, {(-a + d + e2)/(a + d + e1), 0, 0, 1}, {-((a + d - e1)/(a + d + e1)), 0, 1, 0},
+			// {-((a - d + e2)/(a + d + e1)), 1, 0, 0}}
+
+			//v0
+			cevec[0] = cevec[1] = cevec[2] = cevec[3] = 1.0;
+			//v1
+			cevec[4] = (-a + d + e2)*deno;
+			cevec[5] = 0.0;
+			cevec[6] = 0.0;
+			cevec[7] = 1.0;
+			//v2
+			cevec[8] = -(a + d - e1)*deno;
+			cevec[9] = 0.0;
+			cevec[10] = 1.0;
+			cevec[11] = 0.0;
+			//v3 =
+			cevec[12] = -(a - d + e2)*deno;
+			cevec[13] = 1.0;
+			cevec[14] = 0.0;
+			cevec[15] = 0.0;
+			/******** INVERSE *********/
+
+			double auxd = d*deno2; double auxe1 = e1*deno2; double auxe2 = e2*deno2;
+
+			cinv_evec[0] = 0.25 + auxd + auxe1;
+			cinv_evec[1] = cinv_evec[2] = cinv_evec[3] = -cinv_evec[0];
+			cinv_evec[4] =  0.25 - auxd +auxe2;
+			cinv_evec[5] = cinv_evec[6] = -cinv_evec[4];
+			cinv_evec[7] = cinv_evec[6] + 1.;
+			cinv_evec[8] = 0.25 + auxd - auxe1;
+			cinv_evec[9] = cinv_evec[11] = -cinv_evec[8] ;
+			cinv_evec[10] = cinv_evec[9] + 1.;
+			cinv_evec[12] = 0.25 - auxd - auxe2;
+			cinv_evec[14] = cinv_evec[15] = -cinv_evec[12];
+			cinv_evec[13] = cinv_evec[14] + 1.;
+		}
+    } else if (name.find("4.4b") != string::npos) {
+		d = (rate_matrix[4] - rate_matrix[3])/2.;
+		d1 = (-rate_matrix[0] + rate_matrix[5] + 2.*d)/2.;
+		a = (-rate_matrix[0] + d - d1)/3.;
+		a2 = -rate_matrix[1] + a - d;
+
+		double deno = a - a2 + d;
+		double deno2 = a-a2;
+
+		if (abs(deno) < 1.0e-7 || abs(deno2) < 1.0e-7) {
+				// call numerical method if denominator == 0
+				nondiagonalizable = true;
+		} else {
+			nondiagonalizable = false;
+
+			/******** eigenvalues *********/
+			//Eigenvalues = {0, -4 (a - a2), -2 (2 a + a2 - d1), -2 (2 a + a2 + d1)}
+			ceval[0] = 0.0; ceval[1] = -4.0*(a-a2); ceval[2] = -2.0*(2.0*a + a2 -d1); ceval[3] = ceval[2]-4.0*d1;
+
+			/******** right eigenvectors *********/
+			// {{1, 1, 1, 1}, {(-a + a2 + d)/(a - a2 + d), 1, (-a + a2 + d)/(a - a2 + d), 1},
+			// {0, -1, 0, 1}, {-1, 0, 1, 0}}
+
+			//v0
+			cevec[0] = cevec[1] = cevec[2] = cevec[3] = 1.0;
+			//v1
+			cevec[4] = (-a + a2 + d)/deno;
+			cevec[5] = 1.0;
+			cevec[6] = cevec[4];
+			cevec[7] = 1.0;
+			//v2
+			cevec[8] = 0.0;
+			cevec[9] = -1.0;
+			cevec[10] = 0.0;
+			cevec[11] = 1.0;
+			//v3 =
+			cevec[12] = -1.0;
+			cevec[13] = 0.0;
+			cevec[14] = 1.0;
+			cevec[15] = 0.0;
+			/*INVERSE*/
+			cinv_evec[0] = 0.25 + 0.25*d/deno2;
+			cinv_evec[8] = cinv_evec[5] = cinv_evec[13] = cinv_evec[0];
+			cinv_evec[1] = cinv_evec[9] = -cinv_evec[0];
+			cinv_evec[2] = cinv_evec[10] = cinv_evec[7] = cinv_evec[15] = 0.;
+			cinv_evec[3] = cinv_evec[6] = -0.5;
+			cinv_evec[11] = cinv_evec[14] = 0.5;
+			cinv_evec[4] = -cinv_evec[0] + 0.5;
+			cinv_evec[12] = cinv_evec[4];
+		}
+
+    } else if (name.find("4.5a") != string::npos) {
+
+		d = (rate_matrix[0] - rate_matrix[5])/2.;
+		a = -(rate_matrix[0] - d)/3.;
+		a2 = (rate_matrix[2] - a - d)/2.;
+		b = rate_matrix[1] - a + a2 + d;
+		double deno = a - a2 + d;
+        if (abs(deno) < 1.0e-7 || abs(a-a2) < 1.0e-7) {
+            // call numerical method if denominator == 0
+            nondiagonalizable = true;
+        } else {
+            nondiagonalizable = false;
+            /******** eigenvalues *********/
+            //Eigenvalues = {0, -4 (a - a2), -2 (2 a + a2 - b), -2 (2 a + a2 + b)}
+            ceval[0] = 0.0; ceval[1] = -4.0*(a-a2); ceval[2] =-2.0*(2.0*a + a2 - b); ceval[3] = ceval[2]- 4.0*b;
+
+            /******** right eigenvectors *********/
+            // {{1, 1, 1, 1}, {-((a - a2 - d)/(a - a2 + d)), 1, -((a - a2 - d)/(a - a2 + d)), 1},
+            // {-1, -1, 1, 1}, {1, -1, -1, 1}}
+
+            //v0
+            cevec[0] = cevec[1] = cevec[2] = cevec[3] = 1.0;
+            //v1
+            cevec[4] = -(a - a2 - d)/deno;
+            cevec[5] = 1.0;
+            cevec[6] = cevec[4];
+            cevec[7] = 1.0;
+            //v2
+            cevec[8] = -1.0;
+            cevec[9] = -1.0;
+            cevec[10] = 1.0;
+            cevec[11] = 1.0;
+            //v3 =
+            cevec[12] = 1.0;
+            cevec[13] = -1.0;
+            cevec[14] = -1.0;
+            cevec[15] = 1.0;
+             /*INVERSE */
+            double auxd = 0.25*d/(a-a2);
+            cinv_evec[0] = cinv_evec[8] = cinv_evec[5] = cinv_evec[13] = 0.25 + auxd;
+            cinv_evec[2] = cinv_evec[11] = cinv_evec[6] = cinv_evec[7] = -0.25;
+            cinv_evec[3] = cinv_evec[10] = cinv_evec[14] = cinv_evec[15] = 0.25;
+            cinv_evec[1] = cinv_evec[9] = -cinv_evec[0];
+            cinv_evec[4] = cinv_evec[12] = 0.25 - auxd;
         }
-        
-        std::complex<double> complex1(1, sqrt(3));
-        std::complex<double> complex2(1,-sqrt(3));
+	} else if (name.find("4.5b") != string::npos) {
+		d = (rate_matrix[0] - rate_matrix[5])/2.;
+		a = -(rate_matrix[0] + rate_matrix[5])/6.;
+		c = (rate_matrix[3] - rate_matrix[1])/2.;
+		a2 = -rate_matrix[1] + a - d - c;
+		double deno = a-a2 + d;
+		if (abs(deno) < 1.0e-7 || abs(a-a2) < 1.0e-7) {
+			nondiagonalizable = true;
+		} else {
+			nondiagonalizable = false;
+			deno = 1/deno;
+			/******** eigenvalues *********/
+			//Eigenvalues = {0, -4 (a - a2), -2 (2 a + a2 - I c), -2 (2 a + a2 + I c)}
+			ceval[0] = 0.0; ceval[1] = -4.0*(a-a2); ceval[2] = complex<double> (-2. *(2.* a + a2), -2.*c); ceval[3] = complex<double>  (-2.*(2.*a + a2), 2.*c);
 
-        std::complex<double> alpha=-36*a2*a2-12*b*b+12*c*c-12*d1*d1+24*f1*g1-24*f2*g2;
-        std::complex<double> beta=432*a2*a2*a2-432*a2*b*b-432*a2*d1*d1-432*a2*f1*g1+432*d1*f1*g1-432*b*f2*g1-432*c*f2*g1+432*b*f1*g2-432*c*f1*g2+432*a2*f2*g2+432*d1*f2*g2;
+			/******** right eigenvectors *********/
+			// {{1, 1, 1, 1}, {-((a - a2 - d)/(a - a2 + d)), 1, -((a - a2 - d)/(a - a2 + d)), 1},
+			// {I, -1, -I, 1}, {-I, -1, I, 1}}
 
-        cout.unsetf(ios::fixed);
-        cout.precision(10);
+			//v0
+			cevec[0] = cevec[1] = cevec[2] = cevec[3] = 1.0;
+			//v1
+			cevec[4] = -(a - a2 - d)*deno;
+			cevec[5] = 1.0;
+			cevec[6] = cevec[4];
+			cevec[7] = 1.0;
+			//v2
+			cevec[8] = complex<double> (0., 1.);
+			cevec[9] = -1.0;
+			cevec[10] = complex<double> (0., -1.);
+			cevec[11] = 1.0;
+			//v3 =
+			cevec[12] = complex<double> (0., -1.);
+			cevec[13] = -1.0;
+			cevec[14] = complex<double> (0., 1.);
+			cevec[15] = 1.0;
+			/*INVERSE*/
+			double auxd = 0.25*d/(a-a2);
+			cinv_evec[0] =cinv_evec[8] =cinv_evec[5] =cinv_evec[13] = 0.25 + auxd;
+			cinv_evec[1] =cinv_evec[9] =-cinv_evec[0];
+			cinv_evec[4] =cinv_evec[12] = 0.25 - auxd;
+			cinv_evec[10] =cinv_evec[3] = complex<double> (0, 0.25);
+			cinv_evec[2] =cinv_evec[11] = complex<double> (0, -0.25);
+			cinv_evec[6] =cinv_evec[7] = -0.25;
+			cinv_evec[14] =cinv_evec[15] = 0.25;
+		}
 
-        cout << "alpha: " << alpha << endl;
-        cout << "beta:  " << beta << endl;
-        
-//        assert(alpha != 0.0 || beta != 0.0);
-        
-        ceval[1] = -4.0*a-(std::pow(2.0,1/3.0))*alpha/(3.0*std::pow(beta+std::pow(4.0*alpha*alpha*alpha+beta*beta,1/2.),1/3.))+std::pow(beta+std::pow(4.0*alpha*alpha*alpha+beta*beta,1/2.),1/3.)/(3.0*std::pow(2.0,1/3.));
-        ceval[2] = -4.0*a+complex1*alpha/((3.0*std::pow(2.0,2/3.))*(std::pow(beta+std::pow(4.0*alpha*alpha*alpha+beta*beta,1/2.),1/3.)))-complex2*std::pow(beta+std::pow(4.0*alpha*alpha*alpha+beta*beta,1/2.),1/3.)/(6.0*std::pow(2.0,1/3.));
-        ceval[3] =-4.0*a+complex2*alpha/((3.0*std::pow(2.0,2/3.))*(std::pow(beta+std::pow(4.0*alpha*alpha*alpha+beta*beta,1/2.),1/3.)))-complex1*std::pow(beta+std::pow(4.0*alpha*alpha*alpha+beta*beta,1/2.),1/3.)/(6.0*std::pow(2.0,1/3.));
+    } else if (name.find("5.6a") != string::npos) {
+    	/*Cassius note: The formulas are complex; I think they are not worth it to be computed*/
+    	nondiagonalizable = true;
 
+	} else if (name.find("5.6b") != string::npos) {
+        e1 = (rate_matrix[0] - rate_matrix[10])*0.5;
+        e2 = (rate_matrix[5] - rate_matrix[15])*0.5;
+        a = -(rate_matrix[0] + rate_matrix[5] -e1 - e2)/6.;
+        d = rate_matrix[0] + 3.*a - e1;
+        a2 = -rate_matrix[1] + a - d + e2;
+        double deno56b = (2.0* a + a2 + e1 + e2);
+        if (abs(deno56b) < 1.0e-7 || abs(a - a2 + d) < 1.0e-7 || abs(2.*a + a2) < 1.0e-7 || abs(a - a2) < 1.0e-7) {
+        	nondiagonalizable = true;
+        } else {
+			nondiagonalizable = false;
+		   /******** eigenvalues *********/
+			//Eigenvalues = {0, -4 (a - a2), -2 (2 a + a2), -2 (2 a + a2)}
+			ceval[0] = 0.0; ceval[1] = -4.0*(a - a2); ceval[2] = ceval[3] =-2.0*(2.0*a + a2);
 
-        for (i = 1; i < 4; i++) {
-            std::complex<double> p, q, r, s, t;
-            p = (8*a*a-2*f2*g2+a*ceval[i])*ceval[i];
-            q = (-4*a*a2-4*a2*a2+8*a*d+4*a2*d+2*b*g1+2*c*g1-2*e1*g1+2*f1*g1-4*a*g2-2*a2*g2-2*d1*g2+2*e2*g2-a2*ceval[i]+d*ceval[i]-g2*ceval[i])*ceval[i];
-            r = (-4*a*b+4*a2*b-4*a*c+4*a2*c+8*a*e1-2*a2*e1-2*d1*e1+2*b*e2+2*c*e2-4*a*f1-2*a2*f1+4*d*f1+2*d1*f1-2*b*f2-2*c*f2-4*f1*g2-b*ceval[i]-c*ceval[i]+e1*ceval[i]-f1*ceval[i])*ceval[i];
-            s = (4*a*a2-2*a2*a2-2*b*b+2*c*c-4*a*d1+4*a2*d1-2*d1*d1+2*b*e1-2*c*e1+8*a*e2-2*a2*e2+2*d1*e2-2*b*f1+2*c*f1-4*a*f2-2*a*f2+4*d*f2-2*d1*f2+a2*ceval[i]-d1*ceval[i]+e2*ceval[i]-f2*ceval[i])*ceval[i];
-            t = (16*a*a-12*a2*a2-4*b*b+4*c*c-4*d1*d1+8*f1*g1+8*a*ceval[i]+ceval[i]*ceval[i])*ceval[i];
-            
-            std::complex<double> vi[] = {4*v0[0]+p+q+r, 4*v0[1]+p+q-r, 4*v0[2]+p-q+s, 4*v0[3]+p-q-s+t};
-            for (j = 0; j < 4; j++)
-                cinv_evec[i*4+j] = vi[j];
+			/******** right eigenvectors *********/
+			// {{1, 1, 1, 1},
+			//{-((a - a2 - d)/(a - a2 + d)), 1, -((a - a2 - d)/(a - a2 + d)), 1},
+			// {(2 e2)/(2 a + a2 + e1 + e2),-((2 a + a2 + e1 - e2)/(2 a + a2 + e1 + e2)), 0, 1},
+			// {-((2 a + a2 - e1 + e2)/(2 a + a2 + e1 + e2)), (2 e1)/(2 a + a2 + e1 + e2), 1, 0}}
+
+			//v0
+			cevec[0] = cevec[1] = cevec[2] = cevec[3] = 1.0;
+			//v1
+			cevec[4] = -((a - a2 - d)/(a - a2 + d));
+			cevec[5] = 1.0;
+			cevec[6] = cevec[4];
+			cevec[7] = 1.0;
+			//v2;   we declare an auxiliar denominator in order to reuse it
+
+			cevec[8] = (2.0* e2)/deno56b;
+			cevec[9] = -1.0 + cevec[8];
+			cevec[10] = 0.0;
+			cevec[11] = 1.0;
+			//v3
+			cevec[13] = (2.0* e1)/deno56b;
+			cevec[12] = -1.0+cevec[13];
+			cevec[14] = 1.0;
+			cevec[15] = 0.0;
+			/*INVERSE*/
+			double deno = 0.5/(2.*a + a2); double auxe1 = e1*deno; double auxe2 = e2*deno; double auxd = d*0.25/(a-a2);
+			cinv_evec[1] = cinv_evec[9] = -0.25 - auxd;
+			cinv_evec[5] = cinv_evec[13] = - cinv_evec[1];
+			cinv_evec[2] =  -auxe1;
+			cinv_evec[10] = - cinv_evec[2];
+			cinv_evec[6] = -0.5 - auxe2;
+			cinv_evec[14] = -cinv_evec[6];
+			cinv_evec[3] =  -0.5 -auxe1;
+			cinv_evec[11] = - cinv_evec[3];
+			cinv_evec[7] = -auxe2;
+			cinv_evec[15] = -cinv_evec[7];
+			cinv_evec[0] = 0.25 + auxe1 + auxd;
+			cinv_evec[4] = 0.25 + auxe2 -auxd;
+			cinv_evec[8] = 0.25 - auxe1 + auxd;
+			cinv_evec[12] = 0.25 - auxe2 - auxd;
         }
     }
 
-    cout << "complex eigenvalues:";
-    for (i = 0; i < 4; i++) 
-        cout << " " << ceval[i];
-    cout << endl;
+     else if (name.find("5.7a") != string::npos) {
+		a = -(rate_matrix[0] + rate_matrix[10])/6.;
+		e1 = rate_matrix[0] + 3.*a;
+		e2 = rate_matrix[5] + 3.*a;
+		a2 = (rate_matrix[2] - a + e1)/2.;
+		b = rate_matrix[1] - a + a2 - e2;
+		double deno1 = 2.0*a + a2 - b + e1 + e2;
+		double deno2 = 2.0* a + a2 + b - e1 + e2;
+		double deno3 = 2.*a + a2 - b;
+		double deno4 = 2.*a + a2 + b;
+		if (abs(deno1) < 1.0e-7 || abs(deno2) < 1.0e-7|| abs(deno3) < 1.0e-7 || abs(deno4) < 1.0e-7) {
+			nondiagonalizable = true;
+		} else {
+			nondiagonalizable = false;
+			/*cout <<"Los parametros son a = " << a << " e1 =  " << e1 << "e2 = " << e2 << " a2 =  " << a2 << " b = " << b << endl;*/
+			/******** eigenvalues *********/
+			//Eigenvalues = {0, -4 (a - a2), -2 (2 a + a2 - b), -2 (2 a + a2 + b)}
+			ceval[0] = 0.0; ceval[1] = -4.0*(a - a2); ceval[2] = -2.0*(2.0*a + a2 - b); ceval[3] = ceval[2]-4.0*b;
 
-    cout << "complex eigenvectors: " << endl;
-    for (i = 0; i < 4; i++) {
-        for (j = 0; j < 4; j++)
-            cout << " " << cevec[i*4+j];
-        cout << endl;
-    }
+			/******** right eigenvectors *********/
+			// {{1, 1, 1, 1},
+			// {-1, 1, -1, 1},
+			// {-((2 a + a2 - b - e1 - e2)/(2 a + a2 - b + e1 + e2)), -((2 a + a2 - b - e1 - e2)/(2 a + a2 - b + e1 + e2)), 1, 1},
+			//{1, -((2 a + a2 + b + e1 - e2)/(2 a + a2 + b - e1 + e2)), -((2 a + a2 + b + e1 - e2)/(2 a + a2 + b - e1 + e2)), 1}}
 
-    cout << "complex inv_eigenvectors: " << endl;
-    for (i = 0; i < 4; i++) {
-        for (j = 0; j < 4; j++)
-            cout << " " << cinv_evec[i*4+j];
-        cout << endl;
+			//v0
+			cevec[0] = cevec[1] = cevec[2] = cevec[3] = 1.0;
+			//v1
+			cevec[4] = -1.0;
+			cevec[5] = 1.0;
+			cevec[6] = -1.0;
+			cevec[7] = 1.0;
+			//v2
+			cevec[8] = -((2.0*a + a2 - b - e1 - e2)/deno1);
+			cevec[9] = cevec[8];
+			cevec[10] = 1.0;
+			cevec[11] = 1.0;
+			//v3
+			cevec[12] = 1.0;
+			cevec[13] = -((2.0*a + a2 + b + e1 - e2)/deno2);
+			cevec[14] = cevec[13];
+			cevec[15] = 1.0;
+			/******** INVERSE ****** There is a sum zero property ***/
+			double auxs = 0.25*(e1 + e2)/deno3; double auxr = 0.25*(-e1 + e2)/deno4;
+			cinv_evec[2] = cinv_evec[6] =-0.25 - auxs;
+			cinv_evec[10] = cinv_evec[14] = - cinv_evec[2];
+			cinv_evec[3] = cinv_evec[15] = 0.25 + auxr;
+			cinv_evec[7] = cinv_evec[11] =-cinv_evec[3];
+			cinv_evec[0] = 0.25 + auxs - auxr;
+			cinv_evec[4] = 0.25 + auxs + auxr;
+			cinv_evec[8] = 0.5 - cinv_evec[0];
+			cinv_evec[12] = 0.5 - cinv_evec[4];
+			cinv_evec[1] = cinv_evec[9] = -0.25;
+			cinv_evec[5] = cinv_evec[13] = 0.25;
+		}
+     } else if (name.find("5.7b") != string::npos) {
+		f1 = (rate_matrix[0] - rate_matrix[10])*0.5;
+		f2 = (rate_matrix[15] - rate_matrix[5])*0.5;
+		a = (-rate_matrix[0] + f1)/3.;
+		a2 = (rate_matrix[2] - a + f1)*0.5;
+		b = rate_matrix[1] - a + a2 -f2;
+		double deno57br1 = (3.0*a2 - b - f1 - f2);
+		double deno57br2 = (3.0*a2 + b + f1 - f2);
+		double deno3 = 3.*a2 - b;
+		double deno4 = 3.*a2 + b;
+		if (abs(deno57br1) < 1.0e-7 || abs(deno57br2) < 1.0e-7 || abs(deno3) < 1.0e-7 || abs(deno4) < 1.0e-7) {
+			nondiagonalizable = true;
+		} else {
+			nondiagonalizable = false;
+			deno57br1 = 1/deno57br1;
+			deno57br2 = 1/deno57br2;
+			 /*cout << "These are the parameters  a  = " << a << " a2 =  " << a2 << "   b = " << b << "  f1 =  " << f1 << "  f2 = " << f2 << endl;*/
+			/******** eigenvalues *********/
+
+			//Eigenvalues = {0, -4 (a - a2), -2 (2 a + a2 - b), -2 (2 a + a2 + b)}
+			ceval[0] = 0.0; ceval[1] = -4.0*(a - a2); ceval[2] = -2.0*(2.0*a + a2 - b); ceval[3] = ceval[2] - 4.0*b;
+
+			/******** right eigenvectors *********/
+			// {{1, 1, 1, 1},
+			//{-1, 1, -1, 1},
+			//{-1, -((3 a2 - b + f1 + f2)/(3 a2 - b - f1 - f2)), -((-3 a2 + b - f1 - f2)/(3 a2 - b - f1 - f2)), 1},
+			// {-((-3 a2 - b + f1 - f2)/(3 a2 + b + f1 - f2)), -((3 a2 + b - f1 + f2)/(3 a2 + b + f1 - f2)), -1, 1}}
+
+			//v0
+			cevec[0] = cevec[1] = cevec[2] = cevec[3] = 1.0;
+			//v1
+			cevec[4] = -1.0;
+			cevec[5] = 1.0;
+			cevec[6] = -1.0;
+			cevec[7] = 1.0;
+			//v4
+			cevec[8] = -1.0;
+			cevec[9] = -(3.0*a2 - b + f1 + f2)*deno57br1;
+			cevec[10] = -cevec[9];
+			cevec[11] = 1.0;
+			//v3
+			cevec[12] = -(-3.0*a2 - b + f1 - f2)*deno57br2;
+			cevec[13] = -cevec[12];
+			cevec[14] = -1.0;
+			cevec[15] = 1.0;
+			/*INVERSE : They satisfy a sumzero property*/
+
+			cinv_evec[0] =cinv_evec[4] =cinv_evec[8] =cinv_evec[12] = 0.25;
+			cinv_evec[2] =cinv_evec[6] = -0.25 + 0.25*(f1 + f2)/(3.*a2 - b);
+			cinv_evec[10] =cinv_evec[14] = - cinv_evec[2];
+			cinv_evec[3] =cinv_evec[15] = 0.25 + 0.25*(f1 - f2)/(3.*a2 + b);
+			cinv_evec[11] =cinv_evec[7] = -cinv_evec[3];
+			cinv_evec[1] = -cinv_evec[0]-cinv_evec[2]-cinv_evec[3];
+			cinv_evec[5] = -cinv_evec[4]-cinv_evec[6] - cinv_evec[7];
+			cinv_evec[9] = -cinv_evec[1] - 0.5;
+			cinv_evec[13] = -cinv_evec[5] +0.5;
+		}
+
+	} else if (name.find("5.7c") != string::npos) {
+		g1 = (rate_matrix[0] - rate_matrix[10])*0.5;
+		g2 = (rate_matrix[15] - rate_matrix[5])*0.5;
+		a = (-rate_matrix[0] + g1)/3.;
+		a2 = (rate_matrix[2] - a - g1)*0.5;
+		b = rate_matrix[1] - a + a2 + g1;
+		double aux57b1 = 9.0*a2*a2 - b*b;
+		double aux57b2 = 6.0*a2*g1 + 2.0 * b * g2;
+		double aux57b3 = 6.0*a2*g2 + 2.0 * b * g1;
+		double deno57bl = aux57b1 + aux57b3;
+		double deno2 = 3.*a2 - b;
+		double deno3 = 3.*a2 + b;
+
+		if (abs(deno57bl) < 1.0e-7 || abs(deno2) < 1.0e-7 || abs(deno3) < 1.0e-7) {
+			nondiagonalizable = true;
+		} else {
+			nondiagonalizable = false;
+			 deno57bl = 1./deno57bl;
+			//Eigenvalues = {0, -4 (a - a2), -2 (2 a + a2 - b), -2 (2 a + a2 + b)}
+			ceval[0] = 0.0; ceval[1] = -4.0*(a - a2); ceval[2] = -2.0*(2.0*a + a2 - b); ceval[3] = ceval[2] - 4.0*b;
+
+			/******** right eigenvectors *********/
+			// {{1, 1, 1, 1},
+			//{-((9 a2^2 - b^2 + 6 a2 g1 + 2 b g2)/(9 a2^2 - b^2 + 2 b g1 + 6 a2 g2)),
+			// -((-9 a2^2 + b^2 + 2 b g1 + 6 a2 g2)/(9 a2^2 - b^2 + 2 b g1 + 6 a2 g2)),
+			// -((9 a2^2 - b^2 - 6 a2 g1 - 2 b g2)/(9 a2^2 - b^2 + 2 b g1 + 6 a2 g2)),
+			// 1},
+			// {-1, -1, 1, 1},
+			// {1, -1, -1, 1}}
+
+			//v0
+			cevec[0] = cevec[1] = cevec[2] = cevec[3] = 1.0;
+			//v1
+			cevec[4] = -(aux57b1 + aux57b2 )* deno57bl;
+			cevec[5] = -(-aux57b1 + aux57b3)* deno57bl;
+			cevec[6] = -(aux57b1 - aux57b2)* deno57bl;
+			cevec[7] = 1.0;
+			//v2
+			cevec[8] = -1.0;
+			cevec[9] = -1.0;
+			cevec[10] = 1.0;
+			cevec[11] = 1.0;
+			//v3
+			cevec[12] = 1.0;
+			cevec[13] = -1.0;
+			cevec[14] = -1.0;
+			cevec[15] = 1.0;
+			/*INVERSE*/
+			cinv_evec[0] =cinv_evec[4] =cinv_evec[8] =cinv_evec[12] = 0.25;
+
+			cinv_evec[2] = -0.25 + 0.25*(g1 + g2)/deno2;
+			cinv_evec[6] =-0.5 - cinv_evec[2];
+			cinv_evec[10] =-cinv_evec[6];
+			cinv_evec[14] = -cinv_evec[2];
+
+			cinv_evec[3] = 0.25 - 0.25*(g1 - g2)/deno3;
+			cinv_evec[7] =-cinv_evec[3];
+			cinv_evec[11] =cinv_evec[3] - 0.5;
+			cinv_evec[15] = - cinv_evec[11];
+
+			cinv_evec[1] = cinv_evec[9] = -cinv_evec[0]-cinv_evec[2]-cinv_evec[3];
+			cinv_evec[5] = cinv_evec[13] = -cinv_evec[1];
+		}
+
+	} else if (name.find("5.11a") != string::npos) {
+
+		e2 = (rate_matrix[1] - rate_matrix[3])*0.5;
+		e1 = (rate_matrix[4] - rate_matrix[6])*0.5;
+		d1 = (rate_matrix[5] - rate_matrix[0] - e2 + e1)*0.5;
+		a = (-rate_matrix[0] -d1 + e1)/3.;
+		a2 = -rate_matrix[4] + a + e1;
+		double deno511a = 2.* a + a2 - d1 + e2;
+		double deno2 = 2.*a + a2 +d1;
+		double deno3 = 2.*a + a2 - d1;
+
+		if (abs(deno511a) < 1.0e-7 || abs(deno2) < 1.0e-7 || abs(deno3) < 1.0e-7 || abs(e1) < 1.0e-7) {
+			nondiagonalizable = true;
+		} else {
+			nondiagonalizable = false;
+			/******** eigenvalues REPASAR *********/
+			//Eigenvalues = {0, -4 (a - a2), -2 (2 a + a2 - d1), -2 (2 a + a2 + d1)}
+			ceval[0] = 0.0; ceval[1] = -4.0*(a - a2); ceval[2] = -2.0*(2.0*a + a2 - d1); ceval[3] = ceval[2] - 4.*d1;
+
+			/******** right eigenvectors *********/
+			//{{1, 1, 1, 1},
+			//{-1, 1, -1, 1},
+			//{e2/(2 a + a2 - d1 + e2), -((2 a + a2 - d1 - e2)/(2 a + a2 - d1 + e2)), e2/(2 a + a2 - d1 + e2), 1},
+			//{-((2 a + a2 + d1 - e1)/e1), 1, -((-2 a - a2 - d1 - e1)/e1), 1}}
+
+			//v0
+			cevec[0] = cevec[1] = cevec[2] = cevec[3] = 1.0;
+			//v1
+			cevec[4] = -1.0;
+			cevec[5] = 1.0;
+			cevec[6] = -1.0;
+			cevec[7] = 1.0;
+			//v2
+
+			cevec[8] = e2/deno511a;
+			cevec[9] =-1. + 2.*cevec[8];
+			cevec[10] = cevec[8];
+			cevec[11] = 1.0;
+			//v3
+			double aux511a = 2.* a + a2 + d1;
+			cevec[12] = 1.- aux511a/e1;
+			cevec[13] = 1.0;
+			cevec[14] = -cevec[12] +2.;
+			cevec[15] = 1.0;
+			/*INVERSE*/
+			cinv_evec[2] =cinv_evec[10] = 0.;
+			cinv_evec[5] =cinv_evec[13] = 0.25;
+			cinv_evec[1] =cinv_evec[9] = -0.25;
+			cinv_evec[3] =-0.5*e1/(2.*a + a2 +d1);
+			cinv_evec[0] = 0.25 -cinv_evec[3];
+			cinv_evec[4] = 0.25 + 0.5*e2/(2.*a + a2 - d1);
+			cinv_evec[6] = -cinv_evec[4] - 0.25;
+			cinv_evec[8] = -cinv_evec[0] + 0.5;
+			cinv_evec[12] = -cinv_evec[4] + 0.5;
+			cinv_evec[11] = -cinv_evec[3];
+			cinv_evec[14] = -cinv_evec[6];
+		}
+	} else if (name.find("5.11b") != string::npos) {
+		f2 = (rate_matrix[1] - rate_matrix[3])*0.5;
+		f1 = (rate_matrix[6] - rate_matrix[4])*0.5;
+		a = -(rate_matrix[0] + rate_matrix[5] -f1 + f2)/6.;
+		a2 = -rate_matrix[1] + f2 + a;
+		d1 = -rate_matrix[0] - 3.*a + f1;
+		double deno1 = 3.* a2 - d1 - f2;
+
+		if (abs(deno1) < 1.0e-7 || abs(f1) < 1.0e-7|| abs(3.*a2 -d1) < 1.0e-7 || abs(3.*a2 + d1) < 1.0e-7) {
+			nondiagonalizable = true;
+		} else {
+			nondiagonalizable = false;
+			/******** eigenvalues *********/
+			//Eigenvalues = {0, -4 (a - a2), -2 (2 a + a2 - d1), -2 (2 a + a2 + d1)}
+			ceval[0] = 0.0; ceval[1] = -4.0*(a - a2); ceval[2] = -2.0*(2.0*a + a2 - d1); ceval[3] = ceval[2] - 4.0*d1;
+
+			/******** right eigenvectors  *********/
+			// {{1, 1, 1, 1},
+			// {-1, 1, -1, 1},
+			// {f2/(3 a2 - d1 - f2), -((3 a2 - d1 + f2)/(3 a2 - d1 - f2)), f2/(3 a2 - d1 - f2), 1},
+			// {-((-3 a2 - d1 + f1)/f1), 1, -((3 a2 + d1 + f1)/f1), 1}}
+
+			//v0
+			cevec[0] = cevec[1] = cevec[2] = cevec[3] = 1.0;
+			//v1
+			cevec[4] = -1.0;
+			cevec[5] = 1.0;
+			cevec[6] = -1.0;
+			cevec[7] = 1.0;
+			//v2
+			cevec[8] = f2/deno1;
+			cevec[9] = -(1. + 2.* f2/deno1);
+			cevec[10] = cevec[8];
+			cevec[11] = 1.0;
+			//v3
+			cevec[12] = (3.0*a2 + d1)/f1 -1.;
+			cevec[13] = 1.0;
+			cevec[14] = -cevec[12]-2.;
+			cevec[15] = 1.0;
+			/*INVERSE*/
+			cinv_evec[0] =cinv_evec[4] =cinv_evec[8] =cinv_evec[12] = 0.25;
+			cinv_evec[2] =cinv_evec[7] =cinv_evec[10] =cinv_evec[15] = 0.0;
+
+			cinv_evec[3] = 0.5*f1/(3.*a2 + d1);
+			cinv_evec[1] = - cinv_evec[3] - 0.25;
+			cinv_evec[11] =-cinv_evec[3];
+			cinv_evec[9] =cinv_evec[3] - 0.25;
+
+			double auxf2 = 0.5*f2/(3.*a2 -d1);
+			cinv_evec[5] = 0.25 - auxf2;
+			cinv_evec[6] = -0.5 + auxf2;
+			cinv_evec[13] = 0.25 + auxf2;
+			cinv_evec[14] = 0.5 - auxf2;
+		}
+	} else if (name.find("5.11c") != string::npos) {
+		g1 = (rate_matrix[0] - rate_matrix[10])*0.5;
+		g2 = (rate_matrix[15] - rate_matrix[5])*0.5;
+		d1 =(rate_matrix[5] - rate_matrix[0] + g2 + g1)*0.5;
+		a = (-rate_matrix[0] - d1 + g1)/3.;
+		a2 = -rate_matrix[1] + a -g1;
+		double auxdeno1 = 3.*a2 + d1;
+		double auxnum1 = auxdeno1 - 2.*d1;
+		double auxdeno2 = auxnum1 + 2.*g2;
+		double deno2 = 3.*a2 - d1;
+		double deno3 = 3.*a2 + d1;
+		if (abs(auxdeno1) < 1.0e-7 || abs(auxdeno2) < 1.0e-7 || abs(deno2) < 1.0e-7 || abs(deno3) < 1.0e-7) {
+			nondiagonalizable = true;
+		} else {
+			nondiagonalizable = false;
+			double deno = 1/(auxdeno1 * auxdeno2);
+			/*cout <<"The parameters are a = " << a << " a2 =  " << a2 << " d1 = " << d1 << " g1 = " << g1 << "  g2 = " << g2 << endl;*/
+			/******** eigenvalues *********/
+			//Eigenvalues = {0, -4 (a - a2), -2 (2 a + a2 - d1), -2 (2 a + a2 + d1)}
+			ceval[0] = 0.0; ceval[1] = -4.0*(a - a2); ceval[2] = -2.0*(2.0*a + a2 - d1); ceval[3] = ceval[2] - 4.0*d1;
+
+			/******** right eigenvectors *********/
+			// {{1, 1, 1, 1},
+			// {-(((3 a2 - d1) (3 a2 + d1 + 2 g1))/((3 a2 + d1) (3 a2 - d1 + 2 g2))),
+			//-((-3 a2 + d1 + 2 g2)/(3 a2 - d1 + 2 g2)),
+			//(-9 a2^2 + d1 (d1 - 2 g1) + 6 a2 g1)/((3 a2 + d1) (3 a2 - d1 + 2 g2)),
+			//1},
+			 //0, -1, 0, 1},
+			 //{-1, 0, 1, 0}}
+			//v0
+			cevec[0] = cevec[1] = cevec[2] = cevec[3] = 1.0;
+			//v1
+
+			cevec[4] = -auxnum1*(auxdeno1 + 2.*g1)*deno;
+			cevec[5] = -(-auxnum1 + 2.*g2)/auxdeno2;
+			cevec[6] = (-auxdeno1 + 2.*g1)*auxnum1*deno;
+			cevec[7] = 1.0;
+			//v2
+			cevec[8] = 0.0;
+			cevec[9] = -1.0;
+			cevec[10] = 0.0;
+			cevec[11] = 1.0;
+			//v3
+			cevec[12] = -1.0;
+			cevec[13] = 0.0;
+			cevec[14] = 1.0;
+			cevec[15] = 0.0;
+			/*INVERSE*/
+			cinv_evec[0] =cinv_evec[4] =cinv_evec[8] =cinv_evec[12] = 0.25;
+			cinv_evec[2] =cinv_evec[10] = 0.5*g2 /deno2;
+			cinv_evec[7] =cinv_evec[15] = -0.5*g1 /deno3;
+			cinv_evec[1] = cinv_evec[9] = -0.25 - cinv_evec[2];
+			cinv_evec[3] = -0.5 -cinv_evec[7];
+			cinv_evec[11] = 0.5 - cinv_evec[7];
+			cinv_evec[5] = cinv_evec[13] = 0.25 + cinv_evec[2];
+			cinv_evec[6] = -0.5 -cinv_evec[2];
+			cinv_evec[14] = 0.5 - cinv_evec[2];
+		}
+
+	} else if (name.find("5.16") != string::npos) {
+		g1 = (rate_matrix[0] - rate_matrix[10])*0.5;
+		g2 = (rate_matrix[15] - rate_matrix[5])*0.5;
+		d = (-rate_matrix[5] + rate_matrix[0] - g2 - g1)*0.5;
+		a = (-rate_matrix[0] + d + g1)/3.;
+		a2 = -rate_matrix[1] + a - d - g1;
+		double aux516r1 = 3.*a2*(a -a2);
+		double aux516r2 = 2.*g1*(a -a2);
+		double aux516r3 = 2.*g2*(a -a2);
+		double aux513r4 = 3.*a2*d;
+		double deno516r = aux516r1 + aux513r4 + aux516r3;
+		if (abs(deno516r) < 1.0e-7 || abs(a2) < 1.0e-7 || abs(a-a2) < 1.0e-7) {
+			nondiagonalizable = true;
+		} else {
+			/*cout <<"The parameters are a = " << a << " a2 =  " << a2 << " d = " << d << " g1 = " << g1 << "  g2 = " << g2 << endl;*/
+			/******** eigenvalues *********/
+			//Eigenvalues = {0, -4 (a - a2), -2 (2 a + a2), -2 (2 a + a2)}
+			ceval[0] = 0.0; ceval[1] = -4.0*(a - a2); ceval[2] = -2.0*(2.0*a + a2); ceval[3] = ceval[2];
+
+			/******** right eigenvectors *********/
+			// {{1, 1, 1, 1},
+			// {-((3 a a2 - 3 a2^2 - 3 a2 d + 2 a g1 - 2 a2 g1)/(3 a a2 - 3 a2^2 + 3 a2 d + 2 a g2 - 2 a2 g2)),
+			// (3 a a2 - 3 a2^2 + 3 a2 d - 2 a g2 + 2 a2 g2)/(3 a a2 - 3 a2^2 + 3 a2 d + 2 a g2 - 2 a2 g2),
+			// -((3 a a2 - 3 a2^2 - 3 a2 d - 2 a g1 + 2 a2 g1)/(3 a a2 - 3 a2^2 + 3 a2 d + 2 a g2 - 2 a2 g2)),
+			// 1},
+			// {0, -1, 0, 1},
+			// {-1, 0, 1, 0}}
+
+			//v0
+			cevec[0] = cevec[1] = cevec[2] = cevec[3] = 1.0;
+			//v1
+
+			cevec[4] = -(aux516r1 - aux513r4 + aux516r2)/deno516r;
+			cevec[5] = (aux516r1 + aux513r4  - aux516r3)/deno516r;
+			cevec[6] = -(aux516r1 - aux513r4 - aux516r2)/deno516r;
+			cevec[7] = 1.0;
+			//v2
+			cevec[8] = 0.0;
+			cevec[9] = -1.0;
+			cevec[10] = 0.0;
+			cevec[11] = 1.0;
+			//v3
+			cevec[12] = -1.0;
+			cevec[13] = 0.0;
+			cevec[14] = 1.0;
+			cevec[15] = 0.0;
+
+			/***INVERSE***/
+			double auxg1 = g1/(6.*a2); double auxg2 = g2/(6.*a2);
+			cinv_evec[0] =cinv_evec[8] = 0.25 + 0.25*d/(a-a2);
+			cinv_evec[4] =cinv_evec[12] = 0.5 - cinv_evec[0];
+			cinv_evec[2] =cinv_evec[10] =auxg2;
+			cinv_evec[6] = -0.5 - auxg2;
+			cinv_evec[14] = 0.5 - auxg2;
+			cinv_evec[3] = -0.5 + auxg1;
+			cinv_evec[11] = 0.5 + auxg1;
+			cinv_evec[7] =cinv_evec[15] = - auxg1;
+			cinv_evec[1] =cinv_evec[9] = -cinv_evec[0] -cinv_evec[2];
+			cinv_evec[13] =cinv_evec[5] =-cinv_evec[1];
+		}
+
+	    }
+	else {
+    	cout << "This line should not appear." << endl;
     }
-    
-	/* check eigenvalue equation */
-	std::complex<double> zero;
-    int error = 0;
-	for (j = 0; j < num_states; j++) {
-		for (i = 0, zero = 0.0; i < num_states; i++) {
-			for (int k = 0; k < num_states; k++) 
-                zero += rate_matrix[i*num_states+k] * cevec[k*num_states+j];
-			zero -= ceval[j] * cevec[i*num_states+j];
-			if (abs(zero) > 1.0e-5) {
-                cout << "too large error[" << i << "," << j << "]: " << zero << endl;
-				error = 1;
-				break;
+   if (nondiagonalizable == false) {
+		/* check eigenvalue equation*/
+		std::complex<double> zero;
+		int error = 0;
+		for (j = 0; j < num_states; j++) {
+			for (i = 0, zero = 0.0; i < num_states; i++) {
+				for (int k = 0; k < num_states; k++)
+					zero += rate_matrix[i*num_states+k] * cevec[j*num_states+k];
+				zero -= ceval[j] * cevec[j*num_states+i];
+				if (abs(zero) > 1.0e-5) {
+					cout << "too large error[" << i << "," << j << "]: " << zero << endl;
+					error = 1;
+					break;
+				}
 			}
 		}
-	}
 
-	for (i = 0; i < num_states; i++) {
-		for (j = 0, zero = 0.0; j < num_states; j++) {
-			for (int k = 0; k < num_states; k++) 
-                zero += cinv_evec[i*num_states+k] * rate_matrix[k*num_states+j];
-			zero -= ceval[i] * cinv_evec[i*num_states+j];
-			if (abs(zero) > 1.0e-5) {
-                cout << "too large inv_error[" << i << "," << j << "]: " << zero << endl;
-				error = 1;
-				break;
-			}
-		}
-	}
-	if (error) {
-		cerr << "\nERROR: Eigensystem doesn't satisfy eigenvalue equation!\n";
-		cerr << "Rate matrix Q: " << endl;
+
+
 		for (i = 0; i < num_states; i++) {
-			for (j = 0; j < num_states; j++) cout << rate_matrix[i*num_states+j] << " ";
-            cerr << endl;
-		}
-		cout << "State frequencies: " << endl;
-		for (i = 0; i < num_states; i++) cout << state_freq[i] << " ";
-		cout << endl;
-	}
+			for (j = 0, zero = 0.0; j < num_states; j++) {
 
-    
+				for (int k = 0; k < num_states; k++)
+					zero += cinv_evec[i*num_states+k] * cevec[k*num_states+j];
+				double deltaij = 0;
+				if (i == j) deltaij = 1;
+				zero -= deltaij;
+				if (abs(zero) > 1.0e-5) {
+					cout << "too large inv_error[" << i << "," << j << "]: " << zero << endl;
+					error = 1;
+					break;
+				}
+			}
+		}
+		 if (error) {
+			cerr << "\nERROR: Eigensystem doesn't satisfy eigenvalue equation!\n";
+			cerr << "Rate matrix Q: " << endl;
+			for (i = 0; i < num_states; i++) {
+				for (j = 0; j < num_states; j++) cout << rate_matrix[i*num_states+j] << " ";
+				cerr << endl;
+			}
+			cout << "State frequencies: " << endl;
+			for (i = 0; i < num_states; i++) cout << state_freq[i] << " ";
+			cout << endl;
+			  cout << "Here we start: complex eigenvalues:";
+				for (i = 0; i < 4; i++)
+					cout << " " << ceval[i];
+				cout << endl;
+
+			   cout << "complex eigenvectors: " << endl;
+				for (i = 0; i < 4; i++) {
+					for (j = 0; j < 4; j++)
+						cout << " " << cevec[i*4+j];
+					cout << endl;
+				}
+
+				cout << "complex inv_eigenvectors: " << endl;
+				for (i = 0; i < 4; i++) {
+					for (j = 0; j < 4; j++)
+						cout << " " << cinv_evec[i*4+j];
+					cout << endl;
+				}
+		}
+    }
 }
 
 void ModelLieMarkov::computeTransMatrix(double time, double *trans_matrix, int mixture) {
 #ifdef USE_EIGEN3
   MatrixExpTechnique technique = phylo_tree->params->matrix_exp_technique;
-  if (technique == MET_SCALING_SQUARING || (technique == MET_EIGEN3LIB_DECOMPOSITION && nondiagonalizable)) {
+  if (technique == MET_SCALING_SQUARING || nondiagonalizable ) {
         Matrix4d A = Map<Matrix4d>(rate_matrix);
         A = (A.transpose() * time).exp();
         Map<Matrix4d> P(trans_matrix);
@@ -1084,9 +1879,9 @@ void ModelLieMarkov::computeTransMatrix(double time, double *trans_matrix, int m
             double sum = 0.0;
             for (j = 0; j < 4; j++)
                 sum += (trans_matrix[i*4+j]);
-            assert(fabs(sum-1.0) < 1e-4);
+            ASSERT(fabs(sum-1.0) < 1e-4);
         }
-    } else if (technique == MET_EIGEN3LIB_DECOMPOSITION) {
+    } else if (technique == MET_EIGEN3LIB_DECOMPOSITION || technique == MET_LIE_MARKOV_DECOMPOSITION) {
     // and nondiagonalizable == false, else we used scaled squaring
         int i;
         Vector4cd ceval_exp;
@@ -1098,19 +1893,37 @@ void ModelLieMarkov::computeTransMatrix(double time, double *trans_matrix, int m
 	// if assertions fail, it may be due to cevec having near-zero
 	// determinant, and a fix could be to relax the test for
 	// nondiagonalizable in ModelLieMarkov::decomposeRateMatrixEigen3lib()
-        for (i = 0; i < 4; i++) {
-            for (int j = 0; j < 4; j++) {
-                trans_matrix[i*4+j] = res(j, i).real();
-                assert(fabs(res(j,i).imag()) < 1e-6);
-                assert(trans_matrix[i*4+j] >= -0.000001);
-                assert(trans_matrix[i*4+j] <=  1.000001);
-                if (trans_matrix[i*4+j] < 0)
-                    trans_matrix[i*4+j] = 0.0;
-                if (trans_matrix[i*4+j] > 1)
-                    trans_matrix[i*4+j] = 1.0;
-            }
-            assert(fabs(trans_matrix[i*4]+trans_matrix[i*4+1]+trans_matrix[i*4+2]+trans_matrix[i*4+3]-1.0) < 1e-4);
-        }        
+        if (technique == MET_EIGEN3LIB_DECOMPOSITION) {
+			for (i = 0; i < 4; i++) {
+				for (int j = 0; j < 4; j++) {
+					trans_matrix[i*4+j] = res(j, i).real();
+					ASSERT(fabs(res(j,i).imag()) < 1e-6);
+					ASSERT(trans_matrix[i*4+j] >= -0.000001);
+					ASSERT(trans_matrix[i*4+j] <=  1.000001);
+					if (trans_matrix[i*4+j] < 0)
+						trans_matrix[i*4+j] = 0.0;
+					if (trans_matrix[i*4+j] > 1)
+						trans_matrix[i*4+j] = 1.0;
+				}
+
+				ASSERT(fabs(trans_matrix[i*4]+trans_matrix[i*4+1]+trans_matrix[i*4+2]+trans_matrix[i*4+3]-1.0) < 1e-4);
+			}
+        } else {
+        	for (i = 0; i < 4; i++) {
+				for (int j = 0; j < 4; j++) {
+					trans_matrix[i*4+j] = res(i,j).real();
+					ASSERT(fabs(res(j,i).imag()) < 1e-6);
+					ASSERT(trans_matrix[i*4+j] >= -0.000001);
+					ASSERT(trans_matrix[i*4+j] <=  1.000001);
+					if (trans_matrix[i*4+j] < 0)
+						trans_matrix[i*4+j] = 0.0;
+					if (trans_matrix[i*4+j] > 1)
+						trans_matrix[i*4+j] = 1.0;
+				}
+				ASSERT(fabs(trans_matrix[i*4]+trans_matrix[i*4+1]+trans_matrix[i*4+2]+trans_matrix[i*4+3]-1.0) < 1e-4);
+			}
+        }
+
     } else
         ModelMarkov::computeTransMatrix(time, trans_matrix);
 

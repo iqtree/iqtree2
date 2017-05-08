@@ -14,9 +14,9 @@
 # Linux example usages:
 #----------------------
 # cmake <source_dir>						   (sequential version)
-# cmake -DIQTREE_FLAGS="omp" <source_dir>      (OpenMP version)
-# cmake -DIQTREE_FLAGS="m32" <source_dir>      (32-bit sequential version)
-# cmake -DIQTREE_FLAGS="m32 omp" <source_dir>  (32-bit OpenMP version)
+# cmake <source_dir>      (OpenMP version)
+# cmake -DIQTREE_FLAGS="m32-single" <source_dir>      (32-bit sequential version)
+# cmake -DIQTREE_FLAGS="m32" <source_dir>  (32-bit OpenMP version)
 #
 # To compile with CLANG on Linux:
 # export CC=/usr/bin/clang
@@ -26,18 +26,19 @@
 #
 # Mac OSX example usages:
 #------------------------
-# cmake -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ <source_dir>							(sequential version)
 #
 # To build OpenMP version one needs to download Clang version 3.7 or later (as of November 2015)
 # Then assuming clang3.7 and clang++3.7 are the newly built compilers, then:
-# cmake -DCMAKE_C_COMPILER=clang3.7 -DCMAKE_CXX_COMPILER=clang++3.7 -DIQTREE_FLAGS="omp" <source_dir>		(OpenMP version)
+# cmake -DCMAKE_C_COMPILER=clang3.7 -DCMAKE_CXX_COMPILER=clang++3.7 <source_dir>   (OpenMP version)
+#
+# cmake -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DIQTREE_FLAGS=single <source_dir>   (sequential version)
 #
 
 
-# Compile OpenMP version: cmake -DIQTREE_FLAGS=omp ....
+# Compile OpenMP version: cmake ....
 # Compile 32-bit version: cmake -DIQTREE_FLAGS=m32 ....
 # Compile static version: cmake -DIQTREE_FLAGS=static ....
-# Compile static OpenMP version: cmake -DIQTREE_FLAGS="omp static" ....
+# Compile static OpenMP version: cmake -DIQTREE_FLAGS="static" ....
 
 #NOTE: Static linking with clang windows: make a symlink libgcc_eh.a to libgcc.a (administrator required)
 # C:\TDM-GCC-64\lib\gcc\x86_64-w64-mingw32\5.1.0>mklink libgcc_eh.a libgcc.a
@@ -49,8 +50,8 @@ project(iqtree)
 add_definitions(-DIQ_TREE)
 # The version number.
 set (iqtree_VERSION_MAJOR 1)
-set (iqtree_VERSION_MINOR 5)
-set (iqtree_VERSION_PATCH "5-pomo")
+set (iqtree_VERSION_MINOR 6)
+set (iqtree_VERSION_PATCH "beta")
 
 set(BUILD_SHARED_LIBS OFF)
 
@@ -253,9 +254,9 @@ endif()
 # configure OpenMP/PThreads compilation
 # change the executable name if compiled for OpenMP parallel version
 ##################################################################
-if (IQTREE_FLAGS MATCHES "omp")
+if (NOT IQTREE_FLAGS MATCHES "single")
 	message("OpenMP        : Yes")
-	SET(EXE_SUFFIX "${EXE_SUFFIX}-omp")
+	#SET(EXE_SUFFIX "${EXE_SUFFIX}-omp")
 	add_definitions(-D_USE_PTHREADS)
 	if (MSVC)
 		add_definitions(/MT)
@@ -367,8 +368,9 @@ elseif (IQTREE_FLAGS MATCHES "avx") # AVX instruction set
 	set(COMBINED_FLAGS "${COMBINED_FLAGS} ${AVX_FLAGS}")
 	#SET(EXE_SUFFIX "${EXE_SUFFIX}-avx")
 elseif (NOT IQTREE_FLAGS MATCHES "nosse") #SSE intruction set
-    if (IQTREE_FLAGS MATCHES "512")
+    if (IQTREE_FLAGS MATCHES "KNL")
         message("Vectorization : SSE3/AVX/AVX2/AVX-512")
+        add_definitions(-D__AVX512KNL)
     else()
         message("Vectorization : SSE3/AVX/AVX2")
     endif()
@@ -450,113 +452,6 @@ include_directories("${PROJECT_BINARY_DIR}")
 #include_directories("${PROJECT_BINARY_DIR}/zlib-1.2.7")
 
 
-##################################################################
-# subdirectories containing necessary libraries for the build
-##################################################################
-add_subdirectory(pll)
-add_subdirectory(ncl)
-add_subdirectory(lbfgsb)
-add_subdirectory(whtest)
-add_subdirectory(sprng)
-#add_subdirectory(zlib-1.2.7)
-add_subdirectory(vectorclass)
-LIST(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}")
-find_package(Eigen3)
-if(EIGEN3_FOUND)
-  add_definitions("-I${EIGEN3_INCLUDE_DIR} -DUSE_EIGEN3")
-endif(EIGEN3_FOUND)
-add_subdirectory(model)
-add_subdirectory(gsl)
-
-##################################################################
-# the main executable
-##################################################################
-
-add_library(kernelsse phylokernelsse.cpp)
-
-if (NOT BINARY32 AND NOT IQTREE_FLAGS MATCHES "novx")
-add_library(kernelavx phylotreeavx.cpp)
-add_library(kernelfma phylokernelfma.cpp)
-if (IQTREE_FLAGS MATCHES "512")
-    add_library(kernelavx512 phylokernelavx512.cpp)
-    add_definitions(-DINCLUDE_AVX512)
-endif()
-endif()
-
-if (IQTREE_FLAGS MATCHES "mpi")
-	add_library(mympi TreeCollection.cpp ObjectStream.cpp)
-endif()
-
-add_executable(iqtree
-alignment.cpp alignment.h
-alignmentpairwise.cpp alignmentpairwise.h
-circularnetwork.cpp circularnetwork.h
-eigendecomposition.cpp eigendecomposition.h
-greedy.cpp greedy.h
-gss.cpp gss.h
-gurobiwrapper.cpp gurobiwrapper.h
-gzstream.cpp gzstream.h
-hashsplitset.cpp hashsplitset.h
-iqtree.cpp iqtree.h
-maalignment.cpp maalignment.h
-matree.cpp matree.h
-mexttree.cpp mexttree.h
-mpdablock.cpp mpdablock.h
-msetsblock.cpp msetsblock.h
-msplitsblock.cpp msplitsblock.h
-modelsblock.cpp modelsblock.h
-mtree.cpp mtree.h
-mtreeset.cpp mtreeset.h
-ncbitree.cpp ncbitree.h
-ngs.cpp ngs.h
-node.cpp node.h
-optimization.cpp optimization.h
-parsmultistate.cpp parsmultistate.h
-pattern.cpp pattern.h
-pda.cpp
-pdnetwork.cpp pdnetwork.h
-pdtree.cpp pdtree.h
-pdtreeset.cpp pdtreeset.h
-phyloanalysis.cpp phyloanalysis.h
-phylonode.cpp phylonode.h
-phylonodemixlen.cpp phylonodemixlen.h
-phylosupertree.cpp phylosupertree.h
-phylotree.cpp phylotree.h
-phylotreesse.cpp phylokernelnew.h
-phylotreepars.cpp
-phylokernelnonrev.cpp phylokernelnonrev.h
-phylotreemixlen.cpp phylotreemixlen.h
-pruning.cpp pruning.h
-quartet.cpp
-split.cpp split.h
-splitgraph.cpp splitgraph.h
-splitset.cpp splitset.h
-stoprule.cpp stoprule.h
-superalignment.cpp superalignment.h
-superalignmentpairwise.cpp superalignmentpairwise.h
-supernode.cpp supernode.h
-tinatree.cpp tinatree.h
-tools.cpp tools.h
-whtest_wrapper.cpp whtest_wrapper.h
-lpwrapper.c lpwrapper.h
-pllnni.cpp pllnni.h
-phylosupertreeplen.cpp phylosupertreeplen.h
-phylotesting.cpp phylotesting.h
-ecopd.cpp ecopd.h
-ecopdmtreeset.cpp ecopdmtreeset.h
-graph.cpp graph.h
-candidateset.cpp candidateset.h
-checkpoint.cpp checkpoint.h
-constrainttree.cpp constrainttree.h
-MPIHelper.cpp MPIHelper.h
-memslot.cpp memslot.h
-)
-
-if(Backtrace_FOUND)
-  include_directories(${Backtrace_INCLUDE_DIR})
-  target_link_libraries(iqtree ${Backtrace_LIBRARY})
-endif(Backtrace_FOUND)
-
 if (NOT IQTREE_FLAGS MATCHES "nozlib")
     find_package(ZLIB)
 endif()
@@ -564,23 +459,79 @@ endif()
 if(ZLIB_FOUND)
   message ("Using system zlib")
   include_directories(${ZLIB_INCLUDE_DIRS})
-  target_link_libraries(iqtree ${ZLIB_LIBRARIES})
 else(ZLIB_FOUND)
   message ("Using own zlib-1.2.7")
   include_directories("${PROJECT_BINARY_DIR}/zlib-1.2.7" "${PROJECT_SOURCE_DIR}/zlib-1.2.7")
   add_subdirectory(zlib-1.2.7)
-  target_link_libraries(iqtree zlibstatic)
 endif(ZLIB_FOUND)
+
+##################################################################
+# subdirectories containing necessary libraries for the build
+##################################################################
+add_subdirectory(pll)
+add_subdirectory(ncl)
+add_subdirectory(nclextra)
+add_subdirectory(utils)
+add_subdirectory(pda)
+add_subdirectory(lbfgsb)
+add_subdirectory(whtest)
+add_subdirectory(sprng)
+#add_subdirectory(zlib-1.2.7)
+add_subdirectory(vectorclass)
+LIST(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}")
+if (NOT EIGEN3_INCLUDE_DIR)
+    find_package(Eigen3)
+    if(NOT EIGEN3_FOUND)
+        message(FATAL_ERROR "Eigen3 library not found. Either install it or rerun cmake with -DEIGEN3_INCLUDE_DIR=<installed_eigen3_dir>")
+    endif()
+endif()
+add_definitions("-I${EIGEN3_INCLUDE_DIR} -DUSE_EIGEN3")
+add_subdirectory(model)
+add_subdirectory(gsl)
+add_subdirectory(alignment)
+add_subdirectory(tree)
+
+##################################################################
+# the main executable
+##################################################################
+
+add_library(kernelsse tree/phylokernelsse.cpp)
+
+if (NOT BINARY32 AND NOT IQTREE_FLAGS MATCHES "novx")
+add_library(kernelavx tree/phylotreeavx.cpp)
+add_library(kernelfma tree/phylokernelfma.cpp)
+    if (IQTREE_FLAGS MATCHES "KNL")
+        add_library(kernelavx512 tree/phylokernelavx512.cpp)
+    endif()
+endif()
+
+if (IQTREE_FLAGS MATCHES "mpi")
+	add_library(mympi TreeCollection.cpp ObjectStream.cpp)
+endif()
+
+add_executable(iqtree
+main/main.cpp
+main/phyloanalysis.cpp
+main/phyloanalysis.h
+main/phylotesting.cpp
+main/phylotesting.h
+)
+
+if(Backtrace_FOUND)
+  include_directories(${Backtrace_INCLUDE_DIR})
+  target_link_libraries(iqtree ${Backtrace_LIBRARY})
+endif(Backtrace_FOUND)
+
 
 if (NOT IQTREE_FLAGS MATCHES "avx" AND NOT IQTREE_FLAGS MATCHES "fma")
     if (NOT IQTREE_FLAGS MATCHES "nosse")
-        set_target_properties(iqtree ncl lbfgsb whtest sprng vectorclass model PROPERTIES COMPILE_FLAGS "${SSE_FLAGS}")
+        set_target_properties(iqtree ncl nclextra utils pda lbfgsb whtest sprng vectorclass model alignment tree PROPERTIES COMPILE_FLAGS "${SSE_FLAGS}")
     endif()
     set_target_properties(kernelsse pll PROPERTIES COMPILE_FLAGS "${SSE_FLAGS}")
 	if (NOT BINARY32 AND NOT IQTREE_FLAGS MATCHES "novx")
 		set_target_properties(kernelavx pllavx PROPERTIES COMPILE_FLAGS "${AVX_FLAGS}")
 		set_target_properties(kernelfma PROPERTIES COMPILE_FLAGS "${FMA_FLAGS}")
-        if (IQTREE_FLAGS MATCHES "512")
+        if (IQTREE_FLAGS MATCHES "KNL")
             set_target_properties(kernelavx512 PROPERTIES COMPILE_FLAGS "${AVX512_FLAGS}")
         endif()
 	endif()
@@ -602,7 +553,7 @@ if (IQTREE_FLAGS MATCHES "libcxx")
 endif()
 
 set(THREAD_LIB "")
-if (IQTREE_FLAGS MATCHES "omp")
+if (NOT IQTREE_FLAGS MATCHES "single")
 	link_directories(${PROJECT_SOURCE_DIR}/lib)
 	if (MSVC)
 		if (BINARY32)
@@ -630,7 +581,7 @@ if (IQTREE_FLAGS MATCHES "omp")
 endif()
 
 # basic linking librararies
-target_link_libraries(iqtree pll ncl lbfgsb whtest sprng vectorclass model gsl ${PLATFORM_LIB} ${STD_LIB} ${THREAD_LIB} ${ATOMIC_LIB})
+target_link_libraries(iqtree pll ncl nclextra utils pda lbfgsb whtest sprng vectorclass model gsl alignment tree ${PLATFORM_LIB} ${STD_LIB} ${THREAD_LIB} ${ATOMIC_LIB})
 
 if (NOT IQTREE_FLAGS MATCHES "nosse")
     target_link_libraries(iqtree kernelsse)
@@ -647,7 +598,7 @@ endif()
 # SSE, AVX etc. libraries
 if (NOT BINARY32 AND NOT IQTREE_FLAGS MATCHES "novx")
     target_link_libraries(iqtree pllavx kernelavx kernelfma)
-    if (IQTREE_FLAGS MATCHES "512")
+    if (IQTREE_FLAGS MATCHES "KNL")
         target_link_libraries(iqtree kernelavx512)
     endif()
 endif()
@@ -690,7 +641,7 @@ install (FILES "${PROJECT_SOURCE_DIR}/example/example.cf" DESTINATION .)
 
 if (WIN32)
 	install (FILES "${BINARY_DIR}/iqtree${EXE_SUFFIX}-click.exe" DESTINATION bin)
-	if (EXE_SUFFIX MATCHES "omp" AND MSVC)
+	if (NOT IQTREE_FLAGS MATCHES "single" AND MSVC)
         if (BINARY32)
             install(FILES  "${PROJECT_SOURCE_DIR}/lib32/pthreadVC2.dll" DESTINATION bin)
             install(FILES  "${PROJECT_SOURCE_DIR}/lib32/libiomp5md.dll" DESTINATION bin)
@@ -702,7 +653,7 @@ if (WIN32)
 #		install(FILES  "${PROJECT_SOURCE_DIR}/lib/pthreadGC2_64.dll" DESTINATION bin)
 	endif()
 
-	if (EXE_SUFFIX MATCHES "omp" AND CLANG)
+	if (NOT IQTREE_FLAGS MATCHES "single" AND CLANG)
         if (BINARY32)
             install(FILES  "${PROJECT_SOURCE_DIR}/lib32/libiomp5md.dll" DESTINATION bin)
         else()
@@ -717,7 +668,7 @@ endif()
 ##############################################################
 include (InstallRequiredSystemLibraries)
 set (CPACK_RESOURCE_FILE_LICENSE
-     "${CMAKE_CURRENT_SOURCE_DIR}/License.txt")
+     "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
 set (CPACK_PACKAGE_VERSION_MAJOR "${iqtree_VERSION_MAJOR}")
 set (CPACK_PACKAGE_VERSION_MINOR "${iqtree_VERSION_MINOR}")
 set (CPACK_PACKAGE_VERSION_PATCH "${iqtree_VERSION_PATCH}")
@@ -747,8 +698,8 @@ if (BINARY32)
     set (SYSTEM_NAME "${SYSTEM_NAME}32")
 endif()
 
-if (IQTREE_FLAGS MATCHES "512")
-    set (SYSTEM_NAME "${SYSTEM_NAME}512")
+if (IQTREE_FLAGS MATCHES "KNL")
+    set (SYSTEM_NAME "${SYSTEM_NAME}KNL")
 endif()
 
 set(CPACK_PACKAGE_FILE_NAME 

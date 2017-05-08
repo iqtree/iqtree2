@@ -1,13 +1,13 @@
 /**************************  instrset_detect.cpp   ****************************
-| Author:        Agner Fog
-| Date created:  2012-05-30
-* Last modified: 2016-04-26
-* Version:       1.22
-| Project:       vector classes
-| Description:
-| Functions for checking which instruction sets are supported.
-|
-| (c) Copyright 2012-2016 GNU General Public License http://www.gnu.org/licenses
+* Author:        Agner Fog
+* Date created:  2012-05-30
+* Last modified: 2017-05-02
+* Version:       1.28
+* Project:       vector classes
+* Description:
+* Functions for checking which instruction sets are supported.
+*
+* (c) Copyright 2012-2017 GNU General Public License http://www.gnu.org/licenses
 \*****************************************************************************/
 
 #include "instrset.h"
@@ -20,11 +20,7 @@ namespace VCL_NAMESPACE {
 // input:  eax = functionnumber, ecx = 0
 // output: eax = output[0], ebx = output[1], ecx = output[2], edx = output[3]
 static inline void cpuid (int output[4], int functionnumber) {	
-#if defined (_MSC_VER) //|| defined (__INTEL_COMPILER)       // Microsoft or Intel compiler, intrin.h included
-
-    __cpuidex(output, functionnumber, 0);                  // intrinsic function for CPUID
-
-#elif defined(__GNUC__) || defined(__clang__) || defined (__INTEL_COMPILER)              // use inline assembly, Gnu/AT&T syntax
+#if defined(__GNUC__) || defined(__clang__)              // use inline assembly, Gnu/AT&T syntax
 
    int a, b, c, d;
    __asm("cpuid" : "=a"(a),"=b"(b),"=c"(c),"=d"(d) : "a"(functionnumber),"c"(0) : );
@@ -32,6 +28,10 @@ static inline void cpuid (int output[4], int functionnumber) {
    output[1] = b;
    output[2] = c;
    output[3] = d;
+
+#elif defined (_MSC_VER) || defined (__INTEL_COMPILER)     // Microsoft or Intel compiler, intrin.h included
+
+    __cpuidex(output, functionnumber, 0);                  // intrinsic function for CPUID
 
 #else                                                      // unknown platform. try inline assembly with masm/intel syntax
 
@@ -90,6 +90,8 @@ static inline int64_t xgetbv (int ctr) {
     7  or above = AVX supported by CPU and operating system
     8  or above = AVX2
     9  or above = AVX512F
+    10 or above = AVX512VL
+    11 or above = AVX512BW, AVX512DQ
 */
 int instrset_detect(void) {
 
@@ -125,10 +127,16 @@ int instrset_detect(void) {
     iset = 7;                                              // 7: AVX supported
     cpuid(abcd, 7);                                        // call cpuid leaf 7 for feature flags
     if ((abcd[1] & (1 <<  5)) == 0) return iset;           // no AVX2
-    iset = 8;                                              // 8: AVX2 supported
+    iset = 8;
+    if ((abcd[1] & (1 << 16)) == 0) return iset;           // no AVX512
     cpuid(abcd, 0xD);                                      // call cpuid leaf 0xD for feature flags
     if ((abcd[0] & 0x60) != 0x60)   return iset;           // no AVX512
-    iset = 9;                                              // 8: AVX512F supported
+    iset = 9; 
+    cpuid(abcd, 7);                                        // call cpuid leaf 7 for feature flags
+    if ((abcd[1] & (1 << 31)) == 0) return iset;           // no AVX512VL
+    iset = 10; 
+    if ((abcd[1] & 0x40020000) != 0x40020000) return iset; // no AVX512BW, AVX512DQ
+    iset = 11; 
     return iset;
 }
 
@@ -155,6 +163,23 @@ bool hasXOP(void) {
     cpuid(abcd, 0x80000001);                               // call cpuid function 0x80000001
     return ((abcd[2] & (1 << 11)) != 0);                   // ecx bit 11 indicates XOP
 }
+
+// detect if CPU supports the F16C instruction set
+bool hasF16C(void) {
+    if (instrset_detect() < 7) return false;               // must have AVX
+    int abcd[4];                                           // cpuid results
+    cpuid(abcd, 1);                                        // call cpuid function 1
+    return ((abcd[2] & (1 << 29)) != 0);                   // ecx bit 29 indicates F16C
+}
+
+// detect if CPU supports the AVX512ER instruction set
+bool hasAVX512ER(void) {
+    if (instrset_detect() < 9) return false;               // must have AVX512F
+    int abcd[4];                                           // cpuid results
+    cpuid(abcd, 7);                                        // call cpuid function 7
+    return ((abcd[1] & (1 << 27)) != 0);                   // ebx bit 27 indicates AVX512ER
+}
+
 
 #ifdef VCL_NAMESPACE
 }

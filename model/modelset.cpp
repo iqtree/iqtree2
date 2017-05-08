@@ -29,7 +29,7 @@ ModelSet::ModelSet(const char *model_name, PhyloTree *tree) : ModelMarkov(tree)
 void ModelSet::computeTransMatrix(double time, double* trans_matrix, int mixture)
 {
     // TODO not working with vectorization
-    assert(0);
+    ASSERT(0);
 	for (iterator it = begin(); it != end(); it++) {
 		(*it)->computeTransMatrix(time, trans_matrix, mixture);
 		trans_matrix += (num_states * num_states);
@@ -39,7 +39,7 @@ void ModelSet::computeTransMatrix(double time, double* trans_matrix, int mixture
 void ModelSet::computeTransDerv(double time, double* trans_matrix, double* trans_derv1, double* trans_derv2, int mixture)
 {
     // TODO not working with vectorization
-    assert(0);
+    ASSERT(0);
 	for (iterator it = begin(); it != end(); it++) {
 		(*it)->computeTransDerv(time, trans_matrix, trans_derv1, trans_derv2, mixture);
 		trans_matrix += (num_states * num_states);
@@ -50,8 +50,8 @@ void ModelSet::computeTransDerv(double time, double* trans_matrix, double* trans
 
 int ModelSet::getPtnModelID(int ptn)
 {
-	assert(ptn >= 0 && ptn < pattern_model_map.size());
-	assert(pattern_model_map[ptn] >= 0 && pattern_model_map[ptn] < size());
+	ASSERT(ptn >= 0 && ptn < pattern_model_map.size());
+	ASSERT(pattern_model_map[ptn] >= 0 && pattern_model_map[ptn] < size());
     return pattern_model_map[ptn];
 }
 
@@ -105,7 +105,7 @@ double ModelSet::computeTrans(double time, int model_id, int state1, int state2,
 
 int ModelSet::getNDim()
 {
-	assert(size());
+	ASSERT(size());
     return front()->getNDim();
 }
 
@@ -175,7 +175,7 @@ void ModelSet::decomposeRateMatrix()
 
 bool ModelSet::getVariables(double* variables)
 {
-	assert(size());
+	ASSERT(size());
     bool changed = false;
 	for (iterator it = begin(); it != end(); it++)
 		changed |= (*it)->getVariables(variables);
@@ -184,7 +184,7 @@ bool ModelSet::getVariables(double* variables)
 
 void ModelSet::setVariables(double* variables)
 {
-	assert(size());
+	ASSERT(size());
 	front()->setVariables(variables);
 }
 

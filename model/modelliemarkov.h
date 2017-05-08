@@ -25,10 +25,20 @@ public:
 
 	static string getModelInfo(string model_name, string &full_name, StateFreqType &def_freq);
 
-	// overrides ModelMarkov::getNDimFreq()
-	int getNDimFreq();
+	// DO NOT override this function, because
+    // BQM, 2017-05-02: getNDimFreq should return degree of freedom, which is not included in getNDim()
+    // That's why 0 is returned for FREQ_ESTIMATE, num_states-1 for FREQ_EMPIRICAL
+//	virtual int getNDimFreq();
 
-	bool isTimeReversible();
+    // this is redundant, there is already the same function below
+//	bool isTimeReversible();
+
+	/**
+		@return TRUE if model is time-reversible, FALSE otherwise
+	*/
+	virtual bool isReversible();
+
+
 
 	static bool validModelName(string model_name);
 	void setBounds(double *lower_bound, double *upper_bound, bool *bound_check);

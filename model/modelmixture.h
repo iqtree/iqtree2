@@ -8,10 +8,10 @@
 #ifndef MODELMIXTURE_H_
 #define MODELMIXTURE_H_
 
-#include "phylotree.h"
+#include "tree/phylotree.h"
 #include "modelsubst.h"
 #include "modelmarkov.h"
-#include "modelsblock.h"
+#include "nclextra/modelsblock.h"
 
 
 const char OPEN_BRACKET = '{';

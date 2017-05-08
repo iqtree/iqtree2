@@ -20,12 +20,12 @@
 #ifndef MODELFACTORY_H
 #define MODELFACTORY_H
 
-#include "tools.h"
+#include "utils/tools.h"
 #include "modelsubst.h"
 #include "rateheterogeneity.h"
-#include "modelsblock.h"
-#include "checkpoint.h"
-#include "alignment.h"
+#include "nclextra/modelsblock.h"
+#include "utils/checkpoint.h"
+#include "alignment/alignment.h"
 
 const double MIN_BRLEN_SCALE = 0.01;
 const double MAX_BRLEN_SCALE = 100.0;
