@@ -3655,6 +3655,7 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "                   +P: Use PoMo."                                                    << endl
             << "            +P{THETA}: Optional; fix the amount of polymorphism to THETA (also"      << endl
             << "                       called Watterson's theta or 4*N*mu)."                         << endl
+            << "              +P{EMP}: Optional; fix THETA to empirical value from data."            << endl
             << "Optional modifiers (affect whole run and not only, e.g., a mixture model component)."<< endl
             << "  +N<ps>               Set virtual population size N to `ps` (default: +N9)."        << endl
             << "                       3 <= N <= 19; N has to be an odd number, 2 or 10."            << endl
@@ -3670,8 +3671,8 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "                       This overwrites the specifications of the DNA model."         << endl
             << "  +G[n]                Discrete Gamma model with n categories (default n=4)."        << endl
             << "                       Other types of rate heterogeneity are not yet supported."     << endl
-            << "  The full default model string is: `-m HKY+P+N9+W+F."                               << endl
-            << "  Examples (please refer to the manual):"                                            << endl
+            << "  The default model modifiers are: `+N9+W+F."                                        << endl
+            << "  Model string examples (please refer to the manual):"                               << endl
             << "                       -m GTR+P+N15+S"                                               << endl
             << "                       -m \"MIX{JC+P,HKY+P}+N11\""                                   << endl
             << "                       -m \"MIX{JC+P,HKY+P}+FQ\""                                    << endl
@@ -3808,14 +3809,12 @@ void quickStartGuide() {
          << "---" << endl
          << "PoMo command-line examples:" << endl
         // TODO DS: BUG.  This does not work at the moment (model finder).
-         << "1. Standard tree inference (HKY model and empirical nucleotide frequencies):" << endl
-         << "     iqtree -s counts_file.cf" << endl << endl
+         << "1. Standard tree inference (HKY model, empirical nucleotide frequencies):" << endl
+         << "     iqtree -s counts_file.cf -m HKY+P" << endl << endl
          << "2. Set virtual population size to 15:" << endl
          << "     iqtree -s counts_file.cf -m HKY+P+N15" << endl << endl
          << "3. Use GTR model and estimate allele frequencies during maximization of likelihood:" << endl
          << "     iqtree -s counts_file.cf -m GTR+P+FO" << endl << endl
-         << "4. Use the sampled input method and N=9 (advanced setting; see manual or publication):" << endl
-         << "     iqtree -s counts_file.cf -m HKY+P+N9+S" << endl << endl
          << "5. Polymorphism-aware mixture model with N=5 and weighted sampling:" << endl
          << "     iqtree -s counts_file.cf -m \"MIX{HKY+P{EMP},JC+P}+N5+W\"" << endl << endl
          << "---" << endl
