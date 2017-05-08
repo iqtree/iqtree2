@@ -32,6 +32,7 @@
 #include "model/modelmorphology.h"
 #include "model/modelmixture.h"
 #include "model/modelliemarkov.h"
+#include "model/modelpomo.h"
 #include "utils/timeutil.h"
 
 #include "phyloanalysis.h"
@@ -1530,7 +1531,7 @@ bool isMixtureModel(ModelsBlock *models_block, string &model_str) {
  * Uses seq_type to return a model of the required class, which can then
  * be used by a ModelFactory to produce more such objects.
  * Gets a little complex in the case of DNA models, as 
- * Lie-Markov models are their own class distinct form time reversible models.
+ * Lie-Markov models are their own class distinct from time reversible models.
  */
 
 ModelMarkov* getPrototypeModel(SeqType seq_type, PhyloTree* tree, char *model_set) {
@@ -1549,6 +1550,7 @@ ModelMarkov* getPrototypeModel(SeqType seq_type, PhyloTree* tree, char *model_se
         subst_model = new ModelCodon("GY", "", FREQ_UNKNOWN, "", tree);
 	break;
     case SEQ_POMO:
+        // subst_model = new ModelPoMo("JC", "", FREQ_UNKNOWN, "", tree, "");
         // TODO DS: Implement model finder.
         cout << "ERROR: Automatic model selection with PoMo not yet supported." << endl;
         outError("Please provide a substitution model with, e.g., \"-m HKY+P\".");

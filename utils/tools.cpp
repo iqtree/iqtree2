@@ -3625,38 +3625,6 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -m \"MIX{model1,...,modelK}\"   Mixture model with K components" << endl
             << "  -m \"FMIX{freq1,...freqK}\"     Frequency mixture model with K components" << endl
             << "  -mwopt               Turn on optimizing mixture weights (default: none)" << endl
-            << endl
-            // TODO DS: Improve this.
-            << "POLYMORPHISM AWARE MODELS (PoMo):"                                                   << endl
-            << "PoMo uses counts files (please refer to the manual)."                                << endl
-            << "  -m <sm>+<pm>"                                                                      << endl
-            << "                 <sm>: Substitution model."                                          << endl
-            << "                  DNA: HKY (default), JC, F81, K2P, K3P, K81uf, TN/TrN, TNef,"       << endl
-            << "                       TIM, TIMef, TVM, TVMef, SYM, GTR, or a 6-digit model"         << endl
-            << "                       specification (e.g., 010010 = HKY)."                          << endl
-            << "                 <pm>: PoMo model."                                                  << endl
-            << "                       - P (default; PoMo with tree inference)."                     << endl
-            << "  -m <model>+<ft>      Frequency type (optional; default: +F, counted)."             << endl
-            << "                       F or +FO or +FU or +FQ."                                      << endl
-            << "                       Counted, optimized, user-defined, equal state frequency."     << endl
-            << "                       This overwrites the specifications of the DNA model."         << endl
-            << "  -m <model>+N<ps>     Set virtual population size to `ps` (optional; default: 9)."  << endl
-            << "                       3 <= ps <= 19; ps has to be an odd number or 2 or 10."        << endl
-            << "  -m <model>+[W|S]     Specify sampling method (default: W)."                        << endl
-            << "                       W: Weighted sampling method (partial likelihoods at the tip"  << endl
-            << "                          of the tree are set to the probabilities of leading to the"<< endl
-            << "                          observed data)."                                           << endl
-            << "                       S: Sampled sampling method (determine PoMo states by randomly"<< endl
-            << "                          drawing N bases per site from the data)."                  << endl
-            << "  The full default model string is: `-m HKY+P+N9+W+F."                               << endl
-            << "  Another example: `-m GTR+P+N15+S."                                                 << endl
-            << "  Please refer to the manual for more complicated model strings such as"             << endl
-            << "      mixture models: -m \"MIX{JC+P,HKY+P}+N11\" or"                                 << endl
-            << "      a mixture model with equal state frequency: -m \"MIX{JC+P,HKY+P}+FQ\"."        << endl
-            << "  Until now, only DNA models work with PoMo."                                        << endl
-            << "  Model testing and rate heterogeneity do not work with PoMo yet."                   << endl
-            << "  Example of a standard run (for more examples please see the manual):"              << endl
-            << "    iqtree -s counts_file.cf"                                                        << endl
 
             << endl << "RATE HETEROGENEITY AMONG SITES:" << endl
             << "  -m modelname+I       A proportion of invariable sites" << endl
@@ -3676,6 +3644,41 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -wsr                 Write site rates to .rate file" << endl
             << "  -mh                  Computing site-specific rates to .mhrate file using" << endl
             << "                       Meyer & von Haeseler (2003) method" << endl
+
+            << endl << "POLYMORPHISM AWARE MODELS (PoMo):"                                           << endl
+            << "PoMo uses counts files (please refer to the manual)."                                << endl
+            << "  -m <sm>+P      <sm>: Substitution model."                                          << endl
+            << "                       Only DNA substitution models can be used at the moment."      << endl
+            << "                  DNA: HKY, JC, F81, K2P, K3P, K81uf, TN/TrN, TNef,"                 << endl
+            << "                       TIM, TIMef, TVM, TVMef, SYM, GTR, or a 6-digit model"         << endl
+            << "                       specification (e.g., 010010 = HKY)."                          << endl
+            << "                   +P: Use PoMo."                                                    << endl
+            << "            +P{THETA}: Optional; fix the amount of polymorphism to THETA (also"      << endl
+            << "                       called Watterson's theta or 4*N*mu)."                         << endl
+            << "Optional modifiers (affect whole run and not only, e.g., a mixture model component)."<< endl
+            << "  +N<ps>               Set virtual population size N to `ps` (default: +N9)."        << endl
+            << "                       3 <= N <= 19; N has to be an odd number, 2 or 10."            << endl
+            << "  +[W|S]               Specify sampling method (default: +W)."                       << endl
+            << "                       W: Weighted sampling method (partial likelihoods at the tip"  << endl
+            << "                          of the tree are set to the probabilities of leading to the"<< endl
+            << "                          observed data)."                                           << endl
+            << "                       S: Sampled sampling method (determine PoMo states by randomly"<< endl
+            << "                          drawing N bases per site from the data)."                  << endl
+            << "  +<ft>                State frequency type (default: +F)."                          << endl
+            << "                       +F or +FO or +FU or +FQ."                                     << endl
+            << "                       Counted, optimized, user-defined, equal state frequency."     << endl
+            << "                       This overwrites the specifications of the DNA model."         << endl
+            << "  +G[n]                Discrete Gamma model with n categories (default n=4)."        << endl
+            << "                       Other types of rate heterogeneity are not yet supported."     << endl
+            << "  The full default model string is: `-m HKY+P+N9+W+F."                               << endl
+            << "  Examples (please refer to the manual):"                                            << endl
+            << "                       -m GTR+P+N15+S"                                               << endl
+            << "                       -m \"MIX{JC+P,HKY+P}+N11\""                                   << endl
+            << "                       -m \"MIX{JC+P,HKY+P}+FQ\""                                    << endl
+            << "                       -m \"MIX{JC+P{0.0025},HKY+P}+N13+W+FO+G4\""                   << endl
+            << "  Example of a standard run:"                                                        << endl
+            << "                       iqtree -m HKY+P -s counts_file.cf"                            << endl
+            << "  PoMo does not yet support model testing and Model Finder."                         << endl
 
             << endl << "ASCERTAINMENT BIAS CORRECTION:" << endl
             << "  -m modelname+ASC     Correction for absence of invariant sites in alignment" << endl
