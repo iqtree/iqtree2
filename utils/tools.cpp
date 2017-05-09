@@ -3814,7 +3814,7 @@ void quickStartGuide() {
          << "     iqtree -s counts_file.cf -m HKY+P+N15" << endl << endl
          << "3. Use GTR model and estimate allele frequencies during maximization of likelihood:" << endl
          << "     iqtree -s counts_file.cf -m GTR+P+FO" << endl << endl
-         << "5. Polymorphism-aware mixture model with N=5 and weighted sampling:" << endl
+         << "4. Polymorphism-aware mixture model with N=5 and weighted sampling:" << endl
          << "     iqtree -s counts_file.cf -m \"MIX{HKY+P{EMP},JC+P}+N5+W\"" << endl << endl
          << "---" << endl
          << "To show all available options: run 'iqtree -h'" << endl << endl
