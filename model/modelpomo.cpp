@@ -1,5 +1,6 @@
 #include "modelpomo.h"
 #include "modeldna.h"
+#include "modelmixture.h"
 #include <stdlib.h>
 #include <assert.h>
 #include <string.h>
@@ -26,17 +27,17 @@ void ModelPoMo::init_mutation_model(const char *model_name,
     // TODO DS: Add support for general Markov models.
     // Trick ModelDNA constructor by setting the number of states to 4 (DNA).
     phylo_tree->aln->num_states = nnuc;
-    // string model_str = model_name;
-    // if (ModelMarkov::validModelName(model_str))
-    //     dna_model = ModelMarkov::getModelByName(model_str, phylo_tree, model_params, freq_type, freq_params);
-    // else
-
+    
     // This would be ideal but the try and catch statement does not
     // work yet.  I guess, for the moment, the user has to find out
     // what went wrong during DNA model initialization.
     try {
         cout << "Initialize PoMo DNA mutation model." << endl;
-        dna_model = new ModelDNA(model_name, model_params, freq_type, freq_params, phylo_tree);
+        string model_str = model_name;
+        if (ModelMarkov::validModelName(model_str))
+            dna_model = ModelMarkov::getModelByName(model_str, phylo_tree, model_params, freq_type, freq_params);
+        else
+            dna_model = new ModelDNA(model_name, model_params, freq_type, freq_params, phylo_tree);
     }
     catch (string str) {
         cout << "Error during initialization of the underlying mutation model of PoMo." << endl;
@@ -47,6 +48,9 @@ void ModelPoMo::init_mutation_model(const char *model_name,
     // Reset the number of states.
     phylo_tree->aln->num_states = num_states;
 
+    // Set reversibility state.
+    is_reversible = dna_model->is_reversible;
+    
     this->name = dna_model->name;
     if (model_params.length() > 0)
         this->name += "{" + model_params + "}";
@@ -357,7 +361,12 @@ double ModelPoMo::mutCoeff(int nt1, int nt2) {
     if (nt1==0) return mutation_rates[nt2-1];
     if (nt1==1) return mutation_rates[nt2+1];
     if (nt1==2) return mutation_rates[5];
-    ASSERT(0);
+    else {
+        string str = "Cannot provide transition rate between nucleotide ";
+        str += convertIntToString(nt1) + " and " + convertIntToString(nt2) + ".";
+        outError(str);
+        return 0;
+    }
 }
 
 double ModelPoMo::computeProbBoundaryMutation(int state1, int state2) {
@@ -524,11 +533,6 @@ void ModelPoMo::writeInfo(ostream &out) {
     out.copyfmt(state);
 }
 
-// TODO: ModelGTR::decomposeRateMatrix() calls
-// EigenDecomposition::eigensystem_sym() which in turn calls
-// ModelPoMo::computeRateMatrix().  I believe that there is
-// unnecessary allocation of rate parameters involved in
-// ModelGTR::decomposeRateMatrix() which can be removed.
 void ModelPoMo::computeRateMatrix(double **r_matrix, double *s_freqs, int n_states) {
     for (int i = 0; i < n_states; i++) {
         for (int j = 0; j < n_states; j++) {
@@ -769,55 +773,6 @@ void ModelPoMo::report(ostream &out) {
     double emp_watterson_theta = estimateEmpiricalWattersonTheta();
     out << "Watterson's Theta: " << emp_watterson_theta << endl;
     out << endl;
-    // out << "(Estimated) frequencies of boundary states:" << endl;
-    // for (int i = 0; i < nnuc; i++)
-    //     out << freq_boundary_states[i] << " ";
-    // out << endl << endl;
-
-    // out << "Total rate: ";
-    // double tot_sum = 0.0;
-    // for (int i = 0; i < num_states; i++) {
-    //     double row_sum;
-    //     row_sum = 0.0;
-    //     for (int j = 0; j < num_states; j++) {
-    //         if (i != j) row_sum += rate_matrix[i*num_states + j];
-    //     }
-    //     tot_sum += state_freq[i]*row_sum;
-    // }
-    // out << tot_sum << endl;
-
-    // // Output expected number of mutations without
-    // // total_tree_length/t_fix.
-    // out << "Total rate (mutations only): ";
-    // double mu_tot = 0.0;
-    // // for (int i = 0; i < nnuc; i++)
-    // //     for (int j = 0; j < nnuc; j++)
-    // //         if (i != j) mu_tot1 += (double) freq_boundary_states[i]*freq_boundary_states[j]*mutCoeff(i,j);
-    // for (int i = 0; i < nnuc; i++)
-    //     for (int j = 0; j < num_states; j++)
-    //         // if (i != j) mu_tot += (double) freq_boundary_states[i]*rate_matrix[i*num_states + j];
-    //         if (i != j) mu_tot += (double) state_freq[i]*rate_matrix[i*num_states + j];
-    // out << mu_tot << endl;
-
-    // double fr_tot = 0.0;
-    // out << "Total rate (drift or frequency shifts only): ";
-    // // fr_tot = tot_sum-mu_tot;
-    // for (int i = nnuc; i < num_states; i++) {
-    //     double row_sum;
-    //     row_sum = 0.0;
-    //     for (int j = 0; j < num_states; j++) {
-    //         if (i != j) row_sum += rate_matrix[i*num_states +j];
-    //     }
-    //     fr_tot += state_freq[i]*row_sum;
-    // }
-    // out << fr_tot << endl;
-
-    // out << "Ratio of mutation to drift (indicates if boundary mutation model is adequate): ";
-    // out << mu_tot / fr_tot << endl;
-
-    // out << "Ratio of mutation rate to total rate: ";
-    // out << mu_tot / (fr_tot + mu_tot) << endl << endl;
-
 }
 
 void ModelPoMo::saveCheckpoint() {
@@ -843,4 +798,70 @@ void ModelPoMo::restoreCheckpoint() {
     decomposeRateMatrix();
     if (phylo_tree)
         phylo_tree->clearAllPartialLH();
+}
+
+// Declaration of helper function; needed by decomposeRateMatrix().
+int computeStateFreqFromQMatrix (double Q[], double pi[], int n, double space[]);
+
+void ModelPoMo::decomposeRateMatrix() {
+	int i, j, k = 0;
+
+    if (!is_reversible) {
+        // TODO DS: Compute pomo states and rates here.  Do not
+        // compute them separately (above) which increases runtime.
+        // Use: ModelPoMo::updatePoMoStatesAndRateMatrix ().  Reduce
+        // computations to a minimum!
+        double sum;
+        //double m[num_states];
+        double *space = new double[num_states*(num_states+1)];
+
+        for (i = 0; i < num_states; i++)
+            state_freq[i] = 1.0/num_states;
+
+        for (i = 0, k = 0; i < num_states; i++) {
+            rate_matrix[i*num_states+i] = 0.0;
+            double row_sum = 0.0;
+            for (j = 0; j < num_states; j++)
+                if (j != i) {
+                    row_sum += (rate_matrix[i*num_states+j] = rates[k++]);
+                }
+            rate_matrix[i*num_states+i] = -row_sum;
+        }
+        computeStateFreqFromQMatrix(rate_matrix, state_freq, num_states, space);
+
+
+        for (i = 0, sum = 0.0; i < num_states; i++) {
+            sum -= rate_matrix[i*num_states+i] * state_freq[i]; /* exp. rate */
+        }
+
+        if (sum == 0.0) throw "Empty Q matrix";
+
+        double delta = total_num_subst / sum; /* 0.01 subst. per unit time */
+
+        for (i = 0; i < num_states; i++) {
+            for (j = 0; j < num_states; j++) {
+                rate_matrix[i*num_states+j] *= delta;
+            }
+        }
+        delete [] space;
+
+        if (phylo_tree->params->matrix_exp_technique == MET_EIGEN_DECOMPOSITION) {
+            eigensystem_nonrev(rate_matrix, state_freq, eigenvalues, eigenvalues_imag, eigenvectors, inv_eigenvectors, num_states);
+        }
+    }
+    else {
+        // TODO DS: This leaves room for speed improvements.
+        // Reversible model.  Alogrithms for symmetric matrizes can be
+        // used.  EigenDecomposition::eigensystem_sym() expects a
+        // matrix[][] object with two indices.  However, it is not
+        // used, because ModelPoMo::computeRateMatrix() is called
+        // anyways from within eigensystem_sym().
+		double **temp_matrix = new double*[num_states];
+		for (int i = 0; i < num_states; i++)
+			temp_matrix[i] = new double[num_states];
+		eigensystem_sym(temp_matrix, state_freq, eigenvalues, eigenvectors, inv_eigenvectors, num_states);
+		for (i = num_states-1; i >= 0; i--)
+			delete [] temp_matrix[i];
+		delete [] temp_matrix;        
+    }
 }

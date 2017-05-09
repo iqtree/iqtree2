@@ -3,29 +3,26 @@
 
 #include "modeldna.h"
 
-/* TODO DS: Code documentation!  Put documentation here; remove
-   unnecessary documentation from the cpp file. */
-
-/* TODO DS: PoMo mutation rate boundaries.  This may not be necessary
+/* PoMo mutation rate boundaries.  This is not necessary anymore
    because rates are bounded by underlying Markov model*/
 /* const double POMO_MIN_RATE =  5e-5; */
 /* const double POMO_INIT_RATE = 1e-3; */
 /* const double POMO_MAX_RATE =  1e-1; */
 
-/* TODO DS: The theta boundaries strongly affect numerical stability.
-   I set them so that errors are very seldom but there may be data
-   that requires different boundaries.  Maybe they should be set
-   variable, depending on data or user input. */
-/* Boundaries for level of polymorphism. */
+/* Boundaries for level of polymorphism.  The theta boundaries
+   strongly affect numerical stability.  I set them so that errors are
+   very seldom but there may be data that requires different
+   boundaries.  Maybe they should be set variable, depending on data
+   or user input. */
 const double POMO_MIN_THETA =  8e-4;
 const double POMO_MAX_THETA =  8e-2;
 /* Not so stringent values. */
 /* const double POMO_MIN_THETA =  1e-4; */
 /* const double POMO_MAX_THETA =  1e-1; */
 
-/* TODO DS: Boundaries for boundary frequencies.  This may not be
-   necessary because those are set by the underlying Markov model.
-   The actual boundaries will be set, e.g., to
+/* Boundaries for boundary frequencies.  This is not necessary anymore
+   because those are set by the underlying Markov model.  The actual
+   boundaries will be set, e.g., to
    freq_boundary_states[i]*POMO_MIN_REL_FREQ. */
 /* const double POMO_MIN_REL_FREQ = 0.5; */
 /* const double POMO_MAX_REL_FREQ = 2.0; */
@@ -38,12 +35,11 @@ class ModelPoMo : virtual public ModelMarkov
  public:
     /**
      * Constructor.
-     * ModelGTR() constructor calls ModelSubst() constructor.
+     * ModelMarkov() constructor calls ModelSubst() constructor.
      * ModelSubst():
      * - allocates state_freq[tree->aln->num_states]
-     * ModelGtr():
+     * ModelMarkov():
      * - allocates rates[getNumRateEntries()] = rates[n*(n-1)/2];
-     *   cf. modelsubst.h
      * - allocates eigenvalues and eigenvectors.
      *
      * @param model_name The name of the model (e.g., "HKY+P").
@@ -106,7 +102,7 @@ class ModelPoMo : virtual public ModelMarkov
      *
      */
     void init_sampling_method();
-    
+
     /**
      *  \brief Initialize state frequencies.
      *
@@ -127,12 +123,6 @@ class ModelPoMo : virtual public ModelMarkov
      */
     void init_fixed_parameters(string model_params,
                                string pomo_theta);
-    
-    /* /\** */
-    /*  *  Deprecated!  Unreversible.  Initialize rate_matrix and */
-    /*  *  state_freq. */
-    /*  *\/ */
-    /* void initMoranWithMutation(); */
 
     /**
      * Initialize rate_matrix and state_freq for boundary mutation model.
@@ -158,81 +148,30 @@ class ModelPoMo : virtual public ModelMarkov
                            bool *bound_check);
 
     /**
-     * Write information to output stream (only with -vv).
-     * @param out Output stream.
+     *  Write information to output stream (only with -vv).
+     *  @param out Output stream.
      */
     virtual void writeInfo(ostream &out);
 
     /**
-     *  the target function which needs to be optimized
+     *  The target function which needs to be optimized
      *  @param x the input vector x
      *  @return the function value at x
     */
     virtual double targetFunk(double x[]);
 
     /**
-     * @return TRUE if parameters are at the boundary that may cause
-     * numerical unstability
+     *  @return TRUE if parameters are at the boundary that may cause
+     *  numerical unstability
      */
     virtual bool isUnstableParameters();
 
     virtual bool isPolymorphismAware() { return true; };
 
-    /* /\**  */
-    /*  * Set the mutation rate parameters by a specification.  From */
-    /*  * ModelDNA::setRateType(). */
-    /*  * */
-    /*  * Sets the array #mutation_rates and the vector #param_fixed. */
-    /*  *  */
-    /*  * @param rate_spec a string of six letters describing how rates are related */
-    /*  * @return TRUE if successful, FALSE otherwise */
-    /*  *\/ */
-    /* bool setRateType(const char *rate_spec); */
-
     /**
      *  @return the number of rate entries
      */
     virtual int getNumRateEntries() { return nnuc*(nnuc-1)/2; };
-
-    /* /\**  */
-    /*  * Read state frequencies from an input stream.  If it fails, */
-    /*  * throw error message. */
-    /*  *  */
-    /*  * @param in input stream */
-    /*  *\/ */
-    /* void readFixedStateFreq(istream &in); */
-
-    /* /\**  */
-    /*  * Read state frequencies from comma-separated string.  Might */
-    /*  * throw error message. */
-    /*  *  */
-    /*  * @param str  */
-    /*  *\/ */
-    /* void readFixedStateFreq(string str); */
-
-    /* /\**  */
-    /*  * Read model parameters from a file.  The file needs to contain */
-    /*  * the upper-triangle rate matrix and the state frequencies. */
-    /*  *  */
-    /*  * @param file_name  */
-    /*  *\/ */
-    /* void readMutationParameters(const char *file_name); */
-
-    /* /\**  */
-    /*  * Read the upper-triangle rate matrix from an input stream. */
-    /*  * Throw error message if failing. */
-    /*  *  */
-    /*  * @param in input stream */
-    /*  *\/ */
-    /* void readMutationRates(istream &in); */
-
-    /* /\**  */
-    /*  * Read rate parameters from a comma-separated string.  Throw */
-    /*  * error message if failing. */
-    /*  *  */
-    /*  * @param str input string */
-    /*  *\/ */
-    /* void readMutationRates(string str); */
 
     /**
      *  \brief Normalize boundary frequencies so that they sum to 1.0.
@@ -245,7 +184,7 @@ class ModelPoMo : virtual public ModelMarkov
      *
      */
     void check_boundary_freqs(double * bfs);
-    
+
     /**
      * Estimate the empirical (relative) boundary state frequencies.  The
      * number of A, C, G, and T in the data is summed up and the
@@ -287,33 +226,41 @@ class ModelPoMo : virtual public ModelMarkov
     void normalizeMutationRates();
 
     /**
-        save object into the checkpoint
+        Save object into the checkpoint.
     */
     virtual void saveCheckpoint();
 
     /**
-        restore object from the checkpoint
+        Restore object from the checkpoint.
     */
     virtual void restoreCheckpoint();
 
+	/**
+       Decompose the rate matrix into eigenvalues and eigenvectors.
+       This function is necessary, because handling of reversible and
+       non-reversible models differs in ModelMarkov, but should not
+       differ for ModelPoMo.
+	*/
+	virtual void decomposeRateMatrix();
+
  protected:
 
-    ModelDNA *dna_model;
+    ModelMarkov *dna_model;
 
     /**
-        compute the rate matrix and then normalize it such that the total number of mutations is 1.
+        Compute the rate matrix and then normalize it such that the total number of mutations is 1.
         @param rate_matrix (OUT).  It is filled with rate matrix entries
         @param state_freq state frequencies
         @param num_state number of states
     */
     virtual void computeRateMatrix(double **rate_matrix, double *state_freq, int num_state);
 
-    /** 
-     * Scale the mutation rates by SCALE.  I.e., new_mutation_rates[i]
-     * = scale*old_mutation_rates[i].
-     * 
-     * @param scale (IN).
-     */ 
+    /**
+     *  Scale the mutation rates by SCALE.  I.e., new_mutation_rates[i].
+     *  = scale*old_mutation_rates[i].
+     *
+     *  @param scale (IN).
+     */
     void scaleMutationRatesAndUpdateRateMatrix(double scale);
 
     /**
@@ -337,8 +284,7 @@ class ModelPoMo : virtual public ModelMarkov
 
 
  protected:
-
-    /// Virtual population size of the PoMo model.
+    /*!<  Virtual population size of the PoMo model. */
     int N;
 
     /**
@@ -361,30 +307,6 @@ class ModelPoMo : virtual public ModelMarkov
      */
     double *rate_matrix;
 
-    /* /\** */
-    /*  * Deprecated!  Unreversible. */
-    /*  * */
-    /*  * P(i,major,minor) is the probability to increase the number of */
-    /*  * major alleles from i to i+1. */
-    /*  * */
-    /*  * @param i abundance of major allele */
-    /*  * @param major major allele (0: A, 1: C, 2: G, 3: T) */
-    /*  * @param minor minor allele (0: A, 1: C, 2: G, 3: T) */
-    /*  *\/ */
-    /* double computeP(int i, int major, int minor); */
-
-    /* /\** */
-    /*  * Deprecated!  Unreversible. */
-    /*  * */
-    /*  * R(i,major,minor) is the probability of no frequency change in the */
-    /*  * Moran model with mutation at one locus with two alleles. */
-    /*  * */
-    /*  * @param i abundance of major allele */
-    /*  * @param major major allele (0: A, 1: C, 2: G, 3: T) */
-    /*  * @param minor minor allele (0: A, 1: C, 2: G, 3: T) */
-    /*  *\/ */
-    /* double computeR(int i, int major, int minor); */
-
     /**
      * Decompose state (0..57) into abundance of two nucleotides.
      *
@@ -393,14 +315,6 @@ class ModelPoMo : virtual public ModelMarkov
      * @param nt2 (OUT) Nucleotide 2 (0: A, 1: C, 2: G, 3: T).
      */
     void decomposeState(int state, int &i, int &nt1, int &nt2);
-
-    /* /\** */
-    /*  * Deprecated!  Unreversible. */
-    /*  * */
-    /*  * Compute probability of change from state1 to state2 in one Moran */
-    /*  * model generation. */
-    /*  *\/ */
-    /* double computeProb(int state1, int state2); */
 
     /**
      * Compute the normalized stationary frequencies that fulfill the
@@ -427,7 +341,6 @@ class ModelPoMo : virtual public ModelMarkov
      * @return
      */
     double mutCoeff(int nt1, int nt2);
-
 
     /**
      * Set the initial mutation coefficients which resemble the level
@@ -486,15 +399,6 @@ class ModelPoMo : virtual public ModelMarkov
      */
     double eps;
 
-    /* /// Rate parameter specification, a string of 6 characters.  E.g., */
-    /* /// for the HKY model, it will be set to '010010' by */
-    /* /// SetRateType(). */
-    /* string param_spec; */
-
-    /* /// Vector of boolean, TRUE if correspodning parameter is fixed */
-    /* /// and FALSE otherwise.  Set by SetRateType(). */
-    /* vector<bool> param_fixed; */
-
     /// Number of nucleotides (alleles).  This might be useful in the
     /// future, when we do not restrict PoMo to DNA models only.
     /// Eventual todo: do not hardcode this.
@@ -502,7 +406,7 @@ class ModelPoMo : virtual public ModelMarkov
 
     /// True if heterozygosity has been fixed.
     bool fixed_theta;
-    
+
     /// True if heterozygosity has been fixed by user.
     bool fixed_theta_usr;
 

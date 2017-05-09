@@ -303,7 +303,7 @@ void ModelMarkov::init_state_freq(StateFreqType type) {
 }
 
 void ModelMarkov::init(StateFreqType type) {
-        init_state_freq(type);
+    init_state_freq(type);
 	decomposeRateMatrix();
 	if (verbose_mode >= VB_MAX)
 		writeInfo(cout);
