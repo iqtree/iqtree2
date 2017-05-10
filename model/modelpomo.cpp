@@ -14,7 +14,12 @@ ModelPoMo::ModelPoMo(const char *model_name,
                      string freq_params,
                      PhyloTree *tree,
                      string pomo_theta)
-    : ModelMarkov(tree) {
+    // Set reversibility to true to allocate memory for objects (like
+    // eigenvalues) necessary when the model is reversible.  In case
+    // the model is not reversible memory for different object has to
+    // be allocated separately.  This is done during the
+    // initialization in ModelPoMo::init_mutation_model().
+    : ModelMarkov(tree, true) {
     init(model_name, model_params, freq_type, freq_params, pomo_theta);
 }
 
@@ -24,10 +29,8 @@ void ModelPoMo::init_mutation_model(const char *model_name,
                                         string freq_params,
                                         string pomo_theta)
 {
-    // TODO DS: Add support for general Markov models.
     // Trick ModelDNA constructor by setting the number of states to 4 (DNA).
-    phylo_tree->aln->num_states = nnuc;
-    
+    phylo_tree->aln->num_states = n_alleles;
     // This would be ideal but the try and catch statement does not
     // work yet.  I guess, for the moment, the user has to find out
     // what went wrong during DNA model initialization.
@@ -35,9 +38,9 @@ void ModelPoMo::init_mutation_model(const char *model_name,
         cout << "Initialize PoMo DNA mutation model." << endl;
         string model_str = model_name;
         if (ModelMarkov::validModelName(model_str))
-            dna_model = ModelMarkov::getModelByName(model_str, phylo_tree, model_params, freq_type, freq_params);
+            mutation_model = ModelMarkov::getModelByName(model_str, phylo_tree, model_params, freq_type, freq_params);
         else
-            dna_model = new ModelDNA(model_name, model_params, freq_type, freq_params, phylo_tree);
+            mutation_model = new ModelDNA(model_name, model_params, freq_type, freq_params, phylo_tree);
     }
     catch (string str) {
         cout << "Error during initialization of the underlying mutation model of PoMo." << endl;
@@ -49,9 +52,11 @@ void ModelPoMo::init_mutation_model(const char *model_name,
     phylo_tree->aln->num_states = num_states;
 
     // Set reversibility state.
-    is_reversible = dna_model->is_reversible;
-    
-    this->name = dna_model->name;
+    is_reversible = mutation_model->is_reversible;
+    if (!is_reversible)
+        setReversible(is_reversible);
+
+    this->name = mutation_model->name;
     if (model_params.length() > 0)
         this->name += "{" + model_params + "}";
     this->name += "+P";
@@ -76,7 +81,7 @@ void ModelPoMo::init_sampling_method()
 
     this->full_name =
         "PoMo with N=" + convertIntToString(N) + " and " +
-        dna_model->full_name + " mutation model; " +
+        mutation_model->full_name + " mutation model; " +
         "Sampling method: " + sampling_method_str + "; " +
         convertIntToString(num_states) + " states in total.";
 }
@@ -84,12 +89,12 @@ void ModelPoMo::init_sampling_method()
 void ModelPoMo::init_boundary_frequencies()
 {
     // Get boundary state frequencies from underlying mutation model.
-    freq_boundary_states = dna_model->state_freq;
+    freq_boundary_states = mutation_model->state_freq;
     // Get the empirical boundary state frequencies from the data.
     freq_boundary_states_emp = new double[4];
     estimateEmpiricalBoundaryStateFreqs(freq_boundary_states_emp);
     // Get frequency type from mutation model.
-    freq_type = dna_model->freq_type;
+    freq_type = mutation_model->freq_type;
 
     // Handle frequency type.  This cannot be done by the underlying
     // mutation model because interpretation of polymorphic states is
@@ -98,7 +103,7 @@ void ModelPoMo::init_boundary_frequencies()
     case FREQ_EQUAL:
         // '+FQ'.
         for (int i = 0; i < 4; i++)
-            freq_boundary_states[i] = 1.0/ (double)nnuc;
+            freq_boundary_states[i] = 1.0/ (double)n_alleles;
         break;
     case FREQ_ESTIMATE:
         // '+FO'.  Start estimation at empirical frequencies.
@@ -132,10 +137,11 @@ void ModelPoMo::init_fixed_parameters(string model_params,
     fixed_theta_usr = false;
     fixed_theta = false;
     if (model_params.length() > 0)
+        // The rest ist done by the underlying mutation model.
         fixed_model_params = true;
     if (pomo_theta.length() > 0) {
-        cout << setprecision(5);
         fixed_theta = true;
+        cout << setprecision(5);
         if (pomo_theta == "EMP") {
             cout << "Level of polymorphism is fixed to the estimate from the data: ";
             cout << theta << "." << endl;
@@ -160,11 +166,11 @@ void ModelPoMo::init(const char *model_name,
                      string pomo_theta) {
     // Initialize model constants.
     N = phylo_tree->aln->virtual_pop_size;
-    nnuc = 4;
-    n_connections = nnuc * (nnuc-1) / 2;
+    n_alleles = 4;
+    n_connections = n_alleles * (n_alleles-1) / 2;
     eps = 1e-6;
     // Check if number of states of PoMo match the provided data.
-    ASSERT(num_states == (nnuc + (nnuc*(nnuc-1)/2 * (N-1))) );
+    ASSERT(num_states == (n_alleles + (n_alleles*(n_alleles-1)/2 * (N-1))) );
 
     // Main initialization of model and parameters.
     init_mutation_model(model_name,
@@ -189,10 +195,13 @@ void ModelPoMo::init(const char *model_name,
 }
 
 ModelPoMo::~ModelPoMo() {
-    delete [] rate_matrix;
-    delete dna_model;
+    // Rate matrix is deleted by ~ModelMarkov().
+    // delete [] rate_matrix;
+    delete mutation_model;
     delete [] freq_boundary_states_emp;
-    delete [] mutation_rates;
+    delete [] mutation_rate_matrix;
+    delete [] mutation_rate_matrix_sym;
+    delete [] mutation_rate_matrix_asy;
 }
 
 double ModelPoMo::computeSumFreqBoundaryStates() {
@@ -211,10 +220,14 @@ double harmonic(int n) {
 }
 
 void ModelPoMo::setInitialMutCoeff() {
-    // Mutation rates point to the rates of the DNA model.
-    mutation_rates = new double[n_connections];
-
+    mutation_rate_matrix = new double[n_alleles*n_alleles];
+    mutation_rate_matrix_sym = new double[n_alleles*n_alleles];
+    mutation_rate_matrix_asy = new double[n_alleles*n_alleles];
+    memset(mutation_rate_matrix, 0, n_alleles*n_alleles*sizeof(double));
+    memset(mutation_rate_matrix_sym, 0, n_alleles*n_alleles*sizeof(double));
+    memset(mutation_rate_matrix_asy, 0, n_alleles*n_alleles*sizeof(double));
     // TODO DS: Check if this works.
+    // TODO DS: Move this where it belongs.
     // Check if polymorphism data is available.
     double lambda_poly_sum_no_mu = computeSumFreqPolyStatesNoMut();
     if (!fixed_theta && lambda_poly_sum_no_mu <= 0) {
@@ -243,10 +256,10 @@ double ModelPoMo::computeSumFreqPolyStatesNoMut() {
 double ModelPoMo::computeSumFreqPolyStates() {
     double norm_polymorphic = 0.0;
     int i, j;
-    for (i = 0; i < nnuc; i++) {
+    for (i = 0; i < n_alleles; i++) {
         for (j = 0; j < i; j++)
             norm_polymorphic +=
-                2 * freq_boundary_states[i] * freq_boundary_states[j] * mutCoeff(i, j);
+                2 * freq_boundary_states[i] * freq_boundary_states[j] * mutation_rate_matrix_sym[i*n_alleles+j];
     }
     norm_polymorphic *= harmonic(N-1);
     return norm_polymorphic;
@@ -258,20 +271,26 @@ double ModelPoMo::computeNormConst() {
     return 1.0/(norm_boundary + norm_polymorphic);
 }
 
-// TODO DS: Add non-reversible stuff.
 void ModelPoMo::computeStateFreq () {
     double norm = computeNormConst();
     int state;
 
+    double * r = mutation_rate_matrix_sym;
+    double * f = mutation_rate_matrix_asy;
+    double * pi = freq_boundary_states;
+    int n = n_alleles;
+
     for (state = 0; state < num_states; state++) {
         if (isBoundary(state))
-            state_freq[state] = freq_boundary_states[state]*norm;
+            state_freq[state] = pi[state]*norm;
         else {
-            int k, X, Y;
-            decomposeState(state, k, X, Y);
-            state_freq[state] =
-                norm * freq_boundary_states[X] * freq_boundary_states[Y] *
-                mutCoeff(X, Y)*N / (k*(N-k));
+            // Allele count, first and second type.
+            int i, a, b;
+            decomposeState(state, i, a, b);
+            state_freq[state] = norm * pi[a] * pi[b];
+            double sym =  r[a*n + b]*(1.0/i + 1.0/(N-i));
+            double asy = -f[a*n + b]*(1.0/i - 1.0/(N-i));
+            state_freq[state] *= (sym + asy);
         }
     }
 }
@@ -352,21 +371,8 @@ bool ModelPoMo::isPolymorphic(int state) {
 }
 
 double ModelPoMo::mutCoeff(int nt1, int nt2) {
-    ASSERT(nt1!=nt2 && nt1<4 && nt2<4);
-    if (nt2 < nt1) {
-        int tmp=nt1;
-        nt1=nt2;
-        nt2=tmp;
-    }
-    if (nt1==0) return mutation_rates[nt2-1];
-    if (nt1==1) return mutation_rates[nt2+1];
-    if (nt1==2) return mutation_rates[5];
-    else {
-        string str = "Cannot provide transition rate between nucleotide ";
-        str += convertIntToString(nt1) + " and " + convertIntToString(nt2) + ".";
-        outError(str);
-        return 0;
-    }
+    // return mutation_rate_matrix_sym[nt1*n_alleles+nt2]+mutation_rate_matrix_asy[nt1*n_alleles+nt2];
+    return mutation_rate_matrix[nt1*n_alleles+nt2];
 }
 
 double ModelPoMo::computeProbBoundaryMutation(int state1, int state2) {
@@ -421,20 +427,20 @@ double ModelPoMo::computeProbBoundaryMutation(int state1, int state2) {
 
 int ModelPoMo::getNDim() {
     if (fixed_theta)
-        return dna_model->getNDim();
+        return mutation_model->getNDim();
     else
-        return dna_model->getNDim()+1;
+        return mutation_model->getNDim()+1;
 }
 
 int ModelPoMo::getNDimFreq() {
-    return dna_model->getNDimFreq();
+    return mutation_model->getNDimFreq();
 }
 
 void ModelPoMo::setBounds(double *lower_bound,
                           double *upper_bound,
                           bool *bound_check) {
     // Set boundaries of underlying mutation model.
-    dna_model->setBounds(lower_bound, upper_bound, bound_check);
+    mutation_model->setBounds(lower_bound, upper_bound, bound_check);
 
     // Level of polymorphism.
     if (!fixed_theta) {
@@ -445,10 +451,38 @@ void ModelPoMo::setBounds(double *lower_bound,
     }
 }
 
+// Get rates from underlying mutation model and normalize them such
+// that the level of polymorphism (theta) matches.
 void ModelPoMo::normalizeMutationRates() {
-    // Get rates from underlying mutation model.
-    for (int i = 0; i < n_connections; i++) {
-        mutation_rates[i] = dna_model->rates[i];
+    // TODO DS: R and PHI are actually not needed during the
+    // maximization of the likelihood but only at the end, when
+    // interpreting the result.
+    double * r = mutation_rate_matrix_sym;
+    double * f = mutation_rate_matrix_asy;
+    double * m = mutation_rate_matrix;
+    double * pi = mutation_model->state_freq;
+    mutation_model->getQMatrix(m);
+    int n = n_alleles;
+    for (int i = 0; i < n; i++)
+        for (int j = 0; j < n; j++)
+            m[i*n+j] /= pi[j];
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+            r[i*n+j] = m[i*n+j] + m[j*n+i];
+            r[i*n+j] /= 2.0;
+        }
+    }
+    if (!is_reversible) {
+        for (int i = 0; i < n; i++) {
+            for (int j = 0; j < n; j++) {
+                if (i==j)
+                    f[i*n+j] = 0;
+                else {
+                    f[i*n+j] = m[i*n+j] - m[j*n+i];
+                    f[i*n+j] /= 2.0;
+                }
+            }
+        }
     }
 
     // Normalize the mutation probability so that they resemble the
@@ -475,8 +509,41 @@ void ModelPoMo::normalizeMutationRates() {
     if (verbose_mode >= VB_MAX)
         cout << "Normalization constant of mutation rates: " << m_norm << endl;
 
-    for (int i = 0; i < n_connections; i++)
-        mutation_rates[i] *= m_norm;
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+            m[i*n+j] *= m_norm;
+            r[i*n+j] *= m_norm;
+            f[i*n+j] *= m_norm;
+        }
+    }
+
+    // DEBUG.
+    cout << setprecision(8);
+    cout << "m" << endl;
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++)
+            cout << m[i*n+j] << " ";
+        cout << endl;
+    }
+    cout << endl;
+    // DEBUG.
+    cout << setprecision(8);
+    cout << "r" << endl;
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++)
+            cout << r[i*n+j] << " ";
+        cout << endl;
+    }
+    cout << endl;
+    // DEBUG.
+    cout << setprecision(8);
+    cout << "f" << endl;
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++)
+            cout << f[i*n+j] << " ";
+        cout << endl;
+    }
+    cout << endl;
 
     // // Recompute stationary frequency vector with updated mutation
     // rates.
@@ -484,15 +551,17 @@ void ModelPoMo::normalizeMutationRates() {
 }
 
 void ModelPoMo::scaleMutationRatesAndUpdateRateMatrix(double scale) {
-    for (int i = 0; i < n_connections; i++) {
-        mutation_rates[i] = mutation_rates[i]*scale;
+    for (int i = 0; i < n_alleles*n_alleles; i++) {
+        mutation_rate_matrix[i] = mutation_rate_matrix[i]*scale;
+        mutation_rate_matrix_sym[i] = mutation_rate_matrix_sym[i]*scale;
+        mutation_rate_matrix_asy[i] = mutation_rate_matrix_asy[i]*scale;
     }
     updatePoMoStatesAndRateMatrix();
 }
 
 bool ModelPoMo::getVariables(double *variables) {
     bool changed = false;
-    changed = dna_model->getVariables(variables);
+    changed = mutation_model->getVariables(variables);
 
     if (!fixed_theta) {
         int ndim = getNDim();
@@ -505,8 +574,12 @@ bool ModelPoMo::getVariables(double *variables) {
     return changed;
 }
 
+void ModelPoMo::setRates() {
+    return;
+}
+
 void ModelPoMo::setVariables(double *variables) {
-    dna_model->setVariables(variables);
+    mutation_model->setVariables(variables);
 
     if (!fixed_theta) {
         int ndim = getNDim();
@@ -515,19 +588,23 @@ void ModelPoMo::setVariables(double *variables) {
 }
 
 void ModelPoMo::writeInfo(ostream &out) {
-    int i;
     ios  state(NULL);
+    int n = n_alleles;
     state.copyfmt(out);
 
     out << setprecision(8);
 
     out << "Frequency of boundary states: ";
-    for (i = 0; i < 4; i++)
+    for (int i = 0; i < n; i++)
         out << freq_boundary_states[i] << " ";
     out << endl;
-    out << "Mutation rates: ";
-    for (i = 0; i < 6; i++)
-        out << mutation_rates[i] << " ";
+    // TODO DS: Output separation (rvbl and flux).
+    out << "Mutation rate matrix: " << endl;
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++)
+            out << mutation_rate_matrix[i*n+j] << " ";
+        out << endl;
+    }
     out << endl;
 
     out.copyfmt(state);
@@ -562,13 +639,13 @@ bool ModelPoMo::isUnstableParameters() {
 void ModelPoMo::normalize_boundary_freqs(double * bfs) {
     // Normalize frequencies so that they sum to 1.0.
     double sum = 0.0;
-    for (int i = 0; i < nnuc; i++)
+    for (int i = 0; i < n_alleles; i++)
         sum += bfs[i];
-    for (int i = 0; i < nnuc; i++)
+    for (int i = 0; i < n_alleles; i++)
         bfs[i] /= sum;
     if (verbose_mode >= VB_MAX) {
         std::cout << "The empirical frequencies of the boundary states are:" << std::endl;
-        for (int i = 0; i < nnuc; i++)
+        for (int i = 0; i < n_alleles; i++)
             std::cout << bfs[i] << " ";
         std::cout << std::endl;
     }
@@ -578,7 +655,7 @@ void ModelPoMo::normalize_boundary_freqs(double * bfs) {
 void ModelPoMo::check_boundary_freqs(double * bfs) {
     // Check if boundary frequencies are within bounds.
     bool change = false;
-    for (int i = 0; i < nnuc; i++) {
+    for (int i = 0; i < n_alleles; i++) {
         if (bfs[i] < POMO_MIN_BOUNDARY_FREQ) {
             bfs[i] = POMO_MIN_BOUNDARY_FREQ;
             cout << "WARNING: A boundary state has very low frequency." << endl;
@@ -599,7 +676,7 @@ void ModelPoMo::check_boundary_freqs(double * bfs) {
 void
 ModelPoMo::estimateEmpiricalBoundaryStateFreqs(double * freq_boundary_states)
 {
-    memset(freq_boundary_states, 0, sizeof(double)*nnuc);
+    memset(freq_boundary_states, 0, sizeof(double)*n_alleles);
 
     if (sampling_method == SAMPLING_SAMPLED) {
         unsigned int abs_state_freq[num_states];
@@ -609,19 +686,19 @@ ModelPoMo::estimateEmpiricalBoundaryStateFreqs(double * freq_boundary_states)
         int x;
         int y;
 
-        int sum[nnuc];
+        int sum[n_alleles];
         int tot_sum = 0;
-        memset (sum, 0, nnuc * sizeof(int));
+        memset (sum, 0, n_alleles * sizeof(int));
 
         for (int i = 0; i < num_states; i++) {
             decomposeState(i, n, x, y);
             sum[x]+= n*abs_state_freq[i];
             if (y >= 0) sum[y]+= (N-n)*abs_state_freq[i];
         }
-        for (int i = 0; i < nnuc; i++) {
+        for (int i = 0; i < n_alleles; i++) {
             tot_sum += sum[i];
         }
-        for (int i = 0; i < nnuc; i++) {
+        for (int i = 0; i < n_alleles; i++) {
             freq_boundary_states[i] = (double) sum[i]/tot_sum;
         }
         // Output vector if verbose mode.
@@ -659,7 +736,7 @@ ModelPoMo::estimateEmpiricalBoundaryStateFreqs(double * freq_boundary_states)
     normalize_boundary_freqs(freq_boundary_states);
     if (verbose_mode >= VB_MAX) {
         cout << "Empirical boundary state frequencies: ";
-        for (int i = 0; i< nnuc; i++)
+        for (int i = 0; i< n_alleles; i++)
             cout << freq_boundary_states[i] << " ";
         cout << endl;
     }
@@ -677,8 +754,8 @@ ModelPoMo::estimateEmpiricalWattersonTheta()
         unsigned int abs_state_freq[num_states];
         memset(abs_state_freq, 0, sizeof(unsigned int)*num_states);
         phylo_tree->aln->computeAbsoluteStateFreq(abs_state_freq);
-        for (int i = 0; i < nnuc; i++) sum_fix += abs_state_freq[i];
-        for (int i = nnuc; i < num_states; i++) sum_pol += abs_state_freq[i];
+        for (int i = 0; i < n_alleles; i++) sum_fix += abs_state_freq[i];
+        for (int i = n_alleles; i < num_states; i++) sum_pol += abs_state_freq[i];
         theta_p = (double) sum_pol / (double) (sum_fix + sum_pol);
         // TODO DS: This is wrong because Watterson's estimator is
         // expected to decrease when sampling step is performed.  Some
@@ -725,9 +802,12 @@ ModelPoMo::estimateEmpiricalWattersonTheta()
 void ModelPoMo::report_rates(ostream &out) {
     out << setprecision(8);
     out << "Mutation rates (in the order AC, AG, AT, CG, CT, GT):" << endl;
-    double sum = 0.0;
-    for (int i = 0; i < 6; i++)
-        out << mutation_rates[i] << " ";
+    int n = n_alleles;
+    // TODO DS: Separation (rvbl and flux).
+    for (int i = 0; i < n; i++)
+        for (int j = i+1; j < n; j++) {
+            out << mutation_rate_matrix[i*n+j] << " ";
+        }
     out << endl;
 }
 
@@ -745,7 +825,7 @@ void ModelPoMo::report(ostream &out) {
 
     if (freq_type == FREQ_ESTIMATE) {
         out << "Frequencies of boundary states (in the order A, C, G T):" << endl;
-        for (int i = 0; i < nnuc; i++)
+        for (int i = 0; i < n_alleles; i++)
             out << freq_boundary_states[i] << " ";
         out << endl;
     }
@@ -766,7 +846,7 @@ void ModelPoMo::report(ostream &out) {
     out << "--------------------" << endl;
 
     out << "Frequencies of boundary states (in the order A, C, G, T):" << endl;
-    for (int i = 0; i < nnuc; i++)
+    for (int i = 0; i < n_alleles; i++)
         out << freq_boundary_states_emp[i] << " ";
     out << endl;
 
@@ -776,24 +856,22 @@ void ModelPoMo::report(ostream &out) {
 }
 
 void ModelPoMo::saveCheckpoint() {
-    int n_rates = nnuc * (nnuc-1) / 2;
+    int n_rates = n_alleles * (n_alleles-1) / 2;
     checkpoint->startStruct("ModelPoMo");
-    CKP_ARRAY_SAVE(n_rates, dna_model->rates);
-    CKP_ARRAY_SAVE(nnuc, dna_model->state_freq);
+    CKP_ARRAY_SAVE(n_rates, mutation_model->rates);
+    CKP_ARRAY_SAVE(n_alleles, mutation_model->state_freq);
     checkpoint->endStruct();
     ModelMarkov::saveCheckpoint();
 }
 
 void ModelPoMo::restoreCheckpoint() {
-    int n_rates = nnuc * (nnuc-1) / 2;
+    int n_rates = n_alleles * (n_alleles-1) / 2;
     // First, get variables from checkpoint.
     checkpoint->startStruct("ModelPoMo");
-    CKP_ARRAY_RESTORE(n_rates, dna_model->rates);
-    CKP_ARRAY_RESTORE(nnuc, dna_model->state_freq);
+    CKP_ARRAY_RESTORE(n_rates, mutation_model->rates);
+    CKP_ARRAY_RESTORE(n_alleles, mutation_model->state_freq);
     checkpoint->endStruct();
-    // Second, update states and rate matrix.
-    updatePoMoStatesAndRateMatrix();
-    // Third, restore ModelGTR.
+    // Second, restore underlying mutation model.
     ModelMarkov::restoreCheckpoint();
     decomposeRateMatrix();
     if (phylo_tree)
@@ -806,62 +884,26 @@ int computeStateFreqFromQMatrix (double Q[], double pi[], int n, double space[])
 void ModelPoMo::decomposeRateMatrix() {
 	int i, j, k = 0;
 
+    updatePoMoStatesAndRateMatrix();
+    // Non-reversible.
     if (!is_reversible) {
-        // TODO DS: Compute pomo states and rates here.  Do not
-        // compute them separately (above) which increases runtime.
-        // Use: ModelPoMo::updatePoMoStatesAndRateMatrix ().  Reduce
-        // computations to a minimum!
-        double sum;
-        //double m[num_states];
-        double *space = new double[num_states*(num_states+1)];
-
-        for (i = 0; i < num_states; i++)
-            state_freq[i] = 1.0/num_states;
-
-        for (i = 0, k = 0; i < num_states; i++) {
-            rate_matrix[i*num_states+i] = 0.0;
-            double row_sum = 0.0;
-            for (j = 0; j < num_states; j++)
-                if (j != i) {
-                    row_sum += (rate_matrix[i*num_states+j] = rates[k++]);
-                }
-            rate_matrix[i*num_states+i] = -row_sum;
-        }
-        computeStateFreqFromQMatrix(rate_matrix, state_freq, num_states, space);
-
-
-        for (i = 0, sum = 0.0; i < num_states; i++) {
-            sum -= rate_matrix[i*num_states+i] * state_freq[i]; /* exp. rate */
-        }
-
-        if (sum == 0.0) throw "Empty Q matrix";
-
-        double delta = total_num_subst / sum; /* 0.01 subst. per unit time */
-
-        for (i = 0; i < num_states; i++) {
-            for (j = 0; j < num_states; j++) {
-                rate_matrix[i*num_states+j] *= delta;
-            }
-        }
-        delete [] space;
-
         if (phylo_tree->params->matrix_exp_technique == MET_EIGEN_DECOMPOSITION) {
             eigensystem_nonrev(rate_matrix, state_freq, eigenvalues, eigenvalues_imag, eigenvectors, inv_eigenvectors, num_states);
         }
     }
+    // Reversible.  Alogrithms for symmetric matrizes can be used.
     else {
         // TODO DS: This leaves room for speed improvements.
-        // Reversible model.  Alogrithms for symmetric matrizes can be
-        // used.  EigenDecomposition::eigensystem_sym() expects a
-        // matrix[][] object with two indices.  However, it is not
-        // used, because ModelPoMo::computeRateMatrix() is called
-        // anyways from within eigensystem_sym().
+        // EigenDecomposition::eigensystem_sym() expects a matrix[][]
+        // object with two indices.  However, it is not used, because
+        // ModelPoMo::computeRateMatrix() is called anyways from
+        // within eigensystem_sym().
 		double **temp_matrix = new double*[num_states];
 		for (int i = 0; i < num_states; i++)
 			temp_matrix[i] = new double[num_states];
 		eigensystem_sym(temp_matrix, state_freq, eigenvalues, eigenvectors, inv_eigenvectors, num_states);
 		for (i = num_states-1; i >= 0; i--)
 			delete [] temp_matrix[i];
-		delete [] temp_matrix;        
+		delete [] temp_matrix;
     }
 }

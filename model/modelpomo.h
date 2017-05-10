@@ -171,7 +171,7 @@ class ModelPoMo : virtual public ModelMarkov
     /**
      *  @return the number of rate entries
      */
-    virtual int getNumRateEntries() { return nnuc*(nnuc-1)/2; };
+    virtual int getNumRateEntries() { return n_alleles*(n_alleles-1)/2; };
 
     /**
      *  \brief Normalize boundary frequencies so that they sum to 1.0.
@@ -245,7 +245,7 @@ class ModelPoMo : virtual public ModelMarkov
 
  protected:
 
-    ModelMarkov *dna_model;
+    ModelMarkov *mutation_model;
 
     /**
         Compute the rate matrix and then normalize it such that the total number of mutations is 1.
@@ -256,8 +256,8 @@ class ModelPoMo : virtual public ModelMarkov
     virtual void computeRateMatrix(double **rate_matrix, double *state_freq, int num_state);
 
     /**
-     *  Scale the mutation rates by SCALE.  I.e., new_mutation_rates[i].
-     *  = scale*old_mutation_rates[i].
+     *  Scale the mutation rates by SCALE.  I.e., new_mut_rates_sym[i].
+     *  = scale*old_mut_rates_sym[i].
      *
      *  @param scale (IN).
      */
@@ -282,15 +282,34 @@ class ModelPoMo : virtual public ModelMarkov
      */
     virtual bool getVariables(double *variables);
 
+    /**
+	 * Called from getVariables() to update the rate matrix for the
+	 * new model parameters.  For ModelPoMo this is only a dummy
+	 * function, which has to be declared empty because otherwise,
+	 * restoreCheckpoint() calls the ModelMarkov::setRates() which in
+	 * turn throws an error.
+	 */
+	virtual void setRates();
 
  protected:
     /*!<  Virtual population size of the PoMo model. */
     int N;
 
     /**
-     * Mutation probabilities, 6 entries for reversible model.
+     * Full mutation rate matrix (R + PHI).
      */
-    double *mutation_rates;
+    double *mutation_rate_matrix;
+
+    /**
+     * Matrix R with symmetric mutation rates (m_ij = m_ji).
+     */
+    double *mutation_rate_matrix_sym;
+
+    /**
+     * Matrix PHI with anti-symmetric mutation rates (f_ij = -f_ji; flux
+     * rates, non-reversible model).
+     */
+    double *mutation_rate_matrix_asy;
 
     /**
      * 4 unnormalized stationary frequencies of boundary states.
@@ -302,10 +321,10 @@ class ModelPoMo : virtual public ModelMarkov
      */
     double *freq_boundary_states_emp;
 
-    /**
-     * The rate matrix of the PoMo model.
-     */
-    double *rate_matrix;
+    /* /\** */
+    /*  * The rate matrix of the PoMo model. */
+    /*  *\/ */
+    /* double *rate_matrix; */
 
     /**
      * Decompose state (0..57) into abundance of two nucleotides.
@@ -402,7 +421,7 @@ class ModelPoMo : virtual public ModelMarkov
     /// Number of nucleotides (alleles).  This might be useful in the
     /// future, when we do not restrict PoMo to DNA models only.
     /// Eventual todo: do not hardcode this.
-    int nnuc;
+    int n_alleles;
 
     /// True if heterozygosity has been fixed.
     bool fixed_theta;
@@ -433,7 +452,7 @@ class ModelPoMo : virtual public ModelMarkov
     /// would look like [1, 2, 1, 1, 2, 1]
     double * fixed_model_params_ratio;
 
-    /// The number of connections between nucleotides.  If nnuc=4,
+    /// The number of connections between nucleotides.  If n_alleles=4,
     /// there are 6 connections.  Set in ModelPoMo::init().
     int n_connections;
 
