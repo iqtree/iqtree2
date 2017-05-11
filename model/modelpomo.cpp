@@ -607,6 +607,27 @@ void ModelPoMo::writeInfo(ostream &out) {
     }
     out << endl;
 
+    // DEBUG.
+    cout << "Symmetric mutation rate matrix:" << endl;
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++)
+            cout << mutation_rate_matrix_sym[i*n+j] << " ";
+        cout << endl;
+    }
+    cout << endl;
+    // DEBUG.
+    cout << "Skew-symmetric mutation rate matrix:" << endl;
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++)
+            cout << mutation_rate_matrix_asy[i*n+j] << " ";
+        cout << endl;
+    }
+    cout << endl;
+    //DEBUG.
+    cout << "Tree:" << endl;
+    phylo_tree->printTree(cout);
+    cout << endl;
+    
     out.copyfmt(state);
 }
 
@@ -882,14 +903,27 @@ void ModelPoMo::restoreCheckpoint() {
 int computeStateFreqFromQMatrix (double Q[], double pi[], int n, double space[]);
 
 void ModelPoMo::decomposeRateMatrix() {
-	int i, j, k = 0;
-
     updatePoMoStatesAndRateMatrix();
     // Non-reversible.
     if (!is_reversible) {
         if (phylo_tree->params->matrix_exp_technique == MET_EIGEN_DECOMPOSITION) {
             eigensystem_nonrev(rate_matrix, state_freq, eigenvalues, eigenvalues_imag, eigenvectors, inv_eigenvectors, num_states);
+            return;
         }
+        else if (phylo_tree->params->matrix_exp_technique == MET_SCALING_SQUARING) {
+            return;
+        }
+        else if (phylo_tree->params->matrix_exp_technique == MET_EIGEN3LIB_DECOMPOSITION) {
+            // Not (yet?) implemented.
+            // decomposeRateMatrixEigen3lib();
+            outError("MET_EIGEN3LIB_DECOMPOSITION does not work with PoMo.");
+        }
+        else if (phylo_tree->params->matrix_exp_technique == MET_LIE_MARKOV_DECOMPOSITION)
+            // Not possible?
+            // decomposeRateMatrixClosedForm();
+            outError("Matrix decomposition in closed form not available for PoMo.");
+        else
+            outError("Matrix decomposition method unknown.");
     }
     // Reversible.  Alogrithms for symmetric matrizes can be used.
     else {
@@ -902,8 +936,9 @@ void ModelPoMo::decomposeRateMatrix() {
 		for (int i = 0; i < num_states; i++)
 			temp_matrix[i] = new double[num_states];
 		eigensystem_sym(temp_matrix, state_freq, eigenvalues, eigenvectors, inv_eigenvectors, num_states);
-		for (i = num_states-1; i >= 0; i--)
+		for (int i = num_states-1; i >= 0; i--)
 			delete [] temp_matrix[i];
 		delete [] temp_matrix;
+        return;
     }
 }
