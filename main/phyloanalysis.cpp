@@ -609,10 +609,9 @@ void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh, 
     out << "Tree in newick format:";
     if (tree.isMixlen())
         out << " (class branch lengths are given in [...] and separated by '/' )";
-    out << endl << endl;
-
     if (tree.aln->seq_type == SEQ_POMO)
-        out << "Tree in newick format (measured in mutations and frequency shifts):" << endl;
+        out << " (measured in mutations and frequency shifts):";
+    out << endl << endl;
 
 	tree.printTree(out, WT_BR_LEN | WT_BR_LEN_FIXED_WIDTH | WT_SORT_TAXA);
 
@@ -1366,7 +1365,11 @@ void computeMLDist(Params& params, IQTree& iqtree, string &dist_file, double beg
     double *ml_var = NULL;
     longest_dist = iqtree.computeDist(params, iqtree.aln, ml_dist, ml_var, dist_file);
 	cout << " " << (getCPUTime() - begin_time) << " sec" << endl;
-	if (longest_dist > MAX_GENETIC_DIST * 0.99) {
+
+    double max_genetic_dist = MAX_GENETIC_DIST;
+    if (params.pomo == true)
+        max_genetic_dist *= params.pomo_pop_size * params.pomo_pop_size;
+	if (longest_dist > max_genetic_dist * 0.99) {
 		outWarning("Some pairwise ML distances are too long (saturated)");
 		//cout << "Some ML distances are too long, using old distances..." << endl;
 	} //else
@@ -1399,7 +1402,10 @@ void computeInitialDist(Params &params, IQTree &iqtree, string &dist_file) {
 	if (params.compute_jc_dist || params.compute_obs_dist || params.partition_file) {
 		longest_dist = iqtree.computeDist(params, iqtree.aln, iqtree.dist_matrix, iqtree.var_matrix, dist_file);
 		checkZeroDist(iqtree.aln, iqtree.dist_matrix);
-		if (longest_dist > MAX_GENETIC_DIST * 0.99) {
+        double max_genetic_dist = MAX_GENETIC_DIST;
+        if (params.pomo == true)
+            max_genetic_dist *= params.pomo_pop_size * params.pomo_pop_size;
+		if (longest_dist > max_genetic_dist * 0.99) {
 			outWarning("Some pairwise distances are too long (saturated)");
 		}
     }

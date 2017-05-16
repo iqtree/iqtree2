@@ -500,10 +500,14 @@ void ModelPoMo::normalizeMutationRates() {
     // the correction, the estimated heterozygosity is still too high
     // when N is low.  A correct calculation of the heterozygosity
     // requires a rethinking of the sampling step together with a
-    // correction of htereozygosity for low N.
-    double correction = (double) (N-1) / double (N);
+    // correction of heterozygosity for low N.
+
+    // No correction:
+    double correction = 1.0;
+    // double correction = (double) (N-1) / double (N);
     // Interestingly, a correction factor of (N-1)/(N+1) gives very
     // good results but I cannot derive it and do not know why.
+
     double m_norm = theta / (theta_bm * (correction - harmonic(N-1) * theta));
 
     if (verbose_mode >= VB_MAX)
@@ -517,33 +521,33 @@ void ModelPoMo::normalizeMutationRates() {
         }
     }
 
-    // DEBUG.
-    cout << setprecision(8);
-    cout << "m" << endl;
-    for (int i = 0; i < n; i++) {
-        for (int j = 0; j < n; j++)
-            cout << m[i*n+j] << " ";
-        cout << endl;
-    }
-    cout << endl;
-    // DEBUG.
-    cout << setprecision(8);
-    cout << "r" << endl;
-    for (int i = 0; i < n; i++) {
-        for (int j = 0; j < n; j++)
-            cout << r[i*n+j] << " ";
-        cout << endl;
-    }
-    cout << endl;
-    // DEBUG.
-    cout << setprecision(8);
-    cout << "f" << endl;
-    for (int i = 0; i < n; i++) {
-        for (int j = 0; j < n; j++)
-            cout << f[i*n+j] << " ";
-        cout << endl;
-    }
-    cout << endl;
+    // // DEBUG.
+    // cout << setprecision(8);
+    // cout << "m" << endl;
+    // for (int i = 0; i < n; i++) {
+    //     for (int j = 0; j < n; j++)
+    //         cout << m[i*n+j] << " ";
+    //     cout << endl;
+    // }
+    // cout << endl;
+    // // DEBUG.
+    // cout << setprecision(8);
+    // cout << "r" << endl;
+    // for (int i = 0; i < n; i++) {
+    //     for (int j = 0; j < n; j++)
+    //         cout << r[i*n+j] << " ";
+    //     cout << endl;
+    // }
+    // cout << endl;
+    // // DEBUG.
+    // cout << setprecision(8);
+    // cout << "f" << endl;
+    // for (int i = 0; i < n; i++) {
+    //     for (int j = 0; j < n; j++)
+    //         cout << f[i*n+j] << " ";
+    //     cout << endl;
+    // }
+    // cout << endl;
 
     // // Recompute stationary frequency vector with updated mutation
     // rates.
@@ -607,26 +611,26 @@ void ModelPoMo::writeInfo(ostream &out) {
     }
     out << endl;
 
-    // DEBUG.
-    cout << "Symmetric mutation rate matrix:" << endl;
-    for (int i = 0; i < n; i++) {
-        for (int j = 0; j < n; j++)
-            cout << mutation_rate_matrix_sym[i*n+j] << " ";
-        cout << endl;
-    }
-    cout << endl;
-    // DEBUG.
-    cout << "Skew-symmetric mutation rate matrix:" << endl;
-    for (int i = 0; i < n; i++) {
-        for (int j = 0; j < n; j++)
-            cout << mutation_rate_matrix_asy[i*n+j] << " ";
-        cout << endl;
-    }
-    cout << endl;
-    //DEBUG.
-    cout << "Tree:" << endl;
-    phylo_tree->printTree(cout);
-    cout << endl;
+    // // DEBUG.
+    // cout << "Symmetric mutation rate matrix:" << endl;
+    // for (int i = 0; i < n; i++) {
+    //     for (int j = 0; j < n; j++)
+    //         cout << mutation_rate_matrix_sym[i*n+j] << " ";
+    //     cout << endl;
+    // }
+    // cout << endl;
+    // // DEBUG.
+    // cout << "Skew-symmetric mutation rate matrix:" << endl;
+    // for (int i = 0; i < n; i++) {
+    //     for (int j = 0; j < n; j++)
+    //         cout << mutation_rate_matrix_asy[i*n+j] << " ";
+    //     cout << endl;
+    // }
+    // cout << endl;
+    // //DEBUG.
+    // cout << "Tree:" << endl;
+    // phylo_tree->printTree(cout);
+    // cout << endl;
     
     out.copyfmt(state);
 }

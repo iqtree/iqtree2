@@ -1998,7 +1998,7 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
     // Access model_name in global parameters; needed to get N and
     // sampling method.
     Params params = Params::getInstance();
-    // TODO: Do not temper with params; use another way to set PoMo
+    // TODO DS: Do not temper with params; use another way to set PoMo
     // flag.
     params.pomo = true;
 
