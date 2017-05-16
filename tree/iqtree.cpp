@@ -1018,6 +1018,10 @@ void IQTree::initializeModel(Params &params, ModelsBlock *models_block) {
         	outError("non GTR model for DNA is not yet supported by PLL.");
         pllInitModel(pllInst, pllPartitions);
     }
+
+    if (aln->ordered_pattern.empty())
+        aln->orderPatternByNumChars(PAT_VARIANT);
+
 }
 double IQTree::getProbDelete() {
     return (double) k_delete / leafNum;
