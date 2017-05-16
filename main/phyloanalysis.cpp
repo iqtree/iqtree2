@@ -1367,8 +1367,10 @@ void computeMLDist(Params& params, IQTree& iqtree, string &dist_file, double beg
 	cout << " " << (getCPUTime() - begin_time) << " sec" << endl;
 
     double max_genetic_dist = MAX_GENETIC_DIST;
-    if (params.pomo == true)
-        max_genetic_dist *= params.pomo_pop_size * params.pomo_pop_size;
+    if (iqtree.aln->seq_type == SEQ_POMO) {
+        int N = iqtree.aln->virtual_pop_size;
+        max_genetic_dist *= N * N;
+    }
 	if (longest_dist > max_genetic_dist * 0.99) {
 		outWarning("Some pairwise ML distances are too long (saturated)");
 		//cout << "Some ML distances are too long, using old distances..." << endl;
@@ -1402,9 +1404,12 @@ void computeInitialDist(Params &params, IQTree &iqtree, string &dist_file) {
 	if (params.compute_jc_dist || params.compute_obs_dist || params.partition_file) {
 		longest_dist = iqtree.computeDist(params, iqtree.aln, iqtree.dist_matrix, iqtree.var_matrix, dist_file);
 		checkZeroDist(iqtree.aln, iqtree.dist_matrix);
+
         double max_genetic_dist = MAX_GENETIC_DIST;
-        if (params.pomo == true)
-            max_genetic_dist *= params.pomo_pop_size * params.pomo_pop_size;
+        if (iqtree.aln->seq_type == SEQ_POMO) {
+            int N = iqtree.aln->virtual_pop_size;
+            max_genetic_dist *= N * N;
+        }
 		if (longest_dist > max_genetic_dist * 0.99) {
 			outWarning("Some pairwise distances are too long (saturated)");
 		}
@@ -2900,6 +2905,14 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
             cout.precision(3);
         }
     }
+    // Increase the minimum branch length if PoMo is used.
+    if (alignment->seq_type == SEQ_POMO) {
+        params.max_branch_length *= alignment->virtual_pop_size * alignment->virtual_pop_size;
+        cout.precision(12);
+        cout << "NOTE: maximal branch length is increased to " << params.max_branch_length << " because PoMo infers number of mutations and frequency shifts" << endl;
+        cout.precision(3);
+    }
+
 
 	string original_model = params.model_name;
 

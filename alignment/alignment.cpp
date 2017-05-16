@@ -2029,6 +2029,7 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
             outError("Custom virtual population size of PoMo not 2, 10 or any other odd number between 3 and 19.");
     }
     // TODO: probably remove virtual_pop_size and use N only.
+    params.pomo_pop_size = N;
     virtual_pop_size = N;
     if (params.model_name.find("+W") != string::npos &&
         params.model_name.find("+S") != string::npos)
@@ -3319,11 +3320,11 @@ double Alignment::computeJCDist(int seq1, int seq2) {
     double x = 1.0 - (z * obs_dist);
 
     if (x <= 0) {
-        /*		string str = "Too long distance between two sequences ";
-        		str += getSeqName(seq1);
-        		str += " and ";
-        		str += getSeqName(seq2);
-        		outWarning(str);*/
+        // string str = "Too long distance between two sequences ";
+        // str += getSeqName(seq1);
+        // str += " and ";
+        // str += getSeqName(seq2);
+        // outWarning(str);
         return MAX_GENETIC_DIST;
     }
 

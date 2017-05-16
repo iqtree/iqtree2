@@ -444,7 +444,7 @@ double SuperAlignment::computeObsDist(int seq1, int seq2) {
 					diff_pos += (*it).frequency;
 			}
 	}
-	if (!total_pos) 
+	if (!total_pos)
 		return MAX_GENETIC_DIST; // return +INF if no overlap between two sequences
 	return ((double)diff_pos) / total_pos;
 }
@@ -458,11 +458,11 @@ double SuperAlignment::computeDist(int seq1, int seq2) {
     double x = 1.0 - (z * obs_dist);
 
     if (x <= 0) {
-        /*		string str = "Too long distance between two sequences ";
-        		str += getSeqName(seq1);
-        		str += " and ";
-        		str += getSeqName(seq2);
-        		outWarning(str);*/
+        // string str = "Too long distance between two sequences ";
+        // str += getSeqName(seq1);
+        // str += " and ";
+        // str += getSeqName(seq2);
+        // outWarning(str);
         return MAX_GENETIC_DIST;
     }
 

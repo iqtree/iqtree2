@@ -832,6 +832,8 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.optimize_alg_gammai = "EM";
     params.fixed_branch_length = false;
     params.min_branch_length = 0.0; // this is now adjusted later based on alignment length
+    // TODO DS: This seems inappropriate for PoMo.  It is handled in
+    // phyloanalysis::2908.
     params.max_branch_length = 10.0; // Nov 22 2016: reduce from 100 to 10!
     params.iqp_assess_quartet = IQP_DISTANCE;
     params.iqp = false;

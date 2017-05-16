@@ -298,10 +298,15 @@ double AlignmentPairwise::optimizeDist(double initial_dist, double &d2l) {
     if (!tree->getModelFactory() || !tree->getRate()) return dist;
 
     double negative_lh, ferror;
+    double max_genetic_dist = MAX_GENETIC_DIST;
+    if (tree->aln->seq_type == SEQ_POMO) {
+        int N = tree->aln->virtual_pop_size;
+        max_genetic_dist *= N*N;
+    }
     if (tree->optimize_by_newton) // Newton-Raphson method
-        dist = minimizeNewton(Params::getInstance().min_branch_length, dist, MAX_GENETIC_DIST, Params::getInstance().min_branch_length, d2l);
+        dist = minimizeNewton(Params::getInstance().min_branch_length, dist, max_genetic_dist, Params::getInstance().min_branch_length, d2l);
     else // Brent method
-        dist = minimizeOneDimen(Params::getInstance().min_branch_length, dist, MAX_GENETIC_DIST, Params::getInstance().min_branch_length, &negative_lh, &ferror);
+        dist = minimizeOneDimen(Params::getInstance().min_branch_length, dist, max_genetic_dist, Params::getInstance().min_branch_length, &negative_lh, &ferror);
 
     return dist;
 }

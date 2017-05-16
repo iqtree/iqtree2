@@ -502,11 +502,17 @@ void ModelPoMo::normalizeMutationRates() {
     // requires a rethinking of the sampling step together with a
     // correction of heterozygosity for low N.
 
-    // No correction:
+    // No correction, sampling without replacement:
     double correction = 1.0;
+
+    // Correction, sampling with replacement (see above), seems to
+    // work better to estimate level of polymorphism but deteriorates
+    // branch scrore distance, so deactivated.
     // double correction = (double) (N-1) / double (N);
+
     // Interestingly, a correction factor of (N-1)/(N+1) gives very
     // good results but I cannot derive it and do not know why.
+    // double correction = (double) (N-1) / double (N+1);
 
     double m_norm = theta / (theta_bm * (correction - harmonic(N-1) * theta));
 

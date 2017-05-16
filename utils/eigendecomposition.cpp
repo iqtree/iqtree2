@@ -252,6 +252,7 @@ void EigenDecomposition::eigensystem_sym(double **rate_params, double *state_fre
 //			inv_evec[i*num_state+j] = 0.0;
 		}
 
+    // TODO DS: This seems a little too verbose for PoMo.
 	if (verbose_mode >= VB_MAX) {
 		cout << "eigenvalues:";
 		for (i = 0; i < num_state; i++)
