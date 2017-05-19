@@ -2908,7 +2908,7 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
     // Increase the minimum branch length if PoMo is used.
     if (alignment->seq_type == SEQ_POMO) {
         params.max_branch_length *= alignment->virtual_pop_size * alignment->virtual_pop_size;
-        cout.precision(12);
+        cout.precision(1);
         cout << "NOTE: maximal branch length is increased to " << params.max_branch_length << " because PoMo infers number of mutations and frequency shifts" << endl;
         cout.precision(3);
     }
