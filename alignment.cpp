@@ -407,7 +407,7 @@ int Alignment::getNumNonstopCodons() {
 
 bool Alignment::isStandardGeneticCode() {
     if (seq_type != SEQ_CODON) return false;
-	return (genetic_code == genetic_code1);
+	return (genetic_code == genetic_code1 || genetic_code == genetic_code11);
 }
 
 void Alignment::buildSeqStates(bool add_unobs_const) {

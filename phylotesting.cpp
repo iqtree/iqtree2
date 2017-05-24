@@ -856,16 +856,16 @@ int getModelList(Params &params, Alignment *aln, StrVector &models, bool separat
         if (with_new) {
             if (with_asc)
                 test_options = test_options_asc_new;
-            else if (seq_type == SEQ_PROTEIN)
-                test_options = test_options_noASC_I_new;
-            else
+            else if (seq_type == SEQ_DNA || seq_type == SEQ_BINARY || seq_type == SEQ_MORPH)
                 test_options = test_options_morph_new;
+            else
+                test_options = test_options_noASC_I_new;
         } else if (with_asc)
             test_options = test_options_asc;
-        else if (seq_type == SEQ_PROTEIN)
-            test_options = test_options_noASC_I;
-        else
+        else if (seq_type == SEQ_DNA || seq_type == SEQ_BINARY || seq_type == SEQ_MORPH)
             test_options = test_options_morph;
+        else
+            test_options = test_options_noASC_I;
 	} else {
         // normal data, use +I instead
         if (with_new) {
@@ -1558,6 +1558,11 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 			<< ((seq_type == SEQ_BINARY) ? "binary" : ((seq_type == SEQ_DNA) ? "DNA" :
 				((seq_type == SEQ_PROTEIN) ? "protein": ((seq_type == SEQ_CODON) ? "codon": "morphological"))))
 			<< " models (sample size: " << ssize << ") ..." << endl;
+        if (verbose_mode >= VB_MED) {
+            for (auto i = model_names.begin(); i != model_names.end(); i++)
+                cout << *i << " ";
+            cout << endl;
+        }
         if (params.model_test_and_tree == 0)
             cout << " No. Model         -LnL         df  AIC          AICc         BIC" << endl;
 	}
