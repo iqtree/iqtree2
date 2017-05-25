@@ -2633,7 +2633,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -bb <#replicates>";
-                if (params.min_iterations != -1) {
+                if (params.stop_condition == SC_FIXED_ITERATION) {
                     outError("Ultrafast bootstrap does not work with -te or -n option");
                 }
 				params.gbo_replicates = convert_int(argv[cnt]);

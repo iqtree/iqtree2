@@ -928,16 +928,16 @@ int getModelList(Params &params, Alignment *aln, StrVector &models, bool separat
         if (with_new) {
             if (with_asc)
                 test_options = test_options_asc_new;
-            else if (seq_type == SEQ_PROTEIN)
-                test_options = test_options_noASC_I_new;
-            else
+            else if (seq_type == SEQ_DNA || seq_type == SEQ_BINARY || seq_type == SEQ_MORPH)
                 test_options = test_options_morph_new;
+            else
+                test_options = test_options_noASC_I_new;
         } else if (with_asc)
             test_options = test_options_asc;
-        else if (seq_type == SEQ_PROTEIN)
-            test_options = test_options_noASC_I;
-        else
+        else if (seq_type == SEQ_DNA || seq_type == SEQ_BINARY || seq_type == SEQ_MORPH)
             test_options = test_options_morph;
+        else
+            test_options = test_options_noASC_I;
 	} else {
         // normal data, use +I instead
         if (with_new) {
@@ -1245,10 +1245,13 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInf
         }
     }
 
+    bool parallel_over_partitions = false;
+
 #ifdef _OPENMP
+    parallel_over_partitions = !params.model_test_and_tree && (in_tree->size() >= num_threads);
 //        for (i = 0; i < in_tree->size(); i++)
 //            cout << distID[i]+1 << "\t" << in_tree->part_info[distID[i]].name << "\t" << -dist[i] << endl;
-#pragma omp parallel for private(i) schedule(dynamic) reduction(+: lhsum, dfsum) if(!params.model_test_and_tree)
+#pragma omp parallel for private(i) schedule(dynamic) reduction(+: lhsum, dfsum) if(parallel_over_partitions)
 #endif
 	for (int j = 0; j < in_tree->size(); j++) {
         i = distID[j];
@@ -1261,7 +1264,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInf
         string part_model_name;
         if (params.model_name.empty())
             part_model_name = in_tree->part_info[i].model_name;
-		string model = testModel(params, this_tree, part_model_info, this_fmodel, models_block, 1, in_tree->part_info[i].name, false, part_model_name);
+		string model = testModel(params, this_tree, part_model_info, this_fmodel, models_block, (parallel_over_partitions ? 1 : num_threads), in_tree->part_info[i].name, false, part_model_name);
 		double score = computeInformationScore(part_model_info[0].logl,part_model_info[0].df,
 				this_tree->getAlnNSite(),params.model_test_criterion);
 		in_tree->part_info[i].model_name = model;
@@ -1679,6 +1682,11 @@ string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_in
 			<< ((seq_type == SEQ_BINARY) ? "binary" : ((seq_type == SEQ_DNA) ? "DNA" :
 				((seq_type == SEQ_PROTEIN) ? "protein": ((seq_type == SEQ_CODON) ? "codon": "morphological"))))
 			<< " models (sample size: " << ssize << ") ..." << endl;
+        if (verbose_mode >= VB_MED) {
+            for (auto i = model_names.begin(); i != model_names.end(); i++)
+                cout << *i << " ";
+            cout << endl;
+        }
         if (params.model_test_and_tree == 0)
             cout << " No. Model         -LnL         df  AIC          AICc         BIC" << endl;
 	}
