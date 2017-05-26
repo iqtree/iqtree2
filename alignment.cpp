@@ -488,8 +488,8 @@ int getDataBlockMorphStates(NxsCharactersBlock *data_block) {
     char ch;
     int nstates = 0;
     
-    for (site = 0; site < nsite; site++)
-        for (seq = 0; seq < nseq; seq++) {
+    for (seq = 0; seq < nseq; seq++)
+        for (site = 0; site < nsite; site++) {
             int nstate = data_block->GetNumStates(seq, site);
             if (nstate == 0)
                 continue;
@@ -501,23 +501,11 @@ int getDataBlockMorphStates(NxsCharactersBlock *data_block) {
                 else if (ch >= 'A' && ch <= 'Z') 
                     ch = ch - 'A' + 11;
                 else 
-                    outError(data_block->GetTaxonLabel(seq) + " has invalid state at site " + convertIntToString(site));
+                    outError(data_block->GetTaxonLabel(seq) + " has invalid single state " + ch + " at site " + convertIntToString(site+1));
                 if (ch > nstates) nstates = ch;
                 continue;
             }
-            for (int state = 0; state < nstate; state++) {
-                ch = data_block->GetState(seq, site, state);
-                if (!isalnum(ch)) continue;
-                if (ch >= '0' && ch <= '9') ch = ch - '0' + 1;
-                if (ch >= 'A' && ch <= 'Z') ch = ch - 'A' + 11;
-                if (ch >= '0' && ch <= '9') 
-                    ch = ch - '0' + 1;
-                else if (ch >= 'A' && ch <= 'Z') 
-                    ch = ch - 'A' + 11;
-                else 
-                    outError(data_block->GetTaxonLabel(seq) + " has invalid state at site " + convertIntToString(site));
-                if (ch > nstates) nstates = ch;
-            }
+            cout << "NOTE: " << data_block->GetTaxonLabel(seq) << " has ambiguous state at site " << site+1 << " which is treated as unknown" << endl;
         }
     return nstates;
 }
@@ -589,14 +577,17 @@ void Alignment::extractDataBlock(NxsCharactersBlock *data_block) {
                 pat += STATE_UNKNOWN;
             else if (nstate == 1) {
                 pat += char_to_state[(int)data_block->GetState(seq, site, 0)];
-            } else {
-                assert(data_type != NxsCharactersBlock::dna || data_type != NxsCharactersBlock::rna || data_type != NxsCharactersBlock::nucleotide);
+            } else if (seq_type == SEQ_DNA) {
+                // ambiguous DNA state
                 char pat_ch = 0;
                 for (int state = 0; state < nstate; state++) {
                     pat_ch |= (1 << char_to_state[(int)data_block->GetState(seq, site, state)]);
                 }
                 pat_ch += 3;
                 pat += pat_ch;
+            } else {
+                // other datatype will be treated as unknown
+                pat += STATE_UNKNOWN;
             }
         }
         num_gaps_only += addPattern(pat, site);
@@ -1425,6 +1416,25 @@ int Alignment::buildPattern(StrVector &sequences, char *sequence_type, int nseq,
     return 1;
 }
 
+void processSeq(string &sequence, string &line, int line_num) {
+    for (string::iterator it = line.begin(); it != line.end(); it++) {
+        if ((*it) <= ' ') continue;
+        if (isalnum(*it) || (*it) == '-' || (*it) == '?'|| (*it) == '.' || (*it) == '*' || (*it) == '~')
+            sequence.append(1, toupper(*it));
+        else if (*it == '(' || *it == '{') {
+            auto start_it = it;
+            while (*it != ')' && *it != '}' && it != line.end())
+                it++;
+            if (it == line.end())
+                throw "Line " + convertIntToString(line_num) + ": No matching close-bracket ) or } found";
+            sequence.append(1, '?');
+            cout << "NOTE: Line " << line_num << ": " << line.substr(start_it-line.begin(), (it-start_it)+1) << " is treated as unknown character" << endl;
+        } else {
+            throw "Line " + convertIntToString(line_num) + ": Unrecognized character "  + *it;
+        }
+    }
+}
+
 int Alignment::readPhylip(char *filename, char *sequence_type) {
 
     StrVector sequences;
@@ -1479,16 +1489,7 @@ int Alignment::readPhylip(char *filename, char *sequence_type) {
                     sequences[seq_id].append(1, state);
                     if (num_states < state+1) num_states = state+1;
                 }
-            } else
-                for (string::iterator it = line.begin(); it != line.end(); it++) {
-                    if ((*it) <= ' ') continue;
-                    if (isalnum(*it) || (*it) == '-' || (*it) == '?'|| (*it) == '.' || (*it) == '*' || (*it) == '~')
-                        sequences[seq_id].append(1, toupper(*it));
-                    else {
-                        err_str << "Line " << line_num <<": Unrecognized character " << *it;
-                        throw err_str.str();
-                    }
-                }
+            } else processSeq(sequences[seq_id], line, line_num);
             if (sequences[seq_id].length() != sequences[0].length()) {
                 err_str << "Line " << line_num << ": Sequence " << seq_names[seq_id] << " has wrong sequence length " << sequences[seq_id].length() << endl;
                 throw err_str.str();
@@ -1555,15 +1556,7 @@ int Alignment::readPhylipSequential(char *filename, char *sequence_type) {
                 seq_names[seq_id] = line.substr(0, pos);
                 line.erase(0, pos);
             }
-            for (string::iterator it = line.begin(); it != line.end(); it++) {
-                if ((*it) <= ' ') continue;
-                if (isalnum(*it) || (*it) == '-' || (*it) == '?'|| (*it) == '.' || (*it) == '*' || (*it) == '~')
-                    sequences[seq_id].append(1, toupper(*it));
-                else {
-                    err_str << "Line " << line_num <<": Unrecognized character " << *it;
-                    throw err_str.str();
-                }
-            }
+            processSeq(sequences[seq_id], line, line_num);
             if (sequences[seq_id].length() > nsite)
                 throw ("Line " + convertIntToString(line_num) + ": Sequence " + seq_names[seq_id] + " is too long (" + convertIntToString(sequences[seq_id].length()) + ")");
             if (sequences[seq_id].length() == nsite) {
@@ -1608,15 +1601,7 @@ int Alignment::readFasta(char *filename, char *sequence_type) {
         }
         // read sequence contents
         if (sequences.empty()) throw "First line must begin with '>' to define sequence name";
-        for (string::iterator it = line.begin(); it != line.end(); it++) {
-            if ((*it) <= ' ') continue;
-            if (isalnum(*it) || (*it) == '-' || (*it) == '?'|| (*it) == '.' || (*it) == '*' || (*it) == '~')
-                sequences.back().append(1, toupper(*it));
-            else {
-                err_str << "Line " << line_num <<": Unrecognized character " << *it;
-                throw err_str.str();
-            }
-        }
+        processSeq(sequences.back(), line, line_num);
     }
     in.clear();
     // set the failbit again
@@ -1713,14 +1698,7 @@ int Alignment::readClustal(char *filename, char *sequence_type) {
         pos = line.find_first_of(" \t");
         line = line.substr(0, pos);
         // read sequence contents
-        for (string::iterator it = line.begin(); it != line.end(); it++) {
-            if ((*it) <= ' ') continue;
-            if (isalnum(*it) || (*it) == '-' || (*it) == '?'|| (*it) == '.' || (*it) == '*' || (*it) == '~')
-                sequences[seq_count].append(1, toupper(*it));
-            else {
-                throw "Line " +convertIntToString(line_num) + ": Unrecognized character " + *it;
-            }
-        }
+        processSeq(sequences[seq_count], line, line_num);
         seq_count++;
     }
     in.clear();
@@ -1825,16 +1803,7 @@ int Alignment::readMSF(char *filename, char *sequence_type) {
         
         line = line.substr(pos+1);
         // read sequence contents
-        for (string::iterator it = line.begin(); it != line.end(); it++) {
-            if ((*it) <= ' ') continue;
-            if (isalnum(*it) || (*it) == '-' || (*it) == '?'|| (*it) == '.' || (*it) == '*')
-                sequences[seq_count].append(1, toupper(*it));
-            else  if ((*it) == '~')
-                sequences[seq_count].append(1, '-');
-            else {
-                throw "Line " +convertIntToString(line_num) + ": Unrecognized character " + *it;
-            }
-        }
+        processSeq(sequences[seq_count], line, line_num);
         seq_count++;
         if (seq_count == seq_names.size())
             seq_count = 0;
