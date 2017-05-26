@@ -1509,6 +1509,25 @@ int Alignment::buildPattern(StrVector &sequences, char *sequence_type, int nseq,
     return 1;
 }
 
+void processSeq(string &sequence, string &line, int line_num) {
+    for (string::iterator it = line.begin(); it != line.end(); it++) {
+        if ((*it) <= ' ') continue;
+        if (isalnum(*it) || (*it) == '-' || (*it) == '?'|| (*it) == '.' || (*it) == '*' || (*it) == '~')
+            sequence.append(1, toupper(*it));
+        else if (*it == '(' || *it == '{') {
+            auto start_it = it;
+            while (*it != ')' && *it != '}' && it != line.end())
+                it++;
+            if (it == line.end())
+                throw "Line " + convertIntToString(line_num) + ": No matching close-bracket ) or } found";
+            sequence.append(1, '?');
+            cout << "NOTE: Line " << line_num << ": " << line.substr(start_it-line.begin(), (it-start_it)+1) << " is treated as unknown character" << endl;
+        } else {
+            throw "Line " + convertIntToString(line_num) + ": Unrecognized character "  + *it;
+        }
+    }
+}
+
 int Alignment::readPhylip(char *filename, char *sequence_type) {
 
     StrVector sequences;
@@ -1563,16 +1582,7 @@ int Alignment::readPhylip(char *filename, char *sequence_type) {
                     sequences[seq_id].append(1, state);
                     if (num_states < state+1) num_states = state+1;
                 }
-            } else
-                for (string::iterator it = line.begin(); it != line.end(); it++) {
-                    if ((*it) <= ' ') continue;
-                    if (isalnum(*it) || (*it) == '-' || (*it) == '?'|| (*it) == '.' || (*it) == '*' || (*it) == '~')
-                        sequences[seq_id].append(1, toupper(*it));
-                    else {
-                        err_str << "Line " << line_num <<": Unrecognized character " << *it;
-                        throw err_str.str();
-                    }
-                }
+            } else processSeq(sequences[seq_id], line, line_num);
             if (sequences[seq_id].length() != sequences[0].length()) {
                 err_str << "Line " << line_num << ": Sequence " << seq_names[seq_id] << " has wrong sequence length " << sequences[seq_id].length() << endl;
                 throw err_str.str();
@@ -1639,15 +1649,7 @@ int Alignment::readPhylipSequential(char *filename, char *sequence_type) {
                 seq_names[seq_id] = line.substr(0, pos);
                 line.erase(0, pos);
             }
-            for (string::iterator it = line.begin(); it != line.end(); it++) {
-                if ((*it) <= ' ') continue;
-                if (isalnum(*it) || (*it) == '-' || (*it) == '?'|| (*it) == '.' || (*it) == '*' || (*it) == '~')
-                    sequences[seq_id].append(1, toupper(*it));
-                else {
-                    err_str << "Line " << line_num <<": Unrecognized character " << *it;
-                    throw err_str.str();
-                }
-            }
+            processSeq(sequences[seq_id], line, line_num);
             if (sequences[seq_id].length() > nsite)
                 throw ("Line " + convertIntToString(line_num) + ": Sequence " + seq_names[seq_id] + " is too long (" + convertIntToString(sequences[seq_id].length()) + ")");
             if (sequences[seq_id].length() == nsite) {
@@ -1700,15 +1702,7 @@ int Alignment::readFasta(char *filename, char *sequence_type) {
         }
         // read sequence contents
         if (sequences.empty()) throw "First line must begin with '>' to define sequence name";
-        for (string::iterator it = line.begin(); it != line.end(); it++) {
-            if ((*it) <= ' ') continue;
-            if (isalnum(*it) || (*it) == '-' || (*it) == '?'|| (*it) == '.' || (*it) == '*' || (*it) == '~')
-                sequences.back().append(1, toupper(*it));
-            else {
-                err_str << "Line " << line_num <<": Unrecognized character " << *it;
-                throw err_str.str();
-            }
-        }
+        processSeq(sequences.back(), line, line_num);
     }
     in.clear();
     // set the failbit again
@@ -1805,14 +1799,7 @@ int Alignment::readClustal(char *filename, char *sequence_type) {
         pos = line.find_first_of(" \t");
         line = line.substr(0, pos);
         // read sequence contents
-        for (string::iterator it = line.begin(); it != line.end(); it++) {
-            if ((*it) <= ' ') continue;
-            if (isalnum(*it) || (*it) == '-' || (*it) == '?'|| (*it) == '.' || (*it) == '*' || (*it) == '~')
-                sequences[seq_count].append(1, toupper(*it));
-            else {
-                throw "Line " +convertIntToString(line_num) + ": Unrecognized character " + *it;
-            }
-        }
+        processSeq(sequences[seq_count], line, line_num);
         seq_count++;
     }
     in.clear();
@@ -1917,16 +1904,7 @@ int Alignment::readMSF(char *filename, char *sequence_type) {
 
         line = line.substr(pos+1);
         // read sequence contents
-        for (string::iterator it = line.begin(); it != line.end(); it++) {
-            if ((*it) <= ' ') continue;
-            if (isalnum(*it) || (*it) == '-' || (*it) == '?'|| (*it) == '.' || (*it) == '*')
-                sequences[seq_count].append(1, toupper(*it));
-            else  if ((*it) == '~')
-                sequences[seq_count].append(1, '-');
-            else {
-                throw "Line " +convertIntToString(line_num) + ": Unrecognized character " + *it;
-            }
-        }
+        processSeq(sequences[seq_count], line, line_num);
         seq_count++;
         if (seq_count == seq_names.size())
             seq_count = 0;
