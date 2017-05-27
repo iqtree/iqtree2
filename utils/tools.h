@@ -2394,11 +2394,11 @@ int random_int(int n, int *rstream = NULL);
 double random_double(int *rstream = NULL);
 
 template <class T>
-void my_random_shuffle (T first, T last)
+void my_random_shuffle (T first, T last, int *rstream = NULL)
 {
 	int n = last - first;
 	for (int i=n-1; i>0; --i) {
-		swap (first[i],first[random_int(i+1)]);
+		swap (first[i],first[random_int(i+1, rstream)]);
 	}
 }
 

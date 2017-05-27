@@ -2985,6 +2985,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.unsuccess_iteration = convert_int(argv[cnt]);
                 if (params.unsuccess_iteration <= 0)
                     throw "-nstop iterations must be positive";
+                params.max_iterations = max(params.max_iterations, params.unsuccess_iteration*10);
 				continue;
 			}
 			if (strcmp(argv[cnt], "-lsbran") == 0) {

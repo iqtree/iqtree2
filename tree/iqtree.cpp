@@ -685,6 +685,7 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
     bool orig_rooted = rooted;
     rooted = false;
 
+/* TODO: this does not work properly with partition model
 #ifdef _OPENMP
     StrVector pars_trees;
     if (params->start_tree == STT_PARSIMONY && nParTrees >= 1) {
@@ -707,6 +708,7 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
         }
     }
 #endif
+*/
 
     int init_size = candidateTrees.size();
 
@@ -740,6 +742,10 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
 			curParsTree = getTreeString();
         } else if (params->start_tree == STT_PARSIMONY) {
             /********* Create parsimony tree using IQ-TREE *********/
+            computeParsimonyTree(NULL, aln);
+            curParsTree = getTreeString();
+
+/* TODO: this does not work properly with partition model
 #ifdef _OPENMP
             curParsTree = pars_trees[treeNr-1];
 #else
@@ -750,6 +756,7 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
                 curParsTree = getTreeString();
             }
 #endif
+*/
         }
         
         int pos = addTreeToCandidateSet(curParsTree, -DBL_MAX, false, MPIHelper::getInstance().getProcessID());
@@ -4219,7 +4226,7 @@ void PhyloTree::warnNumThreads() {
     size_t nptn = getAlnNPattern();
     if (nptn < num_threads*vector_size)
         outError("Too many threads for short alignments, please reduce number of threads or use -nt AUTO to determine it.");
-    if (nptn < num_threads*100)
+    if (nptn < num_threads*1000/aln->num_states)
         outWarning("Number of threads seems too high for short alignments. Use -nt AUTO to determine best number of threads.");
 }
 
