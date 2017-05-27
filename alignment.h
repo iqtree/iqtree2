@@ -610,13 +610,13 @@ public:
 	/**
 	 *  map from 64 codon to non-stop codon index
 	 */
-//    char *non_stop_codon;
+    char *non_stop_codon;
 
 	/**
 	 * For codon sequences: index of 61 non-stop codons to 64 codons
 	 * For other sequences: NULL
 	 */
-//	char *codon_table;
+	char *codon_table;
 
 	/**
 	 * For codon_sequences: 64 amino-acid letters for genetic code of AAA,AAC,AAG,AAT,...,TTT
