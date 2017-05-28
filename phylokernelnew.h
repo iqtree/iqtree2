@@ -123,6 +123,24 @@ template <class VectorClass, class Numeric, const bool FMA>
 inline void dotProductVec(Numeric *A, VectorClass *B, VectorClass &X, size_t N)
 #endif
 {
+    // quick treatment for small N <= 4
+    switch (N) {
+    case 1:
+        X = A[0]*B[0];
+        return;
+    case 2:
+        X = mul_add(A[1], B[1], A[0]*B[0]);
+        return;
+    case 3:
+        X = mul_add(A[2], B[2], mul_add(A[1], B[1], A[0]*B[0]));
+        return;
+    case 4:
+        X = mul_add(A[1], B[1], A[0]*B[0]) + mul_add(A[3], B[3], A[2]*B[2]);
+        return;
+    default: break;
+    }
+
+    // For N > 4, add the rest with 4-way unrolling
     size_t i, j;
     switch (N % 4) {
     case 0: {
@@ -134,6 +152,19 @@ inline void dotProductVec(Numeric *A, VectorClass *B, VectorClass &X, size_t N)
                 V[j] = mul_add(A[i+j], B[i+j], V[j]);
         }
         X = (V[0]+V[1]) + (V[2]+V[3]);
+        break;
+    }
+
+    case 1: {
+        const size_t Nm1 = N-1;
+        VectorClass V[4];
+        for (j = 0; j < 4; j++)
+            V[j] = A[j] * B[j];
+        for (i = 4; i < Nm1; i+=4) {
+            for (j = 0; j < 4; j++)
+                V[j] = mul_add(A[i+j], B[i+j], V[j]);
+        }
+        X = mul_add(A[Nm1], B[Nm1], (V[0]+V[1]) + (V[2]+V[3]));
         break;
     }
 
@@ -185,6 +216,26 @@ template <class VectorClass, class Numeric, const bool FMA>
 inline void dotProductDualVec(Numeric *A, VectorClass *B, Numeric *C, VectorClass *D, VectorClass &X, size_t N)
 #endif
 {
+    // quick treatment for small N <= 4
+    switch (N) {
+    case 1:
+        X = (A[0]*B[0])*(C[0]*D[0]);
+        return;
+    case 2:
+        X = mul_add(A[1],B[1],A[0]*B[0]) * mul_add(C[1],D[1],C[0]*D[0]);
+        return;
+    case 3:
+        X = mul_add(A[2], B[2], mul_add(A[1], B[1], A[0]*B[0])) *
+            mul_add(C[2], D[2], mul_add(C[1], D[1], C[0]*D[0]));
+        return;
+    case 4:
+        X = (mul_add(A[1], B[1], A[0]*B[0]) + mul_add(A[3], B[3], A[2]*B[2])) *
+            (mul_add(C[1], D[1], C[0]*D[0]) + mul_add(C[3], D[3], C[2]*D[2]));
+        return;
+    default: break;
+    }
+
+    // For N > 4, add the rest with 4-way unrolling
     size_t i, j;
     switch (N % 4) {
     case 0: {
@@ -201,6 +252,24 @@ inline void dotProductDualVec(Numeric *A, VectorClass *B, Numeric *C, VectorClas
             }
         }
         X = ((AB[0]+AB[1])+(AB[2]+AB[3])) * ((CD[0]+CD[1])+CD[2]+CD[3]);
+        break;
+    }
+
+    case 1: {
+        const size_t Nm1 = N-1;
+        VectorClass AB[4], CD[4];
+        for (j = 0; j < 4; j++) {
+            AB[j] = A[j] * B[j];
+            CD[j] = C[j] * D[j];
+        }
+        for (i = 4; i < Nm1; i+=4) {
+
+            for (j = 0; j < 4; j++) {
+                AB[j] = mul_add(A[i+j],  B[i+j],  AB[j]);
+                CD[j] = mul_add(C[i+j], D[i+j], CD[j]);
+            }
+        }
+        X = mul_add(A[Nm1], B[Nm1], (AB[0]+AB[1])+(AB[2]+AB[3])) * mul_add(C[Nm1], D[Nm1], (CD[0]+CD[1])+CD[2]+CD[3]);
         break;
     }
 
@@ -258,7 +327,35 @@ template <class VectorClass, class Numeric, const bool FMA>
 inline void productVecMat(VectorClass *A, Numeric *M, VectorClass *X, size_t N)
 #endif
 {
-    size_t i, j, x;
+    // quick treatment for small N <= 4
+    size_t i;
+    switch (N) {
+    case 1:
+        X[0] = A[0]*M[0];
+        return;
+    case 2:
+        X[0] = mul_add(A[1],M[1],A[0]*M[0]);
+        X[1] = mul_add(A[1],M[3],A[0]*M[2]);
+        return;
+    case 3:
+        for (i = 0; i < 3; i++) {
+            // manual unrolling
+            X[i] = mul_add(A[2],M[2],mul_add(A[1],M[1],A[0]*M[0]));
+            M += 3;
+        }
+        return;
+    case 4:
+        for (i = 0; i < 4; i++) {
+            // manual unrolling
+            X[i] = mul_add(A[1],M[1],A[0]*M[0]) + mul_add(A[3],M[3],A[2]*M[2]);
+            M += 4;
+        }
+        return;
+    default: break;
+    }
+
+    // For N > 4, add the rest with 4-way unrolling
+    size_t j, x;
 
     switch (N % 4) {
     case 0:
@@ -277,6 +374,23 @@ inline void productVecMat(VectorClass *A, Numeric *M, VectorClass *X, size_t N)
         }
         break;
 
+    case 1: {
+        const size_t Nm1 = N-1;
+        for (i = 0; i < N; i++) {
+            // manual unrolling
+            VectorClass V[4];
+            for (j = 0; j < 4; j++)
+                V[j] = A[j] * M[j];
+
+            for (x = 4; x < Nm1; x+=4) {
+                for (j = 0; j < 4; j++)
+                    V[j] = mul_add(A[x+j], M[x+j], V[j]);
+            }
+            X[i] = mul_add(A[Nm1], M[Nm1], (V[0]+V[1])+(V[2]+V[3]));
+            M += N;
+        }
+        break;
+    }
     case 2:
         for (i = 0; i < N; i++) {
             // manual unrolling
@@ -331,7 +445,39 @@ template <class VectorClass, class Numeric, const bool FMA>
 inline void productVecMat(VectorClass *A, Numeric *M, VectorClass *X, VectorClass &Xmax, size_t N)
 #endif
 {
-    size_t i, j, x;
+    // quick treatment for small N <= 4
+    size_t i;
+    switch (N) {
+    case 1:
+        X[0] = A[0]*M[0];
+        Xmax = max(Xmax, abs(X[0]));
+        return;
+    case 2:
+        X[0] = mul_add(A[1],M[1],A[0]*M[0]);
+        X[1] = mul_add(A[1],M[3],A[0]*M[2]);
+        Xmax = max(Xmax, max(abs(X[0]), abs(X[1])));
+        return;
+    case 3:
+        for (i = 0; i < 3; i++) {
+            // manual unrolling
+            X[i] = mul_add(A[2],M[2],mul_add(A[1],M[1],A[0]*M[0]));
+            Xmax = max(Xmax, abs(X[i]));
+            M += 3;
+        }
+        return;
+    case 4:
+        for (i = 0; i < 4; i++) {
+            // manual unrolling
+            X[i] = mul_add(A[1],M[1],A[0]*M[0]) + mul_add(A[3],M[3],A[2]*M[2]);
+            Xmax = max(Xmax, abs(X[i]));
+            M += 4;
+        }
+        return;
+    default: break;
+    }
+
+    // For N > 4, add the rest with 4-way unrolling
+    size_t j, x;
 
     switch (N % 4) {
     case 0:
@@ -351,6 +497,24 @@ inline void productVecMat(VectorClass *A, Numeric *M, VectorClass *X, VectorClas
         }
         break;
 
+    case 1: {
+        const size_t Nm1 = N-1;
+        for (i = 0; i < N; i++) {
+            // manual unrolling
+            VectorClass V[4];
+            for (j = 0; j < 4; j++)
+                V[j] = A[j] * M[j];
+
+            for (x = 4; x < Nm1; x+=4) {
+                for (j = 0; j < 4; j++)
+                    V[j] = mul_add(A[x+j], M[x+j], V[j]);
+            }
+            X[i] = mul_add(A[Nm1], M[Nm1], (V[0]+V[1])+(V[2]+V[3]));
+            M += N;
+            Xmax = max(Xmax, abs(X[i]));
+        }
+        break;
+    }
     case 2:
         for (i = 0; i < N; i++) {
             // manual unrolling
@@ -480,6 +644,18 @@ inline void dotProduct3Vec(Numeric *A, VectorClass *B, VectorClass *C, VectorCla
             for (j = 0; j < 4; j++)
                 V[j] = mul_add(A[i+j]*B[i+j], C[i+j], V[j]);
         X = (V[0]+V[1])+(V[2]+V[3]);
+        break;
+    }
+
+    case 1: {
+        VectorClass V[4];
+        const size_t Nm1 = N-1;
+        for (j = 0; j < 4; j++)
+            V[j] = A[j] * B[j] * C[j];
+        for (i = 4; i < Nm1; i+=4)
+            for (j = 0; j < 4; j++)
+                V[j] = mul_add(A[i+j]*B[i+j], C[i+j], V[j]);
+        X = mul_add(A[Nm1]*B[Nm1], C[Nm1], (V[0]+V[1])+(V[2]+V[3]));
         break;
     }
 
