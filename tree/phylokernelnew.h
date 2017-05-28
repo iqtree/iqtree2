@@ -44,7 +44,10 @@ template <class VectorClass, const bool append>
 inline void sumVec(VectorClass *A, VectorClass &X, size_t N)
 {
     if (N == 1) {
-        X = A[0];
+        if (append)
+            X += A[0];
+        else
+            X = A[0];
         return;
     }
 
@@ -60,7 +63,7 @@ inline void sumVec(VectorClass *A, VectorClass &X, size_t N)
             V[0] += A[i];
             V[1] += A[i+1];
             V[2] += A[i+2];
-            V[2] += A[i+3];
+            V[3] += A[i+3];
         }
         if (append)
             X += (V[0] + V[1]) + (V[2] + V[3]);
