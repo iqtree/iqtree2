@@ -499,9 +499,9 @@ void ModelCodon::computeRateAttributes() {
                 attr |= CA_NONSYNONYMOUS;
                 
                 
-            int nt_changes = ((i/16) != (j/16)) + (((i%16)/4) != ((j%16)/4)) + ((i%4) != (j%4));
-            int aa1 = strchr(symbols_protein, phylo_tree->aln->genetic_code[i]) - symbols_protein;
-            int aa2 = strchr(symbols_protein, phylo_tree->aln->genetic_code[j]) - symbols_protein;
+            int nt_changes = ((codoni/16) != (codonj/16)) + (((codoni%16)/4) != ((codonj%16)/4)) + ((codoni%4) != (codonj%4));
+            int aa1 = strchr(symbols_protein, phylo_tree->aln->genetic_code[codoni]) - symbols_protein;
+            int aa2 = strchr(symbols_protein, phylo_tree->aln->genetic_code[codonj]) - symbols_protein;
             ASSERT(aa1 >= 0 && aa1 < 20 && aa2 >= 0 && aa2 < 20);
             if (nt_changes < aa_cost_change[aa1*20+aa2]) {
                 aa_cost_change[aa1*20+aa2] = aa_cost_change[aa2*20+aa1] = nt_changes;
