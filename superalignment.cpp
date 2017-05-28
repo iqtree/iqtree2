@@ -609,6 +609,12 @@ Alignment *SuperAlignment::concatenateAlignments(IntVector &ids) {
     aln->pattern_index.clear();
     aln->STATE_UNKNOWN = partitions[ids[0]]->STATE_UNKNOWN;
     aln->genetic_code = partitions[ids[0]]->genetic_code;
+    if (aln->seq_type == SEQ_CODON) {
+    	aln->codon_table = new char[aln->num_states];
+    	memcpy(aln->codon_table, partitions[ids[0]]->codon_table, aln->num_states);
+    	aln->non_stop_codon = new char[strlen(aln->genetic_code)];
+    	memcpy(aln->non_stop_codon, partitions[ids[0]]->non_stop_codon, strlen(aln->genetic_code));
+    }
 
     int site = 0;
     for (i = 0; i < ids.size(); i++) {

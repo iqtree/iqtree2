@@ -1996,7 +1996,6 @@ void Alignment::extractSubAlignment(Alignment *aln, IntVector &seq_id, int min_t
     	memcpy(codon_table, aln->codon_table, num_states);
     	non_stop_codon = new char[strlen(genetic_code)];
     	memcpy(non_stop_codon, aln->non_stop_codon, strlen(genetic_code));
-
     }
     site_pattern.resize(aln->getNSite(), -1);
     clear();
@@ -2040,6 +2039,12 @@ void Alignment::extractPatterns(Alignment *aln, IntVector &ptn_id) {
     seq_type = aln->seq_type;
     STATE_UNKNOWN = aln->STATE_UNKNOWN;
     genetic_code = aln->genetic_code;
+    if (seq_type == SEQ_CODON) {
+    	codon_table = new char[num_states];
+    	memcpy(codon_table, aln->codon_table, num_states);
+    	non_stop_codon = new char[strlen(genetic_code)];
+    	memcpy(non_stop_codon, aln->non_stop_codon, strlen(genetic_code));
+    }
     site_pattern.resize(aln->getNSite(), -1);
     clear();
     pattern_index.clear();
@@ -2069,6 +2074,12 @@ void Alignment::extractPatternFreqs(Alignment *aln, IntVector &ptn_freq) {
     num_states = aln->num_states;
     seq_type = aln->seq_type;
     genetic_code = aln->genetic_code;
+    if (seq_type == SEQ_CODON) {
+    	codon_table = new char[num_states];
+    	memcpy(codon_table, aln->codon_table, num_states);
+    	non_stop_codon = new char[strlen(genetic_code)];
+    	memcpy(non_stop_codon, aln->non_stop_codon, strlen(genetic_code));
+    }
     STATE_UNKNOWN = aln->STATE_UNKNOWN;
     site_pattern.resize(accumulate(ptn_freq.begin(), ptn_freq.end(), 0), -1);
     clear();
@@ -2100,6 +2111,12 @@ void Alignment::extractSites(Alignment *aln, IntVector &site_id) {
     seq_type = aln->seq_type;
     STATE_UNKNOWN = aln->STATE_UNKNOWN;
     genetic_code = aln->genetic_code;
+    if (seq_type == SEQ_CODON) {
+    	codon_table = new char[num_states];
+    	memcpy(codon_table, aln->codon_table, num_states);
+    	non_stop_codon = new char[strlen(genetic_code)];
+    	memcpy(non_stop_codon, aln->non_stop_codon, strlen(genetic_code));
+    }
     site_pattern.resize(site_id.size(), -1);
     clear();
     pattern_index.clear();
@@ -2310,6 +2327,12 @@ void Alignment::createBootstrapAlignment(Alignment *aln, IntVector* pattern_freq
     num_states = aln->num_states;
     seq_type = aln->seq_type;
     genetic_code = aln->genetic_code;
+    if (seq_type == SEQ_CODON) {
+    	codon_table = new char[num_states];
+    	memcpy(codon_table, aln->codon_table, num_states);
+    	non_stop_codon = new char[strlen(genetic_code)];
+    	memcpy(non_stop_codon, aln->non_stop_codon, strlen(genetic_code));
+    }
     STATE_UNKNOWN = aln->STATE_UNKNOWN;
     site_pattern.resize(nsite, -1);
     clear();
@@ -2534,6 +2557,12 @@ void Alignment::createGapMaskedAlignment(Alignment *masked_aln, Alignment *aln) 
     num_states = aln->num_states;
     seq_type = aln->seq_type;
     genetic_code = aln->genetic_code;
+    if (seq_type == SEQ_CODON) {
+    	codon_table = new char[num_states];
+    	memcpy(codon_table, aln->codon_table, num_states);
+    	non_stop_codon = new char[strlen(genetic_code)];
+    	memcpy(non_stop_codon, aln->non_stop_codon, strlen(genetic_code));
+    }
     STATE_UNKNOWN = aln->STATE_UNKNOWN;
     site_pattern.resize(nsite, -1);
     clear();
@@ -2597,6 +2626,12 @@ void Alignment::copyAlignment(Alignment *aln) {
     num_states = aln->num_states;
     seq_type = aln->seq_type;
     genetic_code = aln->genetic_code;
+    if (seq_type == SEQ_CODON) {
+    	codon_table = new char[num_states];
+    	memcpy(codon_table, aln->codon_table, num_states);
+    	non_stop_codon = new char[strlen(genetic_code)];
+    	memcpy(non_stop_codon, aln->non_stop_codon, strlen(genetic_code));
+    }
     STATE_UNKNOWN = aln->STATE_UNKNOWN;
     site_pattern.resize(nsite, -1);
     clear();
