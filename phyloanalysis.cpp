@@ -1752,6 +1752,20 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
     params.startCPUTime = getCPUTime();
     params.start_real_time = getRealTime();
 
+    int absent_states = 0;
+    if (iqtree.isSuperTree()) {
+        SuperAlignment *saln = (SuperAlignment*)iqtree.aln;
+        PhyloSuperTree *stree = (PhyloSuperTree*)&iqtree;
+        for (int i = 0; i < saln->partitions.size(); i++)
+            absent_states += saln->partitions[i]->checkAbsentStates("partition " + stree->part_info[i].name);
+    } else {
+        absent_states = iqtree.aln->checkAbsentStates("alignment");
+    }
+    if (absent_states > 0) {
+        outWarning(convertIntToString(absent_states) + " states (see above) are not present that may cause numerical problems");
+        cout << endl;
+    }
+
     // Make sure that no partial likelihood of IQ-TREE is initialized when PLL is used to save memory
     if (params.pll) {
         iqtree.deleteAllPartialLh();

@@ -103,6 +103,24 @@ double chi2prob (int deg, double chi2)
 } /* chi2prob */
 
 
+int Alignment::checkAbsentStates(string msg) {
+    double *state_freq = new double[num_states];
+    computeStateFreq(state_freq);
+    int count = 0;
+    for (int i = 0; i < num_states; i++)
+        if (state_freq[i] <= MIN_FREQUENCY) {
+            if (count == 0)
+                cout << "WARNING: " << convertStateBackStr(i);
+            else
+                cout << ", " << convertStateBackStr(i);
+            count++;
+        }
+    if (count)
+        cout << ((count >= 2) ? " are" : " is") << " not present in " << msg << " that may cause numerical problems" << endl;
+    delete[] state_freq;
+    return count;
+}
+
 void Alignment::checkSeqName() {
     ostringstream warn_str;
     StrVector::iterator it;
@@ -1391,7 +1409,7 @@ int Alignment::buildPattern(StrVector &sequences, char *sequence_type, int nseq,
             			ostringstream warn_str;
                         warn_str << "Sequence " << seq_names[seq] << " has ambiguous character " <<
                         		sequences[seq][site] << sequences[seq][site+1] << sequences[seq][site+2] <<
-                        		" at site " << site+1 << endl;
+                        		" at site " << site+1;
                         outWarning(warn_str.str());
             		}
             		state = STATE_UNKNOWN;
@@ -2204,7 +2222,7 @@ void Alignment::convertToCodonOrAA(Alignment *aln, char *gene_code_id, bool nt2a
                 if (state != STATE_UNKNOWN || state2 != STATE_UNKNOWN || state3 != STATE_UNKNOWN) {
                     ostringstream warn_str;
                     warn_str << "Sequence " << seq_names[seq] << " has ambiguous character " <<
-                        " at site " << site+1 << endl;
+                        " at site " << site+1;
                     outWarning(warn_str.str());
                 }
                 state = STATE_UNKNOWN;
@@ -3396,8 +3414,6 @@ void Alignment::convfreq(double *stateFrqArr) {
 		freq = stateFrqArr[i];
 		if (freq < MIN_FREQUENCY) {
 			stateFrqArr[i] = MIN_FREQUENCY;
-			if (!isStopCodon(i))
-				cout << "WARNING: " << convertStateBackStr(i) << " is not present in alignment that may cause numerical problems" << endl;
 		}
 		if (freq > maxfreq) {
 			maxfreq = freq;
