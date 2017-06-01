@@ -356,7 +356,7 @@ void SuperAlignment::createBootstrapAlignment(Alignment *aln, IntVector* pattern
             partitions.push_back(boot_aln);
         }
     } else {
-        outError("Wrong -bspec, either -bspec GENE or -bspec GENESITE");
+        outError("Wrong -bsam, either -bsam GENE or -bsam GENESITE");
     }
 	taxa_index = super_aln->taxa_index;
     countConstSite();
