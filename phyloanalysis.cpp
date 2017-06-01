@@ -63,7 +63,8 @@ void reportReferences(Params &params, ofstream &out, string &original_model) {
         out << "To cite ModelFinder please use: " << endl << endl
             << "Subha Kalyaanamoorthy, Bui Quang Minh, Thomas KF Wong, Arndt von Haeseler," << endl
             << "and Lars S Jermiin (2017) ModelFinder: Fast model selection for" << endl
-            << "accurate phylogenetic estimates. Nature Methods, in press." << endl << endl;
+            << "accurate phylogenetic estimates. Nature Methods, 14:587–589." << endl
+            << "http://dx.doi.org/10.1038/nmeth.4285" << endl << endl;
         if (original_model.find("ONLY") != string::npos || (original_model.substr(0,2)=="MF" && original_model.substr(0,3)!="MFP"))
             modelfinder_only = true;
     }
