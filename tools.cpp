@@ -2189,10 +2189,10 @@ void parseArg(int argc, char *argv[], Params &params) {
 					params.consensus_type = CT_NONE;
 				continue;
 			}
-			if (strcmp(argv[cnt], "-bspec") == 0) {
+			if (strcmp(argv[cnt], "-bspec") == 0 || strcmp(argv[cnt], "-bsam") == 0) {
 				cnt++;
 				if (cnt >= argc)
-					throw "Use -bspec <bootstrap_specification>";
+					throw "Use -bsam <bootstrap_specification>";
 				params.bootstrap_spec = argv[cnt];
 				continue;
 			}
@@ -2585,7 +2585,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -bb <#replicates>";
-                if (params.min_iterations != -1) {
+                if (params.stop_condition == SC_FIXED_ITERATION) {
                     outError("Ultrafast bootstrap does not work with -te or -n option");
                 }
 				params.gbo_replicates = convert_int(argv[cnt]);
@@ -2927,6 +2927,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.unsuccess_iteration = convert_int(argv[cnt]);
                 if (params.unsuccess_iteration <= 0)
                     throw "-nstop iterations must be positive";
+                params.max_iterations = max(params.max_iterations, params.unsuccess_iteration*10);
 				continue;
 			}
 			if (strcmp(argv[cnt], "-lsbran") == 0) {
@@ -3422,6 +3423,7 @@ void usage_iqtree(char* argv[], bool full_command) {
 //            << "  -iqpnni              Switch back to the old IQPNNI tree search algorithm" << endl
             << endl << "ULTRAFAST BOOTSTRAP:" << endl
             << "  -bb <#replicates>    Ultrafast bootstrap (>=1000)" << endl
+            << "  -bsam GENE|GENESITE  Resample GENE or GENE+SITE for partition (default: SITE)" << endl
             << "  -wbt                 Write bootstrap trees to .ufboot file (default: none)" << endl
             << "  -wbtl                Like -wbt but also writing branch lengths" << endl
 //            << "  -n <#iterations>     Minimum number of iterations (default: 100)" << endl

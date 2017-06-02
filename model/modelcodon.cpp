@@ -491,21 +491,23 @@ void ModelCodon::computeRateAttributes() {
             int nuc1, nuc2;
             int attr = 0;
             ts = tv = 0;
-            if (phylo_tree->aln->genetic_code[i] == phylo_tree->aln->genetic_code[j])
+            int codoni = phylo_tree->aln->codon_table[i];
+            int codonj = phylo_tree->aln->codon_table[j];
+            if (phylo_tree->aln->genetic_code[codoni] == phylo_tree->aln->genetic_code[codonj])
                 attr |= CA_SYNONYMOUS;
             else
                 attr |= CA_NONSYNONYMOUS;
                 
                 
-            int nt_changes = ((i/16) != (j/16)) + (((i%16)/4) != ((j%16)/4)) + ((i%4) != (j%4));
-            int aa1 = strchr(symbols_protein, phylo_tree->aln->genetic_code[i]) - symbols_protein;
-            int aa2 = strchr(symbols_protein, phylo_tree->aln->genetic_code[j]) - symbols_protein;
+            int nt_changes = ((codoni/16) != (codonj/16)) + (((codoni%16)/4) != ((codonj%16)/4)) + ((codoni%4) != (codonj%4));
+            int aa1 = strchr(symbols_protein, phylo_tree->aln->genetic_code[codoni]) - symbols_protein;
+            int aa2 = strchr(symbols_protein, phylo_tree->aln->genetic_code[codonj]) - symbols_protein;
             assert(aa1 >= 0 && aa1 < 20 && aa2 >= 0 && aa2 < 20);
             if (nt_changes < aa_cost_change[aa1*20+aa2]) {
                 aa_cost_change[aa1*20+aa2] = aa_cost_change[aa2*20+aa1] = nt_changes;
             }
             
-            if ((nuc1=i/16) != (nuc2=j/16)) {
+            if ((nuc1=codoni/16) != (nuc2=codonj/16)) {
                 if (abs(nuc1-nuc2)==2) { // transition 
                     attr |= CA_TRANSITION_1NT;
                     ts++;
@@ -514,7 +516,7 @@ void ModelCodon::computeRateAttributes() {
                     tv++;
                 }
             }
-            if ((nuc1=(i%16)/4) != (nuc2=(j%16)/4)) {
+            if ((nuc1=(codoni%16)/4) != (nuc2=(codonj%16)/4)) {
                 if (abs(nuc1-nuc2)==2) { // transition
                     attr |= CA_TRANSITION_2NT;
                     ts++;
@@ -523,7 +525,7 @@ void ModelCodon::computeRateAttributes() {
                     tv++;
                 }
             }
-            if ((nuc1=i%4) != (nuc2=j%4)) {
+            if ((nuc1=codoni%4) != (nuc2=codonj%4)) {
                 if (abs(nuc1-nuc2)==2) { // transition
                     attr |= CA_TRANSITION_3NT;
                     ts++;
@@ -579,15 +581,18 @@ void ModelCodon::combineRateNTFreq() {
         for (j = 0; j < num_states; j++)  {
             if (this_rate[j] == 0.0)
                 continue;
+
+            int codoni = phylo_tree->aln->codon_table[i];
+            int codonj = phylo_tree->aln->codon_table[j];
             int nuc1, nuc2;
                 
-            if ((nuc1=i/16) != (nuc2=j/16)) {
+            if ((nuc1=codoni/16) != (nuc2=codonj/16)) {
                 this_rate[j] *= ntfreq[nuc2];
             }
-            if ((nuc1=(i%16)/4) != (nuc2=(j%16)/4)) {
+            if ((nuc1=(codoni%16)/4) != (nuc2=(codonj%16)/4)) {
                 this_rate[j] *= ntfreq[nuc2+4];
             }
-            if ((nuc1=i%4) != (nuc2=j%4)) {
+            if ((nuc1=codoni%4) != (nuc2=codonj%4)) {
                 this_rate[j] *= ntfreq[nuc2+8];
             }
         }
@@ -627,8 +632,8 @@ void ModelCodon::readCodonModel(istream &in, bool reset_params) {
 		int nt3 = phylo_tree->aln->convertState(codons[i][2], SEQ_DNA);
 		if (nt1 > 3 || nt2 > 3 || nt3 > 3)
 			outError("Wrong codon triplet ", codons[i]);
-		state_map[i] = nt1*16+nt2*4+nt3;
-		if (phylo_tree->aln->isStopCodon(state_map[i]))
+		state_map[i] = phylo_tree->aln->non_stop_codon[nt1*16+nt2*4+nt3];
+		if (phylo_tree->aln->isStopCodon(state_map[i]) || state_map[i] == STATE_INVALID)
 			outError("Stop codon encountered");
 		if (verbose_mode >= VB_MAX)
 			cout << " " << codons[i] << " " << state_map[i];
@@ -977,9 +982,9 @@ double ModelCodon::optimizeParameters(double gradient_epsilon) {
 	// by BFGS algorithm
 	setVariables(variables);
 	setBounds(lower_bound, upper_bound, bound_check);
-//    if (phylo_tree->params->optimize_alg.find("BFGS-B") == string::npos)
-//        score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound, bound_check, max(gradient_epsilon, TOL_RATE));
-//    else
+    if (phylo_tree->params->optimize_alg.find("BFGS-B") == string::npos)
+        score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound, bound_check, max(gradient_epsilon, TOL_RATE));
+    else
         score = -L_BFGS_B(ndim, variables+1, lower_bound+1, upper_bound+1, max(gradient_epsilon, TOL_RATE));
 
 	bool changed = getVariables(variables);

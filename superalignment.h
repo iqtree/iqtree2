@@ -124,6 +124,13 @@ public:
     virtual Alignment *removeIdenticalSeq(string not_remove, bool keep_two, StrVector &removed_seqs, StrVector &target_seqs);
 
 
+    /*
+        check if some state is absent, which may cause numerical issues
+        @param msg additional message into the warning
+        @return number of absent states in the alignment
+    */
+    virtual int checkAbsentStates(string msg);
+
 	/**
 		Quit if some sequences contain only gaps or missing data
 	*/
