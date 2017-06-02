@@ -73,7 +73,8 @@ void reportReferences(Params &params, ofstream &out, string &original_model) {
         out << "To cite ModelFinder please use: " << endl << endl
             << "Subha Kalyaanamoorthy, Bui Quang Minh, Thomas KF Wong, Arndt von Haeseler," << endl
             << "and Lars S Jermiin (2017) ModelFinder: Fast model selection for" << endl
-            << "accurate phylogenetic estimates. Nature Methods, in press." << endl << endl;
+            << "accurate phylogenetic estimates. Nature Methods, 14:587–589." << endl
+            << "http://dx.doi.org/10.1038/nmeth.4285" << endl << endl;
         if (original_model.find("ONLY") != string::npos || (original_model.substr(0,2)=="MF" && original_model.substr(0,3)!="MFP"))
             modelfinder_only = true;
     }
@@ -1826,6 +1827,20 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
     params.startCPUTime = getCPUTime();
     params.start_real_time = getRealTime();
 
+    int absent_states = 0;
+    if (iqtree.isSuperTree()) {
+        SuperAlignment *saln = (SuperAlignment*)iqtree.aln;
+        PhyloSuperTree *stree = (PhyloSuperTree*)&iqtree;
+        for (int i = 0; i < saln->partitions.size(); i++)
+            absent_states += saln->partitions[i]->checkAbsentStates("partition " + stree->part_info[i].name);
+    } else {
+        absent_states = iqtree.aln->checkAbsentStates("alignment");
+    }
+    if (absent_states > 0) {
+        outWarning(convertIntToString(absent_states) + " states (see above) are not present that may cause numerical problems");
+        cout << endl;
+    }
+
     // Make sure that no partial likelihood of IQ-TREE is initialized when PLL is used to save memory
     if (params.pll) {
         iqtree.deleteAllPartialLh();
@@ -2879,7 +2894,7 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
     tree->setCheckpoint(checkpoint);
     if (params.min_branch_length <= 0.0) {
         params.min_branch_length = 1e-6;
-        if (tree->getAlnNSite() >= 100000) {
+        if (!tree->isSuperTree() && tree->getAlnNSite() >= 100000) {
             params.min_branch_length = 0.1 / (tree->getAlnNSite());
             tree->num_precision = max((int)ceil(-log10(Params::getInstance().min_branch_length))+1, 6);
             cout.precision(12);

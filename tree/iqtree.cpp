@@ -2786,7 +2786,7 @@ void IQTree::refineBootTrees() {
 		boot_tree->printTree(ostr, WT_TAXON_ID | WT_SORT_TAXA);
 		boot_trees[sample] = ostr.str();
 		boot_logl[sample] = boot_tree->curScore;
-        ostr.seekg(0, ios::beg);
+        ostr.seekp(0, ios::beg);
         boot_tree->printTree(ostr, WT_BR_LEN);
         boot_trees_brlen[sample] = ostr.str();
 

@@ -340,6 +340,13 @@ public:
      */
     int getMaxSeqNameLength();
 
+    /*
+        check if some state is absent, which may cause numerical issues
+        @param msg additional message into the warning
+        @return number of absent states in the alignment
+    */
+    virtual int checkAbsentStates(string msg);
+
     /**
             check proper and undupplicated sequence names
      */

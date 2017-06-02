@@ -1337,7 +1337,8 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInf
         // compute distance between gene_sets
 		for (int part1 = 0; part1 < gene_sets.size()-1; part1++)
 			for (int part2 = part1+1; part2 < gene_sets.size(); part2++)
-			if (super_aln->partitions[gene_sets[part1][0]]->seq_type == super_aln->partitions[gene_sets[part2][0]]->seq_type)
+			if (super_aln->partitions[gene_sets[part1][0]]->seq_type == super_aln->partitions[gene_sets[part2][0]]->seq_type &&
+                super_aln->partitions[gene_sets[part1][0]]->genetic_code == super_aln->partitions[gene_sets[part2][0]]->genetic_code)
             {
 				// only merge partitions of the same data type
                 dist[num_pairs] = fabs(lenvec[part1] - lenvec[part2]);

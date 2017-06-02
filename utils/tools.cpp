@@ -2237,10 +2237,10 @@ void parseArg(int argc, char *argv[], Params &params) {
 					params.consensus_type = CT_NONE;
 				continue;
 			}
-			if (strcmp(argv[cnt], "-bspec") == 0) {
+			if (strcmp(argv[cnt], "-bspec") == 0 || strcmp(argv[cnt], "-bsam") == 0) {
 				cnt++;
 				if (cnt >= argc)
-					throw "Use -bspec <bootstrap_specification>";
+					throw "Use -bsam <bootstrap_specification>";
 				params.bootstrap_spec = argv[cnt];
 				continue;
 			}
@@ -3532,6 +3532,7 @@ void usage_iqtree(char* argv[], bool full_command) {
 //            << "  -iqpnni              Switch back to the old IQPNNI tree search algorithm" << endl
             << endl << "ULTRAFAST BOOTSTRAP:" << endl
             << "  -bb <#replicates>    Ultrafast bootstrap (>=1000)" << endl
+            << "  -bsam GENE|GENESITE  Resample GENE or GENE+SITE for partition (default: SITE)" << endl
             << "  -wbt                 Write bootstrap trees to .ufboot file (default: none)" << endl
             << "  -wbtl                Like -wbt but also writing branch lengths" << endl
 //            << "  -n <#iterations>     Minimum number of iterations (default: 100)" << endl
