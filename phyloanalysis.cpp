@@ -2761,7 +2761,7 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
     tree->setCheckpoint(checkpoint);
     if (params.min_branch_length <= 0.0) {
         params.min_branch_length = 1e-6;
-        if (tree->getAlnNSite() >= 100000) {
+        if (!tree->isSuperTree() && tree->getAlnNSite() >= 100000) {
             params.min_branch_length = 0.1 / (tree->getAlnNSite());
             tree->num_precision = max((int)ceil(-log10(Params::getInstance().min_branch_length))+1, 6);
             cout.precision(12);
