@@ -742,7 +742,10 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
 			curParsTree = getTreeString();
         } else if (params->start_tree == STT_PARSIMONY) {
             /********* Create parsimony tree using IQ-TREE *********/
+            rooted = false;
             computeParsimonyTree(NULL, aln);
+            if (orig_rooted)
+                convertToRooted();
             curParsTree = getTreeString();
 
 /* TODO: this does not work properly with partition model
@@ -766,9 +769,7 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
             doRandomNNIs();
 //            generateRandomTree(YULE_HARDING);
             wrapperFixNegativeBranch(true);
-            rooted = false;
-            if (orig_rooted)
-                convertToRooted();
+            ASSERT(rooted == orig_rooted);
             string randTree = getTreeString();
 //            if (isMixlen()) {
 //                randTree = optimizeBranches(1);
