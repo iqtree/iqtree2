@@ -1341,8 +1341,8 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInf
 #pragma omp parallel for private(i) schedule(dynamic) if(!params.model_test_and_tree)
 #endif
         for (int pair = 0; pair < num_pairs; pair++) {
-            int part1 = distID[pair] >> 16;
-            int part2 = distID[pair] & ((1<<16)-1);
+            int part1 = distID[pair].first;
+            int part2 = distID[pair].second;
             ASSERT(part1 != part2);
             IntVector merged_set;
             merged_set.insert(merged_set.end(), gene_sets[part1].begin(), gene_sets[part1].end());
