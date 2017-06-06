@@ -704,8 +704,8 @@ void printOutfilesInfo(Params &params, string &original_model, IQTree &tree) {
 		if (raxml_format_printed)
 			 cout << "           in RAxML format:      " << params.out_prefix << ".best_scheme" << endl;
 	}
-	if (tree.getRate()->getGammaShape() > 0 && params.print_site_rate)
-		cout << "  Gamma-distributed rates:       " << params.out_prefix << ".rate"
+	if ((tree.getRate()->getGammaShape() > 0 || params.partition_file) && params.print_site_rate)
+		cout << "  Site-specific rates:           " << params.out_prefix << ".rate"
 				<< endl;
 
 	if ((tree.getRate()->isSiteSpecificRate() || tree.getRate()->getPtnCat(0) >= 0) && params.print_site_rate)

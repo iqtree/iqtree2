@@ -1489,19 +1489,26 @@ double PhyloTree::computeLikelihoodBranchEigen(PhyloNeighbor *dad_branch, PhyloN
  ******************************************************/
 
 
-void PhyloTree::initMarginalAncestralState(bool &orig_kernel_nonrev) {
+void PhyloTree::initMarginalAncestralState(ostream &out, bool &orig_kernel_nonrev, double* &ptn_ancestral_prob, int* &ptn_ancestral_seq) {
     orig_kernel_nonrev = params->kernel_nonrev;
     if (!orig_kernel_nonrev) {
         // switch to nonrev kernel to compute _pattern_lh_cat_state
         params->kernel_nonrev = true;
         setLikelihoodKernel(sse, num_threads);
-        initializeAllPartialLh();
+        clearAllPartialLH();
     }
-    size_t nptn = aln->size();
+    size_t nptn = get_safe_upper_limit(aln->size());
     size_t nstates = model->num_states;
     size_t ncat_mix = (model_factory->fused_mix_rate) ? site_rate->getNRate() : site_rate->getNRate()*model->getNMixtures();
 
-    _pattern_lh_cat_state = aligned_alloc<double>(get_safe_upper_limit(nptn)*nstates*ncat_mix);
+    ptn_ancestral_prob = aligned_alloc<double>(nptn*nstates);
+    ptn_ancestral_seq = aligned_alloc<int>(nptn);
+    _pattern_lh_cat_state = aligned_alloc<double>(nptn*nstates*ncat_mix);
+    out << "Node\tSite\tState";
+    for (size_t i = 0; i < nstates; i++)
+        out << "\tp_" << aln->convertStateBackStr(i);
+    out << endl;
+
 }
 
 void PhyloTree::computeMarginalAncestralState(PhyloNeighbor *dad_branch, PhyloNode *dad,
@@ -1557,13 +1564,34 @@ void PhyloTree::computeMarginalAncestralState(PhyloNeighbor *dad_branch, PhyloNo
 
 }
 
-void PhyloTree::endMarginalAncestralState(bool orig_kernel_nonrev) {
+void PhyloTree::writeMarginalAncestralState(ostream &out, PhyloNode *node, double *ptn_ancestral_prob, int *ptn_ancestral_seq) {
+    size_t site, nsites = aln->getNSite(), nstates = model->num_states;
+    for (site = 0; site < nsites; site++) {
+        int ptn = aln->getPatternID(site);
+        out << node->name << "\t" << site+1 << "\t";
+//        if (params->print_ancestral_sequence == AST_JOINT)
+//            out << aln->convertStateBackStr(joint_ancestral_node[ptn]) << "\t";
+        out << aln->convertStateBackStr(ptn_ancestral_seq[ptn]);
+        double *state_prob = ptn_ancestral_prob + ptn*nstates;
+        for (size_t j = 0; j < nstates; j++) {
+            out << "\t" << state_prob[j];
+        }
+        out << endl;
+    }
+
+}
+
+void PhyloTree::endMarginalAncestralState(bool orig_kernel_nonrev, double* &ptn_ancestral_prob, int* &ptn_ancestral_seq) {
     if (!orig_kernel_nonrev) {
         // switch back to REV kernel
         params->kernel_nonrev = orig_kernel_nonrev;
         setLikelihoodKernel(sse, num_threads);
         clearAllPartialLH();
     }
+    aligned_free(_pattern_lh_cat_state);
+    aligned_free(ptn_ancestral_seq);
+    aligned_free(ptn_ancestral_prob);
+    _pattern_lh_cat_state = NULL;
 }
 
 /*

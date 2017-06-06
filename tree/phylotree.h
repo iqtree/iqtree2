@@ -952,7 +952,7 @@ public:
     /**
         initialize computing ancestral sequence probability for an internal node by marginal reconstruction
     */
-    void initMarginalAncestralState(bool &orig_kernel_nonrev);
+    void initMarginalAncestralState(ostream &out, bool &orig_kernel_nonrev, double* &ptn_ancestral_prob, int* &ptn_ancestral_seq);
 
     /**
         compute ancestral sequence probability for an internal node by marginal reconstruction
@@ -964,10 +964,12 @@ public:
     void computeMarginalAncestralState(PhyloNeighbor *dad_branch, PhyloNode *dad,
         double *ptn_ancestral_prob, int *ptn_ancestral_seq);
 
+    void writeMarginalAncestralState(ostream &out, PhyloNode *node, double *ptn_ancestral_prob, int *ptn_ancestral_seq);
+
     /**
         end computing ancestral sequence probability for an internal node by marginal reconstruction
     */
-    void endMarginalAncestralState(bool orig_kernel_nonrev);
+    void endMarginalAncestralState(bool orig_kernel_nonrev, double* &ptn_ancestral_prob, int* &ptn_ancestral_seq);
 
     /**
      	 compute the joint ancestral states at a pattern (Pupko et al. 2000)
