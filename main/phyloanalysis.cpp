@@ -1737,7 +1737,15 @@ void printMiscInfo(Params &params, IQTree &iqtree, double *pattern_lh) {
 		cout << endl << "BEST SCORE FOUND : " << iqtree.getBestScore()<< endl;
 		string mhrate_file = params.out_prefix;
 		mhrate_file += ".mhrate";
-		iqtree.getRate()->writeSiteRates(mhrate_file.c_str());
+        try {
+            ofstream out;
+            out.exceptions(ios::failbit | ios::badbit);
+            out.open(mhrate_file.c_str());
+            iqtree.writeSiteRates(out);
+            out.close();
+        } catch (ios::failure) {
+            outError(ERR_WRITE_OUTPUT, mhrate_file);
+        }
 
 		if (params.print_site_lh) {
 			string site_lh_file = params.out_prefix;
@@ -1749,24 +1757,32 @@ void printMiscInfo(Params &params, IQTree &iqtree, double *pattern_lh) {
 	if (params.print_site_rate) {
 		string rate_file = params.out_prefix;
 		rate_file += ".rate";
-		iqtree.getRate()->writeSiteRates(rate_file.c_str());
-		if (iqtree.isSuperTree()) {
-			PhyloSuperTree *stree = (PhyloSuperTree*) &iqtree;
-			int part = 0;
-			try {
-				ofstream out;
-				out.exceptions(ios::failbit | ios::badbit);
-				out.open(rate_file.c_str());
-				for (PhyloSuperTree::iterator it = stree->begin(); it != stree->end(); it++, part++) {
-					out << "SITE RATES FOR PARTITION " << stree->part_info[part].name << ":" << endl;
-					(*it)->getRate()->writeSiteRates(out);
-				}
-				cout << "Site rates printed to " << rate_file << endl;
-				out.close();
-			} catch (ios::failure) {
-				outError(ERR_WRITE_OUTPUT, rate_file);
-			}
-		}
+        try {
+            ofstream out;
+            out.exceptions(ios::failbit | ios::badbit);
+            out.open(rate_file.c_str());
+            out << "# Site-specific subtitution rates determined by empirical Bayesian method" << endl
+                << "# This file can be read in MS Excel or in R with command:" << endl
+                << "#   tab=read.table('" <<  params.out_prefix << ".rate',header=TRUE)" << endl
+                << "# Columns are tab-separated with following meaning:" << endl;
+            if (iqtree.isSuperTree()) {
+                out << "#   Part:   Partition ID (1=" << ((PhyloSuperTree*)&iqtree)->part_info[0].name << ", etc)" << endl
+                    << "#   Site:   Site ID within partition (starting from 1 for each partition)" << endl;
+            } else
+                out << "#   Site:   Alignment site ID" << endl;
+
+            out << "#   Rate:   Posterior mean site rate weighted by posterior probability" << endl
+                << "#   Cat:    Category with highest posterior (0=invariable, 1=slow, etc)" << endl
+                << "#   C_Rate: Corresponding rate of highest category" << endl;
+            if (iqtree.isSuperTree())
+                out << "Part\t";
+            out << "Site\tRate\tCat\tC_Rate" << endl;
+            iqtree.writeSiteRates(out);
+            out.close();
+        } catch (ios::failure) {
+            outError(ERR_WRITE_OUTPUT, rate_file);
+        }
+        cout << "Site rates printed to " << rate_file << endl;
 	}
 
     if (params.fixed_branch_length == BRLEN_SCALE) {

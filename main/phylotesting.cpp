@@ -462,6 +462,7 @@ void printAncestralSequences(const char *out_prefix, PhyloTree *tree, AncestralS
 		ofstream out;
 		out.exceptions(ios::failbit | ios::badbit);
 		out.open(filename.c_str());
+        out.setf(ios::fixed, ios::floatfield);
         out.precision(5);
 
 //		ofstream outseq;
@@ -480,6 +481,34 @@ void printAncestralSequences(const char *out_prefix, PhyloTree *tree, AncestralS
 //            outseq << (tree->nodeNum-tree->leafNum) << " " << nsites << endl;
 //
 //        int name_width = max(tree->aln->getMaxSeqNameLength(),6)+10;
+
+        out << "# Ancestral state reconstruction for all nodes in " << tree->params->out_prefix << ".treefile" << endl
+            << "# This file can be read in MS Excel or in R with command:" << endl
+            << "#   tab=read.table('" <<  tree->params->out_prefix << ".state',header=TRUE)" << endl
+            << "# Columns are tab-separated with following meaning:" << endl
+            << "#   Node:  Node name in the tree" << endl;
+        if (tree->isSuperTree()) {
+            PhyloSuperTree *stree = (PhyloSuperTree*)tree;
+            out << "#   Part:  Partition ID (1=" << stree->part_info[0].name << ", etc)" << endl
+                << "#   Site:  Site ID within partition (starting from 1 for each partition)" << endl;
+        } else
+            out << "#   Site:  Alignment site ID" << endl;
+
+        out << "#   State: Most likely state assignment" << endl
+            << "#   p_X:   Posterior probability for state X (empirical Bayesian method)" << endl;
+
+        if (tree->isSuperTree()) {
+            PhyloSuperTree *stree = (PhyloSuperTree*)tree;
+            out << "Node\tPart\tSite\tState";
+            for (size_t i = 0; i < stree->front()->aln->num_states; i++)
+                out << "\tp_" << stree->front()->aln->convertStateBackStr(i);
+        } else {
+            out << "Node\tSite\tState";
+            for (size_t i = 0; i < tree->aln->num_states; i++)
+                out << "\tp_" << tree->aln->convertStateBackStr(i);
+        }
+        out << endl;
+
 
         bool orig_kernel_nonrev;
         tree->initMarginalAncestralState(out, orig_kernel_nonrev, marginal_ancestral_prob, marginal_ancestral_seq);

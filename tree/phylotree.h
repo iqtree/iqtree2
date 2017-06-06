@@ -1906,6 +1906,16 @@ public:
     void convertToRooted();
 
 
+	/**
+		write site-rates to a file in the following format:
+		1  rate_1
+		2  rate_2
+		....
+		This function will call computePatternRates()
+		@param out output stream to write rates
+	*/
+	virtual void writeSiteRates(ostream &out);
+
 protected:
 
     /**

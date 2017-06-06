@@ -1504,19 +1504,6 @@ void PhyloTree::initMarginalAncestralState(ostream &out, bool &orig_kernel_nonre
 
     ptn_ancestral_prob = aligned_alloc<double>(nptn*nstates);
     ptn_ancestral_seq = aligned_alloc<int>(nptn);
-    out << "# Ancestral state reconstruction for all nodes in " << params->out_prefix << ".treefile" << endl
-        << "# This file can be read in R with command line:" << endl
-        << "#   tab=read.table('" <<  params->out_prefix << ".state',header=TRUE)" << endl
-        << "# Columns are tab-separated with following meaning:" << endl
-        << "#   Node:  Node name in the tree" << endl
-        << "#   Site:  Alignment site ID" << endl
-        << "#   State: Most likely state assignment" << endl
-        << "#   p_X:   Posterior probability for state X (empirical Bayesian method)" << endl
-        << "Node\tSite\tState";
-    for (size_t i = 0; i < nstates; i++)
-        out << "\tp_" << aln->convertStateBackStr(i);
-    out << endl;
-
 }
 
 void PhyloTree::computeMarginalAncestralState(PhyloNeighbor *dad_branch, PhyloNode *dad,

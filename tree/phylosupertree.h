@@ -381,6 +381,17 @@ public:
     virtual void endMarginalAncestralState(bool orig_kernel_nonrev, double* &ptn_ancestral_prob, int* &ptn_ancestral_seq);
 
 
+	/**
+		write site-rates to a file in the following format:
+		1  rate_1
+		2  rate_2
+		....
+		This function will call computePatternRates()
+		@param out output stream to write rates
+	*/
+	virtual void writeSiteRates(ostream &out);
+
+
     /** True when mixed codon with other data type */
     bool rescale_codon_brlen;
     

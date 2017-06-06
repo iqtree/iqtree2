@@ -1585,21 +1585,6 @@ void PhyloSuperTree::initMarginalAncestralState(ostream &out, bool &orig_kernel_
 
     ptn_ancestral_prob = aligned_alloc<double>(total_size);
     ptn_ancestral_seq = aligned_alloc<int>(total_ptn);
-    out << "# Ancestral state reconstruction for all nodes in " << params->out_prefix << ".treefile" << endl
-        << "# This file can be read in R with command line:" << endl
-        << "#   tab=read.table('" <<  params->out_prefix << ".state',header=TRUE)" << endl
-        << "# Columns are tab-separated with following meaning:" << endl
-        << "#   Node:  Node name in the tree" << endl
-        << "#   Part:  Partition ID (1=" << part_info[0].name << ", etc)" << endl
-        << "#   Site:  Site ID within partition (starting from 1 for each partition)" << endl
-        << "#   State: Most likely state assignment" << endl
-        << "#   p_X:   Posterior probability for state X (empirical Bayesian method)" << endl;
-    if (mixed_data)
-        out << "# **NOTE**: Header may not match some partitions due to mixed partition data" << endl;
-    out << "Node\tPart\tSite\tState";
-    for (size_t i = 0; i < front()->model->num_states; i++)
-        out << "\tp_" << front()->aln->convertStateBackStr(i);
-    out << endl;
 }
 
 /**
@@ -1676,3 +1661,38 @@ void PhyloSuperTree::endMarginalAncestralState(bool orig_kernel_nonrev,
     }
 }
 
+void PhyloSuperTree::writeSiteRates(ostream &out) {
+
+    out.setf(ios::fixed,ios::floatfield);
+    out.precision(5);
+    int part = 1;
+
+    for (iterator it = begin(); it != end(); it++, part++) {
+        DoubleVector pattern_rates;
+        IntVector pattern_cat;
+        (*it)->site_rate->computePatternRates(pattern_rates, pattern_cat);
+        if (pattern_rates.empty()) continue;
+        int nsite = (*it)->getAlnNSite();
+        int i;
+        
+        for (i = 0; i < nsite; i++) {
+            int ptn = (*it)->aln->getPatternID(i);
+            out << part << "\t" << i+1 << "\t";
+            if (pattern_rates[ptn] >= MAX_SITE_RATE) out << "100.0"; else out << pattern_rates[ptn];
+            int site_cat;
+            double cat_rate;
+            if ((*it)->site_rate->getPInvar() == 0.0) {
+                site_cat = pattern_cat[ptn]+1;
+                cat_rate = (*it)->site_rate->getRate(pattern_cat[ptn]);
+            } else {
+                site_cat = pattern_cat[ptn];
+                if (site_cat == 0)
+                    cat_rate = 0.0;
+                else
+                    cat_rate = (*it)->site_rate->getRate(pattern_cat[ptn]-1);
+            }
+            out << "\t" << site_cat << "\t" << cat_rate;
+            out << endl;
+        }
+    }
+}
