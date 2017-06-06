@@ -127,7 +127,7 @@ inline T *aligned_alloc(size_t size) {
     return (T*)mem;
 }
 
-inline void aligned_free(void *mem) {
+inline void aligned_free(void* mem) {
 #if defined WIN32 || defined _WIN32 || defined __WIN32__
     #if (defined(__MINGW32__) || defined(__clang__)) && defined(BINARY32)
         __mingw_aligned_free(mem);
@@ -952,7 +952,7 @@ public:
     /**
         initialize computing ancestral sequence probability for an internal node by marginal reconstruction
     */
-    void initMarginalAncestralState(ostream &out, bool &orig_kernel_nonrev, double* &ptn_ancestral_prob, int* &ptn_ancestral_seq);
+    virtual void initMarginalAncestralState(ostream &out, bool &orig_kernel_nonrev, double* &ptn_ancestral_prob, int* &ptn_ancestral_seq);
 
     /**
         compute ancestral sequence probability for an internal node by marginal reconstruction
@@ -961,15 +961,15 @@ public:
         @param dad dad of the target internal node
         @param[out] ptn_ancestral_prob pattern ancestral probability vector of dad_branch->node
     */
-    void computeMarginalAncestralState(PhyloNeighbor *dad_branch, PhyloNode *dad,
+    virtual void computeMarginalAncestralState(PhyloNeighbor *dad_branch, PhyloNode *dad,
         double *ptn_ancestral_prob, int *ptn_ancestral_seq);
 
-    void writeMarginalAncestralState(ostream &out, PhyloNode *node, double *ptn_ancestral_prob, int *ptn_ancestral_seq);
+    virtual void writeMarginalAncestralState(ostream &out, PhyloNode *node, double *ptn_ancestral_prob, int *ptn_ancestral_seq);
 
     /**
         end computing ancestral sequence probability for an internal node by marginal reconstruction
     */
-    void endMarginalAncestralState(bool orig_kernel_nonrev, double* &ptn_ancestral_prob, int* &ptn_ancestral_seq);
+    virtual void endMarginalAncestralState(bool orig_kernel_nonrev, double* &ptn_ancestral_prob, int* &ptn_ancestral_seq);
 
     /**
      	 compute the joint ancestral states at a pattern (Pupko et al. 2000)

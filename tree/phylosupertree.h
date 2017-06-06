@@ -354,6 +354,33 @@ public:
 
     virtual int computeParsimonyBranchObsolete(PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst = NULL);
 
+    /****************************************************************************
+            ancestral sequence reconstruction
+     ****************************************************************************/
+
+    /**
+        initialize computing ancestral sequence probability for an internal node by marginal reconstruction
+    */
+    virtual void initMarginalAncestralState(ostream &out, bool &orig_kernel_nonrev, double* &ptn_ancestral_prob, int* &ptn_ancestral_seq);
+
+    /**
+        compute ancestral sequence probability for an internal node by marginal reconstruction
+        (Yang, Kumar and Nei 1995)
+        @param dad_branch branch leading to an internal node where to obtain ancestral sequence
+        @param dad dad of the target internal node
+        @param[out] ptn_ancestral_prob pattern ancestral probability vector of dad_branch->node
+    */
+    virtual void computeMarginalAncestralState(PhyloNeighbor *dad_branch, PhyloNode *dad,
+        double *ptn_ancestral_prob, int *ptn_ancestral_seq);
+
+    virtual void writeMarginalAncestralState(ostream &out, PhyloNode *node, double *ptn_ancestral_prob, int *ptn_ancestral_seq);
+
+    /**
+        end computing ancestral sequence probability for an internal node by marginal reconstruction
+    */
+    virtual void endMarginalAncestralState(bool orig_kernel_nonrev, double* &ptn_ancestral_prob, int* &ptn_ancestral_seq);
+
+
     /** True when mixed codon with other data type */
     bool rescale_codon_brlen;
     

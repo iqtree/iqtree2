@@ -1555,3 +1555,124 @@ int PhyloSuperTree::fixNegativeBranch(bool force, Node *node, Node *dad) {
 	computeBranchLengths();
 	return fixed;
 }
+
+/****************************************************************************
+        ancestral sequence reconstruction
+ ****************************************************************************/
+
+void PhyloSuperTree::initMarginalAncestralState(ostream &out, bool &orig_kernel_nonrev, double* &ptn_ancestral_prob, int* &ptn_ancestral_seq) {
+    orig_kernel_nonrev = params->kernel_nonrev;
+    if (!orig_kernel_nonrev) {
+        // switch to nonrev kernel to compute _pattern_lh_cat_state
+        params->kernel_nonrev = true;
+        setLikelihoodKernel(sse, num_threads);
+        clearAllPartialLH();
+    }
+
+    size_t total_size = 0, total_ptn = 0;
+
+    bool mixed_data = false;
+
+    for (auto it = begin(); it != end(); it++) {
+        size_t nptn = (*it)->aln->size();
+        size_t nstates = (*it)->model->num_states;
+        (*it)->_pattern_lh_cat_state = (*it)->newPartialLh();
+        total_size += nptn*nstates;
+        total_ptn += nptn;
+        if (nstates != front()->model->num_states)
+            mixed_data = true;
+    }
+
+    ptn_ancestral_prob = aligned_alloc<double>(total_size);
+    ptn_ancestral_seq = aligned_alloc<int>(total_ptn);
+    out << "# Ancestral state reconstruction for all nodes in " << params->out_prefix << ".treefile" << endl
+        << "# This file can be read in R with command line:" << endl
+        << "#   tab=read.table('" <<  params->out_prefix << ".state',header=TRUE)" << endl
+        << "# Columns are tab-separated with following meaning:" << endl
+        << "#   Node:  Node name in the tree" << endl
+        << "#   Part:  Partition ID (1=" << part_info[0].name << ", etc)" << endl
+        << "#   Site:  Site ID within partition (starting from 1 for each partition)" << endl
+        << "#   State: Most likely state assignment" << endl
+        << "#   p_X:   Posterior probability for state X (empirical Bayesian method)" << endl;
+    if (mixed_data)
+        out << "# **NOTE**: Header may not match some partitions due to mixed partition data" << endl;
+    out << "Node\tPart\tSite\tState";
+    for (size_t i = 0; i < front()->model->num_states; i++)
+        out << "\tp_" << front()->aln->convertStateBackStr(i);
+    out << endl;
+}
+
+/**
+    compute ancestral sequence probability for an internal node by marginal reconstruction
+    (Yang, Kumar and Nei 1995)
+    @param dad_branch branch leading to an internal node where to obtain ancestral sequence
+    @param dad dad of the target internal node
+    @param[out] ptn_ancestral_prob pattern ancestral probability vector of dad_branch->node
+*/
+void PhyloSuperTree::computeMarginalAncestralState(PhyloNeighbor *dad_branch, PhyloNode *dad,
+    double *ptn_ancestral_prob, int *ptn_ancestral_seq) {
+
+    SuperNeighbor *snei = (SuperNeighbor*)dad_branch;
+    SuperNeighbor *snei_back = (SuperNeighbor*)dad_branch->node->findNeighbor(dad);
+    int part = 0;
+    for (auto it = begin(); it != end(); it++, part++) {
+        size_t nptn = (*it)->getAlnNPattern();
+        size_t nstates = (*it)->model->num_states;
+        if (snei->link_neighbors[part]) {
+            (*it)->computeMarginalAncestralState(snei->link_neighbors[part], (PhyloNode*)snei_back->link_neighbors[part]->node,
+                ptn_ancestral_prob, ptn_ancestral_seq);
+        } else {
+            // branch does not exist in partition tree
+            double eqprob = 1.0/nstates;
+            for (size_t ptn = 0; ptn < nptn; ptn++) {
+                for (size_t i = 0; i < nstates; i++)
+                    ptn_ancestral_prob[ptn*nstates+i] = eqprob;
+                ptn_ancestral_seq[ptn] = (*it)->aln->STATE_UNKNOWN;
+            }
+        }
+        ptn_ancestral_prob += nptn*nstates;
+        ptn_ancestral_seq += nptn;
+    }
+}
+
+void PhyloSuperTree::writeMarginalAncestralState(ostream &out, PhyloNode *node,
+    double *ptn_ancestral_prob, int *ptn_ancestral_seq) {
+    int part = 1;
+    for (auto it = begin(); it != end(); it++, part++) {
+        size_t site, nsites = (*it)->getAlnNSite(), nstates = (*it)->model->num_states;
+        for (site = 0; site < nsites; site++) {
+            int ptn = (*it)->aln->getPatternID(site);
+            out << node->name << "\t" << part << "\t" << site+1 << "\t";
+            out << (*it)->aln->convertStateBackStr(ptn_ancestral_seq[ptn]);
+            double *state_prob = ptn_ancestral_prob + ptn*nstates;
+            for (size_t j = 0; j < nstates; j++) {
+                out << "\t" << state_prob[j];
+            }
+            out << endl;
+        }
+        size_t nptn = (*it)->getAlnNPattern();
+        ptn_ancestral_prob += nptn*nstates;
+        ptn_ancestral_seq += nptn;
+    }
+}
+
+/**
+    end computing ancestral sequence probability for an internal node by marginal reconstruction
+*/
+void PhyloSuperTree::endMarginalAncestralState(bool orig_kernel_nonrev,
+    double* &ptn_ancestral_prob, int* &ptn_ancestral_seq) {
+    if (!orig_kernel_nonrev) {
+        // switch back to REV kernel
+        params->kernel_nonrev = orig_kernel_nonrev;
+        setLikelihoodKernel(sse, num_threads);
+        clearAllPartialLH();
+    }
+    aligned_free(ptn_ancestral_seq);
+    aligned_free(ptn_ancestral_prob);
+
+    for (auto it = rbegin(); it != rend(); it++) {
+        aligned_free((*it)->_pattern_lh_cat_state);
+        (*it)->_pattern_lh_cat_state = NULL;
+    }
+}
+
