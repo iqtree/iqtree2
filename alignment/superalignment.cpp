@@ -700,9 +700,11 @@ void SuperAlignment::orderPatternByNumChars(int pat_type) {
     
     // compute ordered_pattern
     ordered_pattern.clear();
-    UINT sum_scores[npart];
+//    UINT sum_scores[npart];
     for (part  = 0; part != partitions.size(); part++) {
         partitions[part]->orderPatternByNumChars(pat_type);
+        if (partitions[part]->ordered_pattern.empty())
+            outWarning("No informative sites in partition " + convertIntToString(part+1));
         // partial_partition
         for (vector<Pattern>::iterator pit = partitions[part]->ordered_pattern.begin(); pit != partitions[part]->ordered_pattern.end(); pit++) {
             Pattern pattern(*pit);
@@ -714,7 +716,7 @@ void SuperAlignment::orderPatternByNumChars(int pat_type) {
                     pattern[j] = partitions[part]->STATE_UNKNOWN;
             ordered_pattern.push_back(pattern);
         }
-        sum_scores[part] = partitions[part]->pars_lower_bound[0];
+//        sum_scores[part] = partitions[part]->pars_lower_bound[0];
     }
     // TODO compute pars_lower_bound (lower bound of pars score for remaining patterns)
 }

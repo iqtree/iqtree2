@@ -312,6 +312,9 @@ void PhyloSuperTree::readPartitionNexus(Params &params) {
     	cout << "NOTE: No CharPartition defined, use all CharSets" << endl;
     }
 
+    cout << endl << "Loading " << sets_block->charsets.size() << " partitions..." << endl;
+    cout << "No\tType\tSeqs\tSites\tModel\tName" << endl;
+
     for (it = sets_block->charsets.begin(); it != sets_block->charsets.end(); it++)
     	if (empty_partition || (*it)->char_partition != "") {
 			PartitionInfo info;
@@ -332,8 +335,8 @@ void PhyloSuperTree::readPartitionNexus(Params &params) {
             }
 			info.position_spec = (*it)->position_spec;
 			trimString(info.sequence_type);
-			cout << endl << "Reading partition " << info.name << " (model=" << info.model_name << ", aln=" <<
-				info.aln_file << ", seq=" << info.sequence_type << ", pos=" << ((info.position_spec.length() >= 20) ? info.position_spec.substr(0,20)+"..." : info.position_spec) << ") ..." << endl;
+//			cout << endl << "Reading partition " << info.name << " (model=" << info.model_name << ", aln=" <<
+//				info.aln_file << ", seq=" << info.sequence_type << ", pos=" << ((info.position_spec.length() >= 20) ? info.position_spec.substr(0,20)+"..." : info.position_spec) << ") ..." << endl;
             if (info.sequence_type != "" && Alignment::getSeqType(info.sequence_type.c_str()) == SEQ_UNKNOWN)
                 outError("Unknown sequence type " + info.sequence_type);
 			//info.mem_ptnlh = NULL;
@@ -371,7 +374,9 @@ void PhyloSuperTree::readPartitionNexus(Params &params) {
 			PhyloTree *tree = new PhyloTree(new_aln);
 			push_back(tree);
 			params = origin_params;
-			cout << new_aln->getNSeq() << " sequences and " << new_aln->getNSite() << " sites extracted" << endl;
+//			cout << new_aln->getNSeq() << " sequences and " << new_aln->getNSite() << " sites extracted" << endl;
+            cout << size() << "\t" << info.sequence_type << "\t" << new_aln->getNSeq()
+                 << "\t" << new_aln->getNSite() << "\t" << info.model_name << "\t" << info.name <<  endl;
     	}
 
     if (input_aln)

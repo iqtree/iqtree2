@@ -1553,7 +1553,7 @@ int Alignment::readPhylip(char *filename, char *sequence_type) {
 
     StrVector sequences;
     ostringstream err_str;
-    ifstream in;
+    igzstream in;
     int line_num = 1;
     // set the failbit and badbit
     in.exceptions(ios::failbit | ios::badbit);
@@ -1629,7 +1629,7 @@ int Alignment::readPhylipSequential(char *filename, char *sequence_type) {
 
     StrVector sequences;
     ostringstream err_str;
-    ifstream in;
+    igzstream in;
     int line_num = 1;
     // set the failbit and badbit
     in.exceptions(ios::failbit | ios::badbit);
@@ -1775,7 +1775,7 @@ int Alignment::readClustal(char *filename, char *sequence_type) {
 
 
     StrVector sequences;
-    ifstream in;
+    igzstream in;
     int line_num = 1;
     string line;
     num_states = 0;
@@ -1841,7 +1841,7 @@ int Alignment::readMSF(char *filename, char *sequence_type) {
 
 
     StrVector sequences;
-    ifstream in;
+    igzstream in;
     int line_num = 1;
     string line;
     num_states = 0;
@@ -3926,7 +3926,7 @@ void Alignment::computeCodonFreq(StateFreqType freq, double *state_freq, double 
 			}
 		}
 
-        double sum_stop=0.0;
+//        double sum_stop=0.0;
         double sum = 0.0;
 		for (i = 0; i < num_states; i++) {
             int codon = codon_table[i];
