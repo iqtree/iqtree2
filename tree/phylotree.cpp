@@ -5012,7 +5012,41 @@ bool PhyloTree::computeTraversalInfo(PhyloNeighbor *dad_branch, PhyloNode *dad, 
     return mem_slots.lock(dad_branch);
 }
 
-void PhyloTree::writeSiteRates(ostream &out) {
+void PhyloTree::writeSiteLh(ostream &out, SiteLoglType wsl, int partid) {
+    // error checking
+    if (!getModel()->isMixture()) {
+        if (wsl != WSL_RATECAT) {
+            outWarning("Switch now to '-wslr' as it is the only option for non-mixture model");
+            wsl = WSL_RATECAT;
+        }
+    } else {
+        // mixture model
+        if (wsl == WSL_MIXTURE_RATECAT && getModelFactory()->fused_mix_rate) {
+            outWarning("-wslmr is not suitable for fused mixture model, switch now to -wslm");
+            wsl = WSL_MIXTURE;
+        }
+    }
+    size_t i, nsites = getAlnNSite();
+	size_t ncat = getNumLhCat(wsl);
+	double *pattern_lh, *pattern_lh_cat;
+	pattern_lh = aligned_alloc<double>(getAlnNPattern());
+	pattern_lh_cat = aligned_alloc<double>(getAlnNPattern()*ncat);
+	computePatternLikelihood(pattern_lh, NULL, pattern_lh_cat, wsl);
+    for (i = 0; i < nsites; i++) {
+        if (partid >= 0)
+            out << partid << "\t";
+        size_t ptn = aln->getPatternID(i);
+        out << i+1 << "\t" << pattern_lh[ptn];
+        for (int j = 0; j < ncat; j++) {
+            out << "\t" << pattern_lh_cat[ptn*ncat+j];
+        }
+        out << endl;
+    }
+    aligned_free(pattern_lh_cat);
+    aligned_free(pattern_lh);
+}
+
+void PhyloTree::writeSiteRates(ostream &out, int partid) {
 	DoubleVector pattern_rates;
 	IntVector pattern_cat;
 	int ncategory = site_rate->computePatternRates(pattern_rates, pattern_cat);
@@ -5027,6 +5061,8 @@ void PhyloTree::writeSiteRates(ostream &out) {
     count.resize(ncategory, 0);
 	for (i = 0; i < nsite; i++) {
 		int ptn = aln->getPatternID(i);
+        if (partid >= 0)
+            out << partid << "\t";
 		out << i+1 << "\t";
 		if (pattern_rates[ptn] >= MAX_SITE_RATE) out << "100.0"; else out << pattern_rates[ptn];
 		//cout << i << " "<< ptn << " " << pattern_cat[ptn] << endl;

@@ -1661,38 +1661,16 @@ void PhyloSuperTree::endMarginalAncestralState(bool orig_kernel_nonrev,
     }
 }
 
-void PhyloSuperTree::writeSiteRates(ostream &out) {
-
-    out.setf(ios::fixed,ios::floatfield);
-    out.precision(5);
+void PhyloSuperTree::writeSiteLh(ostream &out, SiteLoglType wsl, int partid) {
     int part = 1;
+    for (auto it = begin(); it != end(); it++, part++)
+        (*it)->writeSiteLh(out, wsl, part);
+}
 
+void PhyloSuperTree::writeSiteRates(ostream &out, int partid) {
+
+    int part = 1;
     for (iterator it = begin(); it != end(); it++, part++) {
-        DoubleVector pattern_rates;
-        IntVector pattern_cat;
-        (*it)->site_rate->computePatternRates(pattern_rates, pattern_cat);
-        if (pattern_rates.empty()) continue;
-        int nsite = (*it)->getAlnNSite();
-        int i;
-        
-        for (i = 0; i < nsite; i++) {
-            int ptn = (*it)->aln->getPatternID(i);
-            out << part << "\t" << i+1 << "\t";
-            if (pattern_rates[ptn] >= MAX_SITE_RATE) out << "100.0"; else out << pattern_rates[ptn];
-            int site_cat;
-            double cat_rate;
-            if ((*it)->site_rate->getPInvar() == 0.0) {
-                site_cat = pattern_cat[ptn]+1;
-                cat_rate = (*it)->site_rate->getRate(pattern_cat[ptn]);
-            } else {
-                site_cat = pattern_cat[ptn];
-                if (site_cat == 0)
-                    cat_rate = 0.0;
-                else
-                    cat_rate = (*it)->site_rate->getRate(pattern_cat[ptn]-1);
-            }
-            out << "\t" << site_cat << "\t" << cat_rate;
-            out << endl;
-        }
+        (*it)->writeSiteRates(out, part);
     }
 }

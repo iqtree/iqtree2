@@ -389,7 +389,16 @@ public:
 		This function will call computePatternRates()
 		@param out output stream to write rates
 	*/
-	virtual void writeSiteRates(ostream &out);
+	virtual void writeSiteRates(ostream &out, int partid = -1);
+
+
+    /**
+        write site log likelihood to a output stream
+        @param out output stream
+        @param wsl write site-loglikelihood type
+        @param partid partition ID as first column of the line. -1 to omit it
+    */
+    virtual void writeSiteLh(ostream &out, SiteLoglType wsl, int partid = -1);
 
 
     /** True when mixed codon with other data type */

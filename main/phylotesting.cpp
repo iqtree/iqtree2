@@ -350,80 +350,54 @@ void printPartitionLh(const char*filename, PhyloTree *tree, double *ptn_lh,
 
 void printSiteLhCategory(const char*filename, PhyloTree *tree, SiteLoglType wsl) {
 
-    if (tree->isSuperTree()) {
-        cout << "WARNING: -wslm, -wslr do not work with partition models yet" << endl;
-        return;
-    }
-
     if (wsl == WSL_NONE || wsl == WSL_SITE)
         return;
-    // error checking
-    if (!tree->getModel()->isMixture()) {
-        if (wsl != WSL_RATECAT) {
-            outWarning("Switch now to '-wslr' as it is the only option for non-mixture model");
-            wsl = WSL_RATECAT;
-        }
-    } else {
-        // mixture model
-        if (wsl == WSL_MIXTURE_RATECAT && tree->getModelFactory()->fused_mix_rate) {
-            outWarning("-wslmr is not suitable for fused mixture model, switch now to -wslm");
-            wsl = WSL_MIXTURE;
+	int ncat = tree->getNumLhCat(wsl);
+    if (tree->isSuperTree()) {
+        PhyloSuperTree *stree = (PhyloSuperTree*)tree;
+        for (auto it = stree->begin(); it != stree->end(); it++) {
+            int part_ncat = (*it)->getNumLhCat(wsl);
+            if (part_ncat > ncat)
+                ncat = part_ncat;
         }
     }
-	int ncat = tree->getNumLhCat(wsl);
-	double *pattern_lh, *pattern_lh_cat;
 	int i;
-	pattern_lh = new double[tree->getAlnNPattern()];
-	pattern_lh_cat = new double[((size_t)tree->getAlnNPattern())*ncat];
-	tree->computePatternLikelihood(pattern_lh, NULL, pattern_lh_cat, wsl);
 
     
 	try {
 		ofstream out;
 		out.exceptions(ios::failbit | ios::badbit);
 		out.open(filename);
-		out << "Note : P(D|M) is the probability of site D given the model M (i.e., the site likelihood)" << endl;
-        if (wsl == WSL_RATECAT) {
-            out << "P(D|M,rr[i]) is the probability of site D given the model M and the relative rate" << endl;
-            out << "of evolution rr[i], where i is the class of rate to be considered." << endl;
-            out << "We have P(D|M) = \\sum_i P(i) x P(D|M,rr[i])." << endl << endl;
-            out << "Site   logP(D|M)       ";
-            for (i = 0; i < ncat; i++)
-                out << "log{P(" << i+1 << ")xP(D|M,rr[" << i+1 << "]=" << tree->getRate()->getRate(i)<< ")} ";
-        } else if (wsl == WSL_MIXTURE) {
-            out << "P(D|M[i]) is the probability of site D given the model M[i]," << endl;
-            out << "where i is the mixture class to be considered." << endl;
-            out << "We have P(D|M) = \\sum_i P(i) x P(D|M[i])." << endl << endl;
-            out << "Site   logP(D|M)       ";
-            for (i = 0; i < ncat; i++)
-                out << "log{P(" << i+1 << ")xP(D|M[" << i+1 << "])} ";
-        } else {
-            // WSL_MIXTURE_RATECAT
-            out << "P(D|M[i],rr[j]) is the probability of site D given the model M[i] and the relative rate" << endl;
-            out << "of evolution rr[j], where i and j are the mixture class and rate class, respectively." << endl;
-            out << "We have P(D|M) = \\sum_i \\sum_j P(i) x P(j) x P(D|M[i],rr[j])." << endl << endl;
-            out << "Site   logP(D|M)       ";
-            for (i = 0; i < tree->getModel()->getNMixtures(); i++)
-                for (int j = 0; j < tree->getRate()->getNRate(); j++) {
-                    out << "log{P(" << i+1 << ")xP(" << j+1 << ")xP(D|M[" << i+1 << "],rr[" << j+1 << "]=" << tree->getRate()->getRate(j) << ")} ";
-                }
-        }
+        out << "# Site likelihood per rate/mixture category" << endl
+            << "# This file can be read in MS Excel or in R with command:" << endl
+            << "#   tab=read.table('" <<  filename << "',header=TRUE,fill=TRUE)" << endl
+            << "# Columns are tab-separated with following meaning:" << endl;
+        if (tree->isSuperTree()) {
+            out << "#   Part:   Partition ID (1=" << ((PhyloSuperTree*)tree)->part_info[0].name << ", etc)" << endl
+                << "#   Site:   Site ID within partition (starting from 1 for each partition)" << endl;
+        } else
+            out << "#   Site:   Alignment site ID" << endl;
+
+        out << "#   LnL:    Logarithm of site likelihood" << endl
+            << "#           Thus, sum of LnL is equal to tree log-likelihood" << endl
+            << "#   LnLW_k: Logarithm of (category-k site likelihood times category-k weight)" << endl
+            << "#           Thus, sum of exp(LnLW_k) is equal to exp(LnL)" << endl;
+
+        if (tree->isSuperTree()) {
+            out << "Part\tSite\tLnL";
+        } else
+            out << "Site\tLnL";
+        for (i = 0; i < ncat; i++)
+            out << "\tLnLW_" << i+1;
 		out << endl;
-		IntVector pattern_index;
-		tree->aln->getSitePatternIndex(pattern_index);
-		for (i = 0; i < tree->getAlnNSite(); i++) {
-			out.width(6);
-			out << left << i+1 << " ";
-			out.width(15);
-			out << pattern_lh[pattern_index[i]] << " ";
-			for (int j = 0; j < ncat; j++) {
-				out.width(15);
-				out << pattern_lh_cat[pattern_index[i]*ncat+j] << " ";
-			}
-			out << endl;
-		}
+        out.precision(4);
+        out.setf(ios::fixed);
+
+        tree->writeSiteLh(out, wsl);
+
 		out.close();
 		cout << "Site log-likelihoods per category printed to " << filename << endl;
+        /*
         if (!tree->isSuperTree()) {
             cout << "Log-likelihood of constant sites: " << endl;
             double const_prob = 0.0;
@@ -437,12 +411,10 @@ void printSiteLhCategory(const char*filename, PhyloTree *tree, SiteLoglType wsl)
                 }
             cout << "Probability of const sites: " << const_prob << endl;
         }
+        */
 	} catch (ios::failure) {
 		outError(ERR_WRITE_OUTPUT, filename);
 	}
-
-	delete[] pattern_lh_cat;
-	delete[] pattern_lh;
 
 }
 
