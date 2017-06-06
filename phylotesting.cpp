@@ -1153,11 +1153,11 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInf
 	lenvec.resize(in_tree->size());
 
     double *dist = new double[in_tree->size()*(in_tree->size()-1)/2];
-    int *distID = new int[in_tree->size()*(in_tree->size()-1)/2];
+    pair<int,int> *distID = new pair<int,int>[in_tree->size()*(in_tree->size()-1)/2];
     
     // sort partition by computational cost for OpenMP effciency
 	for (i = 0; i < in_tree->size(); i++) {
-        distID[i] = i;
+        distID[i].first = i;
         Alignment *this_aln = in_tree->at(i)->aln;
         // computation cost is proportional to #sequences, #patterns, and #states
         dist[i] = -((double)this_aln->getNSeq())*this_aln->getNPattern()*this_aln->num_states;
@@ -1168,7 +1168,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInf
         quicksort(dist, 0, in_tree->size()-1, distID);
         if (verbose_mode >= VB_MED) {
             for (i = 0; i < in_tree->size(); i++) {
-                cout << i+1 << "\t" << in_tree->part_info[distID[i]].name << endl;
+                cout << i+1 << "\t" << in_tree->part_info[distID[i].first].name << endl;
             }
         }
     }
@@ -1182,7 +1182,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInf
 #pragma omp parallel for private(i) schedule(dynamic) reduction(+: lhsum, dfsum) if(parallel_over_partitions)
 #endif
 	for (int j = 0; j < in_tree->size(); j++) {
-        i = distID[j];
+        i = distID[j].first;
         PhyloTree *this_tree = in_tree->at(i);
 		// scan through models for this partition, assuming the information occurs consecutively
 		vector<ModelInfo> part_model_info;
@@ -1270,7 +1270,8 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInf
             {
 				// only merge partitions of the same data type
                 dist[num_pairs] = fabs(lenvec[part1] - lenvec[part2]);
-                distID[num_pairs] = (part1 << 16) | part2;
+                distID[num_pairs].first = part1;
+                distID[num_pairs].second = part2;
                 num_pairs++;
             }
         if (num_pairs > 0 && params.partfinder_rcluster < 100) {
@@ -1282,9 +1283,9 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInf
         // sort partition by computational cost for OpenMP effciency
         for (i = 0; i < num_pairs; i++) {
             // computation cost is proportional to #sequences, #patterns, and #states
-            Alignment *this_aln = in_tree->at(distID[i] >> 16)->aln;
+            Alignment *this_aln = in_tree->at(distID[i].first)->aln;
             dist[i] = -((double)this_aln->getNSeq())*this_aln->getNPattern()*this_aln->num_states;
-            this_aln = in_tree->at(distID[i] & ((1<<16)-1))->aln;
+            this_aln = in_tree->at(distID[i].second)->aln;
             dist[i] -= ((double)this_aln->getNSeq())*this_aln->getNPattern()*this_aln->num_states;
         }
         if (num_threads > 1 && num_pairs >= 1)
@@ -1294,8 +1295,8 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInf
 #pragma omp parallel for private(i) schedule(dynamic) if(!params.model_test_and_tree)
 #endif
         for (int pair = 0; pair < num_pairs; pair++) {
-            int part1 = distID[pair] >> 16;
-            int part2 = distID[pair] & ((1<<16)-1);
+            int part1 = distID[pair].first;
+            int part2 = distID[pair].second;
             assert(part1 != part2);
             IntVector merged_set;
             merged_set.insert(merged_set.end(), gene_sets[part1].begin(), gene_sets[part1].end());
