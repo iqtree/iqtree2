@@ -2982,10 +2982,10 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
  ******************************************************/
 
 #ifdef KERNEL_FIX_STATES
-template <class VectorClass, const bool SAFE_NUMERIC, const int nstates, const bool FMA, const bool SITE_MODEL>
+template <class VectorClass, const int nstates, const bool FMA, const bool SITE_MODEL>
 double PhyloTree::computeLikelihoodFromBufferSIMD()
 #else
-template <class VectorClass, const bool SAFE_NUMERIC, const bool FMA, const bool SITE_MODEL>
+template <class VectorClass, const bool FMA, const bool SITE_MODEL>
 double PhyloTree::computeLikelihoodFromBufferGenericSIMD()
 #endif
 {
@@ -3135,7 +3135,7 @@ double PhyloTree::computeLikelihoodFromBufferGenericSIMD()
 
     double tree_lh = horizontal_add(all_tree_lh);
 
-    if (!SAFE_NUMERIC && (std::isnan(tree_lh) || std::isinf(tree_lh)))
+    if (!safe_numeric && (std::isnan(tree_lh) || std::isinf(tree_lh)))
         outError("Numerical underflow (lh-from-buffer). Run again with the safe likelihood kernel via `-safe` option");
 
     ASSERT(!std::isnan(tree_lh) && !std::isinf(tree_lh) && "Numerical underflow for lh-from-buffer");

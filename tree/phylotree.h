@@ -719,6 +719,9 @@ public:
     /** vector size used by SIMD kernel */
     size_t vector_size;
 
+    /** true if using safe numeric for likelihood kernel */
+    bool safe_numeric;
+
     /** number of threads used for likelihood kernel */
     int num_threads;
 
@@ -881,10 +884,10 @@ public:
 //    template <class VectorClass, const int VCSIZE, const int nstates>
 //    double computeLikelihoodFromBufferEigenSIMD();
 
-    template <class VectorClass, const bool SAFE_NUMERIC, const int nstates, const bool FMA = false, const bool SITE_MODEL = false>
+    template <class VectorClass, const int nstates, const bool FMA = false, const bool SITE_MODEL = false>
     double computeLikelihoodFromBufferSIMD();
 
-    template <class VectorClass, const bool SAFE_NUMERIC, const bool FMA = false, const bool SITE_MODEL = false>
+    template <class VectorClass, const bool FMA = false, const bool SITE_MODEL = false>
     double computeLikelihoodFromBufferGenericSIMD();
 
     /*
@@ -947,13 +950,24 @@ public:
      ****************************************************************************/
 
     /**
+        initialize computing ancestral sequence probability for an internal node by marginal reconstruction
+    */
+    void initMarginalAncestralState(bool &orig_kernel_nonrev);
+
+    /**
         compute ancestral sequence probability for an internal node by marginal reconstruction
         (Yang, Kumar and Nei 1995)
         @param dad_branch branch leading to an internal node where to obtain ancestral sequence
         @param dad dad of the target internal node
         @param[out] ptn_ancestral_prob pattern ancestral probability vector of dad_branch->node
     */
-    void computeMarginalAncestralProbability(PhyloNeighbor *dad_branch, PhyloNode *dad, double *ptn_ancestral_prob);
+    void computeMarginalAncestralState(PhyloNeighbor *dad_branch, PhyloNode *dad,
+        double *ptn_ancestral_prob, int *ptn_ancestral_seq);
+
+    /**
+        end computing ancestral sequence probability for an internal node by marginal reconstruction
+    */
+    void endMarginalAncestralState(bool orig_kernel_nonrev);
 
     /**
      	 compute the joint ancestral states at a pattern (Pupko et al. 2000)
@@ -1947,9 +1961,14 @@ protected:
 
     /**
             internal pattern likelihoods per category, 
-            only stored after calling non-SSE computeLikelihood for efficiency purpose
     */
     double *_pattern_lh_cat;
+
+    /**
+            internal pattern likelihoods per category per state
+            will be computed if not NULL and using non-reversible kernel 
+    */
+    double *_pattern_lh_cat_state;
 
     /**
             associated substitution model

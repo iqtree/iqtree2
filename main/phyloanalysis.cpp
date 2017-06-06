@@ -725,8 +725,8 @@ void printOutfilesInfo(Params &params, string &original_model, IQTree &tree) {
 				<< endl;
 
     if (params.print_ancestral_sequence) {
-        cout << "  Ancestral state probabilities: " << params.out_prefix << ".ancestralprob" << endl;
-        cout << "  Ancestral sequences:           " << params.out_prefix << ".ancestralseq" << endl;
+        cout << "  Ancestral state:               " << params.out_prefix << ".state" << endl;
+//        cout << "  Ancestral sequences:           " << params.out_prefix << ".aseq" << endl;
     }
 
 	if (params.write_intermediate_trees)

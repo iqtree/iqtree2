@@ -87,6 +87,7 @@ void PhyloTree::init() {
     discard_saturated_site = true;
     _pattern_lh = NULL;
     _pattern_lh_cat = NULL;
+    _pattern_lh_cat_state = NULL;
     //root_state = STATE_UNKNOWN;
     root_state = 126;
     theta_all = NULL;
@@ -122,6 +123,7 @@ void PhyloTree::init() {
     is_opt_scaling = false;
     num_partial_lh_computations = 0;
     vector_size = 0;
+    safe_numeric = false;
 }
 
 PhyloTree::PhyloTree(Alignment *aln) : MTree(), CheckpointFactory() {
@@ -729,11 +731,12 @@ size_t PhyloTree::getBufferPartialLhSize() {
     size_t buffer_size = get_safe_upper_limit(block * model->num_states * 2) * aln->getNSeq();
     buffer_size += get_safe_upper_limit(block *(aln->STATE_UNKNOWN+1)) * (aln->getNSeq()+1);
     buffer_size += (block*2+model->num_states)*VECTOR_SIZE*num_threads;
-    if (!model->isReversible() || params->kernel_nonrev) {
-        buffer_size += get_safe_upper_limit(block)*(aln->STATE_UNKNOWN+1)*2;
-        buffer_size += block*2*VECTOR_SIZE*num_threads;
-        buffer_size += 3*block*model->num_states;
-    }
+
+    // always more buffer for non-rev kernel, in case switching between kernels
+    buffer_size += get_safe_upper_limit(block)*(aln->STATE_UNKNOWN+1)*2;
+    buffer_size += block*2*VECTOR_SIZE*num_threads;
+    buffer_size += 3*block*model->num_states;
+
     if (isMixlen()) {
         size_t nmix = getMixlen();
         buffer_size += nmix*(nmix+1)*VECTOR_SIZE + (nmix+3)*nmix*VECTOR_SIZE*num_threads;

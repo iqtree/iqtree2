@@ -457,58 +457,51 @@ void printAncestralSequences(const char *out_prefix, PhyloTree *tree, AncestralS
         tree->computeJointAncestralSequences(joint_ancestral);
     }
 
-    string filename = (string)out_prefix + ".ancestralprob";
-    string filenameseq = (string)out_prefix + ".ancestralseq";
+    string filename = (string)out_prefix + ".state";
+//    string filenameseq = (string)out_prefix + ".stateseq";
 
     try {
 		ofstream out;
 		out.exceptions(ios::failbit | ios::badbit);
 		out.open(filename.c_str());
+        out.precision(5);
 
-		ofstream outseq;
-		outseq.exceptions(ios::failbit | ios::badbit);
-		outseq.open(filenameseq.c_str());
+//		ofstream outseq;
+//		outseq.exceptions(ios::failbit | ios::badbit);
+//		outseq.open(filenameseq.c_str());
 
         NodeVector nodes;
         tree->getInternalNodes(nodes);
 		IntVector pattern_index;
 		tree->aln->getSitePatternIndex(pattern_index);
 
-        double *marginal_ancestral_prob = new double[nptn * tree->getModel()->num_states];
-        int *marginal_ancestral_seq = new int[nptn];
+        double *marginal_ancestral_prob = aligned_alloc<double>(get_safe_upper_limit(nptn) * tree->getModel()->num_states);
+        int *marginal_ancestral_seq = aligned_alloc<int>(get_safe_upper_limit(nptn));
 
-        out << "Node\tSite\tMargin";
+        out << "Node\tSite\tState";
         for (i = 0; i < nstates; i++)
             out << "\tp_" << tree->aln->convertStateBackStr(i);
         out << endl;
         
-        if (tree->params->print_ancestral_sequence == AST_JOINT)
-            outseq << 2*(tree->nodeNum-tree->leafNum) << " " << nsites << endl;
-        else
-            outseq << (tree->nodeNum-tree->leafNum) << " " << nsites << endl;
-        
-        int name_width = max(tree->aln->getMaxSeqNameLength(),6)+10;
+//        if (tree->params->print_ancestral_sequence == AST_JOINT)
+//            outseq << 2*(tree->nodeNum-tree->leafNum) << " " << nsites << endl;
+//        else
+//            outseq << (tree->nodeNum-tree->leafNum) << " " << nsites << endl;
+//
+//        int name_width = max(tree->aln->getMaxSeqNameLength(),6)+10;
+
+        bool orig_kernel_nonrev;
+        tree->initMarginalAncestralState(orig_kernel_nonrev);
 
         for (NodeVector::iterator it = nodes.begin(); it != nodes.end(); it++) {
             PhyloNode *node = (PhyloNode*)(*it);
             PhyloNode *dad = (PhyloNode*)node->neighbors[0]->node;
-            tree->computeMarginalAncestralProbability((PhyloNeighbor*)dad->findNeighbor(node), dad, marginal_ancestral_prob);
+            
+            tree->computeMarginalAncestralState((PhyloNeighbor*)dad->findNeighbor(node), dad,
+                marginal_ancestral_prob, marginal_ancestral_seq);
             
             int *joint_ancestral_node = joint_ancestral + (node->id - tree->leafNum)*nptn;
-            
-            // compute state with highest probability
-            for (i = 0; i < nptn; i++) {
-                double *prob = marginal_ancestral_prob + (i*nstates);
-                int state_best = 0;
-                for (j = 1; j < nstates; j++)
-                    if (prob[j] > prob[state_best])
-                        state_best = j;
-                //if (fabs(prob[state_best]-flat_prob) < 1e-5)
-                if (prob[state_best] < tree->params->min_ancestral_prob)
-                    state_best = STATE_INVALID;
-                marginal_ancestral_seq[i] = state_best;
-            }
-            
+
             // set node name if neccessary
             if (node->name.empty() || !isalpha(node->name[0])) {
                 node->name = "Node" + convertIntToString(node->id-tree->leafNum+1);
@@ -528,29 +521,31 @@ void printAncestralSequences(const char *out_prefix, PhyloTree *tree, AncestralS
             }
             
             // print ancestral sequences
-            outseq.width(name_width);
-            outseq << left << (node->name+"_marginal") << " ";
-            for (i = 0; i < nsites; i++) 
-                outseq << tree->aln->convertStateBackStr(marginal_ancestral_seq[pattern_index[i]]);
-            outseq << endl;
-            
-            if (tree->params->print_ancestral_sequence == AST_JOINT) {
-                outseq.width(name_width);
-                outseq << left << (node->name+"_joint") << " ";
-                for (i = 0; i < nsites; i++) 
-                    outseq << tree->aln->convertStateBackStr(joint_ancestral_node[pattern_index[i]]);
-                outseq << endl;
-            }
+//            outseq.width(name_width);
+//            outseq << left << node->name << " ";
+//            for (i = 0; i < nsites; i++) 
+//                outseq << tree->aln->convertStateBackStr(marginal_ancestral_seq[pattern_index[i]]);
+//            outseq << endl;
+//
+//            if (tree->params->print_ancestral_sequence == AST_JOINT) {
+//                outseq.width(name_width);
+//                outseq << left << (node->name+"_joint") << " ";
+//                for (i = 0; i < nsites; i++) 
+//                    outseq << tree->aln->convertStateBackStr(joint_ancestral_node[pattern_index[i]]);
+//                outseq << endl;
+//            }
         }
 
-        delete[] marginal_ancestral_seq;
-        delete[] marginal_ancestral_prob;
+        tree->endMarginalAncestralState(orig_kernel_nonrev);
+
+        aligned_free(marginal_ancestral_seq);
+        aligned_free(marginal_ancestral_prob);
         
 		out.close();
-        outseq.close();
+//        outseq.close();
 		cout << "Ancestral state probabilities printed to " << filename << endl;
-		cout << "Ancestral sequences printed to " << filenameseq << endl;
-        
+//		cout << "Ancestral sequences printed to " << filenameseq << endl;
+
 	} catch (ios::failure) {
 		outError(ERR_WRITE_OUTPUT, filename);
 	}

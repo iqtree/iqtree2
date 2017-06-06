@@ -863,7 +863,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.print_site_rate = false;
     params.print_trees_site_posterior = 0;
     params.print_ancestral_sequence = AST_NONE;
-    params.min_ancestral_prob = 0.95;
+    params.min_ancestral_prob = 0.0;
     params.print_tree_lh = false;
     params.lambda = 1;
     params.speed_conf = 1.0;
@@ -2426,8 +2426,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 					throw "Use -asr-min <probability>";
                 
                 params.min_ancestral_prob = convert_double(argv[cnt]);
-                if (params.min_ancestral_prob < 0.5 || params.min_ancestral_prob > 1)
-                    throw "Minimum ancestral probability [-asr-min] must be between 0.5 and 1.0";
+                if (params.min_ancestral_prob < 0 || params.min_ancestral_prob > 1)
+                    throw "Minimum ancestral probability [-asr-min] must be between 0 and 1.0";
                 continue;
             }
 
@@ -3735,9 +3735,9 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -zb <#replicates>    Performing BP,KH,SH,ELW tests for trees passed via -z" << endl
             << "  -zw                  Also performing weighted-KH and weighted-SH tests" << endl
             << "  -au                  Also performing approximately unbiased (AU) test" << endl
-//            << endl << "ANCESTRAL SEQUENCE RECONSTRUCTION:" << endl
-//            << "  -asr                 Compute ancestral states by marginal reconstruction" << endl
-//            << "  -asr-min <prob>      Min probability to assign ancestral sequence (default: 0.95)" << endl
+            << endl << "ANCESTRAL STATE RECONSTRUCTION:" << endl
+            << "  -asr                 Ancestral state reconstruction by empirical Bayes" << endl
+            << "  -asr-min <prob>      Min probability of ancestral state (default: equil freq)" << endl
 //            << "  -wja                 Write ancestral sequences by joint reconstruction" << endl
 
 
