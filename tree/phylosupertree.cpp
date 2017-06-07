@@ -137,8 +137,8 @@ void PhyloSuperTree::readPartition(Params &params) {
 			if (info.sequence_type=="" && params.sequence_type) info.sequence_type = params.sequence_type;
 			safeGetline(in, info.position_spec);
             trimString(info.sequence_type);
-			cout << endl << "Reading partition " << info.name << " (model=" << info.model_name << ", aln=" <<
-					info.aln_file << ", seq=" << info.sequence_type << ", pos=" << ((info.position_spec.length() >= 20) ? info.position_spec.substr(0,20)+"..." : info.position_spec) << ") ..." << endl;
+//			cout << endl << "Reading partition " << info.name << " (model=" << info.model_name << ", aln=" <<
+//					info.aln_file << ", seq=" << info.sequence_type << ", pos=" << ((info.position_spec.length() >= 20) ? info.position_spec.substr(0,20)+"..." : info.position_spec) << ") ..." << endl;
 
 			//info.mem_ptnlh = NULL;
 			info.nniMoves[0].ptnlh = NULL;
@@ -250,7 +250,7 @@ void PhyloSuperTree::readPartitionRaxml(Params &params) {
                 outError("Please specify alignment positions for partition" + info.name);
             std::replace(info.position_spec.begin(), info.position_spec.end(), ',', ' ');
             
-			cout << "Reading partition " << info.name << " (model=" << info.model_name << ", seq=" << info.sequence_type << ", pos=" << ((info.position_spec.length() >= 20) ? info.position_spec.substr(0,20)+"..." : info.position_spec) << ") ..." << endl;
+//			cout << "Reading partition " << info.name << " (model=" << info.model_name << ", seq=" << info.sequence_type << ", pos=" << ((info.position_spec.length() >= 20) ? info.position_spec.substr(0,20)+"..." : info.position_spec) << ") ..." << endl;
 
 			//info.mem_ptnlh = NULL;
 			info.nniMoves[0].ptnlh = NULL;
@@ -271,7 +271,7 @@ void PhyloSuperTree::readPartitionRaxml(Params &params) {
 			if (part_aln != new_aln) delete part_aln;
 			PhyloTree *tree = new PhyloTree(new_aln);
             push_back(tree);
-            cout << new_aln->getNSeq() << " sequences and " << new_aln->getNSite() << " sites extracted" << endl;
+//            cout << new_aln->getNSeq() << " sequences and " << new_aln->getNSite() << " sites extracted" << endl;
 //			params = origin_params;
 		}
 
@@ -313,7 +313,6 @@ void PhyloSuperTree::readPartitionNexus(Params &params) {
     }
 
     cout << endl << "Loading " << sets_block->charsets.size() << " partitions..." << endl;
-    cout << "No\tType\tSeqs\tSites\tModel\tName" << endl;
 
     for (it = sets_block->charsets.begin(); it != sets_block->charsets.end(); it++)
     	if (empty_partition || (*it)->char_partition != "") {
@@ -375,8 +374,6 @@ void PhyloSuperTree::readPartitionNexus(Params &params) {
 			push_back(tree);
 			params = origin_params;
 //			cout << new_aln->getNSeq() << " sequences and " << new_aln->getNSite() << " sites extracted" << endl;
-            cout << size() << "\t" << info.sequence_type << "\t" << new_aln->getNSeq()
-                 << "\t" << new_aln->getNSite() << "\t" << info.model_name << "\t" << info.name <<  endl;
     	}
 
     if (input_aln)
@@ -547,10 +544,18 @@ PhyloSuperTree::PhyloSuperTree(Params &params) :  IQTree() {
 		outError("No partition found");
 
 	// Initialize the counter for evaluated NNIs on subtrees
+    cout << "Subset\tType\tSeqs\tSites\tInfor\tInvar\tModel\tName" << endl;
 	int part = 0;
     iterator it;
 	for (it = begin(); it != end(); it++, part++) {
 		part_info[part].evalNNIs = 0.0;
+        cout << part+1 << "\t" << part_info[part].sequence_type << "\t" << (*it)->aln->getNSeq()
+             << "\t" << (*it)->getAlnNSite() << "\t" << (*it)->aln->num_informative_sites
+             << "\t" << (*it)->getAlnNSite()-(*it)->aln->num_variant_sites << "\t"
+             << part_info[part].model_name << "\t" << part_info[part].name << endl;
+        if ((*it)->aln->num_informative_sites == 0) {
+            outWarning("No parsimony-informative sites in partition " + part_info[part].name);
+        }
 	}
 
 	aln = new SuperAlignment(this);

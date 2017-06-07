@@ -696,15 +696,13 @@ void SuperAlignment::orderPatternByNumChars(int pat_type) {
     int maxi = (num_parsimony_sites+UINT_BITS-1)/UINT_BITS;
     pars_lower_bound = new UINT[maxi+1];
     memset(pars_lower_bound, 0, (maxi+1)*sizeof(UINT));
-    int part, nseq = getNSeq(), npart = partitions.size();
+    int part, nseq = getNSeq();
     
     // compute ordered_pattern
     ordered_pattern.clear();
 //    UINT sum_scores[npart];
     for (part  = 0; part != partitions.size(); part++) {
         partitions[part]->orderPatternByNumChars(pat_type);
-        if (partitions[part]->ordered_pattern.empty())
-            outWarning("No informative sites in partition " + convertIntToString(part+1));
         // partial_partition
         for (vector<Pattern>::iterator pit = partitions[part]->ordered_pattern.begin(); pit != partitions[part]->ordered_pattern.end(); pit++) {
             Pattern pattern(*pit);

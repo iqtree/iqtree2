@@ -846,7 +846,7 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 			int namelen = stree->getMaxPartNameLength();
 			int part;
 			out.width(max(namelen+6,10));
-			out << left << "  ID  Name" << "  Type  #Seqs  #Sites  #Patterns  #Const_Sites" << endl;
+			out << left << "  ID  Name" << "  Type\tSeq\tSite\tUnique\tInfor\tInvar\tConst" << endl;
 			//out << string(namelen+54, '-') << endl;
 			part = 0;
 			for (PhyloSuperTree::iterator it = stree->begin(); it != stree->end(); it++, part++) {
@@ -856,7 +856,6 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 				out << right << part+1 << "  ";
 				out.width(max(namelen,4));
 				out << left << stree->part_info[part].name << "  ";
-				out.width(6);
 				switch ((*it)->aln->seq_type) {
 				case SEQ_BINARY: out << "BIN"; break;
 				case SEQ_CODON: out << "CODON"; break;
@@ -864,18 +863,20 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 				case SEQ_MORPH: out << "MORPH"; break;
 				case SEQ_MULTISTATE: out << "TINA"; break;
 				case SEQ_PROTEIN: out << "AA"; break;
-				case SEQ_POMO: out << "COUNTSFORMAT"; break;
+				case SEQ_POMO: out << "POMO"; break;
 				case SEQ_UNKNOWN: out << "???"; break;
 				}
-				out.width(5);
-				out << right << (*it)->aln->getNSeq() << "  ";
-				out.width(6);
-				out << (*it)->aln->getNSite() << "  ";
-				out.width(6);
-				out << (*it)->aln->getNPattern() << "      ";
-				out << round((*it)->aln->frac_const_sites*100) << "%" << endl;
+				out << "\t" << (*it)->aln->getNSeq() << "\t" << (*it)->aln->getNSite()
+                    << "\t" << (*it)->aln->getNPattern() << "\t" << (*it)->aln->num_informative_sites
+                    << "\t" << (*it)->getAlnNSite() - (*it)->aln->num_variant_sites
+                    << "\t" << int((*it)->aln->frac_const_sites*(*it)->getAlnNSite()) << endl;
 			}
-			out << endl;
+			out << endl
+                << "Unique: Number of unique site patterns" << endl
+                << "Infor:  Number of parsimony-informative sites" << endl
+                << "Invar:  Number of invariant sites" << endl
+                << "Const:  Number of constant sites (can be subset of invariant sites)" << endl << endl;
+
 		} else
 			reportAlignment(out, *(tree.aln), tree.removed_seqs.size());
 

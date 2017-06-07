@@ -1171,9 +1171,17 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInf
 	int ssize = in_tree->getAlnNSite();
 	int64_t num_model = 0;
     int64_t total_num_model = in_tree->size();
+
+    // 2017-06-07: -rcluster-max for max absolute number of pairs
+    if (params.partfinder_rcluster_max == 0)
+        params.partfinder_rcluster_max = max((size_t)1000, 10*in_tree->size());
+
 	if (params.model_name.find("LINK") != string::npos || params.model_name.find("MERGE") != string::npos) {
         double p = params.partfinder_rcluster/100.0;
-        total_num_model += round(in_tree->size()*(in_tree->size()-1)*p/2);
+        size_t num_pairs = round(in_tree->size()*(in_tree->size()-1)*p/2);
+        if (p < 1.0)
+            num_pairs = min(num_pairs, params.partfinder_rcluster_max);
+        total_num_model += num_pairs;
         for (i = in_tree->size()-2; i > 0; i--)
             total_num_model += max(round(i*p), 1.0);
     }
@@ -1306,7 +1314,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInf
 		IntVector opt_merged_set;
 		string opt_set_name = "";
 		string opt_model_name = "";
-        int num_pairs = 0;
+        size_t num_pairs = 0;
         // 2015-06-24: begin rcluster algorithm
         // compute distance between gene_sets
 		for (int part1 = 0; part1 < gene_sets.size()-1; part1++)
@@ -1323,7 +1331,8 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, vector<ModelInf
         if (num_pairs > 0 && params.partfinder_rcluster < 100) {
             // sort distance
             quicksort(dist, 0, num_pairs-1, distID);
-            num_pairs = (int)round(num_pairs * (params.partfinder_rcluster/100.0));
+            num_pairs = round(num_pairs * (params.partfinder_rcluster/100.0));
+            num_pairs = min(num_pairs, params.partfinder_rcluster_max);
             if (num_pairs <= 0) num_pairs = 1;
         }
         // sort partition by computational cost for OpenMP effciency

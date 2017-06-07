@@ -769,6 +769,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.partition_file = NULL;
     params.partition_type = 0;
     params.partfinder_rcluster = 100;
+    params.partfinder_rcluster_max = 0;
     params.remove_empty_seq = true;
     params.terrace_aware = true;
     params.sequence_type = NULL;
@@ -1661,6 +1662,17 @@ void parseArg(int argc, char *argv[], Params &params) {
                     throw "rcluster percentage must be between 0 and 100";
 				continue;
             }
+
+            if (strcmp(argv[cnt], "-rcluster-max") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -rcluster-max <num>";
+                params.partfinder_rcluster_max = convert_int(argv[cnt]);
+                if (params.partfinder_rcluster_max <= 0)
+                    throw "rcluster-max must be between > 0";
+				continue;
+            }
+
 			if (strcmp(argv[cnt], "-keep_empty_seq") == 0) {
 				params.remove_empty_seq = false;
 				continue;
@@ -3561,6 +3573,7 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -m MF+MERGE          Find best partition scheme incl. FreeRate heterogeneity" << endl
             << "  -m MFP+MERGE         Like -m MF+MERGE followed by tree inference" << endl
             << "  -rcluster <percent>  Percentage of partition pairs (relaxed clustering alg.)" << endl
+            << "  -rcluster-max <num>  Max number of partition pairs (default: 10*#partitions)" << endl
             << "  -mset program        Restrict search to models supported by other programs" << endl
             << "                       (raxml, phyml or mrbayes)" << endl
             << "  -mset <lm-subset>    Restrict search to a subset of the Lie-Markov models" << endl
