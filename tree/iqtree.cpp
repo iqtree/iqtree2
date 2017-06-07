@@ -2759,6 +2759,8 @@ void IQTree::refineBootTrees() {
             boot_tree->constraintTree.readConstraint(constraintTree);
         }
 
+        boot_tree->setParams(params);
+
         // copy model
         boot_tree->setModelFactory(getModelFactory());
 

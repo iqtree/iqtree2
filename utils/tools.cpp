@@ -2684,7 +2684,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.min_correlation = convert_double(argv[cnt]);
 				continue;
 			}
-			if (strcmp(argv[cnt], "-brefine") == 0) {
+			if (strcmp(argv[cnt], "-brefine") == 0 || strcmp(argv[cnt], "-bnni") == 0) {
 				params.ufboot2corr = true;
                 // print ufboot trees with branch lengths
 				params.print_ufboot_trees = 2;
@@ -3540,6 +3540,7 @@ void usage_iqtree(char* argv[], bool full_command) {
 			<< "  -nstep <#iterations> #Iterations for UFBoot stopping rule (default: 100)" << endl
             << "  -bcor <min_corr>     Minimum correlation coefficient (default: 0.99)" << endl
 			<< "  -beps <epsilon>      RELL epsilon to break tie (default: 0.5)" << endl
+            << "  -bnni                Optimize UFBoot trees by NNI on bootstrap alignment" << endl
             << endl << "STANDARD NON-PARAMETRIC BOOTSTRAP:" << endl
             << "  -b <#replicates>     Bootstrap + ML tree + consensus tree (>=100)" << endl
             << "  -bc <#replicates>    Bootstrap + consensus tree" << endl
