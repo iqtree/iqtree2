@@ -108,7 +108,7 @@ void PhyloTree::setLikelihoodKernelSSE() {
         return;        
     }
 
-    if (params->lk_safe_scaling || leafNum >= params->numseq_safe_scaling) {
+    if (safe_numeric) {
 	switch(aln->num_states) {
         case 4:
             computeLikelihoodBranchPointer     = &PhyloTree::computeLikelihoodBranchSIMD    <Vec2d, SAFE_LH, 4>;
