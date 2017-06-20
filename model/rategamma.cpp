@@ -36,7 +36,7 @@ RateGamma::RateGamma(int ncat, double shape, bool median, PhyloTree *tree) : Rat
 	rates = NULL;
 	if (shape > 0.0) {
 		// true unless -optfromgiven cmd line option
-		fix_gamma_shape = !(tree->params->optimize_from_given_params);
+		fix_gamma_shape = !(Params::getInstance().optimize_from_given_params);
 	} else if (shape == 0.0) {
 		gamma_shape = max(tree->params->min_gamma_shape*5.0, random_double());
 		cout << "Randomize initial gamma shape (alpha): " << gamma_shape << endl;

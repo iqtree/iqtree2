@@ -28,7 +28,7 @@ ModelDNA::ModelDNA(PhyloTree *tree)
 ModelDNA::ModelDNA(const char *model_name, string model_params, StateFreqType freq, string freq_params, PhyloTree *tree)
 : ModelMarkov(tree)
 {
-  init(model_name, model_params, freq, freq_params, tree->params->optimize_from_given_params);
+  init(model_name, model_params, freq, freq_params);
 }
 
 string getDNAModelInfo(string model_name, string &full_name, string &rate_type, StateFreqType &def_freq) {
@@ -159,7 +159,7 @@ string getDNAModelInfo(string model_name, string &full_name, string &rate_type, 
 }
 
 
-void ModelDNA::init(const char *model_name, string model_params, StateFreqType freq, string freq_params, bool optfromgiven)
+void ModelDNA::init(const char *model_name, string model_params, StateFreqType freq, string freq_params)
 {
 	ASSERT(num_states == 4); // make sure that you create model for DNA
 	StateFreqType def_freq = FREQ_UNKNOWN;
@@ -191,7 +191,7 @@ void ModelDNA::init(const char *model_name, string model_params, StateFreqType f
 		readStateFreq(freq_params);
 	}
 	if (model_params != "") {
-	  readRates(model_params,optfromgiven);
+	  readRates(model_params);
 	}
 
 	if (freq == FREQ_UNKNOWN ||  def_freq == FREQ_EQUAL) freq = def_freq;
@@ -216,7 +216,7 @@ void ModelDNA::restoreCheckpoint() {
         phylo_tree->clearAllPartialLH();
 }
 
-void ModelDNA::readRates(string str, bool optfromgiven) throw(const char*) {
+void ModelDNA::readRates(string str) throw(const char*) {
 	int nrates = *max_element(param_spec.begin(), param_spec.end());
 	int end_pos = 0;
 	int i, j;
@@ -236,7 +236,7 @@ void ModelDNA::readRates(string str, bool optfromgiven) throw(const char*) {
                 num_params++;
                 param_fixed[i+1] = false;
             } else
-	        if (optfromgiven) {
+	        if (Params::getInstance().optimize_from_given_params) {
                     num_params++;
                     param_fixed[i+1] = false;
 	        } else {

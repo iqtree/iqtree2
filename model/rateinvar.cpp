@@ -38,7 +38,7 @@ RateInvar::RateInvar(double p_invar_sites, PhyloTree *tree)
 	if (p_invar_sites >= 0) {
 		p_invar = p_invar_sites;
 		// true unless -optfromgiven cmd line option
-		fix_p_invar = !(tree->params->optimize_from_given_params);
+		fix_p_invar = !(Params::getInstance().optimize_from_given_params);
 	}
 }
 
