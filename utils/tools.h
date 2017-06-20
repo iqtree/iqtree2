@@ -1382,6 +1382,14 @@ public:
     string optimize_alg_gammai;
 
     /**
+     * If given model parameters on command line (e.g. -m RY3.4{0.2,-0.4})
+     * treat these as fixed model parameters (if false), or treat them as 
+     * starting point for optimization search (if true)?
+     */
+
+    bool optimize_from_given_params;
+
+    /**
             BRLEN_OPTIMIZE optimize branch lengths during model optimization
             BRLEN_FIX      fix branch lengths during model optimization
             BRLEN_SCALE    scale all branch lengths by the same factor during model optimization

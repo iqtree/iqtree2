@@ -61,7 +61,7 @@ public:
 		@param model_name model name, e.g., JC, HKY.
 		@param freq state frequency type
 	*/
-	virtual void init(const char *model_name, string model_params, StateFreqType freq, string freq_params);
+    virtual void init(const char *model_name, string model_params, StateFreqType freq, string freq_params, bool optfromgiven);
 
     /**
         save object into the checkpoint
@@ -83,7 +83,7 @@ public:
 		It will throw error messages if failed
 		@param in input stream
 	*/
-	virtual void readRates(string str) throw(const char*);
+	virtual void readRates(string str, bool optfromgiven) throw(const char*);
 
 	/**
 		set the substitution rate parameters by a specification
