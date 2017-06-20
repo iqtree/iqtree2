@@ -831,6 +831,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.optimize_alg = "2-BFGS,EM";
     params.optimize_alg_mixlen = "EM";
     params.optimize_alg_gammai = "EM";
+    params.optimize_from_given_params = false;
     params.fixed_branch_length = false;
     params.min_branch_length = 0.0; // this is now adjusted later based on alignment length
     params.max_branch_length = 10.0; // Nov 22 2016: reduce from 100 to 10!
@@ -2135,6 +2136,10 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.p_invar_sites = convert_double(argv[cnt]);
 				if (params.p_invar_sites < 0)
 					throw "Wrong number of proportion of invariable sites";
+				continue;
+			}
+			if (strcmp(argv[cnt], "-optfromgiven") == 0) {
+				params.optimize_from_given_params = true;
 				continue;
 			}
 			if (strcmp(argv[cnt], "-brent") == 0) {
@@ -3622,8 +3627,16 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "                       10.34,12.12" << endl
             << "       Non-reversible: STRSYM (strand symmetric model, synonymous with WS6.6)" << endl
             << "       Non-reversible: UNREST (most general unrestricted model, functionally equivalent to 12.12)" << endl
-            << "            Otherwise: Name of file containing user-model parameters" << endl
-            << "                       (rate parameters and state frequencies)" << endl
+            << "       Models can have parameters appended in brackets." << endl
+            << "           e.g. '-mRY3.4{0.2,-0.3}+I' specifies parameters for" << endl
+            << "           RY3.4 model but leaves proportion of invariant sites" << endl
+            << "           unspecified. '-mRY3.4{0.2,-0.3}+I{0.5} gives both." << endl
+            << "           When this is done, the given parameters will be taken" << endl
+            << "           as fixed (default) or as start point for optimization" << endl
+            << "           (if -optfromgiven option supplied)" << endl
+            << "" << endl
+            << "        Otherwise: Name of file containing user-model parameters" << endl
+            << "                   (rate parameters and state frequencies)" << endl
             << endl << "STATE FREQUENCY:" << endl
             << "  Append one of the following +F... to -m <model_name>" << endl
             << "  +F                   Empirically counted frequencies from alignment" << endl

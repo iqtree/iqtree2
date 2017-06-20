@@ -20,7 +20,7 @@ public:
 		@param model_name name of the model
 		@param freq_type state frequency type, can be FREQ_USER_DEFINED, FREQ_EQUAL, FREQ_EMPIRICAL, or FREQ_ESTIMATE
 	*/
-	virtual void init(const char *model_name, string model_params, StateFreqType freq, string freq_params);
+	virtual void init(const char *model_name, string model_params, StateFreqType freq, string freq_params, bool optfromgiven);
 	static void getLieMarkovModelInfo(string model_name, string &name, string &full_name, int &model_num, int &symmetry, StateFreqType &def_freq);
 
 	static string getModelInfo(string model_name, string &full_name, StateFreqType &def_freq);

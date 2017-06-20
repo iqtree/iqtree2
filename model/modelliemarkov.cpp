@@ -316,10 +316,10 @@ const double MAX_LIE_WEIGHT =  0.9999;
 
 ModelLieMarkov::ModelLieMarkov(string model_name, PhyloTree *tree, string model_params, StateFreqType freq_type, string freq_params)
 	: ModelMarkov(tree, false) {
-        init(model_name.c_str(), model_params, freq_type, freq_params);
+  init(model_name.c_str(), model_params, freq_type, freq_params, tree->params->optimize_from_given_params);
 }
 
-void ModelLieMarkov::init(const char *model_name, string model_params, StateFreqType freq, string freq_params)
+void ModelLieMarkov::init(const char *model_name, string model_params, StateFreqType freq, string freq_params, bool optfromgiven)
 {
     // TODO: why is freq_params not handled here?
 
@@ -342,6 +342,7 @@ void ModelLieMarkov::init(const char *model_name, string model_params, StateFreq
     model_parameters = new double [num_params];
     memset(model_parameters, 0, sizeof(double)*num_params);
     this->setRates();
+    // param optfromgiven only has effect if model_params != ""
     if (model_params != "") {
         DoubleVector vec;
         convert_double_vec(model_params.c_str(), vec);
@@ -352,7 +353,7 @@ void ModelLieMarkov::init(const char *model_name, string model_params, StateFreq
                 outError("Weights for Lie Markov model must be between " + convertDoubleToString(MIN_LIE_WEIGHT) + " and " +
                     convertDoubleToString(MAX_LIE_WEIGHT));
             model_parameters[i] = vec[i];
-            fixed_parameters = true;
+            fixed_parameters = !optfromgiven;
         }
         setRates();
     }
