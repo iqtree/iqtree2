@@ -2829,6 +2829,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.numInitTrees = 2;
 				params.min_iterations = 2;
 				params.stop_condition = SC_FIXED_ITERATION;
+                params.modelEps = 0.05;
                 continue;
             }
 			if (strcmp(argv[cnt], "-fss") == 0) {
