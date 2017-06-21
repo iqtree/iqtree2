@@ -506,7 +506,7 @@ add_library(kernelfma tree/phylokernelfma.cpp)
 endif()
 
 if (IQTREE_FLAGS MATCHES "mpi")
-	add_library(mympi TreeCollection.cpp ObjectStream.cpp)
+	add_library(mympi utils/TreeCollection.cpp utils/ObjectStream.cpp)
 endif()
 
 add_executable(iqtree
