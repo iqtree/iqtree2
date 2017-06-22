@@ -258,7 +258,7 @@ bool fileExists(string strFilename) {
     return (blnReturn);
 }
 
-int convert_int(const char *str) throw (string) {
+int convert_int(const char *str) {
     char *endptr;
     int i = strtol(str, &endptr, 10);
 
@@ -272,7 +272,7 @@ int convert_int(const char *str) throw (string) {
     return i;
 }
 
-int convert_int(const char *str, int &end_pos) throw (string) {
+int convert_int(const char *str, int &end_pos) {
 	char *endptr;
 	int i = strtol(str, &endptr, 10);
 
@@ -286,7 +286,7 @@ int convert_int(const char *str, int &end_pos) throw (string) {
 	return i;
 }
 
-void convert_int_vec(const char *str, IntVector &vec) throw (string) {
+void convert_int_vec(const char *str, IntVector &vec) {
     char *beginptr = (char*)str, *endptr;
     vec.clear();
     do {
@@ -305,7 +305,7 @@ void convert_int_vec(const char *str, IntVector &vec) throw (string) {
 }
 
 
-int64_t convert_int64(const char *str) throw (string) {
+int64_t convert_int64(const char *str) {
     char *endptr;
     int64_t i = (int64_t)strtoll(str, &endptr, 10); // casted because 'long long' may be larger than int64_t
 
@@ -319,7 +319,7 @@ int64_t convert_int64(const char *str) throw (string) {
     return i;
 }
 
-int64_t convert_int64(const char *str, int &end_pos) throw (string) {
+int64_t convert_int64(const char *str, int &end_pos) {
 	char *endptr;
 	int64_t i = (int64_t)strtoll(str, &endptr, 10); // casted because 'long long' may be larger than int64_t
 
@@ -334,7 +334,7 @@ int64_t convert_int64(const char *str, int &end_pos) throw (string) {
 }
 
 
-double convert_double(const char *str) throw (string) {
+double convert_double(const char *str) {
     char *endptr;
     double d = strtod(str, &endptr);
     if ((d == 0.0 && endptr == str) || fabs(d) == HUGE_VALF || *endptr != 0) {
@@ -346,7 +346,7 @@ double convert_double(const char *str) throw (string) {
     return d;
 }
 
-double convert_double(const char *str, int &end_pos) throw (string) {
+double convert_double(const char *str, int &end_pos) {
 	char *endptr;
 	double d = strtod(str, &endptr);
 	if ((d == 0.0 && endptr == str) || fabs(d) == HUGE_VALF) {
@@ -359,7 +359,7 @@ double convert_double(const char *str, int &end_pos) throw (string) {
 	return d;
 }
 
-void convert_double_vec(const char *str, DoubleVector &vec, char separator) throw (string) {
+void convert_double_vec(const char *str, DoubleVector &vec, char separator) {
     char *beginptr = (char*)str, *endptr;
     vec.clear();
     do {
@@ -387,7 +387,7 @@ string convert_time(const double sec) {
     return ss.str();
 }
 
-void convert_range(const char *str, int &lower, int &upper, int &step_size) throw (string) {
+void convert_range(const char *str, int &lower, int &upper, int &step_size) {
     char *endptr;
     char *beginptr = (char*) str;
 
@@ -434,7 +434,7 @@ void convert_range(const char *str, int &lower, int &upper, int &step_size) thro
 
 }
 
-void convert_range(const char *str, double &lower, double &upper, double &step_size) throw (string) {
+void convert_range(const char *str, double &lower, double &upper, double &step_size) {
     char *endptr;
     char *beginptr = (char*) str;
 
@@ -481,7 +481,7 @@ void convert_range(const char *str, double &lower, double &upper, double &step_s
 
 }
 
-void convert_string_vec(const char *str, StrVector &vec) throw (string) {
+void convert_string_vec(const char *str, StrVector &vec) {
     char *beginptr = (char*)str, *endptr;
     vec.clear();
     string elem;
@@ -3435,7 +3435,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 
 extern void printCopyright(ostream &out);
 
-void usage(char* argv[], bool full_command) {
+void usage(char* argv[]) {
     printCopyright(cout);
     cout << "Usage: " << argv[0] << " [OPTIONS] <file_name> [<output_file>]" << endl;
     cout << "GENERAL OPTIONS:" << endl;
@@ -3910,7 +3910,7 @@ void parseAreaName(char *area_names, set<string> &areas) {
         pos = all.find(',');
         if (pos < 0) pos = all.length();
         areas.insert(all.substr(0, pos));
-        if (pos >= all.length())
+        if (pos >= (signed int) all.length())
             all = "";
         else
             all = all.substr(pos + 1);
