@@ -87,6 +87,7 @@ void PhyloTree::init() {
     discard_saturated_site = true;
     _pattern_lh = NULL;
     _pattern_lh_cat = NULL;
+    _pattern_lh_cat_state = NULL;
     //root_state = STATE_UNKNOWN;
     root_state = 126;
     theta_all = NULL;
@@ -122,6 +123,7 @@ void PhyloTree::init() {
     is_opt_scaling = false;
     num_partial_lh_computations = 0;
     vector_size = 0;
+    safe_numeric = false;
 }
 
 PhyloTree::PhyloTree(Alignment *aln) : MTree(), CheckpointFactory() {
@@ -729,11 +731,12 @@ size_t PhyloTree::getBufferPartialLhSize() {
     size_t buffer_size = get_safe_upper_limit(block * model->num_states * 2) * aln->getNSeq();
     buffer_size += get_safe_upper_limit(block *(aln->STATE_UNKNOWN+1)) * (aln->getNSeq()+1);
     buffer_size += (block*2+model->num_states)*VECTOR_SIZE*num_threads;
-    if (!model->isReversible() || params->kernel_nonrev) {
-        buffer_size += get_safe_upper_limit(block)*(aln->STATE_UNKNOWN+1)*2;
-        buffer_size += block*2*VECTOR_SIZE*num_threads;
-        buffer_size += 3*block*model->num_states;
-    }
+
+    // always more buffer for non-rev kernel, in case switching between kernels
+    buffer_size += get_safe_upper_limit(block)*(aln->STATE_UNKNOWN+1)*2;
+    buffer_size += block*2*VECTOR_SIZE*num_threads;
+    buffer_size += 3*block*model->num_states;
+
     if (isMixlen()) {
         size_t nmix = getMixlen();
         buffer_size += nmix*(nmix+1)*VECTOR_SIZE + (nmix+3)*nmix*VECTOR_SIZE*num_threads;
@@ -5007,4 +5010,82 @@ bool PhyloTree::computeTraversalInfo(PhyloNeighbor *dad_branch, PhyloNode *dad, 
 
     traversal_info.push_back(info);
     return mem_slots.lock(dad_branch);
+}
+
+void PhyloTree::writeSiteLh(ostream &out, SiteLoglType wsl, int partid) {
+    // error checking
+    if (!getModel()->isMixture()) {
+        if (wsl != WSL_RATECAT) {
+            outWarning("Switch now to '-wslr' as it is the only option for non-mixture model");
+            wsl = WSL_RATECAT;
+        }
+    } else {
+        // mixture model
+        if (wsl == WSL_MIXTURE_RATECAT && getModelFactory()->fused_mix_rate) {
+            outWarning("-wslmr is not suitable for fused mixture model, switch now to -wslm");
+            wsl = WSL_MIXTURE;
+        }
+    }
+    size_t i, nsites = getAlnNSite();
+	size_t ncat = getNumLhCat(wsl);
+	double *pattern_lh, *pattern_lh_cat;
+	pattern_lh = aligned_alloc<double>(getAlnNPattern());
+	pattern_lh_cat = aligned_alloc<double>(getAlnNPattern()*ncat);
+	computePatternLikelihood(pattern_lh, NULL, pattern_lh_cat, wsl);
+    for (i = 0; i < nsites; i++) {
+        if (partid >= 0)
+            out << partid << "\t";
+        size_t ptn = aln->getPatternID(i);
+        out << i+1 << "\t" << pattern_lh[ptn];
+        for (int j = 0; j < ncat; j++) {
+            out << "\t" << pattern_lh_cat[ptn*ncat+j];
+        }
+        out << endl;
+    }
+    aligned_free(pattern_lh_cat);
+    aligned_free(pattern_lh);
+}
+
+void PhyloTree::writeSiteRates(ostream &out, int partid) {
+	DoubleVector pattern_rates;
+	IntVector pattern_cat;
+	int ncategory = site_rate->computePatternRates(pattern_rates, pattern_cat);
+	if (pattern_rates.empty()) return;
+	int nsite = aln->getNSite();
+	int i;
+	
+	out.setf(ios::fixed,ios::floatfield);
+	out.precision(5);
+	//cout << __func__ << endl;
+    IntVector count;
+    count.resize(ncategory, 0);
+	for (i = 0; i < nsite; i++) {
+		int ptn = aln->getPatternID(i);
+        if (partid >= 0)
+            out << partid << "\t";
+		out << i+1 << "\t";
+		if (pattern_rates[ptn] >= MAX_SITE_RATE) out << "100.0"; else out << pattern_rates[ptn];
+		//cout << i << " "<< ptn << " " << pattern_cat[ptn] << endl;
+        if (!pattern_cat.empty()) {
+            int site_cat;
+            double cat_rate;
+            if (site_rate->getPInvar() == 0.0) {
+                site_cat = pattern_cat[ptn]+1;
+                cat_rate = site_rate->getRate(pattern_cat[ptn]);
+            } else {
+                site_cat = pattern_cat[ptn];
+                if (site_cat == 0)
+                    cat_rate = 0.0;
+                else
+                    cat_rate = site_rate->getRate(pattern_cat[ptn]-1);
+            }
+            out << "\t" << site_cat << "\t" << cat_rate;
+            count[pattern_cat[ptn]]++;
+        }
+		out << endl;
+	}
+    cout << "Empirical proportions for each category:";
+    for (i = 0; i < count.size(); i++)
+        cout << " " << ((double)count[i])/nsite;
+    cout << endl;
 }

@@ -834,6 +834,9 @@ public:
     /** percentage for rcluster algorithm like PartitionFinder */
     double partfinder_rcluster; 
 
+    /** absolute limit on #partition pairs for rcluster algorithm */
+    size_t partfinder_rcluster_max;
+
     /** remove all-gap sequences in partition model to account for terrace default: TRUE */
     bool remove_empty_seq;
 
@@ -1380,6 +1383,14 @@ public:
      *  Optimization algorithm for +I+G
      */
     string optimize_alg_gammai;
+
+    /**
+     * If given model parameters on command line (e.g. -m RY3.4{0.2,-0.4})
+     * treat these as fixed model parameters (if false), or treat them as 
+     * starting point for optimization search (if true)?
+     */
+
+    bool optimize_from_given_params;
 
     /**
             BRLEN_OPTIMIZE optimize branch lengths during model optimization
@@ -2397,11 +2408,11 @@ int random_int(int n, int *rstream = NULL);
 double random_double(int *rstream = NULL);
 
 template <class T>
-void my_random_shuffle (T first, T last)
+void my_random_shuffle (T first, T last, int *rstream = NULL)
 {
 	int n = last - first;
 	for (int i=n-1; i>0; --i) {
-		swap (first[i],first[random_int(i+1)]);
+		swap (first[i],first[random_int(i+1, rstream)]);
 	}
 }
 

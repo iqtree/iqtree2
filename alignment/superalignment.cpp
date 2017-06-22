@@ -225,6 +225,13 @@ Alignment *SuperAlignment::removeIdenticalSeq(string not_remove, bool keep_two, 
 	return aln;
 }
 
+int SuperAlignment::checkAbsentStates(string msg) {
+    int count = 0;
+    for (auto it = partitions.begin(); it != partitions.end(); it++)
+        count += (*it)->checkAbsentStates("partition " + convertIntToString((it-partitions.begin())+1));
+    return count;
+}
+
 /*
 void SuperAlignment::checkGappySeq() {
 	int nseq = getNSeq(), part = 0, i;
@@ -356,7 +363,7 @@ void SuperAlignment::createBootstrapAlignment(Alignment *aln, IntVector* pattern
             partitions.push_back(boot_aln);
         }
     } else {
-        outError("Wrong -bspec, either -bspec GENE or -bspec GENESITE");
+        outError("Wrong -bsam, either -bsam GENE or -bsam GENESITE");
     }
 	taxa_index = super_aln->taxa_index;
     countConstSite();
@@ -618,6 +625,12 @@ Alignment *SuperAlignment::concatenateAlignments(IntVector &ids) {
     aln->pattern_index.clear();
     aln->STATE_UNKNOWN = partitions[ids[0]]->STATE_UNKNOWN;
     aln->genetic_code = partitions[ids[0]]->genetic_code;
+    if (aln->seq_type == SEQ_CODON) {
+    	aln->codon_table = new char[aln->num_states];
+    	memcpy(aln->codon_table, partitions[ids[0]]->codon_table, aln->num_states);
+    	aln->non_stop_codon = new char[strlen(aln->genetic_code)];
+    	memcpy(aln->non_stop_codon, partitions[ids[0]]->non_stop_codon, strlen(aln->genetic_code));
+    }
 
     int site = 0;
     for (i = 0; i < ids.size(); i++) {
@@ -683,11 +696,11 @@ void SuperAlignment::orderPatternByNumChars(int pat_type) {
     int maxi = (num_parsimony_sites+UINT_BITS-1)/UINT_BITS;
     pars_lower_bound = new UINT[maxi+1];
     memset(pars_lower_bound, 0, (maxi+1)*sizeof(UINT));
-    int part, nseq = getNSeq(), npart = partitions.size();
+    int part, nseq = getNSeq();
     
     // compute ordered_pattern
     ordered_pattern.clear();
-    UINT sum_scores[npart];
+//    UINT sum_scores[npart];
     for (part  = 0; part != partitions.size(); part++) {
         partitions[part]->orderPatternByNumChars(pat_type);
         // partial_partition
@@ -701,7 +714,7 @@ void SuperAlignment::orderPatternByNumChars(int pat_type) {
                     pattern[j] = partitions[part]->STATE_UNKNOWN;
             ordered_pattern.push_back(pattern);
         }
-        sum_scores[part] = partitions[part]->pars_lower_bound[0];
+//        sum_scores[part] = partitions[part]->pars_lower_bound[0];
     }
     // TODO compute pars_lower_bound (lower bound of pars score for remaining patterns)
 }

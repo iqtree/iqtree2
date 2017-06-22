@@ -1478,7 +1478,7 @@ void PhyloTree::computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, Phylo
         // special treatment for root node
 //        if (aln->ordered_pattern.empty())
 //            aln->orderPatternByNumChars();
-        ASSERT(!aln->ordered_pattern.empty());
+//        ASSERT(!aln->ordered_pattern.empty());
         int pars_size = getBitsBlockSize();
         memset(dad_branch->partial_pars, 255, pars_size*sizeof(UINT));
         size_t nsites = (aln->num_parsimony_sites+NUM_BITS-1)/NUM_BITS;
@@ -1494,7 +1494,7 @@ void PhyloTree::computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, Phylo
         }
 //        if (aln->ordered_pattern.empty())
 //            aln->orderPatternByNumChars();
-        ASSERT(!aln->ordered_pattern.empty());
+//        ASSERT(!aln->ordered_pattern.empty());
         int leafid = node->id;
         int pars_size = getBitsBlockSize();
         memset(dad_branch->partial_pars, 0, pars_size*sizeof(UINT));
@@ -1691,7 +1691,7 @@ void PhyloTree::computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, Phylo
         switch (nstates) {
         case 4:
             #ifdef _OPENMP
-            #pragma omp parallel for private (site) reduction(+: score) if(nsites>200)
+            #pragma omp parallel for private (site) reduction(+: score) if(nsites>num_threads*10)
             #endif
 			for (site = 0; site<nsites; site++) {
                 size_t offset = entry_size*site;
@@ -1719,7 +1719,7 @@ void PhyloTree::computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, Phylo
 			break;
         default:
             #ifdef _OPENMP
-            #pragma omp parallel for private (site) reduction(+: score) if(nsites > 800/nstates)
+            #pragma omp parallel for private (site) reduction(+: score) if(nsites>num_threads*10)
             #endif
 			for (site = 0; site<nsites; site++) {
                 size_t offset = entry_size*site;
@@ -1783,7 +1783,7 @@ int PhyloTree::computeParsimonyBranchFastSIMD(PhyloNeighbor *dad_branch, PhyloNo
     switch (nstates) {
     case 4:
         #ifdef _OPENMP
-        #pragma omp parallel for private (site) reduction(+: score) if(nsites>200)
+        #pragma omp parallel for private (site) reduction(+: score) if(nsites>num_threads*10)
         #endif
 		for (site = 0; site < nsites; site++) {
             size_t offset = entry_size*site;
@@ -1802,7 +1802,7 @@ int PhyloTree::computeParsimonyBranchFastSIMD(PhyloNeighbor *dad_branch, PhyloNo
 		break;
     default:
         #ifdef _OPENMP
-        #pragma omp parallel for private (site) reduction(+: score) if(nsites > 800/nstates)
+        #pragma omp parallel for private (site) reduction(+: score) if(nsites>num_threads*10)
         #endif
 		for (site = 0; site < nsites; site++) {
             size_t offset = entry_size*site;

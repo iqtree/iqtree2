@@ -19,6 +19,7 @@ node.cpp
 node.h
 phylokernel.h
 phylokernelnew.h
+phylokernelnonrev.h
 phylonode.cpp
 phylonode.h
 phylonodemixlen.cpp

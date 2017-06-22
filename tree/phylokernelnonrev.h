@@ -912,15 +912,29 @@ double PhyloTree::computeNonrevLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_br
 
                 }
 
-                for (c = 0; c < ncat_mix; c++) {
-#ifdef KERNEL_FIX_STATES
-                    dotProductVec<VectorClass, VectorClass, nstates, FMA>(lh_node, partial_lh_dad, lh_cat[c]);
-#else
-                    dotProductVec<VectorClass, VectorClass, FMA>(lh_node, partial_lh_dad, lh_cat[c], nstates);
-#endif
-                    lh_node += nstates;
-                    partial_lh_dad += nstates;
-                    lh_ptn += lh_cat[c];
+                if (_pattern_lh_cat_state) {
+                    // naively compute pattern_lh per category per state
+                    VectorClass *lh_state = (VectorClass*)(_pattern_lh_cat_state + ptn*block);
+                    for (c = 0; c < ncat_mix; c++) {
+                        for (i=0; i < nstates; i++) {
+                            lh_cat[c] += (lh_state[i] = lh_node[i]*partial_lh_dad[i]);
+                        }
+                        lh_node += nstates;
+                        partial_lh_dad += nstates;
+                        lh_state += nstates;
+                        lh_ptn += lh_cat[c];
+                    }
+                } else {
+                    for (c = 0; c < ncat_mix; c++) {
+    #ifdef KERNEL_FIX_STATES
+                        dotProductVec<VectorClass, VectorClass, nstates, FMA>(lh_node, partial_lh_dad, lh_cat[c]);
+    #else
+                        dotProductVec<VectorClass, VectorClass, FMA>(lh_node, partial_lh_dad, lh_cat[c], nstates);
+    #endif
+                        lh_node += nstates;
+                        partial_lh_dad += nstates;
+                        lh_ptn += lh_cat[c];
+                    }
                 }
                 VectorClass vc_min_scale;
                 double* vc_min_scale_ptr = (double*)&vc_min_scale;
@@ -985,20 +999,39 @@ double PhyloTree::computeNonrevLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_br
                 VectorClass *partial_lh_dad = (VectorClass*)(dad_branch->partial_lh + ptn*block);
                 VectorClass *partial_lh_node = (VectorClass*)(node_branch->partial_lh + ptn*block);
                 double *trans_mat_tmp = trans_mat;
-                for (c = 0; c < ncat_mix; c++) {
-                    for (i = 0; i < nstates; i++) {
-                        VectorClass lh_state;
-#ifdef KERNEL_FIX_STATES
-                        dotProductVec<VectorClass, double, nstates, FMA>(trans_mat_tmp, partial_lh_node, lh_state);
-#else
-                        dotProductVec<VectorClass, double, FMA>(trans_mat_tmp, partial_lh_node, lh_state, nstates);
-#endif
-                        lh_cat[c] = mul_add(partial_lh_dad[i], lh_state, lh_cat[c]);
-                        trans_mat_tmp += nstates;
+                if (_pattern_lh_cat_state) {
+                    VectorClass *lh_state = (VectorClass*)(_pattern_lh_cat_state + ptn*block);
+                    for (c = 0; c < ncat_mix; c++) {
+                        for (i = 0; i < nstates; i++) {
+    #ifdef KERNEL_FIX_STATES
+                            dotProductVec<VectorClass, double, nstates, FMA>(trans_mat_tmp, partial_lh_node, lh_state[i]);
+    #else
+                            dotProductVec<VectorClass, double, FMA>(trans_mat_tmp, partial_lh_node, lh_state[i], nstates);
+    #endif
+                            lh_cat[c] += (lh_state[i] *= partial_lh_dad[i]);
+                            trans_mat_tmp += nstates;
+                        }
+                        lh_ptn += lh_cat[c];
+                        partial_lh_node += nstates;
+                        partial_lh_dad += nstates;
+                        lh_state += nstates;
                     }
-                    lh_ptn += lh_cat[c];
-                    partial_lh_node += nstates;
-                    partial_lh_dad += nstates;
+                } else {
+                    for (c = 0; c < ncat_mix; c++) {
+                        for (i = 0; i < nstates; i++) {
+                            VectorClass lh_state;
+    #ifdef KERNEL_FIX_STATES
+                            dotProductVec<VectorClass, double, nstates, FMA>(trans_mat_tmp, partial_lh_node, lh_state);
+    #else
+                            dotProductVec<VectorClass, double, FMA>(trans_mat_tmp, partial_lh_node, lh_state, nstates);
+    #endif
+                            lh_cat[c] = mul_add(partial_lh_dad[i], lh_state, lh_cat[c]);
+                            trans_mat_tmp += nstates;
+                        }
+                        lh_ptn += lh_cat[c];
+                        partial_lh_node += nstates;
+                        partial_lh_dad += nstates;
+                    }
                 }
                 VectorClass vc_min_scale;
                 double* vc_min_scale_ptr = (double*)&vc_min_scale;

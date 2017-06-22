@@ -231,9 +231,9 @@ double PartitionModelPlen::optimizeGeneRate(double gradient_epsilon)
     sum /= nsite;
     
     if (sum > tree->params->max_branch_length / max_brlen) {
-        cerr << endl << "ERROR: Too high (saturated) partition rates of the proportion partition model!"
-        << endl <<  "Please switch to the edge-equal partition model via -q option instead of -spp" << endl << endl;
-        exit(EXIT_FAILURE);
+        outWarning("Too high (saturated) partition rates for proportional partition model!");
+//        outWarning("Please switch to the edge-equal partition model via -q option instead of -spp");
+//        exit(EXIT_FAILURE);
     }
     tree->scaleLength(sum);
     sum = 1.0/sum;

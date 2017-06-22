@@ -137,8 +137,8 @@ void PhyloSuperTree::readPartition(Params &params) {
 			if (info.sequence_type=="" && params.sequence_type) info.sequence_type = params.sequence_type;
 			safeGetline(in, info.position_spec);
             trimString(info.sequence_type);
-			cout << endl << "Reading partition " << info.name << " (model=" << info.model_name << ", aln=" <<
-					info.aln_file << ", seq=" << info.sequence_type << ", pos=" << ((info.position_spec.length() >= 20) ? info.position_spec.substr(0,20)+"..." : info.position_spec) << ") ..." << endl;
+//			cout << endl << "Reading partition " << info.name << " (model=" << info.model_name << ", aln=" <<
+//					info.aln_file << ", seq=" << info.sequence_type << ", pos=" << ((info.position_spec.length() >= 20) ? info.position_spec.substr(0,20)+"..." : info.position_spec) << ") ..." << endl;
 
 			//info.mem_ptnlh = NULL;
 			info.nniMoves[0].ptnlh = NULL;
@@ -250,7 +250,7 @@ void PhyloSuperTree::readPartitionRaxml(Params &params) {
                 outError("Please specify alignment positions for partition" + info.name);
             std::replace(info.position_spec.begin(), info.position_spec.end(), ',', ' ');
             
-			cout << "Reading partition " << info.name << " (model=" << info.model_name << ", seq=" << info.sequence_type << ", pos=" << ((info.position_spec.length() >= 20) ? info.position_spec.substr(0,20)+"..." : info.position_spec) << ") ..." << endl;
+//			cout << "Reading partition " << info.name << " (model=" << info.model_name << ", seq=" << info.sequence_type << ", pos=" << ((info.position_spec.length() >= 20) ? info.position_spec.substr(0,20)+"..." : info.position_spec) << ") ..." << endl;
 
 			//info.mem_ptnlh = NULL;
 			info.nniMoves[0].ptnlh = NULL;
@@ -271,7 +271,7 @@ void PhyloSuperTree::readPartitionRaxml(Params &params) {
 			if (part_aln != new_aln) delete part_aln;
 			PhyloTree *tree = new PhyloTree(new_aln);
             push_back(tree);
-            cout << new_aln->getNSeq() << " sequences and " << new_aln->getNSite() << " sites extracted" << endl;
+//            cout << new_aln->getNSeq() << " sequences and " << new_aln->getNSite() << " sites extracted" << endl;
 //			params = origin_params;
 		}
 
@@ -312,6 +312,8 @@ void PhyloSuperTree::readPartitionNexus(Params &params) {
     	cout << "NOTE: No CharPartition defined, use all CharSets" << endl;
     }
 
+    cout << endl << "Loading " << sets_block->charsets.size() << " partitions..." << endl;
+
     for (it = sets_block->charsets.begin(); it != sets_block->charsets.end(); it++)
     	if (empty_partition || (*it)->char_partition != "") {
 			PartitionInfo info;
@@ -332,8 +334,8 @@ void PhyloSuperTree::readPartitionNexus(Params &params) {
             }
 			info.position_spec = (*it)->position_spec;
 			trimString(info.sequence_type);
-			cout << endl << "Reading partition " << info.name << " (model=" << info.model_name << ", aln=" <<
-				info.aln_file << ", seq=" << info.sequence_type << ", pos=" << ((info.position_spec.length() >= 20) ? info.position_spec.substr(0,20)+"..." : info.position_spec) << ") ..." << endl;
+//			cout << endl << "Reading partition " << info.name << " (model=" << info.model_name << ", aln=" <<
+//				info.aln_file << ", seq=" << info.sequence_type << ", pos=" << ((info.position_spec.length() >= 20) ? info.position_spec.substr(0,20)+"..." : info.position_spec) << ") ..." << endl;
             if (info.sequence_type != "" && Alignment::getSeqType(info.sequence_type.c_str()) == SEQ_UNKNOWN)
                 outError("Unknown sequence type " + info.sequence_type);
 			//info.mem_ptnlh = NULL;
@@ -371,7 +373,7 @@ void PhyloSuperTree::readPartitionNexus(Params &params) {
 			PhyloTree *tree = new PhyloTree(new_aln);
 			push_back(tree);
 			params = origin_params;
-			cout << new_aln->getNSeq() << " sequences and " << new_aln->getNSite() << " sites extracted" << endl;
+//			cout << new_aln->getNSeq() << " sequences and " << new_aln->getNSite() << " sites extracted" << endl;
     	}
 
     if (input_aln)
@@ -542,10 +544,18 @@ PhyloSuperTree::PhyloSuperTree(Params &params) :  IQTree() {
 		outError("No partition found");
 
 	// Initialize the counter for evaluated NNIs on subtrees
+    cout << "Subset\tType\tSeqs\tSites\tInfor\tInvar\tModel\tName" << endl;
 	int part = 0;
     iterator it;
 	for (it = begin(); it != end(); it++, part++) {
 		part_info[part].evalNNIs = 0.0;
+        cout << part+1 << "\t" << part_info[part].sequence_type << "\t" << (*it)->aln->getNSeq()
+             << "\t" << (*it)->getAlnNSite() << "\t" << (*it)->aln->num_informative_sites
+             << "\t" << (*it)->getAlnNSite()-(*it)->aln->num_variant_sites << "\t"
+             << part_info[part].model_name << "\t" << part_info[part].name << endl;
+        if ((*it)->aln->num_informative_sites == 0) {
+            outWarning("No parsimony-informative sites in partition " + part_info[part].name);
+        }
 	}
 
 	aln = new SuperAlignment(this);
@@ -1554,4 +1564,123 @@ int PhyloSuperTree::fixNegativeBranch(bool force, Node *node, Node *dad) {
 	}
 	computeBranchLengths();
 	return fixed;
+}
+
+/****************************************************************************
+        ancestral sequence reconstruction
+ ****************************************************************************/
+
+void PhyloSuperTree::initMarginalAncestralState(ostream &out, bool &orig_kernel_nonrev, double* &ptn_ancestral_prob, int* &ptn_ancestral_seq) {
+    orig_kernel_nonrev = params->kernel_nonrev;
+    if (!orig_kernel_nonrev) {
+        // switch to nonrev kernel to compute _pattern_lh_cat_state
+        params->kernel_nonrev = true;
+        setLikelihoodKernel(sse, num_threads);
+        clearAllPartialLH();
+    }
+
+    size_t total_size = 0, total_ptn = 0;
+
+    bool mixed_data = false;
+
+    for (auto it = begin(); it != end(); it++) {
+        size_t nptn = (*it)->aln->size();
+        size_t nstates = (*it)->model->num_states;
+        (*it)->_pattern_lh_cat_state = (*it)->newPartialLh();
+        total_size += nptn*nstates;
+        total_ptn += nptn;
+        if (nstates != front()->model->num_states)
+            mixed_data = true;
+    }
+
+    ptn_ancestral_prob = aligned_alloc<double>(total_size);
+    ptn_ancestral_seq = aligned_alloc<int>(total_ptn);
+}
+
+/**
+    compute ancestral sequence probability for an internal node by marginal reconstruction
+    (Yang, Kumar and Nei 1995)
+    @param dad_branch branch leading to an internal node where to obtain ancestral sequence
+    @param dad dad of the target internal node
+    @param[out] ptn_ancestral_prob pattern ancestral probability vector of dad_branch->node
+*/
+void PhyloSuperTree::computeMarginalAncestralState(PhyloNeighbor *dad_branch, PhyloNode *dad,
+    double *ptn_ancestral_prob, int *ptn_ancestral_seq) {
+
+    SuperNeighbor *snei = (SuperNeighbor*)dad_branch;
+    SuperNeighbor *snei_back = (SuperNeighbor*)dad_branch->node->findNeighbor(dad);
+    int part = 0;
+    for (auto it = begin(); it != end(); it++, part++) {
+        size_t nptn = (*it)->getAlnNPattern();
+        size_t nstates = (*it)->model->num_states;
+        if (snei->link_neighbors[part]) {
+            (*it)->computeMarginalAncestralState(snei->link_neighbors[part], (PhyloNode*)snei_back->link_neighbors[part]->node,
+                ptn_ancestral_prob, ptn_ancestral_seq);
+        } else {
+            // branch does not exist in partition tree
+            double eqprob = 1.0/nstates;
+            for (size_t ptn = 0; ptn < nptn; ptn++) {
+                for (size_t i = 0; i < nstates; i++)
+                    ptn_ancestral_prob[ptn*nstates+i] = eqprob;
+                ptn_ancestral_seq[ptn] = (*it)->aln->STATE_UNKNOWN;
+            }
+        }
+        ptn_ancestral_prob += nptn*nstates;
+        ptn_ancestral_seq += nptn;
+    }
+}
+
+void PhyloSuperTree::writeMarginalAncestralState(ostream &out, PhyloNode *node,
+    double *ptn_ancestral_prob, int *ptn_ancestral_seq) {
+    int part = 1;
+    for (auto it = begin(); it != end(); it++, part++) {
+        size_t site, nsites = (*it)->getAlnNSite(), nstates = (*it)->model->num_states;
+        for (site = 0; site < nsites; site++) {
+            int ptn = (*it)->aln->getPatternID(site);
+            out << node->name << "\t" << part << "\t" << site+1 << "\t";
+            out << (*it)->aln->convertStateBackStr(ptn_ancestral_seq[ptn]);
+            double *state_prob = ptn_ancestral_prob + ptn*nstates;
+            for (size_t j = 0; j < nstates; j++) {
+                out << "\t" << state_prob[j];
+            }
+            out << endl;
+        }
+        size_t nptn = (*it)->getAlnNPattern();
+        ptn_ancestral_prob += nptn*nstates;
+        ptn_ancestral_seq += nptn;
+    }
+}
+
+/**
+    end computing ancestral sequence probability for an internal node by marginal reconstruction
+*/
+void PhyloSuperTree::endMarginalAncestralState(bool orig_kernel_nonrev,
+    double* &ptn_ancestral_prob, int* &ptn_ancestral_seq) {
+    if (!orig_kernel_nonrev) {
+        // switch back to REV kernel
+        params->kernel_nonrev = orig_kernel_nonrev;
+        setLikelihoodKernel(sse, num_threads);
+        clearAllPartialLH();
+    }
+    aligned_free(ptn_ancestral_seq);
+    aligned_free(ptn_ancestral_prob);
+
+    for (auto it = rbegin(); it != rend(); it++) {
+        aligned_free((*it)->_pattern_lh_cat_state);
+        (*it)->_pattern_lh_cat_state = NULL;
+    }
+}
+
+void PhyloSuperTree::writeSiteLh(ostream &out, SiteLoglType wsl, int partid) {
+    int part = 1;
+    for (auto it = begin(); it != end(); it++, part++)
+        (*it)->writeSiteLh(out, wsl, part);
+}
+
+void PhyloSuperTree::writeSiteRates(ostream &out, int partid) {
+
+    int part = 1;
+    for (iterator it = begin(); it != end(); it++, part++) {
+        (*it)->writeSiteRates(out, part);
+    }
 }

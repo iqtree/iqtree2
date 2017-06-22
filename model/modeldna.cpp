@@ -28,7 +28,7 @@ ModelDNA::ModelDNA(PhyloTree *tree)
 ModelDNA::ModelDNA(const char *model_name, string model_params, StateFreqType freq, string freq_params, PhyloTree *tree)
 : ModelMarkov(tree)
 {
-	init(model_name, model_params, freq, freq_params);
+  init(model_name, model_params, freq, freq_params);
 }
 
 string getDNAModelInfo(string model_name, string &full_name, string &rate_type, StateFreqType &def_freq) {
@@ -191,7 +191,7 @@ void ModelDNA::init(const char *model_name, string model_params, StateFreqType f
 		readStateFreq(freq_params);
 	}
 	if (model_params != "") {
-		readRates(model_params);
+	  readRates(model_params);
 	}
 
 	if (freq == FREQ_UNKNOWN ||  def_freq == FREQ_EQUAL) freq = def_freq;
@@ -236,7 +236,12 @@ void ModelDNA::readRates(string str) throw(const char*) {
                 num_params++;
                 param_fixed[i+1] = false;
             } else
-                param_fixed[i+1] = true;
+	        if (Params::getInstance().optimize_from_given_params) {
+                    num_params++;
+                    param_fixed[i+1] = false;
+	        } else {
+	            param_fixed[i+1] = true;
+	        }
 			try {
 				rate = convert_double(str.substr(end_pos).c_str(), new_end_pos);
 			} catch (string str) {

@@ -284,20 +284,6 @@ public:
 	virtual int computePatternRates(DoubleVector &pattern_rates, IntVector &pattern_cat) { return 1; }
 
 	/**
-		write site-rates to a file in the following format:
-		1  rate_1
-		2  rate_2
-		....
-		This function will call computePatternRates()
-		@param file_name target file to write rates
-	*/
-	void writeSiteRates(const char *file_name);
-
-	void writeSiteRates(ostream &out);
-
-	void writeSiteRates(ostream &out, DoubleVector &pattern_rates, IntVector &pattern_cat, int ncategory);
-
-	/**
 		name of the rate heterogeneity type
 	*/
 	string name;

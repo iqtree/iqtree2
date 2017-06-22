@@ -354,6 +354,53 @@ public:
 
     virtual int computeParsimonyBranchObsolete(PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst = NULL);
 
+    /****************************************************************************
+            ancestral sequence reconstruction
+     ****************************************************************************/
+
+    /**
+        initialize computing ancestral sequence probability for an internal node by marginal reconstruction
+    */
+    virtual void initMarginalAncestralState(ostream &out, bool &orig_kernel_nonrev, double* &ptn_ancestral_prob, int* &ptn_ancestral_seq);
+
+    /**
+        compute ancestral sequence probability for an internal node by marginal reconstruction
+        (Yang, Kumar and Nei 1995)
+        @param dad_branch branch leading to an internal node where to obtain ancestral sequence
+        @param dad dad of the target internal node
+        @param[out] ptn_ancestral_prob pattern ancestral probability vector of dad_branch->node
+    */
+    virtual void computeMarginalAncestralState(PhyloNeighbor *dad_branch, PhyloNode *dad,
+        double *ptn_ancestral_prob, int *ptn_ancestral_seq);
+
+    virtual void writeMarginalAncestralState(ostream &out, PhyloNode *node, double *ptn_ancestral_prob, int *ptn_ancestral_seq);
+
+    /**
+        end computing ancestral sequence probability for an internal node by marginal reconstruction
+    */
+    virtual void endMarginalAncestralState(bool orig_kernel_nonrev, double* &ptn_ancestral_prob, int* &ptn_ancestral_seq);
+
+
+	/**
+		write site-rates to a file in the following format:
+		1  rate_1
+		2  rate_2
+		....
+		This function will call computePatternRates()
+		@param out output stream to write rates
+	*/
+	virtual void writeSiteRates(ostream &out, int partid = -1);
+
+
+    /**
+        write site log likelihood to a output stream
+        @param out output stream
+        @param wsl write site-loglikelihood type
+        @param partid partition ID as first column of the line. -1 to omit it
+    */
+    virtual void writeSiteLh(ostream &out, SiteLoglType wsl, int partid = -1);
+
+
     /** True when mixed codon with other data type */
     bool rescale_codon_brlen;
     

@@ -53,55 +53,7 @@ void RateHeterogeneity::restoreCheckpoint() {
     checkpoint->endStruct();
 }
 
-void RateHeterogeneity::writeSiteRates(ostream &out, DoubleVector &pattern_rates, IntVector &pattern_cat, int ncategory) {
-	int nsite = phylo_tree->aln->getNSite();
-	int i;
-	
-	out.setf(ios::fixed,ios::floatfield);
-	out.precision(5);
-	out << "Site\tRate";
-	if (!pattern_cat.empty()) out << "\tCategory\tCategorized_rate";
-	out << endl;
-	//cout << __func__ << endl;
-    IntVector count;
-    count.resize(ncategory, 0);
-	for (i = 0; i < nsite; i++) {
-		int ptn = phylo_tree->aln->getPatternID(i);
-		out << i+1 << "\t";
-		if (pattern_rates[ptn] >= MAX_SITE_RATE) out << "100.0"; else out << pattern_rates[ptn];
-		//cout << i << " "<< ptn << " " << pattern_cat[ptn] << endl;
-        if (!pattern_cat.empty()) {
-            int site_cat;
-            double cat_rate;
-            if (getPInvar() == 0.0) {
-                site_cat = pattern_cat[ptn]+1;
-                cat_rate = getRate(pattern_cat[ptn]);
-            } else {
-                site_cat = pattern_cat[ptn];
-                if (site_cat == 0)
-                    cat_rate = 0.0;
-                else
-                    cat_rate = getRate(pattern_cat[ptn]-1);
-            }
-            out << "\t" << site_cat << "\t" << cat_rate;
-            count[pattern_cat[ptn]]++;
-        }
-		out << endl;
-	}
-    cout << "Empirical proportions for each category:";
-    for (i = 0; i < count.size(); i++)
-        cout << " " << ((double)count[i])/nsite;
-    cout << endl;
-}
-
-void RateHeterogeneity::writeSiteRates(ostream &out) {
-	DoubleVector pattern_rates;
-	IntVector pattern_cat;
-	int ncategory = computePatternRates(pattern_rates, pattern_cat);
-	if (pattern_rates.empty()) return;
-	writeSiteRates(out, pattern_rates, pattern_cat, ncategory);
-}
-
+/*
 void RateHeterogeneity::writeSiteRates(const char *file_name) {
 	DoubleVector pattern_rates;
 	IntVector pattern_cat;
@@ -119,6 +71,7 @@ void RateHeterogeneity::writeSiteRates(const char *file_name) {
 		outError(ERR_WRITE_OUTPUT, file_name);
 	}
 }
+*/
 
 double RateHeterogeneity::targetFunk(double x[]) {
 	return -phylo_tree->computeLikelihood();

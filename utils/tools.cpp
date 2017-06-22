@@ -769,6 +769,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.partition_file = NULL;
     params.partition_type = 0;
     params.partfinder_rcluster = 100;
+    params.partfinder_rcluster_max = 0;
     params.remove_empty_seq = true;
     params.terrace_aware = true;
     params.sequence_type = NULL;
@@ -830,6 +831,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.optimize_alg = "2-BFGS,EM";
     params.optimize_alg_mixlen = "EM";
     params.optimize_alg_gammai = "EM";
+    params.optimize_from_given_params = false;
     params.fixed_branch_length = false;
     params.min_branch_length = 0.0; // this is now adjusted later based on alignment length
     // TODO DS: This seems inappropriate for PoMo.  It is handled in
@@ -865,7 +867,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.print_site_rate = false;
     params.print_trees_site_posterior = 0;
     params.print_ancestral_sequence = AST_NONE;
-    params.min_ancestral_prob = 0.95;
+    params.min_ancestral_prob = 0.0;
     params.print_tree_lh = false;
     params.lambda = 1;
     params.speed_conf = 1.0;
@@ -1663,6 +1665,17 @@ void parseArg(int argc, char *argv[], Params &params) {
                     throw "rcluster percentage must be between 0 and 100";
 				continue;
             }
+
+            if (strcmp(argv[cnt], "-rcluster-max") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -rcluster-max <num>";
+                params.partfinder_rcluster_max = convert_int(argv[cnt]);
+                if (params.partfinder_rcluster_max <= 0)
+                    throw "rcluster-max must be between > 0";
+				continue;
+            }
+
 			if (strcmp(argv[cnt], "-keep_empty_seq") == 0) {
 				params.remove_empty_seq = false;
 				continue;
@@ -2127,6 +2140,10 @@ void parseArg(int argc, char *argv[], Params &params) {
 					throw "Wrong number of proportion of invariable sites";
 				continue;
 			}
+			if (strcmp(argv[cnt], "-optfromgiven") == 0) {
+				params.optimize_from_given_params = true;
+				continue;
+			}
 			if (strcmp(argv[cnt], "-brent") == 0) {
 				params.optimize_by_newton = false;
 				continue;
@@ -2239,10 +2256,10 @@ void parseArg(int argc, char *argv[], Params &params) {
 					params.consensus_type = CT_NONE;
 				continue;
 			}
-			if (strcmp(argv[cnt], "-bspec") == 0) {
+			if (strcmp(argv[cnt], "-bspec") == 0 || strcmp(argv[cnt], "-bsam") == 0) {
 				cnt++;
 				if (cnt >= argc)
-					throw "Use -bspec <bootstrap_specification>";
+					throw "Use -bsam <bootstrap_specification>";
 				params.bootstrap_spec = argv[cnt];
 				continue;
 			}
@@ -2428,8 +2445,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 					throw "Use -asr-min <probability>";
                 
                 params.min_ancestral_prob = convert_double(argv[cnt]);
-                if (params.min_ancestral_prob < 0.5 || params.min_ancestral_prob > 1)
-                    throw "Minimum ancestral probability [-asr-min] must be between 0.5 and 1.0";
+                if (params.min_ancestral_prob < 0 || params.min_ancestral_prob > 1)
+                    throw "Minimum ancestral probability [-asr-min] must be between 0 and 1.0";
                 continue;
             }
 
@@ -2635,7 +2652,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -bb <#replicates>";
-                if (params.min_iterations != -1) {
+                if (params.stop_condition == SC_FIXED_ITERATION) {
                     outError("Ultrafast bootstrap does not work with -te or -n option");
                 }
 				params.gbo_replicates = convert_int(argv[cnt]);
@@ -2686,7 +2703,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.min_correlation = convert_double(argv[cnt]);
 				continue;
 			}
-			if (strcmp(argv[cnt], "-brefine") == 0) {
+			if (strcmp(argv[cnt], "-brefine") == 0 || strcmp(argv[cnt], "-bnni") == 0) {
 				params.ufboot2corr = true;
                 // print ufboot trees with branch lengths
 				params.print_ufboot_trees = 2;
@@ -2814,6 +2831,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.numInitTrees = 2;
 				params.min_iterations = 2;
 				params.stop_condition = SC_FIXED_ITERATION;
+                params.modelEps = 0.05;
                 continue;
             }
 			if (strcmp(argv[cnt], "-fss") == 0) {
@@ -2987,6 +3005,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.unsuccess_iteration = convert_int(argv[cnt]);
                 if (params.unsuccess_iteration <= 0)
                     throw "-nstop iterations must be positive";
+                params.max_iterations = max(params.max_iterations, params.unsuccess_iteration*10);
 				continue;
 			}
 			if (strcmp(argv[cnt], "-lsbran") == 0) {
@@ -3533,6 +3552,7 @@ void usage_iqtree(char* argv[], bool full_command) {
 //            << "  -iqpnni              Switch back to the old IQPNNI tree search algorithm" << endl
             << endl << "ULTRAFAST BOOTSTRAP:" << endl
             << "  -bb <#replicates>    Ultrafast bootstrap (>=1000)" << endl
+            << "  -bsam GENE|GENESITE  Resample GENE or GENE+SITE for partition (default: SITE)" << endl
             << "  -wbt                 Write bootstrap trees to .ufboot file (default: none)" << endl
             << "  -wbtl                Like -wbt but also writing branch lengths" << endl
 //            << "  -n <#iterations>     Minimum number of iterations (default: 100)" << endl
@@ -3540,6 +3560,7 @@ void usage_iqtree(char* argv[], bool full_command) {
 			<< "  -nstep <#iterations> #Iterations for UFBoot stopping rule (default: 100)" << endl
             << "  -bcor <min_corr>     Minimum correlation coefficient (default: 0.99)" << endl
 			<< "  -beps <epsilon>      RELL epsilon to break tie (default: 0.5)" << endl
+            << "  -bnni                Optimize UFBoot trees by NNI on bootstrap alignment" << endl
             << endl << "STANDARD NON-PARAMETRIC BOOTSTRAP:" << endl
             << "  -b <#replicates>     Bootstrap + ML tree + consensus tree (>=100)" << endl
             << "  -bc <#replicates>    Bootstrap + consensus tree" << endl
@@ -3560,6 +3581,7 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -m MF+MERGE          Find best partition scheme incl. FreeRate heterogeneity" << endl
             << "  -m MFP+MERGE         Like -m MF+MERGE followed by tree inference" << endl
             << "  -rcluster <percent>  Percentage of partition pairs (relaxed clustering alg.)" << endl
+            << "  -rcluster-max <num>  Max number of partition pairs (default: 10*#partitions)" << endl
             << "  -mset program        Restrict search to models supported by other programs" << endl
             << "                       (raxml, phyml or mrbayes)" << endl
             << "  -mset <lm-subset>    Restrict search to a subset of the Lie-Markov models" << endl
@@ -3608,8 +3630,16 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "                       10.34,12.12" << endl
             << "       Non-reversible: STRSYM (strand symmetric model, synonymous with WS6.6)" << endl
             << "       Non-reversible: UNREST (most general unrestricted model, functionally equivalent to 12.12)" << endl
-            << "            Otherwise: Name of file containing user-model parameters" << endl
-            << "                       (rate parameters and state frequencies)" << endl
+            << "       Models can have parameters appended in brackets." << endl
+            << "           e.g. '-mRY3.4{0.2,-0.3}+I' specifies parameters for" << endl
+            << "           RY3.4 model but leaves proportion of invariant sites" << endl
+            << "           unspecified. '-mRY3.4{0.2,-0.3}+I{0.5} gives both." << endl
+            << "           When this is done, the given parameters will be taken" << endl
+            << "           as fixed (default) or as start point for optimization" << endl
+            << "           (if -optfromgiven option supplied)" << endl
+            << "" << endl
+            << "        Otherwise: Name of file containing user-model parameters" << endl
+            << "                   (rate parameters and state frequencies)" << endl
             << endl << "STATE FREQUENCY:" << endl
             << "  Append one of the following +F... to -m <model_name>" << endl
             << "  +F                   Empirically counted frequencies from alignment" << endl
@@ -3735,9 +3765,9 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -zb <#replicates>    Performing BP,KH,SH,ELW tests for trees passed via -z" << endl
             << "  -zw                  Also performing weighted-KH and weighted-SH tests" << endl
             << "  -au                  Also performing approximately unbiased (AU) test" << endl
-//            << endl << "ANCESTRAL SEQUENCE RECONSTRUCTION:" << endl
-//            << "  -asr                 Compute ancestral states by marginal reconstruction" << endl
-//            << "  -asr-min <prob>      Min probability to assign ancestral sequence (default: 0.95)" << endl
+            << endl << "ANCESTRAL STATE RECONSTRUCTION:" << endl
+            << "  -asr                 Ancestral state reconstruction by empirical Bayes" << endl
+            << "  -asr-min <prob>      Min probability of ancestral state (default: equil freq)" << endl
 //            << "  -wja                 Write ancestral sequences by joint reconstruction" << endl
 
 

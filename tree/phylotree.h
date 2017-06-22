@@ -127,7 +127,7 @@ inline T *aligned_alloc(size_t size) {
     return (T*)mem;
 }
 
-inline void aligned_free(void *mem) {
+inline void aligned_free(void* mem) {
 #if defined WIN32 || defined _WIN32 || defined __WIN32__
     #if (defined(__MINGW32__) || defined(__clang__)) && defined(BINARY32)
         __mingw_aligned_free(mem);
@@ -719,6 +719,9 @@ public:
     /** vector size used by SIMD kernel */
     size_t vector_size;
 
+    /** true if using safe numeric for likelihood kernel */
+    bool safe_numeric;
+
     /** number of threads used for likelihood kernel */
     int num_threads;
 
@@ -881,10 +884,10 @@ public:
 //    template <class VectorClass, const int VCSIZE, const int nstates>
 //    double computeLikelihoodFromBufferEigenSIMD();
 
-    template <class VectorClass, const bool SAFE_NUMERIC, const int nstates, const bool FMA = false, const bool SITE_MODEL = false>
+    template <class VectorClass, const int nstates, const bool FMA = false, const bool SITE_MODEL = false>
     double computeLikelihoodFromBufferSIMD();
 
-    template <class VectorClass, const bool SAFE_NUMERIC, const bool FMA = false, const bool SITE_MODEL = false>
+    template <class VectorClass, const bool FMA = false, const bool SITE_MODEL = false>
     double computeLikelihoodFromBufferGenericSIMD();
 
     /*
@@ -947,13 +950,26 @@ public:
      ****************************************************************************/
 
     /**
+        initialize computing ancestral sequence probability for an internal node by marginal reconstruction
+    */
+    virtual void initMarginalAncestralState(ostream &out, bool &orig_kernel_nonrev, double* &ptn_ancestral_prob, int* &ptn_ancestral_seq);
+
+    /**
         compute ancestral sequence probability for an internal node by marginal reconstruction
         (Yang, Kumar and Nei 1995)
         @param dad_branch branch leading to an internal node where to obtain ancestral sequence
         @param dad dad of the target internal node
         @param[out] ptn_ancestral_prob pattern ancestral probability vector of dad_branch->node
     */
-    void computeMarginalAncestralProbability(PhyloNeighbor *dad_branch, PhyloNode *dad, double *ptn_ancestral_prob);
+    virtual void computeMarginalAncestralState(PhyloNeighbor *dad_branch, PhyloNode *dad,
+        double *ptn_ancestral_prob, int *ptn_ancestral_seq);
+
+    virtual void writeMarginalAncestralState(ostream &out, PhyloNode *node, double *ptn_ancestral_prob, int *ptn_ancestral_seq);
+
+    /**
+        end computing ancestral sequence probability for an internal node by marginal reconstruction
+    */
+    virtual void endMarginalAncestralState(bool orig_kernel_nonrev, double* &ptn_ancestral_prob, int* &ptn_ancestral_seq);
 
     /**
      	 compute the joint ancestral states at a pattern (Pupko et al. 2000)
@@ -1890,6 +1906,24 @@ public:
     void convertToRooted();
 
 
+	/**
+		write site-rates to a file in the following format:
+		1  rate_1
+		2  rate_2
+		....
+		This function will call computePatternRates()
+		@param out output stream to write rates
+	*/
+	virtual void writeSiteRates(ostream &out, int partid = -1);
+
+    /**
+        write site log likelihood to a output stream
+        @param out output stream
+        @param wsl write site-loglikelihood type
+        @param partid partition ID as first column of the line. -1 to omit it
+    */
+    virtual void writeSiteLh(ostream &out, SiteLoglType wsl, int partid = -1);
+
 protected:
 
     /**
@@ -1947,9 +1981,14 @@ protected:
 
     /**
             internal pattern likelihoods per category, 
-            only stored after calling non-SSE computeLikelihood for efficiency purpose
     */
     double *_pattern_lh_cat;
+
+    /**
+            internal pattern likelihoods per category per state
+            will be computed if not NULL and using non-reversible kernel 
+    */
+    double *_pattern_lh_cat_state;
 
     /**
             associated substitution model

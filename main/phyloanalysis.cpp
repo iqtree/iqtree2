@@ -73,7 +73,8 @@ void reportReferences(Params &params, ofstream &out, string &original_model) {
         out << "To cite ModelFinder please use: " << endl << endl
             << "Subha Kalyaanamoorthy, Bui Quang Minh, Thomas KF Wong, Arndt von Haeseler," << endl
             << "and Lars S Jermiin (2017) ModelFinder: Fast model selection for" << endl
-            << "accurate phylogenetic estimates. Nature Methods, in press." << endl << endl;
+            << "accurate phylogenetic estimates. Nature Methods, 14:587–589." << endl
+            << "http://dx.doi.org/10.1038/nmeth.4285" << endl << endl;
         if (original_model.find("ONLY") != string::npos || (original_model.substr(0,2)=="MF" && original_model.substr(0,3)!="MFP"))
             modelfinder_only = true;
     }
@@ -702,8 +703,8 @@ void printOutfilesInfo(Params &params, string &original_model, IQTree &tree) {
 		if (raxml_format_printed)
 			 cout << "           in RAxML format:      " << params.out_prefix << ".best_scheme" << endl;
 	}
-	if (tree.getRate()->getGammaShape() > 0 && params.print_site_rate)
-		cout << "  Gamma-distributed rates:       " << params.out_prefix << ".rate"
+	if ((tree.getRate()->getGammaShape() > 0 || params.partition_file) && params.print_site_rate)
+		cout << "  Site-specific rates:           " << params.out_prefix << ".rate"
 				<< endl;
 
 	if ((tree.getRate()->isSiteSpecificRate() || tree.getRate()->getPtnCat(0) >= 0) && params.print_site_rate)
@@ -723,8 +724,8 @@ void printOutfilesInfo(Params &params, string &original_model, IQTree &tree) {
 				<< endl;
 
     if (params.print_ancestral_sequence) {
-        cout << "  Ancestral state probabilities: " << params.out_prefix << ".ancestralprob" << endl;
-        cout << "  Ancestral sequences:           " << params.out_prefix << ".ancestralseq" << endl;
+        cout << "  Ancestral state:               " << params.out_prefix << ".state" << endl;
+//        cout << "  Ancestral sequences:           " << params.out_prefix << ".aseq" << endl;
     }
 
 	if (params.write_intermediate_trees)
@@ -844,7 +845,7 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 			int namelen = stree->getMaxPartNameLength();
 			int part;
 			out.width(max(namelen+6,10));
-			out << left << "  ID  Name" << "  Type  #Seqs  #Sites  #Patterns  #Const_Sites" << endl;
+			out << left << "  ID  Name" << "  Type\tSeq\tSite\tUnique\tInfor\tInvar\tConst" << endl;
 			//out << string(namelen+54, '-') << endl;
 			part = 0;
 			for (PhyloSuperTree::iterator it = stree->begin(); it != stree->end(); it++, part++) {
@@ -854,7 +855,6 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 				out << right << part+1 << "  ";
 				out.width(max(namelen,4));
 				out << left << stree->part_info[part].name << "  ";
-				out.width(6);
 				switch ((*it)->aln->seq_type) {
 				case SEQ_BINARY: out << "BIN"; break;
 				case SEQ_CODON: out << "CODON"; break;
@@ -862,18 +862,20 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 				case SEQ_MORPH: out << "MORPH"; break;
 				case SEQ_MULTISTATE: out << "TINA"; break;
 				case SEQ_PROTEIN: out << "AA"; break;
-				case SEQ_POMO: out << "COUNTSFORMAT"; break;
+				case SEQ_POMO: out << "POMO"; break;
 				case SEQ_UNKNOWN: out << "???"; break;
 				}
-				out.width(5);
-				out << right << (*it)->aln->getNSeq() << "  ";
-				out.width(6);
-				out << (*it)->aln->getNSite() << "  ";
-				out.width(6);
-				out << (*it)->aln->getNPattern() << "      ";
-				out << round((*it)->aln->frac_const_sites*100) << "%" << endl;
+				out << "\t" << (*it)->aln->getNSeq() << "\t" << (*it)->aln->getNSite()
+                    << "\t" << (*it)->aln->getNPattern() << "\t" << (*it)->aln->num_informative_sites
+                    << "\t" << (*it)->getAlnNSite() - (*it)->aln->num_variant_sites
+                    << "\t" << int((*it)->aln->frac_const_sites*(*it)->getAlnNSite()) << endl;
 			}
-			out << endl;
+			out << endl
+                << "Unique: Number of unique site patterns" << endl
+                << "Infor:  Number of parsimony-informative sites" << endl
+                << "Invar:  Number of invariant sites" << endl
+                << "Const:  Number of constant sites (can be subset of invariant sites)" << endl << endl;
+
 		} else
 			reportAlignment(out, *(tree.aln), tree.removed_seqs.size());
 
@@ -1747,7 +1749,15 @@ void printMiscInfo(Params &params, IQTree &iqtree, double *pattern_lh) {
 		cout << endl << "BEST SCORE FOUND : " << iqtree.getBestScore()<< endl;
 		string mhrate_file = params.out_prefix;
 		mhrate_file += ".mhrate";
-		iqtree.getRate()->writeSiteRates(mhrate_file.c_str());
+        try {
+            ofstream out;
+            out.exceptions(ios::failbit | ios::badbit);
+            out.open(mhrate_file.c_str());
+            iqtree.writeSiteRates(out);
+            out.close();
+        } catch (ios::failure) {
+            outError(ERR_WRITE_OUTPUT, mhrate_file);
+        }
 
 		if (params.print_site_lh) {
 			string site_lh_file = params.out_prefix;
@@ -1759,24 +1769,32 @@ void printMiscInfo(Params &params, IQTree &iqtree, double *pattern_lh) {
 	if (params.print_site_rate) {
 		string rate_file = params.out_prefix;
 		rate_file += ".rate";
-		iqtree.getRate()->writeSiteRates(rate_file.c_str());
-		if (iqtree.isSuperTree()) {
-			PhyloSuperTree *stree = (PhyloSuperTree*) &iqtree;
-			int part = 0;
-			try {
-				ofstream out;
-				out.exceptions(ios::failbit | ios::badbit);
-				out.open(rate_file.c_str());
-				for (PhyloSuperTree::iterator it = stree->begin(); it != stree->end(); it++, part++) {
-					out << "SITE RATES FOR PARTITION " << stree->part_info[part].name << ":" << endl;
-					(*it)->getRate()->writeSiteRates(out);
-				}
-				cout << "Site rates printed to " << rate_file << endl;
-				out.close();
-			} catch (ios::failure) {
-				outError(ERR_WRITE_OUTPUT, rate_file);
-			}
-		}
+        try {
+            ofstream out;
+            out.exceptions(ios::failbit | ios::badbit);
+            out.open(rate_file.c_str());
+            out << "# Site-specific subtitution rates determined by empirical Bayesian method" << endl
+                << "# This file can be read in MS Excel or in R with command:" << endl
+                << "#   tab=read.table('" <<  params.out_prefix << ".rate',header=TRUE)" << endl
+                << "# Columns are tab-separated with following meaning:" << endl;
+            if (iqtree.isSuperTree()) {
+                out << "#   Part:   Partition ID (1=" << ((PhyloSuperTree*)&iqtree)->part_info[0].name << ", etc)" << endl
+                    << "#   Site:   Site ID within partition (starting from 1 for each partition)" << endl;
+            } else
+                out << "#   Site:   Alignment site ID" << endl;
+
+            out << "#   Rate:   Posterior mean site rate weighted by posterior probability" << endl
+                << "#   Cat:    Category with highest posterior (0=invariable, 1=slow, etc)" << endl
+                << "#   C_Rate: Corresponding rate of highest category" << endl;
+            if (iqtree.isSuperTree())
+                out << "Part\t";
+            out << "Site\tRate\tCat\tC_Rate" << endl;
+            iqtree.writeSiteRates(out);
+            out.close();
+        } catch (ios::failure) {
+            outError(ERR_WRITE_OUTPUT, rate_file);
+        }
+        cout << "Site rates printed to " << rate_file << endl;
 	}
 
     if (params.fixed_branch_length == BRLEN_SCALE) {
@@ -1836,6 +1854,20 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
     string dist_file;
     params.startCPUTime = getCPUTime();
     params.start_real_time = getRealTime();
+
+    int absent_states = 0;
+    if (iqtree.isSuperTree()) {
+        SuperAlignment *saln = (SuperAlignment*)iqtree.aln;
+        PhyloSuperTree *stree = (PhyloSuperTree*)&iqtree;
+        for (int i = 0; i < saln->partitions.size(); i++)
+            absent_states += saln->partitions[i]->checkAbsentStates("partition " + stree->part_info[i].name);
+    } else {
+        absent_states = iqtree.aln->checkAbsentStates("alignment");
+    }
+    if (absent_states > 0) {
+        outWarning(convertIntToString(absent_states) + " states (see above) are not present that may cause numerical problems");
+        cout << endl;
+    }
 
     // Make sure that no partial likelihood of IQ-TREE is initialized when PLL is used to save memory
     if (params.pll) {
@@ -2890,7 +2922,7 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
     tree->setCheckpoint(checkpoint);
     if (params.min_branch_length <= 0.0) {
         params.min_branch_length = 1e-6;
-        if (tree->getAlnNSite() >= 100000) {
+        if (!tree->isSuperTree() && tree->getAlnNSite() >= 100000) {
             params.min_branch_length = 0.1 / (tree->getAlnNSite());
             tree->num_precision = max((int)ceil(-log10(Params::getInstance().min_branch_length))+1, 6);
             cout.precision(12);

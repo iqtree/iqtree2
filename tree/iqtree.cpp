@@ -685,6 +685,7 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
     bool orig_rooted = rooted;
     rooted = false;
 
+/* TODO: this does not work properly with partition model
 #ifdef _OPENMP
     StrVector pars_trees;
     if (params->start_tree == STT_PARSIMONY && nParTrees >= 1) {
@@ -707,6 +708,7 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
         }
     }
 #endif
+*/
 
     int init_size = candidateTrees.size();
 
@@ -740,6 +742,13 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
 			curParsTree = getTreeString();
         } else if (params->start_tree == STT_PARSIMONY) {
             /********* Create parsimony tree using IQ-TREE *********/
+            rooted = false;
+            computeParsimonyTree(NULL, aln);
+            if (orig_rooted)
+                convertToRooted();
+            curParsTree = getTreeString();
+
+/* TODO: this does not work properly with partition model
 #ifdef _OPENMP
             curParsTree = pars_trees[treeNr-1];
 #else
@@ -750,6 +759,7 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
                 curParsTree = getTreeString();
             }
 #endif
+*/
         }
         
         int pos = addTreeToCandidateSet(curParsTree, -DBL_MAX, false, MPIHelper::getInstance().getProcessID());
@@ -759,9 +769,7 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
             doRandomNNIs();
 //            generateRandomTree(YULE_HARDING);
             wrapperFixNegativeBranch(true);
-            rooted = false;
-            if (orig_rooted)
-                convertToRooted();
+            ASSERT(rooted == orig_rooted);
             string randTree = getTreeString();
 //            if (isMixlen()) {
 //                randTree = optimizeBranches(1);
@@ -1018,6 +1026,10 @@ void IQTree::initializeModel(Params &params, ModelsBlock *models_block) {
         	outError("non GTR model for DNA is not yet supported by PLL.");
         pllInitModel(pllInst, pllPartitions);
     }
+
+    if (aln->ordered_pattern.empty())
+        aln->orderPatternByNumChars(PAT_VARIANT);
+
 }
 double IQTree::getProbDelete() {
     return (double) k_delete / leafNum;
@@ -2747,6 +2759,8 @@ void IQTree::refineBootTrees() {
             boot_tree->constraintTree.readConstraint(constraintTree);
         }
 
+        boot_tree->setParams(params);
+
         // copy model
         boot_tree->setModelFactory(getModelFactory());
 
@@ -2775,7 +2789,7 @@ void IQTree::refineBootTrees() {
 		boot_tree->printTree(ostr, WT_TAXON_ID | WT_SORT_TAXA);
 		boot_trees[sample] = ostr.str();
 		boot_logl[sample] = boot_tree->curScore;
-        ostr.seekg(0, ios::beg);
+        ostr.seekp(0, ios::beg);
         boot_tree->printTree(ostr, WT_BR_LEN);
         boot_trees_brlen[sample] = ostr.str();
 
@@ -4215,7 +4229,7 @@ void PhyloTree::warnNumThreads() {
     size_t nptn = getAlnNPattern();
     if (nptn < num_threads*vector_size)
         outError("Too many threads for short alignments, please reduce number of threads or use -nt AUTO to determine it.");
-    if (nptn < num_threads*100)
+    if (nptn < num_threads*1000/aln->num_states)
         outWarning("Number of threads seems too high for short alignments. Use -nt AUTO to determine best number of threads.");
 }
 

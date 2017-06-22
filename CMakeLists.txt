@@ -51,7 +51,7 @@ add_definitions(-DIQ_TREE)
 # The version number.
 set (iqtree_VERSION_MAJOR 1)
 set (iqtree_VERSION_MINOR 6)
-set (iqtree_VERSION_PATCH "beta")
+set (iqtree_VERSION_PATCH "beta4")
 
 set(BUILD_SHARED_LIBS OFF)
 
@@ -506,7 +506,7 @@ add_library(kernelfma tree/phylokernelfma.cpp)
 endif()
 
 if (IQTREE_FLAGS MATCHES "mpi")
-	add_library(mympi TreeCollection.cpp ObjectStream.cpp)
+	add_library(mympi utils/TreeCollection.cpp utils/ObjectStream.cpp)
 endif()
 
 add_executable(iqtree
@@ -567,9 +567,9 @@ if (NOT IQTREE_FLAGS MATCHES "single")
 		set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -L${PROJECT_SOURCE_DIR}/libmac")
 	elseif(CLANG AND WIN32)
         if (BINARY32)
-            set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -L${PROJECT_SOURCE_DIR}/lib32 libiomp5md.dll")
+            target_link_libraries(iqtree ${PROJECT_SOURCE_DIR}/lib32/libiomp5md.dll)
         else()
-            set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -L${PROJECT_SOURCE_DIR}/lib libiomp5md.dll")
+            target_link_libraries(iqtree ${PROJECT_SOURCE_DIR}/lib/libiomp5md.dll)
         endif()
 #        set(THREAD_LIB "ompstatic")
 	endif()
