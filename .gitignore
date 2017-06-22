@@ -21,3 +21,4 @@ build/
 /GRTAGS
 /GTAGS
 /.dir-locals.el
+/iqtree_config.h
