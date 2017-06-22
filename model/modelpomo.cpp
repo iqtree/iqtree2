@@ -207,6 +207,9 @@ double ModelPoMo::computeSumFreqBoundaryStates() {
     double norm_boundary = 0.0;
     for (i = 0; i < 4; i++)
         norm_boundary += freq_boundary_states[i];
+    // Should be 1.0!
+    if ((norm_boundary > 1.0 + eps) || (norm_boundary < 1.0 - eps))
+      outError("Calculation of boundary state frequencies faulty (maybe a numerical problem).");
     return norm_boundary;
 }
 
