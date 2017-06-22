@@ -138,7 +138,9 @@ void Initialize(float **delta, FILE *input, int n, POINTERS *trees)
 
   for(lig=1; lig <= n; lig++)
     {
-      fscanf(input,"%s",name_taxon);                  /* read taxon name */
+      // Read taxon name.
+      if (fscanf(input,"%s",name_taxon) != 1)
+        printf("Failed to read taxon name.\n");
       name=(WORD *)calloc(1,sizeof(WORD));            /* taxon name is   */
       if(name == NULL)                                /* put in trees      */
 	{
@@ -153,7 +155,9 @@ void Initialize(float **delta, FILE *input, int n, POINTERS *trees)
 	  trees[lig].tail=name;
 	  for(col= 1; col <= n; col++)
 	    {
-	      fscanf(input,"%f",&distance);             /* read the distance  */
+        // Read distance.
+        if (fscanf(input,"%f",&distance) != 1)
+          printf("Failed to read distance.\n");
 	      delta[lig][col]=distance;
 	    }
 	}
