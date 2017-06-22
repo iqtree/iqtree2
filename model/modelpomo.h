@@ -256,8 +256,9 @@ class ModelPoMo : virtual public ModelMarkov
     virtual void computeRateMatrix(double **rate_matrix, double *state_freq, int num_state);
 
     /**
-     *  Scale the mutation rates by SCALE.  I.e., new_mut_rates_sym[i].
-     *  = scale*old_mut_rates_sym[i].
+     *  Scale the mutation rates by SCALE.
+     *
+     * I.e., new_mut_rates[i]. = * scale*old_mut_rates[i].
      *
      *  @param scale (IN).
      */
@@ -296,20 +297,10 @@ class ModelPoMo : virtual public ModelMarkov
     int N;
 
     /**
-     * Full mutation rate matrix (R + PHI).
+     * Full mutation rate matrix (R + PHI). Only contains exchangeabilities
+     * (i.e., m_ab/pi_b).
      */
     double *mutation_rate_matrix;
-
-    /**
-     * Matrix R with symmetric mutation rates (m_ij = m_ji).
-     */
-    double *mutation_rate_matrix_sym;
-
-    /**
-     * Matrix PHI with anti-symmetric mutation rates (f_ij = -f_ji; flux
-     * rates, non-reversible model).
-     */
-    double *mutation_rate_matrix_asy;
 
     /**
      * 4 unnormalized stationary frequencies of boundary states.
@@ -384,10 +375,9 @@ class ModelPoMo : virtual public ModelMarkov
     double computeSumFreqPolyStates();
 
     /**
-     * Computes the sum over lamda_pol without mutliplying with
-     * mutation coefficients.  This is useful if the mutation
-     * coefficient is constant, e.g., when the initial value is set.
-     * Compute part of normalization constant of polymorphic states.
+     * Compute the sum over lamda_pol without mutliplying with mutation
+     * coefficients. This is useful if the mutation coefficient is constant,
+     * e.g., when the initial value is set.
      *
      * @return
      */

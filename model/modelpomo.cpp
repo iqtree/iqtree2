@@ -200,8 +200,6 @@ ModelPoMo::~ModelPoMo() {
     delete mutation_model;
     delete [] freq_boundary_states_emp;
     delete [] mutation_rate_matrix;
-    delete [] mutation_rate_matrix_sym;
-    delete [] mutation_rate_matrix_asy;
 }
 
 double ModelPoMo::computeSumFreqBoundaryStates() {
@@ -221,21 +219,14 @@ double harmonic(int n) {
 
 void ModelPoMo::setInitialMutCoeff() {
     mutation_rate_matrix = new double[n_alleles*n_alleles];
-    mutation_rate_matrix_sym = new double[n_alleles*n_alleles];
-    mutation_rate_matrix_asy = new double[n_alleles*n_alleles];
     memset(mutation_rate_matrix, 0, n_alleles*n_alleles*sizeof(double));
-    memset(mutation_rate_matrix_sym, 0, n_alleles*n_alleles*sizeof(double));
-    memset(mutation_rate_matrix_asy, 0, n_alleles*n_alleles*sizeof(double));
-    // TODO DS: Check if this works.
-    // TODO DS: Move this where it belongs.
+
     // Check if polymorphism data is available.
     double lambda_poly_sum_no_mu = computeSumFreqPolyStatesNoMut();
-    if (!fixed_theta && lambda_poly_sum_no_mu <= 0) {
-        // TODO DS: Obsolete because mutation rates are scaled
-        // according to theta.  What needs to be done is setting a
-        // predefined theta.
-        outWarning("We strongly discourage to use PoMo on data without polymorphisms.");
-        outError("Setting the level of polymorphism without population data is not yet supported.");
+    if (lambda_poly_sum_no_mu <= 0) {
+      outWarning("We discourage usage of PoMo on data without polymorphisms.");
+      if (!fixed_theta_usr)
+        outError("Please fix the level of polymorphism (theta) when population data is unavailable.");
     }
 
     normalizeMutationRates();
@@ -255,11 +246,16 @@ double ModelPoMo::computeSumFreqPolyStatesNoMut() {
 
 double ModelPoMo::computeSumFreqPolyStates() {
     double norm_polymorphic = 0.0;
+    double dpoly;
     int i, j;
     for (i = 0; i < n_alleles; i++) {
-        for (j = 0; j < i; j++)
-            norm_polymorphic +=
-                2 * freq_boundary_states[i] * freq_boundary_states[j] * mutation_rate_matrix_sym[i*n_alleles+j];
+      for (j = 0; j < n_alleles; j++) {
+        if (i != j) {
+          dpoly = freq_boundary_states[i] * freq_boundary_states[j];
+          dpoly *= mutation_rate_matrix[i*n_alleles+j];
+          norm_polymorphic += dpoly;
+        }
+      }
     }
     norm_polymorphic *= harmonic(N-1);
     return norm_polymorphic;
@@ -275,8 +271,9 @@ void ModelPoMo::computeStateFreq () {
     double norm = computeNormConst();
     int state;
 
-    double * r = mutation_rate_matrix_sym;
-    double * f = mutation_rate_matrix_asy;
+    double * m = mutation_rate_matrix;
+    // double * r = mutation_rate_matrix_sym;
+    // double * f = mutation_rate_matrix_asy;
     double * pi = freq_boundary_states;
     int n = n_alleles;
 
@@ -288,9 +285,10 @@ void ModelPoMo::computeStateFreq () {
             int i, a, b;
             decomposeState(state, i, a, b);
             state_freq[state] = norm * pi[a] * pi[b];
-            double sym =  r[a*n + b]*(1.0/i + 1.0/(N-i));
-            double asy = -f[a*n + b]*(1.0/i - 1.0/(N-i));
-            state_freq[state] *= (sym + asy);
+            state_freq[state] *= (m[a*n + b]*1.0/(N-i) + m[b*n + a]*1.0/i);
+            // double sym =  r[a*n + b]*(1.0/i + 1.0/(N-i));
+            // double asy = -f[a*n + b]*(1.0/i - 1.0/(N-i));
+            // state_freq[state] *= (sym + asy);
         }
     }
 }
@@ -371,7 +369,6 @@ bool ModelPoMo::isPolymorphic(int state) {
 }
 
 double ModelPoMo::mutCoeff(int nt1, int nt2) {
-    // return mutation_rate_matrix_sym[nt1*n_alleles+nt2]+mutation_rate_matrix_asy[nt1*n_alleles+nt2];
     return mutation_rate_matrix[nt1*n_alleles+nt2];
 }
 
@@ -454,11 +451,6 @@ void ModelPoMo::setBounds(double *lower_bound,
 // Get rates from underlying mutation model and normalize them such
 // that the level of polymorphism (theta) matches.
 void ModelPoMo::normalizeMutationRates() {
-    // TODO DS: R and PHI are actually not needed during the
-    // maximization of the likelihood but only at the end, when
-    // interpreting the result.
-    double * r = mutation_rate_matrix_sym;
-    double * f = mutation_rate_matrix_asy;
     double * m = mutation_rate_matrix;
     double * pi = mutation_model->state_freq;
     mutation_model->getQMatrix(m);
@@ -466,24 +458,6 @@ void ModelPoMo::normalizeMutationRates() {
     for (int i = 0; i < n; i++)
         for (int j = 0; j < n; j++)
             m[i*n+j] /= pi[j];
-    for (int i = 0; i < n; i++) {
-        for (int j = 0; j < n; j++) {
-            r[i*n+j] = m[i*n+j] + m[j*n+i];
-            r[i*n+j] /= 2.0;
-        }
-    }
-    if (!is_reversible) {
-        for (int i = 0; i < n; i++) {
-            for (int j = 0; j < n; j++) {
-                if (i==j)
-                    f[i*n+j] = 0;
-                else {
-                    f[i*n+j] = m[i*n+j] - m[j*n+i];
-                    f[i*n+j] /= 2.0;
-                }
-            }
-        }
-    }
 
     // Normalize the mutation probability so that they resemble the
     // given level of polymorphism.
@@ -522,38 +496,8 @@ void ModelPoMo::normalizeMutationRates() {
     for (int i = 0; i < n; i++) {
         for (int j = 0; j < n; j++) {
             m[i*n+j] *= m_norm;
-            r[i*n+j] *= m_norm;
-            f[i*n+j] *= m_norm;
         }
     }
-
-    // // DEBUG.
-    // cout << setprecision(8);
-    // cout << "m" << endl;
-    // for (int i = 0; i < n; i++) {
-    //     for (int j = 0; j < n; j++)
-    //         cout << m[i*n+j] << " ";
-    //     cout << endl;
-    // }
-    // cout << endl;
-    // // DEBUG.
-    // cout << setprecision(8);
-    // cout << "r" << endl;
-    // for (int i = 0; i < n; i++) {
-    //     for (int j = 0; j < n; j++)
-    //         cout << r[i*n+j] << " ";
-    //     cout << endl;
-    // }
-    // cout << endl;
-    // // DEBUG.
-    // cout << setprecision(8);
-    // cout << "f" << endl;
-    // for (int i = 0; i < n; i++) {
-    //     for (int j = 0; j < n; j++)
-    //         cout << f[i*n+j] << " ";
-    //     cout << endl;
-    // }
-    // cout << endl;
 
     // // Recompute stationary frequency vector with updated mutation
     // rates.
@@ -563,8 +507,8 @@ void ModelPoMo::normalizeMutationRates() {
 void ModelPoMo::scaleMutationRatesAndUpdateRateMatrix(double scale) {
     for (int i = 0; i < n_alleles*n_alleles; i++) {
         mutation_rate_matrix[i] = mutation_rate_matrix[i]*scale;
-        mutation_rate_matrix_sym[i] = mutation_rate_matrix_sym[i]*scale;
-        mutation_rate_matrix_asy[i] = mutation_rate_matrix_asy[i]*scale;
+        // mutation_rate_matrix_sym[i] = mutation_rate_matrix_sym[i]*scale;
+        // mutation_rate_matrix_asy[i] = mutation_rate_matrix_asy[i]*scale;
     }
     updatePoMoStatesAndRateMatrix();
 }
@@ -604,11 +548,13 @@ void ModelPoMo::writeInfo(ostream &out) {
 
     out << setprecision(8);
 
+    // Output stationary frequencies of boundary states.
     out << "Frequency of boundary states: ";
     for (int i = 0; i < n; i++)
         out << freq_boundary_states[i] << " ";
     out << endl;
-    // TODO DS: Output separation (rvbl and flux).
+
+    // Output full mutation rate matrix.
     out << "Mutation rate matrix: " << endl;
     for (int i = 0; i < n; i++) {
         for (int j = 0; j < n; j++)
@@ -617,27 +563,54 @@ void ModelPoMo::writeInfo(ostream &out) {
     }
     out << endl;
 
-    // // DEBUG.
-    // cout << "Symmetric mutation rate matrix:" << endl;
-    // for (int i = 0; i < n; i++) {
-    //     for (int j = 0; j < n; j++)
-    //         cout << mutation_rate_matrix_sym[i*n+j] << " ";
-    //     cout << endl;
-    // }
-    // cout << endl;
-    // // DEBUG.
-    // cout << "Skew-symmetric mutation rate matrix:" << endl;
-    // for (int i = 0; i < n; i++) {
-    //     for (int j = 0; j < n; j++)
-    //         cout << mutation_rate_matrix_asy[i*n+j] << " ";
-    //     cout << endl;
-    // }
-    // cout << endl;
+    // Calculate reversible and flux matrizes.
+    // Symmetric (reversible) mutation rate matrix.
+    double * r = new double[n_alleles*n_alleles];
+    // Skew-symmetric (non-reversible) mutation rate matrix.
+    double * f = new double[n_alleles*n_alleles];
+    memset(r, 0, n_alleles*n_alleles*sizeof(double));
+    memset(f, 0, n_alleles*n_alleles*sizeof(double));
+    for (int i = 0; i < n; i++) {
+      for (int j = 0; j < n; j++) {
+        r[i*n+j] = m[i*n+j] + m[j*n+i];
+        r[i*n+j] /= 2.0;
+      }
+    }
+    if (!is_reversible) {
+      for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+          if (i==j)
+            f[i*n+j] = 0;
+          else {
+            f[i*n+j] = m[i*n+j] - m[j*n+i];
+            f[i*n+j] /= 2.0;
+          }
+        }
+      }
+    }
+
+    cout << "Symmetric mutation rate matrix:" << endl;
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++)
+            cout << r[i*n+j] << " ";
+        cout << endl;
+    }
+    cout << endl;
+    cout << "Skew-symmetric mutation rate matrix:" << endl;
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++)
+            cout << f[i*n+j] << " ";
+        cout << endl;
+    }
+    cout << endl;
+    delete [] r;
+    delete [] f;
+
     // //DEBUG.
     // cout << "Tree:" << endl;
     // phylo_tree->printTree(cout);
     // cout << endl;
-    
+
     out.copyfmt(state);
 }
 
