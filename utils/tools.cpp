@@ -1029,7 +1029,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 			}
 			if (strcmp(argv[cnt], "-hh") == 0
 					|| strcmp(argv[cnt], "-hhh") == 0) {
-				usage(argv, true);
+				usage(argv);
 				continue;
 			}
 			if (strcmp(argv[cnt], "-v0") == 0) {

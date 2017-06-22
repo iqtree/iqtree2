@@ -133,13 +133,13 @@ void Initialize(float **delta, FILE *input, int n, POINTERS *trees)
   int lig;                                          /* matrix line       */
   int col;                                          /* matrix column     */
   float distance;
-  char name_taxon[LEN];                             /* taxon�s name      */
+  char name_taxon[LEN];                             /* taxon name      */
   WORD *name;
 
   for(lig=1; lig <= n; lig++)
     {
-      fscanf(input,"%s",name_taxon);                  /* read taxon�s name */
-      name=(WORD *)calloc(1,sizeof(WORD));            /* taxon�s name is   */
+      fscanf(input,"%s",name_taxon);                  /* read taxon name */
+      name=(WORD *)calloc(1,sizeof(WORD));            /* taxon name is   */
       if(name == NULL)                                /* put in trees      */
 	{
 	  printf("Out of memories !!");
