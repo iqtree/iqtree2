@@ -568,6 +568,7 @@ void ModelPoMo::writeInfo(ostream &out) {
     double * r = new double[n_alleles*n_alleles];
     // Skew-symmetric (non-reversible) mutation rate matrix.
     double * f = new double[n_alleles*n_alleles];
+    double * m = mutation_rate_matrix;
     memset(r, 0, n_alleles*n_alleles*sizeof(double));
     memset(f, 0, n_alleles*n_alleles*sizeof(double));
     for (int i = 0; i < n; i++) {
