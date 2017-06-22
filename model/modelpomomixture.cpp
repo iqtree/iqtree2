@@ -112,11 +112,7 @@ void ModelPoMoMixture::decomposeRateMatrix() {
     // propagate eigenvalues and eigenvectors
     int m, nmix = getNMixtures(), num_states_2 = num_states*num_states;
     double saved_mutation_rate_matrix[n_alleles*n_alleles]; 
-    double saved_mutation_rate_matrix_sym[n_alleles*n_alleles]; 
-    double saved_mutation_rate_matrix_asy[n_alleles*n_alleles]; 
     memcpy(saved_mutation_rate_matrix, mutation_rate_matrix, sizeof(double)*n_alleles*n_alleles);
-    memcpy(saved_mutation_rate_matrix_sym, mutation_rate_matrix_sym, sizeof(double)*n_alleles*n_alleles);
-    memcpy(saved_mutation_rate_matrix_asy, mutation_rate_matrix_asy, sizeof(double)*n_alleles*n_alleles);
 
     // trick: reverse loop to retain eigenvalues and eigenvectors of the 0th mixture class 
     for (m = nmix-1; m >= 0; m--) {
@@ -129,10 +125,8 @@ void ModelPoMoMixture::decomposeRateMatrix() {
             memcpy(eigenvectors+m*num_states_2, eigenvectors, sizeof(double)*num_states_2);
             memcpy(inv_eigenvectors+m*num_states_2, inv_eigenvectors, sizeof(double)*num_states_2);
         }
-        // restore mutation_rate matrizes
+        // restore mutation_rate matrix
         memcpy(mutation_rate_matrix, saved_mutation_rate_matrix, sizeof(double)*n_alleles*n_alleles);
-        memcpy(mutation_rate_matrix_sym, saved_mutation_rate_matrix_sym, sizeof(double)*n_alleles*n_alleles);
-        memcpy(mutation_rate_matrix_asy, saved_mutation_rate_matrix_asy, sizeof(double)*n_alleles*n_alleles);
     }
     updatePoMoStatesAndRateMatrix();
 }
