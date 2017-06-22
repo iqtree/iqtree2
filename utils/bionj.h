@@ -677,7 +677,8 @@ int create(const char *inputFile, const char *outputFile) {
   chain2=(char *)calloc(LEN,sizeof(char));
 
   input= fopen(inputFile,"r");
-  fscanf(input,"%d",&n);
+  if (fscanf(input,"%d",&n) != 1)
+    printf("Error reading input file.");
 
   output= fopen(outputFile,"w");
   /*      Create the delta matrix     */
