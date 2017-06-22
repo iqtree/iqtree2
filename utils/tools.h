@@ -2314,9 +2314,8 @@ bool overwriteFile(char *filename);
 /**
         print usage information
         @param argv program arguments list
-        @param full_command TRUE to print all available commands, FALSE to print normal usage dialog
  */
-void usage(char* argv[], bool full_command);
+void usage(char* argv[]);
 
 /**
  *   Print a string into a file
