@@ -198,19 +198,23 @@ void ModelDNA::init(const char *model_name, string model_params, StateFreqType f
 	ModelMarkov::init(freq);
 }
 
-void ModelDNA::saveCheckpoint() {
+void ModelDNA::startCheckpoint() {
     checkpoint->startStruct("ModelDNA");
+}
+
+void ModelDNA::saveCheckpoint() {
+    startCheckpoint();
     CKP_ARRAY_SAVE(6, rates);
-    checkpoint->endStruct();
+    endCheckpoint();
     ModelMarkov::saveCheckpoint();
 }
 
 void ModelDNA::restoreCheckpoint() {
     ModelMarkov::restoreCheckpoint();
-    checkpoint->startStruct("ModelDNA");
+    startCheckpoint();
     CKP_ARRAY_RESTORE(6, rates);
-    checkpoint->endStruct();
-
+    endCheckpoint();
+    
     decomposeRateMatrix();
     if (phylo_tree)
         phylo_tree->clearAllPartialLH();

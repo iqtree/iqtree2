@@ -36,6 +36,11 @@ public:
     virtual ~RateHeterotachy();
 
     /**
+        start structure for checkpointing
+    */
+    virtual void startCheckpoint();
+
+    /**
         save object into the checkpoint
     */
     virtual void saveCheckpoint();

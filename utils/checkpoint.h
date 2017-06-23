@@ -397,7 +397,12 @@ public:
     */
     Checkpoint *getCheckpoint();
 
-    /** 
+    /**
+        start structure for checkpointing
+    */
+    virtual void startCheckpoint();
+
+    /**
         save object into the checkpoint
     */
     virtual void saveCheckpoint();
@@ -406,6 +411,11 @@ public:
         restore object from the checkpoint
     */
     virtual void restoreCheckpoint();
+
+    /**
+        end structure for checkpointing
+    */
+    virtual void endCheckpoint();
 
 protected:
 

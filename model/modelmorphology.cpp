@@ -37,3 +37,6 @@ void ModelMorphology::init(const char *model_name, string model_params, StateFre
 ModelMorphology::~ModelMorphology() {
 }
 
+void ModelMorphology::startCheckpoint() {
+    checkpoint->startStruct("ModelMorph");
+}

@@ -262,8 +262,12 @@ ModelCodon::~ModelCodon() {
 	}
 }
 
-void ModelCodon::saveCheckpoint() {
+void ModelCodon::startCheckpoint() {
     checkpoint->startStruct("ModelCodon");
+}
+
+void ModelCodon::saveCheckpoint() {
+    startCheckpoint();
 //    CKP_ARRAY_SAVE(12, ntfreq);
     CKP_SAVE(omega);
 //    CKP_SAVE(fix_omega);
@@ -275,13 +279,14 @@ void ModelCodon::saveCheckpoint() {
 //    CKP_SAVE(fix_kappa2);
 //    int codon_freq_style = this->codon_freq_style;
 //    CKP_SAVE(codon_freq_style);
-    checkpoint->endStruct();
+    endCheckpoint();
+
     ModelMarkov::saveCheckpoint();
 }
 
 void ModelCodon::restoreCheckpoint() {
     ModelMarkov::restoreCheckpoint();
-    checkpoint->startStruct("ModelCodon");
+    startCheckpoint();
 //    CKP_ARRAY_RESTORE(12, ntfreq);
     CKP_RESTORE(omega);
 //    CKP_RESTORE(fix_omega);
@@ -295,7 +300,7 @@ void ModelCodon::restoreCheckpoint() {
 //    int codon_freq_style;
 //    CKP_RESTORE(codon_freq_style);
 //    this->codon_freq_style = (CodonFreqStyle)codon_freq_style;
-    checkpoint->endStruct();
+    endCheckpoint();
 
     decomposeRateMatrix();
     if (phylo_tree)

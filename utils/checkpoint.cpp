@@ -10,7 +10,7 @@
 #include "timeutil.h"
 #include "gzstream.h"
 
-const char* CKP_HEADER = "--- # IQ-TREE Checkpoint";
+const char* CKP_HEADER = "--- # IQ-TREE Checkpoint ver >= 1.6";
 
 
 Checkpoint::Checkpoint() {
@@ -289,11 +289,19 @@ Checkpoint *CheckpointFactory::getCheckpoint() {
     return checkpoint;
 }
 
+void CheckpointFactory::startCheckpoint() {
+    checkpoint->startStruct("CheckpointFactory");
+}
+
 void CheckpointFactory::saveCheckpoint() {
     // do nothing
 }
 
 void CheckpointFactory::restoreCheckpoint() {
     // do nothing
+}
+
+void CheckpointFactory::endCheckpoint() {
+    checkpoint->endStruct();
 }
 

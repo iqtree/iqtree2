@@ -76,8 +76,12 @@ void PartitionModel::setCheckpoint(Checkpoint *checkpoint) {
 		(*it)->getModelFactory()->setCheckpoint(checkpoint);
 }
 
-void PartitionModel::saveCheckpoint() {
+void PartitionModel::startCheckpoint() {
     checkpoint->startStruct("PartitionModel");
+}
+
+void PartitionModel::saveCheckpoint() {
+    startCheckpoint();
     CKP_SAVE(linked_alpha);
     PhyloSuperTree *tree = (PhyloSuperTree*)site_rate->getTree();
     int part = 0;
@@ -86,14 +90,14 @@ void PartitionModel::saveCheckpoint() {
         (*it)->getModelFactory()->saveCheckpoint();
         checkpoint->endStruct();
     }
-    checkpoint->endStruct();
+    endCheckpoint();
 
     CheckpointFactory::saveCheckpoint();
 }
 
 void PartitionModel::restoreCheckpoint() {
     CheckpointFactory::restoreCheckpoint();
-    checkpoint->startStruct("PartitionModel");
+    startCheckpoint();
     CKP_RESTORE(linked_alpha);
 
     PhyloSuperTree *tree = (PhyloSuperTree*)site_rate->getTree();
@@ -104,7 +108,7 @@ void PartitionModel::restoreCheckpoint() {
         checkpoint->endStruct();
     }
 
-    checkpoint->endStruct();
+    endCheckpoint();
 }
 
 int PartitionModel::getNParameters() {

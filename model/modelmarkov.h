@@ -90,6 +90,11 @@ public:
 	*/
     virtual ~ModelMarkov();
 
+    /**
+        start structure for checkpointing
+    */
+    virtual void startCheckpoint();
+
     /** 
         save object into the checkpoint
     */

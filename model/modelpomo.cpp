@@ -820,22 +820,26 @@ void ModelPoMo::report(ostream &out) {
 
 }
 
+void ModelPoMo::startCheckpoint() {
+    checkpoint->startStruct("ModelPoMo");
+}
+
 void ModelPoMo::saveCheckpoint() {
     int n_rates = nnuc * (nnuc-1) / 2;
-    checkpoint->startStruct("ModelPoMo");
+    startCheckpoint();
     CKP_ARRAY_SAVE(n_rates, dna_model->rates);
     CKP_ARRAY_SAVE(nnuc, dna_model->state_freq);
-    checkpoint->endStruct();
+    endCheckpoint();
     ModelMarkov::saveCheckpoint();
 }
 
 void ModelPoMo::restoreCheckpoint() {
     int n_rates = nnuc * (nnuc-1) / 2;
     // First, get variables from checkpoint.
-    checkpoint->startStruct("ModelPoMo");
+    startCheckpoint();
     CKP_ARRAY_RESTORE(n_rates, dna_model->rates);
     CKP_ARRAY_RESTORE(nnuc, dna_model->state_freq);
-    checkpoint->endStruct();
+    endCheckpoint();
     // Second, update states and rate matrix.
     updatePoMoStatesAndRateMatrix();
     // Third, restore ModelGTR.

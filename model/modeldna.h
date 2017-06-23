@@ -64,6 +64,11 @@ public:
     virtual void init(const char *model_name, string model_params, StateFreqType freq, string freq_params);
 
     /**
+        start structure for checkpointing
+    */
+    virtual void startCheckpoint();
+
+    /**
         save object into the checkpoint
     */
     virtual void saveCheckpoint();

@@ -60,6 +60,10 @@ ModelPoMoMixture::ModelPoMoMixture(const char *model_name,
 ModelPoMoMixture::~ModelPoMoMixture() {
 }
 
+void ModelPoMoMixture::startCheckpoint() {
+    ModelPoMo::startCheckpoint();
+}
+
 void ModelPoMoMixture::saveCheckpoint() {
     ModelPoMo::saveCheckpoint();
 }

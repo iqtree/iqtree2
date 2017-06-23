@@ -44,24 +44,28 @@ RateGamma::RateGamma(int ncat, double shape, bool median, PhyloTree *tree) : Rat
 	setNCategory(ncat);
 }
 
-void RateGamma::saveCheckpoint() {
+void RateGamma::startCheckpoint() {
     checkpoint->startStruct("RateGamma");
+}
+
+void RateGamma::saveCheckpoint() {
+    startCheckpoint();
     CKP_SAVE(gamma_shape);
 //    CKP_SAVE(fix_gamma_shape);
 //    CKP_SAVE(cut_median);
 //    CKP_SAVE(ncategory);
-    checkpoint->endStruct();
+    endCheckpoint();
     RateHeterogeneity::saveCheckpoint();
 }
 
 void RateGamma::restoreCheckpoint() {
     RateHeterogeneity::restoreCheckpoint();
-    checkpoint->startStruct("RateGamma");
+    startCheckpoint();
     CKP_RESTORE(gamma_shape);
 //    CKP_RESTORE(fix_gamma_shape);
 //    CKP_RESTORE(cut_median);
 //    CKP_RESTORE(ncategory);
-    checkpoint->endStruct();
+    endCheckpoint();
     // necessary compute rates after restoring gamma_shape
 	computeRates();
 }

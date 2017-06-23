@@ -50,6 +50,11 @@ public:
 	virtual ~ModelCodon();
 
     /**
+        start structure for checkpointing
+    */
+    virtual void startCheckpoint();
+
+    /**
         save object into the checkpoint
     */
     virtual void saveCheckpoint();

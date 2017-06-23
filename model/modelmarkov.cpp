@@ -129,11 +129,15 @@ int ModelMarkov::getNumRateEntries() {
         return num_states*(num_states-1);
 }
 
+void ModelMarkov::startCheckpoint() {
+    checkpoint->startStruct("ModelMarkov");
+}
+
 void ModelMarkov::saveCheckpoint() {
     if (!is_reversible) {
-        checkpoint->startStruct("ModelMarkov");
+        startCheckpoint();
         CKP_ARRAY_SAVE(num_params, model_parameters);
-        checkpoint->endStruct();
+        endCheckpoint();
     }
     ModelSubst::saveCheckpoint();
 }
@@ -141,9 +145,9 @@ void ModelMarkov::saveCheckpoint() {
 void ModelMarkov::restoreCheckpoint() {
     ModelSubst::restoreCheckpoint();
     if (!is_reversible) {
-        checkpoint->startStruct("ModelMarkov");
+        startCheckpoint();
         CKP_ARRAY_RESTORE(num_params, model_parameters);
-        checkpoint->endStruct();
+        endCheckpoint();
         setRates();
     }
 }

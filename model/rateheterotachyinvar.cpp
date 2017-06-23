@@ -16,9 +16,11 @@ RateHeterotachyInvar::RateHeterotachyInvar(int ncat, string params, double p_inv
     setNCategory(ncat);
 }
 
+void RateHeterotachyInvar::startCheckpoint() {
+    checkpoint->startStruct("RateHeterotachyInvar" + convertIntToString(ncategory));
+}
+
 void RateHeterotachyInvar::saveCheckpoint() {
-    checkpoint->startStruct("RateHeterotachyInvar");
-    checkpoint->endStruct();
     RateInvar::saveCheckpoint();
     RateHeterotachy::saveCheckpoint();
 }
@@ -26,8 +28,6 @@ void RateHeterotachyInvar::saveCheckpoint() {
 void RateHeterotachyInvar::restoreCheckpoint() {
     RateInvar::restoreCheckpoint();
     RateHeterotachy::restoreCheckpoint();
-    checkpoint->startStruct("RateHeterotachyInvar");
-    checkpoint->endStruct();
 }
 
 double RateHeterotachyInvar::getRate(int category) {

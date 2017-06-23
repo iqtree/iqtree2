@@ -2520,9 +2520,22 @@ int main(int argc, char *argv[]) {
     int seed = Params::getInstance().ran_seed;
     CKP_SAVE(seed);
     CKP_SAVE(start_time);
+
+    // check for incompatible version
+    string version;
+    if (CKP_RESTORE(version)) {
+        if (version < "1.6") {
+            delete checkpoint;
+            outError("Incompatible checkpoint file. Please either rerun with version 1.5.X or use -redo option");
+        }
+        if (version.substr(0,8) == "1.6.beta" && version < "1.6.beta5") {
+            delete checkpoint;
+            outError("Incompatible checkpoint file. Please rerun with -redo option");
+        }
+    }
     stringstream sversion;
     sversion << iqtree_VERSION_MAJOR << "." << iqtree_VERSION_MINOR << "." << iqtree_VERSION_PATCH;
-    string version = sversion.str();
+    version = sversion.str();
     CKP_SAVE(version);
     checkpoint->endStruct();
 
