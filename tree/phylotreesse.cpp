@@ -463,12 +463,7 @@ void PhyloTree::computeTipPartialLikelihood() {
                 // PoMo states can lead to this data.  E.g., even (2A,8T)
                 // can lead to a sampled data of 7A.
                 if (j == M) {
-                    // First: Fixed state.  Tue Jan 12 09:26:48 CET
-                    // FIXME: 2016 DOM: The likelihood of the fixed
-                    // state is increased to improve accuracy.
                     real_partial_lh[id1] = 1.0;
-                    // real_partial_lh[id1] = nnuc * (nnuc - 1) / 2;
-                    // real_partial_lh[id1] = 3.0;
                     double sum_lh = real_partial_lh[id1];
                     // Second: Polymorphic states.
                     for (int s_id1 = 0; s_id1 < nnuc-1; s_id1++) {

@@ -168,7 +168,7 @@ void ModelPoMo::init(const char *model_name,
     N = phylo_tree->aln->virtual_pop_size;
     n_alleles = 4;
     n_connections = n_alleles * (n_alleles-1) / 2;
-    eps = 1e-6;
+    eps = 1e-8;
     // Check if number of states of PoMo match the provided data.
     ASSERT(num_states == (n_alleles + (n_alleles*(n_alleles-1)/2 * (N-1))) );
 
@@ -469,15 +469,14 @@ void ModelPoMo::normalizeMutationRates() {
     double theta_bm = poly/harmonic(N-1);
 
     // Mon Apr 17 10:21:09 BST 2017.  See Eq. (12.14) in my
-    // (Dominik's) thesis but sampling with replacement from boundary
-    // mutation equilibrium.  The correction factor is exactly the
-    // difference between sampling with and without replacement.
-    // Without replacement, the correction factor is 1.0 and the
-    // heterozygosity values are very far off if N is low.  Even with
-    // the correction, the estimated heterozygosity is still too high
-    // when N is low.  A correct calculation of the heterozygosity
-    // requires a rethinking of the sampling step together with a
-    // correction of heterozygosity for low N.
+    // (Dominik's) thesis.
+
+    // The correction factor is exactly the difference between sampling with and
+    // without replacement. Without replacement, the correction factor is 1.0
+    // and the heterozygosity values are very far off if N is low. Even with the
+    // correction, the estimated heterozygosity is still too high when N is low.
+    // A correct calculation of the heterozygosity requires a rethinking of the
+    // sampling step together with a correction of heterozygosity for low N.
 
     // No correction, sampling without replacement:
     double correction = 1.0;
@@ -502,8 +501,7 @@ void ModelPoMo::normalizeMutationRates() {
         }
     }
 
-    // // Recompute stationary frequency vector with updated mutation
-    // rates.
+    // Recompute stationary frequency vector with updated mutation rates.
     computeStateFreq();
 }
 
