@@ -514,12 +514,10 @@ void PhyloTree::setModel(ModelSubst *amodel) {
 
 void PhyloTree::setModelFactory(ModelFactory *model_fac) {
     model_factory = model_fac;
-    if (model_factory && (model_factory->model->isMixture() || model_factory->model->isSiteSpecificModel()
-        || !model_factory->model->isReversible() || params->kernel_nonrev))
-    	setLikelihoodKernel(sse, num_threads);
     if (model_fac) {
         model = model_factory->model;
         site_rate = model_factory->site_rate;
+    	setLikelihoodKernel(sse, num_threads);
     } else {
         model = NULL;
         site_rate = NULL;

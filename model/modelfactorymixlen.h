@@ -20,7 +20,7 @@ public:
 		@param params program parameters
 		@param tree associated phylogenetic tree
 	*/
-	ModelFactoryMixlen(Params &params, PhyloTree *tree, ModelsBlock *models_block);
+	ModelFactoryMixlen(Params &params, string &model_name, PhyloTree *tree, ModelsBlock *models_block);
 
 	/**
 		optimize model parameters and tree branch lengths

@@ -13,8 +13,8 @@
 #include "model/modelmixture.h"
 #include "rateheterotachy.h"
 
-ModelFactoryMixlen::ModelFactoryMixlen(Params &params, PhyloTree *tree, ModelsBlock *models_block) :   
-    ModelFactory(params, tree, models_block) {
+ModelFactoryMixlen::ModelFactoryMixlen(Params &params, string &model_name, PhyloTree *tree, ModelsBlock *models_block) :
+    ModelFactory(params, model_name, tree, models_block) {
     if (!tree->isMixlen()) {
         cerr << "ERROR: Please add '-mixlen " << site_rate->getNRate() << "' option into the command line" << endl;
         outError("Sorry for the inconvience, please rerun IQ-TREE with option above");

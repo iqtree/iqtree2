@@ -214,7 +214,11 @@ void ModelDNA::restoreCheckpoint() {
     startCheckpoint();
     CKP_ARRAY_RESTORE(6, rates);
     endCheckpoint();
-    
+    string rate_spec = param_spec;
+    for (auto i = rate_spec.begin(); i != rate_spec.end(); i++)
+        *i = *i + '0';
+    ASSERT(setRateType(rate_spec));
+
     decomposeRateMatrix();
     if (phylo_tree)
         phylo_tree->clearAllPartialLH();
@@ -287,11 +291,11 @@ string ModelDNA::getNameParams() {
 	return retname.str();
 }
 
-bool ModelDNA::setRateType(const char *rate_str) {
+bool ModelDNA::setRateType(string rate_str) {
 	//char first_type = 127;
 	//char last_type = 0;
 	//char t = first_type;
-	int num_ch = strlen(rate_str);
+	int num_ch = rate_str.length();
 	int i;
 
 	if (num_ch != getNumRateEntries()) {

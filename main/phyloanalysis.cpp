@@ -2758,7 +2758,7 @@ void computeSiteFrequencyModel(Params &params, Alignment *alignment) {
     tree->setRootNode(params.root);
     
 	ModelsBlock *models_block = readModelsDefinition(params);
-    tree->setModelFactory(new ModelFactory(params, tree, models_block));
+    tree->setModelFactory(new ModelFactory(params, params.model_name, tree, models_block));
     delete models_block;
     tree->setModel(tree->getModelFactory()->model);
     tree->setRate(tree->getModelFactory()->site_rate);

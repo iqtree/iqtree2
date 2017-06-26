@@ -9,12 +9,14 @@
 #define PHYLOTESTING_H_
 
 #include "utils/tools.h"
+#include "utils/checkpoint.h"
 
 class PhyloTree;
 class IQTree;
 
 
-struct ModelInfo {
+class ModelInfo {
+public:
 	string set_name; // subset name
 	string name; // model name
 	double logl; // tree log likelihood
@@ -24,6 +26,54 @@ struct ModelInfo {
 	double AIC_score, AICc_score, BIC_score;    // scores
 	double AIC_weight, AICc_weight, BIC_weight; // weights
 	bool AIC_conf, AICc_conf, BIC_conf;         // in confidence set?
+
+    /**
+        compute information criterion scores (AIC, AICc, BIC)
+    */
+    void computeICScores(size_t sample_size) {
+        AIC_score = -2 * logl + 2 * df;
+        AICc_score = AIC_score + 2.0 * df * (df + 1) / max(sample_size - df - 1, (size_t)1);
+        BIC_score = -2 * logl + df * log(sample_size);
+    }
+
+    /**
+        save model into checkpoint
+    */
+    void saveCheckpoint(Checkpoint *ckp) {
+        stringstream ostr;
+        ostr.precision(10);
+        ostr << logl << " " << df << " " << tree_len;
+        if (!tree.empty())
+            ostr << " " << tree;
+        ckp->put(name, ostr.str());
+    }
+
+    /**
+        restore model from checkpoint
+    */
+    bool restoreCheckpoint(Checkpoint *ckp) {
+        string val;
+        if (ckp->getString(name, val)) {
+            stringstream str(val);
+            str >> logl >> df >> tree_len;
+            return true;
+        }
+        return false;
+    }
+
+    /**
+        restore model from checkpoint
+    */
+    bool restoreCheckpointRminus1(Checkpoint *ckp, string &model_name) {
+        size_t posR;
+        if ((posR = model_name.find("+R")) != string::npos) {
+            int cat = convert_int(model_name.substr(posR+2).c_str());
+            name = model_name.substr(0, posR+2) + convertIntToString(cat-1);
+            return restoreCheckpoint(ckp);
+        }
+        return false;
+    }
+
 };
 
 

@@ -61,7 +61,7 @@ void PhyloTreeMixlen::setMixlen(int mixlen) {
 void PhyloTreeMixlen::initializeModel(Params &params, ModelsBlock *models_block) {
     try {
         if (!getModelFactory()) {
-            setModelFactory(new ModelFactoryMixlen(params, this, models_block));
+            setModelFactory(new ModelFactoryMixlen(params, params.model_name, this, models_block));
         }
     } catch (string & str) {
         outError(str);

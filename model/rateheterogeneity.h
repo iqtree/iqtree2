@@ -105,6 +105,11 @@ public:
 	*/
 	virtual void setNCategory(int ncat) { ASSERT(0); }
 
+    /**
+        initialize from checkpoint rates and prop from rate model with #category-1
+    */
+    virtual void initFromCatMinusOne() {}
+
 	/**
 		get the number of rate categories for site-specific category model
 		The default returns 1 category since it is homogeneous model

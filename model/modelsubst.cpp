@@ -30,10 +30,10 @@ void ModelSubst::startCheckpoint() {
 void ModelSubst::saveCheckpoint() {
     startCheckpoint();
 //    CKP_SAVE(num_states);
-    CKP_SAVE(name);
+//    CKP_SAVE(name);
 //    CKP_SAVE(full_name);
 //    CKP_SAVE(freq_type);
-    if (freq_type == FREQ_EMPIRICAL || freq_type == FREQ_ESTIMATE)
+    if (freq_type == FREQ_ESTIMATE)
         CKP_ARRAY_SAVE(num_states, state_freq);
     endCheckpoint();
     CheckpointFactory::saveCheckpoint();
@@ -43,12 +43,12 @@ void ModelSubst::restoreCheckpoint() {
     CheckpointFactory::restoreCheckpoint();
     startCheckpoint();
 //    CKP_RESTORE(num_states);
-    CKP_RESTORE(name);
+//    CKP_RESTORE(name);
 //    CKP_RESTORE(full_name);
 //    int freq_type = this->freq_type;
 //    CKP_RESTORE(freq_type);
 //    this->freq_type = (StateFreqType)freq_type;
-    if (freq_type == FREQ_EMPIRICAL || freq_type == FREQ_ESTIMATE)
+    if (freq_type == FREQ_ESTIMATE)
         CKP_ARRAY_RESTORE(num_states, state_freq);
     endCheckpoint();
 

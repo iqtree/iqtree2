@@ -77,11 +77,11 @@ void RateFree::saveCheckpoint() {
     CKP_ARRAY_SAVE(ncategory, prop);
     CKP_ARRAY_SAVE(ncategory, rates);
     endCheckpoint();
-    RateGamma::saveCheckpoint();
+//    RateGamma::saveCheckpoint();
 }
 
 void RateFree::restoreCheckpoint() {
-    RateGamma::restoreCheckpoint();
+//    RateGamma::restoreCheckpoint();
     startCheckpoint();
 //    CKP_RESTORE(fix_params);
 //    CKP_RESTORE(sorted_rates);
@@ -123,24 +123,34 @@ void RateFree::setNCategory(int ncat) {
 	full_name += " with " + convertIntToString(ncategory) + " categories";
 }
 
-void RateFree::setRateAndProp(RateFree *input) {
-    ASSERT(input->ncategory == ncategory-1);
-    setPInvar(input->getPInvar());
-    int k = 0, i;
+void RateFree::initFromCatMinusOne() {
+    ncategory--;
+    restoreCheckpoint();
+    ncategory++;
+
+    int first = 0, second = -1, i;
     // get the category k with largest proportion
     for (i = 1; i < ncategory-1; i++)
-        if (input->prop[i] > input->prop[k]) k = i;
+        if (prop[i] > prop[first]) {
+            first = i;
+        }
+    second = (first == 0) ? 1 : 0;
+    for (i = 0; i < ncategory-1; i++)
+        if (prop[i] > prop[second] && second != first)
+            second = i;
 
-    memcpy(rates, input->rates, (k+1)*sizeof(double));
-    memcpy(prop, input->prop, (k+1)*sizeof(double));
-    rates[k+1] = 1.414*rates[k]; // sqrt(2)
-    prop[k+1] = prop[k]/2;
-    rates[k] = 0.586*rates[k];
-    prop[k] = prop[k]/2;
-    if (k < ncategory-2) {
-        memcpy(&rates[k+2], &input->rates[k+1], (ncategory-2-k)*sizeof(double));
-        memcpy(&prop[k+2], &input->prop[k+1], (ncategory-2-k)*sizeof(double));
-    }
+//    memmove(rates, input->rates, (k+1)*sizeof(double));
+//    memmove(prop, input->prop, (k+1)*sizeof(double));
+
+    // divide highest category into 2 of the same prop
+    rates[ncategory-1] = (-rates[second] + 3*rates[first])/2.0;
+    prop[ncategory-1] = prop[first]/2;
+    rates[first] = (rates[second]+rates[first])/2.0;
+    prop[first] = prop[first]/2;
+//    if (k < ncategory-2) {
+//        memcpy(&rates[k+2], &input->rates[k+1], (ncategory-2-k)*sizeof(double));
+//        memcpy(&prop[k+2], &input->prop[k+1], (ncategory-2-k)*sizeof(double));
+//    }
     // copy half of k to the last category
 
 

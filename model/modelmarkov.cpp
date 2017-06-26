@@ -178,10 +178,7 @@ string freqTypeString(StateFreqType freq_type, SeqType seq_type, bool full_str) 
             return "+FQ";
     case FREQ_EMPIRICAL:  return "+F";
     case FREQ_ESTIMATE:
-        if (seq_type == SEQ_DNA && !full_str)
-            return "";
-        else
-            return "+FO";
+        return "+FO";
     case FREQ_CODON_1x4:  return("+F1X4");
     case FREQ_CODON_3x4:  return("+F3X4");
     case FREQ_CODON_3x4C: return("+F3X4C");

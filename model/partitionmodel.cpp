@@ -41,7 +41,7 @@ PartitionModel::PartitionModel(Params &params, PhyloSuperTree *tree, ModelsBlock
 	site_rate = new RateHeterogeneity();
 	site_rate->setTree(tree);
 
-    string model_name = params.model_name;
+//    string model_name = params.model_name;
     PhyloSuperTree::iterator it;
     int part;
     if (params.link_alpha) {
@@ -50,13 +50,13 @@ PartitionModel::PartitionModel(Params &params, PhyloSuperTree *tree, ModelsBlock
     }
     for (it = tree->begin(), part = 0; it != tree->end(); it++, part++) {
         ASSERT(!((*it)->getModelFactory()));
-        params.model_name = tree->part_info[part].model_name;
-        if (params.model_name == "") // if empty, take model name from command option
-        	params.model_name = model_name;
-        (*it)->setModelFactory(new ModelFactory(params, (*it), models_block));
+        string model_name = tree->part_info[part].model_name;
+        if (model_name == "") // if empty, take model name from command option
+        	model_name = params.model_name;
+        (*it)->setModelFactory(new ModelFactory(params, model_name, (*it), models_block));
         (*it)->setModel((*it)->getModelFactory()->model);
         (*it)->setRate((*it)->getModelFactory()->site_rate);
-        params.model_name = model_name;
+//        params.model_name = model_name;
         if ((*it)->aln->getNSeq() < tree->aln->getNSeq() && (*it)->getModel()->freq_type == FREQ_EMPIRICAL && (*it)->aln->seq_type != SEQ_CODON) {
         	// modify state_freq to account for empty sequences
         	(*it)->aln->computeStateFreq((*it)->getModel()->state_freq, (*it)->aln->getNSite() * (tree->aln->getNSeq() - (*it)->aln->getNSeq()));

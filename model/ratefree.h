@@ -102,9 +102,9 @@ public:
 	virtual void setNCategory(int ncat);
 
     /**
-        initialize rates and prop from rate model with #category less by 1
+        initialize from checkpoint rates and prop from rate model with #category-1
     */
-    void setRateAndProp(RateFree *input);
+    virtual void initFromCatMinusOne();
 
 	/**
 	 * used to normal branch lengths if mean rate is not equal to 1 (e.g. FreeRate model)
