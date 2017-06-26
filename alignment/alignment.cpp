@@ -2002,7 +2002,7 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
     params.pomo = true;
 
     // Initialize sampling method.
-    pomo_sampling_method = SAMPLING_WEIGHTED;
+    pomo_sampling_method = SAMPLING_WEIGHTED_BINOM;
 
     // Check for custom virtual population size or sampling method.
     size_t n_pos_start = params.model_name.find("+N");
@@ -2030,15 +2030,26 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
     // TODO: probably remove virtual_pop_size and use N only.
     params.pomo_pop_size = N;
     virtual_pop_size = N;
-    if (params.model_name.find("+W") != string::npos &&
-        params.model_name.find("+S") != string::npos)
-        outError("Multiple sampling methods specified.");
-    size_t w_pos = params.model_name.find("+W");
-    if (w_pos != string::npos)
-        pomo_sampling_method = SAMPLING_WEIGHTED;
+
+    size_t w_pos = params.model_name.find("+WB");
+    size_t h_pos = params.model_name.find("+WH");
     size_t s_pos = params.model_name.find("+S");
-    if (s_pos != string::npos)
-        pomo_sampling_method = SAMPLING_SAMPLED;
+    int count_sampling_methods = 0;
+    if (w_pos != string::npos) {
+      pomo_sampling_method = SAMPLING_WEIGHTED_BINOM;
+      count_sampling_methods += 1;
+    }
+    if (h_pos != string::npos) {
+      pomo_sampling_method = SAMPLING_WEIGHTED_HYPER;
+      count_sampling_methods += 1;
+    }
+    if (s_pos != string::npos) {
+      pomo_sampling_method = SAMPLING_SAMPLED;
+      count_sampling_methods += 1;
+    }
+
+    if (count_sampling_methods > 1)
+      outError("Multiple sampling methods specified.");
 
     // Print error if sequence type is given (not supported anymore).
     if (sequence_type) {
@@ -2237,10 +2248,10 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
                         everything_ok = false;
                     }
                     uint32_t pomo_state = (id1 | (values[id1]) << 2);
-                    IntIntMap::iterator pit = pomo_states_index.find(pomo_state);
-                    if (pit == pomo_states_index.end()) { // not found
-                        state = pomo_states_index[pomo_state] = pomo_states.size();
-                        pomo_states.push_back(pomo_state);
+                    IntIntMap::iterator pit = pomo_sampled_states_index.find(pomo_state);
+                    if (pit == pomo_sampled_states_index.end()) { // not found
+                        state = pomo_sampled_states_index[pomo_state] = pomo_sampled_states.size();
+                        pomo_sampled_states.push_back(pomo_state);
                     } else {
                         state = pit->second;
                     }
@@ -2287,10 +2298,10 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
                         // population.
                         everything_ok = false;
                     uint32_t pomo_state = (id1 | (values[id1]) << 2) | ((id2 | (values[id2]<<2))<<16);
-                    IntIntMap::iterator pit = pomo_states_index.find(pomo_state);
-                    if (pit == pomo_states_index.end()) { // not found
-                        state = pomo_states_index[pomo_state] = pomo_states.size();
-                        pomo_states.push_back(pomo_state);
+                    IntIntMap::iterator pit = pomo_sampled_states_index.find(pomo_state);
+                    if (pit == pomo_sampled_states_index.end()) { // not found
+                        state = pomo_sampled_states_index[pomo_state] = pomo_sampled_states.size();
+                        pomo_sampled_states.push_back(pomo_state);
                     } else {
                         state = pit->second;
                     }
@@ -2314,7 +2325,8 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
         if (everything_ok == true) {
             if (includes_state_unknown) {
 //                su_site_count++;
-                if (pomo_sampling_method == SAMPLING_WEIGHTED) {
+                if (pomo_sampling_method == SAMPLING_WEIGHTED_BINOM ||
+                    pomo_sampling_method == SAMPLING_WEIGHTED_HYPER) {
                     su_buffer.push_back(pattern);
                     su_site_counts.push_back(site_count);
                 }
@@ -2346,9 +2358,10 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
         throw err_str.str();
     }
 
-    if (pomo_sampling_method == SAMPLING_WEIGHTED) {
+    if (pomo_sampling_method == SAMPLING_WEIGHTED_BINOM ||
+        pomo_sampling_method == SAMPLING_WEIGHTED_HYPER) {
         // Now we can correctly set STATE_UNKNOWN.
-        STATE_UNKNOWN = pomo_states.size() + num_states;
+        STATE_UNKNOWN = pomo_sampled_states.size() + num_states;
 
         // Process sites that include an unknown state.
         for (vector<Pattern>::iterator pat_it = su_buffer.begin();
@@ -2366,22 +2379,23 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
     cout << "Sites with unknown states: " << su_site_counts.size() << endl;
     cout << "Total sites read:          " << site_count << endl;
     cout << "Fails:                     " << fails << endl;
-    if (pomo_sampling_method == SAMPLING_WEIGHTED) {
+    if (pomo_sampling_method == SAMPLING_WEIGHTED_BINOM ||
+        pomo_sampling_method == SAMPLING_WEIGHTED_HYPER) {
         cout << "---" << endl;
-        cout << "Compound states:           " << pomo_states.size() << endl;
+        cout << "Compound states:           " << pomo_sampled_states.size() << endl;
     }
     cout << "----------------------------------------------------------------------" << endl << endl;
 
     // Check if N is not too large.
     n_samples_bar = n_samples_sum / (double) n_sites_sum;
     cout << "The average number of samples is " << n_samples_bar << endl;
-    if ((pomo_sampling_method == SAMPLING_WEIGHTED) &&
+    if ((pomo_sampling_method == SAMPLING_WEIGHTED_BINOM) &&
         (n_samples_bar * 3.0 <= N)) {
         cout << "----------------------------------------------------------------------" << endl;
         cout << "WARNING: The virtual population size N is much larger ";
         cout << "than the average number of samples." << endl;
-        cout << "WARNING: This setting together with the /weighted/ sampling method ";
-        cout << "might be numerically unstable." << endl << endl;
+        cout << "WARNING: This setting together with /weighted binomial/ sampling ";
+        cout << "may be numerically unstable." << endl << endl;
         cout << "----------------------------------------------------------------------" << endl;
     }
 
@@ -2913,8 +2927,8 @@ void Alignment::createBootstrapAlignment(Alignment *aln, IntVector* pattern_freq
     pattern_index.clear();
 
     // 2016-07-05: copy variables for PoMo
-    pomo_states = aln->pomo_states;
-    pomo_states_index = aln->pomo_states_index;
+    pomo_sampled_states = aln->pomo_sampled_states;
+    pomo_sampled_states_index = aln->pomo_sampled_states_index;
     pomo_sampling_method = aln->pomo_sampling_method;
     virtual_pop_size = aln->virtual_pop_size;
 
@@ -3305,7 +3319,7 @@ string Alignment::getUnobservedConstPatterns() {
 int Alignment::countProperChar(int seq_id) {
     int num_proper_chars = 0;
     for (iterator it = begin(); it != end(); it++) {
-        if ((*it)[seq_id] < num_states + pomo_states.size()) num_proper_chars+=(*it).frequency;
+        if ((*it)[seq_id] < num_states + pomo_sampled_states.size()) num_proper_chars+=(*it).frequency;
     }
     return num_proper_chars;
 }
@@ -3567,17 +3581,17 @@ int Alignment::convertPomoState(int state) {
     if (state < num_states) return state;
     if (state == STATE_UNKNOWN) return state;
     state -= num_states;
-    if (pomo_states.size() <= 0)
+    if (pomo_sampled_states.size() <= 0)
         outError("Alignment file is too short.");
-    if (state >= pomo_states.size()) {
+    if (state >= pomo_sampled_states.size()) {
         cout << "state:              " << state << endl;
-        cout << "pomo_states.size(): " << pomo_states.size() << endl;
+        cout << "pomo_sampled_states.size(): " << pomo_sampled_states.size() << endl;
     }
-    ASSERT(state < pomo_states.size());
-    int id1 = pomo_states[state] & 3;
-    int id2 = (pomo_states[state] >> 16) & 3;
-    int value1 = (pomo_states[state] >> 2) & 16383;
-    int value2 = pomo_states[state] >> 18;
+    ASSERT(state < pomo_sampled_states.size());
+    int id1 = pomo_sampled_states[state] & 3;
+    int id2 = (pomo_sampled_states[state] >> 16) & 3;
+    int value1 = (pomo_sampled_states[state] >> 2) & 16383;
+    int value2 = pomo_sampled_states[state] >> 18;
     int N = virtual_pop_size;
     // Mon Jun 13 13:24:55 CEST 2016.  Make this a little bit more
     // stochastic.  This is important if the sample size is small..
@@ -3796,10 +3810,10 @@ void Alignment::getAppearance(StateType state, double *state_app) {
 		break;
     case SEQ_POMO:
 //        state -= num_states;
-//        assert(state < pomo_states.size());
+//        assert(state < pomo_sampled_states.size());
 //        // count the number of nucleotides
-//        state_app[pomo_states[state] & 3] = 1.0;
-//        state_app[(pomo_states[state] >> 16) & 3] = 1.0;
+//        state_app[pomo_sampled_states[state] & 3] = 1.0;
+//        state_app[(pomo_sampled_states[state] >> 16) & 3] = 1.0;
         state_app[convertPomoState(state)] = 1.0;
         break;
 	default: ASSERT(0); break;
@@ -3839,10 +3853,10 @@ void Alignment::getAppearance(StateType state, StateBitset &state_app) {
 		break;
     case SEQ_POMO:
 //        state -= num_states;
-//        assert(state < pomo_states.size());
+//        assert(state < pomo_sampled_states.size());
 //        // count the number of nucleotides
-//        state_app[pomo_states[state] & 3] = 1;
-//        state_app[(pomo_states[state] >> 16) & 3] = 1;
+//        state_app[pomo_sampled_states[state] & 3] = 1;
+//        state_app[(pomo_sampled_states[state] >> 16) & 3] = 1;
         state_app[convertPomoState(state)] = 1;
         break;
 	default: ASSERT(0); break;

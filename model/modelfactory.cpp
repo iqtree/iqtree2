@@ -193,14 +193,20 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
             rate_str = rate_str.substr(0, n_pos_start);
     }
 
-    size_t w_pos = rate_str.find("+W");
-    if (w_pos != string::npos) {
-        if (!pomo)
-            outError("Weighted sampling can only be used with PoMo.");
-        rate_str = rate_str.substr(0, w_pos)
-            + rate_str.substr(w_pos+2);
+    size_t wb_pos = rate_str.find("+WB");
+    if (wb_pos != string::npos) {
+      if (!pomo)
+        outError("Weighted binomial sampling can only be used with PoMo.");
+      rate_str = rate_str.substr(0, wb_pos)
+        + rate_str.substr(wb_pos+3);
     }
-
+    size_t wh_pos = rate_str.find("+WH");
+    if (wh_pos != string::npos) {
+        if (!pomo)
+            outError("Weighted hypergeometric sampling can only be used with PoMo.");
+        rate_str = rate_str.substr(0, wh_pos)
+            + rate_str.substr(wh_pos+3);
+    }
     size_t s_pos = rate_str.find("+S");
     if ( s_pos != string::npos) {
         if (!pomo)

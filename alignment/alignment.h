@@ -21,6 +21,7 @@
 // IMPORTANT: refactor STATE_UNKNOWN
 //const char STATE_UNKNOWN = 126;
 
+// TODO DS: This seems like a significant restriction.
 /* PoMo: STATE_INVALID is not handled in PoMo.  Set STATE_INVALID to
    127 to remove warning about comparison to char in alignment.cpp.
    This is important if the maximum N will be increased above 21
@@ -692,17 +693,18 @@ public:
 	 */
 	int virtual_pop_size;
 
-    /// The sampling method (defaults to SAMPLING_WEIGHTED).
-    SamplingType pomo_sampling_method;
+  // TODO DS: Maybe change default to SAMPLING_WEIGHTED_HYPER.
+  /// The sampling method (defaults to SAMPLING_WEIGHTED_BINOM).
+  SamplingType pomo_sampling_method;
 
-    /** BQM: 2015-07-06, 
-        for PoMo data: map from state ID to pair of base1 and base2 
-        represented in the high 16-bit and the low 16-bit of uint32_t
-        for base1, bit0-1 is used to encode the base (A,G,C,T) and the remaining 14 bits store the count
-        same interpretation for base2
-    */
-    vector<uint32_t> pomo_states;
-    IntIntMap pomo_states_index; // indexing, to quickly find if a PoMo-2-state is already present
+  /** BQM: 2015-07-06, 
+      for PoMo data: map from state ID to pair of base1 and base2 
+      represented in the high 16-bit and the low 16-bit of uint32_t
+      for base1, bit0-1 is used to encode the base (A,G,C,T) and the remaining 14 bits store the count
+      same interpretation for base2
+  */
+  vector<uint32_t> pomo_sampled_states;
+  IntIntMap pomo_sampled_states_index; // indexing, to quickly find if a PoMo-2-state is already present
 
     vector<vector<int> > seq_states; // state set for each sequence in the alignment
 

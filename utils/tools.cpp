@@ -3691,10 +3691,14 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "Optional modifiers (affect whole run and not only, e.g., a mixture model component)."<< endl
             << "  +N<ps>               Set virtual population size N to `ps` (default: +N9)."        << endl
             << "                       3 <= N <= 19; N has to be an odd number, 2 or 10."            << endl
-            << "  +[W|S]               Specify sampling method (default: +W)."                       << endl
-            << "                       W: Weighted sampling method (partial likelihoods at the tip"  << endl
-            << "                          of the tree are set to the probabilities of leading to the"<< endl
-            << "                          observed data)."                                           << endl
+      // TODO DS: Maybe change default to +WH.
+            << "  +[WB|WH|S]           Specify sampling method (default: +WB)."                      << endl
+            << "                       WB: Weighted binomial sampling method (partial likelihoods at"<< endl
+            << "                          the leaves are set to the probabilities of leading to the" << endl
+            << "                          observed data when sampling WITH replacement)."            << endl
+            << "                       WH: Weighted hypergeometric sampling method (partial likelihoods at"<< endl
+            << "                          the leaves are set to the probabilities of leading to the" << endl
+            << "                          observed data when sampling WITHOUT replacement)."         << endl
             << "                       S: Sampled sampling method (determine PoMo states by randomly"<< endl
             << "                          drawing N bases per site from the data)."                  << endl
             << "  +<ft>                State frequency type (default: +F)."                          << endl
@@ -3703,12 +3707,13 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "                       This overwrites the specifications of the DNA model."         << endl
             << "  +G[n]                Discrete Gamma model with n categories (default n=4)."        << endl
             << "                       Other types of rate heterogeneity are not yet supported."     << endl
-            << "  The default model modifiers are: `+N9+W+F."                                        << endl
+      // TODO DS: Maybe change default to +WH.
+            << "  The default model modifiers are: `+N9+WB+F."                                        << endl
             << "  Model string examples (please refer to the manual):"                               << endl
             << "                       -m GTR+P+N15+S"                                               << endl
             << "                       -m \"MIX{JC+P,HKY+P}+N11\""                                   << endl
             << "                       -m \"MIX{JC+P,HKY+P}+FQ\""                                    << endl
-            << "                       -m \"MIX{JC+P{0.0025},HKY+P}+N13+W+FO+G4\""                   << endl
+            << "                       -m \"MIX{JC+P{0.0025},HKY+P}+N13+WB+FO+G4\""                   << endl
             << "  Example of a standard run:"                                                        << endl
             << "                       iqtree -m HKY+P -s counts_file.cf"                            << endl
             << "  PoMo does not yet support model testing and Model Finder."                         << endl
@@ -3846,8 +3851,8 @@ void quickStartGuide() {
          << "     iqtree -s counts_file.cf -m HKY+P+N15" << endl << endl
          << "3. Use GTR model and estimate allele frequencies during maximization of likelihood:" << endl
          << "     iqtree -s counts_file.cf -m GTR+P+FO" << endl << endl
-         << "4. Polymorphism-aware mixture model with N=5 and weighted sampling:" << endl
-         << "     iqtree -s counts_file.cf -m \"MIX{HKY+P{EMP},JC+P}+N5+W\"" << endl << endl
+         << "4. Polymorphism-aware mixture model with N=5 and weighted binomial sampling:" << endl
+         << "     iqtree -s counts_file.cf -m \"MIX{HKY+P{EMP},JC+P}+N5+WB\"" << endl << endl
          << "---" << endl
          << "To show all available options: run 'iqtree -h'" << endl << endl
          << "Have a look at the tutorial and manual for more information:" << endl

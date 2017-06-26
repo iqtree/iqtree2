@@ -1596,11 +1596,11 @@ void PhyloTree::computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, Phylo
                 int freq = pat->frequency;
                 if (aln->seq_type == SEQ_POMO && state >= nstates && state < aln->STATE_UNKNOWN) {
                     state -= nstates;
-                    ASSERT(state < aln->pomo_states.size());
-                    int id1 = aln->pomo_states[state] & 3;
-                    int id2 = (aln->pomo_states[state] >> 16) & 3;
-                    int value1 = (aln->pomo_states[state] >> 2) & 16383;
-                    int value2 = aln->pomo_states[state] >> 18;
+                    ASSERT(state < aln->pomo_sampled_states.size());
+                    int id1 = aln->pomo_sampled_states[state] & 3;
+                    int id2 = (aln->pomo_sampled_states[state] >> 16) & 3;
+                    int value1 = (aln->pomo_sampled_states[state] >> 2) & 16383;
+                    int value2 = aln->pomo_sampled_states[state] >> 18;
                     double weight1 = ((double)value1)/(value1+value2);
 //                    int N = aln->virtual_pop_size;
 //                    int M = value1 + value2;

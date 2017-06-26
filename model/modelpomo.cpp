@@ -73,9 +73,13 @@ void ModelPoMo::init_sampling_method()
         this->name += "+S";
         sampling_method_str = "Sampled";
     }
-    else if (sampling_method == SAMPLING_WEIGHTED) {
-        this->name += "+W";
-        sampling_method_str = "Weighted";
+    else if (sampling_method == SAMPLING_WEIGHTED_BINOM) {
+        this->name += "+WB";
+        sampling_method_str = "Weighted binomial";
+    }
+    else if (sampling_method == SAMPLING_WEIGHTED_HYPER) {
+      this->name += "+WB";
+      sampling_method_str = "Weighted hypergeometric";
     }
     else outError("Sampling type is not supported.");
 
@@ -728,12 +732,12 @@ ModelPoMo::estimateEmpiricalBoundaryStateFreqs(double * freq_boundary_states)
                 else if ((unsigned int)state == phylo_tree->aln->STATE_UNKNOWN)
                     continue;
                 state -= num_states;
-                ASSERT((unsigned int)state < phylo_tree->aln->pomo_states.size());
+                ASSERT((unsigned int)state < phylo_tree->aln->pomo_sampled_states.size());
                 // Decode the id and counts.
-                int id1 = phylo_tree->aln->pomo_states[state] & 3;
-                int id2 = (phylo_tree->aln->pomo_states[state] >> 16) & 3;
-                int j1 = (phylo_tree->aln->pomo_states[state] >> 2) & 16383;
-                int j2 = (phylo_tree->aln->pomo_states[state] >> 18);
+                int id1 = phylo_tree->aln->pomo_sampled_states[state] & 3;
+                int id2 = (phylo_tree->aln->pomo_sampled_states[state] >> 16) & 3;
+                int j1 = (phylo_tree->aln->pomo_sampled_states[state] >> 2) & 16383;
+                int j2 = (phylo_tree->aln->pomo_sampled_states[state] >> 18);
                 freq_boundary_states[id1] += j1*(it->frequency);
                 freq_boundary_states[id2] += j2*(it->frequency);
             }
@@ -777,10 +781,10 @@ ModelPoMo::estimateEmpiricalWattersonTheta()
                 else if ((unsigned int)state == phylo_tree->aln->STATE_UNKNOWN)
                     continue;
                 state -= num_states;
-                ASSERT((unsigned int)state < phylo_tree->aln->pomo_states.size());
+                ASSERT((unsigned int)state < phylo_tree->aln->pomo_sampled_states.size());
                 // Decode counts.
-                int j1 = (phylo_tree->aln->pomo_states[state] >> 2) & 16383;
-                int j2 = (phylo_tree->aln->pomo_states[state] >> 18);
+                int j1 = (phylo_tree->aln->pomo_sampled_states[state] >> 2) & 16383;
+                int j2 = (phylo_tree->aln->pomo_sampled_states[state] >> 18);
                 if (j2 == 0) sum_fix += it->frequency;
                 else {
                     // Have to use Watterson Theta because sample size may be different.
