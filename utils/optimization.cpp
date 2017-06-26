@@ -690,6 +690,28 @@ void Optimization::lnsrch(int n, double xold[], double fold, double g[], double 
 const int MAX_ITER = 3;
 extern double random_double(int *rstream);
 
+bool Optimization::restartParameters(double guess[], int ndim, double lower[], double upper[], bool bound_check[], int iteration) {
+    int i;
+    bool restart = false;
+    if (iteration <= MAX_ITER) {
+        for (i = 1; i <= ndim; i++) {
+	    if (bound_check[i]) {
+	        if (fabs(guess[i]-lower[i]) < 1e-4 || fabs(guess[i]-upper[i]) < 1e-4) {
+		     restart = true;
+	             break;
+		} // if (fabs...
+	    } // if bound_check
+	} // for
+    } // if iteration
+    if (restart) {
+	cout << "Restart estimation at the boundary... " << std::endl;
+        for (i = 1; i <= ndim; i++) {
+	    guess[i] = random_double() * (upper[i] - lower[i])/3 + lower[i];
+	}
+    }	
+    return (restart);
+}
+
 double Optimization::minimizeMultiDimen(double guess[], int ndim, double lower[], double upper[], bool bound_check[], double gtol, double *hessian) {
 	int i, iter;
 	double fret, minf = 10000000.0;
@@ -706,29 +728,8 @@ double Optimization::minimizeMultiDimen(double guess[], int ndim, double lower[]
 		count++;
 		// restart the search if at the boundary
 		// it's likely to end at a local optimum at the boundary
-		restart = false;
-		
-		
-		for (i = 1; i <= ndim; i++)
-			if (bound_check[i])
-			if (fabs(guess[i]-lower[i]) < 1e-4 || fabs(guess[i]-upper[i]) < 1e-4) {
-				restart = true;
-				break;
-			}
-		
-		if (!restart)
-			break;
-
-		if (count == MAX_ITER)
-			break;
-			
-		do {
-			for (i = 1; i <= ndim; i++) {
-				guess[i] = random_double() * (upper[i] - lower[i])/3 + lower[i];
-			}
-		} while (false);
-		cout << "Restart estimation at the boundary... " << std::endl;
-	} while (count < MAX_ITER);
+		restart = restartParameters(guess,ndim,lower,upper,bound_check,count);
+	} while (restart);
 	if (count > 1) {
 		for (i = 1; i <= ndim; i++)
 			guess[i] = minx[i];

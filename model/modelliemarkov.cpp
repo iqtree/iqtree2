@@ -311,8 +311,15 @@ const static bool FULL_SYMMETRY[] =
 	      false,true, false};            // 10.34, 12.12, StrSym
 const static int NUM_RATES = 12;
 
-const double MIN_LIE_WEIGHT = -0.9999;
-const double MAX_LIE_WEIGHT =  0.9999;
+/*
+ * In principle, Lie Markov parameters range in [-1,1]. However values
+ * very near the boundary are biologically implausible (will put at least
+ * one entry in the rate matrix very close to zero) and can cause 
+ * numerical problems, so we restrict the range a bit.
+ */
+
+const double MIN_LIE_WEIGHT = -0.98;
+const double MAX_LIE_WEIGHT =  0.98;
 
 ModelLieMarkov::ModelLieMarkov(string model_name, PhyloTree *tree, string model_params, StateFreqType freq_type, string freq_params)
 	: ModelMarkov(tree, false) {
@@ -610,9 +617,112 @@ void ModelLieMarkov::setBounds(double *lower_bound, double *upper_bound, bool *b
 	for (i = 1; i <= ndim; i++) {
 		lower_bound[i] = MIN_LIE_WEIGHT;
 		upper_bound[i] = MAX_LIE_WEIGHT;
-        // answer: this is correct, typically no bound check is performed
-		bound_check[i] = false; // I've no idea what this does, so don't know if 'false' is appropriate - MDW.
+		// If we end up with optimum on boundary, try restarting
+		// optimization from different start point, because LM models
+		// have a tendancy to find local maxima on boundary.
+		bound_check[i] = true; 
 	}
+}
+
+
+/*
+ * Helper routines for ModelLieMarkov::restartParameters
+ * binaryToGray: returns nth Gray code.
+ * grayToBinary16: inverse of binaryToGray, for up to 16 bit Gray code.
+ * binaryToAntiGray: anti-Gray code = Gray code for even n,
+ *    bit-flip of Gray code for odd n. This means that whenever n 
+ *    advances by one, anti-Gray code will differ in all but one location.
+ */
+int binaryToGray(int n)
+{
+    return n ^ (n >> 1);
+}
+int grayToBinary16(int n)
+{
+    n = n ^ (n >> 8);
+    n = n ^ (n >> 4);
+    n = n ^ (n >> 2);
+    n = n ^ (n >> 1);
+    return n;
+}
+int binaryToAntiGray16(int n) {
+  if (n & 1) {
+    // n is odd. Xor with 16 ones.
+    return 0xFFFF ^ binaryToGray(n);
+  } else {
+    // n is even
+    return binaryToGray(n);
+  }
+}
+/*
+ * writes ndim entries to array, each of which is +base or -base.
+ * Signs of the entries are given by the antiGrey code for n.
+ * NOTE: array is 1-indexed.
+ */
+void antiGray(int n, int ndim, double base, double* array) {
+  int gray = binaryToAntiGray16(n);
+  for (int i=1; i<=ndim; i++) {
+    array[i] = (gray & 1) ? base : -base;
+    gray = gray >> 1;
+  }
+}
+
+
+/*
+ * Lie Markov model parameter restart strategy:
+ * If no parameters (in 'guess') are on the boundary of parameter space,
+ * no restart is needed. 
+ * If restart is needed, the first attempt is to take parameters which are on
+ * boundary, halve them and change sign. This means our restart should be
+ * well away from the local optimum on the boundary, so if the local optimum
+ * is not the global optimum, this restart will hopefully go somewhere else.
+ * 
+ * On subsequent restarts, every parameter starts half way between 0 and the
+ * boundary. The sign of each parameter is given by the anti-Gray code
+ * (so that each iteration is as different as possible from the previous 
+ * iteration.) For the first anti-Gray code restart, we take the signs
+ * of the parameters of the first restart, and take the next anti-Gray code
+ * (i.e. second restart will have all but one parameter of different sign than
+ * the first restart).
+ *
+ * We allow up to three anti-Gray restarts (i.e. up to 4 restarts in total.)
+ */
+const int MAX_ITER = 4;
+bool ModelLieMarkov::restartParameters(double guess[], int ndim, double lower[], double upper[], bool bound_check[], int iteration) {
+    int i;
+    bool restart = false;
+    if (iteration <= MAX_ITER) {
+        for (i = 1; i <= ndim; i++) {
+            if (fabs(guess[i]-lower[i]) < 1e-4 || fabs(guess[i]-upper[i]) < 1e-4) {
+	        restart = true; break;
+	    } // if (fabs...
+        } // for
+    } // if iteration <= MAX_ITER
+    if (restart) {
+        if (iteration == 1) {
+            unsigned int signbits = 0;
+            for (i = ndim; i>0; i--) {
+	         if (fabs(guess[i]-lower[i]) < 1e-4 || fabs(guess[i]-upper[i]) < 1e-4) {
+                     guess[i] *= -0.5;
+	         } // if (fabs...
+		 signbits = (signbits << 1) + ((guess[i]>0) ? 1 : 0);
+	    } // for
+	    restart_base_gray_number = grayToBinary16(signbits);
+        } else {
+            antiGray(restart_base_gray_number+iteration-1,ndim,upper[1]/2,guess);
+	}
+        cout << "Lie Markov Restart estimation at the boundary, iteration " << iteration;
+        if (verbose_mode >= VB_MED) {
+	    cout << ", new start point:" << std::endl << guess[1] ;
+            for (i = 2; i <= ndim; i++) cout << "," << guess[i]; 
+        }
+        cout << std::endl;
+    } else {
+        if (iteration > 1 && verbose_mode >= VB_MED)
+	  cout << "Lie Markov restarts ended at iteration " << iteration << std::endl;
+    
+    } // if restart else
+    return (restart);
 }
 
 

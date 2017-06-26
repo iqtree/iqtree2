@@ -62,6 +62,8 @@ public:
 			Assume trans_matrix has size of num_states * num_states.
 	*/
 	virtual void computeTransMatrix(double time, double *trans_matrix, int mixture = 0);
+	// overrides Optimization::restartParameters
+	bool restartParameters(double guess[], int ndim, double lower[], double upper[], bool bound_check[], int iteration);
 
 protected:
 	double **basis;
@@ -70,6 +72,7 @@ protected:
 	void setBasis();
 	virtual void setRates();
 	bool nondiagonalizable; // will be set true for nondiagonalizable rate matrices, then will use scaled squaring method for matrix exponentiation.
+	unsigned int restart_base_gray_number; // used by restartParameters
 
 	static void parseModelName(string model_name, int* model_num, int* symmetry);
 	/*
@@ -90,5 +93,6 @@ protected:
 	const static int NUM_LM_MODELS;
 	*/
         bool validFreqType();
+
 };
 #endif /* MODELLIEMARKOV_H_ */
