@@ -71,9 +71,9 @@ void Checkpoint::load(istream &in) {
 }
 
 
-void Checkpoint::load() {
+bool Checkpoint::load() {
 	ASSERT(filename != "");
-    if (!fileExists(filename)) return;
+    if (!fileExists(filename)) return false;
     try {
         igzstream in;
         // set the failbit and badbit
@@ -84,7 +84,7 @@ void Checkpoint::load() {
         string line;
         if (!safeGetline(in, line)) {
             in.close();
-            return;
+            return false;
         }
         if (line != header)
         	throw ("Invalid checkpoint file " + filename);
@@ -94,6 +94,7 @@ void Checkpoint::load() {
         // set the failbit again
         in.exceptions(ios::failbit | ios::badbit);
         in.close();
+        return true;
     } catch (ios::failure &) {
         outError(ERR_READ_INPUT);
     } catch (const char *str) {
@@ -101,6 +102,7 @@ void Checkpoint::load() {
     } catch (string &str) {
         outError(str);
     }
+    return false;
 }
 
 void Checkpoint::setCompression(bool compression) {

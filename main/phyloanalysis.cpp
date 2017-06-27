@@ -141,37 +141,45 @@ void reportAlignment(ofstream &out, Alignment &alignment, int nremoved_seqs) {
 		<< endl;
 }
 
-void pruneModelInfo(vector<ModelInfo> &model_info, PhyloSuperTree *tree) {
-	vector<ModelInfo> res_info;
+/*
+void pruneModelInfo(ModelCheckpoint &model_info, PhyloSuperTree *tree) {
+	ModelCheckpoint res_info;
 	for (vector<PartitionInfo>::iterator it = tree->part_info.begin(); it != tree->part_info.end(); it++) {
-		for (vector<ModelInfo>::iterator mit = model_info.begin(); mit != model_info.end(); mit++)
+		for (ModelCheckpoint::iterator mit = model_info.begin(); mit != model_info.end(); mit++)
 			if (mit->set_name == it->name)
 				res_info.push_back(*mit);
 	}
 	model_info = res_info;
 
 }
-
-void reportModelSelection(ofstream &out, Params &params, vector<ModelInfo> &model_info, bool is_partitioned) {
-	out << "Best-fit model according to "
-		<< ((params.model_test_criterion == MTC_BIC) ? "BIC" :
-			((params.model_test_criterion == MTC_AIC) ? "AIC" : "AICc")) << ": ";
-	vector<ModelInfo>::iterator it;
-	if (is_partitioned) {
-		string set_name = "";
-		for (it = model_info.begin(); it != model_info.end(); it++) {
-			if (it->set_name != set_name) {
-				if (set_name != "")
-					out << ",";
-				out << it->name << ":" << it->set_name;
-				set_name = it->set_name;
-			}
-		}
+*/
+void reportModelSelection(ofstream &out, Params &params, ModelCheckpoint *model_info, PhyloTree *tree) {
+	out << "Best-fit model according to " << criterionName(params.model_test_criterion) << ": ";
+//	ModelCheckpoint::iterator it;
+    string best_model;
+    PhyloSuperTree *stree = (tree->isSuperTree()) ? ((PhyloSuperTree*)tree) : NULL;
+	if (tree->isSuperTree()) {
+        for (int part = 0; part != stree->size(); part++) {
+            if (part != 0)
+                out << ",";
+            out << stree->part_info[part].model_name << ":" << stree->part_info[part].name;
+        }
+//		string set_name = "";
+//		for (it = model_info.begin(); it != model_info.end(); it++) {
+//			if (it->set_name != set_name) {
+//				if (set_name != "")
+//					out << ",";
+//				out << it->name << ":" << it->set_name;
+//				set_name = it->set_name;
+//			}
+//		}
 	} else {
-		out << model_info[0].name;
+//		out << model_info[0].name;
+        model_info->getBestModel(best_model);
+        out << best_model;
 	}
 
-	if (is_partitioned) {
+	if (tree->isSuperTree()) {
 		out << endl << endl << "List of best-fit models per partition:" << endl << endl;
 	} else {
 		out << endl << endl << "List of models sorted by "
@@ -179,7 +187,7 @@ void reportModelSelection(ofstream &out, Params &params, vector<ModelInfo> &mode
 				((params.model_test_criterion == MTC_AIC) ? "AIC" : "AICc"))
 			<< " scores: " << endl << endl;
 	}
-	if (is_partitioned)
+	if (tree->isSuperTree())
 		out << "  ID  ";
 	out << "Model             LogL          AIC      w-AIC      AICc     w-AICc       BIC      w-BIC" << endl;
 	/*
@@ -189,6 +197,24 @@ void reportModelSelection(ofstream &out, Params &params, vector<ModelInfo> &mode
 	out << "----------------------------------------------------------------------------------------" << endl;
 	*/
 	int setid = 1;
+
+    vector<ModelInfo> models;
+    model_info->getOrderedModels(tree, models);
+    for (auto it = models.begin(); it != models.end(); it++) {
+		out.width(15);
+		out << left << it->name << " ";
+		out.width(11);
+		out << right << it->logl << " ";
+		out.width(11);
+		out	<< it->AIC_score << ((it->AIC_conf) ? " + " : " - ") << it->AIC_weight << " ";
+		out.width(11);
+		out << it->AICc_score << ((it->AICc_conf) ? " + " : " - ") << it->AICc_weight << " ";
+		out.width(11);
+		out << it->BIC_score  << ((it->BIC_conf) ? " + " : " - ") << it->BIC_weight;
+		out << endl;
+    }
+
+    /* TODO
 	for (it = model_info.begin(); it != model_info.end(); it++) {
 		if (it->AIC_score == DBL_MAX) continue;
 		if (it != model_info.begin() && it->set_name != (it-1)->set_name)
@@ -211,6 +237,7 @@ void reportModelSelection(ofstream &out, Params &params, vector<ModelInfo> &mode
 		out << it->BIC_score  << ((it->BIC_conf) ? " + " : " - ") << it->BIC_weight;
 		out << endl;
 	}
+    */
 	out << endl;
 	out <<  "AIC, w-AIC   : Akaike information criterion scores and weights." << endl
 		 << "AICc, w-AICc : Corrected AIC scores and weights." << endl
@@ -769,7 +796,7 @@ void printOutfilesInfo(Params &params, string &original_model, IQTree &tree) {
 
 
 void reportPhyloAnalysis(Params &params, string &original_model,
-		IQTree &tree, vector<ModelInfo> &model_info) {
+		IQTree &tree, ModelCheckpoint &model_info) {
     if (!MPIHelper::getInstance().isMaster()) {
         return;
     }
@@ -885,9 +912,9 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 
 		if (!model_info.empty()) {
 			out << "ModelFinder" << endl << "-----------" << endl << endl;
-			if (tree.isSuperTree())
-				pruneModelInfo(model_info, (PhyloSuperTree*)&tree);
-			reportModelSelection(out, params, model_info, tree.isSuperTree());
+//			if (tree.isSuperTree())
+//				pruneModelInfo(model_info, (PhyloSuperTree*)&tree);
+			reportModelSelection(out, params, &model_info, &tree);
 		}
 
 		out << "SUBSTITUTION PROCESS" << endl << "--------------------" << endl
@@ -1408,7 +1435,7 @@ void computeInitialDist(Params &params, IQTree &iqtree, string &dist_file) {
 
 }
 
-void initializeParams(Params &params, IQTree &iqtree, vector<ModelInfo> &model_info, ModelsBlock *models_block) {
+void initializeParams(Params &params, IQTree &iqtree, ModelCheckpoint &model_info, ModelsBlock *models_block) {
 //    iqtree.setCurScore(-DBL_MAX);
     bool test_only = (params.model_name.find("ONLY") != string::npos) || (params.model_name.substr(0,2) == "MF" && params.model_name.substr(0,3) != "MFP");
 
@@ -1433,51 +1460,26 @@ void initializeParams(Params &params, IQTree &iqtree, vector<ModelInfo> &model_i
 //            ((PhyloSuperTree*) &iqtree)->mapTrees();
         double cpu_time = getCPUTime();
         double real_time = getRealTime();
-        ofstream fmodel;
-        string fmodel_str = ((string)params.out_prefix + ".model");
+        model_info.setFileName((string)params.out_prefix + ".model.gz");
 
         bool ok_model_file = false;
         if (!params.print_site_lh && !params.model_test_again) {
-            ok_model_file = checkModelFile(fmodel_str, iqtree.isSuperTree(), model_info);
+            ok_model_file = model_info.load();
         }
 
         cout << endl;
 
         ok_model_file &= model_info.size() > 0;
-        if (ok_model_file) {
-            cout << "NOTE: Reusing information from model file " << fmodel_str << endl;
-            fmodel.open(fmodel_str.c_str(), ios::app);
-            if (!fmodel.is_open())
-                outError("cannot append to file ", fmodel_str);
-        } else {
-            fmodel.open(fmodel_str.c_str());
-            if (!fmodel.is_open())
-                outError("cannot write to file ", fmodel_str);
-            // print header
-            SeqType seq_type = iqtree.aln->seq_type;
-            if (iqtree.isSuperTree()) {
-                fmodel << "Charset\t";
-                seq_type = ((PhyloSuperTree*)&iqtree)->front()->aln->seq_type;
-            }
-            fmodel << "Model\tdf\tLnL\tTreeLen";
-            if (seq_type == SEQ_BINARY)
-                fmodel << "\t0\t1";
-            else if (seq_type == SEQ_DNA)
-                fmodel << "\tA-C\tA-G\tA-T\tC-G\tC-T\tG-T\tA\tC\tG\tT";
-            fmodel << "\talpha\tpinv\tTree" << endl;
-            model_info.clear();
-        }
-        fmodel.precision(4);
-        fmodel << fixed;
+        if (ok_model_file)
+            cout << "NOTE: Reusing information from model file " << model_info.getFileName() << endl;
 
-        params.model_name = testModel(params, &iqtree, model_info, fmodel, models_block, params.num_threads, "", true);
-        fmodel.close();
+        params.model_name = testModel(params, &iqtree, model_info, models_block, params.num_threads, "", true);
         params.startCPUTime = cpu_time;
         params.start_real_time = real_time;
         cpu_time = getCPUTime() - cpu_time;
         real_time = getRealTime() - real_time;
         cout << endl;
-        cout << "All model information printed to " << params.out_prefix << ".model" << endl;
+        cout << "All model information printed to " << model_info.getFileName() << endl;
         cout << "CPU time for ModelFinder: " << cpu_time << " seconds (" << convert_time(cpu_time) << ")" << endl;
         cout << "Wall-clock time for ModelFinder: " << real_time << " seconds (" << convert_time(real_time) << ")" << endl;
 
@@ -1838,7 +1840,7 @@ void printTrees(vector<string> trees, Params &params, string suffix) {
 /************************************************************
  *  MAIN TREE RECONSTRUCTION
  ***********************************************************/
-void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtree, vector<ModelInfo> &model_info) {
+void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtree, ModelCheckpoint &model_info) {
 
     string dist_file;
     params.startCPUTime = getCPUTime();
@@ -2481,7 +2483,7 @@ void exhaustiveSearchGAMMAInvar(Params &params, IQTree &iqtree) {
  * STANDARD NON-PARAMETRIC BOOTSTRAP
  ***********************************************************/
 void runStandardBootstrap(Params &params, string &original_model, Alignment *alignment, IQTree *tree) {
-	vector<ModelInfo> *model_info = new vector<ModelInfo>;
+	ModelCheckpoint *model_info = new ModelCheckpoint;
 	StrVector removed_seqs, twin_seqs;
 
 	// turn off all branch tests
@@ -2981,7 +2983,7 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
 	/********************************************************************************
                     THE MAIN MAXIMUM LIKELIHOOD TREE RECONSTRUCTION
 	 ********************************************************************************/
-		vector<ModelInfo> *model_info = new vector<ModelInfo>;
+		ModelCheckpoint *model_info = new ModelCheckpoint;
 		alignment->checkGappySeq(params.remove_empty_seq);
 
 		// remove identical sequences

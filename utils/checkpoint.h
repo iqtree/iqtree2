@@ -23,10 +23,19 @@ using namespace std;
 #define CKP_ARRAY_SAVE(num, arr) checkpoint->putArray(#arr, num, arr)
 #define CKP_VECTOR_SAVE(arr) checkpoint->putVector(#arr, arr)
 
+#define CKP_SAVE2(checkpoint, var) checkpoint->put(#var, var)
+#define CKP_ARRAY_SAVE2(checkpoint, num, arr) checkpoint->putArray(#arr, num, arr)
+#define CKP_VECTOR_SAVE2(checkpoint, arr) checkpoint->putVector(#arr, arr)
+
 #define CKP_RESTORE(var) checkpoint->get(#var, var)
 #define CKP_RESTORE_STRING(var) checkpoint->getString(#var, var)
 #define CKP_ARRAY_RESTORE(num, arr) checkpoint->getArray(#arr, num, arr)
 #define CKP_VECTOR_RESTORE(arr) checkpoint->getVector(#arr, arr)
+
+#define CKP_RESTORE2(checkpoint, var) checkpoint->get(#var, var)
+#define CKP_RESTORE_STRING2(checkpoint, var) checkpoint->getString(#var, var)
+#define CKP_ARRAY_RESTORE2(checkpoint, num, arr) checkpoint->getArray(#arr, num, arr)
+#define CKP_VECTOR_RESTORE2(checkpoint, arr) checkpoint->getVector(#arr, arr)
 
 /** checkpoint stream */
 class CkpStream : public stringstream {
@@ -64,6 +73,8 @@ public:
 	 */
 	void setFileName(string filename);
 
+    string &getFileName() { return filename; }
+
     /** 
         set compression for checkpoint file
         @param compression true to compress checkpoint file, or false: no compression 
@@ -84,8 +95,9 @@ public:
 
 	/**
 	 * load checkpoint information from file
+     * @return TRUE if loaded successfully, otherwise FALSE
 	 */
-	void load();
+	bool load();
 
 	/**
 	 * dump checkpoint information into an output stream

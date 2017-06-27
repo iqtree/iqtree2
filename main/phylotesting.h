@@ -76,6 +76,35 @@ public:
 
 };
 
+//typedef vector<ModelInfo> ModelCheckpoint;
+
+class ModelCheckpoint : public Checkpoint {
+
+public:
+
+    /*
+        get the best model
+        @param[out] best_model name of the best model
+        @return TRUE if best model found, FALSE otherwise (unfinished job)
+    */
+    bool getBestModel(string &best_model);
+
+    /*
+        get the ordered model list according to AIC, AICc or BIC
+        @param tree associated tree
+        @param[out] ordered_models list of models ordered by specified criterion
+        @return TRUE if ordered_models found, FALSE otherwise (unfinished job)
+    */
+    bool getOrderedModels(PhyloTree *tree, vector<ModelInfo> &ordered_models);
+
+    /*
+        get the best tree
+        @param[out] best_tree NEWICK string of the best tree
+        @return TRUE if best tree found, FALSE otherwise (unfinished job)
+    */
+    bool getBestTree(string &best_tree);
+
+};
 
 struct TreeInfo {
 	double logl; // log likelihood
@@ -97,6 +126,8 @@ struct TreeInfo {
  */
 void computeInformationScores(double tree_lh, int df, int ssize, double &AIC, double &AICc, double &BIC);
 
+string criterionName(ModelTestCriterion mtc);
+
 /**
  * check if the model file contains correct information
  * @param model_file model file names
@@ -106,7 +137,7 @@ void computeInformationScores(double tree_lh, int df, int ssize, double &AIC, do
  * @return TRUE if success, FALSE failed.
  */
 
-bool checkModelFile(string model_file, bool is_partitioned, vector<ModelInfo> &infos);
+bool checkModelFile(string model_file, bool is_partitioned, ModelCheckpoint &infos);
 
 /**
  testing the best-fit model
@@ -118,7 +149,7 @@ bool checkModelFile(string model_file, bool is_partitioned, vector<ModelInfo> &i
  @param print_mem_usage true to print RAM memory used (default: false) 
  @return name of best-fit-model
  */
-string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_info, ostream &fmodel,
+string testModel(Params &params, PhyloTree* in_tree, ModelCheckpoint &model_info,
 		ModelsBlock *models_block, int num_threads, string set_name = "", bool print_mem_usage = false, string in_model_name = "");
 
 /**
