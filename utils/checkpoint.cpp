@@ -16,7 +16,7 @@ const char* CKP_HEADER = "--- # IQ-TREE Checkpoint ver >= 1.6";
 Checkpoint::Checkpoint() {
 	filename = "";
     prev_dump_time = 0;
-    dump_interval = 30; // dumping at most once per 30 seconds
+    dump_interval = 60; // dumping at most once per 60 seconds
     struct_name = "";
     compression = true;
     header = CKP_HEADER;

@@ -30,11 +30,12 @@ public:
     /**
         compute information criterion scores (AIC, AICc, BIC)
     */
-    void computeICScores(size_t sample_size) {
-        AIC_score = -2 * logl + 2 * df;
-        AICc_score = AIC_score + 2.0 * df * (df + 1) / max(sample_size - df - 1, (size_t)1);
-        BIC_score = -2 * logl + df * log(sample_size);
-    }
+    void computeICScores(size_t sample_size);
+
+    /**
+        compute information criterion scores (AIC, AICc, BIC)
+    */
+    double computeICScore(size_t sample_size);
 
     /**
         save model into checkpoint
@@ -125,6 +126,8 @@ struct TreeInfo {
  * computing AIC, AICc, and BIC scores
  */
 void computeInformationScores(double tree_lh, int df, int ssize, double &AIC, double &AICc, double &BIC);
+
+double computeInformationScore(double tree_lh, int df, int ssize, ModelTestCriterion mtc);
 
 string criterionName(ModelTestCriterion mtc);
 

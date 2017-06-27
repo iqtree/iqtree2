@@ -1471,7 +1471,7 @@ void initializeParams(Params &params, IQTree &iqtree, ModelCheckpoint &model_inf
 
         ok_model_file &= model_info.size() > 0;
         if (ok_model_file)
-            cout << "NOTE: Reusing information from model file " << model_info.getFileName() << endl;
+            cout << "NOTE: Restoring information from model checkpoint file " << model_info.getFileName() << endl;
 
         params.model_name = testModel(params, &iqtree, model_info, models_block, params.num_threads, "", true);
         params.startCPUTime = cpu_time;

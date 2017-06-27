@@ -988,7 +988,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.num_mixlen = 1;
     params.link_alpha = false;
     params.ignore_checkpoint = false;
-    params.checkpoint_dump_interval = 20;
+    params.checkpoint_dump_interval = 60;
     params.force_unfinished = false;
     params.suppress_output_flags = 0;
 #ifdef USE_EIGEN3
@@ -3529,7 +3529,7 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -mem RAM             Maximal RAM usage for memory saving mode" << endl
             << endl << "CHECKPOINTING TO RESUME STOPPED RUN:" << endl
             << "  -redo                Redo analysis even for successful runs (default: resume)" << endl
-            << "  -cptime <seconds>    Minimum checkpoint time interval (default: 20)" << endl
+            << "  -cptime <seconds>    Minimum checkpoint time interval (default: 60 sec)" << endl
             << endl << "LIKELIHOOD MAPPING ANALYSIS:" << endl
             << "  -lmap <#quartets>    Number of quartets for likelihood mapping analysis" << endl
             << "  -lmclust <clustfile> NEXUS file containing clusters for likelihood mapping" << endl
