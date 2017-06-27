@@ -547,77 +547,11 @@ void ModelPoMo::setVariables(double *variables) {
 }
 
 void ModelPoMo::writeInfo(ostream &out) {
-    ios  state(NULL);
-    int n = n_alleles;
-    state.copyfmt(out);
+  report(out);
 
-    out << setprecision(8);
 
-    // Output stationary frequencies of boundary states.
-    out << "Frequency of boundary states: ";
-    for (int i = 0; i < n; i++)
-        out << freq_boundary_states[i] << " ";
-    out << endl;
 
-    // Output full mutation rate matrix.
-    out << "Mutation rate matrix: " << endl;
-    for (int i = 0; i < n; i++) {
-        for (int j = 0; j < n; j++)
-            out << mutation_rate_matrix[i*n+j] << " ";
-        out << endl;
-    }
-    out << endl;
 
-    // Calculate reversible and flux matrizes.
-    // Symmetric (reversible) mutation rate matrix.
-    double * r = new double[n_alleles*n_alleles];
-    // Skew-symmetric (non-reversible) mutation rate matrix.
-    double * f = new double[n_alleles*n_alleles];
-    double * m = mutation_rate_matrix;
-    memset(r, 0, n_alleles*n_alleles*sizeof(double));
-    memset(f, 0, n_alleles*n_alleles*sizeof(double));
-    for (int i = 0; i < n; i++) {
-      for (int j = 0; j < n; j++) {
-        r[i*n+j] = m[i*n+j] + m[j*n+i];
-        r[i*n+j] /= 2.0;
-      }
-    }
-    if (!is_reversible) {
-      for (int i = 0; i < n; i++) {
-        for (int j = 0; j < n; j++) {
-          if (i==j)
-            f[i*n+j] = 0;
-          else {
-            f[i*n+j] = m[i*n+j] - m[j*n+i];
-            f[i*n+j] /= 2.0;
-          }
-        }
-      }
-    }
-
-    cout << "Symmetric mutation rate matrix:" << endl;
-    for (int i = 0; i < n; i++) {
-        for (int j = 0; j < n; j++)
-            cout << r[i*n+j] << " ";
-        cout << endl;
-    }
-    cout << endl;
-    cout << "Skew-symmetric mutation rate matrix:" << endl;
-    for (int i = 0; i < n; i++) {
-        for (int j = 0; j < n; j++)
-            cout << f[i*n+j] << " ";
-        cout << endl;
-    }
-    cout << endl;
-    delete [] r;
-    delete [] f;
-
-    // //DEBUG.
-    // cout << "Tree:" << endl;
-    // phylo_tree->printTree(cout);
-    // cout << endl;
-
-    out.copyfmt(state);
 }
 
 void ModelPoMo::computeRateMatrix(double **r_matrix, double *s_freqs, int n_states) {
@@ -810,54 +744,113 @@ ModelPoMo::estimateEmpiricalWattersonTheta()
 }
 
 void ModelPoMo::report_rates(ostream &out) {
-    out << setprecision(8);
-    out << "Mutation rates (in the order AC, AG, AT, CG, CT, GT):" << endl;
-    int n = n_alleles;
-    // TODO DS: Separation (rvbl and flux).
-    for (int i = 0; i < n; i++)
-        for (int j = i+1; j < n; j++) {
-            out << mutation_rate_matrix[i*n+j] << " ";
-        }
+  out << setprecision(8);
+  out << "In the following, the term 'mutation rate' does not contain the stationary" << endl;
+  out << "frequency of the target allele. This is also sometimes called exchangeability." << endl << endl;
+  out << "Mutation rates (in the order AC, AG, AT, CG, CT, GT):" << endl;
+  int n = n_alleles;
+
+  for (int i = 0; i < n; i++)
+    for (int j = i+1; j < n; j++) {
+      out << mutation_rate_matrix[i*n+j] << " ";
+    }
+  out << endl;
+
+  // Output full mutation rate matrix.
+  out << "Mutation rate matrix: " << endl;
+  for (int i = 0; i < n; i++) {
+    for (int j = 0; j < n; j++)
+      out << mutation_rate_matrix[i*n+j] << " ";
     out << endl;
+  }
+  out << endl;
+
+  // Calculate reversible and flux matrizes.
+  // Symmetric (reversible) mutation rate matrix.
+  double * r = new double[n_alleles*n_alleles];
+  // Skew-symmetric (non-reversible) mutation rate matrix.
+  double * f = new double[n_alleles*n_alleles];
+  double * m = mutation_rate_matrix;
+  memset(r, 0, n_alleles*n_alleles*sizeof(double));
+  memset(f, 0, n_alleles*n_alleles*sizeof(double));
+  for (int i = 0; i < n; i++) {
+    for (int j = 0; j < n; j++) {
+      r[i*n+j] = m[i*n+j] + m[j*n+i];
+      r[i*n+j] /= 2.0;
+    }
+  }
+  if (!is_reversible) {
+    for (int i = 0; i < n; i++) {
+      for (int j = 0; j < n; j++) {
+        if (i==j)
+          f[i*n+j] = 0;
+        else {
+          f[i*n+j] = m[i*n+j] - m[j*n+i];
+          f[i*n+j] /= 2.0;
+        }
+      }
+    }
+  }
+
+  cout << "Symmetric part of the mutation rate matrix:" << endl;
+  for (int i = 0; i < n; i++) {
+    for (int j = 0; j < n; j++)
+      cout << r[i*n+j] << " ";
+    cout << endl;
+  }
+  cout << endl;
+  cout << "Skew-symmetric part of the mutation rate matrix:" << endl;
+  for (int i = 0; i < n; i++) {
+    for (int j = 0; j < n; j++)
+      cout << f[i*n+j] << " ";
+    cout << endl;
+  }
+  cout << endl;
+  delete [] r;
+  delete [] f;
 }
 
 void ModelPoMo::report(ostream &out) {
-    out << this->full_name << endl;
+  ios  state(NULL);
+  state.copyfmt(out);
+  out << this->full_name << endl;
 
-    out << endl;
-    out << "Estimated quantities" << endl;
-    out << "--------------------" << endl;
+  out << endl;
+  out << "Estimated quantities" << endl;
+  out << "--------------------" << endl;
 
-    if (freq_type == FREQ_ESTIMATE) {
-        out << "Frequencies of boundary states (in the order A, C, G T):" << endl;
-        for (int i = 0; i < n_alleles; i++)
-            out << freq_boundary_states[i] << " ";
-        out << endl;
-    }
-    report_rates(out);
-
-    out << setprecision(8);
-
-    if (!fixed_theta)
-        out << "Estimated heterozygosity: ";
-    else if (fixed_theta_emp)
-        out << "Empirical heterozygosity: ";
-    else if (fixed_theta_usr)
-        out << "User-defined heterozygosity: ";
-    out << theta << endl;
-
-    out << endl;
-    out << "Empirical quantities" << endl;
-    out << "--------------------" << endl;
-
-    out << "Frequencies of boundary states (in the order A, C, G, T):" << endl;
+  if (freq_type == FREQ_ESTIMATE) {
+    out << "Frequencies of boundary states (in the order A, C, G T):" << endl;
     for (int i = 0; i < n_alleles; i++)
-        out << freq_boundary_states_emp[i] << " ";
+      out << freq_boundary_states[i] << " ";
     out << endl;
+  }
+  report_rates(out);
 
-    double emp_watterson_theta = estimateEmpiricalWattersonTheta();
-    out << "Watterson's Theta: " << emp_watterson_theta << endl;
-    out << endl;
+  out << setprecision(8);
+
+  if (!fixed_theta)
+    out << "Estimated heterozygosity: ";
+  else if (fixed_theta_emp)
+    out << "Empirical heterozygosity: ";
+  else if (fixed_theta_usr)
+    out << "User-defined heterozygosity: ";
+  out << theta << endl;
+
+  out << endl;
+  out << "Empirical quantities" << endl;
+  out << "--------------------" << endl;
+
+  out << "Frequencies of boundary states (in the order A, C, G, T):" << endl;
+  for (int i = 0; i < n_alleles; i++)
+    out << freq_boundary_states_emp[i] << " ";
+  out << endl;
+
+  double emp_watterson_theta = estimateEmpiricalWattersonTheta();
+  out << "Watterson's Theta: " << emp_watterson_theta << endl;
+  out << endl;
+
+  out.copyfmt(state);
 }
 
 void ModelPoMo::saveCheckpoint() {
