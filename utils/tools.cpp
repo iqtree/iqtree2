@@ -4995,3 +4995,40 @@ int nFreqParams(StateFreqType freq_type) {
         throw("Unrecognized freq_type in setBoundsForFreqType - can't happen");
     }
 }
+ 
+double binomial_coefficient_log(unsigned int N, unsigned int n) {
+  static DoubleVector logv;
+  if (logv.size() <= 0) {
+    logv.push_back(0.0);
+    logv.push_back(0.0);
+  }
+  if (n < N-n)
+    n = N-n;
+  if (n==0)
+    return 0.0;
+  if (N >= logv.size()) {
+    for (unsigned int i = logv.size(); i <= N; i++)
+      logv.push_back(log((double) i));
+  }
+  double binom_log = 0.0;
+  for (unsigned int i = n+1; i <= N; i++)
+    binom_log += logv[i] - logv[i-n];
+  return binom_log;
+}
+
+double binomial_dist(unsigned int k, unsigned int N, double p) {
+  double binom_log = binomial_coefficient_log(N, k);
+  double res_log = binom_log + log(p)*k + log(1-p)*(N-k);
+  return exp(res_log);
+}
+
+double hypergeometric_dist(unsigned int k, unsigned int n, unsigned int K, unsigned int N) {
+  if (n > N)
+    outError("Invalid parameters for hypergeometric distribution.");
+  if (k > K || (n-k) > (N-K))
+    return 0.0;
+  double num_successes_log = binomial_coefficient_log(K, k);
+  double num_failures_log = binomial_coefficient_log(N-K, n-k);
+  double num_total_log = binomial_coefficient_log(N,n);
+  return exp(num_successes_log + num_failures_log - num_total_log);
+}

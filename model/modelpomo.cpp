@@ -78,7 +78,7 @@ void ModelPoMo::init_sampling_method()
         sampling_method_str = "Weighted binomial";
     }
     else if (sampling_method == SAMPLING_WEIGHTED_HYPER) {
-      this->name += "+WB";
+      this->name += "+WH";
       sampling_method_str = "Weighted hypergeometric";
     }
     else outError("Sampling type is not supported.");
@@ -822,12 +822,7 @@ void ModelPoMo::report_rates(ostream &out) {
 }
 
 void ModelPoMo::report(ostream &out) {
-    out << "Reversible PoMo." << endl;
-    out << "Virtual population size N: " << N << endl;
-    if (sampling_method == SAMPLING_SAMPLED)
-        out << "Sampling method: Sampled." << endl;
-    else
-        out << "Sampling method: Weighted." << endl;
+    out << this->full_name << endl;
 
     out << endl;
     out << "Estimated quantities" << endl;

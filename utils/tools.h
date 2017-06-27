@@ -2672,4 +2672,15 @@ T StringToNumber ( const string &Text )
     return ss >> result ? result : 0;
 }
 
+// Calculate logarithm of binomial coefficient N choose i.
+double binomial_coefficient_log(unsigned int N, unsigned int i);
+
+// Calculate probability of having k out of N successes when the probability of
+// a success is p under the binomial distribution.
+double binomial_dist(unsigned int k, unsigned int N, double p);
+
+// Calculate probability of having k out of n successes when there are K out of
+// N successes in the pool under the hypergeometric distribution.
+double hypergeometric_dist(unsigned int k, unsigned int n, unsigned int K, unsigned int N);
+
 #endif

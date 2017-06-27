@@ -446,14 +446,8 @@ void PhyloTree::computeTipPartialLikelihood() {
     if (binom || hyper)
       {
         int N = aln->virtual_pop_size;
-        DoubleVector logv; // BQM: log(0), log(1), log(2)..., for fast computation
-        logv.resize(N+1);
-        logv[0] = logv[1] = 0.0;
-        for (i = 2; i <= N; i++)
-          logv[i] = log((double)i);
 
         double *real_partial_lh = aligned_alloc<double>(nstates);
-
         for (state = 0; state < aln->pomo_sampled_states.size(); state++) {
           memset(real_partial_lh, 0, sizeof(double)*nstates);
 
@@ -462,12 +456,6 @@ void PhyloTree::computeTipPartialLikelihood() {
           int id2 = (aln->pomo_sampled_states[state] >> 16) & 3;
           int j = (aln->pomo_sampled_states[state] >> 2) & 16383;
           int M = j + (aln->pomo_sampled_states[state] >> 18);
-
-          // Increase logv vector in case M>N or the new sample size is somehow bigger.
-          if (M >= logv.size()) {
-            for (i = logv.size(); i <= M; i++)
-              logv.push_back(log((double)i));
-          }
 
           // Number of alleles is hard coded here, change if generalization is needed.
           int nnuc = 4;
@@ -533,27 +521,33 @@ void PhyloTree::computeTipPartialLikelihood() {
           // polymorphic for the same alleles.  E.g., states of type
           // (ix,(N-i)y) can lead to the observed state (jx,(M-j)y).
           else {
-            if (binom) {
-              // Compute (M choose (M-j) = M choose j).
-              double res = 0.0;
-              for (i = j+1; i <= M; i++)
-                res += (logv[i] - logv[i-j]);
-              // Divide through N**M.
-              res -= M * logv[N];
-              int k;
-              if (id1 == 0) k = id2 - 1;
-              else k = id1 + id2;
-              int real_state = nnuc + k*(N-1);
-
-              for (i = 1; i < N; i++, real_state++) {
-                ASSERT(real_state < nstates);
-                real_partial_lh[real_state] = exp(res + j*logv[i] + (M-j) * logv[N-i]);
-              }
-            }
-            if (hyper) {
-              outError("TODO!");
+            int k;
+            if (id1 == 0) k = id2 - 1;
+            else k = id1 + id2;
+            int real_state = nnuc + k*(N-1);
+            for (i = 1; i < N; i++, real_state++) {
+              ASSERT(real_state < nstates);
+              if (binom)
+                real_partial_lh[real_state] = binomial_dist(j, M, (double) i / (double) N);
+              if (hyper)
+                real_partial_lh[real_state] = hypergeometric_dist(j, M, i, N);
             }
           }
+
+          // cout << "Sample M,j,id1,id2: " << M << ", " << j << ", " << id1 << ", " << id2 << endl;
+          // cout << "Real partial likelihood vector: ";
+          // for (i=0; i<4; i++)
+          //   cout << real_partial_lh[i] << " ";
+          // cout << endl;
+          // for (i=4; i<nstates; i++) {
+          //   cout << real_partial_lh[i] << " ";
+          //   if ((i-3)%(N-1) == 0)
+          //     cout << endl;
+          // }
+          // double sum = 0.0;
+          // for (i=0; i<nstates; i++)
+          //   sum += real_partial_lh[i];
+          // cout << sum << endl;
 
           // The vector tip_partial_lh stores inner product of real_partial_lh
           // and inverse eigenvector for each state
