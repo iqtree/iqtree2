@@ -108,14 +108,17 @@ int Alignment::checkAbsentStates(string msg) {
     double *state_freq = new double[num_states];
     computeStateFreq(state_freq);
     int count = 0;
+    // Skip check for PoMo.
+    if (seq_type == SEQ_POMO)
+      return 0;
     for (int i = 0; i < num_states; i++)
-        if (state_freq[i] <= MIN_FREQUENCY) {
-            if (count == 0)
-                cout << "WARNING: " << convertStateBackStr(i);
-            else
-                cout << ", " << convertStateBackStr(i);
-            count++;
-        }
+      if (state_freq[i] <= MIN_FREQUENCY) {
+        if (count == 0)
+          cout << "WARNING: " << convertStateBackStr(i);
+        else
+          cout << ", " << convertStateBackStr(i);
+        count++;
+      }
     if (count)
         cout << ((count >= 2) ? " are" : " is") << " not present in " << msg << " that may cause numerical problems" << endl;
     delete[] state_freq;
@@ -3509,6 +3512,9 @@ double Alignment::readDist(const char *file_name, double *dist_mat) {
     return longest_dist;
 }
 
+// TODO DS: This only works when the sampling method is SAMPLING_SAMPLED or when
+// the virtual population size is also the sample size (for every species and
+// every site).
 void Alignment::computeStateFreq (double *state_freq, size_t num_unknown_states) {
     int i, j;
     double *states_app = new double[num_states*(STATE_UNKNOWN+1)];
