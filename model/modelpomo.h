@@ -9,16 +9,23 @@
 /* const double POMO_INIT_RATE = 1e-3; */
 /* const double POMO_MAX_RATE =  1e-1; */
 
+// THETA BOUNDARIES ARE NOW SET IN A DYNAMIC WAY TO IMPROVE NUMERICAL STABILITY.
+// EXCEEDING THESE VALUES ONLY INDUCES WARNINGS.
 /* Boundaries for level of polymorphism.  The theta boundaries
    strongly affect numerical stability.  I set them so that errors are
    very seldom but there may be data that requires different
    boundaries.  Maybe they should be set variable, depending on data
    or user input. */
-const double POMO_MIN_THETA =  8e-4;
-const double POMO_MAX_THETA =  8e-2;
-/* Not so stringent values. */
+const double POMO_MIN_THETA =  1e-5;
+const double POMO_MAX_THETA =  1e-1;
+/* Not so stringent values. However, crashes are expected, especially because of
+   the maximum value (?).*/
 /* const double POMO_MIN_THETA =  1e-4; */
 /* const double POMO_MAX_THETA =  1e-1; */
+
+// Relative boundaries for theta.
+const double POMO_MIN_REL_THETA = 0.5;
+const double POMO_MAX_REL_THETA = 3;
 
 /* Boundaries for boundary frequencies.  This is not necessary anymore
    because those are set by the underlying Markov model.  The actual
@@ -27,6 +34,7 @@ const double POMO_MAX_THETA =  8e-2;
 /* const double POMO_MIN_REL_FREQ = 0.5; */
 /* const double POMO_MAX_REL_FREQ = 2.0; */
 
+// Boundaries for each of the boundary states.
 const double POMO_MIN_BOUNDARY_FREQ = 0.05;
 const double POMO_MAX_BOUNDARY_FREQ = 0.95;
 
@@ -243,6 +251,13 @@ class ModelPoMo : virtual public ModelMarkov
 	*/
 	virtual void decomposeRateMatrix();
 
+  // I had serious problems with numerical instabilities because of fixed
+  // boundaries for the level of polymorphism (theta). However, it is easy to
+  // get an empirical value of theta and set boundaries according to this value.
+  // This improves numerical stability. This step does not make sense and,
+  // hence, is not done, if theta is set by the user or to the empirical value.
+  void set_theta_boundaries();
+
  protected:
 
     ModelMarkov *mutation_model;
@@ -449,6 +464,11 @@ class ModelPoMo : virtual public ModelMarkov
     /// Random binomial sampling or weighted; specified when alignment
     /// is created already (Alignment::readCountsFormat()).
     SamplingType sampling_method;
-};
 
+  // Minimum level of polymorphism (theta), set by `set_theta_boundaries()`.
+  double min_theta;
+
+  // Maximum level of polymorphism (theta), set by `set_theta_boundaries()`.
+  double max_theta;
+};
 #endif /* _MODELPOMO_H_ */

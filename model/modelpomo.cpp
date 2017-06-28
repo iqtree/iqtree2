@@ -186,6 +186,7 @@ void ModelPoMo::init(const char *model_name,
     init_boundary_frequencies();
     theta = estimateEmpiricalWattersonTheta();
     init_fixed_parameters(model_params, pomo_theta);
+    set_theta_boundaries();
     setInitialMutCoeff();
     rate_matrix = new double[num_states*num_states];
     updatePoMoStatesAndRateMatrix();
@@ -449,8 +450,8 @@ void ModelPoMo::setBounds(double *lower_bound,
     // Level of polymorphism.
     if (!fixed_theta) {
         int ndim = getNDim();
-        lower_bound[ndim] = POMO_MIN_THETA;
-        upper_bound[ndim] = POMO_MAX_THETA;
+        lower_bound[ndim] = min_theta;
+        upper_bound[ndim] = max_theta;
         bound_check[ndim] = false;
     }
 }
@@ -496,8 +497,9 @@ void ModelPoMo::normalizeMutationRates() {
 
     double m_norm = theta / (theta_bm * (correction - harmonic(N-1) * theta));
 
-    if (verbose_mode >= VB_MAX)
-        cout << "Normalization constant of mutation rates: " << m_norm << endl;
+    if (verbose_mode >= VB_MAX) {
+      cout << "Normalization constant of mutation rates: " << m_norm << endl;
+    }
 
     for (int i = 0; i < n; i++) {
         for (int j = 0; j < n; j++) {
@@ -548,10 +550,6 @@ void ModelPoMo::setVariables(double *variables) {
 
 void ModelPoMo::writeInfo(ostream &out) {
   report(out);
-
-
-
-
 }
 
 void ModelPoMo::computeRateMatrix(double **r_matrix, double *s_freqs, int n_states) {
@@ -756,69 +754,70 @@ void ModelPoMo::report_rates(ostream &out) {
     }
   out << endl;
 
-  // Output full mutation rate matrix.
-  out << "Mutation rate matrix: " << endl;
-  for (int i = 0; i < n; i++) {
-    for (int j = 0; j < n; j++)
-      out << mutation_rate_matrix[i*n+j] << " ";
-    out << endl;
-  }
-  out << endl;
-
-  // Calculate reversible and flux matrizes.
-  // Symmetric (reversible) mutation rate matrix.
-  double * r = new double[n_alleles*n_alleles];
-  // Skew-symmetric (non-reversible) mutation rate matrix.
-  double * f = new double[n_alleles*n_alleles];
-  double * m = mutation_rate_matrix;
-  memset(r, 0, n_alleles*n_alleles*sizeof(double));
-  memset(f, 0, n_alleles*n_alleles*sizeof(double));
-  for (int i = 0; i < n; i++) {
-    for (int j = 0; j < n; j++) {
-      r[i*n+j] = m[i*n+j] + m[j*n+i];
-      r[i*n+j] /= 2.0;
-    }
-  }
   if (!is_reversible) {
+    out << endl;
+    // Output full mutation rate matrix.
+    out << "Mutation rate matrix: " << endl;
+    for (int i = 0; i < n; i++) {
+      for (int j = 0; j < n; j++)
+        out << mutation_rate_matrix[i*n+j] << " ";
+      out << endl;
+    }
+    out << endl;
+
+    // Calculate reversible and flux matrizes.
+    // Symmetric (reversible) mutation rate matrix.
+    double * r = new double[n_alleles*n_alleles];
+    // Skew-symmetric (non-reversible) mutation rate matrix.
+    double * f = new double[n_alleles*n_alleles];
+    double * m = mutation_rate_matrix;
+    memset(r, 0, n_alleles*n_alleles*sizeof(double));
+    memset(f, 0, n_alleles*n_alleles*sizeof(double));
     for (int i = 0; i < n; i++) {
       for (int j = 0; j < n; j++) {
-        if (i==j)
-          f[i*n+j] = 0;
-        else {
-          f[i*n+j] = m[i*n+j] - m[j*n+i];
-          f[i*n+j] /= 2.0;
+        r[i*n+j] = m[i*n+j] + m[j*n+i];
+        r[i*n+j] /= 2.0;
+      }
+    }
+    if (!is_reversible) {
+      for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+          if (i==j)
+            f[i*n+j] = 0;
+          else {
+            f[i*n+j] = m[i*n+j] - m[j*n+i];
+            f[i*n+j] /= 2.0;
+          }
         }
       }
     }
-  }
 
-  cout << "Symmetric part of the mutation rate matrix:" << endl;
-  for (int i = 0; i < n; i++) {
-    for (int j = 0; j < n; j++)
-      cout << r[i*n+j] << " ";
-    cout << endl;
+    out << "Symmetric part of the mutation rate matrix:" << endl;
+    for (int i = 0; i < n; i++) {
+      for (int j = 0; j < n; j++)
+        out << r[i*n+j] << " ";
+      out << endl;
+    }
+    out << endl;
+    out << "Skew-symmetric part of the mutation rate matrix:" << endl;
+    for (int i = 0; i < n; i++) {
+      for (int j = 0; j < n; j++)
+        out << f[i*n+j] << " ";
+      out << endl;
+    }
+    out << endl;
+    delete [] r;
+    delete [] f;
   }
-  cout << endl;
-  cout << "Skew-symmetric part of the mutation rate matrix:" << endl;
-  for (int i = 0; i < n; i++) {
-    for (int j = 0; j < n; j++)
-      cout << f[i*n+j] << " ";
-    cout << endl;
-  }
-  cout << endl;
-  delete [] r;
-  delete [] f;
 }
 
 void ModelPoMo::report(ostream &out) {
   ios  state(NULL);
-  state.copyfmt(out);
   out << this->full_name << endl;
 
   out << endl;
   out << "Estimated quantities" << endl;
   out << "--------------------" << endl;
-
   if (freq_type == FREQ_ESTIMATE) {
     out << "Frequencies of boundary states (in the order A, C, G T):" << endl;
     for (int i = 0; i < n_alleles; i++)
@@ -849,8 +848,6 @@ void ModelPoMo::report(ostream &out) {
   double emp_watterson_theta = estimateEmpiricalWattersonTheta();
   out << "Watterson's Theta: " << emp_watterson_theta << endl;
   out << endl;
-
-  out.copyfmt(state);
 }
 
 void ModelPoMo::saveCheckpoint() {
@@ -919,3 +916,13 @@ void ModelPoMo::decomposeRateMatrix() {
         return;
     }
 }
+
+void ModelPoMo::set_theta_boundaries() {
+  min_theta = POMO_MIN_REL_THETA * theta;
+  max_theta = POMO_MAX_REL_THETA * theta;
+  if (min_theta < POMO_MIN_THETA)
+    outWarning("The polymorphism level in the data is very low.");
+  if (max_theta > POMO_MAX_THETA)
+    outWarning("The polymorphism level in the data is very high.");
+}
+
