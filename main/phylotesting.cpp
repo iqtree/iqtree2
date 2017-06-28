@@ -1830,10 +1830,10 @@ string testModel(Params &params, PhyloTree* in_tree, ModelCheckpoint &model_info
                     if (!prev_info.restoreCheckpointRminus1(checkpoint, info.name)) break;
                     if (prev_info.logl < info.logl + TOL_GRADIENT_MODELTEST) break;
 //                    if (verbose_mode >= VB_MED)
-                    if (step == 1) {
-                        outWarning("Parameters of " + info.name + " are worse than " + prev_info.name);
-                    } else {
+                    if (step == 0) {
                         tree->getRate()->initFromCatMinusOne();
+                    } else if (info.logl < prev_info.logl - TOL_LIKELIHOOD_MODELTEST) {
+                        outWarning("Log-likelihood of " + info.name + " worse than " + prev_info.name);
                     }
                 }
             }

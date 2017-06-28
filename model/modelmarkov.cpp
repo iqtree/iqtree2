@@ -89,6 +89,10 @@ void ModelMarkov::setReversible(bool reversible) {
 
         num_params = nrate - 1;
 
+        if (phylo_tree->rooted) {
+            cout << "Converting rooted to unrooted tree..." << endl;
+            phylo_tree->convertToUnrooted();
+        }
     } else {
         // setup non-reversible model
         ignore_state_freq = true;

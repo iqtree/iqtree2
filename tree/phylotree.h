@@ -1905,6 +1905,11 @@ public:
     */
     void convertToRooted();
 
+    /**
+        convert from rooted to unrooted tree
+    */
+    void convertToUnrooted();
+
 
 	/**
 		write site-rates to a file in the following format:
