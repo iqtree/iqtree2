@@ -4889,6 +4889,7 @@ void PhyloTree::convertToUnrooted() {
     ASSERT(root);
     ASSERT(root->isLeaf() && root->id == leafNum-1);
     Node *node = root->neighbors[0]->node;
+    Node *taxon = findFirstTaxon();
 
     rooted = false;
     leafNum--;
@@ -4913,9 +4914,9 @@ void PhyloTree::convertToUnrooted() {
 
     }
 
-    node = findFirstTaxon(root);
     delete root;
-    root = node;
+    // set a temporary taxon so that tree traversal works
+    root = taxon;
     setRootNode(params->root);
 
     initializeTree();

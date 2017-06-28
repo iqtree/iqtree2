@@ -872,6 +872,24 @@ int getModelList(Params &params, Alignment *aln, StrVector &models, bool separat
 			convert_string_vec(params.model_set, model_names);
 //            copyCString(dna_freq_names, sizeof(dna_freq_names)/sizeof(char*), freq_names);
 		}
+
+        if (params.model_name.find("+LMRY") != string::npos) {
+			appendCString(dna_model_names_lie_markov_fullsym, sizeof(dna_model_names_lie_markov_fullsym) / sizeof(char*), model_names);
+			appendCString(dna_model_names_lie_markov_ry, sizeof(dna_model_names_lie_markov_ry) / sizeof(char*), model_names);
+        } else if (params.model_name.find("+LMWS") != string::npos) {
+			appendCString(dna_model_names_lie_markov_fullsym, sizeof(dna_model_names_lie_markov_fullsym) / sizeof(char*), model_names);
+			appendCString(dna_model_names_lie_markov_ws, sizeof(dna_model_names_lie_markov_ws) / sizeof(char*), model_names);
+        } else if (params.model_name.find("+LMMK") != string::npos) {
+			appendCString(dna_model_names_lie_markov_fullsym, sizeof(dna_model_names_lie_markov_fullsym) / sizeof(char*), model_names);
+			appendCString(dna_model_names_lie_markov_mk, sizeof(dna_model_names_lie_markov_mk) / sizeof(char*), model_names);
+        } else if (params.model_name.find("+LMSS") != string::npos) {
+			appendCString(dna_model_names_lie_markov_strsym, sizeof(dna_model_names_lie_markov_strsym) / sizeof(char*), model_names);
+        } else if (params.model_name.find("+LM") != string::npos) {
+			appendCString(dna_model_names_lie_markov_fullsym, sizeof(dna_model_names_lie_markov_fullsym) / sizeof(char*), model_names);
+			appendCString(dna_model_names_lie_markov_ry, sizeof(dna_model_names_lie_markov_ry) / sizeof(char*), model_names);
+			appendCString(dna_model_names_lie_markov_ws, sizeof(dna_model_names_lie_markov_ws) / sizeof(char*), model_names);
+			appendCString(dna_model_names_lie_markov_mk, sizeof(dna_model_names_lie_markov_mk) / sizeof(char*), model_names);
+        }
 	} else if (seq_type == SEQ_PROTEIN) {
 		if (params.model_set == NULL) {
 			copyCString(aa_model_names, sizeof(aa_model_names) / sizeof(char*), model_names);
