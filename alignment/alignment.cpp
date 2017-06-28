@@ -793,13 +793,17 @@ void Alignment::computeConst(Pattern &pat) {
     ASSERT(is_invariant >= is_const);
 
 
-    if (seq_type == SEQ_POMO) {
-        // For PoMo most sites are informative (ambiguous map from data to state space)
-        is_informative = true;
-        // For PoMo there is hardly any constant site
-        is_const = false;
-        is_invariant = false;
-    }
+    // Wed Jun 28 16:01:30 BST 2017. The calculation of these properties seems
+    // to be OKish. They are only used for reports and to calculate the
+    // parsimony tree in the beginning anyways.
+
+    // if (seq_type == SEQ_POMO) {
+    //     // For PoMo most sites are informative (ambiguous map from data to state space)
+    //     is_informative = true;
+    //     // For PoMo there are hardly any constant sites
+    //     is_const = false;
+    //     is_invariant = false;
+    // }
 
     pat.flag = 0;
     if (is_const) pat.flag |= PAT_CONST;
@@ -2275,6 +2279,7 @@ int Alignment::readCountsFormat(char* filename, char* sequence_type) {
             	// err_str << "More than 2 bases are present on line " << line_num << ".";
             	// throw err_str.str();
             }
+            // Now we deal with the important polymorphic states with two alleles.
             else if (count == 2) {
                 n_samples_sum += values[id1];
                 n_samples_sum += values[id2];

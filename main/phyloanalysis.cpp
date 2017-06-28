@@ -836,6 +836,7 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 		out << "SEQUENCE ALIGNMENT" << endl << "------------------" << endl
 				<< endl;
 		if (tree.isSuperTree()) {
+      // TODO DS: Changes may be needed here for PoMo.
 			out << "Input data: " << tree.aln->getNSeq()+tree.removed_seqs.size() << " taxa with "
 					<< tree.aln->getNSite() << " partitions and "
 					<< tree.getAlnNSite() << " total sites ("
