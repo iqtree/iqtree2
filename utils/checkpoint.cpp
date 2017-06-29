@@ -10,8 +10,8 @@
 #include "timeutil.h"
 #include "gzstream.h"
 
-const char* CKP_HEADER = "--- # IQ-TREE Checkpoint ver >= 1.6";
-
+const char* CKP_HEADER =     "--- # IQ-TREE Checkpoint ver >= 1.6";
+const char* CKP_HEADER_OLD = "--- # IQ-TREE Checkpoint";
 
 Checkpoint::Checkpoint() {
 	filename = "";
@@ -59,7 +59,7 @@ void Checkpoint::load(istream &in) {
             // start a new struct
             line.erase(line.length()-1);
             trimString(line);
-            struct_name = line + '.';
+            struct_name = line + CKP_SEP;
             listid = 0;
             continue;
         } else {
@@ -86,6 +86,8 @@ bool Checkpoint::load() {
             in.close();
             return false;
         }
+        if (line == CKP_HEADER_OLD)
+            throw "Incompatible checkpoint file from version 1.5.X or older.\nEither overwrite it with -redo option or run older version";
         if (line != header)
         	throw ("Invalid checkpoint file " + filename);
         // call load from the stream
@@ -126,7 +128,7 @@ void Checkpoint::dump(ostream &out) {
     size_t pos;
     int listid = 0;
     for (iterator i = begin(); i != end(); i++) {
-        if ((pos = i->first.find('.')) != string::npos) {
+        if ((pos = i->first.find(CKP_SEP)) != string::npos) {
             if (struct_name != i->first.substr(0, pos)) {
                 struct_name = i->first.substr(0, pos);
                 out << struct_name << ':' << endl;
@@ -211,14 +213,14 @@ void Checkpoint::putBool(string key, bool value) {
  * nested structures
  *-------------------------------------------------------------*/
 void Checkpoint::startStruct(string name) {
-    struct_name = struct_name + name + '.';
+    struct_name = struct_name + name + CKP_SEP;
 }
 
 /**
     end the current struct
 */
 void Checkpoint::endStruct() {
-    size_t pos = struct_name.find_last_of('.', struct_name.length()-2);
+    size_t pos = struct_name.find_last_of(CKP_SEP, struct_name.length()-2);
     if (pos == string::npos)
         struct_name = "";
     else
@@ -237,27 +239,27 @@ void Checkpoint::setListElement(int id) {
     list_element.back() = id;
     stringstream ss;
     ss << setw(list_element_precision.back()) << setfill('0') << list_element.back();
-    struct_name += ss.str() + ".";
+    struct_name += ss.str() + CKP_SEP;
 }
 
 void Checkpoint::addListElement() {
     list_element.back()++;
     if (list_element.back() > 0) {
-        size_t pos = struct_name.find_last_of('.', struct_name.length()-2);
+        size_t pos = struct_name.find_last_of(CKP_SEP, struct_name.length()-2);
         ASSERT(pos != string::npos);
         struct_name.erase(pos+1);
     }
     stringstream ss;
     ss << setw(list_element_precision.back()) << setfill('0') << list_element.back();
 //    ss << list_element.back();
-    struct_name += ss.str() + ".";
+    struct_name += ss.str() + CKP_SEP;
 }
 
 void Checkpoint::endList() {
     ASSERT(!list_element.empty());
 
     if (list_element.back() >= 0) {
-        size_t pos = struct_name.find_last_of('.', struct_name.length()-2);
+        size_t pos = struct_name.find_last_of(CKP_SEP, struct_name.length()-2);
         ASSERT(pos != string::npos);
         struct_name.erase(pos+1);
     }

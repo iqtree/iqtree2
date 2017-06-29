@@ -1088,7 +1088,7 @@ int getModelList(Params &params, Alignment *aln, StrVector &models, bool separat
 
 void replaceModelInfo(string &set_name, ModelCheckpoint &model_info, ModelCheckpoint &new_info) {
     for (auto it = new_info.begin(); it != new_info.end(); it++) {
-        model_info.put(set_name + "." + it->first, it->second);
+        model_info.put(set_name + CKP_SEP + it->first, it->second);
     }
 }
 

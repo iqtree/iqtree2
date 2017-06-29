@@ -37,6 +37,8 @@ using namespace std;
 #define CKP_ARRAY_RESTORE2(checkpoint, num, arr) checkpoint->getArray(#arr, num, arr)
 #define CKP_VECTOR_RESTORE2(checkpoint, arr) checkpoint->getVector(#arr, arr)
 
+const char CKP_SEP = '!';
+
 /** checkpoint stream */
 class CkpStream : public stringstream {
 public:
