@@ -140,38 +140,42 @@ PhyloTree::PhyloTree(string& treeString, Alignment* aln, bool isRooted) : MTree(
     setAlignment(aln);
 }
 
-void PhyloTree::saveCheckpoint() {
+void PhyloTree::startCheckpoint() {
     checkpoint->startStruct("PhyloTree");
-    StrVector leafNames;
-    getTaxaName(leafNames);
-    CKP_VECTOR_SAVE(leafNames);
-//    string newick = PhyloTree::getTreeString();
-//    CKP_SAVE(newick);
+}
+
+
+void PhyloTree::saveCheckpoint() {
+    startCheckpoint();
+//    StrVector leafNames;
+//    getTaxaName(leafNames);
+//    CKP_VECTOR_SAVE(leafNames);
+    string newick = PhyloTree::getTreeString();
+    CKP_SAVE(newick);
 //    CKP_SAVE(curScore);
-    checkpoint->endStruct();
+    endCheckpoint();
     CheckpointFactory::saveCheckpoint();
 }
 
 void PhyloTree::restoreCheckpoint() {
     CheckpointFactory::restoreCheckpoint();
-    checkpoint->startStruct("PhyloTree");
-    StrVector leafNames;
-    if (CKP_VECTOR_RESTORE(leafNames)) {
-        if (leafNames.size() +(int)rooted != leafNum)
-            outError("Alignment mismatched from checkpoint!");
-
-        StrVector taxname;
-        getTaxaName(taxname);
-        for (int i = 0; i < leafNames.size(); i++)
-            if (taxname[i] != leafNames[i])
-                outError("Sequence name " + taxname[i] + " mismatched from checkpoint");
-    }    
-//    string newick;
+    startCheckpoint();
+//    StrVector leafNames;
+//    if (CKP_VECTOR_RESTORE(leafNames)) {
+//        if (leafNames.size() +(int)rooted != leafNum)
+//            outError("Alignment mismatched from checkpoint!");
+//
+//        StrVector taxname;
+//        getTaxaName(taxname);
+//        for (int i = 0; i < leafNames.size(); i++)
+//            if (taxname[i] != leafNames[i])
+//                outError("Sequence name " + taxname[i] + " mismatched from checkpoint");
+//    }    
+    string newick;
 //    CKP_RESTORE(curScore);
-//    CKP_RESTORE(newick);
-//    if (!newick.empty())
-//        PhyloTree::readTreeString(newick);
-    checkpoint->endStruct();
+    if (CKP_RESTORE(newick))
+        PhyloTree::readTreeString(newick);
+    endCheckpoint();
 }
 
 void PhyloTree::discardSaturatedSite(bool val) {

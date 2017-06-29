@@ -46,6 +46,40 @@ PhyloTreeMixlen::~PhyloTreeMixlen() {
 //        aligned_free(relative_treelen);
 }
 
+void PhyloTreeMixlen::startCheckpoint() {
+    checkpoint->startStruct("PhyloTreeMixlen" + convertIntToString(getMixlen()));
+}
+
+void PhyloTreeMixlen::saveCheckpoint() {
+    if (mixlen <= 0) return;
+    startCheckpoint();
+    if (this->relative_treelen.size() > 0) {
+        ASSERT(mixlen == this->relative_treelen.size());
+        double relative_treelen[mixlen];
+        for (int i = 0; i < mixlen; i++)
+            relative_treelen[i] = this->relative_treelen[i];
+        CKP_ARRAY_SAVE(mixlen, relative_treelen);
+    }
+    endCheckpoint();
+    IQTree::saveCheckpoint();
+}
+
+/** 
+    restore object from the checkpoint
+*/
+void PhyloTreeMixlen::restoreCheckpoint() {
+    if (mixlen <= 0) return;
+    startCheckpoint();
+    double relative_treelen[mixlen];
+    if (CKP_ARRAY_RESTORE(mixlen, relative_treelen)) {
+        this->relative_treelen.resize(mixlen);
+        for (int i = 0; i < mixlen; i++)
+            this->relative_treelen[i] = relative_treelen[i];
+    }
+    endCheckpoint();
+    IQTree::restoreCheckpoint();
+}
+
 Node* PhyloTreeMixlen::newNode(int node_id, const char* node_name) {
     return (Node*) (new PhyloNodeMixlen(node_id, node_name));
 }
