@@ -823,18 +823,16 @@ void ModelPoMo::report(ostream &out) {
     for (int i = 0; i < n_alleles; i++)
       out << freq_boundary_states[i] << " ";
     out << endl;
+    report_rates(out);
   }
-  report_rates(out);
 
   out << setprecision(8);
 
-  if (!fixed_theta)
-    out << "Estimated heterozygosity: ";
-  else if (fixed_theta_emp)
-    out << "Empirical heterozygosity: ";
-  else if (fixed_theta_usr)
-    out << "User-defined heterozygosity: ";
-  out << theta << endl;
+  if (!fixed_theta) {
+    out << "Estimated heterozygosity: " << theta << endl;
+    if (sampling_method == SAMPLING_WEIGHTED_BINOM)
+      out << "Please note that we expect a slight overestimation of weighted, binomial sampling (see manual)." << endl;
+  }
 
   out << endl;
   out << "Empirical quantities" << endl;
@@ -846,8 +844,13 @@ void ModelPoMo::report(ostream &out) {
   out << endl;
 
   double emp_watterson_theta = estimateEmpiricalWattersonTheta();
-  out << "Watterson's Theta: " << emp_watterson_theta << endl;
+  out << "Watterson's estimator of heterozygosity: " << emp_watterson_theta << endl;
   out << endl;
+
+  if (fixed_theta_emp)
+    out << "Empirical heterozygosity: " << theta << endl;
+  else if (fixed_theta_usr)
+    out << "User-defined heterozygosity: " << theta << endl;
 }
 
 void ModelPoMo::saveCheckpoint() {
