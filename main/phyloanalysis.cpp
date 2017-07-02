@@ -1473,7 +1473,24 @@ void initializeParams(Params &params, IQTree &iqtree, ModelCheckpoint &model_inf
         if (ok_model_file)
             cout << "NOTE: Restoring information from model checkpoint file " << model_info.getFileName() << endl;
 
+
+        Checkpoint *orig_ckp = iqtree.getCheckpoint();
+        iqtree.setCheckpoint(&model_info);
+        if (iqtree.isSuperTree()) {
+            PhyloSuperTree *stree = (PhyloSuperTree*)&iqtree;
+            int part = 0;
+            for (auto it = stree->begin(); it != stree->end(); it++, part++) {
+                model_info.startStruct(stree->part_info[part].name);
+                (*it)->saveCheckpoint();
+                model_info.endStruct();
+            }
+        } else {
+            iqtree.saveCheckpoint();
+        }
+        iqtree.setCheckpoint(orig_ckp);
+
         params.model_name = testModel(params, &iqtree, model_info, models_block, params.num_threads, "", true);
+
         params.startCPUTime = cpu_time;
         params.start_real_time = real_time;
         cpu_time = getCPUTime() - cpu_time;
@@ -1912,7 +1929,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 
     /*********************** INITIAL MODEL OPTIMIZATION *****************/
 
-    iqtree.initializeModel(params, models_block);
+    iqtree.initializeModel(params, params.model_name, models_block);
     iqtree.restoreCheckpoint();
 
     delete models_block;
@@ -2872,39 +2889,6 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
         if (params.num_mixlen > 1) {
             tree = new PhyloTreeMixlen(alignment, params.num_mixlen);
         } else if (pos != string::npos) {
-            /*
-            int end_pos;
-            int num_mixlen = -1;
-            if (params.model_name.length() > pos+2) {
-                num_mixlen = convert_int(params.model_name.substr(pos+2).c_str(), end_pos);
-                if (num_mixlen < 1)
-                    outError("Heterotachy model [+H] must have at least 1 class");
-            } else {
-                end_pos = 0;
-            }
-            params.model_name = params.model_name.substr(0, pos) + params.model_name.substr(pos+end_pos+2);
-            if (params.model_name.find("MIX") == string::npos) {
-                if (num_mixlen < 0)
-                    outError("Please specify number of +H categories (e.g., +H2)");
-                size_t pos = params.model_name.find_first_of("+*");
-                string mixpart = params.model_name.substr(0, pos);
-                string str = "MIX{" + mixpart;
-                for (int i = 1; i < num_mixlen; i++)
-                    str += "," + mixpart;
-                str += "}";
-                if (pos != string::npos)
-                    str += params.model_name.substr(pos);
-                params.model_name = str;
-                cout << "Heterotachy mixture model name: " << params.model_name << endl;
-            } else {
-                int count_mix = 1;
-                for (int i = 0; i < pos; i++)
-                    if (params.model_name[i] == ',') count_mix ++;
-                if (num_mixlen < 0) num_mixlen = count_mix;
-                if (num_mixlen != count_mix)
-                    outError("Number of mixture categories in MIX{...} and +H do not match");
-            }
-            */
             tree = new PhyloTreeMixlen(alignment, 0);
         } else
             tree = new IQTree(alignment);

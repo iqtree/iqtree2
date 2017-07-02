@@ -14,6 +14,7 @@
 #include "tree/phylotree.h"
 #include "tree/iqtree.h"
 #include "tree/phylosupertree.h"
+#include "tree/phylotreemixlen.h"
 #include "phylotesting.h"
 
 #include "model/modelmarkov.h"
@@ -34,6 +35,7 @@
 #include "model/modelliemarkov.h"
 #include "model/modelpomo.h"
 #include "utils/timeutil.h"
+#include "model/modelfactorymixlen.h"
 
 #include "phyloanalysis.h"
 #include "gsl/mygsl.h"
@@ -1052,19 +1054,28 @@ int getModelList(Params &params, Alignment *aln, StrVector &models, bool separat
                 ratehet.push_back(rate_options[j]);
         
     }
-    
+
+    const char *rates[] = {"+R", "*R", "+H", "*H"};
+
+    for (i = 0; i < sizeof(rates)/sizeof(char*); i++)
+        if (params.model_name.find(rates[i]) != string::npos)
+            ratehet.push_back(rates[i]);
+
     size_t pos;
 
+    for (i = 0; i < sizeof(rates)/sizeof(char*); i++)
     for (j = 0; j < ratehet.size(); j++)
-        if ( (pos = ratehet[j].find("+R")) != string::npos && (pos >= ratehet[j].length()-2 || !isdigit(ratehet[j][pos+2]) )) {
+        if ((pos = ratehet[j].find(rates[i])) != string::npos &&
+            (pos >= ratehet[j].length()-2 || !isdigit(ratehet[j][pos+2]) ))
+        {
             string str = ratehet[j];
             ratehet[j].insert(pos+2, convertIntToString(params.min_rate_cats));
             max_cats = max(max_cats, params.max_rate_cats);
             for (int k = params.min_rate_cats+1; k <= params.max_rate_cats; k++) {
                 ratehet.insert(ratehet.begin()+j+k-params.min_rate_cats, str.substr(0, pos+2) + convertIntToString(k) + str.substr(pos+2));
             }
-//            break;
         }
+
 
     if (separate_rate) {
         for (i = 0; i < model_names.size(); i++) 
@@ -1672,9 +1683,6 @@ string testModel(Params &params, PhyloTree* in_tree, ModelCheckpoint &model_info
 		return res_models;
 	}
 
-	in_tree->optimize_by_newton = params.optimize_by_newton;
-	in_tree->setLikelihoodKernel(params.SSE, num_threads);
-
 	int ssize = in_tree->aln->getNSite(); // sample size
 	if (params.model_test_sample_size)
 		ssize = params.model_test_sample_size;
@@ -1699,10 +1707,14 @@ string testModel(Params &params, PhyloTree* in_tree, ModelCheckpoint &model_info
 		sitelh_out.close();
 	}
 
-	uint64_t RAM_requirement = 0;
+//	uint64_t RAM_requirement = 0;
     string best_model_AIC, best_model_AICc, best_model_BIC;
     double best_score_AIC = DBL_MAX, best_score_AICc = DBL_MAX, best_score_BIC = DBL_MAX;
-    string best_tree;
+    string best_tree_AIC, best_tree_AICc, best_tree_BIC;
+
+    CKP_RESTORE(best_tree_AIC);
+    CKP_RESTORE(best_tree_AICc);
+    CKP_RESTORE(best_tree_BIC);
 
 //    string prev_tree_string = "";
 //    int prev_model_id = -1;
@@ -1727,43 +1739,30 @@ string testModel(Params &params, PhyloTree* in_tree, ModelCheckpoint &model_info
                 }
             model_names[model] = best_model + model_names[model];
         }
-		PhyloTree *tree = in_tree;
-        ModelFactory *this_model_fac = NULL;
-        try {
-//                mixture_model = true;
-            // FIX 2017-06-24: This is not thread-safe
-//                params.model_name = model_names[model];
-            this_model_fac = new ModelFactory(params, model_names[model], tree, models_block);
-            this_model_fac->setCheckpoint(checkpoint);
-            tree->setModelFactory(this_model_fac);
-            tree->setModel(this_model_fac->model);
-            tree->setRate(this_model_fac->site_rate);
-            RAM_requirement = max(RAM_requirement, tree->getMemoryRequired());
-        } catch (string &str) {
-            outError("Invalid model " + model_names[model] + ": " + str);
-        }
-
-#ifdef _OPENMP
-        if (num_threads <= 0) {
-            num_threads = tree->testNumThreads();
-            omp_set_num_threads(num_threads);
-        }
-        tree->warnNumThreads();
-#endif
-
+//		PhyloTree *tree = in_tree;
+//        ModelFactory *this_model_fac = NULL;
+//        try {
+////                mixture_model = true;
+//            // FIX 2017-06-24: This is not thread-safe
+////                params.model_name = model_names[model];
+//            if (model_names[model].find("+H") != string::npos)
+//                this_model_fac = new ModelFactoryMixlen(params, model_names[model], in_tree, models_block);
+//            else
+//                this_model_fac = new ModelFactory(params, model_names[model], in_tree, models_block);
+//            this_model_fac->setCheckpoint(checkpoint);
+//            in_tree->setModelFactory(this_model_fac);
+////            RAM_requirement = max(RAM_requirement, tree->getMemoryRequired());
+//        } catch (string &str) {
+//            outError("Invalid model " + model_names[model] + ": " + str);
+//        }
 
 		// optimize model parameters
-		ModelInfo info;        
-		info.set_name = set_name;
-		info.df = tree->getModelFactory()->getNParameters();
         string orig_model_name = model_names[model];
-        if (tree->getModel()->isMixture())
-            info.name = model_names[model];
-        else
-            model_names[model] = info.name = tree->getModelName();
+		ModelInfo info;
+		info.set_name = set_name;
+        string tree_string;
 		if (!info.restoreCheckpoint(checkpoint)) {
-            tree->deleteAllPartialLh();
-            tree->initializeAllPartialLh();
+            IQTree *tree = NULL;
             if (params.model_test_and_tree) {
                 string original_model = params.model_name;
                 // BQM 2017-03-29: disable bootstrap
@@ -1781,10 +1780,8 @@ string testModel(Params &params, PhyloTree* in_tree, ModelCheckpoint &model_info
                 if (params.model_test_and_tree == 1 && model>0 && fileExists(new_user_tree)) {
                     params.user_file = (char*)new_user_tree.c_str();
                 }
-                if (in_tree->isSuperTree()) {
-                    outError("-mtree option is not supported for partition model");
-                }
                 IQTree *iqtree = new IQTree(in_tree->aln);
+                tree = iqtree;
                 // set checkpoint
                 iqtree->setCheckpoint(in_tree->getCheckpoint());
                 iqtree->num_precision = in_tree->num_precision;
@@ -1809,23 +1806,34 @@ string testModel(Params &params, PhyloTree* in_tree, ModelCheckpoint &model_info
                 params.num_bootstrap_samples = orig_num_bootstrap_samples;
                 params.gbo_replicates = orig_gbo_replicates;
                 params.stop_condition = orig_stop_condition;
-                tree = iqtree;
+//                tree = iqtree;
 
                 // clear all checkpointed information
                 newCheckpoint = new Checkpoint;
-                tree->getCheckpoint()->getSubCheckpoint(newCheckpoint, "iqtree");
-                tree->getCheckpoint()->clear();
-                tree->getCheckpoint()->insert(newCheckpoint->begin(), newCheckpoint->end());
-                tree->getCheckpoint()->putBool("finished", false);
-                tree->getCheckpoint()->dump(true);
+                iqtree->getCheckpoint()->getSubCheckpoint(newCheckpoint, "iqtree");
+                iqtree->getCheckpoint()->clear();
+                iqtree->getCheckpoint()->insert(newCheckpoint->begin(), newCheckpoint->end());
+                iqtree->getCheckpoint()->putBool("finished", false);
+                iqtree->getCheckpoint()->dump(true);
                 delete newCheckpoint;
 
             } else {
-                if (tree->getMemoryRequired() > RAM_requirement) {
-                    tree->deleteAllPartialLh();
-                    RAM_requirement = tree->getMemoryRequired();
-                }
-                tree->initializeAllPartialLh();
+                if (model_names[model].find("+H") != string::npos || model_names[model].find("*H") != string::npos)
+                    tree = new PhyloTreeMixlen(in_tree->aln, 0);
+                else
+                    tree = new IQTree(in_tree->aln);
+                tree->setParams(&params);
+                tree->sse = params.SSE;
+                tree->optimize_by_newton = params.optimize_by_newton;
+                tree->num_threads = num_threads;
+
+                tree->setCheckpoint(checkpoint);
+                tree->initializeModel(params, model_names[model], models_block);
+
+//                if (tree->getMemoryRequired() > RAM_requirement) {
+//                    tree->deleteAllPartialLh();
+//                    RAM_requirement = tree->getMemoryRequired();
+//                }
 //                if (prev_tree_string != "") {
 //                    tree->readTreeString(prev_tree_string);
 //                }
@@ -1838,10 +1846,25 @@ string testModel(Params &params, PhyloTree* in_tree, ModelCheckpoint &model_info
                 if (verbose_mode >= VB_MED)
                     cout << "Optimizing model " << info.name << endl;
                 tree->getModelFactory()->restoreCheckpoint();
+                tree->restoreCheckpoint();
+                ASSERT(tree->root);
+
+        #ifdef _OPENMP
+                if (num_threads <= 0) {
+                    num_threads = tree->testNumThreads();
+                    omp_set_num_threads(num_threads);
+                }
+                tree->warnNumThreads();
+        #endif
+
+
+
+//                tree->initializeAllPartialLh();
                 for (int step = 0; step < 2; step++) {
                     info.logl = tree->getModelFactory()->optimizeParameters(false, false, TOL_LIKELIHOOD_MODELTEST, TOL_GRADIENT_MODELTEST);
                     info.tree_len = tree->treeLength();
                     tree->getModelFactory()->saveCheckpoint();
+                    tree->saveCheckpoint();
 
                     // check if logl(+R[k]) is worse than logl(+R[k-1])
                     ModelInfo prev_info;
@@ -1855,12 +1878,16 @@ string testModel(Params &params, PhyloTree* in_tree, ModelCheckpoint &model_info
                     }
                 }
             }
-			// print information to .model file
+            info.df = tree->getModelFactory()->getNParameters();
+            if (tree->getModel()->isMixture())
+                info.name = model_names[model];
+            else
+                model_names[model] = info.name = tree->getModelName();
+            tree_string = tree->getTreeString();
+            delete tree;
 		}
         info.computeICScores(ssize);
         info.saveCheckpoint(checkpoint);
-        checkpoint->put("best_tree_" + criterionName(params.model_test_criterion), best_tree);
-        checkpoint->dump();
 
         ModelInfo prev_info;
 
@@ -1899,24 +1926,23 @@ string testModel(Params &params, PhyloTree* in_tree, ModelCheckpoint &model_info
             }
         }
 
+        ASSERT(!tree_string.empty());
+
 		if (info.AIC_score < best_score_AIC) {
             best_model_AIC = info.name;
             best_score_AIC = info.AIC_score;
-            if (params.model_test_criterion == MTC_AIC)
-                best_tree = tree->getTreeString();
+            best_tree_AIC = tree_string;
         }
 		if (info.AICc_score < best_score_AICc) {
             best_model_AICc = info.name;
             best_score_AICc = info.AICc_score;
-            if (params.model_test_criterion == MTC_AICC)
-                best_tree = tree->getTreeString();
+            best_tree_AICc = tree_string;
         }
 
 		if (info.BIC_score < best_score_BIC) {
 			best_model_BIC = info.name;
             best_score_BIC = info.BIC_score;
-            if (params.model_test_criterion == MTC_BIC)
-                best_tree = tree->getTreeString();
+            best_tree_BIC = tree_string;
         }
 
         switch (params.model_test_criterion) {
@@ -1925,13 +1951,19 @@ string testModel(Params &params, PhyloTree* in_tree, ModelCheckpoint &model_info
             default: model_scores.push_back(info.BIC_score); break;
         }
 
-        delete this_model_fac->model;
-        delete this_model_fac->site_rate;
-        delete this_model_fac;
-        this_model_fac = NULL;
-        in_tree->setModel(NULL);
-        in_tree->setModelFactory(NULL);
-        in_tree->setRate(NULL);
+//        checkpoint->put("best_tree_" + criterionName(params.model_test_criterion), best_tree);
+        CKP_SAVE(best_tree_AIC);
+        CKP_SAVE(best_tree_AICc);
+        CKP_SAVE(best_tree_BIC);
+        checkpoint->dump();
+
+//        delete this_model_fac->model;
+//        delete this_model_fac->site_rate;
+//        delete this_model_fac;
+//        this_model_fac = NULL;
+//        in_tree->setModel(NULL);
+//        in_tree->setModelFactory(NULL);
+//        in_tree->setRate(NULL);
 
 		if (set_name == "") {
             cout.width(3);
@@ -1954,7 +1986,11 @@ string testModel(Params &params, PhyloTree* in_tree, ModelCheckpoint &model_info
 
         if (skip_model) {
             // skip over all +R model of higher categories
-            size_t posR = orig_model_name.find("+R");
+            const char *rates[] = {"+R", "*R", "+H", "*H"};
+            size_t posR;
+            for (int i = 0; i < sizeof(rates)/sizeof(char*); i++)
+                if ((posR = orig_model_name.find(rates[i])) != string::npos)
+                    break;
             string first_part = orig_model_name.substr(0, posR+2);
             while (model < model_names.size()-1 && model_names[model+1].substr(0, posR+2) == first_part) {
                 model++;
@@ -2015,8 +2051,11 @@ string testModel(Params &params, PhyloTree* in_tree, ModelCheckpoint &model_info
 
 	delete [] model_rank;
 
-	in_tree->deleteAllPartialLh();
-    
+//	in_tree->deleteAllPartialLh();
+
+    string best_tree;
+    model_info.getBestTree(best_tree);
+
     // BQM 2015-07-21 with Lars: load the best_tree
 //	if (params.model_test_and_tree)
 		in_tree->readTreeString(best_tree);

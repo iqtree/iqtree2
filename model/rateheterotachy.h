@@ -36,6 +36,11 @@ public:
     virtual ~RateHeterotachy();
 
     /**
+        @return TRUE if this is a heterotachy model, default: FALSE
+    */
+    virtual bool isHeterotachy() { return true; }
+
+    /**
         start structure for checkpointing
     */
     virtual void startCheckpoint();

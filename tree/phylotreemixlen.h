@@ -73,7 +73,7 @@ public:
      */
     virtual Node* newNode(int node_id, int node_name);
 
-    virtual void initializeModel(Params &params, ModelsBlock *models_block);
+    virtual void initializeModel(Params &params, string &model_name, ModelsBlock *models_block);
 
     /**
         @return true if this is a tree with mixture branch lengths, default: false
@@ -135,7 +135,7 @@ public:
     void initializeMixBranches(PhyloNode *node = NULL, PhyloNode *dad = NULL);
 
     /** initialize parameters if necessary */
-    void initializeMixlen(double tolerance);
+    void initializeMixlen(double tolerance, bool write_info);
 
     /**
         called by fixNegativeBranch to fix one branch

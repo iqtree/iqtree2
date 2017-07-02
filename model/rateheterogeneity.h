@@ -94,6 +94,11 @@ public:
 	*/
 	virtual bool isSiteSpecificRate() { return false; }
 
+    /**
+        @return TRUE if this is a heterotachy model, default: FALSE
+    */
+    virtual bool isHeterotachy() { return false; }
+
 	/**
 		get the number of rate categories. The default returns 1 category since it is homogeneous model
 		@return the number of rate categories

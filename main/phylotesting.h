@@ -67,10 +67,13 @@ public:
     */
     bool restoreCheckpointRminus1(Checkpoint *ckp, string &model_name) {
         size_t posR;
-        if ((posR = model_name.find("+R")) != string::npos) {
-            int cat = convert_int(model_name.substr(posR+2).c_str());
-            name = model_name.substr(0, posR+2) + convertIntToString(cat-1);
-            return restoreCheckpoint(ckp);
+        const char *rates[] = {"+R", "*R", "+H", "*H"};
+        for (int i = 0; i < sizeof(rates)/sizeof(char*); i++) {
+            if ((posR = model_name.find(rates[i])) != string::npos) {
+                int cat = convert_int(model_name.substr(posR+2).c_str());
+                name = model_name.substr(0, posR+2) + convertIntToString(cat-1);
+                return restoreCheckpoint(ckp);
+            }
         }
         return false;
     }
