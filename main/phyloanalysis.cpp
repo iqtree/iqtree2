@@ -1925,6 +1925,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 
     initializeParams(params, iqtree, model_info, models_block);
 
+    iqtree.restoreCheckpoint();
     iqtree.initSettings(params);
 
     /*********************** INITIAL MODEL OPTIMIZATION *****************/
