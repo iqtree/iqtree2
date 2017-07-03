@@ -15,14 +15,14 @@ ModelPoMoMixture::ModelPoMoMixture(const char *model_name,
                      string freq_params,
                      PhyloTree *tree,
                      string pomo_params, string pomo_rate_str)
-	:  
+	:
         ModelMarkov(tree),
         ModelPoMo(model_name, model_params, freq_type, freq_params, tree, pomo_params),
         ModelMixture(tree)
-    
+
 {
     optimizing_ratehet = false;
-    
+
     // get number of categories
     int m, num_rate_cats = 4;
     if (pomo_rate_str.length() > 2 && isdigit(pomo_rate_str[2])) {
@@ -51,7 +51,7 @@ ModelPoMoMixture::ModelPoMoMixture(const char *model_name,
 
     // TODO: why calling this init here
     ModelMarkov::init(FREQ_USER_DEFINED);
-    
+
 }
 
 
@@ -111,10 +111,10 @@ void ModelPoMoMixture::writeInfo(ostream &out) {
 void ModelPoMoMixture::decomposeRateMatrix() {
     // propagate eigenvalues and eigenvectors
     int m, nmix = getNMixtures(), num_states_2 = num_states*num_states;
-    double saved_mutation_rate_matrix[n_alleles*n_alleles]; 
+    double saved_mutation_rate_matrix[n_alleles*n_alleles];
     memcpy(saved_mutation_rate_matrix, mutation_rate_matrix, sizeof(double)*n_alleles*n_alleles);
 
-    // trick: reverse loop to retain eigenvalues and eigenvectors of the 0th mixture class 
+    // trick: reverse loop to retain eigenvalues and eigenvectors of the 0th mixture class
     for (m = nmix-1; m >= 0; m--) {
         // rescale mutation_rates
         scaleMutationRatesAndUpdateRateMatrix(ratehet->getRate(m));
@@ -137,7 +137,7 @@ void ModelPoMoMixture::setVariables(double *variables) {
         ratehet->setVariables(variables);
         return;
     }
-    ModelPoMo::setVariables(variables);     
+    ModelPoMo::setVariables(variables);
 }
 
 
@@ -157,7 +157,7 @@ double ModelPoMoMixture::optimizeParameters(double gradient_epsilon) {
 
     // first optimize pomo model parameters
     double score = ModelPoMo::optimizeParameters(gradient_epsilon);
-    
+
     // then optimize rate heterogeneity
     if (ratehet->getNDim() > 0) {
         optimizing_ratehet = true;

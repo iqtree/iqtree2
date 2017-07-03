@@ -916,7 +916,7 @@ void ModelPoMo::decomposeRateMatrix() {
 		for (int i = num_states-1; i >= 0; i--)
 			delete [] temp_matrix[i];
 		delete [] temp_matrix;
-        return;
+    return;
     }
 }
 
