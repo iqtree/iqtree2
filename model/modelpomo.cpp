@@ -87,7 +87,7 @@ void ModelPoMo::init_sampling_method()
         "PoMo with N=" + convertIntToString(N) + " and " +
         mutation_model->full_name + " mutation model; " +
         "Sampling method: " + sampling_method_str + "; " +
-        convertIntToString(num_states) + " states in total.";
+        convertIntToString(num_states) + " states in total;";
 }
 
 void ModelPoMo::init_boundary_frequencies()
@@ -816,8 +816,7 @@ void ModelPoMo::report(ostream &out) {
   out << this->full_name << endl;
 
   out << endl;
-  out << "Estimated quantities" << endl;
-  out << "--------------------" << endl;
+  out << "Estimated quantities:" << endl;
   if (freq_type == FREQ_ESTIMATE) {
     out << "Frequencies of boundary states (in the order A, C, G T):" << endl;
     for (int i = 0; i < n_alleles; i++)
@@ -835,8 +834,7 @@ void ModelPoMo::report(ostream &out) {
   }
 
   out << endl;
-  out << "Empirical quantities" << endl;
-  out << "--------------------" << endl;
+  out << "Empirical quantities:" << endl;
 
   out << "Frequencies of boundary states (in the order A, C, G, T):" << endl;
   for (int i = 0; i < n_alleles; i++)

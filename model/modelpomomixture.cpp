@@ -8,6 +8,7 @@
 
 #include "modelpomomixture.h"
 #include "rategamma.h"
+#include "utils/tools.h"
 
 ModelPoMoMixture::ModelPoMoMixture(const char *model_name,
                      string model_params,
@@ -30,6 +31,10 @@ ModelPoMoMixture::ModelPoMoMixture(const char *model_name,
         num_rate_cats = convert_int(pomo_rate_str.substr(2).c_str(), end_pos);
         if (num_rate_cats < 1) outError("Wrong number of rate categories");
     }
+
+    // Adjust name.
+    this->name += pomo_rate_str;
+    this->full_name += "Gamma rate heterogeneity with " + convertIntToString(num_rate_cats) + " components;";
 
     // initialize rate heterogeneity
     ratehet = new RateGamma(num_rate_cats, Params::getInstance().gamma_shape, Params::getInstance().gamma_median, tree);
@@ -178,6 +183,24 @@ void ModelPoMoMixture::report(ostream &out) {
     phylo_tree->setRate(ratehet);
     reportRate(out, *phylo_tree);
     phylo_tree->setRate(saved_rate);
+}
+
+int ModelPoMoMixture::get_num_states_total() {
+  return num_states * getNMixtures();
+}
+
+void ModelPoMoMixture::update_eigen_pointers(double *eval, double *evec, double *inv_evec) {
+  eigenvalues = eval;
+  eigenvectors = evec;
+  inv_eigenvectors = inv_evec;
+  // We assume that all mixture model components have the same number of states.
+  int m = 0;
+  for (iterator it = begin(); it != end(); it++, m++) {
+    (*it)->update_eigen_pointers(eval + m*num_states,
+                                 evec + m*num_states*num_states,
+                                 inv_evec + m*num_states*num_states);
+  }
+  return;
 }
 
 bool ModelPoMoMixture::isUnstableParameters() {

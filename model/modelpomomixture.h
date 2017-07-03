@@ -106,6 +106,24 @@ public:
     */
     RateHeterogeneity *ratehet;
 
+  // Mon Jul 3 14:47:08 BST 2017; added by Dominik. I had problems with mixture
+  // models together with PoMo and rate heterogeneity. E.g., a model
+  // "MIX{HKY+P+N9+G2,GTR+P+N9+G2}" leads to segmentation faults because the
+  // `ModelPoMoMixture` reports a /wrong/ number of states (i.e., it reports 52
+  // instead of 104). Consequently, the `initMem()` function of ModelMixture,
+  // messes up the `eigenvalues`, etc., variables of the `ModelPoMoMixture`s. I
+  // circumvent this, by adding this virtual function; for normal models, it
+  // just returns `num_states`, however, for mixture models, it returns
+  // `num_states*nmixtures`.
+  virtual int get_num_states_total();
+
+  // Mon Jul 3 15:53:00 BST 2017; added by Dominik. Same problem as with
+  // `get_num_states_total()`. The pointers to the eigenvalues and eigenvectors
+  // need to be updated recursively, if the model is a mixture model. For a
+  // normal Markov model, only the standard pointers are set. This was done in
+  // `ModelMixture::initMem()` before.
+  virtual void update_eigen_pointers(double *eval, double *evec, double *inv_evec);
+
 protected:
 
     /** normally false, set to true while optimizing rate heterogeneity */

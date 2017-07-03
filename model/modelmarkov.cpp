@@ -1124,7 +1124,16 @@ void ModelMarkov::setRates() {
 	  || ModelLieMarkov::validModelName(model_name);
 }
 
+int ModelMarkov::get_num_states_total() {
+  return num_states;
+}
 
+void ModelMarkov::update_eigen_pointers(double *eval, double *evec, double *inv_evec) {
+  eigenvalues = eval;
+  eigenvectors = evec;
+  inv_eigenvectors = inv_evec;
+  return;
+}
 
 void ModelMarkov::computeTransMatrixEigen(double time, double *trans_matrix) {
 	/* compute P(t) */
