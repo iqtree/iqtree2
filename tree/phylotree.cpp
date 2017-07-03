@@ -419,6 +419,7 @@ void PhyloTree::readTreeString(const string &tree_string) {
     if (Params::getInstance().fixStableSplits || Params::getInstance().adaptPertubation) {
         buildNodeSplit();
     }
+    current_it = current_it_back = NULL;
 }
 
 void PhyloTree::readTreeStringSeqName(const string &tree_string) {
@@ -442,6 +443,7 @@ void PhyloTree::readTreeStringSeqName(const string &tree_string) {
     if (params->fixStableSplits) {
         buildNodeSplit();
     }
+    current_it = current_it_back = NULL;
 }
 
 int PhyloTree::wrapperFixNegativeBranch(bool force_change) {
@@ -479,6 +481,7 @@ void PhyloTree::readTreeFile(const string &file_name) {
     	clearAllPartialLH();
     }
     str.close();
+    current_it = current_it_back = NULL;
 }
 
 string PhyloTree::getTreeString() {
@@ -4885,6 +4888,7 @@ void PhyloTree::convertToRooted() {
     root_int->addNeighbor(dad, newlen);
     initializeTree();
     computeBranchDirection();
+    current_it = current_it_back = NULL;
 }
 
 void PhyloTree::convertToUnrooted() {

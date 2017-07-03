@@ -1828,6 +1828,8 @@ string testModel(Params &params, PhyloTree* in_tree, ModelCheckpoint &model_info
                 tree->num_threads = num_threads;
 
                 tree->setCheckpoint(checkpoint);
+                tree->restoreCheckpoint();
+                ASSERT(tree->root);
                 tree->initializeModel(params, model_names[model], models_block);
 
 //                if (tree->getMemoryRequired() > RAM_requirement) {
@@ -1846,8 +1848,6 @@ string testModel(Params &params, PhyloTree* in_tree, ModelCheckpoint &model_info
                 if (verbose_mode >= VB_MED)
                     cout << "Optimizing model " << info.name << endl;
                 tree->getModelFactory()->restoreCheckpoint();
-                tree->restoreCheckpoint();
-                ASSERT(tree->root);
 
         #ifdef _OPENMP
                 if (num_threads <= 0) {
