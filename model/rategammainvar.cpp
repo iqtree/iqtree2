@@ -41,10 +41,11 @@ void RateGammaInvar::setPInvar(double pInvar) {
     computeRates();
 }
 
-void RateGammaInvar::saveCheckpoint() {
+void RateGammaInvar::startCheckpoint() {
     checkpoint->startStruct("RateGammaInvar");
-//    CKP_SAVE(joint_optimize);
-    checkpoint->endStruct();
+}
+
+void RateGammaInvar::saveCheckpoint() {
     RateInvar::saveCheckpoint();
     RateGamma::saveCheckpoint();
 }
@@ -53,9 +54,6 @@ void RateGammaInvar::restoreCheckpoint() {
     // should restore p_invar first before gamma, because RateGamma will call computeRates()
     RateInvar::restoreCheckpoint();
     RateGamma::restoreCheckpoint();
-    checkpoint->startStruct("RateGammaInvar");
-//    CKP_RESTORE(joint_optimize);
-    checkpoint->endStruct();
 }
 
 void RateGammaInvar::setNCategory(int ncat) {

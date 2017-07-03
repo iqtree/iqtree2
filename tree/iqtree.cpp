@@ -996,7 +996,7 @@ void IQTree::initializePLL(Params &params) {
 }
 
 
-void IQTree::initializeModel(Params &params, ModelsBlock *models_block) {
+void IQTree::initializeModel(Params &params, string &model_name, ModelsBlock *models_block) {
     try {
         if (!getModelFactory()) {
             if (isSuperTree()) {
@@ -1005,7 +1005,7 @@ void IQTree::initializeModel(Params &params, ModelsBlock *models_block) {
                 } else
                     setModelFactory(new PartitionModel(params, (PhyloSuperTree*) this, models_block));
             } else {
-                setModelFactory(new ModelFactory(params, this, models_block));
+                setModelFactory(new ModelFactory(params, model_name, this, models_block));
             }
         }
     } catch (string & str) {

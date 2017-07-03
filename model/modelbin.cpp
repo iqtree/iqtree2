@@ -42,3 +42,6 @@ void ModelBIN::init(const char *model_name, string model_params, StateFreqType f
 	ModelMarkov::init(freq);
 }
 
+void ModelBIN::startCheckpoint() {
+    checkpoint->startStruct("ModelBIN");
+}

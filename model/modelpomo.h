@@ -234,7 +234,12 @@ class ModelPoMo : virtual public ModelMarkov
     void normalizeMutationRates();
 
     /**
-        Save object into the checkpoint.
+        start structure for checkpointing
+    */
+    virtual void startCheckpoint();
+
+    /**
+        save object into the checkpoint
     */
     virtual void saveCheckpoint();
 

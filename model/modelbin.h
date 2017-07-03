@@ -50,6 +50,11 @@ public:
 	 */
 	virtual string getNameParams() { return name; }
 
+    /**
+        start structure for checkpointing
+    */
+    virtual void startCheckpoint();
+
 };
 
 #endif

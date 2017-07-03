@@ -9,12 +9,14 @@
 #define PHYLOTESTING_H_
 
 #include "utils/tools.h"
+#include "utils/checkpoint.h"
 
 class PhyloTree;
 class IQTree;
 
 
-struct ModelInfo {
+class ModelInfo {
+public:
 	string set_name; // subset name
 	string name; // model name
 	double logl; // tree log likelihood
@@ -24,8 +26,89 @@ struct ModelInfo {
 	double AIC_score, AICc_score, BIC_score;    // scores
 	double AIC_weight, AICc_weight, BIC_weight; // weights
 	bool AIC_conf, AICc_conf, BIC_conf;         // in confidence set?
+
+    /**
+        compute information criterion scores (AIC, AICc, BIC)
+    */
+    void computeICScores(size_t sample_size);
+
+    /**
+        compute information criterion scores (AIC, AICc, BIC)
+    */
+    double computeICScore(size_t sample_size);
+
+    /**
+        save model into checkpoint
+    */
+    void saveCheckpoint(Checkpoint *ckp) {
+        stringstream ostr;
+        ostr.precision(10);
+        ostr << logl << " " << df << " " << tree_len;
+        if (!tree.empty())
+            ostr << " " << tree;
+        ckp->put(name, ostr.str());
+    }
+
+    /**
+        restore model from checkpoint
+    */
+    bool restoreCheckpoint(Checkpoint *ckp) {
+        string val;
+        if (ckp->getString(name, val)) {
+            stringstream str(val);
+            str >> logl >> df >> tree_len;
+            return true;
+        }
+        return false;
+    }
+
+    /**
+        restore model from checkpoint
+    */
+    bool restoreCheckpointRminus1(Checkpoint *ckp, string &model_name) {
+        size_t posR;
+        const char *rates[] = {"+R", "*R", "+H", "*H"};
+        for (int i = 0; i < sizeof(rates)/sizeof(char*); i++) {
+            if ((posR = model_name.find(rates[i])) != string::npos) {
+                int cat = convert_int(model_name.substr(posR+2).c_str());
+                name = model_name.substr(0, posR+2) + convertIntToString(cat-1);
+                return restoreCheckpoint(ckp);
+            }
+        }
+        return false;
+    }
+
 };
 
+//typedef vector<ModelInfo> ModelCheckpoint;
+
+class ModelCheckpoint : public Checkpoint {
+
+public:
+
+    /*
+        get the best model
+        @param[out] best_model name of the best model
+        @return TRUE if best model found, FALSE otherwise (unfinished job)
+    */
+    bool getBestModel(string &best_model);
+
+    /*
+        get the ordered model list according to AIC, AICc or BIC
+        @param tree associated tree
+        @param[out] ordered_models list of models ordered by specified criterion
+        @return TRUE if ordered_models found, FALSE otherwise (unfinished job)
+    */
+    bool getOrderedModels(PhyloTree *tree, vector<ModelInfo> &ordered_models);
+
+    /*
+        get the best tree
+        @param[out] best_tree NEWICK string of the best tree
+        @return TRUE if best tree found, FALSE otherwise (unfinished job)
+    */
+    bool getBestTree(string &best_tree);
+
+};
 
 struct TreeInfo {
 	double logl; // log likelihood
@@ -47,6 +130,10 @@ struct TreeInfo {
  */
 void computeInformationScores(double tree_lh, int df, int ssize, double &AIC, double &AICc, double &BIC);
 
+double computeInformationScore(double tree_lh, int df, int ssize, ModelTestCriterion mtc);
+
+string criterionName(ModelTestCriterion mtc);
+
 /**
  * check if the model file contains correct information
  * @param model_file model file names
@@ -56,7 +143,7 @@ void computeInformationScores(double tree_lh, int df, int ssize, double &AIC, do
  * @return TRUE if success, FALSE failed.
  */
 
-bool checkModelFile(string model_file, bool is_partitioned, vector<ModelInfo> &infos);
+bool checkModelFile(string model_file, bool is_partitioned, ModelCheckpoint &infos);
 
 /**
  testing the best-fit model
@@ -68,7 +155,7 @@ bool checkModelFile(string model_file, bool is_partitioned, vector<ModelInfo> &i
  @param print_mem_usage true to print RAM memory used (default: false) 
  @return name of best-fit-model
  */
-string testModel(Params &params, PhyloTree* in_tree, vector<ModelInfo> &model_info, ostream &fmodel,
+string testModel(Params &params, PhyloTree* in_tree, ModelCheckpoint &model_info,
 		ModelsBlock *models_block, int num_threads, string set_name = "", bool print_mem_usage = false, string in_model_name = "");
 
 /**

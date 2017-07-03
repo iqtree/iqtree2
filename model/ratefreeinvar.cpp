@@ -16,9 +16,11 @@ RateFreeInvar::RateFreeInvar(int ncat, double start_alpha, string params, bool s
     setNCategory(ncat);
 }
 
+void RateFreeInvar::startCheckpoint() {
+    checkpoint->startStruct("RateFreeInvar" + convertIntToString(ncategory));
+}
+
 void RateFreeInvar::saveCheckpoint() {
-    checkpoint->startStruct("RateFreeInvar");
-    checkpoint->endStruct();
     RateInvar::saveCheckpoint();
     RateFree::saveCheckpoint();
 }
@@ -26,8 +28,6 @@ void RateFreeInvar::saveCheckpoint() {
 void RateFreeInvar::restoreCheckpoint() {
     RateInvar::restoreCheckpoint();
     RateFree::restoreCheckpoint();
-    checkpoint->startStruct("RateFreeInvar");
-    checkpoint->endStruct();
 }
 
 void RateFreeInvar::setNCategory(int ncat) {

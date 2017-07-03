@@ -140,38 +140,42 @@ PhyloTree::PhyloTree(string& treeString, Alignment* aln, bool isRooted) : MTree(
     setAlignment(aln);
 }
 
-void PhyloTree::saveCheckpoint() {
+void PhyloTree::startCheckpoint() {
     checkpoint->startStruct("PhyloTree");
-    StrVector leafNames;
-    getTaxaName(leafNames);
-    CKP_VECTOR_SAVE(leafNames);
-//    string newick = PhyloTree::getTreeString();
-//    CKP_SAVE(newick);
+}
+
+
+void PhyloTree::saveCheckpoint() {
+    startCheckpoint();
+//    StrVector leafNames;
+//    getTaxaName(leafNames);
+//    CKP_VECTOR_SAVE(leafNames);
+    string newick = PhyloTree::getTreeString();
+    CKP_SAVE(newick);
 //    CKP_SAVE(curScore);
-    checkpoint->endStruct();
+    endCheckpoint();
     CheckpointFactory::saveCheckpoint();
 }
 
 void PhyloTree::restoreCheckpoint() {
     CheckpointFactory::restoreCheckpoint();
-    checkpoint->startStruct("PhyloTree");
-    StrVector leafNames;
-    if (CKP_VECTOR_RESTORE(leafNames)) {
-        if (leafNames.size() +(int)rooted != leafNum)
-            outError("Alignment mismatched from checkpoint!");
-
-        StrVector taxname;
-        getTaxaName(taxname);
-        for (int i = 0; i < leafNames.size(); i++)
-            if (taxname[i] != leafNames[i])
-                outError("Sequence name " + taxname[i] + " mismatched from checkpoint");
-    }    
-//    string newick;
+    startCheckpoint();
+//    StrVector leafNames;
+//    if (CKP_VECTOR_RESTORE(leafNames)) {
+//        if (leafNames.size() +(int)rooted != leafNum)
+//            outError("Alignment mismatched from checkpoint!");
+//
+//        StrVector taxname;
+//        getTaxaName(taxname);
+//        for (int i = 0; i < leafNames.size(); i++)
+//            if (taxname[i] != leafNames[i])
+//                outError("Sequence name " + taxname[i] + " mismatched from checkpoint");
+//    }    
+    string newick;
 //    CKP_RESTORE(curScore);
-//    CKP_RESTORE(newick);
-//    if (!newick.empty())
-//        PhyloTree::readTreeString(newick);
-    checkpoint->endStruct();
+    if (CKP_RESTORE(newick))
+        PhyloTree::readTreeString(newick);
+    endCheckpoint();
 }
 
 void PhyloTree::discardSaturatedSite(bool val) {
@@ -415,6 +419,7 @@ void PhyloTree::readTreeString(const string &tree_string) {
     if (Params::getInstance().fixStableSplits || Params::getInstance().adaptPertubation) {
         buildNodeSplit();
     }
+    current_it = current_it_back = NULL;
 }
 
 void PhyloTree::readTreeStringSeqName(const string &tree_string) {
@@ -438,6 +443,7 @@ void PhyloTree::readTreeStringSeqName(const string &tree_string) {
     if (params->fixStableSplits) {
         buildNodeSplit();
     }
+    current_it = current_it_back = NULL;
 }
 
 int PhyloTree::wrapperFixNegativeBranch(bool force_change) {
@@ -475,6 +481,7 @@ void PhyloTree::readTreeFile(const string &file_name) {
     	clearAllPartialLH();
     }
     str.close();
+    current_it = current_it_back = NULL;
 }
 
 string PhyloTree::getTreeString() {
@@ -514,12 +521,10 @@ void PhyloTree::setModel(ModelSubst *amodel) {
 
 void PhyloTree::setModelFactory(ModelFactory *model_fac) {
     model_factory = model_fac;
-    if (model_factory && (model_factory->model->isMixture() || model_factory->model->isSiteSpecificModel()
-        || !model_factory->model->isReversible() || params->kernel_nonrev))
-    	setLikelihoodKernel(sse, num_threads);
     if (model_fac) {
         model = model_factory->model;
         site_rate = model_factory->site_rate;
+    	setLikelihoodKernel(sse, num_threads);
     } else {
         model = NULL;
         site_rate = NULL;
@@ -738,7 +743,7 @@ size_t PhyloTree::getBufferPartialLhSize() {
     buffer_size += 3*block*model->num_states;
 
     if (isMixlen()) {
-        size_t nmix = getMixlen();
+        size_t nmix = max(getMixlen(), getRate()->getNRate());
         buffer_size += nmix*(nmix+1)*VECTOR_SIZE + (nmix+3)*nmix*VECTOR_SIZE*num_threads;
     }
     return buffer_size;
@@ -4883,6 +4888,47 @@ void PhyloTree::convertToRooted() {
     root_int->addNeighbor(dad, newlen);
     initializeTree();
     computeBranchDirection();
+    current_it = current_it_back = NULL;
+}
+
+void PhyloTree::convertToUnrooted() {
+    ASSERT(rooted);
+    ASSERT(leafNum == aln->getNSeq()+1);
+    ASSERT(root);
+    ASSERT(root->isLeaf() && root->id == leafNum-1);
+    Node *node = root->neighbors[0]->node;
+    Node *taxon = findFirstTaxon();
+
+    rooted = false;
+    leafNum--;
+
+    // delete root node
+    if (node->degree() == 3) {
+        // delete and join adjacent branches
+        Node *node1 = NULL, *node2 = NULL;
+        double len = 0.0;
+        FOR_NEIGHBOR_IT(node, root, it) {
+            if (!node1) node1 = (*it)->node; else node2 = (*it)->node;
+            len += (*it)->length;
+        }
+        node1->updateNeighbor(node, node2, len);
+        node2->updateNeighbor(node, node1, len);
+        delete node;
+    } else {
+        // only delete root node
+        auto it = node->findNeighborIt(root);
+        delete *it;
+        node->neighbors.erase(it);
+
+    }
+
+    delete root;
+    // set a temporary taxon so that tree traversal works
+    root = taxon;
+    setRootNode(params->root);
+
+    initializeTree();
+//    computeBranchDirection();
 }
 
 void PhyloTree::reorientPartialLh(PhyloNeighbor* dad_branch, Node *dad) {

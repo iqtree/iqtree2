@@ -13,10 +13,10 @@
 #include "model/modelmixture.h"
 #include "rateheterotachy.h"
 
-ModelFactoryMixlen::ModelFactoryMixlen(Params &params, PhyloTree *tree, ModelsBlock *models_block) :   
-    ModelFactory(params, tree, models_block) {
+ModelFactoryMixlen::ModelFactoryMixlen(Params &params, string &model_name, PhyloTree *tree, ModelsBlock *models_block) :
+    ModelFactory(params, model_name, tree, models_block) {
     if (!tree->isMixlen()) {
-        cerr << "ERROR: Please add '-mixlen " << site_rate->getNRate() << "' option into the command line" << endl;
+        cerr << "Please add '-mixlen " << site_rate->getNRate() << "' option into the command line" << endl;
         outError("Sorry for the inconvience, please rerun IQ-TREE with option above");
     }
     if (tree->getMixlen() != site_rate->getNRate()) {
@@ -51,7 +51,7 @@ double ModelFactoryMixlen::optimizeParameters(int fixed_len, bool write_info, do
 	PhyloTreeMixlen *tree = (PhyloTreeMixlen*)site_rate->getTree();
 	ASSERT(tree);
     
-    tree->initializeMixlen(logl_epsilon);
+    tree->initializeMixlen(logl_epsilon, write_info);
 
     double score = ModelFactory::optimizeParameters(fixed_len, write_info, logl_epsilon, gradient_epsilon);
 

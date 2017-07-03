@@ -47,11 +47,12 @@ public:
 		constructor
 		create substitution model with possible rate heterogeneity. Create proper class objects
 		for two variables: model and site_rate. It takes the following field of params into account:
-			model_name, num_rate_cats, freq_type, store_trans_matrix
+			num_rate_cats, freq_type, store_trans_matrix
 		@param params program parameters
+        @param model_name full model name
 		@param tree associated phylogenetic tree
 	*/
-	ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_block);
+	ModelFactory(Params &params, string &model_name, PhyloTree *tree, ModelsBlock *models_block);
 
 	/**
 		blank constructor
@@ -64,6 +65,11 @@ public:
         @param checkpoint
     */
     virtual void setCheckpoint(Checkpoint *checkpoint);
+
+    /**
+        start structure for checkpointing
+    */
+    virtual void startCheckpoint();
 
     /**
         save object into the checkpoint

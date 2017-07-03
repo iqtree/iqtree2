@@ -2520,9 +2520,12 @@ int main(int argc, char *argv[]) {
     int seed = Params::getInstance().ran_seed;
     CKP_SAVE(seed);
     CKP_SAVE(start_time);
+
+    // check for incompatible version
+    string version;
     stringstream sversion;
     sversion << iqtree_VERSION_MAJOR << "." << iqtree_VERSION_MINOR << "." << iqtree_VERSION_PATCH;
-    string version = sversion.str();
+    version = sversion.str();
     CKP_SAVE(version);
     checkpoint->endStruct();
 

@@ -38,19 +38,23 @@ RateHeterogeneity::~RateHeterogeneity()
 {
 }
 
-void RateHeterogeneity::saveCheckpoint() {
+void RateHeterogeneity::startCheckpoint() {
     checkpoint->startStruct("RateHeterogeneity");
+}
+
+void RateHeterogeneity::saveCheckpoint() {
+    startCheckpoint();
 //    CKP_SAVE(name);
 //    CKP_SAVE(full_name);
-    checkpoint->endStruct();
+    endCheckpoint();
     CheckpointFactory::saveCheckpoint();
 }
 
 void RateHeterogeneity::restoreCheckpoint() {
-    checkpoint->startStruct("RateHeterogeneity");
+    startCheckpoint();
 //    CKP_RESTORE(name);
 //    CKP_RESTORE(full_name);
-    checkpoint->endStruct();
+    endCheckpoint();
 }
 
 /*
