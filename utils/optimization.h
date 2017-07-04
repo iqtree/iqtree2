@@ -145,6 +145,25 @@ public:
 	virtual double derivativeFunk(double x[], double dfx[]);
 
 	/**
+	        Controls restarting of optimization if optimization gets
+                stuck on the boundary. Models are free to override this
+		to provide their own boundary avoidance strategies.
+		@param guess the current optimized parameters, and
+                       will get overwritten with new search start point
+                       if required. (I.e. this is both input and output)
+                @param ndim the number of dimensions
+		@param lower lower bounds on parameters
+		@param upper upper bounds on parameters
+		@param bound_check whether to trigger a restart if
+                       corresponding parameter is on boundary
+		@param iteration how many times we've called restartParameters
+		       for this model. Should start at 1, increase by one each 
+		       call, until restartParameters returns false.
+		@return true if guess has changed, false if not.
+	 */
+	virtual bool restartParameters(double guess[], int ndim, double lower[], double upper[], bool bound_check[], int iteration);
+
+	/**
 		multi dimensional optimization by BFGS method
 		@param guess the initial starting point
 		@param ndim number of dimension

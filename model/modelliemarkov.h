@@ -62,6 +62,8 @@ public:
 			Assume trans_matrix has size of num_states * num_states.
 	*/
 	virtual void computeTransMatrix(double time, double *trans_matrix, int mixture = 0);
+	// overrides Optimization::restartParameters
+	bool restartParameters(double guess[], int ndim, double lower[], double upper[], bool bound_check[], int iteration);
 
 protected:
 	double **basis;
@@ -90,5 +92,6 @@ protected:
 	const static int NUM_LM_MODELS;
 	*/
         bool validFreqType();
+
 };
 #endif /* MODELLIEMARKOV_H_ */

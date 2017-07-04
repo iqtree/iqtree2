@@ -311,8 +311,15 @@ const static bool FULL_SYMMETRY[] =
 	      false,true, false};            // 10.34, 12.12, StrSym
 const static int NUM_RATES = 12;
 
-const double MIN_LIE_WEIGHT = -0.9999;
-const double MAX_LIE_WEIGHT =  0.9999;
+/*
+ * In principle, Lie Markov parameters range in [-1,1]. However values
+ * very near the boundary are biologically implausible (will put at least
+ * one entry in the rate matrix very close to zero) and can cause 
+ * numerical problems, so we restrict the range a bit.
+ */
+
+const double MIN_LIE_WEIGHT = -0.98;
+const double MAX_LIE_WEIGHT =  0.98;
 
 ModelLieMarkov::ModelLieMarkov(string model_name, PhyloTree *tree, string model_params, StateFreqType freq_type, string freq_params)
 	: ModelMarkov(tree, false) {
@@ -610,9 +617,79 @@ void ModelLieMarkov::setBounds(double *lower_bound, double *upper_bound, bool *b
 	for (i = 1; i <= ndim; i++) {
 		lower_bound[i] = MIN_LIE_WEIGHT;
 		upper_bound[i] = MAX_LIE_WEIGHT;
-        // answer: this is correct, typically no bound check is performed
-		bound_check[i] = false; // I've no idea what this does, so don't know if 'false' is appropriate - MDW.
+		// If we end up with optimum on boundary, try restarting
+		// optimization from different start point, because LM models
+		// have a tendancy to find local maxima on boundary.
+		bound_check[i] = true; 
 	}
+}
+
+
+/*
+ * Lie Markov model parameter restart strategy:
+ * If no parameters (in 'guess') are on the boundary of parameter space,
+ * no restart is needed. 
+ * If restart is needed, the first attempt is to take parameters which are on
+ * boundary, halve them and change sign. This means our restart should be
+ * well away from the local optimum on the boundary, so if the local optimum
+ * is not the global optimum, this restart will hopefully go somewhere else.
+ * 
+ * On subsequent restarts (iterations 2 to 5), every parameter starts halfway 
+ * between 0 and the boundary. The parameters are split into two sections 
+ * of (nearly) equal size, and all restart parameters within a section have 
+ * the same sign. The pattern of signs is:
+ * iteration group1 group2
+ *     2       -      -
+ *     3       +      +
+ *     4       -      +
+ *     5       +      -
+ * (this ordering gives maximal difference between restarts 2 and 3,
+ * which we hope will be more likely to find the way to a different
+ * local optimum.)
+ */
+const int MAX_ITER = 5;
+bool ModelLieMarkov::restartParameters(double guess[], int ndim, double lower[], double upper[], bool bound_check[], int iteration) {
+    int i;
+    bool restart = false;
+    if (iteration <= MAX_ITER) {
+        for (i = 1; i <= ndim; i++) {
+            if (fabs(guess[i]-lower[i]) < 1e-4 || fabs(guess[i]-upper[i]) < 1e-4) {
+	        restart = true; break;
+	    } // if (fabs...
+        } // for
+    } // if iteration <= MAX_ITER
+    if (restart) {
+        if (iteration == 1) {
+            unsigned int signbits = 0;
+            for (i = ndim; i>0; i--) {
+	         if (fabs(guess[i]-lower[i]) < 1e-4 || fabs(guess[i]-upper[i]) < 1e-4) {
+                     guess[i] *= -0.5;
+	         } // if (fabs...
+		 signbits = (signbits << 1) + ((guess[i]>0) ? 1 : 0);
+	    } // for
+        } else {
+            int halfN = ndim/2;
+            double sign1 = (iteration==2 || iteration==4) ? -1 : 1;
+            double sign2 = (iteration==2 || iteration==5) ? -1 : 1;
+            for (i=1; i<=halfN; i++) {
+                guess[i] = sign1 * upper[i]/2;
+            }
+            for (i=halfN+1; i<=ndim; i++) {
+                guess[i] = sign2 * upper[i]/2;
+            }
+	}
+        cout << "Lie Markov Restart estimation at the boundary, iteration " << iteration;
+        if (verbose_mode >= VB_MED) {
+	    cout << ", new start point:" << std::endl << guess[1] ;
+            for (i = 2; i <= ndim; i++) cout << "," << guess[i]; 
+        }
+        cout << std::endl;
+    } else {
+        if (iteration > 1 && verbose_mode >= VB_MED)
+	  cout << "Lie Markov restarts ended at iteration " << iteration-1 << std::endl;
+    
+    } // if restart else
+    return (restart);
 }
 
 
