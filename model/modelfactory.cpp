@@ -221,8 +221,6 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
             // TODO DS: This is an important feature, because then,
             // PoMo can be applied to SNP data only.
             outError("PoMo does not yet support ascertainment bias correction (+ASC).");
-        if (rate_str.find("+I") != string::npos)
-            outError("PoMo does not yet support invariable sites (+I).");
         if (rate_str.find("+R") != string::npos)
             outError("PoMo does not yet support free rate models (+R).");
         if (rate_str.find("+FMIX") != string::npos)
@@ -231,47 +229,64 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
             outError("PoMo does not yet support heterotachy models (+H).");
     }
 
-    // PoMo.  The +P{} and +GXX flags are interpreted during model
-    // creation.  This is necessary for compatibility with mixture
-    // models.  If there is no mixture model, move +P{} and +GXX flags
-    // to model string.  For mixture models, theta can be set
-    // separately for each model and the +P{} and +GXX flags should
-    // already be inside the model definition.
+    // PoMo. The +P{}, +GXX and +I flags are interpreted during model creation.
+    // This is necessary for compatibility with mixture models. If there is no
+    // mixture model, move +P{}, +GXX and +I flags to model string. For mixture
+    // models, theta can be set separately for each model and the +P{}, +GXX and
+    // +I flags should already be inside the model definition.
     if (model_str.substr(0, 3) != "MIX" && pomo) {
-        p_pos = rate_str.find("+P");
-        if (p_pos != string::npos) {
-            if (rate_str[p_pos+2] == '{') {
-                string::size_type close_bracket = rate_str.find("}");
-                if (close_bracket == string::npos)
-                    outError("No closing bracket in PoMo parameters.");
-                else {
-                    string pomo_theta = rate_str.substr(p_pos+3,close_bracket-p_pos-3);
-                    rate_str = rate_str.substr(0, p_pos) + rate_str.substr(close_bracket+1);
-                    model_str += "+P{" + pomo_theta + "}";
-                }
-            }
-            else {
-                rate_str = rate_str.substr(0, p_pos) + rate_str.substr(p_pos + 2);
-                model_str += "+P";
-            }
-        }
 
-        size_t pomo_rate_start_pos;
-        if ((pomo_rate_start_pos = rate_str.find("+G")) != string::npos) {
-            string pomo_rate_str = "";
-            size_t pomo_rate_end_pos = rate_str.find_first_of("+*", pomo_rate_start_pos+1);
-            if (pomo_rate_end_pos == string::npos) {
-                pomo_rate_str = rate_str.substr(pomo_rate_start_pos, rate_str.length() - pomo_rate_start_pos);
-                rate_str = rate_str.substr(0, pomo_rate_start_pos);
-                model_str += pomo_rate_str;
-            } else {
-                pomo_rate_str = rate_str.substr(pomo_rate_start_pos, pomo_rate_end_pos - pomo_rate_start_pos);
-                rate_str = rate_str.substr(0, pomo_rate_start_pos) + rate_str.substr(pomo_rate_end_pos);
-                model_str += pomo_rate_str;
-            }
+      // +P{} flag.
+      p_pos = rate_str.find("+P");
+      if (p_pos != string::npos) {
+        if (rate_str[p_pos+2] == '{') {
+          string::size_type close_bracket = rate_str.find("}");
+          if (close_bracket == string::npos)
+            outError("No closing bracket in PoMo parameters.");
+          else {
+            string pomo_theta = rate_str.substr(p_pos+3,close_bracket-p_pos-3);
+            rate_str = rate_str.substr(0, p_pos) + rate_str.substr(close_bracket+1);
+            model_str += "+P{" + pomo_theta + "}";
+          }
         }
+        else {
+          rate_str = rate_str.substr(0, p_pos) + rate_str.substr(p_pos + 2);
+          model_str += "+P";
+        }
+      }
+
+      // +G flag.
+      size_t pomo_rate_start_pos;
+      if ((pomo_rate_start_pos = rate_str.find("+G")) != string::npos) {
+        string pomo_rate_str = "";
+        size_t pomo_rate_end_pos = rate_str.find_first_of("+*", pomo_rate_start_pos+1);
+        if (pomo_rate_end_pos == string::npos) {
+          pomo_rate_str = rate_str.substr(pomo_rate_start_pos, rate_str.length() - pomo_rate_start_pos);
+          rate_str = rate_str.substr(0, pomo_rate_start_pos);
+          model_str += pomo_rate_str;
+        } else {
+          pomo_rate_str = rate_str.substr(pomo_rate_start_pos, pomo_rate_end_pos - pomo_rate_start_pos);
+          rate_str = rate_str.substr(0, pomo_rate_start_pos) + rate_str.substr(pomo_rate_end_pos);
+          model_str += pomo_rate_str;
+        }
+      }
+
+      // // +I flag.
+      // size_t pomo_irate_start_pos;
+      // if ((pomo_irate_start_pos = rate_str.find("+I")) != string::npos) {
+      //   string pomo_irate_str = "";
+      //   size_t pomo_irate_end_pos = rate_str.find_first_of("+*", pomo_irate_start_pos+1);
+      //   if (pomo_irate_end_pos == string::npos) {
+      //     pomo_irate_str = rate_str.substr(pomo_irate_start_pos, rate_str.length() - pomo_irate_start_pos);
+      //     rate_str = rate_str.substr(0, pomo_irate_start_pos);
+      //     model_str += pomo_irate_str;
+      //   } else {
+      //     pomo_irate_str = rate_str.substr(pomo_irate_start_pos, pomo_irate_end_pos - pomo_irate_start_pos);
+      //     rate_str = rate_str.substr(0, pomo_irate_start_pos) + rate_str.substr(pomo_irate_end_pos);
+      //     model_str += pomo_irate_str;
+      //   }
     }
-    
+
     //	nxsmodel = models_block->findModel(model_str);
     //	if (nxsmodel && nxsmodel->description.find("MIX") != string::npos) {
     //		cout << "Model " << model_str << " is alias for " << nxsmodel->description << endl;

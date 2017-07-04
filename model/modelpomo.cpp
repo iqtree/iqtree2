@@ -743,8 +743,7 @@ ModelPoMo::estimateEmpiricalWattersonTheta()
 
 void ModelPoMo::report_rates(ostream &out) {
   out << setprecision(8);
-  out << "In the following, the term 'mutation rate' does not contain the stationary" << endl;
-  out << "frequency of the target allele. This is also sometimes called exchangeability." << endl << endl;
+  out << "The term 'mutation rate' (or exchangeabilitiy) does not contain the frequency of the target allele." << endl;
   out << "Mutation rates (in the order AC, AG, AT, CG, CT, GT):" << endl;
   int n = n_alleles;
 
@@ -814,37 +813,40 @@ void ModelPoMo::report_rates(ostream &out) {
 void ModelPoMo::report(ostream &out) {
   ios  state(NULL);
   out << this->full_name << endl;
-
   out << endl;
-  out << "Estimated quantities:" << endl;
+
+  // Estimated quantities.
+  out << "--" << endl;
+  out << "Estimated quantities." << endl;
   if (freq_type == FREQ_ESTIMATE) {
-    out << "Frequencies of boundary states (in the order A, C, G T):" << endl;
+    out << "Frequencies of boundary states (order A, C, G T): ";
+    out << setprecision(2);
     for (int i = 0; i < n_alleles; i++)
       out << freq_boundary_states[i] << " ";
     out << endl;
-    report_rates(out);
   }
-
   out << setprecision(8);
-
+  report_rates(out);
   if (!fixed_theta) {
     out << "Estimated heterozygosity: " << theta << endl;
     if (sampling_method == SAMPLING_WEIGHTED_BINOM)
-      out << "Please note that we expect a slight overestimation of weighted, binomial sampling (see manual)." << endl;
+      out << "We expect a slight overestimation (effect of weighted binomial sampling, see manual)." << endl;
   }
 
+  // Empirical quantities.
   out << endl;
-  out << "Empirical quantities:" << endl;
-
-  out << "Frequencies of boundary states (in the order A, C, G, T):" << endl;
-  for (int i = 0; i < n_alleles; i++)
+  out << "--" << endl;
+  out << "Empirical quantities." << endl;
+  out << "Frequencies of boundary states (in the order A, C, G, T): ";
+  for (int i = 0; i < n_alleles; i++) {
+    out << setprecision(2);
     out << freq_boundary_states_emp[i] << " ";
+  }
   out << endl;
-
+  out << setprecision(8);
   double emp_watterson_theta = estimateEmpiricalWattersonTheta();
   out << "Watterson's estimator of heterozygosity: " << emp_watterson_theta << endl;
   out << endl;
-
   if (fixed_theta_emp)
     out << "Empirical heterozygosity: " << theta << endl;
   else if (fixed_theta_usr)
