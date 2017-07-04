@@ -58,6 +58,11 @@ public:
     virtual ~RateHeterogeneity();
 
     /**
+        start structure for checkpointing
+    */
+    virtual void startCheckpoint();
+
+    /**
         save object into the checkpoint
     */
     virtual void saveCheckpoint();
@@ -89,6 +94,11 @@ public:
 	*/
 	virtual bool isSiteSpecificRate() { return false; }
 
+    /**
+        @return TRUE if this is a heterotachy model, default: FALSE
+    */
+    virtual bool isHeterotachy() { return false; }
+
 	/**
 		get the number of rate categories. The default returns 1 category since it is homogeneous model
 		@return the number of rate categories
@@ -99,6 +109,11 @@ public:
 		set the number of rate categories. The default raises assertion since it is homogeneous model
 	*/
 	virtual void setNCategory(int ncat) { ASSERT(0); }
+
+    /**
+        initialize from checkpoint rates and prop from rate model with #category-1
+    */
+    virtual void initFromCatMinusOne() {}
 
 	/**
 		get the number of rate categories for site-specific category model

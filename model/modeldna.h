@@ -64,6 +64,11 @@ public:
     virtual void init(const char *model_name, string model_params, StateFreqType freq, string freq_params);
 
     /**
+        start structure for checkpointing
+    */
+    virtual void startCheckpoint();
+
+    /**
         save object into the checkpoint
     */
     virtual void saveCheckpoint();
@@ -90,7 +95,7 @@ public:
 		@param rate_spec a string of six letters describing how rates are related
 		@return TRUE if successful, FALSE otherwise
 	*/
-	bool setRateType(const char *rate_spec);
+	bool setRateType(string rate_spec);
 
 	/**
 		return the number of dimensions

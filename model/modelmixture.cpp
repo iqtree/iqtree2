@@ -1380,8 +1380,12 @@ void ModelMixture::setCheckpoint(Checkpoint *checkpoint) {
 		(*it)->setCheckpoint(checkpoint);
 }
 
-void ModelMixture::saveCheckpoint() {
+void ModelMixture::startCheckpoint() {
     checkpoint->startStruct("ModelMixture");
+}
+
+void ModelMixture::saveCheckpoint() {
+    startCheckpoint();
 //    CKP_SAVE(fix_prop);
     int nmix = getNMixtures();
     CKP_ARRAY_SAVE(nmix, prop);
@@ -1391,7 +1395,7 @@ void ModelMixture::saveCheckpoint() {
         (*it)->saveCheckpoint();
         checkpoint->endStruct();
     }
-    checkpoint->endStruct();
+    endCheckpoint();
 
 //    ModelMarkov::saveCheckpoint();
 }
@@ -1399,7 +1403,7 @@ void ModelMixture::saveCheckpoint() {
 void ModelMixture::restoreCheckpoint() {
 //    ModelMarkov::restoreCheckpoint();
 
-    checkpoint->startStruct("ModelMixture");
+    startCheckpoint();
 //    CKP_RESTORE(fix_prop);
     int nmix = getNMixtures();
     CKP_ARRAY_RESTORE(nmix, prop);
@@ -1409,7 +1413,7 @@ void ModelMixture::restoreCheckpoint() {
         (*it)->restoreCheckpoint();
         checkpoint->endStruct();
     }
-    checkpoint->endStruct();
+    endCheckpoint();
 
     decomposeRateMatrix();
     if (phylo_tree)

@@ -378,6 +378,10 @@ public:
      */
     virtual ~PhyloTree();
 
+    /**
+        start structure for checkpointing
+    */
+    virtual void startCheckpoint();
 
     /** 
         save object into the checkpoint
@@ -1904,6 +1908,11 @@ public:
         convert from unrooted to rooted tree
     */
     void convertToRooted();
+
+    /**
+        convert from rooted to unrooted tree
+    */
+    void convertToUnrooted();
 
 
 	/**

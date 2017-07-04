@@ -302,6 +302,11 @@ public:
 		Checkpointing facility
 	*****************************************************/
 
+    /**
+        start structure for checkpointing
+    */
+    virtual void startCheckpoint();
+
     /** 
         save object into the checkpoint
     */

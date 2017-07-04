@@ -100,12 +100,12 @@ size_t findCloseBracket(string &str, size_t start_pos) {
 	return string::npos;
 }
 
-ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_block) : CheckpointFactory() {
+ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, ModelsBlock *models_block) : CheckpointFactory() {
 	store_trans_matrix = params.store_trans_matrix;
 	is_storing = false;
 	joint_optimize = params.optimize_model_rate_joint;
 	fused_mix_rate = false;
-    string model_str = params.model_name;
+    string model_str = model_name;
 	string rate_str;
 
 	try {
@@ -425,7 +425,7 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
 				model_list = model_str.substr(4, model_str.length()-5);
 				model_str = model_str.substr(0, 3);
 			}
-			model = new ModelMixture(params.model_name, model_str, model_list, models_block, freq_type, freq_params, tree, optimize_mixmodel_weight);
+			model = new ModelMixture(model_name, model_str, model_list, models_block, freq_type, freq_params, tree, optimize_mixmodel_weight);
 		} else {
             //			string model_desc;
             //			NxsModel *nxsmodel = models_block->findModel(model_str);
@@ -508,7 +508,9 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
         }
 		cout << "Ascertainment bias correction: " << unobserved_ptns.size() << " unobservable constant patterns"<< endl;
 		rate_str = rate_str.substr(0, posasc) + rate_str.substr(posasc+4);
-	}
+	} else {
+        tree->aln->buildSeqStates(false);
+    }
 
 
 	/******************** initialize site rate heterogeneity ****************************/
@@ -728,7 +730,7 @@ ModelFactory::ModelFactory(Params &params, PhyloTree *tree, ModelsBlock *models_
             delete model;
             for (int i = 1; i < site_rate->getNRate(); i++)
                 model_list += "," + model_str;
-            model = new ModelMixture(params.model_name, model_str, model_list, models_block, freq_type, freq_params, tree, optimize_mixmodel_weight);
+            model = new ModelMixture(model_name, model_str, model_list, models_block, freq_type, freq_params, tree, optimize_mixmodel_weight);
         }
 		if (model->getNMixtures() != site_rate->getNRate())
 			outError("Mixture model and site rate model do not have the same number of categories");
@@ -763,25 +765,29 @@ void ModelFactory::setCheckpoint(Checkpoint *checkpoint) {
 	site_rate->setCheckpoint(checkpoint);
 }
 
+void ModelFactory::startCheckpoint() {
+    checkpoint->startStruct("ModelFactory");
+}
+
 void ModelFactory::saveCheckpoint() {
     model->saveCheckpoint();
     site_rate->saveCheckpoint();
-    checkpoint->startStruct("ModelFactory");
+    startCheckpoint();
 //    CKP_SAVE(fused_mix_rate);
 //    CKP_SAVE(unobserved_ptns);
 //    CKP_SAVE(joint_optimize);
-    checkpoint->endStruct();
+    endCheckpoint();
     CheckpointFactory::saveCheckpoint();
 }
 
 void ModelFactory::restoreCheckpoint() {
     model->restoreCheckpoint();
     site_rate->restoreCheckpoint();
-    checkpoint->startStruct("ModelFactory");
+    startCheckpoint();
 //    CKP_RESTORE(fused_mix_rate);
 //    CKP_RESTORE(unobserved_ptns);
 //    CKP_RESTORE(joint_optimize);
-    checkpoint->endStruct();
+    endCheckpoint();
 }
 
 int ModelFactory::getNParameters() {

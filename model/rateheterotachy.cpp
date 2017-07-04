@@ -68,14 +68,17 @@ void RateHeterotachy::setNCategory(int ncat) {
 	full_name += " with " + convertIntToString(ncategory) + " categories";
 }
 
+void RateHeterotachy::startCheckpoint() {
+    checkpoint->startStruct("RateHeterotachy" + convertIntToString(ncategory));
+}
 
 /**
     save object into the checkpoint
 */
 void RateHeterotachy::saveCheckpoint() {
-    checkpoint->startStruct("RateHeterotachy");
+    startCheckpoint();
     CKP_ARRAY_SAVE(ncategory, prop);
-    checkpoint->endStruct();
+    endCheckpoint();
     RateHeterogeneity::saveCheckpoint();
 }
 
@@ -84,9 +87,9 @@ void RateHeterotachy::saveCheckpoint() {
 */
 void RateHeterotachy::restoreCheckpoint() {
     RateHeterogeneity::restoreCheckpoint();
-    checkpoint->startStruct("RateHeterotachy");
+    startCheckpoint();
     CKP_ARRAY_RESTORE(ncategory, prop);
-    checkpoint->endStruct();
+    endCheckpoint();
 }
 
 int RateHeterotachy::getNDim() {

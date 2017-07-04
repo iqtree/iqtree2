@@ -3232,11 +3232,16 @@ void ModelProtein::init(const char *model_name, string model_params, StateFreqTy
 	ModelMarkov::init(freq);
 }
 
+void ModelProtein::startCheckpoint() {
+    checkpoint->startStruct("ModelProtein");
+}
+
+
 void ModelProtein::saveCheckpoint() {
     if (num_params > 0) {
-        checkpoint->startStruct("ModelProtein");
+        startCheckpoint();
         CKP_ARRAY_SAVE(getNumRateEntries(), rates);
-        checkpoint->endStruct();
+        endCheckpoint();
     }
     ModelMarkov::saveCheckpoint();
 }
@@ -3245,9 +3250,9 @@ void ModelProtein::restoreCheckpoint() {
     ModelMarkov::restoreCheckpoint();
 
     if (num_params > 0) {
-        checkpoint->startStruct("ModelProtein");
+        startCheckpoint();
         CKP_ARRAY_RESTORE(getNumRateEntries(), rates);
-        checkpoint->endStruct();
+        endCheckpoint();
         decomposeRateMatrix();
         if (phylo_tree)
             phylo_tree->clearAllPartialLH();

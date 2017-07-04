@@ -34,8 +34,12 @@ PartitionModelPlen::~PartitionModelPlen()
 {
 }
 
-void PartitionModelPlen::saveCheckpoint() {
+void PartitionModelPlen::startCheckpoint() {
     checkpoint->startStruct("PartitionModelPlen");
+}
+
+void PartitionModelPlen::saveCheckpoint() {
+    startCheckpoint();
     PhyloSuperTreePlen *tree = (PhyloSuperTreePlen*)site_rate->getTree();
     if (!tree->fixed_rates) {
         int nrates = tree->part_info.size();
@@ -45,12 +49,12 @@ void PartitionModelPlen::saveCheckpoint() {
         CKP_ARRAY_SAVE(nrates, part_rates);
         delete [] part_rates;
     }
-    checkpoint->endStruct();
+    endCheckpoint();
     PartitionModel::saveCheckpoint();
 }
 
 void PartitionModelPlen::restoreCheckpoint() {
-    checkpoint->startStruct("PartitionModelPlen");
+    startCheckpoint();
     PhyloSuperTreePlen *tree = (PhyloSuperTreePlen*)site_rate->getTree();
     if (!tree->fixed_rates) {
         int nrates = tree->part_info.size();
@@ -62,7 +66,7 @@ void PartitionModelPlen::restoreCheckpoint() {
         }
         delete [] part_rates;
     }
-    checkpoint->endStruct();
+    endCheckpoint();
     PartitionModel::restoreCheckpoint();
 }
 

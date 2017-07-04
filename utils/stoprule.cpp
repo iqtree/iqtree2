@@ -33,7 +33,7 @@ StopRule::StopRule() : CheckpointFactory()
 	unsuccess_iteration = 100;
 	min_correlation = 0.99;
 	step_iteration = 100;
-	start_real_time = -1.0;
+	start_real_time = getRealTime();
 	max_run_time = -1.0;
 	curIteration = 0;
     should_stop = false;

@@ -26,6 +26,7 @@ public:
 	*/
 	ModelMorphology(const char *model_name, string model_params, StateFreqType freq, string freq_params, PhyloTree *tree);
 
+
 	/**
 		initialization, called automatically by the constructor, no need to call it
 		@param model_name model name, e.g., JC, HKY.
@@ -33,6 +34,10 @@ public:
 	*/
 	virtual void init(const char *model_name, string model_params, StateFreqType freq, string freq_params);
 
+    /**
+        start structure for checkpointing
+    */
+    virtual void startCheckpoint();
 
 	/**
 		return the number of dimensions
