@@ -626,49 +626,6 @@ void ModelLieMarkov::setBounds(double *lower_bound, double *upper_bound, bool *b
 
 
 /*
- * Helper routines for ModelLieMarkov::restartParameters
- * binaryToGray: returns nth Gray code.
- * grayToBinary16: inverse of binaryToGray, for up to 16 bit Gray code.
- * binaryToAntiGray: anti-Gray code = Gray code for even n,
- *    bit-flip of Gray code for odd n. This means that whenever n 
- *    advances by one, anti-Gray code will differ in all but one location.
- */
-int binaryToGray(int n)
-{
-    return n ^ (n >> 1);
-}
-int grayToBinary16(int n)
-{
-    n = n ^ (n >> 8);
-    n = n ^ (n >> 4);
-    n = n ^ (n >> 2);
-    n = n ^ (n >> 1);
-    return n;
-}
-int binaryToAntiGray16(int n) {
-  if (n & 1) {
-    // n is odd. Xor with 16 ones.
-    return 0xFFFF ^ binaryToGray(n);
-  } else {
-    // n is even
-    return binaryToGray(n);
-  }
-}
-/*
- * writes ndim entries to array, each of which is +base or -base.
- * Signs of the entries are given by the antiGrey code for n.
- * NOTE: array is 1-indexed.
- */
-void antiGray(int n, int ndim, double base, double* array) {
-  int gray = binaryToAntiGray16(n);
-  for (int i=1; i<=ndim; i++) {
-    array[i] = (gray & 1) ? base : -base;
-    gray = gray >> 1;
-  }
-}
-
-
-/*
  * Lie Markov model parameter restart strategy:
  * If no parameters (in 'guess') are on the boundary of parameter space,
  * no restart is needed. 
@@ -677,17 +634,20 @@ void antiGray(int n, int ndim, double base, double* array) {
  * well away from the local optimum on the boundary, so if the local optimum
  * is not the global optimum, this restart will hopefully go somewhere else.
  * 
- * On subsequent restarts, every parameter starts half way between 0 and the
- * boundary. The sign of each parameter is given by the anti-Gray code
- * (so that each iteration is as different as possible from the previous 
- * iteration.) For the first anti-Gray code restart, we take the signs
- * of the parameters of the first restart, and take the next anti-Gray code
- * (i.e. second restart will have all but one parameter of different sign than
- * the first restart).
- *
- * We allow up to three anti-Gray restarts (i.e. up to 4 restarts in total.)
+ * On subsequent restarts (iterations 2 to 5), every parameter starts halfway 
+ * between 0 and the boundary. The parameters are split into two sections 
+ * of (nearly) equal size, and all restart parameters within a section have 
+ * the same sign. The pattern of signs is:
+ * iteration group1 group2
+ *     2       -      -
+ *     3       +      +
+ *     4       -      +
+ *     5       +      -
+ * (this ordering gives maximal difference between restarts 2 and 3,
+ * which we hope will be more likely to find the way to a different
+ * local optimum.)
  */
-const int MAX_ITER = 4;
+const int MAX_ITER = 5;
 bool ModelLieMarkov::restartParameters(double guess[], int ndim, double lower[], double upper[], bool bound_check[], int iteration) {
     int i;
     bool restart = false;
@@ -707,9 +667,16 @@ bool ModelLieMarkov::restartParameters(double guess[], int ndim, double lower[],
 	         } // if (fabs...
 		 signbits = (signbits << 1) + ((guess[i]>0) ? 1 : 0);
 	    } // for
-	    restart_base_gray_number = grayToBinary16(signbits);
         } else {
-            antiGray(restart_base_gray_number+iteration-1,ndim,upper[1]/2,guess);
+            int halfN = ndim/2;
+            double sign1 = (iteration==2 || iteration==4) ? -1 : 1;
+            double sign2 = (iteration==2 || iteration==5) ? -1 : 1;
+            for (i=1; i<=halfN; i++) {
+                guess[i] = sign1 * upper[i]/2;
+            }
+            for (i=halfN+1; i<=ndim; i++) {
+                guess[i] = sign2 * upper[i]/2;
+            }
 	}
         cout << "Lie Markov Restart estimation at the boundary, iteration " << iteration;
         if (verbose_mode >= VB_MED) {
@@ -719,7 +686,7 @@ bool ModelLieMarkov::restartParameters(double guess[], int ndim, double lower[],
         cout << std::endl;
     } else {
         if (iteration > 1 && verbose_mode >= VB_MED)
-	  cout << "Lie Markov restarts ended at iteration " << iteration << std::endl;
+	  cout << "Lie Markov restarts ended at iteration " << iteration-1 << std::endl;
     
     } // if restart else
     return (restart);

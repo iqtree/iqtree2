@@ -72,7 +72,6 @@ protected:
 	void setBasis();
 	virtual void setRates();
 	bool nondiagonalizable; // will be set true for nondiagonalizable rate matrices, then will use scaled squaring method for matrix exponentiation.
-	unsigned int restart_base_gray_number; // used by restartParameters
 
 	static void parseModelName(string model_name, int* model_num, int* symmetry);
 	/*
