@@ -5032,3 +5032,15 @@ double hypergeometric_dist(unsigned int k, unsigned int n, unsigned int K, unsig
   double num_total_log = binomial_coefficient_log(N,n);
   return exp(num_successes_log + num_failures_log - num_total_log);
 }
+
+// Calculate the Frobenius norm of an N x N matrix M (flattened, rows
+// concatenated) and linearly scaled by SCALE.
+ double frob_norm(double m[], int n, double scale) {
+   double sum = 0;
+   for (int i = 0; i < n; i++) {
+     for (int j = 0; j < n; j++) {
+       sum += m[i*n + j] * m[i*n + j] * scale * scale;
+     }
+   }
+   return sqrt(sum);
+ }

@@ -810,6 +810,15 @@ void ModelPoMo::report_rates(ostream &out) {
       out << endl;
     }
     out << endl;
+
+    out << "Comparison of Frobenius norms." << endl;
+    double frob_norm_m = frob_norm(m, n);
+    double frob_norm_f = frob_norm(f, n);
+    out << "Mutation rate matrix: " << frob_norm_m << endl;
+    out << "Skew-symmetric part: " << frob_norm_f << endl;
+    out << "Ratio: " << frob_norm_f / frob_norm_m << endl;
+    out << endl;
+
     delete [] r;
     delete [] f;
   }

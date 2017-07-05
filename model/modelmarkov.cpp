@@ -30,7 +30,6 @@ const int TimeSquare = 10;
 //----- declaration of some helper functions -----/
 int matexp (double Q[], double t, int n, int TimeSquare, double space[]);
 int computeStateFreqFromQMatrix (double Q[], double pi[], int n, double space[]);
-double frob_norm (double m[], int n, double scale=1.0);
 
 //const double MIN_FREQ_RATIO = MIN_FREQUENCY;
 //const double MAX_FREQ_RATIO = 1.0/MIN_FREQUENCY;
@@ -1311,7 +1310,8 @@ int matexp (double Q[], double t, int n, int TimeSquare, double space[])
     for (i=0; i<n*n; i++)  T[0][i] = ldexp( Q[i]*t, -TimeSquare );
 
     // DEBUG. Output norms, check scaling factor TimeSquare. Norm should be
-    // around 1.0 after scaling.
+    // around 1.0 after scaling. The function `frob_norm()` is declared in
+    // `utils/tools.h`.
     // cout << setprecision(16);
     // cout << "Branch length (t): " << t << "." << endl;
     // cout << "Norm of Q*t-matrix before scaling: " << frob_norm(Q, n, t) << "." << endl;
@@ -1329,16 +1329,4 @@ int matexp (double Q[], double t, int n, int TimeSquare, double space[])
     if (it==1)
         for (i=0;i<n*n;i++) Q[i]=T[1][i];
     return(0);
-}
-
-// Calculate the Frobenius norm of an N x N matrix M (flattened, rows
-// concatenated) and linearly scaled by SCALE.
-double frob_norm(double m[], int n, double scale) {
-  double sum = 0;
-  for (int i = 0; i < n; i++) {
-    for (int j = 0; j < n; j++) {
-      sum += m[i*n + j] * m[i*n + j] * scale * scale;
-    }
-  }
-  return sqrt(sum);
 }

@@ -2683,4 +2683,9 @@ double binomial_dist(unsigned int k, unsigned int N, double p);
 // N successes in the pool under the hypergeometric distribution.
 double hypergeometric_dist(unsigned int k, unsigned int n, unsigned int K, unsigned int N);
 
+// Calculate the Frobenius norm of an N x N matrix M (flattened, rows
+// concatenated) and linearly scaled by SCALE.
+double frob_norm (double m[], int n, double scale=1.0);
+
+
 #endif
