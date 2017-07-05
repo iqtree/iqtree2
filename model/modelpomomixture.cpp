@@ -214,3 +214,14 @@ bool ModelPoMoMixture::isUnstableParameters() {
         return true;
     return false;
 }
+
+// I had to write this function because of a compiler error. ModelPoMoMixture is
+// inheriting functions from ModelMixture and from ModelPoMo. I had to define
+// computeTransMatrix for ModelPoMo becaues the Modelmarkov version did not work
+// for non-reversible substitution models. However, this led to a clash because
+// then computeTransMatrix is defined in both, ModelMixture and ModelPoMo and
+// inheritance is flawed.
+void ModelPoMoMixture::computeTransMatrix(double time, double *trans_matrix, int mixture) {
+  ASSERT(mixture < getNMixtures());
+  at(mixture)->computeTransMatrix(time, trans_matrix);
+}

@@ -263,6 +263,15 @@ class ModelPoMo : virtual public ModelMarkov
   // hence, is not done, if theta is set by the user or to the empirical value.
   void set_theta_boundaries();
 
+	/**
+     compute the transition probability matrix.
+     @param time time between two events
+     @param mixture (optional) class for mixture model
+     @param trans_matrix (OUT) the transition matrix between all pairs of states.
+     Assume trans_matrix has size of num_states * num_states.
+	*/
+	virtual void computeTransMatrix(double time, double *trans_matrix, int mixture = 0);
+
  protected:
 
     ModelMarkov *mutation_model;

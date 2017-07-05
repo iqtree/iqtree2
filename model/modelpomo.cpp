@@ -5,6 +5,11 @@
 #include <assert.h>
 #include <string.h>
 
+#ifdef USE_EIGEN3
+#include <Eigen/Dense>
+#include <unsupported/Eigen/MatrixFunctions>
+#endif
+
 ModelPoMo::ModelPoMo(PhyloTree *tree) : ModelMarkov(tree) {
 }
 
@@ -934,3 +939,66 @@ void ModelPoMo::set_theta_boundaries() {
     outWarning("The polymorphism level in the data is very high.");
 }
 
+// TODO DS or Minh: This is a copy of ModelLieMarkov::computeTransMatrix(). I do
+// not see why every model needs its own function, especially when it is so
+// generic like this one. However, the ModelMarkov::computeTransMatrix() DOES
+// NOT WORK!
+
+// TODO DS: The parameter mixture is unused at the moment.
+void ModelPoMo::computeTransMatrix(double time, double *trans_matrix, int mixture) {
+#ifdef USE_EIGEN3
+  MatrixExpTechnique technique = phylo_tree->params->matrix_exp_technique;
+  if (technique == MET_SCALING_SQUARING || !is_reversible) {
+    // Do not change the object rate_matrix, but only trans_matrix.
+    Eigen::Map<Eigen::MatrixXd> A(rate_matrix, num_states, num_states);
+    Eigen::Map<Eigen::MatrixXd> P(trans_matrix, num_states, num_states);
+    P = (A * time).exp();
+    int i, j;
+    for (i = 0; i < num_states; i++) {
+      double sum = 0.0;
+      for (j = 0; j < num_states; j++)
+        sum += (trans_matrix[i*num_states+j]);
+      ASSERT(fabs(sum-1.0) < 1e-4);
+    }
+  }
+  // TODO DS: NOT TESTED YET!
+  else if (technique == MET_EIGEN3LIB_DECOMPOSITION) {
+    // and nondiagonalizable == false, else we used scaled squaring
+    int i;
+    Eigen::VectorXcd ceval_exp;
+    ceval_exp.resize(num_states);
+    for (i = 0; i < 4; i++)
+      ceval_exp(i) = exp(ceval[i]*time);
+    Eigen::Map<Eigen::MatrixXcd> cevectors(cevec, num_states, num_states);
+    Eigen::Map<Eigen::MatrixXcd> cinv_evectors(cevec, num_states, num_states);
+    Eigen::MatrixXcd res;
+    res.resize(num_states, num_states);
+    res = cevectors * ceval_exp.asDiagonal() * cinv_evectors;
+    // if assertions fail, it may be due to cevec having near-zero
+    // determinant, and a fix could be to relax the test for
+    // nondiagonalizable in ModelLieMarkov::decomposeRateMatrixEigen3lib()
+    if (technique == MET_EIGEN3LIB_DECOMPOSITION) {
+			for (i = 0; i < num_states; i++) {
+        double row_sum = 0.0;
+        for (int j = 0; j < num_states; j++) {
+					trans_matrix[i*num_states+j] = res(j, i).real();
+					ASSERT(fabs(res(j,i).imag()) < 1e-6);
+					ASSERT(trans_matrix[i*num_states+j] >= -0.000001);
+					ASSERT(trans_matrix[i*num_states+j] <=  1.000001);
+					if (trans_matrix[i*num_states+j] < 0)
+						trans_matrix[i*num_states+j] = 0.0;
+					if (trans_matrix[i*num_states+j] > 1)
+						trans_matrix[i*num_states+j] = 1.0;
+          row_sum += trans_matrix[i*num_states+j];
+				}
+				ASSERT(fabs(row_sum-1.0) < 1e-4);
+			}
+    }
+  }
+
+  else ModelMarkov::computeTransMatrix(time, trans_matrix);
+
+#else
+  ModelMarkov::computeTransMatrix(time, trans_matrix);
+#endif
+}
