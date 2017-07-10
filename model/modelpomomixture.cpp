@@ -117,6 +117,7 @@ void ModelPoMoMixture::writeInfo(ostream &out) {
     ModelPoMo::writeInfo(out);
 }
 
+
 void ModelPoMoMixture::decomposeRateMatrix() {
     // propagate eigenvalues and eigenvectors
     int m, nmix = getNMixtures(), num_states_2 = num_states*num_states;
@@ -126,7 +127,7 @@ void ModelPoMoMixture::decomposeRateMatrix() {
     // trick: reverse loop to retain eigenvalues and eigenvectors of the 0th mixture class
     for (m = nmix-1; m >= 0; m--) {
         // rescale mutation_rates
-        scaleMutationRatesAndUpdateRateMatrix(ratehet->getRate(m));
+        setScale(ratehet->getRate(m));
         ModelPoMo::decomposeRateMatrix();
         // copy eigenvalues and eigenvectors
         if (m > 0) {
@@ -137,6 +138,8 @@ void ModelPoMoMixture::decomposeRateMatrix() {
         // restore mutation_rate matrix
         memcpy(mutation_rate_matrix, saved_mutation_rate_matrix, sizeof(double)*n_alleles*n_alleles);
     }
+    // Reset scale.
+    setScale(1.0);
     updatePoMoStatesAndRateMatrix();
 }
 
@@ -190,6 +193,7 @@ void ModelPoMoMixture::report(ostream &out) {
 }
 
 int ModelPoMoMixture::get_num_states_total() {
+  // We assume that all mixture model components have the same number of states.
   return num_states * getNMixtures();
 }
 
@@ -216,11 +220,11 @@ bool ModelPoMoMixture::isUnstableParameters() {
 }
 
 // I had to write this function because of a compiler error. ModelPoMoMixture is
-// inheriting functions from ModelMixture and from ModelPoMo. I had to define
-// computeTransMatrix for ModelPoMo becaues the Modelmarkov version did not work
-// for non-reversible substitution models. However, this led to a clash because
-// then computeTransMatrix is defined in both, ModelMixture and ModelPoMo and
-// inheritance is flawed.
+// inheriting functions from ModelMixture and from ModelPoMo. I defined
+// computeTransMatrix for ModelPoMo because I thought that the Modelmarkov
+// version did not work for non-reversible substitution models. However, this
+// led to a clash because then computeTransMatrix is defined in both,
+// ModelMixture and ModelPoMo and inheritance is flawed.
 void ModelPoMoMixture::computeTransMatrix(double time, double *trans_matrix, int mixture) {
   ASSERT(mixture < getNMixtures());
   at(mixture)->computeTransMatrix(time, trans_matrix);

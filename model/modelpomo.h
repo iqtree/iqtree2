@@ -217,7 +217,7 @@ class ModelPoMo : virtual public ModelMarkov
      *
      * @param out Output file stream.
      */
-    void report_rates(ostream &out);
+    void report_rates(ostream &out, bool reset_scale = true);
 
     /**
      * Report the state frequencies to the output file stream 'out'.
@@ -272,6 +272,13 @@ class ModelPoMo : virtual public ModelMarkov
 	*/
 	virtual void computeTransMatrix(double time, double *trans_matrix, int mixture = 0);
 
+    /**
+     *  Set the scale factor of the mutation rates to NEW_SCALE.
+     *
+     *  @param scale (IN).
+     */
+  void setScale(double new_scale);
+
  protected:
 
     ModelMarkov *mutation_model;
@@ -284,15 +291,8 @@ class ModelPoMo : virtual public ModelMarkov
     */
     virtual void computeRateMatrix(double **rate_matrix, double *state_freq, int num_state);
 
-    /**
-     *  Scale the mutation rates by SCALE.
-     *
-     * I.e., new_mut_rates[i]. = * scale*old_mut_rates[i].
-     *
-     *  @param scale (IN).
-     */
-    void scaleMutationRatesAndUpdateRateMatrix(double scale);
-
+  // Get the current scale factor of the mutation rates.
+  double getScale();
     /**
      * This function is served for the multi-dimension
      * optimization. It should pack the model parameters into a vector
@@ -484,5 +484,9 @@ class ModelPoMo : virtual public ModelMarkov
 
   // Maximum level of polymorphism (theta), set by `set_theta_boundaries()`.
   double max_theta;
+
+  // The scale factor of the mutation rates. Important for Gamma rate
+  // heterogeneity.
+  double scale;
 };
 #endif /* _MODELPOMO_H_ */

@@ -189,7 +189,10 @@ void ModelPoMo::init(const char *model_name,
                         pomo_theta);
     init_sampling_method();
     init_boundary_frequencies();
+    // Initialize theta and the scale factor of the mutation rates which is only
+    // used for Gamma rate heterogeneity at the moment.
     theta = estimateEmpiricalWattersonTheta();
+    scale = 1.0;
     init_fixed_parameters(model_params, pomo_theta);
     set_theta_boundaries();
     setInitialMutCoeff();
@@ -500,7 +503,7 @@ void ModelPoMo::normalizeMutationRates() {
     // good results but I cannot derive it and do not know why.
     // double correction = (double) (N-1) / double (N+1);
 
-    double m_norm = theta / (theta_bm * (correction - harmonic(N-1) * theta));
+    double m_norm = scale * (theta / (theta_bm * (correction - harmonic(N-1) * theta)));
 
     if (verbose_mode >= VB_MAX) {
       cout << "Normalization constant of mutation rates: " << m_norm << endl;
@@ -511,18 +514,21 @@ void ModelPoMo::normalizeMutationRates() {
             m[i*n+j] *= m_norm;
         }
     }
-
-    // Recompute stationary frequency vector with updated mutation rates.
-    computeStateFreq();
 }
 
-void ModelPoMo::scaleMutationRatesAndUpdateRateMatrix(double scale) {
-    for (int i = 0; i < n_alleles*n_alleles; i++) {
-        mutation_rate_matrix[i] = mutation_rate_matrix[i]*scale;
-        // mutation_rate_matrix_sym[i] = mutation_rate_matrix_sym[i]*scale;
-        // mutation_rate_matrix_asy[i] = mutation_rate_matrix_asy[i]*scale;
-    }
-    updatePoMoStatesAndRateMatrix();
+void ModelPoMo::setScale(double new_scale) {
+  scale = new_scale;
+  // if (theta*new_scale < min_theta || theta*new_scale > max_theta) {
+  //   cout << "Scale: " << scale << endl;
+  //   outWarning("After rescaling, level of polymorphism out of range. Numerical instabilities expected.");
+  // }
+
+  normalizeMutationRates();
+  updatePoMoStatesAndRateMatrix();
+}
+
+double ModelPoMo::getScale() {
+  return scale;
 }
 
 bool ModelPoMo::getVariables(double *variables) {
@@ -531,7 +537,7 @@ bool ModelPoMo::getVariables(double *variables) {
 
     if (!fixed_theta) {
         int ndim = getNDim();
-        changed |= (theta != variables[ndim+1]);
+        changed |= (theta != variables[ndim]);
         theta = variables[ndim];
     }
 
@@ -540,6 +546,8 @@ bool ModelPoMo::getVariables(double *variables) {
     return changed;
 }
 
+
+// Dummy function, see declaration in header file.
 void ModelPoMo::setRates() {
     return;
 }
@@ -605,14 +613,14 @@ void ModelPoMo::check_boundary_freqs(double * bfs) {
     for (int i = 0; i < n_alleles; i++) {
         if (bfs[i] < POMO_MIN_BOUNDARY_FREQ) {
             bfs[i] = POMO_MIN_BOUNDARY_FREQ;
-            cout << "WARNING: A boundary state has very low frequency." << endl;
-            cout << "WARNING: Frequency set to." << POMO_MIN_BOUNDARY_FREQ;
+            outWarning("A boundary state has very low frequency.");
+            cout << "Frequency set to." << POMO_MIN_BOUNDARY_FREQ;
             change = true;
         }
         if (bfs[i] > POMO_MAX_BOUNDARY_FREQ) {
             bfs[i] = POMO_MAX_BOUNDARY_FREQ;
-            cout << "WARNING: A boundary state has very high frequency." << endl;
-            cout << "WARNING: Frequency set to." << POMO_MAX_BOUNDARY_FREQ;
+            outWarning("A boundary state has very high frequency.");
+            cout << "Frequency set to." << POMO_MAX_BOUNDARY_FREQ;
             change = true;
         }
     }
@@ -746,12 +754,17 @@ ModelPoMo::estimateEmpiricalWattersonTheta()
     return theta_p;
 }
 
-void ModelPoMo::report_rates(ostream &out) {
+void ModelPoMo::report_rates(ostream &out, bool reset_scale) {
+  // By default, reset scale before reporting.
+  if (reset_scale)
+    setScale(1.0);
+  else
+    out << "The mutation parameters are scaled by a factor of " << scale << "." << endl;;
+
   out << setprecision(8);
   out << "The term 'mutation rate' (or exchangeabilitiy) does not contain the frequency of the target allele." << endl;
   out << "Mutation rates (in the order AC, AG, AT, CG, CT, GT):" << endl;
   int n = n_alleles;
-
   for (int i = 0; i < n; i++)
     for (int j = i+1; j < n; j++) {
       out << mutation_rate_matrix[i*n+j] << " ";
@@ -970,8 +983,8 @@ void ModelPoMo::computeTransMatrix(double time, double *trans_matrix, int mixtur
       ASSERT(fabs(sum-1.0) < 1e-4);
     }
   }
-  // TODO DS: NOT TESTED YET!
   else if (technique == MET_EIGEN3LIB_DECOMPOSITION) {
+    outError("TODO DS: EIGEN3LIB DECOMPOSITION not yet tested.");
     // and nondiagonalizable == false, else we used scaled squaring
     int i;
     Eigen::VectorXcd ceval_exp;
