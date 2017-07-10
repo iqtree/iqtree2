@@ -54,7 +54,7 @@ ModelPoMoMixture::ModelPoMoMixture(const char *model_name,
     // allocate memory for mixture components so that they are continuous in RAM
     initMem();
 
-    // TODO: why calling this init here
+    // TODO: why calling this here?
     ModelMarkov::init(FREQ_USER_DEFINED);
 
 }
@@ -129,6 +129,8 @@ void ModelPoMoMixture::decomposeRateMatrix() {
         // rescale mutation_rates
         setScale(ratehet->getRate(m));
         ModelPoMo::decomposeRateMatrix();
+        // TODO Check! TEST: copy state frequency
+        ModelPoMo::getStateFrequency(at(m)->state_freq);
         // copy eigenvalues and eigenvectors
         if (m > 0) {
             memcpy(eigenvalues+m*num_states, eigenvalues, sizeof(double)*num_states);
@@ -138,9 +140,10 @@ void ModelPoMoMixture::decomposeRateMatrix() {
         // restore mutation_rate matrix
         memcpy(mutation_rate_matrix, saved_mutation_rate_matrix, sizeof(double)*n_alleles*n_alleles);
     }
-    // Reset scale.
+    // // Reset scale.
     setScale(1.0);
     updatePoMoStatesAndRateMatrix();
+    ModelPoMo::getStateFrequency(state_freq);
 }
 
 

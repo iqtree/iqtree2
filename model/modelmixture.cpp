@@ -1462,6 +1462,12 @@ void ModelMixture::getStateFrequency(double *state_freq, int mixture) {
         for (int j = 0; j < num_states; j++)
             state_freq[j] += weight*state_freq_class[j];
     }
+    // // DEBUG.
+    // cout << "Weighted state frequency of mixture component zero: ";
+    // for (int i = 0; i < num_states; i++) {
+    //   cout << state_freq[i] << " ";
+    // }
+    // cout << endl;
 }
 
 void ModelMixture::computeTransMatrix(double time, double *trans_matrix, int mixture) {

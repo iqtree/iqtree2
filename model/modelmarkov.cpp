@@ -533,6 +533,13 @@ void ModelMarkov::getStateFrequency(double *freq, int mixture) {
 	ASSERT(state_freq);
 	ASSERT(freq_type != FREQ_UNKNOWN);
 	memcpy(freq, state_freq, sizeof(double) * num_states);
+  // // DEBUG.
+  // cout << setprecision(8);
+  // cout << "State frequency reported by ModelMarkov: ";
+  // for (int i = 0; i < num_states; i++) {
+  //   cout << state_freq[i] << " ";
+  // }
+  // cout << endl;
     // 2015-09-07: relax the sum of state_freq to be 1, this will be done at the end of optimization
     double sum = 0.0;
     int i;

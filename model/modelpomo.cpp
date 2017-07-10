@@ -518,13 +518,13 @@ void ModelPoMo::normalizeMutationRates() {
 
 void ModelPoMo::setScale(double new_scale) {
   scale = new_scale;
+  // DEBUG.
   // if (theta*new_scale < min_theta || theta*new_scale > max_theta) {
   //   cout << "Scale: " << scale << endl;
   //   outWarning("After rescaling, level of polymorphism out of range. Numerical instabilities expected.");
   // }
 
   normalizeMutationRates();
-  updatePoMoStatesAndRateMatrix();
 }
 
 double ModelPoMo::getScale() {
