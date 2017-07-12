@@ -34,7 +34,7 @@ ModelPoMoMixture::ModelPoMoMixture(const char *model_name,
 
     // Adjust name.
     this->name += pomo_rate_str;
-    this->full_name += "Gamma rate heterogeneity with " + convertIntToString(num_rate_cats) + " components;";
+    this->full_name += " Gamma rate heterogeneity with " + convertIntToString(num_rate_cats) + " components;";
 
     // initialize rate heterogeneity
     ratehet = new RateGamma(num_rate_cats, Params::getInstance().gamma_shape, Params::getInstance().gamma_median, tree);
