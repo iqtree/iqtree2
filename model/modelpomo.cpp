@@ -312,8 +312,7 @@ void ModelPoMo::computeStateFreq () {
 void ModelPoMo::updatePoMoStatesAndRateMatrix () {
     computeStateFreq();
 
-    // Compute and normalzie the rate matrix such that on average one
-    // event happens per delta_t = 1.0.  This seems to be stable.
+    // Compute rate matrix.
     int i, j;
     double tot_sum = 0.0;
     for (i = 0; i < num_states; i++) {
@@ -328,11 +327,14 @@ void ModelPoMo::updatePoMoStatesAndRateMatrix () {
         tot_sum += state_freq[i]*row_sum;
         rate_matrix[i*num_states+i] = -(row_sum);
     }
-    for (int i = 0; i < num_states; i++) {
-        for (int j = 0; j < num_states; j++) {
-            rate_matrix[i*num_states+j] /= tot_sum;
-        }
-    }
+    // Sun Jul 16 17:43:30 BST 2017; Dom. I removed normalization, it should not
+    // change output nor stability.
+    // // Normalize rate matrix such that one event happens per unit time.
+    // for (int i = 0; i < num_states; i++) {
+    //     for (int j = 0; j < num_states; j++) {
+    //         rate_matrix[i*num_states+j] /= tot_sum;
+    //     }
+    // }
 }
 
 void ModelPoMo::decomposeState(int state, int &i, int &nt1, int &nt2) {
@@ -769,7 +771,16 @@ void ModelPoMo::report_rates(ostream &out, bool reset_scale) {
     for (int j = i+1; j < n; j++) {
       out << mutation_rate_matrix[i*n+j] << " ";
     }
-  out << endl;
+
+  // // DEBUG, report rate matrix.
+  // out << endl;
+  // out << setprecision(4);
+  // out << "The rate matrix:" << endl;
+  // for (int i = 0; i < num_states; i++) {
+  //   for (int j = 0; j < num_states; j++)
+  //     out << rate_matrix[i*num_states+j] << "\t";
+  //   out << endl;
+  // }
 
   if (!is_reversible) {
     out << endl;
@@ -796,15 +807,13 @@ void ModelPoMo::report_rates(ostream &out, bool reset_scale) {
         r[i*n+j] /= 2.0;
       }
     }
-    if (!is_reversible) {
-      for (int i = 0; i < n; i++) {
-        for (int j = 0; j < n; j++) {
-          if (i==j)
-            f[i*n+j] = 0;
-          else {
-            f[i*n+j] = m[i*n+j] - m[j*n+i];
-            f[i*n+j] /= 2.0;
-          }
+    for (int i = 0; i < n; i++) {
+      for (int j = 0; j < n; j++) {
+        if (i==j)
+          f[i*n+j] = 0;
+        else {
+          f[i*n+j] = m[i*n+j] - m[j*n+i];
+          f[i*n+j] /= 2.0;
         }
       }
     }
@@ -963,8 +972,9 @@ void ModelPoMo::set_theta_boundaries() {
 
 // TODO DS or Minh: This is a copy of ModelLieMarkov::computeTransMatrix(). I do
 // not see why every model needs its own function, especially when it is so
-// generic like this one. However, the ModelMarkov::computeTransMatrix() DOES
-// NOT WORK!
+// generic like this one. However, I thought my problems may be related to the
+// implementation in ModelMarkov::computeTransMatrix(). Now I am not so sure
+// anymore.
 
 // TODO DS: The parameter mixture is unused at the moment.
 void ModelPoMo::computeTransMatrix(double time, double *trans_matrix, int mixture) {
