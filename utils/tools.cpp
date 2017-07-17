@@ -3685,9 +3685,9 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "                       TIM, TIMef, TVM, TVMef, SYM, GTR, or a 6-digit model"         << endl
             << "                       specification (e.g., 010010 = HKY)."                          << endl
             << "                   +P: Use PoMo."                                                    << endl
-            << "            +P{THETA}: Optional; fix the amount of polymorphism to THETA (also"      << endl
+            << "              +P{HET}: Optional; fix the heterozygosity to HET (also"                << endl
             << "                       called Watterson's theta or 4*N*mu)."                         << endl
-            << "              +P{EMP}: Optional; fix THETA to empirical value from data."            << endl
+            << "              +P{EMP}: Optional; fix heterozygosity to empirical value from data."   << endl
             << "Optional modifiers (affect whole run and not only, e.g., a mixture model component)."<< endl
             << "  +N<ps>               Set virtual population size N to `ps` (default: +N9)."        << endl
             << "                       3 <= N <= 19; N has to be an odd number, 2 or 10."            << endl
