@@ -768,17 +768,23 @@ void ModelPoMo::report_rates(ostream &out, bool reset_scale) {
   if (reset_scale)
     setScale(1.0);
   else
-    out << "The mutation parameters are scaled by a factor of " << scale << "." << endl;;
+    out << "The reported rates are scaled by a factor of " << scale << "." << endl;;
 
   out << setprecision(8);
-  out << "The term 'mutation rate' (or exchangeabilitiy) does not contain the frequency of the target allele." << endl;
-  mutation_model->writeInfo(out);
-//  out << "Mutation rates (in the order AC, AG, AT, CG, CT, GT):" << endl;
+  out << "The term exchangeabilitiy does not contain the frequency of the target allele." << endl;
   int n = n_alleles;
-//  for (int i = 0; i < n; i++)
-//    for (int j = i+1; j < n; j++) {
-//      out << mutation_rate_matrix[i*n+j] << " ";
-//    }
+
+  // TODO DS: Separate output of "Substitution rates" and actual model
+  // parameters, because here, these are mutation rates or exchangeabilities.
+  // Maybe it is better to use my function, because the mutation model reports
+  // the unnormalized rates.
+  mutation_model->writeInfo(out);
+
+  //  out << "Mutation rates (in the order AC, AG, AT, CG, CT, GT):" << endl;
+  //  for (int i = 0; i < n; i++)
+  //    for (int j = i+1; j < n; j++) {
+  //      out << mutation_rate_matrix[i*n+j] << " ";
+  //    }
 
   // // DEBUG, report rate matrix.
   // out << endl;
@@ -859,29 +865,27 @@ void ModelPoMo::report(ostream &out) {
   out << this->full_name << endl;
   out << endl;
 
-  // Estimated quantities.
+  // Model parameters.
   out << "--" << endl;
-  out << "Estimated quantities." << endl;
-  if (freq_type == FREQ_ESTIMATE) {
-    out << "Frequencies of boundary states (order A, C, G T): ";
-    out << setprecision(2);
-    for (int i = 0; i < n_alleles; i++)
-      out << freq_boundary_states[i] << " ";
-    out << endl;
-  }
-  out << setprecision(8);
+  out << "Model parameters." << endl;
   report_rates(out);
   if (!fixed_heterozygosity) {
     out << "Estimated heterozygosity: " << heterozygosity << endl;
     if (sampling_method == SAMPLING_WEIGHTED_BINOM)
       out << "We expect a slight overestimation (effect of weighted binomial sampling, see manual)." << endl;
   }
+  else if (fixed_heterozygosity_emp)
+    out << "Empirical heterozygosity: " << heterozygosity << endl;
+  else if (fixed_heterozygosity_usr)
+    out << "User-defined heterozygosity: " << heterozygosity << endl;
+  else
+    outError("It is undefined how the heterozygosity was determined.");
 
   // Empirical quantities.
   out << endl;
   out << "--" << endl;
   out << "Empirical quantities." << endl;
-  out << "Frequencies of boundary states (in the order A, C, G, T): ";
+  out << "Base frequencies in order A, C, G, T: ";
   for (int i = 0; i < n_alleles; i++) {
     out << setprecision(2);
     out << freq_boundary_states_emp[i] << " ";
@@ -891,10 +895,6 @@ void ModelPoMo::report(ostream &out) {
   double emp_watterson_theta = estimateEmpiricalWattersonTheta();
   out << "Watterson's estimator of heterozygosity: " << emp_watterson_theta << endl;
   out << endl;
-  if (fixed_heterozygosity_emp)
-    out << "Empirical heterozygosity: " << heterozygosity << endl;
-  else if (fixed_heterozygosity_usr)
-    out << "User-defined heterozygosity: " << heterozygosity << endl;
 }
 
 void ModelPoMo::startCheckpoint() {
