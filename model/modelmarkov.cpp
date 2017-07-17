@@ -139,7 +139,8 @@ void ModelMarkov::startCheckpoint() {
 void ModelMarkov::saveCheckpoint() {
     if (!is_reversible) {
         startCheckpoint();
-        CKP_ARRAY_SAVE(num_params, model_parameters);
+        if (model_parameters)
+            CKP_ARRAY_SAVE(num_params, model_parameters);
         endCheckpoint();
     }
     ModelSubst::saveCheckpoint();
@@ -149,7 +150,8 @@ void ModelMarkov::restoreCheckpoint() {
     ModelSubst::restoreCheckpoint();
     if (!is_reversible) {
         startCheckpoint();
-        CKP_ARRAY_RESTORE(num_params, model_parameters);
+        if (model_parameters)
+            CKP_ARRAY_RESTORE(num_params, model_parameters);
         endCheckpoint();
         setRates();
     }

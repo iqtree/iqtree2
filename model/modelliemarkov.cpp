@@ -364,6 +364,8 @@ void ModelLieMarkov::init(const char *model_name, string model_params, StateFreq
         }
         setRates();
     }
+
+    if (freq_type == FREQ_UNKNOWN || expected_freq_type == FREQ_EQUAL) freq_type = expected_freq_type;
     ModelMarkov::init(freq_type);
 }
 

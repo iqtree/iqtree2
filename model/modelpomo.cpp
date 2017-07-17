@@ -765,12 +765,13 @@ void ModelPoMo::report_rates(ostream &out, bool reset_scale) {
 
   out << setprecision(8);
   out << "The term 'mutation rate' (or exchangeabilitiy) does not contain the frequency of the target allele." << endl;
-  out << "Mutation rates (in the order AC, AG, AT, CG, CT, GT):" << endl;
+  mutation_model->writeInfo(out);
+//  out << "Mutation rates (in the order AC, AG, AT, CG, CT, GT):" << endl;
   int n = n_alleles;
-  for (int i = 0; i < n; i++)
-    for (int j = i+1; j < n; j++) {
-      out << mutation_rate_matrix[i*n+j] << " ";
-    }
+//  for (int i = 0; i < n; i++)
+//    for (int j = i+1; j < n; j++) {
+//      out << mutation_rate_matrix[i*n+j] << " ";
+//    }
 
   // // DEBUG, report rate matrix.
   // out << endl;
@@ -984,7 +985,7 @@ void ModelPoMo::computeTransMatrix(double time, double *trans_matrix, int mixtur
     // Do not change the object rate_matrix, but only trans_matrix.
     Eigen::Map<Eigen::MatrixXd> A(rate_matrix, num_states, num_states);
     Eigen::Map<Eigen::MatrixXd> P(trans_matrix, num_states, num_states);
-    P = (A * time).exp();
+    P = ((A.transpose() * time).exp()).transpose();
     int i, j;
     for (i = 0; i < num_states; i++) {
       double sum = 0.0;
