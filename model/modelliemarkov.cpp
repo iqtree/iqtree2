@@ -603,6 +603,8 @@ string ModelLieMarkov::getName() {
         return name+"+F";
     case FREQ_USER_DEFINED:
         return name+"+FU";
+    case FREQ_EQUAL:
+      return name;
     default:
        	cerr << "Bad freq_type for a Lie-Markov model. Can't happen" << endl;
         abort();
