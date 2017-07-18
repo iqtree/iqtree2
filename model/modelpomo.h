@@ -327,8 +327,7 @@ class ModelPoMo : virtual public ModelMarkov
     int N;
 
     /**
-     * Full mutation rate matrix (R + PHI). The entries are actually only the
-     * exchangeabilities (i.e., m_ab/pi_b)!
+     * Full mutation rate matrix (Q^REV + Q^NONREV; or, Q^GTR + Q^FLUX).
      */
     double *mutation_rate_matrix;
 

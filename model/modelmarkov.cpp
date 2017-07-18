@@ -330,11 +330,12 @@ void ModelMarkov::writeInfo(ostream &out) {
 
         if (num_states != 4) return;
 		report_rates(out, "Substitution rates", rates);
-    report_state_freqs(out);
+    report_state_freqs(out, state_freq);
     }
 }
 
 void ModelMarkov::report_rates(ostream& out, string title, double *r) {
+  out << setprecision(5);
   if (is_reversible && num_states == 4) {
     out << title << ":";
     //out.precision(3);
@@ -365,12 +366,16 @@ void ModelMarkov::report_rates(ostream& out, string title, double *r) {
   }
 }
 
-void ModelMarkov::report_state_freqs(ostream& out) {
+void ModelMarkov::report_state_freqs(ostream& out, double *custom_state_freq) {
+  double *f;
+  if (custom_state_freq) f = custom_state_freq;
+  else f = state_freq;
+  out << setprecision(2);
   out << "Base frequencies:";
-  out << "  A: " << state_freq[0];
-  out << "  C: " << state_freq[1];
-  out << "  G: " << state_freq[2];
-  out << "  T: " << state_freq[3];
+  out << "  A: " << f[0];
+  out << "  C: " << f[1];
+  out << "  G: " << f[2];
+  out << "  T: " << f[3];
   out << endl;
 }
 

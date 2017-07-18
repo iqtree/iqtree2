@@ -268,8 +268,7 @@ double ModelPoMo::computeSumFreqPolyStates() {
     for (i = 0; i < n_alleles; i++) {
       for (j = 0; j < n_alleles; j++) {
         if (i != j) {
-          dpoly = freq_boundary_states[i] * freq_boundary_states[j];
-          dpoly *= mutation_rate_matrix[i*n_alleles+j];
+          dpoly = freq_boundary_states[i] * mutation_rate_matrix[i*n_alleles+j];
           norm_polymorphic += dpoly;
         }
       }
@@ -301,8 +300,10 @@ void ModelPoMo::computeStateFreq () {
             // Allele count, first and second type.
             int i, a, b;
             decomposeState(state, i, a, b);
-            state_freq[state] = norm * pi[a] * pi[b];
-            state_freq[state] *= (m[a*n + b]*1.0/(N-i) + m[b*n + a]*1.0/i);
+            // state_freq[state] = norm * pi[a] * pi[b];
+            // state_freq[state] *= (m[a*n + b]*1.0/(N-i) + m[b*n + a]*1.0/i);
+            state_freq[state] = pi[a]*m[a*n+b]/(N-i) + pi[b]*m[b*n+a]/i;
+            state_freq[state] *= norm;
             // double sym =  r[a*n + b]*(1.0/i + 1.0/(N-i));
             // double asy = -f[a*n + b]*(1.0/i - 1.0/(N-i));
             // state_freq[state] *= (sym + asy);
@@ -330,12 +331,16 @@ void ModelPoMo::updatePoMoStatesAndRateMatrix () {
     }
     // Sun Jul 16 17:43:30 BST 2017; Dom. I removed normalization, it should not
     // change output nor stability.
-    // // Normalize rate matrix such that one event happens per unit time.
-    // for (int i = 0; i < num_states; i++) {
-    //     for (int j = 0; j < num_states; j++) {
-    //         rate_matrix[i*num_states+j] /= tot_sum;
-    //     }
-    // }
+
+    // Tue Jul 18 12:32:00 BST 2017; Dom. However, it changes the branch
+    // lengths, which should be normalized to one event per unit time.
+
+    // Normalize rate matrix such that one event happens per unit time.
+    for (int i = 0; i < num_states; i++) {
+        for (int j = 0; j < num_states; j++) {
+            rate_matrix[i*num_states+j] /= tot_sum;
+        }
+    }
 }
 
 void ModelPoMo::decomposeState(int state, int &i, int &nt1, int &nt2) {
@@ -387,10 +392,6 @@ bool ModelPoMo::isPolymorphic(int state) {
     return (!isBoundary(state));
 }
 
-double ModelPoMo::mutCoeff(int nt1, int nt2) {
-    return mutation_rate_matrix[nt1*n_alleles+nt2];
-}
-
 double ModelPoMo::computeProbBoundaryMutation(int state1, int state2) {
     // The transition rate to the same state will be calculated by
     // setting the row sum to 0.
@@ -419,7 +420,7 @@ double ModelPoMo::computeProbBoundaryMutation(int state1, int state2) {
             if (nt2 == -1)
                 // e.g. 10A -> 9A1C
                 // return mutCoeff(nt1,nt4) * state_freq[nt4];
-                return mutCoeff(nt1,nt4) * freq_boundary_states[nt4];
+                return mutation_rate_matrix[nt1*n_alleles+nt4];
             else
                 // e.g. 9A1C -> 8A2C
                 // Changed Dom Tue Sep 29 13:30:43 CEST 2015
@@ -430,7 +431,7 @@ double ModelPoMo::computeProbBoundaryMutation(int state1, int state2) {
     } else if (nt1 == nt4 && nt2 == -1 && i2 == 1)  {
         // e.g.: 10G -> 1A9G
         //return mutCoeff(nt1,nt3) * state_freq[nt3];
-        return mutCoeff(nt1,nt3) * freq_boundary_states[nt3];
+        return mutation_rate_matrix[nt1*n_alleles+nt3];
     } else if (nt2 == nt3  && i1 == 1 && nt4 == -1) {
         // E.g.: 1A9G -> 10G
         // Changed Dom Tue Sep 29 13:30:25 CEST 2015
@@ -471,12 +472,7 @@ void ModelPoMo::setBounds(double *lower_bound,
 // that the heterozygosity matches.
 void ModelPoMo::normalizeMutationRates() {
     double * m = mutation_rate_matrix;
-    double * pi = mutation_model->state_freq;
     mutation_model->getQMatrix(m);
-    int n = n_alleles;
-    for (int i = 0; i < n; i++)
-        for (int j = 0; j < n; j++)
-            m[i*n+j] /= pi[j];
 
     // Normalize the mutation probability so that they resemble the given level
     // of polymorphism. The way of normalization determines heterozygosity.
@@ -519,11 +515,8 @@ void ModelPoMo::normalizeMutationRates() {
       cout << "Normalization constant of mutation rates: " << m_norm << endl;
     }
 
-    for (int i = 0; i < n; i++) {
-        for (int j = 0; j < n; j++) {
-            m[i*n+j] *= m_norm;
-        }
-    }
+    for (int i = 0; i < n_alleles; i++)
+        for (int j = 0; j < n_alleles; j++) m[i*n_alleles+j] *= m_norm;
 }
 
 void ModelPoMo::setScale(double new_scale) {
@@ -772,27 +765,20 @@ void ModelPoMo::report_model_params(ostream &out, bool reset_scale) {
   else
     out << "The reported rates are scaled by a factor of " << scale << "." << endl;;
 
-  out << "The term exchangeabilitiy does not contain the frequency of the target allele." << endl;
-  int n = n_alleles;
-
-  // Convert mutation rate matrix to rate vector also used by DNA substitution models.
+  // Report rates.
   double *rs = NULL;
   if (is_reversible) rs = new double[n_connections];
   else if (!is_reversible) rs = new double[2*n_connections];
   else outError("Model has to be either reversible or non-reversible.");
   rate_matrix_to_rates(mutation_rate_matrix, rs);
-  out << setprecision(5);
   mutation_model->report_rates(out, "Mutation rates", rs);
   delete [] rs;
   // Report stationary frequencies.
-  out << setprecision(2);
   mutation_model->report_state_freqs(out);
 
+  int n = n_alleles;
   if (!is_reversible) {
-    out << setprecision(5);
-    out << endl;
-    out << "Analysis of non-reversible mutation rate matrix." << endl;
-    // Output full mutation rate matrix.
+    out << setprecision(5) << endl;
     out << "Mutation rate matrix: " << endl;
     for (int i = 0; i < n; i++) {
       for (int j = 0; j < n; j++)
@@ -801,10 +787,9 @@ void ModelPoMo::report_model_params(ostream &out, bool reset_scale) {
     }
     out << endl;
 
-    // Calculate reversible and flux matrizes.
-    // Symmetric (reversible) mutation rate matrix.
+    // Reversible part of mutation rate matrix (Q^GTR or Q^REV).
     double * r = new double[n_alleles*n_alleles];
-    // Skew-symmetric (non-reversible) mutation rate matrix.
+    // Non-reversible part of mutation rate matrix (Q^FLUX).
     double * f = new double[n_alleles*n_alleles];
     double * m = mutation_rate_matrix;
     memset(r, 0, n_alleles*n_alleles*sizeof(double));
@@ -826,14 +811,14 @@ void ModelPoMo::report_model_params(ostream &out, bool reset_scale) {
       }
     }
 
-    out << "Symmetric part of the mutation rate matrix:" << endl;
+    out << "Reversible part of the mutation rate matrix:" << endl;
     for (int i = 0; i < n; i++) {
       for (int j = 0; j < n; j++)
         out << setw(8) << r[i*n+j] << " ";
       out << endl;
     }
     out << endl;
-    out << "Skew-symmetric part of the mutation rate matrix:" << endl;
+    out << "Non-reversible part of the mutation rate matrix:" << endl;
     for (int i = 0; i < n; i++) {
       for (int j = 0; j < n; j++)
         out << setw(8) << f[i*n+j] << " ";
@@ -846,23 +831,37 @@ void ModelPoMo::report_model_params(ostream &out, bool reset_scale) {
     double frob_norm_m = frob_norm(m, n);
     double frob_norm_f = frob_norm(f, n);
     out << "Mutation rate matrix: " << setw(6) << frob_norm_m << endl;
-    out << "Skew-symmetric part:  " << setw(6) << frob_norm_f << endl;
+    out << "Non-reversible part:  " << setw(6) << frob_norm_f << endl;
     out << "Ratio:                " << setw(6) << frob_norm_f / frob_norm_m << endl;
     out << endl;
 
     delete [] r;
     delete [] f;
   }
+
+  // Report heterozygosity.
+  out << setprecision(4);
+  if (!fixed_heterozygosity) {
+    out << "Estimated heterozygosity: " << heterozygosity << endl;
+    if (sampling_method == SAMPLING_WEIGHTED_BINOM)
+      out << "A slight overestimation is expected and an effect of weighted binomial sampling; see manual." << endl;
+  }
+  else if (fixed_heterozygosity_emp)
+    out << "Empirical heterozygosity: " << heterozygosity << endl;
+  else if (fixed_heterozygosity_usr)
+    out << "User-defined heterozygosity: " << heterozygosity << endl;
+  else
+    outError("It is undefined how the heterozygosity was determined.");
+
+  return;
 }
 
 void ModelPoMo::rate_matrix_to_rates(double *m, double *r) {
   int c = 0;
-  if (is_reversible) {
-    for (int i = 0; i < n_alleles; i++) {
-      for (int j = i+1; j < n_alleles; j++) {
-        r[c] = m[i*n_alleles+j];
-        c++;
-      }
+  for (int i = 0; i < n_alleles; i++) {
+    for (int j = i+1; j < n_alleles; j++) {
+      r[c] = m[i*n_alleles+j];
+      c++;
     }
   }
   if (!is_reversible) {
@@ -883,32 +882,14 @@ void ModelPoMo::report(ostream &out) {
   // Model parameters.
   out << "--" << endl;
   report_model_params(out);
-  if (!fixed_heterozygosity) {
-    out << "Estimated heterozygosity: " << heterozygosity << endl;
-    if (sampling_method == SAMPLING_WEIGHTED_BINOM)
-      out << "We expect a slight overestimation (effect of weighted binomial sampling, see manual)." << endl;
-  }
-  else if (fixed_heterozygosity_emp)
-    out << "Empirical heterozygosity: " << heterozygosity << endl;
-  else if (fixed_heterozygosity_usr)
-    out << "User-defined heterozygosity: " << heterozygosity << endl;
-  else
-    outError("It is undefined how the heterozygosity was determined.");
+  out << endl;
 
   // Empirical quantities.
-  out << endl;
   out << "--" << endl;
   out << "Empirical quantities." << endl;
-  out << "Base frequencies in order A, C, G, T: ";
-  for (int i = 0; i < n_alleles; i++) {
-    out << setprecision(2);
-    out << freq_boundary_states_emp[i] << " ";
-  }
-  out << endl;
-  out << setprecision(8);
-  double emp_watterson_theta = estimateEmpiricalWattersonTheta();
-  out << "Watterson's estimator of heterozygosity: " << emp_watterson_theta << endl;
-  out << endl;
+  mutation_model->report_state_freqs(out, freq_boundary_states_emp);
+  out << setprecision(4);
+  out << "Watterson's estimator of heterozygosity: " << estimateEmpiricalWattersonTheta() << endl;
 }
 
 void ModelPoMo::startCheckpoint() {
