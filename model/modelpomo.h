@@ -207,12 +207,17 @@ class ModelPoMo : virtual public ModelMarkov
      */
     double estimateEmpiricalWattersonTheta();
 
+  // Extract the rate entries of a rate matrix (basically remove the diagonal
+  // and align upper triangle before lower triangle). IN: rate matrix m; OUT:
+  // rates r (array of size n_connections or 2*n_connections).
+  void rate_matrix_to_rates(double *m, double *r);
+
     /**
      * Report the model rates to the output file stream 'out'.
      *
      * @param out Output file stream.
      */
-    void report_rates(ostream &out, bool reset_scale = true);
+    void report_model_params(ostream &out, bool reset_scale = true);
 
     /**
      * Report the state frequencies to the output file stream 'out'.

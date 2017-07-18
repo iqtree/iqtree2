@@ -97,12 +97,13 @@ void ModelPoMo::init_sampling_method()
 
 void ModelPoMo::init_boundary_frequencies()
 {
-    // Get boundary state frequencies from underlying mutation model.
+    // The boundary state frequencies are just the state frequencies from the
+    // underlying mutation model.
     freq_boundary_states = mutation_model->state_freq;
-    // Get the empirical boundary state frequencies from the data.
+    // The empirical boundary state frequencies are computed from the data.
     freq_boundary_states_emp = new double[4];
     estimateEmpiricalBoundaryStateFreqs(freq_boundary_states_emp);
-    // Get frequency type from mutation model.
+    // The frequency type is the one from the mutation model.
     freq_type = mutation_model->freq_type;
 
     // Handle frequency type.  This cannot be done by the underlying
@@ -763,46 +764,39 @@ ModelPoMo::estimateEmpiricalWattersonTheta()
     return theta_p;
 }
 
-void ModelPoMo::report_rates(ostream &out, bool reset_scale) {
+void ModelPoMo::report_model_params(ostream &out, bool reset_scale) {
+  out << "Model parameters." << endl;
   // By default, reset scale before reporting.
   if (reset_scale)
     setScale(1.0);
   else
     out << "The reported rates are scaled by a factor of " << scale << "." << endl;;
 
-  out << setprecision(8);
   out << "The term exchangeabilitiy does not contain the frequency of the target allele." << endl;
   int n = n_alleles;
 
-  // TODO DS: Separate output of "Substitution rates" and actual model
-  // parameters, because here, these are mutation rates or exchangeabilities.
-  // Maybe it is better to use my function, because the mutation model reports
-  // the unnormalized rates.
-  mutation_model->writeInfo(out);
-
-  //  out << "Mutation rates (in the order AC, AG, AT, CG, CT, GT):" << endl;
-  //  for (int i = 0; i < n; i++)
-  //    for (int j = i+1; j < n; j++) {
-  //      out << mutation_rate_matrix[i*n+j] << " ";
-  //    }
-
-  // // DEBUG, report rate matrix.
-  // out << endl;
-  // out << setprecision(4);
-  // out << "The rate matrix:" << endl;
-  // for (int i = 0; i < num_states; i++) {
-  //   for (int j = 0; j < num_states; j++)
-  //     out << rate_matrix[i*num_states+j] << "\t";
-  //   out << endl;
-  // }
+  // Convert mutation rate matrix to rate vector also used by DNA substitution models.
+  double *rs = NULL;
+  if (is_reversible) rs = new double[n_connections];
+  else if (!is_reversible) rs = new double[2*n_connections];
+  else outError("Model has to be either reversible or non-reversible.");
+  rate_matrix_to_rates(mutation_rate_matrix, rs);
+  out << setprecision(5);
+  mutation_model->report_rates(out, "Mutation rates", rs);
+  delete [] rs;
+  // Report stationary frequencies.
+  out << setprecision(2);
+  mutation_model->report_state_freqs(out);
 
   if (!is_reversible) {
+    out << setprecision(5);
     out << endl;
+    out << "Analysis of non-reversible mutation rate matrix." << endl;
     // Output full mutation rate matrix.
     out << "Mutation rate matrix: " << endl;
     for (int i = 0; i < n; i++) {
       for (int j = 0; j < n; j++)
-        out << mutation_rate_matrix[i*n+j] << " ";
+        out << setw(8) << mutation_rate_matrix[i*n+j] << " ";
       out << endl;
     }
     out << endl;
@@ -835,28 +829,49 @@ void ModelPoMo::report_rates(ostream &out, bool reset_scale) {
     out << "Symmetric part of the mutation rate matrix:" << endl;
     for (int i = 0; i < n; i++) {
       for (int j = 0; j < n; j++)
-        out << r[i*n+j] << " ";
+        out << setw(8) << r[i*n+j] << " ";
       out << endl;
     }
     out << endl;
     out << "Skew-symmetric part of the mutation rate matrix:" << endl;
     for (int i = 0; i < n; i++) {
       for (int j = 0; j < n; j++)
-        out << f[i*n+j] << " ";
+        out << setw(8) << f[i*n+j] << " ";
       out << endl;
     }
     out << endl;
 
+    out << setprecision(4);
     out << "Comparison of Frobenius norms." << endl;
     double frob_norm_m = frob_norm(m, n);
     double frob_norm_f = frob_norm(f, n);
-    out << "Mutation rate matrix: " << frob_norm_m << endl;
-    out << "Skew-symmetric part: " << frob_norm_f << endl;
-    out << "Ratio: " << frob_norm_f / frob_norm_m << endl;
+    out << "Mutation rate matrix: " << setw(6) << frob_norm_m << endl;
+    out << "Skew-symmetric part:  " << setw(6) << frob_norm_f << endl;
+    out << "Ratio:                " << setw(6) << frob_norm_f / frob_norm_m << endl;
     out << endl;
 
     delete [] r;
     delete [] f;
+  }
+}
+
+void ModelPoMo::rate_matrix_to_rates(double *m, double *r) {
+  int c = 0;
+  if (is_reversible) {
+    for (int i = 0; i < n_alleles; i++) {
+      for (int j = i+1; j < n_alleles; j++) {
+        r[c] = m[i*n_alleles+j];
+        c++;
+      }
+    }
+  }
+  if (!is_reversible) {
+    for (int i = 0; i < n_alleles; i++) {
+      for (int j = 0; j < i; j++) {
+        r[c] = m[i*n_alleles+j];
+        c++;
+      }
+    }
   }
 }
 
@@ -867,8 +882,7 @@ void ModelPoMo::report(ostream &out) {
 
   // Model parameters.
   out << "--" << endl;
-  out << "Model parameters." << endl;
-  report_rates(out);
+  report_model_params(out);
   if (!fixed_heterozygosity) {
     out << "Estimated heterozygosity: " << heterozygosity << endl;
     if (sampling_method == SAMPLING_WEIGHTED_BINOM)
