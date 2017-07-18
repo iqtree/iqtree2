@@ -286,6 +286,12 @@ public:
 	 */
 	virtual bool isUnstableParameters();
 
+  // A simple helper function that prints the rates in a nice way and can be
+  // reused by children. The title is necessary, because, e.g., for PoMo, the
+  // rates are mutation rates and not substitution rates, and also
+  // exchangeabilities may be reported.
+  void report_rates(ostream &out, string title, double *r);
+
 	/**
 		write information
 		@param out output stream

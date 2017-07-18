@@ -317,16 +317,7 @@ void ModelMarkov::init(StateFreqType type) {
 
 void ModelMarkov::writeInfo(ostream &out) {
 	if (is_reversible && num_states == 4) {
-		out << "Rate parameters:";
-		//out.precision(3);
-		//out << fixed;
-		out << "  A-C: " << rates[0];
-		out << "  A-G: " << rates[1];
-		out << "  A-T: " << rates[2];
-		out << "  C-G: " << rates[3];
-		out << "  C-T: " << rates[4];
-		out << "  G-T: " << rates[5];
-		out << endl;
+    report_rates(out, "Rate parameters", rates);
 		//if (freq_type != FREQ_ESTIMATE) return;
 		out << "Base frequencies: ";
 		out << "  A: " << state_freq[0];
@@ -343,20 +334,7 @@ void ModelMarkov::writeInfo(ostream &out) {
         out << endl;
 
         if (num_states != 4) return;
-		out << "Substitution rates:" << endl;
-		out << "  A-C: " << rates[0];
-		out << "  A-G: " << rates[1];
-		out << "  A-T: " << rates[2];
-        out << "  C-A: " << rates[3];
-		out << "  C-G: " << rates[4];
-		out << "  C-T: " << rates[5] << endl;
-        out << "  G-A: " << rates[6];
-        out << "  G-C: " << rates[7];
-		out << "  G-T: " << rates[8];
-        out << "  T-A: " << rates[9];
-        out << "  T-C: " << rates[10];
-        out << "  T-G: " << rates[11];
-		out << endl;
+		report_rates(out, "Substitution rates", rates);
 		out << "Base frequencies: ";
 		out << "  A: " << state_freq[0];
 		out << "  C: " << state_freq[1];
@@ -364,6 +342,37 @@ void ModelMarkov::writeInfo(ostream &out) {
 		out << "  T: " << state_freq[3];
 		out << endl;
     }
+}
+
+void ModelMarkov::report_rates(ostream& out, string title, double *r) {
+  if (is_reversible && num_states == 4) {
+    out << title << ":";
+    //out.precision(3);
+    //out << fixed;
+    out << "  A-C: " << r[0];
+    out << "  A-G: " << r[1];
+    out << "  A-T: " << r[2];
+    out << "  C-G: " << r[3];
+    out << "  C-T: " << r[4];
+    out << "  G-T: " << r[5];
+    out << endl;
+  }
+  else if (!is_reversible) {
+    out << title << ":" << endl;
+    out << "  A-C: " << r[0];
+    out << "  A-G: " << r[1];
+    out << "  A-T: " << r[2];
+    out << "  C-A: " << r[3];
+    out << "  C-G: " << r[4];
+    out << "  C-T: " << r[5] << endl;
+    out << "  G-A: " << r[6];
+    out << "  G-C: " << r[7];
+    out << "  G-T: " << r[8];
+    out << "  T-A: " << r[9];
+    out << "  T-C: " << r[10];
+    out << "  T-G: " << r[11];
+    out << endl;
+  }
 }
 
 void ModelMarkov::computeTransMatrix(double time, double *trans_matrix, int mixture) {
