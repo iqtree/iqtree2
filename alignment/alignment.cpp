@@ -3607,6 +3607,8 @@ int Alignment::convertPomoState(int state) {
     // Mon Jun 13 13:24:55 CEST 2016.  Make this a little bit more
     // stochastic.  This is important if the sample size is small..
     int M = value1 + value2;
+
+    // TODO DS: this will impact +I likelihood computation
     double stoch = (double) rand() / RAND_MAX - 0.5;
     stoch /= 2.0;
     int pick = (int)round(((double) value1*N/M) + stoch);
