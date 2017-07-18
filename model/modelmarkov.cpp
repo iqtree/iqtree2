@@ -318,13 +318,8 @@ void ModelMarkov::init(StateFreqType type) {
 void ModelMarkov::writeInfo(ostream &out) {
 	if (is_reversible && num_states == 4) {
     report_rates(out, "Rate parameters", rates);
+    report_state_freqs(out);
 		//if (freq_type != FREQ_ESTIMATE) return;
-		out << "Base frequencies: ";
-		out << "  A: " << state_freq[0];
-		out << "  C: " << state_freq[1];
-		out << "  G: " << state_freq[2];
-		out << "  T: " << state_freq[3];
-		out << endl;
 	} else if (!is_reversible) {
         // non-reversible
         int i;
@@ -335,12 +330,7 @@ void ModelMarkov::writeInfo(ostream &out) {
 
         if (num_states != 4) return;
 		report_rates(out, "Substitution rates", rates);
-		out << "Base frequencies: ";
-		out << "  A: " << state_freq[0];
-		out << "  C: " << state_freq[1];
-		out << "  G: " << state_freq[2];
-		out << "  T: " << state_freq[3];
-		out << endl;
+    report_state_freqs(out);
     }
 }
 
@@ -373,6 +363,15 @@ void ModelMarkov::report_rates(ostream& out, string title, double *r) {
     out << "  T-G: " << r[11];
     out << endl;
   }
+}
+
+void ModelMarkov::report_state_freqs(ostream& out) {
+  out << "Base frequencies:";
+  out << "  A: " << state_freq[0];
+  out << "  C: " << state_freq[1];
+  out << "  G: " << state_freq[2];
+  out << "  T: " << state_freq[3];
+  out << endl;
 }
 
 void ModelMarkov::computeTransMatrix(double time, double *trans_matrix, int mixture) {
