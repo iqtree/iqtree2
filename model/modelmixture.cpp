@@ -994,7 +994,7 @@ ModelSubst* createModel(string model_str, ModelsBlock *models_block, StateFreqTy
     // PoMo.
     bool pomo = false;
     string pomo_rate_str = "";
-    string pomo_theta = "";
+    string pomo_heterozygosity = "";
     string::size_type p_pos = model_str.find("+P");
     if ((p_pos != string::npos))
         pomo = true;
@@ -1007,7 +1007,7 @@ ModelSubst* createModel(string model_str, ModelsBlock *models_block, StateFreqTy
                 outError("No closing bracket in PoMo parameters.");
             }
             else {
-                pomo_theta = model_str.substr(p_pos+3,close_bracket-p_pos-3);
+                pomo_heterozygosity = model_str.substr(p_pos+3,close_bracket-p_pos-3);
                 model_str = model_str.substr(0, p_pos) + model_str.substr(close_bracket+1);
             }
         }
@@ -1049,9 +1049,9 @@ ModelSubst* createModel(string model_str, ModelsBlock *models_block, StateFreqTy
 
     if ((pomo) || (tree->aln->seq_type == SEQ_POMO)) {
         if (pomo_rate_str == "")
-            model = new ModelPoMo(model_str.c_str(), model_params, freq_type, freq_params, tree, pomo_theta);
+            model = new ModelPoMo(model_str.c_str(), model_params, freq_type, freq_params, tree, pomo_heterozygosity);
         else
-            model = new ModelPoMoMixture(model_str.c_str(), model_params, freq_type, freq_params, tree, pomo_theta, pomo_rate_str);
+            model = new ModelPoMoMixture(model_str.c_str(), model_params, freq_type, freq_params, tree, pomo_heterozygosity, pomo_rate_str);
         if (model->isMixture())
             cout << "PoMo mixture model for Gamma rate heterogeneity." << endl;
 //	else if ((model_str == "GTR" && tree->aln->seq_type == SEQ_DNA) ||

@@ -9,23 +9,22 @@
 /* const double POMO_INIT_RATE = 1e-3; */
 /* const double POMO_MAX_RATE =  1e-1; */
 
-// THETA BOUNDARIES ARE NOW SET IN A DYNAMIC WAY TO IMPROVE NUMERICAL STABILITY.
-// EXCEEDING THESE VALUES ONLY INDUCES WARNINGS.
-/* Boundaries for level of polymorphism.  The theta boundaries
-   strongly affect numerical stability.  I set them so that errors are
-   very seldom but there may be data that requires different
-   boundaries.  Maybe they should be set variable, depending on data
-   or user input. */
-const double POMO_MIN_THETA =  1e-5;
-const double POMO_MAX_THETA =  1e-1;
+// HETEROZYGOSITY BOUNDARIES ARE NOW SET IN A DYNAMIC WAY TO IMPROVE NUMERICAL
+// STABILITY. EXCEEDING THESE VALUES ONLY INDUCES WARNINGS.
+/* Boundaries for level of polymorphism or heterozygosity. The heterozygosity
+   boundaries strongly affect numerical stability. I set them so that errors are
+   very seldom but there may be data that requires different boundaries. Maybe
+   they should be set variable, depending on data or user input. */
+const double POMO_MIN_HETEROZYGOSITY =  1e-5;
+const double POMO_MAX_HETEROZYGOSITY =  1e-1;
 /* Not so stringent values. However, crashes are expected, especially because of
    the maximum value (?).*/
-/* const double POMO_MIN_THETA =  1e-4; */
-/* const double POMO_MAX_THETA =  1e-1; */
+/* const double POMO_MIN_HETEROZYGOSITY =  1e-4; */
+/* const double POMO_MAX_HETEROZYGOSITY =  1e-1; */
 
-// Relative boundaries for theta.
-const double POMO_MIN_REL_THETA = 0.5;
-const double POMO_MAX_REL_THETA = 3;
+// Relative boundaries for the heterozygosity.
+const double POMO_MIN_REL_HETEROZYGOSITY = 0.5;
+const double POMO_MAX_REL_HETEROZYGOSITY = 3;
 
 /* Boundaries for boundary frequencies.  This is not necessary anymore
    because those are set by the underlying Markov model.  The actual
@@ -55,12 +54,12 @@ class ModelPoMo : virtual public ModelMarkov
      * @param freq_type
      * @param freq_params
      * @param tree Associated tree for the model.
-     * @param pomo_theta parameters for PoMo
+     * @param pomo_heterozygosity heterozygosity of PoMo
      *
      * @return
      */
     ModelPoMo(const char *model_name, string model_params, StateFreqType freq_type, string freq_params,
-              PhyloTree *tree, string pomo_theta);
+              PhyloTree *tree, string pomo_heterozygosity);
 
     ModelPoMo(PhyloTree *tree);
 
@@ -83,25 +82,24 @@ class ModelPoMo : virtual public ModelMarkov
                       string model_params,
                       StateFreqType freq_type,
                       string freq_params,
-                      string pomo_theta);
+                      string pomo_heterozygosity);
 
     /**
      *  \brief Initialize underlying mutation model.
      *
-     * PoMo is built on top of any Markov mutation model which is
-     * of class ModelMarkov in IQ-TREE and is denominated "underlying"
-     * Markov model or "underlying" mutation model.  The idea is
-     * to the machinery of the underlying Markov model and only
-     * introduce an additional layer that adds polymorphic states and
-     * one parameter, namely the level of polymorphism which is
-     * denoted "theta" in the code.
+     * PoMo is built on top of any Markov mutation model which is of class
+     * ModelMarkov in IQ-TREE and is denominated "underlying" Markov model or
+     * "underlying" mutation model. The idea is to use the machinery of the
+     * underlying Markov model and only introduce an additional layer that adds
+     * polymorphic states and one parameter, namely the heterozygosity or level
+     * of polymorphism.
      *
      */
     void init_mutation_model(const char *model_name,
                              string model_params,
                              StateFreqType freq_type,
                              string freq_params,
-                             string pomo_theta);
+                             string pomo_heterozygosity);
 
     /**
      *  \brief Initialize sampling type.
@@ -122,15 +120,12 @@ class ModelPoMo : virtual public ModelMarkov
     /**
      *  \brief Check if parameters are optimized or not.
      *
-     *  The parameters of PoMo are the ones from the underlying
-     *  mutation model plus the amount of polymorphism, theta.  So
-     *  far, it is only possible to either infer or fix all
-     *  parameters.  For example, fixing theta only requires
-     *  constrained maximization of the likelihood.
+     *  The parameters of PoMo are the ones from the underlying mutation model
+     *  plus the the heterozygosity or the level of polymorphism.
      *
      */
     void init_fixed_parameters(string model_params,
-                               string pomo_theta);
+                               string pomo_heterozygosity);
 
     /**
      * Initialize rate_matrix and state_freq for boundary mutation model.
@@ -227,8 +222,8 @@ class ModelPoMo : virtual public ModelMarkov
     virtual void report(ostream &out);
 
     /**
-     * Normalize the mutation probabilities such that the given level of
-     * polymorphism is honored (theta).
+     * Normalize the mutation probabilities such that the given heterozygosity
+     * or level of polymorphism is honored.
      *
      */
     void normalizeMutationRates();
@@ -257,11 +252,12 @@ class ModelPoMo : virtual public ModelMarkov
 	virtual void decomposeRateMatrix();
 
   // I had serious problems with numerical instabilities because of fixed
-  // boundaries for the level of polymorphism (theta). However, it is easy to
-  // get an empirical value of theta and set boundaries according to this value.
+  // boundaries for the heterozygosity. However, it is easy to get an empirical
+  // value of the heterozygosity and set boundaries according to this value.
   // This improves numerical stability. This step does not make sense and,
-  // hence, is not done, if theta is set by the user or to the empirical value.
-  void set_theta_boundaries();
+  // hence, is not done, if the heterozygosity is set by the user or to the
+  // empirical value.
+  void set_heterozygosity_boundaries();
 
 	/**
      compute the transition probability matrix.
@@ -443,22 +439,22 @@ class ModelPoMo : virtual public ModelMarkov
     int n_alleles;
 
     /// True if heterozygosity has been fixed.
-    bool fixed_theta;
+    bool fixed_heterozygosity;
 
     /// True if heterozygosity has been fixed by user.
-    bool fixed_theta_usr;
+    bool fixed_heterozygosity_usr;
 
     /// True if heterozygosity has been fixed to empirical estimate
     /// from data.
-    bool fixed_theta_emp;
+    bool fixed_heterozygosity_emp;
 
     /**
-     * level of polymorphism.  Will be set by init() and is
-     * used to normalize the mutation coefficients.  This is needed to
-     * be done because PoMo had trouble to estimate this (especially,
-     * when N was large).
+     * Heterozygosity or level of polymorphism. Will be set by init() and is
+     * used to normalize the mutation coefficients. This is needed to be done
+     * because PoMo had trouble to estimate this (especially, when N was large).
+     * See also ModelPoMo::normalizeMutationRates().
      */
-    double theta;
+    double heterozygosity;
 
     /// True if the model parameters are fixed (e.g., if the
     /// transition to transversion ratio is set in the HKY model).
@@ -479,11 +475,11 @@ class ModelPoMo : virtual public ModelMarkov
     /// is created already (Alignment::readCountsFormat()).
     SamplingType sampling_method;
 
-  // Minimum level of polymorphism (theta), set by `set_theta_boundaries()`.
-  double min_theta;
+  // Minimum heterozygosity, set by `set_heterozygosity_boundaries()`.
+  double min_heterozygosity;
 
-  // Maximum level of polymorphism (theta), set by `set_theta_boundaries()`.
-  double max_theta;
+  // Maximum heterozygosity, set by `set_heterozygosity_boundaries()`.
+  double max_heterozygosity;
 
   // The scale factor of the mutation rates. Important for Gamma rate
   // heterogeneity.

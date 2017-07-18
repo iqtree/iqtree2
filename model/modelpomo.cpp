@@ -18,21 +18,21 @@ ModelPoMo::ModelPoMo(const char *model_name,
                      StateFreqType freq_type,
                      string freq_params,
                      PhyloTree *tree,
-                     string pomo_theta)
+                     string pomo_heterozygosity)
     // Set reversibility to true to allocate memory for objects (like
     // eigenvalues) necessary when the model is reversible.  In case
     // the model is not reversible memory for different object has to
     // be allocated separately.  This is done during the
     // initialization in ModelPoMo::init_mutation_model().
     : ModelMarkov(tree, true) {
-    init(model_name, model_params, freq_type, freq_params, pomo_theta);
+    init(model_name, model_params, freq_type, freq_params, pomo_heterozygosity);
 }
 
 void ModelPoMo::init_mutation_model(const char *model_name,
                                         string model_params,
                                         StateFreqType freq_type,
                                         string freq_params,
-                                        string pomo_theta)
+                                        string pomo_heterozygosity)
 {
     // Trick ModelDNA constructor by setting the number of states to 4 (DNA).
     phylo_tree->aln->num_states = n_alleles;
@@ -65,8 +65,8 @@ void ModelPoMo::init_mutation_model(const char *model_name,
     if (model_params.length() > 0)
         this->name += "{" + model_params + "}";
     this->name += "+P";
-    if (pomo_theta.length() > 0)
-        this->name += "{" + pomo_theta + "}";
+    if (pomo_heterozygosity.length() > 0)
+        this->name += "{" + pomo_heterozygosity + "}";
     this->name += "+N" + convertIntToString(N);
 }
 
@@ -139,30 +139,30 @@ void ModelPoMo::init_boundary_frequencies()
 }
 
 void ModelPoMo::init_fixed_parameters(string model_params,
-                                      string pomo_theta)
+                                      string pomo_heterozygosity)
 {
     fixed_model_params = false;
-    fixed_theta_emp = false;
-    fixed_theta_usr = false;
-    fixed_theta = false;
+    fixed_heterozygosity_emp = false;
+    fixed_heterozygosity_usr = false;
+    fixed_heterozygosity = false;
     if (model_params.length() > 0)
         // The rest ist done by the underlying mutation model.
         fixed_model_params = true;
-    if (pomo_theta.length() > 0) {
-        fixed_theta = true;
+    if (pomo_heterozygosity.length() > 0) {
+        fixed_heterozygosity = true;
         cout << setprecision(5);
-        if (pomo_theta == "EMP") {
+        if (pomo_heterozygosity == "EMP") {
             cout << "Level of polymorphism is fixed to the estimate from the data: ";
-            cout << theta << "." << endl;
-            fixed_theta_emp = true;
+            cout << heterozygosity << "." << endl;
+            fixed_heterozygosity_emp = true;
             // No need to set the level of polymorphism here because
             // of initialization.
         }
         else {
-            cout << "Level of polymorphism is fixed to the value given by the user: ";
-            theta = convert_double(pomo_theta.c_str());
-            cout << theta << "." << endl;
-            fixed_theta_usr = true;
+            cout << "Heterozygosity is fixed to the value given by the user: ";
+            heterozygosity = convert_double(pomo_heterozygosity.c_str());
+            cout << heterozygosity << "." << endl;
+            fixed_heterozygosity_usr = true;
         }
     }
 }
@@ -172,7 +172,7 @@ void ModelPoMo::init(const char *model_name,
                      string model_params,
                      StateFreqType freq_type,
                      string freq_params,
-                     string pomo_theta) {
+                     string pomo_heterozygosity) {
     // Initialize model constants.
     N = phylo_tree->aln->virtual_pop_size;
     n_alleles = 4;
@@ -186,15 +186,15 @@ void ModelPoMo::init(const char *model_name,
                         model_params,
                         freq_type,
                         freq_params,
-                        pomo_theta);
+                        pomo_heterozygosity);
     init_sampling_method();
     init_boundary_frequencies();
-    // Initialize theta and the scale factor of the mutation rates which is only
-    // used for Gamma rate heterogeneity at the moment.
-    theta = estimateEmpiricalWattersonTheta();
+    // Initialize heterozygosity and the scale factor of the mutation rates
+    // which is only used for Gamma rate heterogeneity at the moment.
+    heterozygosity = estimateEmpiricalWattersonTheta();
     scale = 1.0;
-    init_fixed_parameters(model_params, pomo_theta);
-    set_theta_boundaries();
+    init_fixed_parameters(model_params, pomo_heterozygosity);
+    set_heterozygosity_boundaries();
     setInitialMutCoeff();
     rate_matrix = new double[num_states*num_states];
     updatePoMoStatesAndRateMatrix();
@@ -241,8 +241,8 @@ void ModelPoMo::setInitialMutCoeff() {
     double lambda_poly_sum_no_mu = computeSumFreqPolyStatesNoMut();
     if (lambda_poly_sum_no_mu <= 0) {
       outWarning("We discourage usage of PoMo on data without polymorphisms.");
-      if (!fixed_theta_usr)
-        outError("Please fix the level of polymorphism (theta) when population data is unavailable.");
+      if (!fixed_heterozygosity_usr)
+        outError("Please fix the heterozygosity when population data is unavailable.");
     }
 
     normalizeMutationRates();
@@ -441,7 +441,7 @@ double ModelPoMo::computeProbBoundaryMutation(int state1, int state2) {
 }
 
 int ModelPoMo::getNDim() {
-    if (fixed_theta)
+    if (fixed_heterozygosity)
         return mutation_model->getNDim();
     else
         return mutation_model->getNDim()+1;
@@ -458,16 +458,16 @@ void ModelPoMo::setBounds(double *lower_bound,
     mutation_model->setBounds(lower_bound, upper_bound, bound_check);
 
     // Level of polymorphism.
-    if (!fixed_theta) {
+    if (!fixed_heterozygosity) {
         int ndim = getNDim();
-        lower_bound[ndim] = min_theta;
-        upper_bound[ndim] = max_theta;
+        lower_bound[ndim] = min_heterozygosity;
+        upper_bound[ndim] = max_heterozygosity;
         bound_check[ndim] = false;
     }
 }
 
 // Get rates from underlying mutation model and normalize them such
-// that the level of polymorphism (theta) matches.
+// that the heterozygosity matches.
 void ModelPoMo::normalizeMutationRates() {
     double * m = mutation_rate_matrix;
     double * pi = mutation_model->state_freq;
@@ -477,14 +477,11 @@ void ModelPoMo::normalizeMutationRates() {
         for (int j = 0; j < n; j++)
             m[i*n+j] /= pi[j];
 
-    // Normalize the mutation probability so that they resemble the
-    // given level of polymorphism.
+    // Normalize the mutation probability so that they resemble the given level
+    // of polymorphism. The way of normalization determines heterozygosity.
     computeStateFreq();
     double poly = computeSumFreqPolyStates();
     double theta_bm = poly/harmonic(N-1);
-
-    // Mon Apr 17 10:21:09 BST 2017.  See Eq. (12.14) in my
-    // (Dominik's) thesis.
 
     // The correction factor is exactly the difference between sampling with and
     // without replacement. Without replacement, the correction factor is 1.0
@@ -505,7 +502,17 @@ void ModelPoMo::normalizeMutationRates() {
     // good results but I cannot derive it and do not know why.
     // double correction = (double) (N-1) / double (N+1);
 
-    double m_norm = scale * (theta / (theta_bm * (correction - harmonic(N-1) * theta)));
+    // Mon Apr 17 10:21:09 BST 2017. See Eq. (12.14) in Dominik's thesis.
+
+    // heterozygosity: desired heterozygosity or level of polymorphism (Watterson's
+    // estimator is mostly used to estimate this quantity).
+
+    // theta_bm: the scaled mutation rate parameter of the PoMo model.
+
+    // scale: a parameter that is used for the gamma rate heterogeneity model.
+
+    double m_norm = scale * (heterozygosity / (theta_bm * (correction - harmonic(N-1) * heterozygosity)));
+
 
     if (verbose_mode >= VB_MAX) {
       cout << "Normalization constant of mutation rates: " << m_norm << endl;
@@ -521,9 +528,9 @@ void ModelPoMo::normalizeMutationRates() {
 void ModelPoMo::setScale(double new_scale) {
   scale = new_scale;
   // DEBUG.
-  // if (theta*new_scale < min_theta || theta*new_scale > max_theta) {
+  // if (heterozygosity*new_scale < min_heterozygosity || heterozygosity*new_scale > max_heterozygosity) {
   //   cout << "Scale: " << scale << endl;
-  //   outWarning("After rescaling, level of polymorphism out of range. Numerical instabilities expected.");
+  //   outWarning("After rescaling, heterozygosity out of range. Numerical instabilities expected.");
   // }
 
   normalizeMutationRates();
@@ -537,10 +544,10 @@ bool ModelPoMo::getVariables(double *variables) {
     bool changed = false;
     changed = mutation_model->getVariables(variables);
 
-    if (!fixed_theta) {
+    if (!fixed_heterozygosity) {
         int ndim = getNDim();
-        changed |= (theta != variables[ndim]);
-        theta = variables[ndim];
+        changed |= (heterozygosity != variables[ndim]);
+        heterozygosity = variables[ndim];
     }
 
     normalizeMutationRates();
@@ -557,9 +564,9 @@ void ModelPoMo::setRates() {
 void ModelPoMo::setVariables(double *variables) {
     mutation_model->setVariables(variables);
 
-    if (!fixed_theta) {
+    if (!fixed_heterozygosity) {
         int ndim = getNDim();
-        variables[ndim] = theta;
+        variables[ndim] = heterozygosity;
     }
 }
 
@@ -761,17 +768,23 @@ void ModelPoMo::report_rates(ostream &out, bool reset_scale) {
   if (reset_scale)
     setScale(1.0);
   else
-    out << "The mutation parameters are scaled by a factor of " << scale << "." << endl;;
+    out << "The reported rates are scaled by a factor of " << scale << "." << endl;;
 
   out << setprecision(8);
-  out << "The term 'mutation rate' (or exchangeabilitiy) does not contain the frequency of the target allele." << endl;
-  mutation_model->writeInfo(out);
-//  out << "Mutation rates (in the order AC, AG, AT, CG, CT, GT):" << endl;
+  out << "The term exchangeabilitiy does not contain the frequency of the target allele." << endl;
   int n = n_alleles;
-//  for (int i = 0; i < n; i++)
-//    for (int j = i+1; j < n; j++) {
-//      out << mutation_rate_matrix[i*n+j] << " ";
-//    }
+
+  // TODO DS: Separate output of "Substitution rates" and actual model
+  // parameters, because here, these are mutation rates or exchangeabilities.
+  // Maybe it is better to use my function, because the mutation model reports
+  // the unnormalized rates.
+  mutation_model->writeInfo(out);
+
+  //  out << "Mutation rates (in the order AC, AG, AT, CG, CT, GT):" << endl;
+  //  for (int i = 0; i < n; i++)
+  //    for (int j = i+1; j < n; j++) {
+  //      out << mutation_rate_matrix[i*n+j] << " ";
+  //    }
 
   // // DEBUG, report rate matrix.
   // out << endl;
@@ -852,29 +865,27 @@ void ModelPoMo::report(ostream &out) {
   out << this->full_name << endl;
   out << endl;
 
-  // Estimated quantities.
+  // Model parameters.
   out << "--" << endl;
-  out << "Estimated quantities." << endl;
-  if (freq_type == FREQ_ESTIMATE) {
-    out << "Frequencies of boundary states (order A, C, G T): ";
-    out << setprecision(2);
-    for (int i = 0; i < n_alleles; i++)
-      out << freq_boundary_states[i] << " ";
-    out << endl;
-  }
-  out << setprecision(8);
+  out << "Model parameters." << endl;
   report_rates(out);
-  if (!fixed_theta) {
-    out << "Estimated heterozygosity: " << theta << endl;
+  if (!fixed_heterozygosity) {
+    out << "Estimated heterozygosity: " << heterozygosity << endl;
     if (sampling_method == SAMPLING_WEIGHTED_BINOM)
       out << "We expect a slight overestimation (effect of weighted binomial sampling, see manual)." << endl;
   }
+  else if (fixed_heterozygosity_emp)
+    out << "Empirical heterozygosity: " << heterozygosity << endl;
+  else if (fixed_heterozygosity_usr)
+    out << "User-defined heterozygosity: " << heterozygosity << endl;
+  else
+    outError("It is undefined how the heterozygosity was determined.");
 
   // Empirical quantities.
   out << endl;
   out << "--" << endl;
   out << "Empirical quantities." << endl;
-  out << "Frequencies of boundary states (in the order A, C, G, T): ";
+  out << "Base frequencies in order A, C, G, T: ";
   for (int i = 0; i < n_alleles; i++) {
     out << setprecision(2);
     out << freq_boundary_states_emp[i] << " ";
@@ -884,10 +895,6 @@ void ModelPoMo::report(ostream &out) {
   double emp_watterson_theta = estimateEmpiricalWattersonTheta();
   out << "Watterson's estimator of heterozygosity: " << emp_watterson_theta << endl;
   out << endl;
-  if (fixed_theta_emp)
-    out << "Empirical heterozygosity: " << theta << endl;
-  else if (fixed_theta_usr)
-    out << "User-defined heterozygosity: " << theta << endl;
 }
 
 void ModelPoMo::startCheckpoint() {
@@ -962,12 +969,12 @@ void ModelPoMo::decomposeRateMatrix() {
     }
 }
 
-void ModelPoMo::set_theta_boundaries() {
-  min_theta = POMO_MIN_REL_THETA * theta;
-  max_theta = POMO_MAX_REL_THETA * theta;
-  if (min_theta < POMO_MIN_THETA)
+void ModelPoMo::set_heterozygosity_boundaries() {
+  min_heterozygosity = POMO_MIN_REL_HETEROZYGOSITY * heterozygosity;
+  max_heterozygosity = POMO_MAX_REL_HETEROZYGOSITY * heterozygosity;
+  if (min_heterozygosity < POMO_MIN_HETEROZYGOSITY)
     outWarning("The polymorphism level in the data is very low.");
-  if (max_theta > POMO_MAX_THETA)
+  if (max_heterozygosity > POMO_MAX_HETEROZYGOSITY)
     outWarning("The polymorphism level in the data is very high.");
 }
 

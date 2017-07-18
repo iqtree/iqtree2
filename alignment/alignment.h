@@ -764,6 +764,11 @@ public:
 
     /**
             get the appearance for a state, helpful for ambigious states
+
+            For nucleotides, the appearances of A, and C are 1000 and 0100,
+            respectively. If a state is ambiguous, more than one 1 will show up.
+            The appearance of the unknown state is 1111.
+
             @param state the state index
             @param state_app (OUT) state appearance
      */

@@ -179,8 +179,7 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
     }
 
     // PoMo; +NXX and +W or +S because those flags are handled when
-    // reading in the data.  Set PoMo parameters (level of
-    // polymorphism or theta).
+    // reading in the data.  Set PoMo parameters (heterozygosity).
     size_t n_pos_start = rate_str.find("+N");
     size_t n_pos_end   = rate_str.find_first_of("+", n_pos_start+1);
     if (n_pos_start != string::npos) {
@@ -232,8 +231,8 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
     // PoMo. The +P{}, +GXX and +I flags are interpreted during model creation.
     // This is necessary for compatibility with mixture models. If there is no
     // mixture model, move +P{}, +GXX and +I flags to model string. For mixture
-    // models, theta can be set separately for each model and the +P{}, +GXX and
-    // +I flags should already be inside the model definition.
+    // models, the heterozygosity can be set separately for each model and the
+    // +P{}, +GXX and +I flags should already be inside the model definition.
     if (model_str.substr(0, 3) != "MIX" && pomo) {
 
       // +P{} flag.
@@ -244,9 +243,9 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
           if (close_bracket == string::npos)
             outError("No closing bracket in PoMo parameters.");
           else {
-            string pomo_theta = rate_str.substr(p_pos+3,close_bracket-p_pos-3);
+            string pomo_heterozygosity = rate_str.substr(p_pos+3,close_bracket-p_pos-3);
             rate_str = rate_str.substr(0, p_pos) + rate_str.substr(close_bracket+1);
-            model_str += "+P{" + pomo_theta + "}";
+            model_str += "+P{" + pomo_heterozygosity + "}";
           }
         }
         else {
