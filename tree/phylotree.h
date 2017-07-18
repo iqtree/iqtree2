@@ -771,6 +771,10 @@ public:
     /** transform _pattern_lh_cat from "interleaved" to "sequential", due to vector_size > 1 */
     void transformPatternLhCat();
 
+  // Compute the partial likelihoods LH (OUT) at the leaves for an observed PoMo
+  // STATE (IN). Use binomial sampling unless hyper is true, then use
+  // hypergeometric sampling.
+  void computeTipPartialLikelihoodPoMo(int state, double *lh, bool hyper=false);
     void computeTipPartialLikelihood();
     void computePtnInvar();
     void computePtnFreq();
