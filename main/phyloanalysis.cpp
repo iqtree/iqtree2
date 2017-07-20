@@ -61,13 +61,6 @@
 
 
 void reportReferences(Params &params, ofstream &out, string &original_model) {
-    if (params.pomo) {
-        out << "For polymorphism-aware models please cite:" << endl << endl
-            << "Dominik Schrempf, Bui Quang Minh, Nicola De Maio, Arndt von Haeseler, and Carolin Kosiol" << endl
-            << "(2016) Reversible polymorphism-aware phylogenetic models and their application to" << endl
-            << "tree inference. J. Theor. Biol., in press." << endl << endl;
-    }
-
     bool modelfinder_only = false;
     if (original_model.substr(0,4) == "TEST" || original_model.substr(0, 2) == "MF" || original_model.empty()) {
         out << "To cite ModelFinder please use: " << endl << endl
@@ -78,7 +71,7 @@ void reportReferences(Params &params, ofstream &out, string &original_model) {
         if (original_model.find("ONLY") != string::npos || (original_model.substr(0,2)=="MF" && original_model.substr(0,3)!="MFP"))
             modelfinder_only = true;
     }
-    if (params.pomo) {
+    if (original_model.find("+P") != string::npos) {
         out << "For polymorphism-aware models please cite:" << endl << endl
             << "Dominik Schrempf, Bui Quang Minh, Nicola De Maio, Arndt von Haeseler, and Carolin Kosiol" << endl
             << "(2016) Reversible polymorphism-aware phylogenetic models and their application to" << endl
