@@ -778,14 +778,13 @@ void ModelPoMo::report_model_params(ostream &out, bool reset_scale) {
 
   int n = n_alleles;
   if (!is_reversible) {
-    out << setprecision(5) << endl;
+    out << setprecision(5);
     out << "Mutation rate matrix: " << endl;
     for (int i = 0; i < n; i++) {
       for (int j = 0; j < n; j++)
         out << setw(8) << mutation_rate_matrix[i*n+j] << " ";
       out << endl;
     }
-    out << endl;
 
     // Reversible part of mutation rate matrix (Q^GTR or Q^REV).
     double * r = new double[n_alleles*n_alleles];
@@ -817,14 +816,12 @@ void ModelPoMo::report_model_params(ostream &out, bool reset_scale) {
         out << setw(8) << r[i*n+j] << " ";
       out << endl;
     }
-    out << endl;
     out << "Non-reversible part of the mutation rate matrix:" << endl;
     for (int i = 0; i < n; i++) {
       for (int j = 0; j < n; j++)
         out << setw(8) << f[i*n+j] << " ";
       out << endl;
     }
-    out << endl;
 
     out << setprecision(4);
     out << "Comparison of Frobenius norms." << endl;
@@ -833,7 +830,6 @@ void ModelPoMo::report_model_params(ostream &out, bool reset_scale) {
     out << "Mutation rate matrix: " << setw(6) << frob_norm_m << endl;
     out << "Non-reversible part:  " << setw(6) << frob_norm_f << endl;
     out << "Ratio:                " << setw(6) << frob_norm_f / frob_norm_m << endl;
-    out << endl;
 
     delete [] r;
     delete [] f;
@@ -882,7 +878,6 @@ void ModelPoMo::report(ostream &out) {
   // Model parameters.
   out << "--" << endl;
   report_model_params(out);
-  out << endl;
 
   // Empirical quantities.
   out << "--" << endl;
@@ -890,6 +885,7 @@ void ModelPoMo::report(ostream &out) {
   mutation_model->report_state_freqs(out, freq_boundary_states_emp);
   out << setprecision(4);
   out << "Watterson's estimator of heterozygosity: " << estimateEmpiricalWattersonTheta() << endl;
+  out << "--" << endl;
 }
 
 void ModelPoMo::startCheckpoint() {
