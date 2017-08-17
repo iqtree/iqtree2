@@ -329,11 +329,11 @@ void ModelPoMo::updatePoMoStatesAndRateMatrix () {
         tot_sum += state_freq[i]*row_sum;
         rate_matrix[i*num_states+i] = -(row_sum);
     }
-    // Sun Jul 16 17:43:30 BST 2017; Dom. I removed normalization, it should not
-    // change output nor stability.
-
-    // Tue Jul 18 12:32:00 BST 2017; Dom. However, it changes the branch
-    // lengths, which should be normalized to one event per unit time.
+    // Thu Aug 17 16:11:19 BST 2017; Dom. Normalization is preferred. Then,
+    // branch lengths can be interpreted in an easy way (the length equals the
+    // estimated number of events). Without normalization, branch lengths are
+    // harder to interpret although from a biological point of view they make
+    // more sense (see also discussion below).
 
     // Normalize rate matrix such that one event happens per unit time.
     for (int i = 0; i < num_states; i++) {
@@ -341,6 +341,16 @@ void ModelPoMo::updatePoMoStatesAndRateMatrix () {
             rate_matrix[i*num_states+j] /= tot_sum;
         }
     }
+
+    // Sun Jul 16 17:43:30 BST 2017; Dom. I removed normalization, it should not
+    // change output nor stability.
+
+    // Tue Jul 18 12:32:00 BST 2017; Dom. However, it changes the branch
+    // lengths, which should be normalized to one event per unit time.
+
+    // Fri Jul 21 16:56:40 BST 2017; Dom. Going back to having no normalization,
+    // because I am comparing trees to the boundary mutation model simulator and
+    // they should have the same lengths.
 }
 
 void ModelPoMo::decomposeState(int state, int &i, int &nt1, int &nt2) {
@@ -885,7 +895,7 @@ void ModelPoMo::report(ostream &out) {
   mutation_model->report_state_freqs(out, freq_boundary_states_emp);
   out << setprecision(4);
   out << "Watterson's estimator of heterozygosity: " << estimateEmpiricalWattersonTheta() << endl;
-  out << "--" << endl;
+  out << "--" << endl << endl;
 }
 
 void ModelPoMo::startCheckpoint() {
