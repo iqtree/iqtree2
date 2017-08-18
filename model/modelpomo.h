@@ -280,6 +280,11 @@ class ModelPoMo : virtual public ModelMarkov
      */
   void setScale(double new_scale);
 
+    /**
+    * get the underlying mutation model, used with PoMo model
+    */
+  virtual ModelSubst *getMutationModel() { return mutation_model; }
+
  protected:
 
     ModelMarkov *mutation_model;

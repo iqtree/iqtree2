@@ -523,6 +523,7 @@ void ModelPoMo::normalizeMutationRates() {
 
     if (verbose_mode >= VB_MAX) {
       cout << "Normalization constant of mutation rates: " << m_norm << endl;
+      cout << "heterozygosity: " << heterozygosity << endl;
     }
 
     for (int i = 0; i < n_alleles; i++)
@@ -781,13 +782,15 @@ void ModelPoMo::report_model_params(ostream &out, bool reset_scale) {
   else if (!is_reversible) rs = new double[2*n_connections];
   else outError("Model has to be either reversible or non-reversible.");
   rate_matrix_to_rates(mutation_rate_matrix, rs);
+  mutation_model->writeInfo(out);
   mutation_model->report_rates(out, "Mutation rates", rs);
   delete [] rs;
   // Report stationary frequencies.
   mutation_model->report_state_freqs(out);
 
   int n = n_alleles;
-  if (!is_reversible) {
+  //if (!is_reversible)
+  {
     out << setprecision(5);
     out << "Mutation rate matrix: " << endl;
     for (int i = 0; i < n; i++) {
@@ -805,7 +808,7 @@ void ModelPoMo::report_model_params(ostream &out, bool reset_scale) {
     memset(f, 0, n_alleles*n_alleles*sizeof(double));
     for (int i = 0; i < n; i++) {
       for (int j = 0; j < n; j++) {
-        r[i*n+j] = m[i*n+j] + m[j*n+i];
+        r[i*n+j] = m[i*n+j]/mutation_model->state_freq[j] + m[j*n+i]/mutation_model->state_freq[i];
         r[i*n+j] /= 2.0;
       }
     }
@@ -814,7 +817,7 @@ void ModelPoMo::report_model_params(ostream &out, bool reset_scale) {
         if (i==j)
           f[i*n+j] = 0;
         else {
-          f[i*n+j] = m[i*n+j] - m[j*n+i];
+          f[i*n+j] = m[i*n+j]/mutation_model->state_freq[j] - m[j*n+i]/mutation_model->state_freq[i];
           f[i*n+j] /= 2.0;
         }
       }

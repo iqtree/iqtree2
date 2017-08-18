@@ -298,6 +298,11 @@ public:
     	return num_states*sizeof(double);
     }
 
+    /**
+    * get the underlying mutation model, used with PoMo model
+    */
+    virtual ModelSubst *getMutationModel() { return this; }
+
 	/*****************************************************
 		Checkpointing facility
 	*****************************************************/

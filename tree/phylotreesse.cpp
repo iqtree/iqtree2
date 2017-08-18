@@ -603,7 +603,7 @@ void PhyloTree::computePtnFreq() {
 void PhyloTree::computePtnInvar() {
 	size_t nptn = aln->getNPattern(), ptn;
 	size_t maxptn = get_safe_upper_limit(nptn)+get_safe_upper_limit(model_factory->unobserved_ptns.size());
-	int nstates = aln->num_states;
+	int nstates = model->getMutationModel()->num_states;
     int x;
     // ambiguous characters
     int ambi_aa[] = {
@@ -615,7 +615,7 @@ void PhyloTree::computePtnInvar() {
     double state_freq[nstates];
 
     // -1 for mixture model
-    model->getStateFrequency(state_freq, -1);
+    model->getMutationModel()->getStateFrequency(state_freq, -1);
 
 	memset(ptn_invar, 0, maxptn*sizeof(double));
 	double p_invar = site_rate->getPInvar();

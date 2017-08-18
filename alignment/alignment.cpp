@@ -3609,10 +3609,14 @@ int Alignment::convertPomoState(int state) {
     int M = value1 + value2;
 
     // TODO DS: this will impact +I likelihood computation
-    double stoch = (double) rand() / RAND_MAX - 0.5;
-    stoch /= 2.0;
-    int pick = (int)round(((double) value1*N/M) + stoch);
-    // int pick = (int)round(((double) value1*N/M));
+//    double stoch = (double) rand() / RAND_MAX - 0.5;
+//    stoch /= 2.0;
+//    int pick = (int)round(((double) value1*N/M) + stoch);
+
+    // BQM: prefer the state with highest likelihood.
+    // TODO: how to break tie?
+    int pick = (int)round(((double) value1*N/M));
+
     int real_state;
     if (pick <= 0)
         real_state = id2;
