@@ -3588,6 +3588,10 @@ void Alignment::computeStateFreq (double *state_freq, size_t num_unknown_states)
 }
 
 int Alignment::convertPomoState(int state) {
+  // This map from an observed state to a PoMo state influences parsimony
+  // construction and the +I likelihood computation. It should not make too much
+  // of a difference though.
+
     if (seq_type != SEQ_POMO) return state;
     if (state < num_states) return state;
     if (state == STATE_UNKNOWN) return state;
@@ -3604,17 +3608,23 @@ int Alignment::convertPomoState(int state) {
     int value1 = (pomo_sampled_states[state] >> 2) & 16383;
     int value2 = pomo_sampled_states[state] >> 18;
     int N = virtual_pop_size;
-    // Mon Jun 13 13:24:55 CEST 2016.  Make this a little bit more
-    // stochastic.  This is important if the sample size is small..
     int M = value1 + value2;
 
-    // TODO DS: this will impact +I likelihood computation
-//    double stoch = (double) rand() / RAND_MAX - 0.5;
-//    stoch /= 2.0;
-//    int pick = (int)round(((double) value1*N/M) + stoch);
+    // Mon Jun 13 13:24:55 CEST 2016. This is a stochastic way to assign PoMo
+    // states. This is important if the sample size is small.
 
-    // BQM: prefer the state with highest likelihood.
-    // TODO: how to break tie?
+    // double stoch = (double) rand() / RAND_MAX - 0.5;
+    // stoch /= 2.0;
+    // int pick = (int)round(((double) value1*N/M) + stoch);
+
+    // Fri Aug 18 15:37:22 BST 2017 However, Minh prefers a deterministic way
+    // that, necessarily, introduces some systematic error.
+
+    // BQM: Prefer the state with highest likelihood.
+
+    // TODO: How to break tie? E.g., 4A4C but N=9? This way always prefers the
+    // first allele (which is equivalent to a bias towards A and C, kind of).
+
     int pick = (int)round(((double) value1*N/M));
 
     int real_state;
