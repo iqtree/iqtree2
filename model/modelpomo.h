@@ -212,6 +212,12 @@ class ModelPoMo : virtual public ModelMarkov
   // rates r (array of size n_connections or 2*n_connections).
   void rate_matrix_to_rates(double *m, double *r);
 
+  // Extract the exchangeability entries of a rate matrix (basically remove the
+  // diagonal and align upper triangle before lower triangle; divide through
+  // stationary frequencies of target alleles). IN: rate matrix m; OUT: rates r
+  // (array of size n_connections or 2*n_connections).
+  void rate_matrix_to_exchangeabilities(double *m, double *r);
+
     /**
      * Report the model rates to the output file stream 'out'.
      *
@@ -280,9 +286,9 @@ class ModelPoMo : virtual public ModelMarkov
      */
   void setScale(double new_scale);
 
-    /**
-    * get the underlying mutation model, used with PoMo model
-    */
+  /**
+   * get the underlying mutation model, used with PoMo model
+   */
   virtual ModelSubst *getMutationModel() { return mutation_model; }
 
  protected:

@@ -370,7 +370,7 @@ void ModelMarkov::report_state_freqs(ostream& out, double *custom_state_freq) {
   double *f;
   if (custom_state_freq) f = custom_state_freq;
   else f = state_freq;
-  out << setprecision(2);
+  out << setprecision(3);
   out << "Base frequencies:";
   out << "  A: " << f[0];
   out << "  C: " << f[1];

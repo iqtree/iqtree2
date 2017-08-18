@@ -603,6 +603,8 @@ void PhyloTree::computePtnFreq() {
 void PhyloTree::computePtnInvar() {
 	size_t nptn = aln->getNPattern(), ptn;
 	size_t maxptn = get_safe_upper_limit(nptn)+get_safe_upper_limit(model_factory->unobserved_ptns.size());
+  // For PoMo, only consider monomorphic states and set nstates to the number of
+  // states of the underlying mutation model.
 	int nstates = model->getMutationModel()->num_states;
     int x;
     // ambiguous characters
@@ -615,6 +617,9 @@ void PhyloTree::computePtnInvar() {
     double state_freq[nstates];
 
     // -1 for mixture model
+
+    // Again for PoMo, the stationary frequencies are set to the stationary
+    // frequencies of the boundary states.
     model->getMutationModel()->getStateFrequency(state_freq, -1);
 
 	memset(ptn_invar, 0, maxptn*sizeof(double));
@@ -626,6 +631,8 @@ void PhyloTree::computePtnInvar() {
 
 			if ((*aln)[ptn].const_char == aln->STATE_UNKNOWN) {
 				ptn_invar[ptn] = p_invar;
+        // For PoMo, if a polymorphic state is considered, the likelihood is
+        // left unchanged and zero because ptn_invar has been initialized to 0.
 			} else if ((*aln)[ptn].const_char < nstates) {
 				ptn_invar[ptn] = p_invar * state_freq[(int) (*aln)[ptn].const_char];
 			} else if (aln->seq_type == SEQ_DNA) {
