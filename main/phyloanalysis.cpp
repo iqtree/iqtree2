@@ -1339,6 +1339,54 @@ void printAnalysisInfo(int model_df, IQTree& iqtree, Params& params) {
 		case FREQ_CODON_3x4C:
 			cout << "counted 3x4-corrected";
 			break;
+		case FREQ_DNA_RY:
+			cout << "constrained A+G=C+T";
+			break;
+		case FREQ_DNA_WS:
+			cout << "constrained A+T=C+G";
+			break;
+		case FREQ_DNA_MK:
+			cout << "constrained A+C=G+T";
+			break;
+		case FREQ_DNA_1112:
+			cout << "constrained A=C=G";
+			break;
+		case FREQ_DNA_1121:
+			cout << "constrained A=C=T";
+			break;
+		case FREQ_DNA_1211:
+			cout << "constrained A=G=T";
+			break;
+		case FREQ_DNA_2111:
+			cout << "constrained C=G=T";
+			break;
+		case FREQ_DNA_1122:
+			cout << "constrained A=C,G=T";
+			break;
+		case FREQ_DNA_1212:
+			cout << "constrained A=G,C=T";
+			break;
+		case FREQ_DNA_1221:
+			cout << "constrained A=T,C=G";
+			break;
+		case FREQ_DNA_1123:
+			cout << "constrained A=C";
+			break;
+		case FREQ_DNA_1213:
+			cout << "constrained A=G";
+			break;
+		case FREQ_DNA_1231:
+			cout << "constrained A=T";
+			break;
+		case FREQ_DNA_2113:
+			cout << "constrained C=G";
+			break;
+		case FREQ_DNA_2131:
+			cout << "constrained C=T";
+			break;
+		case FREQ_DNA_2311:
+			cout << "constrained G=T";
+			break;
 		default:
 			outError("Wrong specified state frequencies");
 		}
