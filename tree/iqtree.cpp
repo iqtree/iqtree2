@@ -3600,7 +3600,7 @@ void IQTree::saveCurrentTree(double cur_logl) {
         }
 
     #ifdef _OPENMP
-        double rand_seed = random_double();
+        int rand_seed = random_int(1000);
         #pragma omp parallel
         {
         int *rstream;
@@ -3623,9 +3623,7 @@ void IQTree::saveCurrentTree(double cur_logl) {
 
             bool better = rell > boot_logl[sample] + params->ufboot_epsilon;
             if (!better && rell > boot_logl[sample] - params->ufboot_epsilon) {
-                double rand = random_double(rstream);
-                //cout << sample << " " << rand << endl;
-                better = (rand <= 1.0 / (boot_counts[sample] + 1));
+                better = (random_double(rstream) <= 1.0 / (boot_counts[sample] + 1));
             }
             if (better) {
                 if (rell <= boot_logl[sample] + params->ufboot_epsilon) {
