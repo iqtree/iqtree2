@@ -3598,11 +3598,17 @@ void IQTree::saveCurrentTree(double cur_logl) {
 			printTree(ostr_brlen, WT_BR_LEN);
 			tree_str_brlen = ostr_brlen.str();
         }
-        double rand_double = random_double();
 
-        #ifdef _OPENMP
-        #pragma omp parallel for
-        #endif
+    #ifdef _OPENMP
+        double rand_seed = random_double();
+        #pragma omp parallel
+        {
+        int *rstream;
+        init_random(rand_seed + omp_get_thread_num(), false, &rstream);
+        #pragma omp for
+    #else
+        int *rstream = randstream;
+    #endif
         for (int sample = sample_start; sample < sample_end; sample++) {
             double rell = 0.0;
 
@@ -3617,7 +3623,9 @@ void IQTree::saveCurrentTree(double cur_logl) {
 
             bool better = rell > boot_logl[sample] + params->ufboot_epsilon;
             if (!better && rell > boot_logl[sample] - params->ufboot_epsilon) {
-                better = (rand_double <= 1.0 / (boot_counts[sample] + 1));
+                double rand = random_double(rstream);
+                //cout << sample << " " << rand << endl;
+                better = (rand <= 1.0 / (boot_counts[sample] + 1));
             }
             if (better) {
                 if (rell <= boot_logl[sample] + params->ufboot_epsilon) {
@@ -3633,6 +3641,10 @@ void IQTree::saveCurrentTree(double cur_logl) {
                 }
             }
         }
+    #ifdef _OPENMP
+        finish_random(rstream);
+        }
+    #endif
     }
     if (Params::getInstance().print_tree_lh) {
         out_treelh << cur_logl;
