@@ -137,23 +137,30 @@ void ModelMarkov::startCheckpoint() {
     checkpoint->startStruct("ModelMarkov");
 }
 
+/* 
+ * Minh: in old code (prior to my changes), saveCheckpoint saves model_parameters
+ * (only for non-time-reversible models) and *then* calls ModelSubst::saveCheckpoint.
+ * However, restoreCheckpoint calls ModelSubst::restoreCheckpoint *then* loads
+ * model_parameters. I think the order should be consistent, so I changed it.
+ * If I was wrong to do so, change it back. Either way, delete this comment.
+ */
 void ModelMarkov::saveCheckpoint() {
-    if (!is_reversible) {
-        startCheckpoint();
-        CKP_ARRAY_SAVE(num_params, model_parameters);
-        endCheckpoint();
-    }
     ModelSubst::saveCheckpoint();
+    startCheckpoint();
+    CKP_ARRAY_SAVE(num_params, model_parameters);
+    endCheckpoint();
 }
 
+/*
+ * NOTE: subclass is responsible for calling whatever methods
+ * to update the rest of the internal state of the class to be
+ * consistent with the new model_parameters.
+ */
 void ModelMarkov::restoreCheckpoint() {
     ModelSubst::restoreCheckpoint();
-    if (!is_reversible) {
-        startCheckpoint();
-        CKP_ARRAY_RESTORE(num_params, model_parameters);
-        endCheckpoint();
-        setRates();
-    }
+    startCheckpoint();
+    CKP_ARRAY_RESTORE(num_params, model_parameters);
+    endCheckpoint();
 }
 
 

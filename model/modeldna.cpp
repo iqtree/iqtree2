@@ -193,9 +193,10 @@ void ModelDNA::init(const char *model_name, string model_params, StateFreqType f
 	if (model_params != "") {
 	  readRates(model_params);
 	}
-
+	
 	if (freq == FREQ_UNKNOWN ||  def_freq == FREQ_EQUAL) freq = def_freq;
 	ModelMarkov::init(freq);
+        model_parameters = new double [getNDim()+1]; // see setVariables for explaination of +1
 }
 
 void ModelDNA::startCheckpoint() {
@@ -203,17 +204,17 @@ void ModelDNA::startCheckpoint() {
 }
 
 void ModelDNA::saveCheckpoint() {
-    startCheckpoint();
-    CKP_ARRAY_SAVE(6, rates);
-    endCheckpoint();
-    ModelMarkov::saveCheckpoint();
+    // construct model_parameters from rates and base freqs. 
+    // This is one-indexed, so parameters are in model_parameters[1]
+    // up to model_parameters[num_params]
+    setVariables(model_parameters); 
+    ModelMarkov::saveCheckpoint();   // saves model_parameters
 }
 
 void ModelDNA::restoreCheckpoint() {
-    ModelMarkov::restoreCheckpoint();
-    startCheckpoint();
-    CKP_ARRAY_RESTORE(6, rates);
-    endCheckpoint();
+  // curiously, this seems to be the only plase ModelDNA uses model_parameters.
+    ModelMarkov::restoreCheckpoint();     // restores model_parameters
+    getVariables(model_parameters);       // updates rates and state_freq
     string rate_spec = param_spec;
     for (auto i = rate_spec.begin(); i != rate_spec.end(); i++)
         *i = *i + '0';
@@ -398,8 +399,8 @@ void ModelDNA::writeParameters(ostream &out) {
 }
 
 /*
- * getVariables *writes* the variables (i.e. model parameters).
- * Returns true if any variables have changed, false if not.
+ * getVariables *changes* the state of the model, setting from *variables
+ * Returns true if the model state has changed, false if not.
  */
 bool ModelDNA::getVariables(double *variables) {
     int i;
@@ -448,7 +449,17 @@ bool ModelDNA::getVariables(double *variables) {
 }
 
 /*
- * setVariables *reads* the variables (i.e. model parameters).
+ * setVariables *reads* the state of the model and writes into "variables"
+ * Model does not change state. *variables should have length getNDim()+1
+ * If param_spec is (e.g.) 012210 (e.g. K3P model) then in general
+ * we'd have rates 0 and 5 (A<->C and G<->T) written to variables[0],
+ * rates 1 and 4 to variables[1] and rates 2 and 3 to variables[2].
+ * However one of these (typically 0) is 'fixed' (param_fixed)
+ * to always have value 1, and this doesn't get written. 
+ * num_parameters in this case will be two, for two free rates parameters.
+ * Base frequency parameters get written after the rate parameters, so
+ * K3P+FO model (i.e. fits base frequencies with no constraints) would
+ * use variables[3] to variables[5] (3 values) to store base freq info. 
  */
 void ModelDNA::setVariables(double *variables) {
     if (num_params > 0) {

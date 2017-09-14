@@ -1014,6 +1014,15 @@ void IQTree::initializeModel(Params &params, string &model_name, ModelsBlock *mo
     setModel(getModelFactory()->model);
     setRate(getModelFactory()->site_rate);
     getModelFactory()->setCheckpoint(checkpoint);
+    /*
+     * MDW: I don't understand why/how checkpointing is being used,
+     * however I'm having problems because a restoreCheckpoint
+     * happens before anything has been saved (in 
+     * phyloanalysis.cpp:runTreeReconstruction). This fixes that
+     * problem, but as I don't understand what is going on, I am
+     * not at all confident this is the correct solution.
+     */
+    model->saveCheckpoint();
 
     if (params.pll) {
         if (getRate()->getNDiscreteRate() == 1) {

@@ -367,6 +367,28 @@ void ModelLieMarkov::init(const char *model_name, string model_params, StateFreq
     ModelMarkov::init(freq_type);
 }
 
+// Note to Minh: I see ModelUnrest also lacks checkpointing.
+// I think this code could be copied straight over.
+// If modelDNA had a setRates() method,
+// we could make virtual setRates in ModelMarkov and
+// perhaps move this code all into there. - MDW
+void ModelLieMarkov::startCheckpoint() {
+    checkpoint->startStruct("ModelLieMarkov");
+}
+
+void ModelLieMarkov::saveCheckpoint() {
+    // saves model_parameters
+    ModelMarkov::saveCheckpoint();
+}
+
+void ModelLieMarkov::restoreCheckpoint() {
+    ModelMarkov::restoreCheckpoint();  // restores model_parameters
+    setRates();                        // updates rate matrix
+    decomposeRateMatrix();             // updates eigen system.
+    if (phylo_tree)
+        phylo_tree->clearAllPartialLH();
+}
+
 /*static*/ void ModelLieMarkov::getLieMarkovModelInfo(string model_name, string &name, string &full_name, int &model_num, int &symmetry, StateFreqType &def_freq) {
     parseModelName(model_name,&model_num,&symmetry);
     // Special case, just because it is confusing
@@ -678,14 +700,16 @@ bool ModelLieMarkov::restartParameters(double guess[], int ndim, double lower[],
                 guess[i] = sign2 * upper[i]/2;
             }
 	}
-        cout << "Lie Markov Restart estimation at the boundary, iteration " << iteration;
-        if (verbose_mode >= VB_MED) {
-	    cout << ", new start point:" << std::endl << guess[1] ;
-            for (i = 2; i <= ndim; i++) cout << "," << guess[i]; 
-        }
-        cout << std::endl;
+	if (verbose_mode >= VB_MED) {
+            cout << "Lie Markov Restart estimation at the boundary, iteration " << iteration;
+            if (verbose_mode >= VB_MAX) {
+                cout << ", new start point:" << std::endl << guess[1] ;
+                for (i = 2; i <= ndim; i++) cout << "," << guess[i]; 
+            }
+            cout << std::endl;
+	}
     } else {
-        if (iteration > 1 && verbose_mode >= VB_MED)
+        if (iteration > 1 && verbose_mode >= VB_MAX)
 	  cout << "Lie Markov restarts ended at iteration " << iteration-1 << std::endl;
     
     } // if restart else
