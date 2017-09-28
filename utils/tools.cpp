@@ -2704,7 +2704,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 			if (strcmp(argv[cnt], "-brefine") == 0 || strcmp(argv[cnt], "-bnni") == 0) {
 				params.ufboot2corr = true;
                 // print ufboot trees with branch lengths
-				params.print_ufboot_trees = 2;
+//				params.print_ufboot_trees = 2; // Diep: relocate to be below this for loop
 				continue;
 			}
 			if (strcmp(argv[cnt], "-u2c_nni5") == 0) {
@@ -3407,6 +3407,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 	if(params.ufboot2corr == true){
 		if(params.gbo_replicates <= 0) params.ufboot2corr = false;
 		else params.stop_condition = SC_UNSUCCESS_ITERATION;
+
+		params.print_ufboot_trees = 2; // 2017-09-25: fix bug regarding the order of -bb 1000 -bnni -wbt
 	}
 
     if (!params.out_prefix) {
