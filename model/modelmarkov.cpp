@@ -137,18 +137,18 @@ void ModelMarkov::startCheckpoint() {
     checkpoint->startStruct("ModelMarkov");
 }
 
-/* 
- * Minh: in old code (prior to my changes), saveCheckpoint saves model_parameters
- * (only for non-time-reversible models) and *then* calls ModelSubst::saveCheckpoint.
- * However, restoreCheckpoint calls ModelSubst::restoreCheckpoint *then* loads
- * model_parameters. I think the order should be consistent, so I changed it.
- * If I was wrong to do so, change it back. Either way, delete this comment.
+/* Note:
+ * model_parameters must hold whatever is needed to reconstruct the
+ * model parameters - subclass's saveCheckpoint should ensure this.
+ * Also: ModelSubst::saveCheckpoint saves state_freq 
+ * if freq_type == FREQ_ESTIMATE. This will be redundant if called from
+ * ModelMarkov::saveCheckpoint, but is needed by ModelProtein and others.
  */
 void ModelMarkov::saveCheckpoint() {
-    ModelSubst::saveCheckpoint();
     startCheckpoint();
     CKP_ARRAY_SAVE(num_params, model_parameters);
     endCheckpoint();
+    ModelSubst::saveCheckpoint();
 }
 
 /*

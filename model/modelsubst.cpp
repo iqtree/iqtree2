@@ -33,8 +33,8 @@ void ModelSubst::saveCheckpoint() {
 //    CKP_SAVE(name);
 //    CKP_SAVE(full_name);
 //    CKP_SAVE(freq_type);
-//   Used to save state_freq if freq_type==FREQ_ESTIMATE. 
-// Now ModelMarkov saves model_parameters, from which state_freq is reconstructed
+    if (freq_type == FREQ_ESTIMATE)
+        CKP_ARRAY_SAVE(num_states, state_freq);
     endCheckpoint();
     CheckpointFactory::saveCheckpoint();
 }
@@ -48,10 +48,11 @@ void ModelSubst::restoreCheckpoint() {
 //    int freq_type = this->freq_type;
 //    CKP_RESTORE(freq_type);
 //    this->freq_type = (StateFreqType)freq_type;
-//   Used to restore state_freq if freq_type==FREQ_ESTIMATE. 
-// Now ModelMarkov saves/restores model_parameters, from which state_freq is reconstructed
+    if (freq_type == FREQ_ESTIMATE)
+        CKP_ARRAY_RESTORE(num_states, state_freq);
     endCheckpoint();
-//    decomposeRateMatrix();
+
+    decomposeRateMatrix();
 }
 
 // here the simplest Juke-Cantor model is implemented, valid for all kind of data (DNA, AA,...)
