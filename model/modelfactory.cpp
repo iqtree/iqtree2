@@ -155,8 +155,16 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
     // compareable.
     bool pomo = false;
     string::size_type p_pos = model_str.find("+P");
-    if ((p_pos != string::npos))
+    if ((p_pos != string::npos)) {
+      // Check for +POISSON model.
+      if ((model_str.length() > p_pos+2) and
+          (model_str[p_pos+2] == 'O')) {
+        // Don't activate PoMo because +POISSON model is used.
+        ;
+      }
+      else
         pomo = true;
+    }
 
     if ((p_pos == string::npos) &&
         (tree->aln->seq_type == SEQ_POMO))
