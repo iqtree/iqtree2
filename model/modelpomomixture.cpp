@@ -104,7 +104,8 @@ double ModelPoMoMixture::targetFunk(double x[]) {
 void ModelPoMoMixture::setBounds(double *lower_bound, double *upper_bound, bool *bound_check) {
     if (optimizing_ratehet) {
 //        ratehet->setBounds(lower_bound, upper_bound, bound_check);
-        lower_bound[1] = 0.2;
+        // lower_bound[1] = 0.2;
+        lower_bound[1] = 0.02;
         upper_bound[1] = 100.0;
         bound_check[1] = false;
         return;
