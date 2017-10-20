@@ -136,25 +136,49 @@ void ModelMarkov::startCheckpoint() {
     checkpoint->startStruct("ModelMarkov");
 }
 
+/* Note:
+ * model_parameters must hold whatever is needed to reconstruct the
+ * model parameters - subclass's saveCheckpoint should ensure this.
+ * Also: ModelSubst::saveCheckpoint saves state_freq 
+ * if freq_type == FREQ_ESTIMATE. This will be redundant if called from
+ * ModelMarkov::saveCheckpoint, but is needed by ModelProtein and others.
+ */
 void ModelMarkov::saveCheckpoint() {
-    if (!is_reversible) {
-        startCheckpoint();
-        if (model_parameters)
-            CKP_ARRAY_SAVE(num_params, model_parameters);
-        endCheckpoint();
-    }
+// <<<<<<< HEAD
+//     if (!is_reversible) {
+//         startCheckpoint();
+//         if (model_parameters)
+//             CKP_ARRAY_SAVE(num_params, model_parameters);
+//         endCheckpoint();
+//     }
+// =======
+    startCheckpoint();
+    CKP_ARRAY_SAVE(num_params, model_parameters);
+    endCheckpoint();
+// >>>>>>> origin/latest
     ModelSubst::saveCheckpoint();
 }
 
+/*
+ * NOTE: subclass is responsible for calling whatever methods
+ * to update the rest of the internal state of the class to be
+ * consistent with the new model_parameters.
+ */
 void ModelMarkov::restoreCheckpoint() {
     ModelSubst::restoreCheckpoint();
-    if (!is_reversible) {
-        startCheckpoint();
-        if (model_parameters)
-            CKP_ARRAY_RESTORE(num_params, model_parameters);
-        endCheckpoint();
-        setRates();
-    }
+// <<<<<<< HEAD
+//     if (!is_reversible) {
+//         startCheckpoint();
+//         if (model_parameters)
+//             CKP_ARRAY_RESTORE(num_params, model_parameters);
+//         endCheckpoint();
+//         setRates();
+//     }
+// =======
+    startCheckpoint();
+    CKP_ARRAY_RESTORE(num_params, model_parameters);
+    endCheckpoint();
+// >>>>>>> origin/latest
 }
 
 

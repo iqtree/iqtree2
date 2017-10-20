@@ -1014,6 +1014,15 @@ void IQTree::initializeModel(Params &params, string &model_name, ModelsBlock *mo
     setModel(getModelFactory()->model);
     setRate(getModelFactory()->site_rate);
     getModelFactory()->setCheckpoint(checkpoint);
+    /*
+     * MDW: I don't understand why/how checkpointing is being used,
+     * however I'm having problems because a restoreCheckpoint
+     * happens before anything has been saved (in 
+     * phyloanalysis.cpp:runTreeReconstruction). This fixes that
+     * problem, but as I don't understand what is going on, I am
+     * not at all confident this is the correct solution.
+     */
+    model->saveCheckpoint();
 
     if (params.pll) {
         if (getRate()->getNDiscreteRate() == 1) {
@@ -3598,11 +3607,17 @@ void IQTree::saveCurrentTree(double cur_logl) {
 			printTree(ostr_brlen, WT_BR_LEN);
 			tree_str_brlen = ostr_brlen.str();
         }
-        double rand_double = random_double();
 
-        #ifdef _OPENMP
-        #pragma omp parallel for
-        #endif
+    #ifdef _OPENMP
+        int rand_seed = random_int(1000);
+        #pragma omp parallel
+        {
+        int *rstream;
+        init_random(rand_seed + omp_get_thread_num(), false, &rstream);
+        #pragma omp for
+    #else
+        int *rstream = randstream;
+    #endif
         for (int sample = sample_start; sample < sample_end; sample++) {
             double rell = 0.0;
 
@@ -3617,7 +3632,7 @@ void IQTree::saveCurrentTree(double cur_logl) {
 
             bool better = rell > boot_logl[sample] + params->ufboot_epsilon;
             if (!better && rell > boot_logl[sample] - params->ufboot_epsilon) {
-                better = (rand_double <= 1.0 / (boot_counts[sample] + 1));
+                better = (random_double(rstream) <= 1.0 / (boot_counts[sample] + 1));
             }
             if (better) {
                 if (rell <= boot_logl[sample] + params->ufboot_epsilon) {
@@ -3633,6 +3648,10 @@ void IQTree::saveCurrentTree(double cur_logl) {
                 }
             }
         }
+    #ifdef _OPENMP
+        finish_random(rstream);
+        }
+    #endif
     }
     if (Params::getInstance().print_tree_lh) {
         out_treelh << cur_logl;

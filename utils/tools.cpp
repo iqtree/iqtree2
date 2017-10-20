@@ -2706,7 +2706,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 			if (strcmp(argv[cnt], "-brefine") == 0 || strcmp(argv[cnt], "-bnni") == 0) {
 				params.ufboot2corr = true;
                 // print ufboot trees with branch lengths
-				params.print_ufboot_trees = 2;
+//				params.print_ufboot_trees = 2; // Diep: relocate to be below this for loop
 				continue;
 			}
 			if (strcmp(argv[cnt], "-u2c_nni5") == 0) {
@@ -3409,6 +3409,8 @@ void parseArg(int argc, char *argv[], Params &params) {
 	if(params.ufboot2corr == true){
 		if(params.gbo_replicates <= 0) params.ufboot2corr = false;
 		else params.stop_condition = SC_UNSUCCESS_ITERATION;
+
+		params.print_ufboot_trees = 2; // 2017-09-25: fix bug regarding the order of -bb 1000 -bnni -wbt
 	}
 
     if (!params.out_prefix) {
@@ -3611,7 +3613,7 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "                       specification (e.g., 010010 = HKY)" << endl
             << "              Protein: LG (default), Poisson, cpREV, mtREV, Dayhoff, mtMAM," << endl
             << "                       JTT, WAG, mtART, mtZOA, VT, rtREV, DCMut, PMB, HIVb," << endl
-            << "                       HIVw, JTTDCMut, FLU, Blosum62, GTR20" << endl
+            << "                       HIVw, JTTDCMut, FLU, Blosum62, GTR20, mtMet, mtVer, mtInv" << endl
             << "      Protein mixture: C10,...,C60, EX2, EX3, EHO, UL2, UL3, EX_EHO, LG4M, LG4X" << endl
             << "               Binary: JC2 (default), GTR2" << endl
             << "      Empirical codon: KOSI07, SCHN05" << endl 

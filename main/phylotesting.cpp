@@ -110,7 +110,7 @@ const char *dna_model_names_lie_markov_strsym[] = {
 /****** Protein model set ******/
 const char* aa_model_names[] = { "Dayhoff", "mtMAM", "JTT", "WAG",
 		"cpREV", "mtREV", "rtREV", "mtART", "mtZOA", "VT", "LG", "DCMut", "PMB",
-		"HIVb", "HIVw", "JTTDCMut", "FLU", "Blosum62" };
+		"HIVb", "HIVw", "JTTDCMut", "FLU", "Blosum62" , "mtMet" , "mtVer" , "mtInv" };
         
 /* Protein models supported by PhyML/PartitionFinder */
 const char *aa_model_names_phyml[] = { "Dayhoff", "mtMAM", "JTT", "WAG",
@@ -126,7 +126,7 @@ const char* aa_model_names_mrbayes[] = {"Poisson", "Dayhoff", "mtMAM", "JTT", "W
 
 const char *aa_model_names_nuclear[] = {"WAG", "Dayhoff","JTT", "LG", "VT", "DCMut", "PMB", "JTTDCMut", "Blosum62"};
 
-const char *aa_model_names_mitochondrial[] = {"mtREV", "mtMAM", "mtART", "mtZOA"};
+const char *aa_model_names_mitochondrial[] = {"mtREV", "mtMAM", "mtART", "mtZOA", "mtMet" , "mtVer" , "mtInv" };
 
 const char *aa_model_names_chloroplast[] = {"cpREV"};
 
