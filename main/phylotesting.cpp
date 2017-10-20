@@ -1632,7 +1632,6 @@ ModelMarkov* getPrototypeModel(SeqType seq_type, PhyloTree* tree, char *model_se
 string testModel(Params &params, PhyloTree* in_tree, ModelCheckpoint &model_info, ModelsBlock *models_block,
     int num_threads, string set_name, bool print_mem_usage, string in_model_name)
 {
-
     ModelCheckpoint *checkpoint = &model_info;
 
 	SeqType seq_type = in_tree->aln->seq_type;
@@ -1640,6 +1639,11 @@ string testModel(Params &params, PhyloTree* in_tree, ModelCheckpoint &model_info
 		seq_type = ((PhyloSuperTree*)in_tree)->front()->aln->seq_type;
 	if (seq_type == SEQ_UNKNOWN)
 		outError("Unknown data for model testing.");
+  if (seq_type == SEQ_POMO) {
+    // TODO DS: Implement model finder.
+    cout << "ERROR: Automatic model selection with PoMo not yet supported." << endl;
+    outError("Please provide a substitution model with, e.g., \"-m HKY+P\".");
+  }
 	string sitelh_file = params.out_prefix;
 	sitelh_file += ".sitelh";
 	in_tree->params = &params;
