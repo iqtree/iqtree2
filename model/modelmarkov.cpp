@@ -153,7 +153,11 @@ void ModelMarkov::saveCheckpoint() {
 //     }
 // =======
     startCheckpoint();
-    CKP_ARRAY_SAVE(num_params, model_parameters);
+    // Thu Oct 26 13:16:06 CEST 2017: We have to check for model parameters
+    // before restoring or saving them (because otherwise, for PoMo this leads
+    // to a segmentation fault).
+    if (model_parameters)
+      CKP_ARRAY_SAVE(num_params, model_parameters);
     endCheckpoint();
 // >>>>>>> origin/latest
     ModelSubst::saveCheckpoint();
@@ -176,7 +180,11 @@ void ModelMarkov::restoreCheckpoint() {
 //     }
 // =======
     startCheckpoint();
-    CKP_ARRAY_RESTORE(num_params, model_parameters);
+    // Thu Oct 26 13:16:06 CEST 2017: We have to check for model parameters
+    // before restoring or saving them (because otherwise, for PoMo this leads
+    // to a segmentation fault).
+    if (model_parameters)
+      CKP_ARRAY_RESTORE(num_params, model_parameters);
     endCheckpoint();
 // >>>>>>> origin/latest
 }
