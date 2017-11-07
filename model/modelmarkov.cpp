@@ -49,7 +49,7 @@ ModelMarkov::ModelMarkov(PhyloTree *tree, bool reversible)
 
     // variables for non-reversible model
     fixed_parameters = false;
-    model_parameters = NULL;
+//    model_parameters = NULL;
     rate_matrix = NULL;
     temp_space = NULL;
     eigenvalues_imag = NULL;
@@ -354,11 +354,11 @@ void ModelMarkov::writeInfo(ostream &out) {
 		//if (freq_type != FREQ_ESTIMATE) return;
 	} else if (!is_reversible) {
         // non-reversible
-        int i;
-        out << "Model parameters: ";
-        if (num_params>0) out << model_parameters[0];
-        for (i=1; i < num_params; i++) out << "," << model_parameters[i];
-        out << endl;
+//        int i;
+//        out << "Model parameters: ";
+//        if (num_params>0) out << model_parameters[0];
+//        for (i=1; i < num_params; i++) out << "," << model_parameters[i];
+//        out << endl;
 
         if (num_states != 4) return;
 		report_rates(out, "Substitution rates", rates);
@@ -686,11 +686,11 @@ void ModelMarkov::setVariables(double *variables) {
 	int nrate = getNDim();
 
     // non-reversible case
-    if (!is_reversible) {
-        if (nrate > 0)
-            memcpy(variables+1, model_parameters, nrate*sizeof(double));
-        return;
-    }
+//    if (!is_reversible) {
+//        if (nrate > 0)
+//            memcpy(variables+1, model_parameters, nrate*sizeof(double));
+//        return;
+//    }
 
 	if (freq_type == FREQ_ESTIMATE) nrate -= (num_states-1);
 	if (nrate > 0)
@@ -708,15 +708,15 @@ bool ModelMarkov::getVariables(double *variables) {
 	bool changed = false;
 
     // non-reversible case
-    if (!is_reversible) {
-        for (i = 0; i < nrate && !changed; i++)
-            changed = (model_parameters[i] != variables[i+1]);
-        if (changed) {
-            memcpy(model_parameters, variables+1, nrate * sizeof(double));
-            setRates();
-        }
-        return changed;
-    }
+//    if (!is_reversible) {
+//        for (i = 0; i < nrate && !changed; i++)
+//            changed = (model_parameters[i] != variables[i+1]);
+//        if (changed) {
+//            memcpy(model_parameters, variables+1, nrate * sizeof(double));
+//            setRates();
+//        }
+//        return changed;
+//    }
 
 	if (freq_type == FREQ_ESTIMATE) nrate -= (num_states-1);
 	if (nrate > 0) {
@@ -1118,8 +1118,8 @@ void ModelMarkov::freeMem()
         aligned_free(temp_space);
     if (rate_matrix)
         aligned_free(rate_matrix);
-    if (model_parameters)
-        delete [] model_parameters;
+//    if (model_parameters)
+//        delete [] model_parameters;
 }
 
 double *ModelMarkov::getEigenvalues() const

@@ -1022,7 +1022,11 @@ void IQTree::initializeModel(Params &params, string &model_name, ModelsBlock *mo
      * problem, but as I don't understand what is going on, I am
      * not at all confident this is the correct solution.
      */
-    model->saveCheckpoint();
+
+     //!!! BQM: Because iqtree restore the checkpoint from the previous run! (not this current run)
+     // That's why saveCheckpoint should NOT be called now! I comment this line out.
+
+//    model->saveCheckpoint();
 
     if (params.pll) {
         if (getRate()->getNDiscreteRate() == 1) {

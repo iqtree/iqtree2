@@ -28,6 +28,12 @@ public:
     
 protected:
 
+	/**
+	    Model parameters - cached so we know when they change, and thus when
+	    recalculations are needed.
+
+	 */
+	double *model_parameters;
 
 	/**
 	 * Called from getVariables to update the rate matrix for the new

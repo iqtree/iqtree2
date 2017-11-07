@@ -455,13 +455,6 @@ protected:
 	*/
 	void computeTransMatrixEigen(double time, double *trans_matrix);
 
-	/**
-	    Model parameters - cached so we know when they change, and thus when
-	    recalculations are needed.
-
-	 */
-	double *model_parameters;
-
 	/** true to fix parameters, otherwise false */
 	bool fixed_parameters;
 
