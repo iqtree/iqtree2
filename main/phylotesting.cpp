@@ -1649,6 +1649,28 @@ string getSeqTypeName(SeqType seq_type) {
     }
 }
 
+IQTree *initTreeForModel(string &model_name, Params &params, PhyloTree* in_tree,
+    Checkpoint *checkpoint, ModelsBlock *models_block, int num_threads)
+{
+    IQTree *tree;
+    if (model_name.find("+H") != string::npos || model_name.find("*H") != string::npos)
+        tree = new PhyloTreeMixlen(in_tree->aln, 0);
+    else
+        tree = new IQTree(in_tree->aln);
+    tree->setParams(&params);
+    tree->sse = params.SSE;
+    tree->optimize_by_newton = params.optimize_by_newton;
+    tree->num_threads = num_threads;
+
+    tree->setCheckpoint(checkpoint);
+    tree->restoreCheckpoint();
+    ASSERT(tree->root);
+    tree->initializeModel(params, model_name, models_block);
+    if (!tree->getModel()->isMixture() || in_tree->aln->seq_type == SEQ_POMO)
+        model_name = tree->getModelName();
+    return tree;
+}
+
 string testModel(Params &params, PhyloTree* in_tree, ModelCheckpoint &model_info, ModelsBlock *models_block,
     int num_threads, string set_name, bool print_mem_usage, string in_model_name)
 {
