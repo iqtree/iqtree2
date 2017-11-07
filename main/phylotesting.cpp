@@ -830,6 +830,7 @@ int getModelList(Params &params, Alignment *aln, StrVector &models, bool separat
 	bool test_options_morph_new[] = {true,false,   true, true,  false,     true, true,     true};
 	bool test_options_noASC_I_new[] = {true,false,  false, true,  false,    false, true,    false};
 	bool test_options_asc_new[]   ={false,false,   true,false,  false,     true,false,     true};
+	bool test_options_pomo[]      = {true, false,  false, true,   false,   false,false,    false};
     bool *test_options = test_options_default;
 //	bool test_options_codon[] =  {true,false,  false,false,  false,    false};
 	const int noptions = sizeof(rate_options) / sizeof(char*);
@@ -839,7 +840,7 @@ int getModelList(Params &params, Alignment *aln, StrVector &models, bool separat
 		copyCString(bin_model_names, sizeof(bin_model_names) / sizeof(char*), model_names);
 	} else if (seq_type == SEQ_MORPH) {
 		copyCString(morph_model_names, sizeof(morph_model_names) / sizeof(char*), model_names);
-	} else if (seq_type == SEQ_DNA) {
+	} else if (seq_type == SEQ_DNA || seq_type == SEQ_POMO) {
 		if (params.model_set == NULL) {
 			copyCString(dna_model_names, sizeof(dna_model_names) / sizeof(char*), model_names);
 //            copyCString(dna_freq_names, sizeof(dna_freq_names)/sizeof(char*), freq_names);
@@ -991,7 +992,11 @@ int getModelList(Params &params, Alignment *aln, StrVector &models, bool separat
 //	if (seq_type == SEQ_CODON) {
 //		for (i = 0; i < noptions; i++)
 //			test_options[i] = test_options_codon[i];
-//	} else 
+//	} else
+    if (seq_type == SEQ_POMO) {
+		for (i = 0; i < noptions; i++)
+			test_options[i] = test_options_pomo[i];
+    }
     if (aln->frac_invariant_sites == 0.0) {
         // morphological or SNP data: activate +ASC
         if (with_new) {
@@ -1076,17 +1081,19 @@ int getModelList(Params &params, Alignment *aln, StrVector &models, bool separat
             }
         }
 
+    string pomo_suffix = (seq_type == SEQ_POMO) ? "+P" : "";
+    // TODO DS: should we allow virtual population size?
 
     if (separate_rate) {
         for (i = 0; i < model_names.size(); i++) 
             models.push_back(model_names[i]);
         for (j = 0; j < ratehet.size(); j++)
             if (ratehet[j] != "")
-                models.push_back(ratehet[j]);
+                models.push_back(ratehet[j] + pomo_suffix);
     } else {
         for (i = 0; i < model_names.size(); i++)
             for (j = 0; j < ratehet.size(); j++) {
-                models.push_back(model_names[i] + ratehet[j]);
+                models.push_back(model_names[i] + ratehet[j] + pomo_suffix);
             }
     }
     if (params.model_extra_set) {
@@ -1724,6 +1731,8 @@ string testModel(Params &params, PhyloTree* in_tree, ModelCheckpoint &model_info
 //    int prev_model_id = -1;
 //    int skip_model = 0;
 
+    //------------- MAIN FOR LOOP GOING THROUGH ALL MODELS TO BE TESTED ---------//
+
 	for (model = 0; model < model_names.size(); model++) {
 		//cout << model_names[model] << endl;
         if (model_names[model][0] == '+') {
@@ -1768,6 +1777,7 @@ string testModel(Params &params, PhyloTree* in_tree, ModelCheckpoint &model_info
 		if (!info.restoreCheckpoint(checkpoint)) {
             IQTree *tree = NULL;
             if (params.model_test_and_tree) {
+                //--- PERFORM FULL TREE SEARCH PER MODEL ----//
                 string original_model = params.model_name;
                 // BQM 2017-03-29: disable bootstrap
                 int orig_num_bootstrap_samples = params.num_bootstrap_samples;
@@ -1822,6 +1832,7 @@ string testModel(Params &params, PhyloTree* in_tree, ModelCheckpoint &model_info
                 delete newCheckpoint;
 
             } else {
+                //--- FIX TREE TOPOLOGY AND ESTIMATE MODEL PARAMETERS ----//
                 if (model_names[model].find("+H") != string::npos || model_names[model].find("*H") != string::npos)
                     tree = new PhyloTreeMixlen(in_tree->aln, 0);
                 else

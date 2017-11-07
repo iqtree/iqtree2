@@ -240,6 +240,12 @@ class ModelPoMo : virtual public ModelMarkov
     void normalizeMutationRates();
 
     /**
+        set checkpoint object
+        @param checkpoint
+    */
+    virtual void setCheckpoint(Checkpoint *checkpoint);
+
+    /**
         start structure for checkpointing
     */
     virtual void startCheckpoint();

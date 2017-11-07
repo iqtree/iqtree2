@@ -937,26 +937,35 @@ void ModelPoMo::report(ostream &out) {
   out << "--" << endl << endl;
 }
 
+void ModelPoMo::setCheckpoint(Checkpoint *checkpoint) {
+	ModelMarkov::setCheckpoint(checkpoint);
+    mutation_model->setCheckpoint(checkpoint);
+}
+
 void ModelPoMo::startCheckpoint() {
     checkpoint->startStruct("ModelPoMo");
 }
 
 void ModelPoMo::saveCheckpoint() {
-    int n_rates = n_alleles * (n_alleles-1) / 2;
+//    int n_rates = n_alleles * (n_alleles-1) / 2;
     startCheckpoint();
-    CKP_ARRAY_SAVE(n_rates, mutation_model->rates);
-    CKP_ARRAY_SAVE(n_alleles, mutation_model->state_freq);
+//    CKP_ARRAY_SAVE(n_rates, mutation_model->rates);
+//    CKP_ARRAY_SAVE(n_alleles, mutation_model->state_freq);
+    mutation_model->saveCheckpoint();
+    CKP_SAVE(heterozygosity);
     endCheckpoint();
     ModelMarkov::saveCheckpoint();
 }
 
 // TODO DS: Check checkpointing :-).
 void ModelPoMo::restoreCheckpoint() {
-    int n_rates = n_alleles * (n_alleles-1) / 2;
+//    int n_rates = n_alleles * (n_alleles-1) / 2;
     // First, get variables from checkpoint.
     startCheckpoint();
-    CKP_ARRAY_RESTORE(n_rates, mutation_model->rates);
-    CKP_ARRAY_RESTORE(n_alleles, mutation_model->state_freq);
+//    CKP_ARRAY_RESTORE(n_rates, mutation_model->rates);
+//    CKP_ARRAY_RESTORE(n_alleles, mutation_model->state_freq);
+    mutation_model->restoreCheckpoint();
+    CKP_RESTORE(heterozygosity);
     endCheckpoint();
     // Second, restore underlying mutation model.
     ModelMarkov::restoreCheckpoint();

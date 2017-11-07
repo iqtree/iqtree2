@@ -38,6 +38,12 @@ public:
     virtual ~ModelPoMoMixture();
 
     /**
+        set checkpoint object
+        @param checkpoint
+    */
+    virtual void setCheckpoint(Checkpoint *checkpoint);
+
+    /**
         start structure for checkpointing
     */
     virtual void startCheckpoint();
