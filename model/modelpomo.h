@@ -132,6 +132,11 @@ class ModelPoMo : virtual public ModelMarkov
      */
     void updatePoMoStatesAndRateMatrix();
 
+	/**
+	 * @return model name
+	 */
+	virtual string getName();
+
     /**
      *  @return Number of free parameters.
      */

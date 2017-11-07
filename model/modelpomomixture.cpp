@@ -32,12 +32,14 @@ ModelPoMoMixture::ModelPoMoMixture(const char *model_name,
         if (num_rate_cats < 1) outError("Wrong number of rate categories");
     }
 
-    // Adjust name.
-    this->name += pomo_rate_str;
-    this->full_name += " Gamma rate heterogeneity with " + convertIntToString(num_rate_cats) + " components;";
-
     // initialize rate heterogeneity
     ratehet = new RateGamma(num_rate_cats, Params::getInstance().gamma_shape, Params::getInstance().gamma_median, tree);
+
+    // Adjust name.
+    // this->name += pomo_rate_str;
+    // this->full_name += " Gamma rate heterogeneity with " + convertIntToString(num_rate_cats) + " components;";
+    this->name += ratehet->name;
+    this->full_name += ratehet->full_name;
 
     // initialize mixture
     prop = aligned_alloc<double>(num_rate_cats);

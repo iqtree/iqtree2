@@ -65,10 +65,15 @@ void ModelPoMo::init_mutation_model(const char *model_name,
     this->name = mutation_model->name;
     if (model_params.length() > 0)
         this->name += "{" + model_params + "}";
+    this->name += freqTypeString(getFreqType(), phylo_tree->aln->seq_type, false);
     this->name += "+P";
     if (pomo_heterozygosity.length() > 0)
         this->name += "{" + pomo_heterozygosity + "}";
     this->name += "+N" + convertIntToString(N);
+}
+
+string ModelPoMo::getName() {
+  return this->name;
 }
 
 void ModelPoMo::init_sampling_method()

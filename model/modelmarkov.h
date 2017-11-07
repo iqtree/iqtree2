@@ -31,6 +31,7 @@ const double MIN_RATE = 1e-4;
 const double TOL_RATE = 1e-4;
 const double MAX_RATE = 100;
 
+string freqTypeString(StateFreqType freq_type, SeqType seq_type, bool full_str);
 
 /**
 General Markov model of substitution (reversible or non-reversible)
