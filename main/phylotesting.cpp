@@ -1636,6 +1636,19 @@ ModelMarkov* getPrototypeModel(SeqType seq_type, PhyloTree* tree, char *model_se
     return(subst_model);
 }
 
+string getSeqTypeName(SeqType seq_type) {
+    switch (seq_type) {
+    case SEQ_BINARY: return "binary";
+    case SEQ_DNA: return "DNA";
+    case SEQ_PROTEIN: return "protein";
+    case SEQ_CODON: return "codon";
+    case SEQ_MORPH: return "morphological";
+    case SEQ_POMO: return "PoMo";
+    case SEQ_UNKNOWN: return "unknown";
+    case SEQ_MULTISTATE: return "MultiState";
+    }
+}
+
 string testModel(Params &params, PhyloTree* in_tree, ModelCheckpoint &model_info, ModelsBlock *models_block,
     int num_threads, string set_name, bool print_mem_usage, string in_model_name)
 {
@@ -1699,8 +1712,7 @@ string testModel(Params &params, PhyloTree* in_tree, ModelCheckpoint &model_info
 		ssize = params.model_test_sample_size;
 	if (set_name == "") {
 		cout << "ModelFinder will test " << model_names.size() << " "
-			<< ((seq_type == SEQ_BINARY) ? "binary" : ((seq_type == SEQ_DNA) ? "DNA" :
-				((seq_type == SEQ_PROTEIN) ? "protein": ((seq_type == SEQ_CODON) ? "codon": "morphological"))))
+			<< getSeqTypeName(seq_type)
 			<< " models (sample size: " << ssize << ") ..." << endl;
         if (verbose_mode >= VB_MED) {
             for (auto i = model_names.begin(); i != model_names.end(); i++)

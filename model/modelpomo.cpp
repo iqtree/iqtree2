@@ -61,15 +61,6 @@ void ModelPoMo::init_mutation_model(const char *model_name,
     is_reversible = mutation_model->is_reversible;
     if (!is_reversible)
         setReversible(is_reversible);
-
-    this->name = mutation_model->name;
-    if (model_params.length() > 0)
-        this->name += "{" + model_params + "}";
-    this->name += freqTypeString(getFreqType(), phylo_tree->aln->seq_type, false);
-    this->name += "+P";
-    if (pomo_heterozygosity.length() > 0)
-        this->name += "{" + pomo_heterozygosity + "}";
-    this->name += "+N" + convertIntToString(N);
 }
 
 string ModelPoMo::getName() {
@@ -206,6 +197,15 @@ void ModelPoMo::init(const char *model_name,
     rate_matrix = new double[num_states*num_states];
     updatePoMoStatesAndRateMatrix();
     decomposeRateMatrix();
+
+
+    this->name = mutation_model->getName();
+//    if (model_params.length() > 0)
+//        this->name += "{" + model_params + "}";
+    this->name += "+P";
+//    if (pomo_heterozygosity.length() > 0)
+//        this->name += "{" + pomo_heterozygosity + "}";
+    this->name += "+N" + convertIntToString(N);
 
     if (verbose_mode >= VB_MED) {
         cout << "Initialized PoMo model." << endl;
