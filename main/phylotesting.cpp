@@ -1786,6 +1786,14 @@ string testModel(Params &params, PhyloTree* in_tree, ModelCheckpoint &model_info
 		ModelInfo info;
 		info.set_name = set_name;
         string tree_string;
+        if (params.model_test_and_tree) {
+            // check if this model is already tested
+            IQTree *tree = initTreeForModel(model_names[model], params, in_tree, checkpoint, models_block, num_threads);
+            info.name = model_names[model];
+            delete tree;
+        }
+
+
 		if (!info.restoreCheckpoint(checkpoint)) {
             IQTree *tree = NULL;
             if (params.model_test_and_tree) {
@@ -1854,10 +1862,8 @@ string testModel(Params &params, PhyloTree* in_tree, ModelCheckpoint &model_info
                 tree->optimize_by_newton = params.optimize_by_newton;
                 tree->num_threads = num_threads;
 
-                tree->setCheckpoint(checkpoint);
-                tree->restoreCheckpoint();
-                ASSERT(tree->root);
-                tree->initializeModel(params, model_names[model], models_block);
+                tree = initTreeForModel(model_names[model], params, in_tree, checkpoint, models_block, num_threads);
+                info.name = model_names[model];
 
 //                if (tree->getMemoryRequired() > RAM_requirement) {
 //                    tree->deleteAllPartialLh();
@@ -1876,32 +1882,34 @@ string testModel(Params &params, PhyloTree* in_tree, ModelCheckpoint &model_info
                     cout << "Optimizing model " << info.name << endl;
                 tree->getModelFactory()->restoreCheckpoint();
 
-        #ifdef _OPENMP
-                if (num_threads <= 0) {
-                    num_threads = tree->testNumThreads();
-                    omp_set_num_threads(num_threads);
-                }
-                tree->warnNumThreads();
-        #endif
+                if (!info.restoreCheckpoint(checkpoint)) {
+
+                    #ifdef _OPENMP
+                    if (num_threads <= 0) {
+                        num_threads = tree->testNumThreads();
+                        omp_set_num_threads(num_threads);
+                    }
+                    tree->warnNumThreads();
+                    #endif
 
 
+    //                tree->initializeAllPartialLh();
+                    for (int step = 0; step < 2; step++) {
+                        info.logl = tree->getModelFactory()->optimizeParameters(false, false, TOL_LIKELIHOOD_MODELTEST, TOL_GRADIENT_MODELTEST);
+                        info.tree_len = tree->treeLength();
+                        tree->getModelFactory()->saveCheckpoint();
+                        tree->saveCheckpoint();
 
-//                tree->initializeAllPartialLh();
-                for (int step = 0; step < 2; step++) {
-                    info.logl = tree->getModelFactory()->optimizeParameters(false, false, TOL_LIKELIHOOD_MODELTEST, TOL_GRADIENT_MODELTEST);
-                    info.tree_len = tree->treeLength();
-                    tree->getModelFactory()->saveCheckpoint();
-                    tree->saveCheckpoint();
-
-                    // check if logl(+R[k]) is worse than logl(+R[k-1])
-                    ModelInfo prev_info;
-                    if (!prev_info.restoreCheckpointRminus1(checkpoint, info.name)) break;
-                    if (prev_info.logl < info.logl + TOL_GRADIENT_MODELTEST) break;
-//                    if (verbose_mode >= VB_MED)
-                    if (step == 0) {
-                        tree->getRate()->initFromCatMinusOne();
-                    } else if (info.logl < prev_info.logl - TOL_LIKELIHOOD_MODELTEST) {
-                        outWarning("Log-likelihood of " + info.name + " worse than " + prev_info.name);
+                        // check if logl(+R[k]) is worse than logl(+R[k-1])
+                        ModelInfo prev_info;
+                        if (!prev_info.restoreCheckpointRminus1(checkpoint, info.name)) break;
+                        if (prev_info.logl < info.logl + TOL_GRADIENT_MODELTEST) break;
+    //                    if (verbose_mode >= VB_MED)
+                        if (step == 0) {
+                            tree->getRate()->initFromCatMinusOne();
+                        } else if (info.logl < prev_info.logl - TOL_LIKELIHOOD_MODELTEST) {
+                            outWarning("Log-likelihood of " + info.name + " worse than " + prev_info.name);
+                        }
                     }
                 }
             }
