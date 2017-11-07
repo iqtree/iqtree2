@@ -38,6 +38,12 @@ public:
         virtual void restoreCheckpoint();
 
 
+	/**
+		write information
+		@param out output stream
+	*/
+	virtual void writeInfo(ostream &out);
+
 	static void getLieMarkovModelInfo(string model_name, string &name, string &full_name, int &model_num, int &symmetry, StateFreqType &def_freq);
 
 	static string getModelInfo(string model_name, string &full_name, StateFreqType &def_freq);
@@ -83,12 +89,35 @@ public:
 	bool restartParameters(double guess[], int ndim, double lower[], double upper[], bool bound_check[], int iteration);
 
 protected:
+	/**
+	    Model parameters - cached so we know when they change, and thus when
+	    recalculations are needed.
+
+	 */
+	double *model_parameters;
+
+
 	double **basis;
 	int symmetry; // RY->0, WS->1, MK->2
 	int model_num; // 0->1.1, etc to 36->12.12
 	void setBasis();
 	virtual void setRates();
 	bool nondiagonalizable; // will be set true for nondiagonalizable rate matrices, then will use scaled squaring method for matrix exponentiation.
+
+	/**
+		this function is served for the multi-dimension optimization. It should pack the model parameters 
+		into a vector that is index from 1 (NOTE: not from 0)
+		@param variables (OUT) vector of variables, indexed from 1
+	*/
+	virtual void setVariables(double *variables);
+
+	/**
+		this function is served for the multi-dimension optimization. It should assign the model parameters 
+		from a vector of variables that is index from 1 (NOTE: not from 0)
+		@param variables vector of variables, indexed from 1
+		@return TRUE if parameters are changed, FALSE otherwise (2015-10-20)
+	*/
+	virtual bool getVariables(double *variables);
 
 	static void parseModelName(string model_name, int* model_num, int* symmetry);
 	/*

@@ -196,7 +196,8 @@ void ModelDNA::init(const char *model_name, string model_params, StateFreqType f
 	
 	if (freq == FREQ_UNKNOWN ||  def_freq == FREQ_EQUAL) freq = def_freq;
 	ModelMarkov::init(freq);
-        model_parameters = new double [getNDim()+1]; // see setVariables for explaination of +1
+//    model_parameters = new double [getNDim()+1]; // see setVariables for explaination of +1
+//    setVariables(model_parameters);
 }
 
 void ModelDNA::startCheckpoint() {
@@ -207,14 +208,20 @@ void ModelDNA::saveCheckpoint() {
     // construct model_parameters from rates and base freqs. 
     // This is one-indexed, so parameters are in model_parameters[1]
     // up to model_parameters[num_params]
-    setVariables(model_parameters); 
-    ModelMarkov::saveCheckpoint();   // saves model_parameters
+//    setVariables(model_parameters);
+    startCheckpoint();
+    CKP_ARRAY_SAVE(6, rates);
+    endCheckpoint();
+    ModelMarkov::saveCheckpoint();
 }
 
 void ModelDNA::restoreCheckpoint() {
   // curiously, this seems to be the only plase ModelDNA uses model_parameters.
-    ModelMarkov::restoreCheckpoint();     // restores model_parameters
-    getVariables(model_parameters);       // updates rates and state_freq
+    ModelMarkov::restoreCheckpoint();
+    startCheckpoint();
+    CKP_ARRAY_RESTORE(6, rates);
+    endCheckpoint();
+//    getVariables(model_parameters);       // updates rates and state_freq
     string rate_spec = param_spec;
     for (auto i = rate_spec.begin(); i != rate_spec.end(); i++)
         *i = *i + '0';
