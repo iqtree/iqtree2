@@ -1983,7 +1983,8 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 
     /*********************** INITIAL MODEL OPTIMIZATION *****************/
 
-    iqtree.initializeModel(params, params.model_name, models_block);
+    if (!iqtree.getModelFactory())
+        iqtree.initializeModel(params, params.model_name, models_block);
 //    iqtree.restoreCheckpoint();
 
     delete models_block;
