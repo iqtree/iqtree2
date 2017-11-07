@@ -15,6 +15,8 @@
 #include "modelmixture.h"
 #include "rateheterogeneity.h"
 
+enum PomoMixtureOptMode {OPT_NONE, OPT_RATEHET, OPT_POMO};
+
 /**
     Mixture PoMo models
 */
@@ -36,6 +38,11 @@ public:
                      string pomo_rate_str);
 
     virtual ~ModelPoMoMixture();
+
+	/**
+	 * @return model name
+	 */
+	virtual string getName();
 
     /**
         set checkpoint object
@@ -148,7 +155,7 @@ public:
 protected:
 
     /** normally false, set to true while optimizing rate heterogeneity */
-    bool optimizing_ratehet;
+    PomoMixtureOptMode opt_mode;
 
 	/**
 		this function is served for the multi-dimension optimization. It should pack the model parameters

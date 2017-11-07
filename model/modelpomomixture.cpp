@@ -22,7 +22,7 @@ ModelPoMoMixture::ModelPoMoMixture(const char *model_name,
         ModelMixture(tree)
 
 {
-    optimizing_ratehet = false;
+    opt_mode = OPT_NONE;
 
     // get number of categories
     int m, num_rate_cats = 4;
@@ -55,37 +55,49 @@ ModelPoMoMixture::ModelPoMoMixture(const char *model_name,
     initMem();
 
     // TODO: why calling this here?
-    ModelMarkov::init(FREQ_USER_DEFINED);
+    ModelMarkov::init(freq_type);
 
 }
 
 
-
+string ModelPoMoMixture::getName() {
+    return ModelPoMo::getName();
+}
 
 ModelPoMoMixture::~ModelPoMoMixture() {
 }
 
 void ModelPoMoMixture::setCheckpoint(Checkpoint *checkpoint) {
 	ModelPoMo::setCheckpoint(checkpoint);
+    ratehet->setCheckpoint(checkpoint);
 }
 
 void ModelPoMoMixture::startCheckpoint() {
-    ModelPoMo::startCheckpoint();
+    checkpoint->startStruct("ModelPoMoMixture");
 }
 
 void ModelPoMoMixture::saveCheckpoint() {
     ModelPoMo::saveCheckpoint();
+    startCheckpoint();
+    ratehet->saveCheckpoint();
+    endCheckpoint();
 }
 
 void ModelPoMoMixture::restoreCheckpoint() {
+    // ratehet needs to be restored first, so that decomposeRateMatrix works properly
+    startCheckpoint();
+    ratehet->restoreCheckpoint();
+    endCheckpoint();
     ModelPoMo::restoreCheckpoint();
 }
 
 
 int ModelPoMoMixture::getNDim() {
-    if (optimizing_ratehet)
+    if (opt_mode == OPT_RATEHET)
         return ratehet->getNDim();
-    return ModelPoMo::getNDim();
+    else if (opt_mode == OPT_POMO)
+        return ModelPoMo::getNDim();
+    else return ratehet->getNDim()+ModelPoMo::getNDim();
 }
 
 
@@ -95,7 +107,7 @@ int ModelPoMoMixture::getNDimFreq() {
 
 
 double ModelPoMoMixture::targetFunk(double x[]) {
-    if (optimizing_ratehet) {
+    if (opt_mode == OPT_RATEHET) {
         getVariables(x);
         phylo_tree->clearAllPartialLH();
         return -phylo_tree->computeLikelihood();
@@ -106,7 +118,7 @@ double ModelPoMoMixture::targetFunk(double x[]) {
 
 
 void ModelPoMoMixture::setBounds(double *lower_bound, double *upper_bound, bool *bound_check) {
-    if (optimizing_ratehet) {
+    if (opt_mode == OPT_RATEHET) {
 //        ratehet->setBounds(lower_bound, upper_bound, bound_check);
         lower_bound[1] = 0.2;
         // This would be the preferred lower bound but eigendecomposition leads to numerical errors.
@@ -154,7 +166,7 @@ void ModelPoMoMixture::decomposeRateMatrix() {
 
 
 void ModelPoMoMixture::setVariables(double *variables) {
-    if (optimizing_ratehet) {
+    if (opt_mode == OPT_RATEHET) {
         ratehet->setVariables(variables);
         return;
     }
@@ -163,7 +175,7 @@ void ModelPoMoMixture::setVariables(double *variables) {
 
 
 bool ModelPoMoMixture::getVariables(double *variables) {
-    if (optimizing_ratehet) {
+    if (opt_mode == OPT_RATEHET) {
         bool changed = ratehet->getVariables(variables);
         if (changed) {
             decomposeRateMatrix();
@@ -177,15 +189,17 @@ bool ModelPoMoMixture::getVariables(double *variables) {
 double ModelPoMoMixture::optimizeParameters(double gradient_epsilon) {
 
     // first optimize pomo model parameters
+    opt_mode = OPT_POMO;
     double score = ModelPoMo::optimizeParameters(gradient_epsilon);
+    opt_mode = OPT_NONE;
 
     // then optimize rate heterogeneity
     if (ratehet->getNDim() > 0) {
-        optimizing_ratehet = true;
+        opt_mode = OPT_RATEHET;
         double score_ratehet = ModelPoMo::optimizeParameters(gradient_epsilon);
         if (verbose_mode >= VB_MED)
             ratehet->writeInfo(cout);
-        optimizing_ratehet = false;
+        opt_mode = OPT_NONE;
         ASSERT(score_ratehet >= score-0.1);
         return score_ratehet;
     }

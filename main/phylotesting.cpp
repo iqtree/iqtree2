@@ -1894,7 +1894,7 @@ string testModel(Params &params, PhyloTree* in_tree, ModelCheckpoint &model_info
                 }
             }
             info.df = tree->getModelFactory()->getNParameters();
-            if (tree->getModel()->isMixture())
+            if (tree->getModel()->isMixture() && tree->aln->seq_type != SEQ_POMO)
                 info.name = model_names[model];
             else
                 model_names[model] = info.name = tree->getModelName();
