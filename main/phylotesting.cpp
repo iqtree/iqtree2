@@ -1629,6 +1629,29 @@ ModelMarkov* getPrototypeModel(SeqType seq_type, PhyloTree* tree, char *model_se
     return(subst_model);
 }
 
+
+IQTree *initTreeForModel(string &model_name, Params &params, PhyloTree* in_tree,
+    Checkpoint *checkpoint, ModelsBlock *models_block, int num_threads)
+{
+    IQTree *tree;
+    if (model_name.find("+H") != string::npos || model_name.find("*H") != string::npos)
+        tree = new PhyloTreeMixlen(in_tree->aln, 0);
+    else
+        tree = new IQTree(in_tree->aln);
+    tree->setParams(&params);
+    tree->sse = params.SSE;
+    tree->optimize_by_newton = params.optimize_by_newton;
+    tree->num_threads = num_threads;
+
+    tree->setCheckpoint(checkpoint);
+    tree->restoreCheckpoint();
+    ASSERT(tree->root);
+    tree->initializeModel(params, model_name, models_block);
+    if (!tree->getModel()->isMixture() || in_tree->aln->seq_type == SEQ_POMO)
+        model_name = tree->getModelName();
+    return tree;
+}
+
 string testModel(Params &params, PhyloTree* in_tree, ModelCheckpoint &model_info, ModelsBlock *models_block,
     int num_threads, string set_name, bool print_mem_usage, string in_model_name)
 {
@@ -1761,6 +1784,14 @@ string testModel(Params &params, PhyloTree* in_tree, ModelCheckpoint &model_info
 		ModelInfo info;
 		info.set_name = set_name;
         string tree_string;
+        if (params.model_test_and_tree) {
+            // check if this model is already tested
+            IQTree *tree = initTreeForModel(model_names[model], params, in_tree, checkpoint, models_block, num_threads);
+            info.name = model_names[model];
+            delete tree;
+        }
+
+
 		if (!info.restoreCheckpoint(checkpoint)) {
             IQTree *tree = NULL;
             if (params.model_test_and_tree) {
@@ -1818,19 +1849,9 @@ string testModel(Params &params, PhyloTree* in_tree, ModelCheckpoint &model_info
                 delete newCheckpoint;
 
             } else {
-                if (model_names[model].find("+H") != string::npos || model_names[model].find("*H") != string::npos)
-                    tree = new PhyloTreeMixlen(in_tree->aln, 0);
-                else
-                    tree = new IQTree(in_tree->aln);
-                tree->setParams(&params);
-                tree->sse = params.SSE;
-                tree->optimize_by_newton = params.optimize_by_newton;
-                tree->num_threads = num_threads;
 
-                tree->setCheckpoint(checkpoint);
-                tree->restoreCheckpoint();
-                ASSERT(tree->root);
-                tree->initializeModel(params, model_names[model], models_block);
+                tree = initTreeForModel(model_names[model], params, in_tree, checkpoint, models_block, num_threads);
+                info.name = model_names[model];
 
 //                if (tree->getMemoryRequired() > RAM_requirement) {
 //                    tree->deleteAllPartialLh();
@@ -1849,32 +1870,34 @@ string testModel(Params &params, PhyloTree* in_tree, ModelCheckpoint &model_info
                     cout << "Optimizing model " << info.name << endl;
                 tree->getModelFactory()->restoreCheckpoint();
 
-        #ifdef _OPENMP
-                if (num_threads <= 0) {
-                    num_threads = tree->testNumThreads();
-                    omp_set_num_threads(num_threads);
-                }
-                tree->warnNumThreads();
-        #endif
+                if (!info.restoreCheckpoint(checkpoint)) {
+
+                    #ifdef _OPENMP
+                    if (num_threads <= 0) {
+                        num_threads = tree->testNumThreads();
+                        omp_set_num_threads(num_threads);
+                    }
+                    tree->warnNumThreads();
+                    #endif
 
 
+    //                tree->initializeAllPartialLh();
+                    for (int step = 0; step < 2; step++) {
+                        info.logl = tree->getModelFactory()->optimizeParameters(false, false, TOL_LIKELIHOOD_MODELTEST, TOL_GRADIENT_MODELTEST);
+                        info.tree_len = tree->treeLength();
+                        tree->getModelFactory()->saveCheckpoint();
+                        tree->saveCheckpoint();
 
-//                tree->initializeAllPartialLh();
-                for (int step = 0; step < 2; step++) {
-                    info.logl = tree->getModelFactory()->optimizeParameters(false, false, TOL_LIKELIHOOD_MODELTEST, TOL_GRADIENT_MODELTEST);
-                    info.tree_len = tree->treeLength();
-                    tree->getModelFactory()->saveCheckpoint();
-                    tree->saveCheckpoint();
-
-                    // check if logl(+R[k]) is worse than logl(+R[k-1])
-                    ModelInfo prev_info;
-                    if (!prev_info.restoreCheckpointRminus1(checkpoint, info.name)) break;
-                    if (prev_info.logl < info.logl + TOL_GRADIENT_MODELTEST) break;
-//                    if (verbose_mode >= VB_MED)
-                    if (step == 0) {
-                        tree->getRate()->initFromCatMinusOne();
-                    } else if (info.logl < prev_info.logl - TOL_LIKELIHOOD_MODELTEST) {
-                        outWarning("Log-likelihood of " + info.name + " worse than " + prev_info.name);
+                        // check if logl(+R[k]) is worse than logl(+R[k-1])
+                        ModelInfo prev_info;
+                        if (!prev_info.restoreCheckpointRminus1(checkpoint, info.name)) break;
+                        if (prev_info.logl < info.logl + TOL_GRADIENT_MODELTEST) break;
+    //                    if (verbose_mode >= VB_MED)
+                        if (step == 0) {
+                            tree->getRate()->initFromCatMinusOne();
+                        } else if (info.logl < prev_info.logl - TOL_LIKELIHOOD_MODELTEST) {
+                            outWarning("Log-likelihood of " + info.name + " worse than " + prev_info.name);
+                        }
                     }
                 }
             }
