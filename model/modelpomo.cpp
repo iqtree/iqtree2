@@ -40,7 +40,8 @@ void ModelPoMo::init_mutation_model(const char *model_name,
     // work yet.  I guess, for the moment, the user has to find out
     // what went wrong during DNA model initialization.
     try {
-        cout << "Initialize PoMo DNA mutation model." << endl;
+        if (verbose_mode >= VB_MED)
+            cout << "Initialize PoMo DNA mutation model." << endl;
         string model_str = model_name;
         if (ModelMarkov::validModelName(model_str))
             mutation_model = ModelMarkov::getModelByName(model_str, phylo_tree, model_params, freq_type, freq_params);
@@ -201,9 +202,11 @@ void ModelPoMo::init(const char *model_name,
     updatePoMoStatesAndRateMatrix();
     decomposeRateMatrix();
 
-    cout << "Initialized PoMo model." << endl;
-    cout << "Model name: " << this->name << "." << endl;
-    cout << this->full_name << endl;
+    if (verbose_mode >= VB_MED) {
+        cout << "Initialized PoMo model." << endl;
+        cout << "Model name: " << this->name << "." << endl;
+        cout << this->full_name << endl;
+    }
     if (verbose_mode >= VB_MAX)
         writeInfo(cout);
 }
@@ -969,6 +972,7 @@ void ModelPoMo::restoreCheckpoint() {
     endCheckpoint();
     // Second, restore underlying mutation model.
     ModelMarkov::restoreCheckpoint();
+    normalizeMutationRates();
     decomposeRateMatrix();
     if (phylo_tree)
         phylo_tree->clearAllPartialLH();

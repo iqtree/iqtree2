@@ -183,7 +183,8 @@ double ModelPoMoMixture::optimizeParameters(double gradient_epsilon) {
     if (ratehet->getNDim() > 0) {
         optimizing_ratehet = true;
         double score_ratehet = ModelPoMo::optimizeParameters(gradient_epsilon);
-        ratehet->writeInfo(cout);
+        if (verbose_mode >= VB_MED)
+            ratehet->writeInfo(cout);
         optimizing_ratehet = false;
         ASSERT(score_ratehet >= score-0.1);
         return score_ratehet;
