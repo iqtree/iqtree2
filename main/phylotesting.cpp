@@ -1659,6 +1659,8 @@ string testOneModel(string &model_name, int model, Params &params, PhyloTree *in
     }
 
     if (params.model_test_and_tree) {
+        //--- PERFORM FULL TREE SEARCH PER MODEL ----//
+
         string original_model = params.model_name;
         // BQM 2017-03-29: disable bootstrap
         int orig_num_bootstrap_samples = params.num_bootstrap_samples;
@@ -1699,7 +1701,6 @@ string testOneModel(string &model_name, int model, Params &params, PhyloTree *in
         params.num_bootstrap_samples = orig_num_bootstrap_samples;
         params.gbo_replicates = orig_gbo_replicates;
         params.stop_condition = orig_stop_condition;
-//                tree = iqtree;
 
         // clear all checkpointed information
         newCheckpoint = new Checkpoint;
@@ -1711,44 +1712,39 @@ string testOneModel(string &model_name, int model, Params &params, PhyloTree *in
         delete newCheckpoint;
 
     } else {
-
-        info.name = model_name;
+        //--- FIX TREE TOPOLOGY AND ESTIMATE MODEL PARAMETERS ----//
 
         if (verbose_mode >= VB_MED)
             cout << "Optimizing model " << info.name << endl;
         iqtree->getModelFactory()->restoreCheckpoint();
 
-        if (!info.restoreCheckpoint(&model_info)) {
-
-            #ifdef _OPENMP
-            if (num_threads <= 0) {
-                num_threads = iqtree->testNumThreads();
-                omp_set_num_threads(num_threads);
-            }
-            iqtree->warnNumThreads();
-            #endif
+        #ifdef _OPENMP
+        if (num_threads <= 0) {
+            num_threads = iqtree->testNumThreads();
+            omp_set_num_threads(num_threads);
+        }
+        iqtree->warnNumThreads();
+        #endif
 
 
-//                tree->initializeAllPartialLh();
-            for (int step = 0; step < 2; step++) {
-                info.logl = iqtree->getModelFactory()->optimizeParameters(false, false,
-                    TOL_LIKELIHOOD_MODELTEST, TOL_GRADIENT_MODELTEST);
-                info.tree_len = iqtree->treeLength();
-                iqtree->getModelFactory()->saveCheckpoint();
-                iqtree->saveCheckpoint();
+        for (int step = 0; step < 2; step++) {
+            info.logl = iqtree->getModelFactory()->optimizeParameters(false, false,
+                TOL_LIKELIHOOD_MODELTEST, TOL_GRADIENT_MODELTEST);
+            info.tree_len = iqtree->treeLength();
+            iqtree->getModelFactory()->saveCheckpoint();
+            iqtree->saveCheckpoint();
 
-                // check if logl(+R[k]) is worse than logl(+R[k-1])
-                ModelInfo prev_info;
-                if (!prev_info.restoreCheckpointRminus1(&model_info, info.name)) break;
-                if (prev_info.logl < info.logl + TOL_GRADIENT_MODELTEST) break;
-//                    if (verbose_mode >= VB_MED)
-                if (step == 0) {
-                    iqtree->getRate()->initFromCatMinusOne();
-                } else if (info.logl < prev_info.logl - TOL_LIKELIHOOD_MODELTEST) {
-                    outWarning("Log-likelihood of " + info.name + " worse than " + prev_info.name);
-                }
+            // check if logl(+R[k]) is worse than logl(+R[k-1])
+            ModelInfo prev_info;
+            if (!prev_info.restoreCheckpointRminus1(&model_info, info.name)) break;
+            if (prev_info.logl < info.logl + TOL_GRADIENT_MODELTEST) break;
+            if (step == 0) {
+                iqtree->getRate()->initFromCatMinusOne();
+            } else if (info.logl < prev_info.logl - TOL_LIKELIHOOD_MODELTEST) {
+                outWarning("Log-likelihood of " + info.name + " worse than " + prev_info.name);
             }
         }
+
     }
 
     info.df = iqtree->getModelFactory()->getNParameters();
@@ -1875,6 +1871,7 @@ string testModel(Params &params, PhyloTree* in_tree, ModelCheckpoint &model_info
 		info.set_name = set_name;
         string tree_string;
 
+        /***** main call to estimate model parameters ******/
         tree_string = testOneModel(model_names[model], model, params, in_tree,
             model_info, info, models_block, num_threads);
 
