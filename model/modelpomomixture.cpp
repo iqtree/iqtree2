@@ -122,10 +122,10 @@ double ModelPoMoMixture::targetFunk(double x[]) {
 void ModelPoMoMixture::setBounds(double *lower_bound, double *upper_bound, bool *bound_check) {
     if (opt_mode == OPT_RATEHET) {
 //        ratehet->setBounds(lower_bound, upper_bound, bound_check);
-        lower_bound[1] = 0.2;
-        // This would be the preferred lower bound but eigendecomposition leads to numerical errors.
-        // lower_bound[1] = 0.02;
-        upper_bound[1] = 100.0;
+        lower_bound[1] = POMO_GAMMA_MIN;
+        upper_bound[1] = POMO_GAMMA_MAX;
+        // Boundary checking is the preferred solution to warn the user if the
+        // shape parameter hits the boundary, but it seems to be too verbose.
         bound_check[1] = false;
         return;
     }
@@ -199,8 +199,12 @@ double ModelPoMoMixture::optimizeParameters(double gradient_epsilon) {
     if (ratehet->getNDim() > 0) {
         opt_mode = OPT_RATEHET;
         double score_ratehet = ModelPoMo::optimizeParameters(gradient_epsilon);
-        if (verbose_mode >= VB_MED)
-            ratehet->writeInfo(cout);
+        if (verbose_mode >= VB_MIN) {
+          double shape = ratehet->getGammaShape();
+          if (shape <= POMO_GAMMA_MIN)
+            outWarning("The shape parameter of the gamma rate heterogeneity is hitting the lower boundary.");
+          ratehet->writeInfo(cout);
+        }
         opt_mode = OPT_NONE;
         ASSERT(score_ratehet >= score-0.1);
         return score_ratehet;
