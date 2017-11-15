@@ -776,7 +776,10 @@ ModelPoMo::estimateEmpiricalWattersonTheta()
 }
 
 void ModelPoMo::report_model_params(ostream &out, bool reset_scale) {
-  out << "Model parameters." << endl;
+  if (fixed_model_params)
+    out << "User-defined model parameters." << endl;
+  else
+    out << "Model parameters." << endl;
   // By default, reset scale before reporting.
   if (reset_scale)
     setScale(1.0);
