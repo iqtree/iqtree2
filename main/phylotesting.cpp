@@ -997,7 +997,8 @@ int getModelList(Params &params, Alignment *aln, StrVector &models, bool separat
 		for (i = 0; i < noptions; i++)
 			test_options[i] = test_options_pomo[i];
     }
-    if (aln->frac_invariant_sites == 0.0) {
+    // If not PoMo, go on with normal treatment.
+    else if (aln->frac_invariant_sites == 0.0) {
         // morphological or SNP data: activate +ASC
         if (with_new) {
             if (with_asc)
