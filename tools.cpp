@@ -3612,6 +3612,9 @@ void quickStartGuide() {
 
 InputType detectInputFile(char *input_file) {
 
+    if (!fileExists(input_file))
+        outError("File not found ", input_file);
+
     try {
         ifstream in;
         in.exceptions(ios::failbit | ios::badbit);
@@ -3636,6 +3639,8 @@ InputType detectInputFile(char *input_file) {
                 return IN_OTHER;
         }
     } catch (ios::failure) {
+        outError("Cannot read file ", input_file);
+    } catch (...) {
         outError("Cannot read file ", input_file);
     }
     return IN_OTHER;
