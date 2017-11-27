@@ -380,6 +380,8 @@ enum TestType {
     TEST_NONE, TEST_COMPATIBLE, TEST_CIRCULAR, TEST_WEAKLY_COMPATIBLE, TEST_K_COMPATIBLE
 };
 
+const double ZERO_FREQ = 0.000001;
+
 /**
         State frequency type
  */
@@ -1325,6 +1327,10 @@ public:
             state frequency type
      */
     StateFreqType freq_type;
+
+    /** FALSE to set zero state frequency to 1e-4.
+        Default: FALSE (version <= 1.5.5), TRUE (ver >= 1.5.6) */
+    bool keep_zero_freq;
 
 
     /**
