@@ -810,6 +810,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.store_trans_matrix = false;
     //params.freq_type = FREQ_EMPIRICAL;
     params.freq_type = FREQ_UNKNOWN;
+    params.keep_zero_freq = true;
     params.min_rate_cats = 2;
     params.num_rate_cats = 4;
     params.max_rate_cats = 10;
@@ -1981,6 +1982,17 @@ void parseArg(int argc, char *argv[], Params &params) {
 					throw "Use -f <c | o | u | q>";
 				continue;
 			}
+
+            if (strcmp(argv[cnt], "--keep-zero-freq") == 0) {
+                params.keep_zero_freq = true;
+                continue;
+            }
+
+            if (strcmp(argv[cnt], "--inc-zero-freq") == 0) {
+                params.keep_zero_freq = false;
+                continue;
+            }
+
 			if (strcmp(argv[cnt], "-fs") == 0) {
                 if (params.tree_freq_file)
                     throw "Specifying both -fs and -ft not allowed";

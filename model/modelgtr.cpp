@@ -393,8 +393,8 @@ void ModelGTR::getQMatrix(double *q_mat) {
 	for (i = 0, k = 0; i < num_states; i++) {
 		rate_matrix[i][i] = 0.0;
 		for (j = i+1; j < num_states; j++, k++) {
-			rate_matrix[i][j] = rates[k];
-			rate_matrix[j][i] = rates[k];
+			rate_matrix[i][j] = (state_freq[i] <= ZERO_FREQ || state_freq[j] <= ZERO_FREQ) ? 0 : rates[k];
+			rate_matrix[j][i] = rate_matrix[i][j];
 		}
 	}
 
@@ -508,7 +508,7 @@ bool ModelGTR::getVariables(double *variables) {
 
 double ModelGTR::targetFunk(double x[]) {
 	bool changed = getVariables(x);
-	if (state_freq[num_states-1] < 1e-4) return 1.0e+12;
+	if (state_freq[num_states-1] < 0) return 1.0e+12;
 	if (changed) {
 		decomposeRateMatrix();
 		assert(phylo_tree);
@@ -662,8 +662,8 @@ void ModelGTR::decomposeRateMatrix(){
             for (i = 0, k = 0; i < num_states; i++) {
                 rate_matrix[i][i] = 0.0;
                 for (j = i+1; j < num_states; j++, k++) {
-                    rate_matrix[i][j] = rates[k];
-                    rate_matrix[j][i] = rates[k];
+                    rate_matrix[i][j] = (state_freq[i] <= ZERO_FREQ || state_freq[j] <= ZERO_FREQ) ? 0 : rates[k];
+                    rate_matrix[j][i] = rate_matrix[i][j];
                 }
             }
         } else {
