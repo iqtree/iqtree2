@@ -572,8 +572,8 @@ void ModelMarkov::getQMatrix(double *q_mat) {
 	for (i = 0, k = 0; i < num_states; i++) {
 		rate_matrix[i][i] = 0.0;
 		for (j = i+1; j < num_states; j++, k++) {
-			rate_matrix[i][j] = rates[k];
-			rate_matrix[j][i] = rates[k];
+			rate_matrix[i][j] = (state_freq[i] <= ZERO_FREQ || state_freq[j] <= ZERO_FREQ) ? 0 : rates[k];
+			rate_matrix[j][i] = rate_matrix[i][j];
 		}
 	}
 
@@ -712,7 +712,7 @@ bool ModelMarkov::getVariables(double *variables) {
 double ModelMarkov::targetFunk(double x[]) {
 	bool changed = getVariables(x);
 
-    if (is_reversible && state_freq[num_states-1] < 1e-4) return 1.0e+12;
+    if (state_freq[num_states-1] < 0) return 1.0e+12;
 
 	if (changed) {
 		decomposeRateMatrix();
@@ -722,7 +722,7 @@ double ModelMarkov::targetFunk(double x[]) {
 
     // avoid numerical issue if state_freq is too small
     for (int i = 0; i < num_states; i++)
-        if (state_freq[i] < 1e-4)
+        if (state_freq[i] < 0)
             return 1.0e+12;
 
 	return -phylo_tree->computeLikelihood();
@@ -917,8 +917,8 @@ void ModelMarkov::decomposeRateMatrix(){
             for (i = 0, k = 0; i < num_states; i++) {
                 rate_matrix[i][i] = 0.0;
                 for (j = i+1; j < num_states; j++, k++) {
-                    rate_matrix[i][j] = rates[k];
-                    rate_matrix[j][i] = rates[k];
+                    rate_matrix[i][j] = (state_freq[i] <= ZERO_FREQ || state_freq[j] <= ZERO_FREQ) ? 0 : rates[k];
+                    rate_matrix[j][i] = rate_matrix[i][j];
                 }
             }
         } else {
