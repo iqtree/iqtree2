@@ -97,23 +97,19 @@ void EigenDecomposition::eigensystem(
 	// now get back eigen
 	//for (i = 0,inew = 0; i < num_state; i++)
 	for (i = num_state-1,inew = new_num-1; i >= 0; i--)
-		eval[i] = (forg[i] > ZERO) ? eval_new[inew--] : 0;
-		//eval[i] = (forg[i] > ZERO) ? eval_new[inew++] : 0;
+		eval[i] = (forg[i] > ZERO_FREQ) ? eval_new[inew--] : 0;
 
 	// calculate the actual eigenvectors of Q and its inverse matrix
 	//for (i = 0, inew = 0; i < num_state; i++)
 	for (i = num_state-1,inew = new_num-1; i >= 0; i--)
-		if (forg[i] > ZERO) {
-// 			for (j = 0, jnew = 0; j < num_state; j++) 
-			for (j = num_state-1, jnew = new_num-1; j >= 0; j--) 
-				if (forg[j] > ZERO) {
+		if (forg[i] > ZERO_FREQ) {
+			for (j = num_state-1, jnew = new_num-1; j >= 0; j--)
+				if (forg[j] > ZERO_FREQ) {
 					evec[i][j] = evec_new[inew][jnew];
-					//jnew++;
 					jnew--;
 				} else {
 					evec[i][j] = (i == j);
 				}
-// 			inew++;
  			inew--;
 		} else 
 		for (j=0; j < num_state; j++) {
@@ -221,35 +217,27 @@ void EigenDecomposition::eigensystem_sym(double **rate_params, double *state_fre
 	// now get back eigen
 	//for (i = 0,inew = 0; i < num_state; i++)
 	for (i = num_state-1,inew = new_num-1; i >= 0; i--)
-		eval[i] = (forg[i] > ZERO) ? eval_new[inew--] : 0;
-		//eval[i] = (forg[i] > ZERO) ? eval_new[inew++] : 0;
+		eval[i] = (forg[i] > ZERO_FREQ) ? eval_new[inew--] : 0;
 
 	ASSERT(inew == -1);
 	// calculate the actual eigenvectors of Q and its inverse matrix
 	//for (i = 0, inew = 0; i < num_state; i++)
 	for (i = num_state-1,inew = new_num-1; i >= 0; i--)
-		if (forg[i] > ZERO) {
-// 			for (j = 0, jnew = 0; j < num_state; j++) 
-			for (j = num_state-1, jnew = new_num-1; j >= 0; j--) 
-				if (forg[j] > ZERO) {
+		if (forg[i] > ZERO_FREQ) {
+			for (j = num_state-1, jnew = new_num-1; j >= 0; j--)
+				if (forg[j] > ZERO_FREQ) {
 					evec[i*num_state+j] = a[inew][jnew] / forg_sqrt[inew];
 					inv_evec[i*num_state+j] = a[jnew][inew] * forg_sqrt[jnew];
-					//jnew++;
 					jnew--;
 				} else {
 					evec[i*num_state+j] = (i == j);
 					inv_evec[i*num_state+j] = (i == j);
-//					evec[i*num_state+j] = 0.0;
-//					inv_evec[i*num_state+j] = 0.0;
 				}
-// 			inew++;
  			inew--;
 		} else 
 		for (j=0; j < num_state; j++) {
 			evec[i*num_state+j] = (i==j);
 			inv_evec[i*num_state+j] = (i==j);
-//			evec[i*num_state+j] = 0.0;
-//			inv_evec[i*num_state+j] = 0.0;
 		}
 
     // Only print eigenvalues and eigenvectors if state space is manageable.
@@ -531,20 +519,25 @@ void EigenDecomposition::eliminateZero(double **mat, double *forg, int num,
 	int i, j, inew, jnew;
 	new_num = 0;
 	for (i = 0; i < num; i++)
-		if (forg[i] > ZERO) 
+		if (forg[i] > ZERO_FREQ)
 			new_forg[new_num++] = forg[i];
 	if (new_num == num) return;
 	//writeDouble(forg, num);
 	//writeMat(mat, num);
 	for (i = 0, inew = 0; i < num; i++)
-		if (forg[i] > ZERO) {
+		if (forg[i] > ZERO_FREQ) {
 			for (j = 0, jnew = 0; j < num; j++) 
-				if (forg[j] > ZERO) {
+				if (forg[j] > ZERO_FREQ) {
 					new_mat[inew][jnew] = mat[i][j];
 					jnew++;
 				}
 			inew++;
-		}
+		} else {
+            for (j = 0; j < num; j++)
+                mat[i][j] = 0.0;
+            for (j = 0; j < num; j++)
+                mat[j][i] = 0.0;
+        }
 	if (verbose_mode >= VB_MED)
 		cout << "new_num_states = " << new_num << endl;
 	//writeMat(new_mat, new_num);

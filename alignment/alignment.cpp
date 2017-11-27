@@ -4125,6 +4125,9 @@ void Alignment::computeDivergenceMatrixNonRev (double *rates) {
 }
 
 void Alignment::convfreq(double *stateFrqArr) {
+
+    if (Params::getInstance().keep_zero_freq)
+        return;
 	int i, maxi=0;
 	double freq, maxfreq, sum;
 	int zero_states = 0;
