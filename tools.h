@@ -2232,7 +2232,7 @@ void parseArg(int argc, char *argv[], Params &params);
                 IN_PHYLIP if in phylip format,
                 IN_OTHER if file format unknown.
  */
-InputType detectInputFile(char *input_file);
+InputType detectInputFile(const char *input_file);
 
 /**
         if file exists, ask user to overwrite it or not

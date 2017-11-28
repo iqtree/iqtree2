@@ -2993,7 +2993,7 @@ void assignBootstrapSupport(const char *input_trees, int burnin, int max_count,
 		scale = params->scaling_factor;
 
 	MTreeSet boot_trees;
-	if (params && detectInputFile((char*) input_trees) == IN_NEXUS) {
+	if (params && detectInputFile(input_trees) == IN_NEXUS) {
 		sg.init(*params);
 		for (SplitGraph::iterator it = sg.begin(); it != sg.end(); it++)
 			hash_ss.insertSplit((*it), (*it)->getWeight());
@@ -3084,7 +3084,7 @@ void computeConsensusTree(const char *input_trees, int burnin, int max_count,
 		scale = params->scaling_factor;
 
 	MTreeSet boot_trees;
-	if (params && detectInputFile((char*) input_trees) == IN_NEXUS) {
+	if (params && detectInputFile(input_trees) == IN_NEXUS) {
 		char *user_file = params->user_file;
 		params->user_file = (char*) input_trees;
 		params->split_weight_summary = SW_COUNT; // count number of splits
