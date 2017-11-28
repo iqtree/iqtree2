@@ -381,8 +381,6 @@ enum TestType {
     TEST_NONE, TEST_COMPATIBLE, TEST_CIRCULAR, TEST_WEAKLY_COMPATIBLE, TEST_K_COMPATIBLE
 };
 
-const double ZERO_FREQ = 0.000001;
-
 /**
         State frequency type
  */

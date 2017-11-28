@@ -25,8 +25,6 @@
 #include <stdlib.h>
 #include "tools.h"
 
-//const double ZERO = 0.000001;
-const double ZERO = 0.00000;
 using namespace std;
 
 EigenDecomposition::EigenDecomposition()
@@ -266,25 +264,18 @@ void EigenDecomposition::eigensystem_sym(double **rate_params, double *state_fre
 	/* check eigenvalue equation */
 	error = 0.0;
 	for (j = 0; j < num_state; j++) {
-		for (i = 0, zero = 0.0; i < num_state; i++) {
-			for (k = 0; k < num_state; k++) zero += b[i][k] * evec[k*num_state+j];
-			zero -= eval[j] * evec[i*num_state+j];
-			if (fabs(zero) > 1.0e-3) {
-				error = max(error, fabs(zero));
-				break;
-			}
+		for (i = 0; i < num_state; i++) {
+			for (k = 0, zero = 0.0; k < num_state; k++) zero += b[i][k] * evec[k*num_state+j];
+            zero -= eval[j] * evec[i*num_state+j];
+            error = max(error, fabs(zero));
 		}
 	}
-	if (error > 1e-4) {
+	if (error >= 0.1) {
 		cout.precision(5);
+        cout.unsetf(ios::fixed);
 		cout << "\nWARNING: Eigensystem doesn't satisfy eigenvalue equation! (gap=" << error << ")" << endl;
         
-//		cout << "Rate matrix R: " << endl;
-//		for (i = 0; i < num_state; i++) {
-//			for (j = 0; j < num_state; j++) cout << rate_params[i][j] << " ";
-//			cout << endl;
-//		}
-		cout << "State frequencies (might be un-normalized): " << endl;
+		cout << " State frequencies (might be un-normalized): " << new_num << " states freq > " << ZERO_FREQ << endl;
         double sum = 0.0;
         cout.precision(7);
 		for (i = 0; i < num_state; i++) {
@@ -293,7 +284,7 @@ void EigenDecomposition::eigensystem_sym(double **rate_params, double *state_fre
         }
 		cout << endl;
         cout << "sum = " << sum << endl;
-		ASSERT(error < 1e-2);
+		ASSERT(0);
 	}
 
 	for (i=num_state-1; i>= 0; i--)
@@ -385,7 +376,7 @@ void EigenDecomposition::eigensystem_nonrev(
 	// now get back eigen
 	//for (i = 0,inew = 0; i < num_state; i++)
 	for (i = num_state-1,inew = new_num-1; i >= 0; i--)
-        if (forg[i] > ZERO) {
+        if (forg[i] > ZERO_FREQ) {
             eval[i] = eval_new[inew];
             eval_imag[i] = evali[inew];
             inew--;
@@ -399,10 +390,10 @@ void EigenDecomposition::eigensystem_nonrev(
 	// calculate the actual eigenvectors of Q and its inverse matrix
 	//for (i = 0, inew = 0; i < num_state; i++)
 	for (i = num_state-1,inew = new_num-1; i >= 0; i--)
-		if (forg[i] > ZERO) {
+		if (forg[i] > ZERO_FREQ) {
 // 			for (j = 0, jnew = 0; j < num_state; j++)
 			for (j = num_state-1, jnew = new_num-1; j >= 0; j--)
-				if (forg[j] > ZERO) {
+				if (forg[j] > ZERO_FREQ) {
 					evec[i*num_state+j] = evec_new[inew][jnew];
 					inv_evec[i*num_state+j] = inv_evec_new[inew][jnew];
 					//jnew++;
@@ -518,9 +509,10 @@ void EigenDecomposition::eliminateZero(double **mat, double *forg, int num,
 	double **new_mat, double *new_forg, int &new_num) {
 	int i, j, inew, jnew;
 	new_num = 0;
-	for (i = 0; i < num; i++)
+	for (i = 0; i < num; i++) {
 		if (forg[i] > ZERO_FREQ)
 			new_forg[new_num++] = forg[i];
+    }
 	if (new_num == num) return;
 	//writeDouble(forg, num);
 	//writeMat(mat, num);
@@ -538,8 +530,13 @@ void EigenDecomposition::eliminateZero(double **mat, double *forg, int num,
             for (j = 0; j < num; j++)
                 mat[j][i] = 0.0;
         }
-	if (verbose_mode >= VB_MED)
+	if (verbose_mode >= VB_MED) {
 		cout << "new_num_states = " << new_num << endl;
+        for (i = 0; i < new_num; i++) {
+            cout << new_mat[i][i] << " ";
+        }
+        cout << endl;
+    }
 	//writeMat(new_mat, new_num);
 	//writeDouble(new_forg, new_num);
 }

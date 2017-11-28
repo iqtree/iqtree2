@@ -18,7 +18,7 @@
 // This would be the preferred lower bound but eigendecomposition leads to
 // numerical errors.
 // const double POMO_GAMMA_MIN = 0.02;
-const double POMO_GAMMA_MIN = 0.2;
+const double POMO_GAMMA_MIN = 0.05;
 const double POMO_GAMMA_MAX = 100;
 
 enum PomoMixtureOptMode {OPT_NONE, OPT_RATEHET, OPT_POMO};

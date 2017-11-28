@@ -20,6 +20,10 @@
 #ifndef EIGENDECOMPOSITION_H
 #define EIGENDECOMPOSITION_H
 
+//const double ZERO_FREQ = 0.000001;
+const double ZERO_FREQ = 1e-10;
+
+
 /**
 Eigenvalues, eigenvectors decomposition
 
