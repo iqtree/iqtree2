@@ -116,7 +116,7 @@ int Alignment::checkAbsentStates(string msg) {
             count++;
         }
     if (count)
-        cout << ((count >= 2) ? " are" : " is") << " not present in " << msg << " that may cause numerical problems" << endl;
+        cout << ((count >= 2) ? " are" : " is") << " not present in " << msg << " and thus removed from Markov process to prevent numerical problems" << endl;
     delete[] state_freq;
     return count;
 }

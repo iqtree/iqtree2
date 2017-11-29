@@ -1763,7 +1763,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
         absent_states = iqtree.aln->checkAbsentStates("alignment");
     }
     if (absent_states > 0) {
-        outWarning(convertIntToString(absent_states) + " states (see above) are not present that may cause numerical problems");
+        outWarning(convertIntToString(absent_states) + " states (see above) are not present and thus removed from Markov process to prevent numerical problems");
         cout << endl;
     }
 
