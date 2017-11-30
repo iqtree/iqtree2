@@ -113,15 +113,20 @@ int Alignment::checkAbsentStates(string msg) {
     if (seq_type == SEQ_POMO)
       return 0;
     for (int i = 0; i < num_states; i++)
-      if (state_freq[i] <= MIN_FREQUENCY) {
-        if (count == 0)
-          cout << "WARNING: " << convertStateBackStr(i);
-        else
-          cout << ", " << convertStateBackStr(i);
-        count++;
-      }
-    if (count)
-        cout << ((count >= 2) ? " are" : " is") << " not present in " << msg << " that may cause numerical problems" << endl;
+        if (state_freq[i] == 0.0) {
+            if (!absent_states.empty())
+                absent_states += ", ";
+            absent_states += convertStateBackStr(i);
+            count++;
+        } else if (state_freq[i] <= MIN_FREQUENCY) {
+            if (!rare_states.empty())
+                rare_states += ", ";
+            rare_states += convertStateBackStr(i);
+        }
+    if (!absent_states.empty())
+        cout << "NOTE: State(s) " << absent_states << " not present in " << msg << " and thus removed from Markov process to prevent numerical problems" << endl;
+    if (!rare_states.empty())
+        cerr << "WARNING: States(s) " << rare_states << " rarely appear in " << msg << " and may cause numerical problems" << endl;
     delete[] state_freq;
     return count;
 }
