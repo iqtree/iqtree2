@@ -106,17 +106,23 @@ double chi2prob (int deg, double chi2)
 int Alignment::checkAbsentStates(string msg) {
     double *state_freq = new double[num_states];
     computeStateFreq(state_freq);
+    string absent_states, rare_states;
     int count = 0;
     for (int i = 0; i < num_states; i++)
-        if (state_freq[i] <= MIN_FREQUENCY) {
-            if (count == 0)
-                cout << "WARNING: " << convertStateBackStr(i);
-            else
-                cout << ", " << convertStateBackStr(i);
+        if (state_freq[i] == 0.0) {
+            if (!absent_states.empty())
+                absent_states += ", ";
+            absent_states += convertStateBackStr(i);
             count++;
+        } else if (state_freq[i] <= MIN_FREQUENCY) {
+            if (!rare_states.empty())
+                rare_states += ", ";
+            rare_states += convertStateBackStr(i);
         }
-    if (count)
-        cout << ((count >= 2) ? " are" : " is") << " not present in " << msg << " and thus removed from Markov process to prevent numerical problems" << endl;
+    if (!absent_states.empty())
+        cout << "NOTE: State(s) " << absent_states << " not present in " << msg << " and thus removed from Markov process to prevent numerical problems" << endl;
+    if (!rare_states.empty())
+        cerr << "WARNING: States(s) " << rare_states << " rarely appear in " << msg << " and may cause numerical problems" << endl;
     delete[] state_freq;
     return count;
 }
