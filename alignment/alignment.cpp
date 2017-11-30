@@ -107,6 +107,7 @@ double chi2prob (int deg, double chi2)
 int Alignment::checkAbsentStates(string msg) {
     double *state_freq = new double[num_states];
     computeStateFreq(state_freq);
+    string absent_states, rare_states;
     int count = 0;
     // Skip check for PoMo.
     if (seq_type == SEQ_POMO)
@@ -655,6 +656,12 @@ void Alignment::extractDataBlock(NxsCharactersBlock *data_block) {
 
 
     int seq, site;
+
+    if (data_block->taxa->GetNumTaxonLabels() == 0)
+        outError("MATRIX not found, make sure nexus command before MATRIX ends with semi-colon (;)");
+
+    if (data_block->taxa->GetNumTaxonLabels() != nseq)
+        outError("ntax is different from number of matrix rows");
 
     for (seq = 0; seq < nseq; seq++) {
         seq_names.push_back(data_block->GetTaxonLabel(seq));

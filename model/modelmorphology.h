@@ -44,6 +44,12 @@ public:
 	*/
 	virtual int getNDim() { return 0; }
 
+	/**
+		read the rates from an input stream. it will throw error messages if failed
+		@param in input stream
+	*/
+	virtual void readRates(istream &in) throw(const char*, string);
+
     virtual ~ModelMorphology();
 };
 

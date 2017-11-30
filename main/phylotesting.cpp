@@ -837,7 +837,11 @@ int getModelList(Params &params, Alignment *aln, StrVector &models, bool separat
 	int i, j;
     
 	if (seq_type == SEQ_BINARY) {
-		copyCString(bin_model_names, sizeof(bin_model_names) / sizeof(char*), model_names);
+		if (params.model_set == NULL) {
+            copyCString(bin_model_names, sizeof(bin_model_names) / sizeof(char*), model_names);
+		} else {
+			convert_string_vec(params.model_set, model_names);
+		}
 	} else if (seq_type == SEQ_MORPH) {
 		copyCString(morph_model_names, sizeof(morph_model_names) / sizeof(char*), model_names);
 	} else if (seq_type == SEQ_DNA || seq_type == SEQ_POMO) {

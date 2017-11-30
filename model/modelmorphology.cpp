@@ -29,10 +29,34 @@ void ModelMorphology::init(const char *model_name, string model_params, StateFre
 				rates[k] = 0.0;
 		}
 	} else {
-		outError("Unknown morphological model name");
+		// if name does not match, read the user-defined model
+		readParameters(model_name);
+        num_params = 0;
 	}
 	ModelMarkov::init(freq);
 }
+
+void ModelMorphology::readRates(istream &in) throw(const char*, string) {
+	int nrates = getNumRateEntries();
+	int row = 1, col = 0;
+	// since states for protein is stored in lower-triangle, special treatment is needed
+	for (int i = 0; i < nrates; i++, col++) {
+		if (col == row) {
+			row++; col = 0;
+		}
+		// switch col and row
+		int id = col*(2*num_states-col-1)/2 + (row-col-1);
+		if (id >= nrates) {
+			cout << row << " " << col << endl;
+		}
+		assert(id < nrates && id >= 0); // make sure that the conversion is correct
+		if (!(in >> rates[id]))
+			throw name+string(": Rate entries could not be read");
+		if (rates[id] < 0.0)
+			throw "Negative rates found";
+	}
+}
+
 
 ModelMorphology::~ModelMorphology() {
 }

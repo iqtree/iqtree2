@@ -1742,7 +1742,8 @@ outstreambuf* outstreambuf::open( const char* name, ios::openmode mode) {
     if (!(Params::getInstance().suppress_output_flags & OUT_LOG) && MPIHelper::getInstance().isMaster()) {
         fout.open(name, mode);
         if (!fout.is_open()) {
-            cout << "Could not open " << name << " for logging" << endl;
+            cerr << "ERROR: Could not open " << name << " for logging" << endl;
+            exit(EXIT_FAILURE);
             return NULL;
         }
         fout_buf = fout.rdbuf();

@@ -3874,7 +3874,7 @@ void quickStartGuide() {
     exit(0);
 }
 
-InputType detectInputFile(char *input_file) {
+InputType detectInputFile(const char *input_file) {
 
     if (!fileExists(input_file))
         outError("File not found ", input_file);
