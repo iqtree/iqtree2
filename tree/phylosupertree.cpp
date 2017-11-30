@@ -333,6 +333,8 @@ void PhyloSuperTree::readPartitionNexus(Params &params) {
                 info.sequence_type = getSeqType(info.model_name.substr(0, info.model_name.find_first_of("+*")));
             }
 			info.position_spec = (*it)->position_spec;
+            if (info.aln_file == "" && (info.position_spec == "" || info.position_spec == "*"))
+                outError("Empty position range for partition ", info.name);
 			trimString(info.sequence_type);
 //			cout << endl << "Reading partition " << info.name << " (model=" << info.model_name << ", aln=" <<
 //				info.aln_file << ", seq=" << info.sequence_type << ", pos=" << ((info.position_spec.length() >= 20) ? info.position_spec.substr(0,20)+"..." : info.position_spec) << ") ..." << endl;
@@ -634,7 +636,8 @@ void PhyloSuperTree::readTreeString(const string &tree_string) {
 	str << tree_string;
 	str.seekg(0, ios::beg);
 	freeNode();
-	readTree(str, rooted);
+    // bug fix 2017-11-30: in case taxon name happens to be ID
+	MTree::readTree(str, rooted);
     assignLeafNames();
 //	setAlignment(aln);
 	setRootNode(params->root);

@@ -1921,8 +1921,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
         absent_states = iqtree.aln->checkAbsentStates("alignment");
     }
     if (absent_states > 0) {
-        outWarning(convertIntToString(absent_states) + " states (see above) are not present that may cause numerical problems");
-        cout << endl;
+        cout << "NOTE: " << absent_states << " states (see above) are not present and thus removed from Markov process to prevent numerical problems" << endl;
     }
 
     // Make sure that no partial likelihood of IQ-TREE is initialized when PLL is used to save memory
@@ -3186,7 +3185,7 @@ void assignBootstrapSupport(const char *input_trees, int burnin, int max_count,
 		scale = params->scaling_factor;
 
 	MTreeSet boot_trees;
-	if (params && detectInputFile((char*) input_trees) == IN_NEXUS) {
+	if (params && detectInputFile(input_trees) == IN_NEXUS) {
 		sg.init(*params);
 		for (SplitGraph::iterator it = sg.begin(); it != sg.end(); it++)
 			hash_ss.insertSplit((*it), (*it)->getWeight());
@@ -3277,7 +3276,7 @@ void computeConsensusTree(const char *input_trees, int burnin, int max_count,
 		scale = params->scaling_factor;
 
 	MTreeSet boot_trees;
-	if (params && detectInputFile((char*) input_trees) == IN_NEXUS) {
+	if (params && detectInputFile(input_trees) == IN_NEXUS) {
 		char *user_file = params->user_file;
 		params->user_file = (char*) input_trees;
 		params->split_weight_summary = SW_COUNT; // count number of splits
