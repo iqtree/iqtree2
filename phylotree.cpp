@@ -4593,6 +4593,11 @@ void PhyloTree::removeIdenticalSeqs(Params &params) {
 		delete aln;
 		aln = new_aln;
 	}
+    if (!constraintTree.empty()) {
+        int count = constraintTree.removeTaxa(removed_seqs);
+        if (count)
+            cout << count << " taxa removed from constraint tree" << endl;
+    }
 }
 
 void PhyloTree::reinsertIdenticalSeqs(Alignment *orig_aln) {

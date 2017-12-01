@@ -79,6 +79,11 @@ void ConstraintTree::initFromTree() {
     SplitGraph sg;
     convertSplits(taxname, sg);
     sg.removeTrivialSplits();
+
+    for (iterator mit = begin(); mit != end(); mit++)
+        delete (mit->first);
+    clear();
+
     for (SplitGraph::iterator sit = sg.begin(); sit != sg.end(); sit++) {
         if (!(*sit)->containTaxon(0))
             (*sit)->invert();
@@ -92,6 +97,14 @@ void ConstraintTree::readConstraint(MTree &src_tree) {
     initFromTree();
 }
 
+int ConstraintTree::removeTaxa(StrVector &taxa_names) {
+    if (taxa_names.empty())
+        return 0;
+    int count = MTree::removeTaxa(taxa_names);
+    if (count == 0) return 0;
+    initFromTree();
+    return count;
+}
 
 bool ConstraintTree::isCompatible(StrVector &tax1, StrVector &tax2) {
 

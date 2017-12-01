@@ -677,8 +677,9 @@ public:
 
 	/** remove some taxa from the tree
 	 * @param taxa_names names of taxa that will be removed
+     * @return number of taxa actually removed
 	 */
-	void removeTaxa(StrVector &taxa_names);
+	virtual int removeTaxa(StrVector &taxa_names);
 
 	/** find a first taxon below a subtree */
 	Node *findFirstTaxon(Node *node = NULL, Node *dad = NULL);

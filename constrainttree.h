@@ -43,6 +43,12 @@ public:
     */
     void readConstraint(MTree &src_tree);
 
+	/** remove some taxa from the tree
+	 * @param taxa_names names of taxa that will be removed
+     * @return number of taxa actually removed
+	 */
+	virtual int removeTaxa(StrVector &taxa_names);
+
     /** 
         check if a "partial" split defined by two taxa name sets is compatible with the constraint tree.
         The union of 2 taxa set do not need to comprise all taxa in the constraint tree.
