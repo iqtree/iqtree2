@@ -1749,6 +1749,13 @@ void printTrees(vector<string> trees, Params &params, string suffix) {
  ***********************************************************/
 void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtree, vector<ModelInfo> &model_info) {
 
+    if (params.root) {
+        string root_name = params.root;
+        if (iqtree.aln->getSeqID(root_name) < 0)
+        outError("Alignment does not have specified outgroup taxon ", params.root);
+    }
+
+
     string dist_file;
     params.startCPUTime = getCPUTime();
     params.start_real_time = getRealTime();
