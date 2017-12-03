@@ -67,7 +67,7 @@ void reportReferences(Params &params, ofstream &out, string &original_model) {
             << "Subha Kalyaanamoorthy, Bui Quang Minh, Thomas KF Wong, Arndt von Haeseler," << endl
             << "and Lars S Jermiin (2017) ModelFinder: Fast model selection for" << endl
             << "accurate phylogenetic estimates. Nature Methods, 14:587–589." << endl
-            << "http://dx.doi.org/10.1038/nmeth.4285" << endl << endl;
+            << "https://doi.org/10.1038/nmeth.4285" << endl << endl;
         if (original_model.find("ONLY") != string::npos || (original_model.substr(0,2)=="MF" && original_model.substr(0,3)!="MFP"))
             modelfinder_only = true;
     }
@@ -76,7 +76,7 @@ void reportReferences(Params &params, ofstream &out, string &original_model) {
             << "Dominik Schrempf, Bui Quang Minh, Nicola De Maio, Arndt von Haeseler, and Carolin Kosiol" << endl
             << "(2016) Reversible polymorphism-aware phylogenetic models and their application to" << endl
             << "tree inference. J. Theor. Biol., 407:362–370." << endl
-            << "http://dx.doi.org/10.1016/j.jtbi.2016.07.042" << endl << endl;
+            << "https://doi.org/10.1016/j.jtbi.2016.07.042" << endl << endl;
     }
 
     if (!modelfinder_only)
@@ -84,27 +84,29 @@ void reportReferences(Params &params, ofstream &out, string &original_model) {
 		<< "Lam-Tung Nguyen, Heiko A. Schmidt, Arndt von Haeseler, and Bui Quang Minh" << endl
 		<< "(2015) IQ-TREE: A fast and effective stochastic algorithm for estimating" << endl
 		<< "maximum likelihood phylogenies. Mol Biol Evol, 32:268-274." << endl
-        << "http://dx.doi.org/10.1093/molbev/msu300" << endl << endl;
+        << "https://doi.org/10.1093/molbev/msu300" << endl << endl;
 
     if (params.site_freq_file || params.tree_freq_file)
     out << "Since you used site-specific frequency model please also cite: " << endl << endl
         << "Huai-Chun Wang, Edward Susko, Bui Quang Minh, and Andrew J. Roger (2017)" << endl
         << "Modeling site heterogeneity with posterior mean site frequency profiles" << endl
-        << "accelerates accurate phylogenomic estimation. Submitted." << endl << endl;
+        << "accelerates accurate phylogenomic estimation. Syst Biol, in press." << endl
+        << "https://doi.org/10.1093/sysbio/syx068" << endl << endl;
 
 
 	if (params.gbo_replicates)
 	out << "Since you used ultrafast bootstrap (UFBoot) please also cite: " << endl << endl
-		<< "Bui Quang Minh, Minh Anh Thi Nguyen, and Arndt von Haeseler (2013)" << endl
-		<< "Ultrafast approximation for phylogenetic bootstrap. Mol Biol Evol, 30:1188-95." << endl
-        << "http://dx.doi.org/10.1093/molbev/mst024" << endl << endl;
+		<< "Diep Thi Hoang, Olga Chernomor, Arndt von Haeseler, Bui Quang Minh,"
+        << "and Le Sy Vinh (2017) UFBoot2: Improving the ultrafast bootstrap" << endl
+		<< "approximation. Mol Biol Evol, in press." << endl
+        << "https://doi.org/10.1093/molbev/msx281" << endl << endl;
 
     if (params.partition_file)
     out << "Since you used partition models please also cite:" << endl << endl
         << "Olga Chernomor, Arndt von Haeseler, and Bui Quang Minh (2016)" << endl
         << "Terrace aware data structure for phylogenomic inference from" << endl
         << "supermatrices. Syst Biol, 65:997-1008." << endl
-        << "http://dx.doi.org/10.1093/sysbio/syw037" << endl << endl;
+        << "https://doi.org/10.1093/sysbio/syw037" << endl << endl;
 
 }
 
