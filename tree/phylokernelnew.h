@@ -1095,7 +1095,8 @@ inline void computeBounds(int threads, size_t elements, vector<size_t> &limits) 
     }
 
     limits.push_back(elements);
-    ASSERT(limits.size() == threads+1);
+    if (limits.size() != threads+1)
+        outError("Too many threads may slow down analysis [-nt option]. Reduce #threads or use -nt AUTO to automatically determine it");
 }
 #endif
 

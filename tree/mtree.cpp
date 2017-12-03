@@ -2268,8 +2268,9 @@ Node *MTree::findFirstTaxon(Node *node, Node *dad) {
 	return NULL;
 }
 
-void MTree::removeTaxa(StrVector &taxa_names) {
-	if (taxa_names.empty()) return;
+int MTree::removeTaxa(StrVector &taxa_names) {
+	if (taxa_names.empty())
+        return 0;
 	int count = 0;
 	for (StrVector::iterator sit = taxa_names.begin(); sit != taxa_names.end(); sit++) {
 		Node *node = findLeafName(*sit);
@@ -2309,6 +2310,7 @@ void MTree::removeTaxa(StrVector &taxa_names) {
 						(*it)->node = othernodes[1-i];
 						(*it)->length = length;
 					}
+            delete innode;
 		} else {
 			// simple delete the neighbor of innode
 			for (it = innode->neighbors.begin(); it != innode->neighbors.end(); it++)
@@ -2320,7 +2322,7 @@ void MTree::removeTaxa(StrVector &taxa_names) {
 		delete node;
 	}
 
-	if (!count) return;
+	if (!count) return 0;
 
 	NodeVector taxa;
 	getTaxa(taxa);
@@ -2331,6 +2333,7 @@ void MTree::removeTaxa(StrVector &taxa_names) {
 		(*nit)->id = id;
 	leafNum = taxa.size();
 	initializeTree();
+    return count;
 }
 
 void MTree::getSplits(SplitGraph &splits, Node* node, Node* dad) {

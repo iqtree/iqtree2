@@ -350,8 +350,9 @@ StateFreqType ModelCodon::initCodon(const char *model_name, StateFreqType freq, 
 		return FREQ_USER_DEFINED;
 	} else {
 		//cout << "User-specified model "<< model_name << endl;
-		readParameters(model_name);
+		//readParameters(model_name);
 			//name += " (user-defined)";
+        readCodonModelFile(model_name, reset_params);
 		return FREQ_USER_DEFINED;
 	}
 
@@ -689,6 +690,30 @@ void ModelCodon::readCodonModel(string &str, bool reset_params) {
 	catch (const char *str) {
 		outError(str);
 	}
+}
+
+void ModelCodon::readCodonModelFile(const char *filename, bool reset_params) {
+	try {
+		ifstream in;
+        // set the failbit and badbit
+        in.exceptions(ios::failbit | ios::badbit);
+        in.open(filename);
+        // remove the failbit
+        in.exceptions(ios::badbit);
+
+		readCodonModel(in, reset_params);
+
+        in.clear();
+        // set the failbit again
+        in.exceptions(ios::failbit | ios::badbit);
+        in.close();
+	}
+	catch (const char *str) {
+		outError(str);
+	}
+	catch (...) {
+        outError(ERR_READ_INPUT, filename);
+    }
 }
 
 void ModelCodon::decomposeRateMatrix() {
