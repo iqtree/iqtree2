@@ -16,7 +16,7 @@ Key features of IQ-TREE
 
 * __Efficient search algorithm__: Fast and effective stochastic algorithm to reconstruct phylogenetic trees by maximum likelihood. IQ-TREE compares favorably to RAxML and PhyML in terms of likelihood while requiring similar amount of computing time ([Nguyen et al., 2015]).
 * __Ultrafast bootstrap__: An ultrafast bootstrap approximation (UFBoot) to assess branch supports. UFBoot is 10 to 40 times faster than RAxML rapid bootstrap and obtains less biased support values ([Minh et al., 2013]).
-* __Ultrafast model selection__: An ultrafast and automatic model selection (ModelFinder) which is 10 to 100 times faster than jModelTest and ProtTest. ModelFinder also finds best-fit partitioning scheme like PartitionFinder.
+* __Ultrafast model selection__: An ultrafast and automatic model selection (ModelFinder) which is 10 to 100 times faster than jModelTest and ProtTest. ModelFinder also finds best-fit partitioning scheme like PartitionFinder ([Kalyaanamoorthy et al., 2017]).
 * __Phylogenetic testing__: Several fast branch tests like SH-aLRT and aBayes test ([Anisimova et al., 2011]) and tree topology tests like the approximately unbiased (AU) test ([Shimodaira, 2002]).
 
 
@@ -83,26 +83,35 @@ _The average response time is one working day._
 Citations
 ---------
 
-To cite IQ-TREE please use:
+When using ModelFinder please cite:
 
-* L.-T. Nguyen, H.A. Schmidt, A. von Haeseler, and B.Q. Minh (2015) IQ-TREE: A fast and effective stochastic algorithm for estimating maximum likelihood phylogenies. *Mol. Biol. Evol.*, 32, 268-274. [DOI: 10.1093/molbev/msu300](http://dx.doi.org/10.1093/molbev/msu300)
+* S. Kalyaanamoorthy, B.Q. Minh, T.K.F. Wong, A. von Haeseler, L.S. Jermiin (2017) ModelFinder: Fast model selection for accurate phylogenetic estimates. *Nat. Methods*, 14:587-589. <https://doi.org/10.1038/nmeth.4285>
+
+When performing tree reconstruction please cite:
+
+* L.-T. Nguyen, H.A. Schmidt, A. von Haeseler, and B.Q. Minh (2015) IQ-TREE: A fast and effective stochastic algorithm for estimating maximum likelihood phylogenies. *Mol. Biol. Evol.*, 32, 268-274. <https://doi.org/10.1093/molbev/msu300>
 
 For the ultrafast bootstrap (UFBoot) please cite:
 
-* B.Q. Minh, M.A.T. Nguyen, and A. von Haeseler (2013) Ultrafast approximation for phylogenetic bootstrap. *Mol. Biol. Evol.*, 30:1188-1195. [DOI: 10.1093/molbev/mst024](http://dx.doi.org/10.1093/molbev/mst024)
+* D.T. Hoang, O. Chernomor, A. von Haeseler, B.Q. Minh, and L.S. Vinh (2017) UFBoot2: Improving the ultrafast bootstrap approximation. *Mol. Biol. Evol.*, in press. <https://doi.org/10.1093/molbev/msx281>
+
+When using partition models please cite:
+
+O. Chernomor, A. von Haeseler, B.Q. Minh (2016) Terrace aware data structure for phylogenomic inference from supermatrices. *Syst. Biol.*, 65:997-1008. <https://doi.org/10.1093/sysbio/syw037>
 
 #### Credits and Acknowledgements
 
 Some parts of the code were taken from the following packages/libraries: [Phylogenetic likelihood library](http://www.libpll.org), [TREE-PUZZLE](http://www.tree-puzzle.de), 
 [BIONJ](http://dx.doi.org/10.1093/oxfordjournals.molbev.a025808), [Nexus Class Libary](http://dx.doi.org/10.1093/bioinformatics/btg319), [Eigen library](http://eigen.tuxfamily.org/),
-[SPRNG library](http://www.sprng.org), [Zlib library](http://www.zlib.net), gzstream library, [vectorclass library](http://www.agner.org/optimize/), [GNU scientific library](https://www.gnu.org/software/gsl/).
+[SPRNG library](http://www.sprng.org), [Zlib library](http://www.zlib.net), [gzstream library](http://www.cs.unc.edu/Research/compgeom/gzstream/), [vectorclass library](http://www.agner.org/optimize/), [GNU scientific library](https://www.gnu.org/software/gsl/).
 
 
-IQ-TREE was partially funded by the [Austrian Science Fund - FWF](http://www.fwf.ac.at/) (grant no. I760-B17 from 2012-2015 and and I 2508-B29 from 2016-2019) and the [University of Vienna](https://www.univie.ac.at/) (Initiativkolleg I059-N).
+IQ-TREE was partially funded by the [Austrian Science Fund - FWF](http://www.fwf.ac.at/) (grant no. I 760-B17 from 2012-2015 and and I 2508-B29 from 2016-2019) and the [University of Vienna](https://www.univie.ac.at/) (Initiativkolleg I059-N).
 
 
 [Anisimova et al., 2011]: http://dx.doi.org/10.1093/sysbio/syr041
 [Guindon et al., 2010]: http://dx.doi.org/10.1093/sysbio/syq010
+[Kalyaanamoorthy et al., 2017]: https://doi.org/10.1038/nmeth.4285
 [Minh et al., 2013]: http://dx.doi.org/10.1093/molbev/mst024
 [Nguyen et al., 2015]: http://dx.doi.org/10.1093/molbev/msu300
 [Shimodaira, 2002]: http://dx.doi.org/10.1080/10635150290069913
