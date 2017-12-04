@@ -1745,6 +1745,7 @@ string testOneModel(string &model_name, int model, Params &params, PhyloTree *in
         if (verbose_mode >= VB_MED)
             cout << "Optimizing model " << info.name << endl;
         iqtree->getModelFactory()->restoreCheckpoint();
+        iqtree->clearAllPartialLH();
 
         #ifdef _OPENMP
         if (num_threads <= 0) {
