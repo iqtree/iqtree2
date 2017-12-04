@@ -1353,7 +1353,7 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(TraversalInfo &info, size_t 
         /*--------------------- multifurcating node ------------------*/
 
         // now for-loop computing partial_lh over all site-patterns
-        VectorClass *partial_lh_all = (VectorClass*) &buffer_partial_lh_ptr[block*VectorClass::size()*2*thread_id];
+        VectorClass *partial_lh_all = (VectorClass*) &buffer_partial_lh_ptr[(2*block+nstates)*VectorClass::size()*thread_id];
         double *vec_tip = (double*)&partial_lh_all[block];
 
         for (ptn = ptn_lower; ptn < ptn_upper; ptn+=VectorClass::size()) {
