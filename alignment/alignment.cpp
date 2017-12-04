@@ -123,6 +123,8 @@ int Alignment::checkAbsentStates(string msg) {
                 rare_states += ", ";
             rare_states += convertStateBackStr(i);
         }
+    if (absent_states.size() >= num_states-1)
+        outError("Only one state is observed in " + msg);
     if (!absent_states.empty())
         cout << "NOTE: State(s) " << absent_states << " not present in " << msg << " and thus removed from Markov process to prevent numerical problems" << endl;
     if (!rare_states.empty())
@@ -167,117 +169,105 @@ void Alignment::checkSeqName() {
     double *freq_per_sequence = new double[num_states];
     unsigned *count_per_seq = new unsigned[num_states*getNSeq()];
     computeStateFreq(state_freq);
-    bool do_comp_test = true;
-    for (int stateno = 0; stateno < num_states; stateno++)
-        if (state_freq[stateno] <= 0)
-            do_comp_test = false;
 //    computeStateFreqPerSequence(freq_per_sequence);
     countStatePerSequence(count_per_seq);
 
-    /*if (verbose_mode >= VB_MIN)*/ {
-        if (seq_type == SEQ_POMO)
-            cout << "NOTE: The composition test for PoMo only tests the proportion of fixed states!" << endl;
-        int max_len = getMaxSeqNameLength()+1;
-        // cout << "  ID  ";
-        // cout <<  "  Sequence";
-        cout.width(max_len+14);
-        cout << right << "Gap/Ambiguity";
-        if (do_comp_test)
-            cout << "  Composition  p-value";
-        cout << endl;
-        int num_problem_seq = 0;
-        int total_gaps = 0;
-        cout.precision(2);
-        int num_failed = 0;
-        for (int i = 0; i < seq_names.size(); i++) {
-            int j;
-            int num_gaps = getNSite() - countProperChar(i);
-            total_gaps += num_gaps;
-            double percent_gaps = ((double)num_gaps / getNSite())*100.0;
-			cout.width(4);
-			cout << right << i+1 << "  ";
-            cout.width(max_len);
-            cout << left << seq_names[i] << " ";
-			cout.width(6);
-//			cout << num_gaps << " (" << percent_gaps << "%)";
-            cout << right << percent_gaps << "%";
-            if (percent_gaps > 50) {
-//				cout << " !!!";
-				num_problem_seq++;
-			}
-//            cout << "\t" << seq_states[i].size();
+    int i, df = -1;
+    for (i = 0; i < num_states; i++)
+        if (state_freq[i] > 0.0) df++;
+    
+    if (seq_type == SEQ_POMO)
+        cout << "NOTE: The composition test for PoMo only tests the proportion of fixed states!" << endl;
 
-            if (do_comp_test) {
-                double chi2 = 0.0;
-                unsigned sum_count = 0;
-                if (seq_type == SEQ_POMO) {
-                    // FIXME: Number of nucleotides hardcoded here.
-                    int nnuc = 4;
-                    // Have to normalize allele frequencies.
-                    double state_freq_norm[nnuc];
-                    double sum_freq = 0.0;
-                    for (j = 0; j < nnuc; j++) {
-                        sum_freq += state_freq[j];
-                        state_freq_norm[j] = state_freq[j];
-                    }
-                    for (j = 0; j < nnuc; j++) {
-                        state_freq_norm[j] /= sum_freq;
-                    }
-
-                    for (j = 0; j < nnuc; j++)
-                        sum_count += count_per_seq[i*num_states+j];
-                    double sum_inv = 1.0/sum_count;
-                    for (j = 0; j < nnuc; j++)
-                        freq_per_sequence[j] = count_per_seq[i*num_states+j]*sum_inv;
-                    for (j = 0; j < nnuc; j++)
-                        chi2 += (state_freq_norm[j] - freq_per_sequence[j]) * (state_freq_norm[j] - freq_per_sequence[j]) / state_freq_norm[j];
-
-                    // chi2 *= getNSite();
-                    chi2 *= sum_count;
-                    double pvalue = chi2prob(nnuc-1, chi2);
-                    if (pvalue < 0.05) {
-                        cout << "    failed ";
-                        num_failed++;
-                    } else
-                        cout << "    passed ";
-                    cout.width(9);
-                    cout << right << pvalue*100 << "%";
-                }
-                else {
-                    for (j = 0; j < num_states; j++)
-                        sum_count += count_per_seq[i*num_states+j];
-                    double sum_inv = 1.0/sum_count;
-                    for (j = 0; j < num_states; j++)
-                        freq_per_sequence[j] = count_per_seq[i*num_states+j]*sum_inv;
-                    for (j = 0; j < num_states; j++)
-                        chi2 += (state_freq[j] - freq_per_sequence[j]) * (state_freq[j] - freq_per_sequence[j]) / state_freq[j];
-
-                    // chi2 *= getNSite();
-                    chi2 *= sum_count;
-                    double pvalue = chi2prob(num_states-1, chi2);
-                    if (pvalue < 0.05) {
-                        cout << "    failed ";
-                        num_failed++;
-                    } else
-                        cout << "    passed ";
-                    cout.width(9);
-                    cout << right << pvalue*100 << "%";
-                }
-            }
-//            cout << "  " << chi2;
-			cout << endl;
-        }
-        if (num_problem_seq) cout << "WARNING: " << num_problem_seq << " sequences contain more than 50% gaps/ambiguity" << endl;
-        cout << "**** ";
-        cout.width(max_len+2);
-        cout << left << " TOTAL  ";
+    int max_len = getMaxSeqNameLength()+1;
+    cout.width(max_len+14);
+    cout << right << "Gap/Ambiguity" << "  Composition  p-value"<< endl;
+    int num_problem_seq = 0;
+    int total_gaps = 0;
+    cout.precision(2);
+    int num_failed = 0;
+    for (i = 0; i < seq_names.size(); i++) {
+        int j;
+        int num_gaps = getNSite() - countProperChar(i);
+        total_gaps += num_gaps;
+        double percent_gaps = ((double)num_gaps / getNSite())*100.0;
+        cout.width(4);
+        cout << right << i+1 << "  ";
+        cout.width(max_len);
+        cout << left << seq_names[i] << " ";
         cout.width(6);
-        cout << right << ((double)total_gaps/getNSite())/getNSeq()*100 << "% ";
-        if (do_comp_test)
-            cout << " " << num_failed << " sequences failed composition chi2 test (p-value<5%; df=" << num_states-1 << ")";
+        cout << right << percent_gaps << "%";
+        if (percent_gaps > 50) {
+            num_problem_seq++;
+        }
+
+        double chi2 = 0.0;
+        unsigned sum_count = 0;
+
+        if (seq_type == SEQ_POMO) {
+            // FIXME: Number of nucleotides hardcoded here.
+            int nnuc = 4;
+            df = nnuc-1;
+            // Have to normalize allele frequencies.
+            double state_freq_norm[nnuc];
+            double sum_freq = 0.0;
+            for (j = 0; j < nnuc; j++) {
+                sum_freq += state_freq[j];
+                state_freq_norm[j] = state_freq[j];
+            }
+            for (j = 0; j < nnuc; j++) {
+                state_freq_norm[j] /= sum_freq;
+            }
+
+            for (j = 0; j < nnuc; j++)
+                sum_count += count_per_seq[i*num_states+j];
+            double sum_inv = 1.0/sum_count;
+            for (j = 0; j < nnuc; j++)
+                freq_per_sequence[j] = count_per_seq[i*num_states+j]*sum_inv;
+            for (j = 0; j < nnuc; j++)
+                chi2 += (state_freq_norm[j] - freq_per_sequence[j]) * (state_freq_norm[j] - freq_per_sequence[j]) / state_freq_norm[j];
+
+            // chi2 *= getNSite();
+            chi2 *= sum_count;
+            double pvalue = chi2prob(nnuc-1, chi2);
+            if (pvalue < 0.05) {
+                cout << "    failed ";
+                num_failed++;
+            } else
+                cout << "    passed ";
+            cout.width(9);
+            cout << right << pvalue*100 << "%";
+        } else {
+            for (j = 0; j < num_states; j++)
+                sum_count += count_per_seq[i*num_states+j];
+            double sum_inv = 1.0/sum_count;
+            for (j = 0; j < num_states; j++)
+                freq_per_sequence[j] = count_per_seq[i*num_states+j]*sum_inv;
+            for (j = 0; j < num_states; j++)
+                if (state_freq[j] > 0.0)
+                    chi2 += (state_freq[j] - freq_per_sequence[j]) * (state_freq[j] - freq_per_sequence[j]) / state_freq[j];
+            
+            chi2 *= sum_count;
+            double pvalue = chi2prob(df, chi2);
+            if (pvalue < 0.05) {
+                cout << "    failed ";
+                num_failed++;
+            } else
+                cout << "    passed ";
+            cout.width(9);
+            cout << right << pvalue*100 << "%";
+        }
         cout << endl;
-        cout.precision(3);
     }
+    if (num_problem_seq) cout << "WARNING: " << num_problem_seq << " sequences contain more than 50% gaps/ambiguity" << endl;
+    cout << "**** ";
+    cout.width(max_len+2);
+    cout << left << " TOTAL  ";
+    cout.width(6);
+    cout << right << ((double)total_gaps/getNSite())/getNSeq()*100 << "% ";
+    cout << " " << num_failed << " sequences failed composition chi2 test (p-value<5%; df=" << df << ")" << endl;
+    cout.precision(3);
+
     delete [] count_per_seq;
     delete [] freq_per_sequence;
     delete [] state_freq;
