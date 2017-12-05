@@ -4389,7 +4389,10 @@ double PhyloTree::testOneBranch(double best_score, double *pattern_lh, int reps,
     lbp_support = 0.0;
     int times = max(reps, lbp_reps);
 
-    for (int i = 0; i < times; i++) {
+    if (max(lh[1],lh[2]) == -DBL_MAX) {
+        SH_aLRT_support = times;
+        outWarning("Branch where both NNIs violate constraint tree will show 100% SH-aLRT support");
+    } else for (int i = 0; i < times; i++) {
         double lh_new[NUM_NNI];
         // resampling estimated log-likelihood (RELL)
         resampleLh(pat_lh, lh_new);

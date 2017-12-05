@@ -1172,7 +1172,10 @@ NNIMove PhyloSuperTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NN
     myMove.newloglh = -DBL_MAX;
     // return if both NNIs do not satisfy constraint
     if (!nni_ok[0] && !nni_ok[1]) {
-        ASSERT(!nniMoves);
+//        ASSERT(!nniMoves);
+        if (nniMoves) {
+            nniMoves[0].newloglh = nniMoves[1].newloglh = -DBL_MAX;
+        }
         return myMove;
     }
 
