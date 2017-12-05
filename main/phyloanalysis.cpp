@@ -96,7 +96,7 @@ void reportReferences(Params &params, ofstream &out, string &original_model) {
 
 	if (params.gbo_replicates)
 	out << "Since you used ultrafast bootstrap (UFBoot) please also cite: " << endl << endl
-		<< "Diep Thi Hoang, Olga Chernomor, Arndt von Haeseler, Bui Quang Minh,"
+		<< "Diep Thi Hoang, Olga Chernomor, Arndt von Haeseler, Bui Quang Minh," << endl
         << "and Le Sy Vinh (2017) UFBoot2: Improving the ultrafast bootstrap" << endl
 		<< "approximation. Mol Biol Evol, in press." << endl
         << "https://doi.org/10.1093/molbev/msx281" << endl << endl;
@@ -893,11 +893,11 @@ void reportPhyloAnalysis(Params &params, string &original_model,
                     << "\t" << (*it)->getAlnNSite() - (*it)->aln->num_variant_sites
                     << "\t" << int((*it)->aln->frac_const_sites*(*it)->getAlnNSite()) << endl;
 			}
-			out << endl
-                << "Unique: Number of unique site patterns" << endl
-                << "Infor:  Number of parsimony-informative sites" << endl
-                << "Invar:  Number of invariant sites" << endl
-                << "Const:  Number of constant sites (can be subset of invariant sites)" << endl << endl;
+			out << endl << "Column meanings:" << endl
+                << "  Unique: Number of unique site patterns" << endl
+                << "  Infor:  Number of parsimony-informative sites" << endl
+                << "  Invar:  Number of invariant sites" << endl
+                << "  Const:  Number of constant sites (can be subset of invariant sites)" << endl << endl;
 
 		} else
 			reportAlignment(out, *(tree.aln), tree.removed_seqs.size());

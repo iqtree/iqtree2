@@ -3774,12 +3774,14 @@ void IQTree::summarizeBootstrap(Params &params, MTreeSet &trees) {
 //    MTree::readTree(tree_stream, rooted);
 
     assignLeafNames();
-    if (isSuperTree()) {
-        ((PhyloSuperTree*) this)->mapTrees();
-    } else {
-		initializeAllPartialLh();
-		clearAllPartialLH();
-    }
+
+    // 2017-12-05: commented out, not sure why doing this, which disort branch lengths
+//    if (isSuperTree()) {
+//        ((PhyloSuperTree*) this)->mapTrees();
+//    } else {
+//		initializeAllPartialLh();
+//		clearAllPartialLH();
+//    }
 
     if (!save_all_trees) {
         out_file = params.out_prefix;
