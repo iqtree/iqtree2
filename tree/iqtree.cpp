@@ -104,7 +104,6 @@ void IQTree::saveUFBoot(Checkpoint *checkpoint) {
         CKP_SAVE(sample_end);
         checkpoint->startList(boot_samples.size());
         checkpoint->setListElement(sample_start-1);
-        // TODO: save boot_trees_brlen
         for (int id = sample_start; id != sample_end; id++) {
             checkpoint->addListElement();
             stringstream ss;
@@ -119,7 +118,6 @@ void IQTree::saveUFBoot(Checkpoint *checkpoint) {
         int boot_splits_size = boot_splits.size();
         CKP_SAVE(boot_splits_size);
         checkpoint->startList(boot_samples.size());
-        // TODO: save boot_trees_brlen
         for (int id = 0; id != boot_samples.size(); id++) {
             checkpoint->addListElement();
             stringstream ss;
@@ -365,23 +363,8 @@ void IQTree::initSettings(Params &params) {
             boot_orig_logl.resize(params.gbo_replicates, -DBL_MAX);
             boot_trees.resize(params.gbo_replicates, "");
             boot_counts.resize(params.gbo_replicates, 0);
-            if (params.print_ufboot_trees == 2)
-                boot_trees_brlen.resize(params.gbo_replicates);
         } else {
             cout << "CHECKPOINT: " << boot_trees.size() << " UFBoot trees and " << boot_splits.size() << " UFBootSplits restored" << endl;
-            // TODO: quick and dirty fix, no branch lengths are saved after checkpointing
-            if (params.print_ufboot_trees == 2) {
-                boot_trees_brlen.resize(params.gbo_replicates);
-                string ufboot_file = params.out_prefix + string(".ufboot");
-                if (fileExists(ufboot_file)) {
-                    ifstream in(ufboot_file.c_str());
-                    for (i = 0; i < params.gbo_replicates && !in.eof(); i++)
-                        in >> boot_trees_brlen[i];
-                    in.close();
-                } else {
-                    outWarning("Cannot properly restore bootstrap trees with branch lengths");
-                }
-            }
         }
         VerboseMode saved_mode = verbose_mode;
         verbose_mode = VB_QUIET;
@@ -2743,8 +2726,15 @@ void IQTree::refineBootTrees() {
 
     int refined_trees = 0;
 
+    int refined_samples = 0;
+
+    checkpoint->startStruct("UFBoot");
+    if (CKP_RESTORE(refined_samples))
+        cout << "CHECKPOINT: " << refined_samples << " refined samples restored" << endl;
+    checkpoint->endStruct();
+
 	// do bootstrap analysis
-	for (int sample = 0; sample < boot_trees.size(); sample++) {
+	for (int sample = refined_samples; sample < boot_trees.size(); sample++) {
         // create bootstrap alignment
 		Alignment* bootstrap_alignment;
 		if (aln->isSuperAlignment())
@@ -2783,7 +2773,12 @@ void IQTree::refineBootTrees() {
         boot_tree->setLikelihoodKernel(sse, num_threads);
 
         // load the current ufboot tree
-        boot_tree->readTreeStringSeqName(boot_trees_brlen[sample]);
+        boot_tree->readTreeString(boot_trees[sample]);
+
+        // just in case some branch lengths are negative
+        if (int num_neg = boot_tree->wrapperFixNegativeBranch(false))
+            outWarning("Bootstrap tree " + convertIntToString(sample+1) + " has " +
+                convertIntToString(num_neg) + "non-positive branch lengths");
 
         // REMARK: branch lengths were estimated from original alignments
         // for bootstrap_alignment, they still thus need to be reoptimized a bit
@@ -2799,12 +2794,12 @@ void IQTree::refineBootTrees() {
         }
 
 		stringstream ostr;
-		boot_tree->printTree(ostr, WT_TAXON_ID | WT_SORT_TAXA);
+        if (params->print_ufboot_trees == 2)
+            boot_tree->printTree(ostr, WT_TAXON_ID | WT_SORT_TAXA | WT_BR_LEN | WT_BR_LEN_SHORT);
+        else
+            boot_tree->printTree(ostr, WT_TAXON_ID | WT_SORT_TAXA);
 		boot_trees[sample] = ostr.str();
 		boot_logl[sample] = boot_tree->curScore;
-        ostr.seekp(0, ios::beg);
-        boot_tree->printTree(ostr, WT_BR_LEN);
-        boot_trees_brlen[sample] = ostr.str();
 
 
         // delete memory
@@ -2819,6 +2814,14 @@ void IQTree::refineBootTrees() {
 
         if ((sample+1) % 100 == 0)
             cout << sample+1 << " samples done" << endl;
+
+        saveCheckpoint();
+        checkpoint->startStruct("UFBoot");
+        refined_samples = sample;
+        CKP_SAVE(refined_samples);
+        checkpoint->endStruct();
+
+        checkpoint->dump();
 
 	}
 
@@ -3602,15 +3605,13 @@ void IQTree::saveCurrentTree(double cur_logl) {
 //        int updated = 0;
 //        int nsamples = boot_samples.size();
         ostringstream ostr;
-        string tree_str, tree_str_brlen;
+        string tree_str;
         setRootNode(params->root);
-        printTree(ostr, WT_TAXON_ID + WT_SORT_TAXA);
+        if (params->print_ufboot_trees == 2)
+            printTree(ostr, WT_TAXON_ID + WT_SORT_TAXA + WT_BR_LEN + WT_BR_LEN_SHORT);
+        else
+            printTree(ostr, WT_TAXON_ID + WT_SORT_TAXA);
         tree_str = ostr.str();
-        if (params->print_ufboot_trees == 2) {
-            ostringstream ostr_brlen;
-			printTree(ostr_brlen, WT_BR_LEN);
-			tree_str_brlen = ostr_brlen.str();
-        }
 
     #ifdef _OPENMP
         int rand_seed = random_int(1000);
@@ -3647,9 +3648,6 @@ void IQTree::saveCurrentTree(double cur_logl) {
                 boot_logl[sample] = max(boot_logl[sample], rell);
                 boot_orig_logl[sample] = cur_logl;
                 boot_trees[sample] = tree_str;
-                if (params->print_ufboot_trees == 2) {
-                	boot_trees_brlen[sample] = tree_str_brlen;
-                }
             }
         }
     #ifdef _OPENMP
@@ -3810,38 +3808,30 @@ void IQTree::summarizeBootstrap(Params &params, MTreeSet &trees) {
 void IQTree::writeUFBootTrees(Params &params) {
     MTreeSet trees;
 //    IntVector tree_weights;
-    int sample, i, j;
+    int i, j;
 	string filename = params.out_prefix;
 	filename += ".ufboot";
 	ofstream out(filename.c_str());
 
-	if (params.print_ufboot_trees == 1) {
-		// print trees without branch lengths
-        trees.init(boot_trees, rooted);
-		for (i = 0; i < trees.size(); i++) {
-			NodeVector taxa;
-			// change the taxa name from ID to real name
-			trees[i]->getOrderedTaxa(taxa);
-			for (j = 0; j < taxa.size(); j++)
-				taxa[j]->name = aln->getSeqName(taxa[j]->id);
-			if (removed_seqs.size() > 0) {
-				// reinsert removed seqs into each tree
-				trees[i]->insertTaxa(removed_seqs, twin_seqs);
-			}
-			// now print to file
-			for (j = 0; j < trees.tree_weights[i]; j++)
-				if (params.print_ufboot_trees == 1)
-					trees[i]->printTree(out, WT_NEWLINE);
-				else
-					trees[i]->printTree(out, WT_NEWLINE + WT_BR_LEN);
-		}
-		cout << "UFBoot trees printed to " << filename << endl;
-	} else {
-		// with branch lengths
-		for (sample = 0; sample < boot_trees_brlen.size(); sample++)
-			out << boot_trees_brlen[sample] << endl;
-		cout << "UFBoot trees with branch lengths printed to " << filename << endl;
-	}
+    trees.init(boot_trees, rooted);
+    for (i = 0; i < trees.size(); i++) {
+        NodeVector taxa;
+        // change the taxa name from ID to real name
+        trees[i]->getOrderedTaxa(taxa);
+        for (j = 0; j < taxa.size(); j++)
+            taxa[j]->name = aln->getSeqName(taxa[j]->id);
+        if (removed_seqs.size() > 0) {
+            // reinsert removed seqs into each tree
+            trees[i]->insertTaxa(removed_seqs, twin_seqs);
+        }
+        // now print to file
+        for (j = 0; j < trees.tree_weights[i]; j++)
+            if (params.print_ufboot_trees == 1)
+                trees[i]->printTree(out, WT_NEWLINE);
+            else
+                trees[i]->printTree(out, WT_NEWLINE + WT_BR_LEN);
+    }
+    cout << "UFBoot trees printed to " << filename << endl;
 	out.close();
 }
 
