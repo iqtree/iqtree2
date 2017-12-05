@@ -176,7 +176,7 @@ void IQTree::restoreCheckpoint() {
     stop_rule.restoreCheckpoint();
     candidateTrees.restoreCheckpoint();
 
-    if (params->gbo_replicates > 0 && checkpoint->hasKey("UFBoot.logl_cutoff")) {
+    if (params->gbo_replicates > 0 && checkpoint->hasKeyPrefix("UFBoot")) {
         checkpoint->startStruct("UFBoot");
 //        CKP_RESTORE(max_candidate_trees);
         CKP_RESTORE(logl_cutoff);

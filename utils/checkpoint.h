@@ -125,6 +125,12 @@ public:
 	 */
 	bool hasKey(string key);
 
+	/**
+	 * @return true if checkpoint contains the key prefix
+	 * @param key_prefix key prefix to search for
+	 */
+	bool hasKeyPrefix(string key_prefix);
+
     /*-------------------------------------------------------------
      * series of get function to get value of a key
      *-------------------------------------------------------------*/
