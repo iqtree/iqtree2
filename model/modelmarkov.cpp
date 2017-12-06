@@ -753,10 +753,12 @@ bool ModelMarkov::isUnstableParameters() {
 	int i;
     // NOTE: zero rates are not consider unstable anymore
 	for (i = 0; i < nrates; i++)
-		if (/*rates[i] < MIN_RATE+TOL_RATE || */rates[i] > MAX_RATE-TOL_RATE)
+		if (/*rates[i] < MIN_RATE+TOL_RATE || */rates[i] > MAX_RATE*0.99)
 			return true;
+
+    if (freq_type == FREQ_ESTIMATE)
 	for (i = 0; i < num_states; i++)
-		if (state_freq[i] < MIN_RATE+TOL_RATE)
+		if (state_freq[i] > 0.0 && state_freq[i] < MIN_RATE+TOL_RATE)
 			return true;
 	return false;
 }
@@ -799,7 +801,8 @@ double ModelMarkov::optimizeParameters(double gradient_epsilon) {
 
 	//if (freq_type == FREQ_ESTIMATE) scaleStateFreq(false);
 
-	double *variables = new double[ndim+1];
+	double *variables = new double[ndim+1]; // used for BFGS numerical recipes
+    double *variables2 = new double[ndim+1]; // used for L-BFGS-B
 	double *upper_bound = new double[ndim+1];
 	double *lower_bound = new double[ndim+1];
 	bool *bound_check = new bool[ndim+1];
@@ -811,13 +814,31 @@ double ModelMarkov::optimizeParameters(double gradient_epsilon) {
 
 	// by BFGS algorithm
 	setVariables(variables);
+    setVariables(variables2);
 	setBounds(lower_bound, upper_bound, bound_check);
-    if (phylo_tree->params->optimize_alg.find("BFGS-B") == string::npos)
-        score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound, bound_check, max(gradient_epsilon, TOL_RATE));
-    else
-        score = -L_BFGS_B(ndim, variables+1, lower_bound+1, upper_bound+1, max(gradient_epsilon, TOL_RATE));
+//    if (phylo_tree->params->optimize_alg.find("BFGS-B") == string::npos)
+//        score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound, bound_check, max(gradient_epsilon, TOL_RATE));
+//    else
+//        score = -L_BFGS_B(ndim, variables+1, lower_bound+1, upper_bound+1, max(gradient_epsilon, TOL_RATE));
 
+    // 2017-12-06: more robust optimization using 2 different routines
+    // when estimates are at boundary
+    score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound, bound_check, max(gradient_epsilon, TOL_RATE));
 	bool changed = getVariables(variables);
+
+    if (isUnstableParameters()) {
+        // parameters at boundary, restart with L-BFGS-B with parameters2
+        double score2 = -L_BFGS_B(ndim, variables2+1, lower_bound+1, upper_bound+1, max(gradient_epsilon, TOL_RATE));
+        if (score2 > score+0.1) {
+            cout << "NICE: L-BFGS-B found better parameters with LnL=" << score2 << " than BFGS LnL=" << score << endl;
+            changed = getVariables(variables2);
+            score = score2;
+        } else {
+            // otherwise, revert what BFGS found
+            changed = getVariables(variables);
+        }
+    }
+
     // BQM 2015-09-07: normalize state_freq
 	if (is_reversible && freq_type == FREQ_ESTIMATE) {
         scaleStateFreq(true);
@@ -832,6 +853,7 @@ double ModelMarkov::optimizeParameters(double gradient_epsilon) {
 	delete [] bound_check;
 	delete [] lower_bound;
 	delete [] upper_bound;
+	delete [] variables2;
 	delete [] variables;
 
 	return score;

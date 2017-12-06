@@ -716,7 +716,7 @@ bool Optimization::restartParameters(double guess[], int ndim, double lower[], d
 
 double Optimization::minimizeMultiDimen(double guess[], int ndim, double lower[], double upper[], bool bound_check[], double gtol, double *hessian) {
 	int i, iter;
-	double fret, minf = 10000000.0;
+	double fret, minf = 1e+12;
 	double *minx = new double [ndim+1];
 	int count = 0;
 	bool restart;
