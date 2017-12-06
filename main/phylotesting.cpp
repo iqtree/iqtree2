@@ -1751,8 +1751,8 @@ string testOneModel(string &model_name, int model, Params &params, PhyloTree *in
         if (num_threads <= 0) {
             num_threads = iqtree->testNumThreads();
             omp_set_num_threads(num_threads);
-        }
-        iqtree->warnNumThreads();
+        } else
+            iqtree->warnNumThreads();
         #endif
 
 
