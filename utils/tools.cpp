@@ -753,6 +753,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.split_threshold = 0.0;
     params.split_threshold_str = NULL;
     params.split_weight_threshold = -1000;
+    params.collapse_zero_branch = false;
     params.split_weight_summary = SW_SUM;
     params.gurobi_format = true;
     params.gurobi_threads = 1;
@@ -1576,6 +1577,12 @@ void parseArg(int argc, char *argv[], Params &params) {
 					throw "Split weight threshold is negative";
 				continue;
 			}
+
+            if (strcmp(argv[cnt], "-czb") == 0 || strcmp(argv[cnt], "--collapse-zero-branch") == 0) {
+                params.collapse_zero_branch = true;
+                continue;
+            }
+
 			if (strcmp(argv[cnt], "-swc") == 0) {
 				params.split_weight_summary = SW_COUNT;
 				continue;
@@ -3825,7 +3832,8 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -me <epsilon>        LogL epsilon for parameter estimation (default 0.01)" << endl
             << "  --no-outfiles        Suppress printing output files" << endl
             << "  --eigenlib           Use Eigen3 library" << endl
-            << "  -alninfo             Print alignment sites statistics to .alninfo" << endl;
+            << "  -alninfo             Print alignment sites statistics to .alninfo" << endl
+            << "  -czb                 Collapse zero branches in final tree" << endl;
 //            << "  -d <file>            Reading genetic distances from file (default: JC)" << endl
 //			<< "  -d <outfile>         Calculate the distance matrix inferred from tree" << endl
 //			<< "  -stats <outfile>     Output some statistics about branch lengths" << endl

@@ -2353,6 +2353,12 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 			iqtree.summarizeBootstrap(params);
 	}
 
+    if (params.collapse_zero_branch) {
+        cout << "Collapsing near-zero internal branches... ";
+        cout << iqtree.collapseInternalBranches(NULL, NULL, params.min_branch_length*4);
+        cout << " collapsed" << endl;
+    }
+
 	printFinalSearchInfo(params, iqtree, search_cpu_time, search_real_time);
 
 	// BUG FIX: readTreeString(bestTreeString) not needed before this line

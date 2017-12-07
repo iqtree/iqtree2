@@ -138,6 +138,15 @@ public:
     virtual void restoreBranchLengths(DoubleVector &lenvec, int startid = 0, PhyloNode *node = NULL, PhyloNode *dad = NULL);
 
     /**
+        Collapse all internal branches with length <= threshold
+		@param node the starting node, NULL to start from the root
+		@param dad dad of the node, used to direct the search
+        @param threshold branch length threshold
+        @return number of branches collapsed
+    */
+    virtual int collapseInternalBranches(Node *node = NULL, Node *dad = NULL, double threshold = 0.0);
+
+    /**
             allocate a new node. Override this if you have an inherited Node class.
             @param node_id node ID
             @param node_name node name

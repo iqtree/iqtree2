@@ -72,31 +72,6 @@ void MExtTree::setZeroInternalBranches(int num_zero_len) {
 	}
 }
 
-void MExtTree::collapseZeroBranches(Node *node, Node *dad, double threshold) {
-	if (!node) node = root;
-	FOR_NEIGHBOR_DECLARE(node, dad, it) {
-		collapseZeroBranches((*it)->node, node, threshold);
-	}
-	NeighborVec nei_vec;
-	nei_vec.insert(nei_vec.begin(), node->neighbors.begin(), node->neighbors.end());
-	for (it = nei_vec.begin(); it != nei_vec.end(); it++) 
-	if ((*it)->node != dad) {
-		if ((*it)->length <= threshold) { // delete the child node
-			Node *child = (*it)->node;
-			bool first = true;
-			FOR_NEIGHBOR_IT(child, node, it2) {
-				if (first)
-					node->updateNeighbor(child, (*it2)->node, (*it2)->length);
-				else
-					node->addNeighbor((*it2)->node, (*it2)->length);
-				(*it2)->node->updateNeighbor(child, node);
-				first = false;
-			}
-			delete child;
-		}
-	}
-}
-
 void MExtTree::generateCaterpillar(int size) {
 	if (size < 3)
 		outError(ERR_FEW_TAXA);

@@ -819,6 +819,35 @@ public:
 	void reportDisagreedTrees(vector<string> &taxname, MTreeSet &trees, Split &mysplit);
 
 
+    /********************************************************
+        COLLAPSING BRANCHES
+    ********************************************************/
+
+    /**
+        remove a node from tree
+        @param dad dad of the removed node
+        @param node node to be removed
+    */
+    void removeNode(Node *dad, Node *node);
+
+    /**
+        Collapse all branches with length <= threshold
+		@param node the starting node, NULL to start from the root
+		@param dad dad of the node, used to direct the search
+        @param threshold branch length threshold
+        @return number of branches collapsed
+    */
+	int collapseZeroBranches(Node *node = NULL, Node *dad = NULL, double threshold = 0.0);
+
+    /**
+        Collapse all internal branches with length <= threshold
+		@param node the starting node, NULL to start from the root
+		@param dad dad of the node, used to direct the search
+        @param threshold branch length threshold
+        @return number of branches collapsed
+    */
+    virtual int collapseInternalBranches(Node *node = NULL, Node *dad = NULL, double threshold = 0.0);
+
 protected:
     /**
      * 		Hash stable mapping a split into branch.

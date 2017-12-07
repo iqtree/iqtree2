@@ -2223,6 +2223,69 @@ void MTree::createBootstrapSupport(vector<string> &taxname, MTreeSet &trees, Spl
 	}	
 }
 
+void MTree::removeNode(Node *dad, Node *node) {
+//    Node *child = (*it)->node;
+    bool first = true;
+    FOR_NEIGHBOR_IT(node, dad, it2) {
+        if (first)
+            dad->updateNeighbor(node, (*it2)->node, (*it2)->length);
+        else
+            dad->addNeighbor((*it2)->node, (*it2)->length);
+        (*it2)->node->updateNeighbor(node, dad);
+        first = false;
+    }
+    delete node;
+
+//    Node *child = (*it)->node;
+//    bool first = true;
+//    FOR_NEIGHBOR_IT(child, node, it2) {
+//        if (first)
+//            node->updateNeighbor(child, (*it2)->node, (*it2)->length);
+//        else
+//            node->addNeighbor((*it2)->node, (*it2)->length);
+//        (*it2)->node->updateNeighbor(child, node);
+//        first = false;
+//    }
+//    delete child;
+}
+
+
+int MTree::collapseZeroBranches(Node *node, Node *dad, double threshold) {
+	if (!node) node = root;
+    int count = 0;
+	FOR_NEIGHBOR_DECLARE(node, dad, it) {
+		count += collapseZeroBranches((*it)->node, node, threshold);
+	}
+	NeighborVec nei_vec;
+	nei_vec.insert(nei_vec.begin(), node->neighbors.begin(), node->neighbors.end());
+	for (it = nei_vec.begin(); it != nei_vec.end(); it++) 
+	if ((*it)->node != dad && (*it)->length <= threshold) {
+		// delete the child node
+        removeNode(node, (*it)->node);
+        count++;
+	}
+    return count;
+}
+
+int MTree::collapseInternalBranches(Node *node, Node *dad, double threshold) {
+	if (!node) node = root;
+    int count = 0;
+	FOR_NEIGHBOR_DECLARE(node, dad, it) {
+		count += collapseInternalBranches((*it)->node, node, threshold);
+	}
+    if (node->isLeaf())
+        return count;
+	NeighborVec nei_vec;
+	nei_vec.insert(nei_vec.begin(), node->neighbors.begin(), node->neighbors.end());
+	for (it = nei_vec.begin(); it != nei_vec.end(); it++) 
+	if ((*it)->node != dad && !(*it)->node->isLeaf() && (*it)->length <= threshold) {
+		// delete the child node
+        removeNode(node, (*it)->node);
+        count++;
+	}
+    return count;
+}
+
 void MTree::insertTaxa(StrVector &new_taxa, StrVector &existing_taxa) {
 	if (new_taxa.empty()) return;
 	IntVector id;
