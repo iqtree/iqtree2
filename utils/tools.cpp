@@ -780,6 +780,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.concatenate_aln = NULL;
     params.aln_nogaps = false;
     params.aln_no_const_sites = false;
+    params.print_aln_info = false;
 //    params.parsimony = false;
 //    params.parsimony_tree = false;
     params.tree_spr = false;
@@ -1793,6 +1794,10 @@ void parseArg(int argc, char *argv[], Params &params) {
 			}
 			if (strcmp(argv[cnt], "-noconst") == 0) {
 				params.aln_no_const_sites = true;
+				continue;
+			}
+			if (strcmp(argv[cnt], "-alninfo") == 0) {
+				params.print_aln_info = true;
 				continue;
 			}
 //			if (strcmp(argv[cnt], "-parstree") == 0) {
@@ -3819,7 +3824,8 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -fconst f1,...,fN    Add constant patterns into alignment (N=#nstates)" << endl
             << "  -me <epsilon>        LogL epsilon for parameter estimation (default 0.01)" << endl
             << "  --no-outfiles        Suppress printing output files" << endl
-            << "  --eigenlib           Use Eigen3 library" << endl;
+            << "  --eigenlib           Use Eigen3 library" << endl
+            << "  -alninfo             Print alignment sites statistics to .alninfo" << endl;
 //            << "  -d <file>            Reading genetic distances from file (default: JC)" << endl
 //			<< "  -d <outfile>         Calculate the distance matrix inferred from tree" << endl
 //			<< "  -stats <outfile>     Output some statistics about branch lengths" << endl

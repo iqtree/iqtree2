@@ -102,6 +102,12 @@ public:
 	*/
 	virtual void getPatternFreq(IntVector &pattern_freq);
 
+    /**
+        Print all site information to a file
+        @param filename output file name
+    */
+    virtual void printSiteInfo(const char* filename);
+
 
     /**
             extract sub-alignment of a sub-set of sequences

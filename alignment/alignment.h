@@ -113,6 +113,20 @@ public:
 	void computeConst(Pattern &pat);
 
 
+    void printSiteInfoHeader(ostream& out, const char* filename, bool partition = false);
+    /**
+        Print all site information to a stream
+        @param out output stream
+        @param part_id partition ID, negative to omit
+    */
+    void printSiteInfo(ostream &out, int part_id);
+
+    /**
+        Print all site information to a file
+        @param filename output file name
+    */
+    virtual void printSiteInfo(const char* filename);
+
     /**
      * add const patterns into the alignment
      * @param freq_const_pattern comma-separated list of const pattern frequencies

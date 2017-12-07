@@ -291,6 +291,19 @@ void SuperAlignment::getPatternFreq(IntVector &pattern_freq) {
 	}
 }
 
+void SuperAlignment::printSiteInfo(const char* filename) {
+    try {
+        ofstream out(filename);
+        printSiteInfoHeader(out, filename, true);
+        int id = 1;
+        for (auto it = partitions.begin(); it != partitions.end(); it++, id++)
+            (*it)->printSiteInfo(out, id);
+        out.close();
+    } catch (...) {
+        outError(ERR_WRITE_OUTPUT, filename);
+    }
+}
+
 void SuperAlignment::createBootstrapAlignment(Alignment *aln, IntVector* pattern_freq, const char *spec) {
 	ASSERT(aln->isSuperAlignment());
 	Alignment::copyAlignment(aln);

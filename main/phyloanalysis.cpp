@@ -2957,6 +2957,12 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
             tree = new IQTree(alignment);
 	}
 
+    if (params.print_aln_info) {
+        string site_info_file = string(params.out_prefix) + ".alninfo";
+        alignment->printSiteInfo(site_info_file.c_str());
+        cout << "Alignment sites statistics printed to " << site_info_file << endl;
+    }
+
     tree->setCheckpoint(checkpoint);
     if (params.min_branch_length <= 0.0) {
         params.min_branch_length = 1e-6;

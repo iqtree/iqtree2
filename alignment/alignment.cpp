@@ -814,6 +814,57 @@ void Alignment::computeConst(Pattern &pat) {
 }
 
 
+void Alignment::printSiteInfo(ostream &out, int part_id) {
+    int nsite = getNSite();
+    for (int site = 0; site != nsite; site++) {
+        Pattern ptn = getPattern(site);
+        if (part_id >= 0)
+            out << part_id << "\t";
+        out << site+1 << "\t";
+        if (ptn.isInformative())
+            out << "I";
+        else if (ptn.isConst()) {
+            if (ptn.const_char == STATE_UNKNOWN)
+                out << "-";
+            else if (ptn.const_char < num_states)
+                out << "C";
+            else
+                out << "c";
+        } else
+            out << "U";
+        out << endl;
+    }
+}
+
+void Alignment::printSiteInfoHeader(ostream &out, const char* filename, bool partition) {
+    out << "# Alignment site statistics" << endl
+        << "# This file can be read in MS Excel or in R with command:" << endl
+        << "#   tab=read.table('" <<  filename << "',header=TRUE)" << endl
+        << "# Columns are tab-separated with following meaning:" << endl;
+    if (partition)
+        out << "#   Part:   Partition ID" << endl
+            << "#   Site:   Site ID within partition (starting from 1 for each partition)" << endl;
+    else
+        out << "#   Site:   Site ID" << endl;
+
+    out << "#   Stat:   Statistic, I=informative, C=constant, c=constant+ambiguous," << endl
+        << "#           U=Uninformative but not constant, -=all-gaps" << endl;
+    if (partition)
+        out << "Part\t";
+    out << "Site\tStat" << endl;
+}
+
+void Alignment::printSiteInfo(const char* filename) {
+    try {
+        ofstream out(filename);
+        printSiteInfoHeader(out, filename);
+        printSiteInfo(out, -1);
+        out.close();
+    } catch (...) {
+        outError(ERR_WRITE_OUTPUT, filename);
+    }
+}
+
 bool Alignment::addPattern(Pattern &pat, int site, int freq) {
     // check if pattern contains only gaps
     bool gaps_only = true;

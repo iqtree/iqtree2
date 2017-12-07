@@ -897,6 +897,9 @@ public:
      */
     bool aln_no_const_sites;
 
+    /** TRUE to print .alninfo file */
+    bool print_aln_info;
+
     /**
             OBSOLETE compute parsimony score on trees
      */
