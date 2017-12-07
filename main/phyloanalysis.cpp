@@ -2869,7 +2869,8 @@ void computeSiteFrequencyModel(Params &params, Alignment *alignment) {
 #endif
 
     tree->initializeAllPartialLh();
-    tree->getModelFactory()->optimizeParameters(params.fixed_branch_length, true, params.modelEps);
+    // 2017-12-07: Increase espilon ten times (0.01 -> 0.1) to speedup PMSF computation
+    tree->getModelFactory()->optimizeParameters(params.fixed_branch_length, true, params.modelEps*10);
 
     size_t nptn = alignment->getNPattern(), nstates = alignment->num_states;
     double *ptn_state_freq = new double[nptn*nstates];
