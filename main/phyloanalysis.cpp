@@ -1070,15 +1070,17 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 			out << "Consensus tree is constructed from "
 					<< (params.num_bootstrap_samples ? params.num_bootstrap_samples : params.gbo_replicates)
 					<< " bootstrap trees";
-            if (params.gbo_replicates) {
-                out << endl << "Log-likelihood of consensus tree: " << tree.boot_consense_logl;
+            if (params.gbo_replicates || params.num_bootstrap_samples) {
+                out << endl << "Log-likelihood of consensus tree: " << fixed << tree.boot_consense_logl;
             }
 			string con_file = params.out_prefix;
 			con_file += ".contree";
 
             // -- Mon Apr 17 21:14:53 BST 2017
             // DONE Minh: merged correctly
-            out << endl << "Robinson-Foulds distance between ML tree and consensus tree: " << params.contree_rfdist << endl;
+            if (params.compute_ml_tree)
+                out << endl << "Robinson-Foulds distance between ML tree and consensus tree: "
+                    << params.contree_rfdist << endl;
             // --
             
             out << endl << "Branches with bootstrap support >"
@@ -2565,6 +2567,28 @@ void exhaustiveSearchGAMMAInvar(Params &params, IQTree &iqtree) {
 }
 
 
+/** 
+    optimize branch lengths of consensus tree
+*/
+void optimizeConTree(Params &params, IQTree *tree) {
+    string contree_file = string(params.out_prefix) + ".contree";
+
+    IntVector rfdist;
+    tree->computeRFDist(contree_file.c_str(), rfdist);
+    params.contree_rfdist = rfdist[0];
+
+    tree->readTreeFile(contree_file);
+
+    tree->initializeAllPartialLh();
+    tree->fixNegativeBranch(false);
+
+    tree->boot_consense_logl = tree->optimizeAllBranches();
+    cout << "Log-likelihood of consensus tree: " << tree->boot_consense_logl << endl;
+    tree->setRootNode(params.root);
+    tree->insertTaxa(tree->removed_seqs, tree->twin_seqs);
+    tree->printTree(contree_file.c_str(), WT_BR_LEN | WT_BR_LEN_FIXED_WIDTH | WT_SORT_TAXA | WT_NEWLINE);
+}
+
 /**********************************************************
  * STANDARD NON-PARAMETRIC BOOTSTRAP
  ***********************************************************/
@@ -2744,8 +2768,12 @@ void runStandardBootstrap(Params &params, string &original_model, Alignment *ali
 
 		cout << endl << "===> COMPUTE CONSENSUS TREE FROM "
 				<< params.num_bootstrap_samples << " BOOTSTRAP TREES" << endl << endl;
+        string root_name = (params.root) ? params.root : alignment->getSeqName(0);
+        const char* saved_root = params.root;
+        params.root = root_name.c_str();
 		computeConsensusTree(boottrees_name.c_str(), 0, 1e6, -1,
 				params.split_threshold, NULL, params.out_prefix, NULL, &params);
+        params.root = saved_root;
 	}
 
 	if (params.compute_ml_tree) {
@@ -2759,13 +2787,18 @@ void runStandardBootstrap(Params &params, string &original_model, Alignment *ali
 		runTreeReconstruction(params, original_model, *tree, *model_info);
 
         if (MPIHelper::getInstance().isMaster()) {
-		cout << endl << "===> ASSIGN BOOTSTRAP SUPPORTS TO THE TREE FROM ORIGINAL ALIGNMENT" << endl << endl;
-		MExtTree ext_tree;
-		assignBootstrapSupport(boottrees_name.c_str(), 0, 1e6,
-				treefile_name.c_str(), false, treefile_name.c_str(),
-				params.out_prefix, ext_tree, NULL, &params);
-		tree->copyTree(&ext_tree);
-		reportPhyloAnalysis(params, original_model, *tree, *model_info);
+            if (params.consensus_type == CT_CONSENSUS_TREE) {
+                // 2017-12-08: optimize branch lengths of consensus tree
+                optimizeConTree(params, tree);
+            }
+
+            cout << endl << "===> ASSIGN BOOTSTRAP SUPPORTS TO THE TREE FROM ORIGINAL ALIGNMENT" << endl << endl;
+            MExtTree ext_tree;
+            assignBootstrapSupport(boottrees_name.c_str(), 0, 1e6,
+                    treefile_name.c_str(), false, treefile_name.c_str(),
+                    params.out_prefix, ext_tree, NULL, &params);
+            tree->copyTree(&ext_tree);
+            reportPhyloAnalysis(params, original_model, *tree, *model_info);
         }
 	} else if (params.consensus_type == CT_CONSENSUS_TREE && MPIHelper::getInstance().isMaster()) {
 		int mi = params.min_iterations;
@@ -2776,6 +2809,7 @@ void runStandardBootstrap(Params &params, string &original_model, Alignment *ali
 		params.min_iterations = mi;
 		params.stop_condition = sc;
 		tree->stop_rule.initialize(params);
+        optimizeConTree(params, tree);
 		reportPhyloAnalysis(params, original_model, *tree, *model_info);
 	} else
 		cout << endl;
@@ -3086,23 +3120,7 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
 					weight_threshold, NULL, params.out_prefix, NULL, &params);
 			// now optimize branch lengths of the consensus tree
 			string current_tree = tree->getTreeString();
-			splitsfile = params.out_prefix;
-			splitsfile += ".contree";
-
-            IntVector rfdist;
-            tree->computeRFDist(splitsfile.c_str(), rfdist);
-            params.contree_rfdist = rfdist[0];
-
-			tree->readTreeFile(splitsfile);
-
-			tree->initializeAllPartialLh();
-			tree->fixNegativeBranch(true);
-
-			tree->boot_consense_logl = tree->optimizeAllBranches();
-			cout << "Log-likelihood of consensus tree: " << tree->boot_consense_logl << endl;
-		    tree->setRootNode(params.root);
-		    tree->insertTaxa(tree->removed_seqs, tree->twin_seqs);
-			tree->printTree(splitsfile.c_str(), WT_BR_LEN | WT_BR_LEN_FIXED_WIDTH | WT_SORT_TAXA | WT_NEWLINE);
+            optimizeConTree(params, tree);
 			// revert the best tree
 			tree->readTreeString(current_tree);
 		}
