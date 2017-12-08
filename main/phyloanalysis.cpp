@@ -400,6 +400,14 @@ void reportModel(ofstream &out, PhyloTree &tree) {
                 reportModel(out, tree.aln, m);
             }
 		}
+        if (tree.aln->seq_type != SEQ_POMO)
+		for (i = 0; i < nmix; i++) {
+            ModelMarkov *m = (ModelMarkov*)mmodel->getMixtureClass(i);
+            if (m->getFreqType() == FREQ_EQUAL || m->getFreqType() == FREQ_USER_DEFINED)
+                continue;
+            out << endl << "Model for mixture component "  << i+1 << ": " << (m)->name << endl;
+            reportModel(out, tree.aln, m);
+        }
 		out << endl;
 	} else {
 		out << "Model of substitution: " << tree.getModelName() << endl << endl;
