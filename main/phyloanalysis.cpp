@@ -400,7 +400,7 @@ void reportModel(ofstream &out, PhyloTree &tree) {
                 reportModel(out, tree.aln, m);
             }
 		}
-        if (tree.aln->seq_type != SEQ_POMO)
+        if (tree.aln->seq_type != SEQ_POMO && tree.aln->seq_type != SEQ_DNA)
 		for (i = 0; i < nmix; i++) {
             ModelMarkov *m = (ModelMarkov*)mmodel->getMixtureClass(i);
             if (m->getFreqType() == FREQ_EQUAL || m->getFreqType() == FREQ_USER_DEFINED)
