@@ -1057,7 +1057,7 @@ int getModelList(Params &params, Alignment *aln, StrVector &models, bool separat
 			ratehet.insert(ratehet.begin(), ratedef.begin(), ratedef.end());
 		}
         for (j = 0; j < ratehet.size(); j++) {
-            if (ratehet[j] != "" && ratehet[j][0] != '+')
+            if (ratehet[j] != "" && ratehet[j][0] != '+' && ratehet[j][0] != '*')
                 ratehet[j] = "+" + ratehet[j];
             if (ratehet[j] == "+E") // for equal rate model 
                 ratehet[j] = "";
@@ -1745,7 +1745,7 @@ string testOneModel(string &model_name, int model, Params &params, PhyloTree *in
         if (verbose_mode >= VB_MED)
             cout << "Optimizing model " << info.name << endl;
         iqtree->getModelFactory()->restoreCheckpoint();
-        iqtree->clearAllPartialLH();
+        iqtree->initializeAllPartialLh();
 
         #ifdef _OPENMP
         if (num_threads <= 0) {

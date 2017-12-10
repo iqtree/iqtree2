@@ -754,7 +754,8 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
 
 	if (fused_mix_rate) {
 		if (!model->isMixture()) {
-			cout << endl << "NOTE: Using mixture model with unlinked " << model_str << " parameters" << endl;
+            if (verbose_mode >= VB_MED)
+                cout << endl << "NOTE: Using mixture model with unlinked " << model_str << " parameters" << endl;
             string model_list = model_str;
             delete model;
             for (int i = 1; i < site_rate->getNRate(); i++)
