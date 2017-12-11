@@ -1700,11 +1700,11 @@ string testOneModel(string &model_name, int model, Params &params, PhyloTree *in
             params.stop_condition = SC_UNSUCCESS_ITERATION;
 
         params.model_name = model_name;
-        char *orig_user_tree = params.user_file;
-        string new_user_tree = (string)params.out_prefix+".treefile";
-        if (params.model_test_and_tree == 1 && model>0 && fileExists(new_user_tree)) {
-            params.user_file = (char*)new_user_tree.c_str();
-        }
+//        char *orig_user_tree = params.user_file;
+//        string new_user_tree = (string)params.out_prefix+".treefile";
+//        if (params.model_test_and_tree == 1 && model>0 && fileExists(new_user_tree)) {
+//            params.user_file = (char*)new_user_tree.c_str();
+//        }
         // set checkpoint
         iqtree->setCheckpoint(in_tree->getCheckpoint());
         iqtree->num_precision = in_tree->num_precision;
@@ -1717,6 +1717,14 @@ string testOneModel(string &model_name, int model, Params &params, PhyloTree *in
         delete newCheckpoint;
         
         cout << endl << "===> Testing model " << model+1 << ": " << model_name << endl;
+
+        if (iqtree->root) {
+            // start from previous tree
+            string initTree = iqtree->getTreeString();
+            iqtree->getCheckpoint()->put("initTree", initTree);
+            iqtree->saveCheckpoint();
+        }
+
         runTreeReconstruction(params, original_model, *iqtree, model_info);
         info.logl = iqtree->computeLikelihood();
         info.tree_len = iqtree->treeLength();
@@ -1724,7 +1732,7 @@ string testOneModel(string &model_name, int model, Params &params, PhyloTree *in
 
         // restore original parameters
         params.model_name = original_model;
-        params.user_file = orig_user_tree;
+//        params.user_file = orig_user_tree;
         // 2017-03-29: restore bootstrap replicates
         params.num_bootstrap_samples = orig_num_bootstrap_samples;
         params.gbo_replicates = orig_gbo_replicates;
