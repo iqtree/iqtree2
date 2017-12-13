@@ -1660,7 +1660,7 @@ string getSeqTypeName(SeqType seq_type) {
 
 
 string testOneModel(string &model_name, int model, Params &params, PhyloTree *in_tree,
-    ModelCheckpoint &model_info, ModelInfo &info, ModelsBlock *models_block, int num_threads)
+    ModelCheckpoint &model_info, ModelInfo &info, ModelsBlock *models_block, int &num_threads)
 {
     IQTree *iqtree = NULL;
     if (model_name.find("+H") != string::npos || model_name.find("*H") != string::npos)
@@ -1753,7 +1753,6 @@ string testOneModel(string &model_name, int model, Params &params, PhyloTree *in
         if (verbose_mode >= VB_MED)
             cout << "Optimizing model " << info.name << endl;
         iqtree->getModelFactory()->restoreCheckpoint();
-        iqtree->initializeAllPartialLh();
 
         #ifdef _OPENMP
         if (num_threads <= 0) {
@@ -1763,6 +1762,7 @@ string testOneModel(string &model_name, int model, Params &params, PhyloTree *in
             iqtree->warnNumThreads();
         #endif
 
+        iqtree->initializeAllPartialLh();
 
         for (int step = 0; step < 2; step++) {
             info.logl = iqtree->getModelFactory()->optimizeParameters(false, false,

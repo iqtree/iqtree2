@@ -731,6 +731,8 @@ int PhyloTree::computeParsimony() {
 
 size_t PhyloTree::getBufferPartialLhSize() {
     const size_t VECTOR_SIZE = 8; // TODO, adjusted
+    // 2017-12-13: make sure that num_threads was already set
+    ASSERT(num_threads > 0);
     size_t ncat_mix = site_rate->getNRate() * ((model_factory->fused_mix_rate)? 1 : model->getNMixtures());
     size_t block = model->num_states * ncat_mix;
     size_t buffer_size = get_safe_upper_limit(block * model->num_states * 2) * aln->getNSeq();
