@@ -71,7 +71,7 @@ void reportReferences(Params &params, ofstream &out, string &original_model) {
         if (original_model.find("ONLY") != string::npos || (original_model.substr(0,2)=="MF" && original_model.substr(0,3)!="MFP"))
             modelfinder_only = true;
     }
-    if (original_model.find("+P") != string::npos) {
+    if (posPOMO(original_model) != string::npos) {
         out << "For polymorphism-aware models please cite:" << endl << endl
             << "Dominik Schrempf, Bui Quang Minh, Nicola De Maio, Arndt von Haeseler, and Carolin Kosiol" << endl
             << "(2016) Reversible polymorphism-aware phylogenetic models and their application to" << endl
@@ -1500,7 +1500,9 @@ void computeInitialDist(Params &params, IQTree &iqtree, string &dist_file) {
 
 }
 
-void initializeParams(Params &params, IQTree &iqtree, ModelCheckpoint &model_info, ModelsBlock *models_block) {
+void initializeParams(Params &params, IQTree &iqtree, ModelCheckpoint &model_info,
+    ModelsBlock *models_block, string &dist_file)
+{
 //    iqtree.setCurScore(-DBL_MAX);
     bool test_only = (params.model_name.find("ONLY") != string::npos) || (params.model_name.substr(0,2) == "MF" && params.model_name.substr(0,3) != "MFP");
 
@@ -1539,8 +1541,12 @@ void initializeParams(Params &params, IQTree &iqtree, ModelCheckpoint &model_inf
             cout << "NOTE: Restoring information from model checkpoint file " << model_info.getFileName() << endl;
 
 
-        Checkpoint *orig_ckp = iqtree.getCheckpoint();
+        Checkpoint *checkpoint = iqtree.getCheckpoint();
         iqtree.setCheckpoint(&model_info);
+
+        // compute initial tree
+        iqtree.computeInitialTree(dist_file, params.SSE);
+
         if (iqtree.isSuperTree()) {
             PhyloSuperTree *stree = (PhyloSuperTree*)&iqtree;
             int part = 0;
@@ -1552,7 +1558,13 @@ void initializeParams(Params &params, IQTree &iqtree, ModelCheckpoint &model_inf
         } else {
             iqtree.saveCheckpoint();
         }
-        iqtree.setCheckpoint(orig_ckp);
+
+        iqtree.setCheckpoint(checkpoint);
+        // also save initial tree to the original .ckp.gz checkpoint
+//        string initTree = iqtree.getTreeString();
+//        CKP_SAVE(initTree);
+//        iqtree.saveCheckpoint();
+//        checkpoint->dump(true);
 
         params.model_name = testModel(params, &iqtree, model_info, models_block, params.num_threads, "", true);
 
@@ -1569,6 +1581,9 @@ void initializeParams(Params &params, IQTree &iqtree, ModelCheckpoint &model_inf
         if (test_only) {
             params.min_iterations = 0;
         }
+    } else {
+        // compute initial tree
+        iqtree.computeInitialTree(dist_file, params.SSE);
     }
 
     if (params.model_name == "WHTEST") {
@@ -1982,11 +1997,6 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
     /******************** Pass the parameter object params to IQTree *******************/
     iqtree.setParams(&params);
 
-    /********************** Create an initial tree **********************/
-    iqtree.computeInitialTree(dist_file, params.SSE);
-
-   	iqtree.setRootNode(params.root);
-
     /*************** SET UP PARAMETERS and model testing ****************/
 
    	// FOR TUNG: swapping the order cause bug for -m TESTLINK
@@ -1994,15 +2004,25 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree &iqtre
 
 	ModelsBlock *models_block = readModelsDefinition(params);
 
-    initializeParams(params, iqtree, model_info, models_block);
+    initializeParams(params, iqtree, model_info, models_block, dist_file);
+
+    iqtree.setRootNode(params.root);
 
     iqtree.restoreCheckpoint();
     iqtree.initSettings(params);
 
     /*********************** INITIAL MODEL OPTIMIZATION *****************/
 
-    if (!iqtree.getModelFactory())
+    if (posRateHeterotachy(params.model_name) != string::npos && !iqtree.isMixlen()) {
+        ASSERT(0 && "Heterotachy model but non-heterotachy tree");
+    }
+
+    if (!iqtree.getModelFactory()) {
         iqtree.initializeModel(params, params.model_name, models_block);
+        if (iqtree.getRate()->isHeterotachy() && !iqtree.isMixlen()) {
+            // TODO
+        }
+    }
 //    iqtree.restoreCheckpoint();
 
     delete models_block;
@@ -2994,10 +3014,8 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
 
 
         // allocate heterotachy tree if neccessary
-        int pos = params.model_name.find("+H");
-        if (params.model_name.find("*H") != string::npos)
-            pos = params.model_name.find("*H");
-
+        int pos = posRateHeterotachy(params.model_name);
+        
         if (params.num_mixlen > 1) {
             tree = new PhyloTreeMixlen(alignment, params.num_mixlen);
         } else if (pos != string::npos) {

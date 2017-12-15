@@ -1663,7 +1663,7 @@ string testOneModel(string &model_name, int model, Params &params, PhyloTree *in
     ModelCheckpoint &model_info, ModelInfo &info, ModelsBlock *models_block, int &num_threads)
 {
     IQTree *iqtree = NULL;
-    if (model_name.find("+H") != string::npos || model_name.find("*H") != string::npos)
+    if (posRateHeterotachy(model_name) != string::npos)
         iqtree = new PhyloTreeMixlen(in_tree->aln, 0);
     else
         iqtree = new IQTree(in_tree->aln);

@@ -44,6 +44,69 @@
 #include "nclextra/myreader.h"
 #include <sstream>
 
+string::size_type posRateHeterotachy(string &model_name) {
+	string::size_type pos1 = 0, pos2 = 0;
+    do {
+        pos1 = model_name.find("+H", pos1);
+        if (pos1 == string::npos) break;
+    } while (pos1 < model_name.length()-2 && isalpha(model_name[pos1+2]));
+
+    do {
+        pos2 = model_name.find("*H");
+        if (pos2 == string::npos) break;
+    } while (pos2 < model_name.length()-2 && isalpha(model_name[pos2+2]));
+
+    if (pos1 != string::npos && pos2 != string::npos) {
+        return min(pos1, pos2);
+    } else if (pos1 != string::npos)
+        return pos1;
+    else
+        return pos2;
+
+}
+
+string::size_type posRateFree(string &model_name) {
+	string::size_type pos1 = 0, pos2 = 0;
+    do {
+        pos1 = model_name.find("+R", pos1);
+        if (pos1 == string::npos) break;
+    } while (pos1 < model_name.length()-2 && isalpha(model_name[pos1+2]));
+
+    do {
+        pos2 = model_name.find("*R");
+        if (pos2 == string::npos) break;
+    } while (pos2 < model_name.length()-2 && isalpha(model_name[pos2+2]));
+
+    if (pos1 != string::npos && pos2 != string::npos) {
+        return min(pos1, pos2);
+    } else if (pos1 != string::npos)
+        return pos1;
+    else
+        return pos2;
+
+}
+
+string::size_type posPOMO(string &model_name) {
+	string::size_type pos1 = 0, pos2 = 0;
+    do {
+        pos1 = model_name.find("+P", pos1);
+        if (pos1 == string::npos) break;
+    } while (pos1 < model_name.length()-2 && isalpha(model_name[pos1+2]));
+
+    do {
+        pos2 = model_name.find("*P");
+        if (pos2 == string::npos) break;
+    } while (pos2 < model_name.length()-2 && isalpha(model_name[pos2+2]));
+
+    if (pos1 != string::npos && pos2 != string::npos) {
+        return min(pos1, pos2);
+    } else if (pos1 != string::npos)
+        return pos1;
+    else
+        return pos2;
+
+}
+
 ModelsBlock *readModelsDefinition(Params &params) {
 
 	ModelsBlock *models_block = new ModelsBlock;
@@ -153,18 +216,8 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
     // Detect PoMo and throw error if sequence type is PoMo but +P is
     // not given.  This makes the model string cleaner and
     // compareable.
-    bool pomo = false;
-    string::size_type p_pos = model_str.find("+P");
-    if ((p_pos != string::npos)) {
-      // Check for +POISSON model.
-      if ((model_str.length() > p_pos+2) and
-          (model_str[p_pos+2] == 'O')) {
-        // Don't activate PoMo because +POISSON model is used.
-        ;
-      }
-      else
-        pomo = true;
-    }
+    string::size_type p_pos = posPOMO(model_str);
+    bool pomo = (p_pos != string::npos);
 
     if ((p_pos == string::npos) &&
         (tree->aln->seq_type == SEQ_POMO))
@@ -228,11 +281,11 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
             // TODO DS: This is an important feature, because then,
             // PoMo can be applied to SNP data only.
             outError("PoMo does not yet support ascertainment bias correction (+ASC).");
-        if (rate_str.find("+R") != string::npos)
+        if (posRateFree(rate_str) != string::npos)
             outError("PoMo does not yet support free rate models (+R).");
         if (rate_str.find("+FMIX") != string::npos)
             outError("PoMo does not yet support frequency mixture models (+FMIX).");
-        if (rate_str.find("+H") != string::npos)
+        if (posRateHeterotachy(rate_str) != string::npos)
             outError("PoMo does not yet support heterotachy models (+H).");
     }
 
@@ -244,7 +297,7 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
     if (model_str.substr(0, 3) != "MIX" && pomo) {
 
       // +P{} flag.
-      p_pos = rate_str.find("+P");
+      p_pos = posPOMO(rate_str);
       if (p_pos != string::npos) {
         if (rate_str[p_pos+2] == '{') {
           string::size_type close_bracket = rate_str.find("}");

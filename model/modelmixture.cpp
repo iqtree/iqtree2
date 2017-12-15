@@ -995,9 +995,8 @@ ModelSubst* createModel(string model_str, ModelsBlock *models_block, StateFreqTy
     bool pomo = false;
     string pomo_rate_str = "";
     string pomo_heterozygosity = "";
-    string::size_type p_pos = model_str.find("+P");
-    if ((p_pos != string::npos))
-        pomo = true;
+    string::size_type p_pos = posPOMO(model_str);
+    pomo = (p_pos != string::npos);
 
     if (pomo) {
         if (model_str[p_pos+2] == '{') {
