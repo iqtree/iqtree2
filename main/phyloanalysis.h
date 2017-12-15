@@ -39,7 +39,7 @@ class IQTree;
 void runPhyloAnalysis(Params &params, Checkpoint *checkpoint);
 
 void runTreeReconstruction(Params &params, string &original_model,
-		IQTree &tree, ModelCheckpoint &model_info);
+		IQTree* &tree, ModelCheckpoint &model_info);
 
 /**
 	take the collection of trees from input_trees, it assign support values to target_tree

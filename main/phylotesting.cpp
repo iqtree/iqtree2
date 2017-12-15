@@ -1725,7 +1725,7 @@ string testOneModel(string &model_name, int model, Params &params, PhyloTree *in
             iqtree->saveCheckpoint();
         }
 
-        runTreeReconstruction(params, original_model, *iqtree, model_info);
+        runTreeReconstruction(params, original_model, iqtree, model_info);
         info.logl = iqtree->computeLikelihood();
         info.tree_len = iqtree->treeLength();
         info.tree = iqtree->getTreeString();
