@@ -15,8 +15,15 @@
 ConstraintTree::ConstraintTree() : MTree(), SplitIntMap() {
 }
 
+ConstraintTree::~ConstraintTree() {
+    for (iterator mit = begin(); mit != end(); mit++)
+        delete (mit->first);
+    clear();
+}
+
 void ConstraintTree::readConstraint(const char *constraint_file, StrVector &fulltaxname) {
     bool is_rooted = false;
+    freeNode();
     MTree::init(constraint_file, is_rooted);
     initFromTree();
 

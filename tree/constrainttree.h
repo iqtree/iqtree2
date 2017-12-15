@@ -23,7 +23,11 @@ struct NNIMove;
 class ConstraintTree : public MTree, public SplitIntMap {
 public:
 
+    /** constructor */
     ConstraintTree();
+
+    /** destructor */
+    virtual ~ConstraintTree();
 
     /**
         internal function to initialize splits from tree structure
