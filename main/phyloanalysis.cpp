@@ -1953,7 +1953,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree* &iqtr
     int absent_states = 0;
     if (iqtree->isSuperTree()) {
         SuperAlignment *saln = (SuperAlignment*)iqtree->aln;
-        PhyloSuperTree *stree = (PhyloSuperTree*)&iqtree;
+        PhyloSuperTree *stree = (PhyloSuperTree*)iqtree;
         for (int i = 0; i < saln->partitions.size(); i++)
             absent_states += saln->partitions[i]->checkAbsentStates("partition " + stree->part_info[i].name);
     } else {
@@ -1974,7 +1974,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree* &iqtr
     // Temporary fix since PLL only supports DNA/Protein: switch to IQ-TREE parsimony kernel
     if (params.start_tree == STT_PLL_PARSIMONY) {
 		if (iqtree->isSuperTree()) {
-			PhyloSuperTree *stree = (PhyloSuperTree*)&iqtree;
+			PhyloSuperTree *stree = (PhyloSuperTree*)iqtree;
 			for (PhyloSuperTree::iterator it = stree->begin(); it != stree->end(); it++)
 				if ((*it)->aln->seq_type != SEQ_DNA && (*it)->aln->seq_type != SEQ_PROTEIN)
 					params.start_tree = STT_BIONJ;
@@ -2050,7 +2050,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree* &iqtr
     if (params.upper_bound) {
     	iqtree.setCurScore(iqtree.computeLikelihood());
     	cout<<iqtree.getCurScore()<<endl;
-    	UpperBounds(&params, iqtree.aln, &iqtree);
+    	UpperBounds(&params, iqtree.aln, iqtree);
     	exit(0);
 	}
     */
@@ -2302,7 +2302,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree* &iqtr
 
     // COMMENT THIS OUT BECAUSE IT DELETES ALL BRANCH LENGTHS OF SUBTREES!
 //	if (iqtree.isSuperTree())
-//			((PhyloSuperTree*) &iqtree)->mapTrees();
+//			((PhyloSuperTree*) iqtree)->mapTrees();
 
     if (!MPIHelper::getInstance().isMaster()) {
         delete[] pattern_lh;
@@ -2342,7 +2342,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree* &iqtr
     }
 
 	if (iqtree->isSuperTree())
-		((PhyloSuperTree*) &iqtree)->computeBranchLengths();
+		((PhyloSuperTree*) iqtree)->computeBranchLengths();
 
 	cout << "BEST SCORE FOUND : " << iqtree->getCurScore() << endl;
 
