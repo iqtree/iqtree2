@@ -771,6 +771,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.partition_type = 0;
     params.partfinder_rcluster = 100;
     params.partfinder_rcluster_max = 0;
+    params.partfinder_rcluster_fast = false;
     params.remove_empty_seq = true;
     params.terrace_aware = true;
     params.sequence_type = NULL;
@@ -1672,6 +1673,16 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.partfinder_rcluster = convert_double(argv[cnt]);
                 if (params.partfinder_rcluster < 0 || params.partfinder_rcluster > 100)
                     throw "rcluster percentage must be between 0 and 100";
+				continue;
+            }
+            if (strcmp(argv[cnt], "-rclusterf") == 0) {
+				cnt++;
+				if (cnt >= argc)
+					throw "Use -rcluster <percent>";
+                params.partfinder_rcluster = convert_double(argv[cnt]);
+                if (params.partfinder_rcluster < 0 || params.partfinder_rcluster > 100)
+                    throw "rcluster percentage must be between 0 and 100";
+                params.partfinder_rcluster_fast = true;
 				continue;
             }
 

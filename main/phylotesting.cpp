@@ -1378,6 +1378,27 @@ string testOneModel(string &model_name, Params &params, Alignment *in_aln,
     return tree_string;
 }
 
+/** model information by merging two partitions */
+struct ModelPairInfo {
+    /** score after merging */
+    double score;
+    /** ID of partition 1 */
+    int part1;
+    /** ID of partition 2 */
+    int part2;
+    /** log-likelihood */
+    double logl;
+    /** degree of freedom */
+    int df;
+    /** tree length */
+    double tree_len;
+    /** IDs of merged partitions */
+    IntVector merged_set;
+    /** set name */
+    string set_name;
+    /* best model name */
+    string model_name;
+};
 
 /**
  * select models for all partitions
@@ -1587,14 +1608,8 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
 	int prev_part = -1;
 	while (gene_sets.size() >= 2) {
 		// stepwise merging charsets
-		double new_score = DBL_MAX;
-		double opt_lh = 0.0;
-		int opt_df = 0;
-        double opt_treelen = 0.0;
-		int opt_part1 = 0, opt_part2 = 1;
-		IntVector opt_merged_set;
-		string opt_set_name = "";
-		string opt_model_name = "";
+        ModelPairInfo opt_pair;
+        opt_pair.score = DBL_MAX;
         size_t num_pairs = 0;
         // 2015-06-24: begin rcluster algorithm
         // compute distance between gene_sets
@@ -1631,23 +1646,23 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
 #pragma omp parallel for private(i) schedule(dynamic) if(!params.model_test_and_tree)
 #endif
         for (int pair = 0; pair < num_pairs; pair++) {
-            int part1 = distID[pair].first;
-            int part2 = distID[pair].second;
-            ASSERT(part1 != part2);
-            IntVector merged_set;
-            merged_set.insert(merged_set.end(), gene_sets[part1].begin(), gene_sets[part1].end());
-            merged_set.insert(merged_set.end(), gene_sets[part2].begin(), gene_sets[part2].end());
-            string set_name = "";
-            for (i = 0; i < merged_set.size(); i++) {
+            // information of current partitions pair
+            ModelPairInfo cur_pair;
+            cur_pair.part1 = distID[pair].first;
+            cur_pair.part2 = distID[pair].second;
+            ASSERT(cur_pair.part1 != cur_pair.part2);
+            cur_pair.merged_set.insert(cur_pair.merged_set.end(), gene_sets[cur_pair.part1].begin(), gene_sets[cur_pair.part1].end());
+            cur_pair.merged_set.insert(cur_pair.merged_set.end(), gene_sets[cur_pair.part2].begin(), gene_sets[cur_pair.part2].end());
+            for (i = 0; i < cur_pair.merged_set.size(); i++) {
                 if (i > 0)
-                    set_name += "+";
-                set_name += in_tree->part_info[merged_set[i]].name;
+                    cur_pair.set_name += "+";
+                cur_pair.set_name += in_tree->part_info[cur_pair.merged_set[i]].name;
             }
             ModelInfo best_model;
             bool done_before = false;
-            if (prev_part >= 0 && part1 != prev_part && part2 != prev_part) {
+            if (prev_part >= 0 && cur_pair.part1 != prev_part && cur_pair.part2 != prev_part) {
                 // if pairs previously examined, reuse the information
-                model_info.startStruct(set_name);
+                model_info.startStruct(cur_pair.set_name);
                 if (model_info.getBestModel(best_model.name)) {
                     best_model.restoreCheckpoint(&model_info);
                     done_before = true;
@@ -1655,12 +1670,11 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
                 model_info.endStruct();
             }
             ModelCheckpoint part_model_info;
-            stringstream this_fmodel;
             if (!done_before) {
-                Alignment *aln = super_aln->concatenateAlignments(merged_set);
-                PhyloTree *tree = in_tree->extractSubtree(merged_set);
+                Alignment *aln = super_aln->concatenateAlignments(cur_pair.merged_set);
+                PhyloTree *tree = in_tree->extractSubtree(cur_pair.merged_set);
                 tree->setAlignment(aln);
-                extractModelInfo(set_name, model_info, part_model_info);
+                extractModelInfo(cur_pair.set_name, model_info, part_model_info);
                 tree->num_precision = in_tree->num_precision;
                 tree->setParams(&params);
                 tree->sse = params.SSE;
@@ -1676,7 +1690,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
                     tree->saveCheckpoint();
                 }
                 best_model.name = testModel(params, tree, part_model_info, models_block,
-                    params.model_test_and_tree ? num_threads : 1, brlen_type, set_name);
+                    params.model_test_and_tree ? num_threads : 1, brlen_type, cur_pair.set_name);
                 best_model.restoreCheckpoint(&part_model_info);
                 if (params.model_test_and_tree) {
                     delete tree->getCheckpoint();
@@ -1684,15 +1698,19 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
                 delete tree;
                 delete aln;
             }
-            double lhnew = lhsum - lhvec[part1] - lhvec[part2] + best_model.logl;
-            int dfnew = dfsum - dfvec[part1] - dfvec[part2] + best_model.df;
-            double score = computeInformationScore(lhnew, dfnew, ssize, params.model_test_criterion);
+            cur_pair.logl = best_model.logl;
+            cur_pair.df = best_model.df;
+            cur_pair.model_name = best_model.name;
+            cur_pair.tree_len = best_model.tree_len;
+            double lhnew = lhsum - lhvec[cur_pair.part1] - lhvec[cur_pair.part2] + best_model.logl;
+            int dfnew = dfsum - dfvec[cur_pair.part1] - dfvec[cur_pair.part2] + best_model.df;
+            cur_pair.score = computeInformationScore(lhnew, dfnew, ssize, params.model_test_criterion);
 #ifdef _OPENMP
 #pragma omp critical
 #endif
 			{
 				if (!done_before) {
-					replaceModelInfo(set_name, model_info, part_model_info);
+					replaceModelInfo(cur_pair.set_name, model_info, part_model_info);
                     model_info.dump();
                     num_model++;
 					cout.width(4);
@@ -1700,7 +1718,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
 					cout.width(12);
 					cout << left << best_model.name << " ";
 					cout.width(11);
-					cout << score << " " << set_name;
+					cout << cur_pair.score << " " << cur_pair.set_name;
                     if (num_model >= 10) {
                         double remain_time = max(total_num_model-num_model, (int64_t)0)*(getRealTime()-start_time)/num_model;
                         cout << "\t" << convert_time(getRealTime()-start_time) << " (" 
@@ -1708,43 +1726,35 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
                     }
                     cout << endl;
 				}
-				if (score < new_score) {
-					new_score = score;
-					opt_part1 = part1;
-					opt_part2 = part2;
-					opt_lh = best_model.logl;
-					opt_df = best_model.df;
-                    opt_treelen = best_model.tree_len;
-					opt_merged_set = merged_set;
-					opt_set_name = set_name;
-					opt_model_name = best_model.name;
+				if (cur_pair.score < opt_pair.score) {
+                    opt_pair = cur_pair;
 				}
 			}
 
         }
-		if (new_score >= inf_score) break;
-		inf_score = new_score;
+		if (opt_pair.score >= inf_score) break;
+		inf_score = opt_pair.score;
 
-		lhsum = lhsum - lhvec[opt_part1] - lhvec[opt_part2] + opt_lh;
-		dfsum = dfsum - dfvec[opt_part1] - dfvec[opt_part2] + opt_df;
-		cout << "Merging " << opt_set_name << " with " << criterionName(params.model_test_criterion) << " score: " << new_score << " (lh=" << lhsum << "  df=" << dfsum << ")" << endl;
+		lhsum = lhsum - lhvec[opt_pair.part1] - lhvec[opt_pair.part2] + opt_pair.logl;
+		dfsum = dfsum - dfvec[opt_pair.part1] - dfvec[opt_pair.part2] + opt_pair.df;
+		cout << "Merging " << opt_pair.set_name << " with " << criterionName(params.model_test_criterion) << " score: " << opt_pair.score << " (lh=" << lhsum << "  df=" << dfsum << ")" << endl;
 		// change entry opt_part1 to merged one
-		gene_sets[opt_part1] = opt_merged_set;
-		lhvec[opt_part1] = opt_lh;
-		dfvec[opt_part1] = opt_df;
-        lenvec[opt_part1] = opt_treelen;
-		model_names[opt_part1] = opt_model_name;
-		greedy_model_trees[opt_part1] = "(" + greedy_model_trees[opt_part1] + "," + greedy_model_trees[opt_part2] + ")" +
+		gene_sets[opt_pair.part1] = opt_pair.merged_set;
+		lhvec[opt_pair.part1] = opt_pair.logl;
+		dfvec[opt_pair.part1] = opt_pair.df;
+        lenvec[opt_pair.part1] = opt_pair.tree_len;
+		model_names[opt_pair.part1] = opt_pair.model_name;
+		greedy_model_trees[opt_pair.part1] = "(" + greedy_model_trees[opt_pair.part1] + "," + greedy_model_trees[opt_pair.part2] + ")" +
 				convertIntToString(in_tree->size()-gene_sets.size()+1) + ":" + convertDoubleToString(inf_score);
-		prev_part = opt_part1;
+		prev_part = opt_pair.part1;
 
 		// delete entry opt_part2
-		lhvec.erase(lhvec.begin() + opt_part2);
-		dfvec.erase(dfvec.begin() + opt_part2);
-		lenvec.erase(lenvec.begin() + opt_part2);
-		gene_sets.erase(gene_sets.begin() + opt_part2);
-		model_names.erase(model_names.begin() + opt_part2);
-		greedy_model_trees.erase(greedy_model_trees.begin() + opt_part2);
+		lhvec.erase(lhvec.begin() + opt_pair.part2);
+		dfvec.erase(dfvec.begin() + opt_pair.part2);
+		lenvec.erase(lenvec.begin() + opt_pair.part2);
+		gene_sets.erase(gene_sets.begin() + opt_pair.part2);
+		model_names.erase(model_names.begin() + opt_pair.part2);
+		greedy_model_trees.erase(greedy_model_trees.begin() + opt_pair.part2);
 	}
 
 	string final_model_tree;

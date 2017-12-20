@@ -838,6 +838,9 @@ public:
     /** absolute limit on #partition pairs for rcluster algorithm */
     size_t partfinder_rcluster_max;
 
+    /** rclusterf algorithm to top 50% pairs instead of only one best pair */
+    bool partfinder_rcluster_fast;
+
     /** remove all-gap sequences in partition model to account for terrace default: TRUE */
     bool remove_empty_seq;
 
