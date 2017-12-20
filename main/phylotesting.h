@@ -156,7 +156,8 @@ bool checkModelFile(string model_file, bool is_partitioned, ModelCheckpoint &inf
  @return name of best-fit-model
  */
 string testModel(Params &params, PhyloTree* in_tree, ModelCheckpoint &model_info,
-		ModelsBlock *models_block, int num_threads, string set_name = "", bool print_mem_usage = false, string in_model_name = "");
+		ModelsBlock *models_block, int num_threads, int brlen_type,
+        string set_name = "", bool print_mem_usage = false, string in_model_name = "");
 
 /**
  * print site log likelihoods to a fileExists

@@ -264,6 +264,12 @@ public:
 	 */
     Alignment *concatenateAlignments(IntVector &ids);
 
+	/**
+	 * concatenate all alignments
+	 * @return concatenated alignment
+	 */
+    Alignment *concatenateAlignments();
+
 
 };
 

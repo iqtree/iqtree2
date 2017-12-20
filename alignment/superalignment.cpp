@@ -677,6 +677,14 @@ Alignment *SuperAlignment::concatenateAlignments(IntVector &ids) {
 	return aln;
 }
 
+Alignment *SuperAlignment::concatenateAlignments() {
+    IntVector ids;
+    ids.resize(partitions.size());
+    for (int i = 0; i < partitions.size(); i++)
+        ids[i] = i;
+    return concatenateAlignments(ids);
+}
+
 void SuperAlignment::countConstSite() {
     num_informative_sites = 0;
     num_variant_sites = 0;

@@ -2387,6 +2387,33 @@ void PhyloTree::computeFuncDerv(double value, double &df, double &ddf) {
 //    return lh;
 }
 
+int PhyloTree::getNBranchParameters(int brlen_type) {
+    if (params->fixed_branch_length || brlen_type == BRLEN_FIX)
+        return 0;
+
+    int df = 0;
+
+    if (brlen_type == BRLEN_OPTIMIZE) {
+        df = branchNum - (int)rooted;
+	// If model is Lie-Markov, and is in fact time reversible, one of the
+	// degrees of freedom is illusary. (Of the two edges coming from the
+	// root, only sum of their lenghts affects likelihood.)
+	// So correct for this. Without this correction, K2P and RY2.2b
+	// would not be synonymous, for example.
+
+//	string className(typeid(*model).name());
+//	if (className.find("ModelLieMarkov")!=string::npos && model->isReversible())
+//	    df--;
+
+        // BQM 2017-04-28, alternatively, check if there is a virtual_root and model is reversible
+        if (rooted && model && model->isReversible())
+            df--;
+
+    } else if (brlen_type == BRLEN_SCALE)
+        df = 1;
+    return df;
+}
+
 void PhyloTree::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool clearLH, int maxNRStep) {
 
     if (rooted && (node1 == root || node2 == root))

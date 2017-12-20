@@ -460,7 +460,7 @@ void reportRate(ostream &out, PhyloTree &tree) {
 void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh, double lh_variance, double main_tree) {
 	double epsilon = 1.0 / tree.getAlnNSite();
 	double totalLen = tree.treeLength();
-	int df = tree.getModelFactory()->getNParameters();
+	int df = tree.getModelFactory()->getNParameters(BRLEN_OPTIMIZE);
 	int ssize = tree.getAlnNSite();
 	double AIC_score, AICc_score, BIC_score;
 	computeInformationScores(tree_lh, df, ssize, AIC_score, AICc_score, BIC_score);
@@ -1541,7 +1541,7 @@ void initializeParams(Params &params, IQTree &iqtree, ModelCheckpoint &model_inf
             cout << "NOTE: Restoring information from model checkpoint file " << model_info.getFileName() << endl;
 
 
-        Checkpoint *checkpoint = iqtree.getCheckpoint();
+        Checkpoint *orig_checkpoint = iqtree.getCheckpoint();
         iqtree.setCheckpoint(&model_info);
 
         // compute initial tree
@@ -1559,14 +1559,15 @@ void initializeParams(Params &params, IQTree &iqtree, ModelCheckpoint &model_inf
             iqtree.saveCheckpoint();
         }
 
-        iqtree.setCheckpoint(checkpoint);
         // also save initial tree to the original .ckp.gz checkpoint
 //        string initTree = iqtree.getTreeString();
 //        CKP_SAVE(initTree);
 //        iqtree.saveCheckpoint();
 //        checkpoint->dump(true);
 
-        params.model_name = testModel(params, &iqtree, model_info, models_block, params.num_threads, "", true);
+        params.model_name = testModel(params, &iqtree, model_info, models_block, params.num_threads, BRLEN_OPTIMIZE, "", true);
+
+        iqtree.setCheckpoint(orig_checkpoint);
 
         params.startCPUTime = cpu_time;
         params.start_real_time = real_time;
@@ -2059,7 +2060,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree* &iqtr
     cout << endl;
     if (verbose_mode >= VB_MED) {
     	cout << "ML-TREE SEARCH START WITH THE FOLLOWING PARAMETERS:" << endl;
-        int model_df = iqtree->getModelFactory()->getNParameters();
+        int model_df = iqtree->getModelFactory()->getNParameters(BRLEN_OPTIMIZE);
     	printAnalysisInfo(model_df, *iqtree, params);
     }
 

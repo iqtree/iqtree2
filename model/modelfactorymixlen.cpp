@@ -149,8 +149,11 @@ string ModelFactoryMixlen::sortClassesByTreeLength() {
     return tree->getTreeString();
 }
 
-int ModelFactoryMixlen::getNParameters() {
-	int df = ModelFactory::getNParameters();
-    df += site_rate->phylo_tree->branchNum * (site_rate->phylo_tree->getMixlen()-1);
+int ModelFactoryMixlen::getNParameters(int brlen_type) {
+	int df = ModelFactory::getNParameters(brlen_type);
+    if (brlen_type == BRLEN_OPTIMIZE)
+        df += site_rate->phylo_tree->branchNum * (site_rate->phylo_tree->getMixlen()-1);
+    else if (brlen_type == BRLEN_SCALE)
+        df += (site_rate->phylo_tree->getMixlen()-1);
 	return df;
 }

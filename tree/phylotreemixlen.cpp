@@ -241,7 +241,7 @@ void PhyloTreeMixlen::initializeMixlen(double tolerance, bool write_info) {
 
         // 2016-07-22: BUGFIX should rescale rates
         double mean_rate = relative_rate->rescaleRates();
-        if (mean_rate != 1.0 && params->fixed_branch_length != BRLEN_FIX) {
+        if (fabs(mean_rate-1.0) > 1e-6 && params->fixed_branch_length != BRLEN_FIX) {
             scaleLength(mean_rate);
         }
         if (write_info) {

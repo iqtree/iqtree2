@@ -1256,6 +1256,13 @@ public:
             Branch length optimization by maximum likelihood
      ****************************************************************************/
 
+
+    /**
+        @param brlen_type either BRLEN_OPTIMIZE, BRLEN_FIX or BRLEN_SCALE
+        @return the number of free branch parameters 
+    */
+    int getNBranchParameters(int brlen_type);
+
     /**
      * IMPORTANT: semantic change: this function does not return score anymore, for efficiency purpose
             optimize one branch length by ML

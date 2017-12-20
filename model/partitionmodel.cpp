@@ -111,11 +111,11 @@ void PartitionModel::restoreCheckpoint() {
     endCheckpoint();
 }
 
-int PartitionModel::getNParameters() {
+int PartitionModel::getNParameters(int brlen_type) {
     PhyloSuperTree *tree = (PhyloSuperTree*)site_rate->getTree();
 	int df = 0;
     for (PhyloSuperTree::iterator it = tree->begin(); it != tree->end(); it++) {
-    	df += (*it)->getModelFactory()->getNParameters();
+    	df += (*it)->getModelFactory()->getNParameters(brlen_type);
     }
     if (linked_alpha > 0)
         df ++;
@@ -166,7 +166,7 @@ double PartitionModel::optimizeParameters(int fixed_len, bool write_info, double
         {
     		cout << "Optimizing " << tree->at(part)->getModelName() <<
         		" parameters for partition " << tree->part_info[part].name <<
-        		" (" << tree->at(part)->getModelFactory()->getNParameters() << " free parameters)" << endl;
+        		" (" << tree->at(part)->getModelFactory()->getNParameters(fixed_len) << " free parameters)" << endl;
         }
         tree_lh += tree->at(part)->getModelFactory()->optimizeParameters(fixed_len, write_info && verbose_mode >= VB_MED, 
             logl_epsilon/min(ntrees,10), gradient_epsilon/min(ntrees,10));
@@ -200,7 +200,7 @@ double PartitionModel::optimizeParametersGammaInvar(int fixed_len, bool write_in
         {
     		cout << "Optimizing " << tree->at(part)->getModelName() <<
         		" parameters for partition " << tree->part_info[part].name <<
-        		" (" << tree->at(part)->getModelFactory()->getNParameters() << " free parameters)" << endl;
+        		" (" << tree->at(part)->getModelFactory()->getNParameters(fixed_len) << " free parameters)" << endl;
         }
         tree_lh += tree->at(part)->getModelFactory()->optimizeParametersGammaInvar(fixed_len, write_info && verbose_mode >= VB_MED, 
             logl_epsilon/min(ntrees,10), gradient_epsilon/min(ntrees,10));

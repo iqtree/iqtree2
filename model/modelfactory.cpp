@@ -873,26 +873,10 @@ void ModelFactory::restoreCheckpoint() {
     endCheckpoint();
 }
 
-int ModelFactory::getNParameters() {
-	int df = model->getNDim() + model->getNDimFreq() + site_rate->getNDim();
+int ModelFactory::getNParameters(int brlen_type) {
+	int df = model->getNDim() + model->getNDimFreq() + site_rate->getNDim() +
+        site_rate->getTree()->getNBranchParameters(brlen_type);
 
-    if (!site_rate->getTree()->params->fixed_branch_length) {
-        df += site_rate->phylo_tree->branchNum - (int)site_rate->phylo_tree->rooted;
-	// If model is Lie-Markov, and is in fact time reversible, one of the
-	// degrees of freedom is illusary. (Of the two edges coming from the
-	// root, only sum of their lenghts affects likelihood.)
-	// So correct for this. Without this correction, K2P and RY2.2b
-	// would not be synonymous, for example.
-
-//	string className(typeid(*model).name());
-//	if (className.find("ModelLieMarkov")!=string::npos && model->isReversible())
-//	    df--;
-
-        // BQM 2017-04-28, alternatively, check if there is a virtual_root and model is reversible
-        if (site_rate->phylo_tree->rooted && model->isReversible())
-            df--;
-
-    }
     return df;
 }
 /*
@@ -1268,7 +1252,7 @@ double ModelFactory::optimizeParameters(int fixed_len, bool write_info,
 //    if (Params::getInstance().optimize_alg_gammai != "EM")
     {
         double mean_rate = site_rate->rescaleRates();
-        if (mean_rate != 1.0) {
+        if (fabs(mean_rate-1.0) > 1e-6) {
             if (fixed_len == BRLEN_FIX)
                 outError("Fixing branch lengths not supported under specified site rate model");
             tree->scaleLength(mean_rate);

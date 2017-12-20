@@ -1234,8 +1234,154 @@ void printModelFile(ostream &fmodel, Params &params, PhyloTree *tree, ModelInfo 
 }
 
 /**
+    test one single model
+    @param model_name model to be tested
+    @param params program parameters
+    @param in_tree input tree
+    @param model_info checkpointing information
+    @param[out] info output model information
+    @param models_block models block
+    @param num_thread number of threads
+    @return tree string
+*/
+string testOneModel(string &model_name, Params &params, Alignment *in_aln,
+    ModelCheckpoint &model_info, ModelInfo &info, ModelsBlock *models_block,
+    int &num_threads, int brlen_type)
+{
+    IQTree *iqtree = NULL;
+    if (posRateHeterotachy(model_name) != string::npos)
+        iqtree = new PhyloTreeMixlen(in_aln, 0);
+    else
+        iqtree = new IQTree(in_aln);
+    iqtree->setParams(&params);
+    iqtree->sse = params.SSE;
+    iqtree->optimize_by_newton = params.optimize_by_newton;
+    iqtree->num_threads = num_threads;
+
+    iqtree->setCheckpoint(&model_info);
+    iqtree->restoreCheckpoint();
+    ASSERT(iqtree->root);
+    iqtree->initializeModel(params, model_name, models_block);
+    if (!iqtree->getModel()->isMixture() || in_aln->seq_type == SEQ_POMO)
+        model_name = iqtree->getModelName();
+
+    info.name = model_name;
+
+    if (info.restoreCheckpoint(&model_info)) {
+        delete iqtree;
+        return "";
+    }
+
+    if (params.model_test_and_tree) {
+        //--- PERFORM FULL TREE SEARCH PER MODEL ----//
+
+        string original_model = params.model_name;
+        // BQM 2017-03-29: disable bootstrap
+        int orig_num_bootstrap_samples = params.num_bootstrap_samples;
+        int orig_gbo_replicates = params.gbo_replicates;
+        params.num_bootstrap_samples = 0;
+        params.gbo_replicates = 0;
+        STOP_CONDITION orig_stop_condition = params.stop_condition;
+        if (params.stop_condition == SC_BOOTSTRAP_CORRELATION)
+            params.stop_condition = SC_UNSUCCESS_ITERATION;
+
+        params.model_name = model_name;
+//        char *orig_user_tree = params.user_file;
+//        string new_user_tree = (string)params.out_prefix+".treefile";
+//        if (params.model_test_and_tree == 1 && model>0 && fileExists(new_user_tree)) {
+//            params.user_file = (char*)new_user_tree.c_str();
+//        }
+        // set checkpoint
+        // commented out: using model_info as checkpoint
+//        iqtree->setCheckpoint(in_tree->getCheckpoint());
+//        iqtree->num_precision = in_tree->num_precision;
+
+        // clear all checkpointed information
+        Checkpoint *newCheckpoint = new Checkpoint;
+        iqtree->getCheckpoint()->getSubCheckpoint(newCheckpoint, "iqtree");
+        iqtree->getCheckpoint()->clear();
+        iqtree->getCheckpoint()->insert(newCheckpoint->begin(), newCheckpoint->end());
+        delete newCheckpoint;
+        
+        cout << endl << "===> Testing model " << model_name << endl;
+
+        if (iqtree->root) {
+            // start from previous tree
+            string initTree = iqtree->getTreeString();
+            iqtree->getCheckpoint()->put("initTree", initTree);
+            iqtree->saveCheckpoint();
+        }
+
+        runTreeReconstruction(params, original_model, iqtree, model_info);
+        info.logl = iqtree->computeLikelihood();
+        info.tree_len = iqtree->treeLength();
+        info.tree = iqtree->getTreeString();
+
+        // restore original parameters
+        params.model_name = original_model;
+//        params.user_file = orig_user_tree;
+        // 2017-03-29: restore bootstrap replicates
+        params.num_bootstrap_samples = orig_num_bootstrap_samples;
+        params.gbo_replicates = orig_gbo_replicates;
+        params.stop_condition = orig_stop_condition;
+
+        // clear all checkpointed information
+        newCheckpoint = new Checkpoint;
+        iqtree->getCheckpoint()->getSubCheckpoint(newCheckpoint, "iqtree");
+        iqtree->getCheckpoint()->clear();
+        iqtree->getCheckpoint()->insert(newCheckpoint->begin(), newCheckpoint->end());
+        iqtree->getCheckpoint()->putBool("finished", false);
+        iqtree->getCheckpoint()->dump(true);
+        delete newCheckpoint;
+
+    } else {
+        //--- FIX TREE TOPOLOGY AND ESTIMATE MODEL PARAMETERS ----//
+
+        if (verbose_mode >= VB_MED)
+            cout << "Optimizing model " << info.name << endl;
+        iqtree->getModelFactory()->restoreCheckpoint();
+
+        #ifdef _OPENMP
+        if (num_threads <= 0) {
+            num_threads = iqtree->testNumThreads();
+            omp_set_num_threads(num_threads);
+        } else
+            iqtree->warnNumThreads();
+        #endif
+
+        iqtree->initializeAllPartialLh();
+
+        for (int step = 0; step < 2; step++) {
+            info.logl = iqtree->getModelFactory()->optimizeParameters(brlen_type, false,
+                TOL_LIKELIHOOD_MODELTEST, TOL_GRADIENT_MODELTEST);
+            info.tree_len = iqtree->treeLength();
+            iqtree->getModelFactory()->saveCheckpoint();
+            iqtree->saveCheckpoint();
+
+            // check if logl(+R[k]) is worse than logl(+R[k-1])
+            ModelInfo prev_info;
+            if (!prev_info.restoreCheckpointRminus1(&model_info, info.name)) break;
+            if (prev_info.logl < info.logl + TOL_GRADIENT_MODELTEST) break;
+            if (step == 0) {
+                iqtree->getRate()->initFromCatMinusOne();
+            } else if (info.logl < prev_info.logl - TOL_LIKELIHOOD_MODELTEST) {
+                outWarning("Log-likelihood of " + info.name + " worse than " + prev_info.name);
+            }
+        }
+
+    }
+
+    info.df = iqtree->getModelFactory()->getNParameters(brlen_type);
+    string tree_string = iqtree->getTreeString();
+
+    delete iqtree;
+    return tree_string;
+}
+
+
+/**
  * select models for all partitions
- * @param model_info (IN/OUT) all model information
+ * @param[in,out] model_info (IN/OUT) all model information
  * @return total number of parameters
  */
 void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint &model_info, ModelsBlock *models_block, int num_threads) {
@@ -1248,6 +1394,11 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
     DoubleVector lenvec; // tree length for each partition
 	double lhsum = 0.0;
 	int dfsum = 0;
+    if (params.partition_type) {
+        dfsum = in_tree->getNBranchParameters(BRLEN_OPTIMIZE);
+        if (params.partition_type == 'p')
+            dfsum -= 1;
+    }
 	int ssize = in_tree->getAlnNSite();
 	int64_t num_model = 0;
     int64_t total_num_model = in_tree->size();
@@ -1277,7 +1428,51 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
 #endif
 
     double start_time = getRealTime();
-    
+
+	SuperAlignment *super_aln = ((SuperAlignment*)in_tree->aln);
+
+    string concat_tree;
+    ModelInfo concat_info;
+
+    // Analysis on supermatrix
+    {
+        cout << "Performing single model on concatenated supermatrix..." << endl;
+        Alignment *conaln = super_aln->concatenateAlignments();
+        string model_name;
+        switch (conaln->seq_type) {
+            case SEQ_DNA: model_name = "GTR+G"; break;
+            case SEQ_PROTEIN: model_name = "LG+G"; break;
+            case SEQ_CODON: model_name = "GY+G"; break;
+            case SEQ_BINARY: model_name = "GTR2+G"; break;
+            case SEQ_MORPH: model_name = "MK+G"; break;
+            case SEQ_POMO: model_name = "GTR+P"; break;
+            default: ASSERT(0 && "Unprocessed seq_type");
+
+        }
+        concat_tree = testOneModel(model_name, params, conaln, model_info, concat_info,
+            models_block, num_threads, BRLEN_OPTIMIZE);
+        concat_info.computeICScores(ssize);
+        concat_info.saveCheckpoint(&model_info);
+
+
+        // read tree with branch lengths for linked partition model
+        if (params.partition_type && !concat_tree.empty()) {
+            in_tree->readTreeString(concat_tree);
+            int part = 0;
+            for (auto it = in_tree->begin(); it != in_tree->end(); it++, part++) {
+                model_info.startStruct(in_tree->part_info[part].name);
+                (*it)->saveCheckpoint();
+                model_info.endStruct();
+            }
+        }
+        model_info.dump();
+
+        cout << "Single model: " << concat_info.name << " / LnL: " << concat_info.logl
+             << " / df: " << concat_info.df << " / AIC: " << concat_info.AIC_score
+             << " / AICc: " << concat_info.AICc_score << " / BIC: " << concat_info.BIC_score << endl;
+        delete conaln;
+    }
+
 	cout << "Selecting individual models for " << in_tree->size() << " charsets using " << criterionName(params.model_test_criterion) << "..." << endl;
 	//cout << " No. AIC         AICc        BIC         Charset" << endl;
 	cout << " No. Model        Score       Charset" << endl;
@@ -1308,6 +1503,8 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
     }
 
     bool parallel_over_partitions = false;
+    int brlen_type = (params.partition_type == 0) ? BRLEN_OPTIMIZE :
+                    ((params.partition_type == 'p') ? BRLEN_SCALE : BRLEN_FIX);
 
 #ifdef _OPENMP
     parallel_over_partitions = !params.model_test_and_tree && (in_tree->size() >= num_threads);
@@ -1324,7 +1521,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
         if (params.model_name.empty())
             part_model_name = in_tree->part_info[i].model_name;
         ModelInfo best_model;
-		best_model.name = testModel(params, this_tree, part_model_info, models_block, (parallel_over_partitions ? 1 : num_threads), in_tree->part_info[i].name, false, part_model_name);
+		best_model.name = testModel(params, this_tree, part_model_info, models_block, (parallel_over_partitions ? 1 : num_threads), brlen_type, in_tree->part_info[i].name, false, part_model_name);
 
         ASSERT(best_model.restoreCheckpoint(&part_model_info));
 
@@ -1356,20 +1553,25 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
         }
     }
 
+	double inf_score = computeInformationScore(lhsum, dfsum, ssize, params.model_test_criterion);
+	cout << "Full partition model " << criterionName(params.model_test_criterion) << " score: " << inf_score << " (lh=" << lhsum << "  df=" << dfsum << ")" << endl;
+
 	if (params.model_name.find("LINK") == string::npos && params.model_name.find("MERGE") == string::npos) {
 		in_tree->printBestPartition((string(params.out_prefix) + ".best_scheme.nex").c_str());
 		in_tree->printBestPartitionRaxml((string(params.out_prefix) + ".best_scheme").c_str());
         delete [] distID;
         delete [] dist;
         model_info.dump(true);
+        if (inf_score > concat_info.computeICScore(ssize)) {
+            cout << endl;
+            outWarning("Partition model has worse fit than single model!");
+            outWarning("Add MERGE to -m option to increase model fit!");
+        }
 		return;
 	}
 
 	/* following implements the greedy algorithm of Lanfear et al. (2012) */
 //	int part1, part2;
-	double inf_score = computeInformationScore(lhsum, dfsum, ssize, params.model_test_criterion);
-	cout << "Full partition model " << criterionName(params.model_test_criterion) << " score: " << inf_score << " (lh=" << lhsum << "  df=" << dfsum << ")" << endl;
-	SuperAlignment *super_aln = ((SuperAlignment*)in_tree->aln);
 	vector<IntVector> gene_sets;
 	gene_sets.resize(in_tree->size());
 	StrVector model_names;
@@ -1460,10 +1662,21 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
                 tree->setAlignment(aln);
                 extractModelInfo(set_name, model_info, part_model_info);
                 tree->num_precision = in_tree->num_precision;
+                tree->setParams(&params);
+                tree->sse = params.SSE;
+                tree->optimize_by_newton = params.optimize_by_newton;
+                tree->num_threads = params.model_test_and_tree ? num_threads : 1;
                 if (params.model_test_and_tree) {
                     tree->setCheckpoint(new Checkpoint());
+                    tree->saveCheckpoint();
+                } else {
+                    tree->setCheckpoint(&part_model_info);
+                    // trick to restore checkpoint
+                    tree->restoreCheckpoint();
+                    tree->saveCheckpoint();
                 }
-                best_model.name = testModel(params, tree, part_model_info, models_block, 1, set_name);
+                best_model.name = testModel(params, tree, part_model_info, models_block,
+                    params.model_test_and_tree ? num_threads : 1, brlen_type, set_name);
                 best_model.restoreCheckpoint(&part_model_info);
                 if (params.model_test_and_tree) {
                     delete tree->getCheckpoint();
@@ -1584,13 +1797,13 @@ bool isMixtureModel(ModelsBlock *models_block, string &model_str) {
 }
 
 /*
- * Helper function for testModels.
+ * OBSOLETE: Helper function for testModels.
  * Uses seq_type to return a model of the required class, which can then
  * be used by a ModelFactory to produce more such objects.
  * Gets a little complex in the case of DNA models, as 
  * Lie-Markov models are their own class distinct from time reversible models.
  */
-
+/*
 ModelMarkov* getPrototypeModel(SeqType seq_type, PhyloTree* tree, char *model_set) {
     ModelMarkov *subst_model = NULL;
     switch (seq_type) {
@@ -1644,7 +1857,7 @@ ModelMarkov* getPrototypeModel(SeqType seq_type, PhyloTree* tree, char *model_se
     }
     return(subst_model);
 }
-
+*/
 string getSeqTypeName(SeqType seq_type) {
     switch (seq_type) {
     case SEQ_BINARY: return "binary";
@@ -1659,140 +1872,8 @@ string getSeqTypeName(SeqType seq_type) {
 }
 
 
-string testOneModel(string &model_name, int model, Params &params, PhyloTree *in_tree,
-    ModelCheckpoint &model_info, ModelInfo &info, ModelsBlock *models_block, int &num_threads)
-{
-    IQTree *iqtree = NULL;
-    if (posRateHeterotachy(model_name) != string::npos)
-        iqtree = new PhyloTreeMixlen(in_tree->aln, 0);
-    else
-        iqtree = new IQTree(in_tree->aln);
-    iqtree->setParams(&params);
-    iqtree->sse = params.SSE;
-    iqtree->optimize_by_newton = params.optimize_by_newton;
-    iqtree->num_threads = num_threads;
-
-    iqtree->setCheckpoint(&model_info);
-    iqtree->restoreCheckpoint();
-    ASSERT(iqtree->root);
-    iqtree->initializeModel(params, model_name, models_block);
-    if (!iqtree->getModel()->isMixture() || in_tree->aln->seq_type == SEQ_POMO)
-        model_name = iqtree->getModelName();
-
-    info.name = model_name;
-
-    if (info.restoreCheckpoint(&model_info)) {
-        delete iqtree;
-        return "";
-    }
-
-    if (params.model_test_and_tree) {
-        //--- PERFORM FULL TREE SEARCH PER MODEL ----//
-
-        string original_model = params.model_name;
-        // BQM 2017-03-29: disable bootstrap
-        int orig_num_bootstrap_samples = params.num_bootstrap_samples;
-        int orig_gbo_replicates = params.gbo_replicates;
-        params.num_bootstrap_samples = 0;
-        params.gbo_replicates = 0;
-        STOP_CONDITION orig_stop_condition = params.stop_condition;
-        if (params.stop_condition == SC_BOOTSTRAP_CORRELATION)
-            params.stop_condition = SC_UNSUCCESS_ITERATION;
-
-        params.model_name = model_name;
-//        char *orig_user_tree = params.user_file;
-//        string new_user_tree = (string)params.out_prefix+".treefile";
-//        if (params.model_test_and_tree == 1 && model>0 && fileExists(new_user_tree)) {
-//            params.user_file = (char*)new_user_tree.c_str();
-//        }
-        // set checkpoint
-        iqtree->setCheckpoint(in_tree->getCheckpoint());
-        iqtree->num_precision = in_tree->num_precision;
-
-        // clear all checkpointed information
-        Checkpoint *newCheckpoint = new Checkpoint;
-        iqtree->getCheckpoint()->getSubCheckpoint(newCheckpoint, "iqtree");
-        iqtree->getCheckpoint()->clear();
-        iqtree->getCheckpoint()->insert(newCheckpoint->begin(), newCheckpoint->end());
-        delete newCheckpoint;
-        
-        cout << endl << "===> Testing model " << model+1 << ": " << model_name << endl;
-
-        if (iqtree->root) {
-            // start from previous tree
-            string initTree = iqtree->getTreeString();
-            iqtree->getCheckpoint()->put("initTree", initTree);
-            iqtree->saveCheckpoint();
-        }
-
-        runTreeReconstruction(params, original_model, iqtree, model_info);
-        info.logl = iqtree->computeLikelihood();
-        info.tree_len = iqtree->treeLength();
-        info.tree = iqtree->getTreeString();
-
-        // restore original parameters
-        params.model_name = original_model;
-//        params.user_file = orig_user_tree;
-        // 2017-03-29: restore bootstrap replicates
-        params.num_bootstrap_samples = orig_num_bootstrap_samples;
-        params.gbo_replicates = orig_gbo_replicates;
-        params.stop_condition = orig_stop_condition;
-
-        // clear all checkpointed information
-        newCheckpoint = new Checkpoint;
-        iqtree->getCheckpoint()->getSubCheckpoint(newCheckpoint, "iqtree");
-        iqtree->getCheckpoint()->clear();
-        iqtree->getCheckpoint()->insert(newCheckpoint->begin(), newCheckpoint->end());
-        iqtree->getCheckpoint()->putBool("finished", false);
-        iqtree->getCheckpoint()->dump(true);
-        delete newCheckpoint;
-
-    } else {
-        //--- FIX TREE TOPOLOGY AND ESTIMATE MODEL PARAMETERS ----//
-
-        if (verbose_mode >= VB_MED)
-            cout << "Optimizing model " << info.name << endl;
-        iqtree->getModelFactory()->restoreCheckpoint();
-
-        #ifdef _OPENMP
-        if (num_threads <= 0) {
-            num_threads = iqtree->testNumThreads();
-            omp_set_num_threads(num_threads);
-        } else
-            iqtree->warnNumThreads();
-        #endif
-
-        iqtree->initializeAllPartialLh();
-
-        for (int step = 0; step < 2; step++) {
-            info.logl = iqtree->getModelFactory()->optimizeParameters(false, false,
-                TOL_LIKELIHOOD_MODELTEST, TOL_GRADIENT_MODELTEST);
-            info.tree_len = iqtree->treeLength();
-            iqtree->getModelFactory()->saveCheckpoint();
-            iqtree->saveCheckpoint();
-
-            // check if logl(+R[k]) is worse than logl(+R[k-1])
-            ModelInfo prev_info;
-            if (!prev_info.restoreCheckpointRminus1(&model_info, info.name)) break;
-            if (prev_info.logl < info.logl + TOL_GRADIENT_MODELTEST) break;
-            if (step == 0) {
-                iqtree->getRate()->initFromCatMinusOne();
-            } else if (info.logl < prev_info.logl - TOL_LIKELIHOOD_MODELTEST) {
-                outWarning("Log-likelihood of " + info.name + " worse than " + prev_info.name);
-            }
-        }
-
-    }
-
-    info.df = iqtree->getModelFactory()->getNParameters();
-    string tree_string = iqtree->getTreeString();
-
-    delete iqtree;
-    return tree_string;
-}
-
 string testModel(Params &params, PhyloTree* in_tree, ModelCheckpoint &model_info, ModelsBlock *models_block,
-    int num_threads, string set_name, bool print_mem_usage, string in_model_name)
+    int num_threads, int brlen_type, string set_name, bool print_mem_usage, string in_model_name)
 {
     ModelCheckpoint *checkpoint = &model_info;
 
@@ -1909,8 +1990,8 @@ string testModel(Params &params, PhyloTree* in_tree, ModelCheckpoint &model_info
         string tree_string;
 
         /***** main call to estimate model parameters ******/
-        tree_string = testOneModel(model_names[model], model, params, in_tree,
-            model_info, info, models_block, num_threads);
+        tree_string = testOneModel(model_names[model], params, in_tree->aln,
+            model_info, info, models_block, num_threads, brlen_type);
 
         info.computeICScores(ssize);
         info.saveCheckpoint(checkpoint);
