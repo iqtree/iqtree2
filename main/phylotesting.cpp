@@ -1562,7 +1562,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
         delete [] distID;
         delete [] dist;
         model_info.dump(true);
-        if (inf_score > concat_info.computeICScore(ssize)) {
+        if (inf_score > concat_info.computeICScore(ssize) + 1.0) {
             cout << endl;
             outWarning("Partition model has worse fit than single model!");
             outWarning("Add MERGE to -m option to increase model fit!");
@@ -1780,6 +1780,11 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
 	in_tree->printBestPartition((string(params.out_prefix) + ".best_scheme.nex").c_str());
 	in_tree->printBestPartitionRaxml((string(params.out_prefix) + ".best_scheme").c_str());
     model_info.dump(true);
+    if (inf_score > concat_info.computeICScore(ssize) + 1.0) {
+        cout << endl;
+        outWarning("Partition merging found worse model than single model!");
+        outWarning("Please do not use partition model!");
+    }
 }
 
 bool isMixtureModel(ModelsBlock *models_block, string &model_str) {

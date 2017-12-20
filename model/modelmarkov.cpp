@@ -830,7 +830,8 @@ double ModelMarkov::optimizeParameters(double gradient_epsilon) {
         // parameters at boundary, restart with L-BFGS-B with parameters2
         double score2 = -L_BFGS_B(ndim, variables2+1, lower_bound+1, upper_bound+1, max(gradient_epsilon, TOL_RATE));
         if (score2 > score+0.1) {
-            cout << "NICE: L-BFGS-B found better parameters with LnL=" << score2 << " than BFGS LnL=" << score << endl;
+            if (verbose_mode >= VB_MED)
+                cout << "NICE: L-BFGS-B found better parameters with LnL=" << score2 << " than BFGS LnL=" << score << endl;
             changed = getVariables(variables2);
             score = score2;
         } else {
