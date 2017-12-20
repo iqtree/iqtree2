@@ -191,11 +191,16 @@ void reportModelSelection(ofstream &out, Params &params, ModelCheckpoint *model_
 
 	out << "----------------------------------------------------------------------------------------" << endl;
 	*/
-//	int setid = 1;
+	int setid = 1;
 
     vector<ModelInfo> models;
     model_info->getOrderedModels(tree, models);
     for (auto it = models.begin(); it != models.end(); it++) {
+		if (tree->isSuperTree()) {
+			out.width(4);
+			out << right << setid << "  ";
+            setid++;
+		}
 		out.width(15);
 		out << left << it->name << " ";
 		out.width(11);
