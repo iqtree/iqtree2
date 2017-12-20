@@ -338,7 +338,7 @@ public:
 	 * @param ids partitions IDs
 	 * @return subtree
 	 */
-    PhyloTree *extractSubtree(IntVector &ids);
+    PhyloTree *extractSubtree(set<int> &ids);
 
     /**
      * compute the memory size required for storing partial likelihood vectors

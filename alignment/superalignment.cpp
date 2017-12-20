@@ -602,12 +602,13 @@ double SuperAlignment::computeMissingData() {
 
 }
 
-Alignment *SuperAlignment::concatenateAlignments(IntVector &ids) {
+Alignment *SuperAlignment::concatenateAlignments(set<int> &ids) {
 	string union_taxa;
-	int nsites = 0, nstates = 0, i;
+	int nsites = 0, nstates = 0;
+    set<int>::iterator it;
 	SeqType sub_type = SEQ_UNKNOWN;
-	for (i = 0; i < ids.size(); i++) {
-		int id = ids[i];
+	for (it = ids.begin(); it != ids.end(); it++) {
+		int id = *it;
 		ASSERT(id >= 0 && id < partitions.size());
 		if (nstates == 0) nstates = partitions[id]->num_states;
 		if (sub_type == SEQ_UNKNOWN) sub_type = partitions[id]->seq_type;
@@ -620,14 +621,14 @@ Alignment *SuperAlignment::concatenateAlignments(IntVector &ids) {
         Pattern taxa_pat = getPattern(id);
         taxa_set.insert(taxa_set.begin(), taxa_pat.begin(), taxa_pat.end());
 		nsites += partitions[id]->getNSite();
-		if (i == 0) union_taxa = taxa_set; else {
+		if (it == ids.begin()) union_taxa = taxa_set; else {
 			for (int j = 0; j < union_taxa.length(); j++)
 				if (taxa_set[j] == 1) union_taxa[j] = 1;
 		}
 	}
 
 	Alignment *aln = new Alignment;
-	for (i = 0; i < union_taxa.length(); i++)
+	for (int i = 0; i < union_taxa.length(); i++)
 		if (union_taxa[i] == 1) {
 			aln->seq_names.push_back(getSeqName(i));
 		}
@@ -636,18 +637,18 @@ Alignment *SuperAlignment::concatenateAlignments(IntVector &ids) {
 	aln->site_pattern.resize(nsites, -1);
     aln->clear();
     aln->pattern_index.clear();
-    aln->STATE_UNKNOWN = partitions[ids[0]]->STATE_UNKNOWN;
-    aln->genetic_code = partitions[ids[0]]->genetic_code;
+    aln->STATE_UNKNOWN = partitions[*ids.begin()]->STATE_UNKNOWN;
+    aln->genetic_code = partitions[*ids.begin()]->genetic_code;
     if (aln->seq_type == SEQ_CODON) {
     	aln->codon_table = new char[aln->num_states];
-    	memcpy(aln->codon_table, partitions[ids[0]]->codon_table, aln->num_states);
+    	memcpy(aln->codon_table, partitions[*ids.begin()]->codon_table, aln->num_states);
     	aln->non_stop_codon = new char[strlen(aln->genetic_code)];
-    	memcpy(aln->non_stop_codon, partitions[ids[0]]->non_stop_codon, strlen(aln->genetic_code));
+    	memcpy(aln->non_stop_codon, partitions[*ids.begin()]->non_stop_codon, strlen(aln->genetic_code));
     }
 
     int site = 0;
-    for (i = 0; i < ids.size(); i++) {
-    	int id = ids[i];
+    for (it = ids.begin(); it != ids.end(); it++) {
+    	int id = *it;
 		string taxa_set;
         Pattern taxa_pat = getPattern(id);
         taxa_set.insert(taxa_set.begin(), taxa_pat.begin(), taxa_pat.end());
@@ -678,10 +679,9 @@ Alignment *SuperAlignment::concatenateAlignments(IntVector &ids) {
 }
 
 Alignment *SuperAlignment::concatenateAlignments() {
-    IntVector ids;
-    ids.resize(partitions.size());
+    set<int> ids;
     for (int i = 0; i < partitions.size(); i++)
-        ids[i] = i;
+        ids.insert(i);
     return concatenateAlignments(ids);
 }
 

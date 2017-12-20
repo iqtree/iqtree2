@@ -1126,9 +1126,9 @@ void extractModelInfo(string &set_name, ModelCheckpoint &model_info, ModelCheckp
     }
 }
 
-void mergePartitions(PhyloSuperTree* super_tree, vector<IntVector> &gene_sets, StrVector &model_names) {
+void mergePartitions(PhyloSuperTree* super_tree, vector<set<int> > &gene_sets, StrVector &model_names) {
 	cout << "Merging into " << gene_sets.size() << " partitions..." << endl;
-	vector<IntVector>::iterator it;
+	vector<set<int> >::iterator it;
 	SuperAlignment *super_aln = (SuperAlignment*)super_tree->aln;
 	vector<PartitionInfo> part_info;
 	vector<PhyloTree*> tree_vec;
@@ -1141,7 +1141,7 @@ void mergePartitions(PhyloSuperTree* super_tree, vector<IntVector> &gene_sets, S
 		info.model_name = model_names[it-gene_sets.begin()];
         info.part_rate = 1.0; // BIG FIX: make -spp works with -m TESTMERGE now!
         info.evalNNIs = 0;
-		for (IntVector::iterator i = it->begin(); i != it->end(); i++) {
+		for (set<int>::iterator i = it->begin(); i != it->end(); i++) {
 			if (i != it->begin()) {
 				info.name += "+";
 				info.position_spec += ", ";
@@ -1379,7 +1379,7 @@ string testOneModel(string &model_name, Params &params, Alignment *in_aln,
 }
 
 /** model information by merging two partitions */
-struct ModelPairInfo {
+struct ModelPair {
     /** score after merging */
     double score;
     /** ID of partition 1 */
@@ -1393,11 +1393,47 @@ struct ModelPairInfo {
     /** tree length */
     double tree_len;
     /** IDs of merged partitions */
-    IntVector merged_set;
+    set<int> merged_set;
     /** set name */
     string set_name;
     /* best model name */
     string model_name;
+};
+
+class ModelPairSet : public multimap<double, ModelPair> {
+
+public:
+
+    /** insert a partition pair */
+    void insertPair(ModelPair &pair) {
+        insert(value_type(pair.score, pair));
+    }
+
+    /** 
+        find the maximum compatible partition pairs
+        @param num max number of pairs to return
+    */
+    void getCompatiblePairs(int num, ModelPairSet &res) {
+        set<int> part_ids;
+
+        for (auto it = begin(); it != end() && res.size() < num; it++) {
+
+            // check for compatibility
+            vector<int> overlap;
+            set_intersection(part_ids.begin(), part_ids.end(),
+                it->second.merged_set.begin(), it->second.merged_set.end(),
+                std::back_inserter(overlap));
+
+            if (!overlap.empty()) continue;
+
+            // take the union
+            part_ids.insert(it->second.merged_set.begin(), it->second.merged_set.end());
+
+            // put the compatible pair to the set
+            res.insertPair(it->second);
+        }
+    }
+
 };
 
 /**
@@ -1593,14 +1629,14 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
 
 	/* following implements the greedy algorithm of Lanfear et al. (2012) */
 //	int part1, part2;
-	vector<IntVector> gene_sets;
+	vector<set<int> > gene_sets;
 	gene_sets.resize(in_tree->size());
 	StrVector model_names;
 	model_names.resize(in_tree->size());
 	StrVector greedy_model_trees;
 	greedy_model_trees.resize(in_tree->size());
 	for (i = 0; i < gene_sets.size(); i++) {
-		gene_sets[i].push_back(i);
+		gene_sets[i].insert(i);
 		model_names[i] = in_tree->part_info[i].model_name;
 		greedy_model_trees[i] = in_tree->part_info[i].name;
 	}
@@ -1608,15 +1644,17 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
 	int prev_part = -1;
 	while (gene_sets.size() >= 2) {
 		// stepwise merging charsets
-        ModelPairInfo opt_pair;
-        opt_pair.score = DBL_MAX;
+
+        // list of all better pairs of partitions than current partitioning scheme
+        ModelPairSet better_pairs;
+
         size_t num_pairs = 0;
         // 2015-06-24: begin rcluster algorithm
         // compute distance between gene_sets
 		for (int part1 = 0; part1 < gene_sets.size()-1; part1++)
 			for (int part2 = part1+1; part2 < gene_sets.size(); part2++)
-			if (super_aln->partitions[gene_sets[part1][0]]->seq_type == super_aln->partitions[gene_sets[part2][0]]->seq_type &&
-                super_aln->partitions[gene_sets[part1][0]]->genetic_code == super_aln->partitions[gene_sets[part2][0]]->genetic_code)
+			if (super_aln->partitions[*gene_sets[part1].begin()]->seq_type == super_aln->partitions[*gene_sets[part2].begin()]->seq_type &&
+                super_aln->partitions[*gene_sets[part1].begin()]->genetic_code == super_aln->partitions[*gene_sets[part2].begin()]->genetic_code)
             {
 				// only merge partitions of the same data type
                 dist[num_pairs] = fabs(lenvec[part1] - lenvec[part2]);
@@ -1647,16 +1685,16 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
 #endif
         for (int pair = 0; pair < num_pairs; pair++) {
             // information of current partitions pair
-            ModelPairInfo cur_pair;
+            ModelPair cur_pair;
             cur_pair.part1 = distID[pair].first;
             cur_pair.part2 = distID[pair].second;
-            ASSERT(cur_pair.part1 != cur_pair.part2);
-            cur_pair.merged_set.insert(cur_pair.merged_set.end(), gene_sets[cur_pair.part1].begin(), gene_sets[cur_pair.part1].end());
-            cur_pair.merged_set.insert(cur_pair.merged_set.end(), gene_sets[cur_pair.part2].begin(), gene_sets[cur_pair.part2].end());
-            for (i = 0; i < cur_pair.merged_set.size(); i++) {
-                if (i > 0)
+            ASSERT(cur_pair.part1 < cur_pair.part2);
+            cur_pair.merged_set.insert(gene_sets[cur_pair.part1].begin(), gene_sets[cur_pair.part1].end());
+            cur_pair.merged_set.insert(gene_sets[cur_pair.part2].begin(), gene_sets[cur_pair.part2].end());
+            for (auto it = cur_pair.merged_set.begin(); it != cur_pair.merged_set.end(); it++) {
+                if (it != cur_pair.merged_set.begin())
                     cur_pair.set_name += "+";
-                cur_pair.set_name += in_tree->part_info[cur_pair.merged_set[i]].name;
+                cur_pair.set_name += in_tree->part_info[*it].name;
             }
             ModelInfo best_model;
             bool done_before = false;
@@ -1726,13 +1764,19 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
                     }
                     cout << endl;
 				}
-				if (cur_pair.score < opt_pair.score) {
-                    opt_pair = cur_pair;
-				}
+                if (cur_pair.score < inf_score)
+                    better_pairs.insertPair(cur_pair);
 			}
 
         }
-		if (opt_pair.score >= inf_score) break;
+		if (better_pairs.empty()) break;
+        ModelPairSet compatible_pairs;
+
+        int num_comp_pairs = params.partfinder_rcluster_fast ? gene_sets.size()/2 : 1;
+        better_pairs.getCompatiblePairs(num_comp_pairs, compatible_pairs);
+
+        ModelPair opt_pair = better_pairs.begin()->second;
+
 		inf_score = opt_pair.score;
 
 		lhsum = lhsum - lhvec[opt_pair.part1] - lhvec[opt_pair.part2] + opt_pair.logl;
@@ -1776,8 +1820,8 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
 		if (i > 0)
 			cout << ", ";
 		cout << model_names[i] << ":";
-		for (int j = 0; j < gene_sets[i].size(); j++) {
-			cout << " " << in_tree->part_info[gene_sets[i][j]].name;
+		for (auto j = gene_sets[i].begin(); j != gene_sets[i].end(); j++) {
+			cout << " " << in_tree->part_info[*j].name;
 		}
 	}
 	cout << ";" << endl;

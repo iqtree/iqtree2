@@ -1505,17 +1505,16 @@ string PhyloSuperTree::getModelName() {
 	return (string)"Partition model";
 }
 
-PhyloTree *PhyloSuperTree::extractSubtree(IntVector &ids) {
+PhyloTree *PhyloSuperTree::extractSubtree(set<int> &ids) {
 	string union_taxa;
-	int i;
-	for (i = 0; i < ids.size(); i++) {
-		int id = ids[i];
+	for (auto it = ids.begin(); it != ids.end(); it++) {
+		int id = *it;
 		if (id < 0 || id >= size())
 			outError("Internal error ", __func__);
 		string taxa_set;
         Pattern taxa_pat = aln->getPattern(id);
         taxa_set.insert(taxa_set.begin(), taxa_pat.begin(), taxa_pat.end());
-		if (i == 0) union_taxa = taxa_set; else {
+		if (it == ids.begin()) union_taxa = taxa_set; else {
 			for (int j = 0; j < union_taxa.length(); j++)
 				if (taxa_set[j] == 1) union_taxa[j] = 1;
 		}

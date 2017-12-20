@@ -262,7 +262,7 @@ public:
 	 * @param ids IDs of sub-alignments
 	 * @return concatenated alignment
 	 */
-    Alignment *concatenateAlignments(IntVector &ids);
+    Alignment *concatenateAlignments(set<int> &ids);
 
 	/**
 	 * concatenate all alignments
