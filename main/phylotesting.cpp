@@ -1641,7 +1641,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
 		greedy_model_trees[i] = in_tree->part_info[i].name;
 	}
 	cout << "Merging models to increase model fit (about " << total_num_model << " total partition schemes)..." << endl;
-	int prev_part = -1;
+
 	while (gene_sets.size() >= 2) {
 		// stepwise merging charsets
 
@@ -1698,7 +1698,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
             }
             ModelInfo best_model;
             bool done_before = false;
-            if (prev_part >= 0 && cur_pair.part1 != prev_part && cur_pair.part2 != prev_part) {
+            {
                 // if pairs previously examined, reuse the information
                 model_info.startStruct(cur_pair.set_name);
                 if (model_info.getBestModel(best_model.name)) {
@@ -1774,31 +1774,48 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
 
         int num_comp_pairs = params.partfinder_rcluster_fast ? gene_sets.size()/2 : 1;
         better_pairs.getCompatiblePairs(num_comp_pairs, compatible_pairs);
+        if (compatible_pairs.size() > 1)
+            cout << compatible_pairs.size() << " compatible better partition pairs found" << endl;
 
-        ModelPair opt_pair = better_pairs.begin()->second;
+        // 2017-12-21: simultaneously merging better pairs
+        for (auto it_pair = compatible_pairs.begin(); it_pair != compatible_pairs.end(); it_pair++) {
+            ModelPair opt_pair = it_pair->second;
 
-		inf_score = opt_pair.score;
+            lhsum = lhsum - lhvec[opt_pair.part1] - lhvec[opt_pair.part2] + opt_pair.logl;
+            dfsum = dfsum - dfvec[opt_pair.part1] - dfvec[opt_pair.part2] + opt_pair.df;
+            inf_score = computeInformationScore(lhsum, dfsum, ssize, params.model_test_criterion);
+            ASSERT(inf_score <= opt_pair.score + 0.1);
 
-		lhsum = lhsum - lhvec[opt_pair.part1] - lhvec[opt_pair.part2] + opt_pair.logl;
-		dfsum = dfsum - dfvec[opt_pair.part1] - dfvec[opt_pair.part2] + opt_pair.df;
-		cout << "Merging " << opt_pair.set_name << " with " << criterionName(params.model_test_criterion) << " score: " << opt_pair.score << " (lh=" << lhsum << "  df=" << dfsum << ")" << endl;
-		// change entry opt_part1 to merged one
-		gene_sets[opt_pair.part1] = opt_pair.merged_set;
-		lhvec[opt_pair.part1] = opt_pair.logl;
-		dfvec[opt_pair.part1] = opt_pair.df;
-        lenvec[opt_pair.part1] = opt_pair.tree_len;
-		model_names[opt_pair.part1] = opt_pair.model_name;
-		greedy_model_trees[opt_pair.part1] = "(" + greedy_model_trees[opt_pair.part1] + "," + greedy_model_trees[opt_pair.part2] + ")" +
-				convertIntToString(in_tree->size()-gene_sets.size()+1) + ":" + convertDoubleToString(inf_score);
-		prev_part = opt_pair.part1;
+            cout << "Merging " << opt_pair.set_name << " with " << criterionName(params.model_test_criterion)
+                 << " score: " << inf_score << " (lh=" << lhsum << "  df=" << dfsum << ")" << endl;
+            // change entry opt_part1 to merged one
+            gene_sets[opt_pair.part1] = opt_pair.merged_set;
+            lhvec[opt_pair.part1] = opt_pair.logl;
+            dfvec[opt_pair.part1] = opt_pair.df;
+            lenvec[opt_pair.part1] = opt_pair.tree_len;
+            model_names[opt_pair.part1] = opt_pair.model_name;
+            greedy_model_trees[opt_pair.part1] = "(" + greedy_model_trees[opt_pair.part1] + "," +
+                greedy_model_trees[opt_pair.part2] + ")" +
+                convertIntToString(in_tree->size()-gene_sets.size()+1) + ":" +
+                convertDoubleToString(inf_score);
 
-		// delete entry opt_part2
-		lhvec.erase(lhvec.begin() + opt_pair.part2);
-		dfvec.erase(dfvec.begin() + opt_pair.part2);
-		lenvec.erase(lenvec.begin() + opt_pair.part2);
-		gene_sets.erase(gene_sets.begin() + opt_pair.part2);
-		model_names.erase(model_names.begin() + opt_pair.part2);
-		greedy_model_trees.erase(greedy_model_trees.begin() + opt_pair.part2);
+            // delete entry opt_part2
+            lhvec.erase(lhvec.begin() + opt_pair.part2);
+            dfvec.erase(dfvec.begin() + opt_pair.part2);
+            lenvec.erase(lenvec.begin() + opt_pair.part2);
+            gene_sets.erase(gene_sets.begin() + opt_pair.part2);
+            model_names.erase(model_names.begin() + opt_pair.part2);
+            greedy_model_trees.erase(greedy_model_trees.begin() + opt_pair.part2);
+
+            // decrease part ID for all pairs beyond opt_pair.part2
+            auto next_pair = it_pair;
+            for (next_pair++; next_pair != compatible_pairs.end(); next_pair++) {
+                if (next_pair->second.part1 > opt_pair.part2)
+                    next_pair->second.part1--;
+                if (next_pair->second.part2 > opt_pair.part2)
+                    next_pair->second.part2--;
+            }
+        }
 	}
 
 	string final_model_tree;

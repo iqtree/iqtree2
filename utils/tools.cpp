@@ -3618,6 +3618,7 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -m MF+MERGE          Find best partition scheme incl. FreeRate heterogeneity" << endl
             << "  -m MFP+MERGE         Like -m MF+MERGE followed by tree inference" << endl
             << "  -rcluster <percent>  Percentage of partition pairs (relaxed clustering alg.)" << endl
+            << "  -rclusterf <perc.>   Percentage of partition pairs (fast relaxed clustering)" << endl
             << "  -rcluster-max <num>  Max number of partition pairs (default: 10*#partitions)" << endl
             << "  -mset program        Restrict search to models supported by other programs" << endl
             << "                       (raxml, phyml or mrbayes)" << endl
