@@ -1336,7 +1336,7 @@ string testOneModel(string &model_name, Params &params, Alignment *in_aln,
 
         int count = iqtree->getCheckpoint()->eraseKeyPrefix("finished");
         cout << count << " finished checkpoint entries erased" << endl;
-
+        iqtree->getCheckpoint()->eraseKeyPrefix("CandidateSet");
 
     } else {
         //--- FIX TREE TOPOLOGY AND ESTIMATE MODEL PARAMETERS ----//
