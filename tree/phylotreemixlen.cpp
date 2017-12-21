@@ -259,10 +259,14 @@ void PhyloTreeMixlen::initializeMixlen(double tolerance, bool write_info) {
 
         double treelen = treeLength();
         relative_treelen.resize(mixlen);
+        // 2017-12-21: BUG: moved this out of write_info if
+        // otherwise, relative_treelen is not initialized
+        for (i = 0; i < mixlen; i++)
+            relative_treelen[i] = treelen * relative_rate->getRate(i);
+
         if (write_info) {
             cout << "relative_treelen:";
             for (i = 0; i < mixlen; i++) {
-                relative_treelen[i] = treelen * relative_rate->getRate(i);
                 cout << " " << relative_treelen[i];
             }
             cout << endl;
