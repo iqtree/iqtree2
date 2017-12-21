@@ -31,7 +31,7 @@ PhyloSuperTreePlen::PhyloSuperTreePlen(Params &params)
 : PhyloSuperTree(params)
 {
 	memset(allNNIcases_computed, 0, 5*sizeof(int));
-	fixed_rates = (params.partition_type == 'j') ? true : false;
+	fixed_rates = (params.partition_type == BRLEN_FIX) ? true : false;
 	int part = 0;
 	for (iterator it = begin(); it != end(); it++, part++) {
 		part_info[part].part_rate = 1.0;

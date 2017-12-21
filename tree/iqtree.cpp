@@ -983,7 +983,7 @@ void IQTree::initializeModel(Params &params, string &model_name, ModelsBlock *mo
     try {
         if (!getModelFactory()) {
             if (isSuperTree()) {
-                if (params.partition_type) {
+                if (params.partition_type != BRLEN_OPTIMIZE) {
                     setModelFactory(new PartitionModelPlen(params, (PhyloSuperTreePlen*) this, models_block));
                 } else
                     setModelFactory(new PartitionModel(params, (PhyloSuperTree*) this, models_block));
@@ -2746,7 +2746,7 @@ void IQTree::refineBootTrees() {
         // create bootstrap tree
 		IQTree *boot_tree;
 		if (aln->isSuperAlignment()){
-			if(params->partition_type){
+			if(params->partition_type != BRLEN_OPTIMIZE){
 				boot_tree = new PhyloSuperTreePlen((SuperAlignment*) bootstrap_alignment, (PhyloSuperTree*) this);
 			} else {
 				boot_tree = new PhyloSuperTree((SuperAlignment*) bootstrap_alignment, (PhyloSuperTree*) this);

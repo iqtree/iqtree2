@@ -825,12 +825,13 @@ public:
     char *partition_file;
 
     /**
+     *      IMPORTANT (2012-12-21): refactor this variable as below
      * 		defines the relation between edge lengths in supertree and subtrees
-     * 		0 (NULL) for separate edge length (default)
-     * 		'p' for proportional edge length
-     * 		'j' for joint edge length
+     * 		BRLEN_OPTIMIZE (0) for separate edge length (default)
+     * 		BRLEN_FIX (1) for joint edge length
+     * 		BRLEN_SCALE (2) for proportional edge length
      */
-    char partition_type;
+    int partition_type;
 
     /** percentage for rcluster algorithm like PartitionFinder */
     double partfinder_rcluster; 

@@ -594,7 +594,7 @@ void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh, 
     else
         out << "NOTE: Tree is UNROOTED although outgroup taxon '" << tree.root->name << "' is drawn at root" << endl;
 
-    if (tree.isSuperTree() && params.partition_type == 0)
+    if (tree.isSuperTree() && params.partition_type == BRLEN_OPTIMIZE)
         out	<< "NOTE: Branch lengths are weighted average over all partitions" << endl
             << "      (weighted by the number of sites in the partitions)" << endl;
     if (tree.isMixlen())
@@ -928,14 +928,16 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 		out << "SUBSTITUTION PROCESS" << endl << "--------------------" << endl
 				<< endl;
 		if (tree.isSuperTree()) {
-			if(params.partition_type)
-				out	<< "Proportional partition model with joint branch lengths and separate models between partitions" << endl << endl;
+			if(params.partition_type == BRLEN_SCALE)
+				out	<< "Edge-linked-proportional partition model but separate models between partitions" << endl << endl;
+			else if(params.partition_type == BRLEN_FIX)
+				out	<< "Edge-linked-equal partition model but separate models between partitions" << endl << endl;
 			else
-				out	<< "Full partition model with separate branch lengths and models between partitions" << endl << endl;
+				out	<< "Edge-unlinked partition model and separate models between partitions" << endl << endl;
 			PhyloSuperTree *stree = (PhyloSuperTree*) &tree;
 			PhyloSuperTree::iterator it;
 			int part;
-			if(params.partition_type)
+			if(params.partition_type != BRLEN_OPTIMIZE)
 				out << "  ID  Model           Speed  Parameters" << endl;
 			else
 				out << "  ID  Model         TreeLen  Parameters" << endl;
@@ -944,7 +946,7 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 				out.width(4);
 				out << right << (part+1) << "  ";
 				out.width(14);
-				if(params.partition_type)
+				if(params.partition_type != BRLEN_OPTIMIZE)
 					out << left << (*it)->getModelName() << " " << stree->part_info[part].part_rate  << "  " << (*it)->getModelNameParams() << endl;
 				else
 					out << left << (*it)->getModelName() << " " << (*it)->treeLength() << "  " << (*it)->getModelNameParams() << endl;
@@ -1548,6 +1550,15 @@ void initializeParams(Params &params, IQTree &iqtree, ModelCheckpoint &model_inf
 
         Checkpoint *orig_checkpoint = iqtree.getCheckpoint();
         iqtree.setCheckpoint(&model_info);
+
+        int partition_type;
+        if (CKP_RESTORE2((&model_info), partition_type)) {
+            if (partition_type != params.partition_type)
+                outError("Mismatch partition type between checkpoint and partition file command option");
+        } else {
+            partition_type = params.partition_type;
+            CKP_SAVE2((&model_info), partition_type);
+        }
 
         // compute initial tree
         iqtree.computeInitialTree(dist_file, params.SSE);
@@ -2734,7 +2745,7 @@ void runStandardBootstrap(Params &params, string &original_model, Alignment *ali
 		}
 		IQTree *boot_tree;
 		if (alignment->isSuperAlignment()){
-			if(params.partition_type){
+			if(params.partition_type != BRLEN_OPTIMIZE){
 				boot_tree = new PhyloSuperTreePlen((SuperAlignment*) bootstrap_alignment, (PhyloSuperTree*) tree);
 			} else {
 				boot_tree = new PhyloSuperTree((SuperAlignment*) bootstrap_alignment, (PhyloSuperTree*) tree);
@@ -2997,7 +3008,7 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
 	/****************** read in alignment **********************/
 	if (params.partition_file) {
 		// Partition model analysis
-		if(params.partition_type){
+		if(params.partition_type != BRLEN_OPTIMIZE){
 			// since nni5 does not work yet, stop the programm
 /*			if(params.nni5)
 				outError("-nni5 option is unsupported yet for proportitional partition model. please use -nni1 option");*/
@@ -3203,7 +3214,7 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
 //	}
 
 	if(verbose_mode >= VB_MED){
-		if(tree->isSuperTree() && params.partition_type){
+		if(tree->isSuperTree() && params.partition_type != BRLEN_OPTIMIZE){
 			((PhyloSuperTreePlen*) tree)->printNNIcasesNUM();
 		}
 	}

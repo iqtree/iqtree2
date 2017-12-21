@@ -1455,9 +1455,9 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
     DoubleVector lenvec; // tree length for each partition
 	double lhsum = 0.0;
 	int dfsum = 0;
-    if (params.partition_type) {
+    if (params.partition_type != BRLEN_OPTIMIZE) {
         dfsum = in_tree->getNBranchParameters(BRLEN_OPTIMIZE);
-        if (params.partition_type == 'p')
+        if (params.partition_type == BRLEN_SCALE)
             dfsum -= 1;
     }
 	int ssize = in_tree->getAlnNSite();
@@ -1517,7 +1517,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
 
 
         // read tree with branch lengths for linked partition model
-        if (params.partition_type && !concat_tree.empty()) {
+        if (params.partition_type != BRLEN_OPTIMIZE && !concat_tree.empty()) {
             in_tree->readTreeString(concat_tree);
             int part = 0;
             for (auto it = in_tree->begin(); it != in_tree->end(); it++, part++) {
@@ -1564,8 +1564,6 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
     }
 
     bool parallel_over_partitions = false;
-    int brlen_type = (params.partition_type == 0) ? BRLEN_OPTIMIZE :
-                    ((params.partition_type == 'p') ? BRLEN_SCALE : BRLEN_FIX);
 
 #ifdef _OPENMP
     parallel_over_partitions = !params.model_test_and_tree && (in_tree->size() >= num_threads);
@@ -1582,7 +1580,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
         if (params.model_name.empty())
             part_model_name = in_tree->part_info[i].model_name;
         ModelInfo best_model;
-		best_model.name = testModel(params, this_tree, part_model_info, models_block, (parallel_over_partitions ? 1 : num_threads), brlen_type, in_tree->part_info[i].name, false, part_model_name);
+		best_model.name = testModel(params, this_tree, part_model_info, models_block, (parallel_over_partitions ? 1 : num_threads), params.partition_type, in_tree->part_info[i].name, false, part_model_name);
 
         ASSERT(best_model.restoreCheckpoint(&part_model_info));
 
@@ -1732,7 +1730,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
                     tree->saveCheckpoint();
                 }
                 best_model.name = testModel(params, tree, part_model_info, models_block,
-                    params.model_test_and_tree ? num_threads : 1, brlen_type, cur_pair.set_name);
+                    params.model_test_and_tree ? num_threads : 1, params.partition_type, cur_pair.set_name);
                 best_model.restoreCheckpoint(&part_model_info);
                 if (params.model_test_and_tree) {
                     delete tree->getCheckpoint();

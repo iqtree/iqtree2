@@ -768,7 +768,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.do_au_test = false;
     params.siteLL_file = NULL; //added by MA
     params.partition_file = NULL;
-    params.partition_type = 0;
+    params.partition_type = BRLEN_OPTIMIZE;
     params.partfinder_rcluster = 100;
     params.partfinder_rcluster_max = 0;
     params.partfinder_rcluster_fast = false;
@@ -1648,7 +1648,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (cnt >= argc)
 					throw "Use -spp <type of partition model>";
 				params.partition_file = argv[cnt];
-				params.partition_type = 'p';
+				params.partition_type = BRLEN_SCALE;
                 params.opt_gammai = false;
 				continue;
 			}
@@ -1657,13 +1657,13 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (cnt >= argc)
 					throw "Use -q <type of partition model>";
 				params.partition_file = argv[cnt];
-				params.partition_type = 'j';
+				params.partition_type = BRLEN_FIX;
                 params.optimize_alg_gammai = "Brent";
                 params.opt_gammai = false;
 				continue;
 			}
 			if (strcmp(argv[cnt], "-M") == 0) {
-                params.partition_type = 0;
+                params.partition_type = BRLEN_OPTIMIZE;
                 continue;
             }
             if (strcmp(argv[cnt], "-rcluster") == 0) {
@@ -3427,9 +3427,12 @@ void parseArg(int argc, char *argv[], Params &params) {
         usage(argv, false);
 #endif
     }
-    
+
+    if (params.model_test_and_tree && params.partition_type != BRLEN_OPTIMIZE)
+        outError("-mtree not allowed with edge-linked partition model (-spp or -q)");
+
     if (params.do_au_test && params.topotest_replicates == 0)
-        outError("For AU test please please specify number of bootstrap replicates via -zb option");
+        outError("For AU test please specify number of bootstrap replicates via -zb option");
 
     if (params.lh_mem_save == LM_MEM_SAVE && params.partition_file)
         outError("-mem option does not work with partition models yet");
