@@ -1297,12 +1297,12 @@ string testOneModel(string &model_name, Params &params, Alignment *in_aln,
 //        iqtree->num_precision = in_tree->num_precision;
 
         // clear all checkpointed information
-        Checkpoint *newCheckpoint = new Checkpoint;
-        iqtree->getCheckpoint()->getSubCheckpoint(newCheckpoint, "iqtree");
-        iqtree->getCheckpoint()->clear();
-        iqtree->getCheckpoint()->insert(newCheckpoint->begin(), newCheckpoint->end());
-        delete newCheckpoint;
-        
+//        Checkpoint *newCheckpoint = new Checkpoint;
+//        iqtree->getCheckpoint()->getSubCheckpoint(newCheckpoint, "iqtree");
+//        iqtree->getCheckpoint()->clear();
+//        iqtree->getCheckpoint()->insert(newCheckpoint->begin(), newCheckpoint->end());
+//        delete newCheckpoint;
+
         cout << endl << "===> Testing model " << model_name << endl;
 
         if (iqtree->root) {
@@ -1326,13 +1326,17 @@ string testOneModel(string &model_name, Params &params, Alignment *in_aln,
         params.stop_condition = orig_stop_condition;
 
         // clear all checkpointed information
-        newCheckpoint = new Checkpoint;
-        iqtree->getCheckpoint()->getSubCheckpoint(newCheckpoint, "iqtree");
-        iqtree->getCheckpoint()->clear();
-        iqtree->getCheckpoint()->insert(newCheckpoint->begin(), newCheckpoint->end());
-        iqtree->getCheckpoint()->putBool("finished", false);
-        iqtree->getCheckpoint()->dump(true);
-        delete newCheckpoint;
+//        newCheckpoint = new Checkpoint;
+//        iqtree->getCheckpoint()->getSubCheckpoint(newCheckpoint, "iqtree");
+//        iqtree->getCheckpoint()->clear();
+//        iqtree->getCheckpoint()->insert(newCheckpoint->begin(), newCheckpoint->end());
+//        iqtree->getCheckpoint()->putBool("finished", false);
+//        iqtree->getCheckpoint()->dump(true);
+//        delete newCheckpoint;
+
+        int count = iqtree->getCheckpoint()->eraseKeyPrefix("finished");
+        cout << count << " finished checkpoint entries erased" << endl;
+
 
     } else {
         //--- FIX TREE TOPOLOGY AND ESTIMATE MODEL PARAMETERS ----//

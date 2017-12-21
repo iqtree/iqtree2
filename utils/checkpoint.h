@@ -131,6 +131,13 @@ public:
 	 */
 	bool hasKeyPrefix(string key_prefix);
 
+    /**
+        erase all entries with a key prefix
+        @param key_prefix key prefix
+        @return number of entries removed
+    */
+    int eraseKeyPrefix(string key_prefix);
+
     /*-------------------------------------------------------------
      * series of get function to get value of a key
      *-------------------------------------------------------------*/

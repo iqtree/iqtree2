@@ -183,6 +183,22 @@ bool Checkpoint::hasKeyPrefix(string key_prefix) {
     return false;
 }
 
+int Checkpoint::eraseKeyPrefix(string key_prefix) {
+    int count = 0;
+    iterator first_it = lower_bound(key_prefix);
+    iterator i;
+	for (i = first_it; i != end(); i++) {
+        if (i->first.compare(0, key_prefix.size(), key_prefix) == 0)
+            count++;
+        else
+            break;
+
+    }
+    if (count)
+        erase(first_it, i);
+    return count;
+}
+
 /*-------------------------------------------------------------
  * series of get function to get value of a key
  *-------------------------------------------------------------*/
