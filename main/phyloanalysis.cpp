@@ -1550,6 +1550,7 @@ void initializeParams(Params &params, IQTree &iqtree, ModelCheckpoint &model_inf
 
         Checkpoint *orig_checkpoint = iqtree.getCheckpoint();
         iqtree.setCheckpoint(&model_info);
+        iqtree.restoreCheckpoint();
 
         int partition_type;
         if (CKP_RESTORE2((&model_info), partition_type)) {
