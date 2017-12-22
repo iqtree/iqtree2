@@ -1497,19 +1497,19 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
 
     // Analysis on supermatrix
     {
-        cout << "Performing single model on concatenated supermatrix..." << endl;
         Alignment *conaln = super_aln->concatenateAlignments();
         string model_name;
         switch (conaln->seq_type) {
-            case SEQ_DNA: model_name = "GTR+G"; break;
-            case SEQ_PROTEIN: model_name = "LG+G"; break;
-            case SEQ_CODON: model_name = "GY+G"; break;
+            case SEQ_DNA: model_name = "GTR+F+G"; break;
+            case SEQ_PROTEIN: model_name = "LG+F+G"; break;
+            case SEQ_CODON: model_name = "GY"; break; // too much computation, thus no +G
             case SEQ_BINARY: model_name = "GTR2+G"; break;
             case SEQ_MORPH: model_name = "MK+G"; break;
             case SEQ_POMO: model_name = "GTR+P"; break;
             default: ASSERT(0 && "Unprocessed seq_type");
 
         }
+        cout << "Testing " << model_name << " on supermatrix..." << endl;
         concat_tree = testOneModel(model_name, params, conaln, model_info, concat_info,
             models_block, num_threads, BRLEN_OPTIMIZE);
         concat_info.computeICScores(ssize);
@@ -1528,7 +1528,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
         }
         model_info.dump();
 
-        cout << "Single model: " << concat_info.name << " / LnL: " << concat_info.logl
+        cout << concat_info.name << " / LnL: " << concat_info.logl
              << " / df: " << concat_info.df << " / AIC: " << concat_info.AIC_score
              << " / AICc: " << concat_info.AICc_score << " / BIC: " << concat_info.BIC_score << endl;
         delete conaln;
@@ -1613,7 +1613,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
     }
 
 	double inf_score = computeInformationScore(lhsum, dfsum, ssize, params.model_test_criterion);
-	cout << "Full partition model " << criterionName(params.model_test_criterion) << " score: " << inf_score << " (lh=" << lhsum << "  df=" << dfsum << ")" << endl;
+	cout << "Full partition model " << criterionName(params.model_test_criterion) << " score: " << inf_score << " (LnL: " << lhsum << "  df:" << dfsum << ")" << endl;
 
 	if (params.model_name.find("LINK") == string::npos && params.model_name.find("MERGE") == string::npos) {
 		in_tree->printBestPartition((string(params.out_prefix) + ".best_scheme.nex").c_str());
@@ -1789,7 +1789,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
             ASSERT(inf_score <= opt_pair.score + 0.1);
 
             cout << "Merging " << opt_pair.set_name << " with " << criterionName(params.model_test_criterion)
-                 << " score: " << inf_score << " (lh=" << lhsum << "  df=" << dfsum << ")" << endl;
+                 << " score: " << inf_score << " (LnL: " << lhsum << "  df: " << dfsum << ")" << endl;
             // change entry opt_part1 to merged one
             gene_sets[opt_pair.part1] = opt_pair.merged_set;
             lhvec[opt_pair.part1] = opt_pair.logl;

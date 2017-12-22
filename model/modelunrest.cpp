@@ -15,7 +15,7 @@ ModelUnrest::ModelUnrest(PhyloTree *tree, string model_params)
 	for (int i=0; i< num_params; i++) model_parameters[i] = 1;
 	setRates();
 	if (model_params != "") {
-		cerr << "WARNING: Supplying model params to constructor not yet properly implemented -- ignored" << endl;
+		cout << "WARNING: Supplying model params to constructor not yet properly implemented -- ignored" << endl;
 		// TODO: parse model_params into model_parameters, then call setRates().
 	}
     name = "UNREST";

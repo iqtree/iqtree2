@@ -128,7 +128,7 @@ int Alignment::checkAbsentStates(string msg) {
     if (!absent_states.empty())
         cout << "NOTE: State(s) " << absent_states << " not present in " << msg << " and thus removed from Markov process to prevent numerical problems" << endl;
     if (!rare_states.empty())
-        cerr << "WARNING: States(s) " << rare_states << " rarely appear in " << msg << " and may cause numerical problems" << endl;
+        cout << "WARNING: States(s) " << rare_states << " rarely appear in " << msg << " and may cause numerical problems" << endl;
     delete[] state_freq;
     return count;
 }
@@ -290,15 +290,15 @@ int Alignment::checkIdenticalSeq()
 				}
 			if (equal_seq) {
 				if (first)
-					cerr << "WARNING: Identical sequences " << getSeqName(seq1);
-				cerr << ", " << getSeqName(seq2);
+					cout << "WARNING: Identical sequences " << getSeqName(seq1);
+				cout << ", " << getSeqName(seq2);
 				num_identical++;
 				checked[seq2] = 1;
 				first = false;
 			}
 		}
 		checked[seq1] = 1;
-		if (!first) cerr << endl;
+		if (!first) cout << endl;
 	}
 	if (num_identical)
 		outWarning("Some identical sequences found that should be discarded before the analysis");

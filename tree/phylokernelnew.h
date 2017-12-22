@@ -2496,7 +2496,7 @@ void PhyloTree::computeLikelihoodDervGenericSIMD(PhyloNeighbor *dad_branch, Phyl
     }
 
     if (std::isnan(*df) || std::isinf(*df)) {
-        cerr << "WARNING: Numerical underflow for lh-derivative" << endl;
+        cout << "WARNING: Numerical underflow for lh-derivative" << endl;
         *df = *ddf = 0.0;
     }
 }
@@ -3398,7 +3398,7 @@ void PhyloTree::computeLikelihoodDervMixlenGenericSIMD(PhyloNeighbor *dad_branch
     }
 
     if (std::isnan(df) || std::isinf(df)) {
-        cerr << "WARNING: Numerical underflow for lh-derivative-mixlen" << endl;
+        cout << "WARNING: Numerical underflow for lh-derivative-mixlen" << endl;
         df = ddf = 0.0;
     }
 }

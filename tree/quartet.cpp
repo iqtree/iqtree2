@@ -1272,7 +1272,7 @@ void PhyloTree::readLikelihoodMappingGroups(char *filename, QuartetGroups &LMGro
 		for (vector<string>::iterator it = (*i)->taxlist.begin(); it != (*i)->taxlist.end(); it++) {
 			taxid = aln->getSeqID(*it);
 			if (taxid < 0) {
-				cout << "Warning: unknown sequence name \"" << (*it) << "\"! Will be ignored." << endl;
+				cout << "WARNING: unknown sequence name \"" << (*it) << "\"! Will be ignored." << endl;
 			} else {
 				LMGroups.GroupX[t] = taxid;
 				// cout << "  " << (*it) << " (" << taxid << "," << LMGroups.GroupX[t] << ")" << endl;
@@ -1281,7 +1281,7 @@ void PhyloTree::readLikelihoodMappingGroups(char *filename, QuartetGroups &LMGro
 			}
 		}
 		if (numtax != t) {
-			cout << "Warning: ignored cluster did contain unknown sequence names!" << endl;
+			cout << "WARNING: ignored cluster did contain unknown sequence names!" << endl;
 			LMGroups.numGrpSeqs[4] = t;
 		}
 	} else {
@@ -1309,7 +1309,7 @@ void PhyloTree::readLikelihoodMappingGroups(char *filename, QuartetGroups &LMGro
 		for (vector<string>::iterator it = (*i)->taxlist.begin(); it != (*i)->taxlist.end(); it++) {
 			taxid = aln->getSeqID(*it);
 			if (taxid < 0) {
-				cout << "Warning: sequence name \"" << (*it) << "\"! Will be ignored." << endl;
+				cout << "WARNING: sequence name \"" << (*it) << "\"! Will be ignored." << endl;
 			} else {
 				switch(n){
 					case 0: LMGroups.GroupA[t] = taxid;
