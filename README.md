@@ -25,42 +25,7 @@ The strength of IQ-TREE is the availability of a wide variety of phylogenetic mo
 * __Common models__: All [common substitution models](http://www.iqtree.org/doc/Substitution-Models) for DNA, protein, codon, binary and morphological data with [rate heterogeneity among sites](http://www.iqtree.org/doc/Substitution-Models/#rate-heterogeneity-across-sites) and [ascertainment bias correction](http://www.iqtree.org/doc/Substitution-Models/#ascertainment-bias-correction) for e.g. SNP data.
 * __[Partition models](http://www.iqtree.org/doc/Complex-Models/#partition-models)__: Allowing individual models for different genomic loci (e.g. genes or codon positions), mixed data types, mixed rate heterogeneity types, linked or unlinked branch lengths between partitions.
 * __Mixture Models__: [fully customizable mixture models](http://www.iqtree.org/doc/Complex-Models/#mixture-models) and [empirical protein mixture models](http://www.iqtree.org/doc/Substitution-Models/#protein-models) and.
-
-IQ-TREE PoMo
-------------
-
-IQ-TREE+PoMo is still under development.  Please check out
-
-    iqtree --help
-
-Especially, the section titled `POLYMORPHISM AWARE MODELS (PoMo)`.
-
-```
-POLYMORPHISM AWARE MODELS (PoMo):
-PoMo is run when
-- a Counts File is used as input file, and/or when
-- it is specified in the model string (see below).
-  -st C[FR] or C[FR]ps Counts File (automatically detected).
-                       Useful to customize the virtual population size `ps`
-                       3 <= ps <= 19; ps has to be an odd number, 2 or 10.
-                       F: Sum over partial likelihoods at the tip of the tree (weighted).
-                       R: Random binomial sampling of PoMo states from data (sampled).
-                       Default is `CF9`.
-  -m <sm>+<pm>+<ft>    Default: `HKY+rP+FO`.
-                 <sm>: Substitution model.
-                  DNA: HKY (default), JC, F81, K2P, K3P, K81uf, TN/TrN, TNef,
-                       TIM, TIMef, TVM, TVMef, SYM, GTR, or a 6-digit model
-                       specification (e.g., 010010 = HKY).
-                 <pm>: PoMo model.
-                       - rP (default; reversible PoMo with tree inference).
-                 <ft>: Frequency type (optional; default: +F, counted).
-                       F or +FO or +FU or +FQ.
-                       Counted, optimized, user-defined, equal state frequency.
-                       This overwrites the specifications of the DNA model.
-  The default model string is: -m HKY+rP+F.
-  Until now, only DNA models work with PoMo.
-  Model testing and rate heterogeneity do not work with PoMo yet.
-```
+* __Polymorphism-aware models (PoMo)__: <http://www.iqtree.org/doc/Polymorphism-Aware-Models>
 
 
 IQ-TREE web service
@@ -95,9 +60,17 @@ For the ultrafast bootstrap (UFBoot) please cite:
 
 * D.T. Hoang, O. Chernomor, A. von Haeseler, B.Q. Minh, and L.S. Vinh (2017) UFBoot2: Improving the ultrafast bootstrap approximation. *Mol. Biol. Evol.*, in press. <https://doi.org/10.1093/molbev/msx281>
 
+When using posterior mean site frequency model (PMSF) please cite:
+
+* H.C. Wang, B.Q. Minh, S. Susko, A.J. Roger (in press) Modeling site heterogeneity with posterior mean site frequency profiles accelerates accurate phylogenomic estimation. *Syst. Biol.* <https://doi.org/10.1093/sysbio/syx068>
+
 When using partition models please cite:
 
-O. Chernomor, A. von Haeseler, B.Q. Minh (2016) Terrace aware data structure for phylogenomic inference from supermatrices. *Syst. Biol.*, 65:997-1008. <https://doi.org/10.1093/sysbio/syw037>
+* O. Chernomor, A. von Haeseler, B.Q. Minh (2016) Terrace aware data structure for phylogenomic inference from supermatrices. *Syst. Biol.*, 65:997-1008. <https://doi.org/10.1093/sysbio/syw037>
+
+When using polymorphism-aware models please cite:
+
+* D. Schrempf, B.Q. Minh, N. De Maio, A. von Haeseler, C. Kosiol (2016) Reversible polymorphism-aware phylogenetic models and their application to tree inference. *J. Theor. Biol.*, 407:362-370. <https://doi.org/10.1016/j.jtbi.2016.07.042>
 
 #### Credits and Acknowledgements
 
