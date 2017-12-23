@@ -3719,45 +3719,14 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "                       Meyer & von Haeseler (2003) method" << endl
 
             << endl << "POLYMORPHISM AWARE MODELS (PoMo):"                                           << endl
-            << "PoMo uses counts files (please refer to the manual)."                                << endl
-            << "  -m <sm>+P      <sm>: Substitution model."                                          << endl
-            << "                       Only DNA substitution models can be used at the moment."      << endl
-            << "                  DNA: HKY, JC, F81, K2P, K3P, K81uf, TN/TrN, TNef,"                 << endl
-            << "                       TIM, TIMef, TVM, TVMef, SYM, GTR, or a 6-digit model"         << endl
-            << "                       specification (e.g., 010010 = HKY)."                          << endl
-            << "                   +P: Use PoMo."                                                    << endl
-            << "              +P{HET}: Optional; fix the heterozygosity to HET (also"                << endl
-            << "                       called Watterson's theta or 4*N*mu)."                         << endl
-            << "              +P{EMP}: Optional; fix heterozygosity to empirical value from data."   << endl
-            << "Optional modifiers (affect whole run and not only, e.g., a mixture model component)."<< endl
-            << "  +N<ps>               Set virtual population size N to `ps` (default: +N9)."        << endl
-            << "                       3 <= N <= 19; N has to be an odd number, 2 or 10."            << endl
+            << " -s <counts_file>      Input counts file (see manual)"                               << endl
+            << " -m <MODEL>+P          DNA substitution model (see above) used with PoMo"            << endl
+            << "   +N<POPSIZE>         Virtual population size (default: 9)"                         << endl
       // TODO DS: Maybe change default to +WH.
-            << "  +[WB|WH|S]           Specify sampling method (default: +WB)."                      << endl
-            << "                       WB: Weighted binomial sampling method (partial likelihoods at"<< endl
-            << "                          the leaves are set to the probabilities of leading to the" << endl
-            << "                          observed data when sampling WITH replacement)."            << endl
-            << "                       WH: Weighted hypergeometric sampling method (partial likelihoods at"<< endl
-            << "                          the leaves are set to the probabilities of leading to the" << endl
-            << "                          observed data when sampling WITHOUT replacement)."         << endl
-            << "                       S: Sampled sampling method (determine PoMo states by randomly"<< endl
-            << "                          drawing N bases per site from the data)."                  << endl
-            << "  +<ft>                State frequency type (default: +F)."                          << endl
-            << "                       +F or +FO or +FU or +FQ."                                     << endl
-            << "                       Counted, optimized, user-defined, equal state frequency."     << endl
-            << "                       This overwrites the specifications of the DNA model."         << endl
-            << "  +G[n]                Discrete Gamma model with n categories (default n=4)."        << endl
-            << "                       Other types of rate heterogeneity are not yet supported."     << endl
+            << "   +[WB|WH|S]          Sampling method (default: +WB), WB: Weighted binomial,"       << endl
+            << "                       WH: Weighted hypergeometric S: Sampled sampling"              << endl
+            << "   +G[n]               Discrete Gamma rate model with n categories (default n=4)"    << endl
       // TODO DS: Maybe change default to +WH.
-            << "  The default model modifiers are: `+N9+WB+F."                                        << endl
-            << "  Model string examples (please refer to the manual):"                               << endl
-            << "                       -m GTR+P+N15+S"                                               << endl
-            << "                       -m \"MIX{JC+P,HKY+P}+N11\""                                   << endl
-            << "                       -m \"MIX{JC+P,HKY+P}+FQ\""                                    << endl
-            << "                       -m \"MIX{JC+P{0.0025},HKY+P}+N13+WB+FO+G4\""                   << endl
-            << "  Example of a standard run:"                                                        << endl
-            << "                       iqtree -m HKY+P -s counts_file.cf"                            << endl
-            << "  PoMo does not yet support model testing and Model Finder."                         << endl
 
             << endl << "ASCERTAINMENT BIAS CORRECTION:" << endl
             << "  -m modelname+ASC     Correction for absence of invariant sites in alignment" << endl
