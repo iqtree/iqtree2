@@ -1308,7 +1308,8 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(TraversalInfo &info, size_t 
 	}
 
     // precomputed buffer to save times
-    double *buffer_partial_lh_ptr = buffer_partial_lh + (getBufferPartialLhSize() - (2*block+nstates)*VectorClass::size()*num_threads);
+    size_t thread_buf_size = (2*block+nstates)*VectorClass::size();
+    double *buffer_partial_lh_ptr = buffer_partial_lh + (getBufferPartialLhSize() - thread_buf_size*num_threads);
     double *echildren = NULL;
     double *partial_lh_leaves = NULL;
 
@@ -1353,7 +1354,7 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(TraversalInfo &info, size_t 
         /*--------------------- multifurcating node ------------------*/
 
         // now for-loop computing partial_lh over all site-patterns
-        VectorClass *partial_lh_all = (VectorClass*) &buffer_partial_lh_ptr[(2*block+nstates)*VectorClass::size()*thread_id];
+        VectorClass *partial_lh_all = (VectorClass*) &buffer_partial_lh_ptr[thread_buf_size*thread_id];
         double *vec_tip = (double*)&partial_lh_all[block];
 
         for (ptn = ptn_lower; ptn < ptn_upper; ptn+=VectorClass::size()) {
@@ -1573,7 +1574,7 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(TraversalInfo &info, size_t 
 
 		// scale number must be ZERO
 	    memset(dad_branch->scale_num + (SAFE_NUMERIC ? ptn_lower*ncat_mix : ptn_lower), 0, scale_size * sizeof(UBYTE));
-        double *vec_left = buffer_partial_lh_ptr + (block*2 + nstates)*VectorClass::size()*thread_id;
+        double *vec_left = buffer_partial_lh_ptr + thread_buf_size*thread_id;
 
         double *vec_right =  SITE_MODEL ? &vec_left[nstates*VectorClass::size()] : &vec_left[block*VectorClass::size()];
         VectorClass *partial_lh_tmp = SITE_MODEL ? (VectorClass*)vec_right+nstates : (VectorClass*)vec_right+block;
@@ -1678,7 +1679,7 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(TraversalInfo &info, size_t 
         double *partial_lh_left = SITE_MODEL ? &tip_partial_lh[left->node->id * tip_mem_size] : partial_lh_leaves;
 
 
-        double *vec_left = buffer_partial_lh_ptr + (2*block+nstates)*VectorClass::size()*thread_id;
+        double *vec_left = buffer_partial_lh_ptr + thread_buf_size*thread_id;
         VectorClass *partial_lh_tmp = SITE_MODEL ? (VectorClass*)vec_left+2*nstates : (VectorClass*)vec_left+block;
 
 		for (ptn = ptn_lower; ptn < ptn_upper; ptn+=VectorClass::size()) {
@@ -1820,7 +1821,7 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(TraversalInfo &info, size_t 
 
         /*--------------------- INTERNAL-INTERNAL NODE case ------------------*/
 
-        VectorClass *partial_lh_tmp = (VectorClass*)buffer_partial_lh_ptr + (2*block+nstates)*thread_id;
+        VectorClass *partial_lh_tmp = (VectorClass*)buffer_partial_lh_ptr + thread_buf_size*thread_id;
 		for (ptn = ptn_lower; ptn < ptn_upper; ptn+=VectorClass::size()) {
 			VectorClass *partial_lh = (VectorClass*)(dad_branch->partial_lh + ptn*block);
 			VectorClass *partial_lh_left = (VectorClass*)(left->partial_lh + ptn*block);
