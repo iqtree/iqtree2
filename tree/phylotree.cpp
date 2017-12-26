@@ -742,7 +742,7 @@ size_t PhyloTree::getBufferPartialLhSize() {
     // always more buffer for non-rev kernel, in case switching between kernels
     buffer_size += get_safe_upper_limit(block)*(aln->STATE_UNKNOWN+1)*2;
     buffer_size += block*2*VECTOR_SIZE*num_threads;
-    buffer_size += 3*block*model->num_states;
+    buffer_size += get_safe_upper_limit(3*block*model->num_states);
 
     if (isMixlen()) {
         size_t nmix = max(getMixlen(), getRate()->getNRate());
