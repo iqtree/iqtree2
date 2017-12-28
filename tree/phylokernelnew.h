@@ -1821,7 +1821,7 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(TraversalInfo &info, size_t 
 
         /*--------------------- INTERNAL-INTERNAL NODE case ------------------*/
 
-        VectorClass *partial_lh_tmp = (VectorClass*)buffer_partial_lh_ptr + thread_buf_size*thread_id;
+        VectorClass *partial_lh_tmp = (VectorClass*)(buffer_partial_lh_ptr + thread_buf_size*thread_id);
 		for (ptn = ptn_lower; ptn < ptn_upper; ptn+=VectorClass::size()) {
 			VectorClass *partial_lh = (VectorClass*)(dad_branch->partial_lh + ptn*block);
 			VectorClass *partial_lh_left = (VectorClass*)(left->partial_lh + ptn*block);
