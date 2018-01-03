@@ -88,7 +88,7 @@ void ModelMarkov::setReversible(bool reversible) {
 
         num_params = nrate - 1;
 
-        if (phylo_tree->rooted) {
+        if (phylo_tree && phylo_tree->rooted) {
             cout << "Converting rooted to unrooted tree..." << endl;
             phylo_tree->convertToUnrooted();
         }
@@ -118,7 +118,7 @@ void ModelMarkov::setReversible(bool reversible) {
         if (!cinv_evec)
             cinv_evec = aligned_alloc<complex<double> >(num_states*num_states);
         
-        if (!phylo_tree->rooted) {
+        if (phylo_tree && !phylo_tree->rooted) {
             cout << "Converting unrooted to rooted tree..." << endl;
             phylo_tree->convertToRooted();
         }
@@ -1068,13 +1068,32 @@ void ModelMarkov::readStateFreq(string str) throw(const char*) {
 		outError("State frequencies do not sum up to 1.0 in ", str);
 }
 
-void ModelMarkov::readParameters(const char *file_name) { 
+void ModelMarkov::readParameters(const char *file_name) {
+    if (!fileExists(file_name))
+        outError("File not found ", file_name);
+
+    cout << "Reading model parameters from file " << file_name << endl;
+
+    // if detect if reading full matrix or half matrix by the first entry
+	try {
+		ifstream in(file_name);
+        double d;
+        in >> d;
+        if (d < 0) {
+            setReversible(false);
+        } else
+            setReversible(true);
+        in.close();
+    }
+	catch (...) {
+		outError(ERR_READ_ANY, file_name);
+	}
+
 	try {
 		ifstream in(file_name);
 		if (in.fail()) {
 			outError("Invalid model name ", file_name);
         }
-		cout << "Reading model parameters from file " << file_name << endl;
 		readRates(in);
 		readStateFreq(in);
 		in.close();
@@ -1084,6 +1103,17 @@ void ModelMarkov::readParameters(const char *file_name) {
 	} 
 	num_params = 0;
 	writeInfo(cout);
+
+    if (!is_reversible) {
+        // check consistency of state_freq
+        double saved_state_freq[num_states];
+        memcpy(saved_state_freq, state_freq, sizeof(double)*num_states);
+        decomposeRateMatrix();
+        for (int i = 0; i < num_states; i++)
+            if (fabs(state_freq[i] - saved_state_freq[i]) > 1e-3)
+                cout << "WARNING: State " << i << "frequency " << state_freq[i]
+                     << " does not match " << saved_state_freq[i] << endl;
+    }
 }
 
 

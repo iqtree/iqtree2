@@ -357,8 +357,10 @@ void reportModel(ofstream &out, Alignment *aln, ModelSubst *m) {
 			delete[] state_freqs;
 			out << endl;
 		}
-		if (m->num_states <= 4) {
+		if (m->num_states <= 4 || verbose_mode >= VB_MED) {
 			// report Q matrix
+            if (verbose_mode >= VB_MED)
+                out.precision(6);
 			double *q_mat = new double[m->num_states * m->num_states];
 			m->getQMatrix(q_mat);
 

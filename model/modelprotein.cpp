@@ -3904,22 +3904,46 @@ void ModelProtein::restoreCheckpoint() {
 void ModelProtein::readRates(istream &in) throw(const char*, string) {
 	int nrates = getNumRateEntries();
 	int row = 1, col = 0;
-	// since states for protein is stored in lower-triangle, special treatment is needed
-	for (int i = 0; i < nrates; i++, col++) {
-		if (col == row) {
-			row++; col = 0;
-		}
-		// switch col and row
-		int id = col*(2*num_states-col-1)/2 + (row-col-1);
-		if (id >= nrates) {
-			cout << row << " " << col << endl;
-		}
-		ASSERT(id < nrates && id >= 0); // make sure that the conversion is correct
-		if (!(in >> rates[id]))
-			throw name+string(": Rate entries could not be read");
-		if (rates[id] < 0.0)
-			throw "Negative rates found";
-	}
+    if (is_reversible) {
+        // since states for protein is stored in lower-triangle, special treatment is needed
+        for (int i = 0; i < nrates; i++, col++) {
+            if (col == row) {
+                row++; col = 0;
+            }
+            // switch col and row
+            int id = col*(2*num_states-col-1)/2 + (row-col-1);
+            if (id >= nrates) {
+                cout << row << " " << col << endl;
+            }
+            ASSERT(id < nrates && id >= 0); // make sure that the conversion is correct
+            if (!(in >> rates[id]))
+                throw name+string(": Rate entries could not be read");
+            if (rates[id] < 0.0)
+                throw "Negative rates found";
+        }
+    } else {
+        // non-reversible model, read the whole rate matrix
+        int i = 0;
+        for (row = 0; row < num_states; row++) {
+            double row_sum = 0.0;
+            for (col = 0; col < num_states; col++) {
+                if (row != col) {
+                    if (!(in >> rates[i]))
+                        throw name+string(": Rate entries could not be read");
+                    if (rates[i] < 0.0)
+                        throw "Negative rates found";
+                    row_sum += rates[i];
+                    i++;
+                } else {
+                    double d;
+                    in >> d;
+                    row_sum += d;
+                }
+            }
+            if (fabs(row_sum) > 1e-3)
+                throw "Row " + convertIntToString(row) + " does not sum to 0";
+        }
+    }
 }
 
 
