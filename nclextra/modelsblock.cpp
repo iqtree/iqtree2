@@ -7,7 +7,7 @@
 
 #include "modelsblock.h"
 
-ModelsBlock::ModelsBlock()  : NxsBlock(), vector<NxsModel>()
+ModelsBlock::ModelsBlock()  : NxsBlock(), unordered_map<string, NxsModel>()
 {
 	id = "MODELS";
 }
@@ -51,7 +51,7 @@ void ModelsBlock::Read(NxsToken &token)
 
 			model.flag |= (NM_ATOMIC*(model.description.find_first_of("+*") == string::npos && model.description.find("MIX") == string::npos));
 
-			push_back(model);
+			insert({model.name, model});
 
 		} else if (token.Equals("END") || token.Equals("ENDBLOCK")) {
 			// Get the semicolon following END
@@ -73,18 +73,16 @@ void ModelsBlock::Read(NxsToken &token)
 	}
 }
 
-NxsModel *ModelsBlock::findModel(string &name) {
-	for (iterator it = begin(); it != end(); it++)
-		if (it->name == name) return &(*it);
-	return NULL;
+NxsModel *ModelsBlock::findModel(string name) {
+    iterator it = find(name);
+    if (it == end()) return NULL;
+    return &(it->second);
 }
 
-NxsModel *ModelsBlock::findMixModel(string &name) {
-	for (iterator it = begin(); it != end(); it++)
-		if (it->name == name) {
-            if ((it->flag & NM_ATOMIC) == 0) 
-                return &(*it);
-            else return NULL;
-        }
-	return NULL;
+NxsModel *ModelsBlock::findMixModel(string name) {
+    NxsModel *model = findModel(name);
+    if (!model) return NULL;
+    if (model->flag & NM_ATOMIC)
+        return NULL;
+    return model;
 }

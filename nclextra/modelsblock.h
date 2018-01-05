@@ -9,9 +9,11 @@
 #define MODELSBLOCK_H_
 
 #include "ncl/ncl.h"
+#include "utils/tools.h"
 
-const int NM_ATOMIC = 1; // NxsModel is not mixture or +G etc. model
-const int NM_FREQ = 2;   // NxsModel contains state frequency
+const int NM_ATOMIC  = 1; // NxsModel is not mixture or +G etc. model
+const int NM_FREQ    = 2;   // NxsModel contains state frequency
+const int NM_PROTEIN = 4;   // NxsModel contains emprical protein model
 
 class NxsModel {
 public:
@@ -39,7 +41,7 @@ public:
 /**
  * Class to parse MODELS block in NEXUS file
  */
-class ModelsBlock: public NxsBlock, public vector<NxsModel> {
+class ModelsBlock: public NxsBlock, public unordered_map<string, NxsModel> {
 public:
 	/** constructor */
 	ModelsBlock();
@@ -50,13 +52,13 @@ public:
         @param name model name
         @return pointer to model with the name or NULL if not found
     */
-	NxsModel *findModel(string &name);
+	NxsModel *findModel(string name);
 
     /**
         @param name model name
         @return pointer to a mixed model with the name or NULL if not found
     */
-	NxsModel *findMixModel(string &name);
+	NxsModel *findMixModel(string name);
 
 
 protected:
