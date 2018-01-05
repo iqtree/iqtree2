@@ -17,7 +17,7 @@
 const char OPEN_BRACKET = '{';
 const char CLOSE_BRACKET = '}';
 
-extern const string builtin_mixmodels_definition;
+extern const char* builtin_mixmodels_definition;
 
 /**
  * create a substitution model
