@@ -120,12 +120,21 @@ ModelsBlock *readModelsDefinition(Params &params) {
 		nexus.Add(models_block);
 	    MyToken token(in);
 	    nexus.Execute(token);
-//	    int num_model = 0, num_freq = 0;
-//	    for (ModelsBlock::iterator it = models_block->begin(); it != models_block->end(); it++)
-//	    	if ((*it).flag & NM_FREQ) num_freq++; else num_model++;
-//	    cout << num_model << " models and " << num_freq << " frequency vectors loaded" << endl;
 	} catch (...) {
-        ASSERT(0 && "predefined mixture models initialized");
+        ASSERT(0 && "predefined mixture models not initialized");
+    }
+
+	try
+	{
+		// loading internal protei model definitions
+		stringstream in(builtin_prot_models);
+        ASSERT(in && "stringstream is OK");
+		NxsReader nexus;
+		nexus.Add(models_block);
+	    MyToken token(in);
+	    nexus.Execute(token);
+	} catch (...) {
+        ASSERT(0 && "predefined protein models not initialized");
     }
 
 	if (params.model_def_file) {
@@ -136,7 +145,7 @@ ModelsBlock *readModelsDefinition(Params &params) {
 	    nexus.Execute(token);
 	    int num_model = 0, num_freq = 0;
 	    for (ModelsBlock::iterator it = models_block->begin(); it != models_block->end(); it++)
-	    	if ((*it).flag & NM_FREQ) num_freq++; else num_model++;
+	    	if (it->second.flag & NM_FREQ) num_freq++; else num_model++;
 	    cout << num_model << " models and " << num_freq << " frequency vectors loaded" << endl;
 	}
 	return models_block;
