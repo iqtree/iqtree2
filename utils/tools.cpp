@@ -1130,7 +1130,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.optimize_alg_gammai = argv[cnt];
                 continue;
             }
-			if (strcmp(argv[cnt], "-root") == 0) {
+			if (strcmp(argv[cnt], "-root") == 0 || strcmp(argv[cnt], "-rooted") == 0) {
 				params.is_rooted = true;
 				continue;
 			}
