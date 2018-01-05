@@ -164,10 +164,15 @@ public:
 
 	/**
 		read model parameters from a file
-		@param file_name file containing upper-triangle rate matrix and state frequencies
+		@param file_name file containing rate matrix and state frequencies
 	*/
 	void readParameters(const char *file_name);
 
+	/**
+		read model parameters from a string
+		@param model_str string containing rate matrix and state frequencies
+	*/
+	void readParametersString(string &model_str);
 
 	/**
 		compute the transition probability matrix.
