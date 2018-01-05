@@ -548,9 +548,12 @@ void IQTree::computeInitialTree(string &dist_file, LikelihoodKernel kernel) {
 
     if (params->user_file) {
         // start the search with user-defined tree
-        cout << "Reading input tree file " << params->user_file << " ..." << endl;
+        cout << "Reading input tree file " << params->user_file << " ...";
         bool myrooted = params->is_rooted;
         readTree(params->user_file, myrooted);
+        if (myrooted)
+            cout << " rooted tree";
+        cout << endl;
         setAlignment(aln);
         if (isSuperTree())
         	wrapperFixNegativeBranch(params->fixed_branch_length == BRLEN_OPTIMIZE);
