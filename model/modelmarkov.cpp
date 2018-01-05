@@ -1116,6 +1116,40 @@ void ModelMarkov::readParameters(const char *file_name) {
     }
 }
 
+void ModelMarkov::readParametersString(string &model_str) {
+
+    // if detect if reading full matrix or half matrix by the first entry
+    int end_pos;
+    double d = 0.0;
+    d = convert_double(model_str.c_str(), end_pos);
+    if (d < 0) {
+        setReversible(false);
+    } else
+        setReversible(true);
+
+	try {
+		stringstream in(model_str);
+		readRates(in);
+		readStateFreq(in);
+	}
+	catch (const char *str) {
+		outError(str);
+	} 
+	num_params = 0;
+	writeInfo(cout);
+
+    if (!is_reversible) {
+        // check consistency of state_freq
+        double saved_state_freq[num_states];
+        memcpy(saved_state_freq, state_freq, sizeof(double)*num_states);
+        decomposeRateMatrix();
+        for (int i = 0; i < num_states; i++)
+            if (fabs(state_freq[i] - saved_state_freq[i]) > 1e-3)
+                cout << "WARNING: State " << i << "frequency " << state_freq[i]
+                     << " does not match " << saved_state_freq[i] << endl;
+    }
+}
+
 
 ModelMarkov::~ModelMarkov() {
 	freeMem();

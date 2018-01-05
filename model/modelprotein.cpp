@@ -560,9 +560,7 @@ void ModelProtein::init(const char *model_name, string model_params, StateFreqTy
         if (nxs_model->flag != NM_ATOMIC)
             outError("Invalid protein model name ", model_name);
 
-        stringstream sin(nxs_model->description);
-        readRates(sin);
-        readStateFreq(sin);
+        readParametersString(nxs_model->description);
         rescaleRates(rates, getNumRateEntries());
 
         int i;
@@ -576,9 +574,7 @@ void ModelProtein::init(const char *model_name, string model_params, StateFreqTy
         num_params = 0;
 
 	} else if (!model_params.empty()) {
-		stringstream ss(model_params);
-		readRates(ss);
-		readStateFreq(ss);
+        readParametersString(model_params);
         num_params = 0;
     } else if (name_upper == "GTR20") {
         outWarning("GTR20 model will estimate 189 substitution rates that might be overfitting!");
@@ -588,9 +584,7 @@ void ModelProtein::init(const char *model_name, string model_params, StateFreqTy
         // initialize rate matrix with LG
         nxs_model = models_block->findModel("LG");
         ASSERT(nxs_model);
-        stringstream sin(nxs_model->description);
-        readRates(sin);
-        readStateFreq(sin);
+        readParametersString(nxs_model->description);
         rescaleRates(rates, getNumRateEntries());
 	} else {
 		// if name does not match, read the user-defined model
