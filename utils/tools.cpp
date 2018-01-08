@@ -4835,7 +4835,7 @@ void forceFreqsConform(double *base_freq, StateFreqType freq_type) {
     double pC = base_freq[1];
     double pG = base_freq[2];
     double pT = base_freq[3];
-    double diff;
+    double scale;
     switch (freq_type) {
     case FREQ_EQUAL:
         // this was already handled, thus not necessary to check here 
@@ -4846,25 +4846,28 @@ void forceFreqsConform(double *base_freq, StateFreqType freq_type) {
     case FREQ_ESTIMATE:
         break; // any base_freq is legal
     case FREQ_DNA_RY:
-        diff = (pA+pG-pC-pT)/2;
-        base_freq[0] = pA-diff;
-        base_freq[1] = pC+diff;
-        base_freq[2] = pG-diff;
-        base_freq[3] = pT+diff;
+        scale = 0.5/(pA+pG);
+        base_freq[0] = pA*scale;
+        base_freq[2] = pG*scale;
+        scale = 0.5/(pC+pT);
+        base_freq[1] = pC*scale;
+        base_freq[3] = pT*scale;
         break;
     case FREQ_DNA_WS:
-        diff = (pA+pT-pC-pG)/2;
-        base_freq[0] = pA-diff;
-        base_freq[1] = pC+diff;
-        base_freq[2] = pG+diff;
-        base_freq[3] = pT-diff;
+        scale = 0.5/(pA+pT);
+        base_freq[0] = pA*scale;
+        base_freq[3] = pT*scale;
+        scale = 0.5/(pC+pG);
+        base_freq[1] = pC*scale;
+        base_freq[2] = pG*scale;
         break;
     case FREQ_DNA_MK:
-        diff = (pA+pC-pG-pT)/2;
-        base_freq[0] = pA-diff;
-        base_freq[1] = pC-diff;
-        base_freq[2] = pG+diff;
-        base_freq[3] = pT+diff;
+        scale = 0.5/(pA+pC);
+        base_freq[0] = pA*scale;
+        base_freq[1] = pC*scale;
+        scale = 0.5/(pG+pT);
+        base_freq[2] = pG*scale;
+        base_freq[3] = pT*scale;
         break;
     case FREQ_DNA_1112:
         base_freq[0]=base_freq[1]=base_freq[2]=(pA+pC+pG)/3;
