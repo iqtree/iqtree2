@@ -2609,12 +2609,95 @@ double PhyloTree::optimizeAllBranches(int my_iterations, double tolerance, int m
         }
 
         // only return if the new_tree_lh >= tree_lh! (in rare case that likelihood decreases, continue the loop)
-        if (tree_lh <= new_tree_lh && new_tree_lh <= tree_lh + tolerance)
+        if (tree_lh <= new_tree_lh && new_tree_lh <= tree_lh + tolerance) {
+            curScore = new_tree_lh;
         	return new_tree_lh;
+        }
         tree_lh = new_tree_lh;
     }
     curScore = tree_lh;
     return tree_lh;
+}
+
+void PhyloTree::moveRoot(Node *node1, Node *node2) {
+    // unplug root from tree
+    Node *root_dad = root->neighbors[0]->node;
+    Node *root_nei1 = NULL, *root_nei2 = NULL;
+    double len = 0.0;
+    FOR_NEIGHBOR_IT(root_dad, root, it) {
+        if (!root_nei1)
+            root_nei1 = (*it)->node;
+        else if (!root_nei2)
+            root_nei2 = (*it)->node;
+        else
+            outError("Cannot move multifurcating root branch");
+        len += (*it)->length;
+    }
+    root_nei1->updateNeighbor(root_dad, root_nei2, len);
+    root_nei2->updateNeighbor(root_dad, root_nei1, len);
+
+    // plug root to new branch
+    len = node1->findNeighbor(node2)->length / 2.0;
+    root_dad->updateNeighbor(root_nei1, node1, len);
+    node1->updateNeighbor(node2, root_dad, len);
+    root_dad->updateNeighbor(root_nei2, node2, len);
+    node2->updateNeighbor(node1, root_dad, len);
+}
+
+double PhyloTree::optimizeRootPosition(int my_iterations, double tolerance, int maxNRStep) {
+    if (!rooted)
+        return curScore;
+
+    NodeVector nodes1, nodes2;
+    getBranches(nodes1, nodes2);
+    int i;
+    Node *root_dad = root->neighbors[0]->node;
+
+    double best_score = curScore;
+    string best_tree = getTreeString();
+    cout << "Current root: " << curScore << endl;
+
+    StrVector trees;
+
+    // ignore branches directly descended from root branch
+    for (i = 0; i != nodes1.size(); )
+        if (nodes1[i] == root_dad || nodes2[i] == root_dad) {
+            nodes1[i] = nodes1[nodes1.size()-1];
+            nodes2[i] = nodes2[nodes2.size()-1];
+            nodes1.pop_back();
+            nodes2.pop_back();
+        } else {
+            i++;
+        }
+
+    // get all trees
+    for (i = 0; i != nodes1.size(); i++) {
+        moveRoot(nodes1[i], nodes2[i]);
+        trees.push_back(getTreeString());
+    }
+
+    // optimize branch lengths for all trees
+    for (auto t = trees.begin(); t != trees.end(); t++) {
+        readTreeString(*t);
+        optimizeAllBranches(my_iterations, tolerance, maxNRStep);
+        if (verbose_mode >= VB_MED) {
+            cout << "Root pos " << (t - trees.begin())+1 << ": " << curScore << endl;
+            if (verbose_mode >= VB_DEBUG)
+                drawTree(cout);
+        }
+        if (curScore > best_score) {
+            cout << "Better root: " << curScore << endl;
+            best_score = curScore;
+            best_tree = getTreeString();
+        }
+    }
+
+    readTreeString(best_tree);
+    curScore = computeLikelihood();
+
+    if (curScore < best_score - tolerance)
+        cout << "WARNING: Worse curScore " << curScore << " than best_score " << best_score << endl;
+    return curScore;
 }
 
 /****************************************************************************
