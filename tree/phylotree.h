@@ -1307,6 +1307,13 @@ public:
      */
     virtual double optimizeAllBranches(int my_iterations = 100, double tolerance = TOL_LIKELIHOOD, int maxNRStep = 100);
 
+    void moveRoot(Node *node1, Node *node2);
+
+    /**
+        Optimize root position for rooted tree
+    */
+    virtual double optimizeRootPosition(int my_iterations = 100, double tolerance = TOL_LIKELIHOOD, int maxNRStep = 100);
+
     /**
             inherited from Optimization class, to return to likelihood of the tree
             when the current branceh length is set to value
