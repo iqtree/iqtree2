@@ -3016,6 +3016,13 @@ pair<int, int> IQTree::doNNISearch() {
 			// Re-optimize model parameters (the sNNI algorithm)
 			optimizeModelParameters(false, params->modelEps * 10);
 			getModelFactory()->saveCheckpoint();
+
+            // 2018-01-09: additional optimize root position
+            // TODO: does not work with SuperTree yet
+            if (rooted && !isSuperTree())
+            {
+                optimizeRootPosition(true, params->modelEps * 10);
+            }
 		}
 	}
     MPIHelper::getInstance().setNumNNISearch(MPIHelper::getInstance().getNumNNISearch() + 1);

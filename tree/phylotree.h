@@ -1312,7 +1312,7 @@ public:
     /**
         Optimize root position for rooted tree
     */
-    virtual double optimizeRootPosition(int my_iterations = 100, double tolerance = TOL_LIKELIHOOD, int maxNRStep = 100);
+    virtual double optimizeRootPosition(bool write_info, double logl_epsilon);
 
     /**
             inherited from Optimization class, to return to likelihood of the tree
