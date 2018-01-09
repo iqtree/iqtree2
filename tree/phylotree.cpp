@@ -2644,7 +2644,7 @@ void PhyloTree::moveRoot(Node *node1, Node *node2) {
     node2->updateNeighbor(node1, root_dad, len);
 }
 
-double PhyloTree::optimizeRootPosition(int my_iterations, double tolerance, int maxNRStep) {
+double PhyloTree::optimizeRootPosition(bool write_info, double logl_epsilon) {
     if (!rooted)
         return curScore;
 
@@ -2655,7 +2655,6 @@ double PhyloTree::optimizeRootPosition(int my_iterations, double tolerance, int 
 
     double best_score = curScore;
     string best_tree = getTreeString();
-    cout << "Current root: " << curScore << endl;
 
     StrVector trees;
 
@@ -2679,14 +2678,15 @@ double PhyloTree::optimizeRootPosition(int my_iterations, double tolerance, int 
     // optimize branch lengths for all trees
     for (auto t = trees.begin(); t != trees.end(); t++) {
         readTreeString(*t);
-        optimizeAllBranches(my_iterations, tolerance, maxNRStep);
+        optimizeAllBranches(100, logl_epsilon);
         if (verbose_mode >= VB_MED) {
             cout << "Root pos " << (t - trees.begin())+1 << ": " << curScore << endl;
             if (verbose_mode >= VB_DEBUG)
                 drawTree(cout);
         }
-        if (curScore > best_score) {
-            cout << "Better root: " << curScore << endl;
+        if (curScore > best_score + logl_epsilon) {
+            if (verbose_mode >= VB_MED || write_info)
+                cout << "Better root: " << curScore << endl;
             best_score = curScore;
             best_tree = getTreeString();
         }
@@ -2695,8 +2695,8 @@ double PhyloTree::optimizeRootPosition(int my_iterations, double tolerance, int 
     readTreeString(best_tree);
     curScore = computeLikelihood();
 
-    if (curScore < best_score - tolerance)
-        cout << "WARNING: Worse curScore " << curScore << " than best_score " << best_score << endl;
+    ASSERT(fabs(curScore-best_score) < logl_epsilon);
+
     return curScore;
 }
 

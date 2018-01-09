@@ -1269,15 +1269,6 @@ double ModelFactory::optimizeParameters(int fixed_len, bool write_info,
         }
     }
 
-    if (tree->rooted)
-    {
-        double new_lh = tree->optimizeRootPosition(100, logl_epsilon);
-        if (verbose_mode >= VB_MED || write_info)
-            cout << "Best root position: " << new_lh << endl;
-        ASSERT(new_lh > cur_lh - logl_epsilon);
-        cur_lh = new_lh;
-    }
-
 	if (verbose_mode >= VB_MED || write_info)
 		cout << "Optimal log-likelihood: " << cur_lh << endl;
 

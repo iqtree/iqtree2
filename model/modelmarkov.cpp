@@ -1111,7 +1111,7 @@ void ModelMarkov::readParameters(const char *file_name) {
         decomposeRateMatrix();
         for (int i = 0; i < num_states; i++)
             if (fabs(state_freq[i] - saved_state_freq[i]) > 1e-3)
-                cout << "WARNING: State " << i << "frequency " << state_freq[i]
+                cout << "WARNING: State " << i << " frequency " << state_freq[i]
                      << " does not match " << saved_state_freq[i] << endl;
     }
 }
@@ -1145,7 +1145,7 @@ void ModelMarkov::readParametersString(string &model_str) {
         decomposeRateMatrix();
         for (int i = 0; i < num_states; i++)
             if (fabs(state_freq[i] - saved_state_freq[i]) > 1e-3)
-                cout << "WARNING: State " << i << "frequency " << state_freq[i]
+                cout << "WARNING: State " << i << " frequency " << state_freq[i]
                      << " does not match " << saved_state_freq[i] << endl;
     }
 }
