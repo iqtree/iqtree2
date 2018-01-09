@@ -4914,6 +4914,7 @@ void forceFreqsConform(double *base_freq, StateFreqType freq_type) {
     default:
         throw("Unrecognized freq_type in forceFreqsConform - can't happen");
     }
+    ASSERT(base_freq[0]>=0 && base_freq[1]>=0 && base_freq[2]>=0 && base_freq[3]>=0 && fabs(base_freq[0]+base_freq[1]+base_freq[2]+base_freq[3]-1)<1e-7);
 }
 
 /*
