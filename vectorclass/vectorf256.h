@@ -1,8 +1,8 @@
 /****************************  vectorf256.h   *******************************
 * Author:        Agner Fog
 * Date created:  2012-05-30
-* Last modified: 2017-02-19
-* Version:       1.27
+* Last modified: 2017-07-27
+* Version:       1.30
 * Project:       vector classes
 * Description:
 * Header file defining 256-bit floating point vector classes as interface
@@ -2475,6 +2475,7 @@ static inline Vec4d permute4d(Vec4d const & a) {
         r1 = _mm256_castpd128_pd256(_mm256_extractf128_pd(a,1));  break;
     case 0x33:  // ZZ
         r1 = do_zero ? _mm256_setzero_pd() : __m256d(a);  break;
+    default:;   // Not needed. Avoid warning in Clang
     }
 
     if (s2 == s1) {
@@ -2504,6 +2505,7 @@ static inline Vec4d permute4d(Vec4d const & a) {
             r2 = _mm256_castpd128_pd256(_mm256_extractf128_pd(a,1));  break;
         case 0x33:  // ZZ
             r2 = do_zero ? _mm256_setzero_pd() : __m256d(a);  break;
+        default:;   // Not needed. Avoid warning in Clang
         }
     }
     return  _mm256_shuffle_pd(r1, r2, sm);
@@ -2729,7 +2731,7 @@ static inline Vec8f permute8f(Vec8f const & a) {
                     break;
                 case 0x01:  // HL
                     r2 = _mm256_castps128_ps256(_mm256_extractf128_ps(a,1));
-                    r2 = _mm256_insertf128_ps(r1,_mm256_castps256_ps128(a),1);  break;
+                    r2 = _mm256_insertf128_ps(r2,_mm256_castps256_ps128(a),1);  break;
                 case 0x10:  // LH
                 case 0x13:  // ZH
                 case 0x30:  // LZ

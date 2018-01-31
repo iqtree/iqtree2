@@ -6,6 +6,13 @@ Projected future version, 2018:
   * use C++14
   * replace long template argument lists by constant arrays
   
+2017-07-27 version 1.30
+  * fixed bug in permute8f for a particular combination of indexes  
+  
+2017-05-10 version 1.29
+  * Reversed Apple Clang patch in version 1.28 because the problem has reoccurred in
+    later versions of Clang
+  
 2017-05-02 version 1.28
   * Fixed problem with Apple Clang version 6.2 in vectorf128.h
   * Fixed return type for Vec8sb operator > (Vec8us, Vec8us)  
