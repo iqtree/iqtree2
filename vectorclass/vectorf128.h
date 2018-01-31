@@ -1,8 +1,8 @@
 /****************************  vectorf128.h   *******************************
 * Author:        Agner Fog
 * Date created:  2012-05-30
-* Last modified: 2017-04-21
-* Version:       1.28
+* Last modified: 2017-05-10
+* Version:       1.29
 * Project:       vector classes
 * Description:
 * Header file defining floating point vector classes as interface to 
@@ -139,13 +139,23 @@ public:
     operator __m128() const {
         return xmm;
     }
-#if (defined (__clang__) && !defined(__apple_build_version__)) || (defined(__apple_build_version__) && __apple_build_version__ < 6020000)
-#define FIX_CLANG_VECTOR_ALIAS_AMBIGUITY  // clang 3.3 has silent conversion between intrinsic vector types. 
-                                          // I expected this to be fixed in version 3.4 but it still exists in version 3.9!
-                                          // http://llvm.org/bugs/show_bug.cgi?id=17164
-                                          // Additional problem: The version number is not consistent across platforms
-                                          // The Apple build has different version numbers. Too bad!
-                                          // http://llvm.org/bugs/show_bug.cgi?id=12643
+    /* Clang problem:
+    The Clang compiler treats the intrinsic vector types __m128, __m128i, and __m128f as identical.
+    I have reported this problem in 2013 but it is still not fixed in 2017!
+    See the bug report at http://llvm.org/bugs/show_bug.cgi?id=17164
+    Additional problem: The version number is not consistent across platforms. The Apple build has 
+    different version numbers. We have to rely on __apple_build_version__ on the Mac platform:
+    http://llvm.org/bugs/show_bug.cgi?id=12643
+    I have received reports that there was no aliasing of vector types on __apple_build_version__ = 6020053
+    but apparently the problem has come back. The aliasing of vector types has been reported on 
+    __apple_build_version__ = 8000042
+    We have to make switches here when - hopefully - the error some day has been fixed.
+    We need different version checks with and whithout __apple_build_version__
+    */
+
+//#if (defined (__clang__) && !defined(__apple_build_version__)) || (defined(__apple_build_version__) && __apple_build_version__ < 6020000)
+#if defined (__clang__) /* && CLANG_VERSION < xxxxx */ || defined(__apple_build_version__)
+#define FIX_CLANG_VECTOR_ALIAS_AMBIGUITY  
 #else
     // Type cast operator to convert to type Vec4ib used as Boolean for integer vectors
     operator Vec4ib() const {
