@@ -1728,9 +1728,13 @@ void PhyloSuperTree::writeBranch(ostream &out, Node* node1, Node* node2) {
     else
         getTaxaName(taxnames, node2, node1);
     out << nei1->id+1 << ",";
+    bool first = true;
     for (int i = 0; i < taxnames.size(); i++)
-        if (!taxnames[i].empty())
-            out << " " << taxnames[i];
+        if (!taxnames[i].empty()) {
+            if (!first) out << " ";
+            out << taxnames[i];
+            first = false;
+        }
     out << "," << nei1->length;
     for (int part = 0; part != size(); part++) {
         bool present = true;
@@ -1754,7 +1758,7 @@ void PhyloSuperTree::writeBranches(ostream &out) {
     NodeVector nodes1, nodes2;
     getBranches(nodes1, nodes2);
     int i;
-    out << "ID,Len";
+    out << "ID,Taxa,Len";
     for (i = 0; i < size(); i++)
         out << "," << part_info[i].name;
     out << endl;
