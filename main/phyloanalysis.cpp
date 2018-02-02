@@ -1840,6 +1840,15 @@ void printMiscInfo(Params &params, IQTree &iqtree, double *pattern_lh) {
 		cout << "Branch lengths written to " << brlen_file << endl;
 	}
 
+    if (params.write_branches) {
+        string filename = string(params.out_prefix) + ".branches.csv";
+        ofstream out;
+        out.open(filename.c_str());
+        iqtree.writeBranches(out);
+        out.close();
+        cout << "Branch lengths written to " << filename << endl;
+    }
+    
 	if (params.print_partition_info && iqtree.isSuperTree()) {
 		string partition_info = params.out_prefix;
 		partition_info += ".partinfo.nex";

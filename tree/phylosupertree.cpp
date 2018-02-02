@@ -1719,3 +1719,48 @@ void PhyloSuperTree::writeSiteRates(ostream &out, int partid) {
         (*it)->writeSiteRates(out, part);
     }
 }
+
+void PhyloSuperTree::writeBranch(ostream &out, Node* node1, Node* node2) {
+    SuperNeighbor *nei1 = (SuperNeighbor*)node1->findNeighbor(node2);
+    StrVector taxnames;
+    if (getNumTaxa(node1, node2) <= leafNum / 2)
+        getTaxaName(taxnames, node1, node2);
+    else
+        getTaxaName(taxnames, node2, node1);
+    out << nei1->id+1 << ",";
+    for (int i = 0; i < taxnames.size(); i++)
+        if (!taxnames[i].empty())
+            out << " " << taxnames[i];
+    out << "," << nei1->length;
+    for (int part = 0; part != size(); part++) {
+        bool present = true;
+        FOR_NEIGHBOR_DECLARE(node1, NULL, it) {
+            SuperNeighbor *nei = (SuperNeighbor*)(*it);
+            if (!nei->link_neighbors[part])
+                present = false;
+        }
+        FOR_NEIGHBOR(node2, NULL, it) {
+            SuperNeighbor *nei = (SuperNeighbor*)(*it);
+            if (!nei->link_neighbors[part])
+                present = false;
+        }
+        out << ",";
+        if (present)
+            out << nei1->link_neighbors[part]->length;
+    }
+}
+
+void PhyloSuperTree::writeBranches(ostream &out) {
+    NodeVector nodes1, nodes2;
+    getBranches(nodes1, nodes2);
+    int i;
+    out << "ID,Len";
+    for (i = 0; i < size(); i++)
+        out << "," << part_info[i].name;
+    out << endl;
+    for (i = 0; i < nodes1.size(); i++) {
+        writeBranch(out, nodes1[i], nodes2[i]);
+        out << endl;
+    }
+}
+

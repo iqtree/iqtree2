@@ -985,6 +985,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.ignore_identical_seqs = true;
     params.write_init_tree = false;
     params.write_candidate_trees = false;
+    params.write_branches = false;
     params.freq_const_patterns = NULL;
     params.no_rescale_gamma_invar = false;
     params.compute_seq_identity_along_tree = false;
@@ -2360,6 +2361,12 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.write_init_tree = true;
                 continue;
             }
+            
+            if (strcmp(argv[cnt], "--write-branches") == 0) {
+                params.write_branches = true;
+                continue;
+            }
+            
 //			if (strcmp(argv[cnt], "-nodup") == 0) {
 //				params.avoid_duplicated_trees = true;
 //				continue;

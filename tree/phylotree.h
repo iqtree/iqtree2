@@ -1951,6 +1951,13 @@ public:
     */
     virtual void writeSiteLh(ostream &out, SiteLoglType wsl, int partid = -1);
 
+    /**
+        write branches into a csv file
+        Feature requested by Rob Lanfear
+        @param out output stream
+     */
+    virtual void writeBranches(ostream &out);
+    
 protected:
 
     /**
