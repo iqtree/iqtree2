@@ -1931,6 +1931,9 @@ public:
     /** TRUE to write initial tree to a file (default: false) */
     bool write_init_tree;
 
+    /** TRUE to write branch lengths of partition trees for each branch of supertree */
+    bool write_branches;
+    
     /** frequencies of const patterns to be inserted into alignment */
     char *freq_const_patterns;
     /** BQM 2015-02-25: true to NOT rescale Gamma+Invar rates by (1-p_invar) */

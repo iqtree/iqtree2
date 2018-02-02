@@ -5254,3 +5254,8 @@ void PhyloTree::writeSiteRates(ostream &out, int partid) {
         cout << " " << ((double)count[i])/nsite;
     cout << endl;
 }
+
+void PhyloTree::writeBranches(ostream &out) {
+    outError("Please only use this feature with partition model");
+}
+

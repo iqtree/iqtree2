@@ -410,6 +410,15 @@ public:
     virtual void writeSiteLh(ostream &out, SiteLoglType wsl, int partid = -1);
 
 
+    virtual void writeBranch(ostream &out, Node* node1, Node* node2);
+
+    /**
+     write branches into a csv file
+     Feature requested by Rob Lanfear
+     @param out output stream
+     */
+    virtual void writeBranches(ostream &out);
+    
     /** True when mixed codon with other data type */
     bool rescale_codon_brlen;
     
