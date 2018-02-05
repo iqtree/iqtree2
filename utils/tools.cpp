@@ -1415,8 +1415,11 @@ void parseArg(int argc, char *argv[], Params &params) {
 			}
 			if (strcmp(argv[cnt], "-net") == 0) {
 				params.consensus_type = CT_CONSENSUS_NETWORK;
-			} /**MINH ANH: to serve some statistics on tree*/
-			else if (strcmp(argv[cnt], "-comp") == 0) {
+                continue;
+			}
+            
+            /**MINH ANH: to serve some statistics on tree*/
+			if (strcmp(argv[cnt], "-comp") == 0) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -comp <treefile>";
