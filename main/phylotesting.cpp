@@ -1700,6 +1700,9 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
             }
             ModelInfo best_model;
             bool done_before = false;
+#ifdef _OPENMP
+#pragma omp critical
+#endif
             {
                 // if pairs previously examined, reuse the information
                 model_info.startStruct(cur_pair.set_name);
