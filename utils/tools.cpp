@@ -1437,15 +1437,19 @@ void parseArg(int argc, char *argv[], Params &params) {
 					throw "Use -gbo <site likelihod file>";
 				params.siteLL_file = argv[cnt];
 				//params.run_mode = GBO;
+                continue;
 			} // MA
-			else if (strcmp(argv[cnt], "-mprob") == 0) { //compute multinomial distribution probability
+            
+			if (strcmp(argv[cnt], "-mprob") == 0) { //compute multinomial distribution probability
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -mprob <ref_alignment>";
 				params.second_align = argv[cnt];
 				//params.run_mode = MPRO;
+                continue;
 			} // MA
-			else if (strcmp(argv[cnt], "-min") == 0) {
+            
+			if (strcmp(argv[cnt], "-min") == 0) {
 				params.find_pd_min = true;
 				continue;
 			}
@@ -2698,7 +2702,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				if (cnt >= argc)
 					throw "Use -bb <#replicates>";
                 if (params.stop_condition == SC_FIXED_ITERATION) {
-                    outError("Ultrafast bootstrap does not work with -te or -n option");
+                    outError("Ultrafast bootstrap does not work with -fast, -te or -n option");
                 }
 				params.gbo_replicates = convert_int(argv[cnt]);
 //				params.avoid_duplicated_trees = true;
