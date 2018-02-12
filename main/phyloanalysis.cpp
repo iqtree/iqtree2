@@ -1969,11 +1969,12 @@ void printTrees(vector<string> trees, Params &params, string suffix) {
 void runTreeReconstruction(Params &params, string &original_model, IQTree* &iqtree, ModelCheckpoint &model_info) {
 
     if (params.root) {
-        string root_name = params.root;
-        if (iqtree->aln->getSeqID(root_name) < 0)
-        outError("Alignment does not have specified outgroup taxon ", params.root);
+        StrVector outgroup_names;
+        convert_string_vec(params.root, outgroup_names);
+        for (auto it = outgroup_names.begin(); it != outgroup_names.end(); it++)
+            if (iqtree->aln->getSeqID(*it) < 0)
+                outError("Alignment does not have specified outgroup taxon ", *it);
     }
-
 
     string dist_file;
     params.startCPUTime = getCPUTime();

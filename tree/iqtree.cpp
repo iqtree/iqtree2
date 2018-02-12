@@ -621,12 +621,13 @@ void IQTree::computeInitialTree(string &dist_file, LikelihoodKernel kernel) {
     }
 
     if (params->root) {
-        string str = params->root;
-        if (!findNodeName(str)) {
-            str = "Specified root name " + str + "not found";
-            outError(str);
-        }
+        StrVector outgroup_names;
+        convert_string_vec(params->root, outgroup_names);
+        for (auto it = outgroup_names.begin(); it != outgroup_names.end(); it++)
+            if (!findNodeName(*it))
+                outError("Specified outgroup taxon " + *it + " not found");
     }
+
     if (params->write_init_tree) {
         out_file += ".init_tree";
         printTree(out_file.c_str(), WT_NEWLINE);
@@ -3967,23 +3968,24 @@ double IQTree::computeBootstrapCorrelation() {
 //}
 
 void IQTree::printResultTree(string suffix) {
-    setRootNode(params->root);
-    if (params->suppress_output_flags & OUT_TREEFILE)
-        return;
-    string tree_file_name = params->out_prefix;
-    tree_file_name += ".treefile";
     if (MPIHelper::getInstance().isWorker()) {
         return;
-        stringstream processTreeFile;
-        processTreeFile << tree_file_name << "." << MPIHelper::getInstance().getProcessID();
-        tree_file_name = processTreeFile.str();
+//        stringstream processTreeFile;
+//        processTreeFile << tree_file_name << "." << MPIHelper::getInstance().getProcessID();
+//        tree_file_name = processTreeFile.str();
     }
+    if (params->suppress_output_flags & OUT_TREEFILE)
+        return;
+    setRootNode(params->root, true);
+    string tree_file_name = params->out_prefix;
+    tree_file_name += ".treefile";
     if (suffix.compare("") != 0) {
         tree_file_name += "." + suffix;
     }
     printTree(tree_file_name.c_str(), WT_BR_LEN | WT_BR_LEN_FIXED_WIDTH | WT_SORT_TAXA | WT_NEWLINE);
     if (verbose_mode >= VB_MED)
         cout << "Best tree printed to " << tree_file_name << endl;
+    setRootNode(params->root, false);
 }
 
 void IQTree::printResultTree(ostream &out) {

@@ -1360,6 +1360,31 @@ Node *MTree::findNodeName(string &name, Node *node, Node *dad) {
     return NULL;
 }
 
+bool MTree::findNodeNames(unordered_set<string> &taxa_set, pair<Node*,Neighbor*> &res, Node *node, Node *dad) {
+    int presence = 0;
+    Neighbor *target = NULL;
+    FOR_NEIGHBOR_IT(node, dad, it) {
+        if ((*it)->node->isLeaf()) {
+            if (taxa_set.find((*it)->node->name) != taxa_set.end()) {
+                presence++;
+            } else target = (*it);
+        } else {
+            if (findNodeNames(taxa_set, res, (*it)->node, node))
+                presence++;
+            else target = *it;
+        }
+    }
+    // all presence or absence
+    if (presence == node->neighbors.size()-1)
+        return true;
+    if (presence == 0)
+        return false;
+    // inbetween: detect it!
+    res.first = node;
+    res.second = target;
+    return false;
+}
+
 Node *MTree::findLeafName(string &name, Node *node, Node *dad) {
     if (!node) node = root;
     if (node->isLeaf() && node->name == name) return node;

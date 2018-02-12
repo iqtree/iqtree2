@@ -510,6 +510,16 @@ public:
     Node *findNodeName(string &name, Node *node = NULL, Node* dad = NULL);
 
     /**
+         find a node with corresponding taxa names
+         @param taxa_set set of taxa names
+         @param node the starting node, must correspond to the first taxon
+         @param dad dad of the node, used to direct the search
+         @return node if found, otherwise NULL
+     */
+    bool findNodeNames(unordered_set<string> &taxa_set, pair<Node*,Neighbor*> &res,
+        Node *node, Node* dad);
+
+    /**
             find a leaf with corresponding name
             @param name leaf name
             @param node the starting node, NULL to start from the root

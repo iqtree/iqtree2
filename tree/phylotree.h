@@ -444,8 +444,11 @@ public:
      */
     virtual void setAlignment(Alignment *alignment);
 
-    /** set the root by name */
-    void setRootNode(const char *my_root);
+    /** set the root by name
+        @param my_root root node name
+        @param multi_taxa TRUE if my_root is a comma-separated list of nodes
+     */
+    void setRootNode(const char *my_root, bool multi_taxa = false);
 
 
     /**
