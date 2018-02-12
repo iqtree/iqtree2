@@ -381,18 +381,42 @@ void PhyloTree::setAlignment(Alignment *alignment) {
     if (err) outError("Tree taxa and alignment sequence do not match (see above)");
 }
 
-void PhyloTree::setRootNode(const char *my_root) {
-    string root_name;
-    if (rooted)
-        root_name = ROOT_NAME;
-    else if (my_root)
-        root_name = my_root;
-    else
-        root_name = aln->getSeqName(0);
-    root = findNodeName(root_name);
-    ASSERT(root);
-    if (rooted)
+void PhyloTree::setRootNode(const char *my_root, bool multi_taxa) {
+    if (rooted) {
         computeBranchDirection();
+        return;
+    }
+    
+    if (!my_root) {
+        root = findNodeName(aln->getSeqName(0));
+        ASSERT(root);
+        return;
+    }
+
+    if (strchr(my_root, ',') == NULL) {
+        string root_name = my_root;
+        root = findNodeName(root_name);
+        ASSERT(root);
+        return;
+    }
+
+    // my_root is a list of taxa
+    StrVector taxa;
+    convert_string_vec(my_root, taxa);
+    root = findNodeName(taxa[0]);
+    ASSERT(root);
+    if (!multi_taxa) {
+        return;
+    }
+    unordered_set<string> taxa_set;
+    for (auto it = taxa.begin(); it != taxa.end(); it++)
+        taxa_set.insert(*it);
+    pair<Node*,Neighbor*> res = {NULL, NULL};
+    findNodeNames(taxa_set, res, root->neighbors[0]->node, root);
+    if (res.first)
+        root = res.first;
+    else
+        outWarning("Branch separating outgroup is not found");
 }
 
 //void PhyloTree::setParams(Params* params) {
