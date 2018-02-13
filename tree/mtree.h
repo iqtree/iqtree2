@@ -514,7 +514,8 @@ public:
          @param taxa_set set of taxa names
          @param node the starting node, must correspond to the first taxon
          @param dad dad of the node, used to direct the search
-         @return node if found, otherwise NULL
+         @param[out] res resulting node and neighbor pair for the split with taxa_set in one side
+         @return true if found, false otherwise
      */
     bool findNodeNames(unordered_set<string> &taxa_set, pair<Node*,Neighbor*> &res,
         Node *node, Node* dad);

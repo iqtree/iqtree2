@@ -642,8 +642,9 @@ void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh, 
     out << endl;
 
 	//tree.setExtendedFigChar();
+    tree.setRootNode(params.root, true);
 	tree.drawTree(out, WT_BR_SCALE, epsilon);
-        
+    
     out << "Tree in newick format:";
     if (tree.isMixlen())
         out << " (class branch lengths are given in [...] and separated by '/' )";
@@ -652,6 +653,7 @@ void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh, 
     out << endl << endl;
 
 	tree.printTree(out, WT_BR_LEN | WT_BR_LEN_FIXED_WIDTH | WT_SORT_TAXA);
+    tree.setRootNode(params.root, false);
 
 	out << endl << endl;
 }
