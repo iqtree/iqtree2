@@ -2778,6 +2778,9 @@ void IQTree::refineBootTrees() {
 
         // load the current ufboot tree
         boot_tree->readTreeString(boot_trees[sample]);
+        
+        // TODO: check if this resolves the crash in reorientPartialLh()
+        boot_tree->initializeAllPartialLh();
 
         // just in case some branch lengths are negative
         if (int num_neg = boot_tree->wrapperFixNegativeBranch(false))
