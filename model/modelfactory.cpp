@@ -47,12 +47,12 @@
 string::size_type posRateHeterotachy(string &model_name) {
 	string::size_type pos1 = 0, pos2 = 0;
     do {
-        pos1 = model_name.find("+H", pos1);
+        pos1 = model_name.find("+H", pos1+1);
         if (pos1 == string::npos) break;
     } while (pos1 < model_name.length()-2 && isalpha(model_name[pos1+2]));
 
     do {
-        pos2 = model_name.find("*H");
+        pos2 = model_name.find("*H", pos2+1);
         if (pos2 == string::npos) break;
     } while (pos2 < model_name.length()-2 && isalpha(model_name[pos2+2]));
 
@@ -68,12 +68,12 @@ string::size_type posRateHeterotachy(string &model_name) {
 string::size_type posRateFree(string &model_name) {
 	string::size_type pos1 = 0, pos2 = 0;
     do {
-        pos1 = model_name.find("+R", pos1);
+        pos1 = model_name.find("+R", pos1+1);
         if (pos1 == string::npos) break;
     } while (pos1 < model_name.length()-2 && isalpha(model_name[pos1+2]));
 
     do {
-        pos2 = model_name.find("*R");
+        pos2 = model_name.find("*R", pos2+1);
         if (pos2 == string::npos) break;
     } while (pos2 < model_name.length()-2 && isalpha(model_name[pos2+2]));
 
@@ -89,12 +89,12 @@ string::size_type posRateFree(string &model_name) {
 string::size_type posPOMO(string &model_name) {
 	string::size_type pos1 = 0, pos2 = 0;
     do {
-        pos1 = model_name.find("+P", pos1);
+        pos1 = model_name.find("+P", pos1+1);
         if (pos1 == string::npos) break;
     } while (pos1 < model_name.length()-2 && isalpha(model_name[pos1+2]));
 
     do {
-        pos2 = model_name.find("*P");
+        pos2 = model_name.find("*P", pos2+1);
         if (pos2 == string::npos) break;
     } while (pos2 < model_name.length()-2 && isalpha(model_name[pos2+2]));
 
