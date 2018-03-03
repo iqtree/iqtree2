@@ -563,6 +563,9 @@ void IQTree::computeInitialTree(string &dist_file, LikelihoodKernel kernel) {
         params->numNNITrees = 1;
 		if (params->pll)
 			pllReadNewick(getTreeString());
+        initTree = getTreeString();
+        CKP_SAVE(initTree);
+        saveCheckpoint();
     } else if (CKP_RESTORE(initTree)) {
         readTreeString(initTree);
         cout << endl << "CHECKPOINT: Initial tree restored" << endl;
