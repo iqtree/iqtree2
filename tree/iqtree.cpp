@@ -551,8 +551,16 @@ void IQTree::computeInitialTree(string &dist_file, LikelihoodKernel kernel) {
         cout << "Reading input tree file " << params->user_file << " ...";
         bool myrooted = params->is_rooted;
         readTree(params->user_file, myrooted);
-        if (myrooted)
-            cout << " rooted tree";
+        if (myrooted) {
+            // TODO: convert to unrooted tree for supertree as non-reversible models
+            // do not work with partition models yet
+            if (isSuperTree()) {
+                convertToUnrooted();
+                cout << " rooted tree converted to unrooted tree";
+            } else {
+                cout << " rooted tree";
+            }
+        }
         cout << endl;
         setAlignment(aln);
         if (isSuperTree())
