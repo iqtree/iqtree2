@@ -545,9 +545,17 @@ PhyloSuperTree::PhyloSuperTree(Params &params) :  IQTree() {
 	if (part_info.empty())
 		outError("No partition found");
 
+    // check for duplicated partition names
+    unordered_set<string> part_names;
+    for (auto pit = part_info.begin(); pit != part_info.end(); pit++) {
+        if (part_names.find(pit->name) != part_names.end())
+            outError("Duplicated partition name ", pit->name);
+        part_names.insert(pit->name);
+    }
+    
 	// Initialize the counter for evaluated NNIs on subtrees
     cout << "Subset\tType\tSeqs\tSites\tInfor\tInvar\tModel\tName" << endl;
-	int part = 0;
+    int part = 0;
     iterator it;
 	for (it = begin(); it != end(); it++, part++) {
 		part_info[part].evalNNIs = 0.0;
