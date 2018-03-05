@@ -1723,10 +1723,11 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
                 tree->sse = params.SSE;
                 tree->optimize_by_newton = params.optimize_by_newton;
                 tree->num_threads = params.model_test_and_tree ? num_threads : 1;
-                if (params.model_test_and_tree) {
+                /*if (params.model_test_and_tree) {
                     tree->setCheckpoint(new Checkpoint());
                     tree->saveCheckpoint();
-                } else {
+                } else*/
+                {
                     tree->setCheckpoint(&part_model_info);
                     // trick to restore checkpoint
                     tree->restoreCheckpoint();
@@ -1735,9 +1736,11 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
                 best_model.name = testModel(params, tree, part_model_info, models_block,
                     params.model_test_and_tree ? num_threads : 1, params.partition_type, cur_pair.set_name);
                 best_model.restoreCheckpoint(&part_model_info);
+                /*
                 if (params.model_test_and_tree) {
                     delete tree->getCheckpoint();
                 }
+                 */
                 delete tree;
                 delete aln;
             }
