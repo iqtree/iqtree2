@@ -2964,8 +2964,11 @@ void evaluateTrees(Params &params, IQTree *tree, vector<TreeInfo> &info, IntVect
 			continue;
 		}
 		tree->freeNode();
-        bool rooted = tree->rooted;
-		tree->readTree(in, rooted);
+		tree->readTree(in, tree->rooted);
+        if (tree->rooted && tree->getModel()->isReversible())
+            tree->convertToUnrooted();
+        else if (!tree->rooted && !tree->getModel()->isReversible())
+            tree->convertToRooted();
 		tree->setAlignment(tree->aln);
         tree->setRootNode(params.root);
 		if (tree->isSuperTree())
