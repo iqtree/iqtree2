@@ -964,6 +964,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.site_freq_file = NULL;
     params.tree_freq_file = NULL;
     params.num_threads = 1;
+    params.num_threads_max = 10000;
     params.model_test_criterion = MTC_BIC;
 //    params.model_test_stop_rule = MTC_ALL;
     params.model_test_sample_size = 0;
@@ -3236,6 +3237,17 @@ void parseArg(int argc, char *argv[], Params &params) {
                 }
 				continue;
 			}
+            
+            if (strcmp(argv[cnt], "-ntmax") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use -ntmax <num_threads_max>";
+                params.num_threads_max = convert_int(argv[cnt]);
+                if (params.num_threads_max < 1)
+                    throw "At least 1 thread please";
+                continue;
+            }
+            
 //			if (strcmp(argv[cnt], "-rootstate") == 0) {
 //                cnt++;
 //                if (cnt >= argc)
@@ -3575,7 +3587,8 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -o <outgroup_taxon>  Outgroup taxon name for writing .treefile" << endl
             << "  -pre <PREFIX>        Prefix for all output files (default: aln/partition)" << endl
 #ifdef _OPENMP
-            << "  -nt <#cpu_cores>     Number of cores/threads to use (REQUIRED)" << endl
+            << "  -nt <num_threads>    Number of cores/threads or AUTO for automatic detection" << endl
+            << "  -ntmax <max_threads> Max number of threads by -nt AUTO (default: #CPU cores)" << endl
 #endif
             << "  -seed <number>       Random seed number, normally used for debugging purpose" << endl
             << "  -v, -vv, -vvv        Verbose mode, printing more messages to screen" << endl

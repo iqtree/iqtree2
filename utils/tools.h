@@ -1869,6 +1869,9 @@ public:
 
     /** number of threads for OpenMP version     */
     int num_threads;
+    
+    /** maximum number of threads, default: #CPU scores  */
+    int num_threads_max;
 
     /** either MTC_AIC, MTC_AICc, MTC_BIC */
     ModelTestCriterion model_test_criterion;
