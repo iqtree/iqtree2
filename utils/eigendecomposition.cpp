@@ -666,8 +666,10 @@ void EigenDecomposition::tqli(double *d, double *e, int n, double **z)
 				if ((double)(fabs(e[m])+dd) == dd) break;
 			}
 			if (m != l) {
-				if (iter++ == 100) 
-					nrerror("Too many iterations in tqli");
+                if (iter++ == 100) {
+					outWarning("Too many iterations in tqli");
+                    break;
+                }
  
 				g=(d[l+1]-d[l])/(2.0*e[l]);
 				r=pythag(g,1.0);

@@ -22,6 +22,8 @@
 #include <string.h>
 #include "modelliemarkov.h"
 #include "modelunrest.h"
+#include <Eigen/Eigenvalues>
+using namespace Eigen;
 
 
 /** number of squaring for scaling-squaring technique */
@@ -947,6 +949,19 @@ void ModelMarkov::decomposeRateMatrix(){
 			}
 		}
 		delete [] q;
+/*    } else if (Params::getInstance().matrix_exp_technique == MET_EIGEN3LIB_DECOMPOSITION) {
+        // Using Eigen3 libary for general time-reversible model
+        Eigen::MatrixXd Q;
+        Q.resize(num_states, num_states);
+        if (half_matrix) {
+            for (i = 0, k = 0; i < num_states; i++)
+                for (j = i+1; j < num_states; j++, k++) {
+                    Q(i,j) = Q(j,i) = rates[k];
+                }
+        } else {
+            // full matrix
+        }
+*/
 	} else {
 
         // general reversible model
