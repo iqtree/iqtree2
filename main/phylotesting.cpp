@@ -1312,6 +1312,14 @@ string testOneModel(string &model_name, Params &params, Alignment *in_aln,
             iqtree->saveCheckpoint();
         }
 
+#ifdef _OPENMP
+        if (num_threads <= 0) {
+            num_threads = iqtree->testNumThreads();
+            omp_set_num_threads(num_threads);
+        } else
+            iqtree->warnNumThreads();
+#endif
+
         runTreeReconstruction(params, original_model, iqtree, model_info);
         info.logl = iqtree->computeLikelihood();
         info.tree_len = iqtree->treeLength();
@@ -1483,6 +1491,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
     if (num_threads <= 0) {
         // partition selection scales well with many cores
         num_threads = min((int64_t)countPhysicalCPUCores(), total_num_model);
+        num_threads = min(num_threads, params.num_threads_max);
         omp_set_num_threads(num_threads);
         cout << "NUMBER OF THREADS FOR PARTITION FINDING: " << num_threads << endl;
     }
