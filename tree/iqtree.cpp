@@ -20,6 +20,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 #include "iqtree.h"
+#include "phylotreemixlen.h"
 #include "phylosupertree.h"
 #include "phylosupertreeplen.h"
 #include "model/partitionmodelplen.h"
@@ -2729,7 +2730,9 @@ void IQTree::refineBootTrees() {
     params->gbo_replicates = 0;
 
 	NNI_Type saved_nni_type = params->nni_type;
-	if(params->u2c_nni5 == false){
+    // TODO: A bug in PhyloSuperTreePlen::swapNNIBranch by nni1
+    // Thus always turn on -nni5 by PhyloSuperTreePlen
+	if(params->u2c_nni5 == false && (!isSuperTree() || params->partition_type == BRLEN_OPTIMIZE)) {
 		params->nni5 = false;
 		params->nni_type = NNI1;
 	}else{
@@ -2737,7 +2740,11 @@ void IQTree::refineBootTrees() {
 		params->nni_type = NNI5;
 	}
 
-    cout << "Refining ufboot trees with NNI..." << endl;
+    cout << "Refining ufboot trees with NNI ";
+    if (params->nni5)
+        cout << "5 branches..." << endl;
+    else
+        cout << "1 branch..." << endl;
 
     int refined_trees = 0;
 
@@ -2766,8 +2773,17 @@ void IQTree::refineBootTrees() {
 			} else {
 				boot_tree = new PhyloSuperTree((SuperAlignment*) bootstrap_alignment, (PhyloSuperTree*) this);
 			}
-		} else
-			boot_tree = new IQTree(bootstrap_alignment);
+        } else {
+            // allocate heterotachy tree if neccessary
+            int pos = posRateHeterotachy(params->model_name);
+            
+            if (params->num_mixlen > 1) {
+                boot_tree = new PhyloTreeMixlen(bootstrap_alignment, params->num_mixlen);
+            } else if (pos != string::npos) {
+                boot_tree = new PhyloTreeMixlen(bootstrap_alignment, 0);
+            } else
+                boot_tree = new IQTree(bootstrap_alignment);
+        }
 
         boot_tree->on_refine_btree = true;
         boot_tree->save_all_trees = 0;
@@ -2851,11 +2867,11 @@ void IQTree::refineBootTrees() {
 
     // restore
     params->gbo_replicates = boot_trees.size();
-	if(params->u2c_nni5 == false){
-		params->nni_type = saved_nni_type;
-		if(params->nni_type == NNI5)
-			params->nni5 = true;
-	}
+    params->nni_type = saved_nni_type;
+    if(params->nni_type == NNI5) {
+        params->nni5 = true;
+	} else
+        params->nni5 = false;
 
 }
 
