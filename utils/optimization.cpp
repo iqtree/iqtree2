@@ -1108,7 +1108,7 @@ double Optimization::L_BFGS_B(int n, double* x, double* l, double* u, double pgt
 //#endif
 
     if (fail == 51 || fail == 52) {
-        cerr << msg << endl;
+        cout << msg << endl;
     }
 
 	delete[] nbd;
