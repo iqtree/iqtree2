@@ -2765,8 +2765,17 @@ void runStandardBootstrap(Params &params, string &original_model, Alignment *ali
 			} else {
 				boot_tree = new PhyloSuperTree((SuperAlignment*) bootstrap_alignment, (PhyloSuperTree*) tree);
 			}
-		} else
-			boot_tree = new IQTree(bootstrap_alignment);
+        } else {
+            // allocate heterotachy tree if neccessary
+            int pos = posRateHeterotachy(params.model_name);
+            
+            if (params.num_mixlen > 1) {
+                boot_tree = new PhyloTreeMixlen(bootstrap_alignment, params.num_mixlen);
+            } else if (pos != string::npos) {
+                boot_tree = new PhyloTreeMixlen(bootstrap_alignment, 0);
+            } else
+                boot_tree = new IQTree(bootstrap_alignment);
+        }
 		if (params.print_bootaln && MPIHelper::getInstance().isMaster()) {
             if (bootstrap_alignment->isSuperAlignment())
                 ((SuperAlignment*)bootstrap_alignment)->printCombinedAlignment(bootaln_name.c_str(), true);

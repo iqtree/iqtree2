@@ -999,6 +999,9 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.checkpoint_dump_interval = 60;
     params.force_unfinished = false;
     params.suppress_output_flags = 0;
+    params.ufboot2corr = false;
+    params.u2c_nni5 = false;
+    
 #ifdef USE_EIGEN3
     params.matrix_exp_technique = MET_EIGEN3LIB_DECOMPOSITION;
 #else
