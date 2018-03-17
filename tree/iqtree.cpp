@@ -3187,7 +3187,7 @@ pair<int, int> IQTree::optimizeNNI(bool speedNNI) {
 //            doNNI(appliedNNIs[0]);
             totalNNIApplied++;
             curScore = optimizeAllBranches(1, params->loglh_epsilon, PLL_NEWZPERCYCLE);
-            ASSERT(curScore > appliedNNIs.at(0).newloglh - params->loglh_epsilon);
+            ASSERT(curScore > appliedNNIs.at(0).newloglh - 0.1);
         } else {
             totalNNIApplied += appliedNNIs.size();
         }

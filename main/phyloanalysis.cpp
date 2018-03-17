@@ -2402,7 +2402,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree* &iqtr
 
 	/****** perform SH-aLRT test ******************/
 	if ((params.aLRT_replicates > 0 || params.localbp_replicates > 0 || params.aLRT_test || params.aBayes_test) && !params.pll) {
-		double mytime = getCPUTime();
+		double mytime = getRealTime();
 		params.aLRT_replicates = max(params.aLRT_replicates, params.localbp_replicates);
         cout << endl;
         if (params.aLRT_replicates > 0)
@@ -2418,7 +2418,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree* &iqtr
         if (iqtree->isBifurcating()) {
             iqtree->testAllBranches(params.aLRT_threshold, iqtree->getCurScore(),
                     pattern_lh, params.aLRT_replicates, params.localbp_replicates, params.aLRT_test, params.aBayes_test);
-            cout << "CPU Time used:  " << getCPUTime() - mytime << " sec." << endl;
+            cout << getRealTime() - mytime << " sec." << endl;
         } else {
             outWarning("Tree is multifurcating and such test is not applicable");
             params.aLRT_replicates = params.localbp_replicates = params.aLRT_test = params.aBayes_test = 0;

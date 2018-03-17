@@ -1671,7 +1671,7 @@ public:
     /**
             Resampling estimated log-likelihood (RELL)
      */
-    void resampleLh(double **pat_lh, double *lh_new);
+    void resampleLh(double **pat_lh, double *lh_new, int *rstream);
 
     /**
             Test one branch of the tree with aLRT SH-like interpretation

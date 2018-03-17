@@ -4307,19 +4307,20 @@ void PhyloTree::computeNNIPatternLh(double cur_lh, double &lh2, double *pattern_
 		cout << "Alternative NNI shows better log-likelihood " << max(lh2,lh3) << " > " << cur_lh << endl;
 }
 
-void PhyloTree::resampleLh(double **pat_lh, double *lh_new) {
+void PhyloTree::resampleLh(double **pat_lh, double *lh_new, int *rstream) {
     //int nsite = getAlnNSite();
     int nptn = getAlnNPattern();
     memset(lh_new, 0, sizeof(double) * 3);
     int i;
-    IntVector boot_freq;
-    aln->createBootstrapAlignment(boot_freq, params->bootstrap_spec);
+    int *boot_freq = aligned_alloc<int>(getAlnNPattern());
+    aln->createBootstrapAlignment(boot_freq, params->bootstrap_spec, rstream);
     for (i = 0; i < nptn; i++) {
 
         lh_new[0] += boot_freq[i] * pat_lh[0][i];
         lh_new[1] += boot_freq[i] * pat_lh[1][i];
         lh_new[2] += boot_freq[i] * pat_lh[2][i];
     }
+    aligned_free(boot_freq);
 }
 
 /*********************************************************/
@@ -4502,8 +4503,9 @@ double PhyloTree::testOneBranch(double best_score, double *pattern_lh, int reps,
     double *pat_lh[NUM_NNI];
     lh[0] = best_score;
     pat_lh[0] = pattern_lh;
-    pat_lh[1] = new double[getAlnNPattern()];
-    pat_lh[2] = new double[getAlnNPattern()];
+    int nptn = getAlnNPattern();
+    pat_lh[1] = new double[nptn];
+    pat_lh[2] = new double[nptn];
     computeNNIPatternLh(best_score, lh[1], pat_lh[1], lh[2], pat_lh[2], node1, node2);
     double aLRT;
     if (lh[1] > lh[2])
@@ -4528,10 +4530,22 @@ double PhyloTree::testOneBranch(double best_score, double *pattern_lh, int reps,
     if (max(lh[1],lh[2]) == -DBL_MAX) {
         SH_aLRT_support = times;
         outWarning("Branch where both NNIs violate constraint tree will show 100% SH-aLRT support");
-    } else for (int i = 0; i < times; i++) {
+    } else
+#ifdef _OPENMP
+#pragma omp parallel
+    {
+        int *rstream;
+        init_random(params->ran_seed + omp_get_thread_num(), false, &rstream);
+#pragma omp for reduction(+: lbp_support, SH_aLRT_support)
+#endif
+    for (int i = 0; i < times; i++) {
         double lh_new[NUM_NNI];
         // resampling estimated log-likelihood (RELL)
-        resampleLh(pat_lh, lh_new);
+#ifdef _OPENMP
+        resampleLh(pat_lh, lh_new, rstream);
+#else
+        resampleLh(pat_lh, lh_new, randstream);
+#endif
         if (lh_new[0] > lh_new[1] && lh_new[0] > lh_new[2])
             lbp_support += 1.0;
         double cs[NUM_NNI], cs_best, cs_2nd_best;
@@ -4560,6 +4574,10 @@ double PhyloTree::testOneBranch(double best_score, double *pattern_lh, int reps,
         if (aLRT > (cs_best - cs_2nd_best) + 0.05)
             SH_aLRT_support++;
     }
+#ifdef _OPENMP
+    finish_random(rstream);
+    }
+#endif
     delete[] pat_lh[2];
     delete[] pat_lh[1];
     
