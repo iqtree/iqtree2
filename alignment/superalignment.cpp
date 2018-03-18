@@ -679,10 +679,54 @@ Alignment *SuperAlignment::concatenateAlignments(set<int> &ids) {
 }
 
 Alignment *SuperAlignment::concatenateAlignments() {
-    set<int> ids;
-    for (int i = 0; i < partitions.size(); i++)
-        ids.insert(i);
-    return concatenateAlignments(ids);
+    vector<SeqType> seq_types;
+    vector<set<int> > ids;
+    for (int i = 0; i < partitions.size(); i++) {
+        bool found = false;
+        for (int j = 0; j < seq_types.size(); j++)
+            if (partitions[i]->seq_type == seq_types[j]) {
+                ids[j].insert(i);
+                found = true;
+                break;
+            }
+        if (found)
+            continue;
+        // create a new partition
+        seq_types.push_back(partitions[i]->seq_type);
+        ids.push_back(set<int>());
+        ids.back().insert(i);
+    }
+    if (seq_types.size() == 1)
+        return concatenateAlignments(ids[0]);
+
+    // mixed data with >= 2 partitions
+    SuperAlignment *saln = new SuperAlignment();
+    saln->max_num_states = 0;
+    // first build taxa_index and partitions
+    int site, seq, nsite = ids.size();
+    
+    // BUG FIX 2016-11-29: when merging partitions with -m TESTMERGE, sequence order is changed
+    // get the taxa names from existing tree
+    
+    saln->seq_names = seq_names;
+    saln->taxa_index.resize(saln->seq_names.size());
+    for (auto it = saln->taxa_index.begin(); it != saln->taxa_index.end(); it++)
+        it->resize(nsite, -1);
+    
+    for (site = 0; site != nsite; site++) {
+        Alignment *part_aln = concatenateAlignments(ids[site]);
+        saln->partitions.push_back(part_aln);
+        int nseq = part_aln->getNSeq();
+        //cout << "nseq  = " << nseq << endl;
+        for (seq = 0; seq < nseq; seq++) {
+            int id = saln->getSeqID(part_aln->getSeqName(seq));
+            ASSERT(id >= 0);
+            saln->taxa_index[id][site] = seq;
+        }
+    }
+    // now the patterns of sequence-genes presence/absence
+    saln->buildPattern();
+    return saln;
 }
 
 void SuperAlignment::countConstSite() {
