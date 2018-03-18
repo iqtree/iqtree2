@@ -1539,6 +1539,7 @@ void initializeParams(Params &params, IQTree &iqtree, ModelCheckpoint &model_inf
         double cpu_time = getCPUTime();
         double real_time = getRealTime();
         model_info.setFileName((string)params.out_prefix + ".model.gz");
+        model_info.setDumpInterval(params.checkpoint_dump_interval);
 
         bool ok_model_file = false;
         if (!params.print_site_lh && !params.model_test_again) {
