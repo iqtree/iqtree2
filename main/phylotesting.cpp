@@ -146,6 +146,31 @@ const char *codon_freq_names[] = {"", "+F1X4", "+F3X4", "+F"};
 const double TOL_LIKELIHOOD_MODELTEST = 0.1;
 const double TOL_GRADIENT_MODELTEST   = 0.0001;
 
+string getSeqTypeName(SeqType seq_type) {
+    switch (seq_type) {
+        case SEQ_BINARY: return "binary";
+        case SEQ_DNA: return "DNA";
+        case SEQ_PROTEIN: return "protein";
+        case SEQ_CODON: return "codon";
+        case SEQ_MORPH: return "morphological";
+        case SEQ_POMO: return "PoMo";
+        case SEQ_UNKNOWN: return "unknown";
+        case SEQ_MULTISTATE: return "MultiState";
+    }
+}
+
+string getUsualModelName(SeqType seq_type) {
+    switch (seq_type) {
+        case SEQ_DNA: return "GTR+F+G";
+        case SEQ_PROTEIN: return "LG+F+G";
+        case SEQ_CODON: return "GY"; break; // too much computation, thus no +G
+        case SEQ_BINARY: return "GTR2+G";
+        case SEQ_MORPH: return "MK+G";
+        case SEQ_POMO: return "GTR+P";
+        default: ASSERT(0 && "Unprocessed seq_type"); return "";
+    }
+}
+
 void ModelInfo::computeICScores(size_t sample_size) {
     computeInformationScores(logl, df, sample_size, AIC_score, AICc_score, BIC_score);
 }
@@ -1448,12 +1473,64 @@ public:
 
 };
 
+string testConcatModel(Params &params, SuperAlignment *super_aln, ModelCheckpoint &model_info,
+    ModelsBlock *models_block, int num_threads, ModelInfo &concat_info)
+{
+    Alignment *conaln = super_aln->concatenateAlignments();
+    string model_name = getUsualModelName(conaln->seq_type);
+    string concat_tree;
+    int ssize = 0;
+    if (conaln->isSuperAlignment()) {
+        // mixed data type, testing each data separately
+        SuperAlignment *saln = (SuperAlignment*) conaln;
+        StrVector part_trees;
+        ModelInfo part_info;
+        part_trees.reserve(saln->partitions.size());
+        concat_info.name = "";
+        concat_info.logl = 0.0;
+        concat_info.df = 0;
+        int longest = 0;
+        for (auto it = saln->partitions.begin(); it != saln->partitions.end(); it++) {
+            ssize += (*it)->getNSite();
+            model_name = getUsualModelName((*it)->seq_type);
+            cout << "Testing " << model_name << " on " << getSeqTypeName((*it)->seq_type)
+                 << " part of supermatrix..." << endl;
+            string part_tree = testOneModel(model_name, params, *it, model_info, part_info,
+                models_block, num_threads, BRLEN_OPTIMIZE);
+            part_trees.push_back(part_tree);
+            if (!concat_info.name.empty())
+                concat_info.name += "_";
+            concat_info.name += part_info.name;
+            concat_info.logl += part_info.logl;
+            concat_info.df += part_info.df;
+            if (longest < (*it)->getNSite()) {
+                // take the tree from the longest part
+                longest = (*it)->getNSite();
+                concat_tree = part_tree;
+            }
+        }
+    } else {
+        ssize = conaln->getNSite();
+        cout << "Testing " << model_name << " on supermatrix..." << endl;
+        concat_tree = testOneModel(model_name, params, conaln, model_info, concat_info,
+            models_block, num_threads, BRLEN_OPTIMIZE);
+    }
+
+    concat_info.computeICScores(ssize);
+    concat_info.saveCheckpoint(&model_info);
+
+    delete conaln;
+    return concat_tree;
+}
+
 /**
  * select models for all partitions
  * @param[in,out] model_info (IN/OUT) all model information
  * @return total number of parameters
  */
-void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint &model_info, ModelsBlock *models_block, int num_threads) {
+void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint &model_info,
+    ModelsBlock *models_block, int num_threads)
+{
 //    params.print_partition_info = true;
 //    params.print_conaln = true;
 	int i = 0;
@@ -1506,24 +1583,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
 
     // Analysis on supermatrix
     {
-        Alignment *conaln = super_aln->concatenateAlignments();
-        string model_name;
-        switch (conaln->seq_type) {
-            case SEQ_DNA: model_name = "GTR+F+G"; break;
-            case SEQ_PROTEIN: model_name = "LG+F+G"; break;
-            case SEQ_CODON: model_name = "GY"; break; // too much computation, thus no +G
-            case SEQ_BINARY: model_name = "GTR2+G"; break;
-            case SEQ_MORPH: model_name = "MK+G"; break;
-            case SEQ_POMO: model_name = "GTR+P"; break;
-            default: ASSERT(0 && "Unprocessed seq_type");
-
-        }
-        cout << "Testing " << model_name << " on supermatrix..." << endl;
-        concat_tree = testOneModel(model_name, params, conaln, model_info, concat_info,
-            models_block, num_threads, BRLEN_OPTIMIZE);
-        concat_info.computeICScores(ssize);
-        concat_info.saveCheckpoint(&model_info);
-
+        concat_tree = testConcatModel(params, super_aln, model_info, models_block, num_threads, concat_info);
 
         // read tree with branch lengths for linked partition model
         if (params.partition_type != BRLEN_OPTIMIZE && !concat_tree.empty()) {
@@ -1540,7 +1600,6 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
         cout << concat_info.name << " / LnL: " << concat_info.logl
              << " / df: " << concat_info.df << " / AIC: " << concat_info.AIC_score
              << " / AICc: " << concat_info.AICc_score << " / BIC: " << concat_info.BIC_score << endl;
-        delete conaln;
     }
 
 	cout << "Selecting individual models for " << in_tree->size() << " charsets using " << criterionName(params.model_test_criterion) << "..." << endl;
@@ -1951,18 +2010,6 @@ ModelMarkov* getPrototypeModel(SeqType seq_type, PhyloTree* tree, char *model_se
     return(subst_model);
 }
 */
-string getSeqTypeName(SeqType seq_type) {
-    switch (seq_type) {
-    case SEQ_BINARY: return "binary";
-    case SEQ_DNA: return "DNA";
-    case SEQ_PROTEIN: return "protein";
-    case SEQ_CODON: return "codon";
-    case SEQ_MORPH: return "morphological";
-    case SEQ_POMO: return "PoMo";
-    case SEQ_UNKNOWN: return "unknown";
-    case SEQ_MULTISTATE: return "MultiState";
-    }
-}
 
 
 string testModel(Params &params, PhyloTree* in_tree, ModelCheckpoint &model_info, ModelsBlock *models_block,
