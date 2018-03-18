@@ -1497,6 +1497,7 @@ string testConcatModel(Params &params, SuperAlignment *super_aln, ModelCheckpoin
                  << " part of supermatrix..." << endl;
             string part_tree = testOneModel(model_name, params, *it, model_info, part_info,
                 models_block, num_threads, BRLEN_OPTIMIZE);
+            part_info.saveCheckpoint(&model_info);
             part_trees.push_back(part_tree);
             if (!concat_info.name.empty())
                 concat_info.name += "_";
@@ -1507,6 +1508,7 @@ string testConcatModel(Params &params, SuperAlignment *super_aln, ModelCheckpoin
                 // take the tree from the longest part
                 longest = (*it)->getNSite();
                 concat_tree = part_tree;
+                concat_info.tree_len = part_info.tree_len;
             }
         }
     } else {
