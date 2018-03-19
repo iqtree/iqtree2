@@ -324,8 +324,8 @@ void ModelMarkov::init(StateFreqType type) {
 
 void ModelMarkov::writeInfo(ostream &out) {
 	if (is_reversible && num_states == 4) {
-    report_rates(out, "Rate parameters", rates);
-    report_state_freqs(out);
+        report_rates(out, "Rate parameters", rates);
+        report_state_freqs(out);
 		//if (freq_type != FREQ_ESTIMATE) return;
 	} else if (!is_reversible) {
         // non-reversible
@@ -337,7 +337,7 @@ void ModelMarkov::writeInfo(ostream &out) {
 
         if (num_states != 4) return;
 		report_rates(out, "Substitution rates", rates);
-    report_state_freqs(out, state_freq);
+        report_state_freqs(out, state_freq);
     }
 }
 

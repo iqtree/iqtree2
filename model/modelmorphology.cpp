@@ -17,21 +17,26 @@ void ModelMorphology::init(const char *model_name, string model_params, StateFre
 {
 	name = model_name;
 	full_name = model_name;
-	freq = FREQ_EQUAL;
 	if (name == "MK") {
 		// all were initialized
+        num_params = 0;
 	} else if (name == "ORDERED") {
-		int k = 0;
+		int i, j, k = 0;
 		// only allow for substitution from state i to state i+1 and back.
-		for (int i = 0; i < num_states-1; i++) {
+		for (i = 0; i < num_states-1; i++) {
 			rates[k++] = 1.0;
-			for (int j = i+2; j < num_states; j++, k++)
+			for (j = i+2; j < num_states; j++, k++)
 				rates[k] = 0.0;
 		}
+        num_params = 0;
+    } else if (name == "GTR") {
+        outWarning("GTR multistate model will estimate " + convertIntToString(getNumRateEntries()-1) + " substitution rates that might be overfitting!");
+        outWarning("Please only use GTR with very large data and always test for model fit!");
 	} else {
 		// if name does not match, read the user-defined model
 		readParameters(model_name);
         num_params = 0;
+        freq = FREQ_USER_DEFINED;
 	}
 	ModelMarkov::init(freq);
 }
@@ -57,10 +62,77 @@ void ModelMorphology::readRates(istream &in) throw(const char*, string) {
 	}
 }
 
+int ModelMorphology::getNDim() {
+    int ndim = num_params;
+    if (freq_type == FREQ_ESTIMATE)
+        ndim += num_states-1;
+    return ndim;
+}
 
 ModelMorphology::~ModelMorphology() {
 }
 
 void ModelMorphology::startCheckpoint() {
     checkpoint->startStruct("ModelMorph");
+}
+
+void ModelMorphology::saveCheckpoint() {
+    startCheckpoint();
+    if (num_params > 0)
+        CKP_ARRAY_SAVE(getNumRateEntries(), rates);
+    endCheckpoint();
+    ModelMarkov::saveCheckpoint();
+}
+
+void ModelMorphology::restoreCheckpoint() {
+    ModelMarkov::restoreCheckpoint();
+    startCheckpoint();
+    if (num_params > 0)
+        CKP_ARRAY_RESTORE(getNumRateEntries(), rates);
+    endCheckpoint();
+    decomposeRateMatrix();
+    if (phylo_tree)
+        phylo_tree->clearAllPartialLH();
+}
+
+string ModelMorphology::getNameParams() {
+    if (num_params == 0) return name;
+    ostringstream retname;
+    retname << name << '{';
+    int nrates = getNumRateEntries();
+    for (int i = 0; i < nrates; i++) {
+        if (i>0) retname << ',';
+        retname << rates[i];
+    }
+    retname << '}';
+    getNameParamsFreq(retname);
+    return retname.str();
+}
+
+void ModelMorphology::writeParameters(ostream &out) {
+    int i;
+    if (freq_type == FREQ_ESTIMATE) {
+        for (i = 0; i < num_states; i++)
+            out << "\t" << state_freq[i];
+    }
+    if (num_params == 0) return;
+    int nrateout = getNumRateEntries() - 1;
+    for (i = 0; i < nrateout; i++)
+        out << "\t" << rates[i];
+}
+
+void ModelMorphology::writeInfo(ostream &out) {
+    if (num_params > 0) {
+        out << "Rate parameters:";
+        int nrate = getNumRateEntries();
+        for (int i = 0; i < nrate; i++)
+            out << " " << rates[i];
+        out << endl;
+    }
+    if (freq_type != FREQ_EQUAL) {
+        out << "State frequencies:";
+        for (int i = 0; i < num_states; i++)
+            out << " " << state_freq[i];
+        out << endl;
+    }
 }

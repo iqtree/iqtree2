@@ -35,14 +35,41 @@ public:
 	virtual void init(const char *model_name, string model_params, StateFreqType freq, string freq_params);
 
     /**
+     return the number of dimensions
+     */
+    virtual int getNDim();
+
+    /**
         start structure for checkpointing
     */
     virtual void startCheckpoint();
+    
+    /**
+     save object into the checkpoint
+     */
+    virtual void saveCheckpoint();
+    
+    /**
+     restore object from the checkpoint
+     */
+    virtual void restoreCheckpoint();
 
-	/**
-		return the number of dimensions
-	*/
-	virtual int getNDim() { return 0; }
+    /**
+     * @return model name with parameters in form of e.g. GTR{a,b,c,d,e,f}
+     */
+    virtual string getNameParams();
+
+    /**
+     write information
+     @param out output stream
+     */
+    virtual void writeInfo(ostream &out);
+
+    /**
+     write parameters, used with modeltest
+     @param out output stream
+     */
+    virtual void writeParameters(ostream &out);
 
 	/**
 		read the rates from an input stream. it will throw error messages if failed

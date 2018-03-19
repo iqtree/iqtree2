@@ -3689,7 +3689,7 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "    Mechanistic codon: GY (default), MG, MGK, GY0K, GY1KTS, GY1KTV, GY2K," << endl
             << "                       MG1KTS, MG1KTV, MG2K" << endl
             << " Semi-empirical codon: XX_YY where XX is empirical and YY is mechanistic model" << endl
-            << "       Morphology/SNP: MK (default), ORDERED" << endl
+            << "       Morphology/SNP: MK (default), ORDERED, GTR" << endl
             << "       Lie Markov DNA: One of the following, optionally prefixed by RY, WS or MK:" << endl
             << "                       1.1,  2.2b, 3.3a, 3.3b,  3.3c," << endl
             << "                       3.4,  4.4a, 4.4b, 4.5a,  4.5b," << endl
