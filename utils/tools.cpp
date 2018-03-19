@@ -920,6 +920,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 //    params.store_candidate_trees = false;
 	params.print_ufboot_trees = 0;
     params.contree_rfdist = -1;
+    params.jackknife_prop = 0.0;
     //const double INF_NNI_CUTOFF = -1000000.0;
     params.nni_cutoff = -1000000.0;
     params.estimate_nni_cutoff = false;
@@ -2787,6 +2788,16 @@ void parseArg(int argc, char *argv[], Params &params) {
 //				params.store_candidate_trees = false;
 //				continue;
 //			}
+            
+            if (strcmp(argv[cnt], "-j") == 0 || strcmp(argv[cnt], "--jackknife") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use -j jackknife_proportion";
+                params.jackknife_prop = convert_double(argv[cnt]);
+                if (params.jackknife_prop <= 0.0 || params.jackknife_prop >= 1.0)
+                    throw "Jackknife proportion must be between 0.0 and 1.0";
+                continue;
+            }
 			if (strcmp(argv[cnt], "-mem") == 0) {
 				cnt++;
 				if (cnt >= argc)
@@ -3631,6 +3642,7 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -bcor <min_corr>     Minimum correlation coefficient (default: 0.99)" << endl
 			<< "  -beps <epsilon>      RELL epsilon to break tie (default: 0.5)" << endl
             << "  -bnni                Optimize UFBoot trees by NNI on bootstrap alignment" << endl
+            << "  -j <jackknife>       Proportion of sites for jackknife (default: NONE)" << endl
             << endl << "STANDARD NON-PARAMETRIC BOOTSTRAP:" << endl
             << "  -b <#replicates>     Bootstrap + ML tree + consensus tree (>=100)" << endl
             << "  -bc <#replicates>    Bootstrap + consensus tree" << endl

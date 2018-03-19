@@ -630,12 +630,12 @@ void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh, 
         if (params.num_bootstrap_samples && params.compute_ml_tree) {
             if (params.aLRT_replicates > 0 || params.aLRT_test || params.aBayes_test)
                 out << " /";
-            out << " standard bootstrap support (%)";
+            out << " standard " << ((params.jackknife_prop == 0.0) ? "bootstrap" : "jackknife") << " support (%)";
         }
         if (params.gbo_replicates) {
             if (params.aLRT_replicates > 0 || params.aLRT_test || params.aBayes_test)
                 out << " /";
-            out << " ultrafast bootstrap support (%)";
+            out << " ultrafast " << ((params.jackknife_prop==0.0) ? "bootstrap" : "jackknife") << " support (%)";
         }
         out << endl;
     }
@@ -778,7 +778,7 @@ void printOutfilesInfo(Params &params, string &original_model, IQTree &tree) {
     }
 
 	if (params.gbo_replicates) {
-		cout << endl << "Ultrafast bootstrap approximation results written to:" << endl
+        cout << endl << "Ultrafast " << ((params.jackknife_prop==0.0) ? "bootstrap" : "jackknife") << " approximation results written to:" << endl
 			 << "  Split support values:          " << params.out_prefix << ".splits.nex" << endl
 			 << "  Consensus tree:                " << params.out_prefix << ".contree" << endl;
 		if (params.print_ufboot_trees)
@@ -861,11 +861,11 @@ void reportPhyloAnalysis(Params &params, string &original_model,
         if (params.num_bootstrap_samples > 0) {
             if (params.compute_ml_tree)
                 out << " + ";
-            out << "non-parametric bootstrap (" << params.num_bootstrap_samples
+            out << "non-parametric " << ((params.jackknife_prop==0.0) ? "bootstrap" : "jackknife") << " (" << params.num_bootstrap_samples
                     << " replicates)";
         }
         if (params.gbo_replicates > 0) {
-            out << " + ultrafast bootstrap (" << params.gbo_replicates << " replicates)";
+            out << " + ultrafast " << ((params.jackknife_prop==0.0) ? "bootstrap" : "jackknife") << " (" << params.gbo_replicates << " replicates)";
         }
 		out << endl;
 		out << "Random seed number: " << params.ran_seed << endl << endl;
@@ -1088,7 +1088,7 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 			out << "CONSENSUS TREE" << endl << "--------------" << endl << endl;
 			out << "Consensus tree is constructed from "
 					<< (params.num_bootstrap_samples ? params.num_bootstrap_samples : params.gbo_replicates)
-					<< " bootstrap trees";
+					<< ((params.jackknife_prop == 0.0) ? " bootstrap" : " jackknife") << " trees";
             if (params.gbo_replicates || params.num_bootstrap_samples) {
                 out << endl << "Log-likelihood of consensus tree: " << fixed << tree.boot_consense_logl;
             }
@@ -1102,7 +1102,7 @@ void reportPhyloAnalysis(Params &params, string &original_model,
                     << params.contree_rfdist << endl;
             // --
             
-            out << endl << "Branches with bootstrap support >"
+            out << endl << "Branches with support >"
 					<< floor(params.split_threshold * 1000) / 10 << "% are kept";
 			if (params.split_threshold == 0.0)
 				out << " (extended consensus)";
@@ -1112,7 +1112,7 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 				out << " (strict consensus)";
 
 			out << endl << "Branch lengths are optimized by maximum likelihood on original alignment" << endl;
-			out << "Numbers in parentheses are bootstrap supports (%)" << endl << endl;
+			out << "Numbers in parentheses are " << ((params.jackknife_prop == 0.0) ? "bootstrap" : "jackknife") << " supports (%)" << endl << endl;
 
 			bool rooted = false;
 			MTree contree;
@@ -2728,7 +2728,7 @@ void runStandardBootstrap(Params &params, string &original_model, Alignment *ali
 
 	// do bootstrap analysis
 	for (int sample = bootSample; sample < params.num_bootstrap_samples; sample++) {
-		cout << endl << "===> START BOOTSTRAP REPLICATE NUMBER "
+		cout << endl << "===> START " << ((params.jackknife_prop==0.0) ? "BOOTSTRAP" : "JACKKNIFE") << " REPLICATE NUMBER "
 				<< sample + 1 << endl << endl;
 
         // 2015-12-17: initialize random stream for creating bootstrap samples
@@ -2737,7 +2737,11 @@ void runStandardBootstrap(Params &params, string &original_model, Alignment *ali
         init_random(params.ran_seed + sample);
 
 		Alignment* bootstrap_alignment;
-		cout << "Creating bootstrap alignment (seed: " << params.ran_seed+sample << ")..." << endl;
+        if (Params::getInstance().jackknife_prop == 0.0)
+            cout << "Creating bootstrap alignment (seed: " << params.ran_seed+sample << ")..." << endl;
+        else
+            cout << "Creating jackknife alignment (seed: " << params.ran_seed+sample << ")..." << endl;
+
 		if (alignment->isSuperAlignment())
 			bootstrap_alignment = new SuperAlignment;
 		else
@@ -2854,8 +2858,8 @@ void runStandardBootstrap(Params &params, string &original_model, Alignment *ali
 
 	if (params.consensus_type == CT_CONSENSUS_TREE && MPIHelper::getInstance().isMaster()) {
 
-		cout << endl << "===> COMPUTE CONSENSUS TREE FROM "
-				<< params.num_bootstrap_samples << " BOOTSTRAP TREES" << endl << endl;
+		cout << endl << "===> COMPUTE CONSENSUS TREE FROM " << params.num_bootstrap_samples
+            << ((params.jackknife_prop==0.0) ? " BOOTSTRAP" : " JACKKNIFE") << " TREES" << endl << endl;
         string root_name = (params.root) ? params.root : alignment->getSeqName(0);
         const char* saved_root = params.root;
         params.root = root_name.c_str();
@@ -2880,7 +2884,8 @@ void runStandardBootstrap(Params &params, string &original_model, Alignment *ali
                 optimizeConTree(params, tree);
             }
 
-            cout << endl << "===> ASSIGN BOOTSTRAP SUPPORTS TO THE TREE FROM ORIGINAL ALIGNMENT" << endl << endl;
+            cout << endl << "===> ASSIGN " << ((params.jackknife_prop==0.0) ? " BOOTSTRAP" : " JACKKNIFE")
+                << " SUPPORTS TO THE TREE FROM ORIGINAL ALIGNMENT" << endl << endl;
             MExtTree ext_tree;
             assignBootstrapSupport(boottrees_name.c_str(), 0, 1e6,
                     treefile_name.c_str(), false, treefile_name.c_str(),
@@ -2903,12 +2908,12 @@ void runStandardBootstrap(Params &params, string &original_model, Alignment *ali
 		cout << endl;
 
     if (MPIHelper::getInstance().isMaster()) {
-	cout << "Total CPU time for bootstrap: " << (getCPUTime() - start_time) << " seconds." << endl;
-	cout << "Total wall-clock time for bootstrap: " << (getRealTime() - start_real_time) << " seconds." << endl << endl;
-	cout << "Non-parametric bootstrap results written to:" << endl;
+        cout << "Total CPU time for " << ((params.jackknife_prop == 0.0) ? "bootstrap" : "jackknife") << ": " << (getCPUTime() - start_time) << " seconds." << endl;
+	cout << "Total wall-clock time for " << ((params.jackknife_prop == 0.0) ? "bootstrap" : "jackknife") << ": " << (getRealTime() - start_real_time) << " seconds." << endl << endl;
+	cout << "Non-parametric " << ((params.jackknife_prop == 0.0) ? "bootstrap" : "jackknife") << " results written to:" << endl;
 	if (params.print_bootaln)
-		cout << "  Bootstrap alignments:     " << params.out_prefix << ".bootaln" << endl;
-	cout << "  Bootstrap trees:          " << params.out_prefix << ".boottrees" << endl;
+		cout << ((params.jackknife_prop == 0.0) ? "  Bootstrap" : "  Jackknife") << " alignments:     " << params.out_prefix << ".bootaln" << endl;
+	cout << ((params.jackknife_prop == 0.0) ? "  Bootstrap" : "  Jackknife") << " trees:          " << params.out_prefix << ".boottrees" << endl;
 	if (params.consensus_type == CT_CONSENSUS_TREE)
 		cout << "  Consensus tree:           " << params.out_prefix << ".contree" << endl;
 	cout << endl;
@@ -2921,7 +2926,10 @@ void convertAlignment(Params &params, IQTree *iqtree) {
 	if (params.num_bootstrap_samples || params.print_bootaln) {
 		// create bootstrap alignment
 		Alignment* bootstrap_alignment;
-		cout << "Creating bootstrap alignment..." << endl;
+        if (Params::getInstance().jackknife_prop == 0.0)
+            cout << "Creating bootstrap alignment..." << endl;
+        else
+            cout << "Creating jackknife alignment..." << endl;
 		if (alignment->isSuperAlignment())
 			bootstrap_alignment = new SuperAlignment;
 		else
@@ -3197,7 +3205,7 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
 			if (params.print_ufboot_trees)
 				tree->writeUFBootTrees(params);
 
-			cout << endl << "Computing bootstrap consensus tree..." << endl;
+			cout << endl << "Computing " << ((params.jackknife_prop == 0.0) ? "bootstrap" : "jackknife") << " consensus tree..." << endl;
 			string splitsfile = params.out_prefix;
 			splitsfile += ".splits.nex";
             double weight_threshold = (params.split_threshold<1) ? params.split_threshold : (params.gbo_replicates-1.0)/params.gbo_replicates;
@@ -3357,7 +3365,7 @@ void assignBootstrapSupport(const char *input_trees, int burnin, int max_count,
 	// compute the percentage of appearance
 	//	printSplitSet(sg, hash_ss);
 	//sg.report(cout);
-	cout << "Creating bootstrap support values..." << endl;
+    cout << "Creating " << ((params->jackknife_prop == 0.0) ? "bootstrap" : "jackknife") << " support values..." << endl;
 	mytree.createBootstrapSupport(taxname, boot_trees, sg, hash_ss, params->support_tag);
 	//mytree.scaleLength(100.0/boot_trees.size(), true);
 	string out_file;
@@ -3372,7 +3380,7 @@ void assignBootstrapSupport(const char *input_trees, int burnin, int max_count,
 	}
 
 	mytree.printTree(out_file.c_str());
-	cout << "Tree with assigned bootstrap support written to " << out_file
+	cout << "Tree with assigned support written to " << out_file
 			<< endl;
 	/*
 	if (out_prefix)
