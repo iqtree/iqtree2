@@ -3005,16 +3005,30 @@ void Alignment::createBootstrapAlignment(Alignment *aln, IntVector* pattern_freq
         if (aln->site_state_freq.size() != aln->getNPattern() || spec)
             outError("Unsupported bootstrap feature, pls contact the developers");
     }
+    
+    if (Params::getInstance().jackknife_prop > 0.0 && spec) {
+        outError((string)"Unsupported jackknife with sampling " + spec);
+    }
 
 	IntVector site_vec;
     if (!spec) {
 		// standard bootstrap
+        int added_sites = 0;
 		for (site = 0; site < nsite; site++) {
-			int site_id = random_int(nsite);
+            int site_id;
+            if (Params::getInstance().jackknife_prop == 0.0) {
+                // bootstrap sampling with replacement
+                site_id = random_int(nsite);
+            } else {
+                // jacknife without replacement
+                if (random_double() < Params::getInstance().jackknife_prop)
+                    continue;
+                site_id = site;
+            }
 			int ptn_id = aln->getPatternID(site_id);
 			Pattern pat = aln->at(ptn_id);
             int nptn = getNPattern();
-			addPattern(pat, site);
+			addPattern(pat, added_sites);
             if (!aln->site_state_freq.empty() && getNPattern() > nptn) {
                 // a new pattern is added, copy state frequency vector
                 double *state_freq = new double[num_states];
@@ -3022,7 +3036,10 @@ void Alignment::createBootstrapAlignment(Alignment *aln, IntVector* pattern_freq
                 site_state_freq.push_back(state_freq);
             }
 			if (pattern_freq) ((*pattern_freq)[ptn_id])++;
+            added_sites++;
 		}
+        if (added_sites < nsite)
+            site_pattern.resize(added_sites);
     } else if (strncmp(spec, "GENESITE,", 9) == 0) {
 		// resampling genes, then resampling sites within resampled genes
 		convert_int_vec(spec+9, site_vec);
@@ -3115,6 +3132,9 @@ void Alignment::createBootstrapAlignment(int *pattern_freq, const char *spec, in
     int site, nsite = getNSite();
     memset(pattern_freq, 0, getNPattern()*sizeof(int));
 	IntVector site_vec;
+    if (Params::getInstance().jackknife_prop > 0.0 && spec)
+        outError((string)"Unsupported jackknife with " + spec);
+
     if (!spec ||  strncmp(spec, "SCALE=", 6) == 0) {
 
         if (spec) {
@@ -3123,10 +3143,17 @@ void Alignment::createBootstrapAlignment(int *pattern_freq, const char *spec, in
         }
         int nptn = getNPattern();
 
-        if (nsite/8 < nptn) {
+        if (nsite/8 < nptn || Params::getInstance().jackknife_prop > 0.0) {
             int orig_nsite = getNSite();
             for (site = 0; site < nsite; site++) {
-                int site_id = random_int(orig_nsite, rstream);
+                int site_id;
+                if (Params::getInstance().jackknife_prop == 0.0)
+                    site_id = random_int(orig_nsite, rstream);
+                else {
+                    if (random_double() < Params::getInstance().jackknife_prop)
+                        continue;
+                    site_id = site;
+                }
                 int ptn_id = getPatternID(site_id);
                 pattern_freq[ptn_id]++;
             }

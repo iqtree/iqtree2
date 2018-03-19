@@ -1805,6 +1805,12 @@ public:
 
     int contree_rfdist;
 
+    /**********************************************/
+    /**** variables for jackknife ******************/
+
+    /** proportion of sites to be dropped in jackknife */
+    double jackknife_prop;
+    
     /****** variables for NNI cutoff heuristics ******/
 
     /**
