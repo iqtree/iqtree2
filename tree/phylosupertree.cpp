@@ -33,6 +33,39 @@ PhyloSuperTree::PhyloSuperTree()
 	// Initialize the counter for evaluated NNIs on subtrees. FOR THIS CASE IT WON'T BE initialized.
 }
 
+PhyloSuperTree::PhyloSuperTree(SuperAlignment *alignment) :  IQTree(alignment) {
+    totalNNIs = evalNNIs = 0;
+
+    rescale_codon_brlen = false;
+    bool has_codon = false;
+    vector<Alignment*>::iterator it;
+    for (it = alignment->partitions.begin(); it != alignment->partitions.end(); it++)
+        if ((*it)->seq_type != SEQ_CODON) {
+            rescale_codon_brlen = true;
+        } else
+            has_codon = true;
+    
+    rescale_codon_brlen &= has_codon;
+
+    // Initialize the counter for evaluated NNIs on subtrees
+    int part = 0;
+
+    StrVector model_names;
+    for (it = alignment->partitions.begin(); it != alignment->partitions.end(); it++, part++) {
+        PhyloTree *tree = new PhyloTree((*it));
+        push_back(tree);
+        PartitionInfo info;
+        info.name = "superpartition_" + convertIntToString(part);
+        info.cur_ptnlh = NULL;
+        info.nniMoves[0].ptnlh = NULL;
+        info.nniMoves[1].ptnlh = NULL;
+        info.evalNNIs = 0.0;
+        part_info.push_back(info);
+    }
+    
+    aln = alignment;
+}
+
 PhyloSuperTree::PhyloSuperTree(SuperAlignment *alignment, PhyloSuperTree *super_tree) :  IQTree(alignment) {
 	totalNNIs = evalNNIs = 0;
     rescale_codon_brlen = super_tree->rescale_codon_brlen;

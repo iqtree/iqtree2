@@ -38,7 +38,12 @@ public:
 	*/
     PhyloSuperTree();
 
-	/**
+    /**
+     constructor
+     */
+    PhyloSuperTree(SuperAlignment *alignment);
+
+    /**
 		constructor
 	*/
     PhyloSuperTree(SuperAlignment *alignment, PhyloSuperTree *super_tree);

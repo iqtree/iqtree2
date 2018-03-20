@@ -36,6 +36,7 @@
 #include "model/modelpomo.h"
 #include "utils/timeutil.h"
 #include "model/modelfactorymixlen.h"
+#include "tree/phylosupertreeplen.h"
 
 #include "phyloanalysis.h"
 #include "gsl/mygsl.h"
@@ -1274,7 +1275,17 @@ string testOneModel(string &model_name, Params &params, Alignment *in_aln,
     int &num_threads, int brlen_type)
 {
     IQTree *iqtree = NULL;
-    if (posRateHeterotachy(model_name) != string::npos)
+    if (in_aln->isSuperAlignment()) {
+        SuperAlignment *saln = (SuperAlignment*)in_aln;
+        if (brlen_type == BRLEN_OPTIMIZE)
+            iqtree = new PhyloSuperTree(saln);
+        else
+            iqtree = new PhyloSuperTreePlen(saln);
+        StrVector model_names;
+        convert_string_vec(model_name.c_str(), model_names);
+        for (int part = 0; part != model_names.size(); part++)
+            ((PhyloSuperTree*)iqtree)->part_info[part].model_name = model_names[part];
+    } else if (posRateHeterotachy(model_name) != string::npos)
         iqtree = new PhyloTreeMixlen(in_aln, 0);
     else
         iqtree = new IQTree(in_aln);
@@ -1477,46 +1488,25 @@ string testConcatModel(Params &params, SuperAlignment *super_aln, ModelCheckpoin
     ModelsBlock *models_block, int num_threads, ModelInfo &concat_info)
 {
     Alignment *conaln = super_aln->concatenateAlignments();
-    string model_name = getUsualModelName(conaln->seq_type);
-    string concat_tree;
+    string model_name;
     int ssize = 0;
     if (conaln->isSuperAlignment()) {
-        // mixed data type, testing each data separately
-        SuperAlignment *saln = (SuperAlignment*) conaln;
-        StrVector part_trees;
-        ModelInfo part_info;
-        part_trees.reserve(saln->partitions.size());
-        concat_info.name = "";
-        concat_info.logl = 0.0;
-        concat_info.df = 0;
-        int longest = 0;
-        for (auto it = saln->partitions.begin(); it != saln->partitions.end(); it++) {
+        SuperAlignment *sconaln = (SuperAlignment*)conaln;
+        for (auto it = sconaln->partitions.begin(); it != sconaln->partitions.end(); it++) {
+            if (!model_name.empty())
+                model_name += ",";
+            model_name += getUsualModelName((*it)->seq_type);
             ssize += (*it)->getNSite();
-            model_name = getUsualModelName((*it)->seq_type);
-            cout << "Testing " << model_name << " on " << getSeqTypeName((*it)->seq_type)
-                 << " part of supermatrix..." << endl;
-            string part_tree = testOneModel(model_name, params, *it, model_info, part_info,
-                models_block, num_threads, BRLEN_OPTIMIZE);
-            part_info.saveCheckpoint(&model_info);
-            part_trees.push_back(part_tree);
-            if (!concat_info.name.empty())
-                concat_info.name += "_";
-            concat_info.name += part_info.name;
-            concat_info.logl += part_info.logl;
-            concat_info.df += part_info.df;
-            if (longest < (*it)->getNSite()) {
-                // take the tree from the longest part
-                longest = (*it)->getNSite();
-                concat_tree = part_tree;
-                concat_info.tree_len = part_info.tree_len;
-            }
         }
     } else {
+        model_name = getUsualModelName(conaln->seq_type);
         ssize = conaln->getNSite();
-        cout << "Testing " << model_name << " on supermatrix..." << endl;
-        concat_tree = testOneModel(model_name, params, conaln, model_info, concat_info,
-            models_block, num_threads, BRLEN_OPTIMIZE);
     }
+    string concat_tree;
+
+    cout << "Testing " << model_name << " on supermatrix..." << endl;
+    concat_tree = testOneModel(model_name, params, conaln, model_info, concat_info,
+        models_block, num_threads, BRLEN_OPTIMIZE);
 
     concat_info.computeICScores(ssize);
     concat_info.saveCheckpoint(&model_info);
