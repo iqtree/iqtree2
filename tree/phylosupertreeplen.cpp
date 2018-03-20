@@ -41,11 +41,32 @@ PhyloSuperTreePlen::PhyloSuperTreePlen(Params &params)
 	}
 }
 
+PhyloSuperTreePlen::PhyloSuperTreePlen(SuperAlignment *alignment)
+: PhyloSuperTree(alignment)
+{
+    memset(allNNIcases_computed, 0, 5*sizeof(int));
+    fixed_rates = false;
+    int part = 0;
+    for (iterator it = begin(); it != end(); it++, part++) {
+        part_info[part].part_rate = 1.0;
+        part_info[part].evalNNIs = 0.0;
+        if ((*it)->aln->seq_type == SEQ_CODON && rescale_codon_brlen)
+            part_info[part].part_rate = 3.0;
+    }
+}
+
 PhyloSuperTreePlen::PhyloSuperTreePlen(SuperAlignment *alignment, PhyloSuperTree *super_tree)
 : PhyloSuperTree(alignment,super_tree)
 {
 	memset(allNNIcases_computed, 0, 5*sizeof(int));
 	fixed_rates = false;
+    int part = 0;
+    for (iterator it = begin(); it != end(); it++, part++) {
+        part_info[part].part_rate = 1.0;
+        part_info[part].evalNNIs = 0.0;
+        if ((*it)->aln->seq_type == SEQ_CODON && rescale_codon_brlen)
+            part_info[part].part_rate = 3.0;
+    }
 }
 
 void PhyloSuperTreePlen::deleteAllPartialLh() {

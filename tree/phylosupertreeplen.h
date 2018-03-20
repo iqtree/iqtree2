@@ -43,6 +43,7 @@ public:
 	*/
 	PhyloSuperTreePlen();
 	PhyloSuperTreePlen(Params &params);
+    PhyloSuperTreePlen(SuperAlignment *alignment);
 	PhyloSuperTreePlen(SuperAlignment *alignment, PhyloSuperTree *super_tree);
 
 	~PhyloSuperTreePlen();
