@@ -4523,8 +4523,8 @@ double PhyloTree::testOneBranch(double best_score, double *pattern_lh, int reps,
     aBayes_support = 1.0 / (1.0 + exp(lh[1]-lh[0]) + exp(lh[2]-lh[0]));
 
     int SH_aLRT_support = 0;
+    int lbp_support_int = 0;
 
-    lbp_support = 0.0;
     int times = max(reps, lbp_reps);
 
     if (max(lh[1],lh[2]) == -DBL_MAX) {
@@ -4536,7 +4536,7 @@ double PhyloTree::testOneBranch(double best_score, double *pattern_lh, int reps,
     {
         int *rstream;
         init_random(params->ran_seed + omp_get_thread_num(), false, &rstream);
-#pragma omp for reduction(+: lbp_support, SH_aLRT_support)
+#pragma omp for reduction(+: lbp_support_int, SH_aLRT_support)
 #endif
     for (int i = 0; i < times; i++) {
         double lh_new[NUM_NNI];
@@ -4547,7 +4547,7 @@ double PhyloTree::testOneBranch(double best_score, double *pattern_lh, int reps,
         resampleLh(pat_lh, lh_new, randstream);
 #endif
         if (lh_new[0] > lh_new[1] && lh_new[0] > lh_new[2])
-            lbp_support += 1.0;
+            lbp_support_int++;
         double cs[NUM_NNI], cs_best, cs_2nd_best;
         cs[0] = lh_new[0] - lh[0];
         cs[1] = lh_new[1] - lh[1];
@@ -4581,8 +4581,9 @@ double PhyloTree::testOneBranch(double best_score, double *pattern_lh, int reps,
     delete[] pat_lh[2];
     delete[] pat_lh[1];
     
+    lbp_support = 0.0;
     if (times > 0)
-        lbp_support /= times;
+        lbp_support = ((double)lbp_support_int) / times;
 
     if (times > 0)
         return ((double) SH_aLRT_support) / times;
