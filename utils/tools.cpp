@@ -38,6 +38,7 @@
 #include "alignment/alignment.h"
 
 VerboseMode verbose_mode;
+extern void printCopyright(ostream &out);
 
 /*
         WIN32 does not define gettimeofday() function.
@@ -1032,6 +1033,10 @@ void parseArg(int argc, char *argv[], Params &params) {
                 usage(argv, false);
 #endif
                 continue;
+            }
+            if (strcmp(argv[cnt], "-version") == 0 || strcmp(argv[cnt], "--version") == 0) {
+                printCopyright(cout);
+                exit(EXIT_SUCCESS);
             }
 			if (strcmp(argv[cnt], "-ho") == 0 || strcmp(argv[cnt], "-?") == 0) {
 				usage_iqtree(argv, false);
@@ -3513,8 +3518,6 @@ void parseArg(int argc, char *argv[], Params &params) {
 
 }
 
-extern void printCopyright(ostream &out);
-
 void usage(char* argv[]) {
     printCopyright(cout);
     cout << "Usage: " << argv[0] << " [OPTIONS] <file_name> [<output_file>]" << endl;
@@ -3590,6 +3593,7 @@ void usage_iqtree(char* argv[], bool full_command) {
     cout << "Usage: " << argv[0] << " -s <alignment> [OPTIONS]" << endl << endl;
     cout << "GENERAL OPTIONS:" << endl
             << "  -? or -h             Print this help dialog" << endl
+            << "  -version             Display version number" << endl
             << "  -s <alignment>       Input alignment in PHYLIP/FASTA/NEXUS/CLUSTAL/MSF format" << endl
             << "  -st <data_type>      BIN, DNA, AA, NT2AA, CODON, MORPH (default: auto-detect)" << endl
             << "  -q <partition_file>  Edge-linked partition model (file in NEXUS/RAxML format)" << endl
@@ -3903,7 +3907,7 @@ void quickStartGuide() {
          << "     iqtree -s counts_file.cf -m HKY+P" << endl << endl
          << "2. Set virtual population size to 15:" << endl
          << "     iqtree -s counts_file.cf -m HKY+P+N15" << endl << endl
-         << "3. Use GTR model and estimate allele frequencies during maximization of likelihood:" << endl
+         << "3. Use GTR model and estimate state frequencies with maxmimum lilelihood:" << endl
          << "     iqtree -s counts_file.cf -m GTR+P+FO" << endl << endl
          << "4. Polymorphism-aware mixture model with N=5 and weighted binomial sampling:" << endl
          << "     iqtree -s counts_file.cf -m \"MIX{HKY+P{EMP},JC+P}+N5+WB\"" << endl << endl
