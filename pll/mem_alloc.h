@@ -15,6 +15,7 @@
 #endif
 #include "pll.h"
 #include <string.h>
+#include <iqtree_config.h>
 
 //#define rax_memalign memalign
 //#define rax_malloc malloc
@@ -54,12 +55,11 @@
 
 
 /* for strndup stuff */
-static __inline char *my_strndup(const char *s, size_t n) {
-	char *ret = (char *) rax_malloc(n+1);
-	strncpy(ret, s, n);
-	ret[n] = 0;
-	return ret;
-}
+char *my_strndup(const char *s, size_t n);
+
+#ifndef HAVE_STRTOK_R
+char *strtok_r (char * s, const char * delim, char **save_ptr);
+#endif
 
 #if 0
 // using the following contraption to trigger a compile-time error does not work on some gcc versions. It will trigger a confising linker error in the best case, so it is deativated.

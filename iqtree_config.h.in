@@ -12,6 +12,8 @@
 /*#cmakedefine HAVE_PCLOSE*/
 /* does the platform provide GlobalMemoryStatusEx functions? */
 #cmakedefine HAVE_GLOBALMEMORYSTATUSEX
+#cmakedefine HAVE_STRNDUP
+#cmakedefine HAVE_STRTOK_R
 
 /* does the platform provide backtrace functions? */
 #cmakedefine Backtrace_FOUND

@@ -277,7 +277,7 @@ if (NOT IQTREE_FLAGS MATCHES "single")
   		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp -pthread")
   	elseif (CLANG)
 		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pthread")
-  		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp=libomp")
+  		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp=libomp -pthread")
   	endif()
 else()
 	message("OpenMP        : NONE")
@@ -435,6 +435,8 @@ check_function_exists (gettimeofday HAVE_GETTIMEOFDAY)
 check_function_exists (getrusage HAVE_GETRUSAGE)
 check_function_exists (GlobalMemoryStatusEx HAVE_GLOBALMEMORYSTATUSEX)
 check_function_exists (strndup HAVE_STRNDUP)
+check_function_exists (strtok_r HAVE_STRTOK_R)
+
 find_package(Backtrace)
 
 # configure a header file to pass some of the CMake settings
