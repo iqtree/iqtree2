@@ -7,6 +7,7 @@ tools.cpp tools.h
 pllnni.cpp pllnni.h
 checkpoint.cpp checkpoint.h
 MPIHelper.cpp MPIHelper.h
+timeutil.h
 )
 
 if(ZLIB_FOUND)
