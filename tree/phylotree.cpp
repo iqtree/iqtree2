@@ -88,6 +88,7 @@ void PhyloTree::init() {
     _pattern_lh = NULL;
     _pattern_lh_cat = NULL;
     _pattern_lh_cat_state = NULL;
+    _site_lh = NULL;
     //root_state = STATE_UNKNOWN;
     root_state = 126;
     theta_all = NULL;
@@ -224,6 +225,9 @@ PhyloTree::~PhyloTree() {
     if (_pattern_lh)
         aligned_free(_pattern_lh);
     _pattern_lh = NULL;
+    if (_site_lh)
+        aligned_free(_site_lh);
+    _site_lh = NULL;
     //if (state_freqs)
     //	delete [] state_freqs;
     if (theta_all)
@@ -788,6 +792,9 @@ void PhyloTree::initializeAllPartialLh() {
         _pattern_lh = aligned_alloc<double>(mem_size);
     if (!_pattern_lh_cat)
         _pattern_lh_cat = aligned_alloc<double>(mem_size * site_rate->getNDiscreteRate() * ((model_factory->fused_mix_rate)? 1 : model->getNMixtures()));
+    if (!_site_lh && params->robust_phy_keep < 1.0) {
+        _site_lh = aligned_alloc<double>(getAlnNSite());
+    }
     if (!theta_all)
         theta_all = aligned_alloc<double>(block_size);
     if (!buffer_scale_all)
@@ -846,6 +853,8 @@ void PhyloTree::deleteAllPartialLh() {
 		aligned_free(_pattern_lh_cat);
 	if (_pattern_lh)
 		aligned_free(_pattern_lh);
+    if (_site_lh)
+        aligned_free(_site_lh);
 	central_partial_lh = NULL;
 	central_scale_num = NULL;
 	central_partial_pars = NULL;
@@ -858,6 +867,7 @@ void PhyloTree::deleteAllPartialLh() {
     buffer_partial_lh = NULL;
 	_pattern_lh_cat = NULL;
 	_pattern_lh = NULL;
+    _site_lh = NULL;
 
     tip_partial_lh = NULL;
 

@@ -1811,6 +1811,13 @@ public:
     /** proportion of sites to be dropped in jackknife */
     double jackknife_prop;
     
+    /**********************************************/
+    /* variables for robust phylogeny (Lanfear & Holland project */
+    
+    /** proportion of sites to keep in robust phylogeny idea */
+    double robust_phy_keep;
+    
+    
     /****** variables for NNI cutoff heuristics ******/
 
     /**
