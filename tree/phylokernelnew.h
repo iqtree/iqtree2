@@ -2962,6 +2962,21 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
         }
     }
 
+    // robust phylogeny project, summing log-likelihood over the best sites
+    if (params->robust_phy_keep < 1.0) {
+        size_t sites = getAlnNSite();
+        size_t sites_drop = (int)((1.0-params->robust_phy_keep)*sites);
+        size_t site;
+        for (ptn = 0, site = 0; ptn < orig_nptn; ptn++)
+            for (i = 0; i < ptn_freq[ptn]; i++)
+                _site_lh[site++] = _pattern_lh[ptn];
+        ASSERT(site == sites);
+        nth_element(_site_lh, _site_lh + sites_drop, _site_lh + sites);
+        tree_lh = 0.0;
+        for (i = sites_drop; i < sites; i++)
+            tree_lh += _site_lh[i];
+    }
+    
     if (isASC) {
     	// ascertainment bias correction
         double prob_const = horizontal_add(all_prob_const);

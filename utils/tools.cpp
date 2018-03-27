@@ -922,6 +922,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.print_ufboot_trees = 0;
     params.contree_rfdist = -1;
     params.jackknife_prop = 0.0;
+    params.robust_phy_keep = 1.0;
     //const double INF_NNI_CUTOFF = -1000000.0;
     params.nni_cutoff = -1000000.0;
     params.estimate_nni_cutoff = false;
@@ -2803,6 +2804,19 @@ void parseArg(int argc, char *argv[], Params &params) {
                     throw "Jackknife proportion must be between 0.0 and 1.0";
                 continue;
             }
+            
+            if (strcmp(argv[cnt], "--robust-phy") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use --robust-phy proportion_of_best_sites_to_keep";
+                params.robust_phy_keep = convert_double(argv[cnt]);
+                if (params.robust_phy_keep <= 0.0 || params.robust_phy_keep > 1.0)
+                    throw "--robust-phy parameter must be between 0 and 1";
+                // TODO: use Brent (instead of Newton) optimisation of branch lengths
+                params.optimize_by_newton = false;
+                continue;
+            }
+            
 			if (strcmp(argv[cnt], "-mem") == 0) {
 				cnt++;
 				if (cnt >= argc)
