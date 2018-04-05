@@ -199,6 +199,23 @@ int Checkpoint::eraseKeyPrefix(string key_prefix) {
     return count;
 }
 
+int Checkpoint::keepKeyPrefix(string key_prefix) {
+    map<string,string> newckp;
+    int count = 0;
+    erase(begin(), lower_bound(key_prefix));
+    
+    for (iterator i = begin(); i != end(); i++) {
+        if (i->first.compare(0, key_prefix.size(), key_prefix) == 0)
+            count++;
+        else {
+            erase(i, end());
+            break;
+        }
+        
+    }
+    return count;
+}
+
 /*-------------------------------------------------------------
  * series of get function to get value of a key
  *-------------------------------------------------------------*/
@@ -294,13 +311,14 @@ void Checkpoint::endList() {
 
 }
 
+/*
 void Checkpoint::getSubCheckpoint(Checkpoint *target, string partial_key) {
     for (iterator it = begin(); it != end(); it++) {
         if (it->first.find(partial_key) != string::npos)
             (*target)[it->first] = it->second;
     }
 }
-
+*/
 
 /*-------------------------------------------------------------
  * CheckpointFactory

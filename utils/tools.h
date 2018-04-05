@@ -1286,6 +1286,9 @@ public:
     /** number iterations for parameter optimization, default: 100 */
     int num_param_iterations;
 
+    /** number of independent runs (-nrun option) */
+    int num_runs;
+    
     /**
             name of the substitution model (e.g., HKY, GTR, TN+I+G, JC+G, etc.)
      */

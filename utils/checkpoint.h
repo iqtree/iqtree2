@@ -138,6 +138,13 @@ public:
     */
     int eraseKeyPrefix(string key_prefix);
 
+    /**
+     erase all entries without a key prefix
+     @param key_prefix key prefix
+     @return number of entries kept
+     */
+    int keepKeyPrefix(string key_prefix);
+
     /*-------------------------------------------------------------
      * series of get function to get value of a key
      *-------------------------------------------------------------*/
