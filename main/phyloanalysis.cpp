@@ -2316,6 +2316,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree* &iqtr
         cout << "TREE SEARCH COMPLETED AFTER " << iqtree->stop_rule.getCurIt() << " ITERATIONS"
             << " / Time: " << convert_time(getRealTime() - params.start_real_time) << endl << endl;
 	} else {
+        iqtree->candidateTrees.saveCheckpoint();
 		/* do SPR with likelihood function */
 		if (params.tree_spr) {
 			//tree.optimizeSPRBranches();

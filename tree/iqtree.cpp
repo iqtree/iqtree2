@@ -543,7 +543,7 @@ void IQTree::computeInitialTree(string &dist_file, LikelihoodKernel kernel) {
     string out_file = params->out_prefix;
     int score;
     if (params->stop_condition == SC_FIXED_ITERATION && params->numNNITrees > params->min_iterations)
-    	params->numNNITrees = params->min_iterations;
+    	params->numNNITrees = max(params->min_iterations, 1);
     int fixed_number = 0;
     setParsimonyKernel(kernel);
 
