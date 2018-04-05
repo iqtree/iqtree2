@@ -808,6 +808,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.num_param_iterations = 100;
     params.stop_condition = SC_UNSUCCESS_ITERATION;
     params.stop_confidence = 0.95;
+    params.num_runs = 1;
     params.model_name = "";
     params.model_set = NULL;
     params.model_extra_set = NULL;
@@ -2277,6 +2278,15 @@ void parseArg(int argc, char *argv[], Params &params) {
 					throw "Stop confidence value must be in range (0.5,1)";
 				continue;
 			}
+            if (strcmp(argv[cnt], "--runs") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use --runs <number_of_runs>";
+                params.num_runs = convert_int(argv[cnt]);
+                if (params.num_runs < 1)
+                    throw "Positive --runs please";
+                continue;
+            }
 			if (strcmp(argv[cnt], "-gurobi") == 0) {
 				params.gurobi_format = true;
 				continue;
@@ -3614,6 +3624,7 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -keep-ident          Keep identical sequences (default: remove & finally add)" << endl
             << "  -safe                Safe likelihood kernel to avoid numerical underflow" << endl
             << "  -mem RAM             Maximal RAM usage for memory saving mode" << endl
+            << "  --runs NUMBER        Number of indepedent runs (default: 1)" << endl
             << endl << "CHECKPOINTING TO RESUME STOPPED RUN:" << endl
             << "  -redo                Redo analysis even for successful runs (default: resume)" << endl
             << "  -cptime <seconds>    Minimum checkpoint time interval (default: 60 sec)" << endl
