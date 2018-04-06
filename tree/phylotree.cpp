@@ -792,7 +792,7 @@ void PhyloTree::initializeAllPartialLh() {
         _pattern_lh = aligned_alloc<double>(mem_size);
     if (!_pattern_lh_cat)
         _pattern_lh_cat = aligned_alloc<double>(mem_size * site_rate->getNDiscreteRate() * ((model_factory->fused_mix_rate)? 1 : model->getNMixtures()));
-    if (!_site_lh && params->robust_phy_keep < 1.0) {
+    if (!_site_lh && (params->robust_phy_keep < 1.0 || params->robust_median)) {
         _site_lh = aligned_alloc<double>(getAlnNSite());
     }
     if (!theta_all)

@@ -1816,7 +1816,9 @@ public:
     
     /** proportion of sites to keep in robust phylogeny idea */
     double robust_phy_keep;
-    
+
+    /** use median log-likelihood instead of sum log-likelihood */
+    double robust_median;
     
     /****** variables for NNI cutoff heuristics ******/
 

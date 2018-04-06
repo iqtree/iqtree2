@@ -923,6 +923,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.contree_rfdist = -1;
     params.jackknife_prop = 0.0;
     params.robust_phy_keep = 1.0;
+    params.robust_median = false;
     //const double INF_NNI_CUTOFF = -1000000.0;
     params.nni_cutoff = -1000000.0;
     params.estimate_nni_cutoff = false;
@@ -2806,6 +2807,8 @@ void parseArg(int argc, char *argv[], Params &params) {
             }
             
             if (strcmp(argv[cnt], "--robust-phy") == 0) {
+                if (params.robust_median)
+                    throw "Can't couple --robust-phy with --robust-median";
                 cnt++;
                 if (cnt >= argc)
                     throw "Use --robust-phy proportion_of_best_sites_to_keep";
@@ -2818,7 +2821,18 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.optimize_alg_freerate = "2-BFGS";
                 continue;
             }
-            
+
+            if (strcmp(argv[cnt], "--robust-median") == 0) {
+                if (params.robust_phy_keep < 1.0)
+                    throw "Can't couple --robust-phy with --robust-median";
+                params.robust_median = true;
+                // TODO: use Brent (instead of Newton) optimisation of branch lengths
+                params.optimize_by_newton = false;
+                params.optimize_alg_gammai = "Brent";
+                params.optimize_alg_freerate = "2-BFGS";
+                continue;
+            }
+
 			if (strcmp(argv[cnt], "-mem") == 0) {
 				cnt++;
 				if (cnt >= argc)
