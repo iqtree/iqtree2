@@ -1388,8 +1388,8 @@ public:
      */
     bool optimize_by_newton;
 
-    /** optimization algorithm for parameter estimation: 1-BFGS, 2-BFGS, EM */
-    string optimize_alg;
+    /** optimization algorithm for free rate model: 1-BFGS, 2-BFGS, EM */
+    string optimize_alg_freerate;
 
     /** optimization algorithm for mixture (heterotachy) branch length models */
     string optimize_alg_mixlen;
