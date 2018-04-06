@@ -833,7 +833,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.p_invar_sites = -1.0;
     params.optimize_model_rate_joint = false;
     params.optimize_by_newton = true;
-    params.optimize_alg = "2-BFGS,EM";
+    params.optimize_alg_freerate = "2-BFGS,EM";
     params.optimize_alg_mixlen = "EM";
     params.optimize_alg_gammai = "EM";
     params.optimize_from_given_params = false;
@@ -1125,7 +1125,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -opt_alg <1-BFGS|2-BFGS|EM>";
-				params.optimize_alg = argv[cnt];
+				params.optimize_alg_freerate = argv[cnt];
 				continue;
 			}
 			if (strcmp(argv[cnt], "-optlen") == 0) {
@@ -2814,6 +2814,8 @@ void parseArg(int argc, char *argv[], Params &params) {
                     throw "--robust-phy parameter must be between 0 and 1";
                 // TODO: use Brent (instead of Newton) optimisation of branch lengths
                 params.optimize_by_newton = false;
+                params.optimize_alg_gammai = "Brent";
+                params.optimize_alg_freerate = "2-BFGS";
                 continue;
             }
             

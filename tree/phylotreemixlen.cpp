@@ -221,7 +221,7 @@ void PhyloTreeMixlen::initializeMixlen(double tolerance, bool write_info) {
             param = ss.str();
         }
 
-        RateFree *relative_rate = new RateFree(mixlen, params->gamma_shape, param, false, params->optimize_alg, this);
+        RateFree *relative_rate = new RateFree(mixlen, params->gamma_shape, param, false, params->optimize_alg_freerate, this);
         relative_rate->setTree(this);
         
         // setup new rate model
@@ -402,7 +402,7 @@ void PhyloTreeMixlen::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool
         double grad[mixlen+1], hessian[mixlen*mixlen];
         computeFuncDervMulti(variables+1, grad, hessian);
         double score;
-        if (params->optimize_alg.find("BFGS-B") != string::npos)
+        if (params->optimize_alg_mixlen.find("BFGS-B") != string::npos)
             score = -L_BFGS_B(mixlen, variables+1, lower_bound+1, upper_bound+1, params->min_branch_length);
         else
             score = -minimizeMultiDimen(variables, mixlen, lower_bound, upper_bound, bound_check, params->min_branch_length, hessian);
