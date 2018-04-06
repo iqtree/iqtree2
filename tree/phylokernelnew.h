@@ -2968,13 +2968,28 @@ double PhyloTree::computeLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_branch, 
         size_t sites_drop = (int)((1.0-params->robust_phy_keep)*sites);
         size_t site;
         for (ptn = 0, site = 0; ptn < orig_nptn; ptn++)
-            for (i = 0; i < ptn_freq[ptn]; i++)
-                _site_lh[site++] = _pattern_lh[ptn];
+            for (i = 0; i < ptn_freq[ptn]; i++, site++)
+                _site_lh[site] = _pattern_lh[ptn];
         ASSERT(site == sites);
         nth_element(_site_lh, _site_lh + sites_drop, _site_lh + sites);
         tree_lh = 0.0;
         for (i = sites_drop; i < sites; i++)
             tree_lh += _site_lh[i];
+    } else if (params->robust_median) {
+        size_t sites = getAlnNSite();
+        size_t site;
+        for (ptn = 0, site = 0; ptn < orig_nptn; ptn++)
+            for (i = 0; i < ptn_freq[ptn]; i++, site++)
+                _site_lh[site] = _pattern_lh[ptn];
+        ASSERT(site == sites);
+        nth_element(_site_lh, _site_lh + sites/2, _site_lh + sites);
+        if ((sites & 1) == 1) {
+            // odd number of sites
+            tree_lh = _site_lh[sites/2];
+        } else {
+            // even number of sites
+            tree_lh = 0.5*(_site_lh[sites/2] + *max_element(_site_lh, _site_lh + sites/2));
+        }
     }
     
     if (isASC) {
