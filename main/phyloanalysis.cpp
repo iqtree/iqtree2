@@ -530,6 +530,7 @@ void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh, 
         out << "NOTE: The branch lengths of PoMo measure mutations and frequency shifts." << endl;
         out << "To compare PoMo branch lengths to DNA substitution models use the tree length" << endl;
         out << "measured in substitutions per site." << endl << endl;
+        out << "PoMo branch length = Substitution model branch length * N * N." << endl << endl;
         out << "Total tree length (sum of branch lengths)" << endl;
         out << " - measured in number of mutations and frequency shifts per site: " << totalLen << endl;
         out << " - measured in number of substitutions per site (divided by N^2): " << totalLen / (N * N) << endl;
@@ -539,9 +540,11 @@ void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh, 
 	double totalLenInternal = tree.treeLengthInternal(epsilon);
     double totalLenInternalP = totalLenInternal*100.0 / totalLen;
     if (tree.aln->seq_type == SEQ_POMO) {
+      int N = tree.aln->virtual_pop_size;
+      double totLenIntSub = totalLenInternal/(N * N);
         out << "Sum of internal branch lengths" << endl;
         out << "- measured in mutations and frequency shifts per site: " << totalLenInternal << " (" << totalLenInternalP << "% of tree length)" << endl;
-        out << "- measured in substitutions per site: " << totalLenInternal << " (" << totalLenInternalP << "% of tree length)" << endl;
+        out << "- measured in substitutions per site: " << totLenIntSub << " (" << totalLenInternalP << "% of tree length)" << endl;
         out << endl;
     }
     else {
@@ -644,18 +647,31 @@ void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh, 
 	//tree.setExtendedFigChar();
     tree.setRootNode(params.root, true);
 	tree.drawTree(out, WT_BR_SCALE, epsilon);
-    
+
     out << "Tree in newick format:";
     if (tree.isMixlen())
         out << " (class branch lengths are given in [...] and separated by '/' )";
     if (tree.aln->seq_type == SEQ_POMO)
-        out << " (measured in mutations and frequency shifts):";
+        out << " (measured in mutations and frequency shifts)";
     out << endl << endl;
 
 	tree.printTree(out, WT_BR_LEN | WT_BR_LEN_FIXED_WIDTH | WT_SORT_TAXA);
-    tree.setRootNode(params.root, false);
-
 	out << endl << endl;
+
+  if (tree.aln->seq_type == SEQ_POMO) {
+    out << "Tree in newick format (measured in substitutions, see above):" << endl;
+    out << "WARNING: Only for comparison with substitution models." << endl;
+    out << "         These are NOT the branch lengths inferred by PoMo." << endl << endl;
+    double len_scale_old = tree.len_scale;
+    int N = tree.aln->virtual_pop_size;
+    tree.len_scale = 1.0/(N*N);
+    tree.printTree(out, WT_BR_SCALE | WT_BR_LEN | WT_BR_LEN_FIXED_WIDTH | WT_SORT_TAXA);
+    tree.len_scale = len_scale_old;
+    out << endl << endl;
+    }
+
+  tree.setRootNode(params.root, false);
+
 }
 
 void reportCredits(ofstream &out) {
