@@ -89,12 +89,15 @@ string::size_type posRateFree(string &model_name) {
 string::size_type posPOMO(string &model_name) {
 	string::size_type pos1 = 0, pos2 = 0;
     do {
-        pos1 = model_name.find("+P", pos1+1);
+      // TODO Minh: Why did you start you search from pos1+1. Then, +P is not
+      // found when it is the first part of the model_name.
+        pos1 = model_name.find("+P", pos1);
         if (pos1 == string::npos) break;
     } while (pos1 < model_name.length()-2 && isalpha(model_name[pos1+2]));
 
     do {
-        pos2 = model_name.find("*P", pos2+1);
+      // TODO Minh: See above.
+        pos2 = model_name.find("*P", pos2);
         if (pos2 == string::npos) break;
     } while (pos2 < model_name.length()-2 && isalpha(model_name[pos2+2]));
 
@@ -240,9 +243,10 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
 			size_t pos = findCloseBracket(model_str, spec_pos);
 			if (pos == string::npos)
 				outError("Model name has wrong bracket notation '{...}'");
-			rate_str = model_str.substr(pos+1);
-			model_str = model_str.substr(0, pos+1);
-        } else {
+				rate_str = model_str.substr(pos+1);
+				model_str = model_str.substr(0, pos+1);
+        }
+    else {
             rate_str = model_str.substr(spec_pos);
             model_str = model_str.substr(0, spec_pos);
         }
@@ -304,7 +308,6 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
     // models, the heterozygosity can be set separately for each model and the
     // +P{}, +GXX and +I flags should already be inside the model definition.
     if (model_str.substr(0, 3) != "MIX" && pomo) {
-
       // +P{} flag.
       p_pos = posPOMO(rate_str);
       if (p_pos != string::npos) {
