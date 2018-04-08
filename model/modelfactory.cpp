@@ -216,9 +216,10 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
 			size_t pos = findCloseBracket(model_str, spec_pos);
 			if (pos == string::npos)
 				outError("Model name has wrong bracket notation '{...}'");
-			rate_str = model_str.substr(pos+1);
-			model_str = model_str.substr(0, pos+1);
-        } else {
+				rate_str = model_str.substr(pos+1);
+				model_str = model_str.substr(0, pos+1);
+        }
+    else {
             rate_str = model_str.substr(spec_pos);
             model_str = model_str.substr(0, spec_pos);
         }
@@ -280,7 +281,6 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
     // models, the heterozygosity can be set separately for each model and the
     // +P{}, +GXX and +I flags should already be inside the model definition.
     if (model_str.substr(0, 3) != "MIX" && pomo) {
-
       // +P{} flag.
       p_pos = posPOMO(rate_str);
       if (p_pos != string::npos) {
