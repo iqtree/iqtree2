@@ -44,67 +44,43 @@
 #include "nclextra/myreader.h"
 #include <sstream>
 
-string::size_type posRateHeterotachy(string &model_name) {
-	string::size_type pos1 = 0, pos2 = 0;
-    do {
-        pos1 = model_name.find("+H", pos1+1);
-        if (pos1 == string::npos) break;
-    } while (pos1 < model_name.length()-2 && isalpha(model_name[pos1+2]));
-
-    do {
-        pos2 = model_name.find("*H", pos2+1);
-        if (pos2 == string::npos) break;
-    } while (pos2 < model_name.length()-2 && isalpha(model_name[pos2+2]));
-
+string::size_type findSubStr(string &name, string sub1, string sub2) {
+    string::size_type pos1, pos2;
+    for (pos1 = 0; pos1 != string::npos; pos1++) {
+        pos1 = name.find(sub1, pos1);
+        if (pos1 == string::npos)
+            break;
+        if (pos1+2 >= name.length() || !isalpha(name[pos1+2])) {
+            break;
+        }
+    }
+    
+    for (pos2 = 0; pos2 != string::npos; pos2++) {
+        pos2 = name.find(sub2, pos2);
+        if (pos2 == string::npos)
+            break;
+        if (pos2+2 >= name.length() ||!isalpha(name[pos2+2]))
+            break;
+    }
+    
     if (pos1 != string::npos && pos2 != string::npos) {
         return min(pos1, pos2);
     } else if (pos1 != string::npos)
         return pos1;
     else
         return pos2;
+}
 
+string::size_type posRateHeterotachy(string &model_name) {
+    return findSubStr(model_name, "+H", "*H");
 }
 
 string::size_type posRateFree(string &model_name) {
-	string::size_type pos1 = 0, pos2 = 0;
-    do {
-        pos1 = model_name.find("+R", pos1+1);
-        if (pos1 == string::npos) break;
-    } while (pos1 < model_name.length()-2 && isalpha(model_name[pos1+2]));
-
-    do {
-        pos2 = model_name.find("*R", pos2+1);
-        if (pos2 == string::npos) break;
-    } while (pos2 < model_name.length()-2 && isalpha(model_name[pos2+2]));
-
-    if (pos1 != string::npos && pos2 != string::npos) {
-        return min(pos1, pos2);
-    } else if (pos1 != string::npos)
-        return pos1;
-    else
-        return pos2;
-
+    return findSubStr(model_name, "+R", "*R");
 }
 
 string::size_type posPOMO(string &model_name) {
-	string::size_type pos1 = 0, pos2 = 0;
-    do {
-        pos1 = model_name.find("+P", pos1+1);
-        if (pos1 == string::npos) break;
-    } while (pos1 < model_name.length()-2 && isalpha(model_name[pos1+2]));
-
-    do {
-        pos2 = model_name.find("*P", pos2+1);
-        if (pos2 == string::npos) break;
-    } while (pos2 < model_name.length()-2 && isalpha(model_name[pos2+2]));
-
-    if (pos1 != string::npos && pos2 != string::npos) {
-        return min(pos1, pos2);
-    } else if (pos1 != string::npos)
-        return pos1;
-    else
-        return pos2;
-
+    return findSubStr(model_name, "+P", "*P");
 }
 
 ModelsBlock *readModelsDefinition(Params &params) {
