@@ -73,13 +73,10 @@ SuperAlignment::SuperAlignment(Params &params) : Alignment()
         printCombinedAlignment(str.c_str());
     }
     
-//    if (rescale_codon_brlen)
-//        cout << "NOTE: Mixed codon and other data, branch lengths of codon partitions are rescaled by 3!" << endl;
-    
     cout << "Degree of missing data: " << computeMissingData() << endl;
     
 #ifdef _OPENMP
-    if (params->num_threads > partitions.size()) {
+    if (params.num_threads > partitions.size()) {
         cout << "Info: multi-threading strategy over alignment sites" << endl;
     } else {
         cout << "Info: multi-threading strategy over partitions" << endl;

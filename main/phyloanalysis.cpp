@@ -3209,6 +3209,9 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
 		}
 		// this alignment will actually be of type SuperAlignment
 //        alignment = tree->aln;
+        if (((PhyloSuperTree*)tree)->rescale_codon_brlen)
+            cout << "NOTE: Mixed codon and other data, branch lengths of codon partitions are rescaled by 3!" << endl;
+        
 	} else {
 		alignment = new Alignment(params.aln_file, params.sequence_type, params.intype);
 
