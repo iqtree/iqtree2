@@ -65,7 +65,7 @@ Multiple Sequence Alignment. Stored by a vector of site-patterns
 
         @author BUI Quang Minh, Steffen Klaere, Arndt von Haeseler <minh.bui@univie.ac.at>
  */
-class Alignment : public vector<Pattern> {
+class Alignment : public vector<Pattern>, public CharSet {
     friend class SuperAlignment;
 
 public:

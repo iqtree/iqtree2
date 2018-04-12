@@ -22,35 +22,98 @@
 #include "tree/phylotree.h"
 #include "superalignment.h"
 #include "tree/phylosupertree.h"
+#include "nclextra/msetsblock.h"
+#include "nclextra/myreader.h"
+#include "main/phylotesting.h"
 
 SuperAlignment::SuperAlignment() : Alignment() {
     max_num_states = 0;
 }
 
-SuperAlignment::SuperAlignment(PhyloSuperTree *super_tree) : Alignment()
+SuperAlignment::SuperAlignment(Params &params) : Alignment()
 {
+    
+    cout << "Reading partition model file " << params.partition_file << " ..." << endl;
+    if (detectInputFile(params.partition_file) == IN_NEXUS) {
+        readPartitionNexus(params);
+        if (partitions.empty()) {
+            outError("No partition found in SETS block. An example syntax looks like: \n#nexus\nbegin sets;\n  charset part1=1-100;\n  charset part2=101-300;\nend;");
+        }
+    } else
+        readPartitionRaxml(params);
+    if (partitions.empty())
+        outError("No partition found");
+    
+    // check for duplicated partition names
+    unordered_set<string> part_names;
+    for (auto pit = partitions.begin(); pit != partitions.end(); pit++) {
+        if (part_names.find((*pit)->name) != part_names.end())
+            outError("Duplicated partition name ", (*pit)->name);
+        part_names.insert((*pit)->name);
+    }
+
+    // Initialize the counter for evaluated NNIs on subtrees
+    cout << "Subset\tType\tSeqs\tSites\tInfor\tInvar\tModel\tName" << endl;
+    int part = 0;
+    for (auto it = partitions.begin(); it != partitions.end(); it++, part++) {
+        cout << part+1 << "\t" << (*it)->sequence_type << "\t" << (*it)->getNSeq()
+        << "\t" << (*it)->getNSite() << "\t" << (*it)->num_informative_sites
+        << "\t" << (*it)->getNSite()-(*it)->num_variant_sites << "\t"
+        << (*it)->model_name << "\t" << (*it)->name << endl;
+        if ((*it)->num_informative_sites == 0) {
+            outWarning("No parsimony-informative sites in partition " + (*it)->name);
+        }
+    }
+    init();
+
+    if (params.print_conaln) {
+        string str = params.out_prefix;
+        str = params.out_prefix;
+        str += ".conaln";
+        printCombinedAlignment(str.c_str());
+    }
+    
+//    if (rescale_codon_brlen)
+//        cout << "NOTE: Mixed codon and other data, branch lengths of codon partitions are rescaled by 3!" << endl;
+    
+    cout << "Degree of missing data: " << computeMissingData() << endl;
+    
+#ifdef _OPENMP
+    if (params->num_threads > partitions.size()) {
+        cout << "Info: multi-threading strategy over alignment sites" << endl;
+    } else {
+        cout << "Info: multi-threading strategy over partitions" << endl;
+    }
+#endif
+    cout << endl;
+
+}
+
+void SuperAlignment::init(StrVector *sequence_names) {
+    // start original code
+    
     max_num_states = 0;
 	// first build taxa_index and partitions
-	int site, seq, nsite = super_tree->size();
-	PhyloSuperTree::iterator it;
+	int site, seq, nsite = partitions.size();
 
     // BUG FIX 2016-11-29: when merging partitions with -m TESTMERGE, sequence order is changed
     // get the taxa names from existing tree
-    if (super_tree->root) {
-        super_tree->getTaxaName(seq_names);
+    if (sequence_names && !sequence_names->empty()) {
+        seq_names = *sequence_names;
         taxa_index.resize(seq_names.size());
         for (auto i = taxa_index.begin(); i != taxa_index.end(); i++)
             i->resize(nsite, -1);
     }
-        
-	for (site = 0, it = super_tree->begin(); it != super_tree->end(); it++, site++) {
-		partitions.push_back((*it)->aln);
-		int nseq = (*it)->aln->getNSeq();
+
+    site = 0;
+	for (auto it = partitions.begin(); it != partitions.end(); it++, site++) {
+//        partitions.push_back((*it)->aln);
+		int nseq = (*it)->getNSeq();
 		//cout << "nseq  = " << nseq << endl;
 		for (seq = 0; seq < nseq; seq++) {
-			int id = getSeqID((*it)->aln->getSeqName(seq));
+			int id = getSeqID((*it)->getSeqName(seq));
 			if (id < 0) {
-				seq_names.push_back((*it)->aln->getSeqName(seq));
+				seq_names.push_back((*it)->getSeqName(seq));
 				id = seq_names.size()-1;
 				IntVector vec(nsite, -1);
 				vec[site] = seq;
@@ -87,6 +150,436 @@ void SuperAlignment::buildPattern() {
     buildSeqStates();
 }
 
+void SuperAlignment::readPartition(Params &params) {
+    try {
+        ifstream in;
+        in.exceptions(ios::failbit | ios::badbit);
+        in.open(params.partition_file);
+        in.exceptions(ios::badbit);
+        
+        while (!in.eof()) {
+            CharSet info;
+            getline(in, info.name, ',');
+            if (in.eof()) break;
+            getline(in, info.model_name, ',');
+            if (model_name == "") info.model_name = params.model_name;
+            getline(in, info.aln_file, ',');
+            if (info.aln_file == "" && params.aln_file) info.aln_file = params.aln_file;
+            getline(in, info.sequence_type, ',');
+            if (info.sequence_type=="" && params.sequence_type)
+                info.sequence_type = params.sequence_type;
+            safeGetline(in, info.position_spec);
+            trimString(info.sequence_type);
+            //            cout << endl << "Reading partition " << info.name << " (model=" << info.model_name << ", aln=" <<
+            //                    info.aln_file << ", seq=" << info.sequence_type << ", pos=" << ((info.position_spec.length() >= 20) ? info.position_spec.substr(0,20)+"..." : info.position_spec) << ") ..." << endl;
+
+            // TODO move this to supertree
+//            info.nniMoves[0].ptnlh = NULL;
+//            info.nniMoves[1].ptnlh = NULL;
+//            info.cur_ptnlh = NULL;
+//            part_info.push_back(info);
+            Alignment *part_aln = new Alignment((char*)info.aln_file.c_str(), (char*)info.sequence_type.c_str(), params.intype);
+            if (!info.position_spec.empty()) {
+                Alignment *new_aln = new Alignment();
+                new_aln->extractSites(part_aln, info.position_spec.c_str());
+                delete part_aln;
+                part_aln = new_aln;
+            }
+            part_aln->name = info.name;
+            part_aln->model_name = info.model_name;
+            part_aln->position_spec = info.position_spec;
+            part_aln->aln_file = info.aln_file;
+            part_aln->sequence_type = info.sequence_type;
+            partitions.push_back(part_aln);
+            // TODO move this to supertree
+//            PhyloTree *tree = new PhyloTree(part_aln);
+//            push_back(tree);
+        }
+        
+        in.clear();
+        // set the failbit again
+        in.exceptions(ios::failbit | ios::badbit);
+        in.close();
+    } catch(ios::failure) {
+        outError(ERR_READ_INPUT);
+    } catch (string str) {
+        outError(str);
+    }
+    
+    
+}
+
+void SuperAlignment::readPartitionRaxml(Params &params) {
+    try {
+        ifstream in;
+        in.exceptions(ios::failbit | ios::badbit);
+        in.open(params.partition_file);
+        in.exceptions(ios::badbit);
+//        PartitionInfo info;
+        Alignment *input_aln = NULL;
+        if (!params.aln_file)
+            outError("Please supply an alignment with -s option");
+        
+        input_aln = new Alignment(params.aln_file, params.sequence_type, params.intype);
+        
+        cout << endl << "Partition file is not in NEXUS format, assuming RAxML-style partition file..." << endl;
+        
+        size_t pos = params.model_name.find_first_of("+*");
+        string rate_type = "";
+        if (pos != string::npos) rate_type = params.model_name.substr(pos);
+        
+        while (!in.eof()) {
+            CharSet info;
+            getline(in, info.model_name, ',');
+            if (in.eof()) break;
+            trimString(info.model_name);
+            //            std::transform(info.model_name.begin(), info.model_name.end(), info.model_name.begin(), ::toupper);
+            
+            bool is_ASC = info.model_name.substr(0,4) == "ASC_";
+            if (is_ASC) info.model_name.erase(0, 4);
+            StateFreqType freq = FREQ_UNKNOWN;
+            if (info.model_name.find_first_of("*+{") == string::npos ) {
+                if (*info.model_name.rbegin() == 'F' && info.model_name != "DAYHOFF") {
+                    freq = FREQ_EMPIRICAL;
+                    info.model_name.erase(info.model_name.length()-1);
+                } else if (*info.model_name.rbegin() == 'X' && info.model_name != "LG4X") {
+                    freq = FREQ_ESTIMATE;
+                    info.model_name.erase(info.model_name.length()-1);
+                }
+            }
+            
+            if (info.model_name.empty())
+                outError("Please give model names in partition file!");
+            if (info.model_name == "BIN") {
+                info.sequence_type = "BIN";
+                info.model_name = "GTR2";
+            } else if (info.model_name == "DNA") {
+                info.sequence_type = "DNA";
+                info.model_name = "GTR";
+            } else if (info.model_name == "MULTI") {
+                info.sequence_type = "MORPH";
+                info.model_name = "MK";
+            } else if (info.model_name.substr(0,5) == "CODON") {
+                info.sequence_type = info.model_name;
+                info.model_name = "GY";
+            } else {
+                info.sequence_type = "AA";
+                if (*info.model_name.begin() == '[') {
+                    if (*info.model_name.rbegin() != ']')
+                        outError("User-defined protein model should be [myProtenSubstitutionModelFileName]");
+                    info.model_name = info.model_name.substr(1, info.model_name.length()-2);
+                }
+            }
+            
+            if (freq == FREQ_EMPIRICAL)
+                info.model_name += "+F";
+            else if (freq == FREQ_ESTIMATE)
+                info.model_name += "+FO";
+            if (is_ASC)
+                info.model_name += "+ASC";
+            info.model_name += rate_type;
+            
+            getline(in, info.name, '=');
+            trimString(info.name);
+            if (info.name.empty())
+                outError("Please give partition names in partition file!");
+            
+            safeGetline(in, info.position_spec);
+            trimString(info.position_spec);
+            if (info.position_spec.empty())
+                outError("Please specify alignment positions for partition" + info.name);
+            std::replace(info.position_spec.begin(), info.position_spec.end(), ',', ' ');
+            
+            //            cout << "Reading partition " << info.name << " (model=" << info.model_name << ", seq=" << info.sequence_type << ", pos=" << ((info.position_spec.length() >= 20) ? info.position_spec.substr(0,20)+"..." : info.position_spec) << ") ..." << endl;
+            
+            // TODO to supertree
+//            info.nniMoves[0].ptnlh = NULL;
+//            info.nniMoves[1].ptnlh = NULL;
+//            info.cur_ptnlh = NULL;
+//            part_info.push_back(info);
+            Alignment *part_aln = new Alignment();
+            part_aln->extractSites(input_aln, info.position_spec.c_str());
+            
+            Alignment *new_aln;
+            if (params.remove_empty_seq)
+                new_aln = part_aln->removeGappySeq();
+            else
+                new_aln = part_aln;
+            // also rebuild states set of each sequence for likelihood computation
+            new_aln->buildSeqStates();
+            
+            if (part_aln != new_aln) delete part_aln;
+
+            new_aln->name = info.name;
+            new_aln->model_name = info.model_name;
+            new_aln->position_spec = info.position_spec;
+            new_aln->aln_file = info.aln_file;
+            new_aln->sequence_type = info.sequence_type;
+            partitions.push_back(new_aln);
+            // TODO move to supertree
+//            PhyloTree *tree = new PhyloTree(new_aln);
+//            push_back(tree);
+            //            cout << new_aln->getNSeq() << " sequences and " << new_aln->getNSite() << " sites extracted" << endl;
+            //            params = origin_params;
+        }
+        
+        in.clear();
+        // set the failbit again
+        in.exceptions(ios::failbit | ios::badbit);
+        in.close();
+    } catch(ios::failure) {
+        outError(ERR_READ_INPUT);
+    } catch (string str) {
+        outError(str);
+    }
+    
+    
+}
+
+void SuperAlignment::readPartitionNexus(Params &params) {
+//    Params origin_params = params;
+    MSetsBlock *sets_block = new MSetsBlock();
+    MyReader nexus(params.partition_file);
+    nexus.Add(sets_block);
+    MyToken token(nexus.inf);
+    nexus.Execute(token);
+    
+    Alignment *input_aln = NULL;
+    if (params.aln_file) {
+        input_aln = new Alignment(params.aln_file, params.sequence_type, params.intype);
+    }
+    
+    bool empty_partition = true;
+    vector<CharSet*>::iterator it;
+    for (it = sets_block->charsets.begin(); it != sets_block->charsets.end(); it++)
+        if ((*it)->model_name != "") {
+            empty_partition = false;
+            break;
+        }
+    if (empty_partition) {
+        cout << "NOTE: No CharPartition defined, use all CharSets" << endl;
+    }
+    
+    cout << endl << "Loading " << sets_block->charsets.size() << " partitions..." << endl;
+    
+    for (it = sets_block->charsets.begin(); it != sets_block->charsets.end(); it++)
+        if (empty_partition || (*it)->char_partition != "") {
+            if ((*it)->model_name == "")
+                (*it)->model_name = params.model_name;
+            if ((*it)->aln_file == "" && !params.aln_file)
+                outError("No input data for partition ", (*it)->name);
+            if ((*it)->sequence_type=="" && params.sequence_type)
+                (*it)->sequence_type = params.sequence_type;
+            
+            if ((*it)->sequence_type == "" && !(*it)->model_name.empty()) {
+                // try to get sequence type from model
+            //TODO: why compile error?
+                (*it)->sequence_type = detectSeqTypeName((*it)->model_name.substr(0, (*it)->model_name.find_first_of("+*")));
+            }
+            if ((*it)->aln_file == "" && ((*it)->position_spec == "" || (*it)->position_spec == "*"))
+                outError("Empty position range for partition ", (*it)->name);
+            trimString((*it)->sequence_type);
+            //            cout << endl << "Reading partition " << info.name << " (model=" << info.model_name << ", aln=" <<
+            //                info.aln_file << ", seq=" << info.sequence_type << ", pos=" << ((info.position_spec.length() >= 20) ? info.position_spec.substr(0,20)+"..." : info.position_spec) << ") ..." << endl;
+            if ((*it)->sequence_type != "" && Alignment::getSeqType((*it)->sequence_type.c_str()) == SEQ_UNKNOWN)
+                outError("Unknown sequence type " + (*it)->sequence_type);
+
+            // TODO move to supertree
+//            info.nniMoves[0].ptnlh = NULL;
+//            info.nniMoves[1].ptnlh = NULL;
+//            info.cur_ptnlh = NULL;
+//            part_info.push_back(info);
+            Alignment *part_aln;
+            if ((*it)->aln_file != "") {
+                part_aln = new Alignment((char*)(*it)->aln_file.c_str(), (char*)(*it)->sequence_type.c_str(), params.intype);
+            } else {
+                part_aln = input_aln;
+            }
+            if (!(*it)->position_spec.empty() && (*it)->position_spec != "*") {
+                Alignment *new_aln = new Alignment();
+                new_aln->extractSites(part_aln, (*it)->position_spec.c_str());
+                if (part_aln != input_aln) delete part_aln;
+                part_aln = new_aln;
+            }
+            if (part_aln->seq_type == SEQ_DNA && ((*it)->sequence_type.substr(0, 5) == "CODON" || (*it)->sequence_type.substr(0, 5) == "NT2AA")) {
+                Alignment *new_aln = new Alignment();
+                new_aln->convertToCodonOrAA(part_aln, &(*it)->sequence_type[5], (*it)->sequence_type.substr(0, 5) == "NT2AA");
+                if (part_aln != input_aln) delete part_aln;
+                part_aln = new_aln;
+            }
+            Alignment *new_aln;
+            if (params.remove_empty_seq)
+                new_aln = part_aln->removeGappySeq();
+            else
+                new_aln = part_aln;
+            // also rebuild states set of each sequence for likelihood computation
+            new_aln->buildSeqStates();
+            
+            if (part_aln != new_aln && part_aln != input_aln) delete part_aln;
+            new_aln->name = (*it)->name;
+            new_aln->model_name = (*it)->model_name;
+            new_aln->aln_file = (*it)->aln_file;
+            new_aln->position_spec = (*it)->position_spec;
+            new_aln->sequence_type = (*it)->sequence_type;
+            partitions.push_back(new_aln);
+//            PhyloTree *tree = new PhyloTree(new_aln);
+//            push_back(tree);
+//            params = origin_params;
+            //            cout << new_aln->getNSeq() << " sequences and " << new_aln->getNSite() << " sites extracted" << endl;
+        }
+    
+    if (input_aln)
+        delete input_aln;
+    delete sets_block;
+}
+
+void SuperAlignment::printPartition(const char *filename) {
+    try {
+        ofstream out;
+        out.exceptions(ios::failbit | ios::badbit);
+        out.open(filename);
+        out << "#nexus" << endl << "[ partition information for alignment written in .conaln file ]" << endl
+        << "begin sets;" << endl;
+        int part; int start_site;
+        for (part = 0, start_site = 1; part < partitions.size(); part++) {
+            string name = partitions[part]->name;
+            replace(name.begin(), name.end(), '+', '_');
+            int end_site = start_site + partitions[part]->getNSite();
+            out << "  charset " << name << " = " << start_site << "-" << end_site-1 << ";" << endl;
+            start_site = end_site;
+        }
+        out << "  charpartition mymodels =" << endl;
+        for (part = 0; part < partitions.size(); part++) {
+            string name = partitions[part]->name;
+            replace(name.begin(), name.end(), '+', '_');
+            if (part > 0) out << "," << endl;
+//            out << "    " << at(part)->getModelNameParams() << ":" << name;
+            out << "    " << partitions[part]->model_name << ":" << name;
+        }
+        out << ";" << endl;
+        out << "end;" << endl;
+        out.close();
+        cout << "Partition information was printed to " << filename << endl;
+    } catch (ios::failure &) {
+        outError(ERR_WRITE_OUTPUT, filename);
+    }
+    
+}
+
+void SuperAlignment::printBestPartition(const char *filename) {
+    try {
+        ofstream out;
+        out.exceptions(ios::failbit | ios::badbit);
+        out.open(filename);
+        out << "#nexus" << endl
+        << "begin sets;" << endl;
+        int part;
+        for (part = 0; part < partitions.size(); part++) {
+            string name = partitions[part]->name;
+            replace(name.begin(), name.end(), '+', '_');
+            out << "  charset " << name << " = ";
+            if (!partitions[part]->aln_file.empty()) out << partitions[part]->aln_file << ": ";
+            if (partitions[part]->seq_type == SEQ_CODON)
+                out << "CODON, ";
+            string pos = partitions[part]->position_spec;
+            replace(pos.begin(), pos.end(), ',' , ' ');
+            out << pos << ";" << endl;
+        }
+        out << "  charpartition mymodels =" << endl;
+        for (part = 0; part < partitions.size(); part++) {
+            string name = partitions[part]->name;
+            replace(name.begin(), name.end(), '+', '_');
+            if (part > 0) out << "," << endl;
+            out << "    " << partitions[part]->model_name << ": " << name;
+        }
+        out << ";" << endl;
+        out << "end;" << endl;
+        out.close();
+        cout << "Partition information was printed to " << filename << endl;
+    } catch (ios::failure &) {
+        outError(ERR_WRITE_OUTPUT, filename);
+    }
+    
+}
+
+
+void SuperAlignment::printPartitionRaxml(const char *filename) {
+    int part;
+//    for (part = 0; part < partitions.size(); part++) {
+//        if (partitions[part]->aln_file != "") {
+//            cout << "INFO: Printing partition in RAxML format is not possible" << endl;
+//            return;
+//        }
+//    }
+    try {
+        ofstream out;
+        out.exceptions(ios::failbit | ios::badbit);
+        out.open(filename);
+        int start_site;
+        for (part = 0, start_site = 1; part < partitions.size(); part++) {
+            string name = partitions[part]->name;
+            replace(name.begin(), name.end(), '+', '_');
+            int end_site = start_site + partitions[part]->getNSite();
+            switch (partitions[part]->seq_type) {
+                case SEQ_DNA: out << "DNA, "; break;
+                case SEQ_BINARY: out << "BIN, "; break;
+                case SEQ_MORPH: out << "MULTI, "; break;
+                default: out << partitions[part]->model_name << ","; break;
+            }
+            out << name << " = " << start_site << "-" << end_site-1 << endl;
+            start_site = end_site;
+        }
+        out.close();
+        cout << "Partition information in Raxml format was printed to " << filename << endl;
+    } catch (ios::failure &) {
+        outError(ERR_WRITE_OUTPUT, filename);
+    }
+    
+}
+
+void SuperAlignment::printBestPartitionRaxml(const char *filename) {
+    int part;
+//    for (part = 0; part < partitions.size(); part++) {
+//        if (partitions[part]->aln_file != "") {
+//            cout << "INFO: Printing partition in RAxML format is not possible" << endl;
+//            return;
+//        }
+//    }
+    try {
+        ofstream out;
+        out.exceptions(ios::failbit | ios::badbit);
+        out.open(filename);
+        for (part = 0; part < partitions.size(); part++) {
+            string name = partitions[part]->name;
+            replace(name.begin(), name.end(), '+', '_');
+            if (partitions[part]->model_name.find("+ASC") != string::npos)
+                out << "ASC_";
+            switch (partitions[part]->seq_type) {
+                case SEQ_DNA: out << "DNA"; break;
+                case SEQ_BINARY: out << "BIN"; break;
+                case SEQ_MORPH: out << "MULTI"; break;
+                case SEQ_PROTEIN:
+                    out << partitions[part]->model_name.substr(0, partitions[part]->model_name.find_first_of("*{+"));
+                    break;
+                case SEQ_CODON:
+                    out << "CODON_" << partitions[part]->model_name.substr(0, partitions[part]->model_name.find_first_of("*{+"));
+                    break;
+                default: out << partitions[part]->model_name; break;
+            }
+            if (partitions[part]->model_name.find("+FO") != string::npos)
+                out << "X";
+            else if (partitions[part]->model_name.find("+F") != string::npos)
+                out << "F";
+            
+            out << ", " << name << " = " << partitions[part]->position_spec << endl;
+        }
+        out.close();
+        cout << "Partition information in Raxml format was printed to " << filename << endl;
+    } catch (ios::failure &) {
+        outError(ERR_WRITE_OUTPUT, filename);
+    }
+    
+}
 
 
 void SuperAlignment::linkSubAlignment(int part) {
@@ -563,17 +1056,16 @@ void SuperAlignment::printCombinedAlignment(const char *file_name, bool append) 
 	}	
 }
 
-void SuperAlignment::printSubAlignments(Params &params, vector<PartitionInfo> &part_info) {
+void SuperAlignment::printSubAlignments(Params &params) {
 	vector<Alignment*>::iterator pit;
 	string filename;
 	int part;
-	ASSERT(part_info.size() == partitions.size());
 	for (pit = partitions.begin(), part = 0; pit != partitions.end(); pit++, part++) {
 		if (params.aln_output)
 			filename = params.aln_output;
 		else
 			filename = params.out_prefix;
-		filename += "." + part_info[part].name;
+		filename += "." + (*pit)->name;
 		 if (params.aln_output_format == ALN_PHYLIP)
 			(*pit)->printPhylip(filename.c_str(), false, NULL, params.aln_nogaps, false, NULL);
 		else if (params.aln_output_format == ALN_FASTA)

@@ -27,11 +27,12 @@ PhyloSuperTreePlen::PhyloSuperTreePlen()
 	fixed_rates = false;
 }
 
-PhyloSuperTreePlen::PhyloSuperTreePlen(Params &params)
-: PhyloSuperTree(params)
+/*
+PhyloSuperTreePlen::PhyloSuperTreePlen(SuperAlignment *alignment)
+: PhyloSuperTree(alignment)
 {
 	memset(allNNIcases_computed, 0, 5*sizeof(int));
-	fixed_rates = (params.partition_type == BRLEN_FIX) ? true : false;
+	fixed_rates = (params->partition_type == BRLEN_FIX) ? true : false;
 	int part = 0;
 	for (iterator it = begin(); it != end(); it++, part++) {
 		part_info[part].part_rate = 1.0;
@@ -40,12 +41,13 @@ PhyloSuperTreePlen::PhyloSuperTreePlen(Params &params)
             part_info[part].part_rate = 3.0;
 	}
 }
-
-PhyloSuperTreePlen::PhyloSuperTreePlen(SuperAlignment *alignment)
+*/
+PhyloSuperTreePlen::PhyloSuperTreePlen(SuperAlignment *alignment, int partition_type)
 : PhyloSuperTree(alignment)
 {
     memset(allNNIcases_computed, 0, 5*sizeof(int));
-    fixed_rates = false;
+//    fixed_rates = false;
+    fixed_rates = (partition_type == BRLEN_FIX) ? true : false;
     int part = 0;
     for (iterator it = begin(); it != end(); it++, part++) {
         part_info[part].part_rate = 1.0;

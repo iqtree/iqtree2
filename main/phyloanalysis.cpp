@@ -154,10 +154,11 @@ void reportModelSelection(ofstream &out, Params &params, ModelCheckpoint *model_
     string best_model;
     PhyloSuperTree *stree = (tree->isSuperTree()) ? ((PhyloSuperTree*)tree) : NULL;
 	if (tree->isSuperTree()) {
+        SuperAlignment *saln = (SuperAlignment*)stree->aln;
         for (int part = 0; part != stree->size(); part++) {
             if (part != 0)
                 out << ",";
-            out << stree->part_info[part].model_name << ":" << stree->part_info[part].name;
+            out << saln->partitions[part]->model_name << ":" << saln->partitions[part]->name;
         }
 //		string set_name = "";
 //		for (it = model_info.begin(); it != model_info.end(); it++) {
@@ -736,9 +737,9 @@ void printOutfilesInfo(Params &params, string &original_model, IQTree &tree) {
 		cout << "  Best partitioning scheme:      " << params.out_prefix << ".best_scheme.nex" << endl;
 		bool raxml_format_printed = true;
 
-		for (vector<PartitionInfo>::iterator it = ((PhyloSuperTree*)&tree)->part_info.begin();
-				it != ((PhyloSuperTree*)&tree)->part_info.end(); it++)
-			if (!it->aln_file.empty()) {
+		for (auto it = ((SuperAlignment*)tree.aln)->partitions.begin();
+				it != ((SuperAlignment*)tree.aln)->partitions.end(); it++)
+			if (!(*it)->aln_file.empty()) {
 				raxml_format_printed = false;
 				break;
 			}
@@ -897,7 +898,7 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 				out.width(4);
 				out << right << part+1 << "  ";
 				out.width(max(namelen,4));
-				out << left << stree->part_info[part].name << "  ";
+				out << left << (*it)->aln->name << "  ";
 				switch ((*it)->aln->seq_type) {
 				case SEQ_BINARY: out << "BIN"; break;
 				case SEQ_CODON: out << "CODON"; break;
@@ -1070,7 +1071,7 @@ void reportPhyloAnalysis(Params &params, string &original_model,
 				int part = 0;
 				for (PhyloSuperTree::iterator it = stree->begin();
 						it != stree->end(); it++, part++) {
-					out << "FOR PARTITION " << stree->part_info[part].name
+					out << "FOR PARTITION " << (*it)->aln->name
 							<< ":" << endl << endl;
                     (*it)->setRootNode(params.root);
 //					reportTree(out, params, *(*it), (*it)->computeLikelihood(), (*it)->computeLogLVariance(), false);
@@ -1525,8 +1526,8 @@ void initializeParams(Params &params, IQTree &iqtree, ModelCheckpoint &model_inf
     if (params.model_name.empty() && iqtree.isSuperTree()) {
         // check whether any partition has empty model_name
         PhyloSuperTree *stree = (PhyloSuperTree*)&iqtree;
-        for (auto i = stree->part_info.begin(); i != stree->part_info.end(); i++)
-            if (i->model_name.empty()) {
+        for (auto i = stree->begin(); i != stree->end(); i++)
+            if ((*i)->aln->model_name.empty()) {
                 empty_model_found = true;
                 break;
             }
@@ -1576,7 +1577,7 @@ void initializeParams(Params &params, IQTree &iqtree, ModelCheckpoint &model_inf
             PhyloSuperTree *stree = (PhyloSuperTree*)&iqtree;
             int part = 0;
             for (auto it = stree->begin(); it != stree->end(); it++, part++) {
-                model_info.startStruct(stree->part_info[part].name);
+                model_info.startStruct((*it)->aln->name);
                 (*it)->saveCheckpoint();
                 model_info.endStruct();
             }
@@ -1858,9 +1859,9 @@ void printMiscInfo(Params &params, IQTree &iqtree, double *pattern_lh) {
 	if (params.print_partition_info && iqtree.isSuperTree()) {
 		string partition_info = params.out_prefix;
 		partition_info += ".partinfo.nex";
-		((PhyloSuperTree*)(&iqtree))->printPartition(partition_info.c_str());
+		((SuperAlignment*)(iqtree.aln))->printPartition(partition_info.c_str());
 		partition_info = (string)params.out_prefix + ".partitions";
-		((PhyloSuperTree*)(&iqtree))->printPartitionRaxml(partition_info.c_str());
+		((SuperAlignment*)(iqtree.aln))->printPartitionRaxml(partition_info.c_str());
 	}
 
 	if (params.mvh_site_rate) {
@@ -1901,7 +1902,7 @@ void printMiscInfo(Params &params, IQTree &iqtree, double *pattern_lh) {
                 << "#   tab=read.table('" <<  params.out_prefix << ".rate',header=TRUE)" << endl
                 << "# Columns are tab-separated with following meaning:" << endl;
             if (iqtree.isSuperTree()) {
-                out << "#   Part:   Partition ID (1=" << ((PhyloSuperTree*)&iqtree)->part_info[0].name << ", etc)" << endl
+                out << "#   Part:   Partition ID (1=" << ((PhyloSuperTree*)&iqtree)->front()->aln->name << ", etc)" << endl
                     << "#   Site:   Site ID within partition (starting from 1 for each partition)" << endl;
             } else
                 out << "#   Site:   Alignment site ID" << endl;
@@ -1936,8 +1937,9 @@ void printFinalSearchInfo(Params &params, IQTree &iqtree, double search_cpu_time
 		cout << stree->evalNNIs << " NNIs evaluated from " << stree->totalNNIs << " all possible NNIs ( " <<
 				(int)(((stree->evalNNIs+1.0)/(stree->totalNNIs+1.0))*100.0) << " %)" << endl;
 		cout<<"Details for subtrees:"<<endl;
-		for(int part = 0; part < stree->size(); part++){
-			cout << part+1 <<". "<<stree->part_info[part].name<<": "<<stree->part_info[part].evalNNIs<<" ( "
+        int part = 0;
+		for(auto it = stree->begin(); it != stree->end(); it++,part++){
+			cout << part+1 << ". " << (*it)->aln->name << ": " << stree->part_info[part].evalNNIs<<" ( "
 				<< (int)(((stree->part_info[part].evalNNIs+1.0)/((stree->totalNNIs+1.0) / stree->size()))*100.0)
 				<< " %)" << endl;
 		}
@@ -1991,7 +1993,7 @@ void runTreeReconstruction(Params &params, string &original_model, IQTree* &iqtr
         SuperAlignment *saln = (SuperAlignment*)iqtree->aln;
         PhyloSuperTree *stree = (PhyloSuperTree*)iqtree;
         for (int i = 0; i < saln->partitions.size(); i++)
-            absent_states += saln->partitions[i]->checkAbsentStates("partition " + stree->part_info[i].name);
+            absent_states += saln->partitions[i]->checkAbsentStates("partition " + saln->partitions[i]->name);
     } else {
         absent_states = iqtree->aln->checkAbsentStates("alignment");
     }
@@ -3093,7 +3095,7 @@ void convertAlignment(Params &params, IQTree *iqtree) {
 	if (alignment->isSuperAlignment()) {
 		((SuperAlignment*)alignment)->printCombinedAlignment(params.aln_output);
 		if (params.print_subaln)
-			((SuperAlignment*)alignment)->printSubAlignments(params, ((PhyloSuperTree*)iqtree)->part_info);
+			((SuperAlignment*)alignment)->printSubAlignments(params);
 
 	} else if (params.gap_masked_aln) {
 		Alignment out_aln;
@@ -3192,6 +3194,7 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
 	/****************** read in alignment **********************/
 	if (params.partition_file) {
 		// Partition model analysis
+        alignment = new SuperAlignment(params);
 		if(params.partition_type != BRLEN_OPTIMIZE){
 			// since nni5 does not work yet, stop the programm
 /*			if(params.nni5)
@@ -3199,13 +3202,13 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
 //			if(params.aLRT_replicates || params.localbp_replicates)
 //				outError("-alrt or -lbp option is unsupported yet for joint/proportional partition model");
 			// initialize supertree - Proportional Edges case, "-spt p" option
-			tree = new PhyloSuperTreePlen(params);
+			tree = new PhyloSuperTreePlen((SuperAlignment*)alignment, params.partition_type);
 		} else {
 			// initialize supertree stuff if user specifies partition file with -sp option
-			tree = new PhyloSuperTree(params);
+			tree = new PhyloSuperTree((SuperAlignment*)alignment);
 		}
 		// this alignment will actually be of type SuperAlignment
-		alignment = tree->aln;
+//        alignment = tree->aln;
 	} else {
 		alignment = new Alignment(params.aln_file, params.sequence_type, params.intype);
 

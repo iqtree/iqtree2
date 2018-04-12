@@ -20,8 +20,6 @@
 #include "phylosupertree.h"
 #include "alignment/superalignment.h"
 #include "alignment/superalignmentpairwise.h"
-#include "nclextra/msetsblock.h"
-#include "nclextra/myreader.h"
 #include "main/phylotesting.h"
 #include "model/partitionmodel.h"
 
@@ -55,7 +53,6 @@ PhyloSuperTree::PhyloSuperTree(SuperAlignment *alignment) :  IQTree(alignment) {
         PhyloTree *tree = new PhyloTree((*it));
         push_back(tree);
         PartitionInfo info;
-        info.name = "superpartition_" + convertIntToString(part);
         info.cur_ptnlh = NULL;
         info.nniMoves[0].ptnlh = NULL;
         info.nniMoves[1].ptnlh = NULL;
@@ -64,6 +61,7 @@ PhyloSuperTree::PhyloSuperTree(SuperAlignment *alignment) :  IQTree(alignment) {
     }
     
     aln = alignment;
+    
 }
 
 PhyloSuperTree::PhyloSuperTree(SuperAlignment *alignment, PhyloSuperTree *super_tree) :  IQTree(alignment) {
@@ -147,492 +145,6 @@ void PhyloSuperTree::restoreCheckpoint() {
 //    checkpoint->endStruct();
 //
 //    readTreeString(newick);
-
-}
-
-void PhyloSuperTree::readPartition(Params &params) {
-	try {
-		ifstream in;
-		in.exceptions(ios::failbit | ios::badbit);
-		in.open(params.partition_file);
-		in.exceptions(ios::badbit);
-		Params origin_params = params;
-		PartitionInfo info;
-
-		while (!in.eof()) {
-			getline(in, info.name, ',');
-			if (in.eof()) break;
-			getline(in, info.model_name, ',');
-			if (info.model_name == "") info.model_name = params.model_name;
-			getline(in, info.aln_file, ',');
-			if (info.aln_file == "" && params.aln_file) info.aln_file = params.aln_file;
-			getline(in, info.sequence_type, ',');
-			if (info.sequence_type=="" && params.sequence_type) info.sequence_type = params.sequence_type;
-			safeGetline(in, info.position_spec);
-            trimString(info.sequence_type);
-//			cout << endl << "Reading partition " << info.name << " (model=" << info.model_name << ", aln=" <<
-//					info.aln_file << ", seq=" << info.sequence_type << ", pos=" << ((info.position_spec.length() >= 20) ? info.position_spec.substr(0,20)+"..." : info.position_spec) << ") ..." << endl;
-
-			//info.mem_ptnlh = NULL;
-			info.nniMoves[0].ptnlh = NULL;
-			info.nniMoves[1].ptnlh = NULL;
-			info.cur_ptnlh = NULL;
-			part_info.push_back(info);
-			Alignment *part_aln = new Alignment((char*)info.aln_file.c_str(), (char*)info.sequence_type.c_str(), params.intype);
-			if (!info.position_spec.empty()) {
-				Alignment *new_aln = new Alignment();
-				new_aln->extractSites(part_aln, info.position_spec.c_str());
-				delete part_aln;
-				part_aln = new_aln;
-			}
-			PhyloTree *tree = new PhyloTree(part_aln);
-			push_back(tree);
-			params = origin_params;
-		}
-
-		in.clear();
-		// set the failbit again
-		in.exceptions(ios::failbit | ios::badbit);
-		in.close();
-	} catch(ios::failure) {
-		outError(ERR_READ_INPUT);
-	} catch (string str) {
-		outError(str);
-	}
-
-
-}
-
-void PhyloSuperTree::readPartitionRaxml(Params &params) {
-	try {
-		ifstream in;
-		in.exceptions(ios::failbit | ios::badbit);
-		in.open(params.partition_file);
-		in.exceptions(ios::badbit);
-		PartitionInfo info;
-        Alignment *input_aln = NULL;
-        if (!params.aln_file)
-            outError("Please supply an alignment with -s option");
-            
-        input_aln = new Alignment(params.aln_file, params.sequence_type, params.intype);
-
-        cout << endl << "Partition file is not in NEXUS format, assuming RAxML-style partition file..." << endl;
-
-        size_t pos = params.model_name.find_first_of("+*");
-        string rate_type = "";
-        if (pos != string::npos) rate_type = params.model_name.substr(pos);
-
-		while (!in.eof()) {
-			getline(in, info.model_name, ',');
-			if (in.eof()) break;
-            trimString(info.model_name);
-//            std::transform(info.model_name.begin(), info.model_name.end(), info.model_name.begin(), ::toupper);
-
-            bool is_ASC = info.model_name.substr(0,4) == "ASC_";
-            if (is_ASC) info.model_name.erase(0, 4);
-            StateFreqType freq = FREQ_UNKNOWN;
-            if (info.model_name.find_first_of("*+{") == string::npos ) {
-                if (*info.model_name.rbegin() == 'F' && info.model_name != "DAYHOFF") {
-                    freq = FREQ_EMPIRICAL;
-                    info.model_name.erase(info.model_name.length()-1);
-                } else if (*info.model_name.rbegin() == 'X' && info.model_name != "LG4X") {
-                    freq = FREQ_ESTIMATE;
-                    info.model_name.erase(info.model_name.length()-1);
-                }
-            }
-            
-            if (info.model_name.empty())
-                outError("Please give model names in partition file!");
-            if (info.model_name == "BIN") {
-                info.sequence_type = "BIN";
-                info.model_name = "GTR2";
-            } else if (info.model_name == "DNA") {
-                info.sequence_type = "DNA";
-                info.model_name = "GTR";
-            } else if (info.model_name == "MULTI") {
-                info.sequence_type = "MORPH";
-                info.model_name = "MK";
-            } else if (info.model_name.substr(0,5) == "CODON") {
-                info.sequence_type = info.model_name;
-                info.model_name = "GY";
-            } else {
-                info.sequence_type = "AA";
-                if (*info.model_name.begin() == '[') {
-                    if (*info.model_name.rbegin() != ']')
-                        outError("User-defined protein model should be [myProtenSubstitutionModelFileName]");
-                    info.model_name = info.model_name.substr(1, info.model_name.length()-2);
-                }
-            }
-
-            if (freq == FREQ_EMPIRICAL) 
-                info.model_name += "+F";
-            else if (freq == FREQ_ESTIMATE)
-                info.model_name += "+FO";
-            if (is_ASC)
-                info.model_name += "+ASC";
-            info.model_name += rate_type;
-
-			getline(in, info.name, '=');
-            trimString(info.name);
-            if (info.name.empty())
-                outError("Please give partition names in partition file!");
-
-			safeGetline(in, info.position_spec);
-            trimString(info.position_spec);
-            if (info.position_spec.empty())
-                outError("Please specify alignment positions for partition" + info.name);
-            std::replace(info.position_spec.begin(), info.position_spec.end(), ',', ' ');
-            
-//			cout << "Reading partition " << info.name << " (model=" << info.model_name << ", seq=" << info.sequence_type << ", pos=" << ((info.position_spec.length() >= 20) ? info.position_spec.substr(0,20)+"..." : info.position_spec) << ") ..." << endl;
-
-			//info.mem_ptnlh = NULL;
-			info.nniMoves[0].ptnlh = NULL;
-			info.nniMoves[1].ptnlh = NULL;
-			info.cur_ptnlh = NULL;
-			part_info.push_back(info);
-            Alignment *part_aln = new Alignment();
-            part_aln->extractSites(input_aln, info.position_spec.c_str());
-            
-			Alignment *new_aln;
-			if (params.remove_empty_seq)
-				new_aln = part_aln->removeGappySeq();
-			else
-				new_aln = part_aln;
-		    // also rebuild states set of each sequence for likelihood computation
-		    new_aln->buildSeqStates();
-
-			if (part_aln != new_aln) delete part_aln;
-			PhyloTree *tree = new PhyloTree(new_aln);
-            push_back(tree);
-//            cout << new_aln->getNSeq() << " sequences and " << new_aln->getNSite() << " sites extracted" << endl;
-//			params = origin_params;
-		}
-
-		in.clear();
-		// set the failbit again
-		in.exceptions(ios::failbit | ios::badbit);
-		in.close();
-	} catch(ios::failure) {
-		outError(ERR_READ_INPUT);
-	} catch (string str) {
-		outError(str);
-	}
-
-
-}
-
-void PhyloSuperTree::readPartitionNexus(Params &params) {
-	Params origin_params = params;
-	MSetsBlock *sets_block = new MSetsBlock();
-    MyReader nexus(params.partition_file);
-    nexus.Add(sets_block);
-    MyToken token(nexus.inf);
-    nexus.Execute(token);
-
-    Alignment *input_aln = NULL;
-    if (params.aln_file) {
-    	input_aln = new Alignment(params.aln_file, params.sequence_type, params.intype);
-    }
-
-    bool empty_partition = true;
-    vector<CharSet*>::iterator it;
-    for (it = sets_block->charsets.begin(); it != sets_block->charsets.end(); it++)
-    	if ((*it)->model_name != "") {
-    		empty_partition = false;
-    		break;
-    	}
-    if (empty_partition) {
-    	cout << "NOTE: No CharPartition defined, use all CharSets" << endl;
-    }
-
-    cout << endl << "Loading " << sets_block->charsets.size() << " partitions..." << endl;
-
-    for (it = sets_block->charsets.begin(); it != sets_block->charsets.end(); it++)
-    	if (empty_partition || (*it)->char_partition != "") {
-			PartitionInfo info;
-			info.name = (*it)->name;
-			info.model_name = (*it)->model_name;
-			if (info.model_name == "")
-				info.model_name = params.model_name;
-			info.aln_file = (*it)->aln_file;
-			//if (info.aln_file == "" && params.aln_file) info.aln_file = params.aln_file;
-			if (info.aln_file == "" && !params.aln_file)
-				outError("No input data for partition ", info.name);
-			info.sequence_type = (*it)->sequence_type;
-			if (info.sequence_type=="" && params.sequence_type) info.sequence_type = params.sequence_type;
-            
-            if (info.sequence_type == "" && !info.model_name.empty()) {
-                // try to get sequence type from model
-                info.sequence_type = getSeqType(info.model_name.substr(0, info.model_name.find_first_of("+*")));
-            }
-			info.position_spec = (*it)->position_spec;
-            if (info.aln_file == "" && (info.position_spec == "" || info.position_spec == "*"))
-                outError("Empty position range for partition ", info.name);
-			trimString(info.sequence_type);
-//			cout << endl << "Reading partition " << info.name << " (model=" << info.model_name << ", aln=" <<
-//				info.aln_file << ", seq=" << info.sequence_type << ", pos=" << ((info.position_spec.length() >= 20) ? info.position_spec.substr(0,20)+"..." : info.position_spec) << ") ..." << endl;
-            if (info.sequence_type != "" && Alignment::getSeqType(info.sequence_type.c_str()) == SEQ_UNKNOWN)
-                outError("Unknown sequence type " + info.sequence_type);
-			//info.mem_ptnlh = NULL;
-			info.nniMoves[0].ptnlh = NULL;
-			info.nniMoves[1].ptnlh = NULL;
-			info.cur_ptnlh = NULL;
-			part_info.push_back(info);
-			Alignment *part_aln;
-			if (info.aln_file != "") {
-				part_aln = new Alignment((char*)info.aln_file.c_str(), (char*)info.sequence_type.c_str(), params.intype);
-			} else {
-				part_aln = input_aln;
-			}
-			if (!info.position_spec.empty() && info.position_spec != "*") {
-				Alignment *new_aln = new Alignment();
-				new_aln->extractSites(part_aln, info.position_spec.c_str());
-				if (part_aln != input_aln) delete part_aln;
-				part_aln = new_aln;
-			}
-            if (part_aln->seq_type == SEQ_DNA && (info.sequence_type.substr(0, 5) == "CODON" || info.sequence_type.substr(0, 5) == "NT2AA")) {
-				Alignment *new_aln = new Alignment();
-                new_aln->convertToCodonOrAA(part_aln, &info.sequence_type[5], info.sequence_type.substr(0, 5) == "NT2AA");
-                if (part_aln != input_aln) delete part_aln;
-                part_aln = new_aln;
-            }
-			Alignment *new_aln;
-			if (params.remove_empty_seq)
-				new_aln = part_aln->removeGappySeq();
-			else
-				new_aln = part_aln;
-		    // also rebuild states set of each sequence for likelihood computation
-		    new_aln->buildSeqStates();
-
-			if (part_aln != new_aln && part_aln != input_aln) delete part_aln;
-			PhyloTree *tree = new PhyloTree(new_aln);
-			push_back(tree);
-			params = origin_params;
-//			cout << new_aln->getNSeq() << " sequences and " << new_aln->getNSite() << " sites extracted" << endl;
-    	}
-
-    if (input_aln)
-    	delete input_aln;
-    delete sets_block;
-}
-
-void PhyloSuperTree::printPartition(const char *filename) {
-   try {
-		ofstream out;
-		out.exceptions(ios::failbit | ios::badbit);
-		out.open(filename);
-		out << "#nexus" << endl << "[ partition information for alignment written in .conaln file ]" << endl
-			<< "begin sets;" << endl;
-		int part; int start_site;
-		for (part = 0, start_site = 1; part < part_info.size(); part++) {
-			string name = part_info[part].name;
-			replace(name.begin(), name.end(), '+', '_');
-			int end_site = start_site + at(part)->getAlnNSite();
-			out << "  charset " << name << " = " << start_site << "-" << end_site-1 << ";" << endl;
-			start_site = end_site;
-		}
-		out << "  charpartition mymodels =" << endl;
-		for (part = 0; part < part_info.size(); part++) {
-			string name = part_info[part].name;
-			replace(name.begin(), name.end(), '+', '_');
-			if (part > 0) out << "," << endl;
-			out << "    " << at(part)->getModelNameParams() << ":" << name;
-		}
-		out << ";" << endl;
-		out << "end;" << endl;
-		out.close();
-		cout << "Partition information was printed to " << filename << endl;
-	} catch (ios::failure &) {
-		outError(ERR_WRITE_OUTPUT, filename);
-	}
-
-}
-
-void PhyloSuperTree::printBestPartition(const char *filename) {
-   try {
-		ofstream out;
-		out.exceptions(ios::failbit | ios::badbit);
-		out.open(filename);
-		out << "#nexus" << endl
-			<< "begin sets;" << endl;
-		int part;
-		for (part = 0; part < part_info.size(); part++) {
-			string name = part_info[part].name;
-			replace(name.begin(), name.end(), '+', '_');
-			out << "  charset " << name << " = ";
-			if (!part_info[part].aln_file.empty()) out << part_info[part].aln_file << ": ";
-			if (at(part)->aln->seq_type == SEQ_CODON)
-				out << "CODON, ";
-			string pos = part_info[part].position_spec;
-			replace(pos.begin(), pos.end(), ',' , ' ');
-			out << pos << ";" << endl;
-		}
-		out << "  charpartition mymodels =" << endl;
-		for (part = 0; part < part_info.size(); part++) {
-			string name = part_info[part].name;
-			replace(name.begin(), name.end(), '+', '_');
-			if (part > 0) out << "," << endl;
-			out << "    " << part_info[part].model_name << ": " << name;
-		}
-		out << ";" << endl;
-		out << "end;" << endl;
-		out.close();
-		cout << "Partition information was printed to " << filename << endl;
-	} catch (ios::failure &) {
-		outError(ERR_WRITE_OUTPUT, filename);
-	}
-
-}
-
-
-void PhyloSuperTree::printPartitionRaxml(const char *filename) {
-	int part;
-	for (part = 0; part < part_info.size(); part++) {
-		if (part_info[part].aln_file != "") {
-			cout << "INFO: Printing partition in RAxML format is not possible" << endl;
-            return;
-        }
-	}
-   try {
-		ofstream out;
-		out.exceptions(ios::failbit | ios::badbit);
-		out.open(filename);
-		int start_site;
-		for (part = 0, start_site = 1; part < part_info.size(); part++) {
-			string name = part_info[part].name;
-			replace(name.begin(), name.end(), '+', '_');
-			int end_site = start_site + at(part)->getAlnNSite();
-			switch (at(part)->aln->seq_type) {
-			case SEQ_DNA: out << "DNA, "; break;
-			case SEQ_BINARY: out << "BIN, "; break;
-			case SEQ_MORPH: out << "MULTI, "; break;
-			default: out << at(part)->getModel()->name << ","; break;
-			}
-			out << name << " = " << start_site << "-" << end_site-1 << endl;
-			start_site = end_site;
-		}
-		out.close();
-		cout << "Partition information in Raxml format was printed to " << filename << endl;
-	} catch (ios::failure &) {
-		outError(ERR_WRITE_OUTPUT, filename);
-	}
-
-}
-
-void PhyloSuperTree::printBestPartitionRaxml(const char *filename) {
-	int part;
-	for (part = 0; part < part_info.size(); part++) {
-		if (part_info[part].aln_file != "") {
-			cout << "INFO: Printing partition in RAxML format is not possible" << endl;
-            return;
-        }
-	}
-	try {
-		ofstream out;
-		out.exceptions(ios::failbit | ios::badbit);
-		out.open(filename);
-		for (part = 0; part < part_info.size(); part++) {
-			string name = part_info[part].name;
-			replace(name.begin(), name.end(), '+', '_');
-            if (part_info[part].model_name.find("+ASC") != string::npos)
-                out << "ASC_";
-			switch (at(part)->aln->seq_type) {
-			case SEQ_DNA: out << "DNA"; break;
-			case SEQ_BINARY: out << "BIN"; break;
-			case SEQ_MORPH: out << "MULTI"; break;
-            case SEQ_PROTEIN:
-                out << part_info[part].model_name.substr(0, part_info[part].model_name.find_first_of("*{+"));
-                break;
-            case SEQ_CODON:
-                out << "CODON_" << part_info[part].model_name.substr(0, part_info[part].model_name.find_first_of("*{+"));
-                break;
-			default: out << part_info[part].model_name; break;
-			}
-            if (part_info[part].model_name.find("+FO") != string::npos)
-                out << "X";
-            else if (part_info[part].model_name.find("+F") != string::npos)
-                out << "F";
-                
-			out << ", " << name << " = " << part_info[part].position_spec << endl;
-		}
-		out.close();
-		cout << "Partition information in Raxml format was printed to " << filename << endl;
-	} catch (ios::failure &) {
-		outError(ERR_WRITE_OUTPUT, filename);
-	}
-
-}
-
-
-PhyloSuperTree::PhyloSuperTree(Params &params) :  IQTree() {
-	totalNNIs = evalNNIs = 0;
-
-	cout << "Reading partition model file " << params.partition_file << " ..." << endl;
-	if (detectInputFile(params.partition_file) == IN_NEXUS) {
-		readPartitionNexus(params);
-        if (part_info.empty()) {
-            outError("No partition found in SETS block. An example syntax looks like: \n#nexus\nbegin sets;\n  charset part1=1-100;\n  charset part2=101-300;\nend;");
-        }
-	} else
-		readPartitionRaxml(params);
-	if (part_info.empty())
-		outError("No partition found");
-
-    // check for duplicated partition names
-    unordered_set<string> part_names;
-    for (auto pit = part_info.begin(); pit != part_info.end(); pit++) {
-        if (part_names.find(pit->name) != part_names.end())
-            outError("Duplicated partition name ", pit->name);
-        part_names.insert(pit->name);
-    }
-    
-	// Initialize the counter for evaluated NNIs on subtrees
-    cout << "Subset\tType\tSeqs\tSites\tInfor\tInvar\tModel\tName" << endl;
-    int part = 0;
-    iterator it;
-	for (it = begin(); it != end(); it++, part++) {
-		part_info[part].evalNNIs = 0.0;
-        cout << part+1 << "\t" << part_info[part].sequence_type << "\t" << (*it)->aln->getNSeq()
-             << "\t" << (*it)->getAlnNSite() << "\t" << (*it)->aln->num_informative_sites
-             << "\t" << (*it)->getAlnNSite()-(*it)->aln->num_variant_sites << "\t"
-             << part_info[part].model_name << "\t" << part_info[part].name << endl;
-        if ((*it)->aln->num_informative_sites == 0) {
-            outWarning("No parsimony-informative sites in partition " + part_info[part].name);
-        }
-	}
-
-	aln = new SuperAlignment(this);
-	if (params.print_conaln) {
-		string str = params.out_prefix;
-		str = params.out_prefix;
-		str += ".conaln";
-		((SuperAlignment*)aln)->printCombinedAlignment(str.c_str());
-	}
-
-    // this is important: rescale branch length of codon partitions to be compatible with other partitions.
-    // since for codon models, branch lengths = # nucleotide subst per codon site!
-    rescale_codon_brlen = false;
-    bool has_codon = false;
-	for (it = begin(); it != end(); it++, part++) 
-        if ((*it)->aln->seq_type != SEQ_CODON) {
-            rescale_codon_brlen = true;
-        } else 
-            has_codon = true;
-            
-    rescale_codon_brlen &= has_codon;
-    if (rescale_codon_brlen)
-        cout << "NOTE: Mixed codon and other data, branch lengths of codon partitions are rescaled by 3!" << endl;
-    
-	cout << "Degree of missing data: " << ((SuperAlignment*)aln)->computeMissingData() << endl;
-    
-#ifdef _OPENMP
-    if (params.num_threads > size()) {
-        cout << "Info: multi-threading strategy over alignment sites" << endl;
-    } else {
-        cout << "Info: multi-threading strategy over partitions" << endl;
-    }
-#endif
-	cout << endl;
 
 }
 
@@ -1198,8 +710,8 @@ void PhyloSuperTree::initPartitionInfo() {
 
 int PhyloSuperTree::getMaxPartNameLength() {
 	int namelen = 0;
-	for (vector<PartitionInfo>::iterator it = part_info.begin(); it != part_info.end(); it++)
-		namelen = max((int)it->name.length(), namelen);
+	for (iterator it = begin(); it != end(); it++)
+		namelen = max((int)(*it)->aln->name.length(), namelen);
 	return namelen;
 }
 
@@ -1599,12 +1111,13 @@ void PhyloSuperTree::removeIdenticalSeqs(Params &params) {
 	if (removed_seqs.empty()) return;
 	// now synchronize aln
 	int part = 0;
+    SuperAlignment *saln = (SuperAlignment*)aln;
 	for (iterator it = begin(); it != end(); it++, part++) {
 		if (verbose_mode >= VB_MED) {
-			cout << "Partition " << part_info[part].name << " " << ((SuperAlignment*)aln)->partitions[part]->getNSeq() <<
+			cout << "Partition " << saln->partitions[part]->name << " " << saln->partitions[part]->getNSeq() <<
 					" sequences from " << (*it)->aln->getNSeq() << " extracted" << endl;
 		}
-		(*it)->aln = ((SuperAlignment*)aln)->partitions[part];
+		(*it)->aln = saln->partitions[part];
 	}
 	if (verbose_mode >= VB_MED) {
 		cout << "Reduced alignment has " << aln->getNSeq() << " sequences with " << getAlnNSite() << " sites and "
@@ -1801,7 +1314,7 @@ void PhyloSuperTree::writeBranches(ostream &out) {
     int i;
     out << "ID,Taxa,Len";
     for (i = 0; i < size(); i++)
-        out << "," << part_info[i].name;
+        out << "," << at(i)->aln->name;
     out << endl;
     for (i = 0; i < nodes1.size(); i++) {
         writeBranch(out, nodes1[i], nodes2[i]);

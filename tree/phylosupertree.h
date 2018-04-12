@@ -48,12 +48,9 @@ public:
 	*/
     PhyloSuperTree(SuperAlignment *alignment, PhyloSuperTree *super_tree);
 
-	/**
-		constructor
-	*/
-    PhyloSuperTree(Params &params);
-
-
+    /**
+        destructor
+    */
     ~PhyloSuperTree();
 
     /**
@@ -84,22 +81,6 @@ public:
             @param alignment associated alignment
      */
     virtual void setSuperAlignment(Alignment *alignment);
-
-    /** read partition model file */
-    void readPartition(Params &params);
-
-    /** read RAxML-style partition file */
-    void readPartitionRaxml(Params &params);
-
-    /** read partition model file in NEXUS format into variable info */
-    void readPartitionNexus(Params &params);
-
-    void printPartition(const char *filename);
-
-    void printPartitionRaxml(const char *filename);
-
-    void printBestPartition(const char *filename);
-    void printBestPartitionRaxml(const char *filename);
 
     /** remove identical sequences from the tree */
     virtual void removeIdenticalSeqs(Params &params);

@@ -24,12 +24,6 @@
 
 
 struct PartitionInfo {
-	string name; // partition name
-	string model_name; // model name
-	string aln_file; // alignment file associated
-	string sequence_type; // sequence type (DNA/AA/BIN)
-	string position_spec; // position specification, e.g., "1-100\1 1-100\2"
-
 	double cur_score;	// current log-likelihood
 	double part_rate;	// partition heterogeneity rate
 	int    evalNNIs;	// number of evaluated NNIs on subtree
@@ -73,7 +67,7 @@ class SuperAlignment : public Alignment
 {
 public:
 	/** constructor initialize from a supertree */
-    SuperAlignment(PhyloSuperTree *super_tree);
+    SuperAlignment(Params &params);
 
 	/** constructor initialize empty alignment */
     SuperAlignment();
@@ -81,8 +75,26 @@ public:
     /** destructor */
     ~SuperAlignment();
 
+    void init(StrVector *sequence_names = NULL);
+    
     /** return that this is a super-alignment structure */
 	virtual bool isSuperAlignment() { return true; }
+
+    /** read partition model file */
+    void readPartition(Params &params);
+    
+    /** read RAxML-style partition file */
+    void readPartitionRaxml(Params &params);
+    
+    /** read partition model file in NEXUS format into variable info */
+    void readPartitionNexus(Params &params);
+    
+    void printPartition(const char *filename);
+    
+    void printPartitionRaxml(const char *filename);
+    
+    void printBestPartition(const char *filename);
+    void printBestPartitionRaxml(const char *filename);
 
 	/**
 	 * create taxa_index from super-alignment to sub-alignment
@@ -209,7 +221,7 @@ public:
 	 * print all sub alignments into files with prefix, suffix is the charset name
 	 * @param prefix prefix of output files
 	 */
-	void printSubAlignments(Params &params, vector<PartitionInfo> &part_info);
+	void printSubAlignments(Params &params);
 
 	/**
 		@return unconstrained log-likelihood (without a tree)

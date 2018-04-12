@@ -395,6 +395,10 @@ void Alignment::checkGappySeq(bool force_error) {
 }
 
 Alignment::Alignment(char *filename, char *sequence_type, InputType &intype) : vector<Pattern>() {
+    name = "Noname";
+    if (sequence_type)
+        this->sequence_type = sequence_type;
+    aln_file = filename;
     num_states = 0;
     frac_const_sites = 0.0;
     frac_invariant_sites = 0.0;
