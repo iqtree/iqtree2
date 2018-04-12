@@ -50,7 +50,7 @@ PartitionModel::PartitionModel(Params &params, PhyloSuperTree *tree, ModelsBlock
     }
     for (it = tree->begin(), part = 0; it != tree->end(); it++, part++) {
         ASSERT(!((*it)->getModelFactory()));
-        string model_name = tree->part_info[part].model_name;
+        string model_name = (*it)->aln->model_name;
         if (model_name == "") // if empty, take model name from command option
         	model_name = params.model_name;
         (*it)->setModelFactory(new ModelFactory(params, model_name, (*it), models_block));
@@ -86,7 +86,7 @@ void PartitionModel::saveCheckpoint() {
     PhyloSuperTree *tree = (PhyloSuperTree*)site_rate->getTree();
     int part = 0;
     for (PhyloSuperTree::iterator it = tree->begin(); it != tree->end(); it++, part++) {
-        checkpoint->startStruct(tree->part_info[part].name);
+        checkpoint->startStruct((*it)->aln->name);
         (*it)->getModelFactory()->saveCheckpoint();
         checkpoint->endStruct();
     }
@@ -103,7 +103,7 @@ void PartitionModel::restoreCheckpoint() {
     PhyloSuperTree *tree = (PhyloSuperTree*)site_rate->getTree();
     int part = 0;
     for (PhyloSuperTree::iterator it = tree->begin(); it != tree->end(); it++, part++) {
-        checkpoint->startStruct(tree->part_info[part].name);
+        checkpoint->startStruct((*it)->aln->name);
         (*it)->getModelFactory()->restoreCheckpoint();
         checkpoint->endStruct();
     }
@@ -165,7 +165,7 @@ double PartitionModel::optimizeParameters(int fixed_len, bool write_info, double
         #endif
         {
     		cout << "Optimizing " << tree->at(part)->getModelName() <<
-        		" parameters for partition " << tree->part_info[part].name <<
+        		" parameters for partition " << tree->at(part)->aln->name <<
         		" (" << tree->at(part)->getModelFactory()->getNParameters(fixed_len) << " free parameters)" << endl;
         }
         tree_lh += tree->at(part)->getModelFactory()->optimizeParameters(fixed_len, write_info && verbose_mode >= VB_MED, 
@@ -199,7 +199,7 @@ double PartitionModel::optimizeParametersGammaInvar(int fixed_len, bool write_in
         #endif
         {
     		cout << "Optimizing " << tree->at(part)->getModelName() <<
-        		" parameters for partition " << tree->part_info[part].name <<
+        		" parameters for partition " << tree->at(part)->aln->name <<
         		" (" << tree->at(part)->getModelFactory()->getNParameters(fixed_len) << " free parameters)" << endl;
         }
         tree_lh += tree->at(part)->getModelFactory()->optimizeParametersGammaInvar(fixed_len, write_info && verbose_mode >= VB_MED, 

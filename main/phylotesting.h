@@ -234,9 +234,9 @@ void evaluateTrees(Params &params, IQTree *tree);
     @param seq_type (OUT) sequence type, SEQ_UNKNOWN if is not determined
     @return 1 for parametric model, 2 for empirical model
 */
-int getSeqType(const char *model_name, SeqType &seq_type);
+int detectSeqType(const char *model_name, SeqType &seq_type);
 
-string getSeqType(string model_name);
+string detectSeqTypeName(string model_name);
 
 
 #endif /* PHYLOTESTING_H_ */

@@ -464,9 +464,9 @@ void IQTree::createPLLPartition(Params &params, ostream &pllPartitionFileHandle)
                 if ((*it)->aln->seq_type == SEQ_DNA) {
                     pllPartitionFileHandle << "DNA";
                 } else if ((*it)->aln->seq_type == SEQ_PROTEIN) {
-                    if (siqtree->part_info[i-1].model_name != "" && siqtree->part_info[i-1].model_name.substr(0, 4) != "TEST" && siqtree->part_info[i-1].model_name.substr(0, 2) != "MF") {
-                        string modelStr = siqtree->part_info[i - 1].model_name.
-                                substr(0, siqtree->part_info[i - 1].model_name.find_first_of("+{"));
+                    if ((*it)->aln->model_name != "" && (*it)->aln->model_name.substr(0, 4) != "TEST" && (*it)->aln->model_name.substr(0, 2) != "MF") {
+                        string modelStr = (*it)->aln->model_name.
+                                substr(0, (*it)->aln->model_name.find_first_of("+{"));
                         if (modelStr == "LG4")
                             modelStr = "LG4M";
                         bool name_ok = false;

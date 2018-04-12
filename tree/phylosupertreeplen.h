@@ -42,8 +42,8 @@ public:
 		constructors
 	*/
 	PhyloSuperTreePlen();
-	PhyloSuperTreePlen(Params &params);
-    PhyloSuperTreePlen(SuperAlignment *alignment);
+//    PhyloSuperTreePlen(Params &params);
+    PhyloSuperTreePlen(SuperAlignment *alignment, int partition_type);
 	PhyloSuperTreePlen(SuperAlignment *alignment, PhyloSuperTree *super_tree);
 
 	~PhyloSuperTreePlen();

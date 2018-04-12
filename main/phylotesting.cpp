@@ -194,7 +194,7 @@ bool ModelCheckpoint::getOrderedModels(PhyloTree *tree, vector<ModelInfo> &order
         PhyloSuperTree *stree = (PhyloSuperTree*)tree;
         ordered_models.clear();
         for (int part = 0; part != stree->size(); part++) {
-            startStruct(stree->part_info[part].name);
+            startStruct(stree->at(part)->aln->name);
             ModelInfo info;
             if (!getBestModel(info.name)) return false;
             info.restoreCheckpoint(this);
@@ -264,7 +264,7 @@ void appendCString(const char **cvec, int n, StrVector &strvec, bool touppercase
 }
 
 
-int getSeqType(const char *model_name, SeqType &seq_type) {
+int detectSeqType(const char *model_name, SeqType &seq_type) {
     bool empirical_model = false;
     int i;
     string model_str = model_name;
@@ -309,9 +309,9 @@ int getSeqType(const char *model_name, SeqType &seq_type) {
     return (empirical_model) ? 2 : 1;
 }
 
-string getSeqType(string model_name) {
+string detectSeqTypeName(string model_name) {
     SeqType seq_type;
-    getSeqType(model_name.c_str(), seq_type);
+    detectSeqType(model_name.c_str(), seq_type);
     switch (seq_type) {
     case SEQ_BINARY: return "BIN"; break;
     case SEQ_MORPH: return "MORPH"; break;
@@ -470,7 +470,7 @@ void printSiteLhCategory(const char*filename, PhyloTree *tree, SiteLoglType wsl)
             << "#   tab=read.table('" <<  filename << "',header=TRUE,fill=TRUE)" << endl
             << "# Columns are tab-separated with following meaning:" << endl;
         if (tree->isSuperTree()) {
-            out << "#   Part:   Partition ID (1=" << ((PhyloSuperTree*)tree)->part_info[0].name << ", etc)" << endl
+            out << "#   Part:   Partition ID (1=" << ((PhyloSuperTree*)tree)->at(0)->aln->name << ", etc)" << endl
                 << "#   Site:   Site ID within partition (starting from 1 for each partition)" << endl;
         } else
             out << "#   Site:   Alignment site ID" << endl;
@@ -558,7 +558,7 @@ void printAncestralSequences(const char *out_prefix, PhyloTree *tree, AncestralS
             << "#   Node:  Node name in the tree" << endl;
         if (tree->isSuperTree()) {
             PhyloSuperTree *stree = (PhyloSuperTree*)tree;
-            out << "#   Part:  Partition ID (1=" << stree->part_info[0].name << ", etc)" << endl
+            out << "#   Part:  Partition ID (1=" << stree->at(0)->aln->name << ", etc)" << endl
                 << "#   Site:  Site ID within partition (starting from 1 for each partition)" << endl;
         } else
             out << "#   Site:  Alignment site ID" << endl;
@@ -1004,7 +1004,7 @@ int getModelList(Params &params, Alignment *aln, StrVector &models, bool separat
         for (j = 0; j < orig_model_names.size(); j++) {
             if (aln->seq_type == SEQ_CODON) {
                 SeqType seq_type;
-                int model_type = getSeqType(orig_model_names[j].c_str(), seq_type);
+                int model_type = detectSeqType(orig_model_names[j].c_str(), seq_type);
                 for (i = 0; i < freq_names.size(); i++) {
                     // disallow MG+F
                     if (freq_names[i] == "+F" && orig_model_names[j].find("MG") != string::npos)
@@ -1158,34 +1158,32 @@ void mergePartitions(PhyloSuperTree* super_tree, vector<set<int> > &gene_sets, S
 	SuperAlignment *super_aln = (SuperAlignment*)super_tree->aln;
 	vector<PartitionInfo> part_info;
 	vector<PhyloTree*> tree_vec;
+    SuperAlignment *new_super_aln = new SuperAlignment();
 	for (it = gene_sets.begin(); it != gene_sets.end(); it++) {
+        Alignment *aln = super_aln->concatenateAlignments(*it);
 		PartitionInfo info;
-		info.name = "";
-		info.position_spec = "";
-		info.aln_file = "";
-		info.sequence_type = "";
-		info.model_name = model_names[it-gene_sets.begin()];
+		aln->model_name = model_names[it-gene_sets.begin()];
         info.part_rate = 1.0; // BIG FIX: make -spp works with -m TESTMERGE now!
         info.evalNNIs = 0;
 		for (set<int>::iterator i = it->begin(); i != it->end(); i++) {
 			if (i != it->begin()) {
-				info.name += "+";
-				info.position_spec += ", ";
+				aln->name += "+";
+				aln->position_spec += ", ";
 			}
-			info.name += super_tree->part_info[*i].name;
-			info.position_spec += super_tree->part_info[*i].position_spec;
-			if (!super_tree->part_info[*i].aln_file.empty()) {
-                if (info.aln_file.empty())
-                    info.aln_file = super_tree->part_info[*i].aln_file;
-                else if (info.aln_file != super_tree->part_info[*i].aln_file) {
-                    info.aln_file = "__NA__";
+			aln->name += super_aln->partitions[*i]->name;
+			aln->position_spec += super_aln->partitions[*i]->position_spec;
+			if (!super_aln->partitions[*i]->aln_file.empty()) {
+                if (aln->aln_file.empty())
+                    aln->aln_file = super_aln->partitions[*i]->aln_file;
+                else if (aln->aln_file != super_aln->partitions[*i]->aln_file) {
+                    aln->aln_file = "__NA__";
                 }
 			}
-			if (!super_tree->part_info[*i].sequence_type.empty()) {
-                if (info.sequence_type.empty())
-                    info.sequence_type = super_tree->part_info[*i].sequence_type;
-                else if (info.sequence_type != super_tree->part_info[*i].sequence_type) {
-                    info.sequence_type = "__NA__";
+			if (!super_aln->partitions[*i]->sequence_type.empty()) {
+                if (aln->sequence_type.empty())
+                    aln->sequence_type = super_aln->partitions[*i]->sequence_type;
+                else if (aln->sequence_type != super_aln->partitions[*i]->sequence_type) {
+                    aln->sequence_type = "__NA__";
                 }
 			}
 		}
@@ -1193,13 +1191,21 @@ void mergePartitions(PhyloSuperTree* super_tree, vector<set<int> > &gene_sets, S
 		info.nniMoves[0].ptnlh = NULL;
 		info.nniMoves[1].ptnlh = NULL;
 		part_info.push_back(info);
-		Alignment *aln = super_aln->concatenateAlignments(*it);
 		PhyloTree *tree = super_tree->extractSubtree(*it);
         tree->setParams(super_tree->params);
 		tree->setAlignment(aln);
 		tree_vec.push_back(tree);
+        new_super_aln->partitions.push_back(aln);
 	}
 
+    // BUG FIX 2016-11-29: when merging partitions with -m TESTMERGE, sequence order is changed
+    // get the taxa names from existing tree
+    StrVector seq_names;
+    if (super_tree->root) {
+        super_tree->getTaxaName(seq_names);
+    }
+    new_super_aln->init(&seq_names);
+    
 	for (PhyloSuperTree::reverse_iterator tit = super_tree->rbegin(); tit != super_tree->rend(); tit++)
 		delete (*tit);
 	super_tree->clear();
@@ -1207,8 +1213,8 @@ void mergePartitions(PhyloSuperTree* super_tree, vector<set<int> > &gene_sets, S
 	super_tree->part_info = part_info;
 
 	delete super_tree->aln;
-	super_tree->aln = new SuperAlignment(super_tree);
-    super_tree->setAlignment(super_tree->aln);
+//    super_tree->aln = new SuperAlignment(super_tree);
+    super_tree->setAlignment(new_super_aln);
 }
 
 void printModelFile(ostream &fmodel, Params &params, PhyloTree *tree, ModelInfo &info, string &set_name) {
@@ -1280,11 +1286,11 @@ string testOneModel(string &model_name, Params &params, Alignment *in_aln,
         if (brlen_type == BRLEN_OPTIMIZE)
             iqtree = new PhyloSuperTree(saln);
         else
-            iqtree = new PhyloSuperTreePlen(saln);
+            iqtree = new PhyloSuperTreePlen(saln, brlen_type);
         StrVector model_names;
         convert_string_vec(model_name.c_str(), model_names);
         for (int part = 0; part != model_names.size(); part++)
-            ((PhyloSuperTree*)iqtree)->part_info[part].model_name = model_names[part];
+            saln->partitions[part]->model_name = model_names[part];
     } else if (posRateHeterotachy(model_name) != string::npos)
         iqtree = new PhyloTreeMixlen(in_aln, 0);
     else
@@ -1582,7 +1588,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
             in_tree->readTreeString(concat_tree);
             int part = 0;
             for (auto it = in_tree->begin(); it != in_tree->end(); it++, part++) {
-                model_info.startStruct(in_tree->part_info[part].name);
+                model_info.startStruct(in_tree->at(part)->aln->name);
                 (*it)->saveCheckpoint();
                 model_info.endStruct();
             }
@@ -1618,7 +1624,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
         quicksort(dist, 0, in_tree->size()-1, distID);
         if (verbose_mode >= VB_MED) {
             for (i = 0; i < in_tree->size(); i++) {
-                cout << i+1 << "\t" << in_tree->part_info[distID[i].first].name << endl;
+                cout << i+1 << "\t" << super_aln->partitions[distID[i].first]->name << endl;
             }
         }
     }
@@ -1634,18 +1640,19 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
         PhyloTree *this_tree = in_tree->at(i);
 		// scan through models for this partition, assuming the information occurs consecutively
 		ModelCheckpoint part_model_info;
-		extractModelInfo(in_tree->part_info[i].name, model_info, part_model_info);
+		extractModelInfo(in_tree->at(i)->aln->name, model_info, part_model_info);
 		// do the computation
         string part_model_name;
         if (params.model_name.empty())
-            part_model_name = in_tree->part_info[i].model_name;
+            part_model_name = in_tree->at(i)->aln->model_name;
         ModelInfo best_model;
-		best_model.name = testModel(params, this_tree, part_model_info, models_block, (parallel_over_partitions ? 1 : num_threads), params.partition_type, in_tree->part_info[i].name, false, part_model_name);
+		best_model.name = testModel(params, this_tree, part_model_info, models_block,
+            (parallel_over_partitions ? 1 : num_threads), params.partition_type, in_tree->at(i)->aln->name, false, part_model_name);
 
         ASSERT(best_model.restoreCheckpoint(&part_model_info));
 
 		double score = best_model.computeICScore(this_tree->getAlnNSite());
-		in_tree->part_info[i].model_name = best_model.name;
+		in_tree->at(i)->aln->model_name = best_model.name;
 		lhsum += (lhvec[i] = best_model.logl);
 		dfsum += (dfvec[i] = best_model.df);
         lenvec[i] = best_model.tree_len;
@@ -1660,14 +1667,14 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
             cout.width(12);
             cout << left << best_model.name << " ";
             cout.width(11);
-            cout << score << " " << in_tree->part_info[i].name;
+            cout << score << " " << in_tree->at(i)->aln->name;
             if (num_model >= 10) {
                 double remain_time = (total_num_model-num_model)*(getRealTime()-start_time)/num_model;
                 cout << "\t" << convert_time(getRealTime()-start_time) << " (" 
                     << convert_time(remain_time) << " left)";
             }
             cout << endl;
-            replaceModelInfo(in_tree->part_info[i].name, model_info, part_model_info);
+            replaceModelInfo(in_tree->at(i)->aln->name, model_info, part_model_info);
             model_info.dump();
         }
     }
@@ -1676,8 +1683,8 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
 	cout << "Full partition model " << criterionName(params.model_test_criterion) << " score: " << inf_score << " (LnL: " << lhsum << "  df:" << dfsum << ")" << endl;
 
 	if (params.model_name.find("LINK") == string::npos && params.model_name.find("MERGE") == string::npos) {
-		in_tree->printBestPartition((string(params.out_prefix) + ".best_scheme.nex").c_str());
-		in_tree->printBestPartitionRaxml((string(params.out_prefix) + ".best_scheme").c_str());
+		super_aln->printBestPartition((string(params.out_prefix) + ".best_scheme.nex").c_str());
+		super_aln->printBestPartitionRaxml((string(params.out_prefix) + ".best_scheme").c_str());
         delete [] distID;
         delete [] dist;
         model_info.dump(true);
@@ -1699,8 +1706,8 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
 	greedy_model_trees.resize(in_tree->size());
 	for (i = 0; i < gene_sets.size(); i++) {
 		gene_sets[i].insert(i);
-		model_names[i] = in_tree->part_info[i].model_name;
-		greedy_model_trees[i] = in_tree->part_info[i].name;
+		model_names[i] = in_tree->at(i)->aln->model_name;
+		greedy_model_trees[i] = in_tree->at(i)->aln->name;
 	}
 	cout << "Merging models to increase model fit (about " << total_num_model << " total partition schemes)..." << endl;
 
@@ -1756,7 +1763,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
             for (auto it = cur_pair.merged_set.begin(); it != cur_pair.merged_set.end(); it++) {
                 if (it != cur_pair.merged_set.begin())
                     cur_pair.set_name += "+";
-                cur_pair.set_name += in_tree->part_info[*it].name;
+                cur_pair.set_name += in_tree->at(*it)->aln->name;
             }
             ModelInfo best_model;
             bool done_before = false;
@@ -1906,7 +1913,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
 			cout << ", ";
 		cout << model_names[i] << ":";
 		for (auto j = gene_sets[i].begin(); j != gene_sets[i].end(); j++) {
-			cout << " " << in_tree->part_info[*j].name;
+			cout << " " << super_aln->partitions[*j]->name;
 		}
 	}
 	cout << ";" << endl;
@@ -1916,8 +1923,8 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
     delete [] dist;
     if (gene_sets.size() < in_tree->size())
         mergePartitions(in_tree, gene_sets, model_names);
-	in_tree->printBestPartition((string(params.out_prefix) + ".best_scheme.nex").c_str());
-	in_tree->printBestPartitionRaxml((string(params.out_prefix) + ".best_scheme").c_str());
+	((SuperAlignment*)in_tree->aln)->printBestPartition((string(params.out_prefix) + ".best_scheme.nex").c_str());
+	((SuperAlignment*)in_tree->aln)->printBestPartitionRaxml((string(params.out_prefix) + ".best_scheme").c_str());
     model_info.dump(true);
     if (inf_score > concat_info.computeICScore(ssize) + 1.0) {
         cout << endl;
@@ -2050,9 +2057,9 @@ string testModel(Params &params, PhyloTree* in_tree, ModelCheckpoint &model_info
 //        stree->linkTrees();
         stree->mapTrees();
 		string res_models = "";
-		for (vector<PartitionInfo>::iterator it = stree->part_info.begin(); it != stree->part_info.end(); it++) {
-			if (it != stree->part_info.begin()) res_models += ",";
-			res_models += (*it).model_name;
+		for (auto it = stree->begin(); it != stree->end(); it++) {
+			if (it != stree->begin()) res_models += ",";
+			res_models += (*it)->aln->model_name;
 		}
 		return res_models;
 	}
