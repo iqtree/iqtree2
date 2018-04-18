@@ -175,7 +175,7 @@ void SuperAlignment::readPartition(Params &params) {
 //            info.nniMoves[1].ptnlh = NULL;
 //            info.cur_ptnlh = NULL;
 //            part_info.push_back(info);
-            Alignment *part_aln = new Alignment((char*)info.aln_file.c_str(), (char*)info.sequence_type.c_str(), params.intype);
+            Alignment *part_aln = new Alignment((char*)info.aln_file.c_str(), (char*)info.sequence_type.c_str(), params.intype, info.model_name);
             if (!info.position_spec.empty()) {
                 Alignment *new_aln = new Alignment();
                 new_aln->extractSites(part_aln, info.position_spec.c_str());
@@ -217,7 +217,7 @@ void SuperAlignment::readPartitionRaxml(Params &params) {
         if (!params.aln_file)
             outError("Please supply an alignment with -s option");
         
-        input_aln = new Alignment(params.aln_file, params.sequence_type, params.intype);
+        input_aln = new Alignment(params.aln_file, params.sequence_type, params.intype, params.model_name);
         
         cout << endl << "Partition file is not in NEXUS format, assuming RAxML-style partition file..." << endl;
         
@@ -343,7 +343,7 @@ void SuperAlignment::readPartitionNexus(Params &params) {
     
     Alignment *input_aln = NULL;
     if (params.aln_file) {
-        input_aln = new Alignment(params.aln_file, params.sequence_type, params.intype);
+        input_aln = new Alignment(params.aln_file, params.sequence_type, params.intype, params.model_name);
     }
     
     bool empty_partition = true;
@@ -388,7 +388,7 @@ void SuperAlignment::readPartitionNexus(Params &params) {
 //            part_info.push_back(info);
             Alignment *part_aln;
             if ((*it)->aln_file != "") {
-                part_aln = new Alignment((char*)(*it)->aln_file.c_str(), (char*)(*it)->sequence_type.c_str(), params.intype);
+                part_aln = new Alignment((char*)(*it)->aln_file.c_str(), (char*)(*it)->sequence_type.c_str(), params.intype, (*it)->model_name);
             } else {
                 part_aln = input_aln;
             }
@@ -605,6 +605,11 @@ void SuperAlignment::linkSubAlignment(int part) {
 void SuperAlignment::extractSubAlignment(Alignment *aln, IntVector &seq_id, int min_true_char, int min_taxa, IntVector *kept_partitions) {
 	ASSERT(aln->isSuperAlignment());
 	SuperAlignment *saln = (SuperAlignment*)aln;
+    name = aln->name;
+    model_name = aln->model_name;
+    sequence_type = aln->sequence_type;
+    position_spec = aln->position_spec;
+    aln_file = aln->aln_file;
 
     int i;
     IntVector::iterator it;
@@ -799,6 +804,11 @@ void SuperAlignment::createBootstrapAlignment(Alignment *aln, IntVector* pattern
 	Alignment::copyAlignment(aln);
 	SuperAlignment *super_aln = (SuperAlignment*) aln;
 	ASSERT(partitions.empty());
+    name = aln->name;
+    model_name = aln->model_name;
+    sequence_type = aln->sequence_type;
+    position_spec = aln->position_spec;
+    aln_file = aln->aln_file;
 
 	if (spec && strncmp(spec, "GENE", 4) == 0) {
 		// resampling whole genes

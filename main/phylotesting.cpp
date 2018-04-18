@@ -40,6 +40,7 @@
 
 #include "phyloanalysis.h"
 #include "gsl/mygsl.h"
+#include "utils/MPIHelper.h"
 //#include "vectorclass/vectorclass.h"
 
 
@@ -838,6 +839,121 @@ bool checkModelFile(string model_file, bool is_partitioned, ModelCheckpoint &inf
 */
 
 /**
+ testing the best-fit model
+ return in params.freq_type and params.rate_type
+ @param set_name for partitioned analysis
+ @param in_tree phylogenetic tree
+ @param model_info (IN/OUT) information for all models considered
+ @param set_name for partition model selection
+ @param print_mem_usage true to print RAM memory used (default: false)
+ @return name of best-fit-model
+ */
+string testModel(Params &params, PhyloTree* in_tree, ModelCheckpoint &model_info,
+        ModelsBlock *models_block, int num_threads, int brlen_type,
+        string set_name = "", bool print_mem_usage = false, string in_model_name = "");
+
+
+void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info)
+{
+    ModelsBlock *models_block = readModelsDefinition(params);
+    
+    //    iqtree.setCurScore(-DBL_MAX);
+    bool test_only = (params.model_name.find("ONLY") != string::npos) ||
+        (params.model_name.substr(0,2) == "MF" && params.model_name.substr(0,3) != "MFP");
+    
+    bool empty_model_found = params.model_name.empty() && !iqtree.isSuperTree();
+    
+    if (params.model_name.empty() && iqtree.isSuperTree()) {
+        // check whether any partition has empty model_name
+        PhyloSuperTree *stree = (PhyloSuperTree*)&iqtree;
+        for (auto i = stree->begin(); i != stree->end(); i++)
+            if ((*i)->aln->model_name.empty()) {
+                empty_model_found = true;
+                break;
+            }
+    }
+
+    // Model already specifed, nothing to do here
+    if (!empty_model_found && params.model_name.substr(0, 4) != "TEST" && params.model_name.substr(0, 2) != "MF")
+        return;
+    if (MPIHelper::getInstance().getNumProcesses() > 1)
+        outError("Please use only 1 MPI process! We are currently working on the MPI parallelization of model selection.");
+    // TODO: check if necessary
+    //        if (iqtree.isSuperTree())
+    //            ((PhyloSuperTree*) &iqtree)->mapTrees();
+    double cpu_time = getCPUTime();
+    double real_time = getRealTime();
+    model_info.setFileName((string)params.out_prefix + ".model.gz");
+    model_info.setDumpInterval(params.checkpoint_dump_interval);
+    
+    bool ok_model_file = false;
+    if (!params.print_site_lh && !params.model_test_again) {
+        ok_model_file = model_info.load();
+    }
+    
+    cout << endl;
+    
+    ok_model_file &= model_info.size() > 0;
+    if (ok_model_file)
+        cout << "NOTE: Restoring information from model checkpoint file " << model_info.getFileName() << endl;
+    
+    
+    Checkpoint *orig_checkpoint = iqtree.getCheckpoint();
+    iqtree.setCheckpoint(&model_info);
+    iqtree.restoreCheckpoint();
+    
+    int partition_type;
+    if (CKP_RESTORE2((&model_info), partition_type)) {
+        if (partition_type != params.partition_type)
+            outError("Mismatch partition type between checkpoint and partition file command option");
+    } else {
+        partition_type = params.partition_type;
+        CKP_SAVE2((&model_info), partition_type);
+    }
+    
+    // compute initial tree
+    iqtree.computeInitialTree(params.SSE);
+    
+    if (iqtree.isSuperTree()) {
+        PhyloSuperTree *stree = (PhyloSuperTree*)&iqtree;
+        int part = 0;
+        for (auto it = stree->begin(); it != stree->end(); it++, part++) {
+            model_info.startStruct((*it)->aln->name);
+            (*it)->saveCheckpoint();
+            model_info.endStruct();
+        }
+    } else {
+        iqtree.saveCheckpoint();
+    }
+    
+    // also save initial tree to the original .ckp.gz checkpoint
+    //        string initTree = iqtree.getTreeString();
+    //        CKP_SAVE(initTree);
+    //        iqtree.saveCheckpoint();
+    //        checkpoint->dump(true);
+    
+    //params.model_name =
+    iqtree.aln->model_name = testModel(params, &iqtree, model_info, models_block, params.num_threads, BRLEN_OPTIMIZE, "", true);
+    
+    iqtree.setCheckpoint(orig_checkpoint);
+    
+    params.startCPUTime = cpu_time;
+    params.start_real_time = real_time;
+    cpu_time = getCPUTime() - cpu_time;
+    real_time = getRealTime() - real_time;
+    cout << endl;
+    cout << "All model information printed to " << model_info.getFileName() << endl;
+    cout << "CPU time for ModelFinder: " << cpu_time << " seconds (" << convert_time(cpu_time) << ")" << endl;
+    cout << "Wall-clock time for ModelFinder: " << real_time << " seconds (" << convert_time(real_time) << ")" << endl;
+    
+    //        alignment = iqtree.aln;
+    if (test_only) {
+        params.min_iterations = 0;
+    }
+}
+
+
+/**
  * get the list of model
  * @param models (OUT) vectors of model names
  * @return maximum number of rate categories
@@ -1317,7 +1433,6 @@ string testOneModel(string &model_name, Params &params, Alignment *in_aln,
     if (params.model_test_and_tree) {
         //--- PERFORM FULL TREE SEARCH PER MODEL ----//
 
-        string original_model = params.model_name;
         // BQM 2017-03-29: disable bootstrap
         int orig_num_bootstrap_samples = params.num_bootstrap_samples;
         int orig_gbo_replicates = params.gbo_replicates;
@@ -1327,7 +1442,9 @@ string testOneModel(string &model_name, Params &params, Alignment *in_aln,
         if (params.stop_condition == SC_BOOTSTRAP_CORRELATION)
             params.stop_condition = SC_UNSUCCESS_ITERATION;
 
-        params.model_name = model_name;
+//        params.model_name = model_name;
+        iqtree->aln->model_name = model_name;
+        
 //        char *orig_user_tree = params.user_file;
 //        string new_user_tree = (string)params.out_prefix+".treefile";
 //        if (params.model_test_and_tree == 1 && model>0 && fileExists(new_user_tree)) {
@@ -1362,14 +1479,12 @@ string testOneModel(string &model_name, Params &params, Alignment *in_aln,
             iqtree->warnNumThreads();
 #endif
 
-        runTreeReconstruction(params, original_model, iqtree, model_info);
+        runTreeReconstruction(params, iqtree);
         info.logl = iqtree->computeLikelihood();
         info.tree_len = iqtree->treeLength();
         info.tree = iqtree->getTreeString();
 
         // restore original parameters
-        params.model_name = original_model;
-//        params.user_file = orig_user_tree;
         // 2017-03-29: restore bootstrap replicates
         params.num_bootstrap_samples = orig_num_bootstrap_samples;
         params.gbo_replicates = orig_gbo_replicates;

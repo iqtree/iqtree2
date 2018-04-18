@@ -537,7 +537,7 @@ void IQTree::createPLLPartition(Params &params, ostream &pllPartitionFileHandle)
     }
 }
 
-void IQTree::computeInitialTree(string &dist_file, LikelihoodKernel kernel) {
+void IQTree::computeInitialTree(LikelihoodKernel kernel) {
     double start = getRealTime();
     string initTree;
     string out_file = params->out_prefix;
@@ -997,6 +997,9 @@ void IQTree::initializePLL(Params &params) {
     }
 }
 
+bool IQTree::isInitializedPLL() {
+    return pllInst != NULL;
+}
 
 void IQTree::initializeModel(Params &params, string &model_name, ModelsBlock *models_block) {
     try {
@@ -2778,7 +2781,7 @@ void IQTree::refineBootTrees() {
 			}
         } else {
             // allocate heterotachy tree if neccessary
-            int pos = posRateHeterotachy(params->model_name);
+            int pos = posRateHeterotachy(aln->model_name);
             
             if (params->num_mixlen > 1) {
                 boot_tree = new PhyloTreeMixlen(bootstrap_alignment, params->num_mixlen);

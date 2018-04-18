@@ -135,6 +135,8 @@ public:
 
     void initializePLL(Params &params);
 
+    bool isInitializedPLL();
+    
     virtual void initializeModel(Params &params, string &model_name, ModelsBlock *models_block);
 
     /**
@@ -719,9 +721,8 @@ public:
 
     /**
      * Generate the initial tree (usually used for model parameter estimation)
-     * @param dist_file only needed for BIONJ tree
      */
-    void computeInitialTree(string &dist_file, LikelihoodKernel kernel);
+    void computeInitialTree(LikelihoodKernel kernel);
 
     /**
      *  @brief: optimize model parameters on the current tree
