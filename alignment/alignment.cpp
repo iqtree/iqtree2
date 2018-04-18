@@ -394,8 +394,9 @@ void Alignment::checkGappySeq(bool force_error) {
     }
 }
 
-Alignment::Alignment(char *filename, char *sequence_type, InputType &intype) : vector<Pattern>() {
+Alignment::Alignment(char *filename, char *sequence_type, InputType &intype, string model) : vector<Pattern>() {
     name = "Noname";
+    this->model_name = model;
     if (sequence_type)
         this->sequence_type = sequence_type;
     aln_file = filename;
@@ -2640,6 +2641,11 @@ void Alignment::extractSubAlignment(Alignment *aln, IntVector &seq_id, int min_t
         ASSERT(*it >= 0 && *it < aln->getNSeq());
         seq_names.push_back(aln->getSeqName(*it));
     }
+    name = aln->name;
+    model_name = aln->model_name;
+    sequence_type = aln->sequence_type;
+    position_spec = aln->position_spec;
+    aln_file = aln->aln_file;
     num_states = aln->num_states;
     seq_type = aln->seq_type;
     STATE_UNKNOWN = aln->STATE_UNKNOWN;
@@ -2688,6 +2694,11 @@ void Alignment::extractPatterns(Alignment *aln, IntVector &ptn_id) {
     for (i = 0; i < aln->getNSeq(); i++) {
         seq_names.push_back(aln->getSeqName(i));
     }
+    name = aln->name;
+    model_name = aln->model_name;
+    sequence_type = aln->sequence_type;
+    position_spec = aln->position_spec;
+    aln_file = aln->aln_file;
     num_states = aln->num_states;
     seq_type = aln->seq_type;
     STATE_UNKNOWN = aln->STATE_UNKNOWN;
@@ -2724,6 +2735,11 @@ void Alignment::extractPatternFreqs(Alignment *aln, IntVector &ptn_freq) {
     for (i = 0; i < aln->getNSeq(); i++) {
         seq_names.push_back(aln->getSeqName(i));
     }
+    name = aln->name;
+    model_name = aln->model_name;
+    sequence_type = aln->sequence_type;
+    position_spec = aln->position_spec;
+    aln_file = aln->aln_file;
     num_states = aln->num_states;
     seq_type = aln->seq_type;
     genetic_code = aln->genetic_code;
@@ -2760,6 +2776,11 @@ void Alignment::extractSites(Alignment *aln, IntVector &site_id) {
     for (i = 0; i < aln->getNSeq(); i++) {
         seq_names.push_back(aln->getSeqName(i));
     }
+    name = aln->name;
+    model_name = aln->model_name;
+    sequence_type = aln->sequence_type;
+    position_spec = aln->position_spec;
+    aln_file = aln->aln_file;
     num_states = aln->num_states;
     seq_type = aln->seq_type;
     STATE_UNKNOWN = aln->STATE_UNKNOWN;
@@ -2803,6 +2824,11 @@ void Alignment::convertToCodonOrAA(Alignment *aln, char *gene_code_id, bool nt2a
     for (i = 0; i < aln->getNSeq(); i++) {
         seq_names.push_back(aln->getSeqName(i));
     }
+    name = aln->name;
+    model_name = aln->model_name;
+    sequence_type = aln->sequence_type;
+    position_spec = aln->position_spec;
+    aln_file = aln->aln_file;
 //    num_states = aln->num_states;
     seq_type = SEQ_CODON;
     initCodon(gene_code_id);
@@ -2975,6 +3001,11 @@ void Alignment::extractSites(Alignment *aln, const char* spec) {
 
 void Alignment::createBootstrapAlignment(Alignment *aln, IntVector* pattern_freq, const char *spec) {
     if (aln->isSuperAlignment()) outError("Internal error: ", __func__);
+    name = aln->name;
+    model_name = aln->model_name;
+    sequence_type = aln->sequence_type;
+    position_spec = aln->position_spec;
+    aln_file = aln->aln_file;
     int site, nsite = aln->getNSite();
     seq_names.insert(seq_names.begin(), aln->seq_names.begin(), aln->seq_names.end());
     num_states = aln->num_states;
@@ -3239,6 +3270,11 @@ void Alignment::createBootstrapAlignment(int *pattern_freq, const char *spec, in
 void Alignment::buildFromPatternFreq(Alignment & aln, IntVector new_pattern_freqs){
 	int nsite = aln.getNSite();
     seq_names.insert(seq_names.begin(), aln.seq_names.begin(), aln.seq_names.end());
+    name = aln.name;
+    model_name = aln.model_name;
+    sequence_type = aln.sequence_type;
+    position_spec = aln.position_spec;
+    aln_file = aln.aln_file;
     num_states = aln.num_states;
     seq_type = aln.seq_type;
 
@@ -3278,6 +3314,11 @@ void Alignment::createGapMaskedAlignment(Alignment *masked_aln, Alignment *aln) 
 
     int site, nsite = aln->getNSite(), nseq = aln->getNSeq();
     seq_names.insert(seq_names.begin(), aln->seq_names.begin(), aln->seq_names.end());
+    name = aln->name;
+    model_name = aln->model_name;
+    sequence_type = aln->sequence_type;
+    position_spec = aln->position_spec;
+    aln_file = aln->aln_file;
     num_states = aln->num_states;
     seq_type = aln->seq_type;
     genetic_code = aln->genetic_code;
@@ -3347,6 +3388,11 @@ void Alignment::concatenateAlignment(Alignment *aln) {
 void Alignment::copyAlignment(Alignment *aln) {
     int site, nsite = aln->getNSite();
     seq_names.insert(seq_names.begin(), aln->seq_names.begin(), aln->seq_names.end());
+    name = aln->name;
+    model_name = aln->model_name;
+    sequence_type = aln->sequence_type;
+    position_spec = aln->position_spec;
+    aln_file = aln->aln_file;
     num_states = aln->num_states;
     seq_type = aln->seq_type;
     genetic_code = aln->genetic_code;

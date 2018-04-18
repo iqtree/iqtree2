@@ -1635,7 +1635,7 @@ void compare(Params &params){
 /**MINH ANH: to compute 'guided bootstrap' alignment*/
 void guidedBootstrap(Params &params)
 {
-	MaAlignment inputAlign(params.aln_file,params.sequence_type, params.intype);
+	MaAlignment inputAlign(params.aln_file,params.sequence_type, params.intype, params.model_name);
 	inputAlign.readLogLL(params.siteLL_file);
 
 	string outFre_name = params.out_prefix;
@@ -1673,8 +1673,8 @@ void guidedBootstrap(Params &params)
 /**MINH ANH: to compute the probability of an alignment given the multinomial distribution of patterns frequencies derived from a reference alignment*/
 void computeMulProb(Params &params)
 {
-	Alignment refAlign(params.second_align, params.sequence_type, params.intype);
-	Alignment inputAlign(params.aln_file, params.sequence_type, params.intype);
+	Alignment refAlign(params.second_align, params.sequence_type, params.intype, params.model_name);
+	Alignment inputAlign(params.aln_file, params.sequence_type, params.intype, params.model_name);
 	double prob;
 	inputAlign.multinomialProb(refAlign,prob);
 	//Printing

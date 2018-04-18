@@ -81,7 +81,7 @@ public:
             @param sequence_type type of the sequence, either "BIN", "DNA", "AA", or NULL
             @param intype (OUT) input format of the file
      */
-    Alignment(char *filename, char *sequence_type, InputType &intype);
+    Alignment(char *filename, char *sequence_type, InputType &intype, string model);
 
     /**
             destructor

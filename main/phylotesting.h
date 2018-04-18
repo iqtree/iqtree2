@@ -146,6 +146,14 @@ string criterionName(ModelTestCriterion mtc);
 bool checkModelFile(string model_file, bool is_partitioned, ModelCheckpoint &infos);
 
 /**
+ perform ModelFinder to find the best-fit model
+ @param params program parameters
+ @param iqtree phylogenetic tree
+ @param model_info (IN/OUT) information for all models considered
+ */
+void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info);
+
+/**
  testing the best-fit model
  return in params.freq_type and params.rate_type
  @param set_name for partitioned analysis
@@ -155,9 +163,9 @@ bool checkModelFile(string model_file, bool is_partitioned, ModelCheckpoint &inf
  @param print_mem_usage true to print RAM memory used (default: false) 
  @return name of best-fit-model
  */
-string testModel(Params &params, PhyloTree* in_tree, ModelCheckpoint &model_info,
-		ModelsBlock *models_block, int num_threads, int brlen_type,
-        string set_name = "", bool print_mem_usage = false, string in_model_name = "");
+//string testModel(Params &params, PhyloTree* in_tree, ModelCheckpoint &model_info,
+//		ModelsBlock *models_block, int num_threads, int brlen_type,
+//        string set_name = "", bool print_mem_usage = false, string in_model_name = "");
 
 /**
  * print site log likelihoods to a fileExists

@@ -1789,6 +1789,9 @@ public:
      */
     double *var_matrix;
 
+    /** distance matrix file */
+    string dist_file;
+    
     /**
             TRUE if you want to optimize branch lengths by Newton-Raphson method
      */
