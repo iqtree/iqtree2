@@ -4506,7 +4506,10 @@ double PhyloTree::testOneBranch(double best_score, double *pattern_lh, int reps,
     int nptn = getAlnNPattern();
     pat_lh[1] = new double[nptn];
     pat_lh[2] = new double[nptn];
+    int tmp = save_all_trees;
+    save_all_trees = 0;
     computeNNIPatternLh(best_score, lh[1], pat_lh[1], lh[2], pat_lh[2], node1, node2);
+    save_all_trees = tmp;
     double aLRT;
     if (lh[1] > lh[2])
         aLRT = (lh[0] - lh[1]);
