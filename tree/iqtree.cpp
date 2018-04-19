@@ -85,6 +85,8 @@ void IQTree::init() {
     if (Params::getInstance().write_intermediate_trees)
         out_treels.open(treels_name.c_str());
     on_refine_btree = false;
+    contree_rfdist = -1;
+    boot_consense_logl = 0.0;
 
 }
 
@@ -115,7 +117,6 @@ void IQTree::saveUFBoot(Checkpoint *checkpoint) {
         checkpoint->endList();
     } else {
         CKP_SAVE(logl_cutoff);
-        CKP_SAVE(boot_consense_logl);
         int boot_splits_size = boot_splits.size();
         CKP_SAVE(boot_splits_size);
         checkpoint->startList(boot_samples.size());
@@ -147,6 +148,8 @@ void IQTree::saveCheckpoint() {
     }
     
     PhyloTree::saveCheckpoint();
+    CKP_SAVE(boot_consense_logl);
+    CKP_SAVE(contree_rfdist);
 }
 
 void IQTree::restoreUFBoot(Checkpoint *checkpoint) {
@@ -194,7 +197,6 @@ void IQTree::restoreCheckpoint() {
             ss >> boot_counts[id] >> boot_logl[id] >> boot_orig_logl[id] >> boot_trees[id];
         }
         checkpoint->endList();
-        CKP_RESTORE(boot_consense_logl);
         int boot_splits_size = 0;
         CKP_RESTORE(boot_splits_size);
         checkpoint->endStruct();
@@ -210,7 +212,8 @@ void IQTree::restoreCheckpoint() {
         }
     }
 
-
+    CKP_RESTORE(boot_consense_logl);
+    CKP_RESTORE(contree_rfdist);
 }
 
 void IQTree::initSettings(Params &params) {
