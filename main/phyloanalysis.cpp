@@ -1930,6 +1930,27 @@ void startTreeReconstruction(Params &params, IQTree* &iqtree, ModelCheckpoint &m
     runModelFinder(params, *iqtree, model_info);
 }
         
+/**
+ optimize branch lengths of consensus tree
+ */
+void optimizeConTree(Params &params, IQTree *tree) {
+    string contree_file = string(params.out_prefix) + ".contree";
+    
+    IntVector rfdist;
+    tree->computeRFDist(contree_file.c_str(), rfdist);
+    params.contree_rfdist = rfdist[0];
+    
+    tree->readTreeFile(contree_file);
+    
+    tree->initializeAllPartialLh();
+    tree->fixNegativeBranch(false);
+    
+    tree->boot_consense_logl = tree->optimizeAllBranches();
+    cout << "Log-likelihood of consensus tree: " << tree->boot_consense_logl << endl;
+    tree->setRootNode(params.root);
+    tree->insertTaxa(tree->removed_seqs, tree->twin_seqs);
+    tree->printTree(contree_file.c_str(), WT_BR_LEN | WT_BR_LEN_FIXED_WIDTH | WT_SORT_TAXA | WT_NEWLINE);
+}
 
 void runTreeReconstruction(Params &params, IQTree* &iqtree) {
 
@@ -2399,6 +2420,29 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
 
 	runApproximateBranchLengths(params, *iqtree);
 
+    if (params.gbo_replicates && params.online_bootstrap) {
+        if (params.print_ufboot_trees)
+            iqtree->writeUFBootTrees(params);
+        
+        cout << endl << "Computing " << ((params.jackknife_prop == 0.0) ? "bootstrap" : "jackknife") << " consensus tree..." << endl;
+        string splitsfile = params.out_prefix;
+        splitsfile += ".splits.nex";
+        double weight_threshold = (params.split_threshold<1) ? params.split_threshold : (params.gbo_replicates-1.0)/params.gbo_replicates;
+        weight_threshold *= 100.0;
+        computeConsensusTree(splitsfile.c_str(), 0, 1e6, -1,
+                             weight_threshold, NULL, params.out_prefix, NULL, &params);
+        // now optimize branch lengths of the consensus tree
+        string current_tree = iqtree->getTreeString();
+        optimizeConTree(params, iqtree);
+        // revert the best tree
+        iqtree->readTreeString(current_tree);
+    }
+    if (Params::getInstance().writeDistImdTrees) {
+        cout << endl;
+        cout << "Recomputing the log-likelihood of the intermediate trees ... " << endl;
+        iqtree->intermediateTrees.recomputeLoglOfAllTrees(*iqtree);
+    }
+
 }
 
 /**********************************************************
@@ -2434,8 +2478,12 @@ void runMultipleTreeReconstruction(Params &params, Alignment *alignment, IQTree 
     
     int orig_seed = params.ran_seed;
     int run;
-    
-    // do bootstrap analysis
+    int best_run = 0;
+    for (run = 0; run < runLnL.size(); run++)
+        if (runLnL[run] > runLnL[best_run])
+            best_run = run;
+
+    // do multiple tree reconstruction
     for (run = runLnL.size(); run < params.num_runs; run++) {
 
         tree->getCheckpoint()->startStruct("run" + convertIntToString(run+1));
@@ -2500,7 +2548,17 @@ void runMultipleTreeReconstruction(Params &params, Alignment *alignment, IQTree 
             stree->part_info =  ((PhyloSuperTree*)iqtree)->part_info;
         }
         runLnL.push_back(iqtree->getBestScore());
-        
+
+        if (MPIHelper::getInstance().isMaster()) {
+            if (params.num_bootstrap_samples > 0 && params.consensus_type == CT_CONSENSUS_TREE &&
+                (run == 0 || iqtree->getBestScore() > runLnL[best_run])) {
+                // 2017-12-08: optimize branch lengths of consensus tree
+                optimizeConTree(params, iqtree);
+            }
+        }
+        if (iqtree->getBestScore() > runLnL[best_run])
+            best_run = run;
+            
         if (params.num_runs == 1)
             reportPhyloAnalysis(params, *iqtree, *model_info);
         delete iqtree;
@@ -2518,10 +2576,6 @@ void runMultipleTreeReconstruction(Params &params, Alignment *alignment, IQTree 
     
     cout << endl << "---> SUMMARIZE RESULTS FROM " << runLnL.size() << " RUNS" << endl << endl;
     
-    int best_run = 0;
-    for (run = 1; run != runLnL.size(); run++)
-        if (runLnL[run] > runLnL[best_run])
-            best_run = run;
     cout << "Run " << best_run+1 <<  " gave best log-likelihood: " << runLnL[best_run] << endl;
 
     // initialize tree and model strucgture
@@ -2732,29 +2786,6 @@ void exhaustiveSearchGAMMAInvar(Params &params, IQTree &iqtree) {
 	cout << "Wall clock time used: " << getRealTime() - params.start_real_time << endl;
 }
 
-
-/** 
-    optimize branch lengths of consensus tree
-*/
-void optimizeConTree(Params &params, IQTree *tree) {
-    string contree_file = string(params.out_prefix) + ".contree";
-
-    IntVector rfdist;
-    tree->computeRFDist(contree_file.c_str(), rfdist);
-    params.contree_rfdist = rfdist[0];
-
-    tree->readTreeFile(contree_file);
-
-    tree->initializeAllPartialLh();
-    tree->fixNegativeBranch(false);
-
-    tree->boot_consense_logl = tree->optimizeAllBranches();
-    cout << "Log-likelihood of consensus tree: " << tree->boot_consense_logl << endl;
-    tree->setRootNode(params.root);
-    tree->insertTaxa(tree->removed_seqs, tree->twin_seqs);
-    tree->printTree(contree_file.c_str(), WT_BR_LEN | WT_BR_LEN_FIXED_WIDTH | WT_SORT_TAXA | WT_NEWLINE);
-}
-
 /**********************************************************
  * STANDARD NON-PARAMETRIC BOOTSTRAP
  ***********************************************************/
@@ -2958,15 +2989,13 @@ void runStandardBootstrap(Params &params, Alignment *alignment, IQTree *tree) {
         params.aLRT_test = saved_aLRT_test;
         params.aBayes_test = saved_aBayes_test;
 
-        startTreeReconstruction(params, tree, *model_info);
-        
         if (params.num_runs == 1)
             runTreeReconstruction(params, tree);
         else
             runMultipleTreeReconstruction(params, tree->aln, tree);
 
         if (MPIHelper::getInstance().isMaster()) {
-            if (params.consensus_type == CT_CONSENSUS_TREE) {
+            if (params.consensus_type == CT_CONSENSUS_TREE && params.num_runs == 1) {
                 // 2017-12-08: optimize branch lengths of consensus tree
                 optimizeConTree(params, tree);
             }
@@ -3293,30 +3322,7 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
             runMultipleTreeReconstruction(params, tree->aln, tree);
         
         if (MPIHelper::getInstance().isMaster()) {
-
-		if (params.gbo_replicates && params.online_bootstrap) {
-			if (params.print_ufboot_trees)
-				tree->writeUFBootTrees(params);
-
-			cout << endl << "Computing " << ((params.jackknife_prop == 0.0) ? "bootstrap" : "jackknife") << " consensus tree..." << endl;
-			string splitsfile = params.out_prefix;
-			splitsfile += ".splits.nex";
-            double weight_threshold = (params.split_threshold<1) ? params.split_threshold : (params.gbo_replicates-1.0)/params.gbo_replicates;
-            weight_threshold *= 100.0;
-			computeConsensusTree(splitsfile.c_str(), 0, 1e6, -1,
-					weight_threshold, NULL, params.out_prefix, NULL, &params);
-			// now optimize branch lengths of the consensus tree
-			string current_tree = tree->getTreeString();
-            optimizeConTree(params, tree);
-			// revert the best tree
-			tree->readTreeString(current_tree);
-		}
-		if (Params::getInstance().writeDistImdTrees) {
-            cout << endl;
-            cout << "Recomputing the log-likelihood of the intermediate trees ... " << endl;
-            tree->intermediateTrees.recomputeLoglOfAllTrees(*tree);
-        }
-		reportPhyloAnalysis(params, *tree, *model_info);
+            reportPhyloAnalysis(params, *tree, *model_info);
         }
 
 		// reinsert identical sequences
