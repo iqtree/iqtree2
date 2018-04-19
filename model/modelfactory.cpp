@@ -552,6 +552,12 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
 	if ((posasc = rate_str.find("+ASC")) != string::npos) {
 		// ascertainment bias correction
 		unobserved_ptns = tree->aln->getUnobservedConstPatterns();
+        
+        // delete rarely observed state
+        for (int i = unobserved_ptns.length()-1; i >= 0; i--)
+            if (model->state_freq[(int)unobserved_ptns[i]] < 1e-8)
+                unobserved_ptns.erase(i);
+                
 		// rebuild the seq_states to contain states of unobserved constant patterns
 		tree->aln->buildSeqStates(true);
 //		if (unobserved_ptns.size() <= 0)
