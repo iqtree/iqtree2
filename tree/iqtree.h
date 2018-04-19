@@ -794,6 +794,9 @@ public:
     /** log-likelihood of bootstrap consensus tree */
     double boot_consense_logl;
 
+    /** Robinson-Foulds distance between contree and ML tree */
+    int contree_rfdist;
+
     /** Corresponding map for set of splits occurring in bootstrap trees */
     //SplitIntMap boot_splits_map;
 

@@ -921,7 +921,6 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.step_iterations = 100;
 //    params.store_candidate_trees = false;
 	params.print_ufboot_trees = 0;
-    params.contree_rfdist = -1;
     params.jackknife_prop = 0.0;
     //const double INF_NNI_CUTOFF = -1000000.0;
     params.nni_cutoff = -1000000.0;

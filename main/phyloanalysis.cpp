@@ -1102,7 +1102,7 @@ void reportPhyloAnalysis(Params &params, IQTree &tree, ModelCheckpoint &model_in
             // DONE Minh: merged correctly
             if (params.compute_ml_tree)
                 out << endl << "Robinson-Foulds distance between ML tree and consensus tree: "
-                    << params.contree_rfdist << endl;
+                    << tree.contree_rfdist << endl;
             // --
             
             out << endl << "Branches with support >"
@@ -1938,7 +1938,7 @@ void optimizeConTree(Params &params, IQTree *tree) {
     
     IntVector rfdist;
     tree->computeRFDist(contree_file.c_str(), rfdist);
-    params.contree_rfdist = rfdist[0];
+    tree->contree_rfdist = rfdist[0];
     
     tree->readTreeFile(contree_file);
     
@@ -1950,6 +1950,8 @@ void optimizeConTree(Params &params, IQTree *tree) {
     tree->setRootNode(params.root);
     tree->insertTaxa(tree->removed_seqs, tree->twin_seqs);
     tree->printTree(contree_file.c_str(), WT_BR_LEN | WT_BR_LEN_FIXED_WIDTH | WT_SORT_TAXA | WT_NEWLINE);
+    string contree = tree->getTreeString();
+    tree->getCheckpoint()->put("contree", contree);
 }
 
 void runTreeReconstruction(Params &params, IQTree* &iqtree) {
@@ -2398,28 +2400,6 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
 
 	printFinalSearchInfo(params, *iqtree, search_cpu_time, search_real_time);
 
-	// BUG FIX: readTreeString(bestTreeString) not needed before this line
-	iqtree->printResultTree();
-
-    if (params.upper_bound_NNI) {
-        string out_file_UB = params.out_prefix;
-        out_file_UB += ".UB.NNI.main";
-        ofstream out_UB;
-        out_UB.exceptions(ios::failbit | ios::badbit);
-        out_UB.open((char *) out_file_UB.c_str(), std::ofstream::out | std::ofstream::app);
-        out_UB << iqtree->leafNum << "\t" << iqtree->aln->getNSite() << "\t" << iqtree->params->upper_bound_frac << "\t"
-        << iqtree->skippedNNIub << "\t" << iqtree->totalNNIub << "\t" << iqtree->getBestScore() << endl;
-        //iqtree->minUB << "\t" << iqtree->meanUB/iqtree->skippedNNIub << "\t" << iqtree->maxUB << endl;
-        out_UB.close();
-    }
-
-	if (params.out_file)
-		iqtree->printTree(params.out_file);
-
-	delete[] pattern_lh;
-
-	runApproximateBranchLengths(params, *iqtree);
-
     if (params.gbo_replicates && params.online_bootstrap) {
         if (params.print_ufboot_trees)
             iqtree->writeUFBootTrees(params);
@@ -2442,6 +2422,29 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
         cout << "Recomputing the log-likelihood of the intermediate trees ... " << endl;
         iqtree->intermediateTrees.recomputeLoglOfAllTrees(*iqtree);
     }
+    
+	// BUG FIX: readTreeString(bestTreeString) not needed before this line
+	iqtree->printResultTree();
+    iqtree->saveCheckpoint();
+
+    if (params.upper_bound_NNI) {
+        string out_file_UB = params.out_prefix;
+        out_file_UB += ".UB.NNI.main";
+        ofstream out_UB;
+        out_UB.exceptions(ios::failbit | ios::badbit);
+        out_UB.open((char *) out_file_UB.c_str(), std::ofstream::out | std::ofstream::app);
+        out_UB << iqtree->leafNum << "\t" << iqtree->aln->getNSite() << "\t" << iqtree->params->upper_bound_frac << "\t"
+        << iqtree->skippedNNIub << "\t" << iqtree->totalNNIub << "\t" << iqtree->getBestScore() << endl;
+        //iqtree->minUB << "\t" << iqtree->meanUB/iqtree->skippedNNIub << "\t" << iqtree->maxUB << endl;
+        out_UB.close();
+    }
+
+	if (params.out_file)
+		iqtree->printTree(params.out_file);
+
+	delete[] pattern_lh;
+
+	runApproximateBranchLengths(params, *iqtree);
 
 }
 
@@ -2553,7 +2556,12 @@ void runMultipleTreeReconstruction(Params &params, Alignment *alignment, IQTree 
             if (params.num_bootstrap_samples > 0 && params.consensus_type == CT_CONSENSUS_TREE &&
                 (run == 0 || iqtree->getBestScore() > runLnL[best_run])) {
                 // 2017-12-08: optimize branch lengths of consensus tree
+                // now optimize branch lengths of the consensus tree
+                string current_tree = iqtree->getTreeString();
                 optimizeConTree(params, iqtree);
+                // revert the best tree
+                iqtree->readTreeString(current_tree);
+                iqtree->saveCheckpoint();
             }
         }
         if (iqtree->getBestScore() > runLnL[best_run])
@@ -2595,11 +2603,24 @@ void runMultipleTreeReconstruction(Params &params, Alignment *alignment, IQTree 
     tree->restoreCheckpoint();
     tree->getModelFactory()->restoreCheckpoint();
     tree->setCurScore(runLnL[best_run]);
+    if (params.gbo_replicates) {
+        // print consensus tree
+        string contree;
+        if (!tree->getCheckpoint()->getString("contree", contree))
+            ASSERT(0 && "Couldn't restore contree");
+        string contree_file = string(params.out_prefix) + ".contree";
+        string current_tree = tree->getTreeString();
+        tree->readTreeString(contree);
+        tree->setRootNode(params.root);
+        tree->insertTaxa(tree->removed_seqs, tree->twin_seqs);
+        tree->printTree(contree_file.c_str(), WT_BR_LEN | WT_BR_LEN_FIXED_WIDTH | WT_SORT_TAXA | WT_NEWLINE);
+        tree->readTreeString(current_tree);
+    }
     tree->getCheckpoint()->endStruct();
     
     // print the best tree file .treefile
     tree->printResultTree();
-    
+
     if (MPIHelper::getInstance().isMaster()) {
         cout << "Total CPU time for " << params.num_runs << " runs: " << (getCPUTime() - start_time) << " seconds." << endl;
         cout << "Total wall-clock time for " << params.num_runs << " runs: " << (getRealTime() - start_real_time) << " seconds." << endl << endl;
