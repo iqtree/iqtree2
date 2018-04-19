@@ -10,7 +10,7 @@
 
 
 const double MIN_OMEGA_KAPPA = 0.001;
-const double MAX_OMEGA_KAPPA = 100.0;
+const double MAX_OMEGA_KAPPA = 50.0;
 
 /* Empirical codon model restricted (Kosiol et al. 2007), source: http://www.ebi.ac.uk/goldman/ECM/ */
 string model_ECMrest1 =
