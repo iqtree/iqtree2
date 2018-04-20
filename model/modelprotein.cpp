@@ -579,7 +579,7 @@ void ModelProtein::init(const char *model_name, string model_params, StateFreqTy
     } else if (name_upper == "GTR20") {
         outWarning("GTR20 model will estimate 189 substitution rates that might be overfitting!");
         outWarning("Please only use GTR20 with very large data and always test for model fit!");
-        if (freq == FREQ_UNKNOWN || freq == FREQ_USER_DEFINED)
+        if (freq == FREQ_UNKNOWN)
             freq = FREQ_EMPIRICAL;
         // initialize rate matrix with LG
         nxs_model = models_block->findModel("LG");
