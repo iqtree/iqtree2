@@ -1095,8 +1095,12 @@ inline void computeBounds(int threads, size_t elements, vector<size_t> &limits) 
     }
 
     limits.push_back(elements);
-    if (limits.size() != threads+1)
-        outError("Too many threads may slow down analysis [-nt option]. Reduce #threads or use -nt AUTO to automatically determine it");
+    if (limits.size() != threads+1) {
+        if (Params::getInstance().num_threads == 0)
+            outError("Too many threads may slow down analysis [-nt option]. Reduce threads");
+        else
+            outError("Too many threads may slow down analysis [-nt option]. Reduce threads or use -nt AUTO to automatically determine it");
+    }
 }
 #endif
 
