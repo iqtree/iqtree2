@@ -4292,6 +4292,9 @@ void IQTree::sendStopMessage() {
 void PhyloTree::warnNumThreads() {
     if (num_threads <= 1)
         return;
+    // return if -nt AUTO
+    if (params->num_threads == 0)
+        return;
     size_t nptn = getAlnNPattern();
     if (nptn < num_threads*vector_size)
         outError("Too many threads for short alignments, please reduce number of threads or use -nt AUTO to determine it.");
