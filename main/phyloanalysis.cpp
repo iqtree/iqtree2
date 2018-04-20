@@ -1019,6 +1019,17 @@ void reportPhyloAnalysis(Params &params, IQTree &tree, ModelCheckpoint &model_in
 					<< "within a phylogenetic tree. Mol. Biol. Evol, 20(4):572-578"
 					<< endl << endl;
 		}
+        
+        if (params.num_runs > 1) {
+            out << "MULTIPLE RUNS" << endl
+                << "-------------" << endl << endl;
+            out << "Run     logL" << endl;
+            DoubleVector runLnL;
+            tree.getCheckpoint()->getVector("runLnL", runLnL);
+            for (int run = 0; run < runLnL.size(); run++)
+                out << run+1 << "\t" << fixed << runLnL[run] << endl;
+            out << endl;
+        }
 /*
 		out << "TREE SEARCH" << endl << "-----------" << endl << endl
 				<< "Stopping rule: "
