@@ -2430,8 +2430,11 @@ int MTree::removeTaxa(StrVector &taxa_names) {
 	ASSERT(taxa.size() > 0);
 	// reassign taxon IDs
 	int id = 0;
-	for (NodeVector::iterator nit = taxa.begin(); nit != taxa.end(); nit++, id++)
-		(*nit)->id = id;
+	for (NodeVector::iterator nit = taxa.begin(); nit != taxa.end(); nit++)
+        if (*nit == root && rooted)
+            (*nit)->id = taxa.size()-1;
+        else
+            (*nit)->id = id++;
 	leafNum = taxa.size();
 	initializeTree();
     return count;
