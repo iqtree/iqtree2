@@ -183,6 +183,8 @@ void ModelDNA::init(const char *model_name, string model_params, StateFreqType f
 		    full_name = "Time reversible ("+name+")";
 		} else {
 			readParameters(model_name);
+            name = full_name = model_name;
+            freq = FREQ_USER_DEFINED;
 			//name += " (user-defined)";
 		}
 	}
@@ -225,7 +227,10 @@ void ModelDNA::restoreCheckpoint() {
     string rate_spec = param_spec;
     for (auto i = rate_spec.begin(); i != rate_spec.end(); i++)
         *i = *i + '0';
-    ASSERT(setRateType(rate_spec));
+    
+    if (!rate_spec.empty())
+        if (!setRateType(rate_spec))
+            ASSERT(0 && "Cannot set rate_spec");
 
     decomposeRateMatrix();
     if (phylo_tree)
