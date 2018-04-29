@@ -205,6 +205,11 @@ void IQTree::restoreCheckpoint() {
         for (id = 0; id < boot_splits_size; id++) {
             checkpoint->startStruct("UFBootSplit" + convertIntToString(id));
             SplitGraph *sg = new SplitGraph;
+            sg->createBlocks();
+            StrVector taxname;
+            getTaxaName(taxname);
+            for (auto its = taxname.begin(); its != taxname.end(); its++)
+                sg->getTaxa()->AddTaxonLabel(NxsString(its->c_str()));
             sg->setCheckpoint(checkpoint);
             sg->restoreCheckpoint();
             boot_splits.push_back(sg);

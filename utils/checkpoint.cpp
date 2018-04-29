@@ -175,9 +175,12 @@ bool Checkpoint::hasKey(string key) {
 }
 
 bool Checkpoint::hasKeyPrefix(string key_prefix) {
-	auto i = lower_bound(key_prefix);
+    string prefix = key_prefix;
+    if (!struct_name.empty())
+        prefix = struct_name + key_prefix;
+	auto i = lower_bound(prefix);
     if (i != end()) {
-        if (i->first.compare(0, key_prefix.size(), key_prefix) == 0)
+        if (i->first.compare(0, prefix.size(), prefix) == 0)
             return true;
     }
     return false;
