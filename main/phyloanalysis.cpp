@@ -2631,7 +2631,22 @@ void runMultipleTreeReconstruction(Params &params, Alignment *alignment, IQTree 
     tree->getModelFactory()->restoreCheckpoint();
     tree->setCurScore(runLnL[best_run]);
     if (params.gbo_replicates) {
-        // print consensus tree
+        
+        string out_file = (string)params.out_prefix + ".splits";
+        if (params.print_splits_file) {
+            tree->boot_splits.back()->saveFile(out_file.c_str(), IN_OTHER, true);
+            cout << "Split supports printed to star-dot file " << out_file << endl;
+        }
+
+        out_file = (string)params.out_prefix + ".splits.nex";
+        tree->boot_splits.back()->saveFile(out_file.c_str(), IN_NEXUS, false);
+        cout << "Split supports printed to NEXUS file " << out_file << endl;
+
+        // overwrite .ufboot trees
+        if (params.print_ufboot_trees)
+            tree->writeUFBootTrees(params);
+
+        // overwrite .contree
         string contree;
         if (!tree->getCheckpoint()->getString("contree", contree))
             ASSERT(0 && "Couldn't restore contree");
@@ -2642,10 +2657,11 @@ void runMultipleTreeReconstruction(Params &params, Alignment *alignment, IQTree 
         tree->insertTaxa(tree->removed_seqs, tree->twin_seqs);
         tree->printTree(contree_file.c_str(), WT_BR_LEN | WT_BR_LEN_FIXED_WIDTH | WT_SORT_TAXA | WT_NEWLINE);
         tree->readTreeString(current_tree);
+        cout << "Consensus tree written to " << contree_file << endl;
     }
     tree->getCheckpoint()->endStruct();
     
-    // print the best tree file .treefile
+    // overwrite .treefile
     tree->printResultTree();
 
     if (MPIHelper::getInstance().isMaster()) {
