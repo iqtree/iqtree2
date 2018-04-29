@@ -2248,6 +2248,17 @@ void parseArg(int argc, char *argv[], Params &params) {
 					outError("-blmax smaller than 0.5 is not allowed");
 				continue;
 			}
+            if (strcmp(argv[cnt], "--show-lh") == 0) {
+                params.ignore_identical_seqs = false;
+                params.fixed_branch_length = BRLEN_FIX;
+                params.optimize_alg_gammai = "Brent";
+                params.opt_gammai = false;
+                params.min_iterations = 0;
+                params.stop_condition = SC_FIXED_ITERATION;
+                verbose_mode = VB_DEBUG;
+                params.ignore_checkpoint = true;
+                continue;
+            }
 			if (strcmp(argv[cnt], "-sr") == 0) {
 				params.stop_condition = SC_WEIBULL;
 				cnt++;
@@ -3876,7 +3887,8 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  --no-outfiles        Suppress printing output files" << endl
             << "  --eigenlib           Use Eigen3 library" << endl
             << "  -alninfo             Print alignment sites statistics to .alninfo" << endl
-            << "  -czb                 Collapse zero branches in final tree" << endl;
+            << "  -czb                 Collapse zero branches in final tree" << endl
+            << "  --show-lh            Compute tree likelihood without optimisation" << endl;
 //            << "  -d <file>            Reading genetic distances from file (default: JC)" << endl
 //			<< "  -d <outfile>         Calculate the distance matrix inferred from tree" << endl
 //			<< "  -stats <outfile>     Output some statistics about branch lengths" << endl

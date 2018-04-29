@@ -123,7 +123,7 @@ int Alignment::checkAbsentStates(string msg) {
                 rare_states += ", ";
             rare_states += convertStateBackStr(i);
         }
-    if (count >= num_states-1)
+    if (count >= num_states-1 && Params::getInstance().fixed_branch_length != BRLEN_FIX)
         outError("Only one state is observed in " + msg);
     if (!absent_states.empty())
         cout << "NOTE: State(s) " << absent_states << " not present in " << msg << " and thus removed from Markov process to prevent numerical problems" << endl;
