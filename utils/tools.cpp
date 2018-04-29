@@ -3497,6 +3497,9 @@ void parseArg(int argc, char *argv[], Params &params) {
     if ((params.model_name.find("ONLY") != string::npos || (params.model_name.substr(0,2) == "MF" && params.model_name.substr(0,3) != "MFP")) && (params.gbo_replicates || params.num_bootstrap_samples))
         outError("ModelFinder only cannot be combined with bootstrap analysis");
 
+    if (params.num_runs > 1 && params.treeset_file)
+        outError("Can't combine --runs and -z options");
+    
 	// Diep:
 	if(params.ufboot2corr == true){
 		if(params.gbo_replicates <= 0) params.ufboot2corr = false;
