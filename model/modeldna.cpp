@@ -244,24 +244,25 @@ void ModelDNA::readRates(string str) throw(const char*) {
 	for (j = 0; j < param_spec.length(); j++)
 		rates[j] = 1.0;
 	num_params = 0;
-	for (i = 0; i < nrates && end_pos < str.length(); i++) {
+	for (i = 0; i <= nrates && end_pos < str.length(); i++) {
 		int new_end_pos;
 		double rate = 0;
+        int id = (i < nrates) ? i+1 : 0;
 		if (str[end_pos] == '?') {
-			param_fixed[i+1] = false;
+			param_fixed[id] = false;
 			end_pos++;
 			rate = 1.0;
 			num_params++;
 		} else {
             if (Params::getInstance().optimize_rate_matrix) {
                 num_params++;
-                param_fixed[i+1] = false;
+                param_fixed[id] = false;
             } else
 	        if (Params::getInstance().optimize_from_given_params) {
                     num_params++;
-                    param_fixed[i+1] = false;
+                    param_fixed[id] = false;
 	        } else {
-	            param_fixed[i+1] = true;
+	            param_fixed[id] = true;
 	        }
 			try {
 				rate = convert_double(str.substr(end_pos).c_str(), new_end_pos);
@@ -272,7 +273,7 @@ void ModelDNA::readRates(string str) throw(const char*) {
 		}
 		if (rate < 0.0)
 			outError("Negative rates found");
-		if (i == nrates-1 && end_pos < str.length())
+		if (i == nrates && end_pos < str.length())
 			outError("More than " + convertIntToString(nrates) + " rate parameters specified in " + str);
 		if (i < nrates-1 && end_pos >= str.length())
 			outError("Unexpected end of string ", str);
@@ -280,7 +281,7 @@ void ModelDNA::readRates(string str) throw(const char*) {
 			outError("Comma to separate rates not found in ", str);
 		end_pos++;
 		for (j = 0; j < param_spec.length(); j++)
-			if (param_spec[j] == i+1)
+			if (param_spec[j] == id)
 				rates[j] = rate;
 	}
 }
@@ -365,7 +366,10 @@ bool ModelDNA::setRateType(string rate_str) {
 	for (i = 0; i <= num_params; i++)
 		avg_rates[i] /= num_rates[i];
 	for (i = 0; i < param_spec.size(); i++) {
-		rates[i] = avg_rates[(int)param_spec[i]] / avg_rates[0];
+        if (avg_rates[0] > 0.0)
+            rates[i] = avg_rates[(int)param_spec[i]] / avg_rates[0];
+        else
+            rates[i] = avg_rates[(int)param_spec[i]];
 	}
 	if (verbose_mode >= VB_DEBUG) {
 		cout << "Initialized rates: ";
