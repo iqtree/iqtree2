@@ -19,9 +19,7 @@
  ***************************************************************************/
 
 #include <stdarg.h>
-#include "tree/phylotree.h"
 #include "superalignment.h"
-#include "tree/phylosupertree.h"
 #include "nclextra/msetsblock.h"
 #include "nclextra/myreader.h"
 #include "main/phylotesting.h"
@@ -363,8 +361,13 @@ void SuperAlignment::readPartitionNexus(Params &params) {
         if (empty_partition || (*it)->char_partition != "") {
             if ((*it)->model_name == "")
                 (*it)->model_name = params.model_name;
-            if ((*it)->aln_file == "" && !params.aln_file)
-                outError("No input data for partition ", (*it)->name);
+            if ((*it)->aln_file == "" && !params.aln_file) {
+                if (!(*it)->position_spec.empty()) {
+                    (*it)->aln_file = (*it)->position_spec;
+                    (*it)->position_spec = "";
+                } else
+                    outError("No input data for partition ", (*it)->name);
+            }
             if ((*it)->sequence_type=="" && params.sequence_type)
                 (*it)->sequence_type = params.sequence_type;
             

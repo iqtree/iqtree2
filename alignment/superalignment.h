@@ -22,31 +22,6 @@
 
 #include "alignment.h"
 
-
-struct PartitionInfo {
-	double cur_score;	// current log-likelihood
-	double part_rate;	// partition heterogeneity rate
-	int    evalNNIs;	// number of evaluated NNIs on subtree
-
-	//DoubleVector null_score; // log-likelihood of each branch collapsed to zero
-	//DoubleVector opt_score;  // optimized log-likelihood for every branch
-	//DoubleVector nni1_score; // log-likelihood for 1st NNI for every branch
-	//DoubleVector nni2_score; // log-likelihood for 2nd NNI for every branch
-
-	vector<DoubleVector> cur_brlen;  // current branch lengths
-	//DoubleVector opt_brlen;  // optimized branch lengths for every branch
-	vector<DoubleVector> nni1_brlen; // branch length for 1st NNI for every branch
-	vector<DoubleVector> nni2_brlen; // branch length for 2nd NNI for every branch
-
-	//double *mem_ptnlh; // total memory allocated for all pattern likelihood vectors
-	double *cur_ptnlh; // current pattern likelihoods of the tree
-	//double *nni1_ptnlh; // pattern likelihoods of 1st NNI tree
-	//double *nni2_ptnlh; // pattern likelihoods of 2nd NNI tree
-	NNIMove nniMoves[2];
-};
-
-class PhyloSuperTree;
-
 /**
 Super alignment representing presence/absence of sequences in
 k partitions for a total of n sequences. It has the form:
