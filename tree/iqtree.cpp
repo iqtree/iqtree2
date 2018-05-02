@@ -1013,10 +1013,10 @@ void IQTree::initializeModel(Params &params, string &model_name, ModelsBlock *mo
     try {
         if (!getModelFactory()) {
             if (isSuperTree()) {
-                if (params.partition_type != BRLEN_OPTIMIZE) {
-                    setModelFactory(new PartitionModelPlen(params, (PhyloSuperTreePlen*) this, models_block));
-                } else
+                if (params.partition_type == BRLEN_OPTIMIZE || params.partition_type == TOPO_UNLINKED) {
                     setModelFactory(new PartitionModel(params, (PhyloSuperTree*) this, models_block));
+                } else
+                    setModelFactory(new PartitionModelPlen(params, (PhyloSuperTreePlen*) this, models_block));
             } else {
                 setModelFactory(new ModelFactory(params, model_name, this, models_block));
             }

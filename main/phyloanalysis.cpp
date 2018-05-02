@@ -27,6 +27,7 @@
 #include "tree/phylotree.h"
 #include "tree/phylosupertree.h"
 #include "tree/phylosupertreeplen.h"
+#include "tree/phylosupertreeunlinked.h"
 #include "phyloanalysis.h"
 #include "alignment/alignment.h"
 #include "alignment/superalignment.h"
@@ -955,24 +956,26 @@ void reportPhyloAnalysis(Params &params, IQTree &tree, ModelCheckpoint &model_in
 				out	<< "Edge-linked-proportional partition model but separate models between partitions" << endl << endl;
 			else if(params.partition_type == BRLEN_FIX)
 				out	<< "Edge-linked-equal partition model but separate models between partitions" << endl << endl;
-			else
+			else if (params.partition_type == BRLEN_OPTIMIZE)
 				out	<< "Edge-unlinked partition model and separate models between partitions" << endl << endl;
+            else
+                out << "Topology-unlinked partition model and separate models between partitions" << endl << endl;
 			PhyloSuperTree *stree = (PhyloSuperTree*) &tree;
 			PhyloSuperTree::iterator it;
 			int part;
-			if(params.partition_type != BRLEN_OPTIMIZE)
-				out << "  ID  Model           Speed  Parameters" << endl;
+			if(params.partition_type == BRLEN_OPTIMIZE || params.partition_type == TOPO_UNLINKED)
+                out << "  ID  Model         TreeLen  Parameters" << endl;
 			else
-				out << "  ID  Model         TreeLen  Parameters" << endl;
+                out << "  ID  Model           Speed  Parameters" << endl;
 			//out << "-------------------------------------" << endl;
 			for (it = stree->begin(), part = 0; it != stree->end(); it++, part++) {
 				out.width(4);
 				out << right << (part+1) << "  ";
 				out.width(14);
-				if(params.partition_type != BRLEN_OPTIMIZE)
-					out << left << (*it)->getModelName() << " " << stree->part_info[part].part_rate  << "  " << (*it)->getModelNameParams() << endl;
+				if(params.partition_type == BRLEN_OPTIMIZE || params.partition_type == TOPO_UNLINKED)
+                    out << left << (*it)->getModelName() << " " << (*it)->treeLength() << "  " << (*it)->getModelNameParams() << endl;
 				else
-					out << left << (*it)->getModelName() << " " << (*it)->treeLength() << "  " << (*it)->getModelNameParams() << endl;
+                    out << left << (*it)->getModelName() << " " << stree->part_info[part].part_rate  << "  " << (*it)->getModelNameParams() << endl;
 			}
 			out << endl;
 			/*
@@ -1082,7 +1085,8 @@ void reportPhyloAnalysis(Params &params, IQTree &tree, ModelCheckpoint &model_in
                 }
             }
 
-			reportTree(out, params, tree, tree.getBestScore(), tree.logl_variance, true);
+            if (params.partition_type != TOPO_UNLINKED)
+                reportTree(out, params, tree, tree.getBestScore(), tree.logl_variance, true);
 
 			if (tree.isSuperTree() && verbose_mode >= VB_MED) {
 				PhyloSuperTree *stree = (PhyloSuperTree*) &tree;
@@ -3222,13 +3226,10 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
 	if (params.partition_file) {
 		// Partition model analysis
         alignment = new SuperAlignment(params);
-		if(params.partition_type != BRLEN_OPTIMIZE){
-			// since nni5 does not work yet, stop the programm
-/*			if(params.nni5)
-				outError("-nni5 option is unsupported yet for proportitional partition model. please use -nni1 option");*/
-//			if(params.aLRT_replicates || params.localbp_replicates)
-//				outError("-alrt or -lbp option is unsupported yet for joint/proportional partition model");
-			// initialize supertree - Proportional Edges case, "-spt p" option
+        if (params.partition_type == TOPO_UNLINKED) {
+            tree = new PhyloSuperTreeUnlinked((SuperAlignment*)alignment);
+        } else if(params.partition_type != BRLEN_OPTIMIZE){
+			// initialize supertree - Proportional Edges case
 			tree = new PhyloSuperTreePlen((SuperAlignment*)alignment, params.partition_type);
 		} else {
 			// initialize supertree stuff if user specifies partition file with -sp option
@@ -3424,6 +3425,87 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
 
     checkpoint->putBool("finished", true);
     checkpoint->dump(true);
+}
+
+/**
+    Perform separate tree reconstruction when tree topologies
+    are unlinked between partitions
+ */
+void runUnlinkedPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
+    SuperAlignment *super_aln;
+    
+    ASSERT(params.partition_file);
+    
+    /****************** read in alignment **********************/
+    // Partition model analysis
+    super_aln = new SuperAlignment(params);
+    PhyloSuperTree *super_tree = new PhyloSuperTree(super_aln);
+ 
+    /**** do separate tree reconstruction for each partition ***/
+    
+    MTreeSet part_trees;
+    
+    if (params.user_file) {
+        // reading user tree file for all partitions
+        bool is_rooted = false;
+        part_trees.readTrees(params.user_file, is_rooted, 0, super_aln->partitions.size());
+        if (is_rooted)
+            outError("Rooted trees not allowed: ", params.user_file);
+        if (part_trees.size() != super_aln->partitions.size())
+            outError("User tree file does not have the same number of trees as partitions");
+        params.user_file = NULL;
+    }
+
+    ModelCheckpoint *model_info = new ModelCheckpoint;
+    int part = 0;
+    for (auto alnit = super_aln->partitions.begin(); alnit != super_aln->partitions.end(); alnit++, part++) {
+        
+        checkpoint->startStruct((*alnit)->name);
+
+        // allocate heterotachy tree if neccessary
+        int pos = posRateHeterotachy((*alnit)->model_name);
+        IQTree *tree;
+        
+        if (params.num_mixlen > 1) {
+            tree = new PhyloTreeMixlen((*alnit), params.num_mixlen);
+        } else if (pos != string::npos) {
+            tree = new PhyloTreeMixlen((*alnit), 0);
+        } else
+            tree = new IQTree((*alnit));
+
+        tree->setCheckpoint(checkpoint);
+        if (checkpoint->getBool("finished")) {
+            tree->restoreCheckpoint();
+        } else {
+            if (!part_trees.empty())
+                tree->copyTree(part_trees[part]);
+
+            startTreeReconstruction(params, tree, *model_info);
+            // call main tree reconstruction
+            if (params.num_runs == 1)
+                runTreeReconstruction(params, tree);
+            else
+                runMultipleTreeReconstruction(params, tree->aln, tree);
+            checkpoint->putBool("finished", true);
+            checkpoint->dump();
+        }
+
+        super_tree->at(part)->copyTree(tree);
+        
+        delete tree;
+        checkpoint->endStruct();
+    }
+    
+    IQTree *iqtree = super_tree;
+    super_tree->setCheckpoint(checkpoint);
+    startTreeReconstruction(params, iqtree, *model_info);
+    runTreeReconstruction(params, iqtree);
+    if (MPIHelper::getInstance().isMaster())
+        reportPhyloAnalysis(params, *iqtree, *model_info);
+
+    delete super_tree;
+    delete super_aln;
+    delete model_info;
 }
 
 void assignBranchSupportNew(Params &params) {

@@ -28,6 +28,8 @@ phylosupertree.cpp
 phylosupertree.h
 phylosupertreeplen.cpp
 phylosupertreeplen.h
+phylosupertreeunlinked.cpp
+phylosupertreeunlinked.h
 phylotree.cpp
 phylotree.h
 phylotreemixlen.cpp

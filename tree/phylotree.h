@@ -448,7 +448,7 @@ public:
         @param my_root root node name
         @param multi_taxa TRUE if my_root is a comma-separated list of nodes
      */
-    void setRootNode(const char *my_root, bool multi_taxa = false);
+    virtual void setRootNode(const char *my_root, bool multi_taxa = false);
 
 
     /**
@@ -1140,7 +1140,7 @@ public:
      * @param force_change if true then force fixing also positive branch lengths
      * @return number of branches fixed
      */
-    int wrapperFixNegativeBranch(bool force_change);
+    virtual int wrapperFixNegativeBranch(bool force_change);
 
     /**
      * Read the newick string into PLL kernel

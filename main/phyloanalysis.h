@@ -38,6 +38,11 @@ class IQTree;
 */
 void runPhyloAnalysis(Params &params, Checkpoint *checkpoint);
 
+/**
+    Perform separate tree inference across partitions
+ */
+void runUnlinkedPhyloAnalysis(Params &params, Checkpoint *checkpoint);
+
 void startTreeReconstruction(Params &params, IQTree* &iqtree,
         ModelCheckpoint &model_info);
 
