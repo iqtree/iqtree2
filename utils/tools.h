@@ -489,6 +489,7 @@ enum AncestralSeqType {
 const int BRLEN_OPTIMIZE = 0; // optimize branch lengths
 const int BRLEN_FIX      = 1; // fix branch lengths
 const int BRLEN_SCALE    = 2; // scale branch lengths
+const int TOPO_UNLINKED  = 3; // unlinked/separate tree topologies between partitions
 
 const int OUT_LOG       = 1; // .log file written or not
 const int OUT_TREEFILE  = 2; // .treefile file written or not

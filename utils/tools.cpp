@@ -3394,6 +3394,12 @@ void parseArg(int argc, char *argv[], Params &params) {
 				continue;
 			}
 
+            if (strcmp(argv[cnt], "--unlink-tree") == 0) {
+                params.partition_type = TOPO_UNLINKED;
+                params.ignore_identical_seqs = false;
+                continue;
+            }
+            
 			if (strcmp(argv[cnt], "-redo") == 0) {
 				params.ignore_checkpoint = true;
 				continue;

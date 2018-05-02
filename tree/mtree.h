@@ -340,7 +340,7 @@ public:
             @param node the starting node, NULL to start from the root
             @param dad dad of the node, used to direct the search
      */
-    double treeLength(Node *node = NULL, Node *dad = NULL);
+    virtual double treeLength(Node *node = NULL, Node *dad = NULL);
 
     /**
             @param[out] lenvec tree lengths for each class in mixlen model
@@ -354,7 +354,7 @@ public:
             @param node the starting node, NULL to start from the root
             @param dad dad of the node, used to direct the search
      */
-    double treeLengthInternal(double epsilon, Node *node = NULL, Node *dad = NULL);
+    virtual double treeLengthInternal(double epsilon, Node *node = NULL, Node *dad = NULL);
 
     /**
             @return maximum path length from root node to taxa
