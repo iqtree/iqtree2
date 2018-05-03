@@ -1664,7 +1664,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 			if (strcmp(argv[cnt], "-spp") == 0) {
 				cnt++;
 				if (cnt >= argc)
-					throw "Use -spp <type of partition model>";
+					throw "Use -spp <partition_file>";
 				params.partition_file = argv[cnt];
 				params.partition_type = BRLEN_SCALE;
                 params.opt_gammai = false;
@@ -1673,7 +1673,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 			if (strcmp(argv[cnt], "-spj") == 0 || strcmp(argv[cnt], "-q") == 0) {
 				cnt++;
 				if (cnt >= argc)
-					throw "Use -q <type of partition model>";
+					throw "Use -q <partition_file>";
 				params.partition_file = argv[cnt];
 				params.partition_type = BRLEN_FIX;
                 params.optimize_alg_gammai = "Brent";
@@ -1684,6 +1684,17 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.partition_type = BRLEN_OPTIMIZE;
                 continue;
             }
+
+            if (strcmp(argv[cnt], "-spu") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use -spu <partition_file>";
+                params.partition_file = argv[cnt];
+                params.partition_type = TOPO_UNLINKED;
+                params.ignore_identical_seqs = false;
+                continue;
+            }
+            
             if (strcmp(argv[cnt], "-rcluster") == 0) {
 				cnt++;
 				if (cnt >= argc)

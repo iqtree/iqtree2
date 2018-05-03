@@ -1197,7 +1197,7 @@ void EigenDecomposition::luinverse(double **inmat, double **imtrx, int size) {
 		}
 		if (maxb == 0.0) {
 			/* Singular matrix */
-			outError("\n\n\nHALT: PLEASE REPORT ERROR C TO DEVELOPERS\n\n\n");
+			ASSERT(0 && "\n\n\nHALT: PLEASE REPORT ERROR C TO DEVELOPERS\n\n\n");
 		}
 		wk[i] = 1.0 / maxb;
 	}

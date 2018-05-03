@@ -68,6 +68,9 @@ ModelMarkov::ModelMarkov(PhyloTree *tree, bool reversible)
 }
 
 void ModelMarkov::setReversible(bool reversible) {
+    
+    bool old_reversible = is_reversible;
+    
     is_reversible = reversible;
 
     if (reversible) {
@@ -99,15 +102,34 @@ void ModelMarkov::setReversible(bool reversible) {
         ignore_state_freq = true;
 
         int num_rates = getNumRateEntries();
-        
-        // reallocate the mem spaces
-        if (rates)
-            delete [] rates;
-        rates = new double [num_rates];
-        memset(rates, 0, sizeof(double) * (num_rates));
-
         if (!rate_matrix)
             rate_matrix = aligned_alloc<double>(num_states*num_states);
+
+        // reallocate the mem spaces
+        if (rates && old_reversible) {
+            // copy old reversible rates into new non-reversible
+            int i, j, k;
+            for (i = 0, k = 0; i < num_states; i++)
+                for (j = i+1; j < num_states; j++, k++) {
+                    rate_matrix[i*num_states+j] = rates[k] * state_freq[j];
+                    rate_matrix[j*num_states+i] = rates[k] * state_freq[i];
+                }
+            delete [] rates;
+            rates = new double[num_rates];
+            for (i = 0, k = 0; i < num_states; i++)
+                for (j = 0; j < num_states; j++)
+                    if (i!=j) {
+                        rates[k] = rate_matrix[i*num_states+j];
+                        k++;
+                    }
+            ASSERT(k == num_rates);
+        } else {
+            if (rates)
+                delete [] rates;
+            rates = new double [num_rates];
+            memset(rates, 0, sizeof(double) * (num_rates));
+        }
+
         if (!temp_space)
             temp_space =  aligned_alloc<double>(num_states*num_states);
         if (!eigenvalues_imag)
@@ -124,6 +146,7 @@ void ModelMarkov::setReversible(bool reversible) {
             cout << "Converting unrooted to rooted tree..." << endl;
             phylo_tree->convertToRooted();
         }
+        num_params = num_rates - 1;        
     }
 }
 
@@ -766,7 +789,7 @@ bool ModelMarkov::isUnstableParameters() {
 }
 
 void ModelMarkov::setBounds(double *lower_bound, double *upper_bound, bool *bound_check) {
-    ASSERT(is_reversible && "setBounds should only be called on subclass of ModelMarkov");
+//    ASSERT(is_reversible && "setBounds should only be called on subclass of ModelMarkov");
 
     int i, ndim = getNDim();
 
@@ -1350,7 +1373,7 @@ int matinv (double x[], int n, int m, double space[])
         det *= x[irow[i]*m+i];
         if (xmax < ee)   {
             cout << endl << "xmax = " << xmax << " close to zero at " << i+1 << "!\t" << endl;
-            exit(-1);
+            ASSERT(0);
         }
         if (irow[i] != i) {
             for (j=0; j < m; j++) {

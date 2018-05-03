@@ -297,15 +297,27 @@ void reportModel(ofstream &out, Alignment *aln, ModelSubst *m) {
         ASSERT(m->num_states == 20);
         out << "WARNING: This model has " << m->getNDim() + m->getNDimFreq() << " parameters that may be overfitting. Please use with caution!" << endl << endl;
         double full_mat[400];
-        for (i = 0, k = 0; i < m->num_states - 1; i++)
-            for (j = i + 1; j < m->num_states; j++, k++) {
-                full_mat[i*m->num_states+j] = rate_mat[k];
+        
+        if (m->isReversible()) {
+            for (i = 0, k = 0; i < m->num_states - 1; i++)
+                for (j = i + 1; j < m->num_states; j++, k++) {
+                    full_mat[i*m->num_states+j] = rate_mat[k];
+                }
+            out << "Substitution parameters (lower-diagonal) and state frequencies in PAML format (can be used as input for IQ-TREE): " << endl << endl;
+            for (i = 1; i < m->num_states; i++) {
+                for (j = 0; j < i; j++)
+                    out << "\t" << full_mat[j*m->num_states+i];
+                out << endl;
             }
-        out << "Substitution parameters (lower-diagonal) and state frequencies in PAML format (can be used as input for IQ-TREE): " << endl << endl;
-        for (i = 1; i < m->num_states; i++) {
-            for (j = 0; j < i; j++)
-                out << "\t" << full_mat[j*m->num_states+i];
-            out << endl;
+        } else {
+            // non-reversible model
+            m->getQMatrix(full_mat);
+            out << "Full Q matrix and state frequencies (can be used as input for IQ-TREE): " << endl << endl;
+            for (i = 0; i < m->num_states; i++) {
+                for (j = 0; j < m->num_states; j++)
+                    out << "\t" << full_mat[i*m->num_states+j];
+                out << endl;
+            }
         }
         double state_freq[20];
         m->getStateFrequency(state_freq);
