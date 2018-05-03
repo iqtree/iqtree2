@@ -586,6 +586,19 @@ void ModelProtein::init(const char *model_name, string model_params, StateFreqTy
         ASSERT(nxs_model);
         readParametersString(nxs_model->description);
         rescaleRates(rates, getNumRateEntries());
+        num_params = getNumRateEntries()-1;
+    } else if (name_upper == "NONREV") {
+        outWarning("NONREV model will estimate 379 substitution rates that might be overfitting!");
+        outWarning("Please only use NONREV with very large data and always test for model fit!");
+        if (freq == FREQ_UNKNOWN)
+            freq = FREQ_ESTIMATE;
+        // initialize rate matrix with LG
+        nxs_model = models_block->findModel("LG");
+        ASSERT(nxs_model);
+        readParametersString(nxs_model->description);
+        rescaleRates(rates, getNumRateEntries());
+        setReversible(false);
+        num_params = getNumRateEntries()-1;
 	} else {
 		// if name does not match, read the user-defined model
 		readParameters(model_name);
