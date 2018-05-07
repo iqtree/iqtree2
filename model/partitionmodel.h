@@ -105,12 +105,40 @@ public:
 	*/
 	virtual double computeFunction(double shape);
 
+    /**
+     return the number of dimensions
+     */
+    virtual int getNDim();
+    
+    
+    /**
+     the target function which needs to be optimized
+     @param x the input vector x
+     @return the function value at x
+     */
+    virtual double targetFunk(double x[]);
+    
+    /**
+     the approximated derivative function
+     @param x the input vector x
+     @param dfx the derivative at x
+     @return the function value at x
+     */
+    
+    /** optimize linked model parameter of over all partitions */
+    double optimizeLinkedModel(bool write_info, double gradient_epsilon);
+    
 
 protected:
 
 	/** linked Gamma shape alpha between partitions */
 	double linked_alpha;
 
+    /**
+        map of linked models by names.
+     */
+    unordered_map<string, ModelSubst*> linked_models;
+    
 };
 
 #endif

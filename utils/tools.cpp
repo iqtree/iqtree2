@@ -997,6 +997,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.print_lmap_quartet_lh = false;
     params.num_mixlen = 1;
     params.link_alpha = false;
+    params.link_model = false;
     params.ignore_checkpoint = false;
     params.checkpoint_dump_interval = 60;
     params.force_unfinished = false;
@@ -3404,6 +3405,11 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.link_alpha = true;
 				continue;
 			}
+
+            if (strcmp(argv[cnt], "--link-model") == 0) {
+                params.link_model = true;
+                continue;
+            }
 
             if (strcmp(argv[cnt], "--unlink-tree") == 0) {
                 params.partition_type = TOPO_UNLINKED;

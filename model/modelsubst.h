@@ -27,6 +27,7 @@ Substitution model abstract class
 class ModelSubst: public Optimization, public CheckpointFactory
 {
 	friend class ModelFactory;
+    friend class PartitionModel;
 
 public:
 	/**
@@ -118,6 +119,18 @@ public:
 			in the upper-diagonal of the rate matrix (since model is reversible)
 	*/
 	virtual int getNumRateEntries() { return num_states*(num_states-1)/2; }
+    
+    /**
+     set num_params variable
+     */
+    virtual void setNParams(int num_params) {}
+    
+    /**
+     get num_params variable
+     */
+    virtual int getNParams() {
+        return 0;
+    }
 
 	/**
 	 * get the size of transition matrix, default is num_states*num_states.
@@ -322,6 +335,18 @@ public:
     */
     virtual void restoreCheckpoint();
 
+    /*****************************************************
+     Model linking facility, e.g. between partitions
+     *****************************************************/
+
+    
+    /**
+     link this model to target model
+     @param target target model
+     @return true if successfully linked, false for failure
+     */
+    virtual bool linkModel(ModelSubst *target);
+    
 	/**
 		number of states
 	*/
@@ -371,6 +396,11 @@ protected:
 	*/
 	virtual bool getVariables(double *variables) { return false; }
 
+    /**
+     target model that this model is linked with
+     */
+    ModelSubst *linked_model;
+    
 };
 
 #endif
