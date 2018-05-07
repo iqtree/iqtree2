@@ -71,6 +71,7 @@ endif()
 
 if (CMAKE_GENERATOR MATCHES "Xcode")
     set(CMAKE_XCODE_ATTRIBUTE_DEBUG_INFORMATION_FORMAT "dwarf-with-dsym")
+    set(CMAKE_XCODE_ATTRIBUTE_COMPILER_INDEX_STORE_ENABLE "No")
 endif()
 
 include_directories("${PROJECT_SOURCE_DIR}")
@@ -390,6 +391,10 @@ set(CMAKE_C_FLAGS_PROFILE "${CMAKE_C_FLAGS} -fno-inline-functions -fno-inline-fu
 
 if(CLANG AND IQTREE_FLAGS MATCHES "static")
     set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -pthread -Wl,--allow-multiple-definition")
+endif()
+
+if(CLANG AND APPLE)
+    set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fopenmp=libomp")
 endif()
 
 if (IQTREE_FLAGS MATCHES "libcxx")
