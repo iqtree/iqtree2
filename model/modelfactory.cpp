@@ -889,7 +889,7 @@ double ModelFactory::initGTRGammaIParameters(RateHeterogeneity *rate, ModelSubst
 double ModelFactory::optimizeParametersOnly(int num_steps, double gradient_epsilon, double cur_logl) {
 	double logl;
 	/* Optimize substitution and heterogeneity rates independently */
-	if (!joint_optimize) {
+	if (!joint_optimize || model->linked_model) {
         // more steps for fused mix rate model
         int steps;
         if (false && fused_mix_rate && model->getNDim() > 0 && site_rate->getNDim() > 0) {
@@ -901,7 +901,11 @@ double ModelFactory::optimizeParametersOnly(int num_steps, double gradient_epsil
         }
         double prev_logl = cur_logl;
         for (int step = 0; step < steps; step++) {
-            double model_lh = model->optimizeParameters(gradient_epsilon);
+            double model_lh = 0.0;
+            // only optimized if model is not linked
+            if (!model->linked_model)
+                model_lh = model->optimizeParameters(gradient_epsilon);
+
             double rate_lh = site_rate->optimizeParameters(gradient_epsilon);
 
             if (rate_lh == 0.0)

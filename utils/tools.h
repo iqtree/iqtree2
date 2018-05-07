@@ -1913,6 +1913,9 @@ public:
 	/** TRUE to link alpha among Gamma model over partitions */
 	bool link_alpha;
 
+    /** TRUE to link substitution models over partitions */
+    bool link_model;
+
 	/** true to count all distinct trees visited during tree search */
 	bool count_trees;
 

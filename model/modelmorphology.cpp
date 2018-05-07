@@ -29,9 +29,10 @@ void ModelMorphology::init(const char *model_name, string model_params, StateFre
 				rates[k] = 0.0;
 		}
         num_params = 0;
-    } else if (name == "GTR") {
-        outWarning("GTR multistate model will estimate " + convertIntToString(getNumRateEntries()-1) + " substitution rates that might be overfitting!");
-        outWarning("Please only use GTR with very large data and always test for model fit!");
+    } else if (name == "GTR" || name == "GTRX") {
+        outWarning("GTRX multistate model will estimate " + convertIntToString(getNumRateEntries()-1) + " substitution rates that might be overfitting!");
+        outWarning("Please only use GTRX with very large data and always test for model fit!");
+        name = "GTRX";
 	} else {
 		// if name does not match, read the user-defined model
 		readParameters(model_name);

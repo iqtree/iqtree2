@@ -45,6 +45,7 @@ class ModelMarkov : public ModelSubst, public EigenDecomposition
 	friend class ModelSet;
 	friend class ModelMixture;
     friend class ModelPoMo;
+    friend class PartitionModel;
 	
 public:
 	/**
@@ -105,6 +106,13 @@ public:
         restore object from the checkpoint
     */
     virtual void restoreCheckpoint();
+    
+    /**
+     link this model to target model
+     @param target target model
+     @return true if successfully linked, false for failure
+     */
+    virtual bool linkModel(ModelSubst *target);
 
 	/**
 	 * @return model name
@@ -378,6 +386,21 @@ public:
   // `ModelMixture::initMem()` before.
   virtual void update_eigen_pointers(double *eval, double *evec, double *inv_evec);
 
+
+    /**
+        set num_params variable
+     */
+    virtual void setNParams(int num_params) {
+        this->num_params = num_params;
+    }
+    
+    /**
+        get num_params variable
+     */
+    virtual int getNParams() {
+        return num_params;
+    }
+    
 protected:
 
 	/**

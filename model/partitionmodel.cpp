@@ -20,6 +20,7 @@
 #include "partitionmodel.h"
 #include "alignment/superalignment.h"
 #include "model/rategamma.h"
+#include "model/modelmarkov.h"
 
 PartitionModel::PartitionModel()
         : ModelFactory()
@@ -56,8 +57,15 @@ PartitionModel::PartitionModel(Params &params, PhyloSuperTree *tree, ModelsBlock
         (*it)->setModelFactory(new ModelFactory(params, model_name, (*it), models_block));
         (*it)->setModel((*it)->getModelFactory()->model);
         (*it)->setRate((*it)->getModelFactory()->site_rate);
-//        params.model_name = model_name;
-        if ((*it)->aln->getNSeq() < tree->aln->getNSeq() && (*it)->getModel()->freq_type == FREQ_EMPIRICAL && (*it)->aln->seq_type != SEQ_CODON) {
+
+        // link models between partitions
+        if (params.link_model) {
+            if (linked_models.find((*it)->getModel()->getName()) != linked_models.end())
+                (*it)->getModel()->linkModel(linked_models[(*it)->getModel()->getName()]);
+            else
+                linked_models[(*it)->getModel()->getName()] = (*it)->getModel();
+        } else if ((*it)->aln->getNSeq() < tree->aln->getNSeq() && params.partition_type != TOPO_UNLINKED &&
+            (*it)->getModel()->freq_type == FREQ_EMPIRICAL && (*it)->aln->seq_type != SEQ_CODON) {
         	// modify state_freq to account for empty sequences
         	(*it)->aln->computeStateFreq((*it)->getModel()->state_freq, (*it)->aln->getNSite() * (tree->aln->getNSeq() - (*it)->aln->getNSeq()));
         	(*it)->getModel()->decomposeRateMatrix();
@@ -148,11 +156,107 @@ double PartitionModel::optimizeLinkedAlpha(bool write_info, double gradient_epsi
     
 }
 
+int PartitionModel::getNDim() {
+    return model->getNDim();
+}
+
+double PartitionModel::targetFunk(double x[]) {
+    bool changed = model->getVariables(x);
+    if (changed) {
+        model->decomposeRateMatrix();
+        site_rate->phylo_tree->clearAllPartialLH();
+    }
+    return -site_rate->phylo_tree->computeLikelihood();
+}
+
+double PartitionModel::optimizeLinkedModel(bool write_info, double gradient_epsilon) {
+    int ndim = model->getNDim();
+    
+    // return if nothing to be optimized
+    if (ndim == 0) return 0.0;
+    
+    if (write_info)
+        cout << "Optimizing linked model " << model->getName() << " ..." << endl;
+    
+    if (verbose_mode >= VB_MAX)
+        cout << "Optimizing " << model->name << " model parameters..." << endl;
+    
+    //if (freq_type == FREQ_ESTIMATE) scaleStateFreq(false);
+    
+    double *variables = new double[ndim+1]; // used for BFGS numerical recipes
+    double *variables2 = new double[ndim+1]; // used for L-BFGS-B
+    double *upper_bound = new double[ndim+1];
+    double *lower_bound = new double[ndim+1];
+    bool *bound_check = new bool[ndim+1];
+    double score;
+    
+    
+    // by BFGS algorithm
+    model->setVariables(variables);
+    model->setVariables(variables2);
+    ((ModelMarkov*)model)->setBounds(lower_bound, upper_bound, bound_check);
+    //    if (phylo_tree->params->optimize_alg.find("BFGS-B") == string::npos)
+    //        score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound, bound_check, max(gradient_epsilon, TOL_RATE));
+    //    else
+    //        score = -L_BFGS_B(ndim, variables+1, lower_bound+1, upper_bound+1, max(gradient_epsilon, TOL_RATE));
+    
+    // 2017-12-06: more robust optimization using 2 different routines
+    // when estimates are at boundary
+    score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound, bound_check, max(gradient_epsilon, TOL_RATE));
+    bool changed = model->getVariables(variables);
+    
+    if (model->isUnstableParameters()) {
+        // parameters at boundary, restart with L-BFGS-B with parameters2
+        double score2 = -L_BFGS_B(ndim, variables2+1, lower_bound+1, upper_bound+1, max(gradient_epsilon, TOL_RATE));
+        if (score2 > score+0.1) {
+            if (verbose_mode >= VB_MED)
+                cout << "NICE: L-BFGS-B found better parameters with LnL=" << score2 << " than BFGS LnL=" << score << endl;
+            changed = model->getVariables(variables2);
+            score = score2;
+        } else {
+            // otherwise, revert what BFGS found
+            changed = model->getVariables(variables);
+        }
+    }
+    
+    // BQM 2015-09-07: normalize state_freq
+    if (model->isReversible() && model->freq_type == FREQ_ESTIMATE) {
+        ((ModelMarkov*)model)->scaleStateFreq(true);
+        changed = true;
+    }
+    if (changed) {
+        model->decomposeRateMatrix();
+        site_rate->phylo_tree->clearAllPartialLH();
+        score = site_rate->phylo_tree->computeLikelihood();
+    }
+    
+    delete [] bound_check;
+    delete [] lower_bound;
+    delete [] upper_bound;
+    delete [] variables2;
+    delete [] variables;
+    
+    if (write_info) {
+        cout << "Linked model across partitions: " << endl;
+        model->writeInfo(cout);
+    }
+
+    return score;
+}
+
 double PartitionModel::optimizeParameters(int fixed_len, bool write_info, double logl_epsilon, double gradient_epsilon) {
     PhyloSuperTree *tree = (PhyloSuperTree*)site_rate->getTree();
     double tree_lh = 0.0;
     int ntrees = tree->size();
 
+    unordered_map<string, int> num_params;
+    unordered_map<string, ModelSubst*>::iterator it;
+    // disable optimizing linked model for the moment
+    for (it = linked_models.begin(); it != linked_models.end(); it++) {
+        num_params[it->first] = it->second->getNParams();
+        it->second->setNParams(0);
+    }
+    
     if (tree->part_order.empty()) tree->computePartitionOrder();
 	#ifdef _OPENMP
 	#pragma omp parallel for reduction(+: tree_lh) schedule(dynamic) if(tree->num_threads > 1)
@@ -168,7 +272,7 @@ double PartitionModel::optimizeParameters(int fixed_len, bool write_info, double
         		" parameters for partition " << tree->at(part)->aln->name <<
         		" (" << tree->at(part)->getModelFactory()->getNParameters(fixed_len) << " free parameters)" << endl;
         }
-        tree_lh += tree->at(part)->getModelFactory()->optimizeParameters(fixed_len, write_info && verbose_mode >= VB_MED, 
+        tree_lh += tree->at(part)->getModelFactory()->optimizeParameters(fixed_len, write_info && verbose_mode >= VB_MED,
             logl_epsilon/min(ntrees,10), gradient_epsilon/min(ntrees,10));
     }
     //return ModelFactory::optimizeParameters(fixed_len, write_info);
@@ -176,7 +280,17 @@ double PartitionModel::optimizeParameters(int fixed_len, bool write_info, double
     if (tree->params->link_alpha) {
         tree_lh = optimizeLinkedAlpha(write_info, gradient_epsilon);
     }
-	if (verbose_mode >= VB_MED || write_info)
+
+    ModelSubst *saved_model = model;
+    for (it = linked_models.begin(); it != linked_models.end(); it++)
+        if (num_params[it->first] > 0) {
+            it->second->setNParams(num_params[it->first]);
+            model = it->second;
+            tree_lh = optimizeLinkedModel(write_info, gradient_epsilon);
+        }
+    model = saved_model;
+    
+    if (verbose_mode >= VB_MED || write_info)
 		cout << "Optimal log-likelihood: " << tree_lh << endl;
     return tree_lh;
 }
@@ -187,6 +301,14 @@ double PartitionModel::optimizeParametersGammaInvar(int fixed_len, bool write_in
     double tree_lh = 0.0;
     int ntrees = tree->size();
 
+    unordered_map<string, int> num_params;
+    unordered_map<string, ModelSubst*>::iterator it;
+    // disable optimizing linked model for the moment
+    for (it = linked_models.begin(); it != linked_models.end(); it++) {
+        num_params[it->first] = it->second->getNParams();
+        it->second->setNParams(0);
+    }
+    
     if (tree->part_order.empty()) tree->computePartitionOrder();
 	#ifdef _OPENMP
 	#pragma omp parallel for reduction(+: tree_lh) schedule(dynamic) if(tree->num_threads > 1)
@@ -210,7 +332,17 @@ double PartitionModel::optimizeParametersGammaInvar(int fixed_len, bool write_in
     if (tree->params->link_alpha) {
         tree_lh = optimizeLinkedAlpha(write_info, gradient_epsilon);
     }
-	if (verbose_mode >= VB_MED || write_info)
+
+    ModelSubst *saved_model = model;
+    for (it = linked_models.begin(); it != linked_models.end(); it++)
+        if (num_params[it->first] > 0) {
+            it->second->setNParams(num_params[it->first]);
+            model = it->second;
+            tree_lh = optimizeLinkedModel(write_info, gradient_epsilon);
+        }
+    model = saved_model;
+
+    if (verbose_mode >= VB_MED || write_info)
 		cout << "Optimal log-likelihood: " << tree_lh << endl;
     return tree_lh;
 }

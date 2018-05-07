@@ -21,6 +21,7 @@ ModelSubst::ModelSubst(int nstates) : Optimization(), CheckpointFactory()
 	for (int i = 0; i < num_states; i++)
 		state_freq[i] = 1.0 / num_states;
 	freq_type = FREQ_EQUAL;
+    linked_model = NULL;
 }
 
 void ModelSubst::startCheckpoint() {
@@ -53,6 +54,15 @@ void ModelSubst::restoreCheckpoint() {
     endCheckpoint();
 
     decomposeRateMatrix();
+}
+
+bool ModelSubst::linkModel(ModelSubst *target) {
+    if (num_states != target->num_states || name != target->name || freq_type != target->freq_type)
+        return false;
+    if (state_freq) delete [] state_freq;
+    state_freq = target->state_freq;
+    linked_model = target;
+    return true;
 }
 
 // here the simplest Juke-Cantor model is implemented, valid for all kind of data (DNA, AA,...)
@@ -179,7 +189,11 @@ double *ModelSubst::newTransMatrix() {
 
 ModelSubst::~ModelSubst()
 {
-	if (state_freq) delete [] state_freq;
+    // mem space pointing to target model and thus avoid double free here
+    if (linked_model && linked_model != this)
+        return;
+
+    if (state_freq) delete [] state_freq;
 }
 
 
