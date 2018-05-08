@@ -345,7 +345,7 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
 	if (freq_type == FREQ_UNKNOWN) {
 		switch (tree->aln->seq_type) {
 		case SEQ_BINARY: freq_type = FREQ_ESTIMATE; break; // default for binary: optimized frequencies
-		case SEQ_PROTEIN: freq_type = FREQ_USER_DEFINED; break; // default for protein: frequencies of the empirical AA matrix
+		case SEQ_PROTEIN: break; // let ModelProtein decide by itself
 		case SEQ_MORPH: freq_type = FREQ_EQUAL; break;
 		case SEQ_CODON: freq_type = FREQ_UNKNOWN; break;
             break;
