@@ -191,6 +191,15 @@ public:
 	*/
 	virtual void computeTransMatrix(double time, double *trans_matrix, int mixture = 0);
 
+    /**
+     compute the transition probability matrix for non-reversible model
+     @param time time between two events
+     @param mixture (optional) class for mixture model
+     @param trans_matrix (OUT) the transition matrix between all pairs of states.
+     Assume trans_matrix has size of num_states * num_states.
+     */
+    virtual void computeTransMatrixNonrev(double time, double *trans_matrix, int mixture = 0);
+
 	/**
 		compute the transition probability between two states
 		@param time time between two events
@@ -322,6 +331,8 @@ public:
 	*/
 	virtual void writeParameters(ostream &out){}
 
+    /** decompose rate matrix for non-reversible models */
+    virtual void decomposeRateMatrixNonrev();
 
 	/**
 		decompose the rate matrix into eigenvalues and eigenvectors
@@ -501,6 +512,11 @@ protected:
         to the previous double *eigenvalues and double *eigenvectors
     */
     std::complex<double> *ceval, *cevec, *cinv_evec;
+
+    /** will be set true for nondiagonalizable rate matrices,
+     then will use scaled squaring method for matrix exponentiation.
+    */
+    bool nondiagonalizable;
 
 };
 

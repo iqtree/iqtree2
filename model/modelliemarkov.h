@@ -75,7 +75,7 @@ public:
     void decomposeRateMatrixClosedForm();
 
     /** decompose rate matrix using Eigen library */
-    void decomposeRateMatrixEigen3lib();
+    virtual void decomposeRateMatrixEigen3lib();
 
 	/**
 		compute the transition probability matrix.
@@ -102,9 +102,8 @@ protected:
 	int model_num; // 0->1.1, etc to 36->12.12
 	void setBasis();
 	virtual void setRates();
-	bool nondiagonalizable; // will be set true for nondiagonalizable rate matrices, then will use scaled squaring method for matrix exponentiation.
 
-	/**
+    /**
 		this function is served for the multi-dimension optimization. It should pack the model parameters 
 		into a vector that is index from 1 (NOTE: not from 0)
 		@param variables (OUT) vector of variables, indexed from 1

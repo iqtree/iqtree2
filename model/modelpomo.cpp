@@ -5,10 +5,8 @@
 #include <assert.h>
 #include <string.h>
 
-#ifdef USE_EIGEN3
 #include <Eigen/Dense>
 #include <unsupported/Eigen/MatrixFunctions>
-#endif
 
 ModelPoMo::ModelPoMo(PhyloTree *tree) : ModelMarkov(tree) {
 }
@@ -1047,7 +1045,6 @@ void ModelPoMo::set_heterozygosity_boundaries() {
 
 // TODO DS: The parameter mixture is unused at the moment.
 void ModelPoMo::computeTransMatrix(double time, double *trans_matrix, int mixture) {
-#ifdef USE_EIGEN3
   MatrixExpTechnique technique = phylo_tree->params->matrix_exp_technique;
   if (technique == MET_SCALING_SQUARING || !is_reversible) {
     // Do not change the object rate_matrix, but only trans_matrix.
@@ -1098,8 +1095,4 @@ void ModelPoMo::computeTransMatrix(double time, double *trans_matrix, int mixtur
   }
 
   else ModelMarkov::computeTransMatrix(time, trans_matrix);
-
-#else
-  ModelMarkov::computeTransMatrix(time, trans_matrix);
-#endif
 }
