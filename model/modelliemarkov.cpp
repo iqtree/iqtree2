@@ -17,11 +17,9 @@
  * Currently symmetry permutation is applied every time setRates is called.
  * Would be more efficient to apply it just once to basis in constructor.
  */
-#ifdef USE_EIGEN3
 #include <Eigen/Dense>
 #include <unsupported/Eigen/MatrixFunctions>
 using namespace Eigen;
-#endif
 #include "modelliemarkov.h"
 #include <float.h>
 #undef NDEBUG
@@ -330,7 +328,6 @@ void ModelLieMarkov::init(const char *model_name, string model_params, StateFreq
 {
     // TODO: why is freq_params not handled here?
 
-	nondiagonalizable = false;
     ASSERT(NUM_RATES==getNumRateEntries());
     StateFreqType expected_freq_type; // returned by getLieMarkovModelInfo but not used here
     getLieMarkovModelInfo((string)model_name, name, full_name, model_num, symmetry, expected_freq_type);
@@ -1010,7 +1007,6 @@ void ModelLieMarkov::decomposeRateMatrix() {
 }
 
 void ModelLieMarkov::decomposeRateMatrixEigen3lib() {
-#ifdef USE_EIGEN3
   nondiagonalizable = false; // until proven otherwise
     Matrix4d mat(rate_matrix);
     mat.transpose();
@@ -1051,10 +1047,6 @@ void ModelLieMarkov::decomposeRateMatrixEigen3lib() {
     for (int i = 0; i < 4; i++)
         for (int j = 0; j < 4; j++)
             ASSERT(abs(check(i,j)) < 1e-4);
-#else
-    outError("Please install Eigen3 library for this option ", __func__);
-#endif
-
 }
 
 const static int a2index[] = {-1, 0, 0, 0, 0, 0,-1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
@@ -2046,7 +2038,6 @@ void ModelLieMarkov::decomposeRateMatrixClosedForm() {
 }
 
 void ModelLieMarkov::computeTransMatrix(double time, double *trans_matrix, int mixture) {
-#ifdef USE_EIGEN3
   MatrixExpTechnique technique = phylo_tree->params->matrix_exp_technique;
   if (technique == MET_SCALING_SQUARING || nondiagonalizable ) {
         Matrix4d A = Map<Matrix4d>(rate_matrix);
@@ -2106,9 +2097,5 @@ void ModelLieMarkov::computeTransMatrix(double time, double *trans_matrix, int m
 
     } else
         ModelMarkov::computeTransMatrix(time, trans_matrix);
-
-#else
-    ModelMarkov::computeTransMatrix(time, trans_matrix);
-#endif
 }
 

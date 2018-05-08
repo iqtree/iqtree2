@@ -1016,11 +1016,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.ufboot2corr = false;
     params.u2c_nni5 = false;
     
-#ifdef USE_EIGEN3
     params.matrix_exp_technique = MET_EIGEN3LIB_DECOMPOSITION;
-#else
-    params.matrix_exp_technique = MET_SCALING_SQUARING;
-#endif
 
 	if (params.nni5) {
 	    params.nni_type = NNI5;

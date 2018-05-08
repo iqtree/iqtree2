@@ -176,7 +176,7 @@ double PartitionModel::optimizeLinkedModel(bool write_info, double gradient_epsi
     if (ndim == 0) return 0.0;
     
     if (write_info)
-        cout << "Optimizing linked model " << model->getName() << " ..." << endl;
+        cout << "Optimizing linked " << model->getName() << " parameters across all partitions (" << ndim << " free parameters)" << endl;
     
     if (verbose_mode >= VB_MAX)
         cout << "Optimizing " << model->name << " model parameters..." << endl;
