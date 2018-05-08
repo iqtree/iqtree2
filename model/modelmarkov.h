@@ -496,11 +496,6 @@ protected:
 	/** imaginary part of eigenvalues */
 	double *eigenvalues_imag;
 	
-	/**
-		temporary working space
-	*/
-	double *temp_space;
-    
     /**
         complex eigenvalues and eigenvectors, pointing to the same pointer 
         to the previous double *eigenvalues and double *eigenvectors
