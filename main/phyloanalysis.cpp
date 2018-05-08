@@ -3010,13 +3010,11 @@ void runStandardBootstrap(Params &params, Alignment *alignment, IQTree *tree) {
 		} catch (ios::failure) {
 			outError(ERR_WRITE_OUTPUT, boottrees_name);
 		}
-		// fix bug: set the model for original tree after testing
-		if ((params.model_name.substr(0,4) == "TEST" || params.model_name.substr(0,2) == "MF") && tree->isSuperTree()) {
-			PhyloSuperTree *stree = ((PhyloSuperTree*)tree);
-			stree->part_info =  ((PhyloSuperTree*)boot_tree)->part_info;
-//			for (int i = 0; i < ((PhyloSuperTree*)tree)->part_info.size(); i++)
-//				((PhyloSuperTree*)tree)->part_info[i].model_name = ((PhyloSuperTree*)boot_tree)->part_info[i].model_name;
-		}
+		// OBSOLETE fix bug: set the model for original tree after testing
+//        if ((params.model_name.substr(0,4) == "TEST" || params.model_name.substr(0,2) == "MF") && tree->isSuperTree()) {
+//            PhyloSuperTree *stree = ((PhyloSuperTree*)tree);
+//            stree->part_info =  ((PhyloSuperTree*)boot_tree)->part_info;
+//        }
 		if (params.num_bootstrap_samples == 1)
 			reportPhyloAnalysis(params, *boot_tree, *model_info);
 		// WHY was the following line missing, which caused memory leak?
