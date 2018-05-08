@@ -51,7 +51,7 @@ add_definitions(-DIQ_TREE)
 # The version number.
 set (iqtree_VERSION_MAJOR 1)
 set (iqtree_VERSION_MINOR 6)
-set (iqtree_VERSION_PATCH "4")
+set (iqtree_VERSION_PATCH "5")
 
 set(BUILD_SHARED_LIBS OFF)
 
@@ -71,6 +71,7 @@ endif()
 
 if (CMAKE_GENERATOR MATCHES "Xcode")
     set(CMAKE_XCODE_ATTRIBUTE_DEBUG_INFORMATION_FORMAT "dwarf-with-dsym")
+    set(CMAKE_XCODE_ATTRIBUTE_COMPILER_INDEX_STORE_ENABLE "No")
 endif()
 
 include_directories("${PROJECT_SOURCE_DIR}")
