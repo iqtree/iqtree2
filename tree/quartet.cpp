@@ -1185,6 +1185,7 @@ void readGroupNewick(char *filename, MSetsBlock *sets_block) {
                         break;
                     }
                 } while (ch != ',' && ch != ')');
+                renameString(name);
                 myset->taxlist.push_back(name);
                 if (ch == ',') continue; // continue to read next taxon name
                 if (ch == ')') break;
