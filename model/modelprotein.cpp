@@ -586,6 +586,9 @@ void ModelProtein::init(const char *model_name, string model_params, StateFreqTy
         ASSERT(nxs_model);
         readParametersString(nxs_model->description);
         rescaleRates(rates, getNumRateEntries());
+
+        // 2018-05-08 bug fix: GTR20 rates are not optimized
+        num_params = getNumRateEntries()-1;
 	} else {
 		// if name does not match, read the user-defined model
 		readParameters(model_name);
