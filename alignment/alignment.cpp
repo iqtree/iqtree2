@@ -138,12 +138,7 @@ void Alignment::checkSeqName() {
     StrVector::iterator it;
     for (it = seq_names.begin(); it != seq_names.end(); it++) {
         string orig_name = (*it);
-        for (string::iterator i = it->begin(); i != it->end(); i++) {
-            if (!isalnum(*i) && (*i) != '_' && (*i) != '-' && (*i) != '.') {
-                (*i) = '_';
-            }
-        }
-        if (orig_name != (*it))
+        if (renameString(*it))
             warn_str << orig_name << " -> " << (*it) << endl;
     }
     if (warn_str.str() != "") {
