@@ -586,6 +586,8 @@ void ModelProtein::init(const char *model_name, string model_params, StateFreqTy
         ASSERT(nxs_model);
         readParametersString(nxs_model->description);
         rescaleRates(rates, getNumRateEntries());
+
+        // 2018-05-08 bug fix: GTR20 rates are not optimized
         num_params = getNumRateEntries()-1;
     } else if (name_upper == "NONREV") {
         outWarning("NONREV model will estimate 379 substitution rates that might be overfitting!");

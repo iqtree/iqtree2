@@ -3135,10 +3135,15 @@ void evaluateTrees(Params &params, IQTree *tree, vector<TreeInfo> &info, IntVect
 		}
 		tree->freeNode();
 		tree->readTree(in, tree->rooted);
-        if (tree->rooted && tree->getModel()->isReversible())
+        if (tree->rooted && tree->getModel()->isReversible()) {
+            if (tree->leafNum != tree->aln->getNSeq()+1)
+                outError("Tree does not have same number of taxa as alignment");
             tree->convertToUnrooted();
-        else if (!tree->rooted && !tree->getModel()->isReversible())
+        } else if (!tree->rooted && !tree->getModel()->isReversible()) {
+            if (tree->leafNum != tree->aln->getNSeq())
+                outError("Tree does not have same number of taxa as alignment");
             tree->convertToRooted();
+        }
 		tree->setAlignment(tree->aln);
         tree->setRootNode(params.root);
 		if (tree->isSuperTree())

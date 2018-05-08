@@ -51,7 +51,7 @@ add_definitions(-DIQ_TREE)
 # The version number.
 set (iqtree_VERSION_MAJOR 1)
 set (iqtree_VERSION_MINOR 6)
-set (iqtree_VERSION_PATCH "4")
+set (iqtree_VERSION_PATCH "5")
 
 set(BUILD_SHARED_LIBS OFF)
 
@@ -279,6 +279,7 @@ if (NOT IQTREE_FLAGS MATCHES "single")
   	elseif (CLANG)
 		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pthread")
   		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp=libomp -pthread")
+        set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fopenmp=libomp")
   	endif()
 else()
 	message("OpenMP        : NONE")
@@ -391,10 +392,6 @@ set(CMAKE_C_FLAGS_PROFILE "${CMAKE_C_FLAGS} -fno-inline-functions -fno-inline-fu
 
 if(CLANG AND IQTREE_FLAGS MATCHES "static")
     set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -pthread -Wl,--allow-multiple-definition")
-endif()
-
-if(CLANG AND APPLE)
-    set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fopenmp=libomp")
 endif()
 
 if (IQTREE_FLAGS MATCHES "libcxx")

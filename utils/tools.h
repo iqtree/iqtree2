@@ -2262,6 +2262,13 @@ void convert_range(const char *str, double &lower, double &upper, double &step_s
 void convert_string_vec(const char *str, StrVector &str_vec);
 
 /**
+    change unusual character in names into underscore (_)
+    @param[in/out] name string name
+    @return true if renamed, false otherwise
+ */
+bool renameString(string &name);
+
+/**
         read the file containing branch/split scaling factor and taxa weights
         @param params program parameters
         @param ntaxa total number of taxa
