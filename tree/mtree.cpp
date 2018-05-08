@@ -838,6 +838,7 @@ void MTree::parseFile(istream &infile, char &ch, Node* &root, DoubleVector &bran
         ch = readNextChar(infile, ch);
     if (seqlen == maxlen)
         throw "Too long name ( > 1000)";
+    renameString(seqname);
 //    seqname[seqlen] = 0;
     if (seqlen == 0 && root->isLeaf())
         throw "A taxon has no name.";
