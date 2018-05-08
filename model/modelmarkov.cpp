@@ -30,8 +30,8 @@ using namespace Eigen;
 const int TimeSquare = 10;
 
 //----- declaration of some helper functions -----/
-int matexp (double Q[], double t, int n, int TimeSquare, double space[]);
-int computeStateFreqFromQMatrix (double Q[], double pi[], int n, double space[]);
+int matexp (double Q[], double t, int n, int TimeSquare);
+int computeStateFreqFromQMatrix (double Q[], double pi[], int n);
 
 //const double MIN_FREQ_RATIO = MIN_FREQUENCY;
 //const double MAX_FREQ_RATIO = 1.0/MIN_FREQUENCY;
@@ -53,7 +53,6 @@ ModelMarkov::ModelMarkov(PhyloTree *tree, bool reversible)
     fixed_parameters = false;
 //    model_parameters = NULL;
     rate_matrix = NULL;
-    temp_space = NULL;
     eigenvalues_imag = NULL;
     ceval = cevec = cinv_evec = NULL;
 
@@ -130,8 +129,6 @@ void ModelMarkov::setReversible(bool reversible) {
             memset(rates, 0, sizeof(double) * (num_rates));
         }
 
-        if (!temp_space)
-            temp_space =  aligned_alloc<double>(num_states*num_states);
         if (!eigenvalues_imag)
             eigenvalues_imag = aligned_alloc<double>(num_states);
 
@@ -200,7 +197,6 @@ bool ModelMarkov::linkModel(ModelSubst *target) {
     cevec = model->cevec;
     ceval = model->ceval;
     eigenvalues_imag = model->eigenvalues_imag;
-    temp_space = model->temp_space;
     rate_matrix = model->rate_matrix;
     return true;
 }
@@ -435,7 +431,7 @@ void ModelMarkov::computeTransMatrix(double time, double *trans_matrix, int mixt
             // scaling and squaring technique
             int statesqr = num_states*num_states;
             memcpy(trans_matrix, rate_matrix, statesqr*sizeof(double));
-            matexp(trans_matrix, time, num_states, TimeSquare, temp_space);
+            matexp(trans_matrix, time, num_states, TimeSquare);
         } else {
             ASSERT(0 && "this line should not be reached");
         }
@@ -494,10 +490,10 @@ double ModelMarkov::computeTrans(double time, int state1, int state2) {
         return trans_prob;
     } else {
         // non-reversible
-//        double *trans_matrix = new double[num_states*num_states];
-        computeTransMatrix(time, temp_space);
-        double trans = temp_space[state1*num_states+state2];
-//        delete [] trans_matrix;
+        double *trans_matrix = new double[num_states*num_states];
+        computeTransMatrix(time, trans_matrix);
+        double trans = trans_matrix[state1*num_states+state2];
+        delete [] trans_matrix;
         return trans;
     }
 }
@@ -908,8 +904,7 @@ void ModelMarkov::decomposeRateMatrix(){
     if (!is_reversible) {
         double sum;
         //double m[num_states];
-        double *space = new double[num_states*(num_states+1)];
-
+        
         for (i = 0; i < num_states; i++)
             state_freq[i] = 1.0/num_states;
 
@@ -922,7 +917,7 @@ void ModelMarkov::decomposeRateMatrix(){
                 }
             rate_matrix[i*num_states+i] = -row_sum;
         }
-        computeStateFreqFromQMatrix(rate_matrix, state_freq, num_states, space);
+        computeStateFreqFromQMatrix(rate_matrix, state_freq, num_states);
 
 
         for (i = 0, sum = 0.0; i < num_states; i++) {
@@ -938,7 +933,6 @@ void ModelMarkov::decomposeRateMatrix(){
                 rate_matrix[i*num_states+j] *= delta;
             }
         }
-        delete [] space;
 
         if (phylo_tree->params->matrix_exp_technique == MET_EIGEN_DECOMPOSITION) {
             eigensystem_nonrev(rate_matrix, state_freq, eigenvalues, eigenvalues_imag, eigenvectors, inv_eigenvectors, num_states);
@@ -1232,8 +1226,6 @@ void ModelMarkov::freeMem()
         aligned_free(ceval);
     if (eigenvalues_imag)
         aligned_free(eigenvalues_imag);
-    if (temp_space)
-        aligned_free(temp_space);
     if (rate_matrix)
         aligned_free(rate_matrix);
 //    if (model_parameters)
@@ -1424,8 +1416,10 @@ int matinv (double x[], int n, int m, double space[])
     return(0);
 }
 
-int computeStateFreqFromQMatrix (double Q[], double pi[], int n, double space[])
+int computeStateFreqFromQMatrix (double Q[], double pi[], int n)
 {
+    double *space = new double[n*(n+1)];
+
     /* from rate matrix Q[] to pi, the stationary frequencies:
        Q' * pi = 0     pi * 1 = 1
        space[] is of size n*(n+1).
@@ -1442,6 +1436,7 @@ int computeStateFreqFromQMatrix (double Q[], double pi[], int n, double space[])
     matinv(T, n, n+1, pi);
     for (i=0;i<n;i++)
         pi[i] = T[i*(n+1)+n];
+    delete [] space;
     return (0);
 }
 /* End of Ziheng Yang code */
@@ -1460,8 +1455,9 @@ int matby (double a[], double b[], double c[], int n,int m,int k)
     return (0);
 }
 
-int matexp (double Q[], double t, int n, int TimeSquare, double space[])
+int matexp (double Q[], double t, int n, int TimeSquare)
 {
+    double *space = new double[n*n];
     /* This calculates the matrix exponential P(t) = exp(t*Q).
        Input: Q[] has the rate matrix, and t is the time or branch length.
               TimeSquare is the number of times the matrix is squared and should
@@ -1500,5 +1496,7 @@ int matexp (double Q[], double t, int n, int TimeSquare, double space[])
     }
     if (it==1)
         for (i=0;i<n*n;i++) Q[i]=T[1][i];
+
+    delete [] space;
     return(0);
 }
