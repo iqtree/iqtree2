@@ -18,6 +18,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 #include "msetsblock.h"
+#include "utils/tools.h"
 
 MSetsBlock::MSetsBlock()
  : NxsBlock()
@@ -105,7 +106,9 @@ void MSetsBlock::Read(NxsToken &token)
 			token.SetLabileFlagBit(NxsToken::preserveUnderscores);
 			token.GetNextToken();
 			do {
-				myset->taxlist.push_back(token.GetToken());
+                string taxname = token.GetToken();
+                renameString(taxname);
+				myset->taxlist.push_back(taxname);
 				token.SetLabileFlagBit(NxsToken::preserveUnderscores);
 				token.GetNextToken();
 			} while (!token.AtEOF() && !token.Equals(";"));
