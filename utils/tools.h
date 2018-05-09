@@ -1091,6 +1091,10 @@ public:
      */
     bool is_rooted;
 
+    /**
+        maximum distance to move root
+     */
+    int root_move_dist;
 
     /**
             min branch length, used to create random tree/network

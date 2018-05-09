@@ -1097,6 +1097,23 @@ void MTree::getBranches(NodeVector &nodes, NodeVector &nodes2, Node *node, Node 
     }
 }
 
+void MTree::getBranches(int max_dist, NodeVector &nodes, NodeVector &nodes2, Node *node, Node *dad) {
+    if (!node) node = root;
+    //for (NeighborVec::iterator it = node->neighbors.begin(); it != node->neighbors.end(); it++)
+    //if ((*it)->node != dad)   {
+    FOR_NEIGHBOR_IT(node, dad, it) {
+        if (node->id < (*it)->node->id) {
+            nodes.push_back(node);
+            nodes2.push_back((*it)->node);
+        } else {
+            nodes.push_back((*it)->node);
+            nodes2.push_back(node);
+        }
+        if (max_dist > 1)
+            getBranches(max_dist-1, nodes, nodes2, (*it)->node, node);
+    }
+}
+
 void MTree::getInnerBranches(Branches& branches, Node *node, Node *dad) {
     if (!node) node = root;
     FOR_NEIGHBOR_IT(node, dad, it) {

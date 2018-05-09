@@ -728,6 +728,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.budget_file = NULL;
     params.overlap = 0;
     params.is_rooted = false;
+    params.root_move_dist = 2;
     params.sample_size = -1;
     params.repeated_time = 1;
     //params.nr_output = 10000;
@@ -1153,6 +1154,15 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.is_rooted = true;
 				continue;
 			}
+            
+            if (strcmp(argv[cnt], "--root-move-dist") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use --root-move-dist <maximum-root-move-distance>";
+                params.root_move_dist = convert_int(argv[cnt]);
+                continue;
+            }
+            
 			if (strcmp(argv[cnt], "-all") == 0) {
 				params.find_all = true;
 				continue;

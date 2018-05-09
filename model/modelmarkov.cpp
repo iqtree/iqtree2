@@ -1037,20 +1037,65 @@ void ModelMarkov::decomposeRateMatrix(){
         return;
 	}
     
-    /*    } else if (Params::getInstance().matrix_exp_technique == MET_EIGEN3LIB_DECOMPOSITION) {
-     // Using Eigen3 libary for general time-reversible model
-     Eigen::MatrixXd Q;
-     Q.resize(num_states, num_states);
-     if (half_matrix) {
-     for (i = 0, k = 0; i < num_states; i++)
-     for (j = i+1; j < num_states; j++, k++) {
-     Q(i,j) = Q(j,i) = rates[k];
-     }
-     } else {
-     // full matrix
-     }
-     */
+    auto technique = phylo_tree->params->matrix_exp_technique;
+    
+    if (technique == MET_EIGEN3LIB_DECOMPOSITION) {
+        // Use Eigen3 library for eigen decomposition of symmetric matrix
+        MatrixXd Q(num_states, num_states);
+        VectorXd pi = Map<VectorXd>(state_freq, num_states);
+        ArrayXd pi_sqrt_arr = Map<ArrayXd>(state_freq, num_states).sqrt();
+        auto pi_sqrt = pi_sqrt_arr.matrix().asDiagonal();
+        auto pi_sqrt_inv = pi_sqrt_arr.inverse().matrix().asDiagonal();
 
+        if (half_matrix) {
+            for (i = 0, k = 0; i < num_states; i++) {
+                Q(i,i) = 0.0;
+                for (j = i+1; j < num_states; j++, k++) {
+                    Q(i,j) = Q(j,i) = rates[k];
+                }
+            }
+        } else {
+            // full matrix
+            Q = Map<Matrix<double,Dynamic,Dynamic,RowMajor> >(rates,num_states,num_states);
+        }
+        
+        // compute rate matrix
+        Q = Q * pi.asDiagonal();
+        
+        //make row sum equal zero
+        VectorXd Q_row_sum = Q.rowwise().sum();
+        Q -= Q_row_sum.asDiagonal();
+        
+        // normalize rat_mat
+        if (normalize_matrix) {
+            double scale_factor = total_num_subst / (Q_row_sum.dot(pi));
+            Q = Q * scale_factor;
+        }
+        
+        if (verbose_mode >= VB_DEBUG)
+            cout << Q << endl;
+        
+        //symmetrize rate matrix
+        Q = pi_sqrt * Q * pi_sqrt_inv;
+        if (verbose_mode >= VB_DEBUG)
+            cout << "Symmetric rate matrix:" << endl << Q << endl;
+
+        // eigensolver
+        SelfAdjointEigenSolver<MatrixXd> eigensolver(Q);
+        ASSERT (eigensolver.info() == Eigen::Success);
+
+        Map<VectorXd,Aligned> eval(eigenvalues,num_states);
+        eval = eigensolver.eigenvalues();
+        if (verbose_mode >= VB_DEBUG)
+            cout << "eval: " << eval << endl;
+
+        Map<Matrix<double,Dynamic,Dynamic,RowMajor>,Aligned> evec(eigenvectors,num_states,num_states);
+        evec = pi_sqrt_inv * eigensolver.eigenvectors();
+
+        Map<Matrix<double,Dynamic,Dynamic,RowMajor>,Aligned> inv_evec(inv_eigenvectors,num_states,num_states);
+        inv_evec = eigensolver.eigenvectors().transpose() * pi_sqrt;
+        return;
+    }
 
     // general reversible model
     double **rate_matrix = new double*[num_states];
