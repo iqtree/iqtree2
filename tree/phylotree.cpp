@@ -2668,12 +2668,12 @@ void PhyloTree::moveRoot(Node *node1, Node *node2) {
     node2->updateNeighbor(node1, root_dad, len);
 }
 
-double PhyloTree::optimizeRootPosition(bool write_info, double logl_epsilon) {
+double PhyloTree::optimizeRootPosition(int root_dist, bool write_info, double logl_epsilon) {
     if (!rooted)
         return curScore;
 
     NodeVector nodes1, nodes2;
-    getBranches(nodes1, nodes2);
+    getBranches(root_dist+1, nodes1, nodes2);
     int i;
     Node *root_dad = root->neighbors[0]->node;
 
@@ -5030,16 +5030,26 @@ void PhyloTree::sortNeighborBySubtreeSize(PhyloNode *node, PhyloNode *dad) {
 
 void PhyloTree::convertToRooted() {
     ASSERT(leafNum == aln->getNSeq());
-    string name;
-    if (params->root)
-        name = params->root;
-    else
-        name = aln->getSeqName(0);
-    Node *node = findNodeName(name);
-    if (!node)
-        outError("Cannot find leaf with name " + name);
-    ASSERT(node->isLeaf());
-    Node *dad = node->neighbors[0]->node;
+    Node *node, *dad;
+    if (params->root) {
+        string name = params->root;
+        node = findNodeName(name);
+        if (!node)
+            outError("Cannot find leaf with name " + name);
+        ASSERT(node->isLeaf());
+        dad = node->neighbors[0]->node;
+    } else {
+        // place root to the longest branch
+        NodeVector nodes1, nodes2;
+        getBranches(nodes1, nodes2);
+        double max_length = -1.0;
+        for (int i = 0; i < nodes1.size(); i++)
+            if (max_length < nodes1[i]->findNeighbor(nodes2[i])->length) {
+                max_length = nodes1[i]->findNeighbor(nodes2[i])->length;
+                node = nodes1[i];
+                dad = nodes2[i];
+            }
+    }
     rooted = true;
     root = newNode(leafNum, ROOT_NAME);
     Node *root_int = newNode();

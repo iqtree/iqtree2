@@ -3064,9 +3064,9 @@ pair<int, int> IQTree::doNNISearch() {
 
             // 2018-01-09: additional optimize root position
             // TODO: does not work with SuperTree yet
-            if (rooted && !isSuperTree())
+            if (rooted && !isSuperTree() && params->root_move_dist > 0)
             {
-                optimizeRootPosition(true, params->modelEps * 10);
+                optimizeRootPosition(params->root_move_dist, true, params->modelEps * 10);
             }
 		}
 	}

@@ -1314,8 +1314,11 @@ public:
 
     /**
         Optimize root position for rooted tree
+        @param root_dist maximum distance to move root
+        @param write_info true to write information to cout
+        @param logl_epsilon epsilon of log-likelihood to consider as better
     */
-    virtual double optimizeRootPosition(bool write_info, double logl_epsilon);
+    virtual double optimizeRootPosition(int root_dist, bool write_info, double logl_epsilon);
 
     /**
             inherited from Optimization class, to return to likelihood of the tree
