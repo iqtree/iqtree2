@@ -133,6 +133,10 @@ void ModelSubst::getStateFrequency(double *state_freq, int mixture) {
 		state_freq[i] = freq;
 }
 
+void ModelSubst::setStateFrequency(double *state_freq) {
+    memcpy(this->state_freq, state_freq, sizeof(double)*num_states);
+}
+
 void ModelSubst::computeTransDerv(double time, double *trans_matrix, 
 		double *trans_derv1, double *trans_derv2, int mixture)
 {

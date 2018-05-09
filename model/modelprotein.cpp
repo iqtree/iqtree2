@@ -577,8 +577,10 @@ void ModelProtein::init(const char *model_name, string model_params, StateFreqTy
         readParametersString(model_params);
         num_params = 0;
     } else if (name_upper == "GTR20") {
-        outWarning("GTR20 model will estimate 189 substitution rates that might be overfitting!");
-        outWarning("Please only use GTR20 with very large data and always test for model fit!");
+        if (!Params::getInstance().link_model) {
+            outWarning("GTR20 model will estimate 189 substitution rates that might be overfitting!");
+            outWarning("Please only use GTR20 with very large data and always test for model fit!");
+        }
         if (freq == FREQ_UNKNOWN)
             freq = FREQ_EMPIRICAL;
         // initialize rate matrix with LG
@@ -590,8 +592,10 @@ void ModelProtein::init(const char *model_name, string model_params, StateFreqTy
         // 2018-05-08 bug fix: GTR20 rates are not optimized
         num_params = getNumRateEntries()-1;
     } else if (name_upper == "NONREV") {
-        outWarning("NONREV model will estimate 379 substitution rates that might be overfitting!");
-        outWarning("Please only use NONREV with very large data and always test for model fit!");
+        if (!Params::getInstance().link_model) {
+            outWarning("NONREV model will estimate 379 substitution rates that might be overfitting!");
+            outWarning("Please only use NONREV with very large data and always test for model fit!");
+        }
         if (freq == FREQ_UNKNOWN)
             freq = FREQ_ESTIMATE;
         // initialize rate matrix with LG

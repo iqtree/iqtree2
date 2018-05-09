@@ -623,7 +623,19 @@ void ModelMarkov::getStateFrequency(double *freq, int mixture) {
 void ModelMarkov::setStateFrequency(double* freq)
 {
 	ASSERT(state_freq);
-	memcpy(state_freq, freq, sizeof(double) * num_states);
+    if (!isReversible()) {
+        // integrate out state_freq from rate_matrix
+        int i, j, k = 0;
+        for (i = 0, k = 0; i < num_states; i++)
+            for (j = 0; j < num_states; j++)
+                if (i != j) {
+                    rates[k] = (rates[k])*freq[j];
+                    if (state_freq[j] != 0.0)
+                        rates[k] /= state_freq[j];
+                    k++;
+                }
+    }
+    ModelSubst::setStateFrequency(freq);
 }
 
 void ModelMarkov::getQMatrix(double *q_mat) {

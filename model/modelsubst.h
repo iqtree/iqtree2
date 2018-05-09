@@ -222,9 +222,15 @@ public:
 		compute the state frequency vector. One should override this function when defining new model.
 		The default is equal state sequency, valid for all kind of data.
         @param mixture (optional) class for mixture model
-		@param state_freq (OUT) state frequency vector. Assume state_freq has size of num_states
+		@param[out] state_freq state frequency vector. Assume state_freq has size of num_states
 	*/
 	virtual void getStateFrequency(double *state_freq, int mixture = 0);
+
+    /**
+     set the state frequency vector.
+     @param state_freq state frequency vector. Assume state_freq has size of num_states
+     */
+    virtual void setStateFrequency(double *state_freq);
 
 	/**
 		get frequency type
