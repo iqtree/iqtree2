@@ -128,8 +128,9 @@ public:
     /** optimize linked model parameter of over all partitions */
     double optimizeLinkedModel(bool write_info, double gradient_epsilon);
     
+    void reportLinkedModel(ostream &out);
 
-protected:
+//protected:
 
 	/** linked Gamma shape alpha between partitions */
 	double linked_alpha;

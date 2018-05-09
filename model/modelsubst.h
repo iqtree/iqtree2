@@ -374,6 +374,11 @@ public:
 	*/
 	StateFreqType freq_type;
 
+    /**
+     target model that this model is linked with
+     */
+    ModelSubst *linked_model;
+
 	/**
 		destructor
 	*/
@@ -396,10 +401,6 @@ protected:
 	*/
 	virtual bool getVariables(double *variables) { return false; }
 
-    /**
-     target model that this model is linked with
-     */
-    ModelSubst *linked_model;
     
 };
 

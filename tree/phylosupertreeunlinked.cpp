@@ -107,6 +107,11 @@ void PhyloSuperTreeUnlinked::computeBranchLengths() {
     // DOES NOTHING
 }
 
+void PhyloSuperTreeUnlinked::printTree(ostream &out, int brtype) {
+    for (iterator tree = begin(); tree != end(); tree++)
+        (*tree)->printTree(out, brtype);
+}
+
 void PhyloSuperTreeUnlinked::printResultTree(string suffix) {
     if (MPIHelper::getInstance().isWorker()) {
         return;
