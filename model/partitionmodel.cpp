@@ -244,6 +244,15 @@ double PartitionModel::optimizeLinkedModel(bool write_info, double gradient_epsi
     return score;
 }
 
+void PartitionModel::reportLinkedModel(ostream &out) {
+    if (linked_alpha > 0.0)
+        out << "Linked alpha across partitions: " << linked_alpha << endl;
+    for (auto it = linked_models.begin(); it != linked_models.end(); it++) {
+        out << "Linked model " << it->first << ": " << endl;
+        it->second->report(out);
+    }
+}
+
 double PartitionModel::optimizeParameters(int fixed_len, bool write_info, double logl_epsilon, double gradient_epsilon) {
     PhyloSuperTree *tree = (PhyloSuperTree*)site_rate->getTree();
     double tree_lh = 0.0;

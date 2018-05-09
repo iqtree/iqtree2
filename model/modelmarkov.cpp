@@ -1060,7 +1060,7 @@ void ModelMarkov::decomposeRateMatrix(){
         }
         
         // compute rate matrix
-        Q = Q * pi.asDiagonal();
+        Q *= pi.asDiagonal();
         
         //make row sum equal zero
         VectorXd Q_row_sum = Q.rowwise().sum();
@@ -1069,7 +1069,7 @@ void ModelMarkov::decomposeRateMatrix(){
         // normalize rat_mat
         if (normalize_matrix) {
             double scale_factor = total_num_subst / (Q_row_sum.dot(pi));
-            Q = Q * scale_factor;
+            Q *= scale_factor;
         }
         
         if (verbose_mode >= VB_DEBUG)

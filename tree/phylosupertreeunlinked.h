@@ -90,6 +90,13 @@ public:
     virtual void computeBranchLengths();
 
     /**
+     print the tree to the output file in newick format
+     @param out the output stream.
+     @param brtype type of branch to print
+     */
+    virtual void printTree(ostream & out, int brtype = WT_BR_LEN);
+
+    /**
      print tree to .treefile
      @param params program parameters, field root is taken
      */

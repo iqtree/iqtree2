@@ -479,10 +479,10 @@ void reportRate(ostream &out, PhyloTree &tree) {
 }
 
 void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh, double lh_variance, double main_tree) {
-	double epsilon = 1.0 / tree.getAlnNSite();
+    int ssize = tree.getAlnNSite();
+	double epsilon = 1.0 / ssize;
 	double totalLen = tree.treeLength();
 	int df = tree.getModelFactory()->getNParameters(BRLEN_OPTIMIZE);
-	int ssize = tree.getAlnNSite();
 	double AIC_score, AICc_score, BIC_score;
 	computeInformationScores(tree_lh, df, ssize, AIC_score, AICc_score, BIC_score);
 
@@ -577,6 +577,12 @@ void reportTree(ofstream &out, Params &params, PhyloTree &tree, double tree_lh, 
         out << endl;
     }
 
+    if (params.partition_type == TOPO_UNLINKED) {
+        out << "Tree topologies are unlinked across partitions, thus no drawing will be displayed here" << endl;
+        out << endl;
+        return;
+    }
+    
 	//out << "ZERO BRANCH EPSILON = " << epsilon << endl;
 	int zero_internal_branches = tree.countZeroInternalBranches(NULL, NULL, epsilon);
 	if (zero_internal_branches > 0) {
@@ -995,6 +1001,11 @@ void reportPhyloAnalysis(Params &params, IQTree &tree, ModelCheckpoint &model_in
 				reportModel(out, *(*it));
 				reportRate(out, *(*it));
 			}*/
+            if (params.link_model || params.link_alpha) {
+                for (it = stree->begin(); it != stree->end(); it++)
+                    if (!(*it)->getModel()->linked_model)
+                        reportModel(out, *(*it));
+            }
 		} else {
 			reportModel(out, tree);
 			reportRate(out, tree);
@@ -1097,8 +1108,7 @@ void reportPhyloAnalysis(Params &params, IQTree &tree, ModelCheckpoint &model_in
                 }
             }
 
-            if (params.partition_type != TOPO_UNLINKED)
-                reportTree(out, params, tree, tree.getBestScore(), tree.logl_variance, true);
+            reportTree(out, params, tree, tree.getBestScore(), tree.logl_variance, true);
 
 			if (tree.isSuperTree() && verbose_mode >= VB_MED) {
 				PhyloSuperTree *stree = (PhyloSuperTree*) &tree;

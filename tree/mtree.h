@@ -192,7 +192,7 @@ public:
             @param out the output stream.
             @param brtype type of branch to print
      */
-    void printTree(ostream & out, int brtype = WT_BR_LEN);
+    virtual void printTree(ostream & out, int brtype = WT_BR_LEN);
 
     /**
      *  internal function called by printTree to print branch length
