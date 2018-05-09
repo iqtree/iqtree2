@@ -49,6 +49,7 @@ PartitionModel::PartitionModel(Params &params, PhyloSuperTree *tree, ModelsBlock
         params.gamma_shape = fabs(params.gamma_shape);
         linked_alpha = params.gamma_shape;
     }
+    double *sum_state_freq = NULL;
     for (it = tree->begin(), part = 0; it != tree->end(); it++, part++) {
         ASSERT(!((*it)->getModelFactory()));
         string model_name = (*it)->aln->model_name;
@@ -60,10 +61,18 @@ PartitionModel::PartitionModel(Params &params, PhyloSuperTree *tree, ModelsBlock
 
         // link models between partitions
         if (params.link_model) {
-            if (linked_models.find((*it)->getModel()->getName()) != linked_models.end())
+            if (linked_models.find((*it)->getModel()->getName()) != linked_models.end()) {
+                for (int i = 0; i < (*it)->getModel()->num_states; i++)
+                    sum_state_freq[i] += (*it)->getModel()->state_freq[i];
                 (*it)->getModel()->linkModel(linked_models[(*it)->getModel()->getName()]);
-            else
+            } else {
                 linked_models[(*it)->getModel()->getName()] = (*it)->getModel();
+                if (sum_state_freq)
+                    delete [] sum_state_freq;
+                sum_state_freq = new double[(*it)->getModel()->num_states];
+                (*it)->getModel()->getStateFrequency(sum_state_freq);
+            }
+            
         } else if ((*it)->aln->getNSeq() < tree->aln->getNSeq() && params.partition_type != TOPO_UNLINKED &&
             (*it)->getModel()->freq_type == FREQ_EMPIRICAL && (*it)->aln->seq_type != SEQ_CODON) {
         	// modify state_freq to account for empty sequences
@@ -75,6 +84,19 @@ PartitionModel::PartitionModel(Params &params, PhyloSuperTree *tree, ModelsBlock
         //(*it)->copyTree(tree, taxa_set);
         //(*it)->drawTree(cout);
     }
+    if (linked_models.size() > 1)
+        outWarning("State frequency are not properly set. Contact developers");
+    for (auto mit = linked_models.begin(); mit != linked_models.end(); mit++) {
+        double sum = 0.0;
+        int i;
+        for (i = 0; i < mit->second->num_states; i++)
+            sum += sum_state_freq[i];
+        sum = 1.0/sum;
+        mit->second->setStateFrequency(sum_state_freq);
+        mit->second->decomposeRateMatrix();
+    }
+    if (sum_state_freq)
+        delete [] sum_state_freq;
 }
 
 void PartitionModel::setCheckpoint(Checkpoint *checkpoint) {

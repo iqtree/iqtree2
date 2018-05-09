@@ -298,6 +298,8 @@ void reportModel(ofstream &out, Alignment *aln, ModelSubst *m) {
         out << "WARNING: This model has " << m->getNDim() + m->getNDimFreq() << " parameters that may be overfitting. Please use with caution!" << endl << endl;
         double full_mat[400];
         
+        out.precision(6);
+
         if (m->isReversible()) {
             for (i = 0, k = 0; i < m->num_states - 1; i++)
                 for (j = i + 1; j < m->num_states; j++, k++) {
@@ -306,7 +308,7 @@ void reportModel(ofstream &out, Alignment *aln, ModelSubst *m) {
             out << "Substitution parameters (lower-diagonal) and state frequencies in PAML format (can be used as input for IQ-TREE): " << endl << endl;
             for (i = 1; i < m->num_states; i++) {
                 for (j = 0; j < i; j++)
-                    out << "\t" << full_mat[j*m->num_states+i];
+                    out << " " << full_mat[j*m->num_states+i];
                 out << endl;
             }
         } else {
@@ -315,15 +317,16 @@ void reportModel(ofstream &out, Alignment *aln, ModelSubst *m) {
             out << "Full Q matrix and state frequencies (can be used as input for IQ-TREE): " << endl << endl;
             for (i = 0; i < m->num_states; i++) {
                 for (j = 0; j < m->num_states; j++)
-                    out << "\t" << full_mat[i*m->num_states+j];
+                    out << " " << full_mat[i*m->num_states+j];
                 out << endl;
             }
         }
         double state_freq[20];
         m->getStateFrequency(state_freq);
         for (i = 0; i < m->num_states; i++)
-            out << "\t" << state_freq[i];
+            out << " " << state_freq[i];
         out << endl << endl;
+        out.precision(4);
     }
     
     delete[] rate_mat;
