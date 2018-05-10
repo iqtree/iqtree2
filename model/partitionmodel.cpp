@@ -174,9 +174,12 @@ double PartitionModel::optimizeLinkedAlpha(bool write_info, double gradient_epsi
 	double current_shape = linked_alpha;
 	double ferror, optx;
 	optx = minimizeOneDimen(site_rate->getTree()->params->min_gamma_shape, current_shape, MAX_GAMMA_SHAPE, max(gradient_epsilon, TOL_GAMMA_SHAPE), &negative_lh, &ferror);
-    if (write_info)
+    double tree_lh = site_rate->getTree()->computeLikelihood();
+    if (write_info) {
         cout << "Linked alpha across partitions: " << linked_alpha << endl;
-	return site_rate->getTree()->computeLikelihood();
+        cout << "Linked alpha log-likelihood: " << tree_lh << endl;
+    }
+	return tree_lh;
     
 }
 
@@ -219,10 +222,10 @@ double PartitionModel::optimizeLinkedModel(bool write_info, double gradient_epsi
     model->setVariables(variables);
     model->setVariables(variables2);
     ((ModelMarkov*)model)->setBounds(lower_bound, upper_bound, bound_check);
-    //    if (phylo_tree->params->optimize_alg.find("BFGS-B") == string::npos)
-    //        score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound, bound_check, max(gradient_epsilon, TOL_RATE));
-    //    else
-    //        score = -L_BFGS_B(ndim, variables+1, lower_bound+1, upper_bound+1, max(gradient_epsilon, TOL_RATE));
+    if (Params::getInstance().optimize_alg.find("NR") != string::npos)
+        score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound, bound_check, max(gradient_epsilon, TOL_RATE));
+    else
+        score = -L_BFGS_B(ndim, variables+1, lower_bound+1, upper_bound+1, max(gradient_epsilon, TOL_RATE));
     
     // 2017-12-06: more robust optimization using 2 different routines
     // when estimates are at boundary
@@ -261,8 +264,7 @@ double PartitionModel::optimizeLinkedModel(bool write_info, double gradient_epsi
     delete [] variables;
     
     if (write_info) {
-        cout << "Linked model across partitions: " << endl;
-        model->writeInfo(cout);
+        cout << "Linked-model log-likelihood: " << score << endl;
     }
 
     return score;
@@ -277,56 +279,67 @@ void PartitionModel::reportLinkedModel(ostream &out) {
     }
 }
 
+bool PartitionModel::isLinkedModel() {
+    return Params::getInstance().link_alpha || (linked_models.size()>0);
+}
+
 double PartitionModel::optimizeParameters(int fixed_len, bool write_info, double logl_epsilon, double gradient_epsilon) {
     PhyloSuperTree *tree = (PhyloSuperTree*)site_rate->getTree();
-    double tree_lh = 0.0;
+    double prev_tree_lh = -DBL_MAX, tree_lh = 0.0;
     int ntrees = tree->size();
 
     unordered_map<string, int> num_params;
     unordered_map<string, ModelSubst*>::iterator it;
-    // disable optimizing linked model for the moment
-    for (it = linked_models.begin(); it != linked_models.end(); it++) {
-        num_params[it->first] = it->second->getNParams();
-        it->second->setNParams(0);
-    }
     
-    if (tree->part_order.empty()) tree->computePartitionOrder();
-	#ifdef _OPENMP
-	#pragma omp parallel for reduction(+: tree_lh) schedule(dynamic) if(tree->num_threads > 1)
-	#endif
-    for (int i = 0; i < ntrees; i++) {
-        int part = tree->part_order[i];
-    	if (write_info)
+    for (int step = 0; step < Params::getInstance().model_opt_steps; step++) {
+        // disable optimizing linked model for the moment
+        for (it = linked_models.begin(); it != linked_models.end(); it++) {
+            num_params[it->first] = it->second->getNParams();
+            it->second->setNParams(0);
+        }
+        tree_lh = 0.0;
+        if (tree->part_order.empty()) tree->computePartitionOrder();
         #ifdef _OPENMP
-        #pragma omp critical
+        #pragma omp parallel for reduction(+: tree_lh) schedule(dynamic) if(tree->num_threads > 1)
         #endif
-        {
-    		cout << "Optimizing " << tree->at(part)->getModelName() <<
-        		" parameters for partition " << tree->at(part)->aln->name <<
-        		" (" << tree->at(part)->getModelFactory()->getNParameters(fixed_len) << " free parameters)" << endl;
+        for (int i = 0; i < ntrees; i++) {
+            int part = tree->part_order[i];
+            if (write_info && !isLinkedModel())
+            #ifdef _OPENMP
+            #pragma omp critical
+            #endif
+            {
+                cout << "Optimizing " << tree->at(part)->getModelName() <<
+                    " parameters for partition " << tree->at(part)->aln->name <<
+                    " (" << tree->at(part)->getModelFactory()->getNParameters(fixed_len) << " free parameters)" << endl;
+            }
+            tree_lh += tree->at(part)->getModelFactory()->optimizeParameters(fixed_len, write_info && verbose_mode >= VB_MED,
+                logl_epsilon/min(ntrees,10), gradient_epsilon/min(ntrees,10));
         }
-        tree_lh += tree->at(part)->getModelFactory()->optimizeParameters(fixed_len, write_info && verbose_mode >= VB_MED,
-            logl_epsilon/min(ntrees,10), gradient_epsilon/min(ntrees,10));
-    }
-    //return ModelFactory::optimizeParameters(fixed_len, write_info);
+        //return ModelFactory::optimizeParameters(fixed_len, write_info);
 
-    if (tree->params->link_alpha || !linked_models.empty()) {
+        if (!isLinkedModel())
+            break;
+
         if (verbose_mode >= VB_MED || write_info)
-            cout << "Total log-likelihood: " << tree_lh << endl;
-    }
+            cout << step+1 << ". Log-likelihood: " << tree_lh << endl;
 
-    if (tree->params->link_alpha) {
-        tree_lh = optimizeLinkedAlpha(write_info, gradient_epsilon);
-    }
-
-    ModelSubst *saved_model = model;
-    for (it = linked_models.begin(); it != linked_models.end(); it++)
-        if (num_params[it->first] > 0) {
-            it->second->setNParams(num_params[it->first]);
-            model = it->second;
-            tree_lh = optimizeLinkedModel(write_info, gradient_epsilon);
+        if (tree->params->link_alpha) {
+            tree_lh = optimizeLinkedAlpha(write_info, gradient_epsilon);
         }
-    model = saved_model;
+
+        ModelSubst *saved_model = model;
+        for (it = linked_models.begin(); it != linked_models.end(); it++)
+            if (num_params[it->first] > 0) {
+                it->second->setNParams(num_params[it->first]);
+                model = it->second;
+                tree_lh = optimizeLinkedModel(write_info, gradient_epsilon);
+            }
+        model = saved_model;
+        if (tree_lh-logl_epsilon*10 < prev_tree_lh)
+            break;
+        prev_tree_lh = tree_lh;
+    }
     
     if (verbose_mode >= VB_MED || write_info)
 		cout << "Optimal log-likelihood: " << tree_lh << endl;
