@@ -445,7 +445,14 @@ void ModelMarkov::computeTransMatrixNonrev(double time, double *trans_matrix, in
         map_trans = res.real();
         // sanity check rows sum to 1
         VectorXd row_sum = res.real().rowwise().sum();
-        ASSERT(row_sum.maxCoeff() < 1.0001 && row_sum.minCoeff() > 0.9999);
+        double mincoeff = row_sum.minCoeff();
+        double maxcoeff = row_sum.maxCoeff();
+        if (maxcoeff > 1.0001 || mincoeff < 0.9999) {
+            cout << "INFO: Switch to scaling-squaring due to unstable eigen-decomposition rowsum: "
+                 << mincoeff << " to " << maxcoeff << endl;
+            nondiagonalizable = true;
+            computeTransMatrixNonrev(time, trans_matrix, mixture);
+        }
     } else {
         ASSERT(0 && "this line should not be reached");
     }
@@ -980,7 +987,7 @@ void ModelMarkov::decomposeRateMatrixNonrev() {
     eval = eigensolver.eigenvalues();
     Map<MatrixXcd,Aligned> evec(cevec, num_states, num_states);
     evec = eigensolver.eigenvectors();
-    if (abs(evec.determinant())<1e-10) {
+    if (abs(evec.determinant())<1e-8) {
         // limit of 1e-10 is something of a guess. 1e-12 was too restrictive.
         nondiagonalizable = true; // will use scaled squaring instead of eigendecomposition for matrix exponentiation
         return;
