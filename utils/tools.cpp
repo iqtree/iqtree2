@@ -823,6 +823,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.num_runs = 1;
     params.model_name = "";
     params.model_name_init = NULL;
+    params.model_opt_steps = 10;
     params.model_set = NULL;
     params.model_extra_set = NULL;
     params.model_subset = NULL;
@@ -1942,11 +1943,18 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.model_name = argv[cnt];
 				continue;
 			}
-            if (strcmp(argv[cnt], "--model-init") == 0) {
+            if (strcmp(argv[cnt], "--init-model") == 0) {
                 cnt++;
                 if (cnt >= argc)
-                    throw "Use --model-init FILE";
+                    throw "Use --init-model FILE";
                 params.model_name_init = argv[cnt];
+                continue;
+            }
+            if (strcmp(argv[cnt], "--loop-model") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use --loop-model NUMBER";
+                params.model_opt_steps = convert_int(argv[cnt]);
                 continue;
             }
 			if (strcmp(argv[cnt], "-mset") == 0) {

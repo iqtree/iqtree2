@@ -1302,6 +1302,9 @@ public:
     /** model name to initialize GTR20 or NONREV protein model */
     char* model_name_init;
 
+    /** number of steps for linked model optimisation, default: 1 */
+    int model_opt_steps;
+    
     /** set of models for testing */
     char *model_set;
 

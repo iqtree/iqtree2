@@ -130,6 +130,11 @@ public:
     
     void reportLinkedModel(ostream &out);
 
+    /**
+     @return true if some model is linked between partitions
+     */
+    bool isLinkedModel();
+
 //protected:
 
 	/** linked Gamma shape alpha between partitions */
