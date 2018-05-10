@@ -92,6 +92,8 @@ PartitionModel::PartitionModel(Params &params, PhyloSuperTree *tree, ModelsBlock
         for (i = 0; i < mit->second->num_states; i++)
             sum += sum_state_freq[i];
         sum = 1.0/sum;
+        for (i = 0; i < mit->second->num_states; i++)
+            sum_state_freq[i] *= sum;
         mit->second->setStateFrequency(sum_state_freq);
         mit->second->decomposeRateMatrix();
     }
@@ -307,6 +309,11 @@ double PartitionModel::optimizeParameters(int fixed_len, bool write_info, double
             logl_epsilon/min(ntrees,10), gradient_epsilon/min(ntrees,10));
     }
     //return ModelFactory::optimizeParameters(fixed_len, write_info);
+
+    if (tree->params->link_alpha || !linked_models.empty()) {
+        if (verbose_mode >= VB_MED || write_info)
+            cout << "Total log-likelihood: " << tree_lh << endl;
+    }
 
     if (tree->params->link_alpha) {
         tree_lh = optimizeLinkedAlpha(write_info, gradient_epsilon);
