@@ -5056,7 +5056,7 @@ void PhyloTree::convertToRooted() {
     root->addNeighbor(root_int, 0.0);
     root_int->addNeighbor(root, 0.0);
     leafNum++;
-    double newlen = node->neighbors[0]->length/2.0;
+    double newlen = node->findNeighbor(dad)->length/2.0;
     node->updateNeighbor(dad, root_int, newlen);
     root_int->addNeighbor(node, newlen);
     dad->updateNeighbor(node, root_int, newlen);

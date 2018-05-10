@@ -332,9 +332,11 @@ void ModelMarkov::init_state_freq(StateFreqType type) {
             double ntfreq[12];
             phylo_tree->aln->computeCodonFreq(freq_type, state_freq, ntfreq);
 //                      phylo_tree->aln->computeCodonFreq(state_freq);
-        } else if (phylo_tree->aln->seq_type != SEQ_POMO)
-            phylo_tree->aln->computeStateFreq(state_freq);
-        for (i = 0; i < num_states; i++)
+        } else if (phylo_tree->aln->seq_type != SEQ_POMO) {
+            double emp_state_freq[num_states];
+            phylo_tree->aln->computeStateFreq(emp_state_freq);
+            setStateFrequency(emp_state_freq);
+        } for (i = 0; i < num_states; i++)
             if (state_freq[i] > state_freq[highest_freq_state])
                 highest_freq_state = i;
         break;
