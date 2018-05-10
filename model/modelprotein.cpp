@@ -583,12 +583,18 @@ void ModelProtein::init(const char *model_name, string model_params, StateFreqTy
         }
         if (freq == FREQ_UNKNOWN)
             freq = FREQ_EMPIRICAL;
-        // initialize rate matrix with LG
-        nxs_model = models_block->findModel("LG");
-        ASSERT(nxs_model);
-        readParametersString(nxs_model->description);
-        rescaleRates(rates, getNumRateEntries());
-
+        if (Params::getInstance().model_name_init) {
+            // initialize with custom model file
+            readParameters(Params::getInstance().model_name_init);
+            if (!isReversible())
+                outError("Cannot initialize from non-reversible model");
+        } else {
+            // initialize rate matrix with LG
+            nxs_model = models_block->findModel("LG");
+            ASSERT(nxs_model);
+            readParametersString(nxs_model->description);
+            rescaleRates(rates, getNumRateEntries());
+        }
         // 2018-05-08 bug fix: GTR20 rates are not optimized
         num_params = getNumRateEntries()-1;
     } else if (name_upper == "NONREV") {
@@ -598,12 +604,19 @@ void ModelProtein::init(const char *model_name, string model_params, StateFreqTy
         }
         if (freq == FREQ_UNKNOWN)
             freq = FREQ_ESTIMATE;
-        // initialize rate matrix with LG
-        nxs_model = models_block->findModel("LG");
-        ASSERT(nxs_model);
-        readParametersString(nxs_model->description);
-        rescaleRates(rates, getNumRateEntries());
-        setReversible(false);
+        if (Params::getInstance().model_name_init) {
+            // initialize with custom model file
+            readParameters(Params::getInstance().model_name_init);
+            if (isReversible())
+                setReversible(false);
+        } else {
+            // initialize rate matrix with LG
+            nxs_model = models_block->findModel("LG");
+            ASSERT(nxs_model);
+            readParametersString(nxs_model->description);
+            rescaleRates(rates, getNumRateEntries());
+            setReversible(false);
+        }
         num_params = getNumRateEntries()-1;
 	} else {
 		// if name does not match, read the user-defined model

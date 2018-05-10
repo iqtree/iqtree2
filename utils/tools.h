@@ -1299,6 +1299,9 @@ public:
      */
     string model_name;
 
+    /** model name to initialize GTR20 or NONREV protein model */
+    char* model_name_init;
+
     /** set of models for testing */
     char *model_set;
 

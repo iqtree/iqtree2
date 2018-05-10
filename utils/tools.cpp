@@ -822,6 +822,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.stop_confidence = 0.95;
     params.num_runs = 1;
     params.model_name = "";
+    params.model_name_init = NULL;
     params.model_set = NULL;
     params.model_extra_set = NULL;
     params.model_subset = NULL;
@@ -1941,6 +1942,13 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.model_name = argv[cnt];
 				continue;
 			}
+            if (strcmp(argv[cnt], "--model-init") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use --model-init FILE";
+                params.model_name_init = argv[cnt];
+                continue;
+            }
 			if (strcmp(argv[cnt], "-mset") == 0) {
 				cnt++;
 				if (cnt >= argc)
