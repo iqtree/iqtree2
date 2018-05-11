@@ -26,6 +26,7 @@ PartitionModel::PartitionModel()
         : ModelFactory()
 {
 	linked_alpha = -1.0;
+    opt_gamma_invar = false;
 }
 
 PartitionModel::PartitionModel(Params &params, PhyloSuperTree *tree, ModelsBlock *models_block)
@@ -36,6 +37,7 @@ PartitionModel::PartitionModel(Params &params, PhyloSuperTree *tree, ModelsBlock
 	joint_optimize = params.optimize_model_rate_joint;
 	fused_mix_rate = false;
     linked_alpha = -1.0;
+    opt_gamma_invar = false;
 
 	// create dummy model
 	model = new ModelSubst(tree->aln->num_states);
@@ -311,10 +313,17 @@ double PartitionModel::optimizeParameters(int fixed_len, bool write_info, double
             {
                 cout << "Optimizing " << tree->at(part)->getModelName() <<
                     " parameters for partition " << tree->at(part)->aln->name <<
-                    " (" << tree->at(part)->getModelFactory()->getNParameters(fixed_len) << " free parameters)" << endl;
+                    " (" << tree->at(part)->getModelFactory()->getNParameters(fixed_len) <<
+                    " free parameters)" << endl;
             }
-            tree_lh += tree->at(part)->getModelFactory()->optimizeParameters(fixed_len, write_info && verbose_mode >= VB_MED,
-                logl_epsilon/min(ntrees,10), gradient_epsilon/min(ntrees,10));
+            if (opt_gamma_invar)
+                tree_lh += tree->at(part)->getModelFactory()->optimizeParametersGammaInvar(fixed_len,
+                    write_info && verbose_mode >= VB_MED,
+                    logl_epsilon/min(ntrees,10), gradient_epsilon/min(ntrees,10));
+            else
+                tree_lh += tree->at(part)->getModelFactory()->optimizeParameters(fixed_len,
+                    write_info && verbose_mode >= VB_MED,
+                    logl_epsilon/min(ntrees,10), gradient_epsilon/min(ntrees,10));
         }
         //return ModelFactory::optimizeParameters(fixed_len, write_info);
 
@@ -348,53 +357,9 @@ double PartitionModel::optimizeParameters(int fixed_len, bool write_info, double
 
 
 double PartitionModel::optimizeParametersGammaInvar(int fixed_len, bool write_info, double logl_epsilon, double gradient_epsilon) {
-    PhyloSuperTree *tree = (PhyloSuperTree*)site_rate->getTree();
-    double tree_lh = 0.0;
-    int ntrees = tree->size();
-
-    unordered_map<string, int> num_params;
-    unordered_map<string, ModelSubst*>::iterator it;
-    // disable optimizing linked model for the moment
-    for (it = linked_models.begin(); it != linked_models.end(); it++) {
-        num_params[it->first] = it->second->getNParams();
-        it->second->setNParams(0);
-    }
-    
-    if (tree->part_order.empty()) tree->computePartitionOrder();
-	#ifdef _OPENMP
-	#pragma omp parallel for reduction(+: tree_lh) schedule(dynamic) if(tree->num_threads > 1)
-	#endif
-    for (int i = 0; i < ntrees; i++) {
-        int part = tree->part_order[i];
-    	if (write_info)
-        #ifdef _OPENMP
-        #pragma omp critical
-        #endif
-        {
-    		cout << "Optimizing " << tree->at(part)->getModelName() <<
-        		" parameters for partition " << tree->at(part)->aln->name <<
-        		" (" << tree->at(part)->getModelFactory()->getNParameters(fixed_len) << " free parameters)" << endl;
-        }
-        tree_lh += tree->at(part)->getModelFactory()->optimizeParametersGammaInvar(fixed_len, write_info && verbose_mode >= VB_MED, 
-            logl_epsilon/min(ntrees,10), gradient_epsilon/min(ntrees,10));
-    }
-    //return ModelFactory::optimizeParameters(fixed_len, write_info);
-
-    if (tree->params->link_alpha) {
-        tree_lh = optimizeLinkedAlpha(write_info, gradient_epsilon);
-    }
-
-    ModelSubst *saved_model = model;
-    for (it = linked_models.begin(); it != linked_models.end(); it++)
-        if (num_params[it->first] > 0) {
-            it->second->setNParams(num_params[it->first]);
-            model = it->second;
-            tree_lh = optimizeLinkedModel(write_info, gradient_epsilon);
-        }
-    model = saved_model;
-
-    if (verbose_mode >= VB_MED || write_info)
-		cout << "Optimal log-likelihood: " << tree_lh << endl;
+    opt_gamma_invar = true;
+    double tree_lh = optimizeParameters(fixed_len, write_info, logl_epsilon, gradient_epsilon);
+    opt_gamma_invar = false;
     return tree_lh;
 }
 

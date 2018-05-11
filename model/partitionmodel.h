@@ -145,6 +145,7 @@ public:
      */
     unordered_map<string, ModelSubst*> linked_models;
     
+    bool opt_gamma_invar;
 };
 
 #endif
