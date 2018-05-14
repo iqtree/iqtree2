@@ -1062,22 +1062,52 @@ void ModelMarkov::decomposeRateMatrix(){
     
     if (technique == MET_EIGEN3LIB_DECOMPOSITION) {
         // Use Eigen3 library for eigen decomposition of symmetric matrix
-        MatrixXd Q(num_states, num_states);
-        VectorXd pi = Map<VectorXd>(state_freq, num_states);
-        ArrayXd pi_sqrt_arr = Map<ArrayXd>(state_freq, num_states).sqrt();
+        int n = 0; // the number of states where freq is non-zero
+        for (i = 0; i < num_states; i++)
+            if (state_freq[i] != 0.0)
+                n++;
+        int ii, jj;
+        MatrixXd Q(n, n);
+        VectorXd pi(n);
+        for (i = 0, ii = 0; i < num_states; i++)
+            if (state_freq[i] != 0.0) {
+                pi(ii) = state_freq[i];
+                ii++;
+            }
+        // normalize pi to sum=1
+        pi = pi*(1.0/pi.sum());
+        
+        ArrayXd pi_sqrt_arr = pi.array().sqrt();
         auto pi_sqrt = pi_sqrt_arr.matrix().asDiagonal();
         auto pi_sqrt_inv = pi_sqrt_arr.inverse().matrix().asDiagonal();
 
         if (half_matrix) {
-            for (i = 0, k = 0; i < num_states; i++) {
-                Q(i,i) = 0.0;
-                for (j = i+1; j < num_states; j++, k++) {
-                    Q(i,j) = Q(j,i) = rates[k];
+            for (i = 0, k = 0, ii = 0; i < num_states; i++)
+            if (state_freq[i] != 0.0){
+                Q(ii,ii) = 0.0;
+                for (j = i+1, jj = ii+1; j < num_states; j++, k++)
+                if (state_freq[j] != 0.0) {
+                    Q(ii,jj) = Q(jj,ii) = rates[k];
+                    jj++;
                 }
+                ASSERT(jj == n);
+                ii++;
             }
         } else {
             // full matrix
-            Q = Map<Matrix<double,Dynamic,Dynamic,RowMajor> >(rates,num_states,num_states);
+            if (n == num_states)
+                Q = Map<Matrix<double,Dynamic,Dynamic,RowMajor> >(rates,num_states,num_states);
+            else {
+                for (i = 0, ii = 0; i < num_states; i++)
+                    if (state_freq[i] != 0.0) {
+                        for (j = 0, jj = 0; j < num_states; j++)
+                            if (state_freq[j] != 0.0) {
+                                Q(ii,jj) = rates[i*num_states+j];
+                                jj++;
+                            }
+                        ii++;
+                    }
+            }
         }
         
         // compute rate matrix
@@ -1105,16 +1135,47 @@ void ModelMarkov::decomposeRateMatrix(){
         SelfAdjointEigenSolver<MatrixXd> eigensolver(Q);
         ASSERT (eigensolver.info() == Eigen::Success);
 
-        Map<VectorXd,Aligned> eval(eigenvalues,num_states);
-        eval = eigensolver.eigenvalues();
-        if (verbose_mode >= VB_DEBUG)
-            cout << "eval: " << eval << endl;
+        if (n == num_states) {
+            Map<VectorXd,Aligned> eval(eigenvalues,num_states);
+            eval = eigensolver.eigenvalues();
+            if (verbose_mode >= VB_DEBUG)
+                cout << "eval: " << eval << endl;
 
-        Map<Matrix<double,Dynamic,Dynamic,RowMajor>,Aligned> evec(eigenvectors,num_states,num_states);
-        evec = pi_sqrt_inv * eigensolver.eigenvectors();
+            Map<Matrix<double,Dynamic,Dynamic,RowMajor>,Aligned> evec(eigenvectors,num_states,num_states);
+            evec = pi_sqrt_inv * eigensolver.eigenvectors();
 
-        Map<Matrix<double,Dynamic,Dynamic,RowMajor>,Aligned> inv_evec(inv_eigenvectors,num_states,num_states);
-        inv_evec = eigensolver.eigenvectors().transpose() * pi_sqrt;
+            Map<Matrix<double,Dynamic,Dynamic,RowMajor>,Aligned> inv_evec(inv_eigenvectors,num_states,num_states);
+            inv_evec = eigensolver.eigenvectors().transpose() * pi_sqrt;
+        } else {
+            // manual copy non-zero entries
+            for (i = 0, ii = 0; i < num_states; i++)
+                if (state_freq[i] != 0.0) {
+                    eigenvalues[i] = eigensolver.eigenvalues()(ii);
+                    ii++;
+                } else
+                    eigenvalues[i] = 0.0;
+            MatrixXd evec = pi_sqrt_inv * eigensolver.eigenvectors();
+            MatrixXd inv_evec = eigensolver.eigenvectors().transpose() * pi_sqrt;
+            for (i = 0, ii = 0; i < num_states; i++) {
+                double *eigenvectors_ptr = eigenvectors + (i*num_states);
+                double *inv_eigenvectors_ptr = inv_eigenvectors + (i*num_states);
+                if (state_freq[i] != 0.0) {
+                    for (j = 0, jj = 0; j < num_states; j++)
+                        if (state_freq[j] != 0) {
+                            eigenvectors_ptr[j] = evec(ii,jj);
+                            inv_eigenvectors_ptr[j] = inv_evec(ii,jj);
+                            jj++;
+                        } else {
+                            eigenvectors_ptr[j] = inv_eigenvectors_ptr[j] = (i == j);
+                        }
+                    ii++;
+                } else {
+                    for (j = 0; j < num_states; j++) {
+                        eigenvectors_ptr[j] = inv_eigenvectors_ptr[j] = (i == j);
+                    }
+                }
+            }
+        }
         return;
     }
 
