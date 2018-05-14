@@ -24,22 +24,15 @@ public:
 	/**
 	 * setup the bounds for joint optimization with BFGS
 	 */
-	void setBounds(double *lower_bound, double *upper_bound, bool *bound_check);
+	virtual void setBounds(double *lower_bound, double *upper_bound, bool *bound_check);
     
+    /**
+     set the state frequency vector.
+     @param state_freq state frequency vector. Assume state_freq has size of num_states
+     */
+    virtual void setStateFrequency(double *state_freq);
+
 protected:
-
-	/**
-	    Model parameters - cached so we know when they change, and thus when
-	    recalculations are needed.
-
-	 */
-	double *model_parameters;
-
-	/**
-	 * Called from getVariables to update the rate matrix for the new
-	 * model parameters.
-	 */
-	virtual void setRates();
 };
 
 #endif /* MODELUNREST_H_ */
