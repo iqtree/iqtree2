@@ -738,10 +738,10 @@ void ModelMarkov::setVariables(double *variables) {
 //        return;
 //    }
 
-	if (freq_type == FREQ_ESTIMATE) nrate -= (num_states-1);
+	if (is_reversible && freq_type == FREQ_ESTIMATE) nrate -= (num_states-1);
 	if (nrate > 0)
 		memcpy(variables+1, rates, nrate*sizeof(double));
-	if (freq_type == FREQ_ESTIMATE) {
+	if (is_reversible && freq_type == FREQ_ESTIMATE) {
         // 2015-09-07: relax the sum of state_freq to be 1, this will be done at the end of optimization
 		int ndim = getNDim();
 		memcpy(variables+(ndim-num_states+2), state_freq, (num_states-1)*sizeof(double));
@@ -764,14 +764,14 @@ bool ModelMarkov::getVariables(double *variables) {
 //        return changed;
 //    }
 
-	if (freq_type == FREQ_ESTIMATE) nrate -= (num_states-1);
+	if (is_reversible && freq_type == FREQ_ESTIMATE) nrate -= (num_states-1);
 	if (nrate > 0) {
 		for (i = 0; i < nrate; i++)
 			changed |= (rates[i] != variables[i+1]);
 		memcpy(rates, variables+1, nrate * sizeof(double));
 	}
 
-	if (freq_type == FREQ_ESTIMATE) {
+	if (is_reversible && freq_type == FREQ_ESTIMATE) {
         // 2015-09-07: relax the sum of state_freq to be 1, this will be done at the end of optimization
         // 2015-09-07: relax the sum of state_freq to be 1, this will be done at the end of optimization
 		int ndim = getNDim();
@@ -848,7 +848,7 @@ void ModelMarkov::setBounds(double *lower_bound, double *upper_bound, bool *boun
 	bound_check[i] = false;
     }
 
-	if (freq_type == FREQ_ESTIMATE) {
+	if (is_reversible && freq_type == FREQ_ESTIMATE) {
 		for (i = ndim-num_states+2; i <= ndim; i++) {
 //            lower_bound[i] = MIN_FREQUENCY/state_freq[highest_freq_state];
 //			upper_bound[i] = state_freq[highest_freq_state]/MIN_FREQUENCY;

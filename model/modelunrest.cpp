@@ -10,10 +10,10 @@
 ModelUnrest::ModelUnrest(PhyloTree *tree, string model_params)
 	: ModelMarkov(tree, false)
 {
-	num_params = getNumRateEntries() - 1;
-	model_parameters = new double [num_params];
-	for (int i=0; i< num_params; i++) model_parameters[i] = 1;
-	setRates();
+    num_params = getNumRateEntries() - 1;
+//    model_parameters = new double [num_params];
+    for (int i=0; i <= num_params; i++) rates[i] = 1.0;
+//    setRates();
 	if (model_params != "") {
 		cout << "WARNING: Supplying model params to constructor not yet properly implemented -- ignored" << endl;
 		// TODO: parse model_params into model_parameters, then call setRates().
@@ -31,18 +31,21 @@ void ModelUnrest::setBounds(double *lower_bound, double *upper_bound, bool *boun
 	int i, ndim = getNDim();
 
 	for (i = 1; i <= ndim; i++) {
-		lower_bound[i] = 0.01;
-		upper_bound[i] = 100.0;
+		lower_bound[i] = MIN_RATE;
+		upper_bound[i] = MAX_RATE;
 		bound_check[i] = false;
 	}
 }
 
 /*
- * Set rates from model_parameters
- */
 void ModelUnrest::setRates() {
 	// For UNREST, parameters are simply the off-diagonal rate matrix entries
 	// (except [4,3] = rates[11], which is constrained to be 1)
 	memcpy(rates, model_parameters, num_params*sizeof(double));
 	rates[num_params]=1;
+}
+*/
+
+void ModelUnrest::setStateFrequency(double* freq) {
+    // DOES NOTHING
 }
