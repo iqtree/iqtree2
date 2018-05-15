@@ -51,6 +51,11 @@ PartitionModel::PartitionModel(Params &params, PhyloSuperTree *tree, ModelsBlock
         params.gamma_shape = fabs(params.gamma_shape);
         linked_alpha = params.gamma_shape;
     }
+    double init_by_divmat = false;
+    if (params.model_name_init && strcmp(params.model_name_init, "DIVMAT") == 0) {
+        init_by_divmat = true;
+        params.model_name_init = NULL;
+    }
     double *sum_state_freq = NULL;
     for (it = tree->begin(), part = 0; it != tree->end(); it++, part++) {
         ASSERT(!((*it)->getModelFactory()));
@@ -87,7 +92,27 @@ PartitionModel::PartitionModel(Params &params, PhyloSuperTree *tree, ModelsBlock
         //(*it)->drawTree(cout);
     }
     if (linked_models.size() > 1)
-        outWarning("State frequency are not properly set. Contact developers");
+        outWarning("Can't link more than one model yet. Contact developers");
+    if (init_by_divmat) {
+        int nstates = linked_models.begin()->second->num_states;
+        double *pair_freq = new double[nstates * nstates];
+        double *state_freq = new double[nstates];
+        tree->aln->computeDivergenceMatrix(pair_freq, state_freq);
+        /*
+        MatrixXd divmat = Map<Matrix<double,Dynamic, Dynamic, RowMajor> > (pair_freq, nstates, nstates);
+        cout << "DivMat: " << endl << divmat << endl;
+        auto pi = Map<VectorXd>(state_freq, nstates);
+        MatrixXd Q = (pi.asDiagonal() * divmat).log();
+        cout << "Q: " << endl << Q << endl;
+        cout << "rowsum: " << Q.rowwise().sum() << endl;
+        Map<Matrix<double,Dynamic, Dynamic, RowMajor> >(pair_freq, nstates, nstates) = Q;
+         */
+        ((ModelMarkov*)linked_models.begin()->second)->setFullRateMatrix(pair_freq, state_freq);
+        ((ModelMarkov*)linked_models.begin()->second)->decomposeRateMatrix();
+        delete [] state_freq;
+        delete [] pair_freq;
+
+    } else
     for (auto mit = linked_models.begin(); mit != linked_models.end(); mit++) {
         double sum = 0.0;
         int i;

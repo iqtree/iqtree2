@@ -4173,80 +4173,55 @@ void Alignment::computeCodonFreq(StateFreqType freq, double *state_freq, double 
 	convfreq(state_freq);
 }
 
-void Alignment::computeDivergenceMatrix(double *rates) {
-    int i, j, k;
-    ASSERT(rates);
+void Alignment::computeDivergenceMatrix(double *pair_freq, double *state_freq, bool normalize) {
+    int i, j;
+    ASSERT(pair_freq);
     int nseqs = getNSeq();
-    unsigned *pair_rates = new unsigned[num_states*num_states];
-    memset(pair_rates, 0, sizeof(unsigned)*num_states*num_states);
-//    for (i = 0; i < num_states; i++) {
-//        pair_rates[i] = new double[num_states];
-//        memset(pair_rates[i], 0, sizeof(double)*num_states);
-//    }
+    memset(pair_freq, 0, sizeof(double)*num_states*num_states);
+    memset(state_freq, 0, sizeof(double)*num_states);
 
-    unsigned *state_freq = new unsigned[STATE_UNKNOWN+1];
+    uint64_t *site_state_freq = new uint64_t[STATE_UNKNOWN+1];
 
+    // count pair_freq over all sites
     for (iterator it = begin(); it != end(); it++) {
-        memset(state_freq, 0, sizeof(unsigned)*(STATE_UNKNOWN+1));
+        memset(site_state_freq, 0, sizeof(uint64_t)*(STATE_UNKNOWN+1));
         for (i = 0; i < nseqs; i++) {
-            state_freq[(int)it->at(i)]++;
+            site_state_freq[it->at(i)]++;
         }
         for (i = 0; i < num_states; i++) {
-            if (state_freq[i] == 0) continue;
-            pair_rates[i*num_states+i] += (state_freq[i]*(state_freq[i]-1)/2)*it->frequency;
+            if (site_state_freq[i] == 0) continue;
+            state_freq[i] += site_state_freq[i];
+            double *pair_freq_ptr = pair_freq + (i*num_states);
+            pair_freq_ptr[i] += (site_state_freq[i]*(site_state_freq[i]-1)/2)*it->frequency;
             for (j = i+1; j < num_states; j++)
-                pair_rates[i*num_states+j] += state_freq[i]*state_freq[j]*it->frequency;
+                pair_freq_ptr[j] += site_state_freq[i]*site_state_freq[j]*it->frequency;
         }
-//            int state1 = it->at(i);
-//            if (state1 >= num_states) continue;
-//            int *this_pair = pair_rates + state1*num_states;
-//            for (j = i+1; j < nseqs; j++) {
-//                int state2 = it->at(j);
-//                if (state2 < num_states) this_pair[state2] += it->frequency;
-//            }
-//        }
     }
 
-    k = 0;
-    double last_rate = pair_rates[(num_states-2)*num_states+num_states-1] + pair_rates[(num_states-1)*num_states+num_states-2];
-    if (last_rate == 0) last_rate = 1;
-    for (i = 0; i < num_states-1; i++)
-        for (j = i+1; j < num_states; j++) {
-            rates[k++] = (pair_rates[i*num_states+j] + pair_rates[j*num_states+i]) / last_rate;
-            // BIG WARNING: zero rates might cause numerical instability!
-//            if (rates[k-1] <= 0.0001) rates[k-1] = 0.01;
-//            if (rates[k-1] > 100.0) rates[k-1] = 50.0;
-        }
-    rates[k-1] = 1;
-    if (verbose_mode >= VB_MAX) {
-        cout << "Empirical rates: ";
-        for (k = 0; k < num_states*(num_states-1)/2; k++)
-            cout << rates[k] << " ";
-        cout << endl;
-    }
-
-//    for (i = num_states-1; i >= 0; i--) {
-//        delete [] pair_rates[i];
-//    }
-    delete [] state_freq;
-    delete [] pair_rates;
-}
-
-void Alignment::computeDivergenceMatrixNonRev (double *rates) {
-    double *rates_mat = new double[num_states*num_states];
-    int i, j, k;
-
-    computeDivergenceMatrix(rates);
-
-    for (i = 0, k = 0; i < num_states-1; i++)
-        for (j = i+1; j < num_states; j++)
-            rates_mat[i*num_states+j] = rates_mat[j*num_states+i] = rates[k++];
-
-    for (i = 0, k = 0; i < num_states; i++)
+    // symmerize pair_freq
+    for (i = 0; i < num_states; i++)
         for (j = 0; j < num_states; j++)
-            if (j != i) rates[k++] = rates_mat[i*num_states+j];
-	delete [] rates_mat;
+            pair_freq[j*num_states+i] = pair_freq[i*num_states+j];
 
+    if (normalize) {
+        double sum = 0.0;
+        for (i = 0; i < num_states; i++)
+            sum += state_freq[i];
+        sum = 1.0/sum;
+        for (i = 0; i < num_states; i++)
+            state_freq[i] *= sum;
+        for (i = 0; i < num_states; i++) {
+            sum = 0.0;
+            double *pair_freq_ptr = pair_freq + (i*num_states);
+            for (j = 0; j < num_states; j++)
+                sum += pair_freq_ptr[j];
+            sum = 1.0/sum;
+            for (j = 0; j < num_states; j++)
+                pair_freq_ptr[j] *= sum;
+        }
+    }
+    
+    delete [] site_state_freq;
 }
 
 void Alignment::convfreq(double *stateFrqArr) {

@@ -95,6 +95,13 @@ public:
     */
     virtual void printSiteInfo(const char* filename);
 
+    /**
+     compute empirical substitution counts between state pairs
+     @param normalize true to normalize row sum to 1, false otherwise
+     @param[out] pair_freq matrix of size num_states*num_states
+     @param[out] state_freq vector of size num_states
+     */
+    virtual void computeDivergenceMatrix(double *pair_freq, double *state_freq, bool normalize = true);
 
     /**
             extract sub-alignment of a sub-set of sequences

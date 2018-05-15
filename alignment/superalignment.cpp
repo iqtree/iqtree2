@@ -802,6 +802,44 @@ void SuperAlignment::printSiteInfo(const char* filename) {
     }
 }
 
+void SuperAlignment::computeDivergenceMatrix(double *pair_freq, double *state_freq, bool normalize) {
+    int nstates = partitions[0]->num_states;
+    int nstates2 = nstates*nstates;
+    memset(pair_freq, 0, sizeof(double)*nstates2);
+    memset(state_freq, 0, sizeof(double)*nstates);
+    
+    double *part_pair_freq = new double[nstates2];
+    double *part_state_freq = new double[nstates];
+    int i, j;
+    
+    for (auto it = partitions.begin(); it != partitions.end(); it++) {
+        (*it)->computeDivergenceMatrix(part_pair_freq, part_state_freq, false);
+        for (i = 0; i < nstates2; i++)
+            pair_freq[i] += part_pair_freq[i];
+        for (i = 0; i < nstates; i++)
+            state_freq[i] += part_state_freq[i];
+    }
+    if (normalize) {
+        double sum = 0.0;
+        for (i = 0; i < nstates; i++)
+            sum += state_freq[i];
+        sum = 1.0/sum;
+        for (i = 0; i < nstates; i++)
+            state_freq[i] *= sum;
+        for (i = 0; i < nstates; i++) {
+            sum = 0.0;
+            double *pair_freq_ptr = pair_freq + (i*nstates);
+            for (j = 0; j < nstates; j++)
+                sum += pair_freq_ptr[j];
+            sum = 1.0/sum;
+            for (j = 0; j < nstates; j++)
+                pair_freq_ptr[j] *= sum;
+        }
+    }
+    delete [] part_state_freq;
+    delete [] part_pair_freq;
+}
+
 void SuperAlignment::createBootstrapAlignment(Alignment *aln, IntVector* pattern_freq, const char *spec) {
 	ASSERT(aln->isSuperAlignment());
 	Alignment::copyAlignment(aln);

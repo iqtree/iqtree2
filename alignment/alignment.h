@@ -619,16 +619,12 @@ public:
 	void computeCodonFreq(StateFreqType freq, double *state_freq, double *ntfreq);
 
 	/**
-            compute empirical rates between state pairs
-            @param rates (OUT) vector of size num_states*(num_states-1)/2 for the rates
+            compute empirical substitution counts between state pairs
+            @param normalize true to normalize row sum to 1, false otherwise
+            @param[out] pair_freq matrix of size num_states*num_states
+            @param[out] state_freq vector of size num_states
      */
-    virtual void computeDivergenceMatrix(double *rates);
-
-    /**
-            compute non-reversible empirical rates between state pairs
-            @param rates (OUT) vector of size num_states*(num_states-1) for the rates
-     */
-    virtual void computeDivergenceMatrixNonRev(double *rates);
+    virtual void computeDivergenceMatrix(double *pair_freq, double *state_freq, bool normalize = true);
 
     /**
             count the fraction of constant sites in the alignment, update the variable frac_const_sites
