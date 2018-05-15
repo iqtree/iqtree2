@@ -610,6 +610,23 @@ void ModelMarkov::setRateMatrix(double* rate_mat)
 	memcpy(rates, rate_mat, nrate * sizeof(double));
 }
 
+void ModelMarkov::setFullRateMatrix(double* rate_mat, double *freq)
+{
+    int i, j, k;
+    if (isReversible()) {
+        for (i = 0, k = 0; i < num_states; i++)
+            for (j = i+1; j < num_states; j++)
+                rates[k++] = rate_mat[i*num_states+j] / freq[j];
+        memcpy(state_freq, freq, sizeof(double)*num_states);
+    } else {
+        // non-reversible
+        for (i = 0, k = 0; i < num_states; i++)
+            for (j = 0; j < num_states; j++)
+                if (i != j)
+                    rates[k++] = rate_mat[i*num_states+j];
+    }
+}
+
 void ModelMarkov::getStateFrequency(double *freq, int mixture) {
 	ASSERT(state_freq);
 	ASSERT(freq_type != FREQ_UNKNOWN);

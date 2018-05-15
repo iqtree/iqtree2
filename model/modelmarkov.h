@@ -230,6 +230,13 @@ public:
 	*/
 	virtual void setRateMatrix(double *rate_mat);
 
+    /**
+     Set the full rate matrix of size num_states*num_states
+     @param rate_mat full rate matrix
+     @param freq state frequency
+     */
+    virtual void setFullRateMatrix(double *rate_mat, double *freq);
+
 	/**
 		compute the state frequency vector
         @param mixture (optional) class for mixture model
