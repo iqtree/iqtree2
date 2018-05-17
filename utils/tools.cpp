@@ -775,6 +775,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 
     params.aln_file = NULL;
     params.phylip_sequential_format = false;
+    params.symmetry_test = false;
     params.treeset_file = NULL;
     params.topotest_replicates = 0;
     params.do_weighted_test = false;
@@ -1648,6 +1649,10 @@ void parseArg(int argc, char *argv[], Params &params) {
 			}
 			if (strcmp(argv[cnt], "--sequential") == 0) {
                 params.phylip_sequential_format = true;
+                continue;
+            }
+            if (strcmp(argv[cnt], "--sym-test") == 0) {
+                params.symmetry_test = true;
                 continue;
             }
 			if (strcmp(argv[cnt], "-z") == 0) {

@@ -806,6 +806,9 @@ public:
     /** true if sequential phylip format is used, default: false (interleaved format) */
     bool phylip_sequential_format;
 
+    /** true to perform symmetry test of Lars Jermiin */
+    bool symmetry_test;
+    
     /**
             file containing multiple trees to evaluate at the end
      */

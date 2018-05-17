@@ -3300,6 +3300,20 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
             tree = new IQTree(alignment);
 	}
 
+    if (params.symmetry_test) {
+        cout << "Performing symmetry test..." << endl;
+        ofstream out;
+        string filename = string(params.out_prefix) + ".symtest";
+        out.open(filename.c_str());
+        if (tree->isSuperTree())
+            out << "No,";
+        out << "Name,Sig,NonSig,pSym" << endl;
+        SymTestResult res;
+        alignment->doSymTest(res, out);
+        out.close();
+        cout << "SymTest results written to " << filename << endl;
+    }
+
     if (params.print_aln_info) {
         string site_info_file = string(params.out_prefix) + ".alninfo";
         alignment->printSiteInfo(site_info_file.c_str());

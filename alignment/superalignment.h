@@ -104,6 +104,11 @@ public:
     virtual void computeDivergenceMatrix(double *pair_freq, double *state_freq, bool normalize = true);
 
     /**
+     perform symmetry tests of Lars Jermiin
+     */
+    virtual void doSymTest(SymTestResult &res, ostream &out);
+
+    /**
             extract sub-alignment of a sub-set of sequences
             @param aln original input alignment
             @param seq_id ID of sequences to extract from
