@@ -39,6 +39,14 @@ enum SeqType {
     SEQ_DNA, SEQ_PROTEIN, SEQ_BINARY, SEQ_MORPH, SEQ_MULTISTATE, SEQ_CODON, SEQ_POMO, SEQ_UNKNOWN
 };
 
+struct SymTestResult {
+    int significant_pairs; // number of significant sequence pairs
+    int included_pairs; // total number of included sequence pairs
+    int excluded_pairs; // number of excluded sequence pairs
+    double pval_sym; // pvalue of symmetry test
+    double pval_marsym; // pvalue of marginal symmetry
+    double pval_intsym; // pvalue of internal symmetry
+};
 
 #ifdef USE_HASH_MAP
 struct hashPattern {
@@ -625,6 +633,11 @@ public:
             @param[out] state_freq vector of size num_states
      */
     virtual void computeDivergenceMatrix(double *pair_freq, double *state_freq, bool normalize = true);
+
+    /**
+        perform symmetry tests of Lars Jermiin
+     */
+    virtual void doSymTest(SymTestResult &res, ostream &out);
 
     /**
             count the fraction of constant sites in the alignment, update the variable frac_const_sites

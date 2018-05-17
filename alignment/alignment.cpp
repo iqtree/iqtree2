@@ -4224,6 +4224,70 @@ void Alignment::computeDivergenceMatrix(double *pair_freq, double *state_freq, b
     delete [] site_state_freq;
 }
 
+double binomial_cdf(int x, int n, double p) {
+    ASSERT(p > 0.0 && p < 1.0 && x <= n && x >= 0);
+    double cdf = 0.0;
+    double b = 0;
+    double logp = log(p), log1p = log(1-p);
+    for (int k = 0; k < x; k++) {
+        if (k > 0)
+            b += log(n-k+1) - log(k);
+        
+        double log_pmf_k = b + k * logp + (n-k) * log1p;
+        cdf += exp(log_pmf_k);
+    }
+    return 1.0-cdf;
+}
+
+void Alignment::doSymTest(SymTestResult &res, ostream &out) {
+    double *pair_freq = new double[num_states*num_states];
+    double *state_freq = new double[num_states];
+    int i, j;
+    int nseq = getNSeq();
+
+    double pval_cutoff = 0.05;
+    
+    memset(&res, 0, sizeof(SymTestResult));
+
+    for (i = 0; i < nseq; i++)
+        for (j = i+1; j < nseq; j++) {
+            memset(pair_freq, 0, sizeof(double)*num_states*num_states);
+            for (auto it = begin(); it != end(); it++) {
+                if (it->at(i) < num_states && it->at(j) < num_states)
+                    pair_freq[it->at(i)*num_states + it->at(j)] += 1.0;
+            }
+            int k, l;
+            double chi2 = 0.0;
+            int df = num_states*(num_states-1)/2;
+            bool applicable = true;
+            for (k = 0; k < num_states; k++)
+                for (l = k+1; l < num_states; l++) {
+                    double diff = pair_freq[k*num_states+l] - pair_freq[l*num_states+k];
+                    double sum = pair_freq[k*num_states+l] + pair_freq[l*num_states+k];
+                    if (sum > 0.0) {
+                        chi2 += diff*diff/sum;
+                    } else {
+                        applicable = false;
+                        df--;
+                    }
+                        
+                }
+            if (df > 0 && applicable) {
+                double pvalue_sym = chi2prob(df, chi2);
+                if (pvalue_sym < pval_cutoff)
+                    res.significant_pairs++;
+                res.included_pairs++;
+            } else {
+                res.excluded_pairs++;
+            }
+        }
+    res.pval_sym = binomial_cdf(res.significant_pairs, res.included_pairs, 0.05);
+    out << name << "," << res.significant_pairs
+        << "," << res.included_pairs-res.significant_pairs << "," << res.pval_sym << endl;
+    delete [] state_freq;
+    delete [] pair_freq;
+}
+
 void Alignment::convfreq(double *stateFrqArr) {
 
     if (Params::getInstance().keep_zero_freq)

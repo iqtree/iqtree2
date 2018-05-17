@@ -5,4 +5,5 @@ pow_int.cpp
 gauss.cpp
 gaussinv.cpp
 gausspdf.cpp
+mygsl.h
 )
