@@ -840,11 +840,11 @@ void SuperAlignment::computeDivergenceMatrix(double *pair_freq, double *state_fr
     delete [] part_pair_freq;
 }
 
-void SuperAlignment::doSymTest(SymTestResult &res, ostream &out) {
+void SuperAlignment::doSymTest(SymTestResult &sym, SymTestResult &marsym, SymTestResult &intsym, ostream &out) {
     int part = 0;
     for (auto it = partitions.begin(); it != partitions.end(); it++, part++) {
         out << part+1 << ",";
-        (*it)->doSymTest(res, out);
+        (*it)->doSymTest(sym, marsym, intsym, out);
     }
 }
 

@@ -3301,16 +3301,18 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
 	}
 
     if (params.symmetry_test) {
-        cout << "Performing symmetry test..." << endl;
+        double start_time = getRealTime();
+        cout << "Performing symmetry test... ";
         ofstream out;
-        string filename = string(params.out_prefix) + ".symtest";
+        string filename = string(params.out_prefix) + ".symtest.csv";
         out.open(filename.c_str());
         if (tree->isSuperTree())
             out << "No,";
-        out << "Name,Sig,NonSig,pSym" << endl;
-        SymTestResult res;
-        alignment->doSymTest(res, out);
+        out << "Name,SigSym,NonSigSym,pSym,SigMar,NonSigMar,pMar,SigInt,NonSigInt,pInt" << endl;
+        SymTestResult sym, marsym, intsym;
+        alignment->doSymTest(sym, marsym, intsym, out);
         out.close();
+        cout << getRealTime() - start_time << " seconds" << endl;
         cout << "SymTest results written to " << filename << endl;
     }
 

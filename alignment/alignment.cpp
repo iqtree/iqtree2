@@ -17,8 +17,10 @@
 #include "model/rategamma.h"
 #include "gsl/mygsl.h"
 #include "utils/gzstream.h"
+#include <Eigen/LU>
 
 using namespace std;
+using namespace Eigen;
 
 char symbols_protein[] = "ARNDCQEGHILKMFPSTWYVX"; // X for unknown AA
 char symbols_dna[]     = "ACGT";
@@ -4236,56 +4238,103 @@ double binomial_cdf(int x, int n, double p) {
         double log_pmf_k = b + k * logp + (n-k) * log1p;
         cdf += exp(log_pmf_k);
     }
+    if (cdf > 1.0) cdf = 1.0;
     return 1.0-cdf;
 }
 
-void Alignment::doSymTest(SymTestResult &res, ostream &out) {
-    double *pair_freq = new double[num_states*num_states];
-    double *state_freq = new double[num_states];
-    int i, j;
+void Alignment::doSymTest(SymTestResult &sym, SymTestResult &marsym, SymTestResult &intsym, ostream &out) {
     int nseq = getNSeq();
 
-    double pval_cutoff = 0.05;
+    const double chi2_cutoff = 0.05;
+    const double binom_cutoff = 0.05;
     
-    memset(&res, 0, sizeof(SymTestResult));
+    memset(&sym, 0, sizeof(SymTestResult));
+    memset(&marsym, 0, sizeof(SymTestResult));
+    memset(&intsym, 0, sizeof(SymTestResult));
 
-    for (i = 0; i < nseq; i++)
-        for (j = i+1; j < nseq; j++) {
-            memset(pair_freq, 0, sizeof(double)*num_states*num_states);
+    for (int seq1 = 0; seq1 < nseq; seq1++)
+        for (int seq2 = seq1+1; seq2 < nseq; seq2++) {
+            MatrixXd pair_freq = MatrixXd::Zero(num_states, num_states);
             for (auto it = begin(); it != end(); it++) {
-                if (it->at(i) < num_states && it->at(j) < num_states)
-                    pair_freq[it->at(i)*num_states + it->at(j)] += 1.0;
+                if (it->at(seq1) < num_states && it->at(seq2) < num_states)
+                    pair_freq(it->at(seq1), it->at(seq2)) += it->frequency;
             }
-            int k, l;
-            double chi2 = 0.0;
-            int df = num_states*(num_states-1)/2;
+            
+            // performing test of symmetry
+            int i, j;
+            double chi2_sym = 0.0;
+            int df_sym = num_states*(num_states-1)/2;
             bool applicable = true;
-            for (k = 0; k < num_states; k++)
-                for (l = k+1; l < num_states; l++) {
-                    double diff = pair_freq[k*num_states+l] - pair_freq[l*num_states+k];
-                    double sum = pair_freq[k*num_states+l] + pair_freq[l*num_states+k];
-                    if (sum > 0.0) {
-                        chi2 += diff*diff/sum;
+            MatrixXd sum = (pair_freq + pair_freq.transpose());
+            ArrayXXd res = (pair_freq - pair_freq.transpose()).array().square() / sum.array();
+
+            for (i = 0; i < num_states; i++)
+                for (j = i+1; j < num_states; j++) {
+                    if (!isnan(res(i,j))) {
+                        chi2_sym += res(i,j);
                     } else {
                         applicable = false;
-                        df--;
+                        df_sym--;
                     }
                         
                 }
-            if (df > 0 && applicable) {
-                double pvalue_sym = chi2prob(df, chi2);
-                if (pvalue_sym < pval_cutoff)
-                    res.significant_pairs++;
-                res.included_pairs++;
+            if (df_sym > 0 && applicable) {
+                double pval_sym = chi2prob(df_sym, chi2_sym);
+                if (pval_sym < chi2_cutoff)
+                    sym.significant_pairs++;
+                sym.included_pairs++;
             } else {
-                res.excluded_pairs++;
+                sym.excluded_pairs++;
             }
+
+            // performing test of marginal symmetry
+            VectorXd row_sum = pair_freq.rowwise().sum().head(num_states-1);
+            VectorXd col_sum = pair_freq.colwise().sum().head(num_states-1);
+            VectorXd U = (row_sum - col_sum);
+            MatrixXd V = (row_sum + col_sum).asDiagonal();
+            V -= sum.topLeftCorner(num_states-1, num_states-1);
+                
+            FullPivLU<MatrixXd> lu(V);
+
+            if (lu.isInvertible()) {
+                double chi2_marsym = U.transpose() * lu.inverse() * U;
+                int df_marsym = num_states-1;
+                double chi2_pval = chi2prob(df_marsym, chi2_marsym);
+                if (chi2_pval < chi2_cutoff)
+                    marsym.significant_pairs++;
+                marsym.included_pairs++;
+
+                // internal symmetry
+                double chi2_intsym = chi2_sym - chi2_marsym;
+                int df_intsym = df_sym - df_marsym;
+                if (df_intsym >= 0 && applicable) {
+                    double pval_intsym = chi2prob(df_intsym, chi2_intsym);
+                    if (pval_intsym < chi2_cutoff)
+                        intsym.significant_pairs++;
+                    intsym.included_pairs++;
+                } else
+                    intsym.excluded_pairs++;
+            } else {
+                marsym.excluded_pairs++;
+                intsym.excluded_pairs++;
+            }
+            
+            
         }
-    res.pval_sym = binomial_cdf(res.significant_pairs, res.included_pairs, 0.05);
-    out << name << "," << res.significant_pairs
-        << "," << res.included_pairs-res.significant_pairs << "," << res.pval_sym << endl;
-    delete [] state_freq;
-    delete [] pair_freq;
+    sym.pvalue = binomial_cdf(sym.significant_pairs, sym.included_pairs, binom_cutoff);
+    marsym.pvalue = binomial_cdf(marsym.significant_pairs, marsym.included_pairs, binom_cutoff);
+    intsym.pvalue = binomial_cdf(intsym.significant_pairs, intsym.included_pairs, binom_cutoff);
+    out << name << ","
+        << sym.significant_pairs << ","
+        << sym.included_pairs-sym.significant_pairs << ","
+        << sym.pvalue << ","
+        << marsym.significant_pairs << ","
+        << marsym.included_pairs-marsym.significant_pairs << ","
+        << marsym.pvalue << ","
+        << intsym.significant_pairs << ","
+        << intsym.included_pairs-intsym.significant_pairs << ","
+        << intsym.pvalue << endl;
+    
 }
 
 void Alignment::convfreq(double *stateFrqArr) {
