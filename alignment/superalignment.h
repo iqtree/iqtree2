@@ -106,7 +106,7 @@ public:
     /**
      perform symmetry tests of Lars Jermiin
      */
-    virtual void doSymTest(SymTestResult &res, ostream &out);
+    virtual void doSymTest(SymTestResult &sym, SymTestResult &marsym, SymTestResult &intsym, ostream &out);
 
     /**
             extract sub-alignment of a sub-set of sequences

@@ -43,9 +43,7 @@ struct SymTestResult {
     int significant_pairs; // number of significant sequence pairs
     int included_pairs; // total number of included sequence pairs
     int excluded_pairs; // number of excluded sequence pairs
-    double pval_sym; // pvalue of symmetry test
-    double pval_marsym; // pvalue of marginal symmetry
-    double pval_intsym; // pvalue of internal symmetry
+    double pvalue; // pvalue of symmetry test
 };
 
 #ifdef USE_HASH_MAP
@@ -637,7 +635,7 @@ public:
     /**
         perform symmetry tests of Lars Jermiin
      */
-    virtual void doSymTest(SymTestResult &res, ostream &out);
+    virtual void doSymTest(SymTestResult &sym, SymTestResult &marsym, SymTestResult &intsym, ostream &out);
 
     /**
             count the fraction of constant sites in the alignment, update the variable frac_const_sites
