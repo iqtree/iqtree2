@@ -4245,8 +4245,8 @@ double binomial_cdf(int x, int n, double p) {
 void Alignment::doSymTest(SymTestResult &sym, SymTestResult &marsym, SymTestResult &intsym, ostream &out) {
     int nseq = getNSeq();
 
-    const double chi2_cutoff = 0.05;
-    const double binom_cutoff = 0.05;
+    const double chi2_cutoff = Params::getInstance().symtest_pcutoff;
+    const double binom_cutoff = Params::getInstance().symtest_pcutoff;
     
     memset(&sym, 0, sizeof(SymTestResult));
     memset(&marsym, 0, sizeof(SymTestResult));
@@ -4273,12 +4273,15 @@ void Alignment::doSymTest(SymTestResult &sym, SymTestResult &marsym, SymTestResu
                     if (!isnan(res(i,j))) {
                         chi2_sym += res(i,j);
                     } else {
-                        applicable = false;
+                        if (Params::getInstance().symtest_keep_zero)
+                            applicable = false;
                         df_sym--;
                     }
-                        
                 }
-            if (df_sym > 0 && applicable) {
+            if (df_sym == 0)
+                applicable = false;
+            
+            if (applicable) {
                 double pval_sym = chi2prob(df_sym, chi2_sym);
                 if (pval_sym < chi2_cutoff)
                     sym.significant_pairs++;
@@ -4307,7 +4310,7 @@ void Alignment::doSymTest(SymTestResult &sym, SymTestResult &marsym, SymTestResu
                 // internal symmetry
                 double chi2_intsym = chi2_sym - chi2_marsym;
                 int df_intsym = df_sym - df_marsym;
-                if (df_intsym >= 0 && applicable) {
+                if (df_intsym > 0 && applicable) {
                     double pval_intsym = chi2prob(df_intsym, chi2_intsym);
                     if (pval_intsym < chi2_cutoff)
                         intsym.significant_pairs++;

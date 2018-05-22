@@ -775,7 +775,10 @@ void parseArg(int argc, char *argv[], Params &params) {
 
     params.aln_file = NULL;
     params.phylip_sequential_format = false;
-    params.symmetry_test = false;
+    params.symtest = false;
+    params.symtest_keep_zero = false;
+    params.symtest_type = 0;
+    params.symtest_pcutoff = 0.05;
     params.treeset_file = NULL;
     params.topotest_replicates = 0;
     params.do_weighted_test = false;
@@ -1651,14 +1654,55 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.phylip_sequential_format = true;
                 continue;
             }
-            if (strcmp(argv[cnt], "--sym-test") == 0) {
-                params.symmetry_test = true;
+            if (strcmp(argv[cnt], "--symtest") == 0) {
+                params.symtest = 1;
                 continue;
             }
-			if (strcmp(argv[cnt], "-z") == 0) {
+
+            if (strcmp(argv[cnt], "--symtest-remove-bad") == 0) {
+                params.symtest = 2;
+                continue;
+            }
+
+            if (strcmp(argv[cnt], "--symtest-remove-good") == 0) {
+                params.symtest = 3;
+                continue;
+            }
+
+            if (strcmp(argv[cnt], "--symtest-keep-zero") == 0) {
+                params.symtest_keep_zero = true;
+                continue;
+            }
+
+            if (strcmp(argv[cnt], "--symtest-type") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use --symtest-type SYM|MAR|INT";
+                if (strcmp(argv[cnt], "SYM") == 0)
+                    params.symtest_type = 0;
+                else if (strcmp(argv[cnt], "MAR") == 0)
+                    params.symtest_type = 1;
+                else if (strcmp(argv[cnt], "INT") == 0)
+                    params.symtest_type = 2;
+                else
+                    throw "Use --symtest-type SYM|MAR|INT";
+                continue;
+            }
+
+            if (strcmp(argv[cnt], "--symtest-pval") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use --symtest-pval PVALUE_CUTOFF";
+                params.symtest_pcutoff = convert_double(argv[cnt]);
+                if (params.symtest_pcutoff <= 0 || params.symtest_pcutoff >= 1)
+                    throw "--symtest-pval must be between 0 and 1";
+                continue;
+            }
+            
+            if (strcmp(argv[cnt], "-z") == 0) {
 				cnt++;
 				if (cnt >= argc)
-					throw "Use -aln, -z <user_trees_file>";
+					throw "Use -z <user_trees_file>";
 				params.treeset_file = argv[cnt];
 				continue;
 			}

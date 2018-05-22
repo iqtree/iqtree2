@@ -806,8 +806,27 @@ public:
     /** true if sequential phylip format is used, default: false (interleaved format) */
     bool phylip_sequential_format;
 
-    /** true to perform symmetry test of Lars Jermiin */
-    bool symmetry_test;
+    /**
+     0 to not perform test of symmetry of Jermiin et al. (default)
+     1 to perform symmetry test
+     2 to do symtest and then remove bad loci
+     3 to do symtest and then remove good loci
+    */
+    int symtest;
+    
+    /** true to keep zero which may result in many taxon pairs not testable (default: false) */
+    bool symtest_keep_zero;
+    
+    /**
+        which test used when removing loci
+        0 test of symmetry (default)
+        1 test of marginal symmetry
+        2 test of internal symmetry
+     */
+    int symtest_type;
+    
+    /** pvalue cutoff (default: 0.05) */
+    double symtest_pcutoff;
     
     /**
             file containing multiple trees to evaluate at the end

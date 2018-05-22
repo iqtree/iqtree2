@@ -3300,7 +3300,7 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
             tree = new IQTree(alignment);
 	}
 
-    if (params.symmetry_test) {
+    if (params.symtest) {
         double start_time = getRealTime();
         cout << "Performing symmetry test... ";
         ofstream out;
