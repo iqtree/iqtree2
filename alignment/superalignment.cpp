@@ -656,6 +656,80 @@ void SuperAlignment::extractSubAlignment(Alignment *aln, IntVector &seq_id, int 
 	buildPattern();
 }
 
+SuperAlignment *SuperAlignment::extractPartitions(IntVector &part_id) {
+    SuperAlignment *newaln = new SuperAlignment;
+    newaln->name = name;
+    newaln->model_name = model_name;
+    newaln->sequence_type = sequence_type;
+    newaln->position_spec = position_spec;
+    newaln->aln_file = aln_file;
+
+    unordered_set<string> seq_names_set;
+    IntVector::iterator it;
+    for (it = part_id.begin(); it != part_id.end(); it++) {
+        for (auto seq = partitions[*it]->seq_names.begin(); seq != partitions[*it]->seq_names.end(); seq++)
+            if (seq_names_set.find(*seq) == seq_names_set.end()) {
+                newaln->seq_names.push_back(*seq);
+                seq_names_set.insert(*seq);
+            }
+    }
+    
+    int i;
+    newaln->taxa_index.resize(newaln->getNSeq());
+    for (i = 0; i < newaln->getNSeq(); i++)
+        newaln->taxa_index[i].resize(part_id.size(), -1);
+    
+    int part = 0;
+    for (auto ait = part_id.begin(); ait != part_id.end(); ait++, part++) {
+        newaln->partitions.push_back(partitions[*ait]);
+        newaln->linkSubAlignment(newaln->partitions.size()-1);
+    }
+    
+    // now build the patterns based on taxa_index
+    newaln->buildPattern();
+    return newaln;
+}
+
+void SuperAlignment::removePartitions(set<int> &removed_id) {
+
+    // remove part_id from partitions
+    vector<Alignment*> new_partitions;
+    int i;
+    for (i = 0; i < partitions.size(); i++)
+        if (removed_id.find(i) == removed_id.end()) {
+            // not found in the removed set
+            new_partitions.push_back(partitions[i]);
+        } else {
+            delete partitions[i];
+            partitions[i] = NULL;
+        }
+    
+    ASSERT(new_partitions.size() + removed_id.size() == partitions.size());
+    partitions = new_partitions;
+
+    // get the union seq_names of remaining partitions
+    unordered_set<string> seq_names_set;
+    seq_names.clear();
+    for (auto it = partitions.begin(); it != partitions.end(); it++) {
+        for (auto seq = (*it)->seq_names.begin(); seq != (*it)->seq_names.end(); seq++)
+            if (seq_names_set.find(*seq) == seq_names_set.end()) {
+                seq_names.push_back(*seq);
+                seq_names_set.insert(*seq);
+            }
+    }
+    
+    
+    // build the taxa_index
+    taxa_index.resize(getNSeq());
+    for (i = 0; i < getNSeq(); i++)
+        taxa_index[i].resize(partitions.size(), -1);
+    for (i = 0; i < partitions.size(); i++)
+        linkSubAlignment(i);
+
+    // now build the patterns based on taxa_index
+    buildPattern();
+}
+
 Alignment *SuperAlignment::removeIdenticalSeq(string not_remove, bool keep_two, StrVector &removed_seqs, StrVector &target_seqs) {
     IntVector checked;
     vector<bool> removed;
@@ -840,11 +914,10 @@ void SuperAlignment::computeDivergenceMatrix(double *pair_freq, double *state_fr
     delete [] part_pair_freq;
 }
 
-void SuperAlignment::doSymTest(SymTestResult &sym, SymTestResult &marsym, SymTestResult &intsym, ostream &out) {
-    int part = 0;
-    for (auto it = partitions.begin(); it != partitions.end(); it++, part++) {
-        out << part+1 << ",";
-        (*it)->doSymTest(sym, marsym, intsym, out);
+void SuperAlignment::doSymTest(vector<SymTestResult> &vec_sym, vector<SymTestResult> &vec_marsym,
+                               vector<SymTestResult> &vec_intsym, ostream &out) {
+    for (auto it = partitions.begin(); it != partitions.end(); it++) {
+        (*it)->doSymTest(vec_sym, vec_marsym, vec_intsym, out);
     }
 }
 

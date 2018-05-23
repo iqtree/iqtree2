@@ -3238,9 +3238,56 @@ void computeSiteFrequencyModel(Params &params, Alignment *alignment) {
 /**********************************************************
  * TOP-LEVEL FUNCTION
  ***********************************************************/
+
+IQTree *newIQTree(Params &params, Alignment *alignment) {
+    IQTree *tree;
+    if (alignment->isSuperAlignment()) {
+        if (params.partition_type == TOPO_UNLINKED) {
+            tree = new PhyloSuperTreeUnlinked((SuperAlignment*)alignment);
+        } else if(params.partition_type != BRLEN_OPTIMIZE){
+            // initialize supertree - Proportional Edges case
+            tree = new PhyloSuperTreePlen((SuperAlignment*)alignment, params.partition_type);
+        } else {
+            // initialize supertree stuff if user specifies partition file with -sp option
+            tree = new PhyloSuperTree((SuperAlignment*)alignment);
+        }
+        // this alignment will actually be of type SuperAlignment
+        //        alignment = tree->aln;
+        if (((PhyloSuperTree*)tree)->rescale_codon_brlen)
+            cout << "NOTE: Mixed codon and other data, branch lengths of codon partitions are rescaled by 3!" << endl;
+        
+    } else {
+        // allocate heterotachy tree if neccessary
+        int pos = posRateHeterotachy(alignment->model_name);
+        
+        if (params.num_mixlen > 1) {
+            tree = new PhyloTreeMixlen(alignment, params.num_mixlen);
+        } else if (pos != string::npos) {
+            tree = new PhyloTreeMixlen(alignment, 0);
+        } else
+            tree = new IQTree(alignment);
+    }
+
+    return tree;
+}
+
+/** get ID of bad or good symtest results */
+void getSymTestID(vector<SymTestResult> &res, set<int> &id, bool bad_res) {
+    if (bad_res) {
+        // get significant test ID
+        for (auto i = res.begin(); i != res.end(); i++)
+            if (i->pvalue < Params::getInstance().symtest_pcutoff)
+                id.insert(i - res.begin());
+    } else {
+        // get non-significant test ID
+        for (auto i = res.begin(); i != res.end(); i++)
+            if (i->pvalue >= Params::getInstance().symtest_pcutoff)
+                id.insert(i - res.begin());
+    }
+}
+
 void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
 	Alignment *alignment;
-	IQTree *tree;
 
     checkpoint->putBool("finished", false);
     checkpoint->setDumpInterval(params.checkpoint_dump_interval);
@@ -3249,20 +3296,6 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
 	if (params.partition_file) {
 		// Partition model analysis
         alignment = new SuperAlignment(params);
-        if (params.partition_type == TOPO_UNLINKED) {
-            tree = new PhyloSuperTreeUnlinked((SuperAlignment*)alignment);
-        } else if(params.partition_type != BRLEN_OPTIMIZE){
-			// initialize supertree - Proportional Edges case
-			tree = new PhyloSuperTreePlen((SuperAlignment*)alignment, params.partition_type);
-		} else {
-			// initialize supertree stuff if user specifies partition file with -sp option
-			tree = new PhyloSuperTree((SuperAlignment*)alignment);
-		}
-		// this alignment will actually be of type SuperAlignment
-//        alignment = tree->aln;
-        if (((PhyloSuperTree*)tree)->rescale_codon_brlen)
-            cout << "NOTE: Mixed codon and other data, branch lengths of codon partitions are rescaled by 3!" << endl;
-        
 	} else {
 		alignment = new Alignment(params.aln_file, params.sequence_type, params.intype, params.model_name);
 
@@ -3287,17 +3320,6 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
         if (params.site_freq_file) {
             alignment->readSiteStateFreq(params.site_freq_file);
         }
-
-
-        // allocate heterotachy tree if neccessary
-        int pos = posRateHeterotachy(alignment->model_name);
-        
-        if (params.num_mixlen > 1) {
-            tree = new PhyloTreeMixlen(alignment, params.num_mixlen);
-        } else if (pos != string::npos) {
-            tree = new PhyloTreeMixlen(alignment, 0);
-        } else
-            tree = new IQTree(alignment);
 	}
 
     if (params.symtest) {
@@ -3306,14 +3328,41 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
         ofstream out;
         string filename = string(params.out_prefix) + ".symtest.csv";
         out.open(filename.c_str());
-        if (tree->isSuperTree())
-            out << "No,";
-        out << "Name,SigSym,NonSigSym,pSym,SigMar,NonSigMar,pMar,SigInt,NonSigInt,pInt" << endl;
-        SymTestResult sym, marsym, intsym;
+        out << "Name,SymSig,SymNon,SymPval,MarSig,MarNon,MarPval,IntSig,IntNon,IntPval" << endl;
+        vector<SymTestResult> sym, marsym, intsym;
         alignment->doSymTest(sym, marsym, intsym, out);
         out.close();
         cout << getRealTime() - start_time << " seconds" << endl;
         cout << "SymTest results written to " << filename << endl;
+        if (alignment->isSuperAlignment()) {
+            set<int> part_id;
+            if (params.symtest == 2) {
+                // remove bad loci
+                if (params.symtest_type == 0)
+                    getSymTestID(sym, part_id, true);
+                else if (params.symtest_type == 1)
+                    getSymTestID(marsym, part_id, true);
+                else
+                   getSymTestID(intsym, part_id, true);
+            } else if (params.symtest == 3) {
+                // remove good loci
+                if (params.symtest_type == 0)
+                    getSymTestID(sym, part_id, false);
+                else if (params.symtest_type == 1)
+                    getSymTestID(marsym, part_id, false);
+                else
+                    getSymTestID(intsym, part_id, false);
+            }
+            if (!part_id.empty()) {
+                cout << "Removing " << part_id.size()
+                << ((params.symtest == 2)? " bad" : " good") << " partitions (pvalue cutoff = "
+                     << params.symtest_pcutoff << ")..." << endl;
+                if (part_id.size() < alignment->getNSite())
+                    ((SuperAlignment*)alignment)->removePartitions(part_id);
+                else
+                    outError("Can't remove all partitions");
+            }
+        }
     }
 
     if (params.print_aln_info) {
@@ -3322,6 +3371,9 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
         cout << "Alignment sites statistics printed to " << site_info_file << endl;
     }
 
+    /*************** initialize tree ********************/
+    IQTree *tree = newIQTree(params, alignment);
+    
     tree->setCheckpoint(checkpoint);
     if (params.min_branch_length <= 0.0) {
         params.min_branch_length = 1e-6;
