@@ -106,7 +106,8 @@ public:
     /**
      perform symmetry tests of Lars Jermiin
      */
-    virtual void doSymTest(SymTestResult &sym, SymTestResult &marsym, SymTestResult &intsym, ostream &out);
+    virtual void doSymTest(vector<SymTestResult> &sym, vector<SymTestResult> &marsym,
+                           vector<SymTestResult> &intsym, ostream &out);
 
     /**
             extract sub-alignment of a sub-set of sequences
@@ -117,6 +118,19 @@ public:
             @param[out] kept_partitions (for SuperAlignment) indices of kept partitions
      */
     virtual void extractSubAlignment(Alignment *aln, IntVector &seq_id, int min_true_char, int min_taxa = 0, IntVector *kept_partitions = NULL);
+
+    /**
+        extract a subset of partitions to form a new SuperAlignment object
+        @param part_id vector of partition IDs
+        @return new alignment containing only part_id partitions
+     */
+    SuperAlignment *extractPartitions(IntVector &part_id);
+
+    /**
+     remove a subset of partitions
+     @param part_id vector of partition IDs
+     */
+    void removePartitions(set<int> &part_id);
 
     /**
      * remove identical sequences from alignment

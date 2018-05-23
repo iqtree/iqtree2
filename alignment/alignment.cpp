@@ -4242,15 +4242,26 @@ double binomial_cdf(int x, int n, double p) {
     return 1.0-cdf;
 }
 
-void Alignment::doSymTest(SymTestResult &sym, SymTestResult &marsym, SymTestResult &intsym, ostream &out) {
+void SymTestResult::computePvalue() {
+    pvalue = binomial_cdf(significant_pairs, included_pairs, Params::getInstance().symtest_pcutoff);
+
+}
+
+std::ostream& operator<<(std::ostream& stream, const SymTestResult& res) {
+    stream << res.significant_pairs << ","
+        << res.included_pairs - res.significant_pairs << ","
+    << res.pvalue;
+    return stream;
+}
+
+void Alignment::doSymTest(vector<SymTestResult> &vec_sym, vector<SymTestResult> &vec_marsym,
+                       vector<SymTestResult> &vec_intsym, ostream &out)
+{
     int nseq = getNSeq();
 
     const double chi2_cutoff = Params::getInstance().symtest_pcutoff;
-    const double binom_cutoff = Params::getInstance().symtest_pcutoff;
     
-    memset(&sym, 0, sizeof(SymTestResult));
-    memset(&marsym, 0, sizeof(SymTestResult));
-    memset(&intsym, 0, sizeof(SymTestResult));
+    SymTestResult sym, marsym, intsym;
 
     for (int seq1 = 0; seq1 < nseq; seq1++)
         for (int seq2 = seq1+1; seq2 < nseq; seq2++) {
@@ -4324,19 +4335,14 @@ void Alignment::doSymTest(SymTestResult &sym, SymTestResult &marsym, SymTestResu
             
             
         }
-    sym.pvalue = binomial_cdf(sym.significant_pairs, sym.included_pairs, binom_cutoff);
-    marsym.pvalue = binomial_cdf(marsym.significant_pairs, marsym.included_pairs, binom_cutoff);
-    intsym.pvalue = binomial_cdf(intsym.significant_pairs, intsym.included_pairs, binom_cutoff);
-    out << name << ","
-        << sym.significant_pairs << ","
-        << sym.included_pairs-sym.significant_pairs << ","
-        << sym.pvalue << ","
-        << marsym.significant_pairs << ","
-        << marsym.included_pairs-marsym.significant_pairs << ","
-        << marsym.pvalue << ","
-        << intsym.significant_pairs << ","
-        << intsym.included_pairs-intsym.significant_pairs << ","
-        << intsym.pvalue << endl;
+    
+    sym.computePvalue();
+    marsym.computePvalue();
+    intsym.computePvalue();
+    vec_sym.push_back(sym);
+    vec_marsym.push_back(marsym);
+    vec_intsym.push_back(intsym);
+    out << name << "," << sym << "," << marsym << "," << intsym << endl;
     
 }
 

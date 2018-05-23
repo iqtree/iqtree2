@@ -39,12 +39,24 @@ enum SeqType {
     SEQ_DNA, SEQ_PROTEIN, SEQ_BINARY, SEQ_MORPH, SEQ_MULTISTATE, SEQ_CODON, SEQ_POMO, SEQ_UNKNOWN
 };
 
-struct SymTestResult {
+/** class storing results of symmetry tests */
+class SymTestResult {
+public:
+    SymTestResult() {
+        significant_pairs = included_pairs = excluded_pairs = 0;
+        pvalue = -1.0;
+    }
+    
+    /** compute pvalue using bionomial test */
+    void computePvalue();
+    
     int significant_pairs; // number of significant sequence pairs
     int included_pairs; // total number of included sequence pairs
     int excluded_pairs; // number of excluded sequence pairs
     double pvalue; // pvalue of symmetry test
 };
+
+std::ostream& operator<< (std::ostream& stream, const SymTestResult& res);
 
 #ifdef USE_HASH_MAP
 struct hashPattern {
@@ -635,7 +647,8 @@ public:
     /**
         perform symmetry tests of Lars Jermiin
      */
-    virtual void doSymTest(SymTestResult &sym, SymTestResult &marsym, SymTestResult &intsym, ostream &out);
+    virtual void doSymTest(vector<SymTestResult> &sym, vector<SymTestResult> &marsym,
+                           vector<SymTestResult> &intsym, ostream &out);
 
     /**
             count the fraction of constant sites in the alignment, update the variable frac_const_sites
