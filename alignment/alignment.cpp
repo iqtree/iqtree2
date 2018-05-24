@@ -4281,7 +4281,7 @@ void Alignment::doSymTest(vector<SymTestResult> &vec_sym, vector<SymTestResult> 
 
             for (i = 0; i < num_states; i++)
                 for (j = i+1; j < num_states; j++) {
-                    if (!isnan(res(i,j))) {
+                    if (!std::isnan(res(i,j))) {
                         chi2_sym += res(i,j);
                     } else {
                         if (Params::getInstance().symtest_keep_zero)
