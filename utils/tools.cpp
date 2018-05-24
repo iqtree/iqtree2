@@ -1057,9 +1057,12 @@ void parseArg(int argc, char *argv[], Params &params) {
 				usage_iqtree(argv, false);
 				continue;
 			}
-			if (strcmp(argv[cnt], "-hh") == 0
-					|| strcmp(argv[cnt], "-hhh") == 0) {
+			if (strcmp(argv[cnt], "-hh") == 0 || strcmp(argv[cnt], "-hhh") == 0) {
+#ifdef IQ_TREE
+                usage_iqtree(argv, true);
+#else
 				usage(argv);
+#endif
 				continue;
 			}
 			if (strcmp(argv[cnt], "-v0") == 0) {
@@ -4004,6 +4007,15 @@ void usage_iqtree(char* argv[], bool full_command) {
 
     if (full_command) {
         //TODO Print other options here (to be added)
+        cout << "TEST OF SYMMETRY" << endl
+        << "  --symtest               Perform three tests of symmetry" << endl
+        << "  --symtest-remove-bad    Do --symtest and remove bad partitions" << endl
+        << "  --symtest-remove-good   Do --symtest and remove good partitions" << endl
+        << "  --symtest-type MAR|INT  MARginal/INTernal test when removing partitions" << endl
+        << "  --symtest-pval NUM      P-value cutoff (default: 0.05)" << endl
+        << "  --symtest-keep-zero     Keep NAs in the tests" << endl;
+        
+        cout << endl;
     }
 
     exit(0);
