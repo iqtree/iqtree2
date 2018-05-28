@@ -444,7 +444,7 @@ void ModelMarkov::computeTransMatrixNonrev(double time, double *trans_matrix, in
         Map<Matrix<double,Dynamic,Dynamic,RowMajor> >map_trans(trans_matrix,num_states,num_states);
         map_trans = res.real();
         // sanity check rows sum to 1
-        VectorXd row_sum = res.real().rowwise().sum();
+        VectorXd row_sum = map_trans.rowwise().sum();
         double mincoeff = row_sum.minCoeff();
         double maxcoeff = row_sum.maxCoeff();
         if (maxcoeff > 1.0001 || mincoeff < 0.9999) {
