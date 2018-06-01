@@ -18,6 +18,9 @@
 #include "gsl/mygsl.h"
 #include "utils/gzstream.h"
 #include <Eigen/LU>
+#ifdef USE_BOOST
+#include <boost/math/distributions/binomial.hpp>
+#endif
 
 using namespace std;
 using namespace Eigen;
@@ -4243,8 +4246,16 @@ double binomial_cdf(int x, int n, double p) {
 }
 
 void SymTestResult::computePvalue() {
+    if (significant_pairs <= 0) {
+        pvalue = 1.0;
+        return;
+    }
+#ifdef USE_BOOST
+    boost::math::binomial binom(included_pairs, Params::getInstance().symtest_pcutoff);
+    pvalue = cdf(complement(binom, significant_pairs-1));
+#else
     pvalue = binomial_cdf(significant_pairs, included_pairs, Params::getInstance().symtest_pcutoff);
-
+#endif
 }
 
 std::ostream& operator<<(std::ostream& stream, const SymTestResult& res) {
