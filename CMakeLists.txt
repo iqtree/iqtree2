@@ -48,6 +48,24 @@ set(CMAKE_LEGACY_CYGWIN_WIN32 0)
 
 project(iqtree)
 add_definitions(-DIQ_TREE)
+
+# Find Eigen3 library
+if (NOT EIGEN3_INCLUDE_DIR)
+    find_package(Eigen3)
+    if(NOT EIGEN3_FOUND)
+        message(FATAL_ERROR "Eigen3 library not found. Either install it or rerun cmake with -DEIGEN3_INCLUDE_DIR=<installed_eigen3_dir>")
+    endif()
+endif()
+add_definitions(-I${EIGEN3_INCLUDE_DIR})
+
+# Find Boost library
+find_package(Boost)
+if(Boost_FOUND)
+    add_definitions(-I${Boost_INCLUDE_DIRS})
+    add_definitions(-DUSE_BOOST)
+endif()
+
+
 # The version number.
 set (iqtree_VERSION_MAJOR 1)
 set (iqtree_VERSION_MINOR 6)
@@ -483,13 +501,6 @@ add_subdirectory(sprng)
 #add_subdirectory(zlib-1.2.7)
 add_subdirectory(vectorclass)
 LIST(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}")
-if (NOT EIGEN3_INCLUDE_DIR)
-    find_package(Eigen3)
-    if(NOT EIGEN3_FOUND)
-        message(FATAL_ERROR "Eigen3 library not found. Either install it or rerun cmake with -DEIGEN3_INCLUDE_DIR=<installed_eigen3_dir>")
-    endif()
-endif()
-add_definitions("-I${EIGEN3_INCLUDE_DIR}")
 add_subdirectory(model)
 add_subdirectory(gsl)
 add_subdirectory(alignment)
