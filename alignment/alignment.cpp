@@ -1113,6 +1113,7 @@ void Alignment::buildStateMap(char *map, SeqType seq_type) {
         map[(unsigned char)'J'] = 22; // I or L
         map[(unsigned char)'*'] = STATE_UNKNOWN; // stop codon
         map[(unsigned char)'U'] = STATE_UNKNOWN; // 21st amino acid
+        map[(unsigned char)'O'] = STATE_UNKNOWN; // 22nd amino acid
 
         return;
     case SEQ_MULTISTATE:
@@ -1201,6 +1202,7 @@ char Alignment::convertState(char state, SeqType seq_type) {
 		if (state == 'J') return 22;
         if (state == '*') return STATE_UNKNOWN; // stop codon
         if (state == 'U') return STATE_UNKNOWN; // 21st amino-acid
+        if (state == 'O') return STATE_UNKNOWN; // 22nd amino-acid
         loc = strchr(symbols_protein, state);
 
         if (!loc) return STATE_INVALID; // unrecognize character
