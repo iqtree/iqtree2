@@ -1536,7 +1536,7 @@ void PhyloTree::reportLikelihoodMapping(ofstream &out) {
 	out << "Number of quartets: " << params->lmap_num_quartets;
     if (params->lmap_num_quartets < LMGroups.uniqueQuarts)
         out << " (randomly chosen with replacement from "
-		<< params->lmap_num_quartets << " existing unique quartets)" << endl << endl;
+		<< LMGroups.uniqueQuarts << " existing unique quartets)" << endl << endl;
     else
         out << " (all unique quartets)" << endl << endl;
         
