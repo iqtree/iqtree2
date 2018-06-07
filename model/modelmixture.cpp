@@ -1179,6 +1179,8 @@ void ModelMixture::initMixture(string orig_model_name, string model_name, string
 	} else {
 		if (freq_params != "")
 			readStateFreq(freq_params);
+        if (freq == FREQ_UNKNOWN)
+            freq = FREQ_USER_DEFINED;
 		ModelMarkov::init(freq);
 	}
 
