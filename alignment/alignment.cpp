@@ -674,14 +674,24 @@ void Alignment::extractDataBlock(NxsCharactersBlock *data_block) {
                 pat.push_back(STATE_UNKNOWN);
             else if (nstate == 1) {
                 pat.push_back(char_to_state[(int)data_block->GetState(seq, site, 0)]);
-            } else {
-                ASSERT(data_type != NxsCharactersBlock::dna || data_type != NxsCharactersBlock::rna || data_type != NxsCharactersBlock::nucleotide);
+            } else if (data_type == NxsCharactersBlock::dna || data_type == NxsCharactersBlock::rna || data_type == NxsCharactersBlock::nucleotide) {
+                // 2018-06-07: correctly interpret ambiguous nucleotide
                 char pat_ch = 0;
                 for (int state = 0; state < nstate; state++) {
                     pat_ch |= (1 << char_to_state[(int)data_block->GetState(seq, site, state)]);
                 }
                 pat_ch += 3;
                 pat.push_back(pat_ch);
+            } else {
+                // other ambiguous characters are treated as unknown
+                stringstream str;
+                str << "Sequence " << seq_names[seq] << " site " << site+1 << ": {";
+                for (int state = 0; state < nstate; state++) {
+                    str << data_block->GetState(seq, site, state);
+                }
+                str << "} treated as unknown character";
+                outWarning(str.str());
+                pat.push_back(STATE_UNKNOWN);
             }
         }
         num_gaps_only += addPattern(pat, site);
