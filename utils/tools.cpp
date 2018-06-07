@@ -3521,7 +3521,10 @@ void parseArg(int argc, char *argv[], Params &params) {
 
     if (params.num_runs > 1 && params.treeset_file)
         outError("Can't combine --runs and -z options");
-    
+
+    if (params.num_runs > 1 && params.lmap_num_quartets >= 0)
+        outError("Can't combine --runs and -lmap options");
+
 	// Diep:
 	if(params.ufboot2corr == true){
 		if(params.gbo_replicates <= 0) params.ufboot2corr = false;
