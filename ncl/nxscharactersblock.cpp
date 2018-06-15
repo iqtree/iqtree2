@@ -2681,12 +2681,6 @@ void NxsCharactersBlock::Reset()
 	missing				= '?';
 	gap					= '\0';
 	matchchar			= '\0';
-	matrix				= NULL;
-	charPos				= NULL;
-	taxonPos			= NULL;
-	activeTaxon			= NULL;
-	activeChar			= NULL;
-	symbols				= NULL;
 
 	ResetSymbols();
 

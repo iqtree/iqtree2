@@ -532,18 +532,26 @@ int Alignment::readNexus(char *filename) {
 		return 0;
 	}
 
-    if (char_block->GetNTax() == 0) { char_block = data_block; }
-
-    if (char_block->GetNTax() == 0) {
-        outError("No data is given in the input file");
+    if (data_block->GetNTax() == 0 && char_block->GetNTax() == 0) {
+        outError("No DATA or CHARACTERS blocks found");
         return 0;
     }
-    if (verbose_mode >= VB_DEBUG)
-        char_block->Report(cout);
 
+    if (char_block->GetNTax() > 0) {
+        extractDataBlock(char_block);
+        if (verbose_mode >= VB_DEBUG)
+            char_block->Report(cout);
+    } else {
+        extractDataBlock(data_block);
+        if (verbose_mode >= VB_DEBUG)
+            data_block->Report(cout);
+    }
 
-    extractDataBlock(char_block);
-
+    delete trees_block;
+    delete char_block;
+    delete data_block;
+    delete assumptions_block;
+    delete taxa_block;
     return 1;
 }
 
