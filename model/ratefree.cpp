@@ -128,13 +128,13 @@ void RateFree::initFromCatMinusOne() {
     restoreCheckpoint();
     ncategory++;
 
-    int first = 0, second = -1, i;
+    int first = 0, i;
     // get the category k with largest proportion
     for (i = 1; i < ncategory-1; i++)
         if (prop[i] > prop[first]) {
             first = i;
         }
-    second = (first == 0) ? 1 : 0;
+    int second = (first == 0) ? 1 : 0;
     for (i = 0; i < ncategory-1; i++)
         if (prop[i] > prop[second] && second != first)
             second = i;
@@ -143,9 +143,15 @@ void RateFree::initFromCatMinusOne() {
 //    memmove(prop, input->prop, (k+1)*sizeof(double));
 
     // divide highest category into 2 of the same prop
-    rates[ncategory-1] = (-rates[second] + 3*rates[first])/2.0;
+    // 2018-06-12: fix bug negative rates
+    if (-rates[second] + 3*rates[first] > 0.0) {
+        rates[ncategory-1] = (-rates[second] + 3*rates[first])/2.0;
+        rates[first] = (rates[second]+rates[first])/2.0;
+    } else {
+        rates[ncategory-1] = (3*rates[first])/2.0;
+        rates[first] = (rates[first])/2.0;
+    }
     prop[ncategory-1] = prop[first]/2;
-    rates[first] = (rates[second]+rates[first])/2.0;
     prop[first] = prop[first]/2;
 //    if (k < ncategory-2) {
 //        memcpy(&rates[k+2], &input->rates[k+1], (ncategory-2-k)*sizeof(double));
