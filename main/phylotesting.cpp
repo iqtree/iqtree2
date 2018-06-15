@@ -973,6 +973,7 @@ int getModelList(Params &params, Alignment *aln, StrVector &models, bool separat
 	bool test_options_noASC_I_new[] = {true,false,  false, true,  false,    false, true,    false};
 	bool test_options_asc_new[]   ={false,false,   true,false,  false,     true,false,     true};
 	bool test_options_pomo[]      = {true, false,  false, true,   false,   false,false,    false};
+    bool test_options_norate[]    = {true, false,  false, false,   false,   false,false,    false};
     bool *test_options = test_options_default;
 //	bool test_options_codon[] =  {true,false,  false,false,  false,    false};
 	const int noptions = sizeof(rate_options) / sizeof(char*);
@@ -1163,6 +1164,9 @@ int getModelList(Params &params, Alignment *aln, StrVector &models, bool separat
             test_options = test_options_morph;
         else
             test_options = test_options_noASC_I;
+    } else if (aln->frac_invariant_sites >= 1.0) {
+        // 2018-06-12: alignment with only invariant sites, no rate variation added
+        test_options = test_options_norate;
 	} else {
         // normal data, use +I instead
         if (with_new) {
