@@ -799,6 +799,7 @@ void SuperAlignment::printSiteInfo(const char* filename) {
     }
 }
 
+/*
 void SuperAlignment::createBootstrapAlignment(Alignment *aln, IntVector* pattern_freq, const char *spec) {
 	ASSERT(aln->isSuperAlignment());
 	Alignment::copyAlignment(aln);
@@ -880,6 +881,82 @@ void SuperAlignment::createBootstrapAlignment(Alignment *aln, IntVector* pattern
     }
 	taxa_index = super_aln->taxa_index;
     countConstSite();
+}
+*/
+
+void SuperAlignment::createBootstrapAlignment(Alignment *aln, IntVector* pattern_freq, const char *spec) {
+    ASSERT(aln->isSuperAlignment());
+    SuperAlignment *super_aln = (SuperAlignment*) aln;
+    ASSERT(partitions.empty());
+    name = aln->name;
+    model_name = aln->model_name;
+    sequence_type = aln->sequence_type;
+    position_spec = aln->position_spec;
+    aln_file = aln->aln_file;
+    
+    if (!spec) {
+        // resampling sites within genes
+        Alignment::copyAlignment(aln);
+        partitions.reserve(super_aln->partitions.size());
+        for (vector<Alignment*>::iterator it = super_aln->partitions.begin(); it != super_aln->partitions.end(); it++) {
+            Alignment *boot_aln = new Alignment;
+            if (pattern_freq) {
+                IntVector part_pattern_freq;
+                boot_aln->createBootstrapAlignment(*it, &part_pattern_freq);
+                pattern_freq->insert(pattern_freq->end(), part_pattern_freq.begin(), part_pattern_freq.end());
+            } else {
+                boot_aln->createBootstrapAlignment(*it);
+            }
+            partitions.push_back(boot_aln);
+        }
+        taxa_index = super_aln->taxa_index;
+        countConstSite();
+    } else if (strcmp(spec, "GENE") == 0) {
+        ASSERT(!pattern_freq);
+        // resampling whole genes
+        IntVector gene_freq;
+        gene_freq.resize(super_aln->partitions.size(), 0);
+        int i;
+        for (i = 0; i < gene_freq.size(); i++) {
+            int part = i;
+            if (Params::getInstance().jackknife_prop == 0.0)
+                part = random_int(gene_freq.size());
+            else if (random_double() < Params::getInstance().jackknife_prop)
+                continue;
+            gene_freq[part]++;
+        }
+        for (i = 0; i < gene_freq.size(); i++)
+            if (gene_freq[i] > 0) {
+                Alignment *boot_aln = new Alignment;
+                boot_aln->copyAlignment(super_aln->partitions[i]);
+                if (gene_freq[i] > 1) {
+                    for (auto it = boot_aln->begin(); it != boot_aln->end(); it++)
+                        it->frequency *= gene_freq[i];
+                    auto site_pattern = boot_aln->site_pattern;
+                    for (int j = 1; j < gene_freq[i]; j++)
+                        boot_aln->site_pattern.insert(boot_aln->site_pattern.end(), site_pattern.begin(), site_pattern.end());
+                }
+                partitions.push_back(boot_aln);
+            }
+        init();
+    } else if (strcmp(spec, "GENESITE") == 0) {
+        ASSERT(!pattern_freq);
+        // resampling whole genes then sites within resampled genes
+        for (int i = 0; i < super_aln->partitions.size(); i++) {
+            int part = i;
+            if (Params::getInstance().jackknife_prop == 0.0)
+                part = random_int(super_aln->partitions.size());
+            else if (random_double() < Params::getInstance().jackknife_prop)
+                continue;
+            Alignment *boot_aln = new Alignment;
+            boot_aln->createBootstrapAlignment(super_aln->partitions[part]);
+            boot_aln->name = boot_aln->name + "." + convertIntToString(i);
+            partitions.push_back(boot_aln);
+        }
+        init();
+    } else {
+        outError("Wrong -bsam, either -bsam GENE or -bsam GENESITE");
+    }
 }
 
 void SuperAlignment::createBootstrapAlignment(IntVector &pattern_freq, const char *spec) {

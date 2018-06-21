@@ -527,8 +527,15 @@ double RateFree::optimizeWithEM() {
         }
         ASSERT(score < 0);
         
-        if (step > 0)
+        if (step > 0) {
+            if (score <= old_score-0.1) {
+                phylo_tree->printTree(cout, WT_BR_LEN+WT_NEWLINE);
+                writeInfo(cout);
+                cout << "Partition " << phylo_tree->aln->name << endl;
+                cout << "score: " << score << "  old_score: " << old_score << endl;
+            }
             ASSERT(score > old_score-0.1);
+        }
             
         old_score = score;
         
