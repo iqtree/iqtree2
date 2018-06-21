@@ -4289,6 +4289,34 @@ double random_double(int *rstream) {
 
 }
 
+void random_resampling(int n, IntVector &sample, int *rstream) {
+    sample.resize(n, 0);
+    if (Params::getInstance().jackknife_prop == 0.0) {
+        // boostrap resampling
+        for (int i = 0; i < n; i++) {
+            int j = random_int(n, rstream);
+            sample[j]++;
+        }
+    } else {
+        // jackknife resampling
+        int total = floor((1.0 - Params::getInstance().jackknife_prop)*n);
+        if (total <= 0)
+            outError("Jackknife sample size is zero");
+        // make sure jackknife samples have exacly the same size
+        for (int num = 0; num < total; ) {
+            for (int i = 0; i < n; i++) if (!sample[i]) {
+                if (random_double(rstream) < Params::getInstance().jackknife_prop)
+                    continue;
+                sample[i] = 1;
+                num++;
+                if (num >= total)
+                    break;
+            }
+        }
+    }
+}
+
+
 /* Following part is taken from ModelTest software */
 #define	BIGX            20.0                                 /* max value to represent exp (x) */
 #define	LOG_SQRT_PI     0.5723649429247000870717135          /* log (sqrt (pi)) */

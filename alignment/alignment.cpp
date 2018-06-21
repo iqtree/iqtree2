@@ -3064,18 +3064,11 @@ void Alignment::createBootstrapAlignment(Alignment *aln, IntVector* pattern_freq
     if (!spec) {
 		// standard bootstrap
         int added_sites = 0;
-		for (site = 0; site < nsite; site++) {
-            int site_id;
-            if (Params::getInstance().jackknife_prop == 0.0) {
-                // bootstrap sampling with replacement
-                site_id = random_int(nsite);
-            } else {
-                // jacknife without replacement
-                if (random_double() < Params::getInstance().jackknife_prop)
-                    continue;
-                site_id = site;
-            }
-			int ptn_id = aln->getPatternID(site_id);
+        IntVector sample;
+        random_resampling(nsite, sample);
+		for (site = 0; site < nsite; site++)
+        for (int rep = 0; rep < sample[site]; rep++) {
+			int ptn_id = aln->getPatternID(site);
 			Pattern pat = aln->at(ptn_id);
             int nptn = getNPattern();
 			addPattern(pat, added_sites);
@@ -3185,26 +3178,16 @@ void Alignment::createBootstrapAlignment(int *pattern_freq, const char *spec, in
     if (Params::getInstance().jackknife_prop > 0.0 && spec)
         outError((string)"Unsupported jackknife with " + spec);
 
-    if (!spec ||  strncmp(spec, "SCALE=", 6) == 0) {
+    if (!spec) {
 
-        if (spec) {
-            double scale = convert_double(spec+6);
-            nsite = (int)round(scale * nsite);
-        }
         int nptn = getNPattern();
 
         if (nsite/8 < nptn || Params::getInstance().jackknife_prop > 0.0) {
-            int orig_nsite = getNSite();
-            for (site = 0; site < nsite; site++) {
-                int site_id;
-                if (Params::getInstance().jackknife_prop == 0.0)
-                    site_id = random_int(orig_nsite, rstream);
-                else {
-                    if (random_double() < Params::getInstance().jackknife_prop)
-                        continue;
-                    site_id = site;
-                }
-                int ptn_id = getPatternID(site_id);
+            IntVector sample;
+            random_resampling(nsite, sample, rstream);
+            for (site = 0; site < nsite; site++)
+            for (int rep = 0; rep < sample[site]; rep++) {
+                int ptn_id = getPatternID(site);
                 pattern_freq[ptn_id]++;
             }
         } else {

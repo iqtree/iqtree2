@@ -915,17 +915,8 @@ void SuperAlignment::createBootstrapAlignment(Alignment *aln, IntVector* pattern
         ASSERT(!pattern_freq);
         // resampling whole genes
         IntVector gene_freq;
-        gene_freq.resize(super_aln->partitions.size(), 0);
-        int i;
-        for (i = 0; i < gene_freq.size(); i++) {
-            int part = i;
-            if (Params::getInstance().jackknife_prop == 0.0)
-                part = random_int(gene_freq.size());
-            else if (random_double() < Params::getInstance().jackknife_prop)
-                continue;
-            gene_freq[part]++;
-        }
-        for (i = 0; i < gene_freq.size(); i++)
+        random_resampling(super_aln->partitions.size(), gene_freq);
+        for (int i = 0; i < gene_freq.size(); i++)
             if (gene_freq[i] > 0) {
                 Alignment *boot_aln = new Alignment;
                 boot_aln->copyAlignment(super_aln->partitions[i]);
@@ -942,15 +933,13 @@ void SuperAlignment::createBootstrapAlignment(Alignment *aln, IntVector* pattern
     } else if (strcmp(spec, "GENESITE") == 0) {
         ASSERT(!pattern_freq);
         // resampling whole genes then sites within resampled genes
-        for (int i = 0; i < super_aln->partitions.size(); i++) {
-            int part = i;
-            if (Params::getInstance().jackknife_prop == 0.0)
-                part = random_int(super_aln->partitions.size());
-            else if (random_double() < Params::getInstance().jackknife_prop)
-                continue;
+        IntVector gene_freq;
+        random_resampling(super_aln->partitions.size(), gene_freq);
+        for (int i = 0; i < gene_freq.size(); i++)
+            for (int rep = 0; rep < gene_freq[i]; rep++) {
             Alignment *boot_aln = new Alignment;
-            boot_aln->createBootstrapAlignment(super_aln->partitions[part]);
-            boot_aln->name = boot_aln->name + "." + convertIntToString(i);
+            boot_aln->createBootstrapAlignment(super_aln->partitions[i]);
+            boot_aln->name = boot_aln->name + "." + convertIntToString(rep);
             partitions.push_back(boot_aln);
         }
         init();
@@ -987,29 +976,30 @@ void SuperAlignment::createBootstrapAlignment(int *pattern_freq, const char *spe
 			nptn += (*it)->getNPattern();
 		}
 		memset(pattern_freq, 0, nptn * sizeof(int));
-		for (int i = 0; i < partitions.size(); i++) {
-			int part = random_int(partitions.size(), rstream);
+        IntVector gene_freq;
+        random_resampling(partitions.size(), gene_freq, rstream);
+		for (int part = 0; part < partitions.size(); part++)
+        for (int rep = 0; rep < gene_freq[part]; rep++){
 			Alignment *aln = partitions[part];
 			if (strncmp(spec,"GENESITE",8) == 0) {
 				// then resampling sites in resampled gene
-				for (int j = 0; j < aln->getNSite(); j++) {
-					int ptn_id = aln->getPatternID(random_int(aln->getNPattern(), rstream));
+                IntVector sample;
+                random_resampling(aln->getNSite(), sample, rstream);
+				for (int site = 0; site < sample.size(); site++)
+                for (int rep2 = 0; rep2 < sample[site]; rep2++) {
+					int ptn_id = aln->getPatternID(site);
 					pattern_freq[ptn_id + part_pos[part]]++;
 				}
-
 			} else {
-				for (int j = 0; j < aln->getNPattern(); j++)
-					pattern_freq[j + part_pos[part]] += aln->at(j).frequency;
+				for (int ptn = 0; ptn < aln->getNPattern(); ptn++)
+					pattern_freq[ptn + part_pos[part]] += aln->at(ptn).frequency;
 			}
 		}
 	} else {
 		// resampling sites within genes
 		int offset = 0;
 		for (vector<Alignment*>::iterator it = partitions.begin(); it != partitions.end(); it++) {
-            if (spec && strncmp(spec, "SCALE=", 6) == 0)
-                (*it)->createBootstrapAlignment(pattern_freq + offset, spec, rstream);
-            else
-                (*it)->createBootstrapAlignment(pattern_freq + offset, NULL, rstream);
+            (*it)->createBootstrapAlignment(pattern_freq + offset, NULL, rstream);
 			offset += (*it)->getNPattern();
 		}
 	}
