@@ -2451,6 +2451,18 @@ void my_random_shuffle (T first, T last, int *rstream = NULL)
 }
 
 /**
+ random resampling according to bootstrap or jackknife
+ @param n sample size
+ @param[in/out] sample array of size n with frequency of resampling
+ @param rstream random number generator stream
+*/
+void random_resampling(int n, IntVector &sample, int *rstream = NULL);
+
+#define RESAMPLE_NAME ((Params::getInstance().jackknife_prop == 0.0) ? "bootstrap" : "jackknife")
+#define RESAMPLE_NAME_I ((Params::getInstance().jackknife_prop == 0.0) ? "Bootstrap" : "Jackknife")
+#define RESAMPLE_NAME_UPPER ((Params::getInstance().jackknife_prop == 0.0) ? "BOOTSTRAP" : "JACKKNIFE")
+
+/**
  * generic function for sorting by index
  */
 template <class T>
