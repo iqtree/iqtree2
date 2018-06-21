@@ -2908,6 +2908,9 @@ void runStandardBootstrap(Params &params, Alignment *alignment, IQTree *tree) {
 
     startTreeReconstruction(params, tree, *model_info);
     
+    // 2018-06-21: bug fix: alignment might be changed by -m ...MERGE
+    alignment = tree->aln;
+    
 	// do bootstrap analysis
 	for (int sample = bootSample; sample < params.num_bootstrap_samples; sample++) {
 		cout << endl << "===> START " << RESAMPLE_NAME_UPPER << " REPLICATE NUMBER "
