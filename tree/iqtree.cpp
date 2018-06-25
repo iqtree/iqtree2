@@ -466,8 +466,8 @@ void IQTree::createPLLPartition(Params &params, ostream &pllPartitionFileHandle)
             // prepare proper partition file 
             for (PhyloSuperTree::iterator it = siqtree->begin(); it != siqtree->end(); it++) {
                 i++;
-                int curLen = ((*it))->getAlnNSite();
-                if ((*it)->aln->seq_type == SEQ_DNA) {
+                int curLen = ((*it)->aln->seq_type == SEQ_CODON) ? (*it)->getAlnNSite()*3 : (*it)->getAlnNSite();
+                if ((*it)->aln->seq_type == SEQ_DNA || (*it)->aln->seq_type == SEQ_CODON) {
                     pllPartitionFileHandle << "DNA";
                 } else if ((*it)->aln->seq_type == SEQ_PROTEIN) {
                     if ((*it)->aln->model_name != "" && (*it)->aln->model_name.substr(0, 4) != "TEST" && (*it)->aln->model_name.substr(0, 2) != "MF") {
@@ -495,7 +495,7 @@ void IQTree::createPLLPartition(Params &params, ostream &pllPartitionFileHandle)
             }
         } else {
             // only prepare partition file for computing parsimony trees
-            SeqType datatype[] = {SEQ_DNA, SEQ_PROTEIN};
+            SeqType datatype[] = {SEQ_DNA, SEQ_CODON, SEQ_PROTEIN};
             PhyloSuperTree::iterator it;
             
             for (int i = 0; i < sizeof(datatype)/sizeof(SeqType); i++) {
@@ -504,13 +504,13 @@ void IQTree::createPLLPartition(Params &params, ostream &pllPartitionFileHandle)
                 for (it = siqtree->begin(); it != siqtree->end(); it++) 
                     if ((*it)->aln->seq_type == datatype[i]) {
                         if (first) {
-                        if (datatype[i] == SEQ_DNA)
+                        if (datatype[i] == SEQ_DNA || datatype[i] == SEQ_CODON)
                             pllPartitionFileHandle << "DNA";
                         else
                             pllPartitionFileHandle << "WAG";
                         }
-                        int curLen = (*it)->getAlnNSite();                    
-                        if (first) 
+                        int curLen = (datatype[i] == SEQ_CODON) ? (*it)->getAlnNSite()*3 : (*it)->getAlnNSite();
+                        if (first)
                             pllPartitionFileHandle << ", p" << i << " = ";
                         else
                             pllPartitionFileHandle << ", ";
@@ -527,7 +527,7 @@ void IQTree::createPLLPartition(Params &params, ostream &pllPartitionFileHandle)
     } else {
         /* create a partition file */
         string model;
-        if (aln->seq_type == SEQ_DNA) {
+        if (aln->seq_type == SEQ_DNA || aln->seq_type == SEQ_CODON) {
             model = "DNA";
         } else if (aln->seq_type == SEQ_PROTEIN) {
         	if (params.pll && params.model_name != "" && params.model_name.substr(0, 4) != "TEST" && params.model_name.substr(0, 2) != "MF") {
@@ -539,7 +539,8 @@ void IQTree::createPLLPartition(Params &params, ostream &pllPartitionFileHandle)
         	model = "WAG";
         	//outError("PLL currently only supports DNA/protein alignments");
         }
-        pllPartitionFileHandle << model << ", p1 = " << "1-" << getAlnNSite() << endl;
+        int nsite = (aln->seq_type == SEQ_CODON) ? getAlnNSite()*3 : getAlnNSite();
+        pllPartitionFileHandle << model << ", p1 = " << "1-" << nsite << endl;
     }
 }
 
