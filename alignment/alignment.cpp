@@ -2944,6 +2944,8 @@ void convert_range(const char *str, int &lower, int &upper, int &step_size, char
     //int d_save = d;
     upper = d;
     step_size = 1;
+    // skip blank chars
+    for (; *endptr == ' '; endptr++) {}
     if (*endptr != '-') return;
 
     // parse the upper bound of the range
@@ -2958,6 +2960,9 @@ void convert_range(const char *str, int &lower, int &upper, int &step_size, char
 
     //lower = d_save;
     upper = d;
+    // skip blank chars
+    for (; *endptr == ' '; endptr++) {}
+
     if (*endptr != '\\') return;
 
     // parse the step size of the range
