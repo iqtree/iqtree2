@@ -513,6 +513,14 @@ if (IQTREE_FLAGS MATCHES "mpi")
 	add_library(mympi utils/TreeCollection.cpp utils/ObjectStream.cpp)
 endif()
 
+if (NOT IQTREE_FLAGS MATCHES "single")
+    if (BINARY32)
+        link_directories(${PROJECT_SOURCE_DIR}/lib32)
+    else()
+        link_directories(${PROJECT_SOURCE_DIR}/lib)
+    endif()
+endif()
+
 add_executable(iqtree
 main/main.cpp
 main/phyloanalysis.cpp
