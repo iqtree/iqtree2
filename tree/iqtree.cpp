@@ -3190,17 +3190,19 @@ pair<int, int> IQTree::optimizeNNI(bool speedNNI) {
         if (curScore < appliedNNIs.at(0).newloglh - params->loglh_epsilon) {
             //cout << "Tree getting worse: curScore = " << curScore << " / best score = " <<  appliedNNIs.at(0).newloglh << endl;
             // tree cannot be worse if only 1 NNI is applied
-            ASSERT(appliedNNIs.size() != 1);
-            doNNIs(appliedNNIs);
-            restoreBranchLengths(lenvec);
-            clearAllPartialLH();
-            // only do the best NNI
-            appliedNNIs.resize(1);
-            doNNIs(appliedNNIs);
-//            doNNI(appliedNNIs[0]);
+            if (appliedNNIs.size() > 1) {
+                // revert all applied NNIs
+                doNNIs(appliedNNIs);
+                restoreBranchLengths(lenvec);
+                clearAllPartialLH();
+                // only do the best NNI
+                appliedNNIs.resize(1);
+                doNNIs(appliedNNIs);
+                curScore = optimizeAllBranches(1, params->loglh_epsilon, PLL_NEWZPERCYCLE);
+                ASSERT(curScore > appliedNNIs.at(0).newloglh - 0.1);
+            } else
+                ASSERT(curScore > appliedNNIs.at(0).newloglh - 0.1 && "Using one NNI reduces LogL");
             totalNNIApplied++;
-            curScore = optimizeAllBranches(1, params->loglh_epsilon, PLL_NEWZPERCYCLE);
-            ASSERT(curScore > appliedNNIs.at(0).newloglh - 0.1);
         } else {
             totalNNIApplied += appliedNNIs.size();
         }
