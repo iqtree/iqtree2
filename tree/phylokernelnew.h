@@ -3247,14 +3247,14 @@ void PhyloTree::computeLikelihoodDervMixlenGenericSIMD(PhyloNeighbor *dad_branch
 
 
 
-    size_t mix_addr_nstates[ncat_mix], mix_addr[ncat_mix], cat_id[ncat_mix];
-    size_t denom = (model_factory->fused_mix_rate) ? 1 : ncat;
-    for (c = 0; c < ncat_mix; c++) {
-        size_t m = c/denom;
-        cat_id[c] = c%ncat;
-        mix_addr_nstates[c] = m*nstates;
-        mix_addr[c] = mix_addr_nstates[c]*nstates;
-    }
+//    size_t mix_addr_nstates[ncat_mix], mix_addr[ncat_mix], cat_id[ncat_mix];
+//    size_t denom = (model_factory->fused_mix_rate) ? 1 : ncat;
+//    for (c = 0; c < ncat_mix; c++) {
+//        size_t m = c/denom;
+//        cat_id[c] = c%ncat;
+//        mix_addr_nstates[c] = m*nstates;
+//        mix_addr[c] = mix_addr_nstates[c]*nstates;
+//    }
 
     double *eval = model->getEigenvalues();
     ASSERT(eval);

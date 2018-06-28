@@ -339,10 +339,8 @@ void IQTree::initSettings(Params &params) {
         int *saved_randstream = randstream;
         init_random(params.ran_seed);
         
-        if (params.jackknife_prop == 0.0)
-            cout << "Generating " << params.gbo_replicates << " samples for ultrafast bootstrap (seed: " << params.ran_seed << ")..." << endl;
-        else
-            cout << "Generating " << params.gbo_replicates << " samples for ultrafast jackknife (seed: " << params.ran_seed << ")..." << endl;
+        cout << "Generating " << params.gbo_replicates << " samples for ultrafast "
+             << RESAMPLE_NAME << " (seed: " << params.ran_seed << ")..." << endl;
         // allocate memory for boot_samples
         boot_samples.resize(params.gbo_replicates);
         sample_start = 0;
@@ -468,8 +466,8 @@ void IQTree::createPLLPartition(Params &params, ostream &pllPartitionFileHandle)
             // prepare proper partition file 
             for (PhyloSuperTree::iterator it = siqtree->begin(); it != siqtree->end(); it++) {
                 i++;
-                int curLen = ((*it))->getAlnNSite();
-                if ((*it)->aln->seq_type == SEQ_DNA) {
+                int curLen = ((*it)->aln->seq_type == SEQ_CODON) ? (*it)->getAlnNSite()*3 : (*it)->getAlnNSite();
+                if ((*it)->aln->seq_type == SEQ_DNA || (*it)->aln->seq_type == SEQ_CODON) {
                     pllPartitionFileHandle << "DNA";
                 } else if ((*it)->aln->seq_type == SEQ_PROTEIN) {
                     if ((*it)->aln->model_name != "" && (*it)->aln->model_name.substr(0, 4) != "TEST" && (*it)->aln->model_name.substr(0, 2) != "MF") {
@@ -497,7 +495,7 @@ void IQTree::createPLLPartition(Params &params, ostream &pllPartitionFileHandle)
             }
         } else {
             // only prepare partition file for computing parsimony trees
-            SeqType datatype[] = {SEQ_DNA, SEQ_PROTEIN};
+            SeqType datatype[] = {SEQ_DNA, SEQ_CODON, SEQ_PROTEIN};
             PhyloSuperTree::iterator it;
             
             for (int i = 0; i < sizeof(datatype)/sizeof(SeqType); i++) {
@@ -506,13 +504,13 @@ void IQTree::createPLLPartition(Params &params, ostream &pllPartitionFileHandle)
                 for (it = siqtree->begin(); it != siqtree->end(); it++) 
                     if ((*it)->aln->seq_type == datatype[i]) {
                         if (first) {
-                        if (datatype[i] == SEQ_DNA)
+                        if (datatype[i] == SEQ_DNA || datatype[i] == SEQ_CODON)
                             pllPartitionFileHandle << "DNA";
                         else
                             pllPartitionFileHandle << "WAG";
                         }
-                        int curLen = (*it)->getAlnNSite();                    
-                        if (first) 
+                        int curLen = (datatype[i] == SEQ_CODON) ? (*it)->getAlnNSite()*3 : (*it)->getAlnNSite();
+                        if (first)
                             pllPartitionFileHandle << ", p" << i << " = ";
                         else
                             pllPartitionFileHandle << ", ";
@@ -529,7 +527,7 @@ void IQTree::createPLLPartition(Params &params, ostream &pllPartitionFileHandle)
     } else {
         /* create a partition file */
         string model;
-        if (aln->seq_type == SEQ_DNA) {
+        if (aln->seq_type == SEQ_DNA || aln->seq_type == SEQ_CODON) {
             model = "DNA";
         } else if (aln->seq_type == SEQ_PROTEIN) {
         	if (params.pll && params.model_name != "" && params.model_name.substr(0, 4) != "TEST" && params.model_name.substr(0, 2) != "MF") {
@@ -541,7 +539,8 @@ void IQTree::createPLLPartition(Params &params, ostream &pllPartitionFileHandle)
         	model = "WAG";
         	//outError("PLL currently only supports DNA/protein alignments");
         }
-        pllPartitionFileHandle << model << ", p1 = " << "1-" << getAlnNSite() << endl;
+        int nsite = (aln->seq_type == SEQ_CODON) ? getAlnNSite()*3 : getAlnNSite();
+        pllPartitionFileHandle << model << ", p1 = " << "1-" << nsite << endl;
     }
 }
 
@@ -3191,17 +3190,19 @@ pair<int, int> IQTree::optimizeNNI(bool speedNNI) {
         if (curScore < appliedNNIs.at(0).newloglh - params->loglh_epsilon) {
             //cout << "Tree getting worse: curScore = " << curScore << " / best score = " <<  appliedNNIs.at(0).newloglh << endl;
             // tree cannot be worse if only 1 NNI is applied
-            ASSERT(appliedNNIs.size() != 1);
-            doNNIs(appliedNNIs);
-            restoreBranchLengths(lenvec);
-            clearAllPartialLH();
-            // only do the best NNI
-            appliedNNIs.resize(1);
-            doNNIs(appliedNNIs);
-//            doNNI(appliedNNIs[0]);
+            if (appliedNNIs.size() > 1) {
+                // revert all applied NNIs
+                doNNIs(appliedNNIs);
+                restoreBranchLengths(lenvec);
+                clearAllPartialLH();
+                // only do the best NNI
+                appliedNNIs.resize(1);
+                doNNIs(appliedNNIs);
+                curScore = optimizeAllBranches(1, params->loglh_epsilon, PLL_NEWZPERCYCLE);
+                ASSERT(curScore > appliedNNIs.at(0).newloglh - 0.1);
+            } else
+                ASSERT(curScore > appliedNNIs.at(0).newloglh - 0.1 && "Using one NNI reduces LogL");
             totalNNIApplied++;
-            curScore = optimizeAllBranches(1, params->loglh_epsilon, PLL_NEWZPERCYCLE);
-            ASSERT(curScore > appliedNNIs.at(0).newloglh - 0.1);
         } else {
             totalNNIApplied += appliedNNIs.size();
         }
@@ -3809,7 +3810,7 @@ void IQTree::summarizeBootstrap(Params &params, MTreeSet &trees) {
     sg.scaleWeight(100.0, true);
     //	printSplitSet(sg, hash_ss);
     //sg.report(cout);
-    cout << "Creating " << ((params.jackknife_prop == 0.0) ? "bootstrap" : "jackknife") << " support values..." << endl;
+    cout << "Creating " << RESAMPLE_NAME << " support values..." << endl;
 //    stringstream tree_stream;
 //    printTree(tree_stream, WT_TAXON_ID | WT_BR_LEN);
 //    MExtTree mytree;

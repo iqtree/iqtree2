@@ -3618,7 +3618,10 @@ void parseArg(int argc, char *argv[], Params &params) {
 
     if (params.num_runs > 1 && params.treeset_file)
         outError("Can't combine --runs and -z options");
-    
+
+    if (params.num_runs > 1 && params.lmap_num_quartets >= 0)
+        outError("Can't combine --runs and -lmap options");
+
 	// Diep:
 	if(params.ufboot2corr == true){
 		if(params.gbo_replicates <= 0) params.ufboot2corr = false;
@@ -4391,6 +4394,34 @@ double random_double(int *rstream) {
 #endif /* FIXEDINTRAND */
 
 }
+
+void random_resampling(int n, IntVector &sample, int *rstream) {
+    sample.resize(n, 0);
+    if (Params::getInstance().jackknife_prop == 0.0) {
+        // boostrap resampling
+        for (int i = 0; i < n; i++) {
+            int j = random_int(n, rstream);
+            sample[j]++;
+        }
+    } else {
+        // jackknife resampling
+        int total = floor((1.0 - Params::getInstance().jackknife_prop)*n);
+        if (total <= 0)
+            outError("Jackknife sample size is zero");
+        // make sure jackknife samples have exacly the same size
+        for (int num = 0; num < total; ) {
+            for (int i = 0; i < n; i++) if (!sample[i]) {
+                if (random_double(rstream) < Params::getInstance().jackknife_prop)
+                    continue;
+                sample[i] = 1;
+                num++;
+                if (num >= total)
+                    break;
+            }
+        }
+    }
+}
+
 
 /* Following part is taken from ModelTest software */
 #define	BIGX            20.0                                 /* max value to represent exp (x) */

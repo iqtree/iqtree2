@@ -537,18 +537,26 @@ int Alignment::readNexus(char *filename) {
 		return 0;
 	}
 
-    if (char_block->GetNTax() == 0) { char_block = data_block; }
-
-    if (char_block->GetNTax() == 0) {
-        outError("No data is given in the input file");
+    if (data_block->GetNTax() == 0 && char_block->GetNTax() == 0) {
+        outError("No DATA or CHARACTERS blocks found");
         return 0;
     }
-    if (verbose_mode >= VB_DEBUG)
-        char_block->Report(cout);
 
+    if (char_block->GetNTax() > 0) {
+        extractDataBlock(char_block);
+        if (verbose_mode >= VB_DEBUG)
+            char_block->Report(cout);
+    } else {
+        extractDataBlock(data_block);
+        if (verbose_mode >= VB_DEBUG)
+            data_block->Report(cout);
+    }
 
-    extractDataBlock(char_block);
-
+    delete trees_block;
+    delete char_block;
+    delete data_block;
+    delete assumptions_block;
+    delete taxa_block;
     return 1;
 }
 
@@ -679,14 +687,24 @@ void Alignment::extractDataBlock(NxsCharactersBlock *data_block) {
                 pat.push_back(STATE_UNKNOWN);
             else if (nstate == 1) {
                 pat.push_back(char_to_state[(int)data_block->GetState(seq, site, 0)]);
-            } else {
-                ASSERT(data_type != NxsCharactersBlock::dna || data_type != NxsCharactersBlock::rna || data_type != NxsCharactersBlock::nucleotide);
+            } else if (data_type == NxsCharactersBlock::dna || data_type == NxsCharactersBlock::rna || data_type == NxsCharactersBlock::nucleotide) {
+                // 2018-06-07: correctly interpret ambiguous nucleotide
                 char pat_ch = 0;
                 for (int state = 0; state < nstate; state++) {
                     pat_ch |= (1 << char_to_state[(int)data_block->GetState(seq, site, state)]);
                 }
                 pat_ch += 3;
                 pat.push_back(pat_ch);
+            } else {
+                // other ambiguous characters are treated as unknown
+                stringstream str;
+                str << "Sequence " << seq_names[seq] << " site " << site+1 << ": {";
+                for (int state = 0; state < nstate; state++) {
+                    str << data_block->GetState(seq, site, state);
+                }
+                str << "} treated as unknown character";
+                outWarning(str.str());
+                pat.push_back(STATE_UNKNOWN);
             }
         }
         num_gaps_only += addPattern(pat, site);
@@ -1108,6 +1126,7 @@ void Alignment::buildStateMap(char *map, SeqType seq_type) {
         map[(unsigned char)'J'] = 22; // I or L
         map[(unsigned char)'*'] = STATE_UNKNOWN; // stop codon
         map[(unsigned char)'U'] = STATE_UNKNOWN; // 21st amino acid
+        map[(unsigned char)'O'] = STATE_UNKNOWN; // 22nd amino acid
 
         return;
     case SEQ_MULTISTATE:
@@ -1196,6 +1215,7 @@ char Alignment::convertState(char state, SeqType seq_type) {
 		if (state == 'J') return 22;
         if (state == '*') return STATE_UNKNOWN; // stop codon
         if (state == 'U') return STATE_UNKNOWN; // 21st amino-acid
+        if (state == 'O') return STATE_UNKNOWN; // 22nd amino-acid
         loc = strchr(symbols_protein, state);
 
         if (!loc) return STATE_INVALID; // unrecognize character
@@ -2929,6 +2949,8 @@ void convert_range(const char *str, int &lower, int &upper, int &step_size, char
     //int d_save = d;
     upper = d;
     step_size = 1;
+    // skip blank chars
+    for (; *endptr == ' '; endptr++) {}
     if (*endptr != '-') return;
 
     // parse the upper bound of the range
@@ -2943,6 +2965,9 @@ void convert_range(const char *str, int &lower, int &upper, int &step_size, char
 
     //lower = d_save;
     upper = d;
+    // skip blank chars
+    for (; *endptr == ' '; endptr++) {}
+
     if (*endptr != '\\') return;
 
     // parse the step size of the range
@@ -3049,18 +3074,11 @@ void Alignment::createBootstrapAlignment(Alignment *aln, IntVector* pattern_freq
     if (!spec) {
 		// standard bootstrap
         int added_sites = 0;
-		for (site = 0; site < nsite; site++) {
-            int site_id;
-            if (Params::getInstance().jackknife_prop == 0.0) {
-                // bootstrap sampling with replacement
-                site_id = random_int(nsite);
-            } else {
-                // jacknife without replacement
-                if (random_double() < Params::getInstance().jackknife_prop)
-                    continue;
-                site_id = site;
-            }
-			int ptn_id = aln->getPatternID(site_id);
+        IntVector sample;
+        random_resampling(nsite, sample);
+		for (site = 0; site < nsite; site++)
+        for (int rep = 0; rep < sample[site]; rep++) {
+			int ptn_id = aln->getPatternID(site);
 			Pattern pat = aln->at(ptn_id);
             int nptn = getNPattern();
 			addPattern(pat, added_sites);
@@ -3170,26 +3188,16 @@ void Alignment::createBootstrapAlignment(int *pattern_freq, const char *spec, in
     if (Params::getInstance().jackknife_prop > 0.0 && spec)
         outError((string)"Unsupported jackknife with " + spec);
 
-    if (!spec ||  strncmp(spec, "SCALE=", 6) == 0) {
+    if (!spec) {
 
-        if (spec) {
-            double scale = convert_double(spec+6);
-            nsite = (int)round(scale * nsite);
-        }
         int nptn = getNPattern();
 
         if (nsite/8 < nptn || Params::getInstance().jackknife_prop > 0.0) {
-            int orig_nsite = getNSite();
-            for (site = 0; site < nsite; site++) {
-                int site_id;
-                if (Params::getInstance().jackknife_prop == 0.0)
-                    site_id = random_int(orig_nsite, rstream);
-                else {
-                    if (random_double() < Params::getInstance().jackknife_prop)
-                        continue;
-                    site_id = site;
-                }
-                int ptn_id = getPatternID(site_id);
+            IntVector sample;
+            random_resampling(nsite, sample, rstream);
+            for (site = 0; site < nsite; site++)
+            for (int rep = 0; rep < sample[site]; rep++) {
+                int ptn_id = getPatternID(site);
                 pattern_freq[ptn_id]++;
             }
         } else {
