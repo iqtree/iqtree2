@@ -69,7 +69,7 @@ endif()
 # The version number.
 set (iqtree_VERSION_MAJOR 1)
 set (iqtree_VERSION_MINOR 6)
-set (iqtree_VERSION_PATCH "5")
+set (iqtree_VERSION_PATCH "6.c")
 
 set(BUILD_SHARED_LIBS OFF)
 
@@ -524,6 +524,14 @@ if (IQTREE_FLAGS MATCHES "mpi")
 	add_library(mympi utils/TreeCollection.cpp utils/ObjectStream.cpp)
 endif()
 
+if (NOT IQTREE_FLAGS MATCHES "single")
+    if (BINARY32)
+        link_directories(${PROJECT_SOURCE_DIR}/lib32)
+    else()
+        link_directories(${PROJECT_SOURCE_DIR}/lib)
+    endif()
+endif()
+
 add_executable(iqtree
 main/main.cpp
 main/phyloanalysis.cpp
@@ -623,7 +631,7 @@ endif()
 set_target_properties(iqtree PROPERTIES OUTPUT_NAME "iqtree${EXE_SUFFIX}")
 
 # strip the release build
-if (CMAKE_BUILD_TYPE STREQUAL "Release" AND (GCC OR CLANG) AND NOT APPLE) # strip is not necessary for MSVC
+if (NOT IQTREE_FLAGS MATCHES "nostrip" AND CMAKE_BUILD_TYPE STREQUAL "Release" AND (GCC OR CLANG) AND NOT APPLE) # strip is not necessary for MSVC
 	if (WIN32)
 		ADD_CUSTOM_COMMAND(TARGET iqtree POST_BUILD COMMAND strip $<TARGET_FILE:iqtree>)
 	elseif (NOT APPLE)
