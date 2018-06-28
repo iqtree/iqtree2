@@ -417,6 +417,9 @@ void PhyloTreeMixlen::optimizeOneBranch(PhyloNode *node1, PhyloNode *node2, bool
 
     } else {
 
+        if (!model_factory->fused_mix_rate && getModel()->isMixture())
+            outError("Please use option -optlen BFGS to disable EM algorithm");
+        
         // EM algorithm
         size_t ptn, c;
         size_t nptn = aln->getNPattern();
