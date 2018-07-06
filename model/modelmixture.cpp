@@ -1404,14 +1404,16 @@ void ModelMixture::setCheckpoint(Checkpoint *checkpoint) {
 }
 
 void ModelMixture::startCheckpoint() {
-    checkpoint->startStruct("ModelMixture");
+    checkpoint->startStruct("ModelMixture" + convertIntToString(getNMixtures()));
 }
 
 void ModelMixture::saveCheckpoint() {
     startCheckpoint();
 //    CKP_SAVE(fix_prop);
-    int nmix = getNMixtures();
-    CKP_ARRAY_SAVE(nmix, prop);
+    if (!fix_prop) {
+        int nmix = getNMixtures();
+        CKP_ARRAY_SAVE(nmix, prop);
+    }
     int part = 1;
     for (iterator it = begin(); it != end(); it++, part++) {
         checkpoint->startStruct("Component" + convertIntToString(part));
@@ -1428,8 +1430,10 @@ void ModelMixture::restoreCheckpoint() {
 
     startCheckpoint();
 //    CKP_RESTORE(fix_prop);
-    int nmix = getNMixtures();
-    CKP_ARRAY_RESTORE(nmix, prop);
+    if (!fix_prop) {
+        int nmix = getNMixtures();
+        CKP_ARRAY_RESTORE(nmix, prop);
+    }
     int part = 1;
     for (iterator it = begin(); it != end(); it++, part++) {
         checkpoint->startStruct("Component" + convertIntToString(part));
