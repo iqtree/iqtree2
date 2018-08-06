@@ -3002,7 +3002,7 @@ void extractSiteID(Alignment *aln, const char* spec, IntVector &site_id) {
             for (i = lower; i <= upper; i+=step)
                 site_id.push_back(i);
             if (*str == ',' || *str == ' ') str++;
-            else break;
+            //else break;
         }
         if (aln->seq_type == SEQ_CODON && nchars % 3 != 0)
             throw (string)"Range " + spec + " length is not multiple of 3 (necessary for codon data)";
