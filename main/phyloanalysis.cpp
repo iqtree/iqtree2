@@ -60,6 +60,9 @@
 #include "tree/upperbounds.h"
 #include "utils/MPIHelper.h"
 
+#ifdef IQTREE_TERRAPHAST
+    #include "terrace/terrace.h"
+#endif
 
 void reportReferences(Params &params, ofstream &out) {
     bool modelfinder_only = false;
@@ -109,6 +112,13 @@ void reportReferences(Params &params, ofstream &out) {
         << "supermatrices. Syst Biol, 65:997-1008." << endl
         << "https://doi.org/10.1093/sysbio/syw037" << endl << endl;
 
+    if (params.terrace_analysis)
+    out << "Since you used terrace analysis please also cite:" << endl << endl
+        << "Biczok R, Bozsoky P, Eisenmann P, Ernst J, Ribizel T, Scholz F," << endl
+        << "Trefzer A, Weber F, Hamann M, Stamatakis A. (2018)" << endl
+        << "Two C++ libraries for counting trees on a phylogenetic" << endl
+        << "terrace. Bioinformatics." << endl
+        << "https://doi.org/10.1093/bioinformatics/bty384" << endl << endl;
 }
 
 void reportAlignment(ofstream &out, Alignment &alignment, int nremoved_seqs) {
@@ -843,10 +853,13 @@ void printOutfilesInfo(Params &params, IQTree &tree) {
     	cout << "  Screen log file:               " << params.out_prefix << ".log" << endl;
 	/*	if (params.model_name == "WHTEST")
 	 cout <<"  WH-TEST report:           " << params.out_prefix << ".whtest" << endl;*/
+
+    if (params.terrace_analysis)
+        cout << "  Terrace trees written to:      " << params.out_prefix << ".terrace" << endl;
+
 	cout << endl;
 
 }
-
 
 void reportPhyloAnalysis(Params &params, IQTree &tree, ModelCheckpoint &model_info) {
     if (!MPIHelper::getInstance().isMaster()) {
@@ -1206,8 +1219,50 @@ void reportPhyloAnalysis(Params &params, IQTree &tree, ModelCheckpoint &model_in
 //			tree.printResultTree(out);
 //			out << endl << endl;
 		}
+#ifdef IQTREE_TERRAPHAST
+        if (params.terrace_analysis) {
+            out << "TERRACE ANALYSIS" << endl << "--------------" << endl << endl;
 
+            string filename = params.out_prefix;
+            filename += ".terrace";
 
+            try
+            {
+                Terrace terrace(tree, (SuperAlignment*)(tree.aln));
+
+                uint64_t terrace_size = terrace.getSize();
+
+                if (terrace_size == 1) {
+                    out << "The tree does not lie on a terrace." << endl;
+                } else {
+                    out << "The tree lies on a terrace of size ";
+
+                    if (terrace_size == UINT64_MAX) {
+                        out << "at least " << terrace_size << " (integer overflow)";
+                    } else {
+                        out << terrace_size;
+                    }
+
+                    out << endl;
+
+                    ofstream terraceout;
+                    terraceout.open(filename.c_str());
+
+                    terrace.printTreesCompressed(terraceout);
+
+                    terraceout.close();
+
+                    out << "Terrace trees written (in compressed Newick format) to " << filename;
+                }
+            }
+            catch (std::exception& e)
+            {
+                out << "ERROR: Terrace analysis using Terraphast failed: " << e.what() << endl << endl;
+            }
+
+            out << endl << endl;
+        }
+#endif
 		/* evaluate user trees */
 		vector<TreeInfo> info;
 		IntVector distinct_trees;
