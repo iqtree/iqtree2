@@ -575,8 +575,8 @@ int getDataBlockMorphStates(NxsCharactersBlock *data_block) {
     char ch;
     int nstates = 0;
 
-    for (site = 0; site < nsite; site++)
-        for (seq = 0; seq < nseq; seq++) {
+    for (seq = 0; seq < nseq; seq++)
+        for (site = 0; site < nsite; site++) {
             int nstate = data_block->GetNumStates(seq, site);
             if (nstate == 0)
                 continue;
@@ -588,23 +588,11 @@ int getDataBlockMorphStates(NxsCharactersBlock *data_block) {
                 else if (ch >= 'A' && ch <= 'Z')
                     ch = ch - 'A' + 11;
                 else
-                    outError(data_block->GetTaxonLabel(seq) + " has invalid state at site " + convertIntToString(site));
+                    outError(data_block->GetTaxonLabel(seq) + " has invalid single state " + ch + " at site " + convertIntToString(site+1));
                 if (ch > nstates) nstates = ch;
                 continue;
             }
-            for (int state = 0; state < nstate; state++) {
-                ch = data_block->GetState(seq, site, state);
-                if (!isalnum(ch)) continue;
-                if (ch >= '0' && ch <= '9') ch = ch - '0' + 1;
-                if (ch >= 'A' && ch <= 'Z') ch = ch - 'A' + 11;
-                if (ch >= '0' && ch <= '9')
-                    ch = ch - '0' + 1;
-                else if (ch >= 'A' && ch <= 'Z')
-                    ch = ch - 'A' + 11;
-                else
-                    outError(data_block->GetTaxonLabel(seq) + " has invalid state at site " + convertIntToString(site));
-                if (ch > nstates) nstates = ch;
-            }
+            //cout << "NOTE: " << data_block->GetTaxonLabel(seq) << " has ambiguous state at site " << site+1 << " which is treated as unknown" << endl;
         }
     return nstates;
 }
