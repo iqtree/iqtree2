@@ -548,7 +548,8 @@ void PhyloTree::setModelFactory(ModelFactory *model_fac) {
     if (model_fac) {
         model = model_factory->model;
         site_rate = model_factory->site_rate;
-    	setLikelihoodKernel(sse, num_threads);
+        if (!isSuperTree())
+            setLikelihoodKernel(sse, num_threads);
     } else {
         model = NULL;
         site_rate = NULL;
