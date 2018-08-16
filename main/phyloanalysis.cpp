@@ -1252,13 +1252,17 @@ void reportPhyloAnalysis(Params &params, IQTree &tree, ModelCheckpoint &model_in
 
                     terraceout.close();
 
-                    out << "Terrace trees written (in compressed Newick format) to " << filename;
+                    out << "Terrace trees written (in compressed Newick format) to " << filename << endl;
                 }
             }
             catch (std::exception& e)
             {
                 out << "ERROR: Terrace analysis using Terraphast failed: " << e.what() << endl << endl;
             }
+
+            out << endl;
+            out << "For documentation, see the technical supplement to Biczok et al. (2018)" << endl;
+            out << "https://doi.org/10.1093/bioinformatics/bty384";
 
             out << endl << endl;
         }

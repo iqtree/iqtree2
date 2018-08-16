@@ -3633,7 +3633,7 @@ void parseArg(int argc, char *argv[], Params &params) {
         outError("Can't combine --runs and -lmap options");
 
     if (params.terrace_analysis && !params.partition_file)
-        outError("Terrace analysis requires a partition model.");
+        outError("Terrace analysis requires partition information.");
 
 	// Diep:
 	if(params.ufboot2corr == true){
