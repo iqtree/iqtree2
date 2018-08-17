@@ -215,6 +215,7 @@ class NxsCharactersBlock
 		char					GetGapSymbol();
 		char					GetMatchcharSymbol();
 		char					GetMissingSymbol();
+        NxsDiscreteMatrix       *GetMatrix() { return matrix; }
 		bool					IsGapState(unsigned i, unsigned j);
 		bool					IsInterleave();
 		bool					IsLabels();

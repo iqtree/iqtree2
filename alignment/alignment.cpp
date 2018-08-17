@@ -604,7 +604,10 @@ void Alignment::extractDataBlock(NxsCharactersBlock *data_block) {
     //num_states = strlen(symbols);
     char char_to_state[NUM_CHAR];
     char state_to_char[NUM_CHAR];
-
+    
+    if (!data_block->GetMatrix())
+        outError("MATRIX command undeclared or invalid");
+    
     NxsCharactersBlock::DataTypesEnum data_type = (NxsCharactersBlock::DataTypesEnum)data_block->GetDataType();
     if (data_type == NxsCharactersBlock::continuous) {
         outError("Continuous characters not supported");
