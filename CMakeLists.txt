@@ -99,15 +99,16 @@ include_directories("${PROJECT_SOURCE_DIR}")
 ##################################################################
 # Include the Terraphast library
 ##################################################################
-option(USE_TERRAPHAST "Use phylogentic terraces library (terraphast)" OFF)
+option(USE_TERRAPHAST "Use phylogentic terraces library (terraphast)" ON)
 
 if (USE_TERRAPHAST)
    set(GCC_MIN_VERSION "5.4")
    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DIQTREE_TERRAPHAST")
-   set(TERRAPHAST_USE_GMP OFF)
-   set(TERRAPHAST_BUILD_CLIB OFF)
-   set(TERRAPHAST_BUILD_APPS OFF)
-   set(TERRAPHAST_BUILD_TESTS OFF)
+
+   option(TERRAPHAST_USE_GMP "" OFF)
+   option(TERRAPHAST_BUILD_CLIB "" OFF)
+   option(TERRAPHAST_BUILD_APPS "" OFF)
+   option(TERRAPHAST_BUILD_TESTS "" OFF)
 endif()
 
 ##################################################################
@@ -523,7 +524,7 @@ add_subdirectory(alignment)
 add_subdirectory(tree)
 
 if (USE_TERRAPHAST)
-   add_subdirectory(terraphast)    
+   add_subdirectory(terraphast)
    add_subdirectory(terrace)
 endif()
 
