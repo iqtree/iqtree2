@@ -18,7 +18,7 @@ Option(TERRAPHAST_ARCH_NATIVE "Use -march=native compiler flag" ON)
 #####################################################################
 # build library
 #####################################################################
-add_library(terraces
+add_library(terraphast
 		lib/advanced.cpp
 		lib/bigint.cpp
 		lib/bipartitions.cpp
@@ -73,7 +73,7 @@ add_library(terraces
 		include/terraces/subtree_extraction.hpp
 		include/terraces/trees.hpp
 )
-target_include_directories(terraces
+target_include_directories(terraphast
 		PUBLIC include
 		PRIVATE lib
 )
@@ -82,14 +82,14 @@ if(TERRAPHAST_USE_GMP)
 	find_package(GMP)
 	if(GMP_FOUND)
 		message(STATUS "GMP libraries found")
-		target_link_libraries(terraces gmpxx gmp)
-		target_compile_definitions(terraces PUBLIC USE_GMP)
+		target_link_libraries(terraphast gmpxx gmp)
+		target_compile_definitions(terraphast PUBLIC USE_GMP)
 	else()
 		message(FATAL_ERROR "GMP libraries not found! Disable them using -DTERRAPHAST_USE_GMP=OFF")
 	endif()
 endif()
 
-set(terraces_targets terraces)
+set(terraces_targets terraphast)
 
 if(TERRAPHAST_BUILD_CLIB)
 	add_library(terraces_c
@@ -97,7 +97,7 @@ if(TERRAPHAST_BUILD_CLIB)
 			c_include/terraces/terraces.h
 	)
 	target_include_directories(terraces_c PUBLIC c_include)
-	target_link_libraries(terraces_c terraces)
+	target_link_libraries(terraces_c terraphast)
 	if (NOT TERRAPHAST_USE_GMP)
 		message(FATAL_ERROR "The C library requires the GMP libraries to build! Enable them using -DTERRAPHAST_USE_GMP=ON")
 	endif()
@@ -109,7 +109,7 @@ endif()
 # internal compiler flags
 #####################################################################
 if(DEV_ENVIRONMENT AND CMAKE_BUILD_TYPE STREQUAL "Debug")
-	target_compile_definitions(terraces PUBLIC _GLIBCXX_DEBUG) # PUBLIC to maintain ABI compatibility
+	target_compile_definitions(terraphast PUBLIC _GLIBCXX_DEBUG) # PUBLIC to maintain ABI compatibility
 	if(TERRAPHAST_BUILD_CLIB)
 		target_compile_definitions(terraces_c PRIVATE _GLIBCXX_DEBUG) # PRIVATE since no stdlib objects are used
 	endif()
@@ -128,15 +128,15 @@ if(TERRAPHAST_BUILD_APPS)
 	add_executable(tree_gen "tools/tree_gen.cpp")
 	add_executable(site_gen "tools/site_gen.cpp")
 	add_executable(nwk_to_dot "tools/nwk_to_dot.cpp")
-	target_link_libraries(validated_run terraces)
-	target_link_libraries(verbose_run terraces)
-	target_link_libraries(isomorphic terraces)
-	target_link_libraries(reroot terraces)
-	target_link_libraries(subtree terraces)
-	target_link_libraries(tree_gen terraces)
-	target_link_libraries(site_gen terraces)
-	target_link_libraries(nwk_to_dot terraces)
-	target_link_libraries(app terraces)
+	target_link_libraries(validated_run terraphast)
+	target_link_libraries(verbose_run terraphast)
+	target_link_libraries(isomorphic terraphast)
+	target_link_libraries(reroot terraphast)
+	target_link_libraries(subtree terraphast)
+	target_link_libraries(tree_gen terraphast)
+	target_link_libraries(site_gen terraphast)
+	target_link_libraries(nwk_to_dot terraphast)
+	target_link_libraries(app terraphast)
 
 	set(terraces_targets ${terraces_targets} app validated_run verbose_run isomorphic reroot subtree tree_gen site_gen nwk_to_dot)
 endif()
@@ -173,7 +173,7 @@ if(TERRAPHAST_BUILD_TESTS)
 		test/validation.cpp
 		test/simple.cpp
 	)
-	target_link_libraries(unittests terraces Catch)
+	target_link_libraries(unittests terraphast Catch)
 	if(TERRAPHAST_BUILD_CLIB)
 		target_sources(unittests PRIVATE
 			test/c_api.cpp
@@ -215,11 +215,11 @@ else()
 	endif()
 endif()
 
-target_include_directories(terraces PUBLIC "${TERRAPHAST_PLATFORM_INCLUDE}")
+target_include_directories(terraphast PUBLIC "${TERRAPHAST_PLATFORM_INCLUDE}")
 if(TERRAPHAST_BUILD_TESTS)
 	target_include_directories(unittests PRIVATE "${TERRAPHAST_PLATFORM_INCLUDE}")
 endif()
-target_compile_options(terraces PRIVATE "${TERRAPHAST_COMPILE_FLAGS}")
+target_compile_options(terraphast PRIVATE "${TERRAPHAST_COMPILE_FLAGS}")
 if(TERRAPHAST_BUILD_CLIB)
 	target_compile_options(terraces_c PRIVATE "${TERRAPHAST_COMPILE_FLAGS}")
 endif()
@@ -235,4 +235,4 @@ else()
 	set(CLANG_TIDY_COMMANDLINE "${CLANG_TIDY_PATH}" "-checks=llvm-namespace-comment -fix")
 endif()
 
-#set_target_properties(terraces terraces_c app validated_run verbose_run isomorphic reroot subtree tree_gen site_gen nwk_to_dot unittests PROPERTIES CXX_CLANG_TIDY "${CLANG_TIDY_COMMANDLINE}")
+#set_target_properties(terraphast terraces_c app validated_run verbose_run isomorphic reroot subtree tree_gen site_gen nwk_to_dot unittests PROPERTIES CXX_CLANG_TIDY "${CLANG_TIDY_COMMANDLINE}")
