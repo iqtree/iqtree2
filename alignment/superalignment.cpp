@@ -1215,21 +1215,25 @@ Alignment *SuperAlignment::concatenateAlignments(set<int> &ids) {
     int site = 0;
     for (it = ids.begin(); it != ids.end(); it++) {
     	int id = *it;
-		string taxa_set;
-        Pattern taxa_pat = getPattern(id);
-        taxa_set.insert(taxa_set.begin(), taxa_pat.begin(), taxa_pat.end());
+        // 2018-08-23: important bugfix in v1.6: taxa_set has wrong correspondance
+		//string taxa_set;
+        //Pattern taxa_pat = getPattern(id);
+        //taxa_set.insert(taxa_set.begin(), taxa_pat.begin(), taxa_pat.end());
     	for (Alignment::iterator it = partitions[id]->begin(); it != partitions[id]->end(); it++) {
     		Pattern pat;
-    		int part_seq = 0;
+    		//int part_seq = 0;
     		for (int seq = 0; seq < union_taxa.size(); seq++)
     			if (union_taxa[seq] == 1) {
     				char ch = aln->STATE_UNKNOWN;
-    				if (taxa_set[seq] == 1) {
-    					ch = (*it)[part_seq++];
-    				}
+                    int seq_part = taxa_index[seq][id];
+                    if (seq_part >= 0)
+                        ch = (*it)[seq_part];
+                    //if (taxa_set[seq] == 1) {
+                    //    ch = (*it)[part_seq++];
+                    //}
     				pat.push_back(ch);
     			}
-    		ASSERT(part_seq == partitions[id]->getNSeq());
+    		//ASSERT(part_seq == partitions[id]->getNSeq());
     		aln->addPattern(pat, site, (*it).frequency);
     		// IMPORTANT BUG FIX FOLLOW
     		int ptnindex = aln->pattern_index[pat];
