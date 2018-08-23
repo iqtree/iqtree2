@@ -3242,7 +3242,11 @@ void Alignment::createBootstrapAlignment(int *pattern_freq, const char *spec, in
 		}
 	} else {
 		// resampling sites within genes
-		convert_int_vec(spec, site_vec);
+        try {
+            convert_int_vec(spec, site_vec);
+        } catch (...) {
+            outError("-bsam not allowed for non-partition model");
+        }
 		if (site_vec.size() % 2 != 0)
 			outError("Bootstrap specification length is not divisible by 2");
 		int part, begin_site = 0, out_site = 0;
@@ -3257,7 +3261,7 @@ void Alignment::createBootstrapAlignment(int *pattern_freq, const char *spec, in
 			begin_site += site_vec[part];
 			out_site += site_vec[part+1];
 		}
-	}
+    }
 }
 
 
