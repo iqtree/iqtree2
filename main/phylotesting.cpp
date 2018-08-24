@@ -49,7 +49,9 @@ const char* bin_model_names[] = { "JC2", "GTR2" };
 
 
 /******* Morphological model set ******/
-const char* morph_model_names[] = {"MK", "ORDERED"};
+// 2018-08-20: don't test ORDERED model due to lots of numerical issues
+//const char* morph_model_names[] = {"MK", "ORDERED"};
+const char* morph_model_names[] = {"MK"};
 
 
 /******* DNA model set ******/
