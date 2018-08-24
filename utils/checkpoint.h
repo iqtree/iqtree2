@@ -15,6 +15,7 @@
 #include <cassert>
 #include <vector>
 #include <typeinfo>
+#include "tools.h"
 
 using namespace std;
 
@@ -206,9 +207,13 @@ public:
             CkpStream ss(it->second.substr(pos, next_pos-pos));
         	if (!(ss >> value[i]))
                 break;
-        	if (next_pos == string::npos) break;
+            if (next_pos == string::npos) {
+                ASSERT(i == maxnum-1);
+                break;
+            }
         	pos = next_pos+2;
         }
+        ASSERT(next_pos == string::npos);
         return true;
     }
 

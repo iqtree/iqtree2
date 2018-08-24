@@ -566,6 +566,8 @@ void IQTree::computeInitialTree(LikelihoodKernel kernel) {
             // TODO: convert to unrooted tree for supertree as non-reversible models
             // do not work with partition models yet
             if (isSuperTree()) {
+                if (!findNodeName(aln->getSeqName(0)))
+                    outError("Taxon " + aln->getSeqName(0) + " does not exist in tree file");
                 convertToUnrooted();
                 cout << " rooted tree converted to unrooted tree";
             } else {
@@ -2767,6 +2769,9 @@ void IQTree::refineBootTrees() {
     if (CKP_RESTORE(refined_samples))
         cout << "CHECKPOINT: " << refined_samples << " refined samples restored" << endl;
     checkpoint->endStruct();
+    
+    // 2018-08-17: delete duplicated memory
+    deleteAllPartialLh();
 
 	// do bootstrap analysis
 	for (int sample = refined_samples; sample < boot_trees.size(); sample++) {
@@ -2885,6 +2890,9 @@ void IQTree::refineBootTrees() {
         params->nni5 = true;
 	} else
         params->nni5 = false;
+
+    // 2018-08-17: recover memory
+    initializeAllPartialLh();
 
 }
 
