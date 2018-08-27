@@ -857,8 +857,6 @@ string testModel(Params &params, PhyloTree* in_tree, ModelCheckpoint &model_info
 
 void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info)
 {
-    ModelsBlock *models_block = readModelsDefinition(params);
-    
     //    iqtree.setCurScore(-DBL_MAX);
     bool test_only = (params.model_name.find("ONLY") != string::npos) ||
         (params.model_name.substr(0,2) == "MF" && params.model_name.substr(0,3) != "MFP");
@@ -934,8 +932,12 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info)
     //        iqtree.saveCheckpoint();
     //        checkpoint->dump(true);
     
+    ModelsBlock *models_block = readModelsDefinition(params);
+    
     //params.model_name =
     iqtree.aln->model_name = testModel(params, &iqtree, model_info, models_block, params.num_threads, BRLEN_OPTIMIZE, "", true);
+
+    delete models_block;
     
     iqtree.setCheckpoint(orig_checkpoint);
     

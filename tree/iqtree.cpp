@@ -577,7 +577,8 @@ void IQTree::computeInitialTree(LikelihoodKernel kernel) {
         cout << endl;
         setAlignment(aln);
         if (isSuperTree())
-        	wrapperFixNegativeBranch(params->fixed_branch_length == BRLEN_OPTIMIZE);
+        	wrapperFixNegativeBranch(params->fixed_branch_length == BRLEN_OPTIMIZE &&
+                                     params->partition_type != TOPO_UNLINKED);
         else
         	fixed_number = wrapperFixNegativeBranch(false);
         params->numInitTrees = 1;

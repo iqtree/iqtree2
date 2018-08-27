@@ -856,7 +856,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.optimize_alg_mixlen = "EM";
     params.optimize_alg_gammai = "EM";
     params.optimize_from_given_params = false;
-    params.fixed_branch_length = false;
+    params.fixed_branch_length = BRLEN_OPTIMIZE;
     params.min_branch_length = 0.0; // this is now adjusted later based on alignment length
     // TODO DS: This seems inappropriate for PoMo.  It is handled in
     // phyloanalysis::2908.
@@ -1765,6 +1765,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.partition_file = argv[cnt];
                 params.partition_type = TOPO_UNLINKED;
                 params.ignore_identical_seqs = false;
+                params.buffer_mem_save = true;
                 continue;
             }
             

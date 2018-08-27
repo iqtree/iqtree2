@@ -1461,6 +1461,8 @@ void SuperAlignment::orderPatternByNumChars(int pat_type) {
     for (part  = 0; part != partitions.size(); part++) {
         partitions[part]->orderPatternByNumChars(pat_type);
         // partial_partition
+        if (Params::getInstance().partition_type == TOPO_UNLINKED)
+            continue;
         for (vector<Pattern>::iterator pit = partitions[part]->ordered_pattern.begin(); pit != partitions[part]->ordered_pattern.end(); pit++) {
             Pattern pattern(*pit);
             pattern.resize(nseq); // maximal unknown states
