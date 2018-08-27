@@ -761,11 +761,14 @@ size_t PhyloTree::getBufferPartialLhSize() {
     size_t ncat_mix = site_rate->getNRate() * ((model_factory->fused_mix_rate)? 1 : model->getNMixtures());
     size_t block = model->num_states * ncat_mix;
     size_t buffer_size = 0;
-    
+
+    // buffer for traversal_info.echildren and partial_lh_leaves
     if (!Params::getInstance().buffer_mem_save) {
         buffer_size += get_safe_upper_limit(block * model->num_states * 2) * aln->getNSeq();
-        buffer_size += get_safe_upper_limit(block *(aln->STATE_UNKNOWN+1)) * (aln->getNSeq()+1);
+        buffer_size += get_safe_upper_limit(block *(aln->STATE_UNKNOWN+1)) * aln->getNSeq();
     }
+
+    buffer_size += get_safe_upper_limit(block *(aln->STATE_UNKNOWN+1));
     buffer_size += (block*2+model->num_states)*VECTOR_SIZE*num_threads;
 
     // always more buffer for non-rev kernel, in case switching between kernels
