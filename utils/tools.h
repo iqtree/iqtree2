@@ -1964,6 +1964,9 @@ public:
 	 * 0: store all partial likelihood vectors
 	 * 1: only store 1 partial likelihood vector per node */
 	LhMemSave lh_mem_save;
+    
+    /** true to save buffer, default: false */
+    bool buffer_mem_save;
 
     /** maximum size of memory allowed to use */
     double max_mem_size;

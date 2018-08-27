@@ -91,8 +91,13 @@ PartitionModel::PartitionModel(Params &params, PhyloSuperTree *tree, ModelsBlock
         //(*it)->copyTree(tree, taxa_set);
         //(*it)->drawTree(cout);
     }
-    if (linked_models.size() > 1)
-        outWarning("Can't link more than one model yet. Contact developers");
+    if (linked_models.size() > 1) {
+        cout << "Linked models:";
+        for (auto mit = linked_models.begin(); mit != linked_models.end(); mit++)
+            cout << " " << mit->first;
+        cout << endl;
+        outError("Can't link more than one model yet");
+    }
     if (init_by_divmat) {
         int nstates = linked_models.begin()->second->num_states;
         double *pair_freq = new double[nstates * nstates];
