@@ -3436,8 +3436,11 @@ void parseArg(int argc, char *argv[], Params &params) {
 					params.start_tree = STT_PLL_PARSIMONY;
                 else if (strcmp(argv[cnt], "RANDOM") == 0)
 					params.start_tree = STT_RANDOM_TREE;
-				else
+                else {
                     params.user_file = argv[cnt];
+                    if (params.min_iterations == 0)
+                        params.start_tree = STT_USER_TREE;
+                }
 				continue;
 			}
             
