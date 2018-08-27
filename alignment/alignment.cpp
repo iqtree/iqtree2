@@ -164,6 +164,9 @@ void Alignment::checkSeqName() {
     }
     if (!ok) outError("Please rename sequences listed above!");
 
+    if (!Params::getInstance().compute_seq_composition)
+        return;
+    
     double *state_freq = new double[num_states];
 //    double *freq_per_sequence = new double[num_states*getNSeq()];
     double *freq_per_sequence = new double[num_states];

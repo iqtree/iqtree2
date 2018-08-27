@@ -1991,6 +1991,9 @@ public:
     /** true to compute sequence identity along tree */
     bool compute_seq_identity_along_tree;
     
+    /** true to compute sequence composition */
+    bool compute_seq_composition;
+    
     /** true to ignore checkpoint file */
     bool ignore_checkpoint;
     /** number of quartets for likelihood mapping */
