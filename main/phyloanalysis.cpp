@@ -1468,7 +1468,7 @@ void printAnalysisInfo(int model_df, IQTree& iqtree, Params& params) {
 		cout << " frequencies (" << model_df << " free parameters)" << endl;
 	}
 	cout << "Fixed branch lengths: "
-			<< ((params.fixed_branch_length) ? "Yes" : "No") << endl;
+			<< ((params.fixed_branch_length == BRLEN_FIX) ? "Yes" : "No") << endl;
 
 	if (params.min_iterations > 0) {
 	    cout << "Tree search algorithm: " << (params.snni ? "Stochastic nearest neighbor interchange" : "IQPNNI") << endl;
@@ -1499,7 +1499,7 @@ void printAnalysisInfo(int model_df, IQTree& iqtree, Params& params) {
 	    cout << "NNI assessed on: " << ((params.nni5) ? "5 branches" : "1 branch") << endl;
 	}
 	cout << "Phylogenetic likelihood library: " << (params.pll ? "Yes" : "No") << endl;
-    if (!params.fixed_branch_length)
+    if (params.fixed_branch_length != BRLEN_FIX)
         cout << "Branch length optimization method: "
             << ((iqtree.optimize_by_newton) ? "Newton" : "Brent") << endl;
     cout << "Number of Newton-Raphson steps in NNI evaluation and branch length optimization: " << NNI_MAX_NR_STEP
