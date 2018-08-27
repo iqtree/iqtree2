@@ -1011,6 +1011,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.freq_const_patterns = NULL;
     params.no_rescale_gamma_invar = false;
     params.compute_seq_identity_along_tree = false;
+    params.compute_seq_composition = true;
     params.lmap_num_quartets = -1;
     params.lmap_cluster_file = NULL;
     params.print_lmap_quartet_lh = false;
@@ -3418,6 +3419,12 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.compute_seq_identity_along_tree = true;
 				continue;
 			}
+            
+            if (strcmp(argv[cnt], "--no-seq-comp") == 0) {
+                params.compute_seq_composition = false;
+                continue;
+            }
+            
 			if (strcmp(argv[cnt], "-t") == 0 || strcmp(argv[cnt], "-te") == 0) {
                 if (strcmp(argv[cnt], "-te") == 0) {
                     if (params.gbo_replicates != 0) {
