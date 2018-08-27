@@ -1001,6 +1001,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.pomo_pop_size = 9;
 	params.print_branch_lengths = false;
 	params.lh_mem_save = LM_PER_NODE; // auto detect
+    params.buffer_mem_save = false;
 	params.start_tree = STT_PLL_PARSIMONY;
 	params.print_splits_file = false;
     params.ignore_identical_seqs = true;
@@ -2944,6 +2945,10 @@ void parseArg(int argc, char *argv[], Params &params) {
                 }
 				continue;
 			}
+            if (strcmp(argv[cnt], "--save-mem-buffer") == 0) {
+                params.buffer_mem_save = true;
+                continue;
+            }
 //			if (strcmp(argv[cnt], "-storetrees") == 0) {
 //				params.store_candidate_trees = true;
 //				continue;
@@ -3610,7 +3615,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     if (params.do_au_test && params.topotest_replicates == 0)
         outError("For AU test please specify number of bootstrap replicates via -zb option");
 
-    if (params.lh_mem_save == LM_MEM_SAVE && params.partition_file)
+    if (params.lh_mem_save == LM_MEM_SAVE && params.partition_file && params.partition_type != TOPO_UNLINKED)
         outError("-mem option does not work with partition models yet");
 
     if (params.gbo_replicates && params.num_bootstrap_samples)

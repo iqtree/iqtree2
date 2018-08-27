@@ -1200,6 +1200,8 @@ void PhyloTree::computeTraversalInfo(PhyloNode *node, PhyloNode *dad, bool compu
             cout << endl;
         }
 
+        
+        if (!Params::getInstance().buffer_mem_save) {
 #ifdef _OPENMP
 #pragma omp parallel if (num_info >= 3) num_threads(num_threads)
         {
@@ -1218,6 +1220,7 @@ void PhyloTree::computeTraversalInfo(PhyloNode *node, PhyloNode *dad, bool compu
 #ifdef _OPENMP
         }
 #endif
+        }
     }
 
     if (compute_partial_lh) {
@@ -1301,6 +1304,7 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(TraversalInfo &info, size_t 
 	double *inv_evec = model->getInverseEigenvectors();
 	ASSERT(inv_evec && evec);
 	double *eval = model->getEigenvalues();
+    size_t num_leaves = 0;
 
 	// internal node
 	PhyloNeighbor *left = NULL, *right = NULL; // left & right are two neighbors leading to 2 subtrees
@@ -1309,6 +1313,8 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(TraversalInfo &info, size_t 
         // make sure that the partial_lh of children are different!
         ASSERT(dad_branch->partial_lh != nei->partial_lh);
 		if (!left) left = nei; else right = nei;
+        if (nei->node->isLeaf())
+            num_leaves++;
 	}
 
     // precomputed buffer to save times
@@ -1334,9 +1340,21 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(TraversalInfo &info, size_t 
             len_children_ptr += ncat;
         }
     } else {
-
-        echildren = info.echildren;
-        partial_lh_leaves = info.partial_lh_leaves;
+        if (Params::getInstance().buffer_mem_save) {
+            info.echildren = echildren = aligned_alloc<double>(get_safe_upper_limit(block*nstates*(node->degree()-1)));
+            if (num_leaves > 0)
+                info.partial_lh_leaves = partial_lh_leaves = aligned_alloc<double>(get_safe_upper_limit((aln->STATE_UNKNOWN+1)*block*num_leaves));
+            double *buffer_tmp = aligned_alloc<double>(nstates);
+#ifdef KERNEL_FIX_STATES
+            computePartialInfo<VectorClass, nstates>(info, (VectorClass*)buffer_tmp);
+#else
+            computePartialInfo<VectorClass>(info, (VectorClass*)buffer_tmp);
+#endif
+            aligned_free(buffer_tmp);
+        } else {
+            echildren = info.echildren;
+            partial_lh_leaves = info.partial_lh_leaves;
+        }
 
     }
 
@@ -1947,6 +1965,13 @@ void PhyloTree::computePartialLikelihoodGenericSIMD(TraversalInfo &info, size_t 
 		} // big for loop over ptn
 
 	}
+
+    if (Params::getInstance().buffer_mem_save) {
+        if (partial_lh_leaves)
+            aligned_free(partial_lh_leaves);
+        aligned_free(echildren);
+        info.echildren = info.partial_lh_leaves = NULL;
+    }
 }
 
 /*******************************************************
