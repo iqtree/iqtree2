@@ -1932,6 +1932,11 @@ public:
     void computeBranchDirection(PhyloNode *node = NULL, PhyloNode *dad = NULL);
 
     /**
+     * clear branch direction for all branches
+     */
+    void clearBranchDirection(PhyloNode *node = NULL, PhyloNode *dad = NULL);
+
+    /**
         convert from unrooted to rooted tree
     */
     void convertToRooted();

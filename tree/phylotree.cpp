@@ -5022,6 +5022,18 @@ void PhyloTree::computeBranchDirection(PhyloNode *node, PhyloNode *dad) {
 	}
 }
 
+void PhyloTree::clearBranchDirection(PhyloNode *node, PhyloNode *dad) {
+    if (!node)
+        node = (PhyloNode*)root;
+    if (dad)
+        ((PhyloNeighbor*)node->findNeighbor(dad))->direction = UNDEFINED_DIRECTION;
+    FOR_NEIGHBOR_IT(node, dad, it) {
+        ((PhyloNeighbor*)*it)->direction = UNDEFINED_DIRECTION;
+        clearBranchDirection((PhyloNode*)(*it)->node, node);
+    }
+
+}
+
 /*
 void PhyloTree::sortNeighborBySubtreeSize(PhyloNode *node, PhyloNode *dad) {
 
@@ -5128,6 +5140,7 @@ void PhyloTree::convertToUnrooted() {
     setRootNode(params->root);
 
     initializeTree();
+    clearBranchDirection();
 //    computeBranchDirection();
 }
 
