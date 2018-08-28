@@ -2951,6 +2951,10 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.buffer_mem_save = true;
                 continue;
             }
+            if (strcmp(argv[cnt], "--no-save-mem-buffer") == 0) {
+                params.buffer_mem_save = false;
+                continue;
+            }
 //			if (strcmp(argv[cnt], "-storetrees") == 0) {
 //				params.store_candidate_trees = true;
 //				continue;
@@ -3151,15 +3155,15 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.pll = true;
 				continue;
 			}
-			if (strcmp(argv[cnt], "-me") == 0) {
+			if (strcmp(argv[cnt], "-me") == 0 || strcmp(argv[cnt], "--model-epsilon") == 0) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -me <model_epsilon>";
 				params.modelEps = convert_double(argv[cnt]);
 				if (params.modelEps <= 0.0)
 					throw "Model epsilon must be positive";
-				if (params.modelEps > 0.1)
-					throw "Model epsilon must not be larger than 0.1";
+				if (params.modelEps > 1.0)
+					throw "Model epsilon must not be larger than 1.0";
 				continue;
 			}
 			if (strcmp(argv[cnt], "-pars_ins") == 0) {

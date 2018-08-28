@@ -448,10 +448,12 @@ void ModelMarkov::computeTransMatrixNonrev(double time, double *trans_matrix, in
         double mincoeff = row_sum.minCoeff();
         double maxcoeff = row_sum.maxCoeff();
         if (maxcoeff > 1.0001 || mincoeff < 0.9999) {
-            cout << "INFO: Switch to scaling-squaring due to unstable eigen-decomposition rowsum: "
-                 << mincoeff << " to " << maxcoeff << endl;
+            if (verbose_mode >= VB_MED)
+                cout << "INFO: Switch to scaling-squaring due to unstable eigen-decomposition rowsum: "
+                     << mincoeff << " to " << maxcoeff << endl;
             nondiagonalizable = true;
             computeTransMatrixNonrev(time, trans_matrix, mixture);
+            nondiagonalizable = false;
         }
     } else {
         ASSERT(0 && "this line should not be reached");
@@ -1613,21 +1615,21 @@ int matinv (double x[], int n, int m, double space[])
     return(0);
 }
 
+/*
 int computeStateFreqFromQMatrix (double Q[], double pi[], int n)
 {
     double *space = new double[n*(n+1)];
 
-    /* from rate matrix Q[] to pi, the stationary frequencies:
-       Q' * pi = 0     pi * 1 = 1
-       space[] is of size n*(n+1).
-    */
+    // from rate matrix Q[] to pi, the stationary frequencies:
+    //   Q' * pi = 0     pi * 1 = 1
+    // space[] is of size n*(n+1).
     int i,j;
-    double *T = space;      /* T[n*(n+1)]  */
+    double *T = space;      // T[n*(n+1)]
 
     for (i=0;i<n+1;i++) T[i]=1;
     for (i=1;i<n;i++) {
         for (j=0;j<n;j++)
-            T[i*(n+1)+j] =  Q[j*n+i];     /* transpose */
+            T[i*(n+1)+j] =  Q[j*n+i];     // transpose
         T[i*(n+1)+n] = 0.;
     }
     matinv(T, n, n+1, pi);
@@ -1635,9 +1637,23 @@ int computeStateFreqFromQMatrix (double Q[], double pi[], int n)
         pi[i] = T[i*(n+1)+n];
     delete [] space;
     return (0);
-}
+}*/
 /* End of Ziheng Yang code */
 
+// using Eigen lib
+int computeStateFreqFromQMatrix (double Q[], double pi[], int n) {
+    MatrixXd A(n+1, n);
+    A.topRows(1).setOnes();
+    A.bottomRows(n) = Map<MatrixXd>(Q, n, n);
+    VectorXd b(n+1);
+    b.setZero();
+    b(0) = 1.0;
+    Map<VectorXd> freq(pi, n);
+    freq = A.colPivHouseholderQr().solve(b);
+    double sum = freq.sum();
+    ASSERT(fabs(sum-1.0) < 1e-8);
+    return 0;
+}
 int matby (double a[], double b[], double c[], int n,int m,int k)
 /* a[n*m], b[m*k], c[n*k]  ......  c = a*b
 */
