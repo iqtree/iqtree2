@@ -523,7 +523,7 @@ end;
 
 
 ModelProtein::ModelProtein(const char *model_name, string model_params, StateFreqType freq, string freq_params, PhyloTree *tree, ModelsBlock* models_block)
- : ModelMarkov(tree)
+ : ModelMarkov(tree, true, false)
 {
     this->models_block = models_block;
 	init(model_name, model_params, freq, freq_params);
