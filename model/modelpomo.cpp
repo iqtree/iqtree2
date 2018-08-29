@@ -985,7 +985,7 @@ void ModelPoMo::restoreCheckpoint() {
 }
 
 // Declaration of helper function; needed by decomposeRateMatrix().
-int computeStateFreqFromQMatrix (double Q[], double pi[], int n, double space[]);
+//int computeStateFreqFromQMatrix (double Q[], double pi[], int n, double space[]);
 
 void ModelPoMo::decomposeRateMatrix() {
     updatePoMoStatesAndRateMatrix();
