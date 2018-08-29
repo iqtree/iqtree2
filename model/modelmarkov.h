@@ -52,8 +52,9 @@ public:
 		constructor
 		@param tree associated tree for the model
         @param reversible TRUE (default) for reversible model, FALSE for non-reversible
+        @param adapt_tree TRUE (default) to convert rooted<->unrooted tree
 	*/
-    ModelMarkov(PhyloTree *tree, bool reversible = true);
+    ModelMarkov(PhyloTree *tree, bool reversible = true, bool adapt_tree = true);
 
 	/**
 		@return TRUE if model is time-reversible, FALSE otherwise
@@ -63,8 +64,9 @@ public:
     /**
         set the reversibility of the model
         @param reversible TRUE to make model reversible, FALSE otherwise
+        @param adapt_tree TRUE (default) to convert between rooted and unrooted tree
     */
-    virtual void setReversible(bool reversible);
+    virtual void setReversible(bool reversible, bool adapt_tree = true);
 
 
 	/**

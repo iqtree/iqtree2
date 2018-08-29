@@ -37,7 +37,7 @@ int computeStateFreqFromQMatrix (double Q[], double pi[], int n);
 //const double MIN_FREQ_RATIO = MIN_FREQUENCY;
 //const double MAX_FREQ_RATIO = 1.0/MIN_FREQUENCY;
 
-ModelMarkov::ModelMarkov(PhyloTree *tree, bool reversible)
+ModelMarkov::ModelMarkov(PhyloTree *tree, bool reversible, bool adapt_tree)
  : ModelSubst(tree->aln->num_states), EigenDecomposition()
 {
     phylo_tree = tree;
@@ -65,10 +65,10 @@ ModelMarkov::ModelMarkov(PhyloTree *tree, bool reversible)
         name = "NonRev";
         full_name = "General non-reversible model";
     }
-    setReversible(reversible);
+    setReversible(reversible, adapt_tree);
 }
 
-void ModelMarkov::setReversible(bool reversible) {
+void ModelMarkov::setReversible(bool reversible, bool adapt_tree) {
     
     bool old_reversible = is_reversible;
     
@@ -94,7 +94,7 @@ void ModelMarkov::setReversible(bool reversible) {
 
         num_params = nrate - 1;
 
-        if (phylo_tree && phylo_tree->rooted) {
+        if (adapt_tree && phylo_tree && phylo_tree->rooted) {
             cout << "Converting rooted to unrooted tree..." << endl;
             phylo_tree->convertToUnrooted();
         }
@@ -141,7 +141,7 @@ void ModelMarkov::setReversible(bool reversible) {
         if (!cinv_evec)
             cinv_evec = aligned_alloc<complex<double> >(num_states*num_states);
         
-        if (phylo_tree && !phylo_tree->rooted) {
+        if (adapt_tree && phylo_tree && !phylo_tree->rooted) {
             cout << "Converting unrooted to rooted tree..." << endl;
             phylo_tree->convertToRooted();
         }
