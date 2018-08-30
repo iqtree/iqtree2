@@ -62,8 +62,9 @@ void SuperAlignmentUnlinked::init(StrVector *sequence_names) {
     }
 
     cout << total_seqs << " total sequences" << endl;
+    
+    /*
     taxa_index.resize(total_seqs, IntVector(npart, -1));
-
     for (it = partitions.begin(), part = 0, seq = 0; it != partitions.end(); it++, part++) {
         int part_nseq = (*it)->getNSeq();
         for (int part_seq = 0; part_seq < part_nseq; part_seq++, seq++) {
@@ -71,6 +72,7 @@ void SuperAlignmentUnlinked::init(StrVector *sequence_names) {
         }
     }
     ASSERT(seq == total_seqs);
+    */
     // now the patterns of sequence-genes presence/absence
     buildPattern();
 }
@@ -100,6 +102,7 @@ void SuperAlignmentUnlinked::buildPattern() {
         site_pattern[part] = part;
         start_seq += partitions[part]->getNSeq();
     }
+    ASSERT(start_seq == nseq);
     verbose_mode = save_mode;
     countConstSite();
     buildSeqStates();
