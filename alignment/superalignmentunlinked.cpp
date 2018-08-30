@@ -85,6 +85,7 @@ void SuperAlignmentUnlinked::buildPattern() {
     site_pattern.resize(npart, -1);
     clear();
     pattern_index.clear();
+    /*
     VerboseMode save_mode = verbose_mode;
     verbose_mode = min(verbose_mode, VB_MIN); // to avoid printing gappy sites in addPattern
     int nseq = getNSeq();
@@ -104,6 +105,13 @@ void SuperAlignmentUnlinked::buildPattern() {
     }
     ASSERT(start_seq == nseq);
     verbose_mode = save_mode;
+    */
+    resize(1, Pattern(getNSeq(), npart));
+    computeConst(at(0));
+    for (part = 0; part < npart; part++) {
+        site_pattern[part] = 0;
+    }
+    
     countConstSite();
     buildSeqStates();
 }
