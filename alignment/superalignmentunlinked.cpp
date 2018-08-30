@@ -19,6 +19,7 @@
  ***************************************************************************/
 
 #include "superalignmentunlinked.h"
+#include "utils/timeutil.h"
 
 /** constructor initialize from a supertree */
 SuperAlignmentUnlinked::SuperAlignmentUnlinked(Params &params)
@@ -46,24 +47,86 @@ void SuperAlignmentUnlinked::init(StrVector *sequence_names) {
     map<string, int> name2part;
     vector<Alignment*>::iterator it;
     size_t total_seqs = 0;
-    for (it = partitions.begin(); it != partitions.end(); it++)
+    for (it = partitions.begin(); it != partitions.end(); it++) {
         total_seqs += (*it)->seq_names.size();
-    taxa_index.resize(total_seqs, IntVector(npart, -1));
-    
-    part = 0;
-    for (auto it = partitions.begin(); it != partitions.end(); it++, part++) {
+    }
+    seq_names.reserve(total_seqs);
+    for (it = partitions.begin(); it != partitions.end(); it++) {
         // Make sure that all partitions have different seq names
         for (auto sit = (*it)->seq_names.begin(); sit != (*it)->seq_names.end(); sit++) {
             if (name2part.find(*sit) != name2part.end())
                 outError("Duplicate taxon name " + (*sit) + " in partitions " + partitions[name2part[*sit]]->name + " and " + (*it)->name);
-            name2part[*sit] = it - partitions.begin();
-        }
-        int nseq = (*it)->getNSeq();
-        for (seq = 0; seq < nseq; seq++) {
-            taxa_index[seq_names.size()+seq][part] = seq;
+            name2part[*sit] = (it) - partitions.begin();
         }
         seq_names.insert(seq_names.end(), (*it)->seq_names.begin(), (*it)->seq_names.end());
     }
+
+    cout << total_seqs << " total sequences" << endl;
+    taxa_index.resize(total_seqs, IntVector(npart, -1));
+
+    for (it = partitions.begin(), part = 0, seq = 0; it != partitions.end(); it++, part++) {
+        int part_nseq = (*it)->getNSeq();
+        for (int part_seq = 0; part_seq < part_nseq; part_seq++, seq++) {
+            taxa_index[seq][part] = part_seq;
+        }
+    }
+    ASSERT(seq == total_seqs);
     // now the patterns of sequence-genes presence/absence
     buildPattern();
+}
+
+void SuperAlignmentUnlinked::buildPattern() {
+    int part, seq, npart = partitions.size();
+    seq_type = SEQ_BINARY;
+    num_states = 2; // binary type because the super alignment presents the presence/absence of taxa in the partitions
+    STATE_UNKNOWN = 2;
+    site_pattern.resize(npart, -1);
+    clear();
+    pattern_index.clear();
+    VerboseMode save_mode = verbose_mode;
+    verbose_mode = min(verbose_mode, VB_MIN); // to avoid printing gappy sites in addPattern
+    int nseq = getNSeq();
+    int start_seq = 0;
+    resize(npart, Pattern(nseq));
+    for (part = 0; part < npart; part++) {
+        Pattern *pat = &at(part);
+        for (seq = 0; seq < partitions[part]->getNSeq(); seq++)
+            pat->at(start_seq + seq) = 1;
+        //addPattern(pat, part);
+        computeConst(*pat);
+        
+        // NOT USED FOR TOPO_UNLINKED
+        //pattern_index[*pat] = part;
+        site_pattern[part] = part;
+        start_seq += partitions[part]->getNSeq();
+    }
+    verbose_mode = save_mode;
+    countConstSite();
+    buildSeqStates();
+}
+
+void SuperAlignmentUnlinked::computeConst(Pattern &pat) {
+    bool is_const = (partitions.size() == 1);
+    bool is_invariant = (partitions.size() == 1);
+    bool is_informative = (partitions.size() > 1);
+    pat.const_char = (is_const) ? 1 : (STATE_UNKNOWN+1);
+    
+    pat.num_chars = (is_const) ? 1 : 2; // number of states with >= 1 appearance
+
+    pat.flag = 0;
+    if (is_const) pat.flag |= PAT_CONST;
+    if (is_invariant) pat.flag |= PAT_INVARIANT;
+    if (is_informative) pat.flag |= PAT_INFORMATIVE;
+}
+
+void SuperAlignmentUnlinked::buildSeqStates(bool add_unobs_const) {
+    seq_states.clear();
+    if (add_unobs_const) {
+        seq_states.resize(getNSeq(), IntVector({0,1}));
+    } else {
+        if (partitions.size() == 1)
+            seq_states.resize(getNSeq(), IntVector({1}));
+        else
+            seq_states.resize(getNSeq(), IntVector({0,1}));
+    }
 }

@@ -129,7 +129,7 @@ public:
 	/**
 		determine if the pattern is constant. update the is_const variable.
 	*/
-	void computeConst(Pattern &pat);
+	virtual void computeConst(Pattern &pat);
 
 
     void printSiteInfoHeader(ostream& out, const char* filename, bool partition = false);
@@ -766,7 +766,7 @@ public:
     /* build seq_states containing set of states per sequence
      * @param add_unobs_const TRUE to add all unobserved constant states (for +ASC model)
      */
-    void buildSeqStates(bool add_unobs_const = false);
+    virtual void buildSeqStates(bool add_unobs_const = false);
 
     /** Added by MA
             Compute the probability of this alignment according to the multinomial distribution with parameters determined by the reference alignment

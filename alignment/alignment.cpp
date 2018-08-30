@@ -146,7 +146,7 @@ void Alignment::checkSeqName() {
         if (renameString(*it))
             warn_str << orig_name << " -> " << (*it) << endl;
     }
-    if (warn_str.str() != "") {
+    if (!warn_str.str().empty() && Params::getInstance().compute_seq_composition) {
         string str = "Some sequence names are changed as follows:\n";
         outWarning(str + warn_str.str());
     }
