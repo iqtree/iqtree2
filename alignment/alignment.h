@@ -85,6 +85,7 @@ Multiple Sequence Alignment. Stored by a vector of site-patterns
  */
 class Alignment : public vector<Pattern>, public CharSet {
     friend class SuperAlignment;
+    friend class SuperAlignmentUnlinked;
 
 public:
 

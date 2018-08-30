@@ -31,6 +31,7 @@
 #include "phyloanalysis.h"
 #include "alignment/alignment.h"
 #include "alignment/superalignment.h"
+#include "alignment/superalignmentunlinked.h"
 #include "tree/iqtree.h"
 #include "tree/phylotreemixlen.h"
 #include "model/modelmarkov.h"
@@ -3292,7 +3293,10 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
 	/****************** read in alignment **********************/
 	if (params.partition_file) {
 		// Partition model analysis
-        alignment = new SuperAlignment(params);
+        if (params.partition_type == TOPO_UNLINKED)
+            alignment = new SuperAlignmentUnlinked(params);
+        else
+            alignment = new SuperAlignment(params);
 	} else {
 		alignment = new Alignment(params.aln_file, params.sequence_type, params.intype, params.model_name);
 
@@ -3526,7 +3530,7 @@ void runUnlinkedPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
     
     /****************** read in alignment **********************/
     // Partition model analysis
-    super_aln = new SuperAlignment(params);
+    super_aln = new SuperAlignmentUnlinked(params);
     PhyloSuperTree *super_tree = new PhyloSuperTree(super_aln);
  
     /**** do separate tree reconstruction for each partition ***/

@@ -30,38 +30,8 @@ SuperAlignment::SuperAlignment() : Alignment() {
 
 SuperAlignment::SuperAlignment(Params &params) : Alignment()
 {
+    readFromParams(params);
     
-    cout << "Reading partition model file " << params.partition_file << " ..." << endl;
-    if (detectInputFile(params.partition_file) == IN_NEXUS) {
-        readPartitionNexus(params);
-        if (partitions.empty()) {
-            outError("No partition found in SETS block. An example syntax looks like: \n#nexus\nbegin sets;\n  charset part1=1-100;\n  charset part2=101-300;\nend;");
-        }
-    } else
-        readPartitionRaxml(params);
-    if (partitions.empty())
-        outError("No partition found");
-    
-    // check for duplicated partition names
-    unordered_set<string> part_names;
-    for (auto pit = partitions.begin(); pit != partitions.end(); pit++) {
-        if (part_names.find((*pit)->name) != part_names.end())
-            outError("Duplicated partition name ", (*pit)->name);
-        part_names.insert((*pit)->name);
-    }
-
-    // Initialize the counter for evaluated NNIs on subtrees
-    cout << "Subset\tType\tSeqs\tSites\tInfor\tInvar\tModel\tName" << endl;
-    int part = 0;
-    for (auto it = partitions.begin(); it != partitions.end(); it++, part++) {
-        cout << part+1 << "\t" << (*it)->sequence_type << "\t" << (*it)->getNSeq()
-        << "\t" << (*it)->getNSite() << "\t" << (*it)->num_informative_sites
-        << "\t" << (*it)->getNSite()-(*it)->num_variant_sites << "\t"
-        << (*it)->model_name << "\t" << (*it)->name << endl;
-        if ((*it)->num_informative_sites == 0) {
-            outWarning("No parsimony-informative sites in partition " + (*it)->name);
-        }
-    }
     init();
 
     if (params.print_conaln) {
@@ -82,6 +52,40 @@ SuperAlignment::SuperAlignment(Params &params) : Alignment()
 #endif
     cout << endl;
 
+}
+
+void SuperAlignment::readFromParams(Params &params) {
+    cout << "Reading partition model file " << params.partition_file << " ..." << endl;
+    if (detectInputFile(params.partition_file) == IN_NEXUS) {
+        readPartitionNexus(params);
+        if (partitions.empty()) {
+            outError("No partition found in SETS block. An example syntax looks like: \n#nexus\nbegin sets;\n  charset part1=1-100;\n  charset part2=101-300;\nend;");
+        }
+    } else
+        readPartitionRaxml(params);
+    if (partitions.empty())
+        outError("No partition found");
+    
+    // check for duplicated partition names
+    unordered_set<string> part_names;
+    for (auto pit = partitions.begin(); pit != partitions.end(); pit++) {
+        if (part_names.find((*pit)->name) != part_names.end())
+            outError("Duplicated partition name ", (*pit)->name);
+        part_names.insert((*pit)->name);
+    }
+    
+    // Initialize the counter for evaluated NNIs on subtrees
+    cout << "Subset\tType\tSeqs\tSites\tInfor\tInvar\tModel\tName" << endl;
+    int part = 0;
+    for (auto it = partitions.begin(); it != partitions.end(); it++, part++) {
+        cout << part+1 << "\t" << (*it)->sequence_type << "\t" << (*it)->getNSeq()
+        << "\t" << (*it)->getNSite() << "\t" << (*it)->num_informative_sites
+        << "\t" << (*it)->getNSite()-(*it)->num_variant_sites << "\t"
+        << (*it)->model_name << "\t" << (*it)->name << endl;
+        if ((*it)->num_informative_sites == 0) {
+            outWarning("No parsimony-informative sites in partition " + (*it)->name);
+        }
+    }
 }
 
 void SuperAlignment::init(StrVector *sequence_names) {
@@ -1279,7 +1283,7 @@ double SuperAlignment::computeUnconstrainedLogL() {
 
 double SuperAlignment::computeMissingData() {
 	double ret = 0.0;
-	int len = 0;
+	size_t len = 0;
 	vector<Alignment*>::iterator pit;
 	for (pit = partitions.begin(); pit != partitions.end(); pit++) {
 		ret += (*pit)->getNSeq() * (*pit)->getNSite();
