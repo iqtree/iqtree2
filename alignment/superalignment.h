@@ -248,7 +248,7 @@ public:
 	 * it is in form of a binary alignment, where 0 means absence and 1 means presence
 	 * of a gene in a sequence
 	 */
-	void buildPattern();
+	virtual void buildPattern();
 
     /**
             count the fraction of constant sites in the alignment, update the variable frac_const_sites

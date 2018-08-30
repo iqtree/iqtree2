@@ -31,8 +31,28 @@ public:
     /** constructor initialize empty alignment */
     SuperAlignmentUnlinked();
     
+    /**
+     initialize seq_names, taxon_index, buildPattern
+     */
     virtual void init(StrVector *sequence_names = NULL);
     
+    /**
+     * build all patterns of super alignent from partitions and taxa_index
+     * it is in form of a binary alignment, where 0 means absence and 1 means presence
+     * of a gene in a sequence
+     */
+    virtual void buildPattern();
+
+    /**
+     determine if the pattern is constant. update the is_const variable.
+     */
+    virtual void computeConst(Pattern &pat);
+
+    /* build seq_states containing set of states per sequence
+     * @param add_unobs_const TRUE to add all unobserved constant states (for +ASC model)
+     */
+    void buildSeqStates(bool add_unobs_const = false);
+
 };
 
 #endif
