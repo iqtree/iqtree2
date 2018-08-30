@@ -50,7 +50,16 @@ public:
     /** destructor */
     ~SuperAlignment();
 
-    void init(StrVector *sequence_names = NULL);
+    /**
+        load partitions from program Params
+        @param params program Params
+     */
+    void readFromParams(Params &params);
+    
+    /**
+     initialize seq_names, taxon_index, buildPattern
+     */
+    virtual void init(StrVector *sequence_names = NULL);
     
     /** return that this is a super-alignment structure */
 	virtual bool isSuperAlignment() { return true; }
