@@ -1179,8 +1179,18 @@ double ModelFactory::optimizeParameters(int fixed_len, bool write_info,
     // no optimization of branch length in the first round
     cur_lh = tree->computeLikelihood();
     tree->setCurScore(cur_lh);
-	if (verbose_mode >= VB_MED || write_info) {
-		cout << "1. Initial log-likelihood: " << cur_lh << endl;
+    if (verbose_mode >= VB_MED || write_info) {
+	int p = -1;
+
+	// SET precision to 17 (temporarily)
+	if (verbose_mode >= VB_DEBUG) p = cout.precision(17);
+
+	// PRINT Log-Likelihood
+	cout << "1. Initial log-likelihood: " << cur_lh << endl;
+
+	// RESTORE previous precision
+	if (verbose_mode >= VB_DEBUG) cout.precision(p);
+
         if (verbose_mode >= VB_MAX) {
             tree->printTree(cout);
             cout << endl;
