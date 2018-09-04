@@ -317,7 +317,7 @@ public:
             perform tree search
             @return best likelihood found
      */
-    double doTreeSearch();
+    virtual double doTreeSearch();
 
     /**
      *  Wrapper function that uses either PLL or IQ-TREE to optimize the branch length

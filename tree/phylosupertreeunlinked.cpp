@@ -9,7 +9,7 @@
 #include "utils/MPIHelper.h"
 
 PhyloSuperTreeUnlinked::PhyloSuperTreeUnlinked(SuperAlignment *alignment)
-: PhyloSuperTree(alignment)
+: PhyloSuperTree(alignment, true)
 {
 }
 
@@ -28,6 +28,40 @@ void PhyloSuperTreeUnlinked::setAlignment(Alignment *alignment) {
         at(i)->setAlignment(saln->partitions[i]);
 }
 
+/**
+ * setup all necessary parameters  (declared as virtual needed for phylosupertree)
+ */
+void PhyloSuperTreeUnlinked::initSettings(Params& params) {
+    PhyloSuperTree::initSettings(params);
+    for (auto it = begin(); it != end(); it++)
+        ((IQTree*)(*it))->initSettings(params);
+}
+
+int PhyloSuperTreeUnlinked::computeParsimonyTree(const char *out_prefix, Alignment *alignment) {
+    SuperAlignment *saln = (SuperAlignment*)alignment;
+    int score = 0;
+    int i;
+    ASSERT(saln->partitions.size() == size());
+    for (i = 0; i < size(); i++) {
+        score += at(i)->computeParsimonyTree(NULL, saln->partitions[i]);
+    }
+    if (out_prefix) {
+        string file_name = out_prefix;
+        file_name += ".parstree";
+        try {
+            ofstream out;
+            out.open(file_name.c_str());
+            for (i = 0; i < size(); i++) {
+                at(i)->printTree(out, WT_NEWLINE);
+            }
+            out.close();
+        } catch (...) {
+            outError("Cannot write to file ", file_name);
+        }
+    }
+    return score;
+}
+
 int PhyloSuperTreeUnlinked::wrapperFixNegativeBranch(bool force_change) {
     // Initialize branch lengths for the parsimony tree
     int numFixed = 0;
@@ -36,6 +70,13 @@ int PhyloSuperTreeUnlinked::wrapperFixNegativeBranch(bool force_change) {
         (*tree)->resetCurScore();
     }
     return numFixed;
+}
+
+bool PhyloSuperTreeUnlinked::isBifurcating(Node *node, Node *dad) {
+    for (auto it = begin(); it != end(); it++)
+        if (!(*it)->isBifurcating())
+            return false;
+    return true;
 }
 
 string PhyloSuperTreeUnlinked::getTreeString() {
@@ -144,4 +185,21 @@ double PhyloSuperTreeUnlinked::treeLengthInternal( double epsilon, Node *node, N
     for (iterator tree = begin(); tree != end(); tree++)
         len += (*tree)->treeLengthInternal(epsilon);
     return len;
+}
+
+double PhyloSuperTreeUnlinked::doTreeSearch() {
+    curScore = 0.0;
+    string bestTree;
+    for (auto it = begin(); it != end(); it++) {
+        (*it)->getCheckpoint()->startStruct((*it)->aln->name);
+        cout << "---> TREE SEARCH ON " << (*it)->aln->name << endl;
+        curScore += ((IQTree*)(*it))->doTreeSearch();
+        (*it)->getCheckpoint()->endStruct();
+    }
+    bestTree = getTreeString();
+    addTreeToCandidateSet(bestTree, getCurScore(), false, MPIHelper::getInstance().getProcessID());
+    printResultTree();
+    intermediateTrees.update(bestTree, getCurScore());
+    candidateTrees.saveCheckpoint();
+    return curScore;
 }

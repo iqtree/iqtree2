@@ -499,6 +499,10 @@ public:
         return false;
     }
 
+    virtual bool isSuperTreeUnlinked() {
+        return false;
+    }
+
     /**
         @return true if this is a tree with mixture branch lengths, default: false
     */
@@ -1252,7 +1256,7 @@ public:
      * @param alignment input alignment
      * @return parsimony score
      */
-    int computeParsimonyTree(const char *out_prefix, Alignment *alignment);
+    virtual int computeParsimonyTree(const char *out_prefix, Alignment *alignment);
 
 
     /****************************************************************************
