@@ -1574,7 +1574,10 @@ void computeInitialDist(Params &params, IQTree &iqtree) {
 void initializeParams(Params &params, IQTree &iqtree)
 {
 //    iqtree.setCurScore(-DBL_MAX);
-    if (!iqtree.root)
+    bool ok_tree = iqtree.root;
+    if (iqtree.isSuperTreeUnlinked())
+        ok_tree = ((PhyloSuperTree*)&iqtree)->front()->root;
+    if (!ok_tree)
     {
         // compute initial tree
         iqtree.computeInitialTree(params.SSE);

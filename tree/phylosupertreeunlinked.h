@@ -45,6 +45,12 @@ public:
     virtual void initSettings(Params& params);
 
     /**
+     create sub-trees T|Y_1,...,T|Y_k of the current super-tree T
+     and map F={f_1,...,f_k} the edges of supertree T to edges of subtrees T|Y_i
+     */
+    virtual void mapTrees();
+
+    /**
      * FAST VERSION: compute parsimony tree by step-wise addition
      * @param out_prefix prefix for .parstree file
      * @param alignment input alignment
