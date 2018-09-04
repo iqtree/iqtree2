@@ -1956,7 +1956,9 @@ void startTreeReconstruction(Params &params, IQTree* &iqtree, ModelCheckpoint &m
 
     // Temporary fix since PLL only supports DNA/Protein: switch to IQ-TREE parsimony kernel
     if (params.start_tree == STT_PLL_PARSIMONY) {
-		if (iqtree->isSuperTree()) {
+        if (iqtree->isSuperTreeUnlinked()) {
+            params.start_tree = STT_PARSIMONY;
+        } else if (iqtree->isSuperTree()) {
 			PhyloSuperTree *stree = (PhyloSuperTree*)iqtree;
 			for (PhyloSuperTree::iterator it = stree->begin(); it != stree->end(); it++)
 				if ((*it)->aln->seq_type != SEQ_DNA && (*it)->aln->seq_type != SEQ_PROTEIN)
@@ -2244,6 +2246,12 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
         iqtree->addTreeToCandidateSet(initTree, iqtree->getCurScore(), false, MPIHelper::getInstance().getProcessID());
         iqtree->printResultTree();
         iqtree->intermediateTrees.update(iqtree->getTreeString(), iqtree->getCurScore());
+        if (iqtree->isSuperTreeUnlinked()) {
+            PhyloSuperTree* stree = (PhyloSuperTree*)iqtree;
+            for (auto it = stree->begin(); it != stree->end(); it++)
+                ((IQTree*)(*it))->addTreeToCandidateSet((*it)->getTreeString(),
+                    (*it)->getCurScore(), false, MPIHelper::getInstance().getProcessID());
+        }
     }
 
     if (params.min_iterations && !iqtree->isBifurcating())
@@ -2263,6 +2271,9 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
     }
 
     if (params.constraint_tree_file)
+        params.compute_ml_dist = false;
+    
+    if (iqtree->isSuperTreeUnlinked())
         params.compute_ml_dist = false;
 
 	//Generate BIONJ tree

@@ -20,6 +20,10 @@ public:
      */
     PhyloSuperTreeUnlinked(SuperAlignment *alignment);
 
+    virtual bool isSuperTreeUnlinked() {
+        return true;
+    }
+
     /**
      read the tree from the ifstream in newick format
      @param in the input stream.
@@ -36,6 +40,19 @@ public:
     virtual void setAlignment(Alignment *alignment);
 
     /**
+     * setup all necessary parameters  (declared as virtual needed for phylosupertree)
+     */
+    virtual void initSettings(Params& params);
+
+    /**
+     * FAST VERSION: compute parsimony tree by step-wise addition
+     * @param out_prefix prefix for .parstree file
+     * @param alignment input alignment
+     * @return parsimony score
+     */
+    virtual int computeParsimonyTree(const char *out_prefix, Alignment *alignment);
+
+    /**
      * Assign branch lengths for branch that has no or negative length
      * With single model branch lengths are assigned using parsimony. With partition model
      * branch lengths are assigned randomly
@@ -43,6 +60,9 @@ public:
      * @return number of branches fixed
      */
     virtual int wrapperFixNegativeBranch(bool force_change);
+
+    /** @return true if tree is bifurcating, false otherwise */
+    virtual bool isBifurcating(Node *node = NULL, Node *dad = NULL);
 
     /**
      Read the tree saved with Taxon IDs and branch lengths.
@@ -116,6 +136,12 @@ public:
      @param dad dad of the node, used to direct the search
      */
     virtual double treeLengthInternal(double epsilon, Node *node = NULL, Node *dad = NULL);
+
+    /**
+     perform tree search
+     @return best likelihood found
+     */
+    virtual double doTreeSearch();
 
 };
 
