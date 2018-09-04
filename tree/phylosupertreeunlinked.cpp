@@ -37,6 +37,10 @@ void PhyloSuperTreeUnlinked::initSettings(Params& params) {
         ((IQTree*)(*it))->initSettings(params);
 }
 
+void PhyloSuperTreeUnlinked::mapTrees() {
+    // do nothing here as partition trees are unlinked
+}
+
 int PhyloSuperTreeUnlinked::computeParsimonyTree(const char *out_prefix, Alignment *alignment) {
     SuperAlignment *saln = (SuperAlignment*)alignment;
     int score = 0;
