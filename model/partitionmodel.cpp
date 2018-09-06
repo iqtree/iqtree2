@@ -336,24 +336,26 @@ double PartitionModel::optimizeParameters(int fixed_len, bool write_info, double
         #endif
         for (int i = 0; i < ntrees; i++) {
             int part = tree->part_order[i];
-            if (write_info && !isLinkedModel())
-            #ifdef _OPENMP
-            #pragma omp critical
-            #endif
-            {
-                cout << "Optimizing " << tree->at(part)->getModelName() <<
-                    " parameters for partition " << tree->at(part)->aln->name <<
-                    " (" << tree->at(part)->getModelFactory()->getNParameters(fixed_len) <<
-                    " free parameters)" << endl;
-            }
+            double score;
             if (opt_gamma_invar)
-                tree_lh += tree->at(part)->getModelFactory()->optimizeParametersGammaInvar(fixed_len,
+                score = tree->at(part)->getModelFactory()->optimizeParametersGammaInvar(fixed_len,
                     write_info && verbose_mode >= VB_MED,
                     logl_epsilon/min(ntrees,10), gradient_epsilon/min(ntrees,10));
             else
-                tree_lh += tree->at(part)->getModelFactory()->optimizeParameters(fixed_len,
+                score = tree->at(part)->getModelFactory()->optimizeParameters(fixed_len,
                     write_info && verbose_mode >= VB_MED,
                     logl_epsilon/min(ntrees,10), gradient_epsilon/min(ntrees,10));
+            tree_lh += score;
+            if (write_info && !isLinkedModel())
+#ifdef _OPENMP
+#pragma omp critical
+#endif
+            {
+                cout << "Partition " << tree->at(part)->aln->name
+                     << " / Model: " << tree->at(part)->getModelName()
+                     << " / df: " << tree->at(part)->getModelFactory()->getNParameters(fixed_len)
+                << " / LogL: " << score << endl;
+            }
         }
         //return ModelFactory::optimizeParameters(fixed_len, write_info);
 
