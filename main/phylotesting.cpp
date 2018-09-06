@@ -905,7 +905,7 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info)
     int partition_type;
     if (CKP_RESTORE2((&model_info), partition_type)) {
         if (partition_type != params.partition_type)
-            outError("Mismatch partition type between checkpoint and partition file command option");
+            outError("Mismatch partition type between checkpoint and partition file command option\nRerun with -mredo to ignore .model.gz checkpoint file");
     } else {
         partition_type = params.partition_type;
         CKP_SAVE2((&model_info), partition_type);

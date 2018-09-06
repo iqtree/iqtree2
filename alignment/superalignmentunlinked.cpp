@@ -33,6 +33,7 @@ SuperAlignmentUnlinked::SuperAlignmentUnlinked(Params &params)
 SuperAlignmentUnlinked::SuperAlignmentUnlinked()
 : SuperAlignment()
 {
+    unlinked_taxa = true;
 }
 
 void SuperAlignmentUnlinked::init(StrVector *sequence_names) {
@@ -41,27 +42,33 @@ void SuperAlignmentUnlinked::init(StrVector *sequence_names) {
     max_num_states = 0;
     // first build taxa_index and partitions
     int part, seq, npart = partitions.size();
-
-    ASSERT(!sequence_names);
     
     map<string, int> name2part;
     vector<Alignment*>::iterator it;
-    size_t total_seqs = 0;
-    for (it = partitions.begin(); it != partitions.end(); it++) {
-        total_seqs += (*it)->seq_names.size();
-    }
-    seq_names.reserve(total_seqs);
+    unlinked_taxa = true;
     for (it = partitions.begin(); it != partitions.end(); it++) {
         // Make sure that all partitions have different seq names
         for (auto sit = (*it)->seq_names.begin(); sit != (*it)->seq_names.end(); sit++) {
-            if (name2part.find(*sit) != name2part.end())
-                outError("Duplicate taxon name " + (*sit) + " in partitions " + partitions[name2part[*sit]]->name + " and " + (*it)->name);
+            if (name2part.find(*sit) != name2part.end()) {
+                unlinked_taxa = false;
+                break;
+            }
             name2part[*sit] = (it) - partitions.begin();
         }
+    }
+
+    if (!unlinked_taxa) {
+        // if some taxon sets are overlapping
+        SuperAlignment::init(sequence_names);
+        cout << "Linked " << seq_names.size() << " total sequences" << endl;
+        return;
+    }
+    
+    for (it = partitions.begin(); it != partitions.end(); it++) {
         seq_names.insert(seq_names.end(), (*it)->seq_names.begin(), (*it)->seq_names.end());
     }
 
-    cout << total_seqs << " total sequences" << endl;
+    cout << "Unlinked " << seq_names.size() << " total sequences" << endl;
     
     /*
     taxa_index.resize(total_seqs, IntVector(npart, -1));
@@ -78,6 +85,10 @@ void SuperAlignmentUnlinked::init(StrVector *sequence_names) {
 }
 
 void SuperAlignmentUnlinked::buildPattern() {
+    if (!unlinked_taxa) {
+        SuperAlignment::buildPattern();
+        return;
+    }
     int part, seq, npart = partitions.size();
     seq_type = SEQ_BINARY;
     num_states = 2; // binary type because the super alignment presents the presence/absence of taxa in the partitions
@@ -117,6 +128,10 @@ void SuperAlignmentUnlinked::buildPattern() {
 }
 
 void SuperAlignmentUnlinked::computeConst(Pattern &pat) {
+    if (!unlinked_taxa) {
+        SuperAlignment::computeConst(pat);
+        return;
+    }
     bool is_const = (partitions.size() == 1);
     bool is_invariant = (partitions.size() == 1);
     bool is_informative = (partitions.size() > 1);
@@ -131,6 +146,10 @@ void SuperAlignmentUnlinked::computeConst(Pattern &pat) {
 }
 
 void SuperAlignmentUnlinked::buildSeqStates(bool add_unobs_const) {
+    if (!unlinked_taxa) {
+        SuperAlignment::buildSeqStates(add_unobs_const);
+        return;
+    }
     seq_states.clear();
     if (add_unobs_const) {
         seq_states.resize(getNSeq(), IntVector({0,1}));
