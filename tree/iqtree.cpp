@@ -225,10 +225,11 @@ void IQTree::initSettings(Params &params) {
 
     searchinfo.nni_type = params.nni_type;
     optimize_by_newton = params.optimize_by_newton;
+    setLikelihoodKernel(params.SSE);
     if (num_threads > 0)
-        setLikelihoodKernel(params.SSE, num_threads);
+        setNumThreads(num_threads);
     else
-        setLikelihoodKernel(params.SSE, params.num_threads);
+        setNumThreads(params.num_threads);
     candidateTrees.init(this->aln, 200);
     intermediateTrees.init(this->aln, 200000);
 
@@ -2819,7 +2820,8 @@ void IQTree::refineBootTrees() {
 
         // set likelihood kernel
         boot_tree->setParams(params);
-        boot_tree->setLikelihoodKernel(sse, num_threads);
+        boot_tree->setLikelihoodKernel(sse);
+        boot_tree->setNumThreads(num_threads);
 
         // load the current ufboot tree
         boot_tree->readTreeString(boot_trees[sample]);
@@ -4332,11 +4334,12 @@ int PhyloTree::testNumThreads() {
     double min_time = max_procs; // minimum time in seconds
     StrVector trees;
     trees.push_back(getTreeString());
+    setLikelihoodKernel(sse);
 
     for (int proc = 1; proc <= max_procs; proc++) {
 
         omp_set_num_threads(proc);
-        setLikelihoodKernel(sse, proc);
+        setNumThreads(proc);
         initializeAllPartialLh();
 
         double beginTime = getRealTime();
@@ -4392,7 +4395,7 @@ int PhyloTree::testNumThreads() {
     readTreeString(trees[0]);
 
     cout << "BEST NUMBER OF THREADS: " << bestProc+1 << endl << endl;
-    setLikelihoodKernel(sse, bestProc+1);
+    setNumThreads(bestProc+1);
 
     return bestProc+1;
 #endif

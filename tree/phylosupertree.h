@@ -95,9 +95,11 @@ public:
 	 */
 	virtual void initSettings(Params& params);
 
-    virtual void setLikelihoodKernel(LikelihoodKernel lk, int num_threads);
+    virtual void setLikelihoodKernel(LikelihoodKernel lk);
 
     virtual void changeLikelihoodKernel(LikelihoodKernel lk);
+
+    virtual void setNumThreads(int num_threads);
 
 	virtual bool isSuperTree() { return true; }
 

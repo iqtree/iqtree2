@@ -229,7 +229,7 @@ void PhyloTreeMixlen::initializeMixlen(double tolerance, bool write_info) {
         model_factory->site_rate = relative_rate;
         if (getModel()->isMixture()) {
 //            model_factory->fused_mix_rate = true;
-            setLikelihoodKernel(sse, num_threads);
+            setLikelihoodKernel(sse);
         }
 
         // optimize rate model
@@ -277,7 +277,7 @@ void PhyloTreeMixlen::initializeMixlen(double tolerance, bool write_info) {
         setRate(saved_rate);
         model_factory->site_rate = saved_rate;
         model_factory->fused_mix_rate = saved_fused_mix_rate;
-        setLikelihoodKernel(sse, num_threads);
+        setLikelihoodKernel(sse);
 
         // set the weights of heterotachy model
         double pinvar = site_rate->getPInvar();

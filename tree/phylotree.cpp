@@ -99,7 +99,8 @@ void PhyloTree::init() {
     dist_matrix = NULL;
     var_matrix = NULL;
     params = NULL;
-    setLikelihoodKernel(LK_SSE2, 1);  // FOR TUNG: you forgot to initialize this variable!
+    setLikelihoodKernel(LK_SSE2);  // FOR TUNG: you forgot to initialize this variable!
+    setNumThreads(1);
     num_threads = 0;
     max_lh_slots = 0;
     save_all_trees = 0;
@@ -548,8 +549,10 @@ void PhyloTree::setModelFactory(ModelFactory *model_fac) {
     if (model_fac) {
         model = model_factory->model;
         site_rate = model_factory->site_rate;
-        if (!isSuperTree())
-            setLikelihoodKernel(sse, num_threads);
+        if (!isSuperTree()) {
+            setLikelihoodKernel(sse);
+            setNumThreads(num_threads);
+        }
     } else {
         model = NULL;
         site_rate = NULL;
