@@ -277,7 +277,7 @@ public:
 	 * @param state internal state code
 	 * @return user-readable state string
 	 */
-	string convertStateBackStr(char state);
+	string convertStateBackStr(StateType state);
 
 	/**
             get alignment site range from the residue range relative to a sequence
