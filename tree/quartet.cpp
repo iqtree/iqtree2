@@ -921,7 +921,8 @@ void PhyloTree::computeQuartetLikelihoods(vector<QuartetInfo> &lmap_quartet_info
             // set up parameters
             quartet_tree->setParams(params);
             quartet_tree->optimize_by_newton = params->optimize_by_newton;
-            quartet_tree->setLikelihoodKernel(params->SSE, num_threads);
+            quartet_tree->setLikelihoodKernel(params->SSE);
+            quartet_tree->setNumThreads(num_threads);
 
             // set up partition model
             if (isSuperTree()) {
