@@ -380,6 +380,13 @@ public:
     */
     void getSubCheckpoint(Checkpoint *target, string sub_key);
 
+    /**
+     put a checkpoint where the key string contains a given substring
+     @param source checkpoint
+     @param sub_key key substring to search for
+     */
+    void putSubCheckpoint(Checkpoint *source, string sub_key);
+
 protected:
 
     /** filename to write checkpoint */

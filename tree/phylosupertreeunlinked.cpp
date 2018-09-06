@@ -7,6 +7,7 @@
 
 #include "phylosupertreeunlinked.h"
 #include "utils/MPIHelper.h"
+#include "utils/timeutil.h"
 
 PhyloSuperTreeUnlinked::PhyloSuperTreeUnlinked(SuperAlignment *alignment)
 : PhyloSuperTree(alignment, true)
@@ -194,12 +195,48 @@ double PhyloSuperTreeUnlinked::treeLengthInternal( double epsilon, Node *node, N
 double PhyloSuperTreeUnlinked::doTreeSearch() {
     curScore = 0.0;
     string bestTree;
-    for (auto it = begin(); it != end(); it++) {
-        (*it)->getCheckpoint()->startStruct((*it)->aln->name);
-        cout << "---> TREE SEARCH ON " << (*it)->aln->name << endl;
-        curScore += ((IQTree*)(*it))->doTreeSearch();
-        (*it)->getCheckpoint()->endStruct();
+    
+    cout << "--------------------------------------------------------------------" << endl;
+    cout << "|                SEPARATE TREE SEARCH FOR PARTITIONS               |" << endl;
+    cout << "--------------------------------------------------------------------" << endl;
+
+    if (part_order.empty())
+        computePartitionOrder();
+
+    int saved_flag = params->suppress_output_flags;
+    params->suppress_output_flags &= ~OUT_TREEFILE;
+    VerboseMode saved_mode = verbose_mode;
+    verbose_mode = VB_QUIET;
+
+#pragma omp parallel for schedule(dynamic) num_threads(num_threads) if (num_threads > 1) reduction(+:curScore)
+    for (int i = 0; i < size(); i++) {
+        IQTree *part_tree = (IQTree*)at(part_order[i]);
+        Checkpoint *ckp = new Checkpoint;
+        getCheckpoint()->getSubCheckpoint(ckp, part_tree->aln->name);
+        part_tree->setCheckpoint(ckp);
+        double score = part_tree->doTreeSearch();
+        curScore += score;
+#pragma omp critical
+        {
+            getCheckpoint()->putSubCheckpoint(ckp, part_tree->aln->name);
+            getCheckpoint()->dump();
+            verbose_mode = saved_mode;
+            cout << "Partition " << part_tree->aln->name
+                 << " / Iterations: " << part_tree->stop_rule.getCurIt()
+                 << " / LogL: " << score
+                 << " / Time: " << convert_time(getRealTime() - params->start_real_time)
+                 << endl;
+            verbose_mode = VB_QUIET;
+        }
+        delete ckp;
+        part_tree->setCheckpoint(getCheckpoint());
     }
+
+    verbose_mode = saved_mode;
+    params->suppress_output_flags= saved_flag;
+
+    cout << "BETTER TREE FOUND: " << curScore << endl;
+    
     bestTree = getTreeString();
     addTreeToCandidateSet(bestTree, getCurScore(), false, MPIHelper::getInstance().getProcessID());
     printResultTree();

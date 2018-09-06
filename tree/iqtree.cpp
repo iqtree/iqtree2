@@ -2278,7 +2278,7 @@ double IQTree::doTreeSearch() {
         printBestCandidateTree();
         saveCheckpoint();
         getCheckpoint()->putBool("finishedCandidateSet", true);
-        getCheckpoint()->dump(true);
+        getCheckpoint()->dump();
     } else {
         cout << "CHECKPOINT: Candidate tree set restored, best LogL: " << candidateTrees.getBestScore() << endl;
     }
@@ -2526,7 +2526,7 @@ double IQTree::doTreeSearch() {
     cout << "Total number of trees received: " << MPIHelper::getInstance().getNumTreeReceived() << endl;
     cout << "Total number of trees sent: " << MPIHelper::getInstance().getNumTreeSent() << endl;
     cout << "Total number of NNI searches done by myself: " << MPIHelper::getInstance().getNumNNISearch() << endl;
-    MPIHelper::getInstance().resetNumbers();
+    //MPIHelper::getInstance().resetNumbers();
 //    MPI_Finalize();
 //    if (MPIHelper::getInstance().getProcessID() != MASTER) {
 //        exit(0);
@@ -4051,6 +4051,8 @@ void IQTree::printResultTree(ostream &out) {
 
 void IQTree::printBestCandidateTree() {
     if (MPIHelper::getInstance().isWorker())
+        return;
+    if (params->suppress_output_flags & OUT_TREEFILE)
         return;
     string tree_file_name = params->out_prefix;
     tree_file_name += ".treefile";
