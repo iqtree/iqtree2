@@ -2338,8 +2338,6 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
 	if (params.min_iterations > 0 && !params.tree_spr) {
 		iqtree->doTreeSearch();
 		iqtree->setAlignment(iqtree->aln);
-        cout << "TREE SEARCH COMPLETED AFTER " << iqtree->stop_rule.getCurIt() << " ITERATIONS"
-            << " / Time: " << convert_time(getRealTime() - params.start_real_time) << endl << endl;
 	} else {
         iqtree->candidateTrees.saveCheckpoint();
 		/* do SPR with likelihood function */

@@ -2533,6 +2533,8 @@ double IQTree::doTreeSearch() {
 //    }
 #endif
 
+    cout << "TREE SEARCH COMPLETED AFTER " << stop_rule.getCurIt() << " ITERATIONS"
+    << " / Time: " << convert_time(getRealTime() - params->start_real_time) << endl << endl;
 
     return candidateTrees.getBestScore();
 

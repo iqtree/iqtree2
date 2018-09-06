@@ -53,6 +53,9 @@ public:
      */
     void buildSeqStates(bool add_unobs_const = false);
 
+    /** TRUE if all taxon sets are separate */
+    bool unlinked_taxa;
+    
 };
 
 #endif
