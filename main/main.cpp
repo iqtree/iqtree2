@@ -54,7 +54,7 @@
 #include "phyloanalysis.h"
 #include "tree/matree.h"
 //#include "ngs.h"
-//#include "parsmultistate.h"
+#include "obsolete/parsmultistate.h"
 //#include "gss.h"
 #include "alignment/maalignment.h" //added by MA
 #include "tree/ncbitree.h"
@@ -2540,8 +2540,8 @@ int main(int argc, char *argv[]) {
 	// call the main function
 	if (Params::getInstance().tree_gen != NONE) {
 		generateRandomTree(Params::getInstance());
-//	} else if (Params::getInstance().do_pars_multistate) {
-//		doParsMultiState(Params::getInstance());
+    } else if (Params::getInstance().do_pars_multistate) {
+        doParsMultiState(Params::getInstance());
 	} else if (Params::getInstance().rf_dist_mode != 0) {
 		computeRFDist(Params::getInstance());
 	} else if (Params::getInstance().test_input != TEST_NONE) {

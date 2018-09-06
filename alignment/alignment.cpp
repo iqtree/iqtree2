@@ -1298,21 +1298,24 @@ char Alignment::convertStateBack(char state) {
     }
 }
 
-string Alignment::convertStateBackStr(char state) {
+string Alignment::convertStateBackStr(StateType state) {
 	string str;
     if (seq_type == SEQ_POMO)
         return string("POMO")+convertIntToString(state);
-	if (seq_type != SEQ_CODON) {
-		str = convertStateBack(state);
-	} else {
-		// codon data
-		if (state >= num_states) return "???";
-		assert(codon_table);
-		state = codon_table[(int)state];
-		str = symbols_dna[state/16];
-		str += symbols_dna[(state%16)/4];
-		str += symbols_dna[state%4];
+    if (seq_type == SEQ_MULTISTATE)
+        return " " + convertIntToString(state);
+	if (seq_type == SEQ_CODON) {
+        // codon data
+        if (state >= num_states) return "???";
+        assert(codon_table);
+        state = codon_table[(int)state];
+        str = symbols_dna[state/16];
+        str += symbols_dna[(state%16)/4];
+        str += symbols_dna[state%4];
+        return str;
 	}
+    // all other data types
+    str = convertStateBack(state);
 	return str;
 }
 
@@ -1406,9 +1409,9 @@ SeqType Alignment::getSeqType(const char *sequence_type) {
         user_seq_type = SEQ_PROTEIN;
     } else if (strncmp(sequence_type, "NT2AA", 5) == 0) {
         user_seq_type = SEQ_PROTEIN;
-    } else if (strcmp(sequence_type, "NUM") == 0 || strcmp(sequence_type, "MORPH") == 0 || strcmp(sequence_type, "MULTI") == 0) {
+    } else if (strcmp(sequence_type, "NUM") == 0 || strcmp(sequence_type, "MORPH") == 0) {
         user_seq_type = SEQ_MORPH;
-    } else if (strcmp(sequence_type, "TINA") == 0) {
+    } else if (strcmp(sequence_type, "TINA") == 0 || strcmp(sequence_type, "MULTI") == 0) {
         user_seq_type = SEQ_MULTISTATE;
     } else if (strncmp(sequence_type, "CODON", 5) == 0) {
         user_seq_type = SEQ_CODON;
@@ -1503,11 +1506,11 @@ int Alignment::buildPattern(StrVector &sequences, char *sequence_type, int nseq,
             num_states = 20;
             nt2aa = true;
             cout << "Translating to amino-acid sequences with genetic code " << &sequence_type[5] << " ..." << endl;
-        } else if (strcmp(sequence_type, "NUM") == 0 || strcmp(sequence_type, "MORPH") == 0 || strcmp(sequence_type, "MULTI") == 0) {
+        } else if (strcmp(sequence_type, "NUM") == 0 || strcmp(sequence_type, "MORPH") == 0) {
             num_states = getMorphStates(sequences);
             if (num_states < 2 || num_states > 32) throw "Invalid number of states";
             user_seq_type = SEQ_MORPH;
-        } else if (strcmp(sequence_type, "TINA") == 0) {
+        } else if (strcmp(sequence_type, "TINA") == 0 || strcmp(sequence_type, "MULTI") == 0) {
             cout << "Multi-state data with " << num_states << " alphabets" << endl;
             user_seq_type = SEQ_MULTISTATE;
         } else if (strncmp(sequence_type, "CODON", 5) == 0) {
@@ -1634,7 +1637,7 @@ int Alignment::readPhylip(char *filename, char *sequence_type) {
     string line;
     // remove the failbit
     in.exceptions(ios::badbit);
-    bool tina_state = (sequence_type && strcmp(sequence_type,"TINA") == 0);
+    bool tina_state = (sequence_type && (strcmp(sequence_type,"TINA") == 0 || strcmp(sequence_type,"MULTI") == 0));
     num_states = 0;
 
     for (; !in.eof(); line_num++) {

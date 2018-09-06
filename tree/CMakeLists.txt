@@ -39,6 +39,8 @@ supernode.cpp
 supernode.h
 tinatree.cpp
 tinatree.h
+parstree.cpp
+parstree.h
 )
 
 target_link_libraries(tree pll model alignment)
