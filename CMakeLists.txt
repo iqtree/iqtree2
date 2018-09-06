@@ -538,6 +538,8 @@ main/phyloanalysis.cpp
 main/phyloanalysis.h
 main/phylotesting.cpp
 main/phylotesting.h
+obsolete/parsmultistate.cpp
+obsolete/parsmultistate.h
 )
 
 if(Backtrace_FOUND)
