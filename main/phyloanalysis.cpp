@@ -942,7 +942,7 @@ void reportPhyloAnalysis(Params &params, IQTree &tree, ModelCheckpoint &model_in
 				case SEQ_CODON: out << "CODON"; break;
 				case SEQ_DNA: out << "DNA"; break;
 				case SEQ_MORPH: out << "MORPH"; break;
-				case SEQ_MULTISTATE: out << "TINA"; break;
+				case SEQ_MULTISTATE: out << "MULTI"; break;
 				case SEQ_PROTEIN: out << "AA"; break;
 				case SEQ_POMO: out << "POMO"; break;
 				case SEQ_UNKNOWN: out << "???"; break;

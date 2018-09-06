@@ -2711,6 +2711,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 			}
 			if (strcmp(argv[cnt], "-tina") == 0) {
 				params.do_pars_multistate = true;
+                params.ignore_checkpoint = true;
 				continue;
 			}
 			if (strcmp(argv[cnt], "-pval") == 0) {

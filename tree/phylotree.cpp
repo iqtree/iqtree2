@@ -5105,7 +5105,8 @@ void PhyloTree::convertToRooted() {
 
 void PhyloTree::convertToUnrooted() {
     ASSERT(rooted);
-    ASSERT(leafNum == aln->getNSeq()+1);
+    if (aln)
+        ASSERT(leafNum == aln->getNSeq()+1);
     ASSERT(root);
     ASSERT(root->isLeaf() && root->id == leafNum-1);
     Node *node = root->neighbors[0]->node;
@@ -5137,7 +5138,9 @@ void PhyloTree::convertToUnrooted() {
     delete root;
     // set a temporary taxon so that tree traversal works
     root = taxon;
-    setRootNode(params->root);
+    
+    if (params)
+        setRootNode(params->root);
 
     initializeTree();
     clearBranchDirection();
