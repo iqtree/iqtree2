@@ -2658,7 +2658,7 @@ void runMultipleTreeReconstruction(Params &params, Alignment *alignment, IQTree 
     // initialize tree and model strucgture
     ModelsBlock *models_block = readModelsDefinition(params);
     tree->setParams(&params);
-    tree->num_threads = params.num_threads;
+    tree->setNumThreads(params.num_threads);
     if (!tree->getModelFactory()) {
         tree->initializeModel(params, tree->aln->model_name, models_block);
     }
@@ -3197,8 +3197,9 @@ void computeSiteFrequencyModel(Params &params, Alignment *alignment) {
     delete models_block;
     tree->setModel(tree->getModelFactory()->model);
     tree->setRate(tree->getModelFactory()->site_rate);
-    tree->setLikelihoodKernel(params.SSE, params.num_threads);
-
+    tree->setLikelihoodKernel(params.SSE);
+    tree->setNumThreads(params.num_threads);
+    
     if (!tree->getModel()->isMixture())
         outError("No mixture model was specified!");
     uint64_t mem_size = tree->getMemoryRequired();
