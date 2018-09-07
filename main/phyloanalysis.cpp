@@ -61,6 +61,11 @@
 #include "tree/upperbounds.h"
 #include "utils/MPIHelper.h"
 
+#ifdef USE_BOOSTER
+extern "C" {
+#include "booster/booster.h"
+}
+#endif
 
 void reportReferences(Params &params, ofstream &out) {
     bool modelfinder_only = false;
@@ -3127,6 +3132,26 @@ void runStandardBootstrap(Params &params, Alignment *alignment, IQTree *tree) {
 	} else
 		cout << endl;
 
+#ifdef USE_BOOSTER
+    if (params.transfer_bootstrap) {
+        // transfer bootstrap expectation (TBE)
+        cout << "Performing transfer bootstrap expectation..." << endl;
+        string input_tree = (string)params.out_prefix + ".treefile";
+        string boot_trees = (string)params.out_prefix + ".boottrees";
+        string out_tree = (string)params.out_prefix + ".tbe.tree";
+        string out_raw_tree = (string)params.out_prefix + ".tbe.rawtree";
+        string stat_out = (string)params.out_prefix + ".tbe.stat";
+        main_booster(input_tree.c_str(), boot_trees.c_str(), out_tree.c_str(),
+                     (params.transfer_bootstrap==2) ? out_raw_tree.c_str() : NULL,
+                     stat_out.c_str(), (verbose_mode >= VB_MED) ? 0 : 1);
+        cout << "TBE tree written to " << out_tree << endl;
+        if (params.transfer_bootstrap == 2)
+            cout << "TBE raw tree written to " << out_raw_tree << endl;
+        cout << "TBE statistic written to " << stat_out << endl;
+        cout << endl;
+    }
+#endif
+    
     if (MPIHelper::getInstance().isMaster()) {
         cout << "Total CPU time for " << RESAMPLE_NAME << ": " << (getCPUTime() - start_time) << " seconds." << endl;
 	cout << "Total wall-clock time for " << RESAMPLE_NAME << ": " << (getRealTime() - start_real_time) << " seconds." << endl << endl;

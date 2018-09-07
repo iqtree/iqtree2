@@ -772,6 +772,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.gurobi_threads = 1;
     params.num_bootstrap_samples = 0;
     params.bootstrap_spec = NULL;
+    params.transfer_bootstrap = 0;
 
     params.aln_file = NULL;
     params.phylip_sequential_format = false;
@@ -2436,7 +2437,18 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.bootstrap_spec = argv[cnt];
 				continue;
 			}
-			if (strcmp(argv[cnt], "-bc") == 0) {
+            
+            if (strcmp(argv[cnt], "--tbe") == 0) {
+                params.transfer_bootstrap = 1;
+                continue;
+            }
+
+            if (strcmp(argv[cnt], "--tbe-raw") == 0) {
+                params.transfer_bootstrap = 2;
+                continue;
+            }
+
+            if (strcmp(argv[cnt], "-bc") == 0) {
 				params.multi_tree = true;
 				params.compute_ml_tree = false;
 				cnt++;

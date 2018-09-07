@@ -1489,6 +1489,9 @@ public:
     */
     char *bootstrap_spec;
 
+    /** 1 or 2 to perform transfer boostrap expectation (TBE) */
+    int transfer_bootstrap;
+    
     /**
             1 if output all intermediate trees (initial trees, NNI-optimal trees and trees after each NNI step)
             2 if output all intermediate trees + 1-NNI-away trees

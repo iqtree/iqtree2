@@ -490,6 +490,12 @@ endif(ZLIB_FOUND)
 ##################################################################
 # subdirectories containing necessary libraries for the build
 ##################################################################
+
+if (USE_BOOSTER MATCHES "ON")
+    add_subdirectory(booster)
+    add_definitions(-DUSE_BOOSTER)
+endif()
+
 add_subdirectory(pll)
 add_subdirectory(ncl)
 add_subdirectory(nclextra)
@@ -547,6 +553,9 @@ if(Backtrace_FOUND)
   target_link_libraries(iqtree ${Backtrace_LIBRARY})
 endif(Backtrace_FOUND)
 
+if (USE_BOOSTER MATCHES "ON")
+    target_link_libraries(iqtree booster)
+endif()
 
 if (NOT IQTREE_FLAGS MATCHES "avx" AND NOT IQTREE_FLAGS MATCHES "fma")
     if (NOT IQTREE_FLAGS MATCHES "nosse")
