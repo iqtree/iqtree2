@@ -1765,7 +1765,9 @@ public:
 
     virtual void changeLikelihoodKernel(LikelihoodKernel lk);
 
-    virtual void setLikelihoodKernel(LikelihoodKernel lk, int num_threads);
+    virtual void setLikelihoodKernel(LikelihoodKernel lk);
+
+    virtual void setNumThreads(int num_threads);
 
 #if defined(BINARY32) || defined(__NOAVX__)
     void setLikelihoodKernelAVX() {}
