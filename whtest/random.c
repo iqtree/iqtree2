@@ -170,7 +170,7 @@ double dkiss(void)
 }
 /******************************************************************/
 /*************************************************************************/ 
-double normal(void) 
+double stat_normal(void) 
 { 
 	static int iset = 0; 
 	static double gset; 
@@ -252,7 +252,7 @@ double rgamma(double a, double scale)
 	/* x = (s,1/2)-normal deviate. */ 
 	/* immediate acceptance (i) */ 
 	 
-	t = normal(); 
+	t = stat_normal(); 
 	x = s + 0.5 * t; 
 	ret_val = x * x; 
 	if (t >= 0.0) 
