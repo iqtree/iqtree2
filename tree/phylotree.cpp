@@ -99,7 +99,8 @@ void PhyloTree::init() {
     dist_matrix = NULL;
     var_matrix = NULL;
     params = NULL;
-    setLikelihoodKernel(LK_SSE2, 1);  // FOR TUNG: you forgot to initialize this variable!
+    setLikelihoodKernel(LK_SSE2);  // FOR TUNG: you forgot to initialize this variable!
+    setNumThreads(1);
     num_threads = 0;
     max_lh_slots = 0;
     save_all_trees = 0;
@@ -548,7 +549,10 @@ void PhyloTree::setModelFactory(ModelFactory *model_fac) {
     if (model_fac) {
         model = model_factory->model;
         site_rate = model_factory->site_rate;
-    	setLikelihoodKernel(sse, num_threads);
+        if (!isSuperTree()) {
+            setLikelihoodKernel(sse);
+            setNumThreads(num_threads);
+        }
     } else {
         model = NULL;
         site_rate = NULL;
@@ -2349,6 +2353,23 @@ double PhyloTree::optimizeTreeLengthScaling(double min_scaling, double &scaling,
     is_opt_scaling = true;
     current_scaling = scaling;
     double negative_lh, ferror;
+    // 2018-08-20: make sure that max and min branch lengths do not go over bounds
+    vector<DoubleVector> brlens;
+    brlens.resize(branchNum);
+    getBranchLengths(brlens);
+    double min_brlen = params->max_branch_length, max_brlen = params->min_branch_length;
+    for (auto brlenvec = brlens.begin(); brlenvec != brlens.end(); brlenvec++) {
+        for (auto brlen = brlenvec->begin(); brlen != brlenvec->end(); brlen++) {
+            max_brlen = max(max_brlen, *brlen);
+            min_brlen = min(min_brlen, *brlen);
+        }
+    }
+    if (min_brlen <= 0.0) min_brlen = params->min_branch_length;
+    if (max_scaling > params->max_branch_length / max_brlen)
+        max_scaling = params->max_branch_length / max_brlen;
+    if (min_scaling < params->min_branch_length / min_brlen)
+        min_scaling = params->min_branch_length / min_brlen;
+    
     scaling = minimizeOneDimen(min(scaling, min_scaling), scaling, max(max_scaling, scaling), max(TOL_TREE_LENGTH_SCALE, gradient_epsilon), &negative_lh, &ferror);
     if (scaling != current_scaling) {
         scaleLength(scaling / current_scaling);
@@ -5068,7 +5089,8 @@ void PhyloTree::convertToRooted() {
 
 void PhyloTree::convertToUnrooted() {
     ASSERT(rooted);
-    ASSERT(leafNum == aln->getNSeq()+1);
+    if (aln)
+        ASSERT(leafNum == aln->getNSeq()+1);
     ASSERT(root);
     ASSERT(root->isLeaf() && root->id == leafNum-1);
     Node *node = root->neighbors[0]->node;
@@ -5100,7 +5122,9 @@ void PhyloTree::convertToUnrooted() {
     delete root;
     // set a temporary taxon so that tree traversal works
     root = taxon;
-    setRootNode(params->root);
+    
+    if (params)
+        setRootNode(params->root);
 
     initializeTree();
 //    computeBranchDirection();

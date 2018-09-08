@@ -49,7 +49,9 @@ const char* bin_model_names[] = { "JC2", "GTR2" };
 
 
 /******* Morphological model set ******/
-const char* morph_model_names[] = {"MK", "ORDERED"};
+// 2018-08-20: don't test ORDERED model due to lots of numerical issues
+//const char* morph_model_names[] = {"MK", "ORDERED"};
+const char* morph_model_names[] = {"MK"};
 
 
 /******* DNA model set ******/
@@ -1768,7 +1770,8 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
 		best_model.name = testModel(params, this_tree, part_model_info, models_block,
             (parallel_over_partitions ? 1 : num_threads), params.partition_type, in_tree->at(i)->aln->name, false, part_model_name);
 
-        ASSERT(best_model.restoreCheckpoint(&part_model_info));
+        bool check = (best_model.restoreCheckpoint(&part_model_info));
+        ASSERT(check);
 
 		double score = best_model.computeICScore(this_tree->getAlnNSite());
 		in_tree->at(i)->aln->model_name = best_model.name;

@@ -580,8 +580,8 @@ int getDataBlockMorphStates(NxsCharactersBlock *data_block) {
     char ch;
     int nstates = 0;
 
-    for (site = 0; site < nsite; site++)
-        for (seq = 0; seq < nseq; seq++) {
+    for (seq = 0; seq < nseq; seq++)
+        for (site = 0; site < nsite; site++) {
             int nstate = data_block->GetNumStates(seq, site);
             if (nstate == 0)
                 continue;
@@ -593,23 +593,11 @@ int getDataBlockMorphStates(NxsCharactersBlock *data_block) {
                 else if (ch >= 'A' && ch <= 'Z')
                     ch = ch - 'A' + 11;
                 else
-                    outError(data_block->GetTaxonLabel(seq) + " has invalid state at site " + convertIntToString(site));
+                    outError(data_block->GetTaxonLabel(seq) + " has invalid single state " + ch + " at site " + convertIntToString(site+1));
                 if (ch > nstates) nstates = ch;
                 continue;
             }
-            for (int state = 0; state < nstate; state++) {
-                ch = data_block->GetState(seq, site, state);
-                if (!isalnum(ch)) continue;
-                if (ch >= '0' && ch <= '9') ch = ch - '0' + 1;
-                if (ch >= 'A' && ch <= 'Z') ch = ch - 'A' + 11;
-                if (ch >= '0' && ch <= '9')
-                    ch = ch - '0' + 1;
-                else if (ch >= 'A' && ch <= 'Z')
-                    ch = ch - 'A' + 11;
-                else
-                    outError(data_block->GetTaxonLabel(seq) + " has invalid state at site " + convertIntToString(site));
-                if (ch > nstates) nstates = ch;
-            }
+            //cout << "NOTE: " << data_block->GetTaxonLabel(seq) << " has ambiguous state at site " << site+1 << " which is treated as unknown" << endl;
         }
     return nstates;
 }
@@ -621,7 +609,10 @@ void Alignment::extractDataBlock(NxsCharactersBlock *data_block) {
     //num_states = strlen(symbols);
     char char_to_state[NUM_CHAR];
     char state_to_char[NUM_CHAR];
-
+    
+    if (!data_block->GetMatrix())
+        outError("MATRIX command undeclared or invalid");
+    
     NxsCharactersBlock::DataTypesEnum data_type = (NxsCharactersBlock::DataTypesEnum)data_block->GetDataType();
     if (data_type == NxsCharactersBlock::continuous) {
         outError("Continuous characters not supported");
@@ -1312,21 +1303,24 @@ char Alignment::convertStateBack(char state) {
     }
 }
 
-string Alignment::convertStateBackStr(char state) {
+string Alignment::convertStateBackStr(StateType state) {
 	string str;
     if (seq_type == SEQ_POMO)
         return string("POMO")+convertIntToString(state);
-	if (seq_type != SEQ_CODON) {
-		str = convertStateBack(state);
-	} else {
-		// codon data
-		if (state >= num_states) return "???";
-		assert(codon_table);
-		state = codon_table[(int)state];
-		str = symbols_dna[state/16];
-		str += symbols_dna[(state%16)/4];
-		str += symbols_dna[state%4];
+    if (seq_type == SEQ_MULTISTATE)
+        return " " + convertIntToString(state);
+	if (seq_type == SEQ_CODON) {
+        // codon data
+        if (state >= num_states) return "???";
+        assert(codon_table);
+        state = codon_table[(int)state];
+        str = symbols_dna[state/16];
+        str += symbols_dna[(state%16)/4];
+        str += symbols_dna[state%4];
+        return str;
 	}
+    // all other data types
+    str = convertStateBack(state);
 	return str;
 }
 
@@ -1420,9 +1414,9 @@ SeqType Alignment::getSeqType(const char *sequence_type) {
         user_seq_type = SEQ_PROTEIN;
     } else if (strncmp(sequence_type, "NT2AA", 5) == 0) {
         user_seq_type = SEQ_PROTEIN;
-    } else if (strcmp(sequence_type, "NUM") == 0 || strcmp(sequence_type, "MORPH") == 0 || strcmp(sequence_type, "MULTI") == 0) {
+    } else if (strcmp(sequence_type, "NUM") == 0 || strcmp(sequence_type, "MORPH") == 0) {
         user_seq_type = SEQ_MORPH;
-    } else if (strcmp(sequence_type, "TINA") == 0) {
+    } else if (strcmp(sequence_type, "TINA") == 0 || strcmp(sequence_type, "MULTI") == 0) {
         user_seq_type = SEQ_MULTISTATE;
     } else if (strncmp(sequence_type, "CODON", 5) == 0) {
         user_seq_type = SEQ_CODON;
@@ -1517,11 +1511,11 @@ int Alignment::buildPattern(StrVector &sequences, char *sequence_type, int nseq,
             num_states = 20;
             nt2aa = true;
             cout << "Translating to amino-acid sequences with genetic code " << &sequence_type[5] << " ..." << endl;
-        } else if (strcmp(sequence_type, "NUM") == 0 || strcmp(sequence_type, "MORPH") == 0 || strcmp(sequence_type, "MULTI") == 0) {
+        } else if (strcmp(sequence_type, "NUM") == 0 || strcmp(sequence_type, "MORPH") == 0) {
             num_states = getMorphStates(sequences);
             if (num_states < 2 || num_states > 32) throw "Invalid number of states";
             user_seq_type = SEQ_MORPH;
-        } else if (strcmp(sequence_type, "TINA") == 0) {
+        } else if (strcmp(sequence_type, "TINA") == 0 || strcmp(sequence_type, "MULTI") == 0) {
             cout << "Multi-state data with " << num_states << " alphabets" << endl;
             user_seq_type = SEQ_MULTISTATE;
         } else if (strncmp(sequence_type, "CODON", 5) == 0) {
@@ -1648,7 +1642,7 @@ int Alignment::readPhylip(char *filename, char *sequence_type) {
     string line;
     // remove the failbit
     in.exceptions(ios::badbit);
-    bool tina_state = (sequence_type && strcmp(sequence_type,"TINA") == 0);
+    bool tina_state = (sequence_type && (strcmp(sequence_type,"TINA") == 0 || strcmp(sequence_type,"MULTI") == 0));
     num_states = 0;
 
     for (; !in.eof(); line_num++) {
@@ -3007,7 +3001,7 @@ void extractSiteID(Alignment *aln, const char* spec, IntVector &site_id) {
             for (i = lower; i <= upper; i+=step)
                 site_id.push_back(i);
             if (*str == ',' || *str == ' ') str++;
-            else break;
+            //else break;
         }
         if (aln->seq_type == SEQ_CODON && nchars % 3 != 0)
             throw (string)"Range " + spec + " length is not multiple of 3 (necessary for codon data)";
@@ -3256,7 +3250,11 @@ void Alignment::createBootstrapAlignment(int *pattern_freq, const char *spec, in
 		}
 	} else {
 		// resampling sites within genes
-		convert_int_vec(spec, site_vec);
+        try {
+            convert_int_vec(spec, site_vec);
+        } catch (...) {
+            outError("-bsam not allowed for non-partition model");
+        }
 		if (site_vec.size() % 2 != 0)
 			outError("Bootstrap specification length is not divisible by 2");
 		int part, begin_site = 0, out_site = 0;
@@ -3271,7 +3269,7 @@ void Alignment::createBootstrapAlignment(int *pattern_freq, const char *spec, in
 			begin_site += site_vec[part];
 			out_site += site_vec[part+1];
 		}
-	}
+    }
 }
 
 

@@ -33,6 +33,7 @@ class PhyloNeighbor : public Neighbor {
     friend class PhyloSuperTree;
     friend class PhyloTreeMixlen;
     friend class MemSlotVector;
+    friend class ParsTree;
 
 public:
     friend class TinaTree;

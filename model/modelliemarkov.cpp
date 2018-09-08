@@ -372,13 +372,14 @@ void ModelLieMarkov::init(const char *model_name, string model_params, StateFreq
 // we could make virtual setRates in ModelMarkov and
 // perhaps move this code all into there. - MDW
 void ModelLieMarkov::startCheckpoint() {
-    checkpoint->startStruct("ModelLieMarkov");
+    checkpoint->startStruct("ModelLieMarkov" + name);
 }
 
 void ModelLieMarkov::saveCheckpoint() {
     // saves model_parameters
     startCheckpoint();
-    CKP_ARRAY_SAVE(num_params, model_parameters);
+    if (num_params > 0)
+        CKP_ARRAY_SAVE(num_params, model_parameters);
     endCheckpoint();
     ModelMarkov::saveCheckpoint();
 }
@@ -387,7 +388,8 @@ void ModelLieMarkov::restoreCheckpoint() {
     ModelMarkov::restoreCheckpoint();
     // restores model_parameters
     startCheckpoint();
-    CKP_ARRAY_RESTORE(num_params, model_parameters);
+    if (num_params > 0)
+        CKP_ARRAY_RESTORE(num_params, model_parameters);
     endCheckpoint();
     setRates();                        // updates rate matrix
     decomposeRateMatrix();             // updates eigen system.
