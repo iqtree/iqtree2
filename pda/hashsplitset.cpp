@@ -41,7 +41,8 @@ Split *SplitIntMap::findSplit(Split *sp, int &value) {
 
 int SplitIntMap::getValue(Split *sp) {
     int value;
-    ASSERT(findSplit(sp, value));
+    Split* findsp = findSplit(sp, value);
+    ASSERT(findsp);
     return value;
 }
 
