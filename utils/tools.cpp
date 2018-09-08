@@ -2438,6 +2438,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				continue;
 			}
             
+#ifdef USE_BOOSTER
             if (strcmp(argv[cnt], "--tbe") == 0) {
                 params.transfer_bootstrap = 1;
                 continue;
@@ -2447,6 +2448,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.transfer_bootstrap = 2;
                 continue;
             }
+#endif
 
             if (strcmp(argv[cnt], "-bc") == 0) {
 				params.multi_tree = true;
@@ -3822,6 +3824,9 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -b <#replicates>     Bootstrap + ML tree + consensus tree (>=100)" << endl
             << "  -bc <#replicates>    Bootstrap + consensus tree" << endl
             << "  -bo <#replicates>    Bootstrap only" << endl
+#ifdef USE_BOOSTER
+            << "  --tbe                Transfer bootstrap expectation" << endl
+#endif
 //            << "  -t <threshold>       Minimum bootstrap support [0...1) for consensus tree" << endl
             << endl << "SINGLE BRANCH TEST:" << endl
             << "  -alrt <#replicates>  SH-like approximate likelihood ratio test (SH-aLRT)" << endl
