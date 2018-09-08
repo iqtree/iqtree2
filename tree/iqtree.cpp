@@ -225,10 +225,11 @@ void IQTree::initSettings(Params &params) {
 
     searchinfo.nni_type = params.nni_type;
     optimize_by_newton = params.optimize_by_newton;
+    setLikelihoodKernel(params.SSE);
     if (num_threads > 0)
-        setLikelihoodKernel(params.SSE, num_threads);
+        setNumThreads(num_threads);
     else
-        setLikelihoodKernel(params.SSE, params.num_threads);
+        setNumThreads(params.num_threads);
     candidateTrees.init(this->aln, 200);
     intermediateTrees.init(this->aln, 200000);
 
@@ -566,6 +567,8 @@ void IQTree::computeInitialTree(LikelihoodKernel kernel) {
             // TODO: convert to unrooted tree for supertree as non-reversible models
             // do not work with partition models yet
             if (isSuperTree()) {
+                if (!findNodeName(aln->getSeqName(0)))
+                    outError("Taxon " + aln->getSeqName(0) + " does not exist in tree file");
                 convertToUnrooted();
                 cout << " rooted tree converted to unrooted tree";
             } else {
@@ -2767,6 +2770,9 @@ void IQTree::refineBootTrees() {
     if (CKP_RESTORE(refined_samples))
         cout << "CHECKPOINT: " << refined_samples << " refined samples restored" << endl;
     checkpoint->endStruct();
+    
+    // 2018-08-17: delete duplicated memory
+    deleteAllPartialLh();
 
 	// do bootstrap analysis
 	for (int sample = refined_samples; sample < boot_trees.size(); sample++) {
@@ -2814,7 +2820,8 @@ void IQTree::refineBootTrees() {
 
         // set likelihood kernel
         boot_tree->setParams(params);
-        boot_tree->setLikelihoodKernel(sse, num_threads);
+        boot_tree->setLikelihoodKernel(sse);
+        boot_tree->setNumThreads(num_threads);
 
         // load the current ufboot tree
         boot_tree->readTreeString(boot_trees[sample]);
@@ -2885,6 +2892,9 @@ void IQTree::refineBootTrees() {
         params->nni5 = true;
 	} else
         params->nni5 = false;
+
+    // 2018-08-17: recover memory
+    initializeAllPartialLh();
 
 }
 
@@ -4324,11 +4334,12 @@ int PhyloTree::testNumThreads() {
     double min_time = max_procs; // minimum time in seconds
     StrVector trees;
     trees.push_back(getTreeString());
+    setLikelihoodKernel(sse);
 
     for (int proc = 1; proc <= max_procs; proc++) {
 
         omp_set_num_threads(proc);
-        setLikelihoodKernel(sse, proc);
+        setNumThreads(proc);
         initializeAllPartialLh();
 
         double beginTime = getRealTime();
@@ -4384,7 +4395,7 @@ int PhyloTree::testNumThreads() {
     readTreeString(trees[0]);
 
     cout << "BEST NUMBER OF THREADS: " << bestProc+1 << endl << endl;
-    setLikelihoodKernel(sse, bestProc+1);
+    setNumThreads(bestProc+1);
 
     return bestProc+1;
 #endif

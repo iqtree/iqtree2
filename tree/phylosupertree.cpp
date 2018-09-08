@@ -157,23 +157,29 @@ void PhyloSuperTree::setParams(Params* params) {
 
 void PhyloSuperTree::initSettings(Params &params) {
 	IQTree::initSettings(params);
-    num_threads = (size() >= params.num_threads) ? params.num_threads : 1;
+    setLikelihoodKernel(params.SSE);
+    setNumThreads(params.num_threads);
 	for (iterator it = begin(); it != end(); it++) {
 		(*it)->params = &params;
-		(*it)->setLikelihoodKernel(params.SSE, (size() >= params.num_threads) ? 1 : params.num_threads);
 		(*it)->optimize_by_newton = params.optimize_by_newton;
 	}
 
 }
 
-void PhyloSuperTree::setLikelihoodKernel(LikelihoodKernel lk, int num_threads) {
-    PhyloTree::setLikelihoodKernel(lk, (size() >= num_threads) ? num_threads : 1);
+void PhyloSuperTree::setLikelihoodKernel(LikelihoodKernel lk) {
+    PhyloTree::setLikelihoodKernel(lk);
     for (iterator it = begin(); it != end(); it++)
-        (*it)->setLikelihoodKernel(lk, (size() >= num_threads) ? 1 : num_threads);
+        (*it)->setLikelihoodKernel(lk);
 }
 
 void PhyloSuperTree::changeLikelihoodKernel(LikelihoodKernel lk) {
 	PhyloTree::changeLikelihoodKernel(lk);
+}
+
+void PhyloSuperTree::setNumThreads(int num_threads) {
+    PhyloTree::setNumThreads((size() >= num_threads) ? num_threads : 1);
+    for (iterator it = begin(); it != end(); it++)
+        (*it)->setNumThreads((size() >= num_threads) ? 1 : num_threads);
 }
 
 string PhyloSuperTree::getTreeString() {
@@ -1164,7 +1170,7 @@ void PhyloSuperTree::initMarginalAncestralState(ostream &out, bool &orig_kernel_
     if (!orig_kernel_nonrev) {
         // switch to nonrev kernel to compute _pattern_lh_cat_state
         params->kernel_nonrev = true;
-        setLikelihoodKernel(sse, num_threads);
+        setLikelihoodKernel(sse);
         clearAllPartialLH();
     }
 
@@ -1248,7 +1254,7 @@ void PhyloSuperTree::endMarginalAncestralState(bool orig_kernel_nonrev,
     if (!orig_kernel_nonrev) {
         // switch back to REV kernel
         params->kernel_nonrev = orig_kernel_nonrev;
-        setLikelihoodKernel(sse, num_threads);
+        setLikelihoodKernel(sse);
         clearAllPartialLH();
     }
     aligned_free(ptn_ancestral_seq);

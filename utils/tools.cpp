@@ -2718,6 +2718,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 			}
 			if (strcmp(argv[cnt], "-tina") == 0) {
 				params.do_pars_multistate = true;
+                params.ignore_checkpoint = true;
 				continue;
 			}
 			if (strcmp(argv[cnt], "-pval") == 0) {
@@ -3611,6 +3612,9 @@ void parseArg(int argc, char *argv[], Params &params) {
 #endif
     }
 
+    if (params.do_au_test)
+        outError("The AU test is temporarily disabled due to numerical issue when bp-RELL=0");
+    
     if (params.model_test_and_tree && params.partition_type != BRLEN_OPTIMIZE)
         outError("-mtree not allowed with edge-linked partition model (-spp or -q)");
 

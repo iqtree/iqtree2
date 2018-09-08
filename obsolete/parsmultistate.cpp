@@ -22,15 +22,25 @@
 #include "tree/tinatree.h"
 #include "parsmultistate.h"
 #include "alignment/alignment.h"
+#include "tree/parstree.h"
 
 void doParsMultiState(Params &params) {
-	cout << "Here\n";
-    Alignment alignment(params.aln_file, params.sequence_type, params.intype);
-    TinaTree tree;
-    tree.readTree(params.user_file, params.is_rooted);
-	tree.setAlignment(&alignment);
-	tree.drawTree(cout);
-	cout << "Parsimony score is: " << tree.computeParsimonyScore() << endl;
-	cout << "Parsimony score ver2 is: " << tree.computeParsimony() << endl;
+    Alignment alignment(params.aln_file, params.sequence_type, params.intype, "");
+    alignment.orderPatternByNumChars(PAT_VARIANT);
+    ParsTree pars_tree;
+    pars_tree.readTree(params.user_file, params.is_rooted);
+    if (pars_tree.rooted)
+        pars_tree.convertToUnrooted();
+    pars_tree.setAlignment(&alignment);
+    pars_tree.initCostMatrix(CM_LINEAR);
+    int total_length = pars_tree.computeParsimony();
+    cout << "total length: " << total_length << endl;
+    pars_tree.initCostMatrix(CM_UNIFORM);
+    int pars_score = pars_tree.computeParsimony();
+    cout.unsetf(ios::fixed);
+    cout.precision(6);
+    cout << "mean length: " << double(total_length)/pars_score << endl;
+    cout << "Parsimony score is: " << pars_score << endl;
+	//cout << "Parsimony score ver2 is: " << tree.computeParsimony() << endl;
 	//tree.printParsimonyStates();
 }
