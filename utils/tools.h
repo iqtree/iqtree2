@@ -871,6 +871,9 @@ public:
     /** use terrace aware data structure for partition models, default: TRUE */
     bool terrace_aware;
 
+    /** check if the tree lies on a terrace */
+    bool terrace_analysis;
+
     /**
             B, D, or P for Binary, DNA, or Protein sequences
      */

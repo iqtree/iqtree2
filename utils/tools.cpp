@@ -792,6 +792,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.partfinder_rcluster_fast = false;
     params.remove_empty_seq = true;
     params.terrace_aware = true;
+    params.terrace_analysis = false;
     params.sequence_type = NULL;
     params.aln_output = NULL;
     params.aln_site_list = NULL;
@@ -1809,6 +1810,15 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.terrace_aware = false;
 				continue;
 			}
+            if (strcmp(argv[cnt], "--terrace") == 0) {
+#ifdef IQTREE_TERRAPHAST
+                params.terrace_analysis = true;
+#else
+                    throw "Unsupported command: --terrace.\n"
+                        "Please build IQ-TREE with the USE_TERRAPHAST flag.";
+#endif
+                continue;
+            }
 			if (strcmp(argv[cnt], "-sf") == 0) {
 				cnt++;
 				if (cnt >= argc)
@@ -3660,6 +3670,9 @@ void parseArg(int argc, char *argv[], Params &params) {
     if (params.num_runs > 1 && params.lmap_num_quartets >= 0)
         outError("Can't combine --runs and -lmap options");
 
+    if (params.terrace_analysis && !params.partition_file)
+        outError("Terrace analysis requires partition information.");
+
 	// Diep:
 	if(params.ufboot2corr == true){
 		if(params.gbo_replicates <= 0) params.ufboot2corr = false;
@@ -4041,6 +4054,9 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -alninfo             Print alignment sites statistics to .alninfo" << endl
             << "  -czb                 Collapse zero branches in final tree" << endl
             << "  --show-lh            Compute tree likelihood without optimisation" << endl;
+#ifdef IQTREE_TERRAPHAST
+            cout << "  --terrace            Check if the tree lies on a phylogenetic terrace" << endl;
+#endif
 //            << "  -d <file>            Reading genetic distances from file (default: JC)" << endl
 //			<< "  -d <outfile>         Calculate the distance matrix inferred from tree" << endl
 //			<< "  -stats <outfile>     Output some statistics about branch lengths" << endl

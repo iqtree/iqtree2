@@ -5,7 +5,7 @@
 
 # Windows example usages:
 #------------------------
-# cmake -G "Visual Studio 12" <source_dir>            (32-bit version, compiled with MSVC)
+# cmake -G "Visual Studio 12" <source_dir>          (32-bit version, compiled with MSVC)
 # cmake -G "Visual Studio 12 Win64" <source_dir>    (64-bit version, compiled with MSVC)
 # cmake -G "Visual Studio 12 Win64" -T "Intel C++ Compiler XE 15.0" <source_dir>        (64-bit version, compiled with ICC)
 # cmake -G "MinGW Makefiles" <source_dir> (TDM-GCC)
@@ -45,6 +45,8 @@
 
 cmake_minimum_required(VERSION 2.8.10 FATAL_ERROR)
 set(CMAKE_LEGACY_CYGWIN_WIN32 0)
+
+set(GCC_MIN_VERSION "4.8")
 
 project(iqtree)
 add_definitions(-DIQ_TREE)
@@ -95,6 +97,21 @@ endif()
 include_directories("${PROJECT_SOURCE_DIR}")
 
 ##################################################################
+# Include the Terraphast library
+##################################################################
+option(USE_TERRAPHAST "Use phylogentic terraces library (terraphast)" ON)
+
+if (USE_TERRAPHAST)
+   set(GCC_MIN_VERSION "5.4")
+   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DIQTREE_TERRAPHAST")
+
+   option(TERRAPHAST_USE_GMP "" OFF)
+   option(TERRAPHAST_BUILD_CLIB "" OFF)
+   option(TERRAPHAST_BUILD_APPS "" OFF)
+   option(TERRAPHAST_BUILD_TESTS "" OFF)
+endif()
+
+##################################################################
 # Detect target platforms
 ##################################################################
 if (WIN32)
@@ -137,8 +154,13 @@ set(GCC "FALSE")   #  GNU compiler
 set(CLANG "FALSE") # Clang compiler
 set(ICC "FALSE")   # Intel compiler
 set(VCC "FALSE")   # MS Visual C Compiler, note that it is different from MSVC variable
-# using C++11 standard
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+if (USE_TERRAPHAST)
+    # using C++14 standard
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
+else()
+    # using C++11 standard
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+endif()
 
 if (CMAKE_COMPILER_IS_GNUCXX)
     message("Compiler      : GNU Compiler (gcc)")
@@ -151,9 +173,9 @@ if (CMAKE_COMPILER_IS_GNUCXX)
     else()
         set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} -Wl,--gc-sections")
     endif()
-    # require at least gcc 4.8
-    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 4.8)
-        message(FATAL_ERROR "GCC version must be at least 4.8!")
+    # require at least gcc ${GCC_MIN_VERSION}
+    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS GCC_MIN_VERSION)
+        message(FATAL_ERROR "GCC version must be at least ${GCC_MIN_VERSION}!")
     endif()
     if (WIN32)
         # disable AVX on Windows due to memory alignment
@@ -259,7 +281,7 @@ if(CMAKE_SIZEOF_VOID_P EQUAL 4 OR IQTREE_FLAGS MATCHES "m32")
     #SET(EXE_SUFFIX "${EXE_SUFFIX}32")
     if (GCC OR CLANG) 
         set(COMBINED_FLAGS "${COMBINED_FLAGS} -m32")
-      endif()
+    endif()
     add_definitions(-DBINARY32)
 else()
     message("Target binary : 64-bit")
@@ -282,23 +304,23 @@ if (NOT IQTREE_FLAGS MATCHES "single")
     endif()
 
     if (VCC)
-          set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /openmp")
-          include_directories("${PROJECT_SOURCE_DIR}/pll") # for PThreads headers
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /openmp")
+        include_directories("${PROJECT_SOURCE_DIR}/pll") # for PThreads headers
     elseif (ICC)
-          if (WIN32)
+        if (WIN32)
             set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Qopenmp")
-              include_directories("${PROJECT_SOURCE_DIR}/pll") # for PThreads headers
+            include_directories("${PROJECT_SOURCE_DIR}/pll") # for PThreads headers
         else()
             set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -qopenmp")
-          endif()
-      elseif (GCC)
+        endif()
+    elseif (GCC)
         set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pthread")
-          set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp -pthread")
-      elseif (CLANG)
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp -pthread")
+    elseif (CLANG)
         set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pthread")
-          set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp=libomp -pthread")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp=libomp -pthread")
         set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fopenmp=libomp")
-      endif()
+    endif()
 else()
     message("OpenMP        : NONE")
 endif()
@@ -378,12 +400,12 @@ endif()
 # further flag to improve performance
 
 if (IQTREE_FLAGS MATCHES "fma") # AVX+FMA instruction set
-     message("Vectorization : AVX+FMA")
+    message("Vectorization : AVX+FMA")
     add_definitions(-D__SSE3 -D__AVX) # define both SSE3 and AVX directive
     set(COMBINED_FLAGS "${COMBINED_FLAGS} ${FMA_FLAGS}")
     #SET(EXE_SUFFIX "${EXE_SUFFIX}-fma")
 elseif (IQTREE_FLAGS MATCHES "avx") # AVX instruction set
-     message("Vectorization : AVX")
+    message("Vectorization : AVX")
     add_definitions(-D__SSE3 -D__AVX) # define both SSE3 and AVX directive
     set(COMBINED_FLAGS "${COMBINED_FLAGS} ${AVX_FLAGS}")
     #SET(EXE_SUFFIX "${EXE_SUFFIX}-avx")
@@ -512,6 +534,11 @@ add_subdirectory(gsl)
 add_subdirectory(alignment)
 add_subdirectory(tree)
 
+if (USE_TERRAPHAST)
+   add_subdirectory(terraphast)
+   add_subdirectory(terrace)
+endif()
+
 ##################################################################
 # the main executable
 ##################################################################
@@ -617,6 +644,10 @@ endif()
 # basic linking librararies
 target_link_libraries(iqtree pll ncl nclextra utils pda lbfgsb whtest sprng vectorclass model gsl alignment tree ${PLATFORM_LIB} ${STD_LIB} ${THREAD_LIB} ${ATOMIC_LIB})
 
+if (USE_TERRAPHAST)
+   target_link_libraries(iqtree terrace)
+endif()
+
 if (NOT IQTREE_FLAGS MATCHES "nosse")
     target_link_libraries(iqtree kernelsse)
 endif()
@@ -683,8 +714,8 @@ if (WIN32)
             install(FILES  "${PROJECT_SOURCE_DIR}/lib/pthreadVC2.dll" DESTINATION bin)
             install(FILES  "${PROJECT_SOURCE_DIR}/lib/libiomp5md.dll" DESTINATION bin)
         endif()
-#        install(FILES  "${PROJECT_SOURCE_DIR}/lib/pthreadGC2.dll" DESTINATION bin)
-#        install(FILES  "${PROJECT_SOURCE_DIR}/lib/pthreadGC2_64.dll" DESTINATION bin)
+#       install(FILES  "${PROJECT_SOURCE_DIR}/lib/pthreadGC2.dll" DESTINATION bin)
+#       install(FILES  "${PROJECT_SOURCE_DIR}/lib/pthreadGC2_64.dll" DESTINATION bin)
     endif()
 
     if (NOT IQTREE_FLAGS MATCHES "single" AND CLANG)
