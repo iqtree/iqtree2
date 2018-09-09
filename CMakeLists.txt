@@ -103,7 +103,7 @@ option(USE_TERRAPHAST "Use phylogentic terraces library (terraphast)" ON)
 
 if (USE_TERRAPHAST)
    set(GCC_MIN_VERSION "5.4")
-   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DIQTREE_TERRAPHAST")
+   add_definitions(-DIQTREE_TERRAPHAST)
 
    option(TERRAPHAST_USE_GMP "" OFF)
    option(TERRAPHAST_BUILD_CLIB "" OFF)
@@ -513,7 +513,8 @@ endif(ZLIB_FOUND)
 # subdirectories containing necessary libraries for the build
 ##################################################################
 
-if (USE_BOOSTER MATCHES "ON")
+option(USE_BOOSTER "Use Booster for transfer bootstrap expectation" ON)
+if (USE_BOOSTER)
     add_subdirectory(booster)
     add_definitions(-DUSE_BOOSTER)
 endif()
@@ -580,7 +581,7 @@ if(Backtrace_FOUND)
   target_link_libraries(iqtree ${Backtrace_LIBRARY})
 endif(Backtrace_FOUND)
 
-if (USE_BOOSTER MATCHES "ON")
+if (USE_BOOSTER)
     target_link_libraries(iqtree booster)
 endif()
 
