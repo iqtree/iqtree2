@@ -3830,7 +3830,7 @@ void IQTree::summarizeBootstrap(Params &params, MTreeSet &trees) {
 //    mytree.readTree(tree_stream, rooted);
 //    mytree.assignLeafID();
     assignLeafNameByID();
-    createBootstrapSupport(taxname, trees, sg, hash_ss, NULL);
+    createBootstrapSupport(taxname, trees, hash_ss, NULL);
 
     // now write resulting tree with supports
 //    tree_stream.seekp(0, ios::beg);

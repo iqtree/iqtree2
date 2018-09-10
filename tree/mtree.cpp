@@ -2118,22 +2118,28 @@ void MTree::assignBranchSupport(istream &in) {
 		delete (*it);
 }
 
-void MTree::computeRFDist(const char *trees_file, IntVector &dist) {
+void MTree::computeRFDist(const char *trees_file, IntVector &dist, int assign_sup) {
 	cout << "Reading input trees file " << trees_file << endl;
 	try {
 		ifstream in;
         in.exceptions(ios::failbit | ios::badbit);
         in.open(trees_file);
-        computeRFDist(in, dist);
+        computeRFDist(in, dist, assign_sup);
 		in.close();
 	} catch (ios::failure) {
 		outError(ERR_READ_INPUT, trees_file);
 	}
 }
 
-void MTree::computeRFDist(istream &in, IntVector &dist) {
+void MTree::computeRFDist(istream &in, IntVector &dist, int assign_sup) {
 	SplitGraph mysg;
-	convertSplits(mysg, NULL, root->neighbors[0]->node);
+    NodeVector nodes;
+	convertSplits(mysg, &nodes, root->neighbors[0]->node);
+    NodeVector::iterator nit;
+    if (assign_sup)
+        for (nit = nodes.begin(); nit != nodes.end(); nit++)
+            (*nit)->height = 0.0;
+    
 	SplitGraph::iterator sit;
 	for (sit = mysg.begin(); sit != mysg.end(); sit++)
 		(*sit)->setWeight(0.0);
@@ -2197,6 +2203,8 @@ void MTree::computeRFDist(istream &in, IntVector &dist) {
 							cout << " " << taxname[taxid];
 					cout << endl;
 				}
+                if (assign_sup && subsp->trivial() < 0)
+                    nodes[sit-mysg.begin()]->height++;
 			}
 			delete subsp;
 		}
@@ -2212,6 +2220,10 @@ void MTree::computeRFDist(istream &in, IntVector &dist) {
 		in.exceptions(ios::failbit | ios::badbit);
 
 	}
+    if (assign_sup)
+        for (nit = nodes.begin(); nit != nodes.end(); nit++)
+            if (!(*nit)->isLeaf())
+                (*nit)->name = convertIntToString((*nit)->height);
 
 //	cout << ntrees << " trees read" << endl;
 
@@ -2231,7 +2243,7 @@ void MTree::reportDisagreedTrees(vector<string> &taxname, MTreeSet &trees, Split
 }
 
 
-void MTree::createBootstrapSupport(vector<string> &taxname, MTreeSet &trees, SplitGraph &sg, SplitIntMap &hash_ss,
+void MTree::createBootstrapSupport(vector<string> &taxname, MTreeSet &trees, SplitIntMap &hash_ss,
     char *tag, Node *node, Node *dad) {
 	if (!node) node = root;	
 	FOR_NEIGHBOR_IT(node, dad, it) {
@@ -2276,7 +2288,7 @@ void MTree::createBootstrapSupport(vector<string> &taxname, MTreeSet &trees, Spl
 				reportDisagreedTrees(taxname, trees, mysplit);
 			}
 		}
-		createBootstrapSupport(taxname, trees, sg, hash_ss, tag, (*it)->node, node);
+		createBootstrapSupport(taxname, trees, hash_ss, tag, (*it)->node, node);
 	}	
 }
 
