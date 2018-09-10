@@ -2,21 +2,33 @@
 #define MULTITREE_IMPL_HPP
 
 #include "multitree.hpp"
+
 #include <memory>
 
 namespace terraces {
 namespace multitree_impl {
 
 template <typename T>
+struct array_deleter {
+	void operator()(T* ptr) { delete[] ptr; }
+};
+
+template <typename T>
+std::unique_ptr<T[], array_deleter<T>> make_unique_array(std::size_t size) {
+	// this may leak memory if allocation or construction of a T fails
+	return std::unique_ptr<T[], array_deleter<T>>{new T[size]};
+}
+
+template <typename T>
 class storage_block {
 private:
-	std::unique_ptr<T[]> begin;
+	std::unique_ptr<T[], array_deleter<T>> begin;
 	index size;
 	index max_size;
 
 public:
 	storage_block(index max_size)
-	        : begin{std::make_unique<T[]>(max_size)}, size{0}, max_size{max_size} {}
+	        : begin{make_unique_array<T>(max_size)}, size{0}, max_size{max_size} {}
 
 	bool has_space(index required = 1) { return size + required <= max_size; }
 

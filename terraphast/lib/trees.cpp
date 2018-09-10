@@ -65,7 +65,7 @@ std::vector<index> postorder(const tree& t) {
 }
 
 void print_tree_dot(const tree& t, const name_map& n, std::ostream& stream, bool rooted) {
-	auto nop = [](auto) {};
+	auto nop = [](index) {};
 	std::string edge = rooted ? " -> " : " -- ";
 	auto node_cb = [&](index node) {
 		stream << node << " [shape=point];\n";
