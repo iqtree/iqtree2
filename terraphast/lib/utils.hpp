@@ -9,6 +9,13 @@
 namespace terraces {
 namespace utils {
 
+template <class T, class U = T>
+T exchange(T& obj, U&& new_value) {
+	T old_value = std::move(obj);
+	obj = std::forward<U>(new_value);
+	return old_value;
+}
+
 template <typename Iterator>
 Iterator skip_ws(Iterator it, Iterator last) {
 	while (it != last and std::isspace(*it)) {

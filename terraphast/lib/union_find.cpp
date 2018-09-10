@@ -1,4 +1,5 @@
 #include "union_find.hpp"
+#include "utils.hpp"
 
 #include <algorithm>
 #include <cassert>
@@ -18,7 +19,7 @@ index union_find::find(index x) {
 		root = m_parent[root];
 	}
 	while (x != root) {
-		x = std::exchange(m_parent[x], root);
+		x = utils::exchange(m_parent[x], root);
 	}
 	assert(is_representative(root) && root < m_parent.size());
 	return root;

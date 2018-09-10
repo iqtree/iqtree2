@@ -21,9 +21,10 @@ std::ostream& operator<<(std::ostream& stream, utils::named_output<constraints, 
 
 constraints compute_constraints(const std::vector<tree>& trees) {
 	constraints result;
-	auto num_nodes = (*std::max_element(trees.begin(), trees.end(), [](auto& a, auto& b) {
-		                 return a.size() < b.size();
-		         })).size();
+	auto num_nodes =
+	        (*std::max_element(trees.begin(), trees.end(), [](const tree& a, const tree& b) {
+		        return a.size() < b.size();
+		})).size();
 	std::vector<std::pair<index, index>> outermost_nodes(num_nodes, {none, none});
 
 	for (auto& t : trees) {
@@ -75,7 +76,7 @@ index deduplicate_constraints(constraints& in_c) {
 	for (auto& c : in_c) {
 		c = {std::min(c.left, c.shared), std::max(c.left, c.shared), c.right};
 	}
-	std::sort(in_c.begin(), in_c.end(), [](auto a, auto b) {
+	std::sort(in_c.begin(), in_c.end(), [](constraint a, constraint b) {
 		return std::tie(a.left, a.shared, a.right) < std::tie(b.left, b.shared, b.right);
 	});
 	auto it = std::unique(in_c.begin(), in_c.end());
