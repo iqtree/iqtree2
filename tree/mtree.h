@@ -721,9 +721,9 @@ public:
 	 * @param trees_file set of trees in NEWICK
 	 * @param dist (OUT) distance vector
 	 */
-	void computeRFDist(const char *trees_file, IntVector &dist);
+	void computeRFDist(const char *trees_file, IntVector &dist, int assign_sup = 0);
 
-	void computeRFDist(istream &in, IntVector &dist);
+	void computeRFDist(istream &in, IntVector &dist, int assign_sup = 0);
 
 	/**
 	 * insert new taxa next to the existing taxa in the tree
@@ -834,7 +834,7 @@ public:
 		@param taxname vector of taxa names
 		@param trees set of trees
 	*/
-	void createBootstrapSupport(vector<string> &taxname, MTreeSet &trees, SplitGraph &sg, SplitIntMap &hash_ss, char *tag,
+	void createBootstrapSupport(vector<string> &taxname, MTreeSet &trees, SplitIntMap &hash_ss, char *tag,
 		Node *node = NULL, Node *dad = NULL);
 
 	void reportDisagreedTrees(vector<string> &taxname, MTreeSet &trees, Split &mysplit);

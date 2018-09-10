@@ -23,6 +23,7 @@
 
 MTreeSet::MTreeSet()
 {
+    equal_taxon_set = false;
 }
 
 MTreeSet::MTreeSet(const char *userTreeFile, bool &is_rooted, 
@@ -232,6 +233,7 @@ void MTreeSet::readTrees(const char *infile, bool &is_rooted, int burnin, int ma
 }
 
 void MTreeSet::checkConsistency() {
+    equal_taxon_set = true;
 	if (empty()) 
 		return;
 	iterator it;
@@ -265,13 +267,20 @@ void MTreeSet::checkConsistency() {
 			first = false;
 		} else {
 			// now check this tree with the first tree	
-			if (tree->leafNum != taxa1.size())
-				outError("Tree has different number of taxa!");
+            if (tree->leafNum != taxa1.size()) {
+                equal_taxon_set = false;
+				cout << "Tree has different number of taxa!" << endl;
+                break;
+            }
 	
 			for (it2 = taxa.begin(), i = 0; it2 != taxa.end(); it2++, i++) {
-				if ((*it2)->name != taxa1[i]->name) 
-					outError("Tree has different taxa names!");
+                if ((*it2)->name != taxa1[i]->name) {
+                    equal_taxon_set = false;
+					cout << "Tree has different taxa names!" << endl;
+                    break;
+                }
 			}
+            if (!equal_taxon_set) break;
 		}
 	}
 }

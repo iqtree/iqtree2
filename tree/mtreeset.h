@@ -176,8 +176,12 @@ public:
 	*/
 	virtual MTree *newTree() { return new MTree(); }
 
+    /** weight vector for trees */
 	IntVector tree_weights;
 
+    /** TRUE if trees have equal taxon set, FALSE otherwise */
+    bool equal_taxon_set;
+    
 };
 
 #endif

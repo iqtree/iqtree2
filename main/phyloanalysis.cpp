@@ -3785,23 +3785,35 @@ void assignBootstrapSupport(const char *input_trees, int burnin, int max_count,
     } else {
         boot_trees.init(input_trees, rooted, burnin, max_count,
                 tree_weight_file);
-        boot_trees.convertSplits(taxname, sg, hash_ss, SW_COUNT, -1, params->support_tag);
-        scale /= boot_trees.sumTreeWeights();
+        if (boot_trees.equal_taxon_set) {
+            boot_trees.convertSplits(taxname, sg, hash_ss, SW_COUNT, -1, params->support_tag);
+            scale /= boot_trees.sumTreeWeights();
+        }
     }
     //sg.report(cout);
-    cout << "Rescaling split weights by " << scale << endl;
-    if (params->scaling_factor < 0)
-        sg.scaleWeight(scale, true);
-    else {
-        sg.scaleWeight(scale, false, params->numeric_precision);
-    }
+    if (!sg.empty()) {
+        cout << "Rescaling split weights by " << scale << endl;
+        if (params->scaling_factor < 0)
+            sg.scaleWeight(scale, true);
+        else {
+            sg.scaleWeight(scale, false, params->numeric_precision);
+        }
 
-    cout << sg.size() << " splits found" << endl;
+        cout << sg.size() << " splits found" << endl;
+    }
     // compute the percentage of appearance
     //    printSplitSet(sg, hash_ss);
     //sg.report(cout);
     cout << "Creating " << RESAMPLE_NAME << " support values..." << endl;
-    mytree.createBootstrapSupport(taxname, boot_trees, sg, hash_ss, params->support_tag);
+    if (!sg.empty())
+        mytree.createBootstrapSupport(taxname, boot_trees, hash_ss, params->support_tag);
+    else {
+        //mytree.createBootstrapSupport(boot_trees);
+        cout << "Unequal taxon sets, rereading trees..." << endl;
+        IntVector rfdist;
+        mytree.computeRFDist(input_trees, rfdist, 1);
+    }
+    
     //mytree.scaleLength(100.0/boot_trees.size(), true);
     string out_file;
     if (output_tree)
