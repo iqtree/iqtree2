@@ -154,13 +154,8 @@ set(GCC "FALSE")   #  GNU compiler
 set(CLANG "FALSE") # Clang compiler
 set(ICC "FALSE")   # Intel compiler
 set(VCC "FALSE")   # MS Visual C Compiler, note that it is different from MSVC variable
-if (USE_TERRAPHAST)
-    # using C++14 standard
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
-else()
-    # using C++11 standard
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
-endif()
+# using C++11 standard
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 
 if (CMAKE_COMPILER_IS_GNUCXX)
     message("Compiler      : GNU Compiler (gcc)")
