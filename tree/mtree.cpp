@@ -2135,6 +2135,10 @@ void MTree::computeRFDist(istream &in, IntVector &dist, int assign_sup) {
 	SplitGraph mysg;
     NodeVector nodes;
 	convertSplits(mysg, &nodes, root->neighbors[0]->node);
+    StringIntMap name_index;
+    int ntrees, taxid;
+    for (taxid = 0; taxid < mysg.getNTaxa(); taxid++)
+        name_index[mysg.getTaxa()->GetTaxonLabel(taxid)] = taxid;
     NodeVector::iterator nit;
     if (assign_sup)
         for (nit = nodes.begin(); nit != nodes.end(); nit++)
@@ -2143,7 +2147,6 @@ void MTree::computeRFDist(istream &in, IntVector &dist, int assign_sup) {
 	SplitGraph::iterator sit;
 	for (sit = mysg.begin(); sit != mysg.end(); sit++)
 		(*sit)->setWeight(0.0);
-	int ntrees, taxid;
 	for (ntrees = 1; !in.eof(); ntrees++) {
 		MTree tree;
 		bool is_rooted = false;
@@ -2157,9 +2160,9 @@ void MTree::computeRFDist(istream &in, IntVector &dist, int assign_sup) {
 		// create the map from taxa between 2 trees
 		Split taxa_mask(leafNum);
 		for (StrVector::iterator it = taxname.begin(); it != taxname.end(); it++) {
-			taxid = mysg.findLeafName(*it);
-			if (taxid < 0)
-				outError("Taxon not found in full tree: ", *it);
+            if (name_index.find(*it) == name_index.end())
+                outError("Taxon not found in full tree: ", *it);
+			taxid = name_index[*it];
 			taxa_mask.addTaxon(taxid);
 		}
 		// make the taxa ordering right before converting to split system
