@@ -34,7 +34,7 @@ TEST_CASE("union_find::make_bipartition", "[union_find]") {
 	std::vector<bool> b1{1, 0, 1, 1, 0, 1, 0, 0};
 	std::vector<bool> b2{0, 1, 1, 1, 0, 0, 0, 0};
 	std::vector<bool> b3{1, 1, 1, 1, 1, 1, 1, 1};
-	auto check = [&](const auto& vec) {
+	auto check = [&](const std::vector<bool>& vec) {
 		auto uf = union_find::make_bipartition(vec, alloc);
 		auto i0 = std::distance(vec.begin(), std::find(vec.begin(), vec.end(), 0));
 		auto i1 = std::distance(vec.begin(), std::find(vec.begin(), vec.end(), 1));
