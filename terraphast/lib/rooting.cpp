@@ -70,7 +70,7 @@ std::vector<bool> root_split(const tree& t, index num_leaves) {
 	std::vector<bool> split(num_leaves);
 	auto root = t[0];
 	foreach_preorder(t,
-	                 [&](auto i) {
+	                 [&](index i) {
 		                 auto node = t[i];
 		                 if (is_leaf(node)) {
 			                 split[node.taxon()] = true;
@@ -103,7 +103,7 @@ tree reroot_at_node(const tree& t, index node_idx) {
 	auto next = t[cur].parent();
 	while (next != 0) {
 		copy_reversed(t, out, prev, cur, next);
-		prev = std::exchange(cur, std::exchange(next, t[next].parent()));
+		prev = utils::exchange(cur, utils::exchange(next, t[next].parent()));
 	}
 
 	// everything on the opposite side of the original root is unchanged
@@ -138,7 +138,7 @@ void reroot_at_taxon_inplace(tree& t, index comp_taxon) {
 		if (t[p].lchild() == cur) {
 			std::swap(t[p].lchild(), t[p].rchild());
 		}
-		cur = std::exchange(p, t[p].parent());
+		cur = utils::exchange(p, t[p].parent());
 	}
 	// second: move the root down right until we meet root_leaf
 	auto& li = t[0].lchild();
