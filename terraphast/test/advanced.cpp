@@ -159,7 +159,7 @@ TEST_CASE("advanced_results", "[advanced-api]") {
 	                    "(s5,((s4,((s2,s3),s6)),s1));\n"
 	                    "(s5,(((s4,(s3,s6)),s2),s1));\n");
 	std::stringstream ss2;
-	enumerate_terrace(d3, [&](auto& tree) { ss2 << as_newick(tree, m3.names) << '\n'; });
+	enumerate_terrace(d3, [&](const tree& t) { ss2 << as_newick(t, m3.names) << '\n'; });
 	CHECK(ss.str() == ss2.str());
 }
 

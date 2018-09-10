@@ -12,12 +12,11 @@
 namespace terraces {
 namespace utils {
 
-class array_deleter {
-public:
+struct char_array_deleter {
 	void operator()(char* ptr) { ::operator delete[](static_cast<void*>(ptr)); }
 };
 
-using char_buffer = std::unique_ptr<char[], array_deleter>;
+using char_buffer = std::unique_ptr<char[], char_array_deleter>;
 
 class free_list {
 public:
