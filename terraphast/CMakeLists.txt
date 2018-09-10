@@ -186,7 +186,7 @@ if(TERRAPHAST_BUILD_TESTS)
 	set(terraces_targets ${terraces_targets} unittests)
 endif()
 
-set_target_properties(${terraces_targets} PROPERTIES CXX_STANDARD 14 CXX_STANDARD_REQUIRED ON)
+set_target_properties(${terraces_targets} PROPERTIES CXX_STANDARD 11 CXX_STANDARD_REQUIRED ON)
 
 #####################################################################
 # set platform-specific options, include platform-specific files
