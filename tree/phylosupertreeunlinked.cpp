@@ -193,7 +193,7 @@ double PhyloSuperTreeUnlinked::treeLengthInternal( double epsilon, Node *node, N
 }
 
 double PhyloSuperTreeUnlinked::doTreeSearch() {
-    curScore = 0.0;
+    double tree_lh = 0.0;
     string bestTree;
     
     cout << "--------------------------------------------------------------------" << endl;
@@ -208,14 +208,14 @@ double PhyloSuperTreeUnlinked::doTreeSearch() {
     VerboseMode saved_mode = verbose_mode;
     verbose_mode = VB_QUIET;
 
-#pragma omp parallel for schedule(dynamic) num_threads(num_threads) if (num_threads > 1) reduction(+:curScore)
+#pragma omp parallel for schedule(dynamic) num_threads(num_threads) if (num_threads > 1) reduction(+: tree_lh)
     for (int i = 0; i < size(); i++) {
         IQTree *part_tree = (IQTree*)at(part_order[i]);
         Checkpoint *ckp = new Checkpoint;
         getCheckpoint()->getSubCheckpoint(ckp, part_tree->aln->name);
         part_tree->setCheckpoint(ckp);
         double score = part_tree->doTreeSearch();
-        curScore += score;
+        tree_lh += score;
 #pragma omp critical
         {
             getCheckpoint()->putSubCheckpoint(ckp, part_tree->aln->name);
@@ -235,8 +235,10 @@ double PhyloSuperTreeUnlinked::doTreeSearch() {
     verbose_mode = saved_mode;
     params->suppress_output_flags= saved_flag;
 
-    cout << "BETTER TREE FOUND: " << curScore << endl;
-    
+    if (tree_lh < curScore)
+        cout << "BETTER TREE FOUND: " << tree_lh << endl;
+    curScore = tree_lh;
+
     bestTree = getTreeString();
     addTreeToCandidateSet(bestTree, getCurScore(), false, MPIHelper::getInstance().getProcessID());
     printResultTree();
