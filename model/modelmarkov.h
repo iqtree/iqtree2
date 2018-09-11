@@ -252,6 +252,12 @@ public:
 	*/
 	virtual void setStateFrequency(double *state_freq);
 
+    /**
+     set the state frequency vector
+     @param state_freq (IN) state frequency vector. Assume state_freq has size of num_states
+     */
+    virtual void adaptStateFrequency(double *state_freq);
+
 	/**
 	 * compute Q matrix 
 	 * @param q_mat (OUT) Q matrix, assuming of size num_states * num_states
