@@ -126,8 +126,14 @@ PartitionModel::PartitionModel(Params &params, PhyloSuperTree *tree, ModelsBlock
         sum = 1.0/sum;
         for (i = 0; i < mit->second->num_states; i++)
             sum_state_freq[i] *= sum;
-        mit->second->setStateFrequency(sum_state_freq);
+        ((ModelMarkov*)mit->second)->adaptStateFrequency(sum_state_freq);
         mit->second->decomposeRateMatrix();
+        cout << "sum_state_freq:";
+        int prec = cout.precision(8);
+        for (i = 0; i < mit->second->num_states; i++)
+            cout << " " << sum_state_freq[i];
+        cout << endl;
+        cout.precision(prec);
     }
     if (sum_state_freq)
         delete [] sum_state_freq;
