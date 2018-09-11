@@ -1332,3 +1332,38 @@ void PhyloSuperTree::writeBranches(ostream &out) {
     }
 }
 
+void PhyloSuperTree::printBestPartitionParams(const char *filename) {
+    try {
+        ofstream out;
+        out.exceptions(ios::failbit | ios::badbit);
+        out.open(filename);
+        out << "#nexus" << endl
+        << "begin sets;" << endl;
+        int part;
+        SuperAlignment *saln = (SuperAlignment*)aln;
+        for (part = 0; part < size(); part++) {
+            string name = saln->partitions[part]->name;
+            replace(name.begin(), name.end(), '+', '_');
+            out << "  charset " << name << " = ";
+            if (!saln->partitions[part]->aln_file.empty()) out << saln->partitions[part]->aln_file << ": ";
+            if (saln->partitions[part]->seq_type == SEQ_CODON)
+                out << "CODON, ";
+            string pos = saln->partitions[part]->position_spec;
+            replace(pos.begin(), pos.end(), ',' , ' ');
+            out << pos << ";" << endl;
+        }
+        out << "  charpartition mymodels =" << endl;
+        for (part = 0; part < size(); part++) {
+            string name = saln->partitions[part]->name;
+            replace(name.begin(), name.end(), '+', '_');
+            if (part > 0) out << "," << endl;
+            out << "    " << at(part)->getModelNameParams() << ": " << name;
+        }
+        out << ";" << endl;
+        out << "end;" << endl;
+        out.close();
+        cout << "Partition information was printed to " << filename << endl;
+    } catch (ios::failure &) {
+        outError(ERR_WRITE_OUTPUT, filename);
+    }
+}

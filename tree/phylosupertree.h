@@ -430,6 +430,13 @@ public:
      @param out output stream
      */
     virtual void writeBranches(ostream &out);
+
+    /**
+        print partition file with best model parameters
+        @param filename output file name
+     */
+    void printBestPartitionParams(const char *filename);
+
     
     /** True when mixed codon with other data type */
     bool rescale_codon_brlen;

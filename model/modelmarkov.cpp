@@ -1292,6 +1292,9 @@ void ModelMarkov::readStateFreq(istream &in) throw(const char*) {
 	for (i = 0; i < num_states; i++) sum += state_freq[i];
 	if (fabs(sum-1.0) > 1e-2)
 		throw "State frequencies do not sum up to 1.0";
+    sum = 1.0/sum;
+    for (i = 0; i < num_states; i++)
+        state_freq[i] *= sum;
 }
 
 void ModelMarkov::readStateFreq(string str) throw(const char*) {
@@ -1314,6 +1317,9 @@ void ModelMarkov::readStateFreq(string str) throw(const char*) {
 	for (i = 0; i < num_states; i++) sum += state_freq[i];
 	if (fabs(sum-1.0) > 1e-2)
 		outError("State frequencies do not sum up to 1.0 in ", str);
+    sum = 1.0/sum;
+    for (i = 0; i < num_states; i++)
+        state_freq[i] *= sum;
 }
 
 void ModelMarkov::readParameters(const char *file_name) {

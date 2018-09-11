@@ -2466,8 +2466,10 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
 
     }
 
-    if (iqtree->isSuperTree())
+    if (iqtree->isSuperTree()) {
         ((PhyloSuperTree*) iqtree)->computeBranchLengths();
+        ((PhyloSuperTree*) iqtree)->printBestPartitionParams((string(params.out_prefix) + ".best_model.nex").c_str());
+    }
 
     cout << "BEST SCORE FOUND : " << iqtree->getCurScore() << endl;
 
