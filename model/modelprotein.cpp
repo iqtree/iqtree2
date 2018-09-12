@@ -575,6 +575,7 @@ void ModelProtein::init(const char *model_name, string model_params, StateFreqTy
 
 	} else if (!model_params.empty()) {
         readParametersString(model_params);
+        rescaleRates(rates, getNumRateEntries());
         num_params = 0;
     } else if (name_upper == "GTR20") {
         if (!Params::getInstance().link_model) {
@@ -584,8 +585,14 @@ void ModelProtein::init(const char *model_name, string model_params, StateFreqTy
         if (freq == FREQ_UNKNOWN)
             freq = FREQ_EMPIRICAL;
         if (Params::getInstance().model_name_init) {
-            // initialize with custom model file
-            readParameters(Params::getInstance().model_name_init);
+            nxs_model = models_block->findModel(Params::getInstance().model_name_init);
+            if (nxs_model) {
+                readParametersString(nxs_model->description);
+            } else {
+                // initialize with custom model file
+                readParameters(Params::getInstance().model_name_init);
+            }
+            rescaleRates(rates, getNumRateEntries());
             if (!isReversible())
                 outError("Cannot initialize from non-reversible model");
         } else {
@@ -605,8 +612,14 @@ void ModelProtein::init(const char *model_name, string model_params, StateFreqTy
         if (freq == FREQ_UNKNOWN)
             freq = FREQ_ESTIMATE;
         if (Params::getInstance().model_name_init) {
-            // initialize with custom model file
-            readParameters(Params::getInstance().model_name_init);
+            nxs_model = models_block->findModel(Params::getInstance().model_name_init);
+            if (nxs_model) {
+                readParametersString(nxs_model->description);
+            } else {
+                // initialize with custom model file
+                readParameters(Params::getInstance().model_name_init);
+            }
+            rescaleRates(rates, getNumRateEntries());
             if (isReversible())
                 setReversible(false);
         } else {
@@ -621,6 +634,7 @@ void ModelProtein::init(const char *model_name, string model_params, StateFreqTy
 	} else {
 		// if name does not match, read the user-defined model
 		readParameters(model_name);
+        rescaleRates(rates, getNumRateEntries());
         num_params = 0;
 	}
 	if (freq_params != "") {
