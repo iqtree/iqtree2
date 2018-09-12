@@ -70,8 +70,8 @@ endif()
 
 # The version number.
 set (iqtree_VERSION_MAJOR 1)
-set (iqtree_VERSION_MINOR 6)
-set (iqtree_VERSION_PATCH "7.1")
+set (iqtree_VERSION_MINOR 7)
+set (iqtree_VERSION_PATCH "-beta")
 
 set(BUILD_SHARED_LIBS OFF)
 
