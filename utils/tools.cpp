@@ -3784,6 +3784,7 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -q <partition_file>  Edge-linked partition model (file in NEXUS/RAxML format)" << endl
             << " -spp <partition_file> Like -q option but allowing partition-specific rates" << endl
             << "  -sp <partition_file> Edge-unlinked partition model (like -M option of RAxML)" << endl
+            << " -spu <partition_file> Topology-unlinked partition model" << endl
             << "  -t <start_tree_file> or -t BIONJ or -t RANDOM" << endl
             << "                       Starting tree (default: 99 parsimony tree and BIONJ)" << endl
             << "  -te <user_tree_file> Like -t but fixing user tree (no tree search performed)" << endl
@@ -4004,11 +4005,13 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -con                 Computing consensus tree to .contree file" << endl
             << "  -net                 Computing consensus network to .nex file" << endl
             << "  -sup <target_tree>   Assigning support values for <target_tree> to .suptree" << endl
+            << "  -sup2 <target_tree>  Like -sup but work for trees with unequal taxon sets" << endl
             << "  -suptag <name>       Node name (or ALL) to assign tree IDs where node occurs" << endl
             << endl << "ROBINSON-FOULDS DISTANCE:" << endl
             << "  -rf_all              Computing all-to-all RF distances of trees in <treefile>" << endl
             << "  -rf <treefile2>      Computing all RF distances between two sets of trees" << endl
             << "                       stored in <treefile> and <treefile2>" << endl
+            << "  -rf2 <treefile2>     Like -rf but work for trees with unequal taxon sets" << endl
             << "  -rf_adj              Computing RF distances of adjacent trees in <treefile>" << endl
             << endl << "TREE TOPOLOGY TEST:" << endl
             << "  -z <trees_file>      Evaluating a set of user trees" << endl
