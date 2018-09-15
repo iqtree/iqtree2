@@ -3168,10 +3168,13 @@ void evaluateTrees(Params &params, IQTree *tree, vector<TreeInfo> &info, IntVect
 
 		tree->initializeAllPartialLh();
 		tree->fixNegativeBranch(false);
-		if (!params.fixed_branch_length) {
+		if (params.fixed_branch_length) {
+            tree->setCurScore(tree->computeLikelihood());
+        } else if (params.topotest_optimize_model) {
+            tree->getModelFactory()->optimizeParameters(BRLEN_OPTIMIZE, false, params.modelEps);
+            tree->setCurScore(tree->computeLikelihood());
+        } else {
 			tree->setCurScore(tree->optimizeAllBranches(100, 0.001));
-		} else {
-			tree->setCurScore(tree->computeLikelihood());
 		}
 		treeout << "[ tree " << tree_index+1 << " lh=" << tree->getCurScore() << " ]";
 		tree->printTree(treeout);

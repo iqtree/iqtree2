@@ -44,7 +44,7 @@ RateFree::RateFree(int ncat, double start_alpha, string params, bool sorted_rate
                 rates[i] = 1.0;
                 sum_prop += prop[i];
             }
-            fix_params = 1;
+            fix_params = (Params::getInstance().optimize_from_given_params) ? 0 : 1;
         } else {
             if (params_vec.size() != ncategory*2)
                 outError("Number of parameters for FreeRate model must be twice number of categories");
@@ -56,7 +56,7 @@ RateFree::RateFree(int ncat, double start_alpha, string params, bool sorted_rate
             }
             for (i = 0; i < ncategory; i++)
                 rates[i] /= sum;
-            fix_params = 2;
+            fix_params = (Params::getInstance().optimize_from_given_params) ? 0 : 2;
         }
 		if (fabs(sum_prop-1.0) > 1e-5)
 			outError("Sum of category proportions not equal to 1");
