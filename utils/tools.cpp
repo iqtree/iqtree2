@@ -782,6 +782,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.symtest_pcutoff = 0.05;
     params.treeset_file = NULL;
     params.topotest_replicates = 0;
+    params.topotest_optimize_model = false;
     params.do_weighted_test = false;
     params.do_au_test = false;
     params.siteLL_file = NULL; //added by MA
@@ -1722,6 +1723,10 @@ void parseArg(int argc, char *argv[], Params &params) {
 					throw "Please specify at least 1000 replicates";
 				continue;
 			}
+            if (strcmp(argv[cnt], "--estimate-model") == 0) {
+                params.topotest_optimize_model = true;
+                continue;
+            }
 			if (strcmp(argv[cnt], "-zw") == 0) {
 				params.do_weighted_test = true;
 				continue;

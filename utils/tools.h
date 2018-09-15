@@ -836,6 +836,10 @@ public:
     /** number of bootstrap replicates for tree topology test */
     int topotest_replicates;
 
+    /** TRUE to optimize model parameters for topology test,
+     FALSE (default) to only optimize branch lengths */
+    bool topotest_optimize_model;
+
     /** true to perform weighted SH and KH test */
     bool do_weighted_test;
 
