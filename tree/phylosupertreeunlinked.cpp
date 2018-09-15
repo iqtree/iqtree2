@@ -9,6 +9,8 @@
 #include "utils/MPIHelper.h"
 #include "utils/timeutil.h"
 
+extern ostream cmust;
+
 PhyloSuperTreeUnlinked::PhyloSuperTreeUnlinked(SuperAlignment *alignment)
 : PhyloSuperTree(alignment, true)
 {
@@ -204,7 +206,7 @@ double PhyloSuperTreeUnlinked::doTreeSearch() {
         computePartitionOrder();
 
     int saved_flag = params->suppress_output_flags;
-    params->suppress_output_flags &= ~OUT_TREEFILE;
+    params->suppress_output_flags |= OUT_TREEFILE + OUT_LOG;
     VerboseMode saved_mode = verbose_mode;
     verbose_mode = VB_QUIET;
 
@@ -220,13 +222,11 @@ double PhyloSuperTreeUnlinked::doTreeSearch() {
         {
             getCheckpoint()->putSubCheckpoint(ckp, part_tree->aln->name);
             getCheckpoint()->dump();
-            verbose_mode = saved_mode;
-            cout << "Partition " << part_tree->aln->name
+            cmust << "Partition " << part_tree->aln->name
                  << " / Iterations: " << part_tree->stop_rule.getCurIt()
                  << " / LogL: " << score
                  << " / Time: " << convert_time(getRealTime() - params->start_real_time)
                  << endl;
-            verbose_mode = VB_QUIET;
         }
         delete ckp;
         part_tree->setCheckpoint(getCheckpoint());

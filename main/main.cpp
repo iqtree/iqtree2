@@ -1726,6 +1726,9 @@ public:
     streambuf *get_fout_buf() {
         return fout_buf;
     }
+    streambuf *get_cout_buf() {
+        return cout_buf;
+    }
     ofstream *get_fout() {
         return &fout;
     }
@@ -1831,6 +1834,30 @@ protected:
     }
 };
 
+class muststreambuf : public streambuf {
+public:
+    void init(streambuf *cout_buf, streambuf *fout_buf) {
+        this->fout_buf = fout_buf;
+        this->cout_buf = cout_buf;
+    }
+    
+protected:
+    streambuf *cout_buf;
+    streambuf *fout_buf;
+    
+    virtual int overflow( int c = EOF) {
+        if (cout_buf->sputc(c) == EOF) {
+            return EOF;
+        }
+        if (fout_buf->sputc(c) == EOF) return EOF;
+        return c;
+    }
+    
+    virtual int sync() {
+        cout_buf->pubsync();
+        return fout_buf->pubsync();
+    }
+};
 
 
 /*********************************************************************************
@@ -1838,6 +1865,9 @@ protected:
  *********************************************************************************/
 outstreambuf _out_buf;
 errstreambuf _err_buf;
+muststreambuf _must_buf;
+ostream cmust(&_must_buf);
+
 string _log_file;
 int _exit_wait_optn = FALSE;
 
@@ -1847,11 +1877,11 @@ extern "C" void startLogFile(bool append_log) {
     else
         _out_buf.open(_log_file.c_str());
     _err_buf.init(_out_buf.get_fout_buf());
+    _must_buf.init(_out_buf.get_cout_buf(), _out_buf.get_fout_buf());
 }
 
 extern "C" void endLogFile() {
 	_out_buf.close();
-    
 }
 
 void funcExit(void) {
