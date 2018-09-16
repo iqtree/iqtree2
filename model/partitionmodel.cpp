@@ -381,6 +381,8 @@ double PartitionModel::optimizeParameters(int fixed_len, bool write_info, double
                 it->second->setNParams(num_params[it->first]);
                 model = it->second;
                 tree_lh = optimizeLinkedModel(write_info, gradient_epsilon);
+                saveCheckpoint();
+                getCheckpoint()->dump();
             }
         model = saved_model;
         if (tree_lh-logl_epsilon*10 < prev_tree_lh)
