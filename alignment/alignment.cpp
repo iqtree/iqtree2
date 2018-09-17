@@ -1144,7 +1144,7 @@ void Alignment::buildStateMap(char *map, SeqType seq_type) {
 	@param seq_type data type (SEQ_DNA, etc.)
 	@return state ID
 */
-char Alignment::convertState(char state, SeqType seq_type) {
+StateType Alignment::convertState(char state, SeqType seq_type) {
     if (state == '?' || state == '-' || state == '.' || state == '~')
         return STATE_UNKNOWN;
 
@@ -1230,7 +1230,7 @@ char Alignment::convertState(char state, SeqType seq_type) {
 }
 
 // TODO: state should int
-char Alignment::convertState(char state) {
+StateType Alignment::convertState(char state) {
 	return convertState(state, seq_type);
 }
 
@@ -1327,11 +1327,13 @@ string Alignment::convertStateBackStr(StateType state) {
 	return str;
 }
 
+/*
 void Alignment::convertStateStr(string &str, SeqType seq_type) {
     for (string::iterator it = str.begin(); it != str.end(); it++)
         (*it) = convertState(*it, seq_type);
 }
-
+*/
+ 
 void Alignment::initCodon(char *gene_code_id) {
     // build index from 64 codons to non-stop codons
 	int transl_table = 1;

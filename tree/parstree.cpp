@@ -428,19 +428,20 @@ void ParsTree::initLeafSiteParsForAmbiguousState(char state, UINT * site_partial
 			}
 			break;
         case 20: // Protein
-        	if (state == 4+8+19){
+        	if (state == 20){
         		site_partial_pars[aln->convertState('D')] = 0;
         		site_partial_pars[aln->convertState('N')] = 0;
         		return; // Aspartic acid (D) or Asparagine (N)
         	}
-        	else if (state == 32+64+19){
+        	else if (state == 21){
         		site_partial_pars[aln->convertState('Q')] = 0;
         		site_partial_pars[aln->convertState('E')] = 0;
         		return; // Glutamine (Q) or Glutamic acid (E)
         	}
         	else if (state == 22){
-				for(i = 0; i < nstates; i++) site_partial_pars[i] = 0;
-        		return; // UNKNOWN for Protein
+                site_partial_pars[aln->convertState('I')] = 0;
+                site_partial_pars[aln->convertState('L')] = 0;
+        		return; // I or L
         	}
         	else{
         		cout << "nstates = " << nstates << "; state = " << (int) state << endl;
