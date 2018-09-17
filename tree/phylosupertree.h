@@ -409,9 +409,9 @@ public:
 		....
 		This function will call computePatternRates()
 		@param out output stream to write rates
-	*/
-	virtual void writeSiteRates(ostream &out, int partid = -1);
-
+        @param bayes TRUE to use empirical Bayesian, false for ML method
+     */
+    virtual void writeSiteRates(ostream &out, bool bayes, int partid = -1);
 
     /**
         write site log likelihood to a output stream

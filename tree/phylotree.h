@@ -1357,6 +1357,12 @@ public:
     */
     void printTreeLengthScaling(const char *filename);
 
+    /**
+     optimize pattern-specific rates by maxmimum likelihood given the tree with fixed branch lengths
+     This function will call optimizeTreeLengthScaling
+     */
+    void optimizePatternRates(DoubleVector &pattern_rates);
+
      /****************************************************************************
             Branch length optimization by Least Squares
      ****************************************************************************/
@@ -1960,8 +1966,9 @@ public:
 		....
 		This function will call computePatternRates()
 		@param out output stream to write rates
+        @param bayes TRUE to use empirical Bayesian, false for ML method
 	*/
-	virtual void writeSiteRates(ostream &out, int partid = -1);
+	virtual void writeSiteRates(ostream &out, bool bayes, int partid = -1);
 
     /**
         write site log likelihood to a output stream

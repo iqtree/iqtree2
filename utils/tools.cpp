@@ -891,7 +891,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.print_partition_lh = false;
     params.print_site_prob = WSL_NONE;
     params.print_site_state_freq = WSF_NONE;
-    params.print_site_rate = false;
+    params.print_site_rate = 0;
     params.print_trees_site_posterior = 0;
     params.print_ancestral_sequence = AST_NONE;
     params.min_ancestral_prob = 0.0;
@@ -2665,10 +2665,16 @@ void parseArg(int argc, char *argv[], Params &params) {
 			}
 
 			if (strcmp(argv[cnt], "-wsr") == 0) {
-				params.print_site_rate = true;
+				params.print_site_rate |= 1;
 				continue;
 			}
-			if (strcmp(argv[cnt], "-wsptrees") == 0) {
+
+            if (strcmp(argv[cnt], "--mlrate") == 0) {
+                params.print_site_rate |= 2;
+                continue;
+            }
+
+            if (strcmp(argv[cnt], "-wsptrees") == 0) {
 				params.print_trees_site_posterior = 1;
 				continue;
 			}
