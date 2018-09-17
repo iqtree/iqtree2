@@ -252,16 +252,16 @@ public:
 
     void buildStateMap(char *map, SeqType seq_type);
 
-    virtual char convertState(char state, SeqType seq_type);
+    virtual StateType convertState(char state, SeqType seq_type);
 
     /** 
      * convert state if the number of states (num_states is known)
      * @param state input char to convert
      * @return output char from 0 to 0-num_states or STATE_INVALID or STATE_UNKNOWN
      */
-    char convertState(char state);
+    StateType convertState(char state);
 
-    virtual void convertStateStr(string &str, SeqType seq_type);
+    //virtual void convertStateStr(string &str, SeqType seq_type);
 
 	/**
 	 * convert from internal state to user-readable state (e.g., to ACGT for DNA)
