@@ -1623,8 +1623,12 @@ public:
     */
     SiteFreqType print_site_state_freq;
 
-    /** TRUE to print site-specific rates, default: FALSE */
-    bool print_site_rate;
+    /**
+     0 (default): do not print .rate file
+     1: print site-specific rates by empirical Bayes
+     2: site-specific rates by maximum-likelihood
+     */
+    int print_site_rate;
 
     /* 1: print site posterior probability for many trees during tree search */
     int print_trees_site_posterior;

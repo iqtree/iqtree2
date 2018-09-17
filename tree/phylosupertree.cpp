@@ -1276,11 +1276,11 @@ void PhyloSuperTree::writeSiteLh(ostream &out, SiteLoglType wsl, int partid) {
         (*it)->writeSiteLh(out, wsl, part);
 }
 
-void PhyloSuperTree::writeSiteRates(ostream &out, int partid) {
+void PhyloSuperTree::writeSiteRates(ostream &out, bool bayes, int partid) {
 
     int part = 1;
     for (iterator it = begin(); it != end(); it++, part++) {
-        (*it)->writeSiteRates(out, part);
+        (*it)->writeSiteRates(out, bayes, part);
     }
 }
 

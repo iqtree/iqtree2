@@ -2439,6 +2439,34 @@ void PhyloTree::computeFuncDerv(double value, double &df, double &ddf) {
 //    return lh;
 }
 
+void PhyloTree::optimizePatternRates(DoubleVector &pattern_rates) {
+    size_t nptn = aln->getNPattern();
+    pattern_rates.resize(nptn, 1.0);
+#pragma omp parallel for
+    for (size_t ptn = 0; ptn < nptn; ptn++) {
+        Alignment *paln = new Alignment;
+        IntVector ptn_id;
+        ptn_id.push_back(ptn);
+        paln->extractPatterns(aln, ptn_id);
+        PhyloTree *tree = new PhyloTree;
+        tree->copyPhyloTree(this);
+        tree->setParams(params);
+        tree->setAlignment(paln);
+        tree->sse = sse;
+        tree->num_threads = 1;
+        // initialize model
+        tree->setModelFactory(getModelFactory());
+
+        // main optimization
+        tree->optimizeTreeLengthScaling(MIN_SITE_RATE, pattern_rates[ptn], MAX_SITE_RATE, 0.0001);
+        
+        tree->setModelFactory(NULL);
+        
+        delete tree;
+        delete paln;
+    }
+}
+
 int PhyloTree::getNBranchParameters(int brlen_type) {
     if (params->fixed_branch_length || brlen_type == BRLEN_FIX)
         return 0;
@@ -5311,10 +5339,16 @@ void PhyloTree::writeSiteLh(ostream &out, SiteLoglType wsl, int partid) {
     aligned_free(pattern_lh);
 }
 
-void PhyloTree::writeSiteRates(ostream &out, int partid) {
+void PhyloTree::writeSiteRates(ostream &out, bool bayes, int partid) {
 	DoubleVector pattern_rates;
 	IntVector pattern_cat;
-	int ncategory = site_rate->computePatternRates(pattern_rates, pattern_cat);
+    int ncategory = 1;
+    
+    if (bayes)
+        ncategory = site_rate->computePatternRates(pattern_rates, pattern_cat);
+    else
+        optimizePatternRates(pattern_rates);
+    
 	if (pattern_rates.empty()) return;
 	int nsite = aln->getNSite();
 	int i;
@@ -5349,10 +5383,12 @@ void PhyloTree::writeSiteRates(ostream &out, int partid) {
         }
 		out << endl;
 	}
-    cout << "Empirical proportions for each category:";
-    for (i = 0; i < count.size(); i++)
-        cout << " " << ((double)count[i])/nsite;
-    cout << endl;
+    if (bayes) {
+        cout << "Empirical proportions for each category:";
+        for (i = 0; i < count.size(); i++)
+            cout << " " << ((double)count[i])/nsite;
+        cout << endl;
+    }
 }
 
 void PhyloTree::writeBranches(ostream &out) {

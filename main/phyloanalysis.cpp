@@ -1798,6 +1798,46 @@ void runApproximateBranchLengths(Params &params, IQTree &iqtree) {
 
 }
 
+void printSiteRates(IQTree &iqtree, const char *rate_file, bool bayes) {
+    try {
+        ofstream out;
+        out.exceptions(ios::failbit | ios::badbit);
+        out.open(rate_file);
+        out << "# Site-specific subtitution rates determined by ";
+        if (bayes)
+            out<< "empirical Bayesian method" << endl;
+        else
+            out<< "maximum likelihood" << endl;
+        out << "# This file can be read in MS Excel or in R with command:" << endl
+        << "#   tab=read.table('" <<  rate_file << "',header=TRUE)" << endl
+        << "# Columns are tab-separated with following meaning:" << endl;
+        if (iqtree.isSuperTree()) {
+            out << "#   Part:   Partition ID (1=" << ((PhyloSuperTree*)&iqtree)->front()->aln->name << ", etc)" << endl
+            << "#   Site:   Site ID within partition (starting from 1 for each partition)" << endl;
+        } else
+            out << "#   Site:   Alignment site ID" << endl;
+        
+        if (bayes)
+            out << "#   Rate:   Posterior mean site rate weighted by posterior probability" << endl
+                << "#   Cat:    Category with highest posterior (0=invariable, 1=slow, etc)" << endl
+                << "#   C_Rate: Corresponding rate of highest category" << endl;
+        else
+            out << "#   Rate:   Site rate estimated by maximum likelihood" << endl;
+        if (iqtree.isSuperTree())
+            out << "Part\t";
+        out << "Site\tRate";
+        if (bayes)
+            out << "\tCat\tC_Rate" << endl;
+        else
+            out << endl;
+        iqtree.writeSiteRates(out, bayes);
+        out.close();
+    } catch (ios::failure) {
+        outError(ERR_WRITE_OUTPUT, rate_file);
+    }
+    cout << "Site rates printed to " << rate_file << endl;
+}
+
 void printMiscInfo(Params &params, IQTree &iqtree, double *pattern_lh) {
     if (params.print_site_lh && !params.pll) {
         string site_lh_file = params.out_prefix;
@@ -1912,7 +1952,7 @@ void printMiscInfo(Params &params, IQTree &iqtree, double *pattern_lh) {
             ofstream out;
             out.exceptions(ios::failbit | ios::badbit);
             out.open(mhrate_file.c_str());
-            iqtree.writeSiteRates(out);
+            iqtree.writeSiteRates(out, true);
             out.close();
         } catch (ios::failure) {
             outError(ERR_WRITE_OUTPUT, mhrate_file);
@@ -1925,35 +1965,16 @@ void printMiscInfo(Params &params, IQTree &iqtree, double *pattern_lh) {
         }
     }
 
-    if (params.print_site_rate) {
+    if (params.print_site_rate & 1) {
         string rate_file = params.out_prefix;
         rate_file += ".rate";
-        try {
-            ofstream out;
-            out.exceptions(ios::failbit | ios::badbit);
-            out.open(rate_file.c_str());
-            out << "# Site-specific subtitution rates determined by empirical Bayesian method" << endl
-                << "# This file can be read in MS Excel or in R with command:" << endl
-                << "#   tab=read.table('" <<  params.out_prefix << ".rate',header=TRUE)" << endl
-                << "# Columns are tab-separated with following meaning:" << endl;
-            if (iqtree.isSuperTree()) {
-                out << "#   Part:   Partition ID (1=" << ((PhyloSuperTree*)&iqtree)->front()->aln->name << ", etc)" << endl
-                    << "#   Site:   Site ID within partition (starting from 1 for each partition)" << endl;
-            } else
-                out << "#   Site:   Alignment site ID" << endl;
+        printSiteRates(iqtree, rate_file.c_str(), true);
+    }
 
-            out << "#   Rate:   Posterior mean site rate weighted by posterior probability" << endl
-                << "#   Cat:    Category with highest posterior (0=invariable, 1=slow, etc)" << endl
-                << "#   C_Rate: Corresponding rate of highest category" << endl;
-            if (iqtree.isSuperTree())
-                out << "Part\t";
-            out << "Site\tRate\tCat\tC_Rate" << endl;
-            iqtree.writeSiteRates(out);
-            out.close();
-        } catch (ios::failure) {
-            outError(ERR_WRITE_OUTPUT, rate_file);
-        }
-        cout << "Site rates printed to " << rate_file << endl;
+    if (params.print_site_rate & 2) {
+        string rate_file = params.out_prefix;
+        rate_file += ".mlrate";
+        printSiteRates(iqtree, rate_file.c_str(), false);
     }
 
     if (params.fixed_branch_length == BRLEN_SCALE) {
