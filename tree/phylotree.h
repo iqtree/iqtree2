@@ -50,6 +50,8 @@
 #define BootValType float
 //#define BootValType double
 
+enum CostMatrixType {CM_UNIFORM, CM_LINEAR};
+
 //extern int instruction_set;
 
 #define SAFE_LH   true  // safe likelihood scaling to avoid numerical underflow for ultra large trees
@@ -658,6 +660,38 @@ public:
 #endif
 
     virtual void setParsimonyKernelSSE();
+
+    /****************************************************************************
+     Sankoff Parsimony function
+     ****************************************************************************/
+
+    /**
+     * initialise cost_matrix as linear
+     * initialize for 'nstates' and 'columns'
+     */
+    void initCostMatrix(CostMatrixType cost_type);
+    
+    /*
+     * For a leaf character corresponding to an ambiguous state
+     * set elements corresponding to possible states to 0, others to UINT_MAX
+     */
+    void initLeafSiteParsForAmbiguousState(char state, UINT * site_partial_pars);
+
+    /**
+     compute partial parsimony score of the subtree rooted at dad
+     @param dad_branch the branch leading to the subtree
+     @param dad its dad, used to direct the traversal
+     */
+    void computePartialParsimonySankoff(PhyloNeighbor *dad_branch, PhyloNode *dad);
+    
+    /**
+     compute tree parsimony score based on a particular branch
+     @param dad_branch the branch leading to the subtree
+     @param dad its dad, used to direct the traversal
+     @param branch_subst (OUT) if not NULL, the number of substitutions on this branch
+     @return parsimony score of the tree
+     */
+    int computeParsimonyBranchSankoff(PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst = NULL);
 
     /****************************************************************************
             likelihood function
@@ -2179,6 +2213,9 @@ protected:
 
     /** current best parsimony score */
     UINT best_pars_score;
+
+    /** cost_matrix for non-uniform parsimony */
+    unsigned int * cost_matrix; // Sep 2016: store cost matrix in 1D array
 
 };
 

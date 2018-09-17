@@ -83,6 +83,7 @@ void PhyloTree::init() {
     central_scale_num = NULL;
     nni_scale_num = NULL;
     central_partial_pars = NULL;
+    cost_matrix = NULL;
     model_factory = NULL;
     discard_saturated_site = true;
     _pattern_lh = NULL;
@@ -210,6 +211,12 @@ PhyloTree::~PhyloTree() {
     if (central_partial_pars)
         aligned_free(central_partial_pars);
     central_partial_pars = NULL;
+
+    if(cost_matrix){
+        aligned_free(cost_matrix);
+        cost_matrix = NULL;
+    }
+
     if (model_factory)
         delete model_factory;
     model_factory = NULL;
@@ -691,7 +698,7 @@ void PhyloTree::initializeAllPartialPars(int &index, PhyloNode *node, PhyloNode 
         node = (PhyloNode*) root;
         // allocate the big central partial pars memory
         if (!central_partial_pars) {
-            int memsize = (aln->getNSeq()) * 4 * pars_block_size;
+            size_t memsize = (aln->getNSeq()) * 4 * pars_block_size;
             if (verbose_mode >= VB_MAX)
                 cout << "Allocating " << memsize * sizeof(UINT) << " bytes for partial parsimony vectors" << endl;
             central_partial_pars = aligned_alloc<UINT>(memsize);
@@ -718,6 +725,9 @@ void PhyloTree::initializeAllPartialPars(int &index, PhyloNode *node, PhyloNode 
 size_t PhyloTree::getBitsBlockSize() {
     // reserve the last entry for parsimony score
 //    return (aln->num_states * aln->size() + UINT_BITS - 1) / UINT_BITS + 1;
+    if (cost_matrix) {
+        return aln->size() * aln->num_states + 1;
+    }
     size_t len = aln->getMaxNumStates() * ((max(aln->size(), (size_t)aln->num_variant_sites) + SIMD_BITS - 1) / UINT_BITS) + 4;
     len = ((len+7)/8)*8;
     return len;
@@ -729,7 +739,10 @@ UINT *PhyloTree::newBitsBlock() {
 
 
 void PhyloTree::computePartialParsimony(PhyloNeighbor *dad_branch, PhyloNode *dad) {
-    (this->*computePartialParsimonyPointer)(dad_branch, dad);
+    if (cost_matrix)
+        computeParsimonyBranchSankoff(dad_branch, dad);
+    else
+        (this->*computePartialParsimonyPointer)(dad_branch, dad);
 }
 
 void PhyloTree::computeReversePartialParsimony(PhyloNode *node, PhyloNode *dad) {
@@ -744,7 +757,10 @@ void PhyloTree::computeReversePartialParsimony(PhyloNode *node, PhyloNode *dad) 
 
 
 int PhyloTree::computeParsimonyBranch(PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst) {
-    return (this->*computeParsimonyBranchPointer)(dad_branch, dad, branch_subst);
+    if (cost_matrix)
+        return computeParsimonyBranchSankoff(dad_branch, dad, branch_subst);
+    else
+        return (this->*computeParsimonyBranchPointer)(dad_branch, dad, branch_subst);
 }
 
 
@@ -752,6 +768,463 @@ int PhyloTree::computeParsimony() {
     return computeParsimonyBranch((PhyloNeighbor*) root->neighbors[0], (PhyloNode*) root);
 }
 
+/****************************************************************************
+ Sankoff parsimony function
+ ****************************************************************************/
+
+
+void PhyloTree::initCostMatrix(CostMatrixType cost_type) {
+    if(cost_matrix){
+        aligned_free(cost_matrix);
+        cost_matrix = NULL;
+    }
+    ASSERT(aln);
+    int cost_nstates = aln->num_states;
+    // allocate memory for cost_matrix
+    cost_matrix = aligned_alloc<unsigned int>(cost_nstates * cost_nstates);
+    
+    switch (cost_type) {
+        case CM_LINEAR:
+            for(int i = 0; i < cost_nstates; i++){
+                for(int j = 0; j < cost_nstates; j++)
+                    cost_matrix[i * cost_nstates + j] = abs(i-j);
+            }
+            break;
+        case CM_UNIFORM:
+            for(int i = 0; i < cost_nstates; i++){
+                for(int j = 0; j < cost_nstates; j++)
+                    cost_matrix[i * cost_nstates + j] = ((i==j) ? 0 : 1);
+            }
+            break;
+    }
+    clearAllPartialLH();
+}
+
+/**
+ compute partial parsimony score of the subtree rooted at dad
+ @param dad_branch the branch leading to the subtree
+ @param dad its dad, used to direct the traversal
+ */
+void PhyloTree::computePartialParsimonySankoff(PhyloNeighbor *dad_branch, PhyloNode *dad){
+    // don't recompute the parsimony
+    if (dad_branch->partial_lh_computed & 2)
+        return;
+    
+    Node *node = dad_branch->node;
+    //assert(node->degree() <= 3);
+    int ptn;
+    /*
+    if(aln->num_states != cost_nstates){
+        cout << "Your cost matrix is not compatible with the alignment"
+        << " in terms of number of states. Please check!" << endl;
+        exit(1);
+    }
+     */
+    int nstates = aln->num_states;
+    assert(dad_branch->partial_pars);
+    
+    int pars_block_size = getBitsBlockSize();
+    
+    if (node->isLeaf() && dad) {
+        //        cout << "############# leaf!" << endl;
+        // external node
+        // set to very large number
+        memset(dad_branch->partial_pars, 127, (pars_block_size-1)*sizeof(UINT));
+//        for(int i = 0; i < pars_block_size - 1; i++)
+//            dad_branch->partial_pars[i] = 1000;
+        dad_branch->partial_pars[pars_block_size - 1] = 0; // reserved for corresponding subtree pars
+        for (ptn = 0; ptn < aln->size(); ptn++){
+            // ignore const ptn because it does not affect pars score
+            if (!aln->at(ptn).isConst()) {
+                int ptn_start_index = ptn * nstates;
+                char state;
+                if (node->name == ROOT_NAME) {
+                    state = aln->STATE_UNKNOWN;
+                } else {
+                    assert(node->id < aln->getNSeq());
+                    state = (aln->at(ptn))[node->id];
+                }
+                
+                if (state < nstates) {
+                    dad_branch->partial_pars[ptn_start_index + state] = 0;
+                } else {
+                    // unknown, ambiguous character
+                    //                    cout << "####### ambigous state = " << int(state) << endl;
+                    initLeafSiteParsForAmbiguousState(state, dad_branch->partial_pars + ptn_start_index);
+                }
+            }
+        }
+    } else {
+        //        cout << "############# internal!" << endl;
+        // internal node
+        UINT i, j, ptn, min_child_ptn_pars;
+        
+        UINT * partial_pars = dad_branch->partial_pars;
+        for(int i = 0; i < pars_block_size; i++)
+            partial_pars[i] = 0;
+        UINT *left = NULL, *right = NULL;
+        
+        FOR_NEIGHBOR_IT(node, dad, it)if ((*it)->node->name != ROOT_NAME) {
+            computePartialParsimonySankoff((PhyloNeighbor*) (*it), (PhyloNode*) node);
+            if (!left)
+                left = ((PhyloNeighbor*)*it)->partial_pars;
+            else
+                right = ((PhyloNeighbor*)*it)->partial_pars;
+        }
+        
+        
+        if (node->degree() > 3) {
+            FOR_NEIGHBOR_IT(node, dad, it) if ((*it)->node->name != ROOT_NAME) {
+                UINT *partial_pars_child = ((PhyloNeighbor*) (*it))->partial_pars;
+                for (ptn = 0; ptn < aln->size(); ptn++){
+                    // ignore const ptn because it does not affect pars score
+                    if (aln->at(ptn).isConst()) continue;
+                    int ptn_start_index = ptn*nstates;
+                    
+                    UINT *partial_pars_child_ptr = &partial_pars_child[ptn_start_index];
+                    UINT *partial_pars_ptr = &partial_pars[ptn_start_index];
+                    UINT *cost_matrix_ptr = cost_matrix;
+                    
+                    for(i = 0; i < nstates; i++){
+                        // min(j->i) from child_branch
+                        min_child_ptn_pars = partial_pars_child_ptr[0] + cost_matrix_ptr[0];
+                        for(j = 1; j < nstates; j++) {
+                            UINT value = partial_pars_child_ptr[j] + cost_matrix_ptr[j];
+                            min_child_ptn_pars = min(value, min_child_ptn_pars);
+                        }
+                        partial_pars_ptr[i] += min_child_ptn_pars;
+                        cost_matrix_ptr += nstates;
+                    }
+                }
+            }
+        } else {
+            // bifurcating node
+            assert(node->degree() == 3);
+            
+            switch (nstates) {
+                case 4:
+                    for (ptn = 0; ptn < aln->size(); ptn++){
+                        // ignore const ptn because it does not affect pars score
+                        if (aln->at(ptn).isConst()) continue;
+                        int ptn_start_index = ptn*4;
+                        
+                        UINT *left_ptr = &left[ptn_start_index];
+                        UINT *right_ptr = &right[ptn_start_index];
+                        UINT *partial_pars_ptr = &partial_pars[ptn_start_index];
+                        UINT *cost_matrix_ptr = cost_matrix;
+                        UINT left_contrib, right_contrib;
+                        
+                        for(i = 0; i < 4; i++){
+                            // min(j->i) from child_branch
+                            left_contrib = left_ptr[0] + cost_matrix_ptr[0];
+                            right_contrib = right_ptr[0] + cost_matrix_ptr[0];
+                            for(j = 1; j < 4; j++) {
+                                UINT value = left_ptr[j] + cost_matrix_ptr[j];
+                                left_contrib = min(value, left_contrib);
+                                value = right_ptr[j] + cost_matrix_ptr[j];
+                                right_contrib = min(value, right_contrib);
+                            }
+                            partial_pars_ptr[i] = left_contrib+right_contrib;
+                            cost_matrix_ptr += 4;
+                        }
+                    }
+                    break;
+                case 20:
+                    for (ptn = 0; ptn < aln->size(); ptn++){
+                        // ignore const ptn because it does not affect pars score
+                        if (aln->at(ptn).isConst()) continue;
+                        int ptn_start_index = ptn*20;
+                        
+                        UINT *left_ptr = &left[ptn_start_index];
+                        UINT *right_ptr = &right[ptn_start_index];
+                        UINT *partial_pars_ptr = &partial_pars[ptn_start_index];
+                        UINT *cost_matrix_ptr = cost_matrix;
+                        UINT left_contrib, right_contrib;
+                        
+                        for(i = 0; i < 20; i++){
+                            // min(j->i) from child_branch
+                            left_contrib = left_ptr[0] + cost_matrix_ptr[0];
+                            right_contrib = right_ptr[0] + cost_matrix_ptr[0];
+                            for(j = 1; j < 20; j++) {
+                                UINT value = left_ptr[j] + cost_matrix_ptr[j];
+                                left_contrib = min(value, left_contrib);
+                                value = right_ptr[j] + cost_matrix_ptr[j];
+                                right_contrib = min(value, right_contrib);
+                            }
+                            partial_pars_ptr[i] = left_contrib+right_contrib;
+                            cost_matrix_ptr += 20;
+                        }
+                    }
+                    break;
+                default:
+                    for (ptn = 0; ptn < aln->size(); ptn++){
+                        // ignore const ptn because it does not affect pars score
+                        if (aln->at(ptn).isConst()) continue;
+                        int ptn_start_index = ptn*nstates;
+                        
+                        UINT *left_ptr = &left[ptn_start_index];
+                        UINT *right_ptr = &right[ptn_start_index];
+                        UINT *partial_pars_ptr = &partial_pars[ptn_start_index];
+                        UINT *cost_matrix_ptr = cost_matrix;
+                        UINT left_contrib, right_contrib;
+                        
+                        for(i = 0; i < nstates; i++){
+                            // min(j->i) from child_branch
+                            left_contrib = left_ptr[0] + cost_matrix_ptr[0];
+                            right_contrib = right_ptr[0] + cost_matrix_ptr[0];
+                            for(j = 1; j < nstates; j++) {
+                                UINT value = left_ptr[j] + cost_matrix_ptr[j];
+                                left_contrib = min(value, left_contrib);
+                                value = right_ptr[j] + cost_matrix_ptr[j];
+                                right_contrib = min(value, right_contrib);
+                            }
+                            partial_pars_ptr[i] = left_contrib+right_contrib;
+                            cost_matrix_ptr += nstates;
+                        }
+                    }
+                    break;
+            }
+            
+        }
+        /*
+         
+         // calc subtree pars
+         for (ptn = 0; ptn < aln->size(); ptn++){
+         // ignore const ptn because it does not affect pars score
+         if (aln->at(ptn).is_const) continue;
+         int ptn_start_index = ptn * nstates;
+         UINT min_ptn_pars = partial_pars[ptn_start_index];
+         for(i = 1; i < nstates; i++){
+         if(partial_pars[ptn_start_index + i] < min_ptn_pars)
+         min_ptn_pars = partial_pars[ptn_start_index + i];
+         }
+         partial_pars[pars_block_size - 1] += min_ptn_pars * aln->at(ptn).frequency;
+         }
+         */
+    }
+    
+    dad_branch->partial_lh_computed |= 2;
+}
+
+void PhyloTree::initLeafSiteParsForAmbiguousState(char state, UINT * site_partial_pars){
+    int i, nstates = aln->num_states;
+    if(state < nstates) return; // no need for manipulate normal state
+    
+    if (state == aln->STATE_UNKNOWN){
+        for(i = 0; i < nstates; i++) site_partial_pars[i] = 0;
+        return;
+    }
+    
+    if (state == STATE_INVALID){
+        cout << "nstates = " << nstates << "; state = " << (int) state << endl;
+        outError("Alignment contains invalid state. Please check your data!");
+    }
+    
+    //    for(i = 0; i < nstates; i++) site_partial_pars[i] = UINT_MAX;
+    
+    switch (nstates) {
+        case 2:
+            cout << "nstates = " << nstates << "; state = " << (int) state << endl;
+            outError("Alignment contains invalid state. Please check your data!");
+            break;
+        case 4: // DNA
+            switch (state) {
+                case 1+4+3:
+                    site_partial_pars[aln->convertState('A')] = 0;
+                    site_partial_pars[aln->convertState('G')] = 0;
+                    return; // A or G, Purine
+                case 2+8+3:
+                    site_partial_pars[aln->convertState('C')] = 0;
+                    site_partial_pars[aln->convertState('T')] = 0;
+                    return; // C or T, Pyrimidine
+                case 1+8+3:
+                    site_partial_pars[aln->convertState('A')] = 0;
+                    site_partial_pars[aln->convertState('T')] = 0;
+                    return; // A or T, Weak
+                case 2+4+3:
+                    site_partial_pars[aln->convertState('G')] = 0;
+                    site_partial_pars[aln->convertState('C')] = 0;
+                    return; // G or C, Strong
+                case 1+2+3:
+                    site_partial_pars[aln->convertState('A')] = 0;
+                    site_partial_pars[aln->convertState('C')] = 0;
+                    return; // A or C, Amino
+                case 4+8+3:
+                    site_partial_pars[aln->convertState('G')] = 0;
+                    site_partial_pars[aln->convertState('T')] = 0;
+                    return; // G or T, Keto
+                case 2+4+8+3:
+                    site_partial_pars[aln->convertState('C')] = 0;
+                    site_partial_pars[aln->convertState('G')] = 0;
+                    site_partial_pars[aln->convertState('T')] = 0;
+                    return;// C or G or T
+                case 1+2+8+3:
+                    site_partial_pars[aln->convertState('A')] = 0;
+                    site_partial_pars[aln->convertState('C')] = 0;
+                    site_partial_pars[aln->convertState('T')] = 0;
+                    return; // A or C or T
+                case 1+4+8+3:
+                    site_partial_pars[aln->convertState('A')] = 0;
+                    site_partial_pars[aln->convertState('G')] = 0;
+                    site_partial_pars[aln->convertState('T')] = 0;
+                    return; // A or G or T
+                case 1+2+4+3:
+                    site_partial_pars[aln->convertState('A')] = 0;
+                    site_partial_pars[aln->convertState('G')] = 0;
+                    site_partial_pars[aln->convertState('C')] = 0;
+                    return; // A or G or C
+                case 18:
+                    site_partial_pars[aln->convertState('A')] = 0;
+                    site_partial_pars[aln->convertState('C')] = 0;
+                    site_partial_pars[aln->convertState('G')] = 0;
+                    site_partial_pars[aln->convertState('T')] = 0;
+                    return; // UNKNOWN for DNA
+                default:
+                    cout << "nstates = " << nstates << "; state = " << (int) state << endl;
+                    outError("Alignment contains invalid state. Please check your data!");
+                    return;
+            }
+            break;
+        case 20: // Protein
+            if (state == 20){
+                site_partial_pars[aln->convertState('D')] = 0;
+                site_partial_pars[aln->convertState('N')] = 0;
+                return; // Aspartic acid (D) or Asparagine (N)
+            }
+            else if (state == 21){
+                site_partial_pars[aln->convertState('Q')] = 0;
+                site_partial_pars[aln->convertState('E')] = 0;
+                return; // Glutamine (Q) or Glutamic acid (E)
+            }
+            else if (state == 22){
+                site_partial_pars[aln->convertState('I')] = 0;
+                site_partial_pars[aln->convertState('L')] = 0;
+                return; // I or L
+            }
+            else{
+                cout << "nstates = " << nstates << "; state = " << (int) state << endl;
+                outError("Alignment contains invalid state. Please check your data!");
+                return;
+            }
+        default:
+            // unknown
+            cout << "nstates = " << nstates << "; state = " << (int) state << endl;
+            outError("Alignment contains invalid state. Please check your data!");
+            return;
+    }
+    
+}
+
+/**
+ compute tree parsimony score based on a particular branch
+ @param dad_branch the branch leading to the subtree
+ @param dad its dad, used to direct the traversal
+ @param branch_subst (OUT) if not NULL, the number of substitutions on this branch
+ @return parsimony score of the tree
+ */
+int PhyloTree::computeParsimonyBranchSankoff(PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst) {
+    PhyloNode *node = (PhyloNode*) dad_branch->node;
+    PhyloNeighbor *node_branch = (PhyloNeighbor*) node->findNeighbor(dad);
+    assert(node_branch);
+    
+    if (!central_partial_pars)
+        initializeAllPartialPars();
+    
+    // DTH: I don't really understand what this is for. ###########
+    // swap node and dad if dad is a leaf
+    if (node->isLeaf()) {
+        PhyloNode *tmp_node = dad;
+        dad = node;
+        node = tmp_node;
+        PhyloNeighbor *tmp_nei = dad_branch;
+        dad_branch = node_branch;
+        node_branch = tmp_nei;
+        //        cout << "swapped\n";
+    }
+    
+    int nptn = aln->size();
+    //    if(!_pattern_pars) _pattern_pars = aligned_alloc<BootValTypePars>(nptn+VCSIZE_USHORT);
+    //    memset(_pattern_pars, 0, sizeof(BootValTypePars) * (nptn+VCSIZE_USHORT));
+    
+    if ((dad_branch->partial_lh_computed & 2) == 0)
+        computePartialParsimonySankoff(dad_branch, dad);
+    if ((node_branch->partial_lh_computed & 2) == 0)
+        computePartialParsimonySankoff(node_branch, node);
+    
+    // now combine likelihood at the branch
+    UINT tree_pars = 0;
+    int nstates = aln->num_states;
+    UINT i, j, ptn;
+    
+    UINT *ptn_partial_pars = new UINT[nstates];
+    if(!ptn_partial_pars){
+        outError("Could not allocate for ptn_partial_pars\n");
+        exit(1);
+    }
+    
+    switch (nstates) {
+        case 4:
+            for (ptn = 0; ptn < aln->size(); ptn++){
+                //_pattern_pars[ptn] = 0;
+                if (aln->at(ptn).isConst()) continue;
+                
+                int ptn_start_index = ptn * 4;
+                UINT *node_branch_ptr = &node_branch->partial_pars[ptn_start_index];
+                UINT *dad_branch_ptr = &dad_branch->partial_pars[ptn_start_index];
+                UINT *cost_matrix_ptr = cost_matrix;
+                UINT min_ptn_pars = UINT_MAX;
+                for(i = 0; i < 4; i++){
+                    // min(j->i) from node_branch
+                    UINT min_score = node_branch_ptr[0] + cost_matrix_ptr[0];
+                    for(j = 1; j < 4; j++) {
+                        UINT value = node_branch_ptr[j] + cost_matrix_ptr[j];
+                        min_score = min(value, min_score);
+                        
+                    }
+                    ptn_partial_pars[i] = min_score + dad_branch_ptr[i];
+                    min_ptn_pars = min(min_ptn_pars, ptn_partial_pars[i]);
+                    cost_matrix_ptr += 4;
+                }
+                //_pattern_pars[ptn] = min_ptn_pars;
+                tree_pars += min_ptn_pars * aln->at(ptn).frequency;
+            }
+            break;
+            
+        default:
+            for (ptn = 0; ptn < aln->size(); ptn++){
+                //_pattern_pars[ptn] = 0;
+                if (aln->at(ptn).isConst()) continue;
+                
+                int ptn_start_index = ptn * nstates;
+                UINT *node_branch_ptr = &node_branch->partial_pars[ptn_start_index];
+                UINT *dad_branch_ptr = &dad_branch->partial_pars[ptn_start_index];
+                UINT *cost_matrix_ptr = cost_matrix;
+                UINT min_ptn_pars = UINT_MAX;
+                for(i = 0; i < nstates; i++){
+                    // min(j->i) from node_branch
+                    UINT min_score = node_branch_ptr[0] + cost_matrix_ptr[0];
+                    for(j = 1; j < nstates; j++) {
+                        UINT value = node_branch_ptr[j] + cost_matrix_ptr[j];
+                        min_score = min(value, min_score);
+                        
+                    }
+                    ptn_partial_pars[i] = min_score + dad_branch_ptr[i];
+                    min_ptn_pars = min(min_ptn_pars, ptn_partial_pars[i]);
+                    cost_matrix_ptr += nstates;
+                }
+                //_pattern_pars[ptn] = min_ptn_pars;
+                tree_pars += min_ptn_pars * aln->at(ptn).frequency;
+            }
+            break;
+    }
+    if (branch_subst)
+        *branch_subst = tree_pars;
+    if(ptn_partial_pars){
+        delete [] ptn_partial_pars;
+        ptn_partial_pars = NULL;
+    }
+    return tree_pars;
+}
 
 /****************************************************************************
  likelihood function
