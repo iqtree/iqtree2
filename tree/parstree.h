@@ -34,12 +34,6 @@ public:
      */
     ~ParsTree();
 
-    /**
-     * read the cost matrix file
-     * initialize for 'nstates' and 'columns'
-     */
-    void loadCostMatrixFile(char* file_name = NULL);
-
 //    /**
 //     * allocate for ptn_pars if needed
 //     */

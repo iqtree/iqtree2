@@ -577,6 +577,8 @@ void IQTree::computeInitialTree(LikelihoodKernel kernel) {
         }
         cout << endl;
         setAlignment(aln);
+        if (params->sankoff_cost_file && !cost_matrix)
+            loadCostMatrixFile(params->sankoff_cost_file);
         if (isSuperTree())
         	wrapperFixNegativeBranch(params->fixed_branch_length == BRLEN_OPTIMIZE &&
                                      params->partition_type != TOPO_UNLINKED);
@@ -599,6 +601,9 @@ void IQTree::computeInitialTree(LikelihoodKernel kernel) {
             start_tree = STT_PARSIMONY;
         switch (start_tree) {
         case STT_PARSIMONY:
+            if (params->sankoff_cost_file && !cost_matrix)
+                loadCostMatrixFile(params->sankoff_cost_file);
+            //initCostMatrix(CM_UNIFORM);
             // Create parsimony tree using IQ-Tree kernel
             cout << "Creating fast initial parsimony tree by random order stepwise addition..." << endl;
 //            aln->orderPatternByNumChars();

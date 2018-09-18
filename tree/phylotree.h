@@ -670,7 +670,13 @@ public:
      * initialize for 'nstates' and 'columns'
      */
     void initCostMatrix(CostMatrixType cost_type);
-    
+        
+    /**
+     * read the cost matrix file
+     * initialize for 'nstates' and 'columns'
+     */
+    void loadCostMatrixFile(char* file_name = NULL);
+
     /*
      * For a leaf character corresponding to an ambiguous state
      * set elements corresponding to possible states to 0, others to UINT_MAX
