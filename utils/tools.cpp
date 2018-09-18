@@ -980,6 +980,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.numSupportTrees = 20;
 //    params.sprDist = 20;
     params.sprDist = 6;
+    params.sankoff_cost_file = NULL;
     params.numNNITrees = 20;
     params.avh_test = 0;
     params.bootlh_test = 0;
@@ -3450,6 +3451,15 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.sprDist = convert_int(argv[cnt]);
 				continue;
 			}
+            
+            if (strcmp(argv[cnt], "--mpcost") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use --mpcost <parsimony_cost_file>";
+                params.sankoff_cost_file = argv[cnt];
+                continue;
+            }
+            
 			if (strcmp(argv[cnt], "-no_rescale_gamma_invar") == 0) {
 				params.no_rescale_gamma_invar = true;
 				continue;

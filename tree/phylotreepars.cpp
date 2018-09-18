@@ -391,6 +391,8 @@ int PhyloTree::computeParsimonyTree(const char *out_prefix, Alignment *alignment
     }
     root = findNodeID(taxon_order[0]);
     initializeAllPartialPars();
+    if (verbose_mode >= VB_MAX)
+        cout << "computeParsimony: " << computeParsimony() << endl;
     size_t index = (2*leafNum-3)*2;
     size_t pars_block_size = getBitsBlockSize();
 
