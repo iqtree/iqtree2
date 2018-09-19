@@ -986,12 +986,20 @@ int getModelList(Params &params, Alignment *aln, StrVector &models, bool separat
 	if (seq_type == SEQ_BINARY) {
 		if (params.model_set == NULL) {
             copyCString(bin_model_names, sizeof(bin_model_names) / sizeof(char*), model_names);
+        } else if (params.model_set[0] == '+') {
+            // append model_set into existing models
+            convert_string_vec(params.model_set+1, model_names);
+            appendCString(bin_model_names, sizeof(bin_model_names) / sizeof(char*), model_names);
 		} else {
 			convert_string_vec(params.model_set, model_names);
 		}
 	} else if (seq_type == SEQ_MORPH) {
 		if (params.model_set == NULL) {
             copyCString(morph_model_names, sizeof(morph_model_names) / sizeof(char*), model_names);
+        } else if (params.model_set[0] == '+') {
+            // append model_set into existing models
+            convert_string_vec(params.model_set+1, model_names);
+            appendCString(morph_model_names, sizeof(morph_model_names) / sizeof(char*), model_names);
 		} else {
 			convert_string_vec(params.model_set, model_names);
 		}
@@ -1026,6 +1034,10 @@ int getModelList(Params &params, Alignment *aln, StrVector &models, bool separat
 			copyCString(dna_model_names_lie_markov_strsym, sizeof(dna_model_names_lie_markov_strsym) / sizeof(char*), model_names);
 			// IMPORTANT NOTE: If you add any more -mset names for sets of Lie Markov models,
 			// you also need to change getPrototypeModel function.
+        } else if (params.model_set[0] == '+') {
+            // append model_set into existing models
+            convert_string_vec(params.model_set+1, model_names);
+            appendCString(dna_model_names, sizeof(dna_model_names) / sizeof(char*), model_names);
 		} else {
 			convert_string_vec(params.model_set, model_names);
 //            copyCString(dna_freq_names, sizeof(dna_freq_names)/sizeof(char*), freq_names);
@@ -1057,6 +1069,10 @@ int getModelList(Params &params, Alignment *aln, StrVector &models, bool separat
 			copyCString(aa_model_names_rax, sizeof(aa_model_names_rax) / sizeof(char*), model_names);
 		} else if (strcmp(params.model_set, "mrbayes") == 0) {
 			copyCString(aa_model_names_mrbayes, sizeof(aa_model_names_mrbayes) / sizeof(char*), model_names);
+        } else if (params.model_set[0] == '+') {
+            // append model_set into existing models
+            convert_string_vec(params.model_set+1, model_names);
+            appendCString(aa_model_names, sizeof(aa_model_names) / sizeof(char*), model_names);
 		} else {
 			convert_string_vec(params.model_set, model_names);
 		}
@@ -1099,6 +1115,17 @@ int getModelList(Params &params, Alignment *aln, StrVector &models, bool separat
                     if (!std_genetic_code[j])
                         model_names.push_back(codon_model_names[j]);
 //				copyCString(codon_model_names, sizeof(codon_model_names) / sizeof(char*) - 1, model_names);
+            }
+        } else if (params.model_set[0] == '+') {
+            // append model_set into existing models
+            convert_string_vec(params.model_set+1, model_names);
+            if (aln->isStandardGeneticCode())
+                appendCString(codon_model_names, sizeof(codon_model_names) / sizeof(char*), model_names);
+            else {
+                i = sizeof(codon_model_names) / sizeof(char*);
+                for (j = 0; j < i; j++)
+                    if (!std_genetic_code[j])
+                        model_names.push_back(codon_model_names[j]);
             }
 		} else
 			convert_string_vec(params.model_set, model_names);
