@@ -1665,8 +1665,10 @@ void PhyloTree::computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, Phylo
         // add dummy states
         if (site > 0 && site < NUM_BITS) {
             x += site/UINT_BITS;
-        	*x |= ~((1<<(site%UINT_BITS)) - 1);
-            x++;
+            if (site % UINT_BITS != 0) {
+                *x |= ~((1<<(site%UINT_BITS)) - 1);
+                x++;
+            }
             int max_sites = ((site+UINT_BITS-1)/UINT_BITS);
             memset(x, 255, (VCSIZE - max_sites)*sizeof(UINT));
         }
