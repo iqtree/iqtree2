@@ -218,7 +218,7 @@ void printCopyright(ostream &out) {
 #else
  	out << "PDA - Phylogenetic Diversity Analyzer version ";
 #endif
-	out << iqtree_VERSION_MAJOR << "." << iqtree_VERSION_MINOR << "." << iqtree_VERSION_PATCH;
+	out << iqtree_VERSION_MAJOR << "." << iqtree_VERSION_MINOR << iqtree_VERSION_PATCH;
 
 #if defined _WIN32 || defined WIN32
 	out << " for Windows";
@@ -2555,7 +2555,7 @@ int main(int argc, char *argv[]) {
     // check for incompatible version
     string version;
     stringstream sversion;
-    sversion << iqtree_VERSION_MAJOR << "." << iqtree_VERSION_MINOR << "." << iqtree_VERSION_PATCH;
+    sversion << iqtree_VERSION_MAJOR << "." << iqtree_VERSION_MINOR << iqtree_VERSION_PATCH;
     version = sversion.str();
     CKP_SAVE(version);
     checkpoint->endStruct();
