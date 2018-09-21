@@ -19,7 +19,9 @@ PhyloSuperTreeUnlinked::PhyloSuperTreeUnlinked(SuperAlignment *alignment)
 
 void PhyloSuperTreeUnlinked::readTree(istream &in, bool &is_rooted) {
     for (iterator it = begin(); it != end(); it++) {
-        (*it)->readTree(in, is_rooted);
+        (*it)->rooted = Params::getInstance().is_rooted;
+        (*it)->readTree(in, (*it)->rooted);
+        is_rooted |= (*it)->rooted;
     }
 }
 
