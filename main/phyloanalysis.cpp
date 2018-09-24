@@ -3727,11 +3727,20 @@ void assignBranchSupportNew(Params &params) {
     if (!params.second_tree)
         outError("No target tree file provided");
     cout << "Reading tree " << params.second_tree << " ..." << endl;
-    MTree tree(params.second_tree, params.is_rooted);
+    PhyloTree tree;
+    tree.readTree(params.second_tree, params.is_rooted);
     cout << tree.leafNum << " taxa and " << tree.branchNum << " branches" << endl;
     tree.assignBranchSupport(params.user_file);
-    string str = params.second_tree;
-    str += ".suptree";
+    if (params.site_concordance) {
+        if (!params.aln_file)
+            outError("Please provide an alignment");
+        Alignment *aln = new Alignment(params.aln_file, params.sequence_type, params.intype, params.model_name);
+        tree.setAlignment(aln);
+        cout << "Computing site concordance factor..." << endl;
+        tree.computeSiteConcordanceFactor();
+        delete aln;
+    }
+    string str = (string)params.second_tree + ".suptree";
     tree.printTree(str.c_str());
     cout << "Tree with assigned branch supports written to " << str << endl;
     if (verbose_mode >= VB_DEBUG)

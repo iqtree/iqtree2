@@ -1775,6 +1775,17 @@ public:
     /** read clusters for likelihood mapping analysis */
     void readLikelihoodMappingGroups(char *filename, QuartetGroups &LMGroups);
 
+    /**
+     compute site concordance factor and assign node names
+     */
+    void computeSiteConcordanceFactor();
+
+    /**
+     compute site concordance factor and assign node names
+     @return sCF value for this branch
+     */
+    virtual double computeSiteConcordanceFactor(Branch &branch);
+
     /****************************************************************************
             Collapse stable (highly supported) clades by one representative
      ****************************************************************************/

@@ -43,6 +43,7 @@ tinatree.cpp
 tinatree.h
 parstree.cpp
 parstree.h
+discordance.cpp
 )
 
 target_link_libraries(tree pll model alignment)

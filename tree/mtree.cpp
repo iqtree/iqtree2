@@ -2101,15 +2101,23 @@ void MTree::assignBranchSupport(istream &in) {
 	if (!mynodes[i]->isLeaf())
 	{
 		stringstream tmp;
-		if (!mynodes[i]->name.empty())
-			tmp << "/";
 		if (mysg[i]->getWeight() == 0.0)
 			tmp << "0";
 		else
 			tmp << round((mysg[i]->getWeight()/decisive_counts[i])*1000)/10;
 		if (verbose_mode >= VB_MED)
 			tmp << "%" << decisive_counts[i];
-		if (!mynodes[i]->isLeaf()) mynodes[i]->name.append(tmp.str());
+
+        if (Params::getInstance().newick_extended_format) {
+            if (mynodes[i]->name.empty() || mynodes[i]->name.back() != ']')
+                mynodes[i]->name += "[&CF=" + tmp.str() + "]";
+            else
+                mynodes[i]->name = mynodes[i]->name.substr(0, mynodes[i]->name.length()-1) + ",!CF=" + tmp.str() + "]";
+        } else {
+            if (!mynodes[i]->name.empty())
+                mynodes[i]->name.append("/");
+            mynodes[i]->name.append(tmp.str());
+        }
 		if (verbose_mode >= VB_MED) {
 			cout << mynodes[i]->name << " " << occurence_trees[i] << endl;
 		}

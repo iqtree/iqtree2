@@ -925,6 +925,11 @@ public:
     AlnFormat aln_output_format;
 
     /**
+     tree in extended newick format with node label like [&label=""]
+     */
+    bool newick_extended_format;
+    
+    /**
             TRUE to discard all gappy positions
      */
     bool aln_nogaps;
@@ -1183,6 +1188,11 @@ public:
     */
     char *support_tag;
 
+    /**
+        number of quartets for site concordance factor
+     */
+    int site_concordance;
+    
     /**
             2nd alignment used in computing multinomialProb (Added by MA)
      */
