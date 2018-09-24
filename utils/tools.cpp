@@ -748,6 +748,8 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.calc_pdgain = false;
     params.multi_tree = false;
     params.second_tree = NULL;
+    params.support_tag = NULL;
+    params.site_concordance = 0;
     params.tree_weight_file = NULL;
     params.consensus_type = CT_NONE;
     params.find_pd_min = false;
@@ -798,6 +800,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.aln_output = NULL;
     params.aln_site_list = NULL;
     params.aln_output_format = ALN_PHYLIP;
+    params.newick_extended_format = false;
     params.gap_masked_aln = NULL;
     params.concatenate_aln = NULL;
     params.aln_nogaps = false;
@@ -1445,6 +1448,15 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.consensus_type = CT_ASSIGN_SUPPORT_EXTENDED;
 				continue;
 			}
+            if (strcmp(argv[cnt], "--site-concordance") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use --site-concordance NUM_QUARTETS";
+                params.site_concordance = convert_int(argv[cnt]);
+                if (params.site_concordance < 1)
+                    throw "Positive --site-concordance please";
+                continue;
+            }
 			if (strcmp(argv[cnt], "-treew") == 0) {
 				cnt++;
 				if (cnt >= argc)
@@ -1913,7 +1925,13 @@ void parseArg(int argc, char *argv[], Params &params) {
 					throw "Unknown output format";
 				continue;
 			}
-			if (strcmp(argv[cnt], "-am") == 0) {
+
+            if (strcmp(argv[cnt], "--figtree") == 0) {
+                params.newick_extended_format = true;
+                continue;
+            }
+
+            if (strcmp(argv[cnt], "-am") == 0) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -am <gap_masked_aln>";
