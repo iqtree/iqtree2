@@ -260,6 +260,11 @@ double PartitionModel::optimizeLinkedModel(bool write_info, double gradient_epsi
     model->setVariables(variables);
     model->setVariables(variables2);
     ((ModelMarkov*)model)->setBounds(lower_bound, upper_bound, bound_check);
+    // expand the bound for linked model
+    for (int i = 1; i <= ndim; i++) {
+        lower_bound[i] = MIN_RATE*0.2;
+        upper_bound[i] = MAX_RATE*2.0;
+    }
     if (Params::getInstance().optimize_alg.find("NR") != string::npos)
         score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound, bound_check, max(gradient_epsilon, TOL_RATE));
     else
