@@ -176,6 +176,12 @@ void PhyloSuperTree::setLikelihoodKernel(LikelihoodKernel lk) {
         (*it)->setLikelihoodKernel(lk);
 }
 
+void PhyloSuperTree::setParsimonyKernel(LikelihoodKernel lk) {
+    PhyloTree::setParsimonyKernel(lk);
+    for (iterator it = begin(); it != end(); it++)
+        (*it)->setParsimonyKernel(lk);
+}
+
 void PhyloSuperTree::changeLikelihoodKernel(LikelihoodKernel lk) {
 	PhyloTree::changeLikelihoodKernel(lk);
 }
