@@ -1716,27 +1716,27 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.phylip_sequential_format = true;
                 continue;
             }
-            if (strcmp(argv[cnt], "--symtest") == 0) {
+            if (strcmp(argv[cnt], "--symtest") == 0 || strcmp(argv[cnt], "--bisymtest") == 0) {
                 params.symtest = 1;
                 continue;
             }
 
-            if (strcmp(argv[cnt], "--symtest-remove-bad") == 0) {
+            if (strcmp(argv[cnt], "--symtest-remove-bad") == 0 || strcmp(argv[cnt], "--bisymtest-remove-bad") == 0) {
                 params.symtest = 2;
                 continue;
             }
 
-            if (strcmp(argv[cnt], "--symtest-remove-good") == 0) {
+            if (strcmp(argv[cnt], "--symtest-remove-good") == 0 || strcmp(argv[cnt], "--bisymtest-remove-good") == 0) {
                 params.symtest = 3;
                 continue;
             }
 
-            if (strcmp(argv[cnt], "--symtest-keep-zero") == 0) {
+            if (strcmp(argv[cnt], "--symtest-keep-zero") == 0 || strcmp(argv[cnt], "--bisymtest-keep-zero") == 0) {
                 params.symtest_keep_zero = true;
                 continue;
             }
 
-            if (strcmp(argv[cnt], "--symtest-type") == 0) {
+            if (strcmp(argv[cnt], "--symtest-type") == 0 || strcmp(argv[cnt], "--bisymtest-type") == 0) {
                 cnt++;
                 if (cnt >= argc)
                     throw "Use --symtest-type SYM|MAR|INT";
@@ -1751,7 +1751,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 continue;
             }
 
-            if (strcmp(argv[cnt], "--symtest-pval") == 0) {
+            if (strcmp(argv[cnt], "--symtest-pval") == 0 || strcmp(argv[cnt], "--bisymtest-pval") == 0) {
                 cnt++;
                 if (cnt >= argc)
                     throw "Use --symtest-pval PVALUE_CUTOFF";
@@ -4152,17 +4152,18 @@ void usage_iqtree(char* argv[], bool full_command) {
 
 			cout << endl;
 
+    cout << "TEST OF SYMMETRY" << endl
+    << "  --bisymtest               Perform three binomial tests of symmetry" << endl
+    << "  --bisymtest-remove-bad    Do --bisymtest and remove bad partitions" << endl
+    << "  --bisymtest-remove-good   Do --bisymtest and remove good partitions" << endl
+    << "  --bisymtest-type MAR|INT  Use MARginal/INTernal test when removing partitions" << endl
+    << "  --bisymtest-pval NUM      P-value cutoff (default: 0.05)" << endl
+    << "  --bisymtest-keep-zero     Keep NAs in the tests" << endl;
+    
+    cout << endl;
+
     if (full_command) {
         //TODO Print other options here (to be added)
-        cout << "TEST OF SYMMETRY" << endl
-        << "  --symtest               Perform three tests of symmetry" << endl
-        << "  --symtest-remove-bad    Do --symtest and remove bad partitions" << endl
-        << "  --symtest-remove-good   Do --symtest and remove good partitions" << endl
-        << "  --symtest-type MAR|INT  MARginal/INTernal test when removing partitions" << endl
-        << "  --symtest-pval NUM      P-value cutoff (default: 0.05)" << endl
-        << "  --symtest-keep-zero     Keep NAs in the tests" << endl;
-        
-        cout << endl;
     }
 
     exit(0);
