@@ -25,6 +25,7 @@
 #include "tools.h"
 #include "timeutil.h"
 #include "MPIHelper.h"
+#include <dirent.h>
 
 #if defined(Backtrace_FOUND)
 #include <execinfo.h>
@@ -259,6 +260,46 @@ bool fileExists(string strFilename) {
     return (blnReturn);
 }
 
+int isDirectory(const char *path) {
+    struct stat statbuf;
+    if (stat(path, &statbuf) != 0)
+        return 0;
+    return S_ISDIR(statbuf.st_mode);
+}
+
+int isFile(const char *path) {
+    struct stat statbuf;
+    if (stat(path, &statbuf) != 0)
+        return 0;
+    return S_ISREG(statbuf.st_mode);
+}
+
+int getFilesInDir(const char *path, StrVector &filenames)
+{
+    if (!isDirectory(path))
+        return 0;
+    string path_name = path;
+    if (path_name.back() != '/')
+        path_name.append("/");
+    DIR *dp;
+    struct dirent *ep;
+    dp = opendir (path);
+    
+    if (dp != NULL)
+    {
+        while ((ep = readdir (dp)) != NULL) {
+            if (isFile((path_name + ep->d_name).c_str()))
+                filenames.push_back(ep->d_name);
+        }
+        
+        (void) closedir (dp);
+        return 1;
+    }
+    else
+        return 0;
+    
+    return 1;
+}
 int convert_int(const char *str) {
     char *endptr;
     int i = strtol(str, &endptr, 10);
@@ -3723,8 +3764,12 @@ void parseArg(int argc, char *argv[], Params &params) {
     if (!params.out_prefix) {
     	if (params.eco_dag_file)
     		params.out_prefix = params.eco_dag_file;
-    	else if (params.partition_file)
+        else if (params.partition_file) {
             params.out_prefix = params.partition_file;
+            if (params.out_prefix[strlen(params.out_prefix)-1] == '/' || params.out_prefix[strlen(params.out_prefix)-1] == '\\') {
+                params.out_prefix[strlen(params.out_prefix)-1] = 0;
+            }
+        }
         else if (params.aln_file)
             params.out_prefix = params.aln_file;
         else if (params.ngs_file)

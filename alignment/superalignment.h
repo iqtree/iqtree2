@@ -72,7 +72,10 @@ public:
     
     /** read partition model file in NEXUS format into variable info */
     void readPartitionNexus(Params &params);
-    
+
+    /** read partition as files in a directory */
+    void readPartitionDir(Params &params);
+
     void printPartition(const char *filename);
     
     void printPartitionRaxml(const char *filename);

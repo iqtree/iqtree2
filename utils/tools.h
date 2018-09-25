@@ -2239,6 +2239,19 @@ bool copyFile(const char SRC[], const char DEST[]);
 bool fileExists(string strFilename);
 
 /**
+    check that path is a directory
+ */
+int isDirectory(const char *path);
+
+/**
+    get all file names in a directory
+    @param path directory name
+    @param[out] filenames vector of file names
+    return 0 if FAIL, non-zero otherwise
+ */
+int getFilesInDir(const char *path, StrVector &filenames);
+
+/**
         convert string to int, with error checking
         @param str original string
         @return the number
