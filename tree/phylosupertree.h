@@ -123,6 +123,8 @@ public:
 
     virtual void changeLikelihoodKernel(LikelihoodKernel lk);
 
+    virtual void setParsimonyKernel(LikelihoodKernel lk);
+
     virtual void setNumThreads(int num_threads);
 
 	virtual bool isSuperTree() { return true; }

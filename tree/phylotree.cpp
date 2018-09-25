@@ -720,21 +720,25 @@ void PhyloTree::initializeAllPartialPars(int &index, PhyloNode *node, PhyloNode 
     FOR_NEIGHBOR_IT(node, dad, it)initializeAllPartialPars(index, (PhyloNode*) (*it)->node, node);
 }
 
+#ifdef __AVX512KNL
+#define SIMD_BITS 512
+#else
+#define SIMD_BITS 256
+#endif
+
+
 size_t PhyloTree::getBitsBlockSize() {
     // reserve the last entry for parsimony score
 //    return (aln->num_states * aln->size() + UINT_BITS - 1) / UINT_BITS + 1;
     if (cost_matrix) {
         return aln->size() * aln->num_states + 1;
     }
-    size_t SIMD_BITS = 32;
-    switch (sse) {
-        case LK_AVX512: SIMD_BITS = 512; break;
-        case LK_AVX:
-        case LK_AVX_FMA: SIMD_BITS = 256; break;
-        default: SIMD_BITS = 128;
-    }
     size_t len = aln->getMaxNumStates() * ((max(aln->size(), (size_t)aln->num_variant_sites) + SIMD_BITS - 1) / UINT_BITS) + 4;
+#ifdef __AVX512KNL
+    len = ((len+15)/16)*16;
+#else
     len = ((len+7)/8)*8;
+#endif
     return len;
 }
 
