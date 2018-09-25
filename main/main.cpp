@@ -2593,6 +2593,16 @@ int main(int argc, char *argv[]) {
 		processNCBITree(Params::getInstance());
 	} else if (Params::getInstance().user_file && Params::getInstance().eco_dag_file) { /**ECOpd analysis*/
 		processECOpd(Params::getInstance());
+    } else if ((Params::getInstance().aln_file || Params::getInstance().partition_file) && !Params::getInstance().second_tree) {
+		if ((Params::getInstance().siteLL_file || Params::getInstance().second_align) && !Params::getInstance().gbo_replicates)
+		{
+			if (Params::getInstance().siteLL_file)
+				guidedBootstrap(Params::getInstance());
+			if (Params::getInstance().second_align)
+				computeMulProb(Params::getInstance());
+		} else {
+			runPhyloAnalysis(Params::getInstance(), checkpoint);
+		}
 //	} else if (Params::getInstance().ngs_file || Params::getInstance().ngs_mapped_reads) {
 //		runNGSAnalysis(Params::getInstance());
 //	} else if (Params::getInstance().pdtaxa_file && Params::getInstance().gene_scale_factor >=0.0 && Params::getInstance().gene_pvalue_file) {
@@ -2620,16 +2630,6 @@ int main(int argc, char *argv[]) {
 			/**MINH ANH: for some comparison*/
 			case COMPARE: compare(Params::getInstance()); break; //MA
 		}
-    } else if (Params::getInstance().aln_file || Params::getInstance().partition_file) {
-        if ((Params::getInstance().siteLL_file || Params::getInstance().second_align) && !Params::getInstance().gbo_replicates)
-        {
-            if (Params::getInstance().siteLL_file)
-                guidedBootstrap(Params::getInstance());
-            if (Params::getInstance().second_align)
-                computeMulProb(Params::getInstance());
-        } else {
-            runPhyloAnalysis(Params::getInstance(), checkpoint);
-        }
     } else if (Params::getInstance().split_threshold_str) {
         // for Ricardo: keep those splits from input tree above given support threshold
         collapseLowBranchSupport(Params::getInstance().user_file, Params::getInstance().split_threshold_str);
