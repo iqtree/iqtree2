@@ -770,6 +770,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.overlap = 0;
     params.is_rooted = false;
     params.root_move_dist = 2;
+    params.root_find = false;
     params.sample_size = -1;
     params.repeated_time = 1;
     //params.nr_output = 10000;
@@ -1214,14 +1215,19 @@ void parseArg(int argc, char *argv[], Params &params) {
 				continue;
 			}
             
-            if (strcmp(argv[cnt], "--root-move-dist") == 0) {
+            if (strcmp(argv[cnt], "--root-dist") == 0) {
                 cnt++;
                 if (cnt >= argc)
-                    throw "Use --root-move-dist <maximum-root-move-distance>";
+                    throw "Use --root-dist <maximum-root-move-distance>";
                 params.root_move_dist = convert_int(argv[cnt]);
                 continue;
             }
-            
+
+            if (strcmp(argv[cnt], "--root-find") == 0) {
+                params.root_find = true;
+                continue;
+            }
+
 			if (strcmp(argv[cnt], "-all") == 0) {
 				params.find_all = true;
 				continue;

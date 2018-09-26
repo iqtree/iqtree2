@@ -1134,6 +1134,11 @@ public:
     int root_move_dist;
 
     /**
+     TRUE to find best root when optimizing model
+     */
+    bool root_find;
+
+    /**
             min branch length, used to create random tree/network
      */
     double min_len;

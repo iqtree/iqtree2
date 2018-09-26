@@ -5124,6 +5124,7 @@ void PhyloTree::sortNeighborBySubtreeSize(PhyloNode *node, PhyloNode *dad) {
 void PhyloTree::convertToRooted() {
     ASSERT(leafNum == aln->getNSeq());
     Node *node, *dad;
+    double node_len, dad_len;
     if (params->root) {
         string name = params->root;
         node = findNodeName(name);
@@ -5131,7 +5132,23 @@ void PhyloTree::convertToRooted() {
             outError("Cannot find leaf with name " + name);
         ASSERT(node->isLeaf());
         dad = node->neighbors[0]->node;
+        node_len = dad_len = node->neighbors[0]->length*0.5;
     } else {
+        //midpoint rooting
+        Node *node1, *node2;
+        double longest = root->longestPath2(node1, node2);
+        longest *= 0.5;
+        double curlen = 0.0;
+        for (; node1 != node2 && curlen + node1->highestNei->length < longest; node1 = node1->highestNei->node) {
+            curlen += node1->highestNei->length;
+        }
+        // place root on node1->heigestNei
+        node = node1;
+        dad = node1->highestNei->node;
+        node_len = longest - curlen;
+        dad_len = node1->highestNei->length - node_len;
+        ASSERT(dad_len >= 0.0);
+        /*
         // place root to the longest branch
         NodeVector nodes1, nodes2;
         getBranches(nodes1, nodes2);
@@ -5142,6 +5159,7 @@ void PhyloTree::convertToRooted() {
                 node = nodes1[i];
                 dad = nodes2[i];
             }
+         */
     }
     rooted = true;
     root = newNode(leafNum, ROOT_NAME);
@@ -5149,11 +5167,11 @@ void PhyloTree::convertToRooted() {
     root->addNeighbor(root_int, 0.0);
     root_int->addNeighbor(root, 0.0);
     leafNum++;
-    double newlen = node->findNeighbor(dad)->length/2.0;
-    node->updateNeighbor(dad, root_int, newlen);
-    root_int->addNeighbor(node, newlen);
-    dad->updateNeighbor(node, root_int, newlen);
-    root_int->addNeighbor(dad, newlen);
+    //double newlen = node->findNeighbor(dad)->length/2.0;
+    node->updateNeighbor(dad, root_int, node_len);
+    root_int->addNeighbor(node, node_len);
+    dad->updateNeighbor(node, root_int, dad_len);
+    root_int->addNeighbor(dad, dad_len);
     initializeTree();
     computeBranchDirection();
     current_it = current_it_back = NULL;
