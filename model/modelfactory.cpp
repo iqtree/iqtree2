@@ -1265,6 +1265,12 @@ double ModelFactory::optimizeParameters(int fixed_len, bool write_info,
         }
     }
 
+    if (Params::getInstance().root_find && tree->rooted && Params::getInstance().root_move_dist > 0) {
+        cur_lh = tree->optimizeRootPosition(Params::getInstance().root_move_dist, write_info, logl_epsilon);
+        if (verbose_mode >= VB_MED || write_info)
+            cout << "Rooting log-likelihood: " << cur_lh << endl;
+    }
+    
     if (verbose_mode >= VB_MED || write_info)
         cout << "Optimal log-likelihood: " << cur_lh << endl;
 
