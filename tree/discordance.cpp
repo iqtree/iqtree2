@@ -7,13 +7,21 @@
 
 #include "phylotree.h"
 
-void PhyloTree::computeSiteConcordanceFactor() {
+void PhyloTree::computeSiteConcordanceFactor(map<int,BranchSupportInfo> &branch_supports) {
     Branches branches;
     getInnerBranches(branches);
     for (auto it = branches.begin(); it != branches.end(); it++) {
-        double sup = computeSiteConcordanceFactor(it->second);
+        double num_sites;
+        double sup = computeSiteConcordanceFactor(it->second, num_sites);
         string sup_str = convertDoubleToString(round(sup*1000)/10);
         Node *node = it->second.second;
+
+        auto brsup = branch_supports.find(node->id);
+        ASSERT(brsup != branch_supports.end());
+        brsup->second.siteCF = sup;
+        brsup->second.siteN = num_sites;
+        brsup->second.length = node->findNeighbor(it->second.first)->length;
+
         if (Params::getInstance().newick_extended_format) {
             if (node->name.empty() || node->name.back() != ']') {
                 node->name += "[&sCF=" + sup_str + "]";
@@ -27,7 +35,7 @@ void PhyloTree::computeSiteConcordanceFactor() {
     }
 }
 
-double PhyloTree::computeSiteConcordanceFactor(Branch &branch) {
+double PhyloTree::computeSiteConcordanceFactor(Branch &branch, double &num_sites) {
     vector<IntVector> taxa;
     taxa.resize(4);
 
@@ -49,6 +57,7 @@ double PhyloTree::computeSiteConcordanceFactor(Branch &branch) {
     }
     
     double sum_support = 0.0;
+    int sum_sites = 0;
     for (int i = 0; i < Params::getInstance().site_concordance; i++) {
         int j;
         // get a random quartet
@@ -76,8 +85,10 @@ double PhyloTree::computeSiteConcordanceFactor(Branch &branch) {
                 support[2] += pat->frequency;
         }
         int sum = support[0] + support[1] + support[2];
+        sum_sites += sum;
         if (sum > 0)
             sum_support += ((double)support[0]) / sum;
     }
+    num_sites = (double)sum_sites / Params::getInstance().site_concordance;
     return sum_support / Params::getInstance().site_concordance;
 }

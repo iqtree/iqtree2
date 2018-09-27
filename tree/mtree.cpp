@@ -1983,20 +1983,20 @@ void MTree::extractQuadSubtrees(vector<Split*> &subtrees, Node *node, Node *dad)
 }
 
 
-void MTree::assignBranchSupport(const char *trees_file) {
+void MTree::assignBranchSupport(const char *trees_file, map<int,BranchSupportInfo> &branch_supports) {
 	cout << "Reading input trees file " << trees_file << endl;
 	try {
 		ifstream in;
         in.exceptions(ios::failbit | ios::badbit);
         in.open(trees_file);
-        assignBranchSupport(in);
+        assignBranchSupport(in, branch_supports);
 		in.close();
 	} catch (ios::failure) {
 		outError(ERR_READ_INPUT, trees_file);
 	}
 }
 
-void MTree::assignBranchSupport(istream &in) {
+void MTree::assignBranchSupport(istream &in, map<int,BranchSupportInfo> &branch_supports) {
 	SplitGraph mysg;
 	NodeVector mynodes;
 	convertSplits(mysg, &mynodes, root->neighbors[0]->node);
@@ -2100,6 +2100,13 @@ void MTree::assignBranchSupport(istream &in) {
 	for (int i = 0; i < mysg.size(); i++)
 	if (!mynodes[i]->isLeaf())
 	{
+        BranchSupportInfo brsup;
+        brsup.id = mynodes[i]->id;
+        brsup.name = mynodes[i]->name;
+        brsup.geneCF = mysg[i]->getWeight()/decisive_counts[i];
+        brsup.geneN = decisive_counts[i];
+        branch_supports[brsup.id] = brsup;
+        
 		stringstream tmp;
 		if (mysg[i]->getWeight() == 0.0)
 			tmp << "0";

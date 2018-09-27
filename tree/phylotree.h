@@ -1778,13 +1778,14 @@ public:
     /**
      compute site concordance factor and assign node names
      */
-    void computeSiteConcordanceFactor();
+    void computeSiteConcordanceFactor(map<int,BranchSupportInfo> &branch_supports);
 
     /**
      compute site concordance factor and assign node names
      @return sCF value for this branch
+     @num_sites average number of quartet informative sites for the branch
      */
-    virtual double computeSiteConcordanceFactor(Branch &branch);
+    virtual double computeSiteConcordanceFactor(Branch &branch, double &num_sites);
 
     /****************************************************************************
             Collapse stable (highly supported) clades by one representative
