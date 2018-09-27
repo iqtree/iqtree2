@@ -3730,14 +3730,15 @@ void assignBranchSupportNew(Params &params) {
     PhyloTree tree;
     tree.readTree(params.second_tree, params.is_rooted);
     cout << tree.leafNum << " taxa and " << tree.branchNum << " branches" << endl;
-    tree.assignBranchSupport(params.user_file);
+    map<int, BranchSupportInfo> branch_supports;
+    tree.assignBranchSupport(params.user_file, branch_supports);
     if (params.site_concordance) {
         if (!params.aln_file)
             outError("Please provide an alignment");
         Alignment *aln = new Alignment(params.aln_file, params.sequence_type, params.intype, params.model_name);
         tree.setAlignment(aln);
         cout << "Computing site concordance factor..." << endl;
-        tree.computeSiteConcordanceFactor();
+        tree.computeSiteConcordanceFactor(branch_supports);
         delete aln;
     }
     string str = (string)params.second_tree + ".suptree";
@@ -3745,6 +3746,31 @@ void assignBranchSupportNew(Params &params) {
     cout << "Tree with assigned branch supports written to " << str << endl;
     if (verbose_mode >= VB_DEBUG)
         tree.drawTree(cout);
+    ofstream out;
+    string filename = (string)params.second_tree + ".support";
+    out.open(filename.c_str());
+    out << "# ID: Node ID" << endl
+        << "# Length: Branch length" << endl
+        << "# Value: Current node value (e.g. bootstrap)" << endl
+        << "# geneCF: Gene concordance factor" << endl
+        << "# geneN: Number of trees decisive for the branch" << endl;
+    if (params.site_concordance)
+        out << "# siteCF: Site concordance factor averaged over " << params.site_concordance << " quartets" << endl
+            << "# siteN: number of informative sites averaged over " << params.site_concordance << " quartets" << endl;
+    out << "ID\tLength\tValue\tgeneCF\tgeneN";
+    if (params.site_concordance)
+        out << "\tsiteCF\tsiteN";
+    out << endl;
+    for (auto brit = branch_supports.begin(); brit != branch_supports.end(); brit++) {
+        out << brit->second.id << '\t' << brit->second.length << '\t' << brit->second.name << '\t'
+            << brit->second.geneCF << '\t' << brit->second.geneN;
+        if (params.site_concordance)
+            out << '\t' << brit->second.siteCF << '\t'
+                << brit->second.siteN;
+        out << endl;
+    }
+    out.close();
+    cout << "Concordance factors printed to " << filename << endl;
 }
 
 

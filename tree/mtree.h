@@ -36,6 +36,24 @@ const char BRANCH_LENGTH_SEPARATOR = '/';
 class SplitGraph;
 class MTreeSet;
 
+class BranchSupportInfo {
+public:
+    BranchSupportInfo() {
+        id = 0;
+        length = 0.0;
+        geneCF = 0.0;
+        geneN = 0;
+        siteCF = siteN = 0.0;
+    }
+    int id; // branch id
+    double length;
+    string name;
+    double geneCF; // gene concordance factor
+    int geneN; // number of gene trees that is decisive
+    double siteCF; // site concordance factor
+    double siteN; // number of sites that is decisive
+};
+
 /**
 General-purposed tree
 @author BUI Quang Minh, Steffen Klaere, Arndt von Haeseler
@@ -711,9 +729,9 @@ public:
 	 * Work fine also when the trees do not have the same taxon set.
 	 * @param trees_file set of trees in NEWICK
 	 */
-	void assignBranchSupport(const char *trees_file);
+	void assignBranchSupport(const char *trees_file, map<int,BranchSupportInfo> &branch_supports);
 
-	void assignBranchSupport(istream &in);
+	void assignBranchSupport(istream &in, map<int,BranchSupportInfo> &branch_supports);
 
 	/**
 	 * compute robinson foulds distance between this tree and a set of trees.

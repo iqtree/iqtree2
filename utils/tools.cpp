@@ -1487,7 +1487,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.support_tag = argv[cnt];
 				continue;
 			}
-			if (strcmp(argv[cnt], "-sup2") == 0) {
+			if (strcmp(argv[cnt], "-sup2") == 0 || strcmp(argv[cnt], "--support") == 0) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -sup2 <target_tree_file>";
