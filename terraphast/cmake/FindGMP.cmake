@@ -1,0 +1,13 @@
+find_path(GMP_INCLUDE_DIR NAMES gmp.h gmpxx.h)
+find_library(GMP_LIBRARIES NAMES gmp libgmp)
+find_library(GMPXX_LIBRARIES NAMES gmpxx libgmpxx )
+
+include(FindPackageHandleStandardArgs)
+find_package_handle_standard_args(GMP DEFAULT_MSG GMP_INCLUDE_DIR GMP_LIBRARIES GMPXX_LIBRARIES)
+mark_as_advanced(GMP_INCLUDE_DIR GMP_LIBRARIES)
+add_library(gmp INTERFACE IMPORTED)
+set_target_properties(gmp PROPERTIES INTERFACE_INCLUDE_DIRECTORIES ${GMP_INCLUDE_DIR})
+set_target_properties(gmp PROPERTIES INTERFACE_LINK_LIBRARIES ${GMP_LIBRARIES})
+add_library(gmpxx INTERFACE IMPORTED)
+set_target_properties(gmpxx PROPERTIES INTERFACE_INCLUDE_DIRECTORIES ${GMP_INCLUDE_DIR})
+set_target_properties(gmpxx PROPERTIES INTERFACE_LINK_LIBRARIES ${GMPXX_LIBRARIES})

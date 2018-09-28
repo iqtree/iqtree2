@@ -225,10 +225,11 @@ void IQTree::initSettings(Params &params) {
 
     searchinfo.nni_type = params.nni_type;
     optimize_by_newton = params.optimize_by_newton;
+    setLikelihoodKernel(params.SSE);
     if (num_threads > 0)
-        setLikelihoodKernel(params.SSE, num_threads);
+        setNumThreads(num_threads);
     else
-        setLikelihoodKernel(params.SSE, params.num_threads);
+        setNumThreads(params.num_threads);
     candidateTrees.init(this->aln, 200);
     intermediateTrees.init(this->aln, 200000);
 
@@ -562,10 +563,12 @@ void IQTree::computeInitialTree(LikelihoodKernel kernel) {
         cout << "Reading input tree file " << params->user_file << " ...";
         bool myrooted = params->is_rooted;
         readTree(params->user_file, myrooted);
-        if (myrooted) {
+        if (myrooted && !isSuperTreeUnlinked()) {
             // TODO: convert to unrooted tree for supertree as non-reversible models
             // do not work with partition models yet
             if (isSuperTree()) {
+                if (!findNodeName(aln->getSeqName(0)))
+                    outError("Taxon " + aln->getSeqName(0) + " does not exist in tree file");
                 convertToUnrooted();
                 cout << " rooted tree converted to unrooted tree";
             } else {
@@ -574,8 +577,11 @@ void IQTree::computeInitialTree(LikelihoodKernel kernel) {
         }
         cout << endl;
         setAlignment(aln);
+        if (params->sankoff_cost_file && !cost_matrix)
+            loadCostMatrixFile(params->sankoff_cost_file);
         if (isSuperTree())
-        	wrapperFixNegativeBranch(params->fixed_branch_length == BRLEN_OPTIMIZE);
+        	wrapperFixNegativeBranch(params->fixed_branch_length == BRLEN_OPTIMIZE &&
+                                     params->partition_type != TOPO_UNLINKED);
         else
         	fixed_number = wrapperFixNegativeBranch(false);
         params->numInitTrees = 1;
@@ -595,6 +601,9 @@ void IQTree::computeInitialTree(LikelihoodKernel kernel) {
             start_tree = STT_PARSIMONY;
         switch (start_tree) {
         case STT_PARSIMONY:
+            if (params->sankoff_cost_file && !cost_matrix)
+                loadCostMatrixFile(params->sankoff_cost_file);
+            //initCostMatrix(CM_UNIFORM);
             // Create parsimony tree using IQ-Tree kernel
             cout << "Creating fast initial parsimony tree by random order stepwise addition..." << endl;
 //            aln->orderPatternByNumChars();
@@ -2275,7 +2284,7 @@ double IQTree::doTreeSearch() {
         printBestCandidateTree();
         saveCheckpoint();
         getCheckpoint()->putBool("finishedCandidateSet", true);
-        getCheckpoint()->dump(true);
+        getCheckpoint()->dump();
     } else {
         cout << "CHECKPOINT: Candidate tree set restored, best LogL: " << candidateTrees.getBestScore() << endl;
     }
@@ -2523,13 +2532,15 @@ double IQTree::doTreeSearch() {
     cout << "Total number of trees received: " << MPIHelper::getInstance().getNumTreeReceived() << endl;
     cout << "Total number of trees sent: " << MPIHelper::getInstance().getNumTreeSent() << endl;
     cout << "Total number of NNI searches done by myself: " << MPIHelper::getInstance().getNumNNISearch() << endl;
-    MPIHelper::getInstance().resetNumbers();
+    //MPIHelper::getInstance().resetNumbers();
 //    MPI_Finalize();
 //    if (MPIHelper::getInstance().getProcessID() != MASTER) {
 //        exit(0);
 //    }
 #endif
 
+    cout << "TREE SEARCH COMPLETED AFTER " << stop_rule.getCurIt() << " ITERATIONS"
+    << " / Time: " << convert_time(getRealTime() - params->start_real_time) << endl << endl;
 
     return candidateTrees.getBestScore();
 
@@ -2767,6 +2778,9 @@ void IQTree::refineBootTrees() {
     if (CKP_RESTORE(refined_samples))
         cout << "CHECKPOINT: " << refined_samples << " refined samples restored" << endl;
     checkpoint->endStruct();
+    
+    // 2018-08-17: delete duplicated memory
+    deleteAllPartialLh();
 
 	// do bootstrap analysis
 	for (int sample = refined_samples; sample < boot_trees.size(); sample++) {
@@ -2814,7 +2828,8 @@ void IQTree::refineBootTrees() {
 
         // set likelihood kernel
         boot_tree->setParams(params);
-        boot_tree->setLikelihoodKernel(sse, num_threads);
+        boot_tree->setLikelihoodKernel(sse);
+        boot_tree->setNumThreads(num_threads);
 
         // load the current ufboot tree
         boot_tree->readTreeString(boot_trees[sample]);
@@ -2885,6 +2900,9 @@ void IQTree::refineBootTrees() {
         params->nni5 = true;
 	} else
         params->nni5 = false;
+
+    // 2018-08-17: recover memory
+    initializeAllPartialLh();
 
 }
 
@@ -3817,7 +3835,7 @@ void IQTree::summarizeBootstrap(Params &params, MTreeSet &trees) {
 //    mytree.readTree(tree_stream, rooted);
 //    mytree.assignLeafID();
     assignLeafNameByID();
-    createBootstrapSupport(taxname, trees, sg, hash_ss, NULL);
+    createBootstrapSupport(taxname, trees, hash_ss, NULL);
 
     // now write resulting tree with supports
 //    tree_stream.seekp(0, ios::beg);
@@ -4040,6 +4058,8 @@ void IQTree::printResultTree(ostream &out) {
 
 void IQTree::printBestCandidateTree() {
     if (MPIHelper::getInstance().isWorker())
+        return;
+    if (params->suppress_output_flags & OUT_TREEFILE)
         return;
     string tree_file_name = params->out_prefix;
     tree_file_name += ".treefile";
@@ -4324,11 +4344,12 @@ int PhyloTree::testNumThreads() {
     double min_time = max_procs; // minimum time in seconds
     StrVector trees;
     trees.push_back(getTreeString());
+    setLikelihoodKernel(sse);
 
     for (int proc = 1; proc <= max_procs; proc++) {
 
         omp_set_num_threads(proc);
-        setLikelihoodKernel(sse, proc);
+        setNumThreads(proc);
         initializeAllPartialLh();
 
         double beginTime = getRealTime();
@@ -4384,7 +4405,7 @@ int PhyloTree::testNumThreads() {
     readTreeString(trees[0]);
 
     cout << "BEST NUMBER OF THREADS: " << bestProc+1 << endl << endl;
-    setLikelihoodKernel(sse, bestProc+1);
+    setNumThreads(bestProc+1);
 
     return bestProc+1;
 #endif

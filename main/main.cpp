@@ -54,7 +54,7 @@
 #include "phyloanalysis.h"
 #include "tree/matree.h"
 //#include "ngs.h"
-//#include "parsmultistate.h"
+#include "obsolete/parsmultistate.h"
 //#include "gss.h"
 #include "alignment/maalignment.h" //added by MA
 #include "tree/ncbitree.h"
@@ -218,7 +218,7 @@ void printCopyright(ostream &out) {
 #else
  	out << "PDA - Phylogenetic Diversity Analyzer version ";
 #endif
-	out << iqtree_VERSION_MAJOR << "." << iqtree_VERSION_MINOR << "." << iqtree_VERSION_PATCH;
+	out << iqtree_VERSION_MAJOR << "." << iqtree_VERSION_MINOR << iqtree_VERSION_PATCH;
 
 #if defined _WIN32 || defined WIN32
 	out << " for Windows";
@@ -1726,6 +1726,9 @@ public:
     streambuf *get_fout_buf() {
         return fout_buf;
     }
+    streambuf *get_cout_buf() {
+        return cout_buf;
+    }
     ofstream *get_fout() {
         return &fout;
     }
@@ -1831,6 +1834,30 @@ protected:
     }
 };
 
+class muststreambuf : public streambuf {
+public:
+    void init(streambuf *cout_buf, streambuf *fout_buf) {
+        this->fout_buf = fout_buf;
+        this->cout_buf = cout_buf;
+    }
+    
+protected:
+    streambuf *cout_buf;
+    streambuf *fout_buf;
+    
+    virtual int overflow( int c = EOF) {
+        if (cout_buf->sputc(c) == EOF) {
+            return EOF;
+        }
+        if (fout_buf->sputc(c) == EOF) return EOF;
+        return c;
+    }
+    
+    virtual int sync() {
+        cout_buf->pubsync();
+        return fout_buf->pubsync();
+    }
+};
 
 
 /*********************************************************************************
@@ -1838,6 +1865,9 @@ protected:
  *********************************************************************************/
 outstreambuf _out_buf;
 errstreambuf _err_buf;
+muststreambuf _must_buf;
+ostream cmust(&_must_buf);
+
 string _log_file;
 int _exit_wait_optn = FALSE;
 
@@ -1847,11 +1877,11 @@ extern "C" void startLogFile(bool append_log) {
     else
         _out_buf.open(_log_file.c_str());
     _err_buf.init(_out_buf.get_fout_buf());
+    _must_buf.init(_out_buf.get_cout_buf(), _out_buf.get_fout_buf());
 }
 
 extern "C" void endLogFile() {
 	_out_buf.close();
-    
 }
 
 void funcExit(void) {
@@ -2525,7 +2555,7 @@ int main(int argc, char *argv[]) {
     // check for incompatible version
     string version;
     stringstream sversion;
-    sversion << iqtree_VERSION_MAJOR << "." << iqtree_VERSION_MINOR << "." << iqtree_VERSION_PATCH;
+    sversion << iqtree_VERSION_MAJOR << "." << iqtree_VERSION_MINOR << iqtree_VERSION_PATCH;
     version = sversion.str();
     CKP_SAVE(version);
     checkpoint->endStruct();
@@ -2540,8 +2570,8 @@ int main(int argc, char *argv[]) {
 	// call the main function
 	if (Params::getInstance().tree_gen != NONE) {
 		generateRandomTree(Params::getInstance());
-//	} else if (Params::getInstance().do_pars_multistate) {
-//		doParsMultiState(Params::getInstance());
+    } else if (Params::getInstance().do_pars_multistate) {
+        doParsMultiState(Params::getInstance());
 	} else if (Params::getInstance().rf_dist_mode != 0) {
 		computeRFDist(Params::getInstance());
 	} else if (Params::getInstance().test_input != TEST_NONE) {
@@ -2563,7 +2593,7 @@ int main(int argc, char *argv[]) {
 		processNCBITree(Params::getInstance());
 	} else if (Params::getInstance().user_file && Params::getInstance().eco_dag_file) { /**ECOpd analysis*/
 		processECOpd(Params::getInstance());
-	} else if (Params::getInstance().aln_file || Params::getInstance().partition_file) {
+    } else if ((Params::getInstance().aln_file || Params::getInstance().partition_file) && !Params::getInstance().second_tree) {
 		if ((Params::getInstance().siteLL_file || Params::getInstance().second_align) && !Params::getInstance().gbo_replicates)
 		{
 			if (Params::getInstance().siteLL_file)

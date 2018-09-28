@@ -44,7 +44,7 @@ RateFree::RateFree(int ncat, double start_alpha, string params, bool sorted_rate
                 rates[i] = 1.0;
                 sum_prop += prop[i];
             }
-            fix_params = 1;
+            fix_params = (Params::getInstance().optimize_from_given_params) ? 0 : 1;
         } else {
             if (params_vec.size() != ncategory*2)
                 outError("Number of parameters for FreeRate model must be twice number of categories");
@@ -56,7 +56,7 @@ RateFree::RateFree(int ncat, double start_alpha, string params, bool sorted_rate
             }
             for (i = 0; i < ncategory; i++)
                 rates[i] /= sum;
-            fix_params = 2;
+            fix_params = (Params::getInstance().optimize_from_given_params) ? 0 : 2;
         }
 		if (fabs(sum_prop-1.0) > 1e-5)
 			outError("Sum of category proportions not equal to 1");
@@ -502,7 +502,9 @@ double RateFree::optimizeWithEM() {
     tree->copyPhyloTree(phylo_tree);
     tree->optimize_by_newton = phylo_tree->optimize_by_newton;
     tree->setParams(phylo_tree->params);
-    tree->setLikelihoodKernel(phylo_tree->sse, phylo_tree->num_threads);
+    tree->setLikelihoodKernel(phylo_tree->sse);
+    tree->setNumThreads(phylo_tree->num_threads);
+
     // initialize model
     ModelFactory *model_fac = new ModelFactory();
     model_fac->joint_optimize = phylo_tree->params->optimize_model_rate_joint;
@@ -617,7 +619,7 @@ double RateFree::optimizeWithEM() {
             subst_model->setTree(tree);
             model_fac->model = subst_model;
             if (subst_model->isMixture() || subst_model->isSiteSpecificModel() || !subst_model->isReversible())
-                tree->setLikelihoodKernel(phylo_tree->sse, phylo_tree->num_threads);
+                tree->setLikelihoodKernel(phylo_tree->sse);
 
                         
             // initialize likelihood

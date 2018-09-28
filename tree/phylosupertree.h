@@ -65,7 +65,7 @@ public:
     /**
      constructor
      */
-    PhyloSuperTree(SuperAlignment *alignment);
+    PhyloSuperTree(SuperAlignment *alignment, bool new_iqtree = false);
 
     /**
 		constructor
@@ -119,9 +119,13 @@ public:
 	 */
 	virtual void initSettings(Params& params);
 
-    virtual void setLikelihoodKernel(LikelihoodKernel lk, int num_threads);
+    virtual void setLikelihoodKernel(LikelihoodKernel lk);
 
     virtual void changeLikelihoodKernel(LikelihoodKernel lk);
+
+    virtual void setParsimonyKernel(LikelihoodKernel lk);
+
+    virtual void setNumThreads(int num_threads);
 
 	virtual bool isSuperTree() { return true; }
 
@@ -407,9 +411,9 @@ public:
 		....
 		This function will call computePatternRates()
 		@param out output stream to write rates
-	*/
-	virtual void writeSiteRates(ostream &out, int partid = -1);
-
+        @param bayes TRUE to use empirical Bayesian, false for ML method
+     */
+    virtual void writeSiteRates(ostream &out, bool bayes, int partid = -1);
 
     /**
         write site log likelihood to a output stream
@@ -428,6 +432,13 @@ public:
      @param out output stream
      */
     virtual void writeBranches(ostream &out);
+
+    /**
+        print partition file with best model parameters
+        @param filename output file name
+     */
+    void printBestPartitionParams(const char *filename);
+
     
     /** True when mixed codon with other data type */
     bool rescale_codon_brlen;

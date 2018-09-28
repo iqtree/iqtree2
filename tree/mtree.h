@@ -36,6 +36,24 @@ const char BRANCH_LENGTH_SEPARATOR = '/';
 class SplitGraph;
 class MTreeSet;
 
+class BranchSupportInfo {
+public:
+    BranchSupportInfo() {
+        id = 0;
+        length = 0.0;
+        geneCF = 0.0;
+        geneN = 0;
+        siteCF = siteN = 0.0;
+    }
+    int id; // branch id
+    double length;
+    string name;
+    double geneCF; // gene concordance factor
+    int geneN; // number of gene trees that is decisive
+    double siteCF; // site concordance factor
+    double siteN; // number of sites that is decisive
+};
+
 /**
 General-purposed tree
 @author BUI Quang Minh, Steffen Klaere, Arndt von Haeseler
@@ -172,7 +190,7 @@ public:
      ********************************************************/
 
 	/** @return true if tree is bifurcating, false otherwise */
-	bool isBifurcating(Node *node = NULL, Node *dad = NULL);
+	virtual bool isBifurcating(Node *node = NULL, Node *dad = NULL);
     /**
             print information
             @param node the starting node, NULL to start from the root
@@ -711,9 +729,9 @@ public:
 	 * Work fine also when the trees do not have the same taxon set.
 	 * @param trees_file set of trees in NEWICK
 	 */
-	void assignBranchSupport(const char *trees_file);
+	void assignBranchSupport(const char *trees_file, map<int,BranchSupportInfo> &branch_supports);
 
-	void assignBranchSupport(istream &in);
+	void assignBranchSupport(istream &in, map<int,BranchSupportInfo> &branch_supports);
 
 	/**
 	 * compute robinson foulds distance between this tree and a set of trees.
@@ -721,9 +739,9 @@ public:
 	 * @param trees_file set of trees in NEWICK
 	 * @param dist (OUT) distance vector
 	 */
-	void computeRFDist(const char *trees_file, IntVector &dist);
+	void computeRFDist(const char *trees_file, IntVector &dist, int assign_sup = 0);
 
-	void computeRFDist(istream &in, IntVector &dist);
+	void computeRFDist(istream &in, IntVector &dist, int assign_sup = 0);
 
 	/**
 	 * insert new taxa next to the existing taxa in the tree
@@ -834,7 +852,7 @@ public:
 		@param taxname vector of taxa names
 		@param trees set of trees
 	*/
-	void createBootstrapSupport(vector<string> &taxname, MTreeSet &trees, SplitGraph &sg, SplitIntMap &hash_ss, char *tag,
+	void createBootstrapSupport(vector<string> &taxname, MTreeSet &trees, SplitIntMap &hash_ss, char *tag,
 		Node *node = NULL, Node *dad = NULL);
 
 	void reportDisagreedTrees(vector<string> &taxname, MTreeSet &trees, Split &mysplit);

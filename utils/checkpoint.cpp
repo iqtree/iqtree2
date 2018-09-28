@@ -314,14 +314,20 @@ void Checkpoint::endList() {
 
 }
 
-/*
 void Checkpoint::getSubCheckpoint(Checkpoint *target, string partial_key) {
-    for (iterator it = begin(); it != end(); it++) {
-        if (it->first.find(partial_key) != string::npos)
-            (*target)[it->first] = it->second;
+    int len = partial_key.length();
+    for (auto it = lower_bound(partial_key); it != end() && it->first.substr(0, len) == partial_key; it++) {
+        target->put(it->first.substr(len+1), it->second);
     }
 }
-*/
+
+void Checkpoint::putSubCheckpoint(Checkpoint *source, string partial_key) {
+    startStruct(partial_key);
+    for (auto it = source->begin(); it != source->end(); it++) {
+        put(it->first, it->second);
+    }
+    endStruct();
+}
 
 /*-------------------------------------------------------------
  * CheckpointFactory

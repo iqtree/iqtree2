@@ -28,16 +28,16 @@ using namespace Eigen;
 
 
 /** number of squaring for scaling-squaring technique */
-const int TimeSquare = 10;
+//const int TimeSquare = 10;
 
 //----- declaration of some helper functions -----/
-int matexp (double Q[], double t, int n, int TimeSquare);
+//int matexp (double Q[], double t, int n, int TimeSquare);
 int computeStateFreqFromQMatrix (double Q[], double pi[], int n);
 
 //const double MIN_FREQ_RATIO = MIN_FREQUENCY;
 //const double MAX_FREQ_RATIO = 1.0/MIN_FREQUENCY;
 
-ModelMarkov::ModelMarkov(PhyloTree *tree, bool reversible)
+ModelMarkov::ModelMarkov(PhyloTree *tree, bool reversible, bool adapt_tree)
  : ModelSubst(tree->aln->num_states), EigenDecomposition()
 {
     phylo_tree = tree;
@@ -65,10 +65,10 @@ ModelMarkov::ModelMarkov(PhyloTree *tree, bool reversible)
         name = "NonRev";
         full_name = "General non-reversible model";
     }
-    setReversible(reversible);
+    setReversible(reversible, adapt_tree);
 }
 
-void ModelMarkov::setReversible(bool reversible) {
+void ModelMarkov::setReversible(bool reversible, bool adapt_tree) {
     
     bool old_reversible = is_reversible;
     
@@ -94,7 +94,7 @@ void ModelMarkov::setReversible(bool reversible) {
 
         num_params = nrate - 1;
 
-        if (phylo_tree && phylo_tree->rooted) {
+        if (adapt_tree && phylo_tree && phylo_tree->rooted) {
             cout << "Converting rooted to unrooted tree..." << endl;
             phylo_tree->convertToUnrooted();
         }
@@ -141,7 +141,7 @@ void ModelMarkov::setReversible(bool reversible) {
         if (!cinv_evec)
             cinv_evec = aligned_alloc<complex<double> >(num_states*num_states);
         
-        if (phylo_tree && !phylo_tree->rooted) {
+        if (adapt_tree && phylo_tree && !phylo_tree->rooted) {
             cout << "Converting unrooted to rooted tree..." << endl;
             phylo_tree->convertToRooted();
         }
@@ -448,10 +448,12 @@ void ModelMarkov::computeTransMatrixNonrev(double time, double *trans_matrix, in
         double mincoeff = row_sum.minCoeff();
         double maxcoeff = row_sum.maxCoeff();
         if (maxcoeff > 1.0001 || mincoeff < 0.9999) {
-            cout << "INFO: Switch to scaling-squaring due to unstable eigen-decomposition rowsum: "
-                 << mincoeff << " to " << maxcoeff << endl;
+            if (verbose_mode >= VB_MED)
+                cout << "INFO: Switch to scaling-squaring due to unstable eigen-decomposition rowsum: "
+                     << mincoeff << " to " << maxcoeff << endl;
             nondiagonalizable = true;
             computeTransMatrixNonrev(time, trans_matrix, mixture);
+            nondiagonalizable = false;
         }
     } else {
         ASSERT(0 && "this line should not be reached");
@@ -649,6 +651,26 @@ void ModelMarkov::getStateFrequency(double *freq, int mixture) {
 void ModelMarkov::setStateFrequency(double* freq)
 {
 	ASSERT(state_freq);
+    /*
+    if (!isReversible()) {
+        // integrate out state_freq from rate_matrix
+        int i, j, k = 0;
+        for (i = 0, k = 0; i < num_states; i++)
+            for (j = 0; j < num_states; j++)
+                if (i != j) {
+                    rates[k] = (rates[k])*freq[j];
+                    if (state_freq[j] != 0.0)
+                        rates[k] /= state_freq[j];
+                    k++;
+                }
+    }
+     */
+    ModelSubst::setStateFrequency(freq);
+}
+
+void ModelMarkov::adaptStateFrequency(double* freq)
+{
+    ASSERT(state_freq);
     if (!isReversible()) {
         // integrate out state_freq from rate_matrix
         int i, j, k = 0;
@@ -1290,6 +1312,9 @@ void ModelMarkov::readStateFreq(istream &in) throw(const char*) {
 	for (i = 0; i < num_states; i++) sum += state_freq[i];
 	if (fabs(sum-1.0) > 1e-2)
 		throw "State frequencies do not sum up to 1.0";
+    sum = 1.0/sum;
+    for (i = 0; i < num_states; i++)
+        state_freq[i] *= sum;
 }
 
 void ModelMarkov::readStateFreq(string str) throw(const char*) {
@@ -1312,6 +1337,9 @@ void ModelMarkov::readStateFreq(string str) throw(const char*) {
 	for (i = 0; i < num_states; i++) sum += state_freq[i];
 	if (fabs(sum-1.0) > 1e-2)
 		outError("State frequencies do not sum up to 1.0 in ", str);
+    sum = 1.0/sum;
+    for (i = 0; i < num_states; i++)
+        state_freq[i] *= sum;
 }
 
 void ModelMarkov::readParameters(const char *file_name) {
@@ -1613,21 +1641,21 @@ int matinv (double x[], int n, int m, double space[])
     return(0);
 }
 
+/*
 int computeStateFreqFromQMatrix (double Q[], double pi[], int n)
 {
     double *space = new double[n*(n+1)];
 
-    /* from rate matrix Q[] to pi, the stationary frequencies:
-       Q' * pi = 0     pi * 1 = 1
-       space[] is of size n*(n+1).
-    */
+    // from rate matrix Q[] to pi, the stationary frequencies:
+    //   Q' * pi = 0     pi * 1 = 1
+    // space[] is of size n*(n+1).
     int i,j;
-    double *T = space;      /* T[n*(n+1)]  */
+    double *T = space;      // T[n*(n+1)]
 
     for (i=0;i<n+1;i++) T[i]=1;
     for (i=1;i<n;i++) {
         for (j=0;j<n;j++)
-            T[i*(n+1)+j] =  Q[j*n+i];     /* transpose */
+            T[i*(n+1)+j] =  Q[j*n+i];     // transpose
         T[i*(n+1)+n] = 0.;
     }
     matinv(T, n, n+1, pi);
@@ -1635,65 +1663,80 @@ int computeStateFreqFromQMatrix (double Q[], double pi[], int n)
         pi[i] = T[i*(n+1)+n];
     delete [] space;
     return (0);
-}
+}*/
 /* End of Ziheng Yang code */
 
-int matby (double a[], double b[], double c[], int n,int m,int k)
-/* a[n*m], b[m*k], c[n*k]  ......  c = a*b
-*/
-{
-    int i,j,i1;
-    double t;
-    for (i = 0; i < n; i++)
-        for (j = 0; j < k; j++) {
-            for (i1=0,t=0; i1<m; i1++) t+=a[i*m+i1]*b[i1*k+j];
-            c[i*k+j] = t;
-        }
-    return (0);
+// using Eigen lib
+int computeStateFreqFromQMatrix (double Q[], double pi[], int n) {
+    MatrixXd A(n+1, n);
+    A.topRows(1).setOnes();
+    A.bottomRows(n) = Map<MatrixXd>(Q, n, n);
+    VectorXd b(n+1);
+    b.setZero();
+    b(0) = 1.0;
+    Map<VectorXd> freq(pi, n);
+    freq = A.colPivHouseholderQr().solve(b);
+    double sum = freq.sum();
+    ASSERT(fabs(sum-1.0) < 1e-8);
+    return 0;
 }
 
-int matexp (double Q[], double t, int n, int TimeSquare)
-{
-    double *space = new double[n*n];
-    /* This calculates the matrix exponential P(t) = exp(t*Q).
-       Input: Q[] has the rate matrix, and t is the time or branch length.
-              TimeSquare is the number of times the matrix is squared and should
-              be from 5 to 31.
-       Output: Q[] has the transition probability matrix, that is P(Qt).
-       space[n*n]: required working space.
-          P(t) = (I + Qt/m + (Qt/m)^2/2)^m, with m = 2^TimeSquare.
-       T[it=0] is the current matrix, and T[it=1] is the squared result matrix,
-       used to avoid copying matrices.
-       Use an even TimeSquare to avoid one round of matrix copying.
-    */
-    int it, i;
-    double *T[2];
-
-    if (TimeSquare<2 || TimeSquare>31) cout << "TimeSquare not good" << endl;
-    T[0]=Q;
-    T[1]=space;
-    for (i=0; i<n*n; i++)  T[0][i] = ldexp( Q[i]*t, -TimeSquare );
-
-    // DEBUG. Output norms, check scaling factor TimeSquare. Norm should be
-    // around 1.0 after scaling. The function `frob_norm()` is declared in
-    // `utils/tools.h`.
-    // cout << setprecision(16);
-    // cout << "Branch length (t): " << t << "." << endl;
-    // cout << "Norm of Q*t-matrix before scaling: " << frob_norm(Q, n, t) << "." << endl;
-    // cout << "Scaling factor (TimeSquare): " << TimeSquare << "." << endl;
-    // cout << "Norm of Q-matrix after scaling: " << frob_norm(T[0], n) << "." << endl << endl;
-
-    matby (T[0], T[0], T[1], n, n, n);
-    for (i=0; i<n*n; i++)  T[0][i] += T[1][i]/2;
-    for (i=0; i<n; i++)  T[0][i*n+i] ++;
-
-    for (i=0,it=0; i<TimeSquare; i++) {
-        it = !it;
-        matby (T[1-it], T[1-it], T[it], n, n, n);
-    }
-    if (it==1)
-        for (i=0;i<n*n;i++) Q[i]=T[1][i];
-
-    delete [] space;
-    return(0);
-}
+//int matby (double a[], double b[], double c[], int n,int m,int k)
+///* a[n*m], b[m*k], c[n*k]  ......  c = a*b
+//*/
+//{
+//    int i,j,i1;
+//    double t;
+//    for (i = 0; i < n; i++)
+//        for (j = 0; j < k; j++) {
+//            for (i1=0,t=0; i1<m; i1++) t+=a[i*m+i1]*b[i1*k+j];
+//            c[i*k+j] = t;
+//        }
+//    return (0);
+//}
+//
+//int matexp (double Q[], double t, int n, int TimeSquare)
+//{
+//    double *space = new double[n*n];
+//    /* This calculates the matrix exponential P(t) = exp(t*Q).
+//       Input: Q[] has the rate matrix, and t is the time or branch length.
+//              TimeSquare is the number of times the matrix is squared and should
+//              be from 5 to 31.
+//       Output: Q[] has the transition probability matrix, that is P(Qt).
+//       space[n*n]: required working space.
+//          P(t) = (I + Qt/m + (Qt/m)^2/2)^m, with m = 2^TimeSquare.
+//       T[it=0] is the current matrix, and T[it=1] is the squared result matrix,
+//       used to avoid copying matrices.
+//       Use an even TimeSquare to avoid one round of matrix copying.
+//    */
+//    int it, i;
+//    double *T[2];
+//
+//    if (TimeSquare<2 || TimeSquare>31) cout << "TimeSquare not good" << endl;
+//    T[0]=Q;
+//    T[1]=space;
+//    for (i=0; i<n*n; i++)  T[0][i] = ldexp( Q[i]*t, -TimeSquare );
+//
+//    // DEBUG. Output norms, check scaling factor TimeSquare. Norm should be
+//    // around 1.0 after scaling. The function `frob_norm()` is declared in
+//    // `utils/tools.h`.
+//    // cout << setprecision(16);
+//    // cout << "Branch length (t): " << t << "." << endl;
+//    // cout << "Norm of Q*t-matrix before scaling: " << frob_norm(Q, n, t) << "." << endl;
+//    // cout << "Scaling factor (TimeSquare): " << TimeSquare << "." << endl;
+//    // cout << "Norm of Q-matrix after scaling: " << frob_norm(T[0], n) << "." << endl << endl;
+//
+//    matby (T[0], T[0], T[1], n, n, n);
+//    for (i=0; i<n*n; i++)  T[0][i] += T[1][i]/2;
+//    for (i=0; i<n; i++)  T[0][i*n+i] ++;
+//
+//    for (i=0,it=0; i<TimeSquare; i++) {
+//        it = !it;
+//        matby (T[1-it], T[1-it], T[it], n, n, n);
+//    }
+//    if (it==1)
+//        for (i=0;i<n*n;i++) Q[i]=T[1][i];
+//
+//    delete [] space;
+//    return(0);
+//}

@@ -85,94 +85,94 @@ string::size_type posPOMO(string &model_name) {
 
 ModelsBlock *readModelsDefinition(Params &params) {
 
-	ModelsBlock *models_block = new ModelsBlock;
+    ModelsBlock *models_block = new ModelsBlock;
 
-	try
-	{
-		// loading internal model definitions
-		stringstream in(builtin_mixmodels_definition);
+    try
+    {
+        // loading internal model definitions
+        stringstream in(builtin_mixmodels_definition);
         ASSERT(in && "stringstream is OK");
-		NxsReader nexus;
-		nexus.Add(models_block);
-	    MyToken token(in);
-	    nexus.Execute(token);
-	} catch (...) {
+        NxsReader nexus;
+        nexus.Add(models_block);
+        MyToken token(in);
+        nexus.Execute(token);
+    } catch (...) {
         ASSERT(0 && "predefined mixture models not initialized");
     }
 
-	try
-	{
-		// loading internal protei model definitions
-		stringstream in(builtin_prot_models);
+    try
+    {
+        // loading internal protei model definitions
+        stringstream in(builtin_prot_models);
         ASSERT(in && "stringstream is OK");
-		NxsReader nexus;
-		nexus.Add(models_block);
-	    MyToken token(in);
-	    nexus.Execute(token);
-	} catch (...) {
+        NxsReader nexus;
+        nexus.Add(models_block);
+        MyToken token(in);
+        nexus.Execute(token);
+    } catch (...) {
         ASSERT(0 && "predefined protein models not initialized");
     }
 
-	if (params.model_def_file) {
-		cout << "Reading model definition file " << params.model_def_file << " ... ";
-		MyReader nexus(params.model_def_file);
-		nexus.Add(models_block);
-	    MyToken token(nexus.inf);
-	    nexus.Execute(token);
-	    int num_model = 0, num_freq = 0;
-	    for (ModelsBlock::iterator it = models_block->begin(); it != models_block->end(); it++)
-	    	if (it->second.flag & NM_FREQ) num_freq++; else num_model++;
-	    cout << num_model << " models and " << num_freq << " frequency vectors loaded" << endl;
-	}
-	return models_block;
+    if (params.model_def_file) {
+        cout << "Reading model definition file " << params.model_def_file << " ... ";
+        MyReader nexus(params.model_def_file);
+        nexus.Add(models_block);
+        MyToken token(nexus.inf);
+        nexus.Execute(token);
+        int num_model = 0, num_freq = 0;
+        for (ModelsBlock::iterator it = models_block->begin(); it != models_block->end(); it++)
+            if (it->second.flag & NM_FREQ) num_freq++; else num_model++;
+        cout << num_model << " models and " << num_freq << " frequency vectors loaded" << endl;
+    }
+    return models_block;
 }
 
 ModelFactory::ModelFactory() : CheckpointFactory() {
-	model = NULL;
-	site_rate = NULL;
-	store_trans_matrix = false;
-	is_storing = false;
-	joint_optimize = false;
-	fused_mix_rate = false;
-	unobserved_ptns = "";
+    model = NULL;
+    site_rate = NULL;
+    store_trans_matrix = false;
+    is_storing = false;
+    joint_optimize = false;
+    fused_mix_rate = false;
+    unobserved_ptns = "";
 }
 
 size_t findCloseBracket(string &str, size_t start_pos) {
-	int counter = 0;
-	for (size_t pos = start_pos+1; pos < str.length(); pos++) {
-		if (str[pos] == '{') counter++;
-		if (str[pos] == '}') {
-			if (counter == 0) return pos; else counter--;
-		}
+    int counter = 0;
+    for (size_t pos = start_pos+1; pos < str.length(); pos++) {
+        if (str[pos] == '{') counter++;
+        if (str[pos] == '}') {
+            if (counter == 0) return pos; else counter--;
+        }
     }
-	return string::npos;
+    return string::npos;
 }
 
 ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, ModelsBlock *models_block) : CheckpointFactory() {
-	store_trans_matrix = params.store_trans_matrix;
-	is_storing = false;
-	joint_optimize = params.optimize_model_rate_joint;
-	fused_mix_rate = false;
+    store_trans_matrix = params.store_trans_matrix;
+    is_storing = false;
+    joint_optimize = params.optimize_model_rate_joint;
+    fused_mix_rate = false;
     string model_str = model_name;
-	string rate_str;
+    string rate_str;
 
-	try {
+    try {
 
 
-	if (model_str == "") {
-		if (tree->aln->seq_type == SEQ_DNA) model_str = "HKY";
-		else if (tree->aln->seq_type == SEQ_PROTEIN) model_str = "LG";
-		else if (tree->aln->seq_type == SEQ_BINARY) model_str = "GTR2";
-		else if (tree->aln->seq_type == SEQ_CODON) model_str = "GY";
-		else if (tree->aln->seq_type == SEQ_MORPH) model_str = "MK";
+    if (model_str == "") {
+        if (tree->aln->seq_type == SEQ_DNA) model_str = "HKY";
+        else if (tree->aln->seq_type == SEQ_PROTEIN) model_str = "LG";
+        else if (tree->aln->seq_type == SEQ_BINARY) model_str = "GTR2";
+        else if (tree->aln->seq_type == SEQ_CODON) model_str = "GY";
+        else if (tree->aln->seq_type == SEQ_MORPH) model_str = "MK";
         else if (tree->aln->seq_type == SEQ_POMO) model_str = "HKY+P";
-		else model_str = "JC";
+        else model_str = "JC";
         if (tree->aln->seq_type != SEQ_POMO)
             outWarning("Default model "+model_str + " may be under-fitting. Use option '-m TEST' to determine the best-fit model.");
-	}
+    }
 
-	/********* preprocessing model string ****************/
-	NxsModel *nxsmodel  = NULL;
+    /********* preprocessing model string ****************/
+    NxsModel *nxsmodel  = NULL;
 
     string new_model_str = "";
     size_t mix_pos;
@@ -192,11 +192,11 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
         cout << "Model " << model_str << " is alias for " << new_model_str << endl;
     model_str = new_model_str;
 
-    //	nxsmodel = models_block->findModel(model_str);
-    //	if (nxsmodel && nxsmodel->description.find_first_of("+*") != string::npos) {
-    //		cout << "Model " << model_str << " is alias for " << nxsmodel->description << endl;
-    //		model_str = nxsmodel->description;
-    //	}
+    //    nxsmodel = models_block->findModel(model_str);
+    //    if (nxsmodel && nxsmodel->description.find_first_of("+*") != string::npos) {
+    //        cout << "Model " << model_str << " is alias for " << nxsmodel->description << endl;
+    //        model_str = nxsmodel->description;
+    //    }
 
     // Detect PoMo and throw error if sequence type is PoMo but +P is
     // not given.  This makes the model string cleaner and
@@ -209,15 +209,15 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
         outError("Provided alignment is exclusively used by PoMo but model string does not contain, e.g., \"+P\".");
 
     // Decompose model string into model_str and rate_str string.
-	size_t spec_pos = model_str.find_first_of("{+*");
-	if (spec_pos != string::npos) {
-		if (model_str[spec_pos] == '{') {
-			// Scan for the corresponding '}'.
-			size_t pos = findCloseBracket(model_str, spec_pos);
-			if (pos == string::npos)
-				outError("Model name has wrong bracket notation '{...}'");
-				rate_str = model_str.substr(pos+1);
-				model_str = model_str.substr(0, pos+1);
+    size_t spec_pos = model_str.find_first_of("{+*");
+    if (spec_pos != string::npos) {
+        if (model_str[spec_pos] == '{') {
+            // Scan for the corresponding '}'.
+            size_t pos = findCloseBracket(model_str, spec_pos);
+            if (pos == string::npos)
+                outError("Model name has wrong bracket notation '{...}'");
+                rate_str = model_str.substr(pos+1);
+                model_str = model_str.substr(0, pos+1);
         }
     else {
             rate_str = model_str.substr(spec_pos);
@@ -332,43 +332,43 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
       //   }
     }
 
-    //	nxsmodel = models_block->findModel(model_str);
-    //	if (nxsmodel && nxsmodel->description.find("MIX") != string::npos) {
-    //		cout << "Model " << model_str << " is alias for " << nxsmodel->description << endl;
-    //		model_str = nxsmodel->description;
-    //	}
+    //    nxsmodel = models_block->findModel(model_str);
+    //    if (nxsmodel && nxsmodel->description.find("MIX") != string::npos) {
+    //        cout << "Model " << model_str << " is alias for " << nxsmodel->description << endl;
+    //        model_str = nxsmodel->description;
+    //    }
 
-	/******************** initialize state frequency ****************************/
+    /******************** initialize state frequency ****************************/
 
-	StateFreqType freq_type = params.freq_type;
+    StateFreqType freq_type = params.freq_type;
 
-	if (freq_type == FREQ_UNKNOWN) {
-		switch (tree->aln->seq_type) {
-		case SEQ_BINARY: freq_type = FREQ_ESTIMATE; break; // default for binary: optimized frequencies
-		case SEQ_PROTEIN: break; // let ModelProtein decide by itself
-		case SEQ_MORPH: freq_type = FREQ_EQUAL; break;
-		case SEQ_CODON: freq_type = FREQ_UNKNOWN; break;
+    if (freq_type == FREQ_UNKNOWN) {
+        switch (tree->aln->seq_type) {
+        case SEQ_BINARY: freq_type = FREQ_ESTIMATE; break; // default for binary: optimized frequencies
+        case SEQ_PROTEIN: break; // let ModelProtein decide by itself
+        case SEQ_MORPH: freq_type = FREQ_EQUAL; break;
+        case SEQ_CODON: freq_type = FREQ_UNKNOWN; break;
             break;
-		default: freq_type = FREQ_EMPIRICAL; break; // default for DNA, PoMo and others: counted frequencies from alignment
-		}
-	}
+        default: freq_type = FREQ_EMPIRICAL; break; // default for DNA, PoMo and others: counted frequencies from alignment
+        }
+    }
 
     // first handle mixture frequency
     string::size_type posfreq = rate_str.find("+FMIX");
-	string freq_params;
+    string freq_params;
     size_t close_bracket;
 
     if (posfreq != string::npos) {
-		string freq_str;
-		size_t last_pos = rate_str.find_first_of("+*", posfreq+1);
+        string freq_str;
+        size_t last_pos = rate_str.find_first_of("+*", posfreq+1);
 
-		if (last_pos == string::npos) {
-			freq_str = rate_str.substr(posfreq);
-			rate_str = rate_str.substr(0, posfreq);
-		} else {
-			freq_str = rate_str.substr(posfreq, last_pos-posfreq);
-			rate_str = rate_str.substr(0, posfreq) + rate_str.substr(last_pos);
-		}
+        if (last_pos == string::npos) {
+            freq_str = rate_str.substr(posfreq);
+            rate_str = rate_str.substr(0, posfreq);
+        } else {
+            freq_str = rate_str.substr(posfreq, last_pos-posfreq);
+            rate_str = rate_str.substr(0, posfreq) + rate_str.substr(last_pos);
+        }
 
         if (freq_str[5] != OPEN_BRACKET)
             outError("Mixture-frequency must start with +FMIX{");
@@ -391,16 +391,16 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
 
     bool optimize_mixmodel_weight = params.optimize_mixmodel_weight;
 
-	if (posfreq != string::npos) {
-		string freq_str;
-		size_t last_pos = rate_str.find_first_of("+*", posfreq+1);
-		if (last_pos == string::npos) {
-			freq_str = rate_str.substr(posfreq);
-			rate_str = rate_str.substr(0, posfreq);
-		} else {
-			freq_str = rate_str.substr(posfreq, last_pos-posfreq);
-			rate_str = rate_str.substr(0, posfreq) + rate_str.substr(last_pos);
-		}
+    if (posfreq != string::npos) {
+        string freq_str;
+        size_t last_pos = rate_str.find_first_of("+*", posfreq+1);
+        if (last_pos == string::npos) {
+            freq_str = rate_str.substr(posfreq);
+            rate_str = rate_str.substr(0, posfreq);
+        } else {
+            freq_str = rate_str.substr(posfreq, last_pos-posfreq);
+            rate_str = rate_str.substr(0, posfreq) + rate_str.substr(last_pos);
+        }
 
         if (freq_str.length() > 2 && freq_str[2] == OPEN_BRACKET) {
             if (freq_type == FREQ_MIXTURE)
@@ -418,7 +418,7 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
                 optimize_mixmodel_weight = true;
             } else
                 freq_type = FREQ_EMPIRICAL;
-	} else if (freq_str == "+FU" || freq_str == "+Fu") {
+    } else if (freq_str == "+FU" || freq_str == "+Fu") {
             if (freq_type == FREQ_MIXTURE)
                 outError("Mixture frequency with user-defined frequency is not allowed");
             else
@@ -434,7 +434,7 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
                 optimize_mixmodel_weight = true;
             } else
                 freq_type = FREQ_ESTIMATE;
-	} else if (freq_str == "+F1x4" || freq_str == "+F1X4") {
+    } else if (freq_str == "+F1x4" || freq_str == "+F1X4") {
             if (freq_type == FREQ_MIXTURE)
                 outError("Mixture frequency with " + freq_str + " is not allowed");
             else
@@ -450,8 +450,8 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
             else
                 freq_type = FREQ_CODON_3x4C;
         } else if (freq_str == "+FRY") {
-	    // MDW to Minh: I don't know how these should interact with FREQ_MIXTURE,
-	    // so as nearly everything else treats it as an error, I do too.
+        // MDW to Minh: I don't know how these should interact with FREQ_MIXTURE,
+        // so as nearly everything else treats it as an error, I do too.
         // BQM answer: that's fine
             if (freq_type == FREQ_MIXTURE)
                 outError("Mixture frequency with " + freq_str + " is not allowed");
@@ -478,61 +478,61 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
 //          model_str = model_str.substr(0, posfreq);
         }
 
-	/******************** initialize model ****************************/
+    /******************** initialize model ****************************/
 
-	if (tree->aln->site_state_freq.empty()) {
-		if (model_str.substr(0, 3) == "MIX" || freq_type == FREQ_MIXTURE) {
-			string model_list;
-			if (model_str.substr(0, 3) == "MIX") {
-				if (model_str[3] != OPEN_BRACKET)
-					outError("Mixture model name must start with 'MIX{'");
-				if (model_str.rfind(CLOSE_BRACKET) != model_str.length()-1)
-					outError("Close bracket not found at the end of ", model_str);
-				model_list = model_str.substr(4, model_str.length()-5);
-				model_str = model_str.substr(0, 3);
-			}
-			model = new ModelMixture(model_name, model_str, model_list, models_block, freq_type, freq_params, tree, optimize_mixmodel_weight);
-		} else {
-            //			string model_desc;
-            //			NxsModel *nxsmodel = models_block->findModel(model_str);
-            //			if (nxsmodel) model_desc = nxsmodel->description;
-			model = createModel(model_str, models_block, freq_type, freq_params, tree);
-		}
-//		fused_mix_rate &= model->isMixture() && site_rate->getNRate() > 1;
-	} else {
-		// site-specific model
-		if (model_str == "JC" || model_str == "POISSON")
-			outError("JC is not suitable for site-specific model");
-		model = new ModelSet(model_str.c_str(), tree);
-		ModelSet *models = (ModelSet*)model; // assign pointer for convenience
-		models->init((params.freq_type != FREQ_UNKNOWN) ? params.freq_type : FREQ_EMPIRICAL);
-		int i;
-		models->pattern_model_map.resize(tree->aln->getNPattern(), -1);
-		for (i = 0; i < tree->aln->getNSite(); i++) {
-			models->pattern_model_map[tree->aln->getPatternID(i)] = tree->aln->site_model[i];
-			//cout << "site " << i << " ptn " << tree->aln->getPatternID(i) << " -> model " << site_model[i] << endl;
-		}
-		double *state_freq = new double[model->num_states];
-		double *rates = new double[model->getNumRateEntries()];
-		for (i = 0; i < tree->aln->site_state_freq.size(); i++) {
-			ModelMarkov *modeli;
-			if (i == 0) {
-				modeli = (ModelMarkov*)createModel(model_str, models_block, (params.freq_type != FREQ_UNKNOWN) ? params.freq_type : FREQ_EMPIRICAL, "", tree);
-				modeli->getStateFrequency(state_freq);
-				modeli->getRateMatrix(rates);
-			} else {
-				modeli = (ModelMarkov*)createModel(model_str, models_block, FREQ_EQUAL, "", tree);
-				modeli->setStateFrequency(state_freq);
-				modeli->setRateMatrix(rates);
-			}
-			if (tree->aln->site_state_freq[i])
-				modeli->setStateFrequency (tree->aln->site_state_freq[i]);
+    if (tree->aln->site_state_freq.empty()) {
+        if (model_str.substr(0, 3) == "MIX" || freq_type == FREQ_MIXTURE) {
+            string model_list;
+            if (model_str.substr(0, 3) == "MIX") {
+                if (model_str[3] != OPEN_BRACKET)
+                    outError("Mixture model name must start with 'MIX{'");
+                if (model_str.rfind(CLOSE_BRACKET) != model_str.length()-1)
+                    outError("Close bracket not found at the end of ", model_str);
+                model_list = model_str.substr(4, model_str.length()-5);
+                model_str = model_str.substr(0, 3);
+            }
+            model = new ModelMixture(model_name, model_str, model_list, models_block, freq_type, freq_params, tree, optimize_mixmodel_weight);
+        } else {
+            //            string model_desc;
+            //            NxsModel *nxsmodel = models_block->findModel(model_str);
+            //            if (nxsmodel) model_desc = nxsmodel->description;
+            model = createModel(model_str, models_block, freq_type, freq_params, tree);
+        }
+//        fused_mix_rate &= model->isMixture() && site_rate->getNRate() > 1;
+    } else {
+        // site-specific model
+        if (model_str == "JC" || model_str == "POISSON")
+            outError("JC is not suitable for site-specific model");
+        model = new ModelSet(model_str.c_str(), tree);
+        ModelSet *models = (ModelSet*)model; // assign pointer for convenience
+        models->init((params.freq_type != FREQ_UNKNOWN) ? params.freq_type : FREQ_EMPIRICAL);
+        int i;
+        models->pattern_model_map.resize(tree->aln->getNPattern(), -1);
+        for (i = 0; i < tree->aln->getNSite(); i++) {
+            models->pattern_model_map[tree->aln->getPatternID(i)] = tree->aln->site_model[i];
+            //cout << "site " << i << " ptn " << tree->aln->getPatternID(i) << " -> model " << site_model[i] << endl;
+        }
+        double *state_freq = new double[model->num_states];
+        double *rates = new double[model->getNumRateEntries()];
+        for (i = 0; i < tree->aln->site_state_freq.size(); i++) {
+            ModelMarkov *modeli;
+            if (i == 0) {
+                modeli = (ModelMarkov*)createModel(model_str, models_block, (params.freq_type != FREQ_UNKNOWN) ? params.freq_type : FREQ_EMPIRICAL, "", tree);
+                modeli->getStateFrequency(state_freq);
+                modeli->getRateMatrix(rates);
+            } else {
+                modeli = (ModelMarkov*)createModel(model_str, models_block, FREQ_EQUAL, "", tree);
+                modeli->setStateFrequency(state_freq);
+                modeli->setRateMatrix(rates);
+            }
+            if (tree->aln->site_state_freq[i])
+                modeli->setStateFrequency (tree->aln->site_state_freq[i]);
 
-			modeli->init(FREQ_USER_DEFINED);
-			models->push_back(modeli);
-		}
-		delete [] rates;
-		delete [] state_freq;
+            modeli->init(FREQ_USER_DEFINED);
+            models->push_back(modeli);
+        }
+        delete [] rates;
+        delete [] state_freq;
 
         models->joinEigenMemory();
         models->decomposeRateMatrix();
@@ -540,29 +540,29 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
         // delete information of the old alignment
 //        tree->aln->ordered_pattern.clear();
 //        tree->deleteAllPartialLh();
-	}
+    }
 
-//	if (model->isMixture())
-//		cout << "Mixture model with " << model->getNMixtures() << " components!" << endl;
+//    if (model->isMixture())
+//        cout << "Mixture model with " << model->getNMixtures() << " components!" << endl;
 
-	/******************** initialize ascertainment bias correction model ****************************/
+    /******************** initialize ascertainment bias correction model ****************************/
 
-	string::size_type posasc;
+    string::size_type posasc;
 
-	if ((posasc = rate_str.find("+ASC")) != string::npos) {
-		// ascertainment bias correction
-		unobserved_ptns = tree->aln->getUnobservedConstPatterns();
+    if ((posasc = rate_str.find("+ASC")) != string::npos) {
+        // ascertainment bias correction
+        unobserved_ptns = tree->aln->getUnobservedConstPatterns();
         
         // delete rarely observed state
         for (int i = unobserved_ptns.length()-1; i >= 0; i--)
             if (model->state_freq[(int)unobserved_ptns[i]] < 1e-8)
                 unobserved_ptns.erase(i);
                 
-		// rebuild the seq_states to contain states of unobserved constant patterns
-		tree->aln->buildSeqStates(true);
-//		if (unobserved_ptns.size() <= 0)
-//			outError("Invalid use of +ASC because all constant patterns are observed in the alignment");
-		if (tree->aln->frac_invariant_sites > 0) {
+        // rebuild the seq_states to contain states of unobserved constant patterns
+        tree->aln->buildSeqStates(true);
+//        if (unobserved_ptns.size() <= 0)
+//            outError("Invalid use of +ASC because all constant patterns are observed in the alignment");
+        if (tree->aln->frac_invariant_sites > 0) {
 //            cerr << tree->aln->frac_invariant_sites*tree->aln->getNSite() << " invariant sites observed in the alignment" << endl;
 //            for (Alignment::iterator pit = tree->aln->begin(); pit != tree->aln->end(); pit++)
 //                if (pit->isInvariant()) {
@@ -579,18 +579,18 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
             outError("Invalid use of +ASC because of " + convertIntToString(tree->aln->frac_invariant_sites*tree->aln->getNSite()) +
                 " invariant sites in the alignment");
         }
-		cout << "Ascertainment bias correction: " << unobserved_ptns.size() << " unobservable constant patterns"<< endl;
-		rate_str = rate_str.substr(0, posasc) + rate_str.substr(posasc+4);
-	} else {
+        cout << "Ascertainment bias correction: " << unobserved_ptns.size() << " unobservable constant patterns"<< endl;
+        rate_str = rate_str.substr(0, posasc) + rate_str.substr(posasc+4);
+    } else {
         tree->aln->buildSeqStates(false);
     }
 
 
-	/******************** initialize site rate heterogeneity ****************************/
+    /******************** initialize site rate heterogeneity ****************************/
 
-	string::size_type posI = rate_str.find("+I");
-	string::size_type posG = rate_str.find("+G");
-	string::size_type posG2 = rate_str.find("*G");
+    string::size_type posI = rate_str.find("+I");
+    string::size_type posG = rate_str.find("+G");
+    string::size_type posG2 = rate_str.find("*G");
     if (posG != string::npos && posG2 != string::npos) {
         cout << "NOTE: both +G and *G were specified, continue with "
             << ((posG < posG2)? rate_str.substr(posG,2) : rate_str.substr(posG2,2)) << endl;
@@ -600,8 +600,8 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
         fused_mix_rate = true;
     }
 
-	string::size_type posR = rate_str.find("+R"); // FreeRate model
-	string::size_type posR2 = rate_str.find("*R"); // FreeRate model
+    string::size_type posR = rate_str.find("+R"); // FreeRate model
+    string::size_type posR2 = rate_str.find("*R"); // FreeRate model
 
     if (posG != string::npos && (posR != string::npos || posR2 != string::npos)) {
         outWarning("Both Gamma and FreeRate models were specified, continue with FreeRate model");
@@ -619,8 +619,8 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
         fused_mix_rate = true;
     }
 
-	string::size_type posH = rate_str.find("+H"); // heterotachy model
-	string::size_type posH2 = rate_str.find("*H"); // heterotachy model
+    string::size_type posH = rate_str.find("+H"); // heterotachy model
+    string::size_type posH2 = rate_str.find("*H"); // heterotachy model
 
     if (posG != string::npos && (posH != string::npos || posH2 != string::npos)) {
         outWarning("Both Gamma and heterotachy models were specified, continue with heterotachy model");
@@ -643,161 +643,161 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
         fused_mix_rate = true;
     }
 
-	string::size_type posX;
-	/* create site-rate heterogeneity */
-	int num_rate_cats = params.num_rate_cats;
-	if (fused_mix_rate && model->isMixture()) num_rate_cats = model->getNMixtures();
-	double gamma_shape = params.gamma_shape;
-	double p_invar_sites = params.p_invar_sites;
-	string freerate_params = "";
-	if (posI != string::npos) {
-		// invariable site model
-		if (rate_str.length() > posI+2 && rate_str[posI+2] == OPEN_BRACKET) {
-			close_bracket = rate_str.find(CLOSE_BRACKET, posI);
-			if (close_bracket == string::npos)
-				outError("Close bracket not found in ", rate_str);
-			p_invar_sites = convert_double(rate_str.substr(posI+3, close_bracket-posI-3).c_str());
-			if (p_invar_sites < 0 || p_invar_sites >= 1)
-				outError("p_invar must be in [0,1)");
-		} else if (rate_str.length() > posI+2 && rate_str[posI+2] != '+' && rate_str[posI+2] != '*')
-			outError("Wrong model name ", rate_str);
-	}
-	if (posG != string::npos) {
-		// Gamma rate model
-		int end_pos = 0;
-		if (rate_str.length() > posG+2 && isdigit(rate_str[posG+2])) {
-			num_rate_cats = convert_int(rate_str.substr(posG+2).c_str(), end_pos);
-			if (num_rate_cats < 1) outError("Wrong number of rate categories");
-		}
-		if (rate_str.length() > posG+2+end_pos && rate_str[posG+2+end_pos] == OPEN_BRACKET) {
-			close_bracket = rate_str.find(CLOSE_BRACKET, posG);
-			if (close_bracket == string::npos)
-				outError("Close bracket not found in ", rate_str);
-			gamma_shape = convert_double(rate_str.substr(posG+3+end_pos, close_bracket-posG-3-end_pos).c_str());
-//			if (gamma_shape < MIN_GAMMA_SHAPE || gamma_shape > MAX_GAMMA_SHAPE) {
-//				stringstream str;
-//				str << "Gamma shape parameter " << gamma_shape << "out of range ["
-//						<< MIN_GAMMA_SHAPE << ',' << MAX_GAMMA_SHAPE << "]" << endl;
-//				outError(str.str());
-//			}
-		} else if (rate_str.length() > posG+2+end_pos && rate_str[posG+2+end_pos] != '+')
-			outError("Wrong model name ", rate_str);
-	}
-	if (posR != string::npos) {
-		// FreeRate model
-		int end_pos = 0;
-		if (rate_str.length() > posR+2 && isdigit(rate_str[posR+2])) {
-			num_rate_cats = convert_int(rate_str.substr(posR+2).c_str(), end_pos);
-				if (num_rate_cats < 1) outError("Wrong number of rate categories");
-			}
-		if (rate_str.length() > posR+2+end_pos && rate_str[posR+2+end_pos] == OPEN_BRACKET) {
-			close_bracket = rate_str.find(CLOSE_BRACKET, posR);
-			if (close_bracket == string::npos)
-				outError("Close bracket not found in ", rate_str);
-			freerate_params = rate_str.substr(posR+3+end_pos, close_bracket-posR-3-end_pos).c_str();
-		} else if (rate_str.length() > posR+2+end_pos && rate_str[posR+2+end_pos] != '+')
-			outError("Wrong model name ", rate_str);
-	}
+    string::size_type posX;
+    /* create site-rate heterogeneity */
+    int num_rate_cats = params.num_rate_cats;
+    if (fused_mix_rate && model->isMixture()) num_rate_cats = model->getNMixtures();
+    double gamma_shape = params.gamma_shape;
+    double p_invar_sites = params.p_invar_sites;
+    string freerate_params = "";
+    if (posI != string::npos) {
+        // invariable site model
+        if (rate_str.length() > posI+2 && rate_str[posI+2] == OPEN_BRACKET) {
+            close_bracket = rate_str.find(CLOSE_BRACKET, posI);
+            if (close_bracket == string::npos)
+                outError("Close bracket not found in ", rate_str);
+            p_invar_sites = convert_double(rate_str.substr(posI+3, close_bracket-posI-3).c_str());
+            if (p_invar_sites < 0 || p_invar_sites >= 1)
+                outError("p_invar must be in [0,1)");
+        } else if (rate_str.length() > posI+2 && rate_str[posI+2] != '+' && rate_str[posI+2] != '*')
+            outError("Wrong model name ", rate_str);
+    }
+    if (posG != string::npos) {
+        // Gamma rate model
+        int end_pos = 0;
+        if (rate_str.length() > posG+2 && isdigit(rate_str[posG+2])) {
+            num_rate_cats = convert_int(rate_str.substr(posG+2).c_str(), end_pos);
+            if (num_rate_cats < 1) outError("Wrong number of rate categories");
+        }
+        if (rate_str.length() > posG+2+end_pos && rate_str[posG+2+end_pos] == OPEN_BRACKET) {
+            close_bracket = rate_str.find(CLOSE_BRACKET, posG);
+            if (close_bracket == string::npos)
+                outError("Close bracket not found in ", rate_str);
+            gamma_shape = convert_double(rate_str.substr(posG+3+end_pos, close_bracket-posG-3-end_pos).c_str());
+//            if (gamma_shape < MIN_GAMMA_SHAPE || gamma_shape > MAX_GAMMA_SHAPE) {
+//                stringstream str;
+//                str << "Gamma shape parameter " << gamma_shape << "out of range ["
+//                        << MIN_GAMMA_SHAPE << ',' << MAX_GAMMA_SHAPE << "]" << endl;
+//                outError(str.str());
+//            }
+        } else if (rate_str.length() > posG+2+end_pos && rate_str[posG+2+end_pos] != '+')
+            outError("Wrong model name ", rate_str);
+    }
+    if (posR != string::npos) {
+        // FreeRate model
+        int end_pos = 0;
+        if (rate_str.length() > posR+2 && isdigit(rate_str[posR+2])) {
+            num_rate_cats = convert_int(rate_str.substr(posR+2).c_str(), end_pos);
+                if (num_rate_cats < 1) outError("Wrong number of rate categories");
+            }
+        if (rate_str.length() > posR+2+end_pos && rate_str[posR+2+end_pos] == OPEN_BRACKET) {
+            close_bracket = rate_str.find(CLOSE_BRACKET, posR);
+            if (close_bracket == string::npos)
+                outError("Close bracket not found in ", rate_str);
+            freerate_params = rate_str.substr(posR+3+end_pos, close_bracket-posR-3-end_pos).c_str();
+        } else if (rate_str.length() > posR+2+end_pos && rate_str[posR+2+end_pos] != '+')
+            outError("Wrong model name ", rate_str);
+    }
 
-	string heterotachy_params = "";
-	if (posH != string::npos) {
-		// Heterotachy model
-		int end_pos = 0;
-		if (rate_str.length() > posH+2 && isdigit(rate_str[posH+2])) {
-			num_rate_cats = convert_int(rate_str.substr(posH+2).c_str(), end_pos);
-				if (num_rate_cats < 1) outError("Wrong number of rate categories");
+    string heterotachy_params = "";
+    if (posH != string::npos) {
+        // Heterotachy model
+        int end_pos = 0;
+        if (rate_str.length() > posH+2 && isdigit(rate_str[posH+2])) {
+            num_rate_cats = convert_int(rate_str.substr(posH+2).c_str(), end_pos);
+                if (num_rate_cats < 1) outError("Wrong number of rate categories");
         } else {
             if (!model->isMixture() || !fused_mix_rate)
                 outError("Please specify number of heterotachy classes (e.g., +H2)");
         }
-		if (rate_str.length() > posH+2+end_pos && rate_str[posH+2+end_pos] == OPEN_BRACKET) {
-			close_bracket = rate_str.find(CLOSE_BRACKET, posH);
-			if (close_bracket == string::npos)
-				outError("Close bracket not found in ", rate_str);
-			heterotachy_params = rate_str.substr(posH+3+end_pos, close_bracket-posH-3-end_pos).c_str();
-		} else if (rate_str.length() > posH+2+end_pos && rate_str[posH+2+end_pos] != '+')
-			outError("Wrong model name ", rate_str);
-	}
+        if (rate_str.length() > posH+2+end_pos && rate_str[posH+2+end_pos] == OPEN_BRACKET) {
+            close_bracket = rate_str.find(CLOSE_BRACKET, posH);
+            if (close_bracket == string::npos)
+                outError("Close bracket not found in ", rate_str);
+            heterotachy_params = rate_str.substr(posH+3+end_pos, close_bracket-posH-3-end_pos).c_str();
+        } else if (rate_str.length() > posH+2+end_pos && rate_str[posH+2+end_pos] != '+')
+            outError("Wrong model name ", rate_str);
+    }
 
 
-	if (rate_str.find('+') != string::npos || rate_str.find('*') != string::npos) {
-		//string rate_str = model_str.substr(pos);
+    if (rate_str.find('+') != string::npos || rate_str.find('*') != string::npos) {
+        //string rate_str = model_str.substr(pos);
         if (posI != string::npos && posH != string::npos) {
-			site_rate = new RateHeterotachyInvar(num_rate_cats, heterotachy_params, p_invar_sites, tree);
+            site_rate = new RateHeterotachyInvar(num_rate_cats, heterotachy_params, p_invar_sites, tree);
         } else if (posH != string::npos) {
-			site_rate = new RateHeterotachy(num_rate_cats, heterotachy_params, tree);
-		} else if (posI != string::npos && posG != string::npos) {
-			site_rate = new RateGammaInvar(num_rate_cats, gamma_shape, params.gamma_median,
-					p_invar_sites, params.optimize_alg_gammai, tree, false);
-		} else if (posI != string::npos && posR != string::npos) {
-			site_rate = new RateFreeInvar(num_rate_cats, gamma_shape, freerate_params, !fused_mix_rate, p_invar_sites, params.optimize_alg, tree);
-		} else if (posI != string::npos) {
-			site_rate = new RateInvar(p_invar_sites, tree);
-		} else if (posG != string::npos) {
-			site_rate = new RateGamma(num_rate_cats, gamma_shape, params.gamma_median, tree);
-		} else if (posR != string::npos) {
-			site_rate = new RateFree(num_rate_cats, gamma_shape, freerate_params, !fused_mix_rate, params.optimize_alg, tree);
-//		} else if ((posX = rate_str.find("+M")) != string::npos) {
-//			tree->setLikelihoodKernel(LK_NORMAL);
-//			params.rate_mh_type = true;
-//			if (rate_str.length() > posX+2 && isdigit(rate_str[posX+2])) {
-//				num_rate_cats = convert_int(rate_str.substr(posX+2).c_str());
-//				if (num_rate_cats < 0) outError("Wrong number of rate categories");
-//			} else num_rate_cats = -1;
-//			if (num_rate_cats >= 0)
-//				site_rate = new RateMeyerDiscrete(num_rate_cats, params.mcat_type,
-//					params.rate_file, tree, params.rate_mh_type);
-//			else
-//				site_rate = new RateMeyerHaeseler(params.rate_file, tree, params.rate_mh_type);
-//			site_rate->setTree(tree);
-//		} else if ((posX = rate_str.find("+D")) != string::npos) {
-//			tree->setLikelihoodKernel(LK_NORMAL);
-//			params.rate_mh_type = false;
-//			if (rate_str.length() > posX+2 && isdigit(rate_str[posX+2])) {
-//				num_rate_cats = convert_int(rate_str.substr(posX+2).c_str());
-//				if (num_rate_cats < 0) outError("Wrong number of rate categories");
-//			} else num_rate_cats = -1;
-//			if (num_rate_cats >= 0)
-//				site_rate = new RateMeyerDiscrete(num_rate_cats, params.mcat_type,
-//					params.rate_file, tree, params.rate_mh_type);
-//			else
-//				site_rate = new RateMeyerHaeseler(params.rate_file, tree, params.rate_mh_type);
-//			site_rate->setTree(tree);
-//		} else if ((posX = rate_str.find("+NGS")) != string::npos) {
-//			tree->setLikelihoodKernel(LK_NORMAL);
-//			if (rate_str.length() > posX+4 && isdigit(rate_str[posX+4])) {
-//				num_rate_cats = convert_int(rate_str.substr(posX+4).c_str());
-//				if (num_rate_cats < 0) outError("Wrong number of rate categories");
-//			} else num_rate_cats = -1;
-//			site_rate = new NGSRateCat(tree, num_rate_cats);
-//			site_rate->setTree(tree);
-//		} else if ((posX = rate_str.find("+NGS")) != string::npos) {
-//			tree->setLikelihoodKernel(LK_NORMAL);
-//			if (rate_str.length() > posX+4 && isdigit(rate_str[posX+4])) {
-//				num_rate_cats = convert_int(rate_str.substr(posX+4).c_str());
-//				if (num_rate_cats < 0) outError("Wrong number of rate categories");
-//			} else num_rate_cats = -1;
-//			site_rate = new NGSRate(tree);
-//			site_rate->setTree(tree);
-		} else if ((posX = rate_str.find("+K")) != string::npos) {
-			if (rate_str.length() > posX+2 && isdigit(rate_str[posX+2])) {
-				num_rate_cats = convert_int(rate_str.substr(posX+2).c_str());
-				if (num_rate_cats < 1) outError("Wrong number of rate categories");
-			}
-			site_rate = new RateKategory(num_rate_cats, tree);
-		} else
-			outError("Invalid rate heterogeneity type");
-//		if (model_str.find('+') != string::npos)
-//			model_str = model_str.substr(0, model_str.find('+'));
-//		else
-//			model_str = model_str.substr(0, model_str.find('*'));
-	} else {
-		site_rate = new RateHeterogeneity();
-		site_rate->setTree(tree);
-	}
+            site_rate = new RateHeterotachy(num_rate_cats, heterotachy_params, tree);
+        } else if (posI != string::npos && posG != string::npos) {
+            site_rate = new RateGammaInvar(num_rate_cats, gamma_shape, params.gamma_median,
+                    p_invar_sites, params.optimize_alg_gammai, tree, false);
+        } else if (posI != string::npos && posR != string::npos) {
+            site_rate = new RateFreeInvar(num_rate_cats, gamma_shape, freerate_params, !fused_mix_rate, p_invar_sites, params.optimize_alg, tree);
+        } else if (posI != string::npos) {
+            site_rate = new RateInvar(p_invar_sites, tree);
+        } else if (posG != string::npos) {
+            site_rate = new RateGamma(num_rate_cats, gamma_shape, params.gamma_median, tree);
+        } else if (posR != string::npos) {
+            site_rate = new RateFree(num_rate_cats, gamma_shape, freerate_params, !fused_mix_rate, params.optimize_alg, tree);
+//        } else if ((posX = rate_str.find("+M")) != string::npos) {
+//            tree->setLikelihoodKernel(LK_NORMAL);
+//            params.rate_mh_type = true;
+//            if (rate_str.length() > posX+2 && isdigit(rate_str[posX+2])) {
+//                num_rate_cats = convert_int(rate_str.substr(posX+2).c_str());
+//                if (num_rate_cats < 0) outError("Wrong number of rate categories");
+//            } else num_rate_cats = -1;
+//            if (num_rate_cats >= 0)
+//                site_rate = new RateMeyerDiscrete(num_rate_cats, params.mcat_type,
+//                    params.rate_file, tree, params.rate_mh_type);
+//            else
+//                site_rate = new RateMeyerHaeseler(params.rate_file, tree, params.rate_mh_type);
+//            site_rate->setTree(tree);
+//        } else if ((posX = rate_str.find("+D")) != string::npos) {
+//            tree->setLikelihoodKernel(LK_NORMAL);
+//            params.rate_mh_type = false;
+//            if (rate_str.length() > posX+2 && isdigit(rate_str[posX+2])) {
+//                num_rate_cats = convert_int(rate_str.substr(posX+2).c_str());
+//                if (num_rate_cats < 0) outError("Wrong number of rate categories");
+//            } else num_rate_cats = -1;
+//            if (num_rate_cats >= 0)
+//                site_rate = new RateMeyerDiscrete(num_rate_cats, params.mcat_type,
+//                    params.rate_file, tree, params.rate_mh_type);
+//            else
+//                site_rate = new RateMeyerHaeseler(params.rate_file, tree, params.rate_mh_type);
+//            site_rate->setTree(tree);
+//        } else if ((posX = rate_str.find("+NGS")) != string::npos) {
+//            tree->setLikelihoodKernel(LK_NORMAL);
+//            if (rate_str.length() > posX+4 && isdigit(rate_str[posX+4])) {
+//                num_rate_cats = convert_int(rate_str.substr(posX+4).c_str());
+//                if (num_rate_cats < 0) outError("Wrong number of rate categories");
+//            } else num_rate_cats = -1;
+//            site_rate = new NGSRateCat(tree, num_rate_cats);
+//            site_rate->setTree(tree);
+//        } else if ((posX = rate_str.find("+NGS")) != string::npos) {
+//            tree->setLikelihoodKernel(LK_NORMAL);
+//            if (rate_str.length() > posX+4 && isdigit(rate_str[posX+4])) {
+//                num_rate_cats = convert_int(rate_str.substr(posX+4).c_str());
+//                if (num_rate_cats < 0) outError("Wrong number of rate categories");
+//            } else num_rate_cats = -1;
+//            site_rate = new NGSRate(tree);
+//            site_rate->setTree(tree);
+        } else if ((posX = rate_str.find("+K")) != string::npos) {
+            if (rate_str.length() > posX+2 && isdigit(rate_str[posX+2])) {
+                num_rate_cats = convert_int(rate_str.substr(posX+2).c_str());
+                if (num_rate_cats < 1) outError("Wrong number of rate categories");
+            }
+            site_rate = new RateKategory(num_rate_cats, tree);
+        } else
+            outError("Invalid rate heterogeneity type");
+//        if (model_str.find('+') != string::npos)
+//            model_str = model_str.substr(0, model_str.find('+'));
+//        else
+//            model_str = model_str.substr(0, model_str.find('*'));
+    } else {
+        site_rate = new RateHeterogeneity();
+        site_rate->setTree(tree);
+    }
 
-	if (fused_mix_rate) {
-		if (!model->isMixture()) {
+    if (fused_mix_rate) {
+        if (!model->isMixture()) {
             if (verbose_mode >= VB_MED)
                 cout << endl << "NOTE: Using mixture model with unlinked " << model_str << " parameters" << endl;
             string model_list = model_str;
@@ -806,8 +806,8 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
                 model_list += "," + model_str;
             model = new ModelMixture(model_name, model_str, model_list, models_block, freq_type, freq_params, tree, optimize_mixmodel_weight);
         }
-		if (model->getNMixtures() != site_rate->getNRate())
-			outError("Mixture model and site rate model do not have the same number of categories");
+        if (model->getNMixtures() != site_rate->getNRate())
+            outError("Mixture model and site rate model do not have the same number of categories");
 //        if (!tree->isMixlen()) {
             // reset mixture model
             model->setFixMixtureWeight(true);
@@ -823,20 +823,20 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
 //            for (c = 0; c < ncat; c++)
 //                site_rate->setProp(c, 1.0);
 //        }
-	}
+    }
 
-	tree->discardSaturatedSite(params.discard_saturated_site);
+    tree->discardSaturatedSite(params.discard_saturated_site);
 
-	} catch (const char* str) {
-		outError(str);
-	}
+    } catch (const char* str) {
+        outError(str);
+    }
 
 }
 
 void ModelFactory::setCheckpoint(Checkpoint *checkpoint) {
-	CheckpointFactory::setCheckpoint(checkpoint);
-	model->setCheckpoint(checkpoint);
-	site_rate->setCheckpoint(checkpoint);
+    CheckpointFactory::setCheckpoint(checkpoint);
+    model->setCheckpoint(checkpoint);
+    site_rate->setCheckpoint(checkpoint);
 }
 
 void ModelFactory::startCheckpoint() {
@@ -865,7 +865,7 @@ void ModelFactory::restoreCheckpoint() {
 }
 
 int ModelFactory::getNParameters(int brlen_type) {
-	int df = model->getNDim() + model->getNDimFreq() + site_rate->getNDim() +
+    int df = model->getNDim() + model->getNDimFreq() + site_rate->getNDim() +
         site_rate->getTree()->getNBranchParameters(brlen_type);
 
     return df;
@@ -887,9 +887,9 @@ double ModelFactory::initGTRGammaIParameters(RateHeterogeneity *rate, ModelSubst
 */
 
 double ModelFactory::optimizeParametersOnly(int num_steps, double gradient_epsilon, double cur_logl) {
-	double logl;
-	/* Optimize substitution and heterogeneity rates independently */
-	if (!joint_optimize || model->linked_model) {
+    double logl;
+    /* Optimize substitution and heterogeneity rates independently */
+    if (!joint_optimize || model->linked_model) {
         // more steps for fused mix rate model
         int steps;
         if (false && fused_mix_rate && model->getNDim() > 0 && site_rate->getNDim() > 0) {
@@ -916,11 +916,11 @@ double ModelFactory::optimizeParametersOnly(int num_steps, double gradient_epsil
                 break;
             prev_logl = logl;
         }
-	} else {
-		/* Optimize substitution and heterogeneity rates jointly using BFGS */
-		logl = optimizeAllParameters(gradient_epsilon);
-	}
-	return logl;
+    } else {
+        /* Optimize substitution and heterogeneity rates jointly using BFGS */
+        logl = optimizeAllParameters(gradient_epsilon);
+    }
+    return logl;
 }
 
 double ModelFactory::optimizeAllParameters(double gradient_epsilon) {
@@ -975,38 +975,38 @@ double ModelFactory::optimizeParametersGammaInvar(int fixed_len, bool write_info
     if (!site_rate->isGammai() || site_rate->isFixPInvar() || site_rate->isFixGammaShape() || site_rate->getTree()->aln->frac_const_sites == 0.0 || model->isMixture())
         return optimizeParameters(fixed_len, write_info, logl_epsilon, gradient_epsilon);
 
-	double begin_time = getRealTime();
+    double begin_time = getRealTime();
 
     PhyloTree *tree = site_rate->getTree();
-	double frac_const = tree->aln->frac_const_sites;
+    double frac_const = tree->aln->frac_const_sites;
     tree->setCurScore(tree->computeLikelihood());
 
-	/* Back up branch lengths and substitutional rates */
-	DoubleVector initBranLens;
-	DoubleVector bestLens;
-	tree->saveBranchLengths(initBranLens);
+    /* Back up branch lengths and substitutional rates */
+    DoubleVector initBranLens;
+    DoubleVector bestLens;
+    tree->saveBranchLengths(initBranLens);
     bestLens = initBranLens;
-//	int numRateEntries = tree->getModel()->getNumRateEntries();
+//    int numRateEntries = tree->getModel()->getNumRateEntries();
     Checkpoint *model_ckp = new Checkpoint;
     Checkpoint *best_ckp = new Checkpoint;
     Checkpoint *saved_ckp = model->getCheckpoint();
     *model_ckp = *saved_ckp;
-//	double *rates = new double[numRateEntries];
-//	double *bestRates = new double[numRateEntries];
-//	tree->getModel()->getRateMatrix(rates);
-//	int numStates = tree->aln->num_states;
-//	double *state_freqs = new double[numStates];
-//	tree->getModel()->getStateFrequency(state_freqs);
+//    double *rates = new double[numRateEntries];
+//    double *bestRates = new double[numRateEntries];
+//    tree->getModel()->getRateMatrix(rates);
+//    int numStates = tree->aln->num_states;
+//    double *state_freqs = new double[numStates];
+//    tree->getModel()->getStateFrequency(state_freqs);
 
-	/* Best estimates found */
-//	double *bestStateFreqs =  new double[numStates];
-	double bestLogl = -DBL_MAX;
-	double bestAlpha = 0.0;
-	double bestPInvar = 0.0;
+    /* Best estimates found */
+//    double *bestStateFreqs =  new double[numStates];
+    double bestLogl = -DBL_MAX;
+    double bestAlpha = 0.0;
+    double bestPInvar = 0.0;
 
-	double testInterval = (frac_const - MIN_PINVAR * 2) / 9;
-	double initPInv = MIN_PINVAR;
-	double initAlpha = site_rate->getGammaShape();
+    double testInterval = (frac_const - MIN_PINVAR * 2) / 9;
+    double initPInv = MIN_PINVAR;
+    double initAlpha = site_rate->getGammaShape();
 
     if (Params::getInstance().opt_gammai_fast) {
         initPInv = frac_const/2;
@@ -1102,31 +1102,31 @@ double ModelFactory::optimizeParametersGammaInvar(int fixed_len, bool write_info
     // ((ModelGTR*) tree->getModel())->setStateFrequency(bestStateFreqs);
     // --
 
-	tree->restoreBranchLengths(bestLens);
+    tree->restoreBranchLengths(bestLens);
     // tree->getModel()->decomposeRateMatrix();
 
-	tree->clearAllPartialLH();
-	tree->setCurScore(tree->computeLikelihood());
+    tree->clearAllPartialLH();
+    tree->setCurScore(tree->computeLikelihood());
     if (write_info) {
         cout << "Optimal pinv,alpha: " << bestPInvar << ", " << bestAlpha << " / ";
         cout << "LogL: " << tree->getCurScore() << endl << endl;
     }
     ASSERT(fabs(tree->getCurScore() - bestLogl) < 1.0);
 
-//	delete [] rates;
-//	delete [] state_freqs;
-//	delete [] bestRates;
-//	delete [] bestStateFreqs;
+//    delete [] rates;
+//    delete [] state_freqs;
+//    delete [] bestRates;
+//    delete [] bestStateFreqs;
 
     delete model_ckp;
     delete best_ckp;
 
-	double elapsed_secs = getRealTime() - begin_time;
-	if (write_info)
-		cout << "Parameters optimization took " << elapsed_secs << " sec" << endl;
+    double elapsed_secs = getRealTime() - begin_time;
+    if (write_info)
+        cout << "Parameters optimization took " << elapsed_secs << " sec" << endl;
 
     // updating global variable is not safe!
-//	Params::getInstance().testAlpha = false;
+//    Params::getInstance().testAlpha = false;
 
     // 2016-03-14: this was missing!
     return tree->getCurScore();
@@ -1164,46 +1164,56 @@ vector<double> ModelFactory::optimizeGammaInvWithInitValue(int fixed_len, double
 
 double ModelFactory::optimizeParameters(int fixed_len, bool write_info,
                                         double logl_epsilon, double gradient_epsilon) {
-	ASSERT(model);
-	ASSERT(site_rate);
+    ASSERT(model);
+    ASSERT(site_rate);
 
 //    double defaultEpsilon = logl_epsilon;
 
-	double begin_time = getRealTime();
-	double cur_lh;
-	PhyloTree *tree = site_rate->getTree();
-	ASSERT(tree);
+    double begin_time = getRealTime();
+    double cur_lh;
+    PhyloTree *tree = site_rate->getTree();
+    ASSERT(tree);
 
-	stopStoringTransMatrix();
+    stopStoringTransMatrix();
     // modified by Thomas Wong on Sept 11, 15
     // no optimization of branch length in the first round
     cur_lh = tree->computeLikelihood();
     tree->setCurScore(cur_lh);
-	if (verbose_mode >= VB_MED || write_info) {
-		cout << "1. Initial log-likelihood: " << cur_lh << endl;
+    if (verbose_mode >= VB_MED || write_info) {
+    int p = -1;
+
+    // SET precision to 17 (temporarily)
+    if (verbose_mode >= VB_DEBUG) p = cout.precision(17);
+
+    // PRINT Log-Likelihood
+    cout << "1. Initial log-likelihood: " << cur_lh << endl;
+
+    // RESTORE previous precision
+    if (verbose_mode >= VB_DEBUG) cout.precision(p);
+
         if (verbose_mode >= VB_MAX) {
             tree->printTree(cout);
             cout << endl;
         }
     }
 
-	// For UpperBounds -----------
-	//cout<<"MLCheck = "<<tree->mlCheck <<endl;
-	if(tree->mlCheck == 0){
-		tree->mlInitial = cur_lh;
-	}
-	// ---------------------------
+    // For UpperBounds -----------
+    //cout<<"MLCheck = "<<tree->mlCheck <<endl;
+    if(tree->mlCheck == 0){
+        tree->mlInitial = cur_lh;
+    }
+    // ---------------------------
 
 
-	int i;
-	//bool optimize_rate = true;
-//	double gradient_epsilon = min(logl_epsilon, 0.01); // epsilon for parameters starts at epsilon for logl
-	for (i = 2; i < tree->params->num_param_iterations; i++) {
+    int i;
+    //bool optimize_rate = true;
+//    double gradient_epsilon = min(logl_epsilon, 0.01); // epsilon for parameters starts at epsilon for logl
+    for (i = 2; i < tree->params->num_param_iterations; i++) {
         double new_lh;
 
         // changed to opimise edge length first, and then Q,W,R inside the loop by Thomas on Sept 11, 15
-		if (fixed_len == BRLEN_OPTIMIZE)
-			new_lh = tree->optimizeAllBranches(min(i,3), logl_epsilon);  // loop only 3 times in total (previously in v0.9.6 5 times)
+        if (fixed_len == BRLEN_OPTIMIZE)
+            new_lh = tree->optimizeAllBranches(min(i,3), logl_epsilon);  // loop only 3 times in total (previously in v0.9.6 5 times)
         else if (fixed_len == BRLEN_SCALE) {
             double scaling = 1.0;
             new_lh = tree->optimizeTreeLengthScaling(MIN_BRLEN_SCALE, scaling, MAX_BRLEN_SCALE, gradient_epsilon);
@@ -1212,27 +1222,27 @@ double ModelFactory::optimizeParameters(int fixed_len, bool write_info,
 
         new_lh = optimizeParametersOnly(i, gradient_epsilon, new_lh);
 
-		if (new_lh == 0.0) {
+        if (new_lh == 0.0) {
             if (fixed_len == BRLEN_OPTIMIZE)
                 cur_lh = tree->optimizeAllBranches(tree->params->num_param_iterations, logl_epsilon);
             else if (fixed_len == BRLEN_SCALE) {
                 double scaling = 1.0;
                 cur_lh = tree->optimizeTreeLengthScaling(MIN_BRLEN_SCALE, scaling, MAX_BRLEN_SCALE, gradient_epsilon);
             }
-			break;
-		}
-		if (verbose_mode >= VB_MED) {
-			model->writeInfo(cout);
-			site_rate->writeInfo(cout);
+            break;
+        }
+        if (verbose_mode >= VB_MED) {
+            model->writeInfo(cout);
+            site_rate->writeInfo(cout);
             if (fixed_len == BRLEN_SCALE)
                 cout << "Scaled tree length: " << tree->treeLength() << endl;
-		}
-		if (new_lh > cur_lh + logl_epsilon) {
-			cur_lh = new_lh;
-			if (write_info)
-				cout << i << ". Current log-likelihood: " << cur_lh << endl;
-		} else {
-			site_rate->classifyRates(new_lh);
+        }
+        if (new_lh > cur_lh + logl_epsilon) {
+            cur_lh = new_lh;
+            if (write_info)
+                cout << i << ". Current log-likelihood: " << cur_lh << endl;
+        } else {
+            site_rate->classifyRates(new_lh);
             if (fixed_len == BRLEN_OPTIMIZE)
                 cur_lh = tree->optimizeAllBranches(100, logl_epsilon);
             else if (fixed_len == BRLEN_SCALE) {
@@ -1240,10 +1250,10 @@ double ModelFactory::optimizeParameters(int fixed_len, bool write_info,
                 cur_lh = tree->optimizeTreeLengthScaling(MIN_BRLEN_SCALE, scaling, MAX_BRLEN_SCALE, gradient_epsilon);
             }
             break;
-		}
-	}
+        }
+    }
 
-	// normalize rates s.t. branch lengths are #subst per site
+    // normalize rates s.t. branch lengths are #subst per site
 //    if (Params::getInstance().optimize_alg_gammai != "EM")
     {
         double mean_rate = site_rate->rescaleRates();
@@ -1255,138 +1265,144 @@ double ModelFactory::optimizeParameters(int fixed_len, bool write_info,
         }
     }
 
-	if (verbose_mode >= VB_MED || write_info)
-		cout << "Optimal log-likelihood: " << cur_lh << endl;
+    if (Params::getInstance().root_find && tree->rooted && Params::getInstance().root_move_dist > 0) {
+        cur_lh = tree->optimizeRootPosition(Params::getInstance().root_move_dist, write_info, logl_epsilon);
+        if (verbose_mode >= VB_MED || write_info)
+            cout << "Rooting log-likelihood: " << cur_lh << endl;
+    }
+    
+    if (verbose_mode >= VB_MED || write_info)
+        cout << "Optimal log-likelihood: " << cur_lh << endl;
 
-	// For UpperBounds -----------
-	if(tree->mlCheck == 0)
-		tree->mlFirstOpt = cur_lh;
-	// ---------------------------
+    // For UpperBounds -----------
+    if(tree->mlCheck == 0)
+        tree->mlFirstOpt = cur_lh;
+    // ---------------------------
 
-	if (verbose_mode <= VB_MIN && write_info) {
-		model->writeInfo(cout);
-		site_rate->writeInfo(cout);
+    if (verbose_mode <= VB_MIN && write_info) {
+        model->writeInfo(cout);
+        site_rate->writeInfo(cout);
         if (fixed_len == BRLEN_SCALE)
             cout << "Scaled tree length: " << tree->treeLength() << endl;
-	}
-	double elapsed_secs = getRealTime() - begin_time;
-	if (write_info)
-		cout << "Parameters optimization took " << i-1 << " rounds (" << elapsed_secs << " sec)" << endl;
-	startStoringTransMatrix();
+    }
+    double elapsed_secs = getRealTime() - begin_time;
+    if (write_info)
+        cout << "Parameters optimization took " << i-1 << " rounds (" << elapsed_secs << " sec)" << endl;
+    startStoringTransMatrix();
 
-	// For UpperBounds -----------
-	tree->mlCheck = 1;
-	// ---------------------------
+    // For UpperBounds -----------
+    tree->mlCheck = 1;
+    // ---------------------------
 
-	tree->setCurScore(cur_lh);
-	return cur_lh;
+    tree->setCurScore(cur_lh);
+    return cur_lh;
 }
 
 /**
  * @return TRUE if parameters are at the boundary that may cause numerical unstability
  */
 bool ModelFactory::isUnstableParameters() {
-	if (model->isUnstableParameters()) return true;
-	return false;
+    if (model->isUnstableParameters()) return true;
+    return false;
 }
 
 void ModelFactory::startStoringTransMatrix() {
-	if (!store_trans_matrix) return;
-	is_storing = true;
+    if (!store_trans_matrix) return;
+    is_storing = true;
 }
 
 void ModelFactory::stopStoringTransMatrix() {
-	if (!store_trans_matrix) return;
-	is_storing = false;
-	if (!empty()) {
-		for (iterator it = begin(); it != end(); it++)
-			delete it->second;
-		clear();
-	}
+    if (!store_trans_matrix) return;
+    is_storing = false;
+    if (!empty()) {
+        for (iterator it = begin(); it != end(); it++)
+            delete it->second;
+        clear();
+    }
 }
 
 
 double ModelFactory::computeTrans(double time, int state1, int state2) {
-	return model->computeTrans(time, state1, state2);
+    return model->computeTrans(time, state1, state2);
 }
 
 double ModelFactory::computeTrans(double time, int state1, int state2, double &derv1, double &derv2) {
-	return model->computeTrans(time, state1, state2, derv1, derv2);
+    return model->computeTrans(time, state1, state2, derv1, derv2);
 }
 
 void ModelFactory::computeTransMatrix(double time, double *trans_matrix, int mixture) {
-	if (!store_trans_matrix || !is_storing || model->isSiteSpecificModel()) {
-		model->computeTransMatrix(time, trans_matrix, mixture);
-		return;
-	}
-	int mat_size = model->num_states * model->num_states;
-	iterator ass_it = find(round(time * 1e6));
-	if (ass_it == end()) {
-		// allocate memory for 3 matricies
-		double *trans_entry = new double[mat_size * 3];
-		trans_entry[mat_size] = trans_entry[mat_size+1] = 0.0;
-		model->computeTransMatrix(time, trans_entry, mixture);
-		ass_it = insert(value_type(round(time * 1e6), trans_entry)).first;
-	} else {
-		//if (verbose_mode >= VB_MAX)
-			//cout << "ModelFactory bingo" << endl;
-	}
+    if (!store_trans_matrix || !is_storing || model->isSiteSpecificModel()) {
+        model->computeTransMatrix(time, trans_matrix, mixture);
+        return;
+    }
+    int mat_size = model->num_states * model->num_states;
+    iterator ass_it = find(round(time * 1e6));
+    if (ass_it == end()) {
+        // allocate memory for 3 matricies
+        double *trans_entry = new double[mat_size * 3];
+        trans_entry[mat_size] = trans_entry[mat_size+1] = 0.0;
+        model->computeTransMatrix(time, trans_entry, mixture);
+        ass_it = insert(value_type(round(time * 1e6), trans_entry)).first;
+    } else {
+        //if (verbose_mode >= VB_MAX)
+            //cout << "ModelFactory bingo" << endl;
+    }
 
-	memcpy(trans_matrix, ass_it->second, mat_size * sizeof(double));
+    memcpy(trans_matrix, ass_it->second, mat_size * sizeof(double));
 }
 
 void ModelFactory::computeTransDerv(double time, double *trans_matrix,
-	double *trans_derv1, double *trans_derv2, int mixture) {
-	if (!store_trans_matrix || !is_storing || model->isSiteSpecificModel()) {
-		model->computeTransDerv(time, trans_matrix, trans_derv1, trans_derv2, mixture);
-		return;
-	}
-	int mat_size = model->num_states * model->num_states;
-	iterator ass_it = find(round(time * 1e6));
-	if (ass_it == end()) {
-		// allocate memory for 3 matricies
-		double *trans_entry = new double[mat_size * 3];
-		trans_entry[mat_size] = trans_entry[mat_size+1] = 0.0;
-		model->computeTransDerv(time, trans_entry, trans_entry+mat_size, trans_entry+(mat_size*2), mixture);
-		ass_it = insert(value_type(round(time * 1e6), trans_entry)).first;
-	} else if (ass_it->second[mat_size] == 0.0 && ass_it->second[mat_size+1] == 0.0) {
-		double *trans_entry = ass_it->second;
-		model->computeTransDerv(time, trans_entry, trans_entry+mat_size, trans_entry+(mat_size*2), mixture);
-	}
-	memcpy(trans_matrix, ass_it->second, mat_size * sizeof(double));
-	memcpy(trans_derv1, ass_it->second + mat_size, mat_size * sizeof(double));
-	memcpy(trans_derv2, ass_it->second + (mat_size*2), mat_size * sizeof(double));
+    double *trans_derv1, double *trans_derv2, int mixture) {
+    if (!store_trans_matrix || !is_storing || model->isSiteSpecificModel()) {
+        model->computeTransDerv(time, trans_matrix, trans_derv1, trans_derv2, mixture);
+        return;
+    }
+    int mat_size = model->num_states * model->num_states;
+    iterator ass_it = find(round(time * 1e6));
+    if (ass_it == end()) {
+        // allocate memory for 3 matricies
+        double *trans_entry = new double[mat_size * 3];
+        trans_entry[mat_size] = trans_entry[mat_size+1] = 0.0;
+        model->computeTransDerv(time, trans_entry, trans_entry+mat_size, trans_entry+(mat_size*2), mixture);
+        ass_it = insert(value_type(round(time * 1e6), trans_entry)).first;
+    } else if (ass_it->second[mat_size] == 0.0 && ass_it->second[mat_size+1] == 0.0) {
+        double *trans_entry = ass_it->second;
+        model->computeTransDerv(time, trans_entry, trans_entry+mat_size, trans_entry+(mat_size*2), mixture);
+    }
+    memcpy(trans_matrix, ass_it->second, mat_size * sizeof(double));
+    memcpy(trans_derv1, ass_it->second + mat_size, mat_size * sizeof(double));
+    memcpy(trans_derv2, ass_it->second + (mat_size*2), mat_size * sizeof(double));
 }
 
 ModelFactory::~ModelFactory()
 {
-	for (iterator it = begin(); it != end(); it++)
-		delete it->second;
-	clear();
+    for (iterator it = begin(); it != end(); it++)
+        delete it->second;
+    clear();
 }
 
 /************* FOLLOWING SERVE FOR JOINT OPTIMIZATION OF MODEL AND RATE PARAMETERS *******/
 int ModelFactory::getNDim()
 {
-	return model->getNDim() + site_rate->getNDim();
+    return model->getNDim() + site_rate->getNDim();
 }
 
 double ModelFactory::targetFunk(double x[]) {
-	model->getVariables(x);
-	// need to compute rates again if p_inv or Gamma shape changes!
-	if (model->state_freq[model->num_states-1] < MIN_RATE) return 1.0e+12;
-	model->decomposeRateMatrix();
-	site_rate->phylo_tree->clearAllPartialLH();
-	return site_rate->targetFunk(x + model->getNDim());
+    model->getVariables(x);
+    // need to compute rates again if p_inv or Gamma shape changes!
+    if (model->state_freq[model->num_states-1] < MIN_RATE) return 1.0e+12;
+    model->decomposeRateMatrix();
+    site_rate->phylo_tree->clearAllPartialLH();
+    return site_rate->targetFunk(x + model->getNDim());
 }
 
 void ModelFactory::setVariables(double *variables) {
-	model->setVariables(variables);
-	site_rate->setVariables(variables + model->getNDim());
+    model->setVariables(variables);
+    site_rate->setVariables(variables + model->getNDim());
 }
 
 bool ModelFactory::getVariables(double *variables) {
-	bool changed = model->getVariables(variables);
-	changed |= site_rate->getVariables(variables + model->getNDim());
+    bool changed = model->getVariables(variables);
+    changed |= site_rate->getVariables(variables + model->getNDim());
     return changed;
 }

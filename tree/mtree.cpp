@@ -1983,20 +1983,20 @@ void MTree::extractQuadSubtrees(vector<Split*> &subtrees, Node *node, Node *dad)
 }
 
 
-void MTree::assignBranchSupport(const char *trees_file) {
+void MTree::assignBranchSupport(const char *trees_file, map<int,BranchSupportInfo> &branch_supports) {
 	cout << "Reading input trees file " << trees_file << endl;
 	try {
 		ifstream in;
         in.exceptions(ios::failbit | ios::badbit);
         in.open(trees_file);
-        assignBranchSupport(in);
+        assignBranchSupport(in, branch_supports);
 		in.close();
 	} catch (ios::failure) {
 		outError(ERR_READ_INPUT, trees_file);
 	}
 }
 
-void MTree::assignBranchSupport(istream &in) {
+void MTree::assignBranchSupport(istream &in, map<int,BranchSupportInfo> &branch_supports) {
 	SplitGraph mysg;
 	NodeVector mynodes;
 	convertSplits(mysg, &mynodes, root->neighbors[0]->node);
@@ -2100,16 +2100,31 @@ void MTree::assignBranchSupport(istream &in) {
 	for (int i = 0; i < mysg.size(); i++)
 	if (!mynodes[i]->isLeaf())
 	{
+        BranchSupportInfo brsup;
+        brsup.id = mynodes[i]->id;
+        brsup.name = mynodes[i]->name;
+        brsup.geneCF = mysg[i]->getWeight()/decisive_counts[i];
+        brsup.geneN = decisive_counts[i];
+        branch_supports[brsup.id] = brsup;
+        
 		stringstream tmp;
-		if (!mynodes[i]->name.empty())
-			tmp << "/";
 		if (mysg[i]->getWeight() == 0.0)
 			tmp << "0";
 		else
 			tmp << round((mysg[i]->getWeight()/decisive_counts[i])*1000)/10;
 		if (verbose_mode >= VB_MED)
 			tmp << "%" << decisive_counts[i];
-		if (!mynodes[i]->isLeaf()) mynodes[i]->name.append(tmp.str());
+
+        if (Params::getInstance().newick_extended_format) {
+            if (mynodes[i]->name.empty() || mynodes[i]->name.back() != ']')
+                mynodes[i]->name += "[&CF=" + tmp.str() + "]";
+            else
+                mynodes[i]->name = mynodes[i]->name.substr(0, mynodes[i]->name.length()-1) + ",!CF=" + tmp.str() + "]";
+        } else {
+            if (!mynodes[i]->name.empty())
+                mynodes[i]->name.append("/");
+            mynodes[i]->name.append(tmp.str());
+        }
 		if (verbose_mode >= VB_MED) {
 			cout << mynodes[i]->name << " " << occurence_trees[i] << endl;
 		}
@@ -2118,26 +2133,35 @@ void MTree::assignBranchSupport(istream &in) {
 		delete (*it);
 }
 
-void MTree::computeRFDist(const char *trees_file, IntVector &dist) {
+void MTree::computeRFDist(const char *trees_file, IntVector &dist, int assign_sup) {
 	cout << "Reading input trees file " << trees_file << endl;
 	try {
 		ifstream in;
         in.exceptions(ios::failbit | ios::badbit);
         in.open(trees_file);
-        computeRFDist(in, dist);
+        computeRFDist(in, dist, assign_sup);
 		in.close();
 	} catch (ios::failure) {
 		outError(ERR_READ_INPUT, trees_file);
 	}
 }
 
-void MTree::computeRFDist(istream &in, IntVector &dist) {
+void MTree::computeRFDist(istream &in, IntVector &dist, int assign_sup) {
 	SplitGraph mysg;
-	convertSplits(mysg, NULL, root->neighbors[0]->node);
+    NodeVector nodes;
+	convertSplits(mysg, &nodes, root->neighbors[0]->node);
+    StringIntMap name_index;
+    int ntrees, taxid;
+    for (taxid = 0; taxid < mysg.getNTaxa(); taxid++)
+        name_index[mysg.getTaxa()->GetTaxonLabel(taxid)] = taxid;
+    NodeVector::iterator nit;
+    if (assign_sup)
+        for (nit = nodes.begin(); nit != nodes.end(); nit++)
+            (*nit)->height = 0.0;
+    
 	SplitGraph::iterator sit;
 	for (sit = mysg.begin(); sit != mysg.end(); sit++)
 		(*sit)->setWeight(0.0);
-	int ntrees, taxid;
 	for (ntrees = 1; !in.eof(); ntrees++) {
 		MTree tree;
 		bool is_rooted = false;
@@ -2151,9 +2175,9 @@ void MTree::computeRFDist(istream &in, IntVector &dist) {
 		// create the map from taxa between 2 trees
 		Split taxa_mask(leafNum);
 		for (StrVector::iterator it = taxname.begin(); it != taxname.end(); it++) {
-			taxid = mysg.findLeafName(*it);
-			if (taxid < 0)
-				outError("Taxon not found in full tree: ", *it);
+            if (name_index.find(*it) == name_index.end())
+                outError("Taxon not found in full tree: ", *it);
+			taxid = name_index[*it];
 			taxa_mask.addTaxon(taxid);
 		}
 		// make the taxa ordering right before converting to split system
@@ -2197,6 +2221,8 @@ void MTree::computeRFDist(istream &in, IntVector &dist) {
 							cout << " " << taxname[taxid];
 					cout << endl;
 				}
+                if (assign_sup && subsp->trivial() < 0)
+                    nodes[sit-mysg.begin()]->height++;
 			}
 			delete subsp;
 		}
@@ -2212,6 +2238,10 @@ void MTree::computeRFDist(istream &in, IntVector &dist) {
 		in.exceptions(ios::failbit | ios::badbit);
 
 	}
+    if (assign_sup)
+        for (nit = nodes.begin(); nit != nodes.end(); nit++)
+            if (!(*nit)->isLeaf())
+                (*nit)->name = convertIntToString((*nit)->height);
 
 //	cout << ntrees << " trees read" << endl;
 
@@ -2231,7 +2261,7 @@ void MTree::reportDisagreedTrees(vector<string> &taxname, MTreeSet &trees, Split
 }
 
 
-void MTree::createBootstrapSupport(vector<string> &taxname, MTreeSet &trees, SplitGraph &sg, SplitIntMap &hash_ss,
+void MTree::createBootstrapSupport(vector<string> &taxname, MTreeSet &trees, SplitIntMap &hash_ss,
     char *tag, Node *node, Node *dad) {
 	if (!node) node = root;	
 	FOR_NEIGHBOR_IT(node, dad, it) {
@@ -2276,7 +2306,7 @@ void MTree::createBootstrapSupport(vector<string> &taxname, MTreeSet &trees, Spl
 				reportDisagreedTrees(taxname, trees, mysplit);
 			}
 		}
-		createBootstrapSupport(taxname, trees, sg, hash_ss, tag, (*it)->node, node);
+		createBootstrapSupport(taxname, trees, hash_ss, tag, (*it)->node, node);
 	}	
 }
 

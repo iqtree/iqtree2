@@ -83,6 +83,7 @@ void PhyloTree::init() {
     central_scale_num = NULL;
     nni_scale_num = NULL;
     central_partial_pars = NULL;
+    cost_matrix = NULL;
     model_factory = NULL;
     discard_saturated_site = true;
     _pattern_lh = NULL;
@@ -99,7 +100,8 @@ void PhyloTree::init() {
     dist_matrix = NULL;
     var_matrix = NULL;
     params = NULL;
-    setLikelihoodKernel(LK_SSE2, 1);  // FOR TUNG: you forgot to initialize this variable!
+    setLikelihoodKernel(LK_SSE2);  // FOR TUNG: you forgot to initialize this variable!
+    setNumThreads(1);
     num_threads = 0;
     max_lh_slots = 0;
     save_all_trees = 0;
@@ -209,6 +211,12 @@ PhyloTree::~PhyloTree() {
     if (central_partial_pars)
         aligned_free(central_partial_pars);
     central_partial_pars = NULL;
+
+    if(cost_matrix){
+        aligned_free(cost_matrix);
+        cost_matrix = NULL;
+    }
+
     if (model_factory)
         delete model_factory;
     model_factory = NULL;
@@ -548,7 +556,10 @@ void PhyloTree::setModelFactory(ModelFactory *model_fac) {
     if (model_fac) {
         model = model_factory->model;
         site_rate = model_factory->site_rate;
-    	setLikelihoodKernel(sse, num_threads);
+        if (!isSuperTree()) {
+            setLikelihoodKernel(sse);
+            setNumThreads(num_threads);
+        }
     } else {
         model = NULL;
         site_rate = NULL;
@@ -687,7 +698,7 @@ void PhyloTree::initializeAllPartialPars(int &index, PhyloNode *node, PhyloNode 
         node = (PhyloNode*) root;
         // allocate the big central partial pars memory
         if (!central_partial_pars) {
-            int memsize = (aln->getNSeq()) * 4 * pars_block_size;
+            size_t memsize = (aln->getNSeq()) * 4 * pars_block_size;
             if (verbose_mode >= VB_MAX)
                 cout << "Allocating " << memsize * sizeof(UINT) << " bytes for partial parsimony vectors" << endl;
             central_partial_pars = aligned_alloc<UINT>(memsize);
@@ -709,13 +720,25 @@ void PhyloTree::initializeAllPartialPars(int &index, PhyloNode *node, PhyloNode 
     FOR_NEIGHBOR_IT(node, dad, it)initializeAllPartialPars(index, (PhyloNode*) (*it)->node, node);
 }
 
+#ifdef __AVX512KNL
+#define SIMD_BITS 512
+#else
 #define SIMD_BITS 256
+#endif
+
 
 size_t PhyloTree::getBitsBlockSize() {
     // reserve the last entry for parsimony score
 //    return (aln->num_states * aln->size() + UINT_BITS - 1) / UINT_BITS + 1;
+    if (cost_matrix) {
+        return aln->size() * aln->num_states + 1;
+    }
     size_t len = aln->getMaxNumStates() * ((max(aln->size(), (size_t)aln->num_variant_sites) + SIMD_BITS - 1) / UINT_BITS) + 4;
+#ifdef __AVX512KNL
+    len = ((len+15)/16)*16;
+#else
     len = ((len+7)/8)*8;
+#endif
     return len;
 }
 
@@ -725,7 +748,10 @@ UINT *PhyloTree::newBitsBlock() {
 
 
 void PhyloTree::computePartialParsimony(PhyloNeighbor *dad_branch, PhyloNode *dad) {
-    (this->*computePartialParsimonyPointer)(dad_branch, dad);
+    if (cost_matrix)
+        computeParsimonyBranchSankoff(dad_branch, dad);
+    else
+        (this->*computePartialParsimonyPointer)(dad_branch, dad);
 }
 
 void PhyloTree::computeReversePartialParsimony(PhyloNode *node, PhyloNode *dad) {
@@ -740,7 +766,10 @@ void PhyloTree::computeReversePartialParsimony(PhyloNode *node, PhyloNode *dad) 
 
 
 int PhyloTree::computeParsimonyBranch(PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst) {
-    return (this->*computeParsimonyBranchPointer)(dad_branch, dad, branch_subst);
+    if (cost_matrix)
+        return computeParsimonyBranchSankoff(dad_branch, dad, branch_subst);
+    else
+        return (this->*computeParsimonyBranchPointer)(dad_branch, dad, branch_subst);
 }
 
 
@@ -759,8 +788,15 @@ size_t PhyloTree::getBufferPartialLhSize() {
     ASSERT(num_threads > 0);
     size_t ncat_mix = site_rate->getNRate() * ((model_factory->fused_mix_rate)? 1 : model->getNMixtures());
     size_t block = model->num_states * ncat_mix;
-    size_t buffer_size = get_safe_upper_limit(block * model->num_states * 2) * aln->getNSeq();
-    buffer_size += get_safe_upper_limit(block *(aln->STATE_UNKNOWN+1)) * (aln->getNSeq()+1);
+    size_t buffer_size = 0;
+
+    // buffer for traversal_info.echildren and partial_lh_leaves
+    if (!Params::getInstance().buffer_mem_save) {
+        buffer_size += get_safe_upper_limit(block * model->num_states * 2) * aln->getNSeq();
+        buffer_size += get_safe_upper_limit(block *(aln->STATE_UNKNOWN+1)) * aln->getNSeq();
+    }
+
+    buffer_size += get_safe_upper_limit(block *(aln->STATE_UNKNOWN+1));
     buffer_size += (block*2+model->num_states)*VECTOR_SIZE*num_threads;
 
     // always more buffer for non-rev kernel, in case switching between kernels
@@ -2349,6 +2385,23 @@ double PhyloTree::optimizeTreeLengthScaling(double min_scaling, double &scaling,
     is_opt_scaling = true;
     current_scaling = scaling;
     double negative_lh, ferror;
+    // 2018-08-20: make sure that max and min branch lengths do not go over bounds
+    vector<DoubleVector> brlens;
+    brlens.resize(branchNum);
+    getBranchLengths(brlens);
+    double min_brlen = params->max_branch_length, max_brlen = params->min_branch_length;
+    for (auto brlenvec = brlens.begin(); brlenvec != brlens.end(); brlenvec++) {
+        for (auto brlen = brlenvec->begin(); brlen != brlenvec->end(); brlen++) {
+            max_brlen = max(max_brlen, *brlen);
+            min_brlen = min(min_brlen, *brlen);
+        }
+    }
+    if (min_brlen <= 0.0) min_brlen = params->min_branch_length;
+    if (max_scaling > params->max_branch_length / max_brlen)
+        max_scaling = params->max_branch_length / max_brlen;
+    if (min_scaling < params->min_branch_length / min_brlen)
+        min_scaling = params->min_branch_length / min_brlen;
+    
     scaling = minimizeOneDimen(min(scaling, min_scaling), scaling, max(max_scaling, scaling), max(TOL_TREE_LENGTH_SCALE, gradient_epsilon), &negative_lh, &ferror);
     if (scaling != current_scaling) {
         scaleLength(scaling / current_scaling);
@@ -2409,6 +2462,34 @@ void PhyloTree::computeFuncDerv(double value, double &df, double &ddf) {
     ddf = -ddf;
 
 //    return lh;
+}
+
+void PhyloTree::optimizePatternRates(DoubleVector &pattern_rates) {
+    size_t nptn = aln->getNPattern();
+    pattern_rates.resize(nptn, 1.0);
+#pragma omp parallel for
+    for (size_t ptn = 0; ptn < nptn; ptn++) {
+        Alignment *paln = new Alignment;
+        IntVector ptn_id;
+        ptn_id.push_back(ptn);
+        paln->extractPatterns(aln, ptn_id);
+        PhyloTree *tree = new PhyloTree;
+        tree->copyPhyloTree(this);
+        tree->setParams(params);
+        tree->setAlignment(paln);
+        tree->sse = sse;
+        tree->num_threads = 1;
+        // initialize model
+        tree->setModelFactory(getModelFactory());
+
+        // main optimization
+        tree->optimizeTreeLengthScaling(MIN_SITE_RATE, pattern_rates[ptn], MAX_SITE_RATE, 0.0001);
+        
+        tree->setModelFactory(NULL);
+        
+        delete tree;
+        delete paln;
+    }
 }
 
 int PhyloTree::getNBranchParameters(int brlen_type) {
@@ -4997,6 +5078,18 @@ void PhyloTree::computeBranchDirection(PhyloNode *node, PhyloNode *dad) {
 	}
 }
 
+void PhyloTree::clearBranchDirection(PhyloNode *node, PhyloNode *dad) {
+    if (!node)
+        node = (PhyloNode*)root;
+    if (dad)
+        ((PhyloNeighbor*)node->findNeighbor(dad))->direction = UNDEFINED_DIRECTION;
+    FOR_NEIGHBOR_IT(node, dad, it) {
+        ((PhyloNeighbor*)*it)->direction = UNDEFINED_DIRECTION;
+        clearBranchDirection((PhyloNode*)(*it)->node, node);
+    }
+
+}
+
 /*
 void PhyloTree::sortNeighborBySubtreeSize(PhyloNode *node, PhyloNode *dad) {
 
@@ -5031,6 +5124,7 @@ void PhyloTree::sortNeighborBySubtreeSize(PhyloNode *node, PhyloNode *dad) {
 void PhyloTree::convertToRooted() {
     ASSERT(leafNum == aln->getNSeq());
     Node *node, *dad;
+    double node_len, dad_len;
     if (params->root) {
         string name = params->root;
         node = findNodeName(name);
@@ -5038,7 +5132,23 @@ void PhyloTree::convertToRooted() {
             outError("Cannot find leaf with name " + name);
         ASSERT(node->isLeaf());
         dad = node->neighbors[0]->node;
+        node_len = dad_len = node->neighbors[0]->length*0.5;
     } else {
+        //midpoint rooting
+        Node *node1, *node2;
+        double longest = root->longestPath2(node1, node2);
+        longest *= 0.5;
+        double curlen = 0.0;
+        for (; node1 != node2 && curlen + node1->highestNei->length < longest; node1 = node1->highestNei->node) {
+            curlen += node1->highestNei->length;
+        }
+        // place root on node1->heigestNei
+        node = node1;
+        dad = node1->highestNei->node;
+        node_len = longest - curlen;
+        dad_len = node1->highestNei->length - node_len;
+        ASSERT(dad_len >= 0.0);
+        /*
         // place root to the longest branch
         NodeVector nodes1, nodes2;
         getBranches(nodes1, nodes2);
@@ -5049,6 +5159,7 @@ void PhyloTree::convertToRooted() {
                 node = nodes1[i];
                 dad = nodes2[i];
             }
+         */
     }
     rooted = true;
     root = newNode(leafNum, ROOT_NAME);
@@ -5056,11 +5167,11 @@ void PhyloTree::convertToRooted() {
     root->addNeighbor(root_int, 0.0);
     root_int->addNeighbor(root, 0.0);
     leafNum++;
-    double newlen = node->findNeighbor(dad)->length/2.0;
-    node->updateNeighbor(dad, root_int, newlen);
-    root_int->addNeighbor(node, newlen);
-    dad->updateNeighbor(node, root_int, newlen);
-    root_int->addNeighbor(dad, newlen);
+    //double newlen = node->findNeighbor(dad)->length/2.0;
+    node->updateNeighbor(dad, root_int, node_len);
+    root_int->addNeighbor(node, node_len);
+    dad->updateNeighbor(node, root_int, dad_len);
+    root_int->addNeighbor(dad, dad_len);
     initializeTree();
     computeBranchDirection();
     current_it = current_it_back = NULL;
@@ -5068,7 +5179,8 @@ void PhyloTree::convertToRooted() {
 
 void PhyloTree::convertToUnrooted() {
     ASSERT(rooted);
-    ASSERT(leafNum == aln->getNSeq()+1);
+    if (aln)
+        ASSERT(leafNum == aln->getNSeq()+1);
     ASSERT(root);
     ASSERT(root->isLeaf() && root->id == leafNum-1);
     Node *node = root->neighbors[0]->node;
@@ -5100,9 +5212,12 @@ void PhyloTree::convertToUnrooted() {
     delete root;
     // set a temporary taxon so that tree traversal works
     root = taxon;
-    setRootNode(params->root);
+    
+    if (params)
+        setRootNode(params->root);
 
     initializeTree();
+    clearBranchDirection();
 //    computeBranchDirection();
 }
 
@@ -5218,7 +5333,7 @@ bool PhyloTree::computeTraversalInfo(PhyloNeighbor *dad_branch, PhyloNode *dad, 
             }
     }
 
-    if (!model->isSiteSpecificModel()) {
+    if (!model->isSiteSpecificModel() && !Params::getInstance().buffer_mem_save) {
         //------- normal model -----
         info.echildren = buffer;
         size_t block = nstates * ((model_factory->fused_mix_rate) ? site_rate->getNRate() : site_rate->getNRate()*model->getNMixtures());
@@ -5267,10 +5382,16 @@ void PhyloTree::writeSiteLh(ostream &out, SiteLoglType wsl, int partid) {
     aligned_free(pattern_lh);
 }
 
-void PhyloTree::writeSiteRates(ostream &out, int partid) {
+void PhyloTree::writeSiteRates(ostream &out, bool bayes, int partid) {
 	DoubleVector pattern_rates;
 	IntVector pattern_cat;
-	int ncategory = site_rate->computePatternRates(pattern_rates, pattern_cat);
+    int ncategory = 1;
+    
+    if (bayes)
+        ncategory = site_rate->computePatternRates(pattern_rates, pattern_cat);
+    else
+        optimizePatternRates(pattern_rates);
+    
 	if (pattern_rates.empty()) return;
 	int nsite = aln->getNSite();
 	int i;
@@ -5305,10 +5426,12 @@ void PhyloTree::writeSiteRates(ostream &out, int partid) {
         }
 		out << endl;
 	}
-    cout << "Empirical proportions for each category:";
-    for (i = 0; i < count.size(); i++)
-        cout << " " << ((double)count[i])/nsite;
-    cout << endl;
+    if (bayes) {
+        cout << "Empirical proportions for each category:";
+        for (i = 0; i < count.size(); i++)
+            cout << " " << ((double)count[i])/nsite;
+        cout << endl;
+    }
 }
 
 void PhyloTree::writeBranches(ostream &out) {

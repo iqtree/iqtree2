@@ -91,8 +91,13 @@ PartitionModel::PartitionModel(Params &params, PhyloSuperTree *tree, ModelsBlock
         //(*it)->copyTree(tree, taxa_set);
         //(*it)->drawTree(cout);
     }
-    if (linked_models.size() > 1)
-        outWarning("Can't link more than one model yet. Contact developers");
+    if (linked_models.size() > 1) {
+        cout << "Linked models:";
+        for (auto mit = linked_models.begin(); mit != linked_models.end(); mit++)
+            cout << " " << mit->first;
+        cout << endl;
+        outError("Can't link more than one model yet");
+    }
     if (init_by_divmat) {
         int nstates = linked_models.begin()->second->num_states;
         double *pair_freq = new double[nstates * nstates];
@@ -121,8 +126,14 @@ PartitionModel::PartitionModel(Params &params, PhyloSuperTree *tree, ModelsBlock
         sum = 1.0/sum;
         for (i = 0; i < mit->second->num_states; i++)
             sum_state_freq[i] *= sum;
-        mit->second->setStateFrequency(sum_state_freq);
+        ((ModelMarkov*)mit->second)->adaptStateFrequency(sum_state_freq);
         mit->second->decomposeRateMatrix();
+        cout << "sum_state_freq:";
+        int prec = cout.precision(8);
+        for (i = 0; i < mit->second->num_states; i++)
+            cout << " " << sum_state_freq[i];
+        cout << endl;
+        cout.precision(prec);
     }
     if (sum_state_freq)
         delete [] sum_state_freq;
@@ -249,6 +260,11 @@ double PartitionModel::optimizeLinkedModel(bool write_info, double gradient_epsi
     model->setVariables(variables);
     model->setVariables(variables2);
     ((ModelMarkov*)model)->setBounds(lower_bound, upper_bound, bound_check);
+    // expand the bound for linked model
+    for (int i = 1; i <= ndim; i++) {
+        lower_bound[i] = MIN_RATE*0.2;
+        upper_bound[i] = MAX_RATE*2.0;
+    }
     if (Params::getInstance().optimize_alg.find("NR") != string::npos)
         score = -minimizeMultiDimen(variables, ndim, lower_bound, upper_bound, bound_check, max(gradient_epsilon, TOL_RATE));
     else
@@ -331,24 +347,26 @@ double PartitionModel::optimizeParameters(int fixed_len, bool write_info, double
         #endif
         for (int i = 0; i < ntrees; i++) {
             int part = tree->part_order[i];
-            if (write_info && !isLinkedModel())
-            #ifdef _OPENMP
-            #pragma omp critical
-            #endif
-            {
-                cout << "Optimizing " << tree->at(part)->getModelName() <<
-                    " parameters for partition " << tree->at(part)->aln->name <<
-                    " (" << tree->at(part)->getModelFactory()->getNParameters(fixed_len) <<
-                    " free parameters)" << endl;
-            }
+            double score;
             if (opt_gamma_invar)
-                tree_lh += tree->at(part)->getModelFactory()->optimizeParametersGammaInvar(fixed_len,
+                score = tree->at(part)->getModelFactory()->optimizeParametersGammaInvar(fixed_len,
                     write_info && verbose_mode >= VB_MED,
                     logl_epsilon/min(ntrees,10), gradient_epsilon/min(ntrees,10));
             else
-                tree_lh += tree->at(part)->getModelFactory()->optimizeParameters(fixed_len,
+                score = tree->at(part)->getModelFactory()->optimizeParameters(fixed_len,
                     write_info && verbose_mode >= VB_MED,
                     logl_epsilon/min(ntrees,10), gradient_epsilon/min(ntrees,10));
+            tree_lh += score;
+            if (write_info && !isLinkedModel())
+#ifdef _OPENMP
+#pragma omp critical
+#endif
+            {
+                cout << "Partition " << tree->at(part)->aln->name
+                     << " / Model: " << tree->at(part)->getModelName()
+                     << " / df: " << tree->at(part)->getModelFactory()->getNParameters(fixed_len)
+                << " / LogL: " << score << endl;
+            }
         }
         //return ModelFactory::optimizeParameters(fixed_len, write_info);
 
@@ -368,6 +386,8 @@ double PartitionModel::optimizeParameters(int fixed_len, bool write_info, double
                 it->second->setNParams(num_params[it->first]);
                 model = it->second;
                 tree_lh = optimizeLinkedModel(write_info, gradient_epsilon);
+                saveCheckpoint();
+                getCheckpoint()->dump();
             }
         model = saved_model;
         if (tree_lh-logl_epsilon*10 < prev_tree_lh)

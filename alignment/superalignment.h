@@ -50,7 +50,16 @@ public:
     /** destructor */
     ~SuperAlignment();
 
-    void init(StrVector *sequence_names = NULL);
+    /**
+        load partitions from program Params
+        @param params program Params
+     */
+    void readFromParams(Params &params);
+    
+    /**
+     initialize seq_names, taxon_index, buildPattern
+     */
+    virtual void init(StrVector *sequence_names = NULL);
     
     /** return that this is a super-alignment structure */
 	virtual bool isSuperAlignment() { return true; }
@@ -63,7 +72,10 @@ public:
     
     /** read partition model file in NEXUS format into variable info */
     void readPartitionNexus(Params &params);
-    
+
+    /** read partition as files in a directory */
+    void readPartitionDir(Params &params);
+
     void printPartition(const char *filename);
     
     void printPartitionRaxml(const char *filename);
@@ -239,7 +251,7 @@ public:
 	 * it is in form of a binary alignment, where 0 means absence and 1 means presence
 	 * of a gene in a sequence
 	 */
-	void buildPattern();
+	virtual void buildPattern();
 
     /**
             count the fraction of constant sites in the alignment, update the variable frac_const_sites

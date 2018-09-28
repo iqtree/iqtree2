@@ -50,6 +50,8 @@
 #define BootValType float
 //#define BootValType double
 
+enum CostMatrixType {CM_UNIFORM, CM_LINEAR};
+
 //extern int instruction_set;
 
 #define SAFE_LH   true  // safe likelihood scaling to avoid numerical underflow for ultra large trees
@@ -499,6 +501,10 @@ public:
         return false;
     }
 
+    virtual bool isSuperTreeUnlinked() {
+        return false;
+    }
+
     /**
         @return true if this is a tree with mixture branch lengths, default: false
     */
@@ -654,6 +660,44 @@ public:
 #endif
 
     virtual void setParsimonyKernelSSE();
+
+    /****************************************************************************
+     Sankoff Parsimony function
+     ****************************************************************************/
+
+    /**
+     * initialise cost_matrix as linear
+     * initialize for 'nstates' and 'columns'
+     */
+    void initCostMatrix(CostMatrixType cost_type);
+        
+    /**
+     * read the cost matrix file
+     * initialize for 'nstates' and 'columns'
+     */
+    void loadCostMatrixFile(char* file_name = NULL);
+
+    /*
+     * For a leaf character corresponding to an ambiguous state
+     * set elements corresponding to possible states to 0, others to UINT_MAX
+     */
+    void initLeafSiteParsForAmbiguousState(char state, UINT * site_partial_pars);
+
+    /**
+     compute partial parsimony score of the subtree rooted at dad
+     @param dad_branch the branch leading to the subtree
+     @param dad its dad, used to direct the traversal
+     */
+    void computePartialParsimonySankoff(PhyloNeighbor *dad_branch, PhyloNode *dad);
+    
+    /**
+     compute tree parsimony score based on a particular branch
+     @param dad_branch the branch leading to the subtree
+     @param dad its dad, used to direct the traversal
+     @param branch_subst (OUT) if not NULL, the number of substitutions on this branch
+     @return parsimony score of the tree
+     */
+    int computeParsimonyBranchSankoff(PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst = NULL);
 
     /****************************************************************************
             likelihood function
@@ -1252,7 +1296,7 @@ public:
      * @param alignment input alignment
      * @return parsimony score
      */
-    int computeParsimonyTree(const char *out_prefix, Alignment *alignment);
+    virtual int computeParsimonyTree(const char *out_prefix, Alignment *alignment);
 
 
     /****************************************************************************
@@ -1352,6 +1396,12 @@ public:
         @param filename output file name written in YAML format 
     */
     void printTreeLengthScaling(const char *filename);
+
+    /**
+     optimize pattern-specific rates by maxmimum likelihood given the tree with fixed branch lengths
+     This function will call optimizeTreeLengthScaling
+     */
+    void optimizePatternRates(DoubleVector &pattern_rates);
 
      /****************************************************************************
             Branch length optimization by Least Squares
@@ -1725,6 +1775,18 @@ public:
     /** read clusters for likelihood mapping analysis */
     void readLikelihoodMappingGroups(char *filename, QuartetGroups &LMGroups);
 
+    /**
+     compute site concordance factor and assign node names
+     */
+    void computeSiteConcordanceFactor(map<int,BranchSupportInfo> &branch_supports);
+
+    /**
+     compute site concordance factor and assign node names
+     @return sCF value for this branch
+     @num_sites average number of quartet informative sites for the branch
+     */
+    virtual double computeSiteConcordanceFactor(Branch &branch, double &num_sites);
+
     /****************************************************************************
             Collapse stable (highly supported) clades by one representative
      ****************************************************************************/
@@ -1761,7 +1823,9 @@ public:
 
     virtual void changeLikelihoodKernel(LikelihoodKernel lk);
 
-    virtual void setLikelihoodKernel(LikelihoodKernel lk, int num_threads);
+    virtual void setLikelihoodKernel(LikelihoodKernel lk);
+
+    virtual void setNumThreads(int num_threads);
 
 #if defined(BINARY32) || defined(__NOAVX__)
     void setLikelihoodKernelAVX() {}
@@ -1932,6 +1996,11 @@ public:
     void computeBranchDirection(PhyloNode *node = NULL, PhyloNode *dad = NULL);
 
     /**
+     * clear branch direction for all branches
+     */
+    void clearBranchDirection(PhyloNode *node = NULL, PhyloNode *dad = NULL);
+
+    /**
         convert from unrooted to rooted tree
     */
     void convertToRooted();
@@ -1949,8 +2018,9 @@ public:
 		....
 		This function will call computePatternRates()
 		@param out output stream to write rates
+        @param bayes TRUE to use empirical Bayesian, false for ML method
 	*/
-	virtual void writeSiteRates(ostream &out, int partid = -1);
+	virtual void writeSiteRates(ostream &out, bool bayes, int partid = -1);
 
     /**
         write site log likelihood to a output stream
@@ -2161,6 +2231,9 @@ protected:
 
     /** current best parsimony score */
     UINT best_pars_score;
+
+    /** cost_matrix for non-uniform parsimony */
+    unsigned int * cost_matrix; // Sep 2016: store cost matrix in 1D array
 
 };
 
