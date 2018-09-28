@@ -30,38 +30,8 @@ SuperAlignment::SuperAlignment() : Alignment() {
 
 SuperAlignment::SuperAlignment(Params &params) : Alignment()
 {
+    readFromParams(params);
     
-    cout << "Reading partition model file " << params.partition_file << " ..." << endl;
-    if (detectInputFile(params.partition_file) == IN_NEXUS) {
-        readPartitionNexus(params);
-        if (partitions.empty()) {
-            outError("No partition found in SETS block. An example syntax looks like: \n#nexus\nbegin sets;\n  charset part1=1-100;\n  charset part2=101-300;\nend;");
-        }
-    } else
-        readPartitionRaxml(params);
-    if (partitions.empty())
-        outError("No partition found");
-    
-    // check for duplicated partition names
-    unordered_set<string> part_names;
-    for (auto pit = partitions.begin(); pit != partitions.end(); pit++) {
-        if (part_names.find((*pit)->name) != part_names.end())
-            outError("Duplicated partition name ", (*pit)->name);
-        part_names.insert((*pit)->name);
-    }
-
-    // Initialize the counter for evaluated NNIs on subtrees
-    cout << "Subset\tType\tSeqs\tSites\tInfor\tInvar\tModel\tName" << endl;
-    int part = 0;
-    for (auto it = partitions.begin(); it != partitions.end(); it++, part++) {
-        cout << part+1 << "\t" << (*it)->sequence_type << "\t" << (*it)->getNSeq()
-        << "\t" << (*it)->getNSite() << "\t" << (*it)->num_informative_sites
-        << "\t" << (*it)->getNSite()-(*it)->num_variant_sites << "\t"
-        << (*it)->model_name << "\t" << (*it)->name << endl;
-        if ((*it)->num_informative_sites == 0) {
-            outWarning("No parsimony-informative sites in partition " + (*it)->name);
-        }
-    }
     init();
 
     if (params.print_conaln) {
@@ -82,6 +52,45 @@ SuperAlignment::SuperAlignment(Params &params) : Alignment()
 #endif
     cout << endl;
 
+}
+
+void SuperAlignment::readFromParams(Params &params) {
+    if (isDirectory(params.partition_file)) {
+        // reading all files in the directory
+        readPartitionDir(params);
+    } else {
+        cout << "Reading partition model file " << params.partition_file << " ..." << endl;
+        if (detectInputFile(params.partition_file) == IN_NEXUS) {
+            readPartitionNexus(params);
+            if (partitions.empty()) {
+                outError("No partition found in SETS block. An example syntax looks like: \n#nexus\nbegin sets;\n  charset part1=1-100;\n  charset part2=101-300;\nend;");
+            }
+        } else
+            readPartitionRaxml(params);
+    }
+    if (partitions.empty())
+        outError("No partition found");
+    
+    // check for duplicated partition names
+    unordered_set<string> part_names;
+    for (auto pit = partitions.begin(); pit != partitions.end(); pit++) {
+        if (part_names.find((*pit)->name) != part_names.end())
+            outError("Duplicated partition name ", (*pit)->name);
+        part_names.insert((*pit)->name);
+    }
+    
+    // Initialize the counter for evaluated NNIs on subtrees
+    cout << "Subset\tType\tSeqs\tSites\tInfor\tInvar\tModel\tName" << endl;
+    int part = 0;
+    for (auto it = partitions.begin(); it != partitions.end(); it++, part++) {
+        cout << part+1 << "\t" << (*it)->sequence_type << "\t" << (*it)->getNSeq()
+        << "\t" << (*it)->getNSite() << "\t" << (*it)->num_informative_sites
+        << "\t" << (*it)->getNSite()-(*it)->num_variant_sites << "\t"
+        << (*it)->model_name << "\t" << (*it)->name << endl;
+        if ((*it)->num_informative_sites == 0) {
+            outWarning("No parsimony-informative sites in partition " + (*it)->name);
+        }
+    }
 }
 
 void SuperAlignment::init(StrVector *sequence_names) {
@@ -431,6 +440,48 @@ void SuperAlignment::readPartitionNexus(Params &params) {
     if (input_aln)
         delete input_aln;
     delete sets_block;
+}
+
+void SuperAlignment::readPartitionDir(Params &params) {
+    //    Params origin_params = params;
+
+    StrVector filenames;
+    string dir = params.partition_file;
+    if (dir.back() != '/')
+        dir.append("/");
+    getFilesInDir(params.partition_file, filenames);
+    if (filenames.empty())
+        outError("No file found in ", params.partition_file);
+    std::sort(filenames.begin(), filenames.end());
+    cout << "Reading " << filenames.size() << " alignment files in directory " << params.partition_file << endl;
+    
+    for (auto it = filenames.begin(); it != filenames.end(); it++)
+    {
+        Alignment *part_aln;
+        part_aln = new Alignment((char*)(dir+*it).c_str(), params.sequence_type, params.intype, params.model_name);
+//        if (part_aln->seq_type == SEQ_DNA && (strncmp(params.sequence_type, "CODON", 5) == 0 || strncmp(params.sequence_type, "NT2AA", 5) == 0)) {
+//            Alignment *new_aln = new Alignment();
+//            new_aln->convertToCodonOrAA(part_aln, params.sequence_type+5, strncmp(params.sequence_type, "NT2AA", 5) == 0);
+//            delete part_aln;
+//            part_aln = new_aln;
+//        }
+        Alignment *new_aln;
+        if (params.remove_empty_seq)
+            new_aln = part_aln->removeGappySeq();
+        else
+            new_aln = part_aln;
+        // also rebuild states set of each sequence for likelihood computation
+        new_aln->buildSeqStates();
+        
+        if (part_aln != new_aln) delete part_aln;
+        new_aln->name = *it;
+        new_aln->model_name = params.model_name;
+        new_aln->aln_file = dir + *it;
+        new_aln->position_spec = "";
+        if (params.sequence_type)
+            new_aln->sequence_type = params.sequence_type;
+        partitions.push_back(new_aln);
+    }
 }
 
 void SuperAlignment::printPartition(const char *filename) {
@@ -1279,7 +1330,7 @@ double SuperAlignment::computeUnconstrainedLogL() {
 
 double SuperAlignment::computeMissingData() {
 	double ret = 0.0;
-	int len = 0;
+	size_t len = 0;
 	vector<Alignment*>::iterator pit;
 	for (pit = partitions.begin(); pit != partitions.end(); pit++) {
 		ret += (*pit)->getNSeq() * (*pit)->getNSite();
@@ -1337,21 +1388,25 @@ Alignment *SuperAlignment::concatenateAlignments(set<int> &ids) {
     int site = 0;
     for (it = ids.begin(); it != ids.end(); it++) {
     	int id = *it;
-		string taxa_set;
-        Pattern taxa_pat = getPattern(id);
-        taxa_set.insert(taxa_set.begin(), taxa_pat.begin(), taxa_pat.end());
+        // 2018-08-23: important bugfix in v1.6: taxa_set has wrong correspondance
+		//string taxa_set;
+        //Pattern taxa_pat = getPattern(id);
+        //taxa_set.insert(taxa_set.begin(), taxa_pat.begin(), taxa_pat.end());
     	for (Alignment::iterator it = partitions[id]->begin(); it != partitions[id]->end(); it++) {
     		Pattern pat;
-    		int part_seq = 0;
+    		//int part_seq = 0;
     		for (int seq = 0; seq < union_taxa.size(); seq++)
     			if (union_taxa[seq] == 1) {
     				char ch = aln->STATE_UNKNOWN;
-    				if (taxa_set[seq] == 1) {
-    					ch = (*it)[part_seq++];
-    				}
+                    int seq_part = taxa_index[seq][id];
+                    if (seq_part >= 0)
+                        ch = (*it)[seq_part];
+                    //if (taxa_set[seq] == 1) {
+                    //    ch = (*it)[part_seq++];
+                    //}
     				pat.push_back(ch);
     			}
-    		ASSERT(part_seq == partitions[id]->getNSeq());
+    		//ASSERT(part_seq == partitions[id]->getNSeq());
     		aln->addPattern(pat, site, (*it).frequency);
     		// IMPORTANT BUG FIX FOLLOW
     		int ptnindex = aln->pattern_index[pat];
@@ -1457,6 +1512,8 @@ void SuperAlignment::orderPatternByNumChars(int pat_type) {
     for (part  = 0; part != partitions.size(); part++) {
         partitions[part]->orderPatternByNumChars(pat_type);
         // partial_partition
+        if (Params::getInstance().partition_type == TOPO_UNLINKED)
+            continue;
         for (vector<Pattern>::iterator pit = partitions[part]->ordered_pattern.begin(); pit != partitions[part]->ordered_pattern.end(); pit++) {
             Pattern pattern(*pit);
             pattern.resize(nseq); // maximal unknown states

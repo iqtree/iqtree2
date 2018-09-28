@@ -40,6 +40,15 @@
 
 //#define USING_SSE
 
+void PhyloTree::setNumThreads(int num_threads) {
+    if (!isSuperTree() && aln && num_threads > 1 && num_threads > aln->getNPattern()/8) {
+        outWarning(convertIntToString(num_threads) + " threads for alignment length " +
+                   convertIntToString(aln->getNPattern()) + " will slow down analysis");
+        num_threads = max(aln->getNPattern()/8,1);
+    }
+    this->num_threads = num_threads;
+}
+
 void PhyloTree::setParsimonyKernel(LikelihoodKernel lk) {
     // set parsimony kernel
     if (lk < LK_SSE2) {
@@ -58,13 +67,12 @@ void PhyloTree::setParsimonyKernel(LikelihoodKernel lk) {
     ASSERT(0);
 }
 
-void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk, int num_threads) {
+void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk) {
 
 	sse = lk;
     vector_size = 1;
     safe_numeric = (params && (params->lk_safe_scaling || leafNum >= params->numseq_safe_scaling)) ||
         (aln && aln->num_states != 4 && aln->num_states != 20);
-    this->num_threads = num_threads;
 
     //--- parsimony kernel ---
     setParsimonyKernel(lk);
@@ -171,7 +179,7 @@ void PhyloTree::setLikelihoodKernel(LikelihoodKernel lk, int num_threads) {
 
 void PhyloTree::changeLikelihoodKernel(LikelihoodKernel lk) {
 	if (sse == lk) return;
-    setLikelihoodKernel(lk, num_threads);
+    setLikelihoodKernel(lk);
 }
 
 /*******************************************************
@@ -1497,7 +1505,7 @@ void PhyloTree::initMarginalAncestralState(ostream &out, bool &orig_kernel_nonre
     if (!orig_kernel_nonrev) {
         // switch to nonrev kernel to compute _pattern_lh_cat_state
         params->kernel_nonrev = true;
-        setLikelihoodKernel(sse, num_threads);
+        setLikelihoodKernel(sse);
         clearAllPartialLH();
     }
     _pattern_lh_cat_state = newPartialLh();
@@ -1585,7 +1593,7 @@ void PhyloTree::endMarginalAncestralState(bool orig_kernel_nonrev, double* &ptn_
     if (!orig_kernel_nonrev) {
         // switch back to REV kernel
         params->kernel_nonrev = orig_kernel_nonrev;
-        setLikelihoodKernel(sse, num_threads);
+        setLikelihoodKernel(sse);
         clearAllPartialLH();
     }
     aligned_free(ptn_ancestral_seq);

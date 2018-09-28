@@ -31,7 +31,7 @@ PhyloSuperTree::PhyloSuperTree()
 	// Initialize the counter for evaluated NNIs on subtrees. FOR THIS CASE IT WON'T BE initialized.
 }
 
-PhyloSuperTree::PhyloSuperTree(SuperAlignment *alignment) :  IQTree(alignment) {
+PhyloSuperTree::PhyloSuperTree(SuperAlignment *alignment, bool new_iqtree) :  IQTree(alignment) {
     totalNNIs = evalNNIs = 0;
 
     rescale_codon_brlen = false;
@@ -50,7 +50,11 @@ PhyloSuperTree::PhyloSuperTree(SuperAlignment *alignment) :  IQTree(alignment) {
 
     StrVector model_names;
     for (it = alignment->partitions.begin(); it != alignment->partitions.end(); it++, part++) {
-        PhyloTree *tree = new PhyloTree((*it));
+        PhyloTree *tree;
+        if (new_iqtree)
+            tree = new IQTree(*it);
+        else
+            tree = new PhyloTree(*it);
         push_back(tree);
         PartitionInfo info;
         info.cur_ptnlh = NULL;
@@ -157,23 +161,35 @@ void PhyloSuperTree::setParams(Params* params) {
 
 void PhyloSuperTree::initSettings(Params &params) {
 	IQTree::initSettings(params);
-    num_threads = (size() >= params.num_threads) ? params.num_threads : 1;
+    setLikelihoodKernel(params.SSE);
+    setNumThreads(params.num_threads);
 	for (iterator it = begin(); it != end(); it++) {
 		(*it)->params = &params;
-		(*it)->setLikelihoodKernel(params.SSE, (size() >= params.num_threads) ? 1 : params.num_threads);
 		(*it)->optimize_by_newton = params.optimize_by_newton;
 	}
 
 }
 
-void PhyloSuperTree::setLikelihoodKernel(LikelihoodKernel lk, int num_threads) {
-    PhyloTree::setLikelihoodKernel(lk, (size() >= num_threads) ? num_threads : 1);
+void PhyloSuperTree::setLikelihoodKernel(LikelihoodKernel lk) {
+    PhyloTree::setLikelihoodKernel(lk);
     for (iterator it = begin(); it != end(); it++)
-        (*it)->setLikelihoodKernel(lk, (size() >= num_threads) ? 1 : num_threads);
+        (*it)->setLikelihoodKernel(lk);
+}
+
+void PhyloSuperTree::setParsimonyKernel(LikelihoodKernel lk) {
+    PhyloTree::setParsimonyKernel(lk);
+    for (iterator it = begin(); it != end(); it++)
+        (*it)->setParsimonyKernel(lk);
 }
 
 void PhyloSuperTree::changeLikelihoodKernel(LikelihoodKernel lk) {
 	PhyloTree::changeLikelihoodKernel(lk);
+}
+
+void PhyloSuperTree::setNumThreads(int num_threads) {
+    PhyloTree::setNumThreads((size() >= num_threads) ? num_threads : 1);
+    for (iterator it = begin(); it != end(); it++)
+        (*it)->setNumThreads((size() >= num_threads) ? 1 : num_threads);
 }
 
 string PhyloSuperTree::getTreeString() {
@@ -1164,7 +1180,7 @@ void PhyloSuperTree::initMarginalAncestralState(ostream &out, bool &orig_kernel_
     if (!orig_kernel_nonrev) {
         // switch to nonrev kernel to compute _pattern_lh_cat_state
         params->kernel_nonrev = true;
-        setLikelihoodKernel(sse, num_threads);
+        setLikelihoodKernel(sse);
         clearAllPartialLH();
     }
 
@@ -1248,7 +1264,7 @@ void PhyloSuperTree::endMarginalAncestralState(bool orig_kernel_nonrev,
     if (!orig_kernel_nonrev) {
         // switch back to REV kernel
         params->kernel_nonrev = orig_kernel_nonrev;
-        setLikelihoodKernel(sse, num_threads);
+        setLikelihoodKernel(sse);
         clearAllPartialLH();
     }
     aligned_free(ptn_ancestral_seq);
@@ -1266,11 +1282,11 @@ void PhyloSuperTree::writeSiteLh(ostream &out, SiteLoglType wsl, int partid) {
         (*it)->writeSiteLh(out, wsl, part);
 }
 
-void PhyloSuperTree::writeSiteRates(ostream &out, int partid) {
+void PhyloSuperTree::writeSiteRates(ostream &out, bool bayes, int partid) {
 
     int part = 1;
     for (iterator it = begin(); it != end(); it++, part++) {
-        (*it)->writeSiteRates(out, part);
+        (*it)->writeSiteRates(out, bayes, part);
     }
 }
 
@@ -1322,3 +1338,38 @@ void PhyloSuperTree::writeBranches(ostream &out) {
     }
 }
 
+void PhyloSuperTree::printBestPartitionParams(const char *filename) {
+    try {
+        ofstream out;
+        out.exceptions(ios::failbit | ios::badbit);
+        out.open(filename);
+        out << "#nexus" << endl
+        << "begin sets;" << endl;
+        int part;
+        SuperAlignment *saln = (SuperAlignment*)aln;
+        for (part = 0; part < size(); part++) {
+            string name = saln->partitions[part]->name;
+            replace(name.begin(), name.end(), '+', '_');
+            out << "  charset " << name << " = ";
+            if (!saln->partitions[part]->aln_file.empty()) out << saln->partitions[part]->aln_file << ": ";
+            if (saln->partitions[part]->seq_type == SEQ_CODON)
+                out << "CODON, ";
+            string pos = saln->partitions[part]->position_spec;
+            replace(pos.begin(), pos.end(), ',' , ' ');
+            out << pos << ";" << endl;
+        }
+        out << "  charpartition mymodels =" << endl;
+        for (part = 0; part < size(); part++) {
+            string name = saln->partitions[part]->name;
+            replace(name.begin(), name.end(), '+', '_');
+            if (part > 0) out << "," << endl;
+            out << "    " << at(part)->getModelNameParams() << ": " << name;
+        }
+        out << ";" << endl;
+        out << "end;" << endl;
+        out.close();
+        cout << "Partition information was printed to " << filename << endl;
+    } catch (ios::failure &) {
+        outError(ERR_WRITE_OUTPUT, filename);
+    }
+}

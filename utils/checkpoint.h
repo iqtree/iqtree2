@@ -15,6 +15,7 @@
 #include <cassert>
 #include <vector>
 #include <typeinfo>
+#include "tools.h"
 
 using namespace std;
 
@@ -206,9 +207,13 @@ public:
             CkpStream ss(it->second.substr(pos, next_pos-pos));
         	if (!(ss >> value[i]))
                 break;
-        	if (next_pos == string::npos) break;
+            if (next_pos == string::npos) {
+                ASSERT(i == maxnum-1);
+                break;
+            }
         	pos = next_pos+2;
         }
+        ASSERT(next_pos == string::npos);
         return true;
     }
 
@@ -374,6 +379,13 @@ public:
         @param sub_key key substring to search for
     */
     void getSubCheckpoint(Checkpoint *target, string sub_key);
+
+    /**
+     put a checkpoint where the key string contains a given substring
+     @param source checkpoint
+     @param sub_key key substring to search for
+     */
+    void putSubCheckpoint(Checkpoint *source, string sub_key);
 
 protected:
 

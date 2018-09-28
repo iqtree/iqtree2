@@ -61,17 +61,33 @@ void PhyloTree::computeNonrevPartialLikelihoodGenericSIMD(TraversalInfo &info, s
     size_t ncat_mix = (model_factory->fused_mix_rate) ? ncat : ncat*model->getNMixtures();
     size_t i, x;
     size_t block = nstates * ncat_mix;
+    size_t num_leaves = 0;
 
 	// internal node
 	PhyloNeighbor *left = NULL, *right = NULL; // left & right are two neighbors leading to 2 subtrees
 	FOR_NEIGHBOR_IT(node, dad, it) {
 		if (!left) left = (PhyloNeighbor*)(*it); else right = (PhyloNeighbor*)(*it);
+        if ((*it)->node->isLeaf())
+            num_leaves++;
 	}
 
     // precomputed buffer to save times
     double *buffer_partial_lh_ptr = buffer_partial_lh + (getBufferPartialLhSize() - 2*block*VectorClass::size()*num_threads);
     double *echildren = info.echildren;
     double *partial_lh_leaves = info.partial_lh_leaves;
+    
+    if (Params::getInstance().buffer_mem_save) {
+        info.echildren = echildren = aligned_alloc<double>(get_safe_upper_limit(block*nstates*(node->degree()-1)));
+        if (num_leaves > 0)
+            info.partial_lh_leaves = partial_lh_leaves = aligned_alloc<double>(get_safe_upper_limit((aln->STATE_UNKNOWN+1)*block*num_leaves));
+        double *buffer_tmp = aligned_alloc<double>(nstates);
+#ifdef KERNEL_FIX_STATES
+        computePartialInfo<VectorClass, nstates>(info, (VectorClass*)buffer_tmp);
+#else
+        computePartialInfo<VectorClass>(info, (VectorClass*)buffer_tmp);
+#endif
+        aligned_free(buffer_tmp);
+    }
 
     double *eleft = echildren, *eright = echildren + block*nstates;
     
@@ -417,6 +433,13 @@ void PhyloTree::computeNonrevPartialLikelihoodGenericSIMD(TraversalInfo &info, s
 		}
 
 	}
+
+    if (Params::getInstance().buffer_mem_save) {
+        if (partial_lh_leaves)
+            aligned_free(partial_lh_leaves);
+        aligned_free(echildren);
+        info.echildren = info.partial_lh_leaves = NULL;
+    }
 }
 
 #ifdef KERNEL_FIX_STATES

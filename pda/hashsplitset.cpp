@@ -41,7 +41,8 @@ Split *SplitIntMap::findSplit(Split *sp, int &value) {
 
 int SplitIntMap::getValue(Split *sp) {
     int value;
-    ASSERT(findSplit(sp, value));
+    Split* findsp = findSplit(sp, value);
+    ASSERT(findsp);
     return value;
 }
 
@@ -62,11 +63,11 @@ void SplitIntMap::insertSplit(Split *sp, int value) {
 }
 
 void SplitIntMap::buildMap(SplitGraph &sg, bool use_index) {
-	clear();
-	for (int i = 0; i < sg.size(); i++) {
-		if (use_index) 
-			insertSplit(sg[i], i);
-		else
-			insertSplit(sg[i], sg[i]->getWeight());
-	}
+    clear();
+    for (int i = 0; i < sg.size(); i++) {
+        if (use_index) 
+            insertSplit(sg[i], i);
+        else
+            insertSplit(sg[i], sg[i]->getWeight());
+    }
 }

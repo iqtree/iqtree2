@@ -271,9 +271,9 @@ public:
     }
     
     void resetNumbers() {
-        numTreeSent = 0;
-        numTreeReceived = 0;
-        numNNISearch = 0;
+//        numTreeSent = 0;
+//        numTreeReceived = 0;
+//        numNNISearch = 0;
     }
 
 private:

@@ -85,6 +85,7 @@ Multiple Sequence Alignment. Stored by a vector of site-patterns
  */
 class Alignment : public vector<Pattern>, public CharSet {
     friend class SuperAlignment;
+    friend class SuperAlignmentUnlinked;
 
 public:
 
@@ -128,7 +129,7 @@ public:
 	/**
 		determine if the pattern is constant. update the is_const variable.
 	*/
-	void computeConst(Pattern &pat);
+	virtual void computeConst(Pattern &pat);
 
 
     void printSiteInfoHeader(ostream& out, const char* filename, bool partition = false);
@@ -251,16 +252,16 @@ public:
 
     void buildStateMap(char *map, SeqType seq_type);
 
-    virtual char convertState(char state, SeqType seq_type);
+    virtual StateType convertState(char state, SeqType seq_type);
 
     /** 
      * convert state if the number of states (num_states is known)
      * @param state input char to convert
      * @return output char from 0 to 0-num_states or STATE_INVALID or STATE_UNKNOWN
      */
-    char convertState(char state);
+    StateType convertState(char state);
 
-    virtual void convertStateStr(string &str, SeqType seq_type);
+    //virtual void convertStateStr(string &str, SeqType seq_type);
 
 	/**
 	 * convert from internal state to user-readable state (e.g., to ACGT for DNA)
@@ -276,7 +277,7 @@ public:
 	 * @param state internal state code
 	 * @return user-readable state string
 	 */
-	string convertStateBackStr(char state);
+	string convertStateBackStr(StateType state);
 
 	/**
             get alignment site range from the residue range relative to a sequence
@@ -765,7 +766,7 @@ public:
     /* build seq_states containing set of states per sequence
      * @param add_unobs_const TRUE to add all unobserved constant states (for +ASC model)
      */
-    void buildSeqStates(bool add_unobs_const = false);
+    virtual void buildSeqStates(bool add_unobs_const = false);
 
     /** Added by MA
             Compute the probability of this alignment according to the multinomial distribution with parameters determined by the reference alignment

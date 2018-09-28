@@ -427,7 +427,7 @@ enum LEAST_SQUARE_VAR {
 };
 
 enum START_TREE_TYPE {
-	STT_BIONJ, STT_PARSIMONY, STT_PLL_PARSIMONY, STT_RANDOM_TREE
+	STT_BIONJ, STT_PARSIMONY, STT_PLL_PARSIMONY, STT_RANDOM_TREE, STT_USER_TREE
 };
 
 const int MCAT_LOG = 1; // categorize by log(rate) for Meyer & von Haeseler model
@@ -630,6 +630,9 @@ public:
 	 */
 	int sprDist;
 
+    /** cost matrix file for Sankoff parsimony */
+    char *sankoff_cost_file;
+    
 	/**
 	 *  Number of NNI locally optimal trees generated from the set of parsimony trees
 	 *  Default = 20 (out of 100 parsimony trees)
@@ -836,6 +839,10 @@ public:
     /** number of bootstrap replicates for tree topology test */
     int topotest_replicates;
 
+    /** TRUE to optimize model parameters for topology test,
+     FALSE (default) to only optimize branch lengths */
+    bool topotest_optimize_model;
+
     /** true to perform weighted SH and KH test */
     bool do_weighted_test;
 
@@ -870,6 +877,9 @@ public:
 
     /** use terrace aware data structure for partition models, default: TRUE */
     bool terrace_aware;
+
+    /** check if the tree lies on a terrace */
+    bool terrace_analysis;
 
     /**
             B, D, or P for Binary, DNA, or Protein sequences
@@ -914,6 +924,11 @@ public:
      */
     AlnFormat aln_output_format;
 
+    /**
+     tree in extended newick format with node label like [&label=""]
+     */
+    bool newick_extended_format;
+    
     /**
             TRUE to discard all gappy positions
      */
@@ -1119,6 +1134,11 @@ public:
     int root_move_dist;
 
     /**
+     TRUE to find best root when optimizing model
+     */
+    bool root_find;
+
+    /**
             min branch length, used to create random tree/network
      */
     double min_len;
@@ -1173,6 +1193,11 @@ public:
     */
     char *support_tag;
 
+    /**
+        number of quartets for site concordance factor
+     */
+    int site_concordance;
+    
     /**
             2nd alignment used in computing multinomialProb (Added by MA)
      */
@@ -1489,6 +1514,9 @@ public:
     */
     char *bootstrap_spec;
 
+    /** 1 or 2 to perform transfer boostrap expectation (TBE) */
+    int transfer_bootstrap;
+    
     /**
             1 if output all intermediate trees (initial trees, NNI-optimal trees and trees after each NNI step)
             2 if output all intermediate trees + 1-NNI-away trees
@@ -1613,8 +1641,12 @@ public:
     */
     SiteFreqType print_site_state_freq;
 
-    /** TRUE to print site-specific rates, default: FALSE */
-    bool print_site_rate;
+    /**
+     0 (default): do not print .rate file
+     1: print site-specific rates by empirical Bayes
+     2: site-specific rates by maximum-likelihood
+     */
+    int print_site_rate;
 
     /* 1: print site posterior probability for many trees during tree search */
     int print_trees_site_posterior;
@@ -1964,6 +1996,9 @@ public:
 	 * 0: store all partial likelihood vectors
 	 * 1: only store 1 partial likelihood vector per node */
 	LhMemSave lh_mem_save;
+    
+    /** true to save buffer, default: false */
+    bool buffer_mem_save;
 
     /** maximum size of memory allowed to use */
     double max_mem_size;
@@ -1987,6 +2022,9 @@ public:
 
     /** true to compute sequence identity along tree */
     bool compute_seq_identity_along_tree;
+    
+    /** true to compute sequence composition */
+    bool compute_seq_composition;
     
     /** true to ignore checkpoint file */
     bool ignore_checkpoint;
@@ -2204,6 +2242,19 @@ bool copyFile(const char SRC[], const char DEST[]);
  * @return
  */
 bool fileExists(string strFilename);
+
+/**
+    check that path is a directory
+ */
+int isDirectory(const char *path);
+
+/**
+    get all file names in a directory
+    @param path directory name
+    @param[out] filenames vector of file names
+    return 0 if FAIL, non-zero otherwise
+ */
+int getFilesInDir(const char *path, StrVector &filenames);
 
 /**
         convert string to int, with error checking

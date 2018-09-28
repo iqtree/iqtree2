@@ -25,6 +25,7 @@
 #include "tools.h"
 #include "timeutil.h"
 #include "MPIHelper.h"
+#include <dirent.h>
 
 #if defined(Backtrace_FOUND)
 #include <execinfo.h>
@@ -259,6 +260,46 @@ bool fileExists(string strFilename) {
     return (blnReturn);
 }
 
+int isDirectory(const char *path) {
+    struct stat statbuf;
+    if (stat(path, &statbuf) != 0)
+        return 0;
+    return S_ISDIR(statbuf.st_mode);
+}
+
+int isFile(const char *path) {
+    struct stat statbuf;
+    if (stat(path, &statbuf) != 0)
+        return 0;
+    return S_ISREG(statbuf.st_mode);
+}
+
+int getFilesInDir(const char *path, StrVector &filenames)
+{
+    if (!isDirectory(path))
+        return 0;
+    string path_name = path;
+    if (path_name.back() != '/')
+        path_name.append("/");
+    DIR *dp;
+    struct dirent *ep;
+    dp = opendir (path);
+    
+    if (dp != NULL)
+    {
+        while ((ep = readdir (dp)) != NULL) {
+            if (isFile((path_name + ep->d_name).c_str()))
+                filenames.push_back(ep->d_name);
+        }
+        
+        (void) closedir (dp);
+        return 1;
+    }
+    else
+        return 0;
+    
+    return 1;
+}
 int convert_int(const char *str) {
     char *endptr;
     int i = strtol(str, &endptr, 10);
@@ -729,6 +770,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.overlap = 0;
     params.is_rooted = false;
     params.root_move_dist = 2;
+    params.root_find = false;
     params.sample_size = -1;
     params.repeated_time = 1;
     //params.nr_output = 10000;
@@ -748,6 +790,8 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.calc_pdgain = false;
     params.multi_tree = false;
     params.second_tree = NULL;
+    params.support_tag = NULL;
+    params.site_concordance = 0;
     params.tree_weight_file = NULL;
     params.consensus_type = CT_NONE;
     params.find_pd_min = false;
@@ -772,6 +816,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.gurobi_threads = 1;
     params.num_bootstrap_samples = 0;
     params.bootstrap_spec = NULL;
+    params.transfer_bootstrap = 0;
 
     params.aln_file = NULL;
     params.phylip_sequential_format = false;
@@ -781,6 +826,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.symtest_pcutoff = 0.05;
     params.treeset_file = NULL;
     params.topotest_replicates = 0;
+    params.topotest_optimize_model = false;
     params.do_weighted_test = false;
     params.do_au_test = false;
     params.siteLL_file = NULL; //added by MA
@@ -791,10 +837,12 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.partfinder_rcluster_fast = false;
     params.remove_empty_seq = true;
     params.terrace_aware = true;
+    params.terrace_analysis = false;
     params.sequence_type = NULL;
     params.aln_output = NULL;
     params.aln_site_list = NULL;
     params.aln_output_format = ALN_PHYLIP;
+    params.newick_extended_format = false;
     params.gap_masked_aln = NULL;
     params.concatenate_aln = NULL;
     params.aln_nogaps = false;
@@ -856,7 +904,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.optimize_alg_mixlen = "EM";
     params.optimize_alg_gammai = "EM";
     params.optimize_from_given_params = false;
-    params.fixed_branch_length = false;
+    params.fixed_branch_length = BRLEN_OPTIMIZE;
     params.min_branch_length = 0.0; // this is now adjusted later based on alignment length
     // TODO DS: This seems inappropriate for PoMo.  It is handled in
     // phyloanalysis::2908.
@@ -888,7 +936,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.print_partition_lh = false;
     params.print_site_prob = WSL_NONE;
     params.print_site_state_freq = WSF_NONE;
-    params.print_site_rate = false;
+    params.print_site_rate = 0;
     params.print_trees_site_posterior = 0;
     params.print_ancestral_sequence = AST_NONE;
     params.min_ancestral_prob = 0.0;
@@ -977,6 +1025,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.numSupportTrees = 20;
 //    params.sprDist = 20;
     params.sprDist = 6;
+    params.sankoff_cost_file = NULL;
     params.numNNITrees = 20;
     params.avh_test = 0;
     params.bootlh_test = 0;
@@ -1001,6 +1050,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 	params.pomo_pop_size = 9;
 	params.print_branch_lengths = false;
 	params.lh_mem_save = LM_PER_NODE; // auto detect
+    params.buffer_mem_save = false;
 	params.start_tree = STT_PLL_PARSIMONY;
 	params.print_splits_file = false;
     params.ignore_identical_seqs = true;
@@ -1010,6 +1060,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.freq_const_patterns = NULL;
     params.no_rescale_gamma_invar = false;
     params.compute_seq_identity_along_tree = false;
+    params.compute_seq_composition = true;
     params.lmap_num_quartets = -1;
     params.lmap_cluster_file = NULL;
     params.print_lmap_quartet_lh = false;
@@ -1164,14 +1215,19 @@ void parseArg(int argc, char *argv[], Params &params) {
 				continue;
 			}
             
-            if (strcmp(argv[cnt], "--root-move-dist") == 0) {
+            if (strcmp(argv[cnt], "--root-dist") == 0) {
                 cnt++;
                 if (cnt >= argc)
-                    throw "Use --root-move-dist <maximum-root-move-distance>";
+                    throw "Use --root-dist <maximum-root-move-distance>";
                 params.root_move_dist = convert_int(argv[cnt]);
                 continue;
             }
-            
+
+            if (strcmp(argv[cnt], "--root-find") == 0) {
+                params.root_find = true;
+                continue;
+            }
+
 			if (strcmp(argv[cnt], "-all") == 0) {
 				params.find_all = true;
 				continue;
@@ -1431,7 +1487,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.support_tag = argv[cnt];
 				continue;
 			}
-			if (strcmp(argv[cnt], "-sup2") == 0) {
+			if (strcmp(argv[cnt], "-sup2") == 0 || strcmp(argv[cnt], "--support") == 0) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -sup2 <target_tree_file>";
@@ -1439,6 +1495,15 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.consensus_type = CT_ASSIGN_SUPPORT_EXTENDED;
 				continue;
 			}
+            if (strcmp(argv[cnt], "--site-concordance") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use --site-concordance NUM_QUARTETS";
+                params.site_concordance = convert_int(argv[cnt]);
+                if (params.site_concordance < 1)
+                    throw "Positive --site-concordance please";
+                continue;
+            }
 			if (strcmp(argv[cnt], "-treew") == 0) {
 				cnt++;
 				if (cnt >= argc)
@@ -1657,27 +1722,27 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.phylip_sequential_format = true;
                 continue;
             }
-            if (strcmp(argv[cnt], "--symtest") == 0) {
+            if (strcmp(argv[cnt], "--symtest") == 0 || strcmp(argv[cnt], "--bisymtest") == 0) {
                 params.symtest = 1;
                 continue;
             }
 
-            if (strcmp(argv[cnt], "--symtest-remove-bad") == 0) {
+            if (strcmp(argv[cnt], "--symtest-remove-bad") == 0 || strcmp(argv[cnt], "--bisymtest-remove-bad") == 0) {
                 params.symtest = 2;
                 continue;
             }
 
-            if (strcmp(argv[cnt], "--symtest-remove-good") == 0) {
+            if (strcmp(argv[cnt], "--symtest-remove-good") == 0 || strcmp(argv[cnt], "--bisymtest-remove-good") == 0) {
                 params.symtest = 3;
                 continue;
             }
 
-            if (strcmp(argv[cnt], "--symtest-keep-zero") == 0) {
+            if (strcmp(argv[cnt], "--symtest-keep-zero") == 0 || strcmp(argv[cnt], "--bisymtest-keep-zero") == 0) {
                 params.symtest_keep_zero = true;
                 continue;
             }
 
-            if (strcmp(argv[cnt], "--symtest-type") == 0) {
+            if (strcmp(argv[cnt], "--symtest-type") == 0 || strcmp(argv[cnt], "--bisymtest-type") == 0) {
                 cnt++;
                 if (cnt >= argc)
                     throw "Use --symtest-type SYM|MAR|INT";
@@ -1692,7 +1757,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 continue;
             }
 
-            if (strcmp(argv[cnt], "--symtest-pval") == 0) {
+            if (strcmp(argv[cnt], "--symtest-pval") == 0 || strcmp(argv[cnt], "--bisymtest-pval") == 0) {
                 cnt++;
                 if (cnt >= argc)
                     throw "Use --symtest-pval PVALUE_CUTOFF";
@@ -1718,6 +1783,10 @@ void parseArg(int argc, char *argv[], Params &params) {
 					throw "Please specify at least 1000 replicates";
 				continue;
 			}
+            if (strcmp(argv[cnt], "--estimate-model") == 0) {
+                params.topotest_optimize_model = true;
+                continue;
+            }
 			if (strcmp(argv[cnt], "-zw") == 0) {
 				params.do_weighted_test = true;
 				continue;
@@ -1764,6 +1833,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.partition_file = argv[cnt];
                 params.partition_type = TOPO_UNLINKED;
                 params.ignore_identical_seqs = false;
+                params.buffer_mem_save = true;
                 continue;
             }
             
@@ -1805,6 +1875,15 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.terrace_aware = false;
 				continue;
 			}
+            if (strcmp(argv[cnt], "--terrace") == 0) {
+#ifdef IQTREE_TERRAPHAST
+                params.terrace_analysis = true;
+#else
+                    throw "Unsupported command: --terrace.\n"
+                        "Please build IQ-TREE with the USE_TERRAPHAST flag.";
+#endif
+                continue;
+            }
 			if (strcmp(argv[cnt], "-sf") == 0) {
 				cnt++;
 				if (cnt >= argc)
@@ -1893,7 +1972,13 @@ void parseArg(int argc, char *argv[], Params &params) {
 					throw "Unknown output format";
 				continue;
 			}
-			if (strcmp(argv[cnt], "-am") == 0) {
+
+            if (strcmp(argv[cnt], "--figtree") == 0) {
+                params.newick_extended_format = true;
+                continue;
+            }
+
+            if (strcmp(argv[cnt], "-am") == 0) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -am <gap_masked_aln>";
@@ -2433,7 +2518,20 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.bootstrap_spec = argv[cnt];
 				continue;
 			}
-			if (strcmp(argv[cnt], "-bc") == 0) {
+            
+#ifdef USE_BOOSTER
+            if (strcmp(argv[cnt], "--tbe") == 0) {
+                params.transfer_bootstrap = 1;
+                continue;
+            }
+
+            if (strcmp(argv[cnt], "--tbe-raw") == 0) {
+                params.transfer_bootstrap = 2;
+                continue;
+            }
+#endif
+
+            if (strcmp(argv[cnt], "-bc") == 0) {
 				params.multi_tree = true;
 				params.compute_ml_tree = false;
 				cnt++;
@@ -2633,10 +2731,16 @@ void parseArg(int argc, char *argv[], Params &params) {
 			}
 
 			if (strcmp(argv[cnt], "-wsr") == 0) {
-				params.print_site_rate = true;
+				params.print_site_rate |= 1;
 				continue;
 			}
-			if (strcmp(argv[cnt], "-wsptrees") == 0) {
+
+            if (strcmp(argv[cnt], "--mlrate") == 0) {
+                params.print_site_rate |= 2;
+                continue;
+            }
+
+            if (strcmp(argv[cnt], "-wsptrees") == 0) {
 				params.print_trees_site_posterior = 1;
 				continue;
 			}
@@ -2708,6 +2812,7 @@ void parseArg(int argc, char *argv[], Params &params) {
 			}
 			if (strcmp(argv[cnt], "-tina") == 0) {
 				params.do_pars_multistate = true;
+                params.ignore_checkpoint = true;
 				continue;
 			}
 			if (strcmp(argv[cnt], "-pval") == 0) {
@@ -2944,6 +3049,14 @@ void parseArg(int argc, char *argv[], Params &params) {
                 }
 				continue;
 			}
+            if (strcmp(argv[cnt], "--save-mem-buffer") == 0) {
+                params.buffer_mem_save = true;
+                continue;
+            }
+            if (strcmp(argv[cnt], "--no-save-mem-buffer") == 0) {
+                params.buffer_mem_save = false;
+                continue;
+            }
 //			if (strcmp(argv[cnt], "-storetrees") == 0) {
 //				params.store_candidate_trees = true;
 //				continue;
@@ -3144,15 +3257,15 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.pll = true;
 				continue;
 			}
-			if (strcmp(argv[cnt], "-me") == 0) {
+			if (strcmp(argv[cnt], "-me") == 0 || strcmp(argv[cnt], "--model-epsilon") == 0) {
 				cnt++;
 				if (cnt >= argc)
 					throw "Use -me <model_epsilon>";
 				params.modelEps = convert_double(argv[cnt]);
 				if (params.modelEps <= 0.0)
 					throw "Model epsilon must be positive";
-				if (params.modelEps > 0.1)
-					throw "Model epsilon must not be larger than 0.1";
+				if (params.modelEps > 1.0)
+					throw "Model epsilon must not be larger than 1.0";
 				continue;
 			}
 			if (strcmp(argv[cnt], "-pars_ins") == 0) {
@@ -3403,6 +3516,15 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.sprDist = convert_int(argv[cnt]);
 				continue;
 			}
+            
+            if (strcmp(argv[cnt], "--mpcost") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use --mpcost <parsimony_cost_file>";
+                params.sankoff_cost_file = argv[cnt];
+                continue;
+            }
+            
 			if (strcmp(argv[cnt], "-no_rescale_gamma_invar") == 0) {
 				params.no_rescale_gamma_invar = true;
 				continue;
@@ -3412,6 +3534,12 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.compute_seq_identity_along_tree = true;
 				continue;
 			}
+            
+            if (strcmp(argv[cnt], "--no-seq-comp") == 0) {
+                params.compute_seq_composition = false;
+                continue;
+            }
+            
 			if (strcmp(argv[cnt], "-t") == 0 || strcmp(argv[cnt], "-te") == 0) {
                 if (strcmp(argv[cnt], "-te") == 0) {
                     if (params.gbo_replicates != 0) {
@@ -3431,8 +3559,11 @@ void parseArg(int argc, char *argv[], Params &params) {
 					params.start_tree = STT_PLL_PARSIMONY;
                 else if (strcmp(argv[cnt], "RANDOM") == 0)
 					params.start_tree = STT_RANDOM_TREE;
-				else
+                else {
                     params.user_file = argv[cnt];
+                    if (params.min_iterations == 0)
+                        params.start_tree = STT_USER_TREE;
+                }
 				continue;
 			}
             
@@ -3601,13 +3732,16 @@ void parseArg(int argc, char *argv[], Params &params) {
 #endif
     }
 
+    if (params.do_au_test)
+        outError("The AU test is temporarily disabled due to numerical issue when bp-RELL=0");
+    
     if (params.model_test_and_tree && params.partition_type != BRLEN_OPTIMIZE)
         outError("-mtree not allowed with edge-linked partition model (-spp or -q)");
 
     if (params.do_au_test && params.topotest_replicates == 0)
         outError("For AU test please specify number of bootstrap replicates via -zb option");
 
-    if (params.lh_mem_save == LM_MEM_SAVE && params.partition_file)
+    if (params.lh_mem_save == LM_MEM_SAVE && params.partition_file && params.partition_type != TOPO_UNLINKED)
         outError("-mem option does not work with partition models yet");
 
     if (params.gbo_replicates && params.num_bootstrap_samples)
@@ -3622,6 +3756,9 @@ void parseArg(int argc, char *argv[], Params &params) {
     if (params.num_runs > 1 && params.lmap_num_quartets >= 0)
         outError("Can't combine --runs and -lmap options");
 
+    if (params.terrace_analysis && !params.partition_file)
+        outError("Terrace analysis requires partition information.");
+
 	// Diep:
 	if(params.ufboot2corr == true){
 		if(params.gbo_replicates <= 0) params.ufboot2corr = false;
@@ -3633,8 +3770,12 @@ void parseArg(int argc, char *argv[], Params &params) {
     if (!params.out_prefix) {
     	if (params.eco_dag_file)
     		params.out_prefix = params.eco_dag_file;
-    	else if (params.partition_file)
+        else if (params.partition_file) {
             params.out_prefix = params.partition_file;
+            if (params.out_prefix[strlen(params.out_prefix)-1] == '/' || params.out_prefix[strlen(params.out_prefix)-1] == '\\') {
+                params.out_prefix[strlen(params.out_prefix)-1] = 0;
+            }
+        }
         else if (params.aln_file)
             params.out_prefix = params.aln_file;
         else if (params.ngs_file)
@@ -3733,6 +3874,7 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -q <partition_file>  Edge-linked partition model (file in NEXUS/RAxML format)" << endl
             << " -spp <partition_file> Like -q option but allowing partition-specific rates" << endl
             << "  -sp <partition_file> Edge-unlinked partition model (like -M option of RAxML)" << endl
+            << " -spu <partition_file> Topology-unlinked partition model" << endl
             << "  -t <start_tree_file> or -t BIONJ or -t RANDOM" << endl
             << "                       Starting tree (default: 99 parsimony tree and BIONJ)" << endl
             << "  -te <user_tree_file> Like -t but fixing user tree (no tree search performed)" << endl
@@ -3786,6 +3928,9 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -b <#replicates>     Bootstrap + ML tree + consensus tree (>=100)" << endl
             << "  -bc <#replicates>    Bootstrap + consensus tree" << endl
             << "  -bo <#replicates>    Bootstrap only" << endl
+#ifdef USE_BOOSTER
+            << "  --tbe                Transfer bootstrap expectation" << endl
+#endif
 //            << "  -t <threshold>       Minimum bootstrap support [0...1) for consensus tree" << endl
             << endl << "SINGLE BRANCH TEST:" << endl
             << "  -alrt <#replicates>  SH-like approximate likelihood ratio test (SH-aLRT)" << endl
@@ -3950,11 +4095,13 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -con                 Computing consensus tree to .contree file" << endl
             << "  -net                 Computing consensus network to .nex file" << endl
             << "  -sup <target_tree>   Assigning support values for <target_tree> to .suptree" << endl
+            << "  -sup2 <target_tree>  Like -sup but work for trees with unequal taxon sets" << endl
             << "  -suptag <name>       Node name (or ALL) to assign tree IDs where node occurs" << endl
             << endl << "ROBINSON-FOULDS DISTANCE:" << endl
             << "  -rf_all              Computing all-to-all RF distances of trees in <treefile>" << endl
             << "  -rf <treefile2>      Computing all RF distances between two sets of trees" << endl
             << "                       stored in <treefile> and <treefile2>" << endl
+            << "  -rf2 <treefile2>     Like -rf but work for trees with unequal taxon sets" << endl
             << "  -rf_adj              Computing RF distances of adjacent trees in <treefile>" << endl
             << endl << "TREE TOPOLOGY TEST:" << endl
             << "  -z <trees_file>      Evaluating a set of user trees" << endl
@@ -4000,6 +4147,9 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  -alninfo             Print alignment sites statistics to .alninfo" << endl
             << "  -czb                 Collapse zero branches in final tree" << endl
             << "  --show-lh            Compute tree likelihood without optimisation" << endl;
+#ifdef IQTREE_TERRAPHAST
+            cout << "  --terrace            Check if the tree lies on a phylogenetic terrace" << endl;
+#endif
 //            << "  -d <file>            Reading genetic distances from file (default: JC)" << endl
 //			<< "  -d <outfile>         Calculate the distance matrix inferred from tree" << endl
 //			<< "  -stats <outfile>     Output some statistics about branch lengths" << endl
@@ -4008,17 +4158,18 @@ void usage_iqtree(char* argv[], bool full_command) {
 
 			cout << endl;
 
+    cout << "TEST OF SYMMETRY" << endl
+    << "  --bisymtest               Perform three binomial tests of symmetry" << endl
+    << "  --bisymtest-remove-bad    Do --bisymtest and remove bad partitions" << endl
+    << "  --bisymtest-remove-good   Do --bisymtest and remove good partitions" << endl
+    << "  --bisymtest-type MAR|INT  Use MARginal/INTernal test when removing partitions" << endl
+    << "  --bisymtest-pval NUM      P-value cutoff (default: 0.05)" << endl
+    << "  --bisymtest-keep-zero     Keep NAs in the tests" << endl;
+    
+    cout << endl;
+
     if (full_command) {
         //TODO Print other options here (to be added)
-        cout << "TEST OF SYMMETRY" << endl
-        << "  --symtest               Perform three tests of symmetry" << endl
-        << "  --symtest-remove-bad    Do --symtest and remove bad partitions" << endl
-        << "  --symtest-remove-good   Do --symtest and remove good partitions" << endl
-        << "  --symtest-type MAR|INT  MARginal/INTernal test when removing partitions" << endl
-        << "  --symtest-pval NUM      P-value cutoff (default: 0.05)" << endl
-        << "  --symtest-keep-zero     Keep NAs in the tests" << endl;
-        
-        cout << endl;
     }
 
     exit(0);
