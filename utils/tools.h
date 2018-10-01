@@ -1980,6 +1980,9 @@ public:
     /** TRUE to link substitution models over partitions */
     bool link_model;
 
+    /** name of the joint model across partitions */
+    char* model_joint;
+    
 	/** true to count all distinct trees visited during tree search */
 	bool count_trees;
 

@@ -216,15 +216,43 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
             size_t pos = findCloseBracket(model_str, spec_pos);
             if (pos == string::npos)
                 outError("Model name has wrong bracket notation '{...}'");
-                rate_str = model_str.substr(pos+1);
-                model_str = model_str.substr(0, pos+1);
-        }
-    else {
+            rate_str = model_str.substr(pos+1);
+            model_str = model_str.substr(0, pos+1);
+        } else {
             rate_str = model_str.substr(spec_pos);
             model_str = model_str.substr(0, spec_pos);
         }
     }
+    
+    // decompose +F from rate_str
+    string freq_str = "";
+    while ((spec_pos = rate_str.find("+F")) != string::npos) {
+        size_t end_pos = rate_str.find_first_of("+*", spec_pos+1);
+        if (end_pos == string::npos) {
+            freq_str += rate_str.substr(spec_pos);
+            rate_str = rate_str.substr(0, spec_pos);
+        } else {
+            freq_str += rate_str.substr(spec_pos, end_pos - spec_pos);
+            rate_str = rate_str.substr(0, spec_pos) + rate_str.substr(end_pos);
+        }
+    }
 
+    // set to model_joint if set
+    if (Params::getInstance().model_joint) {
+        model_str = Params::getInstance().model_joint;
+        freq_str = "";
+        while ((spec_pos = model_str.find("+F")) != string::npos) {
+            size_t end_pos = model_str.find_first_of("+*", spec_pos+1);
+            if (end_pos == string::npos) {
+                freq_str += model_str.substr(spec_pos);
+                model_str = model_str.substr(0, spec_pos);
+            } else {
+                freq_str += model_str.substr(spec_pos, end_pos - spec_pos);
+                model_str = model_str.substr(0, spec_pos) + model_str.substr(end_pos);
+            }
+        }
+    }
+        
     // PoMo; +NXX and +W or +S because those flags are handled when
     // reading in the data.  Set PoMo parameters (heterozygosity).
     size_t n_pos_start = rate_str.find("+N");
@@ -354,125 +382,125 @@ ModelFactory::ModelFactory(Params &params, string &model_name, PhyloTree *tree, 
     }
 
     // first handle mixture frequency
-    string::size_type posfreq = rate_str.find("+FMIX");
+    string::size_type posfreq = freq_str.find("+FMIX");
     string freq_params;
     size_t close_bracket;
 
     if (posfreq != string::npos) {
-        string freq_str;
-        size_t last_pos = rate_str.find_first_of("+*", posfreq+1);
+        string fmix_str;
+        size_t last_pos = freq_str.find_first_of("+*", posfreq+1);
 
         if (last_pos == string::npos) {
-            freq_str = rate_str.substr(posfreq);
-            rate_str = rate_str.substr(0, posfreq);
+            fmix_str = freq_str.substr(posfreq);
+            freq_str = freq_str.substr(0, posfreq);
         } else {
-            freq_str = rate_str.substr(posfreq, last_pos-posfreq);
-            rate_str = rate_str.substr(0, posfreq) + rate_str.substr(last_pos);
+            fmix_str = freq_str.substr(posfreq, last_pos-posfreq);
+            freq_str = freq_str.substr(0, posfreq) + freq_str.substr(last_pos);
         }
 
-        if (freq_str[5] != OPEN_BRACKET)
+        if (fmix_str[5] != OPEN_BRACKET)
             outError("Mixture-frequency must start with +FMIX{");
-        close_bracket = freq_str.find(CLOSE_BRACKET);
+        close_bracket = fmix_str.find(CLOSE_BRACKET);
         if (close_bracket == string::npos)
-            outError("Close bracket not found in ", freq_str);
-        if (close_bracket != freq_str.length()-1)
-            outError("Wrong close bracket position ", freq_str);
+            outError("Close bracket not found in ", fmix_str);
+        if (close_bracket != fmix_str.length()-1)
+            outError("Wrong close bracket position ", fmix_str);
         freq_type = FREQ_MIXTURE;
-        freq_params = freq_str.substr(6, close_bracket-6);
+        freq_params = fmix_str.substr(6, close_bracket-6);
     }
 
     // then normal frequency
-    if (rate_str.find("+FO") != string::npos)
-        posfreq = rate_str.find("+FO");
-    else if (rate_str.find("+Fo") != string::npos)
-        posfreq = rate_str.find("+Fo");
+    if (freq_str.find("+FO") != string::npos)
+        posfreq = freq_str.find("+FO");
+    else if (freq_str.find("+Fo") != string::npos)
+        posfreq = freq_str.find("+Fo");
     else
-        posfreq = rate_str.find("+F");
+        posfreq = freq_str.find("+F");
 
     bool optimize_mixmodel_weight = params.optimize_mixmodel_weight;
 
     if (posfreq != string::npos) {
-        string freq_str;
-        size_t last_pos = rate_str.find_first_of("+*", posfreq+1);
+        string fstr;
+        size_t last_pos = freq_str.find_first_of("+*", posfreq+1);
         if (last_pos == string::npos) {
-            freq_str = rate_str.substr(posfreq);
-            rate_str = rate_str.substr(0, posfreq);
+            fstr = freq_str.substr(posfreq);
+            freq_str = freq_str.substr(0, posfreq);
         } else {
-            freq_str = rate_str.substr(posfreq, last_pos-posfreq);
-            rate_str = rate_str.substr(0, posfreq) + rate_str.substr(last_pos);
+            fstr = freq_str.substr(posfreq, last_pos-posfreq);
+            freq_str = freq_str.substr(0, posfreq) + freq_str.substr(last_pos);
         }
 
-        if (freq_str.length() > 2 && freq_str[2] == OPEN_BRACKET) {
+        if (fstr.length() > 2 && fstr[2] == OPEN_BRACKET) {
             if (freq_type == FREQ_MIXTURE)
                 outError("Mixture frequency with user-defined frequency is not allowed");
-            close_bracket = freq_str.find(CLOSE_BRACKET);
+            close_bracket = fstr.find(CLOSE_BRACKET);
             if (close_bracket == string::npos)
-                outError("Close bracket not found in ", freq_str);
-            if (close_bracket != freq_str.length()-1)
-                outError("Wrong close bracket position ", freq_str);
+                outError("Close bracket not found in ", fstr);
+            if (close_bracket != fstr.length()-1)
+                outError("Wrong close bracket position ", fstr);
             freq_type = FREQ_USER_DEFINED;
-            freq_params = freq_str.substr(3, close_bracket-3);
-        } else if (freq_str == "+FC" || freq_str == "+Fc" || freq_str == "+F") {
+            freq_params = fstr.substr(3, close_bracket-3);
+        } else if (fstr == "+FC" || fstr == "+Fc" || fstr == "+F") {
             if (freq_type == FREQ_MIXTURE) {
                 freq_params = "empirical," + freq_params;
                 optimize_mixmodel_weight = true;
             } else
                 freq_type = FREQ_EMPIRICAL;
-    } else if (freq_str == "+FU" || freq_str == "+Fu") {
+        } else if (fstr == "+FU" || fstr == "+Fu") {
             if (freq_type == FREQ_MIXTURE)
                 outError("Mixture frequency with user-defined frequency is not allowed");
             else
                 freq_type = FREQ_USER_DEFINED;
-        } else if (freq_str == "+FQ" || freq_str == "+Fq") {
+        } else if (fstr == "+FQ" || fstr == "+Fq") {
             if (freq_type == FREQ_MIXTURE)
                 outError("Mixture frequency with equal frequency is not allowed");
             else
             freq_type = FREQ_EQUAL;
-        } else if (freq_str == "+FO" || freq_str == "+Fo") {
+        } else if (fstr == "+FO" || fstr == "+Fo") {
             if (freq_type == FREQ_MIXTURE) {
                 freq_params = "optimize," + freq_params;
                 optimize_mixmodel_weight = true;
             } else
                 freq_type = FREQ_ESTIMATE;
-    } else if (freq_str == "+F1x4" || freq_str == "+F1X4") {
+    } else if (fstr == "+F1x4" || fstr == "+F1X4") {
             if (freq_type == FREQ_MIXTURE)
-                outError("Mixture frequency with " + freq_str + " is not allowed");
+                outError("Mixture frequency with " + fstr + " is not allowed");
             else
                 freq_type = FREQ_CODON_1x4;
-        } else if (freq_str == "+F3x4" || freq_str == "+F3X4") {
+        } else if (fstr == "+F3x4" || fstr == "+F3X4") {
             if (freq_type == FREQ_MIXTURE)
-                outError("Mixture frequency with " + freq_str + " is not allowed");
+                outError("Mixture frequency with " + fstr + " is not allowed");
             else
                 freq_type = FREQ_CODON_3x4;
-        } else if (freq_str == "+F3x4C" || freq_str == "+F3x4c" || freq_str == "+F3X4C" || freq_str == "+F3X4c") {
+        } else if (fstr == "+F3x4C" || fstr == "+F3x4c" || fstr == "+F3X4C" || fstr == "+F3X4c") {
             if (freq_type == FREQ_MIXTURE)
-                outError("Mixture frequency with " + freq_str + " is not allowed");
+                outError("Mixture frequency with " + fstr + " is not allowed");
             else
                 freq_type = FREQ_CODON_3x4C;
-        } else if (freq_str == "+FRY") {
+        } else if (fstr == "+FRY") {
         // MDW to Minh: I don't know how these should interact with FREQ_MIXTURE,
         // so as nearly everything else treats it as an error, I do too.
         // BQM answer: that's fine
             if (freq_type == FREQ_MIXTURE)
-                outError("Mixture frequency with " + freq_str + " is not allowed");
+                outError("Mixture frequency with " + fstr + " is not allowed");
             else
                 freq_type = FREQ_DNA_RY;
-        } else if (freq_str == "+FWS") {
+        } else if (fstr == "+FWS") {
             if (freq_type == FREQ_MIXTURE)
-                outError("Mixture frequency with " + freq_str + " is not allowed");
+                outError("Mixture frequency with " + fstr + " is not allowed");
             else
                 freq_type = FREQ_DNA_WS;
-        } else if (freq_str == "+FMK") {
+        } else if (fstr == "+FMK") {
             if (freq_type == FREQ_MIXTURE)
-                outError("Mixture frequency with " + freq_str + " is not allowed");
+                outError("Mixture frequency with " + fstr + " is not allowed");
             else
                 freq_type = FREQ_DNA_MK;
         } else {
             // might be "+F####" where # are digits
             try {
-                freq_type = parseStateFreqDigits(freq_str.substr(2)); // throws an error if not in +F#### format
+                freq_type = parseStateFreqDigits(fstr.substr(2)); // throws an error if not in +F#### format
             } catch (...) {
-                outError("Unknown state frequency type ",freq_str);
+                outError("Unknown state frequency type ",fstr);
             }
         }
 //          model_str = model_str.substr(0, posfreq);
