@@ -12,7 +12,7 @@ constexpr index word_bits = std::numeric_limits<index>::digits;
 inline index block_index(index i) { return i / word_bits; }
 inline index base_index(index block) { return block * word_bits; }
 inline index shift_index(index i) { return i % word_bits; }
-inline index set_mask(index i) { return 1ull << (i & (word_bits - 1)); }
+inline index set_mask(index i) { return index(1) << (i & (word_bits - 1)); }
 inline index clear_mask(index i) { return ~set_mask(i); }
 inline index prefix_mask(index i) { return set_mask(i) - 1; }
 inline index next_bit(index block, index i) { return i + bitscan(block >> shift_index(i)); }
