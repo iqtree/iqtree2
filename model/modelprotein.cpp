@@ -720,3 +720,16 @@ void ModelProtein::readRates(istream &in) throw(const char*, string) {
 }
 
 
+string ModelProtein::getNameParams() {
+    ostringstream retname;
+    retname << name;
+    retname << freqTypeString(freq_type, phylo_tree->aln->seq_type, true);
+    
+    if (freq_type == FREQ_ESTIMATE) {
+        retname << "{" << state_freq[0];
+        for (int i = 1; i < num_states; i++)
+            retname << "," << state_freq[i];
+        retname << "}";
+    }
+    return retname.str();
+}
