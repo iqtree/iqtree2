@@ -225,7 +225,7 @@ ModelPoMo::~ModelPoMo() {
 double ModelPoMo::computeSumFreqBoundaryStates() {
     int i;
     double norm_boundary = 0.0;
-    for (i = 0; i < 4; i++)
+    for (i = 0; i < n_alleles; i++)
         norm_boundary += freq_boundary_states[i];
     // Should be 1.0!
     if ((norm_boundary > 1.0 + eps) || (norm_boundary < 1.0 - eps))
@@ -258,7 +258,7 @@ void ModelPoMo::setInitialMutCoeff() {
 double ModelPoMo::computeSumFreqPolyStatesNoMut() {
     double norm_polymorphic = 0.0;
     int i, j;
-    for (i = 0; i < 4; i++) {
+    for (i = 0; i < n_alleles; i++) {
         for (j = 0; j < i; j++)
             norm_polymorphic +=
                 2 * freq_boundary_states[i] * freq_boundary_states[j];
@@ -532,7 +532,31 @@ void ModelPoMo::normalizeMutationRates() {
     }
 
     for (int i = 0; i < n_alleles; i++)
-        for (int j = 0; j < n_alleles; j++) m[i*n_alleles+j] *= m_norm;
+      for (int j = 0; j < n_alleles; j++) {
+        m[i*n_alleles+j] *= m_norm;
+        // DEBUG.
+        // cout << setprecision(15);
+        // cout << m[i*n_alleles+j] << endl;
+      }
+
+    // DEBUG.
+    if (verbose_mode >= VB_MED) {
+      cout << "theta_bm before normalization is " << theta_bm << endl;
+      cout << "heterozygosity is " << heterozygosity << endl;
+      for (int i = 0; i < n_alleles; i++) {
+        for (int j = i+1; j < n_alleles; j++) {
+          // The mutation rate matrix entry is the exchangeability times the
+          // target allele frequency.
+          double ex = m[i*n_alleles+j] / freq_boundary_states[j];
+          cout << setprecision(15);
+          cout << "Exchangeability " << i << " to " << j << " is " << ex << endl;
+        }
+      }
+      computeStateFreq();
+      double normc = computeNormConst();
+      theta_bm = (1.0 - normc) / harmonic(N-1);
+      cout << "theta_bm after normalization is " << theta_bm << endl;
+    }
 }
 
 void ModelPoMo::setScale(double new_scale) {
@@ -783,6 +807,18 @@ void ModelPoMo::report_model_params(ostream &out, bool reset_scale) {
     setScale(1.0);
   else
     out << "The reported rates are scaled by a factor of " << scale << "." << endl;;
+
+  // TODO: If verbose, output rate matrix.
+  if (verbose_mode >= VB_MED) {
+    out << "Rate matrix: " << endl;
+    for (int i = 0; i < num_states; i++) {
+      for (int j = 0; j < num_states; j++) {
+        out << setprecision(8);
+        out << setw(8) << rate_matrix[i*num_states+j] << " ";
+      }
+      out << endl;
+    }
+  }
 
   // Report rates.
   // Mutation rates.
