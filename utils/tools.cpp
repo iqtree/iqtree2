@@ -1067,6 +1067,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.num_mixlen = 1;
     params.link_alpha = false;
     params.link_model = false;
+    params.model_joint = NULL;
     params.ignore_checkpoint = false;
     params.checkpoint_dump_interval = 60;
     params.force_unfinished = false;
@@ -3623,6 +3624,15 @@ void parseArg(int argc, char *argv[], Params &params) {
 			}
 
             if (strcmp(argv[cnt], "--link-model") == 0) {
+                params.link_model = true;
+                continue;
+            }
+
+            if (strcmp(argv[cnt], "--model-joint") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use --model-joint MODEL_NAME";
+                params.model_joint = argv[cnt];
                 params.link_model = true;
                 continue;
             }
