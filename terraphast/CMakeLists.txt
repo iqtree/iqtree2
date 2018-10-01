@@ -192,7 +192,7 @@ set_target_properties(${terraces_targets} PROPERTIES CXX_STANDARD 11 CXX_STANDAR
 # set platform-specific options, include platform-specific files
 #####################################################################
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
-    set(TERRAPHAST_COMPILER_INCLUDE "${CMAKE_CURRENT_SOURCE_DIR}/lib/cl")
+    set(TERRAPHAST_PLATFORM_INCLUDE "${CMAKE_CURRENT_SOURCE_DIR}/lib/cl")
     set(TERRAPHAST_COMPILE_FLAGS -Oi -W4)
 
     # Most of our files only compile with disabled language extensions for VC++

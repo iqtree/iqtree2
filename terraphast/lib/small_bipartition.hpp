@@ -34,7 +34,7 @@ struct small_bipartition {
 		m_cur_bip = masked_increment(m_cur_bip);
 		return is_valid();
 	}
-	void reset() { m_cur_bip = 1ull << bitscan(m_mask); }
+	void reset() { m_cur_bip = index(1) << bitscan(m_mask); }
 
 	index mask() const { return m_mask; }
 	index left_mask() const { return m_cur_bip; }
@@ -45,7 +45,7 @@ struct small_bipartition {
 
 	static small_bipartition full_set(index num_leaves) {
 		assert(num_leaves < bits::word_bits);
-		return {(1ull << num_leaves) - 1};
+		return {(index(1) << num_leaves) - 1};
 	}
 };
 } // namespace terraces
