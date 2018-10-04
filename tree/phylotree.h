@@ -1127,7 +1127,7 @@ public:
 
     void computeAllSubtreeDistForOneNode(PhyloNode* source, PhyloNode* nei1, PhyloNode* nei2, PhyloNode* node, PhyloNode* dad);
 
-    double correctBranchLengthF81(double observedBran, double alpha = -1.0);
+    double correctBranchLengthF81(double observedBran, double alpha);
 
     double computeCorrectedBayesianBranchLength(PhyloNeighbor *dad_branch, PhyloNode *dad);
 
@@ -1632,7 +1632,13 @@ public:
      */
     virtual int fixNegativeBranch(bool force = false, Node *node = NULL, Node *dad = NULL);
 
-    double JukesCantorCorrection(double dist);
+    /**
+     Jukes-Cantor correction with alpha shape of Gamma distribution
+     @param dist observed distance
+     @param alpha shape of Gamma distribution
+     @return corrected JC distance
+     */
+    double JukesCantorCorrection(double dist, double alpha);
                                             
     /**
      set all branch lengths using parsimony

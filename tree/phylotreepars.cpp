@@ -310,10 +310,17 @@ void PhyloTree::computeAllPartialPars(PhyloNode *node, PhyloNode *dad) {
 	}
 }
 
-double PhyloTree::JukesCantorCorrection(double dist) {
+double PhyloTree::JukesCantorCorrection(double dist, double alpha) {
     double z = (double) aln->num_states / (aln->num_states - 1);
     double x = 1.0 - (z * dist);
-    if (x > 0) dist = -log(x) / z;
+    if (x > 0) {
+        if (alpha <= 0.0) {
+            dist = -log(x) / z;
+        } else {
+            //if (verbose_mode >= VB_MAX) cout << "alpha: " << alpha << endl;
+            dist = alpha * (pow(x, -1.0/alpha) - 1) / z;
+        }
+    }
     // Branch lengths under PoMo are #events, which is ~N^2 * #substitutions
     if (aln->seq_type == SEQ_POMO)
         dist *= aln->virtual_pop_size * aln->virtual_pop_size;
@@ -330,6 +337,7 @@ int PhyloTree::setParsimonyBranchLengths() {
     
     int sum_score = 0;
     double persite = 1.0/getAlnNSite();
+    double alpha = (site_rate) ? site_rate->getGammaShape() : 1.0;
 //    int pars_score;
     //int i, state;
 
@@ -392,7 +400,7 @@ int PhyloTree::setParsimonyBranchLengths() {
 
     ASSERT(subst == branch_subst);
     sum_score += subst;
-    fixOneNegativeBranch(JukesCantorCorrection(subst*persite), dad_branch, dad);
+    fixOneNegativeBranch(correctBranchLengthF81(subst*persite, alpha), dad_branch, dad);
     
     
     // walking down the tree to assign node states
@@ -436,7 +444,7 @@ int PhyloTree::setParsimonyBranchLengths() {
                 }
             }
         }
-        fixOneNegativeBranch(JukesCantorCorrection(subst*persite), dad_branch, dad);
+        fixOneNegativeBranch(correctBranchLengthF81(subst*persite, alpha), dad_branch, dad);
 //        computeParsimonyBranchFast(dad_branch, dad, &branch_subst);
 //        ASSERT(subst <= branch_subst);
         sum_score += subst;
