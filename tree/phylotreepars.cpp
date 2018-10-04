@@ -667,35 +667,24 @@ void PhyloTree::computePartialParsimonySankoff(PhyloNeighbor *dad_branch, PhyloN
     
     if (node->degree() > 3) {
         // multifurcating node
-        FOR_NEIGHBOR_IT(node, dad, it) if ((*it)->node->name != ROOT_NAME) {
-            if ((*it)->node->isLeaf()) {
-                // leaf node
-                for (ptn = 0; ptn < aln->ordered_pattern.size(); ptn++){
-                    // ignore const ptn because it does not affect pars score
-                    //if (aln->at(ptn).isConst()) continue;
-                    int ptn_start_index = ptn*nstates;
-                    
+        for (ptn = 0; ptn < aln->ordered_pattern.size(); ptn++) {
+            int ptn_start_index = ptn*nstates;
+            UINT *partial_pars_ptr = &partial_pars[ptn_start_index];
+
+            FOR_NEIGHBOR_IT(node, dad, it) if ((*it)->node->name != ROOT_NAME) {
+                if ((*it)->node->isLeaf()) {
+                    // leaf node
                     UINT *partial_pars_child_ptr = &tip_partial_pars[aln->ordered_pattern[ptn][(*it)->node->id]*nstates];
-                    UINT *partial_pars_ptr = &partial_pars[ptn_start_index];
-                    
+                
                     for(i = 0; i < nstates; i++){
-                        // min(j->i) from child_branch
                         partial_pars_ptr[i] += partial_pars_child_ptr[i];
                     }
-                }
-            } else {
-                // internal node
-                UINT *partial_pars_child = ((PhyloNeighbor*) (*it))->partial_pars;
-                for (ptn = 0; ptn < aln->ordered_pattern.size(); ptn++){
-                    // ignore const ptn because it does not affect pars score
-                    //if (aln->at(ptn).isConst()) continue;
-                    int ptn_start_index = ptn*nstates;
-                    
-                    UINT *partial_pars_child_ptr = &partial_pars_child[ptn_start_index];
-                    UINT *partial_pars_ptr = &partial_pars[ptn_start_index];
+                } else {
+                    // internal node
+                    UINT *partial_pars_child_ptr = &((PhyloNeighbor*) (*it))->partial_pars[ptn_start_index];
                     UINT *cost_matrix_ptr = cost_matrix;
                     
-                    for(i = 0; i < nstates; i++){
+                    for (i = 0; i < nstates; i++){
                         // min(j->i) from child_branch
                         min_child_ptn_pars = partial_pars_child_ptr[0] + cost_matrix_ptr[0];
                         for(j = 1; j < nstates; j++) {
