@@ -573,6 +573,46 @@ void PhyloTree::computeTipPartialParsimony() {
     // initialize real states with cost_matrix
     memcpy(tip_partial_pars, cost_matrix, nstates*nstates*sizeof(UINT));
 
+    UINT *this_tip_partial_pars;
+    
+    switch (aln->seq_type) {
+        case SEQ_DNA:
+            for (state = 4; state < 18; state++) {
+                int cstate = state-nstates+1;
+                this_tip_partial_pars = &tip_partial_pars[state*nstates];
+                for (i = 0; i < nstates; i++) {
+                    if ((cstate) & (1 << i))
+                        this_tip_partial_pars[i] = 0;
+                    else {
+                        this_tip_partial_pars[i] = UINT_MAX;
+                        for (int j = 0; j < nstates; j++)
+                            if ((cstate) & (1 << j))
+                                this_tip_partial_pars[i] = min(this_tip_partial_pars[i], cost_matrix[i*nstates+j]);
+                    }
+                }
+            }
+            break;
+        case SEQ_PROTEIN:
+            for (state = 0; state < sizeof(ambi_aa)/sizeof(int); state++) {
+                this_tip_partial_pars = &tip_partial_pars[(state+20)*nstates];
+                for (i = 0; i < nstates; i++) {
+                    if (ambi_aa[state] & (1 << i))
+                        this_tip_partial_pars[i] = 0;
+                    else {
+                        this_tip_partial_pars[i] = UINT_MAX;
+                        for (int j = 0; j < nstates; j++)
+                            if (ambi_aa[state] & (1 << j))
+                                this_tip_partial_pars[i] = min(this_tip_partial_pars[i], cost_matrix[i*nstates+j]);
+                    }
+                }
+            }
+            break;
+        case SEQ_POMO:
+            ASSERT(0 && "POMO not handled with Sankoff parsimony");
+            break;
+        default:
+            break;
+    }
 }
 /**
  compute partial parsimony score of the subtree rooted at dad
@@ -604,24 +644,29 @@ void PhyloTree::computePartialParsimonySankoff(PhyloNeighbor *dad_branch, PhyloN
     
     UINT * partial_pars = dad_branch->partial_pars;
     memset(partial_pars, 0, sizeof(UINT)*pars_block_size);
-    //        for(int i = 0; i < pars_block_size; i++)
-    //            partial_pars[i] = 0;
-    UINT *left = NULL, *right = NULL;
+
+    PhyloNeighbor *left = NULL, *right = NULL;
     
     FOR_NEIGHBOR_IT(node, dad, it)
         if ((*it)->node->name != ROOT_NAME) {
             if (!(*it)->node->isLeaf())
                 computePartialParsimonySankoff((PhyloNeighbor*) (*it), (PhyloNode*) node);
             if (!left)
-                left = ((PhyloNeighbor*)*it)->partial_pars;
+                left = ((PhyloNeighbor*)*it);
             else
-                right = ((PhyloNeighbor*)*it)->partial_pars;
+                right = ((PhyloNeighbor*)*it);
         }
     
-    
+    if (!left->node->isLeaf() && right->node->isLeaf()) {
+        // swap leaf and internal node
+        PhyloNeighbor *tmp = left;
+        left = right;
+        right = tmp;
+    }
     ASSERT(node->degree() >= 3);
     
-    if (node->degree() >= 3) {
+    if (node->degree() > 3) {
+        // multifurcating node
         FOR_NEIGHBOR_IT(node, dad, it) if ((*it)->node->name != ROOT_NAME) {
             if ((*it)->node->isLeaf()) {
                 // leaf node
@@ -663,207 +708,74 @@ void PhyloTree::computePartialParsimonySankoff(PhyloNeighbor *dad_branch, PhyloN
                 }
             }
         }
+    } else if (left->node->isLeaf() && right->node->isLeaf()) {
+        // tip-tip case
+        for (ptn = 0; ptn < aln->ordered_pattern.size(); ptn++){
+            // ignore const ptn because it does not affect pars score
+            //if (aln->at(ptn).isConst()) continue;
+            int ptn_start_index = ptn*nstates;
+            
+            UINT *left_ptr = &tip_partial_pars[aln->ordered_pattern[ptn][left->node->id]*nstates];
+            UINT *right_ptr = &tip_partial_pars[aln->ordered_pattern[ptn][right->node->id]*nstates];
+            UINT *partial_pars_ptr = &partial_pars[ptn_start_index];
+            
+            for (i = 0; i < nstates; i++){
+                // min(j->i) from child_branch
+                partial_pars_ptr[i] = left_ptr[i] + right_ptr[i];
+            }
+        }
+    } else if (left->node->isLeaf() && !right->node->isLeaf()) {
+        // tip-inner case
+        for (ptn = 0; ptn < aln->ordered_pattern.size(); ptn++){
+            // ignore const ptn because it does not affect pars score
+            //if (aln->at(ptn).isConst()) continue;
+            int ptn_start_index = ptn*nstates;
+            
+            UINT *left_ptr = &tip_partial_pars[aln->ordered_pattern[ptn][left->node->id]*nstates];
+            UINT *right_ptr = &right->partial_pars[ptn_start_index];
+            UINT *partial_pars_ptr = &partial_pars[ptn_start_index];
+            UINT *cost_matrix_ptr = cost_matrix;
+            UINT right_contrib;
+            
+            for(i = 0; i < nstates; i++){
+                // min(j->i) from child_branch
+                right_contrib = right_ptr[0] + cost_matrix_ptr[0];
+                for(j = 1; j < nstates; j++) {
+                    right_contrib = min(right_ptr[j] + cost_matrix_ptr[j], right_contrib);
+                }
+                partial_pars_ptr[i] = left_ptr[i] + right_contrib;
+                cost_matrix_ptr += nstates;
+            }
+        }
     } else {
-        // bifurcating node
-        assert(node->degree() == 3);
-        
-        switch (nstates) {
-            case 4:
-                for (ptn = 0; ptn < aln->ordered_pattern.size(); ptn++){
-                    // ignore const ptn because it does not affect pars score
-                    //if (aln->at(ptn).isConst()) continue;
-                    int ptn_start_index = ptn*4;
-                    
-                    UINT *left_ptr = &left[ptn_start_index];
-                    UINT *right_ptr = &right[ptn_start_index];
-                    UINT *partial_pars_ptr = &partial_pars[ptn_start_index];
-                    UINT *cost_matrix_ptr = cost_matrix;
-                    UINT left_contrib, right_contrib;
-                    
-                    for(i = 0; i < 4; i++){
-                        // min(j->i) from child_branch
-                        left_contrib = left_ptr[0] + cost_matrix_ptr[0];
-                        right_contrib = right_ptr[0] + cost_matrix_ptr[0];
-                        for(j = 1; j < 4; j++) {
-                            UINT value = left_ptr[j] + cost_matrix_ptr[j];
-                            left_contrib = min(value, left_contrib);
-                            value = right_ptr[j] + cost_matrix_ptr[j];
-                            right_contrib = min(value, right_contrib);
-                        }
-                        partial_pars_ptr[i] = left_contrib+right_contrib;
-                        cost_matrix_ptr += 4;
-                    }
+        // inner-inner case
+        for (ptn = 0; ptn < aln->ordered_pattern.size(); ptn++){
+            // ignore const ptn because it does not affect pars score
+            //if (aln->at(ptn).isConst()) continue;
+            int ptn_start_index = ptn*nstates;
+            
+            UINT *left_ptr = &left->partial_pars[ptn_start_index];
+            UINT *right_ptr = &right->partial_pars[ptn_start_index];
+            UINT *partial_pars_ptr = &partial_pars[ptn_start_index];
+            UINT *cost_matrix_ptr = cost_matrix;
+            UINT left_contrib, right_contrib;
+            
+            for(i = 0; i < nstates; i++){
+                // min(j->i) from child_branch
+                left_contrib = left_ptr[0] + cost_matrix_ptr[0];
+                right_contrib = right_ptr[0] + cost_matrix_ptr[0];
+                for(j = 1; j < nstates; j++) {
+                    left_contrib = min(left_ptr[j] + cost_matrix_ptr[j], left_contrib);
+                    right_contrib = min(right_ptr[j] + cost_matrix_ptr[j], right_contrib);
                 }
-                break;
-            case 20:
-                for (ptn = 0; ptn < aln->ordered_pattern.size(); ptn++){
-                    // ignore const ptn because it does not affect pars score
-                    //if (aln->at(ptn).isConst()) continue;
-                    int ptn_start_index = ptn*20;
-                    
-                    UINT *left_ptr = &left[ptn_start_index];
-                    UINT *right_ptr = &right[ptn_start_index];
-                    UINT *partial_pars_ptr = &partial_pars[ptn_start_index];
-                    UINT *cost_matrix_ptr = cost_matrix;
-                    UINT left_contrib, right_contrib;
-                    
-                    for(i = 0; i < 20; i++){
-                        // min(j->i) from child_branch
-                        left_contrib = left_ptr[0] + cost_matrix_ptr[0];
-                        right_contrib = right_ptr[0] + cost_matrix_ptr[0];
-                        for(j = 1; j < 20; j++) {
-                            UINT value = left_ptr[j] + cost_matrix_ptr[j];
-                            left_contrib = min(value, left_contrib);
-                            value = right_ptr[j] + cost_matrix_ptr[j];
-                            right_contrib = min(value, right_contrib);
-                        }
-                        partial_pars_ptr[i] = left_contrib+right_contrib;
-                        cost_matrix_ptr += 20;
-                    }
-                }
-                break;
-            default:
-                for (ptn = 0; ptn < aln->ordered_pattern.size(); ptn++){
-                    // ignore const ptn because it does not affect pars score
-                    //if (aln->at(ptn).isConst()) continue;
-                    int ptn_start_index = ptn*nstates;
-                    
-                    UINT *left_ptr = &left[ptn_start_index];
-                    UINT *right_ptr = &right[ptn_start_index];
-                    UINT *partial_pars_ptr = &partial_pars[ptn_start_index];
-                    UINT *cost_matrix_ptr = cost_matrix;
-                    UINT left_contrib, right_contrib;
-                    
-                    for(i = 0; i < nstates; i++){
-                        // min(j->i) from child_branch
-                        left_contrib = left_ptr[0] + cost_matrix_ptr[0];
-                        right_contrib = right_ptr[0] + cost_matrix_ptr[0];
-                        for(j = 1; j < nstates; j++) {
-                            UINT value = left_ptr[j] + cost_matrix_ptr[j];
-                            left_contrib = min(value, left_contrib);
-                            value = right_ptr[j] + cost_matrix_ptr[j];
-                            right_contrib = min(value, right_contrib);
-                        }
-                        partial_pars_ptr[i] = left_contrib+right_contrib;
-                        cost_matrix_ptr += nstates;
-                    }
-                }
-                break;
+                partial_pars_ptr[i] = left_contrib+right_contrib;
+                cost_matrix_ptr += nstates;
+            }
         }
         
     }
     
     dad_branch->partial_lh_computed |= 2;
-}
-
-void PhyloTree::initLeafSiteParsForAmbiguousState(char state, UINT * site_partial_pars){
-    int i, nstates = aln->num_states;
-    if(state < nstates) return; // no need for manipulate normal state
-    
-    if (state == aln->STATE_UNKNOWN){
-        //for(i = 0; i < nstates; i++) site_partial_pars[i] = 0;
-        memset(site_partial_pars, 0, sizeof(UINT) * nstates);
-        return;
-    }
-    
-    if (state == STATE_INVALID){
-        cout << "nstates = " << nstates << "; state = " << (int) state << endl;
-        outError("Alignment contains invalid state. Please check your data!");
-    }
-    
-    //    for(i = 0; i < nstates; i++) site_partial_pars[i] = UINT_MAX;
-    
-    switch (nstates) {
-        case 2:
-            cout << "nstates = " << nstates << "; state = " << (int) state << endl;
-            outError("Alignment contains invalid state. Please check your data!");
-            break;
-        case 4: // DNA
-            switch (state) {
-                case 1+4+3:
-                    site_partial_pars[aln->convertState('A')] = 0;
-                    site_partial_pars[aln->convertState('G')] = 0;
-                    return; // A or G, Purine
-                case 2+8+3:
-                    site_partial_pars[aln->convertState('C')] = 0;
-                    site_partial_pars[aln->convertState('T')] = 0;
-                    return; // C or T, Pyrimidine
-                case 1+8+3:
-                    site_partial_pars[aln->convertState('A')] = 0;
-                    site_partial_pars[aln->convertState('T')] = 0;
-                    return; // A or T, Weak
-                case 2+4+3:
-                    site_partial_pars[aln->convertState('G')] = 0;
-                    site_partial_pars[aln->convertState('C')] = 0;
-                    return; // G or C, Strong
-                case 1+2+3:
-                    site_partial_pars[aln->convertState('A')] = 0;
-                    site_partial_pars[aln->convertState('C')] = 0;
-                    return; // A or C, Amino
-                case 4+8+3:
-                    site_partial_pars[aln->convertState('G')] = 0;
-                    site_partial_pars[aln->convertState('T')] = 0;
-                    return; // G or T, Keto
-                case 2+4+8+3:
-                    site_partial_pars[aln->convertState('C')] = 0;
-                    site_partial_pars[aln->convertState('G')] = 0;
-                    site_partial_pars[aln->convertState('T')] = 0;
-                    return;// C or G or T
-                case 1+2+8+3:
-                    site_partial_pars[aln->convertState('A')] = 0;
-                    site_partial_pars[aln->convertState('C')] = 0;
-                    site_partial_pars[aln->convertState('T')] = 0;
-                    return; // A or C or T
-                case 1+4+8+3:
-                    site_partial_pars[aln->convertState('A')] = 0;
-                    site_partial_pars[aln->convertState('G')] = 0;
-                    site_partial_pars[aln->convertState('T')] = 0;
-                    return; // A or G or T
-                case 1+2+4+3:
-                    site_partial_pars[aln->convertState('A')] = 0;
-                    site_partial_pars[aln->convertState('G')] = 0;
-                    site_partial_pars[aln->convertState('C')] = 0;
-                    return; // A or G or C
-                case 18:
-                    site_partial_pars[aln->convertState('A')] = 0;
-                    site_partial_pars[aln->convertState('C')] = 0;
-                    site_partial_pars[aln->convertState('G')] = 0;
-                    site_partial_pars[aln->convertState('T')] = 0;
-                    return; // UNKNOWN for DNA
-                default:
-                    cout << "nstates = " << nstates << "; state = " << (int) state << endl;
-                    outError("Alignment contains invalid state. Please check your data!");
-                    return;
-            }
-            break;
-        case 20: // Protein
-            if (state == 20){
-                site_partial_pars[aln->convertState('D')] = 0;
-                site_partial_pars[aln->convertState('N')] = 0;
-                return; // Aspartic acid (D) or Asparagine (N)
-            }
-            else if (state == 21){
-                site_partial_pars[aln->convertState('Q')] = 0;
-                site_partial_pars[aln->convertState('E')] = 0;
-                return; // Glutamine (Q) or Glutamic acid (E)
-            }
-            else if (state == 22){
-                site_partial_pars[aln->convertState('I')] = 0;
-                site_partial_pars[aln->convertState('L')] = 0;
-                return; // I or L
-            }
-            else{
-                cout << "nstates = " << nstates << "; state = " << (int) state << endl;
-                outError("Alignment contains invalid state. Please check your data!");
-                return;
-            }
-        default:
-            // unknown
-            cout << "nstates = " << nstates << "; state = " << (int) state << endl;
-            outError("Alignment contains invalid state. Please check your data!");
-            return;
-    }
-    
 }
 
 /**
@@ -918,9 +830,9 @@ int PhyloTree::computeParsimonyBranchSankoff(PhyloNeighbor *dad_branch, PhyloNod
             int ptn_start_index = ptn * nstates;
             UINT *node_branch_ptr = &tip_partial_pars[aln->ordered_pattern[ptn][dad->id]*nstates];
             UINT *dad_branch_ptr = &dad_branch->partial_pars[ptn_start_index];
-            UINT min_ptn_pars = UINT_MAX;
-            UINT br_ptn_pars = UINT_MAX;
-            for(i = 0; i < nstates; i++){
+            UINT min_ptn_pars = node_branch_ptr[0] + dad_branch_ptr[0];
+            UINT br_ptn_pars = node_branch_ptr[0];
+            for (i = 1; i < nstates; i++){
                 // min(j->i) from node_branch
                 UINT min_score = node_branch_ptr[i] + dad_branch_ptr[i];
                 if (min_score < min_ptn_pars) {
@@ -934,78 +846,35 @@ int PhyloTree::computeParsimonyBranchSankoff(PhyloNeighbor *dad_branch, PhyloNod
         }
     }  else {
         // internal node
-        switch (nstates) {
-            case 4:
-                for (ptn = 0; ptn < aln->ordered_pattern.size(); ptn++){
-                    //_pattern_pars[ptn] = 0;
-                    //if (aln->at(ptn).isConst()) continue;
-                    
-                    int ptn_start_index = ptn * 4;
-                    UINT *node_branch_ptr = &node_branch->partial_pars[ptn_start_index];
-                    UINT *dad_branch_ptr = &dad_branch->partial_pars[ptn_start_index];
-                    UINT *cost_matrix_ptr = cost_matrix;
-                    UINT min_ptn_pars = UINT_MAX;
-                    UINT br_ptn_pars = UINT_MAX;
-                    for(i = 0; i < 4; i++){
-                        // min(j->i) from node_branch
-                        UINT min_score = node_branch_ptr[0] + cost_matrix_ptr[0];
-                        UINT branch_score = cost_matrix_ptr[0];
-                        for(j = 1; j < 4; j++) {
-                            UINT value = node_branch_ptr[j] + cost_matrix_ptr[j];
-                            if (value < min_score) {
-                                branch_score = cost_matrix_ptr[j];
-                                min_score = value;
-                            }
-                        }
-                        min_score = min_score + dad_branch_ptr[i];
-                        if (min_score < min_ptn_pars) {
-                            min_ptn_pars = min_score;
-                            br_ptn_pars = branch_score;
-                        }
-                        cost_matrix_ptr += 4;
+        for (ptn = 0; ptn < aln->ordered_pattern.size(); ptn++){
+            int ptn_start_index = ptn * nstates;
+            UINT *node_branch_ptr = &node_branch->partial_pars[ptn_start_index];
+            UINT *dad_branch_ptr = &dad_branch->partial_pars[ptn_start_index];
+            UINT *cost_matrix_ptr = cost_matrix;
+            UINT min_ptn_pars = UINT_MAX;
+            UINT br_ptn_pars = UINT_MAX;
+            for(i = 0; i < nstates; i++){
+                // min(j->i) from node_branch
+                UINT min_score = node_branch_ptr[0] + cost_matrix_ptr[0];
+                UINT branch_score = cost_matrix_ptr[0];
+                for(j = 1; j < nstates; j++) {
+                    UINT value = node_branch_ptr[j] + cost_matrix_ptr[j];
+                    if (value < min_score) {
+                        min_score = value;
+                        branch_score = cost_matrix_ptr[j];
                     }
-                    //_pattern_pars[ptn] = min_ptn_pars;
-                    tree_pars += min_ptn_pars * aln->ordered_pattern[ptn].frequency;
-                    branch_pars += br_ptn_pars * aln->ordered_pattern[ptn].frequency;
-                    //                cout << min_ptn_pars << " ";
-                }
-                break;
-                
-            default:
-                for (ptn = 0; ptn < aln->ordered_pattern.size(); ptn++){
-                    //_pattern_pars[ptn] = 0;
-                    //if (aln->at(ptn).isConst()) continue;
                     
-                    int ptn_start_index = ptn * nstates;
-                    UINT *node_branch_ptr = &node_branch->partial_pars[ptn_start_index];
-                    UINT *dad_branch_ptr = &dad_branch->partial_pars[ptn_start_index];
-                    UINT *cost_matrix_ptr = cost_matrix;
-                    UINT min_ptn_pars = UINT_MAX;
-                    UINT br_ptn_pars = UINT_MAX;
-                    for(i = 0; i < nstates; i++){
-                        // min(j->i) from node_branch
-                        UINT min_score = node_branch_ptr[0] + cost_matrix_ptr[0];
-                        UINT branch_score = cost_matrix_ptr[0];
-                        for(j = 1; j < nstates; j++) {
-                            UINT value = node_branch_ptr[j] + cost_matrix_ptr[j];
-                            if (value < min_score) {
-                                min_score = value;
-                                branch_score = cost_matrix_ptr[j];
-                            }
-                            
-                        }
-                        min_score = min_score + dad_branch_ptr[i];
-                        if (min_score < min_ptn_pars) {
-                            min_ptn_pars = min_score;
-                            br_ptn_pars = branch_score;
-                        }
-                        cost_matrix_ptr += nstates;
-                    }
-                    //_pattern_pars[ptn] = min_ptn_pars;
-                    tree_pars += min_ptn_pars * aln->ordered_pattern[ptn].frequency;
-                    branch_pars += br_ptn_pars * aln->ordered_pattern[ptn].frequency;
                 }
-                break;
+                min_score = min_score + dad_branch_ptr[i];
+                if (min_score < min_ptn_pars) {
+                    min_ptn_pars = min_score;
+                    br_ptn_pars = branch_score;
+                }
+                cost_matrix_ptr += nstates;
+            }
+            //_pattern_pars[ptn] = min_ptn_pars;
+            tree_pars += min_ptn_pars * aln->ordered_pattern[ptn].frequency;
+            branch_pars += br_ptn_pars * aln->ordered_pattern[ptn].frequency;
         }
     }
     if (branch_subst)
