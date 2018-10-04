@@ -323,9 +323,9 @@ void PhyloTree::computeTipPartialLikelihoodPoMo(int state, double *lh, bool hype
 
 
 void PhyloTree::computeTipPartialLikelihood() {
-	if (tip_partial_lh_computed)
+	if ((tip_partial_lh_computed & 1) != 0)
 		return;
-	tip_partial_lh_computed = true;
+	tip_partial_lh_computed |= 1;
     
     
 	//-------------------------------------------------------
