@@ -1633,6 +1633,11 @@ public:
     virtual int fixNegativeBranch(bool force = false, Node *node = NULL, Node *dad = NULL);
 
     /**
+     set all branch lengths using parsimony
+     */
+    int setParsimonyBranchLengths();
+
+    /**
         set negative branch to a new len
     */
     int setNegativeBranch(bool force, double newlen, Node *node = NULL, Node *dad = NULL);
