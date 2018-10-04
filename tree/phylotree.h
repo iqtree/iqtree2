@@ -1632,6 +1632,8 @@ public:
      */
     virtual int fixNegativeBranch(bool force = false, Node *node = NULL, Node *dad = NULL);
 
+    double JukesCantorCorrection(double dist);
+                                            
     /**
      set all branch lengths using parsimony
      */

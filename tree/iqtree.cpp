@@ -616,6 +616,8 @@ void IQTree::computeInitialTree(LikelihoodKernel kernel) {
             break;
         case STT_RANDOM_TREE:
         case STT_PLL_PARSIMONY:
+            if (params->sankoff_cost_file && !cost_matrix)
+                loadCostMatrixFile(params->sankoff_cost_file);
             cout << endl;
             cout << "Create initial parsimony tree by phylogenetic likelihood library (PLL)... ";
             pllInst->randomNumberSeed = params->ran_seed + MPIHelper::getInstance().getProcessID();

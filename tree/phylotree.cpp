@@ -3141,7 +3141,7 @@ int PhyloTree::fixNegativeBranch(bool force, Node *node, Node *dad) {
     }
     int fixed = 0;
 
-    if (force)
+    if (force && !cost_matrix)
         return setParsimonyBranchLengths();
     
     FOR_NEIGHBOR_IT(node, dad, it){
