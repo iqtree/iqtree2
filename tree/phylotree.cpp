@@ -2311,6 +2311,8 @@ double PhyloTree::computeBayesianBranchLength(PhyloNeighbor *dad_branch, PhyloNo
 }
 
 double PhyloTree::correctBranchLengthF81(double observedBran, double alpha) {
+    if (!model)
+        return JukesCantorCorrection(observedBran, alpha);
     double H = 0.0;
     double correctedBranLen;
     for (int i = 0; i < model->num_states; i++) {
@@ -2329,6 +2331,10 @@ double PhyloTree::correctBranchLengthF81(double observedBran, double alpha) {
         correctedBranLen = H * alpha * (pow(observedBran, -1 / alpha) - 1);
     }
 
+    // Branch lengths under PoMo are #events, which is ~N^2 * #substitutions
+    if (aln->seq_type == SEQ_POMO)
+        correctedBranLen *= aln->virtual_pop_size * aln->virtual_pop_size;
+    
     if (correctedBranLen < params->min_branch_length)
     	correctedBranLen = params->min_branch_length;
     if (correctedBranLen > params->max_branch_length)
@@ -3144,6 +3150,8 @@ int PhyloTree::fixNegativeBranch(bool force, Node *node, Node *dad) {
     if (force && !cost_matrix)
         return setParsimonyBranchLengths();
     
+    double alpha = (site_rate) ? site_rate->getGammaShape() : 1.0;
+    
     FOR_NEIGHBOR_IT(node, dad, it){
     if ((*it)->length < 0.0 || force) { // negative branch length detected
         int branch_subst;
@@ -3151,16 +3159,8 @@ int PhyloTree::fixNegativeBranch(bool force, Node *node, Node *dad) {
         // first compute the observed parsimony distance
         double branch_length = (branch_subst > 0) ? ((double) branch_subst / getAlnNSite()) : (1.0 / getAlnNSite());
 
-        // Branch lengths under PoMo are #events, which is ~N^2 * #substitutions
-        if (aln->seq_type == SEQ_POMO)
-            branch_length *= aln->virtual_pop_size * aln->virtual_pop_size;
-
-        // now correct Juke-Cantor formula
-        double z = (double) aln->num_states / (aln->num_states - 1);
-        double x = 1.0 - (z * branch_length);
-        if (x > 0) branch_length = -log(x) / z;
-        if (branch_length < params->min_branch_length)
-            branch_length = params->min_branch_length;
+        branch_length = correctBranchLengthF81(branch_length, alpha);
+        
 //        if (verbose_mode >= VB_DEBUG)
 //        	cout << "Negative branch length " << (*it)->length << " was set to ";
         //(*it)->length = fixed_length;
