@@ -763,7 +763,8 @@ public:
      * e.g. (1,0,0,0) for A,  (0,0,0,1) for T
      */
     double *tip_partial_lh;
-    bool tip_partial_lh_computed;
+    int tip_partial_lh_computed;
+    UINT *tip_partial_pars;
 
     bool ptn_freq_computed;
 
@@ -823,6 +824,7 @@ public:
   // hypergeometric sampling.
   void computeTipPartialLikelihoodPoMo(int state, double *lh, bool hyper=false);
     void computeTipPartialLikelihood();
+    void computeTipPartialParsimony();
     void computePtnInvar();
     void computePtnFreq();
 

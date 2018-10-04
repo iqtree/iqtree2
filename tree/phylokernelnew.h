@@ -1111,7 +1111,7 @@ template<class VectorClass>
 #endif
 void PhyloTree::computeTraversalInfo(PhyloNode *node, PhyloNode *dad, bool compute_partial_lh) {
 
-    if (!tip_partial_lh_computed)
+    if ((tip_partial_lh_computed & 1) == 0)
         computeTipPartialLikelihood();
 
     traversal_info.clear();
