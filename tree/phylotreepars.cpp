@@ -310,49 +310,141 @@ void PhyloTree::computeAllPartialPars(PhyloNode *node, PhyloNode *dad) {
 	}
 }
 
+double PhyloTree::JukesCantorCorrection(double dist) {
+    double z = (double) aln->num_states / (aln->num_states - 1);
+    double x = 1.0 - (z * dist);
+    if (x > 0) dist = -log(x) / z;
+    // Branch lengths under PoMo are #events, which is ~N^2 * #substitutions
+    if (aln->seq_type == SEQ_POMO)
+        dist *= aln->virtual_pop_size * aln->virtual_pop_size;
+    if (dist < Params::getInstance().min_branch_length)
+        dist = Params::getInstance().min_branch_length;
+    return dist;
+}
+
 int PhyloTree::setParsimonyBranchLengths() {
     
     NodeVector nodes1, nodes2;
     getBranches(nodes1, nodes2);
+    clearAllPartialLH();
     
     int sum_score = 0;
     double persite = 1.0/getAlnNSite();
-    int pars_score;
-    int i;
-    int fixed = 0;
+//    int pars_score;
+    //int i, state;
+
+    PhyloNeighbor *dad_branch = (PhyloNeighbor*)nodes1[0]->findNeighbor(nodes2[0]);
+    PhyloNeighbor *node_branch = (PhyloNeighbor*)nodes2[0]->findNeighbor(nodes1[0]);
+    PhyloNode *dad =  (PhyloNode*) nodes1[0];
+    PhyloNode *node =  (PhyloNode*) nodes2[0];
+
+    // determine state of the root
+    int branch_subst = 0;
+    int pars_score = computeParsimonyBranchFast(dad_branch, dad, &branch_subst);
+    int site, real_site;
+    int nsites = (aln->num_parsimony_sites + UINT_BITS-1) / UINT_BITS;
+    int nstates = aln->getMaxNumStates();
+
+    vector<vector<StateType> > sequences;
+    sequences.resize(nodeNum, vector<StateType>(aln->num_parsimony_sites, aln->STATE_UNKNOWN));
+    vector<bool> done;
+    done.resize(nodeNum, false);
+    done[node->id] = done[dad->id] = true;
+
+    int subst = 0;
     
-    // first determine branch length by parsimony
-    for (i = 0; i < nodes1.size(); i++) {
-        int branch_subst;
-        PhyloNeighbor *nei = (PhyloNeighbor*)nodes1[i]->findNeighbor(nodes2[i]);
-        PhyloNode *node =  (PhyloNode*) nodes1[i];
-        pars_score = computeParsimonyBranch(nei, node, &branch_subst);
-        if (branch_subst == 0) branch_subst = 1;
-        sum_score += branch_subst;
-        double branch_length = branch_subst*persite;
-        // Branch lengths under PoMo are #events, which is ~N^2 * #substitutions
-        if (aln->seq_type == SEQ_POMO)
-            branch_length *= aln->virtual_pop_size * aln->virtual_pop_size;
-        fixOneNegativeBranch(branch_length, nei, node);
-        fixed++;
+    for (site = 0, real_site = 0; site < nsites; site++) {
+        size_t offset = nstates*site;
+        UINT *x = dad_branch->partial_pars + offset;
+        UINT *y = node_branch->partial_pars + offset;
+        UINT w = x[0] & y[0];
+        int state;
+        for (state = 1; state < nstates; state++) {
+            w |= x[state] & y[state];
+        }
+        UINT bit = 1;
+        for (int s = 0; s < UINT_BITS && real_site < aln->num_parsimony_sites; s++, bit = bit << 1, real_site++)
+        if (w & bit) {
+            // intersection is non-empty
+            for (state = 0; state < nstates; state++)
+                if ((x[state] & bit) && (y[state] & bit)) {
+                    // assign the first state in the intersection
+                    sequences[node->id][real_site] = sequences[dad->id][real_site] = state;
+                    break;
+                }
+        } else {
+            // intersection is empty
+            subst++;
+            for (state = 0; state < nstates; state++)
+                if (x[state] & bit) {
+                    // assign the first admissible state
+                    sequences[node->id][real_site] = state;
+                    break;
+                }
+            for (state = 0; state < nstates; state++)
+                if (y[state] & bit) {
+                    // assign the first admissible state
+                    sequences[dad->id][real_site] = state;
+                    break;
+                }
+        }
+    }
+
+    ASSERT(subst == branch_subst);
+    sum_score += subst;
+    fixOneNegativeBranch(JukesCantorCorrection(subst*persite), dad_branch, dad);
+    
+    
+    // walking down the tree to assign node states
+    for (int id = 1; id < nodes1.size(); id++) {
+        // arrange such that states of dad are known
+        if (done[nodes1[id]->id]) {
+            dad = (PhyloNode*)nodes1[id];
+            node = (PhyloNode*)nodes2[id];
+        } else {
+            ASSERT(done[nodes2[id]->id]);
+            dad = (PhyloNode*)nodes2[id];
+            node = (PhyloNode*)nodes1[id];
+        }
+        done[node->id] = true;
+        // now determine states of node
+        dad_branch = (PhyloNeighbor*)dad->findNeighbor(node);
+        node_branch = (PhyloNeighbor*)node->findNeighbor(dad);
+        subst = 0;
+        for (site = 0, real_site = 0; site < nsites; site++) {
+            size_t offset = nstates*site;
+            UINT *x = dad_branch->partial_pars + offset;
+            //UINT *y = node_branch->partial_pars + offset;
+            int state;
+            UINT bit = 1;
+            for (int s = 0; s < UINT_BITS && real_site < aln->num_parsimony_sites; s++, bit = bit << 1, real_site++) {
+                StateType dad_state = sequences[dad->id][real_site];
+                ASSERT(dad_state < nstates);
+                //ASSERT(y[dad_state] & bit);
+                if (x[dad_state] & bit) {
+                    // same state as dad
+                    sequences[node->id][real_site] = dad_state;
+                } else {
+                    // different state from dad
+                    subst++;
+                    for (state = 0; state < nstates; state++)
+                        if (x[state] & bit) {
+                            // assign the first admissible state
+                            sequences[node->id][real_site] = state;
+                            break;
+                        }
+                }
+            }
+        }
+        fixOneNegativeBranch(JukesCantorCorrection(subst*persite), dad_branch, dad);
+//        computeParsimonyBranchFast(dad_branch, dad, &branch_subst);
+//        ASSERT(subst <= branch_subst);
+        sum_score += subst;
     }
     
-    // scaling factor if sum parsimony > true parsimony score
-    double scale = (double)pars_score/sum_score;
+    ASSERT(pars_score == sum_score);
     
-    for (i = 0; i < nodes1.size(); i++) {
-        PhyloNeighbor *nei = (PhyloNeighbor*)nodes1[i]->findNeighbor(nodes2[i]);
-        PhyloNode *node =  (PhyloNode*) nodes1[i];
-        double branch_length = nei->length*scale;
-        // now correct Juke-Cantor formula
-        double z = (double) aln->num_states / (aln->num_states - 1);
-        double x = 1.0 - (z * branch_length);
-        if (x > 0) branch_length = -log(x) / z;
-        if (branch_length < params->min_branch_length)
-            branch_length = params->min_branch_length;
-        fixOneNegativeBranch(branch_length, nei, node);
-    }
-    return fixed;
+    return nodes1.size();
 }
 
 
@@ -980,6 +1072,8 @@ int PhyloTree::computeParsimonyTree(const char *out_prefix, Alignment *alignment
 
     UINT *tmp_partial_pars;
     tmp_partial_pars = newBitsBlock();
+    if (size == 3)
+        best_pars_score = computeParsimony();
 
     // stepwise adding the next taxon for the remaining taxa
     for (; leafNum < size; leafNum++) {

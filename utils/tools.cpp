@@ -857,7 +857,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.numSmoothTree = 1;
     params.nni5 = true;
     params.nni5_num_eval = 1;
-    params.brlen_num_traversal = 2;
+    params.brlen_num_traversal = 1;
     params.leastSquareBranch = false;
     params.pars_branch_length = false;
     params.bayes_branch_length = false;
