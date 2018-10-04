@@ -1099,7 +1099,7 @@ double PhyloTree::computeNonrevLikelihoodBranchGenericSIMD(PhyloNeighbor *dad_br
     tree_lh = horizontal_add(all_tree_lh);
 
     if (std::isnan(tree_lh) || std::isinf(tree_lh)) {
-        outWarning("Numerical underflow for non-rev lh-branch");
+        outWarning("Numerical underflow for non-rev lh-branch " + aln->name);
     }
 
     // arbitrarily fix tree_lh if underflown for some sites

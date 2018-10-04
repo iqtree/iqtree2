@@ -3141,6 +3141,9 @@ int PhyloTree::fixNegativeBranch(bool force, Node *node, Node *dad) {
     }
     int fixed = 0;
 
+    if (force)
+        return setParsimonyBranchLengths();
+    
     FOR_NEIGHBOR_IT(node, dad, it){
     if ((*it)->length < 0.0 || force) { // negative branch length detected
         int branch_subst;

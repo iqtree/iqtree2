@@ -310,6 +310,52 @@ void PhyloTree::computeAllPartialPars(PhyloNode *node, PhyloNode *dad) {
 	}
 }
 
+int PhyloTree::setParsimonyBranchLengths() {
+    
+    NodeVector nodes1, nodes2;
+    getBranches(nodes1, nodes2);
+    
+    int sum_score = 0;
+    double persite = 1.0/getAlnNSite();
+    int pars_score;
+    int i;
+    int fixed = 0;
+    
+    // first determine branch length by parsimony
+    for (i = 0; i < nodes1.size(); i++) {
+        int branch_subst;
+        PhyloNeighbor *nei = (PhyloNeighbor*)nodes1[i]->findNeighbor(nodes2[i]);
+        PhyloNode *node =  (PhyloNode*) nodes1[i];
+        pars_score = computeParsimonyBranch(nei, node, &branch_subst);
+        if (branch_subst == 0) branch_subst = 1;
+        sum_score += branch_subst;
+        double branch_length = branch_subst*persite;
+        // Branch lengths under PoMo are #events, which is ~N^2 * #substitutions
+        if (aln->seq_type == SEQ_POMO)
+            branch_length *= aln->virtual_pop_size * aln->virtual_pop_size;
+        fixOneNegativeBranch(branch_length, nei, node);
+        fixed++;
+    }
+    
+    // scaling factor if sum parsimony > true parsimony score
+    double scale = (double)pars_score/sum_score;
+    
+    for (i = 0; i < nodes1.size(); i++) {
+        PhyloNeighbor *nei = (PhyloNeighbor*)nodes1[i]->findNeighbor(nodes2[i]);
+        PhyloNode *node =  (PhyloNode*) nodes1[i];
+        double branch_length = nei->length*scale;
+        // now correct Juke-Cantor formula
+        double z = (double) aln->num_states / (aln->num_states - 1);
+        double x = 1.0 - (z * branch_length);
+        if (x > 0) branch_length = -log(x) / z;
+        if (branch_length < params->min_branch_length)
+            branch_length = params->min_branch_length;
+        fixOneNegativeBranch(branch_length, nei, node);
+    }
+    return fixed;
+}
+
+
 /****************************************************************************
  Sankoff parsimony function
  ****************************************************************************/
