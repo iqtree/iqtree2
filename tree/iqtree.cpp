@@ -553,10 +553,13 @@ void IQTree::computeInitialTree(LikelihoodKernel kernel) {
     if (params->stop_condition == SC_FIXED_ITERATION && params->numNNITrees > params->min_iterations)
     	params->numNNITrees = max(params->min_iterations, 1);
     int fixed_number = 0;
-    setParsimonyKernel(kernel);
 
+    if (params->sankoff_cost_file && !cost_matrix)
+        loadCostMatrixFile(params->sankoff_cost_file);
     if (aln->ordered_pattern.empty())
         aln->orderPatternByNumChars(PAT_VARIANT);
+
+    setParsimonyKernel(kernel);
 
     if (params->user_file) {
         // start the search with user-defined tree
@@ -577,8 +580,6 @@ void IQTree::computeInitialTree(LikelihoodKernel kernel) {
         }
         cout << endl;
         setAlignment(aln);
-        if (params->sankoff_cost_file && !cost_matrix)
-            loadCostMatrixFile(params->sankoff_cost_file);
         if (isSuperTree())
         	wrapperFixNegativeBranch(params->fixed_branch_length == BRLEN_OPTIMIZE &&
                                      params->partition_type != TOPO_UNLINKED);
@@ -601,8 +602,6 @@ void IQTree::computeInitialTree(LikelihoodKernel kernel) {
             start_tree = STT_PARSIMONY;
         switch (start_tree) {
         case STT_PARSIMONY:
-            if (params->sankoff_cost_file && !cost_matrix)
-                loadCostMatrixFile(params->sankoff_cost_file);
             //initCostMatrix(CM_UNIFORM);
             // Create parsimony tree using IQ-Tree kernel
             cout << "Creating fast initial parsimony tree by random order stepwise addition..." << endl;
@@ -616,8 +615,6 @@ void IQTree::computeInitialTree(LikelihoodKernel kernel) {
             break;
         case STT_RANDOM_TREE:
         case STT_PLL_PARSIMONY:
-            if (params->sankoff_cost_file && !cost_matrix)
-                loadCostMatrixFile(params->sankoff_cost_file);
             cout << endl;
             cout << "Create initial parsimony tree by phylogenetic likelihood library (PLL)... ";
             pllInst->randomNumberSeed = params->ran_seed + MPIHelper::getInstance().getProcessID();

@@ -26,6 +26,13 @@
 #endif
 
 void PhyloTree::setParsimonyKernelSSE() {
+    if (cost_matrix) {
+        // Sankoff kernel
+        computeParsimonyBranchPointer = &PhyloTree::computeParsimonyBranchSankoffSIMD<Vec4ui>;
+        computePartialParsimonyPointer = &PhyloTree::computePartialParsimonySankoffSIMD<Vec4ui>;
+        return;
+    }
+    // Fitch kernel
 	computeParsimonyBranchPointer = &PhyloTree::computeParsimonyBranchFastSIMD<Vec4ui>;
     computePartialParsimonyPointer = &PhyloTree::computePartialParsimonyFastSIMD<Vec4ui>;
 }

@@ -74,32 +74,6 @@ const int SPR_DEPTH = 2;
 
 //using namespace Eigen;
 
-inline size_t get_safe_upper_limit(size_t cur_limit) {
-	if (Params::getInstance().SSE >= LK_AVX512)
-		// AVX-512
-		return ((cur_limit+7)/8)*8;
-	else
-	if (Params::getInstance().SSE >= LK_AVX)
-		// AVX
-		return ((cur_limit+3)/4)*4;
-	else
-		// SSE
-		return ((cur_limit+1)/2)*2;
-}
-
-inline size_t get_safe_upper_limit_float(size_t cur_limit) {
-	if (Params::getInstance().SSE >= LK_AVX512)
-		// AVX-512
-		return ((cur_limit+15)/16)*16;
-	else
-	if (Params::getInstance().SSE >= LK_AVX)
-		// AVX
-		return ((cur_limit+7)/8)*8;
-	else
-		// SSE
-		return ((cur_limit+3)/4)*4;
-}
-
 template< class T>
 inline T *aligned_alloc(size_t size) {
 	size_t MEM_ALIGNMENT = (Params::getInstance().SSE >= LK_AVX512) ? 64 : ((Params::getInstance().SSE >= LK_AVX) ? 32 : 16);
@@ -631,6 +605,9 @@ public:
     template<class VectorClass>
     void computePartialParsimonyFastSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad);
 
+    template<class VectorClass>
+    void computePartialParsimonySankoffSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad);
+
     void computeReversePartialParsimony(PhyloNode *node, PhyloNode *dad);
 
     typedef int (PhyloTree::*ComputeParsimonyBranchType)(PhyloNeighbor *, PhyloNode *, int *);
@@ -649,6 +626,8 @@ public:
     template<class VectorClass>
     int computeParsimonyBranchFastSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst = NULL);
 
+    template<class VectorClass>
+    int computeParsimonyBranchSankoffSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst = NULL);
 
 //    void printParsimonyStates(PhyloNeighbor *dad_branch = NULL, PhyloNode *dad = NULL);
 
@@ -1440,6 +1419,11 @@ public:
      * frequencies of alignment patterns, used as buffer for likelihood computation
      */
     double *ptn_freq;
+    
+    /**
+     * frequencies of aln->ordered_pattern, used as buffer for parsimony computation
+     */
+    UINT *ptn_freq_pars;
 
     /**
      * used as buffer for faster likelihood computation

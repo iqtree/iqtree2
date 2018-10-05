@@ -50,7 +50,26 @@ void PhyloTree::setNumThreads(int num_threads) {
 }
 
 void PhyloTree::setParsimonyKernel(LikelihoodKernel lk) {
-    // set parsimony kernel
+    
+    if (cost_matrix) {
+        // Sankoff parsimony kernel
+        if (lk < LK_SSE2) {
+            computeParsimonyBranchPointer = &PhyloTree::computeParsimonyBranchSankoff;
+            computePartialParsimonyPointer = &PhyloTree::computePartialParsimonySankoff;
+            return;
+        }
+        if (lk >= LK_AVX) {
+            setParsimonyKernelAVX();
+            return;
+        }
+        if (lk >= LK_SSE2) {
+            setParsimonyKernelSSE();
+            return;
+        }
+        ASSERT(0);
+        return;
+    }
+    // set Fitch parsimony kernel
     if (lk < LK_SSE2) {
         computeParsimonyBranchPointer = &PhyloTree::computeParsimonyBranchFast;
         computePartialParsimonyPointer = &PhyloTree::computePartialParsimonyFast;

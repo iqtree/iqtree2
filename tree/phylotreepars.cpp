@@ -560,6 +560,16 @@ void PhyloTree::computeTipPartialParsimony() {
     tip_partial_lh_computed |= 2;
     
     int i, state, nstates = aln->num_states;
+
+    size_t nptn = aln->ordered_pattern.size();
+    size_t maxptn = get_safe_upper_limit_float(nptn);
+    int ptn;
+    for (ptn = 0; ptn < nptn; ptn++)
+        ptn_freq_pars[ptn] = aln->ordered_pattern[ptn].frequency;
+    for (ptn = nptn; ptn < maxptn; ptn++)
+        ptn_freq_pars[ptn] = 0;
+
+
     ASSERT(tip_partial_pars);
     // ambiguous characters
     int ambi_aa[] = {

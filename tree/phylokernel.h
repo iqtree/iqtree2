@@ -1838,5 +1838,283 @@ int PhyloTree::computeParsimonyBranchFastSIMD(PhyloNeighbor *dad_branch, PhyloNo
     return score;
 }
 
+/****************************************************************************
+ Sankoff parsimony function
+ ****************************************************************************/
+
+template<class VectorClass>
+void PhyloTree::computePartialParsimonySankoffSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad){
+    // don't recompute the parsimony
+    if (dad_branch->partial_lh_computed & 2)
+        return;
+    
+    Node *node = dad_branch->node;
+    //assert(node->degree() <= 3);
+    /*
+     if(aln->num_states != cost_nstates){
+     cout << "Your cost matrix is not compatible with the alignment"
+     << " in terms of number of states. Please check!" << endl;
+     exit(1);
+     }
+     */
+    int nstates = aln->num_states;
+    assert(dad_branch->partial_pars);
+    
+    int pars_block_size = getBitsBlockSize();
+    
+    
+    // internal node
+    UINT i, j, ptn;
+    
+    UINT * partial_pars = dad_branch->partial_pars;
+    memset(partial_pars, 0, sizeof(UINT)*pars_block_size);
+    VectorClass *tip_buffer = aligned_alloc<VectorClass>(nstates*2);
+    
+    PhyloNeighbor *left = NULL, *right = NULL;
+    
+    FOR_NEIGHBOR_IT(node, dad, it)
+    if ((*it)->node->name != ROOT_NAME) {
+        if (!(*it)->node->isLeaf())
+            computePartialParsimonySankoffSIMD<VectorClass>((PhyloNeighbor*) (*it), (PhyloNode*) node);
+        if (!left)
+            left = ((PhyloNeighbor*)*it);
+        else
+            right = ((PhyloNeighbor*)*it);
+    }
+    
+    if (!left->node->isLeaf() && right->node->isLeaf()) {
+        // swap leaf and internal node
+        PhyloNeighbor *tmp = left;
+        left = right;
+        right = tmp;
+    }
+    ASSERT(node->degree() >= 3);
+    
+    if (node->degree() > 3) {
+        // multifurcating node
+        for (ptn = 0; ptn < aln->ordered_pattern.size(); ptn+=VectorClass::size()) {
+            int ptn_start_index = ptn*nstates;
+            VectorClass *partial_pars_ptr = (VectorClass*)&partial_pars[ptn_start_index];
+            
+            FOR_NEIGHBOR_IT(node, dad, it) if ((*it)->node->name != ROOT_NAME) {
+                if ((*it)->node->isLeaf()) {
+                    // leaf node
+                    for (i = 0; i < VectorClass::size(); i++) {
+                        UINT *tip_buffer_ptr = (UINT*)tip_buffer + i;
+                        UINT *partial_pars_child_ptr = &tip_partial_pars[aln->ordered_pattern[ptn+i][(*it)->node->id]*nstates];
+                        for (j = 0; j < nstates; j++, tip_buffer_ptr += VectorClass::size())
+                            *tip_buffer_ptr = partial_pars_child_ptr[j];
+                    }
+                    
+                    for (i = 0; i < nstates; i++){
+                        partial_pars_ptr[i] += tip_buffer[i];
+                    }
+                } else {
+                    // internal node
+                    VectorClass *partial_pars_child_ptr = (VectorClass*)&((PhyloNeighbor*) (*it))->partial_pars[ptn_start_index];
+                    UINT *cost_matrix_ptr = cost_matrix;
+                    
+                    for (i = 0; i < nstates; i++){
+                        // min(j->i) from child_branch
+                        VectorClass min_child_ptn_pars = partial_pars_child_ptr[0] + cost_matrix_ptr[0];
+                        for(j = 1; j < nstates; j++) {
+                            min_child_ptn_pars = min(partial_pars_child_ptr[j] + cost_matrix_ptr[j], min_child_ptn_pars);
+                        }
+                        partial_pars_ptr[i] += min_child_ptn_pars;
+                        cost_matrix_ptr += nstates;
+                    }
+                }
+            }
+        }
+    } else if (left->node->isLeaf() && right->node->isLeaf()) {
+        // tip-tip case
+        VectorClass *tip_buffer_right = tip_buffer + nstates;
+        
+        for (ptn = 0; ptn < aln->ordered_pattern.size(); ptn+=VectorClass::size()){
+            // ignore const ptn because it does not affect pars score
+            //if (aln->at(ptn).isConst()) continue;
+            int ptn_start_index = ptn*nstates;
+            
+            // load data for tip
+            for (i = 0; i < VectorClass::size(); i++) {
+                UINT *left_ptr = &tip_partial_pars[aln->ordered_pattern[ptn+i][left->node->id]*nstates];
+                UINT *right_ptr = &tip_partial_pars[aln->ordered_pattern[ptn+i][right->node->id]*nstates];
+                UINT *tip_buffer_ptr = (UINT*)tip_buffer + i;
+                UINT *tip_buffer_right_ptr = (UINT*)tip_buffer_right + i;
+                for (j = 0; j < nstates; j++) {
+                    *tip_buffer_ptr = left_ptr[j];
+                    *tip_buffer_right_ptr = right_ptr[j];
+                    tip_buffer_ptr += VectorClass::size();
+                    tip_buffer_right_ptr += VectorClass::size();
+                }
+            }
+            VectorClass *partial_pars_ptr = (VectorClass*)&partial_pars[ptn_start_index];
+            
+            for (i = 0; i < nstates; i++){
+                // min(j->i) from child_branch
+                partial_pars_ptr[i] = tip_buffer[i] + tip_buffer_right[i];
+            }
+        }
+    } else if (left->node->isLeaf() && !right->node->isLeaf()) {
+        // tip-inner case
+        for (ptn = 0; ptn < aln->ordered_pattern.size(); ptn+=VectorClass::size()){
+            // ignore const ptn because it does not affect pars score
+            //if (aln->at(ptn).isConst()) continue;
+            int ptn_start_index = ptn*nstates;
+            
+            for (i = 0; i < VectorClass::size(); i++) {
+                UINT *left_ptr = &tip_partial_pars[aln->ordered_pattern[ptn+i][left->node->id]*nstates];
+                UINT *tip_buffer_ptr = (UINT*)tip_buffer + i;
+                for (j = 0; j < nstates; j++) {
+                    *tip_buffer_ptr = left_ptr[j];
+                    tip_buffer_ptr += VectorClass::size();
+                }
+            }
+            
+            VectorClass *right_ptr = (VectorClass*)&right->partial_pars[ptn_start_index];
+            VectorClass *partial_pars_ptr = (VectorClass*)&partial_pars[ptn_start_index];
+            UINT *cost_matrix_ptr = cost_matrix;
+            VectorClass right_contrib;
+            
+            for(i = 0; i < nstates; i++){
+                // min(j->i) from child_branch
+                right_contrib = right_ptr[0] + cost_matrix_ptr[0];
+                for(j = 1; j < nstates; j++) {
+                    right_contrib = min(right_ptr[j] + cost_matrix_ptr[j], right_contrib);
+                }
+                partial_pars_ptr[i] = tip_buffer[i] + right_contrib;
+                cost_matrix_ptr += nstates;
+            }
+        }
+    } else {
+        // inner-inner case
+        for (ptn = 0; ptn < aln->ordered_pattern.size(); ptn+=VectorClass::size()){
+            // ignore const ptn because it does not affect pars score
+            //if (aln->at(ptn).isConst()) continue;
+            int ptn_start_index = ptn*nstates;
+            
+            VectorClass *left_ptr = (VectorClass*)&left->partial_pars[ptn_start_index];
+            VectorClass *right_ptr = (VectorClass*)&right->partial_pars[ptn_start_index];
+            VectorClass *partial_pars_ptr = (VectorClass*)&partial_pars[ptn_start_index];
+            UINT *cost_matrix_ptr = cost_matrix;
+            VectorClass left_contrib, right_contrib;
+            
+            for(i = 0; i < nstates; i++){
+                // min(j->i) from child_branch
+                left_contrib = left_ptr[0] + cost_matrix_ptr[0];
+                right_contrib = right_ptr[0] + cost_matrix_ptr[0];
+                for(j = 1; j < nstates; j++) {
+                    left_contrib = min(left_ptr[j] + cost_matrix_ptr[j], left_contrib);
+                    right_contrib = min(right_ptr[j] + cost_matrix_ptr[j], right_contrib);
+                }
+                partial_pars_ptr[i] = left_contrib+right_contrib;
+                cost_matrix_ptr += nstates;
+            }
+        }
+        
+    }
+    
+    dad_branch->partial_lh_computed |= 2;
+    aligned_free(tip_buffer);
+}
+
+template<class VectorClass>
+int PhyloTree::computeParsimonyBranchSankoffSIMD(PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst) {
+    
+    if ((tip_partial_lh_computed & 2) == 0)
+        computeTipPartialParsimony();
+    
+    PhyloNode *node = (PhyloNode*) dad_branch->node;
+    PhyloNeighbor *node_branch = (PhyloNeighbor*) node->findNeighbor(dad);
+    assert(node_branch);
+    
+    if (!central_partial_pars)
+        initializeAllPartialPars();
+    
+    // swap node and dad if dad is a leaf
+    if (node->isLeaf()) {
+        PhyloNode *tmp_node = dad;
+        dad = node;
+        node = tmp_node;
+        PhyloNeighbor *tmp_nei = dad_branch;
+        dad_branch = node_branch;
+        node_branch = tmp_nei;
+    }
+    
+    //int nptn = aln->size();
+    //    if(!_pattern_pars) _pattern_pars = aligned_alloc<BootValTypePars>(nptn+VCSIZE_USHORT);
+    //    memset(_pattern_pars, 0, sizeof(BootValTypePars) * (nptn+VCSIZE_USHORT));
+    
+    if ((dad_branch->partial_lh_computed & 2) == 0 && !node->isLeaf())
+        computePartialParsimonySankoffSIMD<VectorClass>(dad_branch, dad);
+    if ((node_branch->partial_lh_computed & 2) == 0 && !dad->isLeaf())
+        computePartialParsimonySankoffSIMD<VectorClass>(node_branch, node);
+    
+    // now combine likelihood at the branch
+    VectorClass tree_pars = 0;
+    int nstates = aln->num_states;
+    UINT i, j, ptn;
+    VectorClass branch_pars = 0;
+    
+    if (dad->isLeaf()) {
+        VectorClass *tip_buffer = aligned_alloc<VectorClass>(nstates);
+        // external node
+        for (ptn = 0; ptn < aln->ordered_pattern.size(); ptn+=VectorClass::size()){
+            int ptn_start_index = ptn * nstates;
+            for (i = 0; i < VectorClass::size(); i++) {
+                UINT *node_branch_ptr = &tip_partial_pars[aln->ordered_pattern[ptn+i][dad->id]*nstates];
+                UINT *tip_buffer_ptr = (UINT*)tip_buffer + i;
+                for (j = 0; j < nstates; j++, tip_buffer_ptr += VectorClass::size()) {
+                    *tip_buffer_ptr = node_branch_ptr[j];
+                }
+            }
+            VectorClass *dad_branch_ptr = (VectorClass*)&dad_branch->partial_pars[ptn_start_index];
+            VectorClass min_ptn_pars = tip_buffer[0] + dad_branch_ptr[0];
+            VectorClass br_ptn_pars = tip_buffer[0];
+            for (i = 1; i < nstates; i++){
+                // min(j->i) from node_branch
+                VectorClass min_score = tip_buffer[i] + dad_branch_ptr[i];
+                br_ptn_pars = select(min_score < min_ptn_pars, tip_buffer[i], br_ptn_pars);
+                min_ptn_pars = min(min_ptn_pars, min_score);
+            }
+            //_pattern_pars[ptn] = min_ptn_pars;
+            tree_pars += min_ptn_pars * VectorClass().load_a(&ptn_freq_pars[ptn]);
+            branch_pars += br_ptn_pars * VectorClass().load_a(&ptn_freq_pars[ptn]);
+        }
+        aligned_free(tip_buffer);
+    }  else {
+        // internal node
+        for (ptn = 0; ptn < aln->ordered_pattern.size(); ptn+=VectorClass::size()){
+            int ptn_start_index = ptn * nstates;
+            VectorClass *node_branch_ptr = (VectorClass*)&node_branch->partial_pars[ptn_start_index];
+            VectorClass *dad_branch_ptr = (VectorClass*)&dad_branch->partial_pars[ptn_start_index];
+            UINT *cost_matrix_ptr = cost_matrix;
+            VectorClass min_ptn_pars = UINT_MAX;
+            VectorClass br_ptn_pars = UINT_MAX;
+            for(i = 0; i < nstates; i++){
+                // min(j->i) from node_branch
+                VectorClass min_score = node_branch_ptr[0] + cost_matrix_ptr[0];
+                VectorClass branch_score = cost_matrix_ptr[0];
+                for(j = 1; j < nstates; j++) {
+                    VectorClass value = node_branch_ptr[j] + cost_matrix_ptr[j];
+                    branch_score = select(value < min_score, cost_matrix_ptr[j], branch_score);
+                    min_score = min(value, min_score);                    
+                }
+                min_score = min_score + dad_branch_ptr[i];
+                br_ptn_pars = select(min_score < min_ptn_pars, branch_score, br_ptn_pars);
+                min_ptn_pars = min(min_score, min_ptn_pars);
+                cost_matrix_ptr += nstates;
+            }
+            //_pattern_pars[ptn] = min_ptn_pars;
+            tree_pars += min_ptn_pars * VectorClass().load_a(&ptn_freq_pars[ptn]);
+            branch_pars += br_ptn_pars * VectorClass().load_a(&ptn_freq_pars[ptn]);
+        }
+    }
+    if (branch_subst)
+        *branch_subst = horizontal_add(branch_pars);
+    //    cout << endl;
+    return horizontal_add(tree_pars);
+}
+
 
 #endif /* PHYLOKERNEL_H_ */
