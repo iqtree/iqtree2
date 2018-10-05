@@ -2105,6 +2105,32 @@ struct PDRelatedMeasures {
 
 
 /*--------------------------------------------------------------*/
+    
+inline size_t get_safe_upper_limit(size_t cur_limit) {
+    if (Params::getInstance().SSE >= LK_AVX512)
+        // AVX-512
+        return ((cur_limit+7)/8)*8;
+    else
+        if (Params::getInstance().SSE >= LK_AVX)
+            // AVX
+            return ((cur_limit+3)/4)*4;
+        else
+            // SSE
+            return ((cur_limit+1)/2)*2;
+}
+
+inline size_t get_safe_upper_limit_float(size_t cur_limit) {
+    if (Params::getInstance().SSE >= LK_AVX512)
+        // AVX-512
+        return ((cur_limit+15)/16)*16;
+    else
+        if (Params::getInstance().SSE >= LK_AVX)
+            // AVX
+            return ((cur_limit+7)/8)*8;
+        else
+            // SSE
+            return ((cur_limit+3)/4)*4;
+}
 /*--------------------------------------------------------------*/
 
 /**

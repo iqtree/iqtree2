@@ -84,6 +84,7 @@ void PhyloSuperTreePlen::deleteAllPartialLh() {
         (*it)->buffer_partial_lh = NULL;
 		(*it)->ptn_freq = NULL;
 		(*it)->ptn_freq_computed = false;
+        (*it)->ptn_freq_pars = NULL;
 		(*it)->ptn_invar = NULL;
         (*it)->nni_partial_lh = NULL;
         (*it)->nni_scale_num = NULL;
@@ -105,6 +106,7 @@ PhyloSuperTreePlen::~PhyloSuperTreePlen()
         (*it)->buffer_partial_lh = NULL;
 		(*it)->ptn_freq = NULL;
 		(*it)->ptn_freq_computed = false;
+        (*it)->ptn_freq_pars = NULL;
 		(*it)->ptn_invar = NULL;
         (*it)->nni_partial_lh = NULL;
         (*it)->nni_scale_num = NULL;
@@ -1608,7 +1610,10 @@ void PhyloSuperTreePlen::initializeAllPartialLh() {
         ptn_freq = aligned_alloc<double>(total_mem_size);
         ptn_freq_computed = false;
     }
+    if (!ptn_freq_pars)
+        ptn_freq_pars = aligned_alloc<UINT>(total_mem_size);
     at(part_order[0])->ptn_freq = ptn_freq;
+    at(part_order[0])->ptn_freq_pars = ptn_freq_pars;
     at(part_order[0])->ptn_freq_computed = false;
     if (!ptn_invar)
         ptn_invar = aligned_alloc<double>(total_mem_size);
@@ -1636,6 +1641,7 @@ void PhyloSuperTreePlen::initializeAllPartialLh() {
         (*it)->buffer_scale_all = (*prev_it)->buffer_scale_all + mem_size[part];
         (*it)->buffer_partial_lh = (*prev_it)->buffer_partial_lh + buffer_size[part];
 		(*it)->ptn_freq = (*prev_it)->ptn_freq + mem_size[part];
+        (*it)->ptn_freq_pars = (*prev_it)->ptn_freq_pars + mem_size[part];
 		(*it)->ptn_freq_computed = false;
 		(*it)->ptn_invar = (*prev_it)->ptn_invar + mem_size[part];
         (*it)->nni_partial_lh = (*prev_it)->nni_partial_lh + IT_NUM*block_size[part];

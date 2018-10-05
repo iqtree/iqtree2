@@ -980,6 +980,15 @@ void Alignment::orderPatternByNumChars(int pat_type) {
             pars_lower_bound[i] += num;
         }
     }
+    
+    // fill up to vectoclass with dummy pattern
+    int maxnptn = get_safe_upper_limit_float(ordered_pattern.size());
+    while (ordered_pattern.size() < maxnptn) {
+        Pattern pat;
+        pat.resize(getNSeq(), STATE_UNKNOWN);
+        pat.frequency = 0;
+        ordered_pattern.push_back(pat);
+    }
     sum += pars_lower_bound[i];
     // now transform lower_bound
 //    assert(i == maxi-1);

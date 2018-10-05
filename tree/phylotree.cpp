@@ -96,6 +96,7 @@ void PhyloTree::init() {
     buffer_scale_all = NULL;
     buffer_partial_lh = NULL;
     ptn_freq = NULL;
+    ptn_freq_pars = NULL;
     ptn_invar = NULL;
     subTreeDistComputed = false;
     dist_matrix = NULL;
@@ -247,6 +248,9 @@ PhyloTree::~PhyloTree() {
     if (ptn_freq)
         aligned_free(ptn_freq);
     ptn_freq = NULL;
+    if (ptn_freq_pars)
+        aligned_free(ptn_freq_pars);
+    ptn_freq_pars = NULL;
     ptn_freq_computed = false;
     if (ptn_invar)
     	aligned_free(ptn_invar);
@@ -687,6 +691,8 @@ void PhyloTree::restoreBranchLengths(DoubleVector &lenvec, int startid, PhyloNod
  }
  */
 void PhyloTree::initializeAllPartialPars() {
+    if (!ptn_freq_pars)
+        ptn_freq_pars = aligned_alloc<UINT>(get_safe_upper_limit_float(getAlnNPattern()));
     int index = 0;
     initializeAllPartialPars(index);
     clearAllPartialLH();
@@ -751,10 +757,7 @@ UINT *PhyloTree::newBitsBlock() {
 
 
 void PhyloTree::computePartialParsimony(PhyloNeighbor *dad_branch, PhyloNode *dad) {
-    if (cost_matrix)
-        computeParsimonyBranchSankoff(dad_branch, dad);
-    else
-        (this->*computePartialParsimonyPointer)(dad_branch, dad);
+    (this->*computePartialParsimonyPointer)(dad_branch, dad);
 }
 
 void PhyloTree::computeReversePartialParsimony(PhyloNode *node, PhyloNode *dad) {
@@ -769,10 +772,7 @@ void PhyloTree::computeReversePartialParsimony(PhyloNode *node, PhyloNode *dad) 
 
 
 int PhyloTree::computeParsimonyBranch(PhyloNeighbor *dad_branch, PhyloNode *dad, int *branch_subst) {
-    if (cost_matrix)
-        return computeParsimonyBranchSankoff(dad_branch, dad, branch_subst);
-    else
-        return (this->*computeParsimonyBranchPointer)(dad_branch, dad, branch_subst);
+    return (this->*computeParsimonyBranchPointer)(dad_branch, dad, branch_subst);
 }
 
 
@@ -838,6 +838,8 @@ void PhyloTree::initializeAllPartialLh() {
         ptn_freq = aligned_alloc<double>(mem_size);
         ptn_freq_computed = false;
     }
+    if (!ptn_freq_pars)
+        ptn_freq_pars = aligned_alloc<UINT>(mem_size);
     if (!ptn_invar)
         ptn_invar = aligned_alloc<double>(mem_size);
     initializeAllPartialLh(index, indexlh);
@@ -875,6 +877,8 @@ void PhyloTree::deleteAllPartialLh() {
 		aligned_free(ptn_invar);
 	if (ptn_freq)
 		aligned_free(ptn_freq);
+    if (ptn_freq_pars)
+        aligned_free(ptn_freq_pars);
 	if (theta_all)
 		aligned_free(theta_all);
     if (buffer_scale_all)
@@ -891,6 +895,7 @@ void PhyloTree::deleteAllPartialLh() {
 
 	ptn_invar = NULL;
 	ptn_freq = NULL;
+    ptn_freq_pars = NULL;
 	ptn_freq_computed = false;
 	theta_all = NULL;
     buffer_scale_all = NULL;
