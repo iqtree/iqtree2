@@ -1011,6 +1011,18 @@ void MTree::getInternalNodes(NodeVector &nodes, Node *node, Node *dad) {
     }
 }
 
+void MTree::getMultifurcatingNodes(NodeVector &nodes, Node *node, Node *dad) {
+    if (!node) node = root;
+    //for (NeighborVec::iterator it = node->neighbors.begin(); it != node->neighbors.end(); it++)
+    //if ((*it)->node != dad)    {
+    FOR_NEIGHBOR_IT(node, dad, it)
+    if (!(*it)->node->isLeaf()) {
+        if ((*it)->node->degree() > 3)
+            nodes.push_back((*it)->node);
+        getMultifurcatingNodes(nodes, (*it)->node, node);
+    }
+}
+
 void MTree::generateNNIBraches(NodeVector &nodes1, NodeVector &nodes2, SplitGraph* excludeSplits, Node *node, Node *dad) {
     if (!node) node = root;
     //for (NeighborVec::iterator it = node->neighbors.begin(); it != node->neighbors.end(); it++)

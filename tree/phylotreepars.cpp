@@ -926,8 +926,8 @@ int PhyloTree::computeParsimonyTree(const char *out_prefix, Alignment *alignment
         MTree::copyTree(&constraintTree);
         
         // convert to birfucating tree if needed
-        extractBifurcatingSubTree();
-        ASSERT(isBifurcating());
+        //extractBifurcatingSubTree();
+        //ASSERT(isBifurcating());
         
         // assign proper taxon IDs
         NodeVector nodes;
@@ -936,20 +936,36 @@ int PhyloTree::computeParsimonyTree(const char *out_prefix, Alignment *alignment
         leafNum = nodes.size();
         vector<int> pushed;
         pushed.resize(size, 0);
+        
+        StrVector seq_names = aln->getSeqNames();
+        StringIntMap name2id;
+        for (auto sit = seq_names.begin(); sit != seq_names.end(); sit++)
+            name2id[*sit] = sit - seq_names.begin();
+
         for (it = nodes.begin(); it != nodes.end(); it++) {
-            (*it)->id = aln->getSeqID((*it)->name);
+            (*it)->id = name2id[(*it)->name];
             ASSERT((*it)->id >= 0);
             taxon_order.push_back((*it)->id);
             pushed[(*it)->id] = 1;
         }
 
+        // reindex internal nodes properly
+        nodes.clear();
+        getInternalNodes(nodes);
+        for (it = nodes.begin(); it != nodes.end(); it++)
+            (*it)->id = size + (it - nodes.begin());
+        
+
+        resolveMultifurcationParsimony();
+        
         // start with constraint tree
-        int i;
-        for (i = 0; i < size; i++)
-            if (!pushed[i] && constraintTree.hasTaxon(aln->getSeqName(i))) {
-                taxon_order.push_back(i);
-                pushed[i] = 1;
-            }
+//        int i;
+//        for (i = 0; i < size; i++)
+//            if (!pushed[i] && constraintTree.hasTaxon(aln->getSeqName(i))) {
+//                taxon_order.push_back(i);
+//                pushed[i] = 1;
+//            }
+        ASSERT(leafNum == constraintTree.leafNum);
         ASSERT(taxon_order.size() == constraintTree.leafNum);
         for (int i = 0; i < size; i++)
             if (!pushed[i]) {
@@ -1081,8 +1097,8 @@ int PhyloTree::addTaxonMPFast(Node *added_taxon, Node* added_node, Node* node, N
     int score = computeParsimonyBranch((PhyloNeighbor*) added_node->neighbors[0], (PhyloNode*) added_node);
     if (leafNum < constraintTree.leafNum) {
         // still during addition of taxa from constraint tree
-        if (!constraintTree.isCompatible(this))
-            score = INT_MAX;
+//        if (!constraintTree.isCompatible(this))
+//            score = INT_MAX;
     }
     // remove the added node
     node->updateNeighbor(added_node, dad, len);
@@ -1101,4 +1117,186 @@ int PhyloTree::addTaxonMPFast(Node *added_taxon, Node* added_node, Node* node, N
 //    }
     return score;
 
+}
+
+void getNeiBranches(NeighborVec &removed_nei, NodeVector &attached_node, NodeVector &added_nodes, int i,
+                    NodeVector &nodes1, NodeVector &nodes2)
+{
+    // get target branches surrounding attached_node
+    FOR_NEIGHBOR_IT(attached_node[i], NULL, it) {
+        if (attached_node[i]->id < (*it)->node->id) {
+            nodes1.push_back(attached_node[i]);
+            nodes2.push_back((*it)->node);
+        } else {
+            nodes2.push_back(attached_node[i]);
+            nodes1.push_back((*it)->node);
+        }
+    }
+    // get target branches surrounding previous added_nodes
+    for (int j = i-1; j >= 0; j--) {
+        if (attached_node[j] != attached_node[i])
+            break;
+        int cur_size = nodes1.size();
+        Node *node = added_nodes[j];
+        FOR_NEIGHBOR_IT(node, NULL, it) {
+            if (node->id < (*it)->node->id) {
+                bool present = false;
+                for (int k = 0; k < nodes1.size(); k++)
+                    if (node == nodes1[k] && (*it)->node == nodes2[k]) {
+                        present = true;
+                        break;
+                    }
+                if (present) continue;
+                nodes1.push_back(node);
+                nodes2.push_back((*it)->node);
+            } else {
+                bool present = false;
+                for (int k = 0; k < nodes1.size(); k++)
+                    if (node == nodes2[k] && (*it)->node == nodes1[k]) {
+                        present = true;
+                        break;
+                    }
+                if (present) continue;
+                nodes2.push_back(node);
+                nodes1.push_back((*it)->node);
+            }
+        }
+        // check that exactly two branches are added
+        ASSERT(nodes1.size() == cur_size+2);
+    }
+
+}
+
+void PhyloTree::resolveMultifurcationParsimony() {
+    NodeVector nodes;
+    getMultifurcatingNodes(nodes);
+    if (nodes.empty())
+        return;
+
+    NeighborVec removed_nei;
+    NodeVector attached_node; // node that removed_taxa is attached to
+    int i;
+    int newNodeID = nodeNum - leafNum + aln->getNSeq();
+    
+    computeBranchDirection();
+
+    initializeAllPartialPars();
+    
+    size_t index = (branchNum)*2;
+    size_t pars_block_size = getBitsBlockSize();
+
+    // firstly make bifurcating tree
+    for (NodeVector::iterator it = nodes.begin(); it != nodes.end(); it++)
+    {
+        Node *node = (*it);
+        int id[3];
+        id[0] = -1;
+        // find the neighbor toward root to preserve root
+        for (i = 0; i < node->neighbors.size(); i++)
+            if (((PhyloNeighbor*)node->neighbors[i])->direction == TOWARD_ROOT) {
+                id[0] = i;
+                break;
+            }
+        ASSERT(id[0] >= 0);
+        // randomly choose 2 neighbors to reserve
+        do {
+            id[1] = random_int(node->degree());
+        } while (id[1] == id[0]);
+
+        do {
+            id[2] = random_int(node->degree());
+        } while (id[2] == id[0] || id[2] == id[1]);
+
+        std::sort(id, id+3);
+        
+        // remove taxa
+        int cur_size = removed_nei.size();
+        for (i = 0; i < node->degree(); i++)
+            if (i != id[0] && i != id[1] && i != id[2]) {
+                removed_nei.push_back(node->neighbors[i]);
+                attached_node.push_back(node);
+            }
+        // randomize removed_nei
+        my_random_shuffle(removed_nei.begin() + cur_size, removed_nei.end());
+
+        // remove neigbors to make bifurcating tree
+        node->neighbors[0] = node->neighbors[id[0]];
+        node->neighbors[1] = node->neighbors[id[1]];
+        node->neighbors[2] = node->neighbors[id[2]];
+        node->neighbors.resize(3);
+    }
+    
+    leafNum = getNumTaxa();
+    
+    if (verbose_mode >= VB_MAX)
+        printTree(cout, WT_NEWLINE);
+    
+    NodeVector added_nodes;
+    added_nodes.reserve(removed_nei.size());
+    
+    // now add removed_nei back into the tree
+    for (i = 0; i < removed_nei.size(); i++) {
+        NodeVector nodes1, nodes2;
+        
+        getNeiBranches(removed_nei, attached_node, added_nodes, i, nodes1, nodes2);
+        PhyloNode *target_node = NULL;
+        PhyloNode *target_dad = NULL;
+        best_pars_score = UINT_MAX;
+
+        // add a new internal node
+        PhyloNode *added_node = (PhyloNode*)newNode(newNodeID++);
+        added_nodes.push_back(added_node);
+        added_node->neighbors.push_back(removed_nei[i]);
+        removed_nei[i]->node->updateNeighbor(attached_node[i], added_node);
+        
+        // preserve two neighbors
+        added_node->addNeighbor((Node*) 1, -1.0);
+        added_node->addNeighbor((Node*) 2, -1.0);
+
+        UINT *new_taxon_partial_pars = central_partial_pars + ((index) * pars_block_size);
+        PhyloNeighbor *removed_nei_back = (PhyloNeighbor*)removed_nei[i]->node->findNeighbor(added_node);
+
+        for (int nodeid = 0; nodeid < nodes1.size(); nodeid++) {
+            
+            int score = addTaxonMPFast(removed_nei[i]->node, added_node, nodes1[nodeid], nodes2[nodeid]);
+            if (score < best_pars_score) {
+                best_pars_score = score;
+                target_node = (PhyloNode*)nodes1[nodeid];
+                target_dad = (PhyloNode*)nodes2[nodeid];
+                memcpy(new_taxon_partial_pars, removed_nei_back->partial_pars, pars_block_size*sizeof(UINT));
+            }
+        }
+        
+        if (verbose_mode >= VB_MAX)
+            cout << ", score = " << best_pars_score << endl;
+        // now insert the new node in the middle of the branch node-dad
+        target_node->updateNeighbor(target_dad, added_node, -1.0);
+        target_dad->updateNeighbor(target_node, added_node, -1.0);
+        added_node->updateNeighbor((Node*) 1, target_node, -1.0);
+        added_node->updateNeighbor((Node*) 2, target_dad, -1.0);
+        ((PhyloNeighbor*) added_node->findNeighbor(target_node))->partial_pars =
+        ((PhyloNeighbor*) target_dad->findNeighbor(added_node))->partial_pars;
+        ((PhyloNeighbor*) added_node->findNeighbor(target_dad))->partial_pars =
+        ((PhyloNeighbor*) target_node->findNeighbor(added_node))->partial_pars;
+        
+        ((PhyloNeighbor*) added_node->findNeighbor(target_node))->partial_lh_computed =
+        ((PhyloNeighbor*) target_dad->findNeighbor(added_node))->partial_lh_computed;
+        ((PhyloNeighbor*) added_node->findNeighbor(target_dad))->partial_lh_computed =
+        ((PhyloNeighbor*) target_node->findNeighbor(added_node))->partial_lh_computed;
+        
+        removed_nei_back->partial_lh_computed |= 2;
+        memcpy(removed_nei_back->partial_pars, new_taxon_partial_pars, pars_block_size*sizeof(UINT));
+        
+        ((PhyloNeighbor*)target_dad->findNeighbor(added_node))->clearPartialLh();
+        ((PhyloNeighbor*)target_dad->findNeighbor(added_node))->partial_pars = central_partial_pars + ((index++) * pars_block_size);
+        ((PhyloNeighbor*)target_node->findNeighbor(added_node))->clearPartialLh();
+        ((PhyloNeighbor*)target_node->findNeighbor(added_node))->partial_pars = central_partial_pars + ((index++) * pars_block_size);
+        
+        target_dad->clearReversePartialLh(added_node);
+        target_node->clearReversePartialLh(added_node);
+        leafNum += getNumTaxa(removed_nei[i]->node, added_node);
+
+    }
+    if (verbose_mode >= VB_MAX)
+        printTree(cout, WT_NEWLINE);
 }
