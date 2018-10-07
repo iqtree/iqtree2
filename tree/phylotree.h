@@ -396,6 +396,12 @@ public:
      */
     virtual void copyTree(MTree *tree, string &taxa_set);
 
+    /**
+     copy the constraint tree structure into this tree and reindex node IDs accordingly
+     @param tree the tree to copy
+     @param[out] order of taxa with first part being in constraint tree
+     */
+    void copyConstraintTree(MTree *tree, IntVector &taxon_order);
 
     /**
             copy the phylogenetic tree structure into this tree, designed specifically for PhyloTree.
@@ -1270,6 +1276,20 @@ public:
      */
     int addTaxonMPFast(Node *added_taxon, Node *added_node, Node *node, Node *dad);
 
+    /**
+        create a 3-taxon tree and return random taxon order
+        @param[out] taxon_order random taxon order
+     */
+    void create3TaxonTree(IntVector &taxon_order);
+
+    /**
+     Extract a bifurcating subtree and return randomly removed Neighbor
+     If the tree is bifurcating, nothing change
+     @param[out] removed_nei vector of removed Neighbor
+     @param[out] attached_node vector of node attached to removed Neighbor
+     */
+    void extractBifurcatingSubTree(NeighborVec &removed_nei, NodeVector &attached_node);
+    
 
     /**
      * FAST VERSION: compute parsimony tree by step-wise addition
@@ -1278,13 +1298,7 @@ public:
      * @return parsimony score
      */
     virtual int computeParsimonyTree(const char *out_prefix, Alignment *alignment);
-    
-    /**
-     Resolve multifurcating node to obtain strictly bifurcating tree using parsimony
-     If the tree is bifurcating, nothing change
-     */
-    void resolveMultifurcationParsimony();
-    
+        
     /****************************************************************************
             Branch length optimization by maximum likelihood
      ****************************************************************************/
