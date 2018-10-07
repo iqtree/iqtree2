@@ -1007,6 +1007,26 @@ void getNeiBranches(NeighborVec &removed_nei, NodeVector &attached_node, NodeVec
     
 }
 
+void PhyloTree::insertNode2Branch(Node* added_node, Node* target_node, Node* target_dad) {
+    target_node->updateNeighbor(target_dad, added_node, -1.0);
+    target_dad->updateNeighbor(target_node, added_node, -1.0);
+    added_node->updateNeighbor((Node*) 1, target_node, -1.0);
+    added_node->updateNeighbor((Node*) 2, target_dad, -1.0);
+    ((PhyloNeighbor*) added_node->findNeighbor(target_node))->partial_pars =
+    ((PhyloNeighbor*) target_dad->findNeighbor(added_node))->partial_pars;
+    ((PhyloNeighbor*) added_node->findNeighbor(target_dad))->partial_pars =
+    ((PhyloNeighbor*) target_node->findNeighbor(added_node))->partial_pars;
+    
+    ((PhyloNeighbor*) added_node->findNeighbor(target_node))->partial_lh_computed =
+    ((PhyloNeighbor*) target_dad->findNeighbor(added_node))->partial_lh_computed;
+    ((PhyloNeighbor*) added_node->findNeighbor(target_dad))->partial_lh_computed =
+    ((PhyloNeighbor*) target_node->findNeighbor(added_node))->partial_lh_computed;
+
+    PhyloNode *ass_node = (PhyloNode*)added_node->neighbors[0]->node;
+    ((PhyloNeighbor*)ass_node->findNeighbor(added_node))->clearPartialLh();
+    ass_node->clearReversePartialLh((PhyloNode*)added_node);
+}
+
 int PhyloTree::computeParsimonyTree(const char *out_prefix, Alignment *alignment) {
     aln = alignment;
     int nseq = aln->getNSeq();
@@ -1090,12 +1110,6 @@ int PhyloTree::computeParsimonyTree(const char *out_prefix, Alignment *alignment
         added_node->addNeighbor((Node*) 1, -1.0);
         added_node->addNeighbor((Node*) 2, -1.0);
 
-        // assign pointers
-        PhyloNeighbor *new_taxon_nei = (PhyloNeighbor*)new_taxon->findNeighbor(added_node);
-        
-        // storage for partial_pars at best insertion
-        UINT *best_partial_pars = central_partial_pars + ((index) * pars_block_size);
-
         for (int nodeid = 0; nodeid < nodes1.size(); nodeid++) {
         
             int score = addTaxonMPFast(new_taxon, added_node, nodes1[nodeid], nodes2[nodeid]);
@@ -1103,30 +1117,15 @@ int PhyloTree::computeParsimonyTree(const char *out_prefix, Alignment *alignment
                 best_pars_score = score;
                 target_node = (PhyloNode*)nodes1[nodeid];
                 target_dad = (PhyloNode*)nodes2[nodeid];
-                memcpy(best_partial_pars, new_taxon_nei->partial_pars, pars_block_size*sizeof(UINT));
             }
         }
         
         if (verbose_mode >= VB_MAX)
             cout << ", score = " << best_pars_score << endl;
         // now insert the new node in the middle of the branch node-dad
-        target_node->updateNeighbor(target_dad, added_node, -1.0);
-        target_dad->updateNeighbor(target_node, added_node, -1.0);
-        added_node->updateNeighbor((Node*) 1, target_node, -1.0);
-        added_node->updateNeighbor((Node*) 2, target_dad, -1.0);
-        ((PhyloNeighbor*) added_node->findNeighbor(target_node))->partial_pars =
-            ((PhyloNeighbor*) target_dad->findNeighbor(added_node))->partial_pars;
-        ((PhyloNeighbor*) added_node->findNeighbor(target_dad))->partial_pars =
-            ((PhyloNeighbor*) target_node->findNeighbor(added_node))->partial_pars;
-            
-        ((PhyloNeighbor*) added_node->findNeighbor(target_node))->partial_lh_computed = 
-            ((PhyloNeighbor*) target_dad->findNeighbor(added_node))->partial_lh_computed;
-        ((PhyloNeighbor*) added_node->findNeighbor(target_dad))->partial_lh_computed = 
-            ((PhyloNeighbor*) target_node->findNeighbor(added_node))->partial_lh_computed;
+        insertNode2Branch(added_node, target_node, target_dad);
 
-        new_taxon_nei->partial_lh_computed |= 2;
-        memcpy(new_taxon_nei->partial_pars, best_partial_pars, pars_block_size*sizeof(UINT));
-
+        // assign partial_pars storage
         ((PhyloNeighbor*)target_dad->findNeighbor(added_node))->clearPartialLh();
         ((PhyloNeighbor*)target_dad->findNeighbor(added_node))->partial_pars = central_partial_pars + ((index++) * pars_block_size);
         ((PhyloNeighbor*)target_node->findNeighbor(added_node))->clearPartialLh();
@@ -1135,10 +1134,9 @@ int PhyloTree::computeParsimonyTree(const char *out_prefix, Alignment *alignment
         target_dad->clearReversePartialLh(added_node);
         target_node->clearReversePartialLh(added_node);
 
+        // increase number of taxa
         leafNum += getNumTaxa(new_taxon, added_node);
     }
-
-    //aligned_free(tmp_partial_pars);
     
     ASSERT(index == 4*leafNum-6);
 
@@ -1161,35 +1159,18 @@ int PhyloTree::computeParsimonyTree(const char *out_prefix, Alignment *alignment
 }
 
 int PhyloTree::addTaxonMPFast(Node *added_taxon, Node* added_node, Node* node, Node* dad) {
-    Neighbor *dad_nei = dad->findNeighbor(node);
 
     // now insert the new node in the middle of the branch node-dad
-    double len = dad_nei->length;
-    node->updateNeighbor(dad, added_node, len / 2.0);
-    dad->updateNeighbor(node, added_node, len / 2.0);
-    added_node->updateNeighbor((Node*) 1, node, len / 2.0);
-    added_node->updateNeighbor((Node*) 2, dad, len / 2.0);
-    ((PhyloNeighbor*) added_node->findNeighbor(node))->partial_pars =
-        ((PhyloNeighbor*) dad->findNeighbor(added_node))->partial_pars;
-    ((PhyloNeighbor*) added_node->findNeighbor(dad))->partial_pars =
-        ((PhyloNeighbor*) node->findNeighbor(added_node))->partial_pars;
-    ((PhyloNeighbor*) added_node->findNeighbor(node))->partial_lh_computed = 
-        ((PhyloNeighbor*) dad->findNeighbor(added_node))->partial_lh_computed;
-    ((PhyloNeighbor*) added_node->findNeighbor(dad))->partial_lh_computed = 
-        ((PhyloNeighbor*) node->findNeighbor(added_node))->partial_lh_computed;
+    insertNode2Branch(added_node, node, dad);
+
     // compute the likelihood
-    ((PhyloNeighbor*) added_taxon->findNeighbor(added_node))->clearPartialLh();
-    int score = computeParsimonyBranch((PhyloNeighbor*) added_node->neighbors[0], (PhyloNode*) added_node);
-    if (leafNum < constraintTree.leafNum) {
-        // still during addition of taxa from constraint tree
-//        if (!constraintTree.isCompatible(this))
-//            score = INT_MAX;
-    }
+    int score = computeParsimonyBranch((PhyloNeighbor*)added_taxon->findNeighbor(added_node), (PhyloNode*)added_taxon);
+
     // remove the added node
-    node->updateNeighbor(added_node, dad, len);
-    dad->updateNeighbor(added_node, node, len);
-    added_node->updateNeighbor(node, (Node*) 1, len);
-    added_node->updateNeighbor(dad, (Node*) 2, len);
+    node->updateNeighbor(added_node, dad);
+    dad->updateNeighbor(added_node, node);
+    added_node->updateNeighbor(node, (Node*) 1);
+    added_node->updateNeighbor(dad, (Node*) 2);
 
     // set partial_pars to COMPUTED
     ((PhyloNeighbor*)node->findNeighbor(dad))->partial_lh_computed |= 2;

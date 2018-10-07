@@ -1265,6 +1265,14 @@ public:
     ConstraintTree constraintTree;
 
     /**
+     insert a node to a target branch
+     @param added_node node to add
+     @param target_node left node of the target branch
+     @param target_dad right node of the target branch
+     */
+    void insertNode2Branch(Node* added_node, Node* target_node, Node* target_dad);
+        
+    /**
             FAST VERSION: used internally by computeParsimonyTree() to find the best target branch to add into the tree
             @param added_node node to add
             @param target_node (OUT) one end of the best branch found
