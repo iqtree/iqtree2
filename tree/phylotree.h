@@ -1278,8 +1278,13 @@ public:
      * @return parsimony score
      */
     virtual int computeParsimonyTree(const char *out_prefix, Alignment *alignment);
-
-
+    
+    /**
+     Resolve multifurcating node to obtain strictly bifurcating tree using parsimony
+     If the tree is bifurcating, nothing change
+     */
+    void resolveMultifurcationParsimony();
+    
     /****************************************************************************
             Branch length optimization by maximum likelihood
      ****************************************************************************/

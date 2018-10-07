@@ -125,7 +125,7 @@ public:
 
 
     /**
-            In case of mulfurcating tree, randomly resolve multifurcating node to obtain strictly bifurcating tree
+            In case of multifurcating tree, randomly resolve multifurcating node to obtain strictly bifurcating tree
             If the tree is bifurcating, nothing change
      */
     void resolveMultifurcation();
@@ -462,6 +462,14 @@ public:
             @param nodes (OUT) vector of internal nodes
      */
     void getInternalNodes(NodeVector &nodes, Node *node = NULL, Node *dad = NULL);
+
+    /**
+         get the descending internal nodes below \a node
+         @param node the starting node, NULL to start from the root
+         @param dad dad of the node, used to direct the search
+         @param nodes (OUT) vector of internal nodes
+     */
+    void getMultifurcatingNodes(NodeVector &nodes, Node *node = NULL, Node *dad = NULL);
 
     /**
             get the descending internal branches below \a node
