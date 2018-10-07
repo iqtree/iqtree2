@@ -894,123 +894,207 @@ int PhyloTree::computeParsimonyBranchSankoff(PhyloNeighbor *dad_branch, PhyloNod
 // pointer object to it:
 //ptrdiff_t (*p_myrandom)(ptrdiff_t) = myrandom;
 
+void PhyloTree::create3TaxonTree(IntVector &taxon_order) {
+    freeNode();
+    int nseq = aln->getNSeq();
+    taxon_order.resize(nseq);
+    for (int i = 0; i < nseq; i++)
+        taxon_order[i] = i;
+    // randomize the addition order
+    my_random_shuffle(taxon_order.begin(), taxon_order.end());
+    
+    root = newNode(nseq);
+    
+    // create star tree
+    for (leafNum = 0; leafNum < 3; leafNum++) {
+        if (leafNum < 3 && verbose_mode >= VB_MAX)
+            cout << "Add " << aln->getSeqName(taxon_order[leafNum]) << " to the tree" << endl;
+        Node *new_taxon = newNode(taxon_order[leafNum], aln->getSeqName(taxon_order[leafNum]).c_str());
+        root->addNeighbor(new_taxon, -1.0);
+        new_taxon->addNeighbor(root, -1.0);
+    }
+    root = root->neighbors[0]->node;
+}
+
+void PhyloTree::copyConstraintTree(MTree *tree, IntVector &taxon_order) {
+    MTree::copyTree(tree);
+    // assign proper taxon IDs
+    NodeVector nodes;
+    NodeVector::iterator it;
+    getTaxa(nodes);
+    leafNum = nodes.size();
+    vector<int> pushed;
+    pushed.resize(aln->getNSeq(), 0);
+    
+    // name map for fast lookup
+    StrVector seq_names = aln->getSeqNames();
+    StringIntMap name2id;
+    for (auto sit = seq_names.begin(); sit != seq_names.end(); sit++)
+        name2id[*sit] = sit - seq_names.begin();
+    
+    // reindex taxon ID from alignment
+    for (it = nodes.begin(); it != nodes.end(); it++) {
+        (*it)->id = name2id[(*it)->name];
+        ASSERT((*it)->id >= 0);
+        taxon_order.push_back((*it)->id);
+        pushed[(*it)->id] = 1;
+    }
+    ASSERT(taxon_order.size() == constraintTree.leafNum);
+
+    // reindex internal nodes properly
+    nodes.clear();
+    getInternalNodes(nodes);
+    for (it = nodes.begin(); it != nodes.end(); it++)
+        (*it)->id = aln->getNSeq() + (it - nodes.begin());
+
+    // add the remaining taxa
+    for (int i = 0; i < aln->getNSeq(); i++)
+        if (!pushed[i]) {
+            taxon_order.push_back(i);
+        }
+    // randomize the addition order
+    my_random_shuffle(taxon_order.begin()+constraintTree.leafNum, taxon_order.end());
+}
+
+/**
+ get all neighboring branches to a removed node
+ */
+void getNeiBranches(NeighborVec &removed_nei, NodeVector &attached_node, NodeVector &added_nodes, int i,
+                    NodeVector &nodes1, NodeVector &nodes2)
+{
+    // get target branches surrounding attached_node
+    FOR_NEIGHBOR_IT(attached_node[i], NULL, it) {
+        if (attached_node[i]->id < (*it)->node->id) {
+            nodes1.push_back(attached_node[i]);
+            nodes2.push_back((*it)->node);
+        } else {
+            nodes2.push_back(attached_node[i]);
+            nodes1.push_back((*it)->node);
+        }
+    }
+    // get target branches surrounding previous added_nodes
+    int j;
+    for (j = i-1; j >= 0; j--) {
+        if (attached_node[j] != attached_node[i])
+            break;
+        Node *node = added_nodes[j];
+        FOR_NEIGHBOR_IT(node, NULL, it) {
+            if (node->id < (*it)->node->id) {
+                bool present = false;
+                for (int k = 0; k < nodes1.size(); k++)
+                    if (node == nodes1[k] && (*it)->node == nodes2[k]) {
+                        present = true;
+                        break;
+                    }
+                if (present) continue;
+                nodes1.push_back(node);
+                nodes2.push_back((*it)->node);
+            } else {
+                bool present = false;
+                for (int k = 0; k < nodes1.size(); k++)
+                    if (node == nodes2[k] && (*it)->node == nodes1[k]) {
+                        present = true;
+                        break;
+                    }
+                if (present) continue;
+                nodes2.push_back(node);
+                nodes1.push_back((*it)->node);
+            }
+        }
+        // check that exactly two branches are added
+    }
+    ASSERT(nodes1.size() == 3 + (i-j-1)*2);
+    
+}
+
 int PhyloTree::computeParsimonyTree(const char *out_prefix, Alignment *alignment) {
     aln = alignment;
-    int size = aln->getNSeq();
-    if (size < 3)
+    int nseq = aln->getNSeq();
+    if (nseq < 3)
         outError(ERR_FEW_TAXA);
 
     IntVector taxon_order;
-    taxon_order.reserve(size);
-
-    if (constraintTree.empty()) {
-        freeNode();
-        taxon_order.resize(size);
-        for (int i = 0; i < size; i++)
-            taxon_order[i] = i;
-        // randomize the addition order
-        my_random_shuffle(taxon_order.begin(), taxon_order.end());
-
-        root = newNode(size);
-
-        // create initial tree with 3 taxa
-        for (leafNum = 0; leafNum < 3; leafNum++) {
-            if (verbose_mode >= VB_MAX)
-                cout << "Add " << aln->getSeqName(taxon_order[leafNum]) << " to the tree" << endl;
-            Node *new_taxon = newNode(taxon_order[leafNum], aln->getSeqName(taxon_order[leafNum]).c_str());
-            root->addNeighbor(new_taxon, -1.0);
-            new_taxon->addNeighbor(root, -1.0);
-        }
-    } else {
-        // first copy the constraint tree
-        MTree::copyTree(&constraintTree);
-        
-        // convert to birfucating tree if needed
-        //extractBifurcatingSubTree();
-        //ASSERT(isBifurcating());
-        
-        // assign proper taxon IDs
-        NodeVector nodes;
-        NodeVector::iterator it;
-        getTaxa(nodes);
-        leafNum = nodes.size();
-        vector<int> pushed;
-        pushed.resize(size, 0);
-        
-        StrVector seq_names = aln->getSeqNames();
-        StringIntMap name2id;
-        for (auto sit = seq_names.begin(); sit != seq_names.end(); sit++)
-            name2id[*sit] = sit - seq_names.begin();
-
-        for (it = nodes.begin(); it != nodes.end(); it++) {
-            (*it)->id = name2id[(*it)->name];
-            ASSERT((*it)->id >= 0);
-            taxon_order.push_back((*it)->id);
-            pushed[(*it)->id] = 1;
-        }
-
-        // reindex internal nodes properly
-        nodes.clear();
-        getInternalNodes(nodes);
-        for (it = nodes.begin(); it != nodes.end(); it++)
-            (*it)->id = size + (it - nodes.begin());
-        
-
-        resolveMultifurcationParsimony();
-        
-        // start with constraint tree
-//        int i;
-//        for (i = 0; i < size; i++)
-//            if (!pushed[i] && constraintTree.hasTaxon(aln->getSeqName(i))) {
-//                taxon_order.push_back(i);
-//                pushed[i] = 1;
-//            }
-        ASSERT(leafNum == constraintTree.leafNum);
-        ASSERT(taxon_order.size() == constraintTree.leafNum);
-        for (int i = 0; i < size; i++)
-            if (!pushed[i]) {
-                taxon_order.push_back(i);
-            }
-        // randomize the addition order
-        my_random_shuffle(taxon_order.begin()+leafNum, taxon_order.begin()+constraintTree.leafNum);
-        my_random_shuffle(taxon_order.begin()+constraintTree.leafNum, taxon_order.end());
-
-    }
-    root = findNodeID(taxon_order[0]);
-    initializeAllPartialPars();
-    if (verbose_mode >= VB_MAX)
-        cout << "computeParsimony: " << computeParsimony() << endl;
-    size_t index = (2*leafNum-3)*2;
+    taxon_order.reserve(aln->getNSeq());
+    
+    NeighborVec removed_nei; // removed Neighbor
+    NodeVector attached_node; // node attached to removed Neighbor
+    NodeVector added_nodes; // newly added nodes
+    int newNodeID;
+    size_t index;
     size_t pars_block_size = getBitsBlockSize();
 
-    UINT *tmp_partial_pars;
-    tmp_partial_pars = newBitsBlock();
-    if (size == 3)
+    if (constraintTree.empty()) {
+        create3TaxonTree(taxon_order);
+        ASSERT(leafNum == 3);
+        initializeAllPartialPars();
+        index = (2*leafNum-3)*2;
+        newNodeID = nseq + leafNum - 2;
+    } else {
+        // first copy the constraint tree
+        copyConstraintTree(&constraintTree, taxon_order);
+        newNodeID = nodeNum - leafNum + nseq;
+        index = (branchNum)*2;
+        
+        // initialize partial_pars to reuse later
+        initializeAllPartialPars();
+        
+        // extract a bifurcating subtree and get removed nodes to insert later
+        extractBifurcatingSubTree(removed_nei, attached_node);
+        
+        added_nodes.reserve(removed_nei.size());
+    }
+    if (verbose_mode >= VB_MAX)
+        cout << "computeParsimony: " << computeParsimony() << endl;
+
+    //UINT *tmp_partial_pars;
+    //tmp_partial_pars = newBitsBlock();
+    if (nseq == 3)
         best_pars_score = computeParsimony();
 
     // stepwise adding the next taxon for the remaining taxa
-    for (; leafNum < size; leafNum++) {
-        if (verbose_mode >= VB_MAX)
-            cout << "Adding " << aln->getSeqName(taxon_order[leafNum]) << " to the tree..." << endl;
+    for (int step = 0; leafNum < nseq; step++) {
         NodeVector nodes1, nodes2;
-        getBranches(nodes1, nodes2);
         PhyloNode *target_node = NULL;
         PhyloNode *target_dad = NULL;
-        best_pars_score = INT_MAX;
-        // allocate a new taxon and a new adjacent internal node
+        best_pars_score = UINT_MAX;
         
-        UINT *new_taxon_partial_pars = central_partial_pars + ((index++) * pars_block_size);
-        
-        PhyloNode *new_taxon = (PhyloNode*)newNode(taxon_order[leafNum], aln->getSeqName(taxon_order[leafNum]).c_str());
-        PhyloNode *added_node = (PhyloNode*)newNode(size+leafNum-2);
-        added_node->addNeighbor(new_taxon, -1.0);
-        new_taxon->addNeighbor(added_node, -1.0);
-        ((PhyloNeighbor*) added_node->findNeighbor(new_taxon))->partial_pars = central_partial_pars + ((index++) * pars_block_size);
-        ((PhyloNeighbor*) new_taxon->findNeighbor(added_node))->partial_pars = tmp_partial_pars;
+        // create a new node attached to new taxon or removed node
+        PhyloNode *added_node = (PhyloNode*)newNode(newNodeID++);
+        PhyloNode *new_taxon;
 
+        if (step < removed_nei.size()) {
+            // add the removed_nei (from constraint tree) back to the tree
+            getNeiBranches(removed_nei, attached_node, added_nodes, step, nodes1, nodes2);
+            new_taxon = (PhyloNode*)removed_nei[step]->node;
+            added_node->neighbors.push_back(removed_nei[step]);
+            new_taxon->updateNeighbor(attached_node[step], added_node);
+            added_nodes.push_back(added_node);
+        } else {
+            // add new taxon to the tree
+            if (verbose_mode >= VB_MAX)
+                cout << "Adding " << aln->getSeqName(taxon_order[leafNum]) << " to the tree..." << endl;
+            getBranches(nodes1, nodes2);
+
+            // allocate a new taxon
+            new_taxon = (PhyloNode*)newNode(taxon_order[leafNum], aln->getSeqName(taxon_order[leafNum]).c_str());
+            
+            // link new_taxon and added_node
+            added_node->addNeighbor(new_taxon, -1.0);
+            new_taxon->addNeighbor(added_node, -1.0);
+            
+            // allocate memory
+            ((PhyloNeighbor*)new_taxon->findNeighbor(added_node))->partial_pars = central_partial_pars + ((index++) * pars_block_size);
+            ((PhyloNeighbor*)added_node->findNeighbor(new_taxon))->partial_pars = central_partial_pars + ((index++) * pars_block_size);
+        }
         // preserve two neighbors
         added_node->addNeighbor((Node*) 1, -1.0);
         added_node->addNeighbor((Node*) 2, -1.0);
+
+        // assign pointers
+        PhyloNeighbor *new_taxon_nei = (PhyloNeighbor*)new_taxon->findNeighbor(added_node);
+        
+        // storage for partial_pars at best insertion
+        UINT *best_partial_pars = central_partial_pars + ((index) * pars_block_size);
 
         for (int nodeid = 0; nodeid < nodes1.size(); nodeid++) {
         
@@ -1019,7 +1103,7 @@ int PhyloTree::computeParsimonyTree(const char *out_prefix, Alignment *alignment
                 best_pars_score = score;
                 target_node = (PhyloNode*)nodes1[nodeid];
                 target_dad = (PhyloNode*)nodes2[nodeid];
-                memcpy(new_taxon_partial_pars, tmp_partial_pars, pars_block_size*sizeof(UINT));
+                memcpy(best_partial_pars, new_taxon_nei->partial_pars, pars_block_size*sizeof(UINT));
             }
         }
         
@@ -1039,9 +1123,9 @@ int PhyloTree::computeParsimonyTree(const char *out_prefix, Alignment *alignment
             ((PhyloNeighbor*) target_dad->findNeighbor(added_node))->partial_lh_computed;
         ((PhyloNeighbor*) added_node->findNeighbor(target_dad))->partial_lh_computed = 
             ((PhyloNeighbor*) target_node->findNeighbor(added_node))->partial_lh_computed;
-        
-        ((PhyloNeighbor*) new_taxon->findNeighbor(added_node))->partial_lh_computed |= 2;
-        ((PhyloNeighbor*) new_taxon->findNeighbor(added_node))->partial_pars = new_taxon_partial_pars;
+
+        new_taxon_nei->partial_lh_computed |= 2;
+        memcpy(new_taxon_nei->partial_pars, best_partial_pars, pars_block_size*sizeof(UINT));
 
         ((PhyloNeighbor*)target_dad->findNeighbor(added_node))->clearPartialLh();
         ((PhyloNeighbor*)target_dad->findNeighbor(added_node))->partial_pars = central_partial_pars + ((index++) * pars_block_size);
@@ -1051,9 +1135,10 @@ int PhyloTree::computeParsimonyTree(const char *out_prefix, Alignment *alignment
         target_dad->clearReversePartialLh(added_node);
         target_node->clearReversePartialLh(added_node);
 
+        leafNum += getNumTaxa(new_taxon, added_node);
     }
 
-    aligned_free(tmp_partial_pars);
+    //aligned_free(tmp_partial_pars);
     
     ASSERT(index == 4*leafNum-6);
 
@@ -1067,7 +1152,7 @@ int PhyloTree::computeParsimonyTree(const char *out_prefix, Alignment *alignment
     if (out_prefix) {
 		string file_name = out_prefix;
 		file_name += ".parstree";
-		printTree(file_name.c_str(), WT_NEWLINE);
+		printTree(file_name.c_str(), WT_NEWLINE + WT_BR_LEN);
     }
 //    if (isSuperTree())
 //        ((PhyloSuperTree*)this)->mapTrees();
@@ -1119,72 +1204,16 @@ int PhyloTree::addTaxonMPFast(Node *added_taxon, Node* added_node, Node* node, N
 
 }
 
-void getNeiBranches(NeighborVec &removed_nei, NodeVector &attached_node, NodeVector &added_nodes, int i,
-                    NodeVector &nodes1, NodeVector &nodes2)
-{
-    // get target branches surrounding attached_node
-    FOR_NEIGHBOR_IT(attached_node[i], NULL, it) {
-        if (attached_node[i]->id < (*it)->node->id) {
-            nodes1.push_back(attached_node[i]);
-            nodes2.push_back((*it)->node);
-        } else {
-            nodes2.push_back(attached_node[i]);
-            nodes1.push_back((*it)->node);
-        }
-    }
-    // get target branches surrounding previous added_nodes
-    int j;
-    for (j = i-1; j >= 0; j--) {
-        if (attached_node[j] != attached_node[i])
-            break;
-        Node *node = added_nodes[j];
-        FOR_NEIGHBOR_IT(node, NULL, it) {
-            if (node->id < (*it)->node->id) {
-                bool present = false;
-                for (int k = 0; k < nodes1.size(); k++)
-                    if (node == nodes1[k] && (*it)->node == nodes2[k]) {
-                        present = true;
-                        break;
-                    }
-                if (present) continue;
-                nodes1.push_back(node);
-                nodes2.push_back((*it)->node);
-            } else {
-                bool present = false;
-                for (int k = 0; k < nodes1.size(); k++)
-                    if (node == nodes2[k] && (*it)->node == nodes1[k]) {
-                        present = true;
-                        break;
-                    }
-                if (present) continue;
-                nodes2.push_back(node);
-                nodes1.push_back((*it)->node);
-            }
-        }
-        // check that exactly two branches are added
-    }
-    ASSERT(nodes1.size() == 3 + (i-j-1)*2);
-
-}
-
-void PhyloTree::resolveMultifurcationParsimony() {
+void PhyloTree::extractBifurcatingSubTree(NeighborVec &removed_nei, NodeVector &attached_node) {
     NodeVector nodes;
     getMultifurcatingNodes(nodes);
     if (nodes.empty())
         return;
-
-    NeighborVec removed_nei;
-    NodeVector attached_node; // node that removed_taxa is attached to
+    
     int i;
-    int newNodeID = nodeNum - leafNum + aln->getNSeq();
     
     computeBranchDirection();
-
-    initializeAllPartialPars();
     
-    size_t index = (branchNum)*2;
-    size_t pars_block_size = getBitsBlockSize();
-
     // firstly make bifurcating tree
     for (NodeVector::iterator it = nodes.begin(); it != nodes.end(); it++)
     {
@@ -1202,11 +1231,11 @@ void PhyloTree::resolveMultifurcationParsimony() {
         do {
             id[1] = random_int(node->degree());
         } while (id[1] == id[0]);
-
+        
         do {
             id[2] = random_int(node->degree());
         } while (id[2] == id[0] || id[2] == id[1]);
-
+        
         std::sort(id, id+3);
         
         // remove taxa
@@ -1218,7 +1247,7 @@ void PhyloTree::resolveMultifurcationParsimony() {
             }
         // randomize removed_nei
         my_random_shuffle(removed_nei.begin() + cur_size, removed_nei.end());
-
+        
         // remove neigbors to make bifurcating tree
         node->neighbors[0] = node->neighbors[id[0]];
         node->neighbors[1] = node->neighbors[id[1]];
@@ -1228,75 +1257,4 @@ void PhyloTree::resolveMultifurcationParsimony() {
     
     leafNum = getNumTaxa();
     
-    if (verbose_mode >= VB_MAX)
-        printTree(cout, WT_NEWLINE);
-    
-    NodeVector added_nodes;
-    added_nodes.reserve(removed_nei.size());
-    
-    // now add removed_nei back into the tree
-    for (i = 0; i < removed_nei.size(); i++) {
-        NodeVector nodes1, nodes2;
-        
-        getNeiBranches(removed_nei, attached_node, added_nodes, i, nodes1, nodes2);
-        PhyloNode *target_node = NULL;
-        PhyloNode *target_dad = NULL;
-        best_pars_score = UINT_MAX;
-
-        // add a new internal node
-        PhyloNode *added_node = (PhyloNode*)newNode(newNodeID++);
-        added_nodes.push_back(added_node);
-        added_node->neighbors.push_back(removed_nei[i]);
-        removed_nei[i]->node->updateNeighbor(attached_node[i], added_node);
-        
-        // preserve two neighbors
-        added_node->addNeighbor((Node*) 1, -1.0);
-        added_node->addNeighbor((Node*) 2, -1.0);
-
-        UINT *new_taxon_partial_pars = central_partial_pars + ((index) * pars_block_size);
-        PhyloNeighbor *removed_nei_back = (PhyloNeighbor*)removed_nei[i]->node->findNeighbor(added_node);
-
-        for (int nodeid = 0; nodeid < nodes1.size(); nodeid++) {
-            
-            int score = addTaxonMPFast(removed_nei[i]->node, added_node, nodes1[nodeid], nodes2[nodeid]);
-            if (score < best_pars_score) {
-                best_pars_score = score;
-                target_node = (PhyloNode*)nodes1[nodeid];
-                target_dad = (PhyloNode*)nodes2[nodeid];
-                memcpy(new_taxon_partial_pars, removed_nei_back->partial_pars, pars_block_size*sizeof(UINT));
-            }
-        }
-        
-        if (verbose_mode >= VB_MAX)
-            cout << ", score = " << best_pars_score << endl;
-        // now insert the new node in the middle of the branch node-dad
-        target_node->updateNeighbor(target_dad, added_node, -1.0);
-        target_dad->updateNeighbor(target_node, added_node, -1.0);
-        added_node->updateNeighbor((Node*) 1, target_node, -1.0);
-        added_node->updateNeighbor((Node*) 2, target_dad, -1.0);
-        ((PhyloNeighbor*) added_node->findNeighbor(target_node))->partial_pars =
-        ((PhyloNeighbor*) target_dad->findNeighbor(added_node))->partial_pars;
-        ((PhyloNeighbor*) added_node->findNeighbor(target_dad))->partial_pars =
-        ((PhyloNeighbor*) target_node->findNeighbor(added_node))->partial_pars;
-        
-        ((PhyloNeighbor*) added_node->findNeighbor(target_node))->partial_lh_computed =
-        ((PhyloNeighbor*) target_dad->findNeighbor(added_node))->partial_lh_computed;
-        ((PhyloNeighbor*) added_node->findNeighbor(target_dad))->partial_lh_computed =
-        ((PhyloNeighbor*) target_node->findNeighbor(added_node))->partial_lh_computed;
-        
-        removed_nei_back->partial_lh_computed |= 2;
-        memcpy(removed_nei_back->partial_pars, new_taxon_partial_pars, pars_block_size*sizeof(UINT));
-        
-        ((PhyloNeighbor*)target_dad->findNeighbor(added_node))->clearPartialLh();
-        ((PhyloNeighbor*)target_dad->findNeighbor(added_node))->partial_pars = central_partial_pars + ((index++) * pars_block_size);
-        ((PhyloNeighbor*)target_node->findNeighbor(added_node))->clearPartialLh();
-        ((PhyloNeighbor*)target_node->findNeighbor(added_node))->partial_pars = central_partial_pars + ((index++) * pars_block_size);
-        
-        target_dad->clearReversePartialLh(added_node);
-        target_node->clearReversePartialLh(added_node);
-        leafNum += getNumTaxa(removed_nei[i]->node, added_node);
-
-    }
-    if (verbose_mode >= VB_MAX)
-        printTree(cout, WT_NEWLINE);
 }
