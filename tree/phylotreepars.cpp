@@ -1133,10 +1133,10 @@ void getNeiBranches(NeighborVec &removed_nei, NodeVector &attached_node, NodeVec
         }
     }
     // get target branches surrounding previous added_nodes
-    for (int j = i-1; j >= 0; j--) {
+    int j;
+    for (j = i-1; j >= 0; j--) {
         if (attached_node[j] != attached_node[i])
             break;
-        int cur_size = nodes1.size();
         Node *node = added_nodes[j];
         FOR_NEIGHBOR_IT(node, NULL, it) {
             if (node->id < (*it)->node->id) {
@@ -1162,8 +1162,8 @@ void getNeiBranches(NeighborVec &removed_nei, NodeVector &attached_node, NodeVec
             }
         }
         // check that exactly two branches are added
-        ASSERT(nodes1.size() == cur_size+2);
     }
+    ASSERT(nodes1.size() == 3 + (i-j-1)*2);
 
 }
 
