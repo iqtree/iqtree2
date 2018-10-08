@@ -46,7 +46,13 @@ void PhyloTree::computePartialParsimonyFast(PhyloNeighbor *dad_branch, PhyloNode
         partitions->push_back(aln);
     }
 
-    if (node->isLeaf() && dad) {
+    if (node->name == ROOT_NAME) {
+        ASSERT(dad);
+        int pars_size = getBitsBlockSize();
+        memset(dad_branch->partial_pars, 255, pars_size*sizeof(UINT));
+        size_t nsites = (aln->num_parsimony_sites+UINT_BITS-1)/UINT_BITS;
+        dad_branch->partial_pars[nstates*nsites] = 0;
+    } else if (node->isLeaf() && dad) {
         // external node
         int leafid = node->id;
         memset(dad_branch->partial_pars, 0, getBitsBlockSize()*sizeof(UINT));
