@@ -316,6 +316,7 @@ void PhyloTree::assignLeafNames(Node *node, Node *dad) {
     if (node->isLeaf()) {
         if (rooted && node == root) {
             ASSERT(node->id == leafNum-1);
+            root->name = ROOT_NAME;
         } else {
             node->id = atoi(node->name.c_str());
             node->name = aln->getSeqName(node->id);

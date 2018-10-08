@@ -1167,7 +1167,7 @@ void reportPhyloAnalysis(Params &params, IQTree &tree, ModelCheckpoint &model_in
             out << "CONSENSUS TREE" << endl << "--------------" << endl << endl;
             out << "Consensus tree is constructed from "
                     << (params.num_bootstrap_samples ? params.num_bootstrap_samples : params.gbo_replicates)
-                    << RESAMPLE_NAME << " trees";
+                    << " " << RESAMPLE_NAME << " trees";
             if (params.gbo_replicates || params.num_bootstrap_samples) {
                 out << endl << "Log-likelihood of consensus tree: " << fixed << tree.boot_consense_logl;
             }
@@ -3983,14 +3983,16 @@ void computeConsensusTree(const char *input_trees, int burnin, int max_count,
     //cout << "convert compatible split system into tree..." << endl;
     mytree.convertToTree(maxsg);
     //cout << "done" << endl;
-    string taxname;
-    if (params->root)
-        taxname = params->root;
-    else
-        taxname = sg.getTaxa()->GetTaxonLabel(0);
-    Node *node = mytree.findLeafName(taxname);
-    if (node)
-        mytree.root = node;
+    if (!mytree.rooted) {
+        string taxname;
+        if (params->root)
+            taxname = params->root;
+        else
+            taxname = sg.getTaxa()->GetTaxonLabel(0);
+        Node *node = mytree.findLeafName(taxname);
+        if (node)
+            mytree.root = node;
+    }
     // mytree.scaleLength(100.0 / boot_trees.sumTreeWeights(), true);
 
     // mytree.getTaxaID(maxsg.getSplitsBlock()->getCycle());

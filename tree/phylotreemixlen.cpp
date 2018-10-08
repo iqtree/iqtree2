@@ -618,7 +618,7 @@ void PhyloTreeMixlen::printBranchLength(ostream &out, int brtype, bool print_sla
                     out << fixed << length;
                 else
                     out << length;
-            } else if (brtype & WT_BR_CLADE) {
+            } else if (brtype & WT_BR_CLADE && length_nei->node->name != ROOT_NAME) {
                 out << length;
             }
         }
@@ -627,7 +627,7 @@ void PhyloTreeMixlen::printBranchLength(ostream &out, int brtype, bool print_sla
 
     if (brtype & WT_BR_LEN)
         out << ":";
-    else if ((brtype & WT_BR_CLADE) && print_slash)
+    else if ((brtype & WT_BR_CLADE) && print_slash && length_nei->node->name != ROOT_NAME)
         out << "/";
         
     double length = nei->length;
@@ -644,7 +644,7 @@ void PhyloTreeMixlen::printBranchLength(ostream &out, int brtype, bool print_sla
             out << fixed << length;
         else
             out << length;
-    } else if (brtype & WT_BR_CLADE) {
+    } else if (brtype & WT_BR_CLADE && length_nei->node->name != ROOT_NAME) {
         out << length;
     }
 }
