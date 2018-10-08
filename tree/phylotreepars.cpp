@@ -894,14 +894,14 @@ int PhyloTree::computeParsimonyBranchSankoff(PhyloNeighbor *dad_branch, PhyloNod
 // pointer object to it:
 //ptrdiff_t (*p_myrandom)(ptrdiff_t) = myrandom;
 
-void PhyloTree::create3TaxonTree(IntVector &taxon_order) {
+void PhyloTree::create3TaxonTree(IntVector &taxon_order, int *rand_stream) {
     freeNode();
     int nseq = aln->getNSeq();
     taxon_order.resize(nseq);
     for (int i = 0; i < nseq; i++)
         taxon_order[i] = i;
     // randomize the addition order
-    my_random_shuffle(taxon_order.begin(), taxon_order.end());
+    my_random_shuffle(taxon_order.begin(), taxon_order.end(), rand_stream);
     
     root = newNode(nseq);
     
@@ -916,7 +916,7 @@ void PhyloTree::create3TaxonTree(IntVector &taxon_order) {
     root = root->neighbors[0]->node;
 }
 
-void PhyloTree::copyConstraintTree(MTree *tree, IntVector &taxon_order) {
+void PhyloTree::copyConstraintTree(MTree *tree, IntVector &taxon_order, int *rand_stream) {
     MTree::copyTree(tree);
     // assign proper taxon IDs
     NodeVector nodes;
@@ -953,7 +953,7 @@ void PhyloTree::copyConstraintTree(MTree *tree, IntVector &taxon_order) {
             taxon_order.push_back(i);
         }
     // randomize the addition order
-    my_random_shuffle(taxon_order.begin()+constraintTree.leafNum, taxon_order.end());
+    my_random_shuffle(taxon_order.begin()+constraintTree.leafNum, taxon_order.end(), rand_stream);
 }
 
 /**
@@ -1027,7 +1027,7 @@ void PhyloTree::insertNode2Branch(Node* added_node, Node* target_node, Node* tar
     ass_node->clearReversePartialLh((PhyloNode*)added_node);
 }
 
-int PhyloTree::computeParsimonyTree(const char *out_prefix, Alignment *alignment) {
+int PhyloTree::computeParsimonyTree(const char *out_prefix, Alignment *alignment, int *rand_stream) {
     aln = alignment;
     int nseq = aln->getNSeq();
     if (nseq < 3)
@@ -1044,14 +1044,14 @@ int PhyloTree::computeParsimonyTree(const char *out_prefix, Alignment *alignment
     size_t pars_block_size = getBitsBlockSize();
 
     if (constraintTree.empty()) {
-        create3TaxonTree(taxon_order);
+        create3TaxonTree(taxon_order, rand_stream);
         ASSERT(leafNum == 3);
         initializeAllPartialPars();
         index = (2*leafNum-3)*2;
         newNodeID = nseq + leafNum - 2;
     } else {
         // first copy the constraint tree
-        copyConstraintTree(&constraintTree, taxon_order);
+        copyConstraintTree(&constraintTree, taxon_order, rand_stream);
         newNodeID = nodeNum - leafNum + nseq;
         index = (branchNum)*2;
         
@@ -1059,7 +1059,7 @@ int PhyloTree::computeParsimonyTree(const char *out_prefix, Alignment *alignment
         initializeAllPartialPars();
         
         // extract a bifurcating subtree and get removed nodes to insert later
-        extractBifurcatingSubTree(removed_nei, attached_node);
+        extractBifurcatingSubTree(removed_nei, attached_node, rand_stream);
         
         added_nodes.reserve(removed_nei.size());
     }
@@ -1185,7 +1185,7 @@ int PhyloTree::addTaxonMPFast(Node *added_taxon, Node* added_node, Node* node, N
 
 }
 
-void PhyloTree::extractBifurcatingSubTree(NeighborVec &removed_nei, NodeVector &attached_node) {
+void PhyloTree::extractBifurcatingSubTree(NeighborVec &removed_nei, NodeVector &attached_node, int *rand_stream) {
     NodeVector nodes;
     getMultifurcatingNodes(nodes);
     if (nodes.empty())
@@ -1210,11 +1210,11 @@ void PhyloTree::extractBifurcatingSubTree(NeighborVec &removed_nei, NodeVector &
         ASSERT(id[0] >= 0);
         // randomly choose 2 neighbors to reserve
         do {
-            id[1] = random_int(node->degree());
+            id[1] = random_int(node->degree(), rand_stream);
         } while (id[1] == id[0]);
         
         do {
-            id[2] = random_int(node->degree());
+            id[2] = random_int(node->degree(), rand_stream);
         } while (id[2] == id[0] || id[2] == id[1]);
         
         std::sort(id, id+3);
@@ -1227,7 +1227,7 @@ void PhyloTree::extractBifurcatingSubTree(NeighborVec &removed_nei, NodeVector &
                 attached_node.push_back(node);
             }
         // randomize removed_nei
-        my_random_shuffle(removed_nei.begin() + cur_size, removed_nei.end());
+        my_random_shuffle(removed_nei.begin() + cur_size, removed_nei.end(), rand_stream);
         
         // remove neigbors to make bifurcating tree
         node->neighbors[0] = node->neighbors[id[0]];

@@ -607,10 +607,11 @@ void IQTree::computeInitialTree(LikelihoodKernel kernel) {
             cout << "Creating fast initial parsimony tree by random order stepwise addition..." << endl;
 //            aln->orderPatternByNumChars();
             start = getRealTime();
-            score = computeParsimonyTree(params->out_prefix, aln);
+            score = computeParsimonyTree(params->out_prefix, aln, randstream);
             cout << getRealTime() - start << " seconds, parsimony score: " << score
                 << " (based on " << aln->num_parsimony_sites << " sites)"<< endl;
-            wrapperFixNegativeBranch(false);
+            // already fixed branch length
+            //wrapperFixNegativeBranch(false);
 
             break;
         case STT_RANDOM_TREE:
@@ -701,14 +702,17 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
 //    int numDupPars = 0;
     bool orig_rooted = rooted;
     rooted = false;
+    int processID = MPIHelper::getInstance().getProcessID();
 
-/* TODO: this does not work properly with partition model
 #ifdef _OPENMP
     StrVector pars_trees;
     if (params->start_tree == STT_PARSIMONY && nParTrees >= 1) {
         pars_trees.resize(nParTrees);
         #pragma omp parallel
         {
+            int *rstream;
+            int ran_seed = params->ran_seed + processID * 1000 + omp_get_thread_num();
+            init_random(ran_seed, false, &rstream);
             PhyloTree tree;
             if (!constraintTree.empty()) {
                 tree.constraintTree.readConstraint(constraintTree);
@@ -717,19 +721,18 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
             tree.setParsimonyKernel(params->SSE);
             #pragma omp for schedule(dynamic)
             for (int i = 0; i < nParTrees; i++) {
-                tree.computeParsimonyTree(NULL, aln);
+                tree.computeParsimonyTree(NULL, aln, rstream);
                 if (orig_rooted)
-                    convertToRooted();
+                    tree.convertToRooted();
                 pars_trees[i] = tree.getTreeString();
             }
+            finish_random(rstream);
         }
     }
 #endif
-*/
 
     int init_size = candidateTrees.size();
 
-    int processID = MPIHelper::getInstance().getProcessID();
 //    unsigned long curNumTrees = candidateTrees.size();
     for (int treeNr = 1; treeNr <= nParTrees; treeNr++) {
         int parRandSeed = Params::getInstance().ran_seed + processID * nParTrees + treeNr;
@@ -759,24 +762,15 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
 			curParsTree = getTreeString();
         } else if (params->start_tree == STT_PARSIMONY) {
             /********* Create parsimony tree using IQ-TREE *********/
-            rooted = false;
-            computeParsimonyTree(NULL, aln);
-            if (orig_rooted)
-                convertToRooted();
-            curParsTree = getTreeString();
-
-/* TODO: this does not work properly with partition model
 #ifdef _OPENMP
             curParsTree = pars_trees[treeNr-1];
 #else
             rooted = false;
-            curParsTree = generateParsimonyTree(parRandSeed);
-            if (orig_rooted) {
+            computeParsimonyTree(NULL, aln, randstream);
+            if (orig_rooted)
                 convertToRooted();
-                curParsTree = getTreeString();
-            }
+            curParsTree = getTreeString();
 #endif
-*/
         }
         
         int pos = addTreeToCandidateSet(curParsTree, -DBL_MAX, false, MPIHelper::getInstance().getProcessID());
@@ -954,7 +948,7 @@ string IQTree::generateParsimonyTree(int randomSeed) {
         wrapperFixNegativeBranch(true);
         parsimonyTreeString = getTreeString();
     } else {
-        computeParsimonyTree(NULL, aln);
+        computeParsimonyTree(NULL, aln, randstream);
         parsimonyTreeString = getTreeString();
     }
     return parsimonyTreeString;
