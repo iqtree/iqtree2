@@ -509,6 +509,14 @@ public:
     void getInnerBranches(Branches& branches, Node *node = NULL, Node *dad = NULL);
 
     /**
+     get all inner branches below the node
+     @param branches the branches are stored here
+     @param node the starting node, NULL to start from the root
+     @param dad dad of the node, used to direct the search
+     */
+    void getInnerBranches(BranchVector& branches, Node *node = NULL, Node *dad = NULL);
+
+    /**
      *      get all descending internal branches below \a node and \a dad up to depth \a depth
      *      @param[in] depth collect all internal branches up to distance \a depth from the current branch
      *      @param[in] node one of the 2 nodes of the current branches

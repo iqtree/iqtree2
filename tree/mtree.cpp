@@ -1140,6 +1140,19 @@ void MTree::getInnerBranches(Branches& branches, Node *node, Node *dad) {
     }
 }
 
+void MTree::getInnerBranches(BranchVector& branches, Node *node, Node *dad) {
+    if (!node) node = root;
+    FOR_NEIGHBOR_IT(node, dad, it) {
+        if (!node->isLeaf() && !(*it)->node->isLeaf()) {
+            Branch branch;
+            branch.first = node;
+            branch.second = (*it)->node;
+            branches.push_back(branch);
+        }
+        getInnerBranches(branches, (*it)->node, node);
+    }
+}
+
 void MTree::getBranchLengths(vector<DoubleVector> &len, Node *node, Node *dad) {
     if (!node) {
         node = root;
