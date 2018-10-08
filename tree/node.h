@@ -44,6 +44,10 @@ using namespace std;
 
 class Node;
 
+#define BA_BOOTSTRAP "B"
+#define BA_CERTAINTY "C"
+
+
 /**
     Neighbor list of a node in the tree
  */
@@ -71,6 +75,11 @@ public:
     */
     Split* split;
 
+    /**
+        Flexible attributes of the branch as key-value pairs (2018-10-08)
+     */
+    map<string,string> attributes;
+    
     /**
         construct class with a node and length
         @param anode the other end of the branch
@@ -181,6 +190,35 @@ public:
         length = vec[start_pos];
     }
 
+    /************** attribute processing ***************/
+    /**
+     @param key key name
+     @param[out] value value for key
+     @return true if key exists, false otherwise
+     */
+    template<class T>
+    bool getAttr(string key, T& value) {
+        map<string,string>::iterator it = attributes.find(key);
+        if (it == attributes.end())
+            return false;
+        string ss(it->second);
+        ss >> value;
+        return true;
+    }
+
+    /**
+     put pair of (key,value) to checkpoint
+     @param key key name
+     @param value value
+     */
+    template<class T>
+    void putAttr(string key, T value) {
+        stringstream ss;
+        ss.precision(10);
+        ss << value;
+        attributes[key] = ss.str();
+    }
+
 };
 
 /**
@@ -194,6 +232,7 @@ typedef vector<Neighbor*> NeighborVec;
 typedef vector<Node*> NodeVector;
 
 typedef pair<Node*, Node*> Branch;
+typedef vector<Branch> BranchVector;
 typedef map<int, Branch> Branches;
 
 /*--------------------------------------------------------------*/
