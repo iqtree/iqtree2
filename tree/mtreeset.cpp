@@ -123,7 +123,10 @@ void MTreeSet::init(StrVector &treels, bool &is_rooted) {
 		NodeVector taxa;
 		tree->getTaxa(taxa);
 		for (NodeVector::iterator taxit = taxa.begin(); taxit != taxa.end(); taxit++)
-			(*taxit)->id = atoi((*taxit)->name.c_str());
+            if ((*taxit)->name == ROOT_NAME)
+                (*taxit)->id = taxa.size()-1;
+            else
+                (*taxit)->id = atoi((*taxit)->name.c_str());
 		//at(it->second) = tree;
 		push_back(tree);
 		tree_weights.push_back(1);

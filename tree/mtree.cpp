@@ -439,7 +439,7 @@ void MTree::printBranchLength(ostream &out, int brtype, bool print_slash, Neighb
             out << ":" << fixed << length;
         else
             out << ":" << length;
-    } else if (brtype & WT_BR_CLADE) {
+    } else if (brtype & WT_BR_CLADE && length_nei->node->name != ROOT_NAME) {
     	if (print_slash)
     		out << "/";
         out << length;
@@ -1392,6 +1392,13 @@ void MTree::convertToTree(SplitGraph &sg) {
     root = newnode;
     nodeNum++;
     cladetaxa.clear();
+    string root_name = ROOT_NAME;
+    newnode = findLeafName(root_name);
+    if (newnode) {
+        rooted = true;
+        root = newnode;
+    }
+    
 }
 
 Node *MTree::findNodeName(string &name, Node *node, Node *dad) {

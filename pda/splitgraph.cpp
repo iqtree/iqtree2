@@ -87,8 +87,8 @@ void SplitGraph::init(Params &params)
             saveFileStarDot(cout);
     } else {
         createBlocks();
-        if (params.is_rooted) 
-            outError(ERR_ROOT_NET);
+//        if (params.is_rooted)
+//            outError(ERR_ROOT_NET);
     
          cout << "Reading input file " << params.user_file << "..." << endl;
 
