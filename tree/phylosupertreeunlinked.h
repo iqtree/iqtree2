@@ -54,9 +54,10 @@ public:
      * FAST VERSION: compute parsimony tree by step-wise addition
      * @param out_prefix prefix for .parstree file
      * @param alignment input alignment
+     * @param rand_stream random stream
      * @return parsimony score
      */
-    virtual int computeParsimonyTree(const char *out_prefix, Alignment *alignment);
+    virtual int computeParsimonyTree(const char *out_prefix, Alignment *alignment, int *rand_stream);
 
     /**
      * Assign branch lengths for branch that has no or negative length

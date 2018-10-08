@@ -401,7 +401,7 @@ public:
      @param tree the tree to copy
      @param[out] order of taxa with first part being in constraint tree
      */
-    void copyConstraintTree(MTree *tree, IntVector &taxon_order);
+    void copyConstraintTree(MTree *tree, IntVector &taxon_order, int *rand_stream);
 
     /**
             copy the phylogenetic tree structure into this tree, designed specifically for PhyloTree.
@@ -1288,7 +1288,7 @@ public:
         create a 3-taxon tree and return random taxon order
         @param[out] taxon_order random taxon order
      */
-    void create3TaxonTree(IntVector &taxon_order);
+    void create3TaxonTree(IntVector &taxon_order, int *rand_stream);
 
     /**
      Extract a bifurcating subtree and return randomly removed Neighbor
@@ -1296,16 +1296,17 @@ public:
      @param[out] removed_nei vector of removed Neighbor
      @param[out] attached_node vector of node attached to removed Neighbor
      */
-    void extractBifurcatingSubTree(NeighborVec &removed_nei, NodeVector &attached_node);
+    void extractBifurcatingSubTree(NeighborVec &removed_nei, NodeVector &attached_node, int *rand_stream);
     
 
     /**
      * FAST VERSION: compute parsimony tree by step-wise addition
      * @param out_prefix prefix for .parstree file
      * @param alignment input alignment
+     * @param rand_stream random stream
      * @return parsimony score
      */
-    virtual int computeParsimonyTree(const char *out_prefix, Alignment *alignment);
+    virtual int computeParsimonyTree(const char *out_prefix, Alignment *alignment, int *rand_stream);
         
     /****************************************************************************
             Branch length optimization by maximum likelihood
