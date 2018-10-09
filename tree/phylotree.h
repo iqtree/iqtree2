@@ -1533,7 +1533,7 @@ public:
      *   Apply 5 new branch lengths stored in the NNI move
      *   @param nnimove the NNI move currently in consideration
      */
-    virtual void changeNNIBrans(NNIMove nnimove);
+    virtual void changeNNIBrans(NNIMove &nnimove);
 
     /****************************************************************************
             Stepwise addition (greedy) by maximum likelihood

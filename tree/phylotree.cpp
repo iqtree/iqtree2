@@ -3402,7 +3402,7 @@ void PhyloTree::doNNI(NNIMove &move, bool clearLH) {
     }
 }
 
-void PhyloTree::changeNNIBrans(NNIMove nnimove) {
+void PhyloTree::changeNNIBrans(NNIMove &nnimove) {
 	PhyloNode *node1 = nnimove.node1;
 	PhyloNode *node2 = nnimove.node2;
 	PhyloNeighbor *node1_node2_nei = (PhyloNeighbor*) node1->findNeighbor(node2);

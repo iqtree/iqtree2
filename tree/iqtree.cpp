@@ -700,8 +700,8 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
     }
     double startTime = getRealTime();
 //    int numDupPars = 0;
-    bool orig_rooted = rooted;
-    rooted = false;
+//    bool orig_rooted = rooted;
+//    rooted = false;
     int processID = MPIHelper::getInstance().getProcessID();
 
 #ifdef _OPENMP
@@ -722,7 +722,7 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
             #pragma omp for schedule(dynamic)
             for (int i = 0; i < nParTrees; i++) {
                 tree.computeParsimonyTree(NULL, aln, rstream);
-                if (orig_rooted)
+                if (rooted)
                     tree.convertToRooted();
                 pars_trees[i] = tree.getTreeString();
             }
@@ -753,19 +753,21 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
         } else if (params->start_tree == STT_RANDOM_TREE) {
             generateRandomTree(YULE_HARDING);
             wrapperFixNegativeBranch(true);
-            rooted = false;
-            if (orig_rooted)
+            if (rooted) {
+                rooted = false;
                 convertToRooted();
+            }
 			curParsTree = getTreeString();
         } else if (params->start_tree == STT_PARSIMONY) {
             /********* Create parsimony tree using IQ-TREE *********/
 #ifdef _OPENMP
             curParsTree = pars_trees[treeNr-1];
 #else
-            rooted = false;
             computeParsimonyTree(NULL, aln, randstream);
-            if (orig_rooted)
+            if (rooted) {
+                rooted = false;
                 convertToRooted();
+            }
             curParsTree = getTreeString();
 #endif
         }
@@ -777,7 +779,6 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
             doRandomNNIs();
 //            generateRandomTree(YULE_HARDING);
             wrapperFixNegativeBranch(true);
-            ASSERT(rooted == orig_rooted);
             string randTree = getTreeString();
 //            if (isMixlen()) {
 //                randTree = optimizeBranches(1);
