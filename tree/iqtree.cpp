@@ -747,11 +747,8 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
 					pllInst->start->back, PLL_FALSE, PLL_TRUE, PLL_FALSE,
 					PLL_FALSE, PLL_FALSE, PLL_SUMMARIZE_LH, PLL_FALSE, PLL_FALSE);
 			curParsTree = string(pllInst->tree_string);
-            rooted = false;
 			PhyloTree::readTreeStringSeqName(curParsTree);
 			wrapperFixNegativeBranch(true);
-            if (orig_rooted)
-                convertToRooted();
 			curParsTree = getTreeString();
         } else if (params->start_tree == STT_RANDOM_TREE) {
             generateRandomTree(YULE_HARDING);
@@ -1018,6 +1015,10 @@ void IQTree::initializeModel(Params &params, string &model_name, ModelsBlock *mo
                     setModelFactory(new PartitionModel(params, (PhyloSuperTree*) this, models_block));
                 } else
                     setModelFactory(new PartitionModelPlen(params, (PhyloSuperTreePlen*) this, models_block));
+
+                // mapTrees again in case of different rooting
+                ((PhyloSuperTree*)this)->mapTrees();
+
             } else {
                 setModelFactory(new ModelFactory(params, model_name, this, models_block));
             }

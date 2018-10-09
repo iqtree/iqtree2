@@ -142,6 +142,10 @@ void MTree::copyTree(MTree *tree) {
 }
 
 void MTree::copyTree(MTree *tree, string &taxa_set) {
+    if (rooted) {
+        ASSERT(tree->rooted);
+        taxa_set.push_back(1);
+    }
     if (tree->leafNum != taxa_set.length())
     	outError("#leaves and taxa_set do not match!");
     leafNum = nodeNum = branchNum = 0;
@@ -151,6 +155,8 @@ void MTree::copyTree(MTree *tree, string &taxa_set) {
     if (root) freeNode();
     root = NULL;
     root = copyTree(tree, taxa_set, new_len);
+    if (rooted)
+        ASSERT(root->name == ROOT_NAME);
 }
 
 Node* MTree::copyTree(MTree *tree, string &taxa_set, double &len, Node *node, Node *dad) {

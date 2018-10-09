@@ -223,7 +223,12 @@ public:
 	 */
 	void linkBranch(int part, SuperNeighbor *nei, SuperNeighbor *dad_nei);
 
-
+    /**
+        make the rooting consistent between trees
+     */
+    void syncRooting();
+    
+    
     /**
             initialize partial_lh vector of all PhyloNeighbors, allocating central_partial_lh
      */

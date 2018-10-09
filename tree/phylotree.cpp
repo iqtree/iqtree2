@@ -280,6 +280,8 @@ void PhyloTree::readTree(const char *infile, bool &is_rooted) {
 	MTree::readTree(infile, is_rooted);
     // 2015-10-14: has to reset this pointer when read in
     current_it = current_it_back = NULL;
+    if (rooted)
+        computeBranchDirection();
 }
 
 void PhyloTree::readTree(istream &in, bool &is_rooted) {
@@ -308,6 +310,8 @@ void PhyloTree::readTree(istream &in, bool &is_rooted) {
 		}
 	if (num_collapsed)
 		initializeTree();
+    if (rooted)
+        computeBranchDirection();
 }
 
 void PhyloTree::assignLeafNames(Node *node, Node *dad) {
@@ -336,6 +340,8 @@ void PhyloTree::copyTree(MTree *tree) {
 
 void PhyloTree::copyTree(MTree *tree, string &taxa_set) {
     MTree::copyTree(tree, taxa_set);
+    if (rooted)
+        computeBranchDirection();
     if (!aln)
         return;
     // reset the ID with alignment
@@ -465,7 +471,14 @@ void PhyloTree::readTreeStringSeqName(const string &tree_string) {
 //	str(tree_string);
 //	str.seekg(0, ios::beg);
 	freeNode();
-	readTree(str, rooted);
+    if (rooted) {
+        rooted = false;
+        readTree(str, rooted);
+        if (!rooted)
+            convertToRooted();
+    } else {
+        readTree(str, rooted);
+    }
 //    assignLeafNames();
 	setAlignment(aln);
 	setRootNode(params->root);
@@ -511,7 +524,13 @@ void PhyloTree::readTreeFile(const string &file_name) {
 //	str << tree_string;
 //	str.seekg(0, ios::beg);
 	freeNode();
-	readTree(str, rooted);
+    if (rooted) {
+        rooted = false;
+        readTree(str, rooted);
+        if (!rooted)
+            convertToRooted();
+    } else
+        readTree(str, rooted);
 	setAlignment(aln);
     if (isSuperTree()) {
         ((PhyloSuperTree*) this)->mapTrees();

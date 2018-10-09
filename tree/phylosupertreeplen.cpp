@@ -139,7 +139,10 @@ double PhyloSuperTreePlen::computeDist(int seq1, int seq2, double initial_dist, 
 
 void PhyloSuperTreePlen::mapTrees() {
 	ASSERT(root);
-	int part = 0;
+
+    syncRooting();
+    
+    int part = 0;
     // this is important: rescale branch length of codon partitions to be compatible with other partitions.
     // since for codon models, branch lengths = # nucleotide subst per codon site!
     bool noncodon_present = false;
@@ -165,7 +168,12 @@ void PhyloSuperTreePlen::mapTrees() {
 		part_taxa.resize(leafNum, NULL);
 		int i;
 		for (i = 0; i < leafNum; i++) {
-			int id = ((SuperAlignment*)aln)->taxa_index[i][part];
+            int id;
+            if (i < aln->getNSeq())
+                id = ((SuperAlignment*)aln)->taxa_index[i][part];
+            else {
+                id = (*it)->leafNum-1;
+            }
 			if (id >=0) part_taxa[i] = my_taxa[id];
 		}
 		linkTree(part, part_taxa);
