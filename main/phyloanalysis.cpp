@@ -2373,16 +2373,12 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
                 // NEW 2015-08-10: always compute BIONJ tree into the candidate set
                 iqtree->resetCurScore();
                 double start_bionj = getRealTime();
-                bool orig_rooted = iqtree->rooted;
-                iqtree->rooted = false;
                 iqtree->computeBioNJ(params, iqtree->aln, iqtree->dist_file);
                 cout << getRealTime() - start_bionj << " seconds" << endl;
                 if (iqtree->isSuperTree())
                     iqtree->wrapperFixNegativeBranch(true);
                 else
                     iqtree->wrapperFixNegativeBranch(false);
-                if (orig_rooted)
-                    iqtree->convertToRooted();
                 iqtree->initializeAllPartialLh();
                 if (params.start_tree == STT_BIONJ) {
                     initTree = iqtree->optimizeModelParameters(params.min_iterations==0, initEpsilon);

@@ -212,7 +212,7 @@ void PhyloSuperTree::readTreeString(const string &tree_string) {
 	setRootNode(params->root);
 	for (iterator it = begin(); it != end(); it++) {
 		(*it)->freeNode();
-		(*it)->readTree(str, rooted);
+		(*it)->readTree(str, (*it)->rooted);
         (*it)->assignLeafNames();
 //		(*it)->setAlignment((*it)->aln);
 	}
@@ -413,6 +413,32 @@ void PhyloSuperTree::linkTree(int part, NodeVector &part_taxa, SuperNode *node, 
 	linkBranch(part, nei, dad_nei);
 }
 
+void PhyloSuperTree::syncRooting() {
+    if (empty())
+        return;
+    // check if all trees are similarly rooted or unrooted
+    bool same_rooting = true;
+    iterator tree;
+    for (tree = begin(); tree != end(); tree++) {
+        if ((*tree)->rooted != front()->rooted) {
+            same_rooting = false;
+            break;
+        }
+    }
+    
+    if (same_rooting) {
+        if (!empty() && rooted != front()->rooted) {
+            if (rooted)
+                convertToUnrooted();
+            else
+                convertToRooted();
+        }
+    } else if (!rooted) {
+        // not same rooting between trees
+        convertToRooted();
+    }
+}
+
 void PhyloSuperTree::printMapInfo() {
 	NodeVector nodes1, nodes2;
 	getBranches(nodes1, nodes2);
@@ -449,6 +475,7 @@ void PhyloSuperTree::printMapInfo() {
 
 void PhyloSuperTree::mapTrees() {
 	ASSERT(root);
+    syncRooting();
 	int part = 0, i;
 	if (verbose_mode >= VB_DEBUG)
 		drawTree(cout,  WT_BR_SCALE | WT_INT_NODE | WT_TAXON_ID | WT_NEWLINE | WT_BR_ID);
@@ -465,7 +492,12 @@ void PhyloSuperTree::mapTrees() {
 		(*it)->getOrderedTaxa(my_taxa);
 		part_taxa.resize(leafNum, NULL);
 		for (i = 0; i < leafNum; i++) {
-			int id = ((SuperAlignment*)aln)->taxa_index[i][part];
+            int id;
+            if (i < aln->getNSeq())
+                id = ((SuperAlignment*)aln)->taxa_index[i][part];
+            else {
+                id = (*it)->leafNum-1;
+            }
 			if (id >=0) part_taxa[i] = my_taxa[id];
 		}
 		if (verbose_mode >= VB_DEBUG) {
@@ -493,7 +525,12 @@ void PhyloSuperTree::linkTrees() {
 		part_taxa.resize(leafNum, NULL);
 		int i;
 		for (i = 0; i < leafNum; i++) {
-			int id = ((SuperAlignment*)aln)->taxa_index[i][part];
+            int id;
+            if (i < aln->getNSeq())
+                id = ((SuperAlignment*)aln)->taxa_index[i][part];
+            else {
+                id = (*it)->leafNum-1;
+            }
 			if (id >=0) part_taxa[i] = my_taxa[id];
 		}
 		linkTree(part, part_taxa);
@@ -732,6 +769,12 @@ int PhyloSuperTree::getMaxPartNameLength() {
 }
 
 NNIMove PhyloSuperTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove *nniMoves) {
+    if (((PhyloNeighbor*)node1->findNeighbor(node2))->direction == TOWARD_ROOT) {
+        // swap node1 and node2 if the direction is not right, only for nonreversible models
+        PhyloNode *tmp = node1;
+        node1 = node2;
+        node2 = tmp;
+    }
     NNIMove myMove;
     //myMove.newloglh = 0;
 	SuperNeighbor *nei1 = ((SuperNeighbor*)node1->findNeighbor(node2));
@@ -740,7 +783,9 @@ NNIMove PhyloSuperTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NN
 	SuperNeighbor *node1_nei = NULL;
 	SuperNeighbor *node2_nei = NULL;
 	SuperNeighbor *node2_nei_other = NULL;
-	FOR_NEIGHBOR_DECLARE(node1, node2, node1_it) {
+	FOR_NEIGHBOR_DECLARE(node1, node2, node1_it)
+    if (((PhyloNeighbor*)*node1_it)->direction != TOWARD_ROOT)
+    {
 		node1_nei = (SuperNeighbor*)(*node1_it);
 		break;
 	}
