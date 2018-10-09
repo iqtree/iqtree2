@@ -1016,7 +1016,7 @@ void PhyloSuperTree::doNNI(NNIMove &move, bool clearLH) {
 
 }
 
-void PhyloSuperTree::changeNNIBrans(NNIMove move) {
+void PhyloSuperTree::changeNNIBrans(NNIMove &move) {
 	SuperNeighbor *nei1 = (SuperNeighbor*)move.node1->findNeighbor(move.node2);
 	SuperNeighbor *nei2 = (SuperNeighbor*)move.node2->findNeighbor(move.node1);
 	iterator it;
