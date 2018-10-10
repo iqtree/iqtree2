@@ -40,6 +40,18 @@ public:
         }
     }
 
+    PhyloNeighborMixlen(PhyloNeighborMixlen *nei) : PhyloNeighbor(nei) {
+        lengths = nei->lengths;
+    }
+    
+    /**
+     allocate a new Neighbor by just copying from this one
+     @return pointer to newly created Neighbor
+     */
+    virtual Neighbor* newNeighbor() {
+        return (new PhyloNeighborMixlen(this));
+    }
+
     /** branch lengths for mixture */
     DoubleVector lengths;
 

@@ -3496,12 +3496,7 @@ NNIMove PhyloTree::getBestNNIForBran(PhyloNode *node1, PhyloNode *node2, NNIMove
 	// save Neighbor and allocate new Neighbor pointer
 	for (id = 0; id < IT_NUM; id++) {
 		saved_nei[id] = (*saved_it[id]);
-        if (isMixlen())
-            *saved_it[id] = new PhyloNeighborMixlen(saved_nei[id]->node, ((PhyloNeighborMixlen*)saved_nei[id])->lengths);
-        else
-            *saved_it[id] = new PhyloNeighbor(saved_nei[id]->node, saved_nei[id]->length);
-
-        ((PhyloNeighbor*)*saved_it[id])->direction = ((PhyloNeighbor*)saved_nei[id])->direction;
+        *saved_it[id] = saved_nei[id]->newNeighbor();
 
         if (((PhyloNeighbor*)saved_nei[id])->partial_lh) {
             ((PhyloNeighbor*) (*saved_it[id]))->partial_lh = nni_partial_lh + mem_id*partial_lh_size;

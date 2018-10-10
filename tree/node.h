@@ -114,7 +114,17 @@ public:
         length = nei->length;
         id = nei->id;
         split = NULL;
+        attributes = nei->attributes;
     }
+
+    /**
+     allocate a new Neighbor by just copying from this one
+     @return pointer to newly created Neighbor
+     */
+    virtual Neighbor* newNeighbor() {
+        return (new Neighbor(this));
+    }
+    
 
     /**
         destructor
