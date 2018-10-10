@@ -1148,11 +1148,16 @@ int PhyloTree::computeParsimonyTree(const char *out_prefix, Alignment *alignment
 
     nodeNum = 2 * leafNum - 2;
     initializeTree();
-
+    // parsimony tree is always unrooted
+    bool orig_rooted = rooted;
+    rooted = false;
     setAlignment(alignment);
 //    initializeAllPartialPars();
 //    clearAllPartialLH();
     fixNegativeBranch(true);
+    // convert to rooted tree if originally so
+    if (orig_rooted)
+        convertToRooted();
     if (out_prefix) {
 		string file_name = out_prefix;
 		file_name += ".parstree";
