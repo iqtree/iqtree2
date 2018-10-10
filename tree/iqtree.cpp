@@ -755,10 +755,6 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
             curParsTree = pars_trees[treeNr-1];
 #else
             computeParsimonyTree(NULL, aln, randstream);
-            if (rooted) {
-                rooted = false;
-                convertToRooted();
-            }
             curParsTree = getTreeString();
 #endif
         }
