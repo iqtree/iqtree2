@@ -710,11 +710,10 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
             }
             tree.setParams(params);
             tree.setParsimonyKernel(params->SSE);
+            tree.rooted = rooted;
             #pragma omp for schedule(dynamic)
             for (int i = 0; i < nParTrees; i++) {
                 tree.computeParsimonyTree(NULL, aln, rstream);
-                if (rooted)
-                    tree.convertToRooted();
                 pars_trees[i] = tree.getTreeString();
             }
             finish_random(rstream);
