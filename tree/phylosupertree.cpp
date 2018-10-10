@@ -496,7 +496,11 @@ void PhyloSuperTree::mapTrees() {
             if (i < aln->getNSeq())
                 id = ((SuperAlignment*)aln)->taxa_index[i][part];
             else {
-                id = (*it)->leafNum-1;
+                ASSERT(rooted);
+                if ((*it)->rooted)
+                    id = (*it)->leafNum-1;
+                else
+                    id = -1;
             }
 			if (id >=0) part_taxa[i] = my_taxa[id];
 		}
@@ -528,9 +532,10 @@ void PhyloSuperTree::linkTrees() {
             int id;
             if (i < aln->getNSeq())
                 id = ((SuperAlignment*)aln)->taxa_index[i][part];
-            else {
+            else if ((*it)->rooted)
                 id = (*it)->leafNum-1;
-            }
+            else
+                id = -1;
 			if (id >=0) part_taxa[i] = my_taxa[id];
 		}
 		linkTree(part, part_taxa);

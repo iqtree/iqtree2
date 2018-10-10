@@ -567,16 +567,7 @@ void IQTree::computeInitialTree(LikelihoodKernel kernel) {
         bool myrooted = params->is_rooted;
         readTree(params->user_file, myrooted);
         if (myrooted && !isSuperTreeUnlinked()) {
-            // TODO: convert to unrooted tree for supertree as non-reversible models
-            // do not work with partition models yet
-            if (isSuperTree()) {
-                if (!findNodeName(aln->getSeqName(0)))
-                    outError("Taxon " + aln->getSeqName(0) + " does not exist in tree file");
-                convertToUnrooted();
-                cout << " rooted tree converted to unrooted tree";
-            } else {
-                cout << " rooted tree";
-            }
+            cout << " rooted tree";
         }
         cout << endl;
         setAlignment(aln);
