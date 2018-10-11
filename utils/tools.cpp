@@ -3769,6 +3769,9 @@ void parseArg(int argc, char *argv[], Params &params) {
     if (params.terrace_analysis && !params.partition_file)
         outError("Terrace analysis requires partition information.");
 
+    if (params.constraint_tree_file && params.partition_type == TOPO_UNLINKED)
+        outError("-g constraint tree option does not work with -spu.");
+
 	// Diep:
 	if(params.ufboot2corr == true){
 		if(params.gbo_replicates <= 0) params.ufboot2corr = false;
