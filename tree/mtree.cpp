@@ -1602,6 +1602,42 @@ string MTree::reportInputInfo() {
     return str;
 }
 
+void MTree::convertToUnrooted() {
+    ASSERT(rooted && root);
+    ASSERT(root->isLeaf() && root->id == leafNum-1);
+    Node *node = root->neighbors[0]->node;
+    Node *taxon = findFirstTaxon();
+    
+    rooted = false;
+    leafNum--;
+    
+    // delete root node
+    if (node->degree() == 3) {
+        // delete and join adjacent branches
+        Node *node1 = NULL, *node2 = NULL;
+        double len = 0.0;
+        FOR_NEIGHBOR_IT(node, root, it) {
+            if (!node1) node1 = (*it)->node; else node2 = (*it)->node;
+            len += (*it)->length;
+        }
+        node1->updateNeighbor(node, node2, len);
+        node2->updateNeighbor(node, node1, len);
+        delete node;
+    } else {
+        // only delete root node
+        auto it = node->findNeighborIt(root);
+        delete *it;
+        node->neighbors.erase(it);
+        
+    }
+    
+    delete root;
+    // set a temporary taxon so that tree traversal works
+    root = taxon;
+    
+    initializeTree();
+    //    computeBranchDirection();
+}
 
 typedef map<int, Neighbor*> IntNeighborMap;
 

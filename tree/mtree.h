@@ -155,6 +155,11 @@ public:
     }
 
     /**
+     convert from rooted to unrooted tree
+     */
+    void convertToUnrooted();
+    
+    /**
             allocate a new node. Override this if you have an inherited Node class.
             @param node_id node ID
             @param node_name node name
