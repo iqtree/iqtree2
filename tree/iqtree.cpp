@@ -751,7 +751,8 @@ void IQTree::initCandidateTreeSet(int nParTrees, int nNNITrees) {
         } else if (params->start_tree == STT_PARSIMONY) {
             /********* Create parsimony tree using IQ-TREE *********/
 #ifdef _OPENMP
-            curParsTree = pars_trees[treeNr-1];
+            PhyloTree::readTreeString(pars_trees[treeNr-1]);
+            curParsTree = getTreeString();
 #else
             computeParsimonyTree(NULL, aln, randstream);
             curParsTree = getTreeString();
