@@ -33,6 +33,8 @@ void doParsMultiState(Params &params) {
         pars_tree.convertToUnrooted();
     pars_tree.setAlignment(&alignment);
     pars_tree.initCostMatrix(CM_LINEAR);
+    pars_tree.setParsimonyKernel(params.SSE);
+    pars_tree.initializeAllPartialPars();
     int total_length = pars_tree.computeParsimony();
     cout << "total length: " << total_length << endl;
     pars_tree.initCostMatrix(CM_UNIFORM);
