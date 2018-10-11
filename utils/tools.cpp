@@ -4159,7 +4159,8 @@ void usage_iqtree(char* argv[], bool full_command) {
             << "  --eigenlib           Use Eigen3 library" << endl
             << "  -alninfo             Print alignment sites statistics to .alninfo" << endl
             << "  -czb                 Collapse zero branches in final tree" << endl
-            << "  --show-lh            Compute tree likelihood without optimisation" << endl;
+            << "  --show-lh            Compute tree likelihood without optimisation" << endl
+            << "  --mlrate             Write site-specific rates by ML to .mlrate file" << endl;
 #ifdef IQTREE_TERRAPHAST
             cout << "  --terrace            Check if the tree lies on a phylogenetic terrace" << endl;
 #endif
