@@ -882,6 +882,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.state_freq_set = NULL;
     params.ratehet_set = NULL;
     params.model_def_file = NULL;
+    params.modelomatic = false;
     params.model_test_again = false;
     params.model_test_and_tree = 0;
     params.model_test_separate_rate = false;
@@ -2137,6 +2138,10 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.model_def_file = argv[cnt];
 				continue;
 			}
+            if (strcmp(argv[cnt], "--modelomatic") == 0) {
+                params.modelomatic = true;
+                continue;
+            }
 			if (strcmp(argv[cnt], "-mredo") == 0) {
 				params.model_test_again = true;
 				continue;
