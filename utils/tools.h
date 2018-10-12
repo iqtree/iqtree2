@@ -1370,6 +1370,9 @@ public:
     /** model defition file */
     char *model_def_file;
 
+    /** TRUE to perform ModelOMatic method of Whelan et al. 2015 */
+    bool modelomatic;
+    
     /** true to redo model testing even if .model file exists */
     bool model_test_again;
 

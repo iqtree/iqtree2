@@ -852,8 +852,22 @@ bool checkModelFile(string model_file, bool is_partitioned, ModelCheckpoint &inf
  */
 string testModel(Params &params, PhyloTree* in_tree, ModelCheckpoint &model_info,
         ModelsBlock *models_block, int num_threads, int brlen_type,
-        string set_name = "", bool print_mem_usage = false, string in_model_name = "");
+        string set_name = "", string in_model_name = "");
 
+/**
+ * select models for all partitions
+ * @param[in,out] model_info (IN/OUT) all model information
+ * @return total number of parameters
+ */
+void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint &model_info,
+                        ModelsBlock *models_block, int num_threads);
+
+/**
+ * get the list of model
+ * @param models (OUT) vectors of model names
+ * @return maximum number of rate categories
+ */
+int getModelList(Params &params, Alignment *aln, StrVector &models, bool separate_rate = false);
 
 void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info)
 {
@@ -887,7 +901,7 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info)
     model_info.setDumpInterval(params.checkpoint_dump_interval);
     
     bool ok_model_file = false;
-    if (!params.print_site_lh && !params.model_test_again) {
+    if (!params.model_test_again) {
         ok_model_file = model_info.load();
     }
     
@@ -932,10 +946,38 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info)
     //        iqtree.saveCheckpoint();
     //        checkpoint->dump(true);
     
+    StrVector model_names;
+    int max_cats = getModelList(params, iqtree.aln, model_names, params.model_test_separate_rate);
+    
+    uint64_t mem_size = iqtree.getMemoryRequired(max_cats);
+    cout << "NOTE: ModelFinder requires " << (mem_size / 1024) / 1024 << " MB RAM!" << endl;
+    if (mem_size >= getMemorySize()) {
+        outError("Memory required exceeds your computer RAM size!");
+    }
+#ifdef BINARY32
+    if (mem_size >= 2000000000) {
+        outError("Memory required exceeds 2GB limit of 32-bit executable");
+    }
+#endif
+    
+
     ModelsBlock *models_block = readModelsDefinition(params);
     
-    //params.model_name =
-    iqtree.aln->model_name = testModel(params, &iqtree, model_info, models_block, params.num_threads, BRLEN_OPTIMIZE, "", true);
+    if (iqtree.isSuperTree()) {
+        // partition model selection
+        PhyloSuperTree *stree = (PhyloSuperTree*)&iqtree;
+        testPartitionModel(params, stree, model_info, models_block, params.num_threads);
+        stree->mapTrees();
+        string res_models = "";
+        for (auto it = stree->begin(); it != stree->end(); it++) {
+            if (it != stree->begin()) res_models += ",";
+            res_models += (*it)->aln->model_name;
+        }
+        iqtree.aln->model_name = res_models;
+    } else {
+        // single model selection
+        iqtree.aln->model_name = testModel(params, &iqtree, model_info, models_block, params.num_threads, BRLEN_OPTIMIZE);
+    }
 
     delete models_block;
     
@@ -962,7 +1004,7 @@ void runModelFinder(Params &params, IQTree &iqtree, ModelCheckpoint &model_info)
  * @param models (OUT) vectors of model names
  * @return maximum number of rate categories
  */
-int getModelList(Params &params, Alignment *aln, StrVector &models, bool separate_rate = false) {
+int getModelList(Params &params, Alignment *aln, StrVector &models, bool separate_rate) {
 	StrVector model_names;
     StrVector freq_names;
 	SeqType seq_type = aln->seq_type;
@@ -1368,54 +1410,6 @@ void mergePartitions(PhyloSuperTree* super_tree, vector<set<int> > &gene_sets, S
     super_tree->setAlignment(new_super_aln);
 }
 
-void printModelFile(ostream &fmodel, Params &params, PhyloTree *tree, ModelInfo &info, string &set_name) {
-	string sitelh_file = params.out_prefix;
-	sitelh_file += ".sitelh";
-	SeqType seq_type = tree->aln->seq_type;
-	if (tree->isSuperTree())
-		seq_type = ((PhyloSuperTree*)tree)->front()->aln->seq_type;
-
-    fmodel.precision(4);
-    fmodel << fixed;
-    if (set_name != "")
-        fmodel << set_name << "\t";
-    fmodel << info.name << "\t" << info.df << "\t" << info.logl << "\t" << info.tree_len;
-    if (seq_type == SEQ_DNA) {
-        int nrates = tree->getModel()->getNumRateEntries();
-        double *rate_mat = new double[nrates];
-        tree->getModel()->getRateMatrix(rate_mat);
-        for (int rate = 0; rate < nrates; rate++)
-            fmodel << "\t" << rate_mat[rate];
-        delete [] rate_mat;
-    }
-    if (seq_type == SEQ_DNA || seq_type == SEQ_BINARY) {
-        int nstates = (seq_type == SEQ_DNA) ? 4 : 2;
-        double *freqs = new double[nstates];
-        tree->getModel()->getStateFrequency(freqs);
-        for (int freq = 0; freq < nstates; freq++)
-            fmodel << "\t" << freqs[freq];
-        delete [] freqs;
-    }
-    double alpha = tree->getRate()->getGammaShape();
-    fmodel << "\t";
-    if (alpha > 0) fmodel << alpha; else fmodel << "NA";
-    fmodel << "\t";
-    double pinvar = tree->getRate()->getPInvar();
-    if (pinvar > 0) fmodel << pinvar; else fmodel << "NA";
-    fmodel << "\t";
-//    tree->printTree(fmodel);
-    fmodel << info.tree;
-    fmodel << endl;
-    fmodel.precision(4);
-    const char *model_name = (params.print_site_lh) ? info.name.c_str() : NULL;
-    if (params.print_site_lh)
-        printSiteLh(sitelh_file.c_str(), tree, NULL, true, model_name);
-    if (params.model_test_and_tree) {
-        delete tree;
-        tree = NULL;
-    }
-}
-
 /**
     test one single model
     @param model_name model to be tested
@@ -1801,7 +1795,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
             part_model_name = in_tree->at(i)->aln->model_name;
         ModelInfo best_model;
 		best_model.name = testModel(params, this_tree, part_model_info, models_block,
-            (parallel_over_partitions ? 1 : num_threads), brlen_type, in_tree->at(i)->aln->name, false, part_model_name);
+            (parallel_over_partitions ? 1 : num_threads), brlen_type, in_tree->at(i)->aln->name, part_model_name);
 
         bool check = (best_model.restoreCheckpoint(&part_model_info));
         ASSERT(check);
@@ -2102,129 +2096,30 @@ bool isMixtureModel(ModelsBlock *models_block, string &model_str) {
     return false;
 }
 
-/*
- * OBSOLETE: Helper function for testModels.
- * Uses seq_type to return a model of the required class, which can then
- * be used by a ModelFactory to produce more such objects.
- * Gets a little complex in the case of DNA models, as 
- * Lie-Markov models are their own class distinct from time reversible models.
- */
-/*
-ModelMarkov* getPrototypeModel(SeqType seq_type, PhyloTree* tree, char *model_set) {
-    ModelMarkov *subst_model = NULL;
-    switch (seq_type) {
-    case SEQ_BINARY:
-        subst_model = new ModelBIN("JC2", "", FREQ_UNKNOWN, "", tree);
-	break;
-    case SEQ_PROTEIN:
-        subst_model = new ModelProtein("WAG", "", FREQ_UNKNOWN, "", tree);
-	break;
-    case SEQ_MORPH:
-        subst_model = new ModelMorphology("MK", "", FREQ_UNKNOWN, "", tree);
-	break;
-    case SEQ_CODON:
-        subst_model = new ModelCodon("GY", "", FREQ_UNKNOWN, "", tree);
-	break;
-    case SEQ_POMO:
-        // subst_model = new ModelPoMo("JC", "", FREQ_UNKNOWN, "", tree, "");
-        // TODO DS: Implement model finder.
-        cout << "ERROR: Automatic model selection with PoMo not yet supported." << endl;
-        outError("Please provide a substitution model with, e.g., \"-m HKY+P\".");
-	break;
-    case SEQ_DNA:
-	// This is the complicated case. Need to return either a ModelDNA, or a
-	// ModelLieMarkov
-        if (model_set && (strncmp(model_set, "liemarkov", 9) == 0 || strcmp(model_set,"strandsymmetric")==0)) {
-            // "liemarkov", "liemarkovry", "liemarkovws", "liemarkovmk", "strandsymmetric"
-            subst_model = new ModelLieMarkov("1.1", tree, "", FREQ_ESTIMATE, "");
-        } else {
-            StrVector model_names;
-            bool foundLM = false;
-            bool foundTR = false;
-            if (model_set) {
-                convert_string_vec(model_set, model_names);
-                for (StrVector::iterator it = model_names.begin() ; it != model_names.end(); ++it) {
-                    bool valid = ModelLieMarkov::validModelName(*it);
-                    foundLM = foundLM || valid;
-                    foundTR = foundTR || !valid;
-                }
-            }
-            if (foundLM && foundTR) {
-                outError("Currently we can't model test both Lie-Markov and non-Lie-Markov models\nat the same time. (You may have misspelled the name of a Lie-Markov model.");
-            } else if (foundLM) {
-                subst_model = new ModelLieMarkov("1.1", tree, "", FREQ_ESTIMATE, "");
-            } else {
-                subst_model = new ModelDNA("JC", "", FREQ_UNKNOWN, "", tree);
-            }
-        }
-	break;
-    default:
-	outError("Unrecognized seq_type, can't happen");
-    }
-    return(subst_model);
-}
-*/
-
-
-string testModel(Params &params, PhyloTree* in_tree, ModelCheckpoint &model_info, ModelsBlock *models_block,
-    int num_threads, int brlen_type, string set_name, bool print_mem_usage, string in_model_name)
+string testModel(Params &params, PhyloTree* in_tree, ModelCheckpoint &model_info,
+    ModelsBlock *models_block, int num_threads, int brlen_type,
+    string set_name, string in_model_name)
 {
     ModelCheckpoint *checkpoint = &model_info;
 
-	SeqType seq_type = in_tree->aln->seq_type;
-	if (in_tree->isSuperTree())
-		seq_type = ((PhyloSuperTree*)in_tree)->front()->aln->seq_type;
-	if (seq_type == SEQ_UNKNOWN)
-		outError("Unknown data for model testing.");
-	string sitelh_file = params.out_prefix;
-	sitelh_file += ".sitelh";
 	in_tree->params = &params;
 	StrVector model_names;
-    DoubleVector model_scores;
-	int max_cats;
     if (in_model_name.empty())
-        max_cats = getModelList(params, in_tree->aln, model_names, params.model_test_separate_rate);
+        getModelList(params, in_tree->aln, model_names, params.model_test_separate_rate);
     else {
-        max_cats = params.max_rate_cats;
         model_names.push_back(in_model_name);
     }
-	int model;
 
-    if (print_mem_usage) {
-        uint64_t mem_size = in_tree->getMemoryRequired(max_cats);
-        cout << "NOTE: ModelFinder requires " << (mem_size / 1024) / 1024 << " MB RAM!" << endl;
-        if (mem_size >= getMemorySize()) {
-            outError("Memory required exceeds your computer RAM size!");
-        }
-#ifdef BINARY32
-        if (mem_size >= 2000000000) {
-            outError("Memory required exceeds 2GB limit of 32-bit executable");
-        }
-#endif
-    }
-
+    DoubleVector model_scores;
+    int model;
 	string best_model;
-
-	if (in_tree->isSuperTree()) {
-		// select model for each partition
-		PhyloSuperTree *stree = (PhyloSuperTree*)in_tree;
-		testPartitionModel(params, stree, model_info, models_block, num_threads);
-//        stree->linkTrees();
-        stree->mapTrees();
-		string res_models = "";
-		for (auto it = stree->begin(); it != stree->end(); it++) {
-			if (it != stree->begin()) res_models += ",";
-			res_models += (*it)->aln->model_name;
-		}
-		return res_models;
-	}
 
 	int ssize = in_tree->aln->getNSite(); // sample size
 	if (params.model_test_sample_size)
 		ssize = params.model_test_sample_size;
 	if (set_name == "") {
 		cout << "ModelFinder will test " << model_names.size() << " "
-			<< getSeqTypeName(seq_type)
+			<< getSeqTypeName(in_tree->aln->seq_type)
 			<< " models (sample size: " << ssize << ") ..." << endl;
         if (verbose_mode >= VB_MED) {
             for (auto i = model_names.begin(); i != model_names.end(); i++)
@@ -2234,15 +2129,8 @@ string testModel(Params &params, PhyloTree* in_tree, ModelCheckpoint &model_info
         if (params.model_test_and_tree == 0)
             cout << " No. Model         -LnL         df  AIC          AICc         BIC" << endl;
 	}
-	if (params.print_site_lh) {
-		ofstream sitelh_out(sitelh_file.c_str());
-		if (!sitelh_out.is_open())
-			outError("Cannot write to file ", sitelh_file);
-		sitelh_out << model_names.size() << " " << in_tree->getAlnNSite() << endl;
-		sitelh_out.close();
-	}
 
-//	uint64_t RAM_requirement = 0;
+    //	uint64_t RAM_requirement = 0;
     string best_model_AIC, best_model_AICc, best_model_BIC;
     double best_score_AIC = DBL_MAX, best_score_AICc = DBL_MAX, best_score_BIC = DBL_MAX;
     string best_tree_AIC, best_tree_AICc, best_tree_BIC;
@@ -2250,10 +2138,6 @@ string testModel(Params &params, PhyloTree* in_tree, ModelCheckpoint &model_info
     CKP_RESTORE(best_tree_AIC);
     CKP_RESTORE(best_tree_AICc);
     CKP_RESTORE(best_tree_BIC);
-
-//    string prev_tree_string = "";
-//    int prev_model_id = -1;
-//    int skip_model = 0;
 
     //------------- MAIN FOR LOOP GOING THROUGH ALL MODELS TO BE TESTED ---------//
 
@@ -2459,8 +2343,6 @@ string testModel(Params &params, PhyloTree* in_tree, ModelCheckpoint &model_info
 		cout << "Best-fit model: " << best_model << " chosen according to "
             << criterionName(params.model_test_criterion) << endl;
 	}
-	if (params.print_site_lh)
-		cout << "Site log-likelihoods per model printed to " << sitelh_file << endl;
 	return best_model;
 }
 
