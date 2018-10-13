@@ -2941,6 +2941,109 @@ void Alignment::convertToCodonOrAA(Alignment *aln, char *gene_code_id, bool nt2a
 
 }
 
+Alignment *Alignment::convertCodonToAA() {
+    Alignment *res = new Alignment;
+    if (seq_type != SEQ_CODON)
+        outError("Cannot convert non-codon alignment into AA");
+    int i, site;
+    char AA_to_state[NUM_CHAR];
+    for (i = 0; i < getNSeq(); i++) {
+        res->seq_names.push_back(getSeqName(i));
+    }
+    res->name = name;
+    res->model_name = model_name;
+    res->sequence_type = sequence_type;
+    res->position_spec = position_spec;
+    res->aln_file = aln_file;
+    res->seq_type = SEQ_PROTEIN;
+    res->num_states = 20;
+    
+    res->computeUnknownState();
+    
+    res->buildStateMap(AA_to_state, SEQ_PROTEIN);
+
+    res->site_pattern.resize(getNSite(), -1);
+    res->clear();
+    res->pattern_index.clear();
+    
+    VerboseMode save_mode = verbose_mode;
+    verbose_mode = min(verbose_mode, VB_MIN); // to avoid printing gappy sites in addPattern
+    int nsite = getNSite();
+    int nseq = getNSeq();
+    Pattern pat;
+    pat.resize(nseq);
+    
+    for (site = 0; site < nsite; site++) {
+        for (int seq = 0; seq < nseq; seq++) {
+            StateType state = at(getPatternID(site))[seq];
+            if (state == STATE_UNKNOWN)
+                state = res->STATE_UNKNOWN;
+            else
+                state = AA_to_state[(int)genetic_code[(int)codon_table[state]]];
+            pat[seq] = state;
+        }
+        res->addPattern(pat, site);
+    }
+    verbose_mode = save_mode;
+    res->countConstSite();
+    res->buildSeqStates();
+    return res;
+}
+
+Alignment *Alignment::convertCodonToDNA() {
+    Alignment *res = new Alignment;
+    if (seq_type != SEQ_CODON)
+        outError("Cannot convert non-codon alignment into DNA");
+    int i, site;
+    for (i = 0; i < getNSeq(); i++) {
+        res->seq_names.push_back(getSeqName(i));
+    }
+    res->name = name;
+    res->model_name = model_name;
+    res->sequence_type = sequence_type;
+    res->position_spec = position_spec;
+    res->aln_file = aln_file;
+    res->seq_type = SEQ_DNA;
+    res->num_states = 4;
+    
+    res->computeUnknownState();
+    
+    res->site_pattern.resize(getNSite()*3, -1);
+    res->clear();
+    res->pattern_index.clear();
+    
+    VerboseMode save_mode = verbose_mode;
+    verbose_mode = min(verbose_mode, VB_MIN); // to avoid printing gappy sites in addPattern
+    int nsite = getNSite();
+    int nseq = getNSeq();
+    Pattern pat[3];
+    pat[0].resize(nseq);
+    pat[1].resize(nseq);
+    pat[2].resize(nseq);
+
+    for (site = 0; site < nsite; site++) {
+        int i;
+        for (int seq = 0; seq < nseq; seq++) {
+            StateType state = at(getPatternID(site))[seq];
+            if (state == STATE_UNKNOWN) {
+                for (i = 0; i < 3; i++)
+                    pat[i][seq] = res->STATE_UNKNOWN;
+            } else {
+                state = codon_table[state];
+                pat[0][seq] = state/16;
+                pat[1][seq] = (state%16)/4;
+                pat[2][seq] = state%4;
+            }
+        }
+        for (i = 0; i < 3; i++)
+            res->addPattern(pat[i], site*3+i);
+    }
+    verbose_mode = save_mode;
+    res->countConstSite();
+    res->buildSeqStates();
+    return res;
+}
+
 void convert_range(const char *str, int &lower, int &upper, int &step_size, char* &endptr) throw (string) {
     //char *endptr;
     char *beginptr = (char*) str;
@@ -3803,7 +3906,8 @@ void Alignment::computeAbsoluteStateFreq(unsigned int *abs_state_freq) {
     } else {
         for (iterator it = begin(); it != end(); it++)
             for (Pattern::iterator it2 = it->begin(); it2 != it->end(); it2++)
-                abs_state_freq[(int)*it2] += it->frequency;
+                if ((*it2) < num_states)
+                    abs_state_freq[(int)*it2] += it->frequency;
     }
 }
 

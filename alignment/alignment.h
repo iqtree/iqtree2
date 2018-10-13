@@ -528,6 +528,16 @@ public:
     */
     void convertToCodonOrAA(Alignment *aln, char *gene_code_id, bool nt2aa = false);
 
+    /**
+     convert this codon alignment to AA
+     */
+    Alignment *convertCodonToAA();
+
+    /**
+     convert this codon alignment to DNA
+     */
+    Alignment *convertCodonToDNA();
+
     /****************************************************************************
             Distance functions
      ****************************************************************************/
