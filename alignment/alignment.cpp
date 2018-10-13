@@ -1545,6 +1545,8 @@ int Alignment::buildPattern(StrVector &sequences, char *sequence_type, int nseq,
         seq_type = user_seq_type;
     }
 
+    initStateSpace(seq_type);
+    
     // now convert to patterns
     int site, seq, num_gaps_only = 0;
 
