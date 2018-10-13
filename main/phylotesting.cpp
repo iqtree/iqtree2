@@ -879,8 +879,12 @@ int getModelList(Params &params, Alignment *aln, StrVector &models, bool separat
 
 /**
  compute log-adapter function according to Whelan et al. 2015
+ @param orig_aln original codon alignment
+ @param newaln AA alignment
+ @param[out] adjusted_df adjusted degree of freedom factor
+ @return adjusted log-likelihood factor
  */
-double computeAdapter(Alignment *orig_aln, Alignment *newaln) {
+double computeAdapter(Alignment *orig_aln, Alignment *newaln, int &adjusted_df) {
     int aa, codon;
 
     // count codon occurences
@@ -917,11 +921,20 @@ double computeAdapter(Alignment *orig_aln, Alignment *newaln) {
     
     // now compute adapter function
     double adapter = 0.0;
+    adjusted_df = 0;
+    vector<bool> has_AA;
+    has_AA.resize(newaln->num_states, false);
+    
     for (codon = 0; codon < orig_aln->num_states; codon++) {
         if (codon_counts[codon] == 0)
             continue;
+        has_AA[newaln->convertState(orig_aln->genetic_code[(int)orig_aln->codon_table[codon]])] = true;
         adapter += codon_counts[codon]*log(codon_freq[codon]);
+        adjusted_df++;
     }
+    for (aa = 0; aa < has_AA.size(); aa++)
+        if (has_AA[aa])
+            adjusted_df--;
     return adapter;
 }
 
@@ -969,11 +982,13 @@ string testModelOMatic(Params &params, PhyloTree* in_tree, ModelCheckpoint &mode
     for (int id = 0; id < sizeof(test_seq_types) / sizeof(SeqType); id++) {
         Alignment *newaln = NULL;
         // adapter coefficient according to Whelan et al. 2015
-        double adapter = 0.0;
+        double adjusted_logl = 0.0;
+        int adjusted_df = 0;
         if (test_seq_types[id] == SEQ_PROTEIN) {
             newaln = orig_aln->convertCodonToAA();
-            adapter = computeAdapter(orig_aln, newaln);
-            cout << "Adapter function: " << adapter << endl;
+            adjusted_logl = computeAdapter(orig_aln, newaln, adjusted_df);
+            if (set_name.empty())
+                cout << "Adapter function: " << adjusted_logl << "  adjusted_df: " << adjusted_df << endl;
         } else if (test_seq_types[id] == SEQ_DNA)
             newaln = orig_aln->convertCodonToDNA();
         else
@@ -986,7 +1001,8 @@ string testModelOMatic(Params &params, PhyloTree* in_tree, ModelCheckpoint &mode
         check = info.restoreCheckpoint(&model_info);
         ASSERT(check);
         // correct log-likelihood with adapter function
-        info.logl += adapter;
+        info.logl += adjusted_logl;
+        info.df += adjusted_df;
         info.computeICScores(newaln->getNSite());
         double score_new = info.computeICScore(newaln->getNSite());
         if (score_new < score_best) {
