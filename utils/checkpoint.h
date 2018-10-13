@@ -248,6 +248,39 @@ public:
         return true;
     }
 
+    /**
+        get a vector in YAML syntax from checkpoint
+        @param key key name
+        @param num number of elements
+        @param[out] value value
+    */
+    template<class T>
+    bool ymlGetVector(string key, vector<T> &value) {
+        if (key.empty())
+            key = struct_name.substr(0, struct_name.length()-1);
+        else
+            key = struct_name + key;
+        iterator it = find(key);
+        if (it == end())
+            return false;
+        size_t pos = 0, next_pos;
+        value.clear();
+        if ((pos = it->second.find('[')) == string::npos)
+            outError(key + " vector not starting with [");
+        for (int i = 0; ; i++) {
+            next_pos = it->second.find(", ", pos);
+            CkpStream ss(it->second.substr(pos, next_pos-pos));
+            T val;
+            if (ss >> val)
+                value.push_back(val);
+            else
+                break;
+            if (next_pos == string::npos) break;
+            pos = next_pos+2;
+        }
+        return true;
+    }
+
     /** 
         @param key key name
         @return bool value for key

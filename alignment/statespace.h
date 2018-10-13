@@ -1,0 +1,82 @@
+
+//
+// C++ Interface: StateSpace
+//
+// Description:
+//
+//
+// Author: BUI Quang Minh (c) 2018
+//
+// Copyright: See COPYING file that comes with this distribution
+//
+//
+
+#ifndef STATESPACE_H
+#define STATESPACE_H
+
+#include <iostream>
+#include <string>
+#include <vector>
+#include <stdint.h>
+#include "utils/tools.h"
+
+/**
+ StateType as 32-bit unsigned int
+ */
+typedef uint32_t StateType;
+
+enum SeqType {
+    SEQ_DNA, SEQ_PROTEIN, SEQ_BINARY, SEQ_MORPH, SEQ_MULTISTATE, SEQ_CODON, SEQ_POMO, SEQ_UNKNOWN
+};
+
+// IMPORTANT: refactor STATE_UNKNOWN
+//const char STATE_UNKNOWN = 126;
+
+// TODO DS: This seems like a significant restriction.
+/* PoMo: STATE_INVALID is not handled in PoMo.  Set STATE_INVALID to
+ 127 to remove warning about comparison to char in alignment.cpp.
+ This is important if the maximum N will be increased above 21
+ because then the state space is larger than 127 and we have to
+ think about something else. */
+/* const unsigned char STATE_INVALID = 255; */
+const unsigned char STATE_INVALID = 127;
+
+#ifdef USE_HASH_MAP
+typedef unordered_map<string, int> StringIntMap;
+typedef unordered_map<string, StateType> StringStateMap;
+typedef unordered_map<string, double> StringDoubleHashMap;
+typedef unordered_map<uint32_t, uint32_t> IntIntMap;
+#else
+typedef map<string, int> StringIntMap;
+typedef map<string, StateType> StringStateMap;
+typedef map<string, double> StringDoubleHashMap;
+typedef map<uint32_t, uint32_t> IntIntMap;
+#endif
+
+
+/**
+ general class defining state space
+ */
+class StateSpace {
+public:
+    /** constructor */
+    StateSpace() {}
+
+    /** destructor */
+    ~StateSpace() {}
+
+    /**
+     initialise from a state definition string
+     */
+    void initStateSpace(string name);
+
+    void initStateSpace(SeqType seqtype);
+
+protected:
+    
+    /** map from raw state string to StateType */
+    StringStateMap states; // state symbols
+    unordered_map<string, vector<StateType> >equate; // ambiguous symbols
+};
+
+#endif

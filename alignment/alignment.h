@@ -16,28 +16,13 @@
 #include <bitset>
 #include "pattern.h"
 #include "ncl/ncl.h"
-#include "utils/tools.h"
+#include "statespace.h"
 
-// IMPORTANT: refactor STATE_UNKNOWN
-//const char STATE_UNKNOWN = 126;
-
-// TODO DS: This seems like a significant restriction.
-/* PoMo: STATE_INVALID is not handled in PoMo.  Set STATE_INVALID to
-   127 to remove warning about comparison to char in alignment.cpp.
-   This is important if the maximum N will be increased above 21
-   because then the state space is larger than 127 and we have to
-   think about something else. */
-/* const unsigned char STATE_INVALID = 255; */
-const unsigned char STATE_INVALID = 127;
-const int NUM_CHAR = 256;
 const double MIN_FREQUENCY          = 0.0001;
 const double MIN_FREQUENCY_DIFF     = 0.00001;
 
+const int NUM_CHAR = 256;
 typedef bitset<NUM_CHAR> StateBitset;
-
-enum SeqType {
-    SEQ_DNA, SEQ_PROTEIN, SEQ_BINARY, SEQ_MORPH, SEQ_MULTISTATE, SEQ_CODON, SEQ_POMO, SEQ_UNKNOWN
-};
 
 /** class storing results of symmetry tests */
 class SymTestResult {
@@ -60,30 +45,25 @@ std::ostream& operator<< (std::ostream& stream, const SymTestResult& res);
 
 #ifdef USE_HASH_MAP
 struct hashPattern {
-	size_t operator()(const vector<StateType> &sp) const {
-		size_t sum = 0;
-		for (Pattern::const_iterator it = sp.begin(); it != sp.end(); it++)
-			sum = (*it) + (sum << 6) + (sum << 16) - sum;
-		return sum;
-	}
+    size_t operator()(const vector<StateType> &sp) const {
+        size_t sum = 0;
+        for (Pattern::const_iterator it = sp.begin(); it != sp.end(); it++)
+            sum = (*it) + (sum << 6) + (sum << 16) - sum;
+        return sum;
+    }
 };
-typedef unordered_map<string, int> StringIntMap;
-typedef unordered_map<string, double> StringDoubleHashMap;
 typedef unordered_map<vector<StateType>, int, hashPattern> PatternIntMap;
-typedef unordered_map<uint32_t, uint32_t> IntIntMap;
 #else
-typedef map<string, int> StringIntMap;
-typedef map<string, double> StringDoubleHashMap;
 typedef map<vector<StateType>, int> PatternIntMap;
-typedef map<uint32_t, uint32_t> IntIntMap;
 #endif
+
 
 /**
 Multiple Sequence Alignment. Stored by a vector of site-patterns
 
         @author BUI Quang Minh, Steffen Klaere, Arndt von Haeseler <minh.bui@univie.ac.at>
  */
-class Alignment : public vector<Pattern>, public CharSet {
+class Alignment : public vector<Pattern>, public CharSet, public StateSpace {
     friend class SuperAlignment;
     friend class SuperAlignmentUnlinked;
 
