@@ -1625,6 +1625,25 @@ void mergePartitions(PhyloSuperTree* super_tree, vector<set<int> > &gene_sets, S
 }
 
 /**
+ called when some partition is changed
+ */
+void fixPartitions(PhyloSuperTree* super_tree) {
+    SuperAlignment *super_aln = (SuperAlignment*)super_tree->aln;
+    int part;
+    bool aln_changed = false;
+    for (part = 0; part < super_tree->size(); part++)
+        if (super_aln->partitions[part] != super_tree->at(part)->aln) {
+            aln_changed = true;
+            super_aln->partitions[part] = super_tree->at(part)->aln;
+        }
+    if (!aln_changed)
+        return;
+    super_aln->buildPattern();
+    super_aln->orderPatternByNumChars(PAT_VARIANT);
+    super_tree->deleteAllPartialLh();
+}
+
+/**
     test one single model
     @param model_name model to be tested
     @param params program parameters
@@ -2002,20 +2021,20 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
         PhyloTree *this_tree = in_tree->at(i);
 		// scan through models for this partition, assuming the information occurs consecutively
 		ModelCheckpoint part_model_info;
-		extractModelInfo(in_tree->at(i)->aln->name, model_info, part_model_info);
+		extractModelInfo(this_tree->aln->name, model_info, part_model_info);
 		// do the computation
         string part_model_name;
         if (params.model_name.empty())
-            part_model_name = in_tree->at(i)->aln->model_name;
+            part_model_name = this_tree->aln->model_name;
         ModelInfo best_model;
-		best_model.name = testModel(params, this_tree, part_model_info, models_block,
-            (parallel_over_partitions ? 1 : num_threads), brlen_type, in_tree->at(i)->aln->name, part_model_name);
+		best_model.name = testModelOMatic(params, this_tree, part_model_info, models_block,
+            (parallel_over_partitions ? 1 : num_threads), brlen_type, this_tree->aln->name, part_model_name);
 
         bool check = (best_model.restoreCheckpoint(&part_model_info));
         ASSERT(check);
 
 		double score = best_model.computeICScore(this_tree->getAlnNSite());
-		in_tree->at(i)->aln->model_name = best_model.name;
+		this_tree->aln->model_name = best_model.name;
 		lhsum += (lhvec[i] = best_model.logl);
 		dfsum += (dfvec[i] = best_model.df);
         lenvec[i] = best_model.tree_len;
@@ -2030,18 +2049,21 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
             cout.width(12);
             cout << left << best_model.name << " ";
             cout.width(11);
-            cout << score << " " << in_tree->at(i)->aln->name;
+            cout << score << " " << this_tree->aln->name;
             if (num_model >= 10) {
                 double remain_time = (total_num_model-num_model)*(getRealTime()-start_time)/num_model;
                 cout << "\t" << convert_time(getRealTime()-start_time) << " (" 
                     << convert_time(remain_time) << " left)";
             }
             cout << endl;
-            replaceModelInfo(in_tree->at(i)->aln->name, model_info, part_model_info);
+            replaceModelInfo(this_tree->aln->name, model_info, part_model_info);
             model_info.dump();
         }
     }
 
+    // in case ModelOMatic change the alignment
+    fixPartitions(in_tree);
+    
 	double inf_score = computeInformationScore(lhsum, dfsum, ssize, params.model_test_criterion);
 	cout << "Full partition model " << criterionName(params.model_test_criterion) << " score: " << inf_score << " (LnL: " << lhsum << "  df:" << dfsum << ")" << endl;
 
@@ -2163,7 +2185,7 @@ void testPartitionModel(Params &params, PhyloSuperTree* in_tree, ModelCheckpoint
                     tree->restoreCheckpoint();
                     tree->saveCheckpoint();
                 }
-                best_model.name = testModel(params, tree, part_model_info, models_block,
+                best_model.name = testModelOMatic(params, tree, part_model_info, models_block,
                     params.model_test_and_tree ? num_threads : 1, params.partition_type, cur_pair.set_name);
                 best_model.restoreCheckpoint(&part_model_info);
                 /*
