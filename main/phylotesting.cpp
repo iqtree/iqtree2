@@ -69,6 +69,9 @@ const char* dna_model_names_rax[] ={"GTR"};
 /* DNA model supported by MrBayes */
 const char *dna_model_names_mrbayes[] = {"JC", "F81", "K80", "HKY", "SYM", "GTR"};
 
+/* DNA model supported by ModelOMatic */
+const char *dna_model_names_modelomatic[] = {"JC", "F81", "K80", "HKY", "GTR"};
+
 //const char* dna_freq_names[] = {"+FO"};
 
 // Lie-Markov models without an RY, WS or MK prefix
@@ -128,6 +131,9 @@ const char *aa_model_names_rax[] = { "Dayhoff", "mtMAM", "JTT", "WAG",
 const char* aa_model_names_mrbayes[] = {"Poisson", "Dayhoff", "mtMAM", "JTT", "WAG",
 		"cpREV", "mtREV", "rtREV", "VT", "Blosum62" };
 
+const char* aa_model_names_modelomatic[] = {"Poisson", "Blosum62", "Dayhoff", "HIVb", "HIVw",
+    "JTT", "LG", "VT", "WAG", "cpREV", "mtART", "mtMAM", "mtREV", "rtREV"};
+
 const char *aa_model_names_nuclear[] = {"WAG", "Dayhoff","JTT", "LG", "VT", "DCMut", "PMB", "JTTDCMut", "Blosum62"};
 
 const char *aa_model_names_mitochondrial[] = {"mtREV", "mtMAM", "mtART", "mtZOA", "mtMet" , "mtVer" , "mtInv" };
@@ -144,6 +150,8 @@ const char* aa_freq_names[] = {"", "+F"};
 //short int std_genetic_code[]    = {   0,    0,     0,        1,        1,              1,              1};
 const char *codon_model_names[] = {"MG", "MGK", "GY", "KOSI07", "SCHN05"};
 short int std_genetic_code[]    = {   0,    0,     0,        1,        1};
+const char *codon_model_names_modelomatic[] = {"GY"};
+short int std_genetic_code_modelomatic[]    = {   0};
 
 const char *codon_freq_names[] = {"", "+F1X4", "+F3X4", "+F"};
 
@@ -1258,6 +1266,8 @@ int getModelList(Params &params, Alignment *aln, StrVector &models, bool separat
 		} else if (strcmp(params.model_set, "mrbayes") == 0) {
 			copyCString(dna_model_names_mrbayes, sizeof(dna_model_names_mrbayes) / sizeof(char*), model_names);
 //            copyCString(dna_freq_names, sizeof(dna_freq_names)/sizeof(char*), freq_names);
+        } else if (strcmp(params.model_set, "modelomatic") == 0) {
+            copyCString(dna_model_names_modelomatic, sizeof(dna_model_names_modelomatic) / sizeof(char*), model_names);
 		} else if (strcmp(params.model_set, "liemarkov") == 0) {
 			copyCString(dna_model_names_lie_markov_fullsym, sizeof(dna_model_names_lie_markov_fullsym) / sizeof(char*), model_names);
 			appendCString(dna_model_names_lie_markov_ry, sizeof(dna_model_names_lie_markov_ry) / sizeof(char*), model_names);
@@ -1311,6 +1321,8 @@ int getModelList(Params &params, Alignment *aln, StrVector &models, bool separat
 			copyCString(aa_model_names_rax, sizeof(aa_model_names_rax) / sizeof(char*), model_names);
 		} else if (strcmp(params.model_set, "mrbayes") == 0) {
 			copyCString(aa_model_names_mrbayes, sizeof(aa_model_names_mrbayes) / sizeof(char*), model_names);
+        } else if (strcmp(params.model_set, "modelomatic") == 0) {
+            copyCString(aa_model_names_modelomatic, sizeof(aa_model_names_modelomatic) / sizeof(char*), model_names);
         } else if (params.model_set[0] == '+') {
             // append model_set into existing models
             convert_string_vec(params.model_set+1, model_names);
@@ -1358,6 +1370,8 @@ int getModelList(Params &params, Alignment *aln, StrVector &models, bool separat
                         model_names.push_back(codon_model_names[j]);
 //				copyCString(codon_model_names, sizeof(codon_model_names) / sizeof(char*) - 1, model_names);
             }
+        } else if (strcmp(params.model_set, "modelomatic") == 0) {
+            copyCString(codon_model_names_modelomatic, sizeof(codon_model_names_modelomatic) / sizeof(char*), model_names);
         } else if (params.model_set[0] == '+') {
             // append model_set into existing models
             convert_string_vec(params.model_set+1, model_names);
