@@ -94,6 +94,20 @@ public:
     bool getBestModel(string &best_model);
 
     /*
+     get the best model list
+     @param[out] best_model_list list of the best model
+     @return TRUE if best model found, FALSE otherwise (unfinished job)
+     */
+    bool getBestModelList(string &best_model_list);
+
+    /*
+     put the best model list
+     @param best_model_list list of the best model
+     @return TRUE if best model found, FALSE otherwise (unfinished job)
+     */
+    void putBestModelList(string &best_model_list);
+
+    /*
         get the ordered model list according to AIC, AICc or BIC
         @param tree associated tree
         @param[out] ordered_models list of models ordered by specified criterion
