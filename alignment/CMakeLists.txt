@@ -1,6 +1,4 @@
 add_library(alignment
-statespace.h
-statespace.cpp
 pattern.cpp
 pattern.h
 alignment.cpp

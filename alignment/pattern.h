@@ -12,7 +12,7 @@
 #ifndef PATTERN_H
 #define PATTERN_H
 
-#include "statespace.h"
+#include "phylo-yaml/statespace.h"
 
 using namespace std;
 
