@@ -15,6 +15,7 @@
 #include "phylo-yaml/statespace.h"
 
 using namespace std;
+using namespace PML;
 
 const int PAT_CONST       = 1; // const site pattern, e.g. AAAAAA, CC-C-CCCC
 const int PAT_INVARIANT   = 2; // invariant site pattern, including const patterns and e.g., GS--G-GGG (S = G/C)

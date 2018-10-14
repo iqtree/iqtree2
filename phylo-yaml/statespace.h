@@ -21,6 +21,8 @@
 #include "utils/tools.h"
 #include "yaml-cpp/yaml.h"
 
+namespace PML {
+
 /**
  StateType as 32-bit unsigned int
  */
@@ -87,5 +89,7 @@ protected:
     /** vector of the same size as states to translate to another state space */
     StrVector translate;
 };
+
+} // namespace PML
 
 #endif

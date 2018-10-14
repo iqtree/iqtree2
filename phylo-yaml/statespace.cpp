@@ -11,6 +11,8 @@
 //
 #include "statespace.h"
 
+namespace PML {
+
 const char* const ERR_NOT_A_LIST = "list '[...]' expected";
 const char* const ERR_NOT_A_MAP = "'key: value' pairs expected";
 const char* const ERR_UNDEFINED_STATE = "undefined state";
@@ -390,3 +392,5 @@ void StateSpace::initStateSpace(SeqType seqtype) {
         outError(e.what());
     }
 }
+
+} // namespace PML
