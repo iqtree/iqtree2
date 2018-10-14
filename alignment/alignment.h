@@ -672,11 +672,6 @@ public:
     StateType STATE_UNKNOWN;
 
     /**
-            number of states
-     */
-    int num_states;
-
-    /**
             fraction of constant sites
      */
     double frac_const_sites;
