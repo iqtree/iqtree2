@@ -19,6 +19,7 @@
 #include <vector>
 #include <stdint.h>
 #include "utils/tools.h"
+#include "yaml-cpp/yaml.h"
 
 /**
  StateType as 32-bit unsigned int
@@ -68,15 +69,23 @@ public:
     /**
      initialise from a state definition string
      */
-    void initStateSpace(string name);
+    void parseStateSpace(YAML::Node datatype);
 
     void initStateSpace(SeqType seqtype);
 
 protected:
+
+    /** state space name */
+    string space_name;
+
+    /** map from raw state string to state ID */
+    StringStateMap states;
     
-    /** map from raw state string to StateType */
-    StringStateMap states; // state symbols
-    unordered_map<string, vector<StateType> >equate; // ambiguous symbols
+    /** map from ambiguous states to vector of state ID */
+    unordered_map<string, vector<StateType> >equate;
+    
+    /** vector of the same size as states to translate to another state space */
+    StrVector translate;
 };
 
 #endif
