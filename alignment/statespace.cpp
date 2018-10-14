@@ -10,14 +10,26 @@
 //
 //
 #include "statespace.h"
-#include "yaml-cpp/yaml.h"
+
+const char* const ERR_NOT_A_LIST = "list '[...]' expected";
+const char* const ERR_NOT_A_MAP = "'key: value' pairs expected";
+const char* const ERR_UNDEFINED_STATE = "undefined state";
+const char* const ERR_STRING_LIST = "string or list [...] expected";
+const char* const ERR_TRANSLATE_LENGTH = "translate length different from #states";
+
+const char* const KEY_DATATYPE = "datatype";
+const char* const KEY_STATE = "state";
+const char* const KEY_MISSING = "missing";
+const char* const KEY_GAP = "gap";
+const char* const KEY_EQUATE = "equate";
+const char* const KEY_TRANSLATE = "translate";
 
 const char* builtin_state_spaces = R"(
 ### DNA data definition ###
 - datatype: DNA
-state: &Nucleotide [ A, C, G, T ]  # anchor to Nucleotide
-  missing: [ N, "?" ]
-  gap: "-"
+  state: &Nucleotide [ A, C, G, T ]  # anchor to Nucleotide
+  missing: &NTmissing [ N, "?" ]
+  gap: &NTgap "-"
   equate:
     U: T      # T and U are the same
     R: [A, G] # R is interpreted as A or G
@@ -47,6 +59,18 @@ state: &Nucleotide [ A, C, G, T ]  # anchor to Nucleotide
   missing: "?"
   gap: "-"
 
+### RY data definition ###
+- datatype: RY
+  state: [ R, Y ] # R=AG, Y=CT
+  missing: [ N, "?", W, S, M, K, B, H, D, V ]
+  gap: "-"
+  equate:
+    A: R
+    C: Y
+    G: R
+    T: Y
+    U: Y
+
 ### Morphological data ###
 - datatype: MORPH
   state: [ 0..9, A..Z ]
@@ -54,142 +78,313 @@ state: &Nucleotide [ A, C, G, T ]  # anchor to Nucleotide
   gap: "-"
 
 ### Codon data with standard genetic code ###
-
 - datatype: CODON
   state: [ *Nucleotide, *Nucleotide, *Nucleotide ]  # reference to Nucleotide
-  drop: [ TAA, TAG, TGA ]  # remove stop codons
-  missing: [ "NNN", "???" ]
-  gap: "---"
-  translate: [ ]
-  translateTo: AminoAcid
+  missing: [ *NTmissing, *NTmissing, *NTmissing ]
+  gap: [ *NTgap, *NTgap, *NTgap ]
+  translate: [ K, N, K, N, T, T, T, T, R, S, R, S, I, I, M, I,
+               Q, H, Q, H, P, P, P, P, R, R, R, R, L, L, L, L,
+               E, D, E, D, A, A, A, A, G, G, G, G, V, V, V, V,
+               X, Y, X, Y, S, S, S, S, X, C, W, C, L, F, L, F ]
+
+### Codon data with Vertebrate Mitochondrial code ###
+- datatype: CODON2
+  state: [ *Nucleotide, *Nucleotide, *Nucleotide ]  # reference to Nucleotide
+  missing: [ *NTmissing, *NTmissing, *NTmissing ]
+  gap: [ *NTgap, *NTgap, *NTgap ]
+  translate: KNKNTTTT*S*SMIMIQHQHPPPPRRRRLLLLEDEDAAAAGGGGVVVV*Y*YSSSSWCWCLFLF
+
+### Codon data with Vertebrate Mitochondrial code ###
+- datatype: CODON2
+  state: [ *Nucleotide, *Nucleotide, *Nucleotide ]  # reference to Nucleotide
+  missing: [ *NTmissing, *NTmissing, *NTmissing ]
+  gap: [ *NTgap, *NTgap, *NTgap ]
+  translate: KNKNTTTT*S*SMIMIQHQHPPPPRRRRLLLLEDEDAAAAGGGGVVVV*Y*YSSSSWCWCLFLF
+
+### Codon data with Yeast Mitochondrial code ###
+- datatype: CODON3
+  state: [ *Nucleotide, *Nucleotide, *Nucleotide ]  # reference to Nucleotide
+  missing: [ *NTmissing, *NTmissing, *NTmissing ]
+  gap: [ *NTgap, *NTgap, *NTgap ]
+  translate: KNKNTTTTRSRSMIMIQHQHPPPPRRRRTTTTEDEDAAAAGGGGVVVV*Y*YSSSSWCWCLFLF
+
+### Codon data with Mold, Protozoan code ###
+- datatype: CODON4
+  state: [ *Nucleotide, *Nucleotide, *Nucleotide ]  # reference to Nucleotide
+  missing: [ *NTmissing, *NTmissing, *NTmissing ]
+  gap: [ *NTgap, *NTgap, *NTgap ]
+  translate: KNKNTTTTRSRSIIMIQHQHPPPPRRRRLLLLEDEDAAAAGGGGVVVV*Y*YSSSSWCWCLFLF
+
+### Codon data with Invertebrate Mitochondrial code ###
+- datatype: CODON5
+  state: [ *Nucleotide, *Nucleotide, *Nucleotide ]  # reference to Nucleotide
+  missing: [ *NTmissing, *NTmissing, *NTmissing ]
+  gap: [ *NTgap, *NTgap, *NTgap ]
+  translate: KNKNTTTTSSSSMIMIQHQHPPPPRRRRLLLLEDEDAAAAGGGGVVVV*Y*YSSSSWCWCLFLF
+
+### Codon data with Ciliate, Dasycladacean and Hexamita Nuclear code ###
+- datatype: CODON6
+  state: [ *Nucleotide, *Nucleotide, *Nucleotide ]  # reference to Nucleotide
+  missing: [ *NTmissing, *NTmissing, *NTmissing ]
+  gap: [ *NTgap, *NTgap, *NTgap ]
+  translate: KNKNTTTTRSRSIIMIQHQHPPPPRRRRLLLLEDEDAAAAGGGGVVVVQYQYSSSS*CWCLFLF
+
+### Codon data with Echinoderm and Flatworm Mitochondrial code ###
+- datatype: CODON9
+  state: [ *Nucleotide, *Nucleotide, *Nucleotide ]  # reference to Nucleotide
+  missing: [ *NTmissing, *NTmissing, *NTmissing ]
+  gap: [ *NTgap, *NTgap, *NTgap ]
+  translate: NNKNTTTTSSSSIIMIQHQHPPPPRRRRLLLLEDEDAAAAGGGGVVVV*Y*YSSSSWCWCLFLF
+
+### Codon data with Euplotid Nuclear code ###
+- datatype: CODON10
+  state: [ *Nucleotide, *Nucleotide, *Nucleotide ]  # reference to Nucleotide
+  missing: [ *NTmissing, *NTmissing, *NTmissing ]
+  gap: [ *NTgap, *NTgap, *NTgap ]
+  translate: KNKNTTTTRSRSIIMIQHQHPPPPRRRRLLLLEDEDAAAAGGGGVVVV*Y*YSSSSCCWCLFLF
+
+### Codon data with Bacterial, Archaeal and Plant Plastid code ###
+- datatype: CODON11
+  state: [ *Nucleotide, *Nucleotide, *Nucleotide ]  # reference to Nucleotide
+  missing: [ *NTmissing, *NTmissing, *NTmissing ]
+  gap: [ *NTgap, *NTgap, *NTgap ]
+  translate: KNKNTTTTRSRSIIMIQHQHPPPPRRRRLLLLEDEDAAAAGGGGVVVV*Y*YSSSS*CWCLFLF
+
+### Codon data with Alternative Yeast Nuclear code ###
+- datatype: CODON12
+  state: [ *Nucleotide, *Nucleotide, *Nucleotide ]  # reference to Nucleotide
+  missing: [ *NTmissing, *NTmissing, *NTmissing ]
+  gap: [ *NTgap, *NTgap, *NTgap ]
+  translate: KNKNTTTTRSRSIIMIQHQHPPPPRRRRLLSLEDEDAAAAGGGGVVVV*Y*YSSSS*CWCLFLF
+
+### Codon data with Ascidian Mitochondrial code ###
+- datatype: CODON13
+  state: [ *Nucleotide, *Nucleotide, *Nucleotide ]  # reference to Nucleotide
+  missing: [ *NTmissing, *NTmissing, *NTmissing ]
+  gap: [ *NTgap, *NTgap, *NTgap ]
+  translate: KNKNTTTTGSGSMIMIQHQHPPPPRRRRLLLLEDEDAAAAGGGGVVVV*Y*YSSSSWCWCLFLF
+
+### Codon data with Alternative Flatworm Mitochondrial code ###
+- datatype: CODON14
+  state: [ *Nucleotide, *Nucleotide, *Nucleotide ]  # reference to Nucleotide
+  missing: [ *NTmissing, *NTmissing, *NTmissing ]
+  gap: [ *NTgap, *NTgap, *NTgap ]
+  translate: NNKNTTTTSSSSIIMIQHQHPPPPRRRRLLLLEDEDAAAAGGGGVVVVYY*YSSSSWCWCLFLF
+
+### Codon data with Blepharisma Nuclear code ###
+- datatype: CODON15
+  state: [ *Nucleotide, *Nucleotide, *Nucleotide ]  # reference to Nucleotide
+  missing: [ *NTmissing, *NTmissing, *NTmissing ]
+  gap: [ *NTgap, *NTgap, *NTgap ]
+  translate: KNKNTTTTRSRSIIMIQHQHPPPPRRRRLLLLEDEDAAAAGGGGVVVV*YQYSSSS*CWCLFLF
+
+### Codon data with Chlorophycean Mitochondrial code ###
+- datatype: CODON16
+  state: [ *Nucleotide, *Nucleotide, *Nucleotide ]  # reference to Nucleotide
+  missing: [ *NTmissing, *NTmissing, *NTmissing ]
+  gap: [ *NTgap, *NTgap, *NTgap ]
+  translate: KNKNTTTTRSRSIIMIQHQHPPPPRRRRLLLLEDEDAAAAGGGGVVVV*YLYSSSS*CWCLFLF
+
+### Codon data with Trematode Mitochondrial code ###
+- datatype: CODON21
+  state: [ *Nucleotide, *Nucleotide, *Nucleotide ]  # reference to Nucleotide
+  missing: [ *NTmissing, *NTmissing, *NTmissing ]
+  gap: [ *NTgap, *NTgap, *NTgap ]
+  translate: NNKNTTTTSSSSMIMIQHQHPPPPRRRRLLLLEDEDAAAAGGGGVVVV*Y*YSSSSWCWCLFLF
+
+### Codon data with Scenedesmus obliquus mitochondrial code ###
+- datatype: CODON22
+  state: [ *Nucleotide, *Nucleotide, *Nucleotide ]  # reference to Nucleotide
+  missing: [ *NTmissing, *NTmissing, *NTmissing ]
+  gap: [ *NTgap, *NTgap, *NTgap ]
+  translate: KNKNTTTTRSRSIIMIQHQHPPPPRRRRLLLLEDEDAAAAGGGGVVVV*YLY*SSS*CWCLFLF
+
+### Codon data with Thraustochytrium Mitochondrial code ###
+- datatype: CODON23
+  state: [ *Nucleotide, *Nucleotide, *Nucleotide ]  # reference to Nucleotide
+  missing: [ *NTmissing, *NTmissing, *NTmissing ]
+  gap: [ *NTgap, *NTgap, *NTgap ]
+  translate: KNKNTTTTRSRSIIMIQHQHPPPPRRRRLLLLEDEDAAAAGGGGVVVV*Y*YSSSS*CWC*FLF
+
+### Codon data with Pterobranchia mitochondrial code ###
+- datatype: CODON24
+  state: [ *Nucleotide, *Nucleotide, *Nucleotide ]  # reference to Nucleotide
+  missing: [ *NTmissing, *NTmissing, *NTmissing ]
+  gap: [ *NTgap, *NTgap, *NTgap ]
+  translate: KNKNTTTTSSKSIIMIQHQHPPPPRRRRLLLLEDEDAAAAGGGGVVVV*Y*YSSSSWCWCLFLF
+
+### Codon data with Candidate Division SR1 and Gracilibacteria code ###
+- datatype: CODON25
+  state: [ *Nucleotide, *Nucleotide, *Nucleotide ]  # reference to Nucleotide
+  missing: [ *NTmissing, *NTmissing, *NTmissing ]
+  gap: [ *NTgap, *NTgap, *NTgap ]
+  translate: KNKNTTTTRSRSIIMIQHQHPPPPRRRRLLLLEDEDAAAAGGGGVVVV*Y*YSSSSGCWCLFLF
+
 
 )";
 
 /**
  parse a string with range (e.g. 1..5) to a vector of string
  */
-void parseStates(string state, StrVector &states) {
-    states.clear();
+void parseRange(string str, StrVector &list) {
     size_t pos;
-    if ((pos = state.find("..")) == string::npos) {
-        states.push_back(state);
+    if ((pos = str.find("..")) == string::npos) {
+        list.push_back(str);
         return;
     }
-    string first = state.substr(0, pos);
-    string last = state.substr(pos+2);
+    string first = str.substr(0, pos);
+    string last = str.substr(pos+2);
     trimString(first);
     trimString(last);
     if (first.length() == 1 && last.length() == 1 && first[0] < last[0]) {
         for (char ch = first[0]; ch <= last[0]; ch++)
-            states.push_back(string(1,ch));
+            list.push_back(string(1,ch));
     } else {
-        states.push_back(state);
+        list.push_back(str);
     }
 }
 
-void StateSpace::initStateSpace(string name) {
-    YAML::Node spaceDef = YAML::Load(builtin_state_spaces);
-    ASSERT(spaceDef.IsSequence());
-    for (auto it = spaceDef.begin(); it != spaceDef.end(); it++) {
-        auto datatype = (*it);
-        YAML::Node node;
-        if (!(node = datatype["datatype"]))
-            continue;
-        if (node.as<string>() != name)
-            continue;
-        cout << datatype << endl;
-        // definition found
-        // parse state: symbols
-        if (!(node = datatype["state"]))
-            outError("No 'state: ' for datatype " + name);
-        if (!node.IsSequence()) {
-            cerr << node;
-            outError(" is not a list");
+/**
+ parse a list into a vector of string
+ */
+void parseList(YAML::const_iterator first, YAML::const_iterator last, StrVector &list) {
+    StrVector this_list;
+    if (first->IsScalar())
+        parseRange(first->Scalar(), this_list);
+    else if (first->IsSequence()) {
+        for (auto it = first->begin(); it != first->end(); it++) {
+            parseRange(it->Scalar(), this_list);
         }
-        StateType stateID = 0;
-        YAML::const_iterator state;
-        for (state = node.begin(); state != node.end(); state++) {
-            StrVector str;
-            parseStates(state->as<string>(), str);
-            for (auto sit = str.begin(); sit != str.end(); sit++, stateID++) {
-                states[*sit] = stateID;
-            }
-        }
-        cout << states.size() << " states" << endl;
+    } else {
+        throw YAML::Exception(first->Mark(), ERR_STRING_LIST);
+    }
+    StrVector last_list;
+    first++;
+    if (first != last)
+        parseList(first, last, last_list);
+    else
+        last_list = { "" };
+    for (auto sit = this_list.begin(); sit != this_list.end(); sit++)
+        for (auto sit2 = last_list.begin(); sit2 != last_list.end(); sit2++ )
+            list.push_back(*sit + *sit2);
+}
 
-        // parse equate: symbols
-        if ((node = datatype["equate"])) {
-            if (!node.IsMap()) {
-                cerr << node;
-                outError(" is not a map");
+/**
+ parse a YAML::Node into a list of strings
+ @param extend_length TRUE to make vector of characters if list has length 1
+ */
+void parseStringList(YAML::Node node, StrVector &list, bool extend_length = false) {
+    if (node.IsScalar()) {
+        // scalar assumed to be string
+        parseRange(node.Scalar(), list);
+    } else if (node.IsSequence()) {
+        YAML::const_iterator it;
+        // check if a sequence of scalars
+        bool all_scalars = true;
+        for (it = node.begin(); it != node.end(); it++)
+            if (!it->IsScalar()) {
+                all_scalars = false;
+                break;
             }
-            for (auto nit = node.begin(); nit != node.end(); nit++) {
-                string key = nit->first.as<string>();
-                auto value = nit->second;
-                if (value.IsScalar()) {
-                    if (states.find(value.as<string>()) == states.end()) {
-                        cerr << *nit;
-                        outError(" undefined");
-                    }
-                    equate[key] = { states[value.as<string>()] };
-                    continue;
-                }
-                if (!value.IsSequence()) {
-                    cerr << value;
-                    outError("is not a list");
-                }
-                for (state = value.begin(); state != value.end(); state++) {
-                    if (states.find(state->as<string>()) == states.end()) {
-                        cerr << *state;
-                        outError(" undefined");
-                    }
-                    if (equate.find(key) == equate.end())
-                        equate[key] = { states[state->as<string>()] };
-                    else
-                        equate[key].push_back(states[state->as<string>()]);
-                }
-            } // for Node
-            cout << equate.size() << " ambiguous states" << endl;
-        } // equate
-
-        // parse missing: symbols
-        if ((node = datatype["missing"])) {
-            if (node.IsScalar())
-                equate[node.as<string>()] = { (StateType)states.size() };
-            else if (node.IsSequence()) {
-                for (state = node.begin(); state != node.end(); state++)
-                    equate[state->as<string>()] = { (StateType)states.size() };
-            } else {
-                cerr << node;
-                outError(" invalid");
-            }
-        }
-
-        // parse gap: symbols
-        if ((node = datatype["gap"])) {
-            if (node.IsScalar())
-                equate[node.as<string>()] = { (StateType)states.size() };
-            else if (node.IsSequence()) {
-                for (state = node.begin(); state != node.end(); state++)
-                    equate[state->as<string>()] = { (StateType)states.size() };
-            } else {
-                cerr << node;
-                outError(" invalid");
-            }
-        }
         
-        cout << equate.size() << " ambiguous states" << endl;
+        if (all_scalars) {
+            for (it = node.begin(); it != node.end(); it++)
+                parseRange(it->Scalar(), list);
+        } else {
+            // now it can be a sequence of sequences, merge them together
+            parseList(node.begin(), node.end(), list);
+        }
+    } else {
+        throw YAML::Exception(node.Mark(), ERR_STRING_LIST);
+    }
+    
+    if (list.size() == 1 && extend_length) {
+        // single list, convert to vector of characters
+        for (auto i = list[0].begin()+1; i != list[0].end(); i++)
+            list.push_back(string(1,*i));
+        list[0] = list[0].substr(0,1);
+    }
+}
 
-    } // for spaceDef
+void StateSpace::parseStateSpace(YAML::Node datatype) {
+    if (!datatype.IsMap())
+        throw YAML::Exception(datatype.Mark(), ERR_NOT_A_MAP);
+    if (!datatype[KEY_DATATYPE])
+        throw YAML::Exception(datatype.Mark(), "'datatype: XXX' declaration not found");
+    states.clear();
+    equate.clear();
+    translate.clear();
+    space_name = datatype[KEY_DATATYPE].Scalar();
+    // definition found
+    // parse state: symbols
+    if (!datatype[KEY_STATE])
+        throw YAML::Exception(datatype.Mark(), "datatype does not have 'state: [...]'");
+    StrVector allstates;
+    parseStringList(datatype[KEY_STATE], allstates);
+    if (allstates.size() < 2)
+        throw YAML::Exception(datatype[KEY_STATE].Mark(), "state space must have at least 2 states");
+    StateType stateID = 0;
+    for (auto sit = allstates.begin(); sit != allstates.end(); sit++, stateID++) {
+        states[*sit] = stateID;
+    }
+    if (verbose_mode >= VB_MED)
+        cout << states.size() << " " << KEY_STATE << endl;
+
+    // parse missing: symbols
+    if (datatype[KEY_MISSING]) {
+        StrVector list;
+        parseStringList(datatype[KEY_MISSING], list);
+        for (auto i = list.begin(); i != list.end(); i++)
+            equate[*i] = { (StateType)states.size() };
+    }
+    
+    // parse gap: symbols
+    if (datatype[KEY_GAP]) {
+        StrVector list;
+        parseStringList(datatype[KEY_GAP], list);
+        for (auto i = list.begin(); i != list.end(); i++)
+            equate[*i] = { (StateType)states.size() };
+    }
+    
+    // parse equate: symbols
+    YAML::Node node_equate;
+    if ((node_equate = datatype[KEY_EQUATE])) {
+        if (!node_equate.IsMap())
+            throw YAML::Exception(node_equate.Mark(), ERR_NOT_A_MAP);
+        for (auto nit = node_equate.begin(); nit != node_equate.end(); nit++) {
+            string key = nit->first.Scalar();
+            auto value = nit->second;
+            StrVector values;
+            parseStringList(value, values);
+            for (auto i = values.begin(); i != values.end(); i++) {
+                if (states.find(*i) == states.end())
+                    throw YAML::Exception(value.Mark(), ERR_UNDEFINED_STATE);
+                if (equate.find(key) == equate.end())
+                    equate[key] = { states[*i] };
+                else
+                    equate[key].push_back(states[*i]);
+            }
+        } // for Node
+        if (verbose_mode >= VB_MED)
+            cout << equate.size() << " ambiguous states" << endl;
+    } // equate
+
+    // parse translate
+    if (datatype[KEY_TRANSLATE]) {
+        parseStringList(datatype[KEY_TRANSLATE], translate, true);
+        if (translate.size() != states.size())
+            throw YAML::Exception(datatype[KEY_TRANSLATE].Mark(), ERR_TRANSLATE_LENGTH);
+    }
 }
 
 void StateSpace::initStateSpace(SeqType seqtype) {
     try {
-        switch (seqtype) {
-            case SEQ_DNA: initStateSpace("CODON");
-                break;
-            default:
-                break;
+        YAML::Node spaceDef = YAML::Load(builtin_state_spaces);
+        if (!spaceDef.IsSequence())
+            throw YAML::Exception(spaceDef.Mark(), ERR_NOT_A_LIST);
+        for (auto it = spaceDef.begin(); it != spaceDef.end(); it++) {
+            cout << *it << endl;
+            parseStateSpace(*it);
         }
     } catch (YAML::Exception &e) {
         outError(e.what());
