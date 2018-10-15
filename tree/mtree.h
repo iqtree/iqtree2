@@ -43,6 +43,7 @@ public:
         length = 0.0;
         geneCF = 0.0;
         geneN = 0;
+        IC = 0.0;
         siteCF = siteN = 0.0;
     }
     int id; // branch id
@@ -50,6 +51,7 @@ public:
     string name;
     double geneCF; // gene concordance factor
     int geneN; // number of gene trees that is decisive
+    double IC; // internode certainty
     double siteCF; // site concordance factor
     double siteN; // number of sites that is decisive
 };

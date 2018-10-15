@@ -1197,6 +1197,9 @@ public:
         number of quartets for site concordance factor
      */
     int site_concordance;
+
+    /** 1 to compute internode certainty */
+    int internode_certainty;
     
     /**
             2nd alignment used in computing multinomialProb (Added by MA)

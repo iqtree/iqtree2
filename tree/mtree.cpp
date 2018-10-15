@@ -2056,7 +2056,7 @@ void MTree::extractQuadSubtrees(vector<Split*> &subtrees, Node *node, Node *dad)
 	}
 }
 
-
+/*
 void MTree::assignBranchSupport(const char *trees_file, map<int,BranchSupportInfo> &branch_supports) {
 	cout << "Reading input trees file " << trees_file << endl;
 	try {
@@ -2206,6 +2206,7 @@ void MTree::assignBranchSupport(istream &in, map<int,BranchSupportInfo> &branch_
 	for (vector<Split*>::reverse_iterator it = subtrees.rbegin(); it != subtrees.rend(); it++)
 		delete (*it);
 }
+*/
 
 void MTree::computeRFDist(const char *trees_file, IntVector &dist, int assign_sup) {
 	cout << "Reading input trees file " << trees_file << endl;
