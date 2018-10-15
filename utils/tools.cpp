@@ -792,6 +792,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.second_tree = NULL;
     params.support_tag = NULL;
     params.site_concordance = 0;
+    params.internode_certainty = 0;
     params.tree_weight_file = NULL;
     params.consensus_type = CT_NONE;
     params.find_pd_min = false;
@@ -1489,21 +1490,25 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.support_tag = argv[cnt];
 				continue;
 			}
-			if (strcmp(argv[cnt], "-sup2") == 0 || strcmp(argv[cnt], "--support") == 0) {
+			if (strcmp(argv[cnt], "-sup2") == 0 || strcmp(argv[cnt], "--gcf") == 0) {
 				cnt++;
 				if (cnt >= argc)
-					throw "Use -sup2 <target_tree_file>";
+					throw "Use -gcf <target_tree_file>";
 				params.second_tree = argv[cnt];
 				params.consensus_type = CT_ASSIGN_SUPPORT_EXTENDED;
 				continue;
 			}
-            if (strcmp(argv[cnt], "--site-concordance") == 0) {
+            if (strcmp(argv[cnt], "--site-concordance") == 0 || strcmp(argv[cnt], "--scf") == 0) {
                 cnt++;
                 if (cnt >= argc)
                     throw "Use --site-concordance NUM_QUARTETS";
                 params.site_concordance = convert_int(argv[cnt]);
                 if (params.site_concordance < 1)
                     throw "Positive --site-concordance please";
+                continue;
+            }
+            if (strcmp(argv[cnt], "--qic") == 0) {
+                params.internode_certainty = 1;
                 continue;
             }
 			if (strcmp(argv[cnt], "-treew") == 0) {
