@@ -1805,14 +1805,35 @@ public:
     /**
      compute site concordance factor and assign node names
      */
-    void computeSiteConcordanceFactor(map<int,BranchSupportInfo> &branch_supports);
+    void computeSiteConcordance();
 
     /**
      compute site concordance factor and assign node names
      @return sCF value for this branch
      @num_sites average number of quartet informative sites for the branch
      */
-    virtual double computeSiteConcordanceFactor(Branch &branch, double &num_sites);
+    virtual double computeSiteConcordance(Branch &branch, double &num_sites);
+
+    /**
+     Compute gene concordance factor
+     for each branch, assign how many times this branch appears in the input set of trees.
+     Work fine also when the trees do not have the same taxon set.
+     */
+    void computeGeneConcordance(MTreeSet &trees);
+
+    /**
+     Compute quartet concordance factor and internode certainty, similar to Zhou et al. biorxiv
+     Work fine also when the trees do not have the same taxon set.
+     */
+    void computeQuartetConcordance(MTreeSet &trees);
+
+    /**
+     compute quartet concordance factor and assign node names
+     @param branch target branch
+     @param trees input tree set
+     @return quartet concordance factor
+     */
+    double computeQuartetConcordance(Branch &branch, MTreeSet &trees);
 
     /****************************************************************************
             Collapse stable (highly supported) clades by one representative

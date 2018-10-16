@@ -3717,131 +3717,6 @@ void runUnlinkedPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
     delete model_info;
 }
 
-/**
- assign branch supports to a target tree
- */
-void assignBranchSupport(MTree &target, MTreeSet &trees, map<int,BranchSupportInfo> &branch_supports) {
-    SplitGraph mysg;
-    NodeVector mynodes;
-    target.convertSplits(mysg, &mynodes, target.root->neighbors[0]->node);
-    vector<Split*> subtrees;
-    target.extractQuadSubtrees(subtrees, target.root->neighbors[0]->node);
-    IntVector decisive_counts;
-    decisive_counts.resize(mynodes.size(), 0);
-    StrVector occurence_trees; // list of tree IDs where each split occurs
-    if (verbose_mode >= VB_MED)
-        occurence_trees.resize(mynodes.size());
-    SplitGraph::iterator sit;
-    for (sit = mysg.begin(); sit != mysg.end(); sit++)
-        (*sit)->setWeight(0.0);
-    int treeid, taxid;
-    for (treeid = 0; treeid < trees.size(); treeid++) {
-        MTree *tree = trees[treeid];
-        StrVector taxname;
-        tree->getTaxaName(taxname);
-        // create the map from taxa between 2 trees
-        Split taxa_mask(target.leafNum);
-        for (StrVector::iterator it = taxname.begin(); it != taxname.end(); it++) {
-            taxid = mysg.findLeafName(*it);
-            if (taxid < 0)
-                outError("Taxon not found in full tree: ", *it);
-            taxa_mask.addTaxon(taxid);
-        }
-        // make the taxa ordering right before converting to split system
-        taxname.clear();
-        int smallid;
-        for (taxid = 0, smallid = 0; taxid < target.leafNum; taxid++)
-            if (taxa_mask.containTaxon(taxid)) {
-                taxname.push_back(mysg.getTaxa()->GetTaxonLabel(taxid));
-                string name = (string)mysg.getTaxa()->GetTaxonLabel(taxid);
-                tree->findLeafName(name)->id = smallid++;
-            }
-        ASSERT(taxname.size() == tree->leafNum);
-        
-        SplitGraph sg;
-        //NodeVector nodes;
-        tree->convertSplits(sg);
-        SplitIntMap hash_ss;
-        for (sit = sg.begin(); sit != sg.end(); sit++)
-            hash_ss.insertSplit((*sit), 1);
-        
-        // now scan through all splits in current tree
-        int id, qid;
-        for (sit = mysg.begin(), id = 0, qid = 0; sit != mysg.end(); sit++, id++)
-            if ((*sit)->trivial() < 0) // it is an internal split
-            {
-                
-                bool decisive = true;
-                for (int i = 0; i < 4; i++) {
-                    if (!taxa_mask.overlap(*subtrees[qid+i])) {
-                        decisive = false;
-                        break;
-                    }
-                }
-                qid += 4;
-                if (!decisive) continue;
-                
-                decisive_counts[id]++;
-                Split *subsp = (*sit)->extractSubSplit(taxa_mask);
-                if (subsp->shouldInvert())
-                    subsp->invert();
-                Split *sp = hash_ss.findSplit(subsp);
-                if (sp && sp->trivial() < 0) {
-                    (*sit)->setWeight((*sit)->getWeight()+1.0);
-                    if (verbose_mode >= VB_MED)
-                        occurence_trees[id] += convertIntToString(treeid+1) + " ";
-                    if (verbose_mode >= VB_MAX) {
-                        for (taxid = 0; taxid < (*sit)->getNTaxa(); taxid++)
-                            if ((*sit)->containTaxon(taxid))
-                                cout << " " << mysg.getTaxa()->GetTaxonLabel(taxid);
-                        cout << " --> ";
-                        for (taxid = 0; taxid < sp->getNTaxa(); taxid++)
-                            if (sp->containTaxon(taxid))
-                                cout << " " << taxname[taxid];
-                        cout << endl;
-                    }
-                }
-                delete subsp;
-            }
-        
-    }
-    
-    for (int i = 0; i < mysg.size(); i++)
-        if (!mynodes[i]->isLeaf())
-        {
-            BranchSupportInfo brsup;
-            brsup.id = mynodes[i]->id;
-            brsup.name = mynodes[i]->name;
-            brsup.geneCF = mysg[i]->getWeight()/decisive_counts[i];
-            brsup.geneN = decisive_counts[i];
-            branch_supports[brsup.id] = brsup;
-            
-            stringstream tmp;
-            if (mysg[i]->getWeight() == 0.0)
-                tmp << "0";
-            else
-                tmp << round((mysg[i]->getWeight()/decisive_counts[i])*1000)/10;
-            if (verbose_mode >= VB_MED)
-                tmp << "%" << decisive_counts[i];
-            
-            if (Params::getInstance().newick_extended_format) {
-                if (mynodes[i]->name.empty() || mynodes[i]->name.back() != ']')
-                    mynodes[i]->name += "[&CF=" + tmp.str() + "]";
-                else
-                    mynodes[i]->name = mynodes[i]->name.substr(0, mynodes[i]->name.length()-1) + ",!CF=" + tmp.str() + "]";
-            } else {
-                if (!mynodes[i]->name.empty())
-                    mynodes[i]->name.append("/");
-                mynodes[i]->name.append(tmp.str());
-            }
-            if (verbose_mode >= VB_MED) {
-                cout << mynodes[i]->name << " " << occurence_trees[i] << endl;
-            }
-        }
-    for (vector<Split*>::reverse_iterator it = subtrees.rbegin(); it != subtrees.rend(); it++)
-        delete (*it);
-}
-
 void assignBranchSupportNew(Params &params) {
     if (!params.user_file)
         outError("No trees file provided");
@@ -3851,10 +3726,11 @@ void assignBranchSupportNew(Params &params) {
     PhyloTree tree;
     tree.readTree(params.second_tree, params.is_rooted);
     cout << tree.leafNum << " taxa and " << tree.branchNum << " branches" << endl;
-    map<int, BranchSupportInfo> branch_supports;
     cout << "Computing gene concordance factor..." << endl;
     MTreeSet trees(params.user_file, params.is_rooted, params.tree_burnin, params.tree_max_count);
-    assignBranchSupport(tree, trees, branch_supports);
+    tree.computeGeneConcordance(trees);
+    if (params.internode_certainty)
+        tree.computeQuartetConcordance(trees);
     if (params.site_concordance) {
         params.compute_seq_composition = false;
         if (!params.aln_file)
@@ -3862,7 +3738,7 @@ void assignBranchSupportNew(Params &params) {
         Alignment *aln = new Alignment(params.aln_file, params.sequence_type, params.intype, params.model_name);
         tree.setAlignment(aln);
         cout << "Computing site concordance factor..." << endl;
-        tree.computeSiteConcordanceFactor(branch_supports);
+        tree.computeSiteConcordance();
         delete aln;
     }
     string str = (string)params.second_tree + ".suptree";
@@ -3870,8 +3746,11 @@ void assignBranchSupportNew(Params &params) {
     cout << "Tree with assigned branch supports written to " << str << endl;
     if (verbose_mode >= VB_DEBUG)
         tree.drawTree(cout);
+    str = (string)params.second_tree + ".branch-id";
+    tree.printTree(str.c_str(), WT_BR_LEN + WT_INT_NODE + WT_NEWLINE);
+    cout << "Tree with branch IDs written to " << str << endl;
     ofstream out;
-    string filename = (string)params.second_tree + ".support";
+    string filename = (string)params.second_tree + ".concord";
     out.open(filename.c_str());
     out << "# ID: Branch ID" << endl
         << "# Length: Branch length" << endl
@@ -3885,17 +3764,29 @@ void assignBranchSupportNew(Params &params) {
         out << "# siteCF: Site concordance factor averaged over " << params.site_concordance << " quartets" << endl
             << "# siteN: number of informative sites averaged over " << params.site_concordance << " quartets" << endl;
     out << "ID\tLength\tValue\tgeneCF\tgeneN";
-    if (params.site_concordance)
+    if (params.internode_certainty)
         out << "\tIC";
     if (params.site_concordance)
         out << "\tsiteCF\tsiteN";
     out << endl;
-    for (auto brit = branch_supports.begin(); brit != branch_supports.end(); brit++) {
-        out << brit->second.id << '\t' << brit->second.length << '\t' << brit->second.name << '\t'
-            << brit->second.geneCF << '\t' << brit->second.geneN;
+    BranchVector branches;
+    tree.getInnerBranches(branches);
+    for (auto brit = branches.begin(); brit != branches.end(); brit++) {
+        Neighbor *branch = brit->second->findNeighbor(brit->first);
+        int ID = brit->second->id;
+        double length = branch->length;
+        string value = brit->second->name.substr(0, brit->second->name.find('/'));
+        double gCF, gN, sCF, sN;
+        bool check = branch->getAttr("gCF", gCF) && branch->getAttr("gN", gN);
+        ASSERT(check);
+        if (params.site_concordance) {
+            check = branch->getAttr("sCF", sCF) && branch->getAttr("sN", sN);
+            ASSERT(check);
+        }
+        out << ID << '\t' << length << '\t' << value << '\t'
+            << gCF << '\t' << gN;
         if (params.site_concordance)
-            out << '\t' << brit->second.siteCF << '\t'
-                << brit->second.siteN;
+            out << '\t' << sCF << '\t' << sN;
         out << endl;
     }
     out.close();
