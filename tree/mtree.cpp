@@ -522,10 +522,10 @@ int MTree::printTree(ostream &out, int brtype, Node *node, Node *dad)
                 delete (*iss);
         }
         out << ")";
-        if (!node->name.empty())
-            out << node->name;
-        else if (brtype & WT_INT_NODE)
+        if (brtype & WT_INT_NODE)
             out << node->id;
+        else if (!node->name.empty())
+            out << node->name;
         if (dad != NULL || length_nei) {
         	printBranchLength(out, brtype, !node->name.empty(), length_nei);
         }
@@ -1100,19 +1100,28 @@ bool MTree::isABranch(Node* node1, Node* node2) {
     return (node1->findNeighbor(node2) != NULL && node2->findNeighbor(node1) != NULL);
 }
 
-void MTree::getBranches(NodeVector &nodes, NodeVector &nodes2, Node *node, Node *dad) {
+void MTree::getBranches(NodeVector &nodes, NodeVector &nodes2, Node *node, Node *dad, bool post_traversal) {
     if (!node) node = root;
     //for (NeighborVec::iterator it = node->neighbors.begin(); it != node->neighbors.end(); it++)
     //if ((*it)->node != dad)   {
     FOR_NEIGHBOR_IT(node, dad, it) {
-        if (node->id < (*it)->node->id) {
-            nodes.push_back(node);
-            nodes2.push_back((*it)->node);
-        } else {
-            nodes.push_back((*it)->node);
-            nodes2.push_back(node);
-        }
-        getBranches(nodes, nodes2, (*it)->node, node);
+        if (!post_traversal)
+            if (node->id < (*it)->node->id) {
+                nodes.push_back(node);
+                nodes2.push_back((*it)->node);
+            } else {
+                nodes.push_back((*it)->node);
+                nodes2.push_back(node);
+            }
+        getBranches(nodes, nodes2, (*it)->node, node, post_traversal);
+        if (post_traversal)
+            if (node->id < (*it)->node->id) {
+                nodes.push_back(node);
+                nodes2.push_back((*it)->node);
+            } else {
+                nodes.push_back((*it)->node);
+                nodes2.push_back(node);
+            }
     }
 }
 

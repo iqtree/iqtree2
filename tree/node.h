@@ -211,7 +211,7 @@ public:
         map<string,string>::iterator it = attributes.find(key);
         if (it == attributes.end())
             return false;
-        string ss(it->second);
+        stringstream ss(it->second);
         ss >> value;
         return true;
     }
