@@ -154,6 +154,11 @@ public:
     virtual void summarizeBootstrap(Params &params);
 
     /**
+     write .ufboot trees file
+     */
+    virtual void writeUFBootTrees(Params &params);
+
+    /**
      Test all branches of the tree with aLRT SH-like interpretation
      */
     virtual int testAllBranches(int threshold, double best_score, double *pattern_lh,

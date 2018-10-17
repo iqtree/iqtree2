@@ -2561,9 +2561,10 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
 
     printFinalSearchInfo(params, *iqtree, search_cpu_time, search_real_time);
 
+    if (params.gbo_replicates && params.online_bootstrap && params.print_ufboot_trees)
+        iqtree->writeUFBootTrees(params);
+
     if (params.gbo_replicates && params.online_bootstrap && !iqtree->isSuperTreeUnlinked()) {
-        if (params.print_ufboot_trees)
-            iqtree->writeUFBootTrees(params);
         
         cout << endl << "Computing " << RESAMPLE_NAME << " consensus tree..." << endl;
         string splitsfile = params.out_prefix;
