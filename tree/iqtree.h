@@ -809,7 +809,10 @@ public:
     /** summarize bootstrap trees into split set */
     void summarizeBootstrap(SplitGraph &sg);
 
-    void writeUFBootTrees(Params &params);
+    /**
+     write .ufboot trees file
+     */
+    virtual void writeUFBootTrees(Params &params);
 
     /** @return bootstrap correlation coefficient for assessing convergence */
     double computeBootstrapCorrelation();
