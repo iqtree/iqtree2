@@ -150,6 +150,9 @@ public:
      */
     virtual double doTreeSearch();
 
+    /** summarize bootstrap trees */
+    virtual void summarizeBootstrap(Params &params);
+
 };
 
 #endif /* phylosupertreeunlinked_h */

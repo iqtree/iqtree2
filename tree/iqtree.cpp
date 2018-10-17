@@ -98,6 +98,8 @@ void IQTree::setCheckpoint(Checkpoint *checkpoint) {
     PhyloTree::setCheckpoint(checkpoint);
     stop_rule.setCheckpoint(checkpoint);
     candidateTrees.setCheckpoint(checkpoint);
+    for (auto it = boot_splits.begin(); it != boot_splits.end(); it++)
+        (*it)->setCheckpoint(checkpoint);
 }
 
 void IQTree::saveUFBoot(Checkpoint *checkpoint) {
@@ -323,7 +325,7 @@ void IQTree::initSettings(Params &params) {
 
     size_t i;
 
-    if (params.online_bootstrap && params.gbo_replicates > 0) {
+    if (params.online_bootstrap && params.gbo_replicates > 0 && !isSuperTreeUnlinked()) {
         if (aln->getNSeq() < 4)
             outError("It makes no sense to perform bootstrap with less than 4 sequences.");
 
@@ -3846,11 +3848,13 @@ void IQTree::summarizeBootstrap(Params &params, MTreeSet &trees) {
         printTree(out_file.c_str());
         cout << "Tree with assigned support written to " << out_file << endl;
     }
-
-    out_file = params.out_prefix;
-    out_file += ".splits.nex";
-    sg.saveFile(out_file.c_str(), IN_NEXUS, false);
-    cout << "Split supports printed to NEXUS file " << out_file << endl;
+    
+    if (params.print_splits_nex_file) {
+        out_file = params.out_prefix;
+        out_file += ".splits.nex";
+        sg.saveFile(out_file.c_str(), IN_NEXUS, false);
+        cout << "Split supports printed to NEXUS file " << out_file << endl;
+    }
 
     /*
      out_file = params.out_prefix;
