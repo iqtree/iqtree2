@@ -342,8 +342,8 @@ void IQTree::initSettings(Params &params) {
         int *saved_randstream = randstream;
         init_random(params.ran_seed);
         
-        cout << "Generating " << params.gbo_replicates << " samples for ultrafast "
-             << RESAMPLE_NAME << " (seed: " << params.ran_seed << ")..." << endl;
+//        cout << "Generating " << params.gbo_replicates << " samples for ultrafast "
+//             << RESAMPLE_NAME << " (seed: " << params.ran_seed << ")..." << endl;
         // allocate memory for boot_samples
         boot_samples.resize(params.gbo_replicates);
         sample_start = 0;
@@ -3812,7 +3812,7 @@ void IQTree::summarizeBootstrap(Params &params, MTreeSet &trees) {
     sg.scaleWeight(100.0, true);
     //	printSplitSet(sg, hash_ss);
     //sg.report(cout);
-    cout << "Creating " << RESAMPLE_NAME << " support values..." << endl;
+    //cout << "Creating " << RESAMPLE_NAME << " support values..." << endl;
 //    stringstream tree_stream;
 //    printTree(tree_stream, WT_TAXON_ID | WT_BR_LEN);
 //    MExtTree mytree;
