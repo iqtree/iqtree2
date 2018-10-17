@@ -2169,6 +2169,12 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
     iqtree->setRootNode(params.root);
 
     iqtree->restoreCheckpoint();
+
+    if (params.online_bootstrap && params.gbo_replicates > 0) {
+        cout << "Generating " << params.gbo_replicates << " samples for ultrafast "
+        << RESAMPLE_NAME << " (seed: " << params.ran_seed << ")..." << endl;
+    }
+
     iqtree->initSettings(params);
 
     /*********************** INITIAL MODEL OPTIMIZATION *****************/
@@ -2539,6 +2545,7 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
     }
 
     if (params.gbo_replicates > 0) {
+        cout << "Creating " << RESAMPLE_NAME << " support values..." << endl;
         if (!params.online_bootstrap)
             outError("Obsolete feature");
 //            runGuidedBootstrap(params, iqtree->aln, iqtree);

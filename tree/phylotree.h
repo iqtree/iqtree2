@@ -1764,7 +1764,7 @@ public:
     /**
             Test all branches of the tree with aLRT SH-like interpretation
      */
-    int testAllBranches(int threshold, double best_score, double *pattern_lh, 
+    virtual int testAllBranches(int threshold, double best_score, double *pattern_lh,
             int reps, int lbp_reps, bool aLRT_test, bool aBayes_test,
             PhyloNode *node = NULL, PhyloNode *dad = NULL);
 

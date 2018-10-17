@@ -253,3 +253,26 @@ void PhyloSuperTreeUnlinked::summarizeBootstrap(Params &params) {
     for (auto tree = begin(); tree != end(); tree++)
         ((IQTree*)*tree)->summarizeBootstrap(params);
 }
+
+/**
+ Test all branches of the tree with aLRT SH-like interpretation
+ */
+int PhyloSuperTreeUnlinked::testAllBranches(int threshold, double best_score, double *pattern_lh,
+                            int reps, int lbp_reps, bool aLRT_test, bool aBayes_test,
+                            PhyloNode *node, PhyloNode *dad)
+{
+    int id;
+    int num_low_support = 0;
+    double *ptn_lh[size()];
+    ptn_lh[0] = pattern_lh;
+    for (id = 1; id < size(); id++)
+        ptn_lh[id] = ptn_lh[id-1] + at(id-1)->getAlnNPattern();
+#ifdef _OPENMP
+#pragma omp parallel for reduction(+: num_low_support)
+#endif
+    for (int id = 0; id < size(); id++) {
+        num_low_support += at(id)->testAllBranches(threshold, at(id)->getCurScore(), ptn_lh[id],
+                            reps, lbp_reps, aLRT_test, aBayes_test);
+    }
+    return num_low_support;
+}
