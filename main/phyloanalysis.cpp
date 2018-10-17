@@ -3412,6 +3412,90 @@ void getSymTestID(vector<SymTestResult> &res, set<int> &id, bool bad_res) {
     }
 }
 
+void doSymTest(Alignment *alignment, Params &params) {
+    double start_time = getRealTime();
+    cout << "Performing matched-pair tests of symmetry...";
+    vector<SymTestResult> sym, marsym, intsym;
+
+    string filename = string(params.out_prefix) + ".symtest.csv";
+    ofstream out;
+    out.open(filename.c_str());
+    out << "# Binomial matched-pair tests of symmetry" << endl
+        << "# This file can be read in MS Excel or in R with command:" << endl
+        << "#    dat=read.csv('" <<  filename << "',comment.char='#')" << endl
+        << "# Columns are comma-separated with following meanings:" << endl
+        << "#    Name:    Partition name" << endl
+        << "#    SymSig:  Number of significant sequence pairs by test of symmetry" << endl
+        << "#    SymNon:  Number of non-significant sequence pairs by test of symmetry" << endl
+        << "#    SymPval: P-value for binomial test of symmetry" << endl
+        << "#    MarSig:  Number of significant sequence pairs by test of marginal symmetry" << endl
+        << "#    MarNon:  Number of non-significant sequence pairs by test of marginal symmetry" << endl
+        << "#    MarPval: P-value for binomial test of marginal symmetry" << endl
+        << "#    IntSig:  Number of significant sequence pairs by test of internal symmetry" << endl
+        << "#    IntNon:  Number of non-significant sequence pairs by test of internal symmetry" << endl
+        << "#    IntPval: P-value for binomial test of internal symmetry" << endl
+        << "Name,SymSig,SymNon,SymPval,MarSig,MarNon,MarPval,IntSig,IntNon,IntPval" << endl;
+
+    string filename_stat = string(params.out_prefix) + ".symstat.csv";
+    if (params.symtest_stat) {
+        ofstream out_stat;
+        out_stat.open(filename_stat);
+        out_stat
+        << "# Statistic values for matched-pair tests of symmetry" << endl
+        << "# This file can be read in MS Excel or in R with command:" << endl
+        << "#    dat=read.csv('" <<  filename_stat << "',comment.char='#')" << endl
+        << "# Columns are comma-separated with following meanings:" << endl
+        << "#    Name: Partition name" << endl
+        << "#    Seq1: ID of sequence 1 within partition" << endl
+        << "#    Seq1: ID of sequence 2 within partition" << endl
+        << "#    Sym:  Statistic for test of symmetry" << endl
+        << "#    Mar:  Statistic for test of marginal symmetry" << endl
+        << "#    Int:  Statistic for test of internal symmetry" << endl
+        << "Name,Seq1,Seq2,Sym,Mar,Int" << endl;
+        alignment->doSymTest(sym, marsym, intsym, out, &out_stat);
+        out_stat.close();
+    } else {
+        alignment->doSymTest(sym, marsym, intsym, out);
+    }
+
+    out.close();
+    cout << getRealTime() - start_time << " seconds" << endl;
+    if (params.symtest_stat)
+        cout << "SymTest statistics written to " << filename_stat << endl;
+    cout << "SymTest results written to " << filename << endl;
+
+    // now filter out partitions
+    if (alignment->isSuperAlignment()) {
+        set<int> part_id;
+        if (params.symtest == 2) {
+            // remove bad loci
+            if (params.symtest_type == 0)
+                getSymTestID(sym, part_id, true);
+            else if (params.symtest_type == 1)
+                getSymTestID(marsym, part_id, true);
+            else
+                getSymTestID(intsym, part_id, true);
+        } else if (params.symtest == 3) {
+            // remove good loci
+            if (params.symtest_type == 0)
+                getSymTestID(sym, part_id, false);
+            else if (params.symtest_type == 1)
+                getSymTestID(marsym, part_id, false);
+            else
+                getSymTestID(intsym, part_id, false);
+        }
+        if (!part_id.empty()) {
+            cout << "Removing " << part_id.size()
+            << ((params.symtest == 2)? " bad" : " good") << " partitions (pvalue cutoff = "
+            << params.symtest_pcutoff << ")..." << endl;
+            if (part_id.size() < alignment->getNSite())
+                ((SuperAlignment*)alignment)->removePartitions(part_id);
+            else
+                outError("Can't remove all partitions");
+        }
+    }
+}
+
 void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
     Alignment *alignment;
 
@@ -3452,46 +3536,7 @@ void runPhyloAnalysis(Params &params, Checkpoint *checkpoint) {
     }
 
     if (params.symtest) {
-        double start_time = getRealTime();
-        cout << "Performing symmetry test... ";
-        ofstream out;
-        string filename = string(params.out_prefix) + ".symtest.csv";
-        out.open(filename.c_str());
-        out << "Name,SymSig,SymNon,SymPval,MarSig,MarNon,MarPval,IntSig,IntNon,IntPval" << endl;
-        vector<SymTestResult> sym, marsym, intsym;
-        alignment->doSymTest(sym, marsym, intsym, out);
-        out.close();
-        cout << getRealTime() - start_time << " seconds" << endl;
-        cout << "SymTest results written to " << filename << endl;
-        if (alignment->isSuperAlignment()) {
-            set<int> part_id;
-            if (params.symtest == 2) {
-                // remove bad loci
-                if (params.symtest_type == 0)
-                    getSymTestID(sym, part_id, true);
-                else if (params.symtest_type == 1)
-                    getSymTestID(marsym, part_id, true);
-                else
-                   getSymTestID(intsym, part_id, true);
-            } else if (params.symtest == 3) {
-                // remove good loci
-                if (params.symtest_type == 0)
-                    getSymTestID(sym, part_id, false);
-                else if (params.symtest_type == 1)
-                    getSymTestID(marsym, part_id, false);
-                else
-                    getSymTestID(intsym, part_id, false);
-            }
-            if (!part_id.empty()) {
-                cout << "Removing " << part_id.size()
-                << ((params.symtest == 2)? " bad" : " good") << " partitions (pvalue cutoff = "
-                     << params.symtest_pcutoff << ")..." << endl;
-                if (part_id.size() < alignment->getNSite())
-                    ((SuperAlignment*)alignment)->removePartitions(part_id);
-                else
-                    outError("Can't remove all partitions");
-            }
-        }
+        doSymTest(alignment, params);
     }
 
     if (params.print_aln_info) {

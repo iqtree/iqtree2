@@ -830,7 +830,10 @@ public:
     
     /** pvalue cutoff (default: 0.05) */
     double symtest_pcutoff;
-    
+
+    /** TRUE to print all pairwise statistics */
+    double symtest_stat;
+
     /**
             file containing multiple trees to evaluate at the end
      */
