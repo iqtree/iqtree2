@@ -248,3 +248,8 @@ double PhyloSuperTreeUnlinked::doTreeSearch() {
     candidateTrees.saveCheckpoint();
     return curScore;
 }
+
+void PhyloSuperTreeUnlinked::summarizeBootstrap(Params &params) {
+    for (auto tree = begin(); tree != end(); tree++)
+        ((IQTree*)*tree)->summarizeBootstrap(params);
+}

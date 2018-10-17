@@ -1055,6 +1055,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.buffer_mem_save = false;
 	params.start_tree = STT_PLL_PARSIMONY;
 	params.print_splits_file = false;
+    params.print_splits_nex_file = true;
     params.ignore_identical_seqs = true;
     params.write_init_tree = false;
     params.write_candidate_trees = false;
@@ -1841,6 +1842,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 params.partition_type = TOPO_UNLINKED;
                 params.ignore_identical_seqs = false;
                 params.buffer_mem_save = true;
+                params.print_splits_nex_file = false;
                 continue;
             }
             
@@ -2793,6 +2795,10 @@ void parseArg(int argc, char *argv[], Params &params) {
 				params.print_splits_file = true;
 				continue;
 			}
+            if (strcmp(argv[cnt], "--no-splits.nex") == 0) {
+                params.print_splits_nex_file = false;
+                continue;
+            }
 			if (strcmp(argv[cnt], "-ns") == 0) {
 				cnt++;
 				if (cnt >= argc)

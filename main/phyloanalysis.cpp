@@ -837,8 +837,9 @@ void printOutfilesInfo(Params &params, IQTree &tree) {
     }
 
     if (params.gbo_replicates) {
-        cout << endl << "Ultrafast " << RESAMPLE_NAME << " approximation results written to:" << endl
-             << "  Split support values:          " << params.out_prefix << ".splits.nex" << endl
+        cout << endl << "Ultrafast " << RESAMPLE_NAME << " approximation results written to:" << endl;
+        if (!tree.isSuperTreeUnlinked())
+            cout << "  Split support values:          " << params.out_prefix << ".splits.nex" << endl
              << "  Consensus tree:                " << params.out_prefix << ".contree" << endl;
         if (params.print_ufboot_trees)
         cout << "  UFBoot trees:                  " << params.out_prefix << ".ufboot" << endl;
@@ -1126,7 +1127,7 @@ void reportPhyloAnalysis(Params &params, IQTree &tree, ModelCheckpoint &model_in
             tree.setRootNode(params.root);
 
             if (params.gbo_replicates) {
-                if (tree.boot_consense_logl > tree.getBestScore() + 0.1) {
+                if (tree.boot_consense_logl > tree.getBestScore() + 0.1 && !tree.isSuperTreeUnlinked()) {
                     out << endl << "**NOTE**: Consensus tree has higher likelihood than ML tree found! Please use consensus tree below." << endl;
                 }
             }
@@ -1163,7 +1164,7 @@ void reportPhyloAnalysis(Params &params, IQTree &tree, ModelCheckpoint &model_in
          << "Burn-in: " << params.tree_burnin << endl << endl;
          }*/
 
-        if (params.consensus_type == CT_CONSENSUS_TREE) {
+        if (params.consensus_type == CT_CONSENSUS_TREE && !tree.isSuperTreeUnlinked()) {
             out << "CONSENSUS TREE" << endl << "--------------" << endl << endl;
             out << "Consensus tree is constructed from "
                     << (params.num_bootstrap_samples ? params.num_bootstrap_samples : params.gbo_replicates)
@@ -2553,7 +2554,7 @@ void runTreeReconstruction(Params &params, IQTree* &iqtree) {
 
     printFinalSearchInfo(params, *iqtree, search_cpu_time, search_real_time);
 
-    if (params.gbo_replicates && params.online_bootstrap) {
+    if (params.gbo_replicates && params.online_bootstrap && !iqtree->isSuperTreeUnlinked()) {
         if (params.print_ufboot_trees)
             iqtree->writeUFBootTrees(params);
         
@@ -2756,7 +2757,7 @@ void runMultipleTreeReconstruction(Params &params, Alignment *alignment, IQTree 
     tree->restoreCheckpoint();
     tree->getModelFactory()->restoreCheckpoint();
     tree->setCurScore(runLnL[best_run]);
-    if (params.gbo_replicates) {
+    if (params.gbo_replicates && !tree->isSuperTreeUnlinked()) {
         
         string out_file = (string)params.out_prefix + ".splits";
         if (params.print_splits_file) {
@@ -2764,9 +2765,11 @@ void runMultipleTreeReconstruction(Params &params, Alignment *alignment, IQTree 
             cout << "Split supports printed to star-dot file " << out_file << endl;
         }
 
-        out_file = (string)params.out_prefix + ".splits.nex";
-        tree->boot_splits.back()->saveFile(out_file.c_str(), IN_NEXUS, false);
-        cout << "Split supports printed to NEXUS file " << out_file << endl;
+        if (params.print_splits_nex_file) {
+            out_file = (string)params.out_prefix + ".splits.nex";
+            tree->boot_splits.back()->saveFile(out_file.c_str(), IN_NEXUS, false);
+            cout << "Split supports printed to NEXUS file " << out_file << endl;
+        }
 
         // overwrite .ufboot trees
         if (params.print_ufboot_trees)
