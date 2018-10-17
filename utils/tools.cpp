@@ -825,6 +825,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.symtest_keep_zero = false;
     params.symtest_type = 0;
     params.symtest_pcutoff = 0.05;
+    params.symtest_stat = false;
     params.treeset_file = NULL;
     params.topotest_replicates = 0;
     params.topotest_optimize_model = false;
@@ -1775,6 +1776,13 @@ void parseArg(int argc, char *argv[], Params &params) {
                 continue;
             }
             
+            if (strcmp(argv[cnt], "--bisymtest-stat") == 0) {
+                params.symtest_stat = true;
+                if (!params.symtest)
+                    params.symtest = 1;
+                continue;
+            }
+
             if (strcmp(argv[cnt], "-z") == 0) {
 				cnt++;
 				if (cnt >= argc)

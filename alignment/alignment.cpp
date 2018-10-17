@@ -4392,7 +4392,7 @@ std::ostream& operator<<(std::ostream& stream, const SymTestResult& res) {
 }
 
 void Alignment::doSymTest(vector<SymTestResult> &vec_sym, vector<SymTestResult> &vec_marsym,
-                       vector<SymTestResult> &vec_intsym, ostream &out)
+                       vector<SymTestResult> &vec_intsym, ostream &out, ostream *out_stat)
 {
     int nseq = getNSeq();
 
@@ -4411,6 +4411,8 @@ void Alignment::doSymTest(vector<SymTestResult> &vec_sym, vector<SymTestResult> 
             // performing test of symmetry
             int i, j;
             double chi2_sym = 0.0;
+            double chi2_marsym = std::numeric_limits<double>::quiet_NaN();
+            double chi2_intsym = std::numeric_limits<double>::quiet_NaN();
             int df_sym = num_states*(num_states-1)/2;
             bool applicable = true;
             MatrixXd sum = (pair_freq + pair_freq.transpose());
@@ -4448,7 +4450,7 @@ void Alignment::doSymTest(vector<SymTestResult> &vec_sym, vector<SymTestResult> 
             FullPivLU<MatrixXd> lu(V);
 
             if (lu.isInvertible()) {
-                double chi2_marsym = U.transpose() * lu.inverse() * U;
+                chi2_marsym = U.transpose() * lu.inverse() * U;
                 int df_marsym = num_states-1;
                 double chi2_pval = chi2prob(df_marsym, chi2_marsym);
                 if (chi2_pval < chi2_cutoff)
@@ -4456,7 +4458,7 @@ void Alignment::doSymTest(vector<SymTestResult> &vec_sym, vector<SymTestResult> 
                 marsym.included_pairs++;
 
                 // internal symmetry
-                double chi2_intsym = chi2_sym - chi2_marsym;
+                chi2_intsym = chi2_sym - chi2_marsym;
                 int df_intsym = df_sym - df_marsym;
                 if (df_intsym > 0 && applicable) {
                     double pval_intsym = chi2prob(df_intsym, chi2_intsym);
@@ -4470,7 +4472,9 @@ void Alignment::doSymTest(vector<SymTestResult> &vec_sym, vector<SymTestResult> 
                 intsym.excluded_pairs++;
             }
             
-            
+            if (out_stat)
+                *out_stat << name << ',' << seq1 << ',' << seq2 << ','
+                << chi2_sym << ',' << chi2_marsym << ',' << chi2_intsym << endl;
         }
     
     sym.computePvalue();

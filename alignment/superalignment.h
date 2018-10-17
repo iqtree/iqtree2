@@ -116,10 +116,15 @@ public:
     virtual void computeDivergenceMatrix(double *pair_freq, double *state_freq, bool normalize = true);
 
     /**
-     perform symmetry tests of Lars Jermiin
+     perform matched-pair tests of symmetry of Lars Jermiin et al.
+     @param[out] sym results of test of symmetry
+     @param[out] marsym results of test of marginal symmetry
+     @param[out] intsym results of test of internal symmetry
+     @param out output stream to print results
+     @param out_stat output stream to print pairwise statistics
      */
     virtual void doSymTest(vector<SymTestResult> &sym, vector<SymTestResult> &marsym,
-                           vector<SymTestResult> &intsym, ostream &out);
+                           vector<SymTestResult> &intsym, ostream &out, ostream *out_stat = NULL);
 
     /**
             extract sub-alignment of a sub-set of sequences

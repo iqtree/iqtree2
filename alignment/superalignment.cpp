@@ -966,9 +966,9 @@ void SuperAlignment::computeDivergenceMatrix(double *pair_freq, double *state_fr
 }
 
 void SuperAlignment::doSymTest(vector<SymTestResult> &vec_sym, vector<SymTestResult> &vec_marsym,
-                               vector<SymTestResult> &vec_intsym, ostream &out) {
+                               vector<SymTestResult> &vec_intsym, ostream &out, ostream *out_stat) {
     for (auto it = partitions.begin(); it != partitions.end(); it++) {
-        (*it)->doSymTest(vec_sym, vec_marsym, vec_intsym, out);
+        (*it)->doSymTest(vec_sym, vec_marsym, vec_intsym, out, out_stat);
     }
 }
 
