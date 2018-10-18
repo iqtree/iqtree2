@@ -42,6 +42,29 @@ public:
     double perm_pvalue; // p-value of permutation test of symmetry
 };
 
+/** class storing all pairwise statistics */
+class SymTestStat {
+public:
+    SymTestStat() {
+        part = 0;
+        seq1 = seq2 = 0;
+        chi2_sym = 0.0;
+        chi2_marsym = std::numeric_limits<double>::quiet_NaN();
+        chi2_intsym = std::numeric_limits<double>::quiet_NaN();
+        pval_sym = std::numeric_limits<double>::quiet_NaN();
+        pval_marsym = std::numeric_limits<double>::quiet_NaN();
+        pval_intsym = std::numeric_limits<double>::quiet_NaN();
+    }
+    int part; // partition ID
+    int seq1, seq2; // ID of sequence 1 and 2
+    double chi2_sym; // chi2 statistic test of symmetry
+    double chi2_marsym; // chi2 statistic test of marginal symmetry
+    double chi2_intsym; // chi2 statistic test of internal symmetry
+    double pval_sym; // chi2 p-value test of symmetry
+    double pval_marsym; // chi2 p-value test of marginal symmetry
+    double pval_intsym; // chi2 p-value test of internal symmetry
+};
+
 std::ostream& operator<< (std::ostream& stream, const SymTestResult& res);
 
 #ifdef USE_HASH_MAP
@@ -645,8 +668,8 @@ public:
         @param rstream random stream to shuffle alignment columns
         @param out_stat output stream to print pairwise statistics
      */
-    virtual void doSymTest(vector<SymTestResult> &sym, vector<SymTestResult> &marsym,
-                           vector<SymTestResult> &intsym, int *rstream = NULL, ostream *out_stat = NULL);
+    virtual void doSymTest(size_t vecid, vector<SymTestResult> &sym, vector<SymTestResult> &marsym,
+                           vector<SymTestResult> &intsym, int *rstream = NULL, vector<SymTestStat> *stats = NULL);
 
     /**
             count the fraction of constant sites in the alignment, update the variable frac_const_sites

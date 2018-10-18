@@ -1781,7 +1781,7 @@ void parseArg(int argc, char *argv[], Params &params) {
                 continue;
             }
             
-            if (strcmp(argv[cnt], "--bisymtest-stat") == 0) {
+            if (strcmp(argv[cnt], "--bisymstat") == 0) {
                 params.symtest_stat = true;
                 if (!params.symtest)
                     params.symtest = 1;

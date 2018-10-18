@@ -965,10 +965,28 @@ void SuperAlignment::computeDivergenceMatrix(double *pair_freq, double *state_fr
     delete [] part_pair_freq;
 }
 
-void SuperAlignment::doSymTest(vector<SymTestResult> &vec_sym, vector<SymTestResult> &vec_marsym,
-                               vector<SymTestResult> &vec_intsym, int *rstream, ostream *out_stat) {
-    for (auto it = partitions.begin(); it != partitions.end(); it++) {
-        (*it)->doSymTest(vec_sym, vec_marsym, vec_intsym, rstream, out_stat);
+void SuperAlignment::doSymTest(size_t vecid, vector<SymTestResult> &vec_sym, vector<SymTestResult> &vec_marsym,
+                               vector<SymTestResult> &vec_intsym, int *rstream, vector<SymTestStat> *stats) {
+
+    vector<vector<SymTestStat> >all_stats;
+    if (stats)
+        all_stats.resize(partitions.size());
+
+    int i, nparts = partitions.size();
+    #ifdef _OPENMP
+    #pragma omp parallel for private(i)
+    #endif
+    for (i = 0; i < nparts; i++) {
+        if (stats) {
+            partitions[i]->doSymTest(vecid + i, vec_sym, vec_marsym, vec_intsym, rstream, &all_stats[i]);
+            for (auto it = all_stats[i].begin(); it != all_stats[i].end(); it++)
+                it->part = i;
+        } else
+            partitions[i]->doSymTest(vecid + i, vec_sym, vec_marsym, vec_intsym, rstream);
+    }
+    if (stats) {
+        for (i = 0; i < nparts; i++)
+            stats->insert(stats->end(), all_stats[i].begin(), all_stats[i].end());
     }
 }
 
