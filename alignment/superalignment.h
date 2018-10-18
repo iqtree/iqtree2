@@ -121,10 +121,11 @@ public:
      @param[out] marsym results of test of marginal symmetry
      @param[out] intsym results of test of internal symmetry
      @param out output stream to print results
+     @param rstream random stream to shuffle alignment columns
      @param out_stat output stream to print pairwise statistics
      */
     virtual void doSymTest(vector<SymTestResult> &sym, vector<SymTestResult> &marsym,
-                           vector<SymTestResult> &intsym, ostream &out, ostream *out_stat = NULL);
+                           vector<SymTestResult> &intsym, int *rstream = NULL, ostream *out_stat = NULL);
 
     /**
             extract sub-alignment of a sub-set of sequences

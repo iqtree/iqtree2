@@ -834,6 +834,9 @@ public:
     /** TRUE to print all pairwise statistics */
     double symtest_stat;
 
+    /** Times to shuffle characters within columns of the alignment */
+    int symtest_shuffle;
+
     /**
             file containing multiple trees to evaluate at the end
      */
