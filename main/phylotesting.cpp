@@ -1418,9 +1418,9 @@ string testOneModel(string &model_name, Params &params, Alignment *in_aln,
     else
         iqtree = new IQTree(in_aln);
     iqtree->setParams(&params);
-    iqtree->sse = params.SSE;
+    iqtree->setLikelihoodKernel(params.SSE);
     iqtree->optimize_by_newton = params.optimize_by_newton;
-    iqtree->num_threads = num_threads;
+    iqtree->setNumThreads(num_threads);
 
     iqtree->setCheckpoint(&model_info);
     iqtree->restoreCheckpoint();
