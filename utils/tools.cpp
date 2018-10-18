@@ -826,6 +826,7 @@ void parseArg(int argc, char *argv[], Params &params) {
     params.symtest_type = 0;
     params.symtest_pcutoff = 0.05;
     params.symtest_stat = false;
+    params.symtest_shuffle = 1;
     params.treeset_file = NULL;
     params.topotest_replicates = 0;
     params.topotest_optimize_model = false;
@@ -1754,7 +1755,7 @@ void parseArg(int argc, char *argv[], Params &params) {
             if (strcmp(argv[cnt], "--symtest-type") == 0 || strcmp(argv[cnt], "--bisymtest-type") == 0) {
                 cnt++;
                 if (cnt >= argc)
-                    throw "Use --symtest-type SYM|MAR|INT";
+                    throw "Use --bisymtest-type SYM|MAR|INT";
                 if (strcmp(argv[cnt], "SYM") == 0)
                     params.symtest_type = 0;
                 else if (strcmp(argv[cnt], "MAR") == 0)
@@ -1762,22 +1763,38 @@ void parseArg(int argc, char *argv[], Params &params) {
                 else if (strcmp(argv[cnt], "INT") == 0)
                     params.symtest_type = 2;
                 else
-                    throw "Use --symtest-type SYM|MAR|INT";
+                    throw "Use --bisymtest-type SYM|MAR|INT";
+                if (!params.symtest)
+                    params.symtest = 1;
                 continue;
             }
 
             if (strcmp(argv[cnt], "--symtest-pval") == 0 || strcmp(argv[cnt], "--bisymtest-pval") == 0) {
                 cnt++;
                 if (cnt >= argc)
-                    throw "Use --symtest-pval PVALUE_CUTOFF";
+                    throw "Use --bisymtest-pval PVALUE_CUTOFF";
                 params.symtest_pcutoff = convert_double(argv[cnt]);
                 if (params.symtest_pcutoff <= 0 || params.symtest_pcutoff >= 1)
-                    throw "--symtest-pval must be between 0 and 1";
+                    throw "--bisymtest-pval must be between 0 and 1";
+                if (!params.symtest)
+                    params.symtest = 1;
                 continue;
             }
             
             if (strcmp(argv[cnt], "--bisymtest-stat") == 0) {
                 params.symtest_stat = true;
+                if (!params.symtest)
+                    params.symtest = 1;
+                continue;
+            }
+
+            if (strcmp(argv[cnt], "--permsymtest") == 0) {
+                cnt++;
+                if (cnt >= argc)
+                    throw "Use --permsymtest INT";
+                params.symtest_shuffle = convert_int(argv[cnt]);
+                if (params.symtest_shuffle <= 0)
+                    throw "--permsymtest must be positive";
                 if (!params.symtest)
                     params.symtest = 1;
                 continue;

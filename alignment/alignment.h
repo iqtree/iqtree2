@@ -37,7 +37,9 @@ public:
     int significant_pairs; // number of significant sequence pairs
     int included_pairs; // total number of included sequence pairs
     int excluded_pairs; // number of excluded sequence pairs
-    double pvalue; // pvalue of symmetry test
+    double pvalue; // pvalue of binomial test of symmetry
+    double max_stat; // maximum of the pair statistics
+    double perm_pvalue; // p-value of permutation test of symmetry
 };
 
 std::ostream& operator<< (std::ostream& stream, const SymTestResult& res);
@@ -640,10 +642,11 @@ public:
         @param[out] marsym results of test of marginal symmetry
         @param[out] intsym results of test of internal symmetry
         @param out output stream to print results
+        @param rstream random stream to shuffle alignment columns
         @param out_stat output stream to print pairwise statistics
      */
     virtual void doSymTest(vector<SymTestResult> &sym, vector<SymTestResult> &marsym,
-                           vector<SymTestResult> &intsym, ostream &out, ostream *out_stat = NULL);
+                           vector<SymTestResult> &intsym, int *rstream = NULL, ostream *out_stat = NULL);
 
     /**
             count the fraction of constant sites in the alignment, update the variable frac_const_sites

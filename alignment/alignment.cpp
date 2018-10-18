@@ -4386,26 +4386,49 @@ void SymTestResult::computePvalue() {
 
 std::ostream& operator<<(std::ostream& stream, const SymTestResult& res) {
     stream << res.significant_pairs << ","
-        << res.included_pairs - res.significant_pairs << ","
-    << res.pvalue;
+        << res.included_pairs - res.significant_pairs << "," << res.pvalue;
+    if (Params::getInstance().symtest_shuffle > 1)
+        stream << "," << res.max_stat << ',' << res.perm_pvalue;
     return stream;
 }
 
 void Alignment::doSymTest(vector<SymTestResult> &vec_sym, vector<SymTestResult> &vec_marsym,
-                       vector<SymTestResult> &vec_intsym, ostream &out, ostream *out_stat)
+                       vector<SymTestResult> &vec_intsym, int *rstream, ostream *out_stat)
 {
     int nseq = getNSeq();
 
     const double chi2_cutoff = Params::getInstance().symtest_pcutoff;
     
     SymTestResult sym, marsym, intsym;
-
+    sym.max_stat = -DBL_MAX;
+    marsym.max_stat = -DBL_MAX;
+    intsym.max_stat = -DBL_MAX;
+    
+    vector<Pattern> ptn_shuffled;
+    
+    if (rstream) {
+        // random shuffle alignment columns
+        int nsite = getNSite();
+        for (int site = 0; site < nsite; site++) {
+            Pattern ptn = getPattern(site);
+            my_random_shuffle(ptn.begin(), ptn.end(), rstream);
+            ptn_shuffled.push_back(ptn);
+        }
+    }
+    
     for (int seq1 = 0; seq1 < nseq; seq1++)
         for (int seq2 = seq1+1; seq2 < nseq; seq2++) {
             MatrixXd pair_freq = MatrixXd::Zero(num_states, num_states);
-            for (auto it = begin(); it != end(); it++) {
-                if (it->at(seq1) < num_states && it->at(seq2) < num_states)
-                    pair_freq(it->at(seq1), it->at(seq2)) += it->frequency;
+            if (rstream) {
+                for (auto it = ptn_shuffled.begin(); it != ptn_shuffled.end(); it++)
+                    if (it->at(seq1) < num_states && it->at(seq2) < num_states)
+                        pair_freq(it->at(seq1), it->at(seq2))++;
+
+            } else {
+                for (auto it = begin(); it != end(); it++) {
+                    if (it->at(seq1) < num_states && it->at(seq2) < num_states)
+                        pair_freq(it->at(seq1), it->at(seq2)) += it->frequency;
+                }
             }
             
             // performing test of symmetry
@@ -4413,6 +4436,10 @@ void Alignment::doSymTest(vector<SymTestResult> &vec_sym, vector<SymTestResult> 
             double chi2_sym = 0.0;
             double chi2_marsym = std::numeric_limits<double>::quiet_NaN();
             double chi2_intsym = std::numeric_limits<double>::quiet_NaN();
+            double pval_sym = std::numeric_limits<double>::quiet_NaN();
+            double pval_marsym = std::numeric_limits<double>::quiet_NaN();
+            double pval_intsym = std::numeric_limits<double>::quiet_NaN();
+
             int df_sym = num_states*(num_states-1)/2;
             bool applicable = true;
             MatrixXd sum = (pair_freq + pair_freq.transpose());
@@ -4432,10 +4459,12 @@ void Alignment::doSymTest(vector<SymTestResult> &vec_sym, vector<SymTestResult> 
                 applicable = false;
             
             if (applicable) {
-                double pval_sym = chi2prob(df_sym, chi2_sym);
+                pval_sym = chi2prob(df_sym, chi2_sym);
                 if (pval_sym < chi2_cutoff)
                     sym.significant_pairs++;
                 sym.included_pairs++;
+                if (sym.max_stat < chi2_sym)
+                    sym.max_stat = chi2_sym;
             } else {
                 sym.excluded_pairs++;
             }
@@ -4452,19 +4481,23 @@ void Alignment::doSymTest(vector<SymTestResult> &vec_sym, vector<SymTestResult> 
             if (lu.isInvertible()) {
                 chi2_marsym = U.transpose() * lu.inverse() * U;
                 int df_marsym = num_states-1;
-                double chi2_pval = chi2prob(df_marsym, chi2_marsym);
-                if (chi2_pval < chi2_cutoff)
+                pval_marsym = chi2prob(df_marsym, chi2_marsym);
+                if (pval_marsym < chi2_cutoff)
                     marsym.significant_pairs++;
                 marsym.included_pairs++;
+                if (marsym.max_stat < chi2_marsym)
+                    marsym.max_stat = chi2_marsym;
 
                 // internal symmetry
                 chi2_intsym = chi2_sym - chi2_marsym;
                 int df_intsym = df_sym - df_marsym;
                 if (df_intsym > 0 && applicable) {
-                    double pval_intsym = chi2prob(df_intsym, chi2_intsym);
+                    pval_intsym = chi2prob(df_intsym, chi2_intsym);
                     if (pval_intsym < chi2_cutoff)
                         intsym.significant_pairs++;
                     intsym.included_pairs++;
+                    if (intsym.max_stat < chi2_intsym)
+                        intsym.max_stat = chi2_intsym;
                 } else
                     intsym.excluded_pairs++;
             } else {
@@ -4474,7 +4507,9 @@ void Alignment::doSymTest(vector<SymTestResult> &vec_sym, vector<SymTestResult> 
             
             if (out_stat)
                 *out_stat << name << ',' << seq1 << ',' << seq2 << ','
-                << chi2_sym << ',' << chi2_marsym << ',' << chi2_intsym << endl;
+                << chi2_sym << ',' << pval_sym << ','
+                << chi2_marsym << ',' << pval_marsym << ','
+                << chi2_intsym << ',' << pval_intsym << endl;
         }
     
     sym.computePvalue();
@@ -4483,8 +4518,6 @@ void Alignment::doSymTest(vector<SymTestResult> &vec_sym, vector<SymTestResult> 
     vec_sym.push_back(sym);
     vec_marsym.push_back(marsym);
     vec_intsym.push_back(intsym);
-    out << name << "," << sym << "," << marsym << "," << intsym << endl;
-    
 }
 
 void Alignment::convfreq(double *stateFrqArr) {

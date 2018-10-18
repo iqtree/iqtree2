@@ -3412,35 +3412,27 @@ void getSymTestID(vector<SymTestResult> &res, set<int> &id, bool bad_res) {
     }
 }
 
+double computePValueSMax(vector<SymTestResult> &sym, int start, int step) {
+    double orig_max = sym[start].max_stat;
+    int count = 0, num = 0;
+    for (size_t i = start; i < sym.size(); i += step, num++)
+        if (sym[i].max_stat >= orig_max)
+            count++;
+    return double(count)/num;
+    
+}
+
 void doSymTest(Alignment *alignment, Params &params) {
     double start_time = getRealTime();
     cout << "Performing matched-pair tests of symmetry...";
     vector<SymTestResult> sym, marsym, intsym;
 
-    string filename = string(params.out_prefix) + ".symtest.csv";
-    ofstream out;
-    out.open(filename.c_str());
-    out << "# Binomial matched-pair tests of symmetry" << endl
-        << "# This file can be read in MS Excel or in R with command:" << endl
-        << "#    dat=read.csv('" <<  filename << "',comment.char='#')" << endl
-        << "# Columns are comma-separated with following meanings:" << endl
-        << "#    Name:    Partition name" << endl
-        << "#    SymSig:  Number of significant sequence pairs by test of symmetry" << endl
-        << "#    SymNon:  Number of non-significant sequence pairs by test of symmetry" << endl
-        << "#    SymPval: P-value for binomial test of symmetry" << endl
-        << "#    MarSig:  Number of significant sequence pairs by test of marginal symmetry" << endl
-        << "#    MarNon:  Number of non-significant sequence pairs by test of marginal symmetry" << endl
-        << "#    MarPval: P-value for binomial test of marginal symmetry" << endl
-        << "#    IntSig:  Number of significant sequence pairs by test of internal symmetry" << endl
-        << "#    IntNon:  Number of non-significant sequence pairs by test of internal symmetry" << endl
-        << "#    IntPval: P-value for binomial test of internal symmetry" << endl
-        << "Name,SymSig,SymNon,SymPval,MarSig,MarNon,MarPval,IntSig,IntNon,IntPval" << endl;
-
     string filename_stat = string(params.out_prefix) + ".symstat.csv";
+    ofstream *out_stat = NULL;
     if (params.symtest_stat) {
-        ofstream out_stat;
-        out_stat.open(filename_stat);
-        out_stat
+        out_stat = new ofstream;
+        out_stat->open(filename_stat);
+        *out_stat
         << "# Statistic values for matched-pair tests of symmetry" << endl
         << "# This file can be read in MS Excel or in R with command:" << endl
         << "#    dat=read.csv('" <<  filename_stat << "',comment.char='#')" << endl
@@ -3449,19 +3441,82 @@ void doSymTest(Alignment *alignment, Params &params) {
         << "#    Seq1: ID of sequence 1 within partition" << endl
         << "#    Seq1: ID of sequence 2 within partition" << endl
         << "#    Sym:  Statistic for test of symmetry" << endl
+        << "#    SymChi: Chi-square p-value for test of symmetry" << endl
         << "#    Mar:  Statistic for test of marginal symmetry" << endl
+        << "#    MarChi: Chi-square p-value for marginal test of symmetry" << endl
         << "#    Int:  Statistic for test of internal symmetry" << endl
-        << "Name,Seq1,Seq2,Sym,Mar,Int" << endl;
-        alignment->doSymTest(sym, marsym, intsym, out, &out_stat);
-        out_stat.close();
+        << "#    MarChi: Chi-square p-value for internal test of symmetry" << endl
+        << "Name,Seq1,Seq2,Sym,SymChi,Mar,MarChi,Int,IntChi" << endl;
+    }
+
+    for (int i = 0; i < params.symtest_shuffle; i++) {
+        if (i == 0) // original alignment
+            alignment->doSymTest(sym, marsym, intsym, NULL, out_stat);
+        else
+            alignment->doSymTest(sym, marsym, intsym, randstream, out_stat);
+    }
+
+    if (params.symtest_shuffle > 1) {
+        // compute p-value for s-max approach
+        int num_parts;
+        if (alignment->isSuperAlignment())
+            num_parts = ((SuperAlignment*)alignment)->partitions.size();
+        else
+            num_parts = 1;
+        for (int part = 0; part < num_parts; part++) {
+            sym[part].perm_pvalue = computePValueSMax(sym, part, num_parts);
+            marsym[part].perm_pvalue = computePValueSMax(marsym, part, num_parts);
+            intsym[part].perm_pvalue = computePValueSMax(intsym, part, num_parts);
+        }
+    }
+
+    string filename = string(params.out_prefix) + ".symtest.csv";
+    ofstream out;
+    out.open(filename);
+    out << "# Matched-pair tests of symmetry" << endl
+    << "# This file can be read in MS Excel or in R with command:" << endl
+    << "#    dat=read.csv('" <<  filename << "',comment.char='#')" << endl
+    << "# Columns are comma-separated with following meanings:" << endl
+    << "#    Name:    Partition name" << endl
+    << "#    SymSig:  Number of significant sequence pairs by test of symmetry" << endl
+    << "#    SymNon:  Number of non-significant sequence pairs by test of symmetry" << endl
+    << "#    SymBi:   P-value for binomial test of symmetry" << endl;
+    if (params.symtest_shuffle > 1)
+        out << "#    SymMax:  Maximum of pair statistics by test of symmetry" << endl
+            << "#    SymPerm: P-value for permutation test of symmetry" << endl;
+    
+    out << "#    MarSig:  Number of significant sequence pairs by test of marginal symmetry" << endl
+    << "#    MarNon:  Number of non-significant sequence pairs by test of marginal symmetry" << endl
+    << "#    MarBi:   P-value for binomial test of marginal symmetry" << endl;
+    if (params.symtest_shuffle > 1)
+        out << "#    MarMax:  Maximum of pair statistics by test of marginal symmetry" << endl
+            << "#    MarPerm: P-value for permutation test of marginal symmetry" << endl;
+    out << "#    IntSig:  Number of significant sequence pairs by test of internal symmetry" << endl
+    << "#    IntNon:  Number of non-significant sequence pairs by test of internal symmetry" << endl
+    << "#    IntBi:   P-value for binomial test of internal symmetry" << endl;
+    if (params.symtest_shuffle > 1)
+        out << "#    IntMax:  Maximum of pair statistics by test of internal symmetry" << endl
+        << "#    IntPerm: P-value for permutation test of internal symmetry" << endl;
+    
+    out << "Name,SymSig,SymNon,SymBi" << ((params.symtest_shuffle > 1) ? ",SymMax,SymPerm" : "")
+    << ",MarSig,MarNon,MarBi" << ((params.symtest_shuffle > 1) ? ",MarMax,MarPerm" : "")
+    << ",IntSig,IntNon,IntBi" << ((params.symtest_shuffle > 1) ? ",IntMax,IntPerm" : "") << endl;
+    
+    if (alignment->isSuperAlignment()) {
+        SuperAlignment *saln = (SuperAlignment*)alignment;
+        for (int part = 0; part < saln->partitions.size(); part++)
+            out << saln->partitions[part]->name << ','
+                << sym[part] << ',' << marsym[part] << ','  << intsym[part] << endl;
     } else {
-        alignment->doSymTest(sym, marsym, intsym, out);
+        out << alignment->name << ',' << sym[0] << ',' << marsym[0] << ','  << intsym[0] << endl;
     }
 
     out.close();
     cout << getRealTime() - start_time << " seconds" << endl;
-    if (params.symtest_stat)
+    if (params.symtest_stat) {
+        out_stat->close();
         cout << "SymTest statistics written to " << filename_stat << endl;
+    }
     cout << "SymTest results written to " << filename << endl;
 
     // now filter out partitions
