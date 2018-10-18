@@ -3427,6 +3427,10 @@ void doSymTest(Alignment *alignment, Params &params) {
     cout << "Performing matched-pair tests of symmetry...";
     vector<SymTestResult> sym, marsym, intsym;
 
+    size_t num_parts = 1;
+    if (alignment->isSuperAlignment())
+        num_parts = ((SuperAlignment*)alignment)->partitions.size();
+    
     string filename_stat = string(params.out_prefix) + ".symstat.csv";
     ofstream *out_stat = NULL;
     if (params.symtest_stat) {
@@ -3437,37 +3441,66 @@ void doSymTest(Alignment *alignment, Params &params) {
         << "# This file can be read in MS Excel or in R with command:" << endl
         << "#    dat=read.csv('" <<  filename_stat << "',comment.char='#')" << endl
         << "# Columns are comma-separated with following meanings:" << endl
-        << "#    Name: Partition name" << endl
-        << "#    Seq1: ID of sequence 1 within partition" << endl
-        << "#    Seq1: ID of sequence 2 within partition" << endl
-        << "#    Sym:  Statistic for test of symmetry" << endl
+        << "#    ID:     Partition ID" << endl
+        << "#    Seq1:   ID of sequence 1 within partition" << endl
+        << "#    Seq1:   ID of sequence 2 within partition" << endl
+        << "#    Sym:    Statistic for test of symmetry" << endl
         << "#    SymChi: Chi-square p-value for test of symmetry" << endl
-        << "#    Mar:  Statistic for test of marginal symmetry" << endl
+        << "#    Mar:    Statistic for test of marginal symmetry" << endl
         << "#    MarChi: Chi-square p-value for marginal test of symmetry" << endl
-        << "#    Int:  Statistic for test of internal symmetry" << endl
+        << "#    Int:    Statistic for test of internal symmetry" << endl
         << "#    MarChi: Chi-square p-value for internal test of symmetry" << endl
-        << "Name,Seq1,Seq2,Sym,SymChi,Mar,MarChi,Int,IntChi" << endl;
+        << "ID,Seq1,Seq2,Sym,SymChi,Mar,MarChi,Int,IntChi" << endl;
+        
     }
+
+    sym.resize(num_parts*params.symtest_shuffle);
+    marsym.resize(num_parts*params.symtest_shuffle);
+    intsym.resize(num_parts*params.symtest_shuffle);
 
     for (int i = 0; i < params.symtest_shuffle; i++) {
+        vector<SymTestStat> *stats = NULL;
+        if (params.symtest_stat)
+            stats = new vector<SymTestStat>;
         if (i == 0) // original alignment
-            alignment->doSymTest(sym, marsym, intsym, NULL, out_stat);
-        else
-            alignment->doSymTest(sym, marsym, intsym, randstream, out_stat);
+            alignment->doSymTest(i*num_parts, sym, marsym, intsym, NULL, stats);
+        else {
+            int *rstream;
+            init_random(params.ran_seed+i+1, false, &rstream);
+            alignment->doSymTest(i*num_parts, sym, marsym, intsym, rstream, stats);
+            finish_random(rstream);
+        }
+        if ((i+1)*10 % params.symtest_shuffle == 0) {
+            cout << " " << (i+1)*100 / params.symtest_shuffle << "%";
+            cout.flush();
+        }
+        if (!stats)
+            continue;
+        for (auto it = stats->begin(); it != stats->end(); it++) {
+            *out_stat << it->part << ',' << it->seq1 << ',' << it->seq2 << ','
+            << it->chi2_sym << ',' << it->pval_sym << ','
+            << it->chi2_marsym << ',' << it->pval_marsym << ','
+            << it->chi2_intsym << ',' << it->pval_intsym << endl;
+        }
+        delete stats;
     }
 
+    if (out_stat) {
+        out_stat->close();
+        delete out_stat;
+    }
+    
     if (params.symtest_shuffle > 1) {
         // compute p-value for s-max approach
-        int num_parts;
-        if (alignment->isSuperAlignment())
-            num_parts = ((SuperAlignment*)alignment)->partitions.size();
-        else
-            num_parts = 1;
         for (int part = 0; part < num_parts; part++) {
             sym[part].perm_pvalue = computePValueSMax(sym, part, num_parts);
             marsym[part].perm_pvalue = computePValueSMax(marsym, part, num_parts);
             intsym[part].perm_pvalue = computePValueSMax(intsym, part, num_parts);
         }
+        // erase the rest
+        sym.erase(sym.begin()+num_parts, sym.end());
+        marsym.erase(marsym.begin()+num_parts, marsym.end());
+        intsym.erase(intsym.begin()+num_parts, intsym.end());
     }
 
     string filename = string(params.out_prefix) + ".symtest.csv";
@@ -3512,11 +3545,9 @@ void doSymTest(Alignment *alignment, Params &params) {
     }
 
     out.close();
-    cout << getRealTime() - start_time << " seconds" << endl;
-    if (params.symtest_stat) {
-        out_stat->close();
+    cout << " " << getRealTime() - start_time << " seconds" << endl;
+    if (params.symtest_stat)
         cout << "SymTest statistics written to " << filename_stat << endl;
-    }
     cout << "SymTest results written to " << filename << endl;
 
     // now filter out partitions

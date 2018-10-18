@@ -124,8 +124,8 @@ public:
      @param rstream random stream to shuffle alignment columns
      @param out_stat output stream to print pairwise statistics
      */
-    virtual void doSymTest(vector<SymTestResult> &sym, vector<SymTestResult> &marsym,
-                           vector<SymTestResult> &intsym, int *rstream = NULL, ostream *out_stat = NULL);
+    virtual void doSymTest(size_t vecid, vector<SymTestResult> &sym, vector<SymTestResult> &marsym,
+                           vector<SymTestResult> &intsym, int *rstream = NULL, vector<SymTestStat> *stats = NULL);
 
     /**
             extract sub-alignment of a sub-set of sequences
