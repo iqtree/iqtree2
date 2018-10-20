@@ -3497,10 +3497,6 @@ void doSymTest(Alignment *alignment, Params &params) {
             marsym[part].perm_pvalue = computePValueSMax(marsym, part, num_parts);
             intsym[part].perm_pvalue = computePValueSMax(intsym, part, num_parts);
         }
-        // erase the rest
-        sym.erase(sym.begin()+num_parts, sym.end());
-        marsym.erase(marsym.begin()+num_parts, marsym.end());
-        intsym.erase(intsym.begin()+num_parts, intsym.end());
     }
 
     string filename = string(params.out_prefix) + ".symtest.csv";
@@ -3544,6 +3540,18 @@ void doSymTest(Alignment *alignment, Params &params) {
         out << alignment->name << ',' << sym[0] << ',' << marsym[0] << ','  << intsym[0] << endl;
     }
 
+    if (params.symtest_shuffle > 1) {
+        for (int part = num_parts; part < sym.size(); part++) {
+            sym[part].perm_pvalue = marsym[part].perm_pvalue = intsym[part].perm_pvalue = -1.0;
+            out << part % num_parts << ','
+            << sym[part] << ',' << marsym[part] << ','  << intsym[part] << endl;
+        }
+        // erase the rest
+        sym.erase(sym.begin()+num_parts, sym.end());
+        marsym.erase(marsym.begin()+num_parts, marsym.end());
+        intsym.erase(intsym.begin()+num_parts, intsym.end());
+    }
+    
     out.close();
     cout << " " << getRealTime() - start_time << " seconds" << endl;
     if (params.symtest_stat)
