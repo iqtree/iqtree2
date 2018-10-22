@@ -776,7 +776,7 @@ void SuperAlignment::getSitePatternIndex(IntVector &pattern_index) {
 
 void SuperAlignment::getPatternFreq(IntVector &pattern_freq) {
 	ASSERT(isSuperAlignment());
-	int offset = 0;
+	size_t offset = 0;
 	if (!pattern_freq.empty()) pattern_freq.resize(0);
 	for (vector<Alignment*>::iterator it = partitions.begin(); it != partitions.end(); it++) {
 		IntVector freq;
@@ -784,6 +784,15 @@ void SuperAlignment::getPatternFreq(IntVector &pattern_freq) {
 		pattern_freq.insert(pattern_freq.end(), freq.begin(), freq.end());
 		offset += freq.size();
 	}
+}
+
+void SuperAlignment::getPatternFreq(int *pattern_freq) {
+    ASSERT(isSuperAlignment());
+    size_t offset = 0;
+    for (vector<Alignment*>::iterator it = partitions.begin(); it != partitions.end(); it++) {
+        (*it)->getPatternFreq(pattern_freq + offset);
+        offset += (*it)->getNPattern();
+    }
 }
 
 void SuperAlignment::printSiteInfo(const char* filename) {

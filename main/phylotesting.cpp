@@ -2807,7 +2807,11 @@ void performAUTest(Params &params, PhyloTree *tree, double *pattern_lhs, vector<
     for (k = 0; k < nscales; k++) {
         string str = "SCALE=" + convertDoubleToString(r[k]);    
 		for (boot = 0; boot < nboot; boot++) {
-			tree->aln->createBootstrapAlignment(boot_sample, str.c_str(), rstream);
+            if (r[k] == 1.0 && boot == 0)
+                // 2018-10-23: get one of the bootstrap sample as the original alignment
+                tree->aln->getPatternFreq(boot_sample);
+            else
+                tree->aln->createBootstrapAlignment(boot_sample, str.c_str(), rstream);
             for (ptn = 0; ptn < maxnptn; ptn++)
                 boot_sample_dbl[ptn] = boot_sample[ptn];
             double max_lh = -DBL_MAX, second_max_lh = -DBL_MAX;
@@ -3102,7 +3106,10 @@ void evaluateTrees(Params &params, IQTree *tree, vector<TreeInfo> &info, IntVect
         int *rstream = randstream;
 #endif
 		for (boot = 0; boot < params.topotest_replicates; boot++)
-			tree->aln->createBootstrapAlignment(boot_samples + (boot*nptn), params.bootstrap_spec, rstream);
+            if (boot == 0)
+                tree->aln->getPatternFreq(boot_samples + (boot*nptn));
+            else
+                tree->aln->createBootstrapAlignment(boot_samples + (boot*nptn), params.bootstrap_spec, rstream);
 #ifdef _OPENMP
         finish_random(rstream);
         }
