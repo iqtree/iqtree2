@@ -47,6 +47,13 @@ double gsl_ran_ugaussian_pdf (const double x);
 double gsl_cdf_ugaussian_P (const double x);
 
 /*
+ 1.0 - cumulative distribution function for standard normal distribution
+ @param x x-value
+ @return 1.0-CDF at x
+ */
+double gsl_cdf_ugaussian_Q (const double x);
+
+/*
     quantile function for standard normal distribution (or CDF-inverse function)
     @param P probability value
     @return x-value
