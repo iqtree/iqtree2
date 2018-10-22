@@ -3177,7 +3177,17 @@ void Alignment::createBootstrapAlignment(int *pattern_freq, const char *spec, in
     if (Params::getInstance().jackknife_prop > 0.0 && spec)
         outError((string)"Unsupported jackknife with " + spec);
 
-    if (!spec) {
+    if (spec && strncmp(spec, "SCALE=", 6) == 0) {
+        // multi-scale bootstrapping called by AU test
+        int orig_nsite = nsite;
+        double scale = convert_double(spec+6);
+        nsite = (int)round(scale * nsite);
+        for (site = 0; site < nsite; site++) {
+            int site_id = random_int(orig_nsite, rstream);
+            int ptn_id = getPatternID(site_id);
+            pattern_freq[ptn_id]++;
+        }
+    } else if (!spec) {
 
         int nptn = getNPattern();
 

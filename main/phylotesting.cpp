@@ -2923,7 +2923,7 @@ void performAUTest(Params &params, PhyloTree *tree, double *pattern_lhs, vector<
     //            c = mle.c;
 
                 /* STEP 4: compute p-value according to Eq. 11 */
-                pval = 1.0 - gsl_cdf_ugaussian_P(d-c);
+                pval = gsl_cdf_ugaussian_Q(d-c);
                 z = -pval;
                 ze = se;
                 // compute sum of squared difference
@@ -2935,10 +2935,10 @@ void performAUTest(Params &params, PhyloTree *tree, double *pattern_lhs, vector<
                 
             } else {
                 // not enough data for WLS
-                double sum = 0.0;
+                int num0 = 0;
                 for (k = 0; k < nscales; k++)
-                    sum += cc[k];
-                if (sum >= 0.0) 
+                    if (this_bp[k] <= 0.0) num0++;
+                if (num0 > nscales/2)
                     pval = 0.0;
                 else
                     pval = 1.0;
@@ -2947,6 +2947,8 @@ void performAUTest(Params &params, PhyloTree *tree, double *pattern_lhs, vector<
                 rss = 0.0;
                 if (verbose_mode >= VB_MED)
                     cout << "   error in wls" << endl;
+                info[tid].au_pvalue = pval;
+                break;
             }
 
             // maximum likelhood fit
@@ -2988,7 +2990,7 @@ void performAUTest(Params &params, PhyloTree *tree, double *pattern_lhs, vector<
             ze0=ze;
             idf0 = nscales-2;
             if(fabs(x-th)<1e-10) break;
-        }
+        } // for step
         
         if (failed && verbose_mode >= VB_MED)
             cout << "   degenerated" << endl;
